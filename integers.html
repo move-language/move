@@ -1,0 +1,334 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Integers</title>
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="favicon.png">
+        
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        
+        <link rel="stylesheet" href="css/print.css" media="print">
+        
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="modules-and-scripts.html"><strong aria-hidden="true">1.</strong> Modules and Scripts</a></li><li class="chapter-item expanded "><a href="creating-coins.html"><strong aria-hidden="true">2.</strong> First Tutorial: Creating Coins</a></li><li class="chapter-item expanded "><a href="integers.html" class="active"><strong aria-hidden="true">3.</strong> Integers</a></li><li class="chapter-item expanded "><a href="bool.html"><strong aria-hidden="true">4.</strong> Bool</a></li><li class="chapter-item expanded "><a href="address.html"><strong aria-hidden="true">5.</strong> Address</a></li><li class="chapter-item expanded "><a href="vector.html"><strong aria-hidden="true">6.</strong> Vector</a></li><li class="chapter-item expanded "><a href="signer.html"><strong aria-hidden="true">7.</strong> Signer</a></li><li class="chapter-item expanded "><a href="references.html"><strong aria-hidden="true">8.</strong> References</a></li><li class="chapter-item expanded "><a href="tuples.html"><strong aria-hidden="true">9.</strong> Tuples and Unit</a></li><li class="chapter-item expanded "><a href="variables.html"><strong aria-hidden="true">10.</strong> Local Variables and Scopes</a></li><li class="chapter-item expanded "><a href="equality.html"><strong aria-hidden="true">11.</strong> Equality</a></li><li class="chapter-item expanded "><a href="abort-and-assert.html"><strong aria-hidden="true">12.</strong> Abort and Assert</a></li><li class="chapter-item expanded "><a href="conditionals.html"><strong aria-hidden="true">13.</strong> Conditionals</a></li><li class="chapter-item expanded "><a href="loops.html"><strong aria-hidden="true">14.</strong> While and Loop</a></li><li class="chapter-item expanded "><a href="functions.html"><strong aria-hidden="true">15.</strong> Functions</a></li><li class="chapter-item expanded "><a href="structs-and-resources.html"><strong aria-hidden="true">16.</strong> Structs and Resources</a></li><li class="chapter-item expanded "><a href="constants.html"><strong aria-hidden="true">17.</strong> Constants</a></li><li class="chapter-item expanded "><a href="generics.html"><strong aria-hidden="true">18.</strong> Generics</a></li><li class="chapter-item expanded "><a href="abilities.html"><strong aria-hidden="true">19.</strong> Type Abilities</a></li><li class="chapter-item expanded "><a href="uses.html"><strong aria-hidden="true">20.</strong> Uses and Aliases</a></li><li class="chapter-item expanded "><a href="friends.html"><strong aria-hidden="true">21.</strong> Friends</a></li><li class="chapter-item expanded "><a href="global-storage-structure.html"><strong aria-hidden="true">22.</strong> Global Storage Structure</a></li><li class="chapter-item expanded "><a href="global-storage-operators.html"><strong aria-hidden="true">23.</strong> Global Storage Operators</a></li><li class="chapter-item expanded "><a href="standard-library.html"><strong aria-hidden="true">24.</strong> Standard Library</a></li><li class="chapter-item expanded "><a href="coding-conventions.html"><strong aria-hidden="true">25.</strong> Coding Conventions</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title"></h1>
+
+                    <div class="right-buttons">
+                        
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                        
+                        
+
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="integers"><a class="header" href="#integers">Integers</a></h1>
+<p>Move supports three unsigned integer types: <code>u8</code>, <code>u64</code>, and <code>u128</code>. Values of these types range from 0 to a maximum that depends on the size of the type.</p>
+<table><thead><tr><th>Type</th><th>Value Range</th></tr></thead><tbody>
+<tr><td>Unsigned 8-bit integer, <code>u8</code></td><td>0 to 2<sup>8</sup> - 1</td></tr>
+<tr><td>Unsigned 64-bit integer, <code>u64</code></td><td>0 to 2<sup>64</sup> - 1</td></tr>
+<tr><td>Unsigned 128-bit integer, <code>u128</code></td><td>0 to 2<sup>128</sup> - 1</td></tr>
+</tbody></table>
+<h2 id="literals"><a class="header" href="#literals">Literals</a></h2>
+<p>Literal values for these types are specified either as a sequence of digits (e.g.,<code>112</code>) or as hex literals, e.g., <code>0xFF</code>. The type of the literal can optionally be added as a suffix, e.g., <code>112u8</code>. If the type is not specified, the compiler will try to infer the type from the context where the literal is used. If the type cannot be inferred, it is assumed to be <code>u64</code>.</p>
+<p>If a literal is too large for its specified (or inferred) size range, an error is reported.</p>
+<h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
+<pre><code class="language-move">// literals with explicit annotations;
+let explicit_u8 = 1u8;
+let explicit_u64 = 2u64;
+let explicit_u128 = 3u128;
+
+// literals with simple inference
+let simple_u8: u8 = 1;
+let simple_u64: u64 = 2;
+let simple_u128: u128 = 3;
+
+// literals with more complex inference
+let complex_u8 = 1; // inferred: u8
+// right hand argument to shift must be u8
+let _unused = 10 &lt;&lt; complex_u8;
+
+let x: u8 = 0;
+let complex_u8 = 2; // inferred: u8
+// arguments to `+` must have the same type
+let _unused = x + complex_u8;
+
+let complex_u128 = 3; // inferred: u128
+// inferred from function argument type
+function_that_takes_u128(complex_u128);
+
+// literals can be written in hex
+let hex_u8: u8 = 0x1;
+let hex_u64: u64 = 0xCAFE;
+let hex_u128: u128 = 0xDEADBEEF;
+</code></pre>
+<h2 id="operations"><a class="header" href="#operations">Operations</a></h2>
+<h3 id="arithmetic"><a class="header" href="#arithmetic">Arithmetic</a></h3>
+<p>Each of these types supports the same set of checked arithmetic operations. For all of these operations, both arguments (the left and right side operands) <em>must</em> be of the same type. If you need to operate over values of different types, you will need to first perform a <a href="#casting">cast</a>. Similarly, if you expect the result of the operation to be too large for the integer type, perform a <a href="#casting">cast</a> to a larger size before performing the operation.</p>
+<p>All arithmetic operations abort instead of behaving in a way that mathematical integers would not (e.g., overflow, underflow, divide-by-zero).</p>
+<table><thead><tr><th>Syntax</th><th>Operation</th><th>Aborts If</th></tr></thead><tbody>
+<tr><td><code>+</code></td><td>addition</td><td>Result is too large for the integer type</td></tr>
+<tr><td><code>-</code></td><td>subtraction</td><td>Result is less than zero</td></tr>
+<tr><td><code>*</code></td><td>multiplication</td><td>Result is too large for the integer type</td></tr>
+<tr><td><code>%</code></td><td>modular division</td><td>The divisor is <code>0</code></td></tr>
+<tr><td><code>/</code></td><td>truncating division</td><td>The divisor is <code>0</code></td></tr>
+</tbody></table>
+<h3 id="bitwise"><a class="header" href="#bitwise">Bitwise</a></h3>
+<p>The integer types support the following bitwise operations that treat each number as a series of individual bits, either 0 or 1, instead of as numerical integer values.</p>
+<p>Bitwise operations do not abort.</p>
+<table><thead><tr><th>Syntax</th><th>Operation</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>&amp;</code></td><td>bitwise and</td><td>Performs a boolean and for each bit pairwise</td></tr>
+<tr><td>`</td><td>`</td><td>bitwise or</td></tr>
+<tr><td><code>^</code></td><td>bitwise xor</td><td>Performs a boolean exclusive or for each bit pairwise</td></tr>
+</tbody></table>
+<h3 id="bit-shifts"><a class="header" href="#bit-shifts">Bit Shifts</a></h3>
+<p>Similar to the bitwise operations, each integer type supports bit shifts. But unlike the other operations, the righthand side operand (how many bits to shift by) must <em>always</em> be a <code>u8</code> and need not match the left side operand (the number you are shifting).</p>
+<p>Bit shifts can abort if the number of bits to shift by is greater than or equal to <code>8</code>, <code>64</code>, or <code>128</code> for <code>u8</code>, <code>u64</code>, and <code>u128</code> respectively.</p>
+<table><thead><tr><th>Syntax</th><th>Operation</th><th>Aborts if</th></tr></thead><tbody>
+<tr><td><code>&lt;&lt;</code></td><td>shift left</td><td>Number of bits to shift by is greater than the size of the integer type</td></tr>
+<tr><td><code>&gt;&gt;</code></td><td>shift right</td><td>Number of bits to shift by is greater than the size of the integer type</td></tr>
+</tbody></table>
+<h3 id="comparisons"><a class="header" href="#comparisons">Comparisons</a></h3>
+<p>Integer types are the <em>only</em> types in Move that can use the comparison operators. Both arguments need to be of the same type. If you need to compare integers of different types, you will need to <a href="#casting">cast</a> one of them first.</p>
+<p>Comparison operations do not abort.</p>
+<table><thead><tr><th>Syntax</th><th>Operation</th></tr></thead><tbody>
+<tr><td><code>&lt;</code></td><td>less than</td></tr>
+<tr><td><code>&gt;</code></td><td>greater than</td></tr>
+<tr><td><code>&lt;=</code></td><td>less than or equal to</td></tr>
+<tr><td><code>&gt;=</code></td><td>greater than or equal to</td></tr>
+</tbody></table>
+<h3 id="equality"><a class="header" href="#equality">Equality</a></h3>
+<p>Like all types with <a href="./abilities.html"><code>drop</code></a> in Move, all integer types support the <a href="./equality.html">&quot;equal&quot;</a> and <a href="./equality.html">&quot;not equal&quot;</a>  operations. Both arguments need to be of the same type. If you need to compare integers of different types, you will need to <a href="#casting">cast</a> one of them first.</p>
+<p>Equality operations do not abort.</p>
+<table><thead><tr><th>Syntax</th><th>Operation</th></tr></thead><tbody>
+<tr><td><code>==</code></td><td>equal</td></tr>
+<tr><td><code>!=</code></td><td>not equal</td></tr>
+</tbody></table>
+<p>For more details see the section on <a href="./equality.html">equality</a></p>
+<h2 id="casting"><a class="header" href="#casting">Casting</a></h2>
+<p>Integer types of one size can be cast to integer types of another size. Integers are the only types in Move that support casting.</p>
+<p>Casts <em>do not</em> truncate. Casting will abort if the result is too large for the specified type</p>
+<table><thead><tr><th>Syntax</th><th>Operation</th><th>Aborts if</th></tr></thead><tbody>
+<tr><td><code>(e as T)</code></td><td>Cast integer expression <code>e</code> into an integer type <code>T</code></td><td><code>e</code> is too large to represent as a <code>T</code></td></tr>
+</tbody></table>
+<p>Here, the type of <code>e</code> must be <code>u8</code>, <code>u64</code>, or <code>u128</code> and <code>T</code> must be <code>u8</code>, <code>u64</code>, or <code>u128</code>.</p>
+<p>For example:</p>
+<ul>
+<li><code>(x as u8)</code></li>
+<li><code>(2u8 as u64)</code></li>
+<li><code>(1 + 3 as u128)</code></li>
+</ul>
+<h2 id="ownership"><a class="header" href="#ownership">Ownership</a></h2>
+<p>As with the other scalar values built-in to the language, integer values are implicitly copyable, meaning they can be copied without an explicit instruction such as <a href="./variables.html#move-and-copy"><code>copy</code></a>.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="creating-coins.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="bool.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a rel="prev" href="creating-coins.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="bool.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>

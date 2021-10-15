@@ -1,0 +1,604 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Functions</title>
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="favicon.png">
+        
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        
+        <link rel="stylesheet" href="css/print.css" media="print">
+        
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="modules-and-scripts.html"><strong aria-hidden="true">1.</strong> Modules and Scripts</a></li><li class="chapter-item expanded "><a href="creating-coins.html"><strong aria-hidden="true">2.</strong> First Tutorial: Creating Coins</a></li><li class="chapter-item expanded "><a href="integers.html"><strong aria-hidden="true">3.</strong> Integers</a></li><li class="chapter-item expanded "><a href="bool.html"><strong aria-hidden="true">4.</strong> Bool</a></li><li class="chapter-item expanded "><a href="address.html"><strong aria-hidden="true">5.</strong> Address</a></li><li class="chapter-item expanded "><a href="vector.html"><strong aria-hidden="true">6.</strong> Vector</a></li><li class="chapter-item expanded "><a href="signer.html"><strong aria-hidden="true">7.</strong> Signer</a></li><li class="chapter-item expanded "><a href="references.html"><strong aria-hidden="true">8.</strong> References</a></li><li class="chapter-item expanded "><a href="tuples.html"><strong aria-hidden="true">9.</strong> Tuples and Unit</a></li><li class="chapter-item expanded "><a href="variables.html"><strong aria-hidden="true">10.</strong> Local Variables and Scopes</a></li><li class="chapter-item expanded "><a href="equality.html"><strong aria-hidden="true">11.</strong> Equality</a></li><li class="chapter-item expanded "><a href="abort-and-assert.html"><strong aria-hidden="true">12.</strong> Abort and Assert</a></li><li class="chapter-item expanded "><a href="conditionals.html"><strong aria-hidden="true">13.</strong> Conditionals</a></li><li class="chapter-item expanded "><a href="loops.html"><strong aria-hidden="true">14.</strong> While and Loop</a></li><li class="chapter-item expanded "><a href="functions.html" class="active"><strong aria-hidden="true">15.</strong> Functions</a></li><li class="chapter-item expanded "><a href="structs-and-resources.html"><strong aria-hidden="true">16.</strong> Structs and Resources</a></li><li class="chapter-item expanded "><a href="constants.html"><strong aria-hidden="true">17.</strong> Constants</a></li><li class="chapter-item expanded "><a href="generics.html"><strong aria-hidden="true">18.</strong> Generics</a></li><li class="chapter-item expanded "><a href="abilities.html"><strong aria-hidden="true">19.</strong> Type Abilities</a></li><li class="chapter-item expanded "><a href="uses.html"><strong aria-hidden="true">20.</strong> Uses and Aliases</a></li><li class="chapter-item expanded "><a href="friends.html"><strong aria-hidden="true">21.</strong> Friends</a></li><li class="chapter-item expanded "><a href="global-storage-structure.html"><strong aria-hidden="true">22.</strong> Global Storage Structure</a></li><li class="chapter-item expanded "><a href="global-storage-operators.html"><strong aria-hidden="true">23.</strong> Global Storage Operators</a></li><li class="chapter-item expanded "><a href="standard-library.html"><strong aria-hidden="true">24.</strong> Standard Library</a></li><li class="chapter-item expanded "><a href="coding-conventions.html"><strong aria-hidden="true">25.</strong> Coding Conventions</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title"></h1>
+
+                    <div class="right-buttons">
+                        
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                        
+                        
+
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="functions"><a class="header" href="#functions">Functions</a></h1>
+<p>Function syntax in Move is shared between module functions and script functions. Functions inside of modules are reusable, whereas script functions are only used once to invoke a transaction.</p>
+<h2 id="declaration"><a class="header" href="#declaration">Declaration</a></h2>
+<p>Functions are declared with the <code>fun</code> keyword followed by the function name, type parameters, parameters, a return type, acquires annotations, and finally the function body.</p>
+<pre><code class="language-text">fun &lt;identifier&gt;&lt;[type_parameters: constraint],*&gt;([identifier: type],*): &lt;return_type&gt; &lt;acquires [identifier],*&gt; &lt;function_body&gt;
+</code></pre>
+<p>For example</p>
+<pre><code class="language-move">fun foo&lt;T1, T2&gt;(x: u64, y: T1, z: T2): (T2, T1, u64) { (z, y, x) }
+</code></pre>
+<h3 id="visibility"><a class="header" href="#visibility">Visibility</a></h3>
+<p>Module functions, by default, can only be called within the same module. These internal (sometimes called private) functions cannot be called from other modules or from scripts.</p>
+<pre><code class="language-move=">address 0x42 {
+module M {
+    fun foo(): u64 { 0 }
+    fun calls_foo(): u64 { foo() } // valid
+}
+
+module other {
+    fun calls_M_foo(): u64 {
+        0x42::M::foo() // ERROR!
+//      ^^^^^^^^^^^^ 'foo' is internal to '0x42::M'
+    }
+}
+}
+
+script {
+    fun calls_M_foo(): u64 {
+        0x42::M::foo() // ERROR!
+//      ^^^^^^^^^^^^ 'foo' is internal to '0x42::M'
+    }
+}
+</code></pre>
+<p>To allow access from other modules or from scripts, the function must be declared <code>public</code>, <code>public(friend)</code>, or <code>public(script)</code>.</p>
+<h4 id="public-visibility"><a class="header" href="#public-visibility"><code>public</code> visibility</a></h4>
+<p>A <code>public</code> function can be called by <em>any</em> function defined in <em>any</em> module or script. As shown in the following example, a <code>public</code> function can be called by:</p>
+<ul>
+<li>other functions defined in the same module,</li>
+<li>functions defined in another module, or</li>
+<li>the function defined in a script.</li>
+</ul>
+<pre><code class="language-move=">address 0x42 {
+module M {
+    public fun foo(): u64 { 0 }
+    fun calls_foo(): u64 { foo() } // valid
+}
+
+module other {
+    fun calls_M_foo(): u64 {
+        0x42::M::foo() // valid
+    }
+}
+}
+
+script {
+    fun calls_M_foo(): u64 {
+        0x42::M::foo() // valid
+    }
+}
+</code></pre>
+<h4 id="publicfriend-visibility"><a class="header" href="#publicfriend-visibility"><code>public(friend)</code> visibility</a></h4>
+<p>The <code>public(friend)</code> visibility modifier is a more restricted form of the <code>public</code> modifier to give more control about where a function can be used. A <code>public(friend)</code> function can be called by:</p>
+<ul>
+<li>other functions defined in the same module, or</li>
+<li>functions defined in modules which are explicitly specified in the <strong>friend list</strong> (see <a href="./friends.html">Friends</a> on how to specify the friend list).</li>
+</ul>
+<p>Note that since we cannot declare a script to be a friend of a module, the functions defined in scripts can never call a <code>public(friend)</code> function.</p>
+<pre><code class="language-move=">address 0x42 {
+module M {
+    friend 0x42::N;  // friend declaration
+    public(friend) fun foo(): u64 { 0 }
+    fun calls_foo(): u64 { foo() } // valid
+}
+
+module N {
+    fun calls_M_foo(): u64 {
+        0x42::M::foo() // valid
+    }
+}
+
+module other {
+    fun calls_M_foo(): u64 {
+        0x42::M::foo() // ERROR!
+//      ^^^^^^^^^^^^ 'foo' can only be called from a 'friend' of module '0x42::M'
+    }
+}
+}
+
+script {
+    fun calls_M_foo(): u64 {
+        0x42::M::foo() // ERROR!
+//      ^^^^^^^^^^^^ 'foo' can only be called from a 'friend' of module '0x42::M'
+    }
+}
+</code></pre>
+<h4 id="publicscript-visibility"><a class="header" href="#publicscript-visibility"><code>public(script)</code> visibility</a></h4>
+<p>The <code>public(script)</code> modifier is designed to allow module functions to be safely and directly invoked much like scripts. A <code>public(script)</code> function can only be called from a <em>script</em> context, which is either:</p>
+<ul>
+<li>the function defined in a transaction script, or</li>
+<li>another <code>public(script)</code> function.</li>
+</ul>
+<p>Essentially, this rule implies that once the execution transitions to a non-script context via a call to any non-<code>public(script)</code> function, there is no turning back, i.e., there is no way to call a <code>public(script)</code> function again.</p>
+<pre><code class="language-move=">address 0x42 {
+module M {
+    public(script) fun foo(): u64 { 0 }
+    fun calls_foo(): u64 { foo() } // ERROR!
+//                         ^^^ 'foo' can only be called from a script context
+}
+
+module N {
+    fun calls_M_foo(): u64 {
+        0x42::M::foo() // ERROR!
+//      ^^^^^^^^^^^^ 'foo' can only be called from a script context
+    }
+}
+
+module other {
+    public(script) fun calls_M_foo(): u64 {
+        0x42::M::foo() // valid
+    }
+}
+}
+
+script {
+    fun calls_M_foo(): u64 {
+        0x42::M::foo() // valid
+    }
+}
+</code></pre>
+<h3 id="name"><a class="header" href="#name">Name</a></h3>
+<p>Function names can start with letters <code>a</code> to <code>z</code> or letters <code>A</code> to <code>Z</code>. After the first character, function names can contain underscores <code>_</code>, letters <code>a</code> to <code>z</code>, letters <code>A</code> to <code>Z</code>, or digits <code>0</code> to <code>9</code>.</p>
+<pre><code class="language-move">fun FOO() {}
+fun bar_42() {}
+fun _bAZ19() {}
+</code></pre>
+<h3 id="type-parameters"><a class="header" href="#type-parameters">Type Parameters</a></h3>
+<p>After the name, functions can have type parameters</p>
+<pre><code class="language-move">fun id&lt;T&gt;(x: T): T { x }
+fun example&lt;T1: copy, T2&gt;(x: T1, y: T2): (T1, T1, T2) { (copy x, x, y) }
+</code></pre>
+<p>For more details, see <a href="./generics.html">Move generics</a>.</p>
+<h3 id="parameters"><a class="header" href="#parameters">Parameters</a></h3>
+<p>Functions parameters are declared with a local variable name followed by a type annotation</p>
+<pre><code class="language-move">fun add(x: u64, y: u64): u64 { x + y }
+</code></pre>
+<p>We read this as <code>x</code> has type <code>u64</code></p>
+<p>A function does not have to have any parameters at all.</p>
+<pre><code class="language-move">fun useless() { }
+</code></pre>
+<p>This is very common for functions that create new or empty data structures</p>
+<pre><code class="language-move=">address 0x42 {
+module Example {
+  struct Counter { count: u64 }
+
+  fun new_counter(): Counter {
+      Counter { count: 0 }
+  }
+
+}
+}
+</code></pre>
+<h3 id="acquires"><a class="header" href="#acquires">Acquires</a></h3>
+<p>When a function accesses a resource using <code>move_from</code>, <code>borrow_global</code>, or <code>borrow_global_mut</code>, the function must indicate that it <code>acquires</code> that resource. This is then used by Move's type system to ensure the references into global storage are safe, specifically that there are no dangling references into global storage.</p>
+<pre><code class="language-move=">address 0x42 {
+module Example {
+
+    struct Balance has key { value: u64 }
+
+    public fun add_balance(s: &amp;signer, value: u64) {
+        move_to(s, Balance { value })
+    }
+
+    public fun extract_balance(addr: address): u64 acquires Balance {
+        let Balance { value } = move_from(addr); // acquires needed
+        value
+    }
+}
+}
+</code></pre>
+<p><code>acquires</code> annotations must also be added for transitive calls within the module. Calls to these functions from another module do not need to annotated with these acquires because one module cannot access resources declared in another module--so the annotation is not needed to ensure reference safety.</p>
+<pre><code class="language-move=">address 0x42 {
+module Example {
+
+    struct Balance has key { value: u64 }
+
+    public fun add_balance(s: &amp;signer, value: u64) {
+        move_to(s, Balance { value })
+    }
+
+    public fun extract_balance(addr: address): u64 acquires Balance {
+        let Balance { value } = move_from(addr); // acquires needed
+        value
+    }
+
+    public fun extract_and_add(sender: address, receiver: &amp;signer) acquires Balance {
+        let value = extract_balance(sender); // acquires needed here
+        add_balance(receiver, value)
+    }
+}
+}
+
+address 0x42 {
+module Other {
+    fun extract_balance(addr: address): u64 {
+        0x42::Example::extract_balance(addr) // no acquires needed
+    }
+}
+}
+</code></pre>
+<p>A function can <code>acquire</code> as many resources as it needs to</p>
+<pre><code class="language-move=">address 0x42 {
+module Example {
+    use Std::Vector;
+
+    struct Balance has key { value: u64 }
+    struct Box&lt;T&gt; has key { items: vector&lt;T&gt; }
+
+    public fun store_two&lt;Item1: store, Item2: store&gt;(
+        addr: address,
+        item1: Item1,
+        item2: Item2,
+    ) acquires Balance, Box {
+        let balance = borrow_global_mut&lt;Balance&gt;(addr); // acquires needed
+        balance.value = balance.value - 2;
+        let box1 = borrow_global_mut&lt;Box&lt;Item1&gt;&gt;(addr); // acquires needed
+        Vector::push_back(&amp;mut box1.items, item1);
+        let box2 = borrow_global_mut&lt;Box&lt;Item2&gt;&gt;(addr); // acquires needed
+        Vector::push_back(&amp;mut box2.items, item2);
+    }
+}
+}
+</code></pre>
+<h3 id="return-type"><a class="header" href="#return-type">Return type</a></h3>
+<p>After the parameters, a function specifies its return type.</p>
+<pre><code class="language-move">fun zero(): u64 { 0 }
+</code></pre>
+<p>Here <code>: u64</code> indicates that the function's return type is <code>u64</code>.</p>
+<p>Using tuples, a function can return multiple values</p>
+<pre><code class="language-move">fun one_two_three(): (u64, u64, u64) { (0, 1, 2) }
+</code></pre>
+<p>If no return type is specified, the function has an implicit return type of unit <code>()</code>. These functions are equivalent</p>
+<pre><code class="language-move">fun just_unit(): () { () }
+fun just_unit() { () }
+fun just_unit() { }
+</code></pre>
+<p><code>script</code> functions must have a return type of unit <code>()</code></p>
+<pre><code class="language-move=">script {
+    fun do_nothing() {
+    }
+}
+</code></pre>
+<p>As mentioned in the <a href="./tuples.html">tuples section</a>, these tuple &quot;values&quot; are virtual and do not exist at runtime. So for a function that returns unit <code>()</code>, it will not be returning any value at all during execution.</p>
+<h3 id="function-body"><a class="header" href="#function-body">Function body</a></h3>
+<p>A function's body is an expression block. The return value of the function is the last value in the sequence</p>
+<pre><code class="language-move=">fun example(): u64 {
+    let x = 0;
+    x = x + 1;
+    x // returns 'x'
+}
+</code></pre>
+<p>See <a href="#returning-values">the section below for more information on returns</a></p>
+<p>For more information on expression blocks, see <a href="./variables.html">Move variables</a>.</p>
+<h3 id="native-functions"><a class="header" href="#native-functions">Native Functions</a></h3>
+<p>Some functions do not have a body specified, and instead have the body provided by the VM. These functions are marked <code>native</code>.</p>
+<p>Without modifying the VM source code, a programmer cannot add new native functions. Furthermore, it is the intent that <code>native</code> functions are used for either standard library code or for functionality needed for the given Move environment.</p>
+<p>Most <code>native</code> functions you will likely see are in standard library code such as <code>Vector</code></p>
+<pre><code class="language-move=">module Std::Vector {
+    native public fun empty&lt;Element&gt;(): vector&lt;Element&gt;;
+    ...
+}
+</code></pre>
+<h2 id="calling"><a class="header" href="#calling">Calling</a></h2>
+<p>When calling a function, the name can be specified either through an alias or fully qualified</p>
+<pre><code class="language-move=">address 0x42 {
+module Example {
+    public fun zero(): u64 { 0 }
+}
+}
+
+script {
+    use 0x42::Example::{Self, zero};
+    fun call_zero() {
+        // With the `use` above all of these calls are equivalent
+        0x42::Example::zero();
+        Example::zero();
+        zero();
+    }
+}
+</code></pre>
+<p>When calling a function, an argument must be given for every parameter.</p>
+<pre><code class="language-move=">address 0x42 {
+module Example {
+    public fun takes_none(): u64 { 0 }
+    public fun takes_one(x: u64): u64 { x }
+    public fun takes_two(x: u64, y: u64): u64 { x + y }
+    public fun takes_three(x: u64, y: u64, z: u64): u64 { x + y + z }
+}
+}
+
+script {
+    use 0x42::Example;
+    fun call_all() {
+        Example::takes_none();
+        Example::takes_one(0);
+        Example::takes_two(0, 1);
+        Example::takes_three(0, 1, 2);
+    }
+}
+</code></pre>
+<p>Type arguments can be either specified or inferred. Both calls are equivalent.</p>
+<pre><code class="language-move=">address 0x42 {
+module Example {
+    public fun id&lt;T&gt;(x: T): T { x }
+}
+}
+
+script {
+    use 0x42::Example;
+    fun call_all() {
+        Example::id(0);
+        Example::id&lt;u64&gt;(0);
+    }
+}
+</code></pre>
+<p>For more details, see <a href="./generics.html">Move generics</a>.</p>
+<h2 id="returning-values"><a class="header" href="#returning-values">Returning values</a></h2>
+<p>The result of a function, its &quot;return value&quot;, is the final value of its function body. For example</p>
+<pre><code class="language-move=">fun add(x: u64, y: u64): u64 {
+    x + y
+}
+</code></pre>
+<p><a href="#function-body">As mentioned above</a>, the function's body is an <a href="./variables.html">expression block</a>. The expression block can sequence various statements, and the final expression in the block will be be the value of that block</p>
+<pre><code class="language-move=">fun double_and_add(x: u64, y: u64): u64 {
+    let double_x = x * 2;
+    let double_y = y * 2;
+    double_x + double_y
+}
+</code></pre>
+<p>The return value here is <code>double_x + double_y</code></p>
+<h3 id="return-expression"><a class="header" href="#return-expression"><code>return</code> expression</a></h3>
+<p>A function implicitly returns the value that its body evaluates to. However, functions can also use the explicit <code>return</code> expression:</p>
+<pre><code class="language-move">fun f1(): u64 { return 0 }
+fun f2(): u64 { 0 }
+</code></pre>
+<p>These two functions are equivalent. In this slightly more involved example, the function subtracts two <code>u64</code> values, but returns early with <code>0</code> if the second value is too large:</p>
+<pre><code class="language-move=">fun safe_sub(x: u64, y: u64): u64 {
+    if (y &gt; x) return 0;
+    x - y
+}
+</code></pre>
+<p>Note that the body of this function could also have been written as <code>if (y &gt; x) 0 else x - y</code>.</p>
+<p>However <code>return</code> really shines is in exiting deep within other control flow constructs. In this example, the function iterates through a vector to find the index of a given value:</p>
+<pre><code class="language-move=">use Std::Vector;
+use Std::Option::{Self, Option};
+fun index_of&lt;T&gt;(v: &amp;vector&lt;T&gt;, target: &amp;T): Option&lt;u64&gt; {
+    let i = 0;
+    let n = Vector::length(v);
+    while (i &lt; n) {
+        if (Vector::borrow(v, i) == target) return Option::some(i);
+        i = i + 1
+    };
+
+    Option::none()
+}
+</code></pre>
+<p>Using <code>return</code> without an argument is shorthand for <code>return ()</code>. That is, the following two functions are equivalent:</p>
+<pre><code class="language-move">fun foo() { return }
+fun foo() { return () }
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="loops.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="structs-and-resources.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a rel="prev" href="loops.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="structs-and-resources.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>

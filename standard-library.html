@@ -1,0 +1,547 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Standard Library</title>
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="favicon.png">
+        
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        
+        <link rel="stylesheet" href="css/print.css" media="print">
+        
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="modules-and-scripts.html"><strong aria-hidden="true">1.</strong> Modules and Scripts</a></li><li class="chapter-item expanded "><a href="creating-coins.html"><strong aria-hidden="true">2.</strong> First Tutorial: Creating Coins</a></li><li class="chapter-item expanded "><a href="integers.html"><strong aria-hidden="true">3.</strong> Integers</a></li><li class="chapter-item expanded "><a href="bool.html"><strong aria-hidden="true">4.</strong> Bool</a></li><li class="chapter-item expanded "><a href="address.html"><strong aria-hidden="true">5.</strong> Address</a></li><li class="chapter-item expanded "><a href="vector.html"><strong aria-hidden="true">6.</strong> Vector</a></li><li class="chapter-item expanded "><a href="signer.html"><strong aria-hidden="true">7.</strong> Signer</a></li><li class="chapter-item expanded "><a href="references.html"><strong aria-hidden="true">8.</strong> References</a></li><li class="chapter-item expanded "><a href="tuples.html"><strong aria-hidden="true">9.</strong> Tuples and Unit</a></li><li class="chapter-item expanded "><a href="variables.html"><strong aria-hidden="true">10.</strong> Local Variables and Scopes</a></li><li class="chapter-item expanded "><a href="equality.html"><strong aria-hidden="true">11.</strong> Equality</a></li><li class="chapter-item expanded "><a href="abort-and-assert.html"><strong aria-hidden="true">12.</strong> Abort and Assert</a></li><li class="chapter-item expanded "><a href="conditionals.html"><strong aria-hidden="true">13.</strong> Conditionals</a></li><li class="chapter-item expanded "><a href="loops.html"><strong aria-hidden="true">14.</strong> While and Loop</a></li><li class="chapter-item expanded "><a href="functions.html"><strong aria-hidden="true">15.</strong> Functions</a></li><li class="chapter-item expanded "><a href="structs-and-resources.html"><strong aria-hidden="true">16.</strong> Structs and Resources</a></li><li class="chapter-item expanded "><a href="constants.html"><strong aria-hidden="true">17.</strong> Constants</a></li><li class="chapter-item expanded "><a href="generics.html"><strong aria-hidden="true">18.</strong> Generics</a></li><li class="chapter-item expanded "><a href="abilities.html"><strong aria-hidden="true">19.</strong> Type Abilities</a></li><li class="chapter-item expanded "><a href="uses.html"><strong aria-hidden="true">20.</strong> Uses and Aliases</a></li><li class="chapter-item expanded "><a href="friends.html"><strong aria-hidden="true">21.</strong> Friends</a></li><li class="chapter-item expanded "><a href="global-storage-structure.html"><strong aria-hidden="true">22.</strong> Global Storage Structure</a></li><li class="chapter-item expanded "><a href="global-storage-operators.html"><strong aria-hidden="true">23.</strong> Global Storage Operators</a></li><li class="chapter-item expanded "><a href="standard-library.html" class="active"><strong aria-hidden="true">24.</strong> Standard Library</a></li><li class="chapter-item expanded "><a href="coding-conventions.html"><strong aria-hidden="true">25.</strong> Coding Conventions</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title"></h1>
+
+                    <div class="right-buttons">
+                        
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                        
+                        
+
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="standard-library"><a class="header" href="#standard-library">Standard Library</a></h1>
+<p>The Move standard library exposes interfaces that implement the following functionality:</p>
+<ul>
+<li><a href="#vector">Basic operations on vectors</a>.</li>
+<li><a href="#option">Option types and operations on<code>Option</code> types</a>.</li>
+<li><a href="#errors">A common error encoding code interface for abort codes</a>.</li>
+<li><a href="#fixedpoint32">32-bit precision fixed-point numbers</a>.</li>
+</ul>
+<h2 id="vector"><a class="header" href="#vector">Vector</a></h2>
+<p>The <code>Vector</code> module defines a number of operations over the primitive
+<a href="./vector.html"><code>vector</code></a> type. The module is published under the
+named address <code>Std</code> and consists of a number of native functions, as
+well as functions defined in Move. The API for this module is as follows.</p>
+<h3 id="functions"><a class="header" href="#functions">Functions</a></h3>
+<hr />
+<p>Create an empty <a href="./vector.html"><code>vector</code></a>.
+The <code>Element</code> type can be both a <code>resource</code> or <code>copyable</code> type.</p>
+<pre><code class="language-move">    native public fun empty&lt;Element&gt;(): vector&lt;Element&gt;;
+</code></pre>
+<hr />
+<p>Create a vector of length <code>1</code> containing the passed in <code>element</code>.</p>
+<pre><code class="language-move">    public fun singleton&lt;Element&gt;(e: Element): vector&lt;Element&gt;;
+</code></pre>
+<hr />
+<p>Destroy (deallocate) the vector <code>v</code>. Will abort if <code>v</code> is non-empty.
+<em>Note</em>: The emptiness restriction is due to the fact that <code>Element</code> can be a
+resource type, and destruction of a non-empty vector would violate
+<a href="./structs-and-resources.html">resource conservation</a>.</p>
+<pre><code class="language-move">    native public fun destroy_empty&lt;Element&gt;(v: vector&lt;Element&gt;);
+</code></pre>
+<hr />
+<p>Acquire an <a href="./references.html">immutable reference</a> to the <code>i</code>th element of the vector <code>v</code>.  Will abort if
+the index <code>i</code> is out of bounds for the vector <code>v</code>.</p>
+<pre><code class="language-move">    native public fun borrow&lt;Element&gt;(v: &amp;vector&lt;Element&gt;, i: u64): &amp;Element;
+</code></pre>
+<hr />
+<p>Acquire a <a href="./references.html">mutable reference</a>
+to the <code>i</code>th element of the vector <code>v</code>.  Will abort if
+the index <code>i</code> is out of bounds for the vector <code>v</code>.</p>
+<pre><code class="language-move">    native public fun borrow_mut&lt;Element&gt;(v: &amp;mut vector&lt;Element&gt;, i: u64): &amp;mut Element;
+</code></pre>
+<hr />
+<p>Empty and destroy the <code>other</code> vector, and push each of the elements in
+the <code>other</code> vector onto the <code>lhs</code> vector in the same order as they occurred in <code>other</code>.</p>
+<pre><code class="language-move">    public fun append&lt;Element&gt;(lhs: &amp;mut vector&lt;Element&gt;, other: vector&lt;Element&gt;);
+</code></pre>
+<hr />
+<p>Push an element <code>e</code> of type <code>Element</code> onto the end of the vector <code>v</code>. May
+trigger a resizing of the underlying vector's memory.</p>
+<pre><code class="language-move">    native public fun push_back&lt;Element&gt;(v: &amp;mut vector&lt;Element&gt;, e: Element);
+</code></pre>
+<hr />
+<p>Pop an element from the end of the vector <code>v</code> in-place and return the owned
+value. Will abort if <code>v</code> is empty.</p>
+<pre><code class="language-move">    native public fun pop_back&lt;Element&gt;(v: &amp;mut vector&lt;Element&gt;): Element;
+</code></pre>
+<hr />
+<p>Remove the element at index <code>i</code> in the vector <code>v</code> and return the owned value
+that was previously stored at <code>i</code> in <code>v</code>. All elements occurring at indices
+greater than <code>i</code> will be shifted down by 1. Will abort if <code>i</code> is out of bounds
+for <code>v</code>.</p>
+<pre><code class="language-move">    public fun remove&lt;Element&gt;(v: &amp;mut vector&lt;Element&gt;, i: u64): Element;
+</code></pre>
+<hr />
+<p>Swap the <code>i</code>th element of the vector <code>v</code> with the last element and then pop
+this element off of the back of the vector and return the owned value that
+was previously stored at index <code>i</code>.
+This operation is O(1), but does not preserve ordering of elements in the vector.
+Aborts if the index <code>i</code> is out of bounds for the vector <code>v</code>.</p>
+<pre><code class="language-move">    public fun swap_remove&lt;Element&gt;(v: &amp;mut vector&lt;Element&gt;, i: u64): Element;
+</code></pre>
+<hr />
+<p>Swap the elements at the <code>i</code>'th and <code>j</code>'th indices in the vector <code>v</code>. Will
+abort if either of <code>i</code> or <code>j</code> are out of bounds for <code>v</code>.</p>
+<pre><code class="language-move">    native public fun swap&lt;Element&gt;(v: &amp;mut vector&lt;Element&gt;, i: u64, j: u64);
+</code></pre>
+<hr />
+<p>Reverse the order of the elements in the vector <code>v</code> in-place.</p>
+<pre><code class="language-move">    public fun reverse&lt;Element&gt;(v: &amp;mut vector&lt;Element&gt;);
+</code></pre>
+<hr />
+<p>Return the index of the first occurrence of an element in <code>v</code> that is
+equal to <code>e</code>. Returns <code>(true, index)</code> if such an element was found, and
+<code>(false, 0)</code> otherwise.</p>
+<pre><code class="language-move">    public fun index_of&lt;Element&gt;(v: &amp;vector&lt;Element&gt;, e: &amp;Element): (bool, u64);
+</code></pre>
+<hr />
+<p>Return if an element equal to <code>e</code> exists in the vector <code>v</code>.</p>
+<pre><code class="language-move">    public fun contains&lt;Element&gt;(v: &amp;vector&lt;Element&gt;, e: &amp;Element): bool;
+</code></pre>
+<hr />
+<p>Return the length of a <code>vector</code>.</p>
+<pre><code class="language-move">    native public fun length&lt;Element&gt;(v: &amp;vector&lt;Element&gt;): u64;
+</code></pre>
+<hr />
+<p>Return whether the vector <code>v</code> is empty.</p>
+<pre><code class="language-move">    public fun is_empty&lt;Element&gt;(v: &amp;vector&lt;Element&gt;): bool;
+</code></pre>
+<hr />
+<h2 id="option"><a class="header" href="#option">Option</a></h2>
+<p>The <code>Option</code> module defines a generic option type <code>Option&lt;T&gt;</code> that represents a
+value of type <code>T</code> that may, or may not, be present. It is published under the named address <code>Std</code>.</p>
+<p>The Move option type is internally represented as a singleton vector, and may
+contain a value of <code>resource</code> or <code>copyable</code> kind.  If you are familiar with option
+types in other languages, the Move <code>Option</code> behaves similarly to those with a
+couple notable exceptions since the option can contain a value of kind <code>resource</code>.
+Particularly, certain operations such as <code>get_with_default</code> and
+<code>destroy_with_default</code> require that the element type <code>T</code> be of <code>copyable</code> kind.</p>
+<p>The API for the <code>Option</code> module is as as follows</p>
+<h3 id="types"><a class="header" href="#types">Types</a></h3>
+<p>Generic type abstraction of a value that may, or may not, be present. Can contain
+a value of either <code>resource</code> or <code>copyable</code> kind.</p>
+<pre><code class="language-move">    struct Option&lt;T&gt;;
+</code></pre>
+<h3 id="functions-1"><a class="header" href="#functions-1">Functions</a></h3>
+<p>Create an empty <code>Option</code> of that can contain a value of <code>Element</code> type.</p>
+<pre><code class="language-move">    public fun none&lt;Element&gt;(): Option&lt;Element&gt;;
+</code></pre>
+<hr />
+<p>Create a non-empty <code>Option</code> type containing a value <code>e</code> of type <code>Element</code>.</p>
+<pre><code class="language-move">    public fun some&lt;Element&gt;(e: T): Option&lt;Element&gt;;
+</code></pre>
+<hr />
+<p>Return an immutable reference to the value inside the option <code>opt_elem</code>
+Will abort if <code>opt_elem</code> does not contain a value.</p>
+<pre><code class="language-move">    public fun borrow&lt;Element&gt;(opt_elem: &amp;Option&lt;Element&gt;): &amp;Element;
+</code></pre>
+<hr />
+<p>Return a reference to the value inside <code>opt_elem</code> if it contains one. If
+<code>opt_elem</code> does not contain a value the passed in <code>default_ref</code> reference will be returned.
+Does not abort.</p>
+<pre><code class="language-move">    public fun borrow_with_default&lt;Element&gt;(opt_elem: &amp;Option&lt;Element&gt;, default_ref: &amp;Element): &amp;Element;
+</code></pre>
+<hr />
+<p>Return a mutable reference to the value inside <code>opt_elem</code>. Will abort if
+<code>opt_elem</code> does not contain a value.</p>
+<pre><code class="language-move">    public fun borrow_mut&lt;Element&gt;(opt_elem: &amp;mut Option&lt;Element&gt;): &amp;mut Element;
+</code></pre>
+<hr />
+<p>Convert an option value that contains a value to one that is empty in-place by
+removing and returning the value stored inside <code>opt_elem</code>.
+Will abort if <code>opt_elem</code> does not contain a value.</p>
+<pre><code class="language-move">    public fun extract&lt;Element&gt;(opt_elem: &amp;mut Option&lt;Element&gt;): Element;
+</code></pre>
+<hr />
+<p>Return the value contained inside the option <code>opt_elem</code> if it contains one.
+Will return the passed in <code>default</code> value if <code>opt_elem</code> does not contain a
+value. The <code>Element</code> type that the <code>Option</code> type is instantiated with must be
+of <code>copyable</code> kind in order for this function to be callable.</p>
+<pre><code class="language-move">    public fun get_with_default&lt;Element: copyable&gt;(opt_elem: &amp;Option&lt;Element&gt;, default: Element): Element;
+</code></pre>
+<hr />
+<p>Convert an empty option <code>opt_elem</code> to an option value that contains the value <code>e</code>.
+Will abort if <code>opt_elem</code> already contains a value.</p>
+<pre><code class="language-move">    public fun fill&lt;Element&gt;(opt_elem: &amp;mut Option&lt;Element&gt;, e: Element);
+</code></pre>
+<hr />
+<p>Swap the value currently contained in <code>opt_elem</code> with <code>new_elem</code> and return the
+previously contained value. Will abort if <code>opt_elem</code> does not contain a value.</p>
+<pre><code class="language-move">    public fun swap&lt;Element&gt;(opt_elem: &amp;mut Option&lt;Element&gt;, e: Element): Element;
+</code></pre>
+<hr />
+<p>Return true if <code>opt_elem</code> contains a value equal to the value of <code>e_ref</code>.
+Otherwise, <code>false</code> will be returned.</p>
+<pre><code class="language-move">    public fun contains&lt;Element&gt;(opt_elem: &amp;Option&lt;Element&gt;, e_ref: &amp;Element): bool;
+</code></pre>
+<hr />
+<p>Return <code>true</code> if <code>opt_elem</code> does not contain a value.</p>
+<pre><code class="language-move">    public fun is_none&lt;Element&gt;(opt_elem: &amp;Option&lt;Element&gt;): bool;
+</code></pre>
+<hr />
+<p>Return <code>true</code> if <code>opt_elem</code> contains a value.</p>
+<pre><code class="language-move">    public fun is_some&lt;Element&gt;(opt_elem: &amp;Option&lt;Element&gt;): bool;
+</code></pre>
+<hr />
+<p>Unpack <code>opt_elem</code> and return the value that it contained.
+Will abort if <code>opt_elem</code> does not contain a value.</p>
+<pre><code class="language-move">    public fun destroy_some&lt;Element&gt;(opt_elem: Option&lt;Element&gt;): Element;
+</code></pre>
+<hr />
+<p>Destroys the <code>opt_elem</code> value passed in. If <code>opt_elem</code> contained a value it
+will be returned otherwise, the passed in <code>default</code> value will be returned.</p>
+<pre><code class="language-move">    public fun destroy_with_default&lt;Element: copyable&gt;(opt_elem: Option&lt;Element&gt;, default: Element): Element;
+</code></pre>
+<hr />
+<p>Destroys the <code>opt_elem</code> value passed in, <code>opt_elem</code> must be empty and not
+contain a value. Will abort if <code>opt_elem</code> contains a value.</p>
+<pre><code class="language-move">    public fun destroy_none&lt;Element&gt;(opt_elem: Option&lt;Element&gt;);
+</code></pre>
+<h2 id="errors"><a class="header" href="#errors">Errors</a></h2>
+<p>Recall that each abort code in Move is represented as an unsigned 64-bit integer. The <code>Errors</code> module defines a common interface that can be used to &quot;tag&quot; each of these abort codes so that they can represent both the error <strong>category</strong> along with an error <strong>reason</strong>.</p>
+<p>Error categories are declared as constants in the <code>Errors</code> module and are globally unique with respect to this module. Error reasons on the other hand are module-specific error codes, and can provide greater detail (perhaps, even a particular <em>reason</em>) about the specific error condition. This representation of a category and reason for each error code is done by dividing the abort code into two sections.</p>
+<p>The lower 8 bits of the abort code hold the <em>error category</em>. The remaining 56 bits of the abort code hold the <em>error reason</em>.
+The reason should be a unique number relative to the module which raised the error and can be used to obtain more information about the error at hand. It should mostly be used for diagnostic purposes as error reasons may change over time if the module is updated.</p>
+<table><thead><tr><th>Category</th><th>Reason</th></tr></thead><tbody>
+<tr><td>8 bits</td><td>56 bits</td></tr>
+</tbody></table>
+<p>Since error categories are globally stable, these present the most stable API and should in general be what is used by clients to determine the messages they may present to users (whereas the reason is useful for diagnostic purposes). There are public functions in the <code>Errors</code> module for creating an abort code of each error category with a specific <code>reason</code> number (represented as a <code>u64</code>).</p>
+<h3 id="constants"><a class="header" href="#constants">Constants</a></h3>
+<p>The system is in a state where the performed operation is not allowed.</p>
+<pre><code class="language-move">    const INVALID_STATE: u8 = 1;
+</code></pre>
+<hr />
+<p>A specific account address was required to perform an operation, but a different address from what was expected was encounterd.</p>
+<pre><code class="language-move">    const REQUIRES_ADDRESS: u8 = 2;
+</code></pre>
+<hr />
+<p>An account did not have the expected  role for this operation. Useful for Role Based Access Control (RBAC) error conditions.</p>
+<pre><code class="language-move">    const REQUIRES_ROLE: u8 = 3;
+</code></pre>
+<hr />
+<p>An account did not not have a required capability. Useful for RBAC error conditions.</p>
+<pre><code class="language-move">    const REQUIRES_CAPABILITY: u8 = 4;
+</code></pre>
+<hr />
+<p>A resource was expected, but did not exist under an address.</p>
+<pre><code class="language-move">    const NOT_PUBLISHED: u8 = 5;
+</code></pre>
+<hr />
+<p>Attempted to publish a resource under an address where one was already published.</p>
+<pre><code class="language-move">    const ALREADY_PUBLISHED: u8 = 6;
+</code></pre>
+<hr />
+<p>An argument provided for an operation was invalid.</p>
+<pre><code class="language-move">    const INVALID_ARGUMENT: u8 = 7;
+</code></pre>
+<hr />
+<p>A limit on a value was exceeded.</p>
+<pre><code class="language-move">    const LIMIT_EXCEEDED: u8 = 8;
+</code></pre>
+<hr />
+<p>An internal error (bug) has occurred.</p>
+<pre><code class="language-move">    const INTERNAL: u8 = 10;
+</code></pre>
+<hr />
+<p>A custom error category for extension points.</p>
+<pre><code class="language-move">    const CUSTOM: u8 = 255;
+</code></pre>
+<hr />
+<h3 id="functions-2"><a class="header" href="#functions-2">Functions</a></h3>
+<p>Should be used in the case where invalid (global) state is encountered. Constructs an abort code with specified <code>reason</code> and category <code>INVALID_STATE</code>. Will abort if <code>reason</code> does not fit in 56 bits.</p>
+<pre><code class="language-move">    public fun invalid_state(reason: u64): u64;
+</code></pre>
+<hr />
+<p>Should be used if an account's address does not match a specific address. Constructs an abort code with specified <code>reason</code> and category <code>REQUIRES_ADDRESS</code>. Will abort if <code>reason</code> does not fit in 56 bits.</p>
+<pre><code class="language-move">    public fun requires_address(reason: u64): u64;
+</code></pre>
+<hr />
+<p>Should be used if a role did not match a required role when using RBAC. Constructs an abort code with specified <code>reason</code> and category <code>REQUIRES_ROLE</code>. Will abort if <code>reason</code> does not fit in 56 bits.</p>
+<pre><code class="language-move">    public fun requires_role(reason: u64): u64;
+</code></pre>
+<hr />
+<p>Should be used if an account did not have a required capability when using RBAC. Constructs an abort code with specified <code>reason</code> and category <code>REQUIRES_CAPABILITY</code>. Should be Will abort if <code>reason</code> does not fit in 56 bits.</p>
+<pre><code class="language-move">    public fun requires_capability(reason: u64): u64;
+</code></pre>
+<hr />
+<p>Should be used if a resource did not exist where one was expected. Constructs an abort code with specified <code>reason</code> and category <code>NOT_PUBLISHED</code>. Will abort if <code>reason</code> does not fit in 56 bits.</p>
+<pre><code class="language-move">    public fun not_published(reason: u64): u64;
+</code></pre>
+<hr />
+<p>Should be used if a resource already existed where one was about to be published. Constructs an abort code with specified <code>reason</code> and category <code>ALREADY_PUBLISHED</code>. Will abort if <code>reason</code> does not fit in 56 bits.</p>
+<pre><code class="language-move">    public fun already_published(reason: u64): u64;
+</code></pre>
+<hr />
+<p>Should be used if an invalid argument was passed to a function/operation. Constructs an abort code with specified <code>reason</code> and category <code>INVALID_ARGUMENT</code>. Will abort if <code>reason</code> does not fit in 56 bits.</p>
+<pre><code class="language-move">    public fun invalid_argument(reason: u64): u64;
+</code></pre>
+<hr />
+<p>Should be used if a limit on a specific value is reached, e.g., subtracting 1 from a value of 0. Constructs an abort code with specified <code>reason</code> and category <code>LIMIT_EXCEEDED</code>. Will abort if <code>reason</code> does not fit in 56 bits.</p>
+<pre><code class="language-move">    public fun limit_exceeded(reason: u64): u64;
+</code></pre>
+<hr />
+<p>Should be used if an internal error or bug was encountered. Constructs an abort code with specified <code>reason</code> and category <code>INTERNAL</code>. Will abort if <code>reason</code> does not fit in 56 bits.</p>
+<pre><code class="language-move">    public fun internal(reason: u64): u64;
+</code></pre>
+<hr />
+<p>Used for extension points, should be not used under most circumstances. Constructs an abort code with specified <code>reason</code> and category <code>CUSTOM</code>. Will abort if <code>reason</code> does not fit in 56 bits.</p>
+<pre><code class="language-move">    public fun custom(reason: u64): u64;
+</code></pre>
+<hr />
+<h2 id="fixedpoint32"><a class="header" href="#fixedpoint32">FixedPoint32</a></h2>
+<p>The <code>FixedPoint32</code> module defines a fixed-point numeric type with 32 integer bits and 32 fractional bits. Internally, this is represented as a <code>u64</code> integer wrapped in a struct to make a unique <code>FixedPoint32</code> type. Since the numeric representation is a binary one, some decimal values may not be exactly representable, but it provides more than 9 decimal digits of precision both before and after the decimal point (18 digits total). For comparison, double precision floating-point has less than 16 decimal digits of precision, so you should be careful about using floating-point to convert these values to decimal.</p>
+<h3 id="types-1"><a class="header" href="#types-1">Types</a></h3>
+<p>Represents a fixed-point numeric number with 32 fractional bits.</p>
+<pre><code class="language-move">    struct FixedPoint32;
+</code></pre>
+<h3 id="functions-3"><a class="header" href="#functions-3">Functions</a></h3>
+<p>Multiply a u64 integer by a fixed-point number, truncating any fractional part of the product. This will abort if the product overflows.</p>
+<pre><code class="language-move">    public fun multiply_u64(val: u64, multiplier: FixedPoint32): u64;
+</code></pre>
+<hr />
+<p>Divide a u64 integer by a fixed-point number, truncating any fractional part of the quotient. This will abort if the divisor is zero or if the quotient overflows.</p>
+<pre><code class="language-move">    public fun divide_u64(val: u64, divisor: FixedPoint32): u64;
+</code></pre>
+<hr />
+<p>Create a fixed-point value from a rational number specified by its numerator and denominator. Calling this function should be preferred for using <code>FixedPoint32::create_from_raw_value</code> which is also available. This will abort if the denominator is zero. It will also abort if the numerator is nonzero and the ratio is not in the range $2^{-32}\ldots2^{32}-1$. When specifying decimal fractions, be careful about rounding errors: if you round to display $N$ digits after the decimal point, you can use a denominator of $10^N$ to avoid numbers where the very small imprecision in the binary representation could change the rounding, e.g., 0.0125 will round down to 0.012 instead of up to 0.013.</p>
+<pre><code class="language-move">    public fun create_from_rational(numerator: u64, denominator: u64): FixedPoint32;
+</code></pre>
+<hr />
+<p>Create a fixedpoint value from a raw <code>u64</code> value.</p>
+<pre><code class="language-move">    public fun create_from_raw_value(value: u64): FixedPoint32;
+</code></pre>
+<hr />
+<p>Returns <code>true</code> if the decimal value of <code>num</code> is equal to zero.</p>
+<pre><code class="language-move">    public fun is_zero(num: FixedPoint32): bool;
+</code></pre>
+<hr />
+<p>Accessor for the raw <code>u64</code> value. Other less common operations, such as adding or subtracting <code>FixedPoint32</code> values, can be done using the raw values directly.</p>
+<pre><code class="language-move">    public fun get_raw_value(num: FixedPoint32): u64;
+</code></pre>
+<hr />
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="global-storage-operators.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="coding-conventions.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a rel="prev" href="global-storage-operators.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="coding-conventions.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>

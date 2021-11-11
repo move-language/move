@@ -1,0 +1,413 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Packages</title>
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="modules-and-scripts.html"><strong aria-hidden="true">1.</strong> Modules and Scripts</a></li><li class="chapter-item expanded "><a href="creating-coins.html"><strong aria-hidden="true">2.</strong> First Tutorial: Creating Coins</a></li><li class="chapter-item expanded "><a href="integers.html"><strong aria-hidden="true">3.</strong> Integers</a></li><li class="chapter-item expanded "><a href="bool.html"><strong aria-hidden="true">4.</strong> Bool</a></li><li class="chapter-item expanded "><a href="address.html"><strong aria-hidden="true">5.</strong> Address</a></li><li class="chapter-item expanded "><a href="vector.html"><strong aria-hidden="true">6.</strong> Vector</a></li><li class="chapter-item expanded "><a href="signer.html"><strong aria-hidden="true">7.</strong> Signer</a></li><li class="chapter-item expanded "><a href="references.html"><strong aria-hidden="true">8.</strong> References</a></li><li class="chapter-item expanded "><a href="tuples.html"><strong aria-hidden="true">9.</strong> Tuples and Unit</a></li><li class="chapter-item expanded "><a href="variables.html"><strong aria-hidden="true">10.</strong> Local Variables and Scopes</a></li><li class="chapter-item expanded "><a href="equality.html"><strong aria-hidden="true">11.</strong> Equality</a></li><li class="chapter-item expanded "><a href="abort-and-assert.html"><strong aria-hidden="true">12.</strong> Abort and Assert</a></li><li class="chapter-item expanded "><a href="conditionals.html"><strong aria-hidden="true">13.</strong> Conditionals</a></li><li class="chapter-item expanded "><a href="loops.html"><strong aria-hidden="true">14.</strong> While and Loop</a></li><li class="chapter-item expanded "><a href="functions.html"><strong aria-hidden="true">15.</strong> Functions</a></li><li class="chapter-item expanded "><a href="structs-and-resources.html"><strong aria-hidden="true">16.</strong> Structs and Resources</a></li><li class="chapter-item expanded "><a href="constants.html"><strong aria-hidden="true">17.</strong> Constants</a></li><li class="chapter-item expanded "><a href="generics.html"><strong aria-hidden="true">18.</strong> Generics</a></li><li class="chapter-item expanded "><a href="abilities.html"><strong aria-hidden="true">19.</strong> Type Abilities</a></li><li class="chapter-item expanded "><a href="uses.html"><strong aria-hidden="true">20.</strong> Uses and Aliases</a></li><li class="chapter-item expanded "><a href="friends.html"><strong aria-hidden="true">21.</strong> Friends</a></li><li class="chapter-item expanded "><a href="packages.html" class="active"><strong aria-hidden="true">22.</strong> Packages</a></li><li class="chapter-item expanded "><a href="global-storage-structure.html"><strong aria-hidden="true">23.</strong> Global Storage Structure</a></li><li class="chapter-item expanded "><a href="global-storage-operators.html"><strong aria-hidden="true">24.</strong> Global Storage Operators</a></li><li class="chapter-item expanded "><a href="standard-library.html"><strong aria-hidden="true">25.</strong> Standard Library</a></li><li class="chapter-item expanded "><a href="coding-conventions.html"><strong aria-hidden="true">26.</strong> Coding Conventions</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title"></h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="packages"><a class="header" href="#packages">Packages</a></h1>
+<p>Packages allow Move programmers to more easily re-use code and share it
+across projects. The Move package system allows programmers to easily:</p>
+<ul>
+<li>Define a package containing Move code;</li>
+<li>Parameterize a package by <a href="./address.html">named addresses</a>;</li>
+<li>Import and use packages in other Move code and instantiate named addresses;</li>
+<li>Build packages and generate associated compilation artifacts from packages; and</li>
+<li>Work with a common interface around compiled Move artifacts.</li>
+</ul>
+<h2 id="package-layout-and-manifest-syntax"><a class="header" href="#package-layout-and-manifest-syntax">Package Layout and Manifest Syntax</a></h2>
+<p>A Move package source directory contains a <code>Move.toml</code> package manifest
+file along with a set of subdirectories:</p>
+<pre><code>a_move_package
+├── Move.toml      (required)
+├── sources        (required)
+├── examples       (optional, test &amp; dev mode)
+├── scripts        (optional)
+├── doc_templates  (optional)
+└── tests          (optional, test mode)
+</code></pre>
+<p>The directories marked <code>required</code> <em>must</em> be present in order for the directory
+to be considered a Move package and to be compiled. Optional directories can
+be present, and if so will be included in the compilation process. Depending on
+the mode that the package is built with (<code>test</code> or <code>dev</code>), the <code>tests</code> and
+<code>examples</code> directories will be included as well.</p>
+<p>The <code>sources</code> directory can contain both Move modules and Move scripts (both
+transaction scripts and modules containing script functions). The <code>examples</code>
+directory can hold additional code to be used only for development and/or
+tutorial purposes that will not be included when compiled outside <code>test</code> or
+<code>dev</code> mode.</p>
+<p>A <code>scripts</code> directory is supported so transaction scripts can be separated
+from modules if that is desired by the package author. The <code>scripts</code>
+directory will always be included for compilation if it is present.
+Documentation will be built using any documentation templates present in
+the <code>doc_templates</code> directory.</p>
+<h3 id="movetoml"><a class="header" href="#movetoml">Move.toml</a></h3>
+<p>The Move package manifest is defined within the <code>Move.toml</code> file and has the
+following syntax. Optional fields are marked with <code>*</code>, <code>+</code> denotes
+one or more elements:</p>
+<pre><code>[package]
+name = &lt;string&gt;                  # e.g., &quot;MoveStdlib&quot;
+version = &quot;&lt;uint&gt;.&lt;uint&gt;.&lt;uint&gt;&quot; # e.g., &quot;0.1.1&quot;
+license* = &lt;string&gt;              # e.g., &quot;MIT&quot;, &quot;GPL&quot;, &quot;Apache 2.0&quot;
+authors* = [&lt;string&gt;]            # e.g., [&quot;Joe Smith (joesmith@noemail.com)&quot;, &quot;Jane Smith (janesmith@noemail.com)&quot;]
+
+[addresses]  # (Optional section) Declares named addresses in this package and instantiates named addresses in the package graph
+# One or more lines declaring named addresses in the following format
+&lt;addr_name&gt; = &quot;_&quot; | &quot;&lt;hex_address&gt;&quot; # e.g., Std = &quot;_&quot; or Addr = &quot;0xC0FFEECAFE&quot;
+
+[dependencies] # (Optional section) Paths to dependencies and instantiations or renamings of named addresses from each dependency
+# One or more lines declaring dependencies in the following format
+&lt;string&gt; = { local = &lt;string&gt;, addr_subst* = { (&lt;string&gt; = (&lt;string&gt; | &quot;&lt;hex_address&gt;&quot;))+ } }
+
+[dev-addresses] # (Optional section) Same as [addresses] section, but only included in &quot;dev&quot; and &quot;test&quot; modes
+# One or more lines declaring dev named addresses in the following format
+&lt;addr_name&gt; = &quot;_&quot; | &quot;&lt;hex_address&gt;&quot; # e.g., Std = &quot;_&quot; or Addr = &quot;0xC0FFEECAFE&quot;
+
+[dev-dependencies] # (Optional section) Same as [dependencies] section, but only included in &quot;dev&quot; and &quot;test&quot; modes
+# One or more lines declaring dev dependencies in the following format
+&lt;string&gt; = { local = &lt;string&gt;, addr_subst* = { (&lt;string&gt; = (&lt;string&gt; | &lt;address&gt;))+ } }
+</code></pre>
+<p>An example of the most minimal package manifest:</p>
+<pre><code>[package]
+name = &quot;AName&quot;
+version = &quot;0.0.0&quot;
+</code></pre>
+<p>An example of a more standard package manifest that also includes the Move
+standard library and instantiates the named address <code>Std</code> from it with the
+address value <code>0x1</code>:</p>
+<pre><code>[package]
+name = &quot;AName&quot;
+version = &quot;0.0.0&quot;
+license = &quot;Apache 2.0&quot;
+
+[addresses]
+AddressToBeFilledIn = &quot;_&quot;
+SpecifiedAddress = &quot;0xB0B&quot;
+
+[dependencies]
+MoveStdlib = { local = &quot;&lt;some_path&gt;/move-stdlib&quot;, addr_subst = { &quot;Std&quot; = &quot;0x1&quot; } }
+
+[dev-addresses] # For use when developing this module
+AddressToBeFilledIn = &quot;0x101010101&quot;
+</code></pre>
+<p>Most of the sections in the package manifest are self explanatory, but named
+addresses can be a bit difficult to understand so it's worth examining them in
+a bit more detail.</p>
+<h2 id="named-addresses-during-compilation"><a class="header" href="#named-addresses-during-compilation">Named Addresses During Compilation</a></h2>
+<p>Recall that Move has <a href="./address.html">named addresses</a> and that
+named addresses cannot be declared in Move. Because of this, until now
+named addresses and their values needed to be passed to the compiler on the
+command line. With the Move package system this is no longer needed, and
+you can declare named addresses in the package, instantiate other named
+addresses in scope, and rename named addresses from other packages within
+the Move package system manifest file. Let's go through each of these
+individually:</p>
+<h3 id="declaration"><a class="header" href="#declaration">Declaration</a></h3>
+<p>Let's say we have a Move module in <code>example_pkg/sources/A.move</code> as follows:</p>
+<pre><code class="language-move">module NamedAddr::A {
+    public fun x(): address { @NamedAddr }
+}
+</code></pre>
+<p>We could in <code>example_pkg/Move.toml</code> declare the named address <code>NamedAddr</code> in
+two different ways. The first:</p>
+<pre><code>[package]
+name = &quot;ExamplePkg&quot;
+...
+[addresses]
+NamedAddr = &quot;_&quot;
+</code></pre>
+<p>Declares <code>NamedAddr</code> as a named address in the package <code>ExamplePkg</code> and
+that <em>this address can be any valid address value</em>. Therefore an importing
+package can pick the value of the named address <code>NamedAddr</code> to be any address
+it wishes. Intuitively you can think of this as parameterizing the package
+<code>ExamplePkg</code> by the named address <code>NamedAddr</code>, and the package can then be
+instantiated later on by an importing package.</p>
+<p><code>NamedAddr</code> can also be declared as:</p>
+<pre><code>[package]
+name = &quot;ExamplePkg&quot;
+...
+[addresses]
+NamedAddr = &quot;0xCAFE&quot;
+</code></pre>
+<p>which states that the named address <code>NamedAddr</code> is exactly <code>0xCAFE</code> and cannot be
+changed. This is useful so other importing packages can use this named
+address without needing to worry about the exact value assigned to it.</p>
+<p>With these two different declaration methods, there are two ways that
+information about named addresses can flow in the package graph:</p>
+<ul>
+<li>The former (&quot;unassigned named addresses&quot;) allows named address values to flow
+from the importation site to the declaration site.</li>
+<li>The latter (&quot;assigned named addresses&quot;) allows named address values to flow
+from the declaration site upwards in the package graph to usage sites.</li>
+</ul>
+<p>With these two methods for flowing named address information throughout the
+package graph the rules around scoping and renaming become important to
+understand.</p>
+<h2 id="scoping-and-renaming-of-named-addresses"><a class="header" href="#scoping-and-renaming-of-named-addresses">Scoping and Renaming of Named Addresses</a></h2>
+<p>A named address <code>N</code> in a package <code>P</code> is in scope if:</p>
+<ol>
+<li>It declares a named address <code>N</code>; or</li>
+<li>A package in one of <code>P</code>'s transitive dependencies declares the named address
+<code>N</code> and there is a dependency path in the package graph between between <code>P</code> and the
+declaring package of <code>N</code> with no renaming of <code>N</code>.</li>
+</ol>
+<p>Additionally, every named address in a package is exported. Because of this and
+the above scoping rules each package can be viewed as coming with a set of
+named addresses that will be brought into scope when the package is imported,
+e.g., if the <code>ExamplePkg</code> package was imported, that importation would bring
+into scope the <code>NamedAddr</code> named address. Because of this, if <code>P</code> imports two
+packages <code>P1</code> and <code>P2</code> both of which declare a named address <code>N</code> an issue
+arises in <code>P</code>: which &quot;<code>N</code>&quot; is meant when <code>N</code> is referred to in <code>P</code>? The one
+from <code>P1</code> or <code>P2</code>? To prevent this ambiguity around which package a named
+address is coming from, we enforce that the sets of scopes introduced by all
+dependencies in a package are disjoint, and provide a way to <em>rename named
+addresses</em> when the package that brings them into scope is imported.</p>
+<p>Renaming a named address when importing can be done as follows in our <code>P</code>,
+<code>P1</code>, and <code>P2</code> example above:</p>
+<pre><code>[package]
+name = &quot;P&quot;
+...
+[dependencies]
+P1 = { local = &quot;some_path_to_P1&quot;, addr_subst = { &quot;P1N&quot; = &quot;N&quot; } }
+P2 = { local = &quot;some_path_to_P2&quot;  }
+</code></pre>
+<p>With this renaming <code>N</code> refers to the <code>N</code> from <code>P2</code> and <code>P1N</code> will refer to <code>N</code>
+coming from <code>P1</code>:</p>
+<pre><code>module N::A {
+    public fun x(): address { @P1N }
+}
+</code></pre>
+<p>It is important to note that <em>renaming is not local</em>: once a named address <code>N</code>
+has been renamed to <code>N2</code> in a package <code>P</code> all packages that import <code>P</code> will not
+see <code>N</code> but only <code>N2</code> unless <code>N</code> is reintroduced from outside of <code>P</code>. This is
+why rule (2) in the scoping rules at the start of this section specifies a
+&quot;dependency path in the package graph between between <code>P</code> and the declaring
+package of <code>N</code> with no renaming of <code>N</code>.&quot;</p>
+<h3 id="instantiation"><a class="header" href="#instantiation">Instantiation</a></h3>
+<p>Named addresses can be instantiated multiple times across the package graph as
+long as it is always with the same value. It is an error if the same named
+address (regardless of renaming) is instantiated with differing values across
+the package graph.</p>
+<p>A Move package can only be compiled if all named addresses resolve to a value.
+This presents issues if the package wishes to expose an uninstantiated named
+address. This is what the <code>[dev-addresses]</code> section solves. This section can
+set values for named addresses, but cannot introduce any named addresses.
+Additionally, only the <code>[dev-addresses]</code> in the root package are included in
+<code>dev</code> mode. For example a root package with the following manifest would not compile
+outside of <code>dev</code> mode since <code>NamedAddr</code> would be uninstantiated:</p>
+<pre><code>[package]
+name = &quot;ExamplePkg&quot;
+...
+[addresses]
+NamedAddr = &quot;_&quot;
+
+[dev-addresses]
+NamedAddr = &quot;0xC0FFEE&quot;
+</code></pre>
+<h2 id="usage-artifacts-and-data-structures"><a class="header" href="#usage-artifacts-and-data-structures">Usage, Artifacts, and Data Structures</a></h2>
+<p>The Move package system comes with a command line option as part of the Move
+CLI <code>move package &lt;package_flags&gt; &lt;command&gt; &lt;command_flags&gt;</code>. Unless a
+particular path is provided, all package commands will run in the current working
+directory. The full list of commands and flags for the Move Package CLI can be found by
+running <code>move package --help</code>.</p>
+<h3 id="usage"><a class="header" href="#usage">Usage</a></h3>
+<p>A package can be compiled either through the Move CLI commands, or as a library
+command in Rust with the function <code>compile_package</code>. This will create a
+<code>CompiledPackage</code> that holds the compiled bytecode along with other compilation
+artifacts (source maps, documentation, ABIs) in memory. This <code>CompiledPackage</code>
+can be converted to an <code>OnDiskPackage</code> and vice versa -- the latter being the data of
+the <code>CompiledPackage</code> laid out in the file system in the following format:</p>
+<pre><code>a_move_package
+├── Move.toml
+...
+└── build
+    ├── &lt;dep_pkg_name&gt;
+    │   ├── BuildInfo.yaml
+    │   ├── bytecode_modules
+    │   │   └── *.mv
+    │   ├── source_maps
+    │   │   └── *.mvsm
+    │   ├── bytecode_scripts
+    │   │   └── *.mv
+    │   ├── abis
+    │   │   ├── *.abi
+    │   │   └── &lt;module_name&gt;/*.abi
+    │   └── sources
+    │       └── *.move
+    ...
+    └── &lt;dep_pkg_name&gt;
+        ├── BuildInfo.yaml
+        ...
+        └── sources
+</code></pre>
+<p>See the <code>move-package</code> crate for more information on these data structures and
+how to use the Move package system as a Rust library.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="friends.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                            <a rel="next" href="global-storage-structure.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="friends.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                    <a rel="next" href="global-storage-structure.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+    </body>
+</html>

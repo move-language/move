@@ -11,6 +11,7 @@ module 0x2d6.M {
     f(account: signer) {
     label b0:
         move_to<T>(&account, Self.new());
+        return;
     }
 }
 
@@ -33,6 +34,7 @@ module 0x3d6.N {
     f(account: signer) {
     label b0:
         move_to<T>(&account, M.new());
+        return;
     }
 }
 
@@ -43,4 +45,5 @@ import 0x3d6.M;
 main(account: signer) {
 label b0:
     move_to<T>(&account, M.new());
+    return;
 }

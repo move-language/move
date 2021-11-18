@@ -22,6 +22,8 @@ pub trait ControlFlowGraph {
     /// Successors of the block ID in the bytecode vector
     fn successors(&self, block_id: BlockId) -> &Vec<BlockId>;
 
+    fn next_block(&self, block_id: BlockId) -> Option<CodeOffset>;
+
     /// Iterator over the indexes of instructions in this block
     fn instr_indexes(&self, block_id: BlockId) -> Box<dyn Iterator<Item = CodeOffset>>;
 
@@ -34,10 +36,16 @@ pub trait ControlFlowGraph {
     /// Return the id of the entry block for this control-flow graph
     /// Note: even a CFG with no instructions has an (empty) entry block.
     fn entry_block_id(&self) -> BlockId;
+
+    /// Checks if the block ID is a loop head
+    fn is_loop_head(&self, block_id: BlockId) -> bool;
+
+    /// Checks if the the edge from cur->next is a back edge
+    /// returns false if the edge is not in the cfg
+    fn is_back_edge(&self, cur: BlockId, next: BlockId) -> bool;
 }
 
 struct BasicBlock {
-    entry: CodeOffset,
     exit: CodeOffset,
     successors: Vec<BlockId>,
 }
@@ -46,12 +54,16 @@ struct BasicBlock {
 pub struct VMControlFlowGraph {
     /// The basic blocks
     blocks: Map<BlockId, BasicBlock>,
+    /// Basic block ordering for traversal
+    traversal_successors: Map<BlockId, BlockId>,
+    /// Map of loop heads with all of their back edges
+    loop_heads: Map<BlockId, /* back edges */ Set<BlockId>>,
 }
 
 impl BasicBlock {
-    pub fn display(&self) {
+    pub fn display(&self, entry: BlockId) {
         println!("+=======================+");
-        println!("| Enter:  {}            |", self.entry);
+        println!("| Enter:  {}            |", entry);
         println!("+-----------------------+");
         println!("==> Children: {:?}", self.successors);
         println!("+-----------------------+");
@@ -63,7 +75,13 @@ impl BasicBlock {
 const ENTRY_BLOCK_ID: BlockId = 0;
 
 impl VMControlFlowGraph {
+    // Requires checks from the control flow verifier (control_flow.rs)
     pub fn new(code: &[Bytecode]) -> Self {
+        fn is_back_edge(cur_block: BlockId, target_block: BlockId) -> bool {
+            target_block <= cur_block
+        }
+
+        let code_len = code.len() as CodeOffset;
         // First go through and collect block ids, i.e., offsets that begin basic blocks.
         // Need to do this first in order to handle backwards edges.
         let mut block_ids = Set::new();
@@ -73,32 +91,108 @@ impl VMControlFlowGraph {
         }
 
         // Create basic blocks
-        let mut cfg = VMControlFlowGraph { blocks: Map::new() };
+        let mut blocks = Map::new();
         let mut entry = 0;
+        let mut exit_to_entry = Map::new();
         for pc in 0..code.len() {
-            let co_pc: CodeOffset = pc as CodeOffset;
+            let co_pc = pc as CodeOffset;
 
             // Create a basic block
-            if VMControlFlowGraph::is_end_of_block(co_pc, code, &block_ids) {
+            if Self::is_end_of_block(co_pc, code, &block_ids) {
+                let exit = co_pc;
+                exit_to_entry.insert(exit, entry);
                 let successors = Bytecode::get_successors(co_pc, code);
-                let bb = BasicBlock {
-                    entry,
-                    exit: co_pc,
-                    successors,
-                };
-                cfg.blocks.insert(entry, bb);
+                let bb = BasicBlock { exit, successors };
+                blocks.insert(entry, bb);
                 entry = co_pc + 1;
             }
         }
+        let blocks = blocks;
+        assert_eq!(entry, code_len);
 
-        assert_eq!(entry, code.len() as CodeOffset);
-        cfg
+        // Determine traversal order
+        // build a DAG subgraph (remove the loop back edges)
+        let dag: Map<BlockId, Set<BlockId>> = blocks
+            .iter()
+            .map(|(id, block)| {
+                let id = *id;
+                let non_loop_continue_successors = block
+                    .successors
+                    .iter()
+                    // remove the loop back edges
+                    // this simple check for back edges relies on guarantees from the control flow
+                    // verifier (control_flow.rs)
+                    .filter(|successor| !is_back_edge(id, **successor))
+                    .copied()
+                    .collect();
+                (id, non_loop_continue_successors)
+            })
+            .collect();
+        // assert it is a dag
+        debug_assert!(dag.iter().all(|(id, successors)| successors
+            .iter()
+            .all(|successor| !is_back_edge(*id, *successor))));
+
+        // build the post-order traversal
+        let mut post_order = Vec::with_capacity(blocks.len());
+        let mut finished = Set::new();
+        let mut stack = vec![(ENTRY_BLOCK_ID, /* is_first_visit */ true)];
+        while let Some((cur, is_first_visit)) = stack.pop() {
+            if is_first_visit {
+                stack.push((cur, false));
+                stack.extend(
+                    dag[&cur]
+                        .iter()
+                        .filter(|successor| !finished.contains(*successor))
+                        .map(|successor| (*successor, /* is_first_visit */ true)),
+                );
+            } else {
+                debug_assert!(dag[&cur]
+                    .iter()
+                    .all(|successor| finished.contains(successor)));
+                if finished.insert(cur) {
+                    post_order.push(cur)
+                }
+            }
+        }
+        // traversal order is the reverse post-order
+        let traversal_order = {
+            post_order.reverse();
+            post_order
+        };
+        // build a mapping from a block id to the next block id in the traversal order
+        let traversal_successors = traversal_order
+            .windows(2)
+            .map(|window| {
+                debug_assert!(window.len() == 2);
+                (window[0], window[1])
+            })
+            .collect();
+
+        // Gather loop head information
+        let mut loop_heads: Map<BlockId, Set<BlockId>> = Map::new();
+        for (id, block) in &blocks {
+            for successor in &block.successors {
+                // this simple check for back edges relies on guarantees from the control flow
+                // verifier (control_flow.rs)
+                if is_back_edge(*id, *successor) {
+                    loop_heads.entry(*successor).or_default().insert(*id);
+                }
+            }
+        }
+
+        VMControlFlowGraph {
+            blocks,
+            traversal_successors,
+            loop_heads,
+        }
     }
 
     pub fn display(&self) {
-        for block in self.blocks.values() {
-            block.display();
+        for (entry, block) in &self.blocks {
+            block.display(*entry);
         }
+        println!("Traversal: {:#?}", self.traversal_successors);
     }
 
     fn is_end_of_block(pc: CodeOffset, code: &[Bytecode], block_ids: &Set<BlockId>) -> bool {
@@ -158,7 +252,7 @@ impl ControlFlowGraph for VMControlFlowGraph {
     // is not valid. The design does not attempt to prevent this abuse of the API.
 
     fn block_start(&self, block_id: BlockId) -> CodeOffset {
-        self.blocks[&block_id].entry
+        block_id
     }
 
     fn block_end(&self, block_id: BlockId) -> CodeOffset {
@@ -169,12 +263,17 @@ impl ControlFlowGraph for VMControlFlowGraph {
         &self.blocks[&block_id].successors
     }
 
-    fn blocks(&self) -> Vec<BlockId> {
-        self.blocks.keys().cloned().collect()
+    fn next_block(&self, block_id: BlockId) -> Option<CodeOffset> {
+        debug_assert!(self.blocks.contains_key(&block_id));
+        self.traversal_successors.get(&block_id).copied()
     }
 
     fn instr_indexes(&self, block_id: BlockId) -> Box<dyn Iterator<Item = CodeOffset>> {
         Box::new(self.block_start(block_id)..=self.block_end(block_id))
+    }
+
+    fn blocks(&self) -> Vec<BlockId> {
+        self.blocks.keys().cloned().collect()
     }
 
     fn num_blocks(&self) -> u16 {
@@ -183,5 +282,15 @@ impl ControlFlowGraph for VMControlFlowGraph {
 
     fn entry_block_id(&self) -> BlockId {
         ENTRY_BLOCK_ID
+    }
+
+    fn is_loop_head(&self, block_id: BlockId) -> bool {
+        self.loop_heads.contains_key(&block_id)
+    }
+
+    fn is_back_edge(&self, cur: BlockId, next: BlockId) -> bool {
+        self.loop_heads
+            .get(&next)
+            .map_or(false, |back_edges| back_edges.contains(&cur))
     }
 }

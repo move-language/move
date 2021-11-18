@@ -80,7 +80,7 @@ fn instruction_labels(context: &ControlFlowVerifier) -> Vec<Label> {
         match instr {
             // Back jump/"continue"
             Bytecode::Branch(prev) | Bytecode::BrTrue(prev) | Bytecode::BrFalse(prev)
-                if *prev <= i =>
+                if is_back_edge(i, *prev) =>
             {
                 loop_continue(*prev, i)
             }
@@ -111,20 +111,22 @@ fn check_code<
     mut check: F,
 ) -> PartialVMResult<()> {
     let mut loop_stack: Vec<(CodeOffset, CodeOffset)> = vec![];
-    for (i, instr, label) in context.labeled_code(labels) {
+    for (cur_instr, instr, label) in context.labeled_code(labels) {
         // Add loop to stack
         if let Label::Loop { last_continue } = label {
-            loop_stack.push((i, *last_continue));
+            loop_stack.push((cur_instr, *last_continue));
         }
 
-        check(&loop_stack, i, instr)?;
+        check(&loop_stack, cur_instr, instr)?;
 
         // Pop if last continue
         match instr {
             // Back jump/"continue"
-            Bytecode::Branch(j) | Bytecode::BrTrue(j) | Bytecode::BrFalse(j) if *j <= i => {
-                let (_cur_loop, last_continue) = loop_stack.last().unwrap();
-                if i == *last_continue {
+            Bytecode::Branch(target) | Bytecode::BrTrue(target) | Bytecode::BrFalse(target)
+                if is_back_edge(cur_instr, *target) =>
+            {
+                let (_cur_loop_head, last_continue) = loop_stack.last().unwrap();
+                if cur_instr == *last_continue {
                     loop_stack.pop();
                 }
             }
@@ -134,17 +136,22 @@ fn check_code<
     Ok(())
 }
 
+fn is_back_edge(cur_instr: CodeOffset, target_instr: CodeOffset) -> bool {
+    target_instr <= cur_instr
+}
+
 // All back jumps are only to the current loop
 fn check_continues(context: &ControlFlowVerifier, labels: &[Label]) -> PartialVMResult<()> {
-    check_code(context, labels, |loop_stack, i, instr| {
+    check_code(context, labels, |loop_stack, cur_instr, instr| {
         match instr {
             // Back jump/"continue"
-            Bytecode::Branch(j) | Bytecode::BrTrue(j) | Bytecode::BrFalse(j) if *j <= i => {
-                let (cur_loop, _last_continue) = loop_stack.last().unwrap();
-                let is_continue = *j <= i;
-                if is_continue && j != cur_loop {
+            Bytecode::Branch(target) | Bytecode::BrTrue(target) | Bytecode::BrFalse(target)
+                if is_back_edge(cur_instr, *target) =>
+            {
+                let (cur_loop_head, _last_continue) = loop_stack.last().unwrap();
+                if target != cur_loop_head {
                     // Invalid back jump. Cannot back jump outside of the current loop
-                    Err(context.error(StatusCode::INVALID_LOOP_CONTINUE, i))
+                    Err(context.error(StatusCode::INVALID_LOOP_CONTINUE, cur_instr))
                 } else {
                     Ok(())
                 }
@@ -155,17 +162,19 @@ fn check_continues(context: &ControlFlowVerifier, labels: &[Label]) -> PartialVM
 }
 
 fn check_breaks(context: &ControlFlowVerifier, labels: &[Label]) -> PartialVMResult<()> {
-    check_code(context, labels, |loop_stack, i, instr| {
+    check_code(context, labels, |loop_stack, cur_instr, instr| {
         match instr {
             // Forward jump/"break"
-            Bytecode::Branch(j) | Bytecode::BrTrue(j) | Bytecode::BrFalse(j) if *j > i => {
+            Bytecode::Branch(target) | Bytecode::BrTrue(target) | Bytecode::BrFalse(target)
+                if !is_back_edge(cur_instr, *target) =>
+            {
                 match loop_stack.last() {
-                    Some((_cur_loop, last_continue))
-                        if j > last_continue && *j != last_continue + 1 =>
+                    Some((_cur_loop_head, last_continue))
+                        if target > last_continue && *target != last_continue + 1 =>
                     {
                         // Invalid loop break. Must break immediately to the instruction after
                         // the last continue
-                        Err(context.error(StatusCode::INVALID_LOOP_BREAK, i))
+                        Err(context.error(StatusCode::INVALID_LOOP_BREAK, cur_instr))
                     }
                     _ => Ok(()),
                 }
@@ -179,7 +188,7 @@ fn check_no_loop_splits(context: &ControlFlowVerifier, labels: &[Label]) -> Part
     let is_break = |loop_stack: &Vec<(CodeOffset, CodeOffset)>, jump_target: CodeOffset| -> bool {
         match loop_stack.last() {
             None => false,
-            Some((_cur_loop, last_continue)) => jump_target > *last_continue,
+            Some((_cur_loop_head, last_continue)) => jump_target > *last_continue,
         }
     };
     let loop_depth = count_loop_depth(labels);

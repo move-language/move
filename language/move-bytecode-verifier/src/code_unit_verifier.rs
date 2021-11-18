@@ -46,6 +46,7 @@ impl<'a> CodeUnitVerifier<'a> {
 
     fn verify_script_impl(script: &'a CompiledScript) -> PartialVMResult<()> {
         // create `FunctionView` and `BinaryIndexedView`
+        control_flow::verify(None, &script.code)?;
         let function_view = FunctionView::script(script);
         let resolver = BinaryIndexedView::Script(script);
         //verify
@@ -69,6 +70,7 @@ impl<'a> CodeUnitVerifier<'a> {
         };
         // create `FunctionView` and `BinaryIndexedView`
         let function_handle = module.function_handle_at(function_definition.function);
+        control_flow::verify(Some(index), code)?;
         let function_view = FunctionView::function(module, index, code, function_handle);
         let resolver = BinaryIndexedView::Module(module);
         let mut name_def_map = HashMap::new();
@@ -87,7 +89,6 @@ impl<'a> CodeUnitVerifier<'a> {
     }
 
     fn verify_common(&self) -> PartialVMResult<()> {
-        control_flow::verify(self.function_view.index(), self.function_view.code())?;
         StackUsageVerifier::verify(&self.resolver, &self.function_view)?;
         type_safety::verify(&self.resolver, &self.function_view)?;
         locals_safety::verify(&self.resolver, &self.function_view)?;

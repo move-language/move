@@ -335,6 +335,8 @@ pub struct FunctionView<'a> {
 
 impl<'a> FunctionView<'a> {
     // Creates a `FunctionView` for a module function.
+    // Creates a `FunctionView` for a module function.
+    // Requires control flow verifier (control_flow.rs)
     pub fn function(
         module: &'a CompiledModule,
         index: FunctionDefinitionIndex,

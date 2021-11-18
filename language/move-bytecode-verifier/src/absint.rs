@@ -79,7 +79,7 @@ pub trait AbstractInterpreter: TransferFunctions {
     ) -> InvariantMap<Self::State, Self::AnalysisError> {
         let mut inv_map: InvariantMap<Self::State, Self::AnalysisError> = InvariantMap::new();
         let entry_block_id = function_view.cfg().entry_block_id();
-        let mut work_list = vec![entry_block_id];
+        let mut next_block = Some(entry_block_id);
         inv_map.insert(
             entry_block_id,
             BlockInvariant {
@@ -88,16 +88,22 @@ pub trait AbstractInterpreter: TransferFunctions {
             },
         );
 
-        while let Some(block_id) = work_list.pop() {
+        while let Some(block_id) = next_block {
             let block_invariant = match inv_map.get_mut(&block_id) {
                 Some(invariant) => invariant,
-                None => unreachable!("Missing invariant for block {}", block_id),
+                None => {
+                    // This can only happen when all predecessors have errors,
+                    // so skip the block and move on to the next one
+                    next_block = function_view.cfg().next_block(block_id);
+                    continue;
+                }
             };
 
             let pre_state = &block_invariant.pre;
             let post_state = match self.execute_block(block_id, pre_state, function_view) {
                 Err(e) => {
                     block_invariant.post = BlockPostcondition::Error(e);
+                    next_block = function_view.cfg().next_block(block_id);
                     continue;
                 }
                 Ok(s) => {
@@ -106,9 +112,10 @@ pub trait AbstractInterpreter: TransferFunctions {
                 }
             };
 
+            let mut next_block_candidate = function_view.cfg().next_block(block_id);
             // propagate postcondition of this block to successor blocks
-            for next_block_id in function_view.cfg().successors(block_id) {
-                match inv_map.get_mut(next_block_id) {
+            for successor_block_id in function_view.cfg().successors(block_id) {
+                match inv_map.get_mut(successor_block_id) {
                     Some(next_block_invariant) => {
                         let join_result = {
                             let old_pre = &mut next_block_invariant.pre;
@@ -117,29 +124,36 @@ pub trait AbstractInterpreter: TransferFunctions {
                         match join_result {
                             JoinResult::Unchanged => {
                                 // Pre is the same after join. Reanalyzing this block would produce
-                                // the same post. Don't schedule it.
-                                continue;
+                                // the same post
                             }
                             JoinResult::Changed => {
-                                // The pre changed. Schedule the next block.
-                                work_list.push(*next_block_id);
+                                // If the cur->successor is a back edge, jump back to the beginning
+                                // of the loop, instead of the normal next block
+                                if function_view
+                                    .cfg()
+                                    .is_back_edge(block_id, *successor_block_id)
+                                {
+                                    next_block_candidate = Some(*successor_block_id);
+                                }
+                                // Pre has changed, the post condition is now unknown for the block
+                                next_block_invariant.post = BlockPostcondition::Unprocessed
                             }
                         }
                     }
                     None => {
                         // Haven't visited the next block yet. Use the post of the current block as
-                        // its pre and schedule it.
+                        // its pre
                         inv_map.insert(
-                            *next_block_id,
+                            *successor_block_id,
                             BlockInvariant {
                                 pre: post_state.clone(),
                                 post: BlockPostcondition::Success,
                             },
                         );
-                        work_list.push(*next_block_id);
                     }
                 }
             }
+            next_block = next_block_candidate;
         }
         inv_map
     }

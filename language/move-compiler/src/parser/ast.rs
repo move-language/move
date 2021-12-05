@@ -268,6 +268,7 @@ pub struct Function {
     pub signature: FunctionSignature,
     pub acquires: Vec<NameAccessChain>,
     pub name: FunctionName,
+    pub inline: bool,
     pub body: FunctionBody,
 }
 
@@ -1464,6 +1465,7 @@ impl AstDebug for Function {
             entry,
             signature,
             acquires,
+            inline,
             name,
             body,
         } = self;
@@ -1475,7 +1477,11 @@ impl AstDebug for Function {
         if let FunctionBody_::Native = &body.value {
             w.write("native ");
         }
-        w.write(&format!("fun {}", name));
+        if *inline {
+            w.write(&format!("inline fun {}", name));
+        } else {
+            w.write(&format!("fun {}", name));
+        }
         signature.ast_debug(w);
         if !acquires.is_empty() {
             w.write(" acquires ");
@@ -1763,9 +1769,9 @@ impl AstDebug for Exp_ {
             }
             E::Block(seq) => w.block(|w| seq.ast_debug(w)),
             E::Lambda(sp!(_, bs), e) => {
-                w.write("fun ");
+                w.write("|");
                 bs.ast_debug(w);
-                w.write(" ");
+                w.write("|");
                 e.ast_debug(w);
             }
             E::Quant(kind, sp!(_, rs), trs, c_opt, e) => {

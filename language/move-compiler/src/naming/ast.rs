@@ -109,6 +109,7 @@ pub type FunctionBody = Spanned<FunctionBody_>;
 #[derive(PartialEq, Debug, Clone)]
 pub struct Function {
     pub attributes: Attributes,
+    pub is_macro: bool,
     pub visibility: Visibility,
     pub entry: Option<Loc>,
     pub signature: FunctionSignature,
@@ -148,6 +149,8 @@ pub enum BuiltinTypeName_ {
     Vector,
     // bool
     Bool,
+    // Function (last type arg is result type)
+    Fun,
 }
 pub type BuiltinTypeName = Spanned<BuiltinTypeName_>;
 
@@ -160,6 +163,12 @@ pub enum TypeName_ {
     ModuleType(ModuleIdent, StructName),
 }
 pub type TypeName = Spanned<TypeName_>;
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+pub enum Variance {
+    CoVariant,
+    ContraVariant,
+}
 
 #[derive(Debug, Hash, Eq, PartialEq, Ord, PartialOrd, Copy, Clone)]
 pub struct TParamID(pub u64);
@@ -233,9 +242,11 @@ pub enum Exp_ {
     ModuleCall(
         ModuleIdent,
         FunctionName,
+        bool,
         Option<Vec<Type>>,
         Spanned<Vec<Exp>>,
     ),
+    VarCall(Var, Spanned<Vec<Exp>>),
     Builtin(BuiltinFunction, Spanned<Vec<Exp>>),
     Vector(Loc, Option<Type>, Spanned<Vec<Exp>>),
 
@@ -243,6 +254,7 @@ pub enum Exp_ {
     While(Box<Exp>, Box<Exp>),
     Loop(Box<Exp>),
     Block(Sequence),
+    Lambda(LValueList, Box<Exp>),
 
     Assign(LValueList, Box<Exp>),
     FieldMutate(ExpDotted, Box<Exp>),
@@ -328,6 +340,7 @@ impl BuiltinTypeName_ {
     pub const U_128: &'static str = "u128";
     pub const BOOL: &'static str = "bool";
     pub const VECTOR: &'static str = "vector";
+    pub const FUN: &'static str = "|..|..";
 
     pub fn all_names() -> &'static BTreeSet<Symbol> {
         &*BUILTIN_TYPE_ALL_NAMES
@@ -370,15 +383,35 @@ impl BuiltinTypeName_ {
             B::Address | B::U8 | B::U64 | B::U128 | B::Bool => AbilitySet::primitives(loc),
             B::Signer => AbilitySet::signer(loc),
             B::Vector => AbilitySet::collection(loc),
+            B::Fun => AbilitySet::functions(),
         }
     }
 
-    pub fn tparam_constraints(&self, _loc: Loc) -> Vec<AbilitySet> {
+    pub fn tparam_constraints(&self, _loc: Loc, arity: usize) -> Vec<AbilitySet> {
         use BuiltinTypeName_ as B;
         // Match here to make sure this function is fixed when collections are added
         match self {
             B::Address | B::Signer | B::U8 | B::U64 | B::U128 | B::Bool => vec![],
             B::Vector => vec![AbilitySet::empty()],
+            B::Fun => (0..arity).map(|_| AbilitySet::empty()).collect(),
+        }
+    }
+
+    pub fn variance(&self, pos: usize, arity: usize) -> Variance {
+        match self {
+            // Function variance: given g: T1 -> R1 and f: T2 -> R2, then
+            // f can substitute g if T2 >= T1 && R1 <= R2
+            BuiltinTypeName_::Fun if pos < arity - 1 => Variance::ContraVariant,
+            _ => Variance::CoVariant,
+        }
+    }
+}
+
+impl TypeName_ {
+    pub fn variance(&self, pos: usize, arity: usize) -> Variance {
+        match self {
+            TypeName_::Builtin(bn) => bn.value.variance(pos, arity),
+            _ => Variance::CoVariant,
         }
     }
 }
@@ -456,7 +489,7 @@ impl Type_ {
         let abilities = match &b.value {
             B::Address | B::U8 | B::U64 | B::U128 | B::Bool => Some(AbilitySet::primitives(b.loc)),
             B::Signer => Some(AbilitySet::signer(b.loc)),
-            B::Vector => None,
+            B::Vector | B::Fun => None,
         };
         let n = sp(b.loc, TypeName_::Builtin(b));
         Type_::Apply(abilities, n, ty_args)
@@ -547,6 +580,7 @@ impl fmt::Display for BuiltinTypeName_ {
                 BT::U128 => BT::U_128,
                 BT::Bool => BT::BOOL,
                 BT::Vector => BT::VECTOR,
+                BT::Fun => BT::FUN,
             }
         )
     }
@@ -684,6 +718,7 @@ impl AstDebug for (FunctionName, &Function) {
             name,
             Function {
                 attributes,
+                is_macro,
                 visibility,
                 entry,
                 signature,
@@ -699,7 +734,11 @@ impl AstDebug for (FunctionName, &Function) {
         if let FunctionBody_::Native = &body.value {
             w.write("native ");
         }
-        w.write(&format!("fun {}", name));
+        if *is_macro {
+            w.write(&format!("macro {}", name));
+        } else {
+            w.write(&format!("fun {}", name));
+        }
         signature.ast_debug(w);
         if !acquires.is_empty() {
             w.write(" acquires ");
@@ -911,13 +950,22 @@ impl AstDebug for Exp_ {
             E::Use(v) => w.write(&format!("{}", v)),
             E::Constant(None, c) => w.write(&format!("{}", c)),
             E::Constant(Some(m), c) => w.write(&format!("{}::{}", m, c)),
-            E::ModuleCall(m, f, tys_opt, sp!(_, rhs)) => {
+            E::ModuleCall(m, f, is_macro, tys_opt, sp!(_, rhs)) => {
                 w.write(&format!("{}::{}", m, f));
+                if *is_macro {
+                    w.write("!");
+                }
                 if let Some(ss) = tys_opt {
                     w.write("<");
                     ss.ast_debug(w);
                     w.write(">");
                 }
+                w.write("(");
+                w.comma(rhs, |w, e| e.ast_debug(w));
+                w.write(")");
+            }
+            E::VarCall(var, sp!(_, rhs)) => {
+                w.write(&format!("{}", var));
                 w.write("(");
                 w.comma(rhs, |w, e| e.ast_debug(w));
                 w.write(")");
@@ -973,6 +1021,12 @@ impl AstDebug for Exp_ {
                 e.ast_debug(w);
             }
             E::Block(seq) => w.block(|w| seq.ast_debug(w)),
+            E::Lambda(sp!(_, bs), e) => {
+                w.write("|");
+                bs.ast_debug(w);
+                w.write("|");
+                e.ast_debug(w);
+            }
             E::ExpList(es) => {
                 w.write("(");
                 w.comma(es, |w, e| e.ast_debug(w));

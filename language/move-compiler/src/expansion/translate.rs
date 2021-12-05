@@ -1152,6 +1152,7 @@ fn function_(context: &mut Context, pfunction: P::Function) -> (FunctionName, E:
     let P::Function {
         attributes: pattributes,
         loc,
+        is_macro,
         name,
         visibility: pvisibility,
         entry,
@@ -1172,6 +1173,7 @@ fn function_(context: &mut Context, pfunction: P::Function) -> (FunctionName, E:
     let fdef = E::Function {
         attributes,
         loc,
+        is_macro,
         visibility,
         entry,
         signature,
@@ -1542,17 +1544,9 @@ fn type_(context: &mut Context, sp!(loc, pt_): P::Type) -> E::Type {
         }
         PT::Ref(mut_, inner) => ET::Ref(mut_, Box::new(type_(context, *inner))),
         PT::Fun(args, result) => {
-            if context.in_spec_context {
-                let args = types(context, args);
-                let result = type_(context, *result);
-                ET::Fun(args, Box::new(result))
-            } else {
-                context.env.add_diag(diag!(
-                    Syntax::SpecContextRestricted,
-                    (loc, "`|_|_` function type only allowed in specifications")
-                ));
-                ET::UnresolvedError
-            }
+            let args = types(context, args);
+            let result = type_(context, *result);
+            ET::Fun(args, Box::new(result))
         }
     };
     sp(loc, t_)
@@ -1836,21 +1830,13 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         PE::Loop(ploop) => EE::Loop(exp(context, *ploop)),
         PE::Block(seq) => EE::Block(sequence(context, loc, seq)),
         PE::Lambda(pbs, pe) => {
-            if !context.in_spec_context {
-                context.env.add_diag(diag!(
-                    Syntax::SpecContextRestricted,
-                    (loc, "lambda expression only allowed in specifications"),
-                ));
-                EE::UnresolvedError
-            } else {
-                let bs_opt = bind_list(context, pbs);
-                let e = exp_(context, *pe);
-                match bs_opt {
-                    Some(bs) => EE::Lambda(bs, Box::new(e)),
-                    None => {
-                        assert!(context.env.has_errors());
-                        EE::UnresolvedError
-                    }
+            let bs_opt = bind_list(context, pbs);
+            let e = exp_(context, *pe);
+            match bs_opt {
+                Some(bs) => EE::Lambda(bs, Box::new(e)),
+                None => {
+                    assert!(context.env.has_errors());
+                    EE::UnresolvedError
                 }
             }
         }

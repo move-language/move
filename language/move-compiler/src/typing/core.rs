@@ -8,7 +8,7 @@ use crate::{
     expansion::ast::{AbilitySet, ModuleIdent, Visibility},
     naming::ast::{
         self as N, BuiltinTypeName_, FunctionSignature, StructDefinition, StructTypeParameter,
-        TParam, TParamID, TVar, Type, TypeName, TypeName_, Type_,
+        TParam, TParamID, TVar, Type, TypeName, TypeName_, Type_, Variance,
     },
     parser::ast::{Ability_, ConstantName, Field, FunctionName, StructName, Var},
     shared::{unique_map::UniqueMap, *},
@@ -42,6 +42,7 @@ pub struct FunctionInfo {
     pub visibility: Visibility,
     pub signature: FunctionSignature,
     pub acquires: BTreeMap<StructName, Loc>,
+    pub is_macro: bool,
 }
 
 pub struct ConstantInfo {
@@ -103,6 +104,7 @@ impl<'env> Context<'env> {
                 visibility: fdef.visibility.clone(),
                 signature: fdef.signature.clone(),
                 acquires: fdef.acquires.clone(),
+                is_macro: fdef.is_macro,
             });
             let constants = mdef.constants.ref_map(|cname, cdef| ConstantInfo {
                 defined_loc: cname.loc(),
@@ -476,6 +478,15 @@ fn error_format_impl_(b_: &Type_, subst: &Subst, nested: bool) -> String {
             let inner = format_comma(tys.iter().map(|s| error_format_nested(s, subst)));
             format!("({})", inner)
         }
+        Apply(_, sp!(_, TypeName_::Builtin(sp!(_, BuiltinTypeName_::Fun))), tys) => {
+            assert!(!tys.is_empty(), "ICE invalid function type");
+            let k = tys.len() - 1;
+            format!(
+                "|{}|{}",
+                format_comma((&tys[0..k]).iter().map(|t| error_format_nested(t, subst))),
+                error_format_nested(&tys[k], subst)
+            )
+        }
         Apply(_, n, tys) => {
             let tys_str = if !tys.is_empty() {
                 format!(
@@ -759,6 +770,7 @@ pub fn make_function_type(
     Vec<(Var, Type)>,
     BTreeMap<StructName, Loc>,
     Type,
+    bool,
 ) {
     let in_current_module = match &context.current_module {
         Some(current) => m == current,
@@ -790,6 +802,7 @@ pub fn make_function_type(
     };
 
     let finfo = context.function_info(m, f);
+    let is_macro = finfo.is_macro;
     let tparam_subst = &make_tparam_subst(&finfo.signature.type_parameters, ty_args.clone());
     let params = finfo
         .signature
@@ -833,7 +846,7 @@ pub fn make_function_type(
         }
         Visibility::Public(_) => (),
     };
-    (defined_loc, ty_args, params, acquires, return_ty)
+    (defined_loc, ty_args, params, acquires, return_ty, is_macro)
 }
 
 //**************************************************************************************************
@@ -1200,7 +1213,7 @@ fn instantiate_apply(
     ty_args: Vec<Type>,
 ) -> Type_ {
     let tparam_constraints: Vec<AbilitySet> = match &n {
-        sp!(nloc, N::TypeName_::Builtin(b)) => b.value.tparam_constraints(*nloc),
+        sp!(nloc, N::TypeName_::Builtin(b)) => b.value.tparam_constraints(*nloc, ty_args.len()),
         sp!(_, N::TypeName_::Multiple(len)) => {
             debug_assert!(abilities_opt.is_none(), "ICE instantiated expanded type");
             (0..*len).map(|_| AbilitySet::empty()).collect()
@@ -1237,6 +1250,9 @@ fn instantiate_type_args(
     let tvar_case = match n {
         Some(TypeName_::Multiple(_)) => {
             TVarCase::Single("Invalid expression list type argument".to_owned())
+        }
+        Some(TypeName_::Builtin(sp!(_, BuiltinTypeName_::Fun))) => {
+            TVarCase::SingleButLast("Invalid expression list type argument".to_owned())
         }
         None | Some(TypeName_::Builtin(_)) | Some(TypeName_::ModuleType(_, _)) => TVarCase::Base,
     };
@@ -1298,6 +1314,7 @@ fn check_type_argument_arity<F: FnOnce() -> String>(
 
 enum TVarCase {
     Single(String),
+    SingleButLast(String),
     Base,
 }
 
@@ -1307,13 +1324,20 @@ fn make_tparams(
     case: TVarCase,
     tparam_constraints: Vec<(Loc, AbilitySet)>,
 ) -> Vec<Type> {
+    let arity = tparam_constraints.len();
     tparam_constraints
         .into_iter()
-        .map(|(vloc, constraint)| {
+        .enumerate()
+        .map(|(i, (vloc, constraint))| {
             let tvar = make_tvar(context, vloc);
             context.add_ability_set_constraint(loc, None::<String>, tvar.clone(), constraint);
             match &case {
-                TVarCase::Single(msg) => context.add_single_type_constraint(loc, msg, tvar.clone()),
+                TVarCase::SingleButLast(_) if i + 1 == arity => {
+                    // Last arg (return type of a function): do not add any constraint
+                }
+                TVarCase::SingleButLast(msg) | TVarCase::Single(msg) => {
+                    context.add_single_type_constraint(loc, msg, tvar.clone())
+                }
                 TVarCase::Base => {
                     context.add_base_type_constraint(loc, "Invalid type argument", tvar.clone())
                 }
@@ -1410,7 +1434,9 @@ fn join_impl(
                 k1,
                 k2
             );
-            let (subst, tys) = join_impl_types(subst, case, tys1, tys2)?;
+            let arity = tys1.len();
+            let (subst, tys) =
+                join_impl_types(subst, case, |pos| n1.value.variance(pos, arity), tys1, tys2)?;
             Ok((subst, sp(*loc, Apply(k2.clone(), n2.clone(), tys))))
         }
         (sp!(loc1, Var(id1)), sp!(loc2, Var(id2))) => {
@@ -1464,14 +1490,18 @@ fn join_impl(
 fn join_impl_types(
     mut subst: Subst,
     case: TypingCase,
+    variance: impl Fn(usize) -> Variance,
     tys1: &[Type],
     tys2: &[Type],
 ) -> Result<(Subst, Vec<Type>), TypingError> {
     // if tys1.len() != tys2.len(), we will get an error when instantiating the type elsewhere
     // as all types are instantiated as a sanity check
     let mut tys = vec![];
-    for (ty1, ty2) in tys1.iter().zip(tys2) {
-        let (nsubst, t) = join_impl(subst, case, ty1, ty2)?;
+    for (pos, (ty1, ty2)) in tys1.iter().zip(tys2).enumerate() {
+        let (nsubst, t) = match (case, variance(pos)) {
+            (TypingCase::Subtype, Variance::ContraVariant) => join_impl(subst, case, ty2, ty1)?,
+            _ => join_impl(subst, case, ty1, ty2)?,
+        };
         subst = nsubst;
         tys.push(t)
     }
@@ -1600,5 +1630,25 @@ fn check_num_tvar_(subst: &Subst, ty: &Type) -> bool {
             }
         }
         _ => false,
+    }
+}
+//**************************************************************************************************
+// Function type check
+//**************************************************************************************************
+
+pub fn check_non_fun(context: &mut Context, ty: &Type) {
+    if let sp!(
+        loc,
+        Type_::Apply(
+            _,
+            sp!(_, TypeName_::Builtin(sp!(_, BuiltinTypeName_::Fun))),
+            _
+        )
+    ) = ty
+    {
+        context.env.add_diag(diag!(
+            TypeSafety::InvalidFunctionType,
+            (*loc, "function type only allowed for macro arguments")
+        ))
     }
 }

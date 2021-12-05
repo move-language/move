@@ -27,8 +27,18 @@ pub fn function_body_(context: &mut Context, b_: &mut T::FunctionBody_) {
 pub fn function_signature(context: &mut Context, sig: &mut FunctionSignature) {
     for (_, st) in &mut sig.parameters {
         type_(context, st);
+        core::check_non_fun(context, st)
     }
     type_(context, &mut sig.return_type);
+    core::check_non_fun(context, &sig.return_type)
+}
+
+pub fn macro_signature(context: &mut Context, sig: &mut FunctionSignature) {
+    for (_, st) in &mut sig.parameters {
+        type_(context, st);
+    }
+    type_(context, &mut sig.return_type);
+    core::check_non_fun(context, &sig.return_type)
 }
 
 //**************************************************************************************************
@@ -230,6 +240,7 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
         | E::UnresolvedError => (),
 
         E::ModuleCall(call) => module_call(context, call),
+        E::VarCall(_, args) => exp(context, args),
         E::Builtin(b, args) => {
             builtin_function(context, b);
             exp(context, args);
@@ -250,6 +261,10 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
         }
         E::Loop { body: eloop, .. } => exp(context, eloop),
         E::Block(seq) => sequence(context, seq),
+        E::Lambda(args, body) => {
+            lvalues(context, args);
+            exp(context, body);
+        }
         E::Assign(assigns, tys, er) => {
             lvalues(context, assigns);
             expected_types(context, tys);
@@ -299,6 +314,7 @@ fn lvalue(context: &mut Context, b: &mut T::LValue) {
         L::Ignore => (),
         L::Var(_, ty) => {
             type_(context, ty);
+            core::check_non_fun(context, ty.as_ref())
         }
         L::BorrowUnpack(_, _, _, bts, fields) | L::Unpack(_, _, bts, fields) => {
             types(context, bts);

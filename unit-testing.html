@@ -1,0 +1,435 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Unit Tests</title>
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="modules-and-scripts.html"><strong aria-hidden="true">1.</strong> Modules and Scripts</a></li><li class="chapter-item expanded "><a href="creating-coins.html"><strong aria-hidden="true">2.</strong> First Tutorial: Creating Coins</a></li><li class="chapter-item expanded "><a href="integers.html"><strong aria-hidden="true">3.</strong> Integers</a></li><li class="chapter-item expanded "><a href="bool.html"><strong aria-hidden="true">4.</strong> Bool</a></li><li class="chapter-item expanded "><a href="address.html"><strong aria-hidden="true">5.</strong> Address</a></li><li class="chapter-item expanded "><a href="vector.html"><strong aria-hidden="true">6.</strong> Vector</a></li><li class="chapter-item expanded "><a href="signer.html"><strong aria-hidden="true">7.</strong> Signer</a></li><li class="chapter-item expanded "><a href="references.html"><strong aria-hidden="true">8.</strong> References</a></li><li class="chapter-item expanded "><a href="tuples.html"><strong aria-hidden="true">9.</strong> Tuples and Unit</a></li><li class="chapter-item expanded "><a href="variables.html"><strong aria-hidden="true">10.</strong> Local Variables and Scopes</a></li><li class="chapter-item expanded "><a href="equality.html"><strong aria-hidden="true">11.</strong> Equality</a></li><li class="chapter-item expanded "><a href="abort-and-assert.html"><strong aria-hidden="true">12.</strong> Abort and Assert</a></li><li class="chapter-item expanded "><a href="conditionals.html"><strong aria-hidden="true">13.</strong> Conditionals</a></li><li class="chapter-item expanded "><a href="loops.html"><strong aria-hidden="true">14.</strong> While and Loop</a></li><li class="chapter-item expanded "><a href="functions.html"><strong aria-hidden="true">15.</strong> Functions</a></li><li class="chapter-item expanded "><a href="structs-and-resources.html"><strong aria-hidden="true">16.</strong> Structs and Resources</a></li><li class="chapter-item expanded "><a href="constants.html"><strong aria-hidden="true">17.</strong> Constants</a></li><li class="chapter-item expanded "><a href="generics.html"><strong aria-hidden="true">18.</strong> Generics</a></li><li class="chapter-item expanded "><a href="abilities.html"><strong aria-hidden="true">19.</strong> Type Abilities</a></li><li class="chapter-item expanded "><a href="uses.html"><strong aria-hidden="true">20.</strong> Uses and Aliases</a></li><li class="chapter-item expanded "><a href="friends.html"><strong aria-hidden="true">21.</strong> Friends</a></li><li class="chapter-item expanded "><a href="packages.html"><strong aria-hidden="true">22.</strong> Packages</a></li><li class="chapter-item expanded "><a href="unit-testing.html" class="active"><strong aria-hidden="true">23.</strong> Unit Tests</a></li><li class="chapter-item expanded "><a href="global-storage-structure.html"><strong aria-hidden="true">24.</strong> Global Storage Structure</a></li><li class="chapter-item expanded "><a href="global-storage-operators.html"><strong aria-hidden="true">25.</strong> Global Storage Operators</a></li><li class="chapter-item expanded "><a href="standard-library.html"><strong aria-hidden="true">26.</strong> Standard Library</a></li><li class="chapter-item expanded "><a href="coding-conventions.html"><strong aria-hidden="true">27.</strong> Coding Conventions</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title"></h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="unit-tests"><a class="header" href="#unit-tests">Unit Tests</a></h1>
+<p>Unit testing for Move adds three new annotations to the Move source language:</p>
+<ul>
+<li><code>#[test]</code></li>
+<li><code>#[test_only]</code>, and</li>
+<li><code>#[expected_failure]</code>.</li>
+</ul>
+<p>They respectively mark a function as a test, mark a module or module member (<code>use</code>, function, or struct) as code to be included for testing only, and mark that a test is expected to fail. These annotations can be placed on a function with any visibility. Whenever a module or module member is annotated as <code>#[test_only]</code> or <code>#[test]</code>, it will not be included in the compiled bytecode unless it is compiled for testing.</p>
+<h2 id="testing-annotations-their-meaning-and-usage"><a class="header" href="#testing-annotations-their-meaning-and-usage">Testing Annotations: Their Meaning and Usage</a></h2>
+<p>Both the <code>#[test]</code> and <code>#[expected_failure]</code> annotations can be used either with or without arguments.</p>
+<p>Without arguments, the <code>#[test]</code> annotation can only be placed on a function with no parameters. This annotation simply marks this function as a test to be run by the unit testing harness.</p>
+<pre><code>#[test] // OK
+fun this_is_a_test() { ... }
+
+#[test] // Will fail to compile since the test takes an argument
+fun this_is_not_correct(arg: signer) { ... }
+</code></pre>
+<p>A test can also be annotated as an <code>#[expected_failure]</code>. This annotation marks that the test should is expected to raise an error. You can ensure that a test is aborting with a specific abort code by annotating it with <code>#[expected_failure(abort_code = &lt;code&gt;)]</code>, if it then fails with a different abort code or with a non-abort error the test will fail. Only functions that have the <code>#[test]</code> annotation can also be annotated as an #<code>[expected_failure]</code>.</p>
+<pre><code>#[test]
+#[expected_failure]
+public fun this_test_will_abort_and_pass() { abort 1 }
+
+#[test]
+#[expected_failure]
+public fun test_will_error_and_pass() { 1/0; }
+
+#[test]
+#[expected_failure(abort_code = 0)]
+public fun test_will_error_and_fail() { 1/0; }
+
+#[test, expected_failure] // Can have multiple in one attribute. This test will pass.
+public(script) fun this_other_test_will_abort_and_pass() { abort 1 }
+</code></pre>
+<p>With arguments, a test annotation takes the form <code>#[test(&lt;param_name_1&gt; = &lt;address&gt;, ..., &lt;param_name_n&gt; = &lt;address&gt;)]</code>. If a function is annotated in such a manner, the function's parameters must be a permutation of the parameters &lt;<code>param_name_1&gt;, ..., &lt;param_name_n&gt;</code>, i.e., the order of these parameters as they occur in the function and their order in the test annotation do not have to be the same, but they must be able to be matched up with each other by name.</p>
+<p>Only parameters with a type of <code>signer</code> are supported as test parameters. If a non-<code>signer</code> parameter is supplied, the test will result in an error when run.</p>
+<pre><code>#[test(arg = @0xC0FFEE)] // OK
+fun this_is_correct_now(arg: signer) { ... }
+
+#[test(wrong_arg_name = @0xC0FFEE)] // Not correct: arg name doesn't match
+fun this_is_incorrect(arg: signer) { ... }
+
+#[test(a = @0xC0FFEE, b = @0xCAFE)] // OK. We support multiple signer arguments, but you must always provide a value for that argument
+fun this_works(a: signer, b: signer) { ... }
+
+// somewhere a named address is declared
+#[test_only] // test-only named addresses are supported
+address TEST_NAMED_ADDR = @0x1;
+...
+#[test(arg = @TEST_NAMED_ADDR)] // Named addresses are supported!
+fun this_is_correct_now(arg: signer) { ... }
+</code></pre>
+<p>An expected failure annotation can also take the form <code>#[expected_failure(abort_code = &lt;u64&gt;)]</code>. If a test function is annotated in such a way, the test must abort with an abort code equal to <code>&lt;u64&gt;</code>. Any other failure or abort code will result in a test failure.</p>
+<pre><code>#[test, expected_failure(abort_code = 1)] // This test will fail
+fun this_test_should_abort_and_fail() { abort 0 }
+
+#[test]
+#[expected_failure(abort_code = 0)] // This test will pass
+fun this_test_should_abort_and_pass_too() { abort 0 }
+</code></pre>
+<p>A module and any of its members can be declared as test only. In such a case the item will only be included in the compiled Move bytecode when compiled in test mode. Additionally, when compiled outside of test mode, any non-test <code>use</code>s of a <code>#[test_only]</code> module will raise an error during compilation.</p>
+<pre><code>#[test_only] // test only attributes can be attached to modules
+module ABC { ... }
+
+#[test_only] // test only attributes can be attached to named addresses
+address ADDR = @0x1;
+
+#[test_only] // .. to uses
+use 0x1::SomeOtherModule;
+
+#[test_only] // .. to structs
+struct SomeStruct { ... }
+
+#[test_only] // .. and functions. Can only be called from test code, but not a test
+fun test_only_function(...) { ... }
+</code></pre>
+<h2 id="running-unit-tests"><a class="header" href="#running-unit-tests">Running Unit Tests</a></h2>
+<p>Unit tests for a Move package can be run with the <a href="./packages.html"><code>move package test</code>
+command</a>.</p>
+<p>When running tests, every test will either <code>PASS</code>, <code>FAIL</code>, or <code>TIMEOUT</code>. If a test case fails, the location of the failure along with the function name that caused the failure will be reported if possible. You can see an example of this below.</p>
+<p>A test will be marked as timing out if it exceeds the maximum number of instructions that can be executed for any single test. This bound can be changed using the options below, and its default value is set to 5000 instructions. Additionally, while the result of a test is always deterministic, tests are run in parallel by default, so the ordering of test results in a test run is non-deterministic unless running with only one thread (see <code>OPTIONS</code> below).</p>
+<p>There are also a number of options that can be passed to the unit testing binary to fine-tune testing and to help debug failing tests. These can be found using the the help flag:</p>
+<pre><code>$ move package -h
+</code></pre>
+<h2 id="example"><a class="header" href="#example">Example</a></h2>
+<p>A simple module using some of the unit testing features is shown in the following example:</p>
+<p>First create an empty package and change directory into it:</p>
+<pre><code>$ move package new TestExample; cd TestExample
+</code></pre>
+<p>Next add the following to the <code>Move.toml</code>:</p>
+<pre><code>[dependencies]
+MoveStdlib = { git = &quot;https://github.com/diem/diem.git&quot;, subdir=&quot;language/move-stdlib&quot;, rev = &quot;56ab033cc403b489e891424a629e76f643d4fb6b&quot;, addr_subst = { &quot;Std&quot; = &quot;0x1&quot; } }
+</code></pre>
+<p>Next add the following module under the <code>sources</code> directory:</p>
+<pre><code>// filename: sources/MyModule.move
+module 0x1::MyModule {
+
+    struct MyCoin has key { value: u64 }
+
+    public fun make_sure_non_zero_coin(coin: MyCoin): MyCoin {
+        assert!(coin.value &gt; 0, 0);
+        coin
+    }
+
+    public fun has_coin(addr: address): bool {
+        exists&lt;MyCoin&gt;(addr)
+    }
+
+    #[test]
+    fun make_sure_non_zero_coin_passes() {
+        let coin = MyCoin { value: 1 };
+        let MyCoin { value: _ } = make_sure_non_zero_coin(coin);
+    }
+
+    #[test]
+    // Or #[expected_failure] if we don't care about the abort code
+    #[expected_failure(abort_code = 0)]
+    fun make_sure_zero_coin_fails() {
+        let coin = MyCoin { value: 0 };
+        let MyCoin { value: _ } = make_sure_non_zero_coin(coin);
+    }
+
+    #[test_only] // test only helper function
+    fun publish_coin(account: &amp;signer) {
+        move_to(account, MyCoin { value: 1 })
+    }
+
+    #[test(a = @0x1, b = @0x2)]
+    fun test_has_coin(a: signer, b: signer) {
+        publish_coin(&amp;a);
+        publish_coin(&amp;b);
+        assert!(has_coin(@0x1), 0);
+        assert!(has_coin(@0x2), 1);
+        assert!(!has_coin(@0x3), 1);
+    }
+}
+</code></pre>
+<h3 id="running-tests"><a class="header" href="#running-tests">Running Tests</a></h3>
+<p>You can then run these tests with the <code>move package test</code> command:</p>
+<pre><code>$ move package test
+BUILDING MoveStdlib
+BUILDING TestExample
+Running Move unit tests
+[ PASS    ] 0x1::MyModule::make_sure_non_zero_coin_passes
+[ PASS    ] 0x1::MyModule::make_sure_zero_coin_fails
+[ PASS    ] 0x1::MyModule::test_has_coin
+Test result: OK. Total tests: 3; passed: 3; failed: 0
+</code></pre>
+<h3 id="using-test-flags"><a class="header" href="#using-test-flags">Using Test Flags</a></h3>
+<h4 id="-f-str-or---filter-str"><a class="header" href="#-f-str-or---filter-str"><code>-f &lt;str&gt;</code> or <code>--filter &lt;str&gt;</code></a></h4>
+<p>This will only run tests whose fully qualified name contains <code>&lt;str&gt;</code>. For example if we wanted to only run tests with <code>&quot;zero_coin&quot;</code> in their name:</p>
+<pre><code>$ move package test -f zero_coin
+CACHED MoveStdlib
+BUILDING TestExample
+Running Move unit tests
+[ PASS    ] 0x1::MyModule::make_sure_non_zero_coin_passes
+[ PASS    ] 0x1::MyModule::make_sure_zero_coin_fails
+Test result: OK. Total tests: 2; passed: 2; failed: 0
+</code></pre>
+<h4 id="-i-bound-or---instructions-bound"><a class="header" href="#-i-bound-or---instructions-bound"><code>-i &lt;bound&gt;</code> or <code>--instructions &lt;bound&gt;</code></a></h4>
+<p>This bounds the number of instructions that can be executed for any one test to <code>&lt;bound&gt;</code>:</p>
+<pre><code>$ move package test -i 0
+CACHED MoveStdlib
+BUILDING TestExample
+Running Move unit tests
+[ TIMEOUT ] 0x1::MyModule::make_sure_non_zero_coin_passes
+[ TIMEOUT ] 0x1::MyModule::make_sure_zero_coin_fails
+[ TIMEOUT ] 0x1::MyModule::test_has_coin
+
+Test failures:
+
+Failures in 0x1::MyModule:
+
+┌── make_sure_non_zero_coin_passes ──────
+│ Test timed out
+└──────────────────
+
+
+┌── make_sure_zero_coin_fails ──────
+│ Test timed out
+└──────────────────
+
+
+┌── test_has_coin ──────
+│ Test timed out
+└──────────────────
+
+Test result: FAILED. Total tests: 3; passed: 0; failed: 3
+</code></pre>
+<h4 id="-s-or---statistics"><a class="header" href="#-s-or---statistics"><code>-s</code> or <code>--statistics</code></a></h4>
+<p>With these flags you can gather statistics about the tests run and report the runtime and instructions executed for each test. For example, if we wanted to see the statistics for the tests in the example above:</p>
+<pre><code>$ move package test -s
+CACHED MoveStdlib
+BUILDING TestExample
+Running Move unit tests
+[ PASS    ] 0x1::MyModule::make_sure_non_zero_coin_passes
+[ PASS    ] 0x1::MyModule::make_sure_zero_coin_fails
+[ PASS    ] 0x1::MyModule::test_has_coin
+
+Test Statistics:
+
+┌───────────────────────────────────────────────┬────────────┬───────────────────────────┐
+│                   Test Name                   │    Time    │   Instructions Executed   │
+├───────────────────────────────────────────────┼────────────┼───────────────────────────┤
+│ 0x1::MyModule::make_sure_non_zero_coin_passes │   0.009    │             1             │
+├───────────────────────────────────────────────┼────────────┼───────────────────────────┤
+│ 0x1::MyModule::make_sure_zero_coin_fails      │   0.008    │             1             │
+├───────────────────────────────────────────────┼────────────┼───────────────────────────┤
+│ 0x1::MyModule::test_has_coin                  │   0.008    │             1             │
+└───────────────────────────────────────────────┴────────────┴───────────────────────────┘
+
+Test result: OK. Total tests: 3; passed: 3; failed: 0
+</code></pre>
+<h4 id="-g-or---state-on-error"><a class="header" href="#-g-or---state-on-error"><code>-g</code> or <code>--state-on-error</code></a></h4>
+<p>These flags will print the global state for any test failures. e.g., if we added the following (failing) test to the <code>MyModule</code> example:</p>
+<pre><code>module 0x1::MyModule {
+    ...
+    #[test(a = @0x1)]
+    fun test_has_coin_bad(a: signer) {
+        publish_coin(&amp;a);
+        assert!(has_coin(@0x1), 0);
+        assert!(has_coin(@0x2), 1);
+    }
+}
+</code></pre>
+<p>we would get get the following output when running the tests:</p>
+<pre><code>$ move package test -g
+CACHED MoveStdlib
+BUILDING TestExample
+Running Move unit tests
+[ PASS    ] 0x1::MyModule::make_sure_non_zero_coin_passes
+[ PASS    ] 0x1::MyModule::make_sure_zero_coin_fails
+[ PASS    ] 0x1::MyModule::test_has_coin
+[ FAIL    ] 0x1::MyModule::test_has_coin_bad
+
+Test failures:
+
+Failures in 0x1::MyModule:
+
+┌── test_has_coin_bad ──────
+│ error[E11001]: test failure
+│    ┌─ /home/tzakian/TestExample/sources/MyModule.move:47:10
+│    │
+│ 44 │      fun test_has_coin_bad(a: signer) {
+│    │          ----------------- In this function in 0x1::MyModule
+│    ·
+│ 47 │          assert!(has_coin(@0x2), 1);
+│    │          ^^^^^^^^^^^^^^^^^^^^^^^^^^ Test was not expected to abort but it aborted with 1 here
+│
+│
+│ ────── Storage state at point of failure ──────
+│ 0x1:
+│       =&gt; key 0x1::MyModule::MyCoin {
+│           value: 1
+│       }
+│
+└──────────────────
+
+Test result: FAILED. Total tests: 4; passed: 3; failed: 1
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="packages.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                            <a rel="next" href="global-storage-structure.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="packages.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                    <a rel="next" href="global-storage-structure.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+    </body>
+</html>

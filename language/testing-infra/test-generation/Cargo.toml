@@ -31,7 +31,7 @@ module-generation = { path = "../module-generation" }
 move-binary-format = { path = "../../move-binary-format" }
 move-stdlib = { path = "../../move-stdlib" }
 move-compiler = { path = "../../move-compiler" }
-diem-workspace-hack = { version = "0.1", path = "../../../crates/diem-workspace-hack" }
+workspace-hack = { version = "0.1", path = "../../../crates/workspace-hack" }
 
 [features]
 mirai-contracts = []

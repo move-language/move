@@ -19,4 +19,4 @@ anyhow = "1.0.52"
 itertools = "0.10.1"
 pretty = "0.10.0"
 structopt = "0.3.21"
-diem-workspace-hack = { version = "0.1", path = "../../../../crates/diem-workspace-hack" }
+workspace-hack = { version = "0.1", path = "../../../../crates/workspace-hack" }

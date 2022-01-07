@@ -55,51 +55,6 @@ jobs:
           labels: "dependecies"
       - uses: ./.github/actions/build-teardown
 
-  coverage:
-    runs-on: ubuntu-20.04-xl
-    container:
-      image: ghcr.io/diem/diem_build_environment:main
-      volumes:
-        - "${{github.workspace}}:/opt/git/diem"
-    environment:
-      name: Sccache
-    env:
-      CODECOV_OUTPUT: codecov
-      MESSAGE_PAYLOAD_FILE: /tmp/message
-    steps:
-      - uses: actions/checkout@v2.4.0
-      - uses: ./.github/actions/build-setup
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.ENV_DIEM_S3_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.ENV_DIEM_S3_AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.ENV_DIEM_S3_AWS_REGION }}
-      - name: produce coverage
-        run: cargo xtest --html-cov-dir=$CODECOV_OUTPUT/grcovhtml/ --html-lcov-dir=$CODECOV_OUTPUT/lcovhtml/ --no-fail-fast -j 16 || true
-      - name: Push Coverage Reports to S3
-        run: |
-          set -x
-          SUFFIX="$(date +"%Y-%m-%d")-$(git rev-parse --short=8 HEAD)"
-          PREFIX="ci-artifacts.diem.com/coverage";
-          #Push grcov
-          aws s3 cp --recursive ${CODECOV_OUTPUT}/grcovhtml "s3://${PREFIX}/unit-coverage/${SUFFIX}/";
-          aws s3 cp --recursive ${CODECOV_OUTPUT}/grcovhtml "s3://${PREFIX}/unit-coverage/latest/";
-          echo "Grcov available in s3 https://${PREFIX}/unit-coverage/${SUFFIX}/index.html" >> ${MESSAGE_PAYLOAD_FILE}
-          #Push lcov
-          aws s3 cp --recursive ${CODECOV_OUTPUT}/lcovhtml "s3://${PREFIX}/lcov-unit-coverage/${SUFFIX}/";
-          aws s3 cp --recursive ${CODECOV_OUTPUT}/lcovhtml "s3://${PREFIX}/lcov-unit-coverage/latest/";
-          echo "lcov available in s3 https://${PREFIX}/lcov-unit-coverage/${SUFFIX}/index.html" >> ${MESSAGE_PAYLOAD_FILE}
-      - name: "Send Message"
-        uses: ./.github/actions/slack-file
-        with:
-          payload-file: ${{ env.MESSAGE_PAYLOAD_FILE }}
-          webhook: ${{ secrets.WEBHOOK_COVERAGE }}
-      # Disabling for now as this is not critical for job success.   TODO: fix it up.
-      #- name: publish to codecov.io
-      #  run: bash <(curl -s https://codecov.io/bash) -f $CODECOV_OUTPUT/lcovhtml/lcov.info -F unittest;
-      #- uses: ./.github/actions/build-teardown
-
   prover-inconsistency-test:
     runs-on: ubuntu-20.04-xl
     container:
@@ -135,23 +90,3 @@ jobs:
           payload-file: ${{ env.MESSAGE_PAYLOAD_FILE }}
         if: ${{ failure() }}
       - uses: ./.github/actions/build-teardown
-
-  prune-docker-images:
-    runs-on: ubuntu-20.04
-    environment:
-      name: Docker
-      url: https://hub.docker.com/u/diem
-    steps:
-      - uses: actions/checkout@v2.4.0
-      - name: sign in to DockerHub; install image signing cert
-        uses: ./.github/actions/dockerhub_login
-        with:
-          username: ${{ secrets.ENV_DOCKERHUB_USERNAME }}
-          password: ${{ secrets.ENV_DOCKERHUB_PASSWORD }}
-          key_material: ${{ secrets.ENV_DOCKERHUB_KEY_MATERIAL }}
-          key_name: ${{ secrets.ENV_DOCKERHUB_KEY_NAME }}
-          key_password: ${{ secrets.ENV_DOCKERHUB_KEY_PASSWORD }}
-      - name: prune Docker image
-        if: ${{ github.ref != 'refs/heads/auto' }}
-        run: |
-          scripts/dockerhub_prune.sh -u "${{ secrets.ENV_DOCKERHUB_USERNAME }}" -p "${{ secrets.ENV_DOCKERHUB_PASSWORD }}" -x

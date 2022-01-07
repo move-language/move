@@ -14,4 +14,4 @@ anyhow = "1.0.52"
 move-binary-format = { path = "../../move-binary-format" }
 move-core-types = { path = "../../move-core/types" }
 petgraph = "0.5.1"
-diem-workspace-hack = { version = "0.1", path = "../../../crates/diem-workspace-hack" }
+workspace-hack = { version = "0.1", path = "../../../crates/workspace-hack" }

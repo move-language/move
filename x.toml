@@ -2,9 +2,6 @@
 version = "0.8.2"
 
 [system-tests]
-jsonrpc-integration-tests = { path = "json-rpc/integration-tests" }
-smoke-test = { path = "smoke-test" }
-testcases = { path = "testsuite/testcases" }
 
 [cargo.sccache]
 bucket = "ci-artifacts.diem.com"
@@ -51,7 +48,7 @@ warn = [
 
 [hakari]
 resolver = "2"
-hakari-package = "diem-workspace-hack"
+hakari-package = "workspace-hack"
 exact-versions = true
 platforms = [
     "x86_64-unknown-linux-gnu",
@@ -65,8 +62,6 @@ platforms = [
 [hakari.traversal-excludes]
 workspace-members = [
     # Don't consider the crypto packages as they do weird things with mutually exclusive features.
-    "diem-crypto",
-    "diem-crypto-derive",
     "bytecode-interpreter-crypto",
 
     # Also exclude the devtools packages since they get compiled with a different set of options.
@@ -80,6 +75,7 @@ third-party = [
     # Exclude the fail crate because the failpoints feature should only be enabled
     # for certain builds.
     { name = "fail" },
+    { name = "proptest" },
 ]
 
 # This follows the same syntax as CargoOptionsSummary in guppy.
@@ -98,7 +94,7 @@ target-features = "all"
 
 [summaries.default.omitted-packages]
 workspace-members = [
-    "diem-workspace-hack",
+    "workspace-hack",
 ]
 
 [summaries.full]
@@ -114,8 +110,6 @@ allowed-paths = "^([a-zA-Z0-9._\\-/@:]|-)+$"
 
 whitespace-exceptions = [
     ".github/actions/*/dist/*",
-    # TODO: reevaluate skipping whitespace checks in .md files for the website
-    "developers.diem.com/**/*.md",
     "**/*.exp",
     "**/*.errmap",
     "**/*.abi",
@@ -158,48 +152,19 @@ members = [
     "bytecode-interpreter-testsuite",
     "bytecode-verifier-tests",
     "bytecode-verifier-transactional-tests",
-    "testcases",
-    "diem-documentation-tool",
-    "diem-e2e-tests-replay",
-    "diem-experimental-framework-releases",
-    "diem-fuzz",
-    "diem-fuzzer",
-    "diem-keygen",
-    "diem-proptest-helpers",
-    "diem-rest-client",
-    "diem-retrier",
-    "diem-transactional-test-harness",
-    "diem-transaction-benchmarks",
-    "diem-wallet",
-    "executor-benchmark",
-    "executor-test-helpers",
-    "forge",
-    "forge-cli",
-    "generate-format",
     "invalid-mutations",
-    "jsonrpc-integration-tests",
     "language-benchmarks",
-    "language-e2e-tests",
-    "language-e2e-testsuite",
-    "memsocket",
     "mirai-dataflow-analysis",
     "module-generation",
     "move-compiler-transactional-tests",
+    "move-explain",
     "move-ir-compiler-transactional-tests",
     "move-prover-test-utils",
     "move-transactional-test-runner",
     "move-vm-integration-tests",
     "move-vm-transactional-tests",
-    "offchain",
-    "scratchpad-benchmark",
-    "sdk-compatibility",
     "serializer-tests",
-    "shuffle",
-    "shuffle-custom-move-code",
-    "smoke-test",
-    "socket-bench-server",
     "test-generation",
-    "transaction-emitter",
     "x",
     "x-core",
     "x-lint",
@@ -228,41 +193,15 @@ diem_crates_in_language = [
 # about Move crates depending on Diem ones. Again, you should instead fix
 # the design of your crate so it doesn't have to depend on Diem.
 exclude = [
-    "diem-workspace-hack",
+    "workspace-hack",
 ]
 
 # Interesting subsets of the workspace, These are used for generating and
 # checking dependency summaries.
 
-[subsets.lsr]
-# The Diem safety rules TCB.
-root-members = [
-    "safety-rules",
-]
-
-[subsets.lec]
-# The Diem execution correctness TCB.
-root-members = [
-    "execution-correctness",
-]
-
-[subsets.key-manager]
-# The Diem key manager TCB.
-root-members = [
-    "diem-key-manager",
-]
-
 [subsets.release]
 # The Diem release binaries
 root-members = [
-    "backup-cli",
-    "db-bootstrapper",
-    "diem-genesis-tool",
-    "diem-key-manager",
-    "diem-node",
-    "diem-operational-tool",
-    "execution-correctness",
-    "safety-rules",
 ]
 
 # ---
@@ -293,12 +232,6 @@ mark-changed = []
 # Ignore *.md documentation
 globs = ["*.md"]
 mark-changed = []
-
-[[determinator.path-rule]]
-# Required by get_stdlib_script_abis in transaction-builder-generator.
-globs = ["diem-move/diem-framework/DPN/releases/artifacts/current/**/*"]
-mark-changed = ["transaction-builder-generator"]
-post-rule = "skip-rules"
 
 [[determinator.path-rule]]
 # Ignore files in the language/evm/examples tree (for now)

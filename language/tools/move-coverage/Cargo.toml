@@ -25,7 +25,7 @@ move-ir-types = { path = "../../move-ir/types" }
 move-binary-format = { path = "../../move-binary-format" }
 move-bytecode-source-map = { path = "../../move-ir-compiler/move-bytecode-source-map" }
 move-bytecode-verifier = { path = "../../move-bytecode-verifier" }
-diem-workspace-hack = { version = "0.1", path = "../../../crates/diem-workspace-hack" }
+workspace-hack = { version = "0.1", path = "../../../crates/workspace-hack" }
 
 [features]
 default = []

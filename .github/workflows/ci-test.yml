@@ -256,7 +256,7 @@ jobs:
         # commands below with `xvfb-run <command>`.) Without a simulated display
         # such as this one, the tests would fail with the error message:
         # "Unable to open X display."
-        uses: GabrielBB/xvfb-action@v1.5
+        uses: GabrielBB/xvfb-action@v1.6
         with:
           working-directory: language/move-analyzer/editors/code
           run: npm run test

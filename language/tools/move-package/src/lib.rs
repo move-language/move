@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod compilation;
+mod package_lock;
 pub mod resolution;
 pub mod source_package;
 
@@ -22,6 +23,7 @@ use crate::{
     compilation::{
         build_plan::BuildPlan, compiled_package::CompiledPackage, model_builder::ModelBuilder,
     },
+    package_lock::PackageLock,
     resolution::resolution_graph::{ResolutionGraph, ResolvedGraph},
     source_package::{layout, manifest_parser},
 };
@@ -101,7 +103,10 @@ impl BuildConfig {
         writer: &mut W,
     ) -> Result<(CompiledPackage, CompilationCachingStatus)> {
         let resolved_graph = self.resolution_graph_for_package(path)?;
-        BuildPlan::create(resolved_graph)?.compile(writer)
+        let mutx = PackageLock::lock();
+        let ret = BuildPlan::create(resolved_graph)?.compile(writer);
+        mutx.unlock();
+        ret
     }
 
     // NOTE: If there are no renamings, then the root package has the global resolution of all named
@@ -115,7 +120,10 @@ impl BuildConfig {
         model_config: ModelConfig,
     ) -> Result<GlobalEnv> {
         let resolved_graph = self.resolution_graph_for_package(path)?;
-        ModelBuilder::create(resolved_graph, model_config).build_model()
+        let mutx = PackageLock::lock();
+        let ret = ModelBuilder::create(resolved_graph, model_config).build_model();
+        mutx.unlock();
+        ret
     }
 
     pub fn resolution_graph_for_package(mut self, path: &Path) -> Result<ResolvedGraph> {
@@ -126,8 +134,13 @@ impl BuildConfig {
         let manifest_string =
             std::fs::read_to_string(path.join(layout::SourcePackageLayout::Manifest.path()))?;
         let toml_manifest = manifest_parser::parse_move_manifest_string(manifest_string)?;
+        let mutx = PackageLock::lock();
+        // This should be locked as it inspects the environment for `MOVE_HOME` which could
+        // possibly be set by a different process in parallel.
         let manifest = manifest_parser::parse_source_manifest(toml_manifest)?;
         let resolution_graph = ResolutionGraph::new(manifest, path, self)?;
-        resolution_graph.resolve()
+        let ret = resolution_graph.resolve();
+        mutx.unlock();
+        ret
     }
 }

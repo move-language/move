@@ -33,3 +33,20 @@ fn run_metatest() {
     // temp workspace + without coverage
     assert!(test::run_all(&path_metatest, &path_cli_binary, true, false).is_ok());
 }
+
+#[test]
+fn cross_process_locking_git_deps() {
+    let handle = std::thread::spawn(|| {
+        std::process::Command::new("../../../../../../target/debug/move")
+            .current_dir("./tests/cross_process_tests/Package1")
+            .args(["package", "build"])
+            .output()
+            .expect("Package1 failed");
+    });
+    std::process::Command::new("../../../../../../target/debug/move")
+        .current_dir("./tests/cross_process_tests/Package2")
+        .args(["package", "build"])
+        .output()
+        .expect("Package2 failed");
+    handle.join().unwrap();
+}

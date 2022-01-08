@@ -15,8 +15,10 @@ use std::{
     collections::BTreeMap,
     io::Write,
     path::{Path, PathBuf},
+    sync::Mutex,
 };
 use structopt::*;
+use once_cell::sync::Lazy;
 
 use crate::{
     compilation::{
@@ -25,6 +27,19 @@ use crate::{
     resolution::resolution_graph::{ResolutionGraph, ResolvedGraph},
     source_package::{layout, manifest_parser},
 };
+
+pub(crate) static PACKAGE_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+
+#[macro_export]
+macro_rules! critical_section {
+    ($($code:stmt);*$(;)?) => {
+        {
+            let x = $crate::PACKAGE_MUTEX.lock().unwrap();
+            $($code);*
+            drop(x)
+        }
+    }
+}
 
 #[derive(Debug, StructOpt, Clone, Serialize, Deserialize, Eq, PartialEq, PartialOrd)]
 #[structopt(

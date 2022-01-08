@@ -2056,6 +2056,7 @@ dependencies = [
  "move-errmapgen",
  "move-model",
  "move-symbol-pool",
+ "once_cell",
  "petgraph 0.5.1",
  "ptree",
  "regex",

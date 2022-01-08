@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    critical_section,
     resolution::digest::compute_digest,
     source_package::{
         layout::SourcePackageLayout,
@@ -352,7 +353,9 @@ impl ResolvingGraph {
         dep: Dependency,
         root_path: PathBuf,
     ) -> Result<(Renaming, ResolvingTable)> {
-        Self::download_and_update_if_repo(dep_name_in_pkg, &dep)?;
+        critical_section! {
+            Self::download_and_update_if_repo(dep_name_in_pkg, &dep)?;
+        }
         let (dep_package, dep_package_dir) =
             Self::parse_package_manifest(&dep, &dep_name_in_pkg, root_path)
                 .with_context(|| format!("While processing dependency '{}'", dep_name_in_pkg))?;

@@ -1,4 +1,4 @@
-module 0x3::A {
+module 0x3::D {
     public fun foo() {}
     public fun bar() {}
 }

@@ -26,10 +26,11 @@ It is simpler (but less important) to quantify the changes in run time of \MVP
 on one of our more challenging modules, the |DiemAccount| module, which is the
 biggest module in the Diem framework. This module implements basic functionality
 to create and maintain multiple types of accounts on the blockchain, as well as
-manage their coin balances. It was called |LibraAccount| in release 1.0 of
-\MVP. The table below lists the number of lines, functions, invariants,
-conditions (requires, ensures, and aborts-if), as well as the verification
-times:
+manage their coin balances. It was called |LibraAccount| in release 1.0 of \MVP,
+and is called |DiemAccount| today. The comparison requires various patches as
+described in~\cite{MVP_ARTIFACT}. The table below lists the consolidated numbers
+of lines, functions, invariants, conditions (requires, ensures, and aborts-if),
+as well as the verification times:
 
 {
 \setlength{\tabcolsep}{6pt}
@@ -39,8 +40,8 @@ times:
   \hline
   Module & Lines & Functions & Invariants & Conditions & Timing \\
   \hline
-  LibraAccount & 1975 & 72 & 10 & 113 & \textbf{9.131s} \\
-  DiemAccount & 2554 & 64 & 32 & 171 & \textbf{6.290s} \\
+  LibraAccount & 1975 & 72 & 10 & 113 & \textbf{9.899s} \\
+  DiemAccount & 2554 & 64 & 32 & 171 & \textbf{7.340s} \\
   \hline
 \end{tabular*}
 \vspace{2ex}
@@ -51,15 +52,16 @@ the older version. Specifically, additional specifications have been
 added. Moreover, in the original |LibraAccount|, some of the most complex
 functions had to be disabled for verification because the old version of \MVP
 would time out on them. In contrast, in |DiemAccount| and with the new version,
-all functions are verified. Verification time has been improved by roughly 30\%,
-in the presence of three times more global invariants, and 50\% more function
-conditions.
+all functions are verified. Verification time has been improved by roughly 20\%,
+\emph{in the presence of three times more global invariants, and 50\% more function
+conditions}.
 
 We were able to observe similar improvements for the remaining of the 40 modules
-of the Diem framework. All of the roughly half-dozen timeouts in verification in
-the framework resolved after introduction of the transformations described in
-this paper. Also, specifications which were introduced after the new
-transformations did not introduce new timeouts.
+of the Diem framework. All of the roughly half-dozen timeouts resolved after
+introduction of the transformations described in this paper.
+
+%%Also, specifications which were introduced after the new
+%%transformations did not introduce new timeouts.
 
 %% A further improvement is that
 %% often, in cases where specification and program disagree, a timeout occurred
@@ -188,7 +190,7 @@ full type erasure is not possible, as it is the case in Move.
 \Paragraph{Future Work}
 
 \MVP is conceived as a tool for achieving higher assurance systems, not as a bug
-hunting tool. Having at least temporarily achieved satsifactory performance and
+hunting tool. Having at least temporarily achieved satisfactory performance and
 reliability, we are turning our attention to the question of the goal of higher
 assurance, which raises several issues.  If we're striving for high assurance,
 it would be great to be able to measure progress towards that goal.  Since

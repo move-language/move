@@ -287,7 +287,7 @@ accompanied by various other types that are be stored at the same
 address and the requirement certain state changes are only permitted
 for certain accounts by the access control scheme.
 
-Most softare formal verification tools prove that functions preserve
+Most software verification tools prove that functions preserve
 invariants by assuming the invariant at the entry to each function and
 proving them at the exit.  In a module or class, it is only necessary
 to prove that invariants are preserved by public functions, since
@@ -412,7 +412,7 @@ stored under some label |I2_BEFORE|, which is then used in an assertion.
 
 Global invariant injection is optimized by knowledge of the prover, obtained by
 static analysis, about accessed and modified memory.  Let |accessed(f)| be the
-memory accessed by a function, and |modified(f)| the memory be modified. Let
+memory accessed by a function, and |modified(f)| be the memory modified. Let
 |accessed(I)| by an invariant (including transitively by all functions it
 calls).
 
@@ -463,7 +463,7 @@ to inject the \emph{specialized} instance |I2[T = u8]|. The invariant |I1|,
 however, does not apply for this function, because there is no overlap with
 |S<u64>|.  In contrast, |g| is generic in type |R|, which could be instantiated
 to |u64|. So, |I1|, which applies to |S<u64>| needs to be injected
-in addition to |I1|.
+in addition to |I2|.
 %% relevant for the specific case of |S<u64>|.
 
 The general solution depends on type unification.  Given the accessed memory of

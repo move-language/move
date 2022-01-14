@@ -8,7 +8,7 @@ use itertools::Itertools;
 use move_model::{
     ast,
     ast::{ExpData, TempIndex, Value},
-    model::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleId, QualifiedId, StructId},
+    model::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleId, QualifiedId, QualifiedInstId, StructId},
     pragmas::{ABORTS_IF_IS_PARTIAL_PRAGMA, EMITS_IS_PARTIAL_PRAGMA, EMITS_IS_STRICT_PRAGMA},
     ty::{Type, TypeDisplayContext, BOOL_TYPE, NUM_TYPE},
 };
@@ -187,6 +187,7 @@ struct Instrumenter<'a> {
     abort_local: TempIndex,
     abort_label: Label,
     can_abort: bool,
+    mem_info: &'a BTreeSet<QualifiedInstId<StructId>>,
 }
 
 impl<'a> Instrumenter<'a> {
@@ -260,6 +261,16 @@ impl<'a> Instrumenter<'a> {
             })
             .collect();
 
+        let mut mem_info = BTreeSet::new();
+
+        if auto_trace {
+            // Retrieve the memory used by the function
+            mem_info =
+                usage_analysis::get_memory_usage(&FunctionTarget::new(fun_env, &builder.data))
+                    .accessed
+                    .get_all_inst(&builder.data.type_args);
+        }
+
         // Create and run the instrumenter.
         let mut instrumenter = Instrumenter {
             options,
@@ -270,6 +281,7 @@ impl<'a> Instrumenter<'a> {
             abort_local,
             abort_label,
             can_abort: false,
+            mem_info: &mem_info,
         };
         instrumenter.instrument(&spec, &inlined_props);
 
@@ -801,6 +813,19 @@ impl<'a> Instrumenter<'a> {
                     vec![],
                     Operation::TraceExp(*kind, *node_id),
                     vec![temp],
+                    None,
+                )
+            });
+        }
+
+        // Collects related global memory.
+        for memory in self.mem_info {
+            self.builder.emit_with(|id| {
+                Call(
+                    id,
+                    vec![],
+                    Operation::TraceGlobalMem(memory.clone()),
+                    vec![],
                     None,
                 )
             });

@@ -1,4 +1,5 @@
 // flag: --trace
+// separate_baseline: cvc5
 // separate_baseline: simplify
 module 0x42::TestTracing {
     use Std::Signer;

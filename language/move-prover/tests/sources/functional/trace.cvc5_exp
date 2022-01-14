@@ -25,6 +25,12 @@ error: global memory invariant does not hold
 38 │     invariant forall addr: address: exists<R>(addr) ==> global<R>(addr).x < 5;
    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
+   = Related Global Memory:
+   =         Resource name: TestTracing_R
+   =         Values:  {Address(0): <redacted>, Default: empty}
+   =     at tests/sources/functional/trace.move:29: publish_invalid
+   =     at tests/sources/functional/trace.move:33: publish_invalid (spec)
+   =         `let addr = Signer::address_of(s);` = <redacted>
    =     at tests/sources/functional/trace.move:29: publish_invalid
    =         s = <redacted>
    =         x = <redacted>
@@ -39,23 +45,22 @@ error: post-condition does not hold
    │
    = Related Global Memory:
    =         Resource name: TestTracing_R
-   =         Values:  {Address(6334): <redacted>, Default: empty}
+   =         Values:  {Address(0): <redacted>, Default: empty}
    = Related Bindings:
+   =         addr = <redacted>
    =         exists<R>(addr) = <redacted>
    =         global<R>(addr) = <redacted>
    =         x = <redacted>
    = Execution Trace:
+   =     at tests/sources/functional/trace.move:29: publish_invalid
+   =     at tests/sources/functional/trace.move:33: publish_invalid (spec)
+   =         `let addr = Signer::address_of(s);` = <redacted>
    =     at tests/sources/functional/trace.move:29: publish_invalid
    =         s = <redacted>
    =         x = <redacted>
    =     at tests/sources/functional/trace.move:30: publish_invalid
    =     at tests/sources/functional/trace.move:38
    =     at tests/sources/functional/trace.move:31: publish_invalid
-   =     at tests/sources/functional/trace.move:33: publish_invalid (spec)
-   =     at ../move-stdlib/sources/Signer.move:13: address_of
-   =     at tests/sources/functional/trace.move:34: publish_invalid (spec)
-   =     at tests/sources/functional/trace.move:33: publish_invalid (spec)
-   =     at ../move-stdlib/sources/Signer.move:13: address_of
    =     at tests/sources/functional/trace.move:34: publish_invalid (spec)
    =         `ensures exists<R>(addr) ==> global<R>(addr).x == x;` = <redacted>
 

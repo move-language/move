@@ -854,7 +854,8 @@ impl<'env> FunctionContext<'env> {
             | Operation::TraceLocal(..)
             | Operation::TraceReturn(..)
             | Operation::TraceAbort
-            | Operation::TraceExp(..) => {
+            | Operation::TraceExp(..)
+            | Operation::TraceGlobalMem(..) => {
                 unreachable!();
             }
         };

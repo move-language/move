@@ -12,7 +12,7 @@ use log::{debug, info, log, warn, Level};
 use move_model::{
     code_writer::CodeWriter,
     emit, emitln,
-    model::{GlobalEnv, StructEnv},
+    model::{GlobalEnv, QualifiedInstId, StructEnv, StructId},
     pragmas::{ADDITION_OVERFLOW_UNCHECKED_PRAGMA, SEED_PRAGMA, TIMEOUT_PRAGMA},
     ty::{PrimitiveType, Type},
 };
@@ -1455,6 +1455,11 @@ impl<'env> FunctionTranslator<'env> {
                     EventStoreDiverge => {
                         emitln!(writer, "call $es := $EventStore__diverge($es);");
                     }
+                    TraceGlobalMem(mem) => {
+                        let mem = &mem.to_owned().instantiate(self.type_inst);
+                        let node_id = env.new_node(env.unknown_loc(), mem.to_type());
+                        self.track_global_mem(mem, node_id);
+                    }
                 }
                 if let Some(AbortAction(target, code)) = aa {
                     emitln!(writer, "if ($abort_flag) {");
@@ -1675,6 +1680,18 @@ impl<'env> FunctionTranslator<'env> {
         emitln!(
             self.parent.writer,
             &boogie_debug_track_return(self.fun_target, return_idx, idx, &self.get_local_type(idx))
+        );
+    }
+
+    /// Generates the bytecode to print out the value of mem.
+    fn track_global_mem(&self, mem: &QualifiedInstId<StructId>, node_id: NodeId) {
+        let env = self.parent.env;
+        let temp_str = boogie_resource_memory_name(env, mem, &None);
+        emitln!(
+            self.parent.writer,
+            "assume {{:print \"$track_global_mem({}):\", {}}} true;",
+            node_id.as_usize(),
+            temp_str,
         );
     }
 

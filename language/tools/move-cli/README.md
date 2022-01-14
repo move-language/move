@@ -12,11 +12,11 @@ Every Move CLI command, with the exception of `package create`, is expected to b
 
 ## Installation
 ```shell
-$ cargo install --path diem/language/tools/move-cli
+$ cargo install --path move/language/tools/move-cli
 ```
 or
 ```shell
-$ cargo install --git https://github.com/diem/diem move-cli --branch main
+$ cargo install --git https://github.com/diem/move move-cli --branch main
 ```
 
 This will install the `move` binary in your Cargo binary directory. On

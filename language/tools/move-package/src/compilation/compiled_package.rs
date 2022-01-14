@@ -652,7 +652,63 @@ impl CompiledPackage {
         Ok((compiled_package, CompilationCachingStatus::Recompiled))
     }
 
+    // We take the (restrictive) view that all filesystems are case insensitive to maximize
+    // portability of packages.
+    fn check_filepaths_ok(&self) -> Result<()> {
+        // A mapping of (lowercase_name => [info_for_each_occurence]
+        let mut insensitive_mapping = BTreeMap::new();
+        for compiled_unit in &self.compiled_units {
+            let is_module = matches!(&compiled_unit.unit, CompiledUnit::Module(_));
+            let name = match &compiled_unit.unit {
+                CompiledUnit::Script(named) => named.name.as_str(),
+                CompiledUnit::Module(named) => named.name.as_str(),
+            };
+            let entry = insensitive_mapping
+                .entry(name.to_lowercase())
+                .or_insert_with(Vec::new);
+            entry.push((
+                name,
+                is_module,
+                compiled_unit.source_path.to_string_lossy().to_string(),
+            ));
+        }
+        let errs = insensitive_mapping
+            .into_iter()
+            .filter_map(|(insensitive_name, occurence_infos)| {
+                if occurence_infos.len() > 1 {
+                    let name_conflict_error_msg = occurence_infos
+                        .into_iter()
+                        .map(|(name, is_module, fpath)| {
+                                format!(
+                                    "\t{} '{}' at path '{}'",
+                                    if is_module { "Module" } else { "Script" },
+                                    name,
+                                    fpath
+                                )
+                        })
+                        .collect::<Vec<_>>()
+                        .join("\n");
+                    Some(format!(
+                        "The following modules and/or scripts would collide as '{}' on the file system:\n{}",
+                        insensitive_name, name_conflict_error_msg
+                    ))
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        if !errs.is_empty() {
+            anyhow::bail!("Module and/or script names found that would cause failures on case insensitive \
+                file systems when compiling package '{}':\n{}\nPlease rename these scripts and/or modules to resolve these conflicts.",
+                self.compiled_package_info.package_name,
+                errs.join("\n"),
+            )
+        }
+        Ok(())
+    }
+
     pub(crate) fn save_to_disk(&self, under_path: PathBuf) -> Result<OnDiskCompiledPackage> {
+        self.check_filepaths_ok()?;
         let on_disk_package = OnDiskCompiledPackage {
             root_path: under_path.join(&self.compiled_package_info.package_name.to_string()),
             package: OnDiskPackage {

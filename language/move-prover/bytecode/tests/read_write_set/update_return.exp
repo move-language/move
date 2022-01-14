@@ -9,19 +9,17 @@ public fun UpdateReturn::abort_or_write($t0|s: &mut UpdateReturn::S, $t1|b: bool
      var $t7: u64
      var $t8: u64
   0: $t3 := copy($t1)
-  1: if ($t3) goto 4 else goto 2
-  2: label L1
-  3: goto 9
-  4: label L0
-  5: $t4 := move($t0)
-  6: destroy($t4)
-  7: $t5 := 77
-  8: abort($t5)
-  9: label L2
- 10: $t6 := move($t0)
- 11: $t7 := copy($t2)
- 12: $t8 := UpdateReturn::write_f($t6, $t7)
- 13: return $t8
+  1: if ($t3) goto 2 else goto 7
+  2: label L0
+  3: $t4 := move($t0)
+  4: destroy($t4)
+  5: $t5 := 77
+  6: abort($t5)
+  7: label L2
+  8: $t6 := move($t0)
+  9: $t7 := copy($t2)
+ 10: $t8 := UpdateReturn::write_f($t6, $t7)
+ 11: return $t8
 }
 
 
@@ -59,19 +57,17 @@ public fun UpdateReturn::abort_or_write($t0|s: &mut UpdateReturn::S, $t1|b: bool
      # Ret(0): Formal(2)
      #
   0: $t3 := copy($t1)
-  1: if ($t3) goto 4 else goto 2
-  2: label L1
-  3: goto 9
-  4: label L0
-  5: $t4 := move($t0)
-  6: destroy($t4)
-  7: $t5 := 77
-  8: abort($t5)
-  9: label L2
- 10: $t6 := move($t0)
- 11: $t7 := copy($t2)
- 12: $t8 := UpdateReturn::write_f($t6, $t7)
- 13: return $t8
+  1: if ($t3) goto 2 else goto 7
+  2: label L0
+  3: $t4 := move($t0)
+  4: destroy($t4)
+  5: $t5 := 77
+  6: abort($t5)
+  7: label L2
+  8: $t6 := move($t0)
+  9: $t7 := copy($t2)
+ 10: $t8 := UpdateReturn::write_f($t6, $t7)
+ 11: return $t8
 }
 
 

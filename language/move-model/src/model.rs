@@ -821,6 +821,20 @@ impl GlobalEnv {
             .collect()
     }
 
+    /// Return the source file ids.
+    pub fn get_source_file_ids(&self) -> Vec<FileId> {
+        self.file_hash_map
+            .iter()
+            .filter_map(|(_, (k, id))| {
+                if k.eq("<internal>") || k.eq("<unknown>") {
+                    None
+                } else {
+                    Some(*id)
+                }
+            })
+            .collect()
+    }
+
     // Gets the number of source files in this environment.
     pub fn get_file_count(&self) -> usize {
         self.file_hash_map.len()

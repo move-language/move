@@ -2,15 +2,14 @@
 # Copyright (c) The Diem Core Contributors
 # SPDX-License-Identifier: Apache-2.0
 
-# A script to check whether a local commit related to the Move Prover and Diem Framework
-# is ready for a PR.
+# A script to check whether a local commit related to Move repo is ready for a PR.
 
 set -e
 
 BUILD_MODE=--release
 
 BASE=$(git rev-parse --show-toplevel)
-echo "*************** [check-pr] Assuming diem root at $BASE"
+echo "*************** [check-pr] Assuming move root at $BASE"
 
 # Run only tests which would also be run on CI
 export ENV_TEST_ON_CI=1
@@ -29,8 +28,8 @@ Flags:
          on move-model)
     -t   In addition to xfmt/xclippy, run cargo test
     -d   Run documentation generation, abi generation, etc. for move-stdlib
-         and diem-framework.
-    -g   Run the Diem git checks script (whitespace check). This works
+         and other tested frameworks.
+    -g   Run the Move git checks script (whitespace check). This works
          only for committed clients.
     -m   Run the Move unit and verification tests.
     -e   Run the Move e2e tests
@@ -82,6 +81,7 @@ CRATES="\
   $BASE/language/move-prover/boogie-backend \
   $BASE/language/move-prover\
   $BASE/language/move-model\
+  $BASE/language/evm/move-to-yul\
 "
 
 if [ ! -z "$CHECKMORE" ]; then
@@ -101,24 +101,20 @@ fi
 
 ARTIFACT_CRATES="\
   $BASE/language/move-stdlib\
-  $BASE/diem-move/diem-framework\
 "
 
-BUILD_EXPERIMENTAL="$BASE/diem-move/diem-framework"
+BUILD_EXPERIMENTAL=""
 
 MOVE_TEST_CRATES="\
   $BASE/language/move-stdlib\
-  $BASE/diem-move/diem-framework\
 "
 
 MOVE_E2E_TEST_CRATES="\
-  $BASE/language/move-compiler/functional-tests\
-  $BASE/language/e2e-testsuite\
-  $BASE/language/tools/move-cli\
-  $BASE/diem-move/df-cli\
+  $BASE/language/move-compiler\
+  $BASE/language/move-compiler/transactional-tests\
   $BASE/language/move-stdlib\
-  $BASE/diem-move/diem-framework\
 "
+# test failure?  $BASE/language/tools/move-cli\
 
 
 if [ ! -z "$CHECK" ]; then
@@ -143,7 +139,7 @@ if [ ! -z "$GEN_ARTIFACTS" ]; then
       cd $dir
       cargo run $BUILD_MODE
     )
-    if [[  $BUILD_EXPERIMENTAL == "$dir"  ]]; then
+    if [[  "$BUILD_EXPERIMENTAL" == "$dir"  ]]; then
         echo "Building additional experimental artifact in $dir"
         (
             cd $dir
@@ -154,7 +150,7 @@ if [ ! -z "$GEN_ARTIFACTS" ]; then
 fi
 
 if [ ! -z "$GIT_CHECKS" ]; then
-   echo "*************** [check-pr] Diem git checks"
+   echo "*************** [check-pr] Move git checks"
    $BASE/scripts/git-checks.sh
 fi
 

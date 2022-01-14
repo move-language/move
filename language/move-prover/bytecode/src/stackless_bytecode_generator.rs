@@ -37,6 +37,7 @@ pub struct StacklessBytecodeGenerator<'a> {
     code: Vec<Bytecode>,
     location_table: BTreeMap<AttrId, Loc>,
     loop_invariants: BTreeSet<AttrId>,
+    fallthrough_labels: BTreeSet<Label>,
 }
 
 impl<'a> StacklessBytecodeGenerator<'a> {
@@ -53,6 +54,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             code: vec![],
             location_table: BTreeMap::new(),
             loop_invariants: BTreeSet::new(),
+            fallthrough_labels: BTreeSet::new(),
         }
     }
 
@@ -77,6 +79,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 if label_map.get(&next_offs).is_none() {
                     let fall_through_label = Label::new(label_map.len());
                     label_map.insert(next_offs, fall_through_label);
+                    self.fallthrough_labels.insert(fall_through_label);
                 }
             };
         }
@@ -106,6 +109,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             code,
             location_table,
             loop_invariants,
+            ..
         } = self;
 
         FunctionData::new(
@@ -249,8 +253,31 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             }
 
             MoveBytecode::Branch(target) => {
-                self.code
-                    .push(Bytecode::Jump(attr_id, *label_map.get(target).unwrap()));
+                // Attempt to eliminate the common pattern `if c goto L1 else L2; L2: goto L3`
+                // and replace it with `if c goto L1 else L3`, provided L2 is a fall-through
+                // label, i.e. not referenced from elsewhere.
+                let target_label = *label_map.get(target).unwrap();
+                let at = self.code.len();
+                let rewritten = if at >= 2 {
+                    match (&self.code[at - 2], &self.code[at - 1]) {
+                        (
+                            Bytecode::Branch(attr, if_true, if_false, c),
+                            Bytecode::Label(_, cont),
+                        ) if self.fallthrough_labels.contains(cont) && if_false == cont => {
+                            let bc = Bytecode::Branch(*attr, *if_true, target_label, *c);
+                            self.code.pop();
+                            self.code.pop();
+                            self.code.push(bc);
+                            true
+                        }
+                        _ => false,
+                    }
+                } else {
+                    false
+                };
+                if !rewritten {
+                    self.code.push(Bytecode::Jump(attr_id, target_label));
+                }
             }
 
             MoveBytecode::FreezeRef => {

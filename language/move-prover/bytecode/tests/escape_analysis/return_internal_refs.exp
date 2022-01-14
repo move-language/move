@@ -21,25 +21,23 @@ fun LeakInternalRefs::leak_in_branch($t0|b: bool, $t1|x: &mut u64, $t2|s: &mut L
      var $t9: &mut u64
      var $t10: &mut u64
   0: $t4 := copy($t0)
-  1: if ($t4) goto 4 else goto 2
-  2: label L1
-  3: goto 10
-  4: label L0
-  5: $t5 := move($t2)
-  6: destroy($t5)
-  7: $t6 := move($t1)
-  8: $t3 := $t6
-  9: goto 17
- 10: label L2
- 11: $t7 := move($t1)
- 12: destroy($t7)
- 13: $t8 := move($t2)
- 14: $t9 := borrow_field<LeakInternalRefs::S>.f($t8)
- 15: $t3 := $t9
- 16: goto 17
- 17: label L3
- 18: $t10 := move($t3)
- 19: return $t10
+  1: if ($t4) goto 2 else goto 8
+  2: label L0
+  3: $t5 := move($t2)
+  4: destroy($t5)
+  5: $t6 := move($t1)
+  6: $t3 := $t6
+  7: goto 15
+  8: label L2
+  9: $t7 := move($t1)
+ 10: destroy($t7)
+ 11: $t8 := move($t2)
+ 12: $t9 := borrow_field<LeakInternalRefs::S>.f($t8)
+ 13: $t3 := $t9
+ 14: goto 15
+ 15: label L3
+ 16: $t10 := move($t3)
+ 17: return $t10
 }
 
 
@@ -68,33 +66,29 @@ fun LeakInternalRefs::leak_in_loop($t0|x: &mut u64, $t1|s: &mut LeakInternalRefs
   4: $t4 := copy($t2)
   5: $t5 := 10
   6: $t6 := <($t4, $t5)
-  7: if ($t6) goto 10 else goto 8
-  8: label L1
-  9: goto 29
- 10: label L0
- 11: $t7 := copy($t2)
- 12: $t8 := 7
- 13: $t9 := ==($t7, $t8)
- 14: if ($t9) goto 17 else goto 15
- 15: label L4
- 16: goto 23
- 17: label L3
- 18: $t10 := move($t0)
- 19: destroy($t10)
- 20: $t11 := move($t1)
- 21: $t12 := borrow_field<LeakInternalRefs::S>.f($t11)
- 22: return $t12
- 23: label L5
- 24: $t13 := copy($t2)
- 25: $t14 := 1
- 26: $t15 := +($t13, $t14)
- 27: $t2 := $t15
- 28: goto 3
- 29: label L2
- 30: $t16 := move($t1)
- 31: destroy($t16)
- 32: $t17 := move($t0)
- 33: return $t17
+  7: if ($t6) goto 8 else goto 25
+  8: label L0
+  9: $t7 := copy($t2)
+ 10: $t8 := 7
+ 11: $t9 := ==($t7, $t8)
+ 12: if ($t9) goto 13 else goto 19
+ 13: label L3
+ 14: $t10 := move($t0)
+ 15: destroy($t10)
+ 16: $t11 := move($t1)
+ 17: $t12 := borrow_field<LeakInternalRefs::S>.f($t11)
+ 18: return $t12
+ 19: label L5
+ 20: $t13 := copy($t2)
+ 21: $t14 := 1
+ 22: $t15 := +($t13, $t14)
+ 23: $t2 := $t15
+ 24: goto 3
+ 25: label L2
+ 26: $t16 := move($t1)
+ 27: destroy($t16)
+ 28: $t17 := move($t0)
+ 29: return $t17
 }
 
 
@@ -157,25 +151,23 @@ fun LeakInternalRefs::leak_in_branch($t0|b: bool, $t1|x: &mut u64, $t2|s: &mut L
      var $t9: &mut u64
      var $t10: &mut u64
   0: $t4 := copy($t0)
-  1: if ($t4) goto 4 else goto 2
-  2: label L1
-  3: goto 10
-  4: label L0
-  5: $t5 := move($t2)
-  6: destroy($t5)
-  7: $t6 := move($t1)
-  8: $t3 := $t6
-  9: goto 17
- 10: label L2
- 11: $t7 := move($t1)
- 12: destroy($t7)
- 13: $t8 := move($t2)
- 14: $t9 := borrow_field<LeakInternalRefs::S>.f($t8)
- 15: $t3 := $t9
- 16: goto 17
- 17: label L3
- 18: $t10 := move($t3)
- 19: return $t10
+  1: if ($t4) goto 2 else goto 8
+  2: label L0
+  3: $t5 := move($t2)
+  4: destroy($t5)
+  5: $t6 := move($t1)
+  6: $t3 := $t6
+  7: goto 15
+  8: label L2
+  9: $t7 := move($t1)
+ 10: destroy($t7)
+ 11: $t8 := move($t2)
+ 12: $t9 := borrow_field<LeakInternalRefs::S>.f($t8)
+ 13: $t3 := $t9
+ 14: goto 15
+ 15: label L3
+ 16: $t10 := move($t3)
+ 17: return $t10
 }
 
 
@@ -204,33 +196,29 @@ fun LeakInternalRefs::leak_in_loop($t0|x: &mut u64, $t1|s: &mut LeakInternalRefs
   4: $t4 := copy($t2)
   5: $t5 := 10
   6: $t6 := <($t4, $t5)
-  7: if ($t6) goto 10 else goto 8
-  8: label L1
-  9: goto 29
- 10: label L0
- 11: $t7 := copy($t2)
- 12: $t8 := 7
- 13: $t9 := ==($t7, $t8)
- 14: if ($t9) goto 17 else goto 15
- 15: label L4
- 16: goto 23
- 17: label L3
- 18: $t10 := move($t0)
- 19: destroy($t10)
- 20: $t11 := move($t1)
- 21: $t12 := borrow_field<LeakInternalRefs::S>.f($t11)
- 22: return $t12
- 23: label L5
- 24: $t13 := copy($t2)
- 25: $t14 := 1
- 26: $t15 := +($t13, $t14)
- 27: $t2 := $t15
- 28: goto 3
- 29: label L2
- 30: $t16 := move($t1)
- 31: destroy($t16)
- 32: $t17 := move($t0)
- 33: return $t17
+  7: if ($t6) goto 8 else goto 25
+  8: label L0
+  9: $t7 := copy($t2)
+ 10: $t8 := 7
+ 11: $t9 := ==($t7, $t8)
+ 12: if ($t9) goto 13 else goto 19
+ 13: label L3
+ 14: $t10 := move($t0)
+ 15: destroy($t10)
+ 16: $t11 := move($t1)
+ 17: $t12 := borrow_field<LeakInternalRefs::S>.f($t11)
+ 18: return $t12
+ 19: label L5
+ 20: $t13 := copy($t2)
+ 21: $t14 := 1
+ 22: $t15 := +($t13, $t14)
+ 23: $t2 := $t15
+ 24: goto 3
+ 25: label L2
+ 26: $t16 := move($t1)
+ 27: destroy($t16)
+ 28: $t17 := move($t0)
+ 29: return $t17
 }
 
 

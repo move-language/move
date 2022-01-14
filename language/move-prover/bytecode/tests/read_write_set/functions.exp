@@ -21,20 +21,18 @@ public fun Funtions::choice($t0|a: vector<address>, $t1|b: vector<address>, $t2|
      var $t6: vector<address>
      var $t7: vector<address>
   0: $t4 := copy($t2)
-  1: if ($t4) goto 4 else goto 2
-  2: label L1
-  3: goto 8
-  4: label L0
-  5: $t5 := move($t0)
-  6: $t3 := $t5
-  7: goto 12
-  8: label L2
-  9: $t6 := move($t1)
- 10: $t3 := $t6
- 11: goto 12
- 12: label L3
- 13: $t7 := move($t3)
- 14: return $t7
+  1: if ($t4) goto 2 else goto 6
+  2: label L0
+  3: $t5 := move($t0)
+  4: $t3 := $t5
+  5: goto 10
+  6: label L2
+  7: $t6 := move($t1)
+  8: $t3 := $t6
+  9: goto 10
+ 10: label L3
+ 11: $t7 := move($t3)
+ 12: return $t7
 }
 
 
@@ -121,20 +119,18 @@ public fun Funtions::choice($t0|a: vector<address>, $t1|b: vector<address>, $t2|
      # Ret(0): {Formal(0), Formal(1), }
      #
   0: $t4 := copy($t2)
-  1: if ($t4) goto 4 else goto 2
-  2: label L1
-  3: goto 8
-  4: label L0
-  5: $t5 := move($t0)
-  6: $t3 := $t5
-  7: goto 12
-  8: label L2
-  9: $t6 := move($t1)
- 10: $t3 := $t6
- 11: goto 12
- 12: label L3
- 13: $t7 := move($t3)
- 14: return $t7
+  1: if ($t4) goto 2 else goto 6
+  2: label L0
+  3: $t5 := move($t0)
+  4: $t3 := $t5
+  5: goto 10
+  6: label L2
+  7: $t6 := move($t1)
+  8: $t3 := $t6
+  9: goto 10
+ 10: label L3
+ 11: $t7 := move($t3)
+ 12: return $t7
 }
 
 

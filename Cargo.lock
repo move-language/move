@@ -2288,6 +2288,48 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-to-yul"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "atty",
+ "clap",
+ "codespan",
+ "codespan-reporting",
+ "datatest-stable",
+ "futures",
+ "hex",
+ "itertools 0.10.1",
+ "log",
+ "move-binary-format",
+ "move-command-line-common",
+ "move-core-types",
+ "move-ir-types",
+ "move-model",
+ "move-prover-boogie-backend",
+ "move-prover-test-utils",
+ "move-stackless-bytecode",
+ "move-stdlib",
+ "num 0.4.0",
+ "once_cell",
+ "pretty",
+ "rand 0.8.4",
+ "regex",
+ "serde 1.0.130",
+ "serde_json",
+ "shell-words",
+ "simplelog",
+ "structopt 0.3.25",
+ "tempfile",
+ "tera",
+ "tokio",
+ "toml",
+ "walkdir",
+ "workspace-hack",
+]
+
+[[package]]
 name = "move-transactional-test-runner"
 version = "0.1.0"
 dependencies = [

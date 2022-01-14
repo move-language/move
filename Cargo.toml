@@ -7,6 +7,7 @@ members = [
     "devtools/x-core",
     "devtools/x-lint",
     "language/benchmarks",
+    "language/evm/move-to-yul",
     "language/move-analyzer",
     "language/move-binary-format",
     "language/move-binary-format/serializer-tests",
@@ -70,6 +71,7 @@ members = [
 #
 # For more, see the "Conditional compilation for tests" section in documentation/coding_guidelines.md.
 default-members = [
+    "language/evm/move-to-yul",
     "language/move-analyzer",
     "language/move-ir-compiler",
     "language/move-prover",

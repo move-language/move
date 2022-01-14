@@ -7,18 +7,16 @@ public fun Footprint::reassign_cond($t0|a: address, $t1|b: bool): address {
      var $t4: u64
      var $t5: address
   0: $t2 := copy($t1)
-  1: if ($t2) goto 4 else goto 2
-  2: label L1
-  3: goto 8
-  4: label L0
-  5: $t3 := 0x2
-  6: $t0 := $t3
-  7: goto 8
-  8: label L2
-  9: $t4 := 4
- 10: destroy($t4)
- 11: $t5 := copy($t0)
- 12: return $t5
+  1: if ($t2) goto 2 else goto 6
+  2: label L0
+  3: $t3 := 0x2
+  4: $t0 := $t3
+  5: goto 6
+  6: label L2
+  7: $t4 := 4
+  8: destroy($t4)
+  9: $t5 := copy($t0)
+ 10: return $t5
 }
 
 
@@ -54,21 +52,19 @@ public fun Footprint::reassign_field_cond($t0|s: &mut Footprint::S, $t1|b: bool)
      var $t5: &mut address
      var $t6: &mut Footprint::S
   0: $t2 := copy($t1)
-  1: if ($t2) goto 4 else goto 2
-  2: label L1
-  3: goto 10
-  4: label L0
-  5: $t3 := 0x2
-  6: $t4 := move($t0)
-  7: $t5 := borrow_field<Footprint::S>.f($t4)
-  8: write_ref($t5, $t3)
-  9: goto 14
- 10: label L2
- 11: $t6 := move($t0)
- 12: destroy($t6)
- 13: goto 14
- 14: label L3
- 15: return ()
+  1: if ($t2) goto 2 else goto 8
+  2: label L0
+  3: $t3 := 0x2
+  4: $t4 := move($t0)
+  5: $t5 := borrow_field<Footprint::S>.f($t4)
+  6: write_ref($t5, $t3)
+  7: goto 12
+  8: label L2
+  9: $t6 := move($t0)
+ 10: destroy($t6)
+ 11: goto 12
+ 12: label L3
+ 13: return ()
 }
 
 
@@ -98,18 +94,16 @@ public fun Footprint::reassign_cond($t0|a: address, $t1|b: bool): address {
      # Ret(0): {0x2, Formal(0), }
      #
   0: $t2 := copy($t1)
-  1: if ($t2) goto 4 else goto 2
-  2: label L1
-  3: goto 8
-  4: label L0
-  5: $t3 := 0x2
-  6: $t0 := $t3
-  7: goto 8
-  8: label L2
-  9: $t4 := 4
- 10: destroy($t4)
- 11: $t5 := copy($t0)
- 12: return $t5
+  1: if ($t2) goto 2 else goto 6
+  2: label L0
+  3: $t3 := 0x2
+  4: $t0 := $t3
+  5: goto 6
+  6: label L2
+  7: $t4 := 4
+  8: destroy($t4)
+  9: $t5 := copy($t0)
+ 10: return $t5
 }
 
 
@@ -165,21 +159,19 @@ public fun Footprint::reassign_field_cond($t0|s: &mut Footprint::S, $t1|b: bool)
      # Formal(0)/f: {0x2, Formal(0)/f, }
      #
   0: $t2 := copy($t1)
-  1: if ($t2) goto 4 else goto 2
-  2: label L1
-  3: goto 10
-  4: label L0
-  5: $t3 := 0x2
-  6: $t4 := move($t0)
-  7: $t5 := borrow_field<Footprint::S>.f($t4)
-  8: write_ref($t5, $t3)
-  9: goto 14
- 10: label L2
- 11: $t6 := move($t0)
- 12: destroy($t6)
- 13: goto 14
- 14: label L3
- 15: return ()
+  1: if ($t2) goto 2 else goto 8
+  2: label L0
+  3: $t3 := 0x2
+  4: $t4 := move($t0)
+  5: $t5 := borrow_field<Footprint::S>.f($t4)
+  6: write_ref($t5, $t3)
+  7: goto 12
+  8: label L2
+  9: $t6 := move($t0)
+ 10: destroy($t6)
+ 11: goto 12
+ 12: label L3
+ 13: return ()
 }
 
 

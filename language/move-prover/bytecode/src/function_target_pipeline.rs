@@ -190,6 +190,11 @@ impl FunctionTargetsHolder {
         FunctionTarget::new(func_env, data)
     }
 
+    pub fn has_target(&self, func_env: &FunctionEnv<'_>, variant: &FunctionVariant) -> bool {
+        self.get_data(&func_env.get_qualified_id(), variant)
+            .is_some()
+    }
+
     /// Gets all available variants for function.
     pub fn get_target_variants(&self, func_env: &FunctionEnv<'_>) -> Vec<FunctionVariant> {
         self.targets

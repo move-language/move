@@ -70,20 +70,18 @@ fun PackUnpack::read_unpacked_addr($t0|s: PackUnpack::S): address {
   5: $t3 := $t9
   6: $t2 := $t6
   7: $t11 := copy($t4)
-  8: if ($t11) goto 11 else goto 9
-  9: label L1
- 10: goto 15
- 11: label L0
- 12: $t12 := copy($t2)
- 13: $t1 := $t12
- 14: goto 19
- 15: label L2
- 16: $t13 := copy($t3)
- 17: $t1 := $t13
- 18: goto 19
- 19: label L3
- 20: $t14 := move($t1)
- 21: return $t14
+  8: if ($t11) goto 9 else goto 13
+  9: label L0
+ 10: $t12 := copy($t2)
+ 11: $t1 := $t12
+ 12: goto 17
+ 13: label L2
+ 14: $t13 := copy($t3)
+ 15: $t1 := $t13
+ 16: goto 17
+ 17: label L3
+ 18: $t14 := move($t1)
+ 19: return $t14
 }
 
 
@@ -263,20 +261,18 @@ fun PackUnpack::read_unpacked_addr($t0|s: PackUnpack::S): address {
   5: $t3 := $t9
   6: $t2 := $t6
   7: $t11 := copy($t4)
-  8: if ($t11) goto 11 else goto 9
-  9: label L1
- 10: goto 15
- 11: label L0
- 12: $t12 := copy($t2)
- 13: $t1 := $t12
- 14: goto 19
- 15: label L2
- 16: $t13 := copy($t3)
- 17: $t1 := $t13
- 18: goto 19
- 19: label L3
- 20: $t14 := move($t1)
- 21: return $t14
+  8: if ($t11) goto 9 else goto 13
+  9: label L0
+ 10: $t12 := copy($t2)
+ 11: $t1 := $t12
+ 12: goto 17
+ 13: label L2
+ 14: $t13 := copy($t3)
+ 15: $t1 := $t13
+ 16: goto 17
+ 17: label L3
+ 18: $t14 := move($t1)
+ 19: return $t14
 }
 
 

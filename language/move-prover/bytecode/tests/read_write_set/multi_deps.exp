@@ -15,29 +15,27 @@ fun MultiDeps::add_to($t0|s: &mut MultiDeps::S, $t1|t: &MultiDeps::T, $t2|v: boo
      var $t13: &mut MultiDeps::S
      var $t14: &mut u64
   0: $t4 := copy($t2)
-  1: if ($t4) goto 4 else goto 2
-  2: label L1
-  3: goto 12
-  4: label L0
-  5: $t5 := move($t1)
-  6: destroy($t5)
-  7: $t6 := copy($t0)
-  8: $t7 := borrow_field<MultiDeps::S>.f($t6)
-  9: $t8 := read_ref($t7)
- 10: $t3 := $t8
- 11: goto 18
- 12: label L2
- 13: $t9 := move($t1)
- 14: $t10 := borrow_field<MultiDeps::T>.f($t9)
- 15: $t11 := read_ref($t10)
- 16: $t3 := $t11
- 17: goto 18
- 18: label L3
- 19: $t12 := move($t3)
- 20: $t13 := move($t0)
- 21: $t14 := borrow_field<MultiDeps::S>.f($t13)
- 22: write_ref($t14, $t12)
- 23: return ()
+  1: if ($t4) goto 2 else goto 10
+  2: label L0
+  3: $t5 := move($t1)
+  4: destroy($t5)
+  5: $t6 := copy($t0)
+  6: $t7 := borrow_field<MultiDeps::S>.f($t6)
+  7: $t8 := read_ref($t7)
+  8: $t3 := $t8
+  9: goto 16
+ 10: label L2
+ 11: $t9 := move($t1)
+ 12: $t10 := borrow_field<MultiDeps::T>.f($t9)
+ 13: $t11 := read_ref($t10)
+ 14: $t3 := $t11
+ 15: goto 16
+ 16: label L3
+ 17: $t12 := move($t3)
+ 18: $t13 := move($t0)
+ 19: $t14 := borrow_field<MultiDeps::S>.f($t13)
+ 20: write_ref($t14, $t12)
+ 21: return ()
 }
 
 ============ after pipeline `read_write_set` ================
@@ -67,27 +65,25 @@ fun MultiDeps::add_to($t0|s: &mut MultiDeps::S, $t1|t: &MultiDeps::T, $t2|v: boo
      # Formal(0)/f: {Formal(0)/f, Formal(1)/f, }
      #
   0: $t4 := copy($t2)
-  1: if ($t4) goto 4 else goto 2
-  2: label L1
-  3: goto 12
-  4: label L0
-  5: $t5 := move($t1)
-  6: destroy($t5)
-  7: $t6 := copy($t0)
-  8: $t7 := borrow_field<MultiDeps::S>.f($t6)
-  9: $t8 := read_ref($t7)
- 10: $t3 := $t8
- 11: goto 18
- 12: label L2
- 13: $t9 := move($t1)
- 14: $t10 := borrow_field<MultiDeps::T>.f($t9)
- 15: $t11 := read_ref($t10)
- 16: $t3 := $t11
- 17: goto 18
- 18: label L3
- 19: $t12 := move($t3)
- 20: $t13 := move($t0)
- 21: $t14 := borrow_field<MultiDeps::S>.f($t13)
- 22: write_ref($t14, $t12)
- 23: return ()
+  1: if ($t4) goto 2 else goto 10
+  2: label L0
+  3: $t5 := move($t1)
+  4: destroy($t5)
+  5: $t6 := copy($t0)
+  6: $t7 := borrow_field<MultiDeps::S>.f($t6)
+  7: $t8 := read_ref($t7)
+  8: $t3 := $t8
+  9: goto 16
+ 10: label L2
+ 11: $t9 := move($t1)
+ 12: $t10 := borrow_field<MultiDeps::T>.f($t9)
+ 13: $t11 := read_ref($t10)
+ 14: $t3 := $t11
+ 15: goto 16
+ 16: label L3
+ 17: $t12 := move($t3)
+ 18: $t13 := move($t0)
+ 19: $t14 := borrow_field<MultiDeps::S>.f($t13)
+ 20: write_ref($t14, $t12)
+ 21: return ()
 }

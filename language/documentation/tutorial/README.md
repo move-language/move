@@ -24,10 +24,11 @@ Now let's get started!
 
 ## Step 0: Installation<span id="Step0"><span>
 
-If you haven't already, open your terminal and clone [the Diem repository](https://github.com/diem/diem):
+If you haven't already, open your terminal and clone [the Diem repository](https://github.com/diem/diem) and [the Move repository](https://github.com/diem/move):
 
 ```bash
 git clone https://github.com/diem/diem.git
+git clone https://github.com/diem/move.git
 ```
 
 Go to the `diem` directory and run the `dev_setup.sh` script:
@@ -49,8 +50,9 @@ source ~/.profile
 Next, install Move's command-line tools by running these commands:
 
 ```bash
-cargo install --path diem-move/df-cli
-cargo install --path language/move-analyzer
+cd ..
+cargo install --path diem/diem-move/df-cli
+cargo install --path move/language/move-analyzer
 ```
 
 After running these commands, you should be able to confirm that they can be
@@ -92,11 +94,11 @@ a command or subcommand with the `-h` flag will print documentation.
 There is official Move support for Visual Studio Code. You can install this
 extension by opening VS Code, searching for the "move-analyzer" extension in
 the Extension Pane, and installing it. More detailed instructions can be found
-in the extension's [README](https://github.com/diem/diem/tree/main/language/move-analyzer/editors/code).
+in the extension's [README](https://github.com/diem/move/tree/main/language/move-analyzer/editors/code).
 
 Before running the next steps, `cd` to the tutorial directory:
 ```bash
-cd <path_to_diem_repo>/language/documentation/tutorial
+cd <path_to_move_repo>/language/documentation/tutorial
 ```
 
 ## Step 1: Writing my first Move module<span id="Step1"><span>
@@ -252,7 +254,7 @@ assertion fails the unit test will fail.
 
 * There are a number of test-related annotations that are worth exploring, they
   can be found
-  [here](https://github.com/diem/diem/blob/main/language/changes/4-unit-testing.md#testing-annotations-their-meaning-and-usage).
+  [here](https://github.com/diem/move/blob/main/language/changes/4-unit-testing.md#testing-annotations-their-meaning-and-usage).
   You'll see some of these used in Step 5.
 * Before running unit tests, you'll always need to add a dependency on the Move
   standard library. This can be done by adding an entry to the `[dependencies]`
@@ -571,7 +573,7 @@ source ~/.profile
 ```
 ## Step 7:  Use the Move prover<span id="Step7"><span>
 
-Smart contracts deployed on the blockchain may maniputate high-value assets. As a technique that uses strict mathematical methods to describe behavior and reason correctness of computer systems, formal verification has been used in blockchains to prevent bugs in smart contracts. [The Move prover](https://github.com/diem/diem/tree/main/language/move-prover) is an evolving formal verification tool for smart contracts written in the Move language. The user can specify functional properties of smart contracts using the [Move Specification Language (MSL)](https://github.com/diem/diem/blob/main/language/move-prover/doc/user/spec-lang.md) and then use the prover to automatically check them statically. To illustrate how the prover is used, we have added the following code snippet to the [BasicCoin.move](./step_7/BasicCoin/sources/BasicCoin.move):
+Smart contracts deployed on the blockchain may maniputate high-value assets. As a technique that uses strict mathematical methods to describe behavior and reason correctness of computer systems, formal verification has been used in blockchains to prevent bugs in smart contracts. [The Move prover](https://github.com/diem/move/tree/main/language/move-prover) is an evolving formal verification tool for smart contracts written in the Move language. The user can specify functional properties of smart contracts using the [Move Specification Language (MSL)](https://github.com/diem/move/blob/main/language/move-prover/doc/user/spec-lang.md) and then use the prover to automatically check them statically. To illustrate how the prover is used, we have added the following code snippet to the [BasicCoin.move](./step_7/BasicCoin/sources/BasicCoin.move):
 
 ```
     spec balance_of {
@@ -644,7 +646,7 @@ The method withdraws tokens with value `amount` from the address `addr` and retu
     }
 ```
 
-As we can see here, a spec block can contain let bindings which introduce names for expressions. `global<T>(address): T` is a built-in function that returns the resource value at `addr`. `balance` is the number of tokens owned by `addr`. `exists<T>(address): bool` is a built-in function that returns true if the resource T exists at address. Two `aborts_if` clauses correspond to the two conditions mentioned above. In general, if a function has more than one `aborts_if` condition, those conditions are or-ed with each other. By default, if a user wants to specify aborts conditions, all possible conditions need to be listed. Otherwise, the prover will generate a verification error. However, if `pragma aborts_if_is_partial` is defined in the spec block, the combined aborts condition (the or-ed individual conditions) only *imply* that the function aborts. The reader can refer to the [MSL](https://github.com/diem/diem/blob/main/language/move-prover/doc/user/spec-lang.md) document for more information.
+As we can see here, a spec block can contain let bindings which introduce names for expressions. `global<T>(address): T` is a built-in function that returns the resource value at `addr`. `balance` is the number of tokens owned by `addr`. `exists<T>(address): bool` is a built-in function that returns true if the resource T exists at address. Two `aborts_if` clauses correspond to the two conditions mentioned above. In general, if a function has more than one `aborts_if` condition, those conditions are or-ed with each other. By default, if a user wants to specify aborts conditions, all possible conditions need to be listed. Otherwise, the prover will generate a verification error. However, if `pragma aborts_if_is_partial` is defined in the spec block, the combined aborts condition (the or-ed individual conditions) only *imply* that the function aborts. The reader can refer to the [MSL](https://github.com/diem/move/blob/main/language/move-prover/doc/user/spec-lang.md) document for more information.
 
 The next step is to define functional properties, which are described in the two `ensures` clauses below. First, by using the `let post` binding, `balance_post` represents the balance of `addr` after the execution, which should be equal to `balance - amount`. Then, the return value (denoted as `result`) should be a coin with value `amount`.
 

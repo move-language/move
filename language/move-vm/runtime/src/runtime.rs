@@ -358,7 +358,6 @@ impl VMRuntime {
         data_store: &mut impl DataStore,
         gas_status: &mut GasStatus,
     ) -> VMResult<(Vec<Vec<u8>>, Vec<Vec<u8>>)> {
-        // TODO: convert numerous unwraps below into the appropriate error
         let is_script_execution = false;
         let (func, ty_args, params, return_tys) = self.loader.load_function(
             function_name,
@@ -382,19 +381,24 @@ impl VMRuntime {
             }
             match arg_type {
                 Type::MutableReference(inner_t) => {
-                    dummy_locals
-                        .store_loc(idx, self.deserialize_value(&inner_t, arg).unwrap())
-                        .unwrap();
-                    actuals.push(dummy_locals.borrow_loc(idx).unwrap());
+                    match self.borrow_arg(idx, arg, &inner_t, &mut dummy_locals) {
+                        Err(err) => return Err(err.finish(Location::Undefined)),
+                        Ok(val) => actuals.push(val),
+                    }
                     mut_ref_inputs.push((idx, *inner_t));
                 }
                 Type::Reference(inner_t) => {
-                    dummy_locals
-                        .store_loc(idx, self.deserialize_value(&inner_t, arg).unwrap())
-                        .unwrap();
-                    actuals.push(dummy_locals.borrow_loc(idx).unwrap())
+                    match self.borrow_arg(idx, arg, &inner_t, &mut dummy_locals) {
+                        Err(err) => return Err(err.finish(Location::Undefined)),
+                        Ok(val) => actuals.push(val),
+                    }
                 }
-                arg_type => actuals.push(self.deserialize_value(&arg_type, arg).unwrap()),
+                arg_type => {
+                    match self.deserialize_value(&arg_type, arg) {
+                        Ok(val) => actuals.push(val),
+                        Err(err) => return Err(err.finish(Location::Undefined)),
+                    };
+                }
             }
         }
 
@@ -437,17 +441,47 @@ impl VMRuntime {
 
         let mut serialized_mut_ref_outputs = Vec::new();
         for (idx, ty) in mut_ref_inputs {
-            let val = dummy_locals.move_loc(idx).unwrap();
+            let val = match dummy_locals.move_loc(idx) {
+                Ok(v) => v,
+                Err(e) => return Err(e.finish(Location::Undefined)),
+            };
             let layout = self.loader.type_to_type_layout(&ty).map_err(|_err| {
                 PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                     .with_message("cannot be called with non-serializable return type".to_string())
                     .finish(Location::Undefined)
             })?;
-            let val_bytes = val.simple_serialize(&layout).unwrap();
-            serialized_mut_ref_outputs.push(val_bytes)
+            match val.simple_serialize(&layout) {
+                Some(bytes) => serialized_mut_ref_outputs.push(bytes),
+                None => {
+                    return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+                        .with_message("failed to serialize mutable ref values".to_string())
+                        .finish(Location::Undefined))
+                }
+            };
         }
 
         Ok((serialized_return_vals, serialized_mut_ref_outputs))
+    }
+
+    fn borrow_arg(
+        &self,
+        idx: usize,
+        arg: Vec<u8>,
+        arg_t: &Type,
+        locals: &mut Locals,
+    ) -> Result<Value, PartialVMError> {
+        let arg_value = match self.deserialize_value(arg_t, arg) {
+            Ok(val) => val,
+            Err(err) => return Err(err),
+        };
+        if let Err(err) = locals.store_loc(idx, arg_value) {
+            return Err(err);
+        };
+        let val = match locals.borrow_loc(idx) {
+            Ok(v) => v,
+            Err(err) => return Err(err),
+        };
+        Ok(val)
     }
 
     fn execute_function_impl<F>(

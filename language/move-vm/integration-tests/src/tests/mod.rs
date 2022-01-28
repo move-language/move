@@ -7,3 +7,4 @@ mod function_arg_tests;
 mod loader_tests;
 mod mutated_accounts_tests;
 mod return_value_tests;
+mod exec_func_effects_tests;

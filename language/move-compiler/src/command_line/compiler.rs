@@ -9,7 +9,10 @@ use crate::{
     diagnostics::{codes::Severity, *},
     expansion, hlir, interface_generator, naming, parser,
     parser::{comments::*, *},
-    shared::{CompilationEnv, Flags, NumericalAddress},
+    shared::{
+        AddressScopedFileIndexed, AddressScopedFiles, CompilationEnv, Flags, NamedAddressMap,
+        NamedAddressMaps,
+    },
     to_bytecode, typing, unit_test,
 };
 use move_command_line_common::files::{
@@ -30,13 +33,13 @@ use tempfile::NamedTempFile;
 // Definitions
 //**************************************************************************************************
 
-pub struct Compiler<'a, 'b> {
-    targets: &'a [String],
-    deps: &'a [String],
+pub struct Compiler<'a> {
+    maps: NamedAddressMaps,
+    targets: Vec<AddressScopedFileIndexed>,
+    deps: Vec<AddressScopedFileIndexed>,
     interface_files_dir_opt: Option<String>,
-    pre_compiled_lib: Option<&'b FullyCompiledProgram>,
+    pre_compiled_lib: Option<&'a FullyCompiledProgram>,
     compiled_module_named_address_mapping: BTreeMap<CompiledModuleId, String>,
-    named_address_mapping: BTreeMap<Symbol, NumericalAddress>,
     flags: Flags,
 }
 
@@ -84,16 +87,36 @@ pub struct FullyCompiledProgram {
 // Entry points and impls
 //**************************************************************************************************
 
-impl<'a, 'b> Compiler<'a, 'b> {
-    pub fn new(targets: &'a [String], deps: &'a [String]) -> Self {
+impl<'a> Compiler<'a> {
+    pub fn new(targets: Vec<AddressScopedFiles>, deps: Vec<AddressScopedFiles>) -> Self {
+        fn rc_scopes(
+            maps: &mut NamedAddressMaps,
+            all_paths: Vec<AddressScopedFiles>,
+        ) -> Vec<AddressScopedFileIndexed> {
+            let mut idx_paths = vec![];
+            for (paths, mapping) in all_paths {
+                let idx = maps.insert(
+                    mapping
+                        .into_iter()
+                        .map(|(k, v)| (Symbol::from(k), v))
+                        .collect::<NamedAddressMap>(),
+                );
+                idx_paths.extend(paths.into_iter().map(|p| (p, idx)));
+            }
+            idx_paths
+        }
+        let mut maps = NamedAddressMaps::new();
+        let targets = rc_scopes(&mut maps, targets);
+        let deps = rc_scopes(&mut maps, deps);
+
         Self {
+            maps,
             targets,
             deps,
             interface_files_dir_opt: None,
             pre_compiled_lib: None,
             compiled_module_named_address_mapping: BTreeMap::new(),
             flags: Flags::empty(),
-            named_address_mapping: BTreeMap::new(),
         }
     }
 
@@ -115,7 +138,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
         self
     }
 
-    pub fn set_pre_compiled_lib(mut self, pre_compiled_lib: &'b FullyCompiledProgram) -> Self {
+    pub fn set_pre_compiled_lib(mut self, pre_compiled_lib: &'a FullyCompiledProgram) -> Self {
         assert!(self.pre_compiled_lib.is_none());
         self.pre_compiled_lib = Some(pre_compiled_lib);
         self
@@ -123,7 +146,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
 
     pub fn set_pre_compiled_lib_opt(
         mut self,
-        pre_compiled_lib: Option<&'b FullyCompiledProgram>,
+        pre_compiled_lib: Option<&'a FullyCompiledProgram>,
     ) -> Self {
         assert!(self.pre_compiled_lib.is_none());
         self.pre_compiled_lib = pre_compiled_lib;
@@ -139,42 +162,29 @@ impl<'a, 'b> Compiler<'a, 'b> {
         self
     }
 
-    pub fn set_named_address_values(
-        mut self,
-        named_address_mapping: BTreeMap<impl Into<Symbol>, NumericalAddress>,
-    ) -> Self {
-        assert!(self.named_address_mapping.is_empty());
-        self.named_address_mapping = named_address_mapping
-            .into_iter()
-            .map(|(k, v)| (k.into(), v))
-            .collect();
-        self
-    }
-
     pub fn run<const TARGET: Pass>(
         self,
     ) -> anyhow::Result<(
         FilesSourceText,
-        Result<(CommentMap, SteppedCompiler<'b, TARGET>), Diagnostics>,
+        Result<(CommentMap, SteppedCompiler<'a, TARGET>), Diagnostics>,
     )> {
         let Self {
+            maps,
             targets,
-            deps,
+            mut deps,
             interface_files_dir_opt,
             pre_compiled_lib,
             compiled_module_named_address_mapping,
-            named_address_mapping,
             flags,
         } = self;
-        let mut deps = deps.to_vec();
         generate_interface_files_for_deps(
             &mut deps,
             interface_files_dir_opt,
             &compiled_module_named_address_mapping,
         )?;
-        let mut compilation_env = CompilationEnv::new(flags, named_address_mapping);
+        let mut compilation_env = CompilationEnv::new(flags);
         let (source_text, pprog_and_comments_res) =
-            parse_program(&mut compilation_env, targets, &deps)?;
+            parse_program(&mut compilation_env, maps, targets, deps)?;
         let res: Result<_, Diagnostics> = pprog_and_comments_res.and_then(|(pprog, comments)| {
             SteppedCompiler::new_at_parser(compilation_env, pre_compiled_lib, pprog)
                 .run::<TARGET>()
@@ -374,15 +384,13 @@ impl<'a> SteppedCompiler<'a, PASS_COMPILATION> {
 /// Given a set of dependencies, precompile them and save the ASTs so that they can be used again
 /// to compile against without having to recompile these dependencies
 pub fn construct_pre_compiled_lib(
-    deps: &[String],
+    deps: Vec<AddressScopedFiles>,
     interface_files_dir_opt: Option<String>,
     flags: Flags,
-    named_address_values: BTreeMap<String, NumericalAddress>,
 ) -> anyhow::Result<Result<FullyCompiledProgram, (FilesSourceText, Diagnostics)>> {
-    let (files, pprog_and_comments_res) = Compiler::new(&[], deps)
+    let (files, pprog_and_comments_res) = Compiler::new(vec![], deps)
         .set_interface_files_dir_opt(interface_files_dir_opt)
         .set_flags(flags)
-        .set_named_address_values(named_address_values)
         .run::<PASS_PARSER>()?;
 
     let (_comments, stepped) = match pprog_and_comments_res {
@@ -559,39 +567,42 @@ pub fn output_compiled_units(
 }
 
 fn generate_interface_files_for_deps(
-    deps: &mut Vec<String>,
+    deps: &mut Vec<AddressScopedFileIndexed>,
     interface_files_dir_opt: Option<String>,
     named_address_mapping: &BTreeMap<CompiledModuleId, String>,
 ) -> anyhow::Result<()> {
-    if let Some(dir) =
-        generate_interface_files(deps, interface_files_dir_opt, named_address_mapping, true)?
-    {
-        deps.push(dir)
-    }
+    let interface_files_paths =
+        generate_interface_files(deps, interface_files_dir_opt, named_address_mapping, true)?;
+    deps.extend(interface_files_paths);
     Ok(())
 }
 
 pub fn generate_interface_files(
-    mv_file_locations: &[String],
+    mv_file_locations: &mut Vec<AddressScopedFileIndexed>,
     interface_files_dir_opt: Option<String>,
     named_address_mapping: &BTreeMap<CompiledModuleId, String>,
     separate_by_hash: bool,
-) -> anyhow::Result<Option<String>> {
+) -> anyhow::Result<Vec<AddressScopedFileIndexed>> {
     let mv_files = {
         let mut v = vec![];
         let (mv_magic_files, other_file_locations): (Vec<_>, Vec<_>) = mv_file_locations
             .iter()
             .cloned()
-            .partition(|s| Path::new(s).is_file() && has_compiled_module_magic_number(s));
+            .partition(|s| Path::new(&s.0).is_file() && has_compiled_module_magic_number(&s.0));
         v.extend(mv_magic_files);
-        let mv_ext_files = find_filenames(&other_file_locations, |path| {
-            extension_equals(path, MOVE_COMPILED_EXTENSION)
-        })?;
-        v.extend(mv_ext_files);
+        for (file, address_mapping) in other_file_locations {
+            v.extend(
+                find_filenames(&[file], |path| {
+                    extension_equals(path, MOVE_COMPILED_EXTENSION)
+                })?
+                .into_iter()
+                .map(|f| (f, address_mapping)),
+            );
+        }
         v
     };
     if mv_files.is_empty() {
-        return Ok(None);
+        return Ok(vec![]);
     }
 
     let interface_files_dir =
@@ -607,7 +618,7 @@ pub fn generate_interface_files(
         let mut hasher = DefaultHasher::new();
         mv_files.len().hash(&mut hasher);
         HASH_DELIM.hash(&mut hasher);
-        for mv_file in &mv_files {
+        for (mv_file, _) in &mv_files {
             std::fs::read(mv_file)?.hash(&mut hasher);
             HASH_DELIM.hash(&mut hasher);
         }
@@ -619,11 +630,16 @@ pub fn generate_interface_files(
         interface_sub_dir
     };
 
-    for mv_file in mv_files {
+    let mut result = vec![];
+    for (mv_file, idx) in mv_files {
         let (id, interface_contents) =
             interface_generator::write_file_to_string(named_address_mapping, &mv_file)?;
         let addr_dir = dir_path!(all_addr_dir.clone(), format!("{}", id.address()));
         let file_path = file_path!(addr_dir.clone(), format!("{}", id.name()), MOVE_EXTENSION);
+        result.push((
+            file_path.clone().into_os_string().into_string().unwrap(),
+            idx,
+        ));
         // it's possible some files exist but not others due to multithreaded environments
         if separate_by_hash && Path::new(&file_path).is_file() {
             continue;
@@ -643,7 +659,7 @@ pub fn generate_interface_files(
         std::fs::rename(tmp.path(), file_path)?;
     }
 
-    Ok(Some(all_addr_dir.into_os_string().into_string().unwrap()))
+    Ok(result)
 }
 
 fn has_compiled_module_magic_number(path: &str) -> bool {

@@ -3,9 +3,10 @@
 
 #![forbid(unsafe_code)]
 
+use move_command_line_common::files::verify_and_create_named_address_mapping;
 use move_compiler::{
     command_line::{self as cli},
-    shared::{self, verify_and_create_named_address_mapping, Flags, NumericalAddress},
+    shared::{self, Flags, NumericalAddress},
 };
 use structopt::*;
 
@@ -65,10 +66,13 @@ pub fn main() -> anyhow::Result<()> {
     } = Options::from_args();
 
     let interface_files_dir = format!("{}/generated_interface_files", out_dir);
-    let (files, compiled_units) = move_compiler::Compiler::new(&source_files, &dependencies)
-        .set_interface_files_dir(interface_files_dir)
-        .set_flags(flags)
-        .set_named_address_values(verify_and_create_named_address_mapping(named_addresses)?)
-        .build_and_report()?;
+    let named_addr_map = verify_and_create_named_address_mapping(named_addresses)?;
+    let (files, compiled_units) = move_compiler::Compiler::new(
+        vec![(source_files, named_addr_map.clone())],
+        vec![(dependencies, named_addr_map)],
+    )
+    .set_interface_files_dir(interface_files_dir)
+    .set_flags(flags)
+    .build_and_report()?;
     move_compiler::output_compiled_units(emit_source_map, files, compiled_units, &out_dir)
 }

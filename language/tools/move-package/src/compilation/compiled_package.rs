@@ -558,17 +558,19 @@ impl CompiledPackage {
             Flags::empty()
         };
 
-        let compiler = Compiler::new(&sources, &dep_paths)
-            .set_compiled_module_named_address_mapping(
-                module_resolution_metadata
-                    .clone()
-                    .into_iter()
-                    .map(|(x, ident)| (x, ident.to_string()))
-                    .collect::<BTreeMap<_, _>>(),
-            )
-            .set_named_address_values(in_scope_named_addrs.clone())
-            .set_interface_files_dir(tmp_interface_dir.path().to_string_lossy().to_string())
-            .set_flags(flags);
+        let compiler = Compiler::new(
+            vec![(sources.clone(), in_scope_named_addrs.clone())],
+            vec![(dep_paths, in_scope_named_addrs.clone())],
+        )
+        .set_compiled_module_named_address_mapping(
+            module_resolution_metadata
+                .clone()
+                .into_iter()
+                .map(|(x, ident)| (x, ident.to_string()))
+                .collect::<BTreeMap<_, _>>(),
+        )
+        .set_interface_files_dir(tmp_interface_dir.path().to_string_lossy().to_string())
+        .set_flags(flags);
         let (file_map, compiled_units) = compiler_driver(compiler, is_root_package)?;
 
         let (compiled_units, resolutions): (Vec<_>, Vec<_>) = compiled_units

@@ -21,6 +21,7 @@ use std::collections::BTreeMap;
 /// Given a parsed program, merge all specification modules into their target modules.
 pub fn program(compilation_env: &mut CompilationEnv, prog: Program) -> Program {
     let Program {
+        named_address_maps,
         source_definitions,
         lib_definitions,
     } = prog;
@@ -58,6 +59,7 @@ pub fn program(compilation_env: &mut CompilationEnv, prog: Program) -> Program {
         compilation_env.add_diag(diag!(Declarations::InvalidSpec, (m.name.loc(), msg)))
     }
     Program {
+        named_address_maps,
         source_definitions,
         lib_definitions,
     }
@@ -65,12 +67,15 @@ pub fn program(compilation_env: &mut CompilationEnv, prog: Program) -> Program {
 
 fn extract_spec_modules(
     spec_modules: &mut BTreeMap<(Option<LeadingNameAccess_>, Symbol), ModuleDefinition>,
-    defs: Vec<Definition>,
-) -> Vec<Definition> {
+    defs: Vec<(NamedAddressMapIndex, Definition)>,
+) -> Vec<(NamedAddressMapIndex, Definition)> {
+    // TODO check address mappings line up
     use Definition::*;
     defs.into_iter()
-        .filter_map(|def| match def {
-            Module(m) => extract_spec_module(spec_modules, None, m).map(Module),
+        .filter_map(|(address_map, def)| match def {
+            Module(m) => {
+                extract_spec_module(spec_modules, None, m).map(|m| (address_map, Module(m)))
+            }
             Address(mut a) => {
                 let addr_ = Some(&a.addr.value);
                 a.modules = a
@@ -78,9 +83,9 @@ fn extract_spec_modules(
                     .into_iter()
                     .filter_map(|m| extract_spec_module(spec_modules, addr_, m))
                     .collect::<Vec<_>>();
-                Some(Address(a))
+                Some((address_map, Address(a)))
             }
-            Definition::Script(s) => Some(Script(s)),
+            Definition::Script(s) => Some((address_map, Script(s))),
         })
         .collect()
 }
@@ -91,6 +96,7 @@ fn extract_spec_module(
     m: ModuleDefinition,
 ) -> Option<ModuleDefinition> {
     if m.is_spec_module {
+        // TODO check for duplicate spec modules?
         spec_modules.insert(module_key(address_opt, &m), m);
         None
     } else {
@@ -100,10 +106,11 @@ fn extract_spec_module(
 
 fn merge_spec_modules(
     spec_modules: &mut BTreeMap<(Option<LeadingNameAccess_>, Symbol), ModuleDefinition>,
-    defs: &mut Vec<Definition>,
+    defs: &mut Vec<(NamedAddressMapIndex, Definition)>,
 ) {
     use Definition::*;
-    for def in defs.iter_mut() {
+    // TODO check address mappings line up
+    for (_address_map, def) in defs.iter_mut() {
         match def {
             Module(m) => merge_spec_module(spec_modules, None, m),
             Address(a) => {

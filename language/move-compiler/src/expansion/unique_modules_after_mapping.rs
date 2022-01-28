@@ -27,16 +27,13 @@ pub fn verify(
         let sp!(nloc, n_) = module.0;
         let addr_name = match &address {
             Address::Anonymous(_) => None,
-            Address::Named(n) => Some(*n),
+            Address::Named(n, _) => Some(*n),
         };
         let addr_bytes = match &address {
             Address::Anonymous(sp!(_, addr_bytes)) => *addr_bytes,
-            Address::Named(n) => match compilation_env.named_address_mapping().get(&n.value) {
-                // undeclared or no value bound, so can skip
-                None => continue,
-                // copy the assigned value
-                Some(addr_bytes) => *addr_bytes,
-            },
+            Address::Named(_, Some(addr_bytes)) => *addr_bytes,
+            // No mapping given, already an error
+            Address::Named(_, None) => continue,
         };
         let mident_ = (addr_bytes, n_);
         let compiled_mident = (loc, addr_name, addr_bytes, ModuleName(sp(nloc, n_)));

@@ -14,7 +14,7 @@ use crate::{
     diagnostics::{codes::Severity, Diagnostics, FilesSourceText},
     parser,
     parser::syntax::parse_file_string,
-    shared::CompilationEnv,
+    shared::{AddressScopedFileIndexed, CompilationEnv, NamedAddressMapIndex, NamedAddressMaps},
 };
 use anyhow::anyhow;
 use comments::*;
@@ -28,20 +28,29 @@ use std::{
 
 pub(crate) fn parse_program(
     compilation_env: &mut CompilationEnv,
-    targets: &[String],
-    deps: &[String],
+    named_address_maps: NamedAddressMaps,
+    targets: Vec<AddressScopedFileIndexed>,
+    deps: Vec<AddressScopedFileIndexed>,
 ) -> anyhow::Result<(
     FilesSourceText,
     Result<(parser::ast::Program, CommentMap), Diagnostics>,
 )> {
-    let targets = find_move_filenames(targets, true)?
-        .into_iter()
-        .map(Symbol::from)
-        .collect::<Vec<Symbol>>();
-    let mut deps = find_move_filenames(deps, true)?
-        .into_iter()
-        .map(Symbol::from)
-        .collect::<Vec<Symbol>>();
+    fn find_move_filenames_with_address_mapping(
+        paths_with_mapping: Vec<AddressScopedFileIndexed>,
+    ) -> anyhow::Result<Vec<(Symbol, NamedAddressMapIndex)>> {
+        let mut res = vec![];
+        for (paths, idx) in paths_with_mapping {
+            res.extend(
+                find_move_filenames(&[paths], true)?
+                    .into_iter()
+                    .map(|s| (Symbol::from(s), idx)),
+            );
+        }
+        Ok(res)
+    }
+
+    let targets = find_move_filenames_with_address_mapping(targets)?;
+    let mut deps = find_move_filenames_with_address_mapping(deps)?;
     ensure_targets_deps_dont_intersect(compilation_env, &targets, &mut deps)?;
     let mut files: FilesSourceText = HashMap::new();
     let mut source_definitions = Vec::new();
@@ -49,16 +58,16 @@ pub(crate) fn parse_program(
     let mut lib_definitions = Vec::new();
     let mut diags: Diagnostics = Diagnostics::new();
 
-    for fname in targets {
+    for (fname, address_map_idx) in targets {
         let (defs, comments, ds, file_hash) = parse_file(compilation_env, &mut files, fname)?;
-        source_definitions.extend(defs);
+        source_definitions.extend(defs.into_iter().map(|d| (address_map_idx, d)));
         source_comments.insert(file_hash, comments);
         diags.extend(ds);
     }
 
-    for fname in deps {
+    for (fname, address_map_idx) in deps {
         let (defs, _, ds, _) = parse_file(compilation_env, &mut files, fname)?;
-        lib_definitions.extend(defs);
+        lib_definitions.extend(defs.into_iter().map(|d| (address_map_idx, d)));
         diags.extend(ds);
     }
 
@@ -70,6 +79,7 @@ pub(crate) fn parse_program(
     }
     let res = if diags.is_empty() {
         let pprog = parser::ast::Program {
+            named_address_maps,
             source_definitions,
             lib_definitions,
         };
@@ -82,8 +92,8 @@ pub(crate) fn parse_program(
 
 fn ensure_targets_deps_dont_intersect(
     compilation_env: &CompilationEnv,
-    targets: &[Symbol],
-    deps: &mut Vec<Symbol>,
+    targets: &[(Symbol, NamedAddressMapIndex)],
+    deps: &mut Vec<(Symbol, NamedAddressMapIndex)>,
 ) -> anyhow::Result<()> {
     /// Canonicalize a file path.
     fn canonicalize(path: &Symbol) -> String {
@@ -95,18 +105,18 @@ fn ensure_targets_deps_dont_intersect(
     }
     let target_set = targets
         .iter()
-        .map(|s| canonicalize(s))
+        .map(|(s, _)| canonicalize(s))
         .collect::<BTreeSet<_>>();
     let dep_set = deps
         .iter()
-        .map(|s| canonicalize(s))
+        .map(|(s, _)| canonicalize(s))
         .collect::<BTreeSet<_>>();
     let intersection = target_set.intersection(&dep_set).collect::<Vec<_>>();
     if intersection.is_empty() {
         return Ok(());
     }
     if compilation_env.flags().sources_shadow_deps() {
-        deps.retain(|fname| !intersection.contains(&&canonicalize(fname)));
+        deps.retain(|(fname, _)| !intersection.contains(&&canonicalize(fname)));
         return Ok(());
     }
     let all_files = intersection

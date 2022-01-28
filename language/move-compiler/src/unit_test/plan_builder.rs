@@ -27,8 +27,8 @@ impl<'env> Context<'env> {
         }
     }
 
-    fn resolve_address(&mut self, addr: &Address) -> NumericalAddress {
-        (*addr).into_addr_bytes(self.env.named_address_mapping())
+    fn resolve_address(&self, addr: &Address) -> NumericalAddress {
+        (*addr).into_addr_bytes()
     }
 }
 

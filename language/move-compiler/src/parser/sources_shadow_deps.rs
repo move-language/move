@@ -17,11 +17,12 @@ pub fn program(compilation_env: &CompilationEnv, prog: Program) -> Program {
     }
 
     let Program {
+        named_address_maps,
         source_definitions,
         lib_definitions,
     } = prog;
     let mut modules_defined_in_src = BTreeSet::new();
-    for def in &source_definitions {
+    for (_, def) in &source_definitions {
         match def {
             Definition::Address(a) => {
                 let addr = a.addr.value;
@@ -49,7 +50,7 @@ pub fn program(compilation_env: &CompilationEnv, prog: Program) -> Program {
     //  2. this library definition is a Module AST and the module is already defined in the source.
     let lib_definitions = lib_definitions
         .into_iter()
-        .map(|def| match def {
+        .map(|(address_map, def)| match def {
             Definition::Address(mut a) => {
                 let addr = a.addr.value;
                 let modules = std::mem::take(&mut a.modules);
@@ -57,11 +58,11 @@ pub fn program(compilation_env: &CompilationEnv, prog: Program) -> Program {
                     .into_iter()
                     .filter(|module| !modules_defined_in_src.contains(&(addr, module.name)))
                     .collect();
-                Definition::Address(a)
+                (address_map, Definition::Address(a))
             }
-            def => def,
+            def => (address_map, def),
         })
-        .filter(|def| match def {
+        .filter(|(_, def)| match def {
             Definition::Address(_) => true,
             Definition::Module(module) => !modules_defined_in_src.contains(&(
                 module.address.map(|a| a.value).unwrap_or_else(|| {
@@ -74,6 +75,7 @@ pub fn program(compilation_env: &CompilationEnv, prog: Program) -> Program {
         .collect();
 
     Program {
+        named_address_maps,
         source_definitions,
         lib_definitions,
     }

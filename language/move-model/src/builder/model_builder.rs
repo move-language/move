@@ -13,7 +13,6 @@ use log::{debug, info, warn};
 use num::BigUint;
 
 use move_compiler::{expansion::ast as EA, parser::ast as PA, shared::NumericalAddress};
-use move_symbol_pool::Symbol as MoveStringSymbol;
 
 use crate::{
     ast::{Attribute, ModuleName, Operation, QualifiedSymbol, Spec, Value},
@@ -36,8 +35,6 @@ use codespan_reporting::diagnostic::Severity;
 pub(crate) struct ModelBuilder<'env> {
     /// The global environment we are building.
     pub env: &'env mut GlobalEnv,
-    /// Set of known named addresses provided by the compiler
-    pub named_address_mapping: BTreeMap<MoveStringSymbol, NumericalAddress>,
     /// A symbol table for specification functions. Because of overloading, and entry can
     /// contain multiple functions.
     pub spec_fun_table: BTreeMap<QualifiedSymbol, Vec<SpecFunEntry>>,
@@ -133,13 +130,9 @@ pub(crate) struct ConstEntry {
 
 impl<'env> ModelBuilder<'env> {
     /// Creates a builders.
-    pub fn new(
-        env: &'env mut GlobalEnv,
-        named_address_mapping: BTreeMap<MoveStringSymbol, NumericalAddress>,
-    ) -> Self {
+    pub fn new(env: &'env mut GlobalEnv) -> Self {
         let mut translator = ModelBuilder {
             env,
-            named_address_mapping,
             spec_fun_table: BTreeMap::new(),
             spec_var_table: BTreeMap::new(),
             spec_schema_table: BTreeMap::new(),
@@ -299,14 +292,11 @@ impl<'env> ModelBuilder<'env> {
     pub fn resolve_address(&self, loc: &Loc, addr: &EA::Address) -> NumericalAddress {
         match addr {
             EA::Address::Anonymous(bytes) => bytes.value,
-            EA::Address::Named(n) => self
-                .named_address_mapping
-                .get(&n.value)
-                .cloned()
-                .unwrap_or_else(|| {
-                    self.error(loc, &format!("Undeclared address `{}`", n));
-                    NumericalAddress::DEFAULT_ERROR_ADDRESS
-                }),
+            EA::Address::Named(_n, Some(bytes)) => *bytes,
+            EA::Address::Named(n, None) => {
+                self.error(loc, &format!("Undeclared address `{}`", n));
+                NumericalAddress::DEFAULT_ERROR_ADDRESS
+            }
         }
     }
 

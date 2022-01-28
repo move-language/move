@@ -30,8 +30,9 @@ use super::aliases::{AliasMapBuilder, OldAliasMap};
 //**************************************************************************************************
 
 type ModuleMembers = BTreeMap<Name, ModuleMemberKind>;
-struct Context<'env> {
+struct Context<'env, 'map> {
     module_members: UniqueMap<ModuleIdent, ModuleMembers>,
+    named_address_mapping: Option<&'map NamedAddressMap>,
     address: Option<Address>,
     aliases: AliasMap,
     is_source_definition: bool,
@@ -39,7 +40,7 @@ struct Context<'env> {
     exp_specs: BTreeMap<SpecId, E::SpecBlock>,
     env: &'env mut CompilationEnv,
 }
-impl<'env> Context<'env> {
+impl<'env, 'map> Context<'env, 'map> {
     fn new(
         compilation_env: &'env mut CompilationEnv,
         module_members: UniqueMap<ModuleIdent, ModuleMembers>,
@@ -47,6 +48,7 @@ impl<'env> Context<'env> {
         Self {
             module_members,
             env: compilation_env,
+            named_address_mapping: None,
             address: None,
             aliases: AliasMap::new(),
             is_source_definition: false,
@@ -99,15 +101,23 @@ pub fn program(
         let mut members = UniqueMap::new();
         all_module_members(
             compilation_env,
+            &prog.named_address_maps,
             &mut members,
             true,
             &prog.source_definitions,
         );
-        all_module_members(compilation_env, &mut members, true, &prog.lib_definitions);
+        all_module_members(
+            compilation_env,
+            &prog.named_address_maps,
+            &mut members,
+            true,
+            &prog.lib_definitions,
+        );
         if let Some(pre_compiled) = pre_compiled_lib {
             assert!(pre_compiled.parser.source_definitions.is_empty());
             all_module_members(
                 compilation_env,
+                &pre_compiled.parser.named_address_maps,
                 &mut members,
                 false,
                 &pre_compiled.parser.lib_definitions,
@@ -121,17 +131,20 @@ pub fn program(
     let mut module_map = UniqueMap::new();
     let mut scripts = vec![];
     let P::Program {
+        named_address_maps,
         source_definitions,
         lib_definitions,
     } = prog;
 
     context.is_source_definition = true;
-    for def in source_definitions {
+    for (named_addr_map_idx, def) in source_definitions {
+        context.named_address_mapping = Some(named_address_maps.get(named_addr_map_idx));
         definition(&mut context, &mut module_map, &mut scripts, def)
     }
 
     context.is_source_definition = false;
-    for def in lib_definitions {
+    for (named_addr_map_idx, def) in lib_definitions {
+        context.named_address_mapping = Some(named_address_maps.get(named_addr_map_idx));
         definition(&mut context, &mut module_map, &mut scripts, def)
     }
 
@@ -212,11 +225,17 @@ fn address_without_value_error(suggest_declaration: bool, loc: Loc, n: &Name) ->
 
 // Access a top level address as declared, not affected by any aliasing/shadowing
 fn address(context: &mut Context, suggest_declaration: bool, ln: P::LeadingNameAccess) -> Address {
-    address_(context.env, suggest_declaration, ln)
+    address_(
+        context.env,
+        context.named_address_mapping.as_ref().unwrap(),
+        suggest_declaration,
+        ln,
+    )
 }
 
 fn address_(
     compilation_env: &mut CompilationEnv,
+    named_address_mapping: &NamedAddressMap,
     suggest_declaration: bool,
     ln: P::LeadingNameAccess,
 ) -> Address {
@@ -228,16 +247,12 @@ fn address_(
             Address::Anonymous(sp(loc, bytes))
         }
         P::LeadingNameAccess_::Name(n) => {
-            if name_res.is_ok()
-                && compilation_env
-                    .named_address_mapping()
-                    .get(&n.value)
-                    .is_none()
-            {
+            let addr = named_address_mapping.get(&n.value);
+            if name_res.is_ok() && addr.is_none() {
                 compilation_env.add_diag(address_without_value_error(suggest_declaration, loc, &n));
             }
 
-            Address::Named(n)
+            Address::Named(n, addr.copied())
         }
     }
 }
@@ -597,16 +612,23 @@ fn attribute_value(
 
 fn all_module_members<'a>(
     compilation_env: &mut CompilationEnv,
+    named_addr_maps: &NamedAddressMaps,
     members: &mut UniqueMap<ModuleIdent, ModuleMembers>,
     always_add: bool,
-    defs: impl IntoIterator<Item = &'a P::Definition>,
+    defs: impl IntoIterator<Item = &'a (NamedAddressMapIndex, P::Definition)>,
 ) {
-    for def in defs {
+    for (named_addr_map_index, def) in defs {
+        let named_addr_map = named_addr_maps.get(*named_addr_map_index);
         match def {
             P::Definition::Module(m) => {
                 let addr = match &m.address {
                     Some(a) => {
-                        address_(compilation_env, /* suggest_declaration */ true, *a)
+                        address_(
+                            compilation_env,
+                            named_addr_map,
+                            /* suggest_declaration */ true,
+                            *a,
+                        )
                     }
                     // Error will be handled when the module is compiled
                     None => Address::Anonymous(sp(m.loc, NumericalAddress::DEFAULT_ERROR_ADDRESS)),
@@ -616,6 +638,7 @@ fn all_module_members<'a>(
             P::Definition::Address(addr_def) => {
                 let addr = address_(
                     compilation_env,
+                    named_addr_map,
                     /* suggest_declaration */ false,
                     addr_def.addr,
                 );
@@ -1875,12 +1898,7 @@ fn value(context: &mut Context, sp!(loc, pvalue_): P::Value) -> Option<E::Value>
     use P::Value_ as PV;
     let value_ = match pvalue_ {
         PV::Address(addr) => {
-            let mut addr = address(context, /* suggest_declaration */ true, addr);
-            if let Address::Named(n) = addr {
-                if context.env.named_address_mapping().get(&n.value).is_none() {
-                    addr = Address::Anonymous(sp(n.loc, NumericalAddress::DEFAULT_ERROR_ADDRESS));
-                }
-            }
+            let addr = address(context, /* suggest_declaration */ true, addr);
             EV::Address(addr)
         }
         PV::Num(s) if s.ends_with("u8") => match parse_u8(&s[..s.len() - 2]) {

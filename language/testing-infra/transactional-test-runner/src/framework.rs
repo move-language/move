@@ -51,13 +51,13 @@ pub struct ProcessedModule {
 pub struct CompiledState<'a> {
     pre_compiled_deps: Option<&'a FullyCompiledProgram>,
     compiled_module_named_address_mapping: BTreeMap<ModuleId, Symbol>,
-    named_address_mapping: BTreeMap<Symbol, NumericalAddress>,
+    named_address_mapping: BTreeMap<String, NumericalAddress>,
     modules: BTreeMap<ModuleId, ProcessedModule>,
 }
 
 impl<'a> CompiledState<'a> {
     pub fn resolve_named_address(&self, s: &str) -> AccountAddress {
-        if let Some(addr) = self.named_address_mapping.get(&Symbol::from(s)) {
+        if let Some(addr) = self.named_address_mapping.get(s) {
             return AccountAddress::new(addr.into_bytes());
         }
         panic!("Failed to resolve named address '{}'", s)
@@ -340,13 +340,9 @@ pub trait MoveTestAdapter<'a> {
 
 impl<'a> CompiledState<'a> {
     pub fn new(
-        named_address_mapping: BTreeMap<impl Into<Symbol>, NumericalAddress>,
+        named_address_mapping: BTreeMap<String, NumericalAddress>,
         pre_compiled_deps: Option<&'a FullyCompiledProgram>,
     ) -> Self {
-        let named_address_mapping = named_address_mapping
-            .into_iter()
-            .map(|(k, v)| (k.into(), v))
-            .collect();
         let mut state = Self {
             pre_compiled_deps,
             modules: BTreeMap::new(),
@@ -413,7 +409,7 @@ impl<'a> CompiledState<'a> {
 
 fn compile_source_unit(
     pre_compiled_deps: Option<&FullyCompiledProgram>,
-    named_address_mapping: BTreeMap<Symbol, NumericalAddress>,
+    named_address_mapping: BTreeMap<String, NumericalAddress>,
     deps: &[String],
     path: String,
 ) -> Result<(AnnotatedCompiledUnit, Option<String>)> {
@@ -431,10 +427,12 @@ fn compile_source_unit(
     }
 
     use move_compiler::PASS_COMPILATION;
-    let (mut files, comments_and_compiler_res) = move_compiler::Compiler::new(&[path], deps)
-        .set_pre_compiled_lib_opt(pre_compiled_deps)
-        .set_named_address_values(named_address_mapping)
-        .run::<PASS_COMPILATION>()?;
+    let (mut files, comments_and_compiler_res) = move_compiler::Compiler::new(
+        vec![(vec![path], named_address_mapping.clone())],
+        vec![(deps.to_vec(), named_address_mapping)],
+    )
+    .set_pre_compiled_lib_opt(pre_compiled_deps)
+    .run::<PASS_COMPILATION>()?;
     let units_or_diags = comments_and_compiler_res
         .map(|(_comments, move_compiler)| move_compiler.into_compiled_units());
 

@@ -1,10 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, bail};
+use anyhow::{anyhow, bail, *};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
-use std::{convert::TryInto, path::Path};
+use std::{collections::BTreeMap, convert::TryInto, path::Path};
 
 /// Result of sha256 hash of a file's contents.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
@@ -122,4 +122,47 @@ pub fn extension_equals(path: &Path, target_ext: &str) -> bool {
         Some(extension) => extension == target_ext,
         None => false,
     }
+}
+
+pub fn verify_and_create_named_address_mapping<T: Copy + std::fmt::Display + Eq>(
+    named_addresses: Vec<(String, T)>,
+) -> anyhow::Result<BTreeMap<String, T>> {
+    let mut mapping = BTreeMap::new();
+    let mut invalid_mappings = BTreeMap::new();
+    for (name, addr_bytes) in named_addresses {
+        match mapping.insert(name.clone(), addr_bytes) {
+            Some(other_addr) if other_addr != addr_bytes => {
+                invalid_mappings
+                    .entry(name)
+                    .or_insert_with(Vec::new)
+                    .push(other_addr);
+            }
+            None | Some(_) => (),
+        }
+    }
+
+    if !invalid_mappings.is_empty() {
+        let redefinitions = invalid_mappings
+            .into_iter()
+            .map(|(name, addr_bytes)| {
+                format!(
+                    "{} is assigned differing values {} and {}",
+                    name,
+                    addr_bytes
+                        .iter()
+                        .map(|x| format!("{}", x))
+                        .collect::<Vec<_>>()
+                        .join(","),
+                    mapping[&name]
+                )
+            })
+            .collect::<Vec<_>>();
+
+        anyhow::bail!(
+            "Redefinition of named addresses found in arguments to compiler: {}",
+            redefinitions.join(", ")
+        )
+    }
+
+    Ok(mapping)
 }

@@ -88,10 +88,10 @@ pub struct Script {
 // Modules
 //**************************************************************************************************
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy)]
 pub enum Address {
     Anonymous(Spanned<NumericalAddress>),
-    Named(Name),
+    Named(Name, Option<NumericalAddress>),
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ModuleIdent_ {
@@ -491,6 +491,51 @@ impl fmt::Debug for Address {
     }
 }
 
+impl PartialEq for Address {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Anonymous(l), Self::Anonymous(r)) => l == r,
+            (Self::Named(l, _), Self::Named(r, _)) => l == r,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for Address {}
+
+impl PartialOrd for Address {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Address {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        use std::cmp::Ordering;
+
+        match (self, other) {
+            (Self::Anonymous(_), Self::Named(_, _)) => Ordering::Less,
+            (Self::Named(_, _), Self::Anonymous(_)) => Ordering::Greater,
+
+            (Self::Anonymous(l), Self::Anonymous(r)) => l.cmp(r),
+            (Self::Named(l, _), Self::Named(r, _)) => l.cmp(r),
+        }
+    }
+}
+
+impl Hash for Address {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            Self::Anonymous(sp!(_, bytes)) => bytes.hash(state),
+            Self::Named(n, None) => n.hash(state),
+            Self::Named(n, Some(bytes)) => {
+                n.hash(state);
+                bytes.hash(state)
+            }
+        }
+    }
+}
+
 //**************************************************************************************************
 // impls
 //**************************************************************************************************
@@ -500,18 +545,11 @@ impl Address {
         Self::Anonymous(sp(loc, address))
     }
 
-    pub fn into_addr_bytes(
-        self,
-        addresses: &BTreeMap<Symbol, NumericalAddress>,
-    ) -> NumericalAddress {
+    pub fn into_addr_bytes(self) -> NumericalAddress {
         match self {
             Self::Anonymous(sp!(_, bytes)) => bytes,
-            Self::Named(n) => *addresses.get(&n.value).unwrap_or_else(|| {
-                panic!(
-                    "ICE no value found for address '{}' after expansion",
-                    n.value
-                )
-            }),
+            Self::Named(_, Some(bytes)) => bytes,
+            Self::Named(_, None) => NumericalAddress::DEFAULT_ERROR_ADDRESS,
         }
     }
 }
@@ -683,7 +721,7 @@ impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         match self {
             Self::Anonymous(sp!(_, bytes)) => write!(f, "{}", bytes),
-            Self::Named(n) => write!(f, "{}", n),
+            Self::Named(n, _) => write!(f, "{}", n),
         }
     }
 }

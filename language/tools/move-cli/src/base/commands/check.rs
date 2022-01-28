@@ -12,18 +12,20 @@ use move_compiler::{
 
 /// Type-check the user modules in `files` and the dependencies in `interface_files`
 pub fn check(
-    interface_files: &[String],
+    interface_files: Vec<String>,
     sources_shadow_deps: bool,
-    files: &[String],
+    files: Vec<String>,
     named_addresses: BTreeMap<String, NumericalAddress>,
     verbose: bool,
 ) -> Result<()> {
     if verbose {
         println!("Checking Move files...");
     }
-    Compiler::new(files, interface_files)
-        .set_flags(Flags::empty().set_sources_shadow_deps(sources_shadow_deps))
-        .set_named_address_values(named_addresses)
-        .check_and_report()?;
+    Compiler::new(
+        vec![(files, named_addresses.clone())],
+        vec![(interface_files, named_addresses)],
+    )
+    .set_flags(Flags::empty().set_sources_shadow_deps(sources_shadow_deps))
+    .check_and_report()?;
     Ok(())
 }

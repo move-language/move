@@ -94,7 +94,7 @@ impl AnnotatedCompiledModule {
         use crate::expansion::ast::Address;
         let address = match self.address_name {
             None => Address::Anonymous(sp(self.loc, self.named_module.address)),
-            Some(n) => Address::Named(n),
+            Some(n) => Address::Named(n, Some(self.named_module.address)),
         };
         sp(
             self.loc,

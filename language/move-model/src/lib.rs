@@ -32,7 +32,6 @@ use move_compiler::{
 };
 use move_core_types::{account_address::AccountAddress, identifier::Identifier};
 use move_ir_types::location::sp;
-use move_symbol_pool::Symbol as MoveStringSymbol;
 use num::{BigUint, Num};
 
 use crate::{
@@ -105,10 +104,12 @@ pub fn run_model_builder_with_options_and_compilation_flags(
     env.set_extension(options);
 
     // Step 1: parse the program to get comments and a separation of targets and dependencies.
-    let (files, comments_and_compiler_res) = Compiler::new(move_sources, deps_dir)
-        .set_flags(flags)
-        .set_named_address_values(named_address_mapping.clone())
-        .run::<PASS_PARSER>()?;
+    let (files, comments_and_compiler_res) = Compiler::new(
+        vec![(move_sources.to_vec(), named_address_mapping.clone())],
+        vec![(deps_dir.to_vec(), named_address_mapping)],
+    )
+    .set_flags(flags)
+    .run::<PASS_PARSER>()?;
     let (comment_map, compiler) = match comments_and_compiler_res {
         Err(diags) => {
             // Add source files so that the env knows how to translate locations of parse errors
@@ -125,7 +126,7 @@ pub fn run_model_builder_with_options_and_compilation_flags(
     let dep_files: BTreeSet<_> = parsed_prog
         .lib_definitions
         .iter()
-        .map(|def| def.file_hash())
+        .map(|(_, def)| def.file_hash())
         .collect();
     for fhash in files.keys().sorted() {
         let (fname, fsrc) = files.get(fhash).unwrap();
@@ -147,11 +148,13 @@ pub fn run_model_builder_with_options_and_compilation_flags(
     // Step 2: run the compiler up to expansion
     let parsed_prog = {
         let P::Program {
+            named_address_maps,
             mut source_definitions,
             lib_definitions,
         } = parsed_prog;
         source_definitions.extend(lib_definitions);
         P::Program {
+            named_address_maps,
             source_definitions,
             lib_definitions: vec![],
         }
@@ -189,21 +192,12 @@ pub fn run_model_builder_with_options_and_compilation_flags(
                 );
             }
             for addr in &sdef.used_addresses {
-                if let Address::Named(n) = &addr {
+                if let Address::Named(n, _) = &addr {
                     visited_addresses.insert(&n.value);
                 }
             }
         }
     }
-
-    let addresses = named_address_mapping
-        .into_iter()
-        .filter_map(|(n, val)| {
-            visited_addresses
-                .contains(n.as_str())
-                .then(|| (n.into(), val))
-        })
-        .collect();
 
     // Step 3: selective compilation.
     let expansion_ast = {
@@ -245,7 +239,7 @@ pub fn run_model_builder_with_options_and_compilation_flags(
 
     // Now that it is known that the program has no errors, run the spec checker on verified units
     // plus expanded AST. This will populate the environment including any errors.
-    run_spec_checker(&mut env, addresses, units, expansion_ast);
+    run_spec_checker(&mut env, units, expansion_ast);
     Ok(env)
 }
 
@@ -254,7 +248,7 @@ fn collect_used_addresses<'a>(
     visited_addresses: &mut BTreeSet<&'a str>,
 ) {
     for addr in used_addresses {
-        if let Address::Named(n) = &addr {
+        if let Address::Named(n, _) = &addr {
             visited_addresses.insert(&n.value);
         }
     }
@@ -270,7 +264,7 @@ fn collect_related_modules_recursive<'a>(
         return;
     }
     let mdef = modules.get_(mident).unwrap();
-    if let Address::Named(n) = &mident.address {
+    if let Address::Named(n, _) = &mident.address {
         visited_addresses.insert(&n.value);
     }
     collect_used_addresses(&mdef.used_addresses, visited_addresses);
@@ -463,13 +457,8 @@ fn script_into_module(compiled_script: CompiledScript) -> CompiledModule {
 }
 
 #[allow(deprecated)]
-fn run_spec_checker(
-    env: &mut GlobalEnv,
-    named_address_mapping: BTreeMap<MoveStringSymbol, NumericalAddress>,
-    units: Vec<AnnotatedCompiledUnit>,
-    mut eprog: E::Program,
-) {
-    let mut builder = ModelBuilder::new(env, named_address_mapping);
+fn run_spec_checker(env: &mut GlobalEnv, units: Vec<AnnotatedCompiledUnit>, mut eprog: E::Program) {
+    let mut builder = ModelBuilder::new(env);
     // Merge the compiled units with the expanded program, preserving the order of the compiled
     // units which is topological w.r.t. use relation.
     let modules = units

@@ -183,6 +183,7 @@ pub type Type = Spanned<Type_>;
 //**************************************************************************************************
 
 #[derive(Debug, PartialEq, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum LValue_ {
     Ignore,
     Var(Var),

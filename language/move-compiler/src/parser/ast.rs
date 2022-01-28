@@ -1,7 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::shared::{ast_debug::*, Identifier, Name, NumericalAddress, TName};
+use crate::shared::{
+    ast_debug::*, Identifier, Name, NamedAddressMap, NamedAddressMapIndex, NamedAddressMaps,
+    NumericalAddress, TName,
+};
 use move_command_line_common::files::FileHash;
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
@@ -52,8 +55,9 @@ macro_rules! new_name {
 
 #[derive(Debug, Clone)]
 pub struct Program {
-    pub source_definitions: Vec<Definition>,
-    pub lib_definitions: Vec<Definition>,
+    pub named_address_maps: NamedAddressMaps,
+    pub source_definitions: Vec<(NamedAddressMapIndex, Definition)>,
+    pub lib_definitions: Vec<(NamedAddressMapIndex, Definition)>,
 }
 
 #[derive(Debug, Clone)]
@@ -958,14 +962,29 @@ impl fmt::Display for Ability_ {
 
 impl AstDebug for Program {
     fn ast_debug(&self, w: &mut AstWriter) {
+        let Self {
+            named_address_maps,
+            source_definitions,
+            lib_definitions,
+        } = self;
         w.write("------ Lib Defs: ------");
-        for src in &self.source_definitions {
+        for (idx, src) in lib_definitions {
+            named_address_maps.get(*idx).ast_debug(w);
             src.ast_debug(w);
         }
         w.new_line();
         w.write("------ Source Defs: ------");
-        for src in &self.source_definitions {
+        for (idx, src) in source_definitions {
+            named_address_maps.get(*idx).ast_debug(w);
             src.ast_debug(w);
+        }
+    }
+}
+
+impl AstDebug for NamedAddressMap {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        for (sym, addr) in self {
+            w.writeln(&format!("{} => {}", sym, addr))
         }
     }
 }

@@ -194,49 +194,6 @@ pub fn parse_named_address(s: &str) -> anyhow::Result<(String, NumericalAddress)
     Ok((name, addr))
 }
 
-pub fn verify_and_create_named_address_mapping(
-    named_addresses: Vec<(String, NumericalAddress)>,
-) -> anyhow::Result<BTreeMap<String, NumericalAddress>> {
-    let mut mapping = BTreeMap::new();
-    let mut invalid_mappings = BTreeMap::new();
-    for (name, addr_bytes) in named_addresses {
-        match mapping.insert(name.clone(), addr_bytes) {
-            Some(other_addr) if other_addr != addr_bytes => {
-                invalid_mappings
-                    .entry(name)
-                    .or_insert_with(Vec::new)
-                    .push(other_addr);
-            }
-            None | Some(_) => (),
-        }
-    }
-
-    if !invalid_mappings.is_empty() {
-        let redefinitions = invalid_mappings
-            .into_iter()
-            .map(|(name, addr_bytes)| {
-                format!(
-                    "{} is assigned differing values {} and {}",
-                    name,
-                    addr_bytes
-                        .iter()
-                        .map(|x| format!("{}", x))
-                        .collect::<Vec<_>>()
-                        .join(","),
-                    mapping[&name]
-                )
-            })
-            .collect::<Vec<_>>();
-
-        anyhow::bail!(
-            "Redefinition of named addresses found in arguments to compiler: {}",
-            redefinitions.join(", ")
-        )
-    }
-
-    Ok(mapping)
-}
-
 impl PartialOrd for NumericalAddress {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
@@ -356,21 +313,44 @@ pub fn shortest_cycle<'a, T: Ord + Hash>(
 // Compilation Env
 //**************************************************************************************************
 
+pub type AddressScopedFiles = (Vec<String>, BTreeMap<String, NumericalAddress>);
+pub type NamedAddressMap = BTreeMap<Symbol, NumericalAddress>;
+pub(crate) type AddressScopedFileIndexed = (String, NamedAddressMapIndex);
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct NamedAddressMapIndex(usize);
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct NamedAddressMaps(Vec<NamedAddressMap>);
+
+impl NamedAddressMaps {
+    pub fn new() -> Self {
+        Self(vec![])
+    }
+
+    pub fn insert(&mut self, m: NamedAddressMap) -> NamedAddressMapIndex {
+        let index = self.0.len();
+        self.0.push(m);
+        NamedAddressMapIndex(index)
+    }
+
+    pub fn get(&self, idx: NamedAddressMapIndex) -> &NamedAddressMap {
+        &self.0[idx.0]
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CompilationEnv {
     flags: Flags,
     diags: Diagnostics,
-    named_address_mapping: BTreeMap<Symbol, NumericalAddress>,
     // TODO(tzakian): Remove the global counter and use this counter instead
     // pub counter: u64,
 }
 
 impl CompilationEnv {
-    pub fn new(flags: Flags, named_address_mapping: BTreeMap<Symbol, NumericalAddress>) -> Self {
+    pub fn new(flags: Flags) -> Self {
         Self {
             flags,
             diags: Diagnostics::new(),
-            named_address_mapping,
         }
     }
 
@@ -412,10 +392,6 @@ impl CompilationEnv {
 
     pub fn flags(&self) -> &Flags {
         &self.flags
-    }
-
-    pub fn named_address_mapping(&self) -> &BTreeMap<Symbol, NumericalAddress> {
-        &self.named_address_mapping
     }
 }
 

@@ -188,12 +188,12 @@ fn module(
     let friends = mdef
         .friends
         .into_iter()
-        .map(|(mident, _loc)| context.translate_module_ident(mident))
+        .map(|(mident, _loc)| Context::translate_module_ident(mident))
         .collect();
 
     let addr_name = match &ident.value.address {
         Address::Anonymous(_) => None,
-        Address::Named(n) => Some(*n),
+        Address::Named(n, _) => Some(*n),
     };
     let addr_bytes = context.resolve_address(ident.value.address);
     let (imports, explicit_dependency_declarations) = context.materialize(

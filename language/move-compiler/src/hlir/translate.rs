@@ -1506,12 +1506,12 @@ fn builtin(
     }
 }
 
-fn value(context: &mut Context, sp!(loc, ev_): E::Value) -> H::Value {
+fn value(_context: &mut Context, sp!(loc, ev_): E::Value) -> H::Value {
     use E::Value_ as EV;
     use H::Value_ as HV;
     let v_ = match ev_ {
         EV::InferredNum(_) => panic!("ICE should have been expanded"),
-        EV::Address(a) => HV::Address(a.into_addr_bytes(context.env.named_address_mapping())),
+        EV::Address(a) => HV::Address(a.into_addr_bytes()),
         EV::U8(u) => HV::U8(u),
         EV::U64(u) => HV::U64(u),
         EV::U128(u) => HV::U128(u),

@@ -5,6 +5,7 @@ pub mod cargo_runner;
 pub mod test_reporter;
 pub mod test_runner;
 use crate::test_runner::TestRunner;
+use move_command_line_common::files::verify_and_create_named_address_mapping;
 use move_compiler::{
     self,
     diagnostics::{self, codes::Severity},
@@ -121,15 +122,20 @@ impl UnitTestingConfig {
         self
     }
 
-    fn compile_to_test_plan(&self, source_files: &[String], deps: &[String]) -> Option<TestPlan> {
-        let (files, comments_and_compiler_res) = Compiler::new(source_files, deps)
-            .set_flags(Flags::testing())
-            .set_named_address_values(
-                shared::verify_and_create_named_address_mapping(self.named_address_values.clone())
-                    .ok()?,
-            )
-            .run::<PASS_CFGIR>()
-            .unwrap();
+    fn compile_to_test_plan(
+        &self,
+        source_files: Vec<String>,
+        deps: Vec<String>,
+    ) -> Option<TestPlan> {
+        let addresses =
+            verify_and_create_named_address_mapping(self.named_address_values.clone()).ok()?;
+        let (files, comments_and_compiler_res) = Compiler::new(
+            vec![(source_files, addresses.clone())],
+            vec![(deps, addresses)],
+        )
+        .set_flags(Flags::testing())
+        .run::<PASS_CFGIR>()
+        .unwrap();
         let (_, compiler) =
             diagnostics::unwrap_or_report_diagnostics(&files, comments_and_compiler_res);
 
@@ -155,9 +161,9 @@ impl UnitTestingConfig {
 
         let TestPlan {
             files, module_info, ..
-        } = self.compile_to_test_plan(&deps, &[])?;
+        } = self.compile_to_test_plan(deps.clone(), vec![])?;
 
-        let mut test_plan = self.compile_to_test_plan(&self.source_files, &deps)?;
+        let mut test_plan = self.compile_to_test_plan(self.source_files.clone(), deps)?;
         test_plan.module_info.extend(module_info.into_iter());
         test_plan.files.extend(files.into_iter());
         Some(test_plan)
@@ -196,8 +202,7 @@ impl UnitTestingConfig {
             self.report_storage_on_error,
             test_plan,
             native_function_table,
-            shared::verify_and_create_named_address_mapping(self.named_address_values.clone())
-                .unwrap(),
+            verify_and_create_named_address_mapping(self.named_address_values.clone()).unwrap(),
         )
         .unwrap();
 

@@ -14,10 +14,9 @@ use move_binary_format::{
     file_format::CompiledScript,
     CompiledModule,
 };
+use move_command_line_common::files::verify_and_create_named_address_mapping;
 use move_compiler::{
-    compiled_unit::AnnotatedCompiledUnit,
-    shared::{verify_and_create_named_address_mapping, NumericalAddress},
-    FullyCompiledProgram,
+    compiled_unit::AnnotatedCompiledUnit, shared::NumericalAddress, FullyCompiledProgram,
 };
 use move_core_types::{
     account_address::AccountAddress,
@@ -288,10 +287,12 @@ impl<'a> SimpleVMTestAdapter<'a> {
 
 static PRECOMPILED_MOVE_STDLIB: Lazy<FullyCompiledProgram> = Lazy::new(|| {
     let program_res = move_compiler::construct_pre_compiled_lib(
-        &move_stdlib::move_stdlib_files(),
+        vec![(
+            move_stdlib::move_stdlib_files(),
+            move_stdlib::move_stdlib_named_addresses(),
+        )],
         None,
         move_compiler::Flags::empty().set_sources_shadow_deps(false),
-        move_stdlib::move_stdlib_named_addresses(),
     )
     .unwrap();
     match program_res {
@@ -304,10 +305,15 @@ static PRECOMPILED_MOVE_STDLIB: Lazy<FullyCompiledProgram> = Lazy::new(|| {
 });
 
 static MOVE_STDLIB_COMPILED: Lazy<Vec<CompiledModule>> = Lazy::new(|| {
-    let (files, units_res) = move_compiler::Compiler::new(&move_stdlib::move_stdlib_files(), &[])
-        .set_named_address_values(move_stdlib::move_stdlib_named_addresses())
-        .build()
-        .unwrap();
+    let (files, units_res) = move_compiler::Compiler::new(
+        vec![(
+            move_stdlib::move_stdlib_files(),
+            move_stdlib::move_stdlib_named_addresses(),
+        )],
+        vec![],
+    )
+    .build()
+    .unwrap();
     match units_res {
         Err(diags) => {
             eprintln!("!!!Standard library failed to compile!!!");

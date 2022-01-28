@@ -16,10 +16,15 @@ pub fn compile_units(s: &str) -> Result<Vec<AnnotatedCompiledUnit>> {
         writeln!(file, "{}", s)?;
     }
 
-    let (_, units) = MoveCompiler::new(&[file_path.to_str().unwrap().to_string()], &[])
-        .set_flags(Flags::empty().set_sources_shadow_deps(false))
-        .set_named_address_values(move_stdlib::move_stdlib_named_addresses())
-        .build_and_report()?;
+    let (_, units) = MoveCompiler::new(
+        vec![(
+            vec![file_path.to_str().unwrap().to_string()],
+            move_stdlib::move_stdlib_named_addresses(),
+        )],
+        vec![],
+    )
+    .set_flags(Flags::empty().set_sources_shadow_deps(false))
+    .build_and_report()?;
 
     dir.close()?;
 
@@ -36,9 +41,15 @@ fn expect_modules(
 }
 
 pub fn compile_modules_in_file(path: &Path) -> Result<Vec<CompiledModule>> {
-    let (_, units) = MoveCompiler::new(&[path.to_str().unwrap().to_string()], &[])
-        .set_flags(Flags::empty().set_sources_shadow_deps(false))
-        .build_and_report()?;
+    let (_, units) = MoveCompiler::new(
+        vec![(
+            vec![path.to_str().unwrap().to_string()],
+            std::collections::BTreeMap::new(),
+        )],
+        vec![],
+    )
+    .set_flags(Flags::empty().set_sources_shadow_deps(false))
+    .build_and_report()?;
 
     expect_modules(units).collect()
 }

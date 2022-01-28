@@ -26,7 +26,7 @@ verification from day one.  Move is currently co-evolving with \MVP.  The
 language supports specifying pre-, post-, and aborts conditions of functions, as
 well as invariants over data structures and over the content of the global
 persistent memory (i.e., the state of the blockchain).  One feature that makes
-verification harder is that universal and existential quantification can be used
+verification harder is that quantification can be used
 freely in specifications.
 
 Despite this specification richness, \MVP is capable of verifying the full Move
@@ -47,8 +47,7 @@ optimized in many ways.  As a result, it is not easy to define exactly what
 implementation decisions lead to fast and reliable performance.  However, we can
 at least identify three major ideas that resulted in dramatic improvements in
 speed and reliability since the description of an early prototype of
-\MVP~\cite{MOVE_PROVER}.  The rest of this paper focuses on these three core
-ideas:
+\MVP~\cite{MOVE_PROVER}:
 \begin{itemize}
 \item an \emph{alias-free memory model} based on Move's semantics, which are
   similar to the Rust programming language;

@@ -450,8 +450,18 @@ function install_dotnet {
     fi
     # Below we need to (a) set TERM variable because the .net installer expects it and it is not set
     # in some environments (b) use bash not sh because the installer uses bash features.
-    curl -sSL https://dot.net/v1/dotnet-install.sh \
-        | TERM=linux /bin/bash -s -- --channel $DOTNET_VERSION --install-dir "${DOTNET_INSTALL_DIR}" --version latest
+    if [[ "$(uname)" == "Darwin" ]]; then
+        # On Macs with M1 chip the dotnet-install.sh script will
+        # attempt to download the Arm64 version which does not exist
+        # for .NET 5.x so for now we have to force x64 version instead
+        # to work for both architectures (in emulation mode for the M1
+        # chip).
+        curl -sSL https://dot.net/v1/dotnet-install.sh \
+            | TERM=linux /bin/bash -s -- --channel $DOTNET_VERSION --install-dir "${DOTNET_INSTALL_DIR}" --version latest --architecture "x64"
+    else
+        curl -sSL https://dot.net/v1/dotnet-install.sh \
+            | TERM=linux /bin/bash -s -- --channel $DOTNET_VERSION --install-dir "${DOTNET_INSTALL_DIR}" --version latest
+    fi
   else
     echo Dotnet already installed.
   fi

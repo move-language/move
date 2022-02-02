@@ -374,7 +374,12 @@ impl VMRuntime {
         let mut dummy_locals = Locals::new(params.len());
         // index and (inner) type of mutable ref inputs. we will use them to return the effects of `func` on these inputs
         let mut mut_ref_inputs = Vec::new();
-        for (idx, (arg, arg_type)) in args.into_iter().zip(params).enumerate() {
+        for (idx, (arg, mut arg_type)) in args.into_iter().zip(params).enumerate() {
+            if let Type::TyParam(_) = arg_type {
+                arg_type = arg_type
+                    .subst(&ty_args)
+                    .map_err(|err| err.finish(Location::Undefined))?;
+            }
             match arg_type {
                 Type::MutableReference(inner_t) => {
                     dummy_locals

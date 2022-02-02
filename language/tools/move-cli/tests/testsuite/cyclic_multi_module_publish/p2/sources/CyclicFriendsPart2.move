@@ -1,6 +1,9 @@
-module 0x3::D {
+module 0x3::A {
     public fun foo() {}
-    public fun bar() {}
+}
+
+module 0x3::B {
+    public fun foo() {}
 }
 
 module 0x3::C {

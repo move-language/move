@@ -1,1 +1,2 @@
-sandbox publish --override-ordering A --override-ordering B -v
+-p p1 sandbox publish --override-ordering A --override-ordering B -v
+-p p2 sandbox publish --override-ordering A --override-ordering C -v

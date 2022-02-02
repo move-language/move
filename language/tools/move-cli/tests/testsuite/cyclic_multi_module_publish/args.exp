@@ -1,14 +1,8 @@
-Command `sandbox publish --override-ordering A --override-ordering B -v`:
-error[E02004]: invalid 'module' declaration
-  ┌─ ./sources/CyclicFriendsPart2.move:8:24
-  │
-7 │     friend 0x3::A;
-  │     -------------- '0x3::A' is a friend of '0x3::C'
-8 │     public fun foo() { 0x3::B::foo() }
-  │                        ^^^^^^^^^^^ '0x3::B' uses '0x3::C'. This 'use' relationship creates a dependency cycle.
-  │
-  ┌─ ./sources/CyclicFriendsPart1.move:6:24
-  │
-6 │     public fun foo() { 0x3::A::foo() }
-  │                        ----------- '0x3::A' uses '0x3::B'
-
+Command `-p p1 sandbox publish --override-ordering A --override-ordering B -v`:
+Found 2 modules
+Publishing a new module 00000000000000000000000000000003::A (wrote 82 bytes)
+Publishing a new module 00000000000000000000000000000003::B (wrote 93 bytes)
+Wrote 175 bytes of module ID's and code
+Command `-p p2 sandbox publish --override-ordering A --override-ordering C -v`:
+Found 3 modules
+Invalid multi-module publishing: VMError with status INVALID_FRIEND_DECL_WITH_MODULES_IN_DEPENDENCIES at location Module ModuleId { address: 00000000000000000000000000000003, name: Identifier("C") } and message At least one module, 00000000000000000000000000000003::A, appears in both the dependency set and the friend set

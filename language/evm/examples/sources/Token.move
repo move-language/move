@@ -36,7 +36,7 @@ module Evm::ERC20 {
         move_to<State>(sign(self()), State{decimals, total_supply: initial_amount});
 
         // Initialize senders balance with initial amount
-        move_to<Account>(sign(sender()), Account{value: initial_amount, allowances: vector[]});
+        move_to<Account>(sign(sender()), Account{value: initial_amount, allowances: Vector::empty()});
     }
 
     #[callable, view]
@@ -127,7 +127,7 @@ module Evm::ERC20 {
     /// Helper function to create an account with a zero balance and no allowances.
     fun create_account_if_not_present(owner: address) {
         if (!exists<Account>(owner)) {
-            move_to<Account>(sign(owner), Account{value: 0, allowances: vector[]})
+            move_to<Account>(sign(owner), Account{value: 0, allowances: Vector::empty()})
         }
     }
 

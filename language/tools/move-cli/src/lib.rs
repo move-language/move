@@ -19,7 +19,8 @@ const BCS_EXTENSION: &str = "bcs";
 
 use anyhow::Result;
 use move_core_types::{
-    account_address::AccountAddress, errmap::ErrorMapping, identifier::Identifier,
+    account_address::AccountAddress, errmap::ErrorMapping, gas_schedule::CostTable,
+    identifier::Identifier,
 };
 use move_vm_runtime::native_functions::NativeFunction;
 use std::path::PathBuf;
@@ -98,14 +99,19 @@ pub enum Command {
 
 pub fn run_cli(
     natives: Vec<NativeFunctionRecord>,
+    cost_table: &CostTable,
     error_descriptions: &ErrorMapping,
     move_args: &Move,
     cmd: &Command,
 ) -> Result<()> {
     match cmd {
-        Command::Sandbox { storage_dir, cmd } => {
-            cmd.handle_command(natives, error_descriptions, move_args, storage_dir)
-        }
+        Command::Sandbox { storage_dir, cmd } => cmd.handle_command(
+            natives,
+            cost_table,
+            error_descriptions,
+            move_args,
+            storage_dir,
+        ),
         Command::Experimental { storage_dir, cmd } => cmd.handle_command(move_args, storage_dir),
         Command::Package { cmd } => package::cli::handle_package_commands(
             &move_args.package_path,
@@ -118,8 +124,15 @@ pub fn run_cli(
 
 pub fn move_cli(
     natives: Vec<NativeFunctionRecord>,
+    cost_table: &CostTable,
     error_descriptions: &ErrorMapping,
 ) -> Result<()> {
     let args = MoveCLI::from_args();
-    run_cli(natives, error_descriptions, &args.move_args, &args.cmd)
+    run_cli(
+        natives,
+        cost_table,
+        error_descriptions,
+        &args.move_args,
+        &args.cmd,
+    )
 }

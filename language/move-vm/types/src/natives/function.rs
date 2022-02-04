@@ -16,7 +16,7 @@
 //! This module contains the declarations and utilities to implement a native
 //! function.
 
-use crate::{gas_schedule::NativeCostIndex, values::Value};
+use crate::values::Value;
 use move_core_types::gas_schedule::{
     AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, InternalGasUnits,
 };
@@ -108,10 +108,10 @@ impl NativeResult {
 /// The key is the specific native function index known to `CostTable`.
 pub fn native_gas(
     table: &CostTable,
-    key: NativeCostIndex,
+    native_table_idx: impl Into<u8>,
     size: usize,
 ) -> InternalGasUnits<GasCarrier> {
-    let gas_amt = table.native_cost(key as u8);
+    let gas_amt = table.native_cost(native_table_idx.into());
     let memory_size = AbstractMemorySize::new(std::cmp::max(1, size) as GasCarrier);
     debug_assert!(memory_size.get() > 0);
     gas_amt.total().mul(memory_size)

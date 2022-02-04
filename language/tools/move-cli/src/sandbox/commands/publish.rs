@@ -9,12 +9,14 @@ use crate::{
     NativeFunctionRecord,
 };
 use anyhow::{bail, Result};
+use move_core_types::gas_schedule::CostTable;
 use move_package::compilation::compiled_package::CompiledPackage;
 use move_vm_runtime::move_vm::MoveVM;
 use std::collections::BTreeMap;
 
 pub fn publish(
     natives: impl IntoIterator<Item = NativeFunctionRecord>,
+    cost_table: &CostTable,
     state: &OnDiskStateView,
     package: &CompiledPackage,
     no_republish: bool,
@@ -52,7 +54,7 @@ pub fn publish(
     // use the the publish_module API from the VM if we do not allow breaking changes
     if !ignore_breaking_changes {
         let vm = MoveVM::new(natives).unwrap();
-        let mut gas_status = get_gas_status(None)?;
+        let mut gas_status = get_gas_status(cost_table, None)?;
         let mut session = vm.new_session(state);
 
         let mut has_error = false;

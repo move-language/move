@@ -24,8 +24,10 @@ use move_core_types::{
     vm_status::StatusCode,
 };
 use once_cell::sync::Lazy;
+use std::cmp::max;
 
-static ZERO_COST_SCHEDULE: Lazy<CostTable> = Lazy::new(zero_cost_schedule);
+static ZERO_COST_SCHEDULE: Lazy<CostTable> =
+    Lazy::new(|| zero_cost_schedule(NUMBER_OF_NATIVE_FUNCTIONS));
 
 /// The Move VM implementation of state for gas metering.
 ///
@@ -164,7 +166,7 @@ pub fn new_from_instructions(
 
 // Only used for genesis and for tests where we need a cost table and
 // don't have a genesis storage state.
-pub fn zero_cost_schedule() -> CostTable {
+pub fn zero_cost_schedule(num_of_native_funcs: usize) -> CostTable {
     use Bytecode::*;
     // The actual costs for the instructions in this table _DO NOT MATTER_. This is only used
     // for genesis and testing, and for these cases we don't need to worry
@@ -279,15 +281,18 @@ pub fn zero_cost_schedule() -> CostTable {
         (VecUnpack(SignatureIndex::new(0), 0), GasCost::new(0, 0)),
         (VecSwap(SignatureIndex::new(0)), GasCost::new(0, 0)),
     ];
-    let native_table = (0..NUMBER_OF_NATIVE_FUNCTIONS)
+    // length of native_table vector should be at least 18 due to the fact that there's a
+    // builtin native function cost EMIT_EVENT which indexed 17 in the vector
+    let num_of_native_funcs = max(num_of_native_funcs, 18);
+    let native_table = (0..num_of_native_funcs)
         .map(|_| GasCost::new(0, 0))
         .collect::<Vec<GasCost>>();
     new_from_instructions(instrs, native_table)
 }
 
-pub static INITIAL_GAS_SCHEDULE: Lazy<CostTable> = Lazy::new(|| {
+pub fn bytecode_instruction_costs() -> Vec<(Bytecode, GasCost)> {
     use Bytecode::*;
-    let mut instrs = vec![
+    return vec![
         (MoveTo(StructDefinitionIndex::new(0)), GasCost::new(13, 1)),
         (
             MoveToGeneric(StructDefInstantiationIndex::new(0)),
@@ -399,6 +404,10 @@ pub static INITIAL_GAS_SCHEDULE: Lazy<CostTable> = Lazy::new(|| {
         (VecUnpack(SignatureIndex::new(0), 0), GasCost::new(572, 1)),
         (VecSwap(SignatureIndex::new(0)), GasCost::new(1436, 1)),
     ];
+}
+
+pub static INITIAL_COST_SCHEDULE: Lazy<CostTable> = Lazy::new(|| {
+    let mut instrs = bytecode_instruction_costs();
     // Note that the DiemVM is expecting the table sorted by instruction order.
     instrs.sort_by_key(|cost| instruction_key(&cost.0));
 
@@ -470,4 +479,10 @@ pub enum NativeCostIndex {
     CREATE_SIGNER = 15,
     DESTROY_SIGNER = 16,
     EMIT_EVENT = 17,
+}
+
+impl From<NativeCostIndex> for u8 {
+    fn from(index: NativeCostIndex) -> Self {
+        index as u8
+    }
 }

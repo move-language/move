@@ -58,8 +58,8 @@ pub struct TestRunner {
 
 /// A gas schedule where every instruction has a cost of "1". This is used to bound execution of a
 /// test to a certain number of ticks.
-fn unit_cost_table() -> CostTable {
-    let mut cost_schedule = zero_cost_schedule();
+fn unit_cost_table(num_of_native_funcs: usize) -> CostTable {
+    let mut cost_schedule = zero_cost_schedule(num_of_native_funcs);
     cost_schedule.instruction_table.iter_mut().for_each(|cost| {
         *cost = GasCost::new(1, 1);
     });
@@ -132,13 +132,14 @@ impl TestRunner {
         let native_function_table = native_function_table.unwrap_or_else(|| {
             move_stdlib::natives::all_natives(AccountAddress::from_hex_literal("0x1").unwrap())
         });
+        let num_of_native_funcs = native_function_table.len();
         Ok(Self {
             testing_config: SharedTestingConfig {
                 save_storage_state_on_failure,
                 starting_storage_state,
                 execution_bound,
                 native_function_table,
-                cost_table: unit_cost_table(),
+                cost_table: unit_cost_table(num_of_native_funcs),
                 source_files,
                 check_stackless_vm,
                 verbose,

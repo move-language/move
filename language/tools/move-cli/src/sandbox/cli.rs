@@ -10,7 +10,7 @@ use crate::{
 };
 use anyhow::Result;
 use move_core_types::{
-    errmap::ErrorMapping, language_storage::TypeTag, parser,
+    errmap::ErrorMapping, gas_schedule::CostTable, language_storage::TypeTag, parser,
     transaction_argument::TransactionArgument,
 };
 use move_package::compilation::package_layout::CompiledPackageLayout;
@@ -140,6 +140,7 @@ impl SandboxCommand {
     pub fn handle_command(
         &self,
         natives: Vec<NativeFunctionRecord>,
+        cost_table: &CostTable,
         error_descriptions: &ErrorMapping,
         move_args: &Move,
         storage_dir: &Path,
@@ -155,6 +156,7 @@ impl SandboxCommand {
                 let state = context.prepare_state(storage_dir)?;
                 sandbox::commands::publish(
                     natives,
+                    cost_table,
                     &state,
                     context.package(),
                     *no_republish,
@@ -177,6 +179,7 @@ impl SandboxCommand {
                 let state = context.prepare_state(storage_dir)?;
                 sandbox::commands::run(
                     natives,
+                    cost_table,
                     error_descriptions,
                     &state,
                     context.package(),

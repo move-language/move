@@ -41,19 +41,19 @@ pub mod on_disk_state_view;
 pub mod package_context;
 
 use move_bytecode_utils::module_cache::GetModule;
+use move_core_types::gas_schedule::CostTable;
 pub use on_disk_state_view::*;
 pub use package_context::*;
 
-pub fn get_gas_status(gas_budget: Option<u64>) -> Result<GasStatus<'static>> {
+pub fn get_gas_status(cost_table: &CostTable, gas_budget: Option<u64>) -> Result<GasStatus> {
     let gas_status = if let Some(gas_budget) = gas_budget {
-        let gas_schedule = &move_vm_types::gas_schedule::INITIAL_GAS_SCHEDULE;
         let max_gas_budget = u64::MAX
-            .checked_div(gas_schedule.gas_constants.gas_unit_scaling_factor)
+            .checked_div(cost_table.gas_constants.gas_unit_scaling_factor)
             .unwrap();
         if gas_budget >= max_gas_budget {
             bail!("Gas budget set too high; maximum is {}", max_gas_budget)
         }
-        GasStatus::new(gas_schedule, GasUnits::new(gas_budget))
+        GasStatus::new(cost_table, GasUnits::new(gas_budget))
     } else {
         // no budget specified. Disable gas metering
         GasStatus::new_unmetered()

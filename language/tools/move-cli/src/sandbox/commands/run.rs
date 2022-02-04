@@ -13,6 +13,7 @@ use move_binary_format::file_format::CompiledModule;
 use move_core_types::{
     account_address::AccountAddress,
     errmap::ErrorMapping,
+    gas_schedule::CostTable,
     identifier::IdentStr,
     language_storage::TypeTag,
     transaction_argument::{convert_txn_args, TransactionArgument},
@@ -23,6 +24,7 @@ use std::{fs, path::Path};
 
 pub fn run(
     natives: impl IntoIterator<Item = NativeFunctionRecord>,
+    cost_table: &CostTable,
     error_descriptions: &ErrorMapping,
     state: &OnDiskStateView,
     package: &CompiledPackage,
@@ -68,7 +70,7 @@ move run` must be applied to a module inside `storage/`",
     let vm_args: Vec<Vec<u8>> = convert_txn_args(txn_args);
 
     let vm = MoveVM::new(natives).unwrap();
-    let mut gas_status = get_gas_status(gas_budget)?;
+    let mut gas_status = get_gas_status(cost_table, gas_budget)?;
     let mut session = vm.new_session(state);
 
     let script_type_parameters = vec![];

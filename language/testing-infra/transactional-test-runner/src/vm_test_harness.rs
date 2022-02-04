@@ -266,7 +266,11 @@ impl<'a> SimpleVMTestAdapter<'a> {
         // start session
         let vm = MoveVM::new(move_stdlib::natives::all_natives(STD_ADDR)).unwrap();
         let (mut session, mut gas_status) = {
-            let gas_status = move_cli::sandbox::utils::get_gas_status(gas_budget).unwrap();
+            let gas_status = move_cli::sandbox::utils::get_gas_status(
+                &move_vm_types::gas_schedule::INITIAL_COST_SCHEDULE,
+                gas_budget,
+            )
+            .unwrap();
             let session = vm.new_session(&self.storage);
             (session, gas_status)
         };

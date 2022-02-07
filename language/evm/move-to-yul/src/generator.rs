@@ -256,7 +256,6 @@ impl Generator {
         // functions reached by callable entry points. While we traversing this list,
         // more functions might be added due to transitive calls.
         while let Some(fun_id) = self.needed_move_functions.pop() {
-            self.done_move_functions.insert(fun_id.clone());
             self.function(ctx, &fun_id)
         }
 
@@ -276,20 +275,21 @@ impl Generator {
 impl Generator {
     /// Generate Yul function for Move function.
     fn function(&mut self, ctx: &Context, fun_id: &QualifiedInstId<FunId>) {
+        self.done_move_functions.insert(fun_id.clone());
         let fun = &ctx.env.get_function(fun_id.to_qualified_id());
         // Emit function header
         let params = (0..fun.get_parameter_count())
             .map(|idx| ctx.make_local_name(fun, idx))
             .join(", ");
-        let results = match fun.get_return_count() {
-            0 => "".to_string(),
-            1 => format!(" -> {}", ctx.make_result_name(fun, 0)),
-            _ => format!(
-                " -> ({})",
+        let results = if fun.get_return_count() == 0 {
+            "".to_string()
+        } else {
+            format!(
+                " -> {}",
                 (0..fun.get_return_count())
                     .map(|i| ctx.make_result_name(fun, i))
                     .join(", ")
-            ),
+            )
         };
         emitln!(
             ctx.writer,
@@ -439,10 +439,12 @@ impl Generator {
                 print_loc();
                 emitln!(
                     ctx.writer,
-                    "if {} {{ $block := {} }} else {{ $block := {} }}",
+                    "switch {}\n\
+                     case 0  {{ $block := {} }}\n\
+                     default {{ $block := {} }}",
                     local_name(cond),
+                    get_block(if_f),
                     get_block(if_t),
-                    get_block(if_f)
                 )
             }
             Assign(_, dest, src, _) => {

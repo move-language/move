@@ -37,7 +37,7 @@ object "A2_M" {
                 $result := x
             }
 
-            function A2_M_g(x) -> ($result0, $result1) {
+            function A2_M_g(x) -> $result0, $result1 {
                 /// @src 2:309:315
                 $result0 := x
                 $result1 := x

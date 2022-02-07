@@ -11,7 +11,7 @@ object "A2_M" {
     }
     object "A2_M_deployed" {
         code {
-            function A2_M_add_two_number(x, y) -> ($result0, $result1) {
+            function A2_M_add_two_number(x, y) -> $result0, $result1 {
                 let res, z, $t4, $t5
                 /// @src 2:309:310
                 $t4 := $AddU64(x, y)
@@ -21,7 +21,7 @@ object "A2_M" {
                 $result1 := $t4
             }
 
-            function A2_M_arithmetic_ops(a) -> ($result0, $result1) {
+            function A2_M_arithmetic_ops(a) -> $result0, $result1 {
                 let c, $t2, $t3, $t4, $t5
                 let $block := 4
                 for {} true {} {
@@ -42,12 +42,14 @@ object "A2_M" {
                         /// @src 2:1338:1340
                         $t4 := $Neq($t2, $t3)
                         /// @src 2:1332:1352
-                        if $t4 { $block := 2 } else { $block := 3 }
+                        switch $t4
+                        case 0  { $block := 3 }
+                        default { $block := 2 }
                     }
                 }
             }
 
-            function A2_M_bool_ops(a, b) -> ($result0, $result1) {
+            function A2_M_bool_ops(a, b) -> $result0, $result1 {
                 let tmp_$2, tmp_$3, c, d, $t6, $t7, $t8, $t9, $t10, $t11, $t12
                 let $block := 4
                 for {} true {} {
@@ -69,13 +71,17 @@ object "A2_M" {
                         /// @src 2:969:970
                         $t6 := $Gt(a, b)
                         /// @src 2:967:982
-                        if $t6 { $block := 2 } else { $block := 3 }
+                        switch $t6
+                        case 0  { $block := 3 }
+                        default { $block := 2 }
                     }
                     case 5 {
                         /// @src 2:998:999
                         $t8 := $Lt(a, b)
                         /// @src 2:996:1011
-                        if $t8 { $block := 6 } else { $block := 7 }
+                        switch $t8
+                        case 0  { $block := 7 }
+                        default { $block := 6 }
                     }
                     case 6 {
                         $t9 := true
@@ -96,7 +102,9 @@ object "A2_M" {
                         /// @src 2:1025:1026
                         $t11 := $LogicalNot($t10)
                         /// @src 2:1021:1044
-                        if $t11 { $block := 9 } else { $block := 10 }
+                        switch $t11
+                        case 0  { $block := 10 }
+                        default { $block := 9 }
                     }
                     case 9 {
                         $t12 := 42
@@ -111,7 +119,7 @@ object "A2_M" {
                 }
             }
 
-            function A2_M_div(x, y) -> ($result0, $result1) {
+            function A2_M_div(x, y) -> $result0, $result1 {
                 let $t2, $t3
                 /// @src 2:536:537
                 $t2 := $Div(x, y)
@@ -184,11 +192,15 @@ object "A2_M" {
                     case 4 {
                         $t5 := 3
                         /// @src 2:1878:1903
-                        if b { $block := 2 } else { $block := 3 }
+                        switch b
+                        case 0  { $block := 3 }
+                        default { $block := 2 }
                     }
                     case 5 {
                         /// @src 2:1917:1928
-                        if b { $block := 6 } else { $block := 7 }
+                        switch b
+                        case 0  { $block := 7 }
+                        default { $block := 6 }
                     }
                     case 6 {
                         $t6 := 4
@@ -206,7 +218,9 @@ object "A2_M" {
                     }
                     case 8 {
                         /// @src 2:1913:1937
-                        if tmp_$1 { $block := 9 } else { $block := 10 }
+                        switch tmp_$1
+                        case 0  { $block := 10 }
+                        default { $block := 9 }
                     }
                     case 9 {
                         $t8 := 4
@@ -216,7 +230,9 @@ object "A2_M" {
                         /// @src 2:1951:1952
                         $t9 := $LogicalNot(b)
                         /// @src 2:1951:1963
-                        if $t9 { $block := 11 } else { $block := 12 }
+                        switch $t9
+                        case 0  { $block := 12 }
+                        default { $block := 11 }
                     }
                     case 11 {
                         $t10 := 5
@@ -234,7 +250,9 @@ object "A2_M" {
                     }
                     case 13 {
                         /// @src 2:1947:1972
-                        if tmp_$2 { $block := 14 } else { $block := 15 }
+                        switch tmp_$2
+                        case 0  { $block := 15 }
+                        default { $block := 14 }
                     }
                     case 14 {
                         $t12 := 5
@@ -362,24 +380,6 @@ object "A2_M" {
                 $t3 := $Sub($t1, $t2)
                 /// @src 2:2175:2180
                 $result := $t3
-            }
-
-            function A2_M_g(x) -> $result {
-                let $t1, $t2
-                $t1 := 2
-                /// @src 2:1689:1690
-                $t2 := $AddU64(x, $t1)
-                /// @src 2:1688:1691
-                $result := $t2
-            }
-
-            function A2_M_f(x) -> $result {
-                let $t1, $t2
-                $t1 := 1
-                /// @src 2:1543:1544
-                $t2 := $AddU64(x, $t1)
-                /// @src 2:1542:1545
-                $result := $t2
             }
 
             function $Abort(code) {

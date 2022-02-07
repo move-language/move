@@ -24,7 +24,9 @@ object "A2_M" {
                         /// @src 2:260:262
                         $t6 := $Eq($t4, $t5)
                         /// @src 2:250:298
-                        if $t6 { $block := 5 } else { $block := 6 }
+                        switch $t6
+                        case 0  { $block := 6 }
+                        default { $block := 5 }
                     }
                     case 3 {
                         /// @src 2:228:304
@@ -35,7 +37,9 @@ object "A2_M" {
                         /// @src 2:237:238
                         $t2 := $Gt(x, $t1)
                         /// @src 2:228:304
-                        if $t2 { $block := 2 } else { $block := 3 }
+                        switch $t2
+                        case 0  { $block := 3 }
+                        default { $block := 2 }
                     }
                     case 5 {
                         $t7 := 1
@@ -75,14 +79,18 @@ object "A2_M" {
                         /// @src 2:412:414
                         $t5 := $Eq(x, $t4)
                         /// @src 2:406:423
-                        if $t5 { $block := 5 } else { $block := 4 }
+                        switch $t5
+                        case 0  { $block := 4 }
+                        default { $block := 5 }
                     }
                     case 4 {
                         $t1 := 1
                         /// @src 2:367:369
                         $t2 := $GtEq(x, $t1)
                         /// @src 2:361:396
-                        if $t2 { $block := 2 } else { $block := 3 }
+                        switch $t2
+                        case 0  { $block := 3 }
+                        default { $block := 2 }
                     }
                     case 5 {
                         /// @src 2:346:430
@@ -115,7 +123,9 @@ object "A2_M" {
                         /// @src 2:111:112
                         $t3 := $Gt(x, $t2)
                         /// @src 2:105:124
-                        if $t3 { $block := 2 } else { $block := 3 }
+                        switch $t3
+                        case 0  { $block := 3 }
+                        default { $block := 2 }
                     }
                     case 5 {
                         /// @src 2:105:124
@@ -143,7 +153,9 @@ object "A2_M" {
                         /// @src 2:173:174
                         $t2 := $Gt(x, $t1)
                         /// @src 2:167:186
-                        if $t2 { $block := 2 } else { $block := 3 }
+                        switch $t2
+                        case 0  { $block := 3 }
+                        default { $block := 2 }
                     }
                 }
             }

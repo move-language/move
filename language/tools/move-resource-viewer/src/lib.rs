@@ -134,7 +134,7 @@ impl<'a, T: MoveResolver + ?Sized> MoveValueAnnotator<'a, T> {
                 .into_iter()
                 .zip(runtime.into_iter())
                 .collect(),
-            MoveStruct::WithFields(fields) => fields,
+            MoveStruct::WithFields(fields) | MoveStruct::WithTypes { fields, .. } => fields,
         })
     }
 

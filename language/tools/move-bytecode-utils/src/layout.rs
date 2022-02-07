@@ -16,7 +16,7 @@ use move_core_types::{
     value::{MoveFieldLayout, MoveStructLayout, MoveTypeLayout},
 };
 use serde_reflection::{ContainerFormat, Format, Named, Registry};
-use std::{borrow::Borrow, collections::BTreeMap, fmt::Debug};
+use std::{borrow::Borrow, collections::BTreeMap, convert::TryInto, fmt::Debug};
 
 /// Name of the Move `address` type in the serde registry
 const ADDRESS: &str = "AccountAddress";
@@ -219,12 +219,20 @@ pub enum StructLayoutBuilder {}
 
 #[derive(Copy, Clone, Debug)]
 enum LayoutType {
+    WithTypes,
     WithFields,
     Runtime,
 }
 
 impl TypeLayoutBuilder {
-    /// Construct `TypeLayout` with fields from `t`.
+    /// Construct a WithTypes `TypeLayout` with fields from `t`.
+    /// Panics if `resolver` cannot resolve a module whose types are referenced directly or
+    /// transitively by `t`
+    pub fn build_with_types(t: &TypeTag, resolver: &impl GetModule) -> Result<MoveTypeLayout> {
+        Self::build(t, resolver, LayoutType::WithTypes)
+    }
+
+    /// Construct a WithFields `TypeLayout` with fields from `t`.
     /// Panics if `resolver` cannot resolve a module whose types are referenced directly or
     /// transitively by `t`.
     pub fn build_with_fields(t: &TypeTag, resolver: &impl GetModule) -> Result<MoveTypeLayout> {
@@ -354,8 +362,9 @@ impl StructLayoutBuilder {
         resolver: &impl GetModule,
         layout_type: LayoutType,
     ) -> Result<MoveStructLayout> {
+        let s_handle = m.struct_handle_at(s.struct_handle);
         assert_eq!(
-            m.struct_handle_at(s.struct_handle).type_parameters.len(),
+            s_handle.type_parameters.len(),
             type_arguments.len(),
             "Wrong number of type arguments for struct",
         );
@@ -386,6 +395,25 @@ impl StructLayoutBuilder {
                             .map(|(name, layout)| MoveFieldLayout::new(name, layout))
                             .collect(),
                     ),
+                    LayoutType::WithTypes => {
+                        let mid = m.self_id();
+                        let type_param_res: Result<Vec<TypeTag>> =
+                            type_arguments.iter().map(|t| t.try_into()).collect();
+                        let type_params = type_param_res?;
+                        let type_ = StructTag {
+                            address: *mid.address(),
+                            module: mid.name().to_owned(),
+                            name: m.identifier_at(s_handle.name).to_owned(),
+                            type_params,
+                        };
+                        let fields = fields
+                            .iter()
+                            .map(|f| m.identifier_at(f.name).to_owned())
+                            .zip(layouts)
+                            .map(|(name, layout)| MoveFieldLayout::new(name, layout))
+                            .collect();
+                        MoveStructLayout::WithTypes { type_, fields }
+                    }
                 })
             }
         }

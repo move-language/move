@@ -1033,7 +1033,7 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
             BitAnd => write!(f, "&")?,
             Xor => write!(f, "^")?,
             Shl => write!(f, "<<")?,
-            Shr => write!(f, "<<")?,
+            Shr => write!(f, ">>")?,
             Lt => write!(f, "<")?,
             Gt => write!(f, ">")?,
             Le => write!(f, "<=")?,

@@ -52,9 +52,10 @@ move run` must be applied to a module inside `storage/`",
         fs::read(script_path)?
     } else {
         // TODO(tzakian): support calling scripts in transitive deps
+        let file_contents = std::fs::read_to_string(script_path)?;
         let script_opt = package
             .scripts()
-            .find(|unit| unit.source_path.file_stem() == script_path.file_stem());
+            .find(|unit| unit.unit.source_map().check(&file_contents));
         // script source file; package is already compiled so load it up
         match script_opt {
             Some(unit) => unit.unit.serialize(),

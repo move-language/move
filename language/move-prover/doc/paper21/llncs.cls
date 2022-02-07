@@ -1,4 +1,4 @@
-% LLNCS DOCUMENT CLASS -- version 2.21 (12-Jan-2022)
+% LLNCS DOCUMENT CLASS -- version 2.20 (10-Mar-2018)
 % Springer Verlag LaTeX2e support for Lecture Notes in Computer Science
 %
 %%
@@ -19,7 +19,7 @@
 %%   Right brace   \}     Tilde         \~}
 %%
 \NeedsTeXFormat{LaTeX2e}[1995/12/01]
-\ProvidesClass{llncs}[2022/01/12 v2.21
+\ProvidesClass{llncs}[2018/03/10 v2.20
 ^^J LaTeX document class for Lecture Notes in Computer Science]
 % Options
 \let\if@envcntreset\iffalse
@@ -122,7 +122,7 @@
  \def\ackname{Remerciements.}%
  \def\andname{et}%
  \def\lastandname{ et}%
- \def\appendixname{Appendice}%
+ \def\appendixname{Appendice}
  \def\chaptername{Chapitre}%
  \def\claimname{Pr\'etention}%
  \def\conjecturename{Hypoth\`ese}%
@@ -132,13 +132,13 @@
  \def\examplename{Exemple}%
  \def\exercisename{Exercice}%
  \def\figurename{Fig.}%
- \def\keywordname{{\bf Mots-cl\'e:}}%
- \def\indexname{Index}%
+ \def\keywordname{{\bf Mots-cl\'e:}}
+ \def\indexname{Index}
  \def\lemmaname{Lemme}%
- \def\contriblistname{Liste des contributeurs}%
+ \def\contriblistname{Liste des contributeurs}
  \def\listfigurename{Liste des figures}%
  \def\listtablename{Liste des tables}%
- \def\mailname{{\it Correspondence to\/}:}%
+ \def\mailname{{\it Correspondence to\/}:}
  \def\noteaddname{Note ajout\'ee \`a l'\'epreuve}%
  \def\notename{Remarque}%
  \def\partname{Partie}%
@@ -148,9 +148,9 @@
 %\def\propositionname{Proposition}%
  \def\questionname{Question}%
  \def\remarkname{Remarque}%
- \def\seename{voir}%
+ \def\seename{voir}
  \def\solutionname{Solution}%
- \def\subclassname{{\it Subject Classifications\/}:}%
+ \def\subclassname{{\it Subject Classifications\/}:}
  \def\tablename{Tableau}%
  \def\theoremname{Th\'eor\`eme}%
 }
@@ -171,13 +171,13 @@
  \def\examplename{Beispiel}%
  \def\exercisename{\"Ubung}%
  \def\figurename{Abb.}%
- \def\keywordname{{\bf Schl\"usselw\"orter:}}%
- \def\indexname{Index}%
+ \def\keywordname{{\bf Schl\"usselw\"orter:}}
+ \def\indexname{Index}
 %\def\lemmaname{Lemma}%
- \def\contriblistname{Mitarbeiter}%
+ \def\contriblistname{Mitarbeiter}
  \def\listfigurename{Abbildungsverzeichnis}%
  \def\listtablename{Tabellenverzeichnis}%
- \def\mailname{{\it Correspondence to\/}:}%
+ \def\mailname{{\it Correspondence to\/}:}
  \def\noteaddname{Nachtrag}%
  \def\notename{Anmerkung}%
  \def\partname{Teil}%
@@ -187,9 +187,9 @@
 %\def\propositionname{Proposition}%
  \def\questionname{Frage}%
  \def\remarkname{Anmerkung}%
- \def\seename{siehe}%
+ \def\seename{siehe}
  \def\solutionname{L\"osung}%
- \def\subclassname{{\it Subject Classifications\/}:}%
+ \def\subclassname{{\it Subject Classifications\/}:}
  \def\tablename{Tabelle}%
 %\def\theoremname{Theorem}%
 }
@@ -890,8 +890,8 @@ to0pt{\kern0.55\wd0\vrule height0.45\ht0\hss}\box0}}}}
 \par\addvspace\baselineskip
 \noindent\keywordname\enspace\ignorespaces#1}%
 \@ifpackageloaded{hyperref}{%
-\def\doi#1{\href{https://doi.org/\detokenize{#1}}{\url{https://doi.org/\detokenize{#1}}}}}{
-\def\doi#1{https://doi.org/\detokenize{#1}}}
+\def\doi#1{\href{https://doi.org/#1}{https://doi.org/#1}}}{
+\def\doi#1{https://doi.org/#1}}
 }
 \def\homedir{\~{ }}
 

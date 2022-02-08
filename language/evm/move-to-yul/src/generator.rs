@@ -565,7 +565,8 @@ impl Generator {
                     | OpaqueCallBegin(_, _, _)
                     | OpaqueCallEnd(_, _, _)
                     | Havoc(_)
-                    | Stop => {}
+                    | Stop
+                    | TraceGlobalMem(_) => {}
                 }
             }
 

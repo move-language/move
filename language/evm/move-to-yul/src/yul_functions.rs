@@ -80,7 +80,7 @@ Abort: "(code) {
     revert(0, 0) // TODO: convention to store code
 }",
 AbortBuiltin: "() {
-    $Abort(-1)
+    $Abort(0-1)
 }" dep Abort,
 AddU64: "(x, y) -> r {
     if lt(sub($MAX_U64, x), y) { $AbortBuiltin() }

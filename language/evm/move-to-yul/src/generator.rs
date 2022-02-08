@@ -639,11 +639,20 @@ impl Generator {
         fun: YulFunction,
         mut args: impl Iterator<Item = String>,
     ) -> String {
-        self.needed_yul_functions.insert(fun);
+        self.need_yul_function(fun);
         for dep in fun.yule_deps() {
             self.needed_yul_functions.insert(dep);
         }
         format!("{}({})", fun.yule_name(), args.join(", "))
+    }
+
+    fn need_yul_function(&mut self, yul_fun: YulFunction) {
+        if !self.needed_yul_functions.contains(&yul_fun) {
+            self.needed_yul_functions.insert(yul_fun);
+            for dep in yul_fun.yule_deps() {
+                self.need_yul_function(dep);
+            }
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-** Diagnostics:
+!! Move-To-Yul Diagnostics:
  error: #[callable] or #[create] functions cannot be generic
   ┌─ tests/NoGenericCallable.move:5:2
   │

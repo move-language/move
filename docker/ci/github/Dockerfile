@@ -14,7 +14,7 @@ ENV RUSTUP_HOME "/opt/rustup"
 RUN mkdir -p /github/home && \
     mkdir -p /opt/cargo/ && \
     mkdir -p /opt/git/ && \
-    /diem/scripts/dev_setup.sh -t -o -b -p -y -s -n -a && \
+    /diem/scripts/dev_setup.sh -t -o -b -p -y -d -s -n -a && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -22,6 +22,7 @@ ENV DOTNET_ROOT "/opt/dotnet"
 ENV Z3_EXE "/opt/bin/z3"
 ENV CVC5_EXE "/opt/bin/cvc5"
 ENV BOOGIE_EXE "/opt/dotnet/tools/boogie"
+ENV SOLC_EXE "/opt/bin/solc"
 ENV PATH "/opt/cargo/bin:/usr/lib/golang/bin:/opt/bin:${DOTNET_ROOT}:${DOTNET_ROOT}/tools:$PATH"
 
 FROM setup_ci as tested_ci
@@ -40,6 +41,7 @@ RUN [ -x "$(set -x; command -v shellcheck)" ] \
     && [ -x "$(set -x; command -v grcov)" ] \
     && [ -x "$(set -x; command -v helm)" ] \
     && [ -x "$(set -x; command -v aws)" ] \
+    && [ -x "$(set -x; command -v solc)" ] \
     && [ -x "$(set -x; command -v z3)" ] \
     && [ -x "$(set -x; command -v "$BOOGIE_EXE")" ] \
     && [ -x "$(set -x; xargs rustup which cargo --toolchain < /diem/rust-toolchain )" ] \
@@ -54,6 +56,6 @@ RUN [ -x "$(set -x; command -v shellcheck)" ] \
 
 # should be a no-op
 # sccache builds fine, but is not executable ??? in alpine, ends up being recompiled.  Wierd.
-RUN /diem/scripts/dev_setup.sh -t -o -y -b -p -s -a
+RUN /diem/scripts/dev_setup.sh -t -o -y -d -b -p -s -a
 
 FROM setup_ci as build_environment

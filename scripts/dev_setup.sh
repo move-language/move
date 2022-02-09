@@ -32,6 +32,7 @@ BOOGIE_VERSION=2.9.6
 PYRE_CHECK_VERSION=0.0.59
 NUMPY_VERSION=1.20.1
 ALLURE_VERSION=2.15.pr1135
+SOLC_VERSION="v0.8.11+commit.d7f03943"
 
 SCRIPT_PATH="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
 cd "$SCRIPT_PATH/.." || exit
@@ -46,11 +47,12 @@ function usage {
   echo "-y installs or updates Move prover tools: z3, cvc5, dotnet, boogie"
   echo "-s installs or updates requirements to test code-generation for Move SDKs"
   echo "-a install tools for build and test api"
+  echo "-d installs the solidity compiler"
   echo "-v verbose mode"
   echo "-i installs an individual tool by name"
   echo "-n will target the /opt/ dir rather than the $HOME dir.  /opt/bin/, /opt/rustup/, and /opt/dotnet/ rather than $HOME/bin/, $HOME/.rustup/, and $HOME/.dotnet/"
   echo "If no toolchain component is selected with -t, -o, -y, or -p, the behavior is as if -t had been provided."
-  echo "This command must be called from the root folder of the Diem project."
+  echo "This command must be called from the root folder of the Move project."
 }
 
 function add_to_profile {
@@ -91,6 +93,9 @@ function update_path_and_profile {
     add_to_profile "export Z3_EXE=\"${BIN_DIR}/z3\""
     add_to_profile "export CVC5_EXE=\"${BIN_DIR}/cvc5\""
     add_to_profile "export BOOGIE_EXE=\"${DOTNET_ROOT}/tools/boogie\""
+  fi
+  if [[ "$INSTALL_SOLIDITY" == "true" ]]; then
+    add_to_profile "export SOLC_EXE=\"${BIN_DIR}/solc\""
   fi
   if [[ "$INSTALL_CODEGEN" == "true" ]] && [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
     add_to_profile "export PATH=\$PATH:${INSTALL_DIR}swift/usr/bin"
@@ -638,6 +643,21 @@ function install_python3 {
   fi
 }
 
+function install_solidity {
+  echo "Installing Solidity compiler"
+  # We fetch the binary from  https://binaries.soliditylang.org
+  if [[ "$(uname)" == "Linux" ]]; then
+    SOLC_BIN="linux-amd64/solc-linux-amd64-${SOLC_VERSION}"
+  elif [[ "$(uname)" == "Darwin" ]]; then
+    SOLC_BIN="macosx-amd64/solc-macosx-amd64-${SOLC_VERSION}"
+  else
+    echo "Solidity support not configured for this platform (uname=$(uname))"
+    return
+  fi
+  curl -o ${INSTALL_DIR}solc "https://binaries.soliditylang.org/${SOLC_BIN}"
+  chmod +x ${INSTALL_DIR}solc
+}
+
 function welcome_message {
 cat <<EOF
 Welcome to Diem!
@@ -689,6 +709,13 @@ Move prover tools (since -y was provided):
 EOF
   fi
 
+  if [[ "$INSTALL_SOLIDITY" == "true" ]]; then
+cat <<EOF
+Solidity compiler (since -d was provided):
+  * solc
+EOF
+  fi
+
   if [[ "$INSTALL_CODEGEN" == "true" ]]; then
 cat <<EOF
 Codegen tools (since -s was provided):
@@ -726,6 +753,7 @@ INSTALL_BUILD_TOOLS=false;
 OPERATIONS=false;
 INSTALL_PROFILE=false;
 INSTALL_PROVER=false;
+INSTALL_SOLIDITY=false;
 INSTALL_CODEGEN=false;
 INSTALL_API_BUILD_TOOLS=false;
 INSTALL_INDIVIDUAL=false;
@@ -734,7 +762,7 @@ INSTALL_DIR="${HOME}/bin/"
 OPT_DIR="false"
 
 #parse args
-while getopts "btopvysah:i:n" arg; do
+while getopts "btopvydsah:i:n" arg; do
   case "$arg" in
     b)
       BATCH_MODE="true"
@@ -753,6 +781,9 @@ while getopts "btopvysah:i:n" arg; do
       ;;
     y)
       INSTALL_PROVER="true"
+      ;;
+    d)
+      INSTALL_SOLIDITY="true"
       ;;
     s)
       INSTALL_CODEGEN="true"
@@ -783,6 +814,7 @@ if [[ "$INSTALL_BUILD_TOOLS" == "false" ]] && \
    [[ "$OPERATIONS" == "false" ]] && \
    [[ "$INSTALL_PROFILE" == "false" ]] && \
    [[ "$INSTALL_PROVER" == "false" ]] && \
+   [[ "$INSTALL_SOLIDITY" == "false" ]] && \
    [[ "$INSTALL_CODEGEN" == "false" ]] && \
    [[ "$INSTALL_API_BUILD_TOOLS" == "false" ]] && \
    [[ "$INSTALL_INDIVIDUAL" == "false" ]]; then
@@ -929,6 +961,10 @@ if [[ "$INSTALL_PROVER" == "true" ]]; then
   install_cvc5
   install_dotnet
   install_boogie
+fi
+
+if [[ "$INSTALL_SOLIDITY" == "true" ]]; then
+  install_solidity
 fi
 
 if [[ "$INSTALL_CODEGEN" == "true" ]]; then

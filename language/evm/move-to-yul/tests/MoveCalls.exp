@@ -47,7 +47,7 @@ object "A2_M" {
                 revert(0, 0) // TODO: convention to store code
             }
             function $AbortBuiltin() {
-                $Abort(0-1)
+                $Abort(sub(0, 1))
             }
             function $AddU64(x, y) -> r {
                 if lt(sub(0xffffffffffffffff, x), y) { $AbortBuiltin() }

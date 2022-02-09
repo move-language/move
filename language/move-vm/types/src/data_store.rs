@@ -6,7 +6,9 @@ use crate::{
     values::{GlobalValue, Value},
 };
 use move_binary_format::errors::{PartialVMResult, VMResult};
-use move_core_types::{account_address::AccountAddress, language_storage::ModuleId};
+use move_core_types::{
+    account_address::AccountAddress, language_storage::ModuleId, value::MoveTypeLayout,
+};
 
 /// Provide an implementation for bytecodes related to data with a given data store.
 ///
@@ -48,4 +50,6 @@ pub trait DataStore {
         ty: Type,
         val: Value,
     ) -> PartialVMResult<()>;
+
+    fn events(&self) -> &Vec<(Vec<u8>, u64, Type, MoveTypeLayout, Value)>;
 }

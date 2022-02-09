@@ -104,6 +104,10 @@ impl<'a> NativeContext<'a> {
         }
     }
 
+    pub fn events(&self) -> &Vec<(Vec<u8>, u64, Type, MoveTypeLayout, Value)> {
+        self.data_store.events()
+    }
+
     pub fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<Option<MoveTypeLayout>> {
         match self.resolver.type_to_type_layout(ty) {
             Ok(ty_layout) => Ok(Some(ty_layout)),

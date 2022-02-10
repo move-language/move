@@ -45,6 +45,7 @@ use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use ref_cast::RefCast;
+use serde::{Deserialize, Serialize};
 use std::ops::BitOr;
 use variant_count::VariantCount;
 
@@ -259,7 +260,7 @@ impl StructHandle {
 }
 
 /// A type parameter used in the declaration of a struct.
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
 pub struct StructTypeParameter {
@@ -399,7 +400,7 @@ pub struct FieldDefinition {
 
 /// `Visibility` restricts the accessibility of the associated entity.
 /// - For function visibility, it restricts who may call into the associated function.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
 #[repr(u8)]
@@ -594,7 +595,7 @@ impl Ability {
 }
 
 /// A set of `Ability`s
-#[derive(Clone, Eq, Copy, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Eq, Copy, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct AbilitySet(u8);
 
 impl AbilitySet {

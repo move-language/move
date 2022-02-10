@@ -29,11 +29,17 @@ use std::collections::BTreeMap;
 /// compared.
 #[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Type {
+    #[serde(rename = "bool")]
     Bool,
+    #[serde(rename = "u8")]
     U8,
+    #[serde(rename = "u64")]
     U64,
+    #[serde(rename = "u128")]
     U128,
+    #[serde(rename = "address")]
     Address,
+    #[serde(rename = "signer")]
     Signer,
     Struct {
         address: AccountAddress,
@@ -41,6 +47,7 @@ pub enum Type {
         name: Identifier,
         type_arguments: Vec<Type>,
     },
+    #[serde(rename = "vector")]
     Vector(Box<Type>),
     TypeParameter(TypeParameterIndex),
     Reference(Box<Type>),
@@ -51,7 +58,7 @@ pub enum Type {
 /// metadata that it is ignored by the VM. The reason: names are important to clients. We would
 /// want a change from `Account { bal: u64, seq: u64 }` to `Account { seq: u64, bal: u64 }` to be
 /// marked as incompatible. Not safe to compare without an enclosing `Struct`.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Field {
     pub name: Identifier,
     pub type_: Type,
@@ -59,7 +66,7 @@ pub struct Field {
 
 /// Normalized version of a `StructDefinition`. Not safe to compare without an associated
 /// `ModuleId` or `Module`.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Struct {
     pub abilities: AbilitySet,
     pub type_parameters: Vec<StructTypeParameter>,
@@ -68,7 +75,7 @@ pub struct Struct {
 
 /// Normalized version of a `FunctionDefinition`. Not safe to compare without an associated
 /// `ModuleId` or `Module`.
-#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Function {
     pub visibility: Visibility,
     pub type_parameters: Vec<AbilitySet>,
@@ -78,7 +85,7 @@ pub struct Function {
 
 /// Normalized version of a `CompiledModule`: its address, name, struct declarations, and public
 /// function declarations.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Module {
     pub address: AccountAddress,
     pub name: Identifier,
@@ -366,16 +373,16 @@ impl std::fmt::Display for Type {
                 }
                 Ok(())
             }
-            Type::Vector(ty) => write!(f, "Vector<{}>", ty),
-            Type::U8 => write!(f, "U8"),
-            Type::U64 => write!(f, "U64"),
-            Type::U128 => write!(f, "U128"),
-            Type::Address => write!(f, "Address"),
-            Type::Signer => write!(f, "Signer"),
-            Type::Bool => write!(f, "Bool"),
+            Type::Vector(ty) => write!(f, "vector<{}>", ty),
+            Type::U8 => write!(f, "u8"),
+            Type::U64 => write!(f, "u64"),
+            Type::U128 => write!(f, "u128"),
+            Type::Address => write!(f, "address"),
+            Type::Signer => write!(f, "signer"),
+            Type::Bool => write!(f, "bool"),
             Type::Reference(r) => write!(f, "&{}", r),
             Type::MutableReference(r) => write!(f, "&mut {}", r),
-            Type::TypeParameter(i) => write!(f, "#{:?}", i),
+            Type::TypeParameter(i) => write!(f, "T{:?}", i),
         }
     }
 }

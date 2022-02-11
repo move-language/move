@@ -2302,6 +2302,7 @@ dependencies = [
  "hex",
  "itertools 0.10.1",
  "log",
+ "maplit",
  "move-binary-format",
  "move-command-line-common",
  "move-core-types",

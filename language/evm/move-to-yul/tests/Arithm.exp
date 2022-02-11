@@ -21,6 +21,7 @@ object "A2_M" {
     }
     object "A2_M_deployed" {
         code {
+            mstore(0, memoryguard(4))
             function A2_M_add_two_number(x, y) -> $result0, $result1 {
                 let res, z, $t4, $t5
                 /// @src 2:309:310

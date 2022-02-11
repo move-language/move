@@ -15,6 +15,10 @@ use crate::model::Loc;
 use std::cell::RefCell;
 
 struct CodeWriterData {
+    /// A function to be called on each emitted string. If the function does not change
+    /// anything, it returns None.
+    emit_hook: Box<dyn Fn(&str) -> Option<String>>,
+
     /// The generated output string.
     output: String,
 
@@ -47,12 +51,22 @@ impl CodeWriter {
         let mut output_location_map = BTreeMap::new();
         output_location_map.insert(zero, loc.clone());
         Self(RefCell::new(CodeWriterData {
+            emit_hook: Box::new(|_| None),
             output: String::new(),
             indent: 0,
             current_location: loc,
             output_location_map,
             label_map: Default::default(),
         }))
+    }
+
+    pub fn set_emit_hook<F>(&self, f: F)
+    where
+        F: Fn(&str) -> Option<String>,
+        F: 'static,
+    {
+        let mut data = self.0.borrow_mut();
+        data.emit_hook = Box::new(f)
     }
 
     /// Creates a label at which code can be inserted later.
@@ -178,6 +192,12 @@ impl CodeWriter {
 
     /// Emit a string. The string will be broken down into lines to apply current indentation.
     pub fn emit(&self, s: &str) {
+        let rewritten = (*self.0.borrow().emit_hook)(s);
+        let s = if let Some(r) = &rewritten {
+            r.as_str()
+        } else {
+            s
+        };
         let mut first = true;
         // str::lines ignores trailing newline, so deal with this ad-hoc
         let end_newl = s.ends_with('\n');

@@ -11,6 +11,7 @@ object "A2_M" {
     }
     object "A2_M_deployed" {
         code {
+            mstore(0, memoryguard(4))
             function A2_M_f(x) -> $result {
                 let y, $t2, $t3, $t4, $t5, $t6
                 $t2, $t3 := A2_M_g(x)

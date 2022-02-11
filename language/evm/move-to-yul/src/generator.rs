@@ -24,7 +24,10 @@ use move_stackless_bytecode::{
     stackless_control_flow_graph::{BlockContent, BlockId, StacklessControlFlowGraph},
 };
 
-use crate::{yul_functions::YulFunction, Options};
+use crate::{
+    yul_functions::{substitute_placeholders, YulFunction},
+    Options,
+};
 
 const CONTRACT_ATTR: &str = "contract";
 const CREATE_ATTR: &str = "create";
@@ -74,12 +77,14 @@ impl Generator {
 
     /// Creates immutable context and mutable state of the Generator.
     fn new<'a>(options: &'a Options, env: &'a GlobalEnv) -> (Context<'a>, Self) {
+        let writer = CodeWriter::new(env.unknown_loc());
+        writer.set_emit_hook(substitute_placeholders);
         (
             Context {
                 options,
                 env,
                 targets: Self::create_bytecode(options, env),
-                writer: CodeWriter::new(env.unknown_loc()),
+                writer,
             },
             Self {
                 needed_move_functions: Default::default(),
@@ -193,6 +198,10 @@ impl Generator {
         emitln!(ctx.writer, "object \"{}\" {{", contract_deployed_name);
         ctx.writer.indent();
         self.begin_code_block(ctx);
+        emitln!(
+            ctx.writer,
+            "mstore(${MEM_SIZE_LOC}, memoryguard(${USED_MEM}))"
+        );
         self.callable_functions(ctx, module);
         self.end_code_block(ctx);
         ctx.writer.unindent();

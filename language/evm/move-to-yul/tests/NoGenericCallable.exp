@@ -20,6 +20,7 @@ object "A2_M" {
     }
     object "A2_M_deployed" {
         code {
+            mstore(0, memoryguard(4))
             function A2_M_f(x) -> $result {
                 /// @src 2:105:106
                 $result := x

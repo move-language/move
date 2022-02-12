@@ -25,10 +25,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let options = Options::default();
     let mut out = Generator::run_to_string(&options, &env);
     if !env.has_errors() {
-        let yul_check = compile_check(&options, &out);
-        if !yul_check.is_empty() {
-            out = format!("!! Yul compilation errors:\n{}\n\n{}", yul_check, out);
-        }
+        out = format!("{}\n\n{}", out, compile_check(&options, &out));
     }
     let mut error_writer = Buffer::no_color();
     env.report_diag(&mut error_writer, Severity::Help);
@@ -44,20 +41,35 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
 fn compile_check(options: &Options, source: &str) -> String {
     let run = || -> anyhow::Result<String> {
         let mut child = Command::new(&options.solc_exe)
+            .arg("--optimize")
             .arg("--strict-assembly")
+            .arg("--ir-optimized")
             .arg("-")
             .stdin(Stdio::piped())
-            .stdout(Stdio::null())
+            .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()?;
         let pipe = child.stdin.as_mut().ok_or(anyhow!("cannot create pipe"))?;
         pipe.write_all(source.as_bytes())?;
         let out = child.wait_with_output()?;
-        if out.status.success() {
-            Ok("".to_string())
+        let result = if out.status.success() {
+            let yul = String::from_utf8_lossy(&out.stdout).to_string();
+            // Yul output contains markers which are mistaken for merge conflicts. Skip
+            // them.
+            let yul_slice = if let Some(p) = yul.find("Pretty printed source:") {
+                &yul[p..]
+            } else {
+                yul.as_str()
+            };
+
+            format!("!! Optimized Yul\n\n{}", yul_slice)
         } else {
-            Ok(String::from_utf8_lossy(&out.stderr).to_string())
-        }
+            format!(
+                "!! Errors compiling Yul\n\n{}",
+                String::from_utf8_lossy(&out.stderr).to_string()
+            )
+        };
+        Ok(result)
     };
     run().unwrap_or_else(|e| panic!("cannot run `{}`: {}", options.solc_exe, e))
 }

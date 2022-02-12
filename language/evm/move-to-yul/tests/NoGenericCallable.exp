@@ -20,8 +20,14 @@ object "A2_M" {
     }
     object "A2_M_deployed" {
         code {
-            mstore(0, memoryguard(4))
+            mstore(0, memoryguard(96))
+
+            // Dummy calls to reference callables for Yul optimizer
+            let $dummy0 := A2_M_f(sload(100))
+            sstore(200, $dummy0)
+
             function A2_M_f(x) -> $result {
+                // return $t0
                 /// @src 2:105:106
                 $result := x
             }

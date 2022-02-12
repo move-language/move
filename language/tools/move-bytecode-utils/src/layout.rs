@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::module_cache::GetModule;
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use move_binary_format::{
     access::ModuleAccess,
     file_format::{SignatureToken, StructDefinition, StructFieldInformation, StructHandleIndex},
@@ -363,11 +363,9 @@ impl StructLayoutBuilder {
         layout_type: LayoutType,
     ) -> Result<MoveStructLayout> {
         let s_handle = m.struct_handle_at(s.struct_handle);
-        assert_eq!(
-            s_handle.type_parameters.len(),
-            type_arguments.len(),
-            "Wrong number of type arguments for struct",
-        );
+        if s_handle.type_parameters.len() != type_arguments.len() {
+            bail!("Wrong number of type arguments for struct")
+        }
         match &s.field_information {
             StructFieldInformation::Native => {
                 bail!("Can't extract fields for native struct")
@@ -426,19 +424,20 @@ impl StructLayoutBuilder {
         resolver: &impl GetModule,
         layout_type: LayoutType,
     ) -> Result<MoveStructLayout> {
-        let module = resolver
-            .get_module_by_id(declaring_module)
-            .unwrap_or_else(|_| panic!("Error while resolving module {}", declaring_module))
-            .unwrap();
+        let module = match resolver.get_module_by_id(declaring_module) {
+            Err(_) | Ok(None) => bail!("Could not find module"),
+            Ok(Some(m)) => m,
+        };
         let def = module
             .borrow()
             .find_struct_def_by_name(name)
-            .unwrap_or_else(|| {
-                panic!(
+            .ok_or_else(|| {
+                anyhow!(
                     "Could not find struct named {} in module {}",
-                    name, declaring_module
+                    name,
+                    declaring_module
                 )
-            });
+            })?;
         Self::build_from_definition(module.borrow(), def, type_arguments, resolver, layout_type)
     }
 

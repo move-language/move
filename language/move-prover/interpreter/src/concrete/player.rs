@@ -402,6 +402,7 @@ impl<'env> FunctionContext<'env> {
             Constant::U8(v) => TypedValue::mk_u8(*v),
             Constant::U64(v) => TypedValue::mk_u64(*v),
             Constant::U128(v) => TypedValue::mk_u128(*v),
+            Constant::U256(_) => unimplemented!(),
             Constant::Address(v) => TypedValue::mk_address(
                 AccountAddress::from_hex_literal(&format!("{:#x}", v)).unwrap(),
             ),
@@ -855,7 +856,8 @@ impl<'env> FunctionContext<'env> {
             | Operation::TraceReturn(..)
             | Operation::TraceAbort
             | Operation::TraceExp(..)
-            | Operation::TraceGlobalMem(..) => {
+            | Operation::TraceGlobalMem(..)
+            | Operation::CastU256 => {
                 unreachable!();
             }
         };

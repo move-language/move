@@ -203,7 +203,6 @@ fn get_tested_transformation_pipeline(
             pipeline.add_processor(UsageProcessor::new());
             Ok(Some(pipeline))
         }
-
         _ => Err(anyhow!(
             "the sub-directory `{}` has no associated pipeline to test",
             dir_name

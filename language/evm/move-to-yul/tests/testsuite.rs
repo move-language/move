@@ -70,7 +70,12 @@ fn compile_check(options: &Options, source: &str) -> String {
         };
         Ok(result)
     };
-    run().unwrap_or_else(|e| panic!("cannot run `{}`: {}", options.solc_exe, e))
+    run().unwrap_or_else(|e| {
+        panic!(
+            "cannot run solidity compiler`{}`: {}.\n Make sure SOLC_EXE is set.",
+            options.solc_exe, e
+        )
+    })
 }
 
 datatest_stable::harness!(test_runner, "tests", r".*\.move$");

@@ -461,6 +461,14 @@ MulU128: "(x, y) -> r {
     if gt(y, div(${MAX_U128}, x)) { $AbortBuiltin() }
     r := mul(x, y)
 }" dep AbortBuiltin,
+AddU256: "(x, y) -> r {
+    if lt(sub(${MAX_U256}, x), y) { $AbortBuiltin() }
+    r := add(x, y)
+}" dep AbortBuiltin,
+MulU256: "(x, y) -> r {
+    if gt(y, div(${MAX_U256}, x)) { $AbortBuiltin() }
+    r := mul(x, y)
+}" dep AbortBuiltin,
 Sub: "(x, y) -> r {
     if lt(x, y) { $AbortBuiltin() }
     r := sub(x, y)
@@ -484,6 +492,9 @@ ShlU64: "(x, y) -> r {
 }",
 ShlU128: "(x, y) -> r {
     r := and(shl(x, y), ${MAX_U128})
+}",
+ShlU256: "(x, y) -> r {
+    r := and(shl(x, y), ${MAX_U256})
 }",
 Gt: "(x, y) -> r {
     r := gt(x, y)
@@ -535,5 +546,10 @@ CastU64: "(x) -> r {
 CastU128: "(x) -> r {
     if gt(x, ${MAX_U128}) { $AbortBuiltin() }
     r := x
+}" dep AbortBuiltin,
+CastU256: "(hi, lo) -> r {
+    if gt(hi, ${MAX_U128}) { $AbortBuiltin() }
+    if gt(lo, ${MAX_U128}) { $AbortBuiltin() }
+    r := add(shl(hi, 128), lo)
 }" dep AbortBuiltin,
 }

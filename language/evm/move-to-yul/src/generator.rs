@@ -7,12 +7,14 @@ use std::{
 };
 
 use itertools::Itertools;
+use move_core_types::language_storage::CORE_CODE_ADDRESS;
 
+use crate::evm_transformation::EvmTransformationProcessor;
 use move_model::{
     ast::{Attribute, TempIndex},
     code_writer::CodeWriter,
     emit, emitln,
-    model::{FunId, FunctionEnv, GlobalEnv, ModuleEnv, QualifiedInstId, StructId},
+    model::{FunId, FunctionEnv, GlobalEnv, ModuleEnv, ModuleId, QualifiedInstId, StructId},
     ty::{PrimitiveType, Type},
 };
 use move_stackless_bytecode::{
@@ -32,6 +34,7 @@ use crate::{
 const CONTRACT_ATTR: &str = "contract";
 const CREATE_ATTR: &str = "create";
 const CALLABLE_ATTR: &str = "callable";
+const EVM_ARITH_ATTR: &str = "evm_arith";
 
 /// Immutable context passed through the compilation.
 struct Context<'a> {
@@ -123,6 +126,7 @@ impl Generator {
         // Run a minimal transformation pipeline. For now, we do reaching-def and live-var
         // to clean up some churn created by the conversion from stack to stackless bytecode.
         let mut pipeline = FunctionTargetPipeline::default();
+        pipeline.add_processor(EvmTransformationProcessor::new());
         pipeline.add_processor(ReachingDefProcessor::new());
         pipeline.add_processor(LiveVarAnalysisProcessor::new());
         if options.dump_bytecode {
@@ -523,6 +527,7 @@ impl Generator {
         let mut builtin_typed = |yul_fun_u8: YulFunction,
                                  yul_fun_u64: YulFunction,
                                  yul_fun_u128: YulFunction,
+                                 yul_fun_u256: YulFunction,
                                  dest: &[TempIndex],
                                  srcs: &[TempIndex]| {
             use PrimitiveType::*;
@@ -531,6 +536,13 @@ impl Generator {
                 Primitive(U8) => builtin(yul_fun_u8, dest, srcs),
                 Primitive(U64) => builtin(yul_fun_u64, dest, srcs),
                 Primitive(U128) => builtin(yul_fun_u128, dest, srcs),
+                Struct(mid, sid, _) => {
+                    if is_u256(ctx.env, *mid, *sid) {
+                        builtin(yul_fun_u256, dest, srcs)
+                    } else {
+                        panic!("unexpected operand type")
+                    }
+                }
                 _ => panic!("unexpected operand type"),
             }
         };
@@ -689,11 +701,13 @@ impl Generator {
                     CastU8 => builtin(YulFunction::CastU8, dest, srcs),
                     CastU64 => builtin(YulFunction::CastU64, dest, srcs),
                     CastU128 => builtin(YulFunction::CastU128, dest, srcs),
+                    CastU256 => builtin(YulFunction::CastU256, dest, srcs),
                     Not => builtin(YulFunction::LogicalNot, dest, srcs),
                     Add => builtin_typed(
                         YulFunction::AddU8,
                         YulFunction::AddU64,
                         YulFunction::AddU128,
+                        YulFunction::AddU256,
                         dest,
                         srcs,
                     ),
@@ -702,6 +716,7 @@ impl Generator {
                         YulFunction::MulU8,
                         YulFunction::MulU64,
                         YulFunction::MulU128,
+                        YulFunction::MulU256,
                         dest,
                         srcs,
                     ),
@@ -714,6 +729,7 @@ impl Generator {
                         YulFunction::ShlU8,
                         YulFunction::ShlU64,
                         YulFunction::ShlU128,
+                        YulFunction::ShlU256,
                         dest,
                         srcs,
                     ),
@@ -787,6 +803,9 @@ impl Generator {
                 format!("{}", v)
             }
             Constant::U128(v) => {
+                format!("{}", v)
+            }
+            Constant::U256(v) => {
                 format!("{}", v)
             }
             Constant::Address(a) => {
@@ -1334,4 +1353,17 @@ fn is_callable_fun(fun: &FunctionEnv<'_>) -> bool {
 /// Check whether the function has a `#[create]` attribute.
 fn is_create_fun(fun: &FunctionEnv<'_>) -> bool {
     has_simple_attr(fun.module_env.env, fun.get_attributes(), CREATE_ATTR)
+}
+
+/// Returns whether a module has a `#[evm_arith]` attribute.
+pub(crate) fn is_evm_arith_module(module: &ModuleEnv<'_>) -> bool {
+    *module.self_address() == CORE_CODE_ADDRESS
+        && has_simple_attr(module.env, module.get_attributes(), EVM_ARITH_ATTR)
+}
+
+/// Returns whether the struct identified by module_id and struct_id is the native U256 struct.
+fn is_u256(env: &GlobalEnv, module_id: ModuleId, struct_id: StructId) -> bool {
+    let module_env = env.get_module(module_id);
+    let struct_env = module_env.get_struct(struct_id);
+    is_evm_arith_module(&module_env) && struct_env.is_native()
 }

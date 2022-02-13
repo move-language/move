@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::function_target::FunctionTarget;
+use ethnum::U256;
 use itertools::Itertools;
 use move_binary_format::file_format::CodeOffset;
 use move_model::{
@@ -88,6 +89,7 @@ pub enum Constant {
     U8(u8),
     U64(u64),
     U128(u128),
+    U256(U256),
     Address(BigUint),
     ByteArray(Vec<u8>),
 }
@@ -165,6 +167,7 @@ pub enum Operation {
     And,
     Eq,
     Neq,
+    CastU256,
 
     // Debugging
     TraceLocal(TempIndex),
@@ -210,6 +213,7 @@ impl Operation {
             Operation::CastU8 => true,
             Operation::CastU64 => true,
             Operation::CastU128 => true,
+            Operation::CastU256 => true,
             Operation::Not => false,
             Operation::Add => true,
             Operation::Sub => true,
@@ -1021,6 +1025,7 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
             CastU8 => write!(f, "(u8)")?,
             CastU64 => write!(f, "(u64)")?,
             CastU128 => write!(f, "(u128)")?,
+            CastU256 => write!(f, "(u256)")?,
             Not => write!(f, "!")?,
 
             // Binary
@@ -1108,6 +1113,7 @@ impl fmt::Display for Constant {
             U8(x) => write!(f, "{}", x)?,
             U64(x) => write!(f, "{}", x)?,
             U128(x) => write!(f, "{}", x)?,
+            U256(x) => write!(f, "{}", x)?,
             Address(x) => write!(f, "0x{}", x.to_str_radix(16))?,
             ByteArray(x) => write!(f, "{:?}", x)?,
         }

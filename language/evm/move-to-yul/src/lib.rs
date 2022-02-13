@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+mod evm_transformation;
 pub mod generator;
 pub mod options;
 mod yul_functions;

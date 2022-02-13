@@ -245,8 +245,10 @@ impl<'a> LiveVarAnalysis<'a> {
                     new_bytecodes.append(&mut bytecodes);
                     transformed_code.push(Bytecode::Branch(attr_id, then_label, else_label, src));
                 }
-                Bytecode::Assign(_, dest, _, _) if !annotation_at.after.contains(&dest) => {
-                    // Drop this assign as it is not used.
+                Bytecode::Load(_, dest, _) | Bytecode::Assign(_, dest, _, _)
+                    if !annotation_at.after.contains(&dest) =>
+                {
+                    // Drop this load/assign as it is not used.
                 }
                 Bytecode::Call(attr_id, dests, oper, srcs, aa)
                     if code_offset + 1 < code.len() && dests.len() == 1 =>

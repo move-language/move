@@ -983,6 +983,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "ethnum"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f58da196a1fc8f14cb51f373f504efc66c434c577b777c2cd30d6fad16e4822"
+
+[[package]]
 name = "evm"
 version = "0.33.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2452,6 +2458,7 @@ dependencies = [
  "codespan",
  "codespan-reporting",
  "datatest-stable",
+ "ethnum",
  "im",
  "itertools 0.10.1",
  "log",
@@ -2543,6 +2550,7 @@ dependencies = [
  "codespan",
  "codespan-reporting",
  "datatest-stable",
+ "ethnum",
  "futures",
  "hex",
  "itertools 0.10.1",

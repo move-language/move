@@ -236,7 +236,7 @@ mark-changed = []
 
 [[determinator.path-rule]]
 # Ignore files in the language/evm/examples tree (for now)
-globs = ["language/evm/examples/**/*"]
+globs = ["language/evm/examples/**/*", "language/evm/stdlib/**/*"]
 mark-changed = []
 
 [[determinator.path-rule]]

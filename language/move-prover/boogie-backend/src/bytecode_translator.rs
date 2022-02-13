@@ -837,6 +837,7 @@ impl<'env> FunctionTranslator<'env> {
                     Constant::U8(num) => num.to_string(),
                     Constant::U64(num) => num.to_string(),
                     Constant::U128(num) => num.to_string(),
+                    Constant::U256(num) => num.to_string(),
                     Constant::Address(val) => val.to_string(),
                     Constant::ByteArray(val) => boogie_byte_blob(options, val),
                 };
@@ -1460,6 +1461,7 @@ impl<'env> FunctionTranslator<'env> {
                         let node_id = env.new_node(env.unknown_loc(), mem.to_type());
                         self.track_global_mem(mem, node_id);
                     }
+                    CastU256 => unimplemented!(),
                 }
                 if let Some(AbortAction(target, code)) = aa {
                     emitln!(writer, "if ($abort_flag) {");

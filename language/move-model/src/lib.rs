@@ -5,6 +5,7 @@
 
 use codespan::ByteIndex;
 use codespan_reporting::diagnostic::{Diagnostic, Label, LabelStyle};
+use itertools::Itertools;
 #[allow(unused_imports)]
 use log::warn;
 use std::collections::{BTreeMap, BTreeSet};
@@ -126,7 +127,8 @@ pub fn run_model_builder_with_options_and_compilation_flags(
         .iter()
         .map(|def| def.file_hash())
         .collect();
-    for (fhash, (fname, fsrc)) in &files {
+    for fhash in files.keys().sorted() {
+        let (fname, fsrc) = files.get(fhash).unwrap();
         env.add_source(*fhash, fname.as_str(), fsrc, dep_files.contains(fhash));
     }
 

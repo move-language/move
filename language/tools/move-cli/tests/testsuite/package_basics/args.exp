@@ -65,7 +65,7 @@ B1:
 [2]	6: Abort
 B2:
 [4]	7: CopyLoc[0](x: u64)
-[4]	8: CopyLoc[0](x: u64)
+[4]	8: MoveLoc[0](x: u64)
 [4]	9: Mul
 [4]	10: Ret
 }
@@ -78,50 +78,50 @@ module 1.Errors {
 public already_published(): u64 {
 B0:
 	0: LdAddr[0](U8: [6])
-	1: CopyLoc[0](reason: u64)
+	1: MoveLoc[0](reason: u64)
 	2: Call[6](make(u8, u64): u64)
 	3: Ret
 }
 public custom(): u64 {
 B0:
 	0: LdAddr[1](U8: [255])
-	1: CopyLoc[0](reason: u64)
+	1: MoveLoc[0](reason: u64)
 	2: Call[6](make(u8, u64): u64)
 	3: Ret
 }
 public internal(): u64 {
 B0:
 	0: LdAddr[2](U8: [10])
-	1: CopyLoc[0](reason: u64)
+	1: MoveLoc[0](reason: u64)
 	2: Call[6](make(u8, u64): u64)
 	3: Ret
 }
 public invalid_argument(): u64 {
 B0:
 	0: LdAddr[3](U8: [7])
-	1: CopyLoc[0](reason: u64)
+	1: MoveLoc[0](reason: u64)
 	2: Call[6](make(u8, u64): u64)
 	3: Ret
 }
 public invalid_state(): u64 {
 B0:
 	0: LdAddr[4](U8: [1])
-	1: CopyLoc[0](reason: u64)
+	1: MoveLoc[0](reason: u64)
 	2: Call[6](make(u8, u64): u64)
 	3: Ret
 }
 public limit_exceeded(): u64 {
 B0:
 	0: LdAddr[5](U8: [8])
-	1: CopyLoc[0](reason: u64)
+	1: MoveLoc[0](reason: u64)
 	2: Call[6](make(u8, u64): u64)
 	3: Ret
 }
 make(): u64 {
 B0:
-	0: CopyLoc[0](category: u8)
+	0: MoveLoc[0](category: u8)
 	1: CastU64
-	2: CopyLoc[1](reason: u64)
+	2: MoveLoc[1](reason: u64)
 	3: LdU8(8)
 	4: Shl
 	5: Add
@@ -130,28 +130,28 @@ B0:
 public not_published(): u64 {
 B0:
 	0: LdAddr[6](U8: [5])
-	1: CopyLoc[0](reason: u64)
+	1: MoveLoc[0](reason: u64)
 	2: Call[6](make(u8, u64): u64)
 	3: Ret
 }
 public requires_address(): u64 {
 B0:
 	0: LdAddr[7](U8: [2])
-	1: CopyLoc[0](reason: u64)
+	1: MoveLoc[0](reason: u64)
 	2: Call[6](make(u8, u64): u64)
 	3: Ret
 }
 public requires_capability(): u64 {
 B0:
 	0: LdAddr[8](U8: [4])
-	1: CopyLoc[0](reason: u64)
+	1: MoveLoc[0](reason: u64)
 	2: Call[6](make(u8, u64): u64)
 	3: Ret
 }
 public requires_role(): u64 {
 B0:
 	0: LdAddr[9](U8: [3])
-	1: CopyLoc[0](reason: u64)
+	1: MoveLoc[0](reason: u64)
 	2: Call[6](make(u8, u64): u64)
 	3: Ret
 }

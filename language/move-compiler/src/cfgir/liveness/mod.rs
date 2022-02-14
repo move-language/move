@@ -340,18 +340,13 @@ mod last_usage {
                 // Even if not switched to a move:
                 // remove it from dropped_live to prevent accidental dropping in previous usages
                 let var_is_dead = context.dropped_live.remove(var);
-                // Non-references might still be borrowed
-                // Switching such non-locals to a copy is an optimization and not
-                // needed for this refinement
-                let is_reference = matches!(
-                    &parent_e.ty.value,
-                    Type_::Single(sp!(_, SingleType_::Ref(_, _)))
-                );
-                if var_is_dead && is_reference && !*from_user {
+                // Non-references might still be borrowed, but that error will be caught in borrow
+                // checking with a specific tip/message
+                if var_is_dead && !*from_user {
                     parent_e.exp.value = E::Move {
                         var: *var,
-                        from_user: *from_user,
-                    };
+                        annotation: MoveOpAnnotation::InferredLastUsage,
+                    }
                 }
             }
 
@@ -496,7 +491,7 @@ fn pop_ref(loc: Loc, var: Var, ty: SingleType) -> Command {
     use Command_ as C;
     use UnannotatedExp_ as E;
     let move_e_ = E::Move {
-        from_user: false,
+        annotation: MoveOpAnnotation::InferredLastUsage,
         var,
     };
     let move_e = H::exp(Type_::single(ty), sp(loc, move_e_));

@@ -72,7 +72,7 @@ public fun TestMutRefs::delete($t0|x: TestMutRefs::T) {
   6: $t7 := copy($t1)
   7: $t8 := borrow_field<TestMutRefs::TSum>.sum($t7)
   8: $t9 := read_ref($t8)
-  9: $t10 := copy($t2)
+  9: $t10 := move($t2)
  10: $t11 := -($t9, $t10)
  11: $t12 := move($t1)
  12: $t13 := borrow_field<TestMutRefs::TSum>.sum($t12)
@@ -169,7 +169,7 @@ public fun TestMutRefs::new($t0|x: u64): TestMutRefs::T {
   8: $t9 := move($t1)
   9: $t10 := borrow_field<TestMutRefs::TSum>.sum($t9)
  10: write_ref($t10, $t8)
- 11: $t11 := copy($t0)
+ 11: $t11 := move($t0)
  12: $t12 := pack TestMutRefs::T($t11)
  13: return $t12
 }

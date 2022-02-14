@@ -9,7 +9,7 @@ fun TestBranching::branching($t0|cond: bool): u64 {
      var $t5: u64
      var $t6: u64
      var $t7: u64
-  0: $t3 := copy($t0)
+  0: $t3 := move($t0)
   1: if ($t3) goto 2 else goto 6
   2: label L0
   3: $t4 := 3
@@ -22,7 +22,7 @@ fun TestBranching::branching($t0|cond: bool): u64 {
  10: label L3
  11: $t6 := move($t1)
  12: $t2 := $t6
- 13: $t7 := copy($t2)
+ 13: $t7 := move($t2)
  14: return $t7
 }
 
@@ -37,7 +37,7 @@ fun TestBranching::branching($t0|cond: bool): u64 {
      var $t5: u64
      var $t6: u64
      var $t7: u64
-  0: $t3 := copy($t0)
+  0: $t3 := move($t0)
   1: if ($t0) goto 2 else goto 6
   2: label L0
   3: $t4 := 3
@@ -49,6 +49,6 @@ fun TestBranching::branching($t0|cond: bool): u64 {
   9: label L3
  10: $t6 := move($t1)
  11: $t2 := $t1
- 12: $t7 := copy($t1)
+ 12: $t7 := move($t1)
  13: return $t1
 }

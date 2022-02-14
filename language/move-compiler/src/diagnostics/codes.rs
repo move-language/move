@@ -203,6 +203,7 @@ codes!(
         InvalidReturn:
             { msg: "invalid return of locally borrowed state", severity: NonblockingError },
         InvalidTransfer: { msg: "invalid transfer of references", severity: NonblockingError },
+        AmbiguousVariableUsage: { msg: "ambiguous usage of variable", severity: NonblockingError },
     ],
     BytecodeGeneration: [
         UnfoldableConstant: { msg: "cannot compute constant value", severity: NonblockingError },

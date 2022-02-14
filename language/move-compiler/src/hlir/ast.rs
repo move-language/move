@@ -271,12 +271,30 @@ pub enum Value_ {
 }
 pub type Value = Spanned<Value_>;
 
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum MoveOpAnnotation {
+    // 'move' annotated by the user
+    FromUser,
+    // inferred based on liveness data
+    InferredLastUsage,
+    // inferred based on no 'copy' ability
+    InferredNoCopy,
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum UnannotatedExp_ {
-    Unit { case: UnitCase },
+    Unit {
+        case: UnitCase,
+    },
     Value(Value),
-    Move { from_user: bool, var: Var },
-    Copy { from_user: bool, var: Var },
+    Move {
+        annotation: MoveOpAnnotation,
+        var: Var,
+    },
+    Copy {
+        from_user: bool,
+        var: Var,
+    },
     Constant(ConstantName),
 
     ModuleCall(Box<ModuleCall>),
@@ -987,14 +1005,14 @@ impl AstDebug for UnannotatedExp_ {
                 case: UnitCase::Trailing,
             } => w.write("/*;()*/"),
             E::Value(v) => v.ast_debug(w),
-            E::Move {
-                from_user: false,
-                var: v,
-            } => w.write(&format!("move {}", v)),
-            E::Move {
-                from_user: true,
-                var: v,
-            } => w.write(&format!("move@{}", v)),
+            E::Move { annotation, var: v } => {
+                let case = match annotation {
+                    MoveOpAnnotation::FromUser => "@",
+                    MoveOpAnnotation::InferredLastUsage => "#last ",
+                    MoveOpAnnotation::InferredNoCopy => "#no-copy ",
+                };
+                w.write(&format!("move{}{}", case, v))
+            }
             E::Copy {
                 from_user: false,
                 var: v,

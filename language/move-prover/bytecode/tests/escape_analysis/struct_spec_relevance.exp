@@ -17,8 +17,8 @@ public fun StructSpecRelevance::create($t0|i: u64, $t1|j: u64): StructSpecReleva
   5: $t5 := 0
   6: abort($t5)
   7: label L0
-  8: $t6 := copy($t0)
-  9: $t7 := copy($t1)
+  8: $t6 := move($t0)
+  9: $t7 := move($t1)
  10: $t8 := pack StructSpecRelevance::Nonzero($t6, $t7)
  11: return $t8
 }
@@ -62,8 +62,8 @@ public fun StructSpecRelevance::create($t0|i: u64, $t1|j: u64): StructSpecReleva
   5: $t5 := 0
   6: abort($t5)
   7: label L0
-  8: $t6 := copy($t0)
-  9: $t7 := copy($t1)
+  8: $t6 := move($t0)
+  9: $t7 := move($t1)
  10: $t8 := pack StructSpecRelevance::Nonzero($t6, $t7)
  11: return $t8
 }

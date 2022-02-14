@@ -81,7 +81,7 @@ public intrinsic fun Vector::swap_remove<#0>($t0|v: &mut vector<#0>, $t1|i: u64)
 fun Borrow::borrow_s($t0|a: address) {
      var $t1: address
      var $t2: &Borrow::S
-  0: $t1 := copy($t0)
+  0: $t1 := move($t0)
   1: $t2 := borrow_global<Borrow::S>($t1)
   2: destroy($t2)
   3: return ()
@@ -92,7 +92,7 @@ fun Borrow::borrow_s($t0|a: address) {
 fun Borrow::borrow_s_mut($t0|a: address) {
      var $t1: address
      var $t2: &mut Borrow::S
-  0: $t1 := copy($t0)
+  0: $t1 := move($t0)
   1: $t2 := borrow_global<Borrow::S>($t1)
   2: destroy($t2)
   3: return ()
@@ -217,7 +217,7 @@ fun Borrow::borrow_s($t0|a: address) {
      #
      # Locals:
      #
-  0: $t1 := copy($t0)
+  0: $t1 := move($t0)
   1: $t2 := borrow_global<Borrow::S>($t1)
   2: destroy($t2)
   3: return ()
@@ -233,7 +233,7 @@ fun Borrow::borrow_s_mut($t0|a: address) {
      #
      # Locals:
      #
-  0: $t1 := copy($t0)
+  0: $t1 := move($t0)
   1: $t2 := borrow_global<Borrow::S>($t1)
   2: destroy($t2)
   3: return ()

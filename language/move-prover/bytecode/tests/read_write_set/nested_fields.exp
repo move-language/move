@@ -56,7 +56,7 @@ fun NestedFields::nested_fields_interproc($t0|a1: &NestedFields::A, $t1|a2: &Nes
      var $t12: &NestedFields::B
      var $t13: address
      var $t14: address
-  0: $t4 := copy($t2)
+  0: $t4 := move($t2)
   1: if ($t4) goto 2 else goto 11
   2: label L0
   3: $t5 := move($t1)
@@ -171,7 +171,7 @@ fun NestedFields::nested_fields_interproc($t0|a1: &NestedFields::A, $t1|a2: &Nes
      # Locals:
      # Ret(0): {Formal(0)/b/c/f, Formal(1)/b/c/f, }
      #
-  0: $t4 := copy($t2)
+  0: $t4 := move($t2)
   1: if ($t4) goto 2 else goto 11
   2: label L0
   3: $t5 := move($t1)

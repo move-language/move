@@ -2084,11 +2084,15 @@ fn exp_dotted_to_owned_value(
                 sp!(_, ExpDotted_::Dot(_, name, _)) => *name,
             };
             let eborrow = exp_dotted_to_borrow(context, eloc, false, edot);
-            context.add_implicit_copyable_constraint(
+            context.add_ability_constraint(
                 eloc,
-                format!("Invalid implicit copy of field '{}'.", name),
+                Some(format!(
+                    "Invalid implicit copy of field '{}' without the '{}' ability",
+                    name,
+                    Ability_::COPY,
+                )),
                 inner_ty.clone(),
-                "Try adding '*&' to the front of the field access",
+                Ability_::Copy,
             );
             T::exp(inner_ty, sp(eloc, TE::Dereference(Box::new(eborrow))))
         }

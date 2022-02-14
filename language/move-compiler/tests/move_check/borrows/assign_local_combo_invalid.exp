@@ -4,7 +4,7 @@ error[E07003]: invalid operation, could create dangling a reference
 13 │         if (cond) f = &s.f else f = &s.g;
    │                                     ---- It is still being borrowed by this reference
 14 │         s = S { f: 0, g: 0 };
-   │         ^ Invalid assignment of local 's'
+   │         ^ Invalid assignment of variable 's'
 
 error[E07003]: invalid operation, could create dangling a reference
    ┌─ tests/move_check/borrows/assign_local_combo_invalid.move:23:9
@@ -12,7 +12,7 @@ error[E07003]: invalid operation, could create dangling a reference
 22 │         if (cond) f = &mut s.f else f = &mut other.f;
    │                       -------- It is still being mutably borrowed by this reference
 23 │         s = S { f: 0, g: 0 };
-   │         ^ Invalid assignment of local 's'
+   │         ^ Invalid assignment of variable 's'
 
 error[E07003]: invalid operation, could create dangling a reference
    ┌─ tests/move_check/borrows/assign_local_combo_invalid.move:32:9
@@ -20,7 +20,7 @@ error[E07003]: invalid operation, could create dangling a reference
 31 │         if (cond) f = &mut s else f = other;
    │                       ------ It is still being mutably borrowed by this reference
 32 │         s = S { f: 0, g: 0 };
-   │         ^ Invalid assignment of local 's'
+   │         ^ Invalid assignment of variable 's'
 
 error[E07003]: invalid operation, could create dangling a reference
    ┌─ tests/move_check/borrows/assign_local_combo_invalid.move:41:9
@@ -28,7 +28,7 @@ error[E07003]: invalid operation, could create dangling a reference
 40 │         if (cond) f = id_mut(&mut s) else f = other;
    │                       -------------- It is still being mutably borrowed by this reference
 41 │         s = S { f: 0, g: 0 };
-   │         ^ Invalid assignment of local 's'
+   │         ^ Invalid assignment of variable 's'
 
 error[E07003]: invalid operation, could create dangling a reference
    ┌─ tests/move_check/borrows/assign_local_combo_invalid.move:49:19
@@ -36,5 +36,5 @@ error[E07003]: invalid operation, could create dangling a reference
 48 │         let f = &s.f;
    │                 ---- It is still being borrowed by this reference
 49 │         if (cond) s = S { f: 0, g: 0 };
-   │                   ^ Invalid assignment of local 's'
+   │                   ^ Invalid assignment of variable 's'
 

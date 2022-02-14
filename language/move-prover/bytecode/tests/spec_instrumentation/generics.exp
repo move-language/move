@@ -4,7 +4,7 @@
 fun Generics::remove<#0>($t0|a: address): Generics::R<#0> {
      var $t1: address
      var $t2: Generics::R<#0>
-  0: $t1 := copy($t0)
+  0: $t1 := move($t0)
   1: $t2 := move_from<Generics::R<#0>>($t1)
   2: return $t2
 }
@@ -14,7 +14,7 @@ fun Generics::remove<#0>($t0|a: address): Generics::R<#0> {
 fun Generics::remove_u64($t0|a: address): Generics::R<u64> {
      var $t1: address
      var $t2: Generics::R<u64>
-  0: $t1 := copy($t0)
+  0: $t1 := move($t0)
   1: $t2 := Generics::remove<u64>($t1)
   2: return $t2
 }

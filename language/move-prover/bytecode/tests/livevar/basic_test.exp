@@ -39,7 +39,7 @@ fun TestLiveVars::test2($t0|b: bool): u64 {
   5: $t2 := $t7
   6: $t8 := borrow_local($t1)
   7: $t3 := $t8
-  8: $t9 := copy($t0)
+  8: $t9 := move($t0)
   9: if ($t9) goto 10 else goto 16
  10: label L0
  11: $t10 := move($t3)
@@ -108,7 +108,7 @@ fun TestLiveVars::test3($t0|n: u64, $t1|r_ref: &TestLiveVars::R): u64 {
  27: $t1 := $t18
  28: goto 29
  29: label L6
- 30: $t19 := copy($t0)
+ 30: $t19 := move($t0)
  31: $t20 := 1
  32: $t21 := -($t19, $t20)
  33: $t0 := $t21

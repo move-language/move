@@ -332,7 +332,7 @@ fn add_move_lang_diagnostics(env: &mut GlobalEnv, diags: Diagnostics) {
         let loc = env.to_loc(&loc);
         Label::new(style, loc.file_id(), loc.span()).with_message(msg)
     };
-    for (severity, msg, primary_label, secondary_labels) in diags.into_codespan_format() {
+    for (severity, msg, primary_label, secondary_labels, notes) in diags.into_codespan_format() {
         let diag = Diagnostic::new(severity)
             .with_labels(vec![mk_label(true, primary_label)])
             .with_message(msg)
@@ -341,7 +341,8 @@ fn add_move_lang_diagnostics(env: &mut GlobalEnv, diags: Diagnostics) {
                     .into_iter()
                     .map(|e| mk_label(false, e))
                     .collect(),
-            );
+            )
+            .with_notes(notes);
         env.add_diag(diag);
     }
 }

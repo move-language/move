@@ -29,7 +29,7 @@ public fun InvRelevance::outer_bool($t0|s: &signer, $t1|t: bool) {
      var $t2: &signer
      var $t3: bool
   0: $t2 := move($t0)
-  1: $t3 := copy($t1)
+  1: $t3 := move($t1)
   2: InvRelevance::inner<bool>($t2, $t3)
   3: return ()
 }
@@ -40,7 +40,7 @@ public fun InvRelevance::outer_u64($t0|s: &signer, $t1|t: u64) {
      var $t2: &signer
      var $t3: u64
   0: $t2 := move($t0)
-  1: $t3 := copy($t1)
+  1: $t3 := move($t1)
   2: InvRelevance::inner<u64>($t2, $t3)
   3: return ()
 }

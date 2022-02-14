@@ -1164,8 +1164,8 @@ fn resolve_builtin_function(
             );
             // TODO make this a tip/hint?
             let help_msg = format!(
-                "Replace with '{0}!'. \
-                '{0}' has been replaced with a '{0}!' built-in macro so that arguments are no longer eagerly evaluated",
+                "Replace with '{0}!'. '{0}' has been replaced with a '{0}!' built-in macro so \
+                 that arguments are no longer eagerly evaluated",
                 B::ASSERT_MACRO
             );
             context.env.add_diag(diag!(

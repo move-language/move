@@ -168,8 +168,9 @@ fn exp(context: &mut Context, parent_e: &Exp) -> Values {
     let eloc = &parent_e.exp.loc;
     let svalue = || vec![Value::NonRef];
     match &parent_e.exp.value {
-        E::Move { var, .. } => {
-            let (diags, value) = context.borrow_state.move_local(*eloc, var);
+        E::Move { var, annotation } => {
+            let last_usage = matches!(annotation, MoveOpAnnotation::InferredLastUsage);
+            let (diags, value) = context.borrow_state.move_local(*eloc, var, last_usage);
             context.add_diags(diags);
             vec![value]
         }

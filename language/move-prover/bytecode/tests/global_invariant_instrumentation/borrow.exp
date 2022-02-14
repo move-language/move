@@ -12,7 +12,7 @@ public fun Test::borrow($t0|a: address) {
      var $t8: u64
      var $t9: &mut Test::R
      var $t10: &mut u64
-  0: $t2 := copy($t0)
+  0: $t2 := move($t0)
   1: $t3 := borrow_global<Test::R>($t2)
   2: $t1 := $t3
   3: $t4 := copy($t1)

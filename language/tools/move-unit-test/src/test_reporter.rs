@@ -238,6 +238,7 @@ impl TestFailure {
                             diagnostics::codes::Tests::TestFailed,
                             (loc, base_message.clone()),
                             vec![(function_source_map.definition_location, msg)],
+                            std::iter::empty::<String>(),
                         ))
                     })
                     .collect();

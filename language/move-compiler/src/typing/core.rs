@@ -21,12 +21,6 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 //**************************************************************************************************
 
 pub enum Constraint {
-    IsImplicitlyCopyable {
-        loc: Loc,
-        msg: String,
-        ty: Type,
-        fix: String,
-    },
     AbilityConstraint {
         loc: Loc,
         msg: Option<String>,
@@ -162,18 +156,6 @@ impl<'env> Context<'env> {
         sp(loc, Type_::UnresolvedError)
     }
 
-    pub fn add_implicit_copyable_constraint(
-        &mut self,
-        loc: Loc,
-        msg: impl Into<String>,
-        ty: Type,
-        fix: impl Into<String>,
-    ) {
-        let msg = msg.into();
-        let fix = fix.into();
-        self.constraints
-            .push(Constraint::IsImplicitlyCopyable { loc, msg, ty, fix })
-    }
     pub fn add_ability_constraint(
         &mut self,
         loc: Loc,
@@ -909,9 +891,6 @@ pub fn solve_constraints(context: &mut Context) {
     let constraints = std::mem::take(&mut context.constraints);
     for constraint in constraints {
         match constraint {
-            Constraint::IsImplicitlyCopyable { loc, msg, ty, fix } => {
-                solve_implicitly_copyable_constraint(context, loc, msg, ty, fix)
-            }
             Constraint::AbilityConstraint {
                 loc,
                 msg,
@@ -1033,58 +1012,6 @@ pub fn ability_not_satisified_tips<'a>(
             }
             assert!(label_added)
         }
-    }
-}
-
-// This could be done with abilities, but currently all abilities are user accessable. So it seems
-// reasonable to keep this separate for now
-pub fn is_implicitly_copyable(subst: &Subst, ty: &Type) -> bool {
-    use BuiltinTypeName_ as B;
-    use Type_ as T;
-    match &ty.value {
-        T::Var(_) => panic!("ICE call unfold_type before is_implicitly_copyable"),
-
-        T::Unit
-        | T::Ref(_, _)
-        | T::UnresolvedError
-        | T::Anything
-        | T::Apply(_, sp!(_, TypeName_::Builtin(sp!(_, B::Address))), _)
-        | T::Apply(_, sp!(_, TypeName_::Builtin(sp!(_, B::U8))), _)
-        | T::Apply(_, sp!(_, TypeName_::Builtin(sp!(_, B::U64))), _)
-        | T::Apply(_, sp!(_, TypeName_::Builtin(sp!(_, B::U128))), _)
-        | T::Apply(_, sp!(_, TypeName_::Builtin(sp!(_, B::Bool))), _) => true,
-
-        T::Apply(_, sp!(_, TypeName_::Builtin(sp!(_, B::Signer))), _)
-        | T::Apply(_, sp!(_, TypeName_::Builtin(sp!(_, B::Vector))), _)
-        | T::Param(TParam { .. })
-        | T::Apply(_, sp!(_, TypeName_::ModuleType(_, _)), _) => false,
-
-        T::Apply(_, sp!(_, TypeName_::Multiple(_)), ty_args) => ty_args
-            .iter()
-            .all(|ty_arg| is_implicitly_copyable(subst, &unfold_type(subst, ty_arg.clone()))),
-    }
-}
-
-fn solve_implicitly_copyable_constraint(
-    context: &mut Context,
-    loc: Loc,
-    msg: String,
-    ty: Type,
-    fix: String,
-) {
-    let ty = unfold_type(&context.subst, ty);
-    let tloc = ty.loc;
-    if !is_implicitly_copyable(&context.subst, &ty) {
-        let ty_msg = format!(
-            "The type {} is not implicitly copyable. Implicit copies are limited to simple \
-             primitive values",
-            error_format(&ty, &context.subst),
-        );
-        context.env.add_diag(diag!(
-            AbilitySafety::ImplicitlyCopyable,
-            (loc, format!("{} {}", msg, fix)),
-            (tloc, ty_msg),
-        ))
     }
 }
 

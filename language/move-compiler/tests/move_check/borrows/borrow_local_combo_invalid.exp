@@ -4,7 +4,7 @@ error[E07001]: referential transparency violated
 12 │         if (cond) f = &mut s.f else f = &mut other.f;
    │                       -------- It is still being mutably borrowed by this reference
 13 │         let x = &s;
-   │                 ^^ Invalid borrow of local 's'
+   │                 ^^ Invalid borrow of variable 's'
 
 error[E07002]: mutable ownership violated
    ┌─ tests/move_check/borrows/borrow_local_combo_invalid.move:23:9
@@ -21,7 +21,7 @@ error[E07001]: referential transparency violated
 29 │         if (cond) f = &mut s.f else f = &mut s.g;
    │                                         -------- It is still being mutably borrowed by this reference
 30 │         let x = &s;
-   │                 ^^ Invalid borrow of local 's'
+   │                 ^^ Invalid borrow of variable 's'
 
 error[E07001]: referential transparency violated
    ┌─ tests/move_check/borrows/borrow_local_combo_invalid.move:38:17
@@ -29,7 +29,7 @@ error[E07001]: referential transparency violated
 37 │         if (cond) x = &mut s else x = other;
    │                       ------ It is still being mutably borrowed by this reference
 38 │         let y = &s;
-   │                 ^^ Invalid borrow of local 's'
+   │                 ^^ Invalid borrow of variable 's'
 
 error[E07002]: mutable ownership violated
    ┌─ tests/move_check/borrows/borrow_local_combo_invalid.move:48:9

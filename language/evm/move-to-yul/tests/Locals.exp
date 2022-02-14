@@ -55,9 +55,9 @@ object "A2_M" {
                 $t13 := $AddU64($t11, $t12)
                 // write_ref($t9, $t13)
                 $StoreU64($t9, $t13)
-                // $t14 := copy($t0)
+                // $t14 := move($t0)
                 $t14 := mload($locals)
-                // $t15 := copy($t3)
+                // $t15 := move($t3)
                 $t15 := mload(add($locals, 32))
                 // return ($t14, $t1, $t15, $t8)
                 $result0 := $t14
@@ -295,7 +295,7 @@ object "test_A2_M_test_call_by_ref" {
                     $t2 := $MakePtr(false, add($locals, 24))
                     // M::call_by_ref($t2)
                     A2_M_call_by_ref($t2)
-                    // $t3 := copy($t0)
+                    // $t3 := move($t0)
                     $t3 := mload($locals)
                     // $t4 := 2
                     $t4 := 2
@@ -539,9 +539,9 @@ object "test_A2_M_test_evaded" {
             $t13 := $AddU64($t11, $t12)
             // write_ref($t9, $t13)
             $StoreU64($t9, $t13)
-            // $t14 := copy($t0)
+            // $t14 := move($t0)
             $t14 := mload($locals)
-            // $t15 := copy($t3)
+            // $t15 := move($t3)
             $t15 := mload(add($locals, 32))
             // return ($t14, $t1, $t15, $t8)
             $result0 := $t14

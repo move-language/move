@@ -9,7 +9,7 @@ fun PackUnpack::pack_then_read($t0|a2: address): address {
      var $t5: &PackUnpack::T
      var $t6: &address
      var $t7: address
-  0: $t2 := copy($t0)
+  0: $t2 := move($t0)
   1: $t3 := false
   2: $t4 := pack PackUnpack::T($t2, $t3)
   3: $t1 := $t4
@@ -32,7 +32,7 @@ fun PackUnpack::read_packed_borrow_glob($t0|a2: address): bool {
      var $t8: &PackUnpack::Glob
      var $t9: &bool
      var $t10: bool
-  0: $t2 := copy($t0)
+  0: $t2 := move($t0)
   1: $t3 := false
   2: $t4 := pack PackUnpack::T($t2, $t3)
   3: $t1 := $t4
@@ -69,14 +69,14 @@ fun PackUnpack::read_unpacked_addr($t0|s: PackUnpack::S): address {
   4: $t4 := $t10
   5: $t3 := $t9
   6: $t2 := $t6
-  7: $t11 := copy($t4)
+  7: $t11 := move($t4)
   8: if ($t11) goto 9 else goto 13
   9: label L0
- 10: $t12 := copy($t2)
+ 10: $t12 := move($t2)
  11: $t1 := $t12
  12: goto 17
  13: label L2
- 14: $t13 := copy($t3)
+ 14: $t13 := move($t3)
  15: $t1 := $t13
  16: goto 17
  17: label L3
@@ -101,7 +101,7 @@ fun PackUnpack::read_unpacked_borrow_glob($t0|s: PackUnpack::S): bool {
   2: destroy($t5)
   3: destroy($t4)
   4: $t1 := $t3
-  5: $t6 := copy($t1)
+  5: $t6 := move($t1)
   6: $t7 := borrow_global<PackUnpack::Glob>($t6)
   7: $t8 := borrow_field<PackUnpack::Glob>.b($t7)
   8: $t9 := read_ref($t8)
@@ -128,7 +128,7 @@ fun PackUnpack::reassign_packed_addr($t0|a2: address): address {
   3: $t1 := $t4
   4: $t5 := move($t1)
   5: destroy($t5)
-  6: $t6 := copy($t0)
+  6: $t6 := move($t0)
   7: $t7 := false
   8: $t8 := pack PackUnpack::T($t6, $t7)
   9: $t1 := $t8
@@ -153,10 +153,10 @@ fun PackUnpack::use_results($t0|_: u64, $t1|a: address): address {
      var $t11: PackUnpack::S
      var $t12: PackUnpack::S
      var $t13: address
-  0: $t4 := copy($t1)
+  0: $t4 := move($t1)
   1: $t5 := PackUnpack::pack_then_read($t4)
   2: $t2 := $t5
-  3: $t6 := copy($t2)
+  3: $t6 := move($t2)
   4: $t7 := 0x7
   5: $t8 := true
   6: $t9 := pack PackUnpack::T($t7, $t8)
@@ -185,7 +185,7 @@ fun PackUnpack::pack_then_read($t0|a2: address): address {
      # Locals:
      # Ret(0): Formal(0)
      #
-  0: $t2 := copy($t0)
+  0: $t2 := move($t0)
   1: $t3 := false
   2: $t4 := pack PackUnpack::T($t2, $t3)
   3: $t1 := $t4
@@ -215,7 +215,7 @@ fun PackUnpack::read_packed_borrow_glob($t0|a2: address): bool {
      # Locals:
      # Ret(0): Formal(0)/0x1::PackUnpack::Glob/b
      #
-  0: $t2 := copy($t0)
+  0: $t2 := move($t0)
   1: $t3 := false
   2: $t4 := pack PackUnpack::T($t2, $t3)
   3: $t1 := $t4
@@ -260,14 +260,14 @@ fun PackUnpack::read_unpacked_addr($t0|s: PackUnpack::S): address {
   4: $t4 := $t10
   5: $t3 := $t9
   6: $t2 := $t6
-  7: $t11 := copy($t4)
+  7: $t11 := move($t4)
   8: if ($t11) goto 9 else goto 13
   9: label L0
- 10: $t12 := copy($t2)
+ 10: $t12 := move($t2)
  11: $t1 := $t12
  12: goto 17
  13: label L2
- 14: $t13 := copy($t3)
+ 14: $t13 := move($t3)
  15: $t1 := $t13
  16: goto 17
  17: label L3
@@ -300,7 +300,7 @@ fun PackUnpack::read_unpacked_borrow_glob($t0|s: PackUnpack::S): bool {
   2: destroy($t5)
   3: destroy($t4)
   4: $t1 := $t3
-  5: $t6 := copy($t1)
+  5: $t6 := move($t1)
   6: $t7 := borrow_global<PackUnpack::Glob>($t6)
   7: $t8 := borrow_field<PackUnpack::Glob>.b($t7)
   8: $t9 := read_ref($t8)
@@ -333,7 +333,7 @@ fun PackUnpack::reassign_packed_addr($t0|a2: address): address {
   3: $t1 := $t4
   4: $t5 := move($t1)
   5: destroy($t5)
-  6: $t6 := copy($t0)
+  6: $t6 := move($t0)
   7: $t7 := false
   8: $t8 := pack PackUnpack::T($t6, $t7)
   9: $t1 := $t8
@@ -364,10 +364,10 @@ fun PackUnpack::use_results($t0|_: u64, $t1|a: address): address {
      # Locals:
      # Ret(0): {0x7, Formal(1), }
      #
-  0: $t4 := copy($t1)
+  0: $t4 := move($t1)
   1: $t5 := PackUnpack::pack_then_read($t4)
   2: $t2 := $t5
-  3: $t6 := copy($t2)
+  3: $t6 := move($t2)
   4: $t7 := 0x7
   5: $t8 := true
   6: $t9 := pack PackUnpack::T($t7, $t8)

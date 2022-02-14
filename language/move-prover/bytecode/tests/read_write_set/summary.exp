@@ -26,7 +26,7 @@ public fun Summary::write_callee($t0|s2: &mut Summary::S2) {
 public fun Summary::write_caller1($t0|a: address) {
      var $t1: address
      var $t2: &mut Summary::S2
-  0: $t1 := copy($t0)
+  0: $t1 := move($t0)
   1: $t2 := borrow_global<Summary::S2>($t1)
   2: Summary::write_callee($t2)
   3: return ()
@@ -38,7 +38,7 @@ public fun Summary::write_caller2($t0|a: address) {
      var $t1: address
      var $t2: &mut Summary::S1
      var $t3: &mut Summary::S2
-  0: $t1 := copy($t0)
+  0: $t1 := move($t0)
   1: $t2 := borrow_global<Summary::S1>($t1)
   2: $t3 := borrow_field<Summary::S1>.s2($t2)
   3: Summary::write_callee($t3)
@@ -92,7 +92,7 @@ public fun Summary::write_caller1($t0|a: address) {
      #
      # Locals:
      #
-  0: $t1 := copy($t0)
+  0: $t1 := move($t0)
   1: $t2 := borrow_global<Summary::S2>($t1)
   2: Summary::write_callee($t2)
   3: return ()
@@ -111,7 +111,7 @@ public fun Summary::write_caller2($t0|a: address) {
      #
      # Locals:
      #
-  0: $t1 := copy($t0)
+  0: $t1 := move($t0)
   1: $t2 := borrow_global<Summary::S1>($t1)
   2: $t3 := borrow_field<Summary::S1>.s2($t2)
   3: Summary::write_callee($t3)

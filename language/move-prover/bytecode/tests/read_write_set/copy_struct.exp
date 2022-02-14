@@ -48,7 +48,7 @@ public fun CopyStruct::g() {
 public fun CopyStruct::ret_struct($t0|a: address): CopyStruct::S {
      var $t1: address
      var $t2: CopyStruct::S
-  0: $t1 := copy($t0)
+  0: $t1 := move($t0)
   1: $t2 := pack CopyStruct::S($t1)
   2: return $t2
 }
@@ -61,7 +61,7 @@ public fun CopyStruct::ret_struct_copy($t0|a: address): CopyStruct::S {
      var $t3: CopyStruct::S
      var $t4: &CopyStruct::S
      var $t5: CopyStruct::S
-  0: $t2 := copy($t0)
+  0: $t2 := move($t0)
   1: $t3 := pack CopyStruct::S($t2)
   2: $t1 := $t3
   3: $t4 := borrow_local($t1)
@@ -130,7 +130,7 @@ public fun CopyStruct::ret_struct($t0|a: address): CopyStruct::S {
      # Locals:
      # Ret(0)/a: Formal(0)
      #
-  0: $t1 := copy($t0)
+  0: $t1 := move($t0)
   1: $t2 := pack CopyStruct::S($t1)
   2: return $t2
 }
@@ -149,7 +149,7 @@ public fun CopyStruct::ret_struct_copy($t0|a: address): CopyStruct::S {
      # Locals:
      # Ret(0)/a: Formal(0)
      #
-  0: $t2 := copy($t0)
+  0: $t2 := move($t0)
   1: $t3 := pack CopyStruct::S($t2)
   2: $t1 := $t3
   3: $t4 := borrow_local($t1)

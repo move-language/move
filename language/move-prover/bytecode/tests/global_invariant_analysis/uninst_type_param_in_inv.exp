@@ -30,7 +30,7 @@ fun Demo::f1($t0|addr: address) {
  13: if ($t8) goto 14 else goto 21
  14: label L3
  15: $t9 := 0
- 16: $t10 := copy($t0)
+ 16: $t10 := move($t0)
  17: $t11 := borrow_global<Demo::S1<u64>>($t10)
  18: $t12 := borrow_field<Demo::S1<u64>>.v($t11)
  19: write_ref($t12, $t9)

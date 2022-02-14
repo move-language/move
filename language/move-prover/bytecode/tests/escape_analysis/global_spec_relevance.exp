@@ -5,8 +5,8 @@ public fun GlobalSpecRelevance::create($t0|i: u64, $t1|j: u64): GlobalSpecReleva
      var $t2: u64
      var $t3: u64
      var $t4: GlobalSpecRelevance::Nonzero
-  0: $t2 := copy($t0)
-  1: $t3 := copy($t1)
+  0: $t2 := move($t0)
+  1: $t3 := move($t1)
   2: $t4 := pack GlobalSpecRelevance::Nonzero($t2, $t3)
   3: return $t4
 }
@@ -68,8 +68,8 @@ public fun GlobalSpecRelevance::create($t0|i: u64, $t1|j: u64): GlobalSpecReleva
      var $t2: u64
      var $t3: u64
      var $t4: GlobalSpecRelevance::Nonzero
-  0: $t2 := copy($t0)
-  1: $t3 := copy($t1)
+  0: $t2 := move($t0)
+  1: $t3 := move($t1)
   2: $t4 := pack GlobalSpecRelevance::Nonzero($t2, $t3)
   3: return $t4
 }

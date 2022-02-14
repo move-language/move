@@ -65,7 +65,7 @@ fun TestBorrow::test10($t0|b: bool): TestBorrow::R {
  11: label L0
  12: $t11 := move($t2)
  13: destroy($t11)
- 14: $t12 := copy($t0)
+ 14: $t12 := move($t0)
  15: $t13 := move($t3)
  16: $t14 := TestBorrow::test9($t12, $t13)
  17: $t2 := $t14
@@ -87,7 +87,7 @@ fun TestBorrow::test10($t0|b: bool): TestBorrow::R {
 fun TestBorrow::test2($t0|x_ref: &mut u64, $t1|v: u64) {
      var $t2: u64
      var $t3: &mut u64
-  0: $t2 := copy($t1)
+  0: $t2 := move($t1)
   1: $t3 := move($t0)
   2: write_ref($t3, $t2)
   3: return ()
@@ -105,7 +105,7 @@ public fun TestBorrow::test3($t0|r_ref: &mut TestBorrow::R, $t1|v: u64) {
   1: $t4 := borrow_field<TestBorrow::R>.x($t3)
   2: $t2 := $t4
   3: $t5 := move($t2)
-  4: $t6 := copy($t1)
+  4: $t6 := move($t1)
   5: TestBorrow::test2($t5, $t6)
   6: return ()
 }
@@ -204,7 +204,7 @@ fun TestBorrow::test7($t0|b: bool) {
   7: $t2 := $t9
   8: $t10 := borrow_local($t1)
   9: $t3 := $t10
- 10: $t11 := copy($t0)
+ 10: $t11 := move($t0)
  11: if ($t11) goto 12 else goto 18
  12: label L0
  13: $t12 := move($t3)
@@ -287,13 +287,13 @@ fun TestBorrow::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: &mut TestBorrow::R) {
  31: $t5 := $t23
  32: goto 33
  33: label L6
- 34: $t24 := copy($t1)
+ 34: $t24 := move($t1)
  35: $t25 := 1
  36: $t26 := -($t24, $t25)
  37: $t1 := $t26
  38: goto 11
  39: label L2
- 40: $t27 := copy($t0)
+ 40: $t27 := move($t0)
  41: if ($t27) goto 42 else goto 49
  42: label L8
  43: $t28 := move($t5)
@@ -330,7 +330,7 @@ fun TestBorrow::test9($t0|b: bool, $t1|r_ref: &mut TestBorrow::R): &mut u64 {
   0: $t3 := copy($t1)
   1: $t4 := borrow_field<TestBorrow::R>.x($t3)
   2: $t2 := $t4
-  3: $t5 := copy($t0)
+  3: $t5 := move($t0)
   4: if ($t5) goto 5 else goto 12
   5: label L0
   6: $t6 := move($t2)

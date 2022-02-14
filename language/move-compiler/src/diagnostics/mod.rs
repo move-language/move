@@ -41,6 +41,7 @@ pub struct Diagnostic {
     info: DiagnosticInfo,
     primary_label: (Loc, String),
     secondary_labels: Vec<(Loc, String)>,
+    notes: Vec<String>,
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Default)]
@@ -156,6 +157,7 @@ fn render_diagnostic(
         info,
         primary_label,
         secondary_labels,
+        notes,
     } = diag;
     let mut diag = csr::diagnostic::Diagnostic::new(info.severity().into_codespan_severity());
     let (code, message) = info.render();
@@ -168,6 +170,7 @@ fn render_diagnostic(
             .map(|msg| mk_lbl(LabelStyle::Secondary, msg))
             .collect(),
     );
+    diag = diag.with_notes(notes);
     diag
 }
 
@@ -204,6 +207,12 @@ impl Diagnostics {
         self.diagnostics.push(diag)
     }
 
+    pub fn add_opt(&mut self, diag_opt: Option<Diagnostic>) {
+        if let Some(diag) = diag_opt {
+            self.add(diag)
+        }
+    }
+
     pub fn extend(&mut self, other: Self) {
         let Self {
             diagnostics,
@@ -226,6 +235,7 @@ impl Diagnostics {
         &'static str,
         (Loc, String),
         Vec<(Loc, String)>,
+        Vec<String>,
     )> {
         let mut v = vec![];
         for diag in self.into_vec() {
@@ -233,12 +243,14 @@ impl Diagnostics {
                 info,
                 primary_label,
                 secondary_labels,
+                notes,
             } = diag;
             let csr_diag = (
                 info.severity().into_codespan_severity(),
                 info.message(),
                 primary_label,
                 secondary_labels,
+                notes,
             );
             v.push(csr_diag)
         }
@@ -251,6 +263,7 @@ impl Diagnostic {
         code: impl DiagnosticCode,
         (loc, label): (Loc, impl ToString),
         secondary_labels: impl IntoIterator<Item = (Loc, impl ToString)>,
+        notes: impl IntoIterator<Item = impl ToString>,
     ) -> Self {
         Diagnostic {
             info: code.into_info(),
@@ -259,6 +272,7 @@ impl Diagnostic {
                 .into_iter()
                 .map(|(loc, msg)| (loc, msg.to_string()))
                 .collect(),
+            notes: notes.into_iter().map(|msg| msg.to_string()).collect(),
         }
     }
 
@@ -283,8 +297,18 @@ impl Diagnostic {
         self.secondary_labels.push((loc, msg.to_string()))
     }
 
-    pub fn secondary_labels_len(&self) -> usize {
-        self.secondary_labels.len()
+    pub fn extra_labels_len(&self) -> usize {
+        self.secondary_labels.len() + self.notes.len()
+    }
+
+    #[allow(unused)]
+    pub fn add_notes(&mut self, additional_notes: impl IntoIterator<Item = impl ToString>) {
+        self.notes
+            .extend(additional_notes.into_iter().map(|msg| msg.to_string()))
+    }
+
+    pub fn add_note(&mut self, msg: impl ToString) {
+        self.notes.push(msg.to_string())
     }
 }
 
@@ -297,12 +321,18 @@ macro_rules! diag {
             $code,
             $primary,
             std::iter::empty::<(move_ir_types::location::Loc, String)>(),
+            std::iter::empty::<String>(),
         )
     }};
     ($code: expr, $primary: expr, $($secondary: expr),+ $(,)?) => {{
         #[allow(unused)]
         use crate::diagnostics::codes::*;
-        crate::diagnostics::Diagnostic::new($code, $primary, vec![$($secondary, )*])
+        crate::diagnostics::Diagnostic::new(
+            $code,
+            $primary,
+            vec![$($secondary, )*],
+            std::iter::empty::<String>(),
+        )
     }};
 }
 
@@ -327,5 +357,11 @@ impl From<Vec<Diagnostic>> for Diagnostics {
             diagnostics,
             severity_count,
         }
+    }
+}
+
+impl From<Option<Diagnostic>> for Diagnostics {
+    fn from(diagnostic_opt: Option<Diagnostic>) -> Self {
+        Diagnostics::from(diagnostic_opt.map_or_else(Vec::new, |diag| vec![diag]))
     }
 }

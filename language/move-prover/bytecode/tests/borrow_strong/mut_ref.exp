@@ -96,7 +96,7 @@ fun TestMutRef::call_return_ref_different_path($t0|b: bool): TestMutRef::N {
   2: $t5 := pack TestMutRef::T($t4)
   3: $t6 := pack TestMutRef::N($t3, $t5)
   4: $t2 := $t6
-  5: $t7 := copy($t0)
+  5: $t7 := move($t0)
   6: $t8 := borrow_local($t2)
   7: $t9 := TestMutRef::return_ref_different_path($t7, $t8)
   8: $t1 := $t9
@@ -143,7 +143,7 @@ fun TestMutRef::call_return_ref_different_path_vec($t0|b: bool): TestMutRef::V {
  11: $t12 := move($t3)
  12: $t13 := pack TestMutRef::V($t11, $t12)
  13: $t4 := $t13
- 14: $t14 := copy($t0)
+ 14: $t14 := move($t0)
  15: $t15 := borrow_local($t4)
  16: $t16 := TestMutRef::return_ref_different_path_vec($t14, $t15)
  17: $t2 := $t16
@@ -204,7 +204,7 @@ fun TestMutRef::call_return_ref_different_path_vec2($t0|b: bool): TestMutRef::V 
  19: $t18 := move($t3)
  20: $t19 := pack TestMutRef::V($t17, $t18)
  21: $t4 := $t19
- 22: $t20 := copy($t0)
+ 22: $t20 := move($t0)
  23: $t21 := borrow_local($t4)
  24: $t22 := TestMutRef::return_ref_different_path_vec2($t20, $t21)
  25: $t2 := $t22
@@ -265,7 +265,7 @@ fun TestMutRef::call_return_ref_different_path_vec2_incorrect($t0|b: bool): Test
  19: $t18 := move($t3)
  20: $t19 := pack TestMutRef::V($t17, $t18)
  21: $t4 := $t19
- 22: $t20 := copy($t0)
+ 22: $t20 := move($t0)
  23: $t21 := borrow_local($t4)
  24: $t22 := TestMutRef::return_ref_different_path_vec2($t20, $t21)
  25: $t2 := $t22
@@ -300,7 +300,7 @@ fun TestMutRef::call_return_ref_different_root($t0|b: bool): (TestMutRef::T, Tes
   3: $t6 := 10
   4: $t7 := pack TestMutRef::R($t6)
   5: $t3 := $t7
-  6: $t8 := copy($t0)
+  6: $t8 := move($t0)
   7: $t9 := borrow_local($t2)
   8: $t10 := borrow_local($t3)
   9: $t11 := TestMutRef::return_ref_different_root($t8, $t9, $t10)
@@ -324,7 +324,7 @@ fun TestMutRef::return_ref_different_path($t0|b: bool, $t1|x: &mut TestMutRef::N
      var $t7: &mut TestMutRef::T
      var $t8: &mut u64
      var $t9: &mut u64
-  0: $t3 := copy($t0)
+  0: $t3 := move($t0)
   1: if ($t3) goto 2 else goto 7
   2: label L0
   3: $t4 := move($t1)
@@ -356,7 +356,7 @@ fun TestMutRef::return_ref_different_path_vec($t0|b: bool, $t1|x: &mut TestMutRe
      var $t10: u64
      var $t11: &mut u64
      var $t12: &mut u64
-  0: $t3 := copy($t0)
+  0: $t3 := move($t0)
   1: if ($t3) goto 2 else goto 9
   2: label L0
   3: $t4 := move($t1)
@@ -392,7 +392,7 @@ fun TestMutRef::return_ref_different_path_vec2($t0|b: bool, $t1|x: &mut TestMutR
      var $t11: &mut TestMutRef::T
      var $t12: &mut u64
      var $t13: &mut u64
-  0: $t3 := copy($t0)
+  0: $t3 := move($t0)
   1: if ($t3) goto 2 else goto 9
   2: label L0
   3: $t4 := move($t1)
@@ -426,7 +426,7 @@ fun TestMutRef::return_ref_different_root($t0|b: bool, $t1|x: &mut TestMutRef::T
      var $t9: &mut TestMutRef::R
      var $t10: &mut u64
      var $t11: &mut u64
-  0: $t4 := copy($t0)
+  0: $t4 := move($t0)
   1: if ($t4) goto 2 else goto 9
   2: label L0
   3: $t5 := move($t2)

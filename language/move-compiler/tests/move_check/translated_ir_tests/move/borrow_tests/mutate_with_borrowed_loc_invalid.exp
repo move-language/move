@@ -4,5 +4,5 @@ error[E07003]: invalid operation, could create dangling a reference
 4 │         let y = &x;
   │                 -- It is still being borrowed by this reference
 5 │         x = 0;
-  │         ^ Invalid assignment of local 'x'
+  │         ^ Invalid assignment of variable 'x'
 

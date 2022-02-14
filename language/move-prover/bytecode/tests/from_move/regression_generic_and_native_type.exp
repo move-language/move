@@ -138,7 +138,7 @@ public fun Diem::preburn<#0>($t0|preburn_ref: &mut Diem::Preburn<#0>, $t1|coin: 
  10: $t11 := copy($t3)
  11: $t12 := borrow_field<Diem::Info<#0>>.preburn_value($t11)
  12: $t13 := read_ref($t12)
- 13: $t14 := copy($t2)
+ 13: $t14 := move($t2)
  14: $t15 := +($t13, $t14)
  15: $t16 := move($t3)
  16: $t17 := borrow_field<Diem::Info<#0>>.preburn_value($t16)

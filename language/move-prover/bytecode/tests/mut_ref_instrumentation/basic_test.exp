@@ -33,7 +33,7 @@ fun TestEliminateMutRefs::test1(): TestEliminateMutRefs::R {
 fun TestEliminateMutRefs::test2($t0|x_ref: &mut u64, $t1|v: u64) {
      var $t2: u64
      var $t3: &mut u64
-  0: $t2 := copy($t1)
+  0: $t2 := move($t1)
   1: $t3 := move($t0)
   2: write_ref($t3, $t2)
   3: return ()
@@ -51,7 +51,7 @@ public fun TestEliminateMutRefs::test3($t0|r_ref: &mut TestEliminateMutRefs::R, 
   1: $t4 := borrow_field<TestEliminateMutRefs::R>.x($t3)
   2: $t2 := $t4
   3: $t5 := move($t2)
-  4: $t6 := copy($t1)
+  4: $t6 := move($t1)
   5: TestEliminateMutRefs::test2($t5, $t6)
   6: return ()
 }
@@ -142,7 +142,7 @@ fun TestEliminateMutRefs::test7($t0|b: bool) {
   5: $t2 := $t7
   6: $t8 := borrow_local($t1)
   7: $t3 := $t8
-  8: $t9 := copy($t0)
+  8: $t9 := move($t0)
   9: if ($t9) goto 10 else goto 16
  10: label L0
  11: $t10 := move($t3)
@@ -221,13 +221,13 @@ fun TestEliminateMutRefs::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: &mut TestEli
  29: $t5 := $t21
  30: goto 31
  31: label L6
- 32: $t22 := copy($t1)
+ 32: $t22 := move($t1)
  33: $t23 := 1
  34: $t24 := -($t22, $t23)
  35: $t1 := $t24
  36: goto 9
  37: label L2
- 38: $t25 := copy($t0)
+ 38: $t25 := move($t0)
  39: if ($t25) goto 40 else goto 47
  40: label L8
  41: $t26 := move($t5)
@@ -282,7 +282,7 @@ fun TestEliminateMutRefs::test1(): TestEliminateMutRefs::R {
 fun TestEliminateMutRefs::test2($t0|x_ref: &mut u64, $t1|v: u64) {
      var $t2: u64
      var $t3: &mut u64
-  0: $t2 := copy($t1)
+  0: $t2 := move($t1)
   1: $t3 := copy($t0)
   2: write_ref($t3, $t2)
   3: trace_local[x_ref]($t0)
@@ -301,7 +301,7 @@ public fun TestEliminateMutRefs::test3($t0|r_ref: &mut TestEliminateMutRefs::R, 
   1: $t4 := borrow_field<TestEliminateMutRefs::R>.x($t3)
   2: $t2 := $t4
   3: $t5 := move($t2)
-  4: $t6 := copy($t1)
+  4: $t6 := move($t1)
   5: TestEliminateMutRefs::test2($t5, $t6)
   6: trace_local[r_ref]($t0)
   7: return ()
@@ -394,7 +394,7 @@ fun TestEliminateMutRefs::test7($t0|b: bool) {
   5: $t2 := $t7
   6: $t8 := borrow_local($t1)
   7: $t3 := $t8
-  8: $t9 := copy($t0)
+  8: $t9 := move($t0)
   9: if ($t9) goto 10 else goto 15
  10: label L0
  11: $t10 := move($t3)
@@ -470,13 +470,13 @@ fun TestEliminateMutRefs::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: &mut TestEli
  27: $t21 := borrow_local($t4)
  28: $t5 := $t21
  29: label L6
- 30: $t22 := copy($t1)
+ 30: $t22 := move($t1)
  31: $t23 := 1
  32: $t24 := -($t22, $t23)
  33: $t1 := $t24
  34: goto 8
  35: label L2
- 36: $t25 := copy($t0)
+ 36: $t25 := move($t0)
  37: if ($t25) goto 38 else goto 45
  38: label L8
  39: $t26 := move($t5)

@@ -17,7 +17,7 @@ public fun Test::publish($t0|s: &signer) {
 public fun Test::remove($t0|a: address): Test::R {
      var $t1: address
      var $t2: Test::R
-  0: $t1 := copy($t0)
+  0: $t1 := move($t0)
   1: $t2 := move_from<Test::R>($t1)
   2: return $t2
 }

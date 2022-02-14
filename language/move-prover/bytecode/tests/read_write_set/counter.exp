@@ -15,7 +15,7 @@ fun Counter::call_increment1($t0|s: &mut Counter::S) {
 fun Counter::call_increment2($t0|a: address) {
      var $t1: address
      var $t2: &mut Counter::S
-  0: $t1 := copy($t0)
+  0: $t1 := move($t0)
   1: $t2 := borrow_global<Counter::S>($t1)
   2: Counter::increment2($t2)
   3: return ()
@@ -89,7 +89,7 @@ fun Counter::call_increment2($t0|a: address) {
      #
      # Locals:
      #
-  0: $t1 := copy($t0)
+  0: $t1 := move($t0)
   1: $t2 := borrow_global<Counter::S>($t1)
   2: Counter::increment2($t2)
   3: return ()

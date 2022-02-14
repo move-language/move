@@ -40,7 +40,7 @@ Call Stack:
     [2] 00000000000000000000000000000002::M::sum
 
         Code:
-            [10] CopyLoc(0)
+            [10] MoveLoc(0)
             [11] LdU64(1)
             [12] Sub
           > [13] Call(0)
@@ -49,14 +49,14 @@ Call Stack:
             [16] MoveLoc(1)
 
         Locals:
-            [0] 4
+            [0] -
             [1] -
 
 
     [3] 00000000000000000000000000000002::M::sum
 
         Code:
-            [10] CopyLoc(0)
+            [10] MoveLoc(0)
             [11] LdU64(1)
             [12] Sub
           > [13] Call(0)
@@ -65,14 +65,14 @@ Call Stack:
             [16] MoveLoc(1)
 
         Locals:
-            [0] 3
+            [0] -
             [1] -
 
 
     [4] 00000000000000000000000000000002::M::sum
 
         Code:
-            [10] CopyLoc(0)
+            [10] MoveLoc(0)
             [11] LdU64(1)
             [12] Sub
           > [13] Call(0)
@@ -81,7 +81,7 @@ Call Stack:
             [16] MoveLoc(1)
 
         Locals:
-            [0] 2
+            [0] -
             [1] -
 
 
@@ -130,7 +130,7 @@ Call Stack:
     [2] 00000000000000000000000000000002::M::sum
 
         Code:
-            [10] CopyLoc(0)
+            [10] MoveLoc(0)
             [11] LdU64(1)
             [12] Sub
           > [13] Call(0)
@@ -139,14 +139,14 @@ Call Stack:
             [16] MoveLoc(1)
 
         Locals:
-            [0] 4
+            [0] -
             [1] -
 
 
     [3] 00000000000000000000000000000002::M::sum
 
         Code:
-            [10] CopyLoc(0)
+            [10] MoveLoc(0)
             [11] LdU64(1)
             [12] Sub
           > [13] Call(0)
@@ -155,14 +155,14 @@ Call Stack:
             [16] MoveLoc(1)
 
         Locals:
-            [0] 3
+            [0] -
             [1] -
 
 
     [4] 00000000000000000000000000000002::M::sum
 
         Code:
-            [10] CopyLoc(0)
+            [10] MoveLoc(0)
             [11] LdU64(1)
             [12] Sub
           > [13] Call(0)
@@ -171,7 +171,7 @@ Call Stack:
             [16] MoveLoc(1)
 
         Locals:
-            [0] 2
+            [0] -
             [1] -
 
 

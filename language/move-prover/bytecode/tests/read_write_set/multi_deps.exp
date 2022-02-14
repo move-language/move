@@ -14,7 +14,7 @@ fun MultiDeps::add_to($t0|s: &mut MultiDeps::S, $t1|t: &MultiDeps::T, $t2|v: boo
      var $t12: u64
      var $t13: &mut MultiDeps::S
      var $t14: &mut u64
-  0: $t4 := copy($t2)
+  0: $t4 := move($t2)
   1: if ($t4) goto 2 else goto 10
   2: label L0
   3: $t5 := move($t1)
@@ -64,7 +64,7 @@ fun MultiDeps::add_to($t0|s: &mut MultiDeps::S, $t1|t: &MultiDeps::T, $t2|v: boo
      # Locals:
      # Formal(0)/f: {Formal(0)/f, Formal(1)/f, }
      #
-  0: $t4 := copy($t2)
+  0: $t4 := move($t2)
   1: if ($t4) goto 2 else goto 10
   2: label L0
   3: $t5 := move($t1)

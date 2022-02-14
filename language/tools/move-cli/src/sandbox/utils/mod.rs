@@ -427,6 +427,7 @@ pub(crate) fn explain_publish_error(
                             diagnostics::codes::Declarations::InvalidFunction,
                             (map.definition_location, err_string),
                             Vec::<(Loc, String)>::new(),
+                            Vec::<String>::new(),
                         );
                         diags.add(diag);
                     }

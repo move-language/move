@@ -8,7 +8,7 @@ public fun A::mutate_at($t0|addr: address) {
      var $t4: u64
      var $t5: &mut A::S
      var $t6: &mut u64
-  0: $t2 := copy($t0)
+  0: $t2 := move($t0)
   1: $t3 := borrow_global<A::S>($t2)
   2: $t1 := $t3
   3: $t4 := 2
@@ -27,7 +27,7 @@ public fun A::read_at($t0|addr: address): u64 {
      var $t4: &A::S
      var $t5: &u64
      var $t6: u64
-  0: $t2 := copy($t0)
+  0: $t2 := move($t0)
   1: $t3 := borrow_global<A::S>($t2)
   2: $t1 := $t3
   3: $t4 := move($t1)
@@ -52,10 +52,10 @@ public fun B::move_from_test_incorrect($t0|addr1: address, $t1|addr2: address): 
   0: $t5 := copy($t1)
   1: $t6 := A::read_at($t5)
   2: $t3 := $t6
-  3: $t7 := copy($t0)
+  3: $t7 := move($t0)
   4: $t8 := move_from<B::T>($t7)
   5: $t2 := $t8
-  6: $t9 := copy($t1)
+  6: $t9 := move($t1)
   7: $t10 := A::read_at($t9)
   8: $t4 := $t10
   9: assert Eq<u64>($t3, $t4)
@@ -82,7 +82,7 @@ public fun B::move_to_test_incorrect($t0|account: &signer, $t1|addr2: address) {
   4: $t7 := 2
   5: $t8 := pack B::T($t7)
   6: move_to<B::T>($t8, $t6)
-  7: $t9 := copy($t1)
+  7: $t9 := move($t1)
   8: $t10 := A::read_at($t9)
   9: $t3 := $t10
  10: assert Eq<u64>($t2, $t3)
@@ -102,9 +102,9 @@ public fun B::mutate_S_test1_incorrect($t0|addr1: address, $t1|addr2: address) {
   0: $t4 := copy($t1)
   1: $t5 := A::read_at($t4)
   2: $t2 := $t5
-  3: $t6 := copy($t0)
+  3: $t6 := move($t0)
   4: A::mutate_at($t6)
-  5: $t7 := copy($t1)
+  5: $t7 := move($t1)
   6: $t8 := A::read_at($t7)
   7: $t3 := $t8
   8: assert Eq<u64>($t2, $t3)
@@ -126,7 +126,7 @@ public fun B::mutate_S_test2_incorrect($t0|addr: address) {
   2: $t1 := $t4
   3: $t5 := copy($t0)
   4: A::mutate_at($t5)
-  5: $t6 := copy($t0)
+  5: $t6 := move($t0)
   6: $t7 := A::read_at($t6)
   7: $t2 := $t7
   8: assert Eq<u64>($t1, $t2)
@@ -151,14 +151,14 @@ public fun B::mutate_at_test_incorrect($t0|addr1: address, $t1|addr2: address) {
   0: $t5 := copy($t1)
   1: $t6 := A::read_at($t5)
   2: $t3 := $t6
-  3: $t7 := copy($t0)
+  3: $t7 := move($t0)
   4: $t8 := borrow_global<B::T>($t7)
   5: $t2 := $t8
   6: $t9 := 2
   7: $t10 := move($t2)
   8: $t11 := borrow_field<B::T>.x($t10)
   9: write_ref($t11, $t9)
- 10: $t12 := copy($t1)
+ 10: $t12 := move($t1)
  11: $t13 := A::read_at($t12)
  12: $t4 := $t13
  13: assert Eq<u64>($t3, $t4)

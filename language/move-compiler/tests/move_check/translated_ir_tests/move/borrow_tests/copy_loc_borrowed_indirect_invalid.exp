@@ -4,5 +4,5 @@ error[E07002]: mutable ownership violated
 5 │         let r1 = foo(&mut x, &mut y);
   │                  ------------------- It is still being mutably borrowed by this reference
 6 │         copy x;
-  │         ^^^^^^ Invalid copy of local 'x'
+  │         ^^^^^^ Invalid copy of variable 'x'
 

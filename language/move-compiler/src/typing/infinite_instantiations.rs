@@ -386,6 +386,7 @@ fn cycle_error(
         TypeSafety::CyclicInstantiation,
         (call_loc, call_msg),
         secondary_labels,
+        std::iter::empty::<String>(),
     )
 }
 

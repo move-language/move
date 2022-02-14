@@ -5,7 +5,7 @@ public fun BoolFootprint::call_get($t0|a: address) {
      var $t1: address
      var $t2: bool
      var $t3: u64
-  0: $t1 := copy($t0)
+  0: $t1 := move($t0)
   1: $t2 := BoolFootprint::global_get($t1)
   2: if ($t2) goto 6 else goto 3
   3: label L1
@@ -31,7 +31,7 @@ public fun BoolFootprint::global_get($t0|a: address): bool {
   1: $t3 := exists<BoolFootprint::B>($t2)
   2: if ($t3) goto 3 else goto 10
   3: label L0
-  4: $t4 := copy($t0)
+  4: $t4 := move($t0)
   5: $t5 := borrow_global<BoolFootprint::B>($t4)
   6: $t6 := borrow_field<BoolFootprint::B>.b($t5)
   7: $t7 := read_ref($t6)
@@ -60,7 +60,7 @@ public fun BoolFootprint::call_get($t0|a: address) {
      #
      # Locals:
      #
-  0: $t1 := copy($t0)
+  0: $t1 := move($t0)
   1: $t2 := BoolFootprint::global_get($t1)
   2: if ($t2) goto 6 else goto 3
   3: label L1
@@ -94,7 +94,7 @@ public fun BoolFootprint::global_get($t0|a: address): bool {
   1: $t3 := exists<BoolFootprint::B>($t2)
   2: if ($t3) goto 3 else goto 10
   3: label L0
-  4: $t4 := copy($t0)
+  4: $t4 := move($t0)
   5: $t5 := borrow_global<BoolFootprint::B>($t4)
   6: $t6 := borrow_field<BoolFootprint::B>.b($t5)
   7: $t7 := read_ref($t6)

@@ -109,7 +109,7 @@ fun ReadVector::read_addr_from_vec($t0|s: ReadVector::S): bool {
   0: $t2 := move($t0)
   1: $t3 := ReadVector::extract_addr_from_vec($t2)
   2: $t1 := $t3
-  3: $t4 := copy($t1)
+  3: $t4 := move($t1)
   4: $t5 := borrow_global<ReadVector::Glob>($t4)
   5: $t6 := borrow_field<ReadVector::Glob>.b($t5)
   6: $t7 := read_ref($t6)
@@ -249,7 +249,7 @@ fun ReadVector::read_addr_from_vec($t0|s: ReadVector::S): bool {
   0: $t2 := move($t0)
   1: $t3 := ReadVector::extract_addr_from_vec($t2)
   2: $t1 := $t3
-  3: $t4 := copy($t1)
+  3: $t4 := move($t1)
   4: $t5 := borrow_global<ReadVector::Glob>($t4)
   5: $t6 := borrow_field<ReadVector::Glob>.b($t5)
   6: $t7 := read_ref($t6)

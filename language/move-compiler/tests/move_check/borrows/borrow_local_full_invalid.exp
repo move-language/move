@@ -30,5 +30,5 @@ error[E07001]: referential transparency violated
 32 │         let x = &mut v;
    │                 ------ It is still being mutably borrowed by this reference
 33 │         let y = &v;
-   │                 ^^ Invalid borrow of local 'v'
+   │                 ^^ Invalid borrow of variable 'v'
 

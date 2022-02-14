@@ -18,14 +18,14 @@ fun TestSpecBlock::looping($t0|x: u64): u64 {
   6: if ($t3) goto 7 else goto 14
   7: label L0
   8: assume Lt($t0, 10)
-  9: $t4 := copy($t0)
+  9: $t4 := move($t0)
  10: $t5 := 1
  11: $t6 := +($t4, $t5)
  12: $t0 := $t6
  13: goto 2
  14: label L2
  15: assert Eq<u64>($t0, 10)
- 16: $t7 := copy($t0)
+ 16: $t7 := move($t0)
  17: return $t7
 }
 

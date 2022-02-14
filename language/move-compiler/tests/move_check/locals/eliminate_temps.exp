@@ -2,7 +2,7 @@ error[E07002]: mutable ownership violated
   ┌─ tests/move_check/locals/eliminate_temps.move:7:47
   │
 7 │         let (boom, u): (&u64, u64) = (&mut x, x);
-  │                                       ------  ^ Invalid copy of local 'x'
+  │                                       ------  ^ Invalid copy of variable 'x'
   │                                       │        
   │                                       It is still being mutably borrowed by this reference
 

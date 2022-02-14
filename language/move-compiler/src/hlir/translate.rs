@@ -4,7 +4,7 @@
 use crate::{
     diag,
     expansion::ast::{self as E, AbilitySet, Fields, ModuleIdent},
-    hlir::ast::{self as H, Block},
+    hlir::ast::{self as H, Block, MoveOpAnnotation},
     naming::ast as N,
     parser::ast::{BinOp_, ConstantName, Field, FunctionName, StructName, Var},
     shared::{unique_map::UniqueMap, *},
@@ -1125,10 +1125,17 @@ fn exp_impl(
             // Currently only private constants exist
             HE::Constant(c)
         }
-        TE::Move { from_user, var } => HE::Move {
-            from_user,
-            var: context.remapped_local(var),
-        },
+        TE::Move { from_user, var } => {
+            let annotation = if from_user {
+                MoveOpAnnotation::FromUser
+            } else {
+                MoveOpAnnotation::InferredNoCopy
+            };
+            HE::Move {
+                annotation,
+                var: context.remapped_local(var),
+            }
+        }
         TE::Copy { from_user, var } => HE::Copy {
             from_user,
             var: context.remapped_local(var),
@@ -1287,7 +1294,7 @@ fn exp_impl(
             let eb = exp_(context, result, None, *te);
             let tmp = match bind_exp_impl(context, result, eb, true).exp.value {
                 HE::Move {
-                    from_user: false,
+                    annotation: MoveOpAnnotation::InferredLastUsage,
                     var,
                 } => var,
                 _ => panic!("ICE invalid bind_exp for single value"),
@@ -1453,7 +1460,7 @@ fn bind_exp_impl_(
 fn use_tmp(var: Var) -> H::UnannotatedExp_ {
     use H::UnannotatedExp_ as E;
     E::Move {
-        from_user: false,
+        annotation: MoveOpAnnotation::InferredLastUsage,
         var,
     }
 }

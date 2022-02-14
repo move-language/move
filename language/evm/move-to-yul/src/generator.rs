@@ -613,8 +613,9 @@ impl Generator {
                     ),
                     Unpack(m, s, inst) => self.unpack(
                         ctx,
+                        target,
                         m.qualified(*s).instantiate(inst.clone()),
-                        dest.iter().map(local),
+                        dest,
                         local(&srcs[0]),
                     ),
 
@@ -966,40 +967,21 @@ impl Generator {
         // Initialize fields
         let struct_env = &ctx.env.get_struct(struct_id.to_qualified_id());
         for (logical_offs, field_exp) in srcs.enumerate() {
-            use PrimitiveType::*;
-            use Type::*;
+            let yul_fun = match self.type_size(
+                ctx,
+                &struct_env
+                    .get_field_by_offset(logical_offs)
+                    .get_type()
+                    .instantiate(&struct_id.inst),
+            ) {
+                1 => YulFunction::MemoryStoreU8,
+                8 => YulFunction::MemoryStoreU64,
+                32 => YulFunction::MemoryStoreU256,
+                _ => panic!("unexpected field type"),
+            };
             let (byte_offset, _) = *layout.offsets.get(&logical_offs).unwrap();
             let field_ptr = format!("add({}, {})", mem, byte_offset);
-            match struct_env
-                .get_field_by_offset(logical_offs)
-                .get_type()
-                .instantiate(&struct_id.inst)
-            {
-                Primitive(p) => match p {
-                    Bool | U8 => self.call_builtin(
-                        ctx,
-                        YulFunction::MemoryStoreU8,
-                        vec![field_ptr, field_exp].into_iter(),
-                    ),
-                    U64 => self.call_builtin(
-                        ctx,
-                        YulFunction::MemoryStoreU64,
-                        vec![field_ptr, field_exp].into_iter(),
-                    ),
-                    U128 | Address | Signer => ctx
-                        .env
-                        .error(&ctx.env.unknown_loc(), "NYI: u128, address, signer"),
-                    Num | Range | EventStore => {
-                        panic!("unexpected primitive field type")
-                    }
-                },
-                Struct(..) | Vector(..) => self.call_builtin(
-                    ctx,
-                    YulFunction::MemoryStoreU256,
-                    vec![field_ptr, field_exp].into_iter(),
-                ),
-                _ => panic!("unexpected field type"),
-            }
+            self.call_builtin(ctx, yul_fun, vec![field_ptr, field_exp].into_iter());
         }
         // Store result
         self.assign(ctx, target, dest, mem);
@@ -1008,13 +990,44 @@ impl Generator {
     }
 
     fn unpack(
-        &self,
-        _ctx: &Context,
-        _struct_id: QualifiedInstId<StructId>,
-        _dest: impl Iterator<Item = String>,
-        _src: String,
+        &mut self,
+        ctx: &Context,
+        target: &FunctionTarget,
+        struct_id: QualifiedInstId<StructId>,
+        dest: &[TempIndex],
+        src: String,
     ) {
-        todo!()
+        // We unfortunately need to clone the struct layout because of borrowing issues.
+        // However, it should not be too large.
+        let layout = self.get_or_compute_struct_layout(ctx, &struct_id).clone();
+
+        // Copy fields
+        let struct_env = &ctx.env.get_struct(struct_id.to_qualified_id());
+        for (logical_offs, dest_idx) in dest.iter().enumerate() {
+            let yul_fun = match self.type_size(
+                ctx,
+                &struct_env
+                    .get_field_by_offset(logical_offs)
+                    .get_type()
+                    .instantiate(&struct_id.inst),
+            ) {
+                1 => YulFunction::MemoryLoadU8,
+                8 => YulFunction::MemoryLoadU64,
+                32 => YulFunction::MemoryLoadU256,
+                _ => panic!("unexpected field type"),
+            };
+            let (byte_offset, _) = *layout.offsets.get(&logical_offs).unwrap();
+            let field_ptr = format!("add({}, {})", src, byte_offset);
+            let call_str = self.call_builtin_str(ctx, yul_fun, std::iter::once(field_ptr));
+            self.assign(ctx, target, *dest_idx, call_str);
+        }
+
+        // Free memory
+        self.call_builtin(
+            ctx,
+            YulFunction::Free,
+            vec![src, layout.size.to_string()].into_iter(),
+        )
     }
 
     fn borrow_field(

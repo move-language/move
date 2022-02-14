@@ -22,7 +22,9 @@ object "A2_M" {
             sstore(202, $dummy2)
             let $dummy3 := A2_M_read_and_write_s()
             sstore(203, $dummy3)
-            A2_M_write_S(sload(104), sload(105))
+            let $dummy4 := A2_M_unpack(sload(104))
+            sstore(204, $dummy4)
+            A2_M_write_S(sload(105), sload(106))
 
             function A2_M_pack_S(a, b) -> $result {
                 let $t2, $t3
@@ -100,6 +102,20 @@ object "A2_M" {
                 $Free($locals, 32)
             }
 
+            function A2_M_unpack(s) -> $result {
+                let _a, _b, c, $t4, $t5, $t6
+                // ($t4, $t5, $t6) := unpack M::S($t0)
+                $t4 := $MemoryLoadU64(add(s, 0))
+                $t5 := $MemoryLoadU8(add(s, 8))
+                $t6 := $MemoryLoadU256(add(s, 9))
+                $Free(s, 41)
+                // destroy($t5)
+                // destroy($t4)
+                // return $t6
+                /// @src 2:690:691
+                $result := $t6
+            }
+
             function A2_M_write_S(s, v) {
                 let $t2, $t3, $t4, $t5, $t6
                 // $t2 := borrow_field<M::S>.a($t0)
@@ -146,6 +162,9 @@ object "A2_M" {
               mstore(32, word)
               mstore(64, type)
               key := keccak256(32, 33)
+            }
+            function $MemoryLoadU8(offs) -> val {
+              val := and(mload(offs), 0xff)
             }
             function $MemoryStoreU8(offs, val) {
               mstore8(offs, val)
@@ -271,7 +290,8 @@ object "A2_M" {
                 mstore(_3, A2_M_pack_S())
                 A2_M_write_S(_3, A2_M_read_S(_3))
                 sstore(203, mload(_3))
-                A2_M_write_S(sload(104), sload(105))
+                sstore(204, mload(add(sload(104), 9)))
+                A2_M_write_S(sload(105), sload(106))
             }
             function A2_M_pack_S() -> $result
             {

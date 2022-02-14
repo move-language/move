@@ -38,4 +38,10 @@ module 0x2::M {
         write_S(&mut s, x);
         s
     }
+
+    #[callable]
+    fun unpack(s: S): S2 {
+        let S{a: _a, b: _b, c} = s;
+        c
+    }
 }

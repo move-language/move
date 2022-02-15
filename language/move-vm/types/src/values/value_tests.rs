@@ -17,7 +17,7 @@ fn locals() -> PartialVMResult<()> {
 
     assert!(locals.copy_loc(1)?.equals(&Value::u64(42))?);
     let r = locals.borrow_loc(1)?.value_as::<Reference>()?;
-    assert!(r.read_ref()?.equals(&Value::u64(42))?);
+    assert!(r.read_ref().equals(&Value::u64(42))?);
     assert!(locals.move_loc(1)?.equals(&Value::u64(42))?);
 
     assert!(locals.copy_loc(1).is_err());
@@ -56,17 +56,17 @@ fn struct_borrow_field() -> PartialVMResult<()> {
 
     {
         let f: Reference = r.borrow_field(1)?.value_as()?;
-        assert!(f.read_ref()?.equals(&Value::bool(false))?);
+        assert!(f.read_ref().equals(&Value::bool(false))?);
     }
 
-    {
+    unsafe {
         let f: Reference = r.borrow_field(1)?.value_as()?;
         f.write_ref(Value::bool(true))?;
     }
 
     {
         let f: Reference = r.borrow_field(1)?.value_as()?;
-        assert!(f.read_ref()?.equals(&Value::bool(true))?);
+        assert!(f.read_ref().equals(&Value::bool(true))?);
     }
 
     Ok(())
@@ -89,21 +89,21 @@ fn struct_borrow_nested() -> PartialVMResult<()> {
 
     {
         let r3: Reference = r2.borrow_field(0)?.value_as()?;
-        assert!(r3.read_ref()?.equals(&Value::u64(20))?);
+        assert!(r3.read_ref().equals(&Value::u64(20))?);
     }
 
-    {
+    unsafe {
         let r3: Reference = r2.borrow_field(0)?.value_as()?;
         r3.write_ref(Value::u64(30))?;
     }
 
     {
         let r3: Reference = r2.borrow_field(0)?.value_as()?;
-        assert!(r3.read_ref()?.equals(&Value::u64(30))?);
+        assert!(r3.read_ref().equals(&Value::u64(30))?);
     }
 
-    assert!(r2.read_ref()?.equals(&inner(30))?);
-    assert!(r1.read_ref()?.equals(&outer(30))?);
+    assert!(r2.into_ref().read_ref().equals(&inner(30))?);
+    assert!(r1.into_ref().read_ref().equals(&outer(30))?);
 
     Ok(())
 }

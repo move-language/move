@@ -928,7 +928,7 @@ impl Frame {
                     }
                     Bytecode::ReadRef => {
                         let reference = interpreter.operand_stack.pop_as::<Reference>()?;
-                        let value = reference.read_ref()?;
+                        let value = reference.read_ref();
                         gas_status.charge_instr_with_size(Opcodes::READ_REF, value.size())?;
                         interpreter.operand_stack.push(value)?;
                     }
@@ -936,7 +936,11 @@ impl Frame {
                         let reference = interpreter.operand_stack.pop_as::<Reference>()?;
                         let value = interpreter.operand_stack.pop()?;
                         gas_status.charge_instr_with_size(Opcodes::WRITE_REF, value.size())?;
-                        reference.write_ref(value)?;
+                        // safe due as long as the code being executed passed the reference
+                        // safety checks
+                        unsafe {
+                            reference.write_ref(value)?;
+                        }
                     }
                     Bytecode::CastU8 => {
                         gas_status.charge_instr(Opcodes::CAST_U8)?;
@@ -1114,7 +1118,7 @@ impl Frame {
                         let addr = signer_reference
                             .borrow_field(0)?
                             .value_as::<Reference>()?
-                            .read_ref()?
+                            .read_ref()
                             .value_as::<AccountAddress>()?;
                         let ty = resolver.get_struct_type(*sd_idx);
                         // REVIEW: Can we simplify Interpreter::move_to?
@@ -1127,7 +1131,7 @@ impl Frame {
                         let addr = signer_reference
                             .borrow_field(0)?
                             .value_as::<Reference>()?
-                            .read_ref()?
+                            .read_ref()
                             .value_as::<AccountAddress>()?;
                         let ty = resolver.instantiate_generic_type(*si_idx, self.ty_args())?;
                         let size = interpreter.move_to(data_store, addr, &ty, resource)?;

@@ -7,6 +7,7 @@ members = [
     "devtools/x-core",
     "devtools/x-lint",
     "language/benchmarks",
+    "language/evm/exec-utils",
     "language/evm/move-to-yul",
     "language/move-analyzer",
     "language/move-binary-format",

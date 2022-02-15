@@ -152,6 +152,7 @@ members = [
     "bytecode-interpreter-testsuite",
     "bytecode-verifier-tests",
     "bytecode-verifier-transactional-tests",
+    "evm-exec-utils",
     "invalid-mutations",
     "language-benchmarks",
     "mirai-dataflow-analysis",

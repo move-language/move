@@ -37,17 +37,22 @@ object "A2_M" {
                 /// @src 2:127:128
                 $t8 := $AddU64($t7, b)
                 // $t9 := borrow_local($t0)
+                /// @src 2:146:152
                 $t9 := $locals
                 // $t10 := borrow_local($t3)
+                /// @src 2:168:170
                 $t10 := add($locals, 32)
                 // $t11 := read_ref($t10)
+                /// @src 2:183:186
                 $t11 := $LoadU64($t10)
                 // $t12 := 1
+                /// @src 2:189:190
                 $t12 := 1
                 // $t13 := +($t11, $t12)
                 /// @src 2:187:188
                 $t13 := $AddU64($t11, $t12)
                 // write_ref($t9, $t13)
+                /// @src 2:177:190
                 $StoreU64($t9, $t13)
                 // $t14 := copy($t0)
                 /// @src 2:198:199

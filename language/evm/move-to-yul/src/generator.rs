@@ -60,6 +60,8 @@ pub struct Generator {
     borrowed_locals: BTreeMap<TempIndex, usize>,
     /// Memory layout info.
     struct_layout: BTreeMap<QualifiedInstId<StructId>, StructLayout>,
+    /// Type instantiation of the currently compiled function.
+    type_inst: Vec<Type>,
 }
 
 /// Information about the layout of a struct in linear memory.
@@ -186,42 +188,37 @@ impl Generator {
     /// Generate contract object for given module.
     fn contract(&mut self, ctx: &Context, module: &ModuleEnv<'_>) {
         let contract_name = ctx.make_contract_name(module);
-        emitln!(ctx.writer, "object \"{}\" {{", contract_name);
-        ctx.writer.indent();
+        emit!(ctx.writer, "object \"{}\" ", contract_name);
+        ctx.emit_block(|| {
+            // Generate the deployment code block
+            self.begin_code_block(ctx);
+            let contract_deployed_name = format!("{}_deployed", contract_name);
+            emitln!(
+                ctx.writer,
+                "codecopy(0, dataoffset(\"{}\"), datasize(\"{}\"))",
+                contract_deployed_name,
+                contract_deployed_name
+            );
+            self.optional_creator(ctx, module);
+            emitln!(
+                ctx.writer,
+                "return(0, datasize(\"{}\"))",
+                contract_deployed_name,
+            );
+            self.end_code_block(ctx);
 
-        // Generate the deployment code block
-        self.begin_code_block(ctx);
-        let contract_deployed_name = format!("{}_deployed", contract_name);
-        emitln!(
-            ctx.writer,
-            "codecopy(0, dataoffset(\"{}\"), datasize(\"{}\"))",
-            contract_deployed_name,
-            contract_deployed_name
-        );
-        self.optional_creator(ctx, module);
-        emitln!(
-            ctx.writer,
-            "return(0, datasize(\"{}\"))",
-            contract_deployed_name,
-        );
-        self.end_code_block(ctx);
-
-        // Generate the runtime object
-        emitln!(ctx.writer, "object \"{}\" {{", contract_deployed_name);
-        ctx.writer.indent();
-        self.begin_code_block(ctx);
-        emitln!(
-            ctx.writer,
-            "mstore(${MEM_SIZE_LOC}, memoryguard(${USED_MEM}))"
-        );
-        self.callable_functions(ctx, module);
-        self.end_code_block(ctx);
-        ctx.writer.unindent();
-        emitln!(ctx.writer, "}");
-
-        // Close contract object
-        ctx.writer.unindent();
-        emitln!(ctx.writer, "}");
+            // Generate the runtime object
+            emit!(ctx.writer, "object \"{}\" ", contract_deployed_name);
+            ctx.emit_block(|| {
+                self.begin_code_block(ctx);
+                emitln!(
+                    ctx.writer,
+                    "mstore(${MEM_SIZE_LOC}, memoryguard(${USED_MEM}))"
+                );
+                self.callable_functions(ctx, module);
+                self.end_code_block(ctx);
+            })
+        })
     }
 
     /// Generate optional creator (contract constructor).
@@ -327,8 +324,10 @@ impl Generator {
     /// Generate Yul function for Move function.
     fn function(&mut self, ctx: &Context, fun_id: &QualifiedInstId<FunId>) {
         self.done_move_functions.insert(fun_id.clone());
+        self.type_inst = fun_id.inst.clone();
         let fun = &ctx.env.get_function(fun_id.to_qualified_id());
         let target = &ctx.targets.get_target(fun, &FunctionVariant::Baseline);
+
         // Emit function header
         let params = (0..target.get_parameter_count())
             .map(|idx| ctx.make_local_name(target, idx))
@@ -343,89 +342,92 @@ impl Generator {
                     .join(", ")
             )
         };
-        emitln!(
+        emit!(
             ctx.writer,
-            "function {}({}){} {{",
+            "function {}({}){} ",
             ctx.make_function_name(fun_id),
             params,
             results,
         );
-        ctx.writer.indent();
-
-        // Emit function locals
-        self.collect_borrowed_locals(target);
-        let locals = (target.get_parameter_count()..target.get_local_count())
-            // filter locals which are not evaded to memory
-            .filter(|idx| !self.borrowed_locals.contains_key(idx))
-            .map(|idx| ctx.make_local_name(target, idx))
-            .join(", ");
-        if !locals.is_empty() {
-            emitln!(ctx.writer, "let {}", locals);
-        }
-        if !self.borrowed_locals.is_empty() {
-            // These locals are evaded to memory, as references to them are borrowed.
-            // Allocate a chunk of memory for them.
-            self.call_builtin_with_result(
-                ctx,
-                "let ",
-                std::iter::once("$locals".to_string()),
-                YulFunction::Malloc,
-                std::iter::once((self.borrowed_locals.len() * WORD_SIZE).to_string()),
-            );
-            // For all evaded locals which are parameters, we need to initialize them from
-            // the Yul parameter.
-            for idx in self.borrowed_locals.keys() {
-                if *idx < target.get_parameter_count() {
-                    emitln!(
-                        ctx.writer,
-                        "mstore({}, {})",
-                        Self::local_ptr(&self.borrowed_locals, *idx).unwrap(),
-                        ctx.make_local_name(target, *idx)
-                    )
+        ctx.emit_block(|| {
+            // Emit function locals
+            self.collect_borrowed_locals(target);
+            let locals = (target.get_parameter_count()..target.get_local_count())
+                // filter locals which are not evaded to memory
+                .filter(|idx| !self.borrowed_locals.contains_key(idx))
+                .map(|idx| ctx.make_local_name(target, idx))
+                .join(", ");
+            if !locals.is_empty() {
+                emitln!(ctx.writer, "let {}", locals);
+            }
+            if !self.borrowed_locals.is_empty() {
+                // These locals are evaded to memory, as references to them are borrowed.
+                // Allocate a chunk of memory for them.
+                self.call_builtin_with_result(
+                    ctx,
+                    "let ",
+                    std::iter::once("$locals".to_string()),
+                    YulFunction::Malloc,
+                    std::iter::once((self.borrowed_locals.len() * WORD_SIZE).to_string()),
+                );
+                // For all evaded locals which are parameters, we need to initialize them from
+                // the Yul parameter.
+                for idx in self.borrowed_locals.keys() {
+                    if *idx < target.get_parameter_count() {
+                        emitln!(
+                            ctx.writer,
+                            "mstore({}, {})",
+                            Self::local_ptr(&self.borrowed_locals, *idx).unwrap(),
+                            ctx.make_local_name(target, *idx)
+                        )
+                    }
                 }
             }
-        }
 
-        // Compute control flow graph, entry block, and label map
-        let code = target.data.code.as_slice();
-        let cfg = StacklessControlFlowGraph::new_forward(code);
-        let entry_bb = Self::get_actual_entry_block(&cfg);
-        let label_map = Self::compute_label_map(&cfg, code);
+            // Compute control flow graph, entry block, and label map
+            let code = target.data.code.as_slice();
+            let cfg = StacklessControlFlowGraph::new_forward(code);
+            let entry_bb = Self::get_actual_entry_block(&cfg);
+            let label_map = Self::compute_label_map(&cfg, code);
 
-        // Emit state machine to represent control flow.
-        // TODO: Eliminate the need for this, see also
-        //    https://medium.com/leaningtech/solving-the-structured-control-flow-problem-once-and-for-all-5123117b1ee2
-        if cfg.successors(entry_bb).iter().all(|b| cfg.is_dummmy(*b)) {
-            // In this trivial case, we have only one block and can omit the state machine
-            if let BlockContent::Basic { lower, upper } = cfg.content(entry_bb) {
-                for offs in *lower..*upper + 1 {
-                    self.bytecode(ctx, target, &label_map, &code[offs as usize], false);
+            // Emit state machine to represent control flow.
+            // TODO: Eliminate the need for this, see also
+            //    https://medium.com/leaningtech/solving-the-structured-control-flow-problem-once-and-for-all-5123117b1ee2
+            if cfg.successors(entry_bb).iter().all(|b| cfg.is_dummmy(*b)) {
+                // In this trivial case, we have only one block and can omit the state machine
+                if let BlockContent::Basic { lower, upper } = cfg.content(entry_bb) {
+                    for offs in *lower..*upper + 1 {
+                        self.bytecode(ctx, target, &label_map, &code[offs as usize], false);
+                    }
+                } else {
+                    panic!("effective entry block is not basic")
                 }
             } else {
-                panic!("effective entry block is not basic")
-            }
-        } else {
-            emitln!(ctx.writer, "let $block := {}", entry_bb);
-            emitln!(ctx.writer, "for {} true {} {");
-            ctx.writer.indent();
-            emitln!(ctx.writer, "switch $block");
-            for blk_id in &cfg.blocks() {
-                if let BlockContent::Basic { lower, upper } = cfg.content(*blk_id) {
-                    // Emit code for this basic block.
-                    emitln!(ctx.writer, "case {} {{", blk_id);
-                    ctx.writer.indent();
-                    for offs in *lower..*upper + 1 {
-                        self.bytecode(ctx, target, &label_map, &code[offs as usize], true);
+                emitln!(ctx.writer, "let $block := {}", entry_bb);
+                emit!(ctx.writer, "for {} true {} ");
+                ctx.emit_block(|| {
+                    emitln!(ctx.writer, "switch $block");
+                    for blk_id in &cfg.blocks() {
+                        if let BlockContent::Basic { lower, upper } = cfg.content(*blk_id) {
+                            // Emit code for this basic block.
+                            emit!(ctx.writer, "case {} ", blk_id);
+                            ctx.emit_block(|| {
+                                for offs in *lower..*upper + 1 {
+                                    self.bytecode(
+                                        ctx,
+                                        target,
+                                        &label_map,
+                                        &code[offs as usize],
+                                        true,
+                                    );
+                                }
+                            })
+                        }
                     }
-                    ctx.writer.unindent();
-                    emitln!(ctx.writer, "}")
-                }
+                })
             }
-            ctx.writer.unindent();
-            emitln!(ctx.writer, "}"); // for
-        }
-        ctx.writer.unindent();
-        emitln!(ctx.writer, "}\n"); // function
+        });
+        emitln!(ctx.writer)
     }
 
     /// Compute the locals in the given function which are borrowed from. Such locals need
@@ -555,6 +557,7 @@ impl Generator {
                 self.assign(ctx, target, *dest, local(src))
             }
             Load(_, dest, cons) => {
+                print_loc();
                 emitln!(
                     ctx.writer,
                     "{} := {}",
@@ -589,35 +592,56 @@ impl Generator {
                 }
             }
             Abort(_, code) => {
+                print_loc();
                 self.call_builtin(ctx, YulFunction::Abort, std::iter::once(local(code)))
             }
             Call(_, dest, op, srcs, _) => {
                 use Operation::*;
                 match op {
                     // Move function call
-                    Function(m, f, targs) => self.move_call(
-                        ctx,
-                        target,
-                        dest,
-                        m.qualified(*f).instantiate(targs.clone()),
-                        srcs.iter().map(local),
-                    ),
+                    Function(m, f, inst) => {
+                        print_loc();
+                        self.move_call(
+                            ctx,
+                            target,
+                            dest,
+                            m.qualified(*f)
+                                .instantiate(Type::instantiate_slice(inst, &self.type_inst)),
+                            srcs.iter().map(local),
+                        )
+                    }
 
                     // Packing and unpacking of structs
-                    Pack(m, s, inst) => self.pack(
-                        ctx,
-                        target,
-                        m.qualified(*s).instantiate(inst.clone()),
-                        dest[0],
-                        srcs.iter().map(local),
-                    ),
-                    Unpack(m, s, inst) => self.unpack(
-                        ctx,
-                        target,
-                        m.qualified(*s).instantiate(inst.clone()),
-                        dest,
-                        local(&srcs[0]),
-                    ),
+                    Pack(m, s, inst) => {
+                        print_loc();
+                        self.pack(
+                            ctx,
+                            target,
+                            m.qualified(*s)
+                                .instantiate(Type::instantiate_slice(inst, &self.type_inst)),
+                            dest[0],
+                            srcs.iter().map(local),
+                        )
+                    }
+                    Unpack(m, s, inst) => {
+                        print_loc();
+                        self.unpack(
+                            ctx,
+                            target,
+                            m.qualified(*s)
+                                .instantiate(Type::instantiate_slice(inst, &self.type_inst)),
+                            dest,
+                            local(&srcs[0]),
+                        )
+                    }
+                    Destroy => {
+                        print_loc();
+                        self.destroy(
+                            ctx,
+                            &target.get_local_type(srcs[0]).instantiate(&self.type_inst),
+                            local(&srcs[0]),
+                        )
+                    }
 
                     // Resource management
                     MoveTo(_, _, _) => print_nyi(),
@@ -625,28 +649,41 @@ impl Generator {
                     Exists(_, _, _) => print_nyi(),
 
                     // References
-                    BorrowLoc => self.borrow_loc(ctx, target, dest, srcs),
-                    BorrowField(m, s, inst, f) => self.borrow_field(
-                        ctx,
-                        target.get_local_type(dest[0]).skip_reference(),
-                        m.qualified(*s).instantiate(inst.clone()),
-                        *f,
-                        local(&dest[0]),
-                        local(&srcs[0]),
-                    ),
+                    BorrowLoc => {
+                        print_loc();
+                        self.borrow_loc(ctx, target, dest, srcs)
+                    }
+                    BorrowField(m, s, inst, f) => {
+                        print_loc();
+                        self.borrow_field(
+                            ctx,
+                            target.get_local_type(dest[0]).skip_reference(),
+                            m.qualified(*s)
+                                .instantiate(Type::instantiate_slice(inst, &self.type_inst)),
+                            *f,
+                            local(&dest[0]),
+                            local(&srcs[0]),
+                        )
+                    }
                     BorrowGlobal(_, _, _) => print_nyi(),
-                    ReadRef => self.read_ref(
-                        ctx,
-                        target.get_local_type(dest[0]),
-                        local(&dest[0]),
-                        local(&srcs[0]),
-                    ),
-                    WriteRef => self.write_ref(
-                        ctx,
-                        target.get_local_type(srcs[1]),
-                        local(&srcs[0]),
-                        local(&srcs[1]),
-                    ),
+                    ReadRef => {
+                        print_loc();
+                        self.read_ref(
+                            ctx,
+                            &target.get_local_type(dest[0]).instantiate(&self.type_inst),
+                            local(&dest[0]),
+                            local(&srcs[0]),
+                        )
+                    }
+                    WriteRef => {
+                        print_loc();
+                        self.write_ref(
+                            ctx,
+                            &target.get_local_type(srcs[1]).instantiate(&self.type_inst),
+                            local(&srcs[0]),
+                            local(&srcs[1]),
+                        )
+                    }
 
                     // Arithmetics
                     CastU8 => builtin(YulFunction::CastU8, dest, srcs),
@@ -692,7 +729,6 @@ impl Generator {
 
                     // Specification or other operations which can be ignored here
                     GetField(_, _, _, _)
-                    | Destroy
                     | FreezeRef
                     | GetGlobal(_, _, _)
                     | IsParent(_, _)
@@ -784,30 +820,28 @@ impl Generator {
                 {
                     // Multiple outputs, some of them evaded into memory. Need to introduce
                     // temporaries to store the result
-                    emitln!(ctx.writer, "{");
-                    ctx.writer.indent();
-                    let temp_names = (0..dest.len())
-                        .map(|i| {
+                    ctx.emit_block(|| {
+                        let temp_names = (0..dest.len())
+                            .map(|i| {
+                                if self.borrowed_locals.contains_key(&dest[i]) {
+                                    format!("$d{}", i)
+                                } else {
+                                    ctx.make_local_name(target, dest[i])
+                                }
+                            })
+                            .collect_vec();
+                        emitln!(
+                            ctx.writer,
+                            "let {} := {}",
+                            temp_names.iter().join(", "),
+                            call_str
+                        );
+                        for (i, temp_name) in temp_names.into_iter().enumerate() {
                             if self.borrowed_locals.contains_key(&dest[i]) {
-                                format!("$d{}", i)
-                            } else {
-                                ctx.make_local_name(target, dest[i])
+                                self.assign(ctx, target, dest[i], temp_name)
                             }
-                        })
-                        .collect_vec();
-                    emitln!(
-                        ctx.writer,
-                        "let {} := {}",
-                        temp_names.iter().join(", "),
-                        call_str
-                    );
-                    for (i, temp_name) in temp_names.into_iter().enumerate() {
-                        if self.borrowed_locals.contains_key(&dest[i]) {
-                            self.assign(ctx, target, dest[i], temp_name)
                         }
-                    }
-                    ctx.writer.unindent();
-                    emitln!(ctx.writer, "}");
+                    })
                 } else {
                     let dest_str = dest
                         .iter()
@@ -951,42 +985,39 @@ impl Generator {
         // However, it should not be too large.
         let layout = self.get_or_compute_struct_layout(ctx, &struct_id).clone();
 
-        emitln!(ctx.writer, "{");
-        ctx.writer.indent();
-
-        // Allocate memory
-        let mem = "$mem".to_string();
-        self.call_builtin_with_result(
-            ctx,
-            "let ",
-            std::iter::once(mem.clone()),
-            YulFunction::Malloc,
-            std::iter::once(layout.size.to_string()),
-        );
-
-        // Initialize fields
-        let struct_env = &ctx.env.get_struct(struct_id.to_qualified_id());
-        for (logical_offs, field_exp) in srcs.enumerate() {
-            let yul_fun = match self.type_size(
+        ctx.emit_block(|| {
+            // Allocate memory
+            let mem = "$mem".to_string();
+            self.call_builtin_with_result(
                 ctx,
-                &struct_env
-                    .get_field_by_offset(logical_offs)
-                    .get_type()
-                    .instantiate(&struct_id.inst),
-            ) {
-                1 => YulFunction::MemoryStoreU8,
-                8 => YulFunction::MemoryStoreU64,
-                32 => YulFunction::MemoryStoreU256,
-                _ => panic!("unexpected field type"),
-            };
-            let (byte_offset, _) = *layout.offsets.get(&logical_offs).unwrap();
-            let field_ptr = format!("add({}, {})", mem, byte_offset);
-            self.call_builtin(ctx, yul_fun, vec![field_ptr, field_exp].into_iter());
-        }
-        // Store result
-        self.assign(ctx, target, dest, mem);
-        ctx.writer.unindent();
-        emitln!(ctx.writer, "}")
+                "let ",
+                std::iter::once(mem.clone()),
+                YulFunction::Malloc,
+                std::iter::once(layout.size.to_string()),
+            );
+
+            // Initialize fields
+            let struct_env = &ctx.env.get_struct(struct_id.to_qualified_id());
+            for (logical_offs, field_exp) in srcs.enumerate() {
+                let yul_fun = match self.type_size(
+                    ctx,
+                    &struct_env
+                        .get_field_by_offset(logical_offs)
+                        .get_type()
+                        .instantiate(&struct_id.inst),
+                ) {
+                    1 => YulFunction::MemoryStoreU8,
+                    8 => YulFunction::MemoryStoreU64,
+                    32 => YulFunction::MemoryStoreU256,
+                    _ => panic!("unexpected field type"),
+                };
+                let (byte_offset, _) = *layout.offsets.get(&logical_offs).unwrap();
+                let field_ptr = format!("add({}, {})", mem, byte_offset);
+                self.call_builtin(ctx, yul_fun, vec![field_ptr, field_exp].into_iter());
+            }
+            // Store result
+            self.assign(ctx, target, dest, mem);
+        })
     }
 
     fn unpack(
@@ -1028,6 +1059,47 @@ impl Generator {
             YulFunction::Free,
             vec![src, layout.size.to_string()].into_iter(),
         )
+    }
+
+    fn destroy(&mut self, ctx: &Context, ty: &Type, src: String) {
+        use Type::*;
+        match ty {
+            Struct(m, s, inst) => {
+                // Destroy all fields
+                let struct_id = m.qualified(*s).instantiate(inst.clone());
+                let layout = self.get_or_compute_struct_layout(ctx, &struct_id).clone();
+                let struct_env = &ctx.env.get_struct(struct_id.to_qualified_id());
+                for field in struct_env.get_fields() {
+                    let field_type = field.get_type().instantiate(&self.type_inst);
+                    if !self.type_allocates_memory(&field_type) {
+                        continue;
+                    }
+                    ctx.emit_block(|| {
+                        let (byte_offset, _) = layout.offsets.get(&field.get_offset()).unwrap();
+                        let field_ptr = self.call_builtin_str(
+                            ctx,
+                            YulFunction::LoadU256,
+                            std::iter::once(format!("add({}, {})", src, byte_offset)),
+                        );
+                        emitln!(ctx.writer, "let $field_ptr := {}", field_ptr);
+                        self.destroy(ctx, &field_type, "$field_ptr".to_string());
+                    })
+                }
+
+                // Free the memory allocated by this struct.
+                self.call_builtin(
+                    ctx,
+                    YulFunction::Free,
+                    vec![src, layout.size.to_string()].into_iter(),
+                )
+            }
+            Vector(ty) => {
+                if self.type_allocates_memory(ty.as_ref()) {
+                    // TODO: implement vectors
+                }
+            }
+            _ => {}
+        }
     }
 
     fn borrow_field(
@@ -1086,8 +1158,7 @@ impl Generator {
                 Bool | U8 => 1,
                 U64 => 8,
                 U128 => 16,
-                Address => 16,
-                Signer => 16,
+                Address | Signer => 20,
                 Num | Range | EventStore => {
                     panic!("unexpected field type")
                 }
@@ -1104,6 +1175,10 @@ impl Generator {
                 panic!("unexpected field type")
             }
         }
+    }
+
+    fn type_allocates_memory(&self, ty: &Type) -> bool {
+        matches!(ty, Type::Vector(..) | Type::Struct(..))
     }
 }
 
@@ -1202,6 +1277,15 @@ impl<'a> Context<'a> {
         } else {
             format!("$result{}", idx)
         }
+    }
+
+    /// Emits a Yul block.
+    fn emit_block(&self, blk: impl FnOnce()) {
+        emitln!(self.writer, "{");
+        self.writer.indent();
+        blk();
+        self.writer.unindent();
+        emitln!(self.writer, "}");
     }
 }
 

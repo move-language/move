@@ -61,7 +61,6 @@ fn compile_check(options: &Options, source: &str) -> String {
             } else {
                 yul.as_str()
             };
-
             format!("!! Optimized Yul\n\n{}", yul_slice)
         } else {
             format!(

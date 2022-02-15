@@ -73,6 +73,7 @@ object "A2_M" {
                 /// @src 2:309:310
                 $t4 := $AddU64(x, y)
                 // $t5 := 3
+                /// @src 2:329:330
                 $t5 := 3
                 // return ($t5, $t4)
                 /// @src 2:334:342
@@ -88,8 +89,10 @@ object "A2_M" {
                     case 2 {
                         // label L0
                         // $t5 := 42
+                        /// @src 2:1350:1352
                         $t5 := 42
                         // abort($t5)
+                        /// @src 2:1344:1352
                         $Abort($t5)
                     }
                     case 3 {
@@ -102,8 +105,10 @@ object "A2_M" {
                     }
                     case 4 {
                         // $t2 := 2
+                        /// @src 2:1299:1322
                         $t2 := 2
                         // $t3 := 2
+                        /// @src 2:1341:1342
                         $t3 := 2
                         // $t4 := !=($t2, $t3)
                         /// @src 2:1338:1340
@@ -134,6 +139,7 @@ object "A2_M" {
                     case 3 {
                         // label L2
                         // $t7 := false
+                        /// @src 2:967:982
                         $t7 := false
                         // $t2 := $t7
                         /// @src 2:967:982
@@ -166,6 +172,7 @@ object "A2_M" {
                     case 6 {
                         // label L4
                         // $t9 := true
+                        /// @src 2:996:1011
                         $t9 := true
                         // $t3 := $t9
                         /// @src 2:996:1011
@@ -200,8 +207,10 @@ object "A2_M" {
                     case 9 {
                         // label L8
                         // $t12 := 42
+                        /// @src 2:1042:1044
                         $t12 := 42
                         // abort($t12)
+                        /// @src 2:1036:1044
                         $Abort($t12)
                     }
                     case 10 {
@@ -232,8 +241,10 @@ object "A2_M" {
             function A2_M_div_by_zero() -> $result {
                 let x, $t1, $t2, $t3
                 // $t1 := 1
+                /// @src 2:2393:2394
                 $t1 := 1
                 // $t2 := 0
+                /// @src 2:2382:2383
                 $t2 := 0
                 // $t3 := /($t1, $t2)
                 /// @src 2:2395:2396
@@ -266,6 +277,7 @@ object "A2_M" {
             function A2_M_f(x) -> $result {
                 let $t1, $t2
                 // $t1 := 1
+                /// @src 2:1544:1545
                 $t1 := 1
                 // $t2 := +($t0, $t1)
                 /// @src 2:1543:1544
@@ -278,6 +290,7 @@ object "A2_M" {
             function A2_M_g(x) -> $result {
                 let $t1, $t2
                 // $t1 := 2
+                /// @src 2:1690:1691
                 $t1 := 2
                 // $t2 := +($t0, $t1)
                 /// @src 2:1689:1690
@@ -295,6 +308,7 @@ object "A2_M" {
                     case 2 {
                         // label L0
                         // $t4 := M::f($t5)
+                        /// @src 2:1887:1891
                         y := A2_M_f($t5)
                         // goto L3
                         /// @src 2:1885:1891
@@ -303,6 +317,7 @@ object "A2_M" {
                     case 3 {
                         // label L2
                         // $t4 := M::g($t5)
+                        /// @src 2:1899:1903
                         y := A2_M_g($t5)
                         // goto L3
                         /// @src 2:1917:1918
@@ -310,6 +325,7 @@ object "A2_M" {
                     }
                     case 4 {
                         // $t5 := 3
+                        /// @src 2:1847:1848
                         $t5 := 3
                         // if ($t0) goto L0 else goto L2
                         /// @src 2:1878:1903
@@ -328,6 +344,7 @@ object "A2_M" {
                     case 6 {
                         // label L4
                         // $t6 := 4
+                        /// @src 2:1927:1928
                         $t6 := 4
                         // $t1 := !=($t4, $t6)
                         /// @src 2:1924:1926
@@ -339,6 +356,7 @@ object "A2_M" {
                     case 7 {
                         // label L6
                         // $t7 := false
+                        /// @src 2:1917:1928
                         $t7 := false
                         // $t1 := $t7
                         /// @src 2:1917:1928
@@ -358,8 +376,10 @@ object "A2_M" {
                     case 9 {
                         // label L8
                         // $t8 := 4
+                        /// @src 2:1936:1937
                         $t8 := 4
                         // abort($t8)
+                        /// @src 2:1930:1937
                         $Abort($t8)
                     }
                     case 10 {
@@ -376,6 +396,7 @@ object "A2_M" {
                     case 11 {
                         // label L11
                         // $t10 := 5
+                        /// @src 2:1962:1963
                         $t10 := 5
                         // $t2 := !=($t4, $t10)
                         /// @src 2:1959:1961
@@ -387,6 +408,7 @@ object "A2_M" {
                     case 12 {
                         // label L13
                         // $t11 := false
+                        /// @src 2:1951:1963
                         $t11 := false
                         // $t2 := $t11
                         /// @src 2:1951:1963
@@ -406,8 +428,10 @@ object "A2_M" {
                     case 14 {
                         // label L15
                         // $t12 := 5
+                        /// @src 2:1971:1972
                         $t12 := 5
                         // abort($t12)
+                        /// @src 2:1965:1972
                         $Abort($t12)
                     }
                     case 15 {
@@ -556,8 +580,10 @@ object "A2_M" {
             function A2_M_underflow() -> $result {
                 let x, $t1, $t2, $t3
                 // $t1 := 0
+                /// @src 2:2164:2165
                 $t1 := 0
                 // $t2 := 1
+                /// @src 2:2179:2180
                 $t2 := 1
                 // $t3 := -($t1, $t2)
                 /// @src 2:2177:2178

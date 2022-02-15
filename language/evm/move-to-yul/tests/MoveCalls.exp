@@ -20,14 +20,18 @@ object "A2_M" {
             function A2_M_f(x) -> $result {
                 let y, $t2, $t3, $t4, $t5, $t6
                 // ($t2, $t3) := M::g($t0)
+                /// @src 2:187:191
                 $t2, $t3 := A2_M_g(x)
                 // destroy($t2)
+                /// @src 2:179:180
                 // $t4 := 1
+                /// @src 2:203:204
                 $t4 := 1
                 // $t5 := -($t3, $t4)
                 /// @src 2:201:202
                 $t5 := $Sub($t3, $t4)
                 // $t6 := M::h($t5)
+                /// @src 2:197:205
                 $t6 := A2_M_h($t5)
                 // return $t6
                 /// @src 2:197:205
@@ -37,8 +41,10 @@ object "A2_M" {
             function A2_M_h(x) -> $result {
                 let $t1, $t2, $t3
                 // $t1 := M::k<u64>($t0)
+                /// @src 2:238:242
                 $t1 := A2_M_k$u64$(x)
                 // $t2 := 1
+                /// @src 2:245:246
                 $t2 := 1
                 // $t3 := +($t1, $t2)
                 /// @src 2:243:244

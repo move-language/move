@@ -14,6 +14,7 @@ object "A2_M" {
             mstore(0, memoryguard(96))
 
             // Dummy calls to reference callables for Yul optimizer
+            A2_M_destroy()
             let $dummy0 := A2_M_pack_S(sload(100), sload(101))
             sstore(200, $dummy0)
             let $dummy1 := A2_M_pack_S2(sload(101))
@@ -26,11 +27,35 @@ object "A2_M" {
             sstore(204, $dummy4)
             A2_M_write_S(sload(105), sload(106))
 
+            function A2_M_destroy() {
+                let _s, $t1, $t2, $t3
+                // $t1 := 1
+                /// @src 2:777:778
+                $t1 := 1
+                // $t2 := false
+                /// @src 2:780:785
+                $t2 := false
+                // $t3 := M::pack_S($t1, $t2)
+                /// @src 2:770:786
+                $t3 := A2_M_pack_S($t1, $t2)
+                // destroy($t3)
+                /// @src 2:765:767
+                {
+                    let $field_ptr := $LoadU256(add($t3, 9))
+                    $Free($field_ptr, 8)
+                }
+                $Free($t3, 41)
+                // return ()
+                /// @src 2:786:787
+            }
+
             function A2_M_pack_S(a, b) -> $result {
                 let $t2, $t3
                 // $t2 := M::pack_S2($t0)
+                /// @src 2:277:287
                 $t2 := A2_M_pack_S2(a)
                 // $t3 := pack M::S($t0, $t1, $t2)
+                /// @src 2:266:288
                 {
                     let $mem := $Malloc(41)
                     $MemoryStoreU64(add($mem, 0), a)
@@ -39,40 +64,46 @@ object "A2_M" {
                     $t3 := $mem
                 }
                 // return $t3
-                /// @src 2:248:270
+                /// @src 2:266:288
                 $result := $t3
             }
 
             function A2_M_pack_S2(x) -> $result {
                 let $t1
                 // $t1 := pack M::S2($t0)
+                /// @src 2:195:200
                 {
                     let $mem := $Malloc(8)
                     $MemoryStoreU64(add($mem, 0), x)
                     $t1 := $mem
                 }
                 // return $t1
-                /// @src 2:177:182
+                /// @src 2:195:200
                 $result := $t1
             }
 
             function A2_M_read_S(s) -> $result {
                 let $t1, $t2, $t3, $t4, $t5, $t6
                 // $t1 := borrow_field<M::S>.a($t0)
+                /// @src 2:349:352
                 $t1 := add($LoadU256(s), 0)
                 // $t2 := read_ref($t1)
+                /// @src 2:349:352
                 $t2 := $LoadU64($t1)
                 // $t3 := borrow_field<M::S>.c($t0)
+                /// @src 2:355:358
                 $t3 := add($LoadU256(s), 9)
                 // $t4 := borrow_field<M::S2>.x($t3)
+                /// @src 2:355:360
                 $t4 := add($LoadU256($t3), 0)
                 // $t5 := read_ref($t4)
+                /// @src 2:355:360
                 $t5 := $LoadU64($t4)
                 // $t6 := +($t2, $t5)
-                /// @src 2:335:336
+                /// @src 2:353:354
                 $t6 := $AddU64($t2, $t5)
                 // return $t6
-                /// @src 2:331:342
+                /// @src 2:349:360
                 $result := $t6
             }
 
@@ -80,24 +111,31 @@ object "A2_M" {
                 let x, $t2, $t3, $t4, $t5, $t6, $t7
                 let $locals := $Malloc(32)
                 // $t2 := 1
+                /// @src 2:537:538
                 $t2 := 1
                 // $t3 := false
+                /// @src 2:540:545
                 $t3 := false
                 // $t0 := M::pack_S($t2, $t3)
+                /// @src 2:530:546
                 mstore(add($locals, 32), A2_M_pack_S($t2, $t3))
                 // $t4 := borrow_local($t0)
+                /// @src 2:571:573
                 $t4 := add($locals, 32)
                 // $t5 := M::read_S($t4)
+                /// @src 2:564:574
                 $t5 := A2_M_read_S($t4)
                 // $t6 := borrow_local($t0)
+                /// @src 2:592:598
                 $t6 := add($locals, 32)
                 // M::write_S($t6, $t5)
+                /// @src 2:584:602
                 A2_M_write_S($t6, $t5)
                 // $t7 := move($t0)
-                /// @src 2:594:595
+                /// @src 2:612:613
                 $t7 := mload(add($locals, 32))
                 // return $t7
-                /// @src 2:594:595
+                /// @src 2:612:613
                 $result := $t7
                 $Free($locals, 32)
             }
@@ -105,35 +143,45 @@ object "A2_M" {
             function A2_M_unpack(s) -> $result {
                 let _a, _b, c, $t4, $t5, $t6
                 // ($t4, $t5, $t6) := unpack M::S($t0)
+                /// @src 2:676:694
                 $t4 := $MemoryLoadU64(add(s, 0))
                 $t5 := $MemoryLoadU8(add(s, 8))
                 $t6 := $MemoryLoadU256(add(s, 9))
                 $Free(s, 41)
                 // destroy($t5)
+                /// @src 2:688:690
                 // destroy($t4)
+                /// @src 2:681:683
                 // return $t6
-                /// @src 2:690:691
+                /// @src 2:708:709
                 $result := $t6
             }
 
             function A2_M_write_S(s, v) {
                 let $t2, $t3, $t4, $t5, $t6
                 // $t2 := borrow_field<M::S>.a($t0)
+                /// @src 2:429:432
                 $t2 := add($LoadU256(s), 0)
                 // write_ref($t2, $t1)
+                /// @src 2:429:436
                 $StoreU64($t2, v)
                 // $t3 := borrow_field<M::S>.a($t0)
+                /// @src 2:454:457
                 $t3 := add($LoadU256(s), 0)
                 // $t4 := read_ref($t3)
+                /// @src 2:454:457
                 $t4 := $LoadU64($t3)
                 // $t5 := borrow_field<M::S>.c($t0)
+                /// @src 2:446:449
                 $t5 := add($LoadU256(s), 9)
                 // $t6 := borrow_field<M::S2>.x($t5)
+                /// @src 2:446:451
                 $t6 := add($LoadU256($t5), 0)
                 // write_ref($t6, $t4)
+                /// @src 2:446:457
                 $StoreU64($t6, $t4)
                 // return ()
-                /// @src 2:439:440
+                /// @src 2:457:458
             }
 
             function $Abort(code) {
@@ -274,6 +322,7 @@ object "A2_M" {
         code {
             {
                 mstore(0, memoryguard(0x60))
+                pop($LoadU256(add(A2_M_pack_S(), 9)))
                 let _1 := sload(101)
                 let _2 := sload(100)
                 let $t2 := A2_M_pack_S2(_2)
@@ -290,7 +339,7 @@ object "A2_M" {
                 mstore(_3, A2_M_pack_S())
                 A2_M_write_S(_3, A2_M_read_S(_3))
                 sstore(203, mload(_3))
-                sstore(204, mload(add(sload(104), 9)))
+                sstore(204, A2_M_unpack(sload(104)))
                 A2_M_write_S(sload(105), sload(106))
             }
             function A2_M_pack_S() -> $result
@@ -320,6 +369,8 @@ object "A2_M" {
                 if lt(sub(0xffffffffffffffff, $t2), _1) { revert(0, 0) }
                 $result := add($t2, _1)
             }
+            function A2_M_unpack(s) -> $result
+            { $result := mload(add(s, 9)) }
             function A2_M_write_S(s, v)
             {
                 $StoreU64($LoadU256(s), v)

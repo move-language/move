@@ -1,12 +1,12 @@
 #[contract]
 module 0x2::M {
-    struct S {
+    struct S has drop {
       a: u64,
       b: bool,
       c: S2
     }
 
-    struct S2 {
+    struct S2 has drop {
         x: u64
     }
 
@@ -44,4 +44,10 @@ module 0x2::M {
         let S{a: _a, b: _b, c} = s;
         c
     }
+
+    #[callable]
+    fun destroy() {
+        let _s = pack_S(1, false);
+    }
+
 }

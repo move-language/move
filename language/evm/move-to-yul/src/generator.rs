@@ -60,8 +60,6 @@ pub struct Generator {
     borrowed_locals: BTreeMap<TempIndex, usize>,
     /// Memory layout info.
     struct_layout: BTreeMap<QualifiedInstId<StructId>, StructLayout>,
-    /// Type instantiation of the currently compiled function.
-    type_inst: Vec<Type>,
 }
 
 /// Information about the layout of a struct in linear memory.
@@ -324,7 +322,6 @@ impl Generator {
     /// Generate Yul function for Move function.
     fn function(&mut self, ctx: &Context, fun_id: &QualifiedInstId<FunId>) {
         self.done_move_functions.insert(fun_id.clone());
-        self.type_inst = fun_id.inst.clone();
         let fun = &ctx.env.get_function(fun_id.to_qualified_id());
         let target = &ctx.targets.get_target(fun, &FunctionVariant::Baseline);
 
@@ -397,7 +394,7 @@ impl Generator {
                 // In this trivial case, we have only one block and can omit the state machine
                 if let BlockContent::Basic { lower, upper } = cfg.content(entry_bb) {
                     for offs in *lower..*upper + 1 {
-                        self.bytecode(ctx, target, &label_map, &code[offs as usize], false);
+                        self.bytecode(ctx, fun_id, target, &label_map, &code[offs as usize], false);
                     }
                 } else {
                     panic!("effective entry block is not basic")
@@ -415,6 +412,7 @@ impl Generator {
                                 for offs in *lower..*upper + 1 {
                                     self.bytecode(
                                         ctx,
+                                        fun_id,
                                         target,
                                         &label_map,
                                         &code[offs as usize],
@@ -473,6 +471,7 @@ impl Generator {
     fn bytecode(
         &mut self,
         ctx: &Context,
+        fun_id: &QualifiedInstId<FunId>,
         target: &FunctionTarget,
         label_map: &BTreeMap<Label, BlockId>,
         bc: &Bytecode,
@@ -606,7 +605,7 @@ impl Generator {
                             target,
                             dest,
                             m.qualified(*f)
-                                .instantiate(Type::instantiate_slice(inst, &self.type_inst)),
+                                .instantiate(Type::instantiate_slice(inst, &fun_id.inst)),
                             srcs.iter().map(local),
                         )
                     }
@@ -618,7 +617,7 @@ impl Generator {
                             ctx,
                             target,
                             m.qualified(*s)
-                                .instantiate(Type::instantiate_slice(inst, &self.type_inst)),
+                                .instantiate(Type::instantiate_slice(inst, &fun_id.inst)),
                             dest[0],
                             srcs.iter().map(local),
                         )
@@ -629,7 +628,7 @@ impl Generator {
                             ctx,
                             target,
                             m.qualified(*s)
-                                .instantiate(Type::instantiate_slice(inst, &self.type_inst)),
+                                .instantiate(Type::instantiate_slice(inst, &fun_id.inst)),
                             dest,
                             local(&srcs[0]),
                         )
@@ -638,7 +637,8 @@ impl Generator {
                         print_loc();
                         self.destroy(
                             ctx,
-                            &target.get_local_type(srcs[0]).instantiate(&self.type_inst),
+                            fun_id,
+                            &target.get_local_type(srcs[0]).instantiate(&fun_id.inst),
                             local(&srcs[0]),
                         )
                     }
@@ -659,7 +659,7 @@ impl Generator {
                             ctx,
                             target.get_local_type(dest[0]).skip_reference(),
                             m.qualified(*s)
-                                .instantiate(Type::instantiate_slice(inst, &self.type_inst)),
+                                .instantiate(Type::instantiate_slice(inst, &fun_id.inst)),
                             *f,
                             local(&dest[0]),
                             local(&srcs[0]),
@@ -670,7 +670,7 @@ impl Generator {
                         print_loc();
                         self.read_ref(
                             ctx,
-                            &target.get_local_type(dest[0]).instantiate(&self.type_inst),
+                            &target.get_local_type(dest[0]).instantiate(&fun_id.inst),
                             local(&dest[0]),
                             local(&srcs[0]),
                         )
@@ -679,7 +679,7 @@ impl Generator {
                         print_loc();
                         self.write_ref(
                             ctx,
-                            &target.get_local_type(srcs[1]).instantiate(&self.type_inst),
+                            &target.get_local_type(srcs[1]).instantiate(&fun_id.inst),
                             local(&srcs[0]),
                             local(&srcs[1]),
                         )
@@ -938,16 +938,7 @@ impl Generator {
 
     /// Read the value of reference.
     fn read_ref(&mut self, ctx: &Context, ty: &Type, dest: String, src: String) {
-        let yul_fun = match self.type_size(ctx, ty.skip_reference()) {
-            1 => YulFunction::LoadU8,
-            8 => YulFunction::LoadU64,
-            32 => YulFunction::LoadU256,
-            _ => {
-                ctx.env
-                    .error(&ctx.env.unknown_loc(), "NYI: types of 16 bytes size");
-                YulFunction::LoadU256
-            }
-        };
+        let yul_fun = self.load_builtin_fun(ctx, ty.skip_reference());
         self.call_builtin_with_result(
             ctx,
             "",
@@ -959,16 +950,7 @@ impl Generator {
 
     /// Write the value of reference.
     fn write_ref(&mut self, ctx: &Context, ty: &Type, dest: String, src: String) {
-        let yul_fun = match self.type_size(ctx, ty.skip_reference()) {
-            1 => YulFunction::StoreU8,
-            8 => YulFunction::StoreU64,
-            32 => YulFunction::StoreU256,
-            _ => {
-                ctx.env
-                    .error(&ctx.env.unknown_loc(), "NYI: types of 16 bytes size");
-                YulFunction::StoreU256
-            }
-        };
+        let yul_fun = self.store_builtin_fun(ctx, ty.skip_reference());
         self.call_builtin(ctx, yul_fun, vec![dest, src].into_iter())
     }
 
@@ -999,18 +981,13 @@ impl Generator {
             // Initialize fields
             let struct_env = &ctx.env.get_struct(struct_id.to_qualified_id());
             for (logical_offs, field_exp) in srcs.enumerate() {
-                let yul_fun = match self.type_size(
+                let yul_fun = self.memory_store_builtin_fun(
                     ctx,
                     &struct_env
                         .get_field_by_offset(logical_offs)
                         .get_type()
                         .instantiate(&struct_id.inst),
-                ) {
-                    1 => YulFunction::MemoryStoreU8,
-                    8 => YulFunction::MemoryStoreU64,
-                    32 => YulFunction::MemoryStoreU256,
-                    _ => panic!("unexpected field type"),
-                };
+                );
                 let (byte_offset, _) = *layout.offsets.get(&logical_offs).unwrap();
                 let field_ptr = format!("add({}, {})", mem, byte_offset);
                 self.call_builtin(ctx, yul_fun, vec![field_ptr, field_exp].into_iter());
@@ -1020,6 +997,7 @@ impl Generator {
         })
     }
 
+    /// Unpack a structure.
     fn unpack(
         &mut self,
         ctx: &Context,
@@ -1035,18 +1013,13 @@ impl Generator {
         // Copy fields
         let struct_env = &ctx.env.get_struct(struct_id.to_qualified_id());
         for (logical_offs, dest_idx) in dest.iter().enumerate() {
-            let yul_fun = match self.type_size(
+            let yul_fun = self.memory_load_builtin_fun(
                 ctx,
                 &struct_env
                     .get_field_by_offset(logical_offs)
                     .get_type()
                     .instantiate(&struct_id.inst),
-            ) {
-                1 => YulFunction::MemoryLoadU8,
-                8 => YulFunction::MemoryLoadU64,
-                32 => YulFunction::MemoryLoadU256,
-                _ => panic!("unexpected field type"),
-            };
+            );
             let (byte_offset, _) = *layout.offsets.get(&logical_offs).unwrap();
             let field_ptr = format!("add({}, {})", src, byte_offset);
             let call_str = self.call_builtin_str(ctx, yul_fun, std::iter::once(field_ptr));
@@ -1061,16 +1034,22 @@ impl Generator {
         )
     }
 
-    fn destroy(&mut self, ctx: &Context, ty: &Type, src: String) {
+    /// Destroy (free) a value of type.
+    /// TODO: the Destroy instruction is currently not reflecting lifetime of values correctly,
+    ///   but is only inserted for the original pop bytecode. We should run lifetime analysis
+    ///   and insert Destroy where needed. However, this does not matter much yet, as
+    ///   YulFunction::Free is a nop in the current runtime which uses arena style allocation.
+    fn destroy(&mut self, ctx: &Context, fun_id: &QualifiedInstId<FunId>, ty: &Type, src: String) {
         use Type::*;
         match ty {
             Struct(m, s, inst) => {
                 // Destroy all fields
-                let struct_id = m.qualified(*s).instantiate(inst.clone());
+                let struct_inst = Type::instantiate_slice(inst, &fun_id.inst);
+                let struct_id = m.qualified(*s).instantiate(struct_inst.clone());
                 let layout = self.get_or_compute_struct_layout(ctx, &struct_id).clone();
                 let struct_env = &ctx.env.get_struct(struct_id.to_qualified_id());
                 for field in struct_env.get_fields() {
-                    let field_type = field.get_type().instantiate(&self.type_inst);
+                    let field_type = field.get_type().instantiate(&struct_inst);
                     if !self.type_allocates_memory(&field_type) {
                         continue;
                     }
@@ -1082,7 +1061,7 @@ impl Generator {
                             std::iter::once(format!("add({}, {})", src, byte_offset)),
                         );
                         emitln!(ctx.writer, "let $field_ptr := {}", field_ptr);
-                        self.destroy(ctx, &field_type, "$field_ptr".to_string());
+                        self.destroy(ctx, fun_id, &field_type, "$field_ptr".to_string());
                     })
                 }
 
@@ -1102,6 +1081,7 @@ impl Generator {
         }
     }
 
+    /// Borrow a field, creating a reference to it.
     fn borrow_field(
         &mut self,
         ctx: &Context,
@@ -1174,6 +1154,46 @@ impl Generator {
             | Var(_) => {
                 panic!("unexpected field type")
             }
+        }
+    }
+
+    fn load_builtin_fun(&mut self, ctx: &Context, ty: &Type) -> YulFunction {
+        match self.type_size(ctx, ty.skip_reference()) {
+            1 => YulFunction::LoadU8,
+            8 => YulFunction::LoadU64,
+            16 => YulFunction::LoadU128,
+            32 => YulFunction::LoadU256,
+            _ => panic!("unexpected type size"),
+        }
+    }
+
+    fn store_builtin_fun(&mut self, ctx: &Context, ty: &Type) -> YulFunction {
+        match self.type_size(ctx, ty.skip_reference()) {
+            1 => YulFunction::StoreU8,
+            8 => YulFunction::StoreU64,
+            16 => YulFunction::StoreU128,
+            32 => YulFunction::StoreU256,
+            _ => panic!("unexpected type size"),
+        }
+    }
+
+    fn memory_load_builtin_fun(&mut self, ctx: &Context, ty: &Type) -> YulFunction {
+        match self.type_size(ctx, ty.skip_reference()) {
+            1 => YulFunction::MemoryLoadU8,
+            8 => YulFunction::MemoryLoadU64,
+            16 => YulFunction::MemoryLoadU128,
+            32 => YulFunction::MemoryLoadU256,
+            _ => panic!("unexpected type size"),
+        }
+    }
+
+    fn memory_store_builtin_fun(&mut self, ctx: &Context, ty: &Type) -> YulFunction {
+        match self.type_size(ctx, ty.skip_reference()) {
+            1 => YulFunction::MemoryStoreU8,
+            8 => YulFunction::MemoryStoreU64,
+            16 => YulFunction::MemoryStoreU128,
+            32 => YulFunction::MemoryStoreU256,
+            _ => panic!("unexpected type size"),
         }
     }
 

@@ -294,6 +294,70 @@ StorageStoreU64: "(offs, val) {
 }" dep ToWordOffs dep StorageKey,
 
 // Loads u64 from pointer.
+LoadU128: "(ptr) -> val {
+  let offs := $OffsetPtr(ptr)
+  switch $IsStoragePtr(ptr)
+  case 0 {
+    val := $MemoryLoadU128(offs)
+  }
+  default {
+    val := $StorageLoadU128(offs)
+  }
+}" dep OffsetPtr dep IsStoragePtr dep MemoryLoadU128 dep StorageLoadU128,
+
+// Loads u128 from memory offset.
+MemoryLoadU128: "(offs) -> val {
+  val := and(mload(offs), ${MAX_U128})
+}",
+
+// Loads u128 from storage offset.
+StorageLoadU128: "(offs) -> val {
+  let word_offs, bit_offs := $ToWordOffs(offs)
+  let key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, word_offs)
+  val := and(shr(sload(key), bit_offs), ${MAX_U128})
+  let used_bits := sub(256, bit_offs)
+  if lt(used_bits, 128) {
+    let overflow_bits := sub(128, used_bits)
+    let mask := sub(shl(1, overflow_bits), 1)
+    key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, add(word_offs, 1))
+    val := or(val, shl(and(sload(key), mask), used_bits))
+  }
+}" dep ToWordOffs dep StorageKey,
+
+// Stores u128 to pointer.
+StoreU128: "(ptr, val) {
+  let offs := $OffsetPtr(ptr)
+  switch $IsStoragePtr(ptr)
+  case 0 {
+    $MemoryStoreU128(offs, val)
+  }
+  default {
+    $StorageStoreU128(offs, val)
+  }
+}" dep OffsetPtr dep IsStoragePtr dep MemoryStoreU128 dep StorageStoreU128,
+
+// Stores u128 to memory offset.
+MemoryStoreU128: "(offs, val) {
+  mstore(offs, or(and(mload(offs), not(${MAX_U128})), val))
+}",
+
+// Stores u128 to storage offset.
+StorageStoreU128: "(offs, val) {
+  let word_offs, bit_offs := $ToWordOffs(offs)
+  let key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, word_offs)
+  let word := sload(key)
+  word := or(and(word, not(shl(${MAX_U128}, bit_offs))), shl(val, bit_offs))
+  mstore(key, word)
+  let used_bits := sub(256, bit_offs)
+  if lt(used_bits, 128) {
+    let overflow_bits := sub(128, used_bits)
+    let mask := sub(shl(1, overflow_bits), 1)
+    key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, add(word_offs, 1))
+    sstore(key, or(and(sload(key), not(mask)), shr(val, used_bits)))
+  }
+}" dep ToWordOffs dep StorageKey,
+
+// Loads u256 from pointer.
 LoadU256: "(ptr) -> val {
   let offs := $OffsetPtr(ptr)
   switch $IsStoragePtr(ptr)
@@ -305,12 +369,12 @@ LoadU256: "(ptr) -> val {
   }
 }" dep OffsetPtr dep IsStoragePtr dep MemoryLoadU256 dep StorageLoadU256,
 
-// Loads u64 from memory offset.
+// Loads u256 from memory offset.
 MemoryLoadU256: "(offs) -> val {
   val := mload(offs)
 }",
 
-// Loads u64 from storage offset.
+// Loads u256 from storage offset.
 StorageLoadU256: "(offs) -> val {
   let word_offs, bit_offs := $ToWordOffs(offs)
   let key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, word_offs)
@@ -324,7 +388,7 @@ StorageLoadU256: "(offs) -> val {
   }
 }" dep ToWordOffs dep StorageKey,
 
-// Stores u64 to pointer.
+// Stores u256 to pointer.
 StoreU256: "(ptr, val) {
   let offs := $OffsetPtr(ptr)
   switch $IsStoragePtr(ptr)
@@ -336,12 +400,12 @@ StoreU256: "(ptr, val) {
   }
 }" dep OffsetPtr dep IsStoragePtr dep MemoryStoreU256 dep StorageStoreU256,
 
-// Stores u64 to memory offset.
+// Stores u256 to memory offset.
 MemoryStoreU256: "(offs, val) {
   mstore(offs, val)
 }",
 
-// Stores u64 to storage offset.
+// Stores u256 to storage offset.
 StorageStoreU256: "(offs, val) {
   let word_offs, bit_offs := $ToWordOffs(offs)
   let key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, word_offs)
@@ -358,16 +422,16 @@ StorageStoreU256: "(offs, val) {
 }" dep ToWordOffs dep StorageKey,
 
 // Copies size bytes from memory to memory.
-CopyMemory: "(src, dest, size) {
+CopyMemory: "(src, dst, size) {
   let i := 0
   for { } and(lt(i, length), gt(i, 31)) { i := add(i, 32) } {
     mstore(add(dst, i), mload(add(src, i)))
   }
   if lt(i, length) {
     let mask := sub(shl(1, shl(i, 3)), 1)
-    let dest_word := and(mload(add(dst, i)), not(mask))
+    let dst_word := and(mload(add(dst, i)), not(mask))
     let src_word := and(mload(add(src, i)), mask)
-    mstore(add(dst, i), or(dest_word, src_word))
+    mstore(add(dst, i), or(dst_word, src_word))
   }
 }",
 

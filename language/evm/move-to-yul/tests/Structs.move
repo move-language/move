@@ -7,28 +7,28 @@ module 0x2::M {
     }
 
     struct S2 has drop {
-        x: u64
+        x: u128
     }
 
     #[callable]
-	fun pack_S2(x: u64): S2 {
+	fun pack_S2(x: u128): S2 {
 	    S2{x}
 	}
 
     #[callable]
     fun pack_S(a: u64, b: bool): S {
-        S{a, b, c: pack_S2(a)}
+        S{a, b, c: pack_S2((a as u128))}
     }
 
     #[callable]
     fun read_S(s: &S): u64 {
-        s.a + s.c.x
+        s.a + (s.c.x as u64)
     }
 
     #[callable]
     fun write_S(s: &mut S, v: u64) {
         s.a = v;
-        s.c.x = s.a;
+        s.c.x = (s.a as u128);
     }
 
     #[callable]

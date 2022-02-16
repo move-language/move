@@ -2,64 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use evm::{
-    backend::{Apply, ApplyBackend, MemoryBackend, MemoryVicinity},
+    backend::{ApplyBackend, MemoryBackend, MemoryVicinity},
     executor::stack::{MemoryStackState, StackExecutor, StackSubstateMetadata},
-    Config, ExitReason,
+    Config, CreateScheme, ExitReason,
 };
-use primitive_types::{H160, H256, U256};
+use primitive_types::{H160, U256};
 use sha3::{Digest, Keccak256};
 use std::collections::BTreeMap;
 
 /// Stateful EVM executor backed by an in-memory storage.
 pub struct Executor<'v> {
     storage_backend: MemoryBackend<'v>,
-}
-
-fn map_apply<F, T, U>(apply: Apply<T>, mut f: F) -> Apply<U>
-where
-    F: FnMut(T) -> U,
-{
-    match apply {
-        Apply::Modify {
-            address,
-            basic,
-            code,
-            storage,
-            reset_storage,
-        } => Apply::Modify {
-            address,
-            basic,
-            code,
-            storage: f(storage),
-            reset_storage,
-        },
-        Apply::Delete { address } => Apply::Delete { address },
-    }
-}
-
-// Try to find the address at which the contract has been deployed to.
-//
-// TODO: right now this feels more like a hack.
-// We should study it more and determine if it's acceptable and see if we need to use CREATE2 instead.
-fn find_contract_address<'a, I, T>(caller_address: H160, applies: I) -> H160
-where
-    I: IntoIterator<Item = &'a Apply<T>>,
-    T: 'a,
-{
-    for apply in applies {
-        if let Apply::Modify {
-            address,
-            code: Some(_),
-            ..
-        } = apply
-        {
-            if *address != caller_address {
-                return *address;
-            }
-        }
-    }
-
-    panic!("failed to find contract address -- something is wrong")
 }
 
 /// Return the 4-byte method selector derived from the signature, which is encoded as a string (e.g. `"foo(uint256,uint256)"`).
@@ -93,37 +46,33 @@ impl<'v> Executor<'v> {
         caller_address: H160,
         contract_code: Vec<u8>,
     ) -> Result<H160, ExitReason> {
+        // TODO: due to some lifetime issues, the following code is duplicated a few times.
+        // Figure out how we can reuse this code.
         let config = Config::london();
         let metadata = StackSubstateMetadata::new(u64::MAX, &config);
         let state = MemoryStackState::new(metadata, &self.storage_backend);
         let mut exec = StackExecutor::new_with_precompiles(state, &config, &());
 
+        let contract_address = exec.create_address(CreateScheme::Legacy {
+            caller: caller_address,
+        });
+
         let exit_reason =
             exec.transact_create(caller_address, 0.into(), contract_code, u64::MAX, vec![]);
-        let state = exec.into_state();
 
+        let state = exec.into_state();
         let (changes, logs) = state.deconstruct();
+        self.storage_backend.apply(changes, logs, false);
 
         match &exit_reason {
-            ExitReason::Succeed(_) => {
-                let changes: Vec<Apply<Vec<(H256, H256)>>> = changes
-                    .into_iter()
-                    .map(|app| map_apply(app, |entries| entries.into_iter().collect()))
-                    .collect();
-
-                let contract_addr = find_contract_address(caller_address, &changes);
-
-                self.storage_backend.apply(changes, logs, false);
-                Ok(contract_addr)
-            }
-            _ => {
-                self.storage_backend.apply(changes, logs, false);
-                Err(exit_reason)
-            }
+            ExitReason::Succeed(_) => Ok(contract_address),
+            _ => Err(exit_reason),
         }
     }
 
     /// Call a contract method with the given signature.
+    /// The signature is represented by a string consisting of the name of the method and
+    /// a list of parameter types (e.g. `foo(uint256,uint256)`).
     pub fn call_function(
         &mut self,
         caller_address: H160,
@@ -140,18 +89,19 @@ impl<'v> Executor<'v> {
         data.extend(derive_method_selector(method_sig));
         data.extend(method_args);
 
-        exec.transact_call(
+        let (exit_reason, buffer) = exec.transact_call(
             caller_address,
             contract_address,
             U256::zero(),
             data,
             u64::MAX,
             vec![],
-        )
-    }
+        );
 
-    // TODO: implement this.
-    // pub fn run_custom_code(&mut self, _code: Vec<u8>, _data: Vec<u8>) {
-    //     unimplemented!()
-    // }
+        let state = exec.into_state();
+        let (changes, logs) = state.deconstruct();
+        self.storage_backend.apply(changes, logs, false);
+
+        (exit_reason, buffer)
+    }
 }

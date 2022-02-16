@@ -81,7 +81,7 @@ fn test_a_plus_b() -> Result<()> {
         .create_contract(H160::zero(), contract_code)
         .expect("failed to create contract");
 
-    let mut args = vec![0u8; 64];
+    let mut args = [0u8; 64];
     args[0] = 1;
     args[32] = 2;
 
@@ -96,6 +96,37 @@ fn test_a_plus_b() -> Result<()> {
     assert!(buffer.len() >= 32);
     let mut expected = [0u8; 32];
     expected[0] = 0x3;
+    assert_eq!(&buffer[..32], &expected);
+
+    Ok(())
+}
+
+#[test]
+fn test_stateful() -> Result<()> {
+    let (_contract_name, contract_code) = solc([contract_path("stateful.sol")])?
+        .into_iter()
+        .next()
+        .unwrap();
+
+    let vicinity = test_vincinity();
+    let mut exec = Executor::new(&vicinity);
+
+    let contract_address = exec
+        .create_contract(H160::zero(), contract_code)
+        .expect("failed to create contract");
+
+    for _ in 0..7 {
+        let (exit_reason, _buffer) =
+            exec.call_function(H160::zero(), contract_address, "inc()", &[]);
+        assert!(matches!(exit_reason, ExitReason::Succeed(_)));
+    }
+
+    let (exit_reason, buffer) = exec.call_function(H160::zero(), contract_address, "get()", &[]);
+    assert!(matches!(exit_reason, ExitReason::Succeed(_)));
+
+    assert!(buffer.len() >= 32);
+    let mut expected = [0u8; 32];
+    expected[31] = 0x7;
     assert_eq!(&buffer[..32], &expected);
 
     Ok(())

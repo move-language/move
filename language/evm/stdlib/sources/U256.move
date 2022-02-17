@@ -1,7 +1,7 @@
 #[evm_arith]
 module 0x1::U256 {
     native struct U256 has copy, drop, store;
-    native public fun u256_from_words(lo: u128, hi: u128): U256;
+    native public fun u256_from_words(hi: u128, lo: u128): U256;
     native public fun add(x: U256, y: U256): U256;
     native public fun sub(x: U256, y: U256): U256;
     native public fun mul(x: U256, y: U256): U256;

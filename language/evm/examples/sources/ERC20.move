@@ -1,5 +1,5 @@
 #[contract]
-/// Another implementation of ERC20 using Table.
+/// An implementation of the ERC-20 Token Standard.
 module Evm::ERC20_ALT {
     use Evm::Evm::{sender, self, sign, emit};
     use Evm::Table::{Self, Table};

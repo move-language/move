@@ -1,8 +1,12 @@
 #[contract]
-/// Another implementation of ERC20 using Table.
+/// An implementation of the ERC-1155 Multi Token Standard.
 module Evm::ERC1155 {
-    use Evm::Evm::{sender, self, sign, emit};
+    use Evm::Evm::{sender, self, sign, emit, isContract};
+    use Evm::IERC1155Receiver;
+    use Evm::IERC165;
+    use Evm::IERC1155;
     use Evm::Table::{Self, Table};
+    use Evm::Result;
     use Std::ASCII::{String};
     use Std::Errors;
     use Std::Vector;
@@ -111,7 +115,7 @@ module Evm::ERC1155 {
 
     #[callable]
     /// Transfers `_value` amount of an `_id` from the `_from` address to the `_to` address specified (with safety call).
-    public fun safeTransferFrom(from: address, to: address, id: u128, amount: u128, _data: vector<u8>) acquires State {
+    public fun safeTransferFrom(from: address, to: address, id: u128, amount: u128, data: vector<u8>) acquires State {
         assert!(from == sender() || isApprovalForAll(from, sender()), Errors::invalid_argument(0));
         let operator = sender();
         let s = borrow_global_mut<State>(self());
@@ -121,11 +125,12 @@ module Evm::ERC1155 {
         let mut_balance_to = mut_balanceOf(s, id, to);
         *mut_balance_to = *mut_balance_to + amount;
         emit(TransferSingle{operator, from, to, id, value: amount});
+        doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
     }
 
     #[callable]
     /// Transfers `_value` amount of an `_id` from the `_from` address to the `_to` address specified (with safety call).
-    public fun safeBatchTransferFrom(from: address, to: address, ids: vector<u128>, amounts: vector<u128>, _data: vector<u8>) acquires State {
+    public fun safeBatchTransferFrom(from: address, to: address, ids: vector<u128>, amounts: vector<u128>, data: vector<u8>) acquires State {
         assert!(from == sender() || isApprovalForAll(from, sender()), Errors::invalid_argument(0));
         assert!(Vector::length(&amounts) == Vector::length(&ids), Errors::invalid_argument(0));
         let len = Vector::length(&amounts);
@@ -147,7 +152,15 @@ module Evm::ERC1155 {
             i = i + 1;
         };
 
-        emit(TransferBatch{operator, from, to, ids, values: amounts});
+        emit(TransferBatch{operator, from, to, ids: copy ids, values: copy amounts});
+
+        doSafeBatchTransferAcceptanceCheck(operator, from, to, ids, amounts, data);
+    }
+
+    #[callable]
+    // Query if this contract implements a certain interface.
+    public fun supportsInterface(interfaceId: vector<u8>): bool {
+        copy interfaceId == IERC1155::interfaceId() || interfaceId == IERC165::interfaceId()
     }
 
     /// Helper function to return a mut ref to the operatorApproval
@@ -177,5 +190,37 @@ module Evm::ERC1155 {
         };
         let balances_id = Table::borrow_mut(&mut s.balances, &id);
         Table::borrow_mut_with_default(balances_id, account, 0)
+    }
+
+    /// Helper function for the safe transfer acceptance check.
+    fun doSafeTransferAcceptanceCheck(operator: address, from: address, to: address, id: u128, amount: u128, data: vector<u8>) {
+        if (isContract(to)) {
+            let result = IERC1155Receiver::call_onERC1155Received(to, operator, from, id, amount, data);
+            if (Result::is_ok(&result)) {
+                let retval = Result::unwrap(result);
+                let expected = IERC1155Receiver::selector_onERC1155Received();
+                assert!(retval == expected, Errors::custom(0));
+            }
+            else {
+                let _error = Result::unwrap_err(result);
+                abort(Errors::custom(1)) // TODO: abort with the `_error` value.
+            }
+        }
+    }
+
+    /// Helper function for the safe batch transfer acceptance check.
+    fun doSafeBatchTransferAcceptanceCheck(operator: address, from: address, to: address, ids: vector<u128>, amounts: vector<u128>, data: vector<u8>) {
+        if (isContract(to)) {
+            let result = IERC1155Receiver::call_onERC1155BatchReceived(to, operator, from, ids, amounts, data);
+            if (Result::is_ok(&result)) {
+                let retval = Result::unwrap(result);
+                let expected = IERC1155Receiver::selector_onERC1155BatchReceived();
+                assert!(retval == expected, Errors::custom(0));
+            }
+            else {
+                let _error = Result::unwrap_err(result);
+                abort(Errors::custom(1)) // TODO: abort with the `_error` value.
+            }
+        }
     }
 }

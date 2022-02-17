@@ -11,7 +11,7 @@ object "A2_M" {
     }
     object "A2_M_deployed" {
         code {
-            mstore(0, memoryguard(96))
+            mstore(0, memoryguard(160))
 
             // Dummy calls to reference callables for Yul optimizer
             let $dummy0, $dummy1 := A2_M_add_two_number(sload(100), sload(101))
@@ -674,7 +674,7 @@ object "A2_M" {
         code {
             {
                 let _1 := 0
-                mstore(_1, memoryguard(0x60))
+                mstore(_1, memoryguard(0xa0))
                 let _2 := sload(101)
                 let _3 := sload(100)
                 if lt(sub(0xffffffffffffffff, _3), _2) { revert(_1, _1) }

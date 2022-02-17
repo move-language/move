@@ -8,14 +8,15 @@ use std::{
 
 use itertools::Itertools;
 use move_core_types::language_storage::CORE_CODE_ADDRESS;
+use sha3::{Digest, Keccak256};
 
 use crate::evm_transformation::EvmTransformationProcessor;
 use move_model::{
     ast::{Attribute, TempIndex},
     code_writer::CodeWriter,
     emit, emitln,
-    model::{FunId, FunctionEnv, GlobalEnv, ModuleEnv, ModuleId, QualifiedInstId, StructId},
-    ty::{PrimitiveType, Type},
+    model::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, ModuleId, QualifiedInstId, StructId},
+    ty::{PrimitiveType, Type, TypeDisplayContext},
 };
 use move_stackless_bytecode::{
     function_target::FunctionTarget,
@@ -51,6 +52,8 @@ struct Context<'a> {
 /// Mutable state of the generator.
 #[derive(Default)]
 pub struct Generator {
+    // Location of the currently compiled contract, for general error messages.
+    contract_loc: Loc,
     /// Move functions, including type instantiation, needed in the currently generated code block.
     needed_move_functions: Vec<QualifiedInstId<FunId>>,
     /// Move functions for which code has been emitted.
@@ -63,6 +66,8 @@ pub struct Generator {
     borrowed_locals: BTreeMap<TempIndex, usize>,
     /// Memory layout info.
     struct_layout: BTreeMap<QualifiedInstId<StructId>, StructLayout>,
+    /// Mapping of type signature hash to type, to identify collisions.
+    type_sig_map: BTreeMap<u32, Type>,
 }
 
 /// Information about the layout of a struct in linear memory.
@@ -70,8 +75,8 @@ pub struct Generator {
 struct StructLayout {
     /// The size, in bytes, of this struct.
     size: usize,
-    /// Offsets in linear memory for each field.
-    offsets: BTreeMap<usize, (usize, usize)>,
+    /// Offsets in linear memory and type for each field.
+    offsets: BTreeMap<usize, (usize, Type)>,
 }
 
 // ================================================================================================
@@ -189,6 +194,11 @@ impl Generator {
 
     /// Generate contract object for given module.
     fn contract(&mut self, ctx: &Context, module: &ModuleEnv<'_>) {
+        // Initialize contract specific state
+        self.contract_loc = module.get_loc();
+        self.type_sig_map.clear();
+
+        // Generate the contract object.
         let contract_name = ctx.make_contract_name(module);
         emit!(ctx.writer, "object \"{}\" ", contract_name);
         ctx.emit_block(|| {
@@ -497,13 +507,6 @@ impl Generator {
                 loc.span().end()
             );
         };
-        let print_nyi = || {
-            emitln!(
-                ctx.writer,
-                "// NYI: {}",
-                bc.display(target, &BTreeMap::default())
-            );
-        };
         let get_block = |l| label_map.get(l).expect("label has corresponding block");
         // Need to make a clone below to avoid cascading borrow problems. We don't want the
         // subsequent lambdas to access self.
@@ -515,6 +518,11 @@ impl Generator {
                 ctx.make_local_name(target, *l)
             }
         };
+        let make_struct_id = |m: &ModuleId, s: &StructId, inst: &[Type]| {
+            m.qualified(*s)
+                .instantiate(Type::instantiate_slice(inst, &fun_id.inst))
+        };
+        let get_local_type = |idx: TempIndex| target.get_local_type(idx).instantiate(&fun_id.inst);
         let mut builtin = |yul_fun: YulFunction, dest: &[TempIndex], srcs: &[TempIndex]| {
             print_loc();
             emitln!(
@@ -532,12 +540,12 @@ impl Generator {
                                  srcs: &[TempIndex]| {
             use PrimitiveType::*;
             use Type::*;
-            match target.get_local_type(srcs[0]) {
+            match get_local_type(srcs[0]) {
                 Primitive(U8) => builtin(yul_fun_u8, dest, srcs),
                 Primitive(U64) => builtin(yul_fun_u64, dest, srcs),
                 Primitive(U128) => builtin(yul_fun_u128, dest, srcs),
                 Struct(mid, sid, _) => {
-                    if is_u256(ctx.env, *mid, *sid) {
+                    if is_u256(ctx.env, mid, sid) {
                         builtin(yul_fun_u256, dest, srcs)
                     } else {
                         panic!("unexpected operand type")
@@ -628,8 +636,7 @@ impl Generator {
                         self.pack(
                             ctx,
                             target,
-                            m.qualified(*s)
-                                .instantiate(Type::instantiate_slice(inst, &fun_id.inst)),
+                            make_struct_id(m, s, inst),
                             dest[0],
                             srcs.iter().map(local),
                         )
@@ -639,26 +646,57 @@ impl Generator {
                         self.unpack(
                             ctx,
                             target,
-                            m.qualified(*s)
-                                .instantiate(Type::instantiate_slice(inst, &fun_id.inst)),
+                            make_struct_id(m, s, inst),
                             dest,
                             local(&srcs[0]),
                         )
                     }
                     Destroy => {
                         print_loc();
-                        self.destroy(
-                            ctx,
-                            fun_id,
-                            &target.get_local_type(srcs[0]).instantiate(&fun_id.inst),
-                            local(&srcs[0]),
-                        )
+                        self.destroy(ctx, &get_local_type(srcs[0]), local(&srcs[0]))
                     }
 
                     // Resource management
-                    MoveTo(_, _, _) => print_nyi(),
-                    MoveFrom(_, _, _) => print_nyi(),
-                    Exists(_, _, _) => print_nyi(),
+                    MoveTo(m, s, inst) => {
+                        print_loc();
+                        self.move_to(
+                            ctx,
+                            target,
+                            make_struct_id(m, s, inst),
+                            local(&srcs[1]),
+                            local(&srcs[0]),
+                        )
+                    }
+                    MoveFrom(m, s, inst) => {
+                        print_loc();
+                        self.move_from(
+                            ctx,
+                            target,
+                            make_struct_id(m, s, inst),
+                            dest[0],
+                            local(&srcs[0]),
+                        )
+                    }
+                    Exists(m, s, inst) => {
+                        print_loc();
+                        self.exists(
+                            ctx,
+                            target,
+                            make_struct_id(m, s, inst),
+                            dest[0],
+                            local(&srcs[0]),
+                        )
+                    }
+                    BorrowGlobal(m, s, inst) => {
+                        print_loc();
+                        self.borrow_global(
+                            ctx,
+                            target,
+                            make_struct_id(m, s, inst),
+                            dest[0],
+                            local(&srcs[0]),
+                        )
+                    }
 
                     // References
                     BorrowLoc => {
@@ -669,20 +707,18 @@ impl Generator {
                         print_loc();
                         self.borrow_field(
                             ctx,
-                            target.get_local_type(dest[0]).skip_reference(),
-                            m.qualified(*s)
-                                .instantiate(Type::instantiate_slice(inst, &fun_id.inst)),
+                            get_local_type(dest[0]).skip_reference(),
+                            make_struct_id(m, s, inst),
                             *f,
                             local(&dest[0]),
                             local(&srcs[0]),
                         )
                     }
-                    BorrowGlobal(_, _, _) => print_nyi(),
                     ReadRef => {
                         print_loc();
                         self.read_ref(
                             ctx,
-                            &target.get_local_type(dest[0]).instantiate(&fun_id.inst),
+                            &get_local_type(dest[0]),
                             local(&dest[0]),
                             local(&srcs[0]),
                         )
@@ -691,7 +727,7 @@ impl Generator {
                         print_loc();
                         self.write_ref(
                             ctx,
-                            &target.get_local_type(srcs[1]).instantiate(&fun_id.inst),
+                            &get_local_type(srcs[1]),
                             local(&srcs[0]),
                             local(&srcs[1]),
                         )
@@ -1058,17 +1094,16 @@ impl Generator {
     ///   but is only inserted for the original pop bytecode. We should run lifetime analysis
     ///   and insert Destroy where needed. However, this does not matter much yet, as
     ///   YulFunction::Free is a nop in the current runtime which uses arena style allocation.
-    fn destroy(&mut self, ctx: &Context, fun_id: &QualifiedInstId<FunId>, ty: &Type, src: String) {
+    fn destroy(&mut self, ctx: &Context, ty: &Type, src: String) {
         use Type::*;
         match ty {
             Struct(m, s, inst) => {
                 // Destroy all fields
-                let struct_inst = Type::instantiate_slice(inst, &fun_id.inst);
-                let struct_id = m.qualified(*s).instantiate(struct_inst.clone());
+                let struct_id = m.qualified(*s).instantiate(inst.clone());
                 let layout = self.get_or_compute_struct_layout(ctx, &struct_id).clone();
                 let struct_env = &ctx.env.get_struct(struct_id.to_qualified_id());
                 for field in struct_env.get_fields() {
-                    let field_type = field.get_type().instantiate(&struct_inst);
+                    let field_type = field.get_type().instantiate(inst);
                     if !self.type_allocates_memory(&field_type) {
                         continue;
                     }
@@ -1080,7 +1115,7 @@ impl Generator {
                             std::iter::once(format!("add({}, {})", src, byte_offset)),
                         );
                         emitln!(ctx.writer, "let $field_ptr := {}", field_ptr);
-                        self.destroy(ctx, fun_id, &field_type, "$field_ptr".to_string());
+                        self.destroy(ctx, &field_type, "$field_ptr".to_string());
                     })
                 }
 
@@ -1119,13 +1154,282 @@ impl Generator {
         // memory. We need to load this pointer first.
         let load_struct_ptr =
             self.call_builtin_str(ctx, YulFunction::LoadU256, std::iter::once(src));
-        emitln!(
-            ctx.writer,
-            "{} := add({}, {})",
-            dest,
-            load_struct_ptr,
-            byte_offs
+        let add_offset = self.call_builtin_str(
+            ctx,
+            YulFunction::IndexPtr,
+            vec![load_struct_ptr, byte_offs.to_string()].into_iter(),
+        );
+        emitln!(ctx.writer, "{} := {}", dest, add_offset)
+    }
+
+    /// Test whether resource exists.
+    fn exists(
+        &mut self,
+        ctx: &Context,
+        target: &FunctionTarget,
+        struct_id: QualifiedInstId<StructId>,
+        dst: TempIndex,
+        addr: String,
+    ) {
+        ctx.emit_block(|| {
+            // Obtain the storage base offset for this resource.
+            let base_offset = self.type_storage_base(
+                ctx,
+                &struct_id.to_type(),
+                "${RESOURCE_STORAGE_CATEGORY}",
+                addr,
+            );
+            // Load the exists flag and store it into destination.
+            let load_flag = self.call_builtin_str(
+                ctx,
+                YulFunction::StorageLoadU8,
+                std::iter::once(base_offset),
+            );
+            self.assign(ctx, target, dst, load_flag);
+        })
+    }
+
+    /// Move resource from memory to storage.
+    fn move_to(
+        &mut self,
+        ctx: &Context,
+        _target: &FunctionTarget,
+        struct_id: QualifiedInstId<StructId>,
+        addr: String,
+        value: String,
+    ) {
+        ctx.emit_block(|| {
+            // Obtain the storage base offset for this resource.
+            emitln!(
+                ctx.writer,
+                "let $base_offset := {}",
+                self.type_storage_base(
+                    ctx,
+                    &struct_id.to_type(),
+                    "${RESOURCE_STORAGE_CATEGORY}",
+                    addr,
+                )
+            );
+            let base_offset = "$base_offset";
+
+            // At the base offset we store a boolean indicating whether the resource exists. Check this
+            // and if it is set, abort. Otherwise set this bit.
+            let exists_call = self.call_builtin_str(
+                ctx,
+                YulFunction::StorageLoadU8,
+                std::iter::once(base_offset.to_string()),
+            );
+            let abort_call =
+                self.call_builtin_str(ctx, YulFunction::AbortBuiltin, std::iter::empty());
+            emitln!(ctx.writer, "if {} {{\n  {}\n}}", exists_call, abort_call);
+            self.call_builtin(
+                ctx,
+                YulFunction::StorageStoreU8,
+                vec![base_offset.to_string(), "true".to_string()].into_iter(),
+            );
+
+            // Move the struct to storage.
+            ctx.emit_block(|| {
+                // The actual resource data starts at base_offset + 32. Set the destination address
+                // to this.
+                emitln!(
+                    ctx.writer,
+                    "let $dst := add({}, ${{RESOURCE_EXISTS_FLAG_SIZE}})",
+                    base_offset
+                );
+                emitln!(ctx.writer, "let $src := {}", value);
+                // Perform the copy
+                self.copy_struct_to_storage(
+                    ctx,
+                    &struct_id,
+                    "$src".to_string(),
+                    "$dst".to_string(),
+                );
+                // Destroy the source struct.
+                self.destroy(ctx, &struct_id.to_type(), "$src".to_string())
+            });
+        })
+    }
+
+    /// Copies a struct from memory to storage. This recursively copies linked data like
+    /// nested structs and vectors.
+    fn copy_struct_to_storage(
+        &mut self,
+        ctx: &Context,
+        struct_id: &QualifiedInstId<StructId>,
+        src: String,
+        dst: String,
+    ) {
+        let layout = self.get_or_compute_struct_layout(ctx, struct_id).clone();
+        for (offs, ty) in layout.offsets.values() {
+            if ty.is_vector() {
+                ctx.env
+                    .error(&self.contract_loc, "vectors not yet implemented");
+                continue;
+            }
+            let src_field_ptr = format!("add({}, {})", src, offs);
+            let dst_field_ptr = format!("add({}, {})", dst, offs);
+            if self.type_allocates_memory(ty) {
+                // This is an indirection to a struct or a vector. We need to recursively
+                // move this as linked data to storage.
+                ctx.emit_block(|| {
+                    let hash = self.type_hash(ctx, ty);
+                    // Allocate a new storage pointer.
+                    emitln!(
+                        ctx.writer,
+                        "let $linked_dst := {}",
+                        self.call_builtin_str(
+                            ctx,
+                            YulFunction::NewLinkedStorageBase,
+                            std::iter::once(format!("0x{:x}", hash))
+                        )
+                    );
+                    // Load the pointer to the linked memory.
+                    emitln!(
+                        ctx.writer,
+                        "let $linked_src := {}",
+                        self.call_builtin_str(
+                            ctx,
+                            YulFunction::MemoryLoadU256,
+                            std::iter::once(src_field_ptr)
+                        )
+                    );
+                    // Recursively copy.
+                    let field_struct_id = ty.get_struct_id(ctx.env).expect("struct");
+                    self.copy_struct_to_storage(
+                        ctx,
+                        &field_struct_id,
+                        "$linked_src".to_string(),
+                        "$linked_dst".to_string(),
+                    );
+                    // Store the result at the destination
+                    self.call_builtin(
+                        ctx,
+                        YulFunction::StorageStoreU256,
+                        vec![dst_field_ptr, "$linked_dst".to_string()].into_iter(),
+                    )
+                })
+            } else {
+                // not allocating linked memory
+                self.copy_memory_to_storage(ctx, ty, dst_field_ptr, src_field_ptr)
+            }
+        }
+    }
+
+    /// Copy a value of given type from memory to storage.
+    fn copy_memory_to_storage(&mut self, ctx: &Context, ty: &Type, dst: String, src: String) {
+        let load_fun = self.memory_load_builtin_fun(ctx, ty);
+        let store_fun = self.store_builtin_fun(ctx, ty);
+        let load_call = self.call_builtin_str(ctx, load_fun, std::iter::once(src));
+        self.call_builtin(ctx, store_fun, vec![dst, load_call].into_iter())
+    }
+
+    /// Move resource from storage to local.
+    fn move_from(
+        &self,
+        _ctx: &Context,
+        _target: &FunctionTarget,
+        _struct_id: QualifiedInstId<StructId>,
+        _dest: TempIndex,
+        _src: String,
+    ) {
+        todo!()
+    }
+
+    /// Borrow a resource.
+    fn borrow_global(
+        &mut self,
+        ctx: &Context,
+        target: &FunctionTarget,
+        struct_id: QualifiedInstId<StructId>,
+        dst: TempIndex,
+        addr: String,
+    ) {
+        ctx.emit_block(|| {
+            // Obtain the storage base offset for this resource.
+            emitln!(
+                ctx.writer,
+                "let $base_offset := {}",
+                self.type_storage_base(
+                    ctx,
+                    &struct_id.to_type(),
+                    "${RESOURCE_STORAGE_CATEGORY}",
+                    addr,
+                )
+            );
+            let base_offset = "$base_offset";
+
+            // At the base offset check the flag whether the resource exists.
+            let exists_call = self.call_builtin_str(
+                ctx,
+                YulFunction::StorageLoadU8,
+                std::iter::once(base_offset.to_string()),
+            );
+            let abort_call =
+                self.call_builtin_str(ctx, YulFunction::AbortBuiltin, std::iter::empty());
+            emitln!(
+                ctx.writer,
+                "if not({}) {{\n  {}\n}}",
+                exists_call,
+                abort_call
+            );
+
+            // Skip the existence flag and create a pointer.
+            let make_ptr = self.call_builtin_str(
+                ctx,
+                YulFunction::MakePtr,
+                vec![
+                    "true".to_string(),
+                    format!("add({}, ${{RESOURCE_EXISTS_FLAG_SIZE}})", base_offset),
+                ]
+                .into_iter(),
+            );
+            self.assign(ctx, target, dst, make_ptr)
+        })
+    }
+
+    /// Make a pointer into storage for the given type and instance.
+    fn type_storage_base(
+        &mut self,
+        ctx: &Context,
+        ty: &Type,
+        category: &str,
+        instance: String,
+    ) -> String {
+        let hash = self.type_hash(ctx, ty);
+        self.call_builtin_str(
+            ctx,
+            YulFunction::MakeTypeStorageBase,
+            vec![category.to_string(), format!("0x{:x}", hash), instance].into_iter(),
         )
+    }
+
+    /// Derive a 4 byte hash for a type. If this hash creates a collision in the current
+    /// contract, create an error.
+    fn type_hash(&mut self, ctx: &Context, ty: &Type) -> u32 {
+        let sig = ctx.mangle_type(ty);
+        let mut keccak = Keccak256::new();
+        keccak.update(sig.as_bytes());
+        let digest = keccak.finalize();
+        let hash = u32::from_le_bytes([digest[0], digest[1], digest[2], digest[3]]);
+        if let Some(old_ty) = self.type_sig_map.insert(hash, ty.clone()) {
+            if old_ty != *ty {
+                let ty_ctx = &TypeDisplayContext::WithEnv {
+                    env: ctx.env,
+                    type_param_names: None,
+                };
+                ctx.env.error(
+                    &self.contract_loc,
+                    &format!(
+                        "collision of type hash for types `{}` and `{}`\n\
+                         (resolution via attribute not yet implemented)",
+                        ty.display(ty_ctx),
+                        old_ty.display(ty_ctx)
+                    ),
+                )
+            }
+        }
+        hash
     }
 
     /// Get the layout of the instantiated struct in linear memory.
@@ -1139,8 +1443,9 @@ impl Generator {
             let mut size = 0;
             let struct_env = ctx.env.get_struct(st.to_qualified_id());
             for field in struct_env.get_fields() {
-                let field_size = self.type_size(ctx, &field.get_type().instantiate(&st.inst));
-                offsets.insert(field.get_offset(), (size, field_size));
+                let field_type = field.get_type().instantiate(&st.inst);
+                let field_size = self.type_size(ctx, &field_type);
+                offsets.insert(field.get_offset(), (size, field_type));
                 size += field_size
             }
             self.struct_layout
@@ -1149,6 +1454,7 @@ impl Generator {
         self.struct_layout.get(st).unwrap()
     }
 
+    /// Calculate the size, in bytes, for the memory layout of this type.
     fn type_size(&mut self, _ctx: &Context, ty: &Type) -> usize {
         use PrimitiveType::*;
         use Type::*;
@@ -1255,6 +1561,10 @@ impl<'a> Context<'a> {
     }
 
     /// Mangle a type for being part of name.
+    ///
+    /// Note that the mangled type representation is also used to create a hash for types
+    /// in `Generator::type_hash` which is used to index storage. Therefor the representation here
+    /// cannot be changed without creating versioning problems for existing storage of contracts.
     fn mangle_type(&self, ty: &Type) -> String {
         use PrimitiveType::*;
         use Type::*;

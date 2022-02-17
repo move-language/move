@@ -2572,6 +2572,7 @@ dependencies = [
  "regex",
  "serde 1.0.130",
  "serde_json",
+ "sha3 0.9.1",
  "shell-words",
  "simplelog",
  "structopt 0.3.25",

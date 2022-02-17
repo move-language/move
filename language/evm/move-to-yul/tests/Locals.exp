@@ -11,7 +11,7 @@ object "A2_M" {
     }
     object "A2_M_deployed" {
         code {
-            mstore(0, memoryguard(96))
+            mstore(0, memoryguard(160))
 
             // Dummy calls to reference callables for Yul optimizer
             let $dummy0, $dummy1, $dummy2, $dummy3 := A2_M_evaded(sload(100), sload(101))
@@ -172,7 +172,7 @@ object "A2_M" {
     object "A2_M_deployed" {
         code {
             {
-                let _1 := memoryguard(0x60)
+                let _1 := memoryguard(0xa0)
                 let _2 := 0
                 mstore(_2, _1)
                 let _3 := sload(101)

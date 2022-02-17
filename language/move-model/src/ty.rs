@@ -12,6 +12,7 @@ use crate::{
 use move_binary_format::{file_format::TypeParameterIndex, normalized::Type as MType};
 use move_core_types::language_storage::{StructTag, TypeTag};
 
+use crate::model::QualifiedInstId;
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
     fmt,
@@ -214,6 +215,16 @@ impl Type {
         } else {
             None
         }
+    }
+
+    /// If this is a struct type, return the associated QualifiedInstId.
+    pub fn get_struct_id(&self, env: &GlobalEnv) -> Option<QualifiedInstId<StructId>> {
+        self.get_struct(env).map(|(se, inst)| {
+            se.module_env
+                .get_id()
+                .qualified(se.get_id())
+                .instantiate(inst.to_vec())
+        })
     }
 
     /// Require this to be a struct, if so extracts its content.

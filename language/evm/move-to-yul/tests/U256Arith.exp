@@ -12,7 +12,7 @@ object "A2_U256Arith" {
     }
     object "A2_U256Arith_deployed" {
         code {
-            mstore(0, memoryguard(96))
+            mstore(0, memoryguard(160))
 
             // Dummy calls to reference callables for Yul optimizer
             let $dummy0 := A2_U256Arith_add()

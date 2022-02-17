@@ -25,7 +25,7 @@ static PLACEHOLDERS: Lazy<BTreeMap<&'static str, &'static str>> = Lazy::new(|| {
         // Memory
         // The size of the memory used by the compilation scheme. This must be the
         // sum of the sizes required by the locations defined below.
-        "USED_MEM" => "96",
+        "USED_MEM" => "160",
 
         // Location where the current size of the used memory is stored. New memory will
         // be allocated from there.
@@ -35,10 +35,25 @@ static PLACEHOLDERS: Lazy<BTreeMap<&'static str, &'static str>> = Lazy::new(|| {
         "SCRATCH1_LOC" => "32",
         "SCRATCH2_LOC" => "64",
 
-        // Storage types. Those are used to augment words by creating a keccak256 value from
-        // word and type to create a unique storage index.
-        "CONTINUOUS_STORAGE_TYPE" => "0",
-        "TABLE_STORAGE_TYPE" => "1",
+        // Storage groups. Those are used to augment words by creating a keccak256 value from
+        // word and group to create a unique storage key. This basically allows -- by the
+        // magic if keccak -- to multiplex the 256 bit address into multiple ones, and
+        // to implement tables with 256 bit keys. The LINEAR_STORAGE_GROUP is reserved
+        // for Move memory. Other groups are created as tables are dynamically allocated.
+        // STORAGE_GROUP_COUNTER_LOC contains the largest storage group allocated so far.
+        "LINEAR_STORAGE_GROUP" => "0",
+        "STORAGE_GROUP_COUNTER_LOC" => "96",
+
+        // Categories to distinguish different types of pointers into the LINEAR_STORAGE_GROUP.
+        // See discussion of YulFunction::MakeTypeStorageOffset.
+        "RESOURCE_STORAGE_CATEGORY" => "0",
+        "LINKED_STORAGE_CATEGORY" => "1",
+        "LINKED_STORAGE_COUNTER_LOC" => "128",
+
+        // Size (in bytes) of the resource exists flag which proceeds any data in storage for
+        // a resource.
+        "RESOURCE_EXISTS_FLAG_SIZE" => "32",
+
     }
 });
 
@@ -174,6 +189,33 @@ StorageKey: "(type, word) -> key {
   key := keccak256(${SCRATCH1_LOC}, 33)
 }",
 
+// Make a base storage offset for a given type. The result has 255 bits width and can be passed into
+// $MakePtr(true, result) to create a pointer as it fits into 255 bits. This pointer can be
+// used to linearly address exclusive memory with an address space of 60 bits.
+//
+//  254                                      0
+//  cccccc..cccccctttttt..tttttiiiii..iiiiiioooooo..oooooooo
+//   category       type_hash     id           offset
+//      4              32         160           60
+//
+// The category indicates what kind of type storage this is, and determines how id
+// is interpreted. RESOURCE_STORAGE_CATEGORY indicates that id is a resource
+// address. LINKED_STORAGE_CATEGORY indicates that id is a handle for data linked
+// to from some other storage (for instance, a vector aggregated by a resource).
+// The type_hash identifies the type of the stored value. The id is any 20 byte
+// number which identifies an instance of this type (e.g. an address if this is a resource).
+MakeTypeStorageBase: "(category, type_hash, instance) -> offs {
+  offs := or(shl(type_hash, 224), shl(instance, 64))
+}",
+
+// Make a new base storage offset for linked storage. This creates a new handle
+// and the calls MakeTypeStorageBase.
+NewLinkedStorageBase: "(type_hash) -> offs {
+  let handle := mload(${LINKED_STORAGE_COUNTER_LOC})
+  mstore(${LINKED_STORAGE_COUNTER_LOC}, add(handle, 1))
+  offs := $MakeTypeStorageBase(${LINKED_STORAGE_CATEGORY}, type_hash, handle)
+}" dep MakeTypeStorageBase,
+
 // Indexes pointer by offset.
 IndexPtr: "(ptr, offs) -> new_ptr {
   new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
@@ -199,7 +241,7 @@ MemoryLoadU8: "(offs) -> val {
 // Loads u8 from storage offset.
 StorageLoadU8: "(offs) -> val {
   let word_offs, bit_offs := $ToWordOffs(offs)
-  let key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, word_offs)
+  let key := $StorageKey(${LINEAR_STORAGE_GROUP}, word_offs)
   val := and(shr(sload(key), bit_offs), ${MAX_U8})
 }" dep StorageKey dep ToWordOffs,
 
@@ -223,7 +265,7 @@ MemoryStoreU8: "(offs, val) {
 // Stores u8 to storage offset.
 StorageStoreU8: "(offs, val) {
   let word_offs, bit_offs := $ToWordOffs(offs)
-  let key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, word_offs)
+  let key := $StorageKey(${LINEAR_STORAGE_GROUP}, word_offs)
   let word := sload(key)
   word := or(and(word, not(shl(${MAX_U8}, bit_offs))), shl(val, bit_offs))
   mstore(key, word)
@@ -249,13 +291,13 @@ MemoryLoadU64: "(offs) -> val {
 // Loads u64 from storage offset.
 StorageLoadU64: "(offs) -> val {
   let word_offs, bit_offs := $ToWordOffs(offs)
-  let key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, word_offs)
+  let key := $StorageKey(${LINEAR_STORAGE_GROUP}, word_offs)
   val := and(shr(sload(key), bit_offs), ${MAX_U64})
   let used_bits := sub(256, bit_offs)
   if lt(used_bits, 64) {
     let overflow_bits := sub(64, used_bits)
     let mask := sub(shl(1, overflow_bits), 1)
-    key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, add(word_offs, 1))
+    key := $StorageKey(${LINEAR_STORAGE_GROUP}, add(word_offs, 1))
     val := or(val, shl(and(sload(key), mask), used_bits))
   }
 }" dep ToWordOffs dep StorageKey,
@@ -280,7 +322,7 @@ MemoryStoreU64: "(offs, val) {
 // Stores u64 to storage offset.
 StorageStoreU64: "(offs, val) {
   let word_offs, bit_offs := $ToWordOffs(offs)
-  let key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, word_offs)
+  let key := $StorageKey(${LINEAR_STORAGE_GROUP}, word_offs)
   let word := sload(key)
   word := or(and(word, not(shl(${MAX_U64}, bit_offs))), shl(val, bit_offs))
   mstore(key, word)
@@ -288,7 +330,7 @@ StorageStoreU64: "(offs, val) {
   if lt(used_bits, 64) {
     let overflow_bits := sub(64, used_bits)
     let mask := sub(shl(1, overflow_bits), 1)
-    key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, add(word_offs, 1))
+    key := $StorageKey(${LINEAR_STORAGE_GROUP}, add(word_offs, 1))
     sstore(key, or(and(sload(key), not(mask)), shr(val, used_bits)))
   }
 }" dep ToWordOffs dep StorageKey,
@@ -313,13 +355,13 @@ MemoryLoadU128: "(offs) -> val {
 // Loads u128 from storage offset.
 StorageLoadU128: "(offs) -> val {
   let word_offs, bit_offs := $ToWordOffs(offs)
-  let key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, word_offs)
+  let key := $StorageKey(${LINEAR_STORAGE_GROUP}, word_offs)
   val := and(shr(sload(key), bit_offs), ${MAX_U128})
   let used_bits := sub(256, bit_offs)
   if lt(used_bits, 128) {
     let overflow_bits := sub(128, used_bits)
     let mask := sub(shl(1, overflow_bits), 1)
-    key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, add(word_offs, 1))
+    key := $StorageKey(${LINEAR_STORAGE_GROUP}, add(word_offs, 1))
     val := or(val, shl(and(sload(key), mask), used_bits))
   }
 }" dep ToWordOffs dep StorageKey,
@@ -344,7 +386,7 @@ MemoryStoreU128: "(offs, val) {
 // Stores u128 to storage offset.
 StorageStoreU128: "(offs, val) {
   let word_offs, bit_offs := $ToWordOffs(offs)
-  let key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, word_offs)
+  let key := $StorageKey(${LINEAR_STORAGE_GROUP}, word_offs)
   let word := sload(key)
   word := or(and(word, not(shl(${MAX_U128}, bit_offs))), shl(val, bit_offs))
   mstore(key, word)
@@ -352,7 +394,7 @@ StorageStoreU128: "(offs, val) {
   if lt(used_bits, 128) {
     let overflow_bits := sub(128, used_bits)
     let mask := sub(shl(1, overflow_bits), 1)
-    key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, add(word_offs, 1))
+    key := $StorageKey(${LINEAR_STORAGE_GROUP}, add(word_offs, 1))
     sstore(key, or(and(sload(key), not(mask)), shr(val, used_bits)))
   }
 }" dep ToWordOffs dep StorageKey,
@@ -377,13 +419,13 @@ MemoryLoadU256: "(offs) -> val {
 // Loads u256 from storage offset.
 StorageLoadU256: "(offs) -> val {
   let word_offs, bit_offs := $ToWordOffs(offs)
-  let key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, word_offs)
+  let key := $StorageKey(${LINEAR_STORAGE_GROUP}, word_offs)
   val := shr(sload(key), bit_offs)
   let used_bits := sub(256, bit_offs)
   if lt(used_bits, 256) {
     let overflow_bits := sub(256, used_bits)
     let mask := sub(shl(1, overflow_bits), 1)
-    key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, add(word_offs, 1))
+    key := $StorageKey(${LINEAR_STORAGE_GROUP}, add(word_offs, 1))
     val := or(val, shl(and(sload(key), mask), used_bits))
   }
 }" dep ToWordOffs dep StorageKey,
@@ -408,7 +450,7 @@ MemoryStoreU256: "(offs, val) {
 // Stores u256 to storage offset.
 StorageStoreU256: "(offs, val) {
   let word_offs, bit_offs := $ToWordOffs(offs)
-  let key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, word_offs)
+  let key := $StorageKey(${LINEAR_STORAGE_GROUP}, word_offs)
   let word := sload(key)
   word := or(and(word, not(shl(${MAX_U256}, bit_offs))), shl(val, bit_offs))
   mstore(key, word)
@@ -416,7 +458,7 @@ StorageStoreU256: "(offs, val) {
   if lt(used_bits, 256) {
     let overflow_bits := sub(256, used_bits)
     let mask := sub(shl(1, overflow_bits), 1)
-    key := $StorageKey(${CONTINUOUS_STORAGE_TYPE}, add(word_offs, 1))
+    key := $StorageKey(${LINEAR_STORAGE_GROUP}, add(word_offs, 1))
     sstore(key, or(and(sload(key), not(mask)), shr(val, used_bits)))
   }
 }" dep ToWordOffs dep StorageKey,

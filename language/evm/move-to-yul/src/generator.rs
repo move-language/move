@@ -36,6 +36,16 @@ const CONTRACT_ATTR: &str = "contract";
 const CREATE_ATTR: &str = "create";
 const CALLABLE_ATTR: &str = "callable";
 const EVM_ARITH_ATTR: &str = "evm_arith";
+const PAYABLE_ATTR: &str = "payable";
+const RECEIVE_ATTR: &str = "receive";
+const RECEIVE_FALLBACK: &str = "fallback";
+
+// revert reason
+const REVERT_ERR_NON_PAYABLE_FUN: usize = 99;
+const UNKNOWN_SIGNATURE_AND_NO_FALLBACK_DEFINED: usize = 98;
+const NO_RECIVE_OR_FALLBACK_FUN: usize = 97;
+const ABI_DECODING_DATA_TOO_SHORT: usize = 96;
+const ABI_DECODING_PARAM_VALIDATION: usize = 95;
 
 /// Immutable context passed through the compilation.
 struct Context<'a> {
@@ -129,7 +139,11 @@ impl Generator {
                 continue;
             }
             for fun in module.get_functions() {
-                if is_callable_fun(&fun) || is_create_fun(&fun) {
+                if is_callable_fun(&fun)
+                    || is_create_fun(&fun)
+                    || is_receive_fun(&fun)
+                    || is_fallback_fun(&fun)
+                {
                     Self::add_fun(&mut targets, &fun)
                 }
             }
@@ -261,13 +275,627 @@ impl Generator {
         }
     }
 
-    /// Generate Yul definitions for all callable functions.
-    fn callable_functions(&mut self, ctx: &Context, module: &ModuleEnv<'_>) {
+    /// Generate optional receive function.
+    fn optional_receive(&mut self, ctx: &Context, module: &ModuleEnv<'_>) -> bool {
+        let mut receives = module
+            .get_functions()
+            .filter(|f| is_receive_fun(f))
+            .collect_vec();
+        if receives.len() > 1 {
+            ctx.env
+                .error(&receives[1].get_loc(), "multiple #[receive] functions")
+        }
+        if let Some(receive) = receives.pop() {
+            ctx.check_no_generics(&receive);
+            if !is_payable_fun(&receive) {
+                ctx.env
+                    .error(&receive.get_loc(), "receive function must be payable")
+            }
+            if is_fallback_fun(&receive) || is_callable_fun(&receive) {
+                ctx.env.error(
+                    &receive.get_loc(),
+                    "receive function must not be a fallback or callable function",
+                )
+            }
+            if receive.get_parameter_count() > 0 {
+                ctx.env.error(
+                    &receive.get_loc(),
+                    "receive function must not have parameters",
+                )
+            }
+            let fun_id = &receive
+                .module_env
+                .get_id()
+                .qualified(receive.get_id())
+                .instantiate(vec![]);
+            emitln!(
+                ctx.writer,
+                "if iszero(calldatasize()) {{ {}() stop() }}",
+                ctx.make_function_name(fun_id)
+            );
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Generate fallback function.
+    fn generate_fallback(&mut self, ctx: &Context, module: &ModuleEnv<'_>, receive_ether: bool) {
+        let mut fallbacks = module
+            .get_functions()
+            .filter(|f| is_fallback_fun(f))
+            .collect_vec();
+        if fallbacks.len() > 1 {
+            ctx.env
+                .error(&fallbacks[1].get_loc(), "multiple #[fallback] functions")
+        }
+        if let Some(fallback) = fallbacks.pop() {
+            ctx.check_no_generics(&fallback);
+            if is_callable_fun(&fallback) {
+                ctx.env.error(
+                    &fallback.get_loc(),
+                    "fallback function must not be a callable function",
+                )
+            }
+            if !is_payable_fun(&fallback) {
+                self.generate_call_value_check(ctx, REVERT_ERR_NON_PAYABLE_FUN);
+            }
+            let fun_id = &fallback
+                .module_env
+                .get_id()
+                .qualified(fallback.get_id())
+                .instantiate(vec![]);
+            let fun_name = ctx.make_function_name(fun_id);
+            let params_size = fallback.get_parameter_count();
+            if params_size == 0 {
+                emitln!(ctx.writer, "{}() stop()", fun_name);
+            } else if params_size != 1 || fallback.get_return_count() != 1 {
+                ctx.env.error(
+                    &fallback.get_loc(),
+                    "fallback function must have at most 1 parameter and 1 return value",
+                );
+            } else {
+                emitln!(
+                    ctx.writer,
+                    "let retval := {}(0, calldatasize()) stop()",
+                    fun_name
+                );
+                emitln!(ctx.writer, "return(add(retval, 0x20), mload(retval))");
+            }
+        } else {
+            let mut err_msg = NO_RECIVE_OR_FALLBACK_FUN;
+            if receive_ether {
+                err_msg = UNKNOWN_SIGNATURE_AND_NO_FALLBACK_DEFINED;
+            }
+            self.call_builtin(
+                ctx,
+                YulFunction::Abort,
+                std::iter::once(err_msg.to_string()),
+            );
+        }
+    }
+
+    /// Generate the code to check value
+    fn generate_call_value_check(&mut self, ctx: &Context, err_code: TempIndex) {
+        emitln!(ctx.writer, "if callvalue()");
+        ctx.emit_block(|| {
+            self.call_builtin(
+                ctx,
+                YulFunction::Abort,
+                std::iter::once(err_code.to_string()),
+            );
+        });
+    }
+
+    /// Generate type string for encoding the function signature
+    fn get_evm_type_string(&self, ctx: &Context, ty: &Type) -> String {
+        use PrimitiveType::*;
+        use Type::*;
+        let generate_tuple = |tys: &Vec<Type>| {
+            format!(
+                "({})",
+                tys.iter()
+                    .map(|t| self.get_evm_type_string(ctx, t))
+                    .collect::<Vec<_>>()
+                    .join(",")
+            )
+        };
+        match ty {
+            Primitive(p) => match p {
+                Bool => "bool".to_string(),
+                U8 => "uint8".to_string(),
+                U64 => "uint64".to_string(),
+                U128 => "uint128".to_string(),
+                Address => "address".to_string(),
+                Signer => "address".to_string(),
+                Num | Range | EventStore => {
+                    panic!("unexpected field type")
+                }
+            },
+            Vector(ety) => format!("{}[]", self.get_evm_type_string(ctx, ety)),
+            Tuple(tys) => generate_tuple(tys),
+            Struct(mid, sid, _) => {
+                if is_u256(ctx.env, *mid, *sid) {
+                    "uint256".to_string()
+                } else {
+                    let tys = ctx.get_or_compute_struct_types(*mid, *sid);
+                    generate_tuple(&tys)
+                }
+            }
+            TypeParameter(_)
+            | Reference(_, _)
+            | Fun(_, _)
+            | TypeDomain(_)
+            | ResourceDomain(_, _, _)
+            | Error
+            | Var(_) => {
+                panic!("unexpected field type")
+            }
+        }
+    }
+
+    /// Generate parameter list for computing the function selector
+    fn compute_param_types(&mut self, ctx: &Context, fun: &FunctionEnv<'_>) -> String {
+        let param_types = fun.get_parameter_types();
+        let display_type_slice = |tys: &[Type]| -> String {
+            tys.iter()
+                .map(|t| self.get_evm_type_string(ctx, t))
+                .collect::<Vec<_>>()
+                .join(",")
+        };
+        display_type_slice(&param_types)
+    }
+
+    /// Generate the start position of memory for returning from the external function
+    /// Note: currently, we directly return the free memory pointer, may need to use the memory model later
+    fn generate_allocate_unbounded(&mut self, ctx: &Context) {
+        emitln!(
+            ctx.writer,
+            "let memPos := mload({})",
+            substitute_placeholders("${MEM_SIZE_LOC}").unwrap()
+        );
+    }
+
+    /// Generate the cleanup function used in the validator and the encoding function
+    fn generate_cleanup(
+        &mut self,
+        ctx: &Context,
+        ty: &Type,
+        funs: &mut BTreeMap<String, Vec<String>>,
+    ) -> String {
+        let name_prefix = "cleanup";
+        let function_name = format!("{}_{}", name_prefix, ctx.mangle_type(ty));
+
+        let generate_fun = |_: &mut BTreeMap<String, Vec<String>>,
+                            generated_code: &mut Vec<String>| {
+            generated_code.push(format!("function {}(value) -> cleaned {{", function_name));
+            use PrimitiveType::*;
+            use Type::*;
+            let mask_value = match ty {
+                Primitive(p) => match p {
+                    U8 => format!(
+                        "and(value, {})",
+                        substitute_placeholders("${MAX_U8}").unwrap()
+                    ),
+                    U64 => format!(
+                        "and(value, {})",
+                        substitute_placeholders("${MAX_U64}").unwrap()
+                    ),
+                    U128 => format!(
+                        "and(value, {})",
+                        substitute_placeholders("${MAX_U128}").unwrap()
+                    ),
+                    Address | Signer => format!(
+                        "add(value, {})",
+                        substitute_placeholders("${ADDRESS_U160}").unwrap()
+                    ),
+                    Bool => "iszero(iszero(value))".to_string(),
+                    _ => {
+                        panic!("unexpected field type")
+                    }
+                },
+                Struct(mid, sid, _) => {
+                    if is_u256(ctx.env, *mid, *sid) {
+                        "value".to_string()
+                    } else {
+                        panic!("unexpected field type")
+                    }
+                }
+                _ => panic!("unexpected field type"),
+            };
+            generated_code.push(format!("    cleaned := {}", mask_value));
+        };
+
+        ctx.generate_marshalling_function(function_name.clone(), funs, generate_fun)
+    }
+
+    /// Generate the validator function, which is used in the decode function
+    fn generate_validator(
+        &mut self,
+        ctx: &Context,
+        ty: &Type,
+        funs: &mut BTreeMap<String, Vec<String>>,
+    ) -> String {
+        let name_prefix = "validator";
+        let function_name = format!("{}_{}", name_prefix, ctx.mangle_type(ty));
+
+        let generate_fun = |funs: &mut BTreeMap<String, Vec<String>>,
+                            generated_code: &mut Vec<String>| {
+            generated_code.push(format!("function {}(value) {{", function_name));
+            let condition = format!("eq(value, {}(value))", self.generate_cleanup(ctx, ty, funs));
+            let failure_call = self.call_builtin_str(
+                ctx,
+                YulFunction::Abort,
+                std::iter::once(ABI_DECODING_PARAM_VALIDATION.to_string()),
+            );
+            generated_code.push(format!(
+                "    if iszero({}) {{ {} }}",
+                condition, failure_call
+            ));
+        };
+
+        ctx.generate_marshalling_function(function_name.clone(), funs, generate_fun)
+    }
+
+    /// Generate decoding functions for primitive types
+    fn generate_abi_decoding_primitive_type(
+        &mut self,
+        ctx: &Context,
+        ty: &Type,
+        funs: &mut BTreeMap<String, Vec<String>>,
+    ) -> String {
+        let name_prefix = "abi_decode";
+        let function_name = format!("{}_{}", name_prefix, ctx.mangle_type(ty));
+
+        let generate_fun = |funs: &mut BTreeMap<String, Vec<String>>,
+                            generated_code: &mut Vec<String>| {
+            generated_code.push(format!(
+                "function {}(offset, end) -> value {{",
+                function_name
+            ));
+            let load = "calldataload";
+            generated_code.push(format!("    value := {}(offset)", load));
+            let validator = self.generate_validator(ctx, ty, funs);
+            generated_code.push(format!("    {}(value)", validator));
+        };
+
+        ctx.generate_marshalling_function(function_name.clone(), funs, generate_fun)
+    }
+
+    /// Generate decoding functions for ty
+    fn generate_abi_decoding_type(
+        &mut self,
+        ctx: &Context,
+        ty: &Type,
+        funs: &mut BTreeMap<String, Vec<String>>,
+    ) -> String {
+        use Type::*;
+        // TODO: struct and dynamic types
+        match ty {
+            Primitive(_) => self.generate_abi_decoding_primitive_type(ctx, ty, funs),
+            Struct(mid, sid, _) => {
+                if is_u256(ctx.env, *mid, *sid) {
+                    self.generate_abi_decoding_primitive_type(ctx, ty, funs)
+                } else {
+                    "".to_string() // TODO
+                }
+            }
+            Tuple(tys) => self.generate_abi_tuple_decoding(ctx, tys, funs),
+            _ => "".to_string(), // TODO: Vector
+        }
+    }
+
+    /// Generate decoding functions for tuple
+    fn generate_abi_tuple_decoding(
+        &mut self,
+        ctx: &Context,
+        param_types: &[Type],
+        funs: &mut BTreeMap<String, Vec<String>>,
+    ) -> String {
+        let name_prefix = "abi_decode_tuple";
+        let function_name = format!("{}_{}", name_prefix, ctx.mangle_types(param_types));
+
+        let generate_fun = |funs: &mut BTreeMap<String, Vec<String>>,
+                            generated_code: &mut Vec<String>| {
+            let mut indent_num = 1;
+            let overall_type_head_vec = ctx.type_head_sizes_vec(param_types, true);
+            let overall_type_head_size = ctx.type_head_sizes_sum(param_types, true);
+            let mut temp_code = vec![];
+            temp_code.push(format!(
+                "{}if slt(sub(dataEnd, headStart), {}) {{ {} }}",
+                ident_str(indent_num),
+                overall_type_head_size,
+                self.call_builtin_str(
+                    ctx,
+                    YulFunction::Abort,
+                    std::iter::once(ABI_DECODING_DATA_TOO_SHORT.to_string())
+                ),
+            ));
+            let mut head_pos = 0;
+            let mut ret_var = vec![];
+            for (stack_pos, (ty, ty_size)) in overall_type_head_vec.iter().enumerate() {
+                let is_static = ctx.is_static_type(ty);
+                let mut local_typ_var = vec![];
+                // TODO: consider the case size_on_stack is not 1
+                local_typ_var.push(format!("value_{}", stack_pos));
+                ret_var.push(format!("value_{}", stack_pos));
+                // stack_pos += 1;
+
+                let abi_decode_type = self.generate_abi_decoding_type(ctx, ty, funs);
+                temp_code.push(format!("{}{{", ident_str(indent_num)));
+                indent_num += 1;
+                if is_static {
+                    temp_code.push(format!(
+                        "{}let offset := {}",
+                        ident_str(indent_num),
+                        head_pos
+                    ));
+                } else {
+                    // TODO: dynamic types need to be revisited
+                    let load = "calldataload";
+                    temp_code.push(format!(
+                        "{}let offset := {}(add(headStart, {}))",
+                        ident_str(indent_num),
+                        load,
+                        head_pos
+                    ));
+                    temp_code.push(format!(
+                        "{}if gt(offset, 0xffffffffffffffff) {{ {} }}",
+                        ident_str(indent_num),
+                        self.call_builtin_str(
+                            ctx,
+                            YulFunction::Abort,
+                            std::iter::once(ABI_DECODING_DATA_TOO_SHORT.to_string())
+                        )
+                    ));
+                }
+                temp_code.push(format!(
+                    "{}{} := {}(add(headStart, offset), dataEnd)",
+                    ident_str(indent_num),
+                    local_typ_var.iter().join(", "),
+                    abi_decode_type
+                ));
+                indent_num -= 1;
+                temp_code.push(format!("{}}}", ident_str(indent_num)));
+                head_pos += ty_size;
+            }
+            indent_num -= 1;
+            generated_code.push(format!(
+                "{}function {}(headStart, dataEnd) -> {} {{",
+                ident_str(indent_num),
+                function_name,
+                ret_var.iter().join(", ")
+            ));
+            generated_code.append(&mut temp_code);
+        };
+
+        ctx.generate_marshalling_function(function_name.clone(), funs, generate_fun)
+    }
+
+    /// Generate encoding functions for primitive types
+    fn generate_abi_encoding_primitive_type(
+        &mut self,
+        ctx: &Context,
+        ty: &Type,
+        funs: &mut BTreeMap<String, Vec<String>>,
+    ) -> String {
+        let name_prefix = "abi_encode";
+        let function_name = format!("{}_{}", name_prefix, ctx.mangle_type(ty));
+
+        let generate_fun = |funs: &mut BTreeMap<String, Vec<String>>,
+                            generate_encoding_funs: &mut Vec<String>| {
+            generate_encoding_funs.push(format!("function {}(value, pos) {{", function_name));
+            generate_encoding_funs.push(format!(
+                "    mstore(pos, {}(value))",
+                self.generate_cleanup(ctx, ty, funs)
+            ));
+        };
+        ctx.generate_marshalling_function(function_name.clone(), funs, generate_fun)
+    }
+
+    /// Generate encoding functions for ty
+    fn generate_abi_encoding_type(
+        &mut self,
+        ctx: &Context,
+        ty: &Type,
+        funs: &mut BTreeMap<String, Vec<String>>,
+    ) -> String {
+        use Type::*;
+        // TODO: dynamic types
+        match ty {
+            Primitive(_) => self.generate_abi_encoding_primitive_type(ctx, ty, funs),
+            Struct(mid, sid, _) => {
+                if is_u256(ctx.env, *mid, *sid) {
+                    self.generate_abi_encoding_primitive_type(ctx, ty, funs)
+                } else {
+                    "".to_string()
+                }
+            }
+            _ => "".to_string(),
+        }
+    }
+
+    /// Generate encoding functions for tuple
+    fn generate_abi_tuple_encoding(
+        &mut self,
+        ctx: &Context,
+        param_types: &[Type],
+        funs: &mut BTreeMap<String, Vec<String>>,
+    ) -> String {
+        let name_prefix = "abi_encode_tuple";
+        let function_name = format!("{}_{}", name_prefix, ctx.mangle_types(param_types));
+
+        let generate_fun = |funs: &mut BTreeMap<String, Vec<String>>,
+                            generate_encoding_funs: &mut Vec<String>| {
+            let mut indent_num = 0;
+            let mut value_params = (0..param_types.len())
+                .map(|i| format!("value_{}", i))
+                .join(", ");
+            if value_params != *"" {
+                value_params = format!(",{}", value_params);
+            }
+            generate_encoding_funs.push(format!(
+                "{}function {}(headStart {}) -> tail {{",
+                ident_str(indent_num),
+                function_name,
+                value_params
+            ));
+            indent_num += 1;
+            let overall_type_head_vec = ctx.type_head_sizes_vec(param_types, true);
+            let overall_type_head_size = ctx.type_head_sizes_sum(param_types, true);
+            generate_encoding_funs.push(format!(
+                "{}tail := add(headStart, {})",
+                ident_str(indent_num),
+                overall_type_head_size
+            ));
+            let mut head_pos = 0;
+            for (stack_pos, (ty, ty_size)) in overall_type_head_vec.iter().enumerate() {
+                let is_static = ctx.is_static_type(ty);
+                let mut local_typ_var = vec![];
+                // TODO: consider the case size_on_stack is not 1
+                local_typ_var.push(format!("value_{}", stack_pos));
+                let values = local_typ_var.iter().join(", ");
+                let abi_encode_type = self.generate_abi_encoding_type(ctx, ty, funs);
+                if is_static {
+                    generate_encoding_funs.push(format!(
+                        "{}{}({}, add(headStart, {}))",
+                        ident_str(indent_num),
+                        abi_encode_type,
+                        values,
+                        head_pos
+                    ));
+                } else {
+                    // TODO: dynamic types need to be revisited
+                    generate_encoding_funs.push(format!(
+                        "{}mstore(add(headStart, {}), sub(tail, headStart))",
+                        ident_str(indent_num),
+                        head_pos
+                    ));
+                    generate_encoding_funs.push(format!(
+                        "{}tail := {}({} tail)",
+                        ident_str(indent_num),
+                        abi_encode_type,
+                        values
+                    ));
+                }
+                head_pos += ty_size;
+            }
+        };
+        ctx.generate_marshalling_function(function_name.clone(), funs, generate_fun)
+    }
+
+    /// Generate the dispatch branch for a function
+    fn generate_dispatch_item(
+        &mut self,
+        ctx: &Context,
+        fun: &FunctionEnv<'_>,
+        selectors: &mut Vec<String>,
+        funs: &mut BTreeMap<String, Vec<String>>,
+    ) {
+        let fun_id = &fun
+            .module_env
+            .get_id()
+            .qualified(fun.get_id())
+            .instantiate(vec![]);
+        let function_name = ctx.make_function_name(fun_id);
+        let original_fun_name = fun.symbol_pool().string(fun.get_name());
+        let fun_sig = format!(
+            "{}({})",
+            original_fun_name,
+            self.compute_param_types(ctx, fun)
+        );
+        let function_selector =
+            format!("0x{:x}", Keccak256::digest(fun_sig.as_bytes()))[..10].to_string();
+        // Check selector collision
+        if selectors.contains(&function_selector) {
+            ctx.env.error(
+                &ctx.env.unknown_loc(),
+                "Hash collision at Function Definition Hash calculation",
+            );
+        } else {
+            selectors.push(function_selector.clone());
+        }
+        emitln!(ctx.writer, "case {}", function_selector);
+        ctx.emit_block(|| {
+            emitln!(ctx.writer, "// {}", fun_sig);
+            // TODO: check delegate call
+            if !is_payable_fun(fun) {
+                self.generate_call_value_check(ctx, REVERT_ERR_NON_PAYABLE_FUN);
+            }
+            // Decoding
+            let param_count = fun.get_parameter_count();
+            let mut params = "".to_string();
+            if param_count > 0 {
+                let decoding_fun_name =
+                    self.generate_abi_tuple_decoding(ctx, &fun.get_parameter_types(), funs);
+                params = (0..param_count).map(|i| format!("param_{}", i)).join(", ");
+                let let_params = format!("let {} := ", params);
+                emitln!(
+                    ctx.writer,
+                    "{}{}(4, calldatasize())",
+                    let_params,
+                    decoding_fun_name
+                );
+            }
+            let ret_count = fun.get_return_count();
+            let mut rets = "".to_string();
+            let mut let_rets = "".to_string();
+            if ret_count > 0 {
+                rets = (0..ret_count).map(|i| format!("ret_{}", i)).join(", ");
+                let_rets = format!("let {} := ", rets);
+            }
+            // Call the function
+            emitln!(ctx.writer, "{}{}({})", let_rets, function_name, params);
+            // Encoding the return values
+            let encoding_fun_name =
+                self.generate_abi_tuple_encoding(ctx, &fun.get_return_types(), funs);
+            if ret_count > 0 {
+                rets = format!(", {}", rets);
+            }
+            // Prepare the return values
+            self.generate_allocate_unbounded(ctx);
+            emitln!(
+                ctx.writer,
+                "let memEnd := {}(memPos{})",
+                encoding_fun_name,
+                rets
+            );
+            emitln!(ctx.writer, "return(memPos, sub(memEnd, memPos))");
+        });
+    }
+
+    /// Generate dispatcher routine
+    fn generate_dispatcher_routine(&mut self, ctx: &Context, module: &ModuleEnv<'_>) {
         let callables = module
             .get_functions()
             .filter(|f| is_callable_fun(f))
             .collect_vec();
-        // TODO: generate dispatcher and marshalling
+        emitln!(ctx.writer, "if iszero(lt(calldatasize(), 4))");
+        let mut decode_funs_map = BTreeMap::new();
+        let mut selectors = vec![];
+        let para_vec = vec!["224".to_string(), "calldataload(0)".to_string()];
+        let shr224 = self.call_builtin_str(ctx, YulFunction::ShiftRight, para_vec.iter().cloned());
+        ctx.emit_block(|| {
+            emitln!(ctx.writer, "let selector := {}", shr224);
+            emitln!(ctx.writer, "switch selector");
+            for callable in callables {
+                self.generate_dispatch_item(ctx, &callable, &mut selectors, &mut decode_funs_map);
+            }
+            emitln!(ctx.writer, "default {}");
+        });
+        let receive_exists = self.optional_receive(ctx, module);
+        self.generate_fallback(ctx, module, receive_exists);
+        // Print aux functions for marshalling
+        ctx.print_out_generated_func(&mut decode_funs_map);
+    }
+
+    /// Generate Yul definitions for all callable functions.
+    fn callable_functions(&mut self, ctx: &Context, module: &ModuleEnv<'_>) {
+        let callables = module
+            .get_functions()
+            .filter(|f| is_callable_fun(f) || is_fallback_fun(f) || is_receive_fun(f))
+            .collect_vec();
+        self.generate_dispatcher_routine(ctx, module);
         //   For now, we emit dummy calls so functions are referenced and the Yul optimizer does
         //   not remove them.
         emitln!(
@@ -1859,6 +2487,159 @@ impl<'a> Context<'a> {
         self.writer.unindent();
         emitln!(self.writer, "}");
     }
+
+    /// Get the types inside a struct
+    fn get_or_compute_struct_types(&self, mid: ModuleId, sid: StructId) -> Vec<Type> {
+        let mut tys = vec![];
+        let module_env = self.env.get_module(mid);
+        let struct_env = module_env.get_struct(sid);
+        for field in struct_env.get_fields() {
+            tys.push(field.get_type());
+        }
+        tys
+    }
+
+    /// Check whether ty is a static type in the sense of serialization
+    fn is_static_type(&self, ty: &Type) -> bool {
+        use PrimitiveType::*;
+        use Type::*;
+
+        let conjunction = |tys: &[Type]| {
+            tys.iter()
+                .map(|t| self.is_static_type(t))
+                .collect::<Vec<_>>()
+                .into_iter()
+                .all(|t| t)
+        };
+        match ty {
+            Primitive(p) => match p {
+                Bool | U8 | U64 | U128 | Address | Signer => true,
+                _ => {
+                    panic!("unexpected field type")
+                }
+            },
+            Vector(_) => false,
+            Tuple(tys) => conjunction(tys),
+            Struct(mid, sid, _) => {
+                if is_u256(self.env, *mid, *sid) {
+                    true
+                } else {
+                    let tys = self.get_or_compute_struct_types(*mid, *sid);
+                    conjunction(&tys)
+                }
+            }
+            TypeParameter(_)
+            | Reference(_, _)
+            | Fun(_, _)
+            | TypeDomain(_)
+            | ResourceDomain(_, _, _)
+            | Error
+            | Var(_) => {
+                panic!("unexpected field type")
+            }
+        }
+    }
+
+    /// Compute the sum of data size of tys
+    fn type_head_sizes_sum(&self, tys: &[Type], padded: bool) -> usize {
+        let size_vec = self.type_head_sizes_vec(tys, padded);
+        size_vec.iter().map(|(_, size)| size).sum()
+    }
+
+    /// Compute the data size of all types in tys
+    fn type_head_sizes_vec(&self, tys: &[Type], padded: bool) -> Vec<(Type, usize)> {
+        tys.iter()
+            .map(|ty_| (ty_.clone(), self.type_head_size(ty_, padded)))
+            .collect_vec()
+    }
+
+    /// Compute the data size of ty on the stack
+    fn type_head_size(&self, ty: &Type, padded: bool) -> usize {
+        use PrimitiveType::*;
+        use Type::*;
+        if self.is_static_type(ty) {
+            match ty {
+                Primitive(p) => match p {
+                    Bool => {
+                        if padded {
+                            32
+                        } else {
+                            1
+                        }
+                    }
+                    U8 => {
+                        if padded {
+                            32
+                        } else {
+                            1
+                        }
+                    }
+                    U64 => {
+                        if padded {
+                            32
+                        } else {
+                            8
+                        }
+                    }
+                    U128 => {
+                        if padded {
+                            32
+                        } else {
+                            16
+                        }
+                    }
+                    Address | Signer => {
+                        if padded {
+                            32
+                        } else {
+                            20
+                        }
+                    }
+                    Num | Range | EventStore => {
+                        panic!("unexpected field type")
+                    }
+                },
+                Tuple(tys) => self.type_head_sizes_sum(tys, padded),
+                Struct(mid, sid, _) => {
+                    if is_u256(self.env, *mid, *sid) {
+                        32
+                    } else {
+                        let tys = self.get_or_compute_struct_types(*mid, *sid);
+                        self.type_head_sizes_sum(&tys, padded)
+                    }
+                }
+                _ => panic!("unexpected field type"),
+            }
+        } else {
+            // Dynamic types
+            32
+        }
+    }
+
+    /// Print out generated function code
+    fn print_out_generated_func(&self, funs: &mut BTreeMap<String, Vec<String>>) {
+        for value in funs.values() {
+            for code_line in value {
+                emitln!(self.writer, code_line);
+            }
+        }
+    }
+
+    fn generate_marshalling_function(
+        &self,
+        function_name: String,
+        funs: &mut BTreeMap<String, Vec<String>>,
+        generate_fun: impl FnOnce(&mut BTreeMap<String, Vec<String>>, &mut Vec<String>),
+    ) -> String {
+        if funs.contains_key(&function_name) {
+            return function_name;
+        }
+        let mut generate_encoding_funs = vec![];
+        generate_fun(funs, &mut generate_encoding_funs);
+        generate_encoding_funs.push("}".to_string());
+        funs.insert(function_name.clone(), generate_encoding_funs);
+        function_name
+    }
 }
 
 /// Check whether a simple attribute is present in an attribute list.
@@ -1888,6 +2669,21 @@ fn is_create_fun(fun: &FunctionEnv<'_>) -> bool {
     has_simple_attr(fun.module_env.env, fun.get_attributes(), CREATE_ATTR)
 }
 
+/// Check whether the function has a `#[payable]` attribute.
+fn is_payable_fun(fun: &FunctionEnv<'_>) -> bool {
+    has_simple_attr(fun.module_env.env, fun.get_attributes(), PAYABLE_ATTR)
+}
+
+/// Check whether the function has a `#[receive]` attribute.
+fn is_receive_fun(fun: &FunctionEnv<'_>) -> bool {
+    has_simple_attr(fun.module_env.env, fun.get_attributes(), RECEIVE_ATTR)
+}
+
+/// Check whether the function has a `#[fallback]]` attribute.
+fn is_fallback_fun(fun: &FunctionEnv<'_>) -> bool {
+    has_simple_attr(fun.module_env.env, fun.get_attributes(), RECEIVE_FALLBACK)
+}
+
 /// Returns whether a module has a `#[evm_arith]` attribute.
 pub(crate) fn is_evm_arith_module(module: &ModuleEnv<'_>) -> bool {
     *module.self_address() == CORE_CODE_ADDRESS
@@ -1899,4 +2695,9 @@ fn is_u256(env: &GlobalEnv, module_id: ModuleId, struct_id: StructId) -> bool {
     let module_env = env.get_module(module_id);
     let struct_env = module_env.get_struct(struct_id);
     is_evm_arith_module(&module_env) && struct_env.is_native()
+}
+
+/// return num of indents as a string
+fn ident_str(num: usize) -> String {
+    (0..num).map(|_| "    ").collect::<String>()
 }

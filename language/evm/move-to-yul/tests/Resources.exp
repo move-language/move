@@ -12,10 +12,89 @@ object "A2_M" {
     object "A2_M_deployed" {
         code {
             mstore(0, memoryguard(160))
+            if iszero(lt(calldatasize(), 4))
+            {
+                let selector := $ShiftRight(224, calldataload(0))
+                switch selector
+                case 0x6fd78c6f
+                {
+                    // increment_a(address)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$address$(4, calldatasize())
+                    A2_M_increment_a(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_(memPos)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0xbb29998e
+                {
+                    // test(address)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$address$(4, calldatasize())
+                    let ret_0 := A2_M_test(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$bool$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x03e6d7c2
+                {
+                    // unpublish(address)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$address$(4, calldatasize())
+                    let ret_0 := A2_M_unpublish(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$A2_M_S$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                default {}
+            }
+            $Abort(97)
+            function abi_decode_address(offset, end) -> value {
+                value := calldataload(offset)
+                validator_address(value)
+            }
+            function abi_decode_tuple_$address$(headStart, dataEnd) -> value_0 {
+                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_address(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_encode_bool(value, pos) {
+                mstore(pos, cleanup_bool(value))
+            }
+            function abi_encode_tuple_(headStart ) -> tail {
+                tail := add(headStart, 0)
+            }
+            function abi_encode_tuple_$A2_M_S$(headStart ,value_0) -> tail {
+                tail := add(headStart, 64)
+                (value_0, add(headStart, 0))
+            }
+            function abi_encode_tuple_$bool$(headStart ,value_0) -> tail {
+                tail := add(headStart, 32)
+                abi_encode_bool(value_0, add(headStart, 0))
+            }
+            function cleanup_address(value) -> cleaned {
+                cleaned := add(value, 0xffffffffffffffffffffffffffffffffffffffff)
+            }
+            function cleanup_bool(value) -> cleaned {
+                cleaned := iszero(iszero(value))
+            }
+            function validator_address(value) {
+                if iszero(eq(value, cleanup_address(value))) { $Abort(95) }
+            }
 
             // Dummy calls to reference callables for Yul optimizer
             A2_M_increment_a(sload(100))
-            A2_M_publish(sload(100), sload(101))
             let $dummy0 := A2_M_test(sload(100))
             sstore(200, $dummy0)
             let $dummy1 := A2_M_unpublish(sload(101))
@@ -24,7 +103,7 @@ object "A2_M" {
             function A2_M_increment_a(addr) {
                 let r, $t2, $t3, $t4, $t5, $t6, $t7
                 // $t2 := borrow_global<M::S>($t0)
-                /// @src 2:493:510
+                /// @src 2:496:513
                 {
                     let $base_offset := $MakeTypeStorageBase(0, 0x698265eb, addr)
                     if not($StorageLoadU8($base_offset)) {
@@ -33,87 +112,41 @@ object "A2_M" {
                     $t2 := $MakePtr(true, add($base_offset, 32))
                 }
                 // $t3 := borrow_field<M::S>.a($t2)
-                /// @src 2:535:538
+                /// @src 2:538:541
                 $t3 := $IndexPtr($LoadU256($t2), 32)
                 // $t4 := read_ref($t3)
-                /// @src 2:535:538
+                /// @src 2:538:541
                 $t4 := $LoadU64($t3)
                 // $t5 := 1
-                /// @src 2:541:542
+                /// @src 2:544:545
                 $t5 := 1
                 // $t6 := +($t4, $t5)
-                /// @src 2:539:540
+                /// @src 2:542:543
                 $t6 := $AddU64($t4, $t5)
                 // $t7 := borrow_field<M::S>.a($t2)
-                /// @src 2:529:532
+                /// @src 2:532:535
                 $t7 := $IndexPtr($LoadU256($t2), 32)
                 // write_ref($t7, $t6)
-                /// @src 2:529:542
+                /// @src 2:532:545
                 $StoreU64($t7, $t6)
                 // return ()
-                /// @src 2:529:542
-            }
-
-            function A2_M_publish(sg, a) {
-                let s, $t3, $t4, $t5
-                // $t3 := true
-                /// @src 2:212:216
-                $t3 := true
-                // $t4 := pack M::S2($t3)
-                /// @src 2:206:217
-                {
-                    let $mem := $Malloc(1)
-                    $MemoryStoreU8(add($mem, 0), $t3)
-                    $t4 := $mem
-                }
-                // $t5 := pack M::S($t1, $t4)
-                /// @src 2:198:218
-                {
-                    let $mem := $Malloc(40)
-                    $MemoryStoreU64(add($mem, 32), a)
-                    $MemoryStoreU256(add($mem, 0), $t4)
-                    $t5 := $mem
-                }
-                // move_to<M::S>($t5, $t0)
-                /// @src 2:225:232
-                {
-                    let $base_offset := $MakeTypeStorageBase(0, 0x698265eb, sg)
-                    if $StorageLoadU8($base_offset) {
-                      $AbortBuiltin()
-                    }
-                    $AlignedStorageStore($base_offset, true)
-                    {
-                        let $dst := add($base_offset, 32)
-                        let $src := $t5
-                        {
-                            let $linked_dst := $NewLinkedStorageBase(0x5f8466cf)
-                            let $linked_src := mload(add($src, 0))
-                            $AlignedStorageStore(add($linked_dst, 0), mload(add($linked_src, 0)))
-                            $Free($linked_src, 1)
-                            $AlignedStorageStore(add($dst, 0), $linked_dst)
-                        }
-                        $AlignedStorageStore(add($dst, 32), mload(add($src, 32)))
-                        $Free($src, 40)
-                    }
-                }
-                // return ()
-                /// @src 2:225:242
+                /// @src 2:532:545
             }
 
             function A2_M_test(addr) -> $result {
                 let $t1
                 // $t1 := exists<M::S>($t0)
-                /// @src 2:391:397
+                /// @src 2:394:400
                 $t1 := $StorageLoadU8($MakeTypeStorageBase(0, 0x698265eb, addr))
                 // return $t1
-                /// @src 2:391:406
+                /// @src 2:394:409
                 $result := $t1
             }
 
             function A2_M_unpublish(a) -> $result {
                 let $t1
                 // $t1 := move_from<M::S>($t0)
-                /// @src 2:311:320
+                /// @src 2:314:323
                 {
                     let $base_offset := $MakeTypeStorageBase(0, 0x698265eb, a)
                     if not($StorageLoadU8($base_offset)) {
@@ -139,7 +172,7 @@ object "A2_M" {
                     }
                 }
                 // return $t1
-                /// @src 2:311:326
+                /// @src 2:314:329
                 $result := $t1
             }
 
@@ -153,8 +186,6 @@ object "A2_M" {
                 offs := mload(0)
                 // pad to word size
                 mstore(0, add(offs, shr(add(size, 31), 5)))
-            }
-            function $Free(offs, size) {
             }
             function $MakePtr(is_storage, offs) -> ptr {
               ptr := or(is_storage, shl(offs, 1))
@@ -177,11 +208,6 @@ object "A2_M" {
             function $MakeTypeStorageBase(category, type_hash, id) -> offs {
               offs := or(shl(category, 252), or(shl(type_hash, 220), shl(id, 60)))
             }
-            function $NewLinkedStorageBase(type_hash) -> offs {
-              let handle := mload(128)
-              mstore(128, add(handle, 1))
-              offs := $MakeTypeStorageBase(1, type_hash, handle)
-            }
             function $IndexPtr(ptr, offs) -> new_ptr {
               new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
             }
@@ -189,9 +215,6 @@ object "A2_M" {
               let word_offs, bit_offs := $ToWordOffs(offs)
               let key := $StorageKey(0, word_offs)
               val := and(shr(sload(key), bit_offs), 0xff)
-            }
-            function $MemoryStoreU8(offs, val) {
-              mstore8(offs, val)
             }
             function $StorageStoreU8(offs, val) {
               let word_offs, bit_offs := $ToWordOffs(offs)
@@ -281,9 +304,6 @@ object "A2_M" {
               let word_offs := shr(offs, 5)
               val := sload($StorageKey(0, word_offs))
             }
-            function $MemoryStoreU256(offs, val) {
-              mstore(offs, val)
-            }
             function $AlignedStorageStore(offs, val) {
               let word_offs := shr(offs, 5)
               sstore($StorageKey(0, word_offs), val)
@@ -292,203 +312,25 @@ object "A2_M" {
                 if lt(sub(0xffffffffffffffff, x), y) { $AbortBuiltin() }
                 r := add(x, y)
             }
-        }
-    }
-}
-
-
-!! Optimized Yul
-
-Pretty printed source:
-/// @use-src 2:"tests/Resources.move"
-object "A2_M" {
-    code {
-        {
-            let _1 := datasize("A2_M_deployed")
-            codecopy(0, dataoffset("A2_M_deployed"), _1)
-            return(0, _1)
-        }
-    }
-    object "A2_M_deployed" {
-        code {
-            {
-                let _1 := 0
-                mstore(_1, memoryguard(0xa0))
-                let $base_offset := or(252, shl(sload(100), 60))
-                if not($StorageLoadU8($base_offset)) { revert(_1, _1) }
-                let _2 := 1
-                let _3 := 32
-                let $t2 := or(true, shl(add($base_offset, _3), _2))
-                let _4 := $LoadU256($t2)
-                let _5 := shl(add(shr(_4, _2), _3), _2)
-                let _6 := and(_4, _2)
-                let val := _1
-                let offs := shr(or(_6, _5), _2)
-                switch or(_6, and(_5, _2))
-                case 0 {
-                    val := and(mload(offs), 0xffffffffffffffff)
-                }
-                default {
-                    let val_1 := _1
-                    let word_offs, bit_offs := $ToWordOffs(offs)
-                    mstore(_3, word_offs)
-                    mstore(64, _1)
-                    val_1 := and(shr(sload(keccak256(_3, 36)), bit_offs), 0xffffffffffffffff)
-                    let used_bits := sub(256, bit_offs)
-                    if lt(used_bits, 64)
-                    {
-                        mstore(_3, add(word_offs, _2))
-                        mstore(64, _1)
-                        val_1 := or(val_1, shl(and(sload(keccak256(_3, 36)), add(shl(_2, add(bit_offs, not(191))), not(0))), used_bits))
-                    }
-                    val := val_1
-                }
-                $StoreU64($IndexPtr($LoadU256($t2)), $AddU64(val))
-                A2_M_publish(sload(100), sload(101))
-                sstore(200, A2_M_test(sload(100)))
-                sstore(201, A2_M_unpublish(sload(101)))
-            }
-            function A2_M_publish(sg, a)
-            {
-                let _1 := 0
-                let offs := mload(_1)
-                mstore(_1, offs)
-                mstore8(offs, true)
-                let offs_1 := mload(_1)
-                mstore(_1, offs_1)
-                let _2 := add(offs_1, 32)
-                mstore(_2, or(and(mload(_2), not(0xffffffffffffffff)), a))
-                mstore(offs_1, offs)
-                let $base_offset := or(252, shl(sg, 60))
-                if $StorageLoadU8($base_offset) { revert(_1, _1) }
-                mstore(32, shr($base_offset, 5))
-                mstore(64, _1)
-                sstore(keccak256(32, 36), true)
-                let handle := mload(128)
-                mstore(128, add(handle, 1))
-                let offs_2 := or(504, shl(handle, 60))
-                $AlignedStorageStore(offs_2, mload(mload(offs_1)))
-                $AlignedStorageStore(add($base_offset, 32), offs_2)
-                $AlignedStorageStore(add($base_offset, 64), mload(_2))
-            }
-            function A2_M_test(addr) -> $result
-            {
-                $result := $StorageLoadU8(or(252, shl(addr, 60)))
-            }
-            function A2_M_unpublish(a) -> $result
-            {
-                let $base_offset := or(252, shl(a, 60))
-                if not($StorageLoadU8($base_offset)) { revert(0, 0) }
-                let word_offs, bit_offs := $ToWordOffs($base_offset)
-                mstore(32, word_offs)
-                mstore(64, 0)
-                let key := keccak256(32, 36)
-                let word := sload(key)
-                mstore(key, or(and(word, not(shl(0xff, bit_offs))), shl(false, bit_offs)))
-                let $src := add($base_offset, 32)
-                let offs := mload(0)
-                mstore(0, offs)
-                let $linked_src := sload($StorageKey(shr($src, 5)))
-                let $linked_dst := $Malloc()
-                mstore($linked_dst, sload($StorageKey(shr($linked_src, 5))))
-                $AlignedStorageStore_1140($linked_src)
-                mstore(offs, $linked_dst)
-                $AlignedStorageStore_1140($src)
-                let _1 := add($base_offset, 64)
-                mstore(add(offs, 32), sload($StorageKey(shr(_1, 5))))
-                $AlignedStorageStore_1140(_1)
-                $result := offs
-            }
-            function $Malloc() -> offs
-            {
-                offs := mload(0)
-                mstore(0, offs)
-            }
-            function $ToWordOffs(offs) -> word_offs, bit_offs
-            {
-                word_offs := shr(offs, 5)
-                bit_offs := shl(and(offs, 0x1F), 3)
-            }
-            function $StorageKey(word) -> key
-            {
-                mstore(32, word)
-                mstore(64, 0)
-                key := keccak256(32, 36)
-            }
-            function $IndexPtr(ptr) -> new_ptr
-            {
-                new_ptr := or(and(ptr, 1), shl(add(shr(ptr, 1), 32), 1))
-            }
-            function $StorageLoadU8(offs) -> val
-            {
-                let word_offs, bit_offs := $ToWordOffs(offs)
-                mstore(32, word_offs)
-                mstore(64, 0)
-                val := and(shr(sload(keccak256(32, 36)), bit_offs), 0xff)
-            }
-            function $StoreU64(ptr, val)
-            {
-                let offs := shr(ptr, 1)
-                switch and(ptr, 1)
-                case 0 {
-                    mstore(offs, or(and(mload(offs), not(0xffffffffffffffff)), val))
-                }
-                default {
-                    let word_offs, bit_offs := $ToWordOffs(offs)
-                    mstore(32, word_offs)
-                    mstore(64, 0)
-                    let key := keccak256(32, 36)
-                    let word := sload(key)
-                    mstore(key, or(word, shl(val, bit_offs)))
-                    let used_bits := sub(256, bit_offs)
-                    if lt(used_bits, 64)
-                    {
-                        mstore(32, add(word_offs, 1))
-                        mstore(64, 0)
-                        let key_1 := keccak256(32, 36)
-                        sstore(key_1, or(and(sload(key_1), not(add(shl(1, add(bit_offs, not(191))), not(0)))), shr(val, used_bits)))
-                    }
-                }
-            }
-            function $LoadU256(ptr) -> val
-            {
-                let offs := shr(ptr, 1)
-                switch and(ptr, 1)
-                case 0 { val := mload(offs) }
-                default {
-                    let val_1 := 0
-                    let word_offs, bit_offs := $ToWordOffs(offs)
-                    mstore(32, word_offs)
-                    mstore(64, val_1)
-                    val_1 := shr(sload(keccak256(32, 36)), bit_offs)
-                    let _1 := 256
-                    let used_bits := sub(_1, bit_offs)
-                    if lt(used_bits, _1)
-                    {
-                        mstore(32, add(word_offs, 1))
-                        mstore(64, 0)
-                        val_1 := or(val_1, shl(and(sload(keccak256(32, 36)), add(shl(1, bit_offs), not(0))), used_bits))
-                    }
-                    val := val_1
-                }
-            }
-            function $AlignedStorageStore_1140(offs)
-            {
-                mstore(32, shr(offs, 5))
-                mstore(64, 0)
-                sstore(keccak256(32, 36), 0)
-            }
-            function $AlignedStorageStore(offs, val)
-            {
-                mstore(32, shr(offs, 5))
-                mstore(64, 0)
-                sstore(keccak256(32, 36), val)
-            }
-            function $AddU64(x) -> r
-            {
-                if lt(sub(0xffffffffffffffff, x), 1) { revert(0, 0) }
-                r := add(x, 1)
+            function $ShiftRight(bits, value) -> r {
+                r := shr(bits, value) // evm version >= constantinople
             }
         }
     }
 }
+
+
+!! Errors compiling Yul
+
+Warning: Yul is still experimental. Please use the output with care.
+Error: Literal or identifier expected.
+  --> <stdin>:80:17:
+   |
+80 |                 (value_0, add(headStart, 0))
+   |                 ^
+
+Error: Expected keyword "data" or "object" or "}".
+  --> <stdin>:80:17:
+   |
+80 |                 (value_0, add(headStart, 0))
+   |                 ^

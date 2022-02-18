@@ -12,6 +12,57 @@ object "A2_M" {
     object "A2_M_deployed" {
         code {
             mstore(0, memoryguard(160))
+            if iszero(lt(calldatasize(), 4))
+            {
+                let selector := $ShiftRight(224, calldataload(0))
+                switch selector
+                case 0xc11ae395
+                {
+                    // evaded(uint64,uint64)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$u64_u64$(4, calldatasize())
+                    let ret_0, ret_1, ret_2, ret_3 := A2_M_evaded(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u64_u64_u64_u64$(memPos, ret_0, ret_1, ret_2, ret_3)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                default {}
+            }
+            $Abort(97)
+            function abi_decode_tuple_$u64_u64$(headStart, dataEnd) -> value_0, value_1 {
+                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := 32
+                    value_1 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_u64(offset, end) -> value {
+                value := calldataload(offset)
+                validator_u64(value)
+            }
+            function abi_encode_tuple_$u64_u64_u64_u64$(headStart ,value_0, value_1, value_2, value_3) -> tail {
+                tail := add(headStart, 128)
+                abi_encode_u64(value_0, add(headStart, 0))
+                abi_encode_u64(value_1, add(headStart, 32))
+                abi_encode_u64(value_2, add(headStart, 64))
+                abi_encode_u64(value_3, add(headStart, 96))
+            }
+            function abi_encode_u64(value, pos) {
+                mstore(pos, cleanup_u64(value))
+            }
+            function cleanup_u64(value) -> cleaned {
+                cleaned := and(value, 0xffffffffffffffff)
+            }
+            function validator_u64(value) {
+                if iszero(eq(value, cleanup_u64(value))) { $Abort(95) }
+            }
 
             // Dummy calls to reference callables for Yul optimizer
             let $dummy0, $dummy1, $dummy2, $dummy3 := A2_M_evaded(sload(100), sload(101))
@@ -156,6 +207,9 @@ object "A2_M" {
                 if lt(sub(0xffffffffffffffff, x), y) { $AbortBuiltin() }
                 r := add(x, y)
             }
+            function $ShiftRight(bits, value) -> r {
+                r := shr(bits, value) // evm version >= constantinople
+            }
         }
     }
 }
@@ -179,43 +233,69 @@ object "A2_M" {
                 let _1 := memoryguard(0xa0)
                 let _2 := 0
                 mstore(_2, _1)
-                let _3 := sload(101)
-                let _4 := sload(100)
-                mstore(_2, _1)
-                mstore(_1, _4)
-                let _5 := add(_1, 32)
-                mstore(_5, _4)
-                let $t8 := $AddU64(_4, _3)
-                let _6 := 1
-                let _7 := or(false, shl(_5, _6))
-                let val := _2
-                let offs := shr(_7, _6)
-                switch and(_7, _6)
-                case 0 {
-                    val := and(mload(offs), 0xffffffffffffffff)
-                }
-                default {
-                    let val_1 := _2
-                    let word_offs, bit_offs := $ToWordOffs(offs)
-                    mstore(32, word_offs)
-                    mstore(64, _2)
-                    val_1 := and(shr(sload(keccak256(32, 36)), bit_offs), 0xffffffffffffffff)
-                    let used_bits := sub(256, bit_offs)
-                    if lt(used_bits, 64)
+                if iszero(lt(calldatasize(), 4))
+                {
+                    if eq(0xc11ae395, shr(224, calldataload(_2)))
                     {
-                        mstore(32, add(word_offs, _6))
-                        mstore(64, _2)
-                        val_1 := or(val_1, shl(and(sload(keccak256(32, 36)), add(shl(_6, add(bit_offs, not(191))), not(0))), used_bits))
+                        if callvalue() { revert(_2, _2) }
+                        if slt(add(calldatasize(), not(3)), 64) { revert(_2, _2) }
+                        let value := abi_decode_u64_806()
+                        let value_1 := abi_decode_u64()
+                        mstore(_2, _1)
+                        mstore(_1, value)
+                        let _3 := add(_1, 32)
+                        mstore(_3, value)
+                        let $t8 := $AddU64(value, value_1)
+                        let _4 := 1
+                        let _5 := or(false, shl(_3, _4))
+                        let val := _2
+                        let offs := shr(_5, _4)
+                        switch and(_5, _4)
+                        case 0 {
+                            val := and(mload(offs), 0xffffffffffffffff)
+                        }
+                        default {
+                            let val_1 := _2
+                            let word_offs, bit_offs := $ToWordOffs(offs)
+                            mstore(32, word_offs)
+                            mstore(64, _2)
+                            val_1 := and(shr(sload(keccak256(32, 36)), bit_offs), 0xffffffffffffffff)
+                            let used_bits := sub(256, bit_offs)
+                            if lt(used_bits, 64)
+                            {
+                                mstore(32, add(word_offs, _4))
+                                mstore(64, _2)
+                                val_1 := or(val_1, shl(and(sload(keccak256(32, 36)), add(shl(_4, add(bit_offs, not(191))), not(0))), used_bits))
+                            }
+                            val := val_1
+                        }
+                        $StoreU64(or(false, shl(_1, _4)), $AddU64_808(val))
+                        let $t14 := mload(_1)
+                        let $t15 := mload(_3)
+                        let memPos := mload(_2)
+                        return(memPos, sub(abi_encode_u64_u64_u64_u64$(memPos, $t14, value_1, $t15, $t8), memPos))
                     }
-                    val := val_1
                 }
-                $StoreU64(or(false, shl(_1, _6)), $AddU64_667(val))
-                let $t14 := mload(_1)
-                let $t15 := mload(_5)
-                sstore(200, $t14)
-                sstore(201, _3)
-                sstore(202, $t15)
-                sstore(203, $t8)
+                revert(_2, _2)
+            }
+            function abi_decode_u64_806() -> value
+            {
+                value := calldataload(4)
+                if iszero(eq(value, and(value, 0xffffffffffffffff))) { revert(0, 0) }
+            }
+            function abi_decode_u64() -> value
+            {
+                value := calldataload(36)
+                if iszero(eq(value, and(value, 0xffffffffffffffff))) { revert(0, 0) }
+            }
+            function abi_encode_u64_u64_u64_u64$(headStart, value, value_1, value_2, value_3) -> tail
+            {
+                tail := add(headStart, 128)
+                let _1 := 0xffffffffffffffff
+                mstore(headStart, and(value, _1))
+                mstore(add(headStart, 32), and(value_1, _1))
+                mstore(add(headStart, 64), and(value_2, _1))
+                mstore(add(headStart, 96), and(value_3, _1))
             }
             function $ToWordOffs(offs) -> word_offs, bit_offs
             {
@@ -246,7 +326,7 @@ object "A2_M" {
                     }
                 }
             }
-            function $AddU64_667(x) -> r
+            function $AddU64_808(x) -> r
             {
                 if lt(sub(0xffffffffffffffff, x), 1) { revert(0, 0) }
                 r := add(x, 1)

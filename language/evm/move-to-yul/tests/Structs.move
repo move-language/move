@@ -20,12 +20,12 @@ module 0x2::M {
         S{a, b, c: pack_S2((a as u128))}
     }
 
-    #[callable]
+    // #[callable]
     fun read_S(s: &S): u64 {
         s.a + (s.c.x as u64)
     }
 
-    #[callable]
+    // #[callable]
     fun write_S(s: &mut S, v: u64) {
         s.a = v;
         s.c.x = (s.a as u128);

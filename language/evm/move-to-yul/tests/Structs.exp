@@ -12,6 +12,142 @@ object "A2_M" {
     object "A2_M_deployed" {
         code {
             mstore(0, memoryguard(160))
+            if iszero(lt(calldatasize(), 4))
+            {
+                let selector := $ShiftRight(224, calldataload(0))
+                switch selector
+                case 0x83197ef0
+                {
+                    // destroy()
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    A2_M_destroy()
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_(memPos)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0xe9fec640
+                {
+                    // pack_S(uint64,bool)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$u64_bool$(4, calldatasize())
+                    let ret_0 := A2_M_pack_S(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$A2_M_S$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x4509feb9
+                {
+                    // pack_S2(uint128)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$u128$(4, calldatasize())
+                    let ret_0 := A2_M_pack_S2(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$A2_M_S2$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x74d3ea10
+                {
+                    // read_and_write_s()
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let ret_0 := A2_M_read_and_write_s()
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$A2_M_S$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x50ec714f
+                {
+                    // unpack((uint64,bool,(uint128)))
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$A2_M_S$(4, calldatasize())
+                    let ret_0 := A2_M_unpack(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$A2_M_S2$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                default {}
+            }
+            $Abort(97)
+            function abi_decode_bool(offset, end) -> value {
+                value := calldataload(offset)
+                validator_bool(value)
+            }
+            function abi_decode_tuple_$A2_M_S$(headStart, dataEnd) -> value_0 {
+                if slt(sub(dataEnd, headStart), 96) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := (add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_tuple_$u128$(headStart, dataEnd) -> value_0 {
+                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_u128(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_tuple_$u64_bool$(headStart, dataEnd) -> value_0, value_1 {
+                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := 32
+                    value_1 := abi_decode_bool(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_u128(offset, end) -> value {
+                value := calldataload(offset)
+                validator_u128(value)
+            }
+            function abi_decode_u64(offset, end) -> value {
+                value := calldataload(offset)
+                validator_u64(value)
+            }
+            function abi_encode_tuple_(headStart ) -> tail {
+                tail := add(headStart, 0)
+            }
+            function abi_encode_tuple_$A2_M_S$(headStart ,value_0) -> tail {
+                tail := add(headStart, 96)
+                (value_0, add(headStart, 0))
+            }
+            function abi_encode_tuple_$A2_M_S2$(headStart ,value_0) -> tail {
+                tail := add(headStart, 32)
+                (value_0, add(headStart, 0))
+            }
+            function cleanup_bool(value) -> cleaned {
+                cleaned := iszero(iszero(value))
+            }
+            function cleanup_u128(value) -> cleaned {
+                cleaned := and(value, 0xffffffffffffffffffffffffffffffff)
+            }
+            function cleanup_u64(value) -> cleaned {
+                cleaned := and(value, 0xffffffffffffffff)
+            }
+            function validator_bool(value) {
+                if iszero(eq(value, cleanup_bool(value))) { $Abort(95) }
+            }
+            function validator_u128(value) {
+                if iszero(eq(value, cleanup_u128(value))) { $Abort(95) }
+            }
+            function validator_u64(value) {
+                if iszero(eq(value, cleanup_u64(value))) { $Abort(95) }
+            }
 
             // Dummy calls to reference callables for Yul optimizer
             A2_M_destroy()
@@ -19,34 +155,31 @@ object "A2_M" {
             sstore(200, $dummy0)
             let $dummy1 := A2_M_pack_S2(sload(101))
             sstore(201, $dummy1)
-            let $dummy2 := A2_M_read_S(sload(102))
+            let $dummy2 := A2_M_read_and_write_s()
             sstore(202, $dummy2)
-            let $dummy3 := A2_M_read_and_write_s()
+            let $dummy3 := A2_M_unpack(sload(103))
             sstore(203, $dummy3)
-            let $dummy4 := A2_M_unpack(sload(104))
-            sstore(204, $dummy4)
-            A2_M_write_S(sload(105), sload(106))
 
             function A2_M_destroy() {
                 let _s, $t1, $t2, $t3
                 // $t1 := 1
-                /// @src 2:808:809
+                /// @src 2:814:815
                 $t1 := 1
                 // $t2 := false
-                /// @src 2:811:816
+                /// @src 2:817:822
                 $t2 := false
                 // $t3 := M::pack_S($t1, $t2)
-                /// @src 2:801:817
+                /// @src 2:807:823
                 $t3 := A2_M_pack_S($t1, $t2)
                 // destroy($t3)
-                /// @src 2:796:798
+                /// @src 2:802:804
                 {
                     let $field_ptr := $LoadU256(add($t3, 0))
                     $Free($field_ptr, 16)
                 }
                 $Free($t3, 41)
                 // return ()
-                /// @src 2:817:818
+                /// @src 2:823:824
             }
 
             function A2_M_pack_S(a, b) -> $result {
@@ -85,63 +218,35 @@ object "A2_M" {
                 $result := $t1
             }
 
-            function A2_M_read_S(s) -> $result {
-                let $t1, $t2, $t3, $t4, $t5, $t6, $t7
-                // $t1 := borrow_field<M::S>.a($t0)
-                /// @src 2:361:364
-                $t1 := $IndexPtr($LoadU256(s), 32)
-                // $t2 := read_ref($t1)
-                /// @src 2:361:364
-                $t2 := $LoadU64($t1)
-                // $t3 := borrow_field<M::S>.c($t0)
-                /// @src 2:368:371
-                $t3 := $IndexPtr($LoadU256(s), 0)
-                // $t4 := borrow_field<M::S2>.x($t3)
-                /// @src 2:368:373
-                $t4 := $IndexPtr($LoadU256($t3), 0)
-                // $t5 := read_ref($t4)
-                /// @src 2:368:373
-                $t5 := $LoadU128($t4)
-                // $t6 := (u64)($t5)
-                /// @src 2:367:381
-                $t6 := $CastU64($t5)
-                // $t7 := +($t2, $t6)
-                /// @src 2:365:366
-                $t7 := $AddU64($t2, $t6)
-                // return $t7
-                /// @src 2:361:381
-                $result := $t7
-            }
-
             function A2_M_read_and_write_s() -> $result {
                 let x, $t2, $t3, $t4, $t5, $t6, $t7
                 let $locals := $Malloc(32)
                 // $t2 := 1
-                /// @src 2:568:569
+                /// @src 2:574:575
                 $t2 := 1
                 // $t3 := false
-                /// @src 2:571:576
+                /// @src 2:577:582
                 $t3 := false
                 // $t0 := M::pack_S($t2, $t3)
-                /// @src 2:561:577
+                /// @src 2:567:583
                 mstore(add($locals, 32), A2_M_pack_S($t2, $t3))
                 // $t4 := borrow_local($t0)
-                /// @src 2:602:604
+                /// @src 2:608:610
                 $t4 := $MakePtr(false, add($locals, 32))
                 // $t5 := M::read_S($t4)
-                /// @src 2:595:605
+                /// @src 2:601:611
                 $t5 := A2_M_read_S($t4)
                 // $t6 := borrow_local($t0)
-                /// @src 2:623:629
+                /// @src 2:629:635
                 $t6 := $MakePtr(false, add($locals, 32))
                 // M::write_S($t6, $t5)
-                /// @src 2:615:633
+                /// @src 2:621:639
                 A2_M_write_S($t6, $t5)
                 // $t7 := move($t0)
-                /// @src 2:643:644
+                /// @src 2:649:650
                 $t7 := mload(add($locals, 32))
                 // return $t7
-                /// @src 2:643:644
+                /// @src 2:649:650
                 $result := $t7
                 $Free($locals, 32)
             }
@@ -149,48 +254,76 @@ object "A2_M" {
             function A2_M_unpack(s) -> $result {
                 let _a, _b, c, $t4, $t5, $t6
                 // ($t4, $t5, $t6) := unpack M::S($t0)
-                /// @src 2:707:725
+                /// @src 2:713:731
                 $t4 := $MemoryLoadU64(add(s, 32))
                 $t5 := $MemoryLoadU8(add(s, 40))
                 $t6 := $MemoryLoadU256(add(s, 0))
                 $Free(s, 41)
                 // destroy($t5)
-                /// @src 2:719:721
+                /// @src 2:725:727
                 // destroy($t4)
-                /// @src 2:712:714
+                /// @src 2:718:720
                 // return $t6
-                /// @src 2:739:740
+                /// @src 2:745:746
                 $result := $t6
             }
 
             function A2_M_write_S(s, v) {
                 let $t2, $t3, $t4, $t5, $t6, $t7
                 // $t2 := borrow_field<M::S>.a($t0)
-                /// @src 2:450:453
+                /// @src 2:456:459
                 $t2 := $IndexPtr($LoadU256(s), 32)
                 // write_ref($t2, $t1)
-                /// @src 2:450:457
+                /// @src 2:456:463
                 $StoreU64($t2, v)
                 // $t3 := borrow_field<M::S>.a($t0)
-                /// @src 2:476:479
+                /// @src 2:482:485
                 $t3 := $IndexPtr($LoadU256(s), 32)
                 // $t4 := read_ref($t3)
-                /// @src 2:476:479
+                /// @src 2:482:485
                 $t4 := $LoadU64($t3)
                 // $t5 := (u128)($t4)
-                /// @src 2:475:488
+                /// @src 2:481:494
                 $t5 := $CastU128($t4)
                 // $t6 := borrow_field<M::S>.c($t0)
-                /// @src 2:467:470
+                /// @src 2:473:476
                 $t6 := $IndexPtr($LoadU256(s), 0)
                 // $t7 := borrow_field<M::S2>.x($t6)
-                /// @src 2:467:472
+                /// @src 2:473:478
                 $t7 := $IndexPtr($LoadU256($t6), 0)
                 // write_ref($t7, $t5)
-                /// @src 2:467:488
+                /// @src 2:473:494
                 $StoreU128($t7, $t5)
                 // return ()
-                /// @src 2:488:489
+                /// @src 2:494:495
+            }
+
+            function A2_M_read_S(s) -> $result {
+                let $t1, $t2, $t3, $t4, $t5, $t6, $t7
+                // $t1 := borrow_field<M::S>.a($t0)
+                /// @src 2:364:367
+                $t1 := $IndexPtr($LoadU256(s), 32)
+                // $t2 := read_ref($t1)
+                /// @src 2:364:367
+                $t2 := $LoadU64($t1)
+                // $t3 := borrow_field<M::S>.c($t0)
+                /// @src 2:371:374
+                $t3 := $IndexPtr($LoadU256(s), 0)
+                // $t4 := borrow_field<M::S2>.x($t3)
+                /// @src 2:371:376
+                $t4 := $IndexPtr($LoadU256($t3), 0)
+                // $t5 := read_ref($t4)
+                /// @src 2:371:376
+                $t5 := $LoadU128($t4)
+                // $t6 := (u64)($t5)
+                /// @src 2:370:384
+                $t6 := $CastU64($t5)
+                // $t7 := +($t2, $t6)
+                /// @src 2:368:369
+                $t7 := $AddU64($t2, $t6)
+                // return $t7
+                /// @src 2:364:384
+                $result := $t7
             }
 
             function $Abort(code) {
@@ -377,231 +510,25 @@ object "A2_M" {
                 if gt(x, 0xffffffffffffffffffffffffffffffff) { $AbortBuiltin() }
                 r := x
             }
-        }
-    }
-}
-
-
-!! Optimized Yul
-
-Pretty printed source:
-/// @use-src 2:"tests/Structs.move"
-object "A2_M" {
-    code {
-        {
-            let _1 := datasize("A2_M_deployed")
-            codecopy(0, dataoffset("A2_M_deployed"), _1)
-            return(0, _1)
-        }
-    }
-    object "A2_M_deployed" {
-        code {
-            {
-                let _1 := 0
-                mstore(_1, memoryguard(0xa0))
-                pop($LoadU256(A2_M_pack_S()))
-                let _2 := sload(101)
-                let _3 := sload(100)
-                if gt(_3, 0xffffffffffffffffffffffffffffffff) { revert(_1, _1) }
-                let $t3 := A2_M_pack_S2(_3)
-                let offs := mload(_1)
-                mstore(_1, offs)
-                let _4 := add(offs, 32)
-                mstore(_4, or(and(mload(_4), not(0xffffffffffffffff)), _3))
-                mstore8(add(offs, 40), _2)
-                mstore(offs, $t3)
-                sstore(200, offs)
-                sstore(201, A2_M_pack_S2(_2))
-                sstore(202, A2_M_read_S(sload(102)))
-                let offs_1 := mload(_1)
-                mstore(_1, offs_1)
-                let _5 := A2_M_pack_S()
-                let _6 := add(offs_1, 32)
-                mstore(_6, _5)
-                let $t4 := or(false, shl(_6, 1))
-                A2_M_write_S($t4, A2_M_read_S($t4))
-                sstore(203, mload(_6))
-                sstore(204, mload(sload(104)))
-                A2_M_write_S(sload(105), sload(106))
-            }
-            function A2_M_pack_S() -> $result
-            {
-                let offs := mload(0)
-                mstore(0, offs)
-                mstore(offs, or(and(mload(offs), not(0xffffffffffffffffffffffffffffffff)), 1))
-                let offs_1 := mload(0)
-                mstore(0, offs_1)
-                let _1 := add(offs_1, 32)
-                mstore(_1, or(and(mload(_1), not(0xffffffffffffffff)), 1))
-                mstore8(add(offs_1, 40), false)
-                mstore(offs_1, offs)
-                $result := offs_1
-            }
-            function A2_M_pack_S2(x) -> $result
-            {
-                let offs := mload(0)
-                mstore(0, offs)
-                mstore(offs, or(and(mload(offs), not(0xffffffffffffffffffffffffffffffff)), x))
-                $result := offs
-            }
-            function A2_M_read_S(s) -> $result
-            {
-                let _1 := $LoadU256(s)
-                let _2 := 1
-                let $t2 := $LoadU64(or(and(_1, _2), shl(add(shr(_1, _2), 32), _2)))
-                let _3 := $LoadU256(s)
-                let _4 := $LoadU256(or(and(_3, _2), shl(shr(_3, _2), _2)))
-                let _5 := shl(shr(_4, _2), _2)
-                let _6 := and(_4, _2)
-                let val := 0
-                let offs := shr(or(_6, _5), _2)
-                switch or(_6, and(_5, _2))
-                case 0 {
-                    val := and(mload(offs), 0xffffffffffffffffffffffffffffffff)
-                }
-                default {
-                    let val_1 := 0
-                    let word_offs, bit_offs := $ToWordOffs(offs)
-                    mstore(32, word_offs)
-                    mstore(64, val_1)
-                    val_1 := and(shr(sload(keccak256(32, 36)), bit_offs), 0xffffffffffffffffffffffffffffffff)
-                    let used_bits := sub(256, bit_offs)
-                    if lt(used_bits, 128)
-                    {
-                        mstore(32, add(word_offs, _2))
-                        mstore(64, 0)
-                        val_1 := or(val_1, shl(and(sload(keccak256(32, 36)), add(shl(_2, add(bit_offs, not(127))), not(0))), used_bits))
-                    }
-                    val := val_1
-                }
-                $result := $AddU64($t2, $CastU64(val))
-            }
-            function A2_M_write_S(s, v)
-            {
-                let _1 := $LoadU256(s)
-                let _2 := 1
-                let _3 := shl(add(shr(_1, _2), 32), _2)
-                let _4 := and(_1, _2)
-                let offs := shr(or(_4, _3), _2)
-                switch or(_4, and(_3, _2))
-                case 0 {
-                    mstore(offs, or(and(mload(offs), not(0xffffffffffffffff)), v))
-                }
-                default {
-                    let word_offs, bit_offs := $ToWordOffs(offs)
-                    mstore(32, word_offs)
-                    mstore(64, 0)
-                    let key := keccak256(32, 36)
-                    let word := sload(key)
-                    mstore(key, or(word, shl(v, bit_offs)))
-                    let used_bits := sub(256, bit_offs)
-                    if lt(used_bits, 64)
-                    {
-                        mstore(32, add(word_offs, _2))
-                        mstore(64, 0)
-                        let key_1 := keccak256(32, 36)
-                        sstore(key_1, or(and(sload(key_1), not(add(shl(_2, add(bit_offs, not(191))), not(0)))), shr(v, used_bits)))
-                    }
-                }
-                $StoreU128($IndexPtr($LoadU256($IndexPtr($LoadU256(s)))), $CastU128($LoadU64($IndexPtr_1352($LoadU256(s)))))
-            }
-            function $ToWordOffs(offs) -> word_offs, bit_offs
-            {
-                word_offs := shr(offs, 5)
-                bit_offs := shl(and(offs, 0x1F), 3)
-            }
-            function $IndexPtr_1352(ptr) -> new_ptr
-            {
-                new_ptr := or(and(ptr, 1), shl(add(shr(ptr, 1), 32), 1))
-            }
-            function $IndexPtr(ptr) -> new_ptr
-            {
-                new_ptr := or(and(ptr, 1), shl(shr(ptr, 1), 1))
-            }
-            function $LoadU64(ptr) -> val
-            {
-                let offs := shr(ptr, 1)
-                switch and(ptr, 1)
-                case 0 {
-                    val := and(mload(offs), 0xffffffffffffffff)
-                }
-                default {
-                    let val_1 := 0
-                    let word_offs, bit_offs := $ToWordOffs(offs)
-                    mstore(32, word_offs)
-                    mstore(64, val_1)
-                    val_1 := and(shr(sload(keccak256(32, 36)), bit_offs), 0xffffffffffffffff)
-                    let used_bits := sub(256, bit_offs)
-                    if lt(used_bits, 64)
-                    {
-                        mstore(32, add(word_offs, 1))
-                        mstore(64, 0)
-                        val_1 := or(val_1, shl(and(sload(keccak256(32, 36)), add(shl(1, add(bit_offs, not(191))), not(0))), used_bits))
-                    }
-                    val := val_1
-                }
-            }
-            function $StoreU128(ptr, val)
-            {
-                let offs := shr(ptr, 1)
-                switch and(ptr, 1)
-                case 0 {
-                    mstore(offs, or(and(mload(offs), not(0xffffffffffffffffffffffffffffffff)), val))
-                }
-                default {
-                    let word_offs, bit_offs := $ToWordOffs(offs)
-                    mstore(32, word_offs)
-                    mstore(64, 0)
-                    let key := keccak256(32, 36)
-                    let word := sload(key)
-                    mstore(key, or(word, shl(val, bit_offs)))
-                    let used_bits := sub(256, bit_offs)
-                    if lt(used_bits, 128)
-                    {
-                        mstore(32, add(word_offs, 1))
-                        mstore(64, 0)
-                        let key_1 := keccak256(32, 36)
-                        sstore(key_1, or(and(sload(key_1), not(add(shl(1, add(bit_offs, not(127))), not(0)))), shr(val, used_bits)))
-                    }
-                }
-            }
-            function $LoadU256(ptr) -> val
-            {
-                let offs := shr(ptr, 1)
-                switch and(ptr, 1)
-                case 0 { val := mload(offs) }
-                default {
-                    let val_1 := 0
-                    let word_offs, bit_offs := $ToWordOffs(offs)
-                    mstore(32, word_offs)
-                    mstore(64, val_1)
-                    val_1 := shr(sload(keccak256(32, 36)), bit_offs)
-                    let _1 := 256
-                    let used_bits := sub(_1, bit_offs)
-                    if lt(used_bits, _1)
-                    {
-                        mstore(32, add(word_offs, 1))
-                        mstore(64, 0)
-                        val_1 := or(val_1, shl(and(sload(keccak256(32, 36)), add(shl(1, bit_offs), not(0))), used_bits))
-                    }
-                    val := val_1
-                }
-            }
-            function $AddU64(x, y) -> r
-            {
-                if lt(sub(0xffffffffffffffff, x), y) { revert(0, 0) }
-                r := add(x, y)
-            }
-            function $CastU64(x) -> r
-            {
-                if gt(x, 0xffffffffffffffff) { revert(0, 0) }
-                r := x
-            }
-            function $CastU128(x) -> r
-            {
-                if gt(x, 0xffffffffffffffffffffffffffffffff) { revert(0, 0) }
-                r := x
+            function $ShiftRight(bits, value) -> r {
+                r := shr(bits, value) // evm version >= constantinople
             }
         }
     }
 }
+
+
+!! Errors compiling Yul
+
+Warning: Yul is still experimental. Please use the output with care.
+Error: Literal or identifier expected.
+  --> <stdin>:93:32:
+   |
+93 |                     value_0 := (add(headStart, offset), dataEnd)
+   |                                ^
+
+Error: Expected keyword "data" or "object" or "}".
+  --> <stdin>:93:32:
+   |
+93 |                     value_0 := (add(headStart, offset), dataEnd)
+   |                                ^

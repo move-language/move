@@ -12,6 +12,92 @@ object "A2_M" {
     object "A2_M_deployed" {
         code {
             mstore(0, memoryguard(160))
+            if iszero(lt(calldatasize(), 4))
+            {
+                let selector := $ShiftRight(224, calldataload(0))
+                switch selector
+                case 0x70e8dbcb
+                {
+                    // f(uint64)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$u64$(4, calldatasize())
+                    A2_M_f(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_(memPos)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0xb3e8e519
+                {
+                    // g(uint64)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$u64$(4, calldatasize())
+                    A2_M_g(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_(memPos)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0xf5f96a87
+                {
+                    // h1(uint64)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$u64$(4, calldatasize())
+                    let ret_0 := A2_M_h1(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x410dac7e
+                {
+                    // h2(uint64)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$u64$(4, calldatasize())
+                    A2_M_h2(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_(memPos)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                default {}
+            }
+            $Abort(97)
+            function abi_decode_tuple_$u64$(headStart, dataEnd) -> value_0 {
+                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_u64(offset, end) -> value {
+                value := calldataload(offset)
+                validator_u64(value)
+            }
+            function abi_encode_tuple_(headStart ) -> tail {
+                tail := add(headStart, 0)
+            }
+            function abi_encode_tuple_$u64$(headStart ,value_0) -> tail {
+                tail := add(headStart, 32)
+                abi_encode_u64(value_0, add(headStart, 0))
+            }
+            function abi_encode_u64(value, pos) {
+                mstore(pos, cleanup_u64(value))
+            }
+            function cleanup_u64(value) -> cleaned {
+                cleaned := and(value, 0xffffffffffffffff)
+            }
+            function validator_u64(value) {
+                if iszero(eq(value, cleanup_u64(value))) { $Abort(95) }
+            }
 
             // Dummy calls to reference callables for Yul optimizer
             A2_M_f(sload(100))
@@ -267,6 +353,9 @@ object "A2_M" {
             function $Eq(x, y) -> r {
                 r := eq(x, y)
             }
+            function $ShiftRight(bits, value) -> r {
+                r := shr(bits, value) // evm version >= constantinople
+            }
         }
     }
 }
@@ -287,12 +376,45 @@ object "A2_M" {
     object "A2_M_deployed" {
         code {
             {
-                mstore(0, memoryguard(0xa0))
-                let _1 := sload(100)
-                A2_M_f(_1)
-                A2_M_g(_1)
-                sstore(200, A2_M_h1(_1))
-                A2_M_h2(sload(101))
+                let _1 := memoryguard(0xa0)
+                let _2 := 0
+                mstore(_2, _1)
+                if iszero(lt(calldatasize(), 4))
+                {
+                    switch shr(224, calldataload(_2))
+                    case 0x70e8dbcb {
+                        if callvalue() { revert(_2, _2) }
+                        A2_M_f(abi_decode_u64(calldatasize()))
+                        return(_1, _2)
+                    }
+                    case 0xb3e8e519 {
+                        if callvalue() { revert(_2, _2) }
+                        A2_M_g(abi_decode_u64(calldatasize()))
+                        return(_1, _2)
+                    }
+                    case 0xf5f96a87 {
+                        if callvalue() { revert(_2, _2) }
+                        return(_1, sub(abi_encode_u64$(_1, A2_M_h1(abi_decode_u64(calldatasize()))), _1))
+                    }
+                    case 0x410dac7e {
+                        if callvalue() { revert(_2, _2) }
+                        A2_M_h2(abi_decode_u64(calldatasize()))
+                        return(mload(_2), _2)
+                    }
+                }
+                revert(_2, _2)
+            }
+            function abi_decode_u64(dataEnd) -> value
+            {
+                if slt(add(dataEnd, not(3)), 32) { revert(0, 0) }
+                let value_1 := calldataload(4)
+                if iszero(eq(value_1, and(value_1, 0xffffffffffffffff))) { revert(0, 0) }
+                value := value_1
+            }
+            function abi_encode_u64$(headStart, value) -> tail
+            {
+                tail := add(headStart, 32)
+                mstore(headStart, and(value, 0xffffffffffffffff))
             }
             function A2_M_f(x)
             {

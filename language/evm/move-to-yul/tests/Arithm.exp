@@ -12,6 +12,459 @@ object "A2_M" {
     object "A2_M_deployed" {
         code {
             mstore(0, memoryguard(160))
+            if iszero(lt(calldatasize(), 4))
+            {
+                let selector := $ShiftRight(224, calldataload(0))
+                switch selector
+                case 0x27a15f43
+                {
+                    // add_two_number(uint64,uint64)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$u64_u64$(4, calldatasize())
+                    let ret_0, ret_1 := A2_M_add_two_number(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u64_u64$(memPos, ret_0, ret_1)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x30df35a9
+                {
+                    // arithmetic_ops(uint64)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$u64$(4, calldatasize())
+                    let ret_0, ret_1 := A2_M_arithmetic_ops(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u64_u64$(memPos, ret_0, ret_1)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0xae7d00ae
+                {
+                    // bool_ops(uint64,uint64)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$u64_u64$(4, calldatasize())
+                    let ret_0, ret_1 := A2_M_bool_ops(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$bool_bool$(memPos, ret_0, ret_1)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0xf1a0a85c
+                {
+                    // div(uint64,uint64)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$u64_u64$(4, calldatasize())
+                    let ret_0, ret_1 := A2_M_div(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u64_u64$(memPos, ret_0, ret_1)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x93094600
+                {
+                    // div_by_zero()
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let ret_0 := A2_M_div_by_zero()
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0xa068bdda
+                {
+                    // div_by_zero_u64(uint64,uint64)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$u64_u64$(4, calldatasize())
+                    let ret_0 := A2_M_div_by_zero_u64(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x131c7572
+                {
+                    // div_by_zero_u64_incorrect(uint64,uint64)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$u64_u64$(4, calldatasize())
+                    let ret_0 := A2_M_div_by_zero_u64_incorrect(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x70e8dbcb
+                {
+                    // f(uint64)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$u64$(4, calldatasize())
+                    let ret_0 := A2_M_f(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0xb3e8e519
+                {
+                    // g(uint64)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$u64$(4, calldatasize())
+                    let ret_0 := A2_M_g(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x05a0581e
+                {
+                    // h(bool)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$bool$(4, calldatasize())
+                    let ret_0 := A2_M_h(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x4c275efc
+                {
+                    // multiple_ops(uint64,uint64,uint64)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1, param_2 := abi_decode_tuple_$u64_u64_u64$(4, calldatasize())
+                    let ret_0 := A2_M_multiple_ops(param_0, param_1, param_2)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x1b2e37b6
+                {
+                    // overflow_u128_add(uint128,uint128)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$u128_u128$(4, calldatasize())
+                    let ret_0 := A2_M_overflow_u128_add(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u128$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0xd279fccf
+                {
+                    // overflow_u128_add_incorrect(uint128,uint128)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$u128_u128$(4, calldatasize())
+                    let ret_0 := A2_M_overflow_u128_add_incorrect(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u128$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x16a555a3
+                {
+                    // overflow_u128_mul(uint128,uint128)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$u128_u128$(4, calldatasize())
+                    let ret_0 := A2_M_overflow_u128_mul(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u128$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x95843be6
+                {
+                    // overflow_u128_mul_incorrect(uint128,uint128)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$u128_u128$(4, calldatasize())
+                    let ret_0 := A2_M_overflow_u128_mul_incorrect(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u128$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x4eb8ec5d
+                {
+                    // overflow_u64_add(uint64,uint64)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$u64_u64$(4, calldatasize())
+                    let ret_0 := A2_M_overflow_u64_add(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0xe6a8dc7f
+                {
+                    // overflow_u64_add_incorrect(uint64,uint64)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$u64_u64$(4, calldatasize())
+                    let ret_0 := A2_M_overflow_u64_add_incorrect(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0xf9cf0228
+                {
+                    // overflow_u64_mul(uint64,uint64)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$u64_u64$(4, calldatasize())
+                    let ret_0 := A2_M_overflow_u64_mul(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x2396bb4e
+                {
+                    // overflow_u64_mul_incorrect(uint64,uint64)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$u64_u64$(4, calldatasize())
+                    let ret_0 := A2_M_overflow_u64_mul_incorrect(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0xc455375d
+                {
+                    // overflow_u8_add(uint8,uint8)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$u8_u8$(4, calldatasize())
+                    let ret_0 := A2_M_overflow_u8_add(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u8$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x3d744079
+                {
+                    // overflow_u8_add_incorrect(uint8,uint8)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$u8_u8$(4, calldatasize())
+                    let ret_0 := A2_M_overflow_u8_add_incorrect(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u8$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0xd4795c0b
+                {
+                    // overflow_u8_mul(uint8,uint8)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$u8_u8$(4, calldatasize())
+                    let ret_0 := A2_M_overflow_u8_mul(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u8$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0xd429fa05
+                {
+                    // overflow_u8_mul_incorrect(uint8,uint8)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$u8_u8$(4, calldatasize())
+                    let ret_0 := A2_M_overflow_u8_mul_incorrect(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u8$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0xdc75bec7
+                {
+                    // underflow()
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let ret_0 := A2_M_underflow()
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                default {}
+            }
+            $Abort(97)
+            function abi_decode_bool(offset, end) -> value {
+                value := calldataload(offset)
+                validator_bool(value)
+            }
+            function abi_decode_tuple_$bool$(headStart, dataEnd) -> value_0 {
+                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_bool(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_tuple_$u128_u128$(headStart, dataEnd) -> value_0, value_1 {
+                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_u128(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := 32
+                    value_1 := abi_decode_u128(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_tuple_$u64$(headStart, dataEnd) -> value_0 {
+                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_tuple_$u64_u64$(headStart, dataEnd) -> value_0, value_1 {
+                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := 32
+                    value_1 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_tuple_$u64_u64_u64$(headStart, dataEnd) -> value_0, value_1, value_2 {
+                if slt(sub(dataEnd, headStart), 96) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := 32
+                    value_1 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := 64
+                    value_2 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_tuple_$u8_u8$(headStart, dataEnd) -> value_0, value_1 {
+                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_u8(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := 32
+                    value_1 := abi_decode_u8(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_u128(offset, end) -> value {
+                value := calldataload(offset)
+                validator_u128(value)
+            }
+            function abi_decode_u64(offset, end) -> value {
+                value := calldataload(offset)
+                validator_u64(value)
+            }
+            function abi_decode_u8(offset, end) -> value {
+                value := calldataload(offset)
+                validator_u8(value)
+            }
+            function abi_encode_bool(value, pos) {
+                mstore(pos, cleanup_bool(value))
+            }
+            function abi_encode_tuple_$bool_bool$(headStart ,value_0, value_1) -> tail {
+                tail := add(headStart, 64)
+                abi_encode_bool(value_0, add(headStart, 0))
+                abi_encode_bool(value_1, add(headStart, 32))
+            }
+            function abi_encode_tuple_$u128$(headStart ,value_0) -> tail {
+                tail := add(headStart, 32)
+                abi_encode_u128(value_0, add(headStart, 0))
+            }
+            function abi_encode_tuple_$u64$(headStart ,value_0) -> tail {
+                tail := add(headStart, 32)
+                abi_encode_u64(value_0, add(headStart, 0))
+            }
+            function abi_encode_tuple_$u64_u64$(headStart ,value_0, value_1) -> tail {
+                tail := add(headStart, 64)
+                abi_encode_u64(value_0, add(headStart, 0))
+                abi_encode_u64(value_1, add(headStart, 32))
+            }
+            function abi_encode_tuple_$u8$(headStart ,value_0) -> tail {
+                tail := add(headStart, 32)
+                abi_encode_u8(value_0, add(headStart, 0))
+            }
+            function abi_encode_u128(value, pos) {
+                mstore(pos, cleanup_u128(value))
+            }
+            function abi_encode_u64(value, pos) {
+                mstore(pos, cleanup_u64(value))
+            }
+            function abi_encode_u8(value, pos) {
+                mstore(pos, cleanup_u8(value))
+            }
+            function cleanup_bool(value) -> cleaned {
+                cleaned := iszero(iszero(value))
+            }
+            function cleanup_u128(value) -> cleaned {
+                cleaned := and(value, 0xffffffffffffffffffffffffffffffff)
+            }
+            function cleanup_u64(value) -> cleaned {
+                cleaned := and(value, 0xffffffffffffffff)
+            }
+            function cleanup_u8(value) -> cleaned {
+                cleaned := and(value, 0xff)
+            }
+            function validator_bool(value) {
+                if iszero(eq(value, cleanup_bool(value))) { $Abort(95) }
+            }
+            function validator_u128(value) {
+                if iszero(eq(value, cleanup_u128(value))) { $Abort(95) }
+            }
+            function validator_u64(value) {
+                if iszero(eq(value, cleanup_u64(value))) { $Abort(95) }
+            }
+            function validator_u8(value) {
+                if iszero(eq(value, cleanup_u8(value))) { $Abort(95) }
+            }
 
             // Dummy calls to reference callables for Yul optimizer
             let $dummy0, $dummy1 := A2_M_add_two_number(sload(100), sload(101))
@@ -653,6 +1106,9 @@ object "A2_M" {
             function $LogicalNot(x) -> r {
                 r := not(x)
             }
+            function $ShiftRight(bits, value) -> r {
+                r := shr(bits, value) // evm version >= constantinople
+            }
         }
     }
 }
@@ -673,25 +1129,265 @@ object "A2_M" {
     object "A2_M_deployed" {
         code {
             {
-                let _1 := 0
-                mstore(_1, memoryguard(0xa0))
-                let _2 := sload(101)
-                let _3 := sload(100)
-                if lt(sub(0xffffffffffffffff, _3), _2) { revert(_1, _1) }
-                sstore(200, 3)
-                sstore(201, add(_3, _2))
-                let $dummy2, $dummy3 := A2_M_arithmetic_ops(sload(102))
-                sstore(202, $dummy2)
-                sstore(203, $dummy3)
-                let $dummy4, $dummy5 := A2_M_bool_ops(sload(104), sload(105))
-                sstore(204, $dummy4)
-                sstore(205, $dummy5)
-                let _4 := sload(107)
-                let _5 := sload(106)
-                if iszero(_4) { revert(_1, _1) }
-                sstore(206, div(_5, _4))
-                sstore(207, mod(_5, _4))
-                revert(_1, _1)
+                let _1 := memoryguard(0xa0)
+                let _2 := 0
+                mstore(_2, _1)
+                if iszero(lt(calldatasize(), 4))
+                {
+                    switch shr(224, calldataload(_2))
+                    case 0x27a15f43 {
+                        if callvalue() { revert(_2, _2) }
+                        let param, param_1 := abi_decode_u64_u64(calldatasize())
+                        let ret, ret_1 := A2_M_add_two_number(param, param_1)
+                        return(_1, sub(abi_encode_u64_u64$(_1, ret, ret_1), _1))
+                    }
+                    case 0x30df35a9 {
+                        if callvalue() { revert(_2, _2) }
+                        let ret_2, ret_3 := A2_M_arithmetic_ops(abi_decode_u64(calldatasize()))
+                        let memPos := mload(_2)
+                        return(memPos, sub(abi_encode_u64_u64$(memPos, ret_2, ret_3), memPos))
+                    }
+                    case 0xae7d00ae {
+                        if callvalue() { revert(_2, _2) }
+                        let param_2, param_3 := abi_decode_u64_u64(calldatasize())
+                        let ret_4, ret_5 := A2_M_bool_ops(param_2, param_3)
+                        let memPos_1 := mload(_2)
+                        return(memPos_1, sub(abi_encode_bool_bool$(memPos_1, ret_4, ret_5), memPos_1))
+                    }
+                    case 0xf1a0a85c {
+                        if callvalue() { revert(_2, _2) }
+                        let param_4, param_5 := abi_decode_u64_u64(calldatasize())
+                        let ret_6, ret_7 := A2_M_div(param_4, param_5)
+                        let memPos_2 := mload(_2)
+                        return(memPos_2, sub(abi_encode_u64_u64$(memPos_2, ret_6, ret_7), memPos_2))
+                    }
+                    case 0x93094600 {
+                        if callvalue() { revert(_2, _2) }
+                        revert(_2, _2)
+                    }
+                    case 0xa068bdda {
+                        if callvalue() { revert(_2, _2) }
+                        let param_6, param_7 := abi_decode_u64_u64(calldatasize())
+                        let ret_8 := $Div(param_6, param_7)
+                        let memPos_3 := mload(_2)
+                        return(memPos_3, sub(abi_encode_u64$(memPos_3, ret_8), memPos_3))
+                    }
+                    case 0x131c7572 {
+                        if callvalue() { revert(_2, _2) }
+                        let param_8, param_9 := abi_decode_u64_u64(calldatasize())
+                        let ret_9 := $Div(param_8, param_9)
+                        let memPos_4 := mload(_2)
+                        return(memPos_4, sub(abi_encode_u64$(memPos_4, ret_9), memPos_4))
+                    }
+                    case 0x70e8dbcb {
+                        if callvalue() { revert(_2, _2) }
+                        let ret_10 := A2_M_f(abi_decode_u64(calldatasize()))
+                        let memPos_5 := mload(_2)
+                        return(memPos_5, sub(abi_encode_u64$(memPos_5, ret_10), memPos_5))
+                    }
+                    case 0xb3e8e519 {
+                        if callvalue() { revert(_2, _2) }
+                        let ret_11 := A2_M_g(abi_decode_u64(calldatasize()))
+                        let memPos_6 := mload(_2)
+                        return(memPos_6, sub(abi_encode_u64$(memPos_6, ret_11), memPos_6))
+                    }
+                    case 0x05a0581e {
+                        if callvalue() { revert(_2, _2) }
+                        let ret_12 := A2_M_h(abi_decode_bool(calldatasize()))
+                        let memPos_7 := mload(_2)
+                        return(memPos_7, sub(abi_encode_u64$(memPos_7, ret_12), memPos_7))
+                    }
+                    case 0x4c275efc {
+                        if callvalue() { revert(_2, _2) }
+                        let param_10, param_11, param_12 := abi_decode_u64_u64_u64(calldatasize())
+                        let ret_13 := $AddU64(param_10, $MulU64(param_11, param_12))
+                        let memPos_8 := mload(_2)
+                        return(memPos_8, sub(abi_encode_u64$(memPos_8, ret_13), memPos_8))
+                    }
+                    case 0x1b2e37b6 {
+                        if callvalue() { revert(_2, _2) }
+                        let param_13, param_14 := abi_decode_u128_u128(calldatasize())
+                        let ret_14 := $AddU128(param_13, param_14)
+                        let memPos_9 := mload(_2)
+                        return(memPos_9, sub(abi_encode_u128$(memPos_9, ret_14), memPos_9))
+                    }
+                    case 0xd279fccf {
+                        if callvalue() { revert(_2, _2) }
+                        let param_15, param_16 := abi_decode_u128_u128(calldatasize())
+                        let ret_15 := $AddU128(param_15, param_16)
+                        let memPos_10 := mload(_2)
+                        return(memPos_10, sub(abi_encode_u128$(memPos_10, ret_15), memPos_10))
+                    }
+                    case 0x16a555a3 {
+                        if callvalue() { revert(_2, _2) }
+                        let param_17, param_18 := abi_decode_u128_u128(calldatasize())
+                        let ret_16 := $MulU128(param_17, param_18)
+                        let memPos_11 := mload(_2)
+                        return(memPos_11, sub(abi_encode_u128$(memPos_11, ret_16), memPos_11))
+                    }
+                    case 0x95843be6 {
+                        if callvalue() { revert(_2, _2) }
+                        let param_19, param_20 := abi_decode_u128_u128(calldatasize())
+                        let ret_17 := $MulU128(param_19, param_20)
+                        let memPos_12 := mload(_2)
+                        return(memPos_12, sub(abi_encode_u128$(memPos_12, ret_17), memPos_12))
+                    }
+                    case 0x4eb8ec5d {
+                        if callvalue() { revert(_2, _2) }
+                        let param_21, param_22 := abi_decode_u64_u64(calldatasize())
+                        let ret_18 := $AddU64(param_21, param_22)
+                        let memPos_13 := mload(_2)
+                        return(memPos_13, sub(abi_encode_u64$(memPos_13, ret_18), memPos_13))
+                    }
+                    case 0xe6a8dc7f {
+                        if callvalue() { revert(_2, _2) }
+                        let param_23, param_24 := abi_decode_u64_u64(calldatasize())
+                        let ret_19 := $AddU64(param_23, param_24)
+                        let memPos_14 := mload(_2)
+                        return(memPos_14, sub(abi_encode_u64$(memPos_14, ret_19), memPos_14))
+                    }
+                    case 0xf9cf0228 {
+                        if callvalue() { revert(_2, _2) }
+                        let param_25, param_26 := abi_decode_u64_u64(calldatasize())
+                        let ret_20 := $MulU64(param_25, param_26)
+                        let memPos_15 := mload(_2)
+                        return(memPos_15, sub(abi_encode_u64$(memPos_15, ret_20), memPos_15))
+                    }
+                    case 0x2396bb4e {
+                        if callvalue() { revert(_2, _2) }
+                        let param_27, param_28 := abi_decode_u64_u64(calldatasize())
+                        let ret_21 := $MulU64(param_27, param_28)
+                        let memPos_16 := mload(_2)
+                        return(memPos_16, sub(abi_encode_u64$(memPos_16, ret_21), memPos_16))
+                    }
+                    case 0xc455375d {
+                        if callvalue() { revert(_2, _2) }
+                        let param_29, param_30 := abi_decode_u8_u8(calldatasize())
+                        let ret_22 := $AddU8(param_29, param_30)
+                        let memPos_17 := mload(_2)
+                        return(memPos_17, sub(abi_encode_u8$(memPos_17, ret_22), memPos_17))
+                    }
+                    case 0x3d744079 {
+                        if callvalue() { revert(_2, _2) }
+                        let param_31, param_32 := abi_decode_u8_u8(calldatasize())
+                        let ret_23 := $AddU8(param_31, param_32)
+                        let memPos_18 := mload(_2)
+                        return(memPos_18, sub(abi_encode_u8$(memPos_18, ret_23), memPos_18))
+                    }
+                    case 0xd4795c0b {
+                        if callvalue() { revert(_2, _2) }
+                        let param_33, param_34 := abi_decode_u8_u8(calldatasize())
+                        let ret_24 := $MulU8(param_33, param_34)
+                        let memPos_19 := mload(_2)
+                        return(memPos_19, sub(abi_encode_u8$(memPos_19, ret_24), memPos_19))
+                    }
+                    case 0xd429fa05 {
+                        if callvalue() { revert(_2, _2) }
+                        let param_35, param_36 := abi_decode_u8_u8(calldatasize())
+                        let ret_25 := $MulU8(param_35, param_36)
+                        let memPos_20 := mload(_2)
+                        return(memPos_20, sub(abi_encode_u8$(memPos_20, ret_25), memPos_20))
+                    }
+                    case 0xdc75bec7 {
+                        if callvalue() { revert(_2, _2) }
+                        revert(_2, _2)
+                    }
+                }
+                revert(_2, _2)
+            }
+            function abi_decode_bool(dataEnd) -> value
+            {
+                if slt(add(dataEnd, not(3)), 32) { revert(0, 0) }
+                let value_1 := calldataload(4)
+                if iszero(eq(value_1, iszero(iszero(value_1)))) { revert(0, 0) }
+                value := value_1
+            }
+            function abi_decode_u128_u128(dataEnd) -> value, value_1
+            {
+                if slt(add(dataEnd, not(3)), 64) { revert(0, 0) }
+                let value_2 := calldataload(4)
+                let _1 := 0xffffffffffffffffffffffffffffffff
+                if iszero(eq(value_2, and(value_2, _1))) { revert(0, 0) }
+                value := value_2
+                let value_3 := calldataload(36)
+                if iszero(eq(value_3, and(value_3, _1))) { revert(0, 0) }
+                value_1 := value_3
+            }
+            function abi_decode_u64(dataEnd) -> value
+            {
+                if slt(add(dataEnd, not(3)), 32) { revert(0, 0) }
+                let value_1 := calldataload(4)
+                if iszero(eq(value_1, and(value_1, 0xffffffffffffffff))) { revert(0, 0) }
+                value := value_1
+            }
+            function abi_decode_u64_u64(dataEnd) -> value, value_1
+            {
+                if slt(add(dataEnd, not(3)), 64) { revert(0, 0) }
+                let value_2 := calldataload(4)
+                let _1 := 0xffffffffffffffff
+                if iszero(eq(value_2, and(value_2, _1))) { revert(0, 0) }
+                value := value_2
+                let value_3 := calldataload(36)
+                if iszero(eq(value_3, and(value_3, _1))) { revert(0, 0) }
+                value_1 := value_3
+            }
+            function abi_decode_u64_u64_u64(dataEnd) -> value, value_1, value_2
+            {
+                if slt(add(dataEnd, not(3)), 96) { revert(0, 0) }
+                let value_3 := calldataload(4)
+                let _1 := 0xffffffffffffffff
+                if iszero(eq(value_3, and(value_3, _1))) { revert(0, 0) }
+                value := value_3
+                let value_4 := calldataload(36)
+                if iszero(eq(value_4, and(value_4, _1))) { revert(0, 0) }
+                value_1 := value_4
+                let value_5 := calldataload(68)
+                if iszero(eq(value_5, and(value_5, _1))) { revert(0, 0) }
+                value_2 := value_5
+            }
+            function abi_decode_u8_u8(dataEnd) -> value, value_1
+            {
+                if slt(add(dataEnd, not(3)), 64) { revert(0, 0) }
+                let value_2 := calldataload(4)
+                if iszero(eq(value_2, and(value_2, 0xff))) { revert(0, 0) }
+                value := value_2
+                let value_3 := calldataload(36)
+                if iszero(eq(value_3, and(value_3, 0xff))) { revert(0, 0) }
+                value_1 := value_3
+            }
+            function abi_encode_bool_bool$(headStart, value, value_1) -> tail
+            {
+                tail := add(headStart, 64)
+                mstore(headStart, iszero(iszero(value)))
+                mstore(add(headStart, 32), iszero(iszero(value_1)))
+            }
+            function abi_encode_u128$(headStart, value) -> tail
+            {
+                tail := add(headStart, 32)
+                mstore(headStart, and(value, 0xffffffffffffffffffffffffffffffff))
+            }
+            function abi_encode_u64$(headStart, value) -> tail
+            {
+                tail := add(headStart, 32)
+                mstore(headStart, and(value, 0xffffffffffffffff))
+            }
+            function abi_encode_u64_u64$(headStart, value, value_1) -> tail
+            {
+                tail := add(headStart, 64)
+                let _1 := 0xffffffffffffffff
+                mstore(headStart, and(value, _1))
+                mstore(add(headStart, 32), and(value_1, _1))
+            }
+            function abi_encode_u8$(headStart, value) -> tail
+            {
+                tail := add(headStart, 32)
+                mstore(headStart, and(value, 0xff))
+            }
+            function A2_M_add_two_number(x, y) -> $result0, $result1
+            {
+                let $t4 := $AddU64(x, y)
+                $result0 := 3
+                $result1 := $t4
             }
             function A2_M_arithmetic_ops(a) -> $result0, $result1
             {
@@ -759,6 +1455,126 @@ object "A2_M" {
                         leave
                     }
                 }
+            }
+            function A2_M_div(x, y) -> $result0, $result1
+            {
+                if iszero(y) { revert(0, 0) }
+                $result0 := div(x, y)
+                $result1 := mod(x, y)
+            }
+            function A2_M_f(x) -> $result
+            {
+                if lt(sub(0xffffffffffffffff, x), 1) { revert(0, 0) }
+                $result := add(x, 1)
+            }
+            function A2_M_g(x) -> $result
+            {
+                if lt(sub(0xffffffffffffffff, x), 2) { revert(0, 0) }
+                $result := add(x, 2)
+            }
+            function A2_M_h(b) -> $result
+            {
+                let tmp := 0
+                let tmp_1 := tmp
+                let y := tmp
+                let $t5 := tmp
+                let $block := 4
+                let $block_1 := $block
+                for { } true { }
+                {
+                    switch $block_1
+                    case 2 {
+                        y := A2_M_f($t5)
+                        $block_1 := 5
+                    }
+                    case 3 {
+                        y := A2_M_g($t5)
+                        $block_1 := 5
+                    }
+                    case 4 {
+                        $t5 := 3
+                        switch b
+                        case 0 { $block_1 := $t5 }
+                        default { $block_1 := 2 }
+                    }
+                    case 5 {
+                        switch b
+                        case 0 { $block_1 := 7 }
+                        default { $block_1 := 6 }
+                    }
+                    case 6 {
+                        tmp := not(eq(y, $block))
+                        $block_1 := 8
+                    }
+                    case 7 {
+                        tmp := false
+                        $block_1 := 8
+                    }
+                    case 8 {
+                        switch tmp
+                        case 0 { $block_1 := 10 }
+                        default { $block_1 := 9 }
+                    }
+                    case 9 { revert(0, 0) }
+                    case 10 {
+                        switch not(b)
+                        case 0 { $block_1 := 12 }
+                        default { $block_1 := 11 }
+                    }
+                    case 11 {
+                        tmp_1 := not(eq(y, 5))
+                        $block_1 := 13
+                    }
+                    case 12 {
+                        tmp_1 := false
+                        $block_1 := 13
+                    }
+                    case 13 {
+                        switch tmp_1
+                        case 0 { $block_1 := 15 }
+                        default { $block_1 := 14 }
+                    }
+                    case 14 { revert(0, 0) }
+                    case 15 {
+                        $result := y
+                        leave
+                    }
+                }
+            }
+            function $AddU64(x, y) -> r
+            {
+                if lt(sub(0xffffffffffffffff, x), y) { revert(0, 0) }
+                r := add(x, y)
+            }
+            function $MulU64(x, y) -> r
+            {
+                if gt(y, div(0xffffffffffffffff, x)) { revert(0, 0) }
+                r := mul(x, y)
+            }
+            function $AddU8(x, y) -> r
+            {
+                if lt(sub(0xff, x), y) { revert(0, 0) }
+                r := add(x, y)
+            }
+            function $MulU8(x, y) -> r
+            {
+                if gt(y, div(0xff, x)) { revert(0, 0) }
+                r := mul(x, y)
+            }
+            function $AddU128(x, y) -> r
+            {
+                if lt(sub(0xffffffffffffffffffffffffffffffff, x), y) { revert(0, 0) }
+                r := add(x, y)
+            }
+            function $MulU128(x, y) -> r
+            {
+                if gt(y, div(0xffffffffffffffffffffffffffffffff, x)) { revert(0, 0) }
+                r := mul(x, y)
+            }
+            function $Div(x, y) -> r
+            {
+                if iszero(y) { revert(0, 0) }
+                r := div(x, y)
             }
         }
     }

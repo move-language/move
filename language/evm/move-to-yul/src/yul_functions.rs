@@ -20,6 +20,7 @@ static PLACEHOLDERS: Lazy<BTreeMap<&'static str, &'static str>> = Lazy::new(|| {
         "MAX_U128" => "0xffffffffffffffffffffffffffffffff",
         "MAX_U256" =>
         "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "ADDRESS_U160" => "0xffffffffffffffffffffffffffffffffffffffff",
 
         // ---------------------------------
         // Memory
@@ -610,4 +611,7 @@ CastU256: "(hi, lo) -> r {
     if gt(lo, ${MAX_U128}) { $AbortBuiltin() }
     r := add(shl(hi, 128), lo)
 }" dep AbortBuiltin,
+ShiftRight: "(bits, value) -> r {
+    r := shr(bits, value) // evm version >= constantinople
+}",
 }

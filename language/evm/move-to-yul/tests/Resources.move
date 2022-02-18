@@ -9,7 +9,7 @@ module 0x2::M {
         x: bool
     }
 
-    #[callable]
+    // #[callable]
 	fun publish(sg: &signer, a: u64) {
 	    let s = S{a, c: S2{x: true}};
 	    move_to<S>(sg, s)

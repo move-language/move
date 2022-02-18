@@ -41,7 +41,7 @@ object "A2_M" {
                 // destroy($t3)
                 /// @src 2:796:798
                 {
-                    let $field_ptr := $LoadU256(add($t3, 9))
+                    let $field_ptr := $LoadU256(add($t3, 0))
                     $Free($field_ptr, 16)
                 }
                 $Free($t3, 41)
@@ -61,9 +61,9 @@ object "A2_M" {
                 /// @src 2:268:300
                 {
                     let $mem := $Malloc(41)
-                    $MemoryStoreU64(add($mem, 0), a)
-                    $MemoryStoreU8(add($mem, 8), b)
-                    $MemoryStoreU256(add($mem, 9), $t3)
+                    $MemoryStoreU64(add($mem, 32), a)
+                    $MemoryStoreU8(add($mem, 40), b)
+                    $MemoryStoreU256(add($mem, 0), $t3)
                     $t4 := $mem
                 }
                 // return $t4
@@ -89,13 +89,13 @@ object "A2_M" {
                 let $t1, $t2, $t3, $t4, $t5, $t6, $t7
                 // $t1 := borrow_field<M::S>.a($t0)
                 /// @src 2:361:364
-                $t1 := $IndexPtr($LoadU256(s), 0)
+                $t1 := $IndexPtr($LoadU256(s), 32)
                 // $t2 := read_ref($t1)
                 /// @src 2:361:364
                 $t2 := $LoadU64($t1)
                 // $t3 := borrow_field<M::S>.c($t0)
                 /// @src 2:368:371
-                $t3 := $IndexPtr($LoadU256(s), 9)
+                $t3 := $IndexPtr($LoadU256(s), 0)
                 // $t4 := borrow_field<M::S2>.x($t3)
                 /// @src 2:368:373
                 $t4 := $IndexPtr($LoadU256($t3), 0)
@@ -127,13 +127,13 @@ object "A2_M" {
                 mstore(add($locals, 32), A2_M_pack_S($t2, $t3))
                 // $t4 := borrow_local($t0)
                 /// @src 2:602:604
-                $t4 := add($locals, 32)
+                $t4 := $MakePtr(false, add($locals, 32))
                 // $t5 := M::read_S($t4)
                 /// @src 2:595:605
                 $t5 := A2_M_read_S($t4)
                 // $t6 := borrow_local($t0)
                 /// @src 2:623:629
-                $t6 := add($locals, 32)
+                $t6 := $MakePtr(false, add($locals, 32))
                 // M::write_S($t6, $t5)
                 /// @src 2:615:633
                 A2_M_write_S($t6, $t5)
@@ -150,9 +150,9 @@ object "A2_M" {
                 let _a, _b, c, $t4, $t5, $t6
                 // ($t4, $t5, $t6) := unpack M::S($t0)
                 /// @src 2:707:725
-                $t4 := $MemoryLoadU64(add(s, 0))
-                $t5 := $MemoryLoadU8(add(s, 8))
-                $t6 := $MemoryLoadU256(add(s, 9))
+                $t4 := $MemoryLoadU64(add(s, 32))
+                $t5 := $MemoryLoadU8(add(s, 40))
+                $t6 := $MemoryLoadU256(add(s, 0))
                 $Free(s, 41)
                 // destroy($t5)
                 /// @src 2:719:721
@@ -167,13 +167,13 @@ object "A2_M" {
                 let $t2, $t3, $t4, $t5, $t6, $t7
                 // $t2 := borrow_field<M::S>.a($t0)
                 /// @src 2:450:453
-                $t2 := $IndexPtr($LoadU256(s), 0)
+                $t2 := $IndexPtr($LoadU256(s), 32)
                 // write_ref($t2, $t1)
                 /// @src 2:450:457
                 $StoreU64($t2, v)
                 // $t3 := borrow_field<M::S>.a($t0)
                 /// @src 2:476:479
-                $t3 := $IndexPtr($LoadU256(s), 0)
+                $t3 := $IndexPtr($LoadU256(s), 32)
                 // $t4 := read_ref($t3)
                 /// @src 2:476:479
                 $t4 := $LoadU64($t3)
@@ -182,7 +182,7 @@ object "A2_M" {
                 $t5 := $CastU128($t4)
                 // $t6 := borrow_field<M::S>.c($t0)
                 /// @src 2:467:470
-                $t6 := $IndexPtr($LoadU256(s), 9)
+                $t6 := $IndexPtr($LoadU256(s), 0)
                 // $t7 := borrow_field<M::S2>.x($t6)
                 /// @src 2:467:472
                 $t7 := $IndexPtr($LoadU256($t6), 0)
@@ -201,7 +201,8 @@ object "A2_M" {
             }
             function $Malloc(size) -> offs {
                 offs := mload(0)
-                mstore(0, add(offs, size))
+                // pad to word size
+                mstore(0, add(offs, shr(add(size, 31), 5)))
             }
             function $Free(offs, size) {
             }
@@ -218,10 +219,10 @@ object "A2_M" {
               word_offs := shr(offs, 5)
               bit_offs := shl(and(offs, 0x1F), 3)
             }
-            function $StorageKey(type, word) -> key {
+            function $StorageKey(group, word) -> key {
               mstore(32, word)
-              mstore(64, type)
-              key := keccak256(32, 33)
+              mstore(64, group)
+              key := keccak256(32, 36)
             }
             function $IndexPtr(ptr, offs) -> new_ptr {
               new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
@@ -398,43 +399,48 @@ object "A2_M" {
             {
                 let _1 := 0
                 mstore(_1, memoryguard(0xa0))
-                pop($LoadU256(add(A2_M_pack_S(), 9)))
+                pop($LoadU256(A2_M_pack_S()))
                 let _2 := sload(101)
                 let _3 := sload(100)
                 if gt(_3, 0xffffffffffffffffffffffffffffffff) { revert(_1, _1) }
                 let $t3 := A2_M_pack_S2(_3)
                 let offs := mload(_1)
-                mstore(_1, add(offs, 41))
-                mstore(offs, or(and(mload(offs), not(0xffffffffffffffff)), _3))
-                mstore8(add(offs, 8), _2)
-                mstore(add(offs, 9), $t3)
+                mstore(_1, offs)
+                let _4 := add(offs, 32)
+                mstore(_4, or(and(mload(_4), not(0xffffffffffffffff)), _3))
+                mstore8(add(offs, 40), _2)
+                mstore(offs, $t3)
                 sstore(200, offs)
                 sstore(201, A2_M_pack_S2(_2))
                 sstore(202, A2_M_read_S(sload(102)))
-                let _4 := add(mload(_1), 32)
-                mstore(_1, _4)
-                mstore(_4, A2_M_pack_S())
-                A2_M_write_S(_4, A2_M_read_S(_4))
-                sstore(203, mload(_4))
-                sstore(204, A2_M_unpack(sload(104)))
+                let offs_1 := mload(_1)
+                mstore(_1, offs_1)
+                let _5 := A2_M_pack_S()
+                let _6 := add(offs_1, 32)
+                mstore(_6, _5)
+                let $t4 := or(false, shl(_6, 1))
+                A2_M_write_S($t4, A2_M_read_S($t4))
+                sstore(203, mload(_6))
+                sstore(204, mload(sload(104)))
                 A2_M_write_S(sload(105), sload(106))
             }
             function A2_M_pack_S() -> $result
             {
                 let offs := mload(0)
-                mstore(0, add(offs, 16))
+                mstore(0, offs)
                 mstore(offs, or(and(mload(offs), not(0xffffffffffffffffffffffffffffffff)), 1))
                 let offs_1 := mload(0)
-                mstore(0, add(offs_1, 41))
-                mstore(offs_1, or(and(mload(offs_1), not(0xffffffffffffffff)), 1))
-                mstore8(add(offs_1, 8), false)
-                mstore(add(offs_1, 9), offs)
+                mstore(0, offs_1)
+                let _1 := add(offs_1, 32)
+                mstore(_1, or(and(mload(_1), not(0xffffffffffffffff)), 1))
+                mstore8(add(offs_1, 40), false)
+                mstore(offs_1, offs)
                 $result := offs_1
             }
             function A2_M_pack_S2(x) -> $result
             {
                 let offs := mload(0)
-                mstore(0, add(offs, 16))
+                mstore(0, offs)
                 mstore(offs, or(and(mload(offs), not(0xffffffffffffffffffffffffffffffff)), x))
                 $result := offs
             }
@@ -442,9 +448,9 @@ object "A2_M" {
             {
                 let _1 := $LoadU256(s)
                 let _2 := 1
-                let $t2 := $LoadU64(or(and(_1, _2), shl(shr(_1, _2), _2)))
+                let $t2 := $LoadU64(or(and(_1, _2), shl(add(shr(_1, _2), 32), _2)))
                 let _3 := $LoadU256(s)
-                let _4 := $LoadU256(or(and(_3, _2), shl(add(shr(_3, _2), 9), _2)))
+                let _4 := $LoadU256(or(and(_3, _2), shl(shr(_3, _2), _2)))
                 let _5 := shl(shr(_4, _2), _2)
                 let _6 := and(_4, _2)
                 let val := 0
@@ -458,25 +464,23 @@ object "A2_M" {
                     let word_offs, bit_offs := $ToWordOffs(offs)
                     mstore(32, word_offs)
                     mstore(64, val_1)
-                    val_1 := and(shr(sload(keccak256(32, 33)), bit_offs), 0xffffffffffffffffffffffffffffffff)
+                    val_1 := and(shr(sload(keccak256(32, 36)), bit_offs), 0xffffffffffffffffffffffffffffffff)
                     let used_bits := sub(256, bit_offs)
                     if lt(used_bits, 128)
                     {
                         mstore(32, add(word_offs, _2))
                         mstore(64, 0)
-                        val_1 := or(val_1, shl(and(sload(keccak256(32, 33)), add(shl(_2, add(bit_offs, not(127))), not(0))), used_bits))
+                        val_1 := or(val_1, shl(and(sload(keccak256(32, 36)), add(shl(_2, add(bit_offs, not(127))), not(0))), used_bits))
                     }
                     val := val_1
                 }
                 $result := $AddU64($t2, $CastU64(val))
             }
-            function A2_M_unpack(s) -> $result
-            { $result := mload(add(s, 9)) }
             function A2_M_write_S(s, v)
             {
                 let _1 := $LoadU256(s)
                 let _2 := 1
-                let _3 := shl(shr(_1, _2), _2)
+                let _3 := shl(add(shr(_1, _2), 32), _2)
                 let _4 := and(_1, _2)
                 let offs := shr(or(_4, _3), _2)
                 switch or(_4, and(_3, _2))
@@ -487,7 +491,7 @@ object "A2_M" {
                     let word_offs, bit_offs := $ToWordOffs(offs)
                     mstore(32, word_offs)
                     mstore(64, 0)
-                    let key := keccak256(32, 33)
+                    let key := keccak256(32, 36)
                     let word := sload(key)
                     mstore(key, or(word, shl(v, bit_offs)))
                     let used_bits := sub(256, bit_offs)
@@ -495,24 +499,24 @@ object "A2_M" {
                     {
                         mstore(32, add(word_offs, _2))
                         mstore(64, 0)
-                        let key_1 := keccak256(32, 33)
+                        let key_1 := keccak256(32, 36)
                         sstore(key_1, or(and(sload(key_1), not(add(shl(_2, add(bit_offs, not(191))), not(0)))), shr(v, used_bits)))
                     }
                 }
-                $StoreU128($IndexPtr_1317($LoadU256($IndexPtr($LoadU256(s)))), $CastU128($LoadU64($IndexPtr_1317($LoadU256(s)))))
+                $StoreU128($IndexPtr($LoadU256($IndexPtr($LoadU256(s)))), $CastU128($LoadU64($IndexPtr_1352($LoadU256(s)))))
             }
             function $ToWordOffs(offs) -> word_offs, bit_offs
             {
                 word_offs := shr(offs, 5)
                 bit_offs := shl(and(offs, 0x1F), 3)
             }
-            function $IndexPtr_1317(ptr) -> new_ptr
+            function $IndexPtr_1352(ptr) -> new_ptr
             {
-                new_ptr := or(and(ptr, 1), shl(shr(ptr, 1), 1))
+                new_ptr := or(and(ptr, 1), shl(add(shr(ptr, 1), 32), 1))
             }
             function $IndexPtr(ptr) -> new_ptr
             {
-                new_ptr := or(and(ptr, 1), shl(add(shr(ptr, 1), 9), 1))
+                new_ptr := or(and(ptr, 1), shl(shr(ptr, 1), 1))
             }
             function $LoadU64(ptr) -> val
             {
@@ -526,13 +530,13 @@ object "A2_M" {
                     let word_offs, bit_offs := $ToWordOffs(offs)
                     mstore(32, word_offs)
                     mstore(64, val_1)
-                    val_1 := and(shr(sload(keccak256(32, 33)), bit_offs), 0xffffffffffffffff)
+                    val_1 := and(shr(sload(keccak256(32, 36)), bit_offs), 0xffffffffffffffff)
                     let used_bits := sub(256, bit_offs)
                     if lt(used_bits, 64)
                     {
                         mstore(32, add(word_offs, 1))
                         mstore(64, 0)
-                        val_1 := or(val_1, shl(and(sload(keccak256(32, 33)), add(shl(1, add(bit_offs, not(191))), not(0))), used_bits))
+                        val_1 := or(val_1, shl(and(sload(keccak256(32, 36)), add(shl(1, add(bit_offs, not(191))), not(0))), used_bits))
                     }
                     val := val_1
                 }
@@ -548,7 +552,7 @@ object "A2_M" {
                     let word_offs, bit_offs := $ToWordOffs(offs)
                     mstore(32, word_offs)
                     mstore(64, 0)
-                    let key := keccak256(32, 33)
+                    let key := keccak256(32, 36)
                     let word := sload(key)
                     mstore(key, or(word, shl(val, bit_offs)))
                     let used_bits := sub(256, bit_offs)
@@ -556,7 +560,7 @@ object "A2_M" {
                     {
                         mstore(32, add(word_offs, 1))
                         mstore(64, 0)
-                        let key_1 := keccak256(32, 33)
+                        let key_1 := keccak256(32, 36)
                         sstore(key_1, or(and(sload(key_1), not(add(shl(1, add(bit_offs, not(127))), not(0)))), shr(val, used_bits)))
                     }
                 }
@@ -571,14 +575,14 @@ object "A2_M" {
                     let word_offs, bit_offs := $ToWordOffs(offs)
                     mstore(32, word_offs)
                     mstore(64, val_1)
-                    val_1 := shr(sload(keccak256(32, 33)), bit_offs)
+                    val_1 := shr(sload(keccak256(32, 36)), bit_offs)
                     let _1 := 256
                     let used_bits := sub(_1, bit_offs)
                     if lt(used_bits, _1)
                     {
                         mstore(32, add(word_offs, 1))
                         mstore(64, 0)
-                        val_1 := or(val_1, shl(and(sload(keccak256(32, 33)), add(shl(1, bit_offs), not(0))), used_bits))
+                        val_1 := or(val_1, shl(and(sload(keccak256(32, 36)), add(shl(1, bit_offs), not(0))), used_bits))
                     }
                     val := val_1
                 }

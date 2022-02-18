@@ -75,8 +75,14 @@ pub struct Generator {
 struct StructLayout {
     /// The size, in bytes, of this struct.
     size: usize,
-    /// Offsets in linear memory and type for each field.
+    /// Offsets in linear memory and type for each field, indexed by logical offsets, i.e.
+    /// position in the struct definition.
     offsets: BTreeMap<usize, (usize, Type)>,
+    /// Field order (in terms of logical offset), optimized for best memory representation.
+    field_order: Vec<usize>,
+    /// The number of leading fields which are pointers to linked data. Those fields always
+    /// appear first in the field_order.
+    pointer_count: usize,
 }
 
 // ================================================================================================
@@ -977,17 +983,26 @@ impl Generator {
 
     /// Borrow a local.
     fn borrow_loc(
-        &self,
+        &mut self,
         ctx: &Context,
         target: &FunctionTarget,
         dest: &[TempIndex],
         srcs: &[TempIndex],
     ) {
+        let local_ptr = self.call_builtin_str(
+            ctx,
+            YulFunction::MakePtr,
+            vec![
+                "false".to_string(),
+                Self::local_ptr(&self.borrowed_locals, srcs[0]).expect("local evaded to memory"),
+            ]
+            .into_iter(),
+        );
         emitln!(
             ctx.writer,
             "{} := {}",
             ctx.make_local_name(target, dest[0]),
-            Self::local_ptr(&self.borrowed_locals, srcs[0]).expect("local evaded to memory")
+            local_ptr
         )
     }
 
@@ -1025,12 +1040,14 @@ impl Generator {
         ctx.emit_block(|| {
             // Allocate memory
             let mem = "$mem".to_string();
-            self.call_builtin_with_result(
-                ctx,
-                "let ",
-                std::iter::once(mem.clone()),
-                YulFunction::Malloc,
-                std::iter::once(layout.size.to_string()),
+            emitln!(
+                ctx.writer,
+                "let $mem := {}",
+                self.call_builtin_str(
+                    ctx,
+                    YulFunction::Malloc,
+                    std::iter::once(layout.size.to_string()),
+                )
             );
 
             // Initialize fields
@@ -1171,22 +1188,20 @@ impl Generator {
         dst: TempIndex,
         addr: String,
     ) {
-        ctx.emit_block(|| {
-            // Obtain the storage base offset for this resource.
-            let base_offset = self.type_storage_base(
-                ctx,
-                &struct_id.to_type(),
-                "${RESOURCE_STORAGE_CATEGORY}",
-                addr,
-            );
-            // Load the exists flag and store it into destination.
-            let load_flag = self.call_builtin_str(
-                ctx,
-                YulFunction::StorageLoadU8,
-                std::iter::once(base_offset),
-            );
-            self.assign(ctx, target, dst, load_flag);
-        })
+        // Obtain the storage base offset for this resource.
+        let base_offset = self.type_storage_base(
+            ctx,
+            &struct_id.to_type(),
+            "${RESOURCE_STORAGE_CATEGORY}",
+            addr,
+        );
+        // Load the exists flag and store it into destination.
+        let load_flag = self.call_builtin_str(
+            ctx,
+            YulFunction::StorageLoadU8,
+            std::iter::once(base_offset),
+        );
+        self.assign(ctx, target, dst, load_flag);
     }
 
     /// Move resource from memory to storage.
@@ -1224,7 +1239,7 @@ impl Generator {
             emitln!(ctx.writer, "if {} {{\n  {}\n}}", exists_call, abort_call);
             self.call_builtin(
                 ctx,
-                YulFunction::StorageStoreU8,
+                YulFunction::AlignedStorageStore,
                 vec![base_offset.to_string(), "true".to_string()].into_iter(),
             );
 
@@ -1238,22 +1253,20 @@ impl Generator {
                     base_offset
                 );
                 emitln!(ctx.writer, "let $src := {}", value);
-                // Perform the copy
-                self.copy_struct_to_storage(
+                // Perform the move.
+                self.move_struct_to_storage(
                     ctx,
                     &struct_id,
                     "$src".to_string(),
                     "$dst".to_string(),
                 );
-                // Destroy the source struct.
-                self.destroy(ctx, &struct_id.to_type(), "$src".to_string())
             });
         })
     }
 
-    /// Copies a struct from memory to storage. This recursively copies linked data like
+    /// Moves a struct from memory to storage. This recursively moves linked data like
     /// nested structs and vectors.
-    fn copy_struct_to_storage(
+    fn move_struct_to_storage(
         &mut self,
         ctx: &Context,
         struct_id: &QualifiedInstId<StructId>,
@@ -1261,79 +1274,245 @@ impl Generator {
         dst: String,
     ) {
         let layout = self.get_or_compute_struct_layout(ctx, struct_id).clone();
-        for (offs, ty) in layout.offsets.values() {
+
+        // By invariant we know that the leading fields are pointer fields. Copy them first.
+        for field_offs in layout.field_order.iter().take(layout.pointer_count) {
+            let (byte_offs, ty) = layout.offsets.get(field_offs).unwrap();
+            assert_eq!(byte_offs % 32, 0, "pointer fields are on word boundary");
             if ty.is_vector() {
                 ctx.env
                     .error(&self.contract_loc, "vectors not yet implemented");
                 continue;
             }
-            let src_field_ptr = format!("add({}, {})", src, offs);
-            let dst_field_ptr = format!("add({}, {})", dst, offs);
-            if self.type_allocates_memory(ty) {
-                // This is an indirection to a struct or a vector. We need to recursively
-                // move this as linked data to storage.
-                ctx.emit_block(|| {
-                    let hash = self.type_hash(ctx, ty);
-                    // Allocate a new storage pointer.
-                    emitln!(
-                        ctx.writer,
-                        "let $linked_dst := {}",
-                        self.call_builtin_str(
-                            ctx,
-                            YulFunction::NewLinkedStorageBase,
-                            std::iter::once(format!("0x{:x}", hash))
-                        )
-                    );
-                    // Load the pointer to the linked memory.
-                    emitln!(
-                        ctx.writer,
-                        "let $linked_src := {}",
-                        self.call_builtin_str(
-                            ctx,
-                            YulFunction::MemoryLoadU256,
-                            std::iter::once(src_field_ptr)
-                        )
-                    );
-                    // Recursively copy.
-                    let field_struct_id = ty.get_struct_id(ctx.env).expect("struct");
-                    self.copy_struct_to_storage(
+            ctx.emit_block(|| {
+                let hash = self.type_hash(ctx, ty);
+                // Allocate a new storage pointer.
+                emitln!(
+                    ctx.writer,
+                    "let $linked_dst := {}",
+                    self.call_builtin_str(
                         ctx,
-                        &field_struct_id,
-                        "$linked_src".to_string(),
-                        "$linked_dst".to_string(),
-                    );
-                    // Store the result at the destination
-                    self.call_builtin(
-                        ctx,
-                        YulFunction::StorageStoreU256,
-                        vec![dst_field_ptr, "$linked_dst".to_string()].into_iter(),
+                        YulFunction::NewLinkedStorageBase,
+                        std::iter::once(format!("0x{:x}", hash))
                     )
-                })
-            } else {
-                // not allocating linked memory
-                self.copy_memory_to_storage(ctx, ty, dst_field_ptr, src_field_ptr)
+                );
+                // Load the pointer to the linked memory.
+                emitln!(
+                    ctx.writer,
+                    "let $linked_src := mload(add({}, {}))",
+                    src,
+                    byte_offs
+                );
+                // Recursively move.
+                let field_struct_id = ty.get_struct_id(ctx.env).expect("struct");
+                self.move_struct_to_storage(
+                    ctx,
+                    &field_struct_id,
+                    "$linked_src".to_string(),
+                    "$linked_dst".to_string(),
+                );
+                // Store the result at the destination
+                self.call_builtin(
+                    ctx,
+                    YulFunction::AlignedStorageStore,
+                    vec![
+                        format!("add({}, {})", dst, byte_offs),
+                        "$linked_dst".to_string(),
+                    ]
+                    .into_iter(),
+                )
+            })
+        }
+
+        // The remaining fields are all primitive. We also know that memory is padded to word size,
+        // so we can just copy directly word by word, which has the lowest gas cost.
+        if layout.pointer_count < layout.field_order.len() {
+            let mut byte_offs = layout
+                .offsets
+                .get(&layout.field_order[layout.pointer_count])
+                .unwrap()
+                .0;
+            assert_eq!(
+                byte_offs % 32,
+                0,
+                "first non-pointer field on word boundary"
+            );
+            while byte_offs < layout.size {
+                self.call_builtin(
+                    ctx,
+                    YulFunction::AlignedStorageStore,
+                    vec![
+                        format!("add({}, {})", dst, byte_offs),
+                        format!("mload(add({}, {}))", src, byte_offs),
+                    ]
+                    .into_iter(),
+                );
+                byte_offs += 32
             }
         }
-    }
 
-    /// Copy a value of given type from memory to storage.
-    fn copy_memory_to_storage(&mut self, ctx: &Context, ty: &Type, dst: String, src: String) {
-        let load_fun = self.memory_load_builtin_fun(ctx, ty);
-        let store_fun = self.store_builtin_fun(ctx, ty);
-        let load_call = self.call_builtin_str(ctx, load_fun, std::iter::once(src));
-        self.call_builtin(ctx, store_fun, vec![dst, load_call].into_iter())
+        // Free the memory allocated by this struct.
+        self.call_builtin(
+            ctx,
+            YulFunction::Free,
+            vec![src, layout.size.to_string()].into_iter(),
+        )
     }
 
     /// Move resource from storage to local.
     fn move_from(
-        &self,
-        _ctx: &Context,
-        _target: &FunctionTarget,
-        _struct_id: QualifiedInstId<StructId>,
-        _dest: TempIndex,
-        _src: String,
+        &mut self,
+        ctx: &Context,
+        target: &FunctionTarget,
+        struct_id: QualifiedInstId<StructId>,
+        dst: TempIndex,
+        addr: String,
     ) {
-        todo!()
+        ctx.emit_block(|| {
+            // Obtain the storage base offset for this resource.
+            emitln!(
+                ctx.writer,
+                "let $base_offset := {}",
+                self.type_storage_base(
+                    ctx,
+                    &struct_id.to_type(),
+                    "${RESOURCE_STORAGE_CATEGORY}",
+                    addr,
+                )
+            );
+            let base_offset = "$base_offset";
+
+            // At the base offset we store a boolean indicating whether the resource exists. Check this
+            // and if it is not set, abort. Otherwise clear this bit.
+            let exists_call = self.call_builtin_str(
+                ctx,
+                YulFunction::StorageLoadU8,
+                std::iter::once(base_offset.to_string()),
+            );
+            let abort_call =
+                self.call_builtin_str(ctx, YulFunction::AbortBuiltin, std::iter::empty());
+            emitln!(
+                ctx.writer,
+                "if not({}) {{\n  {}\n}}",
+                exists_call,
+                abort_call
+            );
+            self.call_builtin(
+                ctx,
+                YulFunction::StorageStoreU8,
+                vec![base_offset.to_string(), "false".to_string()].into_iter(),
+            );
+
+            // Move the struct out of storage into memory
+            ctx.emit_block(|| {
+                // The actual resource data starts at base_offset + 32. Set the src address
+                // to this.
+                emitln!(
+                    ctx.writer,
+                    "let $src := add({}, ${{RESOURCE_EXISTS_FLAG_SIZE}})",
+                    base_offset
+                );
+
+                // Perform the move and assign the result.
+                emitln!(ctx.writer, "let $dst");
+                self.move_struct_to_memory(ctx, &struct_id, "$src".to_string(), "$dst".to_string());
+                self.assign(ctx, target, dst, "$dst".to_string())
+            })
+        })
+    }
+
+    /// Move a struct from storage to memory, zeroing all associated storage. This recursively
+    /// moves linked data like nested structs and vectors.
+    fn move_struct_to_memory(
+        &mut self,
+        ctx: &Context,
+        struct_id: &QualifiedInstId<StructId>,
+        src: String,
+        dst: String,
+    ) {
+        // Allocate struct.
+        let layout = self.get_or_compute_struct_layout(ctx, struct_id).clone();
+        emitln!(
+            ctx.writer,
+            "{} := {}",
+            dst,
+            self.call_builtin_str(
+                ctx,
+                YulFunction::Malloc,
+                std::iter::once(layout.size.to_string()),
+            )
+        );
+
+        // Copy fields. By invariant we know that the leading fields are pointer fields.
+        for field_offs in layout.field_order.iter().take(layout.pointer_count) {
+            let (byte_offs, ty) = layout.offsets.get(field_offs).unwrap();
+            assert_eq!(byte_offs % 32, 0, "pointer fields are on word boundary");
+            if ty.is_vector() {
+                ctx.env
+                    .error(&self.contract_loc, "vectors not yet implemented");
+                continue;
+            }
+            ctx.emit_block(|| {
+                let field_src_ptr = format!("add({}, {})", src, byte_offs);
+                let field_dst_ptr = format!("add({}, {})", dst, byte_offs);
+                // Load the pointer to the linked storage.
+                let load_call = self.call_builtin_str(
+                    ctx,
+                    YulFunction::AlignedStorageLoad,
+                    std::iter::once(field_src_ptr.clone()),
+                );
+                emitln!(ctx.writer, "let $linked_src := {}", load_call);
+                // Declare where to store the result and recursively move
+                emitln!(ctx.writer, "let $linked_dst");
+                let field_struct_id = ty.get_struct_id(ctx.env).expect("struct");
+                self.move_struct_to_memory(
+                    ctx,
+                    &field_struct_id,
+                    "$linked_src".to_string(),
+                    "$linked_dst".to_string(),
+                );
+                // Store the result at the destination.
+                assert_eq!(byte_offs % 32, 0);
+                emitln!(ctx.writer, "mstore({}, $linked_dst)", field_dst_ptr,);
+                // Clear the storage to get a refund
+                self.call_builtin(
+                    ctx,
+                    YulFunction::AlignedStorageStore,
+                    vec![field_src_ptr, 0.to_string()].into_iter(),
+                )
+            })
+        }
+
+        // The remaining fields are all primitive. We also know that memory is padded to word size,
+        // so we can just copy directly word by word, which has the lowest gas cost.
+        if layout.pointer_count < layout.field_order.len() {
+            let mut byte_offs = layout
+                .offsets
+                .get(&layout.field_order[layout.pointer_count])
+                .unwrap()
+                .0;
+            assert_eq!(
+                byte_offs % 32,
+                0,
+                "first non-pointer field on word boundary"
+            );
+            while byte_offs < layout.size {
+                let field_src_ptr = format!("add({}, {})", src, byte_offs);
+                let field_dst_ptr = format!("add({}, {})", dst, byte_offs);
+                let load_call = self.call_builtin_str(
+                    ctx,
+                    YulFunction::AlignedStorageLoad,
+                    std::iter::once(field_src_ptr.clone()),
+                );
+                emitln!(ctx.writer, "mstore({}, {})", field_dst_ptr, load_call);
+                self.call_builtin(
+                    ctx,
+                    YulFunction::AlignedStorageStore,
+                    vec![field_src_ptr, 0.to_string()].into_iter(),
+                );
+                byte_offs += 32
+            }
+        }
     }
 
     /// Borrow a resource.
@@ -1439,17 +1618,40 @@ impl Generator {
         st: &QualifiedInstId<StructId>,
     ) -> &StructLayout {
         if self.struct_layout.get(st).is_none() {
-            let mut offsets = BTreeMap::new();
-            let mut size = 0;
+            // Compute the fields such that the larger appear first, and pointer fields
+            // precede non-pointer fields.
+            let s_or_v = |ty: &Type| ty.is_vector() || ty.is_struct();
             let struct_env = ctx.env.get_struct(st.to_qualified_id());
-            for field in struct_env.get_fields() {
-                let field_type = field.get_type().instantiate(&st.inst);
-                let field_size = self.type_size(ctx, &field_type);
-                offsets.insert(field.get_offset(), (size, field_type));
-                size += field_size
+            let ordered_fields = struct_env
+                .get_fields()
+                .map(|field| {
+                    let field_type = field.get_type().instantiate(&st.inst);
+                    let field_size = self.type_size(ctx, &field_type);
+                    (field.get_offset(), field_size, field_type)
+                })
+                .sorted_by(|(_, s1, ty1), (_, s2, ty2)| {
+                    if s1 > s2 {
+                        std::cmp::Ordering::Less
+                    } else if s2 > s1 {
+                        std::cmp::Ordering::Greater
+                    } else if s_or_v(ty1) && !s_or_v(ty2) {
+                        std::cmp::Ordering::Less
+                    } else if s_or_v(ty2) && !s_or_v(ty1) {
+                        std::cmp::Ordering::Greater
+                    } else {
+                        std::cmp::Ordering::Equal
+                    }
+                });
+            let mut result = StructLayout::default();
+            for (logical_offs, field_size, ty) in ordered_fields {
+                result.field_order.push(logical_offs);
+                if s_or_v(&ty) {
+                    result.pointer_count += 1
+                }
+                result.offsets.insert(logical_offs, (result.size, ty));
+                result.size += field_size
             }
-            self.struct_layout
-                .insert(st.clone(), StructLayout { size, offsets });
+            self.struct_layout.insert(st.clone(), result);
         }
         self.struct_layout.get(st).unwrap()
     }
@@ -1522,6 +1724,27 @@ impl Generator {
         }
     }
 
+    #[allow(dead_code)]
+    fn storage_load_builtin_fun(&mut self, ctx: &Context, ty: &Type) -> YulFunction {
+        match self.type_size(ctx, ty.skip_reference()) {
+            1 => YulFunction::StorageLoadU8,
+            8 => YulFunction::StorageLoadU64,
+            16 => YulFunction::StorageLoadU128,
+            32 => YulFunction::StorageLoadU256,
+            _ => panic!("unexpected type size"),
+        }
+    }
+
+    #[allow(dead_code)]
+    fn storage_store_builtin_fun(&mut self, ctx: &Context, ty: &Type) -> YulFunction {
+        match self.type_size(ctx, ty.skip_reference()) {
+            1 => YulFunction::StorageStoreU8,
+            8 => YulFunction::StorageStoreU64,
+            16 => YulFunction::StorageStoreU128,
+            32 => YulFunction::StorageStoreU256,
+            _ => panic!("unexpected type size"),
+        }
+    }
     fn type_allocates_memory(&self, ty: &Type) -> bool {
         matches!(ty, Type::Vector(..) | Type::Struct(..))
     }

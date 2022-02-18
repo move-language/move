@@ -37,12 +37,14 @@ static PLACEHOLDERS: Lazy<BTreeMap<&'static str, &'static str>> = Lazy::new(|| {
 
         // Storage groups. Those are used to augment words by creating a keccak256 value from
         // word and group to create a unique storage key. This basically allows -- by the
-        // magic if keccak -- to multiplex the 256 bit address into multiple ones, and
+        // magic if keccak -- to multiplex the 256 bit address space into multiple ones, and
         // to implement tables with 256 bit keys. The LINEAR_STORAGE_GROUP is reserved
         // for Move memory. Other groups are created as tables are dynamically allocated.
         // STORAGE_GROUP_COUNTER_LOC contains the largest storage group allocated so far.
+        // A storage group identifier is 4 bytes long.
         "LINEAR_STORAGE_GROUP" => "0",
         "STORAGE_GROUP_COUNTER_LOC" => "96",
+        "WORD_AND_STORAGE_GROUP_LENGTH" => "36",
 
         // Categories to distinguish different types of pointers into the LINEAR_STORAGE_GROUP.
         // See discussion of YulFunction::MakeTypeStorageOffset.
@@ -152,7 +154,8 @@ AbortBuiltin: "() {
 //   arena style.
 Malloc: "(size) -> offs {
     offs := mload(${MEM_SIZE_LOC})
-    mstore(${MEM_SIZE_LOC}, add(offs, size))
+    // pad to word size
+    mstore(${MEM_SIZE_LOC}, add(offs, shr(add(size, 31), 5)))
 }",
 
 // Frees memory of size
@@ -183,20 +186,20 @@ ToWordOffs: "(offs) -> word_offs, bit_offs {
 // Make a unique key into storage, where word can have full 32 byte size, and type
 // indicates the kind of the key given as a byte. This uses keccak256 to fold
 // value and type into a unique storage key.
-StorageKey: "(type, word) -> key {
+StorageKey: "(group, word) -> key {
   mstore(${SCRATCH1_LOC}, word)
-  mstore(${SCRATCH2_LOC}, type)
-  key := keccak256(${SCRATCH1_LOC}, 33)
+  mstore(${SCRATCH2_LOC}, group)
+  key := keccak256(${SCRATCH1_LOC}, ${WORD_AND_STORAGE_GROUP_LENGTH})
 }",
 
 // Make a base storage offset for a given type. The result has 255 bits width and can be passed into
-// $MakePtr(true, result) to create a pointer as it fits into 255 bits. This pointer can be
-// used to linearly address exclusive memory with an address space of 60 bits.
+// $MakePtr(true, result) to create a pointer. This pointer can be used to linearly address
+// exclusive memory, owned by the pointer, with an address space of 60 bits.
 //
-//  254                                      0
+//  254                                                    0
 //  cccccc..cccccctttttt..tttttiiiii..iiiiiioooooo..oooooooo
 //   category       type_hash     id           offset
-//      4              32         160           60
+//      3              32         160           60
 //
 // The category indicates what kind of type storage this is, and determines how id
 // is interpreted. RESOURCE_STORAGE_CATEGORY indicates that id is a resource
@@ -204,8 +207,8 @@ StorageKey: "(type, word) -> key {
 // to from some other storage (for instance, a vector aggregated by a resource).
 // The type_hash identifies the type of the stored value. The id is any 20 byte
 // number which identifies an instance of this type (e.g. an address if this is a resource).
-MakeTypeStorageBase: "(category, type_hash, instance) -> offs {
-  offs := or(shl(type_hash, 224), shl(instance, 64))
+MakeTypeStorageBase: "(category, type_hash, id) -> offs {
+  offs := or(shl(category, 252), or(shl(type_hash, 220), shl(id, 60)))
 }",
 
 // Make a new base storage offset for linked storage. This creates a new handle
@@ -430,6 +433,13 @@ StorageLoadU256: "(offs) -> val {
   }
 }" dep ToWordOffs dep StorageKey,
 
+// Loads u256 from a word-aligned storage offset.
+AlignedStorageLoad: "(offs) -> val {
+  let word_offs := shr(offs, 5)
+  val := sload($StorageKey(${LINEAR_STORAGE_GROUP}, word_offs))
+}" dep StorageKey,
+
+
 // Stores u256 to pointer.
 StoreU256: "(ptr, val) {
   let offs := $OffsetPtr(ptr)
@@ -462,6 +472,12 @@ StorageStoreU256: "(offs, val) {
     sstore(key, or(and(sload(key), not(mask)), shr(val, used_bits)))
   }
 }" dep ToWordOffs dep StorageKey,
+
+// Stores u256 to a word-aligned storage offset
+AlignedStorageStore: "(offs, val) {
+  let word_offs := shr(offs, 5)
+  sstore($StorageKey(${LINEAR_STORAGE_GROUP}, word_offs), val)
+}" dep StorageKey,
 
 // Copies size bytes from memory to memory.
 CopyMemory: "(src, dst, size) {

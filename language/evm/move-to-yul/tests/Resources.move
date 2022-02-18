@@ -16,6 +16,11 @@ module 0x2::M {
 	}
 
     #[callable]
+	fun unpublish(a: address): S acquires S {
+	    move_from<S>(a)
+	}
+
+    #[callable]
     fun test(addr: address): bool {
         exists<S>(addr)
     }

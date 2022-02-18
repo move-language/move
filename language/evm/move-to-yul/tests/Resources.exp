@@ -18,11 +18,13 @@ object "A2_M" {
             A2_M_publish(sload(100), sload(101))
             let $dummy0 := A2_M_test(sload(100))
             sstore(200, $dummy0)
+            let $dummy1 := A2_M_unpublish(sload(101))
+            sstore(201, $dummy1)
 
             function A2_M_increment_a(addr) {
                 let r, $t2, $t3, $t4, $t5, $t6, $t7
                 // $t2 := borrow_global<M::S>($t0)
-                /// @src 2:409:426
+                /// @src 2:493:510
                 {
                     let $base_offset := $MakeTypeStorageBase(0, 0x698265eb, addr)
                     if not($StorageLoadU8($base_offset)) {
@@ -31,25 +33,25 @@ object "A2_M" {
                     $t2 := $MakePtr(true, add($base_offset, 32))
                 }
                 // $t3 := borrow_field<M::S>.a($t2)
-                /// @src 2:451:454
-                $t3 := $IndexPtr($LoadU256($t2), 0)
+                /// @src 2:535:538
+                $t3 := $IndexPtr($LoadU256($t2), 32)
                 // $t4 := read_ref($t3)
-                /// @src 2:451:454
+                /// @src 2:535:538
                 $t4 := $LoadU64($t3)
                 // $t5 := 1
-                /// @src 2:457:458
+                /// @src 2:541:542
                 $t5 := 1
                 // $t6 := +($t4, $t5)
-                /// @src 2:455:456
+                /// @src 2:539:540
                 $t6 := $AddU64($t4, $t5)
                 // $t7 := borrow_field<M::S>.a($t2)
-                /// @src 2:445:448
-                $t7 := $IndexPtr($LoadU256($t2), 0)
+                /// @src 2:529:532
+                $t7 := $IndexPtr($LoadU256($t2), 32)
                 // write_ref($t7, $t6)
-                /// @src 2:445:458
+                /// @src 2:529:542
                 $StoreU64($t7, $t6)
                 // return ()
-                /// @src 2:445:458
+                /// @src 2:529:542
             }
 
             function A2_M_publish(sg, a) {
@@ -68,8 +70,8 @@ object "A2_M" {
                 /// @src 2:198:218
                 {
                     let $mem := $Malloc(40)
-                    $MemoryStoreU64(add($mem, 0), a)
-                    $MemoryStoreU256(add($mem, 8), $t4)
+                    $MemoryStoreU64(add($mem, 32), a)
+                    $MemoryStoreU256(add($mem, 0), $t4)
                     $t5 := $mem
                 }
                 // move_to<M::S>($t5, $t0)
@@ -79,21 +81,18 @@ object "A2_M" {
                     if $StorageLoadU8($base_offset) {
                       $AbortBuiltin()
                     }
-                    $StorageStoreU8($base_offset, true)
+                    $AlignedStorageStore($base_offset, true)
                     {
                         let $dst := add($base_offset, 32)
                         let $src := $t5
-                        $StoreU64(add($dst, 0), $MemoryLoadU64(add($src, 0)))
                         {
                             let $linked_dst := $NewLinkedStorageBase(0x5f8466cf)
-                            let $linked_src := $MemoryLoadU256(add($src, 8))
-                            $StoreU8(add($linked_dst, 0), $MemoryLoadU8(add($linked_src, 0)))
-                            $StorageStoreU256(add($dst, 8), $linked_dst)
+                            let $linked_src := mload(add($src, 0))
+                            $AlignedStorageStore(add($linked_dst, 0), mload(add($linked_src, 0)))
+                            $Free($linked_src, 1)
+                            $AlignedStorageStore(add($dst, 0), $linked_dst)
                         }
-                        {
-                            let $field_ptr := $LoadU256(add($src, 8))
-                            $Free($field_ptr, 1)
-                        }
+                        $AlignedStorageStore(add($dst, 32), mload(add($src, 32)))
                         $Free($src, 40)
                     }
                 }
@@ -104,12 +103,43 @@ object "A2_M" {
             function A2_M_test(addr) -> $result {
                 let $t1
                 // $t1 := exists<M::S>($t0)
-                /// @src 2:307:313
+                /// @src 2:391:397
+                $t1 := $StorageLoadU8($MakeTypeStorageBase(0, 0x698265eb, addr))
+                // return $t1
+                /// @src 2:391:406
+                $result := $t1
+            }
+
+            function A2_M_unpublish(a) -> $result {
+                let $t1
+                // $t1 := move_from<M::S>($t0)
+                /// @src 2:311:320
                 {
-                    $t1 := $StorageLoadU8($MakeTypeStorageBase(0, 0x698265eb, addr))
+                    let $base_offset := $MakeTypeStorageBase(0, 0x698265eb, a)
+                    if not($StorageLoadU8($base_offset)) {
+                      $AbortBuiltin()
+                    }
+                    $StorageStoreU8($base_offset, false)
+                    {
+                        let $src := add($base_offset, 32)
+                        let $dst
+                        $dst := $Malloc(40)
+                        {
+                            let $linked_src := $AlignedStorageLoad(add($src, 0))
+                            let $linked_dst
+                            $linked_dst := $Malloc(1)
+                            mstore(add($linked_dst, 0), $AlignedStorageLoad(add($linked_src, 0)))
+                            $AlignedStorageStore(add($linked_src, 0), 0)
+                            mstore(add($dst, 0), $linked_dst)
+                            $AlignedStorageStore(add($src, 0), 0)
+                        }
+                        mstore(add($dst, 32), $AlignedStorageLoad(add($src, 32)))
+                        $AlignedStorageStore(add($src, 32), 0)
+                        $t1 := $dst
+                    }
                 }
                 // return $t1
-                /// @src 2:307:322
+                /// @src 2:311:326
                 $result := $t1
             }
 
@@ -121,7 +151,8 @@ object "A2_M" {
             }
             function $Malloc(size) -> offs {
                 offs := mload(0)
-                mstore(0, add(offs, size))
+                // pad to word size
+                mstore(0, add(offs, shr(add(size, 31), 5)))
             }
             function $Free(offs, size) {
             }
@@ -138,13 +169,13 @@ object "A2_M" {
               word_offs := shr(offs, 5)
               bit_offs := shl(and(offs, 0x1F), 3)
             }
-            function $StorageKey(type, word) -> key {
+            function $StorageKey(group, word) -> key {
               mstore(32, word)
-              mstore(64, type)
-              key := keccak256(32, 33)
+              mstore(64, group)
+              key := keccak256(32, 36)
             }
-            function $MakeTypeStorageBase(category, type_hash, instance) -> offs {
-              offs := or(shl(type_hash, 224), shl(instance, 64))
+            function $MakeTypeStorageBase(category, type_hash, id) -> offs {
+              offs := or(shl(category, 252), or(shl(type_hash, 220), shl(id, 60)))
             }
             function $NewLinkedStorageBase(type_hash) -> offs {
               let handle := mload(128)
@@ -154,23 +185,10 @@ object "A2_M" {
             function $IndexPtr(ptr, offs) -> new_ptr {
               new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
             }
-            function $MemoryLoadU8(offs) -> val {
-              val := and(mload(offs), 0xff)
-            }
             function $StorageLoadU8(offs) -> val {
               let word_offs, bit_offs := $ToWordOffs(offs)
               let key := $StorageKey(0, word_offs)
               val := and(shr(sload(key), bit_offs), 0xff)
-            }
-            function $StoreU8(ptr, val) {
-              let offs := $OffsetPtr(ptr)
-              switch $IsStoragePtr(ptr)
-              case 0 {
-                $MemoryStoreU8(offs, val)
-              }
-              default {
-                $StorageStoreU8(offs, val)
-              }
             }
             function $MemoryStoreU8(offs, val) {
               mstore8(offs, val)
@@ -259,22 +277,16 @@ object "A2_M" {
                 val := or(val, shl(and(sload(key), mask), used_bits))
               }
             }
+            function $AlignedStorageLoad(offs) -> val {
+              let word_offs := shr(offs, 5)
+              val := sload($StorageKey(0, word_offs))
+            }
             function $MemoryStoreU256(offs, val) {
               mstore(offs, val)
             }
-            function $StorageStoreU256(offs, val) {
-              let word_offs, bit_offs := $ToWordOffs(offs)
-              let key := $StorageKey(0, word_offs)
-              let word := sload(key)
-              word := or(and(word, not(shl(0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, bit_offs))), shl(val, bit_offs))
-              mstore(key, word)
-              let used_bits := sub(256, bit_offs)
-              if lt(used_bits, 256) {
-                let overflow_bits := sub(256, used_bits)
-                let mask := sub(shl(1, overflow_bits), 1)
-                key := $StorageKey(0, add(word_offs, 1))
-                sstore(key, or(and(sload(key), not(mask)), shr(val, used_bits)))
-              }
+            function $AlignedStorageStore(offs, val) {
+              let word_offs := shr(offs, 5)
+              sstore($StorageKey(0, word_offs), val)
             }
             function $AddU64(x, y) -> r {
                 if lt(sub(0xffffffffffffffff, x), y) { $AbortBuiltin() }
@@ -302,104 +314,117 @@ object "A2_M" {
             {
                 let _1 := 0
                 mstore(_1, memoryguard(0xa0))
-                let _2 := shl(sload(100), 64)
-                if not($StorageLoadU8(_2)) { revert(_1, _1) }
-                let _3 := 1
-                let $t2 := or(true, shl(add(_2, 32), _3))
+                let $base_offset := or(252, shl(sload(100), 60))
+                if not($StorageLoadU8($base_offset)) { revert(_1, _1) }
+                let _2 := 1
+                let _3 := 32
+                let $t2 := or(true, shl(add($base_offset, _3), _2))
                 let _4 := $LoadU256($t2)
-                let _5 := shl(shr(_4, _3), _3)
-                let _6 := and(_4, _3)
+                let _5 := shl(add(shr(_4, _2), _3), _2)
+                let _6 := and(_4, _2)
                 let val := _1
-                let offs := shr(or(_6, _5), _3)
-                switch or(_6, and(_5, _3))
+                let offs := shr(or(_6, _5), _2)
+                switch or(_6, and(_5, _2))
                 case 0 {
                     val := and(mload(offs), 0xffffffffffffffff)
                 }
                 default {
                     let val_1 := _1
                     let word_offs, bit_offs := $ToWordOffs(offs)
-                    mstore(32, word_offs)
+                    mstore(_3, word_offs)
                     mstore(64, _1)
-                    val_1 := and(shr(sload(keccak256(32, 33)), bit_offs), 0xffffffffffffffff)
+                    val_1 := and(shr(sload(keccak256(_3, 36)), bit_offs), 0xffffffffffffffff)
                     let used_bits := sub(256, bit_offs)
                     if lt(used_bits, 64)
                     {
-                        mstore(32, add(word_offs, _3))
+                        mstore(_3, add(word_offs, _2))
                         mstore(64, _1)
-                        val_1 := or(val_1, shl(and(sload(keccak256(32, 33)), add(shl(_3, add(bit_offs, not(191))), not(0))), used_bits))
+                        val_1 := or(val_1, shl(and(sload(keccak256(_3, 36)), add(shl(_2, add(bit_offs, not(191))), not(0))), used_bits))
                     }
                     val := val_1
                 }
                 $StoreU64($IndexPtr($LoadU256($t2)), $AddU64(val))
                 A2_M_publish(sload(100), sload(101))
                 sstore(200, A2_M_test(sload(100)))
+                sstore(201, A2_M_unpublish(sload(101)))
             }
             function A2_M_publish(sg, a)
             {
                 let _1 := 0
                 let offs := mload(_1)
-                mstore(_1, add(offs, 1))
+                mstore(_1, offs)
                 mstore8(offs, true)
                 let offs_1 := mload(_1)
-                mstore(_1, add(offs_1, 40))
-                mstore(offs_1, or(and(mload(offs_1), not(0xffffffffffffffff)), a))
-                let _2 := add(offs_1, 8)
-                mstore(_2, offs)
-                let _3 := shl(sg, 64)
-                if $StorageLoadU8(_3) { revert(_1, _1) }
-                let word_offs, bit_offs := $ToWordOffs(_3)
-                mstore(32, word_offs)
+                mstore(_1, offs_1)
+                let _2 := add(offs_1, 32)
+                mstore(_2, or(and(mload(_2), not(0xffffffffffffffff)), a))
+                mstore(offs_1, offs)
+                let $base_offset := or(252, shl(sg, 60))
+                if $StorageLoadU8($base_offset) { revert(_1, _1) }
+                mstore(32, shr($base_offset, 5))
                 mstore(64, _1)
-                let key := keccak256(32, 33)
-                let word := sload(key)
-                mstore(key, or(and(word, not(shl(0xff, bit_offs))), shl(true, bit_offs)))
-                $StoreU64(add(_3, 32), and(mload(offs_1), 0xffffffffffffffff))
-                let $linked_dst := $NewLinkedStorageBase()
-                $StoreU8($linked_dst, $MemoryLoadU8(mload(_2)))
-                $StorageStoreU256(add(_3, 40), $linked_dst)
-                pop($LoadU256(_2))
+                sstore(keccak256(32, 36), true)
+                let handle := mload(128)
+                mstore(128, add(handle, 1))
+                let offs_2 := or(504, shl(handle, 60))
+                $AlignedStorageStore(offs_2, mload(mload(offs_1)))
+                $AlignedStorageStore(add($base_offset, 32), offs_2)
+                $AlignedStorageStore(add($base_offset, 64), mload(_2))
             }
             function A2_M_test(addr) -> $result
             {
-                $result := $StorageLoadU8(shl(addr, 64))
+                $result := $StorageLoadU8(or(252, shl(addr, 60)))
+            }
+            function A2_M_unpublish(a) -> $result
+            {
+                let $base_offset := or(252, shl(a, 60))
+                if not($StorageLoadU8($base_offset)) { revert(0, 0) }
+                let word_offs, bit_offs := $ToWordOffs($base_offset)
+                mstore(32, word_offs)
+                mstore(64, 0)
+                let key := keccak256(32, 36)
+                let word := sload(key)
+                mstore(key, or(and(word, not(shl(0xff, bit_offs))), shl(false, bit_offs)))
+                let $src := add($base_offset, 32)
+                let offs := mload(0)
+                mstore(0, offs)
+                let $linked_src := sload($StorageKey(shr($src, 5)))
+                let $linked_dst := $Malloc()
+                mstore($linked_dst, sload($StorageKey(shr($linked_src, 5))))
+                $AlignedStorageStore_1140($linked_src)
+                mstore(offs, $linked_dst)
+                $AlignedStorageStore_1140($src)
+                let _1 := add($base_offset, 64)
+                mstore(add(offs, 32), sload($StorageKey(shr(_1, 5))))
+                $AlignedStorageStore_1140(_1)
+                $result := offs
+            }
+            function $Malloc() -> offs
+            {
+                offs := mload(0)
+                mstore(0, offs)
             }
             function $ToWordOffs(offs) -> word_offs, bit_offs
             {
                 word_offs := shr(offs, 5)
                 bit_offs := shl(and(offs, 0x1F), 3)
             }
-            function $NewLinkedStorageBase() -> offs
+            function $StorageKey(word) -> key
             {
-                let handle := mload(128)
-                mstore(128, add(handle, 1))
-                offs := shl(handle, 64)
+                mstore(32, word)
+                mstore(64, 0)
+                key := keccak256(32, 36)
             }
             function $IndexPtr(ptr) -> new_ptr
             {
-                new_ptr := or(and(ptr, 1), shl(shr(ptr, 1), 1))
+                new_ptr := or(and(ptr, 1), shl(add(shr(ptr, 1), 32), 1))
             }
-            function $MemoryLoadU8(offs) -> val
-            { val := and(mload(offs), 0xff) }
             function $StorageLoadU8(offs) -> val
             {
                 let word_offs, bit_offs := $ToWordOffs(offs)
                 mstore(32, word_offs)
                 mstore(64, 0)
-                val := and(shr(sload(keccak256(32, 33)), bit_offs), 0xff)
-            }
-            function $StoreU8(ptr, val)
-            {
-                let offs := shr(ptr, 1)
-                switch and(ptr, 1)
-                case 0 { mstore8(offs, val) }
-                default {
-                    let word_offs, bit_offs := $ToWordOffs(offs)
-                    mstore(32, word_offs)
-                    mstore(64, 0)
-                    let key := keccak256(32, 33)
-                    let word := sload(key)
-                    mstore(key, or(and(word, not(shl(0xff, bit_offs))), shl(val, bit_offs)))
-                }
+                val := and(shr(sload(keccak256(32, 36)), bit_offs), 0xff)
             }
             function $StoreU64(ptr, val)
             {
@@ -412,7 +437,7 @@ object "A2_M" {
                     let word_offs, bit_offs := $ToWordOffs(offs)
                     mstore(32, word_offs)
                     mstore(64, 0)
-                    let key := keccak256(32, 33)
+                    let key := keccak256(32, 36)
                     let word := sload(key)
                     mstore(key, or(word, shl(val, bit_offs)))
                     let used_bits := sub(256, bit_offs)
@@ -420,7 +445,7 @@ object "A2_M" {
                     {
                         mstore(32, add(word_offs, 1))
                         mstore(64, 0)
-                        let key_1 := keccak256(32, 33)
+                        let key_1 := keccak256(32, 36)
                         sstore(key_1, or(and(sload(key_1), not(add(shl(1, add(bit_offs, not(191))), not(0)))), shr(val, used_bits)))
                     }
                 }
@@ -435,35 +460,29 @@ object "A2_M" {
                     let word_offs, bit_offs := $ToWordOffs(offs)
                     mstore(32, word_offs)
                     mstore(64, val_1)
-                    val_1 := shr(sload(keccak256(32, 33)), bit_offs)
+                    val_1 := shr(sload(keccak256(32, 36)), bit_offs)
                     let _1 := 256
                     let used_bits := sub(_1, bit_offs)
                     if lt(used_bits, _1)
                     {
                         mstore(32, add(word_offs, 1))
                         mstore(64, 0)
-                        val_1 := or(val_1, shl(and(sload(keccak256(32, 33)), add(shl(1, bit_offs), not(0))), used_bits))
+                        val_1 := or(val_1, shl(and(sload(keccak256(32, 36)), add(shl(1, bit_offs), not(0))), used_bits))
                     }
                     val := val_1
                 }
             }
-            function $StorageStoreU256(offs, val)
+            function $AlignedStorageStore_1140(offs)
             {
-                let word_offs, bit_offs := $ToWordOffs(offs)
-                mstore(32, word_offs)
+                mstore(32, shr(offs, 5))
                 mstore(64, 0)
-                let key := keccak256(32, 33)
-                let word := sload(key)
-                mstore(key, or(word, shl(val, bit_offs)))
-                let _1 := 256
-                let used_bits := sub(_1, bit_offs)
-                if lt(used_bits, _1)
-                {
-                    mstore(32, add(word_offs, 1))
-                    mstore(64, 0)
-                    let key_1 := keccak256(32, 33)
-                    sstore(key_1, or(and(sload(key_1), not(add(shl(1, bit_offs), not(0)))), shr(val, used_bits)))
-                }
+                sstore(keccak256(32, 36), 0)
+            }
+            function $AlignedStorageStore(offs, val)
+            {
+                mstore(32, shr(offs, 5))
+                mstore(64, 0)
+                sstore(keccak256(32, 36), val)
             }
             function $AddU64(x) -> r
             {

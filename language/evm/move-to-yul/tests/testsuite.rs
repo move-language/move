@@ -31,7 +31,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     env.report_diag(&mut error_writer, Severity::Help);
     let diag = String::from_utf8_lossy(&error_writer.into_inner()).to_string();
     if !diag.is_empty() {
-        out = format!("!! Move-To-Yul Diagnostics:\n {}\n\n{}", diag, out);
+        out = format!("{}\n\n!! Move-To-Yul Diagnostics:\n {}", out, diag);
     }
     let baseline_path = path.with_extension(EXP_EXT);
     verify_or_update_baseline(baseline_path.as_path(), &out)?;

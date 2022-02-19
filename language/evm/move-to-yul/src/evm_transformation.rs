@@ -4,6 +4,7 @@
 //! Performs transformations specific for compiling stackless bytecode to
 //! EVM bytecode. Right now it only contains conversions of U256 native functions.
 
+use crate::attributes;
 use ethnum::U256;
 use move_model::model::FunctionEnv;
 use move_stackless_bytecode::{
@@ -42,9 +43,8 @@ impl FunctionTargetProcessor for EvmTransformationProcessor {
                 abort_condition,
             ) = bytecode
             {
-                if crate::generator::is_evm_arith_module(
-                    &func_env.module_env.env.get_module(*module_id),
-                ) {
+                if attributes::is_evm_arith_module(&func_env.module_env.env.get_module(*module_id))
+                {
                     let fun_name = &*func_env
                         .module_env
                         .env

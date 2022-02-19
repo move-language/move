@@ -71,33 +71,6 @@ object "A2_M" {
                 default {}
             }
             $Abort(97)
-            function abi_decode_tuple_$u64$(headStart, dataEnd) -> value_0 {
-                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
-                {
-                    let offset := 0
-                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
-                }
-            }
-            function abi_decode_u64(offset, end) -> value {
-                value := calldataload(offset)
-                validator_u64(value)
-            }
-            function abi_encode_tuple_(headStart ) -> tail {
-                tail := add(headStart, 0)
-            }
-            function abi_encode_tuple_$u64$(headStart ,value_0) -> tail {
-                tail := add(headStart, 32)
-                abi_encode_u64(value_0, add(headStart, 0))
-            }
-            function abi_encode_u64(value, pos) {
-                mstore(pos, cleanup_u64(value))
-            }
-            function cleanup_u64(value) -> cleaned {
-                cleaned := and(value, 0xffffffffffffffff)
-            }
-            function validator_u64(value) {
-                if iszero(eq(value, cleanup_u64(value))) { $Abort(95) }
-            }
 
             // Dummy calls to reference callables for Yul optimizer
             A2_M_f(sload(100))
@@ -326,6 +299,33 @@ object "A2_M" {
                 }
             }
 
+            function abi_encode_tuple_(headStart ) -> tail {
+                tail := add(headStart, 0)
+            }
+            function abi_decode_tuple_$u64$(headStart, dataEnd) -> value_0 {
+                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_u64(offset, end) -> value {
+                value := calldataload(offset)
+                validator_u64(value)
+            }
+            function validator_u64(value) {
+                if iszero(eq(value, cleanup_u64(value))) { $Abort(95) }
+            }
+            function cleanup_u64(value) -> cleaned {
+                cleaned := and(value, 0xffffffffffffffff)
+            }
+            function abi_encode_tuple_$u64$(headStart ,value_0) -> tail {
+                tail := add(headStart, 32)
+                abi_encode_u64(value_0, add(headStart, 0))
+            }
+            function abi_encode_u64(value, pos) {
+                mstore(pos, cleanup_u64(value))
+            }
             function $Abort(code) {
                 revert(0, 0) // TODO: convention to store code
             }
@@ -403,18 +403,6 @@ object "A2_M" {
                     }
                 }
                 revert(_2, _2)
-            }
-            function abi_decode_u64(dataEnd) -> value
-            {
-                if slt(add(dataEnd, not(3)), 32) { revert(0, 0) }
-                let value_1 := calldataload(4)
-                if iszero(eq(value_1, and(value_1, 0xffffffffffffffff))) { revert(0, 0) }
-                value := value_1
-            }
-            function abi_encode_u64$(headStart, value) -> tail
-            {
-                tail := add(headStart, 32)
-                mstore(headStart, and(value, 0xffffffffffffffff))
             }
             function A2_M_f(x)
             {
@@ -523,6 +511,18 @@ object "A2_M" {
                         default { $block := 2 }
                     }
                 }
+            }
+            function abi_decode_u64(dataEnd) -> value
+            {
+                if slt(add(dataEnd, not(3)), 32) { revert(0, 0) }
+                let value_1 := calldataload(4)
+                if iszero(eq(value_1, and(value_1, 0xffffffffffffffff))) { revert(0, 0) }
+                value := value_1
+            }
+            function abi_encode_u64$(headStart, value) -> tail
+            {
+                tail := add(headStart, 32)
+                mstore(headStart, and(value, 0xffffffffffffffff))
             }
             function $Sub(x) -> r
             {

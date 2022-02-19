@@ -329,142 +329,6 @@ object "A2_M" {
                 default {}
             }
             $Abort(97)
-            function abi_decode_bool(offset, end) -> value {
-                value := calldataload(offset)
-                validator_bool(value)
-            }
-            function abi_decode_tuple_$bool$(headStart, dataEnd) -> value_0 {
-                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
-                {
-                    let offset := 0
-                    value_0 := abi_decode_bool(add(headStart, offset), dataEnd)
-                }
-            }
-            function abi_decode_tuple_$u128_u128$(headStart, dataEnd) -> value_0, value_1 {
-                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
-                {
-                    let offset := 0
-                    value_0 := abi_decode_u128(add(headStart, offset), dataEnd)
-                }
-                {
-                    let offset := 32
-                    value_1 := abi_decode_u128(add(headStart, offset), dataEnd)
-                }
-            }
-            function abi_decode_tuple_$u64$(headStart, dataEnd) -> value_0 {
-                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
-                {
-                    let offset := 0
-                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
-                }
-            }
-            function abi_decode_tuple_$u64_u64$(headStart, dataEnd) -> value_0, value_1 {
-                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
-                {
-                    let offset := 0
-                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
-                }
-                {
-                    let offset := 32
-                    value_1 := abi_decode_u64(add(headStart, offset), dataEnd)
-                }
-            }
-            function abi_decode_tuple_$u64_u64_u64$(headStart, dataEnd) -> value_0, value_1, value_2 {
-                if slt(sub(dataEnd, headStart), 96) { $Abort(96) }
-                {
-                    let offset := 0
-                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
-                }
-                {
-                    let offset := 32
-                    value_1 := abi_decode_u64(add(headStart, offset), dataEnd)
-                }
-                {
-                    let offset := 64
-                    value_2 := abi_decode_u64(add(headStart, offset), dataEnd)
-                }
-            }
-            function abi_decode_tuple_$u8_u8$(headStart, dataEnd) -> value_0, value_1 {
-                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
-                {
-                    let offset := 0
-                    value_0 := abi_decode_u8(add(headStart, offset), dataEnd)
-                }
-                {
-                    let offset := 32
-                    value_1 := abi_decode_u8(add(headStart, offset), dataEnd)
-                }
-            }
-            function abi_decode_u128(offset, end) -> value {
-                value := calldataload(offset)
-                validator_u128(value)
-            }
-            function abi_decode_u64(offset, end) -> value {
-                value := calldataload(offset)
-                validator_u64(value)
-            }
-            function abi_decode_u8(offset, end) -> value {
-                value := calldataload(offset)
-                validator_u8(value)
-            }
-            function abi_encode_bool(value, pos) {
-                mstore(pos, cleanup_bool(value))
-            }
-            function abi_encode_tuple_$bool_bool$(headStart ,value_0, value_1) -> tail {
-                tail := add(headStart, 64)
-                abi_encode_bool(value_0, add(headStart, 0))
-                abi_encode_bool(value_1, add(headStart, 32))
-            }
-            function abi_encode_tuple_$u128$(headStart ,value_0) -> tail {
-                tail := add(headStart, 32)
-                abi_encode_u128(value_0, add(headStart, 0))
-            }
-            function abi_encode_tuple_$u64$(headStart ,value_0) -> tail {
-                tail := add(headStart, 32)
-                abi_encode_u64(value_0, add(headStart, 0))
-            }
-            function abi_encode_tuple_$u64_u64$(headStart ,value_0, value_1) -> tail {
-                tail := add(headStart, 64)
-                abi_encode_u64(value_0, add(headStart, 0))
-                abi_encode_u64(value_1, add(headStart, 32))
-            }
-            function abi_encode_tuple_$u8$(headStart ,value_0) -> tail {
-                tail := add(headStart, 32)
-                abi_encode_u8(value_0, add(headStart, 0))
-            }
-            function abi_encode_u128(value, pos) {
-                mstore(pos, cleanup_u128(value))
-            }
-            function abi_encode_u64(value, pos) {
-                mstore(pos, cleanup_u64(value))
-            }
-            function abi_encode_u8(value, pos) {
-                mstore(pos, cleanup_u8(value))
-            }
-            function cleanup_bool(value) -> cleaned {
-                cleaned := iszero(iszero(value))
-            }
-            function cleanup_u128(value) -> cleaned {
-                cleaned := and(value, 0xffffffffffffffffffffffffffffffff)
-            }
-            function cleanup_u64(value) -> cleaned {
-                cleaned := and(value, 0xffffffffffffffff)
-            }
-            function cleanup_u8(value) -> cleaned {
-                cleaned := and(value, 0xff)
-            }
-            function validator_bool(value) {
-                if iszero(eq(value, cleanup_bool(value))) { $Abort(95) }
-            }
-            function validator_u128(value) {
-                if iszero(eq(value, cleanup_u128(value))) { $Abort(95) }
-            }
-            function validator_u64(value) {
-                if iszero(eq(value, cleanup_u64(value))) { $Abort(95) }
-            }
-            function validator_u8(value) {
-                if iszero(eq(value, cleanup_u8(value))) { $Abort(95) }
-            }
 
             // Dummy calls to reference callables for Yul optimizer
             let $dummy0, $dummy1 := A2_M_add_two_number(sload(100), sload(101))
@@ -1046,6 +910,142 @@ object "A2_M" {
                 $result := $t3
             }
 
+            function abi_encode_tuple_$u64$(headStart ,value_0) -> tail {
+                tail := add(headStart, 32)
+                abi_encode_u64(value_0, add(headStart, 0))
+            }
+            function abi_encode_u64(value, pos) {
+                mstore(pos, cleanup_u64(value))
+            }
+            function cleanup_u64(value) -> cleaned {
+                cleaned := and(value, 0xffffffffffffffff)
+            }
+            function abi_encode_tuple_$u8$(headStart ,value_0) -> tail {
+                tail := add(headStart, 32)
+                abi_encode_u8(value_0, add(headStart, 0))
+            }
+            function abi_encode_u8(value, pos) {
+                mstore(pos, cleanup_u8(value))
+            }
+            function cleanup_u8(value) -> cleaned {
+                cleaned := and(value, 0xff)
+            }
+            function abi_decode_tuple_$u8_u8$(headStart, dataEnd) -> value_0, value_1 {
+                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_u8(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := 32
+                    value_1 := abi_decode_u8(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_u8(offset, end) -> value {
+                value := calldataload(offset)
+                validator_u8(value)
+            }
+            function validator_u8(value) {
+                if iszero(eq(value, cleanup_u8(value))) { $Abort(95) }
+            }
+            function abi_decode_tuple_$u64_u64$(headStart, dataEnd) -> value_0, value_1 {
+                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := 32
+                    value_1 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_u64(offset, end) -> value {
+                value := calldataload(offset)
+                validator_u64(value)
+            }
+            function validator_u64(value) {
+                if iszero(eq(value, cleanup_u64(value))) { $Abort(95) }
+            }
+            function abi_encode_tuple_$u128$(headStart ,value_0) -> tail {
+                tail := add(headStart, 32)
+                abi_encode_u128(value_0, add(headStart, 0))
+            }
+            function abi_encode_u128(value, pos) {
+                mstore(pos, cleanup_u128(value))
+            }
+            function cleanup_u128(value) -> cleaned {
+                cleaned := and(value, 0xffffffffffffffffffffffffffffffff)
+            }
+            function abi_decode_tuple_$u128_u128$(headStart, dataEnd) -> value_0, value_1 {
+                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_u128(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := 32
+                    value_1 := abi_decode_u128(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_u128(offset, end) -> value {
+                value := calldataload(offset)
+                validator_u128(value)
+            }
+            function validator_u128(value) {
+                if iszero(eq(value, cleanup_u128(value))) { $Abort(95) }
+            }
+            function abi_decode_tuple_$u64_u64_u64$(headStart, dataEnd) -> value_0, value_1, value_2 {
+                if slt(sub(dataEnd, headStart), 96) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := 32
+                    value_1 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := 64
+                    value_2 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_tuple_$bool$(headStart, dataEnd) -> value_0 {
+                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_bool(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_bool(offset, end) -> value {
+                value := calldataload(offset)
+                validator_bool(value)
+            }
+            function validator_bool(value) {
+                if iszero(eq(value, cleanup_bool(value))) { $Abort(95) }
+            }
+            function cleanup_bool(value) -> cleaned {
+                cleaned := and(value, 0xff)
+            }
+            function abi_decode_tuple_$u64$(headStart, dataEnd) -> value_0 {
+                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_encode_tuple_$u64_u64$(headStart ,value_0, value_1) -> tail {
+                tail := add(headStart, 64)
+                abi_encode_u64(value_0, add(headStart, 0))
+                abi_encode_u64(value_1, add(headStart, 32))
+            }
+            function abi_encode_tuple_$bool_bool$(headStart ,value_0, value_1) -> tail {
+                tail := add(headStart, 64)
+                abi_encode_bool(value_0, add(headStart, 0))
+                abi_encode_bool(value_1, add(headStart, 32))
+            }
+            function abi_encode_bool(value, pos) {
+                mstore(pos, cleanup_bool(value))
+            }
             function $Abort(code) {
                 revert(0, 0) // TODO: convention to store code
             }
@@ -1295,94 +1295,6 @@ object "A2_M" {
                 }
                 revert(_2, _2)
             }
-            function abi_decode_bool(dataEnd) -> value
-            {
-                if slt(add(dataEnd, not(3)), 32) { revert(0, 0) }
-                let value_1 := calldataload(4)
-                if iszero(eq(value_1, iszero(iszero(value_1)))) { revert(0, 0) }
-                value := value_1
-            }
-            function abi_decode_u128_u128(dataEnd) -> value, value_1
-            {
-                if slt(add(dataEnd, not(3)), 64) { revert(0, 0) }
-                let value_2 := calldataload(4)
-                let _1 := 0xffffffffffffffffffffffffffffffff
-                if iszero(eq(value_2, and(value_2, _1))) { revert(0, 0) }
-                value := value_2
-                let value_3 := calldataload(36)
-                if iszero(eq(value_3, and(value_3, _1))) { revert(0, 0) }
-                value_1 := value_3
-            }
-            function abi_decode_u64(dataEnd) -> value
-            {
-                if slt(add(dataEnd, not(3)), 32) { revert(0, 0) }
-                let value_1 := calldataload(4)
-                if iszero(eq(value_1, and(value_1, 0xffffffffffffffff))) { revert(0, 0) }
-                value := value_1
-            }
-            function abi_decode_u64_u64(dataEnd) -> value, value_1
-            {
-                if slt(add(dataEnd, not(3)), 64) { revert(0, 0) }
-                let value_2 := calldataload(4)
-                let _1 := 0xffffffffffffffff
-                if iszero(eq(value_2, and(value_2, _1))) { revert(0, 0) }
-                value := value_2
-                let value_3 := calldataload(36)
-                if iszero(eq(value_3, and(value_3, _1))) { revert(0, 0) }
-                value_1 := value_3
-            }
-            function abi_decode_u64_u64_u64(dataEnd) -> value, value_1, value_2
-            {
-                if slt(add(dataEnd, not(3)), 96) { revert(0, 0) }
-                let value_3 := calldataload(4)
-                let _1 := 0xffffffffffffffff
-                if iszero(eq(value_3, and(value_3, _1))) { revert(0, 0) }
-                value := value_3
-                let value_4 := calldataload(36)
-                if iszero(eq(value_4, and(value_4, _1))) { revert(0, 0) }
-                value_1 := value_4
-                let value_5 := calldataload(68)
-                if iszero(eq(value_5, and(value_5, _1))) { revert(0, 0) }
-                value_2 := value_5
-            }
-            function abi_decode_u8_u8(dataEnd) -> value, value_1
-            {
-                if slt(add(dataEnd, not(3)), 64) { revert(0, 0) }
-                let value_2 := calldataload(4)
-                if iszero(eq(value_2, and(value_2, 0xff))) { revert(0, 0) }
-                value := value_2
-                let value_3 := calldataload(36)
-                if iszero(eq(value_3, and(value_3, 0xff))) { revert(0, 0) }
-                value_1 := value_3
-            }
-            function abi_encode_bool_bool$(headStart, value, value_1) -> tail
-            {
-                tail := add(headStart, 64)
-                mstore(headStart, iszero(iszero(value)))
-                mstore(add(headStart, 32), iszero(iszero(value_1)))
-            }
-            function abi_encode_u128$(headStart, value) -> tail
-            {
-                tail := add(headStart, 32)
-                mstore(headStart, and(value, 0xffffffffffffffffffffffffffffffff))
-            }
-            function abi_encode_u64$(headStart, value) -> tail
-            {
-                tail := add(headStart, 32)
-                mstore(headStart, and(value, 0xffffffffffffffff))
-            }
-            function abi_encode_u64_u64$(headStart, value, value_1) -> tail
-            {
-                tail := add(headStart, 64)
-                let _1 := 0xffffffffffffffff
-                mstore(headStart, and(value, _1))
-                mstore(add(headStart, 32), and(value_1, _1))
-            }
-            function abi_encode_u8$(headStart, value) -> tail
-            {
-                tail := add(headStart, 32)
-                mstore(headStart, and(value, 0xff))
-            }
             function A2_M_add_two_number(x, y) -> $result0, $result1
             {
                 let $t4 := $AddU64(x, y)
@@ -1540,6 +1452,98 @@ object "A2_M" {
                         leave
                     }
                 }
+            }
+            function abi_encode_u64$(headStart, value) -> tail
+            {
+                tail := add(headStart, 32)
+                mstore(headStart, and(value, 0xffffffffffffffff))
+            }
+            function abi_encode_u8$(headStart, value) -> tail
+            {
+                tail := add(headStart, 32)
+                mstore(headStart, and(value, 0xff))
+            }
+            function abi_decode_u8_u8(dataEnd) -> value, value_1
+            {
+                if slt(add(dataEnd, not(3)), 64) { revert(0, 0) }
+                let value_2 := calldataload(4)
+                validator_u8(value_2)
+                value := value_2
+                let value_3 := calldataload(36)
+                validator_u8(value_3)
+                value_1 := value_3
+            }
+            function validator_u8(value)
+            {
+                if iszero(eq(value, and(value, 0xff))) { revert(0, 0) }
+            }
+            function abi_decode_u64_u64(dataEnd) -> value, value_1
+            {
+                if slt(add(dataEnd, not(3)), 64) { revert(0, 0) }
+                let value_2 := calldataload(4)
+                let _1 := 0xffffffffffffffff
+                if iszero(eq(value_2, and(value_2, _1))) { revert(0, 0) }
+                value := value_2
+                let value_3 := calldataload(36)
+                if iszero(eq(value_3, and(value_3, _1))) { revert(0, 0) }
+                value_1 := value_3
+            }
+            function abi_encode_u128$(headStart, value) -> tail
+            {
+                tail := add(headStart, 32)
+                mstore(headStart, and(value, 0xffffffffffffffffffffffffffffffff))
+            }
+            function abi_decode_u128_u128(dataEnd) -> value, value_1
+            {
+                if slt(add(dataEnd, not(3)), 64) { revert(0, 0) }
+                let value_2 := calldataload(4)
+                let _1 := 0xffffffffffffffffffffffffffffffff
+                if iszero(eq(value_2, and(value_2, _1))) { revert(0, 0) }
+                value := value_2
+                let value_3 := calldataload(36)
+                if iszero(eq(value_3, and(value_3, _1))) { revert(0, 0) }
+                value_1 := value_3
+            }
+            function abi_decode_u64_u64_u64(dataEnd) -> value, value_1, value_2
+            {
+                if slt(add(dataEnd, not(3)), 96) { revert(0, 0) }
+                let value_3 := calldataload(4)
+                let _1 := 0xffffffffffffffff
+                if iszero(eq(value_3, and(value_3, _1))) { revert(0, 0) }
+                value := value_3
+                let value_4 := calldataload(36)
+                if iszero(eq(value_4, and(value_4, _1))) { revert(0, 0) }
+                value_1 := value_4
+                let value_5 := calldataload(68)
+                if iszero(eq(value_5, and(value_5, _1))) { revert(0, 0) }
+                value_2 := value_5
+            }
+            function abi_decode_bool(dataEnd) -> value
+            {
+                if slt(add(dataEnd, not(3)), 32) { revert(0, 0) }
+                let value_1 := calldataload(4)
+                validator_u8(value_1)
+                value := value_1
+            }
+            function abi_decode_u64(dataEnd) -> value
+            {
+                if slt(add(dataEnd, not(3)), 32) { revert(0, 0) }
+                let value_1 := calldataload(4)
+                if iszero(eq(value_1, and(value_1, 0xffffffffffffffff))) { revert(0, 0) }
+                value := value_1
+            }
+            function abi_encode_u64_u64$(headStart, value, value_1) -> tail
+            {
+                tail := add(headStart, 64)
+                let _1 := 0xffffffffffffffff
+                mstore(headStart, and(value, _1))
+                mstore(add(headStart, 32), and(value_1, _1))
+            }
+            function abi_encode_bool_bool$(headStart, value, value_1) -> tail
+            {
+                tail := add(headStart, 64)
+                mstore(headStart, and(value, 0xff))
+                mstore(add(headStart, 32), and(value_1, 0xff))
             }
             function $AddU64(x, y) -> r
             {

@@ -1627,6 +1627,14 @@ impl GlobalEnv {
             });
         func_data.spec.on_impl.insert(code_offset, spec);
     }
+
+    /// Produce a TypeDisplayContext to print types within the scope of this env
+    pub fn get_type_display_ctx(&self) -> TypeDisplayContext {
+        TypeDisplayContext::WithEnv {
+            env: self,
+            type_param_names: None,
+        }
+    }
 }
 
 impl Default for GlobalEnv {
@@ -3541,7 +3549,7 @@ impl<'env> FunctionEnv<'env> {
     }
 
     /// Produce a TypeDisplayContext to print types within the scope of this env
-    pub fn get_type_display_ctxt(&self) -> TypeDisplayContext {
+    pub fn get_type_display_ctx(&self) -> TypeDisplayContext {
         let type_param_names = self
             .get_type_parameters()
             .iter()

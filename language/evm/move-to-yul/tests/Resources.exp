@@ -42,56 +42,9 @@ object "A2_M" {
                     let memEnd := abi_encode_tuple_$bool$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
-                case 0x03e6d7c2
-                {
-                    // unpublish(address)
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    let param_0 := abi_decode_tuple_$address$(4, calldatasize())
-                    let ret_0 := A2_M_unpublish(param_0)
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$A2_M_S$(memPos, ret_0)
-                    return(memPos, sub(memEnd, memPos))
-                }
                 default {}
             }
             $Abort(97)
-            function abi_decode_address(offset, end) -> value {
-                value := calldataload(offset)
-                validator_address(value)
-            }
-            function abi_decode_tuple_$address$(headStart, dataEnd) -> value_0 {
-                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
-                {
-                    let offset := 0
-                    value_0 := abi_decode_address(add(headStart, offset), dataEnd)
-                }
-            }
-            function abi_encode_bool(value, pos) {
-                mstore(pos, cleanup_bool(value))
-            }
-            function abi_encode_tuple_(headStart ) -> tail {
-                tail := add(headStart, 0)
-            }
-            function abi_encode_tuple_$A2_M_S$(headStart ,value_0) -> tail {
-                tail := add(headStart, 64)
-                (value_0, add(headStart, 0))
-            }
-            function abi_encode_tuple_$bool$(headStart ,value_0) -> tail {
-                tail := add(headStart, 32)
-                abi_encode_bool(value_0, add(headStart, 0))
-            }
-            function cleanup_address(value) -> cleaned {
-                cleaned := add(value, 0xffffffffffffffffffffffffffffffffffffffff)
-            }
-            function cleanup_bool(value) -> cleaned {
-                cleaned := iszero(iszero(value))
-            }
-            function validator_address(value) {
-                if iszero(eq(value, cleanup_address(value))) { $Abort(95) }
-            }
 
             // Dummy calls to reference callables for Yul optimizer
             A2_M_increment_a(sload(100))
@@ -176,6 +129,36 @@ object "A2_M" {
                 $result := $t1
             }
 
+            function abi_encode_tuple_$bool$(headStart ,value_0) -> tail {
+                tail := add(headStart, 32)
+                abi_encode_bool(value_0, add(headStart, 0))
+            }
+            function abi_encode_bool(value, pos) {
+                mstore(pos, cleanup_bool(value))
+            }
+            function cleanup_bool(value) -> cleaned {
+                cleaned := and(value, 0xff)
+            }
+            function abi_decode_tuple_$address$(headStart, dataEnd) -> value_0 {
+                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_address(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_address(offset, end) -> value {
+                value := calldataload(offset)
+                validator_address(value)
+            }
+            function validator_address(value) {
+                if iszero(eq(value, cleanup_address(value))) { $Abort(95) }
+            }
+            function cleanup_address(value) -> cleaned {
+                cleaned := and(value, 0xffffffffffffffffffffffffffffffffffffffff)
+            }
+            function abi_encode_tuple_(headStart ) -> tail {
+                tail := add(headStart, 0)
+            }
             function $Abort(code) {
                 revert(0, 0) // TODO: convention to store code
             }
@@ -320,17 +303,163 @@ object "A2_M" {
 }
 
 
-!! Errors compiling Yul
+!! Optimized Yul
 
-Warning: Yul is still experimental. Please use the output with care.
-Error: Literal or identifier expected.
-  --> <stdin>:80:17:
-   |
-80 |                 (value_0, add(headStart, 0))
-   |                 ^
+Pretty printed source:
+/// @use-src 2:"tests/Resources.move"
+object "A2_M" {
+    code {
+        {
+            let _1 := datasize("A2_M_deployed")
+            codecopy(0, dataoffset("A2_M_deployed"), _1)
+            return(0, _1)
+        }
+    }
+    object "A2_M_deployed" {
+        code {
+            {
+                let _1 := 0
+                mstore(_1, memoryguard(0xa0))
+                if iszero(lt(calldatasize(), 4))
+                {
+                    switch shr(224, calldataload(_1))
+                    case 0x6fd78c6f {
+                        if callvalue() { revert(_1, _1) }
+                        let $base_offset := or(252, shl(abi_decode_address(calldatasize()), 60))
+                        if not($StorageLoadU8($base_offset)) { revert(_1, _1) }
+                        let _2 := 1
+                        let _3 := 32
+                        let $t2 := or(true, shl(add($base_offset, _3), _2))
+                        let _4 := $LoadU256($t2)
+                        let _5 := shl(add(shr(_4, _2), _3), _2)
+                        let _6 := and(_4, _2)
+                        let val := _1
+                        let offs := shr(or(_6, _5), _2)
+                        switch or(_6, and(_5, _2))
+                        case 0 {
+                            val := and(mload(offs), 0xffffffffffffffff)
+                        }
+                        default {
+                            let val_1 := _1
+                            let word_offs, bit_offs := $ToWordOffs(offs)
+                            mstore(_3, word_offs)
+                            mstore(64, _1)
+                            val_1 := and(shr(sload(keccak256(_3, 36)), bit_offs), 0xffffffffffffffff)
+                            let used_bits := sub(256, bit_offs)
+                            if lt(used_bits, 64)
+                            {
+                                mstore(_3, add(word_offs, _2))
+                                mstore(64, _1)
+                                val_1 := or(val_1, shl(and(sload(keccak256(_3, 36)), add(shl(_2, add(bit_offs, not(191))), not(0))), used_bits))
+                            }
+                            val := val_1
+                        }
+                        $StoreU64($IndexPtr($LoadU256($t2)), $AddU64(val))
+                        return(mload(_1), _1)
+                    }
+                    case 0xbb29998e {
+                        if callvalue() { revert(_1, _1) }
+                        let ret := A2_M_test(abi_decode_address(calldatasize()))
+                        let memPos := mload(_1)
+                        return(memPos, sub(abi_encode_bool$(memPos, ret), memPos))
+                    }
+                }
+                revert(_1, _1)
+            }
+            function A2_M_test(addr) -> $result
+            {
+                $result := $StorageLoadU8(or(252, shl(addr, 60)))
+            }
+            function abi_encode_bool$(headStart, value) -> tail
+            {
+                tail := add(headStart, 32)
+                mstore(headStart, and(value, 0xff))
+            }
+            function abi_decode_address(dataEnd) -> value
+            {
+                if slt(add(dataEnd, not(3)), 32) { revert(0, 0) }
+                let value_1 := calldataload(4)
+                if iszero(eq(value_1, and(value_1, sub(shl(160, 1), 1)))) { revert(0, 0) }
+                value := value_1
+            }
+            function $ToWordOffs(offs) -> word_offs, bit_offs
+            {
+                word_offs := shr(offs, 5)
+                bit_offs := shl(and(offs, 0x1F), 3)
+            }
+            function $IndexPtr(ptr) -> new_ptr
+            {
+                new_ptr := or(and(ptr, 1), shl(add(shr(ptr, 1), 32), 1))
+            }
+            function $StorageLoadU8(offs) -> val
+            {
+                let word_offs, bit_offs := $ToWordOffs(offs)
+                mstore(32, word_offs)
+                mstore(64, 0)
+                val := and(shr(sload(keccak256(32, 36)), bit_offs), 0xff)
+            }
+            function $StoreU64(ptr, val)
+            {
+                let offs := shr(ptr, 1)
+                switch and(ptr, 1)
+                case 0 {
+                    mstore(offs, or(and(mload(offs), not(0xffffffffffffffff)), val))
+                }
+                default {
+                    let word_offs, bit_offs := $ToWordOffs(offs)
+                    mstore(32, word_offs)
+                    mstore(64, 0)
+                    let key := keccak256(32, 36)
+                    let word := sload(key)
+                    mstore(key, or(word, shl(val, bit_offs)))
+                    let used_bits := sub(256, bit_offs)
+                    if lt(used_bits, 64)
+                    {
+                        mstore(32, add(word_offs, 1))
+                        mstore(64, 0)
+                        let key_1 := keccak256(32, 36)
+                        sstore(key_1, or(and(sload(key_1), not(add(shl(1, add(bit_offs, not(191))), not(0)))), shr(val, used_bits)))
+                    }
+                }
+            }
+            function $LoadU256(ptr) -> val
+            {
+                let offs := shr(ptr, 1)
+                switch and(ptr, 1)
+                case 0 { val := mload(offs) }
+                default {
+                    let val_1 := 0
+                    let word_offs, bit_offs := $ToWordOffs(offs)
+                    mstore(32, word_offs)
+                    mstore(64, val_1)
+                    val_1 := shr(sload(keccak256(32, 36)), bit_offs)
+                    let _1 := 256
+                    let used_bits := sub(_1, bit_offs)
+                    if lt(used_bits, _1)
+                    {
+                        mstore(32, add(word_offs, 1))
+                        mstore(64, 0)
+                        val_1 := or(val_1, shl(and(sload(keccak256(32, 36)), add(shl(1, bit_offs), not(0))), used_bits))
+                    }
+                    val := val_1
+                }
+            }
+            function $AddU64(x) -> r
+            {
+                if lt(sub(0xffffffffffffffff, x), 1) { revert(0, 0) }
+                r := add(x, 1)
+            }
+        }
+    }
+}
 
-Error: Expected keyword "data" or "object" or "}".
-  --> <stdin>:80:17:
-   |
-80 |                 (value_0, add(headStart, 0))
-   |                 ^
+
+
+!! Move-To-Yul Diagnostics:
+ warning: cannot dispatch this function because of unsupported parameter types
+   ┌─ tests/Resources.move:19:2
+   │
+19 │ ╭     fun unpublish(a: address): S acquires S {
+20 │ │         move_from<S>(a)
+21 │ │     }
+   │ ╰─────^

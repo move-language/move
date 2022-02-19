@@ -146,6 +146,9 @@ Abort: "(code) {
 AbortBuiltin: "() {
     $Abort(sub(0, 1))
 }" dep Abort,
+NotImplemented: "() {
+    $AbortBuiltin()
+}" dep AbortBuiltin,
 
 // -------------------------------------------------------------------------------------------
 // Memory

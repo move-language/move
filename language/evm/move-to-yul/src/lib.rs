@@ -3,10 +3,14 @@
 
 #![forbid(unsafe_code)]
 
+mod attributes;
+mod context;
 mod evm_transformation;
+mod functions;
 pub mod generator;
 pub mod options;
 mod yul_functions;
+// mod object;
 
 use crate::{generator::Generator, options::Options};
 use anyhow::anyhow;

@@ -189,37 +189,6 @@ object "A2_U256Arith" {
                 default {}
             }
             $Abort(97)
-            function abi_decode_tuple_$u128_u128$(headStart, dataEnd) -> value_0, value_1 {
-                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
-                {
-                    let offset := 0
-                    value_0 := abi_decode_u128(add(headStart, offset), dataEnd)
-                }
-                {
-                    let offset := 32
-                    value_1 := abi_decode_u128(add(headStart, offset), dataEnd)
-                }
-            }
-            function abi_decode_u128(offset, end) -> value {
-                value := calldataload(offset)
-                validator_u128(value)
-            }
-            function abi_encode_A1_U256_U256(value, pos) {
-                mstore(pos, cleanup_A1_U256_U256(value))
-            }
-            function abi_encode_tuple_$A1_U256_U256$(headStart ,value_0) -> tail {
-                tail := add(headStart, 32)
-                abi_encode_A1_U256_U256(value_0, add(headStart, 0))
-            }
-            function cleanup_A1_U256_U256(value) -> cleaned {
-                cleaned := value
-            }
-            function cleanup_u128(value) -> cleaned {
-                cleaned := and(value, 0xffffffffffffffffffffffffffffffff)
-            }
-            function validator_u128(value) {
-                if iszero(eq(value, cleanup_u128(value))) { $Abort(95) }
-            }
 
             // Dummy calls to reference callables for Yul optimizer
             let $dummy0 := A2_U256Arith_add()
@@ -469,6 +438,37 @@ object "A2_U256Arith" {
                 $result := $t2
             }
 
+            function abi_encode_tuple_$A1_U256_U256$(headStart ,value_0) -> tail {
+                tail := add(headStart, 32)
+                abi_encode_A1_U256_U256(value_0, add(headStart, 0))
+            }
+            function abi_encode_A1_U256_U256(value, pos) {
+                mstore(pos, cleanup_A1_U256_U256(value))
+            }
+            function cleanup_A1_U256_U256(value) -> cleaned {
+                cleaned := and(value, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+            }
+            function abi_decode_tuple_$u128_u128$(headStart, dataEnd) -> value_0, value_1 {
+                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_u128(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := 32
+                    value_1 := abi_decode_u128(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_u128(offset, end) -> value {
+                value := calldataload(offset)
+                validator_u128(value)
+            }
+            function validator_u128(value) {
+                if iszero(eq(value, cleanup_u128(value))) { $Abort(95) }
+            }
+            function cleanup_u128(value) -> cleaned {
+                cleaned := and(value, 0xffffffffffffffffffffffffffffffff)
+            }
             function $Abort(code) {
                 revert(0, 0) // TODO: convention to store code
             }

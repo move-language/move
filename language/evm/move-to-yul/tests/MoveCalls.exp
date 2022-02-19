@@ -32,30 +32,6 @@ object "A2_M" {
                 default {}
             }
             $Abort(97)
-            function abi_decode_tuple_$u64$(headStart, dataEnd) -> value_0 {
-                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
-                {
-                    let offset := 0
-                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
-                }
-            }
-            function abi_decode_u64(offset, end) -> value {
-                value := calldataload(offset)
-                validator_u64(value)
-            }
-            function abi_encode_tuple_$u64$(headStart ,value_0) -> tail {
-                tail := add(headStart, 32)
-                abi_encode_u64(value_0, add(headStart, 0))
-            }
-            function abi_encode_u64(value, pos) {
-                mstore(pos, cleanup_u64(value))
-            }
-            function cleanup_u64(value) -> cleaned {
-                cleaned := and(value, 0xffffffffffffffff)
-            }
-            function validator_u64(value) {
-                if iszero(eq(value, cleanup_u64(value))) { $Abort(95) }
-            }
 
             // Dummy calls to reference callables for Yul optimizer
             let $dummy0 := A2_M_f(sload(100))
@@ -111,6 +87,30 @@ object "A2_M" {
                 $result1 := x
             }
 
+            function abi_encode_tuple_$u64$(headStart ,value_0) -> tail {
+                tail := add(headStart, 32)
+                abi_encode_u64(value_0, add(headStart, 0))
+            }
+            function abi_encode_u64(value, pos) {
+                mstore(pos, cleanup_u64(value))
+            }
+            function cleanup_u64(value) -> cleaned {
+                cleaned := and(value, 0xffffffffffffffff)
+            }
+            function abi_decode_tuple_$u64$(headStart, dataEnd) -> value_0 {
+                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_u64(offset, end) -> value {
+                value := calldataload(offset)
+                validator_u64(value)
+            }
+            function validator_u64(value) {
+                if iszero(eq(value, cleanup_u64(value))) { $Abort(95) }
+            }
             function $Abort(code) {
                 revert(0, 0) // TODO: convention to store code
             }

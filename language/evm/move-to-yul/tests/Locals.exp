@@ -32,37 +32,6 @@ object "A2_M" {
                 default {}
             }
             $Abort(97)
-            function abi_decode_tuple_$u64_u64$(headStart, dataEnd) -> value_0, value_1 {
-                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
-                {
-                    let offset := 0
-                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
-                }
-                {
-                    let offset := 32
-                    value_1 := abi_decode_u64(add(headStart, offset), dataEnd)
-                }
-            }
-            function abi_decode_u64(offset, end) -> value {
-                value := calldataload(offset)
-                validator_u64(value)
-            }
-            function abi_encode_tuple_$u64_u64_u64_u64$(headStart ,value_0, value_1, value_2, value_3) -> tail {
-                tail := add(headStart, 128)
-                abi_encode_u64(value_0, add(headStart, 0))
-                abi_encode_u64(value_1, add(headStart, 32))
-                abi_encode_u64(value_2, add(headStart, 64))
-                abi_encode_u64(value_3, add(headStart, 96))
-            }
-            function abi_encode_u64(value, pos) {
-                mstore(pos, cleanup_u64(value))
-            }
-            function cleanup_u64(value) -> cleaned {
-                cleaned := and(value, 0xffffffffffffffff)
-            }
-            function validator_u64(value) {
-                if iszero(eq(value, cleanup_u64(value))) { $Abort(95) }
-            }
 
             // Dummy calls to reference callables for Yul optimizer
             let $dummy0, $dummy1, $dummy2, $dummy3 := A2_M_evaded(sload(100), sload(101))
@@ -120,6 +89,37 @@ object "A2_M" {
                 $Free($locals, 64)
             }
 
+            function abi_encode_tuple_$u64_u64_u64_u64$(headStart ,value_0, value_1, value_2, value_3) -> tail {
+                tail := add(headStart, 128)
+                abi_encode_u64(value_0, add(headStart, 0))
+                abi_encode_u64(value_1, add(headStart, 32))
+                abi_encode_u64(value_2, add(headStart, 64))
+                abi_encode_u64(value_3, add(headStart, 96))
+            }
+            function abi_encode_u64(value, pos) {
+                mstore(pos, cleanup_u64(value))
+            }
+            function cleanup_u64(value) -> cleaned {
+                cleaned := and(value, 0xffffffffffffffff)
+            }
+            function abi_decode_tuple_$u64_u64$(headStart, dataEnd) -> value_0, value_1 {
+                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := 32
+                    value_1 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_u64(offset, end) -> value {
+                value := calldataload(offset)
+                validator_u64(value)
+            }
+            function validator_u64(value) {
+                if iszero(eq(value, cleanup_u64(value))) { $Abort(95) }
+            }
             function $Abort(code) {
                 revert(0, 0) // TODO: convention to store code
             }
@@ -278,6 +278,15 @@ object "A2_M" {
                 }
                 revert(_2, _2)
             }
+            function abi_encode_u64_u64_u64_u64$(headStart, value, value_1, value_2, value_3) -> tail
+            {
+                tail := add(headStart, 128)
+                let _1 := 0xffffffffffffffff
+                mstore(headStart, and(value, _1))
+                mstore(add(headStart, 32), and(value_1, _1))
+                mstore(add(headStart, 64), and(value_2, _1))
+                mstore(add(headStart, 96), and(value_3, _1))
+            }
             function abi_decode_u64_806() -> value
             {
                 value := calldataload(4)
@@ -287,15 +296,6 @@ object "A2_M" {
             {
                 value := calldataload(36)
                 if iszero(eq(value, and(value, 0xffffffffffffffff))) { revert(0, 0) }
-            }
-            function abi_encode_u64_u64_u64_u64$(headStart, value, value_1, value_2, value_3) -> tail
-            {
-                tail := add(headStart, 128)
-                let _1 := 0xffffffffffffffff
-                mstore(headStart, and(value, _1))
-                mstore(add(headStart, 32), and(value_1, _1))
-                mstore(add(headStart, 64), and(value_2, _1))
-                mstore(add(headStart, 96), and(value_3, _1))
             }
             function $ToWordOffs(offs) -> word_offs, bit_offs
             {

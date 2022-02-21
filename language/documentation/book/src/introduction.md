@@ -26,4 +26,4 @@ Currently, Move is not targeting developers who wish to create custom modules an
 
 ## Where Do I Start?
 
-Begin with understanding [modules and scripts](./modules-and-scripts.md) and then work through the [first tutorial on creating coins](./creating-coins.md).
+Begin with understanding [modules and scripts](./modules-and-scripts.md) and then work through the [Move Tutorial](./creating-coins.md).

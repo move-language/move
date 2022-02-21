@@ -5,7 +5,7 @@
 ## Getting Started
 
 - [Modules and Scripts](modules-and-scripts.md)
-- [First Tutorial: Creating Coins](creating-coins.md)
+- [Move Tutorial](creating-coins.md)
 
 ## Primitive Types
 

@@ -23,8 +23,6 @@ Z3_VERSION=4.8.13
 CVC5_VERSION=0.0.3
 DOTNET_VERSION=5.0
 BOOGIE_VERSION=2.9.6
-PYRE_CHECK_VERSION=0.0.59
-NUMPY_VERSION=1.20.1
 SOLC_VERSION="v0.8.11+commit.d7f03943"
 
 SCRIPT_PATH="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
@@ -37,7 +35,6 @@ function usage {
   echo "-p update ${HOME}/.profile"
   echo "-t install build tools"
   echo "-y installs or updates Move prover tools: z3, cvc5, dotnet, boogie"
-  echo "-s installs or updates requirements to test code-generation for Move SDKs"
   echo "-a install tools for build and test api"
   echo "-d installs the solidity compiler"
   echo "-v verbose mode"
@@ -88,14 +85,6 @@ function update_path_and_profile {
   fi
   if [[ "$INSTALL_SOLIDITY" == "true" ]]; then
     add_to_profile "export SOLC_EXE=\"${BIN_DIR}/solc\""
-  fi
-  if [[ "$INSTALL_CODEGEN" == "true" ]] && [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-    add_to_profile "export PATH=\$PATH:${INSTALL_DIR}swift/usr/bin"
-    if [[ -n "${GOBIN}" ]]; then
-      add_to_profile "export PATH=\$PATH:/usr/lib/golang/bin"
-    else
-      add_to_profile "export PATH=\$PATH:$GOBIN"
-    fi
   fi
 }
 
@@ -407,57 +396,6 @@ function install_cvc5 {
   rm -rf "$TMPFILE"
 }
 
-function install_golang {
-    if [[ $(go version | grep -c "go1.14" || true) == "0" ]]; then
-      if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-        curl -LO https://golang.org/dl/go1.14.15.linux-amd64.tar.gz
-        "${PRE_COMMAND[@]}" rm -rf /usr/local/go
-        "${PRE_COMMAND[@]}" tar -C /usr/local -xzf go1.14.15.linux-amd64.tar.gz
-        "${PRE_COMMAND[@]}" ln -sf /usr/local/go /usr/lib/golang
-        rm go1.14.15.linux-amd64.tar.gz
-      elif [[ "$PACKAGE_MANAGER" == "apk" ]]; then
-        apk --update add --no-cache git make musl-dev go
-      elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
-        failed=$(brew install go || echo "failed")
-        if [[ "$failed" == "failed" ]]; then
-          brew link --overwrite go
-        fi
-      else
-        install_pkg golang "$PACKAGE_MANAGER"
-      fi
-    fi
-}
-
-function install_deno {
-  curl -fsSL https://deno.land/x/install/install.sh | sh
-  cp "${HOME}/.deno/bin/deno" "${INSTALL_DIR}"
-  chmod +x "${INSTALL_DIR}deno"
-}
-
-function install_swift {
-    echo Installing Swift.
-    install_pkg wget "$PACKAGE_MANAGER"
-    install_pkg libncurses5 "$PACKAGE_MANAGER"
-    install_pkg clang "$PACKAGE_MANAGER"
-    install_pkg libcurl4 "$PACKAGE_MANAGER"
-    install_pkg libpython2.7 "$PACKAGE_MANAGER"
-    install_pkg libpython2.7-dev "$PACKAGE_MANAGER"
-    wget -q https://swift.org/builds/swift-5.3.3-release/ubuntu1804/swift-5.3.3-RELEASE/swift-5.3.3-RELEASE-ubuntu18.04.tar.gz
-    tar xzf swift-5.3.3-RELEASE-ubuntu18.04.tar.gz
-    rm -rf swift-5.3.3-RELEASE-ubuntu18.04.tar.gz
-    mv swift-5.3.3-RELEASE-ubuntu18.04 "${INSTALL_DIR}swift"
-}
-
-function install_java {
-    if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-      "${PRE_COMMAND[@]}" apt-get install -y default-jdk
-    elif [[ "$PACKAGE_MANAGER" == "apk" ]]; then
-      apk --update add --no-cache  -X http://dl-cdn.alpinelinux.org/alpine/edge/community openjdk11
-    else
-      install_pkg java "$PACKAGE_MANAGER"
-    fi
-}
-
 function install_nodejs {
     if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
       curl -fsSL https://deb.nodesource.com/setup_14.x | bash -
@@ -538,18 +476,6 @@ Solidity compiler (since -d was provided):
 EOF
   fi
 
-  if [[ "$INSTALL_CODEGEN" == "true" ]]; then
-cat <<EOF
-Codegen tools (since -s was provided):
-  * Clang
-  * Python3 (numpy, pyre-check)
-  * Golang
-  * Java
-  * Deno
-  * Swift
-EOF
-  fi
-
   if [[ "$INSTALL_API_BUILD_TOOLS" == "true" ]]; then
 cat <<EOF
 API build and testing tools (since -a was provided):
@@ -575,7 +501,6 @@ INSTALL_BUILD_TOOLS=false;
 INSTALL_PROFILE=false;
 INSTALL_PROVER=false;
 INSTALL_SOLIDITY=false;
-INSTALL_CODEGEN=false;
 INSTALL_API_BUILD_TOOLS=false;
 INSTALL_INDIVIDUAL=false;
 INSTALL_PACKAGES=();
@@ -583,7 +508,7 @@ INSTALL_DIR="${HOME}/bin/"
 OPT_DIR="false"
 
 #parse args
-while getopts "btpvydsah:i:n" arg; do
+while getopts "btpvydah:i:n" arg; do
   case "$arg" in
     b)
       BATCH_MODE="true"
@@ -602,9 +527,6 @@ while getopts "btpvydsah:i:n" arg; do
       ;;
     d)
       INSTALL_SOLIDITY="true"
-      ;;
-    s)
-      INSTALL_CODEGEN="true"
       ;;
     a)
       INSTALL_API_BUILD_TOOLS="true"
@@ -632,7 +554,6 @@ if [[ "$INSTALL_BUILD_TOOLS" == "false" ]] && \
    [[ "$INSTALL_PROFILE" == "false" ]] && \
    [[ "$INSTALL_PROVER" == "false" ]] && \
    [[ "$INSTALL_SOLIDITY" == "false" ]] && \
-   [[ "$INSTALL_CODEGEN" == "false" ]] && \
    [[ "$INSTALL_API_BUILD_TOOLS" == "false" ]] && \
    [[ "$INSTALL_INDIVIDUAL" == "false" ]]; then
    INSTALL_BUILD_TOOLS="true"
@@ -761,28 +682,6 @@ fi
 
 if [[ "$INSTALL_SOLIDITY" == "true" ]]; then
   install_solidity
-fi
-
-if [[ "$INSTALL_CODEGEN" == "true" ]]; then
-  install_pkg clang "$PACKAGE_MANAGER"
-  install_pkg llvm "$PACKAGE_MANAGER"
-  install_python3
-  install_deno
-  install_java
-  install_golang
-  if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-    # Only looked at this for a little while, but depends on glibc so alpine
-    # support isn't easily added. On Mac it requires XCode to be installed,
-    # which is quite largs, so probably something we don't want to download in
-    # this script.
-    install_swift
-  fi
-  if [[ "$PACKAGE_MANAGER" != "apk" ]]; then
-    # depends on wheels which needs glibc which doesn't work on alpine's python.
-    # Only invested a hour or so in this, a work around may exist.
-    "${PRE_COMMAND[@]}" python3 -m pip install pyre-check=="${PYRE_CHECK_VERSION}"
-  fi
-  "${PRE_COMMAND[@]}" python3 -m pip install numpy=="${NUMPY_VERSION}"
 fi
 
 if [[ "$INSTALL_API_BUILD_TOOLS" == "true" ]]; then

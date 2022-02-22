@@ -22,7 +22,7 @@ object "A2_M" {
             $Abort(98)
             function A2_M_receive() {
                 // return ()
-                /// @src 2:68:72
+                /// @src 2:71:78
             }
 
             function $Abort(code) {

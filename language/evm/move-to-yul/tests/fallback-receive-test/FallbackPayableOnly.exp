@@ -21,7 +21,7 @@ object "A2_M" {
             A2_M_fallback() stop()
             function A2_M_fallback() {
                 // return ()
-                /// @src 2:70:74
+                /// @src 2:73:80
             }
 
             function $ShiftRight(bits, value) -> r {

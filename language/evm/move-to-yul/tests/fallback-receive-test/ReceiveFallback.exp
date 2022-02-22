@@ -28,19 +28,19 @@ object "A2_M" {
             function A2_M_fallback(x) -> $result {
                 let $t1, $t2
                 // $t1 := 1
-                /// @src 2:123:124
+                /// @src 2:141:142
                 $t1 := 1
                 // $t2 := +($t0, $t1)
-                /// @src 2:121:122
+                /// @src 2:139:140
                 $t2 := $AddU64(x, $t1)
                 // return $t2
-                /// @src 2:119:124
+                /// @src 2:137:142
                 $result := $t2
             }
 
             function A2_M_receive() {
                 // return ()
-                /// @src 2:68:72
+                /// @src 2:71:78
             }
 
             function $Abort(code) {

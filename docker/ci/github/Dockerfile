@@ -14,7 +14,7 @@ ENV RUSTUP_HOME "/opt/rustup"
 RUN mkdir -p /github/home && \
     mkdir -p /opt/cargo/ && \
     mkdir -p /opt/git/ && \
-    /diem/scripts/dev_setup.sh -t -b -p -y -d -n -a && \
+    /diem/scripts/dev_setup.sh -t -b -p -y -d -n && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -39,11 +39,10 @@ RUN [ -x "$(set -x; command -v rustup)" ] \
     && [ -x "$(set -x; command -v "$BOOGIE_EXE")" ] \
     && [ -x "$(set -x; xargs rustup which cargo --toolchain < /diem/rust-toolchain )" ] \
     && [ -x "$(set -x; command -v clang)" ] \
-    && [ -x "$(set -x; command -v python3)" ] \
     && [ -x "$(set -x; command -v npm)" ]
 
 # should be a no-op
 # sccache builds fine, but is not executable ??? in alpine, ends up being recompiled.  Wierd.
-RUN /diem/scripts/dev_setup.sh -t -y -d -b -p -a
+RUN /diem/scripts/dev_setup.sh -t -y -d -b -p
 
 FROM setup_ci as build_environment

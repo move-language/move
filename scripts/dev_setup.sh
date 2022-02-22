@@ -35,7 +35,6 @@ function usage {
   echo "-p update ${HOME}/.profile"
   echo "-t install build tools"
   echo "-y installs or updates Move prover tools: z3, cvc5, dotnet, boogie"
-  echo "-a install tools for build and test api"
   echo "-d installs the solidity compiler"
   echo "-v verbose mode"
   echo "-i installs an individual tool by name"
@@ -406,18 +405,6 @@ function install_nodejs {
     install_pkg npm "$PACKAGE_MANAGER"
 }
 
-function install_python3 {
-  if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-    install_pkg python3-all-dev "$PACKAGE_MANAGER"
-    install_pkg python3-setuptools "$PACKAGE_MANAGER"
-    install_pkg python3-pip "$PACKAGE_MANAGER"
-  elif [[ "$PACKAGE_MANAGER" == "apk" ]]; then
-    install_pkg python3-dev "$PACKAGE_MANAGER"
-  else
-    install_pkg python3 "$PACKAGE_MANAGER"
-  fi
-}
-
 function install_solidity {
   echo "Installing Solidity compiler"
   # We fetch the binary from  https://binaries.soliditylang.org
@@ -476,13 +463,6 @@ Solidity compiler (since -d was provided):
 EOF
   fi
 
-  if [[ "$INSTALL_API_BUILD_TOOLS" == "true" ]]; then
-cat <<EOF
-API build and testing tools (since -a was provided):
-  * Python3 (schemathesis)
-EOF
-  fi
-
   if [[ "$INSTALL_PROFILE" == "true" ]]; then
 cat <<EOF
 Moreover, ~/.profile will be updated (since -p was provided).
@@ -501,14 +481,13 @@ INSTALL_BUILD_TOOLS=false;
 INSTALL_PROFILE=false;
 INSTALL_PROVER=false;
 INSTALL_SOLIDITY=false;
-INSTALL_API_BUILD_TOOLS=false;
 INSTALL_INDIVIDUAL=false;
 INSTALL_PACKAGES=();
 INSTALL_DIR="${HOME}/bin/"
 OPT_DIR="false"
 
 #parse args
-while getopts "btpvydah:i:n" arg; do
+while getopts "btpvydh:i:n" arg; do
   case "$arg" in
     b)
       BATCH_MODE="true"
@@ -527,9 +506,6 @@ while getopts "btpvydah:i:n" arg; do
       ;;
     d)
       INSTALL_SOLIDITY="true"
-      ;;
-    a)
-      INSTALL_API_BUILD_TOOLS="true"
       ;;
     i)
       INSTALL_INDIVIDUAL="true"
@@ -554,7 +530,6 @@ if [[ "$INSTALL_BUILD_TOOLS" == "false" ]] && \
    [[ "$INSTALL_PROFILE" == "false" ]] && \
    [[ "$INSTALL_PROVER" == "false" ]] && \
    [[ "$INSTALL_SOLIDITY" == "false" ]] && \
-   [[ "$INSTALL_API_BUILD_TOOLS" == "false" ]] && \
    [[ "$INSTALL_INDIVIDUAL" == "false" ]]; then
    INSTALL_BUILD_TOOLS="true"
 fi
@@ -682,12 +657,6 @@ fi
 
 if [[ "$INSTALL_SOLIDITY" == "true" ]]; then
   install_solidity
-fi
-
-if [[ "$INSTALL_API_BUILD_TOOLS" == "true" ]]; then
-  # python and tools
-  install_python3
-  "${PRE_COMMAND[@]}" python3 -m pip install schemathesis
 fi
 
 if [[ "${BATCH_MODE}" == "false" ]]; then

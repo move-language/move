@@ -14,24 +14,17 @@
 # fast fail.
 set -eo pipefail
 
-SHELLCHECK_VERSION=0.7.1
-HADOLINT_VERSION=1.17.4
 SCCACHE_VERSION=0.2.16-alpha.0
 #If installing sccache from a git repp set url@revision.
 SCCACHE_GIT='https://github.com/diem/sccache.git@ef50d87a58260c30767520045e242ccdbdb965af'
 GRCOV_VERSION=0.8.2
 GUPPY_GIT='https://github.com/facebookincubator/cargo-guppy@39ec940f36b0a0df96a330243d127cbe2db9f919'
-KUBECTL_VERSION=1.18.6
-TERRAFORM_VERSION=0.12.26
-HELM_VERSION=3.2.4
-VAULT_VERSION=1.5.0
 Z3_VERSION=4.8.13
 CVC5_VERSION=0.0.3
 DOTNET_VERSION=5.0
 BOOGIE_VERSION=2.9.6
 PYRE_CHECK_VERSION=0.0.59
 NUMPY_VERSION=1.20.1
-ALLURE_VERSION=2.15.pr1135
 SOLC_VERSION="v0.8.11+commit.d7f03943"
 
 SCRIPT_PATH="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
@@ -43,7 +36,6 @@ function usage {
   echo "-b batch mode, no user interactions and miminal output"
   echo "-p update ${HOME}/.profile"
   echo "-t install build tools"
-  echo "-o install operations tooling as well: helm, terraform, hadolint, yamllint, vault, docker, kubectl, python3"
   echo "-y installs or updates Move prover tools: z3, cvc5, dotnet, boogie"
   echo "-s installs or updates requirements to test code-generation for Move SDKs"
   echo "-a install tools for build and test api"
@@ -159,117 +151,6 @@ function install_rustup {
   fi
 }
 
-function install_hadolint {
-  if ! command -v hadolint &> /dev/null; then
-    export HADOLINT=${INSTALL_DIR}/hadolint
-    curl -sL -o "$HADOLINT" "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-$(uname -s)-$(uname -m)" && chmod 700 "$HADOLINT"
-  fi
-  hadolint -v
-}
-
-function install_vault {
-  VERSION=$("${INSTALL_DIR}"/vault --version || true)
-  if [[ "$VERSION" != "Vault v${VAULT_VERSION}" ]]; then
-    MACHINE=$(uname -m);
-    if [[ $MACHINE == "x86_64" ]]; then
-      MACHINE="amd64"
-    fi
-    TMPFILE=$(mktemp)
-    curl -sL -o "$TMPFILE" "https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_$(uname -s | tr '[:upper:]' '[:lower:]')_${MACHINE}.zip"
-    unzip -qq -d "$INSTALL_DIR" "$TMPFILE"
-    rm "$TMPFILE"
-    chmod +x "${INSTALL_DIR}"/vault
-  fi
-  "${INSTALL_DIR}"/vault --version
-}
-
-function install_helm {
-  if ! command -v helm &> /dev/null; then
-    if [[ $(uname -s) == "Darwin" ]]; then
-      install_pkg helm brew
-    else
-      MACHINE=$(uname -m);
-      if [[ $MACHINE == "x86_64" ]]; then
-        MACHINE="amd64"
-      fi
-      TMPFILE=$(mktemp)
-      rm "$TMPFILE"
-      mkdir -p "$TMPFILE"/
-      curl -sL -o "$TMPFILE"/out.tar.gz "https://get.helm.sh/helm-v${HELM_VERSION}-$(uname -s | tr '[:upper:]' '[:lower:]')-${MACHINE}.tar.gz"
-      tar -zxvf "$TMPFILE"/out.tar.gz -C "$TMPFILE"/
-      cp "${TMPFILE}/$(uname -s | tr '[:upper:]' '[:lower:]')-${MACHINE}/helm" "${INSTALL_DIR}/helm"
-      rm -rf "$TMPFILE"
-      chmod +x "${INSTALL_DIR}"/helm
-    fi
-  fi
-}
-
-function install_terraform {
-  VERSION=$(terraform --version | head -1 || true)
-  if [[ "$VERSION" != "Terraform v${TERRAFORM_VERSION}" ]]; then
-    if [[ $(uname -s) == "Darwin" ]]; then
-      install_pkg tfenv brew
-      tfenv install ${TERRAFORM_VERSION}
-      tfenv use ${TERRAFORM_VERSION}
-    else
-      MACHINE=$(uname -m);
-      if [[ $MACHINE == "x86_64" ]]; then
-        MACHINE="amd64"
-      fi
-      TMPFILE=$(mktemp)
-      curl -sL -o "$TMPFILE" "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_$(uname -s | tr '[:upper:]' '[:lower:]')_${MACHINE}.zip"
-      unzip -qq -d "${INSTALL_DIR}" "$TMPFILE"
-      rm "$TMPFILE"
-      chmod +x "${INSTALL_DIR}"/terraform
-      terraform --version
-    fi
-  fi
-}
-
-function install_kubectl {
-  VERSION=$(kubectl version client --short=true | head -1 || true)
-  if [[ "$VERSION" != "Client Version: v${KUBECTL_VERSION}" ]]; then
-    if [[ $(uname -s) == "Darwin" ]]; then
-      install_pkg kubectl brew
-    else
-      MACHINE=$(uname -m);
-      if [[ $MACHINE == "x86_64" ]]; then
-        MACHINE="amd64"
-      fi
-      curl -sL -o "${INSTALL_DIR}"/kubectl "https://storage.googleapis.com/kubernetes-release/release/v${KUBECTL_VERSION}/bin/$(uname -s | tr '[:upper:]' '[:lower:]')/${MACHINE}/kubectl"
-      chmod +x "${INSTALL_DIR}"/kubectl
-    fi
-  fi
-  kubectl version client --short=true | head -1 || true
-}
-
-function install_awscli {
-  PACKAGE_MANAGER=$1
-  if ! command -v aws &> /dev/null; then
-    if [[ $(uname -s) == "Darwin" ]]; then
-      install_pkg awscli brew
-    elif [[ "$PACKAGE_MANAGER" == "apk" ]]; then
-      apk add --no-cache python3 py3-pip \
-      && pip3 install --upgrade pip \
-      && pip3 install awscli
-    else
-      MACHINE=$(uname -m);
-      TMPFILE=$(mktemp)
-      rm "$TMPFILE"
-      mkdir -p "$TMPFILE"/work/
-      curl -sL -o "$TMPFILE"/aws.zip  "https://awscli.amazonaws.com/awscli-exe-$(uname -s | tr '[:upper:]' '[:lower:]')-${MACHINE}.zip"
-      unzip -qq -d "$TMPFILE"/work/ "$TMPFILE"/aws.zip
-      TARGET_DIR="${HOME}"/.local/
-      if [[ "$OPT_DIR" == "true" ]]; then
-         TARGET_DIR="/opt/aws/"
-      fi
-      mkdir -p "${TARGET_DIR}"
-      "$TMPFILE"/work/aws/install -i "${TARGET_DIR}" -b "${INSTALL_DIR}"
-      "${INSTALL_DIR}"aws --version
-    fi
-  fi
-}
-
 function install_pkg {
   package=$1
   PACKAGE_MANAGER=$2
@@ -309,25 +190,6 @@ function install_pkg_config {
   fi
   if [[ "$PACKAGE_MANAGER" == "brew" ]] || [[ "$PACKAGE_MANAGER" == "apk" ]] || [[ "$PACKAGE_MANAGER" == "yum" ]]; then
     install_pkg pkgconfig "$PACKAGE_MANAGER"
-  fi
-}
-
-function install_shellcheck {
-  if ! command -v shellcheck &> /dev/null; then
-    if [[ $(uname -s) == "Darwin" ]]; then
-      install_pkg shellcheck brew
-    else
-      install_pkg xz "$PACKAGE_MANAGER"
-      MACHINE=$(uname -m);
-      TMPFILE=$(mktemp)
-      rm "$TMPFILE"
-      mkdir -p "$TMPFILE"/
-      curl -sL -o "$TMPFILE"/out.xz "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.$(uname -s | tr '[:upper:]' '[:lower:]').${MACHINE}.tar.xz"
-      tar -xf "$TMPFILE"/out.xz -C "$TMPFILE"/
-      cp "${TMPFILE}/shellcheck-v${SHELLCHECK_VERSION}/shellcheck" "${INSTALL_DIR}/shellcheck"
-      rm -rf "$TMPFILE"
-      chmod +x "${INSTALL_DIR}"/shellcheck
-    fi
   fi
 }
 
@@ -596,31 +458,6 @@ function install_java {
     fi
 }
 
-function install_allure {
-    VERSION="$(allure --version || true)"
-    if [[ "$VERSION" != "${ALLURE_VERSION}" ]]; then
-      if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-        "${PRE_COMMAND[@]}" apt-get install default-jre -y --no-install-recommends
-        export ALLURE=${HOME}/allure_"${ALLURE_VERSION}"-1_all.deb
-        curl -sL -o "$ALLURE" "https://github.com/diem/allure2/releases/download/${ALLURE_VERSION}/allure_${ALLURE_VERSION}-1_all.deb"
-        "${PRE_COMMAND[@]}" dpkg -i "$ALLURE"
-        rm "$ALLURE"
-      elif [[ "$PACKAGE_MANAGER" == "apk" ]]; then
-        apk --update add --no-cache  -X http://dl-cdn.alpinelinux.org/alpine/edge/community openjdk11
-      else
-        echo No good way to install allure 'install_pkg allure '"$PACKAGE_MANAGER"
-      fi
-    fi
-}
-
-function install_xsltproc {
-    if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-      install_pkg xsltproc "$PACKAGE_MANAGER"
-    else
-      install_pkg libxslt "$PACKAGE_MANAGER"
-    fi
-}
-
 function install_nodejs {
     if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
       curl -fsSL https://deb.nodesource.com/setup_14.x | bash -
@@ -660,10 +497,10 @@ function install_solidity {
 
 function welcome_message {
 cat <<EOF
-Welcome to Diem!
+Welcome to Move!
 
 This script will download and install the necessary dependencies needed to
-build, test and inspect Diem Core.
+build and run Move.
 
 Based on your selection, these tools will be included:
 EOF
@@ -681,21 +518,6 @@ Build tools (since -t or no option was provided):
   * sccache
   * if linux, gcc-powerpc-linux-gnu
   * NodeJS / NPM
-EOF
-  fi
-
-  if [[ "$OPERATIONS" == "true" ]]; then
-cat <<EOF
-Operation tools (since -o was provided):
-  * yamllint
-  * python3
-  * docker
-  * vault
-  * terraform
-  * kubectl
-  * helm
-  * aws cli
-  * allure
 EOF
   fi
 
@@ -750,7 +572,6 @@ EOF
 BATCH_MODE=false;
 VERBOSE=false;
 INSTALL_BUILD_TOOLS=false;
-OPERATIONS=false;
 INSTALL_PROFILE=false;
 INSTALL_PROVER=false;
 INSTALL_SOLIDITY=false;
@@ -762,16 +583,13 @@ INSTALL_DIR="${HOME}/bin/"
 OPT_DIR="false"
 
 #parse args
-while getopts "btopvydsah:i:n" arg; do
+while getopts "btpvydsah:i:n" arg; do
   case "$arg" in
     b)
       BATCH_MODE="true"
       ;;
     t)
       INSTALL_BUILD_TOOLS="true"
-      ;;
-    o)
-      OPERATIONS="true"
       ;;
     p)
       INSTALL_PROFILE="true"
@@ -811,7 +629,6 @@ if [[ "$VERBOSE" == "true" ]]; then
 fi
 
 if [[ "$INSTALL_BUILD_TOOLS" == "false" ]] && \
-   [[ "$OPERATIONS" == "false" ]] && \
    [[ "$INSTALL_PROFILE" == "false" ]] && \
    [[ "$INSTALL_PROVER" == "false" ]] && \
    [[ "$INSTALL_SOLIDITY" == "false" ]] && \
@@ -917,28 +734,6 @@ if [[ "$INSTALL_BUILD_TOOLS" == "true" ]]; then
   install_nodejs "$PACKAGE_MANAGER"
 fi
 
-if [[ "$OPERATIONS" == "true" ]]; then
-  install_pkg yamllint "$PACKAGE_MANAGER"
-  install_pkg python3 "$PACKAGE_MANAGER"
-  install_pkg unzip "$PACKAGE_MANAGER"
-  install_pkg jq "$PACKAGE_MANAGER"
-  install_pkg git "$PACKAGE_MANAGER"
-  install_tidy "$PACKAGE_MANAGER"
-  install_xsltproc
-  #for timeout
-  if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-    install_pkg coreutils "$PACKAGE_MANAGER"
-  fi
-  install_shellcheck
-  install_hadolint
-  install_vault
-  install_helm
-  install_terraform
-  install_kubectl
-  install_awscli "$PACKAGE_MANAGER"
-  install_allure
-fi
-
 if [[ "$INSTALL_INDIVIDUAL" == "true" ]]; then
   for (( i=0; i < ${#INSTALL_PACKAGES[@]}; i++ ));
   do
@@ -957,6 +752,7 @@ if [[ "$INSTALL_PROVER" == "true" ]]; then
     export DOTNET_INSTALL_DIR="/opt/dotnet/"
     mkdir -p "$DOTNET_INSTALL_DIR" || true
   fi
+  install_pkg unzip "$PACKAGE_MANAGER"
   install_z3
   install_cvc5
   install_dotnet

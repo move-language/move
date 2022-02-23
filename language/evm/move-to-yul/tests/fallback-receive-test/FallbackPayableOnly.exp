@@ -19,10 +19,6 @@ object "A2_M" {
                 default {}
             }
             A2_M_fallback() stop()
-
-            // Dummy calls to reference callables for Yul optimizer
-            A2_M_fallback()
-
             function A2_M_fallback() {
                 // return ()
                 /// @src 2:70:74
@@ -38,7 +34,6 @@ object "A2_M" {
 
 !! Optimized Yul
 
-Pretty printed source:
 /// @use-src 2:"tests/fallback-receive-test/FallbackPayableOnly.move"
 object "A2_M" {
     code {

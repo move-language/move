@@ -32,14 +32,6 @@ object "A2_M" {
                 default {}
             }
             $Abort(97)
-
-            // Dummy calls to reference callables for Yul optimizer
-            let $dummy0, $dummy1, $dummy2, $dummy3 := A2_M_evaded(sload(100), sload(101))
-            sstore(200, $dummy0)
-            sstore(201, $dummy1)
-            sstore(202, $dummy2)
-            sstore(203, $dummy3)
-
             function A2_M_evaded(a, b) -> $result0, $result1, $result2, $result3 {
                 let ar, cr, d, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15
                 let $locals := $Malloc(64)
@@ -121,7 +113,8 @@ object "A2_M" {
                 if iszero(eq(value, cleanup_u64(value))) { $Abort(95) }
             }
             function $Abort(code) {
-                revert(0, 0) // TODO: convention to store code
+                mstore(0, code)
+                revert(24, 8) // TODO: store code as a string?
             }
             function $AbortBuiltin() {
                 $Abort(sub(0, 1))
@@ -217,7 +210,6 @@ object "A2_M" {
 
 !! Optimized Yul
 
-Pretty printed source:
 /// @use-src 2:"tests/Locals.move"
 object "A2_M" {
     code {
@@ -230,53 +222,74 @@ object "A2_M" {
     object "A2_M_deployed" {
         code {
             {
-                let _1 := memoryguard(0xa0)
-                let _2 := 0
-                mstore(_2, _1)
+                let _1 := 0
+                mstore(_1, memoryguard(0xa0))
                 if iszero(lt(calldatasize(), 4))
                 {
-                    if eq(0xc11ae395, shr(224, calldataload(_2)))
+                    if eq(0xc11ae395, shr(224, calldataload(_1)))
                     {
-                        if callvalue() { revert(_2, _2) }
-                        if slt(add(calldatasize(), not(3)), 64) { revert(_2, _2) }
-                        let value := abi_decode_u64_806()
-                        let value_1 := abi_decode_u64()
-                        mstore(_2, _1)
-                        mstore(_1, value)
-                        let _3 := add(_1, 32)
-                        mstore(_3, value)
-                        let $t8 := $AddU64(value, value_1)
-                        let _4 := 1
-                        let _5 := or(false, shl(_3, _4))
-                        let val := _2
-                        let offs := shr(_5, _4)
-                        switch and(_5, _4)
-                        case 0 {
-                            val := and(mload(offs), 0xffffffffffffffff)
+                        if callvalue()
+                        {
+                            mstore(_1, 99)
+                            revert(24, 8)
                         }
-                        default {
-                            let val_1 := _2
-                            let word_offs, bit_offs := $ToWordOffs(offs)
-                            mstore(32, word_offs)
-                            mstore(64, _2)
-                            val_1 := and(shr(sload(keccak256(32, 36)), bit_offs), 0xffffffffffffffff)
-                            let used_bits := sub(256, bit_offs)
-                            if lt(used_bits, 64)
-                            {
-                                mstore(32, add(word_offs, _4))
-                                mstore(64, _2)
-                                val_1 := or(val_1, shl(and(sload(keccak256(32, 36)), add(shl(_4, add(bit_offs, not(191))), not(0))), used_bits))
-                            }
-                            val := val_1
+                        if slt(add(calldatasize(), not(3)), 64)
+                        {
+                            mstore(_1, 96)
+                            revert(24, 8)
                         }
-                        $StoreU64(or(false, shl(_1, _4)), $AddU64_808(val))
-                        let $t14 := mload(_1)
-                        let $t15 := mload(_3)
-                        let memPos := mload(_2)
-                        return(memPos, sub(abi_encode_u64_u64_u64_u64$(memPos, $t14, value_1, $t15, $t8), memPos))
+                        let value := calldataload(4)
+                        if iszero(eq(value, and(value, 0xffffffffffffffff)))
+                        {
+                            mstore(_1, 95)
+                            revert(24, 8)
+                        }
+                        let ret, ret_1, ret_2, ret_3 := A2_M_evaded(value, abi_decode_u64())
+                        let memPos := mload(_1)
+                        return(memPos, sub(abi_encode_u64_u64_u64_u64$(memPos, ret, ret_1, ret_2, ret_3), memPos))
                     }
                 }
-                revert(_2, _2)
+                $Abort()
+            }
+            function A2_M_evaded(a, b) -> $result0, $result1, $result2, $result3
+            {
+                let _1 := 0
+                let offs := mload(_1)
+                mstore(_1, offs)
+                mstore(offs, a)
+                let _2 := add(offs, 32)
+                mstore(_2, a)
+                let $t8 := $AddU64(a, b)
+                let _3 := 1
+                let _4 := or(false, shl(_2, _3))
+                let val := _1
+                let offs_1 := shr(_4, _3)
+                switch and(_4, _3)
+                case 0 {
+                    val := and(mload(offs_1), 0xffffffffffffffff)
+                }
+                default {
+                    let val_1 := _1
+                    let word_offs, bit_offs := $ToWordOffs(offs_1)
+                    mstore(32, word_offs)
+                    mstore(64, _1)
+                    val_1 := and(shr(sload(keccak256(32, 36)), bit_offs), 0xffffffffffffffff)
+                    let used_bits := sub(256, bit_offs)
+                    if lt(used_bits, 64)
+                    {
+                        mstore(32, add(word_offs, _3))
+                        mstore(64, _1)
+                        val_1 := or(val_1, shl(and(sload(keccak256(32, 36)), add(shl(_3, add(bit_offs, not(191))), not(0))), used_bits))
+                    }
+                    val := val_1
+                }
+                $StoreU64(or(false, shl(offs, _3)), $AddU64_686(val))
+                let $t14 := mload(offs)
+                let $t15 := mload(_2)
+                $result0 := $t14
+                $result1 := b
+                $result2 := $t15
+                $result3 := $t8
             }
             function abi_encode_u64_u64_u64_u64$(headStart, value, value_1, value_2, value_3) -> tail
             {
@@ -287,15 +300,19 @@ object "A2_M" {
                 mstore(add(headStart, 64), and(value_2, _1))
                 mstore(add(headStart, 96), and(value_3, _1))
             }
-            function abi_decode_u64_806() -> value
-            {
-                value := calldataload(4)
-                if iszero(eq(value, and(value, 0xffffffffffffffff))) { revert(0, 0) }
-            }
             function abi_decode_u64() -> value
             {
                 value := calldataload(36)
-                if iszero(eq(value, and(value, 0xffffffffffffffff))) { revert(0, 0) }
+                if iszero(eq(value, and(value, 0xffffffffffffffff)))
+                {
+                    mstore(0, 95)
+                    revert(24, 8)
+                }
+            }
+            function $Abort()
+            {
+                mstore(0, 97)
+                revert(24, 8)
             }
             function $ToWordOffs(offs) -> word_offs, bit_offs
             {
@@ -326,14 +343,22 @@ object "A2_M" {
                     }
                 }
             }
-            function $AddU64_808(x) -> r
+            function $AddU64_686(x) -> r
             {
-                if lt(sub(0xffffffffffffffff, x), 1) { revert(0, 0) }
+                if lt(sub(0xffffffffffffffff, x), 1)
+                {
+                    mstore(0, not(0))
+                    revert(24, 8)
+                }
                 r := add(x, 1)
             }
             function $AddU64(x, y) -> r
             {
-                if lt(sub(0xffffffffffffffff, x), y) { revert(0, 0) }
+                if lt(sub(0xffffffffffffffff, x), y)
+                {
+                    mstore(0, not(0))
+                    revert(24, 8)
+                }
                 r := add(x, y)
             }
         }

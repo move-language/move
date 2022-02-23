@@ -39,6 +39,22 @@ impl fmt::Display for MintError {
     }
 }
 
+pub struct ExecuteResult {
+    pub exit_reason: ExitReason,
+    pub return_value: Vec<u8>,
+    pub used_gas: u64,
+}
+
+impl fmt::Display for ExecuteResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{:?} (used_gas={}): {:?}",
+            self.exit_reason, self.used_gas, self.return_value
+        )
+    }
+}
+
 impl Error for MintError {}
 
 impl<'v> Executor<'v> {
@@ -208,7 +224,7 @@ impl<'v> Executor<'v> {
         contract_address: H160,
         code: Vec<u8>,
         data: Vec<u8>,
-    ) -> Result<Vec<u8>, ExitReason> {
+    ) -> ExecuteResult {
         self.transact(|exec| {
             let context = Context {
                 address: contract_address,
@@ -219,11 +235,12 @@ impl<'v> Executor<'v> {
 
             // REVIEW: are we handling gas metering correctly?
             let exit_reason = exec.execute(&mut runtime);
-            let ret = runtime.machine().return_value();
-
-            match &exit_reason {
-                ExitReason::Succeed(_) => Ok(ret),
-                _ => Err(exit_reason),
+            let return_value = runtime.machine().return_value();
+            let used_gas = exec.used_gas();
+            ExecuteResult {
+                exit_reason,
+                return_value,
+                used_gas,
             }
         })
     }

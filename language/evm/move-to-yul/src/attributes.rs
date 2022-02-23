@@ -8,13 +8,13 @@ use move_model::{
     model::{FunctionEnv, GlobalEnv, ModuleEnv},
 };
 
-const CONTRACT_ATTR: &str = "contract";
 const CREATE_ATTR: &str = "create";
 const CALLABLE_ATTR: &str = "callable";
 const EVM_ARITH_ATTR: &str = "evm_arith";
 const PAYABLE_ATTR: &str = "payable";
 const RECEIVE_ATTR: &str = "receive";
-const RECEIVE_FALLBACK: &str = "fallback";
+const RECEIVE_FALLBACK_ATTR: &str = "fallback";
+const TEST_ATTR: &str = "evm_test";
 
 /// Check whether a simple attribute is present in an attribute list.
 pub fn has_simple_attr(env: &GlobalEnv, attrs: &[Attribute], name: &str) -> bool {
@@ -26,11 +26,6 @@ pub fn has_simple_attr(env: &GlobalEnv, attrs: &[Attribute], name: &str) -> bool
         }
         _ => false,
     })
-}
-
-/// Check whether the module has a `#[contract]` attribute.
-pub fn is_contract_module(module: &ModuleEnv<'_>) -> bool {
-    has_simple_attr(module.env, module.get_attributes(), CONTRACT_ATTR)
 }
 
 /// Check whether the module has a `#[evm_arith]` attribute.
@@ -60,5 +55,19 @@ pub fn is_receive_fun(fun: &FunctionEnv<'_>) -> bool {
 
 /// Check whether the function has a `#[fallback]]` attribute.
 pub fn is_fallback_fun(fun: &FunctionEnv<'_>) -> bool {
-    has_simple_attr(fun.module_env.env, fun.get_attributes(), RECEIVE_FALLBACK)
+    has_simple_attr(
+        fun.module_env.env,
+        fun.get_attributes(),
+        RECEIVE_FALLBACK_ATTR,
+    )
+}
+
+/// Checks whether this function is a contract function.
+pub fn is_contract_fun(fun: &FunctionEnv) -> bool {
+    is_callable_fun(fun) || is_fallback_fun(fun) || is_receive_fun(fun)
+}
+
+/// Check whether the function has a `#[evm_test] attribute.
+pub fn is_test_fun(fun: &FunctionEnv<'_>) -> bool {
+    has_simple_attr(fun.module_env.env, fun.get_attributes(), TEST_ATTR)
 }

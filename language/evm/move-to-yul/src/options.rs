@@ -14,8 +14,9 @@ pub struct Options {
     /// Named address mapping.
     #[structopt(short)]
     pub named_address_mapping: Vec<String>,
-    /// Output file
+    /// Output file name.
     #[structopt(short)]
+    #[structopt(long)]
     pub output: String,
     /// Solc executable
     #[structopt(long)]

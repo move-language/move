@@ -171,13 +171,11 @@ fn test_custom_code_add_two_numbers() -> Result<()> {
     code.extend([0; 32]);
     code.push(Opcode::RETURN.0);
 
-    let ret = exec
-        .execute_custom_code(H160::zero(), H160::zero(), code, vec![])
-        .expect("failed to execute code");
+    let ret = exec.execute_custom_code(H160::zero(), H160::zero(), code, vec![]);
 
     let mut expected = [0; 32];
     expected[31] = 0x3;
-    assert_eq!(&ret, &expected);
+    assert_eq!(&ret.return_value, &expected);
 
     Ok(())
 }

@@ -71,14 +71,6 @@ object "A2_M" {
                 default {}
             }
             $Abort(97)
-
-            // Dummy calls to reference callables for Yul optimizer
-            A2_M_f(sload(100))
-            A2_M_g(sload(100))
-            let $dummy0 := A2_M_h1(sload(100))
-            sstore(200, $dummy0)
-            A2_M_h2(sload(101))
-
             function A2_M_f(x) {
                 let $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8
                 let $block := 4
@@ -327,7 +319,8 @@ object "A2_M" {
                 mstore(pos, cleanup_u64(value))
             }
             function $Abort(code) {
-                revert(0, 0) // TODO: convention to store code
+                mstore(0, code)
+                revert(24, 8) // TODO: store code as a string?
             }
             function $AbortBuiltin() {
                 $Abort(sub(0, 1))
@@ -363,7 +356,6 @@ object "A2_M" {
 
 !! Optimized Yul
 
-Pretty printed source:
 /// @use-src 2:"tests/ControlStructures.move"
 object "A2_M" {
     code {
@@ -376,33 +368,34 @@ object "A2_M" {
     object "A2_M_deployed" {
         code {
             {
-                let _1 := memoryguard(0xa0)
-                let _2 := 0
-                mstore(_2, _1)
+                let _1 := 0
+                mstore(_1, memoryguard(0xa0))
                 if iszero(lt(calldatasize(), 4))
                 {
-                    switch shr(224, calldataload(_2))
+                    switch shr(224, calldataload(_1))
                     case 0x70e8dbcb {
-                        if callvalue() { revert(_2, _2) }
+                        if callvalue() { $Abort() }
                         A2_M_f(abi_decode_u64(calldatasize()))
-                        return(_1, _2)
+                        return(mload(_1), _1)
                     }
                     case 0xb3e8e519 {
-                        if callvalue() { revert(_2, _2) }
+                        if callvalue() { $Abort() }
                         A2_M_g(abi_decode_u64(calldatasize()))
-                        return(_1, _2)
+                        return(mload(_1), _1)
                     }
                     case 0xf5f96a87 {
-                        if callvalue() { revert(_2, _2) }
-                        return(_1, sub(abi_encode_u64$(_1, A2_M_h1(abi_decode_u64(calldatasize()))), _1))
+                        if callvalue() { $Abort() }
+                        let ret := A2_M_h1(abi_decode_u64(calldatasize()))
+                        let memPos := mload(_1)
+                        return(memPos, sub(abi_encode_u64$(memPos, ret), memPos))
                     }
                     case 0x410dac7e {
-                        if callvalue() { revert(_2, _2) }
+                        if callvalue() { $Abort() }
                         A2_M_h2(abi_decode_u64(calldatasize()))
-                        return(mload(_2), _2)
+                        return(mload(_1), _1)
                     }
                 }
-                revert(_2, _2)
+                $Abort_741()
             }
             function A2_M_f(x)
             {
@@ -426,8 +419,8 @@ object "A2_M" {
                         let _1 := 1
                         if lt(sub(0xffffffffffffffff, x), _1)
                         {
-                            let _2 := 0
-                            revert(_2, _2)
+                            mstore(0, not(0))
+                            revert(24, 8)
                         }
                         x := add(x, _1)
                         $block_1 := 7
@@ -448,8 +441,8 @@ object "A2_M" {
                     case 2 {
                         if lt(x, 1)
                         {
-                            let _1 := 0
-                            revert(_1, _1)
+                            mstore(0, not(0))
+                            revert(24, 8)
                         }
                         x := add(x, not(0))
                         $block := 4
@@ -460,8 +453,8 @@ object "A2_M" {
                         default { $block := 5 }
                     }
                     case 4 {
-                        let _2 := 1
-                        switch or(gt(x, _2), eq(x, _2))
+                        let _1 := 1
+                        switch or(gt(x, _1), eq(x, _1))
                         case 0 { $block := 3 }
                         default { $block := 2 }
                     }
@@ -501,8 +494,8 @@ object "A2_M" {
                 {
                     switch $block
                     case 2 {
-                        let _1 := 0
-                        revert(_1, _1)
+                        mstore(0, 1)
+                        revert(24, 8)
                     }
                     case 3 { leave }
                     case 4 {
@@ -514,9 +507,17 @@ object "A2_M" {
             }
             function abi_decode_u64(dataEnd) -> value
             {
-                if slt(add(dataEnd, not(3)), 32) { revert(0, 0) }
+                if slt(add(dataEnd, not(3)), 32)
+                {
+                    mstore(0, 96)
+                    revert(24, 8)
+                }
                 let value_1 := calldataload(4)
-                if iszero(eq(value_1, and(value_1, 0xffffffffffffffff))) { revert(0, 0) }
+                if iszero(eq(value_1, and(value_1, 0xffffffffffffffff)))
+                {
+                    mstore(0, 95)
+                    revert(24, 8)
+                }
                 value := value_1
             }
             function abi_encode_u64$(headStart, value) -> tail
@@ -524,9 +525,23 @@ object "A2_M" {
                 tail := add(headStart, 32)
                 mstore(headStart, and(value, 0xffffffffffffffff))
             }
+            function $Abort()
+            {
+                mstore(0, 99)
+                revert(24, 8)
+            }
+            function $Abort_741()
+            {
+                mstore(0, 97)
+                revert(24, 8)
+            }
             function $Sub(x) -> r
             {
-                if lt(x, 2) { revert(0, 0) }
+                if lt(x, 2)
+                {
+                    mstore(0, not(0))
+                    revert(24, 8)
+                }
                 r := add(x, not(1))
             }
         }

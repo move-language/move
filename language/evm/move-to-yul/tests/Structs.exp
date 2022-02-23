@@ -31,18 +31,6 @@ object "A2_M" {
                 default {}
             }
             $Abort(97)
-
-            // Dummy calls to reference callables for Yul optimizer
-            A2_M_destroy()
-            let $dummy0 := A2_M_pack_S(sload(100), sload(101))
-            sstore(200, $dummy0)
-            let $dummy1 := A2_M_pack_S2(sload(101))
-            sstore(201, $dummy1)
-            let $dummy2 := A2_M_read_and_write_s()
-            sstore(202, $dummy2)
-            let $dummy3 := A2_M_unpack(sload(103))
-            sstore(203, $dummy3)
-
             function A2_M_destroy() {
                 let _s, $t1, $t2, $t3
                 // $t1 := 1
@@ -213,7 +201,8 @@ object "A2_M" {
                 tail := add(headStart, 0)
             }
             function $Abort(code) {
-                revert(0, 0) // TODO: convention to store code
+                mstore(0, code)
+                revert(24, 8) // TODO: store code as a string?
             }
             function $AbortBuiltin() {
                 $Abort(sub(0, 1))
@@ -406,7 +395,6 @@ object "A2_M" {
 
 !! Optimized Yul
 
-Pretty printed source:
 /// @use-src 2:"tests/Structs.move"
 object "A2_M" {
     code {
@@ -419,46 +407,53 @@ object "A2_M" {
     object "A2_M_deployed" {
         code {
             {
-                let _1 := memoryguard(0xa0)
-                let _2 := 0
-                mstore(_2, _1)
+                let _1 := 0
+                mstore(_1, memoryguard(0xa0))
                 if iszero(lt(calldatasize(), 4))
                 {
-                    if eq(0x83197ef0, shr(224, calldataload(_2)))
+                    if eq(0x83197ef0, shr(224, calldataload(_1)))
                     {
-                        if callvalue() { revert(_2, _2) }
-                        mstore(_2, _1)
-                        mstore(_1, or(and(mload(_1), not(0xffffffffffffffffffffffffffffffff)), 1))
-                        let offs := mload(_2)
-                        mstore(_2, offs)
-                        let _3 := add(offs, 32)
-                        mstore(_3, or(and(mload(_3), not(0xffffffffffffffff)), 1))
-                        mstore8(add(offs, 40), false)
-                        mstore(offs, _1)
-                        let offs_1 := shr(offs, 1)
-                        switch and(offs, 1)
+                        if callvalue()
+                        {
+                            mstore(_1, 99)
+                            revert(24, 8)
+                        }
+                        let offs := mload(_1)
+                        mstore(_1, offs)
+                        mstore(offs, or(and(mload(offs), not(0xffffffffffffffffffffffffffffffff)), 1))
+                        let offs_1 := mload(_1)
+                        mstore(_1, offs_1)
+                        let _2 := add(offs_1, 32)
+                        mstore(_2, or(and(mload(_2), not(0xffffffffffffffff)), 1))
+                        mstore8(add(offs_1, 40), false)
+                        mstore(offs_1, offs)
+                        let offs_2 := shr(offs_1, 1)
+                        switch and(offs_1, 1)
                         case 0 { }
                         default {
-                            let word_offs := shr(offs_1, 5)
+                            let word_offs := shr(offs_2, 5)
                             mstore(32, word_offs)
-                            mstore(64, _2)
-                            let _4 := 256
-                            if lt(sub(_4, shl(and(offs_1, 31), 3)), _4)
+                            mstore(64, _1)
+                            let _3 := 256
+                            if lt(sub(_3, shl(and(offs_2, 31), 3)), _3)
                             {
                                 mstore(32, add(word_offs, 1))
-                                mstore(64, _2)
+                                mstore(64, _1)
                             }
                         }
-                        return(mload(_2), _2)
+                        return(mload(_1), _1)
                     }
                 }
-                revert(_2, _2)
+                $Abort()
+            }
+            function $Abort()
+            {
+                mstore(0, 97)
+                revert(24, 8)
             }
         }
     }
 }
-
-
 
 !! Move-To-Yul Diagnostics:
  warning: cannot dispatch this function because of unsupported parameter types

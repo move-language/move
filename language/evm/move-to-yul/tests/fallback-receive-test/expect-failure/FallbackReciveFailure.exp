@@ -51,13 +51,6 @@ object "A2_M" {
             }
             let retval := A2_M_receive(0, calldatasize()) stop()
             return(add(retval, 0x20), mload(retval))
-
-            // Dummy calls to reference callables for Yul optimizer
-            let $dummy0 := A2_M_fallback(sload(100))
-            sstore(200, $dummy0)
-            let $dummy1 := A2_M_receive(sload(101))
-            sstore(201, $dummy1)
-
             function A2_M_fallback(x) -> $result {
                 // return $t0
                 /// @src 2:95:96
@@ -95,7 +88,8 @@ object "A2_M" {
                 if iszero(eq(value, cleanup_u64(value))) { $Abort(95) }
             }
             function $Abort(code) {
-                revert(0, 0) // TODO: convention to store code
+                mstore(0, code)
+                revert(24, 8) // TODO: store code as a string?
             }
             function $ShiftRight(bits, value) -> r {
                 r := shr(bits, value) // evm version >= constantinople

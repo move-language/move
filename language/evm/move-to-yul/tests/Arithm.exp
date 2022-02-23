@@ -68,83 +68,6 @@ object "A2_M" {
                     let memEnd := abi_encode_tuple_$u64_u64$(memPos, ret_0, ret_1)
                     return(memPos, sub(memEnd, memPos))
                 }
-                case 0x93094600
-                {
-                    // div_by_zero()
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    let ret_0 := A2_M_div_by_zero()
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
-                    return(memPos, sub(memEnd, memPos))
-                }
-                case 0xa068bdda
-                {
-                    // div_by_zero_u64(uint64,uint64)
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    let param_0, param_1 := abi_decode_tuple_$u64_u64$(4, calldatasize())
-                    let ret_0 := A2_M_div_by_zero_u64(param_0, param_1)
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
-                    return(memPos, sub(memEnd, memPos))
-                }
-                case 0x131c7572
-                {
-                    // div_by_zero_u64_incorrect(uint64,uint64)
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    let param_0, param_1 := abi_decode_tuple_$u64_u64$(4, calldatasize())
-                    let ret_0 := A2_M_div_by_zero_u64_incorrect(param_0, param_1)
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
-                    return(memPos, sub(memEnd, memPos))
-                }
-                case 0x70e8dbcb
-                {
-                    // f(uint64)
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    let param_0 := abi_decode_tuple_$u64$(4, calldatasize())
-                    let ret_0 := A2_M_f(param_0)
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
-                    return(memPos, sub(memEnd, memPos))
-                }
-                case 0xb3e8e519
-                {
-                    // g(uint64)
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    let param_0 := abi_decode_tuple_$u64$(4, calldatasize())
-                    let ret_0 := A2_M_g(param_0)
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
-                    return(memPos, sub(memEnd, memPos))
-                }
-                case 0x05a0581e
-                {
-                    // h(bool)
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    let param_0 := abi_decode_tuple_$bool$(4, calldatasize())
-                    let ret_0 := A2_M_h(param_0)
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
-                    return(memPos, sub(memEnd, memPos))
-                }
                 case 0x4c275efc
                 {
                     // multiple_ops(uint64,uint64,uint64)
@@ -156,162 +79,6 @@ object "A2_M" {
                     let ret_0 := A2_M_multiple_ops(param_0, param_1, param_2)
                     let memPos := mload(0)
                     let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
-                    return(memPos, sub(memEnd, memPos))
-                }
-                case 0x1b2e37b6
-                {
-                    // overflow_u128_add(uint128,uint128)
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    let param_0, param_1 := abi_decode_tuple_$u128_u128$(4, calldatasize())
-                    let ret_0 := A2_M_overflow_u128_add(param_0, param_1)
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u128$(memPos, ret_0)
-                    return(memPos, sub(memEnd, memPos))
-                }
-                case 0xd279fccf
-                {
-                    // overflow_u128_add_incorrect(uint128,uint128)
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    let param_0, param_1 := abi_decode_tuple_$u128_u128$(4, calldatasize())
-                    let ret_0 := A2_M_overflow_u128_add_incorrect(param_0, param_1)
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u128$(memPos, ret_0)
-                    return(memPos, sub(memEnd, memPos))
-                }
-                case 0x16a555a3
-                {
-                    // overflow_u128_mul(uint128,uint128)
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    let param_0, param_1 := abi_decode_tuple_$u128_u128$(4, calldatasize())
-                    let ret_0 := A2_M_overflow_u128_mul(param_0, param_1)
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u128$(memPos, ret_0)
-                    return(memPos, sub(memEnd, memPos))
-                }
-                case 0x95843be6
-                {
-                    // overflow_u128_mul_incorrect(uint128,uint128)
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    let param_0, param_1 := abi_decode_tuple_$u128_u128$(4, calldatasize())
-                    let ret_0 := A2_M_overflow_u128_mul_incorrect(param_0, param_1)
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u128$(memPos, ret_0)
-                    return(memPos, sub(memEnd, memPos))
-                }
-                case 0x4eb8ec5d
-                {
-                    // overflow_u64_add(uint64,uint64)
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    let param_0, param_1 := abi_decode_tuple_$u64_u64$(4, calldatasize())
-                    let ret_0 := A2_M_overflow_u64_add(param_0, param_1)
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
-                    return(memPos, sub(memEnd, memPos))
-                }
-                case 0xe6a8dc7f
-                {
-                    // overflow_u64_add_incorrect(uint64,uint64)
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    let param_0, param_1 := abi_decode_tuple_$u64_u64$(4, calldatasize())
-                    let ret_0 := A2_M_overflow_u64_add_incorrect(param_0, param_1)
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
-                    return(memPos, sub(memEnd, memPos))
-                }
-                case 0xf9cf0228
-                {
-                    // overflow_u64_mul(uint64,uint64)
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    let param_0, param_1 := abi_decode_tuple_$u64_u64$(4, calldatasize())
-                    let ret_0 := A2_M_overflow_u64_mul(param_0, param_1)
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
-                    return(memPos, sub(memEnd, memPos))
-                }
-                case 0x2396bb4e
-                {
-                    // overflow_u64_mul_incorrect(uint64,uint64)
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    let param_0, param_1 := abi_decode_tuple_$u64_u64$(4, calldatasize())
-                    let ret_0 := A2_M_overflow_u64_mul_incorrect(param_0, param_1)
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
-                    return(memPos, sub(memEnd, memPos))
-                }
-                case 0xc455375d
-                {
-                    // overflow_u8_add(uint8,uint8)
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    let param_0, param_1 := abi_decode_tuple_$u8_u8$(4, calldatasize())
-                    let ret_0 := A2_M_overflow_u8_add(param_0, param_1)
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u8$(memPos, ret_0)
-                    return(memPos, sub(memEnd, memPos))
-                }
-                case 0x3d744079
-                {
-                    // overflow_u8_add_incorrect(uint8,uint8)
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    let param_0, param_1 := abi_decode_tuple_$u8_u8$(4, calldatasize())
-                    let ret_0 := A2_M_overflow_u8_add_incorrect(param_0, param_1)
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u8$(memPos, ret_0)
-                    return(memPos, sub(memEnd, memPos))
-                }
-                case 0xd4795c0b
-                {
-                    // overflow_u8_mul(uint8,uint8)
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    let param_0, param_1 := abi_decode_tuple_$u8_u8$(4, calldatasize())
-                    let ret_0 := A2_M_overflow_u8_mul(param_0, param_1)
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u8$(memPos, ret_0)
-                    return(memPos, sub(memEnd, memPos))
-                }
-                case 0xd429fa05
-                {
-                    // overflow_u8_mul_incorrect(uint8,uint8)
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    let param_0, param_1 := abi_decode_tuple_$u8_u8$(4, calldatasize())
-                    let ret_0 := A2_M_overflow_u8_mul_incorrect(param_0, param_1)
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u8$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xdc75bec7
@@ -329,71 +96,16 @@ object "A2_M" {
                 default {}
             }
             $Abort(97)
-
-            // Dummy calls to reference callables for Yul optimizer
-            let $dummy0, $dummy1 := A2_M_add_two_number(sload(100), sload(101))
-            sstore(200, $dummy0)
-            sstore(201, $dummy1)
-            let $dummy2, $dummy3 := A2_M_arithmetic_ops(sload(102))
-            sstore(202, $dummy2)
-            sstore(203, $dummy3)
-            let $dummy4, $dummy5 := A2_M_bool_ops(sload(104), sload(105))
-            sstore(204, $dummy4)
-            sstore(205, $dummy5)
-            let $dummy6, $dummy7 := A2_M_div(sload(106), sload(107))
-            sstore(206, $dummy6)
-            sstore(207, $dummy7)
-            let $dummy8 := A2_M_div_by_zero()
-            sstore(208, $dummy8)
-            let $dummy9 := A2_M_div_by_zero_u64(sload(109), sload(110))
-            sstore(209, $dummy9)
-            let $dummy10 := A2_M_div_by_zero_u64_incorrect(sload(110), sload(111))
-            sstore(210, $dummy10)
-            let $dummy11 := A2_M_f(sload(111))
-            sstore(211, $dummy11)
-            let $dummy12 := A2_M_g(sload(112))
-            sstore(212, $dummy12)
-            let $dummy13 := A2_M_h(sload(113))
-            sstore(213, $dummy13)
-            let $dummy14 := A2_M_multiple_ops(sload(114), sload(115), sload(116))
-            sstore(214, $dummy14)
-            let $dummy15 := A2_M_overflow_u128_add(sload(115), sload(116))
-            sstore(215, $dummy15)
-            let $dummy16 := A2_M_overflow_u128_add_incorrect(sload(116), sload(117))
-            sstore(216, $dummy16)
-            let $dummy17 := A2_M_overflow_u128_mul(sload(117), sload(118))
-            sstore(217, $dummy17)
-            let $dummy18 := A2_M_overflow_u128_mul_incorrect(sload(118), sload(119))
-            sstore(218, $dummy18)
-            let $dummy19 := A2_M_overflow_u64_add(sload(119), sload(120))
-            sstore(219, $dummy19)
-            let $dummy20 := A2_M_overflow_u64_add_incorrect(sload(120), sload(121))
-            sstore(220, $dummy20)
-            let $dummy21 := A2_M_overflow_u64_mul(sload(121), sload(122))
-            sstore(221, $dummy21)
-            let $dummy22 := A2_M_overflow_u64_mul_incorrect(sload(122), sload(123))
-            sstore(222, $dummy22)
-            let $dummy23 := A2_M_overflow_u8_add(sload(123), sload(124))
-            sstore(223, $dummy23)
-            let $dummy24 := A2_M_overflow_u8_add_incorrect(sload(124), sload(125))
-            sstore(224, $dummy24)
-            let $dummy25 := A2_M_overflow_u8_mul(sload(125), sload(126))
-            sstore(225, $dummy25)
-            let $dummy26 := A2_M_overflow_u8_mul_incorrect(sload(126), sload(127))
-            sstore(226, $dummy26)
-            let $dummy27 := A2_M_underflow()
-            sstore(227, $dummy27)
-
             function A2_M_add_two_number(x, y) -> $result0, $result1 {
                 let res, z, $t4, $t5
                 // $t4 := +($t0, $t1)
-                /// @src 2:309:310
+                /// @src 2:283:284
                 $t4 := $AddU64(x, y)
                 // $t5 := 3
-                /// @src 2:329:330
+                /// @src 2:303:304
                 $t5 := 3
                 // return ($t5, $t4)
-                /// @src 2:334:342
+                /// @src 2:308:316
                 $result0 := $t5
                 $result1 := $t4
             }
@@ -406,32 +118,32 @@ object "A2_M" {
                     case 2 {
                         // label L0
                         // $t5 := 42
-                        /// @src 2:1350:1352
+                        /// @src 2:2232:2234
                         $t5 := 42
                         // abort($t5)
-                        /// @src 2:1344:1352
+                        /// @src 2:2226:2234
                         $Abort($t5)
                     }
                     case 3 {
                         // label L2
                         // return ($t2, $t0)
-                        /// @src 2:1362:1368
+                        /// @src 2:2244:2250
                         $result0 := $t2
                         $result1 := a
                         leave
                     }
                     case 4 {
                         // $t2 := 2
-                        /// @src 2:1299:1322
+                        /// @src 2:2181:2204
                         $t2 := 2
                         // $t3 := 2
-                        /// @src 2:1341:1342
+                        /// @src 2:2223:2224
                         $t3 := 2
                         // $t4 := !=($t2, $t3)
-                        /// @src 2:1338:1340
+                        /// @src 2:2220:2222
                         $t4 := $Neq($t2, $t3)
                         // if ($t4) goto L0 else goto L2
-                        /// @src 2:1332:1352
+                        /// @src 2:2214:2234
                         switch $t4
                         case 0  { $block := 3 }
                         default { $block := 2 }
@@ -447,30 +159,30 @@ object "A2_M" {
                     case 2 {
                         // label L0
                         // $t2 := >=($t0, $t1)
-                        /// @src 2:978:980
+                        /// @src 2:1806:1808
                         tmp_$2 := $GtEq(a, b)
                         // goto L3
-                        /// @src 2:967:982
+                        /// @src 2:1795:1810
                         $block := 5
                     }
                     case 3 {
                         // label L2
                         // $t7 := false
-                        /// @src 2:967:982
+                        /// @src 2:1795:1810
                         $t7 := false
                         // $t2 := $t7
-                        /// @src 2:967:982
+                        /// @src 2:1795:1810
                         tmp_$2 := $t7
                         // goto L3
-                        /// @src 2:967:982
+                        /// @src 2:1795:1810
                         $block := 5
                     }
                     case 4 {
                         // $t6 := >($t0, $t1)
-                        /// @src 2:969:970
+                        /// @src 2:1797:1798
                         $t6 := $Gt(a, b)
                         // if ($t6) goto L0 else goto L2
-                        /// @src 2:967:982
+                        /// @src 2:1795:1810
                         switch $t6
                         case 0  { $block := 3 }
                         default { $block := 2 }
@@ -478,10 +190,10 @@ object "A2_M" {
                     case 5 {
                         // label L3
                         // $t8 := <($t0, $t1)
-                        /// @src 2:998:999
+                        /// @src 2:1826:1827
                         $t8 := $Lt(a, b)
                         // if ($t8) goto L4 else goto L6
-                        /// @src 2:996:1011
+                        /// @src 2:1824:1839
                         switch $t8
                         case 0  { $block := 7 }
                         default { $block := 6 }
@@ -489,34 +201,34 @@ object "A2_M" {
                     case 6 {
                         // label L4
                         // $t9 := true
-                        /// @src 2:996:1011
+                        /// @src 2:1824:1839
                         $t9 := true
                         // $t3 := $t9
-                        /// @src 2:996:1011
+                        /// @src 2:1824:1839
                         tmp_$3 := $t9
                         // goto L7
-                        /// @src 2:996:1011
+                        /// @src 2:1824:1839
                         $block := 8
                     }
                     case 7 {
                         // label L6
                         // $t3 := <=($t0, $t1)
-                        /// @src 2:1007:1009
+                        /// @src 2:1835:1837
                         tmp_$3 := $LtEq(a, b)
                         // goto L7
-                        /// @src 2:996:1011
+                        /// @src 2:1824:1839
                         $block := 8
                     }
                     case 8 {
                         // label L7
                         // $t10 := !=($t2, $t3)
-                        /// @src 2:1029:1031
+                        /// @src 2:1857:1859
                         $t10 := $Neq(tmp_$2, tmp_$3)
                         // $t11 := !($t10)
-                        /// @src 2:1025:1026
+                        /// @src 2:1853:1854
                         $t11 := $LogicalNot($t10)
                         // if ($t11) goto L8 else goto L10
-                        /// @src 2:1021:1044
+                        /// @src 2:1849:1872
                         switch $t11
                         case 0  { $block := 10 }
                         default { $block := 9 }
@@ -524,16 +236,16 @@ object "A2_M" {
                     case 9 {
                         // label L8
                         // $t12 := 42
-                        /// @src 2:1042:1044
+                        /// @src 2:1870:1872
                         $t12 := 42
                         // abort($t12)
-                        /// @src 2:1036:1044
+                        /// @src 2:1864:1872
                         $Abort($t12)
                     }
                     case 10 {
                         // label L10
                         // return ($t2, $t3)
-                        /// @src 2:1054:1060
+                        /// @src 2:1882:1888
                         $result0 := tmp_$2
                         $result1 := tmp_$3
                         leave
@@ -544,369 +256,43 @@ object "A2_M" {
             function A2_M_div(x, y) -> $result0, $result1 {
                 let $t2, $t3
                 // $t2 := /($t0, $t1)
-                /// @src 2:536:537
+                /// @src 2:848:849
                 $t2 := $Div(x, y)
                 // $t3 := %($t0, $t1)
-                /// @src 2:543:544
+                /// @src 2:855:856
                 $t3 := $Mod(x, y)
                 // return ($t2, $t3)
-                /// @src 2:533:547
+                /// @src 2:845:859
                 $result0 := $t2
                 $result1 := $t3
-            }
-
-            function A2_M_div_by_zero() -> $result {
-                let x, $t1, $t2, $t3
-                // $t1 := 1
-                /// @src 2:2393:2394
-                $t1 := 1
-                // $t2 := 0
-                /// @src 2:2382:2383
-                $t2 := 0
-                // $t3 := /($t1, $t2)
-                /// @src 2:2395:2396
-                $t3 := $Div($t1, $t2)
-                // return $t3
-                /// @src 2:2393:2398
-                $result := $t3
-            }
-
-            function A2_M_div_by_zero_u64(x, y) -> $result {
-                let $t2
-                // $t2 := /($t0, $t1)
-                /// @src 2:2685:2686
-                $t2 := $Div(x, y)
-                // return $t2
-                /// @src 2:2683:2688
-                $result := $t2
-            }
-
-            function A2_M_div_by_zero_u64_incorrect(x, y) -> $result {
-                let $t2
-                // $t2 := /($t0, $t1)
-                /// @src 2:2533:2534
-                $t2 := $Div(x, y)
-                // return $t2
-                /// @src 2:2531:2536
-                $result := $t2
-            }
-
-            function A2_M_f(x) -> $result {
-                let $t1, $t2
-                // $t1 := 1
-                /// @src 2:1544:1545
-                $t1 := 1
-                // $t2 := +($t0, $t1)
-                /// @src 2:1543:1544
-                $t2 := $AddU64(x, $t1)
-                // return $t2
-                /// @src 2:1542:1545
-                $result := $t2
-            }
-
-            function A2_M_g(x) -> $result {
-                let $t1, $t2
-                // $t1 := 2
-                /// @src 2:1690:1691
-                $t1 := 2
-                // $t2 := +($t0, $t1)
-                /// @src 2:1689:1690
-                $t2 := $AddU64(x, $t1)
-                // return $t2
-                /// @src 2:1688:1691
-                $result := $t2
-            }
-
-            function A2_M_h(b) -> $result {
-                let tmp_$1, tmp_$2, x, y, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12
-                let $block := 4
-                for {} true {} {
-                    switch $block
-                    case 2 {
-                        // label L0
-                        // $t4 := M::f($t5)
-                        /// @src 2:1887:1891
-                        y := A2_M_f($t5)
-                        // goto L3
-                        /// @src 2:1885:1891
-                        $block := 5
-                    }
-                    case 3 {
-                        // label L2
-                        // $t4 := M::g($t5)
-                        /// @src 2:1899:1903
-                        y := A2_M_g($t5)
-                        // goto L3
-                        /// @src 2:1917:1918
-                        $block := 5
-                    }
-                    case 4 {
-                        // $t5 := 3
-                        /// @src 2:1847:1848
-                        $t5 := 3
-                        // if ($t0) goto L0 else goto L2
-                        /// @src 2:1878:1903
-                        switch b
-                        case 0  { $block := 3 }
-                        default { $block := 2 }
-                    }
-                    case 5 {
-                        // label L3
-                        // if ($t0) goto L4 else goto L6
-                        /// @src 2:1917:1928
-                        switch b
-                        case 0  { $block := 7 }
-                        default { $block := 6 }
-                    }
-                    case 6 {
-                        // label L4
-                        // $t6 := 4
-                        /// @src 2:1927:1928
-                        $t6 := 4
-                        // $t1 := !=($t4, $t6)
-                        /// @src 2:1924:1926
-                        tmp_$1 := $Neq(y, $t6)
-                        // goto L7
-                        /// @src 2:1917:1928
-                        $block := 8
-                    }
-                    case 7 {
-                        // label L6
-                        // $t7 := false
-                        /// @src 2:1917:1928
-                        $t7 := false
-                        // $t1 := $t7
-                        /// @src 2:1917:1928
-                        tmp_$1 := $t7
-                        // goto L7
-                        /// @src 2:1917:1928
-                        $block := 8
-                    }
-                    case 8 {
-                        // label L7
-                        // if ($t1) goto L8 else goto L10
-                        /// @src 2:1913:1937
-                        switch tmp_$1
-                        case 0  { $block := 10 }
-                        default { $block := 9 }
-                    }
-                    case 9 {
-                        // label L8
-                        // $t8 := 4
-                        /// @src 2:1936:1937
-                        $t8 := 4
-                        // abort($t8)
-                        /// @src 2:1930:1937
-                        $Abort($t8)
-                    }
-                    case 10 {
-                        // label L10
-                        // $t9 := !($t0)
-                        /// @src 2:1951:1952
-                        $t9 := $LogicalNot(b)
-                        // if ($t9) goto L11 else goto L13
-                        /// @src 2:1951:1963
-                        switch $t9
-                        case 0  { $block := 12 }
-                        default { $block := 11 }
-                    }
-                    case 11 {
-                        // label L11
-                        // $t10 := 5
-                        /// @src 2:1962:1963
-                        $t10 := 5
-                        // $t2 := !=($t4, $t10)
-                        /// @src 2:1959:1961
-                        tmp_$2 := $Neq(y, $t10)
-                        // goto L14
-                        /// @src 2:1951:1963
-                        $block := 13
-                    }
-                    case 12 {
-                        // label L13
-                        // $t11 := false
-                        /// @src 2:1951:1963
-                        $t11 := false
-                        // $t2 := $t11
-                        /// @src 2:1951:1963
-                        tmp_$2 := $t11
-                        // goto L14
-                        /// @src 2:1951:1963
-                        $block := 13
-                    }
-                    case 13 {
-                        // label L14
-                        // if ($t2) goto L15 else goto L17
-                        /// @src 2:1947:1972
-                        switch tmp_$2
-                        case 0  { $block := 15 }
-                        default { $block := 14 }
-                    }
-                    case 14 {
-                        // label L15
-                        // $t12 := 5
-                        /// @src 2:1971:1972
-                        $t12 := 5
-                        // abort($t12)
-                        /// @src 2:1965:1972
-                        $Abort($t12)
-                    }
-                    case 15 {
-                        // label L17
-                        // return $t4
-                        /// @src 2:1982:1983
-                        $result := y
-                        leave
-                    }
-                }
             }
 
             function A2_M_multiple_ops(x, y, z) -> $result {
                 let $t3, $t4
                 // $t3 := *($t1, $t2)
-                /// @src 2:762:763
+                /// @src 2:1358:1359
                 $t3 := $MulU64(y, z)
                 // $t4 := +($t0, $t3)
-                /// @src 2:758:759
+                /// @src 2:1354:1355
                 $t4 := $AddU64(x, $t3)
                 // return $t4
-                /// @src 2:756:765
+                /// @src 2:1352:1361
                 $result := $t4
-            }
-
-            function A2_M_overflow_u128_add(x, y) -> $result {
-                let $t2
-                // $t2 := +($t0, $t1)
-                /// @src 2:3810:3811
-                $t2 := $AddU128(x, y)
-                // return $t2
-                /// @src 2:3808:3813
-                $result := $t2
-            }
-
-            function A2_M_overflow_u128_add_incorrect(x, y) -> $result {
-                let $t2
-                // $t2 := +($t0, $t1)
-                /// @src 2:3634:3635
-                $t2 := $AddU128(x, y)
-                // return $t2
-                /// @src 2:3632:3637
-                $result := $t2
-            }
-
-            function A2_M_overflow_u128_mul(x, y) -> $result {
-                let $t2
-                // $t2 := *($t0, $t1)
-                /// @src 2:4933:4934
-                $t2 := $MulU128(x, y)
-                // return $t2
-                /// @src 2:4931:4936
-                $result := $t2
-            }
-
-            function A2_M_overflow_u128_mul_incorrect(x, y) -> $result {
-                let $t2
-                // $t2 := *($t0, $t1)
-                /// @src 2:4774:4775
-                $t2 := $MulU128(x, y)
-                // return $t2
-                /// @src 2:4772:4777
-                $result := $t2
-            }
-
-            function A2_M_overflow_u64_add(x, y) -> $result {
-                let $t2
-                // $t2 := +($t0, $t1)
-                /// @src 2:3450:3451
-                $t2 := $AddU64(x, y)
-                // return $t2
-                /// @src 2:3448:3453
-                $result := $t2
-            }
-
-            function A2_M_overflow_u64_add_incorrect(x, y) -> $result {
-                let $t2
-                // $t2 := +($t0, $t1)
-                /// @src 2:3279:3280
-                $t2 := $AddU64(x, y)
-                // return $t2
-                /// @src 2:3277:3282
-                $result := $t2
-            }
-
-            function A2_M_overflow_u64_mul(x, y) -> $result {
-                let $t2
-                // $t2 := *($t0, $t1)
-                /// @src 2:4590:4591
-                $t2 := $MulU64(x, y)
-                // return $t2
-                /// @src 2:4588:4593
-                $result := $t2
-            }
-
-            function A2_M_overflow_u64_mul_incorrect(x, y) -> $result {
-                let $t2
-                // $t2 := *($t0, $t1)
-                /// @src 2:4436:4437
-                $t2 := $MulU64(x, y)
-                // return $t2
-                /// @src 2:4434:4439
-                $result := $t2
-            }
-
-            function A2_M_overflow_u8_add(x, y) -> $result {
-                let $t2
-                // $t2 := +($t0, $t1)
-                /// @src 2:3101:3102
-                $t2 := $AddU8(x, y)
-                // return $t2
-                /// @src 2:3099:3104
-                $result := $t2
-            }
-
-            function A2_M_overflow_u8_add_incorrect(x, y) -> $result {
-                let $t2
-                // $t2 := +($t0, $t1)
-                /// @src 2:2935:2936
-                $t2 := $AddU8(x, y)
-                // return $t2
-                /// @src 2:2933:2938
-                $result := $t2
-            }
-
-            function A2_M_overflow_u8_mul(x, y) -> $result {
-                let $t2
-                // $t2 := *($t0, $t1)
-                /// @src 2:4258:4259
-                $t2 := $MulU8(x, y)
-                // return $t2
-                /// @src 2:4256:4261
-                $result := $t2
-            }
-
-            function A2_M_overflow_u8_mul_incorrect(x, y) -> $result {
-                let $t2
-                // $t2 := *($t0, $t1)
-                /// @src 2:4092:4093
-                $t2 := $MulU8(x, y)
-                // return $t2
-                /// @src 2:4090:4095
-                $result := $t2
             }
 
             function A2_M_underflow() -> $result {
                 let x, $t1, $t2, $t3
                 // $t1 := 0
-                /// @src 2:2164:2165
+                /// @src 2:2521:2522
                 $t1 := 0
                 // $t2 := 1
-                /// @src 2:2179:2180
+                /// @src 2:2536:2537
                 $t2 := 1
                 // $t3 := -($t1, $t2)
-                /// @src 2:2177:2178
+                /// @src 2:2534:2535
                 $t3 := $Sub($t1, $t2)
                 // return $t3
-                /// @src 2:2175:2180
+                /// @src 2:2532:2537
                 $result := $t3
             }
 
@@ -919,80 +305,6 @@ object "A2_M" {
             }
             function cleanup_u64(value) -> cleaned {
                 cleaned := and(value, 0xffffffffffffffff)
-            }
-            function abi_encode_tuple_$u8$(headStart ,value_0) -> tail {
-                tail := add(headStart, 32)
-                abi_encode_u8(value_0, add(headStart, 0))
-            }
-            function abi_encode_u8(value, pos) {
-                mstore(pos, cleanup_u8(value))
-            }
-            function cleanup_u8(value) -> cleaned {
-                cleaned := and(value, 0xff)
-            }
-            function abi_decode_tuple_$u8_u8$(headStart, dataEnd) -> value_0, value_1 {
-                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
-                {
-                    let offset := 0
-                    value_0 := abi_decode_u8(add(headStart, offset), dataEnd)
-                }
-                {
-                    let offset := 32
-                    value_1 := abi_decode_u8(add(headStart, offset), dataEnd)
-                }
-            }
-            function abi_decode_u8(offset, end) -> value {
-                value := calldataload(offset)
-                validator_u8(value)
-            }
-            function validator_u8(value) {
-                if iszero(eq(value, cleanup_u8(value))) { $Abort(95) }
-            }
-            function abi_decode_tuple_$u64_u64$(headStart, dataEnd) -> value_0, value_1 {
-                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
-                {
-                    let offset := 0
-                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
-                }
-                {
-                    let offset := 32
-                    value_1 := abi_decode_u64(add(headStart, offset), dataEnd)
-                }
-            }
-            function abi_decode_u64(offset, end) -> value {
-                value := calldataload(offset)
-                validator_u64(value)
-            }
-            function validator_u64(value) {
-                if iszero(eq(value, cleanup_u64(value))) { $Abort(95) }
-            }
-            function abi_encode_tuple_$u128$(headStart ,value_0) -> tail {
-                tail := add(headStart, 32)
-                abi_encode_u128(value_0, add(headStart, 0))
-            }
-            function abi_encode_u128(value, pos) {
-                mstore(pos, cleanup_u128(value))
-            }
-            function cleanup_u128(value) -> cleaned {
-                cleaned := and(value, 0xffffffffffffffffffffffffffffffff)
-            }
-            function abi_decode_tuple_$u128_u128$(headStart, dataEnd) -> value_0, value_1 {
-                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
-                {
-                    let offset := 0
-                    value_0 := abi_decode_u128(add(headStart, offset), dataEnd)
-                }
-                {
-                    let offset := 32
-                    value_1 := abi_decode_u128(add(headStart, offset), dataEnd)
-                }
-            }
-            function abi_decode_u128(offset, end) -> value {
-                value := calldataload(offset)
-                validator_u128(value)
-            }
-            function validator_u128(value) {
-                if iszero(eq(value, cleanup_u128(value))) { $Abort(95) }
             }
             function abi_decode_tuple_$u64_u64_u64$(headStart, dataEnd) -> value_0, value_1, value_2 {
                 if slt(sub(dataEnd, headStart), 96) { $Abort(96) }
@@ -1009,19 +321,36 @@ object "A2_M" {
                     value_2 := abi_decode_u64(add(headStart, offset), dataEnd)
                 }
             }
-            function abi_decode_tuple_$bool$(headStart, dataEnd) -> value_0 {
-                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
+            function abi_decode_u64(offset, end) -> value {
+                value := calldataload(offset)
+                validator_u64(value)
+            }
+            function validator_u64(value) {
+                if iszero(eq(value, cleanup_u64(value))) { $Abort(95) }
+            }
+            function abi_encode_tuple_$u64_u64$(headStart ,value_0, value_1) -> tail {
+                tail := add(headStart, 64)
+                abi_encode_u64(value_0, add(headStart, 0))
+                abi_encode_u64(value_1, add(headStart, 32))
+            }
+            function abi_decode_tuple_$u64_u64$(headStart, dataEnd) -> value_0, value_1 {
+                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
                 {
                     let offset := 0
-                    value_0 := abi_decode_bool(add(headStart, offset), dataEnd)
+                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := 32
+                    value_1 := abi_decode_u64(add(headStart, offset), dataEnd)
                 }
             }
-            function abi_decode_bool(offset, end) -> value {
-                value := calldataload(offset)
-                validator_bool(value)
+            function abi_encode_tuple_$bool_bool$(headStart ,value_0, value_1) -> tail {
+                tail := add(headStart, 64)
+                abi_encode_bool(value_0, add(headStart, 0))
+                abi_encode_bool(value_1, add(headStart, 32))
             }
-            function validator_bool(value) {
-                if iszero(eq(value, cleanup_bool(value))) { $Abort(95) }
+            function abi_encode_bool(value, pos) {
+                mstore(pos, cleanup_bool(value))
             }
             function cleanup_bool(value) -> cleaned {
                 cleaned := and(value, 0xff)
@@ -1033,21 +362,9 @@ object "A2_M" {
                     value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
                 }
             }
-            function abi_encode_tuple_$u64_u64$(headStart ,value_0, value_1) -> tail {
-                tail := add(headStart, 64)
-                abi_encode_u64(value_0, add(headStart, 0))
-                abi_encode_u64(value_1, add(headStart, 32))
-            }
-            function abi_encode_tuple_$bool_bool$(headStart ,value_0, value_1) -> tail {
-                tail := add(headStart, 64)
-                abi_encode_bool(value_0, add(headStart, 0))
-                abi_encode_bool(value_1, add(headStart, 32))
-            }
-            function abi_encode_bool(value, pos) {
-                mstore(pos, cleanup_bool(value))
-            }
             function $Abort(code) {
-                revert(0, 0) // TODO: convention to store code
+                mstore(0, code)
+                revert(24, 8) // TODO: store code as a string?
             }
             function $AbortBuiltin() {
                 $Abort(sub(0, 1))
@@ -1058,22 +375,6 @@ object "A2_M" {
             }
             function $MulU64(x, y) -> r {
                 if gt(y, div(0xffffffffffffffff, x)) { $AbortBuiltin() }
-                r := mul(x, y)
-            }
-            function $AddU8(x, y) -> r {
-                if lt(sub(0xff, x), y) { $AbortBuiltin() }
-                r := add(x, y)
-            }
-            function $MulU8(x, y) -> r {
-                if gt(y, div(0xff, x)) { $AbortBuiltin() }
-                r := mul(x, y)
-            }
-            function $AddU128(x, y) -> r {
-                if lt(sub(0xffffffffffffffffffffffffffffffff, x), y) { $AbortBuiltin() }
-                r := add(x, y)
-            }
-            function $MulU128(x, y) -> r {
-                if gt(y, div(0xffffffffffffffffffffffffffffffff, x)) { $AbortBuiltin() }
                 r := mul(x, y)
             }
             function $Sub(x, y) -> r {
@@ -1116,7 +417,6 @@ object "A2_M" {
 
 !! Optimized Yul
 
-Pretty printed source:
 /// @use-src 2:"tests/Arithm.move"
 object "A2_M" {
     code {
@@ -1129,171 +429,51 @@ object "A2_M" {
     object "A2_M_deployed" {
         code {
             {
-                let _1 := memoryguard(0xa0)
-                let _2 := 0
-                mstore(_2, _1)
+                let _1 := 0
+                mstore(_1, memoryguard(0xa0))
                 if iszero(lt(calldatasize(), 4))
                 {
-                    switch shr(224, calldataload(_2))
+                    switch shr(224, calldataload(_1))
                     case 0x27a15f43 {
-                        if callvalue() { revert(_2, _2) }
+                        if callvalue() { $Abort_784() }
                         let param, param_1 := abi_decode_u64_u64(calldatasize())
                         let ret, ret_1 := A2_M_add_two_number(param, param_1)
-                        return(_1, sub(abi_encode_u64_u64$(_1, ret, ret_1), _1))
+                        let memPos := mload(_1)
+                        return(memPos, sub(abi_encode_u64_u64$(memPos, ret, ret_1), memPos))
                     }
                     case 0x30df35a9 {
-                        if callvalue() { revert(_2, _2) }
-                        let ret_2, ret_3 := A2_M_arithmetic_ops(abi_decode_u64(calldatasize()))
-                        let memPos := mload(_2)
-                        return(memPos, sub(abi_encode_u64_u64$(memPos, ret_2, ret_3), memPos))
+                        if callvalue() { $Abort_784() }
+                        let ret_2, ret_3 := A2_M_arithmetic_ops(abi_decode_u64_787(calldatasize()))
+                        let memPos_1 := mload(_1)
+                        return(memPos_1, sub(abi_encode_u64_u64$(memPos_1, ret_2, ret_3), memPos_1))
                     }
                     case 0xae7d00ae {
-                        if callvalue() { revert(_2, _2) }
+                        if callvalue() { $Abort_784() }
                         let param_2, param_3 := abi_decode_u64_u64(calldatasize())
                         let ret_4, ret_5 := A2_M_bool_ops(param_2, param_3)
-                        let memPos_1 := mload(_2)
-                        return(memPos_1, sub(abi_encode_bool_bool$(memPos_1, ret_4, ret_5), memPos_1))
+                        let memPos_2 := mload(_1)
+                        return(memPos_2, sub(abi_encode_bool_bool$(memPos_2, ret_4, ret_5), memPos_2))
                     }
                     case 0xf1a0a85c {
-                        if callvalue() { revert(_2, _2) }
+                        if callvalue() { $Abort_784() }
                         let param_4, param_5 := abi_decode_u64_u64(calldatasize())
                         let ret_6, ret_7 := A2_M_div(param_4, param_5)
-                        let memPos_2 := mload(_2)
-                        return(memPos_2, sub(abi_encode_u64_u64$(memPos_2, ret_6, ret_7), memPos_2))
-                    }
-                    case 0x93094600 {
-                        if callvalue() { revert(_2, _2) }
-                        revert(_2, _2)
-                    }
-                    case 0xa068bdda {
-                        if callvalue() { revert(_2, _2) }
-                        let param_6, param_7 := abi_decode_u64_u64(calldatasize())
-                        let ret_8 := $Div(param_6, param_7)
-                        let memPos_3 := mload(_2)
-                        return(memPos_3, sub(abi_encode_u64$(memPos_3, ret_8), memPos_3))
-                    }
-                    case 0x131c7572 {
-                        if callvalue() { revert(_2, _2) }
-                        let param_8, param_9 := abi_decode_u64_u64(calldatasize())
-                        let ret_9 := $Div(param_8, param_9)
-                        let memPos_4 := mload(_2)
-                        return(memPos_4, sub(abi_encode_u64$(memPos_4, ret_9), memPos_4))
-                    }
-                    case 0x70e8dbcb {
-                        if callvalue() { revert(_2, _2) }
-                        let ret_10 := A2_M_f(abi_decode_u64(calldatasize()))
-                        let memPos_5 := mload(_2)
-                        return(memPos_5, sub(abi_encode_u64$(memPos_5, ret_10), memPos_5))
-                    }
-                    case 0xb3e8e519 {
-                        if callvalue() { revert(_2, _2) }
-                        let ret_11 := A2_M_g(abi_decode_u64(calldatasize()))
-                        let memPos_6 := mload(_2)
-                        return(memPos_6, sub(abi_encode_u64$(memPos_6, ret_11), memPos_6))
-                    }
-                    case 0x05a0581e {
-                        if callvalue() { revert(_2, _2) }
-                        let ret_12 := A2_M_h(abi_decode_bool(calldatasize()))
-                        let memPos_7 := mload(_2)
-                        return(memPos_7, sub(abi_encode_u64$(memPos_7, ret_12), memPos_7))
+                        let memPos_3 := mload(_1)
+                        return(memPos_3, sub(abi_encode_u64_u64$(memPos_3, ret_6, ret_7), memPos_3))
                     }
                     case 0x4c275efc {
-                        if callvalue() { revert(_2, _2) }
-                        let param_10, param_11, param_12 := abi_decode_u64_u64_u64(calldatasize())
-                        let ret_13 := $AddU64(param_10, $MulU64(param_11, param_12))
-                        let memPos_8 := mload(_2)
-                        return(memPos_8, sub(abi_encode_u64$(memPos_8, ret_13), memPos_8))
-                    }
-                    case 0x1b2e37b6 {
-                        if callvalue() { revert(_2, _2) }
-                        let param_13, param_14 := abi_decode_u128_u128(calldatasize())
-                        let ret_14 := $AddU128(param_13, param_14)
-                        let memPos_9 := mload(_2)
-                        return(memPos_9, sub(abi_encode_u128$(memPos_9, ret_14), memPos_9))
-                    }
-                    case 0xd279fccf {
-                        if callvalue() { revert(_2, _2) }
-                        let param_15, param_16 := abi_decode_u128_u128(calldatasize())
-                        let ret_15 := $AddU128(param_15, param_16)
-                        let memPos_10 := mload(_2)
-                        return(memPos_10, sub(abi_encode_u128$(memPos_10, ret_15), memPos_10))
-                    }
-                    case 0x16a555a3 {
-                        if callvalue() { revert(_2, _2) }
-                        let param_17, param_18 := abi_decode_u128_u128(calldatasize())
-                        let ret_16 := $MulU128(param_17, param_18)
-                        let memPos_11 := mload(_2)
-                        return(memPos_11, sub(abi_encode_u128$(memPos_11, ret_16), memPos_11))
-                    }
-                    case 0x95843be6 {
-                        if callvalue() { revert(_2, _2) }
-                        let param_19, param_20 := abi_decode_u128_u128(calldatasize())
-                        let ret_17 := $MulU128(param_19, param_20)
-                        let memPos_12 := mload(_2)
-                        return(memPos_12, sub(abi_encode_u128$(memPos_12, ret_17), memPos_12))
-                    }
-                    case 0x4eb8ec5d {
-                        if callvalue() { revert(_2, _2) }
-                        let param_21, param_22 := abi_decode_u64_u64(calldatasize())
-                        let ret_18 := $AddU64(param_21, param_22)
-                        let memPos_13 := mload(_2)
-                        return(memPos_13, sub(abi_encode_u64$(memPos_13, ret_18), memPos_13))
-                    }
-                    case 0xe6a8dc7f {
-                        if callvalue() { revert(_2, _2) }
-                        let param_23, param_24 := abi_decode_u64_u64(calldatasize())
-                        let ret_19 := $AddU64(param_23, param_24)
-                        let memPos_14 := mload(_2)
-                        return(memPos_14, sub(abi_encode_u64$(memPos_14, ret_19), memPos_14))
-                    }
-                    case 0xf9cf0228 {
-                        if callvalue() { revert(_2, _2) }
-                        let param_25, param_26 := abi_decode_u64_u64(calldatasize())
-                        let ret_20 := $MulU64(param_25, param_26)
-                        let memPos_15 := mload(_2)
-                        return(memPos_15, sub(abi_encode_u64$(memPos_15, ret_20), memPos_15))
-                    }
-                    case 0x2396bb4e {
-                        if callvalue() { revert(_2, _2) }
-                        let param_27, param_28 := abi_decode_u64_u64(calldatasize())
-                        let ret_21 := $MulU64(param_27, param_28)
-                        let memPos_16 := mload(_2)
-                        return(memPos_16, sub(abi_encode_u64$(memPos_16, ret_21), memPos_16))
-                    }
-                    case 0xc455375d {
-                        if callvalue() { revert(_2, _2) }
-                        let param_29, param_30 := abi_decode_u8_u8(calldatasize())
-                        let ret_22 := $AddU8(param_29, param_30)
-                        let memPos_17 := mload(_2)
-                        return(memPos_17, sub(abi_encode_u8$(memPos_17, ret_22), memPos_17))
-                    }
-                    case 0x3d744079 {
-                        if callvalue() { revert(_2, _2) }
-                        let param_31, param_32 := abi_decode_u8_u8(calldatasize())
-                        let ret_23 := $AddU8(param_31, param_32)
-                        let memPos_18 := mload(_2)
-                        return(memPos_18, sub(abi_encode_u8$(memPos_18, ret_23), memPos_18))
-                    }
-                    case 0xd4795c0b {
-                        if callvalue() { revert(_2, _2) }
-                        let param_33, param_34 := abi_decode_u8_u8(calldatasize())
-                        let ret_24 := $MulU8(param_33, param_34)
-                        let memPos_19 := mload(_2)
-                        return(memPos_19, sub(abi_encode_u8$(memPos_19, ret_24), memPos_19))
-                    }
-                    case 0xd429fa05 {
-                        if callvalue() { revert(_2, _2) }
-                        let param_35, param_36 := abi_decode_u8_u8(calldatasize())
-                        let ret_25 := $MulU8(param_35, param_36)
-                        let memPos_20 := mload(_2)
-                        return(memPos_20, sub(abi_encode_u8$(memPos_20, ret_25), memPos_20))
+                        if callvalue() { $Abort_784() }
+                        let param_6, param_7, param_8 := abi_decode_u64_u64_u64(calldatasize())
+                        let ret_8 := $AddU64(param_6, $MulU64(param_7, param_8))
+                        let memPos_4 := mload(_1)
+                        return(memPos_4, sub(abi_encode_u64$(memPos_4, ret_8), memPos_4))
                     }
                     case 0xdc75bec7 {
-                        if callvalue() { revert(_2, _2) }
-                        revert(_2, _2)
+                        if callvalue() { $Abort_784() }
+                        $Sub()
                     }
                 }
-                revert(_2, _2)
+                $Abort()
             }
             function A2_M_add_two_number(x, y) -> $result0, $result1
             {
@@ -1309,7 +489,10 @@ object "A2_M" {
                 for { } true { }
                 {
                     switch $block
-                    case 2 { revert($t2, $t2) }
+                    case 2 {
+                        mstore($t2, 42)
+                        revert(24, 8)
+                    }
                     case 3 {
                         $result0 := $t2_1
                         $result1 := a
@@ -1360,7 +543,7 @@ object "A2_M" {
                         case 0 { $block := 10 }
                         default { $block := 9 }
                     }
-                    case 9 { revert(0, 0) }
+                    case 9 { $Abort_797() }
                     case 10 {
                         $result0 := tmp
                         $result1 := tmp_1
@@ -1370,167 +553,53 @@ object "A2_M" {
             }
             function A2_M_div(x, y) -> $result0, $result1
             {
-                if iszero(y) { revert(0, 0) }
+                if iszero(y)
+                {
+                    mstore(0, not(0))
+                    revert(24, 8)
+                }
                 $result0 := div(x, y)
                 $result1 := mod(x, y)
-            }
-            function A2_M_f(x) -> $result
-            {
-                if lt(sub(0xffffffffffffffff, x), 1) { revert(0, 0) }
-                $result := add(x, 1)
-            }
-            function A2_M_g(x) -> $result
-            {
-                if lt(sub(0xffffffffffffffff, x), 2) { revert(0, 0) }
-                $result := add(x, 2)
-            }
-            function A2_M_h(b) -> $result
-            {
-                let tmp := 0
-                let tmp_1 := tmp
-                let y := tmp
-                let $t5 := tmp
-                let $block := 4
-                let $block_1 := $block
-                for { } true { }
-                {
-                    switch $block_1
-                    case 2 {
-                        y := A2_M_f($t5)
-                        $block_1 := 5
-                    }
-                    case 3 {
-                        y := A2_M_g($t5)
-                        $block_1 := 5
-                    }
-                    case 4 {
-                        $t5 := 3
-                        switch b
-                        case 0 { $block_1 := $t5 }
-                        default { $block_1 := 2 }
-                    }
-                    case 5 {
-                        switch b
-                        case 0 { $block_1 := 7 }
-                        default { $block_1 := 6 }
-                    }
-                    case 6 {
-                        tmp := not(eq(y, $block))
-                        $block_1 := 8
-                    }
-                    case 7 {
-                        tmp := false
-                        $block_1 := 8
-                    }
-                    case 8 {
-                        switch tmp
-                        case 0 { $block_1 := 10 }
-                        default { $block_1 := 9 }
-                    }
-                    case 9 { revert(0, 0) }
-                    case 10 {
-                        switch not(b)
-                        case 0 { $block_1 := 12 }
-                        default { $block_1 := 11 }
-                    }
-                    case 11 {
-                        tmp_1 := not(eq(y, 5))
-                        $block_1 := 13
-                    }
-                    case 12 {
-                        tmp_1 := false
-                        $block_1 := 13
-                    }
-                    case 13 {
-                        switch tmp_1
-                        case 0 { $block_1 := 15 }
-                        default { $block_1 := 14 }
-                    }
-                    case 14 { revert(0, 0) }
-                    case 15 {
-                        $result := y
-                        leave
-                    }
-                }
             }
             function abi_encode_u64$(headStart, value) -> tail
             {
                 tail := add(headStart, 32)
                 mstore(headStart, and(value, 0xffffffffffffffff))
             }
-            function abi_encode_u8$(headStart, value) -> tail
-            {
-                tail := add(headStart, 32)
-                mstore(headStart, and(value, 0xff))
-            }
-            function abi_decode_u8_u8(dataEnd) -> value, value_1
-            {
-                if slt(add(dataEnd, not(3)), 64) { revert(0, 0) }
-                let value_2 := calldataload(4)
-                validator_u8(value_2)
-                value := value_2
-                let value_3 := calldataload(36)
-                validator_u8(value_3)
-                value_1 := value_3
-            }
-            function validator_u8(value)
-            {
-                if iszero(eq(value, and(value, 0xff))) { revert(0, 0) }
-            }
-            function abi_decode_u64_u64(dataEnd) -> value, value_1
-            {
-                if slt(add(dataEnd, not(3)), 64) { revert(0, 0) }
-                let value_2 := calldataload(4)
-                let _1 := 0xffffffffffffffff
-                if iszero(eq(value_2, and(value_2, _1))) { revert(0, 0) }
-                value := value_2
-                let value_3 := calldataload(36)
-                if iszero(eq(value_3, and(value_3, _1))) { revert(0, 0) }
-                value_1 := value_3
-            }
-            function abi_encode_u128$(headStart, value) -> tail
-            {
-                tail := add(headStart, 32)
-                mstore(headStart, and(value, 0xffffffffffffffffffffffffffffffff))
-            }
-            function abi_decode_u128_u128(dataEnd) -> value, value_1
-            {
-                if slt(add(dataEnd, not(3)), 64) { revert(0, 0) }
-                let value_2 := calldataload(4)
-                let _1 := 0xffffffffffffffffffffffffffffffff
-                if iszero(eq(value_2, and(value_2, _1))) { revert(0, 0) }
-                value := value_2
-                let value_3 := calldataload(36)
-                if iszero(eq(value_3, and(value_3, _1))) { revert(0, 0) }
-                value_1 := value_3
-            }
             function abi_decode_u64_u64_u64(dataEnd) -> value, value_1, value_2
             {
-                if slt(add(dataEnd, not(3)), 96) { revert(0, 0) }
-                let value_3 := calldataload(4)
-                let _1 := 0xffffffffffffffff
-                if iszero(eq(value_3, and(value_3, _1))) { revert(0, 0) }
-                value := value_3
-                let value_4 := calldataload(36)
-                if iszero(eq(value_4, and(value_4, _1))) { revert(0, 0) }
-                value_1 := value_4
-                let value_5 := calldataload(68)
-                if iszero(eq(value_5, and(value_5, _1))) { revert(0, 0) }
-                value_2 := value_5
+                if slt(add(dataEnd, not(3)), 96)
+                {
+                    mstore(0, 96)
+                    revert(24, 8)
+                }
+                value := abi_decode_u64_1509()
+                value_1 := abi_decode_u64()
+                let value_3 := calldataload(68)
+                if iszero(eq(value_3, and(value_3, 0xffffffffffffffff)))
+                {
+                    mstore(0, 95)
+                    revert(24, 8)
+                }
+                value_2 := value_3
             }
-            function abi_decode_bool(dataEnd) -> value
+            function abi_decode_u64_1509() -> value
             {
-                if slt(add(dataEnd, not(3)), 32) { revert(0, 0) }
-                let value_1 := calldataload(4)
-                validator_u8(value_1)
-                value := value_1
+                value := calldataload(4)
+                if iszero(eq(value, and(value, 0xffffffffffffffff)))
+                {
+                    mstore(0, 95)
+                    revert(24, 8)
+                }
             }
-            function abi_decode_u64(dataEnd) -> value
+            function abi_decode_u64() -> value
             {
-                if slt(add(dataEnd, not(3)), 32) { revert(0, 0) }
-                let value_1 := calldataload(4)
-                if iszero(eq(value_1, and(value_1, 0xffffffffffffffff))) { revert(0, 0) }
-                value := value_1
+                value := calldataload(36)
+                if iszero(eq(value, and(value, 0xffffffffffffffff)))
+                {
+                    mstore(0, 95)
+                    revert(24, 8)
+                }
             }
             function abi_encode_u64_u64$(headStart, value, value_1) -> tail
             {
@@ -1539,47 +608,1227 @@ object "A2_M" {
                 mstore(headStart, and(value, _1))
                 mstore(add(headStart, 32), and(value_1, _1))
             }
+            function abi_decode_u64_u64(dataEnd) -> value, value_1
+            {
+                if slt(add(dataEnd, not(3)), 64)
+                {
+                    mstore(0, 96)
+                    revert(24, 8)
+                }
+                value := abi_decode_u64_1509()
+                value_1 := abi_decode_u64()
+            }
             function abi_encode_bool_bool$(headStart, value, value_1) -> tail
             {
                 tail := add(headStart, 64)
                 mstore(headStart, and(value, 0xff))
                 mstore(add(headStart, 32), and(value_1, 0xff))
             }
+            function abi_decode_u64_787(dataEnd) -> value
+            {
+                if slt(add(dataEnd, not(3)), 32)
+                {
+                    mstore(0, 96)
+                    revert(24, 8)
+                }
+                value := abi_decode_u64_1509()
+            }
+            function $Abort_784()
+            {
+                mstore(0, 99)
+                revert(24, 8)
+            }
+            function $Abort()
+            {
+                mstore(0, 97)
+                revert(24, 8)
+            }
+            function $Abort_797()
+            {
+                mstore(0, 42)
+                revert(24, 8)
+            }
             function $AddU64(x, y) -> r
             {
-                if lt(sub(0xffffffffffffffff, x), y) { revert(0, 0) }
+                if lt(sub(0xffffffffffffffff, x), y)
+                {
+                    mstore(0, not(0))
+                    revert(24, 8)
+                }
                 r := add(x, y)
             }
             function $MulU64(x, y) -> r
             {
-                if gt(y, div(0xffffffffffffffff, x)) { revert(0, 0) }
+                if gt(y, div(0xffffffffffffffff, x))
+                {
+                    mstore(0, not(0))
+                    revert(24, 8)
+                }
                 r := mul(x, y)
             }
-            function $AddU8(x, y) -> r
+            function $Sub()
             {
-                if lt(sub(0xff, x), y) { revert(0, 0) }
-                r := add(x, y)
-            }
-            function $MulU8(x, y) -> r
-            {
-                if gt(y, div(0xff, x)) { revert(0, 0) }
-                r := mul(x, y)
-            }
-            function $AddU128(x, y) -> r
-            {
-                if lt(sub(0xffffffffffffffffffffffffffffffff, x), y) { revert(0, 0) }
-                r := add(x, y)
-            }
-            function $MulU128(x, y) -> r
-            {
-                if gt(y, div(0xffffffffffffffffffffffffffffffff, x)) { revert(0, 0) }
-                r := mul(x, y)
-            }
-            function $Div(x, y) -> r
-            {
-                if iszero(y) { revert(0, 0) }
-                r := div(x, y)
+                mstore(0, not(0))
+                revert(24, 8)
             }
         }
     }
 }
+
+!! Unit tests
+
+// test of M::test_add_two_number
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 2:"tests/Arithm.move"
+
+object "test_A2_M_test_add_two_number" {
+    code {
+        A2_M_test_add_two_number()
+        return (0, 0)
+        function A2_M_test_add_two_number() {
+            let res, z, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // $t8 := 100
+                    /// @src 2:425:428
+                    $t8 := 100
+                    // abort($t8)
+                    /// @src 2:409:429
+                    $Abort($t8)
+                }
+                case 3 {
+                    // label L0
+                    // $t9 := 7
+                    /// @src 2:451:452
+                    $t9 := 7
+                    // $t10 := ==($t5, $t9)
+                    /// @src 2:448:450
+                    $t10 := $Eq($t5, $t9)
+                    // if ($t10) goto L2 else goto L3
+                    /// @src 2:436:458
+                    switch $t10
+                    case 0  { $block := 5 }
+                    default { $block := 6 }
+                }
+                case 4 {
+                    // $t2 := 2
+                    /// @src 2:397:398
+                    $t2 := 2
+                    // $t3 := 5
+                    /// @src 2:400:401
+                    $t3 := 5
+                    // ($t4, $t5) := M::add_two_number($t2, $t3)
+                    /// @src 2:382:402
+                    $t4, $t5 := A2_M_add_two_number($t2, $t3)
+                    // $t6 := 3
+                    /// @src 2:422:423
+                    $t6 := 3
+                    // $t7 := ==($t4, $t6)
+                    /// @src 2:419:421
+                    $t7 := $Eq($t4, $t6)
+                    // if ($t7) goto L0 else goto L1
+                    /// @src 2:409:429
+                    switch $t7
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
+                }
+                case 5 {
+                    // label L3
+                    // $t11 := 101
+                    /// @src 2:454:457
+                    $t11 := 101
+                    // abort($t11)
+                    /// @src 2:436:458
+                    $Abort($t11)
+                }
+                case 6 {
+                    // label L2
+                    // return ()
+                    /// @src 2:458:459
+                    leave
+                }
+            }
+        }
+
+        function A2_M_add_two_number(x, y) -> $result0, $result1 {
+            let res, z, $t4, $t5
+            // $t4 := +($t0, $t1)
+            /// @src 2:283:284
+            $t4 := $AddU64(x, y)
+            // $t5 := 3
+            /// @src 2:303:304
+            $t5 := 3
+            // return ($t5, $t4)
+            /// @src 2:308:316
+            $result0 := $t5
+            $result1 := $t4
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $AbortBuiltin() {
+            $Abort(sub(0, 1))
+        }
+        function $AddU64(x, y) -> r {
+            if lt(sub(0xffffffffffffffff, x), y) { $AbortBuiltin() }
+            r := add(x, y)
+        }
+        function $Eq(x, y) -> r {
+            r := eq(x, y)
+        }
+    }
+}
+===> Succeed(Stopped) (used_gas=343): []
+
+// test of M::test_add_two_number_overflow
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 2:"tests/Arithm.move"
+
+object "test_A2_M_test_add_two_number_overflow" {
+    code {
+        A2_M_test_add_two_number_overflow()
+        return (0, 0)
+        function A2_M_test_add_two_number_overflow() {
+            let _res, _z, $t2, $t3, $t4, $t5
+            // $t2 := 18446744073709551615
+            /// @src 2:710:730
+            $t2 := 18446744073709551615
+            // $t3 := 1
+            /// @src 2:732:733
+            $t3 := 1
+            // ($t4, $t5) := M::add_two_number($t2, $t3)
+            /// @src 2:695:734
+            $t4, $t5 := A2_M_add_two_number($t2, $t3)
+            // destroy($t5)
+            /// @src 2:687:691
+            // destroy($t4)
+            /// @src 2:683:685
+            // return ()
+            /// @src 2:734:735
+        }
+
+        function A2_M_add_two_number(x, y) -> $result0, $result1 {
+            let res, z, $t4, $t5
+            // $t4 := +($t0, $t1)
+            /// @src 2:283:284
+            $t4 := $AddU64(x, y)
+            // $t5 := 3
+            /// @src 2:303:304
+            $t5 := 3
+            // return ($t5, $t4)
+            /// @src 2:308:316
+            $result0 := $t5
+            $result1 := $t4
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $AbortBuiltin() {
+            $Abort(sub(0, 1))
+        }
+        function $AddU64(x, y) -> r {
+            if lt(sub(0xffffffffffffffff, x), y) { $AbortBuiltin() }
+            r := add(x, y)
+        }
+    }
+}
+===> Revert(Reverted) (used_gas=21): [255, 255, 255, 255, 255, 255, 255, 255]
+
+// test of M::test_add_two_number_wrong_assert
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 2:"tests/Arithm.move"
+
+object "test_A2_M_test_add_two_number_wrong_assert" {
+    code {
+        A2_M_test_add_two_number_wrong_assert()
+        return (0, 0)
+        function A2_M_test_add_two_number_wrong_assert() {
+            let res, z, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // $t8 := 100
+                    /// @src 2:581:584
+                    $t8 := 100
+                    // abort($t8)
+                    /// @src 2:565:585
+                    $Abort($t8)
+                }
+                case 3 {
+                    // label L0
+                    // $t9 := 6
+                    /// @src 2:607:608
+                    $t9 := 6
+                    // $t10 := ==($t5, $t9)
+                    /// @src 2:604:606
+                    $t10 := $Eq($t5, $t9)
+                    // if ($t10) goto L2 else goto L3
+                    /// @src 2:592:614
+                    switch $t10
+                    case 0  { $block := 5 }
+                    default { $block := 6 }
+                }
+                case 4 {
+                    // $t2 := 2
+                    /// @src 2:553:554
+                    $t2 := 2
+                    // $t3 := 5
+                    /// @src 2:556:557
+                    $t3 := 5
+                    // ($t4, $t5) := M::add_two_number($t2, $t3)
+                    /// @src 2:538:558
+                    $t4, $t5 := A2_M_add_two_number($t2, $t3)
+                    // $t6 := 3
+                    /// @src 2:578:579
+                    $t6 := 3
+                    // $t7 := ==($t4, $t6)
+                    /// @src 2:575:577
+                    $t7 := $Eq($t4, $t6)
+                    // if ($t7) goto L0 else goto L1
+                    /// @src 2:565:585
+                    switch $t7
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
+                }
+                case 5 {
+                    // label L3
+                    // $t11 := 101
+                    /// @src 2:610:613
+                    $t11 := 101
+                    // abort($t11)
+                    /// @src 2:592:614
+                    $Abort($t11)
+                }
+                case 6 {
+                    // label L2
+                    // return ()
+                    /// @src 2:614:615
+                    leave
+                }
+            }
+        }
+
+        function A2_M_add_two_number(x, y) -> $result0, $result1 {
+            let res, z, $t4, $t5
+            // $t4 := +($t0, $t1)
+            /// @src 2:283:284
+            $t4 := $AddU64(x, y)
+            // $t5 := 3
+            /// @src 2:303:304
+            $t5 := 3
+            // return ($t5, $t4)
+            /// @src 2:308:316
+            $result0 := $t5
+            $result1 := $t4
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $AbortBuiltin() {
+            $Abort(sub(0, 1))
+        }
+        function $AddU64(x, y) -> r {
+            if lt(sub(0xffffffffffffffff, x), y) { $AbortBuiltin() }
+            r := add(x, y)
+        }
+        function $Eq(x, y) -> r {
+            r := eq(x, y)
+        }
+    }
+}
+===> Revert(Reverted) (used_gas=347): [0, 0, 0, 0, 0, 0, 0, 101]
+
+// test of M::test_arithmetic_ops_aborts
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 2:"tests/Arithm.move"
+
+object "test_A2_M_test_arithmetic_ops_aborts" {
+    code {
+        A2_M_test_arithmetic_ops_aborts()
+        return (0, 0)
+        function A2_M_test_arithmetic_ops_aborts() {
+            let r1, r2, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // $t7 := 100
+                    /// @src 2:2379:2382
+                    $t7 := 100
+                    // abort($t7)
+                    /// @src 2:2362:2383
+                    $Abort($t7)
+                }
+                case 3 {
+                    // label L0
+                    // $t8 := 3
+                    /// @src 2:2407:2408
+                    $t8 := 3
+                    // $t9 := ==($t4, $t8)
+                    /// @src 2:2404:2406
+                    $t9 := $Eq($t4, $t8)
+                    // if ($t9) goto L2 else goto L3
+                    /// @src 2:2393:2414
+                    switch $t9
+                    case 0  { $block := 5 }
+                    default { $block := 6 }
+                }
+                case 4 {
+                    // $t2 := 3
+                    /// @src 2:2350:2351
+                    $t2 := 3
+                    // ($t3, $t4) := M::arithmetic_ops($t2)
+                    /// @src 2:2335:2352
+                    $t3, $t4 := A2_M_arithmetic_ops($t2)
+                    // $t5 := 1
+                    /// @src 2:2376:2377
+                    $t5 := 1
+                    // $t6 := ==($t3, $t5)
+                    /// @src 2:2373:2375
+                    $t6 := $Eq($t3, $t5)
+                    // if ($t6) goto L0 else goto L1
+                    /// @src 2:2362:2383
+                    switch $t6
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
+                }
+                case 5 {
+                    // label L3
+                    // $t10 := 101
+                    /// @src 2:2410:2413
+                    $t10 := 101
+                    // abort($t10)
+                    /// @src 2:2393:2414
+                    $Abort($t10)
+                }
+                case 6 {
+                    // label L2
+                    // return ()
+                    /// @src 2:2414:2415
+                    leave
+                }
+            }
+        }
+
+        function A2_M_arithmetic_ops(a) -> $result0, $result1 {
+            let c, $t2, $t3, $t4, $t5
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L0
+                    // $t5 := 42
+                    /// @src 2:2232:2234
+                    $t5 := 42
+                    // abort($t5)
+                    /// @src 2:2226:2234
+                    $Abort($t5)
+                }
+                case 3 {
+                    // label L2
+                    // return ($t2, $t0)
+                    /// @src 2:2244:2250
+                    $result0 := $t2
+                    $result1 := a
+                    leave
+                }
+                case 4 {
+                    // $t2 := 2
+                    /// @src 2:2181:2204
+                    $t2 := 2
+                    // $t3 := 2
+                    /// @src 2:2223:2224
+                    $t3 := 2
+                    // $t4 := !=($t2, $t3)
+                    /// @src 2:2220:2222
+                    $t4 := $Neq($t2, $t3)
+                    // if ($t4) goto L0 else goto L2
+                    /// @src 2:2214:2234
+                    switch $t4
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+            }
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $Eq(x, y) -> r {
+            r := eq(x, y)
+        }
+        function $Neq(x, y) -> r {
+            r := not(eq(x, y))
+        }
+    }
+}
+===> Revert(Reverted) (used_gas=276): [0, 0, 0, 0, 0, 0, 0, 42]
+
+// test of M::test_bool_ops
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 2:"tests/Arithm.move"
+
+object "test_A2_M_test_bool_ops" {
+    code {
+        A2_M_test_bool_ops()
+        return (0, 0)
+        function A2_M_test_bool_ops() {
+            let r1, r2, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // $t8 := 100
+                    /// @src 2:2004:2007
+                    $t8 := 100
+                    // abort($t8)
+                    /// @src 2:1984:2008
+                    $Abort($t8)
+                }
+                case 3 {
+                    // label L0
+                    // $t9 := false
+                    /// @src 2:2032:2037
+                    $t9 := false
+                    // $t10 := ==($t5, $t9)
+                    /// @src 2:2029:2031
+                    $t10 := $Eq($t5, $t9)
+                    // if ($t10) goto L2 else goto L3
+                    /// @src 2:2018:2043
+                    switch $t10
+                    case 0  { $block := 5 }
+                    default { $block := 6 }
+                }
+                case 4 {
+                    // $t2 := 3
+                    /// @src 2:1969:1970
+                    $t2 := 3
+                    // $t3 := 2
+                    /// @src 2:1972:1973
+                    $t3 := 2
+                    // ($t4, $t5) := M::bool_ops($t2, $t3)
+                    /// @src 2:1960:1974
+                    $t4, $t5 := A2_M_bool_ops($t2, $t3)
+                    // $t6 := true
+                    /// @src 2:1998:2002
+                    $t6 := true
+                    // $t7 := ==($t4, $t6)
+                    /// @src 2:1995:1997
+                    $t7 := $Eq($t4, $t6)
+                    // if ($t7) goto L0 else goto L1
+                    /// @src 2:1984:2008
+                    switch $t7
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
+                }
+                case 5 {
+                    // label L3
+                    // $t11 := 101
+                    /// @src 2:2039:2042
+                    $t11 := 101
+                    // abort($t11)
+                    /// @src 2:2018:2043
+                    $Abort($t11)
+                }
+                case 6 {
+                    // label L2
+                    // return ()
+                    /// @src 2:2043:2044
+                    leave
+                }
+            }
+        }
+
+        function A2_M_bool_ops(a, b) -> $result0, $result1 {
+            let tmp_$2, tmp_$3, c, d, $t6, $t7, $t8, $t9, $t10, $t11, $t12
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L0
+                    // $t2 := >=($t0, $t1)
+                    /// @src 2:1806:1808
+                    tmp_$2 := $GtEq(a, b)
+                    // goto L3
+                    /// @src 2:1795:1810
+                    $block := 5
+                }
+                case 3 {
+                    // label L2
+                    // $t7 := false
+                    /// @src 2:1795:1810
+                    $t7 := false
+                    // $t2 := $t7
+                    /// @src 2:1795:1810
+                    tmp_$2 := $t7
+                    // goto L3
+                    /// @src 2:1795:1810
+                    $block := 5
+                }
+                case 4 {
+                    // $t6 := >($t0, $t1)
+                    /// @src 2:1797:1798
+                    $t6 := $Gt(a, b)
+                    // if ($t6) goto L0 else goto L2
+                    /// @src 2:1795:1810
+                    switch $t6
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L3
+                    // $t8 := <($t0, $t1)
+                    /// @src 2:1826:1827
+                    $t8 := $Lt(a, b)
+                    // if ($t8) goto L4 else goto L6
+                    /// @src 2:1824:1839
+                    switch $t8
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
+                }
+                case 6 {
+                    // label L4
+                    // $t9 := true
+                    /// @src 2:1824:1839
+                    $t9 := true
+                    // $t3 := $t9
+                    /// @src 2:1824:1839
+                    tmp_$3 := $t9
+                    // goto L7
+                    /// @src 2:1824:1839
+                    $block := 8
+                }
+                case 7 {
+                    // label L6
+                    // $t3 := <=($t0, $t1)
+                    /// @src 2:1835:1837
+                    tmp_$3 := $LtEq(a, b)
+                    // goto L7
+                    /// @src 2:1824:1839
+                    $block := 8
+                }
+                case 8 {
+                    // label L7
+                    // $t10 := !=($t2, $t3)
+                    /// @src 2:1857:1859
+                    $t10 := $Neq(tmp_$2, tmp_$3)
+                    // $t11 := !($t10)
+                    /// @src 2:1853:1854
+                    $t11 := $LogicalNot($t10)
+                    // if ($t11) goto L8 else goto L10
+                    /// @src 2:1849:1872
+                    switch $t11
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
+                }
+                case 9 {
+                    // label L8
+                    // $t12 := 42
+                    /// @src 2:1870:1872
+                    $t12 := 42
+                    // abort($t12)
+                    /// @src 2:1864:1872
+                    $Abort($t12)
+                }
+                case 10 {
+                    // label L10
+                    // return ($t2, $t3)
+                    /// @src 2:1882:1888
+                    $result0 := tmp_$2
+                    $result1 := tmp_$3
+                    leave
+                }
+            }
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $Gt(x, y) -> r {
+            r := gt(x, y)
+        }
+        function $Lt(x, y) -> r {
+            r := lt(x, y)
+        }
+        function $GtEq(x, y) -> r {
+            r := or(gt(x, y), eq(x, y))
+        }
+        function $LtEq(x, y) -> r {
+            r := or(lt(x, y), eq(x, y))
+        }
+        function $Eq(x, y) -> r {
+            r := eq(x, y)
+        }
+        function $Neq(x, y) -> r {
+            r := not(eq(x, y))
+        }
+        function $LogicalNot(x) -> r {
+            r := not(x)
+        }
+    }
+}
+===> Succeed(Stopped) (used_gas=1216): []
+
+// test of M::test_div
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 2:"tests/Arithm.move"
+
+object "test_A2_M_test_div" {
+    code {
+        A2_M_test_div()
+        return (0, 0)
+        function A2_M_test_div() {
+            let r1, r2, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // $t8 := 100
+                    /// @src 2:962:965
+                    $t8 := 100
+                    // abort($t8)
+                    /// @src 2:945:966
+                    $Abort($t8)
+                }
+                case 3 {
+                    // label L0
+                    // $t9 := 3
+                    /// @src 2:990:991
+                    $t9 := 3
+                    // $t10 := ==($t5, $t9)
+                    /// @src 2:987:989
+                    $t10 := $Eq($t5, $t9)
+                    // if ($t10) goto L2 else goto L3
+                    /// @src 2:976:997
+                    switch $t10
+                    case 0  { $block := 5 }
+                    default { $block := 6 }
+                }
+                case 4 {
+                    // $t2 := 7
+                    /// @src 2:930:931
+                    $t2 := 7
+                    // $t3 := 4
+                    /// @src 2:933:934
+                    $t3 := 4
+                    // ($t4, $t5) := M::div($t2, $t3)
+                    /// @src 2:926:935
+                    $t4, $t5 := A2_M_div($t2, $t3)
+                    // $t6 := 1
+                    /// @src 2:959:960
+                    $t6 := 1
+                    // $t7 := ==($t4, $t6)
+                    /// @src 2:956:958
+                    $t7 := $Eq($t4, $t6)
+                    // if ($t7) goto L0 else goto L1
+                    /// @src 2:945:966
+                    switch $t7
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
+                }
+                case 5 {
+                    // label L3
+                    // $t11 := 101
+                    /// @src 2:993:996
+                    $t11 := 101
+                    // abort($t11)
+                    /// @src 2:976:997
+                    $Abort($t11)
+                }
+                case 6 {
+                    // label L2
+                    // return ()
+                    /// @src 2:997:998
+                    leave
+                }
+            }
+        }
+
+        function A2_M_div(x, y) -> $result0, $result1 {
+            let $t2, $t3
+            // $t2 := /($t0, $t1)
+            /// @src 2:848:849
+            $t2 := $Div(x, y)
+            // $t3 := %($t0, $t1)
+            /// @src 2:855:856
+            $t3 := $Mod(x, y)
+            // return ($t2, $t3)
+            /// @src 2:845:859
+            $result0 := $t2
+            $result1 := $t3
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $AbortBuiltin() {
+            $Abort(sub(0, 1))
+        }
+        function $Div(x, y) -> r {
+            if eq(y, 0) { $AbortBuiltin() }
+            r := div(x, y)
+        }
+        function $Mod(x, y) -> r {
+            if eq(y, 0) { $AbortBuiltin() }
+            r := mod(x, y)
+        }
+        function $Eq(x, y) -> r {
+            r := eq(x, y)
+        }
+    }
+}
+===> Succeed(Stopped) (used_gas=343): []
+
+// test of M::test_div_by_zero
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 2:"tests/Arithm.move"
+
+object "test_A2_M_test_div_by_zero" {
+    code {
+        A2_M_test_div_by_zero()
+        return (0, 0)
+        function A2_M_test_div_by_zero() {
+            let _r1, _r2, $t2, $t3, $t4, $t5
+            // $t2 := 7
+            /// @src 2:1231:1232
+            $t2 := 7
+            // $t3 := 0
+            /// @src 2:1234:1235
+            $t3 := 0
+            // ($t4, $t5) := M::div($t2, $t3)
+            /// @src 2:1227:1236
+            $t4, $t5 := A2_M_div($t2, $t3)
+            // destroy($t5)
+            /// @src 2:1220:1223
+            // destroy($t4)
+            /// @src 2:1215:1218
+            // return ()
+            /// @src 2:1236:1237
+        }
+
+        function A2_M_div(x, y) -> $result0, $result1 {
+            let $t2, $t3
+            // $t2 := /($t0, $t1)
+            /// @src 2:848:849
+            $t2 := $Div(x, y)
+            // $t3 := %($t0, $t1)
+            /// @src 2:855:856
+            $t3 := $Mod(x, y)
+            // return ($t2, $t3)
+            /// @src 2:845:859
+            $result0 := $t2
+            $result1 := $t3
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $AbortBuiltin() {
+            $Abort(sub(0, 1))
+        }
+        function $Div(x, y) -> r {
+            if eq(y, 0) { $AbortBuiltin() }
+            r := div(x, y)
+        }
+        function $Mod(x, y) -> r {
+            if eq(y, 0) { $AbortBuiltin() }
+            r := mod(x, y)
+        }
+    }
+}
+===> Revert(Reverted) (used_gas=21): [255, 255, 255, 255, 255, 255, 255, 255]
+
+// test of M::test_div_wrong_assert
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 2:"tests/Arithm.move"
+
+object "test_A2_M_test_div_wrong_assert" {
+    code {
+        A2_M_test_div_wrong_assert()
+        return (0, 0)
+        function A2_M_test_div_wrong_assert() {
+            let r1, r2, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // $t8 := 100
+                    /// @src 2:1114:1117
+                    $t8 := 100
+                    // abort($t8)
+                    /// @src 2:1097:1118
+                    $Abort($t8)
+                }
+                case 3 {
+                    // label L0
+                    // $t9 := 2
+                    /// @src 2:1142:1143
+                    $t9 := 2
+                    // $t10 := ==($t5, $t9)
+                    /// @src 2:1139:1141
+                    $t10 := $Eq($t5, $t9)
+                    // if ($t10) goto L2 else goto L3
+                    /// @src 2:1128:1149
+                    switch $t10
+                    case 0  { $block := 5 }
+                    default { $block := 6 }
+                }
+                case 4 {
+                    // $t2 := 7
+                    /// @src 2:1082:1083
+                    $t2 := 7
+                    // $t3 := 4
+                    /// @src 2:1085:1086
+                    $t3 := 4
+                    // ($t4, $t5) := M::div($t2, $t3)
+                    /// @src 2:1078:1087
+                    $t4, $t5 := A2_M_div($t2, $t3)
+                    // $t6 := 1
+                    /// @src 2:1111:1112
+                    $t6 := 1
+                    // $t7 := ==($t4, $t6)
+                    /// @src 2:1108:1110
+                    $t7 := $Eq($t4, $t6)
+                    // if ($t7) goto L0 else goto L1
+                    /// @src 2:1097:1118
+                    switch $t7
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
+                }
+                case 5 {
+                    // label L3
+                    // $t11 := 101
+                    /// @src 2:1145:1148
+                    $t11 := 101
+                    // abort($t11)
+                    /// @src 2:1128:1149
+                    $Abort($t11)
+                }
+                case 6 {
+                    // label L2
+                    // return ()
+                    /// @src 2:1149:1150
+                    leave
+                }
+            }
+        }
+
+        function A2_M_div(x, y) -> $result0, $result1 {
+            let $t2, $t3
+            // $t2 := /($t0, $t1)
+            /// @src 2:848:849
+            $t2 := $Div(x, y)
+            // $t3 := %($t0, $t1)
+            /// @src 2:855:856
+            $t3 := $Mod(x, y)
+            // return ($t2, $t3)
+            /// @src 2:845:859
+            $result0 := $t2
+            $result1 := $t3
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $AbortBuiltin() {
+            $Abort(sub(0, 1))
+        }
+        function $Div(x, y) -> r {
+            if eq(y, 0) { $AbortBuiltin() }
+            r := div(x, y)
+        }
+        function $Mod(x, y) -> r {
+            if eq(y, 0) { $AbortBuiltin() }
+            r := mod(x, y)
+        }
+        function $Eq(x, y) -> r {
+            r := eq(x, y)
+        }
+    }
+}
+===> Revert(Reverted) (used_gas=339): [0, 0, 0, 0, 0, 0, 0, 101]
+
+// test of M::test_multiple_ops
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 2:"tests/Arithm.move"
+
+object "test_A2_M_test_multiple_ops" {
+    code {
+        A2_M_test_multiple_ops()
+        return (0, 0)
+        function A2_M_test_multiple_ops() {
+            let r, $t1, $t2, $t3, $t4, $t5, $t6, $t7
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // $t7 := 100
+                    /// @src 2:1482:1485
+                    $t7 := 100
+                    // abort($t7)
+                    /// @src 2:1458:1486
+                    $Abort($t7)
+                }
+                case 3 {
+                    // label L0
+                    // return ()
+                    /// @src 2:1486:1487
+                    leave
+                }
+                case 4 {
+                    // $t1 := 3
+                    /// @src 2:1440:1441
+                    $t1 := 3
+                    // $t2 := 2
+                    /// @src 2:1443:1444
+                    $t2 := 2
+                    // $t3 := 5
+                    /// @src 2:1446:1447
+                    $t3 := 5
+                    // $t4 := M::multiple_ops($t1, $t2, $t3)
+                    /// @src 2:1427:1448
+                    $t4 := A2_M_multiple_ops($t1, $t2, $t3)
+                    // $t5 := 13
+                    /// @src 2:1471:1480
+                    $t5 := 13
+                    // $t6 := ==($t4, $t5)
+                    /// @src 2:1468:1470
+                    $t6 := $Eq($t4, $t5)
+                    // if ($t6) goto L0 else goto L1
+                    /// @src 2:1458:1486
+                    switch $t6
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
+                }
+            }
+        }
+
+        function A2_M_multiple_ops(x, y, z) -> $result {
+            let $t3, $t4
+            // $t3 := *($t1, $t2)
+            /// @src 2:1358:1359
+            $t3 := $MulU64(y, z)
+            // $t4 := +($t0, $t3)
+            /// @src 2:1354:1355
+            $t4 := $AddU64(x, $t3)
+            // return $t4
+            /// @src 2:1352:1361
+            $result := $t4
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $AbortBuiltin() {
+            $Abort(sub(0, 1))
+        }
+        function $AddU64(x, y) -> r {
+            if lt(sub(0xffffffffffffffff, x), y) { $AbortBuiltin() }
+            r := add(x, y)
+        }
+        function $MulU64(x, y) -> r {
+            if gt(y, div(0xffffffffffffffff, x)) { $AbortBuiltin() }
+            r := mul(x, y)
+        }
+        function $Eq(x, y) -> r {
+            r := eq(x, y)
+        }
+    }
+}
+===> Succeed(Stopped) (used_gas=164): []
+
+// test of M::test_multiple_overflow
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 2:"tests/Arithm.move"
+
+object "test_A2_M_test_multiple_overflow" {
+    code {
+        A2_M_test_multiple_overflow()
+        return (0, 0)
+        function A2_M_test_multiple_overflow() {
+            let r, $t1, $t2, $t3, $t4, $t5, $t6, $t7
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // $t7 := 100
+                    /// @src 2:1627:1630
+                    $t7 := 100
+                    // abort($t7)
+                    /// @src 2:1611:1631
+                    $Abort($t7)
+                }
+                case 3 {
+                    // label L0
+                    // return ()
+                    /// @src 2:1631:1632
+                    leave
+                }
+                case 4 {
+                    // $t1 := 0
+                    /// @src 2:1574:1575
+                    $t1 := 0
+                    // $t2 := 18446744073709551615
+                    /// @src 2:1577:1597
+                    $t2 := 18446744073709551615
+                    // $t3 := 2
+                    /// @src 2:1599:1600
+                    $t3 := 2
+                    // $t4 := M::multiple_ops($t1, $t2, $t3)
+                    /// @src 2:1561:1601
+                    $t4 := A2_M_multiple_ops($t1, $t2, $t3)
+                    // $t5 := 0
+                    /// @src 2:1624:1625
+                    $t5 := 0
+                    // $t6 := ==($t4, $t5)
+                    /// @src 2:1621:1623
+                    $t6 := $Eq($t4, $t5)
+                    // if ($t6) goto L0 else goto L1
+                    /// @src 2:1611:1631
+                    switch $t6
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
+                }
+            }
+        }
+
+        function A2_M_multiple_ops(x, y, z) -> $result {
+            let $t3, $t4
+            // $t3 := *($t1, $t2)
+            /// @src 2:1358:1359
+            $t3 := $MulU64(y, z)
+            // $t4 := +($t0, $t3)
+            /// @src 2:1354:1355
+            $t4 := $AddU64(x, $t3)
+            // return $t4
+            /// @src 2:1352:1361
+            $result := $t4
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $AbortBuiltin() {
+            $Abort(sub(0, 1))
+        }
+        function $AddU64(x, y) -> r {
+            if lt(sub(0xffffffffffffffff, x), y) { $AbortBuiltin() }
+            r := add(x, y)
+        }
+        function $MulU64(x, y) -> r {
+            if gt(y, div(0xffffffffffffffff, x)) { $AbortBuiltin() }
+            r := mul(x, y)
+        }
+        function $Eq(x, y) -> r {
+            r := eq(x, y)
+        }
+    }
+}
+===> Revert(Reverted) (used_gas=21): [255, 255, 255, 255, 255, 255, 255, 255]
+
+// test of M::test_underflow
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 2:"tests/Arithm.move"
+
+object "test_A2_M_test_underflow" {
+    code {
+        A2_M_test_underflow()
+        return (0, 0)
+        function A2_M_test_underflow() {
+            let _r, $t1
+            // $t1 := M::underflow()
+            /// @src 2:2604:2615
+            $t1 := A2_M_underflow()
+            // destroy($t1)
+            /// @src 2:2599:2601
+            // return ()
+            /// @src 2:2615:2616
+        }
+
+        function A2_M_underflow() -> $result {
+            let x, $t1, $t2, $t3
+            // $t1 := 0
+            /// @src 2:2521:2522
+            $t1 := 0
+            // $t2 := 1
+            /// @src 2:2536:2537
+            $t2 := 1
+            // $t3 := -($t1, $t2)
+            /// @src 2:2534:2535
+            $t3 := $Sub($t1, $t2)
+            // return $t3
+            /// @src 2:2532:2537
+            $result := $t3
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $AbortBuiltin() {
+            $Abort(sub(0, 1))
+        }
+        function $Sub(x, y) -> r {
+            if lt(x, y) { $AbortBuiltin() }
+            r := sub(x, y)
+        }
+    }
+}
+===> Revert(Reverted) (used_gas=21): [255, 255, 255, 255, 255, 255, 255, 255]

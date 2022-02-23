@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use codespan_reporting::diagnostic::Severity;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fs,
-};
+use std::collections::{BTreeMap, BTreeSet};
 
 use itertools::Itertools;
 use sha3::{Digest, Keccak256};
@@ -13,7 +10,7 @@ use sha3::{Digest, Keccak256};
 use move_model::{
     ast::TempIndex,
     emit, emitln,
-    model::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, QualifiedId, QualifiedInstId},
+    model::{FunId, FunctionEnv, GlobalEnv, Loc, QualifiedId, QualifiedInstId},
     ty::{PrimitiveType, Type},
 };
 
@@ -28,7 +25,7 @@ use crate::{
 // Revert reasons
 pub const REVERT_ERR_NON_PAYABLE_FUN: usize = 99;
 pub const UNKNOWN_SIGNATURE_AND_NO_FALLBACK_DEFINED: usize = 98;
-pub const NO_RECIVE_OR_FALLBACK_FUN: usize = 97;
+pub const NO_RECEIVE_OR_FALLBACK_FUN: usize = 97;
 pub const ABI_DECODING_DATA_TOO_SHORT: usize = 96;
 pub const ABI_DECODING_PARAM_VALIDATION: usize = 95;
 
@@ -57,22 +54,48 @@ type AuxilaryFunctionGenerator = dyn FnOnce(&mut Generator, &Context);
 // Entry point
 
 impl Generator {
-    /// Run the generator and produce output written to a file.
-    pub fn run(options: &Options, env: &GlobalEnv) -> anyhow::Result<()> {
-        let ctx = Context::new(options, env);
+    /// Run the generator and produce a pair of contract name and Yul contract object.
+    pub fn run(options: &Options, env: &GlobalEnv) -> (String, String) {
+        let ctx = Context::new(options, env, false);
         let mut gen = Generator::default();
-        gen.objects(&ctx);
-        ctx.writer
-            .process_result(|contents| fs::write(&options.output, contents))?;
-        Ok(())
+        let contract_funs = ctx.get_target_functions(attributes::is_contract_fun);
+        if contract_funs.is_empty() {
+            ctx.env
+                .error(&env.unknown_loc(), "no EVM contract functions found");
+            return ("".to_string(), "".to_string());
+        }
+        // Use the module of the first function to determine contract name and location.
+        // TODO: we want to make the contract name configurable by options
+        let first_module = &contract_funs[0].module_env;
+        let contract_name = ctx.make_contract_name(first_module);
+        gen.contract_object(&ctx, first_module.get_loc(), &contract_name, &contract_funs);
+        (contract_name, ctx.writer.extract_result())
     }
 
-    /// Run the generator and produce output to a string.
-    pub fn run_to_string(options: &Options, env: &GlobalEnv) -> String {
-        let ctx = Context::new(options, env);
-        let mut gen = Generator::default();
-        gen.objects(&ctx);
-        ctx.writer.extract_result()
+    // Run the generator for unit tests and produce a mapping from function id to Yul test object.
+    pub fn run_for_tests(
+        options: &Options,
+        env: &GlobalEnv,
+    ) -> BTreeMap<QualifiedId<FunId>, String> {
+        let mut res = BTreeMap::new();
+        let ctx = Context::new(options, env, /*for_test*/ true);
+
+        // Go over all evm_test functions which are in modules which are target of compilation,
+        // and generate a test object for them.
+        for module in env.get_modules() {
+            if !module.is_target() {
+                continue;
+            }
+            for fun in module.get_functions() {
+                if attributes::is_test_fun(&fun) {
+                    let mut gen = Generator::default();
+                    gen.test_object(&ctx, &fun);
+                    res.insert(fun.get_qualified_id(), ctx.writer.extract_result());
+                }
+            }
+        }
+
+        res
     }
 }
 
@@ -80,10 +103,80 @@ impl Generator {
 // Object generation
 
 impl Generator {
-    /// Generates Yul objects. For each contract module, one Yul object is created.
-    /// TODO: alternatively, we may collect all #[callable] functions independent of module
-    /// context, and put them into one contract object.
-    fn objects(&mut self, ctx: &Context) {
+    /// Generate contract object for given contract functions.
+    fn contract_object(
+        &mut self,
+        ctx: &Context,
+        contract_loc: Loc,
+        contract_name: &str,
+        contract_funs: &[FunctionEnv<'_>],
+    ) {
+        self.header(ctx);
+        // Initialize contract specific state
+        self.contract_loc = contract_loc;
+        emit!(ctx.writer, "object \"{}\" ", contract_name);
+        ctx.emit_block(|| {
+            // Generate the deployment code block
+            self.begin_code_block(ctx);
+            let contract_deployed_name = format!("{}_deployed", contract_name);
+            emitln!(
+                ctx.writer,
+                "codecopy(0, dataoffset(\"{}\"), datasize(\"{}\"))",
+                contract_deployed_name,
+                contract_deployed_name
+            );
+            self.optional_creator(ctx);
+            emitln!(
+                ctx.writer,
+                "return(0, datasize(\"{}\"))",
+                contract_deployed_name,
+            );
+            self.end_code_block(ctx);
+
+            // Generate the runtime object
+            emit!(ctx.writer, "object \"{}\" ", contract_deployed_name);
+            ctx.emit_block(|| {
+                self.begin_code_block(ctx);
+                emitln!(
+                    ctx.writer,
+                    "mstore(${MEM_SIZE_LOC}, memoryguard(${USED_MEM}))"
+                );
+                self.callable_functions(ctx, contract_funs);
+                self.end_code_block(ctx);
+            })
+        })
+    }
+
+    /// Generate test object for given function.
+    ///
+    /// A test object contains no nested objects and is intended to execute at transaction time,
+    /// without actually deploying any contract code.
+    fn test_object(&mut self, ctx: &Context, test: &FunctionEnv) {
+        self.header(ctx);
+        ctx.check_no_generics(test);
+        if test.get_parameter_count() > 0 || test.get_return_count() > 0 {
+            ctx.env.error(
+                &test.get_loc(),
+                "test functions cannot have parameters or return values \
+                    at this point of time",
+            );
+            return;
+        }
+        let fun_id = test.get_qualified_id().instantiate(vec![]);
+        let test_contract_name = format!("test_{}", ctx.make_function_name(&fun_id));
+        emit!(ctx.writer, "object \"{}\" ", test_contract_name);
+        ctx.emit_block(|| {
+            self.begin_code_block(ctx);
+            self.need_move_function(&fun_id);
+            let fun_name = ctx.make_function_name(&fun_id);
+            emitln!(ctx.writer, "{}()", fun_name);
+            emitln!(ctx.writer, "return (0, 0)");
+            self.end_code_block(ctx);
+        });
+    }
+
+    /// Generate header for output Yul.
+    fn header(&self, ctx: &Context) {
         emitln!(
             ctx.writer,
             "\
@@ -102,64 +195,11 @@ impl Generator {
             );
         }
         emitln!(ctx.writer);
-
-        let contract_modules = ctx
-            .env
-            .get_modules()
-            .filter(|m| m.is_target() && attributes::is_contract_module(m))
-            .collect_vec();
-        for module in contract_modules {
-            self.contract(ctx, &module)
-        }
-    }
-
-    /// Generate contract object for given module.
-    fn contract(&mut self, ctx: &Context, module: &ModuleEnv<'_>) {
-        // Initialize contract specific state
-        self.contract_loc = module.get_loc();
-        self.type_sig_map.clear();
-
-        // Generate the contract object.
-        let contract_name = ctx.make_contract_name(module);
-        emit!(ctx.writer, "object \"{}\" ", contract_name);
-        ctx.emit_block(|| {
-            // Generate the deployment code block
-            self.begin_code_block(ctx);
-            let contract_deployed_name = format!("{}_deployed", contract_name);
-            emitln!(
-                ctx.writer,
-                "codecopy(0, dataoffset(\"{}\"), datasize(\"{}\"))",
-                contract_deployed_name,
-                contract_deployed_name
-            );
-            self.optional_creator(ctx, module);
-            emitln!(
-                ctx.writer,
-                "return(0, datasize(\"{}\"))",
-                contract_deployed_name,
-            );
-            self.end_code_block(ctx);
-
-            // Generate the runtime object
-            emit!(ctx.writer, "object \"{}\" ", contract_deployed_name);
-            ctx.emit_block(|| {
-                self.begin_code_block(ctx);
-                emitln!(
-                    ctx.writer,
-                    "mstore(${MEM_SIZE_LOC}, memoryguard(${USED_MEM}))"
-                );
-                self.callable_functions(ctx, module);
-                self.end_code_block(ctx);
-            })
-        })
     }
 
     /// Generate optional creator (contract constructor).
-    fn optional_creator(&mut self, ctx: &Context, module: &ModuleEnv<'_>) {
-        let mut creators = module
-            .get_functions()
-            .filter(|f| attributes::is_create_fun(f))
-            .collect_vec();
+    fn optional_creator(&mut self, ctx: &Context) {
+        let mut creators = ctx.get_target_functions(attributes::is_create_fun);
         if creators.len() > 1 {
             ctx.env
                 .error(&creators[1].get_loc(), "multiple #[create] functions")
@@ -177,11 +217,8 @@ impl Generator {
     }
 
     /// Generate optional receive function.
-    fn optional_receive(&mut self, ctx: &Context, module: &ModuleEnv<'_>) -> bool {
-        let mut receives = module
-            .get_functions()
-            .filter(|f| attributes::is_receive_fun(f))
-            .collect_vec();
+    fn optional_receive(&mut self, ctx: &Context) -> bool {
+        let mut receives = ctx.get_target_functions(attributes::is_receive_fun);
         if receives.len() > 1 {
             ctx.env
                 .error(&receives[1].get_loc(), "multiple #[receive] functions")
@@ -221,11 +258,8 @@ impl Generator {
     }
 
     /// Generate fallback function.
-    fn generate_fallback(&mut self, ctx: &Context, module: &ModuleEnv<'_>, receive_ether: bool) {
-        let mut fallbacks = module
-            .get_functions()
-            .filter(|f| attributes::is_fallback_fun(f))
-            .collect_vec();
+    fn generate_fallback(&mut self, ctx: &Context, receive_ether: bool) {
+        let mut fallbacks = ctx.get_target_functions(attributes::is_fallback_fun);
         if fallbacks.len() > 1 {
             ctx.env
                 .error(&fallbacks[1].get_loc(), "multiple #[fallback] functions")
@@ -264,7 +298,7 @@ impl Generator {
                 emitln!(ctx.writer, "return(add(retval, 0x20), mload(retval))");
             }
         } else {
-            let mut err_msg = NO_RECIVE_OR_FALLBACK_FUN;
+            let mut err_msg = NO_RECEIVE_OR_FALLBACK_FUN;
             if receive_ether {
                 err_msg = UNKNOWN_SIGNATURE_AND_NO_FALLBACK_DEFINED;
             }
@@ -597,11 +631,8 @@ impl Generator {
         fun: &FunctionEnv<'_>,
         selectors: &mut BTreeMap<String, QualifiedId<FunId>>,
     ) {
-        let fun_id = &fun
-            .module_env
-            .get_id()
-            .qualified(fun.get_id())
-            .instantiate(vec![]);
+        let fun_id = &fun.get_qualified_id().instantiate(vec![]);
+        self.need_move_function(fun_id);
         let function_name = ctx.make_function_name(fun_id);
         let original_fun_name = fun.symbol_pool().string(fun.get_name());
         let fun_sig = format!(
@@ -671,11 +702,7 @@ impl Generator {
     }
 
     /// Generate dispatcher routine
-    fn generate_dispatcher_routine(&mut self, ctx: &Context, module: &ModuleEnv<'_>) {
-        let callables = module
-            .get_functions()
-            .filter(|f| attributes::is_callable_fun(f))
-            .collect_vec();
+    fn generate_dispatcher_routine(&mut self, ctx: &Context, contract_funs: &[FunctionEnv<'_>]) {
         emitln!(ctx.writer, "if iszero(lt(calldatasize(), 4))");
         let mut selectors = BTreeMap::new();
         let para_vec = vec!["224".to_string(), "calldataload(0)".to_string()];
@@ -683,79 +710,42 @@ impl Generator {
         ctx.emit_block(|| {
             emitln!(ctx.writer, "let selector := {}", shr224);
             emitln!(ctx.writer, "switch selector");
-            for callable in callables {
-                if !self.is_suitable_for_dispatch(ctx, &callable) {
+            for fun in contract_funs {
+                if !attributes::is_callable_fun(fun) {
+                    // Only dispatch callables
+                    continue;
+                }
+                if !self.is_suitable_for_dispatch(ctx, fun) {
                     ctx.env.diag(
                         Severity::Warning,
-                        &callable.get_loc(),
+                        &fun.get_loc(),
                         "cannot dispatch this function because of unsupported parameter types",
                     );
                     continue;
                 }
-                self.generate_dispatch_item(ctx, &callable, &mut selectors);
+                self.generate_dispatch_item(ctx, fun, &mut selectors);
             }
             emitln!(ctx.writer, "default {}");
         });
-        let receive_exists = self.optional_receive(ctx, module);
-        self.generate_fallback(ctx, module, receive_exists);
+        let receive_exists = self.optional_receive(ctx);
+        self.generate_fallback(ctx, receive_exists);
     }
 
     /// Determine whether the function is suitable as a dispatcher item.
-    fn is_suitable_for_dispatch(&self, ctx: &Context, fun_env: &FunctionEnv) -> bool {
+    fn is_suitable_for_dispatch(&self, ctx: &Context, fun: &FunctionEnv) -> bool {
         // TODO: once we support structs and vectors, remove check for them
-        fun_env
-            .get_parameter_types()
+        fun.get_parameter_types()
             .iter()
-            .chain(fun_env.get_return_types().iter())
+            .chain(fun.get_return_types().iter())
             .all(|ty| !ty.is_reference() && !ctx.type_allocates_memory(ty))
     }
 
     /// Generate Yul definitions for all callable functions.
-    fn callable_functions(&mut self, ctx: &Context, module: &ModuleEnv<'_>) {
-        let callables = module
-            .get_functions()
-            .filter(|f| {
-                attributes::is_callable_fun(f)
-                    || attributes::is_fallback_fun(f)
-                    || attributes::is_receive_fun(f)
-            })
-            .collect_vec();
-        self.generate_dispatcher_routine(ctx, module);
-        //   For now, we emit dummy calls so functions are referenced and the Yul optimizer does
-        //   not remove them.
-        emitln!(
-            ctx.writer,
-            "\n// Dummy calls to reference callables for Yul optimizer"
-        );
-        let mut counter = 0;
-        for callable in &callables {
-            let n = callable.get_return_count();
-            if n > 0 {
-                let dummy_locals = (0..n).map(|i| format!("$dummy{}", counter + i)).join(", ");
-                emit!(ctx.writer, "let {} := ", dummy_locals);
-            }
-            emitln!(
-                ctx.writer,
-                "{}({})",
-                ctx.make_function_name(&callable.get_qualified_id().instantiate(vec![])),
-                (0..callable.get_parameter_count())
-                    .map(|i| format!("sload({})", 100 + counter + i))
-                    .join(", ")
-            );
-            for i in 0..n {
-                emitln!(
-                    ctx.writer,
-                    "sstore({}, $dummy{})",
-                    200 + counter + i,
-                    counter + i
-                )
-            }
-            counter += n;
-        }
-        emitln!(ctx.writer);
-        for callable in callables {
-            ctx.check_no_generics(&callable);
-            self.function(ctx, &callable.get_qualified_id().instantiate(vec![]))
+    fn callable_functions(&mut self, ctx: &Context, contract_funs: &[FunctionEnv<'_>]) {
+        self.generate_dispatcher_routine(ctx, contract_funs);
+        for fun in contract_funs {
+            ctx.check_no_generics(fun);
+            self.function(ctx, &fun.get_qualified_id().instantiate(vec![]))
         }
     }
 
@@ -850,7 +840,7 @@ impl Generator {
     }
 
     /// Indicate that a Yul function is needed.
-    pub fn need_yul_function(&mut self, yul_fun: YulFunction) {
+    pub(crate) fn need_yul_function(&mut self, yul_fun: YulFunction) {
         if !self.needed_yul_functions.contains(&yul_fun) {
             self.needed_yul_functions.insert(yul_fun);
             for dep in yul_fun.yule_deps() {

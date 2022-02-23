@@ -45,14 +45,6 @@ object "A2_M" {
                 default {}
             }
             $Abort(97)
-
-            // Dummy calls to reference callables for Yul optimizer
-            A2_M_increment_a(sload(100))
-            let $dummy0 := A2_M_test(sload(100))
-            sstore(200, $dummy0)
-            let $dummy1 := A2_M_unpublish(sload(101))
-            sstore(201, $dummy1)
-
             function A2_M_increment_a(addr) {
                 let r, $t2, $t3, $t4, $t5, $t6, $t7
                 // $t2 := borrow_global<M::S>($t0)
@@ -160,7 +152,8 @@ object "A2_M" {
                 tail := add(headStart, 0)
             }
             function $Abort(code) {
-                revert(0, 0) // TODO: convention to store code
+                mstore(0, code)
+                revert(24, 8) // TODO: store code as a string?
             }
             function $AbortBuiltin() {
                 $Abort(sub(0, 1))
@@ -305,7 +298,6 @@ object "A2_M" {
 
 !! Optimized Yul
 
-Pretty printed source:
 /// @use-src 2:"tests/Resources.move"
 object "A2_M" {
     code {
@@ -324,9 +316,17 @@ object "A2_M" {
                 {
                     switch shr(224, calldataload(_1))
                     case 0x6fd78c6f {
-                        if callvalue() { revert(_1, _1) }
+                        if callvalue()
+                        {
+                            mstore(_1, 99)
+                            revert(24, 8)
+                        }
                         let $base_offset := or(252, shl(abi_decode_address(calldatasize()), 60))
-                        if not($StorageLoadU8($base_offset)) { revert(_1, _1) }
+                        if not($StorageLoadU8($base_offset))
+                        {
+                            mstore(_1, not(0))
+                            revert(24, 8)
+                        }
                         let _2 := 1
                         let _3 := 32
                         let $t2 := or(true, shl(add($base_offset, _3), _2))
@@ -358,13 +358,13 @@ object "A2_M" {
                         return(mload(_1), _1)
                     }
                     case 0xbb29998e {
-                        if callvalue() { revert(_1, _1) }
+                        if callvalue() { $Abort() }
                         let ret := A2_M_test(abi_decode_address(calldatasize()))
                         let memPos := mload(_1)
                         return(memPos, sub(abi_encode_bool$(memPos, ret), memPos))
                     }
                 }
-                revert(_1, _1)
+                $Abort_969()
             }
             function A2_M_test(addr) -> $result
             {
@@ -377,10 +377,28 @@ object "A2_M" {
             }
             function abi_decode_address(dataEnd) -> value
             {
-                if slt(add(dataEnd, not(3)), 32) { revert(0, 0) }
+                if slt(add(dataEnd, not(3)), 32)
+                {
+                    mstore(0, 96)
+                    revert(24, 8)
+                }
                 let value_1 := calldataload(4)
-                if iszero(eq(value_1, and(value_1, sub(shl(160, 1), 1)))) { revert(0, 0) }
+                if iszero(eq(value_1, and(value_1, sub(shl(160, 1), 1))))
+                {
+                    mstore(0, 95)
+                    revert(24, 8)
+                }
                 value := value_1
+            }
+            function $Abort()
+            {
+                mstore(0, 99)
+                revert(24, 8)
+            }
+            function $Abort_969()
+            {
+                mstore(0, 97)
+                revert(24, 8)
             }
             function $ToWordOffs(offs) -> word_offs, bit_offs
             {
@@ -446,14 +464,16 @@ object "A2_M" {
             }
             function $AddU64(x) -> r
             {
-                if lt(sub(0xffffffffffffffff, x), 1) { revert(0, 0) }
+                if lt(sub(0xffffffffffffffff, x), 1)
+                {
+                    mstore(0, not(0))
+                    revert(24, 8)
+                }
                 r := add(x, 1)
             }
         }
     }
 }
-
-
 
 !! Move-To-Yul Diagnostics:
  warning: cannot dispatch this function because of unsupported parameter types

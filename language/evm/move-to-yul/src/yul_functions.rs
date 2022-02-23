@@ -141,7 +141,8 @@ functions! {
 // -------------------------------------------------------------------------------------------
 // Abort
 Abort: "(code) {
-    revert(0, 0) // TODO: convention to store code
+    mstore(0, code)
+    revert(24, 8) // TODO: store code as a string?
 }",
 AbortBuiltin: "() {
     $Abort(sub(0, 1))

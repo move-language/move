@@ -23,17 +23,14 @@ object "A2_M" {
                 $Abort(99)
             }
             A2_M_fallback() stop()
-
-            // Dummy calls to reference callables for Yul optimizer
-            A2_M_fallback()
-
             function A2_M_fallback() {
                 // return ()
                 /// @src 2:61:65
             }
 
             function $Abort(code) {
-                revert(0, 0) // TODO: convention to store code
+                mstore(0, code)
+                revert(24, 8) // TODO: store code as a string?
             }
             function $ShiftRight(bits, value) -> r {
                 r := shr(bits, value) // evm version >= constantinople
@@ -45,7 +42,6 @@ object "A2_M" {
 
 !! Optimized Yul
 
-Pretty printed source:
 /// @use-src 2:"tests/fallback-receive-test/FallbackOnly.move"
 object "A2_M" {
     code {
@@ -59,7 +55,11 @@ object "A2_M" {
         code {
             {
                 mstore(0, memoryguard(0xa0))
-                if callvalue() { revert(0, 0) }
+                if callvalue()
+                {
+                    mstore(0, 99)
+                    revert(24, 8)
+                }
                 stop()
             }
         }

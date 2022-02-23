@@ -52,38 +52,49 @@ pub(crate) struct StructLayout {
 
 impl<'a> Context<'a> {
     /// Create a new context.
-    pub fn new(options: &'a Options, env: &'a GlobalEnv) -> Self {
+    pub fn new(options: &'a Options, env: &'a GlobalEnv, for_test: bool) -> Self {
         let writer = CodeWriter::new(env.unknown_loc());
         writer.set_emit_hook(yul_functions::substitute_placeholders);
         Self {
             options,
             env,
-            targets: Self::create_bytecode(options, env),
+            targets: Self::create_bytecode(options, env, for_test),
             writer,
             struct_layout: Default::default(),
         }
     }
 
     /// Helper to create the stackless bytecode.
-    fn create_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTargetsHolder {
+    fn create_bytecode(
+        options: &Options,
+        env: &GlobalEnv,
+        for_test: bool,
+    ) -> FunctionTargetsHolder {
         // Populate the targets holder with all needed functions.
         let mut targets = FunctionTargetsHolder::default();
+        let is_used_fun = |fun: &FunctionEnv| {
+            if for_test {
+                attributes::is_test_fun(fun)
+            } else {
+                attributes::is_callable_fun(fun)
+                    || attributes::is_create_fun(fun)
+                    || attributes::is_receive_fun(fun)
+                    || attributes::is_fallback_fun(fun)
+            }
+        };
         for module in env.get_modules() {
-            if !module.is_target() || !attributes::is_contract_module(&module) {
+            if !module.is_target() {
                 continue;
             }
             for fun in module.get_functions() {
-                if attributes::is_callable_fun(&fun)
-                    || attributes::is_create_fun(&fun)
-                    || attributes::is_receive_fun(&fun)
-                    || attributes::is_fallback_fun(&fun)
-                {
+                if is_used_fun(&fun) {
                     Self::add_fun(&mut targets, &fun)
                 }
             }
         }
-        // Run a minimal transformation pipeline. For now, we do reaching-def and live-var
-        // to clean up some churn created by the conversion from stack to stackless bytecode.
+        // Run a minimal transformation pipeline. For now, we do some evm pre-processing,
+        // and reaching-def and live-var to clean up some churn created by the conversion from
+        // stack to stackless bytecode.
         let mut pipeline = FunctionTargetPipeline::default();
         pipeline.add_processor(EvmTransformationProcessor::new());
         pipeline.add_processor(ReachingDefProcessor::new());
@@ -106,6 +117,17 @@ impl<'a> Context<'a> {
                 Self::add_fun(targets, &called_fun)
             }
         }
+    }
+
+    /// Return iterator for all functions in the environment which stem from a target module
+    /// and which satsify predicate.
+    pub fn get_target_functions(&self, p: impl Fn(&FunctionEnv) -> bool) -> Vec<FunctionEnv<'a>> {
+        self.env
+            .get_modules()
+            .filter(|m| m.is_target())
+            .map(|m| m.into_functions().filter(|f| p(f)))
+            .flatten()
+            .collect()
     }
 
     /// Check whether given Move function has no generics; report error otherwise.

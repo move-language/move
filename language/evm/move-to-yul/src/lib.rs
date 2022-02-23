@@ -19,6 +19,7 @@ use move_model::{
     model::GlobalEnv, options::ModelBuilderOptions, parse_addresses_from_options,
     run_model_builder_with_options,
 };
+use std::fs;
 
 /// Run move-to-yul compiler and print errors to stderr.
 pub fn run_to_yul_errors_to_stderr(options: Options) -> anyhow::Result<()> {
@@ -42,13 +43,15 @@ pub fn run_to_yul<W: WriteColor>(error_writer: &mut W, options: Options) -> anyh
         error_writer,
         "exiting with Move build errors",
     )?;
-    Generator::run(&options, &env)?;
+    let (_, content) = Generator::run(&options, &env);
     check_errors(
         &env,
         &options,
         error_writer,
         "exiting with Yul generation errors",
-    )
+    )?;
+    fs::write(options.output, &content)?;
+    Ok(())
 }
 
 pub fn check_errors<W: WriteColor>(

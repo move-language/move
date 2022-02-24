@@ -15,7 +15,7 @@ object "A2_U256Arith" {
             mstore(0, memoryguard(160))
             if iszero(lt(calldatasize(), 4))
             {
-                let selector := $ShiftRight(224, calldataload(0))
+                let selector := $Shr(calldataload(0), 224)
                 switch selector
                 case 0x4f2be91f
                 {
@@ -466,10 +466,10 @@ object "A2_U256Arith" {
                 r := mod(x, y)
             }
             function $Shr(x, y) -> r {
-                r := shr(x, y)
+                r := shr(y, x)
             }
             function $ShlU256(x, y) -> r {
-                r := and(shl(x, y), 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+                r := and(shl(y, x), 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
             }
             function $Gt(x, y) -> r {
                 r := gt(x, y)
@@ -492,10 +492,7 @@ object "A2_U256Arith" {
             function $CastU256(hi, lo) -> r {
                 if gt(hi, 0xffffffffffffffffffffffffffffffff) { $AbortBuiltin() }
                 if gt(lo, 0xffffffffffffffffffffffffffffffff) { $AbortBuiltin() }
-                r := add(shl(hi, 128), lo)
-            }
-            function $ShiftRight(bits, value) -> r {
-                r := shr(bits, value) // evm version >= constantinople
+                r := add(shl(128, hi), lo)
             }
         }
     }

@@ -14,7 +14,7 @@ object "A2_M" {
             mstore(0, memoryguard(160))
             if iszero(lt(calldatasize(), 4))
             {
-                let selector := $ShiftRight(224, calldataload(0))
+                let selector := $Shr(calldataload(0), 224)
                 switch selector
                 default {}
             }
@@ -24,8 +24,8 @@ object "A2_M" {
                 /// @src 2:73:80
             }
 
-            function $ShiftRight(bits, value) -> r {
-                r := shr(bits, value) // evm version >= constantinople
+            function $Shr(x, y) -> r {
+                r := shr(y, x)
             }
         }
     }

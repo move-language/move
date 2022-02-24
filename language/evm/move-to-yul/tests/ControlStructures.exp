@@ -14,7 +14,7 @@ object "A2_M" {
             mstore(0, memoryguard(160))
             if iszero(lt(calldatasize(), 4))
             {
-                let selector := $ShiftRight(224, calldataload(0))
+                let selector := $Shr(calldataload(0), 224)
                 switch selector
                 case 0x70e8dbcb
                 {
@@ -337,6 +337,9 @@ object "A2_M" {
                 if eq(y, 0) { $AbortBuiltin() }
                 r := mod(x, y)
             }
+            function $Shr(x, y) -> r {
+                r := shr(y, x)
+            }
             function $Gt(x, y) -> r {
                 r := gt(x, y)
             }
@@ -345,9 +348,6 @@ object "A2_M" {
             }
             function $Eq(x, y) -> r {
                 r := eq(x, y)
-            }
-            function $ShiftRight(bits, value) -> r {
-                r := shr(bits, value) // evm version >= constantinople
             }
         }
     }

@@ -4,389 +4,27 @@
 
 /// @use-src 2:"tests/Structs.move"
 
-object "A2_M" {
+object "Empty" {
     code {
-        codecopy(0, dataoffset("A2_M_deployed"), datasize("A2_M_deployed"))
-        return(0, datasize("A2_M_deployed"))
+        codecopy(0, dataoffset("Empty_deployed"), datasize("Empty_deployed"))
+        return(0, datasize("Empty_deployed"))
     }
-    object "A2_M_deployed" {
+    object "Empty_deployed" {
         code {
             mstore(0, memoryguard(160))
             if iszero(lt(calldatasize(), 4))
             {
-                let selector := $ShiftRight(224, calldataload(0))
+                let selector := $Shr(calldataload(0), 224)
                 switch selector
-                case 0x83197ef0
-                {
-                    // destroy()
-                    if callvalue()
-                    {
-                        $Abort(99)
-                    }
-                    A2_M_destroy()
-                    let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
-                    return(memPos, sub(memEnd, memPos))
-                }
                 default {}
             }
             $Abort(97)
-            function A2_M_destroy() {
-                let _s, $t1, $t2, $t3
-                // $t1 := 1
-                /// @src 2:814:815
-                $t1 := 1
-                // $t2 := false
-                /// @src 2:817:822
-                $t2 := false
-                // $t3 := M::pack_S($t1, $t2)
-                /// @src 2:807:823
-                $t3 := A2_M_pack_S($t1, $t2)
-                // destroy($t3)
-                /// @src 2:802:804
-                {
-                    let $field_ptr := $LoadU256(add($t3, 0))
-                    $Free($field_ptr, 16)
-                }
-                $Free($t3, 41)
-                // return ()
-                /// @src 2:823:824
-            }
-
-            function A2_M_pack_S(a, b) -> $result {
-                let $t2, $t3, $t4
-                // $t2 := (u128)($t0)
-                /// @src 2:287:298
-                $t2 := $CastU128(a)
-                // $t3 := M::pack_S2($t2)
-                /// @src 2:279:299
-                $t3 := A2_M_pack_S2($t2)
-                // $t4 := pack M::S($t0, $t1, $t3)
-                /// @src 2:268:300
-                {
-                    let $mem := $Malloc(41)
-                    $MemoryStoreU64(add($mem, 32), a)
-                    $MemoryStoreU8(add($mem, 40), b)
-                    $MemoryStoreU256(add($mem, 0), $t3)
-                    $t4 := $mem
-                }
-                // return $t4
-                /// @src 2:268:300
-                $result := $t4
-            }
-
-            function A2_M_pack_S2(x) -> $result {
-                let $t1
-                // $t1 := pack M::S2($t0)
-                /// @src 2:197:202
-                {
-                    let $mem := $Malloc(16)
-                    $MemoryStoreU128(add($mem, 0), x)
-                    $t1 := $mem
-                }
-                // return $t1
-                /// @src 2:197:202
-                $result := $t1
-            }
-
-            function A2_M_read_and_write_s() -> $result {
-                let x, $t2, $t3, $t4, $t5, $t6, $t7
-                let $locals := $Malloc(32)
-                // $t2 := 1
-                /// @src 2:574:575
-                $t2 := 1
-                // $t3 := false
-                /// @src 2:577:582
-                $t3 := false
-                // $t0 := M::pack_S($t2, $t3)
-                /// @src 2:567:583
-                mstore(add($locals, 32), A2_M_pack_S($t2, $t3))
-                // $t4 := borrow_local($t0)
-                /// @src 2:608:610
-                $t4 := $MakePtr(false, add($locals, 32))
-                // $t5 := M::read_S($t4)
-                /// @src 2:601:611
-                $t5 := A2_M_read_S($t4)
-                // $t6 := borrow_local($t0)
-                /// @src 2:629:635
-                $t6 := $MakePtr(false, add($locals, 32))
-                // M::write_S($t6, $t5)
-                /// @src 2:621:639
-                A2_M_write_S($t6, $t5)
-                // $t7 := move($t0)
-                /// @src 2:649:650
-                $t7 := mload(add($locals, 32))
-                // return $t7
-                /// @src 2:649:650
-                $result := $t7
-                $Free($locals, 32)
-            }
-
-            function A2_M_unpack(s) -> $result {
-                let _a, _b, c, $t4, $t5, $t6
-                // ($t4, $t5, $t6) := unpack M::S($t0)
-                /// @src 2:713:731
-                $t4 := $MemoryLoadU64(add(s, 32))
-                $t5 := $MemoryLoadU8(add(s, 40))
-                $t6 := $MemoryLoadU256(add(s, 0))
-                $Free(s, 41)
-                // destroy($t5)
-                /// @src 2:725:727
-                // destroy($t4)
-                /// @src 2:718:720
-                // return $t6
-                /// @src 2:745:746
-                $result := $t6
-            }
-
-            function A2_M_write_S(s, v) {
-                let $t2, $t3, $t4, $t5, $t6, $t7
-                // $t2 := borrow_field<M::S>.a($t0)
-                /// @src 2:456:459
-                $t2 := $IndexPtr($LoadU256(s), 32)
-                // write_ref($t2, $t1)
-                /// @src 2:456:463
-                $StoreU64($t2, v)
-                // $t3 := borrow_field<M::S>.a($t0)
-                /// @src 2:482:485
-                $t3 := $IndexPtr($LoadU256(s), 32)
-                // $t4 := read_ref($t3)
-                /// @src 2:482:485
-                $t4 := $LoadU64($t3)
-                // $t5 := (u128)($t4)
-                /// @src 2:481:494
-                $t5 := $CastU128($t4)
-                // $t6 := borrow_field<M::S>.c($t0)
-                /// @src 2:473:476
-                $t6 := $IndexPtr($LoadU256(s), 0)
-                // $t7 := borrow_field<M::S2>.x($t6)
-                /// @src 2:473:478
-                $t7 := $IndexPtr($LoadU256($t6), 0)
-                // write_ref($t7, $t5)
-                /// @src 2:473:494
-                $StoreU128($t7, $t5)
-                // return ()
-                /// @src 2:494:495
-            }
-
-            function A2_M_read_S(s) -> $result {
-                let $t1, $t2, $t3, $t4, $t5, $t6, $t7
-                // $t1 := borrow_field<M::S>.a($t0)
-                /// @src 2:364:367
-                $t1 := $IndexPtr($LoadU256(s), 32)
-                // $t2 := read_ref($t1)
-                /// @src 2:364:367
-                $t2 := $LoadU64($t1)
-                // $t3 := borrow_field<M::S>.c($t0)
-                /// @src 2:371:374
-                $t3 := $IndexPtr($LoadU256(s), 0)
-                // $t4 := borrow_field<M::S2>.x($t3)
-                /// @src 2:371:376
-                $t4 := $IndexPtr($LoadU256($t3), 0)
-                // $t5 := read_ref($t4)
-                /// @src 2:371:376
-                $t5 := $LoadU128($t4)
-                // $t6 := (u64)($t5)
-                /// @src 2:370:384
-                $t6 := $CastU64($t5)
-                // $t7 := +($t2, $t6)
-                /// @src 2:368:369
-                $t7 := $AddU64($t2, $t6)
-                // return $t7
-                /// @src 2:364:384
-                $result := $t7
-            }
-
-            function abi_encode_tuple_(headStart ) -> tail {
-                tail := add(headStart, 0)
-            }
             function $Abort(code) {
                 mstore(0, code)
                 revert(24, 8) // TODO: store code as a string?
             }
-            function $AbortBuiltin() {
-                $Abort(sub(0, 1))
-            }
-            function $Malloc(size) -> offs {
-                offs := mload(0)
-                // pad to word size
-                mstore(0, add(offs, shr(add(size, 31), 5)))
-            }
-            function $Free(offs, size) {
-            }
-            function $MakePtr(is_storage, offs) -> ptr {
-              ptr := or(is_storage, shl(offs, 1))
-            }
-            function $IsStoragePtr(ptr) -> b {
-              b := and(ptr, 0x1)
-            }
-            function $OffsetPtr(ptr) -> offs {
-              offs := shr(ptr, 1)
-            }
-            function $ToWordOffs(offs) -> word_offs, bit_offs {
-              word_offs := shr(offs, 5)
-              bit_offs := shl(and(offs, 0x1F), 3)
-            }
-            function $StorageKey(group, word) -> key {
-              mstore(32, word)
-              mstore(64, group)
-              key := keccak256(32, 36)
-            }
-            function $IndexPtr(ptr, offs) -> new_ptr {
-              new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
-            }
-            function $MemoryLoadU8(offs) -> val {
-              val := and(mload(offs), 0xff)
-            }
-            function $MemoryStoreU8(offs, val) {
-              mstore8(offs, val)
-            }
-            function $LoadU64(ptr) -> val {
-              let offs := $OffsetPtr(ptr)
-              switch $IsStoragePtr(ptr)
-              case 0 {
-                val := $MemoryLoadU64(offs)
-              }
-              default {
-                val := $StorageLoadU64(offs)
-              }
-            }
-            function $MemoryLoadU64(offs) -> val {
-              val := and(mload(offs), 0xffffffffffffffff)
-            }
-            function $StorageLoadU64(offs) -> val {
-              let word_offs, bit_offs := $ToWordOffs(offs)
-              let key := $StorageKey(0, word_offs)
-              val := and(shr(sload(key), bit_offs), 0xffffffffffffffff)
-              let used_bits := sub(256, bit_offs)
-              if lt(used_bits, 64) {
-                let overflow_bits := sub(64, used_bits)
-                let mask := sub(shl(1, overflow_bits), 1)
-                key := $StorageKey(0, add(word_offs, 1))
-                val := or(val, shl(and(sload(key), mask), used_bits))
-              }
-            }
-            function $StoreU64(ptr, val) {
-              let offs := $OffsetPtr(ptr)
-              switch $IsStoragePtr(ptr)
-              case 0 {
-                $MemoryStoreU64(offs, val)
-              }
-              default {
-                $StorageStoreU64(offs, val)
-              }
-            }
-            function $MemoryStoreU64(offs, val) {
-              mstore(offs, or(and(mload(offs), not(0xffffffffffffffff)), val))
-            }
-            function $StorageStoreU64(offs, val) {
-              let word_offs, bit_offs := $ToWordOffs(offs)
-              let key := $StorageKey(0, word_offs)
-              let word := sload(key)
-              word := or(and(word, not(shl(0xffffffffffffffff, bit_offs))), shl(val, bit_offs))
-              mstore(key, word)
-              let used_bits := sub(256, bit_offs)
-              if lt(used_bits, 64) {
-                let overflow_bits := sub(64, used_bits)
-                let mask := sub(shl(1, overflow_bits), 1)
-                key := $StorageKey(0, add(word_offs, 1))
-                sstore(key, or(and(sload(key), not(mask)), shr(val, used_bits)))
-              }
-            }
-            function $LoadU128(ptr) -> val {
-              let offs := $OffsetPtr(ptr)
-              switch $IsStoragePtr(ptr)
-              case 0 {
-                val := $MemoryLoadU128(offs)
-              }
-              default {
-                val := $StorageLoadU128(offs)
-              }
-            }
-            function $MemoryLoadU128(offs) -> val {
-              val := and(mload(offs), 0xffffffffffffffffffffffffffffffff)
-            }
-            function $StorageLoadU128(offs) -> val {
-              let word_offs, bit_offs := $ToWordOffs(offs)
-              let key := $StorageKey(0, word_offs)
-              val := and(shr(sload(key), bit_offs), 0xffffffffffffffffffffffffffffffff)
-              let used_bits := sub(256, bit_offs)
-              if lt(used_bits, 128) {
-                let overflow_bits := sub(128, used_bits)
-                let mask := sub(shl(1, overflow_bits), 1)
-                key := $StorageKey(0, add(word_offs, 1))
-                val := or(val, shl(and(sload(key), mask), used_bits))
-              }
-            }
-            function $StoreU128(ptr, val) {
-              let offs := $OffsetPtr(ptr)
-              switch $IsStoragePtr(ptr)
-              case 0 {
-                $MemoryStoreU128(offs, val)
-              }
-              default {
-                $StorageStoreU128(offs, val)
-              }
-            }
-            function $MemoryStoreU128(offs, val) {
-              mstore(offs, or(and(mload(offs), not(0xffffffffffffffffffffffffffffffff)), val))
-            }
-            function $StorageStoreU128(offs, val) {
-              let word_offs, bit_offs := $ToWordOffs(offs)
-              let key := $StorageKey(0, word_offs)
-              let word := sload(key)
-              word := or(and(word, not(shl(0xffffffffffffffffffffffffffffffff, bit_offs))), shl(val, bit_offs))
-              mstore(key, word)
-              let used_bits := sub(256, bit_offs)
-              if lt(used_bits, 128) {
-                let overflow_bits := sub(128, used_bits)
-                let mask := sub(shl(1, overflow_bits), 1)
-                key := $StorageKey(0, add(word_offs, 1))
-                sstore(key, or(and(sload(key), not(mask)), shr(val, used_bits)))
-              }
-            }
-            function $LoadU256(ptr) -> val {
-              let offs := $OffsetPtr(ptr)
-              switch $IsStoragePtr(ptr)
-              case 0 {
-                val := $MemoryLoadU256(offs)
-              }
-              default {
-                val := $StorageLoadU256(offs)
-              }
-            }
-            function $MemoryLoadU256(offs) -> val {
-              val := mload(offs)
-            }
-            function $StorageLoadU256(offs) -> val {
-              let word_offs, bit_offs := $ToWordOffs(offs)
-              let key := $StorageKey(0, word_offs)
-              val := shr(sload(key), bit_offs)
-              let used_bits := sub(256, bit_offs)
-              if lt(used_bits, 256) {
-                let overflow_bits := sub(256, used_bits)
-                let mask := sub(shl(1, overflow_bits), 1)
-                key := $StorageKey(0, add(word_offs, 1))
-                val := or(val, shl(and(sload(key), mask), used_bits))
-              }
-            }
-            function $MemoryStoreU256(offs, val) {
-              mstore(offs, val)
-            }
-            function $AddU64(x, y) -> r {
-                if lt(sub(0xffffffffffffffff, x), y) { $AbortBuiltin() }
-                r := add(x, y)
-            }
-            function $CastU64(x) -> r {
-                if gt(x, 0xffffffffffffffff) { $AbortBuiltin() }
-                r := x
-            }
-            function $CastU128(x) -> r {
-                if gt(x, 0xffffffffffffffffffffffffffffffff) { $AbortBuiltin() }
-                r := x
-            }
-            function $ShiftRight(bits, value) -> r {
-                r := shr(bits, value) // evm version >= constantinople
+            function $Shr(x, y) -> r {
+                r := shr(y, x)
             }
         }
     }
@@ -396,58 +34,18 @@ object "A2_M" {
 !! Optimized Yul
 
 /// @use-src 2:"tests/Structs.move"
-object "A2_M" {
+object "Empty" {
     code {
         {
-            let _1 := datasize("A2_M_deployed")
-            codecopy(0, dataoffset("A2_M_deployed"), _1)
+            let _1 := datasize("Empty_deployed")
+            codecopy(0, dataoffset("Empty_deployed"), _1)
             return(0, _1)
         }
     }
-    object "A2_M_deployed" {
+    object "Empty_deployed" {
         code {
             {
-                let _1 := 0
-                mstore(_1, memoryguard(0xa0))
-                if iszero(lt(calldatasize(), 4))
-                {
-                    if eq(0x83197ef0, shr(224, calldataload(_1)))
-                    {
-                        if callvalue()
-                        {
-                            mstore(_1, 99)
-                            revert(24, 8)
-                        }
-                        let offs := mload(_1)
-                        mstore(_1, offs)
-                        mstore(offs, or(and(mload(offs), not(0xffffffffffffffffffffffffffffffff)), 1))
-                        let offs_1 := mload(_1)
-                        mstore(_1, offs_1)
-                        let _2 := add(offs_1, 32)
-                        mstore(_2, or(and(mload(_2), not(0xffffffffffffffff)), 1))
-                        mstore8(add(offs_1, 40), false)
-                        mstore(offs_1, offs)
-                        let offs_2 := shr(offs_1, 1)
-                        switch and(offs_1, 1)
-                        case 0 { }
-                        default {
-                            let word_offs := shr(offs_2, 5)
-                            mstore(32, word_offs)
-                            mstore(64, _1)
-                            let _3 := 256
-                            if lt(sub(_3, shl(and(offs_2, 31), 3)), _3)
-                            {
-                                mstore(32, add(word_offs, 1))
-                                mstore(64, _1)
-                            }
-                        }
-                        return(mload(_1), _1)
-                    }
-                }
-                $Abort()
-            }
-            function $Abort()
-            {
+                mstore(0, memoryguard(0xa0))
                 mstore(0, 97)
                 revert(24, 8)
             }
@@ -455,39 +53,2133 @@ object "A2_M" {
     }
 }
 
-!! Move-To-Yul Diagnostics:
- warning: cannot dispatch this function because of unsupported parameter types
-   ┌─ tests/Structs.move:19:5
-   │
-19 │ ╭     fun pack_S(a: u64, b: bool): S {
-20 │ │         S{a, b, c: pack_S2((a as u128))}
-21 │ │     }
-   │ ╰─────^
+!! Unit tests
 
-warning: cannot dispatch this function because of unsupported parameter types
-   ┌─ tests/Structs.move:14:2
-   │
-14 │ ╭     fun pack_S2(x: u128): S2 {
-15 │ │         S2{x}
-16 │ │     }
-   │ ╰─────^
+// test of M::test_pack_S
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
 
-warning: cannot dispatch this function because of unsupported parameter types
-   ┌─ tests/Structs.move:35:5
-   │
-35 │ ╭     fun read_and_write_s(): S {
-36 │ │         let s = pack_S(1, false);
-37 │ │         let x = read_S(&s);
-38 │ │         write_S(&mut s, x);
-39 │ │         s
-40 │ │     }
-   │ ╰─────^
+/// @use-src 2:"tests/Structs.move"
 
-warning: cannot dispatch this function because of unsupported parameter types
-   ┌─ tests/Structs.move:43:5
-   │
-43 │ ╭     fun unpack(s: S): S2 {
-44 │ │         let S{a: _a, b: _b, c} = s;
-45 │ │         c
-46 │ │     }
-   │ ╰─────^
+object "test_A2_M_test_pack_S" {
+    code {
+        mstore(0, memoryguard(160))
+        A2_M_test_pack_S()
+        return (0, 0)
+        function A2_M_test_pack_S() {
+            let $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21
+            let $locals := $Malloc(32)
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // $t8 := 100
+                    /// @src 2:702:705
+                    $t8 := 100
+                    // abort($t8)
+                    /// @src 2:683:706
+                    $Abort($t8)
+                }
+                case 3 {
+                    // label L0
+                    // $t9 := borrow_local($t0)
+                    /// @src 2:724:725
+                    $t9 := $MakePtr(false, $locals)
+                    // $t10 := borrow_field<M::S>.b($t9)
+                    /// @src 2:724:727
+                    $t10 := $IndexPtr($LoadU256($t9), 40)
+                    // $t11 := read_ref($t10)
+                    /// @src 2:724:727
+                    $t11 := $LoadU8($t10)
+                    // $t12 := true
+                    /// @src 2:731:735
+                    $t12 := true
+                    // $t13 := ==($t11, $t12)
+                    /// @src 2:728:730
+                    $t13 := $Eq($t11, $t12)
+                    // if ($t13) goto L2 else goto L3
+                    /// @src 2:716:741
+                    switch $t13
+                    case 0  { $block := 5 }
+                    default { $block := 6 }
+                }
+                case 4 {
+                    // $t1 := 42
+                    /// @src 2:664:666
+                    $t1 := 42
+                    // $t2 := true
+                    /// @src 2:668:672
+                    $t2 := true
+                    // $t0 := M::pack_S($t1, $t2)
+                    /// @src 2:657:673
+                    mstore($locals, A2_M_pack_S($t1, $t2))
+                    // $t3 := borrow_local($t0)
+                    /// @src 2:691:692
+                    $t3 := $MakePtr(false, $locals)
+                    // $t4 := borrow_field<M::S>.a($t3)
+                    /// @src 2:691:694
+                    $t4 := $IndexPtr($LoadU256($t3), 32)
+                    // $t5 := read_ref($t4)
+                    /// @src 2:691:694
+                    $t5 := $LoadU64($t4)
+                    // $t6 := 42
+                    /// @src 2:698:700
+                    $t6 := 42
+                    // $t7 := ==($t5, $t6)
+                    /// @src 2:695:697
+                    $t7 := $Eq($t5, $t6)
+                    // if ($t7) goto L0 else goto L1
+                    /// @src 2:683:706
+                    switch $t7
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
+                }
+                case 5 {
+                    // label L3
+                    // $t14 := 101
+                    /// @src 2:737:740
+                    $t14 := 101
+                    // abort($t14)
+                    /// @src 2:716:741
+                    $Abort($t14)
+                }
+                case 6 {
+                    // label L2
+                    // $t15 := borrow_local($t0)
+                    /// @src 2:759:760
+                    $t15 := $MakePtr(false, $locals)
+                    // $t16 := borrow_field<M::S>.c($t15)
+                    /// @src 2:759:762
+                    $t16 := $IndexPtr($LoadU256($t15), 0)
+                    // $t17 := borrow_field<M::S2>.x($t16)
+                    /// @src 2:759:764
+                    $t17 := $IndexPtr($LoadU256($t16), 0)
+                    // $t18 := read_ref($t17)
+                    /// @src 2:759:764
+                    $t18 := $LoadU128($t17)
+                    // $t19 := 42
+                    /// @src 2:768:770
+                    $t19 := 42
+                    // $t20 := ==($t18, $t19)
+                    /// @src 2:765:767
+                    $t20 := $Eq($t18, $t19)
+                    // if ($t20) goto L4 else goto L5
+                    /// @src 2:751:776
+                    switch $t20
+                    case 0  { $block := 7 }
+                    default { $block := 8 }
+                }
+                case 7 {
+                    // label L5
+                    // $t21 := 102
+                    /// @src 2:772:775
+                    $t21 := 102
+                    // abort($t21)
+                    /// @src 2:751:776
+                    $Abort($t21)
+                }
+                case 8 {
+                    // label L4
+                    // return ()
+                    /// @src 2:776:777
+                    $Free($locals, 32)
+                    leave
+                }
+            }
+        }
+
+        function A2_M_pack_S(a, b) -> $result {
+            let $t2, $t3, $t4
+            // $t2 := (u128)($t0)
+            /// @src 2:581:592
+            $t2 := $CastU128(a)
+            // $t3 := M::pack_S2($t2)
+            /// @src 2:573:593
+            $t3 := A2_M_pack_S2($t2)
+            // $t4 := pack M::S($t0, $t1, $t3)
+            /// @src 2:562:594
+            {
+                let $mem := $Malloc(41)
+                $MemoryStoreU64(add($mem, 32), a)
+                $MemoryStoreU8(add($mem, 40), b)
+                $MemoryStoreU256(add($mem, 0), $t3)
+                $t4 := $MakePtr(false, $mem)
+            }
+            // return $t4
+            /// @src 2:562:594
+            $result := $t4
+        }
+
+        function A2_M_pack_S2(x) -> $result {
+            let $t1
+            // $t1 := pack M::S2($t0)
+            /// @src 2:229:234
+            {
+                let $mem := $Malloc(16)
+                $MemoryStoreU128(add($mem, 0), x)
+                $t1 := $MakePtr(false, $mem)
+            }
+            // return $t1
+            /// @src 2:229:234
+            $result := $t1
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $AbortBuiltin() {
+            $Abort(sub(0, 1))
+        }
+        function $Malloc(size) -> offs {
+            offs := mload(0)
+            // pad to word size
+            mstore(0, add(offs, shl(5, shr(5, add(size, 31)))))
+        }
+        function $Free(offs, size) {
+        }
+        function $MakePtr(is_storage, offs) -> ptr {
+          ptr := or(is_storage, shl(1, offs))
+        }
+        function $IsStoragePtr(ptr) -> b {
+          b := and(ptr, 0x1)
+        }
+        function $OffsetPtr(ptr) -> offs {
+          offs := shr(1, ptr)
+        }
+        function $MaskForSize(size) -> mask {
+          mask := sub(shl(shl(size, 3), 1), 1)
+        }
+        function $ExtractBytes(word, start, size) -> bytes {
+           switch size
+           case 1 {
+              // use the faster byte primitive
+              bytes := byte(start, word)
+           }
+           default {
+              // As we have big endian, we need to right shift the value from
+              // where the highest byte starts in the word (32 - start), minus
+              // the size.
+              let shift_bits := shl(3, sub(sub(32, start), size))
+              bytes := and(shr(shift_bits, word), $MaskForSize(size))
+           }
+        }
+        function $ToWordOffs(offs) -> word_offs, byte_offset {
+          word_offs := shr(5, offs)
+          byte_offset := and(offs, 0x1F)
+        }
+        function $OverflowBytes(byte_offset, size) -> overflow_bytes {
+          let available_bytes := sub(32, byte_offset)
+          switch gt(size, available_bytes)
+          case 0 {
+            overflow_bytes := 0
+          }
+          default {
+            overflow_bytes := sub(size, available_bytes)
+          }
+        }
+        function $MemoryLoadBytes(offs, size) -> val {
+          // Lower bit where the value in the higher bytes ends
+          let bit_end := shl(3, sub(32, size))
+          val := shr(bit_end, mload(offs))
+        }
+        function $MemoryStoreBytes(offs, size, val) {
+          let bit_end := shl(3, sub(32, size))
+          let mask := shl(bit_end, $MaskForSize(size))
+          mstore(offs, or(and(mload(offs), not(mask)), shl(bit_end, val)))
+        }
+        function $StorageLoadBytes(offs, size) -> val {
+          let word_offs, byte_offs := $ToWordOffs(offs)
+          let key := $StorageKey(0, word_offs)
+          val := $ExtractBytes(sload(key), byte_offs, size)
+          let overflow_bytes := $OverflowBytes(byte_offs, size)
+          if not(iszero(overflow_bytes)) {
+            key := $StorageKey(0, add(word_offs, 1))
+            let extra_bytes := $ExtractBytes(sload(key), 0, overflow_bytes)
+            val := or(shl(shl(3, overflow_bytes), val), extra_bytes)
+          }
+        }
+        function $StorageKey(group, word) -> key {
+          mstore(32, word)
+          mstore(64, group)
+          key := keccak256(32, 36)
+        }
+        function $IndexPtr(ptr, offs) -> new_ptr {
+          new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
+        }
+        function $LoadU8(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU8(offs)
+          }
+          default {
+            val := $StorageLoadU8(offs)
+          }
+        }
+        function $MemoryLoadU8(offs) -> val {
+          val := $MemoryLoadBytes(offs, 1)
+        }
+        function $StorageLoadU8(offs) -> val {
+          val := $StorageLoadBytes(offs, 1)
+        }
+        function $MemoryStoreU8(offs, val) {
+          // Shortcut via special instruction
+          mstore8(offs, val)
+        }
+        function $LoadU64(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU64(offs)
+          }
+          default {
+            val := $StorageLoadU64(offs)
+          }
+        }
+        function $MemoryLoadU64(offs) -> val {
+          val := $MemoryLoadBytes(offs, 8)
+        }
+        function $StorageLoadU64(offs) -> val {
+          val := $StorageLoadBytes(offs, 8)
+        }
+        function $MemoryStoreU64(offs, val) {
+          $MemoryStoreBytes(offs, 8, val)
+        }
+        function $LoadU128(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU128(offs)
+          }
+          default {
+            val := $StorageLoadU128(offs)
+          }
+        }
+        function $MemoryLoadU128(offs) -> val {
+          val := $MemoryLoadBytes(offs, 16)
+        }
+        function $StorageLoadU128(offs) -> val {
+          val := $StorageLoadBytes(offs, 16)
+        }
+        function $MemoryStoreU128(offs, val) {
+          $MemoryStoreBytes(offs, 16, val)
+        }
+        function $LoadU256(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU256(offs)
+          }
+          default {
+            val := $StorageLoadU256(offs)
+          }
+        }
+        function $MemoryLoadU256(offs) -> val {
+          val := $MemoryLoadBytes(offs, 32)
+        }
+        function $StorageLoadU256(offs) -> val {
+          val := $StorageLoadBytes(offs, 32)
+        }
+        function $MemoryStoreU256(offs, val) {
+          $MemoryStoreBytes(offs, 32, val)
+        }
+        function $Eq(x, y) -> r {
+            r := eq(x, y)
+        }
+        function $CastU128(x) -> r {
+            if gt(x, 0xffffffffffffffffffffffffffffffff) { $AbortBuiltin() }
+            r := x
+        }
+    }
+}
+===> Succeed(Stopped) (used_gas=1569): []
+
+// test of M::test_pack_S2
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 2:"tests/Structs.move"
+
+object "test_A2_M_test_pack_S2" {
+    code {
+        mstore(0, memoryguard(160))
+        A2_M_test_pack_S2()
+        return (0, 0)
+        function A2_M_test_pack_S2() {
+            let $t1, $t2, $t3, $t4, $t5, $t6, $t7
+            let $locals := $Malloc(32)
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // $t7 := 100
+                    /// @src 2:338:341
+                    $t7 := 100
+                    // abort($t7)
+                    /// @src 2:319:342
+                    $Abort($t7)
+                }
+                case 3 {
+                    // label L0
+                    // return ()
+                    /// @src 2:319:342
+                    $Free($locals, 32)
+                    leave
+                }
+                case 4 {
+                    // $t1 := 42
+                    /// @src 2:306:308
+                    $t1 := 42
+                    // $t0 := M::pack_S2($t1)
+                    /// @src 2:298:309
+                    mstore($locals, A2_M_pack_S2($t1))
+                    // $t2 := borrow_local($t0)
+                    /// @src 2:327:328
+                    $t2 := $MakePtr(false, $locals)
+                    // $t3 := borrow_field<M::S2>.x($t2)
+                    /// @src 2:327:330
+                    $t3 := $IndexPtr($LoadU256($t2), 0)
+                    // $t4 := read_ref($t3)
+                    /// @src 2:327:330
+                    $t4 := $LoadU128($t3)
+                    // $t5 := 42
+                    /// @src 2:334:336
+                    $t5 := 42
+                    // $t6 := ==($t4, $t5)
+                    /// @src 2:331:333
+                    $t6 := $Eq($t4, $t5)
+                    // if ($t6) goto L0 else goto L1
+                    /// @src 2:319:342
+                    switch $t6
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
+                }
+            }
+        }
+
+        function A2_M_pack_S2(x) -> $result {
+            let $t1
+            // $t1 := pack M::S2($t0)
+            /// @src 2:229:234
+            {
+                let $mem := $Malloc(16)
+                $MemoryStoreU128(add($mem, 0), x)
+                $t1 := $MakePtr(false, $mem)
+            }
+            // return $t1
+            /// @src 2:229:234
+            $result := $t1
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $Malloc(size) -> offs {
+            offs := mload(0)
+            // pad to word size
+            mstore(0, add(offs, shl(5, shr(5, add(size, 31)))))
+        }
+        function $Free(offs, size) {
+        }
+        function $MakePtr(is_storage, offs) -> ptr {
+          ptr := or(is_storage, shl(1, offs))
+        }
+        function $IsStoragePtr(ptr) -> b {
+          b := and(ptr, 0x1)
+        }
+        function $OffsetPtr(ptr) -> offs {
+          offs := shr(1, ptr)
+        }
+        function $MaskForSize(size) -> mask {
+          mask := sub(shl(shl(size, 3), 1), 1)
+        }
+        function $ExtractBytes(word, start, size) -> bytes {
+           switch size
+           case 1 {
+              // use the faster byte primitive
+              bytes := byte(start, word)
+           }
+           default {
+              // As we have big endian, we need to right shift the value from
+              // where the highest byte starts in the word (32 - start), minus
+              // the size.
+              let shift_bits := shl(3, sub(sub(32, start), size))
+              bytes := and(shr(shift_bits, word), $MaskForSize(size))
+           }
+        }
+        function $ToWordOffs(offs) -> word_offs, byte_offset {
+          word_offs := shr(5, offs)
+          byte_offset := and(offs, 0x1F)
+        }
+        function $OverflowBytes(byte_offset, size) -> overflow_bytes {
+          let available_bytes := sub(32, byte_offset)
+          switch gt(size, available_bytes)
+          case 0 {
+            overflow_bytes := 0
+          }
+          default {
+            overflow_bytes := sub(size, available_bytes)
+          }
+        }
+        function $MemoryLoadBytes(offs, size) -> val {
+          // Lower bit where the value in the higher bytes ends
+          let bit_end := shl(3, sub(32, size))
+          val := shr(bit_end, mload(offs))
+        }
+        function $MemoryStoreBytes(offs, size, val) {
+          let bit_end := shl(3, sub(32, size))
+          let mask := shl(bit_end, $MaskForSize(size))
+          mstore(offs, or(and(mload(offs), not(mask)), shl(bit_end, val)))
+        }
+        function $StorageLoadBytes(offs, size) -> val {
+          let word_offs, byte_offs := $ToWordOffs(offs)
+          let key := $StorageKey(0, word_offs)
+          val := $ExtractBytes(sload(key), byte_offs, size)
+          let overflow_bytes := $OverflowBytes(byte_offs, size)
+          if not(iszero(overflow_bytes)) {
+            key := $StorageKey(0, add(word_offs, 1))
+            let extra_bytes := $ExtractBytes(sload(key), 0, overflow_bytes)
+            val := or(shl(shl(3, overflow_bytes), val), extra_bytes)
+          }
+        }
+        function $StorageKey(group, word) -> key {
+          mstore(32, word)
+          mstore(64, group)
+          key := keccak256(32, 36)
+        }
+        function $IndexPtr(ptr, offs) -> new_ptr {
+          new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
+        }
+        function $LoadU128(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU128(offs)
+          }
+          default {
+            val := $StorageLoadU128(offs)
+          }
+        }
+        function $MemoryLoadU128(offs) -> val {
+          val := $MemoryLoadBytes(offs, 16)
+        }
+        function $StorageLoadU128(offs) -> val {
+          val := $StorageLoadBytes(offs, 16)
+        }
+        function $MemoryStoreU128(offs, val) {
+          $MemoryStoreBytes(offs, 16, val)
+        }
+        function $LoadU256(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU256(offs)
+          }
+          default {
+            val := $StorageLoadU256(offs)
+          }
+        }
+        function $MemoryLoadU256(offs) -> val {
+          val := $MemoryLoadBytes(offs, 32)
+        }
+        function $StorageLoadU256(offs) -> val {
+          val := $StorageLoadBytes(offs, 32)
+        }
+        function $Eq(x, y) -> r {
+            r := eq(x, y)
+        }
+    }
+}
+===> Succeed(Stopped) (used_gas=551): []
+
+// test of M::test_pack_S2_fail
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 2:"tests/Structs.move"
+
+object "test_A2_M_test_pack_S2_fail" {
+    code {
+        mstore(0, memoryguard(160))
+        A2_M_test_pack_S2_fail()
+        return (0, 0)
+        function A2_M_test_pack_S2_fail() {
+            let $t1, $t2, $t3, $t4, $t5, $t6, $t7
+            let $locals := $Malloc(32)
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // $t7 := 100
+                    /// @src 2:451:454
+                    $t7 := 100
+                    // abort($t7)
+                    /// @src 2:432:455
+                    $Abort($t7)
+                }
+                case 3 {
+                    // label L0
+                    // return ()
+                    /// @src 2:432:455
+                    $Free($locals, 32)
+                    leave
+                }
+                case 4 {
+                    // $t1 := 42
+                    /// @src 2:419:421
+                    $t1 := 42
+                    // $t0 := M::pack_S2($t1)
+                    /// @src 2:411:422
+                    mstore($locals, A2_M_pack_S2($t1))
+                    // $t2 := borrow_local($t0)
+                    /// @src 2:440:441
+                    $t2 := $MakePtr(false, $locals)
+                    // $t3 := borrow_field<M::S2>.x($t2)
+                    /// @src 2:440:443
+                    $t3 := $IndexPtr($LoadU256($t2), 0)
+                    // $t4 := read_ref($t3)
+                    /// @src 2:440:443
+                    $t4 := $LoadU128($t3)
+                    // $t5 := 41
+                    /// @src 2:447:449
+                    $t5 := 41
+                    // $t6 := ==($t4, $t5)
+                    /// @src 2:444:446
+                    $t6 := $Eq($t4, $t5)
+                    // if ($t6) goto L0 else goto L1
+                    /// @src 2:432:455
+                    switch $t6
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
+                }
+            }
+        }
+
+        function A2_M_pack_S2(x) -> $result {
+            let $t1
+            // $t1 := pack M::S2($t0)
+            /// @src 2:229:234
+            {
+                let $mem := $Malloc(16)
+                $MemoryStoreU128(add($mem, 0), x)
+                $t1 := $MakePtr(false, $mem)
+            }
+            // return $t1
+            /// @src 2:229:234
+            $result := $t1
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $Malloc(size) -> offs {
+            offs := mload(0)
+            // pad to word size
+            mstore(0, add(offs, shl(5, shr(5, add(size, 31)))))
+        }
+        function $Free(offs, size) {
+        }
+        function $MakePtr(is_storage, offs) -> ptr {
+          ptr := or(is_storage, shl(1, offs))
+        }
+        function $IsStoragePtr(ptr) -> b {
+          b := and(ptr, 0x1)
+        }
+        function $OffsetPtr(ptr) -> offs {
+          offs := shr(1, ptr)
+        }
+        function $MaskForSize(size) -> mask {
+          mask := sub(shl(shl(size, 3), 1), 1)
+        }
+        function $ExtractBytes(word, start, size) -> bytes {
+           switch size
+           case 1 {
+              // use the faster byte primitive
+              bytes := byte(start, word)
+           }
+           default {
+              // As we have big endian, we need to right shift the value from
+              // where the highest byte starts in the word (32 - start), minus
+              // the size.
+              let shift_bits := shl(3, sub(sub(32, start), size))
+              bytes := and(shr(shift_bits, word), $MaskForSize(size))
+           }
+        }
+        function $ToWordOffs(offs) -> word_offs, byte_offset {
+          word_offs := shr(5, offs)
+          byte_offset := and(offs, 0x1F)
+        }
+        function $OverflowBytes(byte_offset, size) -> overflow_bytes {
+          let available_bytes := sub(32, byte_offset)
+          switch gt(size, available_bytes)
+          case 0 {
+            overflow_bytes := 0
+          }
+          default {
+            overflow_bytes := sub(size, available_bytes)
+          }
+        }
+        function $MemoryLoadBytes(offs, size) -> val {
+          // Lower bit where the value in the higher bytes ends
+          let bit_end := shl(3, sub(32, size))
+          val := shr(bit_end, mload(offs))
+        }
+        function $MemoryStoreBytes(offs, size, val) {
+          let bit_end := shl(3, sub(32, size))
+          let mask := shl(bit_end, $MaskForSize(size))
+          mstore(offs, or(and(mload(offs), not(mask)), shl(bit_end, val)))
+        }
+        function $StorageLoadBytes(offs, size) -> val {
+          let word_offs, byte_offs := $ToWordOffs(offs)
+          let key := $StorageKey(0, word_offs)
+          val := $ExtractBytes(sload(key), byte_offs, size)
+          let overflow_bytes := $OverflowBytes(byte_offs, size)
+          if not(iszero(overflow_bytes)) {
+            key := $StorageKey(0, add(word_offs, 1))
+            let extra_bytes := $ExtractBytes(sload(key), 0, overflow_bytes)
+            val := or(shl(shl(3, overflow_bytes), val), extra_bytes)
+          }
+        }
+        function $StorageKey(group, word) -> key {
+          mstore(32, word)
+          mstore(64, group)
+          key := keccak256(32, 36)
+        }
+        function $IndexPtr(ptr, offs) -> new_ptr {
+          new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
+        }
+        function $LoadU128(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU128(offs)
+          }
+          default {
+            val := $StorageLoadU128(offs)
+          }
+        }
+        function $MemoryLoadU128(offs) -> val {
+          val := $MemoryLoadBytes(offs, 16)
+        }
+        function $StorageLoadU128(offs) -> val {
+          val := $StorageLoadBytes(offs, 16)
+        }
+        function $MemoryStoreU128(offs, val) {
+          $MemoryStoreBytes(offs, 16, val)
+        }
+        function $LoadU256(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU256(offs)
+          }
+          default {
+            val := $StorageLoadU256(offs)
+          }
+        }
+        function $MemoryLoadU256(offs) -> val {
+          val := $MemoryLoadBytes(offs, 32)
+        }
+        function $StorageLoadU256(offs) -> val {
+          val := $StorageLoadBytes(offs, 32)
+        }
+        function $Eq(x, y) -> r {
+            r := eq(x, y)
+        }
+    }
+}
+===> Revert(Reverted) (used_gas=533): [0, 0, 0, 0, 0, 0, 0, 100]
+
+// test of M::test_read_S
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 2:"tests/Structs.move"
+
+object "test_A2_M_test_read_S" {
+    code {
+        mstore(0, memoryguard(160))
+        A2_M_test_read_S()
+        return (0, 0)
+        function A2_M_test_read_S() {
+            let $t1, $t2, $t3, $t4, $t5, $t6, $t7
+            let $locals := $Malloc(32)
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // $t7 := 100
+                    /// @src 2:1011:1014
+                    $t7 := 100
+                    // abort($t7)
+                    /// @src 2:985:1015
+                    $Abort($t7)
+                }
+                case 3 {
+                    // label L0
+                    // return ()
+                    /// @src 2:1015:1016
+                    $Free($locals, 32)
+                    leave
+                }
+                case 4 {
+                    // $t1 := 42
+                    /// @src 2:966:968
+                    $t1 := 42
+                    // $t2 := true
+                    /// @src 2:970:974
+                    $t2 := true
+                    // $t0 := M::pack_S($t1, $t2)
+                    /// @src 2:959:975
+                    mstore($locals, A2_M_pack_S($t1, $t2))
+                    // $t3 := borrow_local($t0)
+                    /// @src 2:1000:1002
+                    $t3 := $MakePtr(false, $locals)
+                    // $t4 := M::read_S($t3)
+                    /// @src 2:993:1003
+                    $t4 := A2_M_read_S($t3)
+                    // $t5 := 84
+                    /// @src 2:1007:1009
+                    $t5 := 84
+                    // $t6 := ==($t4, $t5)
+                    /// @src 2:1004:1006
+                    $t6 := $Eq($t4, $t5)
+                    // if ($t6) goto L0 else goto L1
+                    /// @src 2:985:1015
+                    switch $t6
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
+                }
+            }
+        }
+
+        function A2_M_read_S(s) -> $result {
+            let $t1, $t2, $t3, $t4, $t5, $t6, $t7
+            // $t1 := borrow_field<M::S>.a($t0)
+            /// @src 2:876:879
+            $t1 := $IndexPtr($LoadU256(s), 32)
+            // $t2 := read_ref($t1)
+            /// @src 2:876:879
+            $t2 := $LoadU64($t1)
+            // $t3 := borrow_field<M::S>.c($t0)
+            /// @src 2:883:886
+            $t3 := $IndexPtr($LoadU256(s), 0)
+            // $t4 := borrow_field<M::S2>.x($t3)
+            /// @src 2:883:888
+            $t4 := $IndexPtr($LoadU256($t3), 0)
+            // $t5 := read_ref($t4)
+            /// @src 2:883:888
+            $t5 := $LoadU128($t4)
+            // $t6 := (u64)($t5)
+            /// @src 2:882:896
+            $t6 := $CastU64($t5)
+            // $t7 := +($t2, $t6)
+            /// @src 2:880:881
+            $t7 := $AddU64($t2, $t6)
+            // return $t7
+            /// @src 2:876:896
+            $result := $t7
+        }
+
+        function A2_M_pack_S(a, b) -> $result {
+            let $t2, $t3, $t4
+            // $t2 := (u128)($t0)
+            /// @src 2:581:592
+            $t2 := $CastU128(a)
+            // $t3 := M::pack_S2($t2)
+            /// @src 2:573:593
+            $t3 := A2_M_pack_S2($t2)
+            // $t4 := pack M::S($t0, $t1, $t3)
+            /// @src 2:562:594
+            {
+                let $mem := $Malloc(41)
+                $MemoryStoreU64(add($mem, 32), a)
+                $MemoryStoreU8(add($mem, 40), b)
+                $MemoryStoreU256(add($mem, 0), $t3)
+                $t4 := $MakePtr(false, $mem)
+            }
+            // return $t4
+            /// @src 2:562:594
+            $result := $t4
+        }
+
+        function A2_M_pack_S2(x) -> $result {
+            let $t1
+            // $t1 := pack M::S2($t0)
+            /// @src 2:229:234
+            {
+                let $mem := $Malloc(16)
+                $MemoryStoreU128(add($mem, 0), x)
+                $t1 := $MakePtr(false, $mem)
+            }
+            // return $t1
+            /// @src 2:229:234
+            $result := $t1
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $AbortBuiltin() {
+            $Abort(sub(0, 1))
+        }
+        function $Malloc(size) -> offs {
+            offs := mload(0)
+            // pad to word size
+            mstore(0, add(offs, shl(5, shr(5, add(size, 31)))))
+        }
+        function $Free(offs, size) {
+        }
+        function $MakePtr(is_storage, offs) -> ptr {
+          ptr := or(is_storage, shl(1, offs))
+        }
+        function $IsStoragePtr(ptr) -> b {
+          b := and(ptr, 0x1)
+        }
+        function $OffsetPtr(ptr) -> offs {
+          offs := shr(1, ptr)
+        }
+        function $MaskForSize(size) -> mask {
+          mask := sub(shl(shl(size, 3), 1), 1)
+        }
+        function $ExtractBytes(word, start, size) -> bytes {
+           switch size
+           case 1 {
+              // use the faster byte primitive
+              bytes := byte(start, word)
+           }
+           default {
+              // As we have big endian, we need to right shift the value from
+              // where the highest byte starts in the word (32 - start), minus
+              // the size.
+              let shift_bits := shl(3, sub(sub(32, start), size))
+              bytes := and(shr(shift_bits, word), $MaskForSize(size))
+           }
+        }
+        function $ToWordOffs(offs) -> word_offs, byte_offset {
+          word_offs := shr(5, offs)
+          byte_offset := and(offs, 0x1F)
+        }
+        function $OverflowBytes(byte_offset, size) -> overflow_bytes {
+          let available_bytes := sub(32, byte_offset)
+          switch gt(size, available_bytes)
+          case 0 {
+            overflow_bytes := 0
+          }
+          default {
+            overflow_bytes := sub(size, available_bytes)
+          }
+        }
+        function $MemoryLoadBytes(offs, size) -> val {
+          // Lower bit where the value in the higher bytes ends
+          let bit_end := shl(3, sub(32, size))
+          val := shr(bit_end, mload(offs))
+        }
+        function $MemoryStoreBytes(offs, size, val) {
+          let bit_end := shl(3, sub(32, size))
+          let mask := shl(bit_end, $MaskForSize(size))
+          mstore(offs, or(and(mload(offs), not(mask)), shl(bit_end, val)))
+        }
+        function $StorageLoadBytes(offs, size) -> val {
+          let word_offs, byte_offs := $ToWordOffs(offs)
+          let key := $StorageKey(0, word_offs)
+          val := $ExtractBytes(sload(key), byte_offs, size)
+          let overflow_bytes := $OverflowBytes(byte_offs, size)
+          if not(iszero(overflow_bytes)) {
+            key := $StorageKey(0, add(word_offs, 1))
+            let extra_bytes := $ExtractBytes(sload(key), 0, overflow_bytes)
+            val := or(shl(shl(3, overflow_bytes), val), extra_bytes)
+          }
+        }
+        function $StorageKey(group, word) -> key {
+          mstore(32, word)
+          mstore(64, group)
+          key := keccak256(32, 36)
+        }
+        function $IndexPtr(ptr, offs) -> new_ptr {
+          new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
+        }
+        function $MemoryStoreU8(offs, val) {
+          // Shortcut via special instruction
+          mstore8(offs, val)
+        }
+        function $LoadU64(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU64(offs)
+          }
+          default {
+            val := $StorageLoadU64(offs)
+          }
+        }
+        function $MemoryLoadU64(offs) -> val {
+          val := $MemoryLoadBytes(offs, 8)
+        }
+        function $StorageLoadU64(offs) -> val {
+          val := $StorageLoadBytes(offs, 8)
+        }
+        function $MemoryStoreU64(offs, val) {
+          $MemoryStoreBytes(offs, 8, val)
+        }
+        function $LoadU128(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU128(offs)
+          }
+          default {
+            val := $StorageLoadU128(offs)
+          }
+        }
+        function $MemoryLoadU128(offs) -> val {
+          val := $MemoryLoadBytes(offs, 16)
+        }
+        function $StorageLoadU128(offs) -> val {
+          val := $StorageLoadBytes(offs, 16)
+        }
+        function $MemoryStoreU128(offs, val) {
+          $MemoryStoreBytes(offs, 16, val)
+        }
+        function $LoadU256(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU256(offs)
+          }
+          default {
+            val := $StorageLoadU256(offs)
+          }
+        }
+        function $MemoryLoadU256(offs) -> val {
+          val := $MemoryLoadBytes(offs, 32)
+        }
+        function $StorageLoadU256(offs) -> val {
+          val := $StorageLoadBytes(offs, 32)
+        }
+        function $MemoryStoreU256(offs, val) {
+          $MemoryStoreBytes(offs, 32, val)
+        }
+        function $AddU64(x, y) -> r {
+            if lt(sub(0xffffffffffffffff, x), y) { $AbortBuiltin() }
+            r := add(x, y)
+        }
+        function $Eq(x, y) -> r {
+            r := eq(x, y)
+        }
+        function $CastU64(x) -> r {
+            if gt(x, 0xffffffffffffffff) { $AbortBuiltin() }
+            r := x
+        }
+        function $CastU128(x) -> r {
+            if gt(x, 0xffffffffffffffffffffffffffffffff) { $AbortBuiltin() }
+            r := x
+        }
+    }
+}
+===> Succeed(Stopped) (used_gas=1113): []
+
+// test of M::test_read_and_write_S
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 2:"tests/Structs.move"
+
+object "test_A2_M_test_read_and_write_S" {
+    code {
+        mstore(0, memoryguard(160))
+        A2_M_test_read_and_write_S()
+        return (0, 0)
+        function A2_M_test_read_and_write_S() {
+            let $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13
+            let $locals := $Malloc(32)
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // $t6 := 100
+                    /// @src 2:1652:1655
+                    $t6 := 100
+                    // abort($t6)
+                    /// @src 2:1634:1656
+                    $Abort($t6)
+                }
+                case 3 {
+                    // label L0
+                    // $t7 := borrow_local($t0)
+                    /// @src 2:1674:1675
+                    $t7 := $MakePtr(false, $locals)
+                    // $t8 := borrow_field<M::S>.c($t7)
+                    /// @src 2:1674:1677
+                    $t8 := $IndexPtr($LoadU256($t7), 0)
+                    // $t9 := borrow_field<M::S2>.x($t8)
+                    /// @src 2:1674:1679
+                    $t9 := $IndexPtr($LoadU256($t8), 0)
+                    // $t10 := read_ref($t9)
+                    /// @src 2:1674:1679
+                    $t10 := $LoadU128($t9)
+                    // $t11 := 2
+                    /// @src 2:1683:1684
+                    $t11 := 2
+                    // $t12 := ==($t10, $t11)
+                    /// @src 2:1680:1682
+                    $t12 := $Eq($t10, $t11)
+                    // if ($t12) goto L2 else goto L3
+                    /// @src 2:1666:1690
+                    switch $t12
+                    case 0  { $block := 5 }
+                    default { $block := 6 }
+                }
+                case 4 {
+                    // $t0 := M::read_and_write_S()
+                    /// @src 2:1606:1624
+                    mstore($locals, A2_M_read_and_write_S())
+                    // $t1 := borrow_local($t0)
+                    /// @src 2:1642:1643
+                    $t1 := $MakePtr(false, $locals)
+                    // $t2 := borrow_field<M::S>.a($t1)
+                    /// @src 2:1642:1645
+                    $t2 := $IndexPtr($LoadU256($t1), 32)
+                    // $t3 := read_ref($t2)
+                    /// @src 2:1642:1645
+                    $t3 := $LoadU64($t2)
+                    // $t4 := 2
+                    /// @src 2:1649:1650
+                    $t4 := 2
+                    // $t5 := ==($t3, $t4)
+                    /// @src 2:1646:1648
+                    $t5 := $Eq($t3, $t4)
+                    // if ($t5) goto L0 else goto L1
+                    /// @src 2:1634:1656
+                    switch $t5
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
+                }
+                case 5 {
+                    // label L3
+                    // $t13 := 101
+                    /// @src 2:1686:1689
+                    $t13 := 101
+                    // abort($t13)
+                    /// @src 2:1666:1690
+                    $Abort($t13)
+                }
+                case 6 {
+                    // label L2
+                    // return ()
+                    /// @src 2:1690:1691
+                    $Free($locals, 32)
+                    leave
+                }
+            }
+        }
+
+        function A2_M_read_and_write_S() -> $result {
+            let x, $t2, $t3, $t4, $t5, $t6, $t7
+            let $locals := $Malloc(32)
+            // $t2 := 1
+            /// @src 2:1457:1458
+            $t2 := 1
+            // $t3 := false
+            /// @src 2:1460:1465
+            $t3 := false
+            // $t0 := M::pack_S($t2, $t3)
+            /// @src 2:1450:1466
+            mstore($locals, A2_M_pack_S($t2, $t3))
+            // $t4 := borrow_local($t0)
+            /// @src 2:1491:1493
+            $t4 := $MakePtr(false, $locals)
+            // $t5 := M::read_S($t4)
+            /// @src 2:1484:1494
+            $t5 := A2_M_read_S($t4)
+            // $t6 := borrow_local($t0)
+            /// @src 2:1512:1518
+            $t6 := $MakePtr(false, $locals)
+            // M::write_S($t6, $t5)
+            /// @src 2:1504:1522
+            A2_M_write_S($t6, $t5)
+            // $t7 := move($t0)
+            /// @src 2:1532:1533
+            $t7 := mload($locals)
+            // return $t7
+            /// @src 2:1532:1533
+            $result := $t7
+            $Free($locals, 32)
+        }
+
+        function A2_M_write_S(s, v) {
+            let $t2, $t3, $t4, $t5, $t6, $t7
+            // $t2 := borrow_field<M::S>.a($t0)
+            /// @src 2:1123:1126
+            $t2 := $IndexPtr($LoadU256(s), 32)
+            // write_ref($t2, $t1)
+            /// @src 2:1123:1130
+            $StoreU64($t2, v)
+            // $t3 := borrow_field<M::S>.a($t0)
+            /// @src 2:1149:1152
+            $t3 := $IndexPtr($LoadU256(s), 32)
+            // $t4 := read_ref($t3)
+            /// @src 2:1149:1152
+            $t4 := $LoadU64($t3)
+            // $t5 := (u128)($t4)
+            /// @src 2:1148:1161
+            $t5 := $CastU128($t4)
+            // $t6 := borrow_field<M::S>.c($t0)
+            /// @src 2:1140:1143
+            $t6 := $IndexPtr($LoadU256(s), 0)
+            // $t7 := borrow_field<M::S2>.x($t6)
+            /// @src 2:1140:1145
+            $t7 := $IndexPtr($LoadU256($t6), 0)
+            // write_ref($t7, $t5)
+            /// @src 2:1140:1161
+            $StoreU128($t7, $t5)
+            // return ()
+            /// @src 2:1161:1162
+        }
+
+        function A2_M_read_S(s) -> $result {
+            let $t1, $t2, $t3, $t4, $t5, $t6, $t7
+            // $t1 := borrow_field<M::S>.a($t0)
+            /// @src 2:876:879
+            $t1 := $IndexPtr($LoadU256(s), 32)
+            // $t2 := read_ref($t1)
+            /// @src 2:876:879
+            $t2 := $LoadU64($t1)
+            // $t3 := borrow_field<M::S>.c($t0)
+            /// @src 2:883:886
+            $t3 := $IndexPtr($LoadU256(s), 0)
+            // $t4 := borrow_field<M::S2>.x($t3)
+            /// @src 2:883:888
+            $t4 := $IndexPtr($LoadU256($t3), 0)
+            // $t5 := read_ref($t4)
+            /// @src 2:883:888
+            $t5 := $LoadU128($t4)
+            // $t6 := (u64)($t5)
+            /// @src 2:882:896
+            $t6 := $CastU64($t5)
+            // $t7 := +($t2, $t6)
+            /// @src 2:880:881
+            $t7 := $AddU64($t2, $t6)
+            // return $t7
+            /// @src 2:876:896
+            $result := $t7
+        }
+
+        function A2_M_pack_S(a, b) -> $result {
+            let $t2, $t3, $t4
+            // $t2 := (u128)($t0)
+            /// @src 2:581:592
+            $t2 := $CastU128(a)
+            // $t3 := M::pack_S2($t2)
+            /// @src 2:573:593
+            $t3 := A2_M_pack_S2($t2)
+            // $t4 := pack M::S($t0, $t1, $t3)
+            /// @src 2:562:594
+            {
+                let $mem := $Malloc(41)
+                $MemoryStoreU64(add($mem, 32), a)
+                $MemoryStoreU8(add($mem, 40), b)
+                $MemoryStoreU256(add($mem, 0), $t3)
+                $t4 := $MakePtr(false, $mem)
+            }
+            // return $t4
+            /// @src 2:562:594
+            $result := $t4
+        }
+
+        function A2_M_pack_S2(x) -> $result {
+            let $t1
+            // $t1 := pack M::S2($t0)
+            /// @src 2:229:234
+            {
+                let $mem := $Malloc(16)
+                $MemoryStoreU128(add($mem, 0), x)
+                $t1 := $MakePtr(false, $mem)
+            }
+            // return $t1
+            /// @src 2:229:234
+            $result := $t1
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $AbortBuiltin() {
+            $Abort(sub(0, 1))
+        }
+        function $Malloc(size) -> offs {
+            offs := mload(0)
+            // pad to word size
+            mstore(0, add(offs, shl(5, shr(5, add(size, 31)))))
+        }
+        function $Free(offs, size) {
+        }
+        function $MakePtr(is_storage, offs) -> ptr {
+          ptr := or(is_storage, shl(1, offs))
+        }
+        function $IsStoragePtr(ptr) -> b {
+          b := and(ptr, 0x1)
+        }
+        function $OffsetPtr(ptr) -> offs {
+          offs := shr(1, ptr)
+        }
+        function $MaskForSize(size) -> mask {
+          mask := sub(shl(shl(size, 3), 1), 1)
+        }
+        function $ExtractBytes(word, start, size) -> bytes {
+           switch size
+           case 1 {
+              // use the faster byte primitive
+              bytes := byte(start, word)
+           }
+           default {
+              // As we have big endian, we need to right shift the value from
+              // where the highest byte starts in the word (32 - start), minus
+              // the size.
+              let shift_bits := shl(3, sub(sub(32, start), size))
+              bytes := and(shr(shift_bits, word), $MaskForSize(size))
+           }
+        }
+        function $InjectBytes(word, start, size, bytes) -> new_word {
+           let shift_bits := shl(3, sub(sub(32, start), size))
+           // Blend out the bits which we inject
+           let neg_mask := not(shl(shift_bits, $MaskForSize(size)))
+           word := and(word, neg_mask)
+           // Overlay the bits we inject
+           new_word := or(word, shl(shift_bits, bytes))
+        }
+        function $ToWordOffs(offs) -> word_offs, byte_offset {
+          word_offs := shr(5, offs)
+          byte_offset := and(offs, 0x1F)
+        }
+        function $OverflowBytes(byte_offset, size) -> overflow_bytes {
+          let available_bytes := sub(32, byte_offset)
+          switch gt(size, available_bytes)
+          case 0 {
+            overflow_bytes := 0
+          }
+          default {
+            overflow_bytes := sub(size, available_bytes)
+          }
+        }
+        function $MemoryLoadBytes(offs, size) -> val {
+          // Lower bit where the value in the higher bytes ends
+          let bit_end := shl(3, sub(32, size))
+          val := shr(bit_end, mload(offs))
+        }
+        function $MemoryStoreBytes(offs, size, val) {
+          let bit_end := shl(3, sub(32, size))
+          let mask := shl(bit_end, $MaskForSize(size))
+          mstore(offs, or(and(mload(offs), not(mask)), shl(bit_end, val)))
+        }
+        function $StorageLoadBytes(offs, size) -> val {
+          let word_offs, byte_offs := $ToWordOffs(offs)
+          let key := $StorageKey(0, word_offs)
+          val := $ExtractBytes(sload(key), byte_offs, size)
+          let overflow_bytes := $OverflowBytes(byte_offs, size)
+          if not(iszero(overflow_bytes)) {
+            key := $StorageKey(0, add(word_offs, 1))
+            let extra_bytes := $ExtractBytes(sload(key), 0, overflow_bytes)
+            val := or(shl(shl(3, overflow_bytes), val), extra_bytes)
+          }
+        }
+        function $StorageStoreBytes(offs, size, bytes) {
+          let word_offs, byte_offs := $ToWordOffs(offs)
+          let key := $StorageKey(0, word_offs)
+          let overflow_bytes := $OverflowBytes(byte_offs, size)
+          switch overflow_bytes
+          case 0 {
+            sstore(key, $InjectBytes(sload(key), byte_offs, size, bytes))
+          }
+          default {
+            // Shift the higher bytes to the right
+            let used_bytes := sub(size, overflow_bytes)
+            let higher_bytes := shr(used_bytes, bytes)
+            let lower_bytes := and(bytes, $MaskForSize(overflow_bytes))
+            sstore(key, $InjectBytes(sload(key), byte_offs, used_bytes, higher_bytes))
+            key := $StorageKey(0, add(word_offs, 1))
+            sstore(key, $InjectBytes(sload(key), 0, overflow_bytes, lower_bytes))
+          }
+        }
+        function $StorageKey(group, word) -> key {
+          mstore(32, word)
+          mstore(64, group)
+          key := keccak256(32, 36)
+        }
+        function $IndexPtr(ptr, offs) -> new_ptr {
+          new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
+        }
+        function $MemoryStoreU8(offs, val) {
+          // Shortcut via special instruction
+          mstore8(offs, val)
+        }
+        function $LoadU64(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU64(offs)
+          }
+          default {
+            val := $StorageLoadU64(offs)
+          }
+        }
+        function $MemoryLoadU64(offs) -> val {
+          val := $MemoryLoadBytes(offs, 8)
+        }
+        function $StorageLoadU64(offs) -> val {
+          val := $StorageLoadBytes(offs, 8)
+        }
+        function $StoreU64(ptr, val) {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            $MemoryStoreU64(offs, val)
+          }
+          default {
+            $StorageStoreU64(offs, val)
+          }
+        }
+        function $MemoryStoreU64(offs, val) {
+          $MemoryStoreBytes(offs, 8, val)
+        }
+        function $StorageStoreU64(offs, val) {
+          $StorageStoreBytes(offs, 8, val)
+        }
+        function $LoadU128(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU128(offs)
+          }
+          default {
+            val := $StorageLoadU128(offs)
+          }
+        }
+        function $MemoryLoadU128(offs) -> val {
+          val := $MemoryLoadBytes(offs, 16)
+        }
+        function $StorageLoadU128(offs) -> val {
+          val := $StorageLoadBytes(offs, 16)
+        }
+        function $StoreU128(ptr, val) {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            $MemoryStoreU128(offs, val)
+          }
+          default {
+            $StorageStoreU128(offs, val)
+          }
+        }
+        function $MemoryStoreU128(offs, val) {
+          $MemoryStoreBytes(offs, 16, val)
+        }
+        function $StorageStoreU128(offs, val) {
+          $StorageStoreBytes(offs, 16, val)
+        }
+        function $LoadU256(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU256(offs)
+          }
+          default {
+            val := $StorageLoadU256(offs)
+          }
+        }
+        function $MemoryLoadU256(offs) -> val {
+          val := $MemoryLoadBytes(offs, 32)
+        }
+        function $StorageLoadU256(offs) -> val {
+          val := $StorageLoadBytes(offs, 32)
+        }
+        function $MemoryStoreU256(offs, val) {
+          $MemoryStoreBytes(offs, 32, val)
+        }
+        function $AddU64(x, y) -> r {
+            if lt(sub(0xffffffffffffffff, x), y) { $AbortBuiltin() }
+            r := add(x, y)
+        }
+        function $Eq(x, y) -> r {
+            r := eq(x, y)
+        }
+        function $CastU64(x) -> r {
+            if gt(x, 0xffffffffffffffff) { $AbortBuiltin() }
+            r := x
+        }
+        function $CastU128(x) -> r {
+            if gt(x, 0xffffffffffffffffffffffffffffffff) { $AbortBuiltin() }
+            r := x
+        }
+    }
+}
+===> Succeed(Stopped) (used_gas=2593): []
+
+// test of M::test_unpack
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 2:"tests/Structs.move"
+
+object "test_A2_M_test_unpack" {
+    code {
+        mstore(0, memoryguard(160))
+        A2_M_test_unpack()
+        return (0, 0)
+        function A2_M_test_unpack() {
+            let s, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
+            let $locals := $Malloc(32)
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // $t10 := 101
+                    /// @src 2:1964:1967
+                    $t10 := 101
+                    // abort($t10)
+                    /// @src 2:1944:1968
+                    $Abort($t10)
+                }
+                case 3 {
+                    // label L0
+                    // return ()
+                    /// @src 2:1968:1969
+                    $Free($locals, 32)
+                    leave
+                }
+                case 4 {
+                    // $t2 := 33
+                    /// @src 2:1896:1898
+                    $t2 := 33
+                    // $t3 := false
+                    /// @src 2:1900:1905
+                    $t3 := false
+                    // $t4 := M::pack_S($t2, $t3)
+                    /// @src 2:1889:1906
+                    $t4 := A2_M_pack_S($t2, $t3)
+                    // $t1 := M::unpack($t4)
+                    /// @src 2:1925:1934
+                    mstore($locals, A2_M_unpack($t4))
+                    // $t5 := borrow_local($t1)
+                    /// @src 2:1952:1954
+                    $t5 := $MakePtr(false, $locals)
+                    // $t6 := borrow_field<M::S2>.x($t5)
+                    /// @src 2:1952:1956
+                    $t6 := $IndexPtr($LoadU256($t5), 0)
+                    // $t7 := read_ref($t6)
+                    /// @src 2:1952:1956
+                    $t7 := $LoadU128($t6)
+                    // $t8 := 33
+                    /// @src 2:1960:1962
+                    $t8 := 33
+                    // $t9 := ==($t7, $t8)
+                    /// @src 2:1957:1959
+                    $t9 := $Eq($t7, $t8)
+                    // if ($t9) goto L0 else goto L1
+                    /// @src 2:1944:1968
+                    switch $t9
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
+                }
+            }
+        }
+
+        function A2_M_unpack(s) -> $result {
+            let _a, _b, c, $t4, $t5, $t6
+            // ($t4, $t5, $t6) := unpack M::S($t0)
+            /// @src 2:1793:1811
+            $t4 := $MemoryLoadU64(add(s, 32))
+            $t5 := $MemoryLoadU8(add(s, 40))
+            $t6 := $MemoryLoadU256(add(s, 0))
+            $Free(s, 41)
+            // destroy($t5)
+            /// @src 2:1805:1807
+            // destroy($t4)
+            /// @src 2:1798:1800
+            // return $t6
+            /// @src 2:1825:1826
+            $result := $t6
+        }
+
+        function A2_M_pack_S(a, b) -> $result {
+            let $t2, $t3, $t4
+            // $t2 := (u128)($t0)
+            /// @src 2:581:592
+            $t2 := $CastU128(a)
+            // $t3 := M::pack_S2($t2)
+            /// @src 2:573:593
+            $t3 := A2_M_pack_S2($t2)
+            // $t4 := pack M::S($t0, $t1, $t3)
+            /// @src 2:562:594
+            {
+                let $mem := $Malloc(41)
+                $MemoryStoreU64(add($mem, 32), a)
+                $MemoryStoreU8(add($mem, 40), b)
+                $MemoryStoreU256(add($mem, 0), $t3)
+                $t4 := $MakePtr(false, $mem)
+            }
+            // return $t4
+            /// @src 2:562:594
+            $result := $t4
+        }
+
+        function A2_M_pack_S2(x) -> $result {
+            let $t1
+            // $t1 := pack M::S2($t0)
+            /// @src 2:229:234
+            {
+                let $mem := $Malloc(16)
+                $MemoryStoreU128(add($mem, 0), x)
+                $t1 := $MakePtr(false, $mem)
+            }
+            // return $t1
+            /// @src 2:229:234
+            $result := $t1
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $AbortBuiltin() {
+            $Abort(sub(0, 1))
+        }
+        function $Malloc(size) -> offs {
+            offs := mload(0)
+            // pad to word size
+            mstore(0, add(offs, shl(5, shr(5, add(size, 31)))))
+        }
+        function $Free(offs, size) {
+        }
+        function $MakePtr(is_storage, offs) -> ptr {
+          ptr := or(is_storage, shl(1, offs))
+        }
+        function $IsStoragePtr(ptr) -> b {
+          b := and(ptr, 0x1)
+        }
+        function $OffsetPtr(ptr) -> offs {
+          offs := shr(1, ptr)
+        }
+        function $MaskForSize(size) -> mask {
+          mask := sub(shl(shl(size, 3), 1), 1)
+        }
+        function $ExtractBytes(word, start, size) -> bytes {
+           switch size
+           case 1 {
+              // use the faster byte primitive
+              bytes := byte(start, word)
+           }
+           default {
+              // As we have big endian, we need to right shift the value from
+              // where the highest byte starts in the word (32 - start), minus
+              // the size.
+              let shift_bits := shl(3, sub(sub(32, start), size))
+              bytes := and(shr(shift_bits, word), $MaskForSize(size))
+           }
+        }
+        function $ToWordOffs(offs) -> word_offs, byte_offset {
+          word_offs := shr(5, offs)
+          byte_offset := and(offs, 0x1F)
+        }
+        function $OverflowBytes(byte_offset, size) -> overflow_bytes {
+          let available_bytes := sub(32, byte_offset)
+          switch gt(size, available_bytes)
+          case 0 {
+            overflow_bytes := 0
+          }
+          default {
+            overflow_bytes := sub(size, available_bytes)
+          }
+        }
+        function $MemoryLoadBytes(offs, size) -> val {
+          // Lower bit where the value in the higher bytes ends
+          let bit_end := shl(3, sub(32, size))
+          val := shr(bit_end, mload(offs))
+        }
+        function $MemoryStoreBytes(offs, size, val) {
+          let bit_end := shl(3, sub(32, size))
+          let mask := shl(bit_end, $MaskForSize(size))
+          mstore(offs, or(and(mload(offs), not(mask)), shl(bit_end, val)))
+        }
+        function $StorageLoadBytes(offs, size) -> val {
+          let word_offs, byte_offs := $ToWordOffs(offs)
+          let key := $StorageKey(0, word_offs)
+          val := $ExtractBytes(sload(key), byte_offs, size)
+          let overflow_bytes := $OverflowBytes(byte_offs, size)
+          if not(iszero(overflow_bytes)) {
+            key := $StorageKey(0, add(word_offs, 1))
+            let extra_bytes := $ExtractBytes(sload(key), 0, overflow_bytes)
+            val := or(shl(shl(3, overflow_bytes), val), extra_bytes)
+          }
+        }
+        function $StorageKey(group, word) -> key {
+          mstore(32, word)
+          mstore(64, group)
+          key := keccak256(32, 36)
+        }
+        function $IndexPtr(ptr, offs) -> new_ptr {
+          new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
+        }
+        function $MemoryLoadU8(offs) -> val {
+          val := $MemoryLoadBytes(offs, 1)
+        }
+        function $MemoryStoreU8(offs, val) {
+          // Shortcut via special instruction
+          mstore8(offs, val)
+        }
+        function $MemoryLoadU64(offs) -> val {
+          val := $MemoryLoadBytes(offs, 8)
+        }
+        function $MemoryStoreU64(offs, val) {
+          $MemoryStoreBytes(offs, 8, val)
+        }
+        function $LoadU128(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU128(offs)
+          }
+          default {
+            val := $StorageLoadU128(offs)
+          }
+        }
+        function $MemoryLoadU128(offs) -> val {
+          val := $MemoryLoadBytes(offs, 16)
+        }
+        function $StorageLoadU128(offs) -> val {
+          val := $StorageLoadBytes(offs, 16)
+        }
+        function $MemoryStoreU128(offs, val) {
+          $MemoryStoreBytes(offs, 16, val)
+        }
+        function $LoadU256(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU256(offs)
+          }
+          default {
+            val := $StorageLoadU256(offs)
+          }
+        }
+        function $MemoryLoadU256(offs) -> val {
+          val := $MemoryLoadBytes(offs, 32)
+        }
+        function $StorageLoadU256(offs) -> val {
+          val := $StorageLoadBytes(offs, 32)
+        }
+        function $MemoryStoreU256(offs, val) {
+          $MemoryStoreBytes(offs, 32, val)
+        }
+        function $Eq(x, y) -> r {
+            r := eq(x, y)
+        }
+        function $CastU128(x) -> r {
+            if gt(x, 0xffffffffffffffffffffffffffffffff) { $AbortBuiltin() }
+            r := x
+        }
+    }
+}
+===> Revert(Reverted) (used_gas=680): [0, 0, 0, 0, 0, 0, 0, 101]
+
+// test of M::test_write_S
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 2:"tests/Structs.move"
+
+object "test_A2_M_test_write_S" {
+    code {
+        mstore(0, memoryguard(160))
+        A2_M_test_write_S()
+        return (0, 0)
+        function A2_M_test_write_S() {
+            let $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17
+            let $locals := $Malloc(32)
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // $t10 := 100
+                    /// @src 2:1300:1303
+                    $t10 := 100
+                    // abort($t10)
+                    /// @src 2:1281:1304
+                    $Abort($t10)
+                }
+                case 3 {
+                    // label L0
+                    // $t11 := borrow_local($t0)
+                    /// @src 2:1322:1323
+                    $t11 := $MakePtr(false, $locals)
+                    // $t12 := borrow_field<M::S>.c($t11)
+                    /// @src 2:1322:1325
+                    $t12 := $IndexPtr($LoadU256($t11), 0)
+                    // $t13 := borrow_field<M::S2>.x($t12)
+                    /// @src 2:1322:1327
+                    $t13 := $IndexPtr($LoadU256($t12), 0)
+                    // $t14 := read_ref($t13)
+                    /// @src 2:1322:1327
+                    $t14 := $LoadU128($t13)
+                    // $t15 := 43
+                    /// @src 2:1331:1333
+                    $t15 := 43
+                    // $t16 := ==($t14, $t15)
+                    /// @src 2:1328:1330
+                    $t16 := $Eq($t14, $t15)
+                    // if ($t16) goto L2 else goto L3
+                    /// @src 2:1314:1339
+                    switch $t16
+                    case 0  { $block := 5 }
+                    default { $block := 6 }
+                }
+                case 4 {
+                    // $t1 := 42
+                    /// @src 2:1233:1235
+                    $t1 := 42
+                    // $t2 := true
+                    /// @src 2:1237:1241
+                    $t2 := true
+                    // $t0 := M::pack_S($t1, $t2)
+                    /// @src 2:1226:1242
+                    mstore($locals, A2_M_pack_S($t1, $t2))
+                    // $t3 := borrow_local($t0)
+                    /// @src 2:1260:1266
+                    $t3 := $MakePtr(false, $locals)
+                    // $t4 := 43
+                    /// @src 2:1268:1270
+                    $t4 := 43
+                    // M::write_S($t3, $t4)
+                    /// @src 2:1252:1271
+                    A2_M_write_S($t3, $t4)
+                    // $t5 := borrow_local($t0)
+                    /// @src 2:1289:1290
+                    $t5 := $MakePtr(false, $locals)
+                    // $t6 := borrow_field<M::S>.a($t5)
+                    /// @src 2:1289:1292
+                    $t6 := $IndexPtr($LoadU256($t5), 32)
+                    // $t7 := read_ref($t6)
+                    /// @src 2:1289:1292
+                    $t7 := $LoadU64($t6)
+                    // $t8 := 43
+                    /// @src 2:1296:1298
+                    $t8 := 43
+                    // $t9 := ==($t7, $t8)
+                    /// @src 2:1293:1295
+                    $t9 := $Eq($t7, $t8)
+                    // if ($t9) goto L0 else goto L1
+                    /// @src 2:1281:1304
+                    switch $t9
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
+                }
+                case 5 {
+                    // label L3
+                    // $t17 := 101
+                    /// @src 2:1335:1338
+                    $t17 := 101
+                    // abort($t17)
+                    /// @src 2:1314:1339
+                    $Abort($t17)
+                }
+                case 6 {
+                    // label L2
+                    // return ()
+                    /// @src 2:1339:1340
+                    $Free($locals, 32)
+                    leave
+                }
+            }
+        }
+
+        function A2_M_write_S(s, v) {
+            let $t2, $t3, $t4, $t5, $t6, $t7
+            // $t2 := borrow_field<M::S>.a($t0)
+            /// @src 2:1123:1126
+            $t2 := $IndexPtr($LoadU256(s), 32)
+            // write_ref($t2, $t1)
+            /// @src 2:1123:1130
+            $StoreU64($t2, v)
+            // $t3 := borrow_field<M::S>.a($t0)
+            /// @src 2:1149:1152
+            $t3 := $IndexPtr($LoadU256(s), 32)
+            // $t4 := read_ref($t3)
+            /// @src 2:1149:1152
+            $t4 := $LoadU64($t3)
+            // $t5 := (u128)($t4)
+            /// @src 2:1148:1161
+            $t5 := $CastU128($t4)
+            // $t6 := borrow_field<M::S>.c($t0)
+            /// @src 2:1140:1143
+            $t6 := $IndexPtr($LoadU256(s), 0)
+            // $t7 := borrow_field<M::S2>.x($t6)
+            /// @src 2:1140:1145
+            $t7 := $IndexPtr($LoadU256($t6), 0)
+            // write_ref($t7, $t5)
+            /// @src 2:1140:1161
+            $StoreU128($t7, $t5)
+            // return ()
+            /// @src 2:1161:1162
+        }
+
+        function A2_M_pack_S(a, b) -> $result {
+            let $t2, $t3, $t4
+            // $t2 := (u128)($t0)
+            /// @src 2:581:592
+            $t2 := $CastU128(a)
+            // $t3 := M::pack_S2($t2)
+            /// @src 2:573:593
+            $t3 := A2_M_pack_S2($t2)
+            // $t4 := pack M::S($t0, $t1, $t3)
+            /// @src 2:562:594
+            {
+                let $mem := $Malloc(41)
+                $MemoryStoreU64(add($mem, 32), a)
+                $MemoryStoreU8(add($mem, 40), b)
+                $MemoryStoreU256(add($mem, 0), $t3)
+                $t4 := $MakePtr(false, $mem)
+            }
+            // return $t4
+            /// @src 2:562:594
+            $result := $t4
+        }
+
+        function A2_M_pack_S2(x) -> $result {
+            let $t1
+            // $t1 := pack M::S2($t0)
+            /// @src 2:229:234
+            {
+                let $mem := $Malloc(16)
+                $MemoryStoreU128(add($mem, 0), x)
+                $t1 := $MakePtr(false, $mem)
+            }
+            // return $t1
+            /// @src 2:229:234
+            $result := $t1
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $AbortBuiltin() {
+            $Abort(sub(0, 1))
+        }
+        function $Malloc(size) -> offs {
+            offs := mload(0)
+            // pad to word size
+            mstore(0, add(offs, shl(5, shr(5, add(size, 31)))))
+        }
+        function $Free(offs, size) {
+        }
+        function $MakePtr(is_storage, offs) -> ptr {
+          ptr := or(is_storage, shl(1, offs))
+        }
+        function $IsStoragePtr(ptr) -> b {
+          b := and(ptr, 0x1)
+        }
+        function $OffsetPtr(ptr) -> offs {
+          offs := shr(1, ptr)
+        }
+        function $MaskForSize(size) -> mask {
+          mask := sub(shl(shl(size, 3), 1), 1)
+        }
+        function $ExtractBytes(word, start, size) -> bytes {
+           switch size
+           case 1 {
+              // use the faster byte primitive
+              bytes := byte(start, word)
+           }
+           default {
+              // As we have big endian, we need to right shift the value from
+              // where the highest byte starts in the word (32 - start), minus
+              // the size.
+              let shift_bits := shl(3, sub(sub(32, start), size))
+              bytes := and(shr(shift_bits, word), $MaskForSize(size))
+           }
+        }
+        function $InjectBytes(word, start, size, bytes) -> new_word {
+           let shift_bits := shl(3, sub(sub(32, start), size))
+           // Blend out the bits which we inject
+           let neg_mask := not(shl(shift_bits, $MaskForSize(size)))
+           word := and(word, neg_mask)
+           // Overlay the bits we inject
+           new_word := or(word, shl(shift_bits, bytes))
+        }
+        function $ToWordOffs(offs) -> word_offs, byte_offset {
+          word_offs := shr(5, offs)
+          byte_offset := and(offs, 0x1F)
+        }
+        function $OverflowBytes(byte_offset, size) -> overflow_bytes {
+          let available_bytes := sub(32, byte_offset)
+          switch gt(size, available_bytes)
+          case 0 {
+            overflow_bytes := 0
+          }
+          default {
+            overflow_bytes := sub(size, available_bytes)
+          }
+        }
+        function $MemoryLoadBytes(offs, size) -> val {
+          // Lower bit where the value in the higher bytes ends
+          let bit_end := shl(3, sub(32, size))
+          val := shr(bit_end, mload(offs))
+        }
+        function $MemoryStoreBytes(offs, size, val) {
+          let bit_end := shl(3, sub(32, size))
+          let mask := shl(bit_end, $MaskForSize(size))
+          mstore(offs, or(and(mload(offs), not(mask)), shl(bit_end, val)))
+        }
+        function $StorageLoadBytes(offs, size) -> val {
+          let word_offs, byte_offs := $ToWordOffs(offs)
+          let key := $StorageKey(0, word_offs)
+          val := $ExtractBytes(sload(key), byte_offs, size)
+          let overflow_bytes := $OverflowBytes(byte_offs, size)
+          if not(iszero(overflow_bytes)) {
+            key := $StorageKey(0, add(word_offs, 1))
+            let extra_bytes := $ExtractBytes(sload(key), 0, overflow_bytes)
+            val := or(shl(shl(3, overflow_bytes), val), extra_bytes)
+          }
+        }
+        function $StorageStoreBytes(offs, size, bytes) {
+          let word_offs, byte_offs := $ToWordOffs(offs)
+          let key := $StorageKey(0, word_offs)
+          let overflow_bytes := $OverflowBytes(byte_offs, size)
+          switch overflow_bytes
+          case 0 {
+            sstore(key, $InjectBytes(sload(key), byte_offs, size, bytes))
+          }
+          default {
+            // Shift the higher bytes to the right
+            let used_bytes := sub(size, overflow_bytes)
+            let higher_bytes := shr(used_bytes, bytes)
+            let lower_bytes := and(bytes, $MaskForSize(overflow_bytes))
+            sstore(key, $InjectBytes(sload(key), byte_offs, used_bytes, higher_bytes))
+            key := $StorageKey(0, add(word_offs, 1))
+            sstore(key, $InjectBytes(sload(key), 0, overflow_bytes, lower_bytes))
+          }
+        }
+        function $StorageKey(group, word) -> key {
+          mstore(32, word)
+          mstore(64, group)
+          key := keccak256(32, 36)
+        }
+        function $IndexPtr(ptr, offs) -> new_ptr {
+          new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
+        }
+        function $MemoryStoreU8(offs, val) {
+          // Shortcut via special instruction
+          mstore8(offs, val)
+        }
+        function $LoadU64(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU64(offs)
+          }
+          default {
+            val := $StorageLoadU64(offs)
+          }
+        }
+        function $MemoryLoadU64(offs) -> val {
+          val := $MemoryLoadBytes(offs, 8)
+        }
+        function $StorageLoadU64(offs) -> val {
+          val := $StorageLoadBytes(offs, 8)
+        }
+        function $StoreU64(ptr, val) {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            $MemoryStoreU64(offs, val)
+          }
+          default {
+            $StorageStoreU64(offs, val)
+          }
+        }
+        function $MemoryStoreU64(offs, val) {
+          $MemoryStoreBytes(offs, 8, val)
+        }
+        function $StorageStoreU64(offs, val) {
+          $StorageStoreBytes(offs, 8, val)
+        }
+        function $LoadU128(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU128(offs)
+          }
+          default {
+            val := $StorageLoadU128(offs)
+          }
+        }
+        function $MemoryLoadU128(offs) -> val {
+          val := $MemoryLoadBytes(offs, 16)
+        }
+        function $StorageLoadU128(offs) -> val {
+          val := $StorageLoadBytes(offs, 16)
+        }
+        function $StoreU128(ptr, val) {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            $MemoryStoreU128(offs, val)
+          }
+          default {
+            $StorageStoreU128(offs, val)
+          }
+        }
+        function $MemoryStoreU128(offs, val) {
+          $MemoryStoreBytes(offs, 16, val)
+        }
+        function $StorageStoreU128(offs, val) {
+          $StorageStoreBytes(offs, 16, val)
+        }
+        function $LoadU256(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU256(offs)
+          }
+          default {
+            val := $StorageLoadU256(offs)
+          }
+        }
+        function $MemoryLoadU256(offs) -> val {
+          val := $MemoryLoadBytes(offs, 32)
+        }
+        function $StorageLoadU256(offs) -> val {
+          val := $StorageLoadBytes(offs, 32)
+        }
+        function $MemoryStoreU256(offs, val) {
+          $MemoryStoreBytes(offs, 32, val)
+        }
+        function $Eq(x, y) -> r {
+            r := eq(x, y)
+        }
+        function $CastU128(x) -> r {
+            if gt(x, 0xffffffffffffffffffffffffffffffff) { $AbortBuiltin() }
+            r := x
+        }
+    }
+}
+===> Succeed(Stopped) (used_gas=1981): []

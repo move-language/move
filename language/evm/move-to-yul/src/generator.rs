@@ -59,16 +59,15 @@ impl Generator {
         let ctx = Context::new(options, env, false);
         let mut gen = Generator::default();
         let contract_funs = ctx.get_target_functions(attributes::is_contract_fun);
-        if contract_funs.is_empty() {
-            ctx.env
-                .error(&env.unknown_loc(), "no EVM contract functions found");
-            return ("".to_string(), "".to_string());
-        }
-        // Use the module of the first function to determine contract name and location.
-        // TODO: we want to make the contract name configurable by options
-        let first_module = &contract_funs[0].module_env;
-        let contract_name = ctx.make_contract_name(first_module);
-        gen.contract_object(&ctx, first_module.get_loc(), &contract_name, &contract_funs);
+        let (contract_name, contract_loc) = if contract_funs.is_empty() {
+            ("Empty".to_string(), env.unknown_loc())
+        } else {
+            // Use the module of the first function to determine contract name and location.
+            // TODO: we want to make the contract name configurable by options
+            let first_module = &contract_funs[0].module_env;
+            (ctx.make_contract_name(first_module), env.unknown_loc())
+        };
+        gen.contract_object(&ctx, contract_loc, &contract_name, &contract_funs);
         (contract_name, ctx.writer.extract_result())
     }
 
@@ -167,6 +166,10 @@ impl Generator {
         emit!(ctx.writer, "object \"{}\" ", test_contract_name);
         ctx.emit_block(|| {
             self.begin_code_block(ctx);
+            emitln!(
+                ctx.writer,
+                "mstore(${MEM_SIZE_LOC}, memoryguard(${USED_MEM}))"
+            );
             self.need_move_function(&fun_id);
             let fun_name = ctx.make_function_name(&fun_id);
             emitln!(ctx.writer, "{}()", fun_name);
@@ -705,8 +708,8 @@ impl Generator {
     fn generate_dispatcher_routine(&mut self, ctx: &Context, contract_funs: &[FunctionEnv<'_>]) {
         emitln!(ctx.writer, "if iszero(lt(calldatasize(), 4))");
         let mut selectors = BTreeMap::new();
-        let para_vec = vec!["224".to_string(), "calldataload(0)".to_string()];
-        let shr224 = self.call_builtin_str(ctx, YulFunction::ShiftRight, para_vec.iter().cloned());
+        let para_vec = vec!["calldataload(0)".to_string(), "224".to_string()];
+        let shr224 = self.call_builtin_str(ctx, YulFunction::Shr, para_vec.iter().cloned());
         ctx.emit_block(|| {
             emitln!(ctx.writer, "let selector := {}", shr224);
             emitln!(ctx.writer, "switch selector");

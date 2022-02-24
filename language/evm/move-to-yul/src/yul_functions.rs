@@ -154,13 +154,19 @@ NotImplemented: "() {
 // -------------------------------------------------------------------------------------------
 // Memory
 
+// TODO: many of the memory operations which take a `size` parameter can be specialized
+//   for the given size (8, 64, 128, or 256 bytes). The Yul optimizer does some of this,
+//   but it is not transparent how far this goes. We should better generate those
+//   functions algorithmically and specialize them ourselves. Doing the specialization
+//   manual is too error prone.
+
 // Allocates memory of size.
 // TODO: add some memory recovery (e.g. over free lists), and benchmark against the current
 //   arena style.
 Malloc: "(size) -> offs {
     offs := mload(${MEM_SIZE_LOC})
     // pad to word size
-    mstore(${MEM_SIZE_LOC}, add(offs, shr(add(size, 31), 5)))
+    mstore(${MEM_SIZE_LOC}, add(offs, shl(5, shr(5, add(size, 31)))))
 }",
 
 // Frees memory of size
@@ -169,7 +175,7 @@ Free: "(offs, size) {
 
 // Makes a pointer, using the lowest bit to indicate whether it is for storage or memory.
 MakePtr: "(is_storage, offs) -> ptr {
-  ptr := or(is_storage, shl(offs, 1))
+  ptr := or(is_storage, shl(1, offs))
 }",
 
 // Returns true if this is a storage  pointer.
@@ -179,14 +185,107 @@ IsStoragePtr: "(ptr) -> b {
 
 // Returns the offset of this pointer.
 OffsetPtr: "(ptr) -> offs {
-  offs := shr(ptr, 1)
+  offs := shr(1, ptr)
 }",
 
-// Takes an offset and splits it into a word and a bit offset.
-ToWordOffs: "(offs) -> word_offs, bit_offs {
-  word_offs := shr(offs, 5)
-  bit_offs := shl(and(offs, 0x1F), 3)
+// Constructs a bit mask for a value of size bytes. E.g. if size == 1, returns 0xff.
+// Note that we expect the Yul optimizer to specialize this for constant parameters.
+MaskForSize: "(size) -> mask {
+  mask := sub(shl(shl(size, 3), 1), 1)
 }",
+
+// Extracts size bytes from word, starting at byte index start. The most significant byte
+// is at index 0 (big endian).
+ExtractBytes: "(word, start, size) -> bytes {
+   switch size
+   case 1 {
+      // use the faster byte primitive
+      bytes := byte(start, word)
+   }
+   default {
+      // As we have big endian, we need to right shift the value from
+      // where the highest byte starts in the word (32 - start), minus
+      // the size.
+      let shift_bits := shl(3, sub(sub(32, start), size))
+      bytes := and(shr(shift_bits, word), $MaskForSize(size))
+   }
+}" dep MaskForSize,
+
+// Inject size bytes into word, starting a byte index start.
+InjectBytes: "(word, start, size, bytes) -> new_word {
+   let shift_bits := shl(3, sub(sub(32, start), size))
+   // Blend out the bits which we inject
+   let neg_mask := not(shl(shift_bits, $MaskForSize(size)))
+   word := and(word, neg_mask)
+   // Overlay the bits we inject
+   new_word := or(word, shl(shift_bits, bytes))
+}" dep MaskForSize,
+
+// For a byte offset, compute word offset and byte offset within this word.
+ToWordOffs: "(offs) -> word_offs, byte_offset {
+  word_offs := shr(5, offs)
+  byte_offset := and(offs, 0x1F)
+}",
+
+// For a byte offset within a word (< 32), compute the number of bytes which
+// overflow the word for a value of size.
+OverflowBytes: "(byte_offset, size) -> overflow_bytes {
+  let available_bytes := sub(32, byte_offset)
+  switch gt(size, available_bytes)
+  case 0 {
+    overflow_bytes := 0
+  }
+  default {
+    overflow_bytes := sub(size, available_bytes)
+  }
+}",
+
+// Loads bytes from memory offset.
+MemoryLoadBytes: "(offs, size) -> val {
+  // Lower bit where the value in the higher bytes ends
+  let bit_end := shl(3, sub(32, size))
+  val := shr(bit_end, mload(offs))
+}" dep MaskForSize,
+
+// Stores bytes to memory offset.
+MemoryStoreBytes: "(offs, size, val) {
+  let bit_end := shl(3, sub(32, size))
+  let mask := shl(bit_end, $MaskForSize(size))
+  mstore(offs, or(and(mload(offs), not(mask)), shl(bit_end, val)))
+}" dep MaskForSize,
+
+// Loads bytes from storage offset.
+StorageLoadBytes: "(offs, size) -> val {
+  let word_offs, byte_offs := $ToWordOffs(offs)
+  let key := $StorageKey(${LINEAR_STORAGE_GROUP}, word_offs)
+  val := $ExtractBytes(sload(key), byte_offs, size)
+  let overflow_bytes := $OverflowBytes(byte_offs, size)
+  if not(iszero(overflow_bytes)) {
+    key := $StorageKey(${LINEAR_STORAGE_GROUP}, add(word_offs, 1))
+    let extra_bytes := $ExtractBytes(sload(key), 0, overflow_bytes)
+    val := or(shl(shl(3, overflow_bytes), val), extra_bytes)
+  }
+}" dep ToWordOffs dep StorageKey dep ExtractBytes dep OverflowBytes,
+
+// Store bytes to storage offset.
+StorageStoreBytes: "(offs, size, bytes) {
+  let word_offs, byte_offs := $ToWordOffs(offs)
+  let key := $StorageKey(${LINEAR_STORAGE_GROUP}, word_offs)
+  let overflow_bytes := $OverflowBytes(byte_offs, size)
+  switch overflow_bytes
+  case 0 {
+    sstore(key, $InjectBytes(sload(key), byte_offs, size, bytes))
+  }
+  default {
+    // Shift the higher bytes to the right
+    let used_bytes := sub(size, overflow_bytes)
+    let higher_bytes := shr(used_bytes, bytes)
+    let lower_bytes := and(bytes, $MaskForSize(overflow_bytes))
+    sstore(key, $InjectBytes(sload(key), byte_offs, used_bytes, higher_bytes))
+    key := $StorageKey(${LINEAR_STORAGE_GROUP}, add(word_offs, 1))
+    sstore(key, $InjectBytes(sload(key), 0, overflow_bytes, lower_bytes))
+  }
+}" dep ToWordOffs dep StorageKey dep InjectBytes dep OverflowBytes,
 
 // Make a unique key into storage, where word can have full 32 byte size, and type
 // indicates the kind of the key given as a byte. This uses keccak256 to fold
@@ -213,7 +312,7 @@ StorageKey: "(group, word) -> key {
 // The type_hash identifies the type of the stored value. The id is any 20 byte
 // number which identifies an instance of this type (e.g. an address if this is a resource).
 MakeTypeStorageBase: "(category, type_hash, id) -> offs {
-  offs := or(shl(category, 252), or(shl(type_hash, 220), shl(id, 60)))
+  offs := or(shl(252, category), or(shl(220, type_hash), shl(60, id)))
 }",
 
 // Make a new base storage offset for linked storage. This creates a new handle
@@ -229,6 +328,8 @@ IndexPtr: "(ptr, offs) -> new_ptr {
   new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
 }" dep MakePtr dep IsStoragePtr dep OffsetPtr,
 
+// ------------
+
 // Loads u8 from pointer.
 LoadU8: "(ptr) -> val {
   let offs := $OffsetPtr(ptr)
@@ -243,15 +344,13 @@ LoadU8: "(ptr) -> val {
 
 // Loads u8 from memory offset.
 MemoryLoadU8: "(offs) -> val {
-  val := and(mload(offs), ${MAX_U8})
-}",
+  val := $MemoryLoadBytes(offs, 1)
+}" dep MemoryLoadBytes,
 
 // Loads u8 from storage offset.
 StorageLoadU8: "(offs) -> val {
-  let word_offs, bit_offs := $ToWordOffs(offs)
-  let key := $StorageKey(${LINEAR_STORAGE_GROUP}, word_offs)
-  val := and(shr(sload(key), bit_offs), ${MAX_U8})
-}" dep StorageKey dep ToWordOffs,
+  val := $StorageLoadBytes(offs, 1)
+}" dep StorageLoadBytes,
 
 // Stores u8 to pointer.
 StoreU8: "(ptr, val) {
@@ -267,17 +366,16 @@ StoreU8: "(ptr, val) {
 
 // Stores u8 to memory offset.
 MemoryStoreU8: "(offs, val) {
+  // Shortcut via special instruction
   mstore8(offs, val)
 }",
 
 // Stores u8 to storage offset.
 StorageStoreU8: "(offs, val) {
-  let word_offs, bit_offs := $ToWordOffs(offs)
-  let key := $StorageKey(${LINEAR_STORAGE_GROUP}, word_offs)
-  let word := sload(key)
-  word := or(and(word, not(shl(${MAX_U8}, bit_offs))), shl(val, bit_offs))
-  mstore(key, word)
-}" dep ToWordOffs dep StorageKey,
+  $StorageStoreBytes(offs, 1, val)
+}" dep StorageStoreBytes,
+
+// ------------
 
 // Loads u64 from pointer.
 LoadU64: "(ptr) -> val {
@@ -293,22 +391,13 @@ LoadU64: "(ptr) -> val {
 
 // Loads u64 from memory offset.
 MemoryLoadU64: "(offs) -> val {
-  val := and(mload(offs), ${MAX_U64})
-}",
+  val := $MemoryLoadBytes(offs, 8)
+}" dep MemoryLoadBytes,
 
 // Loads u64 from storage offset.
 StorageLoadU64: "(offs) -> val {
-  let word_offs, bit_offs := $ToWordOffs(offs)
-  let key := $StorageKey(${LINEAR_STORAGE_GROUP}, word_offs)
-  val := and(shr(sload(key), bit_offs), ${MAX_U64})
-  let used_bits := sub(256, bit_offs)
-  if lt(used_bits, 64) {
-    let overflow_bits := sub(64, used_bits)
-    let mask := sub(shl(1, overflow_bits), 1)
-    key := $StorageKey(${LINEAR_STORAGE_GROUP}, add(word_offs, 1))
-    val := or(val, shl(and(sload(key), mask), used_bits))
-  }
-}" dep ToWordOffs dep StorageKey,
+  val := $StorageLoadBytes(offs, 8)
+}" dep StorageLoadBytes,
 
 // Stores u64 to pointer.
 StoreU64: "(ptr, val) {
@@ -324,26 +413,17 @@ StoreU64: "(ptr, val) {
 
 // Stores u64 to memory offset.
 MemoryStoreU64: "(offs, val) {
-  mstore(offs, or(and(mload(offs), not(${MAX_U64})), val))
-}",
+  $MemoryStoreBytes(offs, 8, val)
+}" dep MemoryStoreBytes,
 
 // Stores u64 to storage offset.
 StorageStoreU64: "(offs, val) {
-  let word_offs, bit_offs := $ToWordOffs(offs)
-  let key := $StorageKey(${LINEAR_STORAGE_GROUP}, word_offs)
-  let word := sload(key)
-  word := or(and(word, not(shl(${MAX_U64}, bit_offs))), shl(val, bit_offs))
-  mstore(key, word)
-  let used_bits := sub(256, bit_offs)
-  if lt(used_bits, 64) {
-    let overflow_bits := sub(64, used_bits)
-    let mask := sub(shl(1, overflow_bits), 1)
-    key := $StorageKey(${LINEAR_STORAGE_GROUP}, add(word_offs, 1))
-    sstore(key, or(and(sload(key), not(mask)), shr(val, used_bits)))
-  }
-}" dep ToWordOffs dep StorageKey,
+  $StorageStoreBytes(offs, 8, val)
+}" dep StorageStoreBytes,
 
-// Loads u64 from pointer.
+// ------------
+
+// Loads u128 from pointer.
 LoadU128: "(ptr) -> val {
   let offs := $OffsetPtr(ptr)
   switch $IsStoragePtr(ptr)
@@ -357,22 +437,13 @@ LoadU128: "(ptr) -> val {
 
 // Loads u128 from memory offset.
 MemoryLoadU128: "(offs) -> val {
-  val := and(mload(offs), ${MAX_U128})
-}",
+  val := $MemoryLoadBytes(offs, 16)
+}" dep MemoryLoadBytes,
 
 // Loads u128 from storage offset.
 StorageLoadU128: "(offs) -> val {
-  let word_offs, bit_offs := $ToWordOffs(offs)
-  let key := $StorageKey(${LINEAR_STORAGE_GROUP}, word_offs)
-  val := and(shr(sload(key), bit_offs), ${MAX_U128})
-  let used_bits := sub(256, bit_offs)
-  if lt(used_bits, 128) {
-    let overflow_bits := sub(128, used_bits)
-    let mask := sub(shl(1, overflow_bits), 1)
-    key := $StorageKey(${LINEAR_STORAGE_GROUP}, add(word_offs, 1))
-    val := or(val, shl(and(sload(key), mask), used_bits))
-  }
-}" dep ToWordOffs dep StorageKey,
+  val := $StorageLoadBytes(offs, 16)
+}" dep StorageLoadBytes,
 
 // Stores u128 to pointer.
 StoreU128: "(ptr, val) {
@@ -388,24 +459,15 @@ StoreU128: "(ptr, val) {
 
 // Stores u128 to memory offset.
 MemoryStoreU128: "(offs, val) {
-  mstore(offs, or(and(mload(offs), not(${MAX_U128})), val))
-}",
+  $MemoryStoreBytes(offs, 16, val)
+}" dep MemoryStoreBytes,
 
 // Stores u128 to storage offset.
 StorageStoreU128: "(offs, val) {
-  let word_offs, bit_offs := $ToWordOffs(offs)
-  let key := $StorageKey(${LINEAR_STORAGE_GROUP}, word_offs)
-  let word := sload(key)
-  word := or(and(word, not(shl(${MAX_U128}, bit_offs))), shl(val, bit_offs))
-  mstore(key, word)
-  let used_bits := sub(256, bit_offs)
-  if lt(used_bits, 128) {
-    let overflow_bits := sub(128, used_bits)
-    let mask := sub(shl(1, overflow_bits), 1)
-    key := $StorageKey(${LINEAR_STORAGE_GROUP}, add(word_offs, 1))
-    sstore(key, or(and(sload(key), not(mask)), shr(val, used_bits)))
-  }
-}" dep ToWordOffs dep StorageKey,
+  $StorageStoreBytes(offs, 16, val)
+}" dep StorageStoreBytes,
+
+// ------------
 
 // Loads u256 from pointer.
 LoadU256: "(ptr) -> val {
@@ -421,29 +483,13 @@ LoadU256: "(ptr) -> val {
 
 // Loads u256 from memory offset.
 MemoryLoadU256: "(offs) -> val {
-  val := mload(offs)
-}",
+  val := $MemoryLoadBytes(offs, 32)
+}" dep MemoryLoadBytes,
 
 // Loads u256 from storage offset.
 StorageLoadU256: "(offs) -> val {
-  let word_offs, bit_offs := $ToWordOffs(offs)
-  let key := $StorageKey(${LINEAR_STORAGE_GROUP}, word_offs)
-  val := shr(sload(key), bit_offs)
-  let used_bits := sub(256, bit_offs)
-  if lt(used_bits, 256) {
-    let overflow_bits := sub(256, used_bits)
-    let mask := sub(shl(1, overflow_bits), 1)
-    key := $StorageKey(${LINEAR_STORAGE_GROUP}, add(word_offs, 1))
-    val := or(val, shl(and(sload(key), mask), used_bits))
-  }
-}" dep ToWordOffs dep StorageKey,
-
-// Loads u256 from a word-aligned storage offset.
-AlignedStorageLoad: "(offs) -> val {
-  let word_offs := shr(offs, 5)
-  val := sload($StorageKey(${LINEAR_STORAGE_GROUP}, word_offs))
-}" dep StorageKey,
-
+  val := $StorageLoadBytes(offs, 32)
+}" dep StorageLoadBytes,
 
 // Stores u256 to pointer.
 StoreU256: "(ptr, val) {
@@ -459,28 +505,25 @@ StoreU256: "(ptr, val) {
 
 // Stores u256 to memory offset.
 MemoryStoreU256: "(offs, val) {
-  mstore(offs, val)
-}",
+  $MemoryStoreBytes(offs, 32, val)
+}" dep MemoryStoreBytes,
 
 // Stores u256 to storage offset.
 StorageStoreU256: "(offs, val) {
-  let word_offs, bit_offs := $ToWordOffs(offs)
-  let key := $StorageKey(${LINEAR_STORAGE_GROUP}, word_offs)
-  let word := sload(key)
-  word := or(and(word, not(shl(${MAX_U256}, bit_offs))), shl(val, bit_offs))
-  mstore(key, word)
-  let used_bits := sub(256, bit_offs)
-  if lt(used_bits, 256) {
-    let overflow_bits := sub(256, used_bits)
-    let mask := sub(shl(1, overflow_bits), 1)
-    key := $StorageKey(${LINEAR_STORAGE_GROUP}, add(word_offs, 1))
-    sstore(key, or(and(sload(key), not(mask)), shr(val, used_bits)))
-  }
-}" dep ToWordOffs dep StorageKey,
+  $StorageStoreBytes(offs, 32, val)
+}" dep StorageStoreBytes,
+
+// ------------
+
+// Loads u256 from a word-aligned storage offset
+AlignedStorageLoad: "(offs) -> val {
+  let word_offs := shr(5, offs)
+  val := sload($StorageKey(${LINEAR_STORAGE_GROUP}, word_offs))
+}" dep StorageKey,
 
 // Stores u256 to a word-aligned storage offset
 AlignedStorageStore: "(offs, val) {
-  let word_offs := shr(offs, 5)
+  let word_offs := shr(5, offs)
   sstore($StorageKey(${LINEAR_STORAGE_GROUP}, word_offs), val)
 }" dep StorageKey,
 
@@ -491,7 +534,7 @@ CopyMemory: "(src, dst, size) {
     mstore(add(dst, i), mload(add(src, i)))
   }
   if lt(i, length) {
-    let mask := sub(shl(1, shl(i, 3)), 1)
+    let mask := sub(shl(shl(3, i), 1), 1)
     let dst_word := and(mload(add(dst, i)), not(mask))
     let src_word := and(mload(add(src, i)), mask)
     mstore(add(dst, i), or(dst_word, src_word))
@@ -545,19 +588,19 @@ Mod: "(x, y) -> r {
     r := mod(x, y)
 }" dep AbortBuiltin,
 Shr: "(x, y) -> r {
-    r := shr(x, y)
+    r := shr(y, x)
 }",
 ShlU8: "(x, y) -> r {
-    r := and(shl(x, y), ${MAX_U8})
+    r := and(shl(y, x), ${MAX_U8})
 }",
 ShlU64: "(x, y) -> r {
-    r := and(shl(x, y), ${MAX_U64})
+    r := and(shl(y, x), ${MAX_U64})
 }",
 ShlU128: "(x, y) -> r {
-    r := and(shl(x, y), ${MAX_U128})
+    r := and(shl(y, x), ${MAX_U128})
 }",
 ShlU256: "(x, y) -> r {
-    r := and(shl(x, y), ${MAX_U256})
+    r := and(shl(y, x), ${MAX_U256})
 }",
 Gt: "(x, y) -> r {
     r := gt(x, y)
@@ -613,9 +656,6 @@ CastU128: "(x) -> r {
 CastU256: "(hi, lo) -> r {
     if gt(hi, ${MAX_U128}) { $AbortBuiltin() }
     if gt(lo, ${MAX_U128}) { $AbortBuiltin() }
-    r := add(shl(hi, 128), lo)
+    r := add(shl(128, hi), lo)
 }" dep AbortBuiltin,
-ShiftRight: "(bits, value) -> r {
-    r := shr(bits, value) // evm version >= constantinople
-}",
 }

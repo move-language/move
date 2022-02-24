@@ -14,7 +14,7 @@ object "A2_M" {
             mstore(0, memoryguard(160))
             if iszero(lt(calldatasize(), 4))
             {
-                let selector := $ShiftRight(224, calldataload(0))
+                let selector := $Shr(calldataload(0), 224)
                 switch selector
                 case 0xc11ae395
                 {
@@ -37,43 +37,43 @@ object "A2_M" {
                 let $locals := $Malloc(64)
                 mstore($locals, a)
                 // $t6 := copy($t0)
-                /// @src 2:109:110
+                /// @src 2:115:116
                 $t6 := mload($locals)
                 // $t3 := $t6
-                /// @src 2:105:106
+                /// @src 2:111:112
                 mstore(add($locals, 32), $t6)
                 // $t7 := copy($t3)
-                /// @src 2:125:126
+                /// @src 2:134:135
                 $t7 := mload(add($locals, 32))
                 // $t8 := +($t7, $t1)
-                /// @src 2:127:128
+                /// @src 2:136:137
                 $t8 := $AddU64($t7, b)
                 // $t9 := borrow_local($t0)
-                /// @src 2:146:152
-                $t9 := $MakePtr(false, $locals)
+                /// @src 2:158:164
+                $t9 := $MakePtr(false, add($locals, 24))
                 // $t10 := borrow_local($t3)
-                /// @src 2:168:170
-                $t10 := $MakePtr(false, add($locals, 32))
+                /// @src 2:183:185
+                $t10 := $MakePtr(false, add($locals, 56))
                 // $t11 := read_ref($t10)
-                /// @src 2:183:186
+                /// @src 2:201:204
                 $t11 := $LoadU64($t10)
                 // $t12 := 1
-                /// @src 2:189:190
+                /// @src 2:207:208
                 $t12 := 1
                 // $t13 := +($t11, $t12)
-                /// @src 2:187:188
+                /// @src 2:205:206
                 $t13 := $AddU64($t11, $t12)
                 // write_ref($t9, $t13)
-                /// @src 2:177:190
+                /// @src 2:195:208
                 $StoreU64($t9, $t13)
                 // $t14 := copy($t0)
-                /// @src 2:198:199
+                /// @src 2:219:220
                 $t14 := mload($locals)
                 // $t15 := copy($t3)
-                /// @src 2:204:205
+                /// @src 2:225:226
                 $t15 := mload(add($locals, 32))
                 // return ($t14, $t1, $t15, $t8)
-                /// @src 2:197:209
+                /// @src 2:218:230
                 $result0 := $t14
                 $result1 := b
                 $result2 := $t15
@@ -122,22 +122,96 @@ object "A2_M" {
             function $Malloc(size) -> offs {
                 offs := mload(0)
                 // pad to word size
-                mstore(0, add(offs, shr(add(size, 31), 5)))
+                mstore(0, add(offs, shl(5, shr(5, add(size, 31)))))
             }
             function $Free(offs, size) {
             }
             function $MakePtr(is_storage, offs) -> ptr {
-              ptr := or(is_storage, shl(offs, 1))
+              ptr := or(is_storage, shl(1, offs))
             }
             function $IsStoragePtr(ptr) -> b {
               b := and(ptr, 0x1)
             }
             function $OffsetPtr(ptr) -> offs {
-              offs := shr(ptr, 1)
+              offs := shr(1, ptr)
             }
-            function $ToWordOffs(offs) -> word_offs, bit_offs {
-              word_offs := shr(offs, 5)
-              bit_offs := shl(and(offs, 0x1F), 3)
+            function $MaskForSize(size) -> mask {
+              mask := sub(shl(shl(size, 3), 1), 1)
+            }
+            function $ExtractBytes(word, start, size) -> bytes {
+               switch size
+               case 1 {
+                  // use the faster byte primitive
+                  bytes := byte(start, word)
+               }
+               default {
+                  // As we have big endian, we need to right shift the value from
+                  // where the highest byte starts in the word (32 - start), minus
+                  // the size.
+                  let shift_bits := shl(3, sub(sub(32, start), size))
+                  bytes := and(shr(shift_bits, word), $MaskForSize(size))
+               }
+            }
+            function $InjectBytes(word, start, size, bytes) -> new_word {
+               let shift_bits := shl(3, sub(sub(32, start), size))
+               // Blend out the bits which we inject
+               let neg_mask := not(shl(shift_bits, $MaskForSize(size)))
+               word := and(word, neg_mask)
+               // Overlay the bits we inject
+               new_word := or(word, shl(shift_bits, bytes))
+            }
+            function $ToWordOffs(offs) -> word_offs, byte_offset {
+              word_offs := shr(5, offs)
+              byte_offset := and(offs, 0x1F)
+            }
+            function $OverflowBytes(byte_offset, size) -> overflow_bytes {
+              let available_bytes := sub(32, byte_offset)
+              switch gt(size, available_bytes)
+              case 0 {
+                overflow_bytes := 0
+              }
+              default {
+                overflow_bytes := sub(size, available_bytes)
+              }
+            }
+            function $MemoryLoadBytes(offs, size) -> val {
+              // Lower bit where the value in the higher bytes ends
+              let bit_end := shl(3, sub(32, size))
+              val := shr(bit_end, mload(offs))
+            }
+            function $MemoryStoreBytes(offs, size, val) {
+              let bit_end := shl(3, sub(32, size))
+              let mask := shl(bit_end, $MaskForSize(size))
+              mstore(offs, or(and(mload(offs), not(mask)), shl(bit_end, val)))
+            }
+            function $StorageLoadBytes(offs, size) -> val {
+              let word_offs, byte_offs := $ToWordOffs(offs)
+              let key := $StorageKey(0, word_offs)
+              val := $ExtractBytes(sload(key), byte_offs, size)
+              let overflow_bytes := $OverflowBytes(byte_offs, size)
+              if not(iszero(overflow_bytes)) {
+                key := $StorageKey(0, add(word_offs, 1))
+                let extra_bytes := $ExtractBytes(sload(key), 0, overflow_bytes)
+                val := or(shl(shl(3, overflow_bytes), val), extra_bytes)
+              }
+            }
+            function $StorageStoreBytes(offs, size, bytes) {
+              let word_offs, byte_offs := $ToWordOffs(offs)
+              let key := $StorageKey(0, word_offs)
+              let overflow_bytes := $OverflowBytes(byte_offs, size)
+              switch overflow_bytes
+              case 0 {
+                sstore(key, $InjectBytes(sload(key), byte_offs, size, bytes))
+              }
+              default {
+                // Shift the higher bytes to the right
+                let used_bytes := sub(size, overflow_bytes)
+                let higher_bytes := shr(used_bytes, bytes)
+                let lower_bytes := and(bytes, $MaskForSize(overflow_bytes))
+                sstore(key, $InjectBytes(sload(key), byte_offs, used_bytes, higher_bytes))
+                key := $StorageKey(0, add(word_offs, 1))
+                sstore(key, $InjectBytes(sload(key), 0, overflow_bytes, lower_bytes))
+              }
             }
             function $StorageKey(group, word) -> key {
               mstore(32, word)
@@ -155,19 +229,10 @@ object "A2_M" {
               }
             }
             function $MemoryLoadU64(offs) -> val {
-              val := and(mload(offs), 0xffffffffffffffff)
+              val := $MemoryLoadBytes(offs, 8)
             }
             function $StorageLoadU64(offs) -> val {
-              let word_offs, bit_offs := $ToWordOffs(offs)
-              let key := $StorageKey(0, word_offs)
-              val := and(shr(sload(key), bit_offs), 0xffffffffffffffff)
-              let used_bits := sub(256, bit_offs)
-              if lt(used_bits, 64) {
-                let overflow_bits := sub(64, used_bits)
-                let mask := sub(shl(1, overflow_bits), 1)
-                key := $StorageKey(0, add(word_offs, 1))
-                val := or(val, shl(and(sload(key), mask), used_bits))
-              }
+              val := $StorageLoadBytes(offs, 8)
             }
             function $StoreU64(ptr, val) {
               let offs := $OffsetPtr(ptr)
@@ -180,28 +245,17 @@ object "A2_M" {
               }
             }
             function $MemoryStoreU64(offs, val) {
-              mstore(offs, or(and(mload(offs), not(0xffffffffffffffff)), val))
+              $MemoryStoreBytes(offs, 8, val)
             }
             function $StorageStoreU64(offs, val) {
-              let word_offs, bit_offs := $ToWordOffs(offs)
-              let key := $StorageKey(0, word_offs)
-              let word := sload(key)
-              word := or(and(word, not(shl(0xffffffffffffffff, bit_offs))), shl(val, bit_offs))
-              mstore(key, word)
-              let used_bits := sub(256, bit_offs)
-              if lt(used_bits, 64) {
-                let overflow_bits := sub(64, used_bits)
-                let mask := sub(shl(1, overflow_bits), 1)
-                key := $StorageKey(0, add(word_offs, 1))
-                sstore(key, or(and(sload(key), not(mask)), shr(val, used_bits)))
-              }
+              $StorageStoreBytes(offs, 8, val)
             }
             function $AddU64(x, y) -> r {
                 if lt(sub(0xffffffffffffffff, x), y) { $AbortBuiltin() }
                 r := add(x, y)
             }
-            function $ShiftRight(bits, value) -> r {
-                r := shr(bits, value) // evm version >= constantinople
+            function $Shr(x, y) -> r {
+                r := shr(y, x)
             }
         }
     }
@@ -255,35 +309,35 @@ object "A2_M" {
             {
                 let _1 := 0
                 let offs := mload(_1)
-                mstore(_1, offs)
+                mstore(_1, add(offs, 64))
                 mstore(offs, a)
                 let _2 := add(offs, 32)
                 mstore(_2, a)
                 let $t8 := $AddU64(a, b)
-                let _3 := 1
-                let _4 := or(false, shl(_2, _3))
+                let _3 := or(false, shl(1, add(offs, 56)))
                 let val := _1
-                let offs_1 := shr(_4, _3)
-                switch and(_4, _3)
+                let offs_1 := shr(1, _3)
+                switch and(_3, 1)
                 case 0 {
-                    val := and(mload(offs_1), 0xffffffffffffffff)
+                    val := shr(192, mload(offs_1))
                 }
                 default {
                     let val_1 := _1
-                    let word_offs, bit_offs := $ToWordOffs(offs_1)
+                    let word_offs := shr(6, _3)
+                    let byte_offset := and(offs_1, 31)
                     mstore(32, word_offs)
                     mstore(64, _1)
-                    val_1 := and(shr(sload(keccak256(32, 36)), bit_offs), 0xffffffffffffffff)
-                    let used_bits := sub(256, bit_offs)
-                    if lt(used_bits, 64)
+                    val_1 := $ExtractBytes_947(sload(keccak256(32, 36)), byte_offset)
+                    let overflow_bytes := $OverflowBytes(byte_offset)
+                    if not(iszero(overflow_bytes))
                     {
-                        mstore(32, add(word_offs, _3))
+                        mstore(32, add(word_offs, 1))
                         mstore(64, _1)
-                        val_1 := or(val_1, shl(and(sload(keccak256(32, 36)), add(shl(_3, add(bit_offs, not(191))), not(0))), used_bits))
+                        val_1 := or(shl(shl(3, overflow_bytes), val_1), $ExtractBytes(sload(keccak256(32, 36)), overflow_bytes))
                     }
                     val := val_1
                 }
-                $StoreU64(or(false, shl(offs, _3)), $AddU64_686(val))
+                $StoreU64(or(false, shl(1, add(offs, 24))), $AddU64_950(val))
                 let $t14 := mload(offs)
                 let $t15 := mload(_2)
                 $result0 := $t14
@@ -314,36 +368,70 @@ object "A2_M" {
                 mstore(0, 97)
                 revert(24, 8)
             }
-            function $ToWordOffs(offs) -> word_offs, bit_offs
+            function $ExtractBytes_947(word, start) -> bytes
             {
-                word_offs := shr(offs, 5)
-                bit_offs := shl(and(offs, 0x1F), 3)
+                bytes := shr(shl(3, add(sub(32, start), not(7))), word)
+            }
+            function $ExtractBytes(word, size) -> bytes
+            {
+                switch size
+                case 1 { bytes := byte(0, word) }
+                default {
+                    bytes := and(shr(shl(3, sub(32, size)), word), add(shl(shl(size, 3), 1), not(0)))
+                }
+            }
+            function $InjectBytes_957(word, start, bytes) -> new_word
+            {
+                let shift_bits := shl(3, add(sub(32, start), not(7)))
+                new_word := or(and(word, not(shl(shift_bits, not(0)))), shl(shift_bits, bytes))
+            }
+            function $InjectBytes_958(word, size, bytes) -> new_word
+            {
+                let shift_bits := shl(3, sub(32, size))
+                new_word := or(and(word, not(shl(shift_bits, add(shl(shl(size, 3), 1), not(0))))), shl(shift_bits, bytes))
+            }
+            function $InjectBytes(word, start, size, bytes) -> new_word
+            {
+                let shift_bits := shl(3, sub(32, add(start, size)))
+                new_word := or(and(word, not(shl(shift_bits, add(shl(shl(size, 3), 1), not(0))))), shl(shift_bits, bytes))
+            }
+            function $OverflowBytes(byte_offset) -> overflow_bytes
+            {
+                switch gt(8, sub(32, byte_offset))
+                case 0 { overflow_bytes := 0 }
+                default {
+                    overflow_bytes := add(byte_offset, not(23))
+                }
             }
             function $StoreU64(ptr, val)
             {
-                let offs := shr(ptr, 1)
+                let offs := shr(1, ptr)
                 switch and(ptr, 1)
                 case 0 {
-                    mstore(offs, or(and(mload(offs), not(0xffffffffffffffff)), val))
+                    mstore(offs, or(and(mload(offs), sub(shl(192, 1), 1)), shl(192, val)))
                 }
                 default {
-                    let word_offs, bit_offs := $ToWordOffs(offs)
+                    let word_offs := shr(6, ptr)
+                    let byte_offset := and(offs, 0x1F)
                     mstore(32, word_offs)
                     mstore(64, 0)
                     let key := keccak256(32, 36)
-                    let word := sload(key)
-                    mstore(key, or(word, shl(val, bit_offs)))
-                    let used_bits := sub(256, bit_offs)
-                    if lt(used_bits, 64)
-                    {
+                    let overflow_bytes := $OverflowBytes(byte_offset)
+                    switch overflow_bytes
+                    case 0 {
+                        sstore(key, $InjectBytes_957(sload(key), byte_offset, val))
+                    }
+                    default {
+                        let used_bytes := sub(8, overflow_bytes)
+                        sstore(key, $InjectBytes(sload(key), byte_offset, used_bytes, shr(used_bytes, val)))
                         mstore(32, add(word_offs, 1))
                         mstore(64, 0)
                         let key_1 := keccak256(32, 36)
-                        sstore(key_1, or(and(sload(key_1), not(add(shl(1, add(bit_offs, not(191))), not(0)))), shr(val, used_bits)))
+                        sstore(key_1, $InjectBytes_958(sload(key_1), overflow_bytes, and(val, add(shl(shl(overflow_bytes, 3), 1), not(0)))))
                     }
                 }
             }
-            function $AddU64_686(x) -> r
+            function $AddU64_950(x) -> r
             {
                 if lt(sub(0xffffffffffffffff, x), 1)
                 {
@@ -364,3 +452,502 @@ object "A2_M" {
         }
     }
 }
+
+!! Unit tests
+
+// test of M::test_call_by_ref
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 2:"tests/Locals.move"
+
+object "test_A2_M_test_call_by_ref" {
+    code {
+        mstore(0, memoryguard(160))
+        A2_M_test_call_by_ref()
+        return (0, 0)
+        function A2_M_test_call_by_ref() {
+            let $t1, $t2, $t3, $t4, $t5, $t6
+            let $locals := $Malloc(32)
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // $t6 := 101
+                    /// @src 2:653:656
+                    $t6 := 101
+                    // abort($t6)
+                    /// @src 2:637:657
+                    $Abort($t6)
+                }
+                case 3 {
+                    // label L0
+                    // return ()
+                    /// @src 2:657:658
+                    $Free($locals, 32)
+                    leave
+                }
+                case 4 {
+                    // $t1 := 1
+                    /// @src 2:565:566
+                    $t1 := 1
+                    // $t0 := $t1
+                    /// @src 2:561:562
+                    mstore($locals, $t1)
+                    // $t2 := borrow_local($t0)
+                    /// @src 2:620:626
+                    $t2 := $MakePtr(false, add($locals, 24))
+                    // M::call_by_ref($t2)
+                    /// @src 2:608:627
+                    A2_M_call_by_ref($t2)
+                    // $t3 := copy($t0)
+                    /// @src 2:645:646
+                    $t3 := mload($locals)
+                    // $t4 := 2
+                    /// @src 2:650:651
+                    $t4 := 2
+                    // $t5 := ==($t3, $t4)
+                    /// @src 2:647:649
+                    $t5 := $Eq($t3, $t4)
+                    // if ($t5) goto L0 else goto L1
+                    /// @src 2:637:657
+                    switch $t5
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
+                }
+            }
+        }
+
+        function A2_M_call_by_ref(a) {
+            let $t1
+            // $t1 := 2
+            /// @src 2:494:495
+            $t1 := 2
+            // write_ref($t0, $t1)
+            /// @src 2:489:495
+            $StoreU64(a, $t1)
+            // return ()
+            /// @src 2:495:496
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $Malloc(size) -> offs {
+            offs := mload(0)
+            // pad to word size
+            mstore(0, add(offs, shl(5, shr(5, add(size, 31)))))
+        }
+        function $Free(offs, size) {
+        }
+        function $MakePtr(is_storage, offs) -> ptr {
+          ptr := or(is_storage, shl(1, offs))
+        }
+        function $IsStoragePtr(ptr) -> b {
+          b := and(ptr, 0x1)
+        }
+        function $OffsetPtr(ptr) -> offs {
+          offs := shr(1, ptr)
+        }
+        function $MaskForSize(size) -> mask {
+          mask := sub(shl(shl(size, 3), 1), 1)
+        }
+        function $InjectBytes(word, start, size, bytes) -> new_word {
+           let shift_bits := shl(3, sub(sub(32, start), size))
+           // Blend out the bits which we inject
+           let neg_mask := not(shl(shift_bits, $MaskForSize(size)))
+           word := and(word, neg_mask)
+           // Overlay the bits we inject
+           new_word := or(word, shl(shift_bits, bytes))
+        }
+        function $ToWordOffs(offs) -> word_offs, byte_offset {
+          word_offs := shr(5, offs)
+          byte_offset := and(offs, 0x1F)
+        }
+        function $OverflowBytes(byte_offset, size) -> overflow_bytes {
+          let available_bytes := sub(32, byte_offset)
+          switch gt(size, available_bytes)
+          case 0 {
+            overflow_bytes := 0
+          }
+          default {
+            overflow_bytes := sub(size, available_bytes)
+          }
+        }
+        function $MemoryStoreBytes(offs, size, val) {
+          let bit_end := shl(3, sub(32, size))
+          let mask := shl(bit_end, $MaskForSize(size))
+          mstore(offs, or(and(mload(offs), not(mask)), shl(bit_end, val)))
+        }
+        function $StorageStoreBytes(offs, size, bytes) {
+          let word_offs, byte_offs := $ToWordOffs(offs)
+          let key := $StorageKey(0, word_offs)
+          let overflow_bytes := $OverflowBytes(byte_offs, size)
+          switch overflow_bytes
+          case 0 {
+            sstore(key, $InjectBytes(sload(key), byte_offs, size, bytes))
+          }
+          default {
+            // Shift the higher bytes to the right
+            let used_bytes := sub(size, overflow_bytes)
+            let higher_bytes := shr(used_bytes, bytes)
+            let lower_bytes := and(bytes, $MaskForSize(overflow_bytes))
+            sstore(key, $InjectBytes(sload(key), byte_offs, used_bytes, higher_bytes))
+            key := $StorageKey(0, add(word_offs, 1))
+            sstore(key, $InjectBytes(sload(key), 0, overflow_bytes, lower_bytes))
+          }
+        }
+        function $StorageKey(group, word) -> key {
+          mstore(32, word)
+          mstore(64, group)
+          key := keccak256(32, 36)
+        }
+        function $StoreU64(ptr, val) {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            $MemoryStoreU64(offs, val)
+          }
+          default {
+            $StorageStoreU64(offs, val)
+          }
+        }
+        function $MemoryStoreU64(offs, val) {
+          $MemoryStoreBytes(offs, 8, val)
+        }
+        function $StorageStoreU64(offs, val) {
+          $StorageStoreBytes(offs, 8, val)
+        }
+        function $Eq(x, y) -> r {
+            r := eq(x, y)
+        }
+    }
+}
+===> Succeed(Stopped) (used_gas=410): []
+
+// test of M::test_evaded
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 2:"tests/Locals.move"
+
+object "test_A2_M_test_evaded" {
+    code {
+        mstore(0, memoryguard(160))
+        A2_M_test_evaded()
+        return (0, 0)
+        function A2_M_test_evaded() {
+            let a, b, c, d, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // $t12 := 100
+                    /// @src 2:343:346
+                    $t12 := 100
+                    // abort($t12)
+                    /// @src 2:327:347
+                    $Abort($t12)
+                }
+                case 3 {
+                    // label L0
+                    // $t13 := 2
+                    /// @src 2:370:371
+                    $t13 := 2
+                    // $t14 := ==($t7, $t13)
+                    /// @src 2:367:369
+                    $t14 := $Eq($t7, $t13)
+                    // if ($t14) goto L2 else goto L3
+                    /// @src 2:357:377
+                    switch $t14
+                    case 0  { $block := 5 }
+                    default { $block := 6 }
+                }
+                case 4 {
+                    // $t4 := 1
+                    /// @src 2:312:313
+                    $t4 := 1
+                    // $t5 := 2
+                    /// @src 2:315:316
+                    $t5 := 2
+                    // ($t6, $t7, $t8, $t9) := M::evaded($t4, $t5)
+                    /// @src 2:305:317
+                    $t6, $t7, $t8, $t9 := A2_M_evaded($t4, $t5)
+                    // $t10 := 2
+                    /// @src 2:340:341
+                    $t10 := 2
+                    // $t11 := ==($t6, $t10)
+                    /// @src 2:337:339
+                    $t11 := $Eq($t6, $t10)
+                    // if ($t11) goto L0 else goto L1
+                    /// @src 2:327:347
+                    switch $t11
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
+                }
+                case 5 {
+                    // label L3
+                    // $t15 := 101
+                    /// @src 2:373:376
+                    $t15 := 101
+                    // abort($t15)
+                    /// @src 2:357:377
+                    $Abort($t15)
+                }
+                case 6 {
+                    // label L2
+                    // $t16 := 1
+                    /// @src 2:400:401
+                    $t16 := 1
+                    // $t17 := ==($t8, $t16)
+                    /// @src 2:397:399
+                    $t17 := $Eq($t8, $t16)
+                    // if ($t17) goto L4 else goto L5
+                    /// @src 2:387:407
+                    switch $t17
+                    case 0  { $block := 7 }
+                    default { $block := 8 }
+                }
+                case 7 {
+                    // label L5
+                    // $t18 := 102
+                    /// @src 2:403:406
+                    $t18 := 102
+                    // abort($t18)
+                    /// @src 2:387:407
+                    $Abort($t18)
+                }
+                case 8 {
+                    // label L4
+                    // $t19 := 3
+                    /// @src 2:430:431
+                    $t19 := 3
+                    // $t20 := ==($t9, $t19)
+                    /// @src 2:427:429
+                    $t20 := $Eq($t9, $t19)
+                    // if ($t20) goto L6 else goto L7
+                    /// @src 2:417:437
+                    switch $t20
+                    case 0  { $block := 9 }
+                    default { $block := 10 }
+                }
+                case 9 {
+                    // label L7
+                    // $t21 := 103
+                    /// @src 2:433:436
+                    $t21 := 103
+                    // abort($t21)
+                    /// @src 2:417:437
+                    $Abort($t21)
+                }
+                case 10 {
+                    // label L6
+                    // return ()
+                    /// @src 2:437:438
+                    leave
+                }
+            }
+        }
+
+        function A2_M_evaded(a, b) -> $result0, $result1, $result2, $result3 {
+            let ar, cr, d, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15
+            let $locals := $Malloc(64)
+            mstore($locals, a)
+            // $t6 := copy($t0)
+            /// @src 2:115:116
+            $t6 := mload($locals)
+            // $t3 := $t6
+            /// @src 2:111:112
+            mstore(add($locals, 32), $t6)
+            // $t7 := copy($t3)
+            /// @src 2:134:135
+            $t7 := mload(add($locals, 32))
+            // $t8 := +($t7, $t1)
+            /// @src 2:136:137
+            $t8 := $AddU64($t7, b)
+            // $t9 := borrow_local($t0)
+            /// @src 2:158:164
+            $t9 := $MakePtr(false, add($locals, 24))
+            // $t10 := borrow_local($t3)
+            /// @src 2:183:185
+            $t10 := $MakePtr(false, add($locals, 56))
+            // $t11 := read_ref($t10)
+            /// @src 2:201:204
+            $t11 := $LoadU64($t10)
+            // $t12 := 1
+            /// @src 2:207:208
+            $t12 := 1
+            // $t13 := +($t11, $t12)
+            /// @src 2:205:206
+            $t13 := $AddU64($t11, $t12)
+            // write_ref($t9, $t13)
+            /// @src 2:195:208
+            $StoreU64($t9, $t13)
+            // $t14 := copy($t0)
+            /// @src 2:219:220
+            $t14 := mload($locals)
+            // $t15 := copy($t3)
+            /// @src 2:225:226
+            $t15 := mload(add($locals, 32))
+            // return ($t14, $t1, $t15, $t8)
+            /// @src 2:218:230
+            $result0 := $t14
+            $result1 := b
+            $result2 := $t15
+            $result3 := $t8
+            $Free($locals, 64)
+        }
+
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $AbortBuiltin() {
+            $Abort(sub(0, 1))
+        }
+        function $Malloc(size) -> offs {
+            offs := mload(0)
+            // pad to word size
+            mstore(0, add(offs, shl(5, shr(5, add(size, 31)))))
+        }
+        function $Free(offs, size) {
+        }
+        function $MakePtr(is_storage, offs) -> ptr {
+          ptr := or(is_storage, shl(1, offs))
+        }
+        function $IsStoragePtr(ptr) -> b {
+          b := and(ptr, 0x1)
+        }
+        function $OffsetPtr(ptr) -> offs {
+          offs := shr(1, ptr)
+        }
+        function $MaskForSize(size) -> mask {
+          mask := sub(shl(shl(size, 3), 1), 1)
+        }
+        function $ExtractBytes(word, start, size) -> bytes {
+           switch size
+           case 1 {
+              // use the faster byte primitive
+              bytes := byte(start, word)
+           }
+           default {
+              // As we have big endian, we need to right shift the value from
+              // where the highest byte starts in the word (32 - start), minus
+              // the size.
+              let shift_bits := shl(3, sub(sub(32, start), size))
+              bytes := and(shr(shift_bits, word), $MaskForSize(size))
+           }
+        }
+        function $InjectBytes(word, start, size, bytes) -> new_word {
+           let shift_bits := shl(3, sub(sub(32, start), size))
+           // Blend out the bits which we inject
+           let neg_mask := not(shl(shift_bits, $MaskForSize(size)))
+           word := and(word, neg_mask)
+           // Overlay the bits we inject
+           new_word := or(word, shl(shift_bits, bytes))
+        }
+        function $ToWordOffs(offs) -> word_offs, byte_offset {
+          word_offs := shr(5, offs)
+          byte_offset := and(offs, 0x1F)
+        }
+        function $OverflowBytes(byte_offset, size) -> overflow_bytes {
+          let available_bytes := sub(32, byte_offset)
+          switch gt(size, available_bytes)
+          case 0 {
+            overflow_bytes := 0
+          }
+          default {
+            overflow_bytes := sub(size, available_bytes)
+          }
+        }
+        function $MemoryLoadBytes(offs, size) -> val {
+          // Lower bit where the value in the higher bytes ends
+          let bit_end := shl(3, sub(32, size))
+          val := shr(bit_end, mload(offs))
+        }
+        function $MemoryStoreBytes(offs, size, val) {
+          let bit_end := shl(3, sub(32, size))
+          let mask := shl(bit_end, $MaskForSize(size))
+          mstore(offs, or(and(mload(offs), not(mask)), shl(bit_end, val)))
+        }
+        function $StorageLoadBytes(offs, size) -> val {
+          let word_offs, byte_offs := $ToWordOffs(offs)
+          let key := $StorageKey(0, word_offs)
+          val := $ExtractBytes(sload(key), byte_offs, size)
+          let overflow_bytes := $OverflowBytes(byte_offs, size)
+          if not(iszero(overflow_bytes)) {
+            key := $StorageKey(0, add(word_offs, 1))
+            let extra_bytes := $ExtractBytes(sload(key), 0, overflow_bytes)
+            val := or(shl(shl(3, overflow_bytes), val), extra_bytes)
+          }
+        }
+        function $StorageStoreBytes(offs, size, bytes) {
+          let word_offs, byte_offs := $ToWordOffs(offs)
+          let key := $StorageKey(0, word_offs)
+          let overflow_bytes := $OverflowBytes(byte_offs, size)
+          switch overflow_bytes
+          case 0 {
+            sstore(key, $InjectBytes(sload(key), byte_offs, size, bytes))
+          }
+          default {
+            // Shift the higher bytes to the right
+            let used_bytes := sub(size, overflow_bytes)
+            let higher_bytes := shr(used_bytes, bytes)
+            let lower_bytes := and(bytes, $MaskForSize(overflow_bytes))
+            sstore(key, $InjectBytes(sload(key), byte_offs, used_bytes, higher_bytes))
+            key := $StorageKey(0, add(word_offs, 1))
+            sstore(key, $InjectBytes(sload(key), 0, overflow_bytes, lower_bytes))
+          }
+        }
+        function $StorageKey(group, word) -> key {
+          mstore(32, word)
+          mstore(64, group)
+          key := keccak256(32, 36)
+        }
+        function $LoadU64(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU64(offs)
+          }
+          default {
+            val := $StorageLoadU64(offs)
+          }
+        }
+        function $MemoryLoadU64(offs) -> val {
+          val := $MemoryLoadBytes(offs, 8)
+        }
+        function $StorageLoadU64(offs) -> val {
+          val := $StorageLoadBytes(offs, 8)
+        }
+        function $StoreU64(ptr, val) {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            $MemoryStoreU64(offs, val)
+          }
+          default {
+            $StorageStoreU64(offs, val)
+          }
+        }
+        function $MemoryStoreU64(offs, val) {
+          $MemoryStoreBytes(offs, 8, val)
+        }
+        function $StorageStoreU64(offs, val) {
+          $StorageStoreBytes(offs, 8, val)
+        }
+        function $AddU64(x, y) -> r {
+            if lt(sub(0xffffffffffffffff, x), y) { $AbortBuiltin() }
+            r := add(x, y)
+        }
+        function $Eq(x, y) -> r {
+            r := eq(x, y)
+        }
+    }
+}
+===> Succeed(Stopped) (used_gas=1261): []

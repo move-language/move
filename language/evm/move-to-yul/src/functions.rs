@@ -16,7 +16,7 @@ use move_stackless_bytecode::{
     stackless_control_flow_graph::{BlockContent, BlockId, StacklessControlFlowGraph},
 };
 use sha3::{Digest, Keccak256};
-use std::collections::BTreeMap;
+use std::collections::{btree_map::Entry, BTreeMap};
 
 /// Mutable state of the function generator.
 pub(crate) struct FunctionGenerator<'a> {
@@ -91,12 +91,7 @@ impl<'a> FunctionGenerator<'a> {
                 // the Yul parameter.
                 for idx in self.borrowed_locals.keys() {
                     if *idx < target.get_parameter_count() {
-                        emitln!(
-                            ctx.writer,
-                            "mstore({}, {})",
-                            Self::local_ptr(&self.borrowed_locals, *idx).unwrap(),
-                            ctx.make_local_name(target, *idx)
-                        )
+                        self.assign(ctx, target, *idx, ctx.make_local_name(target, *idx))
                     }
                 }
             }
@@ -154,8 +149,10 @@ impl<'a> FunctionGenerator<'a> {
         let mut mem_pos = 0;
         for bc in &target.data.code {
             if let Bytecode::Call(_, _, Operation::BorrowLoc, srcs, _) = bc {
-                self.borrowed_locals.insert(srcs[0], mem_pos);
-                mem_pos += 1
+                if let Entry::Vacant(e) = self.borrowed_locals.entry(srcs[0]) {
+                    e.insert(mem_pos);
+                    mem_pos += 1
+                }
             }
         }
     }
@@ -642,20 +639,30 @@ impl<'a> FunctionGenerator<'a> {
         dest: &[TempIndex],
         srcs: &[TempIndex],
     ) {
-        let local_ptr = self.parent.call_builtin_str(
+        // Need to adjust the offset for the local by (32 - size) to account for big endian.
+        // We need to point to the actual highest byte of the value.
+        let offs = (*self
+            .borrowed_locals
+            .get(&srcs[0])
+            .expect("local evaded to memory")
+            * yul_functions::WORD_SIZE)
+            + 32
+            - ctx.type_size(target.get_local_type(srcs[0]));
+        let local_ptr = if offs == 0 {
+            "$locals".to_string()
+        } else {
+            format!("add($locals, {})", offs)
+        };
+        let make_ptr = self.parent.call_builtin_str(
             ctx,
             YulFunction::MakePtr,
-            vec![
-                "false".to_string(),
-                Self::local_ptr(&self.borrowed_locals, srcs[0]).expect("local evaded to memory"),
-            ]
-            .into_iter(),
+            vec!["false".to_string(), local_ptr].into_iter(),
         );
         emitln!(
             ctx.writer,
             "{} := {}",
             ctx.make_local_name(target, dest[0]),
-            local_ptr
+            make_ptr
         )
     }
 
@@ -717,7 +724,12 @@ impl<'a> FunctionGenerator<'a> {
                     .call_builtin(ctx, yul_fun, vec![field_ptr, field_exp].into_iter());
             }
             // Store result
-            self.assign(ctx, target, dest, mem);
+            let make_ptr = self.parent.call_builtin_str(
+                ctx,
+                YulFunction::MakePtr,
+                vec!["false".to_string(), mem].into_iter(),
+            );
+            self.assign(ctx, target, dest, make_ptr);
         })
     }
 

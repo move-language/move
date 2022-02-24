@@ -14,7 +14,7 @@ object "A2_M" {
             mstore(0, memoryguard(160))
             if iszero(lt(calldatasize(), 4))
             {
-                let selector := $ShiftRight(224, calldataload(0))
+                let selector := $Shr(calldataload(0), 224)
                 switch selector
                 case 0x27a15f43
                 {
@@ -389,6 +389,9 @@ object "A2_M" {
                 if eq(y, 0) { $AbortBuiltin() }
                 r := mod(x, y)
             }
+            function $Shr(x, y) -> r {
+                r := shr(y, x)
+            }
             function $Gt(x, y) -> r {
                 r := gt(x, y)
             }
@@ -406,9 +409,6 @@ object "A2_M" {
             }
             function $LogicalNot(x) -> r {
                 r := not(x)
-            }
-            function $ShiftRight(bits, value) -> r {
-                r := shr(bits, value) // evm version >= constantinople
             }
         }
     }
@@ -686,6 +686,7 @@ object "A2_M" {
 
 object "test_A2_M_test_add_two_number" {
     code {
+        mstore(0, memoryguard(160))
         A2_M_test_add_two_number()
         return (0, 0)
         function A2_M_test_add_two_number() {
@@ -786,7 +787,7 @@ object "test_A2_M_test_add_two_number" {
         }
     }
 }
-===> Succeed(Stopped) (used_gas=343): []
+===> Succeed(Stopped) (used_gas=355): []
 
 // test of M::test_add_two_number_overflow
 /* =======================================
@@ -797,6 +798,7 @@ object "test_A2_M_test_add_two_number" {
 
 object "test_A2_M_test_add_two_number_overflow" {
     code {
+        mstore(0, memoryguard(160))
         A2_M_test_add_two_number_overflow()
         return (0, 0)
         function A2_M_test_add_two_number_overflow() {
@@ -856,6 +858,7 @@ object "test_A2_M_test_add_two_number_overflow" {
 
 object "test_A2_M_test_add_two_number_wrong_assert" {
     code {
+        mstore(0, memoryguard(160))
         A2_M_test_add_two_number_wrong_assert()
         return (0, 0)
         function A2_M_test_add_two_number_wrong_assert() {
@@ -956,7 +959,7 @@ object "test_A2_M_test_add_two_number_wrong_assert" {
         }
     }
 }
-===> Revert(Reverted) (used_gas=347): [0, 0, 0, 0, 0, 0, 0, 101]
+===> Revert(Reverted) (used_gas=356): [0, 0, 0, 0, 0, 0, 0, 101]
 
 // test of M::test_arithmetic_ops_aborts
 /* =======================================
@@ -967,6 +970,7 @@ object "test_A2_M_test_add_two_number_wrong_assert" {
 
 object "test_A2_M_test_arithmetic_ops_aborts" {
     code {
+        mstore(0, memoryguard(160))
         A2_M_test_arithmetic_ops_aborts()
         return (0, 0)
         function A2_M_test_arithmetic_ops_aborts() {
@@ -1087,7 +1091,7 @@ object "test_A2_M_test_arithmetic_ops_aborts" {
         }
     }
 }
-===> Revert(Reverted) (used_gas=276): [0, 0, 0, 0, 0, 0, 0, 42]
+===> Revert(Reverted) (used_gas=285): [0, 0, 0, 0, 0, 0, 0, 42]
 
 // test of M::test_bool_ops
 /* =======================================
@@ -1098,6 +1102,7 @@ object "test_A2_M_test_arithmetic_ops_aborts" {
 
 object "test_A2_M_test_bool_ops" {
     code {
+        mstore(0, memoryguard(160))
         A2_M_test_bool_ops()
         return (0, 0)
         function A2_M_test_bool_ops() {
@@ -1297,7 +1302,7 @@ object "test_A2_M_test_bool_ops" {
         }
     }
 }
-===> Succeed(Stopped) (used_gas=1216): []
+===> Succeed(Stopped) (used_gas=1228): []
 
 // test of M::test_div
 /* =======================================
@@ -1308,6 +1313,7 @@ object "test_A2_M_test_bool_ops" {
 
 object "test_A2_M_test_div" {
     code {
+        mstore(0, memoryguard(160))
         A2_M_test_div()
         return (0, 0)
         function A2_M_test_div() {
@@ -1412,7 +1418,7 @@ object "test_A2_M_test_div" {
         }
     }
 }
-===> Succeed(Stopped) (used_gas=343): []
+===> Succeed(Stopped) (used_gas=355): []
 
 // test of M::test_div_by_zero
 /* =======================================
@@ -1423,6 +1429,7 @@ object "test_A2_M_test_div" {
 
 object "test_A2_M_test_div_by_zero" {
     code {
+        mstore(0, memoryguard(160))
         A2_M_test_div_by_zero()
         return (0, 0)
         function A2_M_test_div_by_zero() {
@@ -1486,6 +1493,7 @@ object "test_A2_M_test_div_by_zero" {
 
 object "test_A2_M_test_div_wrong_assert" {
     code {
+        mstore(0, memoryguard(160))
         A2_M_test_div_wrong_assert()
         return (0, 0)
         function A2_M_test_div_wrong_assert() {
@@ -1590,7 +1598,7 @@ object "test_A2_M_test_div_wrong_assert" {
         }
     }
 }
-===> Revert(Reverted) (used_gas=339): [0, 0, 0, 0, 0, 0, 0, 101]
+===> Revert(Reverted) (used_gas=348): [0, 0, 0, 0, 0, 0, 0, 101]
 
 // test of M::test_multiple_ops
 /* =======================================
@@ -1601,6 +1609,7 @@ object "test_A2_M_test_div_wrong_assert" {
 
 object "test_A2_M_test_multiple_ops" {
     code {
+        mstore(0, memoryguard(160))
         A2_M_test_multiple_ops()
         return (0, 0)
         function A2_M_test_multiple_ops() {
@@ -1684,7 +1693,7 @@ object "test_A2_M_test_multiple_ops" {
         }
     }
 }
-===> Succeed(Stopped) (used_gas=164): []
+===> Succeed(Stopped) (used_gas=176): []
 
 // test of M::test_multiple_overflow
 /* =======================================
@@ -1695,6 +1704,7 @@ object "test_A2_M_test_multiple_ops" {
 
 object "test_A2_M_test_multiple_overflow" {
     code {
+        mstore(0, memoryguard(160))
         A2_M_test_multiple_overflow()
         return (0, 0)
         function A2_M_test_multiple_overflow() {
@@ -1789,6 +1799,7 @@ object "test_A2_M_test_multiple_overflow" {
 
 object "test_A2_M_test_underflow" {
     code {
+        mstore(0, memoryguard(160))
         A2_M_test_underflow()
         return (0, 0)
         function A2_M_test_underflow() {

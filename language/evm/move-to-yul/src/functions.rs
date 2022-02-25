@@ -41,6 +41,12 @@ impl<'a> FunctionGenerator<'a> {
     /// Generate Yul function for Move function.
     fn function(&mut self, ctx: &Context, fun_id: &QualifiedInstId<FunId>) {
         let fun = &ctx.env.get_function(fun_id.to_qualified_id());
+        if fun.is_native_or_intrinsic() {
+            // Special treatment for native functions, which have custom generators.
+            ctx.native_funs
+                .gen_native_function(self.parent, ctx, fun_id);
+            return;
+        }
         let target = &ctx.targets.get_target(fun, &FunctionVariant::Baseline);
 
         // Emit function header

@@ -4,6 +4,7 @@
 
 /// @use-src 2:"tests/Arithm.move"
 
+
 object "A2_M" {
     code {
         codecopy(0, dataoffset("A2_M_deployed"), datasize("A2_M_deployed"))
@@ -684,6 +685,7 @@ object "A2_M" {
 
 /// @use-src 2:"tests/Arithm.move"
 
+
 object "test_A2_M_test_add_two_number" {
     code {
         mstore(0, memoryguard(160))
@@ -796,6 +798,7 @@ object "test_A2_M_test_add_two_number" {
 
 /// @use-src 2:"tests/Arithm.move"
 
+
 object "test_A2_M_test_add_two_number_overflow" {
     code {
         mstore(0, memoryguard(160))
@@ -855,6 +858,7 @@ object "test_A2_M_test_add_two_number_overflow" {
  * ======================================= */
 
 /// @use-src 2:"tests/Arithm.move"
+
 
 object "test_A2_M_test_add_two_number_wrong_assert" {
     code {
@@ -967,6 +971,7 @@ object "test_A2_M_test_add_two_number_wrong_assert" {
  * ======================================= */
 
 /// @use-src 2:"tests/Arithm.move"
+
 
 object "test_A2_M_test_arithmetic_ops_aborts" {
     code {
@@ -1099,6 +1104,7 @@ object "test_A2_M_test_arithmetic_ops_aborts" {
  * ======================================= */
 
 /// @use-src 2:"tests/Arithm.move"
+
 
 object "test_A2_M_test_bool_ops" {
     code {
@@ -1311,6 +1317,7 @@ object "test_A2_M_test_bool_ops" {
 
 /// @use-src 2:"tests/Arithm.move"
 
+
 object "test_A2_M_test_div" {
     code {
         mstore(0, memoryguard(160))
@@ -1427,6 +1434,7 @@ object "test_A2_M_test_div" {
 
 /// @use-src 2:"tests/Arithm.move"
 
+
 object "test_A2_M_test_div_by_zero" {
     code {
         mstore(0, memoryguard(160))
@@ -1490,6 +1498,7 @@ object "test_A2_M_test_div_by_zero" {
  * ======================================= */
 
 /// @use-src 2:"tests/Arithm.move"
+
 
 object "test_A2_M_test_div_wrong_assert" {
     code {
@@ -1607,6 +1616,7 @@ object "test_A2_M_test_div_wrong_assert" {
 
 /// @use-src 2:"tests/Arithm.move"
 
+
 object "test_A2_M_test_multiple_ops" {
     code {
         mstore(0, memoryguard(160))
@@ -1702,6 +1712,7 @@ object "test_A2_M_test_multiple_ops" {
 
 /// @use-src 2:"tests/Arithm.move"
 
+
 object "test_A2_M_test_multiple_overflow" {
     code {
         mstore(0, memoryguard(160))
@@ -1796,6 +1807,7 @@ object "test_A2_M_test_multiple_overflow" {
  * ======================================= */
 
 /// @use-src 2:"tests/Arithm.move"
+
 
 object "test_A2_M_test_underflow" {
     code {

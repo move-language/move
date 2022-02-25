@@ -1,8 +1,12 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use codespan::FileId;
 use codespan_reporting::diagnostic::Severity;
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    path::PathBuf,
+};
 
 use itertools::Itertools;
 use sha3::{Digest, Keccak256};
@@ -189,13 +193,29 @@ impl Generator {
             ctx.options.version(),
         );
         emitln!(ctx.writer);
+        let used_files: BTreeSet<FileId> = ctx
+            .targets
+            .get_funs()
+            .map(|f| ctx.env.get_function(f).get_loc().file_id())
+            .collect();
         for file_id in ctx.env.get_source_file_ids() {
-            emitln!(
-                ctx.writer,
-                "/// @use-src {}:\"{}\"",
-                ctx.env.file_id_to_idx(file_id),
-                ctx.env.get_file(file_id).to_string_lossy()
-            );
+            if used_files.contains(&file_id) {
+                let mut file_path = ctx.env.get_file(file_id).to_string_lossy().to_string();
+                let current_dir = std::env::current_dir()
+                    .unwrap_or_else(|_| PathBuf::from("."))
+                    .to_string_lossy()
+                    .to_string()
+                    + &std::path::MAIN_SEPARATOR.to_string();
+                if file_path.starts_with(&current_dir) {
+                    file_path = file_path[current_dir.len()..].to_string();
+                }
+                emitln!(
+                    ctx.writer,
+                    "/// @use-src {}:\"{}\"\n",
+                    ctx.env.file_id_to_idx(file_id),
+                    file_path
+                );
+            }
         }
         emitln!(ctx.writer);
     }

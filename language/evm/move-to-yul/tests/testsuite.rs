@@ -5,24 +5,38 @@ use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
 use evm::backend::MemoryVicinity;
 use evm_exec_utils::{compile, exec::Executor};
 use move_command_line_common::testing::EXP_EXT;
+use move_compiler::shared::NumericalAddress;
 use move_model::{
     model::{FunId, GlobalEnv, QualifiedId},
     options::ModelBuilderOptions,
     run_model_builder_with_options,
 };
 use move_prover_test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives};
+use move_stdlib::move_stdlib_named_addresses;
 use move_to_yul::{generator::Generator, options::Options};
 use primitive_types::{H160, U256};
-use std::{collections::BTreeMap, path::Path};
+use std::{
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+};
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let mut sources = extract_test_directives(path, "// dep:")?;
     sources.push(path.to_string_lossy().to_string());
+    let deps = vec![
+        path_from_crate_root("../stdlib/sources"),
+        path_from_crate_root("../../move-stdlib/sources"),
+    ];
+    let mut named_address_mapping = move_stdlib_named_addresses();
+    named_address_mapping.insert(
+        "Eth".to_string(),
+        NumericalAddress::parse_str("0x2").unwrap(),
+    );
     let env = run_model_builder_with_options(
         &sources,
-        &[],
+        &deps,
         ModelBuilderOptions::default(),
-        move_stdlib::move_stdlib_named_addresses(),
+        named_address_mapping,
     )?;
     let options = Options::default();
     let (_, mut out) = Generator::run(&options, &env);
@@ -44,6 +58,12 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let baseline_path = path.with_extension(EXP_EXT);
     verify_or_update_baseline(baseline_path.as_path(), &out)?;
     Ok(())
+}
+
+fn path_from_crate_root(path: &str) -> String {
+    let mut buf = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    buf.push(path);
+    buf.to_string_lossy().to_string()
 }
 
 fn compile_check(_options: &Options, source: &str) -> String {

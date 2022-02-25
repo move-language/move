@@ -4,6 +4,7 @@
 
 /// @use-src 2:"tests/fallback-receive-test/expect-failure/FallbackMultipleParams.move"
 
+
 object "A2_M" {
     code {
         codecopy(0, dataoffset("A2_M_deployed"), datasize("A2_M_deployed"))

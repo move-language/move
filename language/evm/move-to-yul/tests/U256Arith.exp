@@ -3,7 +3,9 @@
  * ======================================= */
 
 /// @use-src 2:"tests/U256Arith.move"
-/// @use-src 3:"../stdlib/sources/U256.move"
+
+/// @use-src 7:"../stdlib/sources/U256.move"
+
 
 object "A2_U256Arith" {
     code {
@@ -499,11 +501,192 @@ object "A2_U256Arith" {
 }
 
 
-!! Errors compiling Yul
+!! Optimized Yul
 
-Warning: Yul is still experimental. Please use the output with care.
-Error: Error parsing arguments to @use-src. Expected: <number> ":" "<filename>", ...
- --> <stdin>:5:1:
-  |
-5 | /// @use-src 2:"tests/U256Arith.move"
-  | ^ (Relevant source part starts here and spans across multiple lines).
+/// @use-src 7:"../stdlib/sources/U256.move"
+object "A2_U256Arith" {
+    code {
+        {
+            let _1 := datasize("A2_U256Arith_deployed")
+            codecopy(0, dataoffset("A2_U256Arith_deployed"), _1)
+            return(0, _1)
+        }
+    }
+    object "A2_U256Arith_deployed" {
+        code {
+            {
+                let _1 := 0
+                mstore(_1, memoryguard(0xa0))
+                if iszero(lt(calldatasize(), 4))
+                {
+                    switch shr(224, calldataload(_1))
+                    case 0x4f2be91f {
+                        if callvalue() { $Abort() }
+                        let memPos := mload(_1)
+                        return(memPos, sub(abi_encode_A1_U256_U256_1050(memPos), memPos))
+                    }
+                    case 0xf9fa48c3 {
+                        if callvalue() { $Abort() }
+                        let memPos_1 := mload(_1)
+                        return(memPos_1, sub(abi_encode_A1_U256_U256_560(memPos_1), memPos_1))
+                    }
+                    case 0xb5165b60 {
+                        if callvalue() { $Abort() }
+                        let memPos_2 := mload(_1)
+                        return(memPos_2, sub(abi_encode_A1_U256_U256_556(memPos_2), memPos_2))
+                    }
+                    case 0x4e507d6a {
+                        if callvalue() { $Abort() }
+                        let memPos_3 := mload(_1)
+                        return(memPos_3, sub(abi_encode_A1_U256_U256_560(memPos_3), memPos_3))
+                    }
+                    case 0xaf0ab80a {
+                        if callvalue() { $Abort() }
+                        let memPos_4 := mload(_1)
+                        return(memPos_4, sub(abi_encode_A1_U256_U256_560(memPos_4), memPos_4))
+                    }
+                    case 0xdcc78377 {
+                        if callvalue() { $Abort() }
+                        let memPos_5 := mload(_1)
+                        return(memPos_5, sub(abi_encode_A1_U256_U256_556(memPos_5), memPos_5))
+                    }
+                    case 0xa22ca2a6 {
+                        if callvalue() { $Abort() }
+                        let memPos_6 := mload(_1)
+                        return(memPos_6, sub(abi_encode_A1_U256_U256_556(memPos_6), memPos_6))
+                    }
+                    case 0x2986e054 {
+                        if callvalue() { $Abort() }
+                        let memPos_7 := mload(_1)
+                        return(memPos_7, sub(abi_encode_A1_U256_U256(memPos_7), memPos_7))
+                    }
+                    case 0x58931c46 {
+                        if callvalue() { $Abort() }
+                        $MulU256()
+                    }
+                    case 0x83a93813 {
+                        if callvalue() { $Abort() }
+                        let memPos_8 := mload(_1)
+                        return(memPos_8, sub(abi_encode_A1_U256_U256_1055(memPos_8), memPos_8))
+                    }
+                    case 0xcad85866 {
+                        if callvalue() { $Abort() }
+                        let memPos_9 := mload(_1)
+                        return(memPos_9, sub(abi_encode_A1_U256_U256_572(memPos_9), memPos_9))
+                    }
+                    case 0xb87f777a {
+                        if callvalue() { $Abort() }
+                        let memPos_10 := mload(_1)
+                        return(memPos_10, sub(abi_encode_A1_U256_U256_574(memPos_10), memPos_10))
+                    }
+                    case 0xc54124be {
+                        if callvalue() { $Abort() }
+                        let memPos_11 := mload(_1)
+                        return(memPos_11, sub(abi_encode_A1_U256_U256(memPos_11), memPos_11))
+                    }
+                    case 0x5c32cfdd {
+                        if callvalue() { $Abort() }
+                        let param, param_1 := abi_decode_u128_u128(calldatasize())
+                        let ret := $CastU256(param, param_1)
+                        let memPos_12 := mload(_1)
+                        return(memPos_12, sub(abi_encode_A1_U256_U256$(memPos_12, ret), memPos_12))
+                    }
+                }
+                $Abort_579()
+            }
+            function abi_encode_A1_U256_U256_556(headStart) -> tail
+            {
+                tail := add(headStart, 32)
+                mstore(headStart, 0)
+            }
+            function abi_encode_A1_U256_U256_560(headStart) -> tail
+            {
+                tail := add(headStart, 32)
+                mstore(headStart, 1)
+            }
+            function abi_encode_A1_U256_U256_572(headStart) -> tail
+            {
+                tail := add(headStart, 32)
+                mstore(headStart, shl(128, 1))
+            }
+            function abi_encode_A1_U256_U256_574(headStart) -> tail
+            {
+                tail := add(headStart, 32)
+                mstore(headStart, 12)
+            }
+            function abi_encode_A1_U256_U256_1050(headStart) -> tail
+            {
+                tail := add(headStart, 32)
+                mstore(headStart, 0x0b00000000000000000000000000000003)
+            }
+            function abi_encode_A1_U256_U256(headStart) -> tail
+            {
+                tail := add(headStart, 32)
+                mstore(headStart, 0x0100000000000000000000000000000001)
+            }
+            function abi_encode_A1_U256_U256_1055(headStart) -> tail
+            {
+                tail := add(headStart, 32)
+                mstore(headStart, not(0))
+            }
+            function abi_encode_A1_U256_U256$(headStart, value) -> tail
+            {
+                tail := add(headStart, 32)
+                mstore(headStart, value)
+            }
+            function abi_decode_u128_u128(dataEnd) -> value, value_1
+            {
+                if slt(add(dataEnd, not(3)), 64)
+                {
+                    mstore(0, 96)
+                    revert(24, 8)
+                }
+                let value_2 := calldataload(4)
+                let _1 := 0xffffffffffffffffffffffffffffffff
+                if iszero(eq(value_2, and(value_2, _1)))
+                {
+                    mstore(0, 95)
+                    revert(24, 8)
+                }
+                value := value_2
+                let value_3 := calldataload(36)
+                if iszero(eq(value_3, and(value_3, _1)))
+                {
+                    mstore(0, 95)
+                    revert(24, 8)
+                }
+                value_1 := value_3
+            }
+            function $Abort()
+            {
+                mstore(0, 99)
+                revert(24, 8)
+            }
+            function $Abort_579()
+            {
+                mstore(0, 97)
+                revert(24, 8)
+            }
+            function $MulU256()
+            {
+                mstore(0, not(0))
+                revert(24, 8)
+            }
+            function $CastU256(hi, lo) -> r
+            {
+                let _1 := 0xffffffffffffffffffffffffffffffff
+                if gt(hi, _1)
+                {
+                    mstore(0, not(0))
+                    revert(24, 8)
+                }
+                if gt(lo, _1)
+                {
+                    mstore(0, not(0))
+                    revert(24, 8)
+                }
+                r := add(shl(128, hi), lo)
+            }
+        }
+    }
+}

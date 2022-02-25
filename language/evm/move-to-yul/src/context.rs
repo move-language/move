@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    attributes, evm_transformation::EvmTransformationProcessor, yul_functions,
-    yul_functions::YulFunction, Options,
+    attributes, evm_transformation::EvmTransformationProcessor, native_functions::NativeFunctions,
+    yul_functions, yul_functions::YulFunction, Options,
 };
 use itertools::Itertools;
 use move_model::{
@@ -33,6 +33,8 @@ pub(crate) struct Context<'a> {
     pub writer: CodeWriter,
     /// Cached memory layout info.
     pub struct_layout: RefCell<BTreeMap<QualifiedInstId<StructId>, StructLayout>>,
+    /// Native function info.
+    pub native_funs: NativeFunctions,
 }
 
 /// Information about the layout of a struct in linear memory.
@@ -55,13 +57,16 @@ impl<'a> Context<'a> {
     pub fn new(options: &'a Options, env: &'a GlobalEnv, for_test: bool) -> Self {
         let writer = CodeWriter::new(env.unknown_loc());
         writer.set_emit_hook(yul_functions::substitute_placeholders);
-        Self {
+        let mut ctx = Self {
             options,
             env,
             targets: Self::create_bytecode(options, env, for_test),
             writer,
             struct_layout: Default::default(),
-        }
+            native_funs: NativeFunctions::default(),
+        };
+        ctx.native_funs = NativeFunctions::create(&ctx);
+        ctx
     }
 
     /// Helper to create the stackless bytecode.

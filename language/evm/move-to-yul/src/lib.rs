@@ -8,6 +8,7 @@ mod context;
 mod evm_transformation;
 mod functions;
 pub mod generator;
+mod native_functions;
 pub mod options;
 mod yul_functions;
 // mod object;

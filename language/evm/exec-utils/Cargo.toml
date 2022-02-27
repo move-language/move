@@ -11,7 +11,8 @@ publish = false
 [dependencies]
 # external dependencies
 sha3 = "0.9.1"
-evm = "0.33.1"
+evm = { version = "0.33.1", features = [ "tracing"] }
+evm-runtime = { version = "0.33.0", features = [ "tracing"] }
 primitive-types = "0.10.1"
 hex = "0.4.3"
 tempfile = "3.2.0"

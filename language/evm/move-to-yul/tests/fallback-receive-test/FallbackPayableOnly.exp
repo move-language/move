@@ -33,23 +33,4 @@ object "A2_M" {
 }
 
 
-!! Optimized Yul
-
-/// @use-src 17:"tests/fallback-receive-test/FallbackPayableOnly.move"
-object "A2_M" {
-    code {
-        {
-            let _1 := datasize("A2_M_deployed")
-            codecopy(0, dataoffset("A2_M_deployed"), _1)
-            return(0, _1)
-        }
-    }
-    object "A2_M_deployed" {
-        code {
-            {
-                mstore(0, memoryguard(0xa0))
-                stop()
-            }
-        }
-    }
-}
+!! Succeeded compiling Yul

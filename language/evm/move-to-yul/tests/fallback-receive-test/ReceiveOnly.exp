@@ -38,25 +38,4 @@ object "A2_M" {
 }
 
 
-!! Optimized Yul
-
-/// @use-src 9:"tests/fallback-receive-test/ReceiveOnly.move"
-object "A2_M" {
-    code {
-        {
-            let _1 := datasize("A2_M_deployed")
-            codecopy(0, dataoffset("A2_M_deployed"), _1)
-            return(0, _1)
-        }
-    }
-    object "A2_M_deployed" {
-        code {
-            {
-                mstore(0, memoryguard(0xa0))
-                if iszero(calldatasize()) { stop() }
-                mstore(0, 98)
-                revert(24, 8)
-            }
-        }
-    }
-}
+!! Succeeded compiling Yul

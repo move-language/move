@@ -44,14 +44,18 @@ static PLACEHOLDERS: Lazy<BTreeMap<&'static str, &'static str>> = Lazy::new(|| {
         // STORAGE_GROUP_COUNTER_LOC contains the largest storage group allocated so far.
         // A storage group identifier is 4 bytes long.
         "LINEAR_STORAGE_GROUP" => "0",
-        "STORAGE_GROUP_COUNTER_LOC" => "96",
+        "ADMIN_STORAGE_GROUP" => "1",
         "WORD_AND_STORAGE_GROUP_LENGTH" => "36",
 
+        // Counters in the ADMIN_STORAGE_GROUP for persistent storage of group and linked storage
+        // counters.
+        "STORAGE_GROUP_COUNTER_LOC" => "0",
+        "LINKED_STORAGE_COUNTER_LOC" => "1",
+
         // Categories to distinguish different types of pointers into the LINEAR_STORAGE_GROUP.
-        // See discussion of YulFunction::MakeTypeStorageOffset.
+        // See discussion of YulFunction::MakeTypeStorageBase.
         "RESOURCE_STORAGE_CATEGORY" => "0",
         "LINKED_STORAGE_CATEGORY" => "1",
-        "LINKED_STORAGE_COUNTER_LOC" => "128",
 
         // Size (in bytes) of the resource exists flag which proceeds any data in storage for
         // a resource.
@@ -191,7 +195,7 @@ OffsetPtr: "(ptr) -> offs {
 // Constructs a bit mask for a value of size bytes. E.g. if size == 1, returns 0xff.
 // Note that we expect the Yul optimizer to specialize this for constant parameters.
 MaskForSize: "(size) -> mask {
-  mask := sub(shl(shl(size, 3), 1), 1)
+  mask := sub(shl(shl(3, size), 1), 1)
 }",
 
 // Extracts size bytes from word, starting at byte index start. The most significant byte
@@ -316,10 +320,11 @@ MakeTypeStorageBase: "(category, type_hash, id) -> offs {
 }",
 
 // Make a new base storage offset for linked storage. This creates a new handle
-// and the calls MakeTypeStorageBase.
+// and then calls MakeTypeStorageBase.
 NewLinkedStorageBase: "(type_hash) -> offs {
-  let handle := mload(${LINKED_STORAGE_COUNTER_LOC})
-  mstore(${LINKED_STORAGE_COUNTER_LOC}, add(handle, 1))
+  let key := $StorageKey(${ADMIN_STORAGE_GROUP}, ${LINKED_STORAGE_COUNTER_LOC})
+  let handle := sload(key)
+  sstore(key, add(handle, 1))
   offs := $MakeTypeStorageBase(${LINKED_STORAGE_CATEGORY}, type_hash, handle)
 }" dep MakeTypeStorageBase,
 

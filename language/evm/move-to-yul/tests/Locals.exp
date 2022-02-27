@@ -137,7 +137,7 @@ object "A2_M" {
               offs := shr(1, ptr)
             }
             function $MaskForSize(size) -> mask {
-              mask := sub(shl(shl(size, 3), 1), 1)
+              mask := sub(shl(shl(3, size), 1), 1)
             }
             function $ExtractBytes(word, start, size) -> bytes {
                switch size
@@ -263,196 +263,8 @@ object "A2_M" {
 }
 
 
-!! Optimized Yul
+!! Succeeded compiling Yul
 
-/// @use-src 9:"tests/Locals.move"
-object "A2_M" {
-    code {
-        {
-            let _1 := datasize("A2_M_deployed")
-            codecopy(0, dataoffset("A2_M_deployed"), _1)
-            return(0, _1)
-        }
-    }
-    object "A2_M_deployed" {
-        code {
-            {
-                let _1 := 0
-                mstore(_1, memoryguard(0xa0))
-                if iszero(lt(calldatasize(), 4))
-                {
-                    if eq(0xc11ae395, shr(224, calldataload(_1)))
-                    {
-                        if callvalue()
-                        {
-                            mstore(_1, 99)
-                            revert(24, 8)
-                        }
-                        if slt(add(calldatasize(), not(3)), 64)
-                        {
-                            mstore(_1, 96)
-                            revert(24, 8)
-                        }
-                        let value := calldataload(4)
-                        if iszero(eq(value, and(value, 0xffffffffffffffff)))
-                        {
-                            mstore(_1, 95)
-                            revert(24, 8)
-                        }
-                        let ret, ret_1, ret_2, ret_3 := A2_M_evaded(value, abi_decode_u64())
-                        let memPos := mload(_1)
-                        return(memPos, sub(abi_encode_u64_u64_u64_u64$(memPos, ret, ret_1, ret_2, ret_3), memPos))
-                    }
-                }
-                $Abort()
-            }
-            function A2_M_evaded(a, b) -> $result0, $result1, $result2, $result3
-            {
-                let _1 := 0
-                let offs := mload(_1)
-                mstore(_1, add(offs, 64))
-                mstore(offs, a)
-                let _2 := add(offs, 32)
-                mstore(_2, a)
-                let $t8 := $AddU64(a, b)
-                let _3 := or(false, shl(1, add(offs, 56)))
-                let val := _1
-                let offs_1 := shr(1, _3)
-                switch and(_3, 1)
-                case 0 {
-                    val := shr(192, mload(offs_1))
-                }
-                default {
-                    let val_1 := _1
-                    let word_offs := shr(6, _3)
-                    let byte_offset := and(offs_1, 31)
-                    mstore(32, word_offs)
-                    mstore(64, _1)
-                    val_1 := $ExtractBytes_947(sload(keccak256(32, 36)), byte_offset)
-                    let overflow_bytes := $OverflowBytes(byte_offset)
-                    if not(iszero(overflow_bytes))
-                    {
-                        mstore(32, add(word_offs, 1))
-                        mstore(64, _1)
-                        val_1 := or(shl(shl(3, overflow_bytes), val_1), $ExtractBytes(sload(keccak256(32, 36)), overflow_bytes))
-                    }
-                    val := val_1
-                }
-                $StoreU64(or(false, shl(1, add(offs, 24))), $AddU64_950(val))
-                let $t14 := mload(offs)
-                let $t15 := mload(_2)
-                $result0 := $t14
-                $result1 := b
-                $result2 := $t15
-                $result3 := $t8
-            }
-            function abi_encode_u64_u64_u64_u64$(headStart, value, value_1, value_2, value_3) -> tail
-            {
-                tail := add(headStart, 128)
-                let _1 := 0xffffffffffffffff
-                mstore(headStart, and(value, _1))
-                mstore(add(headStart, 32), and(value_1, _1))
-                mstore(add(headStart, 64), and(value_2, _1))
-                mstore(add(headStart, 96), and(value_3, _1))
-            }
-            function abi_decode_u64() -> value
-            {
-                value := calldataload(36)
-                if iszero(eq(value, and(value, 0xffffffffffffffff)))
-                {
-                    mstore(0, 95)
-                    revert(24, 8)
-                }
-            }
-            function $Abort()
-            {
-                mstore(0, 97)
-                revert(24, 8)
-            }
-            function $ExtractBytes_947(word, start) -> bytes
-            {
-                bytes := shr(shl(3, add(sub(32, start), not(7))), word)
-            }
-            function $ExtractBytes(word, size) -> bytes
-            {
-                switch size
-                case 1 { bytes := byte(0, word) }
-                default {
-                    bytes := and(shr(shl(3, sub(32, size)), word), add(shl(shl(size, 3), 1), not(0)))
-                }
-            }
-            function $InjectBytes_957(word, start, bytes) -> new_word
-            {
-                let shift_bits := shl(3, add(sub(32, start), not(7)))
-                new_word := or(and(word, not(shl(shift_bits, not(0)))), shl(shift_bits, bytes))
-            }
-            function $InjectBytes_958(word, size, bytes) -> new_word
-            {
-                let shift_bits := shl(3, sub(32, size))
-                new_word := or(and(word, not(shl(shift_bits, add(shl(shl(size, 3), 1), not(0))))), shl(shift_bits, bytes))
-            }
-            function $InjectBytes(word, start, size, bytes) -> new_word
-            {
-                let shift_bits := shl(3, sub(32, add(start, size)))
-                new_word := or(and(word, not(shl(shift_bits, add(shl(shl(size, 3), 1), not(0))))), shl(shift_bits, bytes))
-            }
-            function $OverflowBytes(byte_offset) -> overflow_bytes
-            {
-                switch gt(8, sub(32, byte_offset))
-                case 0 { overflow_bytes := 0 }
-                default {
-                    overflow_bytes := add(byte_offset, not(23))
-                }
-            }
-            function $StoreU64(ptr, val)
-            {
-                let offs := shr(1, ptr)
-                switch and(ptr, 1)
-                case 0 {
-                    mstore(offs, or(and(mload(offs), sub(shl(192, 1), 1)), shl(192, val)))
-                }
-                default {
-                    let word_offs := shr(6, ptr)
-                    let byte_offset := and(offs, 0x1F)
-                    mstore(32, word_offs)
-                    mstore(64, 0)
-                    let key := keccak256(32, 36)
-                    let overflow_bytes := $OverflowBytes(byte_offset)
-                    switch overflow_bytes
-                    case 0 {
-                        sstore(key, $InjectBytes_957(sload(key), byte_offset, val))
-                    }
-                    default {
-                        let used_bytes := sub(8, overflow_bytes)
-                        sstore(key, $InjectBytes(sload(key), byte_offset, used_bytes, shr(used_bytes, val)))
-                        mstore(32, add(word_offs, 1))
-                        mstore(64, 0)
-                        let key_1 := keccak256(32, 36)
-                        sstore(key_1, $InjectBytes_958(sload(key_1), overflow_bytes, and(val, add(shl(shl(overflow_bytes, 3), 1), not(0)))))
-                    }
-                }
-            }
-            function $AddU64_950(x) -> r
-            {
-                if lt(sub(0xffffffffffffffff, x), 1)
-                {
-                    mstore(0, not(0))
-                    revert(24, 8)
-                }
-                r := add(x, 1)
-            }
-            function $AddU64(x, y) -> r
-            {
-                if lt(sub(0xffffffffffffffff, x), y)
-                {
-                    mstore(0, not(0))
-                    revert(24, 8)
-                }
-                r := add(x, y)
-            }
-        }
-    }
-}
 
 !! Unit tests
 
@@ -555,7 +367,7 @@ object "test_A2_M_test_call_by_ref" {
           offs := shr(1, ptr)
         }
         function $MaskForSize(size) -> mask {
-          mask := sub(shl(shl(size, 3), 1), 1)
+          mask := sub(shl(shl(3, size), 1), 1)
         }
         function $InjectBytes(word, start, size, bytes) -> new_word {
            let shift_bits := shl(3, sub(sub(32, start), size))
@@ -830,7 +642,7 @@ object "test_A2_M_test_evaded" {
           offs := shr(1, ptr)
         }
         function $MaskForSize(size) -> mask {
-          mask := sub(shl(shl(size, 3), 1), 1)
+          mask := sub(shl(shl(3, size), 1), 1)
         }
         function $ExtractBytes(word, start, size) -> bytes {
            switch size

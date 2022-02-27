@@ -19,16 +19,22 @@ bytes = { version = "1.0.1", features = ["std"] }
 codespan-reporting = { version = "0.11.1", default-features = false, features = ["serde", "serialization"] }
 crossbeam-utils = { version = "0.8.3", features = ["lazy_static", "std"] }
 crunchy = { version = "0.2.2", features = ["limit_128", "limit_256", "std"] }
+evm = { version = "0.33.1", features = ["codec", "environmental", "scale-info", "serde", "std", "tracing"] }
+evm-gasometer = { version = "0.33.0", default-features = false, features = ["environmental", "std", "tracing"] }
+evm-runtime = { version = "0.33.0", features = ["environmental", "std", "tracing"] }
 getrandom = { version = "0.2.2", default-features = false, features = ["std"] }
+hex = { version = "0.4.3", features = ["alloc", "std"] }
 log = { version = "0.4.14", default-features = false, features = ["serde", "std"] }
 memchr = { version = "2.4.0", features = ["std", "use_std"] }
 num-traits = { version = "0.2.14", features = ["i128", "std"] }
 plotters = { version = "0.3.0", default-features = false, features = ["area_series", "evcxr", "histogram", "line_series", "plotters-svg", "svg_backend"] }
+primitive-types = { version = "0.10.1", features = ["byteorder", "codec", "impl-codec", "impl-rlp", "rlp", "rustc-hex", "scale-info", "scale-info-crate", "std"] }
 rand_core = { version = "0.5.1", default-features = false, features = ["alloc", "getrandom", "std"] }
 regex = { version = "1.4.3", features = ["aho-corasick", "memchr", "perf", "perf-cache", "perf-dfa", "perf-inline", "perf-literal", "std", "thread_local", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
 regex-automata = { version = "0.1.9", features = ["regex-syntax", "std"] }
 regex-syntax = { version = "0.6.23", features = ["unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
 serde = { version = "1.0.130", features = ["derive", "rc", "serde_derive", "std"] }
+sha3 = { version = "0.9.1", features = ["std"] }
 tiny-keccak = { version = "2.0.2", features = ["keccak", "sha3"] }
 tracing-core = { version = "0.1.21", features = ["lazy_static", "std"] }
 

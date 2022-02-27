@@ -422,7 +422,8 @@ impl<'a> Context<'a> {
                 Bool | U8 => 1,
                 U64 => 8,
                 U128 => 16,
-                Address | Signer => 20,
+                // TODO: optimize for 20 bytes? Then we need primitives like LoadU160 etc.
+                Address | Signer => 32,
                 Num | Range | EventStore => {
                     panic!("unexpected field type")
                 }

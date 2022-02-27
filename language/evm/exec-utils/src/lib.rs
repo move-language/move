@@ -5,3 +5,4 @@ pub mod compile;
 pub mod exec;
 #[cfg(test)]
 pub mod tests;
+pub mod tracing;

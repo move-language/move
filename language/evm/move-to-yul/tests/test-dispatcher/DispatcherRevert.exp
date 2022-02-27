@@ -64,39 +64,4 @@ object "A2_M" {
 }
 
 
-!! Optimized Yul
-
-/// @use-src 11:"tests/test-dispatcher/DispatcherRevert.move"
-object "A2_M" {
-    code {
-        {
-            let _1 := datasize("A2_M_deployed")
-            codecopy(0, dataoffset("A2_M_deployed"), _1)
-            return(0, _1)
-        }
-    }
-    object "A2_M_deployed" {
-        code {
-            {
-                let _1 := 0
-                mstore(_1, memoryguard(0xa0))
-                if iszero(lt(calldatasize(), 4))
-                {
-                    if eq(0xe44f11ec, shr(224, calldataload(_1)))
-                    {
-                        if callvalue()
-                        {
-                            mstore(_1, 99)
-                            revert(24, 8)
-                        }
-                        let memPos := mload(_1)
-                        mstore(memPos, _1)
-                        return(memPos, 32)
-                    }
-                }
-                mstore(_1, 97)
-                revert(24, 8)
-            }
-        }
-    }
-}
+!! Succeeded compiling Yul

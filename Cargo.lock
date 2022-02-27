@@ -1029,6 +1029,7 @@ dependencies = [
  "anyhow",
  "dirs 4.0.0",
  "evm",
+ "evm-runtime",
  "hex",
  "move-command-line-common",
  "primitive-types",
@@ -4701,7 +4702,7 @@ version = "1.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ee73e6e4924fe940354b8d4d98cad5231175d615cd855b758adc658c0aac6a0"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "static_assertions",
 ]
 
@@ -5040,12 +5041,17 @@ dependencies = [
  "codespan-reporting",
  "crossbeam-utils",
  "crunchy",
+ "evm",
+ "evm-gasometer",
+ "evm-runtime",
  "getrandom 0.2.2",
+ "hex",
  "libc",
  "log",
  "memchr",
  "num-traits 0.2.14",
  "plotters",
+ "primitive-types",
  "proc-macro2 0.4.30",
  "quote 0.6.13",
  "rand_core 0.5.1",
@@ -5053,6 +5059,7 @@ dependencies = [
  "regex-automata",
  "regex-syntax",
  "serde 1.0.130",
+ "sha3 0.9.1",
  "syn 0.15.44",
  "syn 1.0.74",
  "tiny-keccak",

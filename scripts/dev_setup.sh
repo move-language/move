@@ -397,8 +397,8 @@ function install_cvc5 {
 
 function install_nodejs {
     if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-      curl -fsSL https://deb.nodesource.com/setup_14.x | bash -
-      apt-get install -y nodejs
+      curl -fsSL https://deb.nodesource.com/setup_14.x | "${PRE_COMMAND[@]}" bash -
+      "${PRE_COMMAND[@]}" apt-get install -y nodejs
     else
       install_pkg nodejs "$PACKAGE_MANAGER"
     fi

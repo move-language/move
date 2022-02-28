@@ -89,7 +89,7 @@ fn run(module: &ModuleCode, fun_name: &str, arg_val0: MoveValue) -> ExecutionRes
     let mut gas_status = GasStatus::new_unmetered();
 
     sess.execute_function_for_effects(
-        &module_id,
+        module_id,
         &fun_name,
         vec![],
         serialize_values(&vec![arg_val0]),
@@ -100,27 +100,27 @@ fn run(module: &ModuleCode, fun_name: &str, arg_val0: MoveValue) -> ExecutionRes
 type ModuleCode = (ModuleId, String);
 
 // TODO - move some utility functions to where test infra lives, see about unifying with similar code
-fn setup_vm(modules: &Vec<ModuleCode>) -> (MoveVM, InMemoryStorage) {
+fn setup_vm(modules: &[ModuleCode]) -> (MoveVM, InMemoryStorage) {
     let mut storage = InMemoryStorage::new();
     compile_modules(&mut storage, modules);
     (MoveVM::new(vec![]).unwrap(), storage)
 }
 
-fn compile_modules(mut storage: &mut InMemoryStorage, modules: &Vec<ModuleCode>) {
+fn compile_modules(mut storage: &mut InMemoryStorage, modules: &[ModuleCode]) {
     modules.iter().for_each(|(id, code)| {
-        compile_module(&mut storage, &id, &code);
+        compile_module(&mut storage, id, code);
     });
 }
 
-fn compile_module(storage: &mut InMemoryStorage, mod_id: &ModuleId, code: &String) {
-    let mut units = compile_units(&code).unwrap();
+fn compile_module(storage: &mut InMemoryStorage, mod_id: &ModuleId, code: &str) {
+    let mut units = compile_units(code).unwrap();
     let module = as_module(units.pop().unwrap());
     let mut blob = vec![];
     module.serialize(&mut blob).unwrap();
     storage.publish_or_overwrite_module(mod_id.clone(), blob);
 }
 
-fn parse_u64_arg(arg: &Vec<u8>) -> u64 {
+fn parse_u64_arg(arg: &[u8]) -> u64 {
     let as_arr: [u8; 8] = arg[..8].try_into().expect("wrong u64 length, must be 8 bytes");
     u64::from_le_bytes(as_arr)
 }

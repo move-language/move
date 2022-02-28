@@ -7,14 +7,14 @@ use move_core_types::{
     account_address::AccountAddress,
     identifier::Identifier,
     language_storage::ModuleId,
-    value::{MoveValue, serialize_values}, vm_status::StatusCode
+    value::{serialize_values, MoveValue},
+    vm_status::StatusCode,
 };
 use move_vm_runtime::{move_vm::MoveVM, session::ExecutionResult};
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas_schedule::GasStatus;
 
-use crate::compiler::{compile_units, as_module};
-
+use crate::compiler::{as_module, compile_units};
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
 const TEST_MODULE_ID: &str = "M";
@@ -28,19 +28,26 @@ const FUN_NAMES: [&str; 2] = [USE_MUTREF_LABEL, USE_REF_LABEL];
 fn fail_arg_deserialize() {
     let mod_code = setup_module();
     // all of these should fail to deserialize because the functions expect u64 args
-    vec![MoveValue::U8(16), MoveValue::U128(512), MoveValue::Bool(true)]
+    vec![
+        MoveValue::U8(16),
+        MoveValue::U128(512),
+        MoveValue::Bool(true),
+    ]
     .iter()
     .for_each(|mv| {
-        FUN_NAMES.iter().for_each(|name| {
-            match run(&mod_code, name, mv.clone()) {
+        FUN_NAMES
+            .iter()
+            .for_each(|name| match run(&mod_code, name, mv.clone()) {
                 ExecutionResult::Success { .. } => {
                     panic!("Should have failed to deserialize non-u64 type to u64");
-                },
-                ExecutionResult::Fail { error, .. } => {
-                    assert_eq!(error.major_status(), StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT);
                 }
-            }
-        });
+                ExecutionResult::Fail { error, .. } => {
+                    assert_eq!(
+                        error.major_status(),
+                        StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT
+                    );
+                }
+            });
     });
 }
 
@@ -49,11 +56,13 @@ fn fail_arg_deserialize() {
 fn mutref_output_success() {
     let mod_code = setup_module();
     match run(&mod_code, USE_MUTREF_LABEL, MoveValue::U64(1)) {
-        ExecutionResult::Success { mutable_ref_values, .. } => {
+        ExecutionResult::Success {
+            mutable_ref_values, ..
+        } => {
             assert_eq!(1, mutable_ref_values.len());
             let parsed = parse_u64_arg(mutable_ref_values.first().unwrap());
             assert_eq!(EXPECT_MUTREF_OUT_VALUE, parsed);
-        },
+        }
         ExecutionResult::Fail { error, .. } => {
             panic!("{:?}", error);
         }
@@ -93,7 +102,7 @@ fn run(module: &ModuleCode, fun_name: &str, arg_val0: MoveValue) -> ExecutionRes
         &fun_name,
         vec![],
         serialize_values(&vec![arg_val0]),
-        &mut gas_status
+        &mut gas_status,
     )
 }
 
@@ -121,6 +130,8 @@ fn compile_module(storage: &mut InMemoryStorage, mod_id: &ModuleId, code: &str) 
 }
 
 fn parse_u64_arg(arg: &[u8]) -> u64 {
-    let as_arr: [u8; 8] = arg[..8].try_into().expect("wrong u64 length, must be 8 bytes");
+    let as_arr: [u8; 8] = arg[..8]
+        .try_into()
+        .expect("wrong u64 length, must be 8 bytes");
     u64::from_le_bytes(as_arr)
 }

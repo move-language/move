@@ -5,6 +5,7 @@ use crate::{
     attributes, evm_transformation::EvmTransformationProcessor, native_functions::NativeFunctions,
     yul_functions, yul_functions::YulFunction, Options,
 };
+use codespan::FileId;
 use itertools::Itertools;
 use move_model::{
     ast::TempIndex,
@@ -19,7 +20,11 @@ use move_stackless_bytecode::{
     livevar_analysis::LiveVarAnalysisProcessor,
     reaching_def_analysis::ReachingDefProcessor,
 };
-use std::{cell::RefCell, collections::BTreeMap};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, BTreeSet},
+    path::PathBuf,
+};
 
 /// Immutable context passed through the compilation.
 pub(crate) struct Context<'a> {
@@ -35,6 +40,8 @@ pub(crate) struct Context<'a> {
     pub struct_layout: RefCell<BTreeMap<QualifiedInstId<StructId>, StructLayout>>,
     /// Native function info.
     pub native_funs: NativeFunctions,
+    /// Mapping of file_id to file number and path.
+    pub(crate) file_id_map: BTreeMap<FileId, (usize, String)>,
 }
 
 /// Information about the layout of a struct in linear memory.
@@ -57,16 +64,45 @@ impl<'a> Context<'a> {
     pub fn new(options: &'a Options, env: &'a GlobalEnv, for_test: bool) -> Self {
         let writer = CodeWriter::new(env.unknown_loc());
         writer.set_emit_hook(yul_functions::substitute_placeholders);
+        let targets = Self::create_bytecode(options, env, for_test);
+        let file_id_map: BTreeMap<FileId, (usize, String)> = targets
+            .get_funs()
+            .map(|f| env.get_function(f).get_loc().file_id())
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .map(|id| (id, Self::get_relative_path(env, id)))
+            // Sort this by file path to ensure deterministic output
+            .sorted_by(|(_, p1), (_, p2)| p2.cmp(p1))
+            // Assign position and collect
+            .enumerate()
+            .map(|(pos, (id, path))| (id, (pos + 1, path)))
+            .collect();
         let mut ctx = Self {
             options,
             env,
-            targets: Self::create_bytecode(options, env, for_test),
+            targets,
+            file_id_map,
             writer,
             struct_layout: Default::default(),
             native_funs: NativeFunctions::default(),
         };
         ctx.native_funs = NativeFunctions::create(&ctx);
         ctx
+    }
+
+    /// Helper to get relative path of a file id.
+    fn get_relative_path(env: &GlobalEnv, file_id: FileId) -> String {
+        let file_path = env.get_file(file_id).to_string_lossy().to_string();
+        let current_dir = std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .to_string_lossy()
+            .to_string()
+            + &std::path::MAIN_SEPARATOR.to_string();
+        if file_path.starts_with(&current_dir) {
+            file_path[current_dir.len()..].to_string()
+        } else {
+            file_path
+        }
     }
 
     /// Helper to create the stackless bytecode.

@@ -220,7 +220,10 @@ impl<'a> FunctionGenerator<'a> {
             emitln!(
                 ctx.writer,
                 "/// @src {}:{}:{}",
-                ctx.env.file_id_to_idx(loc.file_id()),
+                ctx.file_id_map
+                    .get(&loc.file_id())
+                    .expect("file id defined")
+                    .0,
                 loc.span().start(),
                 loc.span().end()
             );

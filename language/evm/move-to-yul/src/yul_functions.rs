@@ -88,6 +88,8 @@ static PLACEHOLDERS: Lazy<BTreeMap<&'static str, &'static str>> = Lazy::new(|| {
         // a resource.
         "RESOURCE_EXISTS_FLAG_SIZE" => "32",
 
+        // Size (in bytes) of the vector metadata.
+        "VECTOR_METADATA_SIZE" => "32",
     }
 });
 
@@ -559,19 +561,33 @@ AlignedStorageStore: "(offs, val) {
   sstore($StorageKey(${LINEAR_STORAGE_GROUP}, word_offs), val)
 }" dep StorageKey,
 
+// TODO: this function needs more testing
 // Copies size bytes from memory to memory.
 CopyMemory: "(src, dst, size) {
   let i := 0
-  for { } and(lt(i, length), gt(i, 31)) { i := add(i, 32) } {
+  for { } lt(i, size) { i := add(i, 32) } {
     mstore(add(dst, i), mload(add(src, i)))
   }
-  if lt(i, length) {
+  if lt(i, size) {
     let mask := sub(shl(shl(3, i), 1), 1)
     let dst_word := and(mload(add(dst, i)), not(mask))
     let src_word := and(mload(add(src, i)), mask)
     mstore(add(dst, i), or(dst_word, src_word))
   }
 }",
+
+ResizeVector: "(v, capacity, type_size) -> new_v {
+    let v_offs := $OffsetPtr(v)
+    let new_capacity := mul(capacity, 2)
+    let data_size := add(${VECTOR_METADATA_SIZE}, mul(capacity, type_size))
+    let new_data_size := add(${VECTOR_METADATA_SIZE}, mul(new_capacity, type_size))
+    let new_v_offs := $Malloc(new_data_size)
+    new_v := $MakePtr(false, new_v_offs)
+    $CopyMemory(v_offs, new_v_offs, data_size)
+    // update capacity at new location
+    $MemoryStoreU64(add(new_v_offs, 8), new_capacity)
+    $Free(v_offs, data_size)
+}" dep OffsetPtr dep Malloc dep MakePtr dep CopyMemory dep MemoryStoreU64 dep Free,
 
 // -------------------------------------------------------------------------------------------
 // Arithmetic, Logic, and Relations

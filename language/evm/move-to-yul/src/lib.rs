@@ -12,6 +12,7 @@ pub mod generator;
 mod native_functions;
 pub mod options;
 mod solidity_ty;
+mod vectors;
 mod yul_functions;
 
 use crate::{generator::Generator, options::Options};

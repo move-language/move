@@ -150,9 +150,7 @@ object "A2_ERC1155" {
             function A1_Option_is_some$A1_ASCII_String$(t) -> $result {
                 let $t1, $t2, $t3
                 // $t1 := borrow_field<Option::Option<#0>>.vec($t0)
-                {
-                    $t1 := $MakePtr($IsStoragePtr(t), $LoadU256(t))
-                }
+                $t1 := t
                 // $t2 := Vector::is_empty<#0>($t1)
                 $t2 := A1_Vector_is_empty$A1_ASCII_String$($t1)
                 // $t3 := !($t2)
@@ -161,8 +159,26 @@ object "A2_ERC1155" {
                 $result := $t3
             }
 
+            function A1_Vector_is_empty$A1_ASCII_String$(v) -> $result {
+                let $t1, $t2, $t3
+                // $t1 := Vector::length<#0>($t0)
+                $t1 := A1_Vector_length$A1_ASCII_String$(v)
+                // $t2 := 0
+                $t2 := 0
+                // $t3 := ==($t1, $t2)
+                $t3 := $Eq($t1, $t2)
+                // return $t3
+                $result := $t3
+            }
+
+            function A1_Vector_length$A1_ASCII_String$(v_ptr) -> len {
+                let v := $LoadU256(v_ptr)
+                len := $LoadU64(v)
+            }
             function A1_ASCII_try_string(bytes) -> $result {
                 let i, len, possible_byte, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17
+                let $locals := $Malloc(32)
+                mstore($locals, bytes)
                 let $block := 3
                 for {} true {} {
                     switch $block
@@ -179,7 +195,7 @@ object "A2_ERC1155" {
                     }
                     case 3 {
                         // $t4 := borrow_local($t0)
-                        $t4 := $MakePtr(false, bytes)
+                        $t4 := $MakePtr(false, $locals)
                         // $t5 := Vector::length<u8>($t4)
                         $t5 := A1_Vector_length$u8$($t4)
                         // $t6 := 0
@@ -192,7 +208,7 @@ object "A2_ERC1155" {
                     case 4 {
                         // label L0
                         // $t8 := borrow_local($t0)
-                        $t8 := $MakePtr(false, bytes)
+                        $t8 := $MakePtr(false, $locals)
                         // $t9 := Vector::borrow<u8>($t8, $t1)
                         $t9 := A1_Vector_borrow$u8$($t8, i)
                         // $t10 := read_ref($t9)
@@ -211,7 +227,7 @@ object "A2_ERC1155" {
                         // assert Eq<u64>($t1, $t5)
                         // assert forall j: Range(0, $t5): ASCII::$is_valid_char(Index($t0, j))
                         // $t15 := move($t0)
-                        $t15 := bytes
+                        $t15 := mload($locals)
                         // $t16 := pack ASCII::String($t15)
                         {
                             let $mem := $Malloc(32)
@@ -222,6 +238,7 @@ object "A2_ERC1155" {
                         $t17 := A1_Option_some$A1_ASCII_String$($t16)
                         // return $t17
                         $result := $t17
+                        $Free($locals, 32)
                         leave
                     }
                     case 6 {
@@ -230,6 +247,7 @@ object "A2_ERC1155" {
                         $t13 := A1_Option_none$A1_ASCII_String$()
                         // return $t13
                         $result := $t13
+                        $Free($locals, 32)
                         leave
                     }
                     case 7 {
@@ -258,6 +276,11 @@ object "A2_ERC1155" {
                 $result := $t1
             }
 
+            function A1_Vector_empty$A1_ASCII_String$() -> vector {
+                vector := $Malloc(96)
+                $MemoryStoreU64(add(vector, 8), 2)
+                vector := $MakePtr(false, vector)
+            }
             function A1_Option_some$A1_ASCII_String$(e) -> $result {
                 let $t1, $t2
                 // $t1 := Vector::singleton<#0>($t0)
@@ -273,19 +296,35 @@ object "A2_ERC1155" {
             }
 
             function A1_Vector_singleton$A1_ASCII_String$(e) -> $result {
-                let v, $t2, $t3
+                let $t2, $t3
+                let $locals := $Malloc(32)
                 // $t1 := Vector::empty<#0>()
-                v := A1_Vector_empty$A1_ASCII_String$()
+                mstore($locals, A1_Vector_empty$A1_ASCII_String$())
                 // $t2 := borrow_local($t1)
-                $t2 := $MakePtr(false, v)
+                $t2 := $MakePtr(false, $locals)
                 // Vector::push_back<#0>($t2, $t0)
                 A1_Vector_push_back$A1_ASCII_String$($t2, e)
                 // $t3 := move($t1)
-                $t3 := v
+                $t3 := mload($locals)
                 // return $t3
                 $result := $t3
+                $Free($locals, 32)
             }
 
+            function A1_Vector_push_back$A1_ASCII_String$(v_ptr, e) {
+                let size, byte_offs, capacity
+                let v := $LoadU256(v_ptr)
+                size := $LoadU64(v)
+                let e_ptr := $IndexPtr(v, add(32, mul(size, 32)))
+                $StoreU256(e_ptr, e)
+                size := add(size, 1)
+                $StoreU64(v, size)
+                capacity := $LoadU64($IndexPtr(v, 8))
+                if and(iszero($IsStoragePtr(v)), eq(size, capacity)) {
+                    let new_v := $ResizeVector(v, capacity, 32)
+                    $StoreU256(v_ptr, new_v)
+                }
+            }
             function A1_ASCII_is_valid_char(byte) -> $result {
                 let $t1, $t2
                 // $t1 := 127
@@ -296,8 +335,19 @@ object "A2_ERC1155" {
                 $result := $t2
             }
 
+            function A1_Vector_borrow$u8$(v_ptr, i) -> e_ptr {
+                let v := $LoadU256(v_ptr)
+                let size := $LoadU64(v)
+                if $GtEq(i, size) { $AbortBuiltin() }
+                e_ptr := $IndexPtr(v, add(32, mul(i, 1)))
+            }
+            function A1_Vector_length$u8$(v_ptr) -> len {
+                let v := $LoadU256(v_ptr)
+                len := $LoadU64(v)
+            }
             function A1_Option_destroy_some$A1_ASCII_String$(t) -> $result {
-                let elem, vec, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
+                let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
+                let $locals := $Malloc(32)
                 let $block := 4
                 for {} true {} {
                     switch $block
@@ -315,18 +365,19 @@ object "A2_ERC1155" {
                         // $t7 := move($t0)
                         $t7 := t
                         // $t2 := unpack Option::Option<#0>($t7)
-                        vec := $MemoryLoadU256(add($t7, 0))
+                        mstore($locals, $MemoryLoadU256(add($t7, 0)))
                         $Free($t7, 32)
                         // $t8 := borrow_local($t2)
-                        $t8 := $MakePtr(false, vec)
+                        $t8 := $MakePtr(false, $locals)
                         // $t9 := Vector::pop_back<#0>($t8)
                         $t9 := A1_Vector_pop_back$A1_ASCII_String$($t8)
                         // $t10 := move($t2)
-                        $t10 := vec
+                        $t10 := mload($locals)
                         // Vector::destroy_empty<#0>($t10)
                         A1_Vector_destroy_empty$A1_ASCII_String$($t10)
                         // return $t9
                         $result := $t9
+                        $Free($locals, 32)
                         leave
                     }
                     case 4 {
@@ -342,6 +393,20 @@ object "A2_ERC1155" {
                 }
             }
 
+            function A1_Vector_destroy_empty$A1_ASCII_String$(v) {
+                let size := $LoadU64(v)
+                if $LogicalNot(iszero(size)) { $AbortBuiltin() }
+                let capacity := $LoadU64($IndexPtr(v, 8))
+                $Free(v, add(32, mul(capacity, 32)))
+            }
+            function A1_Vector_pop_back$A1_ASCII_String$(v_ptr) -> e {
+                let v := $LoadU256(v_ptr)
+                let size := $LoadU64(v)
+                if iszero(size) { $AbortBuiltin() }
+                let e_ptr := $IndexPtr(v, add(32, mul(sub(size, 1), 32)))
+                e := $LoadU256(e_ptr)
+                $StoreU64(v, sub(size, 1))
+            }
             function A1_Errors_invalid_argument(reason) -> $result {
                 let $t1, $t2
                 // $t1 := 7
@@ -486,6 +551,14 @@ object "A2_ERC1155" {
                   bytes := and(shr(shift_bits, word), $MaskForSize(size))
                }
             }
+            function $InjectBytes(word, start, size, bytes) -> new_word {
+               let shift_bits := shl(3, sub(sub(32, start), size))
+               // Blend out the bits which we inject
+               let neg_mask := not(shl(shift_bits, $MaskForSize(size)))
+               word := and(word, neg_mask)
+               // Overlay the bits we inject
+               new_word := or(word, shl(shift_bits, bytes))
+            }
             function $ToWordOffs(offs) -> word_offs, byte_offset {
               word_offs := shr(5, offs)
               byte_offset := and(offs, 0x1F)
@@ -521,10 +594,31 @@ object "A2_ERC1155" {
                 val := or(shl(shl(3, overflow_bytes), val), extra_bytes)
               }
             }
+            function $StorageStoreBytes(offs, size, bytes) {
+              let word_offs, byte_offs := $ToWordOffs(offs)
+              let key := $StorageKey(0, word_offs)
+              let overflow_bytes := $OverflowBytes(byte_offs, size)
+              switch overflow_bytes
+              case 0 {
+                sstore(key, $InjectBytes(sload(key), byte_offs, size, bytes))
+              }
+              default {
+                // Shift the higher bytes to the right
+                let used_bytes := sub(size, overflow_bytes)
+                let higher_bytes := shr(used_bytes, bytes)
+                let lower_bytes := and(bytes, $MaskForSize(overflow_bytes))
+                sstore(key, $InjectBytes(sload(key), byte_offs, used_bytes, higher_bytes))
+                key := $StorageKey(0, add(word_offs, 1))
+                sstore(key, $InjectBytes(sload(key), 0, overflow_bytes, lower_bytes))
+              }
+            }
             function $StorageKey(group, word) -> key {
               mstore(32, word)
               mstore(64, group)
               key := keccak256(32, 36)
+            }
+            function $IndexPtr(ptr, offs) -> new_ptr {
+              new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
             }
             function $LoadU8(ptr) -> val {
               let offs := $OffsetPtr(ptr)
@@ -542,6 +636,38 @@ object "A2_ERC1155" {
             function $StorageLoadU8(offs) -> val {
               val := $StorageLoadBytes(offs, 1)
             }
+            function $LoadU64(ptr) -> val {
+              let offs := $OffsetPtr(ptr)
+              switch $IsStoragePtr(ptr)
+              case 0 {
+                val := $MemoryLoadU64(offs)
+              }
+              default {
+                val := $StorageLoadU64(offs)
+              }
+            }
+            function $MemoryLoadU64(offs) -> val {
+              val := $MemoryLoadBytes(offs, 8)
+            }
+            function $StorageLoadU64(offs) -> val {
+              val := $StorageLoadBytes(offs, 8)
+            }
+            function $StoreU64(ptr, val) {
+              let offs := $OffsetPtr(ptr)
+              switch $IsStoragePtr(ptr)
+              case 0 {
+                $MemoryStoreU64(offs, val)
+              }
+              default {
+                $StorageStoreU64(offs, val)
+              }
+            }
+            function $MemoryStoreU64(offs, val) {
+              $MemoryStoreBytes(offs, 8, val)
+            }
+            function $StorageStoreU64(offs, val) {
+              $StorageStoreBytes(offs, 8, val)
+            }
             function $LoadU256(ptr) -> val {
               let offs := $OffsetPtr(ptr)
               switch $IsStoragePtr(ptr)
@@ -558,8 +684,45 @@ object "A2_ERC1155" {
             function $StorageLoadU256(offs) -> val {
               val := $StorageLoadBytes(offs, 32)
             }
+            function $StoreU256(ptr, val) {
+              let offs := $OffsetPtr(ptr)
+              switch $IsStoragePtr(ptr)
+              case 0 {
+                $MemoryStoreU256(offs, val)
+              }
+              default {
+                $StorageStoreU256(offs, val)
+              }
+            }
             function $MemoryStoreU256(offs, val) {
               $MemoryStoreBytes(offs, 32, val)
+            }
+            function $StorageStoreU256(offs, val) {
+              $StorageStoreBytes(offs, 32, val)
+            }
+            function $CopyMemory(src, dst, size) {
+              let i := 0
+              for { } lt(i, size) { i := add(i, 32) } {
+                mstore(add(dst, i), mload(add(src, i)))
+              }
+              if lt(i, size) {
+                let mask := sub(shl(shl(3, i), 1), 1)
+                let dst_word := and(mload(add(dst, i)), not(mask))
+                let src_word := and(mload(add(src, i)), mask)
+                mstore(add(dst, i), or(dst_word, src_word))
+              }
+            }
+            function $ResizeVector(v, capacity, type_size) -> new_v {
+                let v_offs := $OffsetPtr(v)
+                let new_capacity := mul(capacity, 2)
+                let data_size := add(32, mul(capacity, type_size))
+                let new_data_size := add(32, mul(new_capacity, type_size))
+                let new_v_offs := $Malloc(new_data_size)
+                new_v := $MakePtr(false, new_v_offs)
+                $CopyMemory(v_offs, new_v_offs, data_size)
+                // update capacity at new location
+                $MemoryStoreU64(add(new_v_offs, 8), new_capacity)
+                $Free(v_offs, data_size)
             }
             function $AddU64(x, y) -> r {
                 if lt(sub(0xffffffffffffffff, x), y) { $AbortBuiltin() }
@@ -574,8 +737,14 @@ object "A2_ERC1155" {
             function $Lt(x, y) -> r {
                 r := lt(x, y)
             }
+            function $GtEq(x, y) -> r {
+                r := or(gt(x, y), eq(x, y))
+            }
             function $LtEq(x, y) -> r {
                 r := or(lt(x, y), eq(x, y))
+            }
+            function $Eq(x, y) -> r {
+                r := eq(x, y)
             }
             function $LogicalNot(x) -> r {
                 r := iszero(x)
@@ -587,6 +756,23 @@ object "A2_ERC1155" {
         }
     }
 }
+
+
+!! Errors compiling Yul
+
+Warning: Yul is still experimental. Please use the output with care.
+Error: Literal or identifier expected.
+   --> <stdin>:104:24:
+    |
+104 |                 $t0 := (ByteArray NYI)
+    |                        ^
+
+Error: Expected keyword "data" or "object" or "}".
+   --> <stdin>:104:24:
+    |
+104 |                 $t0 := (ByteArray NYI)
+    |                        ^
+
 
 
 !! Move-To-Yul Diagnostics:
@@ -627,45 +813,3 @@ warning: cannot dispatch this function because of unsupported parameter types
 11 │ │         Std::ASCII::string(b"abc") // TODO: this leads to compilation errors such as "native function `Vector::is_empty` not implemented"
 12 │ │     }
    │ ╰─────^
-
-error: native function `Vector::is_empty` not implemented
-  ┌─ <unknown>:1:1
-  │
-1 │ <unknown>
-  │ ^^^^^^^^^
-
-error: native function `Vector::empty` not implemented
-  ┌─ <unknown>:1:1
-  │
-1 │ <unknown>
-  │ ^^^^^^^^^
-
-error: native function `Vector::push_back` not implemented
-  ┌─ <unknown>:1:1
-  │
-1 │ <unknown>
-  │ ^^^^^^^^^
-
-error: native function `Vector::borrow` not implemented
-  ┌─ <unknown>:1:1
-  │
-1 │ <unknown>
-  │ ^^^^^^^^^
-
-error: native function `Vector::length` not implemented
-  ┌─ <unknown>:1:1
-  │
-1 │ <unknown>
-  │ ^^^^^^^^^
-
-error: native function `Vector::destroy_empty` not implemented
-  ┌─ <unknown>:1:1
-  │
-1 │ <unknown>
-  │ ^^^^^^^^^
-
-error: native function `Vector::pop_back` not implemented
-  ┌─ <unknown>:1:1
-  │
-1 │ <unknown>
-  │ ^^^^^^^^^

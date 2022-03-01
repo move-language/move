@@ -32,6 +32,10 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     ];
     let mut named_address_mapping = move_stdlib_named_addresses();
     named_address_mapping.insert(
+        "Std".to_string(),
+        NumericalAddress::parse_str("0x1").unwrap(),
+    );
+    named_address_mapping.insert(
         "Evm".to_string(),
         NumericalAddress::parse_str("0x2").unwrap(),
     );

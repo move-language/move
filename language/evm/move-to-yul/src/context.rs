@@ -449,4 +449,12 @@ impl<'a> Context<'a> {
             _ => false,
         }
     }
+
+    pub fn type_is_struct(&self, ty: &Type) -> bool {
+        use Type::*;
+        match ty {
+            Struct(m, s, _) => !self.is_u256(m.qualified(*s)),
+            _ => false,
+        }
+    }
 }

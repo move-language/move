@@ -41,7 +41,9 @@ impl<'a> FunctionGenerator<'a> {
     /// Generate Yul function for Move function.
     fn function(&mut self, ctx: &Context, fun_id: &QualifiedInstId<FunId>) {
         let fun = &ctx.env.get_function(fun_id.to_qualified_id());
-        if fun.is_native_or_intrinsic() {
+        // TODO: change back to is_native_or_intrinsic if we decide to implement
+        // intrinsic functions (such as reverse, contains, is_empty) in the Vector module as well
+        if fun.is_native() {
             // Special treatment for native functions, which have custom generators.
             ctx.native_funs
                 .gen_native_function(self.parent, ctx, fun_id);
@@ -158,7 +160,7 @@ impl<'a> FunctionGenerator<'a> {
         for bc in &target.data.code {
             if let Bytecode::Call(_, _, Operation::BorrowLoc, srcs, _) = bc {
                 let ty = target.get_local_type(srcs[0]);
-                if !ctx.type_allocates_memory(ty) {
+                if !ctx.type_is_struct(ty) {
                     if let Entry::Vacant(e) = self.borrowed_locals.entry(srcs[0]) {
                         e.insert(mem_pos);
                         mem_pos += 1
@@ -501,6 +503,7 @@ impl<'a> FunctionGenerator<'a> {
                     Ge => builtin(YulFunction::GtEq, dest, srcs),
                     Or => builtin(YulFunction::LogicalOr, dest, srcs),
                     And => builtin(YulFunction::LogicalAnd, dest, srcs),
+                    // TODO: implement equality comparison for vectors and structs
                     Eq => builtin(YulFunction::Eq, dest, srcs),
                     Neq => builtin(YulFunction::Neq, dest, srcs),
 
@@ -656,7 +659,7 @@ impl<'a> FunctionGenerator<'a> {
         srcs: &[TempIndex],
     ) {
         let ty = target.get_local_type(srcs[0]);
-        let mem_offs = if ctx.type_allocates_memory(ty) {
+        let mem_offs = if ctx.type_is_struct(ty) {
             // The values lives in memory and srcs[0] is an offset into this memory.
             ctx.make_local_name(target, srcs[0])
         } else {
@@ -856,7 +859,7 @@ impl<'a> FunctionGenerator<'a> {
                 vec![src, byte_offs.to_string()].into_iter(),
             )
         };
-        if ctx.type_allocates_memory(ty) {
+        if ctx.type_is_struct(ty) {
             // If this is an indirection to a struct or vector, load its value and make a ptr of it.
             ctx.emit_block(|| {
                 let field_ptr = if *byte_offs == 0 {

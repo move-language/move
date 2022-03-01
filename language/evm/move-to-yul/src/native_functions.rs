@@ -22,6 +22,7 @@ impl NativeFunctions {
     pub(crate) fn create(ctx: &Context) -> Self {
         let mut funs = NativeFunctions::default();
         funs.define_evm_functions(ctx);
+        funs.define_vector_functions(ctx);
         funs
     }
 
@@ -41,10 +42,11 @@ impl NativeFunctions {
             ctx.env.error(
                 &gen.contract_loc,
                 &format!(
-                    "native function `{}` not implemented",
+                    "native function `{}` not implemented for type `{:?}`",
                     ctx.env
                         .get_function(fun_id.to_qualified_id())
-                        .get_full_name_str()
+                        .get_full_name_str(),
+                    fun_id.inst,
                 ),
             )
         }
@@ -103,5 +105,29 @@ impl NativeFunctions {
 }"
             );
         })
+    }
+
+    /// Define vector functions for a specific instantiation.
+    fn define_vector_functions(&mut self, ctx: &Context) {
+        let vector = &self.find_module(ctx, "0x1", "Vector");
+
+        self.define(ctx, vector, "empty", crate::vectors::define_empty_fun);
+        self.define(ctx, vector, "length", crate::vectors::define_length_fun);
+        self.define(
+            ctx,
+            vector,
+            "push_back",
+            crate::vectors::define_push_back_fun,
+        );
+        self.define(ctx, vector, "pop_back", crate::vectors::define_pop_back_fun);
+        self.define(ctx, vector, "borrow", crate::vectors::define_borrow_fun);
+        self.define(ctx, vector, "borrow_mut", crate::vectors::define_borrow_fun);
+        self.define(ctx, vector, "swap", crate::vectors::define_swap_fun);
+        self.define(
+            ctx,
+            vector,
+            "destroy_empty",
+            crate::vectors::define_destroy_empty_fun,
+        );
     }
 }

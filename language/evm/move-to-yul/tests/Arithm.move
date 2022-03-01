@@ -5,27 +5,27 @@ module 0x2::M {
     // ==============================
 
     #[callable]
-	fun add_two_number(x: u64, y: u64): (u64, u64) {
-		let res: u64 = x + y;
-		let z: u64 = 3;
-		(z, res)
-	}
-	#[evm_test]
-	fun test_add_two_number() {
-	    let (z, res) = add_two_number(2, 5);
-	    assert!(z == 3, 100);
-	    assert!(res == 7, 101);
-	}
-	#[evm_test]
-	fun test_add_two_number_wrong_assert() {
-	    let (z, res) = add_two_number(2, 5);
-	    assert!(z == 3, 100);
-	    assert!(res == 6, 101);
-	}
+    fun add_two_number(x: u64, y: u64): (u64, u64) {
+        let res: u64 = x + y;
+        let z: u64 = 3;
+        (z, res)
+    }
     #[evm_test]
-	fun test_add_two_number_overflow() {
-	    let (_z, _res) = add_two_number(18446744073709551615, 1);
-	}
+    fun test_add_two_number() {
+        let (z, res) = add_two_number(2, 5);
+        assert!(z == 3, 100);
+        assert!(res == 7, 101);
+    }
+    #[evm_test]
+    fun test_add_two_number_wrong_assert() {
+        let (z, res) = add_two_number(2, 5);
+        assert!(z == 3, 100);
+        assert!(res == 6, 101);
+    }
+    #[evm_test]
+    fun test_add_two_number_overflow() {
+        let (_z, _res) = add_two_number(18446744073709551615, 1);
+    }
 
     // ==============================
 
@@ -54,9 +54,9 @@ module 0x2::M {
     // ==============================
 
     #[callable]
-	fun multiple_ops(x: u64, y: u64, z: u64): u64 {
-		x + y * z
-	}
+    fun multiple_ops(x: u64, y: u64, z: u64): u64 {
+        x + y * z
+    }
     #[evm_test]
     fun test_multiple_ops() {
         let r = multiple_ops(3, 2, 5);
@@ -71,7 +71,7 @@ module 0x2::M {
     // ==============================
 
     #[callable]
-	fun bool_ops(a: u64, b: u64): (bool, bool) {
+    fun bool_ops(a: u64, b: u64): (bool, bool) {
         let c: bool;
         let d: bool;
         c = a > b && a >= b;
@@ -89,7 +89,7 @@ module 0x2::M {
     // ==============================
 
     #[callable]
-	fun arithmetic_ops(a: u64): (u64, u64) {
+    fun arithmetic_ops(a: u64): (u64, u64) {
         let c: u64;
         c = (6 + 4 - 1) * 2 / 3 % 4;
         if (c != 2) abort 42;

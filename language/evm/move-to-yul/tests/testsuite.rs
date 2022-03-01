@@ -22,6 +22,8 @@ use std::{
 };
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
+    let experiments = extract_test_directives(path, "// experiment:")?;
+
     let mut sources = extract_test_directives(path, "// dep:")?;
     sources.push(path.to_string_lossy().to_string());
     let deps = vec![
@@ -39,25 +41,36 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         ModelBuilderOptions::default(),
         named_address_mapping,
     )?;
-    let options = Options::default();
-    let (_, mut out) = Generator::run(&options, &env);
-    if !env.has_errors() {
-        out = format!("{}\n\n{}", out, compile_check(&options, &out));
+    for exp in std::iter::once(String::new()).chain(experiments.into_iter()) {
+        let mut options = Options {
+            testing: true,
+            ..Options::default()
+        };
+        let ext = if exp.is_empty() {
+            EXP_EXT.to_string()
+        } else {
+            options.experiments.push(exp.clone());
+            format!("{}.{}", EXP_EXT, exp)
+        };
+        let (_, mut out) = Generator::run(&options, &env);
+        if !env.has_errors() {
+            out = format!("{}\n\n{}", out, compile_check(&options, &out));
 
-        // Also generate any tests and run them.
-        let test_cases = Generator::run_for_tests(&options, &env);
-        if !test_cases.is_empty() {
-            out = format!("{}\n\n{}", out, run_tests(&env, &test_cases)?)
+            // Also generate any tests and run them.
+            let test_cases = Generator::run_for_tests(&options, &env);
+            if !test_cases.is_empty() {
+                out = format!("{}\n\n{}", out, run_tests(&env, &test_cases)?)
+            }
         }
+        let mut error_writer = Buffer::no_color();
+        env.report_diag(&mut error_writer, Severity::Help);
+        let diag = String::from_utf8_lossy(&error_writer.into_inner()).to_string();
+        if !diag.is_empty() {
+            out = format!("{}\n\n!! Move-To-Yul Diagnostics:\n {}", out, diag);
+        }
+        let baseline_path = path.with_extension(ext);
+        verify_or_update_baseline(baseline_path.as_path(), &out)?;
     }
-    let mut error_writer = Buffer::no_color();
-    env.report_diag(&mut error_writer, Severity::Help);
-    let diag = String::from_utf8_lossy(&error_writer.into_inner()).to_string();
-    if !diag.is_empty() {
-        out = format!("{}\n\n!! Move-To-Yul Diagnostics:\n {}", out, diag);
-    }
-    let baseline_path = path.with_extension(EXP_EXT);
-    verify_or_update_baseline(baseline_path.as_path(), &out)?;
     Ok(())
 }
 

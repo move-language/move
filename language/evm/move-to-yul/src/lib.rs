@@ -6,12 +6,12 @@
 mod attributes;
 mod context;
 mod evm_transformation;
+mod experiments;
 mod functions;
 pub mod generator;
 mod native_functions;
 pub mod options;
 mod yul_functions;
-// mod object;
 
 use crate::{generator::Generator, options::Options};
 use anyhow::anyhow;

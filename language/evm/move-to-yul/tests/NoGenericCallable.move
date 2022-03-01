@@ -2,5 +2,5 @@
 #[contract]
 module 0x2::M {
     #[callable]
-	fun f<T>(x: u64): u64 { x }
+    fun f<T>(x: u64): u64 { x }
 }

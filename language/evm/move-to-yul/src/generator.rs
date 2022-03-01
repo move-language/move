@@ -189,21 +189,23 @@ impl Generator {
             ctx.options.version(),
         );
         emitln!(ctx.writer);
-        let mut use_src_emitted = false;
-        for (file_no, file_path) in ctx
-            .file_id_map
-            .values()
-            .sorted_by(|(n1, _), (n2, _)| n1.cmp(n2))
-        {
-            let use_str = format!("{}:\"{}\"", file_no, file_path);
-            if !use_src_emitted {
-                emitln!(ctx.writer, "/// @use-src {}", use_str);
-                use_src_emitted = true;
-            } else {
-                emitln!(ctx.writer, "///        , {}", use_str)
+        if ctx.options.generate_source_info() {
+            let mut use_src_emitted = false;
+            for (file_no, file_path) in ctx
+                .file_id_map
+                .values()
+                .sorted_by(|(n1, _), (n2, _)| n1.cmp(n2))
+            {
+                let use_str = format!("{}:\"{}\"", file_no, file_path);
+                if !use_src_emitted {
+                    emitln!(ctx.writer, "/// @use-src {}", use_str);
+                    use_src_emitted = true;
+                } else {
+                    emitln!(ctx.writer, "///        , {}", use_str)
+                }
             }
+            emitln!(ctx.writer);
         }
-        emitln!(ctx.writer);
         emitln!(ctx.writer);
     }
 

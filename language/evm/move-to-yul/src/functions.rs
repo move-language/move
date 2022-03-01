@@ -216,17 +216,19 @@ impl<'a> FunctionGenerator<'a> {
             bc.display(target, &BTreeMap::default())
         );
         let print_loc = || {
-            let loc = target.get_bytecode_loc(bc.get_attr_id());
-            emitln!(
-                ctx.writer,
-                "/// @src {}:{}:{}",
-                ctx.file_id_map
-                    .get(&loc.file_id())
-                    .expect("file id defined")
-                    .0,
-                loc.span().start(),
-                loc.span().end()
-            );
+            if ctx.options.generate_source_info() {
+                let loc = target.get_bytecode_loc(bc.get_attr_id());
+                emitln!(
+                    ctx.writer,
+                    "/// @src {}:{}:{}",
+                    ctx.file_id_map
+                        .get(&loc.file_id())
+                        .expect("file id defined")
+                        .0,
+                    loc.span().start(),
+                    loc.span().end()
+                );
+            }
         };
         let get_block = |l| label_map.get(l).expect("label has corresponding block");
         // Need to make a clone below to avoid cascading borrow problems. We don't want the

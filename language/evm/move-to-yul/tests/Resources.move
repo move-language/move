@@ -1,4 +1,7 @@
-#[contract]
+// Use this test to check source info generation:
+//
+// experiment: capture-source-info
+//
 module 0x2::M {
     use Eth::Evm::sign;
 

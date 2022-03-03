@@ -5,9 +5,13 @@
 module Evm::IERC721Receiver {
     use Evm::Evm::{keccak256, bytes4};
     use Evm::Result::{Result};
+    use Evm::U256::{U256};
 
-    #[interface]
-    public native fun call_onERC721Received(contract: address, operator: address, from: address, tokenId: u128, bytes: vector<u8>): Result<vector<u8>, vector<u8>>;
+    #[external]
+    public native fun call_onERC721Received(contract: address, operator: address, from: address, tokenId: U256, bytes: vector<u8>): vector<u8>;
+
+    #[external]
+    public native fun try_call_onERC721Received(contract: address, operator: address, from: address, tokenId: U256, bytes: vector<u8>): Result<vector<u8>, vector<u8>>;
 
     #[selector]
     /// Return the selector of the function `onERC721Received`

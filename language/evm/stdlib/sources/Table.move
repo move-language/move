@@ -1,6 +1,6 @@
 /// This module defines Table for EVM.
 module Evm::Table {
-    native struct Table<K, V> has store;
+    native struct Table<phantom K, phantom V> has store;
 
     /// Create an empty Table.
     native public fun empty<K, V>(): Table<K, V>;

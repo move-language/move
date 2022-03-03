@@ -5,12 +5,13 @@
 module Evm::IERC1155Receiver {
     use Evm::Evm::{keccak256, bytes4, bytes_xor};
     use Evm::Result::{Result};
+    use Evm::U256::{U256};
 
     #[external]
-    public native fun call_onERC1155Received(contract: address, operator: address, from: address, id: u128, amount: u128, bytes: vector<u8>): Result<vector<u8>, vector<u8>>;
+    public native fun call_onERC1155Received(contract: address, operator: address, from: address, id: U256, amount: U256, bytes: vector<u8>): Result<vector<u8>, vector<u8>>;
 
     #[external]
-    public native fun call_onERC1155BatchReceived(contract: address, operator: address, from: address, ids: vector<u128>, amounts: vector<u128>, bytes: vector<u8>): Result<vector<u8>, vector<u8>>;
+    public native fun call_onERC1155BatchReceived(contract: address, operator: address, from: address, ids: vector<U256>, amounts: vector<U256>, bytes: vector<u8>): Result<vector<u8>, vector<u8>>;
 
     #[selector]
     /// Return the selector of the function `onERC1155Received`

@@ -23,7 +23,7 @@ module 0x42::Faucet {
 
     #[create]
     public fun create() {
-        move_to<State>(sign(self()), State{owner: sender()})
+        move_to<State>(&sign(self()), State{owner: sender()})
     }
 
     #[delete]

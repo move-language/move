@@ -3,6 +3,7 @@
 module Evm::ERC20_ALT {
     use Evm::Evm::{sender, self, sign, emit};
     use Evm::Table::{Self, Table};
+    use Evm::U256::{Self, U256};
     use Std::ASCII::{String};
     use Std::Errors;
 
@@ -10,22 +11,22 @@ module Evm::ERC20_ALT {
     struct Transfer {
         from: address,
         to: address,
-        value: u128,
+        value: U256,
     }
 
     #[event]
     struct Approval {
         owner: address,
         spender: address,
-        value: u128,
+        value: U256,
     }
 
     #[storage]
     /// Represents the state of this contract. This is located at `borrow_global<State>(self())`.
     struct State has key {
-        balances: Table<address, u128>,
-        allowances: Table<address, Table<address, u128>>,
-        total_supply: u128,
+        balances: Table<address, U256>,
+        allowances: Table<address, Table<address, U256>>,
+        total_supply: U256,
         name: String,
         symbol: String,
     }
@@ -35,11 +36,11 @@ module Evm::ERC20_ALT {
     public fun create(name: String, symbol: String) {
         // Initial state of contract
         move_to<State>(
-            sign(self()),
+            &sign(self()),
             State {
-                total_supply: 0,
-                balances: Table::empty<address, u128>(),
-                allowances: Table::empty<address, Table<address, u128>>(),
+                total_supply: U256::zero(),
+                balances: Table::empty<address, U256>(),
+                allowances: Table::empty<address, Table<address, U256>>(),
                 name,
                 symbol,
             }
@@ -66,20 +67,20 @@ module Evm::ERC20_ALT {
 
     #[callable, view]
     /// Returns the total supply of the token.
-    public fun totalSupply(): u128 acquires State {
-        borrow_global<State>(self()).total_supply
+    public fun totalSupply(): U256 acquires State {
+        *&borrow_global<State>(self()).total_supply
     }
 
     #[callable, view]
     /// Returns the balance of an account.
-    public fun balanceOf(owner: address): u128 acquires State {
+    public fun balanceOf(owner: address): U256 acquires State {
         let s = borrow_global_mut<State>(self());
         *mut_balanceOf(s, owner)
     }
 
     #[callable]
     /// Transfers the amount from the sending account to the given account
-    public fun transfer(to: address, amount: u128): bool acquires State {
+    public fun transfer(to: address, amount: U256): bool acquires State {
         assert!(sender() != to, Errors::invalid_argument(0));
         do_transfer(sender(), to, amount);
         true
@@ -88,58 +89,58 @@ module Evm::ERC20_ALT {
     #[callable]
     /// Transfers the amount on behalf of the `from` account to the given account.
     /// This evaluates and adjusts the allowance.
-    public fun transferFrom(from: address, to: address, amount: u128): bool acquires State {
+    public fun transferFrom(from: address, to: address, amount: U256): bool acquires State {
         assert!(sender() != to, Errors::invalid_argument(0));
         let s = borrow_global_mut<State>(self());
         let allowance_for_sender = mut_allowance(s, from, sender());
-        assert!(*allowance_for_sender >= amount, Errors::limit_exceeded(0));
-        *allowance_for_sender = *allowance_for_sender - amount;
+        assert!(U256::le(copy amount, *allowance_for_sender), Errors::limit_exceeded(0));
+        *allowance_for_sender = U256::sub(*allowance_for_sender, copy amount);
         do_transfer(from, to, amount);
         true
     }
 
     #[callable]
     /// Approves that the spender can spent the given amount on behalf of the calling account.
-    public fun approve(spender: address, amount: u128): bool acquires State {
+    public fun approve(spender: address, amount: U256): bool acquires State {
         let s = borrow_global_mut<State>(self());
         if(!Table::contains(&s.allowances, &sender())) {
-            Table::insert(&mut s.allowances, sender(), Table::empty<address, u128>())
+            Table::insert(&mut s.allowances, sender(), Table::empty<address, U256>())
         };
         let a = Table::borrow_mut(&mut s.allowances, &sender());
-        Table::insert(a, spender, amount);
+        Table::insert(a, spender, copy amount);
         emit(Approval{owner: sender(), spender, value: amount});
         true
     }
 
     #[callable, view]
     /// Returns the allowance an account owner has approved for the given spender.
-    public fun allowance(owner: address, spender: address): u128 acquires State {
+    public fun allowance(owner: address, spender: address): U256 acquires State {
         let s = borrow_global_mut<State>(self());
         *mut_allowance(s, owner, spender)
     }
 
     /// Helper function to perform a transfer of funds.
-    fun do_transfer(from: address, to: address, amount: u128) acquires State {
+    fun do_transfer(from: address, to: address, amount: U256) acquires State {
         let s = borrow_global_mut<State>(self());
         let from_bal = mut_balanceOf(s, from);
-        assert!(*from_bal >= amount, Errors::limit_exceeded(0));
-        *from_bal = *from_bal - amount;
+        assert!(U256::le(copy amount, *from_bal), Errors::limit_exceeded(0));
+        *from_bal = U256::sub(*from_bal, copy amount);
         let to_bal = mut_balanceOf(s, to);
-        *to_bal = *to_bal + amount;
+        *to_bal = U256::add(*to_bal, copy amount);
         emit(Transfer{from, to, value: amount});
     }
 
     /// Helper function to return a mut ref to the allowance of a spender.
-    fun mut_allowance(s: &mut State, owner: address, spender: address): &mut u128 {
+    fun mut_allowance(s: &mut State, owner: address, spender: address): &mut U256 {
         if(!Table::contains(&s.allowances, &owner)) {
-            Table::insert(&mut s.allowances, owner, Table::empty<address, u128>())
+            Table::insert(&mut s.allowances, owner, Table::empty<address, U256>())
         };
         let allowance_owner = Table::borrow_mut(&mut s.allowances, &owner);
-        Table::borrow_mut_with_default(allowance_owner, spender, 0)
+        Table::borrow_mut_with_default(allowance_owner, spender, U256::zero())
     }
 
     /// Helper function to return a mut ref to the balance of a owner.
-    fun mut_balanceOf(s: &mut State, owner: address): &mut u128 {
-        Table::borrow_mut_with_default(&mut s.balances, owner, 0)
+    fun mut_balanceOf(s: &mut State, owner: address): &mut U256 {
+        Table::borrow_mut_with_default(&mut s.balances, owner, U256::zero())
     }
 }

@@ -5,12 +5,13 @@
 module Evm::IERC721 {
     use Evm::Evm::{Unit};
     use Evm::Result::{Result};
+    use Evm::U256::{U256};
 
-    #[interface]
-    public native fun safeTransferFrom(contract: address, from: address, to: address, tokenId: u128): Result<Unit, vector<u8>>;
+    #[external]
+    public native fun call_safeTransferFrom(contract: address, from: address, to: address, tokenId: U256): Result<Unit, vector<u8>>;
 
-    #[interface(name=safeTransferFrom)]
-    public native fun safeTransferFrom_with_data(contract: address, from: address, to: address, tokenId: u128, data: vector<u8>): Result<Unit, vector<u8>>;
+    #[external(name=safeTransferFrom)]
+    public native fun call_safeTransferFrom_with_data(contract: address, from: address, to: address, tokenId: U256, data: vector<u8>): Result<Unit, vector<u8>>;
 
     #[interface_id]
     /// Return the interface identifier.

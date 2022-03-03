@@ -8,3 +8,4 @@ Evm = "0x2"
 
 [dependencies]
 MoveStdlib = { local = "../../move-stdlib" }
+EvmStdlib = { local = "../stdlib" }

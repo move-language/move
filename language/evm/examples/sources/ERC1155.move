@@ -7,6 +7,7 @@ module Evm::ERC1155 {
     use Evm::IERC1155;
     use Evm::Table::{Self, Table};
     use Evm::Result;
+    use Evm::U256::{Self, U256};
     use Std::ASCII::{String};
     use Std::Errors;
     use Std::Vector;
@@ -16,8 +17,8 @@ module Evm::ERC1155 {
         operator: address,
         from: address,
         to: address,
-        id: u128,
-        value: u128,
+        id: U256,
+        value: U256,
     }
 
     #[event]
@@ -25,8 +26,8 @@ module Evm::ERC1155 {
         operator: address,
         from: address,
         to: address,
-        ids: vector<u128>,
-        values: vector<u128>,
+        ids: vector<U256>,
+        values: vector<U256>,
     }
 
     #[event]
@@ -39,13 +40,13 @@ module Evm::ERC1155 {
     #[event]
     struct URI {
         value: String,
-        id: u128,
+        id: U256,
     }
 
     #[storage]
     /// Represents the state of this contract. This is located at `borrow_global<State>(self())`.
     struct State has key {
-        balances: Table<u128, Table<address, u128>>,
+        balances: Table<U256, Table<address, U256>>,
         operatorApprovals: Table<address, Table<address, bool>>,
         uri: String,
     }
@@ -55,9 +56,9 @@ module Evm::ERC1155 {
     public fun create(uri: String) {
         // Initial state of contract
         move_to<State>(
-            sign(self()),
+            &sign(self()),
             State {
-                balances: Table::empty<u128, Table<address, u128>>(),
+                balances: Table::empty<U256, Table<address, U256>>(),
                 operatorApprovals: Table::empty<address, Table<address, bool>>(),
                 uri,
             }
@@ -72,18 +73,18 @@ module Evm::ERC1155 {
 
     #[callable, view]
     /// Get the balance of an account's token.
-    public fun balanceOf(account: address, id: u128): u128 acquires State {
+    public fun balanceOf(account: address, id: U256): U256 acquires State {
         let s = borrow_global_mut<State>(self());
         *mut_balanceOf(s, id, account)
     }
 
     #[callable, view]
     /// Get the balance of multiple account/token pairs.
-    public fun balanceOfBatch(accounts: vector<address>, ids: vector<u128>): vector<u128> acquires State {
+    public fun balanceOfBatch(accounts: vector<address>, ids: vector<U256>): vector<U256> acquires State {
         assert!(Vector::length(&accounts) == Vector::length(&ids), Errors::invalid_argument(0));
         let len = Vector::length(&accounts);
         let i = 0;
-        let balances = Vector::empty<u128>();
+        let balances = Vector::empty<U256>();
         while(i < len) {
             Vector::push_back(
                 &mut balances,
@@ -115,22 +116,22 @@ module Evm::ERC1155 {
 
     #[callable]
     /// Transfers `_value` amount of an `_id` from the `_from` address to the `_to` address specified (with safety call).
-    public fun safeTransferFrom(from: address, to: address, id: u128, amount: u128, data: vector<u8>) acquires State {
+    public fun safeTransferFrom(from: address, to: address, id: U256, amount: U256, data: vector<u8>) acquires State {
         assert!(from == sender() || isApprovalForAll(from, sender()), Errors::invalid_argument(0));
         let operator = sender();
         let s = borrow_global_mut<State>(self());
-        let mut_balance_from = mut_balanceOf(s, id, from);
-        assert!(*mut_balance_from >= amount, Errors::invalid_argument(0));
-        *mut_balance_from = *mut_balance_from - amount;
-        let mut_balance_to = mut_balanceOf(s, id, to);
-        *mut_balance_to = *mut_balance_to + amount;
-        emit(TransferSingle{operator, from, to, id, value: amount});
+        let mut_balance_from = mut_balanceOf(s, copy id, from);
+        assert!(U256::le(copy amount, *mut_balance_from), Errors::invalid_argument(0));
+        *mut_balance_from = U256::sub(*mut_balance_from, copy amount);
+        let mut_balance_to = mut_balanceOf(s, copy id, to);
+        *mut_balance_to = U256::add(*mut_balance_to, copy amount);
+        emit(TransferSingle{operator, from, to, id: copy id, value: copy amount});
         doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
     }
 
     #[callable]
     /// Transfers `_value` amount of an `_id` from the `_from` address to the `_to` address specified (with safety call).
-    public fun safeBatchTransferFrom(from: address, to: address, ids: vector<u128>, amounts: vector<u128>, data: vector<u8>) acquires State {
+    public fun safeBatchTransferFrom(from: address, to: address, ids: vector<U256>, amounts: vector<U256>, data: vector<u8>) acquires State {
         assert!(from == sender() || isApprovalForAll(from, sender()), Errors::invalid_argument(0));
         assert!(Vector::length(&amounts) == Vector::length(&ids), Errors::invalid_argument(0));
         let len = Vector::length(&amounts);
@@ -143,11 +144,11 @@ module Evm::ERC1155 {
             let id = *Vector::borrow(&ids, i);
             let amount = *Vector::borrow(&amounts, i);
 
-            let mut_balance_from = mut_balanceOf(s, id, from);
-            assert!(*mut_balance_from >= amount, Errors::invalid_argument(0));
-            *mut_balance_from = *mut_balance_from - amount;
+            let mut_balance_from = mut_balanceOf(s, copy id, from);
+            assert!(U256::le(copy amount, *mut_balance_from), Errors::invalid_argument(0));
+            *mut_balance_from = U256::sub(*mut_balance_from, copy amount);
             let mut_balance_to = mut_balanceOf(s, id, to);
-            *mut_balance_to = *mut_balance_to + amount;
+            *mut_balance_to = U256::add(*mut_balance_to, amount);
 
             i = i + 1;
         };
@@ -160,7 +161,7 @@ module Evm::ERC1155 {
     #[callable]
     // Query if this contract implements a certain interface.
     public fun supportsInterface(interfaceId: vector<u8>): bool {
-        copy interfaceId == IERC1155::interfaceId() || interfaceId == IERC165::interfaceId()
+        &interfaceId == &IERC1155::interfaceId() || &interfaceId == &IERC165::interfaceId()
     }
 
     /// Helper function to return a mut ref to the operatorApproval
@@ -180,20 +181,20 @@ module Evm::ERC1155 {
     }
 
     /// Helper function to return a mut ref to the balance of a owner.
-    fun mut_balanceOf(s: &mut State, id: u128, account: address): &mut u128 {
+    fun mut_balanceOf(s: &mut State, id: U256, account: address): &mut U256 {
         if(!Table::contains(&s.balances, &id)) {
             Table::insert(
                 &mut s.balances,
-                id,
-                Table::empty<address, u128>()
+                copy id,
+                Table::empty<address, U256>()
             )
         };
         let balances_id = Table::borrow_mut(&mut s.balances, &id);
-        Table::borrow_mut_with_default(balances_id, account, 0)
+        Table::borrow_mut_with_default(balances_id, account, U256::zero())
     }
 
     /// Helper function for the safe transfer acceptance check.
-    fun doSafeTransferAcceptanceCheck(operator: address, from: address, to: address, id: u128, amount: u128, data: vector<u8>) {
+    fun doSafeTransferAcceptanceCheck(operator: address, from: address, to: address, id: U256, amount: U256, data: vector<u8>) {
         if (isContract(to)) {
             let result = IERC1155Receiver::call_onERC1155Received(to, operator, from, id, amount, data);
             if (Result::is_ok(&result)) {
@@ -209,7 +210,7 @@ module Evm::ERC1155 {
     }
 
     /// Helper function for the safe batch transfer acceptance check.
-    fun doSafeBatchTransferAcceptanceCheck(operator: address, from: address, to: address, ids: vector<u128>, amounts: vector<u128>, data: vector<u8>) {
+    fun doSafeBatchTransferAcceptanceCheck(operator: address, from: address, to: address, ids: vector<U256>, amounts: vector<U256>, data: vector<u8>) {
         if (isContract(to)) {
             let result = IERC1155Receiver::call_onERC1155BatchReceived(to, operator, from, ids, amounts, data);
             if (Result::is_ok(&result)) {

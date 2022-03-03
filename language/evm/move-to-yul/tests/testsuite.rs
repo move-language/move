@@ -32,7 +32,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     ];
     let mut named_address_mapping = move_stdlib_named_addresses();
     named_address_mapping.insert(
-        "Eth".to_string(),
+        "Evm".to_string(),
         NumericalAddress::parse_str("0x2").unwrap(),
     );
     let env = run_model_builder_with_options(
@@ -99,7 +99,11 @@ fn run_tests(
             env.get_function(*fun).get_full_name_str()
         ));
         res.push_str(source);
-        res.push_str(&format!("===> {}\n\n", execute_test(env, source)?));
+        res.push_str(&format!(
+            "===> Test result of {}: {}\n\n",
+            env.get_function(*fun).get_full_name_str(),
+            execute_test(env, source)?
+        ));
     }
     Ok(res)
 }

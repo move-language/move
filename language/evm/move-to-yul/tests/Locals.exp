@@ -175,7 +175,7 @@ object "A2_M" {
               let key := $StorageKey(0, word_offs)
               val := $ExtractBytes(sload(key), byte_offs, size)
               let overflow_bytes := $OverflowBytes(byte_offs, size)
-              if not(iszero(overflow_bytes)) {
+              if $LogicalNot(iszero(overflow_bytes)) {
                 key := $StorageKey(0, add(word_offs, 1))
                 let extra_bytes := $ExtractBytes(sload(key), 0, overflow_bytes)
                 val := or(shl(shl(3, overflow_bytes), val), extra_bytes)
@@ -242,6 +242,9 @@ object "A2_M" {
             }
             function $Shr(x, y) -> r {
                 r := shr(y, x)
+            }
+            function $LogicalNot(x) -> r {
+                r := iszero(x)
             }
         }
     }
@@ -409,7 +412,7 @@ object "test_A2_M_test_call_by_ref" {
         }
     }
 }
-===> Succeed(Stopped) (used_gas=410): []
+===> Test result of M::test_call_by_ref: Succeed(Stopped) (used_gas=410): []
 
 // test of M::test_evaded
 /* =======================================
@@ -625,7 +628,7 @@ object "test_A2_M_test_evaded" {
           let key := $StorageKey(0, word_offs)
           val := $ExtractBytes(sload(key), byte_offs, size)
           let overflow_bytes := $OverflowBytes(byte_offs, size)
-          if not(iszero(overflow_bytes)) {
+          if $LogicalNot(iszero(overflow_bytes)) {
             key := $StorageKey(0, add(word_offs, 1))
             let extra_bytes := $ExtractBytes(sload(key), 0, overflow_bytes)
             val := or(shl(shl(3, overflow_bytes), val), extra_bytes)
@@ -693,6 +696,9 @@ object "test_A2_M_test_evaded" {
         function $Eq(x, y) -> r {
             r := eq(x, y)
         }
+        function $LogicalNot(x) -> r {
+            r := iszero(x)
+        }
     }
 }
-===> Succeed(Stopped) (used_gas=1261): []
+===> Test result of M::test_evaded: Succeed(Stopped) (used_gas=1261): []

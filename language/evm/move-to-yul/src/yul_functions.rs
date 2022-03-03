@@ -264,12 +264,12 @@ StorageLoadBytes: "(offs, size) -> val {
   let key := $StorageKey(${LINEAR_STORAGE_GROUP}, word_offs)
   val := $ExtractBytes(sload(key), byte_offs, size)
   let overflow_bytes := $OverflowBytes(byte_offs, size)
-  if not(iszero(overflow_bytes)) {
+  if $LogicalNot(iszero(overflow_bytes)) {
     key := $StorageKey(${LINEAR_STORAGE_GROUP}, add(word_offs, 1))
     let extra_bytes := $ExtractBytes(sload(key), 0, overflow_bytes)
     val := or(shl(shl(3, overflow_bytes), val), extra_bytes)
   }
-}" dep ToWordOffs dep StorageKey dep ExtractBytes dep OverflowBytes,
+}" dep ToWordOffs dep StorageKey dep ExtractBytes dep OverflowBytes dep LogicalNot,
 
 // Store bytes to storage offset.
 StorageStoreBytes: "(offs, size, bytes) {
@@ -623,8 +623,8 @@ Eq: "(x, y) -> r {
     r := eq(x, y)
 }",
 Neq: "(x, y) -> r {
-    r := not(eq(x, y))
-}",
+    r := $LogicalNot(eq(x, y))
+}" dep LogicalNot,
 LogicalAnd: "(x, y) -> r {
     r := and(x, y)
 }",
@@ -632,7 +632,7 @@ LogicalOr: "(x, y) -> r {
     r := or(x, y)
 }",
 LogicalNot: "(x) -> r {
-    r := not(x)
+    r := iszero(x)
 }",
 BitAnd: "(x, y) -> r {
     r := and(x, y)

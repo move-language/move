@@ -86,6 +86,16 @@ module 0x2::M {
         assert!(r2 == false, 101);
     }
 
+    #[evm_test]
+    fun test_bool_ops_aborts() {
+        let (r1, r2) = (true, false);
+        assert!(!(r1 == r2), 100);
+        assert!(r1 != r2, 101);
+        assert!(!r1 != !r2, 102);
+        assert!(!r2, 103);
+        assert!(!r1, 104); // should abort here
+    }
+
     // ==============================
 
     #[callable]
@@ -98,7 +108,7 @@ module 0x2::M {
     #[evm_test]
     fun test_arithmetic_ops_aborts() {
         let (r1, r2) = arithmetic_ops(3);
-        assert!(r1 == 1, 100);
+        assert!(r1 == 1, 100); // should abort here
         assert!(r2 == 3, 101);
     }
 

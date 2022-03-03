@@ -3,7 +3,7 @@
 // experiment: capture-source-info
 //
 module 0x2::M {
-    use Eth::Evm::sign;
+    use Evm::Evm::sign;
 
     struct S has key {
       a: u64,

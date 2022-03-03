@@ -2,7 +2,7 @@
 // dep: ../stdlib/sources/U256.move
 #[contract]
 module 0x2::U256Arith {
-    use 0x1::U256::{Self, U256, u256_from_words};
+    use Evm::U256::{Self, U256, u256_from_words};
 
     #[callable]
     fun cast(x: u128, y: u128): U256 {
@@ -45,42 +45,42 @@ module 0x2::U256Arith {
     }
 
     #[callable]
-    fun gt(): U256 {
+    fun gt(): bool {
         let x = u256_from_words(6, 2);
         let y = u256_from_words(5, 1);
         U256::gt(x, y)
     }
 
     #[callable]
-    fun lt(): U256 {
+    fun lt(): bool {
         let x = u256_from_words(6, 2);
         let y = u256_from_words(5, 1);
         U256::lt(x, y)
     }
 
     #[callable]
-    fun ge(): U256 {
+    fun ge(): bool {
         let x = u256_from_words(6, 2);
         let y = u256_from_words(5, 1);
         U256::ge(x, y)
     }
 
     #[callable]
-    fun le(): U256 {
+    fun le(): bool {
         let x = u256_from_words(6, 2);
         let y = u256_from_words(5, 1);
         U256::le(x, y)
     }
 
     #[callable]
-    fun eq(): U256 {
+    fun eq(): bool {
         let x = u256_from_words(6, 2);
         let y = u256_from_words(5, 1);
         U256::eq(x, y)
     }
 
     #[callable]
-    fun ne(): U256 {
+    fun ne(): bool {
         let x = u256_from_words(6, 2);
         let y = u256_from_words(5, 1);
         U256::ne(x, y)

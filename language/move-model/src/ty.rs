@@ -157,6 +157,14 @@ impl Type {
         }
     }
 
+    /// Returns true if this is a bool.
+    pub fn is_bool(&self) -> bool {
+        if let Type::Primitive(PrimitiveType::Bool) = self {
+            return true;
+        }
+        false
+    }
+
     /// Returns true if this is any number type.
     pub fn is_number(&self) -> bool {
         if let Type::Primitive(p) = self {

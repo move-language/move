@@ -276,6 +276,21 @@ impl<'a> Context<'a> {
         emitln!(self.writer, "}");
     }
 
+    /// Returns whether the struct identified by module_id and struct_id is the native U256 struct.
+    pub fn is_u256(&self, struct_id: QualifiedId<StructId>) -> bool {
+        let struct_env = self.env.get_struct(struct_id);
+        attributes::is_evm_arith_module(&struct_env.module_env) && struct_env.is_native()
+    }
+
+    /// Returns whether the struct identified by module_id and struct_id is the native String struct.
+    pub fn is_string(&self, struct_id: QualifiedId<StructId>) -> bool {
+        let struct_env = self.env.get_struct(struct_id);
+        format!(
+            "{}",
+            struct_env.get_name().display(struct_env.symbol_pool())
+        ) == "String"
+    }
+
     /// Get the field types of a struct as a vector.
     pub fn get_field_types(&self, id: QualifiedId<StructId>) -> Vec<Type> {
         self.env
@@ -283,127 +298,6 @@ impl<'a> Context<'a> {
             .get_fields()
             .map(|f| f.get_type())
             .collect()
-    }
-
-    /// Returns whether the struct identified by module_id and struct_id is the native U256 struct.
-    pub fn is_u256(&self, struct_id: QualifiedId<StructId>) -> bool {
-        let struct_env = self.env.get_struct(struct_id);
-        attributes::is_evm_arith_module(&struct_env.module_env) && struct_env.is_native()
-    }
-
-    /// Check whether ty is a static type in the sense of serialization
-    pub fn abi_is_static_type(&self, ty: &Type) -> bool {
-        use move_model::ty::{PrimitiveType::*, Type::*};
-
-        let conjunction = |tys: &[Type]| {
-            tys.iter()
-                .map(|t| self.abi_is_static_type(t))
-                .collect::<Vec<_>>()
-                .into_iter()
-                .all(|t| t)
-        };
-        match ty {
-            Primitive(p) => match p {
-                Bool | U8 | U64 | U128 | Address | Signer => true,
-                _ => {
-                    panic!("unexpected field type")
-                }
-            },
-            Vector(_) => false,
-            Tuple(tys) => conjunction(tys),
-            Struct(mid, sid, _) => {
-                if self.is_u256(mid.qualified(*sid)) {
-                    true
-                } else {
-                    let tys = self.get_field_types(mid.qualified(*sid));
-                    conjunction(&tys)
-                }
-            }
-            TypeParameter(_)
-            | Reference(_, _)
-            | Fun(_, _)
-            | TypeDomain(_)
-            | ResourceDomain(_, _, _)
-            | Error
-            | Var(_) => {
-                panic!("unexpected field type")
-            }
-        }
-    }
-
-    /// Compute the sum of data size of tys
-    pub fn abi_type_head_sizes_sum(&self, tys: &[Type], padded: bool) -> usize {
-        let size_vec = self.abi_type_head_sizes_vec(tys, padded);
-        size_vec.iter().map(|(_, size)| size).sum()
-    }
-
-    /// Compute the data size of all types in tys
-    pub fn abi_type_head_sizes_vec(&self, tys: &[Type], padded: bool) -> Vec<(Type, usize)> {
-        tys.iter()
-            .map(|ty_| (ty_.clone(), self.abi_type_head_size(ty_, padded)))
-            .collect_vec()
-    }
-
-    /// Compute the data size of ty on the stack
-    pub fn abi_type_head_size(&self, ty: &Type, padded: bool) -> usize {
-        use move_model::ty::{PrimitiveType::*, Type::*};
-        if self.abi_is_static_type(ty) {
-            match ty {
-                Primitive(p) => match p {
-                    Bool => {
-                        if padded {
-                            32
-                        } else {
-                            1
-                        }
-                    }
-                    U8 => {
-                        if padded {
-                            32
-                        } else {
-                            1
-                        }
-                    }
-                    U64 => {
-                        if padded {
-                            32
-                        } else {
-                            8
-                        }
-                    }
-                    U128 => {
-                        if padded {
-                            32
-                        } else {
-                            16
-                        }
-                    }
-                    Address | Signer => {
-                        if padded {
-                            32
-                        } else {
-                            20
-                        }
-                    }
-                    Num | Range | EventStore => {
-                        panic!("unexpected field type")
-                    }
-                },
-                Tuple(tys) => self.abi_type_head_sizes_sum(tys, padded),
-                Struct(mid, sid, _) => {
-                    if self.is_u256(mid.qualified(*sid)) {
-                        32
-                    } else {
-                        let tys = self.get_field_types(mid.qualified(*sid));
-                        self.abi_type_head_sizes_sum(&tys, padded)
-                    }
-                }
-                _ => panic!("unexpected field type"),
-            }
-        } else {
-            // Dynamic types
-            32
-        }
     }
 
     /// Get the layout of the instantiated struct in linear memory. The result will be cached
@@ -475,27 +369,6 @@ impl<'a> Context<'a> {
             | Var(_) => {
                 panic!("unexpected field type")
             }
-        }
-    }
-
-    /// Returns the max value (bit mask) for a given type.
-    pub fn max_value(&self, ty: &Type) -> String {
-        let size = self.type_size(ty.skip_reference());
-        match size {
-            1 => "${MAX_U8}".to_string(),
-            8 => "${MAX_U64}".to_string(),
-            16 => "${MAX_U128}".to_string(),
-            20 => "${ADDRESS_U160}".to_string(),
-            32 => "${MAX_U256}".to_string(),
-            _ if self.type_allocates_memory(ty) => {
-                // Type allocates a pointer which uses 256 bits
-                "${MAX_U256}".to_string()
-            }
-            _ => panic!(
-                "unexpected type size {} for `{}`",
-                size,
-                ty.display(&self.env.get_type_display_ctx())
-            ),
         }
     }
 

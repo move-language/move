@@ -24,7 +24,7 @@ object "A2_U256Arith" {
                     }
                     let ret_0 := A2_U256Arith_add()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$A2_U256_U256$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint256$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xf9fa48c3
@@ -36,7 +36,7 @@ object "A2_U256Arith" {
                     }
                     let ret_0 := A2_U256Arith_div()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$A2_U256_U256$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint256$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xb5165b60
@@ -108,7 +108,7 @@ object "A2_U256Arith" {
                     }
                     let ret_0 := A2_U256Arith_mod()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$A2_U256_U256$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint256$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x58931c46
@@ -120,7 +120,7 @@ object "A2_U256Arith" {
                     }
                     let ret_0 := A2_U256Arith_mul()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$A2_U256_U256$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint256$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x83a93813
@@ -144,7 +144,7 @@ object "A2_U256Arith" {
                     }
                     let ret_0 := A2_U256Arith_shl()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$A2_U256_U256$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint256$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xb87f777a
@@ -156,7 +156,7 @@ object "A2_U256Arith" {
                     }
                     let ret_0 := A2_U256Arith_shr()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$A2_U256_U256$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint256$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xc54124be
@@ -168,7 +168,7 @@ object "A2_U256Arith" {
                     }
                     let ret_0 := A2_U256Arith_sub()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$A2_U256_U256$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint256$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x5c32cfdd
@@ -178,10 +178,10 @@ object "A2_U256Arith" {
                     {
                         $Abort(99)
                     }
-                    let param_0, param_1 := abi_decode_tuple_$u128_u128$(4, calldatasize())
+                    let param_0, param_1 := abi_decode_tuple_$uint128_uint128$(4, calldatasize())
                     let ret_0 := A2_U256Arith_cast(param_0, param_1)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$A2_U256_U256$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint256$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 default {}
@@ -351,35 +351,35 @@ object "A2_U256Arith" {
                 $result := $t2
             }
 
-            function abi_encode_tuple_$A2_U256_U256$(headStart ,value_0) -> tail {
+            function abi_encode_tuple_$uint256$(headStart ,value_0) -> tail {
                 tail := add(headStart, 32)
-                abi_encode_A2_U256_U256(value_0, add(headStart, 0))
+                abi_encode_uint256(value_0, add(headStart, 0))
             }
-            function abi_encode_A2_U256_U256(value, pos) {
-                mstore(pos, cleanup_A2_U256_U256(value))
+            function abi_encode_uint256(value, pos) {
+                mstore(pos, cleanup_uint256(value))
             }
-            function cleanup_A2_U256_U256(value) -> cleaned {
+            function cleanup_uint256(value) -> cleaned {
                 cleaned := and(value, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
             }
-            function abi_decode_tuple_$u128_u128$(headStart, dataEnd) -> value_0, value_1 {
+            function abi_decode_tuple_$uint128_uint128$(headStart, dataEnd) -> value_0, value_1 {
                 if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
                 {
                     let offset := 0
-                    value_0 := abi_decode_u128(add(headStart, offset), dataEnd)
+                    value_0 := abi_decode_uint128(add(headStart, offset), dataEnd)
                 }
                 {
                     let offset := 32
-                    value_1 := abi_decode_u128(add(headStart, offset), dataEnd)
+                    value_1 := abi_decode_uint128(add(headStart, offset), dataEnd)
                 }
             }
-            function abi_decode_u128(offset, end) -> value {
+            function abi_decode_uint128(offset, end) -> value {
                 value := calldataload(offset)
-                validator_u128(value)
+                validator_uint128(value)
             }
-            function validator_u128(value) {
-                if iszero(eq(value, cleanup_u128(value))) { $Abort(95) }
+            function validator_uint128(value) {
+                if iszero(eq(value, cleanup_uint128(value))) { $Abort(95) }
             }
-            function cleanup_u128(value) -> cleaned {
+            function cleanup_uint128(value) -> cleaned {
                 cleaned := and(value, 0xffffffffffffffffffffffffffffffff)
             }
             function abi_encode_tuple_$bool$(headStart ,value_0) -> tail {

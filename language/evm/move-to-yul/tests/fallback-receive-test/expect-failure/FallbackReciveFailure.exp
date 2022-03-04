@@ -22,10 +22,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$u64$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint64$(4, calldatasize())
                     let ret_0 := A2_M_fallback(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint64$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x5cdf6ad2
@@ -35,10 +35,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$u64$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint64$(4, calldatasize())
                     let ret_0 := A2_M_receive(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$u64$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint64$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 default {}
@@ -60,29 +60,29 @@ object "A2_M" {
                 $result := x
             }
 
-            function abi_encode_tuple_$u64$(headStart ,value_0) -> tail {
+            function abi_encode_tuple_$uint64$(headStart ,value_0) -> tail {
                 tail := add(headStart, 32)
-                abi_encode_u64(value_0, add(headStart, 0))
+                abi_encode_uint64(value_0, add(headStart, 0))
             }
-            function abi_encode_u64(value, pos) {
-                mstore(pos, cleanup_u64(value))
+            function abi_encode_uint64(value, pos) {
+                mstore(pos, cleanup_uint64(value))
             }
-            function cleanup_u64(value) -> cleaned {
+            function cleanup_uint64(value) -> cleaned {
                 cleaned := and(value, 0xffffffffffffffff)
             }
-            function abi_decode_tuple_$u64$(headStart, dataEnd) -> value_0 {
+            function abi_decode_tuple_$uint64$(headStart, dataEnd) -> value_0 {
                 if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
                 {
                     let offset := 0
-                    value_0 := abi_decode_u64(add(headStart, offset), dataEnd)
+                    value_0 := abi_decode_uint64(add(headStart, offset), dataEnd)
                 }
             }
-            function abi_decode_u64(offset, end) -> value {
+            function abi_decode_uint64(offset, end) -> value {
                 value := calldataload(offset)
-                validator_u64(value)
+                validator_uint64(value)
             }
-            function validator_u64(value) {
-                if iszero(eq(value, cleanup_u64(value))) { $Abort(95) }
+            function validator_uint64(value) {
+                if iszero(eq(value, cleanup_uint64(value))) { $Abort(95) }
             }
             function $Abort(code) {
                 mstore(0, code)

@@ -11,13 +11,17 @@ use move_model::{
     ast::TempIndex,
     emit, emitln,
     model::{FunId, FunctionEnv, GlobalEnv, Loc, QualifiedId, QualifiedInstId},
-    ty::{PrimitiveType, Type},
+    ty::Type,
 };
 
 use crate::{
     attributes,
     context::Context,
     functions::FunctionGenerator,
+    solidity_ty::{
+        abi_head_sizes_sum, abi_head_sizes_vec, mangle_solidity_types, SignatureDataLocation,
+        SoliditySignature, SolidityType,
+    },
     yul_functions::{substitute_placeholders, YulFunction},
     Options,
 };
@@ -334,65 +338,6 @@ impl Generator {
         });
     }
 
-    /// Generate type string for encoding the function signature
-    fn get_evm_type_string(&self, ctx: &Context, ty: &Type) -> String {
-        use PrimitiveType::*;
-        use Type::*;
-        let generate_tuple = |tys: &Vec<Type>| {
-            format!(
-                "({})",
-                tys.iter()
-                    .map(|t| self.get_evm_type_string(ctx, t))
-                    .collect::<Vec<_>>()
-                    .join(",")
-            )
-        };
-        match ty {
-            Primitive(p) => match p {
-                Bool => "bool".to_string(),
-                U8 => "uint8".to_string(),
-                U64 => "uint64".to_string(),
-                U128 => "uint128".to_string(),
-                Address => "address".to_string(),
-                Signer => "address".to_string(),
-                Num | Range | EventStore => {
-                    panic!("unexpected field type")
-                }
-            },
-            Vector(ety) => format!("{}[]", self.get_evm_type_string(ctx, ety)),
-            Tuple(tys) => generate_tuple(tys),
-            Struct(mid, sid, _) => {
-                if ctx.is_u256(mid.qualified(*sid)) {
-                    "uint256".to_string()
-                } else {
-                    let tys = ctx.get_field_types(mid.qualified(*sid));
-                    generate_tuple(&tys)
-                }
-            }
-            TypeParameter(_)
-            | Reference(_, _)
-            | Fun(_, _)
-            | TypeDomain(_)
-            | ResourceDomain(_, _, _)
-            | Error
-            | Var(_) => {
-                panic!("unexpected field type")
-            }
-        }
-    }
-
-    /// Generate parameter list for computing the function selector
-    fn compute_param_types(&mut self, ctx: &Context, fun: &FunctionEnv<'_>) -> String {
-        let param_types = fun.get_parameter_types();
-        let display_type_slice = |tys: &[Type]| -> String {
-            tys.iter()
-                .map(|t| self.get_evm_type_string(ctx, t))
-                .collect::<Vec<_>>()
-                .join(",")
-        };
-        display_type_slice(&param_types)
-    }
-
     /// Generate the start position of memory for returning from the external function
     /// Note: currently, we directly return the free memory pointer, may need to use the memory model later
     fn generate_allocate_unbounded(&mut self, ctx: &Context) {
@@ -404,10 +349,10 @@ impl Generator {
     }
 
     /// Generate the cleanup function used in the validator and the encoding function.
-    fn generate_cleanup(&mut self, ctx: &Context, ty: &Type) -> String {
+    fn generate_cleanup(&mut self, ty: &SolidityType) -> String {
         let name_prefix = "cleanup";
-        let function_name = format!("{}_{}", name_prefix, ctx.mangle_type(ty));
-        let mask = ctx.max_value(ty);
+        let function_name = format!("{}_{}", name_prefix, ty);
+        let mask = ty.max_value();
 
         let generate_fun = move |_gen: &mut Generator, ctx: &Context| {
             emit!(ctx.writer, "(value) -> cleaned ");
@@ -417,15 +362,15 @@ impl Generator {
     }
 
     /// Generate the validator function, which is used in the decode function.
-    fn generate_validator(&mut self, ctx: &Context, ty: &Type) -> String {
+    fn generate_validator(&mut self, ty: &SolidityType) -> String {
         let name_prefix = "validator";
-        let function_name = format!("{}_{}", name_prefix, ctx.mangle_type(ty));
+        let function_name = format!("{}_{}", name_prefix, ty);
         let ty = ty.clone(); // need to move into lambda
 
         let generate_fun = move |gen: &mut Generator, ctx: &Context| {
             emit!(ctx.writer, "(value) ");
             ctx.emit_block(|| {
-                let condition = format!("eq(value, {}(value))", gen.generate_cleanup(ctx, &ty));
+                let condition = format!("eq(value, {}(value))", gen.generate_cleanup(&ty));
                 let failure_call = gen.call_builtin_str(
                     ctx,
                     YulFunction::Abort,
@@ -443,16 +388,16 @@ impl Generator {
     }
 
     /// Generate decoding functions for primitive types.
-    fn generate_abi_decoding_primitive_type(&mut self, ctx: &Context, ty: &Type) -> String {
+    fn generate_abi_decoding_primitive_type(&mut self, ty: &SolidityType) -> String {
         let name_prefix = "abi_decode";
-        let function_name = format!("{}_{}", name_prefix, ctx.mangle_type(ty));
+        let function_name = format!("{}_{}", name_prefix, ty);
         let ty = ty.clone(); // need to move into lambda
 
         let generate_fun = move |gen: &mut Generator, ctx: &Context| {
             emit!(ctx.writer, "(offset, end) -> value ");
             ctx.emit_block(|| {
                 emitln!(ctx.writer, "value := calldataload(offset)");
-                let validator = gen.generate_validator(ctx, &ty);
+                let validator = gen.generate_validator(&ty);
                 emitln!(ctx.writer, "{}(value)", validator);
             });
         };
@@ -460,32 +405,37 @@ impl Generator {
     }
 
     /// Generate decoding functions for ty.
-    fn generate_abi_decoding_type(&mut self, ctx: &Context, ty: &Type) -> String {
-        use Type::*;
+    fn generate_abi_decoding_type(
+        &mut self,
+        ty_loc: (&SolidityType, &SignatureDataLocation),
+    ) -> String {
+        use SolidityType::*;
         // TODO: struct and dynamic types
+        let (ty, _) = ty_loc;
         match ty {
-            Primitive(_) => self.generate_abi_decoding_primitive_type(ctx, ty),
-            Struct(mid, sid, _) => {
-                if ctx.is_u256(mid.qualified(*sid)) {
-                    self.generate_abi_decoding_primitive_type(ctx, ty)
-                } else {
-                    "".to_string() // TODO
-                }
-            }
-            Tuple(tys) => self.generate_abi_tuple_decoding(ctx, tys),
-            _ => "".to_string(), // TODO: Vector
+            Primitive(_) => self.generate_abi_decoding_primitive_type(ty),
+            _ => "".to_string(), // TODO: non value type
         }
     }
 
     /// Generate decoding functions for tuple.
-    fn generate_abi_tuple_decoding(&mut self, ctx: &Context, param_types: &[Type]) -> String {
+    fn generate_abi_tuple_decoding_sig(&mut self, sig: &SoliditySignature) -> String {
         let name_prefix = "abi_decode_tuple";
-        let function_name = format!("{}_{}", name_prefix, ctx.mangle_types(param_types));
-        let param_types = param_types.to_vec(); // need to move into lambda
+        let param_types = sig
+            .para_types
+            .iter()
+            .map(|(ty, _)| ty.clone())
+            .collect_vec(); // need to move into lambda
+        let param_locs = sig
+            .para_types
+            .iter()
+            .map(|(_, loc)| loc.clone())
+            .collect_vec();
+        let function_name = format!("{}_{}", name_prefix, mangle_solidity_types(&param_types));
 
         let generate_fun = move |gen: &mut Generator, ctx: &Context| {
-            let overall_type_head_vec = ctx.abi_type_head_sizes_vec(&param_types, true);
-            let overall_type_head_size = ctx.abi_type_head_sizes_sum(&param_types, true);
+            let overall_type_head_vec = abi_head_sizes_vec(&param_types, true);
+            let overall_type_head_size = abi_head_sizes_sum(&param_types, true);
             let ret_var = (0..overall_type_head_vec.len())
                 .map(|i| format!("value_{}", i))
                 .collect_vec();
@@ -506,11 +456,15 @@ impl Generator {
                     ),
                 );
                 let mut head_pos = 0;
-                for (stack_pos, (ty, ty_size)) in overall_type_head_vec.iter().enumerate() {
-                    let is_static = ctx.abi_is_static_type(ty);
+                for (stack_pos, ((ty, ty_size), loc)) in overall_type_head_vec
+                    .iter()
+                    .zip(param_locs.iter())
+                    .enumerate()
+                {
+                    let is_static = ty.is_static();
                     // TODO: consider the case size_on_stack is not 1
                     let local_typ_var = vec![ret_var[stack_pos].clone()];
-                    let abi_decode_type = gen.generate_abi_decoding_type(ctx, ty);
+                    let abi_decode_type = gen.generate_abi_decoding_type((ty, loc));
                     ctx.emit_block(|| {
                         if is_static {
                             emitln!(ctx.writer, "let offset := {}", head_pos);
@@ -542,51 +496,50 @@ impl Generator {
                 }
             });
         };
-
         self.need_auxiliary_function(function_name, Box::new(generate_fun))
     }
 
     /// Generate encoding functions for primitive types.
-    fn generate_abi_encoding_primitive_type(&mut self, ctx: &Context, ty: &Type) -> String {
+    fn generate_abi_encoding_primitive_type(&mut self, ty: &SolidityType) -> String {
         let name_prefix = "abi_encode";
-        let function_name = format!("{}_{}", name_prefix, ctx.mangle_type(ty));
+        let function_name = format!("{}_{}", name_prefix, ty);
         let ty = ty.clone(); // need to move into lambda
-
         let generate_fun = move |gen: &mut Generator, ctx: &Context| {
             emit!(ctx.writer, "(value, pos) ");
             ctx.emit_block(|| {
                 emitln!(
                     ctx.writer,
                     "mstore(pos, {}(value))",
-                    gen.generate_cleanup(ctx, &ty)
+                    gen.generate_cleanup(&ty)
                 );
             });
         };
         self.need_auxiliary_function(function_name, Box::new(generate_fun))
     }
 
-    /// Generate encoding functions for ty.
-    fn generate_abi_encoding_type(&mut self, ctx: &Context, ty: &Type) -> String {
-        use Type::*;
-        // TODO: dynamic types
+    fn generate_abi_encoding_type(
+        &mut self,
+        ty_loc: (&SolidityType, &SignatureDataLocation),
+    ) -> String {
+        use SolidityType::*;
+        // TODO: Array, bytes and other dynamic types
+        let (ty, _) = ty_loc;
         match ty {
-            Primitive(_) => self.generate_abi_encoding_primitive_type(ctx, ty),
-            Struct(mid, sid, _) => {
-                if ctx.is_u256(mid.qualified(*sid)) {
-                    self.generate_abi_encoding_primitive_type(ctx, ty)
-                } else {
-                    "NYI".to_string()
-                }
-            }
+            Primitive(_) => self.generate_abi_encoding_primitive_type(ty),
             _ => "NYI".to_string(),
         }
     }
 
     /// Generate encoding functions for tuple.
-    fn generate_abi_tuple_encoding(&mut self, ctx: &Context, param_types: &[Type]) -> String {
+    fn generate_abi_tuple_encoding_sig(&mut self, sig: &SoliditySignature) -> String {
         let name_prefix = "abi_encode_tuple";
-        let function_name = format!("{}_{}", name_prefix, ctx.mangle_types(param_types));
-        let param_types = param_types.to_vec(); // need to move into lambda
+        let param_types = sig.ret_types.iter().map(|(ty, _)| ty.clone()).collect_vec(); // need to move into lambda
+        let param_locs = sig
+            .ret_types
+            .iter()
+            .map(|(_, loc)| loc.clone())
+            .collect_vec();
+        let function_name = format!("{}_{}", name_prefix, mangle_solidity_types(&param_types));
 
         let generate_fun = move |gen: &mut Generator, ctx: &Context| {
             let mut value_params = (0..param_types.len())
@@ -597,21 +550,25 @@ impl Generator {
             }
             emit!(ctx.writer, "(headStart {}) -> tail ", value_params);
             ctx.emit_block(|| {
-                let overall_type_head_vec = ctx.abi_type_head_sizes_vec(&param_types, true);
-                let overall_type_head_size = ctx.abi_type_head_sizes_sum(&param_types, true);
+                let overall_type_head_vec = abi_head_sizes_vec(&param_types, true);
+                let overall_type_head_size = abi_head_sizes_sum(&param_types, true);
                 emitln!(
                     ctx.writer,
                     "tail := add(headStart, {})",
                     overall_type_head_size
                 );
                 let mut head_pos = 0;
-                for (stack_pos, (ty, ty_size)) in overall_type_head_vec.iter().enumerate() {
-                    let is_static = ctx.abi_is_static_type(ty);
+                for (stack_pos, ((ty, ty_size), loc)) in overall_type_head_vec
+                    .iter()
+                    .zip(param_locs.iter())
+                    .enumerate()
+                {
+                    let is_static = ty.is_static();
                     let mut local_typ_var = vec![];
                     // TODO: consider the case size_on_stack is not 1
                     local_typ_var.push(format!("value_{}", stack_pos));
                     let values = local_typ_var.iter().join(", ");
-                    let abi_encode_type = gen.generate_abi_encoding_type(ctx, ty);
+                    let abi_encode_type = gen.generate_abi_encoding_type((ty, loc));
                     if is_static {
                         emitln!(
                             ctx.writer,
@@ -636,22 +593,17 @@ impl Generator {
         self.need_auxiliary_function(function_name, Box::new(generate_fun))
     }
 
-    /// Generate the dispatch branch for a function
     fn generate_dispatch_item(
         &mut self,
         ctx: &Context,
         fun: &FunctionEnv<'_>,
+        solidity_sig: &SoliditySignature,
         selectors: &mut BTreeMap<String, QualifiedId<FunId>>,
     ) {
         let fun_id = &fun.get_qualified_id().instantiate(vec![]);
-        self.need_move_function(fun_id);
         let function_name = ctx.make_function_name(fun_id);
-        let original_fun_name = fun.symbol_pool().string(fun.get_name());
-        let fun_sig = format!(
-            "{}({})",
-            original_fun_name,
-            self.compute_param_types(ctx, fun)
-        );
+        let fun_sig = format!("{}", solidity_sig);
+        self.need_move_function(fun_id);
         let function_selector =
             format!("0x{:x}", Keccak256::digest(fun_sig.as_bytes()))[..10].to_string();
         // Check selector collision
@@ -673,11 +625,10 @@ impl Generator {
                 self.generate_call_value_check(ctx, REVERT_ERR_NON_PAYABLE_FUN);
             }
             // Decoding
-            let param_count = fun.get_parameter_count();
+            let param_count = solidity_sig.para_types.len();
             let mut params = "".to_string();
             if param_count > 0 {
-                let decoding_fun_name =
-                    self.generate_abi_tuple_decoding(ctx, &fun.get_parameter_types());
+                let decoding_fun_name = self.generate_abi_tuple_decoding_sig(solidity_sig);
                 params = (0..param_count).map(|i| format!("param_{}", i)).join(", ");
                 let let_params = format!("let {} := ", params);
                 emitln!(
@@ -687,7 +638,7 @@ impl Generator {
                     decoding_fun_name
                 );
             }
-            let ret_count = fun.get_return_count();
+            let ret_count = solidity_sig.ret_types.len();
             let mut rets = "".to_string();
             let mut let_rets = "".to_string();
             if ret_count > 0 {
@@ -697,7 +648,7 @@ impl Generator {
             // Call the function
             emitln!(ctx.writer, "{}{}({})", let_rets, function_name, params);
             // Encoding the return values
-            let encoding_fun_name = self.generate_abi_tuple_encoding(ctx, &fun.get_return_types());
+            let encoding_fun_name = self.generate_abi_tuple_encoding_sig(solidity_sig);
             if ret_count > 0 {
                 rets = format!(", {}", rets);
             }
@@ -727,6 +678,24 @@ impl Generator {
                     // Only dispatch callables
                     continue;
                 }
+                let extracted_sig_opt = attributes::extract_callable_signature(fun);
+                let mut sig = SoliditySignature::create_default_solidity_signature(ctx, fun);
+                if let Some(extracted_sig) = extracted_sig_opt {
+                    let parsed_sig_opt =
+                        SoliditySignature::parse_into_solidity_signature(&extracted_sig);
+                    if let Ok(parsed_sig) = parsed_sig_opt {
+                        if !parsed_sig.check_sig_compatibility(ctx, fun) {
+                            ctx.env.error(
+                                &fun.get_loc(),
+                                "solidity signature is not compatible with the move signature",
+                            );
+                        } else {
+                            sig = parsed_sig;
+                        }
+                    } else if let Err(msg) = parsed_sig_opt {
+                        ctx.env.error(&fun.get_loc(), &format!("{}", msg));
+                    }
+                }
                 if !self.is_suitable_for_dispatch(ctx, fun) {
                     ctx.env.diag(
                         Severity::Warning,
@@ -735,7 +704,7 @@ impl Generator {
                     );
                     continue;
                 }
-                self.generate_dispatch_item(ctx, fun, &mut selectors);
+                self.generate_dispatch_item(ctx, fun, &sig, &mut selectors);
             }
             emitln!(ctx.writer, "default {}");
         });

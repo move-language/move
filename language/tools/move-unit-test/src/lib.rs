@@ -64,6 +64,13 @@ pub struct UnitTestingConfig {
     #[structopt(name = "global_state_on_error", short = "g", long = "state_on_error")]
     pub report_storage_on_error: bool,
 
+    #[structopt(
+        name = "report_stacktrace_on_abort",
+        short = "t",
+        long = "stacktrace_on_abort"
+    )]
+    pub report_stacktrace_on_abort: bool,
+
     /// Named address mapping
     #[structopt(
         name = "NAMED_ADDRESSES",
@@ -104,6 +111,7 @@ impl UnitTestingConfig {
             num_threads: 8,
             report_statistics: false,
             report_storage_on_error: false,
+            report_stacktrace_on_abort: false,
             source_files: vec![],
             dep_files: vec![],
             check_stackless_vm: false,
@@ -200,6 +208,7 @@ impl UnitTestingConfig {
             self.check_stackless_vm,
             self.verbose,
             self.report_storage_on_error,
+            self.report_stacktrace_on_abort,
             test_plan,
             native_function_table,
             verify_and_create_named_address_mapping(self.named_address_values.clone()).unwrap(),
@@ -214,6 +223,7 @@ impl UnitTestingConfig {
         if self.report_statistics {
             test_results.report_statistics(&shared_writer)?;
         }
+
         let all_tests_passed = test_results.summarize(&shared_writer)?;
 
         let writer = shared_writer.into_inner().unwrap();

@@ -81,6 +81,7 @@ fn run_test_impl(path: &Path) -> anyhow::Result<()> {
         verbose: false,
         report_statistics: false,
         report_storage_on_error: false,
+        report_stacktrace_on_abort: false,
         list: false,
         named_address_values: move_stdlib::move_stdlib_named_addresses()
             .into_iter()

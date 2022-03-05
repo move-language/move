@@ -16,8 +16,15 @@ pub fn expect_no_verification_errors(err: VMError) -> VMError {
                 stored on chain that is unverifiable!\nError: {:?}",
                 &err
             );
-            let (_old_status, _old_sub_status, _old_message, location, indices, offsets) =
-                err.all_data();
+            let (
+                _old_status,
+                _old_sub_status,
+                _old_message,
+                _stacktrace,
+                location,
+                indices,
+                offsets,
+            ) = err.all_data();
             let major_status = match status_type {
                 StatusType::Deserialization => StatusCode::UNEXPECTED_DESERIALIZATION_ERROR,
                 StatusType::Verification => StatusCode::UNEXPECTED_VERIFIER_ERROR,

@@ -40,6 +40,7 @@ use std::{collections::BTreeMap, io::Write, marker::Send, sync::Mutex, time::Ins
 /// Test state common to all tests
 pub struct SharedTestingConfig {
     save_storage_state_on_failure: bool,
+    report_stacktrace_on_abort: bool,
     execution_bound: u64,
     cost_table: CostTable,
     native_function_table: NativeFunctionTable,
@@ -118,6 +119,7 @@ impl TestRunner {
         check_stackless_vm: bool,
         verbose: bool,
         save_storage_state_on_failure: bool,
+        report_stacktrace_on_abort: bool,
         tests: TestPlan,
         native_function_table: Option<NativeFunctionTable>,
         named_address_values: BTreeMap<String, NumericalAddress>,
@@ -136,6 +138,7 @@ impl TestRunner {
         Ok(Self {
             testing_config: SharedTestingConfig {
                 save_storage_state_on_failure,
+                report_stacktrace_on_abort,
                 starting_storage_state,
                 execution_bound,
                 native_function_table,
@@ -195,13 +198,18 @@ impl SharedTestingConfig {
         // TODO: collect VM logs if the verbose flag (i.e, `self.verbose`) is set
 
         let now = Instant::now();
-        let return_result = session.execute_function(
+        let mut return_result = session.execute_function(
             &test_plan.module_id,
             IdentStr::new(function_name).unwrap(),
             vec![], // no ty args, at least for now
             serialize_values(test_info.arguments.iter()),
             &mut gas_meter,
         );
+        if !self.report_stacktrace_on_abort {
+            if let Err(err) = &mut return_result {
+                err.remove_stacktrace();
+            }
+        }
         let test_run_info = TestRunInfo::new(
             function_name.to_string(),
             now.elapsed(),

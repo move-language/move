@@ -219,7 +219,7 @@ impl TestFailure {
             Some(vm_error) => vm_error,
         };
 
-        match vm_error.location() {
+        let diags = match vm_error.location() {
             Location::Module(module_id) => {
                 let diags = vm_error
                     .offsets()
@@ -246,6 +246,10 @@ impl TestFailure {
                 String::from_utf8(report_diagnostics(&test_plan.files, diags)).unwrap()
             }
             _ => base_message,
+        };
+        match vm_error.stacktrace() {
+            None => diags,
+            Some(stacktrace) => format!("{}\n{}", diags, stacktrace),
         }
     }
 }

@@ -69,7 +69,7 @@ impl NativeResult {
         let result = match res {
             Ok(_) => NativeResult::ok(cost, smallvec![]),
             Err(err) if err.major_status() == StatusCode::ABORTED => {
-                let (_, abort_code, _, _, _) = err.all_data();
+                let (_, abort_code, _, _, _, _) = err.all_data();
                 NativeResult::err(
                     cost,
                     abort_code.unwrap_or(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR as u64),
@@ -90,7 +90,7 @@ impl NativeResult {
         let result = match res {
             Ok(val) => NativeResult::ok(cost, smallvec![val]),
             Err(err) if err.major_status() == StatusCode::ABORTED => {
-                let (_, abort_code, _, _, _) = err.all_data();
+                let (_, abort_code, _, _, _, _) = err.all_data();
                 NativeResult::err(
                     cost,
                     abort_code.unwrap_or(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR as u64),

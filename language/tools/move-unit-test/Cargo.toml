@@ -22,7 +22,7 @@ move-stdlib = { path = "../../move-stdlib", features = ["testing"] }
 move-core-types = { path = "../../move-core/types" }
 move-compiler = { path = "../../move-compiler" }
 move-vm-types = { path = "../../move-vm/types" }
-move-vm-runtime = { path = "../../move-vm/runtime" }
+move-vm-runtime = { path = "../../move-vm/runtime", features = ["testing"] }
 move-vm-test-utils = { path = "../../move-vm/test-utils" }
 move-resource-viewer = { path = "../move-resource-viewer" }
 move-binary-format = { path = "../../move-binary-format" }

@@ -8,7 +8,7 @@ use move_core_types::{effects::ChangeSet, language_storage::ModuleId, resolver::
 /// do cross-vm comparison, we need to adapt the Move VM result by removing these fields.
 pub fn adapt_move_vm_result<T>(result: VMResult<T>) -> VMResult<T> {
     result.map_err(|err| {
-        let (status_code, sub_status, _, location, _, _) = err.all_data();
+        let (status_code, sub_status, _, _, location, _, _) = err.all_data();
         let adapted = PartialVMError::new(status_code);
         let adapted = match sub_status {
             None => adapted,

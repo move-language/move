@@ -989,13 +989,25 @@ impl Frame {
                     Bytecode::Abort => {
                         gas_status.charge_instr(Opcodes::ABORT)?;
                         let error_code = interpreter.operand_stack.pop_as::<u64>()?;
-                        return Err(PartialVMError::new(StatusCode::ABORTED)
+                        let error = PartialVMError::new(StatusCode::ABORTED)
                             .with_sub_status(error_code)
                             .with_message(format!(
                                 "{} at offset {}",
                                 self.function.pretty_string(),
                                 self.pc,
-                            )));
+                            ));
+                        if cfg!(feature = "testing") {
+                            let mut buf = String::new();
+                            let stacktrace = match interpreter
+                                .debug_print_stack_trace(&mut buf, resolver.loader())
+                            {
+                                Ok(()) => buf,
+                                Err(err) => format!("Stacktrace unavailable: {:?}", err),
+                            };
+                            return Err(error.with_stacktrace(stacktrace));
+                        } else {
+                            return Err(error);
+                        }
                     }
                     Bytecode::Eq => {
                         let lhs = interpreter.operand_stack.pop()?;

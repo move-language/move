@@ -38,3 +38,4 @@ fuzzing = ["move-vm-types/fuzzing"]
 failpoints = ["fail/failpoints"]
 # Enable tracing and debugging also for release builds. By default, it is only enabled for debug builds.
 debugging = []
+testing = []

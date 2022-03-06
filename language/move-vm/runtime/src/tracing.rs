@@ -1,10 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[cfg(debug_assertions)]
+#[cfg(any(debug_assertions, feature = "debugging"))]
 use crate::debug::DebugContext;
 
-#[cfg(debug_assertions)]
+#[cfg(any(debug_assertions, feature = "debugging"))]
 use ::{
     move_binary_format::file_format::Bytecode,
     move_vm_types::values::Locals,
@@ -19,31 +19,31 @@ use ::{
     },
 };
 
-#[cfg(debug_assertions)]
+#[cfg(any(debug_assertions, feature = "debugging"))]
 use crate::{
     interpreter::Interpreter,
     loader::{Function, Loader},
 };
 
-#[cfg(debug_assertions)]
+#[cfg(any(debug_assertions, feature = "debugging"))]
 const MOVE_VM_TRACING_ENV_VAR_NAME: &str = "MOVE_VM_TRACE";
 
-#[cfg(debug_assertions)]
+#[cfg(any(debug_assertions, feature = "debugging"))]
 const MOVE_VM_STEPPING_ENV_VAR_NAME: &str = "MOVE_VM_STEP";
 
-#[cfg(debug_assertions)]
+#[cfg(any(debug_assertions, feature = "debugging"))]
 static FILE_PATH: Lazy<String> = Lazy::new(|| {
     env::var(MOVE_VM_TRACING_ENV_VAR_NAME).unwrap_or_else(|_| "move_vm_trace.trace".to_string())
 });
 
-#[cfg(debug_assertions)]
+#[cfg(any(debug_assertions, feature = "debugging"))]
 static TRACING_ENABLED: Lazy<bool> = Lazy::new(|| env::var(MOVE_VM_TRACING_ENV_VAR_NAME).is_ok());
 
-#[cfg(debug_assertions)]
+#[cfg(any(debug_assertions, feature = "debugging"))]
 static DEBUGGING_ENABLED: Lazy<bool> =
     Lazy::new(|| env::var(MOVE_VM_STEPPING_ENV_VAR_NAME).is_ok());
 
-#[cfg(debug_assertions)]
+#[cfg(any(debug_assertions, feature = "debugging"))]
 static LOGGING_FILE: Lazy<Mutex<File>> = Lazy::new(|| {
     Mutex::new(
         OpenOptions::new()
@@ -55,11 +55,11 @@ static LOGGING_FILE: Lazy<Mutex<File>> = Lazy::new(|| {
     )
 });
 
-#[cfg(debug_assertions)]
+#[cfg(any(debug_assertions, feature = "debugging"))]
 static DEBUG_CONTEXT: Lazy<Mutex<DebugContext>> = Lazy::new(|| Mutex::new(DebugContext::new()));
 
 // Only include in debug builds
-#[cfg(debug_assertions)]
+#[cfg(any(debug_assertions, feature = "debugging"))]
 pub(crate) fn trace(
     function_desc: &Function,
     locals: &Locals,
@@ -93,7 +93,7 @@ pub(crate) fn trace(
 macro_rules! trace {
     ($function_desc:expr, $locals:expr, $pc:expr, $instr:tt, $resolver:expr, $interp:expr) => {
         // Only include this code in debug releases
-        #[cfg(debug_assertions)]
+        #[cfg(any(debug_assertions, feature = "debugging"))]
         crate::tracing::trace(
             &$function_desc,
             $locals,

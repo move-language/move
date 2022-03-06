@@ -24,7 +24,7 @@ pub mod session;
 mod tracing;
 
 // Only include debugging functionality in debug builds
-#[cfg(debug_assertions)]
+#[cfg(any(debug_assertions, feature = "debugging"))]
 mod debug;
 
 #[cfg(test)]

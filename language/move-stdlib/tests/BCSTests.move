@@ -9,7 +9,6 @@ module Std::BCSTests {
     struct Box31<T> has copy, drop, store { x: Box15<Box15<T>> }
     struct Box63<T> has copy, drop, store { x: Box31<Box31<T>> }
     struct Box127<T> has copy, drop, store { x: Box63<Box63<T>> }
-    struct Box255<T> has copy, drop, store { x: Box127<Box127<T>> }
 
     #[test]
     fun bcs_address() {
@@ -73,23 +72,14 @@ module Std::BCSTests {
         Box127 { x: box63(box63(x)) }
     }
 
-    fun box255<T>(x: T): Box255<T> {
-        Box255 { x: box127(box127(x)) }
-    }
-
     #[test]
     fun encode_128() {
         BCS::to_bytes(&box127(true));
     }
 
     #[test]
-    fun encode_256() {
-        BCS::to_bytes(&box255(true));
-    }
-
-    #[test]
     #[expected_failure(abort_code = 453)]
-    fun encode_257() {
-        BCS::to_bytes(&Box { x: box255(true) });
+    fun encode_129() {
+        BCS::to_bytes(&Box { x: box127(true) });
     }
 }

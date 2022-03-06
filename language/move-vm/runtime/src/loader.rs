@@ -2010,7 +2010,7 @@ impl TypeCache {
     }
 }
 
-const VALUE_DEPTH_MAX: usize = 256;
+const VALUE_DEPTH_MAX: usize = 128;
 
 impl Loader {
     fn struct_gidx_to_type_tag(&self, gidx: usize, ty_args: &[Type]) -> PartialVMResult<StructTag> {

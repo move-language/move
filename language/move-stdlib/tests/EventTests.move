@@ -16,7 +16,6 @@ module Std::EventTests {
     struct Box31<T> has copy, drop, store { x: Box15<Box15<T>> }
     struct Box63<T> has copy, drop, store { x: Box31<Box31<T>> }
     struct Box127<T> has copy, drop, store { x: Box63<Box63<T>> }
-    struct Box255<T> has copy, drop, store { x: Box127<Box127<T>> }
 
     struct MyEvent<phantom T: copy + drop + store> has key {
         e: EventHandle<T>
@@ -46,10 +45,6 @@ module Std::EventTests {
         Box127 { x: box63(box63(x)) }
     }
 
-    fun box255<T>(x: T): Box255<T> {
-        Box255 { x: box127(box127(x)) }
-    }
-
     fun maybe_init_event<T: copy + drop + store>(s: &signer) {
         if (exists<MyEvent<T>>(address_of(s))) return;
 
@@ -62,19 +57,13 @@ module Std::EventTests {
         emit_event(&mut borrow_global_mut<MyEvent<Box127<bool>>>(address_of(s)).e, box127(true))
     }
 
-    public fun event_256(s: &signer) acquires MyEvent {
-        maybe_init_event<Box255<bool>>(s);
-
-        emit_event(&mut borrow_global_mut<MyEvent<Box255<bool>>>(address_of(s)).e, box255(true))
-    }
-
-    public fun event_257(s: &signer) acquires MyEvent {
-        maybe_init_event<Box<Box255<bool>>>(s);
+    public fun event_129(s: &signer) acquires MyEvent {
+        maybe_init_event<Box<Box127<bool>>>(s);
 
         // will abort
         emit_event(
-            &mut borrow_global_mut<MyEvent<Box<Box255<bool>>>>(address_of(s)).e,
-            Box { x: box255(true) }
+            &mut borrow_global_mut<MyEvent<Box<Box127<bool>>>>(address_of(s)).e,
+            Box { x: box127(true) }
         )
     }
 
@@ -84,14 +73,9 @@ module Std::EventTests {
     }
 
     #[test(s = @0x42)]
-    fun test_event_256(s: signer) acquires MyEvent {
-        event_256(&s);
-    }
-
-    #[test(s = @0x42)]
     #[expected_failure(abort_code = 0)]
-    fun test_event_257(s: signer) acquires MyEvent {
-        event_257(&s);
+    fun test_event_129(s: signer) acquires MyEvent {
+        event_129(&s);
     }
 
     // More detailed version of the above--test BCS compatibility between the old event

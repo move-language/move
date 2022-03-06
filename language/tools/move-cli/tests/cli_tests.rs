@@ -5,8 +5,12 @@ use move_cli::sandbox::commands::test;
 
 use std::path::PathBuf;
 
-pub const CLI_BINARY_PATH: [&str; 6] = ["..", "..", "..", "target", "debug", "move"];
 pub const CLI_METATEST_PATH: [&str; 3] = ["tests", "metatests", "args.txt"];
+
+#[cfg(debug_assertions)]
+pub const CLI_BINARY_PATH: [&str; 6] = ["..", "..", "..", "target", "debug", "move"];
+#[cfg(not(debug_assertions))]
+pub const CLI_BINARY_PATH: [&str; 6] = ["..", "..", "..", "target", "release", "move"];
 
 fn get_cli_binary_path() -> PathBuf {
     CLI_BINARY_PATH.iter().collect()
@@ -36,14 +40,18 @@ fn run_metatest() {
 
 #[test]
 fn cross_process_locking_git_deps() {
+    #[cfg(debug_assertions)]
+    const CLI_EXE: &str = "../../../../../../target/debug/move";
+    #[cfg(not(debug_assertions))]
+    const CLI_EXE: &str = "../../../../../../target/release/move";
     let handle = std::thread::spawn(|| {
-        std::process::Command::new("../../../../../../target/debug/move")
+        std::process::Command::new(CLI_EXE)
             .current_dir("./tests/cross_process_tests/Package1")
             .args(["package", "build"])
             .output()
             .expect("Package1 failed");
     });
-    std::process::Command::new("../../../../../../target/debug/move")
+    std::process::Command::new(CLI_EXE)
         .current_dir("./tests/cross_process_tests/Package2")
         .args(["package", "build"])
         .output()

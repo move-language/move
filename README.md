@@ -14,7 +14,7 @@ Move is a new programmable platform for blockchains and other applications where
 
 ## Contributing
 
-To begin contributing, [sign the CLA](https://diem.com/en-US/cla-sign/). You can learn more about contributing to the Diem project by reading our [Contribution Guide](https://developers.diem.com/docs/community/contributing) and by viewing our [Code of Conduct](https://developers.diem.com/docs/policies/code-of-conduct).
+To begin contributing, [sign the CLA](https://diem.com/en-US/cla-sign/). You can learn more about contributing to the Diem project by reading our [Contribution Guide](https://github.com/diem/diem/blob/main/CONTRIBUTING.md) and by viewing our [Code of Conduct](https://developers.diem.com/docs/policies/code-of-conduct).
 
 ## Community
 

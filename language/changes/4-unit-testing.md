@@ -336,7 +336,7 @@ In the development of unit tests, there were a couple of alternatives considered
 
 ### Expected Value Tests
 
-Move already supports [expected value tests](https://github.com/diem/diem/tree/main/language/tools/move-cli#testing-with-the-move-cli) in the Move CLI, however these cover a different aspect of testing for Move. In particular, there is no concept of test-only code and test-only dependencies, which makes testing non-public functions much more difficult. Additionally, each expected value test entry must be a transaction or script function. Because of this, the expected value tests rely on a specific Move adapter implementation, whereas the unit tests do not rely on an adapter implementation and rely solely on the Move compiler and VM.
+Move already supports [expected value tests](https://github.com/diem/move/tree/main/language/tools/move-cli#testing-with-the-move-cli) in the Move CLI, however these cover a different aspect of testing for Move. In particular, there is no concept of test-only code and test-only dependencies, which makes testing non-public functions much more difficult. Additionally, each expected value test entry must be a transaction or script function. Because of this, the expected value tests rely on a specific Move adapter implementation, whereas the unit tests do not rely on an adapter implementation and rely solely on the Move compiler and VM.
 
 Due to the design of unit tests, unit tests make it easier to test the individual units of code that comprise a Move module. However, because the unit tests do not require or use an adapter, they do not support certain features that you may  wish to test. E.g., there is no way in Move unit tests to query if a specific event has been emitted.
 

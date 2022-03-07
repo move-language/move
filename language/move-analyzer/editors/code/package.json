@@ -6,7 +6,7 @@
     "license": "Apache-2.0",
     "version": "0.0.5",
     "preview": true,
-    "homepage": "https://developers.diem.com/docs/move/move-overview",
+    "homepage": "https://developers.diem.com",
     "repository": {
         "url": "https://github.com/diem/diem.git",
         "type": "git"

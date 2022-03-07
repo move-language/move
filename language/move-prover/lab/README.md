@@ -11,8 +11,9 @@ pip install jupyterlab
 pip install notebook
 ```
 
-For the Rust kernel, follow the installation instructions at [google/evcxr](https://github.
-com/google/evcxr/blob/master/evcxr_jupyter/README.md). You need version 0.9.0 or later.
+For the Rust kernel, follow the installation instructions at
+[google/evcxr](https://github.com/google/evcxr/blob/master/evcxr_jupyter/README.md).
+You need version 0.9.0 or later.
 
 
 # Caveats

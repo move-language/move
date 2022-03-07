@@ -9,15 +9,13 @@ use std::{collections::BTreeSet, ops::Index as OpsIndex};
 ///
 /// If `indexes_len` is greater than `max`, all indexes will be returned.
 ///
-/// This function implements [Robert Floyd's F2
-/// algorithm](https://blog.acolyer.org/2018/01/30/a-sample-of-brilliance/) for sampling without
-/// replacement.
+/// This function implements Robert Floyd's F2 algorithm for sampling without replacement.
 pub(crate) fn pick_idxs<T, P>(max: usize, indexes: &T, indexes_len: usize) -> Vec<usize>
 where
     T: OpsIndex<usize, Output = P> + ?Sized,
     P: AsRef<PropIndex>,
 {
-    // See https://blog.acolyer.org/2018/01/30/a-sample-of-brilliance/ (the F2 algorithm)
+    // See https://dl.acm.org/doi/10.1145/30401.315746 (the F2 algorithm)
     // for a longer explanation. This is a variant that works with zero-indexing.
     let mut selected = BTreeSet::new();
     let to_select = indexes_len.min(max);
@@ -40,9 +38,7 @@ where
 ///
 /// If the number of `Index` instances is greater than `max`, all indexes will be returned.
 ///
-/// This function implements [Robert Floyd's F2
-/// algorithm](https://blog.acolyer.org/2018/01/30/a-sample-of-brilliance/) for sampling without
-/// replacement.
+/// This function implements Robert Floyd's F2 algorithm for sampling without replacement.
 #[inline]
 pub(crate) fn pick_slice_idxs(max: usize, indexes: &[impl AsRef<PropIndex>]) -> Vec<usize> {
     pick_idxs(max, indexes, indexes.len())

@@ -273,3 +273,20 @@ jobs:
         uses: ./.github/actions/early-terminator
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
+  check-for-broken-links:
+    name: Check for broken links in files
+    runs-on: ubuntu-20.04
+    needs:
+      - prepare
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Ruby 2.6
+        uses: actions/setup-ruby@v1
+        with:
+          ruby-version: 2.6.x
+      - name: Run Checks
+        run: |
+          gem install awesome_bot
+          # Don't look in git or target dirs. Don't check png, bib, tex, or shell files
+          # We allow links to be redirects, allow duplicates, and we also allow Too Many Requests (429) errors
+          find . -not \( -path "./.git*" -prune \) -not \( -path "./target" -prune \) -type f -not -name "*.png" -not -name "*.sh" -not -name "*.bib" -not -name "*.tex" | while read arg; do awesome_bot --allow-redirect --allow-dupe --allow 429 --skip-save-results $arg; done

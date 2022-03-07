@@ -22,7 +22,7 @@ The `move-analyzer` language server is a Rust program that is part of
 1. You may clone [the Diem repository](https://github.com/diem/diem) yourself and build
    `move-analyzer` from its source code. This is recommended for Diem hackathon participants, and
    Diem & Move core developers. To do so, follow the instructions in the Move tutorial's
-   [Step 0: Installation](https://github.com/diem/diem/tree/main/language/documentation/tutorial#step-0-installation).
+   [Step 0: Installation](https://github.com/diem/move/tree/main/language/documentation/tutorial#step-0-installation).
 2. You may use Rust's package manager `cargo` to install `move-analyzer` in your user's PATH. This
    is recommended for people who do not work on Diem & Move core.
    1. If you don't already have a Rust toolchain installed, you should install

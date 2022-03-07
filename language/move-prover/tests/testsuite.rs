@@ -156,7 +156,7 @@ fn test_runner_for_feature(path: &Path, feature: &Feature) -> datatest_stable::R
         {
             warn!(
                 "Prover tools are not configured, verification tests will be skipped. \
-        See https://github.com/diem/diem/tree/main/language/move-prover/doc/user/install.md \
+        See https://github.com/diem/move/tree/main/language/move-prover/doc/user/install.md \
         for instructions."
             );
         }

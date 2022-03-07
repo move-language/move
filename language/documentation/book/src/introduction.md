@@ -18,7 +18,7 @@ Understanding that the capability to create custom modules on the Diem Payment N
 
 ### Core Contributor
 
-Beyond a hobbyist wanting to stay ahead of the curve for the core programming language is someone who may want to [contribute](https://diem.com/en-US/cla-sign/) directly to Move. Whether this includes submitting language improvements or even, in the future, adding core modules available on the Diem Payment Network, the core contributor will understand Move at a deep level. Once familiar with Move, the core contributor may want to submit a request to the Diem Association to add new transaction or module types, via the [Diem Improvement Protocol (DIP) process](https://dip.diem.com/).
+Beyond a hobbyist wanting to stay ahead of the curve for the core programming language is someone who may want to [contribute](https://diem.com/en-US/cla-sign/) directly to Move. Whether this includes submitting language improvements or even, in the future, adding core modules available on the Diem Payment Network, the core contributor will understand Move at a deep level.
 
 ### Who Move is currently not targeting
 

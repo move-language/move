@@ -28,4 +28,6 @@ module Evm::U256 {
     public fun one(): U256 {
         u256_from_words(0, 1)
     }
+
+    native public fun to_address(x: U256): address;
 }

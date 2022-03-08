@@ -1,7 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{format_err, Result};
+#[allow(unused)]
+use anyhow::{anyhow, format_err, Error, Result};
+#[allow(unused)]
+use move_core_types::gas_schedule::{GasAlgebra, GasCarrier, InternalGasUnits};
 use move_core_types::{
     account_address::AccountAddress,
     effects::{AccountChangeSet, ChangeSet},
@@ -10,6 +13,9 @@ use move_core_types::{
     resolver::{ModuleResolver, MoveResolver, ResourceResolver},
 };
 use std::collections::{btree_map, BTreeMap};
+
+#[cfg(feature = "table-extension")]
+use move_table_extension::{TableChangeSet, TableHandle, TableOperation, TableResolver};
 
 /// A dummy storage containing no modules or resources.
 #[derive(Debug, Clone)]
@@ -38,6 +44,30 @@ impl ResourceResolver for BlankStorage {
         _tag: &StructTag,
     ) -> Result<Option<Vec<u8>>, Self::Error> {
         Ok(None)
+    }
+}
+
+#[cfg(feature = "table-extension")]
+impl TableResolver for BlankStorage {
+    fn resolve_table_entry(
+        &self,
+        _handle: &TableHandle,
+        _key: &[u8],
+    ) -> Result<Option<Vec<u8>>, Error> {
+        Ok(None)
+    }
+
+    fn table_size(&self, _handle: &TableHandle) -> Result<usize, Error> {
+        Ok(0)
+    }
+
+    fn operation_cost(
+        &self,
+        _op: TableOperation,
+        _key_size: usize,
+        _val_size: usize,
+    ) -> InternalGasUnits<GasCarrier> {
+        InternalGasUnits::new(1)
     }
 }
 
@@ -98,6 +128,8 @@ struct InMemoryAccountStorage {
 #[derive(Debug, Clone)]
 pub struct InMemoryStorage {
     accounts: BTreeMap<AccountAddress, InMemoryAccountStorage>,
+    #[cfg(feature = "table-extension")]
+    tables: BTreeMap<TableHandle, BTreeMap<Vec<u8>, Vec<u8>>>,
 }
 
 fn apply_changes<K, V, F, E>(
@@ -155,7 +187,11 @@ impl InMemoryAccountStorage {
 }
 
 impl InMemoryStorage {
-    pub fn apply(&mut self, changeset: ChangeSet) -> Result<()> {
+    pub fn apply_extended(
+        &mut self,
+        changeset: ChangeSet,
+        #[cfg(feature = "table-extension")] table_changes: TableChangeSet,
+    ) -> Result<()> {
         for (addr, account_changeset) in changeset.into_inner() {
             match self.accounts.entry(addr) {
                 btree_map::Entry::Occupied(entry) => {
@@ -168,19 +204,64 @@ impl InMemoryStorage {
                 }
             }
         }
+
+        #[cfg(feature = "table-extension")]
+        self.apply_table(table_changes);
+
         Ok(())
+    }
+
+    pub fn apply(&mut self, changeset: ChangeSet) -> Result<()> {
+        self.apply_extended(
+            changeset,
+            #[cfg(feature = "table-extension")]
+            TableChangeSet::default(),
+        )
+    }
+
+    #[cfg(feature = "table-extension")]
+    fn apply_table(&mut self, changes: TableChangeSet) {
+        let TableChangeSet {
+            new_tables,
+            removed_tables,
+            changes,
+        } = changes;
+        self.tables.retain(|h, _| !removed_tables.contains(h));
+        self.tables
+            .extend(new_tables.into_iter().map(|h| (h, BTreeMap::default())));
+        for (h, c) in changes {
+            assert!(
+                self.tables.contains_key(&h),
+                "inconsistent table change set: stale table handle"
+            );
+            let table = self.tables.get_mut(&h).unwrap();
+            for (key, val) in c.entries {
+                if let Some(v) = val {
+                    table.insert(key, v);
+                } else {
+                    table.remove(&key);
+                }
+            }
+        }
     }
 
     pub fn new() -> Self {
         Self {
             accounts: BTreeMap::new(),
+            #[cfg(feature = "table-extension")]
+            tables: BTreeMap::new(),
         }
     }
 
     pub fn publish_or_overwrite_module(&mut self, module_id: ModuleId, blob: Vec<u8>) {
         let mut delta = ChangeSet::new();
         delta.publish_module(module_id, blob).unwrap();
-        self.apply(delta).unwrap();
+        self.apply_extended(
+            delta,
+            #[cfg(feature = "table-extension")]
+            TableChangeSet::default(),
+        )
+        .unwrap();
     }
 
     pub fn publish_or_overwrite_resource(
@@ -191,7 +272,12 @@ impl InMemoryStorage {
     ) {
         let mut delta = ChangeSet::new();
         delta.publish_resource(addr, struct_tag, blob).unwrap();
-        self.apply(delta).unwrap();
+        self.apply_extended(
+            delta,
+            #[cfg(feature = "table-extension")]
+            TableChangeSet::default(),
+        )
+        .unwrap();
     }
 }
 
@@ -218,5 +304,32 @@ impl ResourceResolver for InMemoryStorage {
             return Ok(account_storage.resources.get(tag).cloned());
         }
         Ok(None)
+    }
+}
+
+#[cfg(feature = "table-extension")]
+impl TableResolver for InMemoryStorage {
+    fn resolve_table_entry(
+        &self,
+        handle: &TableHandle,
+        key: &[u8],
+    ) -> std::result::Result<Option<Vec<u8>>, Error> {
+        Ok(self.tables.get(handle).and_then(|t| t.get(key).cloned()))
+    }
+
+    fn table_size(&self, handle: &TableHandle) -> std::result::Result<usize, Error> {
+        self.tables
+            .get(handle)
+            .map(|t| t.len())
+            .ok_or_else(|| anyhow!("table undefined"))
+    }
+
+    fn operation_cost(
+        &self,
+        _op: TableOperation,
+        _key_size: usize,
+        _val_size: usize,
+    ) -> InternalGasUnits<GasCarrier> {
+        InternalGasUnits::new(1)
     }
 }

@@ -941,6 +941,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "31ad93652f40969dead8d4bf897a41e9462095152eb21c56e5830537e41179dd"
 
 [[package]]
+name = "downcast-rs"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
+
+[[package]]
 name = "dtoa"
 version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2140,6 +2146,7 @@ dependencies = [
  "move-resource-viewer",
  "move-stdlib",
  "move-symbol-pool",
+ "move-table-extension",
  "move-unit-test",
  "move-vm-runtime",
  "move-vm-types",
@@ -2650,6 +2657,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-table-extension"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "downcast-rs",
+ "itertools 0.10.1",
+ "move-binary-format",
+ "move-cli",
+ "move-command-line-common",
+ "move-compiler",
+ "move-core-types",
+ "move-package",
+ "move-stdlib",
+ "move-unit-test",
+ "move-vm-runtime",
+ "move-vm-types",
+ "once_cell",
+ "sha3 0.9.1",
+ "smallvec",
+ "tempfile",
+ "walkdir",
+ "workspace-hack",
+]
+
+[[package]]
 name = "move-to-yul"
 version = "0.1.0"
 dependencies = [
@@ -2737,6 +2770,7 @@ dependencies = [
  "difference",
  "evm",
  "evm-exec-utils",
+ "itertools 0.10.1",
  "move-binary-format",
  "move-bytecode-utils",
  "move-command-line-common",
@@ -2746,10 +2780,12 @@ dependencies = [
  "move-resource-viewer",
  "move-stackless-bytecode-interpreter",
  "move-stdlib",
+ "move-table-extension",
  "move-to-yul",
  "move-vm-runtime",
  "move-vm-test-utils",
  "move-vm-types",
+ "once_cell",
  "primitive-types",
  "rayon",
  "regex",
@@ -2765,6 +2801,7 @@ dependencies = [
  "move-compiler",
  "move-core-types",
  "move-stdlib",
+ "move-table-extension",
  "move-vm-runtime",
  "move-vm-test-utils",
  "move-vm-types",
@@ -2801,6 +2838,7 @@ dependencies = [
  "anyhow",
  "move-binary-format",
  "move-core-types",
+ "move-table-extension",
  "move-vm-runtime",
  "workspace-hack",
 ]
@@ -4823,7 +4861,7 @@ version = "1.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ee73e6e4924fe940354b8d4d98cad5231175d615cd855b758adc658c0aac6a0"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "static_assertions",
 ]
 

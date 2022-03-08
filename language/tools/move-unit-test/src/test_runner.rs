@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    format_module_id,
+    extensions, format_module_id,
     test_reporter::{FailureReason, TestFailure, TestResults, TestRunInfo, TestStatistics},
 };
 use anyhow::Result;
@@ -38,6 +38,7 @@ use move_vm_types::gas_schedule::{zero_cost_schedule, GasStatus};
 use rayon::prelude::*;
 use std::{collections::BTreeMap, io::Write, marker::Send, sync::Mutex, time::Instant};
 
+use move_vm_runtime::native_functions::NativeContextExtensions;
 #[cfg(feature = "evm-backend")]
 use {
     evm::{backend::MemoryVicinity, ExitReason},
@@ -105,7 +106,11 @@ fn setup_test_storage<'a>(
 
 /// Print the updates to storage represented by `cs` in the context of the starting storage state
 /// `storage`.
-fn print_resources(cs: &ChangeSet, storage: &InMemoryStorage) -> Result<String> {
+fn print_resources_and_extensions(
+    cs: &ChangeSet,
+    extensions: NativeContextExtensions,
+    storage: &InMemoryStorage,
+) -> Result<String> {
     use std::fmt::Write;
     let mut buf = String::new();
     let annotator = MoveValueAnnotator::new(storage);
@@ -122,6 +127,7 @@ fn print_resources(cs: &ChangeSet, storage: &InMemoryStorage) -> Result<String> 
             }
         }
     }
+    extensions::print_change_sets(&mut buf, extensions);
 
     Ok(buf)
 }
@@ -249,9 +255,16 @@ impl SharedTestingConfig {
         test_plan: &ModuleTestPlan,
         function_name: &str,
         test_info: &TestCase,
-    ) -> (VMResult<ChangeSet>, VMResult<Vec<Vec<u8>>>, TestRunInfo) {
+    ) -> (
+        VMResult<ChangeSet>,
+        VMResult<NativeContextExtensions>,
+        VMResult<Vec<Vec<u8>>>,
+        TestRunInfo,
+    ) {
         let move_vm = MoveVM::new(self.native_function_table.clone()).unwrap();
-        let mut session = move_vm.new_session(&self.starting_storage_state);
+        let extensions = extensions::new_extensions();
+        let mut session =
+            move_vm.new_session_with_extensions(&self.starting_storage_state, extensions);
         let mut gas_meter = GasStatus::new(&self.cost_table, GasUnits::new(self.execution_bound));
         // TODO: collect VM logs if the verbose flag (i.e, `self.verbose`) is set
 
@@ -273,11 +286,10 @@ impl SharedTestingConfig {
             now.elapsed(),
             self.execution_bound - gas_meter.remaining_gas().get(),
         );
-        (
-            session.finish().map(|(cs, _)| cs),
-            return_result,
-            test_run_info,
-        )
+        match session.finish_with_extensions() {
+            Ok((cs, _, extensions)) => (Ok(cs), Ok(extensions), return_result, test_run_info),
+            Err(err) => (Err(err.clone()), Err(err), return_result, test_run_info),
+        }
     }
 
     fn execute_via_stackless_vm(
@@ -365,7 +377,7 @@ impl SharedTestingConfig {
         let mut stats = TestStatistics::new();
 
         for (function_name, test_info) in &test_plan.tests {
-            let (cs_result, exec_result, test_run_info) =
+            let (cs_result, ext_result, exec_result, test_run_info) =
                 self.execute_via_move_vm(test_plan, function_name, test_info);
             if self.check_stackless_vm {
                 let (stackless_vm_change_set, stackless_vm_result, _, prop_check_result) = self
@@ -416,7 +428,14 @@ impl SharedTestingConfig {
             let save_session_state = || {
                 if self.save_storage_state_on_failure {
                     cs_result.ok().and_then(|changeset| {
-                        print_resources(&changeset, &self.starting_storage_state).ok()
+                        ext_result.ok().and_then(|extensions| {
+                            print_resources_and_extensions(
+                                &changeset,
+                                extensions,
+                                &self.starting_storage_state,
+                            )
+                            .ok()
+                        })
                     })
                 } else {
                     None

@@ -14,19 +14,16 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let source_files = vec![path.to_str().unwrap().to_owned()];
     let config = UnitTestingConfig {
         instruction_execution_bound: 5000,
-        filter: None,
         num_threads: 1,
         source_files,
         dep_files: move_stdlib_files(),
         check_stackless_vm: true,
-        report_storage_on_error: false,
-        report_stacktrace_on_abort: false,
-        report_statistics: false,
-        list: false,
         verbose: read_bool_env_var("VERBOSE"),
         named_address_values: move_stdlib::move_stdlib_named_addresses()
             .into_iter()
             .collect(),
+
+        ..UnitTestingConfig::default_with_bound(None)
     };
 
     let test_plan = config.build_test_plan().unwrap();

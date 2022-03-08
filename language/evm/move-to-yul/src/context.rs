@@ -115,7 +115,7 @@ impl<'a> Context<'a> {
         let mut targets = FunctionTargetsHolder::default();
         let is_used_fun = |fun: &FunctionEnv| {
             if for_test {
-                attributes::is_test_fun(fun)
+                attributes::is_evm_test_fun(fun) || attributes::is_test_fun(fun)
             } else {
                 attributes::is_callable_fun(fun)
                     || attributes::is_create_fun(fun)

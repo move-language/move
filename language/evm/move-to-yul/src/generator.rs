@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use codespan_reporting::diagnostic::Severity;
+use move_core_types::{identifier::IdentStr, language_storage::ModuleId};
 use std::collections::{BTreeMap, BTreeSet};
 
 use itertools::Itertools;
@@ -75,8 +76,8 @@ impl Generator {
         (contract_name, ctx.writer.extract_result())
     }
 
-    // Run the generator for unit tests and produce a mapping from function id to Yul test object.
-    pub fn run_for_tests(
+    // Run the generator for evm unit tests and produce a mapping from function id to Yul test object.
+    pub fn run_for_evm_tests(
         options: &Options,
         env: &GlobalEnv,
     ) -> BTreeMap<QualifiedId<FunId>, String> {
@@ -90,7 +91,7 @@ impl Generator {
                 continue;
             }
             for fun in module.get_functions() {
-                if attributes::is_test_fun(&fun) {
+                if attributes::is_evm_test_fun(&fun) {
                     let mut gen = Generator::default();
                     gen.test_object(&ctx, &fun);
                     res.insert(fun.get_qualified_id(), ctx.writer.extract_result());
@@ -99,6 +100,23 @@ impl Generator {
         }
 
         res
+    }
+
+    /// Run the generator for a specific unit test and generate a Yul test object for it.
+    pub fn run_for_unit_test(
+        options: &Options,
+        env: &GlobalEnv,
+        module_id: &ModuleId,
+        fun_name: &IdentStr,
+    ) -> String {
+        let fun = env
+            .find_function_by_language_storage_id_name(module_id, fun_name)
+            .expect("Failed to find test function. This should not have happened.");
+
+        let ctx = Context::new(options, env, /*for_test*/ true);
+        let mut gen = Generator::default();
+        gen.test_object(&ctx, &fun);
+        ctx.writer.extract_result()
     }
 }
 

@@ -7,6 +7,7 @@ use crate::{
 };
 use anyhow::Result;
 use colored::*;
+
 use move_binary_format::{errors::VMResult, file_format::CompiledModule};
 use move_bytecode_utils::Modules;
 use move_compiler::{
@@ -37,6 +38,16 @@ use move_vm_types::gas_schedule::{zero_cost_schedule, GasStatus};
 use rayon::prelude::*;
 use std::{collections::BTreeMap, io::Write, marker::Send, sync::Mutex, time::Instant};
 
+#[cfg(feature = "evm-backend")]
+use {
+    evm::{backend::MemoryVicinity, ExitReason},
+    evm_exec_utils::exec::{ExecuteResult, Executor},
+    move_to_yul,
+    primitive_types::{H160, U256},
+    std::convert::TryInto,
+    std::time::Duration,
+};
+
 /// Test state common to all tests
 pub struct SharedTestingConfig {
     save_storage_state_on_failure: bool,
@@ -49,6 +60,9 @@ pub struct SharedTestingConfig {
     named_address_values: BTreeMap<String, NumericalAddress>,
     check_stackless_vm: bool,
     verbose: bool,
+
+    #[cfg(feature = "evm-backend")]
+    evm: bool,
 }
 
 pub struct TestRunner {
@@ -123,6 +137,7 @@ impl TestRunner {
         tests: TestPlan,
         native_function_table: Option<NativeFunctionTable>,
         named_address_values: BTreeMap<String, NumericalAddress>,
+        #[cfg(feature = "evm-backend")] evm: bool,
     ) -> Result<Self> {
         let source_files = tests
             .files
@@ -147,6 +162,8 @@ impl TestRunner {
                 check_stackless_vm,
                 verbose,
                 named_address_values,
+                #[cfg(feature = "evm-backend")]
+                evm,
             },
             num_threads,
             tests,
@@ -182,6 +199,47 @@ impl TestRunner {
                     .collect();
             }
         }
+    }
+}
+
+// TODO: do not expose this to backend implementations
+struct TestOutput<'a, 'b, W> {
+    test_plan: &'a ModuleTestPlan,
+    writer: &'b Mutex<W>,
+}
+
+impl<'a, 'b, W: Write> TestOutput<'a, 'b, W> {
+    fn pass(&self, fn_name: &str) {
+        writeln!(
+            self.writer.lock().unwrap(),
+            "[ {}    ] {}::{}",
+            "PASS".bold().bright_green(),
+            format_module_id(&self.test_plan.module_id),
+            fn_name
+        )
+        .unwrap()
+    }
+
+    fn fail(&self, fn_name: &str) {
+        writeln!(
+            self.writer.lock().unwrap(),
+            "[ {}    ] {}::{}",
+            "FAIL".bold().bright_red(),
+            format_module_id(&self.test_plan.module_id),
+            fn_name,
+        )
+        .unwrap()
+    }
+
+    fn timeout(&self, fn_name: &str) {
+        writeln!(
+            self.writer.lock().unwrap(),
+            "[ {} ] {}::{}",
+            "TIMEOUT".bold().bright_yellow(),
+            format_module_id(&self.test_plan.module_id),
+            fn_name,
+        )
+        .unwrap();
     }
 }
 
@@ -271,43 +329,11 @@ impl SharedTestingConfig {
         )
     }
 
-    fn exec_module_tests<W: Write>(
+    fn exec_module_tests_move_vm_and_stackless_vm(
         &self,
         test_plan: &ModuleTestPlan,
-        writer: &Mutex<W>,
+        output: &TestOutput<impl Write>,
     ) -> TestStatistics {
-        let mut stats = TestStatistics::new();
-        let pass = |fn_name: &str| {
-            writeln!(
-                writer.lock().unwrap(),
-                "[ {}    ] {}::{}",
-                "PASS".bold().bright_green(),
-                format_module_id(&test_plan.module_id),
-                fn_name
-            )
-            .unwrap()
-        };
-        let fail = |fn_name: &str| {
-            writeln!(
-                writer.lock().unwrap(),
-                "[ {}    ] {}::{}",
-                "FAIL".bold().bright_red(),
-                format_module_id(&test_plan.module_id),
-                fn_name,
-            )
-            .unwrap()
-        };
-        let timeout = |fn_name: &str| {
-            writeln!(
-                writer.lock().unwrap(),
-                "[ {} ] {}::{}",
-                "TIMEOUT".bold().bright_yellow(),
-                format_module_id(&test_plan.module_id),
-                fn_name,
-            )
-            .unwrap();
-        };
-
         let stackless_model = if self.check_stackless_vm {
             let model = run_model_builder_with_options_and_compilation_flags(
                 &self.source_files,
@@ -321,6 +347,8 @@ impl SharedTestingConfig {
         } else {
             None
         };
+
+        let mut stats = TestStatistics::new();
 
         for (function_name, test_info) in &test_plan.tests {
             let (cs_result, exec_result, test_run_info) =
@@ -339,7 +367,7 @@ impl SharedTestingConfig {
                 if stackless_vm_result != move_vm_result
                     || stackless_vm_change_set != move_vm_change_set
                 {
-                    fail(function_name);
+                    output.fail(function_name);
                     stats.test_failure(
                         TestFailure::new(
                             FailureReason::mismatch(
@@ -357,7 +385,7 @@ impl SharedTestingConfig {
                     continue;
                 }
                 if let Some(prop_failure) = prop_check_result {
-                    fail(function_name);
+                    output.fail(function_name);
                     stats.test_failure(
                         TestFailure::new(
                             FailureReason::property(prop_failure),
@@ -384,7 +412,7 @@ impl SharedTestingConfig {
                 Err(err) => match (test_info.expected_failure.as_ref(), err.sub_status()) {
                     // Ran out of ticks, report a test timeout and log a test failure
                     _ if err.major_status() == StatusCode::OUT_OF_GAS => {
-                        timeout(function_name);
+                        output.timeout(function_name);
                         stats.test_failure(
                             TestFailure::new(
                                 FailureReason::timeout(),
@@ -397,7 +425,7 @@ impl SharedTestingConfig {
                     }
                     // Expected the test to not abort, but it aborted with `code`
                     (None, Some(code)) => {
-                        fail(function_name);
+                        output.fail(function_name);
                         stats.test_failure(
                             TestFailure::new(
                                 FailureReason::aborted(code),
@@ -413,13 +441,13 @@ impl SharedTestingConfig {
                     (Some(ExpectedFailure::ExpectedWithCode(code)), Some(other_code))
                         if err.major_status() == StatusCode::ABORTED && *code == other_code =>
                     {
-                        pass(function_name);
+                        output.pass(function_name);
                         stats.test_success(test_run_info, test_plan);
                     }
                     // Expected the test to abort with a specific `code` but it aborted with a
                     // different `other_code`
                     (Some(ExpectedFailure::ExpectedWithCode(code)), Some(other_code)) => {
-                        fail(function_name);
+                        output.fail(function_name);
                         stats.test_failure(
                             TestFailure::new(
                                 FailureReason::wrong_abort(*code, other_code),
@@ -432,19 +460,19 @@ impl SharedTestingConfig {
                     }
                     // Expected the test to abort and it aborted, but we don't need to check the code
                     (Some(ExpectedFailure::Expected), Some(_)) => {
-                        pass(function_name);
+                        output.pass(function_name);
                         stats.test_success(test_run_info, test_plan);
                     }
                     // Expected the test to abort and it aborted with internal error
                     (Some(ExpectedFailure::Expected), None)
                         if err.major_status() != StatusCode::EXECUTED =>
                     {
-                        pass(function_name);
+                        output.pass(function_name);
                         stats.test_success(test_run_info, test_plan);
                     }
                     // Unexpected return status from the VM, signal that we hit an unknown error.
                     (_, None) => {
-                        fail(function_name);
+                        output.fail(function_name);
                         stats.test_failure(
                             TestFailure::new(
                                 FailureReason::unknown(),
@@ -459,7 +487,7 @@ impl SharedTestingConfig {
                 Ok(_) => {
                     // Expected the test to fail, but it executed
                     if test_info.expected_failure.is_some() {
-                        fail(function_name);
+                        output.fail(function_name);
                         stats.test_failure(
                             TestFailure::new(
                                 FailureReason::no_abort(),
@@ -471,7 +499,7 @@ impl SharedTestingConfig {
                         )
                     } else {
                         // Expected the test to execute fully and it did
-                        pass(function_name);
+                        output.pass(function_name);
                         stats.test_success(test_run_info, test_plan);
                     }
                 }
@@ -479,5 +507,168 @@ impl SharedTestingConfig {
         }
 
         stats
+    }
+
+    #[cfg(feature = "evm-backend")]
+    fn execute_via_evm(&self, yul_source: &str) -> (ExecuteResult, Duration) {
+        let (code, _) = evm_exec_utils::compile::solc_yul(yul_source, false).expect(
+            "Failed to compile yul source into EVM bytecode. This should not have happened.",
+        );
+
+        let vicinity = MemoryVicinity {
+            gas_price: 0.into(),
+            origin: H160::zero(),
+            chain_id: 0.into(),
+            block_hashes: vec![],
+            block_number: 0.into(),
+            block_coinbase: H160::zero(),
+            block_timestamp: 0.into(),
+            block_difficulty: 0.into(),
+            block_gas_limit: U256::MAX,
+            block_base_fee_per_gas: 0.into(),
+        };
+
+        let mut exec = Executor::new(&vicinity);
+
+        let now = Instant::now();
+        let res = exec.execute_custom_code(H160::zero(), H160::zero(), code, vec![]);
+        let elapsed = now.elapsed();
+
+        (res, elapsed)
+    }
+
+    #[cfg(feature = "evm-backend")]
+    fn exec_module_tests_evm(
+        &self,
+        test_plan: &ModuleTestPlan,
+        output: &TestOutput<impl Write>,
+    ) -> TestStatistics {
+        let mut stats = TestStatistics::new();
+
+        let model = run_model_builder_with_options_and_compilation_flags(
+            &self.source_files,
+            &[],
+            ModelBuilderOptions::default(),
+            Flags::testing(),
+            self.named_address_values.clone(),
+        )
+        .unwrap_or_else(|e| panic!("Unable to build stackless bytecode: {}", e));
+
+        let gen_options = move_to_yul::options::Options::default();
+        for (function_name, test_info) in &test_plan.tests {
+            let yul_code = move_to_yul::generator::Generator::run_for_unit_test(
+                &gen_options,
+                &model,
+                &test_plan.module_id,
+                IdentStr::new(function_name).unwrap(),
+            );
+
+            let (res, duration) = self.execute_via_evm(&yul_code);
+
+            let abort_code = || -> u64 {
+                assert!(res.return_value.len() == 8);
+
+                u64::from_be_bytes(res.return_value.as_slice().try_into().unwrap())
+            };
+
+            let test_run_info =
+                || -> TestRunInfo { TestRunInfo::new(function_name.to_string(), duration, 0) };
+
+            // TODO: gas/timeout
+            // TODO: arguments
+            // TODO: locations
+
+            match (test_info.expected_failure.as_ref(), &res.exit_reason) {
+                // Test expected to succeed or abort with a specific abort code, but ran into an internal error.
+                (None | Some(ExpectedFailure::ExpectedWithCode(_)), ExitReason::Revert(_))
+                    if abort_code() == u64::MAX =>
+                {
+                    output.fail(function_name);
+                    stats.test_failure(
+                        TestFailure::new(FailureReason::unknown(), test_run_info(), None, None),
+                        test_plan,
+                    );
+                }
+
+                // Test expected to succeed, but aborted.
+                (None, ExitReason::Revert(_)) => {
+                    output.fail(function_name);
+                    stats.test_failure(
+                        TestFailure::new(
+                            FailureReason::aborted(abort_code()),
+                            test_run_info(),
+                            None,
+                            None,
+                        ),
+                        test_plan,
+                    )
+                }
+
+                // Expect the test to abort with a specific code.
+                (
+                    Some(ExpectedFailure::ExpectedWithCode(exp_abort_code)),
+                    ExitReason::Revert(_),
+                ) => {
+                    let abort_code = abort_code();
+                    if abort_code == *exp_abort_code {
+                        output.pass(function_name);
+                        stats.test_success(test_run_info(), test_plan);
+                    } else {
+                        output.fail(function_name);
+                        stats.test_failure(
+                            TestFailure::new(
+                                FailureReason::wrong_abort(*exp_abort_code, abort_code),
+                                test_run_info(),
+                                None,
+                                None,
+                            ),
+                            test_plan,
+                        );
+                    }
+                }
+
+                // Test expected to abort but succeeded.
+                (
+                    Some(ExpectedFailure::Expected | ExpectedFailure::ExpectedWithCode(_)),
+                    ExitReason::Succeed(_),
+                ) => {
+                    output.fail(function_name);
+                    stats.test_failure(
+                        TestFailure::new(FailureReason::no_abort(), test_run_info(), None, None),
+                        test_plan,
+                    )
+                }
+
+                // Test succeeded or failed as expected.
+                (None, ExitReason::Succeed(_))
+                | (Some(ExpectedFailure::Expected), ExitReason::Revert(_)) => {
+                    output.pass(function_name);
+                    stats.test_success(test_run_info(), test_plan);
+                }
+
+                (exp, reason) => {
+                    unreachable!("Unexpected (exp, exit reason) pair: ({:?}, {:?}). This should not have happened.", exp, reason)
+                }
+            }
+        }
+
+        stats
+    }
+
+    // TODO: comparison of results via different backends
+
+    fn exec_module_tests(
+        &self,
+        test_plan: &ModuleTestPlan,
+        writer: &Mutex<impl Write>,
+    ) -> TestStatistics {
+        let output = TestOutput { test_plan, writer };
+
+        #[cfg(feature = "evm-backend")]
+        if self.evm {
+            return self.exec_module_tests_evm(test_plan, &output);
+        }
+
+        self.exec_module_tests_move_vm_and_stackless_vm(test_plan, &output)
     }
 }

@@ -11,12 +11,18 @@ use std::{
 
 // We don't support statistics tests as that includes times which are variable and will make these
 // tests flaky.
-const TEST_MODIFIER_STRS: &[&str] = &["storage"];
+const TEST_MODIFIER_STRS: &[&str] = &[
+    "storage",
+    #[cfg(feature = "evm-backend")]
+    "evm",
+];
 
 pub fn modify(mut base_config: UnitTestingConfig, modifier_str: &str) -> Option<UnitTestingConfig> {
     // Add future test modifiers here
     match modifier_str {
         "storage" => base_config.report_storage_on_error = true,
+        #[cfg(feature = "evm-backend")]
+        "evm" => base_config.evm = true,
         _ => return None,
     };
     Some(base_config)
@@ -74,18 +80,13 @@ fn run_test_impl(path: &Path) -> anyhow::Result<()> {
     let unit_test_config = UnitTestingConfig {
         num_threads: 1,
         instruction_execution_bound: 1000,
-        filter: None,
         source_files,
         dep_files: move_stdlib::move_stdlib_files(),
-        check_stackless_vm: false,
-        verbose: false,
-        report_statistics: false,
-        report_storage_on_error: false,
-        report_stacktrace_on_abort: false,
-        list: false,
         named_address_values: move_stdlib::move_stdlib_named_addresses()
             .into_iter()
             .collect(),
+
+        ..UnitTestingConfig::default_with_bound(None)
     };
 
     let regex = RegexBuilder::new(r"(┌─ ).+/([^/]+)$")

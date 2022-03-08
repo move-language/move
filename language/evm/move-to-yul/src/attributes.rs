@@ -14,7 +14,8 @@ const EVM_ARITH_ATTR: &str = "evm_arith";
 const PAYABLE_ATTR: &str = "payable";
 const RECEIVE_ATTR: &str = "receive";
 const RECEIVE_FALLBACK_ATTR: &str = "fallback";
-const TEST_ATTR: &str = "evm_test";
+const EVM_TEST_ATTR: &str = "evm_test";
+const TEST_ATTR: &str = "test";
 const SIGNATURE: &str = "sig";
 
 /// Extract the value from an attribute
@@ -119,6 +120,16 @@ pub fn is_contract_fun(fun: &FunctionEnv) -> bool {
 }
 
 /// Check whether the function has a `#[evm_test] attribute.
+pub fn is_evm_test_fun(fun: &FunctionEnv<'_>) -> bool {
+    has_attr(
+        fun.module_env.env,
+        fun.get_attributes(),
+        EVM_TEST_ATTR,
+        true,
+    )
+}
+
+/// Check whether the function has a `#[test]` attribute.
 pub fn is_test_fun(fun: &FunctionEnv<'_>) -> bool {
     has_attr(fun.module_env.env, fun.get_attributes(), TEST_ATTR, true)
 }

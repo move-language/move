@@ -769,7 +769,11 @@ impl Loader {
     // Helpers for loading and verification
     //
 
-    fn load_type(&self, type_tag: &TypeTag, data_store: &impl DataStore) -> VMResult<Type> {
+    pub(crate) fn load_type(
+        &self,
+        type_tag: &TypeTag,
+        data_store: &impl DataStore,
+    ) -> VMResult<Type> {
         Ok(match type_tag {
             TypeTag::Bool => Type::Bool,
             TypeTag::U8 => Type::U8,

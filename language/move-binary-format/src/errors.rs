@@ -171,6 +171,8 @@ impl VMError {
     }
 }
 
+impl std::error::Error for VMError {}
+
 #[derive(Debug, Clone)]
 pub struct PartialVMError {
     major_status: StatusCode,

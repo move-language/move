@@ -3,7 +3,9 @@
 
 use std::borrow::Borrow;
 
-use crate::{data_cache::TransactionDataCache, runtime::VMRuntime};
+use crate::{
+    data_cache::TransactionDataCache, native_functions::NativeContextExtensions, runtime::VMRuntime,
+};
 use move_binary_format::errors::*;
 use move_core_types::{
     account_address::AccountAddress,
@@ -14,7 +16,7 @@ use move_core_types::{
     resolver::MoveResolver,
     value::MoveTypeLayout,
 };
-use move_vm_types::gas_schedule::GasStatus;
+use move_vm_types::{data_store::DataStore, gas_schedule::GasStatus};
 
 pub struct Session<'r, 'l, S> {
     pub(crate) runtime: &'l VMRuntime,
@@ -69,14 +71,39 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         args: Vec<Vec<u8>>,
         gas_status: &mut GasStatus,
     ) -> VMResult<Vec<Vec<u8>>> {
-        self.runtime.execute_function(
+        let no_ext = NativeContextExtensions::default();
+        self.execute_function_with_extensions(
             module,
             function_name,
             ty_args,
             args,
-            &mut self.data_cache,
             gas_status,
+            no_ext,
         )
+        .map(|(_, v)| v)
+    }
+
+    /// Same as `execute_function`, but with native context extensions.
+    pub fn execute_function_with_extensions(
+        &mut self,
+        module: &ModuleId,
+        function_name: &IdentStr,
+        ty_args: Vec<TypeTag>,
+        args: Vec<Vec<u8>>,
+        gas_status: &mut GasStatus,
+        mut extensions: NativeContextExtensions,
+    ) -> VMResult<(NativeContextExtensions, Vec<Vec<u8>>)> {
+        self.runtime
+            .execute_function(
+                module,
+                function_name,
+                ty_args,
+                args,
+                &mut self.data_cache,
+                gas_status,
+                &mut extensions,
+            )
+            .map(|v| (extensions, v))
     }
 
     /// Execute `module`::`fuction_name`<`ty_args`>(`args`) and return the effects in
@@ -93,7 +120,7 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     /// used to manufacture `signer`'s or `Coin`'s from raw bytes. It is the respmsibility of the
     /// caller (e.g. adapter) to ensure that this power is useed responsibility/securely for its use-case.
     pub fn execute_function_for_effects<V>(
-        mut self,
+        self,
         module: &ModuleId,
         function_name: &IdentStr,
         ty_args: Vec<TypeTag>,
@@ -103,7 +130,33 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     where
         V: Borrow<[u8]>,
     {
+        let no_ext = NativeContextExtensions::default();
+        self.execute_function_for_effects_with_extensions(
+            module,
+            function_name,
+            ty_args,
+            args,
+            gas_status,
+            no_ext,
+        )
+        .1
+    }
+
+    /// Same as `execute_function_for_effects`, but with native context extensions.
+    pub fn execute_function_for_effects_with_extensions<V>(
+        mut self,
+        module: &ModuleId,
+        function_name: &IdentStr,
+        ty_args: Vec<TypeTag>,
+        args: Vec<V>,
+        gas_status: &mut GasStatus,
+        mut extensions: NativeContextExtensions,
+    ) -> (Option<NativeContextExtensions>, ExecutionResult)
+    where
+        V: Borrow<[u8]>,
+    {
         let gas_budget = gas_status.remaining_gas().get();
+
         let execution_res = self.runtime.execute_function_for_effects(
             module,
             function_name,
@@ -111,20 +164,24 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
             args,
             &mut self.data_cache,
             gas_status,
+            &mut extensions,
         );
         let gas_used = gas_budget - gas_status.remaining_gas().get();
         match execution_res {
             Ok((return_values, mutable_ref_values)) => match self.finish() {
-                Ok((change_set, events)) => ExecutionResult::Success {
-                    change_set,
-                    events,
-                    return_values,
-                    mutable_ref_values,
-                    gas_used,
-                },
-                Err(error) => ExecutionResult::Fail { error, gas_used },
+                Ok((change_set, events)) => (
+                    Some(extensions),
+                    ExecutionResult::Success {
+                        change_set,
+                        events,
+                        return_values,
+                        mutable_ref_values,
+                        gas_used,
+                    },
+                ),
+                Err(error) => (None, ExecutionResult::Fail { error, gas_used }),
             },
-            Err(error) => ExecutionResult::Fail { error, gas_used },
+            Err(error) => (None, ExecutionResult::Fail { error, gas_used }),
         }
     }
 
@@ -161,15 +218,42 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         senders: Vec<AccountAddress>,
         gas_status: &mut GasStatus,
     ) -> VMResult<()> {
-        self.runtime.execute_script_function(
+        let no_ext = NativeContextExtensions::default();
+        self.execute_script_function_with_extensions(
             module,
             function_name,
             ty_args,
             args,
             senders,
-            &mut self.data_cache,
             gas_status,
+            no_ext,
         )
+        .map(|_| ())
+    }
+
+    /// Same as `execute_script_function`, but with native context extensions.
+    pub fn execute_script_function_with_extensions(
+        &mut self,
+        module: &ModuleId,
+        function_name: &IdentStr,
+        ty_args: Vec<TypeTag>,
+        args: Vec<Vec<u8>>,
+        senders: Vec<AccountAddress>,
+        gas_status: &mut GasStatus,
+        mut extensions: NativeContextExtensions,
+    ) -> VMResult<NativeContextExtensions> {
+        self.runtime
+            .execute_script_function(
+                module,
+                function_name,
+                ty_args,
+                args,
+                senders,
+                &mut self.data_cache,
+                gas_status,
+                &mut extensions,
+            )
+            .map(|_| extensions)
     }
 
     /// Execute a transaction script.
@@ -196,14 +280,32 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         senders: Vec<AccountAddress>,
         gas_status: &mut GasStatus,
     ) -> VMResult<()> {
-        self.runtime.execute_script(
-            script,
-            ty_args,
-            args,
-            senders,
-            &mut self.data_cache,
-            gas_status,
-        )
+        let no_ext = NativeContextExtensions::default();
+        self.execute_script_with_extensions(script, ty_args, args, senders, gas_status, no_ext)
+            .map(|_| ())
+    }
+
+    /// Like `execute_script`, but with native context extensions.
+    pub fn execute_script_with_extensions(
+        &mut self,
+        script: Vec<u8>,
+        ty_args: Vec<TypeTag>,
+        args: Vec<Vec<u8>>,
+        senders: Vec<AccountAddress>,
+        gas_status: &mut GasStatus,
+        mut extensions: NativeContextExtensions,
+    ) -> VMResult<NativeContextExtensions> {
+        self.runtime
+            .execute_script(
+                script,
+                ty_args,
+                args,
+                senders,
+                &mut self.data_cache,
+                gas_status,
+                &mut extensions,
+            )
+            .map(|_| extensions)
     }
 
     /// Publish the given module.
@@ -269,5 +371,9 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         self.runtime
             .loader()
             .get_type_layout(type_tag, &self.data_cache)
+    }
+
+    pub fn get_data_store(&mut self) -> &mut dyn DataStore {
+        &mut self.data_cache
     }
 }

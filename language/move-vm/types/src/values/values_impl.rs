@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::loaded_data::runtime_types::Type;
 use move_binary_format::{
     errors::*,
     file_format::{Constant, SignatureToken},
@@ -2323,7 +2324,6 @@ pub mod debug {
  *   is to involve an explicit representation of the type layout.
  *
  **************************************************************************************/
-use crate::loaded_data::runtime_types::Type;
 use serde::{
     de::Error as DeError,
     ser::{Error as SerError, SerializeSeq, SerializeTuple},

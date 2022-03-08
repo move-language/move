@@ -457,6 +457,8 @@ pub fn calculate_intrinsic_gas(
     }
 }
 
+// TODO: need to refactor native gas calculation so it is extensible. Currently we
+// have hardcoded here the stdlib natives.
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[repr(u8)]

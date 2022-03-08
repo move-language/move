@@ -3,7 +3,7 @@
 
 use crate::{
     loader::{Function, Loader, Resolver},
-    native_functions::NativeContext,
+    native_functions::{NativeContext, NativeContextExtensions},
     trace,
 };
 use fail::fail_point;
@@ -74,12 +74,15 @@ impl Interpreter {
         args: Vec<Value>,
         data_store: &mut impl DataStore,
         gas_status: &mut GasStatus,
+        extensions: &mut NativeContextExtensions,
         loader: &Loader,
     ) -> VMResult<Vec<Value>> {
         // We count the intrinsic cost of the transaction here, since that needs to also cover the
         // setup of the function.
         let mut interp = Self::new();
-        interp.execute(loader, data_store, gas_status, function, ty_args, args)
+        interp.execute(
+            loader, data_store, gas_status, extensions, function, ty_args, args,
+        )
     }
 
     /// Create a new instance of an `Interpreter` in the context of a transaction with a
@@ -97,13 +100,16 @@ impl Interpreter {
         loader: &Loader,
         data_store: &mut impl DataStore,
         gas_status: &mut GasStatus,
+        extensions: &mut NativeContextExtensions,
         function: Arc<Function>,
         ty_args: Vec<Type>,
         args: Vec<Value>,
     ) -> VMResult<Vec<Value>> {
         // No unwinding of the call stack and value stack need to be done here -- the context will
         // take care of that.
-        self.execute_main(loader, data_store, gas_status, function, ty_args, args)
+        self.execute_main(
+            loader, data_store, gas_status, extensions, function, ty_args, args,
+        )
     }
 
     /// Main loop for the execution of a function.
@@ -119,6 +125,7 @@ impl Interpreter {
         loader: &Loader,
         data_store: &mut impl DataStore,
         gas_status: &mut GasStatus,
+        extensions: &mut NativeContextExtensions,
         function: Arc<Function>,
         ty_args: Vec<Type>,
         args: Vec<Value>,
@@ -157,7 +164,14 @@ impl Interpreter {
                         )
                         .map_err(|e| set_err_info!(current_frame, e))?;
                     if func.is_native() {
-                        self.call_native(&resolver, data_store, gas_status, func, vec![])?;
+                        self.call_native(
+                            &resolver,
+                            data_store,
+                            gas_status,
+                            extensions,
+                            func,
+                            vec![],
+                        )?;
                         current_frame.pc += 1; // advance past the Call instruction in the caller
                         continue;
                     }
@@ -190,7 +204,9 @@ impl Interpreter {
                         )
                         .map_err(|e| set_err_info!(current_frame, e))?;
                     if func.is_native() {
-                        self.call_native(&resolver, data_store, gas_status, func, ty_args)?;
+                        self.call_native(
+                            &resolver, data_store, gas_status, extensions, func, ty_args,
+                        )?;
                         current_frame.pc += 1; // advance past the Call instruction in the caller
                         continue;
                     }
@@ -233,23 +249,29 @@ impl Interpreter {
         resolver: &Resolver,
         data_store: &mut dyn DataStore,
         gas_status: &mut GasStatus,
+        extensions: &mut NativeContextExtensions,
         function: Arc<Function>,
         ty_args: Vec<Type>,
     ) -> VMResult<()> {
         // Note: refactor if native functions push a frame on the stack
-        self.call_native_impl(resolver, data_store, gas_status, function.clone(), ty_args)
-            .map_err(|e| match function.module_id() {
-                Some(id) => e
-                    .at_code_offset(function.index(), 0)
-                    .finish(Location::Module(id.clone())),
-                None => {
-                    let err = PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                        .with_message(
-                            "Unexpected native function not located in a module".to_owned(),
-                        );
-                    self.set_location(err)
-                }
-            })
+        self.call_native_impl(
+            resolver,
+            data_store,
+            gas_status,
+            extensions,
+            function.clone(),
+            ty_args,
+        )
+        .map_err(|e| match function.module_id() {
+            Some(id) => e
+                .at_code_offset(function.index(), 0)
+                .finish(Location::Module(id.clone())),
+            None => {
+                let err = PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("Unexpected native function not located in a module".to_owned());
+                self.set_location(err)
+            }
+        })
     }
 
     fn call_native_impl(
@@ -257,6 +279,7 @@ impl Interpreter {
         resolver: &Resolver,
         data_store: &mut dyn DataStore,
         gas_status: &mut GasStatus,
+        extensions: &mut NativeContextExtensions,
         function: Arc<Function>,
         ty_args: Vec<Type>,
     ) -> PartialVMResult<()> {
@@ -265,7 +288,8 @@ impl Interpreter {
         for _ in 0..expected_args {
             arguments.push_front(self.operand_stack.pop()?);
         }
-        let mut native_context = NativeContext::new(self, data_store, gas_status, resolver);
+        let mut native_context =
+            NativeContext::new(self, data_store, gas_status, resolver, extensions);
         let native_function = function.get_native()?;
         let result = native_function(&mut native_context, ty_args, arguments)?;
         gas_status.deduct_gas(result.cost)?;

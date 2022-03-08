@@ -18,21 +18,22 @@ pub const CORE_CODE_ADDRESS: AccountAddress = AccountAddress::ONE;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
 pub enum TypeTag {
-    #[serde(rename(serialize = "bool", deserialize = "bool"))]
+    // alias for compatibility with old json serialized data.
+    #[serde(rename = "bool", alias = "Bool")]
     Bool,
-    #[serde(rename(serialize = "u8", deserialize = "u8"))]
+    #[serde(rename = "u8", alias = "U8")]
     U8,
-    #[serde(rename(serialize = "u64", deserialize = "u64"))]
+    #[serde(rename = "u64", alias = "U64")]
     U64,
-    #[serde(rename(serialize = "u128", deserialize = "u128"))]
+    #[serde(rename = "u128", alias = "U128")]
     U128,
-    #[serde(rename(serialize = "address", deserialize = "address"))]
+    #[serde(rename = "address", alias = "Address")]
     Address,
-    #[serde(rename(serialize = "signer", deserialize = "signer"))]
+    #[serde(rename = "signer", alias = "Signer")]
     Signer,
-    #[serde(rename(serialize = "vector", deserialize = "vector"))]
+    #[serde(rename = "vector", alias = "Vector")]
     Vector(Box<TypeTag>),
-    #[serde(rename(serialize = "struct", deserialize = "struct"))]
+    #[serde(rename = "struct", alias = "Struct")]
     Struct(StructTag),
 }
 
@@ -42,7 +43,8 @@ pub struct StructTag {
     pub module: Identifier,
     pub name: Identifier,
     // TODO: rename to "type_args" (or better "ty_args"?)
-    #[serde(rename(serialize = "type_args", deserialize = "type_args"))]
+    // alias for compatibility with old json serialized data.
+    #[serde(rename = "type_args", alias = "type_params")]
     pub type_params: Vec<TypeTag>,
 }
 

@@ -100,7 +100,7 @@ fun check_vec(v: &vector<u64>, bound: u64) {
 Note that because the operation is replaced with this `if-else`, the argument for the `code` is not
 always evaluated. For example:
 
-````move
+```move
 assert!(true, 1 / 0)
 ```
 

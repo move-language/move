@@ -64,6 +64,9 @@ pub struct BuildConfig {
     /// Additional named address mapping. Useful for tools in rust
     #[clap(skip)]
     pub additional_named_addresses: BTreeMap<String, AccountAddress>,
+
+    #[clap(long = "flavor", global = true)]
+    pub language_flavor: Option<String>,
 }
 
 impl Default for BuildConfig {
@@ -76,6 +79,7 @@ impl Default for BuildConfig {
             install_dir: None,
             force_recompilation: false,
             additional_named_addresses: BTreeMap::new(),
+            language_flavor: None,
         }
     }
 }

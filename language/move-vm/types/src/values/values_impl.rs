@@ -1775,6 +1775,18 @@ impl Vector {
         self.unpack(type_param, 0)?;
         Ok(())
     }
+
+    pub fn to_vec_u8(self) -> PartialVMResult<Vec<u8>> {
+        check_elem_layout(&Type::U8, &self.0)?;
+        if let Container::VecU8(r) = self.0 {
+            Ok(take_unique_ownership(r)?.into_iter().collect())
+        } else {
+            Err(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("expected vector<u8>".to_string()),
+            )
+        }
+    }
 }
 
 /***************************************************************************************

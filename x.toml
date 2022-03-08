@@ -156,6 +156,10 @@ members = [
     "language-benchmarks",
     "mirai-dataflow-analysis",
     "module-generation",
+     # TODO: remove this here once the crate is used in code. There is currently not other way to do this.
+     # The code style direction to mark this crate as pulished doesn't work, because nothing in the repo
+     # is ready for publication and dependencies aren't marked like this.
+    "move-async-vm",
     "move-compiler-transactional-tests",
     "move-explain",
     "move-ir-compiler-transactional-tests",
@@ -236,6 +240,16 @@ mark-changed = []
 [[determinator.path-rule]]
 # Ignore files in the language/evm/examples tree (for now)
 globs = ["language/evm/examples/**/*", "language/evm/stdlib/**/*"]
+mark-changed = []
+
+[[determinator.path-rule]]
+# Ignore files in the language/evm/examples tree (for now)
+globs = ["language/extensions/async/examples/**/*"]
+mark-changed = []
+
+[[determinator.path-rule]]
+# Ignore files in the language/evm/examples tree (for now)
+globs = ["language/extensions/async/move-async-lib/**/*"]
 mark-changed = []
 
 [[determinator.path-rule]]

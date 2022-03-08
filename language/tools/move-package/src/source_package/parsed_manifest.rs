@@ -59,6 +59,7 @@ pub struct GitInfo {
 #[derive(Default, Debug, Clone, Eq, PartialEq)]
 pub struct BuildInfo {
     pub language_version: Option<Version>,
+    pub language_flavor: Option<String>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

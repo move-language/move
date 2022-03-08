@@ -231,6 +231,9 @@ codes!(
         BytecodeGeneration: { msg: "BYTECODE GENERATION FAILED", severity: Bug },
         BytecodeVerification: { msg: "BYTECODE VERIFICATION FAILED", severity: Bug },
     ],
+    Derivation: [
+        DeriveFailed: { msg: "attribute derivation failed", severity: BlockingError }
+    ]
 );
 
 //**************************************************************************************************

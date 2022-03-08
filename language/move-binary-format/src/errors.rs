@@ -169,6 +169,26 @@ impl VMError {
             offsets,
         )
     }
+
+    pub fn to_partial(self) -> PartialVMError {
+        let VMError {
+            major_status,
+            sub_status,
+            message,
+            stacktrace,
+            indices,
+            offsets,
+            ..
+        } = self;
+        PartialVMError {
+            major_status,
+            sub_status,
+            message,
+            stacktrace,
+            indices,
+            offsets,
+        }
+    }
 }
 
 impl std::error::Error for VMError {}

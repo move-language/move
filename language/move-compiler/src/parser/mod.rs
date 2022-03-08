@@ -10,6 +10,7 @@ pub mod keywords;
 pub(crate) mod merge_spec_modules;
 
 use crate::{
+    attr_derivation,
     diagnostics::{codes::Severity, Diagnostics, FilesSourceText},
     parser,
     parser::syntax::parse_file_string,
@@ -79,6 +80,12 @@ pub(crate) fn parse_program(
     if let Err(env_diags) = env_result {
         diags.extend(env_diags)
     }
+
+    // Run attribute expansion on all source definitions, passing in the matching named address map.
+    for (idx, def) in source_definitions.iter_mut() {
+        attr_derivation::derive_from_attributes(compilation_env, named_address_maps.get(*idx), def);
+    }
+
     let res = if diags.is_empty() {
         let pprog = parser::ast::Program {
             named_address_maps,

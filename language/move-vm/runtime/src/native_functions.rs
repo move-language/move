@@ -115,6 +115,15 @@ impl NativeContextExtensions {
             .downcast_mut::<T>()
             .unwrap()
     }
+
+    pub fn remove<T: Any>(&mut self) -> T {
+        *self
+            .map
+            .remove(&TypeId::of::<T>())
+            .expect("dynamic typing error")
+            .downcast::<T>()
+            .unwrap()
+    }
 }
 
 impl<'a, 'b> NativeContext<'a> {

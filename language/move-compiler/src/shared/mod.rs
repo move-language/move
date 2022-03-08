@@ -503,8 +503,8 @@ impl Flags {
         self.shadow
     }
 
-    pub fn get_flavor(&self) -> &str {
-        &self.flavor
+    pub fn has_flavor(&self, flavor: &str) -> bool {
+        self.flavor == flavor
     }
 }
 

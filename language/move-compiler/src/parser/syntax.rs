@@ -10,7 +10,6 @@ use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
 
 use crate::{
-    attr_derivation::derive_from_attributes,
     diag,
     diagnostics::{Diagnostic, Diagnostics},
     parser::{ast::*, lexer::*},
@@ -2272,7 +2271,7 @@ fn parse_module(
         start_loc,
         context.tokens.previous_end_loc(),
     );
-    let mut def = ModuleDefinition {
+    let def = ModuleDefinition {
         attributes,
         loc,
         address,
@@ -2280,9 +2279,6 @@ fn parse_module(
         is_spec_module,
         members,
     };
-
-    // Run attribute derivation.
-    derive_from_attributes(context.env, &mut def);
 
     Ok(def)
 }

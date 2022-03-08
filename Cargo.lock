@@ -2005,6 +2005,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-async-vm"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "datatest-stable",
+ "itertools 0.10.1",
+ "move-binary-format",
+ "move-command-line-common",
+ "move-compiler",
+ "move-core-types",
+ "move-prover-test-utils",
+ "move-stdlib",
+ "move-vm-runtime",
+ "move-vm-types",
+ "sha3 0.9.1",
+ "smallvec",
+ "walkdir",
+ "workspace-hack",
+]
+
+[[package]]
 name = "move-binary-format"
 version = "0.0.3"
 dependencies = [
@@ -2169,6 +2191,7 @@ dependencies = [
  "once_cell",
  "petgraph 0.5.1",
  "regex",
+ "sha3 0.9.1",
  "tempfile",
  "walkdir",
  "workspace-hack",

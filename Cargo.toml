@@ -9,6 +9,7 @@ members = [
     "language/benchmarks",
     "language/evm/exec-utils",
     "language/evm/move-to-yul",
+    "language/extensions/async/move-async-vm",
     "language/move-analyzer",
     "language/move-binary-format",
     "language/move-binary-format/serializer-tests",

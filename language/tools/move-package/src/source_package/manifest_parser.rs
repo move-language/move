@@ -181,11 +181,15 @@ pub fn parse_dependencies(tval: TV) -> Result<PM::Dependencies> {
 pub fn parse_build_info(tval: TV) -> Result<PM::BuildInfo> {
     match tval {
         TV::Table(mut table) => {
-            warn_if_unknown_field_names(&table, &["language_version"]);
+            warn_if_unknown_field_names(&table, &["language_version", "language_flavor"]);
             Ok(PM::BuildInfo {
                 language_version: table
                     .remove("language_version")
                     .map(parse_version)
+                    .transpose()?,
+                language_flavor: table
+                    .remove("language_flavor")
+                    .map(parse_flavor)
                     .transpose()?,
             })
         }
@@ -433,6 +437,10 @@ fn parse_version(tval: TV) -> Result<PM::Version> {
             .parse::<u64>()
             .context("Invalid bugfix version")?,
     ))
+}
+
+fn parse_flavor(tval: TV) -> Result<String> {
+    Ok(tval.as_str().unwrap().to_string())
 }
 
 fn parse_digest(tval: TV) -> Result<PM::PackageDigest> {

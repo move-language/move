@@ -90,8 +90,13 @@ impl ResolvingGraph {
     pub fn new(
         root_package: SourceManifest,
         root_package_path: PathBuf,
-        build_options: BuildConfig,
+        mut build_options: BuildConfig,
     ) -> Result<ResolvingGraph> {
+        if build_options.language_flavor.is_none() {
+            if let Some(info) = &root_package.build {
+                build_options.language_flavor = info.language_flavor.clone();
+            }
+        }
         let mut resolution_graph = Self {
             root_package_path: root_package_path.clone(),
             build_options,

@@ -43,5 +43,6 @@ CompiledPackageInfo {
         ),
         force_recompilation: false,
         additional_named_addresses: {},
+        language_flavor: None,
     },
 }

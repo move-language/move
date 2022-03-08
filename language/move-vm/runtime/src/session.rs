@@ -16,7 +16,9 @@ use move_core_types::{
     resolver::MoveResolver,
     value::MoveTypeLayout,
 };
-use move_vm_types::{data_store::DataStore, gas_schedule::GasStatus};
+use move_vm_types::{
+    data_store::DataStore, gas_schedule::GasStatus, loaded_data::runtime_types::Type,
+};
 
 pub struct Session<'r, 'l, S> {
     pub(crate) runtime: &'l VMRuntime,
@@ -308,6 +310,10 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         self.runtime
             .loader()
             .get_type_layout(type_tag, &self.data_cache)
+    }
+
+    pub fn get_type(&self, type_tag: &TypeTag) -> VMResult<Type> {
+        self.runtime.loader().load_type(type_tag, &self.data_cache)
     }
 
     pub fn get_data_store(&mut self) -> &mut dyn DataStore {

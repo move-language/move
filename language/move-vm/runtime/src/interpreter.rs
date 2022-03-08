@@ -26,6 +26,7 @@ use move_vm_types::{
         Vector, VectorRef,
     },
 };
+
 use std::{cmp::min, collections::VecDeque, fmt::Write, mem, sync::Arc};
 use tracing::error;
 

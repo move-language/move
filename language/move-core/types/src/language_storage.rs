@@ -124,6 +124,12 @@ impl Display for ModuleId {
     }
 }
 
+impl ModuleId {
+    pub fn short_str_lossless(&self) -> String {
+        format!("0x{}::{}", self.address.short_str_lossless(), self.name)
+    }
+}
+
 impl Display for StructTag {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(

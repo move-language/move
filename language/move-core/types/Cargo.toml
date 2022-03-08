@@ -31,5 +31,6 @@ serde_json = "1.0.64"
 
 [features]
 address20 = []
+address32 = []
 default = []
 fuzzing = ["proptest", "proptest-derive"]

@@ -288,7 +288,9 @@ pub fn handle_package_commands(
             package_name,
             module_or_script_name,
         } => {
+            // Make sure the package is built
             let package = config.compile_package(&rerooted_path, &mut Vec::new())?;
+            // Find the package we're interested in looking at, we default to the root package.
             let needle_package = match package_name {
                 Some(package_name) => {
                     if package_name == package.compiled_package_info.package_name.as_str() {
@@ -309,6 +311,9 @@ pub fn handle_package_commands(
                     needle_package.compiled_package_info.package_name
                 ),
                 Some(unit) => {
+                    // Once we find the compiled bytecode we're interested in, startup the bytecode
+                    // viewer, or run the disassembler depending on if we need to run interactively
+                    // or not.
                     if *interactive {
                         match unit {
                             CompiledUnitWithSource {
@@ -394,6 +399,7 @@ pub fn handle_package_commands(
                 *compute_coverage,
             )?;
 
+            // Return a non-zero exit code if any test failed
             if let UnitTestResult::Failure = result {
                 std::process::exit(1)
             }
@@ -419,7 +425,10 @@ pub fn run_move_unit_tests(
     build_config.test_mode = true;
     build_config.dev_mode = true;
 
+    // Build the resolution graph
     let resolution_graph = build_config.resolution_graph_for_package(pkg_path)?;
+    // Get the source files for all modules. We need this in order to report source-mapped error
+    // messages.
     let dep_file_map: HashMap<_, _> = resolution_graph
         .package_table
         .iter()
@@ -436,6 +445,12 @@ pub fn run_move_unit_tests(
         })
         .collect();
     let build_plan = BuildPlan::create(resolution_graph)?;
+    // Compile the package now. We need to treat the root package differently since we need to
+    // construct the test plan. This means that we can't rely on the cached version of the root
+    // package even if it is consistent. Additionally, we need to intercede in the compilation
+    // process being performed by the Move package system, to first grab the compilation env,
+    // construct the test plan from it, and then save it, before resuming the rest of the
+    // compilation and returning the results and control back to the Move package system.
     let pkg = build_plan.compile_with_driver(&mut std::io::stdout(), |compiler, is_root| {
         if !is_root {
             compiler.build_and_report()
@@ -466,6 +481,8 @@ pub fn run_move_unit_tests(
     let test_plan = test_plan.unwrap();
     let no_tests = test_plan.is_empty();
     let mut test_plan = TestPlan::new(test_plan, files, units);
+    // Insert all of the package's transitive dependencies into the set of modules that
+    // need to be published for unit testing.
     for pkg in pkg.0.transitive_dependencies() {
         for unit in &pkg.compiled_units {
             match &unit.unit {
@@ -491,10 +508,14 @@ pub fn run_move_unit_tests(
 
     cleanup_trace();
 
+    // If we need to compute test coverage set the VM tracking environment variable since we will
+    // need this trace to construct the coverage information.
     if compute_coverage {
         std::env::set_var("MOVE_VM_TRACE", &trace_path);
     }
 
+    // Run the tests. If any of the tests fail, then we don't produce a coverage report, so cleanup
+    // the trace files.
     if !unit_test_config
         .run_and_report_unit_tests(test_plan, Some(natives), std::io::stdout())
         .unwrap()
@@ -504,6 +525,7 @@ pub fn run_move_unit_tests(
         return Ok(UnitTestResult::Failure);
     }
 
+    // Compute the coverage map. This will be used by other commands after this.
     if compute_coverage && !no_tests {
         let coverage_map = CoverageMap::from_trace_file(trace_path);
         output_map_to_file(&coverage_map_path, &coverage_map).unwrap();

@@ -2545,7 +2545,6 @@ name = "move-to-yul"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
  "atty",
  "clap",
  "codespan",
@@ -2554,7 +2553,6 @@ dependencies = [
  "ethnum",
  "evm",
  "evm-exec-utils",
- "futures",
  "hex",
  "itertools 0.10.1",
  "log",
@@ -2582,8 +2580,6 @@ dependencies = [
  "simplelog",
  "structopt 0.3.25",
  "tempfile",
- "tera",
- "tokio",
  "toml",
  "walkdir",
  "workspace-hack",

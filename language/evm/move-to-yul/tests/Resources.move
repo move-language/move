@@ -5,7 +5,11 @@
 module 0x2::M {
     use Evm::Evm::sign;
 
-    struct S has key {
+    struct T has key {
+        s: S
+    }
+
+    struct S has key, store {
       a: u64,
       b: u8,
       c: S2
@@ -49,6 +53,19 @@ module 0x2::M {
         publish(&sign(@3), 510);
         increment_a(@3);
         assert!(borrow_global<S>(@3).a == 511, 100);
+    }
+
+    fun publish_t(sg: &signer, a: u64) {
+        let t = T { s: S{a, b: ((a / 2) as u8), c: S2{x: ((a + a) as u128)}}};
+        move_to<T>(sg, t)
+    }
+    #[evm_test]
+    fun test_publish_t() acquires T {
+        publish_t(&sign(@3), 22);
+        assert!(exists<T>(@3), 100);
+        assert!(borrow_global<T>(@3).s.a == 22, 101);
+        assert!(borrow_global<T>(@3).s.b == 11, 102);
+        assert!(borrow_global<T>(@3).s.c.x == 44, 103);
     }
 
 }

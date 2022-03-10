@@ -59,46 +59,46 @@ object "test_A2_M_test_increment_a" {
                 case 2 {
                     // label L1
                     // $t11 := 100
-                    /// @src 1:1257:1260
+                    /// @src 1:1307:1310
                     $t11 := 100
                     // abort($t11)
-                    /// @src 1:1218:1261
+                    /// @src 1:1268:1311
                     $Abort($t11)
                 }
                 case 3 {
                     // label L0
                     // return ()
-                    /// @src 1:1261:1262
+                    /// @src 1:1311:1312
                     $Free($locals, 32)
                     leave
                 }
                 case 4 {
                     // $t1 := 0x3
-                    /// @src 1:1174:1176
+                    /// @src 1:1224:1226
                     $t1 := 0x3
                     // $t0 := Evm::sign($t1)
-                    /// @src 1:1169:1177
+                    /// @src 1:1219:1227
                     mstore($locals, A2_Evm_sign($t1))
                     // $t2 := borrow_local($t0)
-                    /// @src 1:1168:1177
+                    /// @src 1:1218:1227
                     $t2 := $MakePtr(false, $locals)
                     // $t3 := 510
-                    /// @src 1:1179:1182
+                    /// @src 1:1229:1232
                     $t3 := 510
                     // M::publish($t2, $t3)
-                    /// @src 1:1160:1183
+                    /// @src 1:1210:1233
                     A2_M_publish($t2, $t3)
                     // $t4 := 0x3
-                    /// @src 1:1205:1207
+                    /// @src 1:1255:1257
                     $t4 := 0x3
                     // M::increment_a($t4)
-                    /// @src 1:1193:1208
+                    /// @src 1:1243:1258
                     A2_M_increment_a($t4)
                     // $t5 := 0x3
-                    /// @src 1:1243:1245
+                    /// @src 1:1293:1295
                     $t5 := 0x3
                     // $t6 := borrow_global<M::S>($t5)
-                    /// @src 1:1226:1239
+                    /// @src 1:1276:1289
                     {
                         let $base_offset := $MakeTypeStorageBase(0, 0x698265eb, $t5)
                         if iszero($AlignedStorageLoad($base_offset)) {
@@ -107,19 +107,19 @@ object "test_A2_M_test_increment_a" {
                         $t6 := $MakePtr(true, add($base_offset, 32))
                     }
                     // $t7 := borrow_field<M::S>.a($t6)
-                    /// @src 1:1226:1248
+                    /// @src 1:1276:1298
                     $t7 := $IndexPtr($t6, 32)
                     // $t8 := read_ref($t7)
-                    /// @src 1:1226:1248
+                    /// @src 1:1276:1298
                     $t8 := $LoadU64($t7)
                     // $t9 := 511
-                    /// @src 1:1252:1255
+                    /// @src 1:1302:1305
                     $t9 := 511
                     // $t10 := ==($t8, $t9)
-                    /// @src 1:1249:1251
+                    /// @src 1:1299:1301
                     $t10 := $Eq($t8, $t9)
                     // if ($t10) goto L0 else goto L1
-                    /// @src 1:1218:1261
+                    /// @src 1:1268:1311
                     switch $t10
                     case 0  { $block := 2 }
                     default { $block := 3 }
@@ -130,7 +130,7 @@ object "test_A2_M_test_increment_a" {
         function A2_M_increment_a(addr) {
             let r, $t2, $t3, $t4, $t5, $t6, $t7
             // $t2 := borrow_global<M::S>($t0)
-            /// @src 1:1040:1057
+            /// @src 1:1090:1107
             {
                 let $base_offset := $MakeTypeStorageBase(0, 0x698265eb, addr)
                 if iszero($AlignedStorageLoad($base_offset)) {
@@ -139,53 +139,53 @@ object "test_A2_M_test_increment_a" {
                 $t2 := $MakePtr(true, add($base_offset, 32))
             }
             // $t3 := borrow_field<M::S>.a($t2)
-            /// @src 1:1082:1085
+            /// @src 1:1132:1135
             $t3 := $IndexPtr($t2, 32)
             // $t4 := read_ref($t3)
-            /// @src 1:1082:1085
+            /// @src 1:1132:1135
             $t4 := $LoadU64($t3)
             // $t5 := 1
-            /// @src 1:1088:1089
+            /// @src 1:1138:1139
             $t5 := 1
             // $t6 := +($t4, $t5)
-            /// @src 1:1086:1087
+            /// @src 1:1136:1137
             $t6 := $AddU64($t4, $t5)
             // $t7 := borrow_field<M::S>.a($t2)
-            /// @src 1:1076:1079
+            /// @src 1:1126:1129
             $t7 := $IndexPtr($t2, 32)
             // write_ref($t7, $t6)
-            /// @src 1:1076:1089
+            /// @src 1:1126:1139
             $StoreU64($t7, $t6)
             // return ()
-            /// @src 1:1076:1089
+            /// @src 1:1126:1139
         }
 
         function A2_M_publish(sg, a) {
             let s, $t3, $t4, $t5, $t6, $t7, $t8, $t9
             // $t3 := 2
-            /// @src 1:319:320
+            /// @src 1:369:370
             $t3 := 2
             // $t4 := /($t1, $t3)
-            /// @src 1:317:318
+            /// @src 1:367:368
             $t4 := $Div(a, $t3)
             // $t5 := (u8)($t4)
-            /// @src 1:313:328
+            /// @src 1:363:378
             $t5 := $CastU8($t4)
             // $t6 := +($t1, $t1)
-            /// @src 1:343:344
+            /// @src 1:393:394
             $t6 := $AddU64(a, a)
             // $t7 := (u128)($t6)
-            /// @src 1:339:356
+            /// @src 1:389:406
             $t7 := $CastU128($t6)
             // $t8 := pack M::S2($t7)
-            /// @src 1:333:357
+            /// @src 1:383:407
             {
                 let $mem := $Malloc(16)
                 $MemoryStoreU128(add($mem, 0), $t7)
                 $t8 := $mem
             }
             // $t9 := pack M::S($t1, $t5, $t8)
-            /// @src 1:305:358
+            /// @src 1:355:408
             {
                 let $mem := $Malloc(41)
                 $MemoryStoreU64(add($mem, 32), a)
@@ -194,7 +194,7 @@ object "test_A2_M_test_increment_a" {
                 $t9 := $mem
             }
             // move_to<M::S>($t9, $t0)
-            /// @src 1:368:375
+            /// @src 1:418:425
             {
                 let $base_offset := $MakeTypeStorageBase(0, 0x698265eb, $LoadU256(sg))
                 if $AlignedStorageLoad($base_offset) {
@@ -205,18 +205,18 @@ object "test_A2_M_test_increment_a" {
                     let $dst := add($base_offset, 32)
                     let $src := $t9
                     {
-                        let $linked_dst := $NewLinkedStorageBase(0x5f8466cf)
-                        let $linked_src := mload(add($src, 0))
-                        $AlignedStorageStore(add($linked_dst, 0), mload(add($linked_src, 0)))
-                        $Free($linked_src, 16)
-                        $AlignedStorageStore(add($dst, 0), $linked_dst)
+                        let $linked_dst_1602512591 := $NewLinkedStorageBase(0x5f8466cf)
+                        let $linked_src_1602512591 := mload(add($src, 0))
+                        $AlignedStorageStore(add($linked_dst_1602512591, 0), mload(add($linked_src_1602512591, 0)))
+                        $Free($linked_src_1602512591, 16)
+                        $AlignedStorageStore(add($dst, 0), $linked_dst_1602512591)
                     }
                     $AlignedStorageStore(add($dst, 32), mload(add($src, 32)))
                     $Free($src, 41)
                 }
             }
             // return ()
-            /// @src 1:368:385
+            /// @src 1:418:435
         }
 
         function A2_Evm_sign(addr) -> signer {
@@ -455,19 +455,19 @@ object "test_A2_M_test_publish" {
                 case 2 {
                     // label L1
                     // $t6 := 100
-                    /// @src 1:505:508
+                    /// @src 1:555:558
                     $t6 := 100
                     // abort($t6)
-                    /// @src 1:482:509
+                    /// @src 1:532:559
                     $Abort($t6)
                 }
                 case 3 {
                     // label L0
                     // $t7 := 0x3
-                    /// @src 1:543:545
+                    /// @src 1:593:595
                     $t7 := 0x3
                     // $t8 := borrow_global<M::S>($t7)
-                    /// @src 1:526:539
+                    /// @src 1:576:589
                     {
                         let $base_offset := $MakeTypeStorageBase(0, 0x698265eb, $t7)
                         if iszero($AlignedStorageLoad($base_offset)) {
@@ -476,47 +476,47 @@ object "test_A2_M_test_publish" {
                         $t8 := $MakePtr(true, add($base_offset, 32))
                     }
                     // $t9 := borrow_field<M::S>.a($t8)
-                    /// @src 1:526:548
+                    /// @src 1:576:598
                     $t9 := $IndexPtr($t8, 32)
                     // $t10 := read_ref($t9)
-                    /// @src 1:526:548
+                    /// @src 1:576:598
                     $t10 := $LoadU64($t9)
                     // $t11 := 22
-                    /// @src 1:552:554
+                    /// @src 1:602:604
                     $t11 := 22
                     // $t12 := ==($t10, $t11)
-                    /// @src 1:549:551
+                    /// @src 1:599:601
                     $t12 := $Eq($t10, $t11)
                     // if ($t12) goto L2 else goto L3
-                    /// @src 1:518:560
+                    /// @src 1:568:610
                     switch $t12
                     case 0  { $block := 5 }
                     default { $block := 6 }
                 }
                 case 4 {
                     // $t1 := 0x3
-                    /// @src 1:465:467
+                    /// @src 1:515:517
                     $t1 := 0x3
                     // $t0 := Evm::sign($t1)
-                    /// @src 1:460:468
+                    /// @src 1:510:518
                     mstore($locals, A2_Evm_sign($t1))
                     // $t2 := borrow_local($t0)
-                    /// @src 1:459:468
+                    /// @src 1:509:518
                     $t2 := $MakePtr(false, $locals)
                     // $t3 := 22
-                    /// @src 1:470:472
+                    /// @src 1:520:522
                     $t3 := 22
                     // M::publish($t2, $t3)
-                    /// @src 1:451:473
+                    /// @src 1:501:523
                     A2_M_publish($t2, $t3)
                     // $t4 := 0x3
-                    /// @src 1:500:502
+                    /// @src 1:550:552
                     $t4 := 0x3
                     // $t5 := exists<M::S>($t4)
-                    /// @src 1:490:496
+                    /// @src 1:540:546
                     $t5 := $AlignedStorageLoad($MakeTypeStorageBase(0, 0x698265eb, $t4))
                     // if ($t5) goto L0 else goto L1
-                    /// @src 1:482:509
+                    /// @src 1:532:559
                     switch $t5
                     case 0  { $block := 2 }
                     default { $block := 3 }
@@ -524,19 +524,19 @@ object "test_A2_M_test_publish" {
                 case 5 {
                     // label L3
                     // $t13 := 101
-                    /// @src 1:556:559
+                    /// @src 1:606:609
                     $t13 := 101
                     // abort($t13)
-                    /// @src 1:518:560
+                    /// @src 1:568:610
                     $Abort($t13)
                 }
                 case 6 {
                     // label L2
                     // $t14 := 0x3
-                    /// @src 1:594:596
+                    /// @src 1:644:646
                     $t14 := 0x3
                     // $t15 := borrow_global<M::S>($t14)
-                    /// @src 1:577:590
+                    /// @src 1:627:640
                     {
                         let $base_offset := $MakeTypeStorageBase(0, 0x698265eb, $t14)
                         if iszero($AlignedStorageLoad($base_offset)) {
@@ -545,19 +545,19 @@ object "test_A2_M_test_publish" {
                         $t15 := $MakePtr(true, add($base_offset, 32))
                     }
                     // $t16 := borrow_field<M::S>.b($t15)
-                    /// @src 1:577:599
+                    /// @src 1:627:649
                     $t16 := $IndexPtr($t15, 40)
                     // $t17 := read_ref($t16)
-                    /// @src 1:577:599
+                    /// @src 1:627:649
                     $t17 := $LoadU8($t16)
                     // $t18 := 11
-                    /// @src 1:603:605
+                    /// @src 1:653:655
                     $t18 := 11
                     // $t19 := ==($t17, $t18)
-                    /// @src 1:600:602
+                    /// @src 1:650:652
                     $t19 := $Eq($t17, $t18)
                     // if ($t19) goto L4 else goto L5
-                    /// @src 1:569:611
+                    /// @src 1:619:661
                     switch $t19
                     case 0  { $block := 7 }
                     default { $block := 8 }
@@ -565,19 +565,19 @@ object "test_A2_M_test_publish" {
                 case 7 {
                     // label L5
                     // $t20 := 102
-                    /// @src 1:607:610
+                    /// @src 1:657:660
                     $t20 := 102
                     // abort($t20)
-                    /// @src 1:569:611
+                    /// @src 1:619:661
                     $Abort($t20)
                 }
                 case 8 {
                     // label L4
                     // $t21 := 0x3
-                    /// @src 1:645:647
+                    /// @src 1:695:697
                     $t21 := 0x3
                     // $t22 := borrow_global<M::S>($t21)
-                    /// @src 1:628:641
+                    /// @src 1:678:691
                     {
                         let $base_offset := $MakeTypeStorageBase(0, 0x698265eb, $t21)
                         if iszero($AlignedStorageLoad($base_offset)) {
@@ -586,24 +586,24 @@ object "test_A2_M_test_publish" {
                         $t22 := $MakePtr(true, add($base_offset, 32))
                     }
                     // $t23 := borrow_field<M::S>.c($t22)
-                    /// @src 1:628:650
+                    /// @src 1:678:700
                     {
                         $t23 := $MakePtr($IsStoragePtr($t22), $LoadU256($t22))
                     }
                     // $t24 := borrow_field<M::S2>.x($t23)
-                    /// @src 1:628:652
+                    /// @src 1:678:702
                     $t24 := $t23
                     // $t25 := read_ref($t24)
-                    /// @src 1:628:652
+                    /// @src 1:678:702
                     $t25 := $LoadU128($t24)
                     // $t26 := 44
-                    /// @src 1:656:658
+                    /// @src 1:706:708
                     $t26 := 44
                     // $t27 := ==($t25, $t26)
-                    /// @src 1:653:655
+                    /// @src 1:703:705
                     $t27 := $Eq($t25, $t26)
                     // if ($t27) goto L6 else goto L7
-                    /// @src 1:620:664
+                    /// @src 1:670:714
                     switch $t27
                     case 0  { $block := 9 }
                     default { $block := 10 }
@@ -611,16 +611,16 @@ object "test_A2_M_test_publish" {
                 case 9 {
                     // label L7
                     // $t28 := 103
-                    /// @src 1:660:663
+                    /// @src 1:710:713
                     $t28 := 103
                     // abort($t28)
-                    /// @src 1:620:664
+                    /// @src 1:670:714
                     $Abort($t28)
                 }
                 case 10 {
                     // label L6
                     // return ()
-                    /// @src 1:664:665
+                    /// @src 1:714:715
                     $Free($locals, 32)
                     leave
                 }
@@ -630,29 +630,29 @@ object "test_A2_M_test_publish" {
         function A2_M_publish(sg, a) {
             let s, $t3, $t4, $t5, $t6, $t7, $t8, $t9
             // $t3 := 2
-            /// @src 1:319:320
+            /// @src 1:369:370
             $t3 := 2
             // $t4 := /($t1, $t3)
-            /// @src 1:317:318
+            /// @src 1:367:368
             $t4 := $Div(a, $t3)
             // $t5 := (u8)($t4)
-            /// @src 1:313:328
+            /// @src 1:363:378
             $t5 := $CastU8($t4)
             // $t6 := +($t1, $t1)
-            /// @src 1:343:344
+            /// @src 1:393:394
             $t6 := $AddU64(a, a)
             // $t7 := (u128)($t6)
-            /// @src 1:339:356
+            /// @src 1:389:406
             $t7 := $CastU128($t6)
             // $t8 := pack M::S2($t7)
-            /// @src 1:333:357
+            /// @src 1:383:407
             {
                 let $mem := $Malloc(16)
                 $MemoryStoreU128(add($mem, 0), $t7)
                 $t8 := $mem
             }
             // $t9 := pack M::S($t1, $t5, $t8)
-            /// @src 1:305:358
+            /// @src 1:355:408
             {
                 let $mem := $Malloc(41)
                 $MemoryStoreU64(add($mem, 32), a)
@@ -661,7 +661,7 @@ object "test_A2_M_test_publish" {
                 $t9 := $mem
             }
             // move_to<M::S>($t9, $t0)
-            /// @src 1:368:375
+            /// @src 1:418:425
             {
                 let $base_offset := $MakeTypeStorageBase(0, 0x698265eb, $LoadU256(sg))
                 if $AlignedStorageLoad($base_offset) {
@@ -672,18 +672,18 @@ object "test_A2_M_test_publish" {
                     let $dst := add($base_offset, 32)
                     let $src := $t9
                     {
-                        let $linked_dst := $NewLinkedStorageBase(0x5f8466cf)
-                        let $linked_src := mload(add($src, 0))
-                        $AlignedStorageStore(add($linked_dst, 0), mload(add($linked_src, 0)))
-                        $Free($linked_src, 16)
-                        $AlignedStorageStore(add($dst, 0), $linked_dst)
+                        let $linked_dst_1602512591 := $NewLinkedStorageBase(0x5f8466cf)
+                        let $linked_src_1602512591 := mload(add($src, 0))
+                        $AlignedStorageStore(add($linked_dst_1602512591, 0), mload(add($linked_src_1602512591, 0)))
+                        $Free($linked_src_1602512591, 16)
+                        $AlignedStorageStore(add($dst, 0), $linked_dst_1602512591)
                     }
                     $AlignedStorageStore(add($dst, 32), mload(add($src, 32)))
                     $Free($src, 41)
                 }
             }
             // return ()
-            /// @src 1:368:385
+            /// @src 1:418:435
         }
 
         function A2_Evm_sign(addr) -> signer {
@@ -892,6 +892,494 @@ object "test_A2_M_test_publish" {
 }
 ===> Test result of M::test_publish: Succeed(Stopped) (used_gas=114426): []
 
+// test of M::test_publish_t
+/* =======================================
+ * Generated by Move-To-Yul compiler v0.0
+ * ======================================= */
+
+/// @use-src 1:"tests/Resources.move"
+///        , 2:"../stdlib/sources/Evm.move"
+
+
+object "test_A2_M_test_publish_t" {
+    code {
+        mstore(0, memoryguard(160))
+        A2_M_test_publish_t()
+        return (0, 0)
+        function A2_M_test_publish_t() {
+            let $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28, $t29, $t30, $t31
+            let $locals := $Malloc(32)
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // $t6 := 100
+                    /// @src 1:1591:1594
+                    $t6 := 100
+                    // abort($t6)
+                    /// @src 1:1568:1595
+                    $Abort($t6)
+                }
+                case 3 {
+                    // label L0
+                    // $t7 := 0x3
+                    /// @src 1:1630:1632
+                    $t7 := 0x3
+                    // $t8 := borrow_global<M::T>($t7)
+                    /// @src 1:1613:1626
+                    {
+                        let $base_offset := $MakeTypeStorageBase(0, 0x3948ca0a, $t7)
+                        if iszero($AlignedStorageLoad($base_offset)) {
+                          $AbortBuiltin()
+                        }
+                        $t8 := $MakePtr(true, add($base_offset, 32))
+                    }
+                    // $t9 := borrow_field<M::T>.s($t8)
+                    /// @src 1:1613:1635
+                    {
+                        $t9 := $MakePtr($IsStoragePtr($t8), $LoadU256($t8))
+                    }
+                    // $t10 := borrow_field<M::S>.a($t9)
+                    /// @src 1:1613:1637
+                    $t10 := $IndexPtr($t9, 32)
+                    // $t11 := read_ref($t10)
+                    /// @src 1:1613:1637
+                    $t11 := $LoadU64($t10)
+                    // $t12 := 22
+                    /// @src 1:1641:1643
+                    $t12 := 22
+                    // $t13 := ==($t11, $t12)
+                    /// @src 1:1638:1640
+                    $t13 := $Eq($t11, $t12)
+                    // if ($t13) goto L2 else goto L3
+                    /// @src 1:1605:1649
+                    switch $t13
+                    case 0  { $block := 5 }
+                    default { $block := 6 }
+                }
+                case 4 {
+                    // $t1 := 0x3
+                    /// @src 1:1550:1552
+                    $t1 := 0x3
+                    // $t0 := Evm::sign($t1)
+                    /// @src 1:1545:1553
+                    mstore($locals, A2_Evm_sign($t1))
+                    // $t2 := borrow_local($t0)
+                    /// @src 1:1544:1553
+                    $t2 := $MakePtr(false, $locals)
+                    // $t3 := 22
+                    /// @src 1:1555:1557
+                    $t3 := 22
+                    // M::publish_t($t2, $t3)
+                    /// @src 1:1534:1558
+                    A2_M_publish_t($t2, $t3)
+                    // $t4 := 0x3
+                    /// @src 1:1586:1588
+                    $t4 := 0x3
+                    // $t5 := exists<M::T>($t4)
+                    /// @src 1:1576:1582
+                    $t5 := $AlignedStorageLoad($MakeTypeStorageBase(0, 0x3948ca0a, $t4))
+                    // if ($t5) goto L0 else goto L1
+                    /// @src 1:1568:1595
+                    switch $t5
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
+                }
+                case 5 {
+                    // label L3
+                    // $t14 := 101
+                    /// @src 1:1645:1648
+                    $t14 := 101
+                    // abort($t14)
+                    /// @src 1:1605:1649
+                    $Abort($t14)
+                }
+                case 6 {
+                    // label L2
+                    // $t15 := 0x3
+                    /// @src 1:1684:1686
+                    $t15 := 0x3
+                    // $t16 := borrow_global<M::T>($t15)
+                    /// @src 1:1667:1680
+                    {
+                        let $base_offset := $MakeTypeStorageBase(0, 0x3948ca0a, $t15)
+                        if iszero($AlignedStorageLoad($base_offset)) {
+                          $AbortBuiltin()
+                        }
+                        $t16 := $MakePtr(true, add($base_offset, 32))
+                    }
+                    // $t17 := borrow_field<M::T>.s($t16)
+                    /// @src 1:1667:1689
+                    {
+                        $t17 := $MakePtr($IsStoragePtr($t16), $LoadU256($t16))
+                    }
+                    // $t18 := borrow_field<M::S>.b($t17)
+                    /// @src 1:1667:1691
+                    $t18 := $IndexPtr($t17, 40)
+                    // $t19 := read_ref($t18)
+                    /// @src 1:1667:1691
+                    $t19 := $LoadU8($t18)
+                    // $t20 := 11
+                    /// @src 1:1695:1697
+                    $t20 := 11
+                    // $t21 := ==($t19, $t20)
+                    /// @src 1:1692:1694
+                    $t21 := $Eq($t19, $t20)
+                    // if ($t21) goto L4 else goto L5
+                    /// @src 1:1659:1703
+                    switch $t21
+                    case 0  { $block := 7 }
+                    default { $block := 8 }
+                }
+                case 7 {
+                    // label L5
+                    // $t22 := 102
+                    /// @src 1:1699:1702
+                    $t22 := 102
+                    // abort($t22)
+                    /// @src 1:1659:1703
+                    $Abort($t22)
+                }
+                case 8 {
+                    // label L4
+                    // $t23 := 0x3
+                    /// @src 1:1738:1740
+                    $t23 := 0x3
+                    // $t24 := borrow_global<M::T>($t23)
+                    /// @src 1:1721:1734
+                    {
+                        let $base_offset := $MakeTypeStorageBase(0, 0x3948ca0a, $t23)
+                        if iszero($AlignedStorageLoad($base_offset)) {
+                          $AbortBuiltin()
+                        }
+                        $t24 := $MakePtr(true, add($base_offset, 32))
+                    }
+                    // $t25 := borrow_field<M::T>.s($t24)
+                    /// @src 1:1721:1743
+                    {
+                        $t25 := $MakePtr($IsStoragePtr($t24), $LoadU256($t24))
+                    }
+                    // $t26 := borrow_field<M::S>.c($t25)
+                    /// @src 1:1721:1745
+                    {
+                        $t26 := $MakePtr($IsStoragePtr($t25), $LoadU256($t25))
+                    }
+                    // $t27 := borrow_field<M::S2>.x($t26)
+                    /// @src 1:1721:1747
+                    $t27 := $t26
+                    // $t28 := read_ref($t27)
+                    /// @src 1:1721:1747
+                    $t28 := $LoadU128($t27)
+                    // $t29 := 44
+                    /// @src 1:1751:1753
+                    $t29 := 44
+                    // $t30 := ==($t28, $t29)
+                    /// @src 1:1748:1750
+                    $t30 := $Eq($t28, $t29)
+                    // if ($t30) goto L6 else goto L7
+                    /// @src 1:1713:1759
+                    switch $t30
+                    case 0  { $block := 9 }
+                    default { $block := 10 }
+                }
+                case 9 {
+                    // label L7
+                    // $t31 := 103
+                    /// @src 1:1755:1758
+                    $t31 := 103
+                    // abort($t31)
+                    /// @src 1:1713:1759
+                    $Abort($t31)
+                }
+                case 10 {
+                    // label L6
+                    // return ()
+                    /// @src 1:1759:1760
+                    $Free($locals, 32)
+                    leave
+                }
+            }
+        }
+
+        function A2_M_publish_t(sg, a) {
+            let t, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
+            // $t3 := 2
+            /// @src 1:1398:1399
+            $t3 := 2
+            // $t4 := /($t1, $t3)
+            /// @src 1:1396:1397
+            $t4 := $Div(a, $t3)
+            // $t5 := (u8)($t4)
+            /// @src 1:1392:1407
+            $t5 := $CastU8($t4)
+            // $t6 := +($t1, $t1)
+            /// @src 1:1422:1423
+            $t6 := $AddU64(a, a)
+            // $t7 := (u128)($t6)
+            /// @src 1:1418:1435
+            $t7 := $CastU128($t6)
+            // $t8 := pack M::S2($t7)
+            /// @src 1:1412:1436
+            {
+                let $mem := $Malloc(16)
+                $MemoryStoreU128(add($mem, 0), $t7)
+                $t8 := $mem
+            }
+            // $t9 := pack M::S($t1, $t5, $t8)
+            /// @src 1:1384:1437
+            {
+                let $mem := $Malloc(41)
+                $MemoryStoreU64(add($mem, 32), a)
+                $MemoryStoreU8(add($mem, 40), $t5)
+                $MemoryStoreU256(add($mem, 0), $t8)
+                $t9 := $mem
+            }
+            // $t10 := pack M::T($t9)
+            /// @src 1:1377:1438
+            {
+                let $mem := $Malloc(32)
+                $MemoryStoreU256(add($mem, 0), $t9)
+                $t10 := $mem
+            }
+            // move_to<M::T>($t10, $t0)
+            /// @src 1:1448:1455
+            {
+                let $base_offset := $MakeTypeStorageBase(0, 0x3948ca0a, $LoadU256(sg))
+                if $AlignedStorageLoad($base_offset) {
+                  $AbortBuiltin()
+                }
+                $AlignedStorageStore($base_offset, true)
+                {
+                    let $dst := add($base_offset, 32)
+                    let $src := $t10
+                    {
+                        let $linked_dst_1770153451 := $NewLinkedStorageBase(0x698265eb)
+                        let $linked_src_1770153451 := mload(add($src, 0))
+                        {
+                            let $linked_dst_1602512591 := $NewLinkedStorageBase(0x5f8466cf)
+                            let $linked_src_1602512591 := mload(add($linked_src_1770153451, 0))
+                            $AlignedStorageStore(add($linked_dst_1602512591, 0), mload(add($linked_src_1602512591, 0)))
+                            $Free($linked_src_1602512591, 16)
+                            $AlignedStorageStore(add($linked_dst_1770153451, 0), $linked_dst_1602512591)
+                        }
+                        $AlignedStorageStore(add($linked_dst_1770153451, 32), mload(add($linked_src_1770153451, 32)))
+                        $Free($linked_src_1770153451, 41)
+                        $AlignedStorageStore(add($dst, 0), $linked_dst_1770153451)
+                    }
+                    $Free($src, 32)
+                }
+            }
+            // return ()
+            /// @src 1:1448:1465
+        }
+
+        function A2_Evm_sign(addr) -> signer {
+          signer := addr
+        }
+        function $Abort(code) {
+            mstore(0, code)
+            revert(24, 8) // TODO: store code as a string?
+        }
+        function $AbortBuiltin() {
+            $Abort(sub(0, 1))
+        }
+        function $Malloc(size) -> offs {
+            offs := mload(0)
+            // pad to word size
+            mstore(0, add(offs, shl(5, shr(5, add(size, 31)))))
+        }
+        function $Free(offs, size) {
+        }
+        function $MakePtr(is_storage, offs) -> ptr {
+          ptr := or(is_storage, shl(1, offs))
+        }
+        function $IsStoragePtr(ptr) -> b {
+          b := and(ptr, 0x1)
+        }
+        function $OffsetPtr(ptr) -> offs {
+          offs := shr(1, ptr)
+        }
+        function $MaskForSize(size) -> mask {
+          mask := sub(shl(shl(3, size), 1), 1)
+        }
+        function $ExtractBytes(word, start, size) -> bytes {
+           switch size
+           case 1 {
+              // use the faster byte primitive
+              bytes := byte(start, word)
+           }
+           default {
+              // As we have big endian, we need to right shift the value from
+              // where the highest byte starts in the word (32 - start), minus
+              // the size.
+              let shift_bits := shl(3, sub(sub(32, start), size))
+              bytes := and(shr(shift_bits, word), $MaskForSize(size))
+           }
+        }
+        function $ToWordOffs(offs) -> word_offs, byte_offset {
+          word_offs := shr(5, offs)
+          byte_offset := and(offs, 0x1F)
+        }
+        function $OverflowBytes(byte_offset, size) -> overflow_bytes {
+          let available_bytes := sub(32, byte_offset)
+          switch gt(size, available_bytes)
+          case 0 {
+            overflow_bytes := 0
+          }
+          default {
+            overflow_bytes := sub(size, available_bytes)
+          }
+        }
+        function $MemoryLoadBytes(offs, size) -> val {
+          // Lower bit where the value in the higher bytes ends
+          let bit_end := shl(3, sub(32, size))
+          val := shr(bit_end, mload(offs))
+        }
+        function $MemoryStoreBytes(offs, size, val) {
+          let bit_end := shl(3, sub(32, size))
+          let mask := shl(bit_end, $MaskForSize(size))
+          mstore(offs, or(and(mload(offs), not(mask)), shl(bit_end, val)))
+        }
+        function $StorageLoadBytes(offs, size) -> val {
+          let word_offs, byte_offs := $ToWordOffs(offs)
+          let key := $StorageKey(0, word_offs)
+          val := $ExtractBytes(sload(key), byte_offs, size)
+          let overflow_bytes := $OverflowBytes(byte_offs, size)
+          if $LogicalNot(iszero(overflow_bytes)) {
+            key := $StorageKey(0, add(word_offs, 1))
+            let extra_bytes := $ExtractBytes(sload(key), 0, overflow_bytes)
+            val := or(shl(shl(3, overflow_bytes), val), extra_bytes)
+          }
+        }
+        function $StorageKey(group, word) -> key {
+          mstore(32, word)
+          mstore(64, group)
+          key := keccak256(32, 36)
+        }
+        function $MakeTypeStorageBase(category, type_hash, id) -> offs {
+          offs := or(shl(252, category), or(shl(220, type_hash), shl(60, id)))
+        }
+        function $NewLinkedStorageBase(type_hash) -> offs {
+          let key := $StorageKey(1, 1)
+          let handle := sload(key)
+          sstore(key, add(handle, 1))
+          offs := $MakeTypeStorageBase(1, type_hash, handle)
+        }
+        function $IndexPtr(ptr, offs) -> new_ptr {
+          new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
+        }
+        function $LoadU8(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU8(offs)
+          }
+          default {
+            val := $StorageLoadU8(offs)
+          }
+        }
+        function $MemoryLoadU8(offs) -> val {
+          val := $MemoryLoadBytes(offs, 1)
+        }
+        function $StorageLoadU8(offs) -> val {
+          val := $StorageLoadBytes(offs, 1)
+        }
+        function $MemoryStoreU8(offs, val) {
+          // Shortcut via special instruction
+          mstore8(offs, val)
+        }
+        function $LoadU64(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU64(offs)
+          }
+          default {
+            val := $StorageLoadU64(offs)
+          }
+        }
+        function $MemoryLoadU64(offs) -> val {
+          val := $MemoryLoadBytes(offs, 8)
+        }
+        function $StorageLoadU64(offs) -> val {
+          val := $StorageLoadBytes(offs, 8)
+        }
+        function $MemoryStoreU64(offs, val) {
+          $MemoryStoreBytes(offs, 8, val)
+        }
+        function $LoadU128(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU128(offs)
+          }
+          default {
+            val := $StorageLoadU128(offs)
+          }
+        }
+        function $MemoryLoadU128(offs) -> val {
+          val := $MemoryLoadBytes(offs, 16)
+        }
+        function $StorageLoadU128(offs) -> val {
+          val := $StorageLoadBytes(offs, 16)
+        }
+        function $MemoryStoreU128(offs, val) {
+          $MemoryStoreBytes(offs, 16, val)
+        }
+        function $LoadU256(ptr) -> val {
+          let offs := $OffsetPtr(ptr)
+          switch $IsStoragePtr(ptr)
+          case 0 {
+            val := $MemoryLoadU256(offs)
+          }
+          default {
+            val := $StorageLoadU256(offs)
+          }
+        }
+        function $MemoryLoadU256(offs) -> val {
+          val := $MemoryLoadBytes(offs, 32)
+        }
+        function $StorageLoadU256(offs) -> val {
+          val := $StorageLoadBytes(offs, 32)
+        }
+        function $MemoryStoreU256(offs, val) {
+          $MemoryStoreBytes(offs, 32, val)
+        }
+        function $AlignedStorageLoad(offs) -> val {
+          let word_offs := shr(5, offs)
+          val := sload($StorageKey(0, word_offs))
+        }
+        function $AlignedStorageStore(offs, val) {
+          let word_offs := shr(5, offs)
+          sstore($StorageKey(0, word_offs), val)
+        }
+        function $AddU64(x, y) -> r {
+            if lt(sub(0xffffffffffffffff, x), y) { $AbortBuiltin() }
+            r := add(x, y)
+        }
+        function $Div(x, y) -> r {
+            if eq(y, 0) { $AbortBuiltin() }
+            r := div(x, y)
+        }
+        function $Eq(x, y) -> r {
+            r := eq(x, y)
+        }
+        function $LogicalNot(x) -> r {
+            r := iszero(x)
+        }
+        function $CastU8(x) -> r {
+            if gt(x, 0xff) { $AbortBuiltin() }
+            r := x
+        }
+        function $CastU128(x) -> r {
+            if gt(x, 0xffffffffffffffffffffffffffffffff) { $AbortBuiltin() }
+            r := x
+        }
+    }
+}
+===> Test result of M::test_publish_t: Succeed(Stopped) (used_gas=138322): []
+
 // test of M::test_unpublish
 /* =======================================
  * Generated by Move-To-Yul compiler v0.0
@@ -915,66 +1403,66 @@ object "test_A2_M_test_unpublish" {
                 case 2 {
                     // label L1
                     // $t15 := 101
-                    /// @src 1:904:907
+                    /// @src 1:954:957
                     $t15 := 101
                     // abort($t15)
-                    /// @src 1:887:908
+                    /// @src 1:937:958
                     $Abort($t15)
                 }
                 case 3 {
                     // label L0
                     // $t16 := 16
-                    /// @src 1:930:932
+                    /// @src 1:980:982
                     $t16 := 16
                     // $t17 := ==($t10, $t16)
-                    /// @src 1:927:929
+                    /// @src 1:977:979
                     $t17 := $Eq($t10, $t16)
                     // if ($t17) goto L2 else goto L3
-                    /// @src 1:917:938
+                    /// @src 1:967:988
                     switch $t17
                     case 0  { $block := 5 }
                     default { $block := 6 }
                 }
                 case 4 {
                     // $t4 := 0x3
-                    /// @src 1:824:826
+                    /// @src 1:874:876
                     $t4 := 0x3
                     // $t0 := Evm::sign($t4)
-                    /// @src 1:819:827
+                    /// @src 1:869:877
                     mstore($locals, A2_Evm_sign($t4))
                     // $t5 := borrow_local($t0)
-                    /// @src 1:818:827
+                    /// @src 1:868:877
                     $t5 := $MakePtr(false, $locals)
                     // $t6 := 33
-                    /// @src 1:829:831
+                    /// @src 1:879:881
                     $t6 := 33
                     // M::publish($t5, $t6)
-                    /// @src 1:810:832
+                    /// @src 1:860:882
                     A2_M_publish($t5, $t6)
                     // $t7 := 0x3
-                    /// @src 1:875:877
+                    /// @src 1:925:927
                     $t7 := 0x3
                     // $t8 := M::unpublish($t7)
-                    /// @src 1:865:878
+                    /// @src 1:915:928
                     $t8 := A2_M_unpublish($t7)
                     // ($t9, $t10, $t11) := unpack M::S($t8)
-                    /// @src 1:845:862
+                    /// @src 1:895:912
                     $t9 := $MemoryLoadU64(add($t8, 32))
                     $t10 := $MemoryLoadU8(add($t8, 40))
                     $t11 := $MemoryLoadU256(add($t8, 0))
                     $Free($t8, 41)
                     // $t12 := unpack M::S2($t11)
-                    /// @src 1:856:861
+                    /// @src 1:906:911
                     $t12 := $MemoryLoadU128(add($t11, 0))
                     $Free($t11, 16)
                     // $t13 := 33
-                    /// @src 1:900:902
+                    /// @src 1:950:952
                     $t13 := 33
                     // $t14 := ==($t9, $t13)
-                    /// @src 1:897:899
+                    /// @src 1:947:949
                     $t14 := $Eq($t9, $t13)
                     // if ($t14) goto L0 else goto L1
-                    /// @src 1:887:908
+                    /// @src 1:937:958
                     switch $t14
                     case 0  { $block := 2 }
                     default { $block := 3 }
@@ -982,22 +1470,22 @@ object "test_A2_M_test_unpublish" {
                 case 5 {
                     // label L3
                     // $t18 := 102
-                    /// @src 1:934:937
+                    /// @src 1:984:987
                     $t18 := 102
                     // abort($t18)
-                    /// @src 1:917:938
+                    /// @src 1:967:988
                     $Abort($t18)
                 }
                 case 6 {
                     // label L2
                     // $t19 := 66
-                    /// @src 1:960:962
+                    /// @src 1:1010:1012
                     $t19 := 66
                     // $t20 := ==($t12, $t19)
-                    /// @src 1:957:959
+                    /// @src 1:1007:1009
                     $t20 := $Eq($t12, $t19)
                     // if ($t20) goto L4 else goto L5
-                    /// @src 1:947:968
+                    /// @src 1:997:1018
                     switch $t20
                     case 0  { $block := 7 }
                     default { $block := 8 }
@@ -1005,16 +1493,16 @@ object "test_A2_M_test_unpublish" {
                 case 7 {
                     // label L5
                     // $t21 := 103
-                    /// @src 1:964:967
+                    /// @src 1:1014:1017
                     $t21 := 103
                     // abort($t21)
-                    /// @src 1:947:968
+                    /// @src 1:997:1018
                     $Abort($t21)
                 }
                 case 8 {
                     // label L4
                     // return ()
-                    /// @src 1:968:969
+                    /// @src 1:1018:1019
                     $Free($locals, 32)
                     leave
                 }
@@ -1024,7 +1512,7 @@ object "test_A2_M_test_unpublish" {
         function A2_M_unpublish(a) -> $result {
             let $t1
             // $t1 := move_from<M::S>($t0)
-            /// @src 1:727:736
+            /// @src 1:777:786
             {
                 let $base_offset := $MakeTypeStorageBase(0, 0x698265eb, a)
                 if iszero($AlignedStorageLoad($base_offset)) {
@@ -1036,12 +1524,12 @@ object "test_A2_M_test_unpublish" {
                     let $dst
                     $dst := $Malloc(41)
                     {
-                        let $linked_src := $AlignedStorageLoad(add($src, 0))
-                        let $linked_dst
-                        $linked_dst := $Malloc(16)
-                        mstore(add($linked_dst, 0), $AlignedStorageLoad(add($linked_src, 0)))
-                        $AlignedStorageStore(add($linked_src, 0), 0)
-                        mstore(add($dst, 0), $linked_dst)
+                        let $linked_src_1602512591 := $AlignedStorageLoad(add($src, 0))
+                        let $linked_dst_1602512591
+                        $linked_dst_1602512591 := $Malloc(16)
+                        mstore(add($linked_dst_1602512591, 0), $AlignedStorageLoad(add($linked_src_1602512591, 0)))
+                        $AlignedStorageStore(add($linked_src_1602512591, 0), 0)
+                        mstore(add($dst, 0), $linked_dst_1602512591)
                         $AlignedStorageStore(add($src, 0), 0)
                     }
                     mstore(add($dst, 32), $AlignedStorageLoad(add($src, 32)))
@@ -1050,36 +1538,36 @@ object "test_A2_M_test_unpublish" {
                 }
             }
             // return $t1
-            /// @src 1:727:742
+            /// @src 1:777:792
             $result := $t1
         }
 
         function A2_M_publish(sg, a) {
             let s, $t3, $t4, $t5, $t6, $t7, $t8, $t9
             // $t3 := 2
-            /// @src 1:319:320
+            /// @src 1:369:370
             $t3 := 2
             // $t4 := /($t1, $t3)
-            /// @src 1:317:318
+            /// @src 1:367:368
             $t4 := $Div(a, $t3)
             // $t5 := (u8)($t4)
-            /// @src 1:313:328
+            /// @src 1:363:378
             $t5 := $CastU8($t4)
             // $t6 := +($t1, $t1)
-            /// @src 1:343:344
+            /// @src 1:393:394
             $t6 := $AddU64(a, a)
             // $t7 := (u128)($t6)
-            /// @src 1:339:356
+            /// @src 1:389:406
             $t7 := $CastU128($t6)
             // $t8 := pack M::S2($t7)
-            /// @src 1:333:357
+            /// @src 1:383:407
             {
                 let $mem := $Malloc(16)
                 $MemoryStoreU128(add($mem, 0), $t7)
                 $t8 := $mem
             }
             // $t9 := pack M::S($t1, $t5, $t8)
-            /// @src 1:305:358
+            /// @src 1:355:408
             {
                 let $mem := $Malloc(41)
                 $MemoryStoreU64(add($mem, 32), a)
@@ -1088,7 +1576,7 @@ object "test_A2_M_test_unpublish" {
                 $t9 := $mem
             }
             // move_to<M::S>($t9, $t0)
-            /// @src 1:368:375
+            /// @src 1:418:425
             {
                 let $base_offset := $MakeTypeStorageBase(0, 0x698265eb, $LoadU256(sg))
                 if $AlignedStorageLoad($base_offset) {
@@ -1099,18 +1587,18 @@ object "test_A2_M_test_unpublish" {
                     let $dst := add($base_offset, 32)
                     let $src := $t9
                     {
-                        let $linked_dst := $NewLinkedStorageBase(0x5f8466cf)
-                        let $linked_src := mload(add($src, 0))
-                        $AlignedStorageStore(add($linked_dst, 0), mload(add($linked_src, 0)))
-                        $Free($linked_src, 16)
-                        $AlignedStorageStore(add($dst, 0), $linked_dst)
+                        let $linked_dst_1602512591 := $NewLinkedStorageBase(0x5f8466cf)
+                        let $linked_src_1602512591 := mload(add($src, 0))
+                        $AlignedStorageStore(add($linked_dst_1602512591, 0), mload(add($linked_src_1602512591, 0)))
+                        $Free($linked_src_1602512591, 16)
+                        $AlignedStorageStore(add($dst, 0), $linked_dst_1602512591)
                     }
                     $AlignedStorageStore(add($dst, 32), mload(add($src, 32)))
                     $Free($src, 41)
                 }
             }
             // return ()
-            /// @src 1:368:385
+            /// @src 1:418:435
         }
 
         function A2_Evm_sign(addr) -> signer {

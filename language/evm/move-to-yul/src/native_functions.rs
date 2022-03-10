@@ -104,7 +104,157 @@ impl NativeFunctions {
   signer := addr
 }"
             );
-        })
+        });
+
+        self.define(ctx, evm, "blockhash", |_, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+(block_number) -> hash {
+  hash := blockhash(block_number)
+}"
+            );
+        });
+
+        self.define(ctx, evm, "block_basefee", |_, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+() -> result {
+  result := basefee()
+}"
+            );
+        });
+
+        self.define(ctx, evm, "block_chainid", |_, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+() -> result {
+  result := chainid()
+}"
+            );
+        });
+
+        self.define(ctx, evm, "block_coinbase", |_, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+() -> result {
+  result := coinbase()
+}"
+            );
+        });
+
+        self.define(ctx, evm, "block_difficulty", |_, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+() -> result {
+  result := difficulty()
+}"
+            );
+        });
+
+        self.define(ctx, evm, "block_gaslimit", |_, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+() -> result {
+  result := gaslimit()
+}"
+            );
+        });
+
+        self.define(ctx, evm, "block_number", |_, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+() -> result {
+  result := number()
+}"
+            );
+        });
+
+        self.define(ctx, evm, "block_timestamp", |_, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+() -> result {
+  result := timestamp()
+}"
+            );
+        });
+
+        self.define(ctx, evm, "gasleft", |_, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+() -> result {
+  result := gas()
+}"
+            );
+        });
+
+        self.define(ctx, evm, "msg_data", |_, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+() -> result {
+  result := calldataload(0)
+}"
+            );
+        });
+
+        self.define(ctx, evm, "msg_sender", |_, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+() -> result {
+  result := caller()
+}"
+            );
+        });
+
+        self.define(ctx, evm, "msg_sig", |_, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+() -> result {
+  result := timestamp()
+}"
+            );
+        });
+
+        self.define(ctx, evm, "msg_value", |_, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+() -> result {
+  result := callvalue()
+}"
+            );
+        });
+
+        self.define(ctx, evm, "tx_gasprice", |_, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+() -> result {
+  result := gasprice()
+}"
+            );
+        });
+
+        self.define(ctx, evm, "tx_origin", |_, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+() -> result {
+  result := origin()
+}"
+            );
+        });
     }
 
     /// Define vector functions for a specific instantiation.

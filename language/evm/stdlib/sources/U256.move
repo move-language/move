@@ -16,6 +16,11 @@ module Evm::U256 {
     native public fun shl(x: U256, y: u8): U256;
     native public fun shr(x: U256, y: u8): U256;
 
+
+    public fun u256_from_u128(lo: u128): U256 {
+        u256_from_words(0, lo)
+    }
+
     public fun zero(): U256 {
         u256_from_words(0, 0)
     }

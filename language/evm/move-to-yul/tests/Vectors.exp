@@ -94,9 +94,10 @@ object "A2_Vectors" {
                 }
             }
 
-            function A1_Vector_length$u64$(v_ptr) -> len {
-                let v := $LoadU256(v_ptr)
-                len := $LoadU64(v)
+            function A1_Vector_length$u64$(v_ref) -> len {
+                let v_offs := $LoadU256(v_ref)
+                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+                len := $LoadU64(v_ptr)
             }
             function A2_Vectors_one_elem_u64() -> $result {
                 let $t1, $t2, $t3
@@ -116,30 +117,30 @@ object "A2_Vectors" {
                 $Free($locals, 32)
             }
 
-            function A1_Vector_push_back$u64$(v_ptr, e) {
-                let size, byte_offs, capacity
-                let v := $LoadU256(v_ptr)
-                size := $LoadU64(v)
-                let e_ptr := $IndexPtr(v, add(32, mul(size, 8)))
+            function A1_Vector_push_back$u64$(v_ref, e) {
+                let v_offs := $LoadU256(v_ref)
+                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+                let size := $LoadU64(v_ptr)
+                let e_ptr := $IndexPtr(v_ptr, add(32, mul(size, 8)))
                 $StoreU64(e_ptr, e)
                 size := add(size, 1)
-                $StoreU64(v, size)
-                capacity := $LoadU64($IndexPtr(v, 8))
-                if and(iszero($IsStoragePtr(v)), eq(size, capacity)) {
-                    let new_v := $ResizeVector(v, capacity, 8)
-                    $StoreU256(v_ptr, new_v)
+                $StoreU64(v_ptr, size)
+                let capacity := $LoadU64($IndexPtr(v_ptr, 8))
+                if and(iszero($IsStoragePtr(v_ptr)), eq(size, capacity)) {
+                    let new_v_offs := $ResizeVector(v_offs, capacity, 8)
+                    $StoreU256(v_ref, new_v_offs)
                 }
             }
             function A1_Vector_empty$u64$() -> vector {
                 vector := $Malloc(48)
                 $MemoryStoreU64(add(vector, 8), 2)
-                vector := $MakePtr(false, vector)
             }
-            function A1_Vector_borrow$u64$(v_ptr, i) -> e_ptr {
-                let v := $LoadU256(v_ptr)
-                let size := $LoadU64(v)
+            function A1_Vector_borrow$u64$(v_ref, i) -> e_ptr {
+                let v_offs := $LoadU256(v_ref)
+                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+                let size := $LoadU64(v_ptr)
                 if $GtEq(i, size) { $AbortBuiltin() }
-                e_ptr := $IndexPtr(v, add(32, mul(i, 8)))
+                e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 8)))
             }
             function abi_encode_tuple_(headStart ) -> tail {
                 tail := add(headStart, 0)
@@ -329,13 +330,11 @@ object "A2_Vectors" {
                 mstore(add(dst, i), or(dst_word, src_word))
               }
             }
-            function $ResizeVector(v, capacity, type_size) -> new_v {
-                let v_offs := $OffsetPtr(v)
+            function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
                 let new_capacity := mul(capacity, 2)
                 let data_size := add(32, mul(capacity, type_size))
                 let new_data_size := add(32, mul(new_capacity, type_size))
-                let new_v_offs := $Malloc(new_data_size)
-                new_v := $MakePtr(false, new_v_offs)
+                new_v_offs := $Malloc(new_data_size)
                 $CopyMemory(v_offs, new_v_offs, data_size)
                 // update capacity at new location
                 $MemoryStoreU64(add(new_v_offs, 8), new_capacity)
@@ -416,11 +415,12 @@ object "test_A2_Vectors_test_borrow_fail" {
             }
         }
 
-        function A1_Vector_borrow$u64$(v_ptr, i) -> e_ptr {
-            let v := $LoadU256(v_ptr)
-            let size := $LoadU64(v)
+        function A1_Vector_borrow$u64$(v_ref, i) -> e_ptr {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
             if $GtEq(i, size) { $AbortBuiltin() }
-            e_ptr := $IndexPtr(v, add(32, mul(i, 8)))
+            e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 8)))
         }
         function A2_Vectors_empty_vector() -> $result {
             let $t0
@@ -433,7 +433,6 @@ object "test_A2_Vectors_test_borrow_fail" {
         function A1_Vector_empty$u64$() -> vector {
             vector := $Malloc(48)
             $MemoryStoreU64(add(vector, 8), 2)
-            vector := $MakePtr(false, vector)
         }
         function $Abort(code) {
             mstore(0, code)
@@ -564,7 +563,7 @@ object "test_A2_Vectors_test_borrow_fail" {
         }
     }
 }
-===> Test result of Vectors::test_borrow_fail: Revert(Reverted) (used_gas=461): [255, 255, 255, 255, 255, 255, 255, 255]
+===> Test result of Vectors::test_borrow_fail: Revert(Reverted) (used_gas=468): [255, 255, 255, 255, 255, 255, 255, 255]
 
 // test of Vectors::test_borrow_mut
 /* =======================================
@@ -911,34 +910,43 @@ object "test_A2_Vectors_test_borrow_mut" {
             }
         }
 
-        function A1_Vector_borrow$A2_Vectors_S$(v_ptr, i) -> e_ptr {
-            let v := $LoadU256(v_ptr)
-            let size := $LoadU64(v)
+        function A1_Vector_borrow$A2_Vectors_S$(v_ref, i) -> e_ptr {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
             if $GtEq(i, size) { $AbortBuiltin() }
-            e_ptr := $IndexPtr(v, add(32, mul(i, 32)))
+            e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 32)))
             let e := $LoadU256(e_ptr)
-            e_ptr := $MakePtr(false, e)
+            e_ptr := $MakePtr($IsStoragePtr(v_ref), e)
         }
-        function A1_Vector_borrow_mut$A2_Vectors_S$(v_ptr, i) -> e_ptr {
-            let v := $LoadU256(v_ptr)
-            let size := $LoadU64(v)
+        function A1_Vector_borrow_mut$A2_Vectors_S$(v_ref, i) -> e_ptr {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
             if $GtEq(i, size) { $AbortBuiltin() }
-            e_ptr := $IndexPtr(v, add(32, mul(i, 32)))
+            e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 32)))
             let e := $LoadU256(e_ptr)
-            e_ptr := $MakePtr(false, e)
+            e_ptr := $MakePtr($IsStoragePtr(v_ref), e)
         }
-        function A1_Vector_push_back$A2_Vectors_S$(v_ptr, e) {
-            let size, byte_offs, capacity
-            let v := $LoadU256(v_ptr)
-            size := $LoadU64(v)
-            let e_ptr := $IndexPtr(v, add(32, mul(size, 32)))
+        function A1_Vector_push_back$A2_Vectors_S$(v_ref, e) {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
+            let e_ptr := $IndexPtr(v_ptr, add(32, mul(size, 32)))
             $StoreU256(e_ptr, e)
+            if $IsStoragePtr(e_ptr) {
+                let e_offs := $OffsetPtr(e_ptr)
+                let $linked_dst_490229512 := $NewLinkedStorageBase(0x1d384f08)
+                $AlignedStorageStore(add($linked_dst_490229512, 0), mload(add(e, 0)))
+                $Free(e, 25)
+                $AlignedStorageStore(e_offs, $linked_dst_490229512)
+            }
             size := add(size, 1)
-            $StoreU64(v, size)
-            capacity := $LoadU64($IndexPtr(v, 8))
-            if and(iszero($IsStoragePtr(v)), eq(size, capacity)) {
-                let new_v := $ResizeVector(v, capacity, 32)
-                $StoreU256(v_ptr, new_v)
+            $StoreU64(v_ptr, size)
+            let capacity := $LoadU64($IndexPtr(v_ptr, 8))
+            if and(iszero($IsStoragePtr(v_ptr)), eq(size, capacity)) {
+                let new_v_offs := $ResizeVector(v_offs, capacity, 32)
+                $StoreU256(v_ref, new_v_offs)
             }
         }
         function A2_Vectors_one_elem_struct() -> $result {
@@ -974,7 +982,6 @@ object "test_A2_Vectors_test_borrow_mut" {
         function A1_Vector_empty$A2_Vectors_S$() -> vector {
             vector := $Malloc(96)
             $MemoryStoreU64(add(vector, 8), 2)
-            vector := $MakePtr(false, vector)
         }
         function $Abort(code) {
             mstore(0, code)
@@ -1081,6 +1088,15 @@ object "test_A2_Vectors_test_borrow_mut" {
           mstore(32, word)
           mstore(64, group)
           key := keccak256(32, 36)
+        }
+        function $MakeTypeStorageBase(category, type_hash, id) -> offs {
+          offs := or(shl(252, category), or(shl(220, type_hash), shl(60, id)))
+        }
+        function $NewLinkedStorageBase(type_hash) -> offs {
+          let key := $StorageKey(1, 1)
+          let handle := sload(key)
+          sstore(key, add(handle, 1))
+          offs := $MakeTypeStorageBase(1, type_hash, handle)
         }
         function $IndexPtr(ptr, offs) -> new_ptr {
           new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
@@ -1214,6 +1230,10 @@ object "test_A2_Vectors_test_borrow_mut" {
         function $StorageStoreU256(offs, val) {
           $StorageStoreBytes(offs, 32, val)
         }
+        function $AlignedStorageStore(offs, val) {
+          let word_offs := shr(5, offs)
+          sstore($StorageKey(0, word_offs), val)
+        }
         function $CopyMemory(src, dst, size) {
           let i := 0
           for { } lt(i, size) { i := add(i, 32) } {
@@ -1226,13 +1246,11 @@ object "test_A2_Vectors_test_borrow_mut" {
             mstore(add(dst, i), or(dst_word, src_word))
           }
         }
-        function $ResizeVector(v, capacity, type_size) -> new_v {
-            let v_offs := $OffsetPtr(v)
+        function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
             let new_capacity := mul(capacity, 2)
             let data_size := add(32, mul(capacity, type_size))
             let new_data_size := add(32, mul(new_capacity, type_size))
-            let new_v_offs := $Malloc(new_data_size)
-            new_v := $MakePtr(false, new_v_offs)
+            new_v_offs := $Malloc(new_data_size)
             $CopyMemory(v_offs, new_v_offs, data_size)
             // update capacity at new location
             $MemoryStoreU64(add(new_v_offs, 8), new_capacity)
@@ -1249,7 +1267,7 @@ object "test_A2_Vectors_test_borrow_mut" {
         }
     }
 }
-===> Test result of Vectors::test_borrow_mut: Succeed(Stopped) (used_gas=10429): []
+===> Test result of Vectors::test_borrow_mut: Succeed(Stopped) (used_gas=10895): []
 
 // test of Vectors::test_destroy_empty
 /* =======================================
@@ -1272,15 +1290,14 @@ object "test_A2_Vectors_test_destroy_empty" {
         }
 
         function A1_Vector_destroy_empty$address$(v) {
-            let size := $LoadU64(v)
+            let size := $MemoryLoadU64(v)
             if $LogicalNot(iszero(size)) { $AbortBuiltin() }
-            let capacity := $LoadU64($IndexPtr(v, 8))
+            let capacity := $MemoryLoadU64(add(v, 8))
             $Free(v, add(32, mul(capacity, 32)))
         }
         function A1_Vector_empty$address$() -> vector {
             vector := $Malloc(96)
             $MemoryStoreU64(add(vector, 8), 2)
-            vector := $MakePtr(false, vector)
         }
         function $Abort(code) {
             mstore(0, code)
@@ -1296,45 +1313,8 @@ object "test_A2_Vectors_test_destroy_empty" {
         }
         function $Free(offs, size) {
         }
-        function $MakePtr(is_storage, offs) -> ptr {
-          ptr := or(is_storage, shl(1, offs))
-        }
-        function $IsStoragePtr(ptr) -> b {
-          b := and(ptr, 0x1)
-        }
-        function $OffsetPtr(ptr) -> offs {
-          offs := shr(1, ptr)
-        }
         function $MaskForSize(size) -> mask {
           mask := sub(shl(shl(3, size), 1), 1)
-        }
-        function $ExtractBytes(word, start, size) -> bytes {
-           switch size
-           case 1 {
-              // use the faster byte primitive
-              bytes := byte(start, word)
-           }
-           default {
-              // As we have big endian, we need to right shift the value from
-              // where the highest byte starts in the word (32 - start), minus
-              // the size.
-              let shift_bits := shl(3, sub(sub(32, start), size))
-              bytes := and(shr(shift_bits, word), $MaskForSize(size))
-           }
-        }
-        function $ToWordOffs(offs) -> word_offs, byte_offset {
-          word_offs := shr(5, offs)
-          byte_offset := and(offs, 0x1F)
-        }
-        function $OverflowBytes(byte_offset, size) -> overflow_bytes {
-          let available_bytes := sub(32, byte_offset)
-          switch gt(size, available_bytes)
-          case 0 {
-            overflow_bytes := 0
-          }
-          default {
-            overflow_bytes := sub(size, available_bytes)
-          }
         }
         function $MemoryLoadBytes(offs, size) -> val {
           // Lower bit where the value in the higher bytes ends
@@ -1346,40 +1326,8 @@ object "test_A2_Vectors_test_destroy_empty" {
           let mask := shl(bit_end, $MaskForSize(size))
           mstore(offs, or(and(mload(offs), not(mask)), shl(bit_end, val)))
         }
-        function $StorageLoadBytes(offs, size) -> val {
-          let word_offs, byte_offs := $ToWordOffs(offs)
-          let key := $StorageKey(0, word_offs)
-          val := $ExtractBytes(sload(key), byte_offs, size)
-          let overflow_bytes := $OverflowBytes(byte_offs, size)
-          if $LogicalNot(iszero(overflow_bytes)) {
-            key := $StorageKey(0, add(word_offs, 1))
-            let extra_bytes := $ExtractBytes(sload(key), 0, overflow_bytes)
-            val := or(shl(shl(3, overflow_bytes), val), extra_bytes)
-          }
-        }
-        function $StorageKey(group, word) -> key {
-          mstore(32, word)
-          mstore(64, group)
-          key := keccak256(32, 36)
-        }
-        function $IndexPtr(ptr, offs) -> new_ptr {
-          new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
-        }
-        function $LoadU64(ptr) -> val {
-          let offs := $OffsetPtr(ptr)
-          switch $IsStoragePtr(ptr)
-          case 0 {
-            val := $MemoryLoadU64(offs)
-          }
-          default {
-            val := $StorageLoadU64(offs)
-          }
-        }
         function $MemoryLoadU64(offs) -> val {
           val := $MemoryLoadBytes(offs, 8)
-        }
-        function $StorageLoadU64(offs) -> val {
-          val := $StorageLoadBytes(offs, 8)
         }
         function $MemoryStoreU64(offs, val) {
           $MemoryStoreBytes(offs, 8, val)
@@ -1389,7 +1337,7 @@ object "test_A2_Vectors_test_destroy_empty" {
         }
     }
 }
-===> Test result of Vectors::test_destroy_empty: Succeed(Stopped) (used_gas=290): []
+===> Test result of Vectors::test_destroy_empty: Succeed(Stopped) (used_gas=100): []
 
 // test of Vectors::test_destroy_non_empty_fail
 /* =======================================
@@ -1412,9 +1360,9 @@ object "test_A2_Vectors_test_destroy_non_empty_fail" {
         }
 
         function A1_Vector_destroy_empty$A2_Vectors_S$(v) {
-            let size := $LoadU64(v)
+            let size := $MemoryLoadU64(v)
             if $LogicalNot(iszero(size)) { $AbortBuiltin() }
-            let capacity := $LoadU64($IndexPtr(v, 8))
+            let capacity := $MemoryLoadU64(add(v, 8))
             $Free(v, add(32, mul(capacity, 32)))
         }
         function A2_Vectors_one_elem_struct() -> $result {
@@ -1447,24 +1395,30 @@ object "test_A2_Vectors_test_destroy_non_empty_fail" {
             $Free($locals, 32)
         }
 
-        function A1_Vector_push_back$A2_Vectors_S$(v_ptr, e) {
-            let size, byte_offs, capacity
-            let v := $LoadU256(v_ptr)
-            size := $LoadU64(v)
-            let e_ptr := $IndexPtr(v, add(32, mul(size, 32)))
+        function A1_Vector_push_back$A2_Vectors_S$(v_ref, e) {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
+            let e_ptr := $IndexPtr(v_ptr, add(32, mul(size, 32)))
             $StoreU256(e_ptr, e)
+            if $IsStoragePtr(e_ptr) {
+                let e_offs := $OffsetPtr(e_ptr)
+                let $linked_dst_490229512 := $NewLinkedStorageBase(0x1d384f08)
+                $AlignedStorageStore(add($linked_dst_490229512, 0), mload(add(e, 0)))
+                $Free(e, 25)
+                $AlignedStorageStore(e_offs, $linked_dst_490229512)
+            }
             size := add(size, 1)
-            $StoreU64(v, size)
-            capacity := $LoadU64($IndexPtr(v, 8))
-            if and(iszero($IsStoragePtr(v)), eq(size, capacity)) {
-                let new_v := $ResizeVector(v, capacity, 32)
-                $StoreU256(v_ptr, new_v)
+            $StoreU64(v_ptr, size)
+            let capacity := $LoadU64($IndexPtr(v_ptr, 8))
+            if and(iszero($IsStoragePtr(v_ptr)), eq(size, capacity)) {
+                let new_v_offs := $ResizeVector(v_offs, capacity, 32)
+                $StoreU256(v_ref, new_v_offs)
             }
         }
         function A1_Vector_empty$A2_Vectors_S$() -> vector {
             vector := $Malloc(96)
             $MemoryStoreU64(add(vector, 8), 2)
-            vector := $MakePtr(false, vector)
         }
         function $Abort(code) {
             mstore(0, code)
@@ -1572,6 +1526,15 @@ object "test_A2_Vectors_test_destroy_non_empty_fail" {
           mstore(64, group)
           key := keccak256(32, 36)
         }
+        function $MakeTypeStorageBase(category, type_hash, id) -> offs {
+          offs := or(shl(252, category), or(shl(220, type_hash), shl(60, id)))
+        }
+        function $NewLinkedStorageBase(type_hash) -> offs {
+          let key := $StorageKey(1, 1)
+          let handle := sload(key)
+          sstore(key, add(handle, 1))
+          offs := $MakeTypeStorageBase(1, type_hash, handle)
+        }
         function $IndexPtr(ptr, offs) -> new_ptr {
           new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
         }
@@ -1646,6 +1609,10 @@ object "test_A2_Vectors_test_destroy_non_empty_fail" {
         function $StorageStoreU256(offs, val) {
           $StorageStoreBytes(offs, 32, val)
         }
+        function $AlignedStorageStore(offs, val) {
+          let word_offs := shr(5, offs)
+          sstore($StorageKey(0, word_offs), val)
+        }
         function $CopyMemory(src, dst, size) {
           let i := 0
           for { } lt(i, size) { i := add(i, 32) } {
@@ -1658,13 +1625,11 @@ object "test_A2_Vectors_test_destroy_non_empty_fail" {
             mstore(add(dst, i), or(dst_word, src_word))
           }
         }
-        function $ResizeVector(v, capacity, type_size) -> new_v {
-            let v_offs := $OffsetPtr(v)
+        function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
             let new_capacity := mul(capacity, 2)
             let data_size := add(32, mul(capacity, type_size))
             let new_data_size := add(32, mul(new_capacity, type_size))
-            let new_v_offs := $Malloc(new_data_size)
-            new_v := $MakePtr(false, new_v_offs)
+            new_v_offs := $Malloc(new_data_size)
             $CopyMemory(v_offs, new_v_offs, data_size)
             // update capacity at new location
             $MemoryStoreU64(add(new_v_offs, 8), new_capacity)
@@ -1675,7 +1640,7 @@ object "test_A2_Vectors_test_destroy_non_empty_fail" {
         }
     }
 }
-===> Test result of Vectors::test_destroy_non_empty_fail: Revert(Reverted) (used_gas=944): [255, 255, 255, 255, 255, 255, 255, 255]
+===> Test result of Vectors::test_destroy_non_empty_fail: Revert(Reverted) (used_gas=894): [255, 255, 255, 255, 255, 255, 255, 255]
 
 // test of Vectors::test_empty
 /* =======================================
@@ -1726,9 +1691,10 @@ object "test_A2_Vectors_test_empty" {
             }
         }
 
-        function A1_Vector_length$u64$(v_ptr) -> len {
-            let v := $LoadU256(v_ptr)
-            len := $LoadU64(v)
+        function A1_Vector_length$u64$(v_ref) -> len {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            len := $LoadU64(v_ptr)
         }
         function A2_Vectors_empty_vector() -> $result {
             let $t0
@@ -1741,7 +1707,6 @@ object "test_A2_Vectors_test_empty" {
         function A1_Vector_empty$u64$() -> vector {
             vector := $Malloc(48)
             $MemoryStoreU64(add(vector, 8), 2)
-            vector := $MakePtr(false, vector)
         }
         function $Abort(code) {
             mstore(0, code)
@@ -1863,7 +1828,7 @@ object "test_A2_Vectors_test_empty" {
         }
     }
 }
-===> Test result of Vectors::test_empty: Succeed(Stopped) (used_gas=504): []
+===> Test result of Vectors::test_empty: Succeed(Stopped) (used_gas=522): []
 
 // test of Vectors::test_nested_vectors
 /* =======================================
@@ -2190,63 +2155,79 @@ object "test_A2_Vectors_test_nested_vectors" {
             }
         }
 
-        function A1_Vector_borrow$u64$(v_ptr, i) -> e_ptr {
-            let v := $LoadU256(v_ptr)
-            let size := $LoadU64(v)
+        function A1_Vector_borrow$u64$(v_ref, i) -> e_ptr {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
             if $GtEq(i, size) { $AbortBuiltin() }
-            e_ptr := $IndexPtr(v, add(32, mul(i, 8)))
+            e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 8)))
         }
-        function A1_Vector_borrow$vec$u64$$(v_ptr, i) -> e_ptr {
-            let v := $LoadU256(v_ptr)
-            let size := $LoadU64(v)
+        function A1_Vector_borrow$vec$u64$$(v_ref, i) -> e_ptr {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
             if $GtEq(i, size) { $AbortBuiltin() }
-            e_ptr := $IndexPtr(v, add(32, mul(i, 32)))
+            e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 32)))
         }
-        function A1_Vector_length$u64$(v_ptr) -> len {
-            let v := $LoadU256(v_ptr)
-            len := $LoadU64(v)
+        function A1_Vector_length$u64$(v_ref) -> len {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            len := $LoadU64(v_ptr)
         }
-        function A1_Vector_length$vec$u64$$(v_ptr) -> len {
-            let v := $LoadU256(v_ptr)
-            len := $LoadU64(v)
+        function A1_Vector_length$vec$u64$$(v_ref) -> len {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            len := $LoadU64(v_ptr)
         }
-        function A1_Vector_push_back$vec$u64$$(v_ptr, e) {
-            let size, byte_offs, capacity
-            let v := $LoadU256(v_ptr)
-            size := $LoadU64(v)
-            let e_ptr := $IndexPtr(v, add(32, mul(size, 32)))
+        function A1_Vector_push_back$vec$u64$$(v_ref, e) {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
+            let e_ptr := $IndexPtr(v_ptr, add(32, mul(size, 32)))
             $StoreU256(e_ptr, e)
+            if $IsStoragePtr(e_ptr) {
+                let e_offs := $OffsetPtr(e_ptr)
+                let $linked_dst_814019441 := $NewLinkedStorageBase(0x3084f371)
+                let $size_814019441 := $MemoryLoadU64(e)
+                let $data_size_814019441 := mul($size_814019441, 8)
+                $AlignedStorageStore($linked_dst_814019441, mload(e))
+                let $data_src_814019441 := add(e, 32)
+                let $data_dst_814019441 := add($linked_dst_814019441, 32)
+                for { let $offs_814019441 := 0 } lt($offs_814019441, $data_size_814019441) { $offs_814019441 := add($offs_814019441, 32)} {
+                    $AlignedStorageStore(add($data_dst_814019441, $offs_814019441), mload(add($data_src_814019441, $offs_814019441)))
+                    $Free(e, add($data_size_814019441, 32))
+                }
+                $AlignedStorageStore(e_offs, $linked_dst_814019441)
+            }
             size := add(size, 1)
-            $StoreU64(v, size)
-            capacity := $LoadU64($IndexPtr(v, 8))
-            if and(iszero($IsStoragePtr(v)), eq(size, capacity)) {
-                let new_v := $ResizeVector(v, capacity, 32)
-                $StoreU256(v_ptr, new_v)
+            $StoreU64(v_ptr, size)
+            let capacity := $LoadU64($IndexPtr(v_ptr, 8))
+            if and(iszero($IsStoragePtr(v_ptr)), eq(size, capacity)) {
+                let new_v_offs := $ResizeVector(v_offs, capacity, 32)
+                $StoreU256(v_ref, new_v_offs)
             }
         }
         function A1_Vector_empty$vec$u64$$() -> vector {
             vector := $Malloc(96)
             $MemoryStoreU64(add(vector, 8), 2)
-            vector := $MakePtr(false, vector)
         }
-        function A1_Vector_push_back$u64$(v_ptr, e) {
-            let size, byte_offs, capacity
-            let v := $LoadU256(v_ptr)
-            size := $LoadU64(v)
-            let e_ptr := $IndexPtr(v, add(32, mul(size, 8)))
+        function A1_Vector_push_back$u64$(v_ref, e) {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
+            let e_ptr := $IndexPtr(v_ptr, add(32, mul(size, 8)))
             $StoreU64(e_ptr, e)
             size := add(size, 1)
-            $StoreU64(v, size)
-            capacity := $LoadU64($IndexPtr(v, 8))
-            if and(iszero($IsStoragePtr(v)), eq(size, capacity)) {
-                let new_v := $ResizeVector(v, capacity, 8)
-                $StoreU256(v_ptr, new_v)
+            $StoreU64(v_ptr, size)
+            let capacity := $LoadU64($IndexPtr(v_ptr, 8))
+            if and(iszero($IsStoragePtr(v_ptr)), eq(size, capacity)) {
+                let new_v_offs := $ResizeVector(v_offs, capacity, 8)
+                $StoreU256(v_ref, new_v_offs)
             }
         }
         function A1_Vector_empty$u64$() -> vector {
             vector := $Malloc(48)
             $MemoryStoreU64(add(vector, 8), 2)
-            vector := $MakePtr(false, vector)
         }
         function $Abort(code) {
             mstore(0, code)
@@ -2354,6 +2335,15 @@ object "test_A2_Vectors_test_nested_vectors" {
           mstore(64, group)
           key := keccak256(32, 36)
         }
+        function $MakeTypeStorageBase(category, type_hash, id) -> offs {
+          offs := or(shl(252, category), or(shl(220, type_hash), shl(60, id)))
+        }
+        function $NewLinkedStorageBase(type_hash) -> offs {
+          let key := $StorageKey(1, 1)
+          let handle := sload(key)
+          sstore(key, add(handle, 1))
+          offs := $MakeTypeStorageBase(1, type_hash, handle)
+        }
         function $IndexPtr(ptr, offs) -> new_ptr {
           new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
         }
@@ -2421,6 +2411,10 @@ object "test_A2_Vectors_test_nested_vectors" {
         function $StorageStoreU256(offs, val) {
           $StorageStoreBytes(offs, 32, val)
         }
+        function $AlignedStorageStore(offs, val) {
+          let word_offs := shr(5, offs)
+          sstore($StorageKey(0, word_offs), val)
+        }
         function $CopyMemory(src, dst, size) {
           let i := 0
           for { } lt(i, size) { i := add(i, 32) } {
@@ -2433,13 +2427,11 @@ object "test_A2_Vectors_test_nested_vectors" {
             mstore(add(dst, i), or(dst_word, src_word))
           }
         }
-        function $ResizeVector(v, capacity, type_size) -> new_v {
-            let v_offs := $OffsetPtr(v)
+        function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
             let new_capacity := mul(capacity, 2)
             let data_size := add(32, mul(capacity, type_size))
             let new_data_size := add(32, mul(new_capacity, type_size))
-            let new_v_offs := $Malloc(new_data_size)
-            new_v := $MakePtr(false, new_v_offs)
+            new_v_offs := $Malloc(new_data_size)
             $CopyMemory(v_offs, new_v_offs, data_size)
             // update capacity at new location
             $MemoryStoreU64(add(new_v_offs, 8), new_capacity)
@@ -2456,7 +2448,7 @@ object "test_A2_Vectors_test_nested_vectors" {
         }
     }
 }
-===> Test result of Vectors::test_nested_vectors: Succeed(Stopped) (used_gas=17019): []
+===> Test result of Vectors::test_nested_vectors: Succeed(Stopped) (used_gas=17526): []
 
 // test of Vectors::test_one_elem_struct
 /* =======================================
@@ -2591,17 +2583,19 @@ object "test_A2_Vectors_test_one_elem_struct" {
             }
         }
 
-        function A1_Vector_borrow$A2_Vectors_S$(v_ptr, i) -> e_ptr {
-            let v := $LoadU256(v_ptr)
-            let size := $LoadU64(v)
+        function A1_Vector_borrow$A2_Vectors_S$(v_ref, i) -> e_ptr {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
             if $GtEq(i, size) { $AbortBuiltin() }
-            e_ptr := $IndexPtr(v, add(32, mul(i, 32)))
+            e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 32)))
             let e := $LoadU256(e_ptr)
-            e_ptr := $MakePtr(false, e)
+            e_ptr := $MakePtr($IsStoragePtr(v_ref), e)
         }
-        function A1_Vector_length$A2_Vectors_S$(v_ptr) -> len {
-            let v := $LoadU256(v_ptr)
-            len := $LoadU64(v)
+        function A1_Vector_length$A2_Vectors_S$(v_ref) -> len {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            len := $LoadU64(v_ptr)
         }
         function A2_Vectors_one_elem_struct() -> $result {
             let $t1, $t2, $t3, $t4, $t5, $t6
@@ -2633,24 +2627,30 @@ object "test_A2_Vectors_test_one_elem_struct" {
             $Free($locals, 32)
         }
 
-        function A1_Vector_push_back$A2_Vectors_S$(v_ptr, e) {
-            let size, byte_offs, capacity
-            let v := $LoadU256(v_ptr)
-            size := $LoadU64(v)
-            let e_ptr := $IndexPtr(v, add(32, mul(size, 32)))
+        function A1_Vector_push_back$A2_Vectors_S$(v_ref, e) {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
+            let e_ptr := $IndexPtr(v_ptr, add(32, mul(size, 32)))
             $StoreU256(e_ptr, e)
+            if $IsStoragePtr(e_ptr) {
+                let e_offs := $OffsetPtr(e_ptr)
+                let $linked_dst_490229512 := $NewLinkedStorageBase(0x1d384f08)
+                $AlignedStorageStore(add($linked_dst_490229512, 0), mload(add(e, 0)))
+                $Free(e, 25)
+                $AlignedStorageStore(e_offs, $linked_dst_490229512)
+            }
             size := add(size, 1)
-            $StoreU64(v, size)
-            capacity := $LoadU64($IndexPtr(v, 8))
-            if and(iszero($IsStoragePtr(v)), eq(size, capacity)) {
-                let new_v := $ResizeVector(v, capacity, 32)
-                $StoreU256(v_ptr, new_v)
+            $StoreU64(v_ptr, size)
+            let capacity := $LoadU64($IndexPtr(v_ptr, 8))
+            if and(iszero($IsStoragePtr(v_ptr)), eq(size, capacity)) {
+                let new_v_offs := $ResizeVector(v_offs, capacity, 32)
+                $StoreU256(v_ref, new_v_offs)
             }
         }
         function A1_Vector_empty$A2_Vectors_S$() -> vector {
             vector := $Malloc(96)
             $MemoryStoreU64(add(vector, 8), 2)
-            vector := $MakePtr(false, vector)
         }
         function $Abort(code) {
             mstore(0, code)
@@ -2757,6 +2757,15 @@ object "test_A2_Vectors_test_one_elem_struct" {
           mstore(32, word)
           mstore(64, group)
           key := keccak256(32, 36)
+        }
+        function $MakeTypeStorageBase(category, type_hash, id) -> offs {
+          offs := or(shl(252, category), or(shl(220, type_hash), shl(60, id)))
+        }
+        function $NewLinkedStorageBase(type_hash) -> offs {
+          let key := $StorageKey(1, 1)
+          let handle := sload(key)
+          sstore(key, add(handle, 1))
+          offs := $MakeTypeStorageBase(1, type_hash, handle)
         }
         function $IndexPtr(ptr, offs) -> new_ptr {
           new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
@@ -2864,6 +2873,10 @@ object "test_A2_Vectors_test_one_elem_struct" {
         function $StorageStoreU256(offs, val) {
           $StorageStoreBytes(offs, 32, val)
         }
+        function $AlignedStorageStore(offs, val) {
+          let word_offs := shr(5, offs)
+          sstore($StorageKey(0, word_offs), val)
+        }
         function $CopyMemory(src, dst, size) {
           let i := 0
           for { } lt(i, size) { i := add(i, 32) } {
@@ -2876,13 +2889,11 @@ object "test_A2_Vectors_test_one_elem_struct" {
             mstore(add(dst, i), or(dst_word, src_word))
           }
         }
-        function $ResizeVector(v, capacity, type_size) -> new_v {
-            let v_offs := $OffsetPtr(v)
+        function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
             let new_capacity := mul(capacity, 2)
             let data_size := add(32, mul(capacity, type_size))
             let new_data_size := add(32, mul(new_capacity, type_size))
-            let new_v_offs := $Malloc(new_data_size)
-            new_v := $MakePtr(false, new_v_offs)
+            new_v_offs := $Malloc(new_data_size)
             $CopyMemory(v_offs, new_v_offs, data_size)
             // update capacity at new location
             $MemoryStoreU64(add(new_v_offs, 8), new_capacity)
@@ -2899,7 +2910,7 @@ object "test_A2_Vectors_test_one_elem_struct" {
         }
     }
 }
-===> Test result of Vectors::test_one_elem_struct: Succeed(Stopped) (used_gas=3157): []
+===> Test result of Vectors::test_one_elem_struct: Succeed(Stopped) (used_gas=3407): []
 
 // test of Vectors::test_one_elem_u64
 /* =======================================
@@ -2976,9 +2987,10 @@ object "test_A2_Vectors_test_one_elem_u64" {
             }
         }
 
-        function A1_Vector_length$u64$(v_ptr) -> len {
-            let v := $LoadU256(v_ptr)
-            len := $LoadU64(v)
+        function A1_Vector_length$u64$(v_ref) -> len {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            len := $LoadU64(v_ptr)
         }
         function A2_Vectors_one_elem_u64() -> $result {
             let $t1, $t2, $t3
@@ -2998,30 +3010,30 @@ object "test_A2_Vectors_test_one_elem_u64" {
             $Free($locals, 32)
         }
 
-        function A1_Vector_push_back$u64$(v_ptr, e) {
-            let size, byte_offs, capacity
-            let v := $LoadU256(v_ptr)
-            size := $LoadU64(v)
-            let e_ptr := $IndexPtr(v, add(32, mul(size, 8)))
+        function A1_Vector_push_back$u64$(v_ref, e) {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
+            let e_ptr := $IndexPtr(v_ptr, add(32, mul(size, 8)))
             $StoreU64(e_ptr, e)
             size := add(size, 1)
-            $StoreU64(v, size)
-            capacity := $LoadU64($IndexPtr(v, 8))
-            if and(iszero($IsStoragePtr(v)), eq(size, capacity)) {
-                let new_v := $ResizeVector(v, capacity, 8)
-                $StoreU256(v_ptr, new_v)
+            $StoreU64(v_ptr, size)
+            let capacity := $LoadU64($IndexPtr(v_ptr, 8))
+            if and(iszero($IsStoragePtr(v_ptr)), eq(size, capacity)) {
+                let new_v_offs := $ResizeVector(v_offs, capacity, 8)
+                $StoreU256(v_ref, new_v_offs)
             }
         }
         function A1_Vector_empty$u64$() -> vector {
             vector := $Malloc(48)
             $MemoryStoreU64(add(vector, 8), 2)
-            vector := $MakePtr(false, vector)
         }
-        function A1_Vector_borrow$u64$(v_ptr, i) -> e_ptr {
-            let v := $LoadU256(v_ptr)
-            let size := $LoadU64(v)
+        function A1_Vector_borrow$u64$(v_ref, i) -> e_ptr {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
             if $GtEq(i, size) { $AbortBuiltin() }
-            e_ptr := $IndexPtr(v, add(32, mul(i, 8)))
+            e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 8)))
         }
         function $Abort(code) {
             mstore(0, code)
@@ -3208,13 +3220,11 @@ object "test_A2_Vectors_test_one_elem_u64" {
             mstore(add(dst, i), or(dst_word, src_word))
           }
         }
-        function $ResizeVector(v, capacity, type_size) -> new_v {
-            let v_offs := $OffsetPtr(v)
+        function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
             let new_capacity := mul(capacity, 2)
             let data_size := add(32, mul(capacity, type_size))
             let new_data_size := add(32, mul(new_capacity, type_size))
-            let new_v_offs := $Malloc(new_data_size)
-            new_v := $MakePtr(false, new_v_offs)
+            new_v_offs := $Malloc(new_data_size)
             $CopyMemory(v_offs, new_v_offs, data_size)
             // update capacity at new location
             $MemoryStoreU64(add(new_v_offs, 8), new_capacity)
@@ -3231,7 +3241,7 @@ object "test_A2_Vectors_test_one_elem_u64" {
         }
     }
 }
-===> Test result of Vectors::test_one_elem_u64: Succeed(Stopped) (used_gas=1674): []
+===> Test result of Vectors::test_one_elem_u64: Succeed(Stopped) (used_gas=1749): []
 
 // test of Vectors::test_pop_back
 /* =======================================
@@ -3433,41 +3443,44 @@ object "test_A2_Vectors_test_pop_back" {
         }
 
         function A1_Vector_destroy_empty$u64$(v) {
-            let size := $LoadU64(v)
+            let size := $MemoryLoadU64(v)
             if $LogicalNot(iszero(size)) { $AbortBuiltin() }
-            let capacity := $LoadU64($IndexPtr(v, 8))
+            let capacity := $MemoryLoadU64(add(v, 8))
             $Free(v, add(32, mul(capacity, 8)))
         }
-        function A1_Vector_length$u64$(v_ptr) -> len {
-            let v := $LoadU256(v_ptr)
-            len := $LoadU64(v)
+        function A1_Vector_length$u64$(v_ref) -> len {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            len := $LoadU64(v_ptr)
         }
-        function A1_Vector_pop_back$u64$(v_ptr) -> e {
-            let v := $LoadU256(v_ptr)
-            let size := $LoadU64(v)
+        function A1_Vector_pop_back$u64$(v_ref) -> e {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
             if iszero(size) { $AbortBuiltin() }
-            let e_ptr := $IndexPtr(v, add(32, mul(sub(size, 1), 8)))
+            let e_ptr := $IndexPtr(v_ptr, add(32, mul(sub(size, 1), 8)))
             e := $LoadU64(e_ptr)
-            $StoreU64(v, sub(size, 1))
+            $StoreU64(v_ptr, sub(size, 1))
         }
-        function A1_Vector_borrow$u64$(v_ptr, i) -> e_ptr {
-            let v := $LoadU256(v_ptr)
-            let size := $LoadU64(v)
+        function A1_Vector_borrow$u64$(v_ref, i) -> e_ptr {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
             if $GtEq(i, size) { $AbortBuiltin() }
-            e_ptr := $IndexPtr(v, add(32, mul(i, 8)))
+            e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 8)))
         }
-        function A1_Vector_push_back$u64$(v_ptr, e) {
-            let size, byte_offs, capacity
-            let v := $LoadU256(v_ptr)
-            size := $LoadU64(v)
-            let e_ptr := $IndexPtr(v, add(32, mul(size, 8)))
+        function A1_Vector_push_back$u64$(v_ref, e) {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
+            let e_ptr := $IndexPtr(v_ptr, add(32, mul(size, 8)))
             $StoreU64(e_ptr, e)
             size := add(size, 1)
-            $StoreU64(v, size)
-            capacity := $LoadU64($IndexPtr(v, 8))
-            if and(iszero($IsStoragePtr(v)), eq(size, capacity)) {
-                let new_v := $ResizeVector(v, capacity, 8)
-                $StoreU256(v_ptr, new_v)
+            $StoreU64(v_ptr, size)
+            let capacity := $LoadU64($IndexPtr(v_ptr, 8))
+            if and(iszero($IsStoragePtr(v_ptr)), eq(size, capacity)) {
+                let new_v_offs := $ResizeVector(v_offs, capacity, 8)
+                $StoreU256(v_ref, new_v_offs)
             }
         }
         function A2_Vectors_one_elem_u64() -> $result {
@@ -3491,7 +3504,6 @@ object "test_A2_Vectors_test_pop_back" {
         function A1_Vector_empty$u64$() -> vector {
             vector := $Malloc(48)
             $MemoryStoreU64(add(vector, 8), 2)
-            vector := $MakePtr(false, vector)
         }
         function $Abort(code) {
             mstore(0, code)
@@ -3678,13 +3690,11 @@ object "test_A2_Vectors_test_pop_back" {
             mstore(add(dst, i), or(dst_word, src_word))
           }
         }
-        function $ResizeVector(v, capacity, type_size) -> new_v {
-            let v_offs := $OffsetPtr(v)
+        function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
             let new_capacity := mul(capacity, 2)
             let data_size := add(32, mul(capacity, type_size))
             let new_data_size := add(32, mul(new_capacity, type_size))
-            let new_v_offs := $Malloc(new_data_size)
-            new_v := $MakePtr(false, new_v_offs)
+            new_v_offs := $Malloc(new_data_size)
             $CopyMemory(v_offs, new_v_offs, data_size)
             // update capacity at new location
             $MemoryStoreU64(add(new_v_offs, 8), new_capacity)
@@ -3701,7 +3711,7 @@ object "test_A2_Vectors_test_pop_back" {
         }
     }
 }
-===> Test result of Vectors::test_pop_back: Succeed(Stopped) (used_gas=6123): []
+===> Test result of Vectors::test_pop_back: Succeed(Stopped) (used_gas=6212): []
 
 // test of Vectors::test_pop_back_empty_fail
 /* =======================================
@@ -3728,18 +3738,18 @@ object "test_A2_Vectors_test_pop_back_empty_fail" {
             $Free($locals, 32)
         }
 
-        function A1_Vector_pop_back$address$(v_ptr) -> e {
-            let v := $LoadU256(v_ptr)
-            let size := $LoadU64(v)
+        function A1_Vector_pop_back$address$(v_ref) -> e {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
             if iszero(size) { $AbortBuiltin() }
-            let e_ptr := $IndexPtr(v, add(32, mul(sub(size, 1), 32)))
+            let e_ptr := $IndexPtr(v_ptr, add(32, mul(sub(size, 1), 32)))
             e := $LoadU256(e_ptr)
-            $StoreU64(v, sub(size, 1))
+            $StoreU64(v_ptr, sub(size, 1))
         }
         function A1_Vector_empty$address$() -> vector {
             vector := $Malloc(96)
             $MemoryStoreU64(add(vector, 8), 2)
-            vector := $MakePtr(false, vector)
         }
         function $Abort(code) {
             mstore(0, code)
@@ -3903,7 +3913,7 @@ object "test_A2_Vectors_test_pop_back_empty_fail" {
         }
     }
 }
-===> Test result of Vectors::test_pop_back_empty_fail: Revert(Reverted) (used_gas=283): [255, 255, 255, 255, 255, 255, 255, 255]
+===> Test result of Vectors::test_pop_back_empty_fail: Revert(Reverted) (used_gas=324): [255, 255, 255, 255, 255, 255, 255, 255]
 
 // test of Vectors::test_push_back
 /* =======================================
@@ -4298,28 +4308,30 @@ object "test_A2_Vectors_test_push_back" {
             }
         }
 
-        function A1_Vector_borrow$u64$(v_ptr, i) -> e_ptr {
-            let v := $LoadU256(v_ptr)
-            let size := $LoadU64(v)
+        function A1_Vector_borrow$u64$(v_ref, i) -> e_ptr {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
             if $GtEq(i, size) { $AbortBuiltin() }
-            e_ptr := $IndexPtr(v, add(32, mul(i, 8)))
+            e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 8)))
         }
-        function A1_Vector_length$u64$(v_ptr) -> len {
-            let v := $LoadU256(v_ptr)
-            len := $LoadU64(v)
+        function A1_Vector_length$u64$(v_ref) -> len {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            len := $LoadU64(v_ptr)
         }
-        function A1_Vector_push_back$u64$(v_ptr, e) {
-            let size, byte_offs, capacity
-            let v := $LoadU256(v_ptr)
-            size := $LoadU64(v)
-            let e_ptr := $IndexPtr(v, add(32, mul(size, 8)))
+        function A1_Vector_push_back$u64$(v_ref, e) {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
+            let e_ptr := $IndexPtr(v_ptr, add(32, mul(size, 8)))
             $StoreU64(e_ptr, e)
             size := add(size, 1)
-            $StoreU64(v, size)
-            capacity := $LoadU64($IndexPtr(v, 8))
-            if and(iszero($IsStoragePtr(v)), eq(size, capacity)) {
-                let new_v := $ResizeVector(v, capacity, 8)
-                $StoreU256(v_ptr, new_v)
+            $StoreU64(v_ptr, size)
+            let capacity := $LoadU64($IndexPtr(v_ptr, 8))
+            if and(iszero($IsStoragePtr(v_ptr)), eq(size, capacity)) {
+                let new_v_offs := $ResizeVector(v_offs, capacity, 8)
+                $StoreU256(v_ref, new_v_offs)
             }
         }
         function A2_Vectors_one_elem_u64() -> $result {
@@ -4343,7 +4355,6 @@ object "test_A2_Vectors_test_push_back" {
         function A1_Vector_empty$u64$() -> vector {
             vector := $Malloc(48)
             $MemoryStoreU64(add(vector, 8), 2)
-            vector := $MakePtr(false, vector)
         }
         function $Abort(code) {
             mstore(0, code)
@@ -4530,13 +4541,11 @@ object "test_A2_Vectors_test_push_back" {
             mstore(add(dst, i), or(dst_word, src_word))
           }
         }
-        function $ResizeVector(v, capacity, type_size) -> new_v {
-            let v_offs := $OffsetPtr(v)
+        function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
             let new_capacity := mul(capacity, 2)
             let data_size := add(32, mul(capacity, type_size))
             let new_data_size := add(32, mul(new_capacity, type_size))
-            let new_v_offs := $Malloc(new_data_size)
-            new_v := $MakePtr(false, new_v_offs)
+            new_v_offs := $Malloc(new_data_size)
             $CopyMemory(v_offs, new_v_offs, data_size)
             // update capacity at new location
             $MemoryStoreU64(add(new_v_offs, 8), new_capacity)
@@ -4553,7 +4562,7 @@ object "test_A2_Vectors_test_push_back" {
         }
     }
 }
-===> Test result of Vectors::test_push_back: Succeed(Stopped) (used_gas=13447): []
+===> Test result of Vectors::test_push_back: Succeed(Stopped) (used_gas=13960): []
 
 // test of Vectors::test_swap
 /* =======================================
@@ -4758,35 +4767,37 @@ object "test_A2_Vectors_test_swap" {
             }
         }
 
-        function A1_Vector_borrow$u64$(v_ptr, i) -> e_ptr {
-            let v := $LoadU256(v_ptr)
-            let size := $LoadU64(v)
+        function A1_Vector_borrow$u64$(v_ref, i) -> e_ptr {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
             if $GtEq(i, size) { $AbortBuiltin() }
-            e_ptr := $IndexPtr(v, add(32, mul(i, 8)))
+            e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 8)))
         }
-        function A1_Vector_swap$u64$(v_ptr, i, j) {
-            let v := $LoadU256(v_ptr)
-            let size := $LoadU64(v)
+        function A1_Vector_swap$u64$(v_ref, i, j) {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
             if or($GtEq(i, size), $GtEq(j, size)) { $AbortBuiltin() }
-            let i_ptr := $IndexPtr(v, add(32, mul(i, 8)))
-            let j_ptr := $IndexPtr(v, add(32, mul(j, 8)))
+            let i_ptr := $IndexPtr(v_ptr, add(32, mul(i, 8)))
+            let j_ptr := $IndexPtr(v_ptr, add(32, mul(j, 8)))
             let i_val := $LoadU64(i_ptr)
             let j_val := $LoadU64(j_ptr)
             $StoreU64(i_ptr, j_val)
             $StoreU64(j_ptr, i_val)
         }
-        function A1_Vector_push_back$u64$(v_ptr, e) {
-            let size, byte_offs, capacity
-            let v := $LoadU256(v_ptr)
-            size := $LoadU64(v)
-            let e_ptr := $IndexPtr(v, add(32, mul(size, 8)))
+        function A1_Vector_push_back$u64$(v_ref, e) {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
+            let e_ptr := $IndexPtr(v_ptr, add(32, mul(size, 8)))
             $StoreU64(e_ptr, e)
             size := add(size, 1)
-            $StoreU64(v, size)
-            capacity := $LoadU64($IndexPtr(v, 8))
-            if and(iszero($IsStoragePtr(v)), eq(size, capacity)) {
-                let new_v := $ResizeVector(v, capacity, 8)
-                $StoreU256(v_ptr, new_v)
+            $StoreU64(v_ptr, size)
+            let capacity := $LoadU64($IndexPtr(v_ptr, 8))
+            if and(iszero($IsStoragePtr(v_ptr)), eq(size, capacity)) {
+                let new_v_offs := $ResizeVector(v_offs, capacity, 8)
+                $StoreU256(v_ref, new_v_offs)
             }
         }
         function A2_Vectors_one_elem_u64() -> $result {
@@ -4810,7 +4821,6 @@ object "test_A2_Vectors_test_swap" {
         function A1_Vector_empty$u64$() -> vector {
             vector := $Malloc(48)
             $MemoryStoreU64(add(vector, 8), 2)
-            vector := $MakePtr(false, vector)
         }
         function $Abort(code) {
             mstore(0, code)
@@ -4997,13 +5007,11 @@ object "test_A2_Vectors_test_swap" {
             mstore(add(dst, i), or(dst_word, src_word))
           }
         }
-        function $ResizeVector(v, capacity, type_size) -> new_v {
-            let v_offs := $OffsetPtr(v)
+        function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
             let new_capacity := mul(capacity, 2)
             let data_size := add(32, mul(capacity, type_size))
             let new_data_size := add(32, mul(new_capacity, type_size))
-            let new_v_offs := $Malloc(new_data_size)
-            new_v := $MakePtr(false, new_v_offs)
+            new_v_offs := $Malloc(new_data_size)
             $CopyMemory(v_offs, new_v_offs, data_size)
             // update capacity at new location
             $MemoryStoreU64(add(new_v_offs, 8), new_capacity)
@@ -5020,7 +5028,7 @@ object "test_A2_Vectors_test_swap" {
         }
     }
 }
-===> Test result of Vectors::test_swap: Succeed(Stopped) (used_gas=6754): []
+===> Test result of Vectors::test_swap: Succeed(Stopped) (used_gas=7033): []
 
 // test of Vectors::test_swap_fail
 /* =======================================
@@ -5056,29 +5064,30 @@ object "test_A2_Vectors_test_swap_fail" {
             $Free($locals, 32)
         }
 
-        function A1_Vector_swap$u64$(v_ptr, i, j) {
-            let v := $LoadU256(v_ptr)
-            let size := $LoadU64(v)
+        function A1_Vector_swap$u64$(v_ref, i, j) {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
             if or($GtEq(i, size), $GtEq(j, size)) { $AbortBuiltin() }
-            let i_ptr := $IndexPtr(v, add(32, mul(i, 8)))
-            let j_ptr := $IndexPtr(v, add(32, mul(j, 8)))
+            let i_ptr := $IndexPtr(v_ptr, add(32, mul(i, 8)))
+            let j_ptr := $IndexPtr(v_ptr, add(32, mul(j, 8)))
             let i_val := $LoadU64(i_ptr)
             let j_val := $LoadU64(j_ptr)
             $StoreU64(i_ptr, j_val)
             $StoreU64(j_ptr, i_val)
         }
-        function A1_Vector_push_back$u64$(v_ptr, e) {
-            let size, byte_offs, capacity
-            let v := $LoadU256(v_ptr)
-            size := $LoadU64(v)
-            let e_ptr := $IndexPtr(v, add(32, mul(size, 8)))
+        function A1_Vector_push_back$u64$(v_ref, e) {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
+            let e_ptr := $IndexPtr(v_ptr, add(32, mul(size, 8)))
             $StoreU64(e_ptr, e)
             size := add(size, 1)
-            $StoreU64(v, size)
-            capacity := $LoadU64($IndexPtr(v, 8))
-            if and(iszero($IsStoragePtr(v)), eq(size, capacity)) {
-                let new_v := $ResizeVector(v, capacity, 8)
-                $StoreU256(v_ptr, new_v)
+            $StoreU64(v_ptr, size)
+            let capacity := $LoadU64($IndexPtr(v_ptr, 8))
+            if and(iszero($IsStoragePtr(v_ptr)), eq(size, capacity)) {
+                let new_v_offs := $ResizeVector(v_offs, capacity, 8)
+                $StoreU256(v_ref, new_v_offs)
             }
         }
         function A2_Vectors_one_elem_u64() -> $result {
@@ -5102,7 +5111,6 @@ object "test_A2_Vectors_test_swap_fail" {
         function A1_Vector_empty$u64$() -> vector {
             vector := $Malloc(48)
             $MemoryStoreU64(add(vector, 8), 2)
-            vector := $MakePtr(false, vector)
         }
         function $Abort(code) {
             mstore(0, code)
@@ -5289,13 +5297,11 @@ object "test_A2_Vectors_test_swap_fail" {
             mstore(add(dst, i), or(dst_word, src_word))
           }
         }
-        function $ResizeVector(v, capacity, type_size) -> new_v {
-            let v_offs := $OffsetPtr(v)
+        function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
             let new_capacity := mul(capacity, 2)
             let data_size := add(32, mul(capacity, type_size))
             let new_data_size := add(32, mul(new_capacity, type_size))
-            let new_v_offs := $Malloc(new_data_size)
-            new_v := $MakePtr(false, new_v_offs)
+            new_v_offs := $Malloc(new_data_size)
             $CopyMemory(v_offs, new_v_offs, data_size)
             // update capacity at new location
             $MemoryStoreU64(add(new_v_offs, 8), new_capacity)
@@ -5309,7 +5315,7 @@ object "test_A2_Vectors_test_swap_fail" {
         }
     }
 }
-===> Test result of Vectors::test_swap_fail: Revert(Reverted) (used_gas=2150): [255, 255, 255, 255, 255, 255, 255, 255]
+===> Test result of Vectors::test_swap_fail: Revert(Reverted) (used_gas=2235): [255, 255, 255, 255, 255, 255, 255, 255]
 
 // test of Vectors::test_vectors_in_structs
 /* =======================================
@@ -5587,15 +5593,17 @@ object "test_A2_Vectors_test_vectors_in_structs" {
             }
         }
 
-        function A1_Vector_borrow$u64$(v_ptr, i) -> e_ptr {
-            let v := $LoadU256(v_ptr)
-            let size := $LoadU64(v)
+        function A1_Vector_borrow$u64$(v_ref, i) -> e_ptr {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
             if $GtEq(i, size) { $AbortBuiltin() }
-            e_ptr := $IndexPtr(v, add(32, mul(i, 8)))
+            e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 8)))
         }
-        function A1_Vector_length$u64$(v_ptr) -> len {
-            let v := $LoadU256(v_ptr)
-            len := $LoadU64(v)
+        function A1_Vector_length$u64$(v_ref) -> len {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            len := $LoadU64(v_ptr)
         }
         function A2_Vectors_one_elem_u64() -> $result {
             let $t1, $t2, $t3
@@ -5615,30 +5623,30 @@ object "test_A2_Vectors_test_vectors_in_structs" {
             $Free($locals, 32)
         }
 
-        function A1_Vector_push_back$u64$(v_ptr, e) {
-            let size, byte_offs, capacity
-            let v := $LoadU256(v_ptr)
-            size := $LoadU64(v)
-            let e_ptr := $IndexPtr(v, add(32, mul(size, 8)))
+        function A1_Vector_push_back$u64$(v_ref, e) {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
+            let e_ptr := $IndexPtr(v_ptr, add(32, mul(size, 8)))
             $StoreU64(e_ptr, e)
             size := add(size, 1)
-            $StoreU64(v, size)
-            capacity := $LoadU64($IndexPtr(v, 8))
-            if and(iszero($IsStoragePtr(v)), eq(size, capacity)) {
-                let new_v := $ResizeVector(v, capacity, 8)
-                $StoreU256(v_ptr, new_v)
+            $StoreU64(v_ptr, size)
+            let capacity := $LoadU64($IndexPtr(v_ptr, 8))
+            if and(iszero($IsStoragePtr(v_ptr)), eq(size, capacity)) {
+                let new_v_offs := $ResizeVector(v_offs, capacity, 8)
+                $StoreU256(v_ref, new_v_offs)
             }
         }
         function A1_Vector_empty$u64$() -> vector {
             vector := $Malloc(48)
             $MemoryStoreU64(add(vector, 8), 2)
-            vector := $MakePtr(false, vector)
         }
-        function A1_Vector_borrow_mut$u64$(v_ptr, i) -> e_ptr {
-            let v := $LoadU256(v_ptr)
-            let size := $LoadU64(v)
+        function A1_Vector_borrow_mut$u64$(v_ref, i) -> e_ptr {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
             if $GtEq(i, size) { $AbortBuiltin() }
-            e_ptr := $IndexPtr(v, add(32, mul(i, 8)))
+            e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 8)))
         }
         function $Abort(code) {
             mstore(0, code)
@@ -5832,13 +5840,11 @@ object "test_A2_Vectors_test_vectors_in_structs" {
             mstore(add(dst, i), or(dst_word, src_word))
           }
         }
-        function $ResizeVector(v, capacity, type_size) -> new_v {
-            let v_offs := $OffsetPtr(v)
+        function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
             let new_capacity := mul(capacity, 2)
             let data_size := add(32, mul(capacity, type_size))
             let new_data_size := add(32, mul(new_capacity, type_size))
-            let new_v_offs := $Malloc(new_data_size)
-            new_v := $MakePtr(false, new_v_offs)
+            new_v_offs := $Malloc(new_data_size)
             $CopyMemory(v_offs, new_v_offs, data_size)
             // update capacity at new location
             $MemoryStoreU64(add(new_v_offs, 8), new_capacity)
@@ -5855,4 +5861,4 @@ object "test_A2_Vectors_test_vectors_in_structs" {
         }
     }
 }
-===> Test result of Vectors::test_vectors_in_structs: Succeed(Stopped) (used_gas=8125): []
+===> Test result of Vectors::test_vectors_in_structs: Succeed(Stopped) (used_gas=8494): []

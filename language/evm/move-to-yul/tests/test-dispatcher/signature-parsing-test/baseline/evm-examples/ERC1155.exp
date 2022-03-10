@@ -171,9 +171,10 @@ object "A2_ERC1155" {
                 $result := $t3
             }
 
-            function A1_Vector_length$A1_ASCII_String$(v_ptr) -> len {
-                let v := $LoadU256(v_ptr)
-                len := $LoadU64(v)
+            function A1_Vector_length$A1_ASCII_String$(v_ref) -> len {
+                let v_offs := $LoadU256(v_ref)
+                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+                len := $LoadU64(v_ptr)
             }
             function A1_ASCII_try_string(bytes) -> $result {
                 let i, len, possible_byte, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17
@@ -279,7 +280,6 @@ object "A2_ERC1155" {
             function A1_Vector_empty$A1_ASCII_String$() -> vector {
                 vector := $Malloc(96)
                 $MemoryStoreU64(add(vector, 8), 2)
-                vector := $MakePtr(false, vector)
             }
             function A1_Option_some$A1_ASCII_String$(e) -> $result {
                 let $t1, $t2
@@ -311,18 +311,38 @@ object "A2_ERC1155" {
                 $Free($locals, 32)
             }
 
-            function A1_Vector_push_back$A1_ASCII_String$(v_ptr, e) {
-                let size, byte_offs, capacity
-                let v := $LoadU256(v_ptr)
-                size := $LoadU64(v)
-                let e_ptr := $IndexPtr(v, add(32, mul(size, 32)))
+            function A1_Vector_push_back$A1_ASCII_String$(v_ref, e) {
+                let v_offs := $LoadU256(v_ref)
+                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+                let size := $LoadU64(v_ptr)
+                let e_ptr := $IndexPtr(v_ptr, add(32, mul(size, 32)))
                 $StoreU256(e_ptr, e)
+                if $IsStoragePtr(e_ptr) {
+                    let e_offs := $OffsetPtr(e_ptr)
+                    let $linked_dst_2448473555 := $NewLinkedStorageBase(0x91f0bdd3)
+                    {
+                        let $linked_src_2300595445 := mload(add(e, 0))
+                        let $linked_dst_2300595445 := $NewLinkedStorageBase(0x89204cf5)
+                        let $size_2300595445 := $MemoryLoadU64($linked_src_2300595445)
+                        let $data_size_2300595445 := mul($size_2300595445, 1)
+                        $AlignedStorageStore($linked_dst_2300595445, mload($linked_src_2300595445))
+                        let $data_src_2300595445 := add($linked_src_2300595445, 32)
+                        let $data_dst_2300595445 := add($linked_dst_2300595445, 32)
+                        for { let $offs_2300595445 := 0 } lt($offs_2300595445, $data_size_2300595445) { $offs_2300595445 := add($offs_2300595445, 32)} {
+                            $AlignedStorageStore(add($data_dst_2300595445, $offs_2300595445), mload(add($data_src_2300595445, $offs_2300595445)))
+                            $Free($linked_src_2300595445, add($data_size_2300595445, 32))
+                        }
+                        $AlignedStorageStore(add($linked_dst_2448473555, 0), $linked_dst_2300595445)
+                    }
+                    $Free(e, 32)
+                    $AlignedStorageStore(e_offs, $linked_dst_2448473555)
+                }
                 size := add(size, 1)
-                $StoreU64(v, size)
-                capacity := $LoadU64($IndexPtr(v, 8))
-                if and(iszero($IsStoragePtr(v)), eq(size, capacity)) {
-                    let new_v := $ResizeVector(v, capacity, 32)
-                    $StoreU256(v_ptr, new_v)
+                $StoreU64(v_ptr, size)
+                let capacity := $LoadU64($IndexPtr(v_ptr, 8))
+                if and(iszero($IsStoragePtr(v_ptr)), eq(size, capacity)) {
+                    let new_v_offs := $ResizeVector(v_offs, capacity, 32)
+                    $StoreU256(v_ref, new_v_offs)
                 }
             }
             function A1_ASCII_is_valid_char(byte) -> $result {
@@ -335,15 +355,17 @@ object "A2_ERC1155" {
                 $result := $t2
             }
 
-            function A1_Vector_borrow$u8$(v_ptr, i) -> e_ptr {
-                let v := $LoadU256(v_ptr)
-                let size := $LoadU64(v)
+            function A1_Vector_borrow$u8$(v_ref, i) -> e_ptr {
+                let v_offs := $LoadU256(v_ref)
+                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+                let size := $LoadU64(v_ptr)
                 if $GtEq(i, size) { $AbortBuiltin() }
-                e_ptr := $IndexPtr(v, add(32, mul(i, 1)))
+                e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 1)))
             }
-            function A1_Vector_length$u8$(v_ptr) -> len {
-                let v := $LoadU256(v_ptr)
-                len := $LoadU64(v)
+            function A1_Vector_length$u8$(v_ref) -> len {
+                let v_offs := $LoadU256(v_ref)
+                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+                len := $LoadU64(v_ptr)
             }
             function A1_Option_destroy_some$A1_ASCII_String$(t) -> $result {
                 let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
@@ -394,18 +416,42 @@ object "A2_ERC1155" {
             }
 
             function A1_Vector_destroy_empty$A1_ASCII_String$(v) {
-                let size := $LoadU64(v)
+                let size := $MemoryLoadU64(v)
                 if $LogicalNot(iszero(size)) { $AbortBuiltin() }
-                let capacity := $LoadU64($IndexPtr(v, 8))
+                let capacity := $MemoryLoadU64(add(v, 8))
                 $Free(v, add(32, mul(capacity, 32)))
             }
-            function A1_Vector_pop_back$A1_ASCII_String$(v_ptr) -> e {
-                let v := $LoadU256(v_ptr)
-                let size := $LoadU64(v)
+            function A1_Vector_pop_back$A1_ASCII_String$(v_ref) -> e {
+                let v_offs := $LoadU256(v_ref)
+                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+                let size := $LoadU64(v_ptr)
                 if iszero(size) { $AbortBuiltin() }
-                let e_ptr := $IndexPtr(v, add(32, mul(sub(size, 1), 32)))
-                e := $LoadU256(e_ptr)
-                $StoreU64(v, sub(size, 1))
+                let e_ptr := $IndexPtr(v_ptr, add(32, mul(sub(size, 1), 32)))
+                if $IsStoragePtr(e_ptr) {
+                    let e_offs := $OffsetPtr(e_ptr)
+                    let $linked_src_2448473555 := $AlignedStorageLoad(e_offs)
+                    e := $Malloc(32)
+                    {
+                        let $linked_dst_2300595445
+                        let $linked_src_2300595445 := $AlignedStorageLoad(add($linked_src_2448473555, 0))
+                        let $size_2300595445 := $StorageLoadU64($linked_src_2300595445)
+                        let $capacity_2300595445 := $ClosestGreaterPowerOfTwo($size_2300595445)
+                        $linked_dst_2300595445 := $Malloc(add(32, mul($capacity_2300595445, 1)))
+                        let $data_size_2300595445 := mul($size_2300595445, 1)
+                        mstore($linked_dst_2300595445, $AlignedStorageLoad($linked_src_2300595445))
+                        $MemoryStoreU64(add($linked_dst_2300595445, 8), $capacity_2300595445)
+                        let $data_src_2300595445 := add($linked_src_2300595445, 32)
+                        let $data_dst_2300595445 := add($linked_dst_2300595445, 32)
+                        for { let $offs_2300595445 := 0 } lt($offs_2300595445, $data_size_2300595445) { $offs_2300595445 := add($offs_2300595445, 32)} {
+                            mstore(add($data_dst_2300595445, $offs_2300595445), $AlignedStorageLoad(add($data_src_2300595445, $offs_2300595445)))
+                            $AlignedStorageStore(add($data_src_2300595445, $offs_2300595445), 0)
+                        }
+                        $AlignedStorageStore(add($linked_src_2448473555, 0), 0)
+                        mstore(add(e, 0), $linked_dst_2300595445)
+                    }
+                    $AlignedStorageStore(e_offs, 0)
+                }
+                $StoreU64(v_ptr, sub(size, 1))
             }
             function A1_Errors_invalid_argument(reason) -> $result {
                 let $t1, $t2
@@ -617,6 +663,15 @@ object "A2_ERC1155" {
               mstore(64, group)
               key := keccak256(32, 36)
             }
+            function $MakeTypeStorageBase(category, type_hash, id) -> offs {
+              offs := or(shl(252, category), or(shl(220, type_hash), shl(60, id)))
+            }
+            function $NewLinkedStorageBase(type_hash) -> offs {
+              let key := $StorageKey(1, 1)
+              let handle := sload(key)
+              sstore(key, add(handle, 1))
+              offs := $MakeTypeStorageBase(1, type_hash, handle)
+            }
             function $IndexPtr(ptr, offs) -> new_ptr {
               new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
             }
@@ -700,6 +755,14 @@ object "A2_ERC1155" {
             function $StorageStoreU256(offs, val) {
               $StorageStoreBytes(offs, 32, val)
             }
+            function $AlignedStorageLoad(offs) -> val {
+              let word_offs := shr(5, offs)
+              val := sload($StorageKey(0, word_offs))
+            }
+            function $AlignedStorageStore(offs, val) {
+              let word_offs := shr(5, offs)
+              sstore($StorageKey(0, word_offs), val)
+            }
             function $CopyMemory(src, dst, size) {
               let i := 0
               for { } lt(i, size) { i := add(i, 32) } {
@@ -712,13 +775,11 @@ object "A2_ERC1155" {
                 mstore(add(dst, i), or(dst_word, src_word))
               }
             }
-            function $ResizeVector(v, capacity, type_size) -> new_v {
-                let v_offs := $OffsetPtr(v)
+            function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
                 let new_capacity := mul(capacity, 2)
                 let data_size := add(32, mul(capacity, type_size))
                 let new_data_size := add(32, mul(new_capacity, type_size))
-                let new_v_offs := $Malloc(new_data_size)
-                new_v := $MakePtr(false, new_v_offs)
+                new_v_offs := $Malloc(new_data_size)
                 $CopyMemory(v_offs, new_v_offs, data_size)
                 // update capacity at new location
                 $MemoryStoreU64(add(new_v_offs, 8), new_capacity)
@@ -752,6 +813,15 @@ object "A2_ERC1155" {
             function $CastU64(x) -> r {
                 if gt(x, 0xffffffffffffffff) { $AbortBuiltin() }
                 r := x
+            }
+            function $ClosestGreaterPowerOfTwo(x) -> r {
+                r := or(r, shr(1, x))
+                r := or(r, shr(2, r))
+                r := or(r, shr(4, r))
+                r := or(r, shr(8, r))
+                r := or(r, shr(16, r))
+                r := or(r, shr(32, r))
+                r := add(x, 1)
             }
         }
     }

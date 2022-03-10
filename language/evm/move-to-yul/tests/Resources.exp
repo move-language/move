@@ -168,8 +168,8 @@ object "test_A2_M_test_increment_a" {
                     let $dst := add($base_offset, 32)
                     let $src := $t9
                     {
-                        let $linked_dst_1602512591 := $NewLinkedStorageBase(0x5f8466cf)
                         let $linked_src_1602512591 := mload(add($src, 0))
+                        let $linked_dst_1602512591 := $NewLinkedStorageBase(0x5f8466cf)
                         $AlignedStorageStore(add($linked_dst_1602512591, 0), mload(add($linked_src_1602512591, 0)))
                         $Free($linked_src_1602512591, 16)
                         $AlignedStorageStore(add($dst, 0), $linked_dst_1602512591)
@@ -392,7 +392,7 @@ object "test_A2_M_test_increment_a" {
         }
     }
 }
-===> Test result of M::test_increment_a: Succeed(Stopped) (used_gas=113429): []
+===> Test result of M::test_increment_a: Succeed(Stopped) (used_gas=113441): []
 
 // test of M::test_publish
 /* =======================================
@@ -584,8 +584,8 @@ object "test_A2_M_test_publish" {
                     let $dst := add($base_offset, 32)
                     let $src := $t9
                     {
-                        let $linked_dst_1602512591 := $NewLinkedStorageBase(0x5f8466cf)
                         let $linked_src_1602512591 := mload(add($src, 0))
+                        let $linked_dst_1602512591 := $NewLinkedStorageBase(0x5f8466cf)
                         $AlignedStorageStore(add($linked_dst_1602512591, 0), mload(add($linked_src_1602512591, 0)))
                         $Free($linked_src_1602512591, 16)
                         $AlignedStorageStore(add($dst, 0), $linked_dst_1602512591)
@@ -1011,11 +1011,11 @@ object "test_A2_M_test_publish_t" {
                     let $dst := add($base_offset, 32)
                     let $src := $t10
                     {
-                        let $linked_dst_1770153451 := $NewLinkedStorageBase(0x698265eb)
                         let $linked_src_1770153451 := mload(add($src, 0))
+                        let $linked_dst_1770153451 := $NewLinkedStorageBase(0x698265eb)
                         {
-                            let $linked_dst_1602512591 := $NewLinkedStorageBase(0x5f8466cf)
                             let $linked_src_1602512591 := mload(add($linked_src_1770153451, 0))
+                            let $linked_dst_1602512591 := $NewLinkedStorageBase(0x5f8466cf)
                             $AlignedStorageStore(add($linked_dst_1602512591, 0), mload(add($linked_src_1602512591, 0)))
                             $Free($linked_src_1602512591, 16)
                             $AlignedStorageStore(add($linked_dst_1770153451, 0), $linked_dst_1602512591)
@@ -1234,7 +1234,7 @@ object "test_A2_M_test_publish_t" {
         }
     }
 }
-===> Test result of M::test_publish_t: Succeed(Stopped) (used_gas=138322): []
+===> Test result of M::test_publish_t: Succeed(Stopped) (used_gas=138370): []
 
 // test of M::test_unpublish
 /* =======================================
@@ -1351,13 +1351,13 @@ object "test_A2_M_test_unpublish" {
                     let $dst
                     $dst := $Malloc(41)
                     {
-                        let $linked_src_1602512591 := $AlignedStorageLoad(add($src, 0))
                         let $linked_dst_1602512591
+                        let $linked_src_1602512591 := $AlignedStorageLoad(add($src, 0))
                         $linked_dst_1602512591 := $Malloc(16)
                         mstore(add($linked_dst_1602512591, 0), $AlignedStorageLoad(add($linked_src_1602512591, 0)))
                         $AlignedStorageStore(add($linked_src_1602512591, 0), 0)
-                        mstore(add($dst, 0), $linked_dst_1602512591)
                         $AlignedStorageStore(add($src, 0), 0)
+                        mstore(add($dst, 0), $linked_dst_1602512591)
                     }
                     mstore(add($dst, 32), $AlignedStorageLoad(add($src, 32)))
                     $AlignedStorageStore(add($src, 32), 0)
@@ -1405,8 +1405,8 @@ object "test_A2_M_test_unpublish" {
                     let $dst := add($base_offset, 32)
                     let $src := $t9
                     {
-                        let $linked_dst_1602512591 := $NewLinkedStorageBase(0x5f8466cf)
                         let $linked_src_1602512591 := mload(add($src, 0))
+                        let $linked_dst_1602512591 := $NewLinkedStorageBase(0x5f8466cf)
                         $AlignedStorageStore(add($linked_dst_1602512591, 0), mload(add($linked_src_1602512591, 0)))
                         $Free($linked_src_1602512591, 16)
                         $AlignedStorageStore(add($dst, 0), $linked_dst_1602512591)
@@ -1580,4 +1580,4 @@ object "test_A2_M_test_unpublish" {
         }
     }
 }
-===> Test result of M::test_unpublish: Succeed(Stopped) (used_gas=90774): []
+===> Test result of M::test_unpublish: Succeed(Stopped) (used_gas=90784): []

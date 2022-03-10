@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{context::Context, Generator};
+use crate::{context::Context, functions::FunctionGenerator};
 use move_model::{
     ast::ModuleName,
     emit, emitln,
@@ -15,7 +15,7 @@ pub(crate) struct NativeFunctions {
     generators: BTreeMap<QualifiedId<FunId>, Box<NativeFunctionGenerator>>,
 }
 
-type NativeFunctionGenerator = dyn Fn(&mut Generator, &Context, &QualifiedInstId<FunId>);
+type NativeFunctionGenerator = dyn Fn(&mut FunctionGenerator, &Context, &QualifiedInstId<FunId>);
 
 impl NativeFunctions {
     /// Create a NativeFunctions holder and register all function definitions.
@@ -30,7 +30,7 @@ impl NativeFunctions {
     /// Generate code for a native function.
     pub(crate) fn gen_native_function(
         &self,
-        gen: &mut Generator,
+        gen: &mut FunctionGenerator,
         ctx: &Context,
         fun_id: &QualifiedInstId<FunId>,
     ) {
@@ -41,7 +41,7 @@ impl NativeFunctions {
             ngen(gen, ctx, fun_id)
         } else {
             ctx.env.error(
-                &gen.contract_loc,
+                &gen.parent.contract_loc,
                 &format!(
                     "native function `{}` not implemented for type `{:?}`",
                     ctx.env
@@ -61,7 +61,7 @@ impl NativeFunctions {
         name: &str,
         gen: F,
     ) where
-        F: Fn(&mut Generator, &Context, &QualifiedInstId<FunId>) + 'static,
+        F: Fn(&mut FunctionGenerator, &Context, &QualifiedInstId<FunId>) + 'static,
     {
         if let Some(fun_id) = self.find_fun(ctx, module, name) {
             self.generators.insert(fun_id, Box::new(gen));
@@ -70,7 +70,12 @@ impl NativeFunctions {
 
     /// Helper to find a module by name. The module may not exists as it is not used in the
     /// current compiler's run.
-    fn find_module<'a>(&self, ctx: &Context<'a>, addr: &str, name: &str) -> Option<ModuleEnv<'a>> {
+    pub(crate) fn find_module<'a>(
+        &self,
+        ctx: &Context<'a>,
+        addr: &str,
+        name: &str,
+    ) -> Option<ModuleEnv<'a>> {
         let name = ModuleName::from_str(addr, ctx.env.symbol_pool().make(name));
         ctx.env.find_module(&name)
     }
@@ -270,29 +275,5 @@ impl NativeFunctions {
 }"
             );
         });
-    }
-
-    /// Define vector functions for a specific instantiation.
-    fn define_vector_functions(&mut self, ctx: &Context) {
-        let vector = &self.find_module(ctx, "0x1", "Vector");
-
-        self.define(ctx, vector, "empty", crate::vectors::define_empty_fun);
-        self.define(ctx, vector, "length", crate::vectors::define_length_fun);
-        self.define(
-            ctx,
-            vector,
-            "push_back",
-            crate::vectors::define_push_back_fun,
-        );
-        self.define(ctx, vector, "pop_back", crate::vectors::define_pop_back_fun);
-        self.define(ctx, vector, "borrow", crate::vectors::define_borrow_fun);
-        self.define(ctx, vector, "borrow_mut", crate::vectors::define_borrow_fun);
-        self.define(ctx, vector, "swap", crate::vectors::define_swap_fun);
-        self.define(
-            ctx,
-            vector,
-            "destroy_empty",
-            crate::vectors::define_destroy_empty_fun,
-        );
     }
 }

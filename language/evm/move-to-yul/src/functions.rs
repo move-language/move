@@ -21,7 +21,7 @@ use std::collections::{btree_map::Entry, BTreeMap};
 /// Mutable state of the function generator.
 pub(crate) struct FunctionGenerator<'a> {
     /// The parent generator.
-    parent: &'a mut Generator,
+    pub(crate) parent: &'a mut Generator,
     /// A mapping from locals of the currently compiled functions from which a reference is
     /// borrowed, to the position in a memory region where these locals have evaded to.
     /// All borrowed_locals have a consecutive position in this mapping, starting at zero.
@@ -45,8 +45,7 @@ impl<'a> FunctionGenerator<'a> {
         // intrinsic functions (such as reverse, contains, is_empty) in the Vector module as well
         if fun.is_native() {
             // Special treatment for native functions, which have custom generators.
-            ctx.native_funs
-                .gen_native_function(self.parent, ctx, fun_id);
+            ctx.native_funs.gen_native_function(self, ctx, fun_id);
             return;
         }
         let target = &ctx.targets.get_target(fun, &FunctionVariant::Baseline);
@@ -1000,50 +999,23 @@ impl<'a> FunctionGenerator<'a> {
         for field_offs in layout.field_order.iter().take(layout.pointer_count) {
             let (byte_offs, ty) = layout.offsets.get(field_offs).unwrap();
             assert_eq!(byte_offs % 32, 0, "pointer fields are on word boundary");
-            if ty.is_vector() {
-                ctx.env
-                    .error(&self.parent.contract_loc, "vectors not yet implemented");
-                continue;
-            }
             ctx.emit_block(|| {
-                let hash = self.type_hash(ctx, ty);
-                // Add hash to names to avoid naming collision.
-                let linked_src_name = format!("$linked_src_{}", hash);
-                let linked_dst_name = format!("$linked_dst_{}", hash);
-                // Allocate a new storage pointer.
-                emitln!(
-                    ctx.writer,
-                    "let {} := {}",
-                    linked_dst_name,
-                    self.parent.call_builtin_str(
-                        ctx,
-                        YulFunction::NewLinkedStorageBase,
-                        std::iter::once(format!("0x{:x}", hash))
-                    )
-                );
+                let linked_src_name = format!("$linked_src_{}", self.type_hash(ctx, ty));
+
                 // Load the pointer to the linked memory.
                 emitln!(
                     ctx.writer,
-                    "let {} := mload(add({}, {}))",
+                    "let {} := mload({})",
                     linked_src_name,
-                    src,
-                    byte_offs
+                    format!("add({}, {})", src, byte_offs)
                 );
-                // Recursively move.
-                let field_struct_id = ty.get_struct_id(ctx.env).expect("struct");
-                self.move_struct_to_storage(
+                self.create_and_move_data_to_linked_storage(
                     ctx,
-                    &field_struct_id,
+                    ty,
                     linked_src_name,
-                    linked_dst_name.clone(),
+                    format!("add({}, {})", dst, byte_offs),
                 );
-                // Store the result at the destination
-                self.parent.call_builtin(
-                    ctx,
-                    YulFunction::AlignedStorageStore,
-                    vec![format!("add({}, {})", dst, byte_offs), linked_dst_name].into_iter(),
-                )
-            })
+            });
         }
 
         // The remaining fields are all primitive. We also know that memory is padded to word size,
@@ -1170,43 +1142,16 @@ impl<'a> FunctionGenerator<'a> {
         for field_offs in layout.field_order.iter().take(layout.pointer_count) {
             let (byte_offs, ty) = layout.offsets.get(field_offs).unwrap();
             assert_eq!(byte_offs % 32, 0, "pointer fields are on word boundary");
-            if ty.is_vector() {
-                ctx.env
-                    .error(&self.parent.contract_loc, "vectors not yet implemented");
-                continue;
-            }
+            let field_src_ptr = format!("add({}, {})", src, byte_offs);
+            let field_dst_ptr = format!("add({}, {})", dst, byte_offs);
             ctx.emit_block(|| {
-                let field_src_ptr = format!("add({}, {})", src, byte_offs);
-                let field_dst_ptr = format!("add({}, {})", dst, byte_offs);
-                // Load the pointer to the linked storage.
-                let load_call = self.parent.call_builtin_str(
-                    ctx,
-                    YulFunction::AlignedStorageLoad,
-                    std::iter::once(field_src_ptr.clone()),
-                );
-                let hash = self.type_hash(ctx, ty);
-                let linked_src_name = format!("$linked_src_{}", hash);
-                let linked_dst_name = format!("$linked_dst_{}", hash);
-                emitln!(ctx.writer, "let {} := {}", linked_src_name, load_call);
+                let linked_dst_name = format!("$linked_dst_{}", self.type_hash(ctx, ty));
                 // Declare where to store the result and recursively move
                 emitln!(ctx.writer, "let {}", linked_dst_name);
-                let field_struct_id = ty.get_struct_id(ctx.env).expect("struct");
-                self.move_struct_to_memory(
-                    ctx,
-                    &field_struct_id,
-                    linked_src_name,
-                    linked_dst_name.clone(),
-                );
+                self.move_data_from_linked_storage(ctx, ty, field_src_ptr, linked_dst_name.clone());
                 // Store the result at the destination.
-                assert_eq!(byte_offs % 32, 0);
                 emitln!(ctx.writer, "mstore({}, {})", field_dst_ptr, linked_dst_name);
-                // Clear the storage to get a refund
-                self.parent.call_builtin(
-                    ctx,
-                    YulFunction::AlignedStorageStore,
-                    vec![field_src_ptr, 0.to_string()].into_iter(),
-                )
-            })
+            });
         }
 
         // The remaining fields are all primitive. We also know that memory is padded to word size,
@@ -1294,6 +1239,89 @@ impl<'a> FunctionGenerator<'a> {
         })
     }
 
+    // Recursively move struct or vector data to corresponding linked storage.
+    // This function calls `move_struct_to_storage` and `move_vector_to_storage`, and
+    // is called by these two functions too.
+    pub(crate) fn create_and_move_data_to_linked_storage(
+        &mut self,
+        ctx: &Context,
+        ty: &Type,
+        linked_src_name: String,
+        dst: String,
+    ) {
+        assert!(
+            ctx.type_allocates_memory(ty),
+            "type needs to be struct or vector"
+        );
+        let hash = self.type_hash(ctx, ty);
+        // let linked_src_name = format!("$linked_src_{}", hash);
+        let linked_dst_name = format!("$linked_dst_{}", hash);
+        // Allocate a new storage pointer.
+        emitln!(
+            ctx.writer,
+            "let {} := {}",
+            linked_dst_name,
+            self.parent.call_builtin_str(
+                ctx,
+                YulFunction::NewLinkedStorageBase,
+                std::iter::once(format!("0x{:x}", hash))
+            )
+        );
+
+        // Recursively move.
+        if ty.is_vector() {
+            self.move_vector_to_storage(ctx, ty, linked_src_name, linked_dst_name.clone());
+        } else {
+            let field_struct_id = ty.get_struct_id(ctx.env).expect("struct");
+            self.move_struct_to_storage(
+                ctx,
+                &field_struct_id,
+                linked_src_name,
+                linked_dst_name.clone(),
+            );
+        }
+        // Store the result at the destination
+        self.parent.call_builtin(
+            ctx,
+            YulFunction::AlignedStorageStore,
+            vec![dst, linked_dst_name].into_iter(),
+        )
+    }
+
+    // Recursively move struct or vector data from linked storage to memory.
+    // This function calls `move_struct_to_memory` and `move_vector_to_memory`, and
+    // is called by these two functions too.
+    pub(crate) fn move_data_from_linked_storage(
+        &mut self,
+        ctx: &Context,
+        ty: &Type,
+        src: String,
+        linked_dst_name: String,
+    ) {
+        // Load the pointer to the linked storage.
+        let load_call = self.parent.call_builtin_str(
+            ctx,
+            YulFunction::AlignedStorageLoad,
+            std::iter::once(src.clone()),
+        );
+        let hash = self.type_hash(ctx, ty);
+        let linked_src_name = format!("$linked_src_{}", hash);
+        emitln!(ctx.writer, "let {} := {}", linked_src_name, load_call);
+        if ty.is_vector() {
+            self.move_vector_to_memory(ctx, ty, linked_src_name, linked_dst_name);
+        } else {
+            let field_struct_id = ty.get_struct_id(ctx.env).expect("struct");
+            self.move_struct_to_memory(ctx, &field_struct_id, linked_src_name, linked_dst_name);
+        }
+
+        // Clear the storage to get a refund
+        self.parent.call_builtin(
+            ctx,
+            YulFunction::AlignedStorageStore,
+            vec![src, 0.to_string()].into_iter(),
+        );
+    }
+
     /// Make a pointer into storage for the given type and instance.
     fn type_storage_base(
         &mut self,
@@ -1312,7 +1340,7 @@ impl<'a> FunctionGenerator<'a> {
 
     /// Derive a 4 byte hash for a type. If this hash creates a collision in the current
     /// contract, create an error.
-    fn type_hash(&mut self, ctx: &Context, ty: &Type) -> u32 {
+    pub(crate) fn type_hash(&mut self, ctx: &Context, ty: &Type) -> u32 {
         let sig = ctx.mangle_type(ty);
         let mut keccak = Keccak256::new();
         keccak.update(sig.as_bytes());

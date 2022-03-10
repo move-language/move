@@ -3,10 +3,14 @@
 
 // This file defines vector functionalities.
 
-use crate::{context::Context, yul_functions::YulFunction, Generator};
+use crate::{
+    context::Context, functions::FunctionGenerator, native_functions::NativeFunctions,
+    yul_functions::YulFunction,
+};
 use move_model::{
     emitln,
     model::{FunId, QualifiedInstId},
+    ty::Type,
 };
 
 /// The size (in bytes) of the vector metadata, which is stored in front of the actual vector data.
@@ -14,11 +18,312 @@ pub const VECTOR_METADATA_SIZE: usize = 32;
 /// The number of slots allocated initially for an empty vector.
 pub const VECTOR_INITIAL_CAPACITY: usize = 2;
 
-pub(crate) fn define_empty_fun(
-    gen: &mut Generator,
-    ctx: &Context,
-    fun_id: &QualifiedInstId<FunId>,
-) {
+impl<'a> FunctionGenerator<'a> {
+    pub(crate) fn move_vector_to_storage(
+        &mut self,
+        ctx: &Context,
+        vector_type: &Type,
+        src: String,
+        dst: String,
+    ) {
+        let elem_type = get_elem_type(vector_type).expect("not vector type");
+        let elem_type_size = ctx.type_size(&elem_type);
+
+        // Add hash to variable names to avoid naming collisions.
+        let hash = self.type_hash(ctx, vector_type);
+        let size_name = format!("$size_{}", hash);
+        let offs_name = format!("$offs_{}", hash);
+        let data_size_name = format!("$data_size_{}", hash);
+        let data_src_name = format!("$data_src_{}", hash);
+        let data_dst_name = format!("$data_dst_{}", hash);
+
+        // Load size of the vectors
+        emitln!(
+            ctx.writer,
+            "let {} := {}",
+            size_name,
+            self.parent.call_builtin_str(
+                ctx,
+                YulFunction::MemoryLoadU64,
+                std::iter::once(src.clone())
+            )
+        );
+
+        // Calculate the size of all the data
+        emitln!(
+            ctx.writer,
+            "let {} := mul({}, {})",
+            data_size_name,
+            size_name,
+            elem_type_size
+        );
+
+        // Move vector metadata to the storage location
+        self.parent.call_builtin(
+            ctx,
+            YulFunction::AlignedStorageStore,
+            vec![dst.clone(), format!("mload({})", src)].into_iter(),
+        );
+
+        // Calculate the start of actual vector data at memory and storage location
+        emitln!(
+            ctx.writer,
+            "let {} := add({}, {})",
+            data_src_name,
+            src,
+            VECTOR_METADATA_SIZE
+        );
+        emitln!(
+            ctx.writer,
+            "let {} := add({}, {})",
+            data_dst_name,
+            dst,
+            VECTOR_METADATA_SIZE
+        );
+
+        // Loops through the vector and move elements
+        emitln!(
+            ctx.writer,
+            "for {{ let {} := 0 }} lt({}, {}) {{ {} := add({}, 32)}} {{",
+            offs_name,
+            offs_name,
+            data_size_name,
+            offs_name,
+            offs_name,
+        );
+        ctx.writer.indent();
+        if ctx.type_allocates_memory(&elem_type) {
+            ctx.emit_block(|| {
+                let linked_src_name = format!("$linked_src_{}", self.type_hash(ctx, &elem_type));
+
+                // Load the pointer to the linked memory.
+                emitln!(
+                    ctx.writer,
+                    "let {} := mload(add({}, {}))",
+                    linked_src_name,
+                    offs_name,
+                    data_src_name.clone(),
+                );
+                self.create_and_move_data_to_linked_storage(
+                    ctx,
+                    &elem_type,
+                    linked_src_name,
+                    format!("add({}, {})", data_dst_name, offs_name),
+                );
+            });
+        } else {
+            self.parent.call_builtin(
+                ctx,
+                YulFunction::AlignedStorageStore,
+                vec![
+                    format!("add({}, {})", data_dst_name, offs_name),
+                    format!("mload(add({}, {}))", data_src_name, offs_name),
+                ]
+                .into_iter(),
+            );
+        }
+
+        // Free ptr
+        self.parent.call_builtin(
+            ctx,
+            YulFunction::Free,
+            vec![
+                src,
+                format!("add({}, {})", data_size_name, VECTOR_METADATA_SIZE),
+            ]
+            .into_iter(),
+        );
+
+        ctx.writer.unindent();
+        emitln!(ctx.writer, "}");
+    }
+
+    pub(crate) fn move_vector_to_memory(
+        &mut self,
+        ctx: &Context,
+        vector_type: &Type,
+        src: String,
+        dst: String,
+    ) {
+        let elem_type = get_elem_type(vector_type).expect("not vector type");
+        let elem_type_size = ctx.type_size(&elem_type);
+
+        // Add hash to variable names to avoid naming collisions.
+        let hash = self.type_hash(ctx, vector_type);
+        let size_name = format!("$size_{}", hash);
+        let capacity_name = format!("$capacity_{}", hash);
+        let data_size_name = format!("$data_size_{}", hash);
+        let data_src_name = format!("$data_src_{}", hash);
+        let data_dst_name = format!("$data_dst_{}", hash);
+        let offs_name = format!("$offs_{}", hash);
+
+        // Load size of the vector
+        emitln!(
+            ctx.writer,
+            "let {} := {}",
+            size_name,
+            self.parent.call_builtin_str(
+                ctx,
+                YulFunction::StorageLoadU64,
+                std::iter::once(src.clone())
+            )
+        );
+
+        // Calculate the closest power of two that's greater than the size we loaded on the
+        // last line. We will allocate space for this number of elements in the memory.
+        emitln!(
+            ctx.writer,
+            "let {} := {}",
+            capacity_name,
+            self.parent.call_builtin_str(
+                ctx,
+                YulFunction::ClosestGreaterPowerOfTwo,
+                std::iter::once(size_name.clone())
+            )
+        );
+
+        emitln!(
+            ctx.writer,
+            "{} := {}",
+            dst,
+            self.parent.call_builtin_str(
+                ctx,
+                YulFunction::Malloc,
+                std::iter::once(format!(
+                    "add({}, mul({}, {}))",
+                    VECTOR_METADATA_SIZE, capacity_name, elem_type_size
+                ))
+            )
+        );
+
+        // Calculate size of the vector data
+        emitln!(
+            ctx.writer,
+            "let {} := mul({}, {})",
+            data_size_name,
+            size_name,
+            elem_type_size
+        );
+
+        // Move metadata to memory
+        emitln!(
+            ctx.writer,
+            "mstore({}, {})",
+            dst,
+            self.parent.call_builtin_str(
+                ctx,
+                YulFunction::AlignedStorageLoad,
+                std::iter::once(src.clone()),
+            )
+        );
+
+        // Store new capacity in memory
+        self.parent.call_builtin(
+            ctx,
+            YulFunction::MemoryStoreU64,
+            vec![format!("add({}, 8)", dst), capacity_name].into_iter(),
+        );
+
+        // Calculate locations to load data from and move data to
+        emitln!(
+            ctx.writer,
+            "let {} := add({}, {})",
+            data_src_name,
+            src,
+            VECTOR_METADATA_SIZE
+        );
+        emitln!(
+            ctx.writer,
+            "let {} := add({}, {})",
+            data_dst_name,
+            dst,
+            VECTOR_METADATA_SIZE
+        );
+
+        // Loop through the vector and move elements to memory
+        emitln!(
+            ctx.writer,
+            "for {{ let {} := 0 }} lt({}, {}) {{ {} := add({}, 32)}} {{",
+            offs_name,
+            offs_name,
+            data_size_name,
+            offs_name,
+            offs_name,
+        );
+
+        ctx.writer.indent();
+        if ctx.type_allocates_memory(&elem_type) {
+            ctx.emit_block(|| {
+                let src_ptr = format!("add({}, {})", data_src_name, offs_name);
+                let dst_ptr = format!("add({}, {})", data_dst_name, offs_name);
+                let linked_dst_name = format!("$linked_dst_{}", self.type_hash(ctx, &elem_type));
+                // Declare where to store the result and recursively move
+                emitln!(ctx.writer, "let {}", linked_dst_name);
+                self.move_data_from_linked_storage(
+                    ctx,
+                    &elem_type,
+                    src_ptr,
+                    linked_dst_name.clone(),
+                );
+                // Store the result at the destination.
+                emitln!(ctx.writer, "mstore({}, {})", dst_ptr, linked_dst_name);
+            });
+        } else {
+            let load_call = self.parent.call_builtin_str(
+                ctx,
+                YulFunction::AlignedStorageLoad,
+                std::iter::once(format!("add({}, {})", data_src_name, offs_name)),
+            );
+            emitln!(
+                ctx.writer,
+                "mstore(add({}, {}), {})",
+                data_dst_name,
+                offs_name,
+                load_call
+            );
+            // fill storage with 0s
+            self.parent.call_builtin(
+                ctx,
+                YulFunction::AlignedStorageStore,
+                vec![
+                    format!("add({}, {})", data_src_name, offs_name),
+                    0.to_string(),
+                ]
+                .into_iter(),
+            );
+        }
+        ctx.writer.unindent();
+        emitln!(ctx.writer, "}");
+    }
+}
+
+impl NativeFunctions {
+    /// Define vector functions for a specific instantiation.
+    pub(crate) fn define_vector_functions(&mut self, ctx: &Context) {
+        let vector = &self.find_module(ctx, "0x1", "Vector");
+
+        self.define(ctx, vector, "empty", crate::vectors::define_empty_fun);
+        self.define(ctx, vector, "length", crate::vectors::define_length_fun);
+        self.define(
+            ctx,
+            vector,
+            "push_back",
+            crate::vectors::define_push_back_fun,
+        );
+        self.define(ctx, vector, "pop_back", crate::vectors::define_pop_back_fun);
+        self.define(ctx, vector, "borrow", crate::vectors::define_borrow_fun);
+        self.define(ctx, vector, "borrow_mut", crate::vectors::define_borrow_fun);
+        self.define(ctx, vector, "swap", crate::vectors::define_swap_fun);
+        self.define(
+            ctx,
+            vector,
+            "destroy_empty",
+            crate::vectors::define_destroy_empty_fun,
+        );
+    }
+}
+
+fn define_empty_fun(gen: &mut FunctionGenerator, ctx: &Context, fun_id: &QualifiedInstId<FunId>) {
     assert_eq!(
         fun_id.inst.len(),
         1,
@@ -30,7 +335,7 @@ pub(crate) fn define_empty_fun(
     emitln!(
         ctx.writer,
         "vector := {}",
-        gen.call_builtin_str(
+        gen.parent.call_builtin_str(
             ctx,
             YulFunction::Malloc,
             std::iter::once(
@@ -41,7 +346,7 @@ pub(crate) fn define_empty_fun(
     emitln!(
         ctx.writer,
         "{}",
-        gen.call_builtin_str(
+        gen.parent.call_builtin_str(
             ctx,
             YulFunction::MemoryStoreU64,
             vec![
@@ -51,49 +356,50 @@ pub(crate) fn define_empty_fun(
             .into_iter()
         )
     );
-    emitln!(
-        ctx.writer,
-        "vector := {}",
-        gen.call_builtin_str(
-            ctx,
-            YulFunction::MakePtr,
-            vec!["false".to_string(), "vector".to_string()].into_iter()
-        )
-    );
     ctx.writer.unindent();
     emitln!(ctx.writer, "}");
 }
 
-pub(crate) fn define_length_fun(
-    gen: &mut Generator,
-    ctx: &Context,
-    _fun_id: &QualifiedInstId<FunId>,
-) {
-    emitln!(ctx.writer, "(v_ptr) -> len {");
+fn define_length_fun(gen: &mut FunctionGenerator, ctx: &Context, _fun_id: &QualifiedInstId<FunId>) {
+    emitln!(ctx.writer, "(v_ref) -> len {");
     ctx.writer.indent();
     emitln!(
         ctx.writer,
-        "let v := {}",
-        gen.call_builtin_str(
+        "let v_offs := {}",
+        gen.parent.call_builtin_str(
             ctx,
             YulFunction::LoadU256,
-            std::iter::once("v_ptr".to_string())
+            std::iter::once("v_ref".to_string())
+        )
+    );
+    let is_storage_call = gen.parent.call_builtin_str(
+        ctx,
+        YulFunction::IsStoragePtr,
+        std::iter::once("v_ref".to_string()),
+    );
+    emitln!(
+        ctx.writer,
+        "let v_ptr := {}",
+        gen.parent.call_builtin_str(
+            ctx,
+            YulFunction::MakePtr,
+            vec![is_storage_call, "v_offs".to_string()].into_iter()
         )
     );
     emitln!(
         ctx.writer,
         "len := {}",
-        gen.call_builtin_str(ctx, YulFunction::LoadU64, std::iter::once("v".to_string()))
+        gen.parent.call_builtin_str(
+            ctx,
+            YulFunction::LoadU64,
+            std::iter::once("v_ptr".to_string())
+        )
     );
     ctx.writer.unindent();
     emitln!(ctx.writer, "}");
 }
 
-pub(crate) fn define_borrow_fun(
-    gen: &mut Generator,
-    ctx: &Context,
-    fun_id: &QualifiedInstId<FunId>,
-) {
+fn define_borrow_fun(gen: &mut FunctionGenerator, ctx: &Context, fun_id: &QualifiedInstId<FunId>) {
     assert_eq!(
         fun_id.inst.len(),
         1,
@@ -102,45 +408,63 @@ pub(crate) fn define_borrow_fun(
     let elem_type = fun_id.inst.get(0).unwrap();
     let elem_type_size = ctx.type_size(elem_type);
 
-    emitln!(ctx.writer, "(v_ptr, i) -> e_ptr {");
+    emitln!(ctx.writer, "(v_ref, i) -> e_ptr {");
     ctx.writer.indent();
 
     emitln!(
         ctx.writer,
-        "let v := {}",
-        gen.call_builtin_str(
+        "let v_offs := {}",
+        gen.parent.call_builtin_str(
             ctx,
             YulFunction::LoadU256,
+            std::iter::once("v_ref".to_string())
+        )
+    );
+    let is_storage_call = gen.parent.call_builtin_str(
+        ctx,
+        YulFunction::IsStoragePtr,
+        std::iter::once("v_ref".to_string()),
+    );
+    emitln!(
+        ctx.writer,
+        "let v_ptr := {}",
+        gen.parent.call_builtin_str(
+            ctx,
+            YulFunction::MakePtr,
+            vec![is_storage_call.clone(), "v_offs".to_string()].into_iter()
+        )
+    );
+    emitln!(
+        ctx.writer,
+        "let size := {}",
+        gen.parent.call_builtin_str(
+            ctx,
+            YulFunction::LoadU64,
             std::iter::once("v_ptr".to_string())
         )
     );
 
     emitln!(
         ctx.writer,
-        "let size := {}",
-        gen.call_builtin_str(ctx, YulFunction::LoadU64, std::iter::once("v".to_string()))
-    );
-
-    emitln!(
-        ctx.writer,
         "if {} {{ {} }}",
-        &gen.call_builtin_str(
+        &gen.parent.call_builtin_str(
             ctx,
             YulFunction::GtEq,
             vec!["i".to_string(), "size".to_string()].into_iter()
         ),
-        &gen.call_builtin_str(ctx, YulFunction::AbortBuiltin, std::iter::empty())
+        &gen.parent
+            .call_builtin_str(ctx, YulFunction::AbortBuiltin, std::iter::empty())
     );
 
     // calculate byte offset at which the new element should be stored
     emitln!(
         ctx.writer,
         "e_ptr := {}",
-        &gen.call_builtin_str(
+        &gen.parent.call_builtin_str(
             ctx,
             YulFunction::IndexPtr,
             vec![
-                "v".to_string(),
+                "v_ptr".to_string(),
                 format!("add({}, mul(i, {}))", VECTOR_METADATA_SIZE, elem_type_size)
             ]
             .into_iter()
@@ -150,7 +474,7 @@ pub(crate) fn define_borrow_fun(
         emitln!(
             ctx.writer,
             "let e := {}",
-            gen.call_builtin_str(
+            gen.parent.call_builtin_str(
                 ctx,
                 YulFunction::LoadU256,
                 std::iter::once("e_ptr".to_string())
@@ -159,10 +483,10 @@ pub(crate) fn define_borrow_fun(
         emitln!(
             ctx.writer,
             "e_ptr := {}",
-            gen.call_builtin_str(
+            gen.parent.call_builtin_str(
                 ctx,
                 YulFunction::MakePtr,
-                vec![false.to_string(), "e".to_string()].into_iter()
+                vec![is_storage_call, "e".to_string()].into_iter()
             )
         );
     }
@@ -170,8 +494,8 @@ pub(crate) fn define_borrow_fun(
     emitln!(ctx.writer, "}");
 }
 
-pub(crate) fn define_pop_back_fun(
-    gen: &mut Generator,
+fn define_pop_back_fun(
+    gen: &mut FunctionGenerator,
     ctx: &Context,
     fun_id: &QualifiedInstId<FunId>,
 ) {
@@ -183,39 +507,58 @@ pub(crate) fn define_pop_back_fun(
     let elem_type = fun_id.inst.get(0).unwrap();
     let elem_type_size = ctx.type_size(elem_type);
 
-    emitln!(ctx.writer, "(v_ptr) -> e {");
+    emitln!(ctx.writer, "(v_ref) -> e {");
     ctx.writer.indent();
 
     emitln!(
         ctx.writer,
-        "let v := {}",
-        gen.call_builtin_str(
+        "let v_offs := {}",
+        gen.parent.call_builtin_str(
             ctx,
             YulFunction::LoadU256,
-            std::iter::once("v_ptr".to_string())
+            std::iter::once("v_ref".to_string())
+        )
+    );
+    let is_storage_call = gen.parent.call_builtin_str(
+        ctx,
+        YulFunction::IsStoragePtr,
+        std::iter::once("v_ref".to_string()),
+    );
+    emitln!(
+        ctx.writer,
+        "let v_ptr := {}",
+        gen.parent.call_builtin_str(
+            ctx,
+            YulFunction::MakePtr,
+            vec![is_storage_call, "v_offs".to_string()].into_iter()
         )
     );
 
     emitln!(
         ctx.writer,
         "let size := {}",
-        gen.call_builtin_str(ctx, YulFunction::LoadU64, std::iter::once("v".to_string()))
+        gen.parent.call_builtin_str(
+            ctx,
+            YulFunction::LoadU64,
+            std::iter::once("v_ptr".to_string())
+        )
     );
 
     emitln!(
         ctx.writer,
         "if iszero(size) {{ {} }}",
-        gen.call_builtin_str(ctx, YulFunction::AbortBuiltin, std::iter::empty())
+        gen.parent
+            .call_builtin_str(ctx, YulFunction::AbortBuiltin, std::iter::empty())
     );
 
     emitln!(
         ctx.writer,
         "let e_ptr := {}",
-        &gen.call_builtin_str(
+        &gen.parent.call_builtin_str(
             ctx,
             YulFunction::IndexPtr,
             vec![
-                "v".to_string(),
+                "v_ptr".to_string(),
                 format!(
                     "add({}, mul(sub(size, 1), {}))",
                     VECTOR_METADATA_SIZE, elem_type_size
@@ -224,25 +567,52 @@ pub(crate) fn define_pop_back_fun(
             .into_iter()
         )
     );
+
+    // Move element from storage to memory if vector is in global storage and element is a struct or vector
+    if ctx.type_allocates_memory(elem_type) {
+        emitln!(
+            ctx.writer,
+            "if {} {{",
+            gen.parent.call_builtin_str(
+                ctx,
+                YulFunction::IsStoragePtr,
+                std::iter::once("e_ptr".to_string())
+            ),
+        );
+
+        ctx.writer.indent();
+        emitln!(
+            ctx.writer,
+            "let e_offs := {}",
+            gen.parent.call_builtin_str(
+                ctx,
+                YulFunction::OffsetPtr,
+                std::iter::once("e_ptr".to_string())
+            ),
+        );
+
+        gen.move_data_from_linked_storage(ctx, elem_type, "e_offs".to_string(), "e".to_string());
+
+        ctx.writer.unindent();
+        emitln!(ctx.writer, "}");
+    } else {
+        emitln!(
+            ctx.writer,
+            "e := {}",
+            gen.parent.call_builtin_str(
+                ctx,
+                ctx.load_builtin_fun(elem_type),
+                std::iter::once("e_ptr".to_string())
+            )
+        );
+    }
+
     emitln!(
         ctx.writer,
-        "e := {}",
-        gen.call_builtin_str(
-            ctx,
-            ctx.load_builtin_fun(elem_type),
-            std::iter::once("e_ptr".to_string())
-        )
-    );
-
-    // TODO: implement element's move to memory if vector is in global storage
-    // and element is a struct or vector
-
-    emitln!(
-        ctx.writer,
-        &gen.call_builtin_str(
+        &gen.parent.call_builtin_str(
             ctx,
             YulFunction::StoreU64,
-            vec!["v".to_string(), "sub(size, 1)".to_string()].into_iter()
+            vec!["v_ptr".to_string(), "sub(size, 1)".to_string()].into_iter()
         )
     );
 
@@ -250,8 +620,8 @@ pub(crate) fn define_pop_back_fun(
     emitln!(ctx.writer, "}");
 }
 
-pub(crate) fn define_push_back_fun(
-    gen: &mut Generator,
+fn define_push_back_fun(
+    gen: &mut FunctionGenerator,
     ctx: &Context,
     fun_id: &QualifiedInstId<FunId>,
 ) {
@@ -263,34 +633,51 @@ pub(crate) fn define_push_back_fun(
     let elem_type = fun_id.inst.get(0).unwrap();
     let elem_type_size = ctx.type_size(elem_type);
 
-    emitln!(ctx.writer, "(v_ptr, e) {");
+    emitln!(ctx.writer, "(v_ref, e) {");
     ctx.writer.indent();
-    emitln!(ctx.writer, "let size, byte_offs, capacity");
     emitln!(
         ctx.writer,
-        "let v := {}",
-        gen.call_builtin_str(
+        "let v_offs := {}",
+        gen.parent.call_builtin_str(
             ctx,
             YulFunction::LoadU256,
-            std::iter::once("v_ptr".to_string())
+            std::iter::once("v_ref".to_string())
+        )
+    );
+    let is_storage_call = gen.parent.call_builtin_str(
+        ctx,
+        YulFunction::IsStoragePtr,
+        std::iter::once("v_ref".to_string()),
+    );
+    emitln!(
+        ctx.writer,
+        "let v_ptr := {}",
+        gen.parent.call_builtin_str(
+            ctx,
+            YulFunction::MakePtr,
+            vec![is_storage_call, "v_offs".to_string()].into_iter()
         )
     );
 
     emitln!(
         ctx.writer,
-        "size := {}",
-        gen.call_builtin_str(ctx, YulFunction::LoadU64, std::iter::once("v".to_string()))
+        "let size := {}",
+        gen.parent.call_builtin_str(
+            ctx,
+            YulFunction::LoadU64,
+            std::iter::once("v_ptr".to_string())
+        )
     );
 
     // calculate byte offset at which the new element should be stored
     emitln!(
         ctx.writer,
         "let e_ptr := {}",
-        &gen.call_builtin_str(
+        &gen.parent.call_builtin_str(
             ctx,
             YulFunction::IndexPtr,
             vec![
-                "v".to_string(),
+                "v_ptr".to_string(),
                 format!(
                     "add({}, mul(size, {}))",
                     VECTOR_METADATA_SIZE, elem_type_size
@@ -303,36 +690,67 @@ pub(crate) fn define_push_back_fun(
     // store the new element there
     emitln!(
         ctx.writer,
-        &gen.call_builtin_str(
+        &gen.parent.call_builtin_str(
             ctx,
             ctx.store_builtin_fun(elem_type),
             vec!["e_ptr".to_string(), "e".to_string()].into_iter()
         )
     );
 
-    // TODO: implement element's move to storage if vector is in global storage
-    // and element is a struct or vector
+    // Move element to storage if vector is in global storage and element is a struct or vector
+    if ctx.type_allocates_memory(elem_type) {
+        emitln!(
+            ctx.writer,
+            "if {} {{",
+            gen.parent.call_builtin_str(
+                ctx,
+                YulFunction::IsStoragePtr,
+                std::iter::once("e_ptr".to_string())
+            ),
+        );
+
+        ctx.writer.indent();
+        emitln!(
+            ctx.writer,
+            "let e_offs := {}",
+            gen.parent.call_builtin_str(
+                ctx,
+                YulFunction::OffsetPtr,
+                std::iter::once("e_ptr".to_string())
+            ),
+        );
+
+        gen.create_and_move_data_to_linked_storage(
+            ctx,
+            elem_type,
+            "e".to_string(),
+            "e_offs".to_string(),
+        );
+
+        ctx.writer.unindent();
+        emitln!(ctx.writer, "}");
+    }
 
     // increment size
     emitln!(ctx.writer, "size := add(size, 1)");
 
     emitln!(
         ctx.writer,
-        &gen.call_builtin_str(
+        &gen.parent.call_builtin_str(
             ctx,
             YulFunction::StoreU64,
-            vec!["v".to_string(), "size".to_string()].into_iter()
+            vec!["v_ptr".to_string(), "size".to_string()].into_iter()
         )
     );
 
     // load capacity
     emitln!(
         ctx.writer,
-        "capacity := {}",
-        gen.call_builtin_str(
+        "let capacity := {}",
+        gen.parent.call_builtin_str(
             ctx,
             YulFunction::LoadU64,
-            std::iter::once("$IndexPtr(v, 8)".to_string())
+            std::iter::once("$IndexPtr(v_ptr, 8)".to_string())
         )
     );
 
@@ -340,10 +758,10 @@ pub(crate) fn define_push_back_fun(
     emitln!(
         ctx.writer,
         "if and(iszero({}), eq(size, capacity)) {{",
-        gen.call_builtin_str(
+        gen.parent.call_builtin_str(
             ctx,
             YulFunction::IsStoragePtr,
-            std::iter::once("v".to_string())
+            std::iter::once("v_ptr".to_string())
         ),
     );
 
@@ -351,12 +769,12 @@ pub(crate) fn define_push_back_fun(
 
     emitln!(
         ctx.writer,
-        "let new_v := {}",
-        gen.call_builtin_str(
+        "let new_v_offs := {}",
+        gen.parent.call_builtin_str(
             ctx,
             YulFunction::ResizeVector,
             vec![
-                "v".to_string(),
+                "v_offs".to_string(),
                 "capacity".to_string(),
                 elem_type_size.to_string()
             ]
@@ -365,10 +783,10 @@ pub(crate) fn define_push_back_fun(
     );
     emitln!(
         ctx.writer,
-        &gen.call_builtin_str(
+        &gen.parent.call_builtin_str(
             ctx,
             YulFunction::StoreU256,
-            vec!["v_ptr".to_string(), "new_v".to_string()].into_iter()
+            vec!["v_ref".to_string(), "new_v_offs".to_string()].into_iter()
         )
     );
     ctx.writer.unindent();
@@ -377,50 +795,69 @@ pub(crate) fn define_push_back_fun(
     emitln!(ctx.writer, "}");
 }
 
-pub(crate) fn define_swap_fun(gen: &mut Generator, ctx: &Context, fun_id: &QualifiedInstId<FunId>) {
+fn define_swap_fun(gen: &mut FunctionGenerator, ctx: &Context, fun_id: &QualifiedInstId<FunId>) {
     let elem_type = fun_id.inst.get(0).unwrap();
     let elem_type_size = ctx.type_size(elem_type);
-    emitln!(ctx.writer, "(v_ptr, i, j) {");
+    emitln!(ctx.writer, "(v_ref, i, j) {");
     ctx.writer.indent();
     emitln!(
         ctx.writer,
-        "let v := {}",
-        gen.call_builtin_str(
+        "let v_offs := {}",
+        gen.parent.call_builtin_str(
             ctx,
             YulFunction::LoadU256,
-            std::iter::once("v_ptr".to_string())
+            std::iter::once("v_ref".to_string())
+        )
+    );
+    let is_storage_call = gen.parent.call_builtin_str(
+        ctx,
+        YulFunction::IsStoragePtr,
+        std::iter::once("v_ref".to_string()),
+    );
+    emitln!(
+        ctx.writer,
+        "let v_ptr := {}",
+        gen.parent.call_builtin_str(
+            ctx,
+            YulFunction::MakePtr,
+            vec![is_storage_call, "v_offs".to_string()].into_iter()
         )
     );
     emitln!(
         ctx.writer,
         "let size := {}",
-        gen.call_builtin_str(ctx, YulFunction::LoadU64, std::iter::once("v".to_string()))
+        gen.parent.call_builtin_str(
+            ctx,
+            YulFunction::LoadU64,
+            std::iter::once("v_ptr".to_string())
+        )
     );
 
     emitln!(
         ctx.writer,
         "if or({}, {}) {{ {} }}",
-        &gen.call_builtin_str(
+        &gen.parent.call_builtin_str(
             ctx,
             YulFunction::GtEq,
             vec!["i".to_string(), "size".to_string()].into_iter()
         ),
-        &gen.call_builtin_str(
+        &gen.parent.call_builtin_str(
             ctx,
             YulFunction::GtEq,
             vec!["j".to_string(), "size".to_string()].into_iter()
         ),
-        &gen.call_builtin_str(ctx, YulFunction::AbortBuiltin, std::iter::empty())
+        &gen.parent
+            .call_builtin_str(ctx, YulFunction::AbortBuiltin, std::iter::empty())
     );
 
     emitln!(
         ctx.writer,
         "let i_ptr := {}",
-        &gen.call_builtin_str(
+        &gen.parent.call_builtin_str(
             ctx,
             YulFunction::IndexPtr,
             vec![
-                "v".to_string(),
+                "v_ptr".to_string(),
                 format!("add({}, mul(i, {}))", VECTOR_METADATA_SIZE, elem_type_size)
             ]
             .into_iter()
@@ -429,11 +866,11 @@ pub(crate) fn define_swap_fun(gen: &mut Generator, ctx: &Context, fun_id: &Quali
     emitln!(
         ctx.writer,
         "let j_ptr := {}",
-        &gen.call_builtin_str(
+        &gen.parent.call_builtin_str(
             ctx,
             YulFunction::IndexPtr,
             vec![
-                "v".to_string(),
+                "v_ptr".to_string(),
                 format!("add({}, mul(j, {}))", VECTOR_METADATA_SIZE, elem_type_size)
             ]
             .into_iter()
@@ -442,7 +879,7 @@ pub(crate) fn define_swap_fun(gen: &mut Generator, ctx: &Context, fun_id: &Quali
     emitln!(
         ctx.writer,
         "let i_val := {}",
-        &gen.call_builtin_str(
+        &gen.parent.call_builtin_str(
             ctx,
             ctx.load_builtin_fun(elem_type),
             std::iter::once("i_ptr".to_string())
@@ -451,7 +888,7 @@ pub(crate) fn define_swap_fun(gen: &mut Generator, ctx: &Context, fun_id: &Quali
     emitln!(
         ctx.writer,
         "let j_val := {}",
-        &gen.call_builtin_str(
+        &gen.parent.call_builtin_str(
             ctx,
             ctx.load_builtin_fun(elem_type),
             std::iter::once("j_ptr".to_string())
@@ -459,7 +896,7 @@ pub(crate) fn define_swap_fun(gen: &mut Generator, ctx: &Context, fun_id: &Quali
     );
     emitln!(
         ctx.writer,
-        &gen.call_builtin_str(
+        &gen.parent.call_builtin_str(
             ctx,
             ctx.store_builtin_fun(elem_type),
             vec!["i_ptr".to_string(), "j_val".to_string()].into_iter()
@@ -467,7 +904,7 @@ pub(crate) fn define_swap_fun(gen: &mut Generator, ctx: &Context, fun_id: &Quali
     );
     emitln!(
         ctx.writer,
-        &gen.call_builtin_str(
+        &gen.parent.call_builtin_str(
             ctx,
             ctx.store_builtin_fun(elem_type),
             vec!["j_ptr".to_string(), "i_val".to_string()].into_iter()
@@ -477,8 +914,8 @@ pub(crate) fn define_swap_fun(gen: &mut Generator, ctx: &Context, fun_id: &Quali
     emitln!(ctx.writer, "}");
 }
 
-pub(crate) fn define_destroy_empty_fun(
-    gen: &mut Generator,
+fn define_destroy_empty_fun(
+    gen: &mut FunctionGenerator,
     ctx: &Context,
     fun_id: &QualifiedInstId<FunId>,
 ) {
@@ -493,7 +930,11 @@ pub(crate) fn define_destroy_empty_fun(
     emitln!(
         ctx.writer,
         "let size := {}",
-        gen.call_builtin_str(ctx, YulFunction::LoadU64, std::iter::once("v".to_string()))
+        gen.parent.call_builtin_str(
+            ctx,
+            YulFunction::MemoryLoadU64,
+            std::iter::once("v".to_string())
+        )
     );
 
     // check that the vector is indeed empty
@@ -501,28 +942,28 @@ pub(crate) fn define_destroy_empty_fun(
     emitln!(
         ctx.writer,
         "if {} {{ {} }}",
-        &gen.call_builtin_str(
+        &gen.parent.call_builtin_str(
             ctx,
             YulFunction::LogicalNot,
             std::iter::once("iszero(size)".to_string())
         ),
-        &gen.call_builtin_str(ctx, YulFunction::AbortBuiltin, std::iter::empty())
+        &gen.parent
+            .call_builtin_str(ctx, YulFunction::AbortBuiltin, std::iter::empty())
     );
 
-    let capacity_ptr = gen.call_builtin_str(
-        ctx,
-        YulFunction::IndexPtr,
-        vec!["v".to_string(), "8".to_string()].into_iter(),
-    );
     emitln!(
         ctx.writer,
         "let capacity := {}",
-        gen.call_builtin_str(ctx, YulFunction::LoadU64, std::iter::once(capacity_ptr))
+        gen.parent.call_builtin_str(
+            ctx,
+            YulFunction::MemoryLoadU64,
+            std::iter::once("add(v, 8)".to_string())
+        )
     );
 
     emitln!(
         ctx.writer,
-        &gen.call_builtin_str(
+        &gen.parent.call_builtin_str(
             ctx,
             YulFunction::Free,
             vec![
@@ -538,4 +979,11 @@ pub(crate) fn define_destroy_empty_fun(
 
     ctx.writer.unindent();
     emitln!(ctx.writer, "}");
+}
+
+fn get_elem_type(vector_type: &Type) -> Option<Type> {
+    match vector_type {
+        Type::Vector(ty) => Some(*ty.clone()),
+        _ => None,
+    }
 }

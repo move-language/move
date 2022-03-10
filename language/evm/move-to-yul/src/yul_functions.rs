@@ -576,18 +576,16 @@ CopyMemory: "(src, dst, size) {
   }
 }",
 
-ResizeVector: "(v, capacity, type_size) -> new_v {
-    let v_offs := $OffsetPtr(v)
+ResizeVector: "(v_offs, capacity, type_size) -> new_v_offs {
     let new_capacity := mul(capacity, 2)
     let data_size := add(${VECTOR_METADATA_SIZE}, mul(capacity, type_size))
     let new_data_size := add(${VECTOR_METADATA_SIZE}, mul(new_capacity, type_size))
-    let new_v_offs := $Malloc(new_data_size)
-    new_v := $MakePtr(false, new_v_offs)
+    new_v_offs := $Malloc(new_data_size)
     $CopyMemory(v_offs, new_v_offs, data_size)
     // update capacity at new location
     $MemoryStoreU64(add(new_v_offs, 8), new_capacity)
     $Free(v_offs, data_size)
-}" dep OffsetPtr dep Malloc dep MakePtr dep CopyMemory dep MemoryStoreU64 dep Free,
+}" dep Malloc dep CopyMemory dep MemoryStoreU64 dep Free,
 
 // -------------------------------------------------------------------------------------------
 // Arithmetic, Logic, and Relations
@@ -706,4 +704,13 @@ CastU256: "(hi, lo) -> r {
     if gt(lo, ${MAX_U128}) { $AbortBuiltin() }
     r := add(shl(128, hi), lo)
 }" dep AbortBuiltin,
+ClosestGreaterPowerOfTwo: "(x) -> r {
+    r := or(r, shr(1, x))
+    r := or(r, shr(2, r))
+    r := or(r, shr(4, r))
+    r := or(r, shr(8, r))
+    r := or(r, shr(16, r))
+    r := or(r, shr(32, r))
+    r := add(x, 1)
+}"
 }

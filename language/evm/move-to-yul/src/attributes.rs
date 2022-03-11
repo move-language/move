@@ -131,5 +131,5 @@ pub fn is_evm_test_fun(fun: &FunctionEnv<'_>) -> bool {
 
 /// Check whether the function has a `#[test]` attribute.
 pub fn is_test_fun(fun: &FunctionEnv<'_>) -> bool {
-    has_attr(fun.module_env.env, fun.get_attributes(), TEST_ATTR, true)
+    has_attr(fun.module_env.env, fun.get_attributes(), TEST_ATTR, false)
 }

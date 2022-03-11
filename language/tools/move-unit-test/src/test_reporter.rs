@@ -37,6 +37,10 @@ pub enum FailureReason {
     Property(String),
     // The test failed for some unknown reason. This shouldn't be encountered
     Unknown(String),
+
+    // Failed to compile Move code into EVM bytecode.
+    #[cfg(feature = "evm-backend")]
+    MoveToEVMError(String),
 }
 
 #[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq)]
@@ -115,6 +119,10 @@ impl FailureReason {
         FailureReason::Property(details)
     }
 
+    pub fn move_to_evm_error(diagnostics: String) -> Self {
+        FailureReason::MoveToEVMError(diagnostics)
+    }
+
     pub fn unknown() -> Self {
         FailureReason::Unknown("ITE: An unknown error was reported.".to_string())
     }
@@ -183,6 +191,14 @@ impl TestFailure {
                         .as_ref()
                         .map(|err| format!("{:#?}", err))
                         .unwrap_or_else(|| "".to_string()),
+                )
+            }
+
+            #[cfg(feature = "evm-backend")]
+            FailureReason::MoveToEVMError(diagnostics) => {
+                format!(
+                    "Failed to compile Move code into EVM bytecode.\n\n{}",
+                    diagnostics
                 )
             }
         };

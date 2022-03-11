@@ -1,0 +1,35 @@
+Running Move unit tests
+[ FAIL    ] 0x1::M::non_existent_native
+
+Test failures:
+
+Failures in 0x1::M:
+
+┌── non_existent_native ──────
+│ ITE: An unknown error was reported. Location: 
+│ VMError (if there is one): VMError {
+│     major_status: UNEXPECTED_VERIFIER_ERROR,
+│     sub_status: None,
+│     message: Some(
+│         "Unexpected verifier/deserialization error! This likely means there is code stored on chain that is unverifiable!\nError: VMError { major_status: MISSING_DEPENDENCY, sub_status: None, message: None, stacktrace: None, location: Module(ModuleId { address: 00000000000000000000000000000001, name: Identifier(\"M\") }), indices: [(FunctionHandle, 0)], offsets: [] }",
+│     ),
+│     stacktrace: None,
+│     location: Module(
+│         ModuleId {
+│             address: 00000000000000000000000000000001,
+│             name: Identifier(
+│                 "M",
+│             ),
+│         },
+│     ),
+│     indices: [
+│         (
+│             FunctionHandle,
+│             0,
+│         ),
+│     ],
+│     offsets: [],
+│ }
+└──────────────────
+
+Test result: FAILED. Total tests: 1; passed: 0; failed: 1

@@ -1,12 +1,11 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use codespan_reporting::diagnostic::Severity;
-use move_core_types::{identifier::IdentStr, language_storage::ModuleId};
-use std::collections::{BTreeMap, BTreeSet};
-
+use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
 use itertools::Itertools;
+use move_core_types::{identifier::IdentStr, language_storage::ModuleId, value::MoveValue};
 use sha3::{Digest, Keccak256};
+use std::collections::{BTreeMap, BTreeSet};
 
 use move_model::{
     ast::TempIndex,
@@ -93,7 +92,7 @@ impl Generator {
             for fun in module.get_functions() {
                 if attributes::is_evm_test_fun(&fun) {
                     let mut gen = Generator::default();
-                    gen.test_object(&ctx, &fun);
+                    gen.test_object(&ctx, &fun, &[]);
                     res.insert(fun.get_qualified_id(), ctx.writer.extract_result());
                 }
             }
@@ -103,20 +102,28 @@ impl Generator {
     }
 
     /// Run the generator for a specific unit test and generate a Yul test object for it.
+    /// Return diagnostics if errors are raised.
     pub fn run_for_unit_test(
         options: &Options,
         env: &GlobalEnv,
         module_id: &ModuleId,
         fun_name: &IdentStr,
-    ) -> String {
+        args: &[MoveValue],
+    ) -> Result<String, String> {
         let fun = env
             .find_function_by_language_storage_id_name(module_id, fun_name)
             .expect("Failed to find test function. This should not have happened.");
 
         let ctx = Context::new(options, env, /*for_test*/ true);
         let mut gen = Generator::default();
-        gen.test_object(&ctx, &fun);
-        ctx.writer.extract_result()
+        gen.test_object(&ctx, &fun, args);
+        if ctx.env.has_errors() {
+            let mut buffer = Buffer::no_color();
+            ctx.env.report_diag(&mut buffer, Severity::Error);
+            Err(String::from_utf8_lossy(buffer.as_slice()).to_string())
+        } else {
+            Ok(ctx.writer.extract_result())
+        }
     }
 }
 
@@ -172,17 +179,35 @@ impl Generator {
     ///
     /// A test object contains no nested objects and is intended to execute at transaction time,
     /// without actually deploying any contract code.
-    fn test_object(&mut self, ctx: &Context, test: &FunctionEnv) {
+    fn test_object(&mut self, ctx: &Context, test: &FunctionEnv, args: &[MoveValue]) {
         self.header(ctx);
         ctx.check_no_generics(test);
-        if test.get_parameter_count() > 0 || test.get_return_count() > 0 {
+        if test.get_return_count() > 0 {
+            ctx.env
+                .error(&test.get_loc(), "test functions cannot have return values");
+            return;
+        }
+        if test.get_parameter_count() != args.len() {
             ctx.env.error(
                 &test.get_loc(),
-                "test functions cannot have parameters or return values \
-                    at this point of time",
+                &format!(
+                    "test function has {} parameters but {} were provided",
+                    test.get_parameter_count(),
+                    args.len()
+                ),
             );
             return;
         }
+        for ty in test.get_parameter_types() {
+            if !ty.is_signer_or_address() {
+                ctx.env.error(
+                    &test.get_loc(),
+                    "only signer or address parameters are allowed currently",
+                );
+                return;
+            }
+        }
+
         let fun_id = test.get_qualified_id().instantiate(vec![]);
         let test_contract_name = format!("test_{}", ctx.make_function_name(&fun_id));
         emit!(ctx.writer, "object \"{}\" ", test_contract_name);
@@ -193,8 +218,29 @@ impl Generator {
                 "mstore(${MEM_SIZE_LOC}, memoryguard(${USED_MEM}))"
             );
             self.need_move_function(&fun_id);
+
+            for (idx, arg) in args.iter().enumerate() {
+                emit!(ctx.writer, "let $arg{} := ", idx);
+                match arg {
+                    MoveValue::Address(addr) => {
+                        emitln!(ctx.writer, "{}", addr.to_hex_literal());
+                    }
+                    _ => unreachable!(
+                        "only address literals are allowed as test arguments currently"
+                    ),
+                }
+            }
+
             let fun_name = ctx.make_function_name(&fun_id);
-            emitln!(ctx.writer, "{}()", fun_name);
+            emit!(ctx.writer, "{}(", fun_name);
+            for idx in 0..args.len() {
+                if idx > 0 {
+                    emit!(ctx.writer, ", ");
+                }
+                emit!(ctx.writer, "$arg{}", idx);
+            }
+            emitln!(ctx.writer, ")");
+
             emitln!(ctx.writer, "return (0, 0)");
             self.end_code_block(ctx);
         });

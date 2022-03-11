@@ -43,7 +43,7 @@ impl NativeFunctions {
             ctx.env.error(
                 &gen.parent.contract_loc,
                 &format!(
-                    "native function `{}` not implemented for type `{:?}`",
+                    "native function {} not implemented (w/ signature `{:?}`)",
                     ctx.env
                         .get_function(fun_id.to_qualified_id())
                         .get_full_name_str(),

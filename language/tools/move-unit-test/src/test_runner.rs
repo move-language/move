@@ -556,12 +556,30 @@ impl SharedTestingConfig {
 
         let gen_options = move_to_yul::options::Options::default();
         for (function_name, test_info) in &test_plan.tests {
-            let yul_code = move_to_yul::generator::Generator::run_for_unit_test(
+            let yul_code = match move_to_yul::generator::Generator::run_for_unit_test(
                 &gen_options,
                 &model,
                 &test_plan.module_id,
                 IdentStr::new(function_name).unwrap(),
-            );
+                &test_info.arguments,
+            ) {
+                Ok(yul_code) => yul_code,
+                Err(diagnostics) => {
+                    // Failed to generate yul code due to some user errors.
+                    // Mark test as failed.
+                    output.fail(function_name);
+                    stats.test_failure(
+                        TestFailure::new(
+                            FailureReason::move_to_evm_error(diagnostics),
+                            TestRunInfo::new(function_name.to_string(), Duration::ZERO, 0),
+                            None,
+                            None,
+                        ),
+                        test_plan,
+                    );
+                    return stats;
+                }
+            };
 
             let (res, duration) = self.execute_via_evm(&yul_code);
 

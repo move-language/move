@@ -22,6 +22,7 @@ impl NativeFunctions {
     pub(crate) fn create(ctx: &Context) -> Self {
         let mut funs = NativeFunctions::default();
         funs.define_evm_functions(ctx);
+        funs.define_move_functions(ctx);
         funs.define_vector_functions(ctx);
         funs
     }
@@ -252,6 +253,20 @@ impl NativeFunctions {
                 "\
 () -> result {
   result := origin()
+}"
+            );
+        });
+    }
+
+    fn define_move_functions(&mut self, ctx: &Context) {
+        let signer = &self.find_module(ctx, "0x1", "Signer");
+
+        self.define(ctx, signer, "borrow_address", |_, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+(signer_ref) -> addr_ref {
+  addr_ref := signer_ref
 }"
             );
         });

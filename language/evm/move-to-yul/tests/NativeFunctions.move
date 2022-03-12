@@ -5,6 +5,7 @@
 module 0x2::NativeFunctions {
     use Evm::Evm;
     use Evm::U256;
+    use Std::Signer;
 
     #[callable]
     fun call_native_functions() {
@@ -23,5 +24,11 @@ module 0x2::NativeFunctions {
         let _ = Evm::msg_value();
         let _ = Evm::tx_gasprice();
         let _ = Evm::tx_origin();
+    }
+
+    #[evm_test]
+    fun test_signer_address_of() {
+        let s = Evm::sign(@0x42);
+        assert!(Signer::address_of(&s) == @0x42, 101);
     }
 }

@@ -53,12 +53,14 @@ tiny-keccak = { version = "2.0.2", features = ["keccak", "sha3"] }
 
 [target.x86_64-unknown-linux-gnu.dependencies]
 libc = { version = "0.2.112", features = ["std"] }
+mio = { version = "0.7.13", features = ["net", "os-ext", "os-poll", "os-util", "tcp", "udp", "uds"] }
 
 [target.x86_64-unknown-linux-gnu.build-dependencies]
 libc = { version = "0.2.112", features = ["std"] }
 
 [target.x86_64-apple-darwin.dependencies]
 libc = { version = "0.2.112", features = ["std"] }
+mio = { version = "0.7.13", features = ["net", "os-ext", "os-poll", "os-util", "tcp", "udp", "uds"] }
 
 [target.x86_64-apple-darwin.build-dependencies]
 libc = { version = "0.2.112", features = ["std"] }

@@ -5091,6 +5091,7 @@ dependencies = [
  "libc",
  "log",
  "memchr",
+ "mio",
  "num-traits 0.2.14",
  "plotters",
  "primitive-types",

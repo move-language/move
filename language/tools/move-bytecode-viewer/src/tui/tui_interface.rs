@@ -3,9 +3,13 @@
 
 #![forbid(unsafe_code)]
 use crate::tui::TUI;
+use crossterm::{
+    event::EnableMouseCapture,
+    execute,
+    terminal::{enable_raw_mode, EnterAlternateScreen},
+};
 use std::{error::Error, io};
-use termion::{input::MouseTerminal, raw::IntoRawMode, screen::AlternateScreen};
-use tui::{backend::TermionBackend, text::Spans, Terminal};
+use tui::{backend::CrosstermBackend, text::Spans, Terminal};
 
 /// The output that will be display in the TUI. The text in the `left_screen` and `right_screen`
 /// fields will be displayed on the left screen and right screen respectively.
@@ -79,10 +83,10 @@ impl TUIInterface for DebugInterface {
 pub fn start_tui_with_interface<Interface: TUIInterface>(
     interface: Interface,
 ) -> Result<(), Box<dyn Error>> {
-    let stdout = io::stdout().into_raw_mode()?;
-    let stdout = MouseTerminal::from(stdout);
-    let stdout = AlternateScreen::from(stdout);
-    let backend = TermionBackend::new(stdout);
+    enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
     let mut tui = TUI::new(interface);
     loop {

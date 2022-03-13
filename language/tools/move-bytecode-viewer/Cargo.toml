@@ -10,8 +10,8 @@ edition = "2018"
 structopt = "0.3.21"
 anyhow = "1.0.52"
 regex = "1.1.9"
-termion = "1.5"
-tui = "0.14.0"
+tui = "0.17.0"
+crossterm = "0.21"
 
 move-command-line-common = { path = "../../move-command-line-common" }
 move-bytecode-source-map = { path = "../../move-ir-compiler/move-bytecode-source-map" }

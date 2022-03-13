@@ -6,10 +6,19 @@ use std::{
     fmt::Display,
     fs::{create_dir_all, read_to_string},
     io::Write,
-    os::unix::prelude::ExitStatusExt,
     path::{Path, PathBuf},
     process::ExitStatus,
 };
+
+// if windows
+#[cfg(target_family = "windows")]
+use std::os::windows::process::ExitStatusExt;
+// if unix
+#[cfg(any(target_family = "unix"))]
+use std::os::unix::prelude::ExitStatusExt;
+// if not windows nor unix
+#[cfg(not(any(target_family = "windows", target_family = "unix")))]
+compile_error!("Unsupported OS, currently we only support windows and unix family");
 
 use anyhow::{bail, Result};
 

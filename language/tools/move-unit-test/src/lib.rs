@@ -67,7 +67,7 @@ pub struct UnitTestingConfig {
 
     #[structopt(
         name = "report_stacktrace_on_abort",
-        short = "t",
+        short = "r",
         long = "stacktrace_on_abort"
     )]
     pub report_stacktrace_on_abort: bool,

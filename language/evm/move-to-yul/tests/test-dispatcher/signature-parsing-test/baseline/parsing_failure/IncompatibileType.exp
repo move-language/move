@@ -22,10 +22,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$address$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$address$_$address$(4, calldatasize())
                     A2_M_fun_address_u160(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xcbf7c360
@@ -37,7 +37,7 @@ object "A2_M" {
                     }
                     let ret_0 := A2_M_fun_u128()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$uint128$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint128$_$u128$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x8d0b1090
@@ -47,10 +47,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$uint128$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint128$_$u128$(4, calldatasize())
                     A2_M_fun_u128_address(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xa9d905d0
@@ -60,10 +60,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$uint128$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint128$_$u128$(4, calldatasize())
                     A2_M_fun_u128_fixed(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x770a450e
@@ -73,10 +73,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$uint128$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint128$_$u128$(4, calldatasize())
                     A2_M_fun_u128_ufixed(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xc0d24f28
@@ -86,10 +86,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$uint64$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint64$_$u64$(4, calldatasize())
                     A2_M_fun_u64(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x92678e35
@@ -99,10 +99,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$uint8$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint8$_$u8$(4, calldatasize())
                     A2_M_fun_u8(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x998281f6
@@ -112,10 +112,75 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$uint8$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint8$_$u8$(4, calldatasize())
                     A2_M_fun_u8_bool(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x9e9c6db1
+                {
+                    // fun_vec_u128_bytes(uint128[])
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$uint128__$_$vec$u128$$(4, calldatasize())
+                    let ret_0 := A2_M_fun_vec_u128_bytes(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$uint128$_$u128$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x7a8c2655
+                {
+                    // fun_vec_u128_str(uint128[])
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$uint128__$_$vec$u128$$(4, calldatasize())
+                    let ret_0 := A2_M_fun_vec_u128_str(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$uint128$_$u128$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x82da02db
+                {
+                    // fun_vec_u64(uint64[])
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$uint64__$_$vec$u64$$(4, calldatasize())
+                    let ret_0 := A2_M_fun_vec_u64(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$uint128$_$u128$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x2bea815d
+                {
+                    // fun_vec_u64_int72_dynamic(uint64[])
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$uint64__$_$vec$u64$$(4, calldatasize())
+                    let ret_0 := A2_M_fun_vec_u64_int72_dynamic(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$uint128$_$u128$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x782367b8
+                {
+                    // fun_vec_u64_int72_static(uint64[])
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$uint64__$_$vec$u64$$(4, calldatasize())
+                    let ret_0 := A2_M_fun_vec_u64_int72_static(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$uint128$_$u128$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xf1a3a9ec
@@ -127,7 +192,7 @@ object "A2_M" {
                     }
                     let ret_0 := A2_M_len_ret_diff()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$uint128$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint128$_$u128$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xfdcc968a
@@ -137,10 +202,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$uint64$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint64$_$u64$(4, calldatasize())
                     let ret_0 := A2_M_len_typ_diff(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$uint64$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint64$_$u64$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 default {}
@@ -235,7 +300,7 @@ object "A2_M" {
                 $result := x
             }
 
-            function abi_encode_tuple_$uint64$(headStart ,value_0) -> tail {
+            function abi_encode_tuple_$uint64$_$u64$(headStart ,value_0) -> tail {
                 tail := add(headStart, 32)
                 abi_encode_uint64(value_0, add(headStart, 0))
             }
@@ -245,7 +310,7 @@ object "A2_M" {
             function cleanup_uint64(value) -> cleaned {
                 cleaned := and(value, 0xffffffffffffffff)
             }
-            function abi_decode_tuple_$uint64$(headStart, dataEnd) -> value_0 {
+            function abi_decode_tuple_$uint64$_$u64$(headStart, dataEnd) -> value_0 {
                 if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
                 {
                     let offset := 0
@@ -259,7 +324,7 @@ object "A2_M" {
             function validator_uint64(value) {
                 if iszero(eq(value, cleanup_uint64(value))) { $Abort(95) }
             }
-            function abi_encode_tuple_$uint128$(headStart ,value_0) -> tail {
+            function abi_encode_tuple_$uint128$_$u128$(headStart ,value_0) -> tail {
                 tail := add(headStart, 32)
                 abi_encode_uint128(value_0, add(headStart, 0))
             }
@@ -269,10 +334,75 @@ object "A2_M" {
             function cleanup_uint128(value) -> cleaned {
                 cleaned := and(value, 0xffffffffffffffffffffffffffffffff)
             }
-            function abi_encode_tuple_(headStart ) -> tail {
+            function abi_decode_tuple_$uint64__$_$vec$u64$$(headStart, dataEnd) -> value_0 {
+                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
+                {
+                    let offset := calldataload(add(headStart, 0))
+                    if gt(offset, 0xffffffffffffffff) { $Abort(96) }
+                    value_0 := abi_decode_uint64___vec$u64$(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_uint64___vec$u64$(offset, end) -> array {
+                if iszero(slt(add(offset, 0x1f), end)) { $Abort(94) }
+                let length := calldataload(offset)
+                let size := add(mul(8, length), 32)
+                array := abi_decode_available_length__uint64___vec$u64$(add(offset, 0x20), length, size, end)
+            }
+            function abi_decode_available_length__uint64___vec$u64$(offset, length, size, end) -> array {
+                array := $Malloc($CheckMemorySize(size))
+                $MemoryStoreU64(array, length)
+                $MemoryStoreU64(add(array, 8), length)
+                let dst := add(array, 32)
+                let srcEnd := add(offset, mul(length, 32))
+                if gt(srcEnd, end) { $Abort(94) }
+                for { let src := offset } lt(src, srcEnd) { src := add(src, 32) }
+                {
+                    let elementPos := src
+                    let value := abi_decode_uint64(elementPos, end)
+                    $MemoryStoreU64(dst, value)
+                    dst := add(dst, 8)
+                }
+            }
+            function abi_decode_tuple_$uint128__$_$vec$u128$$(headStart, dataEnd) -> value_0 {
+                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
+                {
+                    let offset := calldataload(add(headStart, 0))
+                    if gt(offset, 0xffffffffffffffff) { $Abort(96) }
+                    value_0 := abi_decode_uint128___vec$u128$(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_uint128___vec$u128$(offset, end) -> array {
+                if iszero(slt(add(offset, 0x1f), end)) { $Abort(94) }
+                let length := calldataload(offset)
+                let size := add(mul(16, length), 32)
+                array := abi_decode_available_length__uint128___vec$u128$(add(offset, 0x20), length, size, end)
+            }
+            function abi_decode_available_length__uint128___vec$u128$(offset, length, size, end) -> array {
+                array := $Malloc($CheckMemorySize(size))
+                $MemoryStoreU64(array, length)
+                $MemoryStoreU64(add(array, 8), length)
+                let dst := add(array, 32)
+                let srcEnd := add(offset, mul(length, 32))
+                if gt(srcEnd, end) { $Abort(94) }
+                for { let src := offset } lt(src, srcEnd) { src := add(src, 32) }
+                {
+                    let elementPos := src
+                    let value := abi_decode_uint128(elementPos, end)
+                    $MemoryStoreU128(dst, value)
+                    dst := add(dst, 16)
+                }
+            }
+            function abi_decode_uint128(offset, end) -> value {
+                value := calldataload(offset)
+                validator_uint128(value)
+            }
+            function validator_uint128(value) {
+                if iszero(eq(value, cleanup_uint128(value))) { $Abort(95) }
+            }
+            function abi_encode_tuple__(headStart ) -> tail {
                 tail := add(headStart, 0)
             }
-            function abi_decode_tuple_$uint8$(headStart, dataEnd) -> value_0 {
+            function abi_decode_tuple_$uint8$_$u8$(headStart, dataEnd) -> value_0 {
                 if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
                 {
                     let offset := 0
@@ -289,21 +419,14 @@ object "A2_M" {
             function cleanup_uint8(value) -> cleaned {
                 cleaned := and(value, 0xff)
             }
-            function abi_decode_tuple_$uint128$(headStart, dataEnd) -> value_0 {
+            function abi_decode_tuple_$uint128$_$u128$(headStart, dataEnd) -> value_0 {
                 if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
                 {
                     let offset := 0
                     value_0 := abi_decode_uint128(add(headStart, offset), dataEnd)
                 }
             }
-            function abi_decode_uint128(offset, end) -> value {
-                value := calldataload(offset)
-                validator_uint128(value)
-            }
-            function validator_uint128(value) {
-                if iszero(eq(value, cleanup_uint128(value))) { $Abort(95) }
-            }
-            function abi_decode_tuple_$address$(headStart, dataEnd) -> value_0 {
+            function abi_decode_tuple_$address$_$address$(headStart, dataEnd) -> value_0 {
                 if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
                 {
                     let offset := 0
@@ -323,6 +446,32 @@ object "A2_M" {
             function $Abort(code) {
                 mstore(0, code)
                 revert(24, 8) // TODO: store code as a string?
+            }
+            function $AbortBuiltin() {
+                $Abort(sub(0, 1))
+            }
+            function $Malloc(size) -> offs {
+                offs := mload(0)
+                // pad to word size
+                mstore(0, add(offs, shl(5, shr(5, add(size, 31)))))
+            }
+            function $MaskForSize(size) -> mask {
+              mask := sub(shl(shl(3, size), 1), 1)
+            }
+            function $MemoryStoreBytes(offs, size, val) {
+              let bit_end := shl(3, sub(32, size))
+              let mask := shl(bit_end, $MaskForSize(size))
+              mstore(offs, or(and(mload(offs), not(mask)), shl(bit_end, val)))
+            }
+            function $MemoryStoreU64(offs, val) {
+              $MemoryStoreBytes(offs, 8, val)
+            }
+            function $MemoryStoreU128(offs, val) {
+              $MemoryStoreBytes(offs, 16, val)
+            }
+            function $CheckMemorySize(len) -> checked_len {
+                if gt(len, 0xffffffffffffffff) { $AbortBuiltin() }
+                checked_len := len
             }
             function $Shr(x, y) -> r {
                 r := shr(y, x)
@@ -398,23 +547,7 @@ error: solidity signature is not compatible with the move signature
 63 │ │     }
    │ ╰─────^
 
-warning: cannot dispatch this function because of unsupported parameter types
-   ┌─ tests/test-dispatcher/signature-parsing-test/baseline/parsing_failure/IncompatibileType.move:61:5
-   │
-61 │ ╭     fun fun_vec_u128_bytes(_vec0: vector<u128>): u128 {
-62 │ │         2
-63 │ │     }
-   │ ╰─────^
-
 error: solidity signature is not compatible with the move signature
-   ┌─ tests/test-dispatcher/signature-parsing-test/baseline/parsing_failure/IncompatibileType.move:54:5
-   │
-54 │ ╭     fun fun_vec_u128_str(_vec0: vector<u128>): u128 {
-55 │ │         2
-56 │ │     }
-   │ ╰─────^
-
-warning: cannot dispatch this function because of unsupported parameter types
    ┌─ tests/test-dispatcher/signature-parsing-test/baseline/parsing_failure/IncompatibileType.move:54:5
    │
 54 │ ╭     fun fun_vec_u128_str(_vec0: vector<u128>): u128 {
@@ -430,14 +563,6 @@ error: solidity signature is not compatible with the move signature
 70 │ │     }
    │ ╰─────^
 
-warning: cannot dispatch this function because of unsupported parameter types
-   ┌─ tests/test-dispatcher/signature-parsing-test/baseline/parsing_failure/IncompatibileType.move:68:5
-   │
-68 │ ╭     fun fun_vec_u64(_vec0: vector<u64>): u128 {
-69 │ │         2
-70 │ │     }
-   │ ╰─────^
-
 error: solidity signature is not compatible with the move signature
    ┌─ tests/test-dispatcher/signature-parsing-test/baseline/parsing_failure/IncompatibileType.move:82:5
    │
@@ -446,23 +571,7 @@ error: solidity signature is not compatible with the move signature
 84 │ │     }
    │ ╰─────^
 
-warning: cannot dispatch this function because of unsupported parameter types
-   ┌─ tests/test-dispatcher/signature-parsing-test/baseline/parsing_failure/IncompatibileType.move:82:5
-   │
-82 │ ╭     fun fun_vec_u64_int72_dynamic(_vec0: vector<u64>): u128 {
-83 │ │         2
-84 │ │     }
-   │ ╰─────^
-
 error: solidity signature is not compatible with the move signature
-   ┌─ tests/test-dispatcher/signature-parsing-test/baseline/parsing_failure/IncompatibileType.move:75:5
-   │
-75 │ ╭     fun fun_vec_u64_int72_static(_vec0: vector<u64>): u128 {
-76 │ │         2
-77 │ │     }
-   │ ╰─────^
-
-warning: cannot dispatch this function because of unsupported parameter types
    ┌─ tests/test-dispatcher/signature-parsing-test/baseline/parsing_failure/IncompatibileType.move:75:5
    │
 75 │ ╭     fun fun_vec_u64_int72_static(_vec0: vector<u64>): u128 {

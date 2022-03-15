@@ -22,10 +22,10 @@ object "A2_ERC20" {
                     {
                         $Abort(99)
                     }
-                    let param_0, param_1 := abi_decode_tuple_$address_address$(4, calldatasize())
+                    let param_0, param_1 := abi_decode_tuple_$address_address$_$address_address$(4, calldatasize())
                     let ret_0 := A2_ERC20_allowance(param_0, param_1)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$uint256$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint256$_$A2_U256_U256$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x095ea7b3
@@ -35,10 +35,10 @@ object "A2_ERC20" {
                     {
                         $Abort(99)
                     }
-                    let param_0, param_1 := abi_decode_tuple_$address_uint256$(4, calldatasize())
+                    let param_0, param_1 := abi_decode_tuple_$address_uint256$_$address_A2_U256_U256$(4, calldatasize())
                     let ret_0 := A2_ERC20_approve(param_0, param_1)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$bool$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$bool$_$bool$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x70a08231
@@ -48,10 +48,10 @@ object "A2_ERC20" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$address$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$address$_$address$(4, calldatasize())
                     let ret_0 := A2_ERC20_balance_of(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$uint256$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint256$_$A2_U256_U256$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x18160ddd
@@ -63,7 +63,7 @@ object "A2_ERC20" {
                     }
                     let ret_0 := A2_ERC20_total_supply()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$uint256$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint256$_$A2_U256_U256$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xa9059cbb
@@ -73,10 +73,10 @@ object "A2_ERC20" {
                     {
                         $Abort(99)
                     }
-                    let param_0, param_1 := abi_decode_tuple_$address_uint256$(4, calldatasize())
+                    let param_0, param_1 := abi_decode_tuple_$address_uint256$_$address_A2_U256_U256$(4, calldatasize())
                     let ret_0 := A2_ERC20_transfer(param_0, param_1)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$bool$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$bool$_$bool$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x23b872dd
@@ -86,10 +86,10 @@ object "A2_ERC20" {
                     {
                         $Abort(99)
                     }
-                    let param_0, param_1, param_2 := abi_decode_tuple_$address_address_uint256$(4, calldatasize())
+                    let param_0, param_1, param_2 := abi_decode_tuple_$address_address_uint256$_$address_address_A2_U256_U256$(4, calldatasize())
                     let ret_0 := A2_ERC20_transfer_from(param_0, param_1, param_2)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$bool$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$bool$_$bool$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 default {}
@@ -143,7 +143,7 @@ object "A2_ERC20" {
                 $result := $t3
             }
 
-            function abi_encode_tuple_$bool$(headStart ,value_0) -> tail {
+            function abi_encode_tuple_$bool$_$bool$(headStart ,value_0) -> tail {
                 tail := add(headStart, 32)
                 abi_encode_bool(value_0, add(headStart, 0))
             }
@@ -153,7 +153,7 @@ object "A2_ERC20" {
             function cleanup_bool(value) -> cleaned {
                 cleaned := and(value, 0xff)
             }
-            function abi_decode_tuple_$address_address_uint256$(headStart, dataEnd) -> value_0, value_1, value_2 {
+            function abi_decode_tuple_$address_address_uint256$_$address_address_A2_U256_U256$(headStart, dataEnd) -> value_0, value_1, value_2 {
                 if slt(sub(dataEnd, headStart), 96) { $Abort(96) }
                 {
                     let offset := 0
@@ -188,7 +188,7 @@ object "A2_ERC20" {
             function cleanup_address(value) -> cleaned {
                 cleaned := and(value, 0xffffffffffffffffffffffffffffffffffffffff)
             }
-            function abi_decode_tuple_$address_uint256$(headStart, dataEnd) -> value_0, value_1 {
+            function abi_decode_tuple_$address_uint256$_$address_A2_U256_U256$(headStart, dataEnd) -> value_0, value_1 {
                 if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
                 {
                     let offset := 0
@@ -199,21 +199,21 @@ object "A2_ERC20" {
                     value_1 := abi_decode_uint256(add(headStart, offset), dataEnd)
                 }
             }
-            function abi_encode_tuple_$uint256$(headStart ,value_0) -> tail {
+            function abi_encode_tuple_$uint256$_$A2_U256_U256$(headStart ,value_0) -> tail {
                 tail := add(headStart, 32)
                 abi_encode_uint256(value_0, add(headStart, 0))
             }
             function abi_encode_uint256(value, pos) {
                 mstore(pos, cleanup_uint256(value))
             }
-            function abi_decode_tuple_$address$(headStart, dataEnd) -> value_0 {
+            function abi_decode_tuple_$address$_$address$(headStart, dataEnd) -> value_0 {
                 if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
                 {
                     let offset := 0
                     value_0 := abi_decode_address(add(headStart, offset), dataEnd)
                 }
             }
-            function abi_decode_tuple_$address_address$(headStart, dataEnd) -> value_0, value_1 {
+            function abi_decode_tuple_$address_address$_$address_address$(headStart, dataEnd) -> value_0, value_1 {
                 if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
                 {
                     let offset := 0

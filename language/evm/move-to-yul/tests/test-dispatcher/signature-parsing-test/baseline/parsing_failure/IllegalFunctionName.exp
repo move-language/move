@@ -24,7 +24,7 @@ object "A2_M" {
                     }
                     A2_M_illegal_char()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x7561eadc
@@ -36,7 +36,7 @@ object "A2_M" {
                     }
                     A2_M_illegal_char_begin()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
                 default {}
@@ -50,7 +50,7 @@ object "A2_M" {
                 // return ()
             }
 
-            function abi_encode_tuple_(headStart ) -> tail {
+            function abi_encode_tuple__(headStart ) -> tail {
                 tail := add(headStart, 0)
             }
             function $Abort(code) {

@@ -22,10 +22,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$uint64$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint64$_$u64$(4, calldatasize())
                     A2_M_extra_comma_1(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x198b124c
@@ -35,10 +35,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$uint64$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint64$_$u64$(4, calldatasize())
                     A2_M_extra_comma_2(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x0b875799
@@ -50,7 +50,7 @@ object "A2_M" {
                     }
                     let ret_0 := A2_M_extra_comma_3()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$uint64$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint64$_$u64$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x44ff9ec9
@@ -60,10 +60,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$address$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$address$_$address$(4, calldatasize())
                     let ret_0 := A2_M_illegal_address_1(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$uint64$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint64$_$u64$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x988a22fb
@@ -73,10 +73,36 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$address$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$address$_$address$(4, calldatasize())
                     let ret_0 := A2_M_illegal_address_2(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$address$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$address$_$address$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0xc4614a37
+                {
+                    // illegal_bytes_1(uint8[])
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$uint8__$_$vec$u8$$(4, calldatasize())
+                    let ret_0 := A2_M_illegal_bytes_1(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$uint64$_$u64$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x1310a9d7
+                {
+                    // illegal_bytes_2(uint8[])
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$uint8__$_$vec$u8$$(4, calldatasize())
+                    let ret_0 := A2_M_illegal_bytes_2(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$uint64$_$u64$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xfa286a1e
@@ -88,7 +114,7 @@ object "A2_M" {
                     }
                     A2_M_illegal_char_1()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x4585d6bf
@@ -100,7 +126,7 @@ object "A2_M" {
                     }
                     A2_M_illegal_char_2()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xfbba44bc
@@ -112,7 +138,7 @@ object "A2_M" {
                     }
                     A2_M_illegal_char_3()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xb5015111
@@ -122,10 +148,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$uint8$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint8$_$u8$(4, calldatasize())
                     let ret_0 := A2_M_illegal_fixed_1(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$uint64$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint64$_$u64$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xefc9b749
@@ -135,10 +161,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$uint8$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint8$_$u8$(4, calldatasize())
                     let ret_0 := A2_M_illegal_fixed_2(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$uint64$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint64$_$u64$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x84e3a57e
@@ -148,10 +174,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$uint128$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint128$_$u128$(4, calldatasize())
                     A2_M_illegal_fixed_3(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xa33d896c
@@ -161,10 +187,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$uint128$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint128$_$u128$(4, calldatasize())
                     A2_M_illegal_fixed_4(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xa9e96db8
@@ -174,10 +200,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$uint8$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint8$_$u8$(4, calldatasize())
                     let ret_0 := A2_M_illegal_int_1(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$uint64$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint64$_$u64$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x048421dc
@@ -187,10 +213,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$uint8$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint8$_$u8$(4, calldatasize())
                     let ret_0 := A2_M_illegal_int_2(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$uint64$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint64$_$u64$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xad1de9ea
@@ -200,10 +226,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$uint8$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint8$_$u8$(4, calldatasize())
                     let ret_0 := A2_M_illegal_int_3(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$uint64$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint64$_$u64$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x614bbf5c
@@ -215,7 +241,7 @@ object "A2_M" {
                     }
                     let ret_0 := A2_M_no_bracket()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$uint64$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint64$_$u64$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 default {}
@@ -334,7 +360,7 @@ object "A2_M" {
                 $result := $t0
             }
 
-            function abi_encode_tuple_$uint64$(headStart ,value_0) -> tail {
+            function abi_encode_tuple_$uint64$_$u64$(headStart ,value_0) -> tail {
                 tail := add(headStart, 32)
                 abi_encode_uint64(value_0, add(headStart, 0))
             }
@@ -344,7 +370,7 @@ object "A2_M" {
             function cleanup_uint64(value) -> cleaned {
                 cleaned := and(value, 0xffffffffffffffff)
             }
-            function abi_decode_tuple_$uint8$(headStart, dataEnd) -> value_0 {
+            function abi_decode_tuple_$uint8$_$u8$(headStart, dataEnd) -> value_0 {
                 if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
                 {
                     let offset := 0
@@ -361,10 +387,10 @@ object "A2_M" {
             function cleanup_uint8(value) -> cleaned {
                 cleaned := and(value, 0xff)
             }
-            function abi_encode_tuple_(headStart ) -> tail {
+            function abi_encode_tuple__(headStart ) -> tail {
                 tail := add(headStart, 0)
             }
-            function abi_decode_tuple_$uint128$(headStart, dataEnd) -> value_0 {
+            function abi_decode_tuple_$uint128$_$u128$(headStart, dataEnd) -> value_0 {
                 if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
                 {
                     let offset := 0
@@ -381,7 +407,36 @@ object "A2_M" {
             function cleanup_uint128(value) -> cleaned {
                 cleaned := and(value, 0xffffffffffffffffffffffffffffffff)
             }
-            function abi_encode_tuple_$address$(headStart ,value_0) -> tail {
+            function abi_decode_tuple_$uint8__$_$vec$u8$$(headStart, dataEnd) -> value_0 {
+                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
+                {
+                    let offset := calldataload(add(headStart, 0))
+                    if gt(offset, 0xffffffffffffffff) { $Abort(96) }
+                    value_0 := abi_decode_uint8___vec$u8$(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_uint8___vec$u8$(offset, end) -> array {
+                if iszero(slt(add(offset, 0x1f), end)) { $Abort(94) }
+                let length := calldataload(offset)
+                let size := add(mul(1, length), 32)
+                array := abi_decode_available_length__uint8___vec$u8$(add(offset, 0x20), length, size, end)
+            }
+            function abi_decode_available_length__uint8___vec$u8$(offset, length, size, end) -> array {
+                array := $Malloc($CheckMemorySize(size))
+                $MemoryStoreU64(array, length)
+                $MemoryStoreU64(add(array, 8), length)
+                let dst := add(array, 32)
+                let srcEnd := add(offset, mul(length, 32))
+                if gt(srcEnd, end) { $Abort(94) }
+                for { let src := offset } lt(src, srcEnd) { src := add(src, 32) }
+                {
+                    let elementPos := src
+                    let value := abi_decode_uint8(elementPos, end)
+                    $MemoryStoreU8(dst, value)
+                    dst := add(dst, 1)
+                }
+            }
+            function abi_encode_tuple_$address$_$address$(headStart ,value_0) -> tail {
                 tail := add(headStart, 32)
                 abi_encode_address(value_0, add(headStart, 0))
             }
@@ -391,7 +446,7 @@ object "A2_M" {
             function cleanup_address(value) -> cleaned {
                 cleaned := and(value, 0xffffffffffffffffffffffffffffffffffffffff)
             }
-            function abi_decode_tuple_$address$(headStart, dataEnd) -> value_0 {
+            function abi_decode_tuple_$address$_$address$(headStart, dataEnd) -> value_0 {
                 if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
                 {
                     let offset := 0
@@ -405,7 +460,7 @@ object "A2_M" {
             function validator_address(value) {
                 if iszero(eq(value, cleanup_address(value))) { $Abort(95) }
             }
-            function abi_decode_tuple_$uint64$(headStart, dataEnd) -> value_0 {
+            function abi_decode_tuple_$uint64$_$u64$(headStart, dataEnd) -> value_0 {
                 if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
                 {
                     let offset := 0
@@ -422,6 +477,33 @@ object "A2_M" {
             function $Abort(code) {
                 mstore(0, code)
                 revert(24, 8) // TODO: store code as a string?
+            }
+            function $AbortBuiltin() {
+                $Abort(sub(0, 1))
+            }
+            function $Malloc(size) -> offs {
+                offs := mload(0)
+                // pad to word size
+                mstore(0, add(offs, shl(5, shr(5, add(size, 31)))))
+            }
+            function $MaskForSize(size) -> mask {
+              mask := sub(shl(shl(3, size), 1), 1)
+            }
+            function $MemoryStoreBytes(offs, size, val) {
+              let bit_end := shl(3, sub(32, size))
+              let mask := shl(bit_end, $MaskForSize(size))
+              mstore(offs, or(and(mload(offs), not(mask)), shl(bit_end, val)))
+            }
+            function $MemoryStoreU8(offs, val) {
+              // Shortcut via special instruction
+              mstore8(offs, val)
+            }
+            function $MemoryStoreU64(offs, val) {
+              $MemoryStoreBytes(offs, 8, val)
+            }
+            function $CheckMemorySize(len) -> checked_len {
+                if gt(len, 0xffffffffffffffff) { $AbortBuiltin() }
+                checked_len := len
             }
             function $Shr(x, y) -> r {
                 r := shr(y, x)
@@ -480,23 +562,7 @@ error: error happens when parsing a simple type
 79 │ │     }
    │ ╰─────^
 
-warning: cannot dispatch this function because of unsupported parameter types
-   ┌─ tests/test-dispatcher/signature-parsing-test/baseline/parsing_failure/IllegalTypeList.move:77:5
-   │
-77 │ ╭     fun illegal_bytes_1(_v: vector<u8>) : u64 {
-78 │ │         0
-79 │ │     }
-   │ ╰─────^
-
 error: error happens when parsing a simple type
-   ┌─ tests/test-dispatcher/signature-parsing-test/baseline/parsing_failure/IllegalTypeList.move:82:5
-   │
-82 │ ╭     fun illegal_bytes_2(_v: vector<u8>) : u64 {
-83 │ │         0
-84 │ │     }
-   │ ╰─────^
-
-warning: cannot dispatch this function because of unsupported parameter types
    ┌─ tests/test-dispatcher/signature-parsing-test/baseline/parsing_failure/IllegalTypeList.move:82:5
    │
 82 │ ╭     fun illegal_bytes_2(_v: vector<u8>) : u64 {

@@ -5,6 +5,7 @@
 
 mod attributes;
 mod context;
+mod dispatcher_generator;
 mod evm_transformation;
 mod experiments;
 mod functions;

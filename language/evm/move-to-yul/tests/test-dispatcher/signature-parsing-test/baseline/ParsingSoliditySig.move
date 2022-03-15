@@ -38,7 +38,7 @@ module 0x2::M {
 
     // Compatibility of Solidity string
     #[callable(sig=b"f(string, string)")]
-    fun f4(_s: String, _s1:vector <u8> ) {
+    fun f4(_s: vector<u8>, _s1:vector <u8> ) {
     }
 
 }

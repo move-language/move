@@ -24,7 +24,7 @@ object "A2_NativeFunctions" {
                     }
                     A2_NativeFunctions_call_native_functions()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
                 default {}
@@ -144,7 +144,7 @@ object "A2_NativeFunctions" {
                 $result := $t0
             }
 
-            function abi_encode_tuple_(headStart ) -> tail {
+            function abi_encode_tuple__(headStart ) -> tail {
                 tail := add(headStart, 0)
             }
             function $Abort(code) {

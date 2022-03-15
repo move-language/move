@@ -576,6 +576,29 @@ CopyMemory: "(src, dst, size) {
   }
 }",
 
+CopyMemoryU8: "(src, dst, size) {
+  let i := 0
+  for { } lt(i, size) { i := add(i, 32) } {
+    mstore(add(dst, i), mload(add(src, i)))
+  }
+  if gt(i, size)
+  {
+      for {let j := i} lt(j, size) {j := add(j, 1)} {
+        mstore8(add(dst, j), 0)
+      }
+  }
+}",
+
+CheckMemorySize: "(len) -> checked_len {
+    if gt(len, 0xffffffffffffffff) { $AbortBuiltin() }
+    checked_len := len
+}" dep AbortBuiltin,
+
+CopyFromCallDataToMemory: "(src, dst, length) {
+    calldatacopy(dst, src, length)
+    mstore(add(dst, length), 0)
+}",
+
 ResizeVector: "(v_offs, capacity, type_size) -> new_v_offs {
     let new_capacity := mul(capacity, 2)
     let data_size := add(${VECTOR_METADATA_SIZE}, mul(capacity, type_size))
@@ -712,5 +735,8 @@ ClosestGreaterPowerOfTwo: "(x) -> r {
     r := or(r, shr(16, r))
     r := or(r, shr(32, r))
     r := add(x, 1)
+}",
+RoundUp: "(value) -> result {
+    result := and(add(value, 31), not(31))
 }"
 }

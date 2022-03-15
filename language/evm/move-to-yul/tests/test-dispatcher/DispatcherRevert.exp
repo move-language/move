@@ -24,7 +24,7 @@ object "A2_M" {
                     }
                     let ret_0 := A2_M_return_0()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$uint128$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint128$_$u128$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 default {}
@@ -38,7 +38,7 @@ object "A2_M" {
                 $result := $t0
             }
 
-            function abi_encode_tuple_$uint128$(headStart ,value_0) -> tail {
+            function abi_encode_tuple_$uint128$_$u128$(headStart ,value_0) -> tail {
                 tail := add(headStart, 32)
                 abi_encode_uint128(value_0, add(headStart, 0))
             }

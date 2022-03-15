@@ -15,6 +15,19 @@ object "A2_M" {
             {
                 let selector := $Shr(calldataload(0), 224)
                 switch selector
+                case 0x24ff79ff
+                {
+                    // bytes_calldata(uint8[])
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$uint8__$_$vec$u8$$(4, calldatasize())
+                    let ret_0 := A2_M_bytes_calldata(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$uint128$_$u128$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
                 case 0x447951a9
                 {
                     // primitive_calldata()
@@ -24,7 +37,7 @@ object "A2_M" {
                     }
                     let ret_0 := A2_M_primitive_calldata()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$uint128$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint128$_$u128$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0x9f485227
@@ -34,10 +47,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$uint128$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint128$_$u128$(4, calldatasize())
                     A2_M_primitive_memory(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
                 default {}
@@ -63,10 +76,10 @@ object "A2_M" {
                 // return ()
             }
 
-            function abi_encode_tuple_(headStart ) -> tail {
+            function abi_encode_tuple__(headStart ) -> tail {
                 tail := add(headStart, 0)
             }
-            function abi_decode_tuple_$uint128$(headStart, dataEnd) -> value_0 {
+            function abi_decode_tuple_$uint128$_$u128$(headStart, dataEnd) -> value_0 {
                 if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
                 {
                     let offset := 0
@@ -83,16 +96,82 @@ object "A2_M" {
             function cleanup_uint128(value) -> cleaned {
                 cleaned := and(value, 0xffffffffffffffffffffffffffffffff)
             }
-            function abi_encode_tuple_$uint128$(headStart ,value_0) -> tail {
+            function abi_encode_tuple_$uint128$_$u128$(headStart ,value_0) -> tail {
                 tail := add(headStart, 32)
                 abi_encode_uint128(value_0, add(headStart, 0))
             }
             function abi_encode_uint128(value, pos) {
                 mstore(pos, cleanup_uint128(value))
             }
+            function abi_decode_tuple_$uint8__$_$vec$u8$$(headStart, dataEnd) -> value_0 {
+                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
+                {
+                    let offset := calldataload(add(headStart, 0))
+                    if gt(offset, 0xffffffffffffffff) { $Abort(96) }
+                    value_0 := abi_decode_uint8___vec$u8$(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_uint8___vec$u8$(offset, end) -> array {
+                if iszero(slt(add(offset, 0x1f), end)) { $Abort(94) }
+                let length := calldataload(offset)
+                let size := add(mul(1, length), 32)
+                array := abi_decode_available_length__uint8___vec$u8$(add(offset, 0x20), length, size, end)
+            }
+            function abi_decode_available_length__uint8___vec$u8$(offset, length, size, end) -> array {
+                array := $Malloc($CheckMemorySize(size))
+                $MemoryStoreU64(array, length)
+                $MemoryStoreU64(add(array, 8), length)
+                let dst := add(array, 32)
+                let srcEnd := add(offset, mul(length, 32))
+                if gt(srcEnd, end) { $Abort(94) }
+                for { let src := offset } lt(src, srcEnd) { src := add(src, 32) }
+                {
+                    let elementPos := src
+                    let value := abi_decode_uint8(elementPos, end)
+                    $MemoryStoreU8(dst, value)
+                    dst := add(dst, 1)
+                }
+            }
+            function abi_decode_uint8(offset, end) -> value {
+                value := calldataload(offset)
+                validator_uint8(value)
+            }
+            function validator_uint8(value) {
+                if iszero(eq(value, cleanup_uint8(value))) { $Abort(95) }
+            }
+            function cleanup_uint8(value) -> cleaned {
+                cleaned := and(value, 0xff)
+            }
             function $Abort(code) {
                 mstore(0, code)
                 revert(24, 8) // TODO: store code as a string?
+            }
+            function $AbortBuiltin() {
+                $Abort(sub(0, 1))
+            }
+            function $Malloc(size) -> offs {
+                offs := mload(0)
+                // pad to word size
+                mstore(0, add(offs, shl(5, shr(5, add(size, 31)))))
+            }
+            function $MaskForSize(size) -> mask {
+              mask := sub(shl(shl(3, size), 1), 1)
+            }
+            function $MemoryStoreBytes(offs, size, val) {
+              let bit_end := shl(3, sub(32, size))
+              let mask := shl(bit_end, $MaskForSize(size))
+              mstore(offs, or(and(mload(offs), not(mask)), shl(bit_end, val)))
+            }
+            function $MemoryStoreU8(offs, val) {
+              // Shortcut via special instruction
+              mstore8(offs, val)
+            }
+            function $MemoryStoreU64(offs, val) {
+              $MemoryStoreBytes(offs, 8, val)
+            }
+            function $CheckMemorySize(len) -> checked_len {
+                if gt(len, 0xffffffffffffffff) { $AbortBuiltin() }
+                checked_len := len
             }
             function $Shr(x, y) -> r {
                 r := shr(y, x)
@@ -104,14 +183,6 @@ object "A2_M" {
 
 !! Move-To-Yul Diagnostics:
  error: calldata is not supported yet
-   ┌─ tests/test-dispatcher/signature-parsing-test/baseline/parsing_failure/IllegalDataLocation.move:14:5
-   │
-14 │ ╭     fun bytes_calldata(_v: vector<u8>): u128 {
-15 │ │         0
-16 │ │     }
-   │ ╰─────^
-
-warning: cannot dispatch this function because of unsupported parameter types
    ┌─ tests/test-dispatcher/signature-parsing-test/baseline/parsing_failure/IllegalDataLocation.move:14:5
    │
 14 │ ╭     fun bytes_calldata(_v: vector<u8>): u128 {

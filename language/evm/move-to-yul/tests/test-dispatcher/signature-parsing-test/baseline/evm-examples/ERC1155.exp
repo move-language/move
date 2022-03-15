@@ -22,10 +22,23 @@ object "A2_ERC1155" {
                     {
                         $Abort(99)
                     }
-                    let param_0, param_1 := abi_decode_tuple_$address_uint256$(4, calldatasize())
+                    let param_0, param_1 := abi_decode_tuple_$address_uint256$_$address_A2_U256_U256$(4, calldatasize())
                     let ret_0 := A2_ERC1155_balanceOf(param_0, param_1)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$uint256$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint256$_$A2_U256_U256$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x4e1273f4
+                {
+                    // balanceOfBatch(address[],uint256[])
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1 := abi_decode_tuple_$address___uint256__$_$vec$address$_vec$A2_U256_U256$$(4, calldatasize())
+                    let ret_0 := A2_ERC1155_balanceOfBatch(param_0, param_1)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$uint256__$_$vec$A2_U256_U256$$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xebd1d359
@@ -35,10 +48,36 @@ object "A2_ERC1155" {
                     {
                         $Abort(99)
                     }
-                    let param_0, param_1 := abi_decode_tuple_$address_address$(4, calldatasize())
+                    let param_0, param_1 := abi_decode_tuple_$address_address$_$address_address$(4, calldatasize())
                     let ret_0 := A2_ERC1155_isApprovalForAll(param_0, param_1)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$bool$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$bool$_$bool$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x2eb2c2d6
+                {
+                    // safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1, param_2, param_3, param_4 := abi_decode_tuple_$address_address_uint256___uint256___bytes$_$address_address_vec$A2_U256_U256$_vec$A2_U256_U256$_vec$u8$$(4, calldatasize())
+                    A2_ERC1155_safeBatchTransferFrom(param_0, param_1, param_2, param_3, param_4)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple__(memPos)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0xf242432a
+                {
+                    // safeTransferFrom(address,address,uint256,uint256,bytes)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0, param_1, param_2, param_3, param_4 := abi_decode_tuple_$address_address_uint256_uint256_bytes$_$address_address_A2_U256_U256_A2_U256_U256_vec$u8$$(4, calldatasize())
+                    A2_ERC1155_safeTransferFrom(param_0, param_1, param_2, param_3, param_4)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
                 case 0xa22cb465
@@ -48,10 +87,23 @@ object "A2_ERC1155" {
                     {
                         $Abort(99)
                     }
-                    let param_0, param_1 := abi_decode_tuple_$address_bool$(4, calldatasize())
+                    let param_0, param_1 := abi_decode_tuple_$address_bool$_$address_bool$(4, calldatasize())
                     A2_ERC1155_setApprovalForAll(param_0, param_1)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x01ffc9a7
+                {
+                    // supportsInterface(bytes4)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$bytes4$_$vec$u8$$(4, calldatasize())
+                    let ret_0 := A2_ERC1155_supportsInterface(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$bool$_$bool$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 default {}
@@ -98,389 +150,41 @@ object "A2_ERC1155" {
                 $result := $t1
             }
 
-            function A2_ERC1155_uri() -> $result {
-                let $t0, $t1
-                // $t0 := [97, 98, 99]
-                $t0 := (ByteArray NYI)
-                // $t1 := ASCII::string($t0)
-                $t1 := A1_ASCII_string($t0)
-                // return $t1
-                $result := $t1
+            function abi_encode_tuple_$bool$_$bool$(headStart ,value_0) -> tail {
+                tail := add(headStart, 32)
+                abi_encode_bool(value_0, add(headStart, 0))
             }
-
-            function A1_ASCII_string(bytes) -> $result {
-                let x, $t2, $t3, $t4, $t5, $t6, $t7
-                let $block := 4
-                for {} true {} {
-                    switch $block
-                    case 2 {
-                        // label L1
-                        // $t4 := 0
-                        $t4 := 0
-                        // $t5 := Errors::invalid_argument($t4)
-                        $t5 := A1_Errors_invalid_argument($t4)
-                        // abort($t5)
-                        $Abort($t5)
-                    }
-                    case 3 {
-                        // label L0
-                        // $t6 := move($t1)
-                        $t6 := x
-                        // $t7 := Option::destroy_some<ASCII::String>($t6)
-                        $t7 := A1_Option_destroy_some$A1_ASCII_String$($t6)
-                        // return $t7
-                        $result := $t7
-                        leave
-                    }
-                    case 4 {
-                        // $t1 := ASCII::try_string($t0)
-                        x := A1_ASCII_try_string(bytes)
-                        // $t2 := borrow_local($t1)
-                        $t2 := $MakePtr(false, x)
-                        // $t3 := Option::is_some<ASCII::String>($t2)
-                        $t3 := A1_Option_is_some$A1_ASCII_String$($t2)
-                        // if ($t3) goto L0 else goto L1
-                        switch $t3
-                        case 0  { $block := 2 }
-                        default { $block := 3 }
-                    }
-                }
+            function abi_encode_bool(value, pos) {
+                mstore(pos, cleanup_bool(value))
             }
-
-            function A1_Option_is_some$A1_ASCII_String$(t) -> $result {
-                let $t1, $t2, $t3
-                // $t1 := borrow_field<Option::Option<#0>>.vec($t0)
-                $t1 := t
-                // $t2 := Vector::is_empty<#0>($t1)
-                $t2 := A1_Vector_is_empty$A1_ASCII_String$($t1)
-                // $t3 := !($t2)
-                $t3 := $LogicalNot($t2)
-                // return $t3
-                $result := $t3
+            function cleanup_bool(value) -> cleaned {
+                cleaned := and(value, 0xff)
             }
-
-            function A1_Vector_is_empty$A1_ASCII_String$(v) -> $result {
-                let $t1, $t2, $t3
-                // $t1 := Vector::length<#0>($t0)
-                $t1 := A1_Vector_length$A1_ASCII_String$(v)
-                // $t2 := 0
-                $t2 := 0
-                // $t3 := ==($t1, $t2)
-                $t3 := $Eq($t1, $t2)
-                // return $t3
-                $result := $t3
-            }
-
-            function A1_Vector_length$A1_ASCII_String$(v_ref) -> len {
-                let v_offs := $LoadU256(v_ref)
-                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-                len := $LoadU64(v_ptr)
-            }
-            function A1_ASCII_try_string(bytes) -> $result {
-                let i, len, possible_byte, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17
-                let $locals := $Malloc(32)
-                mstore($locals, bytes)
-                let $block := 3
-                for {} true {} {
-                    switch $block
-                    case 2 {
-                        // label L6
-                        // assert Le($t1, $t5)
-                        // assert forall j: Range(0, $t1): ASCII::$is_valid_char(Index($t0, j))
-                        // $t7 := <($t1, $t5)
-                        $t7 := $Lt(i, $t5)
-                        // if ($t7) goto L0 else goto L2
-                        switch $t7
-                        case 0  { $block := 5 }
-                        default { $block := 4 }
-                    }
-                    case 3 {
-                        // $t4 := borrow_local($t0)
-                        $t4 := $MakePtr(false, $locals)
-                        // $t5 := Vector::length<u8>($t4)
-                        $t5 := A1_Vector_length$u8$($t4)
-                        // $t6 := 0
-                        $t6 := 0
-                        // $t1 := $t6
-                        i := $t6
-                        // goto L6
-                        $block := 2
-                    }
-                    case 4 {
-                        // label L0
-                        // $t8 := borrow_local($t0)
-                        $t8 := $MakePtr(false, $locals)
-                        // $t9 := Vector::borrow<u8>($t8, $t1)
-                        $t9 := A1_Vector_borrow$u8$($t8, i)
-                        // $t10 := read_ref($t9)
-                        $t10 := $LoadU8($t9)
-                        // $t11 := ASCII::is_valid_char($t10)
-                        $t11 := A1_ASCII_is_valid_char($t10)
-                        // $t12 := !($t11)
-                        $t12 := $LogicalNot($t11)
-                        // if ($t12) goto L3 else goto L5
-                        switch $t12
-                        case 0  { $block := 7 }
-                        default { $block := 6 }
-                    }
-                    case 5 {
-                        // label L2
-                        // assert Eq<u64>($t1, $t5)
-                        // assert forall j: Range(0, $t5): ASCII::$is_valid_char(Index($t0, j))
-                        // $t15 := move($t0)
-                        $t15 := mload($locals)
-                        // $t16 := pack ASCII::String($t15)
-                        {
-                            let $mem := $Malloc(32)
-                            $MemoryStoreU256(add($mem, 0), $t15)
-                            $t16 := $mem
-                        }
-                        // $t17 := Option::some<ASCII::String>($t16)
-                        $t17 := A1_Option_some$A1_ASCII_String$($t16)
-                        // return $t17
-                        $result := $t17
-                        $Free($locals, 32)
-                        leave
-                    }
-                    case 6 {
-                        // label L3
-                        // $t13 := Option::none<ASCII::String>()
-                        $t13 := A1_Option_none$A1_ASCII_String$()
-                        // return $t13
-                        $result := $t13
-                        $Free($locals, 32)
-                        leave
-                    }
-                    case 7 {
-                        // label L5
-                        // $t14 := 1
-                        $t14 := 1
-                        // $t1 := +($t1, $t14)
-                        i := $AddU64(i, $t14)
-                        // goto L6
-                        $block := 2
-                    }
-                }
-            }
-
-            function A1_Option_none$A1_ASCII_String$() -> $result {
-                let $t0, $t1
-                // $t0 := Vector::empty<#0>()
-                $t0 := A1_Vector_empty$A1_ASCII_String$()
-                // $t1 := pack Option::Option<#0>($t0)
+            function abi_decode_tuple_$bytes4$_$vec$u8$$(headStart, dataEnd) -> value_0 {
+                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
                 {
-                    let $mem := $Malloc(32)
-                    $MemoryStoreU256(add($mem, 0), $t0)
-                    $t1 := $mem
-                }
-                // return $t1
-                $result := $t1
-            }
-
-            function A1_Vector_empty$A1_ASCII_String$() -> vector {
-                vector := $Malloc(96)
-                $MemoryStoreU64(add(vector, 8), 2)
-            }
-            function A1_Option_some$A1_ASCII_String$(e) -> $result {
-                let $t1, $t2
-                // $t1 := Vector::singleton<#0>($t0)
-                $t1 := A1_Vector_singleton$A1_ASCII_String$(e)
-                // $t2 := pack Option::Option<#0>($t1)
-                {
-                    let $mem := $Malloc(32)
-                    $MemoryStoreU256(add($mem, 0), $t1)
-                    $t2 := $mem
-                }
-                // return $t2
-                $result := $t2
-            }
-
-            function A1_Vector_singleton$A1_ASCII_String$(e) -> $result {
-                let $t2, $t3
-                let $locals := $Malloc(32)
-                // $t1 := Vector::empty<#0>()
-                mstore($locals, A1_Vector_empty$A1_ASCII_String$())
-                // $t2 := borrow_local($t1)
-                $t2 := $MakePtr(false, $locals)
-                // Vector::push_back<#0>($t2, $t0)
-                A1_Vector_push_back$A1_ASCII_String$($t2, e)
-                // $t3 := move($t1)
-                $t3 := mload($locals)
-                // return $t3
-                $result := $t3
-                $Free($locals, 32)
-            }
-
-            function A1_Vector_push_back$A1_ASCII_String$(v_ref, e) {
-                let v_offs := $LoadU256(v_ref)
-                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-                let size := $LoadU64(v_ptr)
-                let e_ptr := $IndexPtr(v_ptr, add(32, mul(size, 32)))
-                $StoreU256(e_ptr, e)
-                if $IsStoragePtr(e_ptr) {
-                    let e_offs := $OffsetPtr(e_ptr)
-                    let $linked_dst_2448473555 := $NewLinkedStorageBase(0x91f0bdd3)
-                    {
-                        let $linked_src_2300595445 := mload(add(e, 0))
-                        let $linked_dst_2300595445 := $NewLinkedStorageBase(0x89204cf5)
-                        let $size_2300595445 := $MemoryLoadU64($linked_src_2300595445)
-                        let $data_size_2300595445 := mul($size_2300595445, 1)
-                        $AlignedStorageStore($linked_dst_2300595445, mload($linked_src_2300595445))
-                        let $data_src_2300595445 := add($linked_src_2300595445, 32)
-                        let $data_dst_2300595445 := add($linked_dst_2300595445, 32)
-                        for { let $offs_2300595445 := 0 } lt($offs_2300595445, $data_size_2300595445) { $offs_2300595445 := add($offs_2300595445, 32)} {
-                            $AlignedStorageStore(add($data_dst_2300595445, $offs_2300595445), mload(add($data_src_2300595445, $offs_2300595445)))
-                            $Free($linked_src_2300595445, add($data_size_2300595445, 32))
-                        }
-                        $AlignedStorageStore(add($linked_dst_2448473555, 0), $linked_dst_2300595445)
-                    }
-                    $Free(e, 32)
-                    $AlignedStorageStore(e_offs, $linked_dst_2448473555)
-                }
-                size := add(size, 1)
-                $StoreU64(v_ptr, size)
-                let capacity := $LoadU64($IndexPtr(v_ptr, 8))
-                if and(iszero($IsStoragePtr(v_ptr)), eq(size, capacity)) {
-                    let new_v_offs := $ResizeVector(v_offs, capacity, 32)
-                    $StoreU256(v_ref, new_v_offs)
+                    let offset := 0
+                    value_0 := abi_decode_bytes4_vec$u8$(add(headStart, offset), dataEnd)
                 }
             }
-            function A1_ASCII_is_valid_char(byte) -> $result {
-                let $t1, $t2
-                // $t1 := 127
-                $t1 := 127
-                // $t2 := <=($t0, $t1)
-                $t2 := $LtEq(byte, $t1)
-                // return $t2
-                $result := $t2
+            function abi_decode_bytes4_vec$u8$(offset, end) -> array {
+                if iszero(slt(add(offset, 0x1f), end)) { $Abort(94) }
+                let length := 4
+                let size := 36
+                array := abi_decode_available_length__bytes4(offset, length, size, end)
             }
-
-            function A1_Vector_borrow$u8$(v_ref, i) -> e_ptr {
-                let v_offs := $LoadU256(v_ref)
-                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-                let size := $LoadU64(v_ptr)
-                if $GtEq(i, size) { $AbortBuiltin() }
-                e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 1)))
+            function abi_decode_available_length__bytes4(src, length, size, end) -> array {
+                array := $Malloc($CheckMemorySize(size))
+                $MemoryStoreU64(array, length)
+                $MemoryStoreU64(add(array, 8), length)
+                let dst := add(array, 32)
+                if gt(add(src, sub(size, 32)), end) { $Abort(93) }
+                $CopyFromCallDataToMemory(src, dst, length)
             }
-            function A1_Vector_length$u8$(v_ref) -> len {
-                let v_offs := $LoadU256(v_ref)
-                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-                len := $LoadU64(v_ptr)
-            }
-            function A1_Option_destroy_some$A1_ASCII_String$(t) -> $result {
-                let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
-                let $locals := $Malloc(32)
-                let $block := 4
-                for {} true {} {
-                    switch $block
-                    case 2 {
-                        // label L1
-                        // $t5 := 1
-                        $t5 := 1
-                        // $t6 := Errors::invalid_argument($t5)
-                        $t6 := A1_Errors_invalid_argument($t5)
-                        // abort($t6)
-                        $Abort($t6)
-                    }
-                    case 3 {
-                        // label L0
-                        // $t7 := move($t0)
-                        $t7 := t
-                        // $t2 := unpack Option::Option<#0>($t7)
-                        mstore($locals, $MemoryLoadU256(add($t7, 0)))
-                        $Free($t7, 32)
-                        // $t8 := borrow_local($t2)
-                        $t8 := $MakePtr(false, $locals)
-                        // $t9 := Vector::pop_back<#0>($t8)
-                        $t9 := A1_Vector_pop_back$A1_ASCII_String$($t8)
-                        // $t10 := move($t2)
-                        $t10 := mload($locals)
-                        // Vector::destroy_empty<#0>($t10)
-                        A1_Vector_destroy_empty$A1_ASCII_String$($t10)
-                        // return $t9
-                        $result := $t9
-                        $Free($locals, 32)
-                        leave
-                    }
-                    case 4 {
-                        // $t3 := borrow_local($t0)
-                        $t3 := $MakePtr(false, t)
-                        // $t4 := Option::is_some<#0>($t3)
-                        $t4 := A1_Option_is_some$A1_ASCII_String$($t3)
-                        // if ($t4) goto L0 else goto L1
-                        switch $t4
-                        case 0  { $block := 2 }
-                        default { $block := 3 }
-                    }
-                }
-            }
-
-            function A1_Vector_destroy_empty$A1_ASCII_String$(v) {
-                let size := $MemoryLoadU64(v)
-                if $LogicalNot(iszero(size)) { $AbortBuiltin() }
-                let capacity := $MemoryLoadU64(add(v, 8))
-                $Free(v, add(32, mul(capacity, 32)))
-            }
-            function A1_Vector_pop_back$A1_ASCII_String$(v_ref) -> e {
-                let v_offs := $LoadU256(v_ref)
-                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-                let size := $LoadU64(v_ptr)
-                if iszero(size) { $AbortBuiltin() }
-                let e_ptr := $IndexPtr(v_ptr, add(32, mul(sub(size, 1), 32)))
-                if $IsStoragePtr(e_ptr) {
-                    let e_offs := $OffsetPtr(e_ptr)
-                    let $linked_src_2448473555 := $AlignedStorageLoad(e_offs)
-                    e := $Malloc(32)
-                    {
-                        let $linked_dst_2300595445
-                        let $linked_src_2300595445 := $AlignedStorageLoad(add($linked_src_2448473555, 0))
-                        let $size_2300595445 := $StorageLoadU64($linked_src_2300595445)
-                        let $capacity_2300595445 := $ClosestGreaterPowerOfTwo($size_2300595445)
-                        $linked_dst_2300595445 := $Malloc(add(32, mul($capacity_2300595445, 1)))
-                        let $data_size_2300595445 := mul($size_2300595445, 1)
-                        mstore($linked_dst_2300595445, $AlignedStorageLoad($linked_src_2300595445))
-                        $MemoryStoreU64(add($linked_dst_2300595445, 8), $capacity_2300595445)
-                        let $data_src_2300595445 := add($linked_src_2300595445, 32)
-                        let $data_dst_2300595445 := add($linked_dst_2300595445, 32)
-                        for { let $offs_2300595445 := 0 } lt($offs_2300595445, $data_size_2300595445) { $offs_2300595445 := add($offs_2300595445, 32)} {
-                            mstore(add($data_dst_2300595445, $offs_2300595445), $AlignedStorageLoad(add($data_src_2300595445, $offs_2300595445)))
-                            $AlignedStorageStore(add($data_src_2300595445, $offs_2300595445), 0)
-                        }
-                        $AlignedStorageStore(add($linked_src_2448473555, 0), 0)
-                        mstore(add(e, 0), $linked_dst_2300595445)
-                    }
-                    $AlignedStorageStore(e_offs, 0)
-                }
-                $StoreU64(v_ptr, sub(size, 1))
-            }
-            function A1_Errors_invalid_argument(reason) -> $result {
-                let $t1, $t2
-                // $t1 := 7
-                $t1 := 7
-                // $t2 := Errors::make($t1, $t0)
-                $t2 := A1_Errors_make($t1, reason)
-                // return $t2
-                $result := $t2
-            }
-
-            function A1_Errors_make(category, reason) -> $result {
-                let $t2, $t3, $t4, $t5
-                // $t2 := (u64)($t0)
-                $t2 := $CastU64(category)
-                // $t3 := 8
-                $t3 := 8
-                // $t4 := <<($t1, $t3)
-                $t4 := $ShlU64(reason, $t3)
-                // $t5 := +($t2, $t4)
-                $t5 := $AddU64($t2, $t4)
-                // return $t5
-                $result := $t5
-            }
-
-            function abi_encode_tuple_(headStart ) -> tail {
+            function abi_encode_tuple__(headStart ) -> tail {
                 tail := add(headStart, 0)
             }
-            function abi_decode_tuple_$address_bool$(headStart, dataEnd) -> value_0, value_1 {
+            function abi_decode_tuple_$address_bool$_$address_bool$(headStart, dataEnd) -> value_0, value_1 {
                 if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
                 {
                     let offset := 0
@@ -498,9 +202,6 @@ object "A2_ERC1155" {
             function validator_bool(value) {
                 if iszero(eq(value, cleanup_bool(value))) { $Abort(95) }
             }
-            function cleanup_bool(value) -> cleaned {
-                cleaned := and(value, 0xff)
-            }
             function abi_decode_address(offset, end) -> value {
                 value := calldataload(offset)
                 validator_address(value)
@@ -511,14 +212,102 @@ object "A2_ERC1155" {
             function cleanup_address(value) -> cleaned {
                 cleaned := and(value, 0xffffffffffffffffffffffffffffffffffffffff)
             }
-            function abi_encode_tuple_$bool$(headStart ,value_0) -> tail {
-                tail := add(headStart, 32)
-                abi_encode_bool(value_0, add(headStart, 0))
+            function abi_decode_tuple_$address_address_uint256_uint256_bytes$_$address_address_A2_U256_U256_A2_U256_U256_vec$u8$$(headStart, dataEnd) -> value_0, value_1, value_2, value_3, value_4 {
+                if slt(sub(dataEnd, headStart), 160) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_address(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := 32
+                    value_1 := abi_decode_address(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := 64
+                    value_2 := abi_decode_uint256(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := 96
+                    value_3 := abi_decode_uint256(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := calldataload(add(headStart, 128))
+                    if gt(offset, 0xffffffffffffffff) { $Abort(96) }
+                    value_4 := abi_decode_bytes_vec$u8$(add(headStart, offset), dataEnd)
+                }
             }
-            function abi_encode_bool(value, pos) {
-                mstore(pos, cleanup_bool(value))
+            function abi_decode_bytes_vec$u8$(offset, end) -> array {
+                if iszero(slt(add(offset, 0x1f), end)) { $Abort(94) }
+                let length := calldataload(offset)
+                let size := add(mul(1, length), 32)
+                array := abi_decode_available_length__bytes(add(offset, 0x20), length, size, end)
             }
-            function abi_decode_tuple_$address_address$(headStart, dataEnd) -> value_0, value_1 {
+            function abi_decode_available_length__bytes(src, length, size, end) -> array {
+                array := $Malloc($CheckMemorySize(size))
+                $MemoryStoreU64(array, length)
+                $MemoryStoreU64(add(array, 8), length)
+                let dst := add(array, 32)
+                if gt(add(src, sub(size, 32)), end) { $Abort(93) }
+                $CopyFromCallDataToMemory(src, dst, length)
+            }
+            function abi_decode_uint256(offset, end) -> value {
+                value := calldataload(offset)
+                validator_uint256(value)
+            }
+            function validator_uint256(value) {
+                if iszero(eq(value, cleanup_uint256(value))) { $Abort(95) }
+            }
+            function cleanup_uint256(value) -> cleaned {
+                cleaned := and(value, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+            }
+            function abi_decode_tuple_$address_address_uint256___uint256___bytes$_$address_address_vec$A2_U256_U256$_vec$A2_U256_U256$_vec$u8$$(headStart, dataEnd) -> value_0, value_1, value_2, value_3, value_4 {
+                if slt(sub(dataEnd, headStart), 160) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_address(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := 32
+                    value_1 := abi_decode_address(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := calldataload(add(headStart, 64))
+                    if gt(offset, 0xffffffffffffffff) { $Abort(96) }
+                    value_2 := abi_decode_uint256___vec$A2_U256_U256$(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := calldataload(add(headStart, 96))
+                    if gt(offset, 0xffffffffffffffff) { $Abort(96) }
+                    value_3 := abi_decode_uint256___vec$A2_U256_U256$(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := calldataload(add(headStart, 128))
+                    if gt(offset, 0xffffffffffffffff) { $Abort(96) }
+                    value_4 := abi_decode_bytes_vec$u8$(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_uint256___vec$A2_U256_U256$(offset, end) -> array {
+                if iszero(slt(add(offset, 0x1f), end)) { $Abort(94) }
+                let length := calldataload(offset)
+                let size := add(mul(32, length), 32)
+                array := abi_decode_available_length__uint256___vec$A2_U256_U256$(add(offset, 0x20), length, size, end)
+            }
+            function abi_decode_available_length__uint256___vec$A2_U256_U256$(offset, length, size, end) -> array {
+                array := $Malloc($CheckMemorySize(size))
+                $MemoryStoreU64(array, length)
+                $MemoryStoreU64(add(array, 8), length)
+                let dst := add(array, 32)
+                let srcEnd := add(offset, mul(length, 32))
+                if gt(srcEnd, end) { $Abort(94) }
+                for { let src := offset } lt(src, srcEnd) { src := add(src, 32) }
+                {
+                    let elementPos := src
+                    let value := abi_decode_uint256(elementPos, end)
+                    $MemoryStoreU256(dst, value)
+                    dst := add(dst, 32)
+                }
+            }
+            function abi_decode_tuple_$address_address$_$address_address$(headStart, dataEnd) -> value_0, value_1 {
                 if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
                 {
                     let offset := 0
@@ -529,17 +318,70 @@ object "A2_ERC1155" {
                     value_1 := abi_decode_address(add(headStart, offset), dataEnd)
                 }
             }
-            function abi_encode_tuple_$uint256$(headStart ,value_0) -> tail {
+            function abi_encode_tuple_$uint256__$_$vec$A2_U256_U256$$(headStart ,value_0) -> tail {
                 tail := add(headStart, 32)
-                abi_encode_uint256(value_0, add(headStart, 0))
+                mstore(add(headStart, 0), sub(tail, headStart))
+                tail := abi_encode_uint256___vec$A2_U256_U256$(value_0,  tail)
+            }
+            function abi_encode_uint256___vec$A2_U256_U256$(value, pos) -> end {
+                let length := $MemoryLoadU64(value)
+                mstore(pos, length)
+                pos := add(pos, 0x20)
+                let start := add(value, 32)
+                let srcEnd := add(start, mul(length, 32))
+                for { let src := start } lt(src, srcEnd) { src := add(src, 32) }
+                {
+                    let v := $MemoryLoadU256(src)
+                    pos := abi_encode_uint256_with_updated_pos(v, pos)
+                }
+                end := pos
+            }
+            function abi_encode_uint256_with_updated_pos(value, pos) -> updated_pos{
+                abi_encode_uint256(value, pos)
+                updated_pos := add(pos, 32)
             }
             function abi_encode_uint256(value, pos) {
                 mstore(pos, cleanup_uint256(value))
             }
-            function cleanup_uint256(value) -> cleaned {
-                cleaned := and(value, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+            function abi_decode_tuple_$address___uint256__$_$vec$address$_vec$A2_U256_U256$$(headStart, dataEnd) -> value_0, value_1 {
+                if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
+                {
+                    let offset := calldataload(add(headStart, 0))
+                    if gt(offset, 0xffffffffffffffff) { $Abort(96) }
+                    value_0 := abi_decode_address___vec$address$(add(headStart, offset), dataEnd)
+                }
+                {
+                    let offset := calldataload(add(headStart, 32))
+                    if gt(offset, 0xffffffffffffffff) { $Abort(96) }
+                    value_1 := abi_decode_uint256___vec$A2_U256_U256$(add(headStart, offset), dataEnd)
+                }
             }
-            function abi_decode_tuple_$address_uint256$(headStart, dataEnd) -> value_0, value_1 {
+            function abi_decode_address___vec$address$(offset, end) -> array {
+                if iszero(slt(add(offset, 0x1f), end)) { $Abort(94) }
+                let length := calldataload(offset)
+                let size := add(mul(32, length), 32)
+                array := abi_decode_available_length__address___vec$address$(add(offset, 0x20), length, size, end)
+            }
+            function abi_decode_available_length__address___vec$address$(offset, length, size, end) -> array {
+                array := $Malloc($CheckMemorySize(size))
+                $MemoryStoreU64(array, length)
+                $MemoryStoreU64(add(array, 8), length)
+                let dst := add(array, 32)
+                let srcEnd := add(offset, mul(length, 32))
+                if gt(srcEnd, end) { $Abort(94) }
+                for { let src := offset } lt(src, srcEnd) { src := add(src, 32) }
+                {
+                    let elementPos := src
+                    let value := abi_decode_address(elementPos, end)
+                    $MemoryStoreU256(dst, value)
+                    dst := add(dst, 32)
+                }
+            }
+            function abi_encode_tuple_$uint256$_$A2_U256_U256$(headStart ,value_0) -> tail {
+                tail := add(headStart, 32)
+                abi_encode_uint256(value_0, add(headStart, 0))
+            }
+            function abi_decode_tuple_$address_uint256$_$address_A2_U256_U256$(headStart, dataEnd) -> value_0, value_1 {
                 if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
                 {
                     let offset := 0
@@ -549,13 +391,6 @@ object "A2_ERC1155" {
                     let offset := 32
                     value_1 := abi_decode_uint256(add(headStart, offset), dataEnd)
                 }
-            }
-            function abi_decode_uint256(offset, end) -> value {
-                value := calldataload(offset)
-                validator_uint256(value)
-            }
-            function validator_uint256(value) {
-                if iszero(eq(value, cleanup_uint256(value))) { $Abort(95) }
             }
             function $Abort(code) {
                 mstore(0, code)
@@ -569,55 +404,8 @@ object "A2_ERC1155" {
                 // pad to word size
                 mstore(0, add(offs, shl(5, shr(5, add(size, 31)))))
             }
-            function $Free(offs, size) {
-            }
-            function $MakePtr(is_storage, offs) -> ptr {
-              ptr := or(is_storage, shl(1, offs))
-            }
-            function $IsStoragePtr(ptr) -> b {
-              b := and(ptr, 0x1)
-            }
-            function $OffsetPtr(ptr) -> offs {
-              offs := shr(1, ptr)
-            }
             function $MaskForSize(size) -> mask {
               mask := sub(shl(shl(3, size), 1), 1)
-            }
-            function $ExtractBytes(word, start, size) -> bytes {
-               switch size
-               case 1 {
-                  // use the faster byte primitive
-                  bytes := byte(start, word)
-               }
-               default {
-                  // As we have big endian, we need to right shift the value from
-                  // where the highest byte starts in the word (32 - start), minus
-                  // the size.
-                  let shift_bits := shl(3, sub(sub(32, start), size))
-                  bytes := and(shr(shift_bits, word), $MaskForSize(size))
-               }
-            }
-            function $InjectBytes(word, start, size, bytes) -> new_word {
-               let shift_bits := shl(3, sub(sub(32, start), size))
-               // Blend out the bits which we inject
-               let neg_mask := not(shl(shift_bits, $MaskForSize(size)))
-               word := and(word, neg_mask)
-               // Overlay the bits we inject
-               new_word := or(word, shl(shift_bits, bytes))
-            }
-            function $ToWordOffs(offs) -> word_offs, byte_offset {
-              word_offs := shr(5, offs)
-              byte_offset := and(offs, 0x1F)
-            }
-            function $OverflowBytes(byte_offset, size) -> overflow_bytes {
-              let available_bytes := sub(32, byte_offset)
-              switch gt(size, available_bytes)
-              case 0 {
-                overflow_bytes := 0
-              }
-              default {
-                overflow_bytes := sub(size, available_bytes)
-              }
             }
             function $MemoryLoadBytes(offs, size) -> val {
               // Lower bit where the value in the higher bytes ends
@@ -629,257 +417,40 @@ object "A2_ERC1155" {
               let mask := shl(bit_end, $MaskForSize(size))
               mstore(offs, or(and(mload(offs), not(mask)), shl(bit_end, val)))
             }
-            function $StorageLoadBytes(offs, size) -> val {
-              let word_offs, byte_offs := $ToWordOffs(offs)
-              let key := $StorageKey(0, word_offs)
-              val := $ExtractBytes(sload(key), byte_offs, size)
-              let overflow_bytes := $OverflowBytes(byte_offs, size)
-              if $LogicalNot(iszero(overflow_bytes)) {
-                key := $StorageKey(0, add(word_offs, 1))
-                let extra_bytes := $ExtractBytes(sload(key), 0, overflow_bytes)
-                val := or(shl(shl(3, overflow_bytes), val), extra_bytes)
-              }
-            }
-            function $StorageStoreBytes(offs, size, bytes) {
-              let word_offs, byte_offs := $ToWordOffs(offs)
-              let key := $StorageKey(0, word_offs)
-              let overflow_bytes := $OverflowBytes(byte_offs, size)
-              switch overflow_bytes
-              case 0 {
-                sstore(key, $InjectBytes(sload(key), byte_offs, size, bytes))
-              }
-              default {
-                // Shift the higher bytes to the right
-                let used_bytes := sub(size, overflow_bytes)
-                let higher_bytes := shr(used_bytes, bytes)
-                let lower_bytes := and(bytes, $MaskForSize(overflow_bytes))
-                sstore(key, $InjectBytes(sload(key), byte_offs, used_bytes, higher_bytes))
-                key := $StorageKey(0, add(word_offs, 1))
-                sstore(key, $InjectBytes(sload(key), 0, overflow_bytes, lower_bytes))
-              }
-            }
-            function $StorageKey(group, word) -> key {
-              mstore(32, word)
-              mstore(64, group)
-              key := keccak256(32, 36)
-            }
-            function $MakeTypeStorageBase(category, type_hash, id) -> offs {
-              offs := or(shl(252, category), or(shl(220, type_hash), shl(60, id)))
-            }
-            function $NewLinkedStorageBase(type_hash) -> offs {
-              let key := $StorageKey(1, 1)
-              let handle := sload(key)
-              sstore(key, add(handle, 1))
-              offs := $MakeTypeStorageBase(1, type_hash, handle)
-            }
-            function $IndexPtr(ptr, offs) -> new_ptr {
-              new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
-            }
-            function $LoadU8(ptr) -> val {
-              let offs := $OffsetPtr(ptr)
-              switch $IsStoragePtr(ptr)
-              case 0 {
-                val := $MemoryLoadU8(offs)
-              }
-              default {
-                val := $StorageLoadU8(offs)
-              }
-            }
-            function $MemoryLoadU8(offs) -> val {
-              val := $MemoryLoadBytes(offs, 1)
-            }
-            function $StorageLoadU8(offs) -> val {
-              val := $StorageLoadBytes(offs, 1)
-            }
-            function $LoadU64(ptr) -> val {
-              let offs := $OffsetPtr(ptr)
-              switch $IsStoragePtr(ptr)
-              case 0 {
-                val := $MemoryLoadU64(offs)
-              }
-              default {
-                val := $StorageLoadU64(offs)
-              }
-            }
             function $MemoryLoadU64(offs) -> val {
               val := $MemoryLoadBytes(offs, 8)
-            }
-            function $StorageLoadU64(offs) -> val {
-              val := $StorageLoadBytes(offs, 8)
-            }
-            function $StoreU64(ptr, val) {
-              let offs := $OffsetPtr(ptr)
-              switch $IsStoragePtr(ptr)
-              case 0 {
-                $MemoryStoreU64(offs, val)
-              }
-              default {
-                $StorageStoreU64(offs, val)
-              }
             }
             function $MemoryStoreU64(offs, val) {
               $MemoryStoreBytes(offs, 8, val)
             }
-            function $StorageStoreU64(offs, val) {
-              $StorageStoreBytes(offs, 8, val)
-            }
-            function $LoadU256(ptr) -> val {
-              let offs := $OffsetPtr(ptr)
-              switch $IsStoragePtr(ptr)
-              case 0 {
-                val := $MemoryLoadU256(offs)
-              }
-              default {
-                val := $StorageLoadU256(offs)
-              }
-            }
             function $MemoryLoadU256(offs) -> val {
               val := $MemoryLoadBytes(offs, 32)
-            }
-            function $StorageLoadU256(offs) -> val {
-              val := $StorageLoadBytes(offs, 32)
-            }
-            function $StoreU256(ptr, val) {
-              let offs := $OffsetPtr(ptr)
-              switch $IsStoragePtr(ptr)
-              case 0 {
-                $MemoryStoreU256(offs, val)
-              }
-              default {
-                $StorageStoreU256(offs, val)
-              }
             }
             function $MemoryStoreU256(offs, val) {
               $MemoryStoreBytes(offs, 32, val)
             }
-            function $StorageStoreU256(offs, val) {
-              $StorageStoreBytes(offs, 32, val)
+            function $CheckMemorySize(len) -> checked_len {
+                if gt(len, 0xffffffffffffffff) { $AbortBuiltin() }
+                checked_len := len
             }
-            function $AlignedStorageLoad(offs) -> val {
-              let word_offs := shr(5, offs)
-              val := sload($StorageKey(0, word_offs))
-            }
-            function $AlignedStorageStore(offs, val) {
-              let word_offs := shr(5, offs)
-              sstore($StorageKey(0, word_offs), val)
-            }
-            function $CopyMemory(src, dst, size) {
-              let i := 0
-              for { } lt(i, size) { i := add(i, 32) } {
-                mstore(add(dst, i), mload(add(src, i)))
-              }
-              if lt(i, size) {
-                let mask := sub(shl(shl(3, i), 1), 1)
-                let dst_word := and(mload(add(dst, i)), not(mask))
-                let src_word := and(mload(add(src, i)), mask)
-                mstore(add(dst, i), or(dst_word, src_word))
-              }
-            }
-            function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
-                let new_capacity := mul(capacity, 2)
-                let data_size := add(32, mul(capacity, type_size))
-                let new_data_size := add(32, mul(new_capacity, type_size))
-                new_v_offs := $Malloc(new_data_size)
-                $CopyMemory(v_offs, new_v_offs, data_size)
-                // update capacity at new location
-                $MemoryStoreU64(add(new_v_offs, 8), new_capacity)
-                $Free(v_offs, data_size)
-            }
-            function $AddU64(x, y) -> r {
-                if lt(sub(0xffffffffffffffff, x), y) { $AbortBuiltin() }
-                r := add(x, y)
+            function $CopyFromCallDataToMemory(src, dst, length) {
+                calldatacopy(dst, src, length)
+                mstore(add(dst, length), 0)
             }
             function $Shr(x, y) -> r {
                 r := shr(y, x)
-            }
-            function $ShlU64(x, y) -> r {
-                r := and(shl(y, x), 0xffffffffffffffff)
-            }
-            function $Lt(x, y) -> r {
-                r := lt(x, y)
-            }
-            function $GtEq(x, y) -> r {
-                r := or(gt(x, y), eq(x, y))
-            }
-            function $LtEq(x, y) -> r {
-                r := or(lt(x, y), eq(x, y))
-            }
-            function $Eq(x, y) -> r {
-                r := eq(x, y)
-            }
-            function $LogicalNot(x) -> r {
-                r := iszero(x)
-            }
-            function $CastU64(x) -> r {
-                if gt(x, 0xffffffffffffffff) { $AbortBuiltin() }
-                r := x
-            }
-            function $ClosestGreaterPowerOfTwo(x) -> r {
-                r := or(r, shr(1, x))
-                r := or(r, shr(2, r))
-                r := or(r, shr(4, r))
-                r := or(r, shr(8, r))
-                r := or(r, shr(16, r))
-                r := or(r, shr(32, r))
-                r := add(x, 1)
             }
         }
     }
 }
 
 
-!! Errors compiling Yul
-
-Warning: Yul is still experimental. Please use the output with care.
-Error: Literal or identifier expected.
-   --> <stdin>:104:24:
-    |
-104 |                 $t0 := (ByteArray NYI)
-    |                        ^
-
-Error: Expected keyword "data" or "object" or "}".
-   --> <stdin>:104:24:
-    |
-104 |                 $t0 := (ByteArray NYI)
-    |                        ^
-
+!! Succeeded compiling Yul
 
 
 !! Move-To-Yul Diagnostics:
- warning: cannot dispatch this function because of unsupported parameter types
-   ┌─ tests/test-dispatcher/signature-parsing-test/baseline/evm-examples/ERC1155.move:22:5
-   │
-22 │ ╭     public fun balanceOfBatch(_accounts: vector<address>, ids: vector<U256>): vector<U256> {
-23 │ │         ids
-24 │ │     }
-   │ ╰─────^
-
-warning: cannot dispatch this function because of unsupported parameter types
-   ┌─ tests/test-dispatcher/signature-parsing-test/baseline/evm-examples/ERC1155.move:44:5
-   │
-44 │ ╭     public fun safeBatchTransferFrom(_from: address, _to: address, _ids: vector<U256>, _amounts: vector<U256>, _data: vector<u8>) {
-45 │ │     }
-   │ ╰─────^
-
-warning: cannot dispatch this function because of unsupported parameter types
-   ┌─ tests/test-dispatcher/signature-parsing-test/baseline/evm-examples/ERC1155.move:39:5
-   │
-39 │ ╭     public fun safeTransferFrom(_from: address, _to: address, _id: U256, _amount: U256, _data: vector<u8>) {
-40 │ │     }
-   │ ╰─────^
-
-warning: cannot dispatch this function because of unsupported parameter types
-   ┌─ tests/test-dispatcher/signature-parsing-test/baseline/evm-examples/ERC1155.move:49:5
-   │
-49 │ ╭     public fun supportsInterface(_interfaceId: vector<u8>): bool {
-50 │ │         true
-51 │ │     }
-   │ ╰─────^
-
-warning: cannot dispatch this function because of unsupported parameter types
-   ┌─ tests/test-dispatcher/signature-parsing-test/baseline/evm-examples/ERC1155.move:10:5
-   │
-10 │ ╭     public fun uri(): String {
-11 │ │         Std::ASCII::string(b"abc") // TODO: this leads to compilation errors such as "native function `Vector::is_empty` not implemented"
-12 │ │     }
-   │ ╰─────^
+ warning: unused alias
+  ┌─ tests/test-dispatcher/signature-parsing-test/baseline/evm-examples/ERC1155.move:4:22
+  │
+4 │     use Std::ASCII::{String};
+  │                      ^^^^^^ Unused 'use' of alias 'String'. Consider removing it

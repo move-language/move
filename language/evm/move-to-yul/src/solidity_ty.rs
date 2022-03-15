@@ -21,6 +21,7 @@ const PARSE_ERR_MSG: &str = "error happens when parsing the signature";
 const PARSE_ERR_MSG_SIMPLE_TYPE: &str = "error happens when parsing a simple type";
 const PARSE_ERR_MSG_ARRAY_TYPE: &str = "error happens when parsing an array type";
 const PARSE_ERR_MSG_RETURN: &str = "error happens when parsing the return types in the signature";
+const PARSE_ERR_MSG_ZERO_SIZE: &str = "array with zero length specified";
 
 /// Represents a Solidity Signature appearing in the callable attribute.
 #[derive(Debug, Clone)]
@@ -93,12 +94,7 @@ impl fmt::Display for SolidityPrimitiveType {
 impl SolidityPrimitiveType {
     /// Check type compatibility for primitive types
     /// TODO: int and fixed are not supported yet
-    pub fn check_primitive_type_compatibility(
-        &self,
-        ctx: &Context,
-        move_ty: &Type,
-        //solidity_primitive_ty: &SolidityPrimitiveType,
-    ) -> bool {
+    pub fn check_primitive_type_compatibility(&self, ctx: &Context, move_ty: &Type) -> bool {
         use SolidityPrimitiveType::*;
         match self {
             Bool => move_ty.is_bool(),
@@ -156,7 +152,7 @@ impl fmt::Display for SolidityType {
 impl SolidityType {
     /// Check whether ty is a static type in the sense of serialization
     pub fn is_static(&self) -> bool {
-        use crate::solidity_ty::SolidityType::*;
+        use SolidityType::*;
         let conjunction = |tys: &[SolidityType]| {
             tys.iter()
                 .map(|t| t.is_static())
@@ -172,9 +168,19 @@ impl SolidityType {
         }
     }
 
+    /// Check whether it is a static array
+    pub fn is_array_static_size(&self) -> bool {
+        use SolidityType::*;
+        match self {
+            StaticArray(_, _) | BytesStatic(_) => true,
+            SolidityString | DynamicArray(_) | Bytes => false,
+            _ => panic!("wrong type"),
+        }
+    }
+
     /// Check whether a type is a value type
     fn is_value_type(&self) -> bool {
-        use crate::solidity_ty::SolidityType::*;
+        use SolidityType::*;
         matches!(self, Primitive(_) | BytesStatic(_))
     }
 
@@ -372,10 +378,11 @@ impl SolidityType {
         {
             let length_opt = last_indice_str[1..last_indice_str.len() - 1].trim();
             if !length_opt.is_empty() {
-                return Ok(SolidityType::StaticArray(
-                    Box::new(out_type),
-                    length_opt.parse::<usize>().context(PARSE_ERR_MSG)?,
-                ));
+                let size = length_opt.parse::<usize>().context(PARSE_ERR_MSG)?;
+                if size == 0 {
+                    return Err(anyhow!(PARSE_ERR_MSG_ZERO_SIZE));
+                }
+                return Ok(SolidityType::StaticArray(Box::new(out_type), size));
             } else {
                 return Ok(SolidityType::DynamicArray(Box::new(out_type)));
             }
@@ -464,6 +471,11 @@ impl SolidityType {
             }
             SolidityType::Tuple(_) => panic!("unexpected solidity type"),
         }
+    }
+
+    pub fn is_bytes_type(&self) -> bool {
+        use SolidityType::*;
+        matches!(self, Bytes | BytesStatic(_) | SolidityString)
     }
 }
 

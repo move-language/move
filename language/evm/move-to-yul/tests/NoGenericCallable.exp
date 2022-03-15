@@ -22,10 +22,10 @@ object "A2_M" {
                     {
                         $Abort(99)
                     }
-                    let param_0 := abi_decode_tuple_$uint64$(4, calldatasize())
+                    let param_0 := abi_decode_tuple_$uint64$_$u64$(4, calldatasize())
                     let ret_0 := A2_M_f(param_0)
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_$uint64$(memPos, ret_0)
+                    let memEnd := abi_encode_tuple_$uint64$_$u64$(memPos, ret_0)
                     return(memPos, sub(memEnd, memPos))
                 }
                 default {}
@@ -36,7 +36,7 @@ object "A2_M" {
                 $result := x
             }
 
-            function abi_encode_tuple_$uint64$(headStart ,value_0) -> tail {
+            function abi_encode_tuple_$uint64$_$u64$(headStart ,value_0) -> tail {
                 tail := add(headStart, 32)
                 abi_encode_uint64(value_0, add(headStart, 0))
             }
@@ -46,7 +46,7 @@ object "A2_M" {
             function cleanup_uint64(value) -> cleaned {
                 cleaned := and(value, 0xffffffffffffffff)
             }
-            function abi_decode_tuple_$uint64$(headStart, dataEnd) -> value_0 {
+            function abi_decode_tuple_$uint64$_$u64$(headStart, dataEnd) -> value_0 {
                 if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
                 {
                     let offset := 0

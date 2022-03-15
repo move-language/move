@@ -24,7 +24,7 @@ object "A2_Vectors" {
                     }
                     A2_Vectors_test_one_elem_u64()
                     let memPos := mload(0)
-                    let memEnd := abi_encode_tuple_(memPos)
+                    let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
                 default {}
@@ -142,7 +142,7 @@ object "A2_Vectors" {
                 if $GtEq(i, size) { $AbortBuiltin() }
                 e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 8)))
             }
-            function abi_encode_tuple_(headStart ) -> tail {
+            function abi_encode_tuple__(headStart ) -> tail {
                 tail := add(headStart, 0)
             }
             function $Abort(code) {

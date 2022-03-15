@@ -4,12 +4,14 @@ module 0x2::ERC1155 {
     use Std::ASCII::{String};
     use Evm::U256::{U256, u256_from_words};
 
-
+    /*
     #[callable(sig=b"uri() returns (string memory) "), view]
     /// Returns the name of the token
     public fun uri(): String {
-        Std::ASCII::string(b"abc") // TODO: this leads to compilation errors such as "native function `Vector::is_empty` not implemented"
+        Std::ASCII::string(b"abc") // TODO: this leads to compilation error "type needs to be struct or vector"
     }
+    */
+
 
     #[callable(sig=b"balanceOf(address,uint256) returns (uint256)"), view]
     /// Get the balance of an account's token.

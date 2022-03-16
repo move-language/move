@@ -21,6 +21,7 @@ To begin contributing, [sign the CLA](https://diem.com/en-US/cla-sign/). You can
 * Join us on the [Diem Discord](https://discord.gg/epNwRT2wcd) or [Discourse](https://community.diem.com).
 * Ask a question on [Stack Overflow](https://stackoverflow.com/questions/tagged/diem).
 * Get the latest updates to our project by signing up for our [newsletter](https://developers.diem.com/newsletter_form).
+* Browse code and content from the community at [awesome-move](https://github.com/MystenLabs/awesome-move).
 
 ## License
 

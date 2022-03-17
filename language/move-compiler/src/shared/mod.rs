@@ -4,6 +4,7 @@
 use crate::{
     command_line as cli,
     diagnostics::{codes::Severity, Diagnostic, Diagnostics},
+    naming::ast::ModuleDefinition,
 };
 use clap::*;
 use move_core_types::account_address::AccountAddress;
@@ -317,6 +318,8 @@ pub type AddressScopedFiles = (Vec<String>, BTreeMap<String, NumericalAddress>);
 pub type NamedAddressMap = BTreeMap<Symbol, NumericalAddress>;
 pub(crate) type AddressScopedFileIndexed = (String, NamedAddressMapIndex);
 
+pub type AttributeDeriver = dyn Fn(&mut CompilationEnv, &mut ModuleDefinition);
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct NamedAddressMapIndex(usize);
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -439,6 +442,12 @@ pub struct Flags {
     )]
     test: bool,
 
+    /// Compilation flavor.
+    #[clap(
+        long = cli::FLAVOR,
+    )]
+    flavor: String,
+
     /// If set, do not allow modules defined in source_files to shadow modules of the same id that
     /// exist in dependencies. Checking will fail in this case.
     #[clap(
@@ -454,6 +463,7 @@ impl Flags {
         Self {
             test: false,
             no_shadow: false,
+            flavor: "".to_string(),
         }
     }
 
@@ -461,6 +471,14 @@ impl Flags {
         Self {
             test: true,
             no_shadow: false,
+            flavor: "".to_string(),
+        }
+    }
+
+    pub fn set_flavor(self, flavor: impl ToString) -> Self {
+        Self {
+            flavor: flavor.to_string(),
+            ..self
         }
     }
 
@@ -481,6 +499,10 @@ impl Flags {
 
     pub fn sources_shadow_deps(&self) -> bool {
         !self.no_shadow
+    }
+
+    pub fn get_flavor(&self) -> &str {
+        &self.flavor
     }
 }
 

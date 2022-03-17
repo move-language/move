@@ -22,6 +22,8 @@ pub const SOURCE_MAP_SHORT: char = 'm';
 pub const TEST: &str = "test";
 pub const TEST_SHORT: char = 't';
 
+pub const FLAVOR: &str = "flavor";
+
 pub const COLOR_MODE_ENV_VAR: &str = "COLOR_MODE";
 
 pub const MOVE_COMPILED_INTERFACES_DIR: &str = "mv_interfaces";

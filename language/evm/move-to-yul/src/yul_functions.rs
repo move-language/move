@@ -183,6 +183,11 @@ AbortBuiltin: "() {
 NotImplemented: "() {
     $AbortBuiltin()
 }" dep AbortBuiltin,
+RevertForward: "() {
+  let pos := mload(${MEM_SIZE_LOC})
+  returndatacopy(pos, 0, returndatasize())
+  revert(pos, returndatasize())
+}",
 
 // -------------------------------------------------------------------------------------------
 // Memory
@@ -201,6 +206,13 @@ Malloc: "(size) -> offs {
     // pad to word size
     mstore(${MEM_SIZE_LOC}, add(offs, shl(5, shr(5, add(size, 31)))))
 }",
+
+MallocAt: "(offs, size) {
+  let new_free_ptr := add(offs, $RoundUp(size))
+  // protect against overflow
+  if or(gt(new_free_ptr, 0xffffffffffffffff), lt(new_free_ptr, offs)) { $AbortBuiltin() }
+  mstore(${MEM_SIZE_LOC}, new_free_ptr)
+}" dep RoundUp dep AbortBuiltin,
 
 // Frees memory of size
 Free: "(offs, size) {
@@ -599,6 +611,19 @@ CopyFromCallDataToMemory: "(src, dst, length) {
     mstore(add(dst, length), 0)
 }",
 
+CopyFromMemoryToMemory: "(src, dst, length) {
+  let i := 0
+  for { } lt(i, length) { i := add(i, 32) }
+  {
+    mstore(add(dst, i), mload(add(src, i)))
+  }
+  if gt(i, length)
+  {
+    // clear end
+    mstore(add(dst, length), 0)
+  }
+}",
+
 ResizeVector: "(v_offs, capacity, type_size) -> new_v_offs {
     let new_capacity := mul(capacity, 2)
     let data_size := add(${VECTOR_METADATA_SIZE}, mul(capacity, type_size))
@@ -658,6 +683,9 @@ Mod: "(x, y) -> r {
 }" dep AbortBuiltin,
 Shr: "(x, y) -> r {
     r := shr(y, x)
+}",
+Shl: "(x, y) -> r {
+  r := shl(y, x)
 }",
 ShlU8: "(x, y) -> r {
     r := and(shl(y, x), ${MAX_U8})

@@ -450,15 +450,6 @@ impl<'a> Context<'a> {
         }
     }
 
-    /// Returns true of the type allocates memory.
-    pub fn type_allocates_memory_not_vector(&self, ty: &Type) -> bool {
-        use Type::*;
-        match ty {
-            Struct(m, s, _) => !self.is_u256(m.qualified(*s)),
-            _ => false,
-        }
-    }
-
     pub fn type_is_struct(&self, ty: &Type) -> bool {
         use Type::*;
         match ty {

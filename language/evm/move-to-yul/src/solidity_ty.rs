@@ -443,7 +443,7 @@ impl SolidityType {
 
     /// Check whether a solidity type is compatible with its corresponding move type
     /// TODO: int<M>, fixed, struct are not supported yets
-    fn check_type_compatibility(&self, ctx: &Context, move_ty: &Type) -> bool {
+    pub(crate) fn check_type_compatibility(&self, ctx: &Context, move_ty: &Type) -> bool {
         match self {
             SolidityType::Primitive(p) => p.check_primitive_type_compatibility(ctx, move_ty),
             SolidityType::DynamicArray(array_type) | SolidityType::StaticArray(array_type, _) => {

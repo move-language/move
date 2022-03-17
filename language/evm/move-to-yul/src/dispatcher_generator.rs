@@ -35,6 +35,7 @@ pub const ABI_DECODING_PARAM_VALIDATION: usize = 95;
 pub const ABI_DECODING_INVALID_CALLDATA_ARRAY_OFFSET: usize = 94;
 pub const ABI_DECODING_INVALID_BYTE_ARRAY_OFFSET: usize = 93;
 pub const STATIC_ARRAY_SIZE_NOT_MATCH: usize = 92;
+pub const TARGET_CONTRACT_DOES_NOT_CONTAIN_CODE: usize = 91;
 
 impl Generator {
     /// Generate dispatcher routine
@@ -124,8 +125,12 @@ impl Generator {
             let param_count = solidity_sig.para_types.len();
             let mut params = "".to_string();
             if param_count > 0 {
-                let decoding_fun_name =
-                    self.generate_abi_tuple_decoding(ctx, solidity_sig, fun.get_parameter_types());
+                let decoding_fun_name = self.generate_abi_tuple_decoding_para(
+                    ctx,
+                    solidity_sig,
+                    fun.get_parameter_types(),
+                    false,
+                );
                 params = (0..param_count).map(|i| format!("param_{}", i)).join(", ");
                 let let_params = format!("let {} := ", params);
                 emitln!(
@@ -146,7 +151,7 @@ impl Generator {
             emitln!(ctx.writer, "{}{}({})", let_rets, function_name, params);
             // Encoding the return values
             let encoding_fun_name =
-                self.generate_abi_tuple_encoding(ctx, solidity_sig, fun.get_return_types());
+                self.generate_abi_tuple_encoding_ret(ctx, solidity_sig, fun.get_return_types());
             if ret_count > 0 {
                 rets = format!(", {}", rets);
             }
@@ -168,7 +173,7 @@ impl Generator {
         fun.get_parameter_types()
             .iter()
             .chain(fun.get_return_types().iter())
-            .all(|ty| !ty.is_reference() && !ctx.type_allocates_memory_not_vector(ty))
+            .all(|ty| !ty.is_reference() && !ctx.type_is_struct(ty))
     }
 
     /// Generate optional receive function.
@@ -327,28 +332,22 @@ impl Generator {
     }
 
     /// Generate decoding functions for tuple.
-    fn generate_abi_tuple_decoding(
+    pub(crate) fn generate_abi_tuple_decoding(
         &mut self,
         ctx: &Context,
-        sig: &SoliditySignature,
+        param_types: Vec<SolidityType>,
+        param_locs: Vec<SignatureDataLocation>,
         move_tys: Vec<Type>,
+        from_memory: bool,
     ) -> String {
         let name_prefix = "abi_decode_tuple";
-        let param_types = sig
-            .para_types
-            .iter()
-            .map(|(ty, _)| ty.clone())
-            .collect_vec(); // need to move into lambda
-        let param_locs = sig
-            .para_types
-            .iter()
-            .map(|(_, loc)| loc.clone())
-            .collect_vec();
+        let from_memory_str = if from_memory { "_from_memory" } else { "" };
         let function_name = format!(
-            "{}_{}_{}",
+            "{}_{}_{}{}",
             name_prefix,
             mangle_solidity_types(&param_types),
-            ctx.mangle_types(&move_tys)
+            ctx.mangle_types(&move_tys),
+            from_memory_str
         )
         .replace("[", "_")
         .replace("]", "_");
@@ -359,11 +358,12 @@ impl Generator {
             let ret_var = (0..overall_type_head_vec.len())
                 .map(|i| format!("value_{}", i))
                 .collect_vec();
-            emit!(
-                ctx.writer,
-                "(headStart, dataEnd) -> {} ",
-                ret_var.iter().join(", ")
-            );
+            let ret_var_str = if ret_var.is_empty() {
+                "".to_string()
+            } else {
+                format!(" -> {}", ret_var.iter().join(", "))
+            };
+            emit!(ctx.writer, "(headStart, dataEnd){} ", ret_var_str);
             ctx.emit_block(|| {
                 emitln!(
                     ctx.writer,
@@ -385,15 +385,18 @@ impl Generator {
                     let is_static = ty.is_static();
                     // TODO: consider the case size_on_stack is not 1
                     let local_typ_var = vec![ret_var[stack_pos].clone()];
-                    let abi_decode_type = gen.generate_abi_decoding_type(ctx, ty, move_ty);
+                    let abi_decode_type =
+                        gen.generate_abi_decoding_type(ctx, ty, move_ty, from_memory);
                     ctx.emit_block(|| {
                         if is_static {
                             emitln!(ctx.writer, "let offset := {}", head_pos);
                         } else {
                             // TODO: dynamic types need to be revisited
+                            let load = if from_memory { "mload" } else { "calldataload" };
                             emitln!(
                                 ctx.writer,
-                                "let offset := calldataload(add(headStart, {}))",
+                                "let offset := {}(add(headStart, {}))",
+                                load,
                                 head_pos
                             );
                             emitln!(
@@ -420,34 +423,77 @@ impl Generator {
         self.need_auxiliary_function(function_name, Box::new(generate_fun))
     }
 
+    pub(crate) fn generate_abi_tuple_decoding_ret(
+        &mut self,
+        ctx: &Context,
+        sig: &SoliditySignature,
+        move_tys: Vec<Type>,
+        from_memory: bool,
+    ) -> String {
+        let param_types = sig.ret_types.iter().map(|(ty, _)| ty.clone()).collect_vec(); // need to move into lambda
+        let ret_locs = sig
+            .ret_types
+            .iter()
+            .map(|(_, loc)| loc.clone())
+            .collect_vec();
+        self.generate_abi_tuple_decoding(ctx, param_types, ret_locs, move_tys, from_memory)
+    }
+
+    pub(crate) fn generate_abi_tuple_decoding_para(
+        &mut self,
+        ctx: &Context,
+        sig: &SoliditySignature,
+        move_tys: Vec<Type>,
+        from_memory: bool,
+    ) -> String {
+        let param_types = sig
+            .para_types
+            .iter()
+            .map(|(ty, _)| ty.clone())
+            .collect_vec(); // need to move into lambda
+        let ret_locs = sig
+            .para_types
+            .iter()
+            .map(|(_, loc)| loc.clone())
+            .collect_vec();
+        self.generate_abi_tuple_decoding(ctx, param_types, ret_locs, move_tys, from_memory)
+    }
+
     /// Generate decoding functions for ty.
     fn generate_abi_decoding_type(
         &mut self,
         ctx: &Context,
         ty: &SolidityType,
         move_ty: &Type,
+        from_memory: bool,
     ) -> String {
         use SolidityType::*;
         // TODO: struct
         match ty {
-            Primitive(_) => self.generate_abi_decoding_primitive_type(ty),
+            Primitive(_) => self.generate_abi_decoding_primitive_type(ty, from_memory),
             DynamicArray(_) | StaticArray(_, _) | Bytes | BytesStatic(_) | SolidityString => {
-                self.generate_abi_decoding_array_type(ctx, ty, move_ty)
+                self.generate_abi_decoding_array_type(ctx, ty, move_ty, from_memory)
             }
             _ => "".to_string(),
         }
     }
 
     /// Generate decoding functions for primitive types.
-    fn generate_abi_decoding_primitive_type(&mut self, ty: &SolidityType) -> String {
+    fn generate_abi_decoding_primitive_type(
+        &mut self,
+        ty: &SolidityType,
+        from_memory: bool,
+    ) -> String {
         let name_prefix = "abi_decode";
-        let function_name = format!("{}_{}", name_prefix, ty);
+        let from_memory_str = if from_memory { "_from_memory" } else { "" };
+        let function_name = format!("{}_{}{}", name_prefix, ty, from_memory_str);
         let ty = ty.clone(); // need to move into lambda
 
         let generate_fun = move |gen: &mut Generator, ctx: &Context| {
             emit!(ctx.writer, "(offset, end) -> value ");
+            let load = if from_memory { "mload" } else { "calldataload" };
             ctx.emit_block(|| {
-                emitln!(ctx.writer, "value := calldataload(offset)");
+                emitln!(ctx.writer, "value := {}(offset)", load);
                 let validator = gen.generate_validator(&ty);
                 emitln!(ctx.writer, "{}(value)", validator);
             });
@@ -478,11 +524,19 @@ impl Generator {
         ctx: &Context,
         ty: &SolidityType,
         move_ty: &Type,
+        from_memory: bool,
     ) -> String {
         let name_prefix = "abi_decode";
-        let function_name = format!("{}_{}_{}", name_prefix, ty, ctx.mangle_type(move_ty))
-            .replace("[", "_")
-            .replace("]", "_");
+        let from_memory_str = if from_memory { "_from_memory" } else { "" };
+        let function_name = format!(
+            "{}_{}_{}{}",
+            name_prefix,
+            ty,
+            ctx.mangle_type(move_ty),
+            from_memory_str
+        )
+        .replace("[", "_")
+        .replace("]", "_");
         let ty = ty.clone(); // need to move into lambda
         let move_ty = move_ty.clone();
 
@@ -509,7 +563,8 @@ impl Generator {
                 offset = "offset";
             } else {
                 // if the size is not fixed, get the length from offset in calldata
-                array_length = "calldataload(offset)".to_string();
+                let load = if from_memory { "mload" } else { "calldataload" };
+                array_length = format!("{}(offset)", load);
                 allocated_size = format!(
                     "add(mul({}, length), {})",
                     ctx.type_size(&inner_move_ty),
@@ -527,7 +582,12 @@ impl Generator {
                 emitln!(
                     ctx.writer,
                     "array := {}({}, length, size, end)",
-                    gen.generate_abi_decode_array_available_len_memory(ctx, &ty, &move_ty),
+                    gen.generate_abi_decode_array_available_len_memory(
+                        ctx,
+                        &ty,
+                        &move_ty,
+                        from_memory
+                    ),
                     offset
                 );
             });
@@ -536,9 +596,14 @@ impl Generator {
     }
 
     /// Generate code to decode bytes
-    fn generate_abi_decode_bytes_available_len_memory(&mut self, ty: &SolidityType) -> String {
+    fn generate_abi_decode_bytes_available_len_memory(
+        &mut self,
+        ty: &SolidityType,
+        from_memory: bool,
+    ) -> String {
         let name_prefix = "abi_decode_available_length_";
-        let function_name = format!("{}_{}", name_prefix, ty)
+        let from_memory_str = if from_memory { "_from_memory" } else { "" };
+        let function_name = format!("{}_{}{}", name_prefix, ty, from_memory_str)
             .replace("[", "_")
             .replace("]", "_");
         let generate_fun = move |gen: &mut Generator, ctx: &Context| {
@@ -597,9 +662,14 @@ impl Generator {
                     VECTOR_METADATA_SIZE,
                     failure_call
                 );
+                let copy_fun = if from_memory {
+                    YulFunction::CopyFromMemoryToMemory
+                } else {
+                    YulFunction::CopyFromCallDataToMemory
+                };
                 gen.call_builtin(
                     ctx,
-                    YulFunction::CopyFromCallDataToMemory,
+                    copy_fun,
                     vec!["src".to_string(), "dst".to_string(), "length".to_string()].into_iter(),
                 );
             });
@@ -613,17 +683,25 @@ impl Generator {
         ctx: &Context,
         ty: &SolidityType,
         move_ty: &Type,
+        from_memory: bool,
     ) -> String {
         use SolidityType::*;
 
         if ty.is_bytes_type() {
-            return self.generate_abi_decode_bytes_available_len_memory(ty);
+            return self.generate_abi_decode_bytes_available_len_memory(ty, from_memory);
         }
 
         let name_prefix = "abi_decode_available_length_";
-        let function_name = format!("{}_{}_{}", name_prefix, ty, ctx.mangle_type(move_ty))
-            .replace("[", "_")
-            .replace("]", "_");
+        let from_memory_str = if from_memory { "_from_memory" } else { "" };
+        let function_name = format!(
+            "{}_{}_{}{}",
+            name_prefix,
+            ty,
+            ctx.mangle_type(move_ty),
+            from_memory_str
+        )
+        .replace("[", "_")
+        .replace("]", "_");
         let ty = ty.clone(); // need to move into lambda
         let move_ty = move_ty.clone();
 
@@ -700,7 +778,8 @@ impl Generator {
                 ctx.emit_block(|| {
                     if !inner_ty.is_static() {
                         // if the inner type is dynamic, obtain the pointer to the array
-                        emitln!(ctx.writer, "let innerOffset := calldataload(src)");
+                        let load = if from_memory { "mload" } else { "calldataload" };
+                        emitln!(ctx.writer, "let innerOffset := {}(src)", load);
                         emitln!(
                             ctx.writer,
                             "if gt(innerOffset, 0xffffffffffffffff) {{ {} }}",
@@ -713,7 +792,7 @@ impl Generator {
                     emitln!(
                         ctx.writer,
                         "let value := {}(elementPos, end)",
-                        gen.generate_abi_decoding_type(ctx, &inner_ty, &inner_move_ty)
+                        gen.generate_abi_decoding_type(ctx, &inner_ty, &inner_move_ty, from_memory)
                     );
                     let memory_func = ctx.memory_store_builtin_fun(&inner_move_ty);
                     gen.call_builtin(
@@ -1003,20 +1082,14 @@ impl Generator {
         self.need_auxiliary_function(function_name, Box::new(generate_fun))
     }
 
-    /// Generate encoding functions for tuple.
-    fn generate_abi_tuple_encoding(
+    pub(crate) fn generate_abi_tuple_encoding(
         &mut self,
         ctx: &Context,
-        sig: &SoliditySignature,
+        param_types: Vec<SolidityType>,
+        param_locs: Vec<SignatureDataLocation>,
         move_tys: Vec<Type>,
     ) -> String {
         let name_prefix = "abi_encode_tuple";
-        let param_types = sig.ret_types.iter().map(|(ty, _)| ty.clone()).collect_vec(); // need to move into lambda
-        let param_locs = sig
-            .ret_types
-            .iter()
-            .map(|(_, loc)| loc.clone())
-            .collect_vec();
         let function_name = format!(
             "{}_{}_{}",
             name_prefix,
@@ -1080,5 +1153,21 @@ impl Generator {
             })
         };
         self.need_auxiliary_function(function_name, Box::new(generate_fun))
+    }
+
+    /// Generate encoding functions for tuple.
+    pub(crate) fn generate_abi_tuple_encoding_ret(
+        &mut self,
+        ctx: &Context,
+        sig: &SoliditySignature,
+        move_tys: Vec<Type>,
+    ) -> String {
+        let param_types = sig.ret_types.iter().map(|(ty, _)| ty.clone()).collect_vec(); // need to move into lambda
+        let param_locs = sig
+            .ret_types
+            .iter()
+            .map(|(_, loc)| loc.clone())
+            .collect_vec();
+        self.generate_abi_tuple_encoding(ctx, param_types, param_locs, move_tys)
     }
 }

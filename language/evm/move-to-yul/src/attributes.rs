@@ -16,6 +16,7 @@ const RECEIVE_ATTR: &str = "receive";
 const RECEIVE_FALLBACK_ATTR: &str = "fallback";
 const EVM_TEST_ATTR: &str = "evm_test";
 const TEST_ATTR: &str = "test";
+const EXTERNAL_ATTR: &str = "external";
 const SIGNATURE: &str = "sig";
 
 /// Extract the value from an attribute
@@ -51,6 +52,16 @@ pub fn extract_callable_signature(fun: &FunctionEnv<'_>) -> Option<String> {
         fun.module_env.env,
         fun.get_attributes(),
         CALLABLE_ATTR,
+        SIGNATURE,
+    )
+}
+
+/// Extract the solidity signature from the callable attribute
+pub fn extract_external_signature(fun: &FunctionEnv<'_>) -> Option<String> {
+    extract_attr_value_str(
+        fun.module_env.env,
+        fun.get_attributes(),
+        EXTERNAL_ATTR,
         SIGNATURE,
     )
 }
@@ -132,4 +143,13 @@ pub fn is_evm_test_fun(fun: &FunctionEnv<'_>) -> bool {
 /// Check whether the function has a `#[test]` attribute.
 pub fn is_test_fun(fun: &FunctionEnv<'_>) -> bool {
     has_attr(fun.module_env.env, fun.get_attributes(), TEST_ATTR, false)
+}
+
+pub fn is_external_fun(fun: &FunctionEnv<'_>) -> bool {
+    has_attr(
+        fun.module_env.env,
+        fun.get_attributes(),
+        EXTERNAL_ATTR,
+        false,
+    )
 }

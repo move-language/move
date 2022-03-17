@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{context::Context, functions::FunctionGenerator};
+use crate::{attributes, context::Context, external_functions, functions::FunctionGenerator};
 use move_model::{
     ast::ModuleName,
     emit, emitln,
@@ -40,16 +40,33 @@ impl NativeFunctions {
             emit!(ctx.writer, "function {}", fun_name);
             ngen(gen, ctx, fun_id)
         } else {
-            ctx.env.error(
-                &gen.parent.contract_loc,
-                &format!(
-                    "native function {} not implemented (w/ signature `{:?}`)",
-                    ctx.env
-                        .get_function(fun_id.to_qualified_id())
-                        .get_full_name_str(),
-                    fun_id.inst,
-                ),
-            )
+            let fun = &ctx.env.get_function(fun_id.to_qualified_id());
+            if attributes::is_external_fun(fun) {
+                if let Some(extracted_sig_str) = attributes::extract_external_signature(fun) {
+                    external_functions::define_external_fun(gen, ctx, fun_id, &extracted_sig_str)
+                } else {
+                    ctx.env.error(
+                        &gen.parent.contract_loc,
+                        &format!(
+                            "external function {} must have a valid solidity signature",
+                            ctx.env
+                                .get_function(fun_id.to_qualified_id())
+                                .get_full_name_str()
+                        ),
+                    )
+                }
+            } else {
+                ctx.env.error(
+                    &gen.parent.contract_loc,
+                    &format!(
+                        "native function {} not implemented (w/ signature `{:?}`)",
+                        ctx.env
+                            .get_function(fun_id.to_qualified_id())
+                            .get_full_name_str(),
+                        fun_id.inst,
+                    ),
+                )
+            }
         }
     }
 

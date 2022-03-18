@@ -8,6 +8,7 @@ use crate::tasks::{
     RawAddress, RunCommand, SyntaxChoice, TaskCommand, TaskInput, ViewCommand,
 };
 use anyhow::{anyhow, Result};
+use clap::Parser;
 use move_binary_format::{
     binary_views::BinaryIndexedView,
     file_format::{CompiledModule, CompiledScript},
@@ -40,7 +41,6 @@ use std::{
     io::Write,
     path::Path,
 };
-use structopt::*;
 use tempfile::NamedTempFile;
 
 pub struct ProcessedModule {
@@ -94,10 +94,10 @@ fn merge_output(left: Option<String>, right: Option<String>) -> Option<String> {
 }
 
 pub trait MoveTestAdapter<'a> {
-    type ExtraPublishArgs;
-    type ExtraRunArgs;
-    type Subcommand;
-    type ExtraInitArgs;
+    type ExtraPublishArgs: Parser;
+    type ExtraRunArgs: Parser;
+    type Subcommand: Parser;
+    type ExtraInitArgs: Parser;
 
     fn compiled_state(&mut self) -> &mut CompiledState<'a>;
     fn default_syntax(&self) -> SyntaxChoice;
@@ -486,10 +486,10 @@ pub fn run_test_impl<'a, Adapter>(
 ) -> Result<(), Box<dyn std::error::Error>>
 where
     Adapter: MoveTestAdapter<'a>,
-    Adapter::ExtraInitArgs: StructOptInternal + Debug,
-    Adapter::ExtraPublishArgs: StructOptInternal + Debug,
-    Adapter::ExtraRunArgs: StructOptInternal + Debug,
-    Adapter::Subcommand: StructOptInternal + Debug,
+    Adapter::ExtraInitArgs: Debug,
+    Adapter::ExtraPublishArgs: Debug,
+    Adapter::ExtraRunArgs: Debug,
+    Adapter::Subcommand: Debug,
 {
     let extension = path.extension().unwrap().to_str().unwrap();
     let default_syntax = if extension == MOVE_IR_EXTENSION {

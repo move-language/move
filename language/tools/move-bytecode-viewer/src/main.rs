@@ -3,9 +3,9 @@
 
 #![forbid(unsafe_code)]
 
+use clap::Parser;
 use move_bytecode_viewer::BytecodeViewerConfig;
-use structopt::StructOpt;
 
 fn main() {
-    BytecodeViewerConfig::from_args().start_viewer()
+    BytecodeViewerConfig::parse().start_viewer()
 }

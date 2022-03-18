@@ -18,27 +18,27 @@ pub const DEFAULT_BUILD_DIR: &str = ".";
 const BCS_EXTENSION: &str = "bcs";
 
 use anyhow::Result;
+use clap::Parser;
 use move_core_types::{
     account_address::AccountAddress, errmap::ErrorMapping, gas_schedule::CostTable,
     identifier::Identifier,
 };
 use move_vm_runtime::native_functions::NativeFunction;
 use std::path::PathBuf;
-use structopt::StructOpt;
 
 type NativeFunctionRecord = (AccountAddress, Identifier, Identifier, NativeFunction);
 
-#[derive(StructOpt)]
-#[structopt(
+#[derive(Parser)]
+#[clap(
     name = "move",
     about = "CLI frontend for Move compiler and VM",
     rename_all = "kebab-case"
 )]
 pub struct Move {
     /// Path to a package which the command should be run with respect to.
-    #[structopt(
+    #[clap(
         long = "path",
-        short = "p",
+        short = 'p',
         global = true,
         parse(from_os_str),
         default_value = "."
@@ -46,53 +46,53 @@ pub struct Move {
     package_path: PathBuf,
 
     /// Print additional diagnostics if available.
-    #[structopt(short = "v", global = true)]
+    #[clap(short = 'v', global = true)]
     verbose: bool,
 
     /// Package build options
-    #[structopt(flatten)]
+    #[clap(flatten)]
     build_config: BuildConfig,
 }
 
 /// MoveCLI is the CLI that will be executed by the `move-cli` command
 /// The `cmd` argument is added here rather than in `Move` to make it
 /// easier for other crates to extend `move-cli`
-#[derive(StructOpt)]
+#[derive(Parser)]
 pub struct MoveCLI {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     move_args: Move,
 
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     cmd: Command,
 }
 
-#[derive(StructOpt)]
+#[derive(Parser)]
 pub enum Command {
     /// Execute a package command. Executed in the current directory or the closest containing Move
     /// package.
-    #[structopt(name = "package")]
+    #[clap(name = "package")]
     Package {
-        #[structopt(subcommand)]
+        #[clap(subcommand)]
         cmd: package::cli::PackageCommand,
     },
     /// Execute a sandbox command.
-    #[structopt(name = "sandbox")]
+    #[clap(name = "sandbox")]
     Sandbox {
         /// Directory storing Move resources, events, and module bytecodes produced by module publishing
         /// and script execution.
-        #[structopt(long, default_value = DEFAULT_STORAGE_DIR, parse(from_os_str))]
+        #[clap(long, default_value = DEFAULT_STORAGE_DIR, parse(from_os_str))]
         storage_dir: PathBuf,
-        #[structopt(subcommand)]
+        #[clap(subcommand)]
         cmd: sandbox::cli::SandboxCommand,
     },
     /// (Experimental) Run static analyses on Move source or bytecode.
-    #[structopt(name = "experimental")]
+    #[clap(name = "experimental")]
     Experimental {
         /// Directory storing Move resources, events, and module bytecodes produced by module publishing
         /// and script execution.
-        #[structopt(long, default_value = DEFAULT_STORAGE_DIR, parse(from_os_str))]
+        #[clap(long, default_value = DEFAULT_STORAGE_DIR, parse(from_os_str))]
         storage_dir: PathBuf,
-        #[structopt(subcommand)]
+        #[clap(subcommand)]
         cmd: experimental::cli::ExperimentalCommand,
     },
 }
@@ -127,7 +127,7 @@ pub fn move_cli(
     cost_table: &CostTable,
     error_descriptions: &ErrorMapping,
 ) -> Result<()> {
-    let args = MoveCLI::from_args();
+    let args = MoveCLI::parse();
     run_cli(
         natives,
         cost_table,

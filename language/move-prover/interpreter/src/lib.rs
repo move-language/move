@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Result};
+use clap::Parser;
 use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
-use structopt::StructOpt;
 
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 use move_core_types::{
@@ -39,28 +39,46 @@ use crate::concrete::{
 };
 
 /// Options passed into the interpreter generator.
-#[derive(StructOpt)]
+#[derive(Parser)]
 pub struct InterpreterOptions {
     /// The function to be executed, specified in the format of `addr::module_name::function_name`
-    #[structopt(long = "entry", parse(try_from_str = parse_entrypoint))]
+    #[clap(long = "entry", parse(try_from_str = parse_entrypoint))]
     pub entrypoint: (ModuleId, Identifier),
 
     /// Possibly-empty list of signers for the execution
-    #[structopt(long = "signers", parse(try_from_str = AccountAddress::from_hex_literal))]
+    #[clap(
+        long = "signers",
+        parse(try_from_str = AccountAddress::from_hex_literal),
+        takes_value(true),
+        multiple_values(true),
+        multiple_occurrences(true)
+    )]
     pub signers: Vec<AccountAddress>,
     /// Possibly-empty list of arguments passed to the transaction
-    #[structopt(long = "args", parse(try_from_str = parse_transaction_argument))]
+    #[clap(
+        long = "args",
+        parse(try_from_str = parse_transaction_argument),
+        takes_value(true),
+        multiple_values(true),
+        multiple_occurrences(true)
+    )]
     pub args: Vec<TransactionArgument>,
     /// Possibly-empty list of type arguments passed to the transaction (e.g., `T` in
     /// `main<T>()`). Must match the type arguments kinds expected by `script_file`.
-    #[structopt(long = "ty-args", parse(try_from_str = parse_type_tag))]
+    #[clap(
+        long = "ty-args",
+        parse(try_from_str = parse_type_tag),
+        takes_value(true),
+        multiple_values(true),
+        multiple_occurrences(true)
+    )]
     pub ty_args: Vec<TypeTag>,
 
     /// Skip checking of expressions
-    #[structopt(long = "no-expr-check")]
+    #[clap(long = "no-expr-check")]
     pub no_expr_check: bool,
     /// Level of verbosity
-    #[structopt(short = "v", long = "verbose")]
+    #[clap(short = 'v', long = "verbose")]
     pub verbose: Option<u64>,
 }
 

@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+use clap::Parser;
 use move_binary_format::file_format::CompiledModule;
 use move_coverage::{
     coverage_map::{CoverageMap, TraceMap},
@@ -13,37 +14,36 @@ use std::{
     io::{self, Write},
     path::Path,
 };
-use structopt::StructOpt;
 
-#[derive(Debug, StructOpt)]
-#[structopt(
+#[derive(Debug, Parser)]
+#[clap(
     name = "Move VM Coverage Summary",
     about = "Creates a coverage summary from the trace data collected from the Move VM"
 )]
 struct Args {
     /// The path to the coverage map or trace file
-    #[structopt(long = "input-trace-path", short = "t")]
+    #[clap(long = "input-trace-path", short = 't')]
     pub input_trace_path: String,
     /// Whether the passed-in file is a raw trace file or a serialized coverage map
-    #[structopt(long = "is-raw-trace", short = "r")]
+    #[clap(long = "is-raw-trace", short = 'r')]
     pub is_raw_trace_file: bool,
     /// The path to the module binary
-    #[structopt(long = "module-path", short = "b")]
+    #[clap(long = "module-path", short = 'b')]
     pub module_binary_path: Option<String>,
     /// Optional path for summaries. Printed to stdout if not present.
-    #[structopt(long = "summary-path", short = "o")]
+    #[clap(long = "summary-path", short = 'o')]
     pub summary_path: Option<String>,
     /// Whether function coverage summaries should be displayed
-    #[structopt(long = "summarize-functions", short = "f")]
+    #[clap(long = "summarize-functions", short = 'f')]
     pub summarize_functions: bool,
     /// The path to the standard library binary directory for Move
-    #[structopt(long = "stdlib-path", short = "s")]
+    #[clap(long = "stdlib-path", short = 's')]
     pub stdlib_path: Option<String>,
     /// Whether path coverage should be derived (default is instruction coverage)
-    #[structopt(long = "derive-path-coverage", short = "p")]
+    #[clap(long = "derive-path-coverage", short = 'p')]
     pub derive_path_coverage: bool,
     /// Output CSV data of coverage
-    #[structopt(long = "csv", short = "c")]
+    #[clap(long = "csv", short = 'c')]
     pub csv_output: bool,
 }
 
@@ -72,7 +72,7 @@ fn get_modules(args: &Args) -> Vec<CompiledModule> {
 }
 
 fn main() {
-    let args = Args::from_args();
+    let args = Args::parse();
     let input_trace_path = Path::new(&args.input_trace_path);
 
     let mut summary_writer: Box<dyn Write> = match &args.summary_path {

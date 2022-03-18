@@ -1,16 +1,37 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::ffi::OsString;
-use structopt::{clap::arg_enum, StructOpt};
+use clap::{ArgEnum, Parser};
+use std::{ffi::OsString, str::FromStr};
 use supports_color::Stream;
 
-arg_enum! {
-    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-    pub enum Coloring {
-        Auto,
-        Always,
-        Never,
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ArgEnum)]
+pub enum Coloring {
+    Auto,
+    Always,
+    Never,
+}
+
+impl FromStr for Coloring {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> anyhow::Result<Self> {
+        match s {
+            "auto" => Ok(Coloring::Auto),
+            "always" => Ok(Coloring::Always),
+            "never" => Ok(Coloring::Never),
+            _ => Err(anyhow::anyhow!("invalid coloring option: {}", s)),
+        }
+    }
+}
+
+impl std::fmt::Display for Coloring {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Coloring::Auto => write!(f, "auto"),
+            Coloring::Always => write!(f, "always"),
+            Coloring::Never => write!(f, "never"),
+        }
     }
 }
 
@@ -23,87 +44,90 @@ impl Coloring {
             Coloring::Never => false,
         }
     }
+    fn variants() -> [&'static str; 3] {
+        ["auto", "always", "never"]
+    }
 }
 
 /// Arguments for controlling cargo build and other similar commands (like check).
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub struct BuildArgs {
-    #[structopt(long, short)]
+    #[clap(long, short)]
     /// No output printed to stdout
     pub(crate) quiet: bool,
-    #[structopt(long, short)]
+    #[clap(long, short)]
     /// Number of parallel build jobs, defaults to # of CPUs
     pub(crate) jobs: Option<u16>,
-    #[structopt(long)]
+    #[clap(long)]
     /// Only this package's library
     pub(crate) lib: bool,
-    #[structopt(long, number_of_values = 1)]
+    #[clap(long, number_of_values = 1)]
     /// Only the specified binary
     pub(crate) bin: Vec<String>,
-    #[structopt(long)]
+    #[clap(long)]
     /// All binaries
     pub(crate) bins: bool,
-    #[structopt(long, number_of_values = 1)]
+    #[clap(long, number_of_values = 1)]
     /// Only the specified example
     pub(crate) example: Vec<String>,
-    #[structopt(long)]
+    #[clap(long)]
     /// All examples
     pub(crate) examples: bool,
-    #[structopt(long, number_of_values = 1)]
+    #[clap(long, number_of_values = 1)]
     /// Only the specified test target
     pub(crate) test: Vec<String>,
-    #[structopt(long)]
+    #[clap(long)]
     /// All tests
     pub(crate) tests: bool,
-    #[structopt(long, number_of_values = 1)]
+    #[clap(long, number_of_values = 1)]
     /// Only the specified bench target
     pub(crate) bench: Vec<String>,
-    #[structopt(long)]
+    #[clap(long)]
     /// All benches
     pub(crate) benches: bool,
-    #[structopt(long)]
+    #[clap(long)]
     /// All targets
     pub(crate) all_targets: bool,
-    #[structopt(long)]
+    #[clap(long)]
     /// Artifacts in release mode, with optimizations
     pub(crate) release: bool,
-    #[structopt(long)]
+    #[clap(long)]
     /// Artifacts with the specified profile
     pub(crate) profile: Option<String>,
-    #[structopt(long, number_of_values = 1)]
+    #[clap(long, number_of_values = 1)]
     /// Space-separated list of features to activate
     pub(crate) features: Vec<String>,
-    #[structopt(long)]
+    #[clap(long)]
     /// Activate all available features
     pub(crate) all_features: bool,
-    #[structopt(long)]
+    #[clap(long)]
     /// Do not activate the `default` feature
     pub(crate) no_default_features: bool,
-    #[structopt(long)]
+    #[clap(long)]
     /// TRIPLE
     pub(crate) target: Option<String>,
-    #[structopt(long, parse(from_os_str))]
+    #[clap(long, parse(from_os_str))]
     /// Directory for all generated artifacts
     pub(crate) target_dir: Option<OsString>,
-    #[structopt(long, parse(from_os_str))]
+    #[clap(long, parse(from_os_str))]
     /// Path to Cargo.toml
     pub(crate) manifest_path: Option<OsString>,
-    #[structopt(long)]
+    #[clap(long)]
     /// Error format
     pub(crate) message_format: Option<String>,
-    #[structopt(long, short, parse(from_occurrences))]
+    #[clap(long, short, parse(from_occurrences))]
     /// Use verbose output (-vv very verbose/build.rs output)
     pub(crate) verbose: usize,
-    #[structopt(long, possible_values = &Coloring::variants(), default_value="Auto")]
+    #[clap(long, possible_values = Coloring::variants(), default_value="auto")]
     /// Coloring: auto, always, never
     pub(crate) color: Coloring,
-    #[structopt(long)]
+    #[clap(long)]
     /// Require Cargo.lock and cache are up to date
     pub(crate) frozen: bool,
-    #[structopt(long)]
+    #[clap(long)]
     /// Require Cargo.lock is up to date
     pub(crate) locked: bool,
-    #[structopt(long)]
+    #[clap(long)]
     /// Run without accessing the network
     pub(crate) offline: bool,
 }

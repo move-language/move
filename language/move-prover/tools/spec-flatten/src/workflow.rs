@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{anyhow, Result};
+use clap::Parser;
 use std::collections::BTreeMap;
-use structopt::StructOpt;
 
 use move_compiler::shared::{parse_named_address, NumericalAddress};
 use move_model::{
@@ -20,33 +20,52 @@ use move_stackless_bytecode::{
 };
 
 /// Options passed into the workflow pipeline.
-#[derive(StructOpt, Clone)]
+#[derive(Parser, Clone)]
 pub struct WorkflowOptions {
     /// Sources of the target modules
     pub srcs: Vec<String>,
 
     /// Dependencies
-    #[structopt(short = "d", long = "dependency")]
+    #[clap(
+        short = 'd',
+        long = "dependency",
+        takes_value(true),
+        multiple_values(true),
+        multiple_occurrences(true)
+    )]
     pub deps: Vec<String>,
 
     /// Target function
-    #[structopt(short, long)]
+    #[clap(short, long)]
     pub target: Option<String>,
 
     /// Do not include default named address
-    #[structopt(long = "no-default-named-addresses")]
+    #[clap(long = "no-default-named-addresses")]
     pub no_default_named_addresses: bool,
 
     /// Extra mappings for named address
-    #[structopt(short = "a", long = "address", parse(try_from_str = parse_named_address))]
+    #[clap(
+        short = 'a',
+        long = "address",
+        parse(try_from_str = parse_named_address),
+        takes_value(true),
+        multiple_values(true),
+        multiple_occurrences(true)
+    )]
     pub named_addresses_extra: Option<Vec<(String, NumericalAddress)>>,
 
     /// Simplification pipeline at the Move model end
-    #[structopt(short = "s", long = "simplify")]
+    #[clap(
+        short = 's',
+        long = "simplify",
+        takes_value(true),
+        multiple_values(true),
+        multiple_occurrences(true)
+    )]
     pub simplification_pipeline: Vec<SimplificationPass>,
 
     /// Verbose mode
-    #[structopt(short, long)]
+    #[clap(short, long)]
     pub verbose: bool,
 }
 

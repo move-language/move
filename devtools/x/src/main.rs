@@ -4,10 +4,10 @@
 #![forbid(unsafe_code)]
 
 use chrono::Local;
+use clap::Parser;
 use env_logger::{self, fmt::Color};
 use log::Level;
 use std::{boxed::Box, io::Write};
-use structopt::StructOpt;
 
 mod bench;
 mod build;
@@ -32,22 +32,22 @@ mod utils;
 
 type Result<T> = anyhow::Result<T>;
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 struct Args {
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     cmd: Command,
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 enum Command {
-    #[structopt(name = "bench")]
+    #[clap(name = "bench")]
     /// Run `cargo bench`
     Bench(bench::Args),
-    #[structopt(name = "build")]
+    #[clap(name = "build")]
     /// Run `cargo build`
     // the argument must be Boxed due to it's size and clippy (it's quite large by comparison to others.)
     Build(Box<build::Args>),
-    #[structopt(name = "check")]
+    #[clap(name = "check")]
     /// Run `cargo check`
     Check(check::Args),
     /// List packages changed since merge base with the given commit
@@ -55,38 +55,38 @@ enum Command {
     /// Note that this compares against the merge base (common ancestor) of the specified commit.
     /// For example, if origin/master is specified, the current working directory will be compared
     /// against the point at which it branched off of origin/master.
-    #[structopt(name = "changed-since")]
+    #[clap(name = "changed-since")]
     ChangedSince(changed_since::Args),
-    #[structopt(name = "clippy")]
+    #[clap(name = "clippy")]
     /// Run `cargo clippy`
     Clippy(clippy::Args),
-    #[structopt(name = "fix")]
+    #[clap(name = "fix")]
     /// Run `cargo fix`
     Fix(fix::Args),
-    #[structopt(name = "fmt")]
+    #[clap(name = "fmt")]
     /// Run `cargo fmt`
     Fmt(fmt::Args),
-    #[structopt(name = "test")]
+    #[clap(name = "test")]
     /// Run tests
     Test(test::Args),
-    #[structopt(name = "nextest")]
+    #[clap(name = "nextest")]
     /// Run tests with new test runner
     Nextest(nextest::Args),
-    #[structopt(name = "tools")]
+    #[clap(name = "tools")]
     /// Run tests
     Tools(tools::Args),
-    #[structopt(name = "lint")]
+    #[clap(name = "lint")]
     /// Run lints
     Lint(lint::Args),
     /// Run playground code
     Playground(playground::Args),
-    #[structopt(name = "generate-summaries")]
+    #[clap(name = "generate-summaries")]
     /// Generate build summaries for important subsets
     GenerateSummaries(generate_summaries::Args),
-    #[structopt(name = "diff-summary")]
+    #[clap(name = "diff-summary")]
     /// Diff build summaries for important subsets
     DiffSummary(diff_summary::Args),
-    #[structopt(name = "generate-workspace-hack")]
+    #[clap(name = "generate-workspace-hack")]
     /// Update workspace-hack contents
     GenerateWorkspaceHack(generate_workspace_hack::Args),
 }
@@ -113,7 +113,7 @@ fn main() -> Result<()> {
         })
         .init();
 
-    let args = Args::from_args();
+    let args = Args::parse();
     let xctx = context::XContext::new()?;
 
     match args.cmd {

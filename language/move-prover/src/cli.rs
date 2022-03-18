@@ -12,7 +12,7 @@ use std::{
 };
 
 use anyhow::anyhow;
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use log::LevelFilter;
 use move_compiler::shared::NumericalAddress;
 use once_cell::sync::Lazy;
@@ -132,18 +132,18 @@ impl Options {
     // the program name.
     pub fn create_from_args(args: &[String]) -> anyhow::Result<Options> {
         // Clap definition of the command line interface.
-        let is_number = |s: String| {
+        let is_number = |s: &str| {
             s.parse::<usize>()
                 .map(|_| ())
                 .map_err(|_| "expected number".to_string())
         };
-        let cli = App::new("mvp")
+        let cli = Command::new("mvp")
             .version("0.1.0")
             .about("The Move Prover")
             .author("The Diem Core Contributors")
             .arg(
-                Arg::with_name("config")
-                    .short("c")
+                Arg::new("config")
+                    .short('c')
                     .long("config")
                     .takes_value(true)
                     .value_name("TOML_FILE")
@@ -151,40 +151,40 @@ impl Options {
                      Values in this file will be overridden by command line flags"),
             )
             .arg(
-                Arg::with_name("config-str")
+                Arg::new("config-str")
                     .conflicts_with("config")
-                    .short("C")
+                    .short('C')
                     .long("config-str")
                     .takes_value(true)
-                    .multiple(true)
+                    .multiple_occurrences(true)
                     .number_of_values(1)
                     .value_name("TOML_STRING")
                     .help("inlines configuration string in toml syntax. Can be repeated. \
                      Use as in `-C=prover.opt=value -C=backend.opt=value`"),
             )
             .arg(
-                Arg::with_name("print-config")
+                Arg::new("print-config")
                     .long("print-config")
                     .help("prints the effective toml configuration, then exits")
             )
             .arg(
-                Arg::with_name("output")
-                    .short("o")
+                Arg::new("output")
+                    .short('o')
                     .long("output")
                     .takes_value(true)
                     .value_name("BOOGIE_FILE")
                     .help("path to the boogie output which represents the verification problem"),
             )
             .arg(
-                Arg::with_name("verbosity")
-                    .short("v")
+                Arg::new("verbosity")
+                    .short('v')
                     .long("verbose")
                     .takes_value(true)
                     .possible_values(&["error", "warn", "info", "debug"])
                     .help("verbosity level"),
             )
             .arg(
-                Arg::with_name("vector-theory")
+                Arg::new("vector-theory")
                     .long("vector-theory")
                     .takes_value(true)
                     .possible_values(&["BoogieArray", "BoogieArrayIntern",
@@ -192,56 +192,56 @@ impl Options {
                     .help("vector theory to use"),
             )
             .arg(
-                Arg::with_name("generate-only")
+                Arg::new("generate-only")
                     .long("generate-only")
-                    .short("g")
+                    .short('g')
                     .help("only generates boogie file but does not call boogie"),
             )
             .arg(
-                Arg::with_name("severity")
+                Arg::new("severity")
                     .long("severity")
-                    .short("s")
+                    .short('s')
                     .takes_value(true)
                     .possible_values(&["bug", "error", "warn", "note"])
                     .help("The minimall level on which diagnostics are reported")
             )
             .arg(
-                Arg::with_name("trace")
+                Arg::new("trace")
                     .long("trace")
-                    .short("t")
+                    .short('t')
                     .help("enables automatic tracing of expressions in prover errors")
             )
             .arg(
-                Arg::with_name("keep")
+                Arg::new("keep")
                     .long("keep")
-                    .short("k")
+                    .short('k')
                     .help("keeps intermediate artifacts of the backend around")
             )
             .arg(
-                Arg::with_name("boogie-poly")
+                Arg::new("boogie-poly")
                     .long("boogie-poly")
                     .help("whether to use the old polymorphic Boogie backend")
             )
             .arg(
-                Arg::with_name("inv-v1")
+                Arg::new("inv-v1")
                     .long("inv-v1")
                     .help("whether to use the old v1 invariant processing (without disabled invariants)")
             )
             .arg(
-                Arg::with_name("negative")
+                Arg::new("negative")
                     .long("negative")
                     .help("runs negative verification checks")
             ).arg(
-                Arg::with_name("seed")
+                Arg::new("seed")
                     .long("seed")
-                    .short("S")
+                    .short('S')
                     .takes_value(true)
                     .value_name("NUMBER")
                     .validator(is_number)
                     .help("sets a random seed for the prover (default 0)")
             )
             .arg(
-                Arg::with_name("cores")
+                Arg::new("cores")
                     .long("cores")
                     .takes_value(true)
                     .value_name("NUMBER")
@@ -251,9 +251,9 @@ impl Options {
                      output from boogie (default 4)")
             )
             .arg(
-                Arg::with_name("timeout")
+                Arg::new("timeout")
                     .long("timeout")
-                    .short("T")
+                    .short('T')
                     .takes_value(true)
                     .value_name("NUMBER")
                     .validator(is_number)
@@ -261,68 +261,68 @@ impl Options {
                              individual verification condition (default 40)")
             )
             .arg(
-                Arg::with_name("ignore-pragma-opaque-when-possible")
+                Arg::new("ignore-pragma-opaque-when-possible")
                     .long("ignore-pragma-opaque-when-possible")
                     .help("Ignore the \"opaque\" pragma on specs of \
                     all functions when possible"),
             )
             .arg(
-                Arg::with_name("ignore-pragma-opaque-internal-only")
+                Arg::new("ignore-pragma-opaque-internal-only")
                     .long("ignore-pragma-opaque-internal-only")
                     .help("Ignore the \"opaque\" pragma on specs of \
                     internal functions when possible"),
             )
             .arg(
-                Arg::with_name("simplification-pipeline")
+                Arg::new("simplification-pipeline")
                     .long("simplify")
                     .takes_value(true)
-                    .multiple(true)
+                    .multiple_occurrences(true)
                     .number_of_values(1)
                     .help("Specify one simplification pass to run on the specifications. \
                     This option May be specified multiple times to compose a pipeline")
             )
             .arg(
-                Arg::with_name("docgen")
+                Arg::new("docgen")
                     .long("docgen")
                     .help("runs the documentation generator instead of the prover. \
                     Generated docs will be written into the directory `./doc` unless configured otherwise via toml"),
             )
             .arg(
-                Arg::with_name("docgen-template")
+                Arg::new("docgen-template")
                     .long("docgen-template")
                     .takes_value(true)
                     .value_name("FILE")
                     .help("a template for documentation generation."),
             )
             .arg(
-                Arg::with_name("abigen")
+                Arg::new("abigen")
                     .long("abigen")
                     .help("runs the ABI generator instead of the prover. \
                     Generated ABIs will be written into the directory `./abi` unless configured otherwise via toml"),
             )
             .arg(
-                Arg::with_name("errmapgen")
+                Arg::new("errmapgen")
                     .long("errmapgen")
                     .help("runs the error map generator instead of the prover. \
                     The generated error map will be written to `errmap` unless configured otherwise"),
             )
             .arg(
-                Arg::with_name("packedtypesgen")
+                Arg::new("packedtypesgen")
                     .long("packedtypesgen")
                     .help("runs the packed types generator instead of the prover.")
             )
             .arg(
-                Arg::with_name("escape")
+                Arg::new("escape")
                     .long("escape")
                     .help("runs the escape analysis instead of the prover.")
             )
             .arg(
-                Arg::with_name("read-write-set")
+                Arg::new("read-write-set")
                     .long("read-write-set")
                     .help("runs the read/write set analysis instead of the prover.")
             )
             .arg(
-                Arg::with_name("verify")
+                Arg::new("verify")
                     .long("verify")
                     .takes_value(true)
                     .possible_values(&["public", "all", "none"])
@@ -331,7 +331,7 @@ impl Options {
                     (can be overridden by `pragma verify=true|false`)"),
             )
             .arg(
-                Arg::with_name("bench-repeat")
+                Arg::new("bench-repeat")
                     .long("bench-repeat")
                     .takes_value(true)
                     .value_name("COUNT")
@@ -341,14 +341,14 @@ impl Options {
                     ),
             )
             .arg(
-                Arg::with_name("mutation")
+                Arg::new("mutation")
                     .long("mutation")
                     .help(
                         "Specifies to use the mutation pass",
                     ),
             )
             .arg(
-                Arg::with_name("mutation-add-sub")
+                Arg::new("mutation-add-sub")
                     .long("mutation-add-sub")
                     .takes_value(true)
                     .value_name("COUNT")
@@ -359,7 +359,7 @@ impl Options {
                     ),
             )
             .arg(
-                Arg::with_name("mutation-sub-add")
+                Arg::new("mutation-sub-add")
                     .long("mutation-sub-add")
                     .takes_value(true)
                     .value_name("COUNT")
@@ -370,7 +370,7 @@ impl Options {
                     ),
             )
             .arg(
-                Arg::with_name("mutation-mul-div")
+                Arg::new("mutation-mul-div")
                     .long("mutation-mul-div")
                     .takes_value(true)
                     .value_name("COUNT")
@@ -381,7 +381,7 @@ impl Options {
                     ),
             )
             .arg(
-                Arg::with_name("mutation-div-mul")
+                Arg::new("mutation-div-mul")
                     .long("mutation-div-mul")
                     .takes_value(true)
                     .value_name("COUNT")
@@ -392,10 +392,10 @@ impl Options {
                     ),
             )
             .arg(
-                Arg::with_name("dependencies")
+                Arg::new("dependencies")
                     .long("dependency")
-                    .short("d")
-                    .multiple(true)
+                    .short('d')
+                    .multiple_occurrences(true)
                     .number_of_values(1)
                     .takes_value(true)
                     .value_name("PATH_TO_DEPENDENCY")
@@ -403,22 +403,22 @@ impl Options {
                     Move files, containing dependencies which will not be verified")
             )
             .arg(
-                Arg::with_name("named-addresses")
+                Arg::new("named-addresses")
                 .long("named-addresses")
-                .short("a")
-                .multiple(true)
+                .short('a')
+                .multiple_occurrences(true)
                 .takes_value(true)
                 .help("specifies the value(s) of named addresses used in Move files")
             )
             .arg(
-                Arg::with_name("sources")
-                    .multiple(true)
+                Arg::new("sources")
+                    .multiple_occurrences(true)
                     .value_name("PATH_TO_SOURCE_FILE")
                     .min_values(1)
                     .help("the source files to verify"),
             )
             .arg(
-                Arg::with_name("eager-threshold")
+                Arg::new("eager-threshold")
                     .long("eager-threshold")
                     .takes_value(true)
                     .value_name("NUMBER")
@@ -426,7 +426,7 @@ impl Options {
                     .help("sets the eager threshold for quantifier instantiation (default 100)")
             )
             .arg(
-                Arg::with_name("lazy-threshold")
+                Arg::new("lazy-threshold")
                     .long("lazy-threshold")
                     .takes_value(true)
                     .value_name("NUMBER")
@@ -434,18 +434,18 @@ impl Options {
                     .help("sets the lazy threshold for quantifier instantiation (default 100)")
             )
             .arg(
-                Arg::with_name("dump-bytecode")
+                Arg::new("dump-bytecode")
                     .long("dump-bytecode")
                     .help("whether to dump the transformed bytecode to a file")
             )
             .arg(
-                Arg::with_name("dump-cfg")
+                Arg::new("dump-cfg")
                     .long("dump-cfg")
                     .requires("dump-bytecode")
                     .help("whether to dump the per-function control-flow graphs (in dot format) to files")
             )
             .arg(
-                Arg::with_name("num-instances")
+                Arg::new("num-instances")
                     .long("num-instances")
                     .takes_value(true)
                     .value_name("NUMBER")
@@ -453,61 +453,61 @@ impl Options {
                     .help("sets the number of Boogie instances to run concurrently (default 1)")
             )
             .arg(
-                Arg::with_name("sequential")
+                Arg::new("sequential")
                     .long("sequential")
                     .help("whether to run the Boogie instances sequentially")
             )
             .arg(
-                Arg::with_name("stable-test-output")
+                Arg::new("stable-test-output")
                     .long("stable-test-output")
                     .help("instruct the prover to produce output in diagnosis which is stable \
                      and suitable for baseline tests. This redacts values in diagnosis which might\
                      be non-deterministic, and may do other things to keep output stable.")
             )
             .arg(
-                Arg::with_name("use-cvc5")
+                Arg::new("use-cvc5")
                     .long("use-cvc5")
                     .help("uses cvc5 solver instead of z3")
             )
             .arg(
-                Arg::with_name("use-exp-boogie")
+                Arg::new("use-exp-boogie")
                     .long("use-exp-boogie")
                     .help("uses experimental boogie expected in EXP_BOOGIE_EXE")
             )
             .arg(
-                Arg::with_name("generate-smt")
+                Arg::new("generate-smt")
                     .long("generate-smt")
                     .help("instructs boogie to log smtlib files for verified functions")
             )
             .arg(
-                Arg::with_name("experimental-pipeline")
+                Arg::new("experimental-pipeline")
                     .long("experimental-pipeline")
-                    .short("e")
+                    .short('e')
                     .help("whether to run experimental pipeline")
             )
             .arg(
-                Arg::with_name("weak-edges")
+                Arg::new("weak-edges")
                     .long("weak-edges")
                     .help("whether to use exclusively weak edges in borrow analysis")
             )
             .arg(
-                Arg::with_name("exp_mut_param")
+                Arg::new("exp_mut_param")
                     .long("exp-mut-param")
                     .help("exp_mut_param experiment")
             )
             .arg(
-                Arg::with_name("check-inconsistency")
+                Arg::new("check-inconsistency")
                     .long("check-inconsistency")
                     .help("checks whether there is any inconsistency")
             )
             .arg(
-                Arg::with_name("unconditional-abort-as-inconsistency")
+                Arg::new("unconditional-abort-as-inconsistency")
                     .long("unconditional-abort-as-inconsistency")
                     .help("treat functions that do not return (i.e., abort unconditionally) \
                     as inconsistency violations")
             )
             .arg(
-                Arg::with_name("verify-only")
+                Arg::new("verify-only")
                     .long("verify-only")
                     .takes_value(true)
                     .value_name("FUNCTION_NAME")
@@ -515,7 +515,7 @@ impl Options {
                     This overrides verification scope and can be overridden by the pragma verify=false")
             )
             .arg(
-                Arg::with_name("z3-trace")
+                Arg::new("z3-trace")
                     .long("z3-trace")
                     .takes_value(true)
                     .value_name("FUNCTION_NAME")
@@ -524,7 +524,7 @@ impl Options {
                     at FUNCTION_NAME.z3log.")
             )
             .arg(
-                Arg::with_name("script-reach")
+                Arg::new("script-reach")
                     .long("script-reach")
                     .help("For each script function which is verification target, \
                     print out the names of all called functions, directly or indirectly.")

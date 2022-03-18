@@ -2,22 +2,22 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{cargo::Cargo, context::XContext, Result};
+use clap::Parser;
 use std::ffi::OsString;
-use structopt::StructOpt;
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub struct Args {
-    #[structopt(long)]
+    #[clap(long)]
     /// Run in 'check' mode. Exits with 0 if input is
     /// formatted correctly. Exits with 1 and prints a diff if
     /// formatting is required.
     check: bool,
 
-    #[structopt(long)]
+    #[clap(long)]
     /// Run check on all packages in the workspace
     workspace: bool,
 
-    #[structopt(name = "ARGS", parse(from_os_str), last = true)]
+    #[clap(name = "ARGS", parse(from_os_str), last = true)]
     /// Pass through args to rustfmt
     args: Vec<OsString>,
 }

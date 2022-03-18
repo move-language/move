@@ -22,7 +22,6 @@ workspace-hack = { version = "0.1", path = "../../../crates/workspace-hack" }
 # external dependencies
 anyhow = "1.0.38"
 atty = "0.2.14"
-clap = "2.33.3"
 codespan = "0.11.1"
 codespan-reporting = "0.11.1"
 ethnum = "1.0.4"
@@ -40,7 +39,7 @@ sha3 = "0.9.1"
 simplelog = "0.9.0"
 once_cell = "1.7.2"
 toml = "0.5.8"
-structopt = "0.3.21"
+clap = { version = "3", features = ["derive", "env"] }
 evm = "0.33.1"
 primitive-types = "0.10.1"
 

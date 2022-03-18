@@ -3,28 +3,28 @@
 
 use crate::{changed_since::changed_since_impl, context::XContext, Result};
 use anyhow::{anyhow, Context};
+use clap::Parser;
 use guppy::graph::DependencyDirection;
 use log::warn;
 use std::collections::BTreeSet;
-use structopt::StructOpt;
 use x_core::WorkspaceStatus;
 
 /// Arguments for the Cargo package selector.
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub struct SelectedPackageArgs {
-    #[structopt(long, short, number_of_values = 1)]
+    #[clap(long, short, number_of_values = 1)]
     /// Run on the provided packages
     pub(crate) package: Vec<String>,
-    #[structopt(long, short, number_of_values = 1)]
+    #[clap(long, short, number_of_values = 1)]
     /// Run on the specified members (package subsets)
     pub(crate) members: Vec<String>,
-    #[structopt(long, number_of_values = 1)]
+    #[clap(long, number_of_values = 1)]
     /// Exclude packages
     pub(crate) exclude: Vec<String>,
-    #[structopt(long, short)]
+    #[clap(long, short)]
     /// Run on packages changed since the merge base of this commit
     changed_since: Option<String>,
-    #[structopt(long)]
+    #[clap(long)]
     /// Run on all packages in the workspace
     pub(crate) workspace: bool,
 }

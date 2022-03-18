@@ -3,7 +3,7 @@
 
 // Functions for running move programs with mutations and reporting errors if found
 
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 use itertools::Itertools;
 use log::LevelFilter;
@@ -31,26 +31,26 @@ struct Runner {
 }
 
 pub fn mutate(args: &[String]) {
-    let cmd_line_parser = App::new("mutation")
+    let cmd_line_parser = Command::new("mutation")
         .version("0.1.0")
         .about("Mutation tool for the move prover")
         .author("The Diem Core Contributors")
         .arg(
-            Arg::with_name("addresses")
+            Arg::new("addresses")
                 .long("address")
-                .short("a")
-                .multiple(true)
+                .short('a')
+                .multiple_occurrences(true)
                 .number_of_values(1)
                 .takes_value(true)
                 .value_name("ADDRESS")
                 .help("Address specified for the move prover"),
         )
         .arg(
-            Arg::with_name("config")
-                .short("c")
+            Arg::new("config")
+                .short('c')
                 .long("config")
                 .takes_value(true)
-                .multiple(true)
+                .multiple_occurrences(true)
                 .number_of_values(1)
                 .value_name("CONFIG_PATH")
                 .help(
@@ -60,10 +60,10 @@ pub fn mutate(args: &[String]) {
                 ),
         )
         .arg(
-            Arg::with_name("dependencies")
+            Arg::new("dependencies")
                 .long("dependency")
-                .short("d")
-                .multiple(true)
+                .short('d')
+                .multiple_occurrences(true)
                 .number_of_values(1)
                 .takes_value(true)
                 .value_name("PATH_TO_DEPENDENCY")
@@ -73,8 +73,8 @@ pub fn mutate(args: &[String]) {
                 ),
         )
         .arg(
-            Arg::with_name("sources")
-                .multiple(true)
+            Arg::new("sources")
+                .multiple_occurrences(true)
                 .value_name("PATH_TO_SOURCE_FILE")
                 .min_values(1)
                 .help("the source files to verify"),

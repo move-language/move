@@ -9,6 +9,7 @@ use crate::{
     Move, NativeFunctionRecord, DEFAULT_BUILD_DIR,
 };
 use anyhow::Result;
+use clap::Parser;
 use move_core_types::{
     errmap::ErrorMapping, gas_schedule::CostTable, language_storage::TypeTag, parser,
     transaction_argument::TransactionArgument,
@@ -18,41 +19,50 @@ use std::{
     fs,
     path::{Path, PathBuf},
 };
-use structopt::StructOpt;
 
-#[derive(StructOpt)]
+#[derive(Parser)]
 pub enum SandboxCommand {
     /// Compile the modules in this package and its dependencies and publish the resulting bytecodes in global storage.
-    #[structopt(name = "publish")]
+    #[clap(name = "publish")]
     Publish {
         /// If set, fail when attempting to publish a module that already
         /// exists in global storage.
-        #[structopt(long = "no-republish")]
+        #[clap(long = "no-republish")]
         no_republish: bool,
         /// By default, code that might cause breaking changes for bytecode
         /// linking or data layout compatibility checks will not be published.
         /// Set this flag to ignore breaking changes checks and publish anyway.
-        #[structopt(long = "ignore-breaking-changes")]
+        #[clap(long = "ignore-breaking-changes")]
         ignore_breaking_changes: bool,
         /// Manually specify the publishing order of modules.
-        #[structopt(long = "override-ordering")]
+        #[clap(
+            long = "override-ordering",
+            takes_value(true),
+            multiple_values(true),
+            multiple_occurrences(true)
+        )]
         override_ordering: Option<Vec<String>>,
     },
     /// Run a Move script that reads/writes resources stored on disk in `storage-dir`.
     /// The script must be defined in the package.
-    #[structopt(name = "run")]
+    #[clap(name = "run")]
     Run {
         /// Path to .mv file containing either script or module bytecodes. If the file is a module, the
         /// `script_name` parameter must be set.
-        #[structopt(name = "script", parse(from_os_str))]
+        #[clap(name = "script", parse(from_os_str))]
         script_file: PathBuf,
         /// Name of the script function inside `script_file` to call. Should only be set if `script_file`
         /// points to a module.
-        #[structopt(name = "name")]
+        #[clap(name = "name")]
         script_name: Option<String>,
         /// Possibly-empty list of signers for the current transaction (e.g., `account` in
         /// `main(&account: signer)`). Must match the number of signers expected by `script_file`.
-        #[structopt(long = "signers")]
+        #[clap(
+            long = "signers",
+            takes_value(true),
+            multiple_values(true),
+            multiple_occurrences(true)
+        )]
         signers: Vec<String>,
         /// Possibly-empty list of arguments passed to the transaction (e.g., `i` in
         /// `main(i: u64)`). Must match the arguments types expected by `script_file`.
@@ -62,81 +72,100 @@ pub enum SandboxCommand {
         /// address literals (e.g., 0x12, 0x0000000000000000000000000000000f),
         /// hexadecimal strings (e.g., x"0012" will parse as the vector<u8> value [00, 12]), and
         /// ASCII strings (e.g., 'b"hi" will parse as the vector<u8> value [68, 69]).
-        #[structopt(long = "args", parse(try_from_str = parser::parse_transaction_argument))]
+        #[clap(
+            long = "args",
+            parse(try_from_str = parser::parse_transaction_argument),
+            takes_value(true),
+            multiple_values(true),
+            multiple_occurrences(true)
+        )]
         args: Vec<TransactionArgument>,
         /// Possibly-empty list of type arguments passed to the transaction (e.g., `T` in
         /// `main<T>()`). Must match the type arguments kinds expected by `script_file`.
-        #[structopt(long = "type-args", parse(try_from_str = parser::parse_type_tag))]
+        #[clap(
+            long = "type-args",
+            parse(try_from_str = parser::parse_type_tag),
+            takes_value(true),
+            multiple_values(true),
+            multiple_occurrences(true)
+        )]
         type_args: Vec<TypeTag>,
         /// Maximum number of gas units to be consumed by execution.
         /// When the budget is exhaused, execution will abort.
         /// By default, no `gas-budget` is specified and gas metering is disabled.
-        #[structopt(long = "gas-budget", short = "g")]
+        #[clap(long = "gas-budget", short = 'g')]
         gas_budget: Option<u64>,
         /// If set, the effects of executing `script_file` (i.e., published, updated, and
         /// deleted resources) will NOT be committed to disk.
-        #[structopt(long = "dry-run", short = "n")]
+        #[clap(long = "dry-run", short = 'n')]
         dry_run: bool,
     },
     /// Run expected value tests using the given batch file.
-    #[structopt(name = "exp-test")]
+    #[clap(name = "exp-test")]
     Test {
         /// Use an ephemeral directory to serve as the testing workspace.
         /// By default, the directory containing the `args.txt` will be the workspace.
-        #[structopt(long = "use-temp-dir")]
+        #[clap(long = "use-temp-dir")]
         use_temp_dir: bool,
         /// Show coverage information after tests are done.
         /// By default, coverage will not be tracked nor shown.
-        #[structopt(long = "track-cov")]
+        #[clap(long = "track-cov")]
         track_cov: bool,
     },
     /// View Move resources, events files, and modules stored on disk.
-    #[structopt(name = "view")]
+    #[clap(name = "view")]
     View {
         /// Path to a resource, events file, or module stored on disk.
-        #[structopt(name = "file", parse(from_os_str))]
+        #[clap(name = "file", parse(from_os_str))]
         file: PathBuf,
     },
     /// Delete all resources, events, and modules stored on disk under `storage-dir`.
     /// Does *not* delete anything in `src`.
     Clean {},
     /// Run well-formedness checks on the `storage-dir` and `install-dir` directories.
-    #[structopt(name = "doctor")]
+    #[clap(name = "doctor")]
     Doctor {},
     /// Generate struct layout bindings for the modules stored on disk under `storage-dir`
     // TODO: expand this to generate script bindings, etc.?.
-    #[structopt(name = "generate")]
+    #[clap(name = "generate")]
     Generate {
-        #[structopt(subcommand)]
+        #[clap(subcommand)]
         cmd: GenerateCommand,
     },
 }
 
-#[derive(StructOpt)]
+#[derive(Parser)]
 pub enum GenerateCommand {
     /// Generate struct layout bindings for the modules stored on disk under `storage-dir`.
-    #[structopt(name = "struct-layouts")]
+    #[clap(name = "struct-layouts")]
     StructLayouts {
         /// Path to a module stored on disk.
-        #[structopt(long, parse(from_os_str))]
+        #[clap(long, parse(from_os_str))]
         module: PathBuf,
         /// If set, generate bindings for the specified struct and type arguments. If unset,
         /// generate bindings for all closed struct definitions.
-        #[structopt(flatten)]
+        #[clap(flatten)]
         options: StructLayoutOptions,
     },
 }
-#[derive(StructOpt)]
+#[derive(Parser)]
 pub struct StructLayoutOptions {
     /// Generate layout bindings for this struct.
-    #[structopt(long = "struct")]
+    #[clap(long = "struct")]
     struct_: Option<String>,
     /// Generate layout bindings for `struct` bound to these type arguments.
-    #[structopt(long = "type-args", parse(try_from_str = parser::parse_type_tag), requires="struct")]
+    #[clap(
+        long = "type-args",
+        parse(try_from_str = parser::parse_type_tag),
+        requires="struct",
+        takes_value(true),
+        multiple_values(true),
+        multiple_occurrences(true)
+    )]
     type_args: Option<Vec<TypeTag>>,
     /// If set, generate bindings only for the struct passed in.
     /// When unset, generates bindings for the struct and all of its transitive dependencies.
-    #[structopt(long = "shallow")]
+    #[clap(long = "shallow")]
     shallow: bool,
 }
 

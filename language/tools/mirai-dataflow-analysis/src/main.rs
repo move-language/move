@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use clap::Parser;
 use mirai_annotations::unrecoverable;
 use regex::Regex;
 use std::{
@@ -9,7 +10,6 @@ use std::{
     path::{Path, PathBuf},
     process::Command,
 };
-use structopt::StructOpt;
 
 mod configuration;
 mod datalog;
@@ -187,44 +187,44 @@ pub fn parse_node_types(
     Ok(node_types)
 }
 
-#[derive(Debug, StructOpt)]
-#[structopt(
+#[derive(Debug, Parser)]
+#[clap(
     name = "mirai-dataflow",
     about = "Rust dataflow analyzer built on MIRAI."
 )]
 struct Opt {
     /// Path to the crate to analyze
-    #[structopt(parse(from_os_str))]
+    #[clap(parse(from_os_str))]
     crate_path: PathBuf,
 
     /// Path to configuration file
-    #[structopt(parse(from_os_str))]
+    #[clap(parse(from_os_str))]
     config_path: PathBuf,
 
     /// Only produce a call graph (no analysis)
-    #[structopt(long)]
+    #[clap(long)]
     call_graph_only: bool,
 
     /// Datalog backend to use (DifferentialDatalog | Souffle)
-    #[structopt(short, long)]
+    #[clap(short, long)]
     datalog_backend: Option<DatalogBackend>,
 
     /// Path to input type relations
-    #[structopt(short, long, parse(from_os_str))]
+    #[clap(short, long, parse(from_os_str))]
     type_relations_path: Option<PathBuf>,
 
     /// Do not rebuild the crate before analysis
-    #[structopt(short, long)]
+    #[clap(short, long)]
     no_rebuild: bool,
 
     /// Rerun the Datalog analysis without running MIRAI
-    #[structopt(short, long)]
+    #[clap(short, long)]
     reanalyze: bool,
 }
 
 fn main() {
     // Process command line arguments
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
     // Canonicalize the crate path
     let crate_path = match fs::canonicalize(opt.crate_path) {
         Ok(crate_path) => crate_path,

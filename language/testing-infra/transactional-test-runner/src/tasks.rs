@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use anyhow::{anyhow, bail, Result};
+use clap::*;
 use move_command_line_common::files::{MOVE_EXTENSION, MOVE_IR_EXTENSION};
 use move_compiler::shared::NumericalAddress;
 use move_core_types::{
@@ -14,7 +15,6 @@ use move_core_types::{
     transaction_argument::TransactionArgument,
 };
 use std::{fmt::Debug, path::Path, str::FromStr};
-use structopt::*;
 use tempfile::NamedTempFile;
 
 #[derive(Debug)]
@@ -57,7 +57,7 @@ pub struct TaskInput<Command> {
     pub data: Option<NamedTempFile>,
 }
 
-pub fn taskify<Command: Debug + StructOpt>(filename: &Path) -> Result<Vec<TaskInput<Command>>> {
+pub fn taskify<Command: Debug + Parser>(filename: &Path) -> Result<Vec<TaskInput<Command>>> {
     use regex::Regex;
     use std::{
         fs::File,
@@ -128,7 +128,7 @@ pub fn taskify<Command: Debug + StructOpt>(filename: &Path) -> Result<Vec<TaskIn
         }
         let command_split = command_text.split_ascii_whitespace().collect::<Vec<_>>();
         let name_opt = command_split.get(1).map(|s| (*s).to_owned());
-        let command = match Command::from_iter_safe(command_split) {
+        let command = match Command::try_parse_from(command_split) {
             Ok(command) => command,
             Err(e) => {
                 let mut spit_iter = command_text.split_ascii_whitespace();
@@ -138,7 +138,7 @@ pub fn taskify<Command: Debug + StructOpt>(filename: &Path) -> Result<Vec<TaskIn
                     None => vec!["task", "--help"],
                     Some(c) => vec!["task", c, "--help"],
                 };
-                let help = match Command::from_iter_safe(help_command) {
+                let help = match Command::try_parse_from(help_command) {
                     Ok(_) => panic!(),
                     Err(e) => e,
                 };
@@ -232,27 +232,30 @@ pub enum PrintBytecodeInputChoice {
 
 /// Translates the given Move IR module or script into bytecode, then prints a textual
 /// representation of that bytecode.
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub struct PrintBytecodeCommand {
     /// The kind of input: either a script, or a module.
-    #[structopt(long = "input", default_value = "script")]
+    #[clap(long = "input", ignore_case = true, default_value = "script")]
     pub input: PrintBytecodeInputChoice,
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub struct InitCommand {
-    #[structopt(
+    #[clap(
         long = "addresses",
-        parse(try_from_str = move_compiler::shared::parse_named_address)
+        parse(try_from_str = move_compiler::shared::parse_named_address),
+        takes_value(true),
+        multiple_values(true),
+        multiple_occurrences(true)
     )]
     pub named_addresses: Vec<(String, NumericalAddress)>,
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub struct PublishCommand {
-    #[structopt(long = "gas-budget")]
+    #[clap(long = "gas-budget")]
     pub gas_budget: Option<u64>,
-    #[structopt(long = "syntax")]
+    #[clap(long = "syntax")]
     pub syntax: Option<SyntaxChoice>,
 }
 
@@ -264,32 +267,55 @@ pub enum Argument {
     TransactionArgument(TransactionArgument),
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub struct RunCommand {
-    #[structopt(long = "signers", parse(try_from_str = RawAddress::parse))]
+    #[clap(
+        long = "signers",
+        parse(try_from_str = RawAddress::parse),
+        takes_value(true),
+        multiple_values(true),
+        multiple_occurrences(true)
+    )]
     pub signers: Vec<RawAddress>,
-    #[structopt(long = "args", parse(try_from_str = parse_argument))]
+    #[clap(
+        long = "args",
+        parse(try_from_str = parse_argument),
+        takes_value(true),
+        multiple_values(true),
+        multiple_occurrences(true)
+    )]
     pub args: Vec<Argument>,
-    #[structopt(long = "type-args", parse(try_from_str = parser::parse_type_tag))]
+    #[clap(
+        long = "type-args",
+        parse(try_from_str = parser::parse_type_tag),
+        takes_value(true),
+        multiple_values(true),
+        multiple_occurrences(true)
+    )]
     pub type_args: Vec<TypeTag>,
-    #[structopt(long = "gas-budget")]
+    #[clap(long = "gas-budget")]
     pub gas_budget: Option<u64>,
-    #[structopt(long = "syntax")]
+    #[clap(long = "syntax")]
     pub syntax: Option<SyntaxChoice>,
-    #[structopt(name = "NAME", parse(try_from_str = parse_qualified_module_access))]
+    #[clap(name = "NAME", parse(try_from_str = parse_qualified_module_access))]
     pub name: Option<(ModuleId, Identifier)>,
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub struct ViewCommand {
-    #[structopt(long = "address", parse(try_from_str = RawAddress::parse))]
+    #[clap(long = "address", parse(try_from_str = RawAddress::parse))]
     pub address: RawAddress,
-    #[structopt(long = "resource", parse(try_from_str = parse_qualified_module_access_with_type_args))]
+    #[clap(long = "resource", parse(try_from_str = parse_qualified_module_access_with_type_args))]
     pub resource: (ModuleId, Identifier, Vec<TypeTag>),
 }
 
 #[derive(Debug)]
-pub enum TaskCommand<ExtraInitArgs, ExtraPublishArgs, ExtraRunArgs, SubCommands> {
+pub enum TaskCommand<
+    ExtraInitArgs: Parser,
+    ExtraPublishArgs: Parser,
+    ExtraRunArgs: Parser,
+    SubCommands: Parser,
+> {
     Init(InitCommand, ExtraInitArgs),
     PrintBytecode(PrintBytecodeCommand),
     Publish(PublishCommand, ExtraPublishArgs),
@@ -298,74 +324,79 @@ pub enum TaskCommand<ExtraInitArgs, ExtraPublishArgs, ExtraRunArgs, SubCommands>
     Subcommand(SubCommands),
 }
 
-// Note: this needs to be manually implemented because structopt cannot handle generic tuples
-// with more than 1 element currently.
-//
-// The code is a simplified version of what `#[derive(StructOpt)` would generate had it worked.
-// (`cargo expand` is useful in printing out the derived code.)
-//
-// We are aware that it is discouraged to use `StructOptInternal` as a public API:
-//   https://github.com/TeXitoi/structopt/blob/7ad03a023534c63136836ddfd1710c75e6dcdaa9/src/lib.rs#L1172
-//   https://github.com/TeXitoi/structopt/issues/317
-//
-// It should be fine in this particular case since `#[struct_opt(flatten)]` relies on
-// `StructOptInternal::augment_clap` to work. In case structopt decides to change this API in
-// a backward-incompatible way, they'll still need to offer the ability to extract arguments
-// from an `App` in one way or another, or otherwise `#[struct_opt(flatten)`, which is a public
-// API, will get broken.
-impl<ExtraInitArgs, ExtraPublishArgs, ExtraRunArgs, SubCommands> StructOpt
-    for TaskCommand<ExtraInitArgs, ExtraPublishArgs, ExtraRunArgs, SubCommands>
-where
-    ExtraInitArgs: StructOptInternal,
-    ExtraPublishArgs: StructOptInternal,
-    ExtraRunArgs: StructOptInternal,
-    SubCommands: StructOptInternal,
+impl<
+        ExtraInitArgs: Parser,
+        ExtraPublishArgs: Parser,
+        ExtraRunArgs: Parser,
+        SubCommands: Parser,
+    > FromArgMatches for TaskCommand<ExtraInitArgs, ExtraPublishArgs, ExtraRunArgs, SubCommands>
 {
-    fn clap<'a, 'b>() -> clap::App<'a, 'b> {
-        let app = clap::App::new("Task Command");
-
-        let app = app.subcommand({
-            let subcommand = InitCommand::clap().name("init");
-            ExtraInitArgs::augment_clap(subcommand)
-        });
-
-        let app = app.subcommand(PrintBytecodeCommand::clap().name("print-bytecode"));
-
-        let app = app.subcommand({
-            let subcommand = PublishCommand::clap().name("publish");
-            ExtraPublishArgs::augment_clap(subcommand)
-        });
-
-        let app = app.subcommand({
-            let subcommand = RunCommand::clap().name("run");
-            ExtraRunArgs::augment_clap(subcommand)
-        });
-
-        let app = app.subcommand(ViewCommand::clap().name("view"));
-        SubCommands::augment_clap(app)
+    fn from_arg_matches(matches: &ArgMatches) -> Result<Self, Error> {
+        Ok(match matches.subcommand() {
+            Some(("init", matches)) => TaskCommand::Init(
+                FromArgMatches::from_arg_matches(matches)?,
+                FromArgMatches::from_arg_matches(matches)?,
+            ),
+            Some(("print-bytecode", matches)) => {
+                TaskCommand::PrintBytecode(FromArgMatches::from_arg_matches(matches)?)
+            }
+            Some(("publish", matches)) => TaskCommand::Publish(
+                FromArgMatches::from_arg_matches(matches)?,
+                FromArgMatches::from_arg_matches(matches)?,
+            ),
+            Some(("run", matches)) => TaskCommand::Run(
+                FromArgMatches::from_arg_matches(matches)?,
+                FromArgMatches::from_arg_matches(matches)?,
+            ),
+            Some(("view", matches)) => {
+                TaskCommand::View(FromArgMatches::from_arg_matches(matches)?)
+            }
+            _ => TaskCommand::Subcommand(SubCommands::from_arg_matches(matches)?),
+        })
     }
 
-    fn from_clap(matches: &clap::ArgMatches<'_>) -> Self {
-        match matches.subcommand() {
-            ("init", Some(matches)) => {
-                TaskCommand::Init(StructOpt::from_clap(matches), StructOpt::from_clap(matches))
-            }
-            ("print-bytecode", Some(matches)) => {
-                TaskCommand::PrintBytecode(StructOpt::from_clap(matches))
-            }
-            ("publish", Some(matches)) => {
-                TaskCommand::Publish(StructOpt::from_clap(matches), StructOpt::from_clap(matches))
-            }
-            ("run", Some(matches)) => {
-                TaskCommand::Run(StructOpt::from_clap(matches), StructOpt::from_clap(matches))
-            }
-            ("view", Some(matches)) => TaskCommand::View(StructOpt::from_clap(matches)),
-            _ => TaskCommand::Subcommand(SubCommands::from_clap(matches)),
-        }
+    fn update_from_arg_matches(&mut self, matches: &ArgMatches) -> Result<(), Error> {
+        *self = Self::from_arg_matches(matches)?;
+        Ok(())
     }
 }
 
-#[derive(Debug, StructOpt)]
+impl<
+        ExtraInitArgs: Parser,
+        ExtraPublishArgs: Parser,
+        ExtraRunArgs: Parser,
+        SubCommands: Parser,
+    > CommandFactory for TaskCommand<ExtraInitArgs, ExtraPublishArgs, ExtraRunArgs, SubCommands>
+{
+    fn into_app<'help>() -> Command<'help> {
+        clap::Command::new("Task Command")
+            .subcommand(InitCommand::command().name("init"))
+            .subcommand(PrintBytecodeCommand::command().name("print-bytecode"))
+            .subcommand(PublishCommand::command().name("publish"))
+            .subcommand(RunCommand::command().name("run"))
+            .subcommand(ViewCommand::command().name("view"))
+    }
+
+    fn into_app_for_update<'help>() -> Command<'help> {
+        todo!()
+    }
+}
+// Note: this needs to be manually implemented because clap cannot handle generic tuples
+// with more than 1 element currently.
+//
+// The code is a simplified version of what `#[derive(Parser)` would generate had it worked.
+// (`cargo expand` is useful in printing out the derived code.)
+//
+impl<
+        ExtraInitArgs: Parser,
+        ExtraPublishArgs: Parser,
+        ExtraRunArgs: Parser,
+        SubCommands: Parser,
+    > Parser for TaskCommand<ExtraInitArgs, ExtraPublishArgs, ExtraRunArgs, SubCommands>
+{
+}
+
+#[derive(Debug, Parser)]
 pub struct EmptyCommand {}
 
 fn parse_qualified_module_access(s: &str) -> Result<(ModuleId, Identifier)> {

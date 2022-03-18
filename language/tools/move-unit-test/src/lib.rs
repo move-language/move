@@ -6,6 +6,7 @@ pub mod test_reporter;
 pub mod test_runner;
 
 use crate::test_runner::TestRunner;
+use clap::*;
 use move_command_line_common::files::verify_and_create_named_address_mapping;
 use move_compiler::{
     self,
@@ -22,82 +23,93 @@ use std::{
     marker::Send,
     sync::Mutex,
 };
-use structopt::*;
 
-#[derive(Debug, StructOpt, Clone)]
-#[structopt(name = "Move Unit Test", about = "Unit testing for Move code.")]
+#[derive(Debug, Parser, Clone)]
+#[clap(name = "Move Unit Test", about = "Unit testing for Move code.")]
 pub struct UnitTestingConfig {
     /// Bound the number of instructions that can be executed by any one test.
-    #[structopt(
+    #[clap(
         name = "instructions",
         default_value = "5000",
-        short = "i",
+        short = 'i',
         long = "instructions"
     )]
     pub instruction_execution_bound: u64,
 
     /// A filter string to determine which unit tests to run
-    #[structopt(name = "filter", short = "f", long = "filter")]
+    #[clap(name = "filter", short = 'f', long = "filter")]
     pub filter: Option<String>,
 
     /// List all tests
-    #[structopt(name = "list", short = "l", long = "list")]
+    #[clap(name = "list", short = 'l', long = "list")]
     pub list: bool,
 
     /// Number of threads to use for running tests.
-    #[structopt(
+    #[clap(
         name = "num_threads",
         default_value = "8",
-        short = "t",
+        short = 't',
         long = "threads"
     )]
     pub num_threads: usize,
 
     /// Dependency files
-    #[structopt(name = "dependencies", long = "dependencies", short = "d")]
+    #[clap(
+        name = "dependencies",
+        long = "dependencies",
+        short = 'd',
+        takes_value(true),
+        multiple_values(true),
+        multiple_occurrences(true)
+    )]
     pub dep_files: Vec<String>,
 
     /// Report test statistics at the end of testing
-    #[structopt(name = "report_statistics", short = "s", long = "statistics")]
+    #[clap(name = "report_statistics", short = 's', long = "statistics")]
     pub report_statistics: bool,
 
     /// Show the storage state at the end of execution of a failing test
-    #[structopt(name = "global_state_on_error", short = "g", long = "state_on_error")]
+    #[clap(name = "global_state_on_error", short = 'g', long = "state_on_error")]
     pub report_storage_on_error: bool,
 
-    #[structopt(
+    #[clap(
         name = "report_stacktrace_on_abort",
-        short = "r",
+        short = 'r',
         long = "stacktrace_on_abort"
     )]
     pub report_stacktrace_on_abort: bool,
 
     /// Named address mapping
-    #[structopt(
+    #[clap(
         name = "NAMED_ADDRESSES",
-        short = "a",
+        short = 'a',
         long = "addresses",
         parse(try_from_str = shared::parse_named_address)
     )]
     pub named_address_values: Vec<(String, NumericalAddress)>,
 
     /// Source files
-    #[structopt(name = "sources")]
+    #[clap(
+        name = "sources",
+        takes_value(true),
+        multiple_values(true),
+        multiple_occurrences(true)
+    )]
     pub source_files: Vec<String>,
 
     /// Use the stackless bytecode interpreter to run the tests and cross check its results with
     /// the execution result from Move VM.
-    #[structopt(long = "stackless")]
+    #[clap(long = "stackless")]
     pub check_stackless_vm: bool,
 
     /// Verbose mode
-    #[structopt(short = "v", long = "verbose")]
+    #[clap(short = 'v', long = "verbose")]
     pub verbose: bool,
 
     /// Use the EVM-based execution backend.
     /// Does not work with --stackless.
     #[cfg(feature = "evm-backend")]
-    #[structopt(long = "evm")]
+    #[clap(long = "evm")]
     pub evm: bool,
 }
 

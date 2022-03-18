@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+use clap::Parser;
 use move_binary_format::file_format::CompiledModule;
 use move_bytecode_source_map::utils::source_map_from_file;
 use move_command_line_common::files::SOURCE_MAP_EXTENSION;
@@ -13,33 +14,32 @@ use std::{
     io::{self, Write},
     path::Path,
 };
-use structopt::StructOpt;
 
-#[derive(Debug, StructOpt)]
-#[structopt(
+#[derive(Debug, Parser)]
+#[clap(
     name = "Move Source Coverage",
     about = "Annotate Move Source Code with Coverage Information"
 )]
 struct Args {
     /// The path to the coverage map or trace file
-    #[structopt(long = "input-trace-path", short = "t")]
+    #[clap(long = "input-trace-path", short = 't')]
     pub input_trace_path: String,
     /// Whether the passed-in file is a raw trace file or a serialized coverage map
-    #[structopt(long = "is-raw-trace", short = "r")]
+    #[clap(long = "is-raw-trace", short = 'r')]
     pub is_raw_trace_file: bool,
     /// The path to the module binary
-    #[structopt(long = "module-path", short = "b")]
+    #[clap(long = "module-path", short = 'b')]
     pub module_binary_path: String,
     /// The path to the source file
-    #[structopt(long = "source-path", short = "s")]
+    #[clap(long = "source-path", short = 's')]
     pub source_file_path: String,
     /// Optional path to save coverage. Printed to stdout if not present.
-    #[structopt(long = "coverage-path", short = "o")]
+    #[clap(long = "coverage-path", short = 'o')]
     pub coverage_path: Option<String>,
 }
 
 fn main() {
-    let args = Args::from_args();
+    let args = Args::parse();
     let source_map_extension = SOURCE_MAP_EXTENSION;
     let coverage_map = if args.is_raw_trace_file {
         CoverageMap::from_trace_file(&args.input_trace_path)

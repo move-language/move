@@ -3,7 +3,7 @@
 
 use crate::context::XContext;
 use anyhow::anyhow;
-use structopt::StructOpt;
+use clap::Parser;
 use x_lint::prelude::*;
 
 mod allowed_paths;
@@ -15,9 +15,9 @@ mod whitespace;
 mod workspace_classify;
 mod workspace_hack;
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub struct Args {
-    #[structopt(long)]
+    #[clap(long)]
     fail_fast: bool,
 }
 

@@ -3,25 +3,44 @@
 
 use crate::{cargo::Cargo, context::XContext, Result};
 use anyhow::bail;
+use clap::{ArgEnum, Parser};
 use log::info;
-use structopt::{clap::arg_enum, StructOpt};
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub struct Args {
     /// Mode to run in
-    #[structopt(long, case_insensitive = true, possible_values = &WorkspaceHackMode::variants(), default_value = "write")]
+    #[clap(long, ignore_case = true, possible_values = WorkspaceHackMode::variants(), default_value = "write")]
     mode: WorkspaceHackMode,
 }
 
-arg_enum! {
-    #[derive(Clone, Copy, Debug)]
-    /// Valid modes for generate-workspace-hack
-    pub enum WorkspaceHackMode {
-        Write,
-        Diff,
-        Check,
-        Verify,
-        Disable,
+#[derive(Clone, Copy, Debug, ArgEnum)]
+/// Valid modes for generate-workspace-hack
+pub enum WorkspaceHackMode {
+    Write,
+    Diff,
+    Check,
+    Verify,
+    Disable,
+}
+
+impl std::str::FromStr for WorkspaceHackMode {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> anyhow::Result<Self> {
+        match s {
+            "write" => Ok(WorkspaceHackMode::Write),
+            "diff" => Ok(WorkspaceHackMode::Diff),
+            "check" => Ok(WorkspaceHackMode::Check),
+            "verify" => Ok(WorkspaceHackMode::Verify),
+            "disable" => Ok(WorkspaceHackMode::Disable),
+            _ => bail!("invalid mode: {}", s),
+        }
+    }
+}
+
+impl WorkspaceHackMode {
+    fn variants() -> [&'static str; 5] {
+        ["write", "diff", "check", "verify", "disable"]
     }
 }
 

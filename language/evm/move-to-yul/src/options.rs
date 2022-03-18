@@ -2,35 +2,50 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::experiments::Experiment;
+use clap::Parser;
 use codespan_reporting::diagnostic::Severity;
-use structopt::StructOpt;
 
 /// Options for a run of the compiler.
-#[derive(StructOpt, Debug)]
-#[structopt(name = "move-to-yul", about = "Move Solidity Generator")]
+#[derive(Parser, Debug)]
+#[clap(name = "move-to-yul", about = "Move Solidity Generator")]
 pub struct Options {
     /// Directories where to lookup dependencies.
-    #[structopt(short)]
+    #[clap(
+        short,
+        takes_value(true),
+        multiple_values(true),
+        multiple_occurrences(true)
+    )]
     pub dependencies: Vec<String>,
     /// Named address mapping.
-    #[structopt(short)]
+    #[clap(
+        short,
+        takes_value(true),
+        multiple_values(true),
+        multiple_occurrences(true)
+    )]
     pub named_address_mapping: Vec<String>,
     /// Output file name.
-    #[structopt(short)]
-    #[structopt(long, default_value = "output.yul")]
+    #[clap(short)]
+    #[clap(long, default_value = "output.yul")]
     pub output: String,
     /// Solc executable
-    #[structopt(long, env = "SOLC_EXE", default_value = "solc")]
+    #[clap(long, env = "SOLC_EXE", default_value = "solc")]
     pub solc_exe: String,
     /// Whether to dump bytecode to a file.
-    #[structopt(long = "dump-bytecode")]
+    #[clap(long = "dump-bytecode")]
     pub dump_bytecode: bool,
     /// Whether we generate code for tests.
-    #[structopt(long)]
+    #[clap(long)]
     pub testing: bool,
     /// Active experiments.
-    #[structopt(short)]
-    #[structopt(long = "experiment")]
+    #[clap(short)]
+    #[clap(
+        long = "experiment",
+        takes_value(true),
+        multiple_values(true),
+        multiple_occurrences(true)
+    )]
     pub experiments: Vec<String>,
     /// Sources to compile (positional arg)
     pub sources: Vec<String>,
@@ -38,7 +53,7 @@ pub struct Options {
 
 impl Default for Options {
     fn default() -> Self {
-        Options::from_iter(std::iter::empty::<String>())
+        Parser::parse_from(std::iter::empty::<String>())
     }
 }
 

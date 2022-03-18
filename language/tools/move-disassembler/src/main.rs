@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+use clap::Parser;
 use move_binary_format::{
     binary_views::BinaryIndexedView,
     file_format::{CompiledModule, CompiledScript},
@@ -15,48 +16,47 @@ use move_coverage::coverage_map::CoverageMap;
 use move_disassembler::disassembler::{Disassembler, DisassemblerOptions};
 use move_ir_types::location::Spanned;
 use std::{fs, path::Path};
-use structopt::StructOpt;
 
-#[derive(Debug, StructOpt)]
-#[structopt(
+#[derive(Debug, Parser)]
+#[clap(
     name = "Move Bytecode Disassembler",
     about = "Print a human-readable version of Move bytecode (.mv files)"
 )]
 struct Args {
     /// Skip printing of private functions.
-    #[structopt(long = "skip-private")]
+    #[clap(long = "skip-private")]
     pub skip_private: bool,
 
     /// Do not print the disassembled bytecodes of each function.
-    #[structopt(long = "skip-code")]
+    #[clap(long = "skip-code")]
     pub skip_code: bool,
 
     /// Do not print locals of each function.
-    #[structopt(long = "skip-locals")]
+    #[clap(long = "skip-locals")]
     pub skip_locals: bool,
 
     /// Do not print the basic blocks of each function.
-    #[structopt(long = "skip-basic-blocks")]
+    #[clap(long = "skip-basic-blocks")]
     pub skip_basic_blocks: bool,
 
     /// Treat input file as a script (default is to treat file as a module)
-    #[structopt(short = "s", long = "script")]
+    #[clap(short = 's', long = "script")]
     pub is_script: bool,
 
     /// The path to the bytecode file to disassemble; let's call it file.mv. We assume that two
     /// other files reside under the same directory: a source map file.mvsm (possibly) and the Move
     /// source code file.move.
-    #[structopt(short = "b", long = "bytecode")]
+    #[clap(short = 'b', long = "bytecode")]
     pub bytecode_file_path: String,
 
     /// (Optional) Path to a coverage file for the VM in order to print trace information in the
     /// disassembled output.
-    #[structopt(short = "c", long = "move-coverage-path")]
+    #[clap(short = 'c', long = "move-coverage-path")]
     pub code_coverage_path: Option<String>,
 }
 
 fn main() {
-    let args = Args::from_args();
+    let args = Args::parse();
 
     let move_extension = MOVE_EXTENSION;
     let mv_bytecode_extension = MOVE_COMPILED_EXTENSION;

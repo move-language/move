@@ -19,7 +19,7 @@ move-binary-format = { path = "../../move-binary-format" }
 move-coverage = { path = "../move-coverage" }
 move-compiler = { path = "../../move-compiler" }
 
-structopt = "0.3.21"
+clap = { version = "3", features = ["derive"] }
 workspace-hack = { version = "0.1", path = "../../../crates/workspace-hack" }
 
 [features]

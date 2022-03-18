@@ -7,6 +7,7 @@ pub mod resolution;
 pub mod source_package;
 
 use anyhow::Result;
+use clap::*;
 use compilation::compiled_package::CompilationCachingStatus;
 use move_core_types::account_address::AccountAddress;
 use move_model::model::GlobalEnv;
@@ -17,7 +18,6 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-use structopt::*;
 
 use crate::{
     compilation::{
@@ -28,8 +28,8 @@ use crate::{
     source_package::{layout, manifest_parser},
 };
 
-#[derive(Debug, StructOpt, Clone, Serialize, Deserialize, Eq, PartialEq, PartialOrd)]
-#[structopt(
+#[derive(Debug, Parser, Clone, Serialize, Deserialize, Eq, PartialEq, PartialOrd)]
+#[clap(
     name = "Move Package",
     about = "Package and build system for Move code."
 )]
@@ -37,32 +37,32 @@ pub struct BuildConfig {
     /// Compile in 'dev' mode. The 'dev-addresses' and 'dev-dependencies' fields will be used if
     /// this flag is set. This flag is useful for development of packages that expose named
     /// addresses that are not set to a specific value.
-    #[structopt(name = "dev-mode", short = "d", long = "dev", global = true)]
+    #[clap(name = "dev-mode", short = 'd', long = "dev", global = true)]
     pub dev_mode: bool,
 
     /// Compile in 'test' mode. The 'dev-addresses' and 'dev-dependencies' fields will be used
     /// along with any code in the 'test' directory.
-    #[structopt(name = "test-mode", long = "test", global = true)]
+    #[clap(name = "test-mode", long = "test", global = true)]
     pub test_mode: bool,
 
     /// Generate documentation for packages
-    #[structopt(name = "generate-docs", long = "doc", global = true)]
+    #[clap(name = "generate-docs", long = "doc", global = true)]
     pub generate_docs: bool,
 
     /// Generate ABIs for packages
-    #[structopt(name = "generate-abis", long = "abi", global = true)]
+    #[clap(name = "generate-abis", long = "abi", global = true)]
     pub generate_abis: bool,
 
     /// Installation directory for compiled artifacts. Defaults to current directory.
-    #[structopt(long = "install-dir", parse(from_os_str), global = true)]
+    #[clap(long = "install-dir", parse(from_os_str), global = true)]
     pub install_dir: Option<PathBuf>,
 
     /// Force recompilation of all packages
-    #[structopt(name = "force-recompilation", long = "force", global = true)]
+    #[clap(name = "force-recompilation", long = "force", global = true)]
     pub force_recompilation: bool,
 
     /// Additional named address mapping. Useful for tools in rust
-    #[structopt(skip)]
+    #[clap(skip)]
     pub additional_named_addresses: BTreeMap<String, AccountAddress>,
 }
 

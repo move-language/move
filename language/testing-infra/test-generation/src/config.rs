@@ -1,8 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use clap::Parser;
 use module_generation::ModuleGeneratorOptions;
-use structopt::StructOpt;
 
 /// This defines how tolerant the generator will be about deviating from
 /// the starting stack height.
@@ -81,8 +81,8 @@ pub fn module_generation_settings() -> ModuleGeneratorOptions {
 }
 
 /// Command line arguments for the tool
-#[derive(Debug, StructOpt)]
-#[structopt(
+#[derive(Debug, Parser)]
+#[clap(
     name = "Bytecode Test Generator",
     author = "Diem",
     about = "Tool for generating tests for the bytecode verifier and Move VM runtime."
@@ -90,19 +90,19 @@ pub fn module_generation_settings() -> ModuleGeneratorOptions {
 pub struct Args {
     /// The optional number of programs that will be generated. If not specified, program
     /// generation will run infinitely.
-    #[structopt(short = "i", long = "iterations")]
+    #[clap(short = 'i', long = "iterations")]
     pub num_iterations: Option<u64>,
 
     /// Path where a serialized module should be saved.
     /// If `None`, then the module will just be printed out.
-    #[structopt(short = "o", long = "output")]
+    #[clap(short = 'o', long = "output")]
     pub output_path: Option<String>,
 
     /// The optional seed used for test generation.
-    #[structopt(short = "s", long = "seed")]
+    #[clap(short = 's', long = "seed")]
     pub seed: Option<String>,
 
     /// The optional number of threads to use for test generation.
-    #[structopt(short = "t", long = "threads")]
+    #[clap(short = 't', long = "threads")]
     pub num_threads: Option<u64>,
 }

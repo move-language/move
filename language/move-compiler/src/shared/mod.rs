@@ -5,6 +5,7 @@ use crate::{
     command_line as cli,
     diagnostics::{codes::Severity, Diagnostic, Diagnostics},
 };
+use clap::*;
 use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
@@ -17,7 +18,6 @@ use std::{
     num::ParseIntError,
     sync::atomic::{AtomicUsize, Ordering as AtomicOrdering},
 };
-use structopt::*;
 
 pub mod ast_debug;
 pub mod remembering_unique_map;
@@ -430,10 +430,10 @@ pub fn format_comma<T: fmt::Display, I: IntoIterator<Item = T>>(items: I) -> Str
 // Flags
 //**************************************************************************************************
 
-#[derive(Clone, Debug, Eq, PartialEq, StructOpt)]
+#[derive(Clone, Debug, Eq, PartialEq, Parser)]
 pub struct Flags {
     /// Compile in test mode
-    #[structopt(
+    #[clap(
         short = cli::TEST_SHORT,
         long = cli::TEST,
     )]
@@ -441,7 +441,7 @@ pub struct Flags {
 
     /// If set, do not allow modules defined in source_files to shadow modules of the same id that
     /// exist in dependencies. Checking will fail in this case.
-    #[structopt(
+    #[clap(
         name = "SOURCES_DO_NOT_SHADOW_DEPS",
         short = cli::NO_SHADOW_SHORT,
         long = cli::NO_SHADOW,

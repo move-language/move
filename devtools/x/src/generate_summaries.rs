@@ -4,27 +4,46 @@
 use crate::context::XContext;
 use anyhow::Context;
 use camino::{Utf8Path, Utf8PathBuf};
+use clap::{ArgEnum, Parser};
 use guppy::graph::{
     cargo::CargoOptions,
     feature::{FeatureSet, StandardFeatures},
 };
 use std::fs;
-use structopt::{clap::arg_enum, StructOpt};
 
-arg_enum! {
-    #[derive(Debug, Copy, Clone)]
-    pub enum OutputFormat {
-        Toml,
-        Json,
+#[derive(Debug, Copy, Clone, ArgEnum)]
+pub enum OutputFormat {
+    Toml,
+    Json,
+}
+
+impl std::str::FromStr for OutputFormat {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> anyhow::Result<Self> {
+        match s {
+            "toml" => Ok(OutputFormat::Toml),
+            "json" => Ok(OutputFormat::Json),
+            _ => Err(anyhow::anyhow!("invalid output format: {}", s)),
+        }
     }
 }
 
-#[derive(Debug, StructOpt)]
+impl std::fmt::Display for OutputFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OutputFormat::Toml => write!(f, "toml"),
+            OutputFormat::Json => write!(f, "json"),
+        }
+    }
+}
+
+#[derive(Debug, Parser)]
 pub struct Args {
-    #[structopt(name = "OUT_DIR")]
+    #[clap(name = "OUT_DIR")]
     /// Directory to output summaries to (default: target/summaries)
     out_dir: Option<Utf8PathBuf>,
-    #[structopt(name = "OUTPUT_FORMAT", default_value = "Toml")]
+    #[clap(name = "OUTPUT_FORMAT", default_value = "toml")]
     /// Output in text, toml or json
     output_format: OutputFormat,
 }

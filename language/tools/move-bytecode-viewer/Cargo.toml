@@ -7,7 +7,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-structopt = "0.3.21"
+clap = { version = "3", features = ["derive"] }
 anyhow = "1.0.52"
 regex = "1.1.9"
 tui = "0.17.0"

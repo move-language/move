@@ -3,9 +3,9 @@
 
 #![forbid(unsafe_code)]
 
+use clap::Parser;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 use move_to_yul::{options::Options, run_to_yul};
-use structopt::StructOpt;
 
 fn main() {
     if let Err(e) = run() {
@@ -20,7 +20,7 @@ fn main() {
 }
 
 fn run() -> anyhow::Result<()> {
-    let options = Options::from_args();
+    let options = Options::parse();
     let color = if atty::is(atty::Stream::Stderr) && atty::is(atty::Stream::Stdout) {
         ColorChoice::Auto
     } else {

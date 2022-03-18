@@ -6,19 +6,26 @@ use crate::{
     context::XContext,
     Result,
 };
+use clap::Parser;
 use std::ffi::OsString;
-use structopt::StructOpt;
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub struct Args {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     package_args: SelectedPackageArgs,
     /// Do not run the benchmarks, but compile them
-    #[structopt(long)]
+    #[clap(long)]
     no_run: bool,
-    #[structopt(name = "BENCHNAME", parse(from_os_str))]
+    #[clap(name = "BENCHNAME", parse(from_os_str))]
     benchname: Option<OsString>,
-    #[structopt(name = "ARGS", parse(from_os_str), last = true)]
+    #[clap(
+        name = "ARGS",
+        parse(from_os_str),
+        last = true,
+        takes_value(true),
+        multiple_values(true),
+        multiple_occurrences(true)
+    )]
     args: Vec<OsString>,
 }
 

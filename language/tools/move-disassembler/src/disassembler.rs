@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, format_err, Error, Result};
+use clap::Parser;
 use colored::*;
 use move_binary_format::{
     binary_views::BinaryIndexedView,
@@ -21,25 +22,24 @@ use move_compiler::compiled_unit::{CompiledUnit, NamedCompiledModule, NamedCompi
 use move_core_types::identifier::IdentStr;
 use move_coverage::coverage_map::{ExecCoverageMap, FunctionCoverage};
 use move_ir_types::location::Loc;
-use structopt::StructOpt;
 
 /// Holds the various options that we support while disassembling code.
-#[derive(Debug, Default, StructOpt)]
+#[derive(Debug, Default, Parser)]
 pub struct DisassemblerOptions {
     /// Only print non-private functions
-    #[structopt(long = "only-public")]
+    #[clap(long = "only-public")]
     pub only_externally_visible: bool,
 
     /// Print the bytecode for the instructions within the function.
-    #[structopt(long = "print-code")]
+    #[clap(long = "print-code")]
     pub print_code: bool,
 
     /// Print the basic blocks of the bytecode.
-    #[structopt(long = "print-basic-blocks")]
+    #[clap(long = "print-basic-blocks")]
     pub print_basic_blocks: bool,
 
     /// Print the locals inside each function body.
-    #[structopt(long = "print-locals")]
+    #[clap(long = "print-locals")]
     pub print_locals: bool,
 }
 

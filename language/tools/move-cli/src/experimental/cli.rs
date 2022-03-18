@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 
 use crate::{experimental, sandbox::utils::PackageContext, Move};
 use anyhow::Result;
@@ -10,44 +10,80 @@ use move_core_types::{
 };
 use std::path::Path;
 
-use structopt::{clap::arg_enum, StructOpt};
+use clap::{ArgEnum, Parser};
 
-#[derive(StructOpt)]
+#[derive(Parser)]
 pub enum ExperimentalCommand {
     /// Perform a read/write set analysis and print the results for
     /// `module_file`::`script_name`.
-    #[structopt(name = "read-write-set")]
+    #[clap(name = "read-write-set")]
     ReadWriteSet {
         /// Path to .mv file containing module bytecode.
-        #[structopt(name = "module", parse(from_os_str))]
+        #[clap(name = "module", parse(from_os_str))]
         module_file: PathBuf,
         /// A function inside `module_file`.
-        #[structopt(name = "function")]
+        #[clap(name = "function")]
         fun_name: String,
-        #[structopt(long = "signers")]
+        #[clap(
+            long = "signers",
+            takes_value(true),
+            multiple_values(true),
+            multiple_occurrences(true)
+        )]
         signers: Vec<String>,
-        #[structopt(long = "args", parse(try_from_str = parser::parse_transaction_argument))]
+        #[clap(
+            long = "args",
+            parse(try_from_str = parser::parse_transaction_argument),
+            takes_value(true),
+            multiple_values(true),
+            multiple_occurrences(true)
+        )]
         args: Vec<TransactionArgument>,
-        #[structopt(long = "type-args", parse(try_from_str = parser::parse_type_tag))]
+        #[clap(
+            long = "type-args",
+            parse(try_from_str = parser::parse_type_tag),
+            takes_value(true),
+            multiple_values(true),
+            multiple_occurrences(true)
+        )]
         type_args: Vec<TypeTag>,
-        #[structopt(long = "concretize", possible_values = &ConcretizeMode::variants(), case_insensitive = true, default_value = "dont")]
+        #[clap(long = "concretize", possible_values = ConcretizeMode::variants(), ignore_case = true, default_value = "dont")]
         concretize: ConcretizeMode,
     },
 }
 
 // Specify if/how the analysis should concretize and filter the static analysis summary
-arg_enum! {
-    // Specify if/how the analysis should concretize and filter the static analysis summary
-    #[derive(Debug, Clone, Copy)]
-    pub enum ConcretizeMode {
-        // Show the full concretized access paths read or written (e.g. 0xA/0x1::M::S/f/g)
-        Paths,
-        // Show only the concrete resource keys that are read (e.g. 0xA/0x1::M::S)
-        Reads,
-        // Show only the concrete resource keys that are written (e.g. 0xA/0x1::M::S)
-        Writes,
-        // Do not concretize; show the results from the static analysis
-        Dont,
+
+// Specify if/how the analysis should concretize and filter the static analysis summary
+#[derive(Debug, Clone, Copy, ArgEnum)]
+pub enum ConcretizeMode {
+    // Show the full concretized access paths read or written (e.g. 0xA/0x1::M::S/f/g)
+    Paths,
+    // Show only the concrete resource keys that are read (e.g. 0xA/0x1::M::S)
+    Reads,
+    // Show only the concrete resource keys that are written (e.g. 0xA/0x1::M::S)
+    Writes,
+    // Do not concretize; show the results from the static analysis
+    Dont,
+}
+
+impl FromStr for ConcretizeMode {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "paths" => Ok(ConcretizeMode::Paths),
+            "reads" => Ok(ConcretizeMode::Reads),
+            "writes" => Ok(ConcretizeMode::Writes),
+            "dont" => Ok(ConcretizeMode::Dont),
+            _ => Err(anyhow::anyhow!("Invalid concretize mode: {}", s)),
+        }
+    }
+}
+
+impl ConcretizeMode {
+    fn variants() -> [&'static str; 4] {
+        ["paths", "reads", "writes", "dont"]
     }
 }
 

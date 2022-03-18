@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-structopt = "0.3.21"
+clap = { version = "3", features = ["derive"] }
 move-command-line-common = { path = "../../move-command-line-common" }
 move-core-types = { path = "../../move-core/types" }
 bcs = "0.1.2"

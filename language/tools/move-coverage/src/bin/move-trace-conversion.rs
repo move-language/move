@@ -3,32 +3,32 @@
 
 #![forbid(unsafe_code)]
 
+use clap::Parser;
 use move_coverage::coverage_map::{output_map_to_file, CoverageMap, TraceMap};
 use std::path::Path;
-use structopt::StructOpt;
 
-#[derive(Debug, StructOpt)]
-#[structopt(
+#[derive(Debug, Parser)]
+#[clap(
     name = "Move VM Coverage",
     about = "Creates a coverage map from the raw data collected from the Move VM"
 )]
 struct Args {
     /// The path to the input file
-    #[structopt(long = "input-file-path", short = "f")]
+    #[clap(long = "input-file-path", short = 'f')]
     pub input_file_path: String,
     /// The path to the output file location
-    #[structopt(long = "output-file-path", short = "o")]
+    #[clap(long = "output-file-path", short = 'o')]
     pub output_file_path: String,
     /// Add traces from `input_file_path` to an existing coverage map at `update_coverage_map`
-    #[structopt(long = "update", short = "u")]
+    #[clap(long = "update", short = 'u')]
     pub update: Option<String>,
     /// Collect structured trace instead of aggregated coverage information
-    #[structopt(long = "use-trace-map", short = "t")]
+    #[clap(long = "use-trace-map", short = 't')]
     pub use_trace_map: bool,
 }
 
 fn main() {
-    let args = Args::from_args();
+    let args = Args::parse();
     let input_path = Path::new(&args.input_file_path);
     let output_path = Path::new(&args.output_file_path);
 

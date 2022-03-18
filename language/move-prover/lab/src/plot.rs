@@ -9,7 +9,7 @@ use crate::{
     benchmark::{Benchmark, BenchmarkData},
 };
 use anyhow::Context;
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use itertools::Itertools;
 use plotters::{
     coord::types::RangedCoordu32,
@@ -24,29 +24,29 @@ use std::collections::BTreeMap;
 // Command line interface
 
 pub fn plot_svg(args: &[String]) -> anyhow::Result<()> {
-    let is_number = |s: String| {
+    let is_number = |s: &str| {
         s.parse::<usize>()
             .map(|_| ())
             .map_err(|_| "expected number".to_string())
     };
-    let cmd_line_parser = App::new("plot")
+    let cmd_line_parser = Command::new("plot")
         .version("0.1.0")
         .about("Benchmark plotter for the Move Prover")
         .author("The Diem Core Contributors")
         .arg(
-            Arg::with_name("out")
+            Arg::new("out")
                 .long("out")
                 .takes_value(true)
                 .value_name("FILE")
                 .help("file where output will be written too"),
         )
         .arg(
-            Arg::with_name("sort")
+            Arg::new("sort")
                 .long("sort")
                 .help("whether to sort the benchmark data based on the first data file"),
         )
         .arg(
-            Arg::with_name("top")
+            Arg::new("top")
                 .long("top")
                 .takes_value(true)
                 .value_name("NUMBER")
@@ -54,15 +54,15 @@ pub fn plot_svg(args: &[String]) -> anyhow::Result<()> {
                 .help("plot only the top N entries"),
         )
         .arg(
-            Arg::with_name("data-files")
-                .multiple(true)
+            Arg::new("data-files")
+                .multiple_occurrences(true)
                 .value_name("PATH_TO_BENCHMARK_DATA")
                 .min_values(1)
                 .default_value("")
-                .empty_values(false)
+                .forbid_empty_values(true)
                 .help("the benchmark data files to plot"),
         );
-    let matches = cmd_line_parser.get_matches_from_safe(args)?;
+    let matches = cmd_line_parser.try_get_matches_from(args)?;
     let get_vec = |s: &str| -> Vec<String> {
         match matches.values_of(s) {
             Some(vs) => vs.map(|v| v.to_string()).collect(),

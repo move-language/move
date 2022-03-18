@@ -13,7 +13,7 @@ edition = "2018"
 rand = "0.8.3"
 num_cpus = "1.13.0"
 mirai-annotations = "1.10.1"
-structopt = "0.3.21"
+clap = { version = "3", features = ["derive"] }
 itertools = "0.10.0"
 hex = "0.4.3"
 getrandom = "0.2.2"

@@ -5,13 +5,13 @@ use crate::{
     bytecode_viewer::BytecodeViewer, source_viewer::ModuleViewer,
     tui::tui_interface::start_tui_with_interface, viewer::Viewer,
 };
+use clap::Parser;
 use move_binary_format::file_format::CompiledModule;
 use move_bytecode_source_map::{source_map::SourceMap, utils::source_map_from_file};
 use std::{
     fs,
     path::{Path, PathBuf},
 };
-use structopt::StructOpt;
 
 pub mod bytecode_viewer;
 pub mod interfaces;
@@ -19,22 +19,22 @@ pub mod source_viewer;
 pub mod tui;
 pub mod viewer;
 
-#[derive(Debug, StructOpt)]
-#[structopt(
+#[derive(Debug, Parser)]
+#[clap(
     name = "Move Bytecode Explorer",
     about = "Explore Move bytecode and how the source code compiles to it"
 )]
 pub struct BytecodeViewerConfig {
     /// The path to the module binary
-    #[structopt(long = "module-path", short = "b")]
+    #[clap(long = "module-path", short = 'b')]
     pub module_binary_path: PathBuf,
 
     /// The path to the source map for the module binary
-    #[structopt(long = "source-map-path")]
+    #[clap(long = "source-map-path")]
     pub module_sourcemap_path: PathBuf,
 
     /// The path to the source file
-    #[structopt(long = "source-path", short = "s")]
+    #[clap(long = "source-path", short = 's')]
     pub source_file_path: PathBuf,
 }
 

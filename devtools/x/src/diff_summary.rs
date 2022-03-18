@@ -2,28 +2,39 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::context::XContext;
+use clap::{ArgEnum, Parser};
 use guppy::graph::summaries::{diff::SummaryDiff, Summary};
 use std::{fs, path::PathBuf};
-use structopt::{clap::arg_enum, StructOpt};
 
-arg_enum! {
-    #[derive(Debug, Copy, Clone)]
-    pub enum OutputFormat {
-        Toml,
-        Json,
-        Text,
+#[derive(Debug, Copy, Clone, ArgEnum)]
+pub enum OutputFormat {
+    Toml,
+    Json,
+    Text,
+}
+
+impl std::str::FromStr for OutputFormat {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> anyhow::Result<Self> {
+        match s {
+            "toml" => Ok(OutputFormat::Toml),
+            "json" => Ok(OutputFormat::Json),
+            "text" => Ok(OutputFormat::Text),
+            _ => Err(anyhow::anyhow!("invalid output format: {}", s)),
+        }
     }
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub struct Args {
-    #[structopt(name = "BASE_SUMMARY")]
+    #[clap(name = "BASE_SUMMARY")]
     /// Path to the base summary
     base_summary: PathBuf,
-    #[structopt(name = "COMPARE_SUMMARY")]
+    #[clap(name = "COMPARE_SUMMARY")]
     /// Path to the comparison summary
     compare_summary: PathBuf,
-    #[structopt(name = "OUTPUT_FORMAT", default_value = "Text")]
+    #[clap(name = "OUTPUT_FORMAT", default_value = "text")]
     /// optionally, output can be formated as json or toml
     output_format: OutputFormat,
 }

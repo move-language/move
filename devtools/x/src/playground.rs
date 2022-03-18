@@ -12,7 +12,7 @@
 
 use crate::context::XContext;
 use anyhow::anyhow;
-use structopt::StructOpt;
+use clap::Parser;
 use x_lint::prelude::*;
 
 #[derive(Copy, Clone, Debug)]
@@ -101,10 +101,10 @@ impl ContentLinter for PlaygroundContent {
 
 // ---
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub struct Args {
     /// Dummy arg that doesn't do anything
-    #[structopt(long)]
+    #[clap(long)]
     dummy: bool,
 }
 

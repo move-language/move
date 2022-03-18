@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use anyhow::Context;
+use clap::Parser;
 use move_binary_format::{
     errors::VMError,
     file_format::{CompiledModule, CompiledScript},
@@ -19,28 +20,27 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-use structopt::StructOpt;
 
-#[derive(Debug, StructOpt)]
-#[structopt(name = "IR Compiler", about = "Move IR to bytecode compiler.")]
+#[derive(Debug, Parser)]
+#[clap(name = "IR Compiler", about = "Move IR to bytecode compiler.")]
 struct Args {
     /// Treat input file as a module (default is to treat file as a script)
-    #[structopt(short = "m", long = "module")]
+    #[clap(short = 'm', long = "module")]
     pub module_input: bool,
     /// Do not automatically run the bytecode verifier
-    #[structopt(long = "no-verify")]
+    #[clap(long = "no-verify")]
     pub no_verify: bool,
     /// Path to the Move IR source to compile
-    #[structopt(parse(from_os_str))]
+    #[clap(parse(from_os_str))]
     pub source_path: PathBuf,
     /// Instead of compiling the source, emit a dependency list of the compiled source
-    #[structopt(short = "l", long = "list-dependencies")]
+    #[clap(short = 'l', long = "list-dependencies")]
     pub list_dependencies: bool,
     /// Path to the list of modules that we want to link with
-    #[structopt(short = "d", long = "deps")]
+    #[clap(short = 'd', long = "deps")]
     pub deps_path: Option<String>,
 
-    #[structopt(long = "src-map")]
+    #[clap(long = "src-map")]
     pub output_source_maps: bool,
 }
 
@@ -74,7 +74,7 @@ fn write_output(path: &Path, buf: &[u8]) {
 }
 
 fn main() {
-    let args = Args::from_args();
+    let args = Args::parse();
 
     let source_path = Path::new(&args.source_path);
     let mvir_extension = MOVE_IR_EXTENSION;

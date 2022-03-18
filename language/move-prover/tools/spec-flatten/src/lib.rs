@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{anyhow, Result};
+use clap::Parser;
 use std::{collections::BTreeMap, str::FromStr};
-use structopt::StructOpt;
 
 use move_model::ast::SpecBlockTarget;
 use move_stackless_bytecode::function_target_pipeline::{FunctionVariant, VerificationFlavor};
@@ -36,22 +36,28 @@ impl FromStr for FlattenPass {
 }
 
 /// Options passed into the specification flattening tool.
-#[derive(StructOpt, Clone)]
+#[derive(Parser, Clone)]
 pub struct FlattenOptions {
     /// Options common and shared by the proving workflow and all passes
-    #[structopt(flatten)]
+    #[clap(flatten)]
     pub workflow: WorkflowOptions,
 
     /// Spec flattening pipeline
-    #[structopt(short = "f", long = "flatten")]
+    #[clap(
+        short = 'f',
+        long = "flatten",
+        takes_value(true),
+        multiple_values(true),
+        multiple_occurrences(true)
+    )]
     pub flattening_pipeline: Vec<FlattenPass>,
 
     /// Dump stepwise result
-    #[structopt(long = "dump-stepwise")]
+    #[clap(long = "dump-stepwise")]
     pub dump_stepwise: bool,
 
     /// Dump stepwise result in raw exp printing format
-    #[structopt(long = "dump-stepwise-raw", requires = "dump-stepwise")]
+    #[clap(long = "dump-stepwise-raw", requires = "dump-stepwise")]
     pub dump_stepwise_raw: bool,
 }
 

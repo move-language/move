@@ -1,6 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::borrow::Borrow;
+
 use crate::{data_cache::TransactionDataCache, runtime::VMRuntime};
 use move_binary_format::errors::*;
 use move_core_types::{
@@ -90,14 +92,17 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     /// NOTE: The ability to deserialize `args` into arbitrary types is very powerful--e.g., it can
     /// used to manufacture `signer`'s or `Coin`'s from raw bytes. It is the respmsibility of the
     /// caller (e.g. adapter) to ensure that this power is useed responsibility/securely for its use-case.
-    pub fn execute_function_for_effects(
+    pub fn execute_function_for_effects<V>(
         mut self,
         module: &ModuleId,
         function_name: &IdentStr,
         ty_args: Vec<TypeTag>,
-        args: Vec<Vec<u8>>,
+        args: Vec<V>,
         gas_status: &mut GasStatus,
-    ) -> ExecutionResult {
+    ) -> ExecutionResult
+    where
+        V: Borrow<[u8]>,
+    {
         let gas_budget = gas_status.remaining_gas().get();
         let execution_res = self.runtime.execute_function_for_effects(
             module,

@@ -29,7 +29,7 @@ use move_vm_types::{
     loaded_data::runtime_types::Type,
     values::{Locals, Value},
 };
-use std::collections::BTreeSet;
+use std::{borrow::Borrow, collections::BTreeSet};
 use tracing::warn;
 
 /// An instantiation of the MoveVM.
@@ -190,7 +190,10 @@ impl VMRuntime {
         Ok(())
     }
 
-    fn deserialize_value(&self, ty: &Type, arg: Vec<u8>) -> PartialVMResult<Value> {
+    fn deserialize_value<V>(&self, ty: &Type, arg: V) -> PartialVMResult<Value>
+    where
+        V: Borrow<[u8]>,
+    {
         let layout = match self.loader.type_to_type_layout(ty) {
             Ok(layout) => layout,
             Err(_err) => {
@@ -201,7 +204,7 @@ impl VMRuntime {
             }
         };
 
-        match Value::simple_deserialize(&arg, &layout) {
+        match Value::simple_deserialize(arg.borrow(), &layout) {
             Some(val) => Ok(val),
             None => {
                 warn!("[VM] failed to deserialize argument");
@@ -212,10 +215,13 @@ impl VMRuntime {
         }
     }
 
-    fn deserialize_arg(&self, ty: &Type, arg: Vec<u8>) -> PartialVMResult<Value> {
+    fn deserialize_arg<V>(&self, ty: &Type, arg: V) -> PartialVMResult<Value>
+    where
+        V: Borrow<[u8]>,
+    {
         if is_signer_reference(ty) {
             // TODO signer_reference should be version gated
-            match MoveValue::simple_deserialize(&arg, &MoveTypeLayout::Signer) {
+            match MoveValue::simple_deserialize(arg.borrow(), &MoveTypeLayout::Signer) {
                 Ok(MoveValue::Signer(addr)) => Ok(Value::signer_reference(addr)),
                 Ok(_) | Err(_) => {
                     warn!("[VM] failed to deserialize argument");
@@ -349,15 +355,18 @@ impl VMRuntime {
         Ok(())
     }
 
-    pub(crate) fn execute_function_for_effects(
+    pub(crate) fn execute_function_for_effects<V>(
         &self,
         module: &ModuleId,
         function_name: &IdentStr,
         ty_args: Vec<TypeTag>,
-        args: Vec<Vec<u8>>,
+        args: Vec<V>,
         data_store: &mut impl DataStore,
         gas_status: &mut GasStatus,
-    ) -> VMResult<(Vec<Vec<u8>>, Vec<Vec<u8>>)> {
+    ) -> VMResult<(Vec<Vec<u8>>, Vec<Vec<u8>>)>
+    where
+        V: Borrow<[u8]>,
+    {
         let is_script_execution = false;
         let (func, ty_args, params, return_tys) = self.loader.load_function(
             function_name,
@@ -463,13 +472,16 @@ impl VMRuntime {
         Ok((serialized_return_vals, serialized_mut_ref_outputs))
     }
 
-    fn borrow_arg(
+    fn borrow_arg<V>(
         &self,
         idx: usize,
-        arg: Vec<u8>,
+        arg: V,
         arg_t: &Type,
         locals: &mut Locals,
-    ) -> Result<Value, PartialVMError> {
+    ) -> Result<Value, PartialVMError>
+    where
+        V: Borrow<[u8]>,
+    {
         let arg_value = match self.deserialize_value(arg_t, arg) {
             Ok(val) => val,
             Err(err) => return Err(err),

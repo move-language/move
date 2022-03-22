@@ -24,6 +24,7 @@ impl NativeFunctions {
         funs.define_evm_functions(ctx);
         funs.define_move_functions(ctx);
         funs.define_vector_functions(ctx);
+        funs.define_table_functions(ctx);
         funs
     }
 

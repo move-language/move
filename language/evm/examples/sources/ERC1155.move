@@ -169,7 +169,7 @@ module Evm::ERC1155 {
         if(!Table::contains(&s.operatorApprovals, &account)) {
             Table::insert(
                 &mut s.operatorApprovals,
-                account,
+                &account,
                 Table::empty<address, bool>()
             )
         };
@@ -177,7 +177,7 @@ module Evm::ERC1155 {
             &mut s.operatorApprovals,
             &account
         );
-        Table::borrow_mut_with_default(operatorApproval_account, operator, false)
+        Table::borrow_mut_with_default(operatorApproval_account, &operator, false)
     }
 
     /// Helper function to return a mut ref to the balance of a owner.
@@ -185,12 +185,12 @@ module Evm::ERC1155 {
         if(!Table::contains(&s.balances, &id)) {
             Table::insert(
                 &mut s.balances,
-                copy id,
+                &id,
                 Table::empty<address, U256>()
             )
         };
         let balances_id = Table::borrow_mut(&mut s.balances, &id);
-        Table::borrow_mut_with_default(balances_id, account, U256::zero())
+        Table::borrow_mut_with_default(balances_id, &account, U256::zero())
     }
 
     /// Helper function for the safe transfer acceptance check.

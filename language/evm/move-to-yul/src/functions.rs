@@ -458,6 +458,12 @@ impl<'a> FunctionGenerator<'a> {
                             local(&srcs[1]),
                         )
                     }
+                    // FreezeRef transforms a mutable reference to an immutable one so just
+                    // treat it as an assignment.
+                    FreezeRef => {
+                        print_loc();
+                        self.assign(ctx, target, dest[0], local(&srcs[0]))
+                    }
 
                     // Arithmetics
                     CastU8 => builtin(YulFunction::CastU8, dest, srcs),
@@ -508,7 +514,6 @@ impl<'a> FunctionGenerator<'a> {
 
                     // Specification or other operations which can be ignored here
                     GetField(_, _, _, _)
-                    | FreezeRef
                     | GetGlobal(_, _, _)
                     | IsParent(_, _)
                     | WriteBack(_, _)
@@ -1001,6 +1006,7 @@ impl<'a> FunctionGenerator<'a> {
             assert_eq!(byte_offs % 32, 0, "pointer fields are on word boundary");
             ctx.emit_block(|| {
                 let linked_src_name = format!("$linked_src_{}", self.type_hash(ctx, ty));
+                let linked_dst_name = format!("$linked_dst_{}", self.type_hash(ctx, ty));
 
                 // Load the pointer to the linked memory.
                 emitln!(
@@ -1013,8 +1019,14 @@ impl<'a> FunctionGenerator<'a> {
                     ctx,
                     ty,
                     linked_src_name,
-                    format!("add({}, {})", dst, byte_offs),
+                    linked_dst_name.clone(),
                 );
+                // Store the result at the destination
+                self.parent.call_builtin(
+                    ctx,
+                    YulFunction::AlignedStorageStore,
+                    vec![format!("add({}, {})", dst, byte_offs), linked_dst_name].into_iter(),
+                )
             });
         }
 
@@ -1145,12 +1157,35 @@ impl<'a> FunctionGenerator<'a> {
             let field_src_ptr = format!("add({}, {})", src, byte_offs);
             let field_dst_ptr = format!("add({}, {})", dst, byte_offs);
             ctx.emit_block(|| {
-                let linked_dst_name = format!("$linked_dst_{}", self.type_hash(ctx, ty));
+                let hash = self.type_hash(ctx, ty);
+                let linked_src_name = format!("$linked_src_{}", hash);
+                let linked_dst_name = format!("$linked_dst_{}", hash);
+
+                // Load the pointer to the linked storage.
+                let load_call = self.parent.call_builtin_str(
+                    ctx,
+                    YulFunction::AlignedStorageLoad,
+                    std::iter::once(field_src_ptr.clone()),
+                );
+
+                emitln!(ctx.writer, "let {} := {}", linked_src_name, load_call);
+
                 // Declare where to store the result and recursively move
                 emitln!(ctx.writer, "let {}", linked_dst_name);
-                self.move_data_from_linked_storage(ctx, ty, field_src_ptr, linked_dst_name.clone());
+                self.move_data_from_linked_storage(
+                    ctx,
+                    ty,
+                    linked_src_name,
+                    linked_dst_name.clone(),
+                );
                 // Store the result at the destination.
                 emitln!(ctx.writer, "mstore({}, {})", field_dst_ptr, linked_dst_name);
+                // Clear the storage to get a refund
+                self.parent.call_builtin(
+                    ctx,
+                    YulFunction::AlignedStorageStore,
+                    vec![field_src_ptr, 0.to_string()].into_iter(),
+                );
             });
         }
 
@@ -1247,15 +1282,9 @@ impl<'a> FunctionGenerator<'a> {
         ctx: &Context,
         ty: &Type,
         linked_src_name: String,
-        dst: String,
+        linked_dst_name: String,
     ) {
-        assert!(
-            ctx.type_allocates_memory(ty),
-            "type needs to be struct or vector"
-        );
         let hash = self.type_hash(ctx, ty);
-        // let linked_src_name = format!("$linked_src_{}", hash);
-        let linked_dst_name = format!("$linked_dst_{}", hash);
         // Allocate a new storage pointer.
         emitln!(
             ctx.writer,
@@ -1270,22 +1299,18 @@ impl<'a> FunctionGenerator<'a> {
 
         // Recursively move.
         if ty.is_vector() {
-            self.move_vector_to_storage(ctx, ty, linked_src_name, linked_dst_name.clone());
-        } else {
+            self.move_vector_to_storage(ctx, ty, linked_src_name, linked_dst_name);
+        } else if ctx.type_is_struct(ty) {
             let field_struct_id = ty.get_struct_id(ctx.env).expect("struct");
-            self.move_struct_to_storage(
+            self.move_struct_to_storage(ctx, &field_struct_id, linked_src_name, linked_dst_name);
+        } else {
+            // Primitive type so directly store the src at the location
+            self.parent.call_builtin(
                 ctx,
-                &field_struct_id,
-                linked_src_name,
-                linked_dst_name.clone(),
+                ctx.storage_store_builtin_fun(ty),
+                vec![linked_dst_name, linked_src_name].into_iter(),
             );
         }
-        // Store the result at the destination
-        self.parent.call_builtin(
-            ctx,
-            YulFunction::AlignedStorageStore,
-            vec![dst, linked_dst_name].into_iter(),
-        )
     }
 
     // Recursively move struct or vector data from linked storage to memory.
@@ -1295,31 +1320,27 @@ impl<'a> FunctionGenerator<'a> {
         &mut self,
         ctx: &Context,
         ty: &Type,
-        src: String,
+        linked_src_name: String,
         linked_dst_name: String,
     ) {
-        // Load the pointer to the linked storage.
-        let load_call = self.parent.call_builtin_str(
-            ctx,
-            YulFunction::AlignedStorageLoad,
-            std::iter::once(src.clone()),
-        );
-        let hash = self.type_hash(ctx, ty);
-        let linked_src_name = format!("$linked_src_{}", hash);
-        emitln!(ctx.writer, "let {} := {}", linked_src_name, load_call);
         if ty.is_vector() {
             self.move_vector_to_memory(ctx, ty, linked_src_name, linked_dst_name);
-        } else {
+        } else if ctx.type_is_struct(ty) {
             let field_struct_id = ty.get_struct_id(ctx.env).expect("struct");
             self.move_struct_to_memory(ctx, &field_struct_id, linked_src_name, linked_dst_name);
+        } else {
+            // Primitive type
+            emitln!(
+                ctx.writer,
+                "{} := {}",
+                linked_dst_name,
+                self.parent.call_builtin_str(
+                    ctx,
+                    ctx.storage_load_builtin_fun(ty),
+                    std::iter::once(linked_src_name)
+                )
+            );
         }
-
-        // Clear the storage to get a refund
-        self.parent.call_builtin(
-            ctx,
-            YulFunction::AlignedStorageStore,
-            vec![src, 0.to_string()].into_iter(),
-        );
     }
 
     /// Make a pointer into storage for the given type and instance.

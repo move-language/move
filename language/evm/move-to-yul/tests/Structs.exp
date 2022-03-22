@@ -245,7 +245,7 @@ object "test_A2_M_test_pack_S" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $IndexPtr(ptr, offs) -> new_ptr {
@@ -477,7 +477,7 @@ object "test_A2_M_test_pack_S2" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $LoadU128(ptr) -> val {
@@ -644,7 +644,7 @@ object "test_A2_M_test_pack_S2_fail" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $LoadU128(ptr) -> val {
@@ -854,7 +854,7 @@ object "test_A2_M_test_read_S" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $IndexPtr(ptr, offs) -> new_ptr {
@@ -1218,7 +1218,7 @@ object "test_A2_M_test_read_and_write_S" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $IndexPtr(ptr, offs) -> new_ptr {
@@ -1508,7 +1508,7 @@ object "test_A2_M_test_unpack" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $MemoryLoadU8(offs) -> val {
@@ -1804,7 +1804,7 @@ object "test_A2_M_test_write_S" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $IndexPtr(ptr, offs) -> new_ptr {

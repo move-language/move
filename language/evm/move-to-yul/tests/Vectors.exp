@@ -248,7 +248,7 @@ object "A2_Vectors" {
             }
             function $StorageKey(group, word) -> key {
               mstore(32, word)
-              mstore(64, group)
+              mstore(64, shl(224, group))
               key := keccak256(32, 36)
             }
             function $IndexPtr(ptr, offs) -> new_ptr {
@@ -511,7 +511,7 @@ object "test_A2_Vectors_test_borrow_fail" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $IndexPtr(ptr, offs) -> new_ptr {
@@ -1086,7 +1086,7 @@ object "test_A2_Vectors_test_borrow_mut" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $MakeTypeStorageBase(category, type_hash, id) -> offs {
@@ -1523,7 +1523,7 @@ object "test_A2_Vectors_test_destroy_non_empty_fail" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $MakeTypeStorageBase(category, type_hash, id) -> offs {
@@ -1782,7 +1782,7 @@ object "test_A2_Vectors_test_empty" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $LoadU64(ptr) -> val {
@@ -2332,7 +2332,7 @@ object "test_A2_Vectors_test_nested_vectors" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $MakeTypeStorageBase(category, type_hash, id) -> offs {
@@ -2755,7 +2755,7 @@ object "test_A2_Vectors_test_one_elem_struct" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $MakeTypeStorageBase(category, type_hash, id) -> offs {
@@ -3138,7 +3138,7 @@ object "test_A2_Vectors_test_one_elem_u64" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $IndexPtr(ptr, offs) -> new_ptr {
@@ -3608,7 +3608,7 @@ object "test_A2_Vectors_test_pop_back" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $IndexPtr(ptr, offs) -> new_ptr {
@@ -3854,7 +3854,7 @@ object "test_A2_Vectors_test_pop_back_empty_fail" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $IndexPtr(ptr, offs) -> new_ptr {
@@ -4459,7 +4459,7 @@ object "test_A2_Vectors_test_push_back" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $IndexPtr(ptr, offs) -> new_ptr {
@@ -4925,7 +4925,7 @@ object "test_A2_Vectors_test_swap" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $IndexPtr(ptr, offs) -> new_ptr {
@@ -5215,7 +5215,7 @@ object "test_A2_Vectors_test_swap_fail" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $IndexPtr(ptr, offs) -> new_ptr {
@@ -5751,7 +5751,7 @@ object "test_A2_Vectors_test_vectors_in_structs" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $IndexPtr(ptr, offs) -> new_ptr {

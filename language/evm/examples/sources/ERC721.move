@@ -192,17 +192,17 @@ module Evm::ERC721 {
 
     /// Helper function to return a mut ref to the balance of a owner.
     fun mut_balanceOf(s: &mut State, owner: address): &mut U256 {
-        Table::borrow_mut_with_default(&mut s.balances, owner, U256::zero())
+        Table::borrow_mut_with_default(&mut s.balances, &owner, U256::zero())
     }
 
     /// Helper function to return a mut ref to the balance of a owner.
     fun mut_ownerOf(s: &mut State, tokenId: U256): &mut address {
-        Table::borrow_mut_with_default(&mut s.owners, tokenId, @0x0)
+        Table::borrow_mut_with_default(&mut s.owners, &tokenId, @0x0)
     }
 
     /// Helper function to return a mut ref to the balance of a owner.
     fun mut_tokenApproval(s: &mut State, tokenId: U256): &mut address {
-        Table::borrow_mut_with_default(&mut s.tokenApprovals, tokenId, @0x0)
+        Table::borrow_mut_with_default(&mut s.tokenApprovals, &tokenId, @0x0)
     }
 
     /// Helper function to return a mut ref to the operator approval.
@@ -210,12 +210,12 @@ module Evm::ERC721 {
         if(!Table::contains(&s.operatorApprovals, &owner)) {
             Table::insert(
                 &mut s.operatorApprovals,
-                owner,
+                &owner,
                 Table::empty<address, bool>()
             )
         };
         let approvals = Table::borrow_mut(&mut s.operatorApprovals, &owner);
-        Table::borrow_mut_with_default(approvals, operator, false)
+        Table::borrow_mut_with_default(approvals, &operator, false)
     }
 
     /// Helper function to return true iff the token exists.

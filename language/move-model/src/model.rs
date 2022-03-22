@@ -2379,6 +2379,15 @@ impl<'env> StructEnv<'env> {
         )
     }
 
+    /// Gets full name with module address as string.
+    pub fn get_full_name_with_address(&self) -> String {
+        format!(
+            "{}::{}",
+            self.module_env.get_full_name_str(),
+            self.get_name().display(self.symbol_pool())
+        )
+    }
+
     /// Returns the VM identifier for this struct
     pub fn get_identifier(&self) -> Option<Identifier> {
         match &self.data.info {

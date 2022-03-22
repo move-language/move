@@ -74,6 +74,10 @@ static PLACEHOLDERS: Lazy<BTreeMap<&'static str, &'static str>> = Lazy::new(|| {
         "ADMIN_STORAGE_GROUP" => "1",
         "WORD_AND_STORAGE_GROUP_LENGTH" => "36",
 
+        // Number of storage groups already allocated. Right now there are two: linear storage
+        // group and admin storage group.
+        "NUM_STATIC_STORAGE_GROUP" => "2",
+
         // Counters in the ADMIN_STORAGE_GROUP for persistent storage of group and linked storage
         // counters.
         "STORAGE_GROUP_COUNTER_LOC" => "0",
@@ -337,7 +341,7 @@ StorageStoreBytes: "(offs, size, bytes) {
 // value and type into a unique storage key.
 StorageKey: "(group, word) -> key {
   mstore(${SCRATCH1_LOC}, word)
-  mstore(${SCRATCH2_LOC}, group)
+  mstore(${SCRATCH2_LOC}, shl(224, group))
   key := keccak256(${SCRATCH1_LOC}, ${WORD_AND_STORAGE_GROUP_LENGTH})
 }",
 
@@ -374,6 +378,17 @@ IndexPtr: "(ptr, offs) -> new_ptr {
   new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
 }" dep MakePtr dep IsStoragePtr dep OffsetPtr,
 
+NewTableHandle: "() -> handle {
+  let key := $StorageKey(${ADMIN_STORAGE_GROUP}, ${STORAGE_GROUP_COUNTER_LOC})
+  handle := sload(key)
+  if iszero(handle) {
+     // no tables have been allocated in this contract, need to initialize the counter
+     // to the number of storage groups already statically allocated
+     handle := ${NUM_STATIC_STORAGE_GROUP}
+  }
+  sstore(key, add(handle, 1))
+}
+" dep StorageKey,
 // ------------
 
 // Loads u8 from pointer.

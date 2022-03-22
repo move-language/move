@@ -95,6 +95,7 @@ impl<'a> FunctionGenerator<'a> {
         if ctx.type_allocates_memory(&elem_type) {
             ctx.emit_block(|| {
                 let linked_src_name = format!("$linked_src_{}", self.type_hash(ctx, &elem_type));
+                let linked_dst_name = format!("$linked_dst_{}", self.type_hash(ctx, &elem_type));
 
                 // Load the pointer to the linked memory.
                 emitln!(
@@ -108,8 +109,18 @@ impl<'a> FunctionGenerator<'a> {
                     ctx,
                     &elem_type,
                     linked_src_name,
-                    format!("add({}, {})", data_dst_name, offs_name),
+                    linked_dst_name.clone(),
                 );
+                // Store the result at the destination
+                self.parent.call_builtin(
+                    ctx,
+                    YulFunction::AlignedStorageStore,
+                    vec![
+                        format!("add({}, {})", data_dst_name, offs_name),
+                        linked_dst_name,
+                    ]
+                    .into_iter(),
+                )
             });
         } else {
             self.parent.call_builtin(
@@ -256,17 +267,34 @@ impl<'a> FunctionGenerator<'a> {
             ctx.emit_block(|| {
                 let src_ptr = format!("add({}, {})", data_src_name, offs_name);
                 let dst_ptr = format!("add({}, {})", data_dst_name, offs_name);
-                let linked_dst_name = format!("$linked_dst_{}", self.type_hash(ctx, &elem_type));
+                let hash = self.type_hash(ctx, &elem_type);
+                let linked_src_name = format!("$linked_src_{}", hash);
+                let linked_dst_name = format!("$linked_dst_{}", hash);
+
+                // Load the pointer to the linked storage.
+                let load_call = self.parent.call_builtin_str(
+                    ctx,
+                    YulFunction::AlignedStorageLoad,
+                    std::iter::once(src_ptr.clone()),
+                );
+
+                emitln!(ctx.writer, "let {} := {}", linked_src_name, load_call);
                 // Declare where to store the result and recursively move
                 emitln!(ctx.writer, "let {}", linked_dst_name);
                 self.move_data_from_linked_storage(
                     ctx,
                     &elem_type,
-                    src_ptr,
+                    linked_src_name,
                     linked_dst_name.clone(),
                 );
                 // Store the result at the destination.
                 emitln!(ctx.writer, "mstore({}, {})", dst_ptr, linked_dst_name);
+                // Clear the storage to get a refund
+                self.parent.call_builtin(
+                    ctx,
+                    YulFunction::AlignedStorageStore,
+                    vec![src_ptr, 0.to_string()].into_iter(),
+                );
             });
         } else {
             let load_call = self.parent.call_builtin_str(
@@ -591,7 +619,28 @@ fn define_pop_back_fun(
             ),
         );
 
-        gen.move_data_from_linked_storage(ctx, elem_type, "e_offs".to_string(), "e".to_string());
+        emitln!(
+            ctx.writer,
+            "let linked_src := {}",
+            gen.parent.call_builtin_str(
+                ctx,
+                YulFunction::AlignedStorageLoad,
+                std::iter::once("e_offs".to_string()),
+            )
+        );
+
+        gen.move_data_from_linked_storage(
+            ctx,
+            elem_type,
+            "linked_src".to_string(),
+            "e".to_string(),
+        );
+
+        gen.parent.call_builtin(
+            ctx,
+            YulFunction::AlignedStorageStore,
+            vec!["e_offs".to_string(), 0.to_string()].into_iter(),
+        );
 
         ctx.writer.unindent();
         emitln!(ctx.writer, "}");
@@ -720,11 +769,19 @@ fn define_push_back_fun(
             ),
         );
 
+        let linked_dst_name = format!("$linked_dst_{}", gen.type_hash(ctx, elem_type));
+
         gen.create_and_move_data_to_linked_storage(
             ctx,
             elem_type,
             "e".to_string(),
-            "e_offs".to_string(),
+            linked_dst_name.clone(),
+        );
+        // Store the result at the destination
+        gen.parent.call_builtin(
+            ctx,
+            YulFunction::AlignedStorageStore,
+            vec!["e_offs".to_string(), linked_dst_name].into_iter(),
         );
 
         ctx.writer.unindent();

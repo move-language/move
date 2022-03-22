@@ -26,6 +26,9 @@ use std::{
     path::PathBuf,
 };
 
+/// Address at which the EVM modules are stored.
+const EVM_MODULE_ADDRESS: &str = "0x2";
+
 /// Immutable context passed through the compilation.
 pub(crate) struct Context<'a> {
     /// The program options.
@@ -279,7 +282,13 @@ impl<'a> Context<'a> {
     /// Returns whether the struct identified by module_id and struct_id is the native U256 struct.
     pub fn is_u256(&self, struct_id: QualifiedId<StructId>) -> bool {
         let struct_env = self.env.get_struct(struct_id);
-        attributes::is_evm_arith_module(&struct_env.module_env) && struct_env.is_native()
+        struct_env.get_full_name_with_address() == format!("{}::U256::U256", EVM_MODULE_ADDRESS)
+    }
+
+    /// Returns whether the struct identified by module_id and struct_id is the native Table struct.
+    pub fn is_table(&self, struct_id: QualifiedId<StructId>) -> bool {
+        let struct_env = self.env.get_struct(struct_id);
+        struct_env.get_full_name_with_address() == format!("{}::Table::Table", EVM_MODULE_ADDRESS)
     }
 
     /// Returns whether the struct identified by module_id and struct_id is the native String struct.
@@ -307,7 +316,7 @@ impl<'a> Context<'a> {
         if layouts_ref.get(st).is_none() {
             // Compute the fields such that the larger appear first, and pointer fields
             // precede non-pointer fields.
-            let s_or_v = |ty: &Type| ty.is_vector() || ty.is_struct();
+            let s_or_v = |ty: &Type| ty.is_vector() || self.type_is_struct(ty);
             let struct_env = self.env.get_struct(st.to_qualified_id());
             let ordered_fields = struct_env
                 .get_fields()
@@ -444,7 +453,7 @@ impl<'a> Context<'a> {
     pub fn type_allocates_memory(&self, ty: &Type) -> bool {
         use Type::*;
         match ty {
-            Struct(m, s, _) => !self.is_u256(m.qualified(*s)),
+            Struct(m, s, _) => !self.is_u256(m.qualified(*s)) && !self.is_table(m.qualified(*s)),
             Vector(_) => true,
             _ => false,
         }
@@ -453,7 +462,7 @@ impl<'a> Context<'a> {
     pub fn type_is_struct(&self, ty: &Type) -> bool {
         use Type::*;
         match ty {
-            Struct(m, s, _) => !self.is_u256(m.qualified(*s)),
+            Struct(m, s, _) => !self.is_u256(m.qualified(*s)) && !self.is_table(m.qualified(*s)),
             _ => false,
         }
     }

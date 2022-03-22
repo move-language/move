@@ -15,21 +15,21 @@ module Evm::Table {
 
     /// Acquire a mutable reference to the value which `key` maps to.
     /// Insert the pair (`key`, `default`) first if there is no entry for `key`.
-    public fun borrow_mut_with_default<K: copy + drop, V: drop>(table: &mut Table<K, V>, key: K, default: V): &mut V {
-        if (!contains(table, &key)) {
-            insert(table, copy key, default)
+    public fun borrow_mut_with_default<K, V: drop>(table: &mut Table<K, V>, key: &K, default_value: V): &mut V {
+        if (!contains(table, key)) {
+            insert(table, key, default_value)
         };
-        borrow_mut(table, &key)
+        borrow_mut(table, key)
     }
 
     /// Remove from `table` and return the value which `key` maps to.
     /// Aborts if there is no entry for `key`.
-    native public fun remove<K, V>(table: &mut Table<K, V>, key: &K): (K, V);
+    native public fun remove<K, V>(table: &mut Table<K, V>, key: &K): V;
 
     /// Returns true iff `table` contains an entry for `key`.
     native public fun contains<K, V>(table: &Table<K, V>, key: &K): bool;
 
     /// Insert the pair (`key`, `val`) to `table`.
     /// Aborts if there is already an entry for `key`.
-    native public fun insert<K, V>(table: &mut Table<K, V>, key: K, val: V);
+    native public fun insert<K, V>(table: &mut Table<K, V>, key: &K, val: V);
 }

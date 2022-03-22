@@ -14,6 +14,7 @@ pub mod generator;
 mod native_functions;
 pub mod options;
 mod solidity_ty;
+mod tables;
 mod vectors;
 mod yul_functions;
 

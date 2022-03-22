@@ -486,7 +486,7 @@ object "A2_M" {
             }
             function $StorageKey(group, word) -> key {
               mstore(32, word)
-              mstore(64, group)
+              mstore(64, shl(224, group))
               key := keccak256(32, 36)
             }
             function $IndexPtr(ptr, offs) -> new_ptr {

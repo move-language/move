@@ -30,4 +30,15 @@ module 0x2::M {
         call_by_ref(&mut a);
         assert!(a == 2, 101);
     }
+
+    fun call_by_immut_ref(a: &u64) : u64 {
+        *a
+    }
+
+    #[evm_test]
+    fun test_freeze_ref() {
+        let a = 1;
+        a = call_by_immut_ref(&mut a);
+        assert!(a == 1, 101);
+    }
 }

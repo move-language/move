@@ -302,7 +302,7 @@ object "test_A2_NativeFunctions_test_signer_address_of" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $LoadU256(ptr) -> val {

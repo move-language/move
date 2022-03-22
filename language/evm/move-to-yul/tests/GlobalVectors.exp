@@ -315,7 +315,7 @@ object "test_A2_GlobalVectors_test_borrow_mut_global" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $MakeTypeStorageBase(category, type_hash, id) -> offs {
@@ -435,7 +435,7 @@ object "test_A2_GlobalVectors_test_borrow_mut_global" {
         }
     }
 }
-===> Test result of GlobalVectors::test_borrow_mut_global: Succeed(Stopped) (used_gas=117242): []
+===> Test result of GlobalVectors::test_borrow_mut_global: Succeed(Stopped) (used_gas=117245): []
 
 // test of GlobalVectors::test_move_from
 /* =======================================
@@ -556,8 +556,8 @@ object "test_A2_GlobalVectors_test_move_from" {
                             let $dst
                             $dst := $Malloc(32)
                             {
-                                let $linked_dst_814019441
                                 let $linked_src_814019441 := $AlignedStorageLoad(add($src, 0))
+                                let $linked_dst_814019441
                                 let $size_814019441 := $StorageLoadU64($linked_src_814019441)
                                 let $capacity_814019441 := $ClosestGreaterPowerOfTwo($size_814019441)
                                 $linked_dst_814019441 := $Malloc(add(32, mul($capacity_814019441, 8)))
@@ -570,8 +570,8 @@ object "test_A2_GlobalVectors_test_move_from" {
                                     mstore(add($data_dst_814019441, $offs_814019441), $AlignedStorageLoad(add($data_src_814019441, $offs_814019441)))
                                     $AlignedStorageStore(add($data_src_814019441, $offs_814019441), 0)
                                 }
-                                $AlignedStorageStore(add($src, 0), 0)
                                 mstore(add($dst, 0), $linked_dst_814019441)
+                                $AlignedStorageStore(add($src, 0), 0)
                             }
                             $t15 := $dst
                         }
@@ -860,7 +860,7 @@ object "test_A2_GlobalVectors_test_move_from" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $MakeTypeStorageBase(category, type_hash, id) -> offs {
@@ -989,7 +989,7 @@ object "test_A2_GlobalVectors_test_move_from" {
         }
     }
 }
-===> Test result of GlobalVectors::test_move_from: Succeed(Stopped) (used_gas=96945): []
+===> Test result of GlobalVectors::test_move_from: Succeed(Stopped) (used_gas=96948): []
 
 // test of GlobalVectors::test_move_from_vector_of_struct
 /* =======================================
@@ -1147,8 +1147,8 @@ object "test_A2_GlobalVectors_test_move_from_vector_of_struct" {
                             let $dst
                             $dst := $Malloc(32)
                             {
-                                let $linked_dst_634259357
                                 let $linked_src_634259357 := $AlignedStorageLoad(add($src, 0))
+                                let $linked_dst_634259357
                                 let $size_634259357 := $StorageLoadU64($linked_src_634259357)
                                 let $capacity_634259357 := $ClosestGreaterPowerOfTwo($size_634259357)
                                 $linked_dst_634259357 := $Malloc(add(32, mul($capacity_634259357, 32)))
@@ -1159,17 +1159,17 @@ object "test_A2_GlobalVectors_test_move_from_vector_of_struct" {
                                 let $data_dst_634259357 := add($linked_dst_634259357, 32)
                                 for { let $offs_634259357 := 0 } lt($offs_634259357, $data_size_634259357) { $offs_634259357 := add($offs_634259357, 32)} {
                                     {
-                                        let $linked_dst_3681206257
                                         let $linked_src_3681206257 := $AlignedStorageLoad(add($data_src_634259357, $offs_634259357))
+                                        let $linked_dst_3681206257
                                         $linked_dst_3681206257 := $Malloc(24)
                                         mstore(add($linked_dst_3681206257, 0), $AlignedStorageLoad(add($linked_src_3681206257, 0)))
                                         $AlignedStorageStore(add($linked_src_3681206257, 0), 0)
-                                        $AlignedStorageStore(add($data_src_634259357, $offs_634259357), 0)
                                         mstore(add($data_dst_634259357, $offs_634259357), $linked_dst_3681206257)
+                                        $AlignedStorageStore(add($data_src_634259357, $offs_634259357), 0)
                                     }
                                 }
-                                $AlignedStorageStore(add($src, 0), 0)
                                 mstore(add($dst, 0), $linked_dst_634259357)
+                                $AlignedStorageStore(add($src, 0), 0)
                             }
                             local_t := $dst
                         }
@@ -1410,7 +1410,7 @@ object "test_A2_GlobalVectors_test_move_from_vector_of_struct" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $MakeTypeStorageBase(category, type_hash, id) -> offs {
@@ -1558,7 +1558,7 @@ object "test_A2_GlobalVectors_test_move_from_vector_of_struct" {
         }
     }
 }
-===> Test result of GlobalVectors::test_move_from_vector_of_struct: Succeed(Stopped) (used_gas=186345): []
+===> Test result of GlobalVectors::test_move_from_vector_of_struct: Succeed(Stopped) (used_gas=186316): []
 
 // test of GlobalVectors::test_move_from_vector_of_vector
 /* =======================================
@@ -1704,8 +1704,8 @@ object "test_A2_GlobalVectors_test_move_from_vector_of_vector" {
                             let $dst
                             $dst := $Malloc(32)
                             {
-                                let $linked_dst_3066871491
                                 let $linked_src_3066871491 := $AlignedStorageLoad(add($src, 0))
+                                let $linked_dst_3066871491
                                 let $size_3066871491 := $StorageLoadU64($linked_src_3066871491)
                                 let $capacity_3066871491 := $ClosestGreaterPowerOfTwo($size_3066871491)
                                 $linked_dst_3066871491 := $Malloc(add(32, mul($capacity_3066871491, 32)))
@@ -1716,8 +1716,8 @@ object "test_A2_GlobalVectors_test_move_from_vector_of_vector" {
                                 let $data_dst_3066871491 := add($linked_dst_3066871491, 32)
                                 for { let $offs_3066871491 := 0 } lt($offs_3066871491, $data_size_3066871491) { $offs_3066871491 := add($offs_3066871491, 32)} {
                                     {
-                                        let $linked_dst_814019441
                                         let $linked_src_814019441 := $AlignedStorageLoad(add($data_src_3066871491, $offs_3066871491))
+                                        let $linked_dst_814019441
                                         let $size_814019441 := $StorageLoadU64($linked_src_814019441)
                                         let $capacity_814019441 := $ClosestGreaterPowerOfTwo($size_814019441)
                                         $linked_dst_814019441 := $Malloc(add(32, mul($capacity_814019441, 8)))
@@ -1730,12 +1730,12 @@ object "test_A2_GlobalVectors_test_move_from_vector_of_vector" {
                                             mstore(add($data_dst_814019441, $offs_814019441), $AlignedStorageLoad(add($data_src_814019441, $offs_814019441)))
                                             $AlignedStorageStore(add($data_src_814019441, $offs_814019441), 0)
                                         }
-                                        $AlignedStorageStore(add($data_src_3066871491, $offs_3066871491), 0)
                                         mstore(add($data_dst_3066871491, $offs_3066871491), $linked_dst_814019441)
+                                        $AlignedStorageStore(add($data_src_3066871491, $offs_3066871491), 0)
                                     }
                                 }
-                                $AlignedStorageStore(add($src, 0), 0)
                                 mstore(add($dst, 0), $linked_dst_3066871491)
+                                $AlignedStorageStore(add($src, 0), 0)
                             }
                             local_t := $dst
                         }
@@ -2026,7 +2026,7 @@ object "test_A2_GlobalVectors_test_move_from_vector_of_vector" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $MakeTypeStorageBase(category, type_hash, id) -> offs {
@@ -2155,7 +2155,7 @@ object "test_A2_GlobalVectors_test_move_from_vector_of_vector" {
         }
     }
 }
-===> Test result of GlobalVectors::test_move_from_vector_of_vector: Succeed(Stopped) (used_gas=243906): []
+===> Test result of GlobalVectors::test_move_from_vector_of_vector: Succeed(Stopped) (used_gas=243916): []
 
 // test of GlobalVectors::test_move_to
 /* =======================================
@@ -2519,7 +2519,7 @@ object "test_A2_GlobalVectors_test_move_to" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $MakeTypeStorageBase(category, type_hash, id) -> offs {
@@ -2639,7 +2639,7 @@ object "test_A2_GlobalVectors_test_move_to" {
         }
     }
 }
-===> Test result of GlobalVectors::test_move_to: Succeed(Stopped) (used_gas=120159): []
+===> Test result of GlobalVectors::test_move_to: Succeed(Stopped) (used_gas=120162): []
 
 // test of GlobalVectors::test_move_to_vector_of_struct
 /* =======================================
@@ -3051,7 +3051,7 @@ object "test_A2_GlobalVectors_test_move_to_vector_of_struct" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $MakeTypeStorageBase(category, type_hash, id) -> offs {
@@ -3190,7 +3190,7 @@ object "test_A2_GlobalVectors_test_move_to_vector_of_struct" {
         }
     }
 }
-===> Test result of GlobalVectors::test_move_to_vector_of_struct: Succeed(Stopped) (used_gas=233763): []
+===> Test result of GlobalVectors::test_move_to_vector_of_struct: Succeed(Stopped) (used_gas=233775): []
 
 // test of GlobalVectors::test_move_to_vector_of_vector
 /* =======================================
@@ -3640,7 +3640,7 @@ object "test_A2_GlobalVectors_test_move_to_vector_of_vector" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $MakeTypeStorageBase(category, type_hash, id) -> offs {
@@ -3760,7 +3760,7 @@ object "test_A2_GlobalVectors_test_move_to_vector_of_vector" {
         }
     }
 }
-===> Test result of GlobalVectors::test_move_to_vector_of_vector: Succeed(Stopped) (used_gas=304362): []
+===> Test result of GlobalVectors::test_move_to_vector_of_vector: Succeed(Stopped) (used_gas=304374): []
 
 // test of GlobalVectors::test_pop_back_global
 /* =======================================
@@ -4114,7 +4114,7 @@ object "test_A2_GlobalVectors_test_pop_back_global" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $MakeTypeStorageBase(category, type_hash, id) -> offs {
@@ -4231,7 +4231,7 @@ object "test_A2_GlobalVectors_test_pop_back_global" {
         }
     }
 }
-===> Test result of GlobalVectors::test_pop_back_global: Succeed(Stopped) (used_gas=120807): []
+===> Test result of GlobalVectors::test_pop_back_global: Succeed(Stopped) (used_gas=120810): []
 
 // test of GlobalVectors::test_pop_back_struct_global
 /* =======================================
@@ -4567,10 +4567,10 @@ object "test_A2_GlobalVectors_test_pop_back_struct_global" {
             let e_ptr := $IndexPtr(v_ptr, add(32, mul(sub(size, 1), 32)))
             if $IsStoragePtr(e_ptr) {
                 let e_offs := $OffsetPtr(e_ptr)
-                let $linked_src_3681206257 := $AlignedStorageLoad(e_offs)
+                let linked_src := $AlignedStorageLoad(e_offs)
                 e := $Malloc(24)
-                mstore(add(e, 0), $AlignedStorageLoad(add($linked_src_3681206257, 0)))
-                $AlignedStorageStore(add($linked_src_3681206257, 0), 0)
+                mstore(add(e, 0), $AlignedStorageLoad(add(linked_src, 0)))
+                $AlignedStorageStore(add(linked_src, 0), 0)
                 $AlignedStorageStore(e_offs, 0)
             }
             $StoreU64(v_ptr, sub(size, 1))
@@ -4706,7 +4706,7 @@ object "test_A2_GlobalVectors_test_pop_back_struct_global" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $MakeTypeStorageBase(category, type_hash, id) -> offs {
@@ -4842,7 +4842,7 @@ object "test_A2_GlobalVectors_test_pop_back_struct_global" {
         }
     }
 }
-===> Test result of GlobalVectors::test_pop_back_struct_global: Succeed(Stopped) (used_gas=188703): []
+===> Test result of GlobalVectors::test_pop_back_struct_global: Succeed(Stopped) (used_gas=188712): []
 
 // test of GlobalVectors::test_push_back_global
 /* =======================================
@@ -5310,7 +5310,7 @@ object "test_A2_GlobalVectors_test_push_back_global" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $MakeTypeStorageBase(category, type_hash, id) -> offs {
@@ -5430,7 +5430,7 @@ object "test_A2_GlobalVectors_test_push_back_global" {
         }
     }
 }
-===> Test result of GlobalVectors::test_push_back_global: Succeed(Stopped) (used_gas=150814): []
+===> Test result of GlobalVectors::test_push_back_global: Succeed(Stopped) (used_gas=150817): []
 
 // test of GlobalVectors::test_push_back_struct_global
 /* =======================================
@@ -5892,7 +5892,7 @@ object "test_A2_GlobalVectors_test_push_back_struct_global" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $MakeTypeStorageBase(category, type_hash, id) -> offs {
@@ -6031,7 +6031,7 @@ object "test_A2_GlobalVectors_test_push_back_struct_global" {
         }
     }
 }
-===> Test result of GlobalVectors::test_push_back_struct_global: Succeed(Stopped) (used_gas=328426): []
+===> Test result of GlobalVectors::test_push_back_struct_global: Succeed(Stopped) (used_gas=328444): []
 
 // test of GlobalVectors::test_swap_global
 /* =======================================
@@ -6425,7 +6425,7 @@ object "test_A2_GlobalVectors_test_swap_global" {
         }
         function $StorageKey(group, word) -> key {
           mstore(32, word)
-          mstore(64, group)
+          mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
         function $MakeTypeStorageBase(category, type_hash, id) -> offs {
@@ -6545,4 +6545,4 @@ object "test_A2_GlobalVectors_test_swap_global" {
         }
     }
 }
-===> Test result of GlobalVectors::test_swap_global: Succeed(Stopped) (used_gas=123133): []
+===> Test result of GlobalVectors::test_swap_global: Succeed(Stopped) (used_gas=123136): []

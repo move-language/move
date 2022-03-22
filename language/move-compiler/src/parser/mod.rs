@@ -8,7 +8,6 @@ pub mod ast;
 pub mod comments;
 pub mod keywords;
 pub(crate) mod merge_spec_modules;
-pub(crate) mod sources_shadow_deps;
 
 use crate::{
     diagnostics::{codes::Severity, Diagnostics, FilesSourceText},
@@ -41,11 +40,14 @@ pub(crate) fn parse_program(
         let mut res = vec![];
         for (paths, idx) in paths_with_mapping {
             res.extend(
-                find_move_filenames(&[paths], true)?
+                find_move_filenames(&[paths.as_str()], true)?
                     .into_iter()
                     .map(|s| (Symbol::from(s), idx)),
             );
         }
+        // sort the filenames so errors about redefinitions, or other inter-file conflicts, are
+        // deterministic
+        res.sort_by(|(fname1, _), (fname2, _)| fname1.cmp(fname2));
         Ok(res)
     }
 

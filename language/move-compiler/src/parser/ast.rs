@@ -967,13 +967,13 @@ impl AstDebug for Program {
             source_definitions,
             lib_definitions,
         } = self;
-        w.write("------ Lib Defs: ------");
+        w.writeln("------ Lib Defs: ------");
         for (idx, src) in lib_definitions {
             named_address_maps.get(*idx).ast_debug(w);
             src.ast_debug(w);
         }
         w.new_line();
-        w.write("------ Source Defs: ------");
+        w.writeln("------ Source Defs: ------");
         for (idx, src) in source_definitions {
             named_address_maps.get(*idx).ast_debug(w);
             src.ast_debug(w);
@@ -984,7 +984,8 @@ impl AstDebug for Program {
 impl AstDebug for NamedAddressMap {
     fn ast_debug(&self, w: &mut AstWriter) {
         for (sym, addr) in self {
-            w.writeln(&format!("{} => {}", sym, addr))
+            w.write(&format!("{} => {}", sym, addr));
+            w.new_line()
         }
     }
 }

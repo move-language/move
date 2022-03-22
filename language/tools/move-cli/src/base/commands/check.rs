@@ -4,11 +4,7 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
-use move_compiler::{
-    self,
-    shared::{Flags, NumericalAddress},
-    Compiler,
-};
+use move_compiler::{self, shared::NumericalAddress, Compiler, Flags};
 
 /// Type-check the user modules in `files` and the dependencies in `interface_files`
 pub fn check(

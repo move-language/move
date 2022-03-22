@@ -291,10 +291,9 @@ impl<'env> ModelBuilder<'env> {
 
     pub fn resolve_address(&self, loc: &Loc, addr: &EA::Address) -> NumericalAddress {
         match addr {
-            EA::Address::Anonymous(bytes) => bytes.value,
-            EA::Address::Named(_n, Some(bytes)) => *bytes,
-            EA::Address::Named(n, None) => {
-                self.error(loc, &format!("Undeclared address `{}`", n));
+            EA::Address::Numerical(_, bytes) => bytes.value,
+            EA::Address::NamedUnassigned(name) => {
+                self.error(loc, &format!("Undeclared address `{}`", name));
                 NumericalAddress::DEFAULT_ERROR_ADDRESS
             }
         }

@@ -346,11 +346,10 @@ impl SharedTestingConfig {
 
         let stackless_model = if self.check_stackless_vm {
             let model = run_model_builder_with_options_and_compilation_flags(
-                &filtered_sources,
-                &[],
+                vec![(filtered_sources, self.named_address_values.clone())],
+                vec![],
                 ModelBuilderOptions::default(),
                 Flags::testing(),
-                self.named_address_values.clone(),
             )
             .unwrap_or_else(|e| panic!("Unable to build stackless bytecode: {}", e));
 
@@ -571,11 +570,10 @@ impl SharedTestingConfig {
             .collect::<Vec<_>>();
 
         let model = run_model_builder_with_options_and_compilation_flags(
-            &filtered_sources,
-            &[],
+            vec![(filtered_sources, self.named_address_values.clone())],
+            vec![],
             ModelBuilderOptions::default(),
             Flags::testing(),
-            self.named_address_values.clone(),
         )
         .unwrap_or_else(|e| panic!("Unable to build move model: {}", e));
 

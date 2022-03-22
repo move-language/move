@@ -51,11 +51,11 @@ pub fn run_move_prover<W: WriteColor>(
 ) -> anyhow::Result<()> {
     let now = Instant::now();
     // Run the model builder.
+    let addrs = parse_addresses_from_options(options.move_named_address_values.clone())?;
     let env = run_model_builder_with_options(
-        &options.move_sources,
-        &options.move_deps,
+        vec![(options.move_sources.clone(), addrs.clone())],
+        vec![(options.move_deps.clone(), addrs)],
         options.model_builder.clone(),
-        parse_addresses_from_options(options.move_named_address_values.clone())?,
     )?;
     run_move_prover_with_model(&env, error_writer, options, Some(now))
 }

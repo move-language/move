@@ -207,8 +207,8 @@ impl<'a> Context<'a> {
 
     fn ir_module_alias(sp!(_, ModuleIdent_ { address, module }): &ModuleIdent) -> IR::ModuleName {
         let s = match address {
-            Address::Anonymous(sp!(_, a_)) => format!("{:X}::{}", a_, module),
-            Address::Named(n, _) => format!("{}::{}", n, module),
+            Address::Numerical(_, sp!(_, a_)) => format!("{:X}::{}", a_, module),
+            Address::NamedUnassigned(name) => format!("{}::{}", name, module),
         };
         IR::ModuleName(s.into())
     }

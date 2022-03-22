@@ -10,7 +10,7 @@ use move_compiler::shared::NumericalAddress;
 use move_model::{
     model::{FunId, GlobalEnv, QualifiedId},
     options::ModelBuilderOptions,
-    run_model_builder_with_options,
+    run_model_builder_with_options_and_compilation_flags,
 };
 use move_prover_test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives};
 use move_stdlib::move_stdlib_named_addresses;
@@ -39,11 +39,11 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         "Evm".to_string(),
         NumericalAddress::parse_str("0x2").unwrap(),
     );
-    let env = run_model_builder_with_options(
-        &sources,
-        &deps,
+    let env = run_model_builder_with_options_and_compilation_flags(
+        vec![(sources, named_address_mapping.clone())],
+        vec![(deps, named_address_mapping)],
         ModelBuilderOptions::default(),
-        named_address_mapping,
+        move_compiler::Flags::empty().set_sources_shadow_deps(true),
     )?;
     for exp in std::iter::once(String::new()).chain(experiments.into_iter()) {
         let mut options = Options {

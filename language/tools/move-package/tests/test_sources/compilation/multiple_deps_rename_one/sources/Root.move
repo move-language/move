@@ -1,9 +1,9 @@
 module A::A {
     use DA::A as DAA;
-    use A::A as CAA;
+    use C::A as CA;
 
     public fun foo() {
         DAA::foo();
-        CAA::foo()
+        CA::foo()
     }
 }

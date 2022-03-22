@@ -1,6 +1,6 @@
 // Unbound address in all cases
 module A::M { // suggests declaration
-    use B::M;
+    use B::X;
 
     friend C::M;
     friend D::M::foo;

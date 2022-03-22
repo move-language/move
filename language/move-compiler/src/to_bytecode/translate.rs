@@ -192,8 +192,8 @@ fn module(
         .collect();
 
     let addr_name = match &ident.value.address {
-        Address::Anonymous(_) => None,
-        Address::Named(n, _) => Some(*n),
+        Address::Numerical(None, _) => None,
+        Address::Numerical(Some(name), _) | Address::NamedUnassigned(name) => Some(*name),
     };
     let addr_bytes = context.resolve_address(ident.value.address);
     let (imports, explicit_dependency_declarations) = context.materialize(

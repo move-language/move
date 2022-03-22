@@ -12,8 +12,11 @@ use move_prover_test_utils::baseline_test::verify_or_update_baseline;
 use std::path::Path;
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
-    let targets = vec![path.to_str().unwrap().to_string()];
-    let env = run_model_builder(&targets, &[])?;
+    let targets = vec![(
+        vec![path.to_str().unwrap().to_string()],
+        std::collections::BTreeMap::<String, _>::new(),
+    )];
+    let env = run_model_builder(targets, vec![])?;
     let diags = if env.diag_count(Severity::Warning) > 0 {
         let mut writer = Buffer::no_color();
         env.report_diag(&mut writer, Severity::Warning);

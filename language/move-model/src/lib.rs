@@ -8,6 +8,7 @@ use codespan_reporting::diagnostic::{Diagnostic, Label, LabelStyle};
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::warn;
+use move_symbol_pool::Symbol as MoveSymbol;
 use std::collections::{BTreeMap, BTreeSet};
 
 use builder::module_builder::ModuleBuilder;
@@ -27,7 +28,7 @@ use move_compiler::{
     diagnostics::Diagnostics,
     expansion::ast::{self as E, Address, ModuleDefinition, ModuleIdent, ModuleIdent_},
     parser::ast::{self as P, ModuleName as ParserModuleName},
-    shared::{parse_named_address, unique_map::UniqueMap, NumericalAddress},
+    shared::{parse_named_address, unique_map::UniqueMap, AddressScopedFiles, NumericalAddress},
     Compiler, Flags, PASS_COMPILATION, PASS_EXPANSION, PASS_PARSER,
 };
 use move_core_types::{account_address::AccountAddress, identifier::Identifier};
@@ -61,55 +62,47 @@ pub mod ty;
 
 /// Build the move model with default compilation flags and default options and no named addresses.
 /// This collects transitive dependencies for move sources from the provided directory list.
-pub fn run_model_builder(
-    move_sources: &[String],
-    deps_dir: &[String],
+pub fn run_model_builder<Paths: Into<MoveSymbol>, NamedAddress: Into<MoveSymbol>>(
+    move_sources: Vec<AddressScopedFiles<Paths, NamedAddress>>,
+    deps: Vec<AddressScopedFiles<Paths, NamedAddress>>,
 ) -> anyhow::Result<GlobalEnv> {
-    run_model_builder_with_options(
-        move_sources,
-        deps_dir,
-        ModelBuilderOptions::default(),
-        BTreeMap::new(),
-    )
+    run_model_builder_with_options(move_sources, deps, ModelBuilderOptions::default())
 }
 
 /// Build the move model with default compilation flags and custom options and a set of provided
 /// named addreses.
 /// This collects transitive dependencies for move sources from the provided directory list.
-pub fn run_model_builder_with_options(
-    move_sources: &[String],
-    deps_dir: &[String],
+pub fn run_model_builder_with_options<Paths: Into<MoveSymbol>, NamedAddress: Into<MoveSymbol>>(
+    move_sources: Vec<AddressScopedFiles<Paths, NamedAddress>>,
+    deps: Vec<AddressScopedFiles<Paths, NamedAddress>>,
     options: ModelBuilderOptions,
-    named_address_mapping: BTreeMap<String, NumericalAddress>,
 ) -> anyhow::Result<GlobalEnv> {
     run_model_builder_with_options_and_compilation_flags(
         move_sources,
-        deps_dir,
+        deps,
         options,
         Flags::empty(),
-        named_address_mapping,
     )
 }
 
 /// Build the move model with custom compilation flags and custom options
 /// This collects transitive dependencies for move sources from the provided directory list.
-pub fn run_model_builder_with_options_and_compilation_flags(
-    move_sources: &[String],
-    deps_dir: &[String],
+pub fn run_model_builder_with_options_and_compilation_flags<
+    Paths: Into<MoveSymbol>,
+    NamedAddress: Into<MoveSymbol>,
+>(
+    move_sources: Vec<AddressScopedFiles<Paths, NamedAddress>>,
+    deps: Vec<AddressScopedFiles<Paths, NamedAddress>>,
     options: ModelBuilderOptions,
     flags: Flags,
-    named_address_mapping: BTreeMap<String, NumericalAddress>,
 ) -> anyhow::Result<GlobalEnv> {
     let mut env = GlobalEnv::new();
     env.set_extension(options);
 
     // Step 1: parse the program to get comments and a separation of targets and dependencies.
-    let (files, comments_and_compiler_res) = Compiler::new(
-        vec![(move_sources.to_vec(), named_address_mapping.clone())],
-        vec![(deps_dir.to_vec(), named_address_mapping)],
-    )
-    .set_flags(flags)
-    .run::<PASS_PARSER>()?;
+    let (files, comments_and_compiler_res) = Compiler::new(move_sources, deps)
+        .set_flags(flags)
+        .run::<PASS_PARSER>()?;
     let (comment_map, compiler) = match comments_and_compiler_res {
         Err(diags) => {
             // Add source files so that the env knows how to translate locations of parse errors
@@ -167,17 +160,11 @@ pub fn run_model_builder_with_options_and_compilation_flags(
         Ok(compiler) => compiler.into_ast(),
     };
     // Extract the module/script closure
-    let mut visited_addresses = BTreeSet::new();
     let mut visited_modules = BTreeSet::new();
     for (_, mident, mdef) in &expansion_ast.modules {
         let src_file_hash = mdef.loc.file_hash();
         if !dep_files.contains(&src_file_hash) {
-            collect_related_modules_recursive(
-                mident,
-                &expansion_ast.modules,
-                &mut visited_addresses,
-                &mut visited_modules,
-            );
+            collect_related_modules_recursive(mident, &expansion_ast.modules, &mut visited_modules);
         }
     }
     for sdef in expansion_ast.scripts.values() {
@@ -187,14 +174,8 @@ pub fn run_model_builder_with_options_and_compilation_flags(
                 collect_related_modules_recursive(
                     mident,
                     &expansion_ast.modules,
-                    &mut visited_addresses,
                     &mut visited_modules,
                 );
-            }
-            for addr in &sdef.used_addresses {
-                if let Address::Named(n, _) = &addr {
-                    visited_addresses.insert(&n.value);
-                }
             }
         }
     }
@@ -243,34 +224,18 @@ pub fn run_model_builder_with_options_and_compilation_flags(
     Ok(env)
 }
 
-fn collect_used_addresses<'a>(
-    used_addresses: &'a BTreeSet<Address>,
-    visited_addresses: &mut BTreeSet<&'a str>,
-) {
-    for addr in used_addresses {
-        if let Address::Named(n, _) = &addr {
-            visited_addresses.insert(&n.value);
-        }
-    }
-}
-
 fn collect_related_modules_recursive<'a>(
     mident: &'a ModuleIdent_,
     modules: &'a UniqueMap<ModuleIdent, ModuleDefinition>,
-    visited_addresses: &mut BTreeSet<&'a str>,
     visited_modules: &mut BTreeSet<ModuleIdent_>,
 ) {
     if visited_modules.contains(mident) {
         return;
     }
     let mdef = modules.get_(mident).unwrap();
-    if let Address::Named(n, _) = &mident.address {
-        visited_addresses.insert(&n.value);
-    }
-    collect_used_addresses(&mdef.used_addresses, visited_addresses);
     visited_modules.insert(*mident);
     for (_, next_mident, _) in &mdef.immediate_neighbors {
-        collect_related_modules_recursive(next_mident, modules, visited_addresses, visited_modules);
+        collect_related_modules_recursive(next_mident, modules, visited_modules);
     }
 }
 
@@ -512,7 +477,7 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<AnnotatedCompiledUnit>, mut 
                     };
                     // Convert the script into a module.
                     let address =
-                        Address::Anonymous(sp(loc, NumericalAddress::DEFAULT_ERROR_ADDRESS));
+                        Address::Numerical(None, sp(loc, NumericalAddress::DEFAULT_ERROR_ADDRESS));
                     let ident = sp(
                         loc,
                         ModuleIdent_::new(address, ParserModuleName(function_name.0)),

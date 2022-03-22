@@ -90,8 +90,8 @@ pub struct Script {
 
 #[derive(Clone, Copy)]
 pub enum Address {
-    Anonymous(Spanned<NumericalAddress>),
-    Named(Name, Option<NumericalAddress>),
+    Numerical(Option<Name>, Spanned<NumericalAddress>),
+    NamedUnassigned(Name),
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ModuleIdent_ {
@@ -494,8 +494,8 @@ impl fmt::Debug for Address {
 impl PartialEq for Address {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::Anonymous(l), Self::Anonymous(r)) => l == r,
-            (Self::Named(l, _), Self::Named(r, _)) => l == r,
+            (Self::Numerical(_, l), Self::Numerical(_, r)) => l == r,
+            (Self::NamedUnassigned(l), Self::NamedUnassigned(r)) => l == r,
             _ => false,
         }
     }
@@ -514,11 +514,11 @@ impl Ord for Address {
         use std::cmp::Ordering;
 
         match (self, other) {
-            (Self::Anonymous(_), Self::Named(_, _)) => Ordering::Less,
-            (Self::Named(_, _), Self::Anonymous(_)) => Ordering::Greater,
+            (Self::Numerical(_, _), Self::NamedUnassigned(_)) => Ordering::Less,
+            (Self::NamedUnassigned(_), Self::Numerical(_, _)) => Ordering::Greater,
 
-            (Self::Anonymous(l), Self::Anonymous(r)) => l.cmp(r),
-            (Self::Named(l, _), Self::Named(r, _)) => l.cmp(r),
+            (Self::Numerical(_, l), Self::Numerical(_, r)) => l.cmp(r),
+            (Self::NamedUnassigned(l), Self::NamedUnassigned(r)) => l.cmp(r),
         }
     }
 }
@@ -526,12 +526,8 @@ impl Ord for Address {
 impl Hash for Address {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         match self {
-            Self::Anonymous(sp!(_, bytes)) => bytes.hash(state),
-            Self::Named(n, None) => n.hash(state),
-            Self::Named(n, Some(bytes)) => {
-                n.hash(state);
-                bytes.hash(state)
-            }
+            Self::Numerical(_, sp!(_, bytes)) => bytes.hash(state),
+            Self::NamedUnassigned(name) => name.hash(state),
         }
     }
 }
@@ -542,14 +538,13 @@ impl Hash for Address {
 
 impl Address {
     pub const fn anonymous(loc: Loc, address: NumericalAddress) -> Self {
-        Self::Anonymous(sp(loc, address))
+        Self::Numerical(None, sp(loc, address))
     }
 
     pub fn into_addr_bytes(self) -> NumericalAddress {
         match self {
-            Self::Anonymous(sp!(_, bytes)) => bytes,
-            Self::Named(_, Some(bytes)) => bytes,
-            Self::Named(_, None) => NumericalAddress::DEFAULT_ERROR_ADDRESS,
+            Self::Numerical(_, sp!(_, bytes)) => bytes,
+            Self::NamedUnassigned(_) => NumericalAddress::DEFAULT_ERROR_ADDRESS,
         }
     }
 }
@@ -720,8 +715,9 @@ impl<'a> IntoIterator for AbilitySet {
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         match self {
-            Self::Anonymous(sp!(_, bytes)) => write!(f, "{}", bytes),
-            Self::Named(n, _) => write!(f, "{}", n),
+            Self::Numerical(None, sp!(_, bytes)) => write!(f, "{}", bytes),
+            Self::Numerical(Some(name), sp!(_, bytes)) => write!(f, "({}={})", name, bytes),
+            Self::NamedUnassigned(name) => write!(f, "{}", name),
         }
     }
 }

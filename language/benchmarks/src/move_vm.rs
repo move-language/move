@@ -3,7 +3,7 @@
 
 use criterion::{measurement::Measurement, Criterion};
 use move_binary_format::CompiledModule;
-use move_compiler::{compiled_unit::AnnotatedCompiledUnit, Compiler, Flags};
+use move_compiler::{compiled_unit::AnnotatedCompiledUnit, Compiler};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
@@ -39,7 +39,6 @@ fn compile_modules() -> Vec<CompiledModule> {
         vec![(src_files, move_stdlib::move_stdlib_named_addresses())],
         vec![],
     )
-    .set_flags(Flags::empty().set_sources_shadow_deps(false))
     .build_and_report()
     .expect("Error compiling...");
     compiled_units

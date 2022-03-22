@@ -432,6 +432,7 @@ fn compile_source_unit(
         vec![(deps.to_vec(), named_address_mapping)],
     )
     .set_pre_compiled_lib_opt(pre_compiled_deps)
+    .set_flags(move_compiler::Flags::empty().set_sources_shadow_deps(true))
     .run::<PASS_COMPILATION>()?;
     let units_or_diags = comments_and_compiler_res
         .map(|(_comments, move_compiler)| move_compiler.into_compiled_units());

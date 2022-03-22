@@ -670,6 +670,7 @@ impl ResolvedPackage {
             .map(Symbol::from)
             .collect())
     }
+
     /// Returns the transitive dependencies of this package in dependency order
     pub fn transitive_dependencies(&self, resolved_graph: &ResolvedGraph) -> Vec<PackageName> {
         let mut seen = BTreeSet::new();

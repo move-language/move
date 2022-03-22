@@ -37,11 +37,11 @@ pub fn run_to_yul_errors_to_stderr(options: Options) -> anyhow::Result<()> {
 /// Run move-to-yul compiler and print errors to given writer.
 pub fn run_to_yul<W: WriteColor>(error_writer: &mut W, options: Options) -> anyhow::Result<()> {
     // Run the model builder.
+    let addrs = parse_addresses_from_options(options.named_address_mapping.clone())?;
     let env = run_model_builder_with_options(
-        &options.sources,
-        &options.dependencies,
+        vec![(options.sources.clone(), addrs.clone())],
+        vec![(options.dependencies.clone(), addrs)],
         ModelBuilderOptions::default(),
-        parse_addresses_from_options(options.named_address_mapping.clone())?,
     )?;
     // If the model contains any errors, report them now and exit.
     check_errors(

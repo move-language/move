@@ -4,11 +4,7 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
-use move_compiler::{
-    self,
-    shared::{Flags, NumericalAddress},
-    Compiler,
-};
+use move_compiler::{self, shared::NumericalAddress, Compiler, Flags};
 
 /// Compile the user modules in `sources` against the dependencies in `interface_files`, placing
 /// the resulting binaries in `output_dir`.

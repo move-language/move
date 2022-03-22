@@ -4,7 +4,7 @@ error[E03002]: unbound module
   ┌─ ./sources/UseSigner.move:2:7
   │
 2 │   use Std::Signer;
-  │       ^^^^^^^^^^^ Invalid 'use'. Unbound module: 'Std::Signer'
+  │       ^^^^^^^^^^^ Invalid 'use'. Unbound module: '(Std=0x1)::Signer'
 
 error[E03002]: unbound module
   ┌─ ./sources/UseSigner.move:5:5

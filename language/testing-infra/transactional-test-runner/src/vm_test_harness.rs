@@ -291,7 +291,7 @@ static PRECOMPILED_MOVE_STDLIB: Lazy<FullyCompiledProgram> = Lazy::new(|| {
             move_stdlib::move_stdlib_named_addresses(),
         )],
         None,
-        move_compiler::Flags::empty().set_sources_shadow_deps(false),
+        move_compiler::Flags::empty(),
     )
     .unwrap();
     match program_res {

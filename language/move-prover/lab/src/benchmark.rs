@@ -127,11 +127,11 @@ fn run_benchmark(
     } else {
         Options::default()
     };
+    let addrs = parse_addresses_from_options(options.move_named_address_values.clone())?;
     let env = run_model_builder_with_options(
-        modules,
-        dep_dirs,
+        vec![(modules.to_vec(), addrs.clone())],
+        vec![(dep_dirs.to_vec(), addrs)],
         options.model_builder.clone(),
-        parse_addresses_from_options(options.move_named_address_values.clone())?,
     )?;
     let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
 

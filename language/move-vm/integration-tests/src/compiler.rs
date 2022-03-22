@@ -3,7 +3,7 @@
 
 use anyhow::{bail, Result};
 use move_binary_format::file_format::{CompiledModule, CompiledScript};
-use move_compiler::{compiled_unit::AnnotatedCompiledUnit, Compiler as MoveCompiler, Flags};
+use move_compiler::{compiled_unit::AnnotatedCompiledUnit, Compiler as MoveCompiler};
 use std::{fs::File, io::Write, path::Path};
 use tempfile::tempdir;
 
@@ -23,7 +23,6 @@ pub fn compile_units(s: &str) -> Result<Vec<AnnotatedCompiledUnit>> {
         )],
         vec![],
     )
-    .set_flags(Flags::empty().set_sources_shadow_deps(false))
     .build_and_report()?;
 
     dir.close()?;
@@ -44,11 +43,10 @@ pub fn compile_modules_in_file(path: &Path) -> Result<Vec<CompiledModule>> {
     let (_, units) = MoveCompiler::new(
         vec![(
             vec![path.to_str().unwrap().to_string()],
-            std::collections::BTreeMap::new(),
+            std::collections::BTreeMap::<String, _>::new(),
         )],
         vec![],
     )
-    .set_flags(Flags::empty().set_sources_shadow_deps(false))
     .build_and_report()?;
 
     expect_modules(units).collect()

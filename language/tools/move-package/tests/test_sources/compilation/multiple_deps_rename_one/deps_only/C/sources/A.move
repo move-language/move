@@ -1,3 +1,3 @@
-module A::A {
+module C::A {
     public fun foo() { }
 }

@@ -3,4 +3,4 @@ name = "C"
 version = "0.0.0"
 
 [addresses]
-A = "0x1"
+C = "0x3"

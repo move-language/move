@@ -314,14 +314,14 @@ pub fn shortest_cycle<'a, T: Ord + Hash>(
 // Compilation Env
 //**************************************************************************************************
 
-pub type AddressScopedFiles = (Vec<String>, BTreeMap<String, NumericalAddress>);
+pub type AddressScopedFiles<Path, NamedAddress> =
+    (Vec<Path>, BTreeMap<NamedAddress, NumericalAddress>);
 pub type NamedAddressMap = BTreeMap<Symbol, NumericalAddress>;
-pub(crate) type AddressScopedFileIndexed = (String, NamedAddressMapIndex);
-
-pub type AttributeDeriver = dyn Fn(&mut CompilationEnv, &mut ModuleDefinition);
+pub(crate) type AddressScopedFileIndexed = (Symbol, NamedAddressMapIndex);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct NamedAddressMapIndex(usize);
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct NamedAddressMaps(Vec<NamedAddressMap>);
 
@@ -340,6 +340,8 @@ impl NamedAddressMaps {
         &self.0[idx.0]
     }
 }
+
+pub type AttributeDeriver = dyn Fn(&mut CompilationEnv, &mut ModuleDefinition);
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CompilationEnv {
@@ -448,21 +450,21 @@ pub struct Flags {
     )]
     flavor: String,
 
-    /// If set, do not allow modules defined in source_files to shadow modules of the same id that
-    /// exist in dependencies. Checking will fail in this case.
+    /// If set, source files will not shadow dependency files. If the same file is passed to both,
+    /// an error will be raised
     #[clap(
-        name = "SOURCES_DO_NOT_SHADOW_DEPS",
-        short = cli::NO_SHADOW_SHORT,
-        long = cli::NO_SHADOW,
+        name = "SOURCES_SHADOW_DEPS",
+        short = cli::SHADOW_SHORT,
+        long = cli::SHADOW,
     )]
-    no_shadow: bool,
+    shadow: bool,
 }
 
 impl Flags {
     pub fn empty() -> Self {
         Self {
             test: false,
-            no_shadow: false,
+            shadow: false,
             flavor: "".to_string(),
         }
     }
@@ -470,7 +472,7 @@ impl Flags {
     pub fn testing() -> Self {
         Self {
             test: true,
-            no_shadow: false,
+            shadow: false,
             flavor: "".to_string(),
         }
     }
@@ -484,7 +486,7 @@ impl Flags {
 
     pub fn set_sources_shadow_deps(self, sources_shadow_deps: bool) -> Self {
         Self {
-            no_shadow: !sources_shadow_deps,
+            shadow: sources_shadow_deps,
             ..self
         }
     }
@@ -498,7 +500,7 @@ impl Flags {
     }
 
     pub fn sources_shadow_deps(&self) -> bool {
-        !self.no_shadow
+        self.shadow
     }
 
     pub fn get_flavor(&self) -> &str {

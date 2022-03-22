@@ -56,10 +56,12 @@ fn compile_yul_to_bytecode_bytes(filename: &str) -> Result<Vec<u8>> {
         NumericalAddress::parse_str("0x2").unwrap(),
     );
     let env = run_model_builder_with_options(
-        &[contract_path(filename).to_string_lossy().to_string()],
-        &deps,
+        vec![(
+            vec![contract_path(filename).to_string_lossy().to_string()],
+            named_address_mapping.clone(),
+        )],
+        vec![(deps, named_address_mapping)],
         ModelBuilderOptions::default(),
-        named_address_mapping,
     )?;
     let options = Options::default();
     let (_, out) = Generator::run(&options, &env);

@@ -119,6 +119,7 @@ pub struct Function {
 //**************************************************************************************************
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum TypeName_ {
     Builtin(BuiltinTypeName),
     ModuleType(ModuleIdent, StructName),

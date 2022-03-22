@@ -214,10 +214,9 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let mut sources = extract_test_directives(path, "// dep:")?;
     sources.push(path.to_string_lossy().to_string());
     let env: GlobalEnv = run_model_builder_with_options(
-        &sources,
-        &[],
+        vec![(sources, move_stdlib::move_stdlib_named_addresses())],
+        vec![],
         ModelBuilderOptions::default(),
-        move_stdlib::move_stdlib_named_addresses(),
     )?;
     let out = if env.has_errors() {
         let mut error_writer = Buffer::no_color();

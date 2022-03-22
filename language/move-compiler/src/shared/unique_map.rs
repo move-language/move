@@ -67,6 +67,10 @@ impl<K: TName, V> UniqueMap<K, V> {
         self.0.get(key_).map(|loc_value| &loc_value.0)
     }
 
+    pub fn get_key(&self, key: &K) -> Option<&K::Key> {
+        self.0.get_key_value(key.borrow().1).map(|(k, _v)| k)
+    }
+
     pub fn remove(&mut self, key: &K) -> Option<V> {
         self.remove_(key.borrow().1)
     }

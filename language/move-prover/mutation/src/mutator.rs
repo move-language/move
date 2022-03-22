@@ -121,11 +121,11 @@ fn apply_mutation(
     dep_dirs: &[String],
 ) -> anyhow::Result<()> {
     println!("building model");
+    let addrs = parse_addresses_from_options(addresses.to_owned())?;
     let env = run_model_builder_with_options(
-        modules,
-        dep_dirs,
+        vec![(modules.to_vec(), addrs.clone())],
+        vec![(dep_dirs.to_vec(), addrs)],
         ModelBuilderOptions::default(),
-        parse_addresses_from_options(addresses.to_owned())?,
     )?;
     let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
     let mut options = if let Some(config_file) = config_file_opt {

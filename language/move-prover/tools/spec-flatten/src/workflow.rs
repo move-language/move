@@ -97,10 +97,9 @@ pub(crate) fn prepare_with_override(
 
     // run move model builder
     let mut env = run_model_builder_with_options(
-        &options.srcs,
-        &options.deps,
+        vec![(options.srcs.clone(), named_addresses.clone())],
+        vec![(options.deps.clone(), named_addresses.clone())],
         get_model_options(options),
-        named_addresses,
     )?;
     if env.has_errors() {
         return Err(anyhow!("Error in model building"));

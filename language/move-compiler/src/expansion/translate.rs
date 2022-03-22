@@ -128,7 +128,8 @@ pub fn program(
 
     let mut context = Context::new(compilation_env, module_members);
 
-    let mut module_map = UniqueMap::new();
+    let mut source_module_map = UniqueMap::new();
+    let mut lib_module_map = UniqueMap::new();
     let mut scripts = vec![];
     let P::Program {
         named_address_maps,
@@ -139,14 +140,23 @@ pub fn program(
     context.is_source_definition = true;
     for (named_addr_map_idx, def) in source_definitions {
         context.named_address_mapping = Some(named_address_maps.get(named_addr_map_idx));
-        definition(&mut context, &mut module_map, &mut scripts, def)
+        definition(&mut context, &mut source_module_map, &mut scripts, def)
     }
 
     context.is_source_definition = false;
     for (named_addr_map_idx, def) in lib_definitions {
         context.named_address_mapping = Some(named_address_maps.get(named_addr_map_idx));
-        definition(&mut context, &mut module_map, &mut scripts, def)
+        definition(&mut context, &mut lib_module_map, &mut scripts, def)
     }
+
+    for (mident, module) in lib_module_map {
+        if let Err((mident, old_loc)) = source_module_map.add(mident, module) {
+            if !context.env.flags().sources_shadow_deps() {
+                duplicate_module(&mut context, &source_module_map, mident, old_loc)
+            }
+        }
+    }
+    let mut module_map = source_module_map;
 
     let mut scripts = {
         let mut collected: BTreeMap<Symbol, Vec<E::Script>> = BTreeMap::new();
@@ -178,7 +188,6 @@ pub fn program(
         keyed
     };
 
-    super::unique_modules_after_mapping::verify(context.env, &module_map);
     super::dependency_ordering::verify(context.env, &mut module_map, &mut scripts);
     E::Program {
         modules: module_map,
@@ -244,16 +253,21 @@ fn address_(
     match ln_ {
         P::LeadingNameAccess_::AnonymousAddress(bytes) => {
             debug_assert!(name_res.is_ok()); //
-            Address::Anonymous(sp(loc, bytes))
+            Address::Numerical(None, sp(loc, bytes))
         }
-        P::LeadingNameAccess_::Name(n) => {
-            let addr = named_address_mapping.get(&n.value);
-            if name_res.is_ok() && addr.is_none() {
-                compilation_env.add_diag(address_without_value_error(suggest_declaration, loc, &n));
+        P::LeadingNameAccess_::Name(n) => match named_address_mapping.get(&n.value).copied() {
+            Some(addr) => Address::Numerical(Some(n), sp(loc, addr)),
+            None => {
+                if name_res.is_ok() {
+                    compilation_env.add_diag(address_without_value_error(
+                        suggest_declaration,
+                        loc,
+                        &n,
+                    ));
+                }
+                Address::NamedUnassigned(n)
             }
-
-            Address::Named(n, addr.copied())
-        }
+        },
     }
 }
 
@@ -293,6 +307,22 @@ fn check_module_address(
     }
 }
 
+fn duplicate_module(
+    context: &mut Context,
+    module_map: &UniqueMap<ModuleIdent, E::ModuleDefinition>,
+    mident: ModuleIdent,
+    old_loc: Loc,
+) {
+    let old_mident = module_map.get_key(&mident).unwrap();
+    let dup_msg = format!("Duplicate definition for module '{}'", mident);
+    let prev_msg = format!("Module previously defined here, with '{}'", old_mident);
+    context.env.add_diag(diag!(
+        Declarations::DuplicateItem,
+        (mident.loc, dup_msg),
+        (old_loc, prev_msg),
+    ))
+}
+
 fn module(
     context: &mut Context,
     module_map: &mut UniqueMap<ModuleIdent, E::ModuleDefinition>,
@@ -302,12 +332,7 @@ fn module(
     assert!(context.address == None);
     let (mident, mod_) = module_(context, module_address, module_def);
     if let Err((mident, old_loc)) = module_map.add(mident, mod_) {
-        let mmsg = format!("Duplicate definition for module '{}'", mident);
-        context.env.add_diag(diag!(
-            Declarations::DuplicateItem,
-            (mident.loc, mmsg),
-            (old_loc, "Module previously defined here"),
-        ));
+        duplicate_module(context, module_map, mident, old_loc)
     }
     context.address = None
 }
@@ -330,7 +355,7 @@ fn set_sender_address(
             context
                 .env
                 .add_diag(diag!(Declarations::InvalidModule, (loc, msg)));
-            Address::Anonymous(sp(loc, NumericalAddress::DEFAULT_ERROR_ADDRESS))
+            Address::Numerical(None, sp(loc, NumericalAddress::DEFAULT_ERROR_ADDRESS))
         }
     })
 }
@@ -631,7 +656,9 @@ fn all_module_members<'a>(
                         )
                     }
                     // Error will be handled when the module is compiled
-                    None => Address::Anonymous(sp(m.loc, NumericalAddress::DEFAULT_ERROR_ADDRESS)),
+                    None => {
+                        Address::Numerical(None, sp(m.loc, NumericalAddress::DEFAULT_ERROR_ADDRESS))
+                    }
                 };
                 module_members(members, always_add, addr, m)
             }

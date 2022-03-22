@@ -24,15 +24,16 @@ use move_compiler::{
         AnnotatedCompiledUnit, CompiledUnit, NamedCompiledModule, NamedCompiledScript,
     },
     diagnostics::FilesSourceText,
-    shared::{Flags, NumericalAddress},
+    shared::{AddressScopedFiles, Flags, NamedAddressMap, NumericalAddress},
     Compiler,
 };
 use move_core_types::language_storage::ModuleId;
 use move_docgen::{Docgen, DocgenOptions};
 use move_model::{model::GlobalEnv, options::ModelBuilderOptions, run_model_builder_with_options};
+use move_symbol_pool::Symbol;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     io::Write,
     path::{Path, PathBuf},
 };
@@ -463,7 +464,7 @@ impl CompiledPackage {
         w: &mut W,
         project_root: &Path,
         resolved_package: ResolvedPackage,
-        dependencies: Vec<(CompiledPackage, CompilationCachingStatus)>,
+        dependencies_with_status: Vec<(CompiledPackage, CompilationCachingStatus)>,
         resolution_graph: &ResolvedGraph,
         is_root_package: bool,
         mut compiler_driver: impl FnMut(
@@ -472,25 +473,16 @@ impl CompiledPackage {
         )
             -> Result<(FilesSourceText, Vec<AnnotatedCompiledUnit>)>,
     ) -> Result<(CompiledPackage, CompilationCachingStatus)> {
-        let mut module_resolution_metadata = BTreeMap::new();
-
-        // NB: This renaming needs to be applied in the topological order of dependencies
-        for package in &dependencies {
-            package
-                .0
-                .apply_renaming(&mut module_resolution_metadata, &resolved_package.renaming)
-        }
-
         let build_root_path = project_root.join(CompiledPackageLayout::Root.path());
         let path = build_root_path
             .join(resolved_package.source_package.package.name.as_str())
             .join(CompiledPackageLayout::BuildInfo.path());
 
-        // Compare the digest of the package being compiled against the digest of the package at the time
-        // of the last compilation to determine if we can reuse the already-compiled package or
+        // Compare the digest of the package being compiled against the digest of the package at the
+        // time of the last compilation to determine if we can reuse the already-compiled package or
         // not. If any dependency has changed we need to recompile.
         if let Ok(package) = OnDiskCompiledPackage::from_path(&path) {
-            if dependencies
+            if dependencies_with_status
                 .iter()
                 .all(|(_, cache_status)| cache_status.is_cached())
                 && Self::can_load_cached(
@@ -517,60 +509,44 @@ impl CompiledPackage {
             "BUILDING".bold().green(),
             resolved_package.source_package.package.name,
         )?;
-        let dependencies: Vec<_> = dependencies.into_iter().map(|x| x.0).collect();
 
-        let dep_paths = dependencies
-            .iter()
-            .map(|compiled_package| {
-                build_root_path
-                    .join(
-                        compiled_package
-                            .compiled_package_info
-                            .package_name
-                            .to_string(),
-                    )
-                    .join(CompiledPackageLayout::CompiledModules.path())
-                    .to_string_lossy()
-                    .to_string()
-            })
+        let dependencies = dependencies_with_status
+            .into_iter()
+            .map(|(package, _status)| package)
             .collect::<Vec<_>>();
 
-        let tmp_interface_dir = tempfile::tempdir()?;
-        let in_scope_named_addrs = resolved_package
-            .resolution_table
+        // gather dep source info
+        let deps_source_info = dependencies
             .iter()
-            .map(|(ident, addr)| {
-                let parsed_addr = NumericalAddress::new(
-                    addr.into_bytes(),
-                    move_compiler::shared::NumberFormat::Hex,
-                );
-                (ident.to_string(), parsed_addr)
+            .map(|dep_package| {
+                let dep_source_paths = dep_package
+                    .compiled_units
+                    .iter()
+                    .map(|unit| Symbol::from(unit.source_path.to_string_lossy().to_string()))
+                    .collect::<Vec<_>>();
+                Ok((
+                    dep_source_paths,
+                    &dep_package
+                        .compiled_package_info
+                        .address_alias_instantiation,
+                ))
             })
-            .collect::<BTreeMap<_, _>>();
-        let sources: Vec<_> = resolved_package
-            .get_sources(&resolution_graph.build_options)?
-            .into_iter()
-            .map(|symbol| symbol.as_str().to_string())
-            .collect();
+            .collect::<Result<Vec<_>>>()?;
+
+        // gather source/dep files with their address mappings
+        let (sources_with_addrs, deps_with_addrs) = make_source_and_deps_for_compiler(
+            resolution_graph,
+            &resolved_package,
+            deps_source_info,
+        )?;
         let flags = if resolution_graph.build_options.test_mode {
             Flags::testing()
         } else {
             Flags::empty()
         };
-
-        let compiler = Compiler::new(
-            vec![(sources.clone(), in_scope_named_addrs.clone())],
-            vec![(dep_paths, in_scope_named_addrs.clone())],
-        )
-        .set_compiled_module_named_address_mapping(
-            module_resolution_metadata
-                .clone()
-                .into_iter()
-                .map(|(x, ident)| (x, ident.to_string()))
-                .collect::<BTreeMap<_, _>>(),
-        )
-        .set_interface_files_dir(tmp_interface_dir.path().to_string_lossy().to_string())
-        .set_flags(flags);
+        // invoke the compiler
+        let compiler = Compiler::new(vec![sources_with_addrs.clone()], deps_with_addrs.clone())
+            .set_flags(flags);
         let (file_map, compiled_units) = compiler_driver(compiler, is_root_package)?;
 
         let (compiled_units, resolutions): (Vec<_>, Vec<_>) = compiled_units
@@ -604,8 +580,18 @@ impl CompiledPackage {
             })
             .unzip();
 
+        // gather module resolution data from deps
+        let mut module_resolution_metadata = BTreeMap::new();
+        for dep_package in &dependencies {
+            dep_package.gather_module_resolution_metadata(
+                &resolved_package.renaming,
+                &mut module_resolution_metadata,
+            )
+        }
+        // gather from compiled units (which do not include deps)
         for (mod_id, name) in resolutions.into_iter().flatten() {
-            module_resolution_metadata.insert(mod_id, name);
+            let _old_value = module_resolution_metadata.insert(mod_id, name);
+            debug_assert!(_old_value.is_none());
         }
 
         let mut compiled_docs = None;
@@ -614,10 +600,9 @@ impl CompiledPackage {
             || resolution_graph.build_options.generate_abis
         {
             let model = run_model_builder_with_options(
-                &sources,
-                &[tmp_interface_dir.path().to_string_lossy().to_string()],
+                vec![sources_with_addrs],
+                deps_with_addrs,
                 ModelBuilderOptions::default(),
-                in_scope_named_addrs,
             )?;
 
             if resolution_graph.build_options.generate_docs {
@@ -807,10 +792,10 @@ impl CompiledPackage {
         Ok(on_disk_package)
     }
 
-    fn apply_renaming(
+    fn gather_module_resolution_metadata(
         &self,
-        module_resolution: &mut ModuleResolutionMetadata,
         renaming: &Renaming,
+        module_resolution: &mut ModuleResolutionMetadata,
     ) {
         let package_renamings = renaming
             .iter()
@@ -909,4 +894,75 @@ impl CompiledPackage {
         let docgen = Docgen::new(model, &doc_options);
         docgen.gen()
     }
+}
+
+pub(crate) fn named_address_mapping_for_compiler(
+    resolution_table: &ResolvedTable,
+) -> BTreeMap<Symbol, NumericalAddress> {
+    resolution_table
+        .iter()
+        .map(|(ident, addr)| {
+            let parsed_addr =
+                NumericalAddress::new(addr.into_bytes(), move_compiler::shared::NumberFormat::Hex);
+            (*ident, parsed_addr)
+        })
+        .collect::<BTreeMap<_, _>>()
+}
+
+pub(crate) fn apply_named_address_renaming(
+    current_package_name: Symbol,
+    address_resolution: BTreeMap<Symbol, NumericalAddress>,
+    renaming: &Renaming,
+) -> NamedAddressMap {
+    let package_renamings = renaming
+        .iter()
+        .filter_map(|(rename_to, (package_name, from_name))| {
+            if package_name == &current_package_name {
+                Some((from_name, *rename_to))
+            } else {
+                None
+            }
+        })
+        .collect::<BTreeMap<_, _>>();
+
+    address_resolution
+        .into_iter()
+        .map(|(name, value)| {
+            let new_name = package_renamings.get(&name).copied();
+            (new_name.unwrap_or(name), value)
+        })
+        .collect()
+}
+
+pub(crate) fn make_source_and_deps_for_compiler(
+    resolution_graph: &ResolvedGraph,
+    root: &ResolvedPackage,
+    deps: Vec<(
+        /* source paths */ Vec<Symbol>,
+        /* address mapping */ &ResolvedTable,
+    )>,
+) -> Result<(
+    /* sources */ AddressScopedFiles<Symbol, Symbol>,
+    /* deps */ Vec<AddressScopedFiles<Symbol, Symbol>>,
+)> {
+    let deps_with_addrs = deps
+        .into_iter()
+        .map(|(source_paths, resolved_table)| {
+            let source_paths = source_paths
+                .into_iter()
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect::<Vec<_>>();
+            let named_addr_map = named_address_mapping_for_compiler(resolved_table);
+            Ok((source_paths, named_addr_map))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let root_named_addrs = apply_named_address_renaming(
+        root.source_package.package.name,
+        named_address_mapping_for_compiler(&root.resolution_table),
+        &root.renaming,
+    );
+    let sources = root.get_sources(&resolution_graph.build_options)?;
+    let sources_with_addrs = (sources, root_named_addrs);
+    Ok((sources_with_addrs, deps_with_addrs))
 }

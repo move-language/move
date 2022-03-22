@@ -1,9 +1,11 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{resolution::resolution_graph::ResolvedGraph, ModelConfig};
+use crate::{
+    compilation::compiled_package::make_source_and_deps_for_compiler,
+    resolution::resolution_graph::ResolvedGraph, ModelConfig,
+};
 use anyhow::Result;
-use move_compiler::shared::NumericalAddress;
 use move_model::{model::GlobalEnv, options::ModelBuilderOptions, run_model_builder_with_options};
 
 #[derive(Debug, Clone)]
@@ -40,54 +42,52 @@ impl ModelBuilder {
         // Targets are all files in the root package
         let root_name = &self.resolution_graph.root_package.package.name;
         let root_package = self.resolution_graph.get_package(root_name).clone();
-        let mut targets: Vec<_> = root_package
-            .get_sources(&self.resolution_graph.build_options)?
-            .into_iter()
-            .map(|symbol| symbol.to_string())
-            .collect();
-        // Dependencies are all files in non-root package
-        let deps = self
+        let deps_source_info = self
             .resolution_graph
             .package_table
             .iter()
-            .flat_map(|(nm, pkg)| {
+            .filter_map(|(nm, pkg)| {
                 if nm == root_name {
-                    vec![]
-                } else {
-                    pkg.get_sources(&self.resolution_graph.build_options)
-                        .unwrap()
+                    return None;
                 }
+                let dep_source_paths = pkg
+                    .get_sources(&self.resolution_graph.build_options)
+                    .unwrap();
+                Some(Ok((dep_source_paths, &pkg.resolution_table)))
             })
-            .map(|symbol| symbol.to_string())
-            .collect::<Vec<String>>();
+            .collect::<Result<Vec<_>>>()?;
 
-        let (mut targets, mut deps) = if self.model_config.all_files_as_targets {
+        let (target, deps) = make_source_and_deps_for_compiler(
+            &self.resolution_graph,
+            &root_package,
+            deps_source_info,
+        )?;
+        let (all_targets, all_deps) = if self.model_config.all_files_as_targets {
+            let mut targets = vec![target];
             targets.extend(deps.into_iter());
             (targets, vec![])
         } else {
-            (targets, deps)
+            (vec![target], deps)
         };
-        if let Some(filter) = &self.model_config.target_filter {
-            // Filtering targets moves them into the deps
-            deps.extend(targets.iter().filter(|t| !t.contains(filter)).cloned());
-            targets = targets.into_iter().filter(|t| t.contains(filter)).collect();
-        }
+        let (all_targets, all_deps) = match &self.model_config.target_filter {
+            Some(filter) => {
+                let mut new_targets = vec![];
+                let mut new_deps = all_deps;
+                for (targets, mapping) in all_targets {
+                    let (true_targets, false_targets): (Vec<_>, Vec<_>) =
+                        targets.into_iter().partition(|t| t.contains(filter));
+                    if !true_targets.is_empty() {
+                        new_targets.push((true_targets, mapping.clone()))
+                    }
+                    if !false_targets.is_empty() {
+                        new_deps.push((false_targets, mapping))
+                    }
+                }
+                (new_targets, new_deps)
+            }
+            None => (all_targets, all_deps),
+        };
 
-        run_model_builder_with_options(
-            &targets,
-            &deps,
-            ModelBuilderOptions::default(),
-            root_package
-                .resolution_table
-                .into_iter()
-                .map(|(ident, addr)| {
-                    let addr = NumericalAddress::new(
-                        addr.into_bytes(),
-                        move_compiler::shared::NumberFormat::Hex,
-                    );
-                    (ident.to_string(), addr)
-                })
-                .collect(),
-        )
+        run_model_builder_with_options(all_targets, all_deps, ModelBuilderOptions::default())
     }
 }

@@ -500,11 +500,3 @@ object "A2_M" {
 
 
 !! Succeeded compiling Yul
-
-
-!! Move-To-Yul Diagnostics:
- warning: unused alias
-  ┌─ tests/test-dispatcher/signature-parsing-test/baseline/ParsingSoliditySig.move:4:22
-  │
-4 │     use Std::ASCII::{String};
-  │                      ^^^^^^ Unused 'use' of alias 'String'. Consider removing it

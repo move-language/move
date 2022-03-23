@@ -24,7 +24,7 @@ module 0x2::M {
 
     // uint8[2], bytes
     #[callable(sig=b"test_bytes_string(bytes, uint8[2], string, uint8[2]) returns (uint8[2], bytes)")]
-    fun test_bytes_string(str_1: vector<u8>, array_1: vector<u8>, str_2: vector<u8>, array_2: vector<u8>): (vector<u8>, vector<u8>) {
+    fun test_bytes_string(str_1: vector<u8>, _array_1: vector<u8>, _str_2: vector<u8>, array_2: vector<u8>): (vector<u8>, vector<u8>) {
         (array_2, str_1)
     }
 

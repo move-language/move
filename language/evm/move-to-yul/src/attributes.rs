@@ -5,7 +5,7 @@
 
 use move_model::{
     ast::{Attribute, AttributeValue, Value},
-    model::{FunctionEnv, GlobalEnv, ModuleEnv},
+    model::{FunctionEnv, GlobalEnv, ModuleEnv, StructEnv},
 };
 
 const CREATE_ATTR: &str = "create";
@@ -18,6 +18,7 @@ const EVM_TEST_ATTR: &str = "evm_test";
 const TEST_ATTR: &str = "test";
 const EXTERNAL_ATTR: &str = "external";
 const SIGNATURE: &str = "sig";
+const EVENT_ATTR: &str = "event";
 
 /// Extract the value from an attribute
 fn extract_attr_value_str(
@@ -62,6 +63,16 @@ pub fn extract_external_signature(fun: &FunctionEnv<'_>) -> Option<String> {
         fun.module_env.env,
         fun.get_attributes(),
         EXTERNAL_ATTR,
+        SIGNATURE,
+    )
+}
+
+/// Extract the event signature from the event attribute
+pub fn extract_event_signature(st: &StructEnv<'_>) -> Option<String> {
+    extract_attr_value_str(
+        st.module_env.env,
+        st.get_attributes(),
+        EVENT_ATTR,
         SIGNATURE,
     )
 }
@@ -145,6 +156,7 @@ pub fn is_test_fun(fun: &FunctionEnv<'_>) -> bool {
     has_attr(fun.module_env.env, fun.get_attributes(), TEST_ATTR, false)
 }
 
+/// Check whether the function has a `#[external]` attribute.
 pub fn is_external_fun(fun: &FunctionEnv<'_>) -> bool {
     has_attr(
         fun.module_env.env,
@@ -152,4 +164,9 @@ pub fn is_external_fun(fun: &FunctionEnv<'_>) -> bool {
         EXTERNAL_ATTR,
         false,
     )
+}
+
+/// Check whether the struct has a `#[event]` attribute.
+pub fn is_event_struct(st: &StructEnv<'_>) -> bool {
+    has_attr(st.module_env.env, st.get_attributes(), EVENT_ATTR, false)
 }

@@ -306,8 +306,8 @@ object "A2_M" {
                 mstore(pos, size)
                 pos := add(pos, 0x20)
                 $CopyMemoryU8(add(value, 0x20), pos, size)
-                let size_roundup := $RoundUp(size)
-                end := add(pos, size_roundup)
+                size := $RoundUp(size)
+                end := add(pos, size)
             }
             function abi_decode_tuple_$uint128_uint128$_$u128_u128$(headStart, dataEnd) -> value_0, value_1 {
                 if slt(sub(dataEnd, headStart), 64) { $Abort(96) }

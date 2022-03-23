@@ -83,7 +83,7 @@ object "A2_M" {
                 default {}
             }
             $Abort(97)
-            function A2_M_test_bytes_string(str_1, array_1, str_2, array_2) -> $result0, $result1 {
+            function A2_M_test_bytes_string(str_1, _array_1, _str_2, array_2) -> $result0, $result1 {
                 // return ($t3, $t0)
                 $result0 := array_2
                 $result1 := str_1
@@ -315,8 +315,8 @@ object "A2_M" {
                 mstore(pos, size)
                 pos := add(pos, 0x20)
                 $CopyMemoryU8(add(value, 0x20), pos, size)
-                let size_roundup := $RoundUp(size)
-                end := add(pos, size_roundup)
+                size := $RoundUp(size)
+                end := add(pos, size)
             }
             function abi_decode_tuple_$string$_$vec$u8$$(headStart, dataEnd) -> value_0 {
                 if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
@@ -371,8 +371,8 @@ object "A2_M" {
                 mstore(pos, size)
                 pos := add(pos, 0x20)
                 $CopyMemoryU8(add(value, 0x20), pos, size)
-                let size_roundup := $RoundUp(size)
-                end := add(pos, size_roundup)
+                size := $RoundUp(size)
+                end := add(pos, size)
             }
             function abi_decode_tuple_$bytes_uint8_2__string_uint8_2_$_$vec$u8$_vec$u8$_vec$u8$_vec$u8$$(headStart, dataEnd) -> value_0, value_1, value_2, value_3 {
                 if slt(sub(dataEnd, headStart), 192) { $Abort(96) }
@@ -589,17 +589,3 @@ object "A2_M" {
 
 
 !! Succeeded compiling Yul
-
-
-!! Move-To-Yul Diagnostics:
- warning: unused variable
-   ┌─ tests/test-dispatcher/DispatcherMultiRetEncoding.move:27:46
-   │
-27 │     fun test_bytes_string(str_1: vector<u8>, array_1: vector<u8>, str_2: vector<u8>, array_2: vector<u8>): (vector<u8>, vector<u8>) {
-   │                                              ^^^^^^^ Unused parameter 'array_1'. Consider removing or prefixing with an underscore: '_array_1'
-
-warning: unused variable
-   ┌─ tests/test-dispatcher/DispatcherMultiRetEncoding.move:27:67
-   │
-27 │     fun test_bytes_string(str_1: vector<u8>, array_1: vector<u8>, str_2: vector<u8>, array_2: vector<u8>): (vector<u8>, vector<u8>) {
-   │                                                                   ^^^^^ Unused parameter 'str_2'. Consider removing or prefixing with an underscore: '_str_2'

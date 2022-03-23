@@ -377,6 +377,7 @@ object "A2_M" {
             }
             function abi_encode_uint8___2__vec$vec$u8$$(value, pos) -> end {
                 let length := $MemoryLoadU64(value)
+                if iszero(eq(length, 2)) { $Abort(92) }
                 let headStart := pos
                 let tail := add(pos, mul(length, 0x20))
                 let start := add(value, 32)
@@ -466,6 +467,7 @@ object "A2_M" {
             }
             function abi_encode_uint256___2__vec$vec$A2_U256_U256$$(value, pos) -> end {
                 let length := $MemoryLoadU64(value)
+                if iszero(eq(length, 2)) { $Abort(92) }
                 let headStart := pos
                 let tail := add(pos, mul(length, 0x20))
                 let start := add(value, 32)
@@ -615,6 +617,7 @@ object "A2_M" {
             }
             function abi_encode_uint72___2__vec$vec$u128$$(value, pos) -> end {
                 let length := $MemoryLoadU64(value)
+                if iszero(eq(length, 2)) { $Abort(92) }
                 let headStart := pos
                 let tail := add(pos, mul(length, 0x20))
                 let start := add(value, 32)

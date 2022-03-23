@@ -1,11 +1,14 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{attributes, context::Context, external_functions, functions::FunctionGenerator};
+use crate::{
+    attributes, context::Context, events, external_functions, functions::FunctionGenerator,
+};
 use move_model::{
     ast::ModuleName,
     emit, emitln,
-    model::{FunId, ModuleEnv, QualifiedId, QualifiedInstId},
+    model::{FunId, FunctionEnv, ModuleEnv, QualifiedId, QualifiedInstId},
+    ty::Type,
 };
 use std::collections::BTreeMap;
 
@@ -26,6 +29,11 @@ impl NativeFunctions {
         funs.define_vector_functions(ctx);
         funs.define_table_functions(ctx);
         funs
+    }
+
+    /// Check whether fun is an emit event function
+    fn is_emit_fun(&self, fun: &FunctionEnv<'_>) -> bool {
+        fun.get_full_name_str() == "Evm::emit"
     }
 
     /// Generate code for a native function.
@@ -55,6 +63,30 @@ impl NativeFunctions {
                                 .get_full_name_str()
                         ),
                     )
+                }
+            } else if self.is_emit_fun(fun) {
+                let elem_type = fun_id.inst.get(0).unwrap(); // obtain the event type
+                if let Type::Struct(mid, sid, inst) = elem_type {
+                    let st_id = QualifiedInstId {
+                        module_id: *mid,
+                        id: *sid,
+                        inst: inst.to_owned(),
+                    };
+                    let ev_signature_map = ctx.event_signature_map.borrow();
+                    let sig_opt = ev_signature_map.get(&st_id);
+                    if let Some(sig) = sig_opt {
+                        events::define_emit_fun(gen, ctx, sig, &st_id, fun_id);
+                    } else {
+                        ctx.env.error(
+                            &gen.parent.contract_loc,
+                            &format!(
+                                "native function {} can only emit event structs",
+                                ctx.env
+                                    .get_function(fun_id.to_qualified_id())
+                                    .get_full_name_str()
+                            ),
+                        )
+                    }
                 }
             } else {
                 ctx.env.error(

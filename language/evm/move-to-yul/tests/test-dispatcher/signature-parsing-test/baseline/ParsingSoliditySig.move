@@ -1,7 +1,6 @@
 #[contract]
 module 0x2::M {
     use Evm::U256::U256;
-    use Std::ASCII::{String};
 
     // This file contains tests that pass compilation.
 

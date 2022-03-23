@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    attributes, evm_transformation::EvmTransformationProcessor, native_functions::NativeFunctions,
-    yul_functions, yul_functions::YulFunction, Options,
+    attributes, events::EventSignature, evm_transformation::EvmTransformationProcessor,
+    native_functions::NativeFunctions, yul_functions, yul_functions::YulFunction, Options,
 };
 use codespan::FileId;
 use itertools::Itertools;
@@ -11,7 +11,9 @@ use move_model::{
     ast::TempIndex,
     code_writer::CodeWriter,
     emitln,
-    model::{FunId, FunctionEnv, GlobalEnv, ModuleEnv, QualifiedId, QualifiedInstId, StructId},
+    model::{
+        FunId, FunctionEnv, GlobalEnv, ModuleEnv, QualifiedId, QualifiedInstId, StructEnv, StructId,
+    },
     ty::{PrimitiveType, Type},
 };
 use move_stackless_bytecode::{
@@ -45,6 +47,8 @@ pub(crate) struct Context<'a> {
     pub native_funs: NativeFunctions,
     /// Mapping of file_id to file number and path.
     pub(crate) file_id_map: BTreeMap<FileId, (usize, String)>,
+    /// Mapping of event structs to corresponding event signatures
+    pub(crate) event_signature_map: RefCell<BTreeMap<QualifiedInstId<StructId>, EventSignature>>,
 }
 
 /// Information about the layout of a struct in linear memory.
@@ -88,8 +92,10 @@ impl<'a> Context<'a> {
             writer,
             struct_layout: Default::default(),
             native_funs: NativeFunctions::default(),
+            event_signature_map: Default::default(),
         };
         ctx.native_funs = NativeFunctions::create(&ctx);
+        ctx.build_event_signature_map();
         ctx
     }
 
@@ -174,6 +180,62 @@ impl<'a> Context<'a> {
             .collect()
     }
 
+    /// Return iterator for all structs in the environment which stem from a target module
+    /// and which satsify predicate.
+    fn get_event_structs(&self, p: impl Fn(&StructEnv) -> bool) -> Vec<StructEnv<'a>> {
+        self.env
+            .get_modules()
+            .filter(|m| m.is_target())
+            .map(|m| m.into_structs().filter(|f| p(f)))
+            .flatten()
+            .collect()
+    }
+
+    /// Build the event signature map
+    pub fn build_event_signature_map(&self) {
+        let event_structs_vec = self.get_event_structs(attributes::is_event_struct);
+        let mut event_signature_map_ref = self.event_signature_map.borrow_mut();
+        for st_env in event_structs_vec {
+            if !self.check_no_generics_struct(&st_env) {
+                break;
+            }
+            let mut sig = EventSignature::create_default_event_signature(self, &st_env);
+            let ev_sig_str_opt = attributes::extract_event_signature(&st_env);
+            if let Some(ev_sig_str) = ev_sig_str_opt {
+                let parsed_sig_opt =
+                    EventSignature::parse_into_event_signature(self, &ev_sig_str, &st_env);
+                if let Ok(parsed_sig) = parsed_sig_opt {
+                    sig = parsed_sig;
+                    /*
+                    if !parsed_sig.check_sig_compatibility(self, &st_env) {
+                        self.env.error(
+                            &st_env.get_loc(),
+                            "event signature is not compatible with the move struct",
+                        );
+                    } else {
+                        sig = parsed_sig;
+                    }
+                    */
+                } else if let Err(msg) = parsed_sig_opt {
+                    self.env.error(&st_env.get_loc(), &format!("{}", msg));
+                }
+            }
+            let st_id = &st_env.get_qualified_id().instantiate(vec![]);
+            if event_signature_map_ref.get(st_id).is_none() {
+                event_signature_map_ref.insert(st_id.clone(), sig.clone());
+            }
+        }
+    }
+
+    /// Check whether given Move struct has no generics; report error otherwise.
+    pub fn check_no_generics_struct(&self, st: &StructEnv<'_>) -> bool {
+        if !st.get_type_parameters().is_empty() {
+            self.env
+                .error(&st.get_loc(), "#[event] structs cannot be generic");
+            return false;
+        }
+        true
+    }
     /// Check whether given Move function has no generics; report error otherwise.
     pub fn check_no_generics(&self, fun: &FunctionEnv<'_>) {
         if fun.get_type_parameter_count() > 0 {
@@ -232,7 +294,7 @@ impl<'a> Context<'a> {
     }
 
     /// Mangle a struct.
-    fn mangle_struct(&self, struct_id: &QualifiedInstId<StructId>) -> String {
+    pub(crate) fn mangle_struct(&self, struct_id: &QualifiedInstId<StructId>) -> String {
         let struct_env = &self.env.get_struct(struct_id.to_qualified_id());
         let module_name = self.make_contract_name(&struct_env.module_env);
         format!(

@@ -124,8 +124,8 @@ object "A2_M" {
                 mstore(pos, size)
                 pos := add(pos, 0x20)
                 $CopyMemoryU8(add(value, 0x20), pos, size)
-                let size_roundup := $RoundUp(size)
-                end := add(pos, size_roundup)
+                size := $RoundUp(size)
+                end := add(pos, size)
             }
             function abi_decode_tuple_$string$_$vec$u8$$(headStart, dataEnd) -> value_0 {
                 if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
@@ -304,8 +304,8 @@ object "A2_M" {
                 mstore(pos, size)
                 pos := add(pos, 0x20)
                 $CopyMemoryU8(add(value, 0x20), pos, size)
-                let size_roundup := $RoundUp(size)
-                end := add(pos, size_roundup)
+                size := $RoundUp(size)
+                end := add(pos, size)
             }
             function abi_decode_tuple_$bytes$_$vec$u8$$(headStart, dataEnd) -> value_0 {
                 if slt(sub(dataEnd, headStart), 32) { $Abort(96) }

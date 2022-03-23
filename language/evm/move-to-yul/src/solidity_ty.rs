@@ -17,11 +17,12 @@ use move_model::{
 
 use crate::context::Context;
 
-const PARSE_ERR_MSG: &str = "error happens when parsing the signature";
-const PARSE_ERR_MSG_SIMPLE_TYPE: &str = "error happens when parsing a simple type";
-const PARSE_ERR_MSG_ARRAY_TYPE: &str = "error happens when parsing an array type";
-const PARSE_ERR_MSG_RETURN: &str = "error happens when parsing the return types in the signature";
-const PARSE_ERR_MSG_ZERO_SIZE: &str = "array with zero length specified";
+pub(crate) const PARSE_ERR_MSG: &str = "error happens when parsing the signature";
+pub(crate) const PARSE_ERR_MSG_SIMPLE_TYPE: &str = "error happens when parsing a simple type";
+pub(crate) const PARSE_ERR_MSG_ARRAY_TYPE: &str = "error happens when parsing an array type";
+pub(crate) const PARSE_ERR_MSG_RETURN: &str =
+    "error happens when parsing the return types in the signature";
+pub(crate) const PARSE_ERR_MSG_ZERO_SIZE: &str = "array with zero length specified";
 
 /// Represents a Solidity Signature appearing in the callable attribute.
 #[derive(Debug, Clone)]
@@ -179,13 +180,13 @@ impl SolidityType {
     }
 
     /// Check whether a type is a value type
-    fn is_value_type(&self) -> bool {
+    pub(crate) fn is_value_type(&self) -> bool {
         use SolidityType::*;
         matches!(self, Primitive(_) | BytesStatic(_))
     }
 
     /// Returns the max value (bit mask) for a given type.
-    pub fn max_value(&self) -> String {
+    pub(crate) fn max_value(&self) -> String {
         let size = self.abi_head_size(false);
         assert!(size <= 32, "unexpected type size {} for `{}`", size, self);
         let multipler = size * 8;
@@ -193,7 +194,7 @@ impl SolidityType {
     }
 
     /// Parse a move type into a solidity type
-    fn translate_from_move(ctx: &Context, ty: &Type) -> Self {
+    pub(crate) fn translate_from_move(ctx: &Context, ty: &Type) -> Self {
         use PrimitiveType::*;
         use Type::*;
         let generate_tuple = |tys: &Vec<Type>| {
@@ -241,7 +242,7 @@ impl SolidityType {
 
     /// Parse a solidity type
     /// TODO: struct is not supported yet
-    fn parse(ty_str: &str) -> anyhow::Result<Self> {
+    pub(crate) fn parse(ty_str: &str) -> anyhow::Result<Self> {
         let trimmed_ty_str = ty_str.trim();
         if trimmed_ty_str.contains('[') {
             // array type
@@ -593,9 +594,15 @@ impl SoliditySignature {
             let mut para_type_str = para_trim;
             let mut loc_flag = false;
             if let Some(stripped_memory) = para_trim.strip_suffix("memory") {
-                data_location = SignatureDataLocation::Memory;
-                para_type_str = stripped_memory;
-                loc_flag = true;
+                let stripped_trimmed = stripped_memory.trim();
+                if stripped_trimmed.ends_with(']') || stripped_trimmed.len() < stripped_memory.len()
+                {
+                    data_location = SignatureDataLocation::Memory;
+                    para_type_str = stripped_trimmed;
+                    loc_flag = true;
+                } else {
+                    return Err(anyhow!(PARSE_ERR_MSG));
+                }
             } else if let Some(_stripped_calldata) = para_trim.strip_suffix("calldata") {
                 return Err(anyhow!("calldata is not supported yet"));
             }

@@ -22,4 +22,8 @@ fn run_all(args_path: &Path) -> datatest_stable::Result<()> {
 }
 
 // runs all the tests
-datatest_stable::harness!(run_all, "tests/testsuite", r"args\.txt$");
+datatest_stable::harness!(
+    run_all,
+    "tests/move_unit_tests",
+    r"args(\.stackless)?\.txt$"
+);

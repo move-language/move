@@ -59,3 +59,16 @@ path = "src/main.rs"
 [[test]]
 name = "cli_testsuite"
 harness = false
+
+[[test]]
+name = "move_unit_tests_move_vm_and_stackless_vm"
+harness = false
+
+[[test]]
+name = "move_unit_tests_evm"
+harness = false
+required-features = ["evm-backend"]
+
+[features]
+default = ["evm-backend"]
+evm-backend = ["move-unit-test/evm-backend"]

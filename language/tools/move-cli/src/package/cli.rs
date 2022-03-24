@@ -27,9 +27,11 @@ use move_command_line_common::files::{FileHash, MOVE_COVERAGE_MAP_EXTENSION};
 use move_compiler::{
     compiled_unit::{CompiledUnit, NamedCompiledModule},
     diagnostics::{self, codes::Severity},
+    shared::{NumberFormat, NumericalAddress},
     unit_test::{plan_builder::construct_test_plan, TestPlan},
     PASS_CFGIR,
 };
+use move_core_types::account_address::AccountAddress;
 use move_coverage::{
     coverage_map::{output_map_to_file, CoverageMap},
     format_csv_summary, format_human_summary,
@@ -39,6 +41,7 @@ use move_coverage::{
 use move_disassembler::disassembler::Disassembler;
 use move_package::{
     compilation::{build_plan::BuildPlan, compiled_package::CompiledUnitWithSource},
+    resolution::resolution_graph::ResolutionGraph,
     source_package::layout::SourcePackageLayout,
     ModelConfig,
 };
@@ -163,6 +166,12 @@ pub enum PackageCommand {
         /// Collect coverage information for later use with the various `package coverage` subcommands
         #[clap(long = "coverage")]
         compute_coverage: bool,
+
+        /// Use the EVM-based execution backend.
+        /// Does not work with --stackless.
+        #[cfg(feature = "evm-backend")]
+        #[structopt(long = "evm")]
+        evm: bool,
     },
     /// Disassemble the Move bytecode pointed to
     #[clap(name = "disassemble")]
@@ -393,6 +402,9 @@ pub fn handle_package_commands(
             check_stackless_vm,
             verbose_mode,
             compute_coverage,
+
+            #[cfg(feature = "evm-backend")]
+            evm,
         } => {
             let unit_test_config = UnitTestingConfig {
                 instruction_execution_bound: *instruction_execution_bound,
@@ -403,6 +415,10 @@ pub fn handle_package_commands(
                 report_storage_on_error: *report_storage_on_error,
                 check_stackless_vm: *check_stackless_vm,
                 verbose: *verbose_mode,
+
+                #[cfg(feature = "evm-backend")]
+                evm: *evm,
+
                 ..UnitTestingConfig::default_with_bound(None)
             };
             let result = run_move_unit_tests(
@@ -428,10 +444,31 @@ pub fn handle_package_commands(
     Ok(())
 }
 
+fn extract_named_address_values(
+    resolution_graph: &ResolutionGraph<AccountAddress>,
+) -> Vec<(String, NumericalAddress)> {
+    let rooot_package_name = &resolution_graph.root_package.package.name;
+    let root_package = resolution_graph
+        .package_table
+        .get(rooot_package_name)
+        .expect("Failed to find root package in package table -- this should never happen");
+
+    root_package
+        .resolution_table
+        .iter()
+        .map(|(name, addr)| {
+            (
+                name.to_string(),
+                NumericalAddress::new(addr.into_bytes(), NumberFormat::Hex),
+            )
+        })
+        .collect()
+}
+
 pub fn run_move_unit_tests(
     pkg_path: &Path,
     mut build_config: move_package::BuildConfig,
-    unit_test_config: UnitTestingConfig,
+    mut unit_test_config: UnitTestingConfig,
     natives: Vec<NativeFunctionRecord>,
     compute_coverage: bool,
 ) -> Result<UnitTestResult> {
@@ -441,6 +478,11 @@ pub fn run_move_unit_tests(
 
     // Build the resolution graph
     let resolution_graph = build_config.resolution_graph_for_package(pkg_path)?;
+
+    // Note: unit_test_config.named_address_values is always set to vec![] (the default value) before
+    // being passed in.
+    unit_test_config.named_address_values = extract_named_address_values(&resolution_graph);
+
     // Get the source files for all modules. We need this in order to report source-mapped error
     // messages.
     let dep_file_map: HashMap<_, _> = resolution_graph

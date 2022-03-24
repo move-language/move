@@ -95,7 +95,12 @@ impl Generator {
     ) -> Result<String, String> {
         let fun = env
             .find_function_by_language_storage_id_name(module_id, fun_name)
-            .expect("Failed to find test function. This should not have happened.");
+            .unwrap_or_else(|| {
+                panic!(
+                    "Failed to find test function {}::{}. This should not have happened.",
+                    module_id, fun_name
+                )
+            });
 
         let ctx = Context::new(options, env, /*for_test*/ true);
         let mut gen = Generator::default();

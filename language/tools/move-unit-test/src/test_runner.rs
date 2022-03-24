@@ -334,15 +334,30 @@ impl SharedTestingConfig {
         test_plan: &ModuleTestPlan,
         output: &TestOutput<impl Write>,
     ) -> TestStatistics {
+        // TODO: Somehow, paths of some temporary Move interface files are being passed in after those files
+        // have been removed. This is a dirty hack to work around the problem while we investigate the root
+        // cause.
+        let filtered_sources = self
+            .source_files
+            .iter()
+            .filter(|s| !s.contains("mv_interfaces"))
+            .cloned()
+            .collect::<Vec<_>>();
+
         let stackless_model = if self.check_stackless_vm {
             let model = run_model_builder_with_options_and_compilation_flags(
-                &self.source_files,
+                &filtered_sources,
                 &[],
                 ModelBuilderOptions::default(),
                 Flags::testing(),
                 self.named_address_values.clone(),
             )
             .unwrap_or_else(|e| panic!("Unable to build stackless bytecode: {}", e));
+
+            if model.has_errors() {
+                panic!("Move model has errors");
+            }
+
             Some(model)
         } else {
             None
@@ -545,14 +560,28 @@ impl SharedTestingConfig {
     ) -> TestStatistics {
         let mut stats = TestStatistics::new();
 
+        // TODO: Somehow, paths of some temporary Move interface files are being passed in after those files
+        // have been removed. This is a dirty hack to work around the problem while we investigate the root
+        // cause.
+        let filtered_sources = self
+            .source_files
+            .iter()
+            .filter(|s| !s.contains("mv_interfaces"))
+            .cloned()
+            .collect::<Vec<_>>();
+
         let model = run_model_builder_with_options_and_compilation_flags(
-            &self.source_files,
+            &filtered_sources,
             &[],
             ModelBuilderOptions::default(),
             Flags::testing(),
             self.named_address_values.clone(),
         )
-        .unwrap_or_else(|e| panic!("Unable to build stackless bytecode: {}", e));
+        .unwrap_or_else(|e| panic!("Unable to build move model: {}", e));
+
+        if model.has_errors() {
+            panic!("Move model has errors");
+        }
 
         let gen_options = move_to_yul::options::Options::default();
         for (function_name, test_info) in &test_plan.tests {

@@ -130,6 +130,16 @@ impl NativeFunctions {
             );
         });
 
+        self.define(ctx, evm, "self", |_, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+() -> addr {
+  addr := address()
+}"
+            );
+        });
+
         self.define(ctx, evm, "blockhash", |_, ctx: &Context, _| {
             emitln!(
                 ctx.writer,

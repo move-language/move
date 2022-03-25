@@ -11,10 +11,14 @@ module Evm::Evm {
     public native fun self(): address;
 
     /// An alias for `msg_sender`.
-    public native fun sender(): address;
+    public fun sender(): address {
+        msg_sender()
+    }
 
     /// An alias for `msg_value`.
-    public native fun value(): U256;
+    public fun value(): U256 {
+        msg_value()
+    }
 
     /// Returns the balance, in Wei, of any account.
     public native fun balance(addr: address): U256;

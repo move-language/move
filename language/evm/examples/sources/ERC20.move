@@ -1,6 +1,6 @@
 #[contract]
 /// An implementation of the ERC-20 Token Standard.
-module Evm::ERC20_ALT {
+module Evm::ERC20 {
     use Evm::Evm::{sender, self, sign, emit};
     use Evm::Table::{Self, Table};
     use Evm::U256::{Self, U256};
@@ -33,7 +33,7 @@ module Evm::ERC20_ALT {
 
     #[create]
     /// Constructor of this contract.
-    public fun create(name: String, symbol: String) {
+    public fun create(name: String, symbol: String, initial_supply: U256) acquires State {
         // Initial state of contract
         move_to<State>(
             &sign(self()),
@@ -45,6 +45,8 @@ module Evm::ERC20_ALT {
                 symbol,
             }
         );
+        // Minting the initial supply
+        mint(sender(), initial_supply);
     }
 
     #[callable, view]
@@ -127,7 +129,8 @@ module Evm::ERC20_ALT {
         *from_bal = U256::sub(*from_bal, copy amount);
         let to_bal = mut_balanceOf(s, to);
         *to_bal = U256::add(*to_bal, copy amount);
-        emit(Transfer{from, to, value: amount});
+        // TODO: Unit testing does not support events yet.
+        //emit(Transfer{from, to, value: amount});
     }
 
     /// Helper function to return a mut ref to the allowance of a spender.
@@ -142,5 +145,16 @@ module Evm::ERC20_ALT {
     /// Helper function to return a mut ref to the balance of a owner.
     fun mut_balanceOf(s: &mut State, owner: address): &mut U256 {
         Table::borrow_mut_with_default(&mut s.balances, &owner, U256::zero())
+    }
+
+    /// Create `amount` tokens and assigns them to `account`, increasing
+    /// the total supply.
+    fun mint(account: address, amount: U256) acquires State {
+        let s = borrow_global_mut<State>(self());
+        s.total_supply = U256::add(s.total_supply, amount);
+        let mut_bal_account = mut_balanceOf(s, account);
+        *mut_bal_account = U256::add(*mut_bal_account, amount);
+        // TODO: Unit testing does not support events yet.
+        //emit(Transfer{from: @0x0, to: account, value: amount});
     }
 }

@@ -49,6 +49,7 @@ module Evm::ERC1155 {
         balances: Table<U256, Table<address, U256>>,
         operatorApprovals: Table<address, Table<address, bool>>,
         uri: String,
+        owner: address, // Implements the "ownable" pattern.
     }
 
     #[create]
@@ -61,6 +62,7 @@ module Evm::ERC1155 {
                 balances: Table::empty<U256, Table<address, U256>>(),
                 operatorApprovals: Table::empty<address, Table<address, bool>>(),
                 uri,
+                owner: sender(),
             }
         );
     }
@@ -116,17 +118,19 @@ module Evm::ERC1155 {
 
     #[callable]
     /// Transfers `_value` amount of an `_id` from the `_from` address to the `_to` address specified (with safety call).
-    public fun safeTransferFrom(from: address, to: address, id: U256, amount: U256, data: vector<u8>) acquires State {
+    public fun safeTransferFrom(from: address, to: address, id: U256, amount: U256, _data: vector<u8>) acquires State {
         assert!(from == sender() || isApprovalForAll(from, sender()), Errors::invalid_argument(0));
-        let operator = sender();
         let s = borrow_global_mut<State>(self());
         let mut_balance_from = mut_balanceOf(s, copy id, from);
         assert!(U256::le(copy amount, *mut_balance_from), Errors::invalid_argument(0));
         *mut_balance_from = U256::sub(*mut_balance_from, copy amount);
         let mut_balance_to = mut_balanceOf(s, copy id, to);
         *mut_balance_to = U256::add(*mut_balance_to, copy amount);
-        emit(TransferSingle{operator, from, to, id: copy id, value: copy amount});
-        doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
+        // TODO: Unit testing does not support events yet.
+        //let operator = sender();
+        //emit(TransferSingle{operator, from, to, id: copy id, value: copy amount});
+        // TODO: Unit testing does not support the following function.
+        //doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
     }
 
     #[callable]
@@ -162,6 +166,45 @@ module Evm::ERC1155 {
     // Query if this contract implements a certain interface.
     public fun supportsInterface(interfaceId: vector<u8>): bool {
         &interfaceId == &IERC1155::interfaceId() || &interfaceId == &IERC165::interfaceId()
+    }
+
+    #[callable]
+    public fun owner(): address acquires State {
+        borrow_global_mut<State>(self()).owner
+    }
+
+    #[callable]
+    // Query if this contract implements a certain interface.
+    public fun mint(to: address, id: U256, amount: U256, _data: vector<u8>) acquires State {
+        assert!(sender() == owner(), Errors::invalid_argument(0)); // Only owner can mint.
+        let s = borrow_global_mut<State>(self());
+        let mut_balance_to = mut_balanceOf(s, copy id, to);
+        *mut_balance_to = U256::add(*mut_balance_to, copy amount);
+        // TODO: Unit testing does not support events yet.
+        //emit(TransferSingle{operator: sender(), from: @0x0, to, id: copy id, value: copy amount});
+    }
+
+    #[callable]
+    // Query if this contract implements a certain interface.
+    public fun mintBatch(to: address, ids: vector<U256>, amounts: vector<U256>, _data: vector<u8>) acquires State {
+        assert!(sender() == owner(), Errors::invalid_argument(0)); // Only owner can mint.
+        assert!(Vector::length(&amounts) == Vector::length(&ids), Errors::invalid_argument(0));
+        let len = Vector::length(&amounts);
+        let i = 0;
+
+        let s = borrow_global_mut<State>(self());
+
+        while(i < len) {
+            let id = *Vector::borrow(&ids, i);
+            let amount = *Vector::borrow(&amounts, i);
+
+            let mut_balance_to = mut_balanceOf(s, id, to);
+            *mut_balance_to = U256::add(*mut_balance_to, amount);
+
+            i = i + 1;
+        };
+        // TODO: Unit testing does not support events yet.
+        //emit(TransferBatch{operator: sender(), from: @0x0, to, ids: copy ids, values: copy amounts});
     }
 
     /// Helper function to return a mut ref to the operatorApproval

@@ -487,10 +487,10 @@ Unpack the <code>char</code> into its underlying byte.
 
 ## Function `is_valid_char`
 
-Returns <code><b>true</b></code> if <code>byte</code> is a valid ASCII character. Returns <code><b>false</b></code> otherwise.
+Returns <code><b>true</b></code> if <code>b</code> is a valid ASCII character. Returns <code><b>false</b></code> otherwise.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="ASCII.md#0x1_ASCII_is_valid_char">is_valid_char</a>(byte: u8): bool
+<pre><code><b>public</b> <b>fun</b> <a href="ASCII.md#0x1_ASCII_is_valid_char">is_valid_char</a>(b: u8): bool
 </code></pre>
 
 
@@ -499,8 +499,8 @@ Returns <code><b>true</b></code> if <code>byte</code> is a valid ASCII character
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="ASCII.md#0x1_ASCII_is_valid_char">is_valid_char</a>(byte: u8): bool {
-   <a href="ASCII.md#0x1_ASCII_byte">byte</a> &lt;= 0x7F
+<pre><code><b>public</b> <b>fun</b> <a href="ASCII.md#0x1_ASCII_is_valid_char">is_valid_char</a>(b: u8): bool {
+   b &lt;= 0x7F
 }
 </code></pre>
 

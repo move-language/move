@@ -1,6 +1,6 @@
 #[contract]
 /// An implementation of ERC20.
-module Evm::ERC20 {
+module Evm::ERC20Token {
     use Evm::Evm::{sender, self, sign};
     use Std::Errors;
     use Std::Vector;

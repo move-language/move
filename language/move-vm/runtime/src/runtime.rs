@@ -59,6 +59,19 @@ impl VMRuntime {
         Session {
             runtime: self,
             data_cache: TransactionDataCache::new(remote, &self.loader),
+            native_extensions: NativeContextExtensions::default(),
+        }
+    }
+
+    pub fn new_session_with_extensions<'r, S: MoveResolver>(
+        &self,
+        remote: &'r S,
+        native_extensions: NativeContextExtensions,
+    ) -> Session<'r, '_, S> {
+        Session {
+            runtime: self,
+            data_cache: TransactionDataCache::new(remote, &self.loader),
+            native_extensions,
         }
     }
 

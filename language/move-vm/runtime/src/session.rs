@@ -21,6 +21,7 @@ use move_vm_types::{data_store::DataStore, gas_schedule::GasStatus};
 pub struct Session<'r, 'l, S> {
     pub(crate) runtime: &'l VMRuntime,
     pub(crate) data_cache: TransactionDataCache<'r, 'l, S>,
+    pub(crate) native_extensions: NativeContextExtensions,
 }
 
 /// Result of executing a function in the VM
@@ -37,6 +38,8 @@ pub enum ExecutionResult {
         mutable_ref_values: Vec<Vec<u8>>,
         /// Gas used during execution
         gas_used: u64,
+        /// Native extensions end state
+        native_extensions: NativeContextExtensions,
     },
     /// Execution failed and had no side effects
     Fail {
@@ -71,39 +74,15 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         args: Vec<Vec<u8>>,
         gas_status: &mut GasStatus,
     ) -> VMResult<Vec<Vec<u8>>> {
-        let no_ext = NativeContextExtensions::default();
-        self.execute_function_with_extensions(
+        self.runtime.execute_function(
             module,
             function_name,
             ty_args,
             args,
+            &mut self.data_cache,
             gas_status,
-            no_ext,
+            &mut self.native_extensions,
         )
-        .map(|(_, v)| v)
-    }
-
-    /// Same as `execute_function`, but with native context extensions.
-    pub fn execute_function_with_extensions(
-        &mut self,
-        module: &ModuleId,
-        function_name: &IdentStr,
-        ty_args: Vec<TypeTag>,
-        args: Vec<Vec<u8>>,
-        gas_status: &mut GasStatus,
-        mut extensions: NativeContextExtensions,
-    ) -> VMResult<(NativeContextExtensions, Vec<Vec<u8>>)> {
-        self.runtime
-            .execute_function(
-                module,
-                function_name,
-                ty_args,
-                args,
-                &mut self.data_cache,
-                gas_status,
-                &mut extensions,
-            )
-            .map(|v| (extensions, v))
     }
 
     /// Execute `module`::`fuction_name`<`ty_args`>(`args`) and return the effects in
@@ -130,58 +109,44 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     where
         V: Borrow<[u8]>,
     {
-        let no_ext = NativeContextExtensions::default();
-        self.execute_function_for_effects_with_extensions(
-            module,
-            function_name,
-            ty_args,
-            args,
-            gas_status,
-            no_ext,
-        )
-        .1
-    }
-
-    /// Same as `execute_function_for_effects`, but with native context extensions.
-    pub fn execute_function_for_effects_with_extensions<V>(
-        mut self,
-        module: &ModuleId,
-        function_name: &IdentStr,
-        ty_args: Vec<TypeTag>,
-        args: Vec<V>,
-        gas_status: &mut GasStatus,
-        mut extensions: NativeContextExtensions,
-    ) -> (Option<NativeContextExtensions>, ExecutionResult)
-    where
-        V: Borrow<[u8]>,
-    {
+        // Deconstruct the session.
+        let Session {
+            runtime,
+            mut data_cache,
+            mut native_extensions,
+        } = self;
         let gas_budget = gas_status.remaining_gas().get();
 
-        let execution_res = self.runtime.execute_function_for_effects(
+        let execution_res = runtime.execute_function_for_effects(
             module,
             function_name,
             ty_args,
             args,
-            &mut self.data_cache,
+            &mut data_cache,
             gas_status,
-            &mut extensions,
+            &mut native_extensions,
         );
         let gas_used = gas_budget - gas_status.remaining_gas().get();
+        // Reconstruct the session for call to finish, but do not provide extensions as we
+        // need to put them into the result.
+        let session = Session {
+            runtime,
+            data_cache,
+            native_extensions: NativeContextExtensions::default(),
+        };
         match execution_res {
-            Ok((return_values, mutable_ref_values)) => match self.finish() {
-                Ok((change_set, events)) => (
-                    Some(extensions),
-                    ExecutionResult::Success {
-                        change_set,
-                        events,
-                        return_values,
-                        mutable_ref_values,
-                        gas_used,
-                    },
-                ),
-                Err(error) => (None, ExecutionResult::Fail { error, gas_used }),
+            Ok((return_values, mutable_ref_values)) => match session.finish() {
+                Ok((change_set, events)) => ExecutionResult::Success {
+                    change_set,
+                    events,
+                    return_values,
+                    mutable_ref_values,
+                    gas_used,
+                    native_extensions,
+                },
+                Err(error) => ExecutionResult::Fail { error, gas_used },
             },
-            Err(error) => (None, ExecutionResult::Fail { error, gas_used }),
+            Err(error) => ExecutionResult::Fail { error, gas_used },
         }
     }
 
@@ -218,42 +183,16 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         senders: Vec<AccountAddress>,
         gas_status: &mut GasStatus,
     ) -> VMResult<()> {
-        let no_ext = NativeContextExtensions::default();
-        self.execute_script_function_with_extensions(
+        self.runtime.execute_script_function(
             module,
             function_name,
             ty_args,
             args,
             senders,
+            &mut self.data_cache,
             gas_status,
-            no_ext,
+            &mut self.native_extensions,
         )
-        .map(|_| ())
-    }
-
-    /// Same as `execute_script_function`, but with native context extensions.
-    pub fn execute_script_function_with_extensions(
-        &mut self,
-        module: &ModuleId,
-        function_name: &IdentStr,
-        ty_args: Vec<TypeTag>,
-        args: Vec<Vec<u8>>,
-        senders: Vec<AccountAddress>,
-        gas_status: &mut GasStatus,
-        mut extensions: NativeContextExtensions,
-    ) -> VMResult<NativeContextExtensions> {
-        self.runtime
-            .execute_script_function(
-                module,
-                function_name,
-                ty_args,
-                args,
-                senders,
-                &mut self.data_cache,
-                gas_status,
-                &mut extensions,
-            )
-            .map(|_| extensions)
     }
 
     /// Execute a transaction script.
@@ -280,32 +219,15 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         senders: Vec<AccountAddress>,
         gas_status: &mut GasStatus,
     ) -> VMResult<()> {
-        let no_ext = NativeContextExtensions::default();
-        self.execute_script_with_extensions(script, ty_args, args, senders, gas_status, no_ext)
-            .map(|_| ())
-    }
-
-    /// Like `execute_script`, but with native context extensions.
-    pub fn execute_script_with_extensions(
-        &mut self,
-        script: Vec<u8>,
-        ty_args: Vec<TypeTag>,
-        args: Vec<Vec<u8>>,
-        senders: Vec<AccountAddress>,
-        gas_status: &mut GasStatus,
-        mut extensions: NativeContextExtensions,
-    ) -> VMResult<NativeContextExtensions> {
-        self.runtime
-            .execute_script(
-                script,
-                ty_args,
-                args,
-                senders,
-                &mut self.data_cache,
-                gas_status,
-                &mut extensions,
-            )
-            .map(|_| extensions)
+        self.runtime.execute_script(
+            script,
+            ty_args,
+            args,
+            senders,
+            &mut self.data_cache,
+            gas_status,
+            &mut self.native_extensions,
+        )
     }
 
     /// Publish the given module.
@@ -365,6 +287,21 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         self.data_cache
             .into_effects()
             .map_err(|e| e.finish(Location::Undefined))
+    }
+
+    /// Same like `finish`, but also extracts the native context extensions from the session.
+    pub fn finish_with_extensions(
+        self,
+    ) -> VMResult<(ChangeSet, Vec<Event>, NativeContextExtensions)> {
+        let Session {
+            data_cache,
+            native_extensions,
+            ..
+        } = self;
+        let (change_set, events) = data_cache
+            .into_effects()
+            .map_err(|e| e.finish(Location::Undefined))?;
+        Ok((change_set, events, native_extensions))
     }
 
     pub fn get_type_layout(&self, type_tag: &TypeTag) -> VMResult<MoveTypeLayout> {

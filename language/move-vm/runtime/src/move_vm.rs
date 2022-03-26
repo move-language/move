@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    data_cache::TransactionDataCache, native_functions::NativeFunction, runtime::VMRuntime,
+    data_cache::TransactionDataCache,
+    native_functions::{NativeContextExtensions, NativeFunction},
+    runtime::VMRuntime,
     session::Session,
 };
 use move_binary_format::errors::{Location, VMResult};
@@ -41,6 +43,15 @@ impl MoveVM {
     ///     and apply the effects to the storage when the Session ends.
     pub fn new_session<'r, S: MoveResolver>(&self, remote: &'r S) -> Session<'r, '_, S> {
         self.runtime.new_session(remote)
+    }
+
+    /// Create a new session, as in `new_session`, but provide native context extensions.
+    pub fn new_session_with_extensions<'r, S: MoveResolver>(
+        &self,
+        remote: &'r S,
+        extensions: NativeContextExtensions,
+    ) -> Session<'r, '_, S> {
+        self.runtime.new_session_with_extensions(remote, extensions)
     }
 
     /// Load a module into VM's code cache

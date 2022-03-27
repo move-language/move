@@ -18,21 +18,21 @@ pub const CORE_CODE_ADDRESS: AccountAddress = AccountAddress::ONE;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
 pub enum TypeTag {
-    #[serde(rename(serialize = "bool", deserialize = "Bool"))]
+    #[serde(rename(serialize = "bool", deserialize = "bool"))]
     Bool,
-    #[serde(rename(serialize = "u8", deserialize = "U8"))]
+    #[serde(rename(serialize = "u8", deserialize = "u8"))]
     U8,
-    #[serde(rename(serialize = "u64", deserialize = "U64"))]
+    #[serde(rename(serialize = "u64", deserialize = "u64"))]
     U64,
-    #[serde(rename(serialize = "u128", deserialize = "U128"))]
+    #[serde(rename(serialize = "u128", deserialize = "u128"))]
     U128,
-    #[serde(rename(serialize = "address", deserialize = "Address"))]
+    #[serde(rename(serialize = "address", deserialize = "address"))]
     Address,
-    #[serde(rename(serialize = "signer", deserialize = "Signer"))]
+    #[serde(rename(serialize = "signer", deserialize = "signer"))]
     Signer,
-    #[serde(rename(serialize = "vector", deserialize = "Vector"))]
+    #[serde(rename(serialize = "vector", deserialize = "vector"))]
     Vector(Box<TypeTag>),
-    #[serde(rename(serialize = "struct", deserialize = "Struct"))]
+    #[serde(rename(serialize = "struct", deserialize = "struct"))]
     Struct(StructTag),
 }
 
@@ -42,7 +42,7 @@ pub struct StructTag {
     pub module: Identifier,
     pub name: Identifier,
     // TODO: rename to "type_args" (or better "ty_args"?)
-    #[serde(rename(serialize = "type_args", deserialize = "type_params"))]
+    #[serde(rename(serialize = "type_args", deserialize = "type_args"))]
     pub type_params: Vec<TypeTag>,
 }
 
@@ -169,5 +169,26 @@ impl Display for ResourceKey {
 impl From<StructTag> for TypeTag {
     fn from(t: StructTag) -> TypeTag {
         TypeTag::Struct(t)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::TypeTag;
+    use crate::{
+        account_address::AccountAddress, identifier::Identifier, language_storage::StructTag,
+    };
+
+    #[test]
+    fn test_type_tag_serde() {
+        let a = TypeTag::Struct(StructTag {
+            address: AccountAddress::ONE,
+            module: Identifier::from_utf8(("abc".as_bytes()).to_vec()).unwrap(),
+            name: Identifier::from_utf8(("abc".as_bytes()).to_vec()).unwrap(),
+            type_params: vec![TypeTag::U8],
+        });
+        let b = serde_json::to_string(&a).unwrap();
+        let c: TypeTag = serde_json::from_str(&b).unwrap();
+        assert!(a.eq(&c), "Typetag serde error")
     }
 }

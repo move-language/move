@@ -79,21 +79,21 @@ pub enum MoveStructLayout {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MoveTypeLayout {
-    #[serde(rename(serialize = "bool", deserialize = "Bool"))]
+    #[serde(rename(serialize = "bool", deserialize = "bool"))]
     Bool,
-    #[serde(rename(serialize = "u8", deserialize = "U8"))]
+    #[serde(rename(serialize = "u8", deserialize = "u8"))]
     U8,
-    #[serde(rename(serialize = "u64", deserialize = "U64"))]
+    #[serde(rename(serialize = "u64", deserialize = "u64"))]
     U64,
-    #[serde(rename(serialize = "u128", deserialize = "U128"))]
+    #[serde(rename(serialize = "u128", deserialize = "u128"))]
     U128,
-    #[serde(rename(serialize = "address", deserialize = "Address"))]
+    #[serde(rename(serialize = "address", deserialize = "address"))]
     Address,
-    #[serde(rename(serialize = "vector", deserialize = "Vector"))]
+    #[serde(rename(serialize = "vector", deserialize = "vector"))]
     Vector(Box<MoveTypeLayout>),
-    #[serde(rename(serialize = "struct", deserialize = "Struct"))]
+    #[serde(rename(serialize = "struct", deserialize = "struct"))]
     Struct(MoveStructLayout),
-    #[serde(rename(serialize = "signer", deserialize = "Signer"))]
+    #[serde(rename(serialize = "signer", deserialize = "signer"))]
     Signer,
 }
 

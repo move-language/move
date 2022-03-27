@@ -1,6 +1,9 @@
-// separate_baseline: cvc4
-// TODO(cvc4): cvc4 currently produces false positives.
+// exclude_for: cvc5
 // separate_baseline: simplify
+// (There used to be a separate baseline: cvc5, but now it's excluded)
+// TODO(cvc5): cvc5 goes into infinite loop because of recursive function
+// $pow (used in shifts) in prelude.bpl.
+// TODO(cvc4): cvc4 currently produces false positives.
 module 0x42::FixedPointArithmetic {
 
     use Std::FixedPoint32::{Self, FixedPoint32};

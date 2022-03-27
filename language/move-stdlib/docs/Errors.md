@@ -178,7 +178,7 @@ A function to create an error from from a category and a reason.
 
 
 <pre><code><b>pragma</b> opaque = <b>true</b>;
-<b>ensures</b> [concrete] result == category + (reason &lt;&lt; 8);
+<b>ensures</b> [concrete] result == category + (reason &lt;&lt; 8) % (1 &lt;&lt; 64);
 <b>aborts_if</b> [abstract] <b>false</b>;
 <b>ensures</b> [abstract] result == category;
 </code></pre>

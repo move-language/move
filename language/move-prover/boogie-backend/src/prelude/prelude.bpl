@@ -328,41 +328,58 @@ procedure {:inline 1} $Sub(src1: int, src2: int) returns (dst: int)
     dst := src1 - src2;
 }
 
-// Note that *not* inlining the shl/shr functions avoids timeouts. It appears that Z3 can reason
-// better about this if it is an axiomatized function.
+// uninterpreted function to return an undefined value.
+function $undefined_int(): int;
+
+// Recursive exponentiation function
+// Undefined unless e >=0.  $pow(0,0) is also undefined.
+function $pow(n: int, e: int): int {
+    if n != 0 && e == 0 then 1
+    else if e > 0 then n * $pow(n, e - 1)
+    else $undefined_int()
+}
+
 function $shl(src1: int, p: int): int {
-    if p == 8 then src1 * 256
-    else if p == 16 then src1 * 65536
-    else if p == 32 then src1 * 4294967296
-    else if p == 64 then src1 * 18446744073709551616
-    // Value is undefined, otherwise.
-    else -1
+    src1 * $pow(2, p)
 }
 
 function $shr(src1: int, p: int): int {
-    if p == 8 then src1 div 256
-    else if p == 16 then src1 div 65536
-    else if p == 32 then src1 div 4294967296
-    else if p == 64 then src1 div 18446744073709551616
-    // Value is undefined, otherwise.
-    else -1
+    src1 div $pow(2, p)
 }
 
-// TODO: fix this and $Shr to drop bits on overflow. Requires $Shl8, $Shl64, and $Shl128
-procedure {:inline 1} $Shl(src1: int, src2: int) returns (dst: int)
+// We need to know the size of the destination in order to drop bits
+// that have been shifted left more than that, so we have $ShlU8/64/128
+procedure {:inline 1} $ShlU8(src1: int, src2: int) returns (dst: int)
 {
     var res: int;
-    res := $shl(src1, src2);
-    assert res >= 0;   // restriction: shift argument must be 8, 16, 32, or 64
-    dst := res;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    dst := $shl(src1, src2) mod 256;
 }
 
+procedure {:inline 1} $ShlU64(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    dst := $shl(src1, src2) mod 18446744073709551616;
+}
+
+procedure {:inline 1} $ShlU128(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    dst := $shl(src1, src2) mod 340282366920938463463374607431768211456;
+}
+
+// We don't need to know the size of destination, so no $ShrU8, etc.
 procedure {:inline 1} $Shr(src1: int, src2: int) returns (dst: int)
 {
     var res: int;
-    res := $shr(src1, src2);
-    assert res >= 0;   // restriction: shift argument must be 8, 16, 32, or 64
-    dst := res;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    dst := $shr(src1, src2);
 }
 
 procedure {:inline 1} $MulU8(src1: int, src2: int) returns (dst: int)

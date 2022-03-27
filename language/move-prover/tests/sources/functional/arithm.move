@@ -239,4 +239,5 @@ module 0x42::TestArithmetic {
     spec overflow_u128_mul {
         aborts_if x * y > max_u128(); // U128_MAX
     }
+
 }

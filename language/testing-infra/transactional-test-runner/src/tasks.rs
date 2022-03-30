@@ -369,11 +369,12 @@ impl<
     > CommandFactory for TaskCommand<ExtraInitArgs, ExtraPublishArgs, ExtraRunArgs, SubCommands>
 {
     fn into_app<'help>() -> Command<'help> {
-        clap::Command::new("Task Command")
-            .subcommand(InitCommand::command().name("init"))
+        SubCommands::command()
+            .name("Task Command")
+            .subcommand(InitCommand::augment_args(ExtraInitArgs::command()).name("init"))
             .subcommand(PrintBytecodeCommand::command().name("print-bytecode"))
-            .subcommand(PublishCommand::command().name("publish"))
-            .subcommand(RunCommand::command().name("run"))
+            .subcommand(PublishCommand::augment_args(ExtraPublishArgs::command()).name("publish"))
+            .subcommand(RunCommand::augment_args(ExtraRunArgs::command()).name("run"))
             .subcommand(ViewCommand::command().name("view"))
     }
 

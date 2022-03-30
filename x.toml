@@ -238,8 +238,8 @@ globs = ["*.md"]
 mark-changed = []
 
 [[determinator.path-rule]]
-# Ignore files in the language/evm/examples tree (for now)
-globs = ["language/evm/examples/**/*", "language/evm/stdlib/**/*"]
+# Ignore files in the examples for EVM (for now)
+globs = ["language/evm/examples/**/*", "language/evm/stdlib/**/*", "language/evm/hardhat-examples/**/*"]
 mark-changed = []
 
 [[determinator.path-rule]]

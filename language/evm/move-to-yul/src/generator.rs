@@ -134,6 +134,7 @@ impl Generator {
         ctx.emit_block(|| {
             // Generate the deployment code block
             self.begin_code_block(ctx);
+            self.optional_creator(ctx);
             let contract_deployed_name = format!("{}_deployed", contract_name);
             emitln!(
                 ctx.writer,
@@ -141,7 +142,6 @@ impl Generator {
                 contract_deployed_name,
                 contract_deployed_name
             );
-            self.optional_creator(ctx);
             emitln!(
                 ctx.writer,
                 "return(0, datasize(\"{}\"))",
@@ -274,13 +274,51 @@ impl Generator {
         }
         if let Some(creator) = creators.pop() {
             ctx.check_no_generics(&creator);
-            self.function(ctx, &creator.get_qualified_id().instantiate(vec![]));
-            // TODO: implement creator invocation
+            if creator.get_return_count() > 0 {
+                ctx.env.error(
+                    &creator.get_loc(),
+                    "return values not allowed for creator functions",
+                )
+            }
+            if !self.is_suitable_for_dispatch(ctx, &creator) {
+                ctx.env.error(
+                    &creator.get_loc(),
+                    "creator function has unsupported parameter types",
+                );
+            }
+
             emitln!(
                 ctx.writer,
-                "// TODO: invocation of {}",
-                creator.get_full_name_str()
+                "mstore(${MEM_SIZE_LOC}, memoryguard(${USED_MEM}))"
             );
+
+            // Translate call to the constructor function
+            let fun_id = creator.get_qualified_id().instantiate(vec![]);
+            let function_name = ctx.make_function_name(&fun_id);
+            let solidity_sig = self.get_solidity_signature(ctx, &creator);
+            let param_count = solidity_sig.para_types.len();
+            let mut params = "".to_string();
+            if param_count > 0 {
+                let decoding_fun_name = self.generate_abi_tuple_decoding_para(
+                    ctx,
+                    &solidity_sig,
+                    creator.get_parameter_types(),
+                    false,
+                );
+                params = (0..param_count).map(|i| format!("param_{}", i)).join(", ");
+                let let_params = format!("let {} := ", params);
+                emitln!(
+                    ctx.writer,
+                    "{}{}(4, calldatasize())",
+                    let_params,
+                    decoding_fun_name
+                );
+            }
+
+            // Call the function
+            emitln!(ctx.writer, "{}({})", function_name, params);
+
+            self.need_move_function(&fun_id);
         }
     }
 
@@ -332,6 +370,10 @@ impl Generator {
         for fun in &self.needed_yul_functions {
             emitln!(ctx.writer, &fun.yule_def());
         }
+        // Empty the set of functions for next block.
+        self.done_move_functions.clear();
+        self.needed_yul_functions.clear();
+        self.done_auxiliary_functions.clear();
         ctx.writer.unindent();
         emitln!(ctx.writer, "}")
     }

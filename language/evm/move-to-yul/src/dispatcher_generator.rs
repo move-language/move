@@ -75,24 +75,6 @@ impl Generator {
                     // Only dispatch callables
                     continue;
                 }
-                let extracted_sig_opt = attributes::extract_callable_signature(fun);
-                let mut sig = SoliditySignature::create_default_solidity_signature(ctx, fun);
-                if let Some(extracted_sig) = extracted_sig_opt {
-                    let parsed_sig_opt =
-                        SoliditySignature::parse_into_solidity_signature(&extracted_sig);
-                    if let Ok(parsed_sig) = parsed_sig_opt {
-                        if !parsed_sig.check_sig_compatibility(ctx, fun) {
-                            ctx.env.error(
-                                &fun.get_loc(),
-                                "solidity signature is not compatible with the move signature",
-                            );
-                        } else {
-                            sig = parsed_sig;
-                        }
-                    } else if let Err(msg) = parsed_sig_opt {
-                        ctx.env.error(&fun.get_loc(), &format!("{}", msg));
-                    }
-                }
                 if !self.is_suitable_for_dispatch(ctx, fun) {
                     ctx.env.diag(
                         Severity::Warning,
@@ -101,12 +83,39 @@ impl Generator {
                     );
                     continue;
                 }
+                let sig = self.get_solidity_signature(ctx, fun);
                 self.generate_dispatch_item(ctx, fun, &sig, &mut selectors);
             }
             emitln!(ctx.writer, "default {}");
         });
         let receive_exists = self.optional_receive(ctx);
         self.generate_fallback(ctx, receive_exists);
+    }
+
+    /// Returns the Solidity signature of the given function.
+    pub(crate) fn get_solidity_signature(
+        &self,
+        ctx: &Context,
+        fun: &FunctionEnv,
+    ) -> SoliditySignature {
+        let extracted_sig_opt = attributes::extract_callable_signature(fun);
+        let mut sig = SoliditySignature::create_default_solidity_signature(ctx, fun);
+        if let Some(extracted_sig) = extracted_sig_opt {
+            let parsed_sig_opt = SoliditySignature::parse_into_solidity_signature(&extracted_sig);
+            if let Ok(parsed_sig) = parsed_sig_opt {
+                if !parsed_sig.check_sig_compatibility(ctx, fun) {
+                    ctx.env.error(
+                        &fun.get_loc(),
+                        "solidity signature is not compatible with the move signature",
+                    );
+                } else {
+                    sig = parsed_sig;
+                }
+            } else if let Err(msg) = parsed_sig_opt {
+                ctx.env.error(&fun.get_loc(), &format!("{}", msg));
+            }
+        }
+        sig
     }
 
     fn generate_dispatch_item(
@@ -187,7 +196,7 @@ impl Generator {
     }
 
     /// Determine whether the function is suitable as a dispatcher item.
-    fn is_suitable_for_dispatch(&self, ctx: &Context, fun: &FunctionEnv) -> bool {
+    pub(crate) fn is_suitable_for_dispatch(&self, ctx: &Context, fun: &FunctionEnv) -> bool {
         // TODO: once we support structs and vectors, remove check for them
         fun.get_parameter_types()
             .iter()

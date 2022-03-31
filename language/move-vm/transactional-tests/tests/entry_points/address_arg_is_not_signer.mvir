@@ -3,11 +3,11 @@ main(s: signer) {
 label b0:
     return;
 }
-// should give NUMBER_OF_SIGNER_ARGUMENTS_MISMATCH
+// DEPRECATED signers can now be passed in as addrs
 
 //# run --args 0x0 0x2
 main(s: signer, s2: signer) {
 label b0:
     return;
 }
-// should give NUMBER_OF_SIGNER_ARGUMENTS_MISMATCH
+// DEPRECATED signers can now be passed in as addrs

@@ -17,6 +17,7 @@ use move_core_types::{
     identifier::IdentStr,
     language_storage::TypeTag,
     transaction_argument::{convert_txn_args, TransactionArgument},
+    value::MoveValue,
 };
 use move_package::compilation::compiled_package::CompiledPackage;
 use move_vm_runtime::move_vm::MoveVM;
@@ -76,27 +77,33 @@ move run` must be applied to a module inside `storage/`",
 
     let script_type_parameters = vec![];
     let script_parameters = vec![];
+    // TODO rethink move-cli arguments for executing functions
+    let vm_args = signer_addresses
+        .iter()
+        .map(|a| {
+            MoveValue::Signer(*a)
+                .simple_serialize()
+                .expect("transaction arguments must serialize")
+        })
+        .chain(vm_args)
+        .collect();
     let res = match script_name_opt {
         Some(script_name) => {
             // script fun. parse module, extract script ID to pass to VM
             let module = CompiledModule::deserialize(&bytecode)
                 .map_err(|e| anyhow!("Error deserializing module: {:?}", e))?;
-            session
-                .execute_script_function(
-                    &module.self_id(),
-                    IdentStr::new(script_name)?,
-                    vm_type_args.clone(),
-                    vm_args,
-                    signer_addresses.clone(),
-                    &mut gas_status,
-                )
-                .map(|_| ())
+            session.execute_entry_function(
+                &module.self_id(),
+                IdentStr::new(script_name)?,
+                vm_type_args.clone(),
+                vm_args,
+                &mut gas_status,
+            )
         }
         None => session.execute_script(
             bytecode.to_vec(),
             vm_type_args.clone(),
             vm_args,
-            signer_addresses.clone(),
             &mut gas_status,
         ),
     };

@@ -1,16 +1,13 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::borrow::Borrow;
-
 use crate::{
     data_cache::TransactionDataCache, native_functions::NativeContextExtensions, runtime::VMRuntime,
 };
-use move_binary_format::errors::*;
+use move_binary_format::{errors::*, file_format::LocalIndex};
 use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet, Event},
-    gas_schedule::GasAlgebra,
     identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
     resolver::MoveResolver,
@@ -19,6 +16,7 @@ use move_core_types::{
 use move_vm_types::{
     data_store::DataStore, gas_schedule::GasStatus, loaded_data::runtime_types::Type,
 };
+use std::borrow::Borrow;
 
 pub struct Session<'r, 'l, S> {
     pub(crate) runtime: &'l VMRuntime,
@@ -26,41 +24,36 @@ pub struct Session<'r, 'l, S> {
     pub(crate) native_extensions: NativeContextExtensions,
 }
 
-/// Result of executing a function in the VM
-pub enum ExecutionResult {
-    /// Execution completed successfully and changed global state
-    Success {
-        /// Changes to global state that occurred during execution
-        change_set: ChangeSet,
-        /// Events emitted during execution
-        events: Vec<Event>,
-        /// Values returned by the function
-        return_values: Vec<Vec<u8>>,
-        /// Final value of inputs passed in to the entrypoint via a mutable reference
-        mutable_ref_values: Vec<Vec<u8>>,
-        /// Gas used during execution
-        gas_used: u64,
-        /// Native extensions end state
-        native_extensions: NativeContextExtensions,
-    },
-    /// Execution failed and had no side effects
-    Fail {
-        /// The reason execution failed
-        error: VMError,
-        /// Gas used during execution
-        gas_used: u64,
-    },
+/// Serialized return values from function/script execution
+/// Simple struct is designed just to convey meaning behind serialized values
+#[derive(Debug)]
+pub struct SerializedReturnValues {
+    /// The value of any arguments that were mutably borrowed.
+    /// Non-mut borrowed values are not included
+    pub mutable_reference_outputs: Vec<(LocalIndex, Vec<u8>, MoveTypeLayout)>,
+    /// The return values from the function
+    pub return_values: Vec<(Vec<u8>, MoveTypeLayout)>,
 }
 
 impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     /// Execute a Move function with the given arguments. This is mainly designed for an external
     /// environment to invoke system logic written in Move.
     ///
+    /// NOTE: There are NO checks on the `args` except that they can deserialize into the provided
+    /// types.
+    /// The ability to deserialize `args` into arbitrary types is *very* powerful, e.g. it can
+    /// used to manufacture `signer`'s or `Coin`'s from raw bytes. It is the responsibility of the
+    /// caller (e.g. adapter) to ensure that this power is used responsibly/securely for its
+    /// use-case.
+    ///
     /// The caller MUST ensure
     ///   - All types and modules referred to by the type arguments exist.
+    ///   - The signature is valid for the rules of the adapter
     ///
     /// The Move VM MUST return an invariant violation if the caller fails to follow any of the
     /// rules above.
+    ///
+    /// The VM will check that the function has public(script) visibility.
     ///
     /// Currently if any other error occurs during execution, the Move VM will simply propagate that
     /// error back to the outer environment without handling/translating it. This behavior may be
@@ -68,14 +61,15 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     ///
     /// In case an invariant violation occurs, the whole Session should be considered corrupted and
     /// one shall not proceed with effect generation.
-    pub fn execute_function(
+    pub fn execute_entry_function(
         &mut self,
         module: &ModuleId,
         function_name: &IdentStr,
         ty_args: Vec<TypeTag>,
-        args: Vec<Vec<u8>>,
+        args: Vec<impl Borrow<[u8]>>,
         gas_status: &mut GasStatus,
-    ) -> VMResult<Vec<Vec<u8>>> {
+    ) -> VMResult<SerializedReturnValues> {
+        let bypass_visibility = false;
         self.runtime.execute_function(
             module,
             function_name,
@@ -84,116 +78,29 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
             &mut self.data_cache,
             gas_status,
             &mut self.native_extensions,
+            bypass_visibility,
         )
     }
 
-    /// Execute `module`::`fuction_name`<`ty_args`>(`args`) and return the effects in
-    /// an `ExecutionResult`, including
-    /// * the write set and events
-    /// * return values of the function
-    /// * changes to values passes by mutable reference to the function
-    /// Arguments to the function in `args` can be any type--ground types, user-defined struct
-    /// types, and references (including mutable references).
-    /// A reference argument in `args[i]` with type `&T` or `&mut T` will be deserialized as a `T`.
-    /// Pure arguments are deserialized in the obvious way.
-    ///
-    /// NOTE: The ability to deserialize `args` into arbitrary types is very powerful--e.g., it can
-    /// used to manufacture `signer`'s or `Coin`'s from raw bytes. It is the respmsibility of the
-    /// caller (e.g. adapter) to ensure that this power is useed responsibility/securely for its use-case.
-    pub fn execute_function_for_effects<V>(
-        self,
-        module: &ModuleId,
-        function_name: &IdentStr,
-        ty_args: Vec<TypeTag>,
-        args: Vec<V>,
-        gas_status: &mut GasStatus,
-    ) -> ExecutionResult
-    where
-        V: Borrow<[u8]>,
-    {
-        // Deconstruct the session.
-        let Session {
-            runtime,
-            mut data_cache,
-            mut native_extensions,
-        } = self;
-        let gas_budget = gas_status.remaining_gas().get();
-
-        let execution_res = runtime.execute_function_for_effects(
-            module,
-            function_name,
-            ty_args,
-            args,
-            &mut data_cache,
-            gas_status,
-            &mut native_extensions,
-        );
-        let gas_used = gas_budget - gas_status.remaining_gas().get();
-        // Reconstruct the session for call to finish, but do not provide extensions as we
-        // need to put them into the result.
-        let session = Session {
-            runtime,
-            data_cache,
-            native_extensions: NativeContextExtensions::default(),
-        };
-        match execution_res {
-            Ok((return_values, mutable_ref_values)) => match session.finish() {
-                Ok((change_set, events)) => ExecutionResult::Success {
-                    change_set,
-                    events,
-                    return_values,
-                    mutable_ref_values,
-                    gas_used,
-                    native_extensions,
-                },
-                Err(error) => ExecutionResult::Fail { error, gas_used },
-            },
-            Err(error) => ExecutionResult::Fail { error, gas_used },
-        }
-    }
-
-    /// Execute a Move script function with the given arguments.
-    ///
-    /// Unlike `execute_function` which is designed for system logic, `execute_script_function` is
-    /// mainly designed to call a script function in an existing module. It similar to
-    /// `execute_script` except that execution of the "script" begins with the specified function
-    ///
-    /// The Move VM MUST return a user error (in other words, an error that's not an invariant
-    /// violation) if
-    ///   - The function does not exist.
-    ///   - The function does not have script visibility.
-    ///   - The signature is not valid for a script. Not all script-visible module functions can
-    ///     be invoked from this entry point. See `move_bytecode_verifier::script_signature` for the
-    ///     rules.
-    ///   - Type arguments refer to a non-existent type.
-    ///   - Arguments (senders included) fail to deserialize or fail to match the signature of the
-    ///     script function.
-
-    ///
-    /// If any other error occurs during execution, the Move VM MUST propagate that error back to
-    /// the caller.
-    /// Besides, no user input should cause the Move VM to return an invariant violation.
-    ///
-    /// In case an invariant violation occurs, the whole Session should be considered corrupted and
-    /// one shall not proceed with effect generation.
-    pub fn execute_script_function(
+    /// Similar to execute_entry_function, but it bypasses visibility checks
+    pub fn execute_function_bypass_visibility(
         &mut self,
         module: &ModuleId,
         function_name: &IdentStr,
         ty_args: Vec<TypeTag>,
-        args: Vec<Vec<u8>>,
-        senders: Vec<AccountAddress>,
+        args: Vec<impl Borrow<[u8]>>,
         gas_status: &mut GasStatus,
-    ) -> VMResult<()> {
-        self.runtime.execute_script_function(
+    ) -> VMResult<SerializedReturnValues> {
+        let bypass_visibility = true;
+        self.runtime.execute_function(
             module,
             function_name,
             ty_args,
             args,
-            senders,
             &mut self.data_cache,
             gas_status,
             &mut self.native_extensions,
+            bypass_visibility,
         )
     }
 
@@ -215,17 +122,15 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     /// one shall not proceed with effect generation.
     pub fn execute_script(
         &mut self,
-        script: Vec<u8>,
+        script: impl Borrow<[u8]>,
         ty_args: Vec<TypeTag>,
-        args: Vec<Vec<u8>>,
-        senders: Vec<AccountAddress>,
+        args: Vec<impl Borrow<[u8]>>,
         gas_status: &mut GasStatus,
-    ) -> VMResult<()> {
+    ) -> VMResult<SerializedReturnValues> {
         self.runtime.execute_script(
             script,
             ty_args,
             args,
-            senders,
             &mut self.data_cache,
             gas_status,
             &mut self.native_extensions,

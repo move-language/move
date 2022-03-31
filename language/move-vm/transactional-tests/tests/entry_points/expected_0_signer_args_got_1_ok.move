@@ -1,5 +1,5 @@
 //# run --signers 0x1
-// will succeed, currently okay to drop a signer?
+// DEPRECATED now will fail. signer args same as other args
 script {
 fun main() {}
 }

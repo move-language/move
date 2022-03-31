@@ -18,7 +18,9 @@ use move_binary_format::{
     },
     IndexKind,
 };
-use move_bytecode_verifier::{self, cyclic_dependencies, dependencies, script_signature};
+use move_bytecode_verifier::{
+    self, cyclic_dependencies, dependencies, script_signature, FnCheckScriptSignature,
+};
 use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
@@ -88,18 +90,30 @@ impl ScriptCache {
         }
     }
 
-    fn get(&self, hash: &ScriptHash) -> Option<(Arc<Function>, Vec<Type>)> {
-        self.scripts
-            .get(hash)
-            .map(|script| (script.entry_point(), script.parameter_tys.clone()))
+    fn get(&self, hash: &ScriptHash) -> Option<(Arc<Function>, Vec<Type>, Vec<Type>)> {
+        self.scripts.get(hash).map(|script| {
+            (
+                script.entry_point(),
+                script.parameter_tys.clone(),
+                script.return_tys.clone(),
+            )
+        })
     }
 
-    fn insert(&mut self, hash: ScriptHash, script: Script) -> (Arc<Function>, Vec<Type>) {
+    fn insert(
+        &mut self,
+        hash: ScriptHash,
+        script: Script,
+    ) -> (Arc<Function>, Vec<Type>, Vec<Type>) {
         match self.get(&hash) {
             Some(cached) => cached,
             None => {
                 let script = self.scripts.insert(hash, script);
-                (script.entry_point(), script.parameter_tys.clone())
+                (
+                    script.entry_point(),
+                    script.parameter_tys.clone(),
+                    script.return_tys.clone(),
+                )
             }
         }
     }
@@ -456,14 +470,14 @@ impl Loader {
         script_blob: &[u8],
         ty_args: &[TypeTag],
         data_store: &mut impl DataStore,
-    ) -> VMResult<(Arc<Function>, Vec<Type>, Vec<Type>)> {
+    ) -> VMResult<(Arc<Function>, Vec<Type>, Vec<Type>, Vec<Type>)> {
         // retrieve or load the script
         let mut sha3_256 = Sha3_256::new();
         sha3_256.update(script_blob);
         let hash_value: [u8; 32] = sha3_256.finalize().into();
 
         let mut scripts = self.scripts.write();
-        let (main, parameter_tys) = match scripts.get(&hash_value) {
+        let (main, parameter_tys, return_tys) = match scripts.get(&hash_value) {
             Some(main) => main,
             None => {
                 let ver_script = self.deserialize_and_verify_script(script_blob, data_store)?;
@@ -480,7 +494,7 @@ impl Loader {
         self.verify_ty_args(main.type_parameters(), &type_arguments)
             .map_err(|e| e.finish(Location::Script))?;
 
-        Ok((main, type_arguments, parameter_tys))
+        Ok((main, type_arguments, parameter_tys, return_tys))
     }
 
     // The process of deserialization and verification is not and it must not be under lock.
@@ -554,8 +568,8 @@ impl Loader {
         function_name: &IdentStr,
         module_id: &ModuleId,
         ty_args: &[TypeTag],
-        is_script_execution: bool,
         data_store: &impl DataStore,
+        additional_signature_checks: FnCheckScriptSignature,
     ) -> VMResult<(Arc<Function>, Vec<Type>, Vec<Type>, Vec<Type>)> {
         let module = self.load_module(module_id, data_store)?;
         let idx = self
@@ -597,10 +611,11 @@ impl Loader {
         self.verify_ty_args(func.type_parameters(), &type_params)
             .map_err(|e| e.finish(Location::Module(module_id.clone())))?;
 
-        if is_script_execution {
-            let compiled_module = module.module();
-            script_signature::verify_module_script_function(compiled_module, function_name)?;
-        }
+        script_signature::verify_module_function_signature_by_name(
+            module.module(),
+            function_name,
+            additional_signature_checks,
+        )?;
 
         Ok((func, type_params, parameter_tys, return_tys))
     }
@@ -1623,6 +1638,9 @@ struct Script {
     // parameters of main
     parameter_tys: Vec<Type>,
 
+    // return values
+    return_tys: Vec<Type>,
+
     // a map of single-token signature indices to type
     single_signature_token_map: BTreeMap<SignatureIndex, Type>,
 }
@@ -1691,7 +1709,6 @@ impl Script {
             .map(|tok| cache.make_type(BinaryIndexedView::Script(&script), tok))
             .collect::<PartialVMResult<Vec<_>>>()
             .map_err(|err| err.finish(Location::Undefined))?;
-        let return_ = Signature(vec![]);
         let locals = Signature(
             parameters
                 .0
@@ -1700,6 +1717,13 @@ impl Script {
                 .cloned()
                 .collect(),
         );
+        let return_ = Signature(vec![]);
+        let return_tys = return_
+            .0
+            .iter()
+            .map(|tok| cache.make_type(BinaryIndexedView::Script(&script), tok))
+            .collect::<PartialVMResult<Vec<_>>>()
+            .map_err(|err| err.finish(Location::Undefined))?;
         let type_parameters = script.type_parameters.clone();
         // TODO: main does not have a name. Revisit.
         let name = Identifier::new("main").unwrap();
@@ -1762,6 +1786,7 @@ impl Script {
             function_instantiations,
             main,
             parameter_tys,
+            return_tys,
             single_signature_token_map,
         })
     }
@@ -1794,6 +1819,7 @@ enum Scope {
 // #[derive(Debug)]
 // https://github.com/rust-lang/rust/issues/70263
 pub(crate) struct Function {
+    #[allow(unused)]
     file_format_version: u32,
     index: FunctionDefinitionIndex,
     code: Vec<Bytecode>,
@@ -1858,6 +1884,7 @@ impl Function {
         }
     }
 
+    #[allow(unused)]
     pub(crate) fn file_format_version(&self) -> u32 {
         self.file_format_version
     }

@@ -6,7 +6,8 @@ use crate::{
     ability_field_requirements, check_duplication::DuplicationChecker,
     code_unit_verifier::CodeUnitVerifier, constants, friends,
     instantiation_loops::InstantiationLoopChecker, instruction_consistency::InstructionConsistency,
-    script_signature, signature::SignatureChecker, struct_defs::RecursiveStructDefChecker,
+    script_signature, script_signature::no_additional_script_signature_checks,
+    signature::SignatureChecker, struct_defs::RecursiveStructDefChecker,
 };
 use move_binary_format::{
     check_bounds::BoundsChecker,
@@ -38,7 +39,8 @@ pub fn verify_module(module: &CompiledModule) -> VMResult<()> {
     ability_field_requirements::verify_module(module)?;
     RecursiveStructDefChecker::verify_module(module)?;
     InstantiationLoopChecker::verify_module(module)?;
-    CodeUnitVerifier::verify_module(module)
+    CodeUnitVerifier::verify_module(module)?;
+    script_signature::verify_module(module, no_additional_script_signature_checks)
 }
 
 /// Helper for a "canonical" verification of a script.
@@ -58,5 +60,5 @@ pub fn verify_script(script: &CompiledScript) -> VMResult<()> {
     InstructionConsistency::verify_script(script)?;
     constants::verify_script(script)?;
     CodeUnitVerifier::verify_script(script)?;
-    script_signature::verify_script(script)
+    script_signature::verify_script(script, no_additional_script_signature_checks)
 }

@@ -18,7 +18,7 @@ use move_vm_test_utils::BlankStorage;
 use once_cell::sync::Lazy;
 
 /// Create all available native context extensions.
-#[allow(unused_mut)]
+#[allow(unused_mut, clippy::let_and_return)]
 pub(crate) fn new_extensions() -> NativeContextExtensions {
     let mut e = NativeContextExtensions::default();
     #[cfg(feature = "table-extension")]

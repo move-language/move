@@ -374,8 +374,12 @@ pub const VERSION_3: u32 = 3;
 ///  + bytecode for vector operations
 pub const VERSION_4: u32 = 4;
 
+/// Version 5: changes compared with version 4
+///  +/- script and public(script) verification is now adapter specific
+pub const VERSION_5: u32 = 5;
+
 // Mark which version is the latest version
-pub const VERSION_MAX: u32 = VERSION_4;
+pub const VERSION_MAX: u32 = VERSION_5;
 
 pub(crate) mod versioned_data {
     use crate::{errors::*, file_format_common::*};

@@ -18,10 +18,9 @@ pub struct MoveVM {
 }
 
 impl MoveVM {
-    pub fn new<I>(natives: I) -> VMResult<Self>
-    where
-        I: IntoIterator<Item = (AccountAddress, Identifier, Identifier, NativeFunction)>,
-    {
+    pub fn new(
+        natives: impl IntoIterator<Item = (AccountAddress, Identifier, Identifier, NativeFunction)>,
+    ) -> VMResult<Self> {
         Ok(Self {
             runtime: VMRuntime::new(natives).map_err(|err| err.finish(Location::Undefined))?,
         })

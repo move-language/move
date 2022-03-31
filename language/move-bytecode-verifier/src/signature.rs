@@ -46,6 +46,7 @@ impl<'a> SignatureChecker<'a> {
         };
         sig_check.verify_signature_pool(script.signatures())?;
         sig_check.verify_function_signatures(script.function_handles())?;
+        sig_check.check_instantiation(script.parameters, &script.type_parameters)?;
         sig_check.verify_code(script.code(), &script.type_parameters)
     }
 

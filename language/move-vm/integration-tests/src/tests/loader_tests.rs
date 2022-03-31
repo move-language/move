@@ -87,7 +87,13 @@ impl Adapter {
                     let mut gas_status = GasStatus::new_unmetered();
                     let mut session = vm.new_session(&data_store);
                     session
-                        .execute_function(&module_id, &name, vec![], vec![], &mut gas_status)
+                        .execute_function_bypass_visibility(
+                            &module_id,
+                            &name,
+                            vec![],
+                            Vec::<Vec<u8>>::new(),
+                            &mut gas_status,
+                        )
                         .unwrap_or_else(|_| {
                             panic!("Failure executing {:?}::{:?}", module_id, name)
                         });
@@ -103,7 +109,13 @@ impl Adapter {
         let mut gas_status = GasStatus::new_unmetered();
         let mut session = self.vm.new_session(&self.store);
         session
-            .execute_function(module, name, vec![], vec![], &mut gas_status)
+            .execute_function_bypass_visibility(
+                module,
+                name,
+                vec![],
+                Vec::<Vec<u8>>::new(),
+                &mut gas_status,
+            )
             .unwrap_or_else(|_| panic!("Failure executing {:?}::{:?}", module, name));
     }
 }

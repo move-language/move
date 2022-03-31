@@ -34,6 +34,7 @@ use move_core_types::{
 use move_disassembler::disassembler::{Disassembler, DisassemblerOptions};
 use move_ir_types::location::Spanned;
 use move_symbol_pool::Symbol;
+use move_vm_runtime::session::SerializedReturnValues;
 use rayon::iter::Either;
 use std::{
     collections::{BTreeMap, VecDeque},
@@ -121,7 +122,7 @@ pub trait MoveTestAdapter<'a> {
         args: Vec<TransactionArgument>,
         gas_budget: Option<u64>,
         extra: Self::ExtraRunArgs,
-    ) -> Result<Option<String>>;
+    ) -> Result<(Option<String>, SerializedReturnValues)>;
     fn call_function(
         &mut self,
         module: &ModuleId,
@@ -131,7 +132,7 @@ pub trait MoveTestAdapter<'a> {
         args: Vec<TransactionArgument>,
         gas_budget: Option<u64>,
         extra: Self::ExtraRunArgs,
-    ) -> Result<Option<String>>;
+    ) -> Result<(Option<String>, SerializedReturnValues)>;
     fn view_data(
         &mut self,
         address: AccountAddress,
@@ -282,9 +283,13 @@ pub trait MoveTestAdapter<'a> {
                     SyntaxChoice::IR => (compile_ir_script(state.dep_modules(), data_path)?, None),
                 };
                 let args = self.compiled_state().resolve_args(args);
-                let output =
+                let (output, return_values) =
                     self.execute_script(script, type_args, signers, args, gas_budget, extra_args)?;
-                Ok(merge_output(warning_opt, output))
+                let rendered_return_value = display_return_values(return_values);
+                Ok(merge_output(
+                    warning_opt,
+                    merge_output(output, rendered_return_value),
+                ))
             }
             TaskCommand::Run(
                 RunCommand {
@@ -302,7 +307,7 @@ pub trait MoveTestAdapter<'a> {
                     "syntax flag meaningless with function execution"
                 );
                 let args = self.compiled_state().resolve_args(args);
-                let output = self.call_function(
+                let (output, return_values) = self.call_function(
                     &module,
                     name.as_ident_str(),
                     type_args,
@@ -311,7 +316,8 @@ pub trait MoveTestAdapter<'a> {
                     gas_budget,
                     extra_args,
                 )?;
-                Ok(output)
+                let rendered_return_value = display_return_values(return_values);
+                Ok(merge_output(output, rendered_return_value))
             }
             TaskCommand::View(ViewCommand {
                 address,
@@ -335,6 +341,57 @@ pub trait MoveTestAdapter<'a> {
                 data,
             }),
         }
+    }
+}
+
+fn display_return_values(return_values: SerializedReturnValues) -> Option<String> {
+    let SerializedReturnValues {
+        mutable_reference_outputs,
+        return_values,
+    } = return_values;
+    let mut output = vec![];
+    if !mutable_reference_outputs.is_empty() {
+        let values = mutable_reference_outputs
+            .iter()
+            .map(|(idx, bytes, layout)| {
+                let value =
+                    move_vm_types::values::Value::simple_deserialize(bytes, layout).unwrap();
+                (idx, value)
+            })
+            .collect::<Vec<_>>();
+        let printed = values
+            .iter()
+            .map(|(idx, v)| {
+                let mut buf = String::new();
+                move_vm_types::values::debug::print_value(&mut buf, v).unwrap();
+                format!("local#{}: {}", idx, buf)
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        output.push(format!("mutable inputs after call: {}", printed))
+    };
+    if !return_values.is_empty() {
+        let values = return_values
+            .iter()
+            .map(|(bytes, layout)| {
+                move_vm_types::values::Value::simple_deserialize(bytes, layout).unwrap()
+            })
+            .collect::<Vec<_>>();
+        let printed = values
+            .iter()
+            .map(|v| {
+                let mut buf = String::new();
+                move_vm_types::values::debug::print_value(&mut buf, v).unwrap();
+                buf
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        output.push(format!("return values: {}", printed))
+    };
+    if output.is_empty() {
+        None
+    } else {
+        Some(output.join("\n"))
     }
 }
 

@@ -26,7 +26,7 @@ fn call_non_existent_module() {
     let mut gas_status = GasStatus::new_unmetered();
 
     let err = sess
-        .execute_function(
+        .execute_function_bypass_visibility(
             &module_id,
             &fun_name,
             vec![],
@@ -61,7 +61,7 @@ fn call_non_existent_function() {
     let mut gas_status = GasStatus::new_unmetered();
 
     let err = sess
-        .execute_function(
+        .execute_function_bypass_visibility(
             &module_id,
             &fun_name,
             vec![],

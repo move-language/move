@@ -8,9 +8,8 @@ use move_core_types::{
     identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
     value::{MoveTypeLayout, MoveValue},
-    vm_status::StatusCode,
 };
-use move_vm_runtime::move_vm::MoveVM;
+use move_vm_runtime::{move_vm::MoveVM, session::SerializedReturnValues};
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas_schedule::GasStatus;
 
@@ -58,10 +57,21 @@ fn run(
         .map(|val| val.simple_serialize().unwrap())
         .collect();
 
-    let return_vals =
-        sess.execute_function(&module_id, &fun_name, ty_args, args, &mut gas_status)?;
+    let SerializedReturnValues {
+        return_values,
+        mutable_reference_outputs: _,
+    } = sess.execute_function_bypass_visibility(
+        &module_id,
+        &fun_name,
+        ty_args,
+        args,
+        &mut gas_status,
+    )?;
 
-    Ok(return_vals)
+    Ok(return_values
+        .into_iter()
+        .map(|(bytes, _layout)| bytes)
+        .collect())
 }
 
 fn expect_success(
@@ -78,22 +88,6 @@ fn expect_success(
     for (blob, layout) in return_vals.iter().zip(expected_layouts.iter()) {
         MoveValue::simple_deserialize(blob, layout).unwrap();
     }
-}
-
-fn expect_failure(
-    structs: &[&str],
-    fun_sig: &str,
-    fun_body: &str,
-    ty_args: Vec<TypeTag>,
-    args: Vec<MoveValue>,
-    expected_status: StatusCode,
-) {
-    assert_eq!(
-        run(structs, fun_sig, fun_body, ty_args, args)
-            .unwrap_err()
-            .major_status(),
-        expected_status
-    );
 }
 
 #[test]
@@ -120,12 +114,12 @@ fn return_u64_bool() {
 
 #[test]
 fn return_signer_ref() {
-    expect_failure(
+    expect_success(
         &[],
         "(s: &signer): &signer",
         "s",
         vec![],
         vec![MoveValue::Signer(TEST_ADDR)],
-        StatusCode::INTERNAL_TYPE_ERROR,
+        &[MoveTypeLayout::Signer],
     )
 }

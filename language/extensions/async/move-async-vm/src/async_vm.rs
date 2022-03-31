@@ -11,6 +11,7 @@ use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMEr
 use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet, Event},
+    gas_schedule::GasAlgebra,
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
     resolver::MoveResolver,
@@ -19,7 +20,7 @@ use move_core_types::{
 use move_vm_runtime::{
     move_vm::MoveVM,
     native_functions::{NativeContextExtensions, NativeFunction},
-    session::{ExecutionResult, Session},
+    session::{SerializedReturnValues, Session},
 };
 use move_vm_types::{
     gas_schedule::GasStatus,
@@ -175,25 +176,29 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
         }
 
         // Execute the initializer.
-        let result = self.vm_session.execute_function_for_effects(
-            &actor.module_id,
-            &actor.initializer,
-            vec![],
-            Vec::<Vec<u8>>::new(),
-            gas_status,
-        );
+        let gas_before = gas_status.remaining_gas().get();
+        let result = self
+            .vm_session
+            .execute_function_bypass_visibility(
+                &actor.module_id,
+                &actor.initializer,
+                vec![],
+                Vec::<Vec<u8>>::new(),
+                gas_status,
+            )
+            .and_then(|ret| Ok((ret, self.vm_session.finish_with_extensions()?)));
+        let gas_used = gas_status.remaining_gas().get() - gas_before;
 
         // Process the result, moving the return value of the initializer function into the
         // changeset.
         match result {
-            ExecutionResult::Success {
-                mut change_set,
-                events,
-                mut return_values,
-                gas_used,
-                mut native_extensions,
-                ..
-            } => {
+            Ok((
+                SerializedReturnValues {
+                    mutable_reference_outputs: _,
+                    mut return_values,
+                },
+                (mut change_set, events, mut native_extensions),
+            )) => {
                 if return_values.len() != 1 {
                     Err(async_extension_error(format!(
                         "inconsistent initializer `{}`",
@@ -204,7 +209,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
                         &mut change_set,
                         actor_addr,
                         actor.state_tag.clone(),
-                        return_values.remove(0),
+                        return_values.remove(0).0,
                     )
                     .map_err(partial_vm_error_to_async)?;
                     let async_ext = native_extensions.remove::<AsyncExtension>();
@@ -216,7 +221,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
                     })
                 }
             }
-            ExecutionResult::Fail { error, gas_used } => Err(AsyncError { error, gas_used }),
+            Err(error) => Err(AsyncError { error, gas_used }),
         }
     }
 
@@ -266,37 +271,36 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
         );
 
         // Execute the handler.
-        let result = self.vm_session.execute_function_for_effects(
-            module_id,
-            handler_id,
-            vec![],
-            args,
-            gas_status,
-        );
+        let gas_before = gas_status.remaining_gas().get();
+        let result = self
+            .vm_session
+            .execute_function_bypass_visibility(module_id, handler_id, vec![], args, gas_status)
+            .and_then(|ret| Ok((ret, self.vm_session.finish_with_extensions()?)));
+
+        let gas_used = gas_status.remaining_gas().get() - gas_before;
 
         // Process the result, moving the mutated value of the handlers first parameter
         // into the changeset.
         match result {
-            ExecutionResult::Success {
-                mut change_set,
-                events,
-                mut mutable_ref_values,
-                gas_used,
-                mut native_extensions,
-                ..
-            } => {
-                if mutable_ref_values.len() > 1 {
+            Ok((
+                SerializedReturnValues {
+                    mut mutable_reference_outputs,
+                    return_values: _,
+                },
+                (mut change_set, events, mut native_extensions),
+            )) => {
+                if mutable_reference_outputs.len() > 1 {
                     Err(async_extension_error(format!(
                         "inconsistent handler `{}`",
                         handler_id
                     )))
                 } else {
-                    if !mutable_ref_values.is_empty() {
+                    if !mutable_reference_outputs.is_empty() {
                         publish_actor_state(
                             &mut change_set,
                             actor_addr,
                             actor.state_tag.clone(),
-                            mutable_ref_values.remove(0),
+                            mutable_reference_outputs.remove(0).1,
                         )
                         .map_err(partial_vm_error_to_async)?;
                     }
@@ -309,7 +313,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
                     })
                 }
             }
-            ExecutionResult::Fail { error, gas_used } => Err(AsyncError { error, gas_used }),
+            Err(error) => Err(AsyncError { error, gas_used }),
         }
     }
 

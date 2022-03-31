@@ -97,10 +97,10 @@ fn test_malformed_resource() {
     sess.execute_script(
         script_blob,
         vec![],
-        vec![],
-        vec![TEST_ADDR],
+        vec![MoveValue::Signer(TEST_ADDR).simple_serialize().unwrap()],
         &mut gas_status,
     )
+    .map(|_| ())
     .unwrap();
     let (changeset, _) = sess.finish().unwrap();
     storage.apply(changeset).unwrap();
@@ -115,10 +115,10 @@ fn test_malformed_resource() {
         sess.execute_script(
             script_blob.clone(),
             vec![],
-            vec![],
-            vec![TEST_ADDR],
+            vec![MoveValue::Signer(TEST_ADDR).simple_serialize().unwrap()],
             &mut gas_status,
         )
+        .map(|_| ())
         .unwrap();
     }
 
@@ -142,10 +142,10 @@ fn test_malformed_resource() {
             .execute_script(
                 script_blob,
                 vec![],
-                vec![],
-                vec![TEST_ADDR],
+                vec![MoveValue::Signer(TEST_ADDR).simple_serialize().unwrap()],
                 &mut gas_status,
             )
+            .map(|_| ())
             .unwrap_err();
         assert_eq!(err.status_type(), StatusType::InvariantViolation);
     }
@@ -179,8 +179,14 @@ fn test_malformed_module() {
         storage.publish_or_overwrite_module(m.self_id(), blob.clone());
         let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
-        sess.execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
-            .unwrap();
+        sess.execute_function_bypass_visibility(
+            &module_id,
+            &fun_name,
+            vec![],
+            Vec::<Vec<u8>>::new(),
+            &mut gas_status,
+        )
+        .unwrap();
     }
 
     // Start over with a fresh storage and publish a corrupted version of M.
@@ -199,7 +205,13 @@ fn test_malformed_module() {
         let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
         let err = sess
-            .execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
+            .execute_function_bypass_visibility(
+                &module_id,
+                &fun_name,
+                vec![],
+                Vec::<Vec<u8>>::new(),
+                &mut gas_status,
+            )
             .unwrap_err();
         assert_eq!(err.status_type(), StatusType::InvariantViolation);
     }
@@ -233,8 +245,14 @@ fn test_unverifiable_module() {
         let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
 
-        sess.execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
-            .unwrap();
+        sess.execute_function_bypass_visibility(
+            &module_id,
+            &fun_name,
+            vec![],
+            Vec::<Vec<u8>>::new(),
+            &mut gas_status,
+        )
+        .unwrap();
     }
 
     // Erase the body of M::foo to make it fail verification.
@@ -252,7 +270,13 @@ fn test_unverifiable_module() {
         let mut sess = vm.new_session(&storage);
 
         let err = sess
-            .execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
+            .execute_function_bypass_visibility(
+                &module_id,
+                &fun_name,
+                vec![],
+                Vec::<Vec<u8>>::new(),
+                &mut gas_status,
+            )
             .unwrap_err();
 
         assert_eq!(err.status_type(), StatusType::InvariantViolation);
@@ -298,8 +322,14 @@ fn test_missing_module_dependency() {
         let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
 
-        sess.execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
-            .unwrap();
+        sess.execute_function_bypass_visibility(
+            &module_id,
+            &fun_name,
+            vec![],
+            Vec::<Vec<u8>>::new(),
+            &mut gas_status,
+        )
+        .unwrap();
     }
 
     // Publish only N and try to call N::bar. The VM should fail to find M and raise
@@ -312,7 +342,13 @@ fn test_missing_module_dependency() {
         let mut sess = vm.new_session(&storage);
 
         let err = sess
-            .execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
+            .execute_function_bypass_visibility(
+                &module_id,
+                &fun_name,
+                vec![],
+                Vec::<Vec<u8>>::new(),
+                &mut gas_status,
+            )
             .unwrap_err();
 
         assert_eq!(err.status_type(), StatusType::InvariantViolation);
@@ -358,8 +394,14 @@ fn test_malformed_module_denpency() {
         let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
 
-        sess.execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
-            .unwrap();
+        sess.execute_function_bypass_visibility(
+            &module_id,
+            &fun_name,
+            vec![],
+            Vec::<Vec<u8>>::new(),
+            &mut gas_status,
+        )
+        .unwrap();
     }
 
     // Publish N and a corrupted version of M and try to call N::bar, the VM should fail to load M.
@@ -378,7 +420,13 @@ fn test_malformed_module_denpency() {
         let mut sess = vm.new_session(&storage);
 
         let err = sess
-            .execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
+            .execute_function_bypass_visibility(
+                &module_id,
+                &fun_name,
+                vec![],
+                Vec::<Vec<u8>>::new(),
+                &mut gas_status,
+            )
             .unwrap_err();
 
         assert_eq!(err.status_type(), StatusType::InvariantViolation);
@@ -425,8 +473,14 @@ fn test_unverifiable_module_dependency() {
         let vm = MoveVM::new(vec![]).unwrap();
         let mut sess = vm.new_session(&storage);
 
-        sess.execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
-            .unwrap();
+        sess.execute_function_bypass_visibility(
+            &module_id,
+            &fun_name,
+            vec![],
+            Vec::<Vec<u8>>::new(),
+            &mut gas_status,
+        )
+        .unwrap();
     }
 
     // Publish N and an unverifiable version of M and try to call N::bar, the VM should fail to load M.
@@ -445,7 +499,13 @@ fn test_unverifiable_module_dependency() {
         let mut sess = vm.new_session(&storage);
 
         let err = sess
-            .execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
+            .execute_function_bypass_visibility(
+                &module_id,
+                &fun_name,
+                vec![],
+                Vec::<Vec<u8>>::new(),
+                &mut gas_status,
+            )
             .unwrap_err();
 
         assert_eq!(err.status_type(), StatusType::InvariantViolation);
@@ -500,7 +560,13 @@ fn test_storage_returns_bogus_error_when_loading_module() {
         let mut sess = vm.new_session(&storage);
 
         let err = sess
-            .execute_function(&module_id, &fun_name, vec![], vec![], &mut gas_status)
+            .execute_function_bypass_visibility(
+                &module_id,
+                &fun_name,
+                vec![],
+                Vec::<Vec<u8>>::new(),
+                &mut gas_status,
+            )
             .unwrap_err();
 
         assert_eq!(err.status_type(), StatusType::InvariantViolation);
@@ -563,11 +629,17 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
         .unwrap();
         let mut sess = vm.new_session(&storage);
 
-        sess.execute_function(&m_id, &foo_name, vec![], vec![], &mut gas_status)
-            .unwrap();
+        sess.execute_function_bypass_visibility(
+            &m_id,
+            &foo_name,
+            vec![],
+            Vec::<Vec<u8>>::new(),
+            &mut gas_status,
+        )
+        .unwrap();
 
         let err = sess
-            .execute_function(
+            .execute_function_bypass_visibility(
                 &m_id,
                 &bar_name,
                 vec![],

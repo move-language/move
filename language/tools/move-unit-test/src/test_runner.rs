@@ -269,13 +269,19 @@ impl SharedTestingConfig {
         // TODO: collect VM logs if the verbose flag (i.e, `self.verbose`) is set
 
         let now = Instant::now();
-        let mut return_result = session.execute_function(
+        let serialized_return_values_result = session.execute_function_bypass_visibility(
             &test_plan.module_id,
             IdentStr::new(function_name).unwrap(),
             vec![], // no ty args, at least for now
             serialize_values(test_info.arguments.iter()),
             &mut gas_meter,
         );
+        let mut return_result = serialized_return_values_result.map(|res| {
+            res.return_values
+                .into_iter()
+                .map(|(bytes, _layout)| bytes)
+                .collect()
+        });
         if !self.report_stacktrace_on_abort {
             if let Err(err) = &mut return_result {
                 err.remove_stacktrace();

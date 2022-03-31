@@ -37,21 +37,30 @@ impl<'a> BoundsChecker<'a> {
         };
         bounds_check.verify_impl()?;
 
-        let signatures = &script.signatures;
-        let parameters = &script.parameters;
-        match signatures.get(parameters.into_index()) {
-            // The bounds checker has already checked each function definition's code, but a script's
-            // code exists outside of any function definition. It gets checked here.
-            Some(signature) => {
-                bounds_check.check_code(&script.code, &script.type_parameters, signature)
+        let type_param_count = script.type_parameters.len();
+
+        check_bounds_impl(bounds_check.view.signatures(), script.parameters)?;
+        if let Some(sig) = bounds_check
+            .view
+            .signatures()
+            .get(script.parameters.into_index())
+        {
+            for ty in &sig.0 {
+                bounds_check.check_type_parameter(ty, type_param_count)?
             }
-            None => Err(bounds_error(
-                StatusCode::INDEX_OUT_OF_BOUNDS,
-                IndexKind::Signature,
-                parameters.into_index() as u16,
-                signatures.len(),
-            )),
         }
+
+        // The bounds checker has already checked each function definition's code, but a
+        // script's code exists outside of any function definition. It gets checked here.
+        bounds_check.check_code(
+            &script.code,
+            &script.type_parameters,
+            bounds_check
+                .view
+                .signatures()
+                .get(script.parameters.into_index())
+                .unwrap(),
+        )
     }
 
     pub fn verify_module(module: &'a CompiledModule) -> PartialVMResult<()> {

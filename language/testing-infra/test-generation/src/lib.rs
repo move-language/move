@@ -141,7 +141,13 @@ fn execute_function_in_module(
         let mut sess = vm.new_session(&delta_storage);
 
         let mut gas_status = GasStatus::new_unmetered();
-        sess.execute_function(&module_id, entry_name, ty_args, args, &mut gas_status)?;
+        sess.execute_function_bypass_visibility(
+            &module_id,
+            entry_name,
+            ty_args,
+            args,
+            &mut gas_status,
+        )?;
 
         Ok(())
     }

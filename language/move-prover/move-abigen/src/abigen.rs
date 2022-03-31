@@ -129,15 +129,35 @@ impl<'env> Abigen<'env> {
                     let func_name = module_env.symbol_pool().string(func.get_name());
                     let func_ident = IdentStr::new(&func_name).unwrap();
                     // only pick up script functions that also have a script-callable signature.
+                    // and check all arguments have a valid type tag
                     func.visibility() == FunctionVisibility::Script
-                        && script_signature::verify_module_script_function(module, func_ident)
-                            .is_ok()
+                        && script_signature::verify_module_function_signature_by_name(
+                            module,
+                            func_ident,
+                            script_signature::no_additional_script_signature_checks,
+                        )
+                        .is_ok()
+                        && func
+                            .get_parameters()
+                            .iter()
+                            .skip_while(|param| match &param.1 {
+                                ty::Type::Primitive(ty::PrimitiveType::Signer) => true,
+                                ty::Type::Reference(_, inner) => matches!(
+                                    &**inner,
+                                    ty::Type::Primitive(ty::PrimitiveType::Signer)
+                                ),
+                                _ => false,
+                            })
+                            .all(|param| {
+                                matches!(self.get_type_tag(&param.1), Err(_) | Ok(Some(_)))
+                            })
+                        && func.get_return_count() == 0
                 })
                 .collect()
         };
 
         let mut abis = Vec::new();
-        for func in script_iter.iter() {
+        for func in &script_iter {
             abis.push(self.generate_abi_for_function(func, module_env)?);
         }
 
@@ -164,7 +184,7 @@ impl<'env> Abigen<'env> {
             .iter()
             .filter(|param| !matches!(&param.1, ty::Type::Primitive(ty::PrimitiveType::Signer)))
             .map(|param| {
-                let tag = self.get_type_tag(&param.1)?;
+                let tag = self.get_type_tag(&param.1)?.unwrap();
                 Ok(ArgumentABI::new(
                     symbol_pool.string(param.0).to_string(),
                     tag,
@@ -220,7 +240,7 @@ impl<'env> Abigen<'env> {
         }
     }
 
-    fn get_type_tag(&self, ty0: &ty::Type) -> anyhow::Result<TypeTag> {
+    fn get_type_tag(&self, ty0: &ty::Type) -> anyhow::Result<Option<TypeTag>> {
         use ty::Type::*;
         let tag = match ty0 {
             Primitive(prim) => {
@@ -238,7 +258,10 @@ impl<'env> Abigen<'env> {
                 }
             }
             Vector(ty) => {
-                let tag = self.get_type_tag(ty)?;
+                let tag = match self.get_type_tag(ty)? {
+                    Some(tag) => tag,
+                    None => return Ok(None),
+                };
                 TypeTag::Vector(Box::new(tag))
             }
             Tuple(_)
@@ -249,8 +272,8 @@ impl<'env> Abigen<'env> {
             | ResourceDomain(..)
             | Error
             | Var(_)
-            | Reference(_, _) => bail!("Type {:?} is not allowed in scripts.", ty0),
+            | Reference(_, _) => return Ok(None),
         };
-        Ok(tag)
+        Ok(Some(tag))
     }
 }

@@ -66,7 +66,7 @@ fn run(
         .map(|val| val.simple_serialize().unwrap())
         .collect();
 
-    sess.execute_function(&module_id, &fun_name, ty_args, args, &mut gas_status)?;
+    sess.execute_function_bypass_visibility(&module_id, &fun_name, ty_args, args, &mut gas_status)?;
 
     Ok(())
 }
@@ -181,12 +181,8 @@ fn expected_u64_got_bool() {
 }
 
 #[test]
-fn invalid_param_type_u64_ref() {
-    expect_err(
-        &["&u64"],
-        vec![MoveValue::U64(0)],
-        StatusCode::INVALID_PARAM_TYPE_FOR_DESERIALIZATION,
-    )
+fn param_type_u64_ref() {
+    expect_ok(&["&u64"], vec![MoveValue::U64(0)])
 }
 
 #[test]
@@ -249,13 +245,7 @@ fn expected_T__T_got_bool__u64() {
 #[test]
 #[allow(non_snake_case)]
 fn expected_T__T_ref_got_u64__u64() {
-    expect_err_generic(
-        &["T"],
-        &["&T"],
-        vec![TypeTag::U64],
-        vec![MoveValue::U64(0)],
-        StatusCode::INVALID_PARAM_TYPE_FOR_DESERIALIZATION,
-    )
+    expect_ok_generic(&["T"], &["&T"], vec![TypeTag::U64], vec![MoveValue::U64(0)])
 }
 
 #[test]

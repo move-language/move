@@ -83,7 +83,13 @@ fn execute<M: Measurement + 'static>(
     c.bench_function(fun, |b| {
         b.iter(|| {
             session
-                .execute_function(&module_id, fun_name, vec![], vec![], &mut gas_status)
+                .execute_function_bypass_visibility(
+                    &module_id,
+                    fun_name,
+                    vec![],
+                    Vec::<Vec<u8>>::new(),
+                    &mut gas_status,
+                )
                 .unwrap_or_else(|err| {
                     panic!(
                         "{:?}::{} failed with {:?}",

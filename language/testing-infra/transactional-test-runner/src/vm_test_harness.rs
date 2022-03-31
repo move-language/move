@@ -24,11 +24,15 @@ use move_core_types::{
     language_storage::{ModuleId, StructTag, TypeTag},
     resolver::MoveResolver,
     transaction_argument::{convert_txn_args, TransactionArgument},
+    value::MoveValue,
 };
 use move_resource_viewer::MoveValueAnnotator;
 use move_stdlib::move_stdlib_named_addresses;
 use move_symbol_pool::Symbol;
-use move_vm_runtime::{move_vm::MoveVM, session::Session};
+use move_vm_runtime::{
+    move_vm::MoveVM,
+    session::{SerializedReturnValues, Session},
+};
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas_schedule::GasStatus;
 use once_cell::sync::Lazy;
@@ -168,7 +172,7 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
         txn_args: Vec<TransactionArgument>,
         gas_budget: Option<u64>,
         _extra_args: Self::ExtraRunArgs,
-    ) -> Result<Option<String>> {
+    ) -> Result<(Option<String>, SerializedReturnValues)> {
         let signers: Vec<_> = signers
             .into_iter()
             .map(|addr| self.compiled_state().resolve_address(&addr))
@@ -176,17 +180,25 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
 
         let mut script_bytes = vec![];
         script.serialize(&mut script_bytes)?;
+
         let args = convert_txn_args(&txn_args);
-        self.perform_session_action(gas_budget, |session, gas_status| {
-            session.execute_script(script_bytes, type_args, args, signers, gas_status)
-        })
-        .map_err(|e| {
-            anyhow!(
-                "Script execution failed with VMError: {}",
-                format_vm_error(&e)
-            )
-        })?;
-        Ok(None)
+        // TODO rethink testing signer args
+        let args = signers
+            .iter()
+            .map(|a| MoveValue::Signer(*a).simple_serialize().unwrap())
+            .chain(args)
+            .collect();
+        let serialized_return_values = self
+            .perform_session_action(gas_budget, |session, gas_status| {
+                session.execute_script(script_bytes, type_args, args, gas_status)
+            })
+            .map_err(|e| {
+                anyhow!(
+                    "Script execution failed with VMError: {}",
+                    format_vm_error(&e)
+                )
+            })?;
+        Ok((None, serialized_return_values))
     }
 
     fn call_function(
@@ -198,23 +210,32 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
         txn_args: Vec<TransactionArgument>,
         gas_budget: Option<u64>,
         _extra_args: Self::ExtraRunArgs,
-    ) -> Result<Option<String>> {
+    ) -> Result<(Option<String>, SerializedReturnValues)> {
         let signers: Vec<_> = signers
             .into_iter()
             .map(|addr| self.compiled_state().resolve_address(&addr))
             .collect();
 
         let args = convert_txn_args(&txn_args);
-        self.perform_session_action(gas_budget, |session, gas_status| {
-            session.execute_script_function(module, function, type_args, args, signers, gas_status)
-        })
-        .map_err(|e| {
-            anyhow!(
-                "Function execution failed with VMError: {}",
-                format_vm_error(&e)
-            )
-        })?;
-        Ok(None)
+        // TODO rethink testing signer args
+        let args = signers
+            .iter()
+            .map(|a| MoveValue::Signer(*a).simple_serialize().unwrap())
+            .chain(args)
+            .collect();
+        let serialized_return_values = self
+            .perform_session_action(gas_budget, |session, gas_status| {
+                session.execute_function_bypass_visibility(
+                    module, function, type_args, args, gas_status,
+                )
+            })
+            .map_err(|e| {
+                anyhow!(
+                    "Function execution failed with VMError: {}",
+                    format_vm_error(&e)
+                )
+            })?;
+        Ok((None, serialized_return_values))
     }
 
     fn view_data(
@@ -256,11 +277,11 @@ pub fn format_vm_error(e: &VMError) -> String {
 }
 
 impl<'a> SimpleVMTestAdapter<'a> {
-    fn perform_session_action(
+    fn perform_session_action<Ret>(
         &mut self,
         gas_budget: Option<u64>,
-        f: impl FnOnce(&mut Session<InMemoryStorage>, &mut GasStatus) -> VMResult<()>,
-    ) -> VMResult<()> {
+        f: impl FnOnce(&mut Session<InMemoryStorage>, &mut GasStatus) -> VMResult<Ret>,
+    ) -> VMResult<Ret> {
         // start session
         let vm = MoveVM::new(move_stdlib::natives::all_natives(STD_ADDR)).unwrap();
         let (mut session, mut gas_status) = {
@@ -274,13 +295,13 @@ impl<'a> SimpleVMTestAdapter<'a> {
         };
 
         // perform op
-        f(&mut session, &mut gas_status)?;
+        let res = f(&mut session, &mut gas_status)?;
 
         // save changeset
         // TODO support events
         let (changeset, _events) = session.finish()?;
         self.storage.apply(changeset).unwrap();
-        Ok(())
+        Ok(res)
     }
 }
 

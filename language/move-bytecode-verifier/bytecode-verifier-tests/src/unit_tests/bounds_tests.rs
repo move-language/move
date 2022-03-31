@@ -71,6 +71,19 @@ fn invalid_type_param_in_fn_parameters() {
 }
 
 #[test]
+fn invalid_type_param_in_script_parameters() {
+    use SignatureToken::*;
+
+    let mut s = basic_test_script();
+    s.parameters = SignatureIndex(1);
+    s.signatures.push(Signature(vec![TypeParameter(0)]));
+    assert_eq!(
+        BoundsChecker::verify_script(&s).unwrap_err().major_status(),
+        StatusCode::INDEX_OUT_OF_BOUNDS
+    );
+}
+
+#[test]
 fn invalid_struct_in_fn_return_() {
     use SignatureToken::*;
 

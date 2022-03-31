@@ -53,7 +53,7 @@ fn mutated_accounts() {
 
     let account1 = AccountAddress::random();
 
-    sess.execute_function(
+    sess.execute_function_bypass_visibility(
         &module_id,
         &publish,
         vec![],
@@ -67,7 +67,7 @@ fn mutated_accounts() {
     // transaction epilogue).
     assert_eq!(sess.num_mutated_accounts(&TEST_ADDR), 2);
 
-    sess.execute_function(
+    sess.execute_function_bypass_visibility(
         &module_id,
         &get,
         vec![],
@@ -78,7 +78,7 @@ fn mutated_accounts() {
 
     assert_eq!(sess.num_mutated_accounts(&TEST_ADDR), 2);
 
-    sess.execute_function(
+    sess.execute_function_bypass_visibility(
         &module_id,
         &flip,
         vec![],
@@ -92,7 +92,7 @@ fn mutated_accounts() {
     storage.apply(changes).unwrap();
 
     let mut sess = vm.new_session(&storage);
-    sess.execute_function(
+    sess.execute_function_bypass_visibility(
         &module_id,
         &get,
         vec![],

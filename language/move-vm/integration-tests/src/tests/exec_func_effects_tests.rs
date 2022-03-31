@@ -3,18 +3,22 @@
 
 use std::convert::TryInto;
 
+use crate::compiler::{as_module, compile_units};
+use move_binary_format::errors::VMResult;
 use move_core_types::{
     account_address::AccountAddress,
+    effects::{ChangeSet, Event},
+    gas_schedule::GasAlgebra,
     identifier::Identifier,
     language_storage::ModuleId,
     value::{serialize_values, MoveValue},
     vm_status::StatusCode,
 };
-use move_vm_runtime::{move_vm::MoveVM, session::ExecutionResult};
+use move_vm_runtime::{
+    move_vm::MoveVM, native_functions::NativeContextExtensions, session::SerializedReturnValues,
+};
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas_schedule::GasStatus;
-
-use crate::compiler::{as_module, compile_units};
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
 const TEST_MODULE_ID: &str = "M";
@@ -28,45 +32,34 @@ const FUN_NAMES: [&str; 2] = [USE_MUTREF_LABEL, USE_REF_LABEL];
 fn fail_arg_deserialize() {
     let mod_code = setup_module();
     // all of these should fail to deserialize because the functions expect u64 args
-    vec![
+    let values = vec![
         MoveValue::U8(16),
         MoveValue::U128(512),
         MoveValue::Bool(true),
-    ]
-    .iter()
-    .for_each(|mv| {
-        FUN_NAMES
-            .iter()
-            .for_each(|name| match run(&mod_code, name, mv.clone()) {
-                ExecutionResult::Success { .. } => {
-                    panic!("Should have failed to deserialize non-u64 type to u64");
-                }
-                ExecutionResult::Fail { error, .. } => {
-                    assert_eq!(
-                        error.major_status(),
-                        StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT
-                    );
-                }
-            });
-    });
+    ];
+    for value in values {
+        for name in FUN_NAMES {
+            let err = run(&mod_code, name, value.clone())
+                .1
+                .map(|_| ())
+                .expect_err("Should have failed to deserialize non-u64 type to u64");
+            assert_eq!(
+                err.major_status(),
+                StatusCode::FAILED_TO_DESERIALIZE_ARGUMENT
+            );
+        }
+    }
 }
 
 // check happy path for writing to mut ref args - may be unecessary / covered by other tests
 #[test]
 fn mutref_output_success() {
     let mod_code = setup_module();
-    match run(&mod_code, USE_MUTREF_LABEL, MoveValue::U64(1)) {
-        ExecutionResult::Success {
-            mutable_ref_values, ..
-        } => {
-            assert_eq!(1, mutable_ref_values.len());
-            let parsed = parse_u64_arg(mutable_ref_values.first().unwrap());
-            assert_eq!(EXPECT_MUTREF_OUT_VALUE, parsed);
-        }
-        ExecutionResult::Fail { error, .. } => {
-            panic!("{:?}", error);
-        }
-    }
+    let (_gas_used, result) = run(&mod_code, USE_MUTREF_LABEL, MoveValue::U64(1));
+    let (_, _, _, ret_values) = result.unwrap();
+    assert_eq!(1, ret_values.mutable_reference_outputs.len());
+    let parsed = parse_u64_arg(&ret_values.mutable_reference_outputs.first().unwrap().1);
+    assert_eq!(EXPECT_MUTREF_OUT_VALUE, parsed);
 }
 
 // TODO - how can we cause serialization errors in values returned from Move ?
@@ -88,22 +81,41 @@ fn setup_module() -> ModuleCode {
     (module_id, code)
 }
 
-fn run(module: &ModuleCode, fun_name: &str, arg_val0: MoveValue) -> ExecutionResult {
+fn run(
+    module: &ModuleCode,
+    fun_name: &str,
+    arg_val0: MoveValue,
+) -> (
+    /* gas used */ u64,
+    VMResult<(
+        ChangeSet,
+        Vec<Event>,
+        NativeContextExtensions,
+        SerializedReturnValues,
+    )>,
+) {
     let module_id = &module.0;
     let modules = vec![module.clone()];
     let (vm, storage) = setup_vm(&modules);
-    let sess = vm.new_session(&storage);
+    let mut session = vm.new_session(&storage);
 
     let fun_name = Identifier::new(fun_name).unwrap();
     let mut gas_status = GasStatus::new_unmetered();
-
-    sess.execute_function_for_effects(
-        module_id,
-        &fun_name,
-        vec![],
-        serialize_values(&vec![arg_val0]),
-        &mut gas_status,
-    )
+    let gas_start = gas_status.remaining_gas().get();
+    let res = session
+        .execute_function_bypass_visibility(
+            module_id,
+            &fun_name,
+            vec![],
+            serialize_values(&vec![arg_val0]),
+            &mut gas_status,
+        )
+        .and_then(|ret_values| {
+            let (change_set, events, extensions) = session.finish_with_extensions()?;
+            Ok((change_set, events, extensions, ret_values))
+        });
+    let gas_used = gas_start - gas_status.remaining_gas().get();
+    (gas_used, res)
 }
 
 type ModuleCode = (ModuleId, String);

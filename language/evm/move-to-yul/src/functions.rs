@@ -702,15 +702,54 @@ impl<'a> FunctionGenerator<'a> {
         self.parent.call_builtin_with_result(
             ctx,
             "",
-            std::iter::once(dest),
+            std::iter::once(dest.clone()),
             yul_fun,
-            std::iter::once(src),
-        )
+            std::iter::once(src.clone()),
+        );
+        let is_storage_call =
+            self.parent
+                .call_builtin_str(ctx, YulFunction::IsStoragePtr, std::iter::once(src));
+        let hash = self.type_hash(ctx, ty);
+        let stroage_ptr_name = format!("$storage_ptr_{}", hash);
+        if ty.is_vector() || (ty.is_struct() && !ctx.is_u256_ty(ty)) {
+            emit!(ctx.writer, "if {}", is_storage_call);
+            ctx.emit_block(|| {
+                emitln!(ctx.writer, "let {}", stroage_ptr_name);
+                self.move_data_from_linked_storage(
+                    ctx,
+                    ty,
+                    dest.clone(),
+                    stroage_ptr_name.clone(),
+                    false,
+                );
+                emitln!(ctx.writer, "{} := {}", dest, stroage_ptr_name);
+            })
+        }
     }
 
     /// Write the value of reference.
     fn write_ref(&mut self, ctx: &Context, ty: &Type, dest: String, src: String) {
         let yul_fun = ctx.store_builtin_fun(ty.skip_reference());
+        let is_storage_call = self.parent.call_builtin_str(
+            ctx,
+            YulFunction::IsStoragePtr,
+            std::iter::once(dest.clone()),
+        );
+        let hash = self.type_hash(ctx, ty);
+        let stroage_ptr_name = format!("$storage_ptr_{}", hash);
+        if ty.is_vector() || (ty.is_struct() && !ctx.is_u256_ty(ty)) {
+            emit!(ctx.writer, "if {}", is_storage_call);
+            ctx.emit_block(|| {
+                self.create_and_move_data_to_linked_storage(
+                    ctx,
+                    ty,
+                    src.clone(),
+                    stroage_ptr_name.clone(),
+                    false,
+                );
+                emitln!(ctx.writer, "{} := {}", src, stroage_ptr_name);
+            });
+        }
         self.parent
             .call_builtin(ctx, yul_fun, vec![dest, src].into_iter())
     }
@@ -984,6 +1023,7 @@ impl<'a> FunctionGenerator<'a> {
                     &struct_id,
                     "$src".to_string(),
                     "$dst".to_string(),
+                    true,
                 );
             });
         })
@@ -997,6 +1037,7 @@ impl<'a> FunctionGenerator<'a> {
         struct_id: &QualifiedInstId<StructId>,
         src: String,
         dst: String,
+        clean_flag: bool,
     ) {
         let layout = ctx.get_struct_layout(struct_id);
 
@@ -1020,6 +1061,7 @@ impl<'a> FunctionGenerator<'a> {
                     ty,
                     linked_src_name,
                     linked_dst_name.clone(),
+                    clean_flag,
                 );
                 // Store the result at the destination
                 self.parent.call_builtin(
@@ -1058,11 +1100,13 @@ impl<'a> FunctionGenerator<'a> {
         }
 
         // Free the memory allocated by this struct.
-        self.parent.call_builtin(
-            ctx,
-            YulFunction::Free,
-            vec![src, layout.size.to_string()].into_iter(),
-        )
+        if clean_flag {
+            self.parent.call_builtin(
+                ctx,
+                YulFunction::Free,
+                vec![src, layout.size.to_string()].into_iter(),
+            )
+        }
     }
 
     /// Move resource from storage to local.
@@ -1122,7 +1166,13 @@ impl<'a> FunctionGenerator<'a> {
 
                 // Perform the move and assign the result.
                 emitln!(ctx.writer, "let $dst");
-                self.move_struct_to_memory(ctx, &struct_id, "$src".to_string(), "$dst".to_string());
+                self.move_struct_to_memory(
+                    ctx,
+                    &struct_id,
+                    "$src".to_string(),
+                    "$dst".to_string(),
+                    true,
+                );
                 self.assign(ctx, target, dst, "$dst".to_string())
             })
         })
@@ -1136,6 +1186,7 @@ impl<'a> FunctionGenerator<'a> {
         struct_id: &QualifiedInstId<StructId>,
         src: String,
         dst: String,
+        clean_flag: bool, // whether to clean the storage
     ) {
         // Allocate struct.
         let layout = ctx.get_struct_layout(struct_id);
@@ -1177,15 +1228,18 @@ impl<'a> FunctionGenerator<'a> {
                     ty,
                     linked_src_name,
                     linked_dst_name.clone(),
+                    clean_flag,
                 );
                 // Store the result at the destination.
                 emitln!(ctx.writer, "mstore({}, {})", field_dst_ptr, linked_dst_name);
                 // Clear the storage to get a refund
-                self.parent.call_builtin(
-                    ctx,
-                    YulFunction::AlignedStorageStore,
-                    vec![field_src_ptr, 0.to_string()].into_iter(),
-                );
+                if clean_flag {
+                    self.parent.call_builtin(
+                        ctx,
+                        YulFunction::AlignedStorageStore,
+                        vec![field_src_ptr, 0.to_string()].into_iter(),
+                    );
+                }
             });
         }
 
@@ -1211,11 +1265,13 @@ impl<'a> FunctionGenerator<'a> {
                     std::iter::once(field_src_ptr.clone()),
                 );
                 emitln!(ctx.writer, "mstore({}, {})", field_dst_ptr, load_call);
-                self.parent.call_builtin(
-                    ctx,
-                    YulFunction::AlignedStorageStore,
-                    vec![field_src_ptr, 0.to_string()].into_iter(),
-                );
+                if clean_flag {
+                    self.parent.call_builtin(
+                        ctx,
+                        YulFunction::AlignedStorageStore,
+                        vec![field_src_ptr, 0.to_string()].into_iter(),
+                    );
+                }
                 byte_offs += 32
             }
         }
@@ -1283,6 +1339,7 @@ impl<'a> FunctionGenerator<'a> {
         ty: &Type,
         linked_src_name: String,
         linked_dst_name: String,
+        clean_flag: bool,
     ) {
         let hash = self.type_hash(ctx, ty);
         // Allocate a new storage pointer.
@@ -1299,10 +1356,16 @@ impl<'a> FunctionGenerator<'a> {
 
         // Recursively move.
         if ty.is_vector() {
-            self.move_vector_to_storage(ctx, ty, linked_src_name, linked_dst_name);
+            self.move_vector_to_storage(ctx, ty, linked_src_name, linked_dst_name, clean_flag);
         } else if ctx.type_is_struct(ty) {
             let field_struct_id = ty.get_struct_id(ctx.env).expect("struct");
-            self.move_struct_to_storage(ctx, &field_struct_id, linked_src_name, linked_dst_name);
+            self.move_struct_to_storage(
+                ctx,
+                &field_struct_id,
+                linked_src_name,
+                linked_dst_name,
+                clean_flag,
+            );
         } else {
             // Primitive type so directly store the src at the location
             self.parent.call_builtin(
@@ -1322,12 +1385,19 @@ impl<'a> FunctionGenerator<'a> {
         ty: &Type,
         linked_src_name: String,
         linked_dst_name: String,
+        clean_flag: bool,
     ) {
         if ty.is_vector() {
-            self.move_vector_to_memory(ctx, ty, linked_src_name, linked_dst_name);
+            self.move_vector_to_memory(ctx, ty, linked_src_name, linked_dst_name, clean_flag);
         } else if ctx.type_is_struct(ty) {
             let field_struct_id = ty.get_struct_id(ctx.env).expect("struct");
-            self.move_struct_to_memory(ctx, &field_struct_id, linked_src_name, linked_dst_name);
+            self.move_struct_to_memory(
+                ctx,
+                &field_struct_id,
+                linked_src_name,
+                linked_dst_name,
+                clean_flag,
+            );
         } else {
             // Primitive type
             emitln!(

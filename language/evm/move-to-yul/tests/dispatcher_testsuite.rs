@@ -1150,3 +1150,45 @@ fn test_dispatch_multi_ret_encoding() -> Result<()> {
 
     Ok(())
 }
+
+/// Test encoding string from storage
+#[test]
+fn test_storage_string_encoding() -> Result<()> {
+    let contract_code = compile_yul_to_bytecode_bytes("DispatcherEncodingStorage.move")?;
+    let vicinity = generate_testing_vincinity();
+    let mut exec = Executor::new(&vicinity);
+    let contract_address = exec
+        .create_contract(H160::zero(), contract_code)
+        .expect("failed to create contract");
+
+    //////
+    let sig = "test_string()";
+    let (exit_reason, buffer) =
+        exec.call_function(H160::zero(), contract_address, 0.into(), sig, &[]);
+    assert!(matches!(exit_reason, ExitReason::Succeed(_)));
+
+    let mut expected = [0u8; 96];
+    expected[31] = 32;
+    expected[63] = 1;
+    expected[64] = 65;
+    assert_eq!(&buffer, &expected);
+
+    //////
+    let sig = "test_vec_u64()";
+    let (exit_reason, buffer) =
+        exec.call_function(H160::zero(), contract_address, 0.into(), sig, &[]);
+    assert!(matches!(exit_reason, ExitReason::Succeed(_)));
+
+    let mut expected = [0u8; 224];
+    expected[31] = 64;
+    expected[63] = 128;
+    expected[95] = 1;
+    expected[96] = 65;
+    expected[159] = 2;
+    expected[191] = 64;
+    expected[223] = 65;
+
+    assert_eq!(&buffer, &expected);
+
+    Ok(())
+}

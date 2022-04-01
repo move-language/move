@@ -5533,6 +5533,18 @@ object "test_A2_Vectors_test_vectors_in_structs" {
                     // $t58 := borrow_field<Vectors::R>.v($t57)
                     $t58 := $IndexPtr($t57, 32)
                     // write_ref($t58, $t56)
+                    if $IsStoragePtr($t58){
+                        let $storage_ptr_814019441 := $NewLinkedStorageBase(0x3084f371)
+                        let $size_814019441 := $MemoryLoadU64($t56)
+                        let $data_size_814019441 := mul($size_814019441, 8)
+                        $AlignedStorageStore($storage_ptr_814019441, mload($t56))
+                        let $data_src_814019441 := add($t56, 32)
+                        let $data_dst_814019441 := add($storage_ptr_814019441, 32)
+                        for { let $offs_814019441 := 0 } lt($offs_814019441, $data_size_814019441) { $offs_814019441 := add($offs_814019441, 32)} {
+                            $AlignedStorageStore(add($data_dst_814019441, $offs_814019441), mload(add($data_src_814019441, $offs_814019441)))
+                        }
+                        $t56 := $storage_ptr_814019441
+                    }
                     $StoreU256($t58, $t56)
                     // $t59 := borrow_local($t0)
                     $t59 := $MakePtr(false, r)
@@ -5754,6 +5766,15 @@ object "test_A2_Vectors_test_vectors_in_structs" {
           mstore(64, shl(224, group))
           key := keccak256(32, 36)
         }
+        function $MakeTypeStorageBase(category, type_hash, id) -> offs {
+          offs := or(shl(252, category), or(shl(220, type_hash), shl(60, id)))
+        }
+        function $NewLinkedStorageBase(type_hash) -> offs {
+          let key := $StorageKey(1, 1)
+          let handle := sload(key)
+          sstore(key, add(handle, 1))
+          offs := $MakeTypeStorageBase(1, type_hash, handle)
+        }
         function $IndexPtr(ptr, offs) -> new_ptr {
           new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
         }
@@ -5828,6 +5849,10 @@ object "test_A2_Vectors_test_vectors_in_structs" {
         function $StorageStoreU256(offs, val) {
           $StorageStoreBytes(offs, 32, val)
         }
+        function $AlignedStorageStore(offs, val) {
+          let word_offs := shr(5, offs)
+          sstore($StorageKey(0, word_offs), val)
+        }
         function $CopyMemory(src, dst, size) {
           let i := 0
           for { } lt(i, size) { i := add(i, 32) } {
@@ -5861,4 +5886,4 @@ object "test_A2_Vectors_test_vectors_in_structs" {
         }
     }
 }
-===> Test result of Vectors::test_vectors_in_structs: Succeed(Stopped) (used_gas=8494): []
+===> Test result of Vectors::test_vectors_in_structs: Succeed(Stopped) (used_gas=8528): []

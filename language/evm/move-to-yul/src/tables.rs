@@ -206,6 +206,7 @@ fn define_insert_fun(gen: &mut FunctionGenerator, ctx: &Context, fun_id: &Qualif
         value_type,
         "value".to_string(),
         linked_dst_name.clone(),
+        true,
     );
 
     if value_type.is_vector() {
@@ -396,6 +397,7 @@ fn define_remove_fun(gen: &mut FunctionGenerator, ctx: &Context, fun_id: &Qualif
         value_type,
         "linked_src".to_string(),
         "value".to_string(),
+        true,
     );
 
     gen.parent.call_builtin(

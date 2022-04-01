@@ -347,6 +347,16 @@ impl<'a> Context<'a> {
         struct_env.get_full_name_with_address() == format!("{}::U256::U256", EVM_MODULE_ADDRESS)
     }
 
+    pub fn is_u256_ty(&self, ty: &Type) -> bool {
+        match ty {
+            Type::Struct(m, s, _) => {
+                let struct_id = m.qualified(*s);
+                self.is_u256(struct_id)
+            }
+            _ => false,
+        }
+    }
+
     /// Returns whether the struct identified by module_id and struct_id is the native Table struct.
     pub fn is_table(&self, struct_id: QualifiedId<StructId>) -> bool {
         let struct_env = self.env.get_struct(struct_id);

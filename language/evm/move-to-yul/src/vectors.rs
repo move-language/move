@@ -25,6 +25,7 @@ impl<'a> FunctionGenerator<'a> {
         vector_type: &Type,
         src: String,
         dst: String,
+        clean_flag: bool,
     ) {
         let elem_type = get_elem_type(vector_type).expect("not vector type");
         let elem_type_size = ctx.type_size(&elem_type);
@@ -110,6 +111,7 @@ impl<'a> FunctionGenerator<'a> {
                     &elem_type,
                     linked_src_name,
                     linked_dst_name.clone(),
+                    clean_flag,
                 );
                 // Store the result at the destination
                 self.parent.call_builtin(
@@ -135,15 +137,17 @@ impl<'a> FunctionGenerator<'a> {
         }
 
         // Free ptr
-        self.parent.call_builtin(
-            ctx,
-            YulFunction::Free,
-            vec![
-                src,
-                format!("add({}, {})", data_size_name, VECTOR_METADATA_SIZE),
-            ]
-            .into_iter(),
-        );
+        if clean_flag {
+            self.parent.call_builtin(
+                ctx,
+                YulFunction::Free,
+                vec![
+                    src,
+                    format!("add({}, {})", data_size_name, VECTOR_METADATA_SIZE),
+                ]
+                .into_iter(),
+            );
+        }
 
         ctx.writer.unindent();
         emitln!(ctx.writer, "}");
@@ -155,6 +159,7 @@ impl<'a> FunctionGenerator<'a> {
         vector_type: &Type,
         src: String,
         dst: String,
+        clean_flag: bool, // whether to clean the storage
     ) {
         let elem_type = get_elem_type(vector_type).expect("not vector type");
         let elem_type_size = ctx.type_size(&elem_type);
@@ -286,15 +291,18 @@ impl<'a> FunctionGenerator<'a> {
                     &elem_type,
                     linked_src_name,
                     linked_dst_name.clone(),
+                    clean_flag,
                 );
                 // Store the result at the destination.
                 emitln!(ctx.writer, "mstore({}, {})", dst_ptr, linked_dst_name);
                 // Clear the storage to get a refund
-                self.parent.call_builtin(
-                    ctx,
-                    YulFunction::AlignedStorageStore,
-                    vec![src_ptr, 0.to_string()].into_iter(),
-                );
+                if clean_flag {
+                    self.parent.call_builtin(
+                        ctx,
+                        YulFunction::AlignedStorageStore,
+                        vec![src_ptr, 0.to_string()].into_iter(),
+                    );
+                }
             });
         } else {
             let load_call = self.parent.call_builtin_str(
@@ -310,15 +318,17 @@ impl<'a> FunctionGenerator<'a> {
                 load_call
             );
             // fill storage with 0s
-            self.parent.call_builtin(
-                ctx,
-                YulFunction::AlignedStorageStore,
-                vec![
-                    format!("add({}, {})", data_src_name, offs_name),
-                    0.to_string(),
-                ]
-                .into_iter(),
-            );
+            if clean_flag {
+                self.parent.call_builtin(
+                    ctx,
+                    YulFunction::AlignedStorageStore,
+                    vec![
+                        format!("add({}, {})", data_src_name, offs_name),
+                        0.to_string(),
+                    ]
+                    .into_iter(),
+                );
+            }
         }
         ctx.writer.unindent();
         emitln!(ctx.writer, "}");
@@ -634,6 +644,7 @@ fn define_pop_back_fun(
             elem_type,
             "linked_src".to_string(),
             "e".to_string(),
+            true,
         );
 
         gen.parent.call_builtin(
@@ -776,6 +787,7 @@ fn define_push_back_fun(
             elem_type,
             "e".to_string(),
             linked_dst_name.clone(),
+            true,
         );
         // Store the result at the destination
         gen.parent.call_builtin(

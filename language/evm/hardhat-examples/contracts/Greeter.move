@@ -1,6 +1,7 @@
 #[contract]
 module Evm::Greeter {
     use Evm::Evm::{self};
+    use Evm::Evm::sign;
 
     #[storage]
     struct State has key {
@@ -8,15 +9,15 @@ module Evm::Greeter {
     }
 
     // TODO: move-to-yul does not support constructor.
-    // #[create]
-    // public fun create(greeting: vector<u8>) {
-    //     move_to<State>(
-    //         &sign(self()),
-    //         State {
-    //             greeting,
-    //         }
-    //     );
-    // }
+    #[callable(sig=b"create(string)")]
+    public fun create(greeting: vector<u8>) {
+         move_to<State>(
+             &sign(self()),
+             State {
+                 greeting,
+             }
+         );
+    }
 
     #[callable(sig=b"greet() returns (string)")]
     public fun greet(): vector<u8> acquires State {

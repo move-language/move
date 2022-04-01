@@ -444,8 +444,9 @@ impl<'a> FunctionGenerator<'a> {
                         print_loc();
                         self.read_ref(
                             ctx,
+                            target,
                             &get_local_type(dest[0]),
-                            local(&dest[0]),
+                            dest[0],
                             local(&srcs[0]),
                         )
                     }
@@ -697,15 +698,20 @@ impl<'a> FunctionGenerator<'a> {
     }
 
     /// Read the value of reference.
-    fn read_ref(&mut self, ctx: &Context, ty: &Type, dest: String, src: String) {
-        let yul_fun = ctx.load_builtin_fun(ty.skip_reference());
-        self.parent.call_builtin_with_result(
+    fn read_ref(
+        &mut self,
+        ctx: &Context,
+        target: &FunctionTarget,
+        ty: &Type,
+        dest_idx: TempIndex,
+        src: String,
+    ) {
+        let load_str = self.parent.call_builtin_str(
             ctx,
-            "",
-            std::iter::once(dest.clone()),
-            yul_fun,
+            ctx.load_builtin_fun(ty.skip_reference()),
             std::iter::once(src.clone()),
         );
+        self.assign(ctx, target, dest_idx, load_str);
         let is_storage_call =
             self.parent
                 .call_builtin_str(ctx, YulFunction::IsStoragePtr, std::iter::once(src));
@@ -715,14 +721,13 @@ impl<'a> FunctionGenerator<'a> {
             emit!(ctx.writer, "if {}", is_storage_call);
             ctx.emit_block(|| {
                 emitln!(ctx.writer, "let {}", stroage_ptr_name);
-                self.move_data_from_linked_storage(
-                    ctx,
-                    ty,
-                    dest.clone(),
-                    stroage_ptr_name.clone(),
-                    false,
-                );
-                emitln!(ctx.writer, "{} := {}", dest, stroage_ptr_name);
+                let dest = if let Some(ptr) = Self::local_ptr(&self.borrowed_locals, dest_idx) {
+                    format!("mload({})", ptr)
+                } else {
+                    ctx.make_local_name(target, dest_idx)
+                };
+                self.move_data_from_linked_storage(ctx, ty, dest, stroage_ptr_name.clone(), false);
+                self.assign(ctx, target, dest_idx, stroage_ptr_name);
             })
         }
     }

@@ -62,7 +62,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
 
             // Also generate any tests and run them.
             let test_cases = Generator::run_for_evm_tests(&options, &env);
-            if !test_cases.is_empty() {
+            if !test_cases.is_empty() && !env.has_errors() {
                 out = format!("{}\n\n{}", out, run_tests(&env, &test_cases)?)
             }
         }

@@ -190,4 +190,14 @@ module 0x2::GlobalVectors {
         *e = 12;
         assert!(*Vector::borrow(&borrow_global<T<u64>>(@0x42).v, 0) == 12, 102);
     }
+
+    #[evm_test]
+    fun test_read_ref_copy() acquires T {
+        let v = Vector::empty();
+        Vector::push_back(&mut v, 65u8);
+        move_to(&sign(@0x42), T { v });
+        let v1 = *&borrow_global<T<u8>>(@0x42).v;
+        assert!(Vector::length(&v1) == 1, 101);
+        assert!(*Vector::borrow(&v1, 0) == 65u8, 102);
+    }
 }

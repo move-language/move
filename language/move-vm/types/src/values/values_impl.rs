@@ -18,7 +18,7 @@ use move_core_types::{
 use std::{
     borrow::Borrow,
     cell::RefCell,
-    fmt::{self, Debug, Display},
+    fmt::{self, Debug},
     mem::size_of,
     ops::Add,
     rc::Rc,
@@ -294,14 +294,10 @@ impl ReferenceImpl {
     fn container(&self) -> PartialVMResult<*mut Container> {
         match self.checked_ref() {
             CheckedRef::Container(c) => Ok(c),
-            _ => {
-                return Err(
-                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                        .with_message(
-                            "tried to borrow a container on a non-container ref".to_string(),
-                        ),
-                )
-            }
+            _ => Err(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("tried to borrow a container on a non-container ref".to_string()),
+            ),
         }
     }
 
@@ -373,88 +369,6 @@ impl_vm_value_ref!(AccountAddress, Address);
 
 /***************************************************************************************
  *
- * Copy Value
- *
- *   Implementation of Move copy. Extra care needs to be taken when copying references.
- *   It is intentional we avoid implementing the standard library trait Clone, to prevent
- *   surprising behaviors from happening.
- *
- **************************************************************************************/
-// impl ValueImpl {
-//     fn copy_value(&self) -> PartialVMResult<Self> {
-//         use ValueImpl::*;
-
-//         Ok(match self {
-//             Invalid => Invalid,
-
-//             U8(x) => U8(*x),
-//             U64(x) => U64(*x),
-//             U128(x) => U128(*x),
-//             Bool(x) => Bool(*x),
-//             Address(x) => Address(*x),
-
-//             Reference(r) => Reference(r.copy_value()),
-
-//             // When cloning a container, we need to make sure we make a deep
-//             // copy of the data instead of a shallow copy of the Rc.
-//             Container(c) => Container(c.copy_value()?),
-//         })
-//     }
-// }
-
-// impl Container {
-//     fn copy_value(&self) -> PartialVMResult<Self> {
-//         let copy_vec_val = |r: &Vec<ValueImpl>| -> PartialVMResult<Vec<ValueImpl>> {
-//             Ok(r.iter()
-//                 .map(|v| v.copy_value())
-//                 .collect::<PartialVMResult<_>>()?)
-//         };
-
-//         Ok(match self {
-//             Self::Vec(v) => Self::Vec(copy_vec_val(v)?),
-//             Self::Struct(v) => Self::Struct(copy_vec_val(v)?),
-
-//             Self::VecU8(v) => Self::VecU8(v.clone()),
-//             Self::VecU64(v) => Self::VecU64(v.clone()),
-//             Self::VecU128(v) => Self::VecU128(v.clone()),
-//             Self::VecBool(v) => Self::VecBool(v.clone()),
-//             Self::VecAddress(v) => Self::VecAddress(v.clone()),
-//         })
-//     }
-// }
-
-// impl ReferenceImpl {
-//     fn copy_value(&self) -> Self {
-//         match self {
-//             ReferenceImpl::CheckedRef(r) => ReferenceImpl::CheckedRef(*r),
-//             ReferenceImpl::ExternalRef(r) => ReferenceImpl::ExternalRef(r.copy_value()),
-//         }
-//     }
-// }
-
-// impl ExternalRef {
-//     fn copy_value(&self) -> Self {
-//         let ExternalRef {
-//             global_status,
-//             source,
-//             checked_ref,
-//         } = self;
-//         ExternalRef {
-//             global_status: global_status.clone(),
-//             source: source.clone(),
-//             checked_ref: *checked_ref,
-//         }
-//     }
-// }
-
-// impl Value {
-//     pub fn copy_value(&self) -> PartialVMResult<Self> {
-//         Ok(Self(self.0.copy_value()?))
-//     }
-// }
-
-/***************************************************************************************
- *
  * Equality
  *
  *   Equality tests of Move values. Errors are raised when types mismatch.
@@ -471,7 +385,7 @@ impl_vm_value_ref!(AccountAddress, Address);
  **************************************************************************************/
 
 impl ValueImpl {
-    fn equals(&self, other: &Self) -> PartialVMResult<bool> {
+    unsafe fn equals(&self, other: &Self) -> PartialVMResult<bool> {
         use ValueImpl::*;
 
         let res = match (self, other) {
@@ -496,7 +410,7 @@ impl ValueImpl {
 }
 
 impl Container {
-    fn equals(&self, other: &Self) -> PartialVMResult<bool> {
+    unsafe fn equals(&self, other: &Self) -> PartialVMResult<bool> {
         use Container::*;
 
         let res = match (self, other) {
@@ -538,24 +452,26 @@ impl Container {
 }
 
 impl ReferenceImpl {
-    pub(crate) fn equals(&self, other: &ReferenceImpl) -> PartialVMResult<bool> {
-        unsafe {
-            match (self.checked_ref(), other.checked_ref()) {
-                (CheckedRef::U8(l), CheckedRef::U8(r)) => Ok(*l == *r),
-                (CheckedRef::U64(l), CheckedRef::U64(r)) => Ok(*l == *r),
-                (CheckedRef::U128(l), CheckedRef::U128(r)) => Ok(&*l == &*r),
-                (CheckedRef::Bool(l), CheckedRef::Bool(r)) => Ok(*l == *r),
-                (CheckedRef::Address(l), CheckedRef::Address(r)) => Ok(&*l == &*r),
-                (CheckedRef::Container(l), CheckedRef::Container(r)) => (&*l).equals(&*r),
-                (l, r) => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
-                    .with_message(format!("cannot compare ref values: {:?}, {:?}", l, r))),
-            }
+    /// # Safety
+    /// see REFERENCE SAFETY EXPLANATION
+    pub(crate) unsafe fn equals(&self, other: &ReferenceImpl) -> PartialVMResult<bool> {
+        match (self.checked_ref(), other.checked_ref()) {
+            (CheckedRef::U8(l), CheckedRef::U8(r)) => Ok(*l == *r),
+            (CheckedRef::U64(l), CheckedRef::U64(r)) => Ok(*l == *r),
+            (CheckedRef::U128(l), CheckedRef::U128(r)) => Ok(*l == *r),
+            (CheckedRef::Bool(l), CheckedRef::Bool(r)) => Ok(*l == *r),
+            (CheckedRef::Address(l), CheckedRef::Address(r)) => Ok(*l == *r),
+            (CheckedRef::Container(l), CheckedRef::Container(r)) => (*l).equals(&*r),
+            (l, r) => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+                .with_message(format!("cannot compare ref values: {:?}, {:?}", l, r))),
         }
     }
 }
 
 impl Value {
-    pub fn equals(&self, other: &Self) -> PartialVMResult<bool> {
+    /// # Safety
+    /// see REFERENCE SAFETY EXPLANATION
+    pub unsafe fn equals(&self, other: &Self) -> PartialVMResult<bool> {
         self.0.equals(&other.0)
     }
 }
@@ -569,23 +485,22 @@ impl Value {
  **************************************************************************************/
 
 impl ReferenceImpl {
-    fn read_ref(self) -> Value {
-        let v = unsafe {
-            match self.checked_ref() {
-                CheckedRef::U8(u) => ValueImpl::U8(*u),
-                CheckedRef::U64(u) => ValueImpl::U64(*u),
-                CheckedRef::U128(u) => ValueImpl::U128(*u),
-                CheckedRef::Bool(b) => ValueImpl::Bool(*b),
-                CheckedRef::Address(a) => ValueImpl::Address(*a),
-                CheckedRef::Container(c) => ValueImpl::Container((&*c).clone()),
-            }
-        };
-        Value(v)
+    unsafe fn read_ref(self) -> Value {
+        Value(match self.checked_ref() {
+            CheckedRef::U8(u) => ValueImpl::U8(*u),
+            CheckedRef::U64(u) => ValueImpl::U64(*u),
+            CheckedRef::U128(u) => ValueImpl::U128(*u),
+            CheckedRef::Bool(b) => ValueImpl::Bool(*b),
+            CheckedRef::Address(a) => ValueImpl::Address(*a),
+            CheckedRef::Container(c) => ValueImpl::Container((&*c).clone()),
+        })
     }
 }
 
 impl Reference {
-    pub fn read_ref(self) -> Value {
+    /// # Safety
+    /// see REFERENCE SAFETY EXPLANATION
+    pub unsafe fn read_ref(self) -> Value {
         self.0.read_ref()
     }
 }
@@ -621,7 +536,8 @@ impl ReferenceImpl {
 
 impl Reference {
     /// Writes to a reference, replacing the value with a new one.
-    /// Potentially unsafe if Move's reference safety rules are not upheld
+    /// # Safety
+    /// REFERENCE SAFETY EXPLANATION
     pub unsafe fn write_ref(self, x: Value) -> PartialVMResult<()> {
         self.0.write_ref(x)
     }
@@ -1359,8 +1275,10 @@ fn check_elem_layout(ty: &Type, v: &Container) -> PartialVMResult<()> {
 }
 
 impl VectorRef {
-    pub fn len(&self, type_param: &Type) -> PartialVMResult<Value> {
-        let c = unsafe { &*self.0.container()? };
+    /// # Safety
+    /// see REFERENCE SAFETY EXPLANATION
+    pub unsafe fn len(&self, type_param: &Type) -> PartialVMResult<Value> {
+        let c = &*self.0.container()?;
         check_elem_layout(type_param, c)?;
 
         let len = match c {
@@ -1375,8 +1293,10 @@ impl VectorRef {
         Ok(Value::u64(len as u64))
     }
 
-    pub fn push_back(&self, e: Value, type_param: &Type) -> PartialVMResult<()> {
-        let c = unsafe { &mut *self.0.container()? };
+    /// # Safety
+    /// see REFERENCE SAFETY EXPLANATION
+    pub unsafe fn push_back(&self, e: Value, type_param: &Type) -> PartialVMResult<()> {
+        let c = &mut *self.0.container()?;
         check_elem_layout(type_param, c)?;
 
         match c {
@@ -1393,8 +1313,10 @@ impl VectorRef {
         Ok(())
     }
 
-    pub fn borrow_elem(&self, idx: usize, type_param: &Type) -> PartialVMResult<Value> {
-        let c = unsafe { &mut *self.0.container()? };
+    /// # Safety
+    /// see REFERENCE SAFETY EXPLANATION
+    pub unsafe fn borrow_elem(&self, idx: usize, type_param: &Type) -> PartialVMResult<Value> {
+        let c = &mut *self.0.container()?;
         check_elem_layout(type_param, c)?;
         if idx >= c.len() {
             return Err(PartialVMError::new(StatusCode::VECTOR_OPERATION_ERROR)
@@ -1403,8 +1325,10 @@ impl VectorRef {
         Ok(Value(ValueImpl::Reference(self.0.borrow_elem(idx)?)))
     }
 
-    pub fn pop(&self, type_param: &Type) -> PartialVMResult<Value> {
-        let c = unsafe { &mut *self.0.container()? };
+    /// # Safety
+    /// see REFERENCE SAFETY EXPLANATION
+    pub unsafe fn pop(&self, type_param: &Type) -> PartialVMResult<Value> {
+        let c = &mut *self.0.container()?;
         check_elem_layout(type_param, c)?;
 
         macro_rules! err_pop_empty_vec {
@@ -1446,8 +1370,10 @@ impl VectorRef {
         Ok(res)
     }
 
-    pub fn swap(&self, idx1: usize, idx2: usize, type_param: &Type) -> PartialVMResult<()> {
-        let c = unsafe { &mut *self.0.container()? };
+    /// # Safety
+    /// see REFERENCE SAFETY EXPLANATION
+    pub unsafe fn swap(&self, idx1: usize, idx2: usize, type_param: &Type) -> PartialVMResult<()> {
+        let c = &mut *self.0.container()?;
         check_elem_layout(type_param, c)?;
 
         macro_rules! swap {
@@ -1850,116 +1776,6 @@ impl GlobalValue {
 *
 **************************************************************************************/
 
-impl Display for ValueImpl {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Invalid => write!(f, "Invalid"),
-
-            Self::U8(x) => write!(f, "U8({})", x),
-            Self::U64(x) => write!(f, "U64({})", x),
-            Self::U128(x) => write!(f, "U128({})", x),
-            Self::Bool(x) => write!(f, "{}", x),
-            Self::Address(addr) => write!(f, "Address({})", addr.short_str_lossless()),
-
-            Self::Container(r) => write!(f, "{}", r),
-
-            Self::Reference(r) => write!(f, "{}", r),
-        }
-    }
-}
-
-fn display_list_of_items<T, I>(items: I, f: &mut fmt::Formatter) -> fmt::Result
-where
-    T: Display,
-    I: IntoIterator<Item = T>,
-{
-    write!(f, "[")?;
-    let mut items = items.into_iter();
-    if let Some(x) = items.next() {
-        write!(f, "{}", x)?;
-        for x in items {
-            write!(f, ", {}", x)?;
-        }
-    }
-    write!(f, "]")
-}
-
-impl Display for ExternalRef {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let Self {
-            data_status: global_status,
-            source,
-            checked_ref,
-        } = self;
-        write!(
-            f,
-            "&({:?}, {}, {})",
-            &*global_status.as_ref().borrow(),
-            Rc::strong_count(source),
-            checked_ref,
-        )
-    }
-}
-
-impl Display for CheckedRef {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        unsafe {
-            match *self {
-                CheckedRef::U8(p) => write!(f, "&{}", ValueImpl::U8(*p)),
-                CheckedRef::U64(p) => write!(f, "&{}", ValueImpl::U64(*p)),
-                CheckedRef::U128(p) => write!(f, "&{}", ValueImpl::U128(*p)),
-                CheckedRef::Bool(p) => write!(f, "&{:?}", ValueImpl::Bool(*p)),
-                CheckedRef::Address(p) => write!(f, "&{}", ValueImpl::Address(*p)),
-                CheckedRef::Container(p) => write!(f, "&{}", &*p),
-            }
-        }
-    }
-}
-
-impl Display for ReferenceImpl {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::CheckedRef(r) => write!(f, "{}", r),
-            Self::ExternalRef(r) => write!(f, "{}", r),
-        }
-    }
-}
-
-impl Display for Container {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Vec(r) | Self::Struct(r) => display_list_of_items(r.iter(), f),
-            Self::VecU8(r) => display_list_of_items(r.iter(), f),
-            Self::VecU64(r) => display_list_of_items(r.iter(), f),
-            Self::VecU128(r) => display_list_of_items(r.iter(), f),
-            Self::VecBool(r) => display_list_of_items(r.iter(), f),
-            Self::VecAddress(r) => display_list_of_items(r.iter(), f),
-        }
-    }
-}
-
-impl Display for Value {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        Display::fmt(&self.0, f)
-    }
-}
-
-impl Display for Locals {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            self.0
-                .iter()
-                .enumerate()
-                .map(|(idx, val)| format!("[{}] {}", idx, val))
-                .collect::<Vec<_>>()
-                .join("\n")
-        )
-    }
-}
-
-#[allow(dead_code)]
 pub mod debug {
     use super::*;
     use std::fmt::Write;
@@ -1988,7 +1804,7 @@ pub mod debug {
         debug_write!(buf, "{}", x)
     }
 
-    fn print_value_impl<B: Write>(buf: &mut B, val: &ValueImpl) -> PartialVMResult<()> {
+    unsafe fn print_value_impl<B: Write>(buf: &mut B, val: &ValueImpl) -> PartialVMResult<()> {
         match val {
             ValueImpl::Invalid => print_invalid(buf),
 
@@ -2004,18 +1820,17 @@ pub mod debug {
         }
     }
 
-    fn print_list<'a, B, I, X, F>(
+    unsafe fn print_list<'a, B, I, X>(
         buf: &mut B,
         begin: &str,
         items: I,
-        print: F,
+        print: unsafe fn(&mut B, &X) -> PartialVMResult<()>,
         end: &str,
     ) -> PartialVMResult<()>
     where
         B: Write,
         X: 'a,
         I: IntoIterator<Item = &'a X>,
-        F: Fn(&mut B, &X) -> PartialVMResult<()>,
     {
         debug_write!(buf, "{}", begin)?;
         let mut it = items.into_iter();
@@ -2030,7 +1845,7 @@ pub mod debug {
         Ok(())
     }
 
-    fn print_container<B: Write>(buf: &mut B, c: &Container) -> PartialVMResult<()> {
+    unsafe fn print_container<B: Write>(buf: &mut B, c: &Container) -> PartialVMResult<()> {
         match c {
             Container::Vec(r) => print_list(buf, "[", r.iter(), print_value_impl, "]"),
 
@@ -2044,38 +1859,30 @@ pub mod debug {
         }
     }
 
-    fn print_slice_elem<B, X, F>(buf: &mut B, v: &[X], idx: usize, print: F) -> PartialVMResult<()>
-    where
-        B: Write,
-        F: FnOnce(&mut B, &X) -> PartialVMResult<()>,
-    {
-        match v.get(idx) {
-            Some(x) => print(buf, x),
-            None => Err(
-                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message("ref index out of bounds".to_string()),
-            ),
+    unsafe fn print_checked_ref<B: Write>(
+        buf: &mut B,
+        checked_ref: CheckedRef,
+    ) -> PartialVMResult<()> {
+        match checked_ref {
+            CheckedRef::U8(p) => print_value_impl(buf, &ValueImpl::U8(*p)),
+            CheckedRef::U64(p) => print_value_impl(buf, &ValueImpl::U64(*p)),
+            CheckedRef::U128(p) => print_value_impl(buf, &ValueImpl::U128(*p)),
+            CheckedRef::Bool(p) => print_value_impl(buf, &ValueImpl::Bool(*p)),
+            CheckedRef::Address(p) => print_value_impl(buf, &ValueImpl::Address(*p)),
+            CheckedRef::Container(p) => print_container(buf, &*p),
         }
     }
 
-    fn print_checked_ref<B: Write>(buf: &mut B, checked_ref: CheckedRef) -> PartialVMResult<()> {
-        unsafe {
-            match checked_ref {
-                CheckedRef::U8(p) => print_value_impl(buf, &ValueImpl::U8(*p)),
-                CheckedRef::U64(p) => print_value_impl(buf, &ValueImpl::U64(*p)),
-                CheckedRef::U128(p) => print_value_impl(buf, &ValueImpl::U128(*p)),
-                CheckedRef::Bool(p) => print_value_impl(buf, &ValueImpl::Bool(*p)),
-                CheckedRef::Address(p) => print_value_impl(buf, &ValueImpl::Address(*p)),
-                CheckedRef::Container(p) => print_container(buf, &*p),
-            }
-        }
-    }
-
-    pub fn print_reference<B: Write>(buf: &mut B, r: &Reference) -> PartialVMResult<()> {
+    /// # Safety
+    /// see REFERENCE SAFETY EXPLANATION
+    pub unsafe fn print_reference<B: Write>(buf: &mut B, r: &Reference) -> PartialVMResult<()> {
         print_reference_impl(buf, &r.0)
     }
 
-    fn print_reference_impl<B: Write>(buf: &mut B, r: &ReferenceImpl) -> PartialVMResult<()> {
+    unsafe fn print_reference_impl<B: Write>(
+        buf: &mut B,
+        r: &ReferenceImpl,
+    ) -> PartialVMResult<()> {
         match r {
             ReferenceImpl::CheckedRef(checked_ref)
             | ReferenceImpl::ExternalRef(ExternalRef { checked_ref, .. }) => {
@@ -2084,7 +1891,9 @@ pub mod debug {
         }
     }
 
-    pub fn print_locals<B: Write>(buf: &mut B, locals: &Locals) -> PartialVMResult<()> {
+    /// # Safety
+    /// see REFERENCE SAFETY EXPLANATION
+    pub unsafe fn print_locals<B: Write>(buf: &mut B, locals: &Locals) -> PartialVMResult<()> {
         // REVIEW: The number of spaces in the indent is currently hard coded.
         for (idx, val) in locals.0.iter().enumerate() {
             debug_write!(buf, "            [{}] ", idx)?;
@@ -2094,7 +1903,9 @@ pub mod debug {
         Ok(())
     }
 
-    pub fn print_value<B: Write>(buf: &mut B, val: &Value) -> PartialVMResult<()> {
+    /// # Safety
+    /// see REFERENCE SAFETY EXPLANATION
+    pub unsafe fn print_value<B: Write>(buf: &mut B, val: &Value) -> PartialVMResult<()> {
         print_value_impl(buf, &val.0)
     }
 }

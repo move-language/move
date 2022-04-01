@@ -15,10 +15,12 @@ fn locals() -> PartialVMResult<()> {
     }
     locals.store_loc(1, Value::u64(42))?;
 
-    assert!(locals.copy_loc(1)?.equals(&Value::u64(42))?);
-    let r = locals.borrow_loc(1)?.value_as::<Reference>()?;
-    assert!(r.read_ref().equals(&Value::u64(42))?);
-    assert!(locals.move_loc(1)?.equals(&Value::u64(42))?);
+    unsafe {
+        assert!(locals.copy_loc(1)?.equals(&Value::u64(42))?);
+        let r = locals.borrow_loc(1)?.value_as::<Reference>()?;
+        assert!(r.read_ref().equals(&Value::u64(42))?);
+        assert!(locals.move_loc(1)?.equals(&Value::u64(42))?);
+    }
 
     assert!(locals.copy_loc(1).is_err());
     assert!(locals.move_loc(1).is_err());
@@ -39,7 +41,9 @@ fn struct_pack_and_unpack() -> PartialVMResult<()> {
 
     assert!(vals.len() == unpacked.len());
     for (v1, v2) in vals.iter().zip(unpacked.iter()) {
-        assert!(v1.equals(v2)?);
+        unsafe {
+            assert!(v1.equals(v2)?);
+        }
     }
 
     Ok(())
@@ -54,7 +58,7 @@ fn struct_borrow_field() -> PartialVMResult<()> {
     )?;
     let r: StructRef = locals.borrow_loc(0)?.value_as()?;
 
-    {
+    unsafe {
         let f: Reference = r.borrow_field(1)?.value_as()?;
         assert!(f.read_ref().equals(&Value::bool(false))?);
     }
@@ -64,7 +68,7 @@ fn struct_borrow_field() -> PartialVMResult<()> {
         f.write_ref(Value::bool(true))?;
     }
 
-    {
+    unsafe {
         let f: Reference = r.borrow_field(1)?.value_as()?;
         assert!(f.read_ref().equals(&Value::bool(true))?);
     }
@@ -87,7 +91,7 @@ fn struct_borrow_nested() -> PartialVMResult<()> {
     let r1: StructRef = locals.borrow_loc(0)?.value_as()?;
     let r2: StructRef = r1.borrow_field(1)?.value_as()?;
 
-    {
+    unsafe {
         let r3: Reference = r2.borrow_field(0)?.value_as()?;
         assert!(r3.read_ref().equals(&Value::u64(20))?);
     }
@@ -97,13 +101,15 @@ fn struct_borrow_nested() -> PartialVMResult<()> {
         r3.write_ref(Value::u64(30))?;
     }
 
-    {
+    unsafe {
         let r3: Reference = r2.borrow_field(0)?.value_as()?;
         assert!(r3.read_ref().equals(&Value::u64(30))?);
     }
 
-    assert!(r2.into_ref().read_ref().equals(&inner(30))?);
-    assert!(r1.into_ref().read_ref().equals(&outer(30))?);
+    unsafe {
+        assert!(r2.into_ref().read_ref().equals(&inner(30))?);
+        assert!(r1.into_ref().read_ref().equals(&outer(30))?);
+    }
 
     Ok(())
 }

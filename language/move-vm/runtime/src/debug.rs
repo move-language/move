@@ -175,7 +175,9 @@ impl DebugContext {
                                 println!("        Locals:");
                                 if function_desc.local_count() > 0 {
                                     let mut s = String::new();
-                                    values::debug::print_locals(&mut s, locals).unwrap();
+                                    unsafe {
+                                        values::debug::print_locals(&mut s, locals).unwrap();
+                                    }
                                     println!("{}", s);
                                 } else {
                                     println!("            (none)");

@@ -29,7 +29,7 @@ pub fn native_to_bytes(
     // delegate to the BCS serialization for `Value`
     let serialized_value_opt = match context.type_to_type_layout(&arg_type)? {
         None => None,
-        Some(layout) => ref_to_val.read_ref().simple_serialize(&layout),
+        Some(layout) => unsafe { ref_to_val.read_ref() }.simple_serialize(&layout),
     };
     let serialized_value = match serialized_value_opt {
         None => {

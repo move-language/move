@@ -32,7 +32,7 @@ module Evm::Evm {
     /// Creates a signer for the contract's address space.
     public native fun sign(addr: address): signer;
 
-        /// Returns the keccak256 hash for the input `data`.
+    /// Returns the keccak256 hash for the input `data`.
     /// The length of the resulting vector should be 32.
     public native fun keccak256(data: vector<u8>): vector<u8>;
 
@@ -70,6 +70,9 @@ module Evm::Evm {
     // This is implemented in Solidity as follows:
     //   bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
     public native fun tokenURI_with_baseURI(baseURI: String, tokenId: U256): String;
+
+    /// Abort with an error message.
+    public native fun abortWith(message: vector<u8>);
 
     // --------------------------------
     // Block and Transaction Properties

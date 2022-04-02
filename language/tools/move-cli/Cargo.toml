@@ -58,7 +58,7 @@ name = "move"
 path = "src/main.rs"
 
 [[test]]
-name = "cli_testsuite"
+name = "sandbox_testsuite"
 harness = false
 
 [[test]]
@@ -70,9 +70,18 @@ name = "move_unit_tests_evm"
 harness = false
 required-features = ["evm-backend"]
 
+[[test]]
+name = "build_testsuite"
+harness = false
+
+[[test]]
+name = "build_testsuite_evm"
+harness = false
+required-features = ["evm-backend"]
+
 [features]
 default = ["evm-backend"]
-evm-backend = ["move-unit-test/evm-backend"]
+evm-backend = ["move-unit-test/evm-backend", "move-package/evm-arch"]
 
 table-extension = [
     "move-table-extension",

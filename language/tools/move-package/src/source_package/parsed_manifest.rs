@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::Architecture;
 use move_core_types::account_address::AccountAddress;
 use move_symbol_pool::symbol::Symbol;
 use std::{collections::BTreeMap, path::PathBuf};
@@ -59,7 +60,7 @@ pub struct GitInfo {
 #[derive(Default, Debug, Clone, Eq, PartialEq)]
 pub struct BuildInfo {
     pub language_version: Option<Version>,
-    pub language_flavor: Option<String>,
+    pub architecture: Option<Architecture>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

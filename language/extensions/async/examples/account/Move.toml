@@ -8,7 +8,7 @@ Async = "0x1"
 This = "0x3"
 
 [build]
-language_flavor = "async"
+arch = "async"
 
 [dependencies]
 MoveAsyncLib = { local = "../../move-async-lib" }

@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::source_package::parsed_manifest as PM;
+use crate::{source_package::parsed_manifest as PM, Architecture};
 use anyhow::{bail, format_err, Context, Result};
 use move_core_types::account_address::{AccountAddress, AccountAddressParseError};
 use move_symbol_pool::symbol::Symbol;
@@ -181,16 +181,13 @@ pub fn parse_dependencies(tval: TV) -> Result<PM::Dependencies> {
 pub fn parse_build_info(tval: TV) -> Result<PM::BuildInfo> {
     match tval {
         TV::Table(mut table) => {
-            warn_if_unknown_field_names(&table, &["language_version", "language_flavor"]);
+            warn_if_unknown_field_names(&table, &["language_version", "arch"]);
             Ok(PM::BuildInfo {
                 language_version: table
                     .remove("language_version")
                     .map(parse_version)
                     .transpose()?,
-                language_flavor: table
-                    .remove("language_flavor")
-                    .map(parse_flavor)
-                    .transpose()?,
+                architecture: table.remove("arch").map(parse_architecture).transpose()?,
             })
         }
         x => bail!(
@@ -439,8 +436,8 @@ fn parse_version(tval: TV) -> Result<PM::Version> {
     ))
 }
 
-fn parse_flavor(tval: TV) -> Result<String> {
-    Ok(tval.as_str().unwrap().to_string())
+fn parse_architecture(tval: TV) -> Result<Architecture> {
+    Architecture::try_parse_from_str(tval.as_str().unwrap())
 }
 
 fn parse_digest(tval: TV) -> Result<PM::PackageDigest> {

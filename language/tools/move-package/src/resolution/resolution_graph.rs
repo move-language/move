@@ -92,9 +92,9 @@ impl ResolvingGraph {
         root_package_path: PathBuf,
         mut build_options: BuildConfig,
     ) -> Result<ResolvingGraph> {
-        if build_options.language_flavor.is_none() {
+        if build_options.architecture.is_none() {
             if let Some(info) = &root_package.build {
-                build_options.language_flavor = info.language_flavor.clone();
+                build_options.architecture = info.architecture;
             }
         }
         let mut resolution_graph = Self {
@@ -689,6 +689,21 @@ impl ResolvedGraph {
         let tree = tree.build();
         print_tree(&tree)?;
         Ok(())
+    }
+
+    pub fn extract_named_address_mapping(
+        &self,
+    ) -> impl Iterator<Item = (Symbol, AccountAddress)> + '_ {
+        let rooot_package_name = &self.root_package.package.name;
+        let root_package = self
+            .package_table
+            .get(rooot_package_name)
+            .expect("Failed to find root package in package table -- this should never happen");
+
+        root_package
+            .resolution_table
+            .iter()
+            .map(|(name, addr)| (*name, *addr))
     }
 }
 

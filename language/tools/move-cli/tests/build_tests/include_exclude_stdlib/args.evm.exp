@@ -1,0 +1,7 @@
+Command `package build -v --arch ethereum`:
+COMPILING build_include_exclude_stdlib to Yul
+ERROR Failed to compile Move into Yul
+Error: exiting with Move build errors
+Command `-d -v package build --arch ethereum`:
+COMPILING MoveStdlib, build_include_exclude_stdlib to Yul
+GENERATING EVM bytecote from Yul

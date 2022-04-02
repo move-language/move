@@ -3,7 +3,7 @@
 
 use std::{
     collections::HashMap,
-    fmt::Display,
+    fmt,
     fs::{create_dir_all, read_to_string},
     io::Write,
     path::{Path, PathBuf},
@@ -31,7 +31,6 @@ use move_compiler::{
     unit_test::{plan_builder::construct_test_plan, TestPlan},
     PASS_CFGIR,
 };
-use move_core_types::account_address::AccountAddress;
 use move_coverage::{
     coverage_map::{output_map_to_file, CoverageMap},
     format_csv_summary, format_human_summary,
@@ -41,9 +40,8 @@ use move_coverage::{
 use move_disassembler::disassembler::Disassembler;
 use move_package::{
     compilation::{build_plan::BuildPlan, compiled_package::CompiledUnitWithSource},
-    resolution::resolution_graph::ResolutionGraph,
     source_package::layout::SourcePackageLayout,
-    ModelConfig,
+    Architecture, ModelConfig,
 };
 use move_unit_test::UnitTestingConfig;
 
@@ -299,7 +297,18 @@ pub fn handle_package_commands(
 
     match cmd {
         PackageCommand::Build => {
-            config.compile_package(&rerooted_path, &mut std::io::stdout())?;
+            let architecture = config.architecture.unwrap_or(Architecture::Move);
+
+            match architecture {
+                Architecture::Move | Architecture::AsyncMove => {
+                    config.compile_package(&rerooted_path, &mut std::io::stdout())?;
+                }
+
+                #[cfg(feature = "evm-backend")]
+                Architecture::Ethereum => {
+                    config.compile_package_evm(&rerooted_path, &mut std::io::stdout())?;
+                }
+            }
         }
         PackageCommand::Info => {
             config
@@ -444,27 +453,6 @@ pub fn handle_package_commands(
     Ok(())
 }
 
-fn extract_named_address_values(
-    resolution_graph: &ResolutionGraph<AccountAddress>,
-) -> Vec<(String, NumericalAddress)> {
-    let rooot_package_name = &resolution_graph.root_package.package.name;
-    let root_package = resolution_graph
-        .package_table
-        .get(rooot_package_name)
-        .expect("Failed to find root package in package table -- this should never happen");
-
-    root_package
-        .resolution_table
-        .iter()
-        .map(|(name, addr)| {
-            (
-                name.to_string(),
-                NumericalAddress::new(addr.into_bytes(), NumberFormat::Hex),
-            )
-        })
-        .collect()
-}
-
 pub fn run_move_unit_tests(
     pkg_path: &Path,
     mut build_config: move_package::BuildConfig,
@@ -481,7 +469,15 @@ pub fn run_move_unit_tests(
 
     // Note: unit_test_config.named_address_values is always set to vec![] (the default value) before
     // being passed in.
-    unit_test_config.named_address_values = extract_named_address_values(&resolution_graph);
+    unit_test_config.named_address_values = resolution_graph
+        .extract_named_address_mapping()
+        .map(|(name, addr)| {
+            (
+                name.to_string(),
+                NumericalAddress::new(addr.into_bytes(), NumberFormat::Hex),
+            )
+        })
+        .collect();
 
     // Get the source files for all modules. We need this in order to report source-mapped error
     // messages.
@@ -589,7 +585,10 @@ pub fn run_move_unit_tests(
     Ok(UnitTestResult::Success)
 }
 
-pub fn create_move_package<S: AsRef<str> + Display>(name: S, creation_path: &Path) -> Result<()> {
+pub fn create_move_package<S: AsRef<str> + fmt::Display>(
+    name: S,
+    creation_path: &Path,
+) -> Result<()> {
     create_dir_all(creation_path.join(SourcePackageLayout::Sources.path()))?;
     let mut w = std::fs::File::create(creation_path.join(SourcePackageLayout::Manifest.path()))?;
     writeln!(

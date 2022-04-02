@@ -6,7 +6,7 @@ mod package_lock;
 pub mod resolution;
 pub mod source_package;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use clap::*;
 use compilation::compiled_package::CompilationCachingStatus;
 use move_core_types::account_address::AccountAddress;
@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use source_package::layout::SourcePackageLayout;
 use std::{
     collections::BTreeMap,
+    fmt,
     io::Write,
     path::{Path, PathBuf},
 };
@@ -27,6 +28,68 @@ use crate::{
     resolution::resolution_graph::{ResolutionGraph, ResolvedGraph},
     source_package::{layout, manifest_parser},
 };
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum Architecture {
+    Move,
+
+    AsyncMove,
+
+    #[cfg(feature = "evm-arch")]
+    Ethereum,
+}
+
+impl fmt::Display for Architecture {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Move => write!(f, "move"),
+
+            Self::AsyncMove => write!(f, "async-move"),
+
+            #[cfg(feature = "evm-arch")]
+            Self::Ethereum => write!(f, "ethereum"),
+        }
+    }
+}
+
+impl Architecture {
+    fn all() -> impl Iterator<Item = Self> {
+        IntoIterator::into_iter([
+            Self::Move,
+            Self::AsyncMove,
+            #[cfg(feature = "evm-arch")]
+            Self::Ethereum,
+        ])
+    }
+
+    fn try_parse_from_str(s: &str) -> Result<Self> {
+        Ok(match s {
+            "move" => Self::Move,
+
+            "async-move" => Self::AsyncMove,
+
+            #[cfg(feature = "evm-arch")]
+            "ethereum" => Self::Ethereum,
+
+            _ => {
+                let supported_architectures = Self::all()
+                    .map(|arch| format!("\"{}\"", arch))
+                    .collect::<Vec<_>>();
+                let be = if supported_architectures.len() == 1 {
+                    "is"
+                } else {
+                    "are"
+                };
+                bail!(
+                    "Unrecognized architecture {} -- only {} {} supported",
+                    s,
+                    supported_architectures.join(", "),
+                    be
+                )
+            }
+        })
+    }
+}
 
 #[derive(Debug, Parser, Clone, Serialize, Deserialize, Eq, PartialEq, PartialOrd)]
 #[clap(
@@ -65,8 +128,8 @@ pub struct BuildConfig {
     #[clap(skip)]
     pub additional_named_addresses: BTreeMap<String, AccountAddress>,
 
-    #[clap(long = "flavor", global = true)]
-    pub language_flavor: Option<String>,
+    #[clap(long = "arch", global = true, parse(try_from_str = Architecture::try_parse_from_str))]
+    pub architecture: Option<Architecture>,
 }
 
 impl Default for BuildConfig {
@@ -79,7 +142,7 @@ impl Default for BuildConfig {
             install_dir: None,
             force_recompilation: false,
             additional_named_addresses: BTreeMap::new(),
-            language_flavor: None,
+            architecture: None,
         }
     }
 }
@@ -97,6 +160,15 @@ impl BuildConfig {
     /// Compile the package at `path` or the containing Move package.
     pub fn compile_package<W: Write>(self, path: &Path, writer: &mut W) -> Result<CompiledPackage> {
         Ok(self.compile_package_with_caching_info(path, writer)?.0)
+    }
+
+    #[cfg(feature = "evm-arch")]
+    pub fn compile_package_evm<W: Write>(self, path: &Path, writer: &mut W) -> Result<()> {
+        let resolved_graph = self.resolution_graph_for_package(path)?;
+        let mutx = PackageLock::lock();
+        let ret = BuildPlan::create(resolved_graph)?.compile_evm(writer);
+        mutx.unlock();
+        ret
     }
 
     /// Compile the package at `path` or the containing Move package and return whether or not all

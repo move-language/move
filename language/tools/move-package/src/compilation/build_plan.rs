@@ -16,6 +16,13 @@ use std::{
 
 use super::{compiled_package::CompilationCachingStatus, package_layout::CompiledPackageLayout};
 
+#[cfg(feature = "evm-arch")]
+use {
+    colored::Colorize,
+    move_to_yul::{options::Options as MoveToYulOptions, run_to_yul},
+    termcolor::Buffer,
+};
+
 #[derive(Debug, Clone)]
 pub struct BuildPlan {
     root: PackageName,
@@ -58,7 +65,7 @@ impl BuildPlan {
         )
             -> anyhow::Result<(FilesSourceText, Vec<AnnotatedCompiledUnit>)>,
     ) -> Result<(CompiledPackage, CompilationCachingStatus)> {
-        let package_root = &self.resolution_graph.package_table[&self.root];
+        let root_package = &self.resolution_graph.package_table[&self.root];
         let project_root = match &self.resolution_graph.build_options.install_dir {
             Some(under_path) => under_path.clone(),
             None => self.resolution_graph.root_package_path.clone(),
@@ -78,7 +85,7 @@ impl BuildPlan {
                 resolved_package.clone(),
                 dependencies,
                 &self.resolution_graph,
-                package_ident == &package_root.source_package.package.name,
+                package_ident == &root_package.source_package.package.name,
                 &mut compiler_driver,
             )?;
             compiled.insert(*package_ident, compiled_package);
@@ -89,8 +96,188 @@ impl BuildPlan {
             compiled_names,
         )?;
         Ok(compiled
-            .remove(&package_root.source_package.package.name)
+            .remove(&root_package.source_package.package.name)
             .unwrap())
+    }
+
+    #[cfg(feature = "evm-arch")]
+    pub fn compile_evm<W: Write>(&self, writer: &mut W) -> Result<()> {
+        let root_package = &self.resolution_graph.package_table[&self.root];
+        let project_root = match &self.resolution_graph.build_options.install_dir {
+            Some(under_path) => under_path.clone(),
+            None => self.resolution_graph.root_package_path.clone(),
+        };
+        let build_root_path = project_root
+            .join(CompiledPackageLayout::Root.path())
+            .join("evm");
+
+        // Step 1: Compile Move into Yul
+        //   Step 1a: Gather command line arguments for move-to-yul
+        let package_names = self
+            .resolution_graph
+            .package_table
+            .iter()
+            .map(|(name, _)| name.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        let dependencies = self
+            .resolution_graph
+            .package_table
+            .iter()
+            .filter_map(|(name, package)| {
+                if name == &root_package.source_package.package.name {
+                    None
+                } else {
+                    Some(format!(
+                        "{}/sources",
+                        package.package_path.to_string_lossy()
+                    ))
+                }
+            })
+            .collect();
+
+        let sources = vec![format!(
+            "{}/sources",
+            root_package.package_path.to_string_lossy()
+        )];
+
+        let named_address_mapping = self
+            .resolution_graph
+            .extract_named_address_mapping()
+            .map(|(name, addr)| format!("{}={}", name.as_str(), addr))
+            .collect();
+
+        let yul_output = format!(
+            "{}/{}.yul",
+            build_root_path.to_string_lossy(),
+            root_package.source_package.package.name
+        );
+        let abi_output = format!(
+            "{}/{}.abi.json",
+            build_root_path.to_string_lossy(),
+            root_package.source_package.package.name
+        );
+
+        //   Step 1b: Call move-to-yul
+        writeln!(
+            writer,
+            "{} {} to Yul",
+            "COMPILING".bold().green(),
+            package_names
+        )?;
+
+        if let Err(err) = std::fs::create_dir_all(&build_root_path) {
+            writeln!(
+                writer,
+                "{} Failed to create build dir {}",
+                "ERROR".bold().red(),
+                build_root_path.to_string_lossy(),
+            )?;
+
+            return Err(err.into());
+        }
+
+        let mut error_buffer = Buffer::no_color();
+        if let Err(err) = run_to_yul(
+            &mut error_buffer,
+            MoveToYulOptions {
+                dependencies,
+                named_address_mapping,
+                sources,
+                output: yul_output.clone(),
+                abi_output,
+
+                ..MoveToYulOptions::default()
+            },
+        ) {
+            writeln!(
+                writer,
+                "{} Failed to compile Move into Yul",
+                "ERROR".bold().red()
+            )?;
+
+            let mut source = err.source();
+            while let Some(s) = source {
+                writeln!(writer, "{}", s)?;
+                source = s.source();
+            }
+
+            return Err(err);
+        }
+
+        // Step 2: Compile Yul into bytecode using solc
+        let yul_source = match std::fs::read_to_string(&yul_output) {
+            Ok(yul_source) => yul_source,
+            Err(err) => {
+                writeln!(
+                    writer,
+                    "{} Failed to read from {}",
+                    "ERROR".bold().red(),
+                    yul_output,
+                )?;
+
+                return Err(err.into());
+            }
+        };
+
+        let bytecode_output = format!(
+            "{}/{}.bin",
+            build_root_path.to_string_lossy(),
+            root_package.source_package.package.name
+        );
+
+        writeln!(
+            writer,
+            "{} EVM bytecote from Yul",
+            "GENERATING".bold().green(),
+        )?;
+
+        match evm_exec_utils::compile::solc_yul(&yul_source, false) {
+            Ok((bytecode, _)) => {
+                let mut bytecode_file = match std::fs::File::create(&bytecode_output) {
+                    Ok(file) => file,
+                    Err(err) => {
+                        writeln!(
+                            writer,
+                            "{} Failed to create bytecode output {}",
+                            "ERROR".bold().red(),
+                            bytecode_output,
+                        )?;
+
+                        return Err(err.into());
+                    }
+                };
+
+                if let Err(err) = bytecode_file.write_all(hex::encode(&bytecode).as_bytes()) {
+                    writeln!(
+                        writer,
+                        "{} Failed to write bytecode to file {}",
+                        "ERROR".bold().red(),
+                        bytecode_output,
+                    )?;
+
+                    return Err(err.into());
+                }
+            }
+            Err(err) => {
+                writeln!(
+                    writer,
+                    "{} Failed to generate EVM bytecote",
+                    "ERROR".bold().red()
+                )?;
+
+                let mut source = err.source();
+                while let Some(s) = source {
+                    writeln!(writer, "{}", s)?;
+                    source = s.source();
+                }
+
+                return Err(err);
+            }
+        }
+
+        Ok(())
     }
 
     // Clean out old packages that are no longer used, or no longer used under the current

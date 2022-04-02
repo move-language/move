@@ -1,7 +1,13 @@
 [
   {
-    "inputs": [],
-    "name": "create",
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "name": "",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "constructor"
@@ -20,6 +26,19 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "name",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
       }
     ],
     "stateMutability": "pure",

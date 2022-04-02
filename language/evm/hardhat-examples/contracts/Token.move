@@ -9,18 +9,26 @@ module Evm::Token {
     struct State has key {
         total_supply: U256,
         balances: Table<address, U256>,
+        name: vector<u8>,
     }
 
-    #[create]
-    public fun create() acquires State {
+    #[create(sig=b"constructor(string)")]
+    public fun create(name: vector<u8>) acquires State {
         move_to<State>(
             &sign(self()),
             State {
                 total_supply: U256::zero(),
                 balances: Table::empty<address, U256>(),
+                name
             }
         );
         mint(sender(), U256::u256_from_u128(42));
+    }
+
+    #[callable(sig=b"name() returns (string)"), view]
+    /// Returns the name of the token
+    public fun name(): vector<u8> acquires State {
+        *&borrow_global<State>(self()).name
     }
 
     #[callable(sig=b"totalSupply() returns (uint256)"), view]

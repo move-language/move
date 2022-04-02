@@ -83,7 +83,7 @@ impl Generator {
                     );
                     continue;
                 }
-                let sig = self.get_solidity_signature(ctx, fun);
+                let sig = self.get_solidity_signature(ctx, fun, true);
                 self.generate_dispatch_item(ctx, fun, &sig, &mut selectors);
             }
             emitln!(ctx.writer, "default {}");
@@ -97,8 +97,10 @@ impl Generator {
         &self,
         ctx: &Context,
         fun: &FunctionEnv,
+        callable_flag: bool,
     ) -> SoliditySignature {
-        let extracted_sig_opt = attributes::extract_callable_signature(fun);
+        let extracted_sig_opt =
+            attributes::extract_callable_or_create_signature(fun, callable_flag);
         let mut sig = SoliditySignature::create_default_solidity_signature(ctx, fun);
         if let Some(extracted_sig) = extracted_sig_opt {
             let parsed_sig_opt = SoliditySignature::parse_into_solidity_signature(&extracted_sig);

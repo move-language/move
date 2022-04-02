@@ -48,13 +48,16 @@ fn extract_attr_value_str(
 }
 
 /// Extract the solidity signature from the callable attribute
-pub fn extract_callable_signature(fun: &FunctionEnv<'_>) -> Option<String> {
-    extract_attr_value_str(
-        fun.module_env.env,
-        fun.get_attributes(),
-        CALLABLE_ATTR,
-        SIGNATURE,
-    )
+pub fn extract_callable_or_create_signature(
+    fun: &FunctionEnv<'_>,
+    callable_flag: bool,
+) -> Option<String> {
+    let attr = if callable_flag {
+        CALLABLE_ATTR
+    } else {
+        CREATE_ATTR
+    };
+    extract_attr_value_str(fun.module_env.env, fun.get_attributes(), attr, SIGNATURE)
 }
 
 /// Extract the solidity signature from the callable attribute
@@ -113,7 +116,7 @@ pub fn is_callable_fun(fun: &FunctionEnv<'_>) -> bool {
 
 /// Check whether the function has a `#[create]` attribute.
 pub fn is_create_fun(fun: &FunctionEnv<'_>) -> bool {
-    has_attr(fun.module_env.env, fun.get_attributes(), CREATE_ATTR, true)
+    has_attr(fun.module_env.env, fun.get_attributes(), CREATE_ATTR, false)
 }
 
 /// Check whether the function has a `#[payable]` attribute.

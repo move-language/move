@@ -134,7 +134,7 @@ impl Generator {
         ctx.emit_block(|| {
             // Generate the deployment code block
             self.begin_code_block(ctx);
-            self.optional_creator(ctx);
+            self.optional_creator(ctx, contract_name);
             let contract_deployed_name = format!("{}_deployed", contract_name);
             emitln!(
                 ctx.writer,
@@ -266,7 +266,7 @@ impl Generator {
     }
 
     /// Generate optional creator (contract constructor).
-    fn optional_creator(&mut self, ctx: &Context) {
+    fn optional_creator(&mut self, ctx: &Context, contract_name: &str) {
         let mut creators = ctx.get_target_functions(attributes::is_create_fun);
         if creators.len() > 1 {
             ctx.env
@@ -295,23 +295,59 @@ impl Generator {
             // Translate call to the constructor function
             let fun_id = creator.get_qualified_id().instantiate(vec![]);
             let function_name = ctx.make_function_name(&fun_id);
-            let solidity_sig = self.get_solidity_signature(ctx, &creator);
+            let solidity_sig = self.get_solidity_signature(ctx, &creator, false);
             let param_count = solidity_sig.para_types.len();
             let mut params = "".to_string();
             if param_count > 0 {
+                let program_size_str = "program_size".to_string();
+                let arg_size_str = "arg_size".to_string();
+                let memory_data_offset_str = "memory_data_offset".to_string();
+                emitln!(
+                    ctx.writer,
+                    "let {} := datasize(\"{}\")",
+                    program_size_str,
+                    contract_name
+                );
+                emitln!(
+                    ctx.writer,
+                    "let {} := sub(codesize(), {})",
+                    arg_size_str,
+                    program_size_str
+                );
+                let malloc_call = self.call_builtin_str(
+                    ctx,
+                    YulFunction::Malloc,
+                    std::iter::once(arg_size_str.clone()),
+                );
+                emitln!(
+                    ctx.writer,
+                    "let {} := {}",
+                    memory_data_offset_str,
+                    malloc_call
+                );
+                emitln!(
+                    ctx.writer,
+                    "codecopy({}, {}, {})",
+                    memory_data_offset_str,
+                    program_size_str,
+                    arg_size_str
+                );
                 let decoding_fun_name = self.generate_abi_tuple_decoding_para(
                     ctx,
                     &solidity_sig,
                     creator.get_parameter_types(),
-                    false,
+                    true,
                 );
                 params = (0..param_count).map(|i| format!("param_{}", i)).join(", ");
                 let let_params = format!("let {} := ", params);
                 emitln!(
                     ctx.writer,
-                    "{}{}(4, calldatasize())",
+                    "{}{}({}, add({}, {}))",
                     let_params,
-                    decoding_fun_name
+                    decoding_fun_name,
+                    memory_data_offset_str,
+                    memory_data_offset_str,
+                    arg_size_str
                 );
             }
 

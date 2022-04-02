@@ -6,38 +6,42 @@
 object "A2_ConstructorTest" {
     code {
         mstore(0, memoryguard(160))
-        A2_ConstructorTest_init()
+        let program_size := datasize("A2_ConstructorTest")
+        let arg_size := sub(codesize(), program_size)
+        let memory_data_offset := $Malloc(arg_size)
+        codecopy(memory_data_offset, program_size, arg_size)
+        let param_0, param_1 := abi_decode_tuple_$uint64_uint64$_$u64_u64$_from_memory(memory_data_offset, add(memory_data_offset, arg_size))
+        A2_ConstructorTest_init(param_0, param_1)
         codecopy(0, dataoffset("A2_ConstructorTest_deployed"), datasize("A2_ConstructorTest_deployed"))
         return(0, datasize("A2_ConstructorTest_deployed"))
-        function A2_ConstructorTest_init() {
-            let $t1, $t2, $t3, $t4
+        function A2_ConstructorTest_init(value, value2) {
+            let $t3, $t4, $t5
             let $locals := $Malloc(32)
-            // $t1 := 0x42
-            $t1 := 0x42
-            // $t0 := Evm::sign($t1)
-            mstore($locals, A2_Evm_sign($t1))
-            // $t2 := borrow_local($t0)
-            $t2 := $MakePtr(false, $locals)
-            // $t3 := 43
-            $t3 := 43
-            // $t4 := pack ConstructorTest::Balance($t3)
+            // $t3 := 0x42
+            $t3 := 0x42
+            // $t2 := Evm::sign($t3)
+            mstore($locals, A2_Evm_sign($t3))
+            // $t4 := borrow_local($t2)
+            $t4 := $MakePtr(false, $locals)
+            // $t5 := pack ConstructorTest::Balance($t0, $t1)
             {
-                let $mem := $Malloc(8)
-                $MemoryStoreU64(add($mem, 0), $t3)
-                $t4 := $mem
+                let $mem := $Malloc(16)
+                $MemoryStoreU64(add($mem, 0), value)
+                $MemoryStoreU64(add($mem, 8), value2)
+                $t5 := $mem
             }
-            // move_to<ConstructorTest::Balance>($t4, $t2)
+            // move_to<ConstructorTest::Balance>($t5, $t4)
             {
-                let $base_offset := $MakeTypeStorageBase(0, 0x91d9463a, $LoadU256($t2))
+                let $base_offset := $MakeTypeStorageBase(0, 0x91d9463a, $LoadU256($t4))
                 if $AlignedStorageLoad($base_offset) {
                   $AbortBuiltin()
                 }
                 $AlignedStorageStore($base_offset, true)
                 {
                     let $dst := add($base_offset, 32)
-                    let $src := $t4
+                    let $src := $t5
                     $AlignedStorageStore(add($dst, 0), mload(add($src, 0)))
-                    $Free($src, 8)
+                    $Free($src, 16)
                 }
             }
             // return ()
@@ -46,6 +50,27 @@ object "A2_ConstructorTest" {
 
         function A2_Evm_sign(addr) -> signer {
           signer := addr
+        }
+        function abi_decode_tuple_$uint64_uint64$_$u64_u64$_from_memory(headStart, dataEnd) -> value_0, value_1 {
+            if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
+            {
+                let offset := 0
+                value_0 := abi_decode_uint64_from_memory(add(headStart, offset), dataEnd)
+            }
+            {
+                let offset := 32
+                value_1 := abi_decode_uint64_from_memory(add(headStart, offset), dataEnd)
+            }
+        }
+        function abi_decode_uint64_from_memory(offset, end) -> value {
+            value := mload(offset)
+            validator_uint64(value)
+        }
+        function validator_uint64(value) {
+            if iszero(eq(value, cleanup_uint64(value))) { $Abort(95) }
+        }
+        function cleanup_uint64(value) -> cleaned {
+            cleaned := and(value, 0xffffffffffffffff)
         }
         function $Abort(code) {
             mstore(0, code)

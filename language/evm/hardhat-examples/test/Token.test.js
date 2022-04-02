@@ -3,7 +3,7 @@ const { expect } = require("chai");
 describe("Token", function () {
     before(async function () {
         this.Token = await ethers.getContractFactory("Token");
-        this.token = await this.Token.deploy();
+        this.token = await this.Token.deploy("user");
         await this.token.deployed();
     });
 
@@ -41,4 +41,11 @@ describe("Token", function () {
         // total supply should not change
         expect(await this.token.totalSupply()).to.be.equal(169);
     });
+
+    it("test name", async function () {
+        const accounts = await ethers.getSigners();
+        deployer = accounts[0];
+        expect(await this.token.name()).to.be.equal("user");
+    });
+
 });

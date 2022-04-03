@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-const make_test = function(contract_name) {
+const make_test = function (contract_name) {
   return function () {
     before(async function () {
       this.Revert = await ethers.getContractFactory(contract_name);

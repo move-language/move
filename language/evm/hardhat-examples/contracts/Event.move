@@ -30,13 +30,13 @@ module 0x1::FortyTwo {
 
     #[callable(sig=b"emitMyEvent(uint64)")]
     public fun emitMyEvent(x: u64) {
-         emit(MyEvent{x, message: b"hello_event"});
+        emit(MyEvent{x, message: b"hello_event"});
     }
 
     #[callable(sig=b"emitMyEventTwice(uint64)")]
     public fun emitMyEventTwice(x: u64) {
-         emit(MyEvent{x, message: b"hello_event_#1"});
-         emit(MyEvent{x: x+x, message: b"hello_event_#2"});
+        emit(MyEvent{x, message: b"hello_event_#1"});
+        emit(MyEvent{x: x+x, message: b"hello_event_#2"});
     }
 
     #[callable(sig=b"emitMyEventWith(uint64,string)")]

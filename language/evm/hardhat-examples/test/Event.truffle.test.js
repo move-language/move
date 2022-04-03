@@ -29,7 +29,7 @@ contract('Truffle-style testing for Event (the Move contract)', function (accoun
             { from: ZERO_ADDRESS, to: ZERO_ADDRESS, value: new BN(7) },
         );
     });
-    //// Enable this to show the events emitted.
+    // Enable this to show the events emitted.
     // it('display the events emitted', async function () {
     //     await this.event.emitTransfer(ZERO_ADDRESS, ZERO_ADDRESS, new BN(7));
     //     let events = await this.event.getPastEvents();

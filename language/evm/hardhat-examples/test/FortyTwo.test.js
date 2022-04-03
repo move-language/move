@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 
-const make_test = function(contract_name) {
+const make_test = function (contract_name) {
   return function () {
     before(async function () {
       this.FortyTwo = await ethers.getContractFactory(contract_name);
@@ -14,8 +14,8 @@ const make_test = function(contract_name) {
       expect(await this.fortyTwo.forty_two_as_u256()).to.be.equal(42);
     });
     it("forty_two_as_string() should return \"forty two\"", async function () {
-       expect(await this.fortyTwo.forty_two_as_string()).to.be.equal("forty two");
-     });
+      expect(await this.fortyTwo.forty_two_as_string()).to.be.equal("forty two");
+    });
     it("forty_two_plus_alpha(7) should return 49", async function () {
       expect(await this.fortyTwo.forty_two_plus_alpha(7)).to.be.equal(42 + 7);
     });

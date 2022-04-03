@@ -162,6 +162,38 @@ jobs:
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
 
+  hardhat-tests:
+    runs-on: ubuntu-20.04-xl
+    timeout-minutes: 20
+    needs: prepare
+    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    container:
+      image: ghcr.io/diem/diem_build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+      volumes:
+        - "${{github.workspace}}:/opt/git/diem"
+    steps:
+      - uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: ./.github/actions/build-setup
+      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - name: setup hardhat
+        working-directory: language/evm/hardhat-examples
+        run: "./setup.sh"
+      - name: compile and install move-to-yul
+        working-directory: language/evm/move-to-yul
+        run: "cargo install --path ."
+      - name: run hardhat tests (Move contracts)
+        working-directory: language/evm/hardhat-examples
+        run: "./compile_all_and_run_tests.sh"
+      # TODO: reenable this once we figure a way to keep package-lock.json stable.
+      # - uses: ./.github/actions/build-teardown
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+
   # Compile (but don't run) the benchmarks, to insulate against bit rot
   build-benchmarks:
     runs-on: ubuntu-20.04-xl

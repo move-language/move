@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 
-describe("Token", function () {
+describe("Token (the Move contract)", function () {
     before(async function () {
         this.Token = await ethers.getContractFactory("Token");
         this.token = await this.Token.deploy("user");

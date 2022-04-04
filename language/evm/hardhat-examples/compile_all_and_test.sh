@@ -4,4 +4,4 @@
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-npx hardhat clean && python3 "$SCRIPT_DIR/compile_move.py" && npx hardhat test --no-compile
+npx hardhat compile && python3 "$SCRIPT_DIR/compile_move.py" && npx hardhat test --no-compile

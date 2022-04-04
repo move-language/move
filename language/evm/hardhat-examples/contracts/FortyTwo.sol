@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-contract FortyTwo {
+contract FortyTwo_Sol {
     function forty_two() public pure returns (uint64) {
         return 42;
     }

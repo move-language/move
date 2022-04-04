@@ -28,16 +28,16 @@ module 0x1::FortyTwo {
     }
 
     //TODO: move-to-yul does not support string literals.
-    // #[callable(sig=b"emitMyEvent(uint64)")]
-    // public fun emitMyEvent(x: u64, message) {
-    //     emit(MyEvent{x, message: b"hello_event"});
-    // }
+    #[callable(sig=b"emitMyEvent(uint64)")]
+    public fun emitMyEvent(x: u64) {
+         emit(MyEvent{x, message: b"hello_event"});
+    }
 
-    // #[callable(sig=b"emitMyEventTwice(uint64)")]
-    // public fun emitMyEventTwice(x: u64) {
-    //     emit(MyEvent{x, message: b"hello_event_#1"});
-    //     emit(MyEvent{x: x+x, message: b"hello_event_#2"});
-    // }
+    #[callable(sig=b"emitMyEventTwice(uint64)")]
+    public fun emitMyEventTwice(x: u64) {
+         emit(MyEvent{x, message: b"hello_event_#1"});
+         emit(MyEvent{x: x+x, message: b"hello_event_#2"});
+    }
 
     #[callable(sig=b"emitMyEventWith(uint64,string)")]
     public fun emitMyEventWith(x: u64, message: vector<u8>) {

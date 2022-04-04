@@ -16,9 +16,9 @@ describe("FortyTwo (the Move contract)", function () {
   });
 
   // TODO: fix string/vector returning
-  // it("forty_two_as_string() should return \"forty two\"", async function () {
-  //   expect(await this.fortyTwo.forty_two_as_string()).to.be.equal("forty two");
-  // });
+  it("forty_two_as_string() should return \"forty two\"", async function () {
+     expect(await this.fortyTwo.forty_two_as_string()).to.be.equal("forty two");
+   });
 
   it("forty_two_plus_alpha(7) should return 49", async function () {
     expect(await this.fortyTwo.forty_two_plus_alpha(7)).to.be.equal(42 + 7);

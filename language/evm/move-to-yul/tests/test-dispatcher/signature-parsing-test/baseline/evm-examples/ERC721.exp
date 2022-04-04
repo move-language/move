@@ -187,7 +187,10 @@ object "A2_ERC721" {
             function A2_ERC721_safeTransferFrom(from, to, tokenId) {
                 let $t3
                 // $t3 := []
-                $t3 := (ByteArray NYI)
+                $t3 := $Malloc(32)
+                $MemoryStoreU64($t3, 0)
+                $MemoryStoreU64(add($t3, 8), $ClosestGreaterPowerOfTwo(32))
+                let $offs_21418693 := add($t3, 32)
                 // ERC721::safeTransferFrom_with_data($t0, $t1, $t2, $t3)
                 A2_ERC721_safeTransferFrom_with_data(from, to, tokenId, $t3)
                 // return ()
@@ -418,22 +421,18 @@ object "A2_ERC721" {
             function $Shr(x, y) -> r {
                 r := shr(y, x)
             }
+            function $ClosestGreaterPowerOfTwo(x) -> r {
+                r := or(r, shr(1, x))
+                r := or(r, shr(2, r))
+                r := or(r, shr(4, r))
+                r := or(r, shr(8, r))
+                r := or(r, shr(16, r))
+                r := or(r, shr(32, r))
+                r := add(x, 1)
+            }
         }
     }
 }
 
 
-!! Errors compiling Yul
-
-Warning: Yul is still experimental. Please use the output with care.
-Error: Literal or identifier expected.
-   --> <stdin>:190:24:
-    |
-190 |                 $t3 := (ByteArray NYI)
-    |                        ^
-
-Error: Expected keyword "data" or "object" or "}".
-   --> <stdin>:190:24:
-    |
-190 |                 $t3 := (ByteArray NYI)
-    |                        ^
+!! Succeeded compiling Yul

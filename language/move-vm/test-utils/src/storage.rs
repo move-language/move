@@ -111,6 +111,33 @@ impl<'a, 'b, S: ResourceResolver> ResourceResolver for DeltaStorage<'a, 'b, S> {
     }
 }
 
+#[cfg(feature = "table-extension")]
+impl<'a, 'b, S: TableResolver> TableResolver for DeltaStorage<'a, 'b, S> {
+    fn resolve_table_entry(
+        &self,
+        handle: &TableHandle,
+        key: &[u8],
+    ) -> std::result::Result<Option<Vec<u8>>, Error> {
+        // TODO: No support for table deltas
+        self.base.resolve_table_entry(handle, key)
+    }
+
+    fn table_size(&self, handle: &TableHandle) -> std::result::Result<usize, Error> {
+        // TODO: No support for table deltas
+        self.base.table_size(handle)
+    }
+
+    fn operation_cost(
+        &self,
+        op: TableOperation,
+        key_size: usize,
+        val_size: usize,
+    ) -> InternalGasUnits<GasCarrier> {
+        // TODO: No support for table deltas
+        self.base.operation_cost(op, key_size, val_size)
+    }
+}
+
 impl<'a, 'b, S: MoveResolver> DeltaStorage<'a, 'b, S> {
     pub fn new(base: &'a S, delta: &'b ChangeSet) -> Self {
         Self { base, delta }

@@ -38,22 +38,20 @@ pub struct AsyncExtension {
 pub fn actor_natives(
     async_addr: AccountAddress,
 ) -> Vec<(AccountAddress, Identifier, Identifier, NativeFunction)> {
-    native_functions::make_table(
-        async_addr,
-        &[
-            ("Actor", "self", native_self),
-            ("Actor", "virtual_time", native_virtual_time),
-            ("Runtime", "send__0", native_send),
-            ("Runtime", "send__1", native_send),
-            ("Runtime", "send__2", native_send),
-            ("Runtime", "send__3", native_send),
-            ("Runtime", "send__4", native_send),
-            ("Runtime", "send__5", native_send),
-            ("Runtime", "send__6", native_send),
-            ("Runtime", "send__7", native_send),
-            ("Runtime", "send__8", native_send),
-        ],
-    )
+    const NATIVES: &[(&str, &str, NativeFunction)] = &[
+        ("Actor", "self", native_self),
+        ("Actor", "virtual_time", native_virtual_time),
+        ("Runtime", "send__0", native_send),
+        ("Runtime", "send__1", native_send),
+        ("Runtime", "send__2", native_send),
+        ("Runtime", "send__3", native_send),
+        ("Runtime", "send__4", native_send),
+        ("Runtime", "send__5", native_send),
+        ("Runtime", "send__6", native_send),
+        ("Runtime", "send__7", native_send),
+        ("Runtime", "send__8", native_send),
+    ];
+    native_functions::make_table(async_addr, NATIVES)
 }
 
 fn native_self(

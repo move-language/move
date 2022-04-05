@@ -31,9 +31,15 @@ pub fn make_table(
     addr: AccountAddress,
     elems: &[(&str, &str, NativeFunction)],
 ) -> NativeFunctionTable {
+    make_table_from_iter(addr, elems.iter().cloned())
+}
+
+pub fn make_table_from_iter<S: Into<Box<str>>>(
+    addr: AccountAddress,
+    elems: impl IntoIterator<Item = (S, S, NativeFunction)>,
+) -> NativeFunctionTable {
     elems
-        .iter()
-        .cloned()
+        .into_iter()
         .map(|(module_name, func_name, func)| {
             (
                 addr,

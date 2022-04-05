@@ -543,6 +543,7 @@ pub mod known_attributes {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     pub enum KnownAttribute {
         Testing(TestingAttribute),
+        Native(NativeAttribute),
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -553,6 +554,12 @@ pub mod known_attributes {
         Test,
         // This test is expected to fail
         ExpectedFailure,
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+    pub enum NativeAttribute {
+        // It is a fake native function that actually compiles to a bytecode instruction
+        BytecodeInstruction,
     }
 
     impl fmt::Display for AttributePosition {
@@ -579,6 +586,9 @@ pub mod known_attributes {
                 TestingAttribute::EXPECTED_FAILURE => {
                     Self::Testing(TestingAttribute::ExpectedFailure)
                 }
+                NativeAttribute::BYTECODE_INSTRUCTION => {
+                    Self::Native(NativeAttribute::BytecodeInstruction)
+                }
                 _ => return None,
             })
         }
@@ -586,12 +596,14 @@ pub mod known_attributes {
         pub const fn name(&self) -> &str {
             match self {
                 Self::Testing(a) => a.name(),
+                Self::Native(a) => a.name(),
             }
         }
 
         pub fn expected_positions(&self) -> &'static BTreeSet<AttributePosition> {
             match self {
                 Self::Testing(a) => a.expected_positions(),
+                Self::Native(a) => a.expected_positions(),
             }
         }
     }
@@ -631,6 +643,24 @@ pub mod known_attributes {
                 TestingAttribute::TestOnly => &*TEST_ONLY_POSITIONS,
                 TestingAttribute::Test => &*TEST_POSITIONS,
                 TestingAttribute::ExpectedFailure => &*EXPECTED_FAILURE_POSITIONS,
+            }
+        }
+    }
+
+    impl NativeAttribute {
+        pub const BYTECODE_INSTRUCTION: &'static str = "bytecode_instruction";
+
+        pub const fn name(&self) -> &str {
+            match self {
+                NativeAttribute::BytecodeInstruction => Self::BYTECODE_INSTRUCTION,
+            }
+        }
+
+        pub fn expected_positions(&self) -> &'static BTreeSet<AttributePosition> {
+            static BYTECODE_INSTRUCTION_POSITIONS: Lazy<BTreeSet<AttributePosition>> =
+                Lazy::new(|| IntoIterator::into_iter([AttributePosition::Function]).collect());
+            match self {
+                NativeAttribute::BytecodeInstruction => &*BYTECODE_INSTRUCTION_POSITIONS,
             }
         }
     }

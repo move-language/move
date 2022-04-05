@@ -426,7 +426,7 @@ impl Interpreter {
             err = new_err.finish(err.location().clone())
         }
         if err.status_type() == StatusType::InvariantViolation {
-            let state = self.get_internal_state(current_frame);
+            let state = self.internal_state_str(current_frame);
 
             error!(
                 "Error: {:?}\nCORE DUMP: >>>>>>>>>>>>\n{}\n<<<<<<<<<<<<\n",
@@ -527,7 +527,7 @@ impl Interpreter {
     /// It is used when generating a core dump but can be used for debugging of the interpreter.
     /// It will be exposed via a debug module to give developers a way to print the internals
     /// of an execution.
-    fn get_internal_state(&self, current_frame: &Frame) -> String {
+    fn internal_state_str(&self, current_frame: &Frame) -> String {
         let mut internal_state = "Call stack:\n".to_string();
         for (i, frame) in self.call_stack.0.iter().enumerate() {
             internal_state.push_str(
@@ -569,6 +569,18 @@ impl Interpreter {
 
     fn set_location(&self, err: PartialVMError) -> VMError {
         err.finish(self.call_stack.current_location())
+    }
+
+    fn get_internal_state(&self) -> ExecutionState {
+        let mut stack_trace = vec![];
+        for frame in self.call_stack.0.iter() {
+            stack_trace.push((
+                frame.function.module_id().cloned(),
+                frame.function.index(),
+                frame.pc,
+            ));
+        }
+        ExecutionState::new(stack_trace)
     }
 }
 
@@ -1022,14 +1034,7 @@ impl Frame {
                                 self.pc,
                             ));
                         if cfg!(feature = "testing") {
-                            let mut buf = String::new();
-                            let stacktrace = match interpreter
-                                .debug_print_stack_trace(&mut buf, resolver.loader())
-                            {
-                                Ok(()) => buf,
-                                Err(err) => format!("Stacktrace unavailable: {:?}", err),
-                            };
-                            return Err(error.with_stacktrace(stacktrace));
+                            return Err(error.with_exec_state(interpreter.get_internal_state()));
                         } else {
                             return Err(error);
                         }

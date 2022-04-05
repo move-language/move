@@ -284,7 +284,7 @@ impl SharedTestingConfig {
         });
         if !self.report_stacktrace_on_abort {
             if let Err(err) = &mut return_result {
-                err.remove_stacktrace();
+                err.remove_exec_state();
             }
         }
         let test_run_info = TestRunInfo::new(

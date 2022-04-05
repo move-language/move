@@ -22,12 +22,51 @@ pub enum Location {
     Module(ModuleId),
 }
 
+/// A representation of the execution state (e.g., stack trace) at an
+/// error point.
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub struct ExecutionState {
+    stack_trace: Vec<(Option<ModuleId>, FunctionDefinitionIndex, CodeOffset)>,
+    // we may consider adding more state if necessary
+}
+
+impl ExecutionState {
+    pub fn new(stack_trace: Vec<(Option<ModuleId>, FunctionDefinitionIndex, CodeOffset)>) -> Self {
+        Self { stack_trace }
+    }
+}
+
+impl ToString for ExecutionState {
+    /// Simple implementation not accounting for source map.
+    fn to_string(&self) -> String {
+        let mut stack_trace = String::new();
+        if self.stack_trace.is_empty() {
+            stack_trace.push_str("EMPTY STACK TRACE");
+        } else {
+            for frame in &self.stack_trace {
+                stack_trace.push_str("function definition ");
+                stack_trace.push_str(&frame.1.to_string());
+                match &frame.0 {
+                    Some(v) => {
+                        stack_trace.push_str(" in module ");
+                        stack_trace.push_str(&v.name().to_string());
+                    }
+                    None => (),
+                };
+                stack_trace.push_str(" at code offset ");
+                stack_trace.push_str(&frame.2.to_string());
+            }
+        }
+        stack_trace
+    }
+}
+
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct VMError {
     major_status: StatusCode,
     sub_status: Option<u64>,
     message: Option<String>,
-    stacktrace: Option<String>,
+    exec_state: Option<ExecutionState>,
     location: Location,
     indices: Vec<(IndexKind, TableIndex)>,
     offsets: Vec<(FunctionDefinitionIndex, CodeOffset)>,
@@ -115,12 +154,12 @@ impl VMError {
         self.message.as_ref()
     }
 
-    pub fn stacktrace(&self) -> Option<&String> {
-        self.stacktrace.as_ref()
+    pub fn exec_state(&self) -> Option<&ExecutionState> {
+        self.exec_state.as_ref()
     }
 
-    pub fn remove_stacktrace(&mut self) {
-        self.stacktrace = None;
+    pub fn remove_exec_state(&mut self) {
+        self.exec_state = None;
     }
 
     pub fn location(&self) -> &Location {
@@ -145,7 +184,7 @@ impl VMError {
         StatusCode,
         Option<u64>,
         Option<String>,
-        Option<String>,
+        Option<ExecutionState>,
         Location,
         Vec<(IndexKind, TableIndex)>,
         Vec<(FunctionDefinitionIndex, CodeOffset)>,
@@ -154,7 +193,7 @@ impl VMError {
             major_status,
             sub_status,
             message,
-            stacktrace,
+            exec_state,
             location,
             indices,
             offsets,
@@ -163,7 +202,7 @@ impl VMError {
             major_status,
             sub_status,
             message,
-            stacktrace,
+            exec_state,
             location,
             indices,
             offsets,
@@ -175,7 +214,7 @@ impl VMError {
             major_status,
             sub_status,
             message,
-            stacktrace,
+            exec_state,
             indices,
             offsets,
             ..
@@ -184,7 +223,7 @@ impl VMError {
             major_status,
             sub_status,
             message,
-            stacktrace,
+            exec_state,
             indices,
             offsets,
         }
@@ -198,7 +237,7 @@ pub struct PartialVMError {
     major_status: StatusCode,
     sub_status: Option<u64>,
     message: Option<String>,
-    stacktrace: Option<String>,
+    exec_state: Option<ExecutionState>,
     indices: Vec<(IndexKind, TableIndex)>,
     offsets: Vec<(FunctionDefinitionIndex, CodeOffset)>,
 }
@@ -210,7 +249,7 @@ impl PartialVMError {
         StatusCode,
         Option<u64>,
         Option<String>,
-        Option<String>,
+        Option<ExecutionState>,
         Vec<(IndexKind, TableIndex)>,
         Vec<(FunctionDefinitionIndex, CodeOffset)>,
     ) {
@@ -218,7 +257,7 @@ impl PartialVMError {
             major_status,
             sub_status,
             message,
-            stacktrace,
+            exec_state,
             indices,
             offsets,
         } = self;
@@ -226,7 +265,7 @@ impl PartialVMError {
             major_status,
             sub_status,
             message,
-            stacktrace,
+            exec_state,
             indices,
             offsets,
         )
@@ -237,7 +276,7 @@ impl PartialVMError {
             major_status,
             sub_status,
             message,
-            stacktrace,
+            exec_state,
             indices,
             offsets,
         } = self;
@@ -245,7 +284,7 @@ impl PartialVMError {
             major_status,
             sub_status,
             message,
-            stacktrace,
+            exec_state,
             location,
             indices,
             offsets,
@@ -257,7 +296,7 @@ impl PartialVMError {
             major_status,
             sub_status: None,
             message: None,
-            stacktrace: None,
+            exec_state: None,
             indices: vec![],
             offsets: vec![],
         }
@@ -283,10 +322,10 @@ impl PartialVMError {
         }
     }
 
-    pub fn with_stacktrace(self, stacktrace: String) -> Self {
-        debug_assert!(self.stacktrace.is_none());
+    pub fn with_exec_state(self, exec_state: ExecutionState) -> Self {
+        debug_assert!(self.exec_state.is_none());
         Self {
-            stacktrace: Some(stacktrace),
+            exec_state: Some(exec_state),
             ..self
         }
     }

@@ -263,9 +263,9 @@ impl TestFailure {
             }
             _ => base_message,
         };
-        match vm_error.stacktrace() {
+        match vm_error.exec_state() {
             None => diags,
-            Some(stacktrace) => format!("{}\n{}", diags, stacktrace),
+            Some(exec_state) => format!("{}\n{}", diags, exec_state.to_string()),
         }
     }
 }

@@ -8,8 +8,7 @@ module Evm::Greeter {
         greeting: vector<u8>,
     }
 
-    // TODO: move-to-yul does not support constructor.
-    #[callable(sig=b"create(string)")]
+    #[create(sig=b"constructor(string)")]
     public fun create(greeting: vector<u8>) {
          move_to<State>(
              &sign(self()),

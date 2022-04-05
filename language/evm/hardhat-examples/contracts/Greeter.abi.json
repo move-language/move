@@ -3,14 +3,14 @@
     "inputs": [
       {
         "internalType": "string",
-        "name": "_greeting",
+        "name": "",
         "type": "string"
       }
     ],
-    "name": "create",
+    "name": "",
     "outputs": [],
     "stateMutability": "nonpayable",
-    "type": "function"
+    "type": "constructor"
   },
   {
     "inputs": [],

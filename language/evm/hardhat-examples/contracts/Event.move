@@ -1,5 +1,6 @@
 module 0x1::FortyTwo {
     use Evm::Evm::{emit};
+    use Evm::U256::U256;
 
     #[event]
     struct SimpleEvent {
@@ -27,7 +28,6 @@ module 0x1::FortyTwo {
         message: vector<u8>,
     }
 
-    //TODO: move-to-yul does not support string literals.
     #[callable(sig=b"emitMyEvent(uint64)")]
     public fun emitMyEvent(x: u64) {
          emit(MyEvent{x, message: b"hello_event"});
@@ -48,5 +48,37 @@ module 0x1::FortyTwo {
     public fun emitMyEventWithTwice(x: u64, message: vector<u8>) {
         emit(MyEvent{x, message});
         emit(MyEvent{x: x+x, message});
+    }
+
+    #[event(sig=b"Transfer(address,address,uint256)")]
+    struct Transfer {
+        from: address,
+        to: address,
+        value: U256,
+    }
+
+    #[callable(sig=b"emitTransfer(address,address,uint256)")]
+    public fun emitTransfer(from: address, to: address, value: U256) {
+        emit(Transfer{from, to, value});
+    }
+
+    #[event(sig=b"U256Event(uint256)")]
+    struct U256Event {
+        x: U256,
+    }
+
+    #[callable(sig=b"emitU256Event(uint256)")]
+    public fun emitU256Event(x: U256) {
+        emit(U256Event{x});
+    }
+
+    #[event(sig=b"AddressEvent(address)")]
+    struct AddressEvent {
+        a: address,
+    }
+
+    #[callable(sig=b"emitAddressEvent(address)")]
+    public fun emitAddressEvent(a: address) {
+        emit(AddressEvent{a});
     }
 }

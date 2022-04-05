@@ -47,5 +47,4 @@ describe("Token (the Move contract)", function () {
         deployer = accounts[0];
         expect(await this.token.name()).to.be.equal("user");
     });
-
 });

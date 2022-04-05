@@ -1288,6 +1288,22 @@ impl<'a> Resolver<'a> {
         ))
     }
 
+    fn single_type_at(&self, idx: SignatureIndex) -> &Type {
+        match &self.binary {
+            BinaryType::Module(module) => module.single_type_at(idx),
+            BinaryType::Script(script) => script.single_type_at(idx),
+        }
+    }
+
+    pub(crate) fn instantiate_single_type(
+        &self,
+        idx: SignatureIndex,
+        ty_args: &[Type],
+    ) -> PartialVMResult<Type> {
+        let ty = self.single_type_at(idx);
+        ty.subst(ty_args)
+    }
+
     //
     // Fields resolution
     //
@@ -1322,17 +1338,6 @@ impl<'a> Resolver<'a> {
 
     pub(crate) fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout> {
         self.loader.type_to_type_layout(ty)
-    }
-
-    //
-    // Type resolution
-    //
-
-    pub(crate) fn single_type_at(&self, idx: SignatureIndex) -> &Type {
-        match &self.binary {
-            BinaryType::Module(module) => module.single_type_at(idx),
-            BinaryType::Script(script) => script.single_type_at(idx),
-        }
     }
 
     // get the loader

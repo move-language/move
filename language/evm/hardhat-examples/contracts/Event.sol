@@ -6,7 +6,7 @@ contract Event_Sol {
     event U256Event(uint256 x);
     event AddressEvent(address x);
     event MyEvent(uint64 x, string message);
-    event Transfer(address from, address to, uint256 value);
+    event Transfer(address indexed from, address indexed to, uint256 value);
 
     function emitNothing(uint64 x) public {
     }

@@ -12,10 +12,11 @@ const make_test = function(contract_name) {
       const tx = this.revert.revertIf0(0);
       await expect(tx).to.be.reverted;
     });
-    it("revertWithMessage() should revert with a message", async function () {
-      const tx = this.revert.revertWithMessage();
-      await expect(tx).to.be.revertedWith('error message');
-    });
+    // TODO: Support reverting with an error message
+    // it("revertWithMessage() should revert with a message", async function () {
+    //   const tx = this.revert.revertWithMessage();
+    //   await expect(tx).to.be.revertedWith('error message');
+    // });
   }
 };
 

@@ -50,7 +50,7 @@ module 0x1::FortyTwo {
         emit(MyEvent{x: x+x, message});
     }
 
-    #[event(sig=b"Transfer(address,address,uint256)")]
+    #[event(sig=b"Transfer(address indexed,address indexed,uint256)")]
     struct Transfer {
         from: address,
         to: address,

@@ -11,7 +11,7 @@ contract('Truffle-style testing for Revert (the Move contract)', function (accou
     it('revertIf0(0) should revert', async function () {
         await expectRevert.unspecified(this.revert.revertIf0(0));
     });
-    // it('revertWithMessage() should revert with a message', async function () {
-    //     await expectRevert(this.revert.revertWithMessage(), "error message");
-    // });
+    it('revertWithMessage() should revert with a message', async function () {
+        await expectRevert(this.revert.revertWithMessage(), "error message");
+    });
 });

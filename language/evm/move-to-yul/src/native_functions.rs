@@ -3,6 +3,7 @@
 
 use crate::{
     attributes, context::Context, events, external_functions, functions::FunctionGenerator,
+    yul_functions::YulFunction,
 };
 use move_model::{
     ast::ModuleName,
@@ -169,6 +170,48 @@ impl NativeFunctions {
 () -> addr {
   addr := address()
 }"
+            );
+        });
+
+        self.define(ctx, evm, "abort_with", |gen, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+(message) {{
+  let head := $Malloc(32)
+  // store the function selector for Error(string)
+  mstore(head, 3963877391197344453575983046348115674221700746820753546331534351508065746944)
+  let pos := add(head, 4)
+  mstore(pos, 32)
+  pos := add(pos, 32)
+  let size := {}
+  mstore(pos, size)
+  pos := add(pos, 32)
+  {}
+  size := {}
+  let end := add(pos, size)
+  revert(head, sub(end, head))
+}}",
+                gen.parent.call_builtin_str(
+                    ctx,
+                    YulFunction::MemoryLoadU64,
+                    std::iter::once("message".to_string())
+                ),
+                gen.parent.call_builtin_str(
+                    ctx,
+                    YulFunction::CopyMemoryU8,
+                    vec![
+                        "add(message, 32)".to_string(),
+                        "pos".to_string(),
+                        "size".to_string()
+                    ]
+                    .into_iter()
+                ),
+                gen.parent.call_builtin_str(
+                    ctx,
+                    YulFunction::RoundUp,
+                    std::iter::once("size".to_string())
+                )
             );
         });
 

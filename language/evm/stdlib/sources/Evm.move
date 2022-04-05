@@ -72,7 +72,7 @@ module Evm::Evm {
     public native fun tokenURI_with_baseURI(baseURI: String, tokenId: U256): String;
 
     /// Abort with an error message.
-    public native fun abortWith(message: vector<u8>);
+    public native fun abort_with(message: vector<u8>);
 
     // --------------------------------
     // Block and Transaction Properties

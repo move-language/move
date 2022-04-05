@@ -3,7 +3,7 @@
 // dep: ../stdlib/sources/U256.move
 #[contract]
 module 0x2::NativeFunctions {
-    use Evm::Evm;
+    use Evm::Evm::{Self, abort_with};
     use Evm::U256;
     use Std::Signer;
 
@@ -30,5 +30,10 @@ module 0x2::NativeFunctions {
     fun test_signer_address_of() {
         let s = Evm::sign(@0x42);
         assert!(Signer::address_of(&s) == @0x42, 101);
+    }
+
+    #[evm_test]
+    fun test_abort() {
+        abort_with(b"error message");
     }
 }

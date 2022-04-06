@@ -84,6 +84,14 @@ impl Generator {
                     continue;
                 }
                 let sig = self.get_solidity_signature(ctx, fun, true);
+                if let Some(fun_attr_opt) = attributes::construct_fun_attribute(fun) {
+                    self.solidity_sigs.push((sig.clone(), fun_attr_opt));
+                } else {
+                    ctx.env.error(
+                        &fun.get_loc(),
+                        "callable functions can only have one attribute among payable, pure and view",
+                    );
+                }
                 self.generate_dispatch_item(ctx, fun, &sig, &mut selectors);
             }
             emitln!(ctx.writer, "default {}");
@@ -103,7 +111,8 @@ impl Generator {
             attributes::extract_callable_or_create_signature(fun, callable_flag);
         let mut sig = SoliditySignature::create_default_solidity_signature(ctx, fun);
         if let Some(extracted_sig) = extracted_sig_opt {
-            let parsed_sig_opt = SoliditySignature::parse_into_solidity_signature(&extracted_sig);
+            let parsed_sig_opt =
+                SoliditySignature::parse_into_solidity_signature(&extracted_sig, fun);
             if let Ok(parsed_sig) = parsed_sig_opt {
                 if !parsed_sig.check_sig_compatibility(ctx, fun) {
                     ctx.env.error(
@@ -479,12 +488,12 @@ impl Generator {
         let param_types = sig
             .para_types
             .iter()
-            .map(|(ty, _)| ty.clone())
+            .map(|(ty, _, _)| ty.clone())
             .collect_vec(); // need to move into lambda
         let ret_locs = sig
             .para_types
             .iter()
-            .map(|(_, loc)| loc.clone())
+            .map(|(_, _, loc)| loc.clone())
             .collect_vec();
         self.generate_abi_tuple_decoding(ctx, param_types, ret_locs, move_tys, from_memory)
     }

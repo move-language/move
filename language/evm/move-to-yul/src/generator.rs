@@ -13,7 +13,8 @@ use move_model::{
 };
 
 use crate::{
-    attributes, context::Context, functions::FunctionGenerator, yul_functions::YulFunction, Options,
+    abi_signature::ABIJsonSignature, attributes, context::Context, functions::FunctionGenerator,
+    solidity_ty::SoliditySignature, yul_functions::YulFunction, Options,
 };
 
 /// Mutable state of the generator.
@@ -33,6 +34,10 @@ pub struct Generator {
     done_auxiliary_functions: BTreeSet<String>,
     /// Mapping of type signature hash to type, to identify collisions.
     pub(crate) type_sig_map: BTreeMap<u32, Type>,
+    /// Solidity signature for callable functions for generating JSON-ABI
+    pub(crate) solidity_sigs: Vec<(SoliditySignature, attributes::FunctionAttribute)>,
+    /// Solidity signature for the optional constructor for generating JSON-ABI
+    pub(crate) constructor_sig: Option<SoliditySignature>,
 }
 
 type AuxilaryFunctionGenerator = dyn FnOnce(&mut Generator, &Context);
@@ -42,7 +47,7 @@ type AuxilaryFunctionGenerator = dyn FnOnce(&mut Generator, &Context);
 
 impl Generator {
     /// Run the generator and produce a pair of contract name and Yul contract object.
-    pub fn run(options: &Options, env: &GlobalEnv) -> (String, String) {
+    pub fn run(options: &Options, env: &GlobalEnv) -> (String, String, String) {
         let ctx = Context::new(options, env, false);
         let mut gen = Generator::default();
         let contract_funs = ctx.get_target_functions(attributes::is_contract_fun);
@@ -55,7 +60,11 @@ impl Generator {
             (ctx.make_contract_name(first_module), env.unknown_loc())
         };
         gen.contract_object(&ctx, contract_loc, &contract_name, &contract_funs);
-        (contract_name, ctx.writer.extract_result())
+        (
+            contract_name,
+            ctx.writer.extract_result(),
+            ctx.abi_writer.extract_result(),
+        )
     }
 
     // Run the generator for evm unit tests and produce a mapping from function id to Yul test object.
@@ -160,7 +169,53 @@ impl Generator {
                 self.callable_functions(ctx, contract_funs);
                 self.end_code_block(ctx);
             })
-        })
+        });
+        // Generate JSON-ABI
+        self.generate_abi_string(ctx);
+    }
+
+    /// Generate JSON-ABI
+    fn generate_abi_string(&self, ctx: &Context) {
+        let mut res = vec![];
+        let event_sigs = ctx
+            .event_signature_map
+            .borrow()
+            .values()
+            .cloned()
+            .collect_vec();
+        for sig in &event_sigs {
+            res.push(serde_json::to_string_pretty(&ABIJsonSignature::from_event_sig(sig)).unwrap());
+        }
+        for (sig, attr) in &self.solidity_sigs {
+            res.push(
+                serde_json::to_string_pretty(&ABIJsonSignature::from_solidity_sig(
+                    sig,
+                    Some(*attr),
+                    "function",
+                ))
+                .unwrap(),
+            );
+        }
+        if let Some(constructor) = &self.constructor_sig {
+            res.push(
+                serde_json::to_string_pretty(&ABIJsonSignature::from_solidity_sig(
+                    constructor,
+                    None,
+                    "constructor",
+                ))
+                .unwrap(),
+            );
+        }
+        emitln!(ctx.abi_writer, "[");
+        emitln!(
+            ctx.abi_writer,
+            "{}",
+            res.iter()
+                .map(|t| t.to_string())
+                .collect::<Vec<_>>()
+                .join(",\n")
+        );
+        emitln!(ctx.abi_writer, "]");
     }
 
     /// Generate test object for given function.
@@ -296,6 +351,7 @@ impl Generator {
             let fun_id = creator.get_qualified_id().instantiate(vec![]);
             let function_name = ctx.make_function_name(&fun_id);
             let solidity_sig = self.get_solidity_signature(ctx, &creator, false);
+            self.constructor_sig = Some(solidity_sig.clone());
             let param_count = solidity_sig.para_types.len();
             let mut params = "".to_string();
             if param_count > 0 {

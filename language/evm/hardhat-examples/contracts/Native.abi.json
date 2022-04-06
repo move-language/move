@@ -1,28 +1,26 @@
 [
+{
+  "name": "getContractAddr",
+  "type": "function",
+  "inputs": [],
+  "outputs": [
     {
-      "inputs": [],
-      "name": "getContractAddr",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "getSenderAddr",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
+      "type": "address",
+      "name": ""
     }
-  ]
+  ],
+  "stateMutability": "view"
+},
+{
+  "name": "getSenderAddr",
+  "type": "function",
+  "inputs": [],
+  "outputs": [
+    {
+      "type": "address",
+      "name": ""
+    }
+  ],
+  "stateMutability": "view"
+}
+]

@@ -18,7 +18,7 @@ module Evm::Greeter {
          );
     }
 
-    #[callable(sig=b"greet() returns (string)")]
+    #[callable(sig=b"greet() returns (string)"), view]
     public fun greet(): vector<u8> acquires State {
         borrow_global<State>(self()).greeting
     }

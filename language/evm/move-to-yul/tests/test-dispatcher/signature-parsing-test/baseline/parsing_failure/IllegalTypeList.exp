@@ -577,7 +577,7 @@ error: error happens when parsing the return types in the signature
 25 │ │     }
    │ ╰─────^
 
-error: illegal type name
+error: error happens when parsing the signature
    ┌─ tests/test-dispatcher/signature-parsing-test/baseline/parsing_failure/IllegalTypeList.move:28:5
    │
 28 │ ╭     fun illegal_char_2() {

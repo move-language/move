@@ -64,7 +64,7 @@ fn compile_yul_to_bytecode_bytes(filename: &str) -> Result<Vec<u8>> {
         ModelBuilderOptions::default(),
     )?;
     let options = Options::default();
-    let (_, out) = Generator::run(&options, &env);
+    let (_, out, _) = Generator::run(&options, &env);
     let (bc, _) = compile::solc_yul(&out, false)?;
     Ok(bc)
 }

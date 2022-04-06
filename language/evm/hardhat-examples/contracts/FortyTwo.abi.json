@@ -1,60 +1,55 @@
 [
-  {
-    "inputs": [],
-    "name": "forty_two",
-    "outputs": [
-      {
-        "internalType": "uint64",
-        "name": "",
-        "type": "uint64"
-      }
-    ],
-    "stateMutability": "pure",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "forty_two_as_u256",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "pure",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint64",
-        "name": "alpha",
-        "type": "uint64"
-      }
-    ],
-    "name": "forty_two_plus_alpha",
-    "outputs": [
-      {
-        "internalType": "uint64",
-        "name": "",
-        "type": "uint64"
-      }
-    ],
-    "stateMutability": "pure",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "forty_two_as_string",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "pure",
-    "type": "function"
-  }
+{
+  "name": "forty_two",
+  "type": "function",
+  "inputs": [],
+  "outputs": [
+    {
+      "type": "uint64",
+      "name": ""
+    }
+  ],
+  "stateMutability": "pure"
+},
+{
+  "name": "forty_two_as_string",
+  "type": "function",
+  "inputs": [],
+  "outputs": [
+    {
+      "type": "string",
+      "name": ""
+    }
+  ],
+  "stateMutability": "pure"
+},
+{
+  "name": "forty_two_as_u256",
+  "type": "function",
+  "inputs": [],
+  "outputs": [
+    {
+      "type": "uint256",
+      "name": ""
+    }
+  ],
+  "stateMutability": "pure"
+},
+{
+  "name": "forty_two_plus_alpha",
+  "type": "function",
+  "inputs": [
+    {
+      "type": "uint64",
+      "name": "alpha"
+    }
+  ],
+  "outputs": [
+    {
+      "type": "uint64",
+      "name": ""
+    }
+  ],
+  "stateMutability": "pure"
+}
 ]

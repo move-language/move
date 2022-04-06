@@ -92,5 +92,4 @@ module 0x2::M {
     fun illegal_address_2(x: address) : address {
         x
     }
-
 }

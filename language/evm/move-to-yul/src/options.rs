@@ -49,6 +49,8 @@ pub struct Options {
     pub experiments: Vec<String>,
     /// Sources to compile (positional arg)
     pub sources: Vec<String>,
+    #[clap(long = "abi-output", default_value = "output.abi.json")]
+    pub abi_output: String,
 }
 
 impl Default for Options {

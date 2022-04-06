@@ -1,34 +1,21 @@
 [
+{
+  "name": "revertIf0",
+  "type": "function",
+  "inputs": [
     {
-        "inputs": [
-        {
-            "internalType": "uint64",
-            "name": "x",
-            "type": "uint64"
-        }
-        ],
-        "name": "revertIf0",
-        "outputs": [
-        {
-            "internalType": "uint64",
-            "name": "",
-            "type": "uint64"
-        }
-        ],
-        "stateMutability": "pure",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "revertWithMessage",
-        "outputs": [
-        {
-            "internalType": "uint64",
-            "name": "",
-            "type": "uint64"
-        }
-        ],
-        "stateMutability": "pure",
-        "type": "function"
+      "type": "uint64",
+      "name": "x"
     }
+  ],
+  "outputs": [],
+  "stateMutability": "pure"
+},
+{
+  "name": "revertWithMessage",
+  "type": "function",
+  "inputs": [],
+  "outputs": [],
+  "stateMutability": "pure"
+}
 ]

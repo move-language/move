@@ -30,7 +30,7 @@ pub(crate) const TOPIC_COUNT_ERROR: &str = "too many indexed arguments";
 #[derive(Debug, Clone)]
 pub(crate) struct EventSignature {
     pub event_name: String,
-    pub para_types: Vec<(usize, SolidityType, Type, bool)>,
+    pub para_types: Vec<(usize, SolidityType, Type, bool, String)>,
     pub indexed_count: usize,
 }
 
@@ -44,21 +44,29 @@ impl fmt::Display for EventSignature {
 }
 
 impl EventSignature {
+    fn get_ordered_types(st: &StructEnv<'_>) -> std::vec::IntoIter<(usize, Type, String)> {
+        st.get_fields()
+            .map(|field| {
+                let field_type = field.get_type();
+                let field_name = st.symbol_pool().string(field.get_name()).to_string();
+                (field.get_offset(), field_type, field_name)
+            })
+            .sorted_by_key(|(offset, _, _)| *offset)
+    }
+
     /// Create a default event signature from a move struct definition
     pub fn create_default_event_signature(ctx: &Context, st: &StructEnv<'_>) -> Self {
         let st_name = st.symbol_pool().string(st.get_name()).to_string();
         let mut para_type_lst = vec![];
-        let ordered_types = st
-            .get_fields()
-            .map(|field| {
-                let field_type = field.get_type();
-                (field.get_offset(), field_type)
-            })
-            .sorted_by_key(|(offset, _)| *offset);
 
-        for (offset, move_ty) in ordered_types.map(|(offset, ty)| (offset, ty)).collect_vec() {
+        let ordered_types = EventSignature::get_ordered_types(st);
+        for (offset, move_ty, field_name) in ordered_types
+            .map(|(offset, ty, field_name)| (offset, ty, field_name))
+            .collect_vec()
+        {
             let solidity_ty = SolidityType::translate_from_move(ctx, &move_ty); // implicit mapping from a move type to a solidity type
-            para_type_lst.push((offset, solidity_ty, move_ty.clone(), false)); // no index by default
+            para_type_lst.push((offset, solidity_ty, move_ty.clone(), false, field_name));
+            // no index by default
         }
         EventSignature {
             event_name: st_name,
@@ -82,7 +90,13 @@ impl EventSignature {
         format!(
             "{}({})",
             self.event_name,
-            self.compute_param_types(&self.para_types.iter().map(|(_, ty, _, _)| ty).collect_vec())
+            self.compute_param_types(
+                &self
+                    .para_types
+                    .iter()
+                    .map(|(_, ty, _, _, _)| ty)
+                    .collect_vec()
+            )
         )
     }
 
@@ -108,24 +122,17 @@ impl EventSignature {
             }
 
             // Check parameter type list
-            let ordered_types = st
-                .get_fields()
-                .map(|field| {
-                    let field_type = field.get_type();
-                    (field.get_offset(), field_type)
-                })
-                .sorted_by_key(|(offset, _)| *offset)
-                .collect_vec();
+            let ordered_types = EventSignature::get_ordered_types(st);
             let sig_para_vec = para_types.iter().map(|(ty, _)| ty).collect::<Vec<_>>();
             if sig_para_vec.len() != ordered_types.len() {
                 return Err(anyhow!(COMPATIBILITY_ERROR));
             }
             let mut offset_para_types = vec![];
-            for ((off, m_ty), (s_ty, b)) in ordered_types.into_iter().zip(para_types.into_iter()) {
+            for ((off, m_ty, field_name), (s_ty, b)) in ordered_types.zip(para_types.into_iter()) {
                 if !s_ty.check_type_compatibility(ctx, &m_ty) {
                     return Err(anyhow!(COMPATIBILITY_ERROR));
                 }
-                offset_para_types.push((off, s_ty.clone(), m_ty.clone(), b));
+                offset_para_types.push((off, s_ty.clone(), m_ty.clone(), b, field_name));
             }
 
             let event_sig = EventSignature {
@@ -215,7 +222,7 @@ pub(crate) fn define_emit_fun(
         let mut indexed_vars = vec![topic_0_var];
         let mut unindexed_paras = vec![];
         let mut unindexed_vars = vec![];
-        for (offset, solidity_ty, move_ty, indexed_flag) in signature_types {
+        for (offset, solidity_ty, move_ty, indexed_flag, _) in signature_types {
             let (real_offset, _) = layout.offsets.get(offset).unwrap();
             let mut var = ctx.make_local_name(target, local_name_idx);
             local_name_idx += 1;

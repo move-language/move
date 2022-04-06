@@ -110,6 +110,10 @@ def move_to_yul(path_source):
             for (name, addr) in named_address_mapping.items():
                 args.append("{}={}".format(name, addr))
 
+        path_abi = path.splitext(path_source)[0] + ".abi.json"
+        args.append("--abi-output")
+        args.append(path_abi)
+
         args.extend(["--", path_source])
 
         move_to_yul_res = subprocess.run(args, capture_output = True)
@@ -158,8 +162,8 @@ def gen_artifact(path_source, abi, bytecode):
 
 def run(path_source):
     print("Compiling {}...".format(path_source))
-    abi = load_abi(path_source)
     yul_code = move_to_yul(path_source)
+    abi = load_abi(path_source)
     bytecode = solc(path_source, yul_code)
     gen_artifact(path_source, abi, bytecode)
 

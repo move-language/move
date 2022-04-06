@@ -19,6 +19,16 @@ const TEST_ATTR: &str = "test";
 const EXTERNAL_ATTR: &str = "external";
 const SIGNATURE: &str = "sig";
 const EVENT_ATTR: &str = "event";
+const VIEW_ATTR: &str = "view";
+const PURE_ATTR: &str = "pure";
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub(crate) enum FunctionAttribute {
+    Payable,
+    NonPayable,
+    View,
+    Pure,
+}
 
 /// Extract the value from an attribute
 fn extract_attr_value_str(
@@ -172,4 +182,39 @@ pub fn is_external_fun(fun: &FunctionEnv<'_>) -> bool {
 /// Check whether the struct has a `#[event]` attribute.
 pub fn is_event_struct(st: &StructEnv<'_>) -> bool {
     has_attr(st.module_env.env, st.get_attributes(), EVENT_ATTR, false)
+}
+
+pub(crate) fn construct_fun_attribute(fun: &FunctionEnv<'_>) -> Option<FunctionAttribute> {
+    let mut res = None;
+
+    for attr in fun.get_attributes() {
+        match attr {
+            Attribute::Apply(_, name, args) if args.is_empty() => {
+                match fun.module_env.env.symbol_pool().string(*name).as_str() {
+                    VIEW_ATTR => {
+                        if res.is_some() {
+                            return None;
+                        }
+                        res = Some(FunctionAttribute::View);
+                    }
+                    PURE_ATTR => {
+                        if res.is_some() {
+                            return None;
+                        }
+                        res = Some(FunctionAttribute::Pure);
+                    }
+                    PAYABLE_ATTR => {
+                        if res.is_some() {
+                            return None;
+                        }
+                        res = Some(FunctionAttribute::Payable);
+                    }
+                    _ => (),
+                }
+            }
+            _ => (),
+        }
+    }
+
+    Some(res.unwrap_or(FunctionAttribute::NonPayable))
 }

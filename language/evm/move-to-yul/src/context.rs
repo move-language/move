@@ -49,6 +49,8 @@ pub(crate) struct Context<'a> {
     pub(crate) file_id_map: BTreeMap<FileId, (usize, String)>,
     /// Mapping of event structs to corresponding event signatures
     pub(crate) event_signature_map: RefCell<BTreeMap<QualifiedInstId<StructId>, EventSignature>>,
+    /// A code writer where we emit JSON-ABI.
+    pub abi_writer: CodeWriter,
 }
 
 /// Information about the layout of a struct in linear memory.
@@ -70,6 +72,8 @@ impl<'a> Context<'a> {
     /// Create a new context.
     pub fn new(options: &'a Options, env: &'a GlobalEnv, for_test: bool) -> Self {
         let writer = CodeWriter::new(env.unknown_loc());
+        let abi_writer = CodeWriter::new(env.unknown_loc());
+
         writer.set_emit_hook(yul_functions::substitute_placeholders);
         let targets = Self::create_bytecode(options, env, for_test);
         let file_id_map: BTreeMap<FileId, (usize, String)> = targets
@@ -93,6 +97,7 @@ impl<'a> Context<'a> {
             struct_layout: Default::default(),
             native_funs: NativeFunctions::default(),
             event_signature_map: Default::default(),
+            abi_writer,
         };
         ctx.native_funs = NativeFunctions::create(&ctx);
         ctx.build_event_signature_map();
@@ -206,16 +211,6 @@ impl<'a> Context<'a> {
                     EventSignature::parse_into_event_signature(self, &ev_sig_str, &st_env);
                 if let Ok(parsed_sig) = parsed_sig_opt {
                     sig = parsed_sig;
-                    /*
-                    if !parsed_sig.check_sig_compatibility(self, &st_env) {
-                        self.env.error(
-                            &st_env.get_loc(),
-                            "event signature is not compatible with the move struct",
-                        );
-                    } else {
-                        sig = parsed_sig;
-                    }
-                    */
                 } else if let Err(msg) = parsed_sig_opt {
                     self.env.error(&st_env.get_loc(), &format!("{}", msg));
                 }

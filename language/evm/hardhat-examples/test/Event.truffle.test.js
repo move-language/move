@@ -12,21 +12,21 @@ contract('Truffle-style testing for Event (the Move contract)', function (accoun
         expectEvent(
             await this.event.emitSimpleEvent(42),
             'SimpleEvent',
-            { x: new BN(42) },
+            [new BN(42)],
         );
     });
     it('emits an MyEvent', async function () {
         expectEvent(
             await this.event.emitMyEvent(7),
             'MyEvent',
-            { x: new BN(7) },
+            [new BN(7)],
         );
     });
     it('emits an Transfer event', async function () {
         expectEvent(
             await this.event.emitTransfer(ZERO_ADDRESS, ZERO_ADDRESS, 7),
             'Transfer',
-            { from: ZERO_ADDRESS, to: ZERO_ADDRESS, value: new BN(7) },
+            [ZERO_ADDRESS, ZERO_ADDRESS, new BN(7)],
         );
     });
     // Enable this to show the events emitted.

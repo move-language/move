@@ -56,7 +56,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
             options.experiments.push(exp.clone());
             format!("{}.{}", EXP_EXT, exp)
         };
-        let (_, mut out) = Generator::run(&options, &env);
+        let (_, mut out, _) = Generator::run(&options, &env);
         if !env.has_errors() {
             out = format!("{}\n\n{}", out, compile_check(&options, &out));
 

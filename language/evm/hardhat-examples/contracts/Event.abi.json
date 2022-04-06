@@ -1,235 +1,213 @@
 [
-  {
-      "anonymous": false,
-      "inputs": [
-          {
-              "indexed": false,
-              "internalType": "uint64",
-              "name": "x",
-              "type": "uint64"
-          }
-      ],
-      "name": "SimpleEvent",
-      "type": "event"
-  },
-  {
-      "anonymous": false,
-      "inputs": [
-          {
-              "indexed": false,
-              "internalType": "uint64",
-              "name": "x",
-              "type": "uint64"
-          },
-          {
-              "indexed": false,
-              "internalType": "string",
-              "name": "message",
-              "type": "string"
-          }
-      ],
-      "name": "MyEvent",
-      "type": "event"
-  },
-  {
-      "anonymous": false,
-      "inputs": [
-          {
-              "indexed": true,
-              "internalType": "address",
-              "name": "from",
-              "type": "address"
-          },
-          {
-              "indexed": true,
-              "internalType": "address",
-              "name": "to",
-              "type": "address"
-          },
-          {
-              "indexed": false,
-              "internalType": "uint256",
-              "name": "value",
-              "type": "uint256"
-          }
-      ],
-      "name": "Transfer",
-      "type": "event"
-  },
-  {
-      "inputs": [
-          {
-              "internalType": "uint64",
-              "name": "x",
-              "type": "uint64"
-          }
-      ],
-      "name": "emitSimpleEvent",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-  },
-  {
-      "inputs": [
-          {
-              "internalType": "uint64",
-              "name": "x",
-              "type": "uint64"
-          }
-      ],
-      "name": "emitSimpleEventTwice",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-  },
-  {
-      "inputs": [
-          {
-              "internalType": "uint64",
-              "name": "x",
-              "type": "uint64"
-          }
-      ],
-      "name": "emitNothing",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-  },
-  {
-      "inputs": [
-          {
-              "internalType": "uint64",
-              "name": "x",
-              "type": "uint64"
-          }
-      ],
-      "name": "emitMyEvent",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-  },
-  {
-      "inputs": [
-          {
-              "internalType": "uint64",
-              "name": "x",
-              "type": "uint64"
-          }
-      ],
-      "name": "emitMyEventTwice",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-  },
-  {
-      "inputs": [
-          {
-              "internalType": "uint64",
-              "name": "x",
-              "type": "uint64"
-          },
-          {
-              "internalType": "string",
-              "name": "message",
-              "type": "string"
-          }
-      ],
-      "name": "emitMyEventWith",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-  },
-  {
-      "inputs": [
-          {
-              "internalType": "uint64",
-              "name": "x",
-              "type": "uint64"
-          },
-          {
-              "internalType": "string",
-              "name": "message",
-              "type": "string"
-          }
-      ],
-      "name": "emitMyEventWithTwice",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-  },
-  {
-    "inputs": [
-        {
-            "internalType": "address",
-            "name": "from",
-            "type": "address"
-        },
-        {
-            "internalType": "address",
-            "name": "to",
-            "type": "address"
-        },
-        {
-            "internalType": "uint256",
-            "name": "value",
-            "type": "uint256"
-        }
-    ],
-    "name": "emitTransfer",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-        {
-            "indexed": false,
-            "internalType": "address",
-            "name": "x",
-            "type": "address"
-        }
-    ],
-    "name": "AddressEvent",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-        {
-            "indexed": false,
-            "internalType": "uint256",
-            "name": "x",
-            "type": "uint256"
-        }
-    ],
-    "name": "U256Event",
-    "type": "event"
-  },
-  {
-    "inputs": [
-        {
-            "internalType": "address",
-            "name": "a",
-            "type": "address"
-        }
-    ],
-    "name": "emitAddressEvent",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-      "inputs": [
-          {
-              "internalType": "uint256",
-              "name": "x",
-              "type": "uint256"
-          }
-      ],
-      "name": "emitU256Event",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-  }
+{
+  "name": "AddressEvent",
+  "type": "event",
+  "inputs": [
+    {
+      "type": "address",
+      "indexed": false,
+      "name": "a"
+    }
+  ],
+  "anonymous": false
+},
+{
+  "name": "MyEvent",
+  "type": "event",
+  "inputs": [
+    {
+      "type": "uint64",
+      "indexed": false,
+      "name": "x"
+    },
+    {
+      "type": "string",
+      "indexed": false,
+      "name": "message"
+    }
+  ],
+  "anonymous": false
+},
+{
+  "name": "SimpleEvent",
+  "type": "event",
+  "inputs": [
+    {
+      "type": "uint64",
+      "indexed": false,
+      "name": "x"
+    }
+  ],
+  "anonymous": false
+},
+{
+  "name": "Transfer",
+  "type": "event",
+  "inputs": [
+    {
+      "type": "address",
+      "indexed": true,
+      "name": "from"
+    },
+    {
+      "type": "address",
+      "indexed": true,
+      "name": "to"
+    },
+    {
+      "type": "uint256",
+      "indexed": false,
+      "name": "value"
+    }
+  ],
+  "anonymous": false
+},
+{
+  "name": "U256Event",
+  "type": "event",
+  "inputs": [
+    {
+      "type": "uint256",
+      "indexed": false,
+      "name": "x"
+    }
+  ],
+  "anonymous": false
+},
+{
+  "name": "emitAddressEvent",
+  "type": "function",
+  "inputs": [
+    {
+      "type": "address",
+      "name": "a"
+    }
+  ],
+  "outputs": [],
+  "stateMutability": "nonpayable"
+},
+{
+  "name": "emitMyEvent",
+  "type": "function",
+  "inputs": [
+    {
+      "type": "uint64",
+      "name": "x"
+    }
+  ],
+  "outputs": [],
+  "stateMutability": "nonpayable"
+},
+{
+  "name": "emitMyEventTwice",
+  "type": "function",
+  "inputs": [
+    {
+      "type": "uint64",
+      "name": "x"
+    }
+  ],
+  "outputs": [],
+  "stateMutability": "nonpayable"
+},
+{
+  "name": "emitMyEventWith",
+  "type": "function",
+  "inputs": [
+    {
+      "type": "uint64",
+      "name": "x"
+    },
+    {
+      "type": "string",
+      "name": "message"
+    }
+  ],
+  "outputs": [],
+  "stateMutability": "nonpayable"
+},
+{
+  "name": "emitMyEventWithTwice",
+  "type": "function",
+  "inputs": [
+    {
+      "type": "uint64",
+      "name": "x"
+    },
+    {
+      "type": "string",
+      "name": "message"
+    }
+  ],
+  "outputs": [],
+  "stateMutability": "nonpayable"
+},
+{
+  "name": "emitNothing",
+  "type": "function",
+  "inputs": [
+    {
+      "type": "uint64",
+      "name": "_x"
+    }
+  ],
+  "outputs": [],
+  "stateMutability": "nonpayable"
+},
+{
+  "name": "emitSimpleEvent",
+  "type": "function",
+  "inputs": [
+    {
+      "type": "uint64",
+      "name": "x"
+    }
+  ],
+  "outputs": [],
+  "stateMutability": "nonpayable"
+},
+{
+  "name": "emitSimpleEventTwice",
+  "type": "function",
+  "inputs": [
+    {
+      "type": "uint64",
+      "name": "x"
+    }
+  ],
+  "outputs": [],
+  "stateMutability": "nonpayable"
+},
+{
+  "name": "emitTransfer",
+  "type": "function",
+  "inputs": [
+    {
+      "type": "address",
+      "name": "from"
+    },
+    {
+      "type": "address",
+      "name": "to"
+    },
+    {
+      "type": "uint256",
+      "name": "value"
+    }
+  ],
+  "outputs": [],
+  "stateMutability": "nonpayable"
+},
+{
+  "name": "emitU256Event",
+  "type": "function",
+  "inputs": [
+    {
+      "type": "uint256",
+      "name": "x"
+    }
+  ],
+  "outputs": [],
+  "stateMutability": "nonpayable"
+}
 ]

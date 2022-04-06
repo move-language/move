@@ -25,7 +25,7 @@ pub(crate) fn define_external_fun(
 ) {
     let fun = ctx.env.get_function(fun_id.to_qualified_id());
     let mut sig = SoliditySignature::create_default_solidity_signature(ctx, &fun);
-    let parsed_sig_opt = SoliditySignature::parse_into_solidity_signature(solidity_sig_str);
+    let parsed_sig_opt = SoliditySignature::parse_into_solidity_signature(solidity_sig_str, &fun);
     // Check compatibility
     if let Ok(parsed_sig) = parsed_sig_opt {
         if !parsed_sig.check_sig_compatibility_for_external_fun(ctx, &fun) {
@@ -131,13 +131,13 @@ pub(crate) fn define_external_fun(
             .para_types
             .clone()
             .into_iter()
-            .map(|(ty, _)| ty)
+            .map(|(ty, _, _)| ty)
             .collect::<Vec<_>>();
         let sig_para_locs = sig
             .para_types
             .clone()
             .into_iter()
-            .map(|(_, loc)| loc)
+            .map(|(_, _, loc)| loc)
             .collect_vec();
         let encode =
             gen.parent
@@ -261,7 +261,11 @@ impl SoliditySignature {
         fun: &FunctionEnv<'_>,
     ) -> bool {
         let para_types = fun.get_parameter_types();
-        let sig_para_vec = self.para_types.iter().map(|(ty, _)| ty).collect::<Vec<_>>();
+        let sig_para_vec = self
+            .para_types
+            .iter()
+            .map(|(ty, _, _)| ty)
+            .collect::<Vec<_>>();
         if para_types.len() != sig_para_vec.len() + 1 {
             // the extra (first) parameter of the move function is the address of the target contract
             return false;

@@ -1,102 +1,92 @@
 [
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "name": "",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "balanceOf",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "pure",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "name",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "pure",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "totalSupply",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "pure",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "mint",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "transfer",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  }
+{
+  "name": "transfer",
+  "type": "function",
+  "inputs": [
+    {
+      "type": "address",
+      "name": "to"
+    },
+    {
+      "type": "uint256",
+      "name": "amount"
+    }
+  ],
+  "outputs": [
+    {
+      "type": "bool",
+      "name": ""
+    }
+  ],
+  "stateMutability": "nonpayable"
+},
+{
+  "name": "balanceOf",
+  "type": "function",
+  "inputs": [
+    {
+      "type": "address",
+      "name": "owner"
+    }
+  ],
+  "outputs": [
+    {
+      "type": "uint256",
+      "name": ""
+    }
+  ],
+  "stateMutability": "view"
+},
+{
+  "name": "name",
+  "type": "function",
+  "inputs": [],
+  "outputs": [
+    {
+      "type": "string",
+      "name": ""
+    }
+  ],
+  "stateMutability": "view"
+},
+{
+  "name": "mint",
+  "type": "function",
+  "inputs": [
+    {
+      "type": "address",
+      "name": "account"
+    },
+    {
+      "type": "uint256",
+      "name": "amount"
+    }
+  ],
+  "outputs": [],
+  "stateMutability": "nonpayable"
+},
+{
+  "name": "totalSupply",
+  "type": "function",
+  "inputs": [],
+  "outputs": [
+    {
+      "type": "uint256",
+      "name": ""
+    }
+  ],
+  "stateMutability": "view"
+},
+{
+  "name": "constructor",
+  "type": "constructor",
+  "inputs": [
+    {
+      "type": "string",
+      "name": "name"
+    }
+  ],
+  "outputs": [],
+  "stateMutability": "nonpayable"
+}
 ]

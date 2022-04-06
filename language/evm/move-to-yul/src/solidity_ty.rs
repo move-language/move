@@ -11,11 +11,11 @@ use regex::Regex;
 use std::{fmt, fmt::Formatter};
 
 use move_model::{
-    model::FunctionEnv,
+    model::{FunctionEnv, Parameter},
     ty::{PrimitiveType, Type},
 };
 
-use crate::context::Context;
+use crate::{attributes, context::Context};
 
 pub(crate) const PARSE_ERR_MSG: &str = "error happens when parsing the signature";
 pub(crate) const PARSE_ERR_MSG_SIMPLE_TYPE: &str = "error happens when parsing a simple type";
@@ -28,7 +28,7 @@ pub(crate) const PARSE_ERR_MSG_ZERO_SIZE: &str = "array with zero length specifi
 #[derive(Debug, Clone)]
 pub(crate) struct SoliditySignature {
     pub sig_name: String,
-    pub para_types: Vec<(SolidityType, SignatureDataLocation)>,
+    pub para_types: Vec<(SolidityType, String, SignatureDataLocation)>,
     pub ret_types: Vec<(SolidityType, SignatureDataLocation)>,
 }
 
@@ -494,9 +494,13 @@ impl SoliditySignature {
     pub fn create_default_solidity_signature(ctx: &Context, fun: &FunctionEnv<'_>) -> Self {
         let fun_name = fun.symbol_pool().string(fun.get_name()).to_string();
         let mut para_type_lst = vec![];
-        for move_ty in fun.get_parameter_types() {
+        for Parameter(para_name, move_ty) in fun.get_parameters() {
             let solidity_ty = SolidityType::translate_from_move(ctx, &move_ty); // implicit mapping from a move type to a solidity type
-            para_type_lst.push((solidity_ty, SignatureDataLocation::Memory)); // memory is used by default
+            para_type_lst.push((
+                solidity_ty,
+                fun.symbol_pool().string(para_name).to_string(),
+                SignatureDataLocation::Memory, // memory is used by default
+            ));
         }
         let mut ret_type_lst = vec![];
         for move_ty in fun.get_return_types() {
@@ -525,12 +529,15 @@ impl SoliditySignature {
         format!(
             "{}({})",
             self.sig_name,
-            self.compute_param_types(&self.para_types.iter().map(|(ty, _)| ty).collect_vec())
+            self.compute_param_types(&self.para_types.iter().map(|(ty, _, _)| ty).collect_vec())
         )
     }
 
     /// Parse the solidity signature
-    pub fn parse_into_solidity_signature(sig_str: &str) -> anyhow::Result<Self> {
+    pub fn parse_into_solidity_signature(
+        sig_str: &str,
+        fun: &FunctionEnv<'_>,
+    ) -> anyhow::Result<Self> {
         // Solidity signature matching
         static SIG_REG: Lazy<Regex> = Lazy::new(|| {
             Regex::new(
@@ -564,10 +571,26 @@ impl SoliditySignature {
                     }
                 }
             }
+            let mut para_names = fun
+                .get_parameters()
+                .iter()
+                .map(|Parameter(para_name, _)| fun.symbol_pool().string(*para_name).to_string())
+                .collect_vec();
+            // Handle external functions where the first parameter is contract
+            if attributes::is_external_fun(fun) {
+                if para_names.is_empty() {
+                    return Err(anyhow!(PARSE_ERR_MSG));
+                }
+                para_names = para_names[1..].to_vec();
+            }
+            let ret_names = vec!["".to_string(); fun.get_return_count()];
             let solidity_sig = SoliditySignature {
                 sig_name: sig_name.to_string(),
-                para_types: SoliditySignature::extract_para_type_str(para_type_str)?,
-                ret_types: SoliditySignature::extract_para_type_str(ret_ty)?,
+                para_types: SoliditySignature::extract_para_type_str(para_type_str, para_names)?,
+                ret_types: SoliditySignature::extract_para_type_str(ret_ty, ret_names)?
+                    .into_iter()
+                    .map(|(ty, _, loc)| (ty, loc))
+                    .collect_vec(),
             };
             Ok(solidity_sig)
         } else {
@@ -578,14 +601,18 @@ impl SoliditySignature {
     /// Generate pairs of solidity type and location
     fn extract_para_type_str(
         args: &str,
-    ) -> anyhow::Result<Vec<(SolidityType, SignatureDataLocation)>> {
+        args_name: Vec<String>,
+    ) -> anyhow::Result<Vec<(SolidityType, String, SignatureDataLocation)>> {
         let args_trim = args.trim();
         if args_trim.is_empty() {
             return Ok(vec![]);
         }
         let mut ret_vec = vec![];
         let paras = args_trim.split(',').collect_vec();
-        for para in paras {
+        if paras.len() != args_name.len() {
+            return Err(anyhow!(PARSE_ERR_MSG));
+        }
+        for (para, para_name) in paras.iter().zip(args_name.iter()) {
             let para_trim = para.trim();
             if para_trim.is_empty() {
                 return Err(anyhow!(PARSE_ERR_MSG));
@@ -612,7 +639,7 @@ impl SoliditySignature {
                     "data location can only be specified for array or struct types"
                 ));
             }
-            ret_vec.push((ty, data_location));
+            ret_vec.push((ty, para_name.clone(), data_location));
         }
         Ok(ret_vec)
     }
@@ -620,7 +647,11 @@ impl SoliditySignature {
     /// Check whether the user defined solidity signature is compatible with the Move signature
     pub fn check_sig_compatibility(&self, ctx: &Context, fun: &FunctionEnv<'_>) -> bool {
         let para_types = fun.get_parameter_types();
-        let sig_para_vec = self.para_types.iter().map(|(ty, _)| ty).collect::<Vec<_>>();
+        let sig_para_vec = self
+            .para_types
+            .iter()
+            .map(|(ty, _, _)| ty)
+            .collect::<Vec<_>>();
         if para_types.len() != sig_para_vec.len() {
             return false;
         }

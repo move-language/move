@@ -3,7 +3,10 @@
 
 use crate::format_module_id;
 use colored::{control, Colorize};
-use move_binary_format::errors::{Location, VMError, VMResult};
+use move_binary_format::{
+    access::ModuleAccess,
+    errors::{ExecutionState, Location, VMError, VMResult},
+};
 use move_compiler::{
     diagnostics::{self, Diagnostic},
     unit_test::{ModuleTestPlan, TestPlan},
@@ -219,6 +222,57 @@ impl TestFailure {
         }
     }
 
+    fn report_exec_state(test_plan: &TestPlan, exec_state: &ExecutionState) -> String {
+        let stack_trace = exec_state.stack_trace();
+        let mut buf = String::new();
+        if !stack_trace.is_empty() {
+            buf.push_str("stack trace\n");
+            for frame in stack_trace {
+                if let Some(module_id) = &frame.0 {
+                    if let Some(named_module) = test_plan.module_info.get(module_id) {
+                        if let Ok(function_source_map) =
+                            named_module.source_map.get_function_source_map(frame.1)
+                        {
+                            // unwrap here is a mirror of the same unwrap in report_error_with_location
+                            let loc = function_source_map.get_code_location(frame.2).unwrap();
+                            let fn_handle_idx =
+                                named_module.module.function_def_at(frame.1).function;
+                            let fn_name = named_module
+                                .module
+                                .function_handle_at(fn_handle_idx)
+                                .name
+                                .to_string();
+                            let file_name = match test_plan.files.get(&loc.file_hash()) {
+                                Some(v) => format!("{}", v.0),
+                                None => "unknown source".to_string(),
+                            };
+                            buf.push_str(
+                                &format!(
+                                    "\t{}::{}({}:{})",
+                                    module_id.name(),
+                                    fn_name,
+                                    file_name,
+                                    loc.start()
+                                )
+                                .to_string(),
+                            );
+                        } else {
+                            buf.push_str("\tmalformed stack trace (no source map)");
+                            return buf;
+                        }
+                    } else {
+                        buf.push_str("\tmalformed stack trace (no module)");
+                        return buf;
+                    }
+                } else {
+                    buf.push_str("\tmalformed stack trace (no module ID)");
+                    return buf;
+                }
+            }
+        }
+        buf
+    }
+
     fn report_error_with_location(
         test_plan: &TestPlan,
         base_message: String,
@@ -265,7 +319,11 @@ impl TestFailure {
         };
         match vm_error.exec_state() {
             None => diags,
-            Some(exec_state) => format!("{}\n{}", diags, exec_state.to_string()),
+            Some(exec_state) => format!(
+                "{}\n{}",
+                diags,
+                Self::report_exec_state(test_plan, exec_state)
+            ),
         }
     }
 }

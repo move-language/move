@@ -34,6 +34,10 @@ impl ExecutionState {
     pub fn new(stack_trace: Vec<(Option<ModuleId>, FunctionDefinitionIndex, CodeOffset)>) -> Self {
         Self { stack_trace }
     }
+
+    pub fn stack_trace(&self) -> &Vec<(Option<ModuleId>, FunctionDefinitionIndex, CodeOffset)> {
+        &self.stack_trace
+    }
 }
 
 impl ToString for ExecutionState {
@@ -41,8 +45,9 @@ impl ToString for ExecutionState {
     fn to_string(&self) -> String {
         let mut stack_trace = String::new();
         if self.stack_trace.is_empty() {
-            stack_trace.push_str("EMPTY STACK TRACE");
+            stack_trace.push_str("empty stack trace");
         } else {
+            stack_trace.push_str("stack trace\n");
             for frame in &self.stack_trace {
                 stack_trace.push_str("function definition ");
                 stack_trace.push_str(&frame.1.to_string());

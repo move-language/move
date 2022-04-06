@@ -239,7 +239,7 @@ impl TestFailure {
                                 named_module.module.function_def_at(frame.1).function;
                             let fn_id_idx =
                                 named_module.module.function_handle_at(fn_handle_idx).name;
-                            let fn_name = named_module.module.identifier_at(fn_id_idx).to_string();
+                            let fn_name = named_module.module.identifier_at(fn_id_idx).as_str();
                             let file_name = match test_plan.files.get(&loc.file_hash()) {
                                 Some(v) => format!("{}", v.0),
                                 None => "unknown source".to_string(),

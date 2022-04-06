@@ -259,11 +259,13 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
             .get_data_store()
             .load_resource(actor_addr, &state_type)
             .map_err(partial_vm_error_to_async)?;
-        let actor_state = actor_state_global
-            .borrow_global()
-            .and_then(|v| v.value_as::<Reference>())
-            .and_then(|r| r.read_ref())
-            .map_err(partial_vm_error_to_async)?;
+        let actor_state = unsafe {
+            actor_state_global
+                .borrow_global()
+                .and_then(|v| v.value_as::<Reference>())
+                .map_err(partial_vm_error_to_async)?
+                .read_ref()
+        };
         args.insert(
             0,
             self.to_bcs(actor_state, &state_type_tag)

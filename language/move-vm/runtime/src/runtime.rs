@@ -266,7 +266,8 @@ impl VMRuntime {
                         "non reference value given for a reference typed return value".to_string(),
                     )
                 })?;
-                let inner_value = ref_value.read_ref()?;
+                // safe as long as the dummy locals are not dropped
+                let inner_value = unsafe { ref_value.read_ref() };
                 (&**inner, inner_value)
             }
             _ => (ty, value),

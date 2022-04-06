@@ -1,8 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
-
 use crate::tasks::{
     taskify, Argument, InitCommand, PrintBytecodeCommand, PrintBytecodeInputChoice, PublishCommand,
     RawAddress, RunCommand, SyntaxChoice, TaskCommand, TaskInput, ViewCommand,
@@ -363,7 +361,8 @@ fn display_return_values(return_values: SerializedReturnValues) -> Option<String
             .iter()
             .map(|(idx, v)| {
                 let mut buf = String::new();
-                move_vm_types::values::debug::print_value(&mut buf, v).unwrap();
+                // contains no refs, so is safe
+                unsafe { move_vm_types::values::debug::print_value(&mut buf, v) }.unwrap();
                 format!("local#{}: {}", idx, buf)
             })
             .collect::<Vec<_>>()
@@ -381,7 +380,8 @@ fn display_return_values(return_values: SerializedReturnValues) -> Option<String
             .iter()
             .map(|v| {
                 let mut buf = String::new();
-                move_vm_types::values::debug::print_value(&mut buf, v).unwrap();
+                // contains no refs, so is safe
+                unsafe { move_vm_types::values::debug::print_value(&mut buf, v) }.unwrap();
                 buf
             })
             .collect::<Vec<_>>()

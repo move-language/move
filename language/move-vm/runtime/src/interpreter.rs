@@ -1192,6 +1192,7 @@ impl Frame {
                         let vec_ref = interpreter.operand_stack.pop_as::<VectorRef>()?;
                         gas_status.charge_instr(Opcodes::VEC_LEN)?;
                         let vec_ty_arg = &resolver.instantiate_single_type(*si, self.ty_args())?;
+                        // see REFERENCE SAFETY EXPLANATION in values
                         let value = unsafe { vec_ref.len(vec_ty_arg)? };
                         interpreter.operand_stack.push(value)?;
                     }
@@ -1200,6 +1201,7 @@ impl Frame {
                         let vec_ref = interpreter.operand_stack.pop_as::<VectorRef>()?;
                         gas_status.charge_instr(Opcodes::VEC_IMM_BORROW)?;
                         let vec_ty_arg = &resolver.instantiate_single_type(*si, self.ty_args())?;
+                        // see REFERENCE SAFETY EXPLANATION in values
                         let value = unsafe { vec_ref.borrow_elem(idx, vec_ty_arg)? };
                         interpreter.operand_stack.push(value)?;
                     }
@@ -1208,6 +1210,7 @@ impl Frame {
                         let vec_ref = interpreter.operand_stack.pop_as::<VectorRef>()?;
                         gas_status.charge_instr(Opcodes::VEC_MUT_BORROW)?;
                         let vec_ty_arg = &resolver.instantiate_single_type(*si, self.ty_args())?;
+                        // see REFERENCE SAFETY EXPLANATION in values
                         let value = unsafe { vec_ref.borrow_elem(idx, vec_ty_arg)? };
                         interpreter.operand_stack.push(value)?;
                     }
@@ -1216,12 +1219,14 @@ impl Frame {
                         let vec_ref = interpreter.operand_stack.pop_as::<VectorRef>()?;
                         gas_status.charge_instr_with_size(Opcodes::VEC_PUSH_BACK, elem.size())?;
                         let vec_ty_arg = &resolver.instantiate_single_type(*si, self.ty_args())?;
+                        // see REFERENCE SAFETY EXPLANATION in values
                         unsafe { vec_ref.push_back(elem, vec_ty_arg)? };
                     }
                     Bytecode::VecPopBack(si) => {
                         let vec_ref = interpreter.operand_stack.pop_as::<VectorRef>()?;
                         gas_status.charge_instr(Opcodes::VEC_POP_BACK)?;
                         let vec_ty_arg = &resolver.instantiate_single_type(*si, self.ty_args())?;
+                        // see REFERENCE SAFETY EXPLANATION in values
                         let value = unsafe { vec_ref.pop(vec_ty_arg)? };
                         interpreter.operand_stack.push(value)?;
                     }
@@ -1241,6 +1246,7 @@ impl Frame {
                         let vec_ref = interpreter.operand_stack.pop_as::<VectorRef>()?;
                         gas_status.charge_instr(Opcodes::VEC_SWAP)?;
                         let vec_ty_arg = &resolver.instantiate_single_type(*si, self.ty_args())?;
+                        // see REFERENCE SAFETY EXPLANATION in values
                         unsafe { vec_ref.swap(idx1, idx2, vec_ty_arg)? };
                     }
                 }

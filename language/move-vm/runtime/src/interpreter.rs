@@ -573,7 +573,10 @@ impl Interpreter {
 
     fn get_internal_state(&self) -> ExecutionState {
         let mut stack_trace = vec![];
-        for frame in self.call_stack.0.iter() {
+        for frame in self.call_stack.0.iter().rev() {
+            // collect frames in the reverse order as this is what is
+            // normally expected from the stack trace (outermost frame
+            // is the last one)
             stack_trace.push((
                 frame.function.module_id().cloned(),
                 frame.function.index(),

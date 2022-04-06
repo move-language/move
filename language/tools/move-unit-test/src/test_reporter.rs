@@ -246,7 +246,7 @@ impl TestFailure {
                             };
                             buf.push_str(
                                 &format!(
-                                    "\t{}::{}({}:{})",
+                                    "\t{}::{}({}:{})\n",
                                     module_id.name(),
                                     fn_name,
                                     file_name,

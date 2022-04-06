@@ -1,5 +1,7 @@
 #[evm_arith]
 module Evm::U256 {
+    const MAX_U128: u128 = 340282366920938463463374607431768211455;
+
     native struct U256 has copy, drop, store;
     native public fun u256_from_words(hi: u128, lo: u128): U256;
     native public fun add(x: U256, y: U256): U256;
@@ -27,6 +29,10 @@ module Evm::U256 {
 
     public fun one(): U256 {
         u256_from_words(0, 1)
+    }
+
+    public fun max(): U256 {
+        u256_from_words(MAX_U128, MAX_U128)
     }
 
     native public fun to_address(x: U256): address;

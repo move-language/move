@@ -74,6 +74,11 @@ module Evm::Evm {
     /// Abort with an error message.
     public native fun abort_with(message: vector<u8>);
 
+    /// If `cond` is false, it aborts with `message`.
+    public fun require(cond: bool, message: vector<u8>) {
+        if (!cond) { abort_with(message); }
+    }
+
     // --------------------------------
     // Block and Transaction Properties
     // --------------------------------

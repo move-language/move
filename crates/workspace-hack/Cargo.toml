@@ -17,7 +17,7 @@ bstr = { version = "0.2.15", features = ["lazy_static", "regex-automata", "serde
 byteorder = { version = "1.4.3", features = ["std"] }
 bytes = { version = "1.0.1", features = ["std"] }
 clap-f595c2ba2a3f28df = { package = "clap", version = "2.33.3", features = ["ansi_term", "atty", "color", "strsim", "suggestions", "vec_map"] }
-clap-7b89eefb6aaa9bf3 = { package = "clap", version = "3.1.6", features = ["atty", "clap_derive", "color", "derive", "env", "lazy_static", "std", "strsim", "suggestions", "termcolor"] }
+clap-7b89eefb6aaa9bf3 = { package = "clap", version = "3.1.8", features = ["atty", "clap_derive", "color", "derive", "env", "lazy_static", "std", "strsim", "suggestions", "termcolor"] }
 codespan-reporting = { version = "0.11.1", default-features = false, features = ["serde", "serialization"] }
 crossbeam-utils = { version = "0.8.3", features = ["lazy_static", "std"] }
 crunchy = { version = "0.2.2", features = ["limit_128", "limit_256", "std"] }

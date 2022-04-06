@@ -237,11 +237,9 @@ impl TestFailure {
                             let loc = function_source_map.get_code_location(frame.2).unwrap();
                             let fn_handle_idx =
                                 named_module.module.function_def_at(frame.1).function;
-                            let fn_name = named_module
-                                .module
-                                .function_handle_at(fn_handle_idx)
-                                .name
-                                .to_string();
+                            let fn_id_idx =
+                                named_module.module.function_handle_at(fn_handle_idx).name;
+                            let fn_name = named_module.module.identifier_at(fn_id_idx).to_string();
                             let file_name = match test_plan.files.get(&loc.file_hash()) {
                                 Some(v) => format!("{}", v.0),
                                 None => "unknown source".to_string(),

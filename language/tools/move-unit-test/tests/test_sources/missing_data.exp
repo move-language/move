@@ -19,7 +19,7 @@ Failures in 0x1::MissingData:
 │     major_status: MISSING_DATA,
 │     sub_status: None,
 │     message: None,
-│     stacktrace: None,
+│     exec_state: None,
 │     location: Module(
 │         ModuleId {
 │             address: 00000000000000000000000000000001,

@@ -11,9 +11,9 @@ Failures in 0x1::M:
 │     major_status: UNEXPECTED_VERIFIER_ERROR,
 │     sub_status: None,
 │     message: Some(
-│         "Unexpected verifier/deserialization error! This likely means there is code stored on chain that is unverifiable!\nError: VMError { major_status: MISSING_DEPENDENCY, sub_status: None, message: None, stacktrace: None, location: Module(ModuleId { address: 00000000000000000000000000000001, name: Identifier(\"M\") }), indices: [(FunctionHandle, 0)], offsets: [] }",
+│         "Unexpected verifier/deserialization error! This likely means there is code stored on chain that is unverifiable!\nError: VMError { major_status: MISSING_DEPENDENCY, sub_status: None, message: None, exec_state: None, location: Module(ModuleId { address: 00000000000000000000000000000001, name: Identifier(\"M\") }), indices: [(FunctionHandle, 0)], offsets: [] }",
 │     ),
-│     stacktrace: None,
+│     exec_state: None,
 │     location: Module(
 │         ModuleId {
 │             address: 00000000000000000000000000000001,

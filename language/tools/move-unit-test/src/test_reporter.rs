@@ -244,9 +244,9 @@ impl TestFailure {
             .get(&loc.file_hash())
             .ok_or(codespan_reporting::files::Error::FileMissing)?;
         let start_line_index = files.line_index(*id, loc.start() as usize)?;
-        let start_line_number = files.line_index(*id, start_line_index)?;
+        let start_line_number = files.line_number(*id, start_line_index)?;
         let end_line_index = files.line_index(*id, loc.end() as usize)?;
-        let end_line_number = files.line_index(*id, end_line_index)?;
+        let end_line_number = files.line_number(*id, end_line_index)?;
         if start_line_number == end_line_number {
             Ok(start_line_number.to_string())
         } else {

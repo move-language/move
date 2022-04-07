@@ -143,7 +143,7 @@ struct Cup<T> has copy, drop, store { item: T }
 fun example(c_x: Cup<u64>, c_s: Cup<S>) {
     // Valid, 'Cup<u64>' has 'copy' because 'u64' has 'copy'
     let c_x2 = copy c_x;
-    // Valid, 'Cup<S>' has 'drop' because 'S' has 'drop'
+    // Valid, 'Cup<S>' has 'drop' because 'S' has 'copy'
     let c_s2 = copy c_s;
 }
 
@@ -152,8 +152,8 @@ fun invalid(c_account: Cup<signer>, c_n: Cup<NoAbilities>) {
     // Even though 'Cup' was declared with copy, the instance does not have 'copy'
     // because 'signer' does not have 'copy'
     let c_account2 = copy c_account;
-    // Invalid, 'Cup<NoAbilities>' does not have 'drop'
-    // because 'NoAbilities' does not have 'drop'
+    // Invalid, 'Cup<NoAbilities>' does not have 'copy'
+    // because 'NoAbilities' does not have 'copy'
     let c_n2 = copy c_n;
 }
 ```

@@ -158,7 +158,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
         let state_type_tag = TypeTag::Struct(actor.state_tag.clone());
         let state_type = self
             .vm_session
-            .get_type(&state_type_tag)
+            .load_type(&state_type_tag)
             .map_err(vm_error_to_async)?;
 
         // Check whether the actor state already exists.
@@ -251,7 +251,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
         let state_type_tag = TypeTag::Struct(actor.state_tag.clone());
         let state_type = self
             .vm_session
-            .get_type(&state_type_tag)
+            .load_type(&state_type_tag)
             .map_err(vm_error_to_async)?;
 
         let actor_state_global = self

@@ -1,13 +1,18 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::sync::Arc;
+
 use crate::{
     data_cache::TransactionDataCache,
     native_functions::{NativeContextExtensions, NativeFunction},
     runtime::VMRuntime,
     session::Session,
 };
-use move_binary_format::errors::{Location, VMResult};
+use move_binary_format::{
+    errors::{Location, VMResult},
+    CompiledModule,
+};
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, language_storage::ModuleId,
     resolver::MoveResolver,
@@ -58,13 +63,13 @@ impl MoveVM {
         &self,
         module_id: &ModuleId,
         remote: &'r S,
-    ) -> VMResult<()> {
+    ) -> VMResult<Arc<CompiledModule>> {
         self.runtime
             .loader()
             .load_module(
                 module_id,
                 &TransactionDataCache::new(remote, self.runtime.loader()),
             )
-            .map(|_| ())
+            .map(|arc_module| arc_module.arc_module())
     }
 }

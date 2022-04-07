@@ -6,7 +6,7 @@ use crate::{
     interpreter::Interpreter,
     loader::{Function, Loader},
     native_functions::{NativeContextExtensions, NativeFunction, NativeFunctions},
-    session::{SerializedReturnValues, Session},
+    session::{LoadedFunctionInstantiation, SerializedReturnValues, Session},
 };
 use move_binary_format::{
     access::ModuleAccess,
@@ -15,6 +15,7 @@ use move_binary_format::{
     file_format::{LocalIndex, Visibility},
     normalized, CompiledModule, IndexKind,
 };
+use move_bytecode_verifier::script_signature;
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
@@ -401,19 +402,30 @@ impl VMRuntime {
             check_visibility
         };
         // load the function
-        let (func, ty_args, param_types, return_types) = self.loader.load_function(
-            function_name,
+        let (
             module,
-            &ty_args,
-            data_store,
+            func,
+            LoadedFunctionInstantiation {
+                type_arguments,
+                parameters,
+                return_,
+            },
+        ) = self
+            .loader
+            .load_function(module, function_name, &ty_args, data_store)?;
+
+        script_signature::verify_module_function_signature_by_name(
+            module.module(),
+            function_name,
             additional_signature_checks,
         )?;
+
         // execute the function
         self.execute_function_impl(
             func,
-            ty_args,
-            param_types,
-            return_types,
+            type_arguments,
+            parameters,
+            return_,
             serialized_args,
             data_store,
             gas_status,

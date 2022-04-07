@@ -25,6 +25,9 @@ impl StructType {
     }
 }
 
+#[derive(Debug, Copy, Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct CachedStructIndex(pub usize);
+
 #[derive(Debug, Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Type {
     Bool,
@@ -34,8 +37,8 @@ pub enum Type {
     Address,
     Signer,
     Vector(Box<Type>),
-    Struct(usize),
-    StructInstantiation(usize, Vec<Type>),
+    Struct(CachedStructIndex),
+    StructInstantiation(CachedStructIndex, Vec<Type>),
     Reference(Box<Type>),
     MutableReference(Box<Type>),
     TyParam(usize),

@@ -14,9 +14,11 @@ use move_core_types::{
     value::MoveTypeLayout,
 };
 use move_vm_types::{
-    data_store::DataStore, gas_schedule::GasStatus, loaded_data::runtime_types::Type,
+    data_store::DataStore,
+    gas_schedule::GasStatus,
+    loaded_data::runtime_types::{CachedStructIndex, StructType, Type},
 };
-use std::borrow::Borrow;
+use std::{borrow::Borrow, sync::Arc};
 
 pub struct Session<'r, 'l, S> {
     pub(crate) runtime: &'l VMRuntime,
@@ -211,17 +213,45 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         Ok((change_set, events, native_extensions))
     }
 
+    /// Load a module, a function, and all of its types into cache
+    pub fn load_function(
+        &self,
+        module_id: &ModuleId,
+        function_name: &IdentStr,
+        type_arguments: &[TypeTag],
+    ) -> VMResult<LoadedFunctionInstantiation> {
+        let (_, _, instantiation) = self.runtime.loader().load_function(
+            module_id,
+            function_name,
+            type_arguments,
+            &self.data_cache,
+        )?;
+        Ok(instantiation)
+    }
+
+    pub fn load_type(&self, type_tag: &TypeTag) -> VMResult<Type> {
+        self.runtime.loader().load_type(type_tag, &self.data_cache)
+    }
+
     pub fn get_type_layout(&self, type_tag: &TypeTag) -> VMResult<MoveTypeLayout> {
         self.runtime
             .loader()
             .get_type_layout(type_tag, &self.data_cache)
     }
 
-    pub fn get_type(&self, type_tag: &TypeTag) -> VMResult<Type> {
-        self.runtime.loader().load_type(type_tag, &self.data_cache)
+    /// Fetch a struct type from cache, if the index is in bounds
+    /// Helpful when paired with load_type, or any other API that returns 'Type'
+    pub fn get_struct_type(&self, index: CachedStructIndex) -> Option<Arc<StructType>> {
+        self.runtime.loader().get_struct_type(index)
     }
 
     pub fn get_data_store(&mut self) -> &mut dyn DataStore {
         &mut self.data_cache
     }
+}
+
+pub struct LoadedFunctionInstantiation {
+    pub type_arguments: Vec<Type>,
+    pub parameters: Vec<Type>,
+    pub return_: Vec<Type>,
 }

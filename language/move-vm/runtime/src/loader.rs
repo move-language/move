@@ -4,6 +4,7 @@
 use crate::{
     logging::expect_no_verification_errors,
     native_functions::{NativeFunction, NativeFunctions},
+    session::LoadedFunctionInstantiation,
 };
 use move_binary_format::{
     access::{ModuleAccess, ScriptAccess},
@@ -18,9 +19,7 @@ use move_binary_format::{
     },
     IndexKind,
 };
-use move_bytecode_verifier::{
-    self, cyclic_dependencies, dependencies, script_signature, FnCheckScriptSignature,
-};
+use move_bytecode_verifier::{self, cyclic_dependencies, dependencies};
 use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
@@ -29,7 +28,7 @@ use move_core_types::{
 };
 use move_vm_types::{
     data_store::DataStore,
-    loaded_data::runtime_types::{StructType, Type},
+    loaded_data::runtime_types::{CachedStructIndex, StructType, Type},
 };
 use parking_lot::RwLock;
 use sha3::{Digest, Sha3_256};
@@ -154,8 +153,8 @@ impl ModuleCache {
     }
 
     // Retrieve a struct by index
-    fn struct_at(&self, idx: usize) -> Arc<StructType> {
-        Arc::clone(&self.structs[idx])
+    fn struct_at(&self, idx: CachedStructIndex) -> Arc<StructType> {
+        Arc::clone(&self.structs[idx.0])
     }
 
     //
@@ -299,7 +298,7 @@ impl ModuleCache {
                             break;
                         }
                         if struct_type.name.as_ident_str() == struct_name {
-                            return Ok(idx);
+                            return Ok(CachedStructIndex(idx));
                         }
                     }
                     Err(
@@ -326,7 +325,7 @@ impl ModuleCache {
         resolver: &F,
     ) -> PartialVMResult<Type>
     where
-        F: Fn(&IdentStr, &ModuleId) -> PartialVMResult<usize>,
+        F: Fn(&IdentStr, &ModuleId) -> PartialVMResult<CachedStructIndex>,
     {
         let res = match tok {
             SignatureToken::Bool => Type::Bool,
@@ -389,13 +388,13 @@ impl ModuleCache {
         &self,
         struct_name: &IdentStr,
         module_id: &ModuleId,
-    ) -> PartialVMResult<(usize, Arc<StructType>)> {
+    ) -> PartialVMResult<(CachedStructIndex, Arc<StructType>)> {
         match self
             .modules
             .get(module_id)
             .and_then(|module| module.struct_map.get(struct_name))
         {
-            Some(struct_idx) => Ok((*struct_idx, Arc::clone(&self.structs[*struct_idx]))),
+            Some(struct_idx) => Ok((*struct_idx, Arc::clone(&self.structs[struct_idx.0]))),
             None => Err(
                 PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(format!(
                     "Cannot find {:?}::{:?} in cache",
@@ -565,12 +564,11 @@ impl Loader {
     // Type parameters are checked as well after every type is loaded.
     pub(crate) fn load_function(
         &self,
-        function_name: &IdentStr,
         module_id: &ModuleId,
+        function_name: &IdentStr,
         ty_args: &[TypeTag],
         data_store: &impl DataStore,
-        additional_signature_checks: FnCheckScriptSignature,
-    ) -> VMResult<(Arc<Function>, Vec<Type>, Vec<Type>, Vec<Type>)> {
+    ) -> VMResult<(Arc<Module>, Arc<Function>, LoadedFunctionInstantiation)> {
         let module = self.load_module(module_id, data_store)?;
         let idx = self
             .module_cache
@@ -579,7 +577,7 @@ impl Loader {
             .map_err(|err| err.finish(Location::Undefined))?;
         let func = self.module_cache.read().function_at(idx);
 
-        let parameter_tys = func
+        let parameters = func
             .parameters
             .0
             .iter()
@@ -591,7 +589,7 @@ impl Loader {
             .collect::<PartialVMResult<Vec<_>>>()
             .map_err(|err| err.finish(Location::Undefined))?;
 
-        let return_tys = func
+        let return_ = func
             .return_
             .0
             .iter()
@@ -604,20 +602,19 @@ impl Loader {
             .map_err(|err| err.finish(Location::Undefined))?;
 
         // verify type arguments
-        let mut type_params = vec![];
-        for ty in ty_args {
-            type_params.push(self.load_type(ty, data_store)?);
-        }
-        self.verify_ty_args(func.type_parameters(), &type_params)
+        let type_arguments = ty_args
+            .iter()
+            .map(|ty| self.load_type(ty, data_store))
+            .collect::<VMResult<Vec<_>>>()?;
+        self.verify_ty_args(func.type_parameters(), &type_arguments)
             .map_err(|e| e.finish(Location::Module(module_id.clone())))?;
 
-        script_signature::verify_module_function_signature_by_name(
-            module.module(),
-            function_name,
-            additional_signature_checks,
-        )?;
-
-        Ok((func, type_params, parameter_tys, return_tys))
+        let loaded = LoadedFunctionInstantiation {
+            type_arguments,
+            parameters,
+            return_,
+        };
+        Ok((module, func, loaded))
     }
 
     // Entry point for module publishing (`MoveVM::publish_module_bundle`).
@@ -1125,6 +1122,10 @@ impl Loader {
         )
     }
 
+    pub(crate) fn get_struct_type(&self, idx: CachedStructIndex) -> Option<Arc<StructType>> {
+        self.module_cache.read().structs.get(idx.0).map(Arc::clone)
+    }
+
     fn abilities(&self, ty: &Type) -> PartialVMResult<AbilitySet> {
         match ty {
             Type::Bool | Type::U8 | Type::U64 | Type::U128 | Type::Address => {
@@ -1344,7 +1345,7 @@ impl<'a> Resolver<'a> {
 pub(crate) struct Module {
     id: ModuleId,
     // primitive pools
-    module: CompiledModule,
+    module: Arc<CompiledModule>,
 
     //
     // types as indexes into the Loader type list
@@ -1354,7 +1355,7 @@ pub(crate) struct Module {
     // That is effectively an indirection over the ref table:
     // the instruction carries an index into this table which contains the index into the
     // glabal table of types. No instantiation of generic types is saved into the global table.
-    struct_refs: Vec<usize>,
+    struct_refs: Vec<CachedStructIndex>,
     structs: Vec<StructDef>,
     // materialized instantiations, whether partial or not
     struct_instantiations: Vec<StructInstantiation>,
@@ -1378,7 +1379,7 @@ pub(crate) struct Module {
     function_map: HashMap<Identifier, usize>,
     // struct name to index into the Loader type list
     // This allows a direct access from struct name to `Struct`
-    struct_map: HashMap<Identifier, usize>,
+    struct_map: HashMap<Identifier, CachedStructIndex>,
 
     // a map of single-token signature indices to type.
     // Single-token signatures are usually indexed by the `SignatureIndex` in bytecode. For example,
@@ -1425,7 +1426,7 @@ impl Module {
                                 )));
                         }
                         if struct_type.name.as_ident_str() == struct_name {
-                            struct_refs.push(idx);
+                            struct_refs.push(CachedStructIndex(idx));
                             break;
                         }
                     }
@@ -1436,7 +1437,7 @@ impl Module {
 
             for struct_def in module.struct_defs() {
                 let idx = struct_refs[struct_def.struct_handle.0 as usize];
-                let field_count = cache.structs[idx].fields.len() as u16;
+                let field_count = cache.structs[idx.0].fields.len() as u16;
                 structs.push(StructDef { field_count, idx });
                 let name =
                     module.identifier_at(module.struct_handle_at(struct_def.struct_handle).name);
@@ -1556,7 +1557,7 @@ impl Module {
         match create() {
             Ok(_) => Ok(Self {
                 id,
-                module,
+                module: Arc::new(module),
                 struct_refs,
                 structs,
                 struct_instantiations,
@@ -1572,7 +1573,7 @@ impl Module {
         }
     }
 
-    fn struct_at(&self, idx: StructDefinitionIndex) -> usize {
+    fn struct_at(&self, idx: StructDefinitionIndex) -> CachedStructIndex {
         self.structs[idx.0 as usize].idx
     }
 
@@ -1600,6 +1601,10 @@ impl Module {
         &self.module
     }
 
+    pub(crate) fn arc_module(&self) -> Arc<CompiledModule> {
+        self.module.clone()
+    }
+
     fn field_offset(&self, idx: FieldHandleIndex) -> usize {
         self.field_handles[idx.0 as usize].offset
     }
@@ -1625,7 +1630,7 @@ struct Script {
     // types as indexes into the Loader type list
     // REVIEW: why is this unused?
     #[allow(dead_code)]
-    struct_refs: Vec<usize>,
+    struct_refs: Vec<CachedStructIndex>,
 
     // functions as indexes into the Loader function list
     function_refs: Vec<usize>,
@@ -1983,7 +1988,7 @@ struct StructDef {
     // struct field count
     field_count: u16,
     // `ModuelCache::structs` global table index
-    idx: usize,
+    idx: CachedStructIndex,
 }
 
 #[derive(Debug)]
@@ -1991,7 +1996,7 @@ struct StructInstantiation {
     // struct field count
     field_count: u16,
     // `ModuelCache::structs` global table index. It is the generic type.
-    def: usize,
+    def: CachedStructIndex,
     instantiation: Vec<Type>,
 }
 
@@ -2000,7 +2005,7 @@ struct StructInstantiation {
 struct FieldHandle {
     offset: usize,
     // `ModuelCache::structs` global table index. It is the generic type.
-    owner: usize,
+    owner: CachedStructIndex,
 }
 
 // A field instantiation. The offset is the only used information when operating on a field
@@ -2008,7 +2013,7 @@ struct FieldHandle {
 struct FieldInstantiation {
     offset: usize,
     // `ModuelCache::structs` global table index. It is the generic type.
-    owner: usize,
+    owner: CachedStructIndex,
 }
 
 //
@@ -2030,7 +2035,7 @@ impl StructInfo {
 }
 
 pub(crate) struct TypeCache {
-    structs: HashMap<usize, HashMap<Vec<Type>, StructInfo>>,
+    structs: HashMap<CachedStructIndex, HashMap<Vec<Type>, StructInfo>>,
 }
 
 impl TypeCache {
@@ -2044,7 +2049,11 @@ impl TypeCache {
 const VALUE_DEPTH_MAX: usize = 128;
 
 impl Loader {
-    fn struct_gidx_to_type_tag(&self, gidx: usize, ty_args: &[Type]) -> PartialVMResult<StructTag> {
+    fn struct_gidx_to_type_tag(
+        &self,
+        gidx: CachedStructIndex,
+        ty_args: &[Type],
+    ) -> PartialVMResult<StructTag> {
         if let Some(struct_map) = self.type_cache.read().structs.get(&gidx) {
             if let Some(struct_info) = struct_map.get(ty_args) {
                 if let Some(struct_tag) = &struct_info.struct_tag {
@@ -2101,7 +2110,7 @@ impl Loader {
 
     fn struct_gidx_to_type_layout(
         &self,
-        gidx: usize,
+        gidx: CachedStructIndex,
         ty_args: &[Type],
         depth: usize,
     ) -> PartialVMResult<MoveStructLayout> {

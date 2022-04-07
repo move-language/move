@@ -267,41 +267,38 @@ impl TestFailure {
             }
 
             for frame in stack_trace {
-                if let Some(module_id) = &frame.0 {
-                    if let Some(named_module) = test_plan.module_info.get(module_id) {
-                        if let Ok(function_source_map) =
-                            named_module.source_map.get_function_source_map(frame.1)
-                        {
-                            // unwrap here is a mirror of the same unwrap in report_error_with_location
-                            let loc = function_source_map.get_code_location(frame.2).unwrap();
-                            let fn_handle_idx =
-                                named_module.module.function_def_at(frame.1).function;
-                            let fn_id_idx =
-                                named_module.module.function_handle_at(fn_handle_idx).name;
-                            let fn_name = named_module.module.identifier_at(fn_id_idx).as_str();
-                            let file_name = match test_plan.files.get(&loc.file_hash()) {
-                                Some(v) => format!("{}", v.0),
-                                None => "unknown_source".to_string(),
-                            };
-                            buf.push_str(
-                                &format!(
-                                    "\t{}::{}({}:{})\n",
-                                    module_id.name(),
-                                    fn_name,
-                                    file_name,
-                                    Self::get_line_number(&loc, &files, &file_mapping)
-                                )
-                                .to_string(),
-                            );
-                        } else {
-                            return "\tmalformed stack trace (no source map)".to_string();
-                        }
-                    } else {
-                        return "\tmalformed stack trace (no module)".to_string();
-                    }
-                } else {
-                    return "\tmalformed stack trace (no module ID)".to_string();
-                }
+                let module_id = match &frame.0 {
+                    Some(v) => v,
+                    None => return "\tmalformed stack trace (no module ID)".to_string(),
+                };
+                let named_module = match test_plan.module_info.get(module_id) {
+                    Some(v) => v,
+                    None => return "\tmalformed stack trace (no module)".to_string(),
+                };
+                let function_source_map =
+                    match named_module.source_map.get_function_source_map(frame.1) {
+                        Ok(v) => v,
+                        Err(_) => return "\tmalformed stack trace (no source map)".to_string(),
+                    };
+                // unwrap here is a mirror of the same unwrap in report_error_with_location
+                let loc = function_source_map.get_code_location(frame.2).unwrap();
+                let fn_handle_idx = named_module.module.function_def_at(frame.1).function;
+                let fn_id_idx = named_module.module.function_handle_at(fn_handle_idx).name;
+                let fn_name = named_module.module.identifier_at(fn_id_idx).as_str();
+                let file_name = match test_plan.files.get(&loc.file_hash()) {
+                    Some(v) => format!("{}", v.0),
+                    None => "unknown_source".to_string(),
+                };
+                buf.push_str(
+                    &format!(
+                        "\t{}::{}({}:{})\n",
+                        module_id.name(),
+                        fn_name,
+                        file_name,
+                        Self::get_line_number(&loc, &files, &file_mapping)
+                    )
+                    .to_string(),
+                );
             }
         }
         buf

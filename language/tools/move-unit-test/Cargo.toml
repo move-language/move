@@ -12,6 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.52"
 clap = { version = "3.1.8", features = ["derive"] }
+codespan-reporting = "0.11.1"
 colored = "2.0.0"
 rayon = "1.5.0"
 regex = "1.1.9"
@@ -23,6 +24,8 @@ move-stdlib = { path = "../../move-stdlib", features = ["testing"] }
 move-table-extension = { path = "../../extensions/move-table-extension" }
 move-core-types = { path = "../../move-core/types" }
 move-compiler = { path = "../../move-compiler" }
+move-ir-types = { path = "../../move-ir/types" }
+move-symbol-pool = { path = "../../move-symbol-pool" }
 move-vm-types = { path = "../../move-vm/types" }
 move-vm-runtime = { path = "../../move-vm/runtime", features = ["testing"] }
 move-vm-test-utils = { path = "../../move-vm/test-utils" }

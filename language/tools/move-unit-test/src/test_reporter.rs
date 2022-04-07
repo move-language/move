@@ -2,18 +2,22 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::format_module_id;
+use codespan_reporting::files::{Files, SimpleFiles};
 use colored::{control, Colorize};
 use move_binary_format::{
     access::ModuleAccess,
     errors::{ExecutionState, Location, VMError, VMResult},
 };
+use move_command_line_common::files::FileHash;
 use move_compiler::{
     diagnostics::{self, Diagnostic},
     unit_test::{ModuleTestPlan, TestPlan},
 };
 use move_core_types::{effects::ChangeSet, language_storage::ModuleId};
+use move_ir_types::location::Loc;
+use move_symbol_pool::Symbol;
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
     io::{Result, Write},
     sync::Mutex,
     time::Duration,
@@ -222,11 +226,46 @@ impl TestFailure {
         }
     }
 
+    fn get_line_number(
+        loc: &Loc,
+        files: &SimpleFiles<Symbol, &str>,
+        file_mapping: &HashMap<FileHash, usize>,
+    ) -> String {
+        Self::get_line_number_internal(loc, files, file_mapping)
+            .unwrap_or_else(|_| "no_source_line".to_string())
+    }
+
+    fn get_line_number_internal(
+        loc: &Loc,
+        files: &SimpleFiles<Symbol, &str>,
+        file_mapping: &HashMap<FileHash, usize>,
+    ) -> std::result::Result<String, codespan_reporting::files::Error> {
+        let id = file_mapping
+            .get(&loc.file_hash())
+            .ok_or(codespan_reporting::files::Error::FileMissing)?;
+        let start_line_index = files.line_index(*id, loc.start() as usize)?;
+        let start_line_number = files.line_index(*id, start_line_index)?;
+        let end_line_index = files.line_index(*id, loc.end() as usize)?;
+        let end_line_number = files.line_index(*id, end_line_index)?;
+        if start_line_number == end_line_number {
+            Ok(start_line_number.to_string())
+        } else {
+            Ok(format!("{}-{}", start_line_number, end_line_number))
+        }
+    }
+
     fn report_exec_state(test_plan: &TestPlan, exec_state: &ExecutionState) -> String {
         let stack_trace = exec_state.stack_trace();
         let mut buf = String::new();
         if !stack_trace.is_empty() {
             buf.push_str("stack trace\n");
+            let mut files = SimpleFiles::new();
+            let mut file_mapping = HashMap::new();
+            for (fhash, (fname, source)) in &test_plan.files {
+                let id = files.add(*fname, source.as_str());
+                file_mapping.insert(*fhash, id);
+            }
+
             for frame in stack_trace {
                 if let Some(module_id) = &frame.0 {
                     if let Some(named_module) = test_plan.module_info.get(module_id) {
@@ -242,7 +281,7 @@ impl TestFailure {
                             let fn_name = named_module.module.identifier_at(fn_id_idx).as_str();
                             let file_name = match test_plan.files.get(&loc.file_hash()) {
                                 Some(v) => format!("{}", v.0),
-                                None => "unknown source".to_string(),
+                                None => "unknown_source".to_string(),
                             };
                             buf.push_str(
                                 &format!(
@@ -250,21 +289,18 @@ impl TestFailure {
                                     module_id.name(),
                                     fn_name,
                                     file_name,
-                                    loc.start()
+                                    Self::get_line_number(&loc, &files, &file_mapping)
                                 )
                                 .to_string(),
                             );
                         } else {
-                            buf.push_str("\tmalformed stack trace (no source map)");
-                            return buf;
+                            return "\tmalformed stack trace (no source map)".to_string();
                         }
                     } else {
-                        buf.push_str("\tmalformed stack trace (no module)");
-                        return buf;
+                        return "\tmalformed stack trace (no module)".to_string();
                     }
                 } else {
-                    buf.push_str("\tmalformed stack trace (no module ID)");
-                    return buf;
+                    return "\tmalformed stack trace (no module ID)".to_string();
                 }
             }
         }
@@ -317,11 +353,14 @@ impl TestFailure {
         };
         match vm_error.exec_state() {
             None => diags,
-            Some(exec_state) => format!(
-                "{}\n{}",
-                diags,
-                Self::report_exec_state(test_plan, exec_state)
-            ),
+            Some(exec_state) => {
+                let exec_state_str = Self::report_exec_state(test_plan, exec_state);
+                if exec_state_str.is_empty() {
+                    diags
+                } else {
+                    format!("{}\n{}", diags, exec_state_str)
+                }
+            }
         }
     }
 }

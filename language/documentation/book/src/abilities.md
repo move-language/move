@@ -143,7 +143,7 @@ struct Cup<T> has copy, drop, store { item: T }
 fun example(c_x: Cup<u64>, c_s: Cup<S>) {
     // Valid, 'Cup<u64>' has 'copy' because 'u64' has 'copy'
     let c_x2 = copy c_x;
-    // Valid, 'Cup<S>' has 'drop' because 'S' has 'copy'
+    // Valid, 'Cup<S>' has 'copy' because 'S' has 'copy'
     let c_s2 = copy c_s;
 }
 

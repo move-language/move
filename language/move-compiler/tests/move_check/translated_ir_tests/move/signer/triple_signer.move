@@ -1,3 +1,4 @@
+// script functions no longer have any built in checks outside of visibility rules
 
 script {
     fun t0(_s: signer, _s2: signer, _s3: signer) {

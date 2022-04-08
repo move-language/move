@@ -10,9 +10,7 @@ use crate::{
     diagnostics::{codes::*, Diagnostic},
     expansion::ast::{Fields, ModuleIdent, Value_},
     naming::ast::{self as N, TParam, TParamID, Type, TypeName_, Type_},
-    parser::ast::{
-        Ability_, BinOp_, ConstantName, Field, FunctionName, StructName, UnaryOp_, Var, Visibility,
-    },
+    parser::ast::{Ability_, BinOp_, ConstantName, Field, FunctionName, StructName, UnaryOp_, Var},
     shared::{unique_map::UniqueMap, *},
     typing::ast as T,
     FullyCompiledProgram,
@@ -117,61 +115,6 @@ fn script(context: &mut Context, nscript: N::Script) -> T::Script {
     }
 }
 
-#[derive(Clone, Copy)]
-// enum representing the case for functions that are invocable by the VM script API
-enum Invocable {
-    // a normal script block
-    Script,
-    // a public(script) function in a module
-    PublicScript,
-}
-
-fn check_primitive_script_arg(
-    context: &mut Context,
-    case: Invocable,
-    mloc: Loc,
-    seen_non_signer: &mut bool,
-    ty: &Type,
-) {
-    let current_function = context.current_function.unwrap();
-    let mk_msg = move || {
-        format!(
-            "Invalid parameter for script function '{}'",
-            current_function
-        )
-    };
-    let code = match case {
-        Invocable::Script => TypeSafety::ScriptSignature,
-        Invocable::PublicScript => TypeSafety::NonInvocablePublicScript,
-    };
-
-    let loc = ty.loc;
-    let signer = Type_::signer(loc);
-    let is_signer = {
-        let old_subst = context.subst.clone();
-        let result = subtype_no_report(context, ty.clone(), signer.clone());
-        context.subst = old_subst;
-        result.is_ok()
-    };
-    if is_signer {
-        if *seen_non_signer {
-            let msg = mk_msg();
-            let tmsg = format!(
-                "{}s must be a prefix of the arguments to a script--they must come before any \
-                 non-signer types",
-                core::error_format(&signer, &Subst::empty()),
-            );
-            context.env.add_diag(diag!(code, (mloc, msg), (loc, tmsg)));
-        }
-
-        return;
-    } else {
-        *seen_non_signer = true;
-    }
-
-    check_valid_constant::signature(context, mloc, mk_msg, code, ty);
-}
-
 //**************************************************************************************************
 // Functions
 //**************************************************************************************************
@@ -193,58 +136,23 @@ fn function(
     assert!(context.constraints.is_empty());
     context.reset_for_module_item();
     context.current_function = Some(name);
-    let invocable_opt = match (is_script, &visibility) {
-        (true, _) => Some(Invocable::Script),
-        (_, Visibility::Script(_)) => Some(Invocable::PublicScript),
-        _ => None,
-    };
-
     function_signature(context, &signature);
-    if let Some(case) = invocable_opt {
-        let mut seen_non_signer = false;
-        for (_, param_ty) in signature.parameters.iter() {
-            check_primitive_script_arg(context, case, loc, &mut seen_non_signer, param_ty);
-        }
-        match case {
-            Invocable::Script => {
-                subtype(
-                    context,
-                    loc,
-                    || {
-                        let tu = core::error_format_(&Type_::Unit, &Subst::empty());
-                        format!(
-                            "Invalid 'script' function return type. The function entry point to a \
-                             'script' must have the return type {}",
-                            tu
-                        )
-                    },
-                    signature.return_type.clone(),
-                    sp(loc, Type_::Unit),
-                );
-            }
-            Invocable::PublicScript => {
-                let res =
-                    subtype_no_report(context, signature.return_type.clone(), sp(loc, Type_::Unit));
-                if let Err(err) = res {
-                    let mut diag = typing_error(
-                        context,
-                        true,
-                        loc,
-                        || {
-                            let tu = core::error_format_(&Type_::Unit, &Subst::empty());
-                            format!(
-                                "'public(script)' functions must have a return type of {} in \
-                                 order to be invocable as a script entry point",
-                                tu,
-                            )
-                        },
-                        err,
-                    );
-                    diag = diag.set_code(TypeSafety::NonInvocablePublicScript);
-                    context.env.add_diag(diag)
-                }
-            }
-        }
+    if is_script {
+        let mk_msg = || {
+            let tu = core::error_format_(&Type_::Unit, &Subst::empty());
+            format!(
+                "Invalid 'script' function return type. The function entry point to a \
+                 'script' must have the return type {}",
+                tu
+            )
+        };
+        subtype(
+            context,
+            loc,
+            mk_msg,
+            signature.return_type.clone(),
+            sp(loc, Type_::Unit),
+        );
     }
     expand::function_signature(context, &mut signature);
 

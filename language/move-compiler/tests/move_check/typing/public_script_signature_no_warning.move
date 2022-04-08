@@ -2,7 +2,7 @@ module 0x42::M {
 
     struct CoolStruct has drop {}
 
-    // script functions with non-invocable signatures
+    // script functions no longer have any built in checks outside of visibility rules
 
     public(script) fun signer_ref(_: &signer) {}
 

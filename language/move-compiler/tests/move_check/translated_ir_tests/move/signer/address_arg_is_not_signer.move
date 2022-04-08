@@ -1,3 +1,5 @@
+// script functions no longer have any built in checks outside of visibility rules
+
 address 0x2 {
 module M {
     struct R has key { s: signer }

@@ -12,7 +12,7 @@ module M {
 
 script {
 use 0x42::M::{S, R, Cup};
-
+// script functions no longer have any built in checks outside of visibility rules
 fun main<T: drop>(
     _s: &signer,
     _a0: T,

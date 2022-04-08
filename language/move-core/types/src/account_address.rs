@@ -68,7 +68,7 @@ impl AccountAddress {
 
         let hex_len = literal.len() - 2;
 
-        // If the string is too short, pad it
+        // If the string is too short, pad it because it needs to be exactly the right number of bytes
         if hex_len < Self::LENGTH * 2 {
             let mut hex_str = String::with_capacity(Self::LENGTH * 2);
             for _ in 0..Self::LENGTH * 2 - hex_len {
@@ -92,7 +92,7 @@ impl AccountAddress {
     }
 
     pub fn to_hex(&self) -> String {
-        format!("{:x}", self)
+        self.short_str_lossless()
     }
 
     pub fn from_bytes<T: AsRef<[u8]>>(bytes: T) -> Result<Self, AccountAddressParseError> {
@@ -206,7 +206,7 @@ impl From<&AccountAddress> for [u8; AccountAddress::LENGTH] {
 
 impl From<&AccountAddress> for String {
     fn from(addr: &AccountAddress) -> String {
-        ::hex::encode(addr.as_ref())
+        addr.to_hex_literal()
     }
 }
 
@@ -214,7 +214,7 @@ impl TryFrom<String> for AccountAddress {
     type Error = AccountAddressParseError;
 
     fn try_from(s: String) -> Result<AccountAddress, AccountAddressParseError> {
-        Self::from_hex(s)
+        AccountAddress::from_str(&s)
     }
 }
 
@@ -222,7 +222,7 @@ impl FromStr for AccountAddress {
     type Err = AccountAddressParseError;
 
     fn from_str(s: &str) -> Result<Self, AccountAddressParseError> {
-        Self::from_hex(s)
+        Self::from_hex_literal(s)
     }
 }
 
@@ -233,7 +233,7 @@ impl<'de> Deserialize<'de> for AccountAddress {
     {
         if deserializer.is_human_readable() {
             let s = <String>::deserialize(deserializer)?;
-            AccountAddress::from_hex(s).map_err(D::Error::custom)
+            AccountAddress::from_hex_literal(&s).map_err(D::Error::custom)
         } else {
             // In order to preserve the Serde data model and help analysis tools,
             // make sure to wrap our value in a container with the same name
@@ -254,7 +254,7 @@ impl Serialize for AccountAddress {
         S: Serializer,
     {
         if serializer.is_human_readable() {
-            self.to_hex().serialize(serializer)
+            self.to_hex_literal().serialize(serializer)
         } else {
             // See comment in deserialize.
             serializer.serialize_newtype_struct("AccountAddress", &self.0)
@@ -346,8 +346,16 @@ mod tests {
         assert_eq!(address_from_literal, address);
         assert_eq!(hex_literal, address.to_hex_literal());
 
-        // Missing '0x'
+        // Check other variations of 0x1
+        assert_eq!(AccountAddress::from_str("0x01").unwrap(), address);
+        assert_eq!(
+            AccountAddress::from_str("0x00000000000000000000000000000001").unwrap(),
+            address
+        );
+
+        // Missing '0x' should fail
         AccountAddress::from_hex_literal(hex).unwrap_err();
+
         // Too long
         AccountAddress::from_hex_literal("0x100000000000000000000000000000001").unwrap_err();
     }
@@ -376,14 +384,12 @@ mod tests {
     #[test]
     fn test_serde_json() {
         let hex = "ca843279e3427144cead5e4d5999a3d0";
-        let json_hex = "\"ca843279e3427144cead5e4d5999a3d0\"";
+        let json_hex = "\"0xca843279e3427144cead5e4d5999a3d0\"";
 
         let address = AccountAddress::from_hex(hex).unwrap();
 
-        let json = serde_json::to_string(&address).unwrap();
         let json_address: AccountAddress = serde_json::from_str(json_hex).unwrap();
 
-        assert_eq!(json, json_hex);
         assert_eq!(address, json_address);
     }
 

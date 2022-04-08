@@ -1421,6 +1421,7 @@ impl<'env> FunctionTranslator<'env> {
                         );
                     }
                     BitOr | BitAnd | Xor => {
+                        env.error(&loc, "Unsupported operator");
                         emitln!(
                             writer,
                             "// bit operation not supported: {:?}\nassert false;",

@@ -93,15 +93,21 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
       - uses: ./.github/actions/build-setup
       - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
-      - name: setup hardhat
+      - name: compile and install move-cli
+        working-directory: language/tools/move-cli
+        run: "cargo install --path ."
+      - name: set up hardhat-move
+        working-directory: language/evm/hardhat-move
+        run: "npm install"
+      - name: compile hardhat-move
+        working-directory: language/evm/hardhat-move
+        run: "npm run build"
+      - name: set up hardhat
         working-directory: language/evm/hardhat-examples
         run: "./setup.sh"
-      - name: compile and install move-to-yul
-        working-directory: language/evm/move-to-yul
-        run: "cargo install --path ."
-      - name: run hardhat tests (Move contracts)
+      - name: run hardhat tests
         working-directory: language/evm/hardhat-examples
-        run: "./compile_all_and_run_tests.sh"
+        run: "npx hardhat test"
       # TODO: reenable this once we figure a way to keep package-lock.json stable.
       # - uses: ./.github/actions/build-teardown
 

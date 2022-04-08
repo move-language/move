@@ -27,7 +27,7 @@ jobs:
       test-dev-setup: ${{ steps.dev-setup-sh-changes.outputs.changes-found }}
       test-non-rust-lint: ${{ steps.non-rust-lint-changes.outputs.changes-found }}
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3.0.0
         with:
           # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
           # On `push` this value will be empty and will "do-the-right-thing"
@@ -76,7 +76,7 @@ jobs:
       matrix:
         target_os: [github]
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3.0.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: build image with dev-setup.sh
@@ -97,7 +97,7 @@ jobs:
       volumes:
         - "${{github.workspace}}:/opt/git/diem"
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3.0.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - uses: ./.github/actions/build-setup
@@ -127,7 +127,7 @@ jobs:
       volumes:
         - "${{github.workspace}}:/opt/git/diem"
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3.0.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 #get all the history!!!
@@ -172,7 +172,7 @@ jobs:
       volumes:
         - "${{github.workspace}}:/opt/git/diem"
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3.0.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - uses: ./.github/actions/build-setup
@@ -205,7 +205,7 @@ jobs:
       volumes:
         - "${{github.workspace}}:/opt/git/diem"
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3.0.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - uses: ./.github/actions/build-setup
@@ -233,7 +233,7 @@ jobs:
     env:
       CRITERION_HOME: /tmp/benches
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3.0.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/cache@v2.1.6
@@ -269,7 +269,7 @@ jobs:
     needs:
       - prepare
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3.0.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Use Node.js 14
@@ -311,7 +311,7 @@ jobs:
     needs:
       - prepare
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3.0.0
       - name: Set up Ruby 2.6
         uses: actions/setup-ruby@v1
         with:

@@ -23,7 +23,7 @@ jobs:
     env:
       AUDIT_SUMMARY_FILE: /tmp/summary
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3.0.0
         with:
           ref: ${{ matrix.target-branch }}
       - uses: ./.github/actions/build-setup
@@ -68,7 +68,7 @@ jobs:
       matrix:
         target-branch: [main]
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3.0.0
         with:
           ref: ${{ matrix.target-branch }}
       - uses: ./.github/actions/build-setup

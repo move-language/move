@@ -25,7 +25,7 @@ jobs:
       rust-changes: ${{ steps.rust-changes.outputs.changes-found }}
       base-image-changes: ${{ steps.base-image-changes.outputs.changes-found }}
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3.0.0
         with:
           # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
           # On `push` this value will be empty and will "do-the-right-thing"
@@ -60,7 +60,7 @@ jobs:
       IMAGE_NAME: ${{ github.repository }}_build_environment
       IMAGE_TAG: ${{ needs.prepare.outputs.changes-target-branch }}
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3.0.0
         with:
           # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
           # On `push` this value will be empty and will "do-the-right-thing"
@@ -88,7 +88,7 @@ jobs:
   #       - "${{github.workspace}}:/opt/git/diem"
   #   steps:
   #     - name: Checkout repository
-  #       uses: actions/checkout@v2.4.0
+  #       uses: actions/checkout@v3.0.0
   #     - uses: ./.github/actions/build-setup
   #     - uses: actions/cache@v2.1.6
   #       with:

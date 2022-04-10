@@ -14,9 +14,7 @@ use move_core_types::{
     value::{serialize_values, MoveValue},
     vm_status::StatusCode,
 };
-use move_vm_runtime::{
-    move_vm::MoveVM, native_functions::NativeContextExtensions, session::SerializedReturnValues,
-};
+use move_vm_runtime::{move_vm::MoveVM, session::SerializedReturnValues};
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas_schedule::GasStatus;
 
@@ -56,7 +54,7 @@ fn fail_arg_deserialize() {
 fn mutref_output_success() {
     let mod_code = setup_module();
     let (_gas_used, result) = run(&mod_code, USE_MUTREF_LABEL, MoveValue::U64(1));
-    let (_, _, _, ret_values) = result.unwrap();
+    let (_, _, ret_values) = result.unwrap();
     assert_eq!(1, ret_values.mutable_reference_outputs.len());
     let parsed = parse_u64_arg(&ret_values.mutable_reference_outputs.first().unwrap().1);
     assert_eq!(EXPECT_MUTREF_OUT_VALUE, parsed);
@@ -87,12 +85,7 @@ fn run(
     arg_val0: MoveValue,
 ) -> (
     /* gas used */ u64,
-    VMResult<(
-        ChangeSet,
-        Vec<Event>,
-        NativeContextExtensions,
-        SerializedReturnValues,
-    )>,
+    VMResult<(ChangeSet, Vec<Event>, SerializedReturnValues)>,
 ) {
     let module_id = &module.0;
     let modules = vec![module.clone()];
@@ -111,8 +104,8 @@ fn run(
             &mut gas_status,
         )
         .and_then(|ret_values| {
-            let (change_set, events, extensions) = session.finish_with_extensions()?;
-            Ok((change_set, events, extensions, ret_values))
+            let (change_set, events) = session.finish()?;
+            Ok((change_set, events, ret_values))
         });
     let gas_used = gas_start - gas_status.remaining_gas().get();
     (gas_used, res)

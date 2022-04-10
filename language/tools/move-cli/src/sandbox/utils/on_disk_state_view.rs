@@ -99,7 +99,7 @@ impl OnDiskStateView {
 
     fn get_addr_path(&self, addr: &AccountAddress) -> PathBuf {
         let mut path = self.storage_dir.clone();
-        path.push(format!("0x{}", addr.to_string()));
+        path.push(format!("0x{}", addr));
         path
     }
 

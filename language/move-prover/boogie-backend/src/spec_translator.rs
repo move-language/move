@@ -155,7 +155,8 @@ impl<'env> SpecTranslator<'env> {
                 .spec_vars
                 .get(&module_env.get_id().qualified(*id))
                 .unwrap_or(empty)
-                .to_owned()
+                .iter()
+                .cloned()
             {
                 let name = boogie_spec_var_name(
                     module_env,
@@ -206,7 +207,8 @@ impl<'env> SpecTranslator<'env> {
                 .spec_funs
                 .get(&module_env.get_id().qualified(*id))
                 .unwrap_or(empty)
-                .to_owned()
+                .iter()
+                .cloned()
             {
                 let name = boogie_spec_fun_name(module_env, *id, &type_inst);
                 if !translated.insert(name) {

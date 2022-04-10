@@ -162,10 +162,7 @@ fn write_module_id(
     match named_address_mapping.get(id) {
         None => format!(
             "{}::{}",
-            format!(
-                "{}",
-                NumericalAddress::new(id.address().into_bytes(), NumberFormat::Hex)
-            ),
+            NumericalAddress::new(id.address().into_bytes(), NumberFormat::Hex),
             id.name()
         ),
         Some(n) => format!("{}::{}", n.as_ref(), id.name()),

@@ -552,14 +552,14 @@ fn find_token(
 fn get_name_len(text: &str) -> usize {
     text.chars()
         .position(|c| !matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '0'..='9'))
-        .unwrap_or_else(|| text.len())
+        .unwrap_or(text.len())
 }
 
 fn get_decimal_number(text: &str) -> (Tok, usize) {
     let num_text_len = text
         .chars()
         .position(|c| !matches!(c, '0'..='9'))
-        .unwrap_or_else(|| text.len());
+        .unwrap_or(text.len());
     get_number_maybe_with_suffix(text, num_text_len)
 }
 
@@ -567,7 +567,7 @@ fn get_decimal_number(text: &str) -> (Tok, usize) {
 fn get_hex_number(text: &str) -> (Tok, usize) {
     let num_text_len = text
         .find(|c| !matches!(c, 'a'..='f' | 'A'..='F' | '0'..='9'))
-        .unwrap_or_else(|| text.len());
+        .unwrap_or(text.len());
     get_number_maybe_with_suffix(text, num_text_len)
 }
 

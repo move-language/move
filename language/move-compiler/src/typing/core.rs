@@ -85,18 +85,16 @@ impl<'env> Context<'env> {
         pre_compiled_lib: Option<&FullyCompiledProgram>,
         prog: &N::Program,
     ) -> Self {
-        let all_modules = prog.modules.key_cloned_iter().chain(
-            pre_compiled_lib
-                .iter()
-                .map(|pre_compiled| {
-                    pre_compiled
-                        .naming
-                        .modules
-                        .key_cloned_iter()
-                        .filter(|(mident, _m)| !prog.modules.contains_key(mident))
-                })
-                .flatten(),
-        );
+        let all_modules = prog
+            .modules
+            .key_cloned_iter()
+            .chain(pre_compiled_lib.iter().flat_map(|pre_compiled| {
+                pre_compiled
+                    .naming
+                    .modules
+                    .key_cloned_iter()
+                    .filter(|(mident, _m)| !prog.modules.contains_key(mident))
+            }));
         let modules = UniqueMap::maybe_from_iter(all_modules.map(|(mident, mdef)| {
             let structs = mdef.structs.clone();
             let functions = mdef.functions.ref_map(|fname, fdef| FunctionInfo {

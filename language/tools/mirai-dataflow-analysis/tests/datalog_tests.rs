@@ -115,7 +115,7 @@ fn execute_test(file_name: &str) -> usize {
 #[ignore]
 fn run_tests() {
     let test_path = PathBuf::from_str("./tests/ddlog_tests/").unwrap();
-    println!("{:?}", std::fs::canonicalize(test_path.to_owned()));
+    println!("{:?}", std::fs::canonicalize(&test_path));
     let files = gather_tests(test_path);
     let result = files.iter().fold(0, |acc, file| acc + execute_test(file));
     assert_eq!(result, 0);

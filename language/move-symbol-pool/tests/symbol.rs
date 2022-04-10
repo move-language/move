@@ -5,7 +5,7 @@ use move_symbol_pool::Symbol;
 
 #[test]
 fn test_from() {
-    Symbol::from("this shouldn't panic");
+    let _ = Symbol::from("this shouldn't panic");
 }
 
 #[test]

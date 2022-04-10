@@ -38,6 +38,7 @@ pub(crate) struct ExpTranslator<'env, 'translator, 'module_translator> {
     pub local_table: LinkedList<BTreeMap<Symbol, LocalVarEntry>>,
     /// When compiling a condition, the result type of the function the condition is associated
     /// with.
+    #[allow(unused)]
     pub result_type: Option<Type>,
     /// Status for the `old(...)` expression form.
     pub old_status: OldExpStatus,

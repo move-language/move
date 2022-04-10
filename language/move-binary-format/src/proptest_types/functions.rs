@@ -886,7 +886,7 @@ impl BytecodeGen {
             Vector(element_token) => BytecodeGen::check_signature_token(element_token),
             StructInstantiation(_, type_arguments) => type_arguments
                 .iter()
-                .all(|ty| BytecodeGen::check_signature_token(ty)),
+                .all(BytecodeGen::check_signature_token),
             Reference(_) | MutableReference(_) => false,
         }
     }

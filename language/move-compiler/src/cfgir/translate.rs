@@ -48,18 +48,15 @@ impl<'env> Context<'env> {
         pre_compiled_lib: Option<&FullyCompiledProgram>,
         modules: &UniqueMap<ModuleIdent, H::ModuleDefinition>,
     ) -> Self {
-        let all_modules = modules.key_cloned_iter().chain(
-            pre_compiled_lib
-                .iter()
-                .map(|pre_compiled| {
-                    pre_compiled
-                        .hlir
-                        .modules
-                        .key_cloned_iter()
-                        .filter(|(mident, _m)| !modules.contains_key(mident))
-                })
-                .flatten(),
-        );
+        let all_modules = modules
+            .key_cloned_iter()
+            .chain(pre_compiled_lib.iter().flat_map(|pre_compiled| {
+                pre_compiled
+                    .hlir
+                    .modules
+                    .key_cloned_iter()
+                    .filter(|(mident, _m)| !modules.contains_key(mident))
+            }));
         let struct_declared_abilities = UniqueMap::maybe_from_iter(
             all_modules
                 .map(|(m, mdef)| (m, mdef.structs.ref_map(|_s, sdef| sdef.abilities.clone()))),

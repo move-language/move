@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    data_cache::TransactionDataCache, native_functions::NativeContextExtensions, runtime::VMRuntime,
+    data_cache::TransactionDataCache, native_extensions::NativeContextExtensions,
+    runtime::VMRuntime,
 };
 use move_binary_format::{errors::*, file_format::LocalIndex};
 use move_core_types::{
@@ -23,7 +24,7 @@ use std::{borrow::Borrow, sync::Arc};
 pub struct Session<'r, 'l, S> {
     pub(crate) runtime: &'l VMRuntime,
     pub(crate) data_cache: TransactionDataCache<'r, 'l, S>,
-    pub(crate) native_extensions: NativeContextExtensions,
+    pub(crate) native_extensions: NativeContextExtensions<'r>,
 }
 
 /// Serialized return values from function/script execution
@@ -201,7 +202,7 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     /// Same like `finish`, but also extracts the native context extensions from the session.
     pub fn finish_with_extensions(
         self,
-    ) -> VMResult<(ChangeSet, Vec<Event>, NativeContextExtensions)> {
+    ) -> VMResult<(ChangeSet, Vec<Event>, NativeContextExtensions<'r>)> {
         let Session {
             data_cache,
             native_extensions,

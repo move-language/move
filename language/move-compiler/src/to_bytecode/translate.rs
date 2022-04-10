@@ -48,16 +48,13 @@ fn extract_decls(
     >,
 ) {
     let pre_compiled_modules = || {
-        pre_compiled_lib
-            .iter()
-            .map(|pre_compiled| {
-                pre_compiled
-                    .cfgir
-                    .modules
-                    .key_cloned_iter()
-                    .filter(|(mident, _m)| !prog.modules.contains_key(mident))
-            })
-            .flatten()
+        pre_compiled_lib.iter().flat_map(|pre_compiled| {
+            pre_compiled
+                .cfgir
+                .modules
+                .key_cloned_iter()
+                .filter(|(mident, _m)| !prog.modules.contains_key(mident))
+        })
     };
 
     let mut max_ordering = 0;

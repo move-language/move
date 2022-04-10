@@ -38,7 +38,7 @@ use move_vm_types::gas_schedule::{zero_cost_schedule, GasStatus};
 use rayon::prelude::*;
 use std::{collections::BTreeMap, io::Write, marker::Send, sync::Mutex, time::Instant};
 
-use move_vm_runtime::native_functions::NativeContextExtensions;
+use move_vm_runtime::native_extensions::NativeContextExtensions;
 #[cfg(feature = "evm-backend")]
 use {
     evm::{backend::MemoryVicinity, ExitReason},

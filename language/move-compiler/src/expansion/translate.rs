@@ -523,8 +523,7 @@ fn flatten_attributes(
 ) -> E::Attributes {
     let all_attrs = attributes
         .into_iter()
-        .map(|attrs| attrs.value)
-        .flatten()
+        .flat_map(|attrs| attrs.value)
         .flat_map(|attr| attribute(context, attr_position, attr))
         .collect::<Vec<_>>();
     unique_attributes(context, attr_position, false, all_attrs)
@@ -688,7 +687,7 @@ fn module_members(
     if !always_add && members.contains_key(&mident) {
         return;
     }
-    let mut cur_members = members.remove(&mident).unwrap_or_else(ModuleMembers::new);
+    let mut cur_members = members.remove(&mident).unwrap_or_default();
     for mem in &m.members {
         use P::{SpecBlockMember_ as SBM, SpecBlockTarget_ as SBT, SpecBlock_ as SB};
         match mem {

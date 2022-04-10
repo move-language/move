@@ -137,9 +137,8 @@ pub fn on_completion_request(context: &Context, request: &Request) {
     }
 
     // The completion items we provide depend upon where the user's cursor is positioned.
-    let cursor = buffer
-        .map(|buf| get_cursor_token(buf, &parameters.text_document_position.position))
-        .flatten();
+    let cursor =
+        buffer.and_then(|buf| get_cursor_token(buf, &parameters.text_document_position.position));
 
     let mut items = vec![];
     match cursor {

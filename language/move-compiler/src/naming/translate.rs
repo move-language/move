@@ -57,18 +57,15 @@ impl<'env> Context<'env> {
     ) -> Self {
         use ResolvedType as RT;
         let all_modules = || {
-            prog.modules.key_cloned_iter().chain(
-                pre_compiled_lib
-                    .iter()
-                    .map(|pre_compiled| {
-                        pre_compiled
-                            .expansion
-                            .modules
-                            .key_cloned_iter()
-                            .filter(|(mident, _m)| !prog.modules.contains_key(mident))
-                    })
-                    .flatten(),
-            )
+            prog.modules
+                .key_cloned_iter()
+                .chain(pre_compiled_lib.iter().flat_map(|pre_compiled| {
+                    pre_compiled
+                        .expansion
+                        .modules
+                        .key_cloned_iter()
+                        .filter(|(mident, _m)| !prog.modules.contains_key(mident))
+                }))
         };
         let scoped_types = all_modules()
             .map(|(mident, mdef)| {

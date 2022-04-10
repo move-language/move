@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::async_vm::Message;
+use better_any::{Tid, TidAble};
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::{account_address::AccountAddress, identifier::Identifier};
 use move_vm_runtime::{
@@ -26,6 +27,7 @@ const EPOCH_TIME_INDEX: NativeCostIndex = NativeCostIndex::LENGTH;
 
 /// Environment extension for the Move VM which we pass down to native functions,
 /// to implement message sending and retrieval of actor address.
+#[derive(Tid)]
 pub struct AsyncExtension {
     pub current_actor: AccountAddress,
     pub sent: Vec<Message>,

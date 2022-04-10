@@ -50,7 +50,7 @@ pub fn display_var(s: Symbol) -> DisplayVar {
         DisplayVar::Tmp
     } else {
         let mut orig = s.as_str().to_string();
-        orig.truncate(orig.find('#').unwrap_or_else(|| s.len()));
+        orig.truncate(orig.find('#').unwrap_or(s.len()));
         DisplayVar::Orig(orig)
     }
 }
@@ -1965,7 +1965,7 @@ fn remove_unused_bindings_command(unused: &BTreeSet<Var>, sp!(_, c_): &mut H::Co
     }
 }
 
-fn remove_unused_bindings_lvalues(unused: &BTreeSet<Var>, ls: &mut Vec<H::LValue>) {
+fn remove_unused_bindings_lvalues(unused: &BTreeSet<Var>, ls: &mut [H::LValue]) {
     ls.iter_mut()
         .for_each(|l| remove_unused_bindings_lvalue(unused, l))
 }

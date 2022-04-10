@@ -292,7 +292,7 @@ fn unreachable_loc_exp(parent_e: &Exp) -> Option<Loc> {
 
         E::Pack(_, _, fields) => fields.iter().find_map(|(_, _, e)| unreachable_loc_exp(e)),
 
-        E::ExpList(es) => es.iter().find_map(|item| unreachable_loc_item(item)),
+        E::ExpList(es) => es.iter().find_map(unreachable_loc_item),
     }
 }
 
@@ -517,7 +517,7 @@ pub struct ReverseBlockCFG<'a> {
 
 impl<'a> ReverseBlockCFG<'a> {
     pub fn new(forward_cfg: &'a mut BlockCFG, infinite_loop_starts: &BTreeSet<Label>) -> Self {
-        let blocks: &'a mut BasicBlocks = &mut forward_cfg.blocks;
+        let blocks: &'a mut BasicBlocks = forward_cfg.blocks;
         let forward_successors = &mut forward_cfg.successor_map;
         let forward_predecessor = &mut forward_cfg.predecessor_map;
         let end_blocks = {

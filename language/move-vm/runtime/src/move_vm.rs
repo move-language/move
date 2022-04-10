@@ -4,10 +4,8 @@
 use std::sync::Arc;
 
 use crate::{
-    data_cache::TransactionDataCache,
-    native_functions::{NativeContextExtensions, NativeFunction},
-    runtime::VMRuntime,
-    session::Session,
+    data_cache::TransactionDataCache, native_extensions::NativeContextExtensions,
+    native_functions::NativeFunction, runtime::VMRuntime, session::Session,
 };
 use move_binary_format::{
     errors::{Location, VMResult},
@@ -53,7 +51,7 @@ impl MoveVM {
     pub fn new_session_with_extensions<'r, S: MoveResolver>(
         &self,
         remote: &'r S,
-        extensions: NativeContextExtensions,
+        extensions: NativeContextExtensions<'r>,
     ) -> Session<'r, '_, S> {
         self.runtime.new_session_with_extensions(remote, extensions)
     }

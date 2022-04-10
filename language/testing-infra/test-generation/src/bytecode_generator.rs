@@ -410,7 +410,7 @@ impl<'a> BytecodeGenerator<'a> {
                                 callable_fns[handle_idx as usize],
                             )
                         })
-                        .map(|handle| instruction(handle))
+                        .map(instruction)
                 }
                 BytecodeType::StructInstantiationIndex(instruction) => {
                     // Select a field definition from the module's field definitions

@@ -228,11 +228,11 @@ where
             ));
         }
         v.push(parse_list_item(context)?);
-        adjust_token(&mut context.tokens, end_token);
-        if match_token(&mut context.tokens, end_token)? {
+        adjust_token(context.tokens, end_token);
+        if match_token(context.tokens, end_token)? {
             break Ok(v);
         }
-        if !match_token(&mut context.tokens, Tok::Comma)? {
+        if !match_token(context.tokens, Tok::Comma)? {
             let current_loc = context.tokens.start_loc();
             let loc = make_loc(context.tokens.file_hash(), current_loc, current_loc);
             let loc2 = make_loc(context.tokens.file_hash(), start_loc, start_loc);

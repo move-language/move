@@ -144,6 +144,7 @@ pub struct StructDefinitionGen {
     name_idx: PropIndex,
     abilities: AbilitySetGen,
     type_parameters: Vec<(AbilitySetGen, bool)>,
+    #[allow(dead_code)]
     is_public: bool,
     field_defs: Option<Vec<FieldDefinitionGen>>,
 }

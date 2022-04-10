@@ -3,7 +3,7 @@
 
 use crate::{
     loader::{Function, Loader, Resolver},
-    native_functions::{NativeContext, NativeContextExtensions},
+    native_functions::NativeContext,
     trace,
 };
 use fail::fail_point;
@@ -27,6 +27,7 @@ use move_vm_types::{
     },
 };
 
+use crate::native_extensions::NativeContextExtensions;
 use std::{cmp::min, collections::VecDeque, fmt::Write, mem, sync::Arc};
 use tracing::error;
 

@@ -2861,6 +2861,7 @@ pub struct FunctionData {
     arg_names: Vec<Symbol>,
 
     /// List of type argument names. Not in bytecode but obtained from AST.
+    #[allow(unused)]
     type_arg_names: Vec<Symbol>,
 
     /// Specification associated with this function.

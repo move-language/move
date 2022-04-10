@@ -5,7 +5,7 @@
 //! Such extensions are enabled by cfg features and must be compiled into the test
 //! to be usable.
 
-use move_vm_runtime::native_functions::NativeContextExtensions;
+use move_vm_runtime::native_extensions::NativeContextExtensions;
 use std::fmt::Write;
 
 #[cfg(feature = "table-extension")]
@@ -19,7 +19,7 @@ use once_cell::sync::Lazy;
 
 /// Create all available native context extensions.
 #[allow(unused_mut, clippy::let_and_return)]
-pub(crate) fn new_extensions() -> NativeContextExtensions {
+pub(crate) fn new_extensions<'a>() -> NativeContextExtensions<'a> {
     let mut e = NativeContextExtensions::default();
     #[cfg(feature = "table-extension")]
     create_table_extension(&mut e);

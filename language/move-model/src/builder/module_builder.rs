@@ -1386,7 +1386,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         if !et.parent.spec_block_lets.is_empty() {
             // Put them into a new scope, they can shadow outer names.
             et.enter_scope();
-            for (name, (post_state, node_id)) in et.parent.spec_block_lets.to_owned() {
+            for (name, (post_state, node_id)) in et.parent.spec_block_lets.clone() {
                 // If allow_old is true, we are looking at a condition in a post state like ensures.
                 // In this case all lets are available. If allow_old is false, only !post_state
                 // lets are available.

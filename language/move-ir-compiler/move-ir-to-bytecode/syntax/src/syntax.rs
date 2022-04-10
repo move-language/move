@@ -1853,9 +1853,9 @@ fn parse_function_decl(
     let func = Function_::new(
         visibility,
         args,
-        ret.unwrap_or_else(Vec::new),
+        ret.unwrap_or_default(),
         type_parameters,
-        acquires.unwrap_or_else(Vec::new),
+        acquires.unwrap_or_default(),
         specifications,
         if is_native {
             consume_token(tokens, Tok::Semicolon)?;

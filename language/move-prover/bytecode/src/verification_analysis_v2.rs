@@ -213,7 +213,7 @@ fn compute_non_inv_cause_chain(fun_env: &FunctionEnv<'_>) -> Vec<String> {
         .collect();
     let mut done = BTreeSet::new();
     let mut result = vec![];
-    while let Some(caller_list) = worklist.iter().cloned().next() {
+    while let Some(caller_list) = worklist.iter().next().cloned() {
         worklist.remove(&caller_list);
         let caller_id = *caller_list.iter().last().unwrap();
         done.insert(caller_id);

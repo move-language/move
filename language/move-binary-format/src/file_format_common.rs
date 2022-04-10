@@ -345,7 +345,7 @@ pub fn read_uleb128_as_u64(cursor: &mut Cursor<&[u8]>) -> Result<u64> {
         }
 
         shift += 7;
-        if shift > size_of::<u64>() * 8 {
+        if shift > u64::BITS {
             break;
         }
     }

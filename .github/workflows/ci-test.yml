@@ -273,7 +273,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Use Node.js 14
-        uses: actions/setup-node@v2.4.0
+        uses: actions/setup-node@v3.1.1
         with:
           node-version: '14'
       - name: Install NPM dependencies

@@ -1,3 +1,5 @@
+DO NOT SUBMIT
+
 This package contains examples for programming patterns in Async Move (code name AMV). We use a simple
 account, where accounts live on different actors. One can deposit, withdraw, and transfer
 between those accounts. The transfer is the interesting operation because it requires a roundtrip

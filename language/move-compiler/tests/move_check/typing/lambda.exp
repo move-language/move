@@ -10,8 +10,8 @@ error[E04017]: too many arguments
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/lambda.move:48:13
    │
-45 │     public macro wrong_local_call_arg_type<T>(v: &vector<T>, action: |&T|) {
-   │                                                                       -- Expected: '&T'
+45 │     public macro fun wrong_local_call_arg_type<T>(v: &vector<T>, action: |&T|) {
+   │                                                                           -- Expected: '&T'
    ·
 48 │             action(i); // expected to have wrong argument type
    │             ^^^^^^^^^ Invalid call of 'action'. Invalid argument type
@@ -22,8 +22,8 @@ error[E04007]: incompatible types
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/lambda.move:56:19
    │
-53 │     public macro wrong_local_call_result_type<T>(v: &vector<T>, action: |&T|) {
-   │                                                                         ---- Found: '()'. It is not compatible with the other type.
+53 │     public macro fun wrong_local_call_result_type<T>(v: &vector<T>, action: |&T|) {
+   │                                                                             ---- Found: '()'. It is not compatible with the other type.
    ·
 56 │             i = i + action(XVector::borrow(v, i)); // expected to have wrong result type
    │                   ^ Incompatible arguments to '+'
@@ -40,8 +40,8 @@ error[E04007]: incompatible types
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/lambda.move:67:9
    │
- 4 │     public macro foreach<T>(v: &vector<T>, action: |&T|) { // expected to be not implemented
-   │                                                     -- Given: '&{integer}'
+ 4 │     public macro fun foreach<T>(v: &vector<T>, action: |&T|) { // expected to be not implemented
+   │                                                         -- Given: '&{integer}'
    ·
 67 │         foreach!(&v, |e| sum = sum + e) // expected to cannot infer type
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -52,8 +52,8 @@ error[E04007]: incompatible types
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/lambda.move:73:9
    │
- 4 │     public macro foreach<T>(v: &vector<T>, action: |&T|) { // expected to be not implemented
-   │                                                    ---- Expected: '()'
+ 4 │     public macro fun foreach<T>(v: &vector<T>, action: |&T|) { // expected to be not implemented
+   │                                                        ---- Expected: '()'
    ·
 73 │         foreach!(&v, |e| { sum = sum + *e; *e }) // expected to have wrong result type of lambda
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -80,10 +80,10 @@ error[E04024]: invalid usage of function type
    │                                              ^^^^^ function type only allowed for macro arguments
 
 error[E04024]: invalid usage of function type
-   ┌─ tests/move_check/typing/lambda.move:86:53
+   ┌─ tests/move_check/typing/lambda.move:86:57
    │
-86 │     public macro macro_result_lambda_not_allowed(): |u64| {  // expected lambda not allowed
-   │                                                     ^^^^^ function type only allowed for macro arguments
+86 │     public macro fun macro_result_lambda_not_allowed(): |u64| {  // expected lambda not allowed
+   │                                                         ^^^^^ function type only allowed for macro arguments
 
 error[E04024]: invalid usage of function type
    ┌─ tests/move_check/typing/lambda.move:89:49

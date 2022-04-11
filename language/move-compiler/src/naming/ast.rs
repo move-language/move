@@ -166,7 +166,7 @@ pub type TypeName = Spanned<TypeName_>;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum Variance {
-    CoVariant,
+    Covariant,
     ContraVariant,
 }
 
@@ -402,7 +402,7 @@ impl BuiltinTypeName_ {
             // Function variance: given g: T1 -> R1 and f: T2 -> R2, then
             // f can substitute g if T2 >= T1 && R1 <= R2
             BuiltinTypeName_::Fun if pos < arity - 1 => Variance::ContraVariant,
-            _ => Variance::CoVariant,
+            _ => Variance::Covariant,
         }
     }
 }
@@ -411,7 +411,7 @@ impl TypeName_ {
     pub fn variance(&self, pos: usize, arity: usize) -> Variance {
         match self {
             TypeName_::Builtin(bn) => bn.value.variance(pos, arity),
-            _ => Variance::CoVariant,
+            _ => Variance::Covariant,
         }
     }
 }

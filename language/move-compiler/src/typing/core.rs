@@ -1252,7 +1252,7 @@ fn instantiate_type_args(
             TVarCase::Single("Invalid expression list type argument".to_owned())
         }
         Some(TypeName_::Builtin(sp!(_, BuiltinTypeName_::Fun))) => {
-            TVarCase::SingleButLast("Invalid expression list type argument".to_owned())
+            TVarCase::Function("Invalid expression list type argument".to_owned())
         }
         None | Some(TypeName_::Builtin(_)) | Some(TypeName_::ModuleType(_, _)) => TVarCase::Base,
     };
@@ -1314,7 +1314,7 @@ fn check_type_argument_arity<F: FnOnce() -> String>(
 
 enum TVarCase {
     Single(String),
-    SingleButLast(String),
+    Function(String),
     Base,
 }
 
@@ -1332,10 +1332,10 @@ fn make_tparams(
             let tvar = make_tvar(context, vloc);
             context.add_ability_set_constraint(loc, None::<String>, tvar.clone(), constraint);
             match &case {
-                TVarCase::SingleButLast(_) if i + 1 == arity => {
+                TVarCase::Function(_) if i + 1 == arity => {
                     // Last arg (return type of a function): do not add any constraint
                 }
-                TVarCase::SingleButLast(msg) | TVarCase::Single(msg) => {
+                TVarCase::Function(msg) | TVarCase::Single(msg) => {
                     context.add_single_type_constraint(loc, msg, tvar.clone())
                 }
                 TVarCase::Base => {

@@ -107,6 +107,7 @@ pub fn new_native_fun(
         signature,
         acquires: vec![],
         name,
+        is_macro: false,
         body: sp(loc, FunctionBody_::Native),
     }
 }
@@ -129,6 +130,7 @@ pub fn new_fun(
         signature,
         acquires: vec![],
         name,
+        is_macro: false,
         body: sp(
             loc,
             FunctionBody_::Defined((vec![], vec![], None, Box::new(Some(def)))),

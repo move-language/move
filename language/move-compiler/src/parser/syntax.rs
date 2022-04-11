@@ -1880,7 +1880,7 @@ fn parse_struct_type_parameters(
 
 // Parse a function declaration:
 //      FunctionDecl =
-//          ( "macro" | "fun" )
+//          [ "macro" ] "fun"
 //          <FunctionDefName> "(" Comma<Parameter> ")"
 //          (":" <Type>)?
 //          ("acquires" <NameAccessChain> ("," <NameAccessChain>)*)?
@@ -1914,14 +1914,14 @@ fn parse_function_decl(
         }
     }
 
-    // "macro" | "fun" <FunctionDefName>
+    // [ "macro" ] "fun" <FunctionDefName>
     let is_macro = if context.tokens.peek() == Tok::Macro {
         context.tokens.advance()?;
         true
     } else {
-        consume_token(context.tokens, Tok::Fun)?;
         false
     };
+    consume_token(context.tokens, Tok::Fun)?;
     let name = FunctionName(parse_identifier(context)?);
     let type_parameters = parse_optional_type_parameters(context)?;
 

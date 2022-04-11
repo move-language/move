@@ -1,7 +1,7 @@
 module 0x8675309::M {
     use 0x1::XVector;
 
-    public macro foreach<T>(v: &vector<T>, action: |&T|) { // expected to be not implemented
+    public macro fun foreach<T>(v: &vector<T>, action: |&T|) { // expected to be not implemented
         let i = 0;
         while (i < XVector::length(v)) {
             action(XVector::borrow(v, i));
@@ -9,7 +9,7 @@ module 0x8675309::M {
         }
     }
 
-    public macro reduce<R, T>(v: vector<T>, accu: R, reducer: |T, R|R): R {
+    public macro fun reduce<R, T>(v: vector<T>, accu: R, reducer: |T, R|R): R {
         while (!XVector::is_empty(&v)) {
             accu = reducer(XVector::pop_back(&mut v), accu);
         };
@@ -34,7 +34,7 @@ module 0x8675309::M {
         foreach!(&v, |e| sum = sum + reduce!(*e, 0, |t, r| t + r));
     }
 
-    public macro wrong_local_call_arg_count<T>(v: &vector<T>, action: |&T|) {
+    public macro fun wrong_local_call_arg_count<T>(v: &vector<T>, action: |&T|) {
         let i = 0;
         while (i < XVector::length(v)) {
             action(XVector::borrow(v, i), i); // expected to have wrong argument count
@@ -42,7 +42,7 @@ module 0x8675309::M {
         }
     }
 
-    public macro wrong_local_call_arg_type<T>(v: &vector<T>, action: |&T|) {
+    public macro fun wrong_local_call_arg_type<T>(v: &vector<T>, action: |&T|) {
         let i = 0;
         while (i < XVector::length(v)) {
             action(i); // expected to have wrong argument type
@@ -50,7 +50,7 @@ module 0x8675309::M {
         }
     }
 
-    public macro wrong_local_call_result_type<T>(v: &vector<T>, action: |&T|) {
+    public macro fun wrong_local_call_result_type<T>(v: &vector<T>, action: |&T|) {
         let i = 0;
         while (i < XVector::length(v)) {
             i = i + action(XVector::borrow(v, i)); // expected to have wrong result type
@@ -83,7 +83,7 @@ module 0x8675309::M {
 
     public fun fun_arg_lambda_not_allowed(x: |u64|) {} // expected lambda not allowed
 
-    public macro macro_result_lambda_not_allowed(): |u64| {  // expected lambda not allowed
+    public macro fun macro_result_lambda_not_allowed(): |u64| {  // expected lambda not allowed
         abort (1)
     }
     public fun fun_result_lambda_not_allowed(): |u64| {  // expected lambda not allowed

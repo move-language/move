@@ -213,7 +213,7 @@ impl Table {
         key: &Value,
         val: Value,
     ) -> PartialVMResult<(usize, usize)> {
-        let (gv_opt, _, _) = self.global_value(context, key)?;
+        let (gv_opt, _, _) = self.global_value_if_exists(context, key)?;
         if gv_opt.is_some() {
             return Err(partial_abort_error(
                 "table entry already occupied",
@@ -237,7 +237,7 @@ impl Table {
         context: &NativeTableContext,
         key: &Value,
     ) -> PartialVMResult<(Value, usize, usize)> {
-        let (gv_opt, key_size, val_size) = self.global_value(context, key)?;
+        let (gv_opt, key_size, val_size) = self.global_value_if_exists(context, key)?;
         let gv = gv_opt.ok_or_else(|| partial_abort_error("undefined table entry", *NOT_FOUND))?;
         let val = gv.borrow_global()?;
         Ok((val, key_size, val_size))
@@ -249,7 +249,7 @@ impl Table {
         context: &NativeTableContext,
         key: &Value,
     ) -> PartialVMResult<(Value, usize, usize)> {
-        let (gv_opt, key_size, val_size) = self.global_value(context, key)?;
+        let (gv_opt, key_size, val_size) = self.global_value_if_exists(context, key)?;
         let gv = gv_opt.ok_or_else(|| partial_abort_error("undefined table entry", *NOT_FOUND))?;
         let val = gv.move_from()?;
         Ok((val, key_size, val_size))
@@ -261,9 +261,8 @@ impl Table {
         context: &NativeTableContext,
         key: &Value,
     ) -> PartialVMResult<(Value, usize, usize)> {
-        let (gv_opt, key_size, val_size) = self.global_value(context, key)?;
-        let val = Value::bool(gv_opt.and_then(|v| v.exists().ok()).unwrap_or(false));
-        Ok((val, key_size, val_size))
+        let (gv_opt, key_size, val_size) = self.global_value_if_exists(context, key)?;
+        Ok((Value::bool(gv_opt.is_some()), key_size, val_size))
     }
 
     /// Destroys a table.
@@ -274,7 +273,7 @@ impl Table {
     /// Gets the global value of an entry in the table. Attempts to retrieve a value from
     /// the resolver if needed. Aborts if the value does not exists. Also returns the size
     /// of the key and value (if a value needs to be fetched from remote) for cost computation.
-    fn global_value(
+    fn global_value_if_exists(
         &mut self,
         context: &NativeTableContext,
         key: &Value,
@@ -284,7 +283,7 @@ impl Table {
         let mut val_size = 0;
         if !self.content.contains_key(&key_bytes) {
             // Try to retrieve a value from the remote resolver.
-            match context
+            let gv = match context
                 .resolver
                 .resolve_table_entry(&self.handle, &key_bytes)
                 .map_err(|err| {
@@ -293,18 +292,19 @@ impl Table {
                 Some(val_bytes) => {
                     val_size = val_bytes.len();
                     let val = deserialize(&self.value_layout, &val_bytes)?;
-                    self.content
-                        .entry(key_bytes.clone())
-                        .or_insert(GlobalValue::cached(val)?);
+                    GlobalValue::cached(val)?
                 }
-                None => return Ok((None, key_size, val_size)),
-            }
+                None => GlobalValue::none(),
+            };
+            self.content.insert(key_bytes.clone(), gv);
         }
-        Ok((
-            Some(self.content.get_mut(&key_bytes).unwrap()),
-            key_size,
-            val_size,
-        ))
+
+        let gv = self.content.get_mut(&key_bytes).unwrap();
+        if gv.exists()? {
+            Ok((Some(gv), key_size, val_size))
+        } else {
+            Ok((None, key_size, val_size))
+        }
     }
 }
 

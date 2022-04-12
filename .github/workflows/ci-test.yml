@@ -79,7 +79,7 @@ jobs:
         with:
           swap-size-gb: 10
       - name: run unit tests
-        run: cargo test --workspace --release
+        run: cargo test --workspace
       - uses: ./.github/actions/build-teardown
 
   hardhat-tests:

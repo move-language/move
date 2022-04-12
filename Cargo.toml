@@ -96,6 +96,14 @@ default-members = [
 [profile.bench]
 debug = true
 
-# Build guppy in opt mode so that x commands are faster.
-[profile.dev.package.guppy]
+[profile.dev.package."*"]
 opt-level = 3
+debug = false
+incremental = false
+codegen-units = 16
+
+# use release settings to reduce memory pressure in the linking step in CI
+[profile.dev]
+opt-level = 3
+incremental = false
+codegen-units = 16

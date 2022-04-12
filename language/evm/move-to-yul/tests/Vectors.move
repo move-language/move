@@ -218,4 +218,21 @@ module 0x2::Vectors {
         assert!(Vector::length(&r.v) == 1, 106);
         assert!(*Vector::borrow(&r.v, 0) == 42, 107);
     }
+
+    #[evm_test]
+    fun test_vector_equality() {
+        let v = Vector::empty<u8>();
+        Vector::push_back(&mut v, 10);
+        Vector::push_back(&mut v, 11);
+        Vector::push_back(&mut v, 12);
+        Vector::push_back(&mut v, 13);
+
+        assert!(v == x"0a0b0c0d", 101);
+        assert!(!(v != x"0a0b0c0d"), 102);
+        assert!(v != x"0a0b0c", 103);
+        assert!(!(v == x"0a0b0c"), 104);
+
+        Vector::push_back(&mut v, 14);
+        assert!(v == x"0a0b0c0d0e", 105);
+    }
 }

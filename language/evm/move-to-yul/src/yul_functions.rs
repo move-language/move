@@ -729,6 +729,28 @@ LtEq: "(x, y) -> r {
 Eq: "(x, y) -> r {
     r := eq(x, y)
 }",
+EqVector: "(x, y, elem_size) -> r {
+    let len_x := $MemoryLoadU64(x)
+    let len_y := $MemoryLoadU64(y)
+    if $Neq(len_x, len_y) {
+        r := false
+        leave
+    }
+    let data_size_bytes := mul(elem_size, len_x)
+    let num_words, overflow_bytes := $ToWordOffs(data_size_bytes)
+    let i := 0
+    for { } lt(i, data_size_bytes) { i := add(i, 32) } {
+        if $Neq(mload(add(x, add(i, 32))), mload(add(y, add(i, 32)))) {
+            r := false
+            leave
+        }
+    }
+    let mask := $MaskForSize(sub(32, overflow_bytes))
+    let overflow_offs := mul(num_words, 32)
+    let x_overflow := mload(add(x, add(overflow_offs, 32)))
+    let y_overflow := mload(add(y, add(overflow_offs, 32)))
+    r := eq(or(mask, x_overflow), or(mask, y_overflow))
+}" dep Neq dep MemoryLoadU64 dep ToWordOffs dep MaskForSize,
 Neq: "(x, y) -> r {
     r := $LogicalNot(eq(x, y))
 }" dep LogicalNot,

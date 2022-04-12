@@ -1,28 +1,19 @@
-<a href="https://developers.diem.com">
-	<img width="200" src="./.assets/diem.png" alt="Diem Logo" />
-</a>
-
----
 
 [![License](https://img.shields.io/badge/license-Apache-green.svg)](LICENSE)
-[![Discord chat](https://img.shields.io/discord/903339070925721652.svg?logo=discord&style=flat-square)](https://discord.gg/epNwRT2wcd)
+[![Discord chat](https://img.shields.io/discord/903339070925721652.svg?logo=discord&style=flat-square)](https://discord.gg/M95qX3KnG8)
 
 
 # The Move Language
 
-Move is a new programmable platform for blockchains and other applications where safety and correctness are paramount. It is an executable bytecode language designed to provide safe and verifiable transaction-oriented computation. The language features a strong type system with linear resource types, runtime checks, and formal verification.
+Move is a programming language for writing safe smart contracts originally developed at Facebook to power the Diem blockchain. Move is designed to be a platform-agnostic language to enable common libraries, tooling, and developer communities across diverse blockchains with vastly different data and execution models. Move's ambition is to become the "JavaScript of web3" in terms of ubiquity--when developers want to quickly write safe code involving assets, it should be written in Move. 
 
-## Contributing
-
-To begin contributing, [sign the CLA](https://diem.com/en-US/cla-sign/). You can learn more about contributing to the Diem project by reading our [Contribution Guide](https://github.com/diem/diem/blob/main/CONTRIBUTING.md) and by viewing our [Code of Conduct](https://developers.diem.com/docs/policies/code-of-conduct).
+This repository is the official home of the Move virtual machine, bytecode verifier, compiler, prover, package manager, and book. For Move code examples and papers, check out [awesome-move](https://github.com/MystenLabs/awesome-move).
 
 ## Community
 
-* Join us on the [Diem Discord](https://discord.gg/epNwRT2wcd) or [Discourse](https://community.diem.com).
-* Ask a question on [Stack Overflow](https://stackoverflow.com/questions/tagged/diem).
-* Get the latest updates to our project by signing up for our [newsletter](https://developers.diem.com/newsletter_form).
+* Join us on the [Move Discord](https://discord.gg/M95qX3KnG8).
 * Browse code and content from the community at [awesome-move](https://github.com/MystenLabs/awesome-move).
 
 ## License
 
-Move is licensed as [Apache 2.0](https://github.com/diem/diem/blob/main/LICENSE).
+Move is licensed as [Apache 2.0](https://github.com/move-language/move/blob/main/LICENSE).

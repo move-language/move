@@ -1,17 +1,26 @@
 /// Type of large-scale storage tables.
 module Extensions::Table {
+    use Std::Errors;
+
+    const ENOT_EMPTY: u64 = 0;
+
     /// Type of tables
     struct Table<phantom K, phantom V> has store {
-        handle: u128
+        handle: u128,
+        length: u64,
     }
 
     /// Create a new Table.
     public fun new<K, V: store>(): Table<K, V> {
-        Table{handle: new_table_handle()}
+        Table{
+            handle: new_table_handle(),
+            length: 0,
+        }
     }
 
     /// Destroy a table. The table must be empty to succeed.
     public fun destroy_empty<K, V>(table: Table<K, V>) {
+        assert!(table.length == 0, Errors::invalid_state(ENOT_EMPTY));
         destroy_empty_box<K, V, Box<V>>(&table);
         drop_unchecked_box<K, V, Box<V>>(table)
     }
@@ -20,7 +29,8 @@ module Extensions::Table {
     /// key already exists. The entry itself is not stored in the
     /// table, and cannot be discovered from it.
     public fun add<K, V>(table: &mut Table<K, V>, key: &K, val: V) {
-        add_box<K, V, Box<V>>(table, key, Box{val})
+        add_box<K, V, Box<V>>(table, key, Box{val});
+        table.length = table.length + 1
     }
 
     /// Acquire an immutable reference to the value which `key` maps to.
@@ -37,12 +47,12 @@ module Extensions::Table {
 
     /// Returns the length of the table, i.e. the number of entries.
     public fun length<K, V>(table: &Table<K, V>): u64 {
-        length_box<K, V, Box<V>>(table)
+        table.length
     }
 
     /// Returns true if this table is empty.
     public fun empty<K, V>(table: &Table<K, V>): bool {
-        length(table) == 0
+        table.length == 0
     }
 
     /// Acquire a mutable reference to the value which `key` maps to.
@@ -58,6 +68,7 @@ module Extensions::Table {
     /// Aborts if there is no entry for `key`.
     public fun remove<K, V>(table: &mut Table<K, V>, key: &K): V {
         let Box{val} = remove_box<K, V, Box<V>>(table, key);
+        table.length = table.length - 1;
         val
     }
 
@@ -86,7 +97,6 @@ module Extensions::Table {
     native fun add_box<K, V, B>(table: &mut Table<K, V>, key: &K, val: Box<V>);
     native fun borrow_box<K, V, B>(table: &Table<K, V>, key: &K): &Box<V>;
     native fun borrow_box_mut<K, V, B>(table: &mut Table<K, V>, key: &K): &mut Box<V>;
-    native fun length_box<K, V, B>(table: &Table<K, V>): u64;
     native fun contains_box<K, V, B>(table: &Table<K, V>, key: &K): bool;
     native fun remove_box<K, V, B>(table: &mut Table<K, V>, key: &K): Box<V>;
     native fun destroy_empty_box<K, V, B>(table: &Table<K, V>);

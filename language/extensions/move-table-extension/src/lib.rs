@@ -71,8 +71,6 @@ pub trait TableResolver {
         key: &[u8],
     ) -> Result<Option<Vec<u8>>, anyhow::Error>;
 
-    fn table_size(&self, handle: &TableHandle) -> Result<usize, anyhow::Error>;
-
     fn operation_cost(
         &self,
         op: TableOperation,
@@ -104,7 +102,6 @@ pub struct NativeTableContext<'a> {
 
 pub static ALREADY_EXISTS: Lazy<u64> = Lazy::new(|| unique_sub_status_code(0));
 pub static NOT_FOUND: Lazy<u64> = Lazy::new(|| unique_sub_status_code(1));
-pub static NOT_EMPTY: Lazy<u64> = Lazy::new(|| unique_sub_status_code(2));
 
 // ===========================================================================================
 // Private Data Structures and Constants
@@ -124,7 +121,6 @@ struct Table {
     key_layout: MoveTypeLayout,
     value_layout: MoveTypeLayout,
     content: BTreeMap<Vec<u8>, GlobalValue>,
-    size_delta: i64, // The sum of added and removed entries
 }
 
 /// The field index of the `handle` field in the `Table` Move struct.
@@ -201,7 +197,6 @@ impl TableData {
                 handle,
                 key_layout,
                 value_layout,
-                size_delta: 0,
                 content: Default::default(),
             };
             e.insert(table);
@@ -233,7 +228,6 @@ impl Table {
             .entry(key_bytes)
             .or_insert_with(GlobalValue::none)
             .move_to(val)?;
-        self.size_delta += 1;
         Ok((key_size, val_size))
     }
 
@@ -258,7 +252,6 @@ impl Table {
         let (gv_opt, key_size, val_size) = self.global_value(context, key)?;
         let gv = gv_opt.ok_or_else(|| partial_abort_error("undefined table entry", *NOT_FOUND))?;
         let val = gv.move_from()?;
-        self.size_delta -= 1;
         Ok((val, key_size, val_size))
     }
 
@@ -273,31 +266,9 @@ impl Table {
         Ok((val, key_size, val_size))
     }
 
-    /// Compute the size of a table.
-    fn length(&mut self, context: &NativeTableContext) -> PartialVMResult<(u64, usize, usize)> {
-        let remote_size = context
-            .resolver
-            .table_size(&self.handle)
-            .map_err(|err| partial_extension_error(format!("remote table size failed: {}", err)))?;
-        let effective_size = (remote_size as i128) + (self.size_delta as i128);
-        if effective_size < 0 {
-            Err(partial_extension_error("inconsistent table size"))
-        } else {
-            Ok((effective_size as u64, 0, 0))
-        }
-    }
-
     /// Destroys a table.
-    fn destroy_empty(&mut self, context: &NativeTableContext) -> PartialVMResult<(usize, usize)> {
-        let (len, _, _) = self.length(context)?;
-        if len > 0 {
-            Err(partial_abort_error(
-                "table is not empty and cannot be destroyed",
-                *NOT_EMPTY,
-            ))
-        } else {
-            Ok((0, 0))
-        }
+    fn destroy_empty(&mut self, _context: &NativeTableContext) -> PartialVMResult<(usize, usize)> {
+        Ok((0, 0))
     }
 
     /// Gets the global value of an entry in the table. Attempts to retrieve a value from
@@ -347,7 +318,6 @@ pub fn table_natives(table_addr: AccountAddress) -> NativeFunctionTable {
         &[
             ("Table", "new_table_handle", native_new_table_handle),
             ("Table", "add_box", native_add_box),
-            ("Table", "length_box", native_length_box),
             ("Table", "borrow_box", native_borrow_box),
             ("Table", "borrow_box_mut", native_borrow_box),
             ("Table", "remove_box", native_remove_box),
@@ -414,30 +384,6 @@ fn native_add_box(
             .resolver
             .operation_cost(TableOperation::Insert, key_size, val_size),
         smallvec![],
-    ))
-}
-
-fn native_length_box(
-    context: &mut NativeContext,
-    ty_args: Vec<Type>,
-    mut args: VecDeque<Value>,
-) -> PartialVMResult<NativeResult> {
-    assert!(ty_args.len() == 3);
-    assert!(args.len() == 1);
-
-    let table_context = context.extensions().get::<NativeTableContext>();
-    let mut table_data = table_context.table_data.borrow_mut();
-
-    let handle = get_table_handle(&pop_arg!(args, StructRef))?;
-
-    let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
-    let (len, key_size, val_size) = table.length(table_context)?;
-
-    Ok(NativeResult::ok(
-        table_context
-            .resolver
-            .operation_cost(TableOperation::Length, key_size, val_size),
-        smallvec![Value::u64(len)],
     ))
 }
 

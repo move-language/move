@@ -41,7 +41,7 @@ module Extensions::TableTests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 51155)]
+    #[expected_failure(abort_code = 1)]
     fun test_destroy_fails() {
         let t = T::new<u64, u64>();
         T::add(&mut t, &1, 2);

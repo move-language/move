@@ -1,6 +1,6 @@
 module 0x2::M {
-    use Evm::Evm::sign;
     use Std::Vector;
+    use Evm::Evm::{sign, require};
 
     struct T has key, drop {
         s: vector<u8>
@@ -25,4 +25,11 @@ module 0x2::M {
         assert!(*Vector::borrow(&v, 3) == 104u8, 104);
 
     }
+
+    #[evm_test]
+    public fun test_same_literals() {
+        require(true, b"error_message");
+        require(true, b"error_message");
+    }
+
 }

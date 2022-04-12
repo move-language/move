@@ -580,49 +580,32 @@ impl<'a> FunctionGenerator<'a> {
         if !val_str.is_empty() {
             emitln!(ctx.writer, "{} := {}", dest, val_str);
         } else if let Constant::ByteArray(value) = cons {
-            self.copy_literal_to_memory(ctx, dest, value);
-        }
-    }
-
-    fn copy_literal_to_memory(&mut self, ctx: &Context, dest: String, value: &[u8]) {
-        let str_literal_size = value.len() + 32;
-        let malloc_str = self.parent.call_builtin_str(
-            ctx,
-            YulFunction::Malloc,
-            std::iter::once(str_literal_size.clone().to_string()),
-        );
-        let store_length_str = self.parent.call_builtin_str(
-            ctx,
-            YulFunction::MemoryStoreU64,
-            vec![dest.clone(), value.len().clone().to_string()].into_iter(),
-        );
-
-        let compute_capacity_str = self.parent.call_builtin_str(
-            ctx,
-            YulFunction::ClosestGreaterPowerOfTwo,
-            std::iter::once(str_literal_size.to_string()),
-        );
-        let store_capacity_str = self.parent.call_builtin_str(
-            ctx,
-            YulFunction::MemoryStoreU64,
-            vec![format!("add({}, 8)", dest), compute_capacity_str].into_iter(),
-        );
-        emitln!(ctx.writer, "{} := {}", dest, malloc_str);
-        emitln!(ctx.writer, &store_length_str);
-        emitln!(ctx.writer, &store_capacity_str);
-
-        let var_name_vector_u8_hash = self.vector_u8_hash(value);
-        let offs_name = format!("$offs_{}", var_name_vector_u8_hash);
-
-        emitln!(ctx.writer, "let {} := add({}, 32)", offs_name, dest);
-        for c in value {
-            let store_u8_str = self.parent.call_builtin_str(
+            let str_literal_size = value.len() + 32;
+            let malloc_str = self.parent.call_builtin_str(
                 ctx,
-                YulFunction::MemoryStoreU8,
-                vec![offs_name.clone(), c.to_string()].into_iter(),
+                YulFunction::Malloc,
+                std::iter::once(str_literal_size.clone().to_string()),
             );
-            emitln!(ctx.writer, "{}", store_u8_str);
-            emitln!(ctx.writer, "{} := add({}, 1)", offs_name, offs_name);
+            let store_length_str = self.parent.call_builtin_str(
+                ctx,
+                YulFunction::MemoryStoreU64,
+                vec![dest.clone(), value.len().clone().to_string()].into_iter(),
+            );
+            let compute_capacity_str = self.parent.call_builtin_str(
+                ctx,
+                YulFunction::ClosestGreaterPowerOfTwo,
+                std::iter::once(str_literal_size.to_string()),
+            );
+            let store_capacity_str = self.parent.call_builtin_str(
+                ctx,
+                YulFunction::MemoryStoreU64,
+                vec![format!("add({}, 8)", dest), compute_capacity_str].into_iter(),
+            );
+            emitln!(ctx.writer, "{} := {}", dest, malloc_str);
+            emitln!(ctx.writer, &store_length_str);
+            emitln!(ctx.writer, &store_capacity_str);
+            let fun_name = self.parent.copy_literal_to_memory(value.clone());
+            emitln!(ctx.writer, "{}(add({}, 32))", fun_name, dest);
         }
     }
 
@@ -1502,12 +1485,5 @@ impl<'a> FunctionGenerator<'a> {
             }
         }
         hash
-    }
-
-    pub(crate) fn vector_u8_hash(&mut self, vec: &[u8]) -> u32 {
-        let mut keccak = Keccak256::new();
-        keccak.update(vec);
-        let digest = keccak.finalize();
-        u32::from_le_bytes([digest[0], digest[1], digest[2], digest[3]])
     }
 }

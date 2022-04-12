@@ -17,6 +17,8 @@ use crate::{
     solidity_ty::SoliditySignature, yul_functions::YulFunction, Options,
 };
 
+use sha3::{Digest, Keccak256};
+
 /// Mutable state of the generator.
 #[derive(Default)]
 pub struct Generator {
@@ -545,5 +547,34 @@ impl Generator {
         if !self.done_move_functions.contains(fun_id) {
             self.needed_move_functions.push(fun_id.clone())
         }
+    }
+
+    /// Copy literal string to memory
+    pub(crate) fn copy_literal_to_memory(&mut self, value: Vec<u8>) -> String {
+        let name_prefix = "copy_literal_string_to_memory";
+        let function_name = format!("{}_{}", name_prefix, self.vector_u8_hash(&value));
+        let value = value.clone();
+        let generate_fun = move |gen: &mut Generator, ctx: &Context| {
+            emit!(ctx.writer, "(value) ");
+            ctx.emit_block(|| {
+                for c in value {
+                    let store_u8_str = gen.call_builtin_str(
+                        ctx,
+                        YulFunction::MemoryStoreU8,
+                        vec!["value".to_string(), c.to_string()].into_iter(),
+                    );
+                    emitln!(ctx.writer, "{}", store_u8_str);
+                    emitln!(ctx.writer, "value := add(value, 1)");
+                }
+            });
+        };
+        self.need_auxiliary_function(function_name, Box::new(generate_fun))
+    }
+
+    fn vector_u8_hash(&mut self, vec: &[u8]) -> u32 {
+        let mut keccak = Keccak256::new();
+        keccak.update(vec);
+        let digest = keccak.finalize();
+        u32::from_le_bytes([digest[0], digest[1], digest[2], digest[3]])
     }
 }

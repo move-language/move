@@ -183,33 +183,7 @@ object "test_A2_NativeFunctions_test_abort" {
             $t0 := $Malloc(45)
             $MemoryStoreU64($t0, 13)
             $MemoryStoreU64(add($t0, 8), $ClosestGreaterPowerOfTwo(45))
-            let $offs_1627894131 := add($t0, 32)
-            $MemoryStoreU8($offs_1627894131, 101)
-            $offs_1627894131 := add($offs_1627894131, 1)
-            $MemoryStoreU8($offs_1627894131, 114)
-            $offs_1627894131 := add($offs_1627894131, 1)
-            $MemoryStoreU8($offs_1627894131, 114)
-            $offs_1627894131 := add($offs_1627894131, 1)
-            $MemoryStoreU8($offs_1627894131, 111)
-            $offs_1627894131 := add($offs_1627894131, 1)
-            $MemoryStoreU8($offs_1627894131, 114)
-            $offs_1627894131 := add($offs_1627894131, 1)
-            $MemoryStoreU8($offs_1627894131, 32)
-            $offs_1627894131 := add($offs_1627894131, 1)
-            $MemoryStoreU8($offs_1627894131, 109)
-            $offs_1627894131 := add($offs_1627894131, 1)
-            $MemoryStoreU8($offs_1627894131, 101)
-            $offs_1627894131 := add($offs_1627894131, 1)
-            $MemoryStoreU8($offs_1627894131, 115)
-            $offs_1627894131 := add($offs_1627894131, 1)
-            $MemoryStoreU8($offs_1627894131, 115)
-            $offs_1627894131 := add($offs_1627894131, 1)
-            $MemoryStoreU8($offs_1627894131, 97)
-            $offs_1627894131 := add($offs_1627894131, 1)
-            $MemoryStoreU8($offs_1627894131, 103)
-            $offs_1627894131 := add($offs_1627894131, 1)
-            $MemoryStoreU8($offs_1627894131, 101)
-            $offs_1627894131 := add($offs_1627894131, 1)
+            copy_literal_string_to_memory_1627894131(add($t0, 32))
             // Evm::abort_with($t0)
             A2_Evm_abort_with($t0)
             // return ()
@@ -229,6 +203,34 @@ object "test_A2_NativeFunctions_test_abort" {
           size := $RoundUp(size)
           let end := add(pos, size)
           revert(head, sub(end, head))
+        }
+        function copy_literal_string_to_memory_1627894131(value) {
+            $MemoryStoreU8(value, 101)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 114)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 114)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 111)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 114)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 32)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 109)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 101)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 115)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 115)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 97)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 103)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 101)
+            value := add(value, 1)
         }
         function $Malloc(size) -> offs {
             offs := mload(0)
@@ -284,7 +286,7 @@ object "test_A2_NativeFunctions_test_abort" {
         }
     }
 }
-===> Test result of NativeFunctions::test_abort: Revert(Reverted) (used_gas=673): [8, 195, 121, 160, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 101, 114, 114, 111, 114, 32, 109, 101, 115, 115, 97, 103, 101, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+===> Test result of NativeFunctions::test_abort: Revert(Reverted) (used_gas=676): [8, 195, 121, 160, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 101, 114, 114, 111, 114, 32, 109, 101, 115, 115, 97, 103, 101, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 // test of NativeFunctions::test_signer_address_of
 /* =======================================

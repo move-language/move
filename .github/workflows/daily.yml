@@ -3,23 +3,10 @@ name: daily
 on:
   schedule:
     - cron: "14 14 * * *"
-  # Uncomment below to test.
-  # push:
-  #   branches: [gha-test-*, canary, auto]
 
 jobs:
   audit:
-    runs-on: ubuntu-20.04
-    container:
-      image: ghcr.io/diem/diem_build_environment:main
-      volumes:
-        - "${{github.workspace}}:/opt/git/diem"
-    strategy:
-      fail-fast: false
-      matrix:
-        #this is a painful solution since it doesn't pick up new branches, other option is lotsa shell in one job....
-        #to test in canary add in canary here.....
-        target-branch: [main, release-1.5, release-1.4]
+    runs-on: ubuntu-latest
     env:
       AUDIT_SUMMARY_FILE: /tmp/summary
     steps:
@@ -56,11 +43,7 @@ jobs:
       - uses: ./.github/actions/build-teardown
 
   prover-inconsistency-test:
-    runs-on: ubuntu-20.04-xl
-    container:
-      image: ghcr.io/diem/diem_build_environment:${{ matrix.target-branch }}
-      volumes:
-        - "${{github.workspace}}:/opt/git/diem"
+    runs-on: ubuntu-latest
     env:
       MESSAGE_PAYLOAD_FILE: /tmp/message
     strategy:

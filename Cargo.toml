@@ -90,8 +90,8 @@ default-members = [
     "language/tools/move-unit-test",
 ]
 
-[profile.release]
-debug = true
+# [profile.release]
+# debug = true
 
 [profile.bench]
 debug = true

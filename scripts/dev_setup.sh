@@ -14,11 +14,6 @@
 # fast fail.
 set -eo pipefail
 
-SCCACHE_VERSION=0.2.16-alpha.0
-#If installing sccache from a git repp set url@revision.
-SCCACHE_GIT='https://github.com/diem/sccache.git@ef50d87a58260c30767520045e242ccdbdb965af'
-GRCOV_VERSION=0.8.2
-GUPPY_GIT='https://github.com/facebookincubator/cargo-guppy@39ec940f36b0a0df96a330243d127cbe2db9f919'
 Z3_VERSION=4.8.13
 CVC5_VERSION=0.0.3
 DOTNET_VERSION=5.0
@@ -198,25 +193,6 @@ function install_openssl_dev {
   fi
 }
 
-function install_lcov {
-  PACKAGE_MANAGER=$1
-  #Differently named packages for lcov with different sources.
-  if [[ "$PACKAGE_MANAGER" == "apk" ]]; then
-    apk --update add --no-cache  -X http://dl-cdn.alpinelinux.org/alpine/edge/testing lcov
-  fi
-  if [[ "$PACKAGE_MANAGER" == "apt-get" ]] || [[ "$PACKAGE_MANAGER" == "yum" ]] || [[ "$PACKAGE_MANAGER" == "dnf" ]] || [[ "$PACKAGE_MANAGER" == "brew" ]]; then
-    install_pkg lcov "$PACKAGE_MANAGER"
-  fi
-  if [[ "$PACKAGE_MANAGER" == "pacman" ]]; then
-    echo nope no lcov for you.
-    echo You can try installing yourself with:
-    echo install_pkg git "$PACKAGE_MANAGER"
-    echo cd lcov;
-    echo git clone https://aur.archlinux.org/lcov.git
-    echo makepkg -si --noconfirm
-  fi
-}
-
 function install_tidy {
   PACKAGE_MANAGER=$1
   #Differently named packages for tidy
@@ -249,33 +225,6 @@ function install_toolchain {
     rustup install "$version"
   else
     echo "${version} rust toolchain already installed"
-  fi
-}
-
-function install_sccache {
-  VERSION="$(sccache --version || true)"
-  if [[ "$VERSION" != "sccache ""${SCCACHE_VERSION}" ]]; then
-    if [[ -n "${SCCACHE_GIT}" ]]; then
-      git_repo=$( echo "$SCCACHE_GIT" | cut -d "@" -f 1 );
-      git_hash=$( echo "$SCCACHE_GIT" | cut -d "@" -f 2 );
-      cargo install sccache --git "$git_repo" --rev "$git_hash" --features s3 --locked
-    else
-      cargo install sccache --version="${SCCACHE_VERSION}" --features s3 --locked
-    fi
-  fi
-}
-
-function install_cargo_guppy {
-  if ! command -v cargo-guppy &> /dev/null; then
-    git_repo=$( echo "$GUPPY_GIT" | cut -d "@" -f 1 );
-    git_hash=$( echo "$GUPPY_GIT" | cut -d "@" -f 2 );
-    cargo install cargo-guppy --git "$git_repo" --rev "$git_hash" --locked
-  fi
-}
-
-function install_grcov {
-  if ! command -v grcov &> /dev/null; then
-    cargo install grcov --version="${GRCOV_VERSION}" --locked
   fi
 }
 
@@ -436,11 +385,8 @@ Build tools (since -t or no option was provided):
   * Rust (and the necessary components, e.g. rust-fmt, clippy)
   * CMake
   * Clang
-  * grcov
-  * lcov
   * pkg-config
   * libssl-dev
-  * sccache
   * if linux, gcc-powerpc-linux-gnu
   * NodeJS / NPM
 EOF
@@ -622,11 +568,6 @@ if [[ "$INSTALL_BUILD_TOOLS" == "true" ]]; then
   rustup component add rustfmt
   rustup component add clippy
 
-  install_cargo_guppy
-  install_sccache
-  install_grcov
-  install_pkg git "$PACKAGE_MANAGER"
-  install_lcov "$PACKAGE_MANAGER"
   install_nodejs "$PACKAGE_MANAGER"
 fi
 

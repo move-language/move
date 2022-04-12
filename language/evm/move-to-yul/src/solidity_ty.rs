@@ -491,7 +491,11 @@ impl fmt::Display for SoliditySignature {
 
 impl SoliditySignature {
     /// Create a default solidity signature from a move function signature
-    pub fn create_default_solidity_signature(ctx: &Context, fun: &FunctionEnv<'_>) -> Self {
+    pub fn create_default_solidity_signature(
+        ctx: &Context,
+        fun: &FunctionEnv<'_>,
+        ty_opt: Option<Type>,
+    ) -> Self {
         let fun_name = fun.symbol_pool().string(fun.get_name()).to_string();
         let mut para_type_lst = vec![];
         for Parameter(para_name, move_ty) in fun.get_parameters() {
@@ -503,10 +507,18 @@ impl SoliditySignature {
             ));
         }
         let mut ret_type_lst = vec![];
-        for move_ty in fun.get_return_types() {
-            let solidity_ty = SolidityType::translate_from_move(ctx, &move_ty);
-            ret_type_lst.push((solidity_ty, SignatureDataLocation::Memory));
+        if let Some(move_ty) = ty_opt {
+            if !ctx.is_unit_ty(&move_ty) {
+                let solidity_ty = SolidityType::translate_from_move(ctx, &move_ty);
+                ret_type_lst.push((solidity_ty, SignatureDataLocation::Memory));
+            }
+        } else {
+            for move_ty in fun.get_return_types() {
+                let solidity_ty = SolidityType::translate_from_move(ctx, &move_ty);
+                ret_type_lst.push((solidity_ty, SignatureDataLocation::Memory));
+            }
         }
+
         SoliditySignature {
             sig_name: fun_name,
             para_types: para_type_lst,

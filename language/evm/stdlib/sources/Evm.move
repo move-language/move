@@ -64,7 +64,7 @@ module Evm::Evm {
     public native fun isContract(addr: address): bool;
 
     /// Define the unit (null or void) type.
-    struct Unit {}
+    struct Unit has drop {}
 
     /// Get tokenURI with base URI.
     // This is implemented in Solidity as follows:

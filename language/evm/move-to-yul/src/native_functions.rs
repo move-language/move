@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    attributes, context::Context, events, external_functions, functions::FunctionGenerator,
-    yul_functions::YulFunction,
+    attributes, context::Context, events, functions::FunctionGenerator, yul_functions::YulFunction,
 };
 use move_model::{
     ast::ModuleName,
@@ -53,7 +52,7 @@ impl NativeFunctions {
             let fun = &ctx.env.get_function(fun_id.to_qualified_id());
             if attributes::is_external_fun(fun) {
                 if let Some(extracted_sig_str) = attributes::extract_external_signature(fun) {
-                    external_functions::define_external_fun(gen, ctx, fun_id, &extracted_sig_str)
+                    self.define_external_fun(gen, ctx, fun_id, &extracted_sig_str)
                 } else {
                     ctx.env.error(
                         &gen.parent.contract_loc,
@@ -132,7 +131,7 @@ impl NativeFunctions {
     }
 
     /// Helper to find a function by name.
-    fn find_fun(
+    pub(crate) fn find_fun(
         &self,
         ctx: &Context,
         module: &Option<ModuleEnv>,

@@ -8,7 +8,7 @@ use crate::{
 use codespan::FileId;
 use itertools::Itertools;
 use move_model::{
-    ast::TempIndex,
+    ast::{ModuleName, TempIndex},
     code_writer::CodeWriter,
     emitln,
     model::{
@@ -137,7 +137,13 @@ impl<'a> Context<'a> {
                     || attributes::is_fallback_fun(fun)
             }
         };
+        let external_name = ModuleName::from_str("0x2", env.symbol_pool().make("ExternalResult"));
         for module in env.get_modules() {
+            if *module.get_name() == external_name {
+                for fun in module.get_functions() {
+                    Self::add_fun(&mut targets, &fun)
+                }
+            }
             if !module.is_target() {
                 continue;
             }
@@ -350,6 +356,42 @@ impl<'a> Context<'a> {
             }
             _ => false,
         }
+    }
+
+    pub fn is_unit_ty(&self, ty: &Type) -> bool {
+        match ty {
+            Type::Struct(m, s, _) => {
+                let struct_id = m.qualified(*s);
+                let struct_env = self.env.get_struct(struct_id);
+                struct_env.get_full_name_with_address()
+                    == format!("{}::Evm::Unit", EVM_MODULE_ADDRESS)
+            }
+            _ => false,
+        }
+    }
+
+    pub fn is_unit_opt_ty(&self, ty: Option<Type>) -> bool {
+        if let Some(Type::Struct(m, s, _)) = ty {
+            let struct_id = m.qualified(s);
+            let struct_env = self.env.get_struct(struct_id);
+            return struct_env.get_full_name_with_address()
+                == format!("{}::Evm::Unit", EVM_MODULE_ADDRESS);
+        }
+        false
+    }
+
+    pub fn extract_external_result(&self, ty: &Type) -> (bool, Option<Type>) {
+        if let Type::Struct(m, s, insts) = ty {
+            let struct_id = m.qualified(*s);
+            let struct_env = self.env.get_struct(struct_id);
+            if struct_env.get_full_name_with_address()
+                == format!("{}::ExternalResult::ExternalResult", EVM_MODULE_ADDRESS)
+            {
+                assert!(insts.len() == 1);
+                return (true, Some(insts[0].clone()));
+            }
+        };
+        (false, None)
     }
 
     /// Returns whether the struct identified by module_id and struct_id is the native Table struct.

@@ -803,5 +803,52 @@ ClosestGreaterPowerOfTwo: "(x) -> r {
 }",
 RoundUp: "(value) -> result {
     result := and(add(value, 31), not(31))
-}"
+}",
+ReturnDataSelector: "() -> sig {
+  if gt(returndatasize(), 3) {
+    let pos := $Malloc(4)
+    returndatacopy(pos, 0, 4)
+    sig := shr(224, mload(pos))
+  }
+}" dep Malloc,
+TryDecodePanicData: "() -> success, data {
+  if gt(returndatasize(), 0x23) {
+    let pos := $Malloc(0x20)
+    returndatacopy(pos, 4, 0x20)
+    success := 1
+    data := mload(pos)
+  }
+}" dep Malloc,
+PackErrData: "() -> data {
+  data := $Malloc(add(returndatasize(), 0x20))
+  $MemoryStoreU64(data, returndatasize())
+  $MemoryStoreU64(add(data, 8), returndatasize())
+  returndatacopy(add(data, 0x20), 0, returndatasize())
+}
+" dep Malloc dep MemoryStoreU64,
+TryDecodeErrMsg: "() -> data {
+  if lt(returndatasize(), 0x44) { leave }
+  data := $Malloc(0x20)
+  returndatacopy(data, 4, 0x20)
+  let offset := mload(data)
+  if or(
+      gt(offset, 0xffffffffffffffff),
+      gt(add(offset, 0x24), returndatasize())
+      ) {
+      leave
+  }
+  data := $Malloc(0x20)
+  returndatacopy(data, add(4, offset), 0x20)
+  let length := mload(data)
+  if or(
+    gt(length, 0xffffffffffffffff),
+    gt(add(add(offset, 0x24), length), returndatasize())
+  ) {
+    leave
+  }
+  data := $Malloc(add(length, 0x20))
+  $MemoryStoreU64(data, length)
+  $MemoryStoreU64(add(data, 8), length)
+  returndatacopy(add(data, 0x20), add(offset, 0x24), length)
+}" dep Malloc dep MemoryStoreU64
 }

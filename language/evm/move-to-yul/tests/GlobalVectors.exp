@@ -4565,6 +4565,7 @@ object "test_A2_GlobalVectors_test_pop_back_struct_global" {
             let size := $LoadU64(v_ptr)
             if iszero(size) { $AbortBuiltin() }
             let e_ptr := $IndexPtr(v_ptr, add(32, mul(sub(size, 1), 32)))
+            e := $LoadU256(e_ptr)
             if $IsStoragePtr(e_ptr) {
                 let e_offs := $OffsetPtr(e_ptr)
                 let linked_src := $AlignedStorageLoad(e_offs)
@@ -4842,7 +4843,7 @@ object "test_A2_GlobalVectors_test_pop_back_struct_global" {
         }
     }
 }
-===> Test result of GlobalVectors::test_pop_back_struct_global: Succeed(Stopped) (used_gas=188712): []
+===> Test result of GlobalVectors::test_pop_back_struct_global: Succeed(Stopped) (used_gas=189330): []
 
 // test of GlobalVectors::test_push_back_global
 /* =======================================

@@ -15,6 +15,32 @@ object "A2_M" {
             {
                 let selector := $Shr(calldataload(0), 224)
                 switch selector
+                case 0x2fe88122
+                {
+                    // call_success(address)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$address$_$address$(4, calldatasize())
+                    let ret_0 := A2_M_call_success(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$uint256$_$A2_U256_U256$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
+                case 0x0d5ec7b5
+                {
+                    // call_unit(address)
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let param_0 := abi_decode_tuple_$address$_$address$(4, calldatasize())
+                    A2_M_call_unit(param_0)
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple__(memPos)
+                    return(memPos, sub(memEnd, memPos))
+                }
                 case 0x640f7372
                 {
                     // test_is_approved_for_all()
@@ -64,9 +90,95 @@ object "A2_M" {
                     let memEnd := abi_encode_tuple__(memPos)
                     return(memPos, sub(memEnd, memPos))
                 }
+                case 0x8494fb4a
+                {
+                    // test_try()
+                    if callvalue()
+                    {
+                        $Abort(99)
+                    }
+                    let ret_0 := A2_M_test_try()
+                    let memPos := mload(0)
+                    let memEnd := abi_encode_tuple_$uint8$_$u8$(memPos, ret_0)
+                    return(memPos, sub(memEnd, memPos))
+                }
                 default {}
             }
             $Abort(97)
+            function A2_M_call_success(addr) -> $result {
+                let v, $t2, $t3, $t4, $t5, $t6
+                let $block := 4
+                for {} true {} {
+                    switch $block
+                    case 2 {
+                        // label L0
+                        // $t4 := move($t1)
+                        $t4 := v
+                        // $t5 := ExternalResult::unwrap<U256::U256>($t4)
+                        $t5 := A2_ExternalResult_unwrap$A2_U256_U256$($t4)
+                        // return $t5
+                        $result := $t5
+                        leave
+                    }
+                    case 3 {
+                        // label L2
+                        // $t6 := U256::one()
+                        $t6 := A2_U256_one()
+                        // return $t6
+                        $result := $t6
+                        leave
+                    }
+                    case 4 {
+                        // $t1 := M::success($t0)
+                        v := A2_M_success(addr)
+                        // $t2 := borrow_local($t1)
+                        $t2 := $MakePtr(false, v)
+                        // $t3 := ExternalResult::is_ok<U256::U256>($t2)
+                        $t3 := A2_ExternalResult_is_ok$A2_U256_U256$($t2)
+                        // if ($t3) goto L0 else goto L2
+                        switch $t3
+                        case 0  { $block := 3 }
+                        default { $block := 2 }
+                    }
+                }
+            }
+
+            function A2_M_call_unit(addr) {
+                let _u, v, $t3, $t4, $t5, $t6
+                let $block := 4
+                for {} true {} {
+                    switch $block
+                    case 2 {
+                        // label L0
+                        // $t5 := move($t2)
+                        $t5 := v
+                        // $t6 := ExternalResult::unwrap<Evm::Unit>($t5)
+                        $t6 := A2_ExternalResult_unwrap$A2_Evm_Unit$($t5)
+                        // destroy($t6)
+                        $Free($t6, 1)
+                        // goto L2
+                        $block := 3
+                    }
+                    case 3 {
+                        // label L2
+                        // return ()
+                        leave
+                    }
+                    case 4 {
+                        // $t2 := M::test_unit($t0)
+                        v := A2_M_test_unit(addr)
+                        // $t3 := borrow_local($t2)
+                        $t3 := $MakePtr(false, v)
+                        // $t4 := ExternalResult::is_ok<Evm::Unit>($t3)
+                        $t4 := A2_ExternalResult_is_ok$A2_Evm_Unit$($t3)
+                        // if ($t4) goto L0 else goto L2
+                        switch $t4
+                        case 0  { $block := 3 }
+                        default { $block := 2 }
+                    }
+                }
+            }
+
             function A2_M_test_is_approved_for_all() -> $result {
                 let account, contract_addr, operator, $t3, $t4, $t5, $t6
                 // $t3 := 0x3
@@ -122,6 +234,448 @@ object "A2_M" {
                 // return ()
             }
 
+            function A2_M_test_try() -> $result {
+                let contract_addr, v, value, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14
+                let $block := 4
+                for {} true {} {
+                    switch $block
+                    case 2 {
+                        // label L0
+                        // $t7 := 0
+                        $t7 := 0
+                        // return $t7
+                        $result := $t7
+                        leave
+                    }
+                    case 3 {
+                        // label L2
+                        // $t8 := borrow_local($t2)
+                        $t8 := $MakePtr(false, value)
+                        // $t9 := ExternalResult::is_err_reason<U256::U256>($t8)
+                        $t9 := A2_ExternalResult_is_err_reason$A2_U256_U256$($t8)
+                        // if ($t9) goto L3 else goto L5
+                        switch $t9
+                        case 0  { $block := 6 }
+                        default { $block := 5 }
+                    }
+                    case 4 {
+                        // $t3 := 340282366920938463463374607431768211458
+                        $t3 := 340282366920938463463374607431768211458
+                        // $t4 := 0x3
+                        $t4 := 0x3
+                        // $t2 := M::test_try_call($t4, $t3)
+                        value := A2_M_test_try_call($t4, $t3)
+                        // $t5 := borrow_local($t2)
+                        $t5 := $MakePtr(false, value)
+                        // $t6 := ExternalResult::is_ok<U256::U256>($t5)
+                        $t6 := A2_ExternalResult_is_ok$A2_U256_U256$($t5)
+                        // if ($t6) goto L0 else goto L2
+                        switch $t6
+                        case 0  { $block := 3 }
+                        default { $block := 2 }
+                    }
+                    case 5 {
+                        // label L3
+                        // $t10 := 1
+                        $t10 := 1
+                        // return $t10
+                        $result := $t10
+                        leave
+                    }
+                    case 6 {
+                        // label L5
+                        // $t11 := borrow_local($t2)
+                        $t11 := $MakePtr(false, value)
+                        // $t12 := ExternalResult::is_panic<U256::U256>($t11)
+                        $t12 := A2_ExternalResult_is_panic$A2_U256_U256$($t11)
+                        // if ($t12) goto L6 else goto L8
+                        switch $t12
+                        case 0  { $block := 8 }
+                        default { $block := 7 }
+                    }
+                    case 7 {
+                        // label L6
+                        // $t13 := 2
+                        $t13 := 2
+                        // return $t13
+                        $result := $t13
+                        leave
+                    }
+                    case 8 {
+                        // label L8
+                        // $t14 := 3
+                        $t14 := 3
+                        // return $t14
+                        $result := $t14
+                        leave
+                    }
+                }
+            }
+
+            function A2_ExternalResult_is_panic$A2_U256_U256$(result) -> $result {
+                let $t1, $t2
+                // $t1 := borrow_field<ExternalResult::ExternalResult<#0>>.panic_code($t0)
+                {
+                    let $field_ptr := $IndexPtr(result, 96)
+                    $t1 := $MakePtr($IsStoragePtr($field_ptr), $LoadU256($field_ptr))
+                }
+                // $t2 := Option::is_some<U256::U256>($t1)
+                $t2 := A1_Option_is_some$A2_U256_U256$($t1)
+                // return $t2
+                $result := $t2
+            }
+
+            function A1_Option_is_some$A2_U256_U256$(t) -> $result {
+                let $t1, $t2, $t3
+                // $t1 := borrow_field<Option::Option<#0>>.vec($t0)
+                $t1 := t
+                // $t2 := Vector::is_empty<#0>($t1)
+                $t2 := A1_Vector_is_empty$A2_U256_U256$($t1)
+                // $t3 := !($t2)
+                $t3 := $LogicalNot($t2)
+                // return $t3
+                $result := $t3
+            }
+
+            function A1_Vector_is_empty$A2_U256_U256$(v) -> $result {
+                let $t1, $t2, $t3
+                // $t1 := Vector::length<#0>($t0)
+                $t1 := A1_Vector_length$A2_U256_U256$(v)
+                // $t2 := 0
+                $t2 := 0
+                // $t3 := ==($t1, $t2)
+                $t3 := $Eq($t1, $t2)
+                // return $t3
+                $result := $t3
+            }
+
+            function A1_Vector_length$A2_U256_U256$(v_ref) -> len {
+                let v_offs := $LoadU256(v_ref)
+                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+                len := $LoadU64(v_ptr)
+            }
+            function A2_ExternalResult_is_ok$A2_U256_U256$(result) -> $result {
+                let $t1, $t2
+                // $t1 := borrow_field<ExternalResult::ExternalResult<#0>>.value($t0)
+                {
+                    $t1 := $MakePtr($IsStoragePtr(result), $LoadU256(result))
+                }
+                // $t2 := Option::is_some<#0>($t1)
+                $t2 := A1_Option_is_some$A2_U256_U256$($t1)
+                // return $t2
+                $result := $t2
+            }
+
+            function A2_M_test_try_call(contract, v) -> $result  {
+                // storage for arguments and returned data
+                let $t2 := mload(0)
+                mstore($t2, $Shl(0x81b91ddb, 224))
+                let $t3 := abi_encode_tuple_$uint256$_$A2_U256_U256$(add($t2, 4), v)
+                let $t4 := call(gas(), contract, 0,  $t2, sub($t3, $t2), $t2, 32)
+                switch iszero($t4)
+                case 0 {
+                    // update freeMemoryPointer according to dynamic return size
+                    $MallocAt($t2, returndatasize())
+                    // decode return parameters from external try-call into retVars
+                    $result := abi_decode_tuple_$uint256$_$A2_U256_U256$_from_memory($t2, add($t2, returndatasize()))
+                    $result := A2_ExternalResult_ok$A2_U256_U256$($result)
+                }
+                default {
+                    let $t5 := 1
+                    switch $ReturnDataSelector()
+                    case 0x08c379a0 {
+                        $result := $TryDecodeErrMsg()
+                        if $result {
+                            $t5 := 0
+                            $result := A2_ExternalResult_err_reason$A2_U256_U256$($result)
+                        }
+                    }
+                    case 0x4e487b71 {
+                        let $t6, $t7 := $TryDecodePanicData()
+                        if $t6 {
+                            $t5 := 0
+                            $result := $t7
+                            $result := A2_ExternalResult_panic$A2_U256_U256$($result)
+                        }
+                    }
+                    if $t5 {
+                        $result := $PackErrData()
+                        $result := A2_ExternalResult_err_data$A2_U256_U256$($result)
+                    }
+                }
+            }
+            function A2_ExternalResult_err_data$A2_U256_U256$(error) -> $result {
+                let $t1, $t2, $t3, $t4, $t5
+                // $t1 := Option::none<#0>()
+                $t1 := A1_Option_none$A2_U256_U256$()
+                // $t2 := Option::some<vector<u8>>($t0)
+                $t2 := A1_Option_some$vec$u8$$(error)
+                // $t3 := Option::none<vector<u8>>()
+                $t3 := A1_Option_none$vec$u8$$()
+                // $t4 := Option::none<U256::U256>()
+                $t4 := A1_Option_none$A2_U256_U256$()
+                // $t5 := pack ExternalResult::ExternalResult<#0>($t1, $t2, $t3, $t4)
+                {
+                    let $mem := $Malloc(128)
+                    $MemoryStoreU256(add($mem, 0), $t1)
+                    $MemoryStoreU256(add($mem, 32), $t2)
+                    $MemoryStoreU256(add($mem, 64), $t3)
+                    $MemoryStoreU256(add($mem, 96), $t4)
+                    $t5 := $mem
+                }
+                // return $t5
+                $result := $t5
+            }
+
+            function A1_Option_none$A2_U256_U256$() -> $result {
+                let $t0, $t1
+                // $t0 := Vector::empty<#0>()
+                $t0 := A1_Vector_empty$A2_U256_U256$()
+                // $t1 := pack Option::Option<#0>($t0)
+                {
+                    let $mem := $Malloc(32)
+                    $MemoryStoreU256(add($mem, 0), $t0)
+                    $t1 := $mem
+                }
+                // return $t1
+                $result := $t1
+            }
+
+            function A1_Vector_empty$A2_U256_U256$() -> vector {
+                vector := $Malloc(96)
+                $MemoryStoreU64(add(vector, 8), 2)
+            }
+            function A1_Option_none$vec$u8$$() -> $result {
+                let $t0, $t1
+                // $t0 := Vector::empty<#0>()
+                $t0 := A1_Vector_empty$vec$u8$$()
+                // $t1 := pack Option::Option<#0>($t0)
+                {
+                    let $mem := $Malloc(32)
+                    $MemoryStoreU256(add($mem, 0), $t0)
+                    $t1 := $mem
+                }
+                // return $t1
+                $result := $t1
+            }
+
+            function A1_Vector_empty$vec$u8$$() -> vector {
+                vector := $Malloc(96)
+                $MemoryStoreU64(add(vector, 8), 2)
+            }
+            function A1_Option_some$vec$u8$$(e) -> $result {
+                let $t1, $t2
+                // $t1 := Vector::singleton<#0>($t0)
+                $t1 := A1_Vector_singleton$vec$u8$$(e)
+                // $t2 := pack Option::Option<#0>($t1)
+                {
+                    let $mem := $Malloc(32)
+                    $MemoryStoreU256(add($mem, 0), $t1)
+                    $t2 := $mem
+                }
+                // return $t2
+                $result := $t2
+            }
+
+            function A1_Vector_singleton$vec$u8$$(e) -> $result {
+                let $t2, $t3
+                let $locals := $Malloc(32)
+                // $t1 := Vector::empty<#0>()
+                mstore($locals, A1_Vector_empty$vec$u8$$())
+                // $t2 := borrow_local($t1)
+                $t2 := $MakePtr(false, $locals)
+                // Vector::push_back<#0>($t2, $t0)
+                A1_Vector_push_back$vec$u8$$($t2, e)
+                // $t3 := move($t1)
+                $t3 := mload($locals)
+                // return $t3
+                $result := $t3
+                $Free($locals, 32)
+            }
+
+            function A1_Vector_push_back$vec$u8$$(v_ref, e) {
+                let v_offs := $LoadU256(v_ref)
+                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+                let size := $LoadU64(v_ptr)
+                let e_ptr := $IndexPtr(v_ptr, add(32, mul(size, 32)))
+                $StoreU256(e_ptr, e)
+                if $IsStoragePtr(e_ptr) {
+                    let e_offs := $OffsetPtr(e_ptr)
+                    let $linked_dst_2300595445 := $NewLinkedStorageBase(0x89204cf5)
+                    let $size_2300595445 := $MemoryLoadU64(e)
+                    let $data_size_2300595445 := mul($size_2300595445, 1)
+                    $AlignedStorageStore($linked_dst_2300595445, mload(e))
+                    let $data_src_2300595445 := add(e, 32)
+                    let $data_dst_2300595445 := add($linked_dst_2300595445, 32)
+                    for { let $offs_2300595445 := 0 } lt($offs_2300595445, $data_size_2300595445) { $offs_2300595445 := add($offs_2300595445, 32)} {
+                        $AlignedStorageStore(add($data_dst_2300595445, $offs_2300595445), mload(add($data_src_2300595445, $offs_2300595445)))
+                        $Free(e, add($data_size_2300595445, 32))
+                    }
+                    $AlignedStorageStore(e_offs, $linked_dst_2300595445)
+                }
+                size := add(size, 1)
+                $StoreU64(v_ptr, size)
+                let capacity := $LoadU64($IndexPtr(v_ptr, 8))
+                if and(iszero($IsStoragePtr(v_ptr)), eq(size, capacity)) {
+                    let new_v_offs := $ResizeVector(v_offs, capacity, 32)
+                    $StoreU256(v_ref, new_v_offs)
+                }
+            }
+            function A2_ExternalResult_panic$A2_U256_U256$(panic_code) -> $result {
+                let tmp_$1, tmp_$2, tmp_$3, tmp_$4, $t5, $t6, $t7, $t8, $t9
+                // $t5 := Option::none<#0>()
+                $t5 := A1_Option_none$A2_U256_U256$()
+                // $t6 := Option::none<vector<u8>>()
+                $t6 := A1_Option_none$vec$u8$$()
+                // $t7 := Option::none<vector<u8>>()
+                $t7 := A1_Option_none$vec$u8$$()
+                // $t8 := Option::some<U256::U256>($t0)
+                $t8 := A1_Option_some$A2_U256_U256$(panic_code)
+                // $t9 := pack ExternalResult::ExternalResult<#0>($t5, $t7, $t6, $t8)
+                {
+                    let $mem := $Malloc(128)
+                    $MemoryStoreU256(add($mem, 0), $t5)
+                    $MemoryStoreU256(add($mem, 32), $t7)
+                    $MemoryStoreU256(add($mem, 64), $t6)
+                    $MemoryStoreU256(add($mem, 96), $t8)
+                    $t9 := $mem
+                }
+                // return $t9
+                $result := $t9
+            }
+
+            function A1_Option_some$A2_U256_U256$(e) -> $result {
+                let $t1, $t2
+                // $t1 := Vector::singleton<#0>($t0)
+                $t1 := A1_Vector_singleton$A2_U256_U256$(e)
+                // $t2 := pack Option::Option<#0>($t1)
+                {
+                    let $mem := $Malloc(32)
+                    $MemoryStoreU256(add($mem, 0), $t1)
+                    $t2 := $mem
+                }
+                // return $t2
+                $result := $t2
+            }
+
+            function A1_Vector_singleton$A2_U256_U256$(e) -> $result {
+                let $t2, $t3
+                let $locals := $Malloc(32)
+                // $t1 := Vector::empty<#0>()
+                mstore($locals, A1_Vector_empty$A2_U256_U256$())
+                // $t2 := borrow_local($t1)
+                $t2 := $MakePtr(false, $locals)
+                // Vector::push_back<#0>($t2, $t0)
+                A1_Vector_push_back$A2_U256_U256$($t2, e)
+                // $t3 := move($t1)
+                $t3 := mload($locals)
+                // return $t3
+                $result := $t3
+                $Free($locals, 32)
+            }
+
+            function A1_Vector_push_back$A2_U256_U256$(v_ref, e) {
+                let v_offs := $LoadU256(v_ref)
+                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+                let size := $LoadU64(v_ptr)
+                let e_ptr := $IndexPtr(v_ptr, add(32, mul(size, 32)))
+                $StoreU256(e_ptr, e)
+                size := add(size, 1)
+                $StoreU64(v_ptr, size)
+                let capacity := $LoadU64($IndexPtr(v_ptr, 8))
+                if and(iszero($IsStoragePtr(v_ptr)), eq(size, capacity)) {
+                    let new_v_offs := $ResizeVector(v_offs, capacity, 32)
+                    $StoreU256(v_ref, new_v_offs)
+                }
+            }
+            function A2_ExternalResult_err_reason$A2_U256_U256$(error) -> $result {
+                let tmp_$1, tmp_$2, tmp_$3, tmp_$4, $t5, $t6, $t7, $t8, $t9
+                // $t5 := Option::none<#0>()
+                $t5 := A1_Option_none$A2_U256_U256$()
+                // $t6 := Option::some<vector<u8>>($t0)
+                $t6 := A1_Option_some$vec$u8$$(error)
+                // $t7 := Option::none<vector<u8>>()
+                $t7 := A1_Option_none$vec$u8$$()
+                // $t8 := Option::none<U256::U256>()
+                $t8 := A1_Option_none$A2_U256_U256$()
+                // $t9 := pack ExternalResult::ExternalResult<#0>($t5, $t7, $t6, $t8)
+                {
+                    let $mem := $Malloc(128)
+                    $MemoryStoreU256(add($mem, 0), $t5)
+                    $MemoryStoreU256(add($mem, 32), $t7)
+                    $MemoryStoreU256(add($mem, 64), $t6)
+                    $MemoryStoreU256(add($mem, 96), $t8)
+                    $t9 := $mem
+                }
+                // return $t9
+                $result := $t9
+            }
+
+            function A2_ExternalResult_ok$A2_U256_U256$(value) -> $result {
+                let $t1, $t2, $t3, $t4, $t5
+                // $t1 := Option::some<#0>($t0)
+                $t1 := A1_Option_some$A2_U256_U256$(value)
+                // $t2 := Option::none<vector<u8>>()
+                $t2 := A1_Option_none$vec$u8$$()
+                // $t3 := Option::none<vector<u8>>()
+                $t3 := A1_Option_none$vec$u8$$()
+                // $t4 := Option::none<U256::U256>()
+                $t4 := A1_Option_none$A2_U256_U256$()
+                // $t5 := pack ExternalResult::ExternalResult<#0>($t1, $t2, $t3, $t4)
+                {
+                    let $mem := $Malloc(128)
+                    $MemoryStoreU256(add($mem, 0), $t1)
+                    $MemoryStoreU256(add($mem, 32), $t2)
+                    $MemoryStoreU256(add($mem, 64), $t3)
+                    $MemoryStoreU256(add($mem, 96), $t4)
+                    $t5 := $mem
+                }
+                // return $t5
+                $result := $t5
+            }
+
+            function A2_ExternalResult_is_err_reason$A2_U256_U256$(result) -> $result {
+                let $t1, $t2
+                // $t1 := borrow_field<ExternalResult::ExternalResult<#0>>.err_reason($t0)
+                {
+                    let $field_ptr := $IndexPtr(result, 64)
+                    $t1 := $MakePtr($IsStoragePtr($field_ptr), $LoadU256($field_ptr))
+                }
+                // $t2 := Option::is_some<vector<u8>>($t1)
+                $t2 := A1_Option_is_some$vec$u8$$($t1)
+                // return $t2
+                $result := $t2
+            }
+
+            function A1_Option_is_some$vec$u8$$(t) -> $result {
+                let $t1, $t2, $t3
+                // $t1 := borrow_field<Option::Option<#0>>.vec($t0)
+                $t1 := t
+                // $t2 := Vector::is_empty<#0>($t1)
+                $t2 := A1_Vector_is_empty$vec$u8$$($t1)
+                // $t3 := !($t2)
+                $t3 := $LogicalNot($t2)
+                // return $t3
+                $result := $t3
+            }
+
+            function A1_Vector_is_empty$vec$u8$$(v) -> $result {
+                let $t1, $t2, $t3
+                // $t1 := Vector::length<#0>($t0)
+                $t1 := A1_Vector_length$vec$u8$$(v)
+                // $t2 := 0
+                $t2 := 0
+                // $t3 := ==($t1, $t2)
+                $t3 := $Eq($t1, $t2)
+                // return $t3
+                $result := $t3
+            }
+
+            function A1_Vector_length$vec$u8$$(v_ref) -> len {
+                let v_offs := $LoadU256(v_ref)
+                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+                len := $LoadU64(v_ptr)
+            }
             function A2_M_safe_transfer_form(contract, from, to, tokenId, data) {
                 if iszero(extcodesize(contract)) { $Abort(91) }
                 // storage for arguments and returned data
@@ -172,10 +726,6 @@ object "A2_M" {
                     $result0, $result1 := abi_decode_tuple_$uint256___uint256$_$vec$A2_U256_U256$_A2_U256_U256$_from_memory($t3, add($t3, returndatasize()))
                 }
             }
-            function A1_Vector_empty$A2_U256_U256$() -> vector {
-                vector := $Malloc(96)
-                $MemoryStoreU64(add(vector, 8), 2)
-            }
             function A2_M_is_approved_for_all(contract, account, operator) -> $result  {
                 // storage for arguments and returned data
                 let $t3 := mload(0)
@@ -189,6 +739,543 @@ object "A2_M" {
                     // decode return parameters from external try-call into retVars
                     $result := abi_decode_tuple_$bool$_$bool$_from_memory($t3, add($t3, returndatasize()))
                 }
+            }
+            function A2_ExternalResult_is_ok$A2_Evm_Unit$(result) -> $result {
+                let $t1, $t2
+                // $t1 := borrow_field<ExternalResult::ExternalResult<#0>>.value($t0)
+                {
+                    $t1 := $MakePtr($IsStoragePtr(result), $LoadU256(result))
+                }
+                // $t2 := Option::is_some<#0>($t1)
+                $t2 := A1_Option_is_some$A2_Evm_Unit$($t1)
+                // return $t2
+                $result := $t2
+            }
+
+            function A1_Option_is_some$A2_Evm_Unit$(t) -> $result {
+                let $t1, $t2, $t3
+                // $t1 := borrow_field<Option::Option<#0>>.vec($t0)
+                $t1 := t
+                // $t2 := Vector::is_empty<#0>($t1)
+                $t2 := A1_Vector_is_empty$A2_Evm_Unit$($t1)
+                // $t3 := !($t2)
+                $t3 := $LogicalNot($t2)
+                // return $t3
+                $result := $t3
+            }
+
+            function A1_Vector_is_empty$A2_Evm_Unit$(v) -> $result {
+                let $t1, $t2, $t3
+                // $t1 := Vector::length<#0>($t0)
+                $t1 := A1_Vector_length$A2_Evm_Unit$(v)
+                // $t2 := 0
+                $t2 := 0
+                // $t3 := ==($t1, $t2)
+                $t3 := $Eq($t1, $t2)
+                // return $t3
+                $result := $t3
+            }
+
+            function A1_Vector_length$A2_Evm_Unit$(v_ref) -> len {
+                let v_offs := $LoadU256(v_ref)
+                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+                len := $LoadU64(v_ptr)
+            }
+            function A2_M_test_unit(contract) -> $result  {
+                if iszero(extcodesize(contract)) { $Abort(91) }
+                // storage for arguments and returned data
+                let $t1 := mload(0)
+                mstore($t1, $Shl(0xb76fa7ae, 224))
+                let $t2 := abi_encode_tuple__(add($t1, 4))
+                let $t3 := call(gas(), contract, 0,  $t1, sub($t2, $t1), $t1, 0)
+                switch iszero($t3)
+                case 0 {
+                    // update freeMemoryPointer according to dynamic return size
+                    $MallocAt($t1, returndatasize())
+                    // decode return parameters from external try-call into retVars
+                    abi_decode_tuple___from_memory($t1, add($t1, returndatasize()))
+                }
+                default {
+                    let $t4 := 1
+                    switch $ReturnDataSelector()
+                    case 0x08c379a0 {
+                        $result := $TryDecodeErrMsg()
+                        if $result {
+                            $t4 := 0
+                            $result := A2_ExternalResult_err_reason$A2_Evm_Unit$($result)
+                        }
+                    }
+                    case 0x4e487b71 {
+                        let $t5, $t6 := $TryDecodePanicData()
+                        if $t5 {
+                            $t4 := 0
+                            $result := $t6
+                            $result := A2_ExternalResult_panic$A2_Evm_Unit$($result)
+                        }
+                    }
+                    if $t4 {
+                        $result := $PackErrData()
+                        $result := A2_ExternalResult_err_data$A2_Evm_Unit$($result)
+                    }
+                }
+            }
+            function A2_ExternalResult_err_data$A2_Evm_Unit$(error) -> $result {
+                let $t1, $t2, $t3, $t4, $t5
+                // $t1 := Option::none<#0>()
+                $t1 := A1_Option_none$A2_Evm_Unit$()
+                // $t2 := Option::some<vector<u8>>($t0)
+                $t2 := A1_Option_some$vec$u8$$(error)
+                // $t3 := Option::none<vector<u8>>()
+                $t3 := A1_Option_none$vec$u8$$()
+                // $t4 := Option::none<U256::U256>()
+                $t4 := A1_Option_none$A2_U256_U256$()
+                // $t5 := pack ExternalResult::ExternalResult<#0>($t1, $t2, $t3, $t4)
+                {
+                    let $mem := $Malloc(128)
+                    $MemoryStoreU256(add($mem, 0), $t1)
+                    $MemoryStoreU256(add($mem, 32), $t2)
+                    $MemoryStoreU256(add($mem, 64), $t3)
+                    $MemoryStoreU256(add($mem, 96), $t4)
+                    $t5 := $mem
+                }
+                // return $t5
+                $result := $t5
+            }
+
+            function A1_Option_none$A2_Evm_Unit$() -> $result {
+                let $t0, $t1
+                // $t0 := Vector::empty<#0>()
+                $t0 := A1_Vector_empty$A2_Evm_Unit$()
+                // $t1 := pack Option::Option<#0>($t0)
+                {
+                    let $mem := $Malloc(32)
+                    $MemoryStoreU256(add($mem, 0), $t0)
+                    $t1 := $mem
+                }
+                // return $t1
+                $result := $t1
+            }
+
+            function A1_Vector_empty$A2_Evm_Unit$() -> vector {
+                vector := $Malloc(96)
+                $MemoryStoreU64(add(vector, 8), 2)
+            }
+            function A2_ExternalResult_panic$A2_Evm_Unit$(panic_code) -> $result {
+                let tmp_$1, tmp_$2, tmp_$3, tmp_$4, $t5, $t6, $t7, $t8, $t9
+                // $t5 := Option::none<#0>()
+                $t5 := A1_Option_none$A2_Evm_Unit$()
+                // $t6 := Option::none<vector<u8>>()
+                $t6 := A1_Option_none$vec$u8$$()
+                // $t7 := Option::none<vector<u8>>()
+                $t7 := A1_Option_none$vec$u8$$()
+                // $t8 := Option::some<U256::U256>($t0)
+                $t8 := A1_Option_some$A2_U256_U256$(panic_code)
+                // $t9 := pack ExternalResult::ExternalResult<#0>($t5, $t7, $t6, $t8)
+                {
+                    let $mem := $Malloc(128)
+                    $MemoryStoreU256(add($mem, 0), $t5)
+                    $MemoryStoreU256(add($mem, 32), $t7)
+                    $MemoryStoreU256(add($mem, 64), $t6)
+                    $MemoryStoreU256(add($mem, 96), $t8)
+                    $t9 := $mem
+                }
+                // return $t9
+                $result := $t9
+            }
+
+            function A2_ExternalResult_err_reason$A2_Evm_Unit$(error) -> $result {
+                let tmp_$1, tmp_$2, tmp_$3, tmp_$4, $t5, $t6, $t7, $t8, $t9
+                // $t5 := Option::none<#0>()
+                $t5 := A1_Option_none$A2_Evm_Unit$()
+                // $t6 := Option::some<vector<u8>>($t0)
+                $t6 := A1_Option_some$vec$u8$$(error)
+                // $t7 := Option::none<vector<u8>>()
+                $t7 := A1_Option_none$vec$u8$$()
+                // $t8 := Option::none<U256::U256>()
+                $t8 := A1_Option_none$A2_U256_U256$()
+                // $t9 := pack ExternalResult::ExternalResult<#0>($t5, $t7, $t6, $t8)
+                {
+                    let $mem := $Malloc(128)
+                    $MemoryStoreU256(add($mem, 0), $t5)
+                    $MemoryStoreU256(add($mem, 32), $t7)
+                    $MemoryStoreU256(add($mem, 64), $t6)
+                    $MemoryStoreU256(add($mem, 96), $t8)
+                    $t9 := $mem
+                }
+                // return $t9
+                $result := $t9
+            }
+
+            function A2_ExternalResult_unwrap$A2_Evm_Unit$(result) -> $result {
+                let err_data, err_reason, panic_code, value, $t5, $t6, $t7, $t8, $t9
+                // ($t5, $t6, $t7, $t8) := unpack ExternalResult::ExternalResult<#0>($t0)
+                $t5 := $MemoryLoadU256(add(result, 0))
+                $t6 := $MemoryLoadU256(add(result, 32))
+                $t7 := $MemoryLoadU256(add(result, 64))
+                $t8 := $MemoryLoadU256(add(result, 96))
+                $Free(result, 128)
+                // Option::destroy_none<vector<u8>>($t6)
+                A1_Option_destroy_none$vec$u8$$($t6)
+                // Option::destroy_none<vector<u8>>($t7)
+                A1_Option_destroy_none$vec$u8$$($t7)
+                // Option::destroy_none<U256::U256>($t8)
+                A1_Option_destroy_none$A2_U256_U256$($t8)
+                // $t9 := Option::destroy_some<#0>($t5)
+                $t9 := A1_Option_destroy_some$A2_Evm_Unit$($t5)
+                // return $t9
+                $result := $t9
+            }
+
+            function A1_Option_destroy_some$A2_Evm_Unit$(t) -> $result {
+                let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
+                let $locals := $Malloc(32)
+                let $block := 4
+                for {} true {} {
+                    switch $block
+                    case 2 {
+                        // label L1
+                        // $t5 := 1
+                        $t5 := 1
+                        // $t6 := Errors::invalid_argument($t5)
+                        $t6 := A1_Errors_invalid_argument($t5)
+                        // abort($t6)
+                        $Abort($t6)
+                    }
+                    case 3 {
+                        // label L0
+                        // $t7 := move($t0)
+                        $t7 := t
+                        // $t2 := unpack Option::Option<#0>($t7)
+                        mstore($locals, $MemoryLoadU256(add($t7, 0)))
+                        $Free($t7, 32)
+                        // $t8 := borrow_local($t2)
+                        $t8 := $MakePtr(false, $locals)
+                        // $t9 := Vector::pop_back<#0>($t8)
+                        $t9 := A1_Vector_pop_back$A2_Evm_Unit$($t8)
+                        // $t10 := move($t2)
+                        $t10 := mload($locals)
+                        // Vector::destroy_empty<#0>($t10)
+                        A1_Vector_destroy_empty$A2_Evm_Unit$($t10)
+                        // return $t9
+                        $result := $t9
+                        $Free($locals, 32)
+                        leave
+                    }
+                    case 4 {
+                        // $t3 := borrow_local($t0)
+                        $t3 := $MakePtr(false, t)
+                        // $t4 := Option::is_some<#0>($t3)
+                        $t4 := A1_Option_is_some$A2_Evm_Unit$($t3)
+                        // if ($t4) goto L0 else goto L1
+                        switch $t4
+                        case 0  { $block := 2 }
+                        default { $block := 3 }
+                    }
+                }
+            }
+
+            function A1_Vector_destroy_empty$A2_Evm_Unit$(v) {
+                let size := $MemoryLoadU64(v)
+                if $LogicalNot(iszero(size)) { $AbortBuiltin() }
+                let capacity := $MemoryLoadU64(add(v, 8))
+                $Free(v, add(32, mul(capacity, 32)))
+            }
+            function A1_Vector_pop_back$A2_Evm_Unit$(v_ref) -> e {
+                let v_offs := $LoadU256(v_ref)
+                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+                let size := $LoadU64(v_ptr)
+                if iszero(size) { $AbortBuiltin() }
+                let e_ptr := $IndexPtr(v_ptr, add(32, mul(sub(size, 1), 32)))
+                e := $LoadU256(e_ptr)
+                if $IsStoragePtr(e_ptr) {
+                    let e_offs := $OffsetPtr(e_ptr)
+                    let linked_src := $AlignedStorageLoad(e_offs)
+                    e := $Malloc(1)
+                    mstore(add(e, 0), $AlignedStorageLoad(add(linked_src, 0)))
+                    $AlignedStorageStore(add(linked_src, 0), 0)
+                    $AlignedStorageStore(e_offs, 0)
+                }
+                $StoreU64(v_ptr, sub(size, 1))
+            }
+            function A1_Errors_invalid_argument(reason) -> $result {
+                let $t1, $t2
+                // $t1 := 7
+                $t1 := 7
+                // $t2 := Errors::make($t1, $t0)
+                $t2 := A1_Errors_make($t1, reason)
+                // return $t2
+                $result := $t2
+            }
+
+            function A1_Errors_make(category, reason) -> $result {
+                let $t2, $t3, $t4, $t5
+                // $t2 := (u64)($t0)
+                $t2 := $CastU64(category)
+                // $t3 := 8
+                $t3 := 8
+                // $t4 := <<($t1, $t3)
+                $t4 := $ShlU64(reason, $t3)
+                // $t5 := +($t2, $t4)
+                $t5 := $AddU64($t2, $t4)
+                // return $t5
+                $result := $t5
+            }
+
+            function A1_Option_destroy_none$A2_U256_U256$(t) {
+                let vec, $t2, $t3, $t4, $t5, $t6, $t7
+                let $block := 4
+                for {} true {} {
+                    switch $block
+                    case 2 {
+                        // label L1
+                        // $t4 := 0
+                        $t4 := 0
+                        // $t5 := Errors::invalid_argument($t4)
+                        $t5 := A1_Errors_invalid_argument($t4)
+                        // abort($t5)
+                        $Abort($t5)
+                    }
+                    case 3 {
+                        // label L0
+                        // $t6 := move($t0)
+                        $t6 := t
+                        // $t7 := unpack Option::Option<#0>($t6)
+                        $t7 := $MemoryLoadU256(add($t6, 0))
+                        $Free($t6, 32)
+                        // Vector::destroy_empty<#0>($t7)
+                        A1_Vector_destroy_empty$A2_U256_U256$($t7)
+                        // return ()
+                        leave
+                    }
+                    case 4 {
+                        // $t2 := borrow_local($t0)
+                        $t2 := $MakePtr(false, t)
+                        // $t3 := Option::is_none<#0>($t2)
+                        $t3 := A1_Option_is_none$A2_U256_U256$($t2)
+                        // if ($t3) goto L0 else goto L1
+                        switch $t3
+                        case 0  { $block := 2 }
+                        default { $block := 3 }
+                    }
+                }
+            }
+
+            function A1_Option_is_none$A2_U256_U256$(t) -> $result {
+                let $t1, $t2
+                // $t1 := borrow_field<Option::Option<#0>>.vec($t0)
+                $t1 := t
+                // $t2 := Vector::is_empty<#0>($t1)
+                $t2 := A1_Vector_is_empty$A2_U256_U256$($t1)
+                // return $t2
+                $result := $t2
+            }
+
+            function A1_Vector_destroy_empty$A2_U256_U256$(v) {
+                let size := $MemoryLoadU64(v)
+                if $LogicalNot(iszero(size)) { $AbortBuiltin() }
+                let capacity := $MemoryLoadU64(add(v, 8))
+                $Free(v, add(32, mul(capacity, 32)))
+            }
+            function A1_Option_destroy_none$vec$u8$$(t) {
+                let vec, $t2, $t3, $t4, $t5, $t6, $t7
+                let $block := 4
+                for {} true {} {
+                    switch $block
+                    case 2 {
+                        // label L1
+                        // $t4 := 0
+                        $t4 := 0
+                        // $t5 := Errors::invalid_argument($t4)
+                        $t5 := A1_Errors_invalid_argument($t4)
+                        // abort($t5)
+                        $Abort($t5)
+                    }
+                    case 3 {
+                        // label L0
+                        // $t6 := move($t0)
+                        $t6 := t
+                        // $t7 := unpack Option::Option<#0>($t6)
+                        $t7 := $MemoryLoadU256(add($t6, 0))
+                        $Free($t6, 32)
+                        // Vector::destroy_empty<#0>($t7)
+                        A1_Vector_destroy_empty$vec$u8$$($t7)
+                        // return ()
+                        leave
+                    }
+                    case 4 {
+                        // $t2 := borrow_local($t0)
+                        $t2 := $MakePtr(false, t)
+                        // $t3 := Option::is_none<#0>($t2)
+                        $t3 := A1_Option_is_none$vec$u8$$($t2)
+                        // if ($t3) goto L0 else goto L1
+                        switch $t3
+                        case 0  { $block := 2 }
+                        default { $block := 3 }
+                    }
+                }
+            }
+
+            function A1_Option_is_none$vec$u8$$(t) -> $result {
+                let $t1, $t2
+                // $t1 := borrow_field<Option::Option<#0>>.vec($t0)
+                $t1 := t
+                // $t2 := Vector::is_empty<#0>($t1)
+                $t2 := A1_Vector_is_empty$vec$u8$$($t1)
+                // return $t2
+                $result := $t2
+            }
+
+            function A1_Vector_destroy_empty$vec$u8$$(v) {
+                let size := $MemoryLoadU64(v)
+                if $LogicalNot(iszero(size)) { $AbortBuiltin() }
+                let capacity := $MemoryLoadU64(add(v, 8))
+                $Free(v, add(32, mul(capacity, 32)))
+            }
+            function A2_M_success(contract) -> $result  {
+                // storage for arguments and returned data
+                let $t1 := mload(0)
+                mstore($t1, $Shl(0x14056b3d, 224))
+                let $t2 := abi_encode_tuple__(add($t1, 4))
+                let $t3 := call(gas(), contract, 0,  $t1, sub($t2, $t1), $t1, 32)
+                switch iszero($t3)
+                case 0 {
+                    // update freeMemoryPointer according to dynamic return size
+                    $MallocAt($t1, returndatasize())
+                    // decode return parameters from external try-call into retVars
+                    $result := abi_decode_tuple_$uint256$_$A2_U256_U256$_from_memory($t1, add($t1, returndatasize()))
+                    $result := A2_ExternalResult_ok$A2_U256_U256$($result)
+                }
+                default {
+                    let $t4 := 1
+                    switch $ReturnDataSelector()
+                    case 0x08c379a0 {
+                        $result := $TryDecodeErrMsg()
+                        if $result {
+                            $t4 := 0
+                            $result := A2_ExternalResult_err_reason$A2_U256_U256$($result)
+                        }
+                    }
+                    case 0x4e487b71 {
+                        let $t5, $t6 := $TryDecodePanicData()
+                        if $t5 {
+                            $t4 := 0
+                            $result := $t6
+                            $result := A2_ExternalResult_panic$A2_U256_U256$($result)
+                        }
+                    }
+                    if $t4 {
+                        $result := $PackErrData()
+                        $result := A2_ExternalResult_err_data$A2_U256_U256$($result)
+                    }
+                }
+            }
+            function A2_U256_one() -> $result {
+                let $t0
+                // $t0 := 1
+                $t0 := 1
+                // return $t0
+                $result := $t0
+            }
+
+            function A2_ExternalResult_unwrap$A2_U256_U256$(result) -> $result {
+                let err_data, err_reason, panic_code, value, $t5, $t6, $t7, $t8, $t9
+                // ($t5, $t6, $t7, $t8) := unpack ExternalResult::ExternalResult<#0>($t0)
+                $t5 := $MemoryLoadU256(add(result, 0))
+                $t6 := $MemoryLoadU256(add(result, 32))
+                $t7 := $MemoryLoadU256(add(result, 64))
+                $t8 := $MemoryLoadU256(add(result, 96))
+                $Free(result, 128)
+                // Option::destroy_none<vector<u8>>($t6)
+                A1_Option_destroy_none$vec$u8$$($t6)
+                // Option::destroy_none<vector<u8>>($t7)
+                A1_Option_destroy_none$vec$u8$$($t7)
+                // Option::destroy_none<U256::U256>($t8)
+                A1_Option_destroy_none$A2_U256_U256$($t8)
+                // $t9 := Option::destroy_some<#0>($t5)
+                $t9 := A1_Option_destroy_some$A2_U256_U256$($t5)
+                // return $t9
+                $result := $t9
+            }
+
+            function A1_Option_destroy_some$A2_U256_U256$(t) -> $result {
+                let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
+                let $locals := $Malloc(32)
+                let $block := 4
+                for {} true {} {
+                    switch $block
+                    case 2 {
+                        // label L1
+                        // $t5 := 1
+                        $t5 := 1
+                        // $t6 := Errors::invalid_argument($t5)
+                        $t6 := A1_Errors_invalid_argument($t5)
+                        // abort($t6)
+                        $Abort($t6)
+                    }
+                    case 3 {
+                        // label L0
+                        // $t7 := move($t0)
+                        $t7 := t
+                        // $t2 := unpack Option::Option<#0>($t7)
+                        mstore($locals, $MemoryLoadU256(add($t7, 0)))
+                        $Free($t7, 32)
+                        // $t8 := borrow_local($t2)
+                        $t8 := $MakePtr(false, $locals)
+                        // $t9 := Vector::pop_back<#0>($t8)
+                        $t9 := A1_Vector_pop_back$A2_U256_U256$($t8)
+                        // $t10 := move($t2)
+                        $t10 := mload($locals)
+                        // Vector::destroy_empty<#0>($t10)
+                        A1_Vector_destroy_empty$A2_U256_U256$($t10)
+                        // return $t9
+                        $result := $t9
+                        $Free($locals, 32)
+                        leave
+                    }
+                    case 4 {
+                        // $t3 := borrow_local($t0)
+                        $t3 := $MakePtr(false, t)
+                        // $t4 := Option::is_some<#0>($t3)
+                        $t4 := A1_Option_is_some$A2_U256_U256$($t3)
+                        // if ($t4) goto L0 else goto L1
+                        switch $t4
+                        case 0  { $block := 2 }
+                        default { $block := 3 }
+                    }
+                }
+            }
+
+            function A1_Vector_pop_back$A2_U256_U256$(v_ref) -> e {
+                let v_offs := $LoadU256(v_ref)
+                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+                let size := $LoadU64(v_ptr)
+                if iszero(size) { $AbortBuiltin() }
+                let e_ptr := $IndexPtr(v_ptr, add(32, mul(sub(size, 1), 32)))
+                e := $LoadU256(e_ptr)
+                $StoreU64(v_ptr, sub(size, 1))
+            }
+            function abi_decode_tuple_$uint256$_$A2_U256_U256$_from_memory(headStart, dataEnd) -> value_0 {
+                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_uint256_from_memory(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_uint256_from_memory(offset, end) -> value {
+                value := mload(offset)
+                validator_uint256(value)
+            }
+            function validator_uint256(value) {
+                if iszero(eq(value, cleanup_uint256(value))) { $Abort(95) }
+            }
+            function cleanup_uint256(value) -> cleaned {
+                cleaned := and(value, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+            }
+            function abi_encode_tuple__(headStart ) -> tail {
+                tail := add(headStart, 0)
+            }
+            function abi_decode_tuple___from_memory(headStart, dataEnd) {
+                if slt(sub(dataEnd, headStart), 0) { $Abort(96) }
             }
             function abi_decode_tuple_$bool$_$bool$_from_memory(headStart, dataEnd) -> value_0 {
                 if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
@@ -229,16 +1316,6 @@ object "A2_M" {
                     let offset := 32
                     value_1 := abi_decode_uint256_from_memory(add(headStart, offset), dataEnd)
                 }
-            }
-            function abi_decode_uint256_from_memory(offset, end) -> value {
-                value := mload(offset)
-                validator_uint256(value)
-            }
-            function validator_uint256(value) {
-                if iszero(eq(value, cleanup_uint256(value))) { $Abort(95) }
-            }
-            function cleanup_uint256(value) -> cleaned {
-                cleaned := and(value, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
             }
             function abi_decode_uint256___vec$A2_U256_U256$_from_memory(offset, end) -> array {
                 if iszero(slt(add(offset, 0x1f), end)) { $Abort(94) }
@@ -287,12 +1364,6 @@ object "A2_M" {
             function abi_encode_uint256(value, pos) {
                 mstore(pos, cleanup_uint256(value))
             }
-            function abi_decode_tuple___from_memory(headStart, dataEnd) {
-                if slt(sub(dataEnd, headStart), 0) { $Abort(96) }
-            }
-            function abi_encode_tuple__(headStart ) -> tail {
-                tail := add(headStart, 0)
-            }
             function abi_encode_tuple_$address_address_uint256_bytes$_$address_address_A2_U256_U256_vec$u8$$(headStart ,value_0, value_1, value_2, value_3) -> tail {
                 tail := add(headStart, 128)
                 abi_encode_address(value_0, add(headStart, 0))
@@ -308,6 +1379,20 @@ object "A2_M" {
                 $CopyMemoryU8(add(value, 0x20), pos, size)
                 size := $RoundUp(size)
                 end := add(pos, size)
+            }
+            function abi_encode_tuple_$uint256$_$A2_U256_U256$(headStart ,value_0) -> tail {
+                tail := add(headStart, 32)
+                abi_encode_uint256(value_0, add(headStart, 0))
+            }
+            function abi_encode_tuple_$uint8$_$u8$(headStart ,value_0) -> tail {
+                tail := add(headStart, 32)
+                abi_encode_uint8(value_0, add(headStart, 0))
+            }
+            function abi_encode_uint8(value, pos) {
+                mstore(pos, cleanup_uint8(value))
+            }
+            function cleanup_uint8(value) -> cleaned {
+                cleaned := and(value, 0xff)
             }
             function abi_decode_tuple_$uint128_uint128$_$u128_u128$(headStart, dataEnd) -> value_0, value_1 {
                 if slt(sub(dataEnd, headStart), 64) { $Abort(96) }
@@ -343,6 +1428,20 @@ object "A2_M" {
             function abi_encode_bool(value, pos) {
                 mstore(pos, cleanup_bool(value))
             }
+            function abi_decode_tuple_$address$_$address$(headStart, dataEnd) -> value_0 {
+                if slt(sub(dataEnd, headStart), 32) { $Abort(96) }
+                {
+                    let offset := 0
+                    value_0 := abi_decode_address(add(headStart, offset), dataEnd)
+                }
+            }
+            function abi_decode_address(offset, end) -> value {
+                value := calldataload(offset)
+                validator_address(value)
+            }
+            function validator_address(value) {
+                if iszero(eq(value, cleanup_address(value))) { $Abort(95) }
+            }
             function $Abort(code) {
                 mstore(0, code)
                 revert(24, 8) // TODO: store code as a string?
@@ -366,8 +1465,55 @@ object "A2_M" {
               if or(gt(new_free_ptr, 0xffffffffffffffff), lt(new_free_ptr, offs)) { $AbortBuiltin() }
               mstore(0, new_free_ptr)
             }
+            function $Free(offs, size) {
+            }
+            function $MakePtr(is_storage, offs) -> ptr {
+              ptr := or(is_storage, shl(1, offs))
+            }
+            function $IsStoragePtr(ptr) -> b {
+              b := and(ptr, 0x1)
+            }
+            function $OffsetPtr(ptr) -> offs {
+              offs := shr(1, ptr)
+            }
             function $MaskForSize(size) -> mask {
               mask := sub(shl(shl(3, size), 1), 1)
+            }
+            function $ExtractBytes(word, start, size) -> bytes {
+               switch size
+               case 1 {
+                  // use the faster byte primitive
+                  bytes := byte(start, word)
+               }
+               default {
+                  // As we have big endian, we need to right shift the value from
+                  // where the highest byte starts in the word (32 - start), minus
+                  // the size.
+                  let shift_bits := shl(3, sub(sub(32, start), size))
+                  bytes := and(shr(shift_bits, word), $MaskForSize(size))
+               }
+            }
+            function $InjectBytes(word, start, size, bytes) -> new_word {
+               let shift_bits := shl(3, sub(sub(32, start), size))
+               // Blend out the bits which we inject
+               let neg_mask := not(shl(shift_bits, $MaskForSize(size)))
+               word := and(word, neg_mask)
+               // Overlay the bits we inject
+               new_word := or(word, shl(shift_bits, bytes))
+            }
+            function $ToWordOffs(offs) -> word_offs, byte_offset {
+              word_offs := shr(5, offs)
+              byte_offset := and(offs, 0x1F)
+            }
+            function $OverflowBytes(byte_offset, size) -> overflow_bytes {
+              let available_bytes := sub(32, byte_offset)
+              switch gt(size, available_bytes)
+              case 0 {
+                overflow_bytes := 0
+              }
+              default {
+                overflow_bytes := sub(size, available_bytes)
+              }
             }
             function $MemoryLoadBytes(offs, size) -> val {
               // Lower bit where the value in the higher bytes ends
@@ -379,17 +1525,135 @@ object "A2_M" {
               let mask := shl(bit_end, $MaskForSize(size))
               mstore(offs, or(and(mload(offs), not(mask)), shl(bit_end, val)))
             }
+            function $StorageLoadBytes(offs, size) -> val {
+              let word_offs, byte_offs := $ToWordOffs(offs)
+              let key := $StorageKey(0, word_offs)
+              val := $ExtractBytes(sload(key), byte_offs, size)
+              let overflow_bytes := $OverflowBytes(byte_offs, size)
+              if $LogicalNot(iszero(overflow_bytes)) {
+                key := $StorageKey(0, add(word_offs, 1))
+                let extra_bytes := $ExtractBytes(sload(key), 0, overflow_bytes)
+                val := or(shl(shl(3, overflow_bytes), val), extra_bytes)
+              }
+            }
+            function $StorageStoreBytes(offs, size, bytes) {
+              let word_offs, byte_offs := $ToWordOffs(offs)
+              let key := $StorageKey(0, word_offs)
+              let overflow_bytes := $OverflowBytes(byte_offs, size)
+              switch overflow_bytes
+              case 0 {
+                sstore(key, $InjectBytes(sload(key), byte_offs, size, bytes))
+              }
+              default {
+                // Shift the higher bytes to the right
+                let used_bytes := sub(size, overflow_bytes)
+                let higher_bytes := shr(used_bytes, bytes)
+                let lower_bytes := and(bytes, $MaskForSize(overflow_bytes))
+                sstore(key, $InjectBytes(sload(key), byte_offs, used_bytes, higher_bytes))
+                key := $StorageKey(0, add(word_offs, 1))
+                sstore(key, $InjectBytes(sload(key), 0, overflow_bytes, lower_bytes))
+              }
+            }
+            function $StorageKey(group, word) -> key {
+              mstore(32, word)
+              mstore(64, shl(224, group))
+              key := keccak256(32, 36)
+            }
+            function $MakeTypeStorageBase(category, type_hash, id) -> offs {
+              offs := or(shl(252, category), or(shl(220, type_hash), shl(60, id)))
+            }
+            function $NewLinkedStorageBase(type_hash) -> offs {
+              let key := $StorageKey(1, 1)
+              let handle := sload(key)
+              sstore(key, add(handle, 1))
+              offs := $MakeTypeStorageBase(1, type_hash, handle)
+            }
+            function $IndexPtr(ptr, offs) -> new_ptr {
+              new_ptr := $MakePtr($IsStoragePtr(ptr), add($OffsetPtr(ptr), offs))
+            }
+            function $LoadU64(ptr) -> val {
+              let offs := $OffsetPtr(ptr)
+              switch $IsStoragePtr(ptr)
+              case 0 {
+                val := $MemoryLoadU64(offs)
+              }
+              default {
+                val := $StorageLoadU64(offs)
+              }
+            }
             function $MemoryLoadU64(offs) -> val {
               val := $MemoryLoadBytes(offs, 8)
+            }
+            function $StorageLoadU64(offs) -> val {
+              val := $StorageLoadBytes(offs, 8)
+            }
+            function $StoreU64(ptr, val) {
+              let offs := $OffsetPtr(ptr)
+              switch $IsStoragePtr(ptr)
+              case 0 {
+                $MemoryStoreU64(offs, val)
+              }
+              default {
+                $StorageStoreU64(offs, val)
+              }
             }
             function $MemoryStoreU64(offs, val) {
               $MemoryStoreBytes(offs, 8, val)
             }
+            function $StorageStoreU64(offs, val) {
+              $StorageStoreBytes(offs, 8, val)
+            }
+            function $LoadU256(ptr) -> val {
+              let offs := $OffsetPtr(ptr)
+              switch $IsStoragePtr(ptr)
+              case 0 {
+                val := $MemoryLoadU256(offs)
+              }
+              default {
+                val := $StorageLoadU256(offs)
+              }
+            }
             function $MemoryLoadU256(offs) -> val {
               val := $MemoryLoadBytes(offs, 32)
             }
+            function $StorageLoadU256(offs) -> val {
+              val := $StorageLoadBytes(offs, 32)
+            }
+            function $StoreU256(ptr, val) {
+              let offs := $OffsetPtr(ptr)
+              switch $IsStoragePtr(ptr)
+              case 0 {
+                $MemoryStoreU256(offs, val)
+              }
+              default {
+                $StorageStoreU256(offs, val)
+              }
+            }
             function $MemoryStoreU256(offs, val) {
               $MemoryStoreBytes(offs, 32, val)
+            }
+            function $StorageStoreU256(offs, val) {
+              $StorageStoreBytes(offs, 32, val)
+            }
+            function $AlignedStorageLoad(offs) -> val {
+              let word_offs := shr(5, offs)
+              val := sload($StorageKey(0, word_offs))
+            }
+            function $AlignedStorageStore(offs, val) {
+              let word_offs := shr(5, offs)
+              sstore($StorageKey(0, word_offs), val)
+            }
+            function $CopyMemory(src, dst, size) {
+              let i := 0
+              for { } lt(i, size) { i := add(i, 32) } {
+                mstore(add(dst, i), mload(add(src, i)))
+              }
+              if lt(i, size) {
+                let mask := sub(shl(shl(3, i), 1), 1)
+                let dst_word := and(mload(add(dst, i)), not(mask))
+                let src_word := and(mload(add(src, i)), mask)
+                mstore(add(dst, i), or(dst_word, src_word))
+              }
             }
             function $CopyMemoryU8(src, dst, size) {
               let i := 0
@@ -407,11 +1671,38 @@ object "A2_M" {
                 if gt(len, 0xffffffffffffffff) { $AbortBuiltin() }
                 checked_len := len
             }
+            function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
+                let new_capacity := mul(capacity, 2)
+                let data_size := add(32, mul(capacity, type_size))
+                let new_data_size := add(32, mul(new_capacity, type_size))
+                new_v_offs := $Malloc(new_data_size)
+                $CopyMemory(v_offs, new_v_offs, data_size)
+                // update capacity at new location
+                $MemoryStoreU64(add(new_v_offs, 8), new_capacity)
+                $Free(v_offs, data_size)
+            }
+            function $AddU64(x, y) -> r {
+                if lt(sub(0xffffffffffffffff, x), y) { $AbortBuiltin() }
+                r := add(x, y)
+            }
             function $Shr(x, y) -> r {
                 r := shr(y, x)
             }
             function $Shl(x, y) -> r {
               r := shl(y, x)
+            }
+            function $ShlU64(x, y) -> r {
+                r := and(shl(y, x), 0xffffffffffffffff)
+            }
+            function $Eq(x, y) -> r {
+                r := eq(x, y)
+            }
+            function $LogicalNot(x) -> r {
+                r := iszero(x)
+            }
+            function $CastU64(x) -> r {
+                if gt(x, 0xffffffffffffffff) { $AbortBuiltin() }
+                r := x
             }
             function $CastU256(hi, lo) -> r {
                 if gt(hi, 0xffffffffffffffffffffffffffffffff) { $AbortBuiltin() }
@@ -420,6 +1711,53 @@ object "A2_M" {
             }
             function $RoundUp(value) -> result {
                 result := and(add(value, 31), not(31))
+            }
+            function $ReturnDataSelector() -> sig {
+              if gt(returndatasize(), 3) {
+                let pos := $Malloc(4)
+                returndatacopy(pos, 0, 4)
+                sig := shr(224, mload(pos))
+              }
+            }
+            function $TryDecodePanicData() -> success, data {
+              if gt(returndatasize(), 0x23) {
+                let pos := $Malloc(0x20)
+                returndatacopy(pos, 4, 0x20)
+                success := 1
+                data := mload(pos)
+              }
+            }
+            function $PackErrData() -> data {
+              data := $Malloc(add(returndatasize(), 0x20))
+              $MemoryStoreU64(data, returndatasize())
+              $MemoryStoreU64(add(data, 8), returndatasize())
+              returndatacopy(add(data, 0x20), 0, returndatasize())
+            }
+
+            function $TryDecodeErrMsg() -> data {
+              if lt(returndatasize(), 0x44) { leave }
+              data := $Malloc(0x20)
+              returndatacopy(data, 4, 0x20)
+              let offset := mload(data)
+              if or(
+                  gt(offset, 0xffffffffffffffff),
+                  gt(add(offset, 0x24), returndatasize())
+                  ) {
+                  leave
+              }
+              data := $Malloc(0x20)
+              returndatacopy(data, add(4, offset), 0x20)
+              let length := mload(data)
+              if or(
+                gt(length, 0xffffffffffffffff),
+                gt(add(add(offset, 0x24), length), returndatasize())
+              ) {
+                leave
+              }
+              data := $Malloc(add(length, 0x20))
+              $MemoryStoreU64(data, length)
+              $MemoryStoreU64(add(data, 8), length)
+              returndatacopy(add(data, 0x20), add(offset, 0x24), length)
             }
         }
     }

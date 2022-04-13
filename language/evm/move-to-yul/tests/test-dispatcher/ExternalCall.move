@@ -1,6 +1,8 @@
 #[contract]
 module 0x2::M {
-    use Evm::U256::{U256, u256_from_words};
+    use Evm::U256::{Self, U256, u256_from_words};
+    use Evm::ExternalResult::{Self, ExternalResult};
+    use Evm::Evm::Unit;
     use Std::Vector;
 
     #[external(sig=b"noPara()")]
@@ -14,6 +16,47 @@ module 0x2::M {
 
     #[external(sig=b"multiRet(uint,uint[])returns(uint[], uint)"), view]
     public native fun multi_ret(contract: address, v: U256, vec: vector<U256>): (vector<U256>, U256);
+
+    #[external(sig=b"testExternalReturn(uint) returns (uint)")]
+    public native fun test_try_call(contract: address, v: U256): ExternalResult<U256>;
+
+    #[external(sig=b"success_uint() returns (uint)")]
+    public native fun success(contract: address): ExternalResult<U256>;
+
+    #[external(sig=b"test_unit()")]
+    public native fun test_unit(contract: address): ExternalResult<Unit>;
+
+    #[callable(sig=b"call_unit(address)"), pure]
+    fun call_unit(addr: address) {
+        let v = test_unit(addr);
+        if (ExternalResult::is_ok(&v)) {
+            let _u = ExternalResult::unwrap<Unit>(v);
+        }
+    }
+
+    #[callable(sig=b"call_success(address) returns (uint)"), pure]
+    fun call_success(addr: address): U256 {
+        let v = success(addr);
+        if (ExternalResult::is_ok(&v)) {
+            return ExternalResult::unwrap<U256>(v)
+        };
+        return U256::one()
+    }
+
+    #[callable]
+    fun test_try(): u8 {
+        let contract_addr = @3;
+        let v = u256_from_words(1, 2);
+        let value = test_try_call(contract_addr, v);
+        if (ExternalResult::is_ok(&value)) {
+            return 0
+        } else if (ExternalResult::is_err_reason(&value)) {
+            return 1
+        } else if (ExternalResult::is_panic(&value)) {
+            return 2
+        };
+        return 3
+    }
 
     #[callable]
     fun test_no_para() {

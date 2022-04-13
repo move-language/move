@@ -605,7 +605,15 @@ fn define_pop_back_fun(
             .into_iter()
         )
     );
-
+    emitln!(
+        ctx.writer,
+        "e := {}",
+        gen.parent.call_builtin_str(
+            ctx,
+            ctx.load_builtin_fun(elem_type),
+            std::iter::once("e_ptr".to_string())
+        )
+    );
     // Move element from storage to memory if vector is in global storage and element is a struct or vector
     if ctx.type_allocates_memory(elem_type) {
         emitln!(
@@ -655,16 +663,6 @@ fn define_pop_back_fun(
 
         ctx.writer.unindent();
         emitln!(ctx.writer, "}");
-    } else {
-        emitln!(
-            ctx.writer,
-            "e := {}",
-            gen.parent.call_builtin_str(
-                ctx,
-                ctx.load_builtin_fun(elem_type),
-                std::iter::once("e_ptr".to_string())
-            )
-        );
     }
 
     emitln!(

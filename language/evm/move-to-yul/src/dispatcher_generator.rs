@@ -109,7 +109,7 @@ impl Generator {
     ) -> SoliditySignature {
         let extracted_sig_opt =
             attributes::extract_callable_or_create_signature(fun, callable_flag);
-        let mut sig = SoliditySignature::create_default_solidity_signature(ctx, fun);
+        let mut sig = SoliditySignature::create_default_solidity_signature(ctx, fun, None);
         if let Some(extracted_sig) = extracted_sig_opt {
             let parsed_sig_opt =
                 SoliditySignature::parse_into_solidity_signature(&extracted_sig, fun);

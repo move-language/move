@@ -5349,15 +5349,7 @@ object "test_A2_Vectors_test_vector_equality" {
                     $t14 := $Malloc(36)
                     $MemoryStoreU64($t14, 4)
                     $MemoryStoreU64(add($t14, 8), $ClosestGreaterPowerOfTwo(36))
-                    let $offs_512532313 := add($t14, 32)
-                    $MemoryStoreU8($offs_512532313, 10)
-                    $offs_512532313 := add($offs_512532313, 1)
-                    $MemoryStoreU8($offs_512532313, 11)
-                    $offs_512532313 := add($offs_512532313, 1)
-                    $MemoryStoreU8($offs_512532313, 12)
-                    $offs_512532313 := add($offs_512532313, 1)
-                    $MemoryStoreU8($offs_512532313, 13)
-                    $offs_512532313 := add($offs_512532313, 1)
+                    copy_literal_string_to_memory_512532313(add($t14, 32))
                     // $t15 := !=($t13, $t14)
                     $t15 := iszero($EqVector($t13, $t14, 1))
                     // $t16 := !($t15)
@@ -5400,15 +5392,7 @@ object "test_A2_Vectors_test_vector_equality" {
                     $t10 := $Malloc(36)
                     $MemoryStoreU64($t10, 4)
                     $MemoryStoreU64(add($t10, 8), $ClosestGreaterPowerOfTwo(36))
-                    let $offs_512532313 := add($t10, 32)
-                    $MemoryStoreU8($offs_512532313, 10)
-                    $offs_512532313 := add($offs_512532313, 1)
-                    $MemoryStoreU8($offs_512532313, 11)
-                    $offs_512532313 := add($offs_512532313, 1)
-                    $MemoryStoreU8($offs_512532313, 12)
-                    $offs_512532313 := add($offs_512532313, 1)
-                    $MemoryStoreU8($offs_512532313, 13)
-                    $offs_512532313 := add($offs_512532313, 1)
+                    copy_literal_string_to_memory_512532313(add($t10, 32))
                     // $t11 := ==($t9, $t10)
                     $t11 := $EqVector($t9, $t10, 1)
                     // if ($t11) goto L0 else goto L1
@@ -5431,13 +5415,7 @@ object "test_A2_Vectors_test_vector_equality" {
                     $t19 := $Malloc(35)
                     $MemoryStoreU64($t19, 3)
                     $MemoryStoreU64(add($t19, 8), $ClosestGreaterPowerOfTwo(35))
-                    let $offs_2815201339 := add($t19, 32)
-                    $MemoryStoreU8($offs_2815201339, 10)
-                    $offs_2815201339 := add($offs_2815201339, 1)
-                    $MemoryStoreU8($offs_2815201339, 11)
-                    $offs_2815201339 := add($offs_2815201339, 1)
-                    $MemoryStoreU8($offs_2815201339, 12)
-                    $offs_2815201339 := add($offs_2815201339, 1)
+                    copy_literal_string_to_memory_2815201339(add($t19, 32))
                     // $t20 := !=($t18, $t19)
                     $t20 := iszero($EqVector($t18, $t19, 1))
                     // if ($t20) goto L4 else goto L5
@@ -5460,13 +5438,7 @@ object "test_A2_Vectors_test_vector_equality" {
                     $t23 := $Malloc(35)
                     $MemoryStoreU64($t23, 3)
                     $MemoryStoreU64(add($t23, 8), $ClosestGreaterPowerOfTwo(35))
-                    let $offs_2815201339 := add($t23, 32)
-                    $MemoryStoreU8($offs_2815201339, 10)
-                    $offs_2815201339 := add($offs_2815201339, 1)
-                    $MemoryStoreU8($offs_2815201339, 11)
-                    $offs_2815201339 := add($offs_2815201339, 1)
-                    $MemoryStoreU8($offs_2815201339, 12)
-                    $offs_2815201339 := add($offs_2815201339, 1)
+                    copy_literal_string_to_memory_2815201339(add($t23, 32))
                     // $t24 := ==($t22, $t23)
                     $t24 := $EqVector($t22, $t23, 1)
                     // $t25 := !($t24)
@@ -5497,17 +5469,7 @@ object "test_A2_Vectors_test_vector_equality" {
                     $t30 := $Malloc(37)
                     $MemoryStoreU64($t30, 5)
                     $MemoryStoreU64(add($t30, 8), $ClosestGreaterPowerOfTwo(37))
-                    let $offs_337779769 := add($t30, 32)
-                    $MemoryStoreU8($offs_337779769, 10)
-                    $offs_337779769 := add($offs_337779769, 1)
-                    $MemoryStoreU8($offs_337779769, 11)
-                    $offs_337779769 := add($offs_337779769, 1)
-                    $MemoryStoreU8($offs_337779769, 12)
-                    $offs_337779769 := add($offs_337779769, 1)
-                    $MemoryStoreU8($offs_337779769, 13)
-                    $offs_337779769 := add($offs_337779769, 1)
-                    $MemoryStoreU8($offs_337779769, 14)
-                    $offs_337779769 := add($offs_337779769, 1)
+                    copy_literal_string_to_memory_337779769(add($t30, 32))
                     // $t31 := ==($t29, $t30)
                     $t31 := $EqVector($t29, $t30, 1)
                     // if ($t31) goto L8 else goto L9
@@ -5548,6 +5510,36 @@ object "test_A2_Vectors_test_vector_equality" {
         function A1_Vector_empty$u8$() -> vector {
             vector := $Malloc(34)
             $MemoryStoreU64(add(vector, 8), 2)
+        }
+        function copy_literal_string_to_memory_337779769(value) {
+            $MemoryStoreU8(value, 10)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 11)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 12)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 13)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 14)
+            value := add(value, 1)
+        }
+        function copy_literal_string_to_memory_2815201339(value) {
+            $MemoryStoreU8(value, 10)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 11)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 12)
+            value := add(value, 1)
+        }
+        function copy_literal_string_to_memory_512532313(value) {
+            $MemoryStoreU8(value, 10)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 11)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 12)
+            value := add(value, 1)
+            $MemoryStoreU8(value, 13)
+            value := add(value, 1)
         }
         function $Abort(code) {
             mstore(0, code)
@@ -5797,7 +5789,7 @@ object "test_A2_Vectors_test_vector_equality" {
         }
     }
 }
-===> Test result of Vectors::test_vector_equality: Succeed(Stopped) (used_gas=7396): []
+===> Test result of Vectors::test_vector_equality: Succeed(Stopped) (used_gas=7536): []
 
 // test of Vectors::test_vectors_in_structs
 /* =======================================

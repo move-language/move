@@ -9,8 +9,8 @@
 
 # It requires cargo-edit and cargo-outdated
 # Example usage:
-# diem$ ./scripts/cargo_update_outdated.sh
-# diem$ git commit --all -m "Update dependencies"
+# move$ ./scripts/cargo_update_outdated.sh
+# move$ git commit --all -m "Update dependencies"
 set -e
 
 # check install for outdated & edit

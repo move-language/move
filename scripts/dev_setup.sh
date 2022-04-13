@@ -1,7 +1,7 @@
 #!/bin/bash
 # Copyright (c) The Diem Core Contributors
 # SPDX-License-Identifier: Apache-2.0
-# This script sets up the environment for the Diem build by installing necessary dependencies.
+# This script sets up the environment for the Move build by installing necessary dependencies.
 #
 # Usage ./dev_setup.sh <options>
 #   v - verbose, print all statements
@@ -25,7 +25,7 @@ cd "$SCRIPT_PATH/.." || exit
 
 function usage {
   echo "Usage:"
-  echo "Installs or updates necessary dev tools for diem/diem."
+  echo "Installs or updates necessary dev tools for Move."
   echo "-b batch mode, no user interactions and miminal output"
   echo "-p update ${HOME}/.profile"
   echo "-t install build tools"
@@ -481,7 +481,7 @@ if [[ "$INSTALL_BUILD_TOOLS" == "false" ]] && \
 fi
 
 if [ ! -f rust-toolchain ]; then
-	echo "Unknown location. Please run this from the diem repository. Abort."
+	echo "Unknown location. Please run this from the move repository. Abort."
 	exit 1
 fi
 

@@ -36,9 +36,6 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
-# Generated VM config in vm-genesis
-diem-move/vm-genesis/genesis/vm_config.toml
-
 # Terraform
 .terraform/
 
@@ -48,11 +45,6 @@ build/
 # Move coverage and tracing information
 .trace
 *.mvcov
-
-# Do not ignore the Move build output under the releases for DPN, core, and
-# experimental -- these are the release code.
-!diem-move/diem-framework/DPN/releases/artifacts/**
-!diem-move/diem-framework/experimental/releases/artifacts/**
 
 # Docker incremental build temporary files and directories
 target-out-docker

@@ -1,5 +1,3 @@
 # Security Policies and Procedures
 
-Please see Diem's
-[security policies](https://developers.diem.com/docs/reference/security) and
-procedures for reporting vulnerabilities.
+Please do NOT report a security problem via GitHub issues. Instead, send a report to build@mystenlabs.com.

@@ -1,8 +1,6 @@
 # Move Version 1.5
 
-Version 1.5 of Move (released along with Diem Core version 1.5) includes a new package
-system, a number of bug fixes,
-and other improvements.
+Version 1.5 of Move includes a new package system, a number of bug fixes, and other improvements.
 
 ## Highlights
 

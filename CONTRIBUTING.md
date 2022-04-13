@@ -1,18 +1,7 @@
 ---
 id: contributing
-title: Contributing to Diem
+title: Contributing to Move
 ---
-
-Our goal is to make contributing to the Diem project easy and transparent.
-
-> **Note**: As the Diem Core project is currently an early-stage prototype, it
-> is undergoing rapid development. While we welcome contributions, before
-> making substantial contributions be sure to discuss them in the Discourse
-> forum to ensure that they fit into the project roadmap.
-
-## On Contributing
-
-### Diem Core
 
 To contribute to the Diem Core implementation, first start with the proper
 development copy.
@@ -20,26 +9,13 @@ development copy.
 To get the development installation with all the necessary dependencies for
 linting, testing, and building the documentation, run the following:
 ```bash
-git clone https://github.com/diem/diem.git
-cd diem
+git clone https://github.com/move-language/move.git
+cd move
 ./scripts/dev_setup.sh
 cargo build
 cargo xtest
 ```
 
-## Our Development Process
-
-#### Code Style, Hints, and Testing
-
-Refer to our [Coding
-Guidelines](https://github.com/diem/diem/blob/main/documentation/coding_guidelines.md) for
-detailed guidance about how to contribute to the project.
-
-#### Documentation
-
-Diem's developer website is also open source (the code can be found in this
-[repository](https://github.com/diem/diem/tree/main/developers.diem.com)).  It is built using
-[Docusaurus](https://docusaurus.io/):
 
 ## Developer Workflow
 
@@ -82,14 +58,6 @@ the area is an identifier for the general area of the code being modified, e.g.
 * [language] removing VerificationPass trait
 ```
 
-A non-exhaustive list of some other areas include:
-* consensus
-* mempool
-* network
-* storage
-* execution
-* vm
-
 Following the commit title (unless it alone is self-explanatory), there should
 be a single blank line followed by the commit body which includes more
 detailed, explanatory text as separate paragraph(s). It is recommended that the
@@ -110,7 +78,7 @@ the format "abbreviated sha1 (subject, date)", with the subject enclosed in a
 pair of double-quotes, like this:
 
 ```bash
-Commit 895b53510 ("[consensus] remove slice_patterns feature", 2019-07-18)
+Commit 895b53510 ("[vm] use slices instead of evecotrs", 2021-08-19)
 noticed that ...
 ```
 
@@ -162,18 +130,9 @@ every commit is able to be built and passes all lints and tests. So if your
 pull request includes multiple commits be sure that each and every commit is
 able to be built and passes all checks performed by CI.
 
-## Contributor License Agreement
-
-For pull request to be accepted by any Diem projects, a CLA must be signed.
-You will only need to do this once to work on any of Diem's open source
-projects. Individuals contributing on their own behalf can sign the [Individual
-CLA](https://github.com/diem/diem/blob/main/documentation/contributing/individual-cla.pdf).
-If you are contributing on behalf of your employer, please ask them to sign the
-[Corporate
-CLA](https://github.com/diem/diem/blob/main/documentation/contributing/corporate-cla.pdf).
 
 ## Issues
 
-Diem uses [GitHub issues](https://github.com/diem/diem/issues) to track
+Move uses [GitHub issues](https://github.com/move-language/move/issues) to track
 bugs. Please include necessary information and instructions to reproduce your
 issue.

@@ -190,7 +190,7 @@ object "A2_ERC721" {
                 $t3 := $Malloc(32)
                 $MemoryStoreU64($t3, 0)
                 $MemoryStoreU64(add($t3, 8), $ClosestGreaterPowerOfTwo(32))
-                let $offs_21418693 := add($t3, 32)
+                copy_literal_string_to_memory_21418693(add($t3, 32))
                 // ERC721::safeTransferFrom_with_data($t0, $t1, $t2, $t3)
                 A2_ERC721_safeTransferFrom_with_data(from, to, tokenId, $t3)
                 // return ()
@@ -216,6 +216,8 @@ object "A2_ERC721" {
                 // return ()
             }
 
+            function copy_literal_string_to_memory_21418693(value) {
+            }
             function abi_encode_tuple__(headStart ) -> tail {
                 tail := add(headStart, 0)
             }

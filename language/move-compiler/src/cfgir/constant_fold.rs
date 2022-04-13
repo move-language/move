@@ -86,10 +86,7 @@ fn optimize_exp(e: &mut Exp) -> bool {
             .map(|(_, _, e)| optimize_exp(e))
             .any(|changed| changed),
 
-        E::ExpList(es) => es
-            .iter_mut()
-            .map(|item| optimize_exp_item(item))
-            .any(|changed| changed),
+        E::ExpList(es) => es.iter_mut().map(optimize_exp_item).any(|changed| changed),
 
         //************************************
         // Foldable cases

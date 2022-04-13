@@ -144,7 +144,7 @@ impl ModuleCache {
     // Retrieve a module by `ModuleId`. The module may have not been loaded yet in which
     // case `None` is returned
     fn module_at(&self, id: &ModuleId) -> Option<Arc<Module>> {
-        self.modules.get(id).map(|module| Arc::clone(module))
+        self.modules.get(id).map(Arc::clone)
     }
 
     // Retrieve a function by index
@@ -1343,6 +1343,7 @@ impl<'a> Resolver<'a> {
 // so that any data needed for execution is immediately available
 #[derive(Debug)]
 pub(crate) struct Module {
+    #[allow(dead_code)]
     id: ModuleId,
     // primitive pools
     module: Arc<CompiledModule>,
@@ -1355,6 +1356,7 @@ pub(crate) struct Module {
     // That is effectively an indirection over the ref table:
     // the instruction carries an index into this table which contains the index into the
     // glabal table of types. No instantiation of generic types is saved into the global table.
+    #[allow(dead_code)]
     struct_refs: Vec<CachedStructIndex>,
     structs: Vec<StructDef>,
     // materialized instantiations, whether partial or not
@@ -2013,6 +2015,7 @@ struct FieldHandle {
 struct FieldInstantiation {
     offset: usize,
     // `ModuelCache::structs` global table index. It is the generic type.
+    #[allow(unused)]
     owner: CachedStructIndex,
 }
 

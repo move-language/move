@@ -911,7 +911,7 @@ impl<'a> Disassembler<'a> {
             .map(|(local_idx, (name, _))| {
                 let ty =
                     self.type_for_local(parameter_len + local_idx, signature, function_source_map)?;
-                Ok(format!("{}: {}", name.to_string(), ty))
+                Ok(format!("{}: {}", name, ty))
             })
             .collect::<Result<Vec<String>>>()?;
         Ok(locals_names_tys)
@@ -1076,7 +1076,7 @@ impl<'a> Disassembler<'a> {
                 .map(|(name, ty)| {
                     let ty_str =
                         self.disassemble_sig_tok(ty.0.clone(), &struct_source_map.type_parameters)?;
-                    Ok(format!("{}: {}", name.to_string(), ty_str))
+                    Ok(format!("{}: {}", name, ty_str))
                 })
                 .collect::<Result<Vec<String>>>()?,
         };
@@ -1101,8 +1101,7 @@ impl<'a> Disassembler<'a> {
 
     pub fn disassemble(&self) -> Result<String> {
         let name_opt = self.source_mapper.source_map.module_name_opt.as_ref();
-        let name =
-            name_opt.map(|(addr, n)| format!("{}.{}", addr.short_str_lossless(), n.to_string()));
+        let name = name_opt.map(|(addr, n)| format!("{}.{}", addr.short_str_lossless(), n));
         let version = format!("{}", self.source_mapper.bytecode.version());
         let header = match name {
             Some(s) => format!("module {}", s),

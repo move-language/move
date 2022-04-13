@@ -306,7 +306,7 @@ impl BorrowState {
         assert!(full_borrows.is_empty());
         field_borrows
             .remove(&Self::local_label(local))
-            .unwrap_or_else(BTreeMap::new)
+            .unwrap_or_default()
     }
 
     fn resource_borrowed_by(&self, resource: &StructName) -> BTreeMap<RefID, Loc> {
@@ -314,7 +314,7 @@ impl BorrowState {
         assert!(full_borrows.is_empty());
         field_borrows
             .remove(&Self::resource_label(resource))
-            .unwrap_or_else(BTreeMap::new)
+            .unwrap_or_default()
     }
 
     // returns empty errors if borrowed_by is empty

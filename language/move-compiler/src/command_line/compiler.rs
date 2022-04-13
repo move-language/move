@@ -582,7 +582,7 @@ fn generate_interface_files_for_deps(
 }
 
 pub fn generate_interface_files(
-    mv_file_locations: &mut Vec<AddressScopedFileIndexed>,
+    mv_file_locations: &mut [AddressScopedFileIndexed],
     interface_files_dir_opt: Option<String>,
     named_address_mapping: &BTreeMap<CompiledModuleId, String>,
     separate_by_hash: bool,

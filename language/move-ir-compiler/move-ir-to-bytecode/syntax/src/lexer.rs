@@ -408,14 +408,14 @@ fn get_name_len(text: &str) -> usize {
     }
     text.chars()
         .position(|c| !matches!(c, 'a'..='z' | 'A'..='Z' | '$' | '_' | '0'..='9'))
-        .unwrap_or_else(|| text.len())
+        .unwrap_or(text.len())
 }
 
 fn get_decimal_number(text: &str) -> (Tok, usize) {
     let len = text
         .chars()
         .position(|c| !matches!(c, '0'..='9'))
-        .unwrap_or_else(|| text.len());
+        .unwrap_or(text.len());
     let rest = &text[len..];
     if rest.starts_with("u8") {
         (Tok::U8Value, len + 2)
@@ -432,7 +432,7 @@ fn get_decimal_number(text: &str) -> (Tok, usize) {
 fn get_hex_digits_len(text: &str) -> usize {
     text.chars()
         .position(|c| !matches!(c, 'a'..='f' | 'A'..='F' | '0'..='9'))
-        .unwrap_or_else(|| text.len())
+        .unwrap_or(text.len())
 }
 
 // Check for an optional sequence of hex digits following by a double quote, and return

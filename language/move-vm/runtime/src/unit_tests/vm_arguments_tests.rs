@@ -772,9 +772,9 @@ fn call_missing_item() {
     let function_name = IdentStr::new("foo").unwrap();
     // mising module
     let move_vm = MoveVM::new(vec![]).unwrap();
+    let mut gas_status = GasStatus::new_unmetered();
     let mut remote_view = RemoteStore::new();
     let mut session = move_vm.new_session(&remote_view);
-    let mut gas_status = GasStatus::new_unmetered();
     let error = session
         .execute_function_bypass_visibility(
             id,
@@ -787,6 +787,7 @@ fn call_missing_item() {
         .unwrap();
     assert_eq!(error.major_status(), StatusCode::LINKER_ERROR);
     assert_eq!(error.status_type(), StatusType::Verification);
+    drop(session);
 
     // missing function
     remote_view.add_module(module);

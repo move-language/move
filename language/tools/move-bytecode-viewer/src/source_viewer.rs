@@ -20,6 +20,7 @@ pub struct ModuleViewer {
     file_index: usize,
     source_code: Vec<String>,
     source_map: SourceMap,
+    #[allow(unused)]
     module: CompiledModule,
 }
 

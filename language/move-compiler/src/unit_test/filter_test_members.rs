@@ -154,13 +154,12 @@ fn filter_tests_from_definition(
                 .chain(specs.iter().flat_map(|spec| &spec.value.attributes));
 
             let diags: Diagnostics = script_attributes
-                .map(|attr| {
+                .flat_map(|attr| {
                     test_attributes(attr).into_iter().map(|(loc, _)| {
                         let msg = "Testing attributes are not allowed in scripts.";
                         diag!(Attributes::InvalidTest, (loc, msg))
                     })
                 })
-                .flatten()
                 .collect();
 
             if diags.is_empty() {

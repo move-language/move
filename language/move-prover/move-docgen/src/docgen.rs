@@ -706,7 +706,7 @@ impl<'env> Docgen<'env> {
             .join(format!(
                 "{}_{}_call_graph.svg",
                 fun_env.get_name_string().to_string().replace("::", "_"),
-                (if is_forward { "forward" } else { "backward" }).to_string()
+                (if is_forward { "forward" } else { "backward" })
             ));
 
         self.gen_svg_file(&out_file_path, &dot_src_lines.join("\n"));
@@ -754,7 +754,7 @@ impl<'env> Docgen<'env> {
             .join(format!(
                 "{}_{}_dep.svg",
                 module_name,
-                (if is_forward { "forward" } else { "backward" }).to_string()
+                (if is_forward { "forward" } else { "backward" })
             ));
 
         self.gen_svg_file(&out_file_path, &dot_src_lines.join("\n"));

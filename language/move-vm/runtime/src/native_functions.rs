@@ -1,7 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{interpreter::Interpreter, loader::Resolver};
+use crate::{
+    interpreter::Interpreter, loader::Resolver, native_extensions::NativeContextExtensions,
+};
 use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_core_types::{
     account_address::AccountAddress,
@@ -15,7 +17,6 @@ use move_vm_types::{
     natives::function::NativeResult, values::Value,
 };
 use std::{
-    any::{Any, TypeId},
     collections::{HashMap, VecDeque},
     fmt::Write,
 };
@@ -76,63 +77,21 @@ impl NativeFunctions {
     }
 }
 
-pub struct NativeContext<'a> {
+pub struct NativeContext<'a, 'b> {
     interpreter: &'a mut Interpreter,
     data_store: &'a mut dyn DataStore,
     gas_status: &'a GasStatus<'a>,
     resolver: &'a Resolver<'a>,
-    extensions: &'a mut NativeContextExtensions,
+    extensions: &'a mut NativeContextExtensions<'b>,
 }
 
-/// A data type to represent a heterogeneous collection of extensions which are available to
-/// native functions. A reference to this is passed into the session function execution
-/// entry points.
-#[derive(Default)]
-pub struct NativeContextExtensions {
-    map: HashMap<TypeId, Box<dyn Any>>,
-}
-
-impl NativeContextExtensions {
-    pub fn add<T: Any>(&mut self, ext: T) {
-        assert!(
-            self.map.insert(TypeId::of::<T>(), Box::new(ext)).is_none(),
-            "multiple extensions of the same type not allowed"
-        )
-    }
-
-    pub fn get<T: Any>(&self) -> &T {
-        self.map
-            .get(&TypeId::of::<T>())
-            .expect("dynamic typing error")
-            .downcast_ref::<T>()
-            .unwrap()
-    }
-
-    pub fn get_mut<T: Any>(&mut self) -> &mut T {
-        self.map
-            .get_mut(&TypeId::of::<T>())
-            .expect("dynamic typing error")
-            .downcast_mut::<T>()
-            .unwrap()
-    }
-
-    pub fn remove<T: Any>(&mut self) -> T {
-        *self
-            .map
-            .remove(&TypeId::of::<T>())
-            .expect("dynamic typing error")
-            .downcast::<T>()
-            .unwrap()
-    }
-}
-
-impl<'a, 'b> NativeContext<'a> {
+impl<'a, 'b> NativeContext<'a, 'b> {
     pub(crate) fn new(
         interpreter: &'a mut Interpreter,
         data_store: &'a mut dyn DataStore,
         gas_status: &'a mut GasStatus,
         resolver: &'a Resolver<'a>,
-        extensions: &'a mut NativeContextExtensions,
+        extensions: &'a mut NativeContextExtensions<'b>,
     ) -> Self {
         Self {
             interpreter,
@@ -144,7 +103,7 @@ impl<'a, 'b> NativeContext<'a> {
     }
 }
 
-impl<'a> NativeContext<'a> {
+impl<'a, 'b> NativeContext<'a, 'b> {
     pub fn print_stack_trace<B: Write>(&self, buf: &mut B) -> PartialVMResult<()> {
         self.interpreter
             .debug_print_stack_trace(buf, self.resolver.loader())
@@ -180,11 +139,11 @@ impl<'a> NativeContext<'a> {
         }
     }
 
-    pub fn extensions(&self) -> &NativeContextExtensions {
+    pub fn extensions(&self) -> &NativeContextExtensions<'b> {
         self.extensions
     }
 
-    pub fn extensions_mut(&mut self) -> &mut NativeContextExtensions {
+    pub fn extensions_mut(&mut self) -> &mut NativeContextExtensions<'b> {
         self.extensions
     }
 }

@@ -61,6 +61,7 @@ pub(crate) struct ModelBuilder<'env> {
 /// A declaration of a specification function or operator in the builders state.
 #[derive(Debug, Clone)]
 pub(crate) struct SpecFunEntry {
+    #[allow(dead_code)]
     pub loc: Loc,
     pub oper: Operation,
     pub type_params: Vec<Type>,
@@ -73,6 +74,7 @@ pub(crate) struct SpecFunEntry {
 pub(crate) struct SpecVarEntry {
     pub loc: Loc,
     pub module_id: ModuleId,
+    #[allow(dead_code)]
     pub var_id: SpecVarId,
     pub type_params: Vec<(Symbol, Type)>,
     pub type_: Type,
@@ -82,6 +84,7 @@ pub(crate) struct SpecVarEntry {
 #[derive(Debug)]
 pub(crate) struct SpecSchemaEntry {
     pub loc: Loc,
+    #[allow(dead_code)]
     pub name: QualifiedSymbol,
     pub module_id: ModuleId,
     pub type_params: Vec<(Symbol, Type)>,
@@ -101,6 +104,7 @@ pub(crate) struct StructEntry {
     pub loc: Loc,
     pub module_id: ModuleId,
     pub struct_id: StructId,
+    #[allow(dead_code)]
     pub is_resource: bool,
     pub type_params: Vec<(Symbol, Type)>,
     pub fields: Option<BTreeMap<Symbol, (usize, Type)>>,
@@ -112,6 +116,7 @@ pub(crate) struct StructEntry {
 pub(crate) struct FunEntry {
     pub loc: Loc,
     pub module_id: ModuleId,
+    #[allow(dead_code)]
     pub fun_id: FunId,
     pub visibility: FunctionVisibility,
     pub type_params: Vec<(Symbol, Type)>,

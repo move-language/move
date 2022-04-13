@@ -524,11 +524,7 @@ impl SpecPrinter<'_> {
         I: IntoIterator<Item = E>,
         F: Fn(E) -> Doc,
     {
-        Self::wrap(
-            "(",
-            Self::sep_comma_space(items.into_iter().map(|t| func(t))),
-            ")",
-        )
+        Self::wrap("(", Self::sep_comma_space(items.into_iter().map(func)), ")")
     }
 
     fn mk_inst<E, I, F>(base: Doc, items: I, func: F) -> Doc
@@ -538,11 +534,7 @@ impl SpecPrinter<'_> {
     {
         Self::concat([
             base,
-            Self::wrap(
-                "<",
-                Self::sep_comma_space(items.into_iter().map(|t| func(t))),
-                ">",
-            ),
+            Self::wrap("<", Self::sep_comma_space(items.into_iter().map(func)), ">"),
         ])
     }
 

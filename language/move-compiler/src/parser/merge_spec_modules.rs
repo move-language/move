@@ -106,7 +106,7 @@ fn extract_spec_module(
 
 fn merge_spec_modules(
     spec_modules: &mut BTreeMap<(Option<LeadingNameAccess_>, Symbol), ModuleDefinition>,
-    defs: &mut Vec<(NamedAddressMapIndex, Definition)>,
+    defs: &mut [(NamedAddressMapIndex, Definition)],
 ) {
     use Definition::*;
     // TODO check address mappings line up

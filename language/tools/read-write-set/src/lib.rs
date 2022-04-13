@@ -72,7 +72,7 @@ impl ReadWriteSetAnalysis {
     /// Returns `None` if this function does not exist
     pub fn get_function_env(&self, module: &ModuleId, fun: &IdentStr) -> Option<FunctionEnv> {
         self.env
-            .find_function_by_language_storage_id_name(module, &fun.to_owned())
+            .find_function_by_language_storage_id_name(module, fun)
     }
 
     /// Normalize the analysis result computed from the move-prover pipeline.

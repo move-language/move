@@ -148,6 +148,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "better_any"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b359aebd937c17c725e19efcb661200883f04c49c53e7132224dac26da39d4a0"
+dependencies = [
+ "better_typeid_derive",
+]
+
+[[package]]
+name = "better_typeid_derive"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3deeecb812ca5300b7d3f66f730cc2ebd3511c3d36c691dd79c165d5b19a26e3"
+dependencies = [
+ "proc-macro2 1.0.28",
+ "quote 1.0.9",
+ "syn 1.0.74",
+]
+
+[[package]]
 name = "bimap"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2016,6 +2036,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
+ "better_any",
  "datatest-stable",
  "itertools 0.10.1",
  "move-binary-format",
@@ -2666,6 +2687,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
+ "better_any",
  "downcast-rs",
  "itertools 0.10.1",
  "move-binary-format",
@@ -2821,6 +2843,7 @@ name = "move-vm-runtime"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "better_any",
  "fail",
  "hex",
  "mirai-annotations",
@@ -4868,7 +4891,7 @@ version = "1.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ee73e6e4924fe940354b8d4d98cad5231175d615cd855b758adc658c0aac6a0"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "static_assertions",
 ]
 

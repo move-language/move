@@ -5,7 +5,8 @@ use crate::{
     data_cache::TransactionDataCache,
     interpreter::Interpreter,
     loader::{Function, Loader},
-    native_functions::{NativeContextExtensions, NativeFunction, NativeFunctions},
+    native_extensions::NativeContextExtensions,
+    native_functions::{NativeFunction, NativeFunctions},
     session::{LoadedFunctionInstantiation, SerializedReturnValues, Session},
 };
 use move_binary_format::{
@@ -58,7 +59,7 @@ impl VMRuntime {
     pub fn new_session_with_extensions<'r, S: MoveResolver>(
         &self,
         remote: &'r S,
-        native_extensions: NativeContextExtensions,
+        native_extensions: NativeContextExtensions<'r>,
     ) -> Session<'r, '_, S> {
         Session {
             runtime: self,

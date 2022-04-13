@@ -19,7 +19,8 @@ use move_core_types::{
 };
 use move_vm_runtime::{
     move_vm::MoveVM,
-    native_functions::{NativeContextExtensions, NativeFunction},
+    native_extensions::NativeContextExtensions,
+    native_functions::NativeFunction,
     session::{SerializedReturnValues, Session},
 };
 use move_vm_types::{
@@ -49,7 +50,7 @@ impl AsyncVM {
             .collect();
         let message_table: HashMap<u64, (ModuleId, Identifier)> = actor_metadata
             .values()
-            .map(|a| {
+            .flat_map(|a| {
                 a.messages.iter().map(move |m| {
                     (
                         actor_metadata::message_hash(&a.module_id, m.as_ident_str()),
@@ -57,7 +58,6 @@ impl AsyncVM {
                     )
                 })
             })
-            .flatten()
             .collect();
         Ok(AsyncVM {
             move_vm: MoveVM::new(
@@ -328,11 +328,11 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
     }
 }
 
-fn make_extensions(
+fn make_extensions<'a>(
     actor_addr: AccountAddress,
     virtual_time: u128,
     in_initializer: bool,
-) -> NativeContextExtensions {
+) -> NativeContextExtensions<'a> {
     let mut exts = NativeContextExtensions::default();
     exts.add(AsyncExtension {
         current_actor: actor_addr,

@@ -91,7 +91,7 @@ impl<'a> ModuleGenerator<'a> {
 
     fn identifier(&mut self) -> String {
         let len = self.gen.gen_range(10..self.options.max_string_size);
-        random_string(&mut self.gen, len)
+        random_string(self.gen, len)
     }
 
     fn base_type(&mut self, ty_param_context: &[&TypeVar]) -> Type {

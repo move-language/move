@@ -34,7 +34,7 @@ pub fn function_signature(context: &mut Context, sig: &mut FunctionSignature) {
 // Types
 //**************************************************************************************************
 
-fn expected_types(context: &mut Context, ss: &mut Vec<Option<Type>>) {
+fn expected_types(context: &mut Context, ss: &mut [Option<Type>]) {
     for st_opt in ss.iter_mut().flatten() {
         type_(context, st_opt);
     }

@@ -689,7 +689,7 @@ impl ExpData {
         F: FnMut(NodeId) -> Option<NodeId>,
     {
         ExpRewriter {
-            exp_rewriter: &mut |e| Err(e),
+            exp_rewriter: &mut Err,
             node_rewriter,
         }
         .rewrite_exp(exp)

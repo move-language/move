@@ -64,7 +64,7 @@ impl FunctionTargetProcessor for WellFormedInstrumentationProcessor {
         }
 
         // Inject well-formedness assumption for used memory.
-        for mem in usage.accessed.all.clone() {
+        for mem in usage.accessed.all {
             let struct_env = builder.global_env().get_struct_qid(mem.to_qualified_id());
             if struct_env.is_native_or_intrinsic() {
                 // If this is native or intrinsic memory, skip this.

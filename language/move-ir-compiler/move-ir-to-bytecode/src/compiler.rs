@@ -614,7 +614,7 @@ fn struct_type_parameters(ast_tys: &[ast::StructTypeParameter]) -> Vec<StructTyp
 fn abilities(abilities: &BTreeSet<ast::Ability>) -> AbilitySet {
     abilities
         .iter()
-        .map(|a| ability(a))
+        .map(ability)
         .fold(AbilitySet::EMPTY, |acc, a| acc | a)
 }
 

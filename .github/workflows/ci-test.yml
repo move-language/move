@@ -63,7 +63,7 @@ jobs:
       - uses: ./.github/actions/build-teardown
 
   unit-test:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     timeout-minutes: 60
     needs: prepare
     # if: ${{ needs.prepare.outputs.test-rust == 'true' }}

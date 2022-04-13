@@ -1050,7 +1050,7 @@ fn define_destroy_empty_fun(
     emitln!(ctx.writer, "}");
 }
 
-fn get_elem_type(vector_type: &Type) -> Option<Type> {
+pub(crate) fn get_elem_type(vector_type: &Type) -> Option<Type> {
     match vector_type {
         Type::Vector(ty) => Some(*ty.clone()),
         _ => None,

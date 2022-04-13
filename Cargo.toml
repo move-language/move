@@ -102,7 +102,7 @@ debug = true
 # use release settings to reduce memory pressure in the linking step in CI
 [profile.ci]
 inherits = "test"
-opt-level = 3
+opt-level = 2
 debug = 1 # for saving disk space during linking
 incremental = false
 codegen-units = 16

@@ -178,7 +178,8 @@ impl BuildPlan {
             return Err(err.into());
         }
 
-        let mut error_buffer = Buffer::no_color();
+        // TODO: should inherit color settings from current shell
+        let mut error_buffer = Buffer::ansi();
         if let Err(err) = run_to_yul(
             &mut error_buffer,
             MoveToYulOptions {
@@ -195,6 +196,12 @@ impl BuildPlan {
                 writer,
                 "{} Failed to compile Move into Yul",
                 "ERROR".bold().red()
+            )?;
+
+            writeln!(
+                writer,
+                "{}",
+                std::str::from_utf8(error_buffer.as_slice()).unwrap()
             )?;
 
             let mut source = err.source();

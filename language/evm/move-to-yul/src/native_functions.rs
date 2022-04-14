@@ -363,6 +363,16 @@ impl NativeFunctions {
 }"
             );
         });
+
+        self.define(ctx, evm, "extcodesize", |_, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+                (addr) -> result {
+                  result := extcodesize(addr)
+                }"
+            );
+        });
     }
 
     fn define_move_functions(&mut self, ctx: &Context) {

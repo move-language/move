@@ -16,6 +16,14 @@ const make_test = function(contract_name) {
       const tx = this.native.getSenderAddr();
       expect(await tx).to.equal(this.native.signer.address);
     });
+    it("getIsContract(this.native.address) should return true", async function () {
+      const tx = this.native.getIsContract(this.native.address);
+      expect(await tx).to.equal(true);
+    });
+    it("getIsContract(this.native.signer.address) should return false", async function () {
+      const tx = this.native.getIsContract(this.native.signer.address);
+      expect(await tx).to.equal(false);
+    });
   }
 };
 

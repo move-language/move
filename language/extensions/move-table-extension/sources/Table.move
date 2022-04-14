@@ -2,7 +2,11 @@
 module Extensions::Table {
     use Std::Errors;
 
-    const ENOT_EMPTY: u64 = 0;
+    // native code raises this with Errors::invalid_arguments()
+    const EALREADY_EXISTS: u64 = 100;
+    // native code raises this with Errors::invalid_arguments()
+    const ENOT_FOUND: u64 = 101;
+    const ENOT_EMPTY: u64 = 102;
 
     /// Type of tables
     struct Table<phantom K, phantom V> has store {

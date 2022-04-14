@@ -27,7 +27,7 @@ fn verify_string(string: &str) -> Result<()> {
         .map_or(Ok(()), |chr| {
             bail!(
                 "Parser Error: invalid character {} found when reading file.\
-                 Only ascii printable, tabs (\\t), and \\n line ending characters are permitted.",
+                 Only ascii printable, tabs (\\t), returns (\\r), and \\n line ending characters are permitted.",
                 chr
             )
         })
@@ -84,9 +84,11 @@ mod tests {
         let mut good_chars = (0x20..=0x7E).collect::<Vec<u8>>();
         good_chars.push(0x0A);
         good_chars.push(0x09);
+        good_chars.push(0x0D);
 
         let mut bad_chars = (0x0..0x09).collect::<Vec<_>>();
-        bad_chars.append(&mut (0x0B..=0x1F).collect::<Vec<_>>());
+        bad_chars.append(&mut vec![0x0B, 0x0C]);
+        bad_chars.append(&mut (0x0E..=0x1F).collect::<Vec<_>>());
         bad_chars.push(0x7F);
 
         // Test to make sure that all the characters that are in the allowlist pass.

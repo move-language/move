@@ -174,10 +174,10 @@ impl<'input> Lexer<'input> {
         let mut text = &self.text[self.cur_end..];
         loop {
             // Trim the only whitespace characters we recognize: newline, tab, and space.
-            text = text.trim_start_matches(|c: char| matches!(c, '\n' | '\t' | ' '));
+            text = text.trim_start_matches(|c: char| matches!(c, '\n' | '\t' | '\r' | ' '));
             // Trim the only comments we recognize: '// ... \n'.
             if text.starts_with("//") {
-                text = text.trim_start_matches(|c: char| c != '\n');
+                text = text.trim_start_matches(|c: char| c != '\n' && c != '\r');
                 // Continue the loop on the following line, which may contain leading
                 // whitespace or comments of its own.
                 continue;

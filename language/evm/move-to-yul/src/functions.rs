@@ -971,8 +971,10 @@ impl<'a> FunctionGenerator<'a> {
                             YulFunction::LoadU256,
                             std::iter::once(format!("add({}, {})", src, byte_offset)),
                         );
-                        emitln!(ctx.writer, "let $field_ptr := {}", field_ptr);
-                        self.destroy(ctx, &field_type, "$field_ptr".to_string());
+                        let field_ptr_name =
+                            format!("$field_ptr_{}", self.type_hash(ctx, &field_type));
+                        emitln!(ctx.writer, "let {} := {}", field_ptr_name, field_ptr);
+                        self.destroy(ctx, &field_type, field_ptr_name);
                     })
                 }
 

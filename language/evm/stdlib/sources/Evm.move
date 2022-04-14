@@ -3,9 +3,7 @@
 /// This currently only represents a basic subset of what we may want to expose.
 module Evm::Evm {
     use Std::Vector;
-    use Std::ASCII::{String};
-    use Std::Errors;
-    use Evm::U256::{U256};
+    use Evm::U256::{Self, U256};
 
     /// Returns the address of the executing contract.
     public native fun self(): address;
@@ -39,7 +37,7 @@ module Evm::Evm {
     /// Returns the first four bytes of `data`.
     /// This is the equivalent to the type casting operation `bytes4` in Solidity.
     public fun bytes4(data: vector<u8>): vector<u8> {
-        assert!(Vector::length(&data) >= 4, Errors::invalid_argument(0));
+        assert!(Vector::length(&data) >= 4, 0);
         let res = Vector::empty<u8>();
         Vector::push_back(&mut res, *Vector::borrow(&data, 0));
         Vector::push_back(&mut res, *Vector::borrow(&data, 1));
@@ -61,7 +59,12 @@ module Evm::Evm {
     // }
     // return (size > 0);
     // ```
-    public native fun isContract(addr: address): bool;
+    public fun isContract(addr: address): bool {
+        U256::gt(extcodesize(addr), U256::zero())
+    }
+
+    /// Returns the size of the code at address `addr`.
+    public native fun extcodesize(addr: address): U256;
 
     /// Define the unit (null or void) type.
     struct Unit has drop {}
@@ -69,7 +72,10 @@ module Evm::Evm {
     /// Get tokenURI with base URI.
     // This is implemented in Solidity as follows:
     //   bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
-    public native fun tokenURI_with_baseURI(baseURI: String, tokenId: U256): String;
+    public fun tokenURI_with_baseURI(_baseURI: vector<u8>, _tokenId: U256): vector<u8> {
+        // TODO: implement this properly
+        b""
+    }
 
     /// Abort with an error message.
     public native fun abort_with(message: vector<u8>);

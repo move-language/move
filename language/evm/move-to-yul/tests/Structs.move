@@ -9,6 +9,10 @@ module 0x2::M {
         x: u128
     }
 
+    struct S3 has drop {
+        s: S,
+    }
+
     // =============================================
 
     fun pack_S2(x: u128): S2 {
@@ -90,5 +94,10 @@ module 0x2::M {
         let s = pack_S(33, false);
         let s1 = unpack(s);
         assert!(s1.x == 33, 101);
+    }
+
+    #[evm_test]
+    fun test_drop() {
+        let _s3 = S3 { s: pack_S(33, false) };
     }
 }

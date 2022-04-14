@@ -62,7 +62,7 @@ module Evm::ExternalCall {
     public fun test_for_move_to_yul(from: address, to: address, tokenId: U256, data: vector<u8>) {
         // TODO: Uncomment the following line to see the error. The error occurs only when this function is set to be `callable`.
         //       See https://github.com/move-language/move/issues/30 for more details.
-        //let _ = IERC721Receiver_try_call_onERC721Received(to, sender(), from, tokenId, data);
+        let _ = IERC721Receiver_try_call_onERC721Received(to, sender(), from, tokenId, data);
     }
 
     #[callable(sig=b"doSafeTransferAcceptanceCheck(address,address,uint256,bytes)"), pure]

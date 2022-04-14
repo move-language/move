@@ -88,6 +88,16 @@ async function createDirIfNotExists(path: Fs.PathLike): Promise<Result<string | 
     });
 }
 
+async function executeChildProcess(cmd: string): Promise<[ChildProcess.ExecException | null, string, string]> {
+    return new Promise((resolve, _reject) => {
+        // TODO: preserve coloring
+        let proc = ChildProcess.exec(cmd, (err, stdout, stderr) => {
+            resolve([err, stdout, stderr]);
+        });
+
+        proc.stdin!.end();
+    });
+}
 
 /***************************************************************************************
  *
@@ -128,16 +138,6 @@ async function listMovePackages(contractsPath: Fs.PathLike): Promise<Array<Strin
  *   Functions to build Move packages using the `move` executable.
  *
  **************************************************************************************/
-async function executeChildProcess(cmd: string): Promise<[ChildProcess.ExecException | null, string, string]> {
-    return new Promise((resolve, _reject) => {
-        let proc = ChildProcess.exec(cmd, (err, stdout, stderr) => {
-            resolve([err, stdout, stderr]);
-        });
-
-        proc.stdin!.end();
-    });
-}
-
 async function locateMoveExecutablePath(): Promise<Result<string, Error>> {
     let [e, stdout, _stderr] = await executeChildProcess("which move");
 
@@ -153,10 +153,14 @@ async function locateMoveExecutablePath(): Promise<Result<string, Error>> {
 
 class MoveBuildError {
     exec_err: ChildProcess.ExecException;
+    // TODO: right now, `move package build` outputs its build errors to stdout instead of stderr.
+    // This may not be ideal and we may want to fix it and then revisit the error definition here.
+    stdout: string;
     stderr: string;
 
-    constructor(exec_err: ChildProcess.ExecException, stderr: string) {
+    constructor(exec_err: ChildProcess.ExecException, stdout: string, stderr: string) {
         this.exec_err = exec_err;
+        this.stdout = stdout;
         this.stderr = stderr;
     }
 }
@@ -164,10 +168,10 @@ class MoveBuildError {
 async function movePackageBuild(movePath: string, packagePath: string): Promise<Result<void, MoveBuildError>> {
     let cmd = `${movePath} package build --path ${packagePath} --arch ethereum`;
 
-    let [e, _stdout, stderr] = await executeChildProcess(cmd);
+    let [e, stdout, stderr] = await executeChildProcess(cmd);
 
     if (e !== null) {
-        return err(new MoveBuildError(e, stderr));
+        return err(new MoveBuildError(e, stdout, stderr));
     }
 
     return ok(undefined);
@@ -373,7 +377,7 @@ subtask(TASK_COMPILE_MOVE)
                 let e = res.error;
 
                 if (e instanceof MoveBuildError) {
-                    console.log(`\nFailed to build ${packagePaths[idx]}\n${e.stderr}`);
+                    console.log(`\nFailed to build ${packagePaths[idx]}\n${e.stdout}${e.stderr}`);
                 }
                 else if (e instanceof ChainedError) {
                     console.log(`\nFailed to build ${packagePaths[idx]}\n${e}`);

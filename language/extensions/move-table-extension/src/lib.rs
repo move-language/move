@@ -24,7 +24,6 @@ use move_vm_types::{
     pop_arg,
     values::{GlobalValue, GlobalValueEffect, Reference, StructRef, Value},
 };
-use once_cell::sync::Lazy;
 use sha3::{Digest, Sha3_256};
 use smallvec::smallvec;
 use std::{
@@ -100,8 +99,14 @@ pub struct NativeTableContext<'a> {
     table_data: RefCell<TableData>,
 }
 
-pub static ALREADY_EXISTS: Lazy<u64> = Lazy::new(|| unique_sub_status_code(0));
-pub static NOT_FOUND: Lazy<u64> = Lazy::new(|| unique_sub_status_code(1));
+// See stdlib/Error.move
+const _ECATEGORY_INVALID_STATE: u8 = 0;
+const ECATEGORY_INVALID_ARGUMENT: u8 = 7;
+
+const ALREADY_EXISTS: u64 = (100 << 8) + ECATEGORY_INVALID_ARGUMENT as u64;
+const NOT_FOUND: u64 = (101 << 8) + ECATEGORY_INVALID_ARGUMENT as u64;
+// Move side raises this
+const _NOT_EMPTY: u64 = (102 << 8) + _ECATEGORY_INVALID_STATE as u64;
 
 // ===========================================================================================
 // Private Data Structures and Constants
@@ -217,7 +222,7 @@ impl Table {
         if gv_opt.is_some() {
             return Err(partial_abort_error(
                 "table entry already occupied",
-                *ALREADY_EXISTS,
+                ALREADY_EXISTS,
             ));
         }
         let key_bytes = serialize(&self.key_layout, key)?;
@@ -238,7 +243,7 @@ impl Table {
         key: &Value,
     ) -> PartialVMResult<(Value, usize, usize)> {
         let (gv_opt, key_size, val_size) = self.global_value_if_exists(context, key)?;
-        let gv = gv_opt.ok_or_else(|| partial_abort_error("undefined table entry", *NOT_FOUND))?;
+        let gv = gv_opt.ok_or_else(|| partial_abort_error("undefined table entry", NOT_FOUND))?;
         let val = gv.borrow_global()?;
         Ok((val, key_size, val_size))
     }
@@ -250,7 +255,7 @@ impl Table {
         key: &Value,
     ) -> PartialVMResult<(Value, usize, usize)> {
         let (gv_opt, key_size, val_size) = self.global_value_if_exists(context, key)?;
-        let gv = gv_opt.ok_or_else(|| partial_abort_error("undefined table entry", *NOT_FOUND))?;
+        let gv = gv_opt.ok_or_else(|| partial_abort_error("undefined table entry", NOT_FOUND))?;
         let val = gv.move_from()?;
         Ok((val, key_size, val_size))
     }
@@ -543,12 +548,4 @@ fn get_type_layout(context: &NativeContext, ty: &Type) -> PartialVMResult<MoveTy
     context
         .type_to_type_layout(ty)?
         .ok_or_else(|| partial_extension_error("cannot determine type layout"))
-}
-
-fn unique_sub_status_code(logical_code: u8) -> u64 {
-    let mut digest = Sha3_256::new();
-    Digest::update(&mut digest, "Extensions::Table");
-    Digest::update(&mut digest, logical_code.to_be_bytes());
-    let bytes: [u8; 2] = digest.finalize()[0..2].try_into().unwrap();
-    u16::from_be_bytes(bytes) as u64
 }

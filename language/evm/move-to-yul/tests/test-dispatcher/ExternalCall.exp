@@ -375,7 +375,7 @@ object "A2_M" {
                 switch iszero($t4)
                 case 0 {
                     // update freeMemoryPointer according to dynamic return size
-                    $MallocAt($t2, returndatasize())
+                    $MallocAt($t3, returndatasize())
                     // decode return parameters from external try-call into retVars
                     $result := abi_decode_tuple_$uint256$_$A2_U256_U256$_from_memory($t2, add($t2, returndatasize()))
                     $result := A2_ExternalResult_ok$A2_U256_U256$($result)
@@ -686,7 +686,7 @@ object "A2_M" {
                 if iszero($t7) { $RevertForward() }
                 if $t7 {
                     // update freeMemoryPointer according to dynamic return size
-                    $MallocAt($t5, returndatasize())
+                    $MallocAt($t6, returndatasize())
                     // decode return parameters from external try-call into retVars
                     abi_decode_tuple___from_memory($t5, add($t5, returndatasize()))
                 }
@@ -705,7 +705,7 @@ object "A2_M" {
                 if iszero($t3) { $RevertForward() }
                 if $t3 {
                     // update freeMemoryPointer according to dynamic return size
-                    $MallocAt($t1, returndatasize())
+                    $MallocAt($t2, returndatasize())
                     // decode return parameters from external try-call into retVars
                     abi_decode_tuple___from_memory($t1, add($t1, returndatasize()))
                 }
@@ -721,7 +721,7 @@ object "A2_M" {
                     // copy dynamic return data out
                     returndatacopy($t3, 0, returndatasize())
                     // update freeMemoryPointer according to dynamic return size
-                    $MallocAt($t3, returndatasize())
+                    $MallocAt($t4, returndatasize())
                     // decode return parameters from external try-call into retVars
                     $result0, $result1 := abi_decode_tuple_$uint256___uint256$_$vec$A2_U256_U256$_A2_U256_U256$_from_memory($t3, add($t3, returndatasize()))
                 }
@@ -735,7 +735,7 @@ object "A2_M" {
                 if iszero($t5) { $RevertForward() }
                 if $t5 {
                     // update freeMemoryPointer according to dynamic return size
-                    $MallocAt($t3, returndatasize())
+                    $MallocAt($t4, returndatasize())
                     // decode return parameters from external try-call into retVars
                     $result := abi_decode_tuple_$bool$_$bool$_from_memory($t3, add($t3, returndatasize()))
                 }
@@ -791,7 +791,7 @@ object "A2_M" {
                 switch iszero($t3)
                 case 0 {
                     // update freeMemoryPointer according to dynamic return size
-                    $MallocAt($t1, returndatasize())
+                    $MallocAt($t2, returndatasize())
                     // decode return parameters from external try-call into retVars
                     abi_decode_tuple___from_memory($t1, add($t1, returndatasize()))
                 }
@@ -1140,7 +1140,7 @@ object "A2_M" {
                 switch iszero($t3)
                 case 0 {
                     // update freeMemoryPointer according to dynamic return size
-                    $MallocAt($t1, returndatasize())
+                    $MallocAt($t2, returndatasize())
                     // decode return parameters from external try-call into retVars
                     $result := abi_decode_tuple_$uint256$_$A2_U256_U256$_from_memory($t1, add($t1, returndatasize()))
                     $result := A2_ExternalResult_ok$A2_U256_U256$($result)

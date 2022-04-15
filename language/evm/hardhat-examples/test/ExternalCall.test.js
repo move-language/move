@@ -70,7 +70,7 @@ contract('ExternalCall', function (accounts) {
             const receiver = await Receiver.new(RECEIVER_MAGIC_VALUE, Error.None);
             // TODO: uncomment the following line to see the error "Transaction ran out of gas".
             //       For more details, https://github.com/move-language/move/issues/31
-            //const receipt = await this.externalCall.doSafeTransferAcceptanceCheck(this.externalCall.address, receiver.address, 5042, '0x42');
+            const receipt = await this.externalCall.doSafeTransferAcceptanceCheck(this.externalCall.address, receiver.address, 5042, '0x42');
         });
     });
 });

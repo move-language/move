@@ -67,7 +67,7 @@ module Evm::ExternalCall {
 
     #[callable(sig=b"doSafeTransferAcceptanceCheck(address,address,uint256,bytes)"), pure]
     public fun doSafeTransferAcceptanceCheck(from: address, to: address, tokenId: U256, data: vector<u8>) {
-       if (isContract(to)) {
+        if (isContract(to)) {
             let result = IERC721Receiver_try_call_onERC721Received(to, sender(), from, tokenId, data);
             if (ExternalResult::is_ok(&result)) {
                 let retval = ExternalResult::unwrap(result);

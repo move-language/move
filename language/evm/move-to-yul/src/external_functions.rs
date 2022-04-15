@@ -231,7 +231,7 @@ impl NativeFunctions {
                 gen.parent.call_builtin(
                     ctx,
                     YulFunction::MallocAt,
-                    vec![pos_var.clone(), return_size.clone()].into_iter(),
+                    vec![end_var.clone(), return_size.clone()].into_iter(),
                 );
                 emitln!(
                     ctx.writer,

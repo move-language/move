@@ -37,7 +37,7 @@ use move_symbol_pool::Symbol;
 use move_vm_runtime::session::SerializedReturnValues;
 use rayon::iter::Either;
 use std::{
-    collections::{BTreeMap, VecDeque},
+    collections::{BTreeMap, BTreeSet, VecDeque},
     fmt::Debug,
     io::Write,
     path::Path,
@@ -46,11 +46,12 @@ use tempfile::NamedTempFile;
 
 pub struct ProcessedModule {
     module: CompiledModule,
-    interface_file: Option<(String, NamedTempFile)>,
+    source_file: Option<(String, NamedTempFile)>,
 }
 
 pub struct CompiledState<'a> {
     pre_compiled_deps: Option<&'a FullyCompiledProgram>,
+    pre_compiled_ids: BTreeSet<(AccountAddress, String)>,
     compiled_module_named_address_mapping: BTreeMap<ModuleId, Symbol>,
     named_address_mapping: BTreeMap<String, NumericalAddress>,
     modules: BTreeMap<ModuleId, ProcessedModule>,
@@ -215,26 +216,36 @@ pub trait MoveTestAdapter<'a> {
                         let (unit, warnings_opt) = compile_source_unit(
                             state.pre_compiled_deps,
                             state.named_address_mapping.clone(),
-                            &state.interface_files().cloned().collect::<Vec<_>>(),
+                            &state.source_files().cloned().collect::<Vec<_>>(),
                             data_path.to_owned(),
                         )?;
-                        match unit {
-                        AnnotatedCompiledUnit::Module(annot_module) =>  {
-                            let (named_addr_opt, _id) = annot_module.module_id();
-                            (named_addr_opt.map(|n| n.value), annot_module.named_module.module, warnings_opt)
-                        }
-                        AnnotatedCompiledUnit::Script(_) => panic!(
-                            "Expected a module text block, not a script, following 'publish' starting on lines {}-{}",
-                            start_line, command_lines_stop
-                        ),
-                    }
+                        let (named_addr_opt, module) = match unit {
+                            AnnotatedCompiledUnit::Module(annot_module) => {
+                                let (named_addr_opt, _id) = annot_module.module_id();
+                                (
+                                    named_addr_opt.map(|n| n.value),
+                                    annot_module.named_module.module,
+                                )
+                            }
+                            AnnotatedCompiledUnit::Script(_) => panic!(
+                                "Expected a module text block, not a script, following 'publish' \
+                                starting on lines {}-{}",
+                                start_line, command_lines_stop
+                            ),
+                        };
+                        state.add_with_source_file(
+                            named_addr_opt,
+                            module.clone(),
+                            (data_path.to_owned(), data),
+                        );
+                        (named_addr_opt, module, warnings_opt)
                     }
                     SyntaxChoice::IR => {
                         let module = compile_ir_module(state.dep_modules(), data_path)?;
+                        state.add_and_generate_interface_file(module.clone());
                         (None, module, None)
                     }
                 };
-                state.add(named_addr_opt, module.clone());
                 self.publish_module(
                     module,
                     named_addr_opt.map(|s| Identifier::new(s.as_str()).unwrap()),
@@ -269,7 +280,7 @@ pub trait MoveTestAdapter<'a> {
                         let (unit, warning_opt) = compile_source_unit(
                             state.pre_compiled_deps,
                             state.named_address_mapping.clone(),
-                            &state.interface_files().cloned().collect::<Vec<_>>(),
+                            &state.source_files().cloned().collect::<Vec<_>>(),
                             data_path.to_owned(),
                         )?;
                         match unit {
@@ -400,8 +411,23 @@ impl<'a> CompiledState<'a> {
         named_address_mapping: BTreeMap<String, NumericalAddress>,
         pre_compiled_deps: Option<&'a FullyCompiledProgram>,
     ) -> Self {
+        let pre_compiled_ids = match pre_compiled_deps {
+            None => BTreeSet::new(),
+            Some(pre_compiled) => pre_compiled
+                .cfgir
+                .modules
+                .key_cloned_iter()
+                .map(|(ident, _)| {
+                    (
+                        ident.value.address.into_addr_bytes().into_inner(),
+                        ident.value.module.to_string(),
+                    )
+                })
+                .collect(),
+        };
         let mut state = Self {
             pre_compiled_deps,
+            pre_compiled_ids,
             modules: BTreeMap::new(),
             compiled_module_named_address_mapping: BTreeMap::new(),
             named_address_mapping,
@@ -410,7 +436,7 @@ impl<'a> CompiledState<'a> {
             for unit in &pcd.compiled {
                 if let AnnotatedCompiledUnit::Module(annot_module) = unit {
                     let (named_addr_opt, _id) = annot_module.module_id();
-                    state.add(
+                    state.add_precompiled(
                         named_addr_opt.map(|n| n.value),
                         annot_module.named_module.module.clone(),
                     );
@@ -424,33 +450,20 @@ impl<'a> CompiledState<'a> {
         self.modules.values().map(|pmod| &pmod.module)
     }
 
-    pub fn interface_files(&mut self) -> impl Iterator<Item = &String> {
-        for pmod in self
-            .modules
-            .values_mut()
-            .filter(|pmod| pmod.interface_file.is_none())
-        {
-            let file = NamedTempFile::new().unwrap();
-            let path = file.path().to_str().unwrap().to_owned();
-            let (_id, interface_text) = move_compiler::interface_generator::write_module_to_string(
-                &self.compiled_module_named_address_mapping,
-                &pmod.module,
-            )
-            .unwrap();
-            file.reopen()
-                .unwrap()
-                .write_all(interface_text.as_bytes())
-                .unwrap();
-            debug_assert!(pmod.interface_file.is_none());
-            pmod.interface_file = Some((path, file))
-        }
+    pub fn source_files(&self) -> impl Iterator<Item = &String> {
         self.modules
-            .values()
-            .map(|pmod| &pmod.interface_file.as_ref().unwrap().0)
+            .iter()
+            .filter_map(|(_, pmod)| Some(&pmod.source_file.as_ref()?.0))
     }
 
-    pub fn add(&mut self, named_addr_opt: Option<Symbol>, module: CompiledModule) {
+    pub fn add_with_source_file(
+        &mut self,
+        named_addr_opt: Option<Symbol>,
+        module: CompiledModule,
+        source_file: (String, NamedTempFile),
+    ) {
         let id = module.self_id();
+        self.check_not_precompiled(&id);
         if let Some(named_addr) = named_addr_opt {
             self.compiled_module_named_address_mapping
                 .insert(id.clone(), named_addr);
@@ -458,9 +471,60 @@ impl<'a> CompiledState<'a> {
 
         let processed = ProcessedModule {
             module,
-            interface_file: None,
+            source_file: Some(source_file),
         };
         self.modules.insert(id, processed);
+    }
+
+    pub fn add_and_generate_interface_file(&mut self, module: CompiledModule) {
+        let id = module.self_id();
+        self.check_not_precompiled(&id);
+        let interface_file = NamedTempFile::new().unwrap();
+        let path = interface_file.path().to_str().unwrap().to_owned();
+        let (_id, interface_text) = move_compiler::interface_generator::write_module_to_string(
+            &self.compiled_module_named_address_mapping,
+            &module,
+        )
+        .unwrap();
+        interface_file
+            .reopen()
+            .unwrap()
+            .write_all(interface_text.as_bytes())
+            .unwrap();
+        let source_file = Some((path, interface_file));
+        let processed = ProcessedModule {
+            module,
+            source_file,
+        };
+        self.modules.insert(id, processed);
+    }
+
+    fn add_precompiled(&mut self, named_addr_opt: Option<Symbol>, module: CompiledModule) {
+        let id = module.self_id();
+        if let Some(named_addr) = named_addr_opt {
+            self.compiled_module_named_address_mapping
+                .insert(id.clone(), named_addr);
+        }
+        let processed = ProcessedModule {
+            module,
+            source_file: None,
+        };
+        self.modules.insert(id, processed);
+    }
+
+    pub fn is_precompiled_dep(&self, id: &ModuleId) -> bool {
+        let addr = *id.address();
+        let name = id.name().to_string();
+        self.pre_compiled_ids.contains(&(addr, name))
+    }
+
+    fn check_not_precompiled(&self, id: &ModuleId) {
+        assert!(
+            !self.is_precompiled_dep(id),
+            "Error publishing module: '{}'. \
+             Re-publishing modules in pre-compiled lib is not yet supported",
+            id
+        )
     }
 }
 

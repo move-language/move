@@ -387,15 +387,17 @@ impl<'a> SteppedCompiler<'a, PASS_COMPILATION> {
 /// Given a set of dependencies, precompile them and save the ASTs so that they can be used again
 /// to compile against without having to recompile these dependencies
 pub fn construct_pre_compiled_lib<Paths: Into<Symbol>, NamedAddress: Into<Symbol>>(
-    deps: Vec<AddressScopedFiles<Paths, NamedAddress>>,
+    targets: Vec<AddressScopedFiles<Paths, NamedAddress>>,
     interface_files_dir_opt: Option<String>,
     flags: Flags,
 ) -> anyhow::Result<Result<FullyCompiledProgram, (FilesSourceText, Diagnostics)>> {
-    let (files, pprog_and_comments_res) =
-        Compiler::new(Vec::<AddressScopedFiles<Paths, NamedAddress>>::new(), deps)
-            .set_interface_files_dir_opt(interface_files_dir_opt)
-            .set_flags(flags)
-            .run::<PASS_PARSER>()?;
+    let (files, pprog_and_comments_res) = Compiler::new(
+        targets,
+        Vec::<AddressScopedFiles<Paths, NamedAddress>>::new(),
+    )
+    .set_interface_files_dir_opt(interface_files_dir_opt)
+    .set_flags(flags)
+    .run::<PASS_PARSER>()?;
 
     let (_comments, stepped) = match pprog_and_comments_res {
         Err(errors) => return Ok(Err((files, errors))),

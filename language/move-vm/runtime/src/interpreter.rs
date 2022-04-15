@@ -1150,46 +1150,55 @@ impl Frame {
                         let elements = interpreter.operand_stack.popn(*num as u16)?;
                         let size = AbstractMemorySize::new(*num);
                         gas_status.charge_instr_with_size(Opcodes::VEC_PACK, size)?;
-                        let value = Vector::pack(resolver.single_type_at(*si), elements)?;
+                        let value = Vector::pack(
+                            &resolver.instantiate_single_type(*si, self.ty_args())?,
+                            elements,
+                        )?;
                         interpreter.operand_stack.push(value)?;
                     }
                     Bytecode::VecLen(si) => {
                         let vec_ref = interpreter.operand_stack.pop_as::<VectorRef>()?;
                         gas_status.charge_instr(Opcodes::VEC_LEN)?;
-                        let value = vec_ref.len(resolver.single_type_at(*si))?;
+                        let vec_ty_arg = &resolver.instantiate_single_type(*si, self.ty_args())?;
+                        let value = vec_ref.len(vec_ty_arg)?;
                         interpreter.operand_stack.push(value)?;
                     }
                     Bytecode::VecImmBorrow(si) => {
                         let idx = interpreter.operand_stack.pop_as::<u64>()? as usize;
                         let vec_ref = interpreter.operand_stack.pop_as::<VectorRef>()?;
                         gas_status.charge_instr(Opcodes::VEC_IMM_BORROW)?;
-                        let value = vec_ref.borrow_elem(idx, resolver.single_type_at(*si))?;
+                        let vec_ty_arg = &resolver.instantiate_single_type(*si, self.ty_args())?;
+                        let value = vec_ref.borrow_elem(idx, vec_ty_arg)?;
                         interpreter.operand_stack.push(value)?;
                     }
                     Bytecode::VecMutBorrow(si) => {
                         let idx = interpreter.operand_stack.pop_as::<u64>()? as usize;
                         let vec_ref = interpreter.operand_stack.pop_as::<VectorRef>()?;
                         gas_status.charge_instr(Opcodes::VEC_MUT_BORROW)?;
-                        let value = vec_ref.borrow_elem(idx, resolver.single_type_at(*si))?;
+                        let vec_ty_arg = &resolver.instantiate_single_type(*si, self.ty_args())?;
+                        let value = vec_ref.borrow_elem(idx, vec_ty_arg)?;
                         interpreter.operand_stack.push(value)?;
                     }
                     Bytecode::VecPushBack(si) => {
                         let elem = interpreter.operand_stack.pop()?;
                         let vec_ref = interpreter.operand_stack.pop_as::<VectorRef>()?;
                         gas_status.charge_instr_with_size(Opcodes::VEC_PUSH_BACK, elem.size())?;
-                        vec_ref.push_back(elem, resolver.single_type_at(*si))?;
+                        let vec_ty_arg = &resolver.instantiate_single_type(*si, self.ty_args())?;
+                        vec_ref.push_back(elem, vec_ty_arg)?;
                     }
                     Bytecode::VecPopBack(si) => {
                         let vec_ref = interpreter.operand_stack.pop_as::<VectorRef>()?;
                         gas_status.charge_instr(Opcodes::VEC_POP_BACK)?;
-                        let value = vec_ref.pop(resolver.single_type_at(*si))?;
+                        let vec_ty_arg = &resolver.instantiate_single_type(*si, self.ty_args())?;
+                        let value = vec_ref.pop(vec_ty_arg)?;
                         interpreter.operand_stack.push(value)?;
                     }
                     Bytecode::VecUnpack(si, num) => {
                         let vec_val = interpreter.operand_stack.pop_as::<Vector>()?;
                         let size = AbstractMemorySize::new(*num);
                         gas_status.charge_instr_with_size(Opcodes::VEC_UNPACK, size)?;
-                        let elements = vec_val.unpack(resolver.single_type_at(*si), *num)?;
+                        let vec_ty_arg = &resolver.instantiate_single_type(*si, self.ty_args())?;
+                        let elements = vec_val.unpack(vec_ty_arg, *num)?;
                         for value in elements {
                             interpreter.operand_stack.push(value)?;
                         }
@@ -1199,7 +1208,8 @@ impl Frame {
                         let idx1 = interpreter.operand_stack.pop_as::<u64>()? as usize;
                         let vec_ref = interpreter.operand_stack.pop_as::<VectorRef>()?;
                         gas_status.charge_instr(Opcodes::VEC_SWAP)?;
-                        vec_ref.swap(idx1, idx2, resolver.single_type_at(*si))?;
+                        let vec_ty_arg = &resolver.instantiate_single_type(*si, self.ty_args())?;
+                        vec_ref.swap(idx1, idx2, vec_ty_arg)?;
                     }
                 }
                 // invariant: advance to pc +1 is iff instruction at pc executed without aborting

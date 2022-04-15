@@ -468,16 +468,16 @@ impl Loader {
         &self,
         script_blob: &[u8],
         ty_args: &[TypeTag],
-        data_store: &mut impl DataStore,
-    ) -> VMResult<(Arc<Function>, Vec<Type>, Vec<Type>, Vec<Type>)> {
+        data_store: &impl DataStore,
+    ) -> VMResult<(Arc<Function>, LoadedFunctionInstantiation)> {
         // retrieve or load the script
         let mut sha3_256 = Sha3_256::new();
         sha3_256.update(script_blob);
         let hash_value: [u8; 32] = sha3_256.finalize().into();
 
         let mut scripts = self.scripts.write();
-        let (main, parameter_tys, return_tys) = match scripts.get(&hash_value) {
-            Some(main) => main,
+        let (main, parameters, return_) = match scripts.get(&hash_value) {
+            Some(cached) => cached,
             None => {
                 let ver_script = self.deserialize_and_verify_script(script_blob, data_store)?;
                 let script = Script::new(ver_script, &hash_value, &self.module_cache.read())?;
@@ -492,8 +492,12 @@ impl Loader {
         }
         self.verify_ty_args(main.type_parameters(), &type_arguments)
             .map_err(|e| e.finish(Location::Script))?;
-
-        Ok((main, type_arguments, parameter_tys, return_tys))
+        let instantiation = LoadedFunctionInstantiation {
+            type_arguments,
+            parameters,
+            return_,
+        };
+        Ok((main, instantiation))
     }
 
     // The process of deserialization and verification is not and it must not be under lock.
@@ -1284,6 +1288,22 @@ impl<'a> Resolver<'a> {
         ))
     }
 
+    fn single_type_at(&self, idx: SignatureIndex) -> &Type {
+        match &self.binary {
+            BinaryType::Module(module) => module.single_type_at(idx),
+            BinaryType::Script(script) => script.single_type_at(idx),
+        }
+    }
+
+    pub(crate) fn instantiate_single_type(
+        &self,
+        idx: SignatureIndex,
+        ty_args: &[Type],
+    ) -> PartialVMResult<Type> {
+        let ty = self.single_type_at(idx);
+        ty.subst(ty_args)
+    }
+
     //
     // Fields resolution
     //
@@ -1318,17 +1338,6 @@ impl<'a> Resolver<'a> {
 
     pub(crate) fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout> {
         self.loader.type_to_type_layout(ty)
-    }
-
-    //
-    // Type resolution
-    //
-
-    pub(crate) fn single_type_at(&self, idx: SignatureIndex) -> &Type {
-        match &self.binary {
-            BinaryType::Module(module) => module.single_type_at(idx),
-            BinaryType::Script(script) => script.single_type_at(idx),
-        }
     }
 
     // get the loader

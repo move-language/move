@@ -445,15 +445,22 @@ impl VMRuntime {
         extensions: &mut NativeContextExtensions,
     ) -> VMResult<SerializedReturnValues> {
         // load the script, perform verification
-        let (func, ty_args, param_types, return_types) =
-            self.loader
-                .load_script(script.borrow(), &ty_args, data_store)?;
+        let (
+            func,
+            LoadedFunctionInstantiation {
+                type_arguments,
+                parameters,
+                return_,
+            },
+        ) = self
+            .loader
+            .load_script(script.borrow(), &ty_args, data_store)?;
         // execute the function
         self.execute_function_impl(
             func,
-            ty_args,
-            param_types,
-            return_types,
+            type_arguments,
+            parameters,
+            return_,
             serialized_args,
             data_store,
             gas_status,

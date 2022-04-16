@@ -591,15 +591,17 @@ AlignedStorageStore: "(offs, val) {
 // TODO: this function needs more testing
 // Copies size bytes from memory to memory.
 CopyMemory: "(src, dst, size) {
+  let num_words, overflow_bytes := $ToWordOffs(size)
   let i := 0
-  for { } lt(i, size) { i := add(i, 32) } {
+  for { } lt(i, mul(num_words, 32)) { i := add(i, 32) } {
     mstore(add(dst, i), mload(add(src, i)))
   }
-  if lt(i, size) {
-    let mask := sub(shl(shl(3, i), 1), 1)
-    let dst_word := and(mload(add(dst, i)), not(mask))
-    let src_word := and(mload(add(src, i)), mask)
-    mstore(add(dst, i), or(dst_word, src_word))
+  if overflow_bytes {
+    let mask := $MaskForSize(sub(32, overflow_bytes))
+    let overflow_offs := mul(num_words, 32)
+    let dst_word := and(mload(add(dst, overflow_offs)), mask)
+    let src_word := and(mload(add(src, overflow_offs)), not(mask))
+    mstore(add(dst, overflow_offs), or(dst_word, src_word))
   }
 }",
 
@@ -739,7 +741,7 @@ EqVector: "(x, y, elem_size) -> r {
     let data_size_bytes := mul(elem_size, len_x)
     let num_words, overflow_bytes := $ToWordOffs(data_size_bytes)
     let i := 0
-    for { } lt(i, data_size_bytes) { i := add(i, 32) } {
+    for { } lt(i, mul(num_words, 32)) { i := add(i, 32) } {
         if $Neq(mload(add(x, add(i, 32))), mload(add(y, add(i, 32)))) {
             r := false
             leave
@@ -850,5 +852,48 @@ TryDecodeErrMsg: "() -> data {
   $MemoryStoreU64(data, length)
   $MemoryStoreU64(add(data, 8), length)
   returndatacopy(add(data, 0x20), add(offset, 0x24), length)
-}" dep Malloc dep MemoryStoreU64
+}" dep Malloc dep MemoryStoreU64,
+NumToString: "(x) -> s {
+  if iszero(x) {
+    s := $Malloc(add(${VECTOR_METADATA_SIZE}, 2))
+    $MemoryStoreU64(s, 1)
+    $MemoryStoreU64(add(s, 8), 2)
+    $MemoryStoreU8(add(s, ${VECTOR_METADATA_SIZE}), 48) // string \"0\"
+    leave
+  }
+  let temp := x
+  let num_digits := 0
+  for { } temp { num_digits := add(num_digits, 1) } {
+    temp := div(temp, 10)
+  }
+  let digits_space := $ClosestGreaterPowerOfTwo(num_digits)
+  s := $Malloc(add(${VECTOR_METADATA_SIZE}, digits_space))
+  $MemoryStoreU64(s, num_digits)
+  $MemoryStoreU64(add(s, 8), digits_space)
+  let digit
+  for { } x { } {
+    digit := add(48, mod(x, 10))
+    num_digits := sub(num_digits, 1)
+    $MemoryStoreU8(add(add(s, ${VECTOR_METADATA_SIZE}), num_digits), digit)
+    x := div(x, 10)
+  }
+}" dep Malloc dep MemoryStoreU64 dep MemoryStoreU8 dep ClosestGreaterPowerOfTwo,
+ExtendVector: "(v1, v2, elem_size) -> new_v1 {
+  let v1_len := $MemoryLoadU64(v1)
+  let v2_len := $MemoryLoadU64(v2)
+  let new_len := add(v1_len, v2_len)
+  let v1_cap := $MemoryLoadU64(add(v1, 8))
+  new_v1 := v1
+  if iszero(gt(v1_cap, new_len)){
+    let new_cap := $ClosestGreaterPowerOfTwo(new_len)
+    new_v1 := $Malloc(add(mul(new_cap, elem_size), ${VECTOR_METADATA_SIZE}))
+    $CopyMemory(v1, new_v1, add(mul(v1_len, elem_size), ${VECTOR_METADATA_SIZE}))
+    $MemoryStoreU64(add(new_v1, 8), new_cap)
+    $Free(v1, add(mul(v1_len, elem_size), ${VECTOR_METADATA_SIZE}))
+  }
+  let src := add(v2, ${VECTOR_METADATA_SIZE})
+  let dst := add(add(new_v1, ${VECTOR_METADATA_SIZE}), mul(elem_size, v1_len))
+  $CopyMemory(src, dst, mul(v2_len, elem_size))
+  $MemoryStoreU64(new_v1, new_len)
+}" dep Malloc dep MemoryLoadU64 dep MemoryStoreU64 dep ClosestGreaterPowerOfTwo dep CopyMemory dep Free,
 }

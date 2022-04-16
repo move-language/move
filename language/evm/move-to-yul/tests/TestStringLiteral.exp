@@ -86,9 +86,9 @@ object "test_A2_M_h1" {
                     // $t6 := borrow_local($t0)
                     $t6 := $MakePtr(false, $locals)
                     // $t7 := [97, 98, 99]
-                    $t7 := $Malloc(35)
+                    $t7 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(3)))
                     $MemoryStoreU64($t7, 3)
-                    $MemoryStoreU64(add($t7, 8), $ClosestGreaterPowerOfTwo(35))
+                    $MemoryStoreU64(add($t7, 8), $ClosestGreaterPowerOfTwo(3))
                     copy_literal_string_to_memory_2053440334(add($t7, 32))
                     // $t8 := pack M::T($t7)
                     {
@@ -227,9 +227,9 @@ object "test_A2_M_h1" {
                 case 10 {
                     // label L6
                     // $t38 := [101, 102, 103, 104]
-                    $t38 := $Malloc(36)
+                    $t38 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(4)))
                     $MemoryStoreU64($t38, 4)
-                    $MemoryStoreU64(add($t38, 8), $ClosestGreaterPowerOfTwo(36))
+                    $MemoryStoreU64(add($t38, 8), $ClosestGreaterPowerOfTwo(4))
                     copy_literal_string_to_memory_2788570470(add($t38, 32))
                     // $t39 := 0x3
                     $t39 := 0x3
@@ -687,18 +687,18 @@ object "test_A2_M_test_same_literals" {
             // $t0 := true
             $t0 := true
             // $t1 := [101, 114, 114, 111, 114, 95, 109, 101, 115, 115, 97, 103, 101]
-            $t1 := $Malloc(45)
+            $t1 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(13)))
             $MemoryStoreU64($t1, 13)
-            $MemoryStoreU64(add($t1, 8), $ClosestGreaterPowerOfTwo(45))
+            $MemoryStoreU64(add($t1, 8), $ClosestGreaterPowerOfTwo(13))
             copy_literal_string_to_memory_3855568786(add($t1, 32))
             // Evm::require($t0, $t1)
             A2_Evm_require($t0, $t1)
             // $t2 := true
             $t2 := true
             // $t3 := [101, 114, 114, 111, 114, 95, 109, 101, 115, 115, 97, 103, 101]
-            $t3 := $Malloc(45)
+            $t3 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(13)))
             $MemoryStoreU64($t3, 13)
-            $MemoryStoreU64(add($t3, 8), $ClosestGreaterPowerOfTwo(45))
+            $MemoryStoreU64(add($t3, 8), $ClosestGreaterPowerOfTwo(13))
             copy_literal_string_to_memory_3855568786(add($t3, 32))
             // Evm::require($t2, $t3)
             A2_Evm_require($t2, $t3)

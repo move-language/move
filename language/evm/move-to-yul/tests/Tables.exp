@@ -3961,15 +3961,17 @@ object "test_A2_Tables_test_vector" {
           sstore($StorageKey(0, word_offs), val)
         }
         function $CopyMemory(src, dst, size) {
+          let num_words, overflow_bytes := $ToWordOffs(size)
           let i := 0
-          for { } lt(i, size) { i := add(i, 32) } {
+          for { } lt(i, mul(num_words, 32)) { i := add(i, 32) } {
             mstore(add(dst, i), mload(add(src, i)))
           }
-          if lt(i, size) {
-            let mask := sub(shl(shl(3, i), 1), 1)
-            let dst_word := and(mload(add(dst, i)), not(mask))
-            let src_word := and(mload(add(src, i)), mask)
-            mstore(add(dst, i), or(dst_word, src_word))
+          if overflow_bytes {
+            let mask := $MaskForSize(sub(32, overflow_bytes))
+            let overflow_offs := mul(num_words, 32)
+            let dst_word := and(mload(add(dst, overflow_offs)), mask)
+            let src_word := and(mload(add(src, overflow_offs)), not(mask))
+            mstore(add(dst, overflow_offs), or(dst_word, src_word))
           }
         }
         function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {

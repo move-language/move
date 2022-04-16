@@ -664,21 +664,20 @@ impl<'a> FunctionGenerator<'a> {
         if !val_str.is_empty() {
             emitln!(ctx.writer, "{} := {}", dest, val_str);
         } else if let Constant::ByteArray(value) = cons {
-            let str_literal_size = value.len() + 32;
+            let compute_capacity_str = self.parent.call_builtin_str(
+                ctx,
+                YulFunction::ClosestGreaterPowerOfTwo,
+                std::iter::once(value.len().to_string()),
+            );
             let malloc_str = self.parent.call_builtin_str(
                 ctx,
                 YulFunction::Malloc,
-                std::iter::once(str_literal_size.clone().to_string()),
+                std::iter::once(format!("add(32, {})", compute_capacity_str)),
             );
             let store_length_str = self.parent.call_builtin_str(
                 ctx,
                 YulFunction::MemoryStoreU64,
                 vec![dest.clone(), value.len().clone().to_string()].into_iter(),
-            );
-            let compute_capacity_str = self.parent.call_builtin_str(
-                ctx,
-                YulFunction::ClosestGreaterPowerOfTwo,
-                std::iter::once(str_literal_size.to_string()),
             );
             let store_capacity_str = self.parent.call_builtin_str(
                 ctx,

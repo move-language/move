@@ -373,6 +373,36 @@ impl NativeFunctions {
                 }"
             );
         });
+
+        self.define(ctx, evm, "to_string", |gen, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+                (x) -> result {{
+                  result := {}
+                }}",
+                gen.parent.call_builtin_str(
+                    ctx,
+                    YulFunction::NumToString,
+                    std::iter::once("x".to_string())
+                ),
+            );
+        });
+
+        self.define(ctx, evm, "concat", |gen, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+                (s1, s2) -> result {{
+                  result := {}
+                }}",
+                gen.parent.call_builtin_str(
+                    ctx,
+                    YulFunction::ExtendVector,
+                    vec!["s1".to_string(), "s2".to_string(), 1.to_string()].into_iter()
+                ),
+            );
+        });
     }
 
     fn define_move_functions(&mut self, ctx: &Context) {

@@ -1734,6 +1734,11 @@ impl GlobalValue {
         self.0.move_to(val.0)
     }
 
+    pub fn simple_serialize(&self, layout: &MoveTypeLayout) -> Option<Vec<u8>> {
+        let value = self.borrow_global().ok()?;
+        value.simple_serialize(layout)
+    }
+
     pub fn borrow_global(&self) -> PartialVMResult<Value> {
         Ok(Value(self.0.borrow_global()?))
     }

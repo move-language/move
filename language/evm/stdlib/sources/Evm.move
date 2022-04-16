@@ -71,10 +71,14 @@ module Evm::Evm {
 
     /// Get tokenURI with base URI.
     // This is implemented in Solidity as follows:
-    //   bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
-    public fun tokenURI_with_baseURI(_baseURI: vector<u8>, _tokenId: U256): vector<u8> {
-        // TODO: implement this properly
-        b""
+    //   bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";\
+    // TODO: this probably belongs in ERC721.move?
+    public fun tokenURI_with_baseURI(baseURI: vector<u8>, tokenId: U256): vector<u8> {
+        if (Vector::length(&baseURI) == 0) {
+            Vector::empty()
+        } else {
+            concat(baseURI, to_string(tokenId))
+        }
     }
 
     /// Abort with an error message.
@@ -134,4 +138,14 @@ module Evm::Evm {
 
     /// Return the sender of the transaction (full call chain).
     public native fun tx_origin(): address;
+
+    // --------------------------------
+    // String Operations
+    // --------------------------------
+
+    /// Add s2 to the end of s1.
+    public native fun concat(s1: vector<u8>, s2: vector<u8>): vector<u8>;
+
+    /// Return the string representation of a U256.
+    public native fun to_string(x: U256): vector<u8>;
 }

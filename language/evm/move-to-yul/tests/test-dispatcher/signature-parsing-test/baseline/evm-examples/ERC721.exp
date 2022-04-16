@@ -187,9 +187,9 @@ object "A2_ERC721" {
             function A2_ERC721_safeTransferFrom(from, to, tokenId) {
                 let $t3
                 // $t3 := []
-                $t3 := $Malloc(32)
+                $t3 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(0)))
                 $MemoryStoreU64($t3, 0)
-                $MemoryStoreU64(add($t3, 8), $ClosestGreaterPowerOfTwo(32))
+                $MemoryStoreU64(add($t3, 8), $ClosestGreaterPowerOfTwo(0))
                 copy_literal_string_to_memory_21418693(add($t3, 32))
                 // ERC721::safeTransferFrom_with_data($t0, $t1, $t2, $t3)
                 A2_ERC721_safeTransferFrom_with_data(from, to, tokenId, $t3)

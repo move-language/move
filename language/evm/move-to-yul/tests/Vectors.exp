@@ -319,15 +319,17 @@ object "A2_Vectors" {
               $StorageStoreBytes(offs, 32, val)
             }
             function $CopyMemory(src, dst, size) {
+              let num_words, overflow_bytes := $ToWordOffs(size)
               let i := 0
-              for { } lt(i, size) { i := add(i, 32) } {
+              for { } lt(i, mul(num_words, 32)) { i := add(i, 32) } {
                 mstore(add(dst, i), mload(add(src, i)))
               }
-              if lt(i, size) {
-                let mask := sub(shl(shl(3, i), 1), 1)
-                let dst_word := and(mload(add(dst, i)), not(mask))
-                let src_word := and(mload(add(src, i)), mask)
-                mstore(add(dst, i), or(dst_word, src_word))
+              if overflow_bytes {
+                let mask := $MaskForSize(sub(32, overflow_bytes))
+                let overflow_offs := mul(num_words, 32)
+                let dst_word := and(mload(add(dst, overflow_offs)), mask)
+                let src_word := and(mload(add(src, overflow_offs)), not(mask))
+                mstore(add(dst, overflow_offs), or(dst_word, src_word))
               }
             }
             function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
@@ -1235,15 +1237,17 @@ object "test_A2_Vectors_test_borrow_mut" {
           sstore($StorageKey(0, word_offs), val)
         }
         function $CopyMemory(src, dst, size) {
+          let num_words, overflow_bytes := $ToWordOffs(size)
           let i := 0
-          for { } lt(i, size) { i := add(i, 32) } {
+          for { } lt(i, mul(num_words, 32)) { i := add(i, 32) } {
             mstore(add(dst, i), mload(add(src, i)))
           }
-          if lt(i, size) {
-            let mask := sub(shl(shl(3, i), 1), 1)
-            let dst_word := and(mload(add(dst, i)), not(mask))
-            let src_word := and(mload(add(src, i)), mask)
-            mstore(add(dst, i), or(dst_word, src_word))
+          if overflow_bytes {
+            let mask := $MaskForSize(sub(32, overflow_bytes))
+            let overflow_offs := mul(num_words, 32)
+            let dst_word := and(mload(add(dst, overflow_offs)), mask)
+            let src_word := and(mload(add(src, overflow_offs)), not(mask))
+            mstore(add(dst, overflow_offs), or(dst_word, src_word))
           }
         }
         function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
@@ -1267,7 +1271,7 @@ object "test_A2_Vectors_test_borrow_mut" {
         }
     }
 }
-===> Test result of Vectors::test_borrow_mut: Succeed(Stopped) (used_gas=10895): []
+===> Test result of Vectors::test_borrow_mut: Succeed(Stopped) (used_gas=10908): []
 
 // test of Vectors::test_destroy_empty
 /* =======================================
@@ -1614,15 +1618,17 @@ object "test_A2_Vectors_test_destroy_non_empty_fail" {
           sstore($StorageKey(0, word_offs), val)
         }
         function $CopyMemory(src, dst, size) {
+          let num_words, overflow_bytes := $ToWordOffs(size)
           let i := 0
-          for { } lt(i, size) { i := add(i, 32) } {
+          for { } lt(i, mul(num_words, 32)) { i := add(i, 32) } {
             mstore(add(dst, i), mload(add(src, i)))
           }
-          if lt(i, size) {
-            let mask := sub(shl(shl(3, i), 1), 1)
-            let dst_word := and(mload(add(dst, i)), not(mask))
-            let src_word := and(mload(add(src, i)), mask)
-            mstore(add(dst, i), or(dst_word, src_word))
+          if overflow_bytes {
+            let mask := $MaskForSize(sub(32, overflow_bytes))
+            let overflow_offs := mul(num_words, 32)
+            let dst_word := and(mload(add(dst, overflow_offs)), mask)
+            let src_word := and(mload(add(src, overflow_offs)), not(mask))
+            mstore(add(dst, overflow_offs), or(dst_word, src_word))
           }
         }
         function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
@@ -2416,15 +2422,17 @@ object "test_A2_Vectors_test_nested_vectors" {
           sstore($StorageKey(0, word_offs), val)
         }
         function $CopyMemory(src, dst, size) {
+          let num_words, overflow_bytes := $ToWordOffs(size)
           let i := 0
-          for { } lt(i, size) { i := add(i, 32) } {
+          for { } lt(i, mul(num_words, 32)) { i := add(i, 32) } {
             mstore(add(dst, i), mload(add(src, i)))
           }
-          if lt(i, size) {
-            let mask := sub(shl(shl(3, i), 1), 1)
-            let dst_word := and(mload(add(dst, i)), not(mask))
-            let src_word := and(mload(add(src, i)), mask)
-            mstore(add(dst, i), or(dst_word, src_word))
+          if overflow_bytes {
+            let mask := $MaskForSize(sub(32, overflow_bytes))
+            let overflow_offs := mul(num_words, 32)
+            let dst_word := and(mload(add(dst, overflow_offs)), mask)
+            let src_word := and(mload(add(src, overflow_offs)), not(mask))
+            mstore(add(dst, overflow_offs), or(dst_word, src_word))
           }
         }
         function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
@@ -2448,7 +2456,7 @@ object "test_A2_Vectors_test_nested_vectors" {
         }
     }
 }
-===> Test result of Vectors::test_nested_vectors: Succeed(Stopped) (used_gas=17526): []
+===> Test result of Vectors::test_nested_vectors: Succeed(Stopped) (used_gas=17759): []
 
 // test of Vectors::test_one_elem_struct
 /* =======================================
@@ -2878,15 +2886,17 @@ object "test_A2_Vectors_test_one_elem_struct" {
           sstore($StorageKey(0, word_offs), val)
         }
         function $CopyMemory(src, dst, size) {
+          let num_words, overflow_bytes := $ToWordOffs(size)
           let i := 0
-          for { } lt(i, size) { i := add(i, 32) } {
+          for { } lt(i, mul(num_words, 32)) { i := add(i, 32) } {
             mstore(add(dst, i), mload(add(src, i)))
           }
-          if lt(i, size) {
-            let mask := sub(shl(shl(3, i), 1), 1)
-            let dst_word := and(mload(add(dst, i)), not(mask))
-            let src_word := and(mload(add(src, i)), mask)
-            mstore(add(dst, i), or(dst_word, src_word))
+          if overflow_bytes {
+            let mask := $MaskForSize(sub(32, overflow_bytes))
+            let overflow_offs := mul(num_words, 32)
+            let dst_word := and(mload(add(dst, overflow_offs)), mask)
+            let src_word := and(mload(add(src, overflow_offs)), not(mask))
+            mstore(add(dst, overflow_offs), or(dst_word, src_word))
           }
         }
         function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
@@ -3209,15 +3219,17 @@ object "test_A2_Vectors_test_one_elem_u64" {
           $StorageStoreBytes(offs, 32, val)
         }
         function $CopyMemory(src, dst, size) {
+          let num_words, overflow_bytes := $ToWordOffs(size)
           let i := 0
-          for { } lt(i, size) { i := add(i, 32) } {
+          for { } lt(i, mul(num_words, 32)) { i := add(i, 32) } {
             mstore(add(dst, i), mload(add(src, i)))
           }
-          if lt(i, size) {
-            let mask := sub(shl(shl(3, i), 1), 1)
-            let dst_word := and(mload(add(dst, i)), not(mask))
-            let src_word := and(mload(add(src, i)), mask)
-            mstore(add(dst, i), or(dst_word, src_word))
+          if overflow_bytes {
+            let mask := $MaskForSize(sub(32, overflow_bytes))
+            let overflow_offs := mul(num_words, 32)
+            let dst_word := and(mload(add(dst, overflow_offs)), mask)
+            let src_word := and(mload(add(src, overflow_offs)), not(mask))
+            mstore(add(dst, overflow_offs), or(dst_word, src_word))
           }
         }
         function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
@@ -3241,7 +3253,7 @@ object "test_A2_Vectors_test_one_elem_u64" {
         }
     }
 }
-===> Test result of Vectors::test_one_elem_u64: Succeed(Stopped) (used_gas=1749): []
+===> Test result of Vectors::test_one_elem_u64: Succeed(Stopped) (used_gas=1746): []
 
 // test of Vectors::test_pop_back
 /* =======================================
@@ -3679,15 +3691,17 @@ object "test_A2_Vectors_test_pop_back" {
           $StorageStoreBytes(offs, 32, val)
         }
         function $CopyMemory(src, dst, size) {
+          let num_words, overflow_bytes := $ToWordOffs(size)
           let i := 0
-          for { } lt(i, size) { i := add(i, 32) } {
+          for { } lt(i, mul(num_words, 32)) { i := add(i, 32) } {
             mstore(add(dst, i), mload(add(src, i)))
           }
-          if lt(i, size) {
-            let mask := sub(shl(shl(3, i), 1), 1)
-            let dst_word := and(mload(add(dst, i)), not(mask))
-            let src_word := and(mload(add(src, i)), mask)
-            mstore(add(dst, i), or(dst_word, src_word))
+          if overflow_bytes {
+            let mask := $MaskForSize(sub(32, overflow_bytes))
+            let overflow_offs := mul(num_words, 32)
+            let dst_word := and(mload(add(dst, overflow_offs)), mask)
+            let src_word := and(mload(add(src, overflow_offs)), not(mask))
+            mstore(add(dst, overflow_offs), or(dst_word, src_word))
           }
         }
         function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
@@ -3711,7 +3725,7 @@ object "test_A2_Vectors_test_pop_back" {
         }
     }
 }
-===> Test result of Vectors::test_pop_back: Succeed(Stopped) (used_gas=6212): []
+===> Test result of Vectors::test_pop_back: Succeed(Stopped) (used_gas=6263): []
 
 // test of Vectors::test_pop_back_empty_fail
 /* =======================================
@@ -4530,15 +4544,17 @@ object "test_A2_Vectors_test_push_back" {
           $StorageStoreBytes(offs, 32, val)
         }
         function $CopyMemory(src, dst, size) {
+          let num_words, overflow_bytes := $ToWordOffs(size)
           let i := 0
-          for { } lt(i, size) { i := add(i, 32) } {
+          for { } lt(i, mul(num_words, 32)) { i := add(i, 32) } {
             mstore(add(dst, i), mload(add(src, i)))
           }
-          if lt(i, size) {
-            let mask := sub(shl(shl(3, i), 1), 1)
-            let dst_word := and(mload(add(dst, i)), not(mask))
-            let src_word := and(mload(add(src, i)), mask)
-            mstore(add(dst, i), or(dst_word, src_word))
+          if overflow_bytes {
+            let mask := $MaskForSize(sub(32, overflow_bytes))
+            let overflow_offs := mul(num_words, 32)
+            let dst_word := and(mload(add(dst, overflow_offs)), mask)
+            let src_word := and(mload(add(src, overflow_offs)), not(mask))
+            mstore(add(dst, overflow_offs), or(dst_word, src_word))
           }
         }
         function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
@@ -4562,7 +4578,7 @@ object "test_A2_Vectors_test_push_back" {
         }
     }
 }
-===> Test result of Vectors::test_push_back: Succeed(Stopped) (used_gas=13960): []
+===> Test result of Vectors::test_push_back: Succeed(Stopped) (used_gas=14029): []
 
 // test of Vectors::test_swap
 /* =======================================
@@ -4996,15 +5012,17 @@ object "test_A2_Vectors_test_swap" {
           $StorageStoreBytes(offs, 32, val)
         }
         function $CopyMemory(src, dst, size) {
+          let num_words, overflow_bytes := $ToWordOffs(size)
           let i := 0
-          for { } lt(i, size) { i := add(i, 32) } {
+          for { } lt(i, mul(num_words, 32)) { i := add(i, 32) } {
             mstore(add(dst, i), mload(add(src, i)))
           }
-          if lt(i, size) {
-            let mask := sub(shl(shl(3, i), 1), 1)
-            let dst_word := and(mload(add(dst, i)), not(mask))
-            let src_word := and(mload(add(src, i)), mask)
-            mstore(add(dst, i), or(dst_word, src_word))
+          if overflow_bytes {
+            let mask := $MaskForSize(sub(32, overflow_bytes))
+            let overflow_offs := mul(num_words, 32)
+            let dst_word := and(mload(add(dst, overflow_offs)), mask)
+            let src_word := and(mload(add(src, overflow_offs)), not(mask))
+            mstore(add(dst, overflow_offs), or(dst_word, src_word))
           }
         }
         function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
@@ -5028,7 +5046,7 @@ object "test_A2_Vectors_test_swap" {
         }
     }
 }
-===> Test result of Vectors::test_swap: Succeed(Stopped) (used_gas=7033): []
+===> Test result of Vectors::test_swap: Succeed(Stopped) (used_gas=7087): []
 
 // test of Vectors::test_swap_fail
 /* =======================================
@@ -5286,15 +5304,17 @@ object "test_A2_Vectors_test_swap_fail" {
           $StorageStoreBytes(offs, 32, val)
         }
         function $CopyMemory(src, dst, size) {
+          let num_words, overflow_bytes := $ToWordOffs(size)
           let i := 0
-          for { } lt(i, size) { i := add(i, 32) } {
+          for { } lt(i, mul(num_words, 32)) { i := add(i, 32) } {
             mstore(add(dst, i), mload(add(src, i)))
           }
-          if lt(i, size) {
-            let mask := sub(shl(shl(3, i), 1), 1)
-            let dst_word := and(mload(add(dst, i)), not(mask))
-            let src_word := and(mload(add(src, i)), mask)
-            mstore(add(dst, i), or(dst_word, src_word))
+          if overflow_bytes {
+            let mask := $MaskForSize(sub(32, overflow_bytes))
+            let overflow_offs := mul(num_words, 32)
+            let dst_word := and(mload(add(dst, overflow_offs)), mask)
+            let src_word := and(mload(add(src, overflow_offs)), not(mask))
+            mstore(add(dst, overflow_offs), or(dst_word, src_word))
           }
         }
         function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
@@ -5315,7 +5335,7 @@ object "test_A2_Vectors_test_swap_fail" {
         }
     }
 }
-===> Test result of Vectors::test_swap_fail: Revert(Reverted) (used_gas=2235): [255, 255, 255, 255, 255, 255, 255, 255]
+===> Test result of Vectors::test_swap_fail: Revert(Reverted) (used_gas=2289): [255, 255, 255, 255, 255, 255, 255, 255]
 
 // test of Vectors::test_vector_equality
 /* =======================================
@@ -5346,9 +5366,9 @@ object "test_A2_Vectors_test_vector_equality" {
                     // $t13 := copy($t0)
                     $t13 := mload($locals)
                     // $t14 := [10, 11, 12, 13]
-                    $t14 := $Malloc(36)
+                    $t14 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(4)))
                     $MemoryStoreU64($t14, 4)
-                    $MemoryStoreU64(add($t14, 8), $ClosestGreaterPowerOfTwo(36))
+                    $MemoryStoreU64(add($t14, 8), $ClosestGreaterPowerOfTwo(4))
                     copy_literal_string_to_memory_512532313(add($t14, 32))
                     // $t15 := !=($t13, $t14)
                     $t15 := iszero($EqVector($t13, $t14, 1))
@@ -5389,9 +5409,9 @@ object "test_A2_Vectors_test_vector_equality" {
                     // $t9 := copy($t0)
                     $t9 := mload($locals)
                     // $t10 := [10, 11, 12, 13]
-                    $t10 := $Malloc(36)
+                    $t10 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(4)))
                     $MemoryStoreU64($t10, 4)
-                    $MemoryStoreU64(add($t10, 8), $ClosestGreaterPowerOfTwo(36))
+                    $MemoryStoreU64(add($t10, 8), $ClosestGreaterPowerOfTwo(4))
                     copy_literal_string_to_memory_512532313(add($t10, 32))
                     // $t11 := ==($t9, $t10)
                     $t11 := $EqVector($t9, $t10, 1)
@@ -5412,9 +5432,9 @@ object "test_A2_Vectors_test_vector_equality" {
                     // $t18 := copy($t0)
                     $t18 := mload($locals)
                     // $t19 := [10, 11, 12]
-                    $t19 := $Malloc(35)
+                    $t19 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(3)))
                     $MemoryStoreU64($t19, 3)
-                    $MemoryStoreU64(add($t19, 8), $ClosestGreaterPowerOfTwo(35))
+                    $MemoryStoreU64(add($t19, 8), $ClosestGreaterPowerOfTwo(3))
                     copy_literal_string_to_memory_2815201339(add($t19, 32))
                     // $t20 := !=($t18, $t19)
                     $t20 := iszero($EqVector($t18, $t19, 1))
@@ -5435,9 +5455,9 @@ object "test_A2_Vectors_test_vector_equality" {
                     // $t22 := copy($t0)
                     $t22 := mload($locals)
                     // $t23 := [10, 11, 12]
-                    $t23 := $Malloc(35)
+                    $t23 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(3)))
                     $MemoryStoreU64($t23, 3)
-                    $MemoryStoreU64(add($t23, 8), $ClosestGreaterPowerOfTwo(35))
+                    $MemoryStoreU64(add($t23, 8), $ClosestGreaterPowerOfTwo(3))
                     copy_literal_string_to_memory_2815201339(add($t23, 32))
                     // $t24 := ==($t22, $t23)
                     $t24 := $EqVector($t22, $t23, 1)
@@ -5466,9 +5486,9 @@ object "test_A2_Vectors_test_vector_equality" {
                     // $t29 := move($t0)
                     $t29 := mload($locals)
                     // $t30 := [10, 11, 12, 13, 14]
-                    $t30 := $Malloc(37)
+                    $t30 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(5)))
                     $MemoryStoreU64($t30, 5)
-                    $MemoryStoreU64(add($t30, 8), $ClosestGreaterPowerOfTwo(37))
+                    $MemoryStoreU64(add($t30, 8), $ClosestGreaterPowerOfTwo(5))
                     copy_literal_string_to_memory_337779769(add($t30, 32))
                     // $t31 := ==($t29, $t30)
                     $t31 := $EqVector($t29, $t30, 1)
@@ -5729,15 +5749,17 @@ object "test_A2_Vectors_test_vector_equality" {
           $StorageStoreBytes(offs, 32, val)
         }
         function $CopyMemory(src, dst, size) {
+          let num_words, overflow_bytes := $ToWordOffs(size)
           let i := 0
-          for { } lt(i, size) { i := add(i, 32) } {
+          for { } lt(i, mul(num_words, 32)) { i := add(i, 32) } {
             mstore(add(dst, i), mload(add(src, i)))
           }
-          if lt(i, size) {
-            let mask := sub(shl(shl(3, i), 1), 1)
-            let dst_word := and(mload(add(dst, i)), not(mask))
-            let src_word := and(mload(add(src, i)), mask)
-            mstore(add(dst, i), or(dst_word, src_word))
+          if overflow_bytes {
+            let mask := $MaskForSize(sub(32, overflow_bytes))
+            let overflow_offs := mul(num_words, 32)
+            let dst_word := and(mload(add(dst, overflow_offs)), mask)
+            let src_word := and(mload(add(src, overflow_offs)), not(mask))
+            mstore(add(dst, overflow_offs), or(dst_word, src_word))
           }
         }
         function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
@@ -5760,7 +5782,7 @@ object "test_A2_Vectors_test_vector_equality" {
             let data_size_bytes := mul(elem_size, len_x)
             let num_words, overflow_bytes := $ToWordOffs(data_size_bytes)
             let i := 0
-            for { } lt(i, data_size_bytes) { i := add(i, 32) } {
+            for { } lt(i, mul(num_words, 32)) { i := add(i, 32) } {
                 if $Neq(mload(add(x, add(i, 32))), mload(add(y, add(i, 32)))) {
                     r := false
                     leave
@@ -5789,7 +5811,7 @@ object "test_A2_Vectors_test_vector_equality" {
         }
     }
 }
-===> Test result of Vectors::test_vector_equality: Succeed(Stopped) (used_gas=7536): []
+===> Test result of Vectors::test_vector_equality: Succeed(Stopped) (used_gas=7346): []
 
 // test of Vectors::test_vectors_in_structs
 /* =======================================
@@ -6328,15 +6350,17 @@ object "test_A2_Vectors_test_vectors_in_structs" {
           sstore($StorageKey(0, word_offs), val)
         }
         function $CopyMemory(src, dst, size) {
+          let num_words, overflow_bytes := $ToWordOffs(size)
           let i := 0
-          for { } lt(i, size) { i := add(i, 32) } {
+          for { } lt(i, mul(num_words, 32)) { i := add(i, 32) } {
             mstore(add(dst, i), mload(add(src, i)))
           }
-          if lt(i, size) {
-            let mask := sub(shl(shl(3, i), 1), 1)
-            let dst_word := and(mload(add(dst, i)), not(mask))
-            let src_word := and(mload(add(src, i)), mask)
-            mstore(add(dst, i), or(dst_word, src_word))
+          if overflow_bytes {
+            let mask := $MaskForSize(sub(32, overflow_bytes))
+            let overflow_offs := mul(num_words, 32)
+            let dst_word := and(mload(add(dst, overflow_offs)), mask)
+            let src_word := and(mload(add(src, overflow_offs)), not(mask))
+            mstore(add(dst, overflow_offs), or(dst_word, src_word))
           }
         }
         function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {
@@ -6360,4 +6384,4 @@ object "test_A2_Vectors_test_vectors_in_structs" {
         }
     }
 }
-===> Test result of Vectors::test_vectors_in_structs: Succeed(Stopped) (used_gas=8528): []
+===> Test result of Vectors::test_vectors_in_structs: Succeed(Stopped) (used_gas=8586): []

@@ -60,31 +60,42 @@ module Evm::ExternalCall {
 
     #[callable]
     public fun test_for_move_to_yul(from: address, to: address, tokenId: U256, data: vector<u8>) {
-        // TODO: Uncomment the following line to see the error. The error occurs only when this function is set to be `callable`.
-        //       See https://github.com/move-language/move/issues/30 for more details.
         let _ = IERC721Receiver_try_call_onERC721Received(to, sender(), from, tokenId, data);
     }
 
-    #[callable(sig=b"doSafeTransferAcceptanceCheck(address,address,uint256,bytes)"), pure]
+    #[callable(sig=b"doSafeTransferAcceptanceCheck(address,address,uint256,bytes)")]
     public fun doSafeTransferAcceptanceCheck(from: address, to: address, tokenId: U256, data: vector<u8>) {
         if (isContract(to)) {
             let result = IERC721Receiver_try_call_onERC721Received(to, sender(), from, tokenId, data);
-            if (ExternalResult::is_ok(&result)) {
-                let retval = ExternalResult::unwrap(result);
-                let expected = IERC721Receiver_selector_onERC721Received();
-                require(retval == expected, b"Unexpected return value");
-            }
-            else {
-                if(ExternalResult::is_err_reason(&result)) {
-                    let reason = ExternalResult::unwrap_err_reason(result);
-                    if (Vector::length(&reason) == 0) {
-                        abort_with(b"ERC721: transfer to non ERC721Receiver implementer");
-                    }
-                    else {
-                        abort_with(reason);
-                    }
-                };
-                abort_with(b"Other");
+
+            // TODO: the following code always aborts with "ok".
+            // if (ExternalResult::is_ok(&result)) {
+            //     abort_with(b"ok");
+            // } else if (ExternalResult::is_err_reason(&result)) {
+            //     abort_with(b"err_reason");
+            // } else if (ExternalResult::is_err_data(&result)) {
+            //     abort_with(b"err_data");
+            // } else if (ExternalResult::is_panic(&result)) {
+            //     abort_with(b"panic");
+            // } else {
+            //     abort_with(b"other");
+            // }
+
+            // The following code works fine.
+            if (ExternalResult::is_err_reason(&result)) {
+                // TODO: The following lines results in reverting without a reason string.
+                //       However, it is expected to revert with "ERC721ReceiverMock: reverting".
+                // let reason = ExternalResult::unwrap_err_reason(result);
+                // abort_with(reason);
+                abort_with(b"err_reason");
+            } else if (ExternalResult::is_err_data(&result)) {
+                abort_with(b"err_data");
+            } else if (ExternalResult::is_panic(&result)) {
+                abort_with(b"panic");
+            } else if (ExternalResult::is_ok(&result)) {
+                abort_with(b"ok");
+            } else {
+                abort_with(b"other");
             }
         }
     }
@@ -94,5 +105,30 @@ module Evm::ExternalCall {
 
     public fun IERC721Receiver_selector_onERC721Received(): vector<u8> {
         x"150b7a02"
+    }
+
+    #[callable(sig=b"doSafeBatchTransferAcceptanceCheck(address,address,address,uint256[],uint256[],bytes)")]
+    public fun doSafeBatchTransferAcceptanceCheck(operator: address, from: address, to: address, ids: vector<U256>, amounts: vector<U256>, data: vector<u8>) {
+        if (isContract(to)) {
+            let result = IERC1155Receiver_try_call_onERC1155BatchReceived(to, operator, from, ids, amounts, data);
+            if (ExternalResult::is_err_reason(&result)) {
+                abort_with(b"err_reason");
+            } else if (ExternalResult::is_err_data(&result)) {
+                abort_with(b"err_data");
+            } else if (ExternalResult::is_panic(&result)) {
+                abort_with(b"panic");
+            } else if (ExternalResult::is_ok(&result)) {
+                abort_with(b"ok");
+            } else {
+                abort_with(b"other");
+            }
+        }
+    }
+
+    #[external(sig=b"onERC1155BatchReceived(address,address,uint256[],uint256[],bytes) returns (bytes4)")]
+    public native fun IERC1155Receiver_try_call_onERC1155BatchReceived(contract: address, operator: address, from: address, ids: vector<U256>, amounts: vector<U256>, bytes: vector<u8>): ExternalResult<vector<u8>>;
+
+    public fun IERC1155Receiver_selector_onERC1155BatchReceived(): vector<u8> {
+        x"bc197c81"
     }
 }

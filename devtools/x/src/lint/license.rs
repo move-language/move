@@ -3,9 +3,28 @@
 
 use x_lint::prelude::*;
 
-static LICENSE_HEADER: &str = "Copyright (c) The Diem Core Contributors\n\
-                               SPDX-License-Identifier: Apache-2.0\n\
-                               ";
+static ALLOWED_LICENSE_HEADERS: &[&str] = &[
+    "Copyright (c) The Move Contributors\n\
+    SPDX-License-Identifier: Apache-2.0\n\
+    ",
+    "Copyright (c) The Diem Core Contributors\n\
+    SPDX-License-Identifier: Apache-2.0\n\
+    ",
+    "Copyright (c) The Move Contributors\n\
+    Copyright (c) The Diem Core Contributors\n\
+    SPDX-License-Identifier: Apache-2.0\n\
+    ",
+];
+
+fn has_license<'a>(maybe_license: impl Iterator<Item = &'a str>) -> bool {
+    let maybe = maybe_license.collect::<Vec<_>>();
+    for allowed in ALLOWED_LICENSE_HEADERS {
+        if allowed.lines().eq(maybe.clone().into_iter()) {
+            return true;
+        }
+    }
+    false
+}
 
 #[derive(Copy, Clone, Debug)]
 pub(super) struct LicenseHeader;
@@ -50,7 +69,7 @@ impl ContentLinter for LicenseHeader {
                     .skip_while(|line| line.is_empty())
                     .take(2)
                     .map(|s| s.trim_start_matches("// "));
-                !LICENSE_HEADER.lines().eq(maybe_license)
+                !has_license(maybe_license)
             }
             FileType::Shell => {
                 let maybe_license = content
@@ -59,7 +78,7 @@ impl ContentLinter for LicenseHeader {
                     .skip_while(|line| line.is_empty())
                     .take(2)
                     .map(|s| s.trim_start_matches("# "));
-                !LICENSE_HEADER.lines().eq(maybe_license)
+                !has_license(maybe_license)
             }
         };
 

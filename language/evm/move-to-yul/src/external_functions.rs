@@ -202,6 +202,14 @@ impl NativeFunctions {
                 pos_var,
                 estimated_size
             );
+            let return_size = "returndatasize()".to_string();
+            emitln!(ctx.writer, "// set freeMemoryPointer");
+            emitln!(
+                ctx.writer,
+                "mstore({}, {})",
+                substitute_placeholders("${MEM_SIZE_LOC}").unwrap(),
+                end_var
+            );
             if !external_flag {
                 emitln!(
                     ctx.writer,
@@ -223,16 +231,6 @@ impl NativeFunctions {
                         pos_var
                     );
                 }
-                emitln!(
-                    ctx.writer,
-                    "// update freeMemoryPointer according to dynamic return size"
-                );
-                let return_size = "returndatasize()".to_string();
-                gen.parent.call_builtin(
-                    ctx,
-                    YulFunction::MallocAt,
-                    vec![end_var.clone(), return_size.clone()].into_iter(),
-                );
                 emitln!(
                     ctx.writer,
                     "// decode return parameters from external try-call into retVars"

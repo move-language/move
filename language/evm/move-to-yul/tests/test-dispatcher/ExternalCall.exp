@@ -372,10 +372,10 @@ object "A2_M" {
                 mstore($t2, $Shl(0x81b91ddb, 224))
                 let $t3 := abi_encode_tuple_$uint256$_$A2_U256_U256$(add($t2, 4), v)
                 let $t4 := call(gas(), contract, 0,  $t2, sub($t3, $t2), $t2, 32)
+                // set freeMemoryPointer
+                mstore(0, $t3)
                 switch iszero($t4)
                 case 0 {
-                    // update freeMemoryPointer according to dynamic return size
-                    $MallocAt($t3, returndatasize())
                     // decode return parameters from external try-call into retVars
                     $result := abi_decode_tuple_$uint256$_$A2_U256_U256$_from_memory($t2, add($t2, returndatasize()))
                     $result := A2_ExternalResult_ok$A2_U256_U256$($result)
@@ -683,10 +683,10 @@ object "A2_M" {
                 mstore($t5, $Shl(0xb88d4fde, 224))
                 let $t6 := abi_encode_tuple_$address_address_uint256_bytes$_$address_address_A2_U256_U256_vec$u8$$(add($t5, 4), from, to, tokenId, data)
                 let $t7 := call(gas(), contract, 0,  $t5, sub($t6, $t5), $t5, 0)
+                // set freeMemoryPointer
+                mstore(0, $t6)
                 if iszero($t7) { $RevertForward() }
                 if $t7 {
-                    // update freeMemoryPointer according to dynamic return size
-                    $MallocAt($t6, returndatasize())
                     // decode return parameters from external try-call into retVars
                     abi_decode_tuple___from_memory($t5, add($t5, returndatasize()))
                 }
@@ -702,10 +702,10 @@ object "A2_M" {
                 mstore($t1, $Shl(0x48050dbe, 224))
                 let $t2 := abi_encode_tuple__(add($t1, 4))
                 let $t3 := call(gas(), contract, 0,  $t1, sub($t2, $t1), $t1, 0)
+                // set freeMemoryPointer
+                mstore(0, $t2)
                 if iszero($t3) { $RevertForward() }
                 if $t3 {
-                    // update freeMemoryPointer according to dynamic return size
-                    $MallocAt($t2, returndatasize())
                     // decode return parameters from external try-call into retVars
                     abi_decode_tuple___from_memory($t1, add($t1, returndatasize()))
                 }
@@ -716,12 +716,12 @@ object "A2_M" {
                 mstore($t3, $Shl(0xe520b193, 224))
                 let $t4 := abi_encode_tuple_$uint256_uint256__$_$A2_U256_U256_vec$A2_U256_U256$$(add($t3, 4), v, vec)
                 let $t5 := call(gas(), contract, 0,  $t3, sub($t4, $t3), $t3, 0)
+                // set freeMemoryPointer
+                mstore(0, $t4)
                 if iszero($t5) { $RevertForward() }
                 if $t5 {
                     // copy dynamic return data out
                     returndatacopy($t3, 0, returndatasize())
-                    // update freeMemoryPointer according to dynamic return size
-                    $MallocAt($t4, returndatasize())
                     // decode return parameters from external try-call into retVars
                     $result0, $result1 := abi_decode_tuple_$uint256___uint256$_$vec$A2_U256_U256$_A2_U256_U256$_from_memory($t3, add($t3, returndatasize()))
                 }
@@ -732,10 +732,10 @@ object "A2_M" {
                 mstore($t3, $Shl(0xe985e9c5, 224))
                 let $t4 := abi_encode_tuple_$address_address$_$address_address$(add($t3, 4), account, operator)
                 let $t5 := call(gas(), contract, 0,  $t3, sub($t4, $t3), $t3, 32)
+                // set freeMemoryPointer
+                mstore(0, $t4)
                 if iszero($t5) { $RevertForward() }
                 if $t5 {
-                    // update freeMemoryPointer according to dynamic return size
-                    $MallocAt($t4, returndatasize())
                     // decode return parameters from external try-call into retVars
                     $result := abi_decode_tuple_$bool$_$bool$_from_memory($t3, add($t3, returndatasize()))
                 }
@@ -788,10 +788,10 @@ object "A2_M" {
                 mstore($t1, $Shl(0xb76fa7ae, 224))
                 let $t2 := abi_encode_tuple__(add($t1, 4))
                 let $t3 := call(gas(), contract, 0,  $t1, sub($t2, $t1), $t1, 0)
+                // set freeMemoryPointer
+                mstore(0, $t2)
                 switch iszero($t3)
                 case 0 {
-                    // update freeMemoryPointer according to dynamic return size
-                    $MallocAt($t2, returndatasize())
                     // decode return parameters from external try-call into retVars
                     abi_decode_tuple___from_memory($t1, add($t1, returndatasize()))
                 }
@@ -1137,10 +1137,10 @@ object "A2_M" {
                 mstore($t1, $Shl(0x14056b3d, 224))
                 let $t2 := abi_encode_tuple__(add($t1, 4))
                 let $t3 := call(gas(), contract, 0,  $t1, sub($t2, $t1), $t1, 32)
+                // set freeMemoryPointer
+                mstore(0, $t2)
                 switch iszero($t3)
                 case 0 {
-                    // update freeMemoryPointer according to dynamic return size
-                    $MallocAt($t2, returndatasize())
                     // decode return parameters from external try-call into retVars
                     $result := abi_decode_tuple_$uint256$_$A2_U256_U256$_from_memory($t1, add($t1, returndatasize()))
                     $result := A2_ExternalResult_ok$A2_U256_U256$($result)
@@ -1458,12 +1458,6 @@ object "A2_M" {
                 offs := mload(0)
                 // pad to word size
                 mstore(0, add(offs, shl(5, shr(5, add(size, 31)))))
-            }
-            function $MallocAt(offs, size) {
-              let new_free_ptr := add(offs, $RoundUp(size))
-              // protect against overflow
-              if or(gt(new_free_ptr, 0xffffffffffffffff), lt(new_free_ptr, offs)) { $AbortBuiltin() }
-              mstore(0, new_free_ptr)
             }
             function $Free(offs, size) {
             }

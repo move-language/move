@@ -68,35 +68,19 @@ module Evm::ExternalCall {
         if (isContract(to)) {
             let result = IERC721Receiver_try_call_onERC721Received(to, sender(), from, tokenId, data);
 
-            // TODO: the following code always aborts with "ok".
-            // if (ExternalResult::is_ok(&result)) {
-            //     abort_with(b"ok");
-            // } else if (ExternalResult::is_err_reason(&result)) {
-            //     abort_with(b"err_reason");
-            // } else if (ExternalResult::is_err_data(&result)) {
-            //     abort_with(b"err_data");
-            // } else if (ExternalResult::is_panic(&result)) {
-            //     abort_with(b"panic");
-            // } else {
-            //     abort_with(b"other");
-            // }
-
-            // The following code works fine.
-            if (ExternalResult::is_err_reason(&result)) {
-                // TODO: The following lines results in reverting without a reason string.
-                //       However, it is expected to revert with "ERC721ReceiverMock: reverting".
-                // let reason = ExternalResult::unwrap_err_reason(result);
-                // abort_with(reason);
-                abort_with(b"err_reason");
-            } else if (ExternalResult::is_err_data(&result)) {
-                abort_with(b"err_data");
-            } else if (ExternalResult::is_panic(&result)) {
-                abort_with(b"panic");
-            } else if (ExternalResult::is_ok(&result)) {
-                abort_with(b"ok");
-            } else {
-                abort_with(b"other");
-            }
+             if (ExternalResult::is_ok(&result)) {
+                 abort_with(b"ok");
+             } else if (ExternalResult::is_err_reason(&result)) {
+                 let reason = ExternalResult::unwrap_err_reason(result);
+                 abort_with(reason);
+                 //abort_with(b"err_reason");
+             } else if (ExternalResult::is_err_data(&result)) {
+                 abort_with(b"err_data");
+             } else if (ExternalResult::is_panic(&result)) {
+                 abort_with(b"panic");
+             } else {
+                 abort_with(b"other");
+             }
         }
     }
 

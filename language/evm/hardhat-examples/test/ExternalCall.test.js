@@ -84,7 +84,7 @@ contract('ExternalCall', function (accounts) {
             const receiver = await ERC721Receiver.new(RECEIVER_MAGIC_VALUE, Error.RevertWithMessage);
             await expectRevert(
                 this.externalCall.doSafeTransferAcceptanceCheck(this.externalCall.address, receiver.address, tokenId, data),
-                'err_reason',
+                'ERC721ReceiverMock: reverting',
             );
         });
         it('receiver reverting without error message', async function () {
@@ -119,26 +119,26 @@ contract('ExternalCall', function (accounts) {
             );
         });
         // TODO: Error with "Transaction ran out of gas"
-        // it('receiver reverting with error message', async function () {
-        //     const ids = [1,2,3];
-        //     const amounts = [10, 100, 1000];
-        //     const data = '0x42';
-        //     const receiver = await ERC1155Receiver.new(RECEIVER_SINGLE_MAGIC_VALUE, false, RECEIVER_BATCH_MAGIC_VALUE, true);
-        //     await expectRevert(
-        //         this.externalCall.doSafeBatchTransferAcceptanceCheck(this.externalCall.address, this.externalCall.address, receiver.address, ids, amounts, data),
-        //         'err_reason',
-        //     );
-        // });
+        it('receiver reverting with error message', async function () {
+             const ids = [1,2,3];
+             const amounts = [10, 100, 1000];
+             const data = '0x42';
+             const receiver = await ERC1155Receiver.new(RECEIVER_SINGLE_MAGIC_VALUE, false, RECEIVER_BATCH_MAGIC_VALUE, true);
+             await expectRevert(
+                 this.externalCall.doSafeBatchTransferAcceptanceCheck(this.externalCall.address, this.externalCall.address, receiver.address, ids, amounts, data),
+                 'err_reason',
+             );
+         });
         // TODO: Error with "Transaction ran out of gas"
-        // it('receiver reverting without error message', async function () {
-        //     const ids = [1,2,3];
-        //     const amounts = [10, 100, 1000];
-        //     const data = '0x42';
-        //     const receiver = await ERC721Receiver.new(RECEIVER_MAGIC_VALUE, Error.Panic);
-        //     await expectRevert(
-        //         this.externalCall.doSafeBatchTransferAcceptanceCheck(this.externalCall.address, this.externalCall.address, receiver.address, ids, amounts, data),
-        //         'err_data',
-        //     );
-        // });
+        it('receiver reverting without error message', async function () {
+             const ids = [1,2,3];
+             const amounts = [10, 100, 1000];
+             const data = '0x42';
+             const receiver = await ERC721Receiver.new(RECEIVER_MAGIC_VALUE, Error.Panic);
+             await expectRevert(
+                 this.externalCall.doSafeBatchTransferAcceptanceCheck(this.externalCall.address, this.externalCall.address, receiver.address, ids, amounts, data),
+                 'err_data',
+             );
+         });
     });
 });

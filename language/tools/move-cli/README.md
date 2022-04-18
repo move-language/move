@@ -16,7 +16,7 @@ $ cargo install --path move/language/tools/move-cli
 ```
 or
 ```shell
-$ cargo install --git https://github.com/diem/move move-cli --branch main
+$ cargo install --git https://github.com/move-language/move move-cli --branch main
 ```
 
 This will install the `move` binary in your Cargo binary directory. On
@@ -73,11 +73,11 @@ $ move package prove -p <path> # Verify the specifications in the package at <pa
 ```
 
 In order to run the Move Prover [additional tools need to be
-installed](https://github.com/diem/move/blob/main/language/move-prover/doc/user/install.md).
+installed](https://github.com/move-language/move/blob/main/language/move-prover/doc/user/install.md).
 Information on the Move Prover and its configuration options can be found
-[here](https://github.com/diem/move/blob/main/language/move-prover/doc/user/prover-guide.md)
+[here](https://github.com/move-language/move/blob/main/language/move-prover/doc/user/prover-guide.md)
 and
-[here](https://github.com/diem/move/blob/main/language/move-prover/doc/user/spec-lang.md).
+[here](https://github.com/move-language/move/blob/main/language/move-prover/doc/user/spec-lang.md).
 
 You can also run unit tests in a package using the `test` command
 
@@ -128,7 +128,7 @@ directory:
 Std = "0x1" # Specify and assign 0x1 to the named address "Std"
 
 [dependencies]
-MoveNursery = { git = "https://github.com/diem/move.git", subdir = "language/move-stdlib/nursery", rev = "d45f20a" }
+MoveNursery = { git = "https://github.com/move-language/move.git", subdir = "language/move-stdlib/nursery", rev = "d45f20a" }
 #                ^                    ^                     ^                                       ^
 #            Git dependency       Git clone URL       Subdir under git repo (optional)           Git revision to use
 ```

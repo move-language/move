@@ -593,8 +593,15 @@ pub fn create_move_package<S: AsRef<str> + fmt::Display>(
     let mut w = std::fs::File::create(creation_path.join(SourcePackageLayout::Manifest.path()))?;
     writeln!(
         &mut w,
-        "[package]\nname = \"{}\"\nversion = \"0.0.0\"",
-        name
-    )?;
+        "[package]
+name = \"{}\"
+version = \"0.0.0\"
+
+[dependencies]
+MoveStdlib = {{ git = \"https://github.com/move-language/move.git\", subdir = \"language/move-stdlib\", rev = \"main\" }}
+
+[addresses]
+Std = \"0x1\"
+", name)?;
     Ok(())
 }

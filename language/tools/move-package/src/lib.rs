@@ -35,7 +35,7 @@ pub enum Architecture {
 
     AsyncMove,
 
-    #[cfg(feature = "evm-arch")]
+    #[cfg(feature = "evm-backend")]
     Ethereum,
 }
 
@@ -46,7 +46,7 @@ impl fmt::Display for Architecture {
 
             Self::AsyncMove => write!(f, "async-move"),
 
-            #[cfg(feature = "evm-arch")]
+            #[cfg(feature = "evm-backend")]
             Self::Ethereum => write!(f, "ethereum"),
         }
     }
@@ -57,7 +57,7 @@ impl Architecture {
         IntoIterator::into_iter([
             Self::Move,
             Self::AsyncMove,
-            #[cfg(feature = "evm-arch")]
+            #[cfg(feature = "evm-backend")]
             Self::Ethereum,
         ])
     }
@@ -68,7 +68,7 @@ impl Architecture {
 
             "async-move" => Self::AsyncMove,
 
-            #[cfg(feature = "evm-arch")]
+            #[cfg(feature = "evm-backend")]
             "ethereum" => Self::Ethereum,
 
             _ => {
@@ -162,7 +162,7 @@ impl BuildConfig {
         Ok(self.compile_package_with_caching_info(path, writer)?.0)
     }
 
-    #[cfg(feature = "evm-arch")]
+    #[cfg(feature = "evm-backend")]
     pub fn compile_package_evm<W: Write>(self, path: &Path, writer: &mut W) -> Result<()> {
         let resolved_graph = self.resolution_graph_for_package(path)?;
         let mutx = PackageLock::lock();

@@ -34,7 +34,6 @@ move-binary-format = { path = "../../move-binary-format" }
 move-model = { path = "../../move-model" }
 move-stackless-bytecode-interpreter = { path = "../../move-prover/interpreter" }
 move-bytecode-utils = { path = "../move-bytecode-utils" }
-workspace-hack = { version = "0.1", path = "../../../crates/workspace-hack" }
 
 # EVM-specific dependencies
 move-to-yul = { path = "../../evm/move-to-yul", optional = true }

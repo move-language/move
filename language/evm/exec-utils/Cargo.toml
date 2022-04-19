@@ -16,9 +16,7 @@ evm-runtime = { version = "0.33.0", features = [ "tracing"] }
 primitive-types = "0.10.1"
 hex = "0.4.3"
 tempfile = "3.2.0"
-dirs = "4.0.0"
 anyhow = "1.0.52"
 
 # move dependencies
-workspace-hack = { version = "0.1", path = "../../../crates/workspace-hack" }
 move-command-line-common = { path = "../../move-command-line-common" }

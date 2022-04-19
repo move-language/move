@@ -13,7 +13,6 @@ mod license;
 mod toml;
 mod whitespace;
 mod workspace_classify;
-mod workspace_hack;
 
 #[derive(Debug, Parser)]
 pub struct Args {
@@ -27,7 +26,6 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
     let project_linters: &[&dyn ProjectLinter] = &[
         &guppy::BannedDeps::new(&workspace_config.banned_deps),
         &guppy::DirectDepDups::new(&workspace_config.direct_dep_dups)?,
-        &workspace_hack::GenerateWorkspaceHack,
     ];
 
     let package_linters: &[&dyn PackageLinter] = &[
@@ -35,7 +33,6 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
         &guppy::CrateNamesPaths,
         &guppy::IrrelevantBuildDeps,
         &guppy::OverlayFeatures::new(&workspace_config.overlay),
-        &guppy::UnpublishedPackagesOnlyUsePathDependencies::new(xctx.core()),
         &guppy::PublishedPackagesDontDependOnUnpublishedPackages::new(xctx.core()),
         &guppy::OnlyPublishToCratesIo,
         &guppy::CratesInCratesDirectory,
@@ -44,7 +41,6 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
             xctx.core().package_graph()?,
             &workspace_config.test_only,
         )?,
-        &workspace_hack::WorkspaceHackDep::new(xctx.core())?,
     ];
 
     let file_path_linters: &[&dyn FilePathLinter] = &[

@@ -28,13 +28,11 @@ move-compiler = { path = "../../move-compiler" }
 move-bytecode-source-map = { path = "../../move-ir-compiler/move-bytecode-source-map" }
 move-abigen = { path = "../../move-prover/move-abigen" }
 move-docgen = { path = "../../move-prover/move-docgen" }
-move-errmapgen = { path = "../../move-prover/move-errmapgen" }
 move-core-types = { path = "../../move-core/types" }
 move-symbol-pool = { path = "../../move-symbol-pool" }
 move-command-line-common = { path = "../../move-command-line-common" }
 move-model = { path = "../../move-model" }
 move-bytecode-utils = { path = "../move-bytecode-utils" }
-workspace-hack = { version = "0.1", path = "../../../crates/workspace-hack" }
 
 move-to-yul = { path = "../../evm/move-to-yul", optional = true }
 evm-exec-utils = { path = "../../evm/exec-utils", optional = true }

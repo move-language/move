@@ -13,7 +13,6 @@ bytecode-interpreter-crypto = { path = "crypto" }
 move-binary-format = { path = "../../move-binary-format" }
 move-core-types = { path = "../../move-core/types" }
 move-model = { path = "../../move-model" }
-move-vm-runtime = { path = "../../move-vm/runtime" }
 
 # external dependencies
 anyhow = "1.0.52"
@@ -22,7 +21,6 @@ itertools = "0.10.0"
 num = "0.4.0"
 serde = { version = "1.0.124", features = ["derive"] }
 clap = { version = "3.1.8", features = ["derive"] }
-workspace-hack = { version = "0.1", path = "../../../crates/workspace-hack" }
 
 [dev-dependencies]
 datatest-stable = "0.1.1"

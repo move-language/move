@@ -9,9 +9,6 @@ license = "Apache-2.0"
 publish = false
 edition = "2018"
 
-[dependencies]
-workspace-hack = { version = "0.1", path = "../../../crates/workspace-hack" }
-
 [dev-dependencies]
 proptest = "1.0.0"
 proptest-derive = "0.3.0"

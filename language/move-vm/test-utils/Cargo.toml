@@ -14,11 +14,8 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.52"
 
-move-vm-runtime = { path = "../runtime" }
 move-core-types = {path = "../../move-core/types" }
-move-binary-format = { path = "../../move-binary-format" }
 move-table-extension = { path = "../../extensions/move-table-extension", optional = true }
-workspace-hack = { version = "0.1", path = "../../../crates/workspace-hack" }
 
 [features]
 default = [ ]

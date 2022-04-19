@@ -16,7 +16,7 @@ use std::{
 
 use super::{compiled_package::CompilationCachingStatus, package_layout::CompiledPackageLayout};
 
-#[cfg(feature = "evm-arch")]
+#[cfg(feature = "evm-backend")]
 use {
     colored::Colorize,
     move_to_yul::{options::Options as MoveToYulOptions, run_to_yul},
@@ -100,7 +100,7 @@ impl BuildPlan {
             .unwrap())
     }
 
-    #[cfg(feature = "evm-arch")]
+    #[cfg(feature = "evm-backend")]
     pub fn compile_evm<W: Write>(&self, writer: &mut W) -> Result<()> {
         let root_package = &self.resolution_graph.package_table[&self.root];
         let project_root = match &self.resolution_graph.build_options.install_dir {

@@ -80,8 +80,7 @@ harness = false
 required-features = ["evm-backend"]
 
 [features]
-default = ["evm-backend"]
-evm-backend = ["move-unit-test/evm-backend", "move-package/evm-arch"]
+evm-backend = ["move-unit-test/evm-backend", "move-package/evm-backend"]
 
 table-extension = [
     "move-table-extension",

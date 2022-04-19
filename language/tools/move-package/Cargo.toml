@@ -49,5 +49,4 @@ name = "test_runner"
 harness = false
 
 [features]
-default = ["evm-arch"]
-evm-arch = ["move-to-yul", "evm-exec-utils", "termcolor", "hex"]
+evm-backend = ["move-to-yul", "evm-exec-utils", "termcolor", "hex"]

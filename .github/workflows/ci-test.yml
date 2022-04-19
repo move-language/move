@@ -74,7 +74,7 @@ jobs:
 
   hardhat-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     needs: prepare
     # if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     steps:
@@ -82,8 +82,7 @@ jobs:
       - uses: ./.github/actions/build-setup
       - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
       - name: compile and install move-cli
-        working-directory: language/tools/move-cli
-        run: "cargo install --path ."
+        run: "cargo install --features evm-backend --path language/tools/move-cli"
       - name: set up hardhat-move
         working-directory: language/evm/hardhat-move
         run: "npm install"
@@ -98,6 +97,28 @@ jobs:
         run: "npx hardhat test"
       # TODO: reenable this once we figure a way to keep package-lock.json stable.
       # - uses: ./.github/actions/build-teardown
+
+  move-cli-tests-evm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: prepare
+    steps:
+      - uses: actions/checkout@v2.4.0
+      - uses: ./.github/actions/build-setup
+      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - name: run EVM-based move cli tests
+        run: "cargo test --features evm-backend -p move-cli --test build_testsuite_evm --test move_unit_tests_evm"
+
+  move-unit-test-framework-tests-evm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: prepare
+    steps:
+      - uses: actions/checkout@v2.4.0
+      - uses: ./.github/actions/build-setup
+      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - name: run EVM-based move unit test framework tests
+        run: "cargo test --features evm-backend -p move-unit-test --test move_unit_test_testsuite"
 
   # Disable benchmarks for now
   # Compile (but don't run) the benchmarks, to insulate against bit rot

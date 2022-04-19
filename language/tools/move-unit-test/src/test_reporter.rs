@@ -126,6 +126,7 @@ impl FailureReason {
         FailureReason::Property(details)
     }
 
+    #[cfg(feature = "evm-backend")]
     pub fn move_to_evm_error(diagnostics: String) -> Self {
         FailureReason::MoveToEVMError(diagnostics)
     }

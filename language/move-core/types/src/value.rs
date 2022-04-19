@@ -54,8 +54,8 @@ pub enum MoveValue {
 /// A layout associated with a named field
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MoveFieldLayout {
-    name: Identifier,
-    layout: MoveTypeLayout,
+    pub name: Identifier,
+    pub layout: MoveTypeLayout,
 }
 
 impl MoveFieldLayout {

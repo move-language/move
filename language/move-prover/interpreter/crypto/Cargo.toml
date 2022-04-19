@@ -7,7 +7,6 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-workspace-hack = { version = "0.1", path = "../../../../crates/workspace-hack" }
 
 # external dependencies
 anyhow = "1.0.52"

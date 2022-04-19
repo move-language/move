@@ -48,7 +48,6 @@ move-unit-test = { path = "../move-unit-test" }
 move-errmapgen = { path = "../../move-prover/move-errmapgen" }
 move-bytecode-source-map = { path = "../../move-ir-compiler/move-bytecode-source-map" }
 move-bytecode-viewer = { path = "../move-bytecode-viewer" }
-workspace-hack = { version = "0.1", path = "../../../crates/workspace-hack" }
 
 [dev-dependencies]
 datatest-stable = "0.1.1"

@@ -2,7 +2,6 @@
 resolver = "2"
 
 members = [
-    "crates/workspace-hack",
     "devtools/x",
     "devtools/x-core",
     "devtools/x-lint",

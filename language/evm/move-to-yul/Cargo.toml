@@ -17,7 +17,6 @@ move-ir-types = { path = "../../move-ir/types" }
 move-core-types = { path = "../../move-core/types" }
 move-compiler = { path = "../../move-compiler" }
 
-workspace-hack = { version = "0.1", path = "../../../crates/workspace-hack" }
 
 # external dependencies
 anyhow = "1.0.38"

@@ -29,7 +29,6 @@ plotters = { version = "0.3.0", default_features = false, features = ["evcxr", "
 serde = { version = "1.0.124", features = ["derive"] }
 serde_json = "1.0.64"
 simplelog = "0.9.0"
-workspace-hack = { version = "0.1", path = "../../../crates/workspace-hack" }
 
 [dev-dependencies]
 datatest-stable = "0.1.1"

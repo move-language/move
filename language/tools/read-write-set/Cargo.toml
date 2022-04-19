@@ -19,4 +19,3 @@ prover_bytecode = { path = "../../move-prover/bytecode", package="move-stackless
 move-resource-viewer = { path = "../move-resource-viewer" }
 move-read-write-set-types = { path = "types" }
 read-write-set-dynamic = { path = "dynamic" }
-workspace-hack = { version = "0.1", path = "../../../crates/workspace-hack" }

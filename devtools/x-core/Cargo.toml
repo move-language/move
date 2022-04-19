@@ -13,7 +13,6 @@ debug-ignore = "1.0.1"
 determinator = "0.7.0"
 guppy = "0.12.3"
 indoc = "1.0.3"
-hakari = { version = "0.8.0", features = ["cli-support"] }
 hex = "0.4.3"
 log = "0.4.14"
 toml = "0.5.8"

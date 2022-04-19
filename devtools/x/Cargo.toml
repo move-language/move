@@ -17,7 +17,6 @@ clap = { version = "3.1.8", features = ["derive"] }
 anyhow = "1.0.52"
 colored-diff = "0.2.2"
 guppy = { version = "0.12.3", features = ["summaries"] }
-hakari = "0.8.0"
 indoc = "1.0.3"
 toml = "0.5.8"
 env_logger = "0.8.3"

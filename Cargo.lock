@@ -92,17 +92,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "atomicwrites"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4830ac690261d0b47f06e86d18c47eaa65d0184e576cf9b62c3a49b28cb876b"
-dependencies = [
- "nix 0.20.0",
- "tempfile",
- "winapi",
-]
-
-[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -166,12 +155,6 @@ dependencies = [
  "quote 1.0.9",
  "syn 1.0.74",
 ]
-
-[[package]]
-name = "bimap"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50ae17cabbc8a38a1e3e4c1a6a664e9a09672dc14d0896fa8d865d3a5a446b07"
 
 [[package]]
 name = "bit-set"
@@ -544,16 +527,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "combine"
-version = "4.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2b2f5d0ee456f3928812dfc8c6d9a1d592b98678f6d56db9b0cd2b7bc6c8db5"
-dependencies = [
- "bytes",
- "memchr",
-]
-
-[[package]]
 name = "config"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -778,7 +751,7 @@ version = "3.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a19c6cedffdc8c03a3346d723eb20bd85a13362bb96dc2ac000842c6381ec7bf"
 dependencies = [
- "nix 0.23.1",
+ "nix",
  "winapi",
 ]
 
@@ -872,15 +845,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c0ff24a73b51d9009c40897faf87d31b77345c90ffbf4dc3a1d2957032c5653"
 dependencies = [
  "itertools 0.10.1",
-]
-
-[[package]]
-name = "diffy"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c1ff48e3f358d3158f88b2c95071f28d136be31d89e5fa843095032a70bff56"
-dependencies = [
- "ansi_term 0.12.1",
 ]
 
 [[package]]
@@ -1458,34 +1422,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92620684d99f750bae383ecb3be3748142d6095760afd5cbcf2261e9a279d780"
 
 [[package]]
-name = "hakari"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f48905a7968260802691e8b6cc2e9426822b79eaf9164d07f2212e9327181b3e"
-dependencies = [
- "atomicwrites",
- "bimap",
- "camino",
- "cfg-if 1.0.0",
- "debug-ignore",
- "diffy",
- "guppy",
- "guppy-workspace-hack",
- "include_dir",
- "indenter",
- "itertools 0.10.1",
- "owo-colors",
- "pathdiff",
- "rayon",
- "serde 1.0.130",
- "strip-ansi-escapes",
- "target-spec",
- "toml",
- "toml_edit",
- "twox-hash",
-]
-
-[[package]]
 name = "half"
 version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1676,12 +1612,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0cfe9645a18782869361d9c8732246be7b410ad4e919d3609ebabdac00ba12c3"
 
 [[package]]
-name = "indenter"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce23b50ad8242c51a442f3ff322d56b02f08852c77e4c0b4d3fd684abc89c683"
-
-[[package]]
 name = "indexmap"
 version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1779,15 +1709,6 @@ name = "keccak"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67c21572b4949434e4fc1e1978b99c5f77064153c59d998bf13ecd96fb5ecba7"
-
-[[package]]
-name = "kstring"
-version = "1.0.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b310ccceade8121d7d77fee406160e457c2f4e7c7982d589da3499bc7ea4526"
-dependencies = [
- "serde 1.0.130",
-]
 
 [[package]]
 name = "language-benchmarks"
@@ -2912,18 +2833,6 @@ source = "git+https://github.com/diem/diem-devtools?rev=f99a204e3d3f8e503d51d7df
 dependencies = [
  "camino",
  "serde 1.0.130",
-]
-
-[[package]]
-name = "nix"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa9b4819da1bc61c0ea48b63b7bc8604064dd43013e7cc325df098d49cd7c18a"
-dependencies = [
- "bitflags",
- "cc",
- "cfg-if 1.0.0",
- "libc",
 ]
 
 [[package]]
@@ -4730,18 +4639,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "toml_edit"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2782eb01c48f7f6f66d63bebe64dd8302dbf6bc0be0d65a85a1854d472e2dfa8"
-dependencies = [
- "combine",
- "indexmap",
- "itertools 0.10.1",
- "kstring",
-]
-
-[[package]]
 name = "tracing"
 version = "0.1.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5178,7 +5075,6 @@ dependencies = [
  "env_logger",
  "globset",
  "guppy",
- "hakari",
  "indexmap",
  "indoc",
  "log",
@@ -5202,7 +5098,6 @@ dependencies = [
  "debug-ignore",
  "determinator",
  "guppy",
- "hakari",
  "hex",
  "indoc",
  "log",
@@ -5218,7 +5113,6 @@ version = "0.1.0"
 dependencies = [
  "camino",
  "guppy",
- "hakari",
  "once_cell",
  "serde 1.0.130",
  "toml",

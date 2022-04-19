@@ -53,29 +53,6 @@ warn = [
     "clippy::wildcard_dependencies",
 ]
 
-# Ideally we'd have powerpc-unknown-linux-gnu here as well, but unification causes openssl-sys to be included,
-# and openssl can't be cross-compiled without extra work. This may need to be fixed in hakari through being able
-# to say "consider only these packages for these target platforms".
-
-[hakari.traversal-excludes]
-workspace-members = [
-    # Don't consider the crypto packages as they do weird things with mutually exclusive features.
-    "bytecode-interpreter-crypto",
-
-    # Also exclude the devtools packages since they get compiled with a different set of options.
-    "x",
-    "x-core",
-    "x-lint",
-]
-
-[hakari.final-excludes]
-third-party = [
-    # Exclude the fail crate because the failpoints feature should only be enabled
-    # for certain builds.
-    { name = "fail" },
-    { name = "proptest" },
-]
-
 # This follows the same syntax as CargoOptionsSummary in guppy.
 [summaries.default]
 resolver = "2"

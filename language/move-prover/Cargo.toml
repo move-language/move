@@ -17,7 +17,6 @@ move-docgen = { path = "move-docgen" }
 move-abigen = { path = "move-abigen" }
 move-errmapgen = { path = "move-errmapgen" }
 move-stackless-bytecode = { path = "bytecode" }
-move-stackless-bytecode-interpreter = { path = "interpreter" }
 move-ir-types = { path = "../move-ir/types" }
 move-core-types = { path = "../move-core/types" }
 

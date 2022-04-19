@@ -12,7 +12,6 @@ edition = "2018"
 [dependencies]
 bcs = "0.1.2"
 move-core-types = { path = "../../move-core/types" }
-move-vm-types = { path = "../../move-vm/types" }
 move-binary-format = { path = "../../move-binary-format" }
 serde = { version = "1.0.124", features = ["derive", "rc"] }
 

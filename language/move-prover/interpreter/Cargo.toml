@@ -13,7 +13,6 @@ bytecode-interpreter-crypto = { path = "crypto" }
 move-binary-format = { path = "../../move-binary-format" }
 move-core-types = { path = "../../move-core/types" }
 move-model = { path = "../../move-model" }
-move-vm-runtime = { path = "../../move-vm/runtime" }
 
 # external dependencies
 anyhow = "1.0.52"

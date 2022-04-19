@@ -48,7 +48,6 @@ move-prover-test-utils = { path = "../../move-prover/test-utils" }
 evm = "0.33.1"
 primitive-types = "0.10.1"
 evm-exec-utils = { path = "../exec-utils" }
-shell-words = "1.0.0"
 walkdir = "2.3.1"
 tempfile = "3.2.0"
 move-stdlib = { path = "../../move-stdlib" }

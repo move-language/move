@@ -16,6 +16,5 @@ move-bytecode-utils = { path = "../move-bytecode-utils" }
 move-core-types = { path = "../../move-core/types" }
 move-model = { path = "../../move-model" }
 prover_bytecode = { path = "../../move-prover/bytecode", package="move-stackless-bytecode" }
-move-resource-viewer = { path = "../move-resource-viewer" }
 move-read-write-set-types = { path = "types" }
 read-write-set-dynamic = { path = "dynamic" }

@@ -298,13 +298,20 @@ async function generateArtifactsForPackage(hardhatRootPath: string, packagePath:
 async function buildPackageAndGenerateArtifacts(movePath: string, hardhatRootPath: string, packagePath: string): Promise<Result<Artifact[], MoveBuildError | ChainedError>> {
     let buildRes = await movePackageBuild(movePath, packagePath);
     if (buildRes.isErr()) {
-        return err(buildRes.error);
+        let e = buildRes.error;
+        console.log(`\nFailed to build ${packagePath}\n${e.stdout}${e.stderr}`);
+        return err(e);
     }
 
     let genArtifactsRes = await generateArtifactsForPackage(hardhatRootPath, packagePath);
     if (genArtifactsRes.isErr()) {
+        let e = genArtifactsRes.error;
+        console.log(`Failed to build ${packagePath}\n${e}`);
         return err(genArtifactsRes.error);
     }
+
+    console.log(`Successfully built ${packagePath}`);
+
     return ok(genArtifactsRes.value);
 }
 
@@ -359,8 +366,6 @@ subtask(TASK_COMPILE_MOVE)
             let res = buildResults[idx];
 
             if (res.isOk()) {
-                console.log(`Successfully built ${packagePaths[idx]}`);
-
                 let contractNames = [];
 
                 for (let artifact of res.value) {
@@ -374,15 +379,6 @@ subtask(TASK_COMPILE_MOVE)
                 artifactsImpl.addValidArtifacts([{ sourceName: packagePathRel, artifacts: contractNames }]);
             }
             else {
-                let e = res.error;
-
-                if (e instanceof MoveBuildError) {
-                    console.log(`\nFailed to build ${packagePaths[idx]}\n${e.stdout}${e.stderr}`);
-                }
-                else if (e instanceof ChainedError) {
-                    console.log(`\nFailed to build ${packagePaths[idx]}\n${e}`);
-                }
-
                 failedToBuildAll = true;
             }
         }

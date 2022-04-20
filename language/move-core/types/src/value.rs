@@ -123,6 +123,16 @@ impl MoveValue {
             (v, _) => v,
         }
     }
+
+    pub fn undecorate(self) -> Self {
+        match self {
+            Self::Struct(s) => MoveValue::Struct(s.undecorate()),
+            Self::Vector(vals) => {
+                MoveValue::Vector(vals.into_iter().map(MoveValue::undecorate).collect())
+            }
+            v => v,
+        }
+    }
 }
 
 pub fn serialize_values<'a, I>(vals: I) -> Vec<Vec<u8>>
@@ -206,6 +216,15 @@ impl MoveStruct {
                 fields.into_iter().map(|(_, f)| f).collect()
             }
         }
+    }
+
+    pub fn undecorate(self) -> Self {
+        Self::Runtime(
+            self.into_fields()
+                .into_iter()
+                .map(MoveValue::undecorate)
+                .collect(),
+        )
     }
 }
 

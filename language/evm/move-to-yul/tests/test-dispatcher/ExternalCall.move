@@ -5,7 +5,7 @@ module 0x2::M {
     use Evm::Evm::Unit;
     use Std::Vector;
 
-    #[external(sig=b"noPara()")]
+    #[external]
     public native fun no_para(contract: address);
 
     #[external(sig=b"safeTransferFrom(address,address,uint256,bytes)")]
@@ -14,7 +14,7 @@ module 0x2::M {
     #[external(sig=b"isApprovedForAll(address,address)returns(bool)"), view]
     public native fun is_approved_for_all(contract: address, account: address, operator: address): bool;
 
-    #[external(sig=b"multiRet(uint,uint[])returns(uint[], uint)"), view]
+    #[external, view]
     public native fun multi_ret(contract: address, v: U256, vec: vector<U256>): (vector<U256>, U256);
 
     #[external(sig=b"testExternalReturn(uint) returns (uint)")]

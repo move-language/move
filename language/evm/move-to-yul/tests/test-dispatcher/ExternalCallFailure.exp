@@ -110,6 +110,12 @@ error: solidity signature is not compatible with the move signature
 8 │     public native fun failure_2(add: u128, i:u8);
   │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+error: external function must have at least one argument
+  ┌─ tests/test-dispatcher/ExternalCallFailure.move:5:5
+  │
+5 │     public native fun failure_1();
+  │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 error: error happens when parsing the signature
   ┌─ tests/test-dispatcher/ExternalCallFailure.move:5:5
   │

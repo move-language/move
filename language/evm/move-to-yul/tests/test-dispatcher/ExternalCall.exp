@@ -699,7 +699,7 @@ object "A2_M" {
                 if iszero(extcodesize(contract)) { $Abort(91) }
                 // storage for arguments and returned data
                 let $t1 := mload(0)
-                mstore($t1, $Shl(0x48050dbe, 224))
+                mstore($t1, $Shl(0x557c379b, 224))
                 let $t2 := abi_encode_tuple__(add($t1, 4))
                 let $t3 := call(gas(), contract, 0,  $t1, sub($t2, $t1), $t1, 0)
                 // set freeMemoryPointer
@@ -713,7 +713,7 @@ object "A2_M" {
             function A2_M_multi_ret(contract, v, vec) -> $result0, $result1  {
                 // storage for arguments and returned data
                 let $t3 := mload(0)
-                mstore($t3, $Shl(0xe520b193, 224))
+                mstore($t3, $Shl(0x7f547216, 224))
                 let $t4 := abi_encode_tuple_$uint256_uint256__$_$A2_U256_U256_vec$A2_U256_U256$$(add($t3, 4), v, vec)
                 let $t5 := call(gas(), contract, 0,  $t3, sub($t4, $t3), $t3, 0)
                 // set freeMemoryPointer
@@ -1326,7 +1326,7 @@ object "A2_M" {
             function abi_decode_available_length__uint256___vec$A2_U256_U256$_from_memory(offset, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 let srcEnd := add(offset, mul(length, 32))
                 if gt(srcEnd, end) { $Abort(94) }
@@ -1376,7 +1376,7 @@ object "A2_M" {
                 let size := $MemoryLoadU64(value)
                 mstore(pos, size)
                 pos := add(pos, 0x20)
-                $CopyMemoryU8(add(value, 0x20), pos, size)
+                $CopyMemory(add(value, 0x20), pos, size)
                 size := $RoundUp(size)
                 end := add(pos, size)
             }
@@ -1651,18 +1651,6 @@ object "A2_M" {
                 mstore(add(dst, overflow_offs), or(dst_word, src_word))
               }
             }
-            function $CopyMemoryU8(src, dst, size) {
-              let i := 0
-              for { } lt(i, size) { i := add(i, 32) } {
-                mstore(add(dst, i), mload(add(src, i)))
-              }
-              if gt(i, size)
-              {
-                  for {let j := i} lt(j, size) {j := add(j, 1)} {
-                    mstore8(add(dst, j), 0)
-                  }
-              }
-            }
             function $CheckMemorySize(len) -> checked_len {
                 if gt(len, 0xffffffffffffffff) { $AbortBuiltin() }
                 checked_len := len
@@ -1704,6 +1692,15 @@ object "A2_M" {
                 if gt(hi, 0xffffffffffffffffffffffffffffffff) { $AbortBuiltin() }
                 if gt(lo, 0xffffffffffffffffffffffffffffffff) { $AbortBuiltin() }
                 r := add(shl(128, hi), lo)
+            }
+            function $ClosestGreaterPowerOfTwo(x) -> r {
+                r := or(r, shr(1, x))
+                r := or(r, shr(2, r))
+                r := or(r, shr(4, r))
+                r := or(r, shr(8, r))
+                r := or(r, shr(16, r))
+                r := or(r, shr(32, r))
+                r := add(x, 1)
             }
             function $RoundUp(value) -> result {
                 result := and(add(value, 31), not(31))

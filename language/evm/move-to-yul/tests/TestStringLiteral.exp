@@ -743,7 +743,7 @@ object "test_A2_M_test_same_literals" {
           let size := $MemoryLoadU64(message)
           mstore(pos, size)
           pos := add(pos, 32)
-          $CopyMemoryU8(add(message, 32), pos, size)
+          $CopyMemory(add(message, 32), pos, size)
           size := $RoundUp(size)
           let end := add(pos, size)
           revert(head, sub(end, head))
@@ -784,6 +784,10 @@ object "test_A2_M_test_same_literals" {
         function $MaskForSize(size) -> mask {
           mask := sub(shl(shl(3, size), 1), 1)
         }
+        function $ToWordOffs(offs) -> word_offs, byte_offset {
+          word_offs := shr(5, offs)
+          byte_offset := and(offs, 0x1F)
+        }
         function $MemoryLoadBytes(offs, size) -> val {
           // Lower bit where the value in the higher bytes ends
           let bit_end := shl(3, sub(32, size))
@@ -804,16 +808,18 @@ object "test_A2_M_test_same_literals" {
         function $MemoryStoreU64(offs, val) {
           $MemoryStoreBytes(offs, 8, val)
         }
-        function $CopyMemoryU8(src, dst, size) {
+        function $CopyMemory(src, dst, size) {
+          let num_words, overflow_bytes := $ToWordOffs(size)
           let i := 0
-          for { } lt(i, size) { i := add(i, 32) } {
+          for { } lt(i, mul(num_words, 32)) { i := add(i, 32) } {
             mstore(add(dst, i), mload(add(src, i)))
           }
-          if gt(i, size)
-          {
-              for {let j := i} lt(j, size) {j := add(j, 1)} {
-                mstore8(add(dst, j), 0)
-              }
+          if overflow_bytes {
+            let mask := $MaskForSize(sub(32, overflow_bytes))
+            let overflow_offs := mul(num_words, 32)
+            let dst_word := and(mload(add(dst, overflow_offs)), mask)
+            let src_word := and(mload(add(src, overflow_offs)), not(mask))
+            mstore(add(dst, overflow_offs), or(dst_word, src_word))
           }
         }
         function $LogicalNot(x) -> r {

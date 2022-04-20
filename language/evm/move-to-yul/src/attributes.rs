@@ -21,6 +21,9 @@ const SIGNATURE: &str = "sig";
 const EVENT_ATTR: &str = "event";
 const VIEW_ATTR: &str = "view";
 const PURE_ATTR: &str = "pure";
+const DECODE_ATTR: &str = "decode";
+const ENCODE_ATTR: &str = "encode";
+const ENCODE_PACKED_ATTR: &str = "encode_packed";
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) enum FunctionAttribute {
@@ -88,6 +91,26 @@ pub fn extract_event_signature(st: &StructEnv<'_>) -> Option<String> {
         EVENT_ATTR,
         SIGNATURE,
     )
+}
+
+/// Extract the solidity signature from the decode attribute
+pub fn extract_decode_signature(fun: &FunctionEnv<'_>) -> Option<String> {
+    extract_attr_value_str(
+        fun.module_env.env,
+        fun.get_attributes(),
+        DECODE_ATTR,
+        SIGNATURE,
+    )
+}
+
+/// Extract the solidity signature from the encode attribute
+pub fn extract_encode_signature(fun: &FunctionEnv<'_>, packed_flag: bool) -> Option<String> {
+    let attr = if packed_flag {
+        ENCODE_PACKED_ATTR
+    } else {
+        ENCODE_ATTR
+    };
+    extract_attr_value_str(fun.module_env.env, fun.get_attributes(), attr, SIGNATURE)
 }
 
 /// Check whether an attribute is present in an attribute list.
@@ -217,4 +240,21 @@ pub(crate) fn construct_fun_attribute(fun: &FunctionEnv<'_>) -> Option<FunctionA
     }
 
     Some(res.unwrap_or(FunctionAttribute::NonPayable))
+}
+
+pub fn is_decode(fun: &FunctionEnv<'_>) -> bool {
+    has_attr(fun.module_env.env, fun.get_attributes(), DECODE_ATTR, false)
+}
+
+pub fn is_encode(fun: &FunctionEnv<'_>) -> bool {
+    has_attr(fun.module_env.env, fun.get_attributes(), ENCODE_ATTR, false)
+}
+
+pub fn is_encode_packed(fun: &FunctionEnv<'_>) -> bool {
+    has_attr(
+        fun.module_env.env,
+        fun.get_attributes(),
+        ENCODE_PACKED_ATTR,
+        false,
+    )
 }

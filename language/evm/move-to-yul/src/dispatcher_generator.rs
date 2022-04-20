@@ -109,7 +109,7 @@ impl Generator {
     ) -> SoliditySignature {
         let extracted_sig_opt =
             attributes::extract_callable_or_create_signature(fun, callable_flag);
-        let mut sig = SoliditySignature::create_default_solidity_signature(ctx, fun, None);
+        let mut sig = SoliditySignature::create_default_solidity_signature(ctx, fun);
         if let Some(extracted_sig) = extracted_sig_opt {
             let parsed_sig_opt =
                 SoliditySignature::parse_into_solidity_signature(&extracted_sig, fun);
@@ -340,6 +340,34 @@ impl Generator {
         let generate_fun = move |_gen: &mut Generator, ctx: &Context| {
             emit!(ctx.writer, "(value) -> cleaned ");
             ctx.emit_block(|| emitln!(ctx.writer, "cleaned := and(value, {})", mask));
+        };
+        self.need_auxiliary_function(function_name, Box::new(generate_fun))
+    }
+
+    fn generate_left_align(&mut self, ty: &SolidityType) -> String {
+        use crate::solidity_ty::{SolidityPrimitiveType::*, SolidityType::*};
+        assert!(ty.is_value_type());
+        let ty = ty.clone();
+        let name_prefix = "left_align";
+        let function_name = format!("{}_{}", name_prefix, ty);
+        let generate_fun = move |_gen: &mut Generator, ctx: &Context| {
+            emit!(ctx.writer, "(value) -> aligned ");
+            ctx.emit_block(|| {
+                let bits = 256
+                    - match ty {
+                        Primitive(p) => match p {
+                            Bool => 8,
+                            Int(size) | Uint(size) => size,
+                            Address(_) => 160,
+                            _ => panic!("wrong types"),
+                        },
+                        BytesStatic(_) => 256,
+                        _ => panic!("wrong types"),
+                    };
+                if bits > 0 {
+                    emitln!(ctx.writer, "aligned := shl({}, value)", bits);
+                }
+            });
         };
         self.need_auxiliary_function(function_name, Box::new(generate_fun))
     }
@@ -676,6 +704,11 @@ impl Generator {
                     )
                 );
                 // store the capacity of vector
+                let compute_capacity_str = gen.call_builtin_str(
+                    ctx,
+                    YulFunction::ClosestGreaterPowerOfTwo,
+                    std::iter::once("length".to_string()),
+                );
                 emitln!(
                     ctx.writer,
                     "{}",
@@ -685,7 +718,7 @@ impl Generator {
                         vec![
                             // TODO: simplify implementation of MemoryStoreU64?
                             "add(array, 8)".to_string(), // skip the length which is a u64 (8 bytes)
-                            "length".to_string()
+                            compute_capacity_str
                         ]
                         .into_iter()
                     )
@@ -787,13 +820,18 @@ impl Generator {
                     )
                 );
                 // capacity of vector
+                let compute_capacity_str = gen.call_builtin_str(
+                    ctx,
+                    YulFunction::ClosestGreaterPowerOfTwo,
+                    std::iter::once("length".to_string()),
+                );
                 emitln!(
                     ctx.writer,
                     "{}",
                     gen.call_builtin_str(
                         ctx,
                         YulFunction::MemoryStoreU64,
-                        vec!["add(array, 8)".to_string(), "length".to_string()].into_iter()
+                        vec!["add(array, 8)".to_string(), compute_capacity_str].into_iter()
                     )
                 );
 
@@ -847,18 +885,22 @@ impl Generator {
     }
 
     /// Generate encoding functions for primitive types.
-    fn generate_abi_encoding_primitive_type(&mut self, ty: &SolidityType) -> String {
+    fn generate_abi_encoding_primitive_type(
+        &mut self,
+        ty: &SolidityType,
+        options: EncodingOptions,
+    ) -> String {
         let name_prefix = "abi_encode";
         let function_name = format!("{}_{}", name_prefix, ty);
         let ty = ty.clone(); // need to move into lambda
         let generate_fun = move |gen: &mut Generator, ctx: &Context| {
             emit!(ctx.writer, "(value, pos) ");
             ctx.emit_block(|| {
-                emitln!(
-                    ctx.writer,
-                    "mstore(pos, {}(value))",
-                    gen.generate_cleanup(&ty)
-                );
+                let mut store_str = format!("{}(value)", gen.generate_cleanup(&ty));
+                if !options.padded {
+                    store_str = format!("{}({})", gen.generate_left_align(&ty), store_str);
+                }
+                emitln!(ctx.writer, "mstore(pos, {})", store_str);
             });
         };
         self.need_auxiliary_function(function_name, Box::new(generate_fun))
@@ -876,7 +918,7 @@ impl Generator {
         use SolidityType::*;
         // TODO: Struct
         match ty {
-            Primitive(_) => self.generate_abi_encoding_primitive_type(ty),
+            Primitive(_) => self.generate_abi_encoding_primitive_type(ty, options),
             DynamicArray(_) | StaticArray(_, _) | Bytes | BytesStatic(_) | SolidityString => {
                 self.generate_abi_encoding_array_type(ctx, ty, move_ty, options)
             }
@@ -898,7 +940,7 @@ impl Generator {
         let move_ty = move_ty.clone();
 
         let encoding_function_name = match ty {
-            Primitive(_) => self.generate_abi_encoding_primitive_type(&ty),
+            Primitive(_) => self.generate_abi_encoding_primitive_type(&ty, options.clone()),
             DynamicArray(_) | StaticArray(_, _) | Bytes | BytesStatic(_) | SolidityString => {
                 self.generate_abi_encoding_array_type(ctx, &ty, &move_ty, options.clone())
             }
@@ -971,7 +1013,7 @@ impl Generator {
                 // copy the memory to pos
                 gen.call_builtin(
                     ctx,
-                    YulFunction::CopyMemoryU8,
+                    YulFunction::CopyMemory,
                     vec![
                         "add(value, 0x20)".to_string(),
                         "pos".to_string(),
@@ -1240,6 +1282,32 @@ impl Generator {
         self.generate_abi_tuple_encoding(ctx, param_types, param_locs, move_tys)
     }
 
+    /// Generate encoding functions for tuple in parameters.
+    pub(crate) fn generate_abi_tuple_encoding_para(
+        &mut self,
+        ctx: &Context,
+        sig: &SoliditySignature,
+        move_tys: Vec<Type>,
+        packed_flag: bool,
+    ) -> String {
+        let param_types = sig
+            .para_types
+            .iter()
+            .map(|(ty, _, _)| ty.clone())
+            .collect_vec(); // need to move into lambda
+        let param_locs = sig
+            .para_types
+            .iter()
+            .map(|(_, _, loc)| loc.clone())
+            .collect_vec();
+        if packed_flag {
+            self.generate_abi_tuple_encoding_packed(ctx, param_types, param_locs, move_tys)
+        } else {
+            self.generate_abi_tuple_encoding(ctx, param_types, param_locs, move_tys)
+        }
+    }
+
+    /// Generate encodePacked function
     pub(crate) fn generate_abi_tuple_encoding_packed(
         &mut self,
         ctx: &Context,
@@ -1271,7 +1339,7 @@ impl Generator {
             }
             emit!(ctx.writer, "(pos {}) -> end ", value_params);
             ctx.emit_block(|| {
-                let overall_type_head_vec = abi_head_sizes_vec(&param_types, true);
+                let overall_type_head_vec = abi_head_sizes_vec(&param_types, options.padded);
                 for (stack_pos, (((ty, ty_size), _loc), move_ty)) in overall_type_head_vec
                     .iter()
                     .zip(param_locs.iter())
@@ -1303,7 +1371,8 @@ impl Generator {
         self.need_auxiliary_function(function_name, Box::new(generate_fun))
     }
 
-    pub(crate) fn generate_pack(
+    /// Generate encodePacked function with keccak256 hashing
+    pub(crate) fn generate_packed_hashed(
         &mut self,
         ctx: &Context,
         tys: Vec<SolidityType>,
@@ -1338,6 +1407,11 @@ impl Generator {
                     "let end := {}(pos {})",
                     generate_encoding_packed,
                     value_params
+                );
+                emitln!(
+                    ctx.writer,
+                    "mstore({}, end)",
+                    substitute_placeholders("${MEM_SIZE_LOC}").unwrap(),
                 );
                 emitln!(ctx.writer, "hash := keccak256(pos, sub(end, pos))");
             });

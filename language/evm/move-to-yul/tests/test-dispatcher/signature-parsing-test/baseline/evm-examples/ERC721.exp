@@ -282,7 +282,7 @@ object "A2_ERC721" {
             function abi_decode_available_length__bytes4(src, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 if gt(add(src, sub(size, 32)), end) { $Abort(93) }
                 $CopyFromCallDataToMemory(src, dst, length)
@@ -334,7 +334,7 @@ object "A2_ERC721" {
             function abi_decode_available_length__bytes(src, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 if gt(add(src, sub(size, 32)), end) { $Abort(93) }
                 $CopyFromCallDataToMemory(src, dst, length)

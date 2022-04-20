@@ -64,7 +64,7 @@ impl EventSignature {
             .map(|(offset, ty, field_name)| (offset, ty, field_name))
             .collect_vec()
         {
-            let solidity_ty = SolidityType::translate_from_move(ctx, &move_ty); // implicit mapping from a move type to a solidity type
+            let solidity_ty = SolidityType::translate_from_move(ctx, &move_ty, false); // implicit mapping from a move type to a solidity type
             para_type_lst.push((offset, solidity_ty, move_ty.clone(), false, field_name));
             // no index by default
         }
@@ -243,7 +243,7 @@ pub(crate) fn define_emit_fun(
                         ctx.writer,
                         "let {} := {}({})",
                         new_var,
-                        gen.parent.generate_pack(
+                        gen.parent.generate_packed_hashed(
                             ctx,
                             vec![solidity_ty.clone()],
                             vec![SignatureDataLocation::Memory],
@@ -315,6 +315,12 @@ pub(crate) fn define_emit_fun(
                 end_var,
                 pos_var,
                 indexed_str
+            );
+            emitln!(
+                ctx.writer,
+                "mstore({}, {})",
+                substitute_placeholders("${MEM_SIZE_LOC}").unwrap(),
+                end_var
             );
         });
     });

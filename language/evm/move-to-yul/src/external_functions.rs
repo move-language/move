@@ -6,13 +6,13 @@ use crate::{
     dispatcher_generator::TARGET_CONTRACT_DOES_NOT_CONTAIN_CODE,
     functions::FunctionGenerator,
     native_functions::NativeFunctions,
-    solidity_ty::{abi_head_sizes_sum, SoliditySignature, SolidityType},
+    solidity_ty::{abi_head_sizes_sum, SignatureDataLocation, SoliditySignature, SolidityType},
     yul_functions::{substitute_placeholders, YulFunction},
 };
 use itertools::Itertools;
 use move_model::{
     emit, emitln,
-    model::{FunId, FunctionEnv, QualifiedInstId},
+    model::{FunId, FunctionEnv, Parameter, QualifiedInstId},
     ty::Type,
 };
 use move_stackless_bytecode::function_target_pipeline::FunctionVariant;
@@ -25,27 +25,31 @@ impl NativeFunctions {
         gen: &mut FunctionGenerator,
         ctx: &Context,
         fun_id: &QualifiedInstId<FunId>,
-        solidity_sig_str: &str,
+        solidity_sig_str_opt: Option<String>,
     ) {
         let fun = ctx.env.get_function(fun_id.to_qualified_id());
         let (external_flag, result_ty) = self.check_external_result(ctx, &fun);
-        let mut sig =
-            SoliditySignature::create_default_solidity_signature(ctx, &fun, result_ty.clone());
-        let parsed_sig_opt =
-            SoliditySignature::parse_into_solidity_signature(solidity_sig_str, &fun);
-        // Check compatibility
-        if let Ok(parsed_sig) = parsed_sig_opt {
-            if !parsed_sig.check_sig_compatibility_for_external_fun(ctx, &fun, result_ty.clone()) {
-                ctx.env.error(
-                    &fun.get_loc(),
-                    "solidity signature is not compatible with the move signature",
-                );
-                return;
-            } else {
+        let mut sig = SoliditySignature::create_default_solidity_signature_for_external_fun(
+            ctx,
+            &fun,
+            result_ty.clone(),
+        );
+        if let Some(solidity_sig_str) = solidity_sig_str_opt {
+            let parsed_sig_opt =
+                SoliditySignature::parse_into_solidity_signature(&solidity_sig_str, &fun);
+            // Check compatibility
+            if let Ok(parsed_sig) = parsed_sig_opt {
                 sig = parsed_sig;
+            } else if let Err(msg) = parsed_sig_opt {
+                ctx.env.error(&fun.get_loc(), &format!("{}", msg));
+                return;
             }
-        } else if let Err(msg) = parsed_sig_opt {
-            ctx.env.error(&fun.get_loc(), &format!("{}", msg));
+        }
+        if !sig.check_sig_compatibility_for_external_fun(ctx, &fun, result_ty.clone()) {
+            ctx.env.error(
+                &fun.get_loc(),
+                "solidity signature is not compatible with the move signature",
+            );
             return;
         }
 
@@ -428,6 +432,50 @@ impl NativeFunctions {
 }
 
 impl SoliditySignature {
+    /// Create a default solidity signature from a move function signature
+    pub(crate) fn create_default_solidity_signature_for_external_fun(
+        ctx: &Context,
+        fun: &FunctionEnv<'_>,
+        external_result_ty_opt: Option<Type>,
+    ) -> Self {
+        let fun_name = fun.symbol_pool().string(fun.get_name()).to_string();
+        let mut para_type_lst = vec![];
+        if fun.get_parameter_count() < 1 {
+            ctx.env.error(
+                &fun.get_loc(),
+                "external function must have at least one argument",
+            );
+        } else {
+            for Parameter(para_name, move_ty) in fun.get_parameters().into_iter().skip(1) {
+                let solidity_ty = SolidityType::translate_from_move(ctx, &move_ty, false); // implicit mapping from a move type to a solidity type
+                para_type_lst.push((
+                    solidity_ty,
+                    fun.symbol_pool().string(para_name).to_string(),
+                    SignatureDataLocation::Memory, // memory is used by default
+                ));
+            }
+        }
+
+        let mut ret_type_lst = vec![];
+        if let Some(move_ty) = external_result_ty_opt {
+            if !ctx.is_unit_ty(&move_ty) {
+                let solidity_ty = SolidityType::translate_from_move(ctx, &move_ty, false);
+                ret_type_lst.push((solidity_ty, SignatureDataLocation::Memory));
+            }
+        } else {
+            for move_ty in fun.get_return_types() {
+                let solidity_ty = SolidityType::translate_from_move(ctx, &move_ty, false);
+                ret_type_lst.push((solidity_ty, SignatureDataLocation::Memory));
+            }
+        }
+
+        SoliditySignature {
+            sig_name: fun_name,
+            para_types: para_type_lst,
+            ret_types: ret_type_lst,
+        }
+    }
+
     /// Check whether the user defined solidity signature is compatible with the Move signature
     pub(crate) fn check_sig_compatibility_for_external_fun(
         &self,

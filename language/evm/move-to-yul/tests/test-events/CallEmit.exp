@@ -276,6 +276,7 @@ object "A2_M" {
                     let $t5 := mload(0)
                     let $t6 := abi_encode_tuple_$address_address_uint256$_$address_address_A2_U256_U256$($t5, $t2,$t3,$t4)
                     log1($t5, sub($t6, $t5), $t1)
+                    mstore(0, $t6)
                 }
             }
             function A2_Evm_emit$A2_M_Event_8$(e) {
@@ -287,6 +288,7 @@ object "A2_M" {
                     let $t5 := mload(0)
                     let $t6 := abi_encode_tuple_$bytes__$_$vec$vec$u8$$$($t5, $t2)
                     log2($t5, sub($t6, $t5), $t1,$t4)
+                    mstore(0, $t6)
                 }
             }
             function A2_Evm_emit$A2_M_Event_7$(e) {
@@ -297,6 +299,7 @@ object "A2_M" {
                     let $t4 := mload(0)
                     let $t5 := abi_encode_tuple__($t4)
                     log2($t4, sub($t5, $t4), $t1,$t3)
+                    mstore(0, $t5)
                 }
             }
             function A2_Evm_emit$A2_M_Event_6$(e) {
@@ -310,6 +313,7 @@ object "A2_M" {
                     let $t7 := mload(0)
                     let $t8 := abi_encode_tuple_$string$_$vec$u8$$($t7, $t4)
                     log3($t7, sub($t8, $t7), $t1,$t3,$t6)
+                    mstore(0, $t8)
                 }
             }
             function A2_Evm_emit$A2_M_Event_5$(e) {
@@ -322,6 +326,7 @@ object "A2_M" {
                     let $t6 := mload(0)
                     let $t7 := abi_encode_tuple__($t6)
                     log3($t6, sub($t7, $t6), $t1,$t3,$t5)
+                    mstore(0, $t7)
                 }
             }
             function A2_Evm_emit$A2_M_Event_4$(e) {
@@ -333,6 +338,7 @@ object "A2_M" {
                     let $t5 := mload(0)
                     let $t6 := abi_encode_tuple__($t5)
                     log4($t5, sub($t6, $t5), $t1,$t2,$t3,$t4)
+                    mstore(0, $t6)
                 }
             }
             function A2_Evm_emit$A2_M_Event_3$(e) {
@@ -344,6 +350,7 @@ object "A2_M" {
                     let $t5 := mload(0)
                     let $t6 := abi_encode_tuple_$address$_$address$($t5, $t3)
                     log3($t5, sub($t6, $t5), $t1,$t2,$t4)
+                    mstore(0, $t6)
                 }
             }
             function A2_Evm_emit$A2_M_Event_2$(e) {
@@ -356,6 +363,7 @@ object "A2_M" {
                     let $t6 := mload(0)
                     let $t7 := abi_encode_tuple_$uint8_address_uint16_bytes$_$u8_address_u64_vec$u8$$($t6, $t2,$t3,$t4,$t5)
                     log1($t6, sub($t7, $t6), $t1)
+                    mstore(0, $t7)
                 }
             }
             function A2_Evm_emit$A2_M_Event_1$(e) {
@@ -367,6 +375,7 @@ object "A2_M" {
                     let $t5 := mload(0)
                     let $t6 := abi_encode_tuple_$uint8_address_uint256$_$u8_address_A2_U256_U256$($t5, $t2,$t3,$t4)
                     log1($t5, sub($t6, $t5), $t1)
+                    mstore(0, $t6)
                 }
             }
             function abi_encode_tuple_$uint8_address_uint256$_$u8_address_A2_U256_U256$(headStart ,value_0, value_1, value_2) -> tail {
@@ -405,7 +414,7 @@ object "A2_M" {
                 let size := $MemoryLoadU64(value)
                 mstore(pos, size)
                 pos := add(pos, 0x20)
-                $CopyMemoryU8(add(value, 0x20), pos, size)
+                $CopyMemory(add(value, 0x20), pos, size)
                 size := $RoundUp(size)
                 end := add(pos, size)
             }
@@ -425,6 +434,7 @@ object "A2_M" {
             function packed_hashed__$string$_$vec$u8$$(value_0) -> hash {
                 let pos := mload(0)
                 let end := abi_encode_tuple_packed_$string$_$vec$u8$$_not_padded_inplace(pos ,value_0)
+                mstore(0, end)
                 hash := keccak256(pos, sub(end, pos))
             }
             function abi_encode_tuple_packed_$string$_$vec$u8$$_not_padded_inplace(pos ,value_0) -> end {
@@ -433,12 +443,13 @@ object "A2_M" {
             }
             function abi_encode_string_not_padded_inplace(value, pos) -> end{
                 let size := $MemoryLoadU64(value)
-                $CopyMemoryU8(add(value, 0x20), pos, size)
+                $CopyMemory(add(value, 0x20), pos, size)
                 end := add(pos, size)
             }
             function packed_hashed__$bytes$_$vec$u8$$(value_0) -> hash {
                 let pos := mload(0)
                 let end := abi_encode_tuple_packed_$bytes$_$vec$u8$$_not_padded_inplace(pos ,value_0)
+                mstore(0, end)
                 hash := keccak256(pos, sub(end, pos))
             }
             function abi_encode_tuple_packed_$bytes$_$vec$u8$$_not_padded_inplace(pos ,value_0) -> end {
@@ -447,7 +458,7 @@ object "A2_M" {
             }
             function abi_encode_bytes_not_padded_inplace(value, pos) -> end{
                 let size := $MemoryLoadU64(value)
-                $CopyMemoryU8(add(value, 0x20), pos, size)
+                $CopyMemory(add(value, 0x20), pos, size)
                 end := add(pos, size)
             }
             function abi_encode_tuple_$string$_$vec$u8$$(headStart ,value_0) -> tail {
@@ -459,13 +470,14 @@ object "A2_M" {
                 let size := $MemoryLoadU64(value)
                 mstore(pos, size)
                 pos := add(pos, 0x20)
-                $CopyMemoryU8(add(value, 0x20), pos, size)
+                $CopyMemory(add(value, 0x20), pos, size)
                 size := $RoundUp(size)
                 end := add(pos, size)
             }
             function packed_hashed__$uint16_3_$_$vec$u64$$(value_0) -> hash {
                 let pos := mload(0)
                 let end := abi_encode_tuple_packed_$uint16_3_$_$vec$u64$$_not_padded_inplace(pos ,value_0)
+                mstore(0, end)
                 hash := keccak256(pos, sub(end, pos))
             }
             function abi_encode_tuple_packed_$uint16_3_$_$vec$u64$$_not_padded_inplace(pos ,value_0) -> end {
@@ -491,6 +503,7 @@ object "A2_M" {
             function packed_hashed__$bytes__$_$vec$vec$u8$$$(value_0) -> hash {
                 let pos := mload(0)
                 let end := abi_encode_tuple_packed_$bytes__$_$vec$vec$u8$$$_not_padded_inplace(pos ,value_0)
+                mstore(0, end)
                 hash := keccak256(pos, sub(end, pos))
             }
             function abi_encode_tuple_packed_$bytes__$_$vec$vec$u8$$$_not_padded_inplace(pos ,value_0) -> end {
@@ -513,7 +526,7 @@ object "A2_M" {
             }
             function abi_encode_bytes_inplace(value, pos) -> end{
                 let size := $MemoryLoadU64(value)
-                $CopyMemoryU8(add(value, 0x20), pos, size)
+                $CopyMemory(add(value, 0x20), pos, size)
                 size := $RoundUp(size)
                 end := add(pos, size)
             }
@@ -546,6 +559,7 @@ object "A2_M" {
             function packed_hashed__$string_3_$_$vec$vec$u8$$$(value_0) -> hash {
                 let pos := mload(0)
                 let end := abi_encode_tuple_packed_$string_3_$_$vec$vec$u8$$$_not_padded_inplace(pos ,value_0)
+                mstore(0, end)
                 hash := keccak256(pos, sub(end, pos))
             }
             function abi_encode_tuple_packed_$string_3_$_$vec$vec$u8$$$_not_padded_inplace(pos ,value_0) -> end {
@@ -569,7 +583,7 @@ object "A2_M" {
             }
             function abi_encode_string_inplace(value, pos) -> end{
                 let size := $MemoryLoadU64(value)
-                $CopyMemoryU8(add(value, 0x20), pos, size)
+                $CopyMemory(add(value, 0x20), pos, size)
                 size := $RoundUp(size)
                 end := add(pos, size)
             }
@@ -630,7 +644,7 @@ object "A2_M" {
             function abi_decode_available_length__string_3__vec$vec$u8$$(offset, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 let srcEnd := add(offset, mul(length, 32))
                 if gt(srcEnd, end) { $Abort(94) }
@@ -653,7 +667,7 @@ object "A2_M" {
             function abi_decode_available_length__string(src, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 if gt(add(src, sub(size, 32)), end) { $Abort(93) }
                 $CopyFromCallDataToMemory(src, dst, length)
@@ -667,7 +681,7 @@ object "A2_M" {
             function abi_decode_available_length__bytes___vec$vec$u8$$(offset, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 let srcEnd := add(offset, mul(length, 32))
                 if gt(srcEnd, end) { $Abort(94) }
@@ -690,7 +704,7 @@ object "A2_M" {
             function abi_decode_available_length__bytes(src, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 if gt(add(src, sub(size, 32)), end) { $Abort(93) }
                 $CopyFromCallDataToMemory(src, dst, length)
@@ -729,7 +743,7 @@ object "A2_M" {
             function abi_decode_available_length__uint16_3__vec$u64$(offset, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 let srcEnd := add(offset, mul(length, 32))
                 if gt(srcEnd, end) { $Abort(94) }
@@ -785,7 +799,7 @@ object "A2_M" {
             function abi_decode_available_length__bytes32(src, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 if gt(add(src, sub(size, 32)), end) { $Abort(93) }
                 $CopyFromCallDataToMemory(src, dst, length)
@@ -799,7 +813,7 @@ object "A2_M" {
             function abi_decode_available_length__bytes2(src, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 if gt(add(src, sub(size, 32)), end) { $Abort(93) }
                 $CopyFromCallDataToMemory(src, dst, length)
@@ -813,7 +827,7 @@ object "A2_M" {
             function abi_decode_available_length__bytes1(src, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 if gt(add(src, sub(size, 32)), end) { $Abort(93) }
                 $CopyFromCallDataToMemory(src, dst, length)
@@ -875,6 +889,10 @@ object "A2_M" {
             function $MaskForSize(size) -> mask {
               mask := sub(shl(shl(3, size), 1), 1)
             }
+            function $ToWordOffs(offs) -> word_offs, byte_offset {
+              word_offs := shr(5, offs)
+              byte_offset := and(offs, 0x1F)
+            }
             function $MemoryLoadBytes(offs, size) -> val {
               // Lower bit where the value in the higher bytes ends
               let bit_end := shl(3, sub(32, size))
@@ -904,16 +922,18 @@ object "A2_M" {
             function $MemoryStoreU256(offs, val) {
               $MemoryStoreBytes(offs, 32, val)
             }
-            function $CopyMemoryU8(src, dst, size) {
+            function $CopyMemory(src, dst, size) {
+              let num_words, overflow_bytes := $ToWordOffs(size)
               let i := 0
-              for { } lt(i, size) { i := add(i, 32) } {
+              for { } lt(i, mul(num_words, 32)) { i := add(i, 32) } {
                 mstore(add(dst, i), mload(add(src, i)))
               }
-              if gt(i, size)
-              {
-                  for {let j := i} lt(j, size) {j := add(j, 1)} {
-                    mstore8(add(dst, j), 0)
-                  }
+              if overflow_bytes {
+                let mask := $MaskForSize(sub(32, overflow_bytes))
+                let overflow_offs := mul(num_words, 32)
+                let dst_word := and(mload(add(dst, overflow_offs)), mask)
+                let src_word := and(mload(add(src, overflow_offs)), not(mask))
+                mstore(add(dst, overflow_offs), or(dst_word, src_word))
               }
             }
             function $CheckMemorySize(len) -> checked_len {
@@ -926,6 +946,15 @@ object "A2_M" {
             }
             function $Shr(x, y) -> r {
                 r := shr(y, x)
+            }
+            function $ClosestGreaterPowerOfTwo(x) -> r {
+                r := or(r, shr(1, x))
+                r := or(r, shr(2, r))
+                r := or(r, shr(4, r))
+                r := or(r, shr(8, r))
+                r := or(r, shr(16, r))
+                r := or(r, shr(32, r))
+                r := add(x, 1)
             }
             function $RoundUp(value) -> result {
                 result := and(add(value, 31), not(31))

@@ -348,7 +348,7 @@ object "A2_M" {
                 let size := $MemoryLoadU64(value)
                 mstore(pos, size)
                 pos := add(pos, 0x20)
-                $CopyMemoryU8(add(value, 0x20), pos, size)
+                $CopyMemory(add(value, 0x20), pos, size)
                 size := $RoundUp(size)
                 end := add(pos, size)
             }
@@ -576,18 +576,6 @@ object "A2_M" {
                 let dst_word := and(mload(add(dst, overflow_offs)), mask)
                 let src_word := and(mload(add(src, overflow_offs)), not(mask))
                 mstore(add(dst, overflow_offs), or(dst_word, src_word))
-              }
-            }
-            function $CopyMemoryU8(src, dst, size) {
-              let i := 0
-              for { } lt(i, size) { i := add(i, 32) } {
-                mstore(add(dst, i), mload(add(src, i)))
-              }
-              if gt(i, size)
-              {
-                  for {let j := i} lt(j, size) {j := add(j, 1)} {
-                    mstore8(add(dst, j), 0)
-                  }
               }
             }
             function $ResizeVector(v_offs, capacity, type_size) -> new_v_offs {

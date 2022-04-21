@@ -16,13 +16,14 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 
 // Go to https://www.alchemyapi.io, sign up, create
 // a new App in its dashboard, and replace "KEY" with its key
-const ALCHEMY_API_KEY = "KEY";
+const ALCHEMY_API_KEY_FOR_ROPSTEN = "KEY1";
+const ALCHEMY_API_KEY_FOR_RINKEBY = "KEY2";
 
 // Replace this private key with your Ropsten account private key
 // To export your private key from Metamask, open Metamask and
 // go to Account Details > Export Private Key
 // Be aware of NEVER putting real Ether into testing accounts
-const ROPSTEN_PRIVATE_KEY = "0000000000000000000000000000000000000000000000000000000000000000";
+const PRIVATE_KEY = "0000000000000000000000000000000000000000000000000000000000000000";
 
 
 // You need to export an object to set up your config
@@ -38,8 +39,14 @@ module.exports = {
   },
   networks: {
     ropsten: {
-      url: `https://eth-ropsten.alchemyapi.io/v2/${ALCHEMY_API_KEY}`,
-      accounts: [`${ROPSTEN_PRIVATE_KEY}`]
+      url: `https://eth-ropsten.alchemyapi.io/v2/${ALCHEMY_API_KEY_FOR_ROPSTEN}`,
+      accounts: [`${PRIVATE_KEY}`]
+    },
+    rinkeby: {
+      url: `https://eth-rinkeby.alchemyapi.io/v2/${ALCHEMY_API_KEY_FOR_RINKEBY}`,
+      accounts: [`${PRIVATE_KEY}`],
+      // gas: 4250274,
+      // gasPrice: 2500000016
     }
   }
 };

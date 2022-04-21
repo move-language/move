@@ -1,11 +1,10 @@
 #[contract]
 /// An implementation of the ERC-721 Non-Fungible Token Standard.
-module Evm::ERC721 {
+module Evm::ERC721Tradable {
     use Evm::Evm::{sender, self, sign, emit, isContract, tokenURI_with_baseURI, require, abort_with};
     use Evm::ExternalResult::{Self, ExternalResult};
     use Evm::Table::{Self, Table};
     use Evm::U256::{Self, U256};
-    use Std::Vector;
 
     // ---------------------
     // Evm::IERC165
@@ -56,6 +55,13 @@ module Evm::ERC721 {
         safeMint_(to, tokenId, data);
     }
 
+    #[callable]
+    public fun mintTo(to: address) acquires State {
+        let s = borrow_global_mut<State>(self());
+        s.currentTokenID = U256::add(s.currentTokenID, U256::one());
+        mint_(to, s.currentTokenID);
+    }
+
     fun mint_(to: address, tokenId: U256) acquires State  {
         require(to != @0x0, b"ERC721: mint to the zero address");
         require(!exists_(tokenId), b"ERC721: token already minted");
@@ -95,13 +101,11 @@ module Evm::ERC721 {
         tokenExists(s, tokenId)
     }
 
-    // Disabled this for a fair gas comparison with `ERC721Mock_Sol.sol`
-    // which does not support `setBaseURI`.
-    // #[callable(sig=b"setBaseURI(string)")]
-    // public fun setBaseURI(newBaseURI: vector<u8>) acquires State {
-    //     let s = borrow_global_mut<State>(self());
-    //     s.baseURI = newBaseURI;
-    // }
+    #[callable(sig=b"setBaseURI(string)")]
+    public fun setBaseURI(newBaseURI: vector<u8>) acquires State {
+        let s = borrow_global_mut<State>(self());
+        s.baseURI = newBaseURI;
+    }
 
     #[callable(sig=b"baseURI() returns (string)"), view]
     public fun baseURI(): vector<u8> acquires State {
@@ -131,8 +135,7 @@ module Evm::ERC721 {
     }
 
     #[storage]
-    /// Represents the state of this contract.
-    /// This is located at `borrow_global<State>(self())`.
+    /// Represents the state of this contract. This is located at `borrow_global<State>(self())`.
     struct State has key {
         name: vector<u8>,
         symbol: vector<u8>,
@@ -141,11 +144,13 @@ module Evm::ERC721 {
         tokenApprovals: Table<U256, address>,
         operatorApprovals: Table<address, Table<address, bool>>,
         baseURI: vector<u8>,
+        currentTokenID: U256,
+        proxyRegistryAddress: address,
     }
 
-    #[create(sig=b"constructor(string,string)")]
     /// Constructor of this contract.
-    public fun create(name: vector<u8>, symbol: vector<u8>) {
+    #[create(sig=b"constructor(string,string,address,string)")]
+    public fun create(name: vector<u8>, symbol: vector<u8>, proxyRegistryAddress: address, baseURI: vector<u8>) acquires State {
         // Initial state of contract
         move_to<State>(
             &sign(self()),
@@ -156,9 +161,14 @@ module Evm::ERC721 {
                 balances: Table::empty<address, U256>(),
                 tokenApprovals: Table::empty<U256, address>(),
                 operatorApprovals: Table::empty<address, Table<address, bool>>(),
-                baseURI: b"",
+                baseURI,
+                currentTokenID: U256::zero(),
+                proxyRegistryAddress
             }
         );
+        mintTo(sender()); // Minting with tokenId = 1.
+        mintTo(sender()); // Minting with tokenId = 2.
+        mintTo(sender()); // Minting with tokenId = 3.
     }
 
     #[callable(sig=b"supportsInterface(bytes4) returns (bool)"), pure]
@@ -184,15 +194,13 @@ module Evm::ERC721 {
     }
 
     #[callable(sig=b"tokenURI(uint256) returns (string)"), view]
-    /// Get the name.
     public fun tokenURI(tokenId: U256): vector<u8> acquires State {
         require(exists_(tokenId), b"ERC721Metadata: URI query for nonexistent token");
         tokenURI_with_baseURI(baseURI(), tokenId)
     }
 
-    /// Count all NFTs assigned to an owner.
-
     #[callable(sig=b"balanceOf(address) returns (uint256)"), view]
+    /// Count all NFTs assigned to an owner.
     public fun balanceOf(owner: address): U256 acquires State {
         require(owner != @0x0, b"ERC721: balance query for the zero address");
         let s = borrow_global_mut<State>(self());
@@ -357,11 +365,5 @@ module Evm::ERC721 {
     }
 
     #[external(sig=b"onERC721Received(address,address,uint256,bytes) returns (bytes4)")]
-    public native fun IERC721Receiver_try_call_onERC721Received(
-        contract: address,
-        operator: address,
-        from: address,
-        tokenId: U256,
-        bytes: vector<u8>
-    ): ExternalResult<vector<u8>>;
+    public native fun IERC721Receiver_try_call_onERC721Received(contract: address, operator: address, from: address, tokenId: U256, bytes: vector<u8>): ExternalResult<vector<u8>>;
 }

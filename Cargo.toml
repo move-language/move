@@ -102,6 +102,6 @@ debug = true
 [profile.ci]
 inherits = "test"
 opt-level = 3
-debug = 1 # for saving disk space during linking
+debug = 0 # for saving disk space during linking
 incremental = false
 codegen-units = 16

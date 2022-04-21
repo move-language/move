@@ -2415,6 +2415,7 @@ dependencies = [
  "bcs",
  "hex",
  "move-binary-format",
+ "move-bytecode-utils",
  "move-core-types",
  "once_cell",
  "serde 1.0.130",

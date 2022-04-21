@@ -47,7 +47,6 @@ The `move-resource-viewer`, and `read-write-set` similarly are library
 crates that are used by and exposed by the Move CLI, but not through the
 `package` subcommand.
 
-The `mirai-dataflow-analysis` and `move-bytecode-utils` crates are separate
-crates that are either experimental in nature, or libraries holding general
+The `move-bytecode-utils` crates holds general
 utilities for working with Move bytecode, e.g., computing the dependency
 order for modules.

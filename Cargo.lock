@@ -1838,18 +1838,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c9be0862c1b3f26a88803c4a49de6889c10e608b3ee9344e6ef5b45fb37ad3d1"
 
 [[package]]
-name = "mirai-dataflow-analysis"
-version = "0.1.0"
-dependencies = [
- "clap 3.1.8",
- "csv",
- "mirai-annotations",
- "regex",
- "serde 1.0.130",
- "serde_json",
-]
-
-[[package]]
 name = "module-generation"
 version = "0.1.0"
 dependencies = [

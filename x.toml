@@ -108,7 +108,7 @@ features = ["failpoints", "fuzzing"]
 #
 # *** IMPORTANT ***
 #
-# Published developer tools (e.g. Move compiler) ARE part of the production Diem codebase.
+# Published developer tools (e.g. Move compiler) ARE part of the production Move codebase.
 # They should be listed in the root Cargo.toml's default-members, not here!
 #
 # Before adding a new crate to this list, ensure that it is *actually* test-only. If not, add it
@@ -124,7 +124,6 @@ members = [
     "bytecode-verifier-transactional-tests",
     "invalid-mutations",
     "language-benchmarks",
-    "mirai-dataflow-analysis",
     "module-generation",
      # TODO: remove this here once the crate is used in code. There is currently not other way to do this.
      # The code style direction to mark this crate as pulished doesn't work, because nothing in the repo

@@ -52,7 +52,6 @@ members = [
     "language/testing-infra/module-generation",
     "language/testing-infra/test-generation",
     "language/testing-infra/transactional-test-runner",
-    "language/tools/mirai-dataflow-analysis",
     "language/tools/move-bytecode-utils",
     "language/tools/move-bytecode-viewer",
     "language/tools/move-cli",

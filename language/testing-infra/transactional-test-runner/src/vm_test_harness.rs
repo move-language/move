@@ -9,15 +9,12 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use move_binary_format::{
-    access::ModuleAccess,
     errors::{Location, VMError, VMResult},
     file_format::CompiledScript,
     CompiledModule,
 };
 use move_command_line_common::files::verify_and_create_named_address_mapping;
-use move_compiler::{
-    compiled_unit::AnnotatedCompiledUnit, shared::NumericalAddress, FullyCompiledProgram,
-};
+use move_compiler::{compiled_unit::AnnotatedCompiledUnit, FullyCompiledProgram};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
@@ -129,13 +126,14 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
             let prev = addr_to_name_mapping.insert(addr, Symbol::from(name));
             assert!(prev.is_none());
         }
-        for module in &*MOVE_STDLIB_COMPILED {
-            let bytes = NumericalAddress::new(
-                module.address().into_bytes(),
-                move_compiler::shared::NumberFormat::Hex,
-            );
-            let named_addr = *addr_to_name_mapping.get(&bytes).unwrap();
-            adapter.compiled_state.add(Some(named_addr), module.clone());
+        for module in MOVE_STDLIB_COMPILED
+            .iter()
+            .filter(|module| !adapter.compiled_state.is_precompiled_dep(&module.self_id()))
+            .collect::<Vec<_>>()
+        {
+            adapter
+                .compiled_state
+                .add_and_generate_interface_file(module.clone());
         }
         adapter
     }

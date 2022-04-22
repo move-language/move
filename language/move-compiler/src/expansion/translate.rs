@@ -114,13 +114,13 @@ pub fn program(
             &prog.lib_definitions,
         );
         if let Some(pre_compiled) = pre_compiled_lib {
-            assert!(pre_compiled.parser.source_definitions.is_empty());
+            assert!(pre_compiled.parser.lib_definitions.is_empty());
             all_module_members(
                 compilation_env,
                 &pre_compiled.parser.named_address_maps,
                 &mut members,
                 false,
-                &pre_compiled.parser.lib_definitions,
+                &pre_compiled.parser.source_definitions,
             );
         }
         members

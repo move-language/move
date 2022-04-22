@@ -28,7 +28,7 @@ use move_compiler::{
     diagnostics::Diagnostics,
     expansion::ast::{self as E, Address, ModuleDefinition, ModuleIdent, ModuleIdent_},
     parser::ast::{self as P, ModuleName as ParserModuleName},
-    shared::{parse_named_address, unique_map::UniqueMap, AddressScopedFiles, NumericalAddress},
+    shared::{parse_named_address, unique_map::UniqueMap, NumericalAddress, PackagePaths},
     Compiler, Flags, PASS_COMPILATION, PASS_EXPANSION, PASS_PARSER,
 };
 use move_core_types::{account_address::AccountAddress, identifier::Identifier};
@@ -63,8 +63,8 @@ pub mod ty;
 /// Build the move model with default compilation flags and default options and no named addresses.
 /// This collects transitive dependencies for move sources from the provided directory list.
 pub fn run_model_builder<Paths: Into<MoveSymbol>, NamedAddress: Into<MoveSymbol>>(
-    move_sources: Vec<AddressScopedFiles<Paths, NamedAddress>>,
-    deps: Vec<AddressScopedFiles<Paths, NamedAddress>>,
+    move_sources: Vec<PackagePaths<Paths, NamedAddress>>,
+    deps: Vec<PackagePaths<Paths, NamedAddress>>,
 ) -> anyhow::Result<GlobalEnv> {
     run_model_builder_with_options(move_sources, deps, ModelBuilderOptions::default())
 }
@@ -73,8 +73,8 @@ pub fn run_model_builder<Paths: Into<MoveSymbol>, NamedAddress: Into<MoveSymbol>
 /// named addreses.
 /// This collects transitive dependencies for move sources from the provided directory list.
 pub fn run_model_builder_with_options<Paths: Into<MoveSymbol>, NamedAddress: Into<MoveSymbol>>(
-    move_sources: Vec<AddressScopedFiles<Paths, NamedAddress>>,
-    deps: Vec<AddressScopedFiles<Paths, NamedAddress>>,
+    move_sources: Vec<PackagePaths<Paths, NamedAddress>>,
+    deps: Vec<PackagePaths<Paths, NamedAddress>>,
     options: ModelBuilderOptions,
 ) -> anyhow::Result<GlobalEnv> {
     run_model_builder_with_options_and_compilation_flags(
@@ -91,8 +91,8 @@ pub fn run_model_builder_with_options_and_compilation_flags<
     Paths: Into<MoveSymbol>,
     NamedAddress: Into<MoveSymbol>,
 >(
-    move_sources: Vec<AddressScopedFiles<Paths, NamedAddress>>,
-    deps: Vec<AddressScopedFiles<Paths, NamedAddress>>,
+    move_sources: Vec<PackagePaths<Paths, NamedAddress>>,
+    deps: Vec<PackagePaths<Paths, NamedAddress>>,
     options: ModelBuilderOptions,
     flags: Flags,
 ) -> anyhow::Result<GlobalEnv> {
@@ -100,7 +100,7 @@ pub fn run_model_builder_with_options_and_compilation_flags<
     env.set_extension(options);
 
     // Step 1: parse the program to get comments and a separation of targets and dependencies.
-    let (files, comments_and_compiler_res) = Compiler::new(move_sources, deps)
+    let (files, comments_and_compiler_res) = Compiler::from_package_paths(move_sources, deps)
         .set_flags(flags)
         .run::<PASS_PARSER>()?;
     let (comment_map, compiler) = match comments_and_compiler_res {
@@ -119,7 +119,7 @@ pub fn run_model_builder_with_options_and_compilation_flags<
     let dep_files: BTreeSet<_> = parsed_prog
         .lib_definitions
         .iter()
-        .map(|(_, def)| def.file_hash())
+        .map(|p| p.def.file_hash())
         .collect();
     for fhash in files.keys().sorted() {
         let (fname, fsrc) = files.get(fhash).unwrap();
@@ -457,6 +457,7 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<AnnotatedCompiledUnit>, mut 
                     function_info,
                 }) => {
                     let move_compiler::expansion::ast::Script {
+                        package_name,
                         attributes,
                         loc,
                         immediate_neighbors,
@@ -488,6 +489,7 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<AnnotatedCompiledUnit>, mut 
                     let mut functions = UniqueMap::new();
                     functions.add(function_name, function).unwrap();
                     let expanded_module = ModuleDefinition {
+                        package_name,
                         attributes,
                         loc,
                         dependency_order: usize::MAX,

@@ -12,9 +12,9 @@ pub(crate) mod merge_spec_modules;
 use crate::{
     attr_derivation,
     diagnostics::{codes::Severity, Diagnostics, FilesSourceText},
-    parser,
     parser::syntax::parse_file_string,
-    shared::{AddressScopedFileIndexed, CompilationEnv, NamedAddressMapIndex, NamedAddressMaps},
+    parser::{self, ast::PackageDefinition},
+    shared::{CompilationEnv, IndexedPackagePath, NamedAddressMaps},
 };
 use anyhow::anyhow;
 use comments::*;
@@ -29,26 +29,35 @@ use std::{
 pub(crate) fn parse_program(
     compilation_env: &mut CompilationEnv,
     named_address_maps: NamedAddressMaps,
-    targets: Vec<AddressScopedFileIndexed>,
-    deps: Vec<AddressScopedFileIndexed>,
+    targets: Vec<IndexedPackagePath>,
+    deps: Vec<IndexedPackagePath>,
 ) -> anyhow::Result<(
     FilesSourceText,
     Result<(parser::ast::Program, CommentMap), Diagnostics>,
 )> {
     fn find_move_filenames_with_address_mapping(
-        paths_with_mapping: Vec<AddressScopedFileIndexed>,
-    ) -> anyhow::Result<Vec<(Symbol, NamedAddressMapIndex)>> {
+        paths_with_mapping: Vec<IndexedPackagePath>,
+    ) -> anyhow::Result<Vec<IndexedPackagePath>> {
         let mut res = vec![];
-        for (paths, idx) in paths_with_mapping {
+        for IndexedPackagePath {
+            package,
+            path,
+            named_address_map: named_address_mapping,
+        } in paths_with_mapping
+        {
             res.extend(
-                find_move_filenames(&[paths.as_str()], true)?
+                find_move_filenames(&[path.as_str()], true)?
                     .into_iter()
-                    .map(|s| (Symbol::from(s), idx)),
+                    .map(|s| IndexedPackagePath {
+                        package,
+                        path: Symbol::from(s),
+                        named_address_map: named_address_mapping,
+                    }),
             );
         }
         // sort the filenames so errors about redefinitions, or other inter-file conflicts, are
         // deterministic
-        res.sort_by(|(fname1, _), (fname2, _)| fname1.cmp(fname2));
+        res.sort_by(|p1, p2| p1.path.cmp(&p2.path));
         Ok(res)
     }
 
@@ -61,16 +70,34 @@ pub(crate) fn parse_program(
     let mut lib_definitions = Vec::new();
     let mut diags: Diagnostics = Diagnostics::new();
 
-    for (fname, address_map_idx) in targets {
-        let (defs, comments, ds, file_hash) = parse_file(compilation_env, &mut files, fname)?;
-        source_definitions.extend(defs.into_iter().map(|d| (address_map_idx, d)));
+    for IndexedPackagePath {
+        package,
+        path,
+        named_address_map,
+    } in targets
+    {
+        let (defs, comments, ds, file_hash) = parse_file(compilation_env, &mut files, path)?;
+        source_definitions.extend(defs.into_iter().map(|def| PackageDefinition {
+            package,
+            named_address_map,
+            def,
+        }));
         source_comments.insert(file_hash, comments);
         diags.extend(ds);
     }
 
-    for (fname, address_map_idx) in deps {
-        let (defs, _, ds, _) = parse_file(compilation_env, &mut files, fname)?;
-        lib_definitions.extend(defs.into_iter().map(|d| (address_map_idx, d)));
+    for IndexedPackagePath {
+        package,
+        path,
+        named_address_map,
+    } in deps
+    {
+        let (defs, _, ds, _) = parse_file(compilation_env, &mut files, path)?;
+        lib_definitions.extend(defs.into_iter().map(|def| PackageDefinition {
+            package,
+            named_address_map,
+            def,
+        }));
         diags.extend(ds);
     }
 
@@ -82,7 +109,12 @@ pub(crate) fn parse_program(
     }
 
     // Run attribute expansion on all source definitions, passing in the matching named address map.
-    for (idx, def) in source_definitions.iter_mut() {
+    for PackageDefinition {
+        named_address_map: idx,
+        def,
+        ..
+    } in source_definitions.iter_mut()
+    {
         attr_derivation::derive_from_attributes(compilation_env, named_address_maps.get(*idx), def);
     }
 
@@ -101,8 +133,8 @@ pub(crate) fn parse_program(
 
 fn ensure_targets_deps_dont_intersect(
     compilation_env: &CompilationEnv,
-    targets: &[(Symbol, NamedAddressMapIndex)],
-    deps: &mut Vec<(Symbol, NamedAddressMapIndex)>,
+    targets: &[IndexedPackagePath],
+    deps: &mut Vec<IndexedPackagePath>,
 ) -> anyhow::Result<()> {
     /// Canonicalize a file path.
     fn canonicalize(path: &Symbol) -> String {
@@ -114,18 +146,18 @@ fn ensure_targets_deps_dont_intersect(
     }
     let target_set = targets
         .iter()
-        .map(|(s, _)| canonicalize(s))
+        .map(|p| canonicalize(&p.path))
         .collect::<BTreeSet<_>>();
     let dep_set = deps
         .iter()
-        .map(|(s, _)| canonicalize(s))
+        .map(|p| canonicalize(&p.path))
         .collect::<BTreeSet<_>>();
     let intersection = target_set.intersection(&dep_set).collect::<Vec<_>>();
     if intersection.is_empty() {
         return Ok(());
     }
     if compilation_env.flags().sources_shadow_deps() {
-        deps.retain(|(fname, _)| !intersection.contains(&&canonicalize(fname)));
+        deps.retain(|p| !intersection.contains(&&canonicalize(&p.path)));
         return Ok(());
     }
     let all_files = intersection

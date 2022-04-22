@@ -11,7 +11,7 @@ use colored::*;
 use move_binary_format::{errors::VMResult, file_format::CompiledModule};
 use move_bytecode_utils::Modules;
 use move_compiler::{
-    shared::{Flags, NumericalAddress},
+    shared::{Flags, NumericalAddress, PackagePaths},
     unit_test::{ExpectedFailure, ModuleTestPlan, TestCase, TestPlan},
 };
 use move_core_types::{
@@ -364,7 +364,11 @@ impl SharedTestingConfig {
 
         let stackless_model = if self.check_stackless_vm {
             let model = run_model_builder_with_options_and_compilation_flags(
-                vec![(filtered_sources, self.named_address_values.clone())],
+                vec![PackagePaths {
+                    name: None,
+                    paths: filtered_sources,
+                    named_address_map: self.named_address_values.clone(),
+                }],
                 vec![],
                 ModelBuilderOptions::default(),
                 Flags::testing(),

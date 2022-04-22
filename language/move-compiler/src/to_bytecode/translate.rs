@@ -123,6 +123,7 @@ pub fn program(
     }
     for (key, s) in gscripts {
         let G::Script {
+            package_name,
             attributes: _attributes,
             loc: _loc,
             constants,
@@ -131,6 +132,7 @@ pub fn program(
         } = s;
         if let Some(unit) = script(
             compilation_env,
+            package_name,
             key,
             constants,
             function_name,
@@ -234,6 +236,7 @@ fn module(
     };
     let function_infos = module_function_infos(&module, &source_map, &collected_function_infos);
     let module = NamedCompiledModule {
+        package_name: mdef.package_name,
         address: addr_bytes,
         name: module_name.value(),
         module,
@@ -250,6 +253,7 @@ fn module(
 
 fn script(
     compilation_env: &mut CompilationEnv,
+    package_name: Option<Symbol>,
     key: Symbol,
     constants: UniqueMap<ConstantName, G::Constant>,
     name: FunctionName,
@@ -300,6 +304,7 @@ fn script(
     };
     let function_info = script_function_info(&source_map, info);
     let script = NamedCompiledScript {
+        package_name,
         name: key,
         script,
         source_map,

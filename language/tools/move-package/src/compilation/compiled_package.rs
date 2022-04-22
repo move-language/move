@@ -24,7 +24,7 @@ use move_compiler::{
         AnnotatedCompiledUnit, CompiledUnit, NamedCompiledModule, NamedCompiledScript,
     },
     diagnostics::FilesSourceText,
-    shared::{AddressScopedFiles, Flags, NamedAddressMap, NumericalAddress},
+    shared::{Flags, NamedAddressMap, NumericalAddress, PackagePaths},
     Compiler,
 };
 use move_core_types::language_storage::ModuleId;
@@ -159,6 +159,7 @@ impl OnDiskCompiledPackage {
             compiled_units.len(),
             source_maps.len()
         );
+        let package_name = Some(self.package.compiled_package_info.package_name);
         let compiled_units = compiled_units
             .iter()
             .map(|bytecode_path| {
@@ -187,6 +188,7 @@ impl OnDiskCompiledPackage {
                                 .to_string(),
                         );
                         let unit = CompiledUnit::Script(NamedCompiledScript {
+                            package_name,
                             name,
                             script,
                             source_map,
@@ -205,6 +207,7 @@ impl OnDiskCompiledPackage {
                             (parsed_addr, module_name)
                         };
                         let unit = CompiledUnit::Module(NamedCompiledModule {
+                            package_name,
                             address: address_bytes,
                             name: module_name,
                             module,
@@ -525,6 +528,7 @@ impl CompiledPackage {
                     .map(|unit| Symbol::from(unit.source_path.to_string_lossy().to_string()))
                     .collect::<Vec<_>>();
                 Ok((
+                    dep_package.compiled_package_info.package_name,
                     dep_source_paths,
                     &dep_package
                         .compiled_package_info
@@ -534,7 +538,7 @@ impl CompiledPackage {
             .collect::<Result<Vec<_>>>()?;
 
         // gather source/dep files with their address mappings
-        let (sources_with_addrs, deps_with_addrs) = make_source_and_deps_for_compiler(
+        let (sources_package_paths, deps_package_paths) = make_source_and_deps_for_compiler(
             resolution_graph,
             &resolved_package,
             deps_source_info,
@@ -545,8 +549,11 @@ impl CompiledPackage {
             Flags::empty()
         };
         // invoke the compiler
-        let compiler = Compiler::new(vec![sources_with_addrs.clone()], deps_with_addrs.clone())
-            .set_flags(flags);
+        let compiler = Compiler::from_package_paths(
+            vec![sources_package_paths.clone()],
+            deps_package_paths.clone(),
+        )
+        .set_flags(flags);
         let (file_map, compiled_units) = compiler_driver(compiler, is_root_package)?;
 
         let (compiled_units, resolutions): (Vec<_>, Vec<_>) = compiled_units
@@ -600,8 +607,8 @@ impl CompiledPackage {
             || resolution_graph.build_options.generate_abis
         {
             let model = run_model_builder_with_options(
-                vec![sources_with_addrs],
-                deps_with_addrs,
+                vec![sources_package_paths],
+                deps_package_paths,
                 ModelBuilderOptions::default(),
             )?;
 
@@ -938,23 +945,28 @@ pub(crate) fn make_source_and_deps_for_compiler(
     resolution_graph: &ResolvedGraph,
     root: &ResolvedPackage,
     deps: Vec<(
+        /* name */ Symbol,
         /* source paths */ Vec<Symbol>,
         /* address mapping */ &ResolvedTable,
     )>,
 ) -> Result<(
-    /* sources */ AddressScopedFiles<Symbol, Symbol>,
-    /* deps */ Vec<AddressScopedFiles<Symbol, Symbol>>,
+    /* sources */ PackagePaths,
+    /* deps */ Vec<PackagePaths>,
 )> {
-    let deps_with_addrs = deps
+    let deps_package_paths = deps
         .into_iter()
-        .map(|(source_paths, resolved_table)| {
-            let source_paths = source_paths
+        .map(|(name, source_paths, resolved_table)| {
+            let paths = source_paths
                 .into_iter()
                 .collect::<BTreeSet<_>>()
                 .into_iter()
                 .collect::<Vec<_>>();
-            let named_addr_map = named_address_mapping_for_compiler(resolved_table);
-            Ok((source_paths, named_addr_map))
+            let named_address_map = named_address_mapping_for_compiler(resolved_table);
+            Ok(PackagePaths {
+                name: Some(name),
+                paths,
+                named_address_map,
+            })
         })
         .collect::<Result<Vec<_>>>()?;
     let root_named_addrs = apply_named_address_renaming(
@@ -963,6 +975,10 @@ pub(crate) fn make_source_and_deps_for_compiler(
         &root.renaming,
     );
     let sources = root.get_sources(&resolution_graph.build_options)?;
-    let sources_with_addrs = (sources, root_named_addrs);
-    Ok((sources_with_addrs, deps_with_addrs))
+    let source_package_paths = PackagePaths {
+        name: Some(root.source_package.package.name),
+        paths: sources,
+        named_address_map: root_named_addrs,
+    };
+    Ok((source_package_paths, deps_package_paths))
 }

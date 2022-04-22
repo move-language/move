@@ -356,6 +356,7 @@ fn module(
 ) -> N::ModuleDefinition {
     context.current_module = Some(ident);
     let E::ModuleDefinition {
+        package_name,
         attributes,
         loc: _loc,
         is_source_module,
@@ -384,6 +385,7 @@ fn module(
     });
     context.restore_unscoped(unscoped);
     N::ModuleDefinition {
+        package_name,
         attributes,
         is_source_module,
         dependency_order,
@@ -406,6 +408,7 @@ fn scripts(
 
 fn script(context: &mut Context, escript: E::Script) -> N::Script {
     let E::Script {
+        package_name,
         attributes,
         loc,
         immediate_neighbors: _,
@@ -428,6 +431,7 @@ fn script(context: &mut Context, escript: E::Script) -> N::Script {
     let function = function(context, function_name, efunction);
     context.restore_unscoped(outer_unscoped);
     N::Script {
+        package_name,
         attributes,
         loc,
         constants,

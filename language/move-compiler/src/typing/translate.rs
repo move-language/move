@@ -57,6 +57,7 @@ fn module(
     assert!(context.current_script_constants.is_none());
     context.current_module = Some(ident);
     let N::ModuleDefinition {
+        package_name,
         attributes,
         is_source_module,
         dependency_order,
@@ -72,6 +73,7 @@ fn module(
     let functions = nfunctions.map(|name, f| function(context, name, f, false));
     assert!(context.constraints.is_empty());
     T::ModuleDefinition {
+        package_name,
         attributes,
         is_source_module,
         dependency_order,
@@ -96,6 +98,7 @@ fn script(context: &mut Context, nscript: N::Script) -> T::Script {
     assert!(context.current_script_constants.is_none());
     context.current_module = None;
     let N::Script {
+        package_name,
         attributes,
         loc,
         constants: nconstants,
@@ -107,6 +110,7 @@ fn script(context: &mut Context, nscript: N::Script) -> T::Script {
     let function = function(context, function_name, nfunction, true);
     context.current_script_constants = None;
     T::Script {
+        package_name,
         attributes,
         loc,
         constants,

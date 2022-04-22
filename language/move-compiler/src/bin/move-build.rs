@@ -72,12 +72,10 @@ pub fn main() -> anyhow::Result<()> {
 
     let interface_files_dir = format!("{}/generated_interface_files", out_dir);
     let named_addr_map = verify_and_create_named_address_mapping(named_addresses)?;
-    let (files, compiled_units) = move_compiler::Compiler::new(
-        vec![(source_files, named_addr_map.clone())],
-        vec![(dependencies, named_addr_map)],
-    )
-    .set_interface_files_dir(interface_files_dir)
-    .set_flags(flags)
-    .build_and_report()?;
+    let (files, compiled_units) =
+        move_compiler::Compiler::from_files(source_files, dependencies, named_addr_map)
+            .set_interface_files_dir(interface_files_dir)
+            .set_flags(flags)
+            .build_and_report()?;
     move_compiler::output_compiled_units(emit_source_map, files, compiled_units, &out_dir)
 }

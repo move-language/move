@@ -6,6 +6,7 @@ use crate::{
     resolution::resolution_graph::ResolvedGraph, ModelConfig,
 };
 use anyhow::Result;
+use move_compiler::shared::PackagePaths;
 use move_model::{model::GlobalEnv, options::ModelBuilderOptions, run_model_builder_with_options};
 
 #[derive(Debug, Clone)]
@@ -53,7 +54,7 @@ impl ModelBuilder {
                 let dep_source_paths = pkg
                     .get_sources(&self.resolution_graph.build_options)
                     .unwrap();
-                Some(Ok((dep_source_paths, &pkg.resolution_table)))
+                Some(Ok((*nm, dep_source_paths, &pkg.resolution_table)))
             })
             .collect::<Result<Vec<_>>>()?;
 
@@ -73,14 +74,27 @@ impl ModelBuilder {
             Some(filter) => {
                 let mut new_targets = vec![];
                 let mut new_deps = all_deps;
-                for (targets, mapping) in all_targets {
+                for PackagePaths {
+                    name,
+                    paths,
+                    named_address_map,
+                } in all_targets
+                {
                     let (true_targets, false_targets): (Vec<_>, Vec<_>) =
-                        targets.into_iter().partition(|t| t.contains(filter));
+                        paths.into_iter().partition(|t| t.contains(filter));
                     if !true_targets.is_empty() {
-                        new_targets.push((true_targets, mapping.clone()))
+                        new_targets.push(PackagePaths {
+                            name,
+                            paths: true_targets,
+                            named_address_map: named_address_map.clone(),
+                        })
                     }
                     if !false_targets.is_empty() {
-                        new_deps.push((false_targets, mapping))
+                        new_deps.push(PackagePaths {
+                            name,
+                            paths: false_targets,
+                            named_address_map,
+                        })
                     }
                 }
                 (new_targets, new_deps)

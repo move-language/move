@@ -44,6 +44,8 @@ pub struct FunctionInfo {
 
 #[derive(Debug, Clone)]
 pub struct NamedCompiledModule {
+    // package name metadata from compiler arguments
+    pub package_name: Option<Symbol>,
     pub address: NumericalAddress,
     pub name: Symbol,
     pub module: F::CompiledModule,
@@ -52,6 +54,8 @@ pub struct NamedCompiledModule {
 
 #[derive(Debug, Clone)]
 pub struct NamedCompiledScript {
+    // package name metadata from compiler arguments
+    pub package_name: Option<Symbol>,
     pub name: Symbol,
     pub script: F::CompiledScript,
     pub source_map: SourceMap,

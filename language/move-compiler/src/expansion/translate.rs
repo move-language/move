@@ -138,15 +138,37 @@ pub fn program(
     } = prog;
 
     context.is_source_definition = true;
-    for (named_addr_map_idx, def) in source_definitions {
-        context.named_address_mapping = Some(named_address_maps.get(named_addr_map_idx));
-        definition(&mut context, &mut source_module_map, &mut scripts, def)
+    for P::PackageDefinition {
+        package,
+        named_address_map,
+        def,
+    } in source_definitions
+    {
+        context.named_address_mapping = Some(named_address_maps.get(named_address_map));
+        definition(
+            &mut context,
+            &mut source_module_map,
+            &mut scripts,
+            package,
+            def,
+        )
     }
 
     context.is_source_definition = false;
-    for (named_addr_map_idx, def) in lib_definitions {
-        context.named_address_mapping = Some(named_address_maps.get(named_addr_map_idx));
-        definition(&mut context, &mut lib_module_map, &mut scripts, def)
+    for P::PackageDefinition {
+        package,
+        named_address_map,
+        def,
+    } in lib_definitions
+    {
+        context.named_address_mapping = Some(named_address_maps.get(named_address_map));
+        definition(
+            &mut context,
+            &mut lib_module_map,
+            &mut scripts,
+            package,
+            def,
+        )
     }
 
     for (mident, module) in lib_module_map {
@@ -199,6 +221,7 @@ fn definition(
     context: &mut Context,
     module_map: &mut UniqueMap<ModuleIdent, E::ModuleDefinition>,
     scripts: &mut Vec<E::Script>,
+    package_name: Option<Symbol>,
     def: P::Definition,
 ) {
     match def {
@@ -206,18 +229,18 @@ fn definition(
             let module_paddr = std::mem::take(&mut m.address);
             let module_addr = module_paddr
                 .map(|a| sp(a.loc, address(context, /* suggest_declaration */ true, a)));
-            module(context, module_map, module_addr, m)
+            module(context, module_map, package_name, module_addr, m)
         }
         P::Definition::Address(a) => {
             let addr = address(context, /* suggest_declaration */ false, a.addr);
             for mut m in a.modules {
                 let module_addr = check_module_address(context, a.loc, addr, &mut m);
-                module(context, module_map, Some(module_addr), m)
+                module(context, module_map, package_name, Some(module_addr), m)
             }
         }
 
         P::Definition::Script(_) if !context.is_source_definition => (),
-        P::Definition::Script(s) => script(context, scripts, s),
+        P::Definition::Script(s) => script(context, scripts, package_name, s),
     }
 }
 
@@ -326,11 +349,12 @@ fn duplicate_module(
 fn module(
     context: &mut Context,
     module_map: &mut UniqueMap<ModuleIdent, E::ModuleDefinition>,
+    package_name: Option<Symbol>,
     module_address: Option<Spanned<Address>>,
     module_def: P::ModuleDefinition,
 ) {
     assert!(context.address == None);
-    let (mident, mod_) = module_(context, module_address, module_def);
+    let (mident, mod_) = module_(context, package_name, module_address, module_def);
     if let Err((mident, old_loc)) = module_map.add(mident, mod_) {
         duplicate_module(context, module_map, mident, old_loc)
     }
@@ -362,6 +386,7 @@ fn set_sender_address(
 
 fn module_(
     context: &mut Context,
+    package_name: Option<Symbol>,
     module_address: Option<Spanned<Address>>,
     mdef: P::ModuleDefinition,
 ) -> (ModuleIdent, E::ModuleDefinition) {
@@ -427,6 +452,7 @@ fn module_(
     context.set_to_outer_scope(old_aliases);
 
     let def = E::ModuleDefinition {
+        package_name,
         attributes,
         loc,
         is_source_module: context.is_source_definition,
@@ -442,11 +468,16 @@ fn module_(
     (current_module, def)
 }
 
-fn script(context: &mut Context, scripts: &mut Vec<E::Script>, pscript: P::Script) {
-    scripts.push(script_(context, pscript))
+fn script(
+    context: &mut Context,
+    scripts: &mut Vec<E::Script>,
+    package_name: Option<Symbol>,
+    pscript: P::Script,
+) {
+    scripts.push(script_(context, package_name, pscript))
 }
 
-fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
+fn script_(context: &mut Context, package_name: Option<Symbol>, pscript: P::Script) -> E::Script {
     assert!(context.address == None);
     assert!(context.is_source_definition);
     let P::Script {
@@ -505,6 +536,7 @@ fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
     context.set_to_outer_scope(old_aliases);
 
     E::Script {
+        package_name,
         attributes,
         loc,
         immediate_neighbors: UniqueMap::new(),
@@ -639,10 +671,15 @@ fn all_module_members<'a>(
     named_addr_maps: &NamedAddressMaps,
     members: &mut UniqueMap<ModuleIdent, ModuleMembers>,
     always_add: bool,
-    defs: impl IntoIterator<Item = &'a (NamedAddressMapIndex, P::Definition)>,
+    defs: impl IntoIterator<Item = &'a P::PackageDefinition>,
 ) {
-    for (named_addr_map_index, def) in defs {
-        let named_addr_map = named_addr_maps.get(*named_addr_map_index);
+    for P::PackageDefinition {
+        named_address_map,
+        def,
+        ..
+    } in defs
+    {
+        let named_addr_map = named_addr_maps.get(*named_address_map);
         match def {
             P::Definition::Module(m) => {
                 let addr = match &m.address {

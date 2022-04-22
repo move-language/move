@@ -185,6 +185,7 @@ fn module(
     mdef: T::ModuleDefinition,
 ) -> (ModuleIdent, H::ModuleDefinition) {
     let T::ModuleDefinition {
+        package_name,
         attributes,
         is_source_module,
         dependency_order,
@@ -204,6 +205,7 @@ fn module(
     (
         module_ident,
         H::ModuleDefinition {
+            package_name,
             attributes,
             is_source_module,
             dependency_order,
@@ -227,6 +229,7 @@ fn scripts(
 
 fn script(context: &mut Context, tscript: T::Script) -> H::Script {
     let T::Script {
+        package_name,
         attributes,
         loc,
         constants: tconstants,
@@ -236,8 +239,8 @@ fn script(context: &mut Context, tscript: T::Script) -> H::Script {
     let constants = tconstants.map(|name, c| constant(context, name, c));
     let function = function(context, function_name, tfunction);
     H::Script {
+        package_name,
         attributes,
-
         loc,
         constants,
         function_name,

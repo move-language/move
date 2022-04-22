@@ -16,12 +16,10 @@ pub fn compile_units(s: &str) -> Result<Vec<AnnotatedCompiledUnit>> {
         writeln!(file, "{}", s)?;
     }
 
-    let (_, units) = MoveCompiler::new(
-        vec![(
-            vec![file_path.to_str().unwrap().to_string()],
-            move_stdlib::move_stdlib_named_addresses(),
-        )],
+    let (_, units) = MoveCompiler::from_files(
+        vec![file_path.to_str().unwrap().to_string()],
         vec![],
+        move_stdlib::move_stdlib_named_addresses(),
     )
     .build_and_report()?;
 
@@ -40,12 +38,10 @@ fn expect_modules(
 }
 
 pub fn compile_modules_in_file(path: &Path) -> Result<Vec<CompiledModule>> {
-    let (_, units) = MoveCompiler::new(
-        vec![(
-            vec![path.to_str().unwrap().to_string()],
-            std::collections::BTreeMap::<String, _>::new(),
-        )],
+    let (_, units) = MoveCompiler::from_files(
+        vec![path.to_str().unwrap().to_string()],
         vec![],
+        std::collections::BTreeMap::<String, _>::new(),
     )
     .build_and_report()?;
 

@@ -3,14 +3,14 @@ id: coding-guidelines
 title: Coding Guidelines
 ---
 
-This document describes the coding guidelines for the Diem Core Rust codebase.
+This document describes the coding guidelines for the Move Rust codebase.
 
 ## Code formatting
 
-All code formatting is enforced with [rustfmt](https://github.com/rust-lang/rustfmt) with a project-specific configuration.  Below is an example command to adhere to the Diem Core project conventions.
+All code formatting is enforced with [rustfmt](https://github.com/rust-lang/rustfmt) with a project-specific configuration.  Below is an example command to adhere to the Move project conventions.
 
 ```
-diem$ cargo xfmt
+$ cargo xfmt
 ```
 
 ## Code analysis
@@ -18,7 +18,7 @@ diem$ cargo xfmt
 [Clippy](https://github.com/rust-lang/rust-clippy) is used to catch common mistakes and is run as a part of continuous integration.  Before submitting your code for review, you can run clippy with our configuration:
 
 ```
-diem$ cargo xclippy --all-targets
+$ cargo xclippy --all-targets
 ```
 
 In general, we follow the recommendations from [rust-lang-nursery](https://rust-lang.github.io/api-guidelines/) and [The Rust Programming Language](https://doc.rust-lang.org/book/).  The remainder of this guide provides detailed guidelines on specific topics in order to achieve uniformity of the codebase.
@@ -53,7 +53,7 @@ struct Point {
 
 ### Terminology
 
-The Diem codebase uses inclusive terminology (similar to other projects such as [the Linux kernel](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=49decddd39e5f6132ccd7d9fdc3d7c470b0061bb)).  The terms below are recommended when appropriate.
+The Move codebase uses inclusive terminology (similar to other projects such as [the Linux kernel](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=49decddd39e5f6132ccd7d9fdc3d7c470b0061bb)).  The terms below are recommended when appropriate.
 * allowlist - a set of entities allowed access
 * blocklist - a set of entities that are blocked from access
 * primary/leader/main - a primary entity
@@ -76,9 +76,7 @@ Document the following for each function:
 
 ### README.md for top-level directories and other major components
 
-Each major component of Diem Core needs to have a `README.md` file. Major components are:
-* top-level directories (e.g. `diem/network`, `diem/language`)
-* the most important crates in the system (e.g. `vm-runtime`)
+Each major component of Move needs to have a `README.md` file.
 
 This file should contain:
 
@@ -109,23 +107,6 @@ assumptions will be added in the future.
 * Describe how the component is modeled. For example, why is the
   code organized the way it is?
 * Other relevant implementation details.
-
-## API Documentation
-
-For the external API of this crate refer to [Link to rustdoc API].
-
-[For a top-level directory, link to the most important APIs within.]
-
-## Contributing
-
-Refer to the Diem Project contributing guide [LINK].
-
-## License
-
-Refer to the Diem Project License [LINK].
-```
-
-A good example of README.md is `diem/network/README.md` that describes the networking crate.
 
 ## Binary, Argument, and Crate Naming
 
@@ -178,11 +159,6 @@ Listed below are high-level suggestions based on experience:
 ### Error handling
 
 Error handling suggestions follow the [Rust book guidance](https://doc.rust-lang.org/book/ch09-00-error-handling.html).  Rust groups errors into two major categories: recoverable and unrecoverable errors.  Recoverable errors should be handled with [Result](https://doc.rust-lang.org/std/result/).  Our suggestions on unrecoverable errors are listed below:
-
-*Fallible functions*
-
-* `duration_since_epoch()` - to obtain the unix time, call the function provided by `diem-infallible`.
-* `RwLock` and `Mutex` - Instead of calling `unwrap()` on the standard library implementations of these functions, use the infallible equivalent types that we provide in `diem-infallible`.
 
 *Panic*
 
@@ -276,9 +252,9 @@ mod tests {
 
 *Property-based tests*
 
-Diem contains [property-based tests](https://blog.jessitron.com/2013/04/25/property-based-testing-what-is-it/) written in Rust using the [`proptest` framework](https://github.com/AltSysrq/proptest). Property-based tests generate random test cases and assert that invariants, also called *properties*, hold for the code under test.
+Move contains [property-based tests](https://blog.jessitron.com/2013/04/25/property-based-testing-what-is-it/) written in Rust using the [`proptest` framework](https://github.com/AltSysrq/proptest). Property-based tests generate random test cases and assert that invariants, also called *properties*, hold for the code under test.
 
-Some examples of properties tested in Diem:
+Some examples of properties tested in Move:
 
 * Every serializer and deserializer pair is tested for correctness with random inputs to the serializer. Any pair of functions that are inverses of each other can be tested this way.
 * The results of executing common transactions through the VM are tested using randomly generated scenarios and verified with an *Oracle*.
@@ -291,13 +267,9 @@ References:
 * [An introduction to property-based testing](https://fsharpforfunandprofit.com/posts/property-based-testing/)
 * [Choosing properties for property-based testing](https://fsharpforfunandprofit.com/posts/property-based-testing-2/)
 
-*Fuzzing*
-
-Diem contains harnesses for fuzzing crash-prone code like deserializers, using [`libFuzzer`](https://llvm.org/docs/LibFuzzer.html) through [`cargo fuzz`](https://rust-fuzz.github.io/book/cargo-fuzz.html). For more examples, see the `testsuite/diem_fuzzer` directory.
-
 ### Conditional compilation of tests
 
-Diem [conditionally
+Move [conditionally
 compiles](https://doc.rust-lang.org/stable/reference/conditional-compilation.html)
 code that is *only relevant for tests, but does not consist of tests* (unitary
 or otherwise). Examples of this include proptest strategies, implementations
@@ -316,8 +288,7 @@ As a consequence, it is recommended that you set up your test-only code in the f
 
 **For production crates:**
 
-Production crates are defined as the set of crates that create externally published artifacts, e.g. the Diem validator,
-the Move compiler, and so on.
+Production crates are defined as the set of crates that create externally published artifacts.
 
 For the sake of example, we'll consider you are defining a test-only helper function `foo` in `foo_crate`:
 
@@ -364,7 +335,7 @@ elements in another crate need to activate the "fuzzing" feature through the
 `[features]` section in their `Cargo.toml`. [Integration
 tests](https://doc.rust-lang.org/rust-by-example/testing/integration_testing.html)
 can neither rely on the `test` flag nor do they have a proper `Cargo.toml` for
-feature activation. In the Diem codebase, we therefore recommend that
+feature activation. In the Move codebase, we therefore recommend that
 *integration tests which depend on test-only code in their tested crate* be
 extracted to their own test-only crate. See `language/move-binary-format/serializer_tests`
 for an example of such an extracted integration test.

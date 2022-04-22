@@ -4,15 +4,15 @@
     "description": "A language server and basic grammar for the Move programming language.",
     "publisher": "move",
     "license": "Apache-2.0",
-    "version": "0.0.5",
+    "version": "0.0.6",
     "preview": true,
-    "homepage": "https://developers.diem.com",
+    "homepage": "https://github.com/move-language/move",
     "repository": {
-        "url": "https://github.com/diem/diem.git",
+        "url": "https://github.com/move-language/move.git",
         "type": "git"
     },
     "bugs": {
-        "url": "https://github.com/diem/diem/issues"
+        "url": "https://github.com/move-language/move/issues"
     },
     "engines": {
         "vscode": "^1.58.2"

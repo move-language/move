@@ -6,7 +6,7 @@ Currently, this means a basic grammar and language configuration for Move (`.mov
 syntax highlighting, commenting/uncommenting, simple context-unaware completion suggestions while
 typing, and other basic language features in Move files.
 
-For information about Move visit [the Move repository](https://github.com/diem/move).
+For information about Move visit [the Move repository](https://github.com/move-language/move).
 
 ## How to Install
 
@@ -16,17 +16,16 @@ the `move-analyzer` language server.
 ### 1. Installing the `move-analyzer` language server<span id="Step1">
 
 The `move-analyzer` language server is a Rust program that is part of
-[the Move repository](https://github.com/diem/move). It may be installed in one of two ways:
+[the Move repository](https://github.com/move-language/move). It may be installed in one of two ways:
 
-1. You may clone [the Move repository](https://github.com/diem/move) yourself and build
-   `move-analyzer` from its source code. This is recommended for Diem hackathon participants, and
-   Diem & Move core developers. To do so, follow the instructions in the Move tutorial's
-   [Step 0: Installation](https://github.com/diem/move/tree/main/language/documentation/tutorial#step-0-installation).
+1. You may clone [the Move repository](https://github.com/move-language/move) yourself and build
+   `move-analyzer` from its source code. To do so, follow the instructions in the Move tutorial's
+   [Step 0: Installation](https://github.com/move-language/move/tree/main/language/documentation/tutorial#step-0-installation).
 2. You may use Rust's package manager `cargo` to install `move-analyzer` in your user's PATH. This
-   is recommended for people who do not work on Diem & Move core.
+   is recommended for people who do not work on Move core.
    1. If you don't already have a Rust toolchain installed, you should install
       [Rustup](https://rustup.rs/), which will install the latest stable Rust toolchain.
-   2. Invoke `cargo install --git https://github.com/diem/move move-analyzer` to install the
+   2. Invoke `cargo install --git https://github.com/move-language/move move-analyzer` to install the
       `move-analyzer` language server in your Cargo binary directory. On macOS and Linux this is
       usually `~/.cargo/bin`. You'll want to make sure this location is in your `PATH` environment
       variable.
@@ -62,7 +61,7 @@ bottom-right of your Visual Studio Code screen when opening a Move file, it mean
    `move-analyzer.server.path` setting, and set it to the location of the `move-analyzer` language
    server you installed.
 3. If the above steps don't work, then report
-   [a GitHub issue to the Move repository](https://github.com/diem/move/issues) to get help.
+   [a GitHub issue to the Move repository](https://github.com/move-language/move/issues) to get help.
 
 ## Features
 

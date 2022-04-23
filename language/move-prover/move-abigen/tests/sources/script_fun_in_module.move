@@ -20,6 +20,12 @@ module ScriptFunInModule {
     /// This is a comment on a non-callable script function
     public(script) fun this_is_another_noncallable_script_fun(_blank: NoCall) { }
 
+    /// This is a comment on a non-callable script function
+    public(script) fun this_is_script_fun_with_signer_ref(account: &signer, _another_arg: u64) { }
+
+    /// This is a comment on a non-callable script function
+    public(script) fun this_is_script_fun_with_signer(account: signer, _another_arg: u64) { }
+
     public fun foo() { }
 
     fun bar() { }

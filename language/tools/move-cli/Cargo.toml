@@ -21,10 +21,8 @@ tempfile = "3.2.0"
 walkdir = "2.3.1"
 codespan-reporting = "0.11.1"
 itertools = "0.10.0"
-
 bcs = "0.1.2"
 move-bytecode-verifier = { path = "../../move-bytecode-verifier" }
-
 move-disassembler = { path = "../move-disassembler" }
 move-command-line-common = { path = "../../move-command-line-common" }
 move-bytecode-utils = { path = "../move-bytecode-utils" }
@@ -79,8 +77,6 @@ required-features = ["evm-backend"]
 
 [features]
 evm-backend = ["move-unit-test/evm-backend", "move-package/evm-backend"]
-
-table-extension = [
-    "move-table-extension",
-    "move-unit-test/table-extension"
-]
+address20 = ["move-stdlib/address20"]
+address32 = ["move-stdlib/address32"]
+table-extension = ["move-table-extension", "move-unit-test/table-extension"]

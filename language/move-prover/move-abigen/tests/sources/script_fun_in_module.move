@@ -23,5 +23,9 @@ module ScriptFunInModule {
     public fun foo() { }
 
     fun bar() { }
+
+    public(script) fun this_tests_ref_signer(_signer: &signer) { }
+
+    public(script) fun this_tests_signer(_signer: signer) { }
 }
 }

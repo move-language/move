@@ -182,7 +182,13 @@ impl<'env> Abigen<'env> {
         let args = func
             .get_parameters()
             .iter()
-            .filter(|param| !matches!(&param.1, ty::Type::Primitive(ty::PrimitiveType::Signer)))
+            .filter(|param| match &param.1 {
+                ty::Type::Primitive(ty::PrimitiveType::Signer) => false,
+                ty::Type::Reference(_, inner) => {
+                    !matches!(&**inner, ty::Type::Primitive(ty::PrimitiveType::Signer))
+                }
+                _ => true,
+            })
             .map(|param| {
                 let tag = self.get_type_tag(&param.1)?.unwrap();
                 Ok(ArgumentABI::new(

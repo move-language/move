@@ -267,7 +267,11 @@ pub struct AccountAddressParseError;
 
 impl fmt::Display for AccountAddressParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Unable to parse AccountAddress")
+        write!(
+            f,
+            "Unable to parse AccountAddress (must be hex string of length {})",
+            AccountAddress::LENGTH
+        )
     }
 }
 

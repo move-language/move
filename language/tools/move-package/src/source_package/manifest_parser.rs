@@ -213,7 +213,10 @@ pub fn parse_addresses(tval: TV) -> Result<PM::AddressDeclarations> {
                         } else if addresses
                             .insert(
                                 ident,
-                                Some(parse_address_literal(entry_str).context("Invalid address")?),
+                                Some(parse_address_literal(entry_str).context(format!(
+                                    "Invalid address '{}' encountered.",
+                                    entry_str
+                                ))?),
                             )
                             .is_some()
                         {
@@ -251,7 +254,10 @@ pub fn parse_dev_addresses(tval: TV) -> Result<PM::DevAddressDeclarations> {
                         } else if addresses
                             .insert(
                                 ident,
-                                parse_address_literal(entry_str).context("Invalid address")?,
+                                parse_address_literal(entry_str).context(format!(
+                                    "Invalid address '{}' encountered.",
+                                    entry_str
+                                ))?,
                             )
                             .is_some()
                         {

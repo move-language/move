@@ -164,9 +164,11 @@ impl<'a, T: MoveResolver + ?Sized> Resolver<'a, T> {
                 ))
             }
             SignatureToken::TypeParameter(idx) => FatType::TyParam(*idx as usize),
-            SignatureToken::MutableReference(_) | SignatureToken::Reference(_) => {
-                return Err(anyhow!("Unexpected Reference"))
-            }
+            SignatureToken::MutableReference(_) => return Err(anyhow!("Unexpected Reference")),
+            SignatureToken::Reference(inner) => match **inner {
+                SignatureToken::Signer => FatType::Reference(Box::new(FatType::Signer)),
+                _ => return Err(anyhow!("Unexpected Reference")),
+            },
         })
     }
 

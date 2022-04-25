@@ -599,7 +599,11 @@ impl SharedTestingConfig {
             .collect::<Vec<_>>();
 
         let model = run_model_builder_with_options_and_compilation_flags(
-            vec![(filtered_sources, self.named_address_values.clone())],
+            vec![PackagePaths {
+                name: None,
+                paths: filtered_sources,
+                named_address_map: self.named_address_values.clone(),
+            }],
             vec![],
             ModelBuilderOptions::default(),
             Flags::testing(),

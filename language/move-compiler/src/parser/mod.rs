@@ -12,8 +12,7 @@ pub(crate) mod merge_spec_modules;
 use crate::{
     attr_derivation,
     diagnostics::{codes::Severity, Diagnostics, FilesSourceText},
-    parser::syntax::parse_file_string,
-    parser::{self, ast::PackageDefinition},
+    parser::{self, ast::PackageDefinition, syntax::parse_file_string},
     shared::{CompilationEnv, IndexedPackagePath, NamedAddressMaps},
 };
 use anyhow::anyhow;

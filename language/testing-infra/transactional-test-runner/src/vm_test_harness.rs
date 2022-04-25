@@ -14,7 +14,9 @@ use move_binary_format::{
     CompiledModule,
 };
 use move_command_line_common::files::verify_and_create_named_address_mapping;
-use move_compiler::{compiled_unit::AnnotatedCompiledUnit, FullyCompiledProgram};
+use move_compiler::{
+    compiled_unit::AnnotatedCompiledUnit, shared::PackagePaths, FullyCompiledProgram,
+};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},

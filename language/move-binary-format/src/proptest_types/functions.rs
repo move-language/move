@@ -47,7 +47,7 @@ impl SignatureState {
     }
 
     fn add_signature(&mut self, sig: Signature) -> SignatureIndex {
-        precondition!(self.signatures.len() < TableSize::max_value() as usize);
+        debug_assert!(self.signatures.len() < TableSize::max_value() as usize);
         if let Some(idx) = self.signature_map.get(&sig) {
             return *idx;
         }
@@ -73,7 +73,7 @@ impl FieldHandleState {
 
     #[allow(unused)]
     fn add_field_handle(&mut self, fh: FieldHandle) -> FieldHandleIndex {
-        precondition!(self.field_handles.len() < TableSize::max_value() as usize);
+        debug_assert!(self.field_handles.len() < TableSize::max_value() as usize);
         if let Some(idx) = self.field_map.get(&fh) {
             return *idx;
         }
@@ -112,7 +112,7 @@ where
 
     #[allow(unused)]
     fn add_instantiation(&mut self, inst: T) -> TableIndex {
-        precondition!(self.instantiations.len() < TableSize::max_value() as usize);
+        debug_assert!(self.instantiations.len() < TableSize::max_value() as usize);
         if let Some(idx) = self.instantiation_map.get(&inst) {
             return *idx;
         }
@@ -298,7 +298,7 @@ impl<'a> FnDefnMaterializeState<'a> {
     }
 
     fn add_function_handle(&mut self, handle: FunctionHandle) -> FunctionHandleIndex {
-        precondition!(self.function_handles.len() < TableSize::max_value() as usize);
+        debug_assert!(self.function_handles.len() < TableSize::max_value() as usize);
         self.function_handles.push(handle);
         FunctionHandleIndex((self.function_handles.len() - 1) as TableIndex)
     }

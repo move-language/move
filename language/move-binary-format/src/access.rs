@@ -23,12 +23,9 @@ pub trait ModuleAccess: Sync {
 
     /// Returns the `ModuleHandle` for `self`.
     fn self_handle(&self) -> &ModuleHandle {
-        assume_preconditions!(); // invariant
         let handle = self.module_handle_at(self.self_handle_idx());
-        assumed_postcondition!(
-            handle.address.into_index() < self.as_module().address_identifiers.len()
-        ); // invariant
-        assumed_postcondition!(handle.name.into_index() < self.as_module().identifiers.len()); // invariant
+        debug_assert!(handle.address.into_index() < self.as_module().address_identifiers.len()); // invariant
+        debug_assert!(handle.name.into_index() < self.as_module().identifiers.len()); // invariant
         handle
     }
 
@@ -44,29 +41,27 @@ pub trait ModuleAccess: Sync {
 
     fn module_handle_at(&self, idx: ModuleHandleIndex) -> &ModuleHandle {
         let handle = &self.as_module().module_handles[idx.into_index()];
-        assumed_postcondition!(
-            handle.address.into_index() < self.as_module().address_identifiers.len()
-        ); // invariant
-        assumed_postcondition!(handle.name.into_index() < self.as_module().identifiers.len()); // invariant
+        debug_assert!(handle.address.into_index() < self.as_module().address_identifiers.len()); // invariant
+        debug_assert!(handle.name.into_index() < self.as_module().identifiers.len()); // invariant
         handle
     }
 
     fn struct_handle_at(&self, idx: StructHandleIndex) -> &StructHandle {
         let handle = &self.as_module().struct_handles[idx.into_index()];
-        assumed_postcondition!(handle.module.into_index() < self.as_module().module_handles.len()); // invariant
+        debug_assert!(handle.module.into_index() < self.as_module().module_handles.len()); // invariant
         handle
     }
 
     fn function_handle_at(&self, idx: FunctionHandleIndex) -> &FunctionHandle {
         let handle = &self.as_module().function_handles[idx.into_index()];
-        assumed_postcondition!(handle.parameters.into_index() < self.as_module().signatures.len()); // invariant
-        assumed_postcondition!(handle.return_.into_index() < self.as_module().signatures.len()); // invariant
+        debug_assert!(handle.parameters.into_index() < self.as_module().signatures.len()); // invariant
+        debug_assert!(handle.return_.into_index() < self.as_module().signatures.len()); // invariant
         handle
     }
 
     fn field_handle_at(&self, idx: FieldHandleIndex) -> &FieldHandle {
         let handle = &self.as_module().field_handles[idx.into_index()];
-        assumed_postcondition!(handle.owner.into_index() < self.as_module().struct_defs.len()); // invariant
+        debug_assert!(handle.owner.into_index() < self.as_module().struct_defs.len()); // invariant
         handle
     }
 
@@ -104,8 +99,8 @@ pub trait ModuleAccess: Sync {
 
     fn function_def_at(&self, idx: FunctionDefinitionIndex) -> &FunctionDefinition {
         let result = &self.as_module().function_defs[idx.into_index()];
-        assumed_postcondition!(result.function.into_index() < self.function_handles().len()); // invariant
-        assumed_postcondition!(match &result.code {
+        debug_assert!(result.function.into_index() < self.function_handles().len()); // invariant
+        debug_assert!(match &result.code {
             Some(code) => code.locals.into_index() < self.signatures().len(),
             None => true,
         }); // invariant

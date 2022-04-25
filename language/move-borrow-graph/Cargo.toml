@@ -5,6 +5,3 @@ authors = ["Diem Association <opensource@diem.com>"]
 publish = false
 edition = "2018"
 license = "Apache-2.0"
-
-[dependencies]
-mirai-annotations = "1.10.1"

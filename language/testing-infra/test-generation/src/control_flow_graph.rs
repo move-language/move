@@ -72,7 +72,7 @@ impl CFG {
         parameters: &Signature,
         target_blocks: BlockIDSize,
     ) -> CFG {
-        checked_precondition!(target_blocks > 0, "The CFG must haave at least one block");
+        assert!(target_blocks > 0, "The CFG must haave at least one block");
         let mut basic_blocks: HashMap<BlockIDSize, BasicBlock> = HashMap::new();
         // Generate basic blocks
         for i in 0..target_blocks {
@@ -89,27 +89,27 @@ impl CFG {
         while current_block_id < target_blocks && !block_queue.is_empty() {
             let front_block = block_queue.pop_front();
             // `front_block` will be `Some` because the block queue is not empty
-            assume!(front_block.is_some());
+            debug_assert!(front_block.is_some());
             let parent_block_id = front_block.unwrap();
             // The number of edges will be at most `2*target_blocks``
             // Since target blocks is at most a `u16`, this will not overflow even if
             // `usize` is a `u32`
-            assume!(edges.len() < usize::max_value());
+            debug_assert!(edges.len() < usize::max_value());
             edges.push((parent_block_id, current_block_id));
             block_queue.push_back(current_block_id);
             // `current_block_id` is bound by the max og `target_block_size`
-            verify!(current_block_id < u16::max_value());
+            debug_assert!(current_block_id < u16::max_value());
             current_block_id += 1;
             // Generate a second child edge with prob = 1/2
             if rng.gen_bool(0.5) && current_block_id < target_blocks {
                 // The number of edges will be at most `2*target_blocks``
                 // Since target blocks is at most a `u16`, this will not overflow even if
                 // `usize` is a `u32`
-                verify!(edges.len() < usize::max_value());
+                debug_assert!(edges.len() < usize::max_value());
                 edges.push((parent_block_id, current_block_id));
                 block_queue.push_back(current_block_id);
                 // `current_block_id` is bound by the max og `target_block_size`
-                verify!(current_block_id < u16::max_value());
+                debug_assert!(current_block_id < u16::max_value());
                 current_block_id += 1;
             }
         }
@@ -118,10 +118,10 @@ impl CFG {
         while !block_queue.is_empty() {
             let front_block = block_queue.pop_front();
             // `front_block` will be `Some` because the block queue is not empty
-            assume!(front_block.is_some());
+            debug_assert!(front_block.is_some());
             let parent_block_id = front_block.unwrap();
             // By the precondition of the function
-            assume!(target_blocks > 0);
+            debug_assert!(target_blocks > 0);
             if parent_block_id != target_blocks - 1 {
                 edges.push((parent_block_id, target_blocks - 1));
             }
@@ -134,7 +134,7 @@ impl CFG {
             edges,
         };
         // Assign locals to basic blocks
-        assume!(target_blocks == 0 || !cfg.basic_blocks.is_empty());
+        debug_assert!(target_blocks == 0 || !cfg.basic_blocks.is_empty());
         CFG::add_locals(&mut cfg, rng, locals, parameters.0.len());
         cfg
     }
@@ -155,7 +155,7 @@ impl CFG {
         for (parent, child) in self.edges.iter() {
             if *parent == block_id {
                 // Length is bound by iteration on `self.edges`
-                verify!(children_ids.len() < usize::max_value());
+                debug_assert!(children_ids.len() < usize::max_value());
                 children_ids.push(*child);
             }
         }
@@ -174,7 +174,7 @@ impl CFG {
         for (parent, child) in self.edges.iter() {
             if *child == block_id {
                 // Iteration is bound by the self.edges vector length
-                verify!(parent_ids.len() < usize::max_value());
+                debug_assert!(parent_ids.len() < usize::max_value());
                 parent_ids.push(*parent);
             }
         }
@@ -189,13 +189,13 @@ impl CFG {
 
     /// Merge the outgoing locals of a set of blocks
     fn merge_locals(&self, block_ids: Vec<BlockIDSize>) -> BlockLocals {
-        checked_precondition!(
+        assert!(
             !block_ids.is_empty(),
             "Cannot merge locals of empty block list"
         );
         let first_basic_block = self.basic_blocks.get(&block_ids[0]);
         // Implication of preconditon
-        assume!(first_basic_block.is_some());
+        debug_assert!(first_basic_block.is_some());
         let first_basic_block_locals_out = &first_basic_block.unwrap().locals_out;
         let locals_len = first_basic_block_locals_out.len();
         let mut locals_out = BlockLocals::new();
@@ -207,7 +207,7 @@ impl CFG {
                 // parent's outgoing locals
                 let basic_block = self.basic_blocks.get(block_id);
                 // Every block ID in the sequence should be valid
-                assume!(basic_block.is_some());
+                debug_assert!(basic_block.is_some());
                 if basic_block.unwrap().locals_out[&local_index].1 == BorrowState::Unavailable {
                     availability = BorrowState::Unavailable;
                 }
@@ -239,7 +239,7 @@ impl CFG {
     /// Add the incoming and outgoing locals for each basic block in the control flow graph.
     /// Currently the incoming and outgoing locals are the same for each block.
     fn add_locals(cfg: &mut CFG, rng: &mut StdRng, locals: &[SignatureToken], args_len: usize) {
-        precondition!(
+        debug_assert!(
             !cfg.basic_blocks.is_empty(),
             "Cannot add locals to empty cfg"
         );
@@ -271,7 +271,7 @@ impl CFG {
                     .collect();
             } else {
                 // Implication of precondition
-                assume!(!cfg_copy.basic_blocks.is_empty());
+                debug_assert!(!cfg_copy.basic_blocks.is_empty());
                 basic_block.locals_in =
                     cfg_copy.merge_locals(cfg_copy.get_parent_ids(block_id as BlockIDSize));
             }
@@ -287,7 +287,7 @@ impl CFG {
         while !block_queue.is_empty() {
             let block_id_front = block_queue.pop_front();
             // The queue is non-empty so the front block id will not be none
-            assume!(block_id_front.is_some());
+            debug_assert!(block_id_front.is_some());
             let block_id = block_id_front.unwrap();
             let child_ids = self.get_children_ids(block_id);
             if child_ids.len() == 2 {
@@ -316,7 +316,7 @@ impl CFG {
     /// Get the serialized code offset of a basic block based on its position in the serialized
     /// instruction sequence.
     fn get_block_offset(cfg: &CFG, block_order: &[BlockIDSize], block_id: BlockIDSize) -> u16 {
-        checked_assume!(
+        assert!(
             (0..block_id).all(|id| cfg.basic_blocks.get(&id).is_some()),
             "Error: Invalid block_id given"
         );
@@ -335,7 +335,7 @@ impl CFG {
     /// Serialize the control flow graph into a sequence of instructions. Set the offsets of branch
     /// instructions appropriately.
     pub fn serialize(&mut self) -> Vec<Bytecode> {
-        checked_precondition!(
+        assert!(
             !self.basic_blocks.is_empty(),
             "Error: CFG has no basic blocks"
         );
@@ -345,10 +345,10 @@ impl CFG {
         for block_id in &block_order {
             let block = self.basic_blocks.get_mut(block_id);
             // The generated block order contains every block
-            assume!(block.is_some());
+            debug_assert!(block.is_some());
             let block = block.unwrap();
             // All basic blocks should have instructions filled in at this point
-            checked_assume!(
+            assert!(
                 !block.instructions.is_empty(),
                 "Error: block created with no instructions",
             );

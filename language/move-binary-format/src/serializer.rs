@@ -891,7 +891,7 @@ fn serialize_code(binary: &mut BinaryData, code: &[Bytecode]) -> Result<()> {
 /// Compute the table size with a check for underflow
 fn checked_calculate_table_size(binary: &mut BinaryData, start: u32) -> Result<u32> {
     let offset = check_index_in_binary(binary.len())?;
-    checked_assume!(offset >= start, "table start must be before end");
+    assert!(offset >= start, "table start must be before end");
     Ok(offset - start)
 }
 
@@ -977,11 +977,11 @@ impl CommonSerializer {
         binary: &mut BinaryData,
         tables: &T,
     ) -> Result<()> {
-        verify!(self.table_count == 0); // Should not be necessary, but it helps MIRAI right now
+        debug_assert!(self.table_count == 0);
         self.serialize_module_handles(binary, tables.get_module_handles())?;
         self.serialize_struct_handles(binary, tables.get_struct_handles())?;
         self.serialize_function_handles(binary, tables.get_function_handles())?;
-        verify!(self.table_count < 6); // Should not be necessary, but it helps MIRAI right now
+        debug_assert!(self.table_count < 6);
         self.serialize_function_instantiations(binary, tables.get_function_instantiations())?;
         self.serialize_signatures(binary, tables.get_signatures())?;
         self.serialize_identifiers(binary, tables.get_identifiers())?;

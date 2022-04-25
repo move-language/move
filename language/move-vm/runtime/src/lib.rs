@@ -9,9 +9,6 @@
 //! other blockchains can use it as well. The VM isn't there yet, but hopefully will be there
 //! soon.
 
-#[macro_use]
-extern crate mirai_annotations;
-
 pub mod data_cache;
 mod interpreter;
 mod loader;

@@ -12,7 +12,6 @@ edition = "2018"
 [dependencies]
 rand = "0.8.3"
 num_cpus = "1.13.0"
-mirai-annotations = "1.10.1"
 clap = { version = "3.1.8", features = ["derive"] }
 itertools = "0.10.0"
 hex = "0.4.3"
@@ -31,6 +30,3 @@ module-generation = { path = "../module-generation" }
 move-binary-format = { path = "../../move-binary-format" }
 move-stdlib = { path = "../../move-stdlib" }
 move-compiler = { path = "../../move-compiler" }
-
-[features]
-mirai-contracts = []

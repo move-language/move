@@ -11,7 +11,6 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.52"
-mirai-annotations = "1.10.1"
 petgraph = "0.5.1"
 
 move-borrow-graph = { path = "../move-borrow-graph" }

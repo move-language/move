@@ -111,7 +111,11 @@ impl<'a, T: MoveResolver + ?Sized> MoveValueAnnotator<'a, T> {
             .cache
             .resolve_function_arguments(module, function)?
             .into_iter()
-            .filter(|t| !matches!(t, FatType::Signer))
+            .filter(|t| match t {
+                FatType::Signer => false,
+                FatType::Reference(inner) => !matches!(&**inner, FatType::Signer),
+                _ => true,
+            })
             .collect();
         anyhow::ensure!(
             types.len() == args.len(),

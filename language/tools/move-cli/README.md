@@ -419,7 +419,7 @@ We can then use the `move sandbox test` command and point it at the `readme` dir
 Move CLI commands for us in sequence:
 
 ```shell
-$ move sandbox exp-test readme
+$ move sandbox exp-test -p readme
 ...<snipped output>
 0 / 1 test(s) passed.
 Error: 1 / 1 test(s) failed.
@@ -430,7 +430,7 @@ yet. We can generate this expectation file by setting the `UPDATE_BASELINE`
 environment variable when running the test:
 
 ```shell
-$ UPDATE_BASELINE=1 move sandbox exp-test readme
+$ UPDATE_BASELINE=1 move sandbox exp-test -p readme
 1 / 1 test(s) passed.
 ```
 
@@ -457,7 +457,7 @@ i.e., `cargo install --debug --path move/language/tools/move-cli`.
 
 Using our running example to illustrate:
 ```shell
-$ move sandbox test readme --track-cov
+$ move sandbox exp-test -p readme --track-cov
 1 / 1 test(s) passed.
 Module 00000000000000000000000000000002::Test
         fun publish
@@ -509,7 +509,7 @@ sandbox run sources/test_unpublish_script.move --signers 0xf -v
 
 Now we can re-test the `readme` again
 ```shell
-$ move sandbox exp-test readme --track-cov
+$ move sandbox exp-test -p readme --track-cov
 1 / 1 test(s) passed.
 Module 00000000000000000000000000000002::Test
         fun publish

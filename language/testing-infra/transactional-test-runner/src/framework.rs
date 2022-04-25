@@ -82,6 +82,14 @@ impl<'a> CompiledState<'a> {
             })
             .collect()
     }
+
+    pub fn insert_named_address(
+        &mut self,
+        name: String,
+        addr: NumericalAddress,
+    ) -> Option<NumericalAddress> {
+        self.named_address_mapping.insert(name, addr)
+    }
 }
 
 fn merge_output(left: Option<String>, right: Option<String>) -> Option<String> {

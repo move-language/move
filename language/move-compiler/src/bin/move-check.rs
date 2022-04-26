@@ -12,8 +12,10 @@ use move_compiler::{
 
 #[derive(Debug, Parser)]
 #[clap(
-    name = "Move Check",
-    about = "Check Move source code, without compiling to bytecode."
+    name = "move-check",
+    about = "Check Move source code, without compiling to bytecode",
+    author,
+    version
 )]
 pub struct Options {
     /// The source files to check

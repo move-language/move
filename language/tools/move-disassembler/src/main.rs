@@ -18,10 +18,7 @@ use move_ir_types::location::Spanned;
 use std::{fs, path::Path};
 
 #[derive(Debug, Parser)]
-#[clap(
-    name = "Move Bytecode Disassembler",
-    about = "Print a human-readable version of Move bytecode (.mv files)"
-)]
+#[clap(author, version, about)]
 struct Args {
     /// Skip printing of private functions.
     #[clap(long = "skip-private")]

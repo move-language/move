@@ -37,6 +37,7 @@ impl FromStr for FlattenPass {
 
 /// Options passed into the specification flattening tool.
 #[derive(Parser, Clone)]
+#[clap(author, version, about)]
 pub struct FlattenOptions {
     /// Options common and shared by the proving workflow and all passes
     #[clap(flatten)]

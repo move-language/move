@@ -51,7 +51,7 @@ pub enum Mutability {
 impl AbstractValue {
     /// Create a new primitive `AbstractValue` given its type; the kind will be `Copyable`
     pub fn new_primitive(token: SignatureToken) -> AbstractValue {
-        checked_precondition!(
+        assert!(
             match token {
                 SignatureToken::Struct(_)
                 | SignatureToken::StructInstantiation(_, _)
@@ -76,7 +76,7 @@ impl AbstractValue {
 
     /// Create a new reference `AbstractValue` given its type and kind
     pub fn new_reference(token: SignatureToken, abilities: AbilitySet) -> AbstractValue {
-        checked_precondition!(
+        assert!(
             matches!(
                 token,
                 SignatureToken::Reference(_) | SignatureToken::MutableReference(_)
@@ -88,7 +88,7 @@ impl AbstractValue {
 
     /// Create a new struct `AbstractValue` given its type and kind
     pub fn new_struct(token: SignatureToken, abilities: AbilitySet) -> AbstractValue {
-        checked_precondition!(
+        assert!(
             matches!(token, SignatureToken::Struct(_)),
             "AbstractValue::new_struct must be applied with a struct type"
         );
@@ -513,7 +513,7 @@ impl AbstractState {
     pub fn stack_push(&mut self, item: AbstractValue) {
         // Programs that are large enough to exceed this bound
         // will not be generated
-        assume!(self.stack.len() < usize::max_value());
+        debug_assert!(self.stack.len() < usize::max_value());
         self.stack.push(item);
     }
 
@@ -523,7 +523,7 @@ impl AbstractState {
         if let Some(abstract_value) = self.register_move() {
             // Programs that are large enough to exceed this bound
             // will not be generated
-            assume!(self.stack.len() < usize::max_value());
+            debug_assert!(self.stack.len() < usize::max_value());
             self.stack.push(abstract_value);
             Ok(())
         } else {

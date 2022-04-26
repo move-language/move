@@ -4,7 +4,6 @@
 //! This module defines the abstract state for the local safety analysis.
 
 use crate::absint::{AbstractDomain, JoinResult};
-use mirai_annotations::{checked_precondition, checked_verify};
 use move_binary_format::{
     binary_views::{BinaryIndexedView, FunctionView},
     errors::{PartialVMError, PartialVMResult},
@@ -80,7 +79,7 @@ impl AbstractState {
     }
 
     pub fn set_unavailable(&mut self, idx: LocalIndex) {
-        checked_precondition!(self.local_states[idx as usize] == Available);
+        assert!(self.local_states[idx as usize] == Available);
         self.local_states[idx as usize] = Unavailable
     }
 
@@ -92,9 +91,9 @@ impl AbstractState {
     }
 
     fn join_(&self, other: &Self) -> Self {
-        checked_precondition!(self.current_function == other.current_function);
-        checked_precondition!(self.all_local_abilities.len() == other.all_local_abilities.len());
-        checked_precondition!(self.local_states.len() == other.local_states.len());
+        assert!(self.current_function == other.current_function);
+        assert!(self.all_local_abilities.len() == other.all_local_abilities.len());
+        assert!(self.local_states.len() == other.local_states.len());
         let current_function = self.current_function;
         let all_local_abilities = self.all_local_abilities.clone();
         let local_states = self
@@ -132,7 +131,7 @@ impl AbstractDomain for AbstractState {
     /// attempts to join state to self and returns the result
     fn join(&mut self, state: &AbstractState) -> JoinResult {
         let joined = Self::join_(self, state);
-        checked_verify!(self.local_states.len() == joined.local_states.len());
+        assert!(self.local_states.len() == joined.local_states.len());
         let locals_unchanged = self
             .local_states
             .iter()

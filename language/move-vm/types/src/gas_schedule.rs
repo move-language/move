@@ -6,7 +6,6 @@
 //! It is important to note that the cost schedule defined in this file does not track hashing
 //! operations or other native operations; the cost of each native operation will be returned by the
 //! native function itself.
-use mirai_annotations::*;
 use move_binary_format::{
     errors::{Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
@@ -446,7 +445,7 @@ pub fn calculate_intrinsic_gas(
     transaction_size: AbstractMemorySize<GasCarrier>,
     gas_constants: &GasConstants,
 ) -> InternalGasUnits<GasCarrier> {
-    precondition!(transaction_size.get() <= MAX_TRANSACTION_SIZE_IN_BYTES as GasCarrier);
+    debug_assert!(transaction_size.get() <= MAX_TRANSACTION_SIZE_IN_BYTES as GasCarrier);
     let min_transaction_fee = gas_constants.min_transaction_gas_units;
 
     if transaction_size.get() > gas_constants.large_transaction_cutoff.get() {

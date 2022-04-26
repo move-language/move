@@ -33,7 +33,6 @@ use crate::{
     internals::ModuleIndex,
     IndexKind, SignatureTokenKind,
 };
-use mirai_annotations::*;
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
@@ -1656,7 +1655,7 @@ impl Bytecode {
 
     /// Return the successor offsets of this bytecode instruction.
     pub fn get_successors(pc: CodeOffset, code: &[Bytecode]) -> Vec<CodeOffset> {
-        checked_precondition!(
+        assert!(
             // The program counter could be added to at most twice and must remain
             // within the bounds of the code.
             pc <= u16::max_value() - 2 && (pc as usize) < code.len(),
@@ -1890,7 +1889,7 @@ impl Arbitrary for CompiledModule {
 impl CompiledModule {
     /// Returns the count of a specific `IndexKind`
     pub fn kind_count(&self, kind: IndexKind) -> usize {
-        precondition!(!matches!(
+        debug_assert!(!matches!(
             kind,
             IndexKind::LocalPool
                 | IndexKind::CodeDefinition

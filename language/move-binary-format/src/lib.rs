@@ -3,9 +3,6 @@
 
 #![forbid(unsafe_code)]
 
-#[macro_use]
-extern crate mirai_annotations;
-
 use std::fmt;
 
 pub mod access;

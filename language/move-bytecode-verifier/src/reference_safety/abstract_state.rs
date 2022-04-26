@@ -3,7 +3,6 @@
 
 //! This module defines the abstract state for the type and memory safety analysis.
 use crate::absint::{AbstractDomain, JoinResult};
-use mirai_annotations::{checked_postcondition, checked_precondition, checked_verify};
 use move_binary_format::{
     binary_views::FunctionView,
     errors::{PartialVMError, PartialVMResult},
@@ -108,7 +107,7 @@ impl AbstractState {
         }
         state.borrow_graph.new_ref(state.frame_root(), true);
 
-        checked_verify!(state.is_canonical());
+        assert!(state.is_canonical());
         state
     }
 
@@ -221,7 +220,7 @@ impl AbstractState {
     /// - Mutable references are writable if there are no consistent borrows
     /// - Immutable references are not writable by the typing rules
     fn is_writable(&self, id: RefID) -> bool {
-        checked_precondition!(self.borrow_graph.is_mutable(id));
+        assert!(self.borrow_graph.is_mutable(id));
         !self.has_consistent_borrows(id, None)
     }
 
@@ -229,7 +228,7 @@ impl AbstractState {
     /// - Mutable references are freezable if there are no consistent mutable borrows
     /// - Immutable references are not freezable by the typing rules
     fn is_freezable(&self, id: RefID, at_field_opt: Option<FieldHandleIndex>) -> bool {
-        checked_precondition!(self.borrow_graph.is_mutable(id));
+        assert!(self.borrow_graph.is_mutable(id));
         !self.has_consistent_mutable_borrows(id, at_field_opt.map(Label::Field))
     }
 
@@ -362,8 +361,8 @@ impl AbstractState {
                 self.release(id2)
             }
             (v1, v2) => {
-                checked_verify!(v1.is_value());
-                checked_verify!(v2.is_value());
+                assert!(v1.is_value());
+                assert!(v2.is_value());
             }
         }
         Ok(AbstractValue::NonReference)
@@ -600,7 +599,7 @@ impl AbstractState {
                 (*local, new_value)
             })
             .collect::<BTreeMap<_, _>>();
-        checked_verify!(self.locals.len() == locals.len());
+        assert!(self.locals.len() == locals.len());
         let mut borrow_graph = self.borrow_graph.clone();
         borrow_graph.remap_refs(&id_map);
         let canonical_state = AbstractState {
@@ -610,7 +609,7 @@ impl AbstractState {
             num_locals: self.num_locals,
             next_id: self.num_locals + 1,
         };
-        checked_postcondition!(canonical_state.is_canonical());
+        assert!(canonical_state.is_canonical());
         canonical_state
     }
 
@@ -633,10 +632,10 @@ impl AbstractState {
     }
 
     pub fn join_(&self, other: &Self) -> Self {
-        checked_precondition!(self.current_function == other.current_function);
-        checked_precondition!(self.is_canonical() && other.is_canonical());
-        checked_precondition!(self.next_id == other.next_id);
-        checked_precondition!(self.num_locals == other.num_locals);
+        assert!(self.current_function == other.current_function);
+        assert!(self.is_canonical() && other.is_canonical());
+        assert!(self.next_id == other.next_id);
+        assert!(self.num_locals == other.num_locals);
         let mut locals = BTreeMap::new();
         let mut self_graph = self.borrow_graph.clone();
         let mut other_graph = other.borrow_graph.clone();
@@ -662,8 +661,8 @@ impl AbstractState {
 
                 // The local has a value on each side, add it to the state
                 (Some(v1), Some(v2)) => {
-                    checked_verify!(v1 == v2);
-                    checked_verify!(!locals.contains_key(&local));
+                    assert!(v1 == v2);
+                    assert!(!locals.contains_key(&local));
                     locals.insert(local, *v1);
                 }
             }
@@ -688,8 +687,8 @@ impl AbstractDomain for AbstractState {
     /// attempts to join state to self and returns the result
     fn join(&mut self, state: &AbstractState) -> JoinResult {
         let joined = Self::join_(self, state);
-        checked_verify!(joined.is_canonical());
-        checked_verify!(self.num_locals == joined.num_locals);
+        assert!(joined.is_canonical());
+        assert!(self.num_locals == joined.num_locals);
         let locals_unchanged = self
             .iter_locals()
             .all(|idx| self.locals.get(&idx) == joined.locals.get(&idx));

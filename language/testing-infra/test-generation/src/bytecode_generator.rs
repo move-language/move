@@ -443,7 +443,7 @@ impl<'a> BytecodeGenerator<'a> {
                     || unsatisfied_preconditions == 0
                 {
                     // The size of matches cannot be greater than the number of bytecode instructions
-                    verify!(matches.len() < usize::max_value());
+                    debug_assert!(matches.len() < usize::max_value());
                     matches.push((*stack_effect, instruction));
                 }
             }
@@ -573,7 +573,7 @@ impl<'a> BytecodeGenerator<'a> {
         exact: bool,
     ) -> Option<AbstractState> {
         // Bytecode will never be generated this large
-        assume!(bytecode.len() < usize::max_value());
+        debug_assert!(bytecode.len() < usize::max_value());
         debug!("**********************");
         debug!("State1: {}", state);
         debug!("Next instr: {:?}", instruction);
@@ -726,7 +726,7 @@ impl<'a> BytecodeGenerator<'a> {
         let number_of_blocks = self.rng.gen_range(1..=MAX_CFG_BLOCKS);
         // The number of basic blocks must be at least one based on the
         // generation range.
-        assume!(number_of_blocks > 0);
+        debug_assert!(number_of_blocks > 0);
         let mut cfg = CFG::new(
             &mut self.rng,
             locals,
@@ -827,7 +827,7 @@ impl<'a> BytecodeGenerator<'a> {
         }
         // The CFG will be non-empty if we set the number of basic blocks to generate
         // to be non-zero
-        verify!(number_of_blocks > 0 || cfg.get_basic_blocks().is_empty());
+        debug_assert!(number_of_blocks > 0 || cfg.get_basic_blocks().is_empty());
         Some(cfg.serialize())
     }
 

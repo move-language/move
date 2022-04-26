@@ -9,7 +9,6 @@ mod abstract_state;
 
 use crate::absint::{AbstractInterpreter, BlockInvariant, BlockPostcondition, TransferFunctions};
 use abstract_state::{AbstractState, LocalState};
-use mirai_annotations::*;
 use move_binary_format::{
     binary_views::{BinaryIndexedView, FunctionView},
     errors::{PartialVMError, PartialVMResult},
@@ -75,7 +74,7 @@ fn execute_inner(
         Bytecode::Ret => {
             let local_states = state.local_states();
             let all_local_abilities = state.all_local_abilities();
-            checked_precondition!(local_states.len() == all_local_abilities.len());
+            assert!(local_states.len() == all_local_abilities.len());
             for (local_state, local_abilities) in local_states.iter().zip(all_local_abilities) {
                 match local_state {
                     LocalState::MaybeAvailable | LocalState::Available

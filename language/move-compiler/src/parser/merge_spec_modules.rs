@@ -12,7 +12,9 @@
 
 use crate::{
     diag,
-    parser::ast::{Definition, LeadingNameAccess_, ModuleDefinition, ModuleMember, Program},
+    parser::ast::{
+        Definition, LeadingNameAccess_, ModuleDefinition, ModuleMember, PackageDefinition, Program,
+    },
     shared::*,
 };
 use move_symbol_pool::Symbol;
@@ -67,26 +69,38 @@ pub fn program(compilation_env: &mut CompilationEnv, prog: Program) -> Program {
 
 fn extract_spec_modules(
     spec_modules: &mut BTreeMap<(Option<LeadingNameAccess_>, Symbol), ModuleDefinition>,
-    defs: Vec<(NamedAddressMapIndex, Definition)>,
-) -> Vec<(NamedAddressMapIndex, Definition)> {
-    // TODO check address mappings line up
-    use Definition::*;
+    defs: Vec<PackageDefinition>,
+) -> Vec<PackageDefinition> {
+    // TODO check package name and address mappings line up
     defs.into_iter()
-        .filter_map(|(address_map, def)| match def {
-            Module(m) => {
-                extract_spec_module(spec_modules, None, m).map(|m| (address_map, Module(m)))
-            }
-            Address(mut a) => {
-                let addr_ = Some(&a.addr.value);
-                a.modules = a
-                    .modules
-                    .into_iter()
-                    .filter_map(|m| extract_spec_module(spec_modules, addr_, m))
-                    .collect::<Vec<_>>();
-                Some((address_map, Address(a)))
-            }
-            Definition::Script(s) => Some((address_map, Script(s))),
-        })
+        .filter_map(
+            |PackageDefinition {
+                 package,
+                 named_address_map,
+                 def,
+             }| {
+                let def = match def {
+                    Definition::Module(m) => {
+                        Definition::Module(extract_spec_module(spec_modules, None, m)?)
+                    }
+                    Definition::Address(mut a) => {
+                        let addr_ = Some(&a.addr.value);
+                        a.modules = a
+                            .modules
+                            .into_iter()
+                            .filter_map(|m| extract_spec_module(spec_modules, addr_, m))
+                            .collect::<Vec<_>>();
+                        Definition::Address(a)
+                    }
+                    Definition::Script(s) => Definition::Script(s),
+                };
+                Some(PackageDefinition {
+                    package,
+                    named_address_map,
+                    def,
+                })
+            },
+        )
         .collect()
 }
 
@@ -106,11 +120,11 @@ fn extract_spec_module(
 
 fn merge_spec_modules(
     spec_modules: &mut BTreeMap<(Option<LeadingNameAccess_>, Symbol), ModuleDefinition>,
-    defs: &mut [(NamedAddressMapIndex, Definition)],
+    defs: &mut [PackageDefinition],
 ) {
     use Definition::*;
-    // TODO check address mappings line up
-    for (_address_map, def) in defs.iter_mut() {
+    // TODO check package name and address mappings line up
+    for PackageDefinition { def, .. } in defs {
         match def {
             Module(m) => merge_spec_module(spec_modules, None, m),
             Address(a) => {

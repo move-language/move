@@ -56,8 +56,15 @@ macro_rules! new_name {
 #[derive(Debug, Clone)]
 pub struct Program {
     pub named_address_maps: NamedAddressMaps,
-    pub source_definitions: Vec<(NamedAddressMapIndex, Definition)>,
-    pub lib_definitions: Vec<(NamedAddressMapIndex, Definition)>,
+    pub source_definitions: Vec<PackageDefinition>,
+    pub lib_definitions: Vec<PackageDefinition>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PackageDefinition {
+    pub package: Option<Symbol>,
+    pub named_address_map: NamedAddressMapIndex,
+    pub def: Definition,
 }
 
 #[derive(Debug, Clone)]
@@ -968,17 +975,33 @@ impl AstDebug for Program {
             lib_definitions,
         } = self;
         w.writeln("------ Lib Defs: ------");
-        for (idx, src) in lib_definitions {
-            named_address_maps.get(*idx).ast_debug(w);
-            src.ast_debug(w);
+        for def in lib_definitions {
+            ast_debug_package_definition(w, named_address_maps, def)
         }
         w.new_line();
         w.writeln("------ Source Defs: ------");
-        for (idx, src) in source_definitions {
-            named_address_maps.get(*idx).ast_debug(w);
-            src.ast_debug(w);
+        for def in source_definitions {
+            ast_debug_package_definition(w, named_address_maps, def)
         }
     }
+}
+
+fn ast_debug_package_definition(
+    w: &mut AstWriter,
+    named_address_maps: &NamedAddressMaps,
+    pkg: &PackageDefinition,
+) {
+    let PackageDefinition {
+        package,
+        named_address_map,
+        def,
+    } = pkg;
+    match package {
+        Some(n) => w.writeln(&format!("package: {}", n)),
+        None => w.writeln("no package"),
+    }
+    named_address_maps.get(*named_address_map).ast_debug(w);
+    def.ast_debug(w);
 }
 
 impl AstDebug for NamedAddressMap {

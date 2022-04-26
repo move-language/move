@@ -84,12 +84,10 @@ fn move_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
 fn run_test(path: &Path, exp_path: &Path, out_path: &Path, flags: Flags) -> anyhow::Result<()> {
     let targets: Vec<String> = vec![path.to_str().unwrap().to_owned()];
 
-    let (files, comments_and_compiler_res) = Compiler::new(
-        vec![(targets, default_testing_addresses())],
-        vec![(
-            move_stdlib::move_stdlib_files(),
-            default_testing_addresses(),
-        )],
+    let (files, comments_and_compiler_res) = Compiler::from_files(
+        targets,
+        move_stdlib::move_stdlib_files(),
+        default_testing_addresses(),
     )
     .set_flags(flags)
     .run::<PASS_PARSER>()?;

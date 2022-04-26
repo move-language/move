@@ -9,7 +9,7 @@ use move_to_yul::{generator::Generator, options::Options};
 use primitive_types::{H160, U256};
 use std::path::{Path, PathBuf};
 
-use move_compiler::shared::NumericalAddress;
+use move_compiler::shared::{NumericalAddress, PackagePaths};
 use move_stdlib::move_stdlib_named_addresses;
 
 pub const DISPATCHER_TESTS_LOCATION: &str = "tests/test-dispatcher";
@@ -46,21 +46,26 @@ fn compile_yul_to_bytecode_bytes(filename: &str) -> Result<Vec<u8>> {
         path_from_crate_root("../stdlib/sources"),
         path_from_crate_root("../../move-stdlib/sources"),
     ];
-    let mut named_address_mapping = move_stdlib_named_addresses();
-    named_address_mapping.insert(
+    let mut named_address_map = move_stdlib_named_addresses();
+    named_address_map.insert(
         "Std".to_string(),
         NumericalAddress::parse_str("0x1").unwrap(),
     );
-    named_address_mapping.insert(
+    named_address_map.insert(
         "Evm".to_string(),
         NumericalAddress::parse_str("0x2").unwrap(),
     );
     let env = run_model_builder_with_options(
-        vec![(
-            vec![contract_path(filename).to_string_lossy().to_string()],
-            named_address_mapping.clone(),
-        )],
-        vec![(deps, named_address_mapping)],
+        vec![PackagePaths {
+            name: None,
+            paths: vec![contract_path(filename).to_string_lossy().to_string()],
+            named_address_map: named_address_map.clone(),
+        }],
+        vec![PackagePaths {
+            name: None,
+            paths: deps,
+            named_address_map,
+        }],
         ModelBuilderOptions::default(),
     )?;
     let options = Options::default();

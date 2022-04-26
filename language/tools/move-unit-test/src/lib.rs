@@ -160,13 +160,11 @@ impl UnitTestingConfig {
     ) -> Option<TestPlan> {
         let addresses =
             verify_and_create_named_address_mapping(self.named_address_values.clone()).ok()?;
-        let (files, comments_and_compiler_res) = Compiler::new(
-            vec![(source_files, addresses.clone())],
-            vec![(deps, addresses)],
-        )
-        .set_flags(Flags::testing())
-        .run::<PASS_CFGIR>()
-        .unwrap();
+        let (files, comments_and_compiler_res) =
+            Compiler::from_files(source_files, deps, addresses)
+                .set_flags(Flags::testing())
+                .run::<PASS_CFGIR>()
+                .unwrap();
         let (_, compiler) =
             diagnostics::unwrap_or_report_diagnostics(&files, comments_and_compiler_res);
 

@@ -35,9 +35,10 @@ pub fn bench<M: Measurement + 'static>(c: &mut Criterion<M>, fun: &str) {
 fn compile_modules() -> Vec<CompiledModule> {
     let mut src_files = move_stdlib::move_stdlib_files();
     src_files.push(MOVE_BENCH_SRC_PATH.to_str().unwrap().to_owned());
-    let (_files, compiled_units) = Compiler::new(
-        vec![(src_files, move_stdlib::move_stdlib_named_addresses())],
+    let (_files, compiled_units) = Compiler::from_files(
+        src_files,
         vec![],
+        move_stdlib::move_stdlib_named_addresses(),
     )
     .build_and_report()
     .expect("Error compiling...");

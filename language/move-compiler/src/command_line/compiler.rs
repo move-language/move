@@ -10,8 +10,8 @@ use crate::{
     expansion, hlir, interface_generator, naming, parser,
     parser::{comments::*, *},
     shared::{
-        AddressScopedFileIndexed, AddressScopedFiles, CompilationEnv, Flags, NamedAddressMap,
-        NamedAddressMaps,
+        CompilationEnv, Flags, IndexedPackagePath, NamedAddressMap, NamedAddressMaps,
+        NumericalAddress, PackagePaths,
     },
     to_bytecode, typing, unit_test,
 };
@@ -35,8 +35,8 @@ use tempfile::NamedTempFile;
 
 pub struct Compiler<'a> {
     maps: NamedAddressMaps,
-    targets: Vec<AddressScopedFileIndexed>,
-    deps: Vec<AddressScopedFileIndexed>,
+    targets: Vec<IndexedPackagePath>,
+    deps: Vec<IndexedPackagePath>,
     interface_files_dir_opt: Option<String>,
     pre_compiled_lib: Option<&'a FullyCompiledProgram>,
     compiled_module_named_address_mapping: BTreeMap<CompiledModuleId, String>,
@@ -88,23 +88,32 @@ pub struct FullyCompiledProgram {
 //**************************************************************************************************
 
 impl<'a> Compiler<'a> {
-    pub fn new<Paths: Into<Symbol>, NamedAddress: Into<Symbol>>(
-        targets: Vec<AddressScopedFiles<Paths, NamedAddress>>,
-        deps: Vec<AddressScopedFiles<Paths, NamedAddress>>,
+    pub fn from_package_paths<Paths: Into<Symbol>, NamedAddress: Into<Symbol>>(
+        targets: Vec<PackagePaths<Paths, NamedAddress>>,
+        deps: Vec<PackagePaths<Paths, NamedAddress>>,
     ) -> Self {
         fn indexed_scopes(
             maps: &mut NamedAddressMaps,
-            all_paths: Vec<AddressScopedFiles<impl Into<Symbol>, impl Into<Symbol>>>,
-        ) -> Vec<AddressScopedFileIndexed> {
+            all_pkgs: Vec<PackagePaths<impl Into<Symbol>, impl Into<Symbol>>>,
+        ) -> Vec<IndexedPackagePath> {
             let mut idx_paths = vec![];
-            for (paths, mapping) in all_paths {
+            for PackagePaths {
+                name,
+                paths,
+                named_address_map,
+            } in all_pkgs
+            {
                 let idx = maps.insert(
-                    mapping
+                    named_address_map
                         .into_iter()
                         .map(|(k, v)| (k.into(), v))
                         .collect::<NamedAddressMap>(),
                 );
-                idx_paths.extend(paths.into_iter().map(|p| (p.into(), idx)));
+                idx_paths.extend(paths.into_iter().map(|path| IndexedPackagePath {
+                    package: name,
+                    path: path.into(),
+                    named_address_map: idx,
+                }))
             }
             idx_paths
         }
@@ -121,6 +130,24 @@ impl<'a> Compiler<'a> {
             compiled_module_named_address_mapping: BTreeMap::new(),
             flags: Flags::empty(),
         }
+    }
+
+    pub fn from_files<Paths: Into<Symbol>, NamedAddress: Into<Symbol> + Clone>(
+        targets: Vec<Paths>,
+        deps: Vec<Paths>,
+        named_address_map: BTreeMap<NamedAddress, NumericalAddress>,
+    ) -> Self {
+        let targets = vec![PackagePaths {
+            name: None,
+            paths: targets,
+            named_address_map: named_address_map.clone(),
+        }];
+        let deps = vec![PackagePaths {
+            name: None,
+            paths: deps,
+            named_address_map,
+        }];
+        Self::from_package_paths(targets, deps)
     }
 
     pub fn set_flags(mut self, flags: Flags) -> Self {
@@ -387,17 +414,15 @@ impl<'a> SteppedCompiler<'a, PASS_COMPILATION> {
 /// Given a set of dependencies, precompile them and save the ASTs so that they can be used again
 /// to compile against without having to recompile these dependencies
 pub fn construct_pre_compiled_lib<Paths: Into<Symbol>, NamedAddress: Into<Symbol>>(
-    targets: Vec<AddressScopedFiles<Paths, NamedAddress>>,
+    targets: Vec<PackagePaths<Paths, NamedAddress>>,
     interface_files_dir_opt: Option<String>,
     flags: Flags,
 ) -> anyhow::Result<Result<FullyCompiledProgram, (FilesSourceText, Diagnostics)>> {
-    let (files, pprog_and_comments_res) = Compiler::new(
-        targets,
-        Vec::<AddressScopedFiles<Paths, NamedAddress>>::new(),
-    )
-    .set_interface_files_dir_opt(interface_files_dir_opt)
-    .set_flags(flags)
-    .run::<PASS_PARSER>()?;
+    let (files, pprog_and_comments_res) =
+        Compiler::from_package_paths(targets, Vec::<PackagePaths<Paths, NamedAddress>>::new())
+            .set_interface_files_dir_opt(interface_files_dir_opt)
+            .set_flags(flags)
+            .run::<PASS_PARSER>()?;
 
     let (_comments, stepped) = match pprog_and_comments_res {
         Err(errors) => return Ok(Err((files, errors))),
@@ -573,36 +598,45 @@ pub fn output_compiled_units(
 }
 
 fn generate_interface_files_for_deps(
-    deps: &mut Vec<AddressScopedFileIndexed>,
+    deps: &mut Vec<IndexedPackagePath>,
     interface_files_dir_opt: Option<String>,
-    named_address_mapping: &BTreeMap<CompiledModuleId, String>,
+    module_to_named_address: &BTreeMap<CompiledModuleId, String>,
 ) -> anyhow::Result<()> {
     let interface_files_paths =
-        generate_interface_files(deps, interface_files_dir_opt, named_address_mapping, true)?;
+        generate_interface_files(deps, interface_files_dir_opt, module_to_named_address, true)?;
     deps.extend(interface_files_paths);
     Ok(())
 }
 
 pub fn generate_interface_files(
-    mv_file_locations: &mut [AddressScopedFileIndexed],
+    mv_file_locations: &mut [IndexedPackagePath],
     interface_files_dir_opt: Option<String>,
-    named_address_mapping: &BTreeMap<CompiledModuleId, String>,
+    module_to_named_address: &BTreeMap<CompiledModuleId, String>,
     separate_by_hash: bool,
-) -> anyhow::Result<Vec<AddressScopedFileIndexed>> {
+) -> anyhow::Result<Vec<IndexedPackagePath>> {
     let mv_files = {
         let mut v = vec![];
         let (mv_magic_files, other_file_locations): (Vec<_>, Vec<_>) =
             mv_file_locations.iter().cloned().partition(|s| {
-                Path::new(s.0.as_str()).is_file() && has_compiled_module_magic_number(&s.0)
+                Path::new(s.path.as_str()).is_file() && has_compiled_module_magic_number(&s.path)
             });
         v.extend(mv_magic_files);
-        for (file, address_mapping) in other_file_locations {
+        for IndexedPackagePath {
+            package,
+            path,
+            named_address_map,
+        } in other_file_locations
+        {
             v.extend(
-                find_filenames(&[file.as_str()], |path| {
+                find_filenames(&[path.as_str()], |path| {
                     extension_equals(path, MOVE_COMPILED_EXTENSION)
                 })?
                 .into_iter()
-                .map(|f| (Symbol::from(f), address_mapping)),
+                .map(|path| IndexedPackagePath {
+                    package,
+                    path: path.into(),
+                    named_address_map,
+                }),
             );
         }
         v
@@ -624,8 +658,8 @@ pub fn generate_interface_files(
         let mut hasher = DefaultHasher::new();
         mv_files.len().hash(&mut hasher);
         HASH_DELIM.hash(&mut hasher);
-        for (mv_file, _) in &mv_files {
-            std::fs::read(mv_file.as_str())?.hash(&mut hasher);
+        for IndexedPackagePath { path, .. } in &mv_files {
+            std::fs::read(path.as_str())?.hash(&mut hasher);
             HASH_DELIM.hash(&mut hasher);
         }
 
@@ -637,15 +671,21 @@ pub fn generate_interface_files(
     };
 
     let mut result = vec![];
-    for (mv_file, idx) in mv_files {
+    for IndexedPackagePath {
+        path,
+        package,
+        named_address_map,
+    } in mv_files
+    {
         let (id, interface_contents) =
-            interface_generator::write_file_to_string(named_address_mapping, &mv_file)?;
+            interface_generator::write_file_to_string(module_to_named_address, &path)?;
         let addr_dir = dir_path!(all_addr_dir.clone(), format!("{}", id.address()));
         let file_path = file_path!(addr_dir.clone(), format!("{}", id.name()), MOVE_EXTENSION);
-        result.push((
-            Symbol::from(file_path.clone().into_os_string().into_string().unwrap()),
-            idx,
-        ));
+        result.push(IndexedPackagePath {
+            path: Symbol::from(file_path.clone().into_os_string().into_string().unwrap()),
+            package,
+            named_address_map,
+        });
         // it's possible some files exist but not others due to multithreaded environments
         if separate_by_hash && Path::new(&file_path).is_file() {
             continue;

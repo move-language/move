@@ -314,10 +314,7 @@ pub fn shortest_cycle<'a, T: Ord + Hash>(
 // Compilation Env
 //**************************************************************************************************
 
-pub type AddressScopedFiles<Path, NamedAddress> =
-    (Vec<Path>, BTreeMap<NamedAddress, NumericalAddress>);
 pub type NamedAddressMap = BTreeMap<Symbol, NumericalAddress>;
-pub(crate) type AddressScopedFileIndexed = (Symbol, NamedAddressMapIndex);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct NamedAddressMapIndex(usize);
@@ -339,6 +336,20 @@ impl NamedAddressMaps {
     pub fn get(&self, idx: NamedAddressMapIndex) -> &NamedAddressMap {
         &self.0[idx.0]
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PackagePaths<Path: Into<Symbol> = Symbol, NamedAddress: Into<Symbol> = Symbol> {
+    pub name: Option<Symbol>,
+    pub paths: Vec<Path>,
+    pub named_address_map: BTreeMap<NamedAddress, NumericalAddress>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct IndexedPackagePath {
+    pub package: Option<Symbol>,
+    pub path: Symbol,
+    pub named_address_map: NamedAddressMapIndex,
 }
 
 pub type AttributeDeriver = dyn Fn(&mut CompilationEnv, &mut ModuleDefinition);

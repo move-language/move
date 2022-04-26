@@ -5,7 +5,7 @@ use anyhow::{anyhow, Result};
 use clap::Parser;
 use std::collections::BTreeMap;
 
-use move_compiler::shared::{parse_named_address, NumericalAddress};
+use move_compiler::shared::{parse_named_address, NumericalAddress, PackagePaths};
 use move_model::{
     ast::Spec,
     model::{FunId, GlobalEnv, QualifiedId, VerificationScope},
@@ -97,8 +97,16 @@ pub(crate) fn prepare_with_override(
 
     // run move model builder
     let mut env = run_model_builder_with_options(
-        vec![(options.srcs.clone(), named_addresses.clone())],
-        vec![(options.deps.clone(), named_addresses.clone())],
+        vec![PackagePaths {
+            name: None,
+            paths: options.srcs.clone(),
+            named_address_map: named_addresses.clone(),
+        }],
+        vec![PackagePaths {
+            name: None,
+            paths: options.deps.clone(),
+            named_address_map: named_addresses.clone(),
+        }],
         get_model_options(options),
     )?;
     if env.has_errors() {

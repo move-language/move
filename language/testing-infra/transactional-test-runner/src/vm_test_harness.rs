@@ -14,7 +14,9 @@ use move_binary_format::{
     CompiledModule,
 };
 use move_command_line_common::files::verify_and_create_named_address_mapping;
-use move_compiler::{compiled_unit::AnnotatedCompiledUnit, FullyCompiledProgram};
+use move_compiler::{
+    compiled_unit::AnnotatedCompiledUnit, shared::PackagePaths, FullyCompiledProgram,
+};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
@@ -305,10 +307,11 @@ impl<'a> SimpleVMTestAdapter<'a> {
 
 static PRECOMPILED_MOVE_STDLIB: Lazy<FullyCompiledProgram> = Lazy::new(|| {
     let program_res = move_compiler::construct_pre_compiled_lib(
-        vec![(
-            move_stdlib::move_stdlib_files(),
-            move_stdlib::move_stdlib_named_addresses(),
-        )],
+        vec![PackagePaths {
+            name: None,
+            paths: move_stdlib::move_stdlib_files(),
+            named_address_map: move_stdlib::move_stdlib_named_addresses(),
+        }],
         None,
         move_compiler::Flags::empty(),
     )
@@ -323,12 +326,10 @@ static PRECOMPILED_MOVE_STDLIB: Lazy<FullyCompiledProgram> = Lazy::new(|| {
 });
 
 static MOVE_STDLIB_COMPILED: Lazy<Vec<CompiledModule>> = Lazy::new(|| {
-    let (files, units_res) = move_compiler::Compiler::new(
-        vec![(
-            move_stdlib::move_stdlib_files(),
-            move_stdlib::move_stdlib_named_addresses(),
-        )],
+    let (files, units_res) = move_compiler::Compiler::from_files(
+        move_stdlib::move_stdlib_files(),
         vec![],
+        move_stdlib::move_stdlib_named_addresses(),
     )
     .build()
     .unwrap();

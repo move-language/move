@@ -46,12 +46,36 @@ pub fn program(compilation_env: &mut CompilationEnv, prog: P::Program) -> P::Pro
 
     let lib_definitions: Vec<_> = lib_definitions
         .into_iter()
-        .filter_map(|(am, def)| Some((am, filter_tests_from_definition(&mut context, def, false)?)))
+        .filter_map(
+            |P::PackageDefinition {
+                 package,
+                 named_address_map,
+                 def,
+             }| {
+                Some(P::PackageDefinition {
+                    package,
+                    named_address_map,
+                    def: filter_tests_from_definition(&mut context, def, false)?,
+                })
+            },
+        )
         .collect();
 
     let source_definitions: Vec<_> = source_definitions
         .into_iter()
-        .filter_map(|(am, def)| Some((am, filter_tests_from_definition(&mut context, def, true)?)))
+        .filter_map(
+            |P::PackageDefinition {
+                 package,
+                 named_address_map,
+                 def,
+             }| {
+                Some(P::PackageDefinition {
+                    package,
+                    named_address_map,
+                    def: filter_tests_from_definition(&mut context, def, true)?,
+                })
+            },
+        )
         .collect();
 
     P::Program {
@@ -66,7 +90,7 @@ fn check_has_unit_test_module(context: &mut Context, prog: &P::Program) -> bool 
         .lib_definitions
         .iter()
         .chain(prog.source_definitions.iter())
-        .any(|(_, def)| match def {
+        .any(|pkg| match &pkg.def {
             P::Definition::Module(mdef) => {
                 mdef.name.0.value.as_str() == UNIT_TEST_MODULE_NAME
                     && mdef.address.is_some()
@@ -82,7 +106,7 @@ fn check_has_unit_test_module(context: &mut Context, prog: &P::Program) -> bool 
         });
 
     if !has_unit_test_module && context.env.flags().is_testing() {
-        if let Some((_, def)) = prog
+        if let Some(P::PackageDefinition { def, .. }) = prog
             .source_definitions
             .iter()
             .chain(prog.lib_definitions.iter())

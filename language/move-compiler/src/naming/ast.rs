@@ -33,6 +33,8 @@ pub struct Program {
 
 #[derive(Debug, Clone)]
 pub struct Script {
+    // package name metadata from compiler arguments, not used for any language rules
+    pub package_name: Option<Symbol>,
     pub attributes: Attributes,
     pub loc: Loc,
     pub constants: UniqueMap<ConstantName, Constant>,
@@ -46,6 +48,8 @@ pub struct Script {
 
 #[derive(Debug, Clone)]
 pub struct ModuleDefinition {
+    // package name metadata from compiler arguments, not used for any language rules
+    pub package_name: Option<Symbol>,
     pub attributes: Attributes,
     pub is_source_module: bool,
     /// `dependency_order` is the topological order/rank in the dependency graph.
@@ -579,12 +583,16 @@ impl AstDebug for Program {
 impl AstDebug for Script {
     fn ast_debug(&self, w: &mut AstWriter) {
         let Script {
+            package_name,
             attributes,
             loc: _loc,
             constants,
             function_name,
             function,
         } = self;
+        if let Some(n) = package_name {
+            w.writeln(&format!("{}", n))
+        }
         attributes.ast_debug(w);
         for cdef in constants.key_cloned_iter() {
             cdef.ast_debug(w);
@@ -597,6 +605,7 @@ impl AstDebug for Script {
 impl AstDebug for ModuleDefinition {
     fn ast_debug(&self, w: &mut AstWriter) {
         let ModuleDefinition {
+            package_name,
             attributes,
             is_source_module,
             dependency_order,
@@ -605,6 +614,9 @@ impl AstDebug for ModuleDefinition {
             constants,
             functions,
         } = self;
+        if let Some(n) = package_name {
+            w.writeln(&format!("{}", n))
+        }
         attributes.ast_debug(w);
         if *is_source_module {
             w.writeln("library module")

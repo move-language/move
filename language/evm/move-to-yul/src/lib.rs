@@ -24,6 +24,7 @@ mod yul_functions;
 use crate::{generator::Generator, options::Options};
 use anyhow::anyhow;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
+use move_compiler::shared::PackagePaths;
 use move_model::{
     model::GlobalEnv, options::ModelBuilderOptions, parse_addresses_from_options,
     run_model_builder_with_options,
@@ -41,8 +42,16 @@ pub fn run_to_yul<W: WriteColor>(error_writer: &mut W, mut options: Options) -> 
     // Run the model builder.
     let addrs = parse_addresses_from_options(options.named_address_mapping.clone())?;
     let env = run_model_builder_with_options(
-        vec![(options.sources.clone(), addrs.clone())],
-        vec![(options.dependencies.clone(), addrs)],
+        vec![PackagePaths {
+            name: None,
+            paths: options.sources.clone(),
+            named_address_map: addrs.clone(),
+        }],
+        vec![PackagePaths {
+            name: None,
+            paths: options.dependencies.clone(),
+            named_address_map: addrs,
+        }],
         ModelBuilderOptions::default(),
     )?;
     // If the model contains any errors, report them now and exit.

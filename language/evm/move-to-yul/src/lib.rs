@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+mod abi_native_functions;
 mod abi_signature;
 mod attributes;
 mod context;

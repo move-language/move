@@ -603,20 +603,7 @@ CopyMemory: "(src, dst, size) {
     let src_word := and(mload(add(src, overflow_offs)), not(mask))
     mstore(add(dst, overflow_offs), or(dst_word, src_word))
   }
-}",
-
-CopyMemoryU8: "(src, dst, size) {
-  let i := 0
-  for { } lt(i, size) { i := add(i, 32) } {
-    mstore(add(dst, i), mload(add(src, i)))
-  }
-  if gt(i, size)
-  {
-      for {let j := i} lt(j, size) {j := add(j, 1)} {
-        mstore8(add(dst, j), 0)
-      }
-  }
-}",
+}" dep ToWordOffs,
 
 CheckMemorySize: "(len) -> checked_len {
     if gt(len, 0xffffffffffffffff) { $AbortBuiltin() }

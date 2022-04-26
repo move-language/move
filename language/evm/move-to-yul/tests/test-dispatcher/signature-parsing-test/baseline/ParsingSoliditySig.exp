@@ -179,7 +179,7 @@ object "A2_M" {
             function abi_decode_available_length__string(src, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 if gt(add(src, sub(size, 32)), end) { $Abort(93) }
                 $CopyFromCallDataToMemory(src, dst, length)
@@ -226,7 +226,7 @@ object "A2_M" {
             function abi_decode_available_length__bytes32(src, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 if gt(add(src, sub(size, 32)), end) { $Abort(93) }
                 $CopyFromCallDataToMemory(src, dst, length)
@@ -240,7 +240,7 @@ object "A2_M" {
             function abi_decode_available_length__bytes1(src, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 if gt(add(src, sub(size, 32)), end) { $Abort(93) }
                 $CopyFromCallDataToMemory(src, dst, length)
@@ -254,7 +254,7 @@ object "A2_M" {
             function abi_decode_available_length__bytes_2__vec$vec$u8$$(offset, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 let srcEnd := add(offset, mul(length, 32))
                 if gt(srcEnd, end) { $Abort(94) }
@@ -277,7 +277,7 @@ object "A2_M" {
             function abi_decode_available_length__bytes(src, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 if gt(add(src, sub(size, 32)), end) { $Abort(93) }
                 $CopyFromCallDataToMemory(src, dst, length)
@@ -291,7 +291,7 @@ object "A2_M" {
             function abi_decode_available_length__address___vec$address$(offset, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 let srcEnd := add(offset, mul(length, 32))
                 if gt(srcEnd, end) { $Abort(94) }
@@ -322,7 +322,7 @@ object "A2_M" {
             function abi_decode_available_length__int120_3____5__vec$vec$vec$u128$$$(offset, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 let srcEnd := add(offset, mul(length, 32))
                 if gt(srcEnd, end) { $Abort(94) }
@@ -345,7 +345,7 @@ object "A2_M" {
             function abi_decode_available_length__int120_3____vec$vec$u128$$(offset, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 let srcEnd := add(offset, mul(length, 96))
                 if gt(srcEnd, end) { $Abort(94) }
@@ -366,7 +366,7 @@ object "A2_M" {
             function abi_decode_available_length__int120_3__vec$u128$(offset, length, size, end) -> array {
                 array := $Malloc($CheckMemorySize(size))
                 $MemoryStoreU64(array, length)
-                $MemoryStoreU64(add(array, 8), length)
+                $MemoryStoreU64(add(array, 8), $ClosestGreaterPowerOfTwo(length))
                 let dst := add(array, 32)
                 let srcEnd := add(offset, mul(length, 32))
                 if gt(srcEnd, end) { $Abort(94) }
@@ -493,6 +493,15 @@ object "A2_M" {
             }
             function $Shr(x, y) -> r {
                 r := shr(y, x)
+            }
+            function $ClosestGreaterPowerOfTwo(x) -> r {
+                r := or(r, shr(1, x))
+                r := or(r, shr(2, r))
+                r := or(r, shr(4, r))
+                r := or(r, shr(8, r))
+                r := or(r, shr(16, r))
+                r := or(r, shr(32, r))
+                r := add(x, 1)
             }
         }
     }

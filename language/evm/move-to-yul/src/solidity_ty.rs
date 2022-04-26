@@ -194,13 +194,13 @@ impl SolidityType {
     }
 
     /// Parse a move type into a solidity type
-    pub(crate) fn translate_from_move(ctx: &Context, ty: &Type) -> Self {
+    pub(crate) fn translate_from_move(ctx: &Context, ty: &Type, bytes_flag: bool) -> Self {
         use PrimitiveType::*;
         use Type::*;
         let generate_tuple = |tys: &Vec<Type>| {
             let s_type = tys
                 .iter()
-                .map(|t| Self::translate_from_move(ctx, t))
+                .map(|t| Self::translate_from_move(ctx, t, bytes_flag))
                 .collect::<Vec<_>>();
             SolidityType::Tuple(s_type)
         };
@@ -217,7 +217,15 @@ impl SolidityType {
                 }
             },
             Vector(ety) => {
-                SolidityType::DynamicArray(Box::new(Self::translate_from_move(ctx, ety)))
+                if bytes_flag {
+                    if let Primitive(U8) = **ety {
+                        // translate vector<u8> to Bytes
+                        return SolidityType::Bytes;
+                    }
+                }
+                SolidityType::DynamicArray(Box::new(Self::translate_from_move(
+                    ctx, ety, bytes_flag,
+                )))
             }
             Tuple(tys) => generate_tuple(tys),
             Struct(mid, sid, _) => {
@@ -420,7 +428,7 @@ impl SolidityType {
                     }
                 },
                 StaticArray(ty, size) => {
-                    let mut size = ty.abi_head_size(padded) * size;
+                    let mut size = ty.abi_head_size(true) * size;
                     if padded {
                         size = ((size + 31) / 32) * 32;
                     }
@@ -491,15 +499,11 @@ impl fmt::Display for SoliditySignature {
 
 impl SoliditySignature {
     /// Create a default solidity signature from a move function signature
-    pub fn create_default_solidity_signature(
-        ctx: &Context,
-        fun: &FunctionEnv<'_>,
-        ty_opt: Option<Type>,
-    ) -> Self {
+    pub(crate) fn create_default_solidity_signature(ctx: &Context, fun: &FunctionEnv<'_>) -> Self {
         let fun_name = fun.symbol_pool().string(fun.get_name()).to_string();
         let mut para_type_lst = vec![];
         for Parameter(para_name, move_ty) in fun.get_parameters() {
-            let solidity_ty = SolidityType::translate_from_move(ctx, &move_ty); // implicit mapping from a move type to a solidity type
+            let solidity_ty = SolidityType::translate_from_move(ctx, &move_ty, false); // implicit mapping from a move type to a solidity type
             para_type_lst.push((
                 solidity_ty,
                 fun.symbol_pool().string(para_name).to_string(),
@@ -507,16 +511,9 @@ impl SoliditySignature {
             ));
         }
         let mut ret_type_lst = vec![];
-        if let Some(move_ty) = ty_opt {
-            if !ctx.is_unit_ty(&move_ty) {
-                let solidity_ty = SolidityType::translate_from_move(ctx, &move_ty);
-                ret_type_lst.push((solidity_ty, SignatureDataLocation::Memory));
-            }
-        } else {
-            for move_ty in fun.get_return_types() {
-                let solidity_ty = SolidityType::translate_from_move(ctx, &move_ty);
-                ret_type_lst.push((solidity_ty, SignatureDataLocation::Memory));
-            }
+        for move_ty in fun.get_return_types() {
+            let solidity_ty = SolidityType::translate_from_move(ctx, &move_ty, false);
+            ret_type_lst.push((solidity_ty, SignatureDataLocation::Memory));
         }
 
         SoliditySignature {

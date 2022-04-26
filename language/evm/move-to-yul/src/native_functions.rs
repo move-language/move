@@ -51,19 +51,12 @@ impl NativeFunctions {
         } else {
             let fun = &ctx.env.get_function(fun_id.to_qualified_id());
             if attributes::is_external_fun(fun) {
-                if let Some(extracted_sig_str) = attributes::extract_external_signature(fun) {
-                    self.define_external_fun(gen, ctx, fun_id, &extracted_sig_str)
-                } else {
-                    ctx.env.error(
-                        &gen.parent.contract_loc,
-                        &format!(
-                            "external function {} must have a valid solidity signature",
-                            ctx.env
-                                .get_function(fun_id.to_qualified_id())
-                                .get_full_name_str()
-                        ),
-                    )
-                }
+                self.define_external_fun(
+                    gen,
+                    ctx,
+                    fun_id,
+                    attributes::extract_external_signature(fun),
+                )
             } else if self.is_emit_fun(fun) {
                 let elem_type = fun_id.inst.get(0).unwrap(); // obtain the event type
                 if let Type::Struct(mid, sid, inst) = elem_type {
@@ -88,6 +81,24 @@ impl NativeFunctions {
                         )
                     }
                 }
+            } else if attributes::is_decode(fun) {
+                self.define_decode_fun(gen, ctx, fun_id, attributes::extract_decode_signature(fun));
+            } else if attributes::is_encode(fun) {
+                self.define_encode_fun(
+                    gen,
+                    ctx,
+                    fun_id,
+                    attributes::extract_encode_signature(fun, false),
+                    false,
+                )
+            } else if attributes::is_encode_packed(fun) {
+                self.define_encode_fun(
+                    gen,
+                    ctx,
+                    fun_id,
+                    attributes::extract_encode_signature(fun, true),
+                    true,
+                )
             } else {
                 ctx.env.error(
                     &gen.parent.contract_loc,
@@ -198,7 +209,7 @@ impl NativeFunctions {
                 ),
                 gen.parent.call_builtin_str(
                     ctx,
-                    YulFunction::CopyMemoryU8,
+                    YulFunction::CopyMemory,
                     vec![
                         "add(message, 32)".to_string(),
                         "pos".to_string(),

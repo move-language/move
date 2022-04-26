@@ -2,6 +2,7 @@
 name = "move-bytecode-viewer"
 version = "0.1.0"
 authors = ["Diem Association <opensource@diem.com>"]
+description = "Explore Move bytecode and how the source code compiles to it"
 license = "Apache-2.0"
 publish = false
 edition = "2018"

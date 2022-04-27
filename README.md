@@ -17,3 +17,5 @@ This repository is the official home of the Move virtual machine, bytecode verif
 ## License
 
 Move is licensed as [Apache 2.0](https://github.com/move-language/move/blob/main/LICENSE).
+
+This is just a test.

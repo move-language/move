@@ -28,7 +28,7 @@ fn verify_string(string: &str) -> Result<()> {
             bail!(
                 "Parser Error: invalid character {} found when reading file.\
                  Only ascii printable, tabs (\\t), and \\n line ending characters are permitted.",
-                chr
+                chr.escape_default()
             )
         })
 }
@@ -104,5 +104,15 @@ mod tests {
             assert!(super::verify_string(s).is_err());
             good_chars.pop();
         }
+    }
+
+    #[test]
+    fn test_verify_string_error_escapes_unicode() {
+        let checkmark = "✓";
+        let result = super::verify_string(checkmark);
+        let diagnostics = result.unwrap_err();
+        let err_msg = format!("{:?}", diagnostics);
+        assert!(err_msg.contains(&checkmark.escape_default().to_string()));
+        assert!(!err_msg.contains(&checkmark));
     }
 }

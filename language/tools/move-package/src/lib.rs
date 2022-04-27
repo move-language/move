@@ -8,7 +8,6 @@ pub mod source_package;
 
 use anyhow::{bail, Result};
 use clap::*;
-use compilation::compiled_package::CompilationCachingStatus;
 use move_core_types::account_address::AccountAddress;
 use move_model::model::GlobalEnv;
 use serde::{Deserialize, Serialize};
@@ -159,7 +158,11 @@ pub struct ModelConfig {
 impl BuildConfig {
     /// Compile the package at `path` or the containing Move package.
     pub fn compile_package<W: Write>(self, path: &Path, writer: &mut W) -> Result<CompiledPackage> {
-        Ok(self.compile_package_with_caching_info(path, writer)?.0)
+        let resolved_graph = self.resolution_graph_for_package(path)?;
+        let mutx = PackageLock::lock();
+        let ret = BuildPlan::create(resolved_graph)?.compile(writer);
+        mutx.unlock();
+        ret
     }
 
     #[cfg(feature = "evm-backend")]
@@ -167,20 +170,6 @@ impl BuildConfig {
         let resolved_graph = self.resolution_graph_for_package(path)?;
         let mutx = PackageLock::lock();
         let ret = BuildPlan::create(resolved_graph)?.compile_evm(writer);
-        mutx.unlock();
-        ret
-    }
-
-    /// Compile the package at `path` or the containing Move package and return whether or not all
-    /// packages and dependencies were cached or not.
-    pub fn compile_package_with_caching_info<W: Write>(
-        self,
-        path: &Path,
-        writer: &mut W,
-    ) -> Result<(CompiledPackage, CompilationCachingStatus)> {
-        let resolved_graph = self.resolution_graph_for_package(path)?;
-        let mutx = PackageLock::lock();
-        let ret = BuildPlan::create(resolved_graph)?.compile(writer);
         mutx.unlock();
         ret
     }

@@ -6,7 +6,7 @@ use crate::{
     resolution::resolution_graph::{Renaming, ResolvedGraph, ResolvedPackage, ResolvedTable},
     source_package::{
         layout::{SourcePackageLayout, REFERENCE_TEMPLATE_FILENAME},
-        parsed_manifest::{FileName, NamedAddress, PackageDigest, PackageName},
+        parsed_manifest::{FileName, PackageDigest, PackageName},
     },
     BuildConfig,
 };
@@ -21,13 +21,12 @@ use move_command_line_common::files::{
 };
 use move_compiler::{
     compiled_unit::{
-        AnnotatedCompiledUnit, CompiledUnit, NamedCompiledModule, NamedCompiledScript,
+        self, AnnotatedCompiledUnit, CompiledUnit, NamedCompiledModule, NamedCompiledScript,
     },
     diagnostics::FilesSourceText,
     shared::{Flags, NamedAddressMap, NumericalAddress, PackagePaths},
     Compiler,
 };
-use move_core_types::language_storage::ModuleId;
 use move_docgen::{Docgen, DocgenOptions};
 use move_model::{model::GlobalEnv, options::ModelBuilderOptions, run_model_builder_with_options};
 use move_symbol_pool::Symbol;
@@ -37,9 +36,6 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-
-/// Module resolution data
-pub type ModuleResolutionMetadata = BTreeMap<ModuleId, NamedAddress>;
 
 #[derive(Debug, Clone)]
 pub enum CompilationCachingStatus {
@@ -63,9 +59,6 @@ pub struct CompiledPackageInfo {
     pub package_name: PackageName,
     /// The instantiations for all named addresses that were used for compilation
     pub address_alias_instantiation: ResolvedTable,
-    /// The module resolution {<addr>::<module_name> |-> <named_address>} mapping used for
-    /// compiling against bytecode using named addresses and to allow address renaming.
-    pub module_resolution_metadata: ModuleResolutionMetadata,
     /// The hash of the source directory at the time of compilation. `None` if the source for this
     /// package is not available/this package was not compiled.
     pub source_digest: Option<PackageDigest>,
@@ -78,10 +71,11 @@ pub struct CompiledPackageInfo {
 pub struct CompiledPackage {
     /// Meta information about the compilation of this `CompiledPackage`
     pub compiled_package_info: CompiledPackageInfo,
-    /// The output compiled bytecode (both module, and scripts) along with its source file
-    pub compiled_units: Vec<CompiledUnitWithSource>,
-    /// Packages that this package depends on. Non-transitive dependencies.
-    pub dependencies: Vec<CompiledPackage>,
+    /// The output compiled bytecode in the root package (both module, and scripts) along with its
+    /// source file
+    pub root_compiled_units: Vec<CompiledUnitWithSource>,
+    /// The output compiled bytecode for dependencies
+    pub deps_compiled_units: Vec<(PackageName, CompiledUnitWithSource)>,
 
     // Optional artifacts from compilation
     //
@@ -100,7 +94,7 @@ pub struct OnDiskPackage {
     /// Information about the package and the specific compilation that was done.
     pub compiled_package_info: CompiledPackageInfo,
     /// Dependency names for this package.
-    pub dependencies: Vec<FileName>,
+    pub dependencies: Vec<PackageName>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -141,99 +135,19 @@ impl OnDiskCompiledPackage {
     }
 
     pub fn into_compiled_package(&self) -> Result<CompiledPackage> {
-        let compiled_units = self.get_compiled_units_paths()?;
-        let source_maps = find_filenames(
-            &[self
-                .root_path
-                .join(self.package.compiled_package_info.package_name.as_str())
-                .join(CompiledPackageLayout::SourceMaps.path())
-                .to_string_lossy()
-                .to_string()],
-            |path| extension_equals(path, SOURCE_MAP_EXTENSION),
-        )
-        .unwrap_or_else(|_| vec![]);
-        assert_eq!(
-            compiled_units.len(),
-            source_maps.len(),
-            "number of compiled units and source maps differ, {} != {}",
-            compiled_units.len(),
-            source_maps.len()
-        );
-        let package_name = Some(self.package.compiled_package_info.package_name);
-        let compiled_units = compiled_units
-            .iter()
-            .map(|bytecode_path| {
-                let bytecode_path = Path::new(bytecode_path.as_str());
-                let file_stem = bytecode_path.file_stem().unwrap();
-                let bytecode_bytes = std::fs::read(&bytecode_path)?;
-                let source_map = source_map_from_file(
-                    &CompiledPackageLayout::SourceMaps
-                        .from_sibling_path(bytecode_path)
-                        .ok_or_else(|| anyhow::format_err!("Unable to find source map"))?
-                        .join(file_stem)
-                        .with_extension(SOURCE_MAP_EXTENSION),
-                )?;
-                let source_path = CompiledPackageLayout::Sources
-                    .from_sibling_path(bytecode_path)
-                    .ok_or_else(|| anyhow::format_err!("Unable to find source file"))?
-                    .join(file_stem)
-                    .with_extension(MOVE_EXTENSION);
-                match CompiledScript::deserialize(&bytecode_bytes) {
-                    Ok(script) => {
-                        let name = FileName::from(
-                            bytecode_path
-                                .file_stem()
-                                .unwrap()
-                                .to_string_lossy()
-                                .to_string(),
-                        );
-                        let unit = CompiledUnit::Script(NamedCompiledScript {
-                            package_name,
-                            name,
-                            script,
-                            source_map,
-                        });
-                        Ok(CompiledUnitWithSource { unit, source_path })
-                    }
-                    Err(_) => {
-                        let module = CompiledModule::deserialize(&bytecode_bytes)?;
-                        let (address_bytes, module_name) = {
-                            let id = module.self_id();
-                            let parsed_addr = NumericalAddress::new(
-                                id.address().into_bytes(),
-                                move_compiler::shared::NumberFormat::Hex,
-                            );
-                            let module_name = FileName::from(id.name().as_str());
-                            (parsed_addr, module_name)
-                        };
-                        let unit = CompiledUnit::Module(NamedCompiledModule {
-                            package_name,
-                            address: address_bytes,
-                            name: module_name,
-                            module,
-                            source_map,
-                        });
-                        Ok(CompiledUnitWithSource { unit, source_path })
-                    }
-                }
-            })
+        let root_parent = self.root_path.parent().unwrap();
+        let root_name = self.package.compiled_package_info.package_name;
+        let root_compiled_units = Self::get_compiled_units_paths(&root_parent, root_name)?;
+        let root_compiled_units = root_compiled_units
+            .into_iter()
+            .map(|bytecode_path| Self::decode_unit(root_name, &bytecode_path))
             .collect::<Result<Vec<_>>>()?;
-
-        let mut dependencies = Vec::new();
-        let self_path = self.package.compiled_package_info.package_name;
-        for dep_path in &self.package.dependencies {
-            if dep_path == &self_path {
-                continue;
+        let mut deps_compiled_units = vec![];
+        for dep_name in self.package.dependencies.iter().copied() {
+            let compiled_units = Self::get_compiled_units_paths(root_parent, dep_name)?;
+            for bytecode_path in compiled_units {
+                deps_compiled_units.push((dep_name, Self::decode_unit(dep_name, &bytecode_path)?))
             }
-            dependencies.push(
-                Self::from_path(
-                    &self
-                        .root_path
-                        .join(dep_path.as_str())
-                        .join(CompiledPackageLayout::BuildInfo.path()),
-                )?
-                .into_compiled_package()?,
-            )
         }
 
         let docs_path = self
@@ -278,11 +192,68 @@ impl OnDiskCompiledPackage {
 
         Ok(CompiledPackage {
             compiled_package_info: self.package.compiled_package_info.clone(),
-            compiled_units,
-            dependencies,
+            root_compiled_units,
+            deps_compiled_units,
             compiled_docs,
             compiled_abis,
         })
+    }
+
+    fn decode_unit(package_name: Symbol, bytecode_path: &str) -> Result<CompiledUnitWithSource> {
+        let package_name_opt = Some(package_name);
+        let bytecode_path = Path::new(bytecode_path);
+        let file_stem = bytecode_path.file_stem().unwrap();
+        let bytecode_bytes = std::fs::read(&bytecode_path)?;
+        let source_map = source_map_from_file(
+            &CompiledPackageLayout::SourceMaps
+                .from_sibling_path(bytecode_path)
+                .ok_or_else(|| anyhow::format_err!("Unable to find source map"))?
+                .join(file_stem)
+                .with_extension(SOURCE_MAP_EXTENSION),
+        )?;
+        let source_path = CompiledPackageLayout::Sources
+            .from_sibling_path(bytecode_path)
+            .ok_or_else(|| anyhow::format_err!("Unable to find source file"))?
+            .join(file_stem)
+            .with_extension(MOVE_EXTENSION);
+        match CompiledScript::deserialize(&bytecode_bytes) {
+            Ok(script) => {
+                let name = FileName::from(
+                    bytecode_path
+                        .file_stem()
+                        .unwrap()
+                        .to_string_lossy()
+                        .to_string(),
+                );
+                let unit = CompiledUnit::Script(NamedCompiledScript {
+                    package_name: package_name_opt,
+                    name,
+                    script,
+                    source_map,
+                });
+                Ok(CompiledUnitWithSource { unit, source_path })
+            }
+            Err(_) => {
+                let module = CompiledModule::deserialize(&bytecode_bytes)?;
+                let (address_bytes, module_name) = {
+                    let id = module.self_id();
+                    let parsed_addr = NumericalAddress::new(
+                        id.address().into_bytes(),
+                        move_compiler::shared::NumberFormat::Hex,
+                    );
+                    let module_name = FileName::from(id.name().as_str());
+                    (parsed_addr, module_name)
+                };
+                let unit = CompiledUnit::Module(NamedCompiledModule {
+                    package_name: package_name_opt,
+                    address: address_bytes,
+                    name: module_name,
+                    module,
+                    source_map,
+                });
+                Ok(CompiledUnitWithSource { unit, source_path })
+            }
+        }
     }
 
     /// Save `bytes` under `path_under` relative to the package on disk
@@ -292,7 +263,16 @@ impl OnDiskCompiledPackage {
         path_under: Option<PathBuf>,
         bytes: &[u8],
     ) -> Result<()> {
-        let mut path_to_save = self.root_path.join(dir_or_file);
+        Self::save_under_impl(&self.root_path, dir_or_file, path_under, bytes)
+    }
+
+    fn save_under_impl(
+        root_path: &PathBuf,
+        dir_or_file: &Path,
+        path_under: Option<PathBuf>,
+        bytes: &[u8],
+    ) -> Result<()> {
+        let mut path_to_save = root_path.join(dir_or_file);
         if let Some(under_path) = path_under {
             let parent = under_path.parent().unwrap();
             path_to_save.push(parent);
@@ -302,6 +282,7 @@ impl OnDiskCompiledPackage {
         std::fs::write(path_to_save, bytes).map_err(|err| err.into())
     }
 
+    #[allow(unused)]
     pub(crate) fn has_source_changed_since_last_compile(
         &self,
         resolved_package: &ResolvedPackage,
@@ -312,73 +293,91 @@ impl OnDiskCompiledPackage {
             Some(digest) => digest != &resolved_package.source_digest,
         }
     }
+
+    #[allow(unused)]
     pub(crate) fn are_build_flags_different(&self, build_config: &BuildConfig) -> bool {
         build_config != &self.package.compiled_package_info.build_flags
     }
 
-    fn get_compiled_units_paths(&self) -> Result<Vec<String>> {
-        let mut compiled_unit_paths = vec![self
-            .root_path
-            .join(self.package.compiled_package_info.package_name.as_str())
-            .join(CompiledPackageLayout::CompiledModules.path())
-            .to_string_lossy()
-            .to_string()];
-        let compiled_scripts_path = self
-            .root_path
-            .join(self.package.compiled_package_info.package_name.as_str())
+    fn get_compiled_units_paths(root_path: &Path, package_name: Symbol) -> Result<Vec<String>> {
+        let mut compiled_unit_paths = vec![];
+        let module_path = root_path
+            .join(package_name.as_str())
+            .join(CompiledPackageLayout::CompiledModules.path());
+        if module_path.exists() {
+            compiled_unit_paths.push(module_path);
+        }
+        let script_path = root_path
+            .join(package_name.as_str())
             .join(CompiledPackageLayout::CompiledScripts.path());
-        if compiled_scripts_path.exists() {
-            compiled_unit_paths.push(compiled_scripts_path.to_string_lossy().to_string());
+        if script_path.exists() {
+            compiled_unit_paths.push(script_path);
         }
         find_filenames(&compiled_unit_paths, |path| {
             extension_equals(path, MOVE_COMPILED_EXTENSION)
         })
     }
+
+    fn save_compiled_unit(
+        &self,
+        package_name: Symbol,
+        compiled_unit: &CompiledUnitWithSource,
+    ) -> Result<()> {
+        let root_path = self.root_path.parent().unwrap().join(package_name.as_str());
+        let under_path = match &compiled_unit.unit {
+            CompiledUnit::Script(_) => CompiledPackageLayout::CompiledScripts.path(),
+            CompiledUnit::Module(_) => CompiledPackageLayout::CompiledModules.path(),
+        };
+        let path = match &compiled_unit.unit {
+            CompiledUnit::Script(named) => named.name.as_str(),
+            CompiledUnit::Module(named) => named.name.as_str(),
+        };
+        Self::save_under_impl(
+            &root_path,
+            &under_path,
+            Some(Path::new(path).with_extension(MOVE_COMPILED_EXTENSION)),
+            compiled_unit.unit.serialize().as_slice(),
+        )?;
+
+        Self::save_under_impl(
+            &root_path,
+            CompiledPackageLayout::SourceMaps.path(),
+            Some(Path::new(path).with_extension(SOURCE_MAP_EXTENSION)),
+            compiled_unit.unit.serialize_source_map().as_slice(),
+        )
+    }
 }
 
 impl CompiledPackage {
+    /// Returns all compiled units with sources for this package in transitive dependencies. Order
+    /// is not guaranteed.
+    pub fn all_compiled_units_with_source(&self) -> impl Iterator<Item = &CompiledUnitWithSource> {
+        self.root_compiled_units
+            .iter()
+            .chain(self.deps_compiled_units.iter().map(|(_, unit)| unit))
+    }
+
     /// Returns all compiled units for this package in transitive dependencies. Order is not
     /// guaranteed.
-    pub fn transitive_compiled_units(&self) -> Vec<CompiledUnit> {
-        self.transitive_dependencies()
-            .flat_map(|compiled_package| {
-                compiled_package
-                    .compiled_units
-                    .iter()
-                    .map(|unit| unit.unit.clone())
-            })
-            .collect()
+    pub fn all_compiled_units(&self) -> impl Iterator<Item = &CompiledUnit> {
+        self.all_compiled_units_with_source().map(|unit| &unit.unit)
     }
 
-    /// Returns all compiled units with sources for this package in transitive dependencies. Order is not
-    /// guaranteed.
-    pub fn transitive_compiled_units_with_source(&self) -> Vec<CompiledUnitWithSource> {
-        self.transitive_dependencies()
-            .flat_map(|compiled_package| compiled_package.compiled_units.clone())
-            .collect()
-    }
-
-    /// Returns compiled modules for this package and its transitive dependencies in dependency
-    /// order.
-    pub fn transitive_compiled_modules(&self) -> Modules {
+    /// Returns compiled modules for this package and its transitive dependencies
+    pub fn all_modules_map(&self) -> Modules {
         Modules::new(
-            self.transitive_dependencies()
-                .flat_map(|compiled_package| &compiled_package.compiled_units)
-                .filter_map(|unit| match &unit.unit {
+            self.all_compiled_units()
+                .filter_map(|unit| match unit {
                     CompiledUnit::Module(NamedCompiledModule { module, .. }) => Some(module),
                     CompiledUnit::Script(_) => None,
-                }),
+                })
+                .collect::<Vec<_>>(),
         )
     }
 
-    /// Returns `CompiledPackage`s deduped
-    pub fn transitive_dependencies(&self) -> impl Iterator<Item = &CompiledPackage> {
-        self.dependencies.iter().chain(vec![self])
-    }
-
-    pub fn compiled_modules(&self) -> Modules {
+    pub fn root_modules_map(&self) -> Modules {
         Modules::new(
-            self.compiled_units
+            self.root_compiled_units
                 .iter()
                 .filter_map(|unit| match &unit.unit {
                     CompiledUnit::Module(NamedCompiledModule { module, .. }) => Some(module),
@@ -387,33 +386,32 @@ impl CompiledPackage {
         )
     }
 
-    pub fn modules(&self) -> Result<impl Iterator<Item = &CompiledUnitWithSource>> {
-        let mut lookup_modules: BTreeMap<_, _> = self
-            .compiled_units
-            .iter()
-            .filter_map(|unit| match &unit.unit {
-                CompiledUnit::Module(NamedCompiledModule { module, .. }) => {
-                    Some((module.self_id(), unit))
-                }
-                CompiledUnit::Script(_) => None,
-            })
-            .collect();
-
-        let dep_graph: Vec<_> = self
-            .transitive_compiled_modules()
-            .compute_dependency_graph()
-            .compute_topological_order()?
-            .cloned()
-            .collect();
-
-        Ok(dep_graph
-            .into_iter()
-            .map(|module| module.self_id())
-            .flat_map(move |module_id| lookup_modules.remove(&module_id)))
+    /// `all_compiled_units_with_source` filtered over `CompiledUnit::Module`
+    pub fn all_modules(&self) -> impl Iterator<Item = &CompiledUnitWithSource> {
+        self.all_compiled_units_with_source()
+            .filter(|unit| matches!(unit.unit, CompiledUnit::Module(_)))
     }
 
-    pub fn get_module_by_name(&self, module_name: &str) -> Result<&CompiledUnitWithSource> {
-        self.modules()?
+    /// `root_compiled_units` filtered over `CompiledUnit::Module`
+    pub fn root_modules(&self) -> impl Iterator<Item = &CompiledUnitWithSource> {
+        self.root_compiled_units
+            .iter()
+            .filter(|unit| matches!(unit.unit, CompiledUnit::Module(_)))
+    }
+
+    pub fn get_module_by_name(
+        &self,
+        package_name: &str,
+        module_name: &str,
+    ) -> Result<&CompiledUnitWithSource> {
+        if self.compiled_package_info.package_name.as_str() == package_name {
+            return self.get_module_by_name_from_root(module_name);
+        }
+
+        self.deps_compiled_units
+            .iter()
+            .filter(|(dep_package, _)| dep_package.as_str() == package_name)
+            .map(|(_, unit)| unit)
             .find(|unit| unit.unit.name().as_str() == module_name)
             .ok_or_else(|| {
                 anyhow::format_err!(
@@ -424,25 +422,28 @@ impl CompiledPackage {
             })
     }
 
-    pub fn get_dependency_by_name(&self, package_name: &str) -> Result<&Self> {
-        self.dependencies
-            .iter()
-            .find(|pkg| pkg.compiled_package_info.package_name.as_str() == package_name)
+    pub fn get_module_by_name_from_root(
+        &self,
+        module_name: &str,
+    ) -> Result<&CompiledUnitWithSource> {
+        self.root_modules()
+            .find(|unit| unit.unit.name().as_str() == module_name)
             .ok_or_else(|| {
                 anyhow::format_err!(
-                    "Unable to find dependency for package '{}' with name '{}'",
-                    self.compiled_package_info.package_name,
-                    package_name
+                    "Unable to find module with name '{}' in package {}",
+                    module_name,
+                    self.compiled_package_info.package_name
                 )
             })
     }
 
     pub fn scripts(&self) -> impl Iterator<Item = &CompiledUnitWithSource> {
-        self.compiled_units
+        self.root_compiled_units
             .iter()
             .filter(|unit| matches!(unit.unit, CompiledUnit::Script(_)))
     }
 
+    #[allow(unused)]
     fn can_load_cached(
         package: &OnDiskCompiledPackage,
         resolution_graph: &ResolvedGraph,
@@ -463,85 +464,41 @@ impl CompiledPackage {
                     == resolved_package.resolution_table
     }
 
-    pub(crate) fn build<W: Write>(
+    pub(crate) fn build_all<W: Write>(
         w: &mut W,
         project_root: &Path,
         resolved_package: ResolvedPackage,
-        dependencies_with_status: Vec<(CompiledPackage, CompilationCachingStatus)>,
+        transitive_dependencies: Vec<(
+            /* name */ Symbol,
+            /* is immediate */ bool,
+            /* source paths */ Vec<Symbol>,
+            /* address mapping */ &ResolvedTable,
+        )>,
         resolution_graph: &ResolvedGraph,
-        is_root_package: bool,
         mut compiler_driver: impl FnMut(
             Compiler,
-            bool,
         )
             -> Result<(FilesSourceText, Vec<AnnotatedCompiledUnit>)>,
-    ) -> Result<(CompiledPackage, CompilationCachingStatus)> {
-        let build_root_path = project_root.join(CompiledPackageLayout::Root.path());
-        let path = build_root_path
-            .join(resolved_package.source_package.package.name.as_str())
-            .join(CompiledPackageLayout::BuildInfo.path());
-
-        // Compare the digest of the package being compiled against the digest of the package at the
-        // time of the last compilation to determine if we can reuse the already-compiled package or
-        // not. If any dependency has changed we need to recompile.
-        if let Ok(package) = OnDiskCompiledPackage::from_path(&path) {
-            if dependencies_with_status
-                .iter()
-                .all(|(_, cache_status)| cache_status.is_cached())
-                && Self::can_load_cached(
-                    &package,
-                    resolution_graph,
-                    &resolved_package,
-                    is_root_package,
-                )
-            {
-                writeln!(
-                    w,
-                    "{} {}",
-                    "CACHED".bold().green(),
-                    resolved_package.source_package.package.name,
-                )?;
-                return package
-                    .into_compiled_package()
-                    .map(|x| (x, CompilationCachingStatus::Cached));
-            }
-        }
-        writeln!(
-            w,
-            "{} {}",
-            "BUILDING".bold().green(),
-            resolved_package.source_package.package.name,
-        )?;
-
-        let dependencies = dependencies_with_status
-            .into_iter()
-            .map(|(package, _status)| package)
-            .collect::<Vec<_>>();
-
-        // gather dep source info
-        let deps_source_info = dependencies
+    ) -> Result<CompiledPackage> {
+        let immediate_dependencies = transitive_dependencies
             .iter()
-            .map(|dep_package| {
-                let dep_source_paths = dep_package
-                    .compiled_units
-                    .iter()
-                    .map(|unit| Symbol::from(unit.source_path.to_string_lossy().to_string()))
-                    .collect::<Vec<_>>();
-                Ok((
-                    dep_package.compiled_package_info.package_name,
-                    dep_source_paths,
-                    &dep_package
-                        .compiled_package_info
-                        .address_alias_instantiation,
-                ))
+            .filter(|(_, is_immediate, _, _)| *is_immediate)
+            .map(|(name, _, _, _)| *name)
+            .collect::<Vec<_>>();
+        let transitive_dependencies = transitive_dependencies
+            .into_iter()
+            .map(|(name, _is_immediate, source_paths, address_mapping)| {
+                (name, source_paths, address_mapping)
             })
-            .collect::<Result<Vec<_>>>()?;
+            .collect();
+        let root_package_name = resolved_package.source_package.package.name;
+        writeln!(w, "{} {}", "BUILDING".bold().green(), root_package_name)?;
 
         // gather source/dep files with their address mappings
         let (sources_package_paths, deps_package_paths) = make_source_and_deps_for_compiler(
             resolution_graph,
             &resolved_package,
-            deps_source_info,
+            transitive_dependencies,
         )?;
         let flags = if resolution_graph.build_options.test_mode {
             Flags::testing()
@@ -549,56 +506,30 @@ impl CompiledPackage {
             Flags::empty()
         };
         // invoke the compiler
-        let compiler = Compiler::from_package_paths(
-            vec![sources_package_paths.clone()],
-            deps_package_paths.clone(),
-        )
-        .set_flags(flags);
-        let (file_map, compiled_units) = compiler_driver(compiler, is_root_package)?;
-
-        let (compiled_units, resolutions): (Vec<_>, Vec<_>) = compiled_units
-            .into_iter()
-            .map(|annot_unit| {
-                let originating_file =
-                    PathBuf::from(file_map[&annot_unit.loc().file_hash()].0.as_str());
-                match &annot_unit {
-                    AnnotatedCompiledUnit::Module(annot_module) => {
-                        // Only return resolutions for modules that have named addresses
-                        let resolution = match annot_module.module_id() {
-                            (Some(str_name), module_id) => Some((module_id, str_name.value)),
-                            _ => None,
-                        };
-                        (
-                            CompiledUnitWithSource {
-                                unit: annot_unit.into_compiled_unit(),
-                                source_path: originating_file,
-                            },
-                            resolution,
-                        )
-                    }
-                    AnnotatedCompiledUnit::Script(_) => (
-                        CompiledUnitWithSource {
-                            unit: annot_unit.into_compiled_unit(),
-                            source_path: originating_file,
-                        },
-                        None,
-                    ),
-                }
-            })
-            .unzip();
-
-        // gather module resolution data from deps
-        let mut module_resolution_metadata = BTreeMap::new();
-        for dep_package in &dependencies {
-            dep_package.gather_module_resolution_metadata(
-                &resolved_package.renaming,
-                &mut module_resolution_metadata,
-            )
-        }
-        // gather from compiled units (which do not include deps)
-        for (mod_id, name) in resolutions.into_iter().flatten() {
-            let _old_value = module_resolution_metadata.insert(mod_id, name);
-            debug_assert!(_old_value.is_none());
+        let paths = {
+            let mut v = deps_package_paths.clone();
+            v.push(sources_package_paths.clone());
+            v
+        };
+        let compiler = Compiler::from_package_paths(paths, vec![]).set_flags(flags);
+        let (file_map, all_compiled_units) = compiler_driver(compiler)?;
+        let mut root_compiled_units = vec![];
+        let mut deps_compiled_units = vec![];
+        for annot_unit in all_compiled_units {
+            let source_path = PathBuf::from(file_map[&annot_unit.loc().file_hash()].0.as_str());
+            let package_name = match &annot_unit {
+                compiled_unit::CompiledUnitEnum::Module(m) => m.named_module.package_name.unwrap(),
+                compiled_unit::CompiledUnitEnum::Script(s) => s.named_script.package_name.unwrap(),
+            };
+            let unit = CompiledUnitWithSource {
+                unit: annot_unit.into_compiled_unit(),
+                source_path,
+            };
+            if package_name == root_package_name {
+                root_compiled_units.push(unit)
+            } else {
+                deps_compiled_units.push((package_name, unit))
+            }
         }
 
         let mut compiled_docs = None;
@@ -617,13 +548,13 @@ impl CompiledPackage {
                     resolved_package.source_package.package.name,
                     &model,
                     &resolved_package.package_path,
-                    &dependencies,
+                    &immediate_dependencies,
                     &resolution_graph.build_options.install_dir,
                 ));
             }
 
             if resolution_graph.build_options.generate_abis {
-                compiled_abis = Some(Self::build_abis(&model, &compiled_units));
+                compiled_abis = Some(Self::build_abis(&model, &root_compiled_units));
             }
         };
 
@@ -631,19 +562,18 @@ impl CompiledPackage {
             compiled_package_info: CompiledPackageInfo {
                 package_name: resolved_package.source_package.package.name,
                 address_alias_instantiation: resolved_package.resolution_table,
-                module_resolution_metadata,
                 source_digest: Some(resolved_package.source_digest),
                 build_flags: resolution_graph.build_options.clone(),
             },
-            compiled_units,
+            root_compiled_units,
+            deps_compiled_units,
             compiled_docs,
             compiled_abis,
-            dependencies,
         };
 
-        compiled_package.save_to_disk(build_root_path)?;
+        compiled_package.save_to_disk(project_root.join(CompiledPackageLayout::Root.path()))?;
 
-        Ok((compiled_package, CompilationCachingStatus::Recompiled))
+        Ok(compiled_package)
     }
 
     // We take the (restrictive) view that all filesystems are case insensitive to maximize
@@ -651,7 +581,7 @@ impl CompiledPackage {
     fn check_filepaths_ok(&self) -> Result<()> {
         // A mapping of (lowercase_name => [info_for_each_occurence]
         let mut insensitive_mapping = BTreeMap::new();
-        for compiled_unit in &self.compiled_units {
+        for compiled_unit in &self.root_compiled_units {
             let is_module = matches!(&compiled_unit.unit, CompiledUnit::Module(_));
             let name = match &compiled_unit.unit {
                 CompiledUnit::Script(named) => named.name.as_str(),
@@ -703,14 +633,17 @@ impl CompiledPackage {
 
     pub(crate) fn save_to_disk(&self, under_path: PathBuf) -> Result<OnDiskCompiledPackage> {
         self.check_filepaths_ok()?;
+        let root_package = self.compiled_package_info.package_name;
         let on_disk_package = OnDiskCompiledPackage {
-            root_path: under_path.join(&self.compiled_package_info.package_name.to_string()),
+            root_path: under_path.join(root_package.as_str()),
             package: OnDiskPackage {
                 compiled_package_info: self.compiled_package_info.clone(),
                 dependencies: self
-                    .dependencies
+                    .deps_compiled_units
                     .iter()
-                    .map(|dep| dep.compiled_package_info.package_name)
+                    .map(|(package_name, _)| *package_name)
+                    .collect::<BTreeSet<_>>()
+                    .into_iter()
                     .collect(),
             },
         };
@@ -728,7 +661,7 @@ impl CompiledPackage {
                 .root_path
                 .join(CompiledPackageLayout::Sources.path()),
         )?;
-        for compiled_unit in &self.compiled_units {
+        for compiled_unit in &self.root_compiled_units {
             on_disk_package.save_under(
                 CompiledPackageLayout::Sources.path(),
                 Some(PathBuf::from(
@@ -748,26 +681,12 @@ impl CompiledPackage {
                 .root_path
                 .join(CompiledPackageLayout::CompiledModules.path()),
         )?;
-        for compiled_unit in &self.compiled_units {
-            let under_path = match &compiled_unit.unit {
-                CompiledUnit::Script(_) => CompiledPackageLayout::CompiledScripts.path(),
-                CompiledUnit::Module(_) => CompiledPackageLayout::CompiledModules.path(),
-            };
-            let path = match &compiled_unit.unit {
-                CompiledUnit::Script(named) => named.name.as_str(),
-                CompiledUnit::Module(named) => named.name.as_str(),
-            };
-            on_disk_package.save_under(
-                under_path,
-                Some(Path::new(path).with_extension(MOVE_COMPILED_EXTENSION)),
-                compiled_unit.unit.serialize().as_slice(),
-            )?;
 
-            on_disk_package.save_under(
-                CompiledPackageLayout::SourceMaps.path(),
-                Some(Path::new(path).with_extension(SOURCE_MAP_EXTENSION)),
-                compiled_unit.unit.serialize_source_map().as_slice(),
-            )?;
+        for compiled_unit in &self.root_compiled_units {
+            on_disk_package.save_compiled_unit(root_package, compiled_unit)?;
+        }
+        for (dep_name, compiled_unit) in &self.deps_compiled_units {
+            on_disk_package.save_compiled_unit(*dep_name, compiled_unit)?;
         }
 
         if let Some(docs) = &self.compiled_docs {
@@ -799,35 +718,6 @@ impl CompiledPackage {
         Ok(on_disk_package)
     }
 
-    fn gather_module_resolution_metadata(
-        &self,
-        renaming: &Renaming,
-        module_resolution: &mut ModuleResolutionMetadata,
-    ) {
-        let package_renamings = renaming
-            .iter()
-            .filter_map(|(rename_to, (package_name, from_name))| {
-                if package_name == &self.compiled_package_info.package_name {
-                    Some((from_name, *rename_to))
-                } else {
-                    None
-                }
-            })
-            .collect::<BTreeMap<_, _>>();
-
-        for (module_id, ident) in self
-            .compiled_package_info
-            .module_resolution_metadata
-            .clone()
-            .into_iter()
-        {
-            match package_renamings.get(&ident) {
-                Some(rename) => module_resolution.insert(module_id, *rename),
-                None => module_resolution.insert(module_id, ident),
-            };
-        }
-    }
-
     fn build_abis(
         model: &GlobalEnv,
         compiled_units: &[CompiledUnitWithSource],
@@ -853,7 +743,7 @@ impl CompiledPackage {
         package_name: PackageName,
         model: &GlobalEnv,
         package_root: &Path,
-        deps: &[CompiledPackage],
+        deps: &[PackageName],
         install_dir: &Option<PathBuf>,
     ) -> Vec<(String, String)> {
         let root_doc_templates = find_filenames(
@@ -871,9 +761,9 @@ impl CompiledPackage {
         };
         let dep_paths = deps
             .iter()
-            .map(|dep| {
+            .map(|dep_name| {
                 root_for_docs
-                    .join(dep.compiled_package_info.package_name.as_str())
+                    .join(dep_name.as_str())
                     .join(CompiledPackageLayout::CompiledDocs.path())
                     .to_string_lossy()
                     .to_string()

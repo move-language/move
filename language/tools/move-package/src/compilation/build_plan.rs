@@ -8,13 +8,9 @@ use crate::{
 use anyhow::Result;
 use move_compiler::{compiled_unit::AnnotatedCompiledUnit, diagnostics::FilesSourceText, Compiler};
 use petgraph::algo::toposort;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    io::Write,
-    path::Path,
-};
+use std::{collections::BTreeSet, io::Write, path::Path};
 
-use super::{compiled_package::CompilationCachingStatus, package_layout::CompiledPackageLayout};
+use super::package_layout::CompiledPackageLayout;
 
 #[cfg(feature = "evm-backend")]
 use {
@@ -49,11 +45,8 @@ impl BuildPlan {
         })
     }
 
-    pub fn compile<W: Write>(
-        &self,
-        writer: &mut W,
-    ) -> Result<(CompiledPackage, CompilationCachingStatus)> {
-        self.compile_with_driver(writer, |compiler, _| compiler.build_and_report())
+    pub fn compile<W: Write>(&self, writer: &mut W) -> Result<CompiledPackage> {
+        self.compile_with_driver(writer, |compiler| compiler.build_and_report())
     }
 
     pub fn compile_with_driver<W: Write>(
@@ -61,43 +54,51 @@ impl BuildPlan {
         writer: &mut W,
         mut compiler_driver: impl FnMut(
             Compiler,
-            bool,
         )
             -> anyhow::Result<(FilesSourceText, Vec<AnnotatedCompiledUnit>)>,
-    ) -> Result<(CompiledPackage, CompilationCachingStatus)> {
+    ) -> Result<CompiledPackage> {
         let root_package = &self.resolution_graph.package_table[&self.root];
         let project_root = match &self.resolution_graph.build_options.install_dir {
             Some(under_path) => under_path.clone(),
             None => self.resolution_graph.root_package_path.clone(),
         };
-        let mut compiled: BTreeMap<PackageName, (CompiledPackage, CompilationCachingStatus)> =
-            BTreeMap::new();
-        for package_ident in &self.sorted_deps {
-            let resolved_package = self.resolution_graph.get_package(package_ident);
-            let dependencies: Vec<_> = resolved_package
-                .transitive_dependencies(&self.resolution_graph)
-                .into_iter()
-                .map(|package_name| compiled.get(&package_name).unwrap().clone())
-                .collect();
-            let compiled_package = CompiledPackage::build(
-                writer,
-                &project_root,
-                resolved_package.clone(),
-                dependencies,
-                &self.resolution_graph,
-                package_ident == &root_package.source_package.package.name,
-                &mut compiler_driver,
-            )?;
-            compiled.insert(*package_ident, compiled_package);
-        }
-        let compiled_names = compiled.keys().collect::<BTreeSet<_>>();
+        let immediate_dependencies_names =
+            root_package.immediate_dependencies(&self.resolution_graph);
+        let transitive_dependencies = root_package
+            .transitive_dependencies(&self.resolution_graph)
+            .into_iter()
+            .map(|package_name| {
+                let dep_package = self
+                    .resolution_graph
+                    .package_table
+                    .get(&package_name)
+                    .unwrap();
+                let dep_source_paths = dep_package
+                    .get_sources(&self.resolution_graph.build_options)
+                    .unwrap();
+                (
+                    package_name,
+                    immediate_dependencies_names.contains(&package_name),
+                    dep_source_paths,
+                    &dep_package.resolution_table,
+                )
+            })
+            .collect();
+
+        let compiled = CompiledPackage::build_all(
+            writer,
+            &project_root,
+            root_package.clone(),
+            transitive_dependencies,
+            &self.resolution_graph,
+            &mut compiler_driver,
+        )?;
+
         Self::clean(
             &project_root.join(CompiledPackageLayout::Root.path()),
-            compiled_names,
+            self.sorted_deps.iter().copied().collect(),
         )?;
-        Ok(compiled
-            .remove(&root_package.source_package.package.name)
-            .unwrap())
+        Ok(compiled)
     }
 
     #[cfg(feature = "evm-backend")]
@@ -289,7 +290,7 @@ impl BuildPlan {
 
     // Clean out old packages that are no longer used, or no longer used under the current
     // compilation flags
-    fn clean(build_root: &Path, keep_paths: BTreeSet<&PackageName>) -> Result<()> {
+    fn clean(build_root: &Path, keep_paths: BTreeSet<PackageName>) -> Result<()> {
         for dir in std::fs::read_dir(build_root)? {
             let path = dir?.path();
             if !keep_paths.iter().any(|name| path.ends_with(name.as_str())) {

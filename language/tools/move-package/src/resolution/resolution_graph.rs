@@ -721,32 +721,23 @@ impl ResolvedPackage {
     }
 
     /// Returns the transitive dependencies of this package in dependency order
-    pub fn transitive_dependencies(&self, resolved_graph: &ResolvedGraph) -> Vec<PackageName> {
+    pub fn transitive_dependencies(&self, resolved_graph: &ResolvedGraph) -> BTreeSet<PackageName> {
         let mut seen = BTreeSet::new();
-        let resolve_package = |(package_name, _): (&PackageName, _)| {
+        let resolve_package = |package_name: PackageName| {
             let mut package_deps = resolved_graph
                 .package_table
-                .get(package_name)
+                .get(&package_name)
                 .unwrap()
                 .transitive_dependencies(resolved_graph);
-            package_deps.push(*package_name);
+            package_deps.insert(package_name);
             package_deps
         };
 
-        let transitive_deps: Vec<_> = if resolved_graph.build_options.dev_mode {
-            self.source_package
-                .dependencies
-                .iter()
-                .chain(self.source_package.dev_dependencies.iter())
-                .flat_map(resolve_package)
-                .collect()
-        } else {
-            self.source_package
-                .dependencies
-                .iter()
-                .flat_map(resolve_package)
-                .collect()
-        };
+        let immediate_deps = self.immediate_dependencies(resolved_graph);
+        let transitive_deps: Vec<_> = immediate_deps
+            .into_iter()
+            .flat_map(resolve_package)
+            .collect();
 
         transitive_deps
             .into_iter()
@@ -759,5 +750,18 @@ impl ResolvedPackage {
                 }
             })
             .collect()
+    }
+
+    pub fn immediate_dependencies(&self, resolved_graph: &ResolvedGraph) -> BTreeSet<PackageName> {
+        if resolved_graph.build_options.dev_mode {
+            self.source_package
+                .dependencies
+                .keys()
+                .chain(self.source_package.dev_dependencies.keys())
+                .copied()
+                .collect()
+        } else {
+            self.source_package.dependencies.keys().copied().collect()
+        }
     }
 }

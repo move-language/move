@@ -63,11 +63,11 @@ pub fn run_test(path: &Path) -> datatest_stable::Result<()> {
                 .and_then(|bp| bp.compile(&mut Vec::new()))
             {
                 Ok(mut pkg) => {
-                    pkg.0.compiled_package_info.source_digest =
+                    pkg.compiled_package_info.source_digest =
                         Some(PackageDigest::from("ELIDED_FOR_TEST"));
-                    pkg.0.compiled_package_info.build_flags.install_dir =
+                    pkg.compiled_package_info.build_flags.install_dir =
                         Some(PathBuf::from("ELIDED_FOR_TEST"));
-                    format!("{:#?}\n", pkg.0.compiled_package_info)
+                    format!("{:#?}\n", pkg.compiled_package_info)
                 }
                 Err(error) => format!("{:#}\n", error),
             },

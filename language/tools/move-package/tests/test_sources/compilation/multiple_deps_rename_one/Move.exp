@@ -5,26 +5,6 @@ CompiledPackageInfo {
         "C": 00000000000000000000000000000003,
         "DA": 00000000000000000000000000000002,
     },
-    module_resolution_metadata: {
-        ModuleId {
-            address: 00000000000000000000000000000001,
-            name: Identifier(
-                "A",
-            ),
-        }: "A",
-        ModuleId {
-            address: 00000000000000000000000000000002,
-            name: Identifier(
-                "A",
-            ),
-        }: "DA",
-        ModuleId {
-            address: 00000000000000000000000000000003,
-            name: Identifier(
-                "A",
-            ),
-        }: "C",
-    },
     source_digest: Some(
         "ELIDED_FOR_TEST",
     ),

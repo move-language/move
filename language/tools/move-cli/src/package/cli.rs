@@ -491,12 +491,10 @@ pub fn run_move_unit_tests(
         .collect();
     let root_package = Some(resolution_graph.root_package.package.name);
     let build_plan = BuildPlan::create(resolution_graph)?;
-    // Compile the package now. We need to treat the root package differently since we need to
-    // construct the test plan. This means that we can't rely on the cached version of the root
-    // package even if it is consistent. Additionally, we need to intercede in the compilation
-    // process being performed by the Move package system, to first grab the compilation env,
-    // construct the test plan from it, and then save it, before resuming the rest of the
-    // compilation and returning the results and control back to the Move package system.
+    // Compile the package. We need to intercede in the compilation, process being performed by the
+    // Move package system, to first grab the compilation env, construct the test plan from it, and
+    // then save it, before resuming the rest of the compilation and returning the results and
+    // control back to the Move package system.
     build_plan.compile_with_driver(&mut std::io::stdout(), |compiler| {
         let (files, comments_and_compiler_res) = compiler.run::<PASS_CFGIR>().unwrap();
         let (_, compiler) =

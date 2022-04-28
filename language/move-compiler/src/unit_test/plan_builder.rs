@@ -63,10 +63,8 @@ fn construct_module_test_plan(
     module_ident: ModuleIdent,
     module: &G::ModuleDefinition,
 ) -> Option<ModuleTestPlan> {
-    if package_filter.is_some() {
-        if module.package_name != package_filter {
-            return None;
-        }
+    if package_filter.is_some() && module.package_name != package_filter {
+        return None;
     }
     let tests: BTreeMap<_, _> = module
         .functions

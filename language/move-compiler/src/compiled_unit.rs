@@ -151,6 +151,13 @@ impl AnnotatedCompiledUnit {
         }
     }
 
+    pub fn package_name(&self) -> Option<Symbol> {
+        match self {
+            Self::Module(AnnotatedCompiledModule { named_module, .. }) => named_module.package_name,
+            Self::Script(AnnotatedCompiledScript { named_script, .. }) => named_script.package_name,
+        }
+    }
+
     pub fn loc(&self) -> &Loc {
         match self {
             Self::Module(AnnotatedCompiledModule { loc, .. })
@@ -164,6 +171,13 @@ impl CompiledUnit {
         match self {
             Self::Module(NamedCompiledModule { name, .. })
             | Self::Script(NamedCompiledScript { name, .. }) => *name,
+        }
+    }
+
+    pub fn package_name(&self) -> Option<Symbol> {
+        match self {
+            Self::Module(NamedCompiledModule { package_name, .. })
+            | Self::Script(NamedCompiledScript { package_name, .. }) => *package_name,
         }
     }
 

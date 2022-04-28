@@ -10,7 +10,7 @@ use crate::{
     },
     BuildConfig,
 };
-use anyhow::Result;
+use anyhow::{ensure, Result};
 use colored::Colorize;
 use move_abigen::{Abigen, AbigenOptions};
 use move_binary_format::file_format::{CompiledModule, CompiledScript};
@@ -119,7 +119,7 @@ impl CompilationCachingStatus {
 
 impl OnDiskCompiledPackage {
     pub fn from_path(p: &Path) -> Result<Self> {
-        let (buf, root_path) = if p.exists() && extension_equals(p, "yaml") {
+        let (buf, build_path) = if p.exists() && extension_equals(p, "yaml") {
             (std::fs::read(p)?, p.parent().unwrap().parent().unwrap())
         } else {
             (
@@ -128,25 +128,24 @@ impl OnDiskCompiledPackage {
             )
         };
         let package = serde_yaml::from_slice::<OnDiskPackage>(&buf)?;
-        Ok(Self {
-            root_path: root_path.to_path_buf(),
-            package,
-        })
+        assert!(build_path.ends_with(CompiledPackageLayout::Root.path()));
+        let root_path = build_path.join(package.compiled_package_info.package_name.as_str());
+        Ok(Self { root_path, package })
     }
 
     pub fn into_compiled_package(&self) -> Result<CompiledPackage> {
-        let root_parent = self.root_path.parent().unwrap();
         let root_name = self.package.compiled_package_info.package_name;
-        let root_compiled_units = Self::get_compiled_units_paths(&root_parent, root_name)?;
+        assert!(self.root_path.ends_with(root_name.as_str()));
+        let root_compiled_units = self.get_compiled_units_paths(root_name)?;
         let root_compiled_units = root_compiled_units
             .into_iter()
-            .map(|bytecode_path| Self::decode_unit(root_name, &bytecode_path))
+            .map(|bytecode_path| self.decode_unit(root_name, &bytecode_path))
             .collect::<Result<Vec<_>>>()?;
         let mut deps_compiled_units = vec![];
         for dep_name in self.package.dependencies.iter().copied() {
-            let compiled_units = Self::get_compiled_units_paths(root_parent, dep_name)?;
+            let compiled_units = self.get_compiled_units_paths(dep_name)?;
             for bytecode_path in compiled_units {
-                deps_compiled_units.push((dep_name, Self::decode_unit(dep_name, &bytecode_path)?))
+                deps_compiled_units.push((dep_name, self.decode_unit(dep_name, &bytecode_path)?))
             }
         }
 
@@ -199,23 +198,35 @@ impl OnDiskCompiledPackage {
         })
     }
 
-    fn decode_unit(package_name: Symbol, bytecode_path: &str) -> Result<CompiledUnitWithSource> {
+    fn decode_unit(
+        &self,
+        package_name: Symbol,
+        bytecode_path_str: &str,
+    ) -> Result<CompiledUnitWithSource> {
         let package_name_opt = Some(package_name);
-        let bytecode_path = Path::new(bytecode_path);
-        let file_stem = bytecode_path.file_stem().unwrap();
+        let bytecode_path = Path::new(bytecode_path_str);
+        let path_to_file = CompiledPackageLayout::path_to_file_after_category(bytecode_path);
         let bytecode_bytes = std::fs::read(&bytecode_path)?;
         let source_map = source_map_from_file(
-            &CompiledPackageLayout::SourceMaps
-                .from_sibling_path(bytecode_path)
-                .ok_or_else(|| anyhow::format_err!("Unable to find source map"))?
-                .join(file_stem)
+            &self
+                .root_path
+                .join(CompiledPackageLayout::SourceMaps.path())
+                .join(&path_to_file)
                 .with_extension(SOURCE_MAP_EXTENSION),
         )?;
-        let source_path = CompiledPackageLayout::Sources
-            .from_sibling_path(bytecode_path)
-            .ok_or_else(|| anyhow::format_err!("Unable to find source file"))?
-            .join(file_stem)
+        let source_path = self
+            .root_path
+            .join(CompiledPackageLayout::Sources.path())
+            .join(path_to_file)
             .with_extension(MOVE_EXTENSION);
+        ensure!(
+            source_path.is_file(),
+            "Error decoding package: {}. \
+            Unable to find corresponding source file for '{}' in package {}",
+            self.package.compiled_package_info.package_name,
+            bytecode_path_str,
+            package_name
+        );
         match CompiledScript::deserialize(&bytecode_bytes) {
             Ok(script) => {
                 let name = FileName::from(
@@ -257,28 +268,10 @@ impl OnDiskCompiledPackage {
     }
 
     /// Save `bytes` under `path_under` relative to the package on disk
-    pub(crate) fn save_under(
-        &self,
-        dir_or_file: &Path,
-        path_under: Option<PathBuf>,
-        bytes: &[u8],
-    ) -> Result<()> {
-        Self::save_under_impl(&self.root_path, dir_or_file, path_under, bytes)
-    }
-
-    fn save_under_impl(
-        root_path: &PathBuf,
-        dir_or_file: &Path,
-        path_under: Option<PathBuf>,
-        bytes: &[u8],
-    ) -> Result<()> {
-        let mut path_to_save = root_path.join(dir_or_file);
-        if let Some(under_path) = path_under {
-            let parent = under_path.parent().unwrap();
-            path_to_save.push(parent);
-            std::fs::create_dir_all(&path_to_save)?;
-            path_to_save.push(Path::new(under_path.file_name().unwrap()));
-        }
+    pub(crate) fn save_under(&self, file: impl AsRef<Path>, bytes: &[u8]) -> Result<()> {
+        let path_to_save = self.root_path.join(file);
+        let parent = path_to_save.parent().unwrap();
+        std::fs::create_dir_all(&parent)?;
         std::fs::write(path_to_save, bytes).map_err(|err| err.into())
     }
 
@@ -299,17 +292,20 @@ impl OnDiskCompiledPackage {
         build_config != &self.package.compiled_package_info.build_flags
     }
 
-    fn get_compiled_units_paths(root_path: &Path, package_name: Symbol) -> Result<Vec<String>> {
+    fn get_compiled_units_paths(&self, package_name: Symbol) -> Result<Vec<String>> {
+        let package_dir = if self.package.compiled_package_info.package_name == package_name {
+            self.root_path.clone()
+        } else {
+            self.root_path
+                .join(CompiledPackageLayout::Dependencies.path())
+                .join(package_name.as_str())
+        };
         let mut compiled_unit_paths = vec![];
-        let module_path = root_path
-            .join(package_name.as_str())
-            .join(CompiledPackageLayout::CompiledModules.path());
+        let module_path = package_dir.join(CompiledPackageLayout::CompiledModules.path());
         if module_path.exists() {
             compiled_unit_paths.push(module_path);
         }
-        let script_path = root_path
-            .join(package_name.as_str())
-            .join(CompiledPackageLayout::CompiledScripts.path());
+        let script_path = package_dir.join(CompiledPackageLayout::CompiledScripts.path());
         if script_path.exists() {
             compiled_unit_paths.push(script_path);
         }
@@ -323,27 +319,43 @@ impl OnDiskCompiledPackage {
         package_name: Symbol,
         compiled_unit: &CompiledUnitWithSource,
     ) -> Result<()> {
-        let root_path = self.root_path.parent().unwrap().join(package_name.as_str());
-        let under_path = match &compiled_unit.unit {
+        let root_package = self.package.compiled_package_info.package_name;
+        assert!(self.root_path.ends_with(root_package.as_str()));
+        let category_dir = match &compiled_unit.unit {
             CompiledUnit::Script(_) => CompiledPackageLayout::CompiledScripts.path(),
             CompiledUnit::Module(_) => CompiledPackageLayout::CompiledModules.path(),
         };
-        let path = match &compiled_unit.unit {
+        let file_path = if root_package == package_name {
+            PathBuf::new()
+        } else {
+            CompiledPackageLayout::Dependencies
+                .path()
+                .join(package_name.as_str())
+        }
+        .join(match &compiled_unit.unit {
             CompiledUnit::Script(named) => named.name.as_str(),
             CompiledUnit::Module(named) => named.name.as_str(),
-        };
-        Self::save_under_impl(
-            &root_path,
-            &under_path,
-            Some(Path::new(path).with_extension(MOVE_COMPILED_EXTENSION)),
+        });
+
+        self.save_under(
+            category_dir
+                .join(&file_path)
+                .with_extension(MOVE_COMPILED_EXTENSION),
             compiled_unit.unit.serialize().as_slice(),
         )?;
-
-        Self::save_under_impl(
-            &root_path,
-            CompiledPackageLayout::SourceMaps.path(),
-            Some(Path::new(path).with_extension(SOURCE_MAP_EXTENSION)),
+        self.save_under(
+            CompiledPackageLayout::SourceMaps
+                .path()
+                .join(&file_path)
+                .with_extension(SOURCE_MAP_EXTENSION),
             compiled_unit.unit.serialize_source_map().as_slice(),
+        )?;
+        self.save_under(
+            CompiledPackageLayout::Sources
+                .path()
+                .join(&file_path)
+                .with_extension(MOVE_EXTENSION),
+            std::fs::read_to_string(&compiled_unit.source_path)?.as_bytes(),
         )
     }
 }
@@ -490,7 +502,15 @@ impl CompiledPackage {
             .map(|(name, _is_immediate, source_paths, address_mapping)| {
                 (name, source_paths, address_mapping)
             })
-            .collect();
+            .collect::<Vec<_>>();
+        for (dep_package_name, _, _) in &transitive_dependencies {
+            writeln!(
+                w,
+                "{} {}",
+                "INCLUDING DEPENDENCY".bold().green(),
+                dep_package_name
+            )?;
+        }
         let root_package_name = resolved_package.source_package.package.name;
         writeln!(w, "{} {}", "BUILDING".bold().green(), root_package_name)?;
 
@@ -633,6 +653,7 @@ impl CompiledPackage {
 
     pub(crate) fn save_to_disk(&self, under_path: PathBuf) -> Result<OnDiskCompiledPackage> {
         self.check_filepaths_ok()?;
+        assert!(under_path.ends_with(CompiledPackageLayout::Root.path()));
         let root_package = self.compiled_package_info.package_name;
         let on_disk_package = OnDiskCompiledPackage {
             root_path: under_path.join(root_package.as_str()),
@@ -656,32 +677,6 @@ impl CompiledPackage {
 
         std::fs::create_dir_all(&on_disk_package.root_path)?;
 
-        std::fs::create_dir_all(
-            on_disk_package
-                .root_path
-                .join(CompiledPackageLayout::Sources.path()),
-        )?;
-        for compiled_unit in &self.root_compiled_units {
-            on_disk_package.save_under(
-                CompiledPackageLayout::Sources.path(),
-                Some(PathBuf::from(
-                    compiled_unit.source_path.file_name().unwrap(),
-                )),
-                std::fs::read_to_string(&compiled_unit.source_path)?.as_bytes(),
-            )?;
-        }
-
-        std::fs::create_dir_all(
-            on_disk_package
-                .root_path
-                .join(CompiledPackageLayout::CompiledScripts.path()),
-        )?;
-        std::fs::create_dir_all(
-            on_disk_package
-                .root_path
-                .join(CompiledPackageLayout::CompiledModules.path()),
-        )?;
-
         for compiled_unit in &self.root_compiled_units {
             on_disk_package.save_compiled_unit(root_package, compiled_unit)?;
         }
@@ -692,8 +687,10 @@ impl CompiledPackage {
         if let Some(docs) = &self.compiled_docs {
             for (doc_filename, doc_contents) in docs {
                 on_disk_package.save_under(
-                    CompiledPackageLayout::CompiledDocs.path(),
-                    Some(Path::new(&doc_filename).with_extension("md")),
+                    CompiledPackageLayout::CompiledDocs
+                        .path()
+                        .join(&doc_filename)
+                        .with_extension("md"),
                     doc_contents.clone().as_bytes(),
                 )?;
             }
@@ -702,8 +699,10 @@ impl CompiledPackage {
         if let Some(abis) = &self.compiled_abis {
             for (filename, abi_bytes) in abis {
                 on_disk_package.save_under(
-                    CompiledPackageLayout::CompiledABIs.path(),
-                    Some(Path::new(&filename).with_extension("abi")),
+                    CompiledPackageLayout::CompiledABIs
+                        .path()
+                        .join(filename)
+                        .with_extension("abi"),
                     abi_bytes,
                 )?;
             }
@@ -711,7 +710,6 @@ impl CompiledPackage {
 
         on_disk_package.save_under(
             CompiledPackageLayout::BuildInfo.path(),
-            None,
             serde_yaml::to_string(&on_disk_package.package)?.as_bytes(),
         )?;
 

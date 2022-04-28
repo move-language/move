@@ -489,7 +489,7 @@ pub fn run_move_unit_tests(
                 .collect::<HashMap<_, _>>()
         })
         .collect();
-    let root_package = Some(resolution_graph.root_package.package.name);
+    let root_package = resolution_graph.root_package.package.name;
     let build_plan = BuildPlan::create(resolution_graph)?;
     // Compile the package. We need to intercede in the compilation, process being performed by the
     // Move package system, to first grab the compilation env, construct the test plan from it, and
@@ -501,8 +501,7 @@ pub fn run_move_unit_tests(
             diagnostics::unwrap_or_report_diagnostics(&files, comments_and_compiler_res);
         let (mut compiler, cfgir) = compiler.into_ast();
         let compilation_env = compiler.compilation_env();
-        let built_test_plan = construct_test_plan(compilation_env, root_package, &cfgir);
-
+        let built_test_plan = construct_test_plan(compilation_env, Some(root_package), &cfgir);
         if let Err(diags) = compilation_env.check_diags_at_or_above_severity(Severity::Warning) {
             diagnostics::report_diagnostics(&files, diags);
         }

@@ -1,5 +1,5 @@
 Command `package test --stackless`:
-BUILDING MoveStdlib
+INCLUDING DEPENDENCY MoveStdlib
 BUILDING StandaloneModule
 Running Move unit tests
 [ PASS    ] 0x2::M::explicit_abort_expect_failure

@@ -130,7 +130,7 @@ pub fn publish(
         // backward incompatible changes, as as result, if this flag is set, we skip the VM process
         // and force the CLI to override the on-disk state directly
         let mut serialized_modules = vec![];
-        for unit in package.root_modules() {
+        for unit in package.all_modules() {
             let id = module(&unit.unit)?.self_id();
             let module_bytes = unit.unit.serialize();
             serialized_modules.push((id, module_bytes));

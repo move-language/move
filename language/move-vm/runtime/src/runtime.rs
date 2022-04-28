@@ -335,6 +335,11 @@ impl VMRuntime {
         let (mut dummy_locals, deserialized_args) = self
             .deserialize_args(arg_types, serialized_args)
             .map_err(|e| e.finish(Location::Undefined))?;
+        let return_types = return_types
+            .into_iter()
+            .map(|ty| ty.subst(&ty_args))
+            .collect::<PartialVMResult<Vec<_>>>()
+            .map_err(|err| err.finish(Location::Undefined))?;
 
         let return_values = Interpreter::entrypoint(
             func,

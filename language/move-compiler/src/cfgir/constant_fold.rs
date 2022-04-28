@@ -3,7 +3,10 @@
 
 use super::cfg::BlockCFG;
 use crate::{
-    hlir::ast::{Command, Command_, Exp, ExpListItem, UnannotatedExp_, Value, Value_},
+    hlir::ast::{
+        BaseType, BaseType_, Command, Command_, Exp, ExpListItem, TypeName, TypeName_,
+        UnannotatedExp_, Value, Value_,
+    },
     naming::ast::{BuiltinTypeName, BuiltinTypeName_},
     parser::ast::{BinOp, BinOp_, UnaryOp, UnaryOp_},
 };
@@ -151,6 +154,9 @@ fn optimize_exp(e: &mut Exp) -> bool {
                 _ => unreachable!(),
             };
             let changed = optimize_exp(eargs);
+            if !is_valid_const_type(ty) {
+                return changed;
+            }
             let vs = match foldable_exps(eargs) {
                 Some(vs) => vs,
                 None => return changed,
@@ -165,6 +171,32 @@ fn optimize_exp(e: &mut Exp) -> bool {
 fn optimize_exp_item(item: &mut ExpListItem) -> bool {
     match item {
         ExpListItem::Single(e, _) | ExpListItem::Splat(_, e, _) => optimize_exp(e),
+    }
+}
+
+fn is_valid_const_type(sp!(_, ty_): &BaseType) -> bool {
+    use BaseType_ as T;
+    match ty_ {
+        T::Apply(_, tn, ty_args) if is_valid_const_type_name(tn) => {
+            ty_args.iter().all(is_valid_const_type)
+        }
+        T::Apply(_, _, _) | T::Param(_) | T::Unreachable | T::UnresolvedError => false,
+    }
+}
+
+fn is_valid_const_type_name(sp!(_, tn_): &TypeName) -> bool {
+    use TypeName_ as T;
+    match tn_ {
+        T::Builtin(bt) => is_valid_const_builtin_type(bt),
+        T::ModuleType(_, _) => false,
+    }
+}
+
+fn is_valid_const_builtin_type(sp!(_, bt_): &BuiltinTypeName) -> bool {
+    use BuiltinTypeName_ as N;
+    match bt_ {
+        N::Address | N::U8 | N::U64 | N::U128 | N::Vector | N::Bool => true,
+        N::Signer => false,
     }
 }
 

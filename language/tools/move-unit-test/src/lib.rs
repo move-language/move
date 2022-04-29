@@ -170,7 +170,7 @@ impl UnitTestingConfig {
 
         let (mut compiler, cfgir) = compiler.into_ast();
         let compilation_env = compiler.compilation_env();
-        let test_plan = unit_test::plan_builder::construct_test_plan(compilation_env, &cfgir);
+        let test_plan = unit_test::plan_builder::construct_test_plan(compilation_env, None, &cfgir);
 
         if let Err(diags) = compilation_env.check_diags_at_or_above_severity(Severity::Warning) {
             diagnostics::report_diagnostics(&files, diags);

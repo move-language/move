@@ -1,6 +1,6 @@
 Command `package test --stackless`:
-BUILDING MoveStdlib
-BUILDING Bar
+INCLUDING DEPENDENCY Bar
+INCLUDING DEPENDENCY MoveStdlib
 BUILDING Foo
 Running Move unit tests
 [ PASS    ] 0x2::M::nop

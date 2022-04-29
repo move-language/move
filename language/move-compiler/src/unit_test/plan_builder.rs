@@ -40,6 +40,7 @@ impl<'env> Context<'env> {
 // attributes as the test plan is constructed.
 pub fn construct_test_plan(
     compilation_env: &mut CompilationEnv,
+    package_filter: Option<Symbol>,
     prog: &G::Program,
 ) -> Option<Vec<ModuleTestPlan>> {
     if !compilation_env.flags().is_testing() {
@@ -50,7 +51,7 @@ pub fn construct_test_plan(
         prog.modules
             .key_cloned_iter()
             .flat_map(|(module_ident, module_def)| {
-                construct_module_test_plan(&mut context, module_ident, module_def)
+                construct_module_test_plan(&mut context, package_filter, module_ident, module_def)
             })
             .collect(),
     )
@@ -58,9 +59,13 @@ pub fn construct_test_plan(
 
 fn construct_module_test_plan(
     context: &mut Context,
+    package_filter: Option<Symbol>,
     module_ident: ModuleIdent,
     module: &G::ModuleDefinition,
 ) -> Option<ModuleTestPlan> {
+    if package_filter.is_some() && module.package_name != package_filter {
+        return None;
+    }
     let tests: BTreeMap<_, _> = module
         .functions
         .iter()

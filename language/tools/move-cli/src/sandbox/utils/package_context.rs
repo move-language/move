@@ -36,16 +36,14 @@ impl PackageContext {
 
         // preload the storage with library modules (if such modules do not exist yet)
         let package = self.package();
-        let new_modules: Vec<_> = package
-            .dependencies
+        let new_modules = package
+            .deps_compiled_units
             .iter()
-            .flat_map(|dep| {
-                dep.compiled_modules()
-                    .iter_modules_owned()
-                    .into_iter()
-                    .filter(|m| !state.has_module(&m.self_id()))
+            .map(|(_, unit)| match &unit.unit {
+                move_compiler::compiled_unit::CompiledUnitEnum::Module(m) => &m.module,
+                _ => unreachable!(),
             })
-            .collect();
+            .filter(|m| !state.has_module(&m.self_id()));
 
         let mut serialized_modules = vec![];
         for module in new_modules {

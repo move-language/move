@@ -19,11 +19,13 @@ fn test_that_second_build_artifacts_removed() {
     .compile_package(path, &mut Vec::new())
     .unwrap();
 
-    assert!(
-        std::fs::read_dir(&dir.join(CompiledPackageLayout::Root.path()))
-            .unwrap()
-            .any(|dir| dir.unwrap().path().ends_with("MoveStdlib"))
-    );
+    let expected_stdlib_path = dir
+        .join(CompiledPackageLayout::Root.path())
+        .join("test")
+        .join(CompiledPackageLayout::CompiledModules.path())
+        .join(CompiledPackageLayout::Dependencies.path())
+        .join("MoveStdlib");
+    assert!(expected_stdlib_path.is_dir());
 
     assert!(dir
         .join(CompiledPackageLayout::Root.path())
@@ -43,11 +45,7 @@ fn test_that_second_build_artifacts_removed() {
     .unwrap();
 
     // The MoveStdlib dep should still exist, but the MTest module should go away
-    assert!(
-        std::fs::read_dir(&dir.join(CompiledPackageLayout::Root.path()))
-            .unwrap()
-            .any(|dir| dir.unwrap().path().ends_with("MoveStdlib"))
-    );
+    assert!(expected_stdlib_path.is_dir());
     assert!(!dir
         .join(CompiledPackageLayout::Root.path())
         .join("test")
@@ -65,11 +63,7 @@ fn test_that_second_build_artifacts_removed() {
     .unwrap();
 
     // The MoveStdlib dep should no longer exist, and the MTest module shouldn't exist either
-    assert!(
-        !std::fs::read_dir(&dir.join(CompiledPackageLayout::Root.path()))
-            .unwrap()
-            .any(|dir| dir.unwrap().path().ends_with("MoveStdlib"))
-    );
+    assert!(!expected_stdlib_path.is_dir());
     assert!(!dir
         .join(CompiledPackageLayout::Root.path())
         .join("test")

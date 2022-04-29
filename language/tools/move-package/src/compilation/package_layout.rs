@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 pub enum CompiledPackageLayout {
     BuildInfo,
     Root,
+    Dependencies,
     Sources,
     SourceMaps,
     CompiledModules,
@@ -20,6 +21,7 @@ impl CompiledPackageLayout {
         let path = match self {
             Self::BuildInfo => "BuildInfo.yaml",
             Self::Root => "build",
+            Self::Dependencies => "dependencies",
             Self::Sources => "sources",
             Self::SourceMaps => "source_maps",
             Self::CompiledModules => "bytecode_modules",
@@ -30,19 +32,23 @@ impl CompiledPackageLayout {
         Path::new(path)
     }
 
-    pub fn from_sibling_path(&self, current_path: &Path) -> Option<PathBuf> {
-        let pkg_root = Self::traverse_to_build_root(current_path)?;
-        Some(pkg_root.join(self.path()))
-    }
-
-    pub fn traverse_to_build_root(path: &Path) -> Option<&Path> {
-        for path in path.ancestors() {
-            match path.parent() {
-                Some(parent) if parent.ends_with(Self::Root.path()) => return Some(path),
-                _ => (),
+    pub fn path_to_file_after_category(path: &Path) -> PathBuf {
+        let mut suffix_components = vec![];
+        // reverse iterate until Root is found
+        for component in path.components().rev() {
+            let component_path: &Path = component.as_ref();
+            if component_path == Self::Root.path() {
+                break;
             }
+            suffix_components.push(component);
         }
-
-        None
+        // pop root package name
+        suffix_components.pop();
+        // pop category
+        suffix_components.pop();
+        // put the components back in order
+        suffix_components.reverse();
+        // make the path
+        suffix_components.into_iter().collect()
     }
 }

@@ -40,7 +40,9 @@ impl<'a> DependencyGraph<'a> {
                 graph.add_node(module_idx);
             } else {
                 for dep in deps {
-                    let dep_idx = *reverse_modules.get(&dep).expect("Missing dependency");
+                    let dep_idx = *reverse_modules
+                        .get(&dep)
+                        .unwrap_or_else(|| panic!("Missing dependency {}", dep));
                     graph.add_edge(dep_idx, module_idx, ());
                 }
             }

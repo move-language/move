@@ -219,7 +219,7 @@ impl CoverageSummaryOptions {
         let coverage_map = CoverageMap::from_binary_file(path.join(".coverage_map.mvcov"))?;
         let package = config.compile_package(path, &mut Vec::new())?;
         let modules: Vec<_> = package
-            .modules()?
+            .root_modules()
             .filter_map(|unit| match &unit.unit {
                 CompiledUnit::Module(NamedCompiledModule { module, .. }) => Some(module.clone()),
                 _ => None,
@@ -227,7 +227,7 @@ impl CoverageSummaryOptions {
             .collect();
         match self {
             CoverageSummaryOptions::Source { module_name } => {
-                let unit = package.get_module_by_name(module_name)?;
+                let unit = package.get_module_by_name_from_root(module_name)?;
                 let source_path = &unit.source_path;
                 let (module, source_map) = match &unit.unit {
                     CompiledUnit::Module(NamedCompiledModule {
@@ -265,7 +265,7 @@ impl CoverageSummaryOptions {
                 }
             }
             CoverageSummaryOptions::Bytecode { module_name } => {
-                let unit = package.get_module_by_name(module_name)?;
+                let unit = package.get_module_by_name_from_root(module_name)?;
                 let mut disassembler = Disassembler::from_unit(&unit.unit);
                 disassembler.add_coverage_map(coverage_map.to_unified_exec_map());
                 println!("{}", disassembler.disassemble()?);
@@ -322,25 +322,18 @@ pub fn handle_package_commands(
         } => {
             // Make sure the package is built
             let package = config.compile_package(&rerooted_path, &mut Vec::new())?;
-            // Find the package we're interested in looking at, we default to the root package.
-            let needle_package = match package_name {
-                Some(package_name) => {
-                    if package_name == package.compiled_package_info.package_name.as_str() {
-                        &package
-                    } else {
-                        package.get_dependency_by_name(package_name)?
-                    }
-                }
-                None => &package,
-            };
-            match needle_package
-                .get_module_by_name(module_or_script_name)
+            let needle_package = package_name
+                .as_ref()
+                .map(|s| s.as_str())
+                .unwrap_or(package.compiled_package_info.package_name.as_str());
+            match package
+                .get_module_by_name(needle_package, module_or_script_name)
                 .ok()
             {
                 None => bail!(
                     "Unable to find module or script with name '{}' in package '{}'",
                     module_or_script_name,
-                    needle_package.compiled_package_info.package_name
+                    needle_package,
                 ),
                 Some(unit) => {
                     // Once we find the compiled bytecode we're interested in, startup the bytecode
@@ -496,57 +489,35 @@ pub fn run_move_unit_tests(
                 .collect::<HashMap<_, _>>()
         })
         .collect();
+    let root_package = resolution_graph.root_package.package.name;
     let build_plan = BuildPlan::create(resolution_graph)?;
-    // Compile the package now. We need to treat the root package differently since we need to
-    // construct the test plan. This means that we can't rely on the cached version of the root
-    // package even if it is consistent. Additionally, we need to intercede in the compilation
-    // process being performed by the Move package system, to first grab the compilation env,
-    // construct the test plan from it, and then save it, before resuming the rest of the
-    // compilation and returning the results and control back to the Move package system.
-    let pkg = build_plan.compile_with_driver(&mut std::io::stdout(), |compiler, is_root| {
-        if !is_root {
-            compiler.build_and_report()
-        } else {
-            let (files, comments_and_compiler_res) = compiler.run::<PASS_CFGIR>().unwrap();
-            let (_, compiler) =
-                diagnostics::unwrap_or_report_diagnostics(&files, comments_and_compiler_res);
-            let (mut compiler, cfgir) = compiler.into_ast();
-            let compilation_env = compiler.compilation_env();
-            let built_test_plan = construct_test_plan(compilation_env, &cfgir);
-
-            if let Err(diags) = compilation_env.check_diags_at_or_above_severity(Severity::Warning)
-            {
-                diagnostics::report_diagnostics(&files, diags);
-            }
-
-            let compilation_result = compiler.at_cfgir(cfgir).build();
-
-            let (units, _) = diagnostics::unwrap_or_report_diagnostics(&files, compilation_result);
-
-            test_plan = Some((built_test_plan, files.clone(), units.clone()));
-            Ok((files, units))
+    // Compile the package. We need to intercede in the compilation, process being performed by the
+    // Move package system, to first grab the compilation env, construct the test plan from it, and
+    // then save it, before resuming the rest of the compilation and returning the results and
+    // control back to the Move package system.
+    build_plan.compile_with_driver(&mut std::io::stdout(), |compiler| {
+        let (files, comments_and_compiler_res) = compiler.run::<PASS_CFGIR>().unwrap();
+        let (_, compiler) =
+            diagnostics::unwrap_or_report_diagnostics(&files, comments_and_compiler_res);
+        let (mut compiler, cfgir) = compiler.into_ast();
+        let compilation_env = compiler.compilation_env();
+        let built_test_plan = construct_test_plan(compilation_env, Some(root_package), &cfgir);
+        if let Err(diags) = compilation_env.check_diags_at_or_above_severity(Severity::Warning) {
+            diagnostics::report_diagnostics(&files, diags);
         }
+
+        let compilation_result = compiler.at_cfgir(cfgir).build();
+
+        let (units, _) = diagnostics::unwrap_or_report_diagnostics(&files, compilation_result);
+        test_plan = Some((built_test_plan, files.clone(), units.clone()));
+        Ok((files, units))
     })?;
 
     let (test_plan, mut files, units) = test_plan.unwrap();
     files.extend(dep_file_map);
     let test_plan = test_plan.unwrap();
     let no_tests = test_plan.is_empty();
-    let mut test_plan = TestPlan::new(test_plan, files, units);
-    // Insert all of the package's transitive dependencies into the set of modules that
-    // need to be published for unit testing.
-    for pkg in pkg.0.transitive_dependencies() {
-        for unit in &pkg.compiled_units {
-            match &unit.unit {
-                CompiledUnit::Script(_) => (),
-                CompiledUnit::Module(module) => {
-                    test_plan
-                        .module_info
-                        .insert(module.module.self_id(), module.clone());
-                }
-            }
-        }
-    }
+    let test_plan = TestPlan::new(test_plan, files, units);
 
     let trace_path = pkg_path.join(".trace");
     let coverage_map_path = pkg_path

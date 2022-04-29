@@ -13,5 +13,5 @@ error[E03002]: unbound module
   │     ^^^^^^ Unbound module alias 'Signer'
 
 Command `-d -v package build`:
-BUILDING MoveStdlib
+INCLUDING DEPENDENCY MoveStdlib
 BUILDING build_include_exclude_stdlib

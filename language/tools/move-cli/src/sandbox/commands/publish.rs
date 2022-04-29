@@ -27,13 +27,13 @@ pub fn publish(
     if verbose {
         println!(
             "Found {} modules",
-            package.modules()?.collect::<Vec<_>>().len()
+            package.root_modules().collect::<Vec<_>>().len()
         );
     }
 
     if no_republish {
         let republished = package
-            .modules()?
+            .root_modules()
             .filter_map(|unit| {
                 let id = module(&unit.unit).ok()?.self_id();
                 if state.has_module(&id) {
@@ -60,7 +60,7 @@ pub fn publish(
         let mut has_error = false;
         match override_ordering {
             None => {
-                for unit in package.modules()? {
+                for unit in package.root_modules() {
                     let module_bytes = unit.unit.serialize();
                     let id = module(&unit.unit)?.self_id();
                     let sender = *id.address();
@@ -75,7 +75,7 @@ pub fn publish(
             }
             Some(ordering) => {
                 let module_map: BTreeMap<_, _> = package
-                    .modules()?
+                    .root_modules()
                     .into_iter()
                     .map(|unit| (unit.unit.name().to_string(), unit))
                     .collect();
@@ -130,7 +130,7 @@ pub fn publish(
         // backward incompatible changes, as as result, if this flag is set, we skip the VM process
         // and force the CLI to override the on-disk state directly
         let mut serialized_modules = vec![];
-        for unit in package.modules()? {
+        for unit in package.all_modules() {
             let id = module(&unit.unit)?.self_id();
             let module_bytes = unit.unit.serialize();
             serialized_modules.push((id, module_bytes));

@@ -162,7 +162,7 @@ fn move_check_for_errors(
         let (mut compiler, cfgir) = compiler.run::<PASS_CFGIR>()?.into_ast();
         let compilation_env = compiler.compilation_env();
         if compilation_env.flags().is_testing() {
-            unit_test::plan_builder::construct_test_plan(compilation_env, &cfgir);
+            unit_test::plan_builder::construct_test_plan(compilation_env, None, &cfgir);
         }
 
         let (units, diags) = compiler.at_cfgir(cfgir).build()?;

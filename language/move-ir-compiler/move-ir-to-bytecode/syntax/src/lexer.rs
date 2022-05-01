@@ -174,7 +174,9 @@ impl<'input> Lexer<'input> {
         let mut text = &self.text[self.cur_end..];
         loop {
             // Trim the only whitespace characters we recognize: newline, tab, and space.
+            text = text.trim_start_matches("\r\n");
             text = text.trim_start_matches(|c: char| matches!(c, '\n' | '\t' | ' '));
+            
             // Trim the only comments we recognize: '// ... \n'.
             if text.starts_with("//") {
                 text = text.trim_start_matches(|c: char| c != '\n');

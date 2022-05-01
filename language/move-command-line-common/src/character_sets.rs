@@ -15,10 +15,12 @@ pub fn is_permitted_printable_char(c: char) -> bool {
 
 /// Determine if a character is a permitted newline character.
 ///
-/// The only permitted newline character is \n. All others are invalid.
+/// The only permitted newline character is \n or \r\n. All others are invalid.
 pub fn is_permitted_newline_char(c: char) -> bool {
     let x = c as u32;
-    x == 0x0A
+    let is_cr = x == 0x0D; // \r
+    let is_lf = x == 0x0A; // \n
+    is_cr || is_lf
 }
 
 /// Determine if a character is permitted character.
@@ -34,6 +36,7 @@ mod tests {
     #[test]
     fn test_permitted_characters() {
         let mut good_chars = (0x20..=0x7E).collect::<Vec<u8>>();
+        good_chars.push(0x0D); // \r
         good_chars.push(0x0A); // \n
         good_chars.push(0x09); // \t
         for c in good_chars {

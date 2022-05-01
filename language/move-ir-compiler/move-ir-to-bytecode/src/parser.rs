@@ -16,7 +16,7 @@ use move_ir_to_bytecode_syntax::syntax::{self, ParseError};
 use move_ir_types::{ast, location::*};
 
 // We restrict strings to only ascii visual characters (0x20 <= c <= 0x7E) or a permitted newline
-// character--\n--or a tab--\t. Checking each character in the input string is more fool-proof
+// character--\r--,--\n--or a tab--\t. Checking each character in the input string is more fool-proof
 // than checking each character later during lexing & tokenization, since that would require special
 // handling of characters inside of comments (usually not included as tokens) and within byte
 // array literals.
@@ -27,7 +27,7 @@ fn verify_string(string: &str) -> Result<()> {
         .map_or(Ok(()), |chr| {
             bail!(
                 "Parser Error: invalid character {} found when reading file.\
-                 Only ascii printable, tabs (\\t), and \\n line ending characters are permitted.",
+                 Only ascii printable, tabs (\\t), and \\r \\n line ending characters are permitted.",
                 chr
             )
         })
@@ -86,7 +86,8 @@ mod tests {
         good_chars.push(0x09);
 
         let mut bad_chars = (0x0..0x09).collect::<Vec<_>>();
-        bad_chars.append(&mut (0x0B..=0x1F).collect::<Vec<_>>());
+        bad_chars.append(&mut vec![0x0B, 0x0C]);
+        bad_chars.append(&mut (0x0E..=0x1F).collect::<Vec<_>>());
         bad_chars.push(0x7F);
 
         // Test to make sure that all the characters that are in the allowlist pass.

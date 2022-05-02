@@ -54,12 +54,17 @@ pub struct CompiledState<'a> {
     pre_compiled_ids: BTreeSet<(AccountAddress, String)>,
     compiled_module_named_address_mapping: BTreeMap<ModuleId, Symbol>,
     named_address_mapping: BTreeMap<String, NumericalAddress>,
+    default_named_address_mapping: Option<NumericalAddress>,
     modules: BTreeMap<ModuleId, ProcessedModule>,
 }
 
 impl<'a> CompiledState<'a> {
     pub fn resolve_named_address(&self, s: &str) -> AccountAddress {
-        if let Some(addr) = self.named_address_mapping.get(s) {
+        if let Some(addr) = self
+            .named_address_mapping
+            .get(s)
+            .or(self.default_named_address_mapping.as_ref())
+        {
             return AccountAddress::new(addr.into_bytes());
         }
         panic!("Failed to resolve named address '{}'", s)
@@ -418,6 +423,7 @@ impl<'a> CompiledState<'a> {
     pub fn new(
         named_address_mapping: BTreeMap<String, NumericalAddress>,
         pre_compiled_deps: Option<&'a FullyCompiledProgram>,
+        default_named_address_mapping: Option<NumericalAddress>,
     ) -> Self {
         let pre_compiled_ids = match pre_compiled_deps {
             None => BTreeSet::new(),
@@ -439,6 +445,7 @@ impl<'a> CompiledState<'a> {
             modules: BTreeMap::new(),
             compiled_module_named_address_mapping: BTreeMap::new(),
             named_address_mapping,
+            default_named_address_mapping,
         };
         if let Some(pcd) = pre_compiled_deps {
             for unit in &pcd.compiled {

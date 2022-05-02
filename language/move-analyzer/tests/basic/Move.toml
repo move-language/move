@@ -1,0 +1,9 @@
+[package]
+name = "Basic"
+version = "0.0.1"
+
+[dependencies]
+MoveStdlib = { local = "../../../move-stdlib/", addr_subst = { "Std" = "0x1" } }
+
+[addresses]
+Basic = "0xCAFE"

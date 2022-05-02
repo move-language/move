@@ -15,7 +15,7 @@ use crate::{
     BuildConfig,
 };
 use anyhow::{bail, Context, Result};
-use move_command_line_common::files::find_move_filenames;
+use move_command_line_common::files::{find_move_filenames, FileHash};
 use move_core_types::account_address::AccountAddress;
 use move_symbol_pool::Symbol;
 use petgraph::{algo, graphmap::DiGraphMap, Outgoing};
@@ -23,6 +23,7 @@ use ptree::{print_tree, TreeBuilder};
 use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet},
+    fs::read_to_string,
     path::{Path, PathBuf},
     process::Command,
     rc::Rc,
@@ -767,5 +768,24 @@ impl ResolvedPackage {
         } else {
             self.source_package.dependencies.keys().copied().collect()
         }
+    }
+}
+
+impl ResolvedGraph {
+    pub fn file_sources(&self) -> BTreeMap<FileHash, (Symbol, String)> {
+        self.package_table
+            .iter()
+            .flat_map(|(_, rpkg)| {
+                rpkg.get_sources(&self.build_options)
+                    .unwrap()
+                    .iter()
+                    .map(|fname| {
+                        let contents = read_to_string(Path::new(fname.as_str())).unwrap();
+                        let fhash = FileHash::new(&contents);
+                        (fhash, (*fname, contents))
+                    })
+                    .collect::<BTreeMap<_, _>>()
+            })
+            .collect()
     }
 }

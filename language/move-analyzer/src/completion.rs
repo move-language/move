@@ -129,7 +129,7 @@ fn get_cursor_token(buffer: &str, position: &Position) -> Option<Tok> {
 /// The completions returned depend upon where the user's cursor is positioned.
 pub fn on_completion_request(context: &Context, request: &Request) {
     let parameters = serde_json::from_value::<CompletionParams>(request.params.clone())
-        .expect("could not deserialize request");
+        .expect("could not deserialize completion request");
 
     let path = parameters.text_document_position.text_document.uri.path();
     let buffer = context.files.get(path);
@@ -180,11 +180,11 @@ pub fn on_completion_request(context: &Context, request: &Request) {
         }
     }
 
-    let result = serde_json::to_value(items).expect("could not serialize response");
+    let result = serde_json::to_value(items).expect("could not serialize completion response");
     let response = lsp_server::Response::new_ok(request.id.clone(), result);
     context
         .connection
         .sender
         .send(lsp_server::Message::Response(response))
-        .expect("could not send response");
+        .expect("could not send completion response");
 }

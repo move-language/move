@@ -1868,12 +1868,20 @@ dependencies = [
 name = "move-analyzer"
 version = "0.0.0"
 dependencies = [
+ "anyhow",
  "clap 3.1.8",
+ "codespan-reporting",
  "lsp-server",
  "lsp-types",
  "move-command-line-common",
  "move-compiler",
+ "move-ir-types",
+ "move-package",
+ "move-symbol-pool",
+ "petgraph 0.5.1",
  "serde_json",
+ "tempfile",
+ "url",
 ]
 
 [[package]]

@@ -91,10 +91,7 @@ impl Architecture {
 }
 
 #[derive(Debug, Parser, Clone, Serialize, Deserialize, Eq, PartialEq, PartialOrd)]
-#[clap(
-    name = "Move Package",
-    about = "Package and build system for Move code."
-)]
+#[clap(author, version, about)]
 pub struct BuildConfig {
     /// Compile in 'dev' mode. The 'dev-addresses' and 'dev-dependencies' fields will be used if
     /// this flag is set. This flag is useful for development of packages that expose named

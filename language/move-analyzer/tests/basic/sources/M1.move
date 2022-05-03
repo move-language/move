@@ -17,4 +17,9 @@ module Basic::M1 {
         ret
     }
 
+    fun pack(): SomeStruct {
+        let ret = SomeStruct { some_field: 7 };
+        ret
+    }
+
 }

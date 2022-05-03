@@ -815,7 +815,7 @@ impl Symbolicator {
         use_types: &mut UseDefMap,
     ) {
         use UnannotatedExp_ as E;
-        match exp.exp.value {
+        match &exp.exp.value {
             E::Move {
                 from_user: _,
                 var: v,
@@ -824,8 +824,39 @@ impl Symbolicator {
                 from_user: _,
                 var: v,
             } => self.add_use_def(&v.value(), &v.loc(), references, scope_stack, use_defs),
+            E::Pack(ident, name, _, fields) => {
+                self.pack_symbols(
+                    &ident.value,
+                    &name,
+                    &fields,
+                    scope_stack,
+                    references,
+                    use_defs,
+                    use_types,
+                );
+            }
 
             _ => (),
+        }
+    }
+
+    fn pack_symbols(
+        &self,
+        ident: &ModuleIdent_,
+        name: &StructName,
+        fields: &Fields<(Type, Exp)>,
+        scope_stack: &mut VecDeque<Scope>,
+        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
+        use_defs: &mut UseDefMap,
+        use_types: &mut UseDefMap,
+    ) {
+        // add use of the struct name
+        self.add_struct_def(ident, &name.value(), &name.loc(), references, use_defs);
+        for (fpos, fname, lval) in fields {
+            // add use of the field name
+            self.add_field_def(ident, &name.value(), fname, &fpos, references, use_defs);
+            // add field initialization expression
+            self.exp_symbols(&lval.1 .1, scope_stack, references, use_defs, use_types);
         }
     }
 }
@@ -1006,4 +1037,7 @@ fn symbols_build_test() {
 
     // copied var in an assignment (cp function)
     assert_use_def(mod_symbols, 1, 15, 18, 14, 11);
+
+    // field name in pack (pack function)
+    assert_use_def(mod_symbols, 1, 20, 31, 3, 8);
 }

@@ -70,6 +70,7 @@ pub type FunctionBody = Spanned<FunctionBody_>;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Function {
+    pub is_macro: bool,
     pub attributes: Attributes,
     pub visibility: Visibility,
     pub signature: FunctionSignature,
@@ -115,6 +116,7 @@ pub type LValueList = Spanned<LValueList_>;
 pub struct ModuleCall {
     pub module: ModuleIdent,
     pub name: FunctionName,
+    pub is_macro: bool,
     pub type_arguments: Vec<Type>,
     pub arguments: Box<Exp>,
     pub parameter_types: Vec<Type>,
@@ -143,6 +145,7 @@ pub enum UnannotatedExp_ {
     Constant(Option<ModuleIdent>, ConstantName),
 
     ModuleCall(Box<ModuleCall>),
+    VarCall(Var, Box<Exp>),
     Builtin(Box<BuiltinFunction>, Box<Exp>),
     Vector(Loc, usize, Box<Type>, Box<Exp>),
 
@@ -150,6 +153,7 @@ pub enum UnannotatedExp_ {
     While(Box<Exp>, Box<Exp>),
     Loop { has_break: bool, body: Box<Exp> },
     Block(Sequence),
+    Lambda(LValueList, Box<Exp>),
     Assign(LValueList, Vec<Option<Type>>, Box<Exp>),
     Mutate(Box<Exp>, Box<Exp>),
     Return(Box<Exp>),
@@ -334,6 +338,7 @@ impl AstDebug for (FunctionName, &Function) {
         let (
             name,
             Function {
+                is_macro,
                 attributes,
                 visibility,
                 signature,
@@ -347,6 +352,9 @@ impl AstDebug for (FunctionName, &Function) {
             w.write("native ");
         }
         w.write(&format!("fun {}", name));
+        if *is_macro {
+            w.write("!");
+        }
         signature.ast_debug(w);
         if !acquires.is_empty() {
             w.write(" acquires ");
@@ -439,6 +447,12 @@ impl AstDebug for UnannotatedExp_ {
             E::ModuleCall(mcall) => {
                 mcall.ast_debug(w);
             }
+            E::VarCall(var, rhs) => {
+                w.write(&format!("{}", var));
+                w.write("(");
+                rhs.ast_debug(w);
+                w.write(")");
+            }
             E::Builtin(bf, rhs) => {
                 bf.ast_debug(w);
                 w.write("(");
@@ -492,6 +506,12 @@ impl AstDebug for UnannotatedExp_ {
                 body.ast_debug(w);
             }
             E::Block(seq) => w.block(|w| seq.ast_debug(w)),
+            E::Lambda(sp!(_, bs), e) => {
+                w.write("|");
+                bs.ast_debug(w);
+                w.write("|");
+                e.ast_debug(w);
+            }
             E::ExpList(es) => {
                 w.write("(");
                 w.comma(es, |w, e| e.ast_debug(w));
@@ -604,12 +624,16 @@ impl AstDebug for ModuleCall {
         let ModuleCall {
             module,
             name,
+            is_macro,
             type_arguments,
             parameter_types,
             acquires,
             arguments,
         } = self;
         w.write(&format!("{}::{}", module, name));
+        if *is_macro {
+            w.write("!");
+        }
         if !acquires.is_empty() || !parameter_types.is_empty() {
             w.write("[");
             if !acquires.is_empty() {

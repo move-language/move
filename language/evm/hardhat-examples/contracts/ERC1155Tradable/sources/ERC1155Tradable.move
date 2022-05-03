@@ -1,7 +1,7 @@
 #[contract]
-/// An implementation of the ERC-1155 Multi Token Standard.
-module Evm::ERC1155Mock {
-    use Evm::Evm::{sender, self, sign, emit, isContract, abort_with, require};
+/// An implementation of the ERC1155Tradable (https://github.com/ProjectOpenSea/opensea-erc1155/blob/master/contracts/ERC1155Tradable.sol).
+module Evm::ERC1155Tradable {
+    use Evm::Evm::{sender, self, sign, emit, isContract, abort_with, require, tokenURI_with_baseURI};
     use Evm::Table::{Self, Table};
     use Evm::ExternalResult::{Self, ExternalResult};
     use Evm::U256::{Self, U256};
@@ -10,11 +10,6 @@ module Evm::ERC1155Mock {
     // ---------------------
     // For test only
     // ---------------------
-
-    #[callable(sig=b"setURI(string)")]
-    public fun setURI(newuri: vector<u8>) acquires State {
-        borrow_global_mut<State>(self()).uri = newuri;
-    }
 
     #[callable(sig=b"mint(address,uint256,uint256,bytes)")]
     public fun mint(to: address, id: U256, amount: U256, data: vector<u8>) acquires State {
@@ -113,7 +108,7 @@ module Evm::ERC1155Mock {
         approved: bool,
     }
 
-    #[event]
+    #[event(sig=b"URI(string,uint256)")]
     struct URI {
         value: vector<u8>,
         id: U256,
@@ -122,31 +117,102 @@ module Evm::ERC1155Mock {
     #[storage]
     /// Represents the state of this contract. This is located at `borrow_global<State>(self())`.
     struct State has key {
+        name: vector<u8>,
+        symbol: vector<u8>,
         balances: Table<U256, Table<address, U256>>,
         operatorApprovals: Table<address, Table<address, bool>>,
-        uri: vector<u8>,
+        //uri: vector<u8>,
         owner: address, // Implements the "ownable" pattern.
+        baseURI: vector<u8>,
+        creators: Table<U256, address>,
+        tokenSupply: Table<U256, U256>,
+        currentTokenID: U256,
+//        proxyRegistryAddress: address;
     }
 
-    #[create(sig=b"constructor(string)")]
+    #[create(sig=b"constructor(string,string,string)")]
     /// Constructor of this contract.
-    public fun create(uri: vector<u8>) {
+    public fun constructor(name: vector<u8>, symbol: vector<u8>, baseURI: vector<u8>) acquires State {
         // Initial state of contract
         move_to<State>(
             &sign(self()),
             State {
+                name,
+                symbol,
                 balances: Table::empty<U256, Table<address, U256>>(),
                 operatorApprovals: Table::empty<address, Table<address, bool>>(),
-                uri,
+                //uri,
                 owner: sender(),
+                baseURI,
+                creators: Table::empty<U256, address>(),
+                tokenSupply: Table::empty<U256, U256>(),
+                currentTokenID: U256::zero(),
             }
         );
+        // for deployment test only
+        // mint(sender(), U256::u256_from_u128(1), U256::u256_from_u128(10), b"");
+        // mint(sender(), U256::u256_from_u128(2), U256::u256_from_u128(100), b"");
+        // mint(sender(), U256::u256_from_u128(3), U256::u256_from_u128(1000), b"");
+        create(sender(), U256::u256_from_u128(10), b"", b"");
+        create(sender(), U256::u256_from_u128(100), b"", b"");
+        create(sender(), U256::u256_from_u128(1000), b"", b"");
     }
 
     #[callable(sig=b"uri(uint256) returns (string)"), view]
     /// Returns the name of the token
-    public fun uri(_id: U256): vector<u8> acquires State {
-        *&borrow_global<State>(self()).uri
+    public fun uri(id: U256): vector<u8> acquires State {
+        require(exists_(id), b"ERC1155Tradable#uri: NONEXISTENT_TOKEN");
+        tokenURI_with_baseURI(baseURI(), id)
+    }
+
+    fun exists_(tokenId: U256): bool acquires State {
+        let s = borrow_global_mut<State>(self());
+        *mut_creatorOf(s, tokenId) != @0x0
+    }
+
+    #[callable(sig=b"baseURI() returns (string)"), view]
+    public fun baseURI(): vector<u8> acquires State {
+        let s = borrow_global_mut<State>(self());
+        s.baseURI
+    }
+
+    #[callable(sig=b"name() returns (string)"), view]
+    public fun name(): vector<u8> acquires State {
+        let s = borrow_global_mut<State>(self());
+        s.name
+    }
+
+    #[callable(sig=b"symbol() returns (string)"), view]
+    public fun symbol(): vector<u8> acquires State {
+        let s = borrow_global_mut<State>(self());
+        s.symbol
+    }
+
+
+    #[callable(sig=b"setBaseMetadataURI(string)")]
+    public fun setBaseMetadataURI(newBaseURI: vector<u8>) acquires State {
+        let s = borrow_global_mut<State>(self());
+        s.baseURI = newBaseURI;
+    }
+
+    #[callable(sig=b"totalSupply(uint256) returns (uint256)"), view]
+    public fun totalSupply(tokenId: U256): U256 acquires State {
+        let s = borrow_global_mut<State>(self());
+        *mut_tokenSupplyOf(s, tokenId)
+    }
+
+    #[callable(sig=b"create(address,uint256,string,bytes) returns (uint256)"), view]
+    public fun create(initialOwner: address, initialSupply: U256, uri: vector<u8>, data: vector<u8>): U256 acquires State {
+        let s = borrow_global_mut<State>(self());
+        s.currentTokenID = U256::add(s.currentTokenID, U256::one());
+        let id = s.currentTokenID;
+        *mut_creatorOf(s, id) = sender();
+        if (Vector::length(&uri) > 0) {
+            emit(URI{value: uri, id})
+        };
+        *mut_tokenSupplyOf(s, id) = initialSupply;
+        mint(initialOwner, id, initialSupply, data);
+        id
     }
 
     #[callable(sig=b"balanceOf(address,uint256) returns (uint256)"), view]
@@ -328,6 +394,17 @@ module Evm::ERC1155Mock {
         );
         Table::borrow_mut_with_default(operatorApproval_account, &operator, false)
     }
+
+    /// Helper function to return a mut ref to the creator.
+    fun mut_creatorOf(s: &mut State, id: U256): &mut address {
+        Table::borrow_mut_with_default(&mut s.creators, &id, @0x0)
+    }
+
+    /// Helper function to return a mut ref to the tokenSupply.
+    fun mut_tokenSupplyOf(s: &mut State, id: U256): &mut U256 {
+        Table::borrow_mut_with_default(&mut s.tokenSupply, &id, U256::zero())
+    }
+
 
     /// Helper function to return a mut ref to the balance of a owner.
     fun mut_balanceOf(s: &mut State, id: U256, account: address): &mut U256 {

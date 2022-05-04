@@ -1,15 +1,15 @@
 Command `package build -v`:
 BUILDING build_include_exclude_stdlib
 error[E03002]: unbound module
-  ┌─ ./sources/UseSigner.move:2:7
+  ┌─ ./sources/UseSigner.move:3:7
   │
-2 │   use Std::Signer;
+3 │   use Std::Signer;
   │       ^^^^^^^^^^^ Invalid 'use'. Unbound module: '(Std=0x1)::Signer'
 
 error[E03002]: unbound module
-  ┌─ ./sources/UseSigner.move:5:5
+  ┌─ ./sources/UseSigner.move:6:5
   │
-5 │     Signer::address_of(account)
+6 │     Signer::address_of(account)
   │     ^^^^^^ Unbound module alias 'Signer'
 
 Command `-d -v package build`:

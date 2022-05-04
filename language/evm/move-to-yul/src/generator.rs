@@ -17,6 +17,8 @@ use crate::{
     solidity_ty::SoliditySignature, yul_functions::YulFunction, Options,
 };
 
+use crate::context::Contract;
+use move_model::model::ModuleEnv;
 use sha3::{Digest, Keccak256};
 
 /// Mutable state of the generator.
@@ -48,25 +50,25 @@ type AuxilaryFunctionGenerator = dyn FnOnce(&mut Generator, &Context);
 // Entry point
 
 impl Generator {
-    /// Run the generator and produce a pair of contract name and Yul contract object.
-    pub fn run(options: &Options, env: &GlobalEnv) -> (String, String, String) {
-        let ctx = Context::new(options, env, false);
-        let mut gen = Generator::default();
-        let contract_funs = ctx.get_target_functions(attributes::is_contract_fun);
-        let (contract_name, contract_loc) = if contract_funs.is_empty() {
-            ("Empty".to_string(), env.unknown_loc())
-        } else {
-            // Use the module of the first function to determine contract name and location.
-            // TODO: we want to make the contract name configurable by options
-            let first_module = &contract_funs[0].module_env;
-            (ctx.make_contract_name(first_module), env.unknown_loc())
-        };
-        gen.contract_object(&ctx, contract_loc, &contract_name, &contract_funs);
-        (
-            contract_name,
-            ctx.writer.extract_result(),
-            ctx.abi_writer.extract_result(),
-        )
+    /// Run the generator and produce a lisy of triples of contract name, Yul contract object, and ABI.
+    pub fn run(options: &Options, env: &GlobalEnv) -> Vec<(String, String, String)> {
+        let mut res = vec![];
+        let ctx = &Context::new(options, env, false);
+        for contract in ctx.derive_contracts() {
+            let module = &ctx.env.get_module(contract.module);
+            if !module.is_target() {
+                // Ignore contract from module not target of compilation
+                continue;
+            }
+            let mut gen = Generator::default();
+            gen.contract_object(ctx, &contract);
+            res.push((
+                contract.name,
+                ctx.writer.extract_result(),
+                ctx.abi_writer.extract_result(),
+            ))
+        }
+        res
     }
 
     // Run the generator for evm unit tests and produce a mapping from function id to Yul test object.
@@ -131,22 +133,17 @@ impl Generator {
 
 impl Generator {
     /// Generate contract object for given contract functions.
-    fn contract_object(
-        &mut self,
-        ctx: &Context,
-        contract_loc: Loc,
-        contract_name: &str,
-        contract_funs: &[FunctionEnv<'_>],
-    ) {
+    fn contract_object(&mut self, ctx: &Context, contract: &Contract) {
         self.header(ctx);
         // Initialize contract specific state
-        self.contract_loc = contract_loc;
-        emit!(ctx.writer, "object \"{}\" ", contract_name);
+        let module = &ctx.env.get_module(contract.module);
+        self.contract_loc = module.get_loc();
+        emit!(ctx.writer, "object \"{}\" ", contract.name);
         ctx.emit_block(|| {
             // Generate the deployment code block
             self.begin_code_block(ctx);
-            self.optional_creator(ctx, contract_name);
-            let contract_deployed_name = format!("{}_deployed", contract_name);
+            self.optional_creator(ctx, module, contract);
+            let contract_deployed_name = format!("{}_deployed", contract.name);
             emitln!(
                 ctx.writer,
                 "codecopy(0, dataoffset(\"{}\"), datasize(\"{}\"))",
@@ -168,7 +165,12 @@ impl Generator {
                     ctx.writer,
                     "mstore(${MEM_SIZE_LOC}, memoryguard(${USED_MEM}))"
                 );
-                self.callable_functions(ctx, contract_funs);
+                let functions = contract
+                    .functions
+                    .iter()
+                    .map(|f| module.get_function(*f))
+                    .collect_vec();
+                self.callable_functions(ctx, &functions);
                 self.end_code_block(ctx);
             })
         });
@@ -323,20 +325,30 @@ impl Generator {
     }
 
     /// Generate optional creator (contract constructor).
-    fn optional_creator(&mut self, ctx: &Context, contract_name: &str) {
-        let mut creators = ctx.get_target_functions(attributes::is_create_fun);
-        if creators.len() > 1 {
-            ctx.env
-                .error(&creators[1].get_loc(), "multiple #[create] functions")
-        }
-        if let Some(creator) = creators.pop() {
+    fn optional_creator(&mut self, ctx: &Context, module: &ModuleEnv, contract: &Contract) {
+        if let Some(creator_id) = contract.constructor {
+            let creator = module.get_function(creator_id);
             ctx.check_no_generics(&creator);
-            if creator.get_return_count() > 0 {
+            if let Some(storage_id) = contract.storage {
+                // The creator function must return a value of the storage type.
+                let storage_ty = module
+                    .get_id()
+                    .qualified(storage_id)
+                    .instantiate(vec![])
+                    .to_type();
+                if creator.get_return_count() != 1 || creator.get_return_type(0) != storage_ty {
+                    ctx.env.error(
+                        &creator.get_loc(),
+                        &format!("creator function for contract with #[storage] must return value of type `{}`", storage_ty.display(&ctx.env.get_type_display_ctx()))
+                    )
+                }
+            } else if creator.get_return_count() > 0 {
                 ctx.env.error(
                     &creator.get_loc(),
                     "return values not allowed for creator functions",
                 )
             }
+
             if !self.is_suitable_for_dispatch(ctx, &creator) {
                 ctx.env.error(
                     &creator.get_loc(),
@@ -364,7 +376,7 @@ impl Generator {
                     ctx.writer,
                     "let {} := datasize(\"{}\")",
                     program_size_str,
-                    contract_name
+                    contract.name
                 );
                 emitln!(
                     ctx.writer,
@@ -410,7 +422,25 @@ impl Generator {
             }
 
             // Call the function
-            emitln!(ctx.writer, "{}({})", function_name, params);
+            if let Some(storage_id) = contract.storage {
+                // The creator function returns a value which we need to store as
+                // a resource.
+                emitln!(
+                    ctx.writer,
+                    "let $new_value := {}({})",
+                    function_name,
+                    params
+                );
+                let storage = module.get_id().qualified_inst(storage_id, vec![]);
+                self.move_to_addr(
+                    ctx,
+                    storage,
+                    "address()".to_string(),
+                    "$new_value".to_string(),
+                );
+            } else {
+                emitln!(ctx.writer, "{}({})", function_name, params);
+            }
 
             self.need_move_function(&fun_id);
         }
@@ -576,5 +606,45 @@ impl Generator {
         keccak.update(vec);
         let digest = keccak.finalize();
         u32::from_le_bytes([digest[0], digest[1], digest[2], digest[3]])
+    }
+
+    pub(crate) fn type_storage_base(
+        &mut self,
+        ctx: &Context,
+        ty: &Type,
+        category: &str,
+        instance: String,
+    ) -> String {
+        let hash = self.type_hash(ctx, ty);
+        self.call_builtin_str(
+            ctx,
+            YulFunction::MakeTypeStorageBase,
+            vec![category.to_string(), format!("0x{:x}", hash), instance].into_iter(),
+        )
+    }
+
+    /// Derive a 4 byte hash for a type. If this hash creates a collision in the current
+    /// contract, create an error.
+    pub(crate) fn type_hash(&mut self, ctx: &Context, ty: &Type) -> u32 {
+        let sig = ctx.mangle_type(ty);
+        let mut keccak = Keccak256::new();
+        keccak.update(sig.as_bytes());
+        let digest = keccak.finalize();
+        let hash = u32::from_le_bytes([digest[0], digest[1], digest[2], digest[3]]);
+        if let Some(old_ty) = self.type_sig_map.insert(hash, ty.clone()) {
+            if old_ty != *ty {
+                let ty_ctx = &ctx.env.get_type_display_ctx();
+                ctx.env.error(
+                    &self.contract_loc,
+                    &format!(
+                        "collision of type hash for types `{}` and `{}`\n\
+                         (resolution via attribute not yet implemented)",
+                        ty.display(ty_ctx),
+                        old_ty.display(ty_ctx)
+                    ),
+                )
+            }
+        }
+        hash
     }
 }

@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 /// An implementation of the ERC-1155 Multi Token Standard.
 module Evm::ERC1155Mock {
     use Evm::Evm::{sender, self, sign, emit, isContract, abort_with, require};
@@ -119,7 +119,6 @@ module Evm::ERC1155Mock {
         id: U256,
     }
 
-    #[storage]
     /// Represents the state of this contract. This is located at `borrow_global<State>(self())`.
     struct State has key {
         balances: Table<U256, Table<address, U256>>,

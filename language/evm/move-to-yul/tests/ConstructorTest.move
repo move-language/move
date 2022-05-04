@@ -1,3 +1,4 @@
+#[evm_contract]
 module 0x2::ConstructorTest {
     use Evm::Evm::sign;
 

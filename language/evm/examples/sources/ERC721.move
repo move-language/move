@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 /// An implementation of the ERC-721 Non-Fungible Token Standard.
 module Evm::ERC721 {
     use Evm::Evm::{sender, self, sign, emit, isContract, tokenURI_with_baseURI};

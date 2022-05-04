@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 /// An implementation of the ERC1155Tradable (https://github.com/ProjectOpenSea/opensea-erc1155/blob/master/contracts/ERC1155Tradable.sol).
 module Evm::ERC1155Tradable {
     use Evm::Evm::{sender, self, sign, emit, isContract, abort_with, require, tokenURI_with_baseURI};
@@ -114,7 +114,6 @@ module Evm::ERC1155Tradable {
         id: U256,
     }
 
-    #[storage]
     /// Represents the state of this contract. This is located at `borrow_global<State>(self())`.
     struct State has key {
         name: vector<u8>,

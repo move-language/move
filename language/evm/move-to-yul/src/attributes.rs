@@ -8,6 +8,8 @@ use move_model::{
     model::{FunctionEnv, GlobalEnv, ModuleEnv, StructEnv},
 };
 
+const CONTRACT_ATTR: &str = "evm_contract";
+const STORAGE_ATTR: &str = "storage";
 const CREATE_ATTR: &str = "create";
 const CALLABLE_ATTR: &str = "callable";
 const EVM_ARITH_ATTR: &str = "evm_arith";
@@ -113,6 +115,11 @@ pub fn extract_encode_signature(fun: &FunctionEnv<'_>, packed_flag: bool) -> Opt
     extract_attr_value_str(fun.module_env.env, fun.get_attributes(), attr, SIGNATURE)
 }
 
+/// Extract the contract name.
+pub fn extract_contract_name(module: &ModuleEnv<'_>) -> Option<String> {
+    extract_attr_value_str(module.env, module.get_attributes(), CONTRACT_ATTR, "name")
+}
+
 /// Check whether an attribute is present in an attribute list.
 pub fn has_attr(env: &GlobalEnv, attrs: &[Attribute], name: &str, simple_flag: bool) -> bool {
     let is_empty = |args: &Vec<Attribute>| {
@@ -132,9 +139,29 @@ pub fn has_attr(env: &GlobalEnv, attrs: &[Attribute], name: &str, simple_flag: b
     })
 }
 
+/// Check whether the module has a `#[evm_contract]` attribute.
+pub fn is_evm_contract_module(module: &ModuleEnv) -> bool {
+    has_attr(module.env, module.get_attributes(), CONTRACT_ATTR, false)
+}
+
 /// Check whether the module has a `#[evm_arith]` attribute.
 pub fn is_evm_arith_module(module: &ModuleEnv) -> bool {
     has_attr(module.env, module.get_attributes(), EVM_ARITH_ATTR, true)
+}
+
+/// Check whether the struct has a `#[storage]` attribute.
+pub fn is_storage_struct(str: &StructEnv) -> bool {
+    has_attr(
+        str.module_env.env,
+        str.get_attributes(),
+        STORAGE_ATTR,
+        false,
+    )
+}
+
+/// Check whether the struct has a `#[event]` attribute.
+pub fn is_event_struct(str: &StructEnv) -> bool {
+    has_attr(str.module_env.env, str.get_attributes(), EVENT_ATTR, false)
 }
 
 /// Check whether the function has a `#[callable]` attribute.
@@ -200,11 +227,6 @@ pub fn is_external_fun(fun: &FunctionEnv<'_>) -> bool {
         EXTERNAL_ATTR,
         false,
     )
-}
-
-/// Check whether the struct has a `#[event]` attribute.
-pub fn is_event_struct(st: &StructEnv<'_>) -> bool {
-    has_attr(st.module_env.env, st.get_attributes(), EVENT_ATTR, false)
 }
 
 pub(crate) fn construct_fun_attribute(fun: &FunctionEnv<'_>) -> Option<FunctionAttribute> {

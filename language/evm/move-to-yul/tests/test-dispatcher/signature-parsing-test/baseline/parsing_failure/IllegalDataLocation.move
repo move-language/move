@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 module 0x2::M {
 
     #[callable(sig=b"f(uint64 memory)")]

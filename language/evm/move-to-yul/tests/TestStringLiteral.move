@@ -1,3 +1,4 @@
+#[evm_contract]
 module 0x2::M {
     use Std::Vector;
     use Evm::Evm::{sign, require};

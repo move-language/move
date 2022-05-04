@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 /// An implementation of the ERC-20 Token Standard.
 module Evm::ERC20 {
     use Evm::Evm::{sender, self, sign, emit};

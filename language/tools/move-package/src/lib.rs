@@ -1,8 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-pub mod compilation;
 mod package_lock;
+
+pub mod compilation;
 pub mod resolution;
 pub mod source_package;
 

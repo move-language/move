@@ -120,6 +120,28 @@ jobs:
       - name: run EVM-based move unit test framework tests
         run: "cargo test --features evm-backend -p move-unit-test --test move_unit_test_testsuite"
 
+  diem-framework-build-all-packages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: prepare
+    steps:
+      - uses: actions/checkout@v2.4.0
+      - uses: ./.github/actions/build-setup
+      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - name: build Diem Framework Packages
+        run: "language/documentation/examples/diem-framework/build_all.sh"
+
+  diem-framework-test-all-packages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: prepare
+    steps:
+      - uses: actions/checkout@v2.4.0
+      - uses: ./.github/actions/build-setup
+      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - name: build Diem Framework Packages
+        run: "language/documentation/examples/diem-framework/test_all.sh"
+
   # Disable benchmarks for now
   # Compile (but don't run) the benchmarks, to insulate against bit rot
   # build-benchmarks:

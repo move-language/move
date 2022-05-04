@@ -163,15 +163,10 @@ pub fn new_from_instructions(
     }
 }
 
-// Only used for genesis and for tests where we need a cost table and
-// don't have a genesis storage state.
-pub fn zero_cost_schedule(num_of_native_funcs: usize) -> CostTable {
+pub fn zero_cost_instruction_table() -> Vec<(Bytecode, GasCost)> {
     use Bytecode::*;
-    // The actual costs for the instructions in this table _DO NOT MATTER_. This is only used
-    // for genesis and testing, and for these cases we don't need to worry
-    // about the actual gas for instructions.  The only thing we care about is having an entry
-    // in the gas schedule for each instruction.
-    let instrs = vec![
+
+    vec![
         (MoveTo(StructDefinitionIndex::new(0)), GasCost::new(0, 0)),
         (
             MoveToGeneric(StructDefInstantiationIndex::new(0)),
@@ -279,7 +274,17 @@ pub fn zero_cost_schedule(num_of_native_funcs: usize) -> CostTable {
         (VecPopBack(SignatureIndex::new(0)), GasCost::new(0, 0)),
         (VecUnpack(SignatureIndex::new(0), 0), GasCost::new(0, 0)),
         (VecSwap(SignatureIndex::new(0)), GasCost::new(0, 0)),
-    ];
+    ]
+}
+
+// Only used for genesis and for tests where we need a cost table and
+// don't have a genesis storage state.
+pub fn zero_cost_schedule(num_of_native_funcs: usize) -> CostTable {
+    // The actual costs for the instructions in this table _DO NOT MATTER_. This is only used
+    // for genesis and testing, and for these cases we don't need to worry
+    // about the actual gas for instructions.  The only thing we care about is having an entry
+    // in the gas schedule for each instruction.
+    let instrs = zero_cost_instruction_table();
     // length of native_table vector should be at least 18 due to the fact that there's a
     // builtin native function cost EMIT_EVENT which indexed 17 in the vector
     let num_of_native_funcs = max(num_of_native_funcs, 18);

@@ -198,14 +198,7 @@ impl UseDefMap {
 }
 
 impl Symbolicator {
-    pub fn empty_symbols() -> Symbols {
-        Symbols {
-            mod_use_defs: BTreeMap::new(),
-            mod_ident_map: BTreeMap::new(),
-            references: BTreeMap::new(),
-            file_name_mapping: BTreeMap::new(),
-        }
-    }
+    /// Main driver to get symbols for the whole package
     pub fn get_symbols(pkg_path: &Path) -> Result<Symbols> {
         let build_config = move_package::BuildConfig {
             test_mode: true,
@@ -290,25 +283,19 @@ impl Symbolicator {
         })
     }
 
-    fn get_start_loc(
-        pos: &Loc,
-        files: &SimpleFiles<Symbol, String>,
-        file_id_mapping: &BTreeMap<FileHash, usize>,
-    ) -> Option<Position> {
-        let id = match file_id_mapping.get(&pos.file_hash()) {
-            Some(v) => v,
-            None => return None,
-        };
-        match files.location(*id, pos.start() as usize) {
-            Ok(v) => Some(Position {
-                // we need 0-based column location
-                line: v.line_number as u32 - 1,
-                character: v.column_number as u32 - 1,
-            }),
-            Err(_) => None,
+    /// Get empty symbols
+    pub fn empty_symbols() -> Symbols {
+        Symbols {
+            mod_use_defs: BTreeMap::new(),
+            mod_ident_map: BTreeMap::new(),
+            references: BTreeMap::new(),
+            file_name_mapping: BTreeMap::new(),
         }
     }
 
+    /// Main AST traversal functions
+
+    /// Get symbols for outer definitions in the module (functions, structs, and consts)
     fn get_mod_outer_defs(
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         mod_def: &ModuleDefinition,
@@ -438,6 +425,7 @@ impl Symbolicator {
         )
     }
 
+    /// Get symbols for the whole module
     fn mod_symbols(
         &mut self,
         mod_def: &ModuleDefinition,
@@ -449,6 +437,7 @@ impl Symbolicator {
         }
     }
 
+    /// Get symbols for function a definition
     fn fun_symbols(
         &mut self,
         fun: &Function,
@@ -527,6 +516,26 @@ impl Symbolicator {
         self.type_params.clear();
     }
 
+    fn get_start_loc(
+        pos: &Loc,
+        files: &SimpleFiles<Symbol, String>,
+        file_id_mapping: &BTreeMap<FileHash, usize>,
+    ) -> Option<Position> {
+        let id = match file_id_mapping.get(&pos.file_hash()) {
+            Some(v) => v,
+            None => return None,
+        };
+        match files.location(*id, pos.start() as usize) {
+            Ok(v) => Some(Position {
+                // we need 0-based column location
+                line: v.line_number as u32 - 1,
+                character: v.column_number as u32 - 1,
+            }),
+            Err(_) => None,
+        }
+    }
+
+    /// Get symbols for a sequence representing function body
     fn seq_item_symbols(
         &self,
         scope_stack: &mut VecDeque<Scope>,
@@ -550,6 +559,7 @@ impl Symbolicator {
         }
     }
 
+    /// Get symbols for a list of lvalues
     fn lvalue_list_symbols(
         &self,
         lvalues: &LValueList,
@@ -564,6 +574,7 @@ impl Symbolicator {
         scope_stack.push_front(scope);
     }
 
+    /// Get symbols for a single lvalue
     fn lvalue_symbols(
         &self,
         lval: &LValue,
@@ -585,6 +596,7 @@ impl Symbolicator {
         }
     }
 
+    /// Get symbols for the unpack statement
     fn unpack_symbols(
         &self,
         ident: &ModuleIdent_,
@@ -604,6 +616,62 @@ impl Symbolicator {
         }
     }
 
+    /// Get symbols for an expression
+    fn exp_symbols(
+        &self,
+        exp: &Exp,
+        scope_stack: &mut VecDeque<Scope>,
+        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
+        use_defs: &mut UseDefMap,
+    ) {
+        use UnannotatedExp_ as E;
+        match &exp.exp.value {
+            E::Move {
+                from_user: _,
+                var: v,
+            } => self.add_local_use_def(&v.value(), &v.loc(), references, scope_stack, use_defs),
+            E::Copy {
+                from_user: _,
+                var: v,
+            } => self.add_local_use_def(&v.value(), &v.loc(), references, scope_stack, use_defs),
+            E::Pack(ident, name, _, fields) => {
+                self.pack_symbols(
+                    &ident.value,
+                    &name,
+                    &fields,
+                    scope_stack,
+                    references,
+                    use_defs,
+                );
+            }
+
+            _ => (),
+        }
+    }
+
+    /// Get symbols for the pack expression
+    fn pack_symbols(
+        &self,
+        ident: &ModuleIdent_,
+        name: &StructName,
+        fields: &Fields<(Type, Exp)>,
+        scope_stack: &mut VecDeque<Scope>,
+        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
+        use_defs: &mut UseDefMap,
+    ) {
+        // add use of the struct name
+        self.add_struct_def(ident, &name.value(), &name.loc(), references, use_defs);
+        for (fpos, fname, lval) in fields {
+            // add use of the field name
+            self.add_field_def(ident, &name.value(), fname, &fpos, references, use_defs);
+            // add field initialization expression
+            self.exp_symbols(&lval.1 .1, scope_stack, references, use_defs);
+        }
+    }
+
+    /// Helper functions
+
+    /// Add definition of a struct
     fn add_struct_def(
         &self,
         module_ident: &ModuleIdent_,
@@ -646,6 +714,7 @@ impl Symbolicator {
         };
     }
 
+    /// Add definition of a struct field
     fn add_field_def(
         &self,
         module_ident: &ModuleIdent_,
@@ -693,6 +762,7 @@ impl Symbolicator {
         };
     }
 
+    /// Add a "generic" definition
     fn add_def(
         &self,
         pos: &Loc,
@@ -734,7 +804,10 @@ impl Symbolicator {
         }
     }
 
-    fn add_use_def(
+    /// Add a use for and identifier whose definition is expected to
+    /// be local to a function, and pair it with an appropriate
+    /// definition
+    fn add_local_use_def(
         &self,
         use_name: &Symbol,
         use_pos: &Loc,
@@ -767,57 +840,6 @@ impl Symbolicator {
             }
         }
         debug_assert!(false);
-    }
-
-    fn exp_symbols(
-        &self,
-        exp: &Exp,
-        scope_stack: &mut VecDeque<Scope>,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-    ) {
-        use UnannotatedExp_ as E;
-        match &exp.exp.value {
-            E::Move {
-                from_user: _,
-                var: v,
-            } => self.add_use_def(&v.value(), &v.loc(), references, scope_stack, use_defs),
-            E::Copy {
-                from_user: _,
-                var: v,
-            } => self.add_use_def(&v.value(), &v.loc(), references, scope_stack, use_defs),
-            E::Pack(ident, name, _, fields) => {
-                self.pack_symbols(
-                    &ident.value,
-                    &name,
-                    &fields,
-                    scope_stack,
-                    references,
-                    use_defs,
-                );
-            }
-
-            _ => (),
-        }
-    }
-
-    fn pack_symbols(
-        &self,
-        ident: &ModuleIdent_,
-        name: &StructName,
-        fields: &Fields<(Type, Exp)>,
-        scope_stack: &mut VecDeque<Scope>,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-    ) {
-        // add use of the struct name
-        self.add_struct_def(ident, &name.value(), &name.loc(), references, use_defs);
-        for (fpos, fname, lval) in fields {
-            // add use of the field name
-            self.add_field_def(ident, &name.value(), fname, &fpos, references, use_defs);
-            // add field initialization expression
-            self.exp_symbols(&lval.1 .1, scope_stack, references, use_defs);
-        }
     }
 }
 

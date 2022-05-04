@@ -58,4 +58,4 @@ module 0x42::Test {
 
 //# run 0x42::Test::t4 --type-args vector<u8> 0x42::Test::Cup<u64> --args b"wat" 0
 
-//# run 0x42::Test::t4 --type-args 0x42::Test::Cup<u64> address --args 0 0x42
+//# run 0x42::Test::t4 --type-args 0x42::Test::Cup<u64> address --args 0 @0x42

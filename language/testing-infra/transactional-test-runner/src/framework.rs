@@ -4,8 +4,8 @@
 #![forbid(unsafe_code)]
 
 use crate::tasks::{
-    taskify, Argument, InitCommand, PrintBytecodeCommand, PrintBytecodeInputChoice, PublishCommand,
-    RawAddress, RunCommand, SyntaxChoice, TaskCommand, TaskInput, ViewCommand,
+    taskify, InitCommand, PrintBytecodeCommand, PrintBytecodeInputChoice, PublishCommand,
+    RunCommand, SyntaxChoice, TaskCommand, TaskInput, ViewCommand,
 };
 use anyhow::{anyhow, Result};
 use clap::Parser;
@@ -15,9 +15,11 @@ use move_binary_format::{
 };
 use move_bytecode_source_map::mapping::SourceMapping;
 use move_command_line_common::{
+    address::ParsedAddress,
     env::read_bool_env_var,
     files::{MOVE_EXTENSION, MOVE_IR_EXTENSION},
     testing::{format_diff, read_env_update_baseline, EXP_EXT},
+    values::{ParsableValue, ParsedValue},
 };
 use move_compiler::{
     compiled_unit::AnnotatedCompiledUnit,
@@ -28,8 +30,7 @@ use move_compiler::{
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
-    language_storage::{ModuleId, TypeTag},
-    transaction_argument::TransactionArgument,
+    language_storage::{ModuleId, StructTag, TypeTag},
 };
 use move_disassembler::disassembler::{Disassembler, DisassemblerOptions};
 use move_ir_types::location::Spanned;
@@ -53,7 +54,7 @@ pub struct CompiledState<'a> {
     pre_compiled_deps: Option<&'a FullyCompiledProgram>,
     pre_compiled_ids: BTreeSet<(AccountAddress, String)>,
     compiled_module_named_address_mapping: BTreeMap<ModuleId, Symbol>,
-    named_address_mapping: BTreeMap<String, NumericalAddress>,
+    pub named_address_mapping: BTreeMap<String, NumericalAddress>,
     default_named_address_mapping: Option<NumericalAddress>,
     modules: BTreeMap<ModuleId, ProcessedModule>,
 }
@@ -70,30 +71,20 @@ impl<'a> CompiledState<'a> {
         panic!("Failed to resolve named address '{}'", s)
     }
 
-    pub fn resolve_address(&self, addr: &RawAddress) -> AccountAddress {
+    pub fn resolve_address(&self, addr: &ParsedAddress) -> AccountAddress {
         match addr {
-            RawAddress::Named(named_addr) => self.resolve_named_address(named_addr.as_str()),
-            RawAddress::Anonymous(addr) => *addr,
+            ParsedAddress::Named(named_addr) => self.resolve_named_address(named_addr.as_str()),
+            ParsedAddress::Numerical(addr) => addr.into_inner(),
         }
     }
 
-    pub fn resolve_args(&self, args: Vec<Argument>) -> Vec<TransactionArgument> {
+    pub fn resolve_args<Extra: ParsableValue>(
+        &self,
+        args: Vec<ParsedValue<Extra>>,
+    ) -> Result<Vec<Extra::ConcreteValue>> {
         args.into_iter()
-            .map(|arg| match arg {
-                Argument::NamedAddress(named_addr) => {
-                    TransactionArgument::Address(self.resolve_named_address(named_addr.as_str()))
-                }
-                Argument::TransactionArgument(arg) => arg,
-            })
+            .map(|arg| arg.into_concrete_value(&|s| Some(self.resolve_named_address(s))))
             .collect()
-    }
-
-    pub fn insert_named_address(
-        &mut self,
-        name: String,
-        addr: NumericalAddress,
-    ) -> Option<NumericalAddress> {
-        self.named_address_mapping.insert(name, addr)
     }
 }
 
@@ -110,6 +101,7 @@ fn merge_output(left: Option<String>, right: Option<String>) -> Option<String> {
 
 pub trait MoveTestAdapter<'a> {
     type ExtraPublishArgs: Parser;
+    type ExtraValueArgs: ParsableValue;
     type ExtraRunArgs: Parser;
     type Subcommand: Parser;
     type ExtraInitArgs: Parser;
@@ -127,13 +119,13 @@ pub trait MoveTestAdapter<'a> {
         named_addr_opt: Option<Identifier>,
         gas_budget: Option<u64>,
         extra: Self::ExtraPublishArgs,
-    ) -> Result<()>;
+    ) -> Result<(Option<String>, CompiledModule)>;
     fn execute_script(
         &mut self,
         script: CompiledScript,
         type_args: Vec<TypeTag>,
-        signers: Vec<RawAddress>,
-        args: Vec<TransactionArgument>,
+        signers: Vec<ParsedAddress>,
+        args: Vec<<<Self as MoveTestAdapter<'a>>::ExtraValueArgs as ParsableValue>::ConcreteValue>,
         gas_budget: Option<u64>,
         extra: Self::ExtraRunArgs,
     ) -> Result<(Option<String>, SerializedReturnValues)>;
@@ -142,8 +134,8 @@ pub trait MoveTestAdapter<'a> {
         module: &ModuleId,
         function: &IdentStr,
         type_args: Vec<TypeTag>,
-        signers: Vec<RawAddress>,
-        args: Vec<TransactionArgument>,
+        signers: Vec<ParsedAddress>,
+        args: Vec<<<Self as MoveTestAdapter<'a>>::ExtraValueArgs as ParsableValue>::ConcreteValue>,
         gas_budget: Option<u64>,
         extra: Self::ExtraRunArgs,
     ) -> Result<(Option<String>, SerializedReturnValues)>;
@@ -166,6 +158,7 @@ pub trait MoveTestAdapter<'a> {
             TaskCommand<
                 Self::ExtraInitArgs,
                 Self::ExtraPublishArgs,
+                Self::ExtraValueArgs,
                 Self::ExtraRunArgs,
                 Self::Subcommand,
             >,
@@ -246,26 +239,31 @@ pub trait MoveTestAdapter<'a> {
                                 start_line, command_lines_stop
                             ),
                         };
-                        state.add_with_source_file(
-                            named_addr_opt,
-                            module.clone(),
-                            (data_path.to_owned(), data),
-                        );
                         (named_addr_opt, module, warnings_opt)
                     }
                     SyntaxChoice::IR => {
                         let module = compile_ir_module(state.dep_modules(), data_path)?;
-                        state.add_and_generate_interface_file(module.clone());
                         (None, module, None)
                     }
                 };
-                self.publish_module(
+                let (output, module) = self.publish_module(
                     module,
                     named_addr_opt.map(|s| Identifier::new(s.as_str()).unwrap()),
                     gas_budget,
                     extra_args,
                 )?;
-                Ok(warnings_opt)
+                match syntax {
+                    SyntaxChoice::Source => self.compiled_state().add_with_source_file(
+                        named_addr_opt,
+                        module,
+                        (data_path.to_owned(), data),
+                    ),
+                    SyntaxChoice::IR => {
+                        self.compiled_state()
+                            .add_and_generate_interface_file(module);
+                    }
+                };
+                Ok(merge_output(warnings_opt, output))
             }
             TaskCommand::Run(
                 RunCommand {
@@ -306,7 +304,7 @@ pub trait MoveTestAdapter<'a> {
                     }
                     SyntaxChoice::IR => (compile_ir_script(state.dep_modules(), data_path)?, None),
                 };
-                let args = self.compiled_state().resolve_args(args);
+                let args = self.compiled_state().resolve_args(args)?;
                 let (output, return_values) =
                     self.execute_script(script, type_args, signers, args, gas_budget, extra_args)?;
                 let rendered_return_value = display_return_values(return_values);
@@ -322,7 +320,7 @@ pub trait MoveTestAdapter<'a> {
                     type_args,
                     gas_budget,
                     syntax,
-                    name: Some((module, name)),
+                    name: Some((raw_addr, module_name, name)),
                 },
                 extra_args,
             ) => {
@@ -330,9 +328,11 @@ pub trait MoveTestAdapter<'a> {
                     syntax.is_none(),
                     "syntax flag meaningless with function execution"
                 );
-                let args = self.compiled_state().resolve_args(args);
+                let addr = self.compiled_state().resolve_address(&raw_addr);
+                let module_id = ModuleId::new(addr, module_name);
+                let args = self.compiled_state().resolve_args(args)?;
                 let (output, return_values) = self.call_function(
-                    &module,
+                    &module_id,
                     name.as_ident_str(),
                     type_args,
                     signers,
@@ -343,14 +343,21 @@ pub trait MoveTestAdapter<'a> {
                 let rendered_return_value = display_return_values(return_values);
                 Ok(merge_output(output, rendered_return_value))
             }
-            TaskCommand::View(ViewCommand {
-                address,
-                resource: (module, name, type_arguments),
-            }) => {
+            TaskCommand::View(ViewCommand { address, resource }) => {
+                let state: &CompiledState = self.compiled_state();
+                let StructTag {
+                    address: module_addr,
+                    module,
+                    name,
+                    type_params: type_arguments,
+                } = resource
+                    .into_struct_tag(&|s| Some(state.resolve_named_address(s)))
+                    .unwrap();
+                let module_id = ModuleId::new(module_addr, module);
                 let address = self.compiled_state().resolve_address(&address);
                 Ok(Some(self.view_data(
                     address,
-                    &module,
+                    &module_id,
                     name.as_ident_str(),
                     type_arguments,
                 )?))
@@ -623,6 +630,7 @@ where
     Adapter: MoveTestAdapter<'a>,
     Adapter::ExtraInitArgs: Debug,
     Adapter::ExtraPublishArgs: Debug,
+    Adapter::ExtraValueArgs: Debug,
     Adapter::ExtraRunArgs: Debug,
     Adapter::Subcommand: Debug,
 {
@@ -638,6 +646,7 @@ where
         TaskCommand<
             Adapter::ExtraInitArgs,
             Adapter::ExtraPublishArgs,
+            Adapter::ExtraValueArgs,
             Adapter::ExtraRunArgs,
             Adapter::Subcommand,
         >,
@@ -679,6 +688,7 @@ fn handle_known_task<'a, Adapter: MoveTestAdapter<'a>>(
         TaskCommand<
             Adapter::ExtraInitArgs,
             Adapter::ExtraPublishArgs,
+            Adapter::ExtraValueArgs,
             Adapter::ExtraRunArgs,
             Adapter::Subcommand,
         >,

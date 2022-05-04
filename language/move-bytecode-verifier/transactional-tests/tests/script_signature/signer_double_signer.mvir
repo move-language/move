@@ -12,7 +12,7 @@ label b0:
     return;
 }
 
-//# run --args 0x1 0 0x2
+//# run --args @0x1 0 @0x2
 // no longer an invalid signature, after V5
 main(s: signer, u: u64, s2: signer) {
 label b0:

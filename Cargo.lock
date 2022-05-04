@@ -2019,6 +2019,8 @@ dependencies = [
  "anyhow",
  "difference",
  "hex",
+ "move-core-types",
+ "num-bigint 0.4.0",
  "serde 1.0.130",
  "sha2",
  "walkdir",

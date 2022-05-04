@@ -7,16 +7,13 @@ use crate::{
     naming::ast::ModuleDefinition,
 };
 use clap::*;
-use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
-use num_bigint::BigUint;
 use petgraph::{algo::astar as petgraph_astar, graphmap::DiGraphMap};
 use std::{
     collections::BTreeMap,
     fmt,
     hash::Hash,
-    num::ParseIntError,
     sync::atomic::{AtomicUsize, Ordering as AtomicOrdering},
 };
 
@@ -29,154 +26,15 @@ pub mod unique_set;
 // Numbers
 //**************************************************************************************************
 
-#[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Clone, Copy)]
-#[repr(u32)]
-/// Number format enum, the u32 value represents the base
-pub enum NumberFormat {
-    Decimal = 10,
-    Hex = 16,
-}
-
-// Determines the base of the number literal, depending on the prefix
-fn determine_num_text_and_base(s: &str) -> (&str, NumberFormat) {
-    match s.strip_prefix("0x") {
-        Some(s_hex) => (s_hex, NumberFormat::Hex),
-        None => (s, NumberFormat::Decimal),
-    }
-}
-
-// Parse a u8 from a decimal or hex encoding
-pub fn parse_u8(s: &str) -> Result<(u8, NumberFormat), ParseIntError> {
-    let (txt, base) = determine_num_text_and_base(s);
-    Ok((u8::from_str_radix(txt, base as u32)?, base))
-}
-
-// Parse a u64 from a decimal or hex encoding
-pub fn parse_u64(s: &str) -> Result<(u64, NumberFormat), ParseIntError> {
-    let (txt, base) = determine_num_text_and_base(s);
-    Ok((u64::from_str_radix(txt, base as u32)?, base))
-}
-
-// Parse a u128 from a decimal or hex encoding
-pub fn parse_u128(s: &str) -> Result<(u128, NumberFormat), ParseIntError> {
-    let (txt, base) = determine_num_text_and_base(s);
-    Ok((u128::from_str_radix(txt, base as u32)?, base))
-}
-
-// Parse an address from a decimal or hex encoding
-pub fn parse_address(s: &str) -> Option<([u8; AccountAddress::LENGTH], NumberFormat)> {
-    let (txt, base) = determine_num_text_and_base(s);
-    let parsed = BigUint::parse_bytes(
-        txt.as_bytes(),
-        match base {
-            NumberFormat::Hex => 16,
-            NumberFormat::Decimal => 10,
-        },
-    )?;
-    let bytes = parsed.to_bytes_be();
-    if bytes.len() > AccountAddress::LENGTH {
-        return None;
-    }
-    let mut result = [0u8; AccountAddress::LENGTH];
-    result[(AccountAddress::LENGTH - bytes.len())..].clone_from_slice(&bytes);
-    Some((result, base))
-}
+pub use move_command_line_common::parser::{
+    parse_address_number as parse_address, parse_u128, parse_u64, parse_u8, NumberFormat,
+};
 
 //**************************************************************************************************
 // Address
 //**************************************************************************************************
 
-/// Numerical address represents non-named address values
-/// or the assigned value of a named address
-#[derive(Clone, Copy)]
-pub struct NumericalAddress {
-    /// the number for the address
-    bytes: AccountAddress,
-    /// The format (e.g. decimal or hex) for displaying the number
-    format: NumberFormat,
-}
-
-impl NumericalAddress {
-    // bytes used for errors when an address is not known but is needed
-    pub const DEFAULT_ERROR_ADDRESS: Self = NumericalAddress {
-        bytes: AccountAddress::ONE,
-        format: NumberFormat::Hex,
-    };
-
-    pub const fn new(bytes: [u8; AccountAddress::LENGTH], format: NumberFormat) -> Self {
-        Self {
-            bytes: AccountAddress::new(bytes),
-            format,
-        }
-    }
-
-    pub fn into_inner(self) -> AccountAddress {
-        self.bytes
-    }
-
-    pub fn into_bytes(self) -> [u8; AccountAddress::LENGTH] {
-        self.bytes.into_bytes()
-    }
-
-    pub fn parse_str(s: &str) -> Result<NumericalAddress, String> {
-        match parse_address(s) {
-            Some((n, format)) => Ok(NumericalAddress {
-                bytes: AccountAddress::new(n),
-                format,
-            }),
-            None =>
-            // TODO the kind of error is in an unstable nightly API
-            // But currently the only way this should fail is if the number is too long
-            {
-                Err(format!(
-                    "Invalid address literal. The numeric value is too large. The maximum size is \
-                     {} bytes",
-                    AccountAddress::LENGTH
-                ))
-            }
-        }
-    }
-}
-
-impl AsRef<[u8]> for NumericalAddress {
-    fn as_ref(&self) -> &[u8] {
-        self.bytes.as_ref()
-    }
-}
-
-impl fmt::Display for NumericalAddress {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.format {
-            NumberFormat::Decimal => {
-                let n = BigUint::from_bytes_be(self.bytes.as_ref());
-                write!(f, "{}", n)
-            }
-            NumberFormat::Hex => write!(f, "{:#X}", self),
-        }
-    }
-}
-
-impl fmt::Debug for NumericalAddress {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(self, f)
-    }
-}
-
-impl fmt::UpperHex for NumericalAddress {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let encoded = hex::encode_upper(self.as_ref());
-        let dropped = encoded
-            .chars()
-            .skip_while(|c| c == &'0')
-            .collect::<String>();
-        let prefix = if f.alternate() { "0x" } else { "" };
-        if dropped.is_empty() {
-            write!(f, "{}0", prefix)
-        } else {
-            write!(f, "{}{}", prefix, dropped)
-        }
-    }
-}
+pub use move_command_line_common::address::NumericalAddress;
 
 pub fn parse_named_address(s: &str) -> anyhow::Result<(String, NumericalAddress)> {
     let before_after = s.split('=').collect::<Vec<_>>();
@@ -193,50 +51,6 @@ pub fn parse_named_address(s: &str) -> anyhow::Result<(String, NumericalAddress)
         .map_err(|err| anyhow::format_err!("{}", err))?;
 
     Ok((name, addr))
-}
-
-impl PartialOrd for NumericalAddress {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-impl Ord for NumericalAddress {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        let Self {
-            bytes: self_bytes,
-            format: _,
-        } = self;
-        let Self {
-            bytes: other_bytes,
-            format: _,
-        } = other;
-        self_bytes.cmp(other_bytes)
-    }
-}
-
-impl PartialEq for NumericalAddress {
-    fn eq(&self, other: &Self) -> bool {
-        let Self {
-            bytes: self_bytes,
-            format: _,
-        } = self;
-        let Self {
-            bytes: other_bytes,
-            format: _,
-        } = other;
-        self_bytes == other_bytes
-    }
-}
-impl Eq for NumericalAddress {}
-
-impl Hash for NumericalAddress {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        let Self {
-            bytes: self_bytes,
-            format: _,
-        } = self;
-        self_bytes.hash(state)
-    }
 }
 
 //**************************************************************************************************

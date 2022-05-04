@@ -1,0 +1,7 @@
+Command `package build -v --arch ethereum`:
+COMPILING Foo to Yul
+GENERATING EVM bytecote from Yul
+External Command `touch sources/Bar.move`:
+Command `package build -v --arch ethereum`:
+COMPILING Foo to Yul
+GENERATING EVM bytecote from Yul

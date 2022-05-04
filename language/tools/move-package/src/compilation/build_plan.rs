@@ -16,7 +16,9 @@ use super::package_layout::CompiledPackageLayout;
 use {
     colored::Colorize,
     move_to_yul::{options::Options as MoveToYulOptions, run_to_yul},
+    std::{fs, io},
     termcolor::Buffer,
+    walkdir::WalkDir,
 };
 
 #[derive(Debug, Clone)]
@@ -24,6 +26,56 @@ pub struct BuildPlan {
     root: PackageName,
     sorted_deps: Vec<PackageName>,
     resolution_graph: ResolvedGraph,
+}
+
+#[cfg(feature = "evm-backend")]
+fn should_recompile(
+    source_paths: impl IntoIterator<Item = impl AsRef<Path>>,
+    output_paths: impl IntoIterator<Item = impl AsRef<Path>>,
+) -> Result<bool> {
+    let mut earliest_output_mod_time = None;
+    for output_path in output_paths.into_iter() {
+        match fs::metadata(output_path) {
+            Ok(meta) => {
+                let mod_time = meta
+                    .modified()
+                    .expect("failed to get file modification time");
+
+                match &mut earliest_output_mod_time {
+                    None => earliest_output_mod_time = Some(mod_time),
+                    Some(earliest_mod_time) => *earliest_mod_time = mod_time,
+                }
+            }
+            Err(err) => {
+                if let io::ErrorKind::NotFound = err.kind() {
+                    return Ok(true);
+                }
+                return Err(err.into());
+            }
+        }
+    }
+
+    let earliest_output_mod_time = match earliest_output_mod_time {
+        Some(mod_time) => mod_time,
+        None => panic!("no output files given -- this should not happen"),
+    };
+
+    for source_path in source_paths.into_iter() {
+        for entry in WalkDir::new(source_path) {
+            let entry = entry?;
+
+            let mod_time = entry
+                .metadata()?
+                .modified()
+                .expect("failed to get file modification time");
+
+            if mod_time > earliest_output_mod_time {
+                return Ok(true);
+            }
+        }
+    }
+
+    Ok(false)
 }
 
 impl BuildPlan {
@@ -114,14 +166,6 @@ impl BuildPlan {
 
         // Step 1: Compile Move into Yul
         //   Step 1a: Gather command line arguments for move-to-yul
-        let package_names = self
-            .resolution_graph
-            .package_table
-            .iter()
-            .map(|(name, _)| name.to_string())
-            .collect::<Vec<_>>()
-            .join(", ");
-
         let dependencies = self
             .resolution_graph
             .package_table
@@ -136,18 +180,18 @@ impl BuildPlan {
                     ))
                 }
             })
-            .collect();
+            .collect::<Vec<_>>();
 
         let sources = vec![format!(
             "{}/sources",
             root_package.package_path.to_string_lossy()
         )];
 
-        let named_address_mapping = self
-            .resolution_graph
-            .extract_named_address_mapping()
-            .map(|(name, addr)| format!("{}={}", name.as_str(), addr))
-            .collect();
+        let bytecode_output = format!(
+            "{}/{}.bin",
+            build_root_path.to_string_lossy(),
+            root_package.source_package.package.name
+        );
 
         let yul_output = format!(
             "{}/{}.yul",
@@ -160,7 +204,43 @@ impl BuildPlan {
             root_package.source_package.package.name
         );
 
-        //   Step 1b: Call move-to-yul
+        let output_paths = [&bytecode_output, &yul_output, &abi_output];
+
+        let package_names = self
+            .resolution_graph
+            .package_table
+            .iter()
+            .map(|(name, _)| name.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        let named_address_mapping = self
+            .resolution_graph
+            .extract_named_address_mapping()
+            .map(|(name, addr)| format!("{}={}", name.as_str(), addr))
+            .collect();
+
+        //   Step 1b: Check if a fresh compilation is really needed. Only recompile if either
+        //              a) Some of the output artifacts are missing
+        //              b) Any source files have been modified since last compile
+        let manifests = self
+            .resolution_graph
+            .package_table
+            .iter()
+            .map(|(_name, package)| format!("{}/Move.toml", package.package_path.to_string_lossy()))
+            .collect::<Vec<_>>();
+
+        let all_sources = manifests
+            .iter()
+            .chain(sources.iter())
+            .chain(dependencies.iter());
+
+        if !should_recompile(all_sources, output_paths)? {
+            writeln!(writer, "{} {}", "CACHED".bold().green(), package_names)?;
+            return Ok(());
+        }
+
+        //   Step 1c: Call move-to-yul
         writeln!(
             writer,
             "{} {} to Yul",
@@ -228,12 +308,6 @@ impl BuildPlan {
                 return Err(err.into());
             }
         };
-
-        let bytecode_output = format!(
-            "{}/{}.bin",
-            build_root_path.to_string_lossy(),
-            root_package.source_package.package.name
-        );
 
         writeln!(
             writer,

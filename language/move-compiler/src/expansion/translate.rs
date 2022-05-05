@@ -437,7 +437,9 @@ fn module_(
     for member in members {
         match member {
             P::ModuleMember::Use(_) => unreachable!(),
-            P::ModuleMember::Friend(f) => friend(context, &mut friends, f),
+            P::ModuleMember::Friend(f) => {
+                friend(context, &mut friends, f);
+            }
             P::ModuleMember::Function(mut f) => {
                 if !context.is_source_definition {
                     f.body.value = P::FunctionBody_::Native
@@ -1570,12 +1572,12 @@ fn name_access_chain(
         (Access::ApplyPositional, PN::One(n))
         | (Access::ApplyNamed, PN::One(n))
         | (Access::Type, PN::One(n)) => match context.aliases.member_alias_get(&n) {
-            Some((mident, mem)) => EN::ModuleAccess(*mident, *mem),
+            Some((mident, mem)) => EN::ModuleAccess(mident, mem),
             None => EN::Name(n),
         },
         (Access::Term, PN::One(n)) if is_valid_struct_constant_or_schema_name(n.value.as_str()) => {
             match context.aliases.member_alias_get(&n) {
-                Some((mident, mem)) => EN::ModuleAccess(*mident, *mem),
+                Some((mident, mem)) => EN::ModuleAccess(mident, mem),
                 None => EN::Name(n),
             }
         }
@@ -1595,7 +1597,7 @@ fn name_access_chain(
                 ));
                 return None;
             }
-            Some(mident) => EN::ModuleAccess(*mident, n2),
+            Some(mident) => EN::ModuleAccess(mident, n2),
         },
         (_, PN::Three(sp!(ident_loc, (ln, n2)), n3)) => {
             let addr = address(context, /* suggest_declaration */ false, ln);
@@ -1620,7 +1622,7 @@ fn name_access_chain_to_module_ident(
                 ));
                 None
             }
-            Some(mident) => Some(*mident),
+            Some(mident) => Some(mident),
         },
         PN::Two(ln, n) => {
             let pmident_ = P::ModuleIdent_ {

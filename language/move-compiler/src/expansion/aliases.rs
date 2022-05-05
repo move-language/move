@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    expansion::ast::ModuleIdent,
+    expansion::ast::{ModuleIdent, ModuleIdent_},
+    parser::ast::ModuleName,
     shared::{unique_map::UniqueMap, unique_set::UniqueSet, *},
 };
 use move_ir_types::location::*;
@@ -152,7 +153,7 @@ impl AliasMap {
         self.unused.len()
     }
 
-    pub fn module_alias_get(&mut self, n: &Name) -> Option<&ModuleIdent> {
+    pub fn module_alias_get(&mut self, n: &Name) -> Option<ModuleIdent> {
         match self.modules.get_mut(n) {
             None => None,
             Some((depth_opt, ident)) => {
@@ -160,12 +161,25 @@ impl AliasMap {
                     self.unused[*depth].modules.remove(n);
                 }
                 *depth_opt = None;
-                Some(ident)
+                // What we are trying to do here is to preserve the
+                // location of the module name rather than replacing
+                // it with the location of the alias. The n parameter
+                // represents JUST the module name, so we leave
+                // locations related to module's address intact as
+                // replacing them with the location of the module name
+                // does not seem right
+                Some(sp(
+                    n.loc,
+                    ModuleIdent_ {
+                        address: ident.value.address,
+                        module: ModuleName(sp(n.loc, ident.value.module.value())),
+                    },
+                ))
             }
         }
     }
 
-    pub fn member_alias_get(&mut self, n: &Name) -> Option<&(ModuleIdent, Name)> {
+    pub fn member_alias_get(&mut self, n: &Name) -> Option<(ModuleIdent, Name)> {
         match self.members.get_mut(n) {
             None => None,
             Some((depth_opt, ident_name)) => {
@@ -173,7 +187,17 @@ impl AliasMap {
                     self.unused[*depth].members.remove(n);
                 }
                 *depth_opt = None;
-                Some(ident_name)
+                // What we are trying to do here is to preserve the
+                // location of the member name rather than replacing
+                // it with the location of the alias. The n parameter
+                // represents JUST the member name, so even if it's
+                // preceded by the module name, we don't know the
+                // location of this name - hence leaving ModuleIdent
+                // location intact.
+                Some((
+                    sp(ident_name.0.loc, ident_name.0.value),
+                    sp(n.loc, ident_name.1.value),
+                ))
             }
         }
     }

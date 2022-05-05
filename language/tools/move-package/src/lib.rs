@@ -35,7 +35,6 @@ pub enum Architecture {
 
     AsyncMove,
 
-    #[cfg(feature = "evm-backend")]
     Ethereum,
 }
 
@@ -46,7 +45,6 @@ impl fmt::Display for Architecture {
 
             Self::AsyncMove => write!(f, "async-move"),
 
-            #[cfg(feature = "evm-backend")]
             Self::Ethereum => write!(f, "ethereum"),
         }
     }
@@ -68,7 +66,6 @@ impl Architecture {
 
             "async-move" => Self::AsyncMove,
 
-            #[cfg(feature = "evm-backend")]
             "ethereum" => Self::Ethereum,
 
             _ => {

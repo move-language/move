@@ -304,9 +304,12 @@ pub fn handle_package_commands(
                     config.compile_package(&rerooted_path, &mut std::io::stderr())?;
                 }
 
-                #[cfg(feature = "evm-backend")]
                 Architecture::Ethereum => {
+                    #[cfg(feature = "evm-backend")]
                     config.compile_package_evm(&rerooted_path, &mut std::io::stderr())?;
+
+                    #[cfg(not(feature = "evm-backend"))]
+                    bail!("The Ethereum architecture is not supported because move-cli was not compiled with feature flag `evm-backend`.");
                 }
             }
         }

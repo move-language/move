@@ -161,9 +161,9 @@ impl AliasMap {
                     self.unused[*depth].modules.remove(n);
                 }
                 *depth_opt = None;
-                // We are preserving the name's original location, rather than referring to where the alias was
-                // defined. The name represents JUST the module name, though, so we do not change location of
-                // the address as we don't have this information.
+                // We are preserving the name's original location, rather than referring to where
+                // the alias was defined. The name represents JUST the module name, though, so we do
+                // not change location of the address as we don't have this information.
                 // TODO maybe we should also keep the alias reference (or its location)?
                 let sp!(
                     _,
@@ -187,9 +187,9 @@ impl AliasMap {
                     self.unused[*depth].members.remove(n);
                 }
                 *depth_opt = None;
-                // We are preserving the name's original location, rather than referring to where the alias was
-                // defined. The name represents JUST the member name, though, so we do not change location of
-                // the module as we don't have this information.
+                // We are preserving the name's original location, rather than referring to where
+                // the alias was defined. The name represents JUST the member name, though, so we do
+                // not change location of the module as we don't have this information.
                 // TODO maybe we should also keep the alias reference (or its location)?
                 Some((sp(*mem_mod_loc, *mem_mod), sp(n.loc, *mem_name)))
             }

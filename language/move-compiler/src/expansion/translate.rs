@@ -437,9 +437,7 @@ fn module_(
     for member in members {
         match member {
             P::ModuleMember::Use(_) => unreachable!(),
-            P::ModuleMember::Friend(f) => {
-                friend(context, &mut friends, f);
-            }
+            P::ModuleMember::Friend(f) => friend(context, &mut friends, f),
             P::ModuleMember::Function(mut f) => {
                 if !context.is_source_definition {
                     f.body.value = P::FunctionBody_::Native

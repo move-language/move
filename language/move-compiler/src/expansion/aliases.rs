@@ -161,20 +161,23 @@ impl AliasMap {
                     self.unused[*depth].modules.remove(n);
                 }
                 *depth_opt = None;
-                // What we are trying to do here is to preserve the
-                // location of the module name rather than replacing
-                // it with the location of the alias. The n parameter
-                // represents JUST the module name, so we leave
-                // locations related to module's address intact as
-                // replacing them with the location of the module name
-                // does not seem right
-                Some(sp(
-                    n.loc,
+                // We are preserving the name's original location,
+                // rather than referring to where the alias was
+                // defined. The name represents JUST the module name,
+                // though, so we do not change location of the address
+                // as we don't have this information.
+                // TODO maybe we should also keep the alias reference
+                // (or its location)?
+                let sp!(
+                    _,
                     ModuleIdent_ {
-                        address: ident.value.address,
-                        module: ModuleName(sp(n.loc, ident.value.module.value())),
-                    },
-                ))
+                        address,
+                        module: ModuleName(sp!(_, module))
+                    }
+                ) = ident;
+                let address = *address;
+                let module = ModuleName(sp(n.loc, *module));
+                Some(sp(n.loc, ModuleIdent_ { address, module }))
             }
         }
     }
@@ -182,22 +185,19 @@ impl AliasMap {
     pub fn member_alias_get(&mut self, n: &Name) -> Option<(ModuleIdent, Name)> {
         match self.members.get_mut(n) {
             None => None,
-            Some((depth_opt, ident_name)) => {
+            Some((depth_opt, (sp!(mem_mod_loc, mem_mod), sp!(_, mem_name)))) => {
                 if let Some(depth) = depth_opt {
                     self.unused[*depth].members.remove(n);
                 }
                 *depth_opt = None;
-                // What we are trying to do here is to preserve the
-                // location of the member name rather than replacing
-                // it with the location of the alias. The n parameter
-                // represents JUST the member name, so even if it's
-                // preceded by the module name, we don't know the
-                // location of this name - hence leaving ModuleIdent
-                // location intact.
-                Some((
-                    sp(ident_name.0.loc, ident_name.0.value),
-                    sp(n.loc, ident_name.1.value),
-                ))
+                // We are preserving the name's original location,
+                // rather than referring to where the alias was
+                // defined. The name represents JUST the member name,
+                // though, so we do not change location of the module
+                // as we don't have this information.
+                // TODO maybe we should also keep the alias reference
+                // (or its location)?
+                Some((sp(*mem_mod_loc, *mem_mod), sp(n.loc, *mem_name)))
             }
         }
     }

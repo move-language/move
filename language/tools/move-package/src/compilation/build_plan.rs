@@ -248,6 +248,22 @@ impl BuildPlan {
             package_names
         )?;
 
+        if let Err(err) = std::fs::remove_dir_all(&build_root_path) {
+            match err.kind() {
+                io::ErrorKind::NotFound => (),
+                _ => {
+                    writeln!(
+                        writer,
+                        "{} Failed to remove build dir {}: {}",
+                        "ERROR".bold().red(),
+                        build_root_path.to_string_lossy(),
+                        err,
+                    )?;
+
+                    return Err(err.into());
+                }
+            }
+        }
         if let Err(err) = std::fs::create_dir_all(&build_root_path) {
             writeln!(
                 writer,
@@ -296,6 +312,7 @@ impl BuildPlan {
         }
 
         // Step 2: Compile Yul into bytecode using solc
+
         let yul_source = match std::fs::read_to_string(&yul_output) {
             Ok(yul_source) => yul_source,
             Err(err) => {

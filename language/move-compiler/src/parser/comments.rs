@@ -25,7 +25,7 @@ pub fn verify_string(file_hash: FileHash, string: &str) -> Result<(), Diagnostic
             let msg = format!(
                 "Invalid character '{}' found when reading file. Only ASCII printable characters, \
                  tabs (\\t), and line endings (\\n) are permitted.",
-                chr
+                chr.escape_default()
             );
             Err(Diagnostics::from(vec![diag!(
                 Syntax::InvalidCharacter,

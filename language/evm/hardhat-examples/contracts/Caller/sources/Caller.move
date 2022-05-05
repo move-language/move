@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 module Evm::Caller {
     use Evm::U256::{Self, U256};
     use Evm::ExternalResult::{Self, ExternalResult};

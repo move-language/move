@@ -1,9 +1,8 @@
-#[contract]
+#[evm_contract]
 module Evm::Greeter {
     use Evm::Evm::{self};
     use Evm::Evm::sign;
 
-    #[storage]
     struct State has key {
         greeting: vector<u8>,
     }

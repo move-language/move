@@ -1,6 +1,6 @@
 // Tests basic arithmetics with u256s.
 // dep: ../stdlib/sources/U256.move
-#[contract]
+#[evm_contract]
 module 0x2::U256Arith {
     use Evm::U256::{Self, U256, u256_from_words};
 

@@ -1,3 +1,4 @@
+#[evm_contract]
 module 0x2::GlobalVectors {
     use Std::Vector;
     use Evm::Evm::sign;

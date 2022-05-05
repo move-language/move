@@ -1,3 +1,4 @@
+#[evm_contract]
 module 0x2::M {
     use Evm::ExternalResult::{Self, ExternalResult};
     use Evm::U256::{Self, U256};

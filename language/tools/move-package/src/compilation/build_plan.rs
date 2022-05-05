@@ -275,7 +275,8 @@ impl BuildPlan {
         ) {
             writeln!(
                 writer,
-                "{} Failed to compile Move into Yul",
+                "{} Failed to compile Move into Yul {}",
+                err,
                 "ERROR".bold().red()
             )?;
 

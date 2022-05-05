@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 /// An implementation of the ERC-165.
 module Evm::ERC165 {
     use Evm::IERC165;

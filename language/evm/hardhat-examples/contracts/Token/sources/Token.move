@@ -1,10 +1,10 @@
+#[evm_contract]
 module Evm::Token {
     use Evm::Evm::{self, sender, sign};
     use Evm::Table::{Self, Table};
     use Evm::U256::{Self, U256};
     use Std::Errors;
 
-    #[storage]
     /// Represents the state of this contract. This is located at `borrow_global<State>(self())`.
     struct State has key {
         total_supply: U256,

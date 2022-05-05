@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 /// An implementation of the ERC-721 Non-Fungible Token Standard.
 module Evm::ERC721 {
     use Evm::Evm::{sender, self, sign, emit, isContract, tokenURI_with_baseURI, require, abort_with};
@@ -130,7 +130,6 @@ module Evm::ERC721 {
         approved: bool,
     }
 
-    #[storage]
     /// Represents the state of this contract.
     /// This is located at `borrow_global<State>(self())`.
     struct State has key {

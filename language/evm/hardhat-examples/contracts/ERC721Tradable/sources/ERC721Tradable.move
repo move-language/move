@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 /// An implementation of the ERC-721 Non-Fungible Token Standard.
 module Evm::ERC721Tradable {
     use Evm::Evm::{sender, self, sign, emit, isContract, tokenURI_with_baseURI, require, abort_with};
@@ -134,7 +134,6 @@ module Evm::ERC721Tradable {
         approved: bool,
     }
 
-    #[storage]
     /// Represents the state of this contract. This is located at `borrow_global<State>(self())`.
     struct State has key {
         name: vector<u8>,
@@ -148,8 +147,8 @@ module Evm::ERC721Tradable {
         proxyRegistryAddress: address,
     }
 
-    /// Constructor of this contract.
     #[create(sig=b"constructor(string,string,address,string)")]
+    /// Constructor of this contract.
     public fun create(name: vector<u8>, symbol: vector<u8>, proxyRegistryAddress: address, baseURI: vector<u8>) acquires State {
         // Initial state of contract
         move_to<State>(

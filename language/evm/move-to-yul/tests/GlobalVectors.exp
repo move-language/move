@@ -3,12 +3,12 @@
  * ======================================= */
 
 
-object "Empty" {
+object "A2_GlobalVectors" {
     code {
-        codecopy(0, dataoffset("Empty_deployed"), datasize("Empty_deployed"))
-        return(0, datasize("Empty_deployed"))
+        codecopy(0, dataoffset("A2_GlobalVectors_deployed"), datasize("A2_GlobalVectors_deployed"))
+        return(0, datasize("A2_GlobalVectors_deployed"))
     }
-    object "Empty_deployed" {
+    object "A2_GlobalVectors_deployed" {
         code {
             mstore(0, memoryguard(160))
             if iszero(lt(calldatasize(), 4))

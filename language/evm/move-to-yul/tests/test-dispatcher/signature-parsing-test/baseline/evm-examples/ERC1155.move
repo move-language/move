@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 /// An implementation of the ERC-1155 Multi Token Standard.
 module 0x2::ERC1155 {
     use Std::ASCII::{String};

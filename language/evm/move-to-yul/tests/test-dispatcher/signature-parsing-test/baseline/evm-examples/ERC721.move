@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 /// An implementation of the ERC-721 Non-Fungible Token Standard.
 module 0x2::ERC721 {
     use Evm::U256::{U256, u256_from_words};

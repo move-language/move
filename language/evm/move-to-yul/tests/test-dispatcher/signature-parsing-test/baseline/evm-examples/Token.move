@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 /// An implementation of ERC20.
 module 0x2::ERC20 {
     use Evm::U256::{U256, u256_from_words};

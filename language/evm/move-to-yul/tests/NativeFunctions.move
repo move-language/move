@@ -1,7 +1,7 @@
 // Tests native functions.
 // dep: ../stdlib/sources/Evm.move
 // dep: ../stdlib/sources/U256.move
-#[contract]
+#[evm_contract]
 module 0x2::NativeFunctions {
     use Evm::Evm::{Self, abort_with, to_string, concat};
     use Evm::U256::{zero, one, u256_from_u128, u256_from_words};

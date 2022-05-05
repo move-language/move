@@ -1,3 +1,4 @@
+#[evm_contract]
 module 0x1::FortyTwo {
     use Evm::Evm::{emit};
     use Evm::U256::U256;

@@ -1,3 +1,4 @@
+#[evm_contract]
 module 0x1::FortyTwo {
     use Evm::U256::{u256_from_u128, U256};
 

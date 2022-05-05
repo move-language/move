@@ -1,3 +1,4 @@
+#[evm_contract]
 module 0x2::Tables {
     use Evm::Evm::sign;
     use Evm::Table::{Self, Table};

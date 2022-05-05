@@ -27,8 +27,12 @@ impl NativeFunctions {
         let fun = ctx.env.get_function(fun_id.to_qualified_id());
         let mut sig = SoliditySignature::create_default_sig_for_decode_fun(ctx, &fun);
         if let Some(solidity_sig_str) = solidity_sig_str_opt {
-            let parsed_sig_opt =
-                SoliditySignature::parse_into_solidity_signature(&solidity_sig_str, &fun);
+            let parsed_sig_opt = SoliditySignature::parse_into_solidity_signature(
+                ctx,
+                &solidity_sig_str,
+                &fun,
+                &None,
+            );
             if let Ok(parsed_sig) = parsed_sig_opt {
                 sig = parsed_sig;
             } else if let Err(msg) = parsed_sig_opt {
@@ -133,8 +137,12 @@ impl NativeFunctions {
         let fun = ctx.env.get_function(fun_id.to_qualified_id());
         let mut sig = SoliditySignature::create_default_sig_for_encode_fun(ctx, &fun);
         if let Some(solidity_sig_str) = solidity_sig_str_opt {
-            let parsed_sig_opt =
-                SoliditySignature::parse_into_solidity_signature(&solidity_sig_str, &fun);
+            let parsed_sig_opt = SoliditySignature::parse_into_solidity_signature(
+                ctx,
+                &solidity_sig_str,
+                &fun,
+                &None,
+            );
             if let Ok(parsed_sig) = parsed_sig_opt {
                 sig = parsed_sig;
             } else if let Err(msg) = parsed_sig_opt {
@@ -310,7 +318,7 @@ impl SoliditySignature {
         ctx: &Context,
         fun: &FunctionEnv<'_>,
     ) -> bool {
-        if !self.check_sig_compatibility(ctx, fun) {
+        if !self.check_sig_compatibility(ctx, fun, &None) {
             ctx.env.error(
                 &fun.get_loc(),
                 "solidity signature is not compatible with the move signature",
@@ -341,7 +349,7 @@ impl SoliditySignature {
         ctx: &Context,
         fun: &FunctionEnv<'_>,
     ) -> bool {
-        if !self.check_sig_compatibility(ctx, fun) {
+        if !self.check_sig_compatibility(ctx, fun, &None) {
             ctx.env.error(
                 &fun.get_loc(),
                 "solidity signature is not compatible with the move signature",

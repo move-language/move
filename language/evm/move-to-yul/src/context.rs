@@ -282,7 +282,7 @@ impl<'a> Context<'a> {
         if storage.is_some() && constructor.is_none() {
             self.env.error(
                 &module.get_loc(),
-                "contract declares #[storage] struct but misses #[creator] function",
+                "contract declares #[storage] struct but misses #[create] function",
             )
         }
 
@@ -701,11 +701,26 @@ impl<'a> Context<'a> {
         }
     }
 
+    /// Returns true if the type is a proper struct.
     pub fn type_is_struct(&self, ty: &Type) -> bool {
         use Type::*;
         match ty {
             Struct(m, s, _) => !self.is_u256(m.qualified(*s)) && !self.is_table(m.qualified(*s)),
             _ => false,
+        }
+    }
+
+    /// Returns true if there is a storage struct given and the type is a reference to it.
+    pub fn is_storage_ref(
+        &self,
+        storage_type: &Option<QualifiedInstId<StructId>>,
+        ty: &Type,
+    ) -> bool {
+        if let Some(st) = &storage_type {
+            matches!(ty,
+                Type::Reference(_, et) if et.as_ref() == &st.to_type())
+        } else {
+            false
         }
     }
 }

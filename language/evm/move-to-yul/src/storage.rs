@@ -341,4 +341,75 @@ impl Generator {
             );
         }
     }
+
+    /// Generate instructions for a borrow_global and return a String which denotes an
+    /// expression valid in the current block. Calls to this function should usually
+    /// scoped into a `ctx.emit_block`.
+    pub(crate) fn borrow_global_instrs(
+        &mut self,
+        ctx: &Context,
+        struct_id: QualifiedInstId<StructId>,
+        addr: String,
+    ) -> String {
+        // Obtain the storage base offset for this resource.
+        emitln!(
+            ctx.writer,
+            "let $base_offset := {}",
+            self.type_storage_base(
+                ctx,
+                &struct_id.to_type(),
+                "${RESOURCE_STORAGE_CATEGORY}",
+                addr,
+            )
+        );
+        let base_offset = "$base_offset";
+
+        // At the base offset check the flag whether the resource exists.
+        let exists_call = self.call_builtin_str(
+            ctx,
+            YulFunction::AlignedStorageLoad,
+            std::iter::once(base_offset.to_string()),
+        );
+        let abort_call = self.call_builtin_str(ctx, YulFunction::AbortBuiltin, std::iter::empty());
+        emitln!(
+            ctx.writer,
+            "if iszero({}) {{\n  {}\n}}",
+            exists_call,
+            abort_call
+        );
+
+        // Skip the existence flag and create a pointer.
+        let make_ptr = self.call_builtin_str(
+            ctx,
+            YulFunction::MakePtr,
+            vec![
+                "true".to_string(),
+                format!("add({}, ${{RESOURCE_EXISTS_FLAG_SIZE}})", base_offset),
+            ]
+            .into_iter(),
+        );
+        make_ptr
+    }
+
+    /// Returns an expression for checking whether a resource exists.
+    pub(crate) fn exists_check(
+        &mut self,
+        ctx: &Context,
+        struct_id: QualifiedInstId<StructId>,
+        addr: String,
+    ) -> String {
+        // Obtain the storage base offset for this resource.
+        let base_offset = self.type_storage_base(
+            ctx,
+            &struct_id.to_type(),
+            "${RESOURCE_STORAGE_CATEGORY}",
+            addr,
+        );
+        // Load the exists flag and store it into destination.
+        self.call_builtin_str(
+            ctx,
+            YulFunction::AlignedStorageLoad,
+            std::iter::once(base_offset),
+        )
+    }
 }

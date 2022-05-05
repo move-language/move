@@ -64,8 +64,10 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
             options.experiments.push(exp.clone());
             format!("{}.{}", EXP_EXT, exp)
         };
-        let (_, mut out, _) = Generator::run(&options, &env).pop().expect("contract");
+        let mut contracts = Generator::run(&options, &env);
+        let mut out = "".to_string();
         if !env.has_errors() {
+            out = out + &contracts.pop().expect("contract").1;
             out = format!("{}\n\n{}", out, compile_check(&options, &out));
 
             // Also generate any tests and run them.

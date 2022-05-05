@@ -98,6 +98,30 @@ fn test_dispatch_basic() -> Result<()> {
     Ok(())
 }
 
+/// Test DispatcherBasicStorage
+#[test]
+fn test_dispatch_basic_storage() -> Result<()> {
+    let contract_code = compile_yul_to_bytecode_bytes("DispatcherBasicStorage.move")?;
+    let vicinity = generate_testing_vincinity();
+    let mut exec = Executor::new(&vicinity);
+    let contract_address = exec
+        .create_contract(H160::zero(), contract_code)
+        .expect("failed to create contract");
+    let current = "current()";
+    let increment = "increment()";
+    for i in 0..3 {
+        let (exit_reason, buffer) =
+            exec.call_function(H160::zero(), contract_address, 0.into(), current, &[]);
+        assert!(matches!(exit_reason, ExitReason::Succeed(_)));
+        assert!(buffer.len() >= 32);
+        assert_eq!(&buffer[31], &(i as u8));
+        let (exit_reason, _) =
+            exec.call_function(H160::zero(), contract_address, 0.into(), increment, &[]);
+        assert!(matches!(exit_reason, ExitReason::Succeed(_)));
+    }
+    Ok(())
+}
+
 /// Test DispatcherRevert
 #[test]
 fn test_dispatch_revert() -> Result<()> {

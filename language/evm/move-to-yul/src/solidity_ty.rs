@@ -11,7 +11,7 @@ use regex::Regex;
 use std::{fmt, fmt::Formatter};
 
 use move_model::{
-    model::{FunctionEnv, Parameter},
+    model::{FunctionEnv, Parameter, QualifiedInstId, StructId},
     ty::{PrimitiveType, Type},
 };
 
@@ -499,10 +499,18 @@ impl fmt::Display for SoliditySignature {
 
 impl SoliditySignature {
     /// Create a default solidity signature from a move function signature
-    pub(crate) fn create_default_solidity_signature(ctx: &Context, fun: &FunctionEnv<'_>) -> Self {
+    pub(crate) fn create_default_solidity_signature(
+        ctx: &Context,
+        fun: &FunctionEnv<'_>,
+        storage_type: &Option<QualifiedInstId<StructId>>,
+    ) -> Self {
         let fun_name = fun.symbol_pool().string(fun.get_name()).to_string();
         let mut para_type_lst = vec![];
-        for Parameter(para_name, move_ty) in fun.get_parameters() {
+        for (pos, Parameter(para_name, move_ty)) in fun.get_parameters().into_iter().enumerate() {
+            if pos == 0 && ctx.is_storage_ref(storage_type, &move_ty) {
+                // Skip the first parameter if it is a reference to contract storage.
+                continue;
+            }
             let solidity_ty = SolidityType::translate_from_move(ctx, &move_ty, false); // implicit mapping from a move type to a solidity type
             para_type_lst.push((
                 solidity_ty,
@@ -544,8 +552,10 @@ impl SoliditySignature {
 
     /// Parse the solidity signature
     pub fn parse_into_solidity_signature(
+        ctx: &Context,
         sig_str: &str,
         fun: &FunctionEnv<'_>,
+        storage_type: &Option<QualifiedInstId<StructId>>,
     ) -> anyhow::Result<Self> {
         // Solidity signature matching
         static SIG_REG: Lazy<Regex> = Lazy::new(|| {
@@ -590,7 +600,11 @@ impl SoliditySignature {
                 if para_names.is_empty() {
                     return Err(anyhow!(PARSE_ERR_MSG));
                 }
-                para_names = para_names[1..].to_vec();
+                para_names.remove(0);
+            }
+            // Skip storage reference parameter.
+            if !para_names.is_empty() && ctx.is_storage_ref(storage_type, &fun.get_local_type(0)) {
+                para_names.remove(0);
             }
             let ret_names = vec!["".to_string(); fun.get_return_count()];
             let solidity_sig = SoliditySignature {
@@ -654,8 +668,17 @@ impl SoliditySignature {
     }
 
     /// Check whether the user defined solidity signature is compatible with the Move signature
-    pub fn check_sig_compatibility(&self, ctx: &Context, fun: &FunctionEnv<'_>) -> bool {
-        let para_types = fun.get_parameter_types();
+    pub fn check_sig_compatibility(
+        &self,
+        ctx: &Context,
+        fun: &FunctionEnv<'_>,
+        storage_type: &Option<QualifiedInstId<StructId>>,
+    ) -> bool {
+        let mut para_types = fun.get_parameter_types();
+        if !para_types.is_empty() && ctx.is_storage_ref(storage_type, &para_types[0]) {
+            // Skip storage reference parameter.
+            para_types.remove(0);
+        }
         let sig_para_vec = self
             .para_types
             .iter()
@@ -671,16 +694,18 @@ impl SoliditySignature {
                 return false;
             }
         }
-        // Check return type list
-        let sig_ret_vec = self.ret_types.iter().map(|(ty, _)| ty).collect::<Vec<_>>();
-        let ret_types = fun.get_return_types();
-        if ret_types.len() != sig_ret_vec.len() {
-            return false;
-        }
-        for type_pair in ret_types.iter().zip(sig_ret_vec.iter()) {
-            let (m_ty, s_ty) = type_pair;
-            if !s_ty.check_type_compatibility(ctx, m_ty) {
+        // Check return type list, but only if fun is not a creator.
+        if !attributes::is_create_fun(fun) {
+            let sig_ret_vec = self.ret_types.iter().map(|(ty, _)| ty).collect::<Vec<_>>();
+            let ret_types = fun.get_return_types();
+            if ret_types.len() != sig_ret_vec.len() {
                 return false;
+            }
+            for type_pair in ret_types.iter().zip(sig_ret_vec.iter()) {
+                let (m_ty, s_ty) = type_pair;
+                if !s_ty.check_type_compatibility(ctx, m_ty) {
+                    return false;
+                }
             }
         }
         true

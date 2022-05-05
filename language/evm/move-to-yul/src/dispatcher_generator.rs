@@ -109,12 +109,17 @@ impl Generator {
     ) -> SoliditySignature {
         let extracted_sig_opt =
             attributes::extract_callable_or_create_signature(fun, callable_flag);
-        let mut sig = SoliditySignature::create_default_solidity_signature(ctx, fun);
+        let mut sig =
+            SoliditySignature::create_default_solidity_signature(ctx, fun, &self.storage_type);
         if let Some(extracted_sig) = extracted_sig_opt {
-            let parsed_sig_opt =
-                SoliditySignature::parse_into_solidity_signature(&extracted_sig, fun);
+            let parsed_sig_opt = SoliditySignature::parse_into_solidity_signature(
+                ctx,
+                &extracted_sig,
+                fun,
+                &self.storage_type,
+            );
             if let Ok(parsed_sig) = parsed_sig_opt {
-                if !parsed_sig.check_sig_compatibility(ctx, fun) {
+                if !parsed_sig.check_sig_compatibility(ctx, fun, &self.storage_type) {
                     ctx.env.error(
                         &fun.get_loc(),
                         "solidity signature is not compatible with the move signature",
@@ -161,13 +166,23 @@ impl Generator {
                 self.generate_call_value_check(ctx, REVERT_ERR_NON_PAYABLE_FUN);
             }
             // Decoding
+            let mut logical_param_types = fun.get_parameter_types();
+            let storage_type = if !logical_param_types.is_empty()
+                && ctx.is_storage_ref(&self.storage_type, &logical_param_types[0])
+            {
+                // Skip the storage reference parameter.
+                logical_param_types.remove(0);
+                Some(self.storage_type.clone().unwrap())
+            } else {
+                None
+            };
             let param_count = solidity_sig.para_types.len();
             let mut params = "".to_string();
             if param_count > 0 {
                 let decoding_fun_name = self.generate_abi_tuple_decoding_para(
                     ctx,
                     solidity_sig,
-                    fun.get_parameter_types(),
+                    logical_param_types,
                     false,
                 );
                 params = (0..param_count).map(|i| format!("param_{}", i)).join(", ");
@@ -185,6 +200,15 @@ impl Generator {
             if ret_count > 0 {
                 rets = (0..ret_count).map(|i| format!("ret_{}", i)).join(", ");
                 let_rets = format!("let {} := ", rets);
+            }
+            if let Some(storage) = storage_type {
+                // The first parameter is a reference to the storage struct.
+                let storage_ref = self.borrow_global_instrs(ctx, storage, "address()".to_string());
+                if params.is_empty() {
+                    params = storage_ref;
+                } else {
+                    params = vec![storage_ref, params].into_iter().join(", ");
+                }
             }
             // Call the function
             emitln!(ctx.writer, "{}{}({})", let_rets, function_name, params);
@@ -208,11 +232,18 @@ impl Generator {
 
     /// Determine whether the function is suitable as a dispatcher item.
     pub(crate) fn is_suitable_for_dispatch(&self, ctx: &Context, fun: &FunctionEnv) -> bool {
-        // TODO: once we support structs and vectors, remove check for them
-        fun.get_parameter_types()
-            .iter()
-            .chain(fun.get_return_types().iter())
-            .all(|ty| !ty.is_reference() && !ctx.type_is_struct(ty))
+        let mut types = fun.get_parameter_types();
+        if !types.is_empty() && ctx.is_storage_ref(&self.storage_type, &types[0]) {
+            // Skip storage ref parameter
+            types.remove(0);
+        }
+        if !attributes::is_create_fun(fun) || self.storage_type.is_none() {
+            // If this is not a creator which returns a storage value, add return types.
+            types.extend(fun.get_return_types().into_iter())
+        }
+        types
+            .into_iter()
+            .all(|ty| !ty.is_reference() && !ctx.type_is_struct(&ty))
     }
 
     /// Generate optional receive function.

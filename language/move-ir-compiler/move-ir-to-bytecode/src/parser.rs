@@ -11,7 +11,7 @@ use codespan_reporting::{
         Config,
     },
 };
-use move_command_line_common::character_sets::is_permitted_char;
+use move_command_line_common::character_sets::is_permitted_chars;
 use move_ir_to_bytecode_syntax::syntax::{self, ParseError};
 use move_ir_types::{ast, location::*};
 
@@ -23,12 +23,13 @@ use move_ir_types::{ast, location::*};
 fn verify_string(string: &str) -> Result<()> {
     string
         .chars()
-        .find(|c| !is_permitted_char(*c))
-        .map_or(Ok(()), |chr| {
+        .enumerate()
+        .find(|(idx, _)| !is_permitted_chars(string.as_bytes(), *idx))
+        .map_or(Ok(()), |(_, c)| {
             bail!(
                 "Parser Error: invalid character {} found when reading file.\
-                 Only ascii printable, tabs (\\t), and \\r \\n line ending characters are permitted.",
-                chr
+                 Only ascii printable, tabs (\\t), lf (\\n) and crlf (\\r\\n) characters are permitted.",
+                c
             )
         })
 }

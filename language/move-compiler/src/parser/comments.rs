@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{diag, diagnostics::Diagnostics};
-use move_command_line_common::{character_sets::is_permitted_char, files::FileHash};
+use move_command_line_common::{character_sets::is_permitted_chars, files::FileHash};
 use move_ir_types::location::*;
 use std::collections::BTreeMap;
 
@@ -17,14 +17,14 @@ pub fn verify_string(file_hash: FileHash, string: &str) -> Result<(), Diagnostic
     match string
         .chars()
         .enumerate()
-        .find(|(_, c)| !is_permitted_char(*c))
+        .find(|(idx, _)| !is_permitted_chars(string.as_bytes(), *idx))
     {
         None => Ok(()),
         Some((idx, chr)) => {
             let loc = Loc::new(file_hash, idx as u32, idx as u32);
             let msg = format!(
                 "Invalid character '{}' found when reading file. Only ASCII printable characters, \
-                 tabs (\\t), and line endings (\\r)(\\n) are permitted.",
+                 tabs (\\t), lf (\\n) and crlf (\\r\\n) are permitted.",
                 chr
             );
             Err(Diagnostics::from(vec![diag!(

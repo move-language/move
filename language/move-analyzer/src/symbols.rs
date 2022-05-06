@@ -1010,16 +1010,20 @@ fn symbols_build_test() {
 
     // param (unpack function)
     assert_use_def(mod_symbols, 1, 9, 15, 9, 15);
+    // struct name in unpack (unpack function)
+    assert_use_def(mod_symbols, 0, 10, 12, 2, 11);
     // field name in unpack (unpack function)
-    assert_use_def(mod_symbols, 0, 10, 25, 3, 8);
+    assert_use_def(mod_symbols, 1, 10, 25, 3, 8);
     // bound variable in unpack (unpack function)
-    assert_use_def(mod_symbols, 1, 10, 37, 10, 37);
+    assert_use_def(mod_symbols, 2, 10, 37, 10, 37);
     // moved var in unpack assignment (unpack function)
-    assert_use_def(mod_symbols, 2, 10, 47, 9, 15);
+    assert_use_def(mod_symbols, 3, 10, 47, 9, 15);
 
     // copied var in an assignment (cp function)
     assert_use_def(mod_symbols, 1, 15, 18, 14, 11);
 
+    // struct name in pack (pack function)
+    assert_use_def(mod_symbols, 1, 20, 18, 2, 11);
     // field name in pack (pack function)
-    assert_use_def(mod_symbols, 1, 20, 31, 3, 8);
+    assert_use_def(mod_symbols, 2, 20, 31, 3, 8);
 }

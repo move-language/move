@@ -1048,6 +1048,97 @@ fn define_destroy_empty_fun(
     emitln!(ctx.writer, "}");
 }
 
+/// Generate equality method for the vector type.
+pub(crate) fn equality_fun(gen: &mut Generator, ctx: &Context, ty: &Type) {
+    let elem_type = get_elem_type(&ty).unwrap();
+    if ctx.type_allocates_memory(&elem_type) {
+        emitln!(
+            ctx.writer,
+            "let len_x := {}",
+            gen.call_builtin_str(
+                ctx,
+                YulFunction::MemoryLoadU64,
+                std::iter::once("x".to_string())
+            )
+        );
+        emitln!(
+            ctx.writer,
+            "let len_y := {}",
+            gen.call_builtin_str(
+                ctx,
+                YulFunction::MemoryLoadU64,
+                std::iter::once("y".to_string())
+            )
+        );
+        emitln!(
+            ctx.writer,
+            "if {} {{\n  res:= false\n  leave\n}}",
+            gen.call_builtin_str(
+                ctx,
+                YulFunction::Neq,
+                vec!["len_x".to_string(), "len_y".to_string()].into_iter()
+            )
+        );
+        emitln!(
+            ctx.writer,
+            "for { let i := 0 } lt(i, len_x) { i := add(i, 1) }"
+        );
+        let elem_size = ctx.type_size(&elem_type);
+        ctx.emit_block(|| {
+            emitln!(
+                ctx.writer,
+                "let e_x := {}",
+                gen.call_builtin_str(
+                    ctx,
+                    ctx.memory_load_builtin_fun(&elem_type),
+                    std::iter::once(format!(
+                        "add({}, add(x, mul(i, {})))",
+                        VECTOR_METADATA_SIZE, elem_size
+                    ))
+                )
+            );
+            emitln!(
+                ctx.writer,
+                "let e_y := {}",
+                gen.call_builtin_str(
+                    ctx,
+                    ctx.memory_load_builtin_fun(&elem_type),
+                    std::iter::once(format!(
+                        "add({}, add(y, mul(i, {})))",
+                        VECTOR_METADATA_SIZE, elem_size
+                    ))
+                )
+            );
+            let elem_equality_call = format!("{}(e_x, e_y)", gen.equality_function(ctx, elem_type));
+            emitln!(
+                ctx.writer,
+                "if {} {{\n  res:= false\n  leave\n}}",
+                gen.call_builtin_str(
+                    ctx,
+                    YulFunction::LogicalNot,
+                    std::iter::once(elem_equality_call)
+                )
+            );
+        });
+        emitln!(ctx.writer, "res := true");
+    } else {
+        emitln!(
+            ctx.writer,
+            "res := {}",
+            gen.call_builtin_str(
+                ctx,
+                YulFunction::EqVector,
+                vec![
+                    "x".to_string(),
+                    "y".to_string(),
+                    ctx.type_size(&elem_type).to_string()
+                ]
+                .into_iter()
+            )
+        );
+    }
+}
+
 pub(crate) fn get_elem_type(vector_type: &Type) -> Option<Type> {
     match vector_type {
         Type::Vector(ty) => Some(*ty.clone()),

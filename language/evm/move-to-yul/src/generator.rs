@@ -598,6 +598,26 @@ impl Generator {
         }
     }
 
+    pub(crate) fn equality_function(&mut self, ctx: &Context, ty: Type) -> String {
+        let function_name = format!("$Eq_{}", ctx.mangle_types(&[ty.clone()]));
+        if ctx.type_allocates_memory(&ty) {
+            let generate_fun = move |gen: &mut Generator, ctx: &Context| {
+                emitln!(ctx.writer, "(x, y) -> res");
+                ctx.emit_block(|| {
+                    if ty.is_vector() {
+                        crate::vectors::equality_fun(gen, ctx, &ty)
+                    } else if ctx.type_is_struct(&ty) {
+                        struct_equality_fun(gen, ctx, &ty)
+                    }
+                });
+            };
+            self.need_auxiliary_function(function_name, Box::new(generate_fun))
+        } else {
+            self.need_yul_function(YulFunction::Eq);
+            YulFunction::Eq.yule_name()
+        }
+    }
+
     /// Copy literal string to memory
     pub(crate) fn copy_literal_to_memory(&mut self, value: Vec<u8>) -> String {
         let name_prefix = "copy_literal_string_to_memory";
@@ -666,4 +686,74 @@ impl Generator {
         }
         hash
     }
+}
+
+fn struct_equality_fun(gen: &mut Generator, ctx: &Context, ty: &Type) {
+    let struct_id = ty.get_struct_id(ctx.env).expect("struct");
+    let layout = ctx.get_struct_layout(&struct_id);
+
+    // Check pointer equality of fields first.
+    for field_offs in layout.field_order.iter().take(layout.pointer_count) {
+        let (byte_offs, field_ty) = layout.offsets.get(field_offs).unwrap();
+
+        emitln!(
+            ctx.writer,
+            "let f_x_{} := mload({})",
+            field_offs,
+            format!("add(x, {})", byte_offs)
+        );
+
+        emitln!(
+            ctx.writer,
+            "let f_y_{} := mload({})",
+            field_offs,
+            format!("add(y, {})", byte_offs)
+        );
+        let field_equality_call = format!(
+            "{}(f_x_{}, f_y_{})",
+            gen.equality_function(ctx, field_ty.clone()),
+            field_offs,
+            field_offs
+        );
+        emitln!(
+            ctx.writer,
+            "if {} {{\n  res:= false\n  leave\n}}",
+            gen.call_builtin_str(
+                ctx,
+                YulFunction::LogicalNot,
+                std::iter::once(field_equality_call)
+            )
+        );
+    }
+
+    // The remaining fields are all primitive. We directly check the memory content.
+    if layout.pointer_count < layout.field_order.len() {
+        let mut byte_offs = layout
+            .offsets
+            .get(&layout.field_order[layout.pointer_count])
+            .unwrap()
+            .0;
+        assert_eq!(
+            byte_offs % 32,
+            0,
+            "first non-pointer field on word boundary"
+        );
+        while byte_offs < layout.size {
+            emitln!(
+                ctx.writer,
+                "if {} {{\n  res:= false\n  leave\n}}",
+                gen.call_builtin_str(
+                    ctx,
+                    YulFunction::Neq,
+                    vec![
+                        format!("mload(add(x, {}))", byte_offs),
+                        format!("mload(add(y, {}))", byte_offs)
+                    ]
+                    .into_iter()
+                )
+            );
+            byte_offs += 32
+        }
+    }
+    emitln!(ctx.writer, "res := true");
 }

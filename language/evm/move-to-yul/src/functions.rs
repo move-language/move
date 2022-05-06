@@ -506,87 +506,37 @@ impl<'a> FunctionGenerator<'a> {
                     // vectors of vectors
                     Eq => {
                         let src_type = get_local_type(srcs[0]);
-                        let loc = target.get_bytecode_loc(bc.get_attr_id());
-                        if src_type.is_vector() {
-                            let elem_type = crate::vectors::get_elem_type(&src_type).unwrap();
-                            if ctx.type_allocates_memory(&elem_type) {
-                                ctx.env.error(
-                                    &loc,
-                                    &format!(
-                                        "equality for type {:?} is not yet implemented",
-                                        src_type,
-                                    ),
-                                )
-                            }
-                            print_loc();
+                        print_loc();
+                        emitln!(
+                            ctx.writer,
+                            "{} := {}({}, {})",
+                            local(&dest[0]),
+                            self.parent.equality_function(ctx, src_type),
+                            local(&srcs[0]),
+                            local(&srcs[1]),
+                        );
+                    }
+                    Neq => {
+                        print_loc();
+                        let src_type = get_local_type(srcs[0]);
+                        if ctx.type_allocates_memory(&src_type) {
+                            let equality_call = format!(
+                                "{}({}, {})",
+                                self.parent.equality_function(ctx, src_type),
+                                local(&srcs[0]),
+                                local(&srcs[1])
+                            );
                             emitln!(
                                 ctx.writer,
                                 "{} := {}",
                                 local(&dest[0]),
                                 self.parent.call_builtin_str(
                                     ctx,
-                                    YulFunction::EqVector,
-                                    vec![
-                                        local(&srcs[0]),
-                                        local(&srcs[1]),
-                                        ctx.type_size(&elem_type).to_string()
-                                    ]
-                                    .into_iter()
+                                    YulFunction::LogicalNot,
+                                    std::iter::once(equality_call)
                                 )
                             );
-                        } else if ctx.type_is_struct(&src_type) {
-                            ctx.env.error(
-                                &loc,
-                                &format!(
-                                    "equality for type {:?} is not yet implemented",
-                                    src_type,
-                                ),
-                            )
                         } else {
-                            // Primitive
-                            builtin(YulFunction::Eq, dest, srcs)
-                        }
-                    }
-                    Neq => {
-                        let src_type = get_local_type(srcs[0]);
-                        let loc = target.get_bytecode_loc(bc.get_attr_id());
-                        if src_type.is_vector() {
-                            let elem_type = crate::vectors::get_elem_type(&src_type).unwrap();
-                            if ctx.type_allocates_memory(&elem_type) {
-                                ctx.env.error(
-                                    &loc,
-                                    &format!(
-                                        "inequality for type {:?} is not yet implemented",
-                                        src_type,
-                                    ),
-                                )
-                            }
-                            print_loc();
-                            emitln!(
-                                ctx.writer,
-                                "{} := iszero({})",
-                                local(&dest[0]),
-                                self.parent.call_builtin_str(
-                                    ctx,
-                                    YulFunction::EqVector,
-                                    vec![
-                                        local(&srcs[0]),
-                                        local(&srcs[1]),
-                                        ctx.type_size(&elem_type).to_string()
-                                    ]
-                                    .into_iter()
-                                )
-                            );
-                        } else if ctx.type_is_struct(&src_type) {
-                            ctx.env.error(
-                                &loc,
-                                &format!(
-                                    "inequality for type {:?} is not yet implemented",
-                                    src_type,
-                                ),
-                            )
-                        } else {
-                            // Primitive
                             builtin(YulFunction::Neq, dest, srcs)
                         }
                     }

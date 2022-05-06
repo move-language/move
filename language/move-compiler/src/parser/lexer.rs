@@ -223,7 +223,8 @@ impl<'input> Lexer<'input> {
         // Loop until we find text that isn't whitespace, and that isn't part of
         // a multi-line or single-line comment.
         loop {
-            // Trim only the whitespace characters we recognize: newline, tab, and space.
+            // Trim only the whitespace characters we recognize: newline(\n|\r\n), tab, and space.
+            text = text.trim_start_matches("\r\n");
             text = text.trim_start_matches(|c: char| matches!(c, '\n' | '\t' | ' '));
 
             if text.starts_with("/*") {
@@ -294,10 +295,11 @@ impl<'input> Lexer<'input> {
                 // If this was a documentation comment, record it in our map.
                 if is_doc {
                     let end = get_offset(text);
-                    self.doc_comments.insert(
-                        (start as u32, end as u32),
-                        self.text[(start + 3)..end].to_string(),
-                    );
+                    let mut comment = &self.text[(start + 3)..end];
+                    comment = comment.trim_end_matches(|c: char| c == '\r');
+
+                    self.doc_comments
+                        .insert((start as u32, end as u32), comment.to_string());
                 }
 
                 // Continue the loop on the following line, which may contain leading

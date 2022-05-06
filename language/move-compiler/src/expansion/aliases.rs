@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    expansion::ast::ModuleIdent,
+    expansion::ast::{ModuleIdent, ModuleIdent_},
+    parser::ast::ModuleName,
     shared::{unique_map::UniqueMap, unique_set::UniqueSet, *},
 };
 use move_ir_types::location::*;
@@ -152,7 +153,7 @@ impl AliasMap {
         self.unused.len()
     }
 
-    pub fn module_alias_get(&mut self, n: &Name) -> Option<&ModuleIdent> {
+    pub fn module_alias_get(&mut self, n: &Name) -> Option<ModuleIdent> {
         match self.modules.get_mut(n) {
             None => None,
             Some((depth_opt, ident)) => {
@@ -160,20 +161,37 @@ impl AliasMap {
                     self.unused[*depth].modules.remove(n);
                 }
                 *depth_opt = None;
-                Some(ident)
+                // We are preserving the name's original location, rather than referring to where
+                // the alias was defined. The name represents JUST the module name, though, so we do
+                // not change location of the address as we don't have this information.
+                // TODO maybe we should also keep the alias reference (or its location)?
+                let sp!(
+                    _,
+                    ModuleIdent_ {
+                        address,
+                        module: ModuleName(sp!(_, module))
+                    }
+                ) = ident;
+                let address = *address;
+                let module = ModuleName(sp(n.loc, *module));
+                Some(sp(n.loc, ModuleIdent_ { address, module }))
             }
         }
     }
 
-    pub fn member_alias_get(&mut self, n: &Name) -> Option<&(ModuleIdent, Name)> {
+    pub fn member_alias_get(&mut self, n: &Name) -> Option<(ModuleIdent, Name)> {
         match self.members.get_mut(n) {
             None => None,
-            Some((depth_opt, ident_name)) => {
+            Some((depth_opt, (sp!(mem_mod_loc, mem_mod), sp!(_, mem_name)))) => {
                 if let Some(depth) = depth_opt {
                     self.unused[*depth].members.remove(n);
                 }
                 *depth_opt = None;
-                Some(ident_name)
+                // We are preserving the name's original location, rather than referring to where
+                // the alias was defined. The name represents JUST the member name, though, so we do
+                // not change location of the module as we don't have this information.
+                // TODO maybe we should also keep the alias reference (or its location)?
+                Some((sp(*mem_mod_loc, *mem_mod), sp(n.loc, *mem_name)))
             }
         }
     }

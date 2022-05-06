@@ -7,10 +7,15 @@ async function main() {
 
   console.log("Account balance:", (await ethers.utils.formatEther(weiAmount)));
 
-  const Token = await ethers.getContractFactory("ERC20Mock");
-  const token = await Token.deploy("MoveOnEvm", "MOE", deployer.address, BigInt(42 * 10**18));
+  const NFT = await ethers.getContractFactory("ERC721Tradable"); // A Move contract
+  const nft = await NFT.deploy(
+    "Move-on-EVM on a sunny spring day", // name
+    "MFT", // symbol
+    ethers.constants.AddressZero, // proxyRegistryAddress
+    "https://bafybeifwn437bhus4gjmvvsbnwjiv5of7beujekcaavlkdbwnfw7tewi6u.ipfs.nftstorage.link/" // baseURI
+  );
 
-  console.log("Token address:", token.address);
+  console.log("NFT address:", nft.address);
 }
 
 main()

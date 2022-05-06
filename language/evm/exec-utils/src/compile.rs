@@ -21,7 +21,11 @@ fn solc_path() -> Result<PathBuf> {
     let solc_exe = move_command_line_common::env::read_env_var("SOLC_EXE");
 
     if solc_exe.is_empty() {
-        bail!("failed to find path to solc -- is the environment variable SOLC_EXE set?")
+        bail!(
+            "failed to resolve path to solc (Solidity compiler).
+            Is the environment variable SOLC_EXE set?
+            Did you run `./scripts/dev_setup.sh -d`?"
+        )
     }
 
     Ok(PathBuf::from(&solc_exe))
@@ -37,7 +41,7 @@ fn solc_impl(
         .arg("-o")
         .arg(output_dir)
         .output()
-        .map_err(|err| format_err!("failed to call solc: {:?}", err))?;
+        .map_err(|err| format_err!("failed to call solc (solidity compiler): {:?}", err))?;
 
     let mut compiled_contracts = BTreeMap::new();
 

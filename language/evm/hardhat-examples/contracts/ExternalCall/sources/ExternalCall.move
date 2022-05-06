@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 module Evm::ExternalCall {
     use Evm::ExternalResult::{Self, ExternalResult};
     use Evm::Evm::Unit;

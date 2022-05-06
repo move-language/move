@@ -198,10 +198,10 @@ fn define_insert_fun(gen: &mut FunctionGenerator, ctx: &Context, fun_id: &Qualif
             .call_builtin_str(ctx, YulFunction::AbortBuiltin, std::iter::empty())
     );
 
-    let hash = gen.type_hash(ctx, value_type);
+    let hash = gen.parent.type_hash(ctx, value_type);
     let linked_dst_name = format!("$linked_dst_{}", hash);
 
-    gen.create_and_move_data_to_linked_storage(
+    gen.parent.create_and_move_data_to_linked_storage(
         ctx,
         value_type,
         "value".to_string(),
@@ -392,7 +392,7 @@ fn define_remove_fun(gen: &mut FunctionGenerator, ctx: &Context, fun_id: &Qualif
         emitln!(ctx.writer, "linked_src := vector_linked_src");
     }
 
-    gen.move_data_from_linked_storage(
+    gen.parent.move_data_from_linked_storage(
         ctx,
         value_type,
         "linked_src".to_string(),

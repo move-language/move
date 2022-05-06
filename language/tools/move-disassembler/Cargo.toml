@@ -2,6 +2,7 @@
 name = "move-disassembler"
 version = "0.1.0"
 authors = ["Diem Association <opensource@diem.com>"]
+description = "Print a human-readable version of Move bytecode (.mv files)"
 license = "Apache-2.0"
 publish = false
 edition = "2018"

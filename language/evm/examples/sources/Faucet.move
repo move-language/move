@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 /// Faucet example in the Ethereum book.
 module 0x42::Faucet {
     use Evm::Evm::{sender, value, self, sign, balance, transfer, emit};

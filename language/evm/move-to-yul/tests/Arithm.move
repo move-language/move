@@ -1,5 +1,6 @@
 // Tests basic arithmetic. We only test for u64. Existing move unit tests (once ready for Move on EVM) should cover
 // all other basic types.
+#[evm_contract]
 module 0x2::M {
 
     // ==============================

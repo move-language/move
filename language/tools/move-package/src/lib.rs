@@ -1,8 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-pub mod compilation;
 mod package_lock;
+
+pub mod compilation;
 pub mod resolution;
 pub mod source_package;
 
@@ -34,7 +35,6 @@ pub enum Architecture {
 
     AsyncMove,
 
-    #[cfg(feature = "evm-backend")]
     Ethereum,
 }
 
@@ -45,7 +45,6 @@ impl fmt::Display for Architecture {
 
             Self::AsyncMove => write!(f, "async-move"),
 
-            #[cfg(feature = "evm-backend")]
             Self::Ethereum => write!(f, "ethereum"),
         }
     }
@@ -67,7 +66,6 @@ impl Architecture {
 
             "async-move" => Self::AsyncMove,
 
-            #[cfg(feature = "evm-backend")]
             "ethereum" => Self::Ethereum,
 
             _ => {
@@ -91,10 +89,7 @@ impl Architecture {
 }
 
 #[derive(Debug, Parser, Clone, Serialize, Deserialize, Eq, PartialEq, PartialOrd)]
-#[clap(
-    name = "Move Package",
-    about = "Package and build system for Move code."
-)]
+#[clap(author, version, about)]
 pub struct BuildConfig {
     /// Compile in 'dev' mode. The 'dev-addresses' and 'dev-dependencies' fields will be used if
     /// this flag is set. This flag is useful for development of packages that expose named

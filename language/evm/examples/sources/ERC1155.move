@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 /// An implementation of the ERC-1155 Multi Token Standard.
 module Evm::ERC1155 {
     use Evm::Evm::{sender, self, sign, emit, isContract};

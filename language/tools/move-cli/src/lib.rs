@@ -29,11 +29,7 @@ use std::path::PathBuf;
 type NativeFunctionRecord = (AccountAddress, Identifier, Identifier, NativeFunction);
 
 #[derive(Parser)]
-#[clap(
-    name = "move",
-    about = "CLI frontend for Move compiler and VM",
-    rename_all = "kebab-case"
-)]
+#[clap(author, version, about)]
 pub struct Move {
     /// Path to a package which the command should be run with respect to.
     #[clap(

@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 /// An implementation of the ERC-20 Token Standard.
 module Evm::ERC20Mock {
     use Evm::Evm::{sender, self, sign, emit, require};
@@ -19,7 +19,6 @@ module Evm::ERC20Mock {
         value: U256,
     }
 
-    #[storage]
     /// Represents the state of this contract. This is located at `borrow_global<State>(self())`.
     struct State has key {
         balances: Table<address, U256>,

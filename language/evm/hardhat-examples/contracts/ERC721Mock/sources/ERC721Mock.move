@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 /// An implementation of the ERC-721 Non-Fungible Token Standard.
 module Evm::ERC721 {
     use Evm::Evm::{sender, self, sign, emit, isContract, tokenURI_with_baseURI, require, abort_with};
@@ -130,8 +130,8 @@ module Evm::ERC721 {
         approved: bool,
     }
 
-    #[storage]
-    /// Represents the state of this contract. This is located at `borrow_global<State>(self())`.
+    /// Represents the state of this contract.
+    /// This is located at `borrow_global<State>(self())`.
     struct State has key {
         name: vector<u8>,
         symbol: vector<u8>,
@@ -186,13 +186,12 @@ module Evm::ERC721 {
     /// Get the name.
     public fun tokenURI(tokenId: U256): vector<u8> acquires State {
         require(exists_(tokenId), b"ERC721Metadata: URI query for nonexistent token");
-        //let baseURI = b"";
         tokenURI_with_baseURI(baseURI(), tokenId)
-        //b""
     }
 
-    #[callable(sig=b"balanceOf(address) returns (uint256)"), view]
     /// Count all NFTs assigned to an owner.
+
+    #[callable(sig=b"balanceOf(address) returns (uint256)"), view]
     public fun balanceOf(owner: address): U256 acquires State {
         require(owner != @0x0, b"ERC721: balance query for the zero address");
         let s = borrow_global_mut<State>(self());
@@ -357,5 +356,11 @@ module Evm::ERC721 {
     }
 
     #[external(sig=b"onERC721Received(address,address,uint256,bytes) returns (bytes4)")]
-    public native fun IERC721Receiver_try_call_onERC721Received(contract: address, operator: address, from: address, tokenId: U256, bytes: vector<u8>): ExternalResult<vector<u8>>;
+    public native fun IERC721Receiver_try_call_onERC721Received(
+        contract: address,
+        operator: address,
+        from: address,
+        tokenId: U256,
+        bytes: vector<u8>
+    ): ExternalResult<vector<u8>>;
 }

@@ -296,12 +296,10 @@ impl<'input> Lexer<'input> {
                 if is_doc {
                     let end = get_offset(text);
                     let mut comment = &self.text[(start + 3)..end];
-                    comment = comment.trim_end_matches(|c: char| c != '\r');
+                    comment = comment.trim_end_matches(|c: char| c == '\r');
 
-                    self.doc_comments.insert(
-                        (start as u32, end as u32),
-                        comment.to_string(),
-                    );
+                    self.doc_comments
+                        .insert((start as u32, end as u32), comment.to_string());
                 }
 
                 // Continue the loop on the following line, which may contain leading

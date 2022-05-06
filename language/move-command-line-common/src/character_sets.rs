@@ -89,7 +89,7 @@ mod tests {
         let mut bad_chars = (0x0..0x09).collect::<Vec<u8>>();
         bad_chars.append(&mut (0x0B..=0x1F).collect::<Vec<u8>>());
         bad_chars.push(0x7F);
-        
+
         for idx in 0..bad_chars.len() {
             assert!(!super::is_permitted_chars(&bad_chars, idx));
         }

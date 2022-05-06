@@ -15,6 +15,7 @@ use move_core_types::{
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
     resolver::MoveResolver,
+    value::MoveTypeLayout,
     vm_status::StatusCode,
 };
 use move_vm_runtime::{
@@ -23,10 +24,7 @@ use move_vm_runtime::{
     native_functions::NativeFunction,
     session::{SerializedReturnValues, Session},
 };
-use move_vm_types::{
-    gas_schedule::GasStatus,
-    values::{Reference, Value},
-};
+use move_vm_types::{gas_schedule::GasStatus, values::GlobalValue};
 
 use crate::{actor_metadata, actor_metadata::ActorMetadata, natives, natives::AsyncExtension};
 
@@ -254,21 +252,18 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
             .load_type(&state_type_tag)
             .map_err(vm_error_to_async)?;
 
-        let actor_state_global = self
+        let layout = self
+            .get_type_layout(&state_type_tag)
+            .map_err(partial_vm_error_to_async)?;
+        let actor_state_global: &GlobalValue = self
             .vm_session
             .get_data_store()
             .load_resource(actor_addr, &state_type)
             .map_err(partial_vm_error_to_async)?;
-        let actor_state = actor_state_global
-            .borrow_global()
-            .and_then(|v| v.value_as::<Reference>())
-            .and_then(|r| r.read_ref())
-            .map_err(partial_vm_error_to_async)?;
-        args.insert(
-            0,
-            self.to_bcs(actor_state, &state_type_tag)
-                .map_err(partial_vm_error_to_async)?,
-        );
+        let bcs = actor_state_global
+            .simple_serialize(&layout)
+            .ok_or_else(|| async_extension_error("serialization failed"))?;
+        args.insert(0, bcs);
 
         // Execute the handler.
         let gas_before = gas_status.remaining_gas().get();
@@ -317,14 +312,10 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
         }
     }
 
-    fn to_bcs(&self, value: Value, tag: &TypeTag) -> PartialVMResult<Vec<u8>> {
-        let type_layout = self
-            .vm_session
+    fn get_type_layout(&self, tag: &TypeTag) -> PartialVMResult<MoveTypeLayout> {
+        self.vm_session
             .get_type_layout(tag)
-            .map_err(|e| e.to_partial())?;
-        value
-            .simple_serialize(&type_layout)
-            .ok_or_else(|| partial_extension_error("serialization failed"))
+            .map_err(|e| e.to_partial())
     }
 }
 

@@ -14,7 +14,7 @@ use move_vm_types::{
     loaded_data::runtime_types::Type,
     natives::function::{native_gas, NativeResult},
     pop_arg,
-    values::{Value, Vector},
+    values::Value,
 };
 use smallvec::smallvec;
 use std::collections::VecDeque;
@@ -77,7 +77,7 @@ fn native_send(
     let ext = context.extensions_mut().get_mut::<AsyncExtension>();
     let mut bcs_args = vec![];
     while args.len() > 2 {
-        bcs_args.push(pop_arg!(args, Vector).to_vec_u8()?);
+        bcs_args.push(pop_arg!(args, Vec<u8>));
     }
     bcs_args.reverse();
     let message_hash = pop_arg!(args, u64);

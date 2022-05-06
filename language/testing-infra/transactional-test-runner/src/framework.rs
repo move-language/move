@@ -30,6 +30,7 @@ use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, TypeTag},
     transaction_argument::TransactionArgument,
+    value::MoveValue,
 };
 use move_disassembler::disassembler::{Disassembler, DisassemblerOptions};
 use move_ir_types::location::Spanned;
@@ -375,39 +376,22 @@ fn display_return_values(return_values: SerializedReturnValues) -> Option<String
     } = return_values;
     let mut output = vec![];
     if !mutable_reference_outputs.is_empty() {
-        let values = mutable_reference_outputs
+        let printed = mutable_reference_outputs
             .iter()
             .map(|(idx, bytes, layout)| {
-                let value =
-                    move_vm_types::values::Value::simple_deserialize(bytes, layout).unwrap();
+                let value = MoveValue::simple_deserialize(bytes, layout).unwrap();
                 (idx, value)
             })
-            .collect::<Vec<_>>();
-        let printed = values
-            .iter()
-            .map(|(idx, v)| {
-                let mut buf = String::new();
-                move_vm_types::values::debug::print_value(&mut buf, v).unwrap();
-                format!("local#{}: {}", idx, buf)
-            })
+            .map(|(idx, v)| format!("local#{}: {}", idx, v))
             .collect::<Vec<_>>()
             .join(", ");
         output.push(format!("mutable inputs after call: {}", printed))
     };
     if !return_values.is_empty() {
-        let values = return_values
+        let printed = return_values
             .iter()
-            .map(|(bytes, layout)| {
-                move_vm_types::values::Value::simple_deserialize(bytes, layout).unwrap()
-            })
-            .collect::<Vec<_>>();
-        let printed = values
-            .iter()
-            .map(|v| {
-                let mut buf = String::new();
-                move_vm_types::values::debug::print_value(&mut buf, v).unwrap();
-                buf
-            })
+            .map(|(bytes, layout)| MoveValue::simple_deserialize(bytes, layout).unwrap())
+            .map(|v| format!("{}", v))
             .collect::<Vec<_>>()
             .join(", ");
         output.push(format!("return values: {}", printed))

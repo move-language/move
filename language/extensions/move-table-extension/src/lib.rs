@@ -372,12 +372,9 @@ fn native_add_box(
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
 
+    // see REFERENCE SAFETY EXPLANATION in values
     let val = args.pop_back().unwrap();
-    let key = args
-        .pop_back()
-        .unwrap()
-        .value_as::<Reference>()?
-        .read_ref()?;
+    let key = unsafe { args.pop_back().unwrap().value_as::<Reference>()?.read_ref() };
     let handle = get_table_handle(&pop_arg!(args, StructRef))?;
 
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
@@ -403,11 +400,8 @@ fn native_borrow_box(
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
 
-    let key = args
-        .pop_back()
-        .unwrap()
-        .value_as::<Reference>()?
-        .read_ref()?;
+    // see REFERENCE SAFETY EXPLANATION in values
+    let key = unsafe { args.pop_back().unwrap().value_as::<Reference>()?.read_ref() };
     let handle = get_table_handle(&pop_arg!(args, StructRef))?;
 
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
@@ -432,11 +426,8 @@ fn native_contains_box(
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
 
-    let key = args
-        .pop_back()
-        .unwrap()
-        .value_as::<Reference>()?
-        .read_ref()?;
+    // see REFERENCE SAFETY EXPLANATION in values
+    let key = unsafe { args.pop_back().unwrap().value_as::<Reference>()?.read_ref() };
     let handle = get_table_handle(&pop_arg!(args, StructRef))?;
 
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
@@ -461,11 +452,8 @@ fn native_remove_box(
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
 
-    let key = args
-        .pop_back()
-        .unwrap()
-        .value_as::<Reference>()?
-        .read_ref()?;
+    // see REFERENCE SAFETY EXPLANATION in values
+    let key = unsafe { args.pop_back().unwrap().value_as::<Reference>()?.read_ref() };
     let handle = get_table_handle(&pop_arg!(args, StructRef))?;
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
     let (val, key_size, val_size) = table.remove(table_context, &key)?;
@@ -521,7 +509,8 @@ fn get_table_handle(table: &StructRef) -> PartialVMResult<TableHandle> {
     let field_ref = table
         .borrow_field(HANDLE_FIELD_INDEX)?
         .value_as::<Reference>()?;
-    field_ref.read_ref()?.value_as::<u128>().map(TableHandle)
+    // see REFERENCE SAFETY EXPLANATION in values
+    unsafe { field_ref.read_ref().value_as::<u128>().map(TableHandle) }
 }
 
 fn serialize(layout: &MoveTypeLayout, val: &Value) -> PartialVMResult<Vec<u8>> {

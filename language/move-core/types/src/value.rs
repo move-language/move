@@ -542,3 +542,61 @@ impl TryInto<StructTag> for &MoveStructLayout {
         }
     }
 }
+
+impl fmt::Display for MoveValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MoveValue::U8(u) => write!(f, "{}u8", u),
+            MoveValue::U64(u) => write!(f, "{}u64", u),
+            MoveValue::U128(u) => write!(f, "{}u128", u),
+            MoveValue::Bool(false) => write!(f, "false"),
+            MoveValue::Bool(true) => write!(f, "true"),
+            MoveValue::Address(a) => write!(f, "{}", a.to_hex_literal()),
+            MoveValue::Signer(a) => write!(f, "signer({})", a.to_hex_literal()),
+            MoveValue::Vector(v) => fmt_list(f, "vector[", v, "]"),
+            MoveValue::Struct(s) => fmt::Display::fmt(s, f),
+        }
+    }
+}
+
+impl fmt::Display for MoveStruct {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MoveStruct::Runtime(v) => fmt_list(f, "struct[", v, "]"),
+            MoveStruct::WithFields(fields) => {
+                fmt_list(f, "{", fields.iter().map(DisplayFieldBinding), "}")
+            }
+            MoveStruct::WithTypes { type_, fields } => {
+                fmt::Display::fmt(type_, f)?;
+                fmt_list(f, " {", fields.iter().map(DisplayFieldBinding), "}")
+            }
+        }
+    }
+}
+
+struct DisplayFieldBinding<'a>(&'a (Identifier, MoveValue));
+
+impl fmt::Display for DisplayFieldBinding<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let DisplayFieldBinding((field, value)) = self;
+        write!(f, "{}: {}", field, value)
+    }
+}
+
+fn fmt_list<T: fmt::Display>(
+    f: &mut fmt::Formatter<'_>,
+    begin: &str,
+    items: impl IntoIterator<Item = T>,
+    end: &str,
+) -> fmt::Result {
+    write!(f, "{}", begin)?;
+    let mut items = items.into_iter();
+    if let Some(x) = items.next() {
+        write!(f, "{}", x)?;
+        for x in items {
+            write!(f, ", {}", x)?;
+        }
+    }
+    write!(f, "{}", end)?;
+    Ok(())
+}

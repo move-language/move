@@ -1,11 +1,11 @@
 module 0x2::M {
-    struct S has drop {
+    struct S has copy, drop {
       a: u64,
       b: bool,
       c: S2
     }
 
-    struct S2 has drop {
+    struct S2 has copy, drop {
         x: u128
     }
 
@@ -99,5 +99,15 @@ module 0x2::M {
     #[evm_test]
     fun test_drop() {
         let _s3 = S3 { s: pack_S(33, false) };
+    }
+
+    #[evm_test]
+    fun test_equality() {
+        let s1 = pack_S(23, false);
+        let s2 = pack_S(23, false);
+        let s3 = pack_S(24, false);
+        assert!(copy s1 == copy s2, 101);
+        assert!(s1 != copy s3, 102);
+        assert!(s2 != s3, 103);
     }
 }

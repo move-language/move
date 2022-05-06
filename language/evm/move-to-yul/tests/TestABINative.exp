@@ -1090,7 +1090,7 @@ object "test_A2_M_test_encode_packed_string" {
                     $MemoryStoreU64(add($t3, 8), $ClosestGreaterPowerOfTwo(0))
                     copy_literal_string_to_memory_21418693(add($t3, 32))
                     // $t4 := ==($t2, $t3)
-                    $t4 := $EqVector($t2, $t3, 1)
+                    $t4 := $Eq_$vec$u8$$($t2, $t3)
                     // if ($t4) goto L0 else goto L2
                     switch $t4
                     case 0  { $block := 3 }
@@ -1116,7 +1116,7 @@ object "test_A2_M_test_encode_packed_string" {
                     $MemoryStoreU64(add($t9, 8), $ClosestGreaterPowerOfTwo(2))
                     copy_literal_string_to_memory_141265791(add($t9, 32))
                     // $t10 := ==($t8, $t9)
-                    $t10 := $EqVector($t8, $t9, 1)
+                    $t10 := $Eq_$vec$u8$$($t8, $t9)
                     // if ($t10) goto L4 else goto L6
                     switch $t10
                     case 0  { $block := 7 }
@@ -1154,7 +1154,7 @@ object "test_A2_M_test_encode_packed_string" {
                     $MemoryStoreU64(add($t15, 8), $ClosestGreaterPowerOfTwo(3))
                     copy_literal_string_to_memory_2053440334(add($t15, 32))
                     // $t16 := ==($t14, $t15)
-                    $t16 := $EqVector($t14, $t15, 1)
+                    $t16 := $Eq_$vec$u8$$($t14, $t15)
                     // if ($t16) goto L8 else goto L10
                     switch $t16
                     case 0  { $block := 10 }
@@ -1199,7 +1199,7 @@ object "test_A2_M_test_encode_packed_string" {
                     $MemoryStoreU64(add($t23, 8), $ClosestGreaterPowerOfTwo(5))
                     copy_literal_string_to_memory_3871831907(add($t23, 32))
                     // $t24 := ==($t22, $t23)
-                    $t24 := $EqVector($t22, $t23, 1)
+                    $t24 := $Eq_$vec$u8$$($t22, $t23)
                     // if ($t24) goto L12 else goto L14
                     switch $t24
                     case 0  { $block := 13 }
@@ -1237,7 +1237,7 @@ object "test_A2_M_test_encode_packed_string" {
                     $MemoryStoreU64(add($t29, 8), $ClosestGreaterPowerOfTwo(4))
                     copy_literal_string_to_memory_1610556060(add($t29, 32))
                     // $t30 := ==($t28, $t29)
-                    $t30 := $EqVector($t28, $t29, 1)
+                    $t30 := $Eq_$vec$u8$$($t28, $t29)
                     // if ($t30) goto L16 else goto L18
                     switch $t30
                     case 0  { $block := 16 }
@@ -1284,6 +1284,10 @@ object "test_A2_M_test_encode_packed_string" {
             let size := $MemoryLoadU64(value)
             $CopyMemory(add(value, 0x20), pos, size)
             end := add(pos, size)
+        }
+        function $Eq_$vec$u8$$(x, y) -> res
+        {
+            res := $EqVector(x, y, 1)
         }
         function copy_literal_string_to_memory_1610556060(value) {
             $MemoryStoreU8(value, 116)
@@ -1777,7 +1781,7 @@ object "test_A2_M_test_marshalling_two_bytes1" {
                     // $t26 := move($t2)
                     $t26 := mload($locals)
                     // $t27 := ==($t26, $t25)
-                    $t27 := $EqVector($t26, $t25, 1)
+                    $t27 := $Eq_$vec$u8$$($t26, $t25)
                     // if ($t27) goto L8 else goto L10
                     switch $t27
                     case 0  { $block := 10 }
@@ -1876,6 +1880,10 @@ object "test_A2_M_test_marshalling_two_bytes1" {
             let size := $MemoryLoadU64(value)
             if iszero(eq(size, 1)) { $Abort(92) }
             $CopyMemory(add(value, 0x20), pos, size)
+        }
+        function $Eq_$vec$u8$$(x, y) -> res
+        {
+            res := $EqVector(x, y, 1)
         }
         function $Abort(code) {
             mstore(0, code)
@@ -2312,7 +2320,7 @@ object "test_A2_M_test_marshalling_two_u8" {
                     // $t32 := move($t2)
                     $t32 := mload($locals)
                     // $t33 := ==($t32, $t31)
-                    $t33 := $EqVector($t32, $t31, 1)
+                    $t33 := $Eq_$vec$u8$$($t32, $t31)
                     // if ($t33) goto L16 else goto L18
                     switch $t33
                     case 0  { $block := 16 }
@@ -2405,6 +2413,10 @@ object "test_A2_M_test_marshalling_two_u8" {
         }
         function abi_encode_uint8(value, pos) {
             mstore(pos, cleanup_uint8(value))
+        }
+        function $Eq_$vec$u8$$(x, y) -> res
+        {
+            res := $EqVector(x, y, 1)
         }
         function $Abort(code) {
             mstore(0, code)

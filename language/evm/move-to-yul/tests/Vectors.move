@@ -235,4 +235,38 @@ module 0x2::Vectors {
         Vector::push_back(&mut v, 14);
         assert!(v == x"0a0b0c0d0e", 105);
     }
+
+    #[evm_test]
+    fun test_vector_equality_struct() {
+        let v1 = Vector::empty<R>();
+        let v2 = Vector::empty<R>();
+        assert!(v1 == v2, 101);
+        let r1 = R{ s: S{ x: 42, y: true, z: 9 }, v: one_elem_u64() };
+        Vector::push_back(&mut v1, copy r1);
+        assert!(v1 != v2, 102);
+        Vector::push_back(&mut v2, r1);
+        assert!(v1 == v2, 103);
+
+        let r2 = R{ s: S{ x: 42, y: false, z: 9 }, v: one_elem_u64() };
+        Vector::push_back(&mut v1, copy r1);
+        assert!(v1 != v2, 104);
+        Vector::push_back(&mut v2, r2);
+        assert!(v1 != v2, 105);
+    }
+
+    #[evm_test]
+    fun test_nested_vector_equality() {
+        let v1 = Vector::empty<vector<u8>>();
+        let v2 = Vector::empty<vector<u8>>();
+        assert!(v1 == v2, 101);
+        Vector::push_back(&mut v1, b"abc");
+        Vector::push_back(&mut v2, b"abc");
+        assert!(v1 == v2, 102);
+        Vector::push_back(&mut v1, b"def");
+        Vector::push_back(&mut v2, b"def");
+        assert!(v1 == v2, 103);
+        Vector::push_back(&mut v1, b"ghi");
+        Vector::push_back(&mut v2, b"ghij");
+        assert!(v1 != v2, 104);
+    }
 }

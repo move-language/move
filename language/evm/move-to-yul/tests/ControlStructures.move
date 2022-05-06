@@ -1,5 +1,5 @@
 // Tests basic control structures.
-#[contract]
+#[evm_contract]
 module 0x2::M {
   #[callable]
   fun h1(x: u64): u64 {

@@ -63,10 +63,15 @@ pub fn taskify<Command: Debug + Parser>(filename: &Path) -> Result<Vec<TaskInput
         fs::File,
         io::{self, BufRead, Write},
     };
-    #[allow(non_snake_case)]
-    let WHITESPACE = Regex::new(r"^\s*$").unwrap();
-    #[allow(non_snake_case)]
-    let COMMAND_TEXT = Regex::new(r"^\s*//#\s*(.*)\s*$").unwrap();
+    // checks for lines that are entirely whitespace
+    let re_whitespace = Regex::new(r"^\s*$").unwrap();
+    // checks for lines that start with // comments
+    // here the next character is whitespace or an ASCII character other than #
+    let re_comment = Regex::new(r"^\s*//(\s|[\x20-\x22]|[[\x24-\x7E]])").unwrap();
+    // checks for lines that start with //# commands
+    // cutting leading/trailing whitespace
+    // capturing the command text
+    let re_command_text = Regex::new(r"^\s*//#\s*(.*)\s*$").unwrap();
 
     let file = File::open(filename).unwrap();
     let lines: Vec<String> = io::BufReader::new(file)
@@ -75,14 +80,15 @@ pub fn taskify<Command: Debug + Parser>(filename: &Path) -> Result<Vec<TaskInput
         .collect();
 
     let lines_iter = lines.into_iter().enumerate().map(|(idx, l)| (idx + 1, l));
-    let skipped_whitespace =
-        lines_iter.skip_while(|(_line_number, line)| WHITESPACE.is_match(line));
+    let skipped_whitespace = lines_iter.skip_while(|(_line_number, line)| {
+        re_whitespace.is_match(line) || re_comment.is_match(line)
+    });
     let mut bucketed_lines = vec![];
     let mut cur_commands = vec![];
     let mut cur_text = vec![];
     let mut in_command = true;
     for (line_number, line) in skipped_whitespace {
-        if let Some(captures) = COMMAND_TEXT.captures(&line) {
+        if let Some(captures) = re_command_text.captures(&line) {
             if !in_command {
                 bucketed_lines.push((cur_commands, cur_text));
                 cur_commands = vec![];
@@ -98,7 +104,7 @@ pub fn taskify<Command: Debug + Parser>(filename: &Path) -> Result<Vec<TaskInput
                 continue;
             }
             cur_commands.push((line_number, command_text))
-        } else if WHITESPACE.is_match(&line) {
+        } else if re_whitespace.is_match(&line) {
             in_command = false;
             continue;
         } else {
@@ -172,7 +178,7 @@ pub fn taskify<Command: Debug + Parser>(filename: &Path) -> Result<Vec<TaskInput
             .map(|_| String::new())
             .chain(text.into_iter().map(|(_ln, l)| l))
             .collect::<Vec<String>>();
-        let data = if file_text_vec.iter().all(|s| WHITESPACE.is_match(s)) {
+        let data = if file_text_vec.iter().all(|s| re_whitespace.is_match(s)) {
             None
         } else {
             let data = NamedTempFile::new()?;

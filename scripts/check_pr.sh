@@ -108,10 +108,10 @@ fi
 
 if [ ! -z "$HARDHAT_CHECKS" ]; then
   echo "*************** [check-pr] Running hardhat tests (expecting hardhat configured)"
-  # (
-  #   cd $BASE/language/tools/move-cli
-  #   cargo install --path .
-  # )
+  (
+     cd $BASE/language/tools/move-cli
+     cargo install --path . --features evm-backend
+  )
   # (
   #   cd $BASE/language/evm/hardhat-move
   #   npm install

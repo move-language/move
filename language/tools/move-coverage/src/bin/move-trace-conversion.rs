@@ -9,8 +9,10 @@ use std::path::Path;
 
 #[derive(Debug, Parser)]
 #[clap(
-    name = "Move VM Coverage",
-    about = "Creates a coverage map from the raw data collected from the Move VM"
+    name = "move-trace-conversion",
+    about = "Creates a coverage map from the raw data collected from the Move VM",
+    author,
+    version
 )]
 struct Args {
     /// The path to the input file

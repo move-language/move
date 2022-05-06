@@ -1,3 +1,4 @@
+#[evm_contract]
 module 0x1::Native {
     use Evm::Evm::{self, sender, isContract};
 

@@ -1,3 +1,4 @@
+#[evm_contract]
 module 0x2::M {
     struct S has drop {
       a: u64,

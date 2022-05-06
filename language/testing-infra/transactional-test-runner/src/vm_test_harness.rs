@@ -103,7 +103,7 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
             named_address_mapping.insert(name, addr);
         }
         let mut adapter = Self {
-            compiled_state: CompiledState::new(named_address_mapping, pre_compiled_deps),
+            compiled_state: CompiledState::new(named_address_mapping, pre_compiled_deps, None),
             default_syntax,
             storage: InMemoryStorage::new(),
         };

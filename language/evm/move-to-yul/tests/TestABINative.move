@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 module 0x2::M {
      use Evm::Evm::concat;
     use Std::Vector;

@@ -2,8 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    attributes, events::EventSignature, evm_transformation::EvmTransformationProcessor,
-    native_functions::NativeFunctions, yul_functions, yul_functions::YulFunction, Options,
+    attributes,
+    attributes::{
+        extract_contract_name, is_contract_fun, is_create_fun, is_event_struct,
+        is_evm_contract_module, is_storage_struct,
+    },
+    events::EventSignature,
+    evm_transformation::EvmTransformationProcessor,
+    native_functions::NativeFunctions,
+    yul_functions,
+    yul_functions::YulFunction,
+    Options,
 };
 use codespan::FileId;
 use itertools::Itertools;
@@ -12,7 +21,8 @@ use move_model::{
     code_writer::CodeWriter,
     emitln,
     model::{
-        FunId, FunctionEnv, GlobalEnv, ModuleEnv, QualifiedId, QualifiedInstId, StructEnv, StructId,
+        FunId, FunctionEnv, GlobalEnv, ModuleEnv, ModuleId, QualifiedId, QualifiedInstId,
+        StructEnv, StructId,
     },
     ty::{PrimitiveType, Type},
 };
@@ -68,7 +78,24 @@ pub(crate) struct StructLayout {
     pub pointer_count: usize,
 }
 
+/// Describes a contract as identified via attribute analysis of the model.
+pub(crate) struct Contract {
+    /// The name of the contract.
+    pub name: String,
+    /// The module defining the contract.
+    pub module: ModuleId,
+    /// Optional struct representing storage root.
+    pub storage: Option<StructId>,
+    /// Optional constructor function.
+    pub constructor: Option<FunId>,
+    /// Functions which are callable, receive, or fallback entry.
+    pub functions: Vec<FunId>,
+}
+
 impl<'a> Context<'a> {
+    // --------------------------------------------------------------------------------------------
+    // Creation
+
     /// Create a new context.
     pub fn new(options: &'a Options, env: &'a GlobalEnv, for_test: bool) -> Self {
         let writer = CodeWriter::new(env.unknown_loc());
@@ -180,8 +207,99 @@ impl<'a> Context<'a> {
         }
     }
 
+    // --------------------------------------------------------------------------------------------
+    // Contract Analysis
+
+    /// Derive the EVM contracts defined in this context. This contains contracts
+    /// defined both in target (i.e. currently compiled) and dependency modules.
+    ///
+    /// This function will produce errors in the global env if attributes are misused,
+    /// and should only be called once because of this.
+    pub fn derive_contracts(&self) -> Vec<Contract> {
+        self.env
+            .get_modules()
+            .into_iter()
+            .filter_map(|ref m| {
+                if is_evm_contract_module(m) {
+                    Some(self.extract_contract(m))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    /// Extract information about a contract from a module.
+    fn extract_contract(&self, module: &ModuleEnv) -> Contract {
+        // Identity name.
+        let name = if let Some(name) = extract_contract_name(module) {
+            name
+        } else {
+            self.make_contract_name(module)
+        };
+        // Identify storage struct
+        let storage_cands = module
+            .get_structs()
+            .filter(is_storage_struct)
+            .take(2)
+            .collect::<Vec<_>>();
+        let storage = match storage_cands.len() {
+            0 => None,
+            1 => Some(storage_cands[0].get_id()),
+            _ => {
+                self.env.error(
+                    &storage_cands[1].get_loc(),
+                    "only one #[storage] struct allowed per contract module",
+                );
+                None
+            }
+        };
+        // Identify constructor.
+        let ctor_cands = module
+            .get_functions()
+            .filter(is_create_fun)
+            .take(2)
+            .collect::<Vec<_>>();
+        let constructor = match ctor_cands.len() {
+            0 => None,
+            1 => Some(ctor_cands[0].get_id()),
+            _ => {
+                self.env.error(
+                    &ctor_cands[1].get_loc(),
+                    "only one #[create] function allowed per contract module",
+                );
+                None
+            }
+        };
+        // Identify functions.
+        let functions = module
+            .get_functions()
+            .filter(is_contract_fun)
+            .map(|s| s.get_id())
+            .collect();
+
+        // Check conditions.
+        if storage.is_some() && constructor.is_none() {
+            self.env.error(
+                &module.get_loc(),
+                "contract declares #[storage] struct but misses #[creator] function",
+            )
+        }
+
+        Contract {
+            name,
+            module: module.get_id(),
+            storage,
+            constructor,
+            functions,
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // Queries
+
     /// Return iterator for all functions in the environment which stem from a target module
-    /// and which satsify predicate.
+    /// and which satisfy predicate.
     pub fn get_target_functions(&self, p: impl Fn(&FunctionEnv) -> bool) -> Vec<FunctionEnv<'a>> {
         self.env
             .get_modules()
@@ -192,8 +310,8 @@ impl<'a> Context<'a> {
     }
 
     /// Return iterator for all structs in the environment which stem from a target module
-    /// and which satsify predicate.
-    fn get_event_structs(&self, p: impl Fn(&StructEnv) -> bool) -> Vec<StructEnv<'a>> {
+    /// and which satisfy predicate.
+    fn get_target_structs(&self, p: impl Fn(&StructEnv) -> bool) -> Vec<StructEnv<'a>> {
         self.env
             .get_modules()
             .filter(|m| m.is_target())
@@ -202,9 +320,12 @@ impl<'a> Context<'a> {
             .collect()
     }
 
+    // --------------------------------------------------------------------------------------------
+    // Signature Event Map
+
     /// Build the event signature map
     pub fn build_event_signature_map(&self) {
-        let event_structs_vec = self.get_event_structs(attributes::is_event_struct);
+        let event_structs_vec = self.get_target_structs(is_event_struct);
         let mut event_signature_map_ref = self.event_signature_map.borrow_mut();
         for st_env in event_structs_vec {
             if !self.check_no_generics_struct(&st_env) {
@@ -228,6 +349,9 @@ impl<'a> Context<'a> {
         }
     }
 
+    // --------------------------------------------------------------------------------------------
+    // Checks
+
     /// Check whether given Move struct has no generics; report error otherwise.
     pub fn check_no_generics_struct(&self, st: &StructEnv<'_>) -> bool {
         if !st.get_type_parameters().is_empty() {
@@ -246,6 +370,9 @@ impl<'a> Context<'a> {
             )
         }
     }
+
+    // --------------------------------------------------------------------------------------------
+    // Name Generation
 
     /// Make the name of a contract.
     pub fn make_contract_name(&self, module: &ModuleEnv) -> String {
@@ -333,6 +460,9 @@ impl<'a> Context<'a> {
         }
     }
 
+    // --------------------------------------------------------------------------------------------
+    // Code Generation
+
     /// Emits a Yul block.
     pub fn emit_block(&self, blk: impl FnOnce()) {
         emitln!(self.writer, "{");
@@ -341,6 +471,9 @@ impl<'a> Context<'a> {
         self.writer.unindent();
         emitln!(self.writer, "}");
     }
+
+    // --------------------------------------------------------------------------------------------
+    // Types
 
     /// Returns whether the struct identified by module_id and struct_id is the native U256 struct.
     pub fn is_u256(&self, struct_id: QualifiedId<StructId>) -> bool {

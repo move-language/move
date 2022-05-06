@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 /// An implementation of the ERC-1155 Multi Token Standard.
 module Evm::ERC1155Mock {
     use Evm::Evm::{sender, self, sign, emit, isContract, abort_with, require};
@@ -119,7 +119,6 @@ module Evm::ERC1155Mock {
         id: U256,
     }
 
-    #[storage]
     /// Represents the state of this contract. This is located at `borrow_global<State>(self())`.
     struct State has key {
         balances: Table<U256, Table<address, U256>>,
@@ -130,7 +129,7 @@ module Evm::ERC1155Mock {
 
     #[create(sig=b"constructor(string)")]
     /// Constructor of this contract.
-    public fun create(uri: vector<u8>) acquires State {
+    public fun create(uri: vector<u8>) {
         // Initial state of contract
         move_to<State>(
             &sign(self()),
@@ -141,10 +140,6 @@ module Evm::ERC1155Mock {
                 owner: sender(),
             }
         );
-        // for deployment test only
-        mint(sender(), U256::u256_from_u128(1), U256::u256_from_u128(10), b"");
-        mint(sender(), U256::u256_from_u128(2), U256::u256_from_u128(100), b"");
-        mint(sender(), U256::u256_from_u128(3), U256::u256_from_u128(1000), b"");
     }
 
     #[callable(sig=b"uri(uint256) returns (string)"), view]

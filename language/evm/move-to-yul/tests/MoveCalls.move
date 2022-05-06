@@ -1,5 +1,5 @@
 // Tests Move functions calling other Move functions, including generic ones which are then specialized.
-#[contract]
+#[evm_contract]
 module 0x2::M {
   #[callable]
   fun f(x: u64): u64 {

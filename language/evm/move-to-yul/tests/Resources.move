@@ -2,6 +2,7 @@
 //
 // experiment: capture-source-info
 //
+#[evm_contract]
 module 0x2::M {
     use Evm::Evm::sign;
 

@@ -1,4 +1,4 @@
-#[contract]
+#[evm_contract]
 module 0x2::M {
 
 #[event(sig=b"Transfer(address indexed,address indexed, uint128 indexed, uint128 indexed)")]

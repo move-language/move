@@ -33,7 +33,7 @@ use move_compiler::{
     },
     PASS_TYPING,
 };
-use move_ir_types::location::Loc;
+use move_ir_types::location::*;
 use move_package::compilation::build_plan::BuildPlan;
 use move_symbol_pool::Symbol;
 
@@ -250,12 +250,12 @@ impl Symbolicator {
             mod_outer_defs.insert(*module_ident, defs);
             mod_use_defs.insert(*module_ident, symbols);
             match source_files.get(&pos.file_hash()) {
-                Some(v) => {
+                Some((fpath, _)) => {
                     mod_ident_map.insert(
                         // if canonicalization fails, simply use
                         // "regular" path to continue processing
-                        fs::canonicalize(v.0.as_str())
-                            .unwrap_or_else(|_| PathBuf::from(v.0.as_str())),
+                        fs::canonicalize(fpath.as_str())
+                            .unwrap_or_else(|_| PathBuf::from(fpath.as_str())),
                         *module_ident,
                     );
                 }
@@ -271,8 +271,8 @@ impl Symbolicator {
         };
 
         for (_, module_ident, module_def) in modules {
-            let mut use_defs = mod_use_defs.get_mut(module_ident).unwrap();
-            symbolicator.mod_symbols(module_def, &mut references, &mut use_defs);
+            let use_defs = mod_use_defs.get_mut(module_ident).unwrap();
+            symbolicator.mod_symbols(module_def, &mut references, use_defs);
         }
 
         Ok(Symbols {
@@ -473,16 +473,16 @@ impl Symbolicator {
         // function body)
         let mut fn_scope = Scope::new();
 
-        for p in &fun.signature.parameters {
+        for (pname, ptype) in &fun.signature.parameters {
             // TODO: process parameter types
             if let Some(def_loc) = self.add_def(
-                &p.0.loc(),
-                &p.0.value(),
+                &pname.loc(),
+                &pname.value(),
                 &mut fn_scope,
                 references,
                 use_defs,
             ) {
-                let exists = fn_scope.insert(p.0.value(), def_loc);
+                let exists = fn_scope.insert(pname.value(), def_loc);
                 // TODO: enable assertion when all scoping rules are in place
                 //                debug_assert!(exists.is_none());
             }
@@ -607,12 +607,12 @@ impl Symbolicator {
         use_defs: &mut UseDefMap,
     ) {
         // add use of the struct name
-        self.add_struct_def(ident, &name.value(), &name.loc(), references, use_defs);
-        for (fpos, fname, lval) in fields {
+        self.add_struct_use_def(ident, &name.value(), &name.loc(), references, use_defs);
+        for (fpos, fname, (_, (_, lvalue))) in fields {
             // add use of the field name
-            self.add_field_def(ident, &name.value(), fname, &fpos, references, use_defs);
+            self.add_field_use_def(ident, &name.value(), fname, &fpos, references, use_defs);
             // add definition of a variable used for struct field unpacking
-            self.lvalue_symbols(&lval.1 .1, scope, references, use_defs);
+            self.lvalue_symbols(lvalue, scope, references, use_defs);
         }
     }
 
@@ -660,19 +660,19 @@ impl Symbolicator {
         use_defs: &mut UseDefMap,
     ) {
         // add use of the struct name
-        self.add_struct_def(ident, &name.value(), &name.loc(), references, use_defs);
-        for (fpos, fname, lval) in fields {
+        self.add_struct_use_def(ident, &name.value(), &name.loc(), references, use_defs);
+        for (fpos, fname, (_, (_, init_exp))) in fields {
             // add use of the field name
-            self.add_field_def(ident, &name.value(), fname, &fpos, references, use_defs);
+            self.add_field_use_def(ident, &name.value(), fname, &fpos, references, use_defs);
             // add field initialization expression
-            self.exp_symbols(&lval.1 .1, scope_stack, references, use_defs);
+            self.exp_symbols(init_exp, scope_stack, references, use_defs);
         }
     }
 
     /// Helper functions
 
-    /// Add definition of a struct
-    fn add_struct_def(
+    /// Add use of a struct identifier
+    fn add_struct_use_def(
         &self,
         module_ident: &ModuleIdent_,
         use_name: &Symbol,
@@ -714,8 +714,8 @@ impl Symbolicator {
         };
     }
 
-    /// Add definition of a struct field
-    fn add_field_def(
+    /// Add use of a struct field identifier
+    fn add_field_use_def(
         &self,
         module_ident: &ModuleIdent_,
         struct_name: &Symbol,

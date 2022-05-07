@@ -17,6 +17,8 @@ pub(crate) struct ABIJsonArg {
     pub ty: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub indexed: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub components: Option<Vec<ABIJsonArg>>,
     pub name: String,
 }
 
@@ -36,19 +38,71 @@ pub(crate) struct ABIJsonSignature {
 
 impl ABIJsonArg {
     pub(crate) fn from_ty(ty: &SolidityType, name: String) -> Self {
+        use SolidityType::*;
+        let mut abi_ty_str = ty.to_string();
+        let mut components = None;
+        if let Struct(_, ty_tuples) = ty {
+            let mut comps = vec![];
+            abi_ty_str = "tuple".to_string();
+            for (_, _, _, para_name, comp_ty) in ty_tuples {
+                let t = Self::from_ty(comp_ty, para_name.clone());
+                comps.push(t);
+            }
+            components = Some(comps);
+        } else if matches!(ty, DynamicArray(_)) || matches!(ty, StaticArray(_, _)) {
+            let mut array_vec = vec![];
+            let base_ty = find_inner_ty_from_array(ty, &mut array_vec);
+            if let Struct(_, ty_tuples) = base_ty {
+                let mut comps = vec![];
+                abi_ty_str = "tuple".to_string();
+                for dimension in array_vec.into_iter().rev() {
+                    let dim = if dimension > 0 {
+                        dimension.to_string()
+                    } else {
+                        "".to_string()
+                    };
+                    abi_ty_str = format!("{}[{}]", abi_ty_str, dim);
+                }
+                for (_, _, _, para_name, comp_ty) in ty_tuples {
+                    let t = Self::from_ty(&comp_ty, para_name.clone());
+                    comps.push(t);
+                }
+                components = Some(comps);
+            }
+        }
         ABIJsonArg {
-            ty: ty.to_string(),
+            ty: abi_ty_str,
             indexed: None,
+            components,
             name,
         }
     }
 
     pub(crate) fn from_event_ty(ty: &SolidityType, indexed: bool, name: String) -> Self {
+        let abi = Self::from_ty(ty, name);
         ABIJsonArg {
-            ty: ty.to_string(),
+            ty: abi.ty,
             indexed: Some(indexed),
-            name,
+            components: abi.components,
+            name: abi.name,
         }
+    }
+}
+
+fn find_inner_ty_from_array(ty: &SolidityType, para: &mut Vec<usize>) -> SolidityType {
+    use SolidityType::*;
+    let mut ret_ty = ty.clone();
+    if let DynamicArray(inner_ty) = ty {
+        ret_ty = *inner_ty.clone();
+        para.push(0);
+    } else if let StaticArray(inner_ty, m) = ty {
+        ret_ty = *inner_ty.clone();
+        para.push(*m);
+    }
+    if ret_ty.is_array() {
+        find_inner_ty_from_array(&ret_ty, para)
+    } else {
+        ret_ty
     }
 }
 

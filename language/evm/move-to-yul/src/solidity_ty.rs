@@ -11,7 +11,7 @@ use regex::Regex;
 use std::{fmt, fmt::Formatter};
 
 use move_model::{
-    model::{FunctionEnv, Parameter, QualifiedInstId, StructId},
+    model::{FunctionEnv, Parameter, QualifiedInstId, StructEnv, StructId},
     ty::{PrimitiveType, Type},
 };
 
@@ -23,6 +23,8 @@ pub(crate) const PARSE_ERR_MSG_ARRAY_TYPE: &str = "error happens when parsing an
 pub(crate) const PARSE_ERR_MSG_RETURN: &str =
     "error happens when parsing the return types in the signature";
 pub(crate) const PARSE_ERR_MSG_ZERO_SIZE: &str = "array with zero length specified";
+pub(crate) const PARSE_ERR_STRUCT_ABI: &str =
+    "error happens when parsing the abi signature for struct";
 
 /// Represents a Solidity Signature appearing in the callable attribute.
 #[derive(Debug, Clone)]
@@ -60,6 +62,7 @@ pub(crate) enum SolidityType {
     SolidityString,
     Bytes,
     BytesStatic(usize),
+    Struct(String, Vec<(usize, usize, Type, String, SolidityType)>),
 }
 
 // ================================================================================================
@@ -143,6 +146,14 @@ impl fmt::Display for SolidityType {
             SolidityString => f.write_str("string"),
             Bytes => f.write_str("bytes"),
             BytesStatic(n) => write!(f, "bytes{}", n),
+            Struct(_, tys) => {
+                let s = tys
+                    .iter()
+                    .map(|(_, _, _, _, t)| format!("{}", t))
+                    .collect::<Vec<String>>()
+                    .join(",");
+                write!(f, "({})", s)
+            }
         }
     }
 }
@@ -165,6 +176,9 @@ impl SolidityType {
             Primitive(_) | BytesStatic(_) => true,
             Tuple(tys) => conjunction(tys),
             StaticArray(ty, _) => ty.is_static(),
+            Struct(_, tys) => {
+                conjunction(&tys.iter().map(|(_, _, _, _, t)| t.clone()).collect_vec())
+            }
             _ => false,
         }
     }
@@ -179,6 +193,12 @@ impl SolidityType {
         }
     }
 
+    /// Check whether it is an array
+    pub fn is_array(&self) -> bool {
+        use SolidityType::*;
+        matches!(self, StaticArray(_, _) | DynamicArray(_))
+    }
+
     /// Check whether a type is a value type
     pub(crate) fn is_value_type(&self) -> bool {
         use SolidityType::*;
@@ -191,6 +211,110 @@ impl SolidityType {
         assert!(size <= 32, "unexpected type size {} for `{}`", size, self);
         let multipler = size * 8;
         format!("${{MAX_U{}}}", multipler)
+    }
+
+    /// Generate struct type using default type information
+    pub(crate) fn generate_default_struct_type(ctx: &Context, st: &StructEnv<'_>) -> Self {
+        let mut name = st.get_full_name_with_address();
+        if let Some(i) = name.rfind(':') {
+            name = name[i + 1..].to_string();
+        }
+        let st_id = &st.get_qualified_id().instantiate(vec![]);
+        // Obtain the layout of the struct
+        let layout = ctx.get_struct_layout(st_id);
+
+        let tys = st
+            .get_fields()
+            .map(|field| {
+                let field_type = field.get_type();
+                let field_name = st.symbol_pool().string(field.get_name()).to_string();
+                (field.get_offset(), field_type, field_name)
+            })
+            .sorted_by_key(|(offset, _, _)| *offset);
+        let solidity_tys = tys
+            .clone()
+            .map(|(_, t, _)| {
+                let bytes_flag = ctx.is_string(st_id.to_qualified_id()); // vec<u8> in String is translated into bytes
+                Self::translate_from_move(ctx, &t, bytes_flag)
+            })
+            .collect::<Vec<_>>();
+        let mut struct_tys_tuple = vec![];
+        for ((offset, field_type, field_name), ty) in tys.zip(solidity_tys.iter()) {
+            let (real_offset, _) = layout.offsets.get(&offset).unwrap();
+            struct_tys_tuple.push((
+                offset,
+                *real_offset,
+                field_type.clone(),
+                field_name.clone(),
+                ty.clone(),
+            ));
+        }
+        SolidityType::Struct(name, struct_tys_tuple)
+    }
+
+    /// Parse type list in the signature and generate types
+    fn extract_struct_type_lst(ctx: &Context, args: &str) -> anyhow::Result<Vec<SolidityType>> {
+        let args_trim = args.trim();
+        if args_trim.is_empty() {
+            return Ok(vec![]);
+        }
+        let mut ret_vec = vec![];
+        let paras = args_trim.split(',').collect_vec();
+
+        for para in paras.iter() {
+            let para_trim = para.trim();
+            if para_trim.is_empty() {
+                return Err(anyhow!(PARSE_ERR_MSG));
+            }
+            let para_type_str = para_trim;
+            let ty = SolidityType::parse(ctx, para_type_str)?;
+            ret_vec.push(ty);
+        }
+        Ok(ret_vec)
+    }
+
+    /// Parse the type signature and generate struct type
+    pub(crate) fn parse_struct_type(
+        ctx: &Context,
+        sig_str: &str,
+        st: &StructEnv<'_>,
+    ) -> anyhow::Result<Self> {
+        let tys = st
+            .get_fields()
+            .map(|field| {
+                let field_type = field.get_type();
+                let field_name = st.symbol_pool().string(field.get_name()).to_string();
+                (field.get_offset(), field_type, field_name)
+            })
+            .sorted_by_key(|(offset, _, _)| *offset);
+
+        static SIG_REG: Lazy<Regex> = Lazy::new(|| {
+            Regex::new(r"^\s*(?P<sig_name>[a-zA-Z_$][a-zA-Z_$0-9]*)\s*\((?P<args>[^)]*)\)").unwrap()
+        });
+
+        if let Some(parsed) = SIG_REG.captures(sig_str.trim()) {
+            let sig_name = parsed.name("sig_name").context(PARSE_ERR_MSG)?.as_str();
+            let para_type_str = parsed.name("args").context(PARSE_ERR_MSG)?.as_str();
+            let solidity_tys = SolidityType::extract_struct_type_lst(ctx, para_type_str)?;
+
+            let st_id = &st.get_qualified_id().instantiate(vec![]);
+            // Obtain the layout of the struct
+            let layout = ctx.get_struct_layout(st_id);
+
+            let mut struct_tys_tuple = vec![];
+            for ((offset, field_type, field_name), ty) in tys.zip(solidity_tys.iter()) {
+                let (real_offset, _) = layout.offsets.get(&offset).unwrap();
+                struct_tys_tuple.push((
+                    offset,
+                    *real_offset,
+                    field_type.clone(),
+                    field_name.clone(),
+                    ty.clone(),
+                ));
+            }
+            return Ok(SolidityType::Struct(sig_name.to_string(), struct_tys_tuple));
+        }
+        Err(anyhow!(PARSE_ERR_STRUCT_ABI))
     }
 
     /// Parse a move type into a solidity type
@@ -232,8 +356,15 @@ impl SolidityType {
                 if ctx.is_u256(mid.qualified(*sid)) {
                     SolidityType::Primitive(SolidityPrimitiveType::Uint(256))
                 } else {
-                    let tys = ctx.get_field_types(mid.qualified(*sid));
-                    generate_tuple(&tys) // TODO: translate into tuple type?
+                    let struct_id = mid.qualified(*sid);
+                    let struct_env = ctx.env.get_struct(struct_id);
+                    if ctx.is_structs_abi(&struct_env) {
+                        // Generate struct type if it is an abi_struct
+                        Self::generate_default_struct_type(ctx, &struct_env)
+                    } else {
+                        let tys = ctx.get_field_types(mid.qualified(*sid));
+                        generate_tuple(&tys) // translate into tuple type
+                    }
                 }
             }
             TypeParameter(_)
@@ -249,12 +380,11 @@ impl SolidityType {
     }
 
     /// Parse a solidity type
-    /// TODO: struct is not supported yet
-    pub(crate) fn parse(ty_str: &str) -> anyhow::Result<Self> {
+    pub(crate) fn parse(ctx: &Context, ty_str: &str) -> anyhow::Result<Self> {
         let trimmed_ty_str = ty_str.trim();
         if trimmed_ty_str.contains('[') {
             // array type
-            SolidityType::parse_array(trimmed_ty_str)
+            SolidityType::parse_array(ctx, trimmed_ty_str)
         } else if check_simple_type_prefix(trimmed_ty_str) {
             // primitive and byte types
             SolidityType::parse_simple_type(trimmed_ty_str)
@@ -262,12 +392,12 @@ impl SolidityType {
             // Solidity identifier matching
             static RE_GENERAL_TYPE: Lazy<Regex> =
                 Lazy::new(|| Regex::new(r"^[a-zA-Z_$][a-zA-Z_$0-9]*$").unwrap());
-            let mut error_msg = "unsupported types";
             if !RE_GENERAL_TYPE.is_match(trimmed_ty_str) {
-                error_msg = "illegal type name";
+                println!("trim:{}", trimmed_ty_str);
+                let error_msg = "illegal type name";
+                return Err(anyhow!(error_msg));
             }
-            // TODO: struct
-            Err(anyhow!(error_msg))
+            ctx.check_or_create_struct_abi(&trimmed_ty_str)
         }
     }
 
@@ -377,9 +507,9 @@ impl SolidityType {
     }
 
     /// Parse array types
-    fn parse_array(ty_str: &str) -> anyhow::Result<Self> {
+    fn parse_array(ctx: &Context, ty_str: &str) -> anyhow::Result<Self> {
         let last_pos = ty_str.rfind('[').context(PARSE_ERR_MSG)?;
-        let out_type = SolidityType::parse(&ty_str[..last_pos])?;
+        let out_type = SolidityType::parse(ctx, &ty_str[..last_pos])?;
         let last_indice_str = &ty_str[last_pos..].trim();
         if last_indice_str.len() >= 2
             && last_indice_str.starts_with('[')
@@ -442,7 +572,14 @@ impl SolidityType {
                     }
                 }
                 Tuple(tys) => abi_head_sizes_sum(tys, padded),
-                _ => panic!("unexpected field type"),
+                Struct(_, ty_tuples) => {
+                    let tys = ty_tuples
+                        .iter()
+                        .map(|(_, _, _, _, ty)| ty.clone())
+                        .collect_vec();
+                    abi_head_sizes_sum(&tys, padded)
+                }
+                _ => panic!("wrong types"),
             }
         } else {
             // Dynamic types
@@ -451,7 +588,7 @@ impl SolidityType {
     }
 
     /// Check whether a solidity type is compatible with its corresponding move type
-    /// TODO: int<M>, fixed, struct are not supported yets
+    /// TODO: int<M> and fixed are not supported yets
     pub(crate) fn check_type_compatibility(&self, ctx: &Context, move_ty: &Type) -> bool {
         match self {
             SolidityType::Primitive(p) => p.check_primitive_type_compatibility(ctx, move_ty),
@@ -463,9 +600,14 @@ impl SolidityType {
                 }
             }
             SolidityType::SolidityString => {
+                // For simplifying type checking, string is only compatible with vector<u8>
+                // ASCII::String is compatible with the tuple (bytes)
+                /*
                 if let Type::Struct(mid, sid, _) = move_ty {
                     ctx.is_string(mid.qualified(*sid))
-                } else if let Type::Vector(ety) = move_ty {
+                } else
+                */
+                if let Type::Vector(ety) = move_ty {
                     matches!(**ety, Type::Primitive(PrimitiveType::U8))
                 } else {
                     false
@@ -477,6 +619,27 @@ impl SolidityType {
                 } else {
                     false
                 }
+            }
+            SolidityType::Struct(struct_name, ty_tuples) => {
+                if let Type::Struct(mid, sid, _) = move_ty {
+                    let abi_struct_name_map_ref = ctx.abi_struct_name_map.borrow();
+                    if let Some(st_id) = abi_struct_name_map_ref.get(struct_name) {
+                        if *st_id == mid.qualified(*sid).instantiate(vec![]) {
+                            let solidity_tys =
+                                ty_tuples.iter().map(|(_, _, _, _, ty)| ty).collect_vec();
+                            let field_tys = ctx.get_field_types(st_id.to_qualified_id());
+                            if solidity_tys.len() == field_tys.len() {
+                                for (s_ty, m_ty) in solidity_tys.iter().zip(field_tys.iter()) {
+                                    if !s_ty.check_type_compatibility(ctx, m_ty) {
+                                        return false;
+                                    }
+                                }
+                                return true;
+                            }
+                        }
+                    }
+                }
+                false
             }
             SolidityType::Tuple(_) => panic!("unexpected solidity type"),
         }
@@ -609,8 +772,12 @@ impl SoliditySignature {
             let ret_names = vec!["".to_string(); fun.get_return_count()];
             let solidity_sig = SoliditySignature {
                 sig_name: sig_name.to_string(),
-                para_types: SoliditySignature::extract_para_type_str(para_type_str, para_names)?,
-                ret_types: SoliditySignature::extract_para_type_str(ret_ty, ret_names)?
+                para_types: SoliditySignature::extract_para_type_str(
+                    ctx,
+                    para_type_str,
+                    para_names,
+                )?,
+                ret_types: SoliditySignature::extract_para_type_str(ctx, ret_ty, ret_names)?
                     .into_iter()
                     .map(|(ty, _, loc)| (ty, loc))
                     .collect_vec(),
@@ -623,6 +790,7 @@ impl SoliditySignature {
 
     /// Generate pairs of solidity type and location
     fn extract_para_type_str(
+        ctx: &Context,
         args: &str,
         args_name: Vec<String>,
     ) -> anyhow::Result<Vec<(SolidityType, String, SignatureDataLocation)>> {
@@ -656,7 +824,7 @@ impl SoliditySignature {
             } else if let Some(_stripped_calldata) = para_trim.strip_suffix("calldata") {
                 return Err(anyhow!("calldata is not supported yet"));
             }
-            let ty = SolidityType::parse(para_type_str)?;
+            let ty = SolidityType::parse(ctx, para_type_str)?;
             if loc_flag && ty.is_value_type() {
                 return Err(anyhow!(
                     "data location can only be specified for array or struct types"

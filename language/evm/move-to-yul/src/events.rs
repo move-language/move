@@ -26,7 +26,7 @@ pub(crate) const COMPATIBILITY_ERROR: &str =
     "event signature is not compatible with the move struct";
 pub(crate) const TOPIC_COUNT_ERROR: &str = "too many indexed arguments";
 
-/// Represents a Solidity Signature appearing in the callable attribute.
+/// Represents an event Signature appearing in the event attribute.
 #[derive(Debug, Clone)]
 pub(crate) struct EventSignature {
     pub event_name: String,
@@ -114,7 +114,8 @@ impl EventSignature {
         if let Some(parsed) = SIG_REG.captures(sig_str.trim()) {
             let sig_name = parsed.name("sig_name").context(PARSE_ERR_MSG)?.as_str();
             let para_type_str = parsed.name("args").context(PARSE_ERR_MSG)?.as_str();
-            let (para_types, indexed_count) = EventSignature::extract_para_type_str(para_type_str)?;
+            let (para_types, indexed_count) =
+                EventSignature::extract_para_type_str(ctx, para_type_str)?;
 
             // Number of topics cannot be greater than 4
             if indexed_count > 4 {
@@ -147,7 +148,10 @@ impl EventSignature {
     }
 
     /// Generate pairs of solidity type and location and the number of indexed parameters
-    fn extract_para_type_str(args: &str) -> anyhow::Result<(Vec<(SolidityType, bool)>, usize)> {
+    fn extract_para_type_str(
+        ctx: &Context,
+        args: &str,
+    ) -> anyhow::Result<(Vec<(SolidityType, bool)>, usize)> {
         let args_trim = args.trim();
         let mut indexed_count = 1;
         if args_trim.is_empty() {
@@ -174,7 +178,7 @@ impl EventSignature {
                     return Err(anyhow!(PARSE_ERR_MSG));
                 }
             }
-            let ty = SolidityType::parse(para_type_str)?;
+            let ty = SolidityType::parse(ctx, para_type_str)?;
             ret_vec.push((ty, index_flag));
         }
         Ok((ret_vec, indexed_count))

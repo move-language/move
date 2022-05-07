@@ -94,7 +94,7 @@ error: error happens when parsing a simple type
 65 │ │     }
    │ ╰─────^
 
-error: unsupported types
+error: cannot create struct abi:fix64x18
    ┌─ tests/test-dispatcher/signature-parsing-test/baseline/parsing_failure/IllegalTypeList.move:68:5
    │
 68 │ ╭     fun illegal_fixed_3(_x: u128) {

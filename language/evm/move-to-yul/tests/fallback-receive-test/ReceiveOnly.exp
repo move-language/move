@@ -17,7 +17,9 @@ object "A2_M" {
                 switch selector
                 default {}
             }
-            if iszero(calldatasize()) { A2_M_receive() stop() }
+            {
+                if iszero(calldatasize()) { A2_M_receive() stop() }
+            }
             $Abort(98)
             function A2_M_receive() {
                 // return ()

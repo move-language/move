@@ -1065,20 +1065,8 @@ impl<'a> FunctionGenerator<'a> {
         dst: TempIndex,
         addr: String,
     ) {
-        // Obtain the storage base offset for this resource.
-        let base_offset = self.parent.type_storage_base(
-            ctx,
-            &struct_id.to_type(),
-            "${RESOURCE_STORAGE_CATEGORY}",
-            addr,
-        );
-        // Load the exists flag and store it into destination.
-        let load_flag = self.parent.call_builtin_str(
-            ctx,
-            YulFunction::AlignedStorageLoad,
-            std::iter::once(base_offset),
-        );
-        self.assign(ctx, target, dst, load_flag);
+        let exists_check = self.parent.exists_check(ctx, struct_id, addr);
+        self.assign(ctx, target, dst, exists_check);
     }
 
     /// Move resource from storage to local.
@@ -1160,46 +1148,8 @@ impl<'a> FunctionGenerator<'a> {
         addr: String,
     ) {
         ctx.emit_block(|| {
-            // Obtain the storage base offset for this resource.
-            emitln!(
-                ctx.writer,
-                "let $base_offset := {}",
-                self.parent.type_storage_base(
-                    ctx,
-                    &struct_id.to_type(),
-                    "${RESOURCE_STORAGE_CATEGORY}",
-                    addr,
-                )
-            );
-            let base_offset = "$base_offset";
-
-            // At the base offset check the flag whether the resource exists.
-            let exists_call = self.parent.call_builtin_str(
-                ctx,
-                YulFunction::AlignedStorageLoad,
-                std::iter::once(base_offset.to_string()),
-            );
-            let abort_call =
-                self.parent
-                    .call_builtin_str(ctx, YulFunction::AbortBuiltin, std::iter::empty());
-            emitln!(
-                ctx.writer,
-                "if iszero({}) {{\n  {}\n}}",
-                exists_call,
-                abort_call
-            );
-
-            // Skip the existence flag and create a pointer.
-            let make_ptr = self.parent.call_builtin_str(
-                ctx,
-                YulFunction::MakePtr,
-                vec![
-                    "true".to_string(),
-                    format!("add({}, ${{RESOURCE_EXISTS_FLAG_SIZE}})", base_offset),
-                ]
-                .into_iter(),
-            );
-            self.assign(ctx, target, dst, make_ptr)
-        })
+            let res = self.parent.borrow_global_instrs(ctx, &struct_id, addr);
+            self.assign(ctx, target, dst, res);
+        });
     }
 }

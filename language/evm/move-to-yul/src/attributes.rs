@@ -199,11 +199,6 @@ pub fn is_fallback_fun(fun: &FunctionEnv<'_>) -> bool {
     )
 }
 
-/// Checks whether this function is a contract function.
-pub fn is_contract_fun(fun: &FunctionEnv) -> bool {
-    is_callable_fun(fun) || is_fallback_fun(fun) || is_receive_fun(fun)
-}
-
 /// Check whether the function has a `#[evm_test] attribute.
 pub fn is_evm_test_fun(fun: &FunctionEnv<'_>) -> bool {
     has_attr(

@@ -35,8 +35,12 @@ impl NativeFunctions {
             result_ty.clone(),
         );
         if let Some(solidity_sig_str) = solidity_sig_str_opt {
-            let parsed_sig_opt =
-                SoliditySignature::parse_into_solidity_signature(&solidity_sig_str, &fun);
+            let parsed_sig_opt = SoliditySignature::parse_into_solidity_signature(
+                ctx,
+                &solidity_sig_str,
+                &fun,
+                &None,
+            );
             // Check compatibility
             if let Ok(parsed_sig) = parsed_sig_opt {
                 sig = parsed_sig;

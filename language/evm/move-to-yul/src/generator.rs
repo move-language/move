@@ -18,7 +18,7 @@ use crate::{
 };
 
 use crate::context::Contract;
-use move_model::model::ModuleEnv;
+use move_model::model::{ModuleEnv, StructId};
 use sha3::{Digest, Keccak256};
 
 /// Mutable state of the generator.
@@ -26,6 +26,8 @@ use sha3::{Digest, Keccak256};
 pub struct Generator {
     // Location of the currently compiled contract, for general error messages.
     pub(crate) contract_loc: Loc,
+    // If the currently compiled contract has a storage type, its contained here.
+    pub(crate) storage_type: Option<QualifiedInstId<StructId>>,
     /// Move functions, including type instantiation, needed in the currently generated code block.
     needed_move_functions: Vec<QualifiedInstId<FunId>>,
     /// Move functions for which code has been emitted.
@@ -138,11 +140,15 @@ impl Generator {
         // Initialize contract specific state
         let module = &ctx.env.get_module(contract.module);
         self.contract_loc = module.get_loc();
+        self.storage_type = contract
+            .storage
+            .map(|struct_id| contract.module.qualified_inst(struct_id, vec![]));
+        // Start generating Yul object.
         emit!(ctx.writer, "object \"{}\" ", contract.name);
         ctx.emit_block(|| {
             // Generate the deployment code block
             self.begin_code_block(ctx);
-            self.optional_creator(ctx, module, contract);
+            self.optional_create(ctx, module, contract);
             let contract_deployed_name = format!("{}_deployed", contract.name);
             emitln!(
                 ctx.writer,
@@ -165,12 +171,14 @@ impl Generator {
                     ctx.writer,
                     "mstore(${MEM_SIZE_LOC}, memoryguard(${USED_MEM}))"
                 );
-                let functions = contract
-                    .functions
+                let callables = contract
+                    .callables
                     .iter()
                     .map(|f| module.get_function(*f))
                     .collect_vec();
-                self.callable_functions(ctx, &functions);
+                let receiver = contract.receive.map(|f| module.get_function(f));
+                let fallback = contract.fallback.map(|f| module.get_function(f));
+                self.callable_functions(ctx, &callables, receiver, fallback);
                 self.end_code_block(ctx);
             })
         });
@@ -325,17 +333,13 @@ impl Generator {
     }
 
     /// Generate optional creator (contract constructor).
-    fn optional_creator(&mut self, ctx: &Context, module: &ModuleEnv, contract: &Contract) {
+    fn optional_create(&mut self, ctx: &Context, module: &ModuleEnv, contract: &Contract) {
         if let Some(creator_id) = contract.constructor {
             let creator = module.get_function(creator_id);
             ctx.check_no_generics(&creator);
-            if let Some(storage_id) = contract.storage {
+            if let Some(storage) = &self.storage_type {
                 // The creator function must return a value of the storage type.
-                let storage_ty = module
-                    .get_id()
-                    .qualified(storage_id)
-                    .instantiate(vec![])
-                    .to_type();
+                let storage_ty = storage.to_type();
                 if creator.get_return_count() != 1 || creator.get_return_type(0) != storage_ty {
                     ctx.env.error(
                         &creator.get_loc(),
@@ -345,7 +349,7 @@ impl Generator {
             } else if creator.get_return_count() > 0 {
                 ctx.env.error(
                     &creator.get_loc(),
-                    "return values not allowed for creator functions",
+                    "return values not allowed for creator functions without specified #[storage]",
                 )
             }
 
@@ -439,6 +443,7 @@ impl Generator {
                     "$new_value".to_string(),
                 );
             } else {
+                // Otherwise the creator function is responsible to store initialized data itself.
                 emitln!(ctx.writer, "{}({})", function_name, params);
             }
 
@@ -447,9 +452,23 @@ impl Generator {
     }
 
     /// Generate Yul definitions for all callable functions.
-    fn callable_functions(&mut self, ctx: &Context, contract_funs: &[FunctionEnv<'_>]) {
-        self.generate_dispatcher_routine(ctx, contract_funs);
-        for fun in contract_funs {
+    fn callable_functions(
+        &mut self,
+        ctx: &Context,
+        callables: &[FunctionEnv<'_>],
+        receiver: Option<FunctionEnv<'_>>,
+        fallback: Option<FunctionEnv<'_>>,
+    ) {
+        self.generate_dispatcher_routine(ctx, callables, &receiver, &fallback);
+        for fun in callables {
+            ctx.check_no_generics(fun);
+            self.function(ctx, &fun.get_qualified_id().instantiate(vec![]))
+        }
+        if let Some(fun) = &receiver {
+            ctx.check_no_generics(fun);
+            self.function(ctx, &fun.get_qualified_id().instantiate(vec![]))
+        }
+        if let Some(fun) = &fallback {
             ctx.check_no_generics(fun);
             self.function(ctx, &fun.get_qualified_id().instantiate(vec![]))
         }

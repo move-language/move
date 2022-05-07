@@ -98,7 +98,7 @@ pub struct BuildConfig {
     pub dev_mode: bool,
 
     /// Compile in 'test' mode. The 'dev-addresses' and 'dev-dependencies' fields will be used
-    /// along with any code in the 'test' directory.
+    /// along with any code in the 'tests' directory.
     #[clap(name = "test-mode", long = "test", global = true)]
     pub test_mode: bool,
 

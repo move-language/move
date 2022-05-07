@@ -17,13 +17,21 @@ object "A2_M" {
                 switch selector
                 default {}
             }
-            if iszero(calldatasize()) { A2_M_receive() stop() }
+            {
+                if iszero(calldatasize()) { A2_M_receive() stop() }
+            }
             if callvalue()
             {
                 $Abort(99)
             }
-            let retval := A2_M_fallback(0, calldatasize()) stop()
-            return(add(retval, 0x20), mload(retval))
+            {
+                let retval := A2_M_fallback(0, calldatasize()) stop()
+                return(add(retval, 0x20), mload(retval))
+            }
+            function A2_M_receive() {
+                // return ()
+            }
+
             function A2_M_fallback(x) -> $result {
                 let $t1, $t2
                 // $t1 := 1
@@ -32,10 +40,6 @@ object "A2_M" {
                 $t2 := $AddU64(x, $t1)
                 // return $t2
                 $result := $t2
-            }
-
-            function A2_M_receive() {
-                // return ()
             }
 
             function $Abort(code) {
@@ -67,7 +71,7 @@ Warning: "switch" statement with only a default case.
    |                 ^ (Relevant source part starts here and spans across multiple lines).
 
 Error: Function "A2_M_fallback" expects 1 arguments but got 2.
-  --> <stdin>:25:27:
+  --> <stdin>:28:31:
    |
-25 |             let retval := A2_M_fallback(0, calldatasize()) stop()
-   |                           ^^^^^^^^^^^^^
+28 |                 let retval := A2_M_fallback(0, calldatasize()) stop()
+   |                               ^^^^^^^^^^^^^

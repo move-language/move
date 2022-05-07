@@ -33,17 +33,19 @@ object "A2_M" {
             {
                 $Abort(99)
             }
-            A2_M_fallback() stop()
-            function A2_M_fallback() {
-                // return ()
+            {
+                A2_M_fallback() stop()
             }
-
             function A2_M_return_0() -> $result {
                 let $t0
                 // $t0 := 0
                 $t0 := 0
                 // return $t0
                 $result := $t0
+            }
+
+            function A2_M_fallback() {
+                // return ()
             }
 
             function abi_encode_tuple_$uint128$_$u128$(headStart ,value_0) -> tail {

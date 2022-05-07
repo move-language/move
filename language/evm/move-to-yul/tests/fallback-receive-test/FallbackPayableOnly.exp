@@ -17,7 +17,9 @@ object "A2_M" {
                 switch selector
                 default {}
             }
-            A2_M_fallback() stop()
+            {
+                A2_M_fallback() stop()
+            }
             function A2_M_fallback() {
                 // return ()
             }

@@ -119,7 +119,24 @@ object "A2_M" {
                 }
                 default {}
             }
-            $Abort(97)
+            {
+                let $base_offset := $MakeTypeStorageBase(0, 0xd5520090, address())
+                if iszero($AlignedStorageLoad($base_offset)) {
+                  $AbortBuiltin()
+                }
+                if iszero(calldatasize()) { A2_M_receive($MakePtr(true, add($base_offset, 32))) stop() }
+            }
+            if callvalue()
+            {
+                $Abort(99)
+            }
+            {
+                let $base_offset := $MakeTypeStorageBase(0, 0xd5520090, address())
+                if iszero($AlignedStorageLoad($base_offset)) {
+                  $AbortBuiltin()
+                }
+                A2_M_fallback($MakePtr(true, add($base_offset, 32))) stop()
+            }
             function A2_M_current(self) -> $result {
                 let $t1, $t2
                 // $t1 := borrow_field<M::Storage>.counter($t0)
@@ -144,6 +161,27 @@ object "A2_M" {
                 $t5 := self
                 // write_ref($t5, $t4)
                 $StoreU64($t5, $t4)
+                // return ()
+            }
+
+            function A2_M_receive(self) {
+                let $t1, $t2, $t3, $t4, $t5
+                // $t1 := borrow_field<M::Storage>.counter($t0)
+                $t1 := self
+                // $t2 := read_ref($t1)
+                $t2 := $LoadU64($t1)
+                // $t3 := 2
+                $t3 := 2
+                // $t4 := +($t2, $t3)
+                $t4 := $AddU64($t2, $t3)
+                // $t5 := borrow_field<M::Storage>.counter($t0)
+                $t5 := self
+                // write_ref($t5, $t4)
+                $StoreU64($t5, $t4)
+                // return ()
+            }
+
+            function A2_M_fallback(_self) {
                 // return ()
             }
 

@@ -1148,7 +1148,7 @@ impl<'a> FunctionGenerator<'a> {
         addr: String,
     ) {
         ctx.emit_block(|| {
-            let res = self.parent.borrow_global_instrs(ctx, struct_id, addr);
+            let res = self.parent.borrow_global_instrs(ctx, &struct_id, addr);
             self.assign(ctx, target, dst, res);
         });
     }

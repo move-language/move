@@ -4,8 +4,8 @@
 use crate::{
     attributes,
     attributes::{
-        extract_contract_name, is_contract_fun, is_create_fun, is_event_struct,
-        is_evm_contract_module, is_storage_struct,
+        extract_contract_name, is_callable_fun, is_create_fun, is_event_struct,
+        is_evm_contract_module, is_fallback_fun, is_receive_fun, is_storage_struct,
     },
     events::EventSignature,
     evm_transformation::EvmTransformationProcessor,
@@ -88,8 +88,12 @@ pub(crate) struct Contract {
     pub storage: Option<StructId>,
     /// Optional constructor function.
     pub constructor: Option<FunId>,
+    /// Optional receive function.
+    pub receive: Option<FunId>,
+    /// Optional fallback function.
+    pub fallback: Option<FunId>,
     /// Functions which are callable, receive, or fallback entry.
-    pub functions: Vec<FunId>,
+    pub callables: Vec<FunId>,
 }
 
 impl<'a> Context<'a> {
@@ -254,27 +258,15 @@ impl<'a> Context<'a> {
                 None
             }
         };
-        // Identify constructor.
-        let ctor_cands = module
+        // Identify special functions.
+        let constructor = self.identify_function(module, is_create_fun, "#[create]");
+        let receive = self.identify_function(module, is_receive_fun, "#[receive]");
+        let fallback = self.identify_function(module, is_fallback_fun, "#[fallback]");
+
+        // Identify callable functions.
+        let callables = module
             .get_functions()
-            .filter(is_create_fun)
-            .take(2)
-            .collect::<Vec<_>>();
-        let constructor = match ctor_cands.len() {
-            0 => None,
-            1 => Some(ctor_cands[0].get_id()),
-            _ => {
-                self.env.error(
-                    &ctor_cands[1].get_loc(),
-                    "only one #[create] function allowed per contract module",
-                );
-                None
-            }
-        };
-        // Identify functions.
-        let functions = module
-            .get_functions()
-            .filter(is_contract_fun)
+            .filter(is_callable_fun)
             .map(|s| s.get_id())
             .collect();
 
@@ -291,23 +283,38 @@ impl<'a> Context<'a> {
             module: module.get_id(),
             storage,
             constructor,
-            functions,
+            receive,
+            fallback,
+            callables,
+        }
+    }
+
+    fn identify_function(
+        &self,
+        module: &ModuleEnv,
+        pred: impl Fn(&FunctionEnv) -> bool,
+        attr_str: &str,
+    ) -> Option<FunId> {
+        let cands = module
+            .get_functions()
+            .filter(pred)
+            .take(2)
+            .collect::<Vec<_>>();
+        match cands.len() {
+            0 => None,
+            1 => Some(cands[0].get_id()),
+            _ => {
+                self.env.error(
+                    &cands[1].get_loc(),
+                    &format!("only one {} function allowed per contract module", attr_str),
+                );
+                None
+            }
         }
     }
 
     // --------------------------------------------------------------------------------------------
     // Queries
-
-    /// Return iterator for all functions in the environment which stem from a target module
-    /// and which satisfy predicate.
-    pub fn get_target_functions(&self, p: impl Fn(&FunctionEnv) -> bool) -> Vec<FunctionEnv<'a>> {
-        self.env
-            .get_modules()
-            .filter(|m| m.is_target())
-            .map(|m| m.into_functions().filter(|f| p(f)))
-            .flatten()
-            .collect()
-    }
 
     /// Return iterator for all structs in the environment which stem from a target module
     /// and which satisfy predicate.

@@ -19,4 +19,13 @@ module 0x2::M {
     fun increment(self: &mut Storage) {
 	    self.counter = self.counter + 1;
     }
+
+    #[receive, payable]
+    fun receive(self: &mut Storage) {
+        self.counter = self.counter + 2;
+    }
+
+    #[fallback]
+    fun fallback(_self: &mut Storage) {
+    }
 }

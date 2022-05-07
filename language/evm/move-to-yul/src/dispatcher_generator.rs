@@ -10,7 +10,7 @@ use sha3::{Digest, Keccak256};
 use move_model::{
     ast::TempIndex,
     emit, emitln,
-    model::{FunId, FunctionEnv, QualifiedId},
+    model::{FunId, FunctionEnv, QualifiedId, QualifiedInstId, StructId},
     ty::Type,
 };
 
@@ -61,7 +61,9 @@ impl Generator {
     pub(crate) fn generate_dispatcher_routine(
         &mut self,
         ctx: &Context,
-        contract_funs: &[FunctionEnv<'_>],
+        callables: &[FunctionEnv<'_>],
+        receiver: &Option<FunctionEnv<'_>>,
+        fallback: &Option<FunctionEnv<'_>>,
     ) {
         emitln!(ctx.writer, "if iszero(lt(calldatasize(), 4))");
         let mut selectors = BTreeMap::new();
@@ -70,11 +72,7 @@ impl Generator {
         ctx.emit_block(|| {
             emitln!(ctx.writer, "let selector := {}", shr224);
             emitln!(ctx.writer, "switch selector");
-            for fun in contract_funs {
-                if !attributes::is_callable_fun(fun) {
-                    // Only dispatch callables
-                    continue;
-                }
+            for fun in callables {
                 if !self.is_suitable_for_dispatch(ctx, fun) {
                     ctx.env.diag(
                         Severity::Warning,
@@ -96,8 +94,8 @@ impl Generator {
             }
             emitln!(ctx.writer, "default {}");
         });
-        let receive_exists = self.optional_receive(ctx);
-        self.generate_fallback(ctx, receive_exists);
+        let receive_exists = self.optional_receive(ctx, receiver);
+        self.generate_fallback(ctx, receive_exists, fallback);
     }
 
     /// Returns the Solidity signature of the given function.
@@ -201,15 +199,8 @@ impl Generator {
                 rets = (0..ret_count).map(|i| format!("ret_{}", i)).join(", ");
                 let_rets = format!("let {} := ", rets);
             }
-            if let Some(storage) = storage_type {
-                // The first parameter is a reference to the storage struct.
-                let storage_ref = self.borrow_global_instrs(ctx, storage, "address()".to_string());
-                if params.is_empty() {
-                    params = storage_ref;
-                } else {
-                    params = vec![storage_ref, params].into_iter().join(", ");
-                }
-            }
+            // Add optional storage ref parameter
+            params = self.add_storage_ref_param(ctx, &storage_type, params);
             // Call the function
             emitln!(ctx.writer, "{}{}({})", let_rets, function_name, params);
             // Encoding the return values
@@ -230,6 +221,26 @@ impl Generator {
         });
     }
 
+    /// Adds the optional storage ref parameter to a parameter list.
+    fn add_storage_ref_param(
+        &mut self,
+        ctx: &Context,
+        storage_type: &Option<QualifiedInstId<StructId>>,
+        params: String,
+    ) -> String {
+        if let Some(storage) = storage_type {
+            // The first parameter is a reference to the storage struct.
+            let storage_ref = self.borrow_global_instrs(ctx, storage, "address()".to_string());
+            if params.is_empty() {
+                storage_ref
+            } else {
+                vec![storage_ref, params].into_iter().join(", ")
+            }
+        } else {
+            params
+        }
+    }
+
     /// Determine whether the function is suitable as a dispatcher item.
     pub(crate) fn is_suitable_for_dispatch(&self, ctx: &Context, fun: &FunctionEnv) -> bool {
         let mut types = fun.get_parameter_types();
@@ -247,28 +258,26 @@ impl Generator {
     }
 
     /// Generate optional receive function.
-    fn optional_receive(&mut self, ctx: &Context) -> bool {
-        let mut receives = ctx.get_target_functions(attributes::is_receive_fun);
-        if receives.len() > 1 {
-            ctx.env
-                .error(&receives[1].get_loc(), "multiple #[receive] functions")
-        }
-        if let Some(receive) = receives.pop() {
+    fn optional_receive(&mut self, ctx: &Context, receive: &Option<FunctionEnv<'_>>) -> bool {
+        if let Some(receive) = receive {
             ctx.check_no_generics(&receive);
             if !attributes::is_payable_fun(&receive) {
                 ctx.env
                     .error(&receive.get_loc(), "receive function must be payable")
             }
-            if attributes::is_fallback_fun(&receive) || attributes::is_callable_fun(&receive) {
+            let mut param_count = receive.get_parameter_count();
+            let storage_type = if param_count > 0
+                && ctx.is_storage_ref(&self.storage_type, &receive.get_local_type(0))
+            {
+                param_count -= 1;
+                Some(self.storage_type.clone().unwrap())
+            } else {
+                None
+            };
+            if param_count > 0 {
                 ctx.env.error(
                     &receive.get_loc(),
-                    "receive function must not be a fallback or callable function",
-                )
-            }
-            if receive.get_parameter_count() > 0 {
-                ctx.env.error(
-                    &receive.get_loc(),
-                    "receive function must not have parameters",
+                    "receive function must not have parameters in addition to optional storage reference",
                 )
             }
             let fun_id = &receive
@@ -276,11 +285,15 @@ impl Generator {
                 .get_id()
                 .qualified(receive.get_id())
                 .instantiate(vec![]);
-            emitln!(
-                ctx.writer,
-                "if iszero(calldatasize()) {{ {}() stop() }}",
-                ctx.make_function_name(fun_id)
-            );
+            ctx.emit_block(|| {
+                let params = self.add_storage_ref_param(ctx, &storage_type, "".to_string());
+                emitln!(
+                    ctx.writer,
+                    "if iszero(calldatasize()) {{ {}({}) stop() }}",
+                    ctx.make_function_name(fun_id),
+                    params
+                );
+            });
             true
         } else {
             false
@@ -288,20 +301,14 @@ impl Generator {
     }
 
     /// Generate fallback function.
-    fn generate_fallback(&mut self, ctx: &Context, receive_ether: bool) {
-        let mut fallbacks = ctx.get_target_functions(attributes::is_fallback_fun);
-        if fallbacks.len() > 1 {
-            ctx.env
-                .error(&fallbacks[1].get_loc(), "multiple #[fallback] functions")
-        }
-        if let Some(fallback) = fallbacks.pop() {
+    fn generate_fallback(
+        &mut self,
+        ctx: &Context,
+        receive_ether: bool,
+        fallback: &Option<FunctionEnv<'_>>,
+    ) {
+        if let Some(fallback) = fallback {
             ctx.check_no_generics(&fallback);
-            if attributes::is_callable_fun(&fallback) {
-                ctx.env.error(
-                    &fallback.get_loc(),
-                    "fallback function must not be a callable function",
-                )
-            }
             if !attributes::is_payable_fun(&fallback) {
                 self.generate_call_value_check(ctx, REVERT_ERR_NON_PAYABLE_FUN);
             }
@@ -311,22 +318,37 @@ impl Generator {
                 .qualified(fallback.get_id())
                 .instantiate(vec![]);
             let fun_name = ctx.make_function_name(fun_id);
-            let params_size = fallback.get_parameter_count();
-            if params_size == 0 {
-                emitln!(ctx.writer, "{}() stop()", fun_name);
-            } else if params_size != 1 || fallback.get_return_count() != 1 {
-                ctx.env.error(
-                    &fallback.get_loc(),
-                    "fallback function must have at most 1 parameter and 1 return value",
-                );
+            let mut param_count = fallback.get_parameter_count();
+            let storage_type = if param_count > 0
+                && ctx.is_storage_ref(&self.storage_type, &fallback.get_local_type(0))
+            {
+                param_count -= 1;
+                Some(self.storage_type.clone().unwrap())
             } else {
-                emitln!(
-                    ctx.writer,
-                    "let retval := {}(0, calldatasize()) stop()",
-                    fun_name
-                );
-                emitln!(ctx.writer, "return(add(retval, 0x20), mload(retval))");
-            }
+                None
+            };
+            ctx.emit_block(|| {
+                let mut params = self.add_storage_ref_param(ctx, &storage_type, "".to_string());
+                if param_count == 0 {
+                    emitln!(ctx.writer, "{}({}) stop()", fun_name, params);
+                } else if param_count != 1 || fallback.get_return_count() != 1 {
+                    ctx.env.error(
+                        &fallback.get_loc(),
+                        "fallback function must have at most 1 parameter and 1 return value",
+                    );
+                } else {
+                    if !params.is_empty() {
+                        params = format!("{}, ", params);
+                    }
+                    emitln!(
+                        ctx.writer,
+                        "let retval := {}({}0, calldatasize()) stop()",
+                        fun_name,
+                        params
+                    );
+                    emitln!(ctx.writer, "return(add(retval, 0x20), mload(retval))");
+                }
+            })
         } else {
             let mut err_msg = NO_RECEIVE_OR_FALLBACK_FUN;
             if receive_ether {

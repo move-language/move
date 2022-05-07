@@ -171,12 +171,14 @@ impl Generator {
                     ctx.writer,
                     "mstore(${MEM_SIZE_LOC}, memoryguard(${USED_MEM}))"
                 );
-                let functions = contract
-                    .functions
+                let callables = contract
+                    .callables
                     .iter()
                     .map(|f| module.get_function(*f))
                     .collect_vec();
-                self.callable_functions(ctx, &functions);
+                let receiver = contract.receive.map(|f| module.get_function(f));
+                let fallback = contract.fallback.map(|f| module.get_function(f));
+                self.callable_functions(ctx, &callables, receiver, fallback);
                 self.end_code_block(ctx);
             })
         });
@@ -450,9 +452,23 @@ impl Generator {
     }
 
     /// Generate Yul definitions for all callable functions.
-    fn callable_functions(&mut self, ctx: &Context, contract_funs: &[FunctionEnv<'_>]) {
-        self.generate_dispatcher_routine(ctx, contract_funs);
-        for fun in contract_funs {
+    fn callable_functions(
+        &mut self,
+        ctx: &Context,
+        callables: &[FunctionEnv<'_>],
+        receiver: Option<FunctionEnv<'_>>,
+        fallback: Option<FunctionEnv<'_>>,
+    ) {
+        self.generate_dispatcher_routine(ctx, callables, &receiver, &fallback);
+        for fun in callables {
+            ctx.check_no_generics(fun);
+            self.function(ctx, &fun.get_qualified_id().instantiate(vec![]))
+        }
+        if let Some(fun) = &receiver {
+            ctx.check_no_generics(fun);
+            self.function(ctx, &fun.get_qualified_id().instantiate(vec![]))
+        }
+        if let Some(fun) = &fallback {
             ctx.check_no_generics(fun);
             self.function(ctx, &fun.get_qualified_id().instantiate(vec![]))
         }

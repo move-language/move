@@ -1,7 +1,7 @@
 
 
 !! Move-To-Yul Diagnostics:
- error: multiple #[receive] functions
+ error: only one #[receive] function allowed per contract module
    ┌─ tests/fallback-receive-test/expect-failure/FallbackReciveFailure.move:10:2
    │
 10 │ ╭     fun receive(x: u64): u64 {
@@ -9,39 +9,7 @@
 12 │ │     }
    │ ╰─────^
 
-error: receive function must be payable
-   ┌─ tests/fallback-receive-test/expect-failure/FallbackReciveFailure.move:10:2
-   │
-10 │ ╭     fun receive(x: u64): u64 {
-11 │ │         x
-12 │ │     }
-   │ ╰─────^
-
-error: receive function must not be a fallback or callable function
-   ┌─ tests/fallback-receive-test/expect-failure/FallbackReciveFailure.move:10:2
-   │
-10 │ ╭     fun receive(x: u64): u64 {
-11 │ │         x
-12 │ │     }
-   │ ╰─────^
-
-error: receive function must not have parameters
-   ┌─ tests/fallback-receive-test/expect-failure/FallbackReciveFailure.move:10:2
-   │
-10 │ ╭     fun receive(x: u64): u64 {
-11 │ │         x
-12 │ │     }
-   │ ╰─────^
-
-error: multiple #[fallback] functions
-   ┌─ tests/fallback-receive-test/expect-failure/FallbackReciveFailure.move:10:2
-   │
-10 │ ╭     fun receive(x: u64): u64 {
-11 │ │         x
-12 │ │     }
-   │ ╰─────^
-
-error: fallback function must not be a callable function
+error: only one #[fallback] function allowed per contract module
    ┌─ tests/fallback-receive-test/expect-failure/FallbackReciveFailure.move:10:2
    │
 10 │ ╭     fun receive(x: u64): u64 {

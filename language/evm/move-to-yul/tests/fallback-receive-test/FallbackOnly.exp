@@ -21,7 +21,9 @@ object "A2_M" {
             {
                 $Abort(99)
             }
-            A2_M_fallback() stop()
+            {
+                A2_M_fallback() stop()
+            }
             function A2_M_fallback() {
                 // return ()
             }

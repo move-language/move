@@ -348,7 +348,7 @@ impl Generator {
     pub(crate) fn borrow_global_instrs(
         &mut self,
         ctx: &Context,
-        struct_id: QualifiedInstId<StructId>,
+        struct_id: &QualifiedInstId<StructId>,
         addr: String,
     ) -> String {
         // Obtain the storage base offset for this resource.

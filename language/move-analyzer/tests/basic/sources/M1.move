@@ -22,4 +22,15 @@ module Basic::M1 {
         ret
     }
 
+    fun other_mod_struct(): Basic::M2::SomeOtherStruct {
+        Basic::M2::some_other_struct(7)
+    }
+
+    use Basic::M2::{Self, SomeOtherStruct};
+
+    fun other_mod_struct_import(): SomeOtherStruct {
+        M2::some_other_struct(7)
+    }
+
+
 }

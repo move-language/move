@@ -24,7 +24,7 @@ use move_command_line_common::files::FileHash;
 use move_compiler::{
     diagnostics,
     expansion::ast::{Fields, ModuleIdent_},
-    naming::ast::{StructFields, Type},
+    naming::ast::{StructFields, Type, TypeName_, Type_},
     parser::ast::StructName,
     shared::Identifier,
     typing::ast::{
@@ -78,8 +78,13 @@ struct StructDef {
 }
 
 struct ModuleDefs {
+    /// File where this module is located
+    fhash: FileHash,
+    /// Struct definitions
     structs: BTreeMap<Symbol, StructDef>,
+    /// Const definitions
     constants: BTreeMap<Symbol, Position>,
+    /// Function definitions
     functions: BTreeMap<Symbol, Position>,
 }
 
@@ -245,8 +250,13 @@ impl Symbolicator {
         let mut mod_use_defs = BTreeMap::new();
         let mut mod_ident_map = BTreeMap::new();
         for (pos, module_ident, module_def) in modules {
-            let (defs, symbols) =
-                Self::get_mod_outer_defs(&mut references, module_def, &files, &file_id_mapping);
+            let (defs, symbols) = Self::get_mod_outer_defs(
+                &pos,
+                &mut references,
+                module_def,
+                &files,
+                &file_id_mapping,
+            );
             mod_outer_defs.insert(*module_ident, defs);
             mod_use_defs.insert(*module_ident, symbols);
             match source_files.get(&pos.file_hash()) {
@@ -297,6 +307,7 @@ impl Symbolicator {
 
     /// Get symbols for outer definitions in the module (functions, structs, and consts)
     fn get_mod_outer_defs(
+        loc: &Loc,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         mod_def: &ModuleDefinition,
         files: &SimpleFiles<Symbol, String>,
@@ -415,8 +426,10 @@ impl Symbolicator {
             };
         }
 
+        let fhash = loc.file_hash();
         (
             ModuleDefs {
+                fhash,
                 structs,
                 constants,
                 functions,
@@ -474,7 +487,9 @@ impl Symbolicator {
         let mut fn_scope = Scope::new();
 
         for (pname, ptype) in &fun.signature.parameters {
-            // TODO: process parameter types
+            self.add_type_use_def(ptype, references, use_defs);
+
+            // add definition of the parameter
             if let Some(def_loc) = self.add_def(
                 &pname.loc(),
                 &pname.value(),
@@ -506,11 +521,11 @@ impl Symbolicator {
         let mut ret_scope = Scope::new();
         scope_stack.push_front(ret_scope);
 
-        // TODO: process return types
+        self.add_type_use_def(&fun.signature.return_type, references, use_defs);
 
         // pop the return parameters scope
         scope_stack.pop_front();
-        debug_assert!(scope_stack.len() == 0);
+        debug_assert!(scope_stack.is_empty());
 
         // clear type params from the scope
         self.type_params.clear();
@@ -637,8 +652,8 @@ impl Symbolicator {
             E::Pack(ident, name, _, fields) => {
                 self.pack_symbols(
                     &ident.value,
-                    &name,
-                    &fields,
+                    name,
+                    fields,
                     scope_stack,
                     references,
                     use_defs,
@@ -704,7 +719,7 @@ impl Symbolicator {
                         references,
                         use_pos.file_hash(),
                         name_start,
-                        module_ident.module.loc().file_hash(),
+                        self.mod_outer_defs.get(module_ident).unwrap().fhash,
                         def.name_start,
                         use_name,
                     ),
@@ -750,7 +765,7 @@ impl Symbolicator {
                                 references,
                                 use_pos.file_hash(),
                                 name_start,
-                                module_ident.module.loc().file_hash(),
+                                self.mod_outer_defs.get(module_ident).unwrap().fhash,
                                 fdef.start,
                                 use_name,
                             ),
@@ -760,6 +775,55 @@ impl Symbolicator {
             }
             None => debug_assert!(false),
         };
+    }
+
+    /// Add use of a type identifier
+    fn add_type_use_def(
+        &self,
+        sp!(_, typ): &Type,
+        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
+        use_defs: &mut UseDefMap,
+    ) {
+        match typ {
+            Type_::Ref(_, t) => self.add_type_use_def(t, references, use_defs),
+            Type_::Param(tparam) => {
+                let sp!(use_pos, use_name) = tparam.user_specified_name;
+                match Self::get_start_loc(&use_pos, &self.files, &self.file_id_mapping) {
+                    Some(name_start) => match self.type_params.get(&use_name) {
+                        Some(def_loc) => {
+                            use_defs.insert(
+                                name_start.line,
+                                UseDef::new(
+                                    references,
+                                    use_pos.file_hash(),
+                                    name_start,
+                                    def_loc.fhash,
+                                    def_loc.start,
+                                    &use_name,
+                                ),
+                            );
+                        }
+                        None => debug_assert!(false),
+                    },
+                    None => debug_assert!(false), // a type param should not be missing
+                }
+            }
+            Type_::Apply(_, sp!(_, type_name), tparams) => {
+                if let TypeName_::ModuleType(sp!(_, mod_ident), struct_name) = type_name {
+                    self.add_struct_use_def(
+                        mod_ident,
+                        &struct_name.value(),
+                        &struct_name.loc(),
+                        references,
+                        use_defs,
+                    );
+                } // otherwise nothing to be done for other type names
+                for t in tparams {
+                    self.add_type_use_def(t, references, use_defs);
+                }
+            }
+            _ => (), // nothing to be done for the other types
+        }
     }
 
     /// Add a "generic" definition
@@ -974,17 +1038,24 @@ pub fn on_use_request(
 
 fn assert_use_def(
     mod_symbols: &UseDefMap,
+    file_name_mapping: &BTreeMap<FileHash, Symbol>,
     use_idx: usize,
     use_line: u32,
     use_col: u32,
     def_line: u32,
     def_col: u32,
+    def_file: &str,
 ) {
     let uses = mod_symbols.get(use_line).unwrap();
     let use_def = uses.iter().nth(use_idx).unwrap();
     assert!(use_def.col_start == use_col);
     assert!(use_def.def_loc.start.line == def_line);
     assert!(use_def.def_loc.start.character == def_col);
+    assert!(file_name_mapping
+        .get(&use_def.def_loc.fhash)
+        .unwrap()
+        .as_str()
+        .ends_with(def_file));
 }
 
 #[test]
@@ -1002,28 +1073,173 @@ fn symbols_build_test() {
     let mod_symbols = symbols.mod_use_defs.get(mod_ident).unwrap();
 
     // struct def name
-    assert_use_def(mod_symbols, 0, 2, 11, 2, 11);
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        2,
+        11,
+        2,
+        11,
+        "M1.move",
+    );
     // const def name
-    assert_use_def(mod_symbols, 0, 6, 10, 6, 10);
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        6,
+        10,
+        6,
+        10,
+        "M1.move",
+    );
     // function def name
-    assert_use_def(mod_symbols, 0, 9, 8, 9, 8);
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        9,
+        8,
+        9,
+        8,
+        "M1.move",
+    );
 
-    // param (unpack function)
-    assert_use_def(mod_symbols, 1, 9, 15, 9, 15);
+    // param var (unpack function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        9,
+        15,
+        9,
+        15,
+        "M1.move",
+    );
+    // struct name in param type (unpack function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        2,
+        9,
+        18,
+        2,
+        11,
+        "M1.move",
+    );
     // struct name in unpack (unpack function)
-    assert_use_def(mod_symbols, 0, 10, 12, 2, 11);
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        10,
+        12,
+        2,
+        11,
+        "M1.move",
+    );
     // field name in unpack (unpack function)
-    assert_use_def(mod_symbols, 1, 10, 25, 3, 8);
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        10,
+        25,
+        3,
+        8,
+        "M1.move",
+    );
     // bound variable in unpack (unpack function)
-    assert_use_def(mod_symbols, 2, 10, 37, 10, 37);
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        2,
+        10,
+        37,
+        10,
+        37,
+        "M1.move",
+    );
     // moved var in unpack assignment (unpack function)
-    assert_use_def(mod_symbols, 3, 10, 47, 9, 15);
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        3,
+        10,
+        47,
+        9,
+        15,
+        "M1.move",
+    );
 
     // copied var in an assignment (cp function)
-    assert_use_def(mod_symbols, 1, 15, 18, 14, 11);
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        15,
+        18,
+        14,
+        11,
+        "M1.move",
+    );
 
+    // struct name return type (pack function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        20,
+        18,
+        2,
+        11,
+        "M1.move",
+    );
     // struct name in pack (pack function)
-    assert_use_def(mod_symbols, 1, 20, 18, 2, 11);
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        20,
+        18,
+        2,
+        11,
+        "M1.move",
+    );
     // field name in pack (pack function)
-    assert_use_def(mod_symbols, 2, 20, 31, 3, 8);
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        2,
+        20,
+        31,
+        3,
+        8,
+        "M1.move",
+    );
+
+    // other module struct name
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        24,
+        39,
+        2,
+        11,
+        "M2.move",
+    );
+
+    // other module struct name imported
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        30,
+        35,
+        2,
+        11,
+        "M2.move",
+    );
 }

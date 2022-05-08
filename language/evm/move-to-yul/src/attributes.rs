@@ -26,6 +26,7 @@ const PURE_ATTR: &str = "pure";
 const DECODE_ATTR: &str = "decode";
 const ENCODE_ATTR: &str = "encode";
 const ENCODE_PACKED_ATTR: &str = "encode_packed";
+const ABI_STRUCT_ATTR: &str = "abi_struct";
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) enum FunctionAttribute {
@@ -118,6 +119,16 @@ pub fn extract_encode_signature(fun: &FunctionEnv<'_>, packed_flag: bool) -> Opt
 /// Extract the contract name.
 pub fn extract_contract_name(module: &ModuleEnv<'_>) -> Option<String> {
     extract_attr_value_str(module.env, module.get_attributes(), CONTRACT_ATTR, "name")
+}
+
+/// Extract the event signature from the event attribute
+pub fn extract_abi_struct_signature(st: &StructEnv<'_>) -> Option<String> {
+    extract_attr_value_str(
+        st.module_env.env,
+        st.get_attributes(),
+        ABI_STRUCT_ATTR,
+        SIGNATURE,
+    )
 }
 
 /// Check whether an attribute is present in an attribute list.
@@ -259,19 +270,32 @@ pub(crate) fn construct_fun_attribute(fun: &FunctionEnv<'_>) -> Option<FunctionA
     Some(res.unwrap_or(FunctionAttribute::NonPayable))
 }
 
+/// Check whether the function has a `#[decode]` attribute.
 pub fn is_decode(fun: &FunctionEnv<'_>) -> bool {
     has_attr(fun.module_env.env, fun.get_attributes(), DECODE_ATTR, false)
 }
 
+/// Check whether the function has a `#[encode]` attribute.
 pub fn is_encode(fun: &FunctionEnv<'_>) -> bool {
     has_attr(fun.module_env.env, fun.get_attributes(), ENCODE_ATTR, false)
 }
 
+/// Check whether the function has a `#[encode_packed]` attribute.
 pub fn is_encode_packed(fun: &FunctionEnv<'_>) -> bool {
     has_attr(
         fun.module_env.env,
         fun.get_attributes(),
         ENCODE_PACKED_ATTR,
+        false,
+    )
+}
+
+/// Check whether the function has a `#[abi_struct]` attribute.
+pub fn is_abi_struct(st: &StructEnv<'_>) -> bool {
+    has_attr(
+        st.module_env.env,
+        st.get_attributes(),
+        ABI_STRUCT_ATTR,
         false,
     )
 }

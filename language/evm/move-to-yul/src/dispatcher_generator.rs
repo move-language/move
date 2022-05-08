@@ -5,13 +5,14 @@ use codespan_reporting::diagnostic::Severity;
 use std::collections::BTreeMap;
 
 use itertools::Itertools;
+use regex::Regex;
 use sha3::{Digest, Keccak256};
 
 use move_model::{
     ast::TempIndex,
     emit, emitln,
     model::{FunId, FunctionEnv, QualifiedId, QualifiedInstId, StructId},
-    ty::Type,
+    ty::{PrimitiveType, Type},
 };
 
 use crate::{
@@ -36,6 +37,7 @@ pub const ABI_DECODING_INVALID_CALLDATA_ARRAY_OFFSET: usize = 94;
 pub const ABI_DECODING_INVALID_BYTE_ARRAY_OFFSET: usize = 93;
 pub const STATIC_ARRAY_SIZE_NOT_MATCH: usize = 92;
 pub const TARGET_CONTRACT_DOES_NOT_CONTAIN_CODE: usize = 91;
+pub const ABI_DECODING_STRUCT_DATA_TOO_SHORT: usize = 90;
 
 #[derive(Debug, Clone)]
 pub(crate) struct EncodingOptions {
@@ -252,9 +254,7 @@ impl Generator {
             // If this is not a creator which returns a storage value, add return types.
             types.extend(fun.get_return_types().into_iter())
         }
-        types
-            .into_iter()
-            .all(|ty| !ty.is_reference() && !ctx.type_is_struct(&ty))
+        types.into_iter().all(|ty| !ty.is_reference())
     }
 
     /// Generate optional receive function.
@@ -451,6 +451,132 @@ impl Generator {
         self.need_auxiliary_function(function_name, Box::new(generate_fun))
     }
 
+    /// Generate decoding functions for solidity structs.
+    fn generate_abi_decoding_struct_type(
+        &mut self,
+        ctx: &Context,
+        ty: &SolidityType,
+        move_ty: &Type,
+        from_memory: bool,
+    ) -> String {
+        use SolidityType::*;
+        assert!(matches!(ty, Struct(_, _)), "wrong types");
+        let name_prefix = "abi_decode";
+        let from_memory_str = if from_memory { "_from_memory" } else { "" };
+
+        let mut param_types = vec![];
+        let mut move_tys = vec![];
+        let mut real_offsets = vec![];
+        if let Struct(_, ty_tuples) = ty {
+            param_types = ty_tuples
+                .iter()
+                .map(|(_, _, _, _, ty)| ty.clone())
+                .collect_vec();
+            move_tys = ty_tuples
+                .iter()
+                .map(|(_, _, m_ty, _, _)| m_ty.clone())
+                .collect_vec();
+            real_offsets = ty_tuples
+                .iter()
+                .map(|(_, real_offset, _, _, _)| *real_offset)
+                .collect_vec();
+        }
+
+        let mut function_name = format!(
+            "{}_{}_{}{}",
+            name_prefix,
+            mangle_solidity_types(&param_types),
+            ctx.mangle_types(&[move_ty.clone()]),
+            from_memory_str
+        );
+        let re = Regex::new(r"[()\[\],]").unwrap();
+        function_name = re.replace_all(&function_name, "_").to_string();
+
+        let generate_fun = move |gen: &mut Generator, ctx: &Context| {
+            let overall_type_head_vec = abi_head_sizes_vec(&param_types, true);
+            let overall_type_head_size = abi_head_sizes_sum(&param_types, true);
+            let ret_var = (0..overall_type_head_vec.len())
+                .map(|i| format!("value_{}", i))
+                .collect_vec();
+            emit!(ctx.writer, "(headStart, end) -> value ");
+            ctx.emit_block(|| {
+                let failure_call = gen.call_builtin_str(
+                    ctx,
+                    YulFunction::Abort,
+                    std::iter::once(ABI_DECODING_STRUCT_DATA_TOO_SHORT.to_string()),
+                );
+                let malloc = gen.call_builtin_str(
+                    ctx,
+                    YulFunction::Malloc,
+                    std::iter::once(overall_type_head_size.to_string()), // Make sure the allocated size is not over the limit
+                );
+                emitln!(
+                    ctx.writer,
+                    "if slt(sub(end, headStart), {}) {{ {} }}",
+                    overall_type_head_size,
+                    failure_call
+                );
+                emitln!(ctx.writer, "let {}", ret_var.iter().join(", "));
+                emitln!(ctx.writer, "value := {}", malloc);
+                assert!(real_offsets.len() == overall_type_head_vec.len());
+                let mut head_pos = 0;
+                for (stack_pos, (((ty, ty_size), move_ty), real_offset)) in overall_type_head_vec
+                    .iter()
+                    .zip(move_tys.iter())
+                    .zip(real_offsets.iter())
+                    .enumerate()
+                {
+                    let is_static = ty.is_static();
+                    let local_typ_var = vec![ret_var[stack_pos].clone()];
+                    let abi_decode_type =
+                        gen.generate_abi_decoding_type(ctx, ty, move_ty, from_memory);
+                    ctx.emit_block(|| {
+                        if is_static {
+                            emitln!(ctx.writer, "let offset := {}", head_pos);
+                        } else {
+                            let load = if from_memory { "mload" } else { "calldataload" };
+                            emitln!(
+                                ctx.writer,
+                                "let offset := {}(add(headStart, {}))",
+                                load,
+                                head_pos
+                            );
+                            emitln!(
+                                ctx.writer,
+                                "if gt(offset, 0xffffffffffffffff) {{ {} }}",
+                                gen.call_builtin_str(
+                                    ctx,
+                                    YulFunction::Abort,
+                                    std::iter::once(ABI_DECODING_DATA_TOO_SHORT.to_string())
+                                )
+                            );
+                        }
+                        emitln!(
+                            ctx.writer,
+                            "{} := {}(add(headStart, offset), end)",
+                            local_typ_var.iter().join(", "),
+                            abi_decode_type
+                        );
+                    });
+                    head_pos += ty_size;
+                    let memory_func = ctx.memory_store_builtin_fun(&move_ty);
+                    if local_typ_var.len() == 1 {
+                        gen.call_builtin(
+                            ctx,
+                            memory_func,
+                            vec![
+                                format!("add(value, {})", real_offset),
+                                local_typ_var[0].clone(),
+                            ]
+                            .into_iter(),
+                        );
+                    }
+                }
+            })
+        };
+        self.need_auxiliary_function(function_name, Box::new(generate_fun))
+    }
+
     /// Generate decoding functions for tuple.
     pub(crate) fn generate_abi_tuple_decoding(
         &mut self,
@@ -462,15 +588,15 @@ impl Generator {
     ) -> String {
         let name_prefix = "abi_decode_tuple";
         let from_memory_str = if from_memory { "_from_memory" } else { "" };
-        let function_name = format!(
+        let mut function_name = format!(
             "{}_{}_{}{}",
             name_prefix,
             mangle_solidity_types(&param_types),
             ctx.mangle_types(&move_tys),
             from_memory_str
-        )
-        .replace("[", "_")
-        .replace("]", "_");
+        );
+        let re = Regex::new(r"[()\[\],]").unwrap();
+        function_name = re.replace_all(&function_name, "_").to_string();
         let generate_fun = move |gen: &mut Generator, ctx: &Context| {
             let overall_type_head_vec = abi_head_sizes_vec(&param_types, true);
             let overall_type_head_size = abi_head_sizes_sum(&param_types, true);
@@ -594,6 +720,7 @@ impl Generator {
             DynamicArray(_) | StaticArray(_, _) | Bytes | BytesStatic(_) | SolidityString => {
                 self.generate_abi_decoding_array_type(ctx, ty, move_ty, from_memory)
             }
+            Struct(_, _) => self.generate_abi_decoding_struct_type(ctx, ty, move_ty, from_memory),
             _ => "".to_string(),
         }
     }
@@ -648,15 +775,15 @@ impl Generator {
     ) -> String {
         let name_prefix = "abi_decode";
         let from_memory_str = if from_memory { "_from_memory" } else { "" };
-        let function_name = format!(
+        let mut function_name = format!(
             "{}_{}_{}{}",
             name_prefix,
             ty,
             ctx.mangle_type(move_ty),
             from_memory_str
-        )
-        .replace("[", "_")
-        .replace("]", "_");
+        );
+        let re = Regex::new(r"[()\[\],]").unwrap();
+        function_name = re.replace_all(&function_name, "_").to_string();
         let ty = ty.clone(); // need to move into lambda
         let move_ty = move_ty.clone();
 
@@ -671,6 +798,14 @@ impl Generator {
             let array_length; // length of the current array
             let inner_move_ty = match move_ty {
                 Type::Vector(ref _ty) => _ty.clone(),
+                Type::Struct(mid, sid, _) => {
+                    let st_id = mid.qualified(sid);
+                    if ctx.is_string(st_id) {
+                        Box::new(Type::Primitive(PrimitiveType::U8))
+                    } else {
+                        panic!("wrong type")
+                    }
+                }
                 _ => panic!("wrong type"),
             };
             let mut offset = "add(offset, 0x20)";
@@ -702,7 +837,7 @@ impl Generator {
                 emitln!(
                     ctx.writer,
                     "array := {}({}, length, size, end)",
-                    gen.generate_abi_decode_array_available_len_memory(
+                    gen.generate_abi_decoding_array_available_len_memory(
                         ctx,
                         &ty,
                         &move_ty,
@@ -716,16 +851,17 @@ impl Generator {
     }
 
     /// Generate code to decode bytes
-    fn generate_abi_decode_bytes_available_len_memory(
+    fn generate_abi_decoding_bytes_available_len_memory(
         &mut self,
         ty: &SolidityType,
         from_memory: bool,
     ) -> String {
         let name_prefix = "abi_decode_available_length_";
         let from_memory_str = if from_memory { "_from_memory" } else { "" };
-        let function_name = format!("{}_{}{}", name_prefix, ty, from_memory_str)
-            .replace("[", "_")
-            .replace("]", "_");
+        let mut function_name = format!("{}_{}{}", name_prefix, ty, from_memory_str);
+        let re = Regex::new(r"[()\[\],]").unwrap();
+        function_name = re.replace_all(&function_name, "_").to_string();
+
         let generate_fun = move |gen: &mut Generator, ctx: &Context| {
             emit!(ctx.writer, "(src, length, size, end) -> array ");
             let failure_call = gen.call_builtin_str(
@@ -803,7 +939,7 @@ impl Generator {
     }
 
     /// Generate code to decode arrays
-    fn generate_abi_decode_array_available_len_memory(
+    fn generate_abi_decoding_array_available_len_memory(
         &mut self,
         ctx: &Context,
         ty: &SolidityType,
@@ -813,20 +949,20 @@ impl Generator {
         use SolidityType::*;
 
         if ty.is_bytes_type() {
-            return self.generate_abi_decode_bytes_available_len_memory(ty, from_memory);
+            return self.generate_abi_decoding_bytes_available_len_memory(ty, from_memory);
         }
 
         let name_prefix = "abi_decode_available_length_";
         let from_memory_str = if from_memory { "_from_memory" } else { "" };
-        let function_name = format!(
+        let mut function_name = format!(
             "{}_{}_{}{}",
             name_prefix,
             ty,
             ctx.mangle_type(move_ty),
             from_memory_str
-        )
-        .replace("[", "_")
-        .replace("]", "_");
+        );
+        let re = Regex::new(r"[()\[\],]").unwrap();
+        function_name = re.replace_all(&function_name, "_").to_string();
         let ty = ty.clone(); // need to move into lambda
         let move_ty = move_ty.clone();
 
@@ -969,12 +1105,12 @@ impl Generator {
         options: EncodingOptions,
     ) -> String {
         use SolidityType::*;
-        // TODO: Struct
         match ty {
             Primitive(_) => self.generate_abi_encoding_primitive_type(ty, options),
             DynamicArray(_) | StaticArray(_, _) | Bytes | BytesStatic(_) | SolidityString => {
                 self.generate_abi_encoding_array_type(ctx, ty, move_ty, options)
             }
+            Struct(_, _) => self.generate_abi_encoding_struct_type(ctx, ty, move_ty, options),
             _ => "NYI".to_string(),
         }
     }
@@ -996,6 +1132,9 @@ impl Generator {
             Primitive(_) => self.generate_abi_encoding_primitive_type(&ty, options.clone()),
             DynamicArray(_) | StaticArray(_, _) | Bytes | BytesStatic(_) | SolidityString => {
                 self.generate_abi_encoding_array_type(ctx, &ty, &move_ty, options.clone())
+            }
+            Struct(_, _) => {
+                self.generate_abi_encoding_struct_type(ctx, &ty, &move_ty, options.clone())
             }
             _ => "NYI".to_string(),
         };
@@ -1113,15 +1252,15 @@ impl Generator {
         let ty = ty.clone();
         let move_ty = move_ty.clone();
         let name_prefix = "abi_encode";
-        let function_name = format!(
+        let mut function_name = format!(
             "{}_{}_{}{}",
             name_prefix,
             ty,
             ctx.mangle_type(&move_ty),
             options.to_suffix()
-        )
-        .replace("[", "_")
-        .replace("]", "_");
+        );
+        let re = Regex::new(r"[()\[\],]").unwrap();
+        function_name = re.replace_all(&function_name, "_").to_string();
 
         let generate_fun = move |gen: &mut Generator, ctx: &Context| {
             let ty_static = ty.is_static();
@@ -1240,6 +1379,153 @@ impl Generator {
         self.need_auxiliary_function(function_name, Box::new(generate_fun))
     }
 
+    /// Generate encoding function for solidity structs
+    fn generate_abi_encoding_struct_type(
+        &mut self,
+        ctx: &Context,
+        ty: &SolidityType,
+        move_ty: &Type,
+        options: EncodingOptions,
+    ) -> String {
+        use SolidityType::*;
+        assert!(matches!(ty, Struct(_, _)), "wrong types");
+        let name_prefix = "abi_encode";
+        let ty = ty.clone();
+
+        let mut param_types = vec![];
+        let mut move_tys = vec![];
+        let mut real_offsets = vec![];
+        if let Struct(_, ty_tuples) = ty.clone() {
+            param_types = ty_tuples
+                .iter()
+                .map(|(_, _, _, _, ty)| ty.clone())
+                .collect_vec();
+            move_tys = ty_tuples
+                .iter()
+                .map(|(_, _, m_ty, _, _)| m_ty.clone())
+                .collect_vec();
+            real_offsets = ty_tuples
+                .iter()
+                .map(|(_, real_offset, _, _, _)| *real_offset)
+                .collect_vec();
+        }
+
+        let mut function_name = format!(
+            "{}_{}_{}{}",
+            name_prefix,
+            mangle_solidity_types(&param_types),
+            ctx.mangle_types(&[move_ty.clone()]),
+            options.to_suffix()
+        );
+        let re = Regex::new(r"[()\[\],]").unwrap();
+        function_name = re.replace_all(&function_name, "_").to_string();
+
+        let return_value = (if ty.is_static() { "" } else { "-> end" }).to_string();
+
+        let sub_option = EncodingOptions {
+            padded: true,
+            in_place: options.in_place,
+        };
+
+        let generate_fun = move |gen: &mut Generator, ctx: &Context| {
+            let overall_type_head_vec = abi_head_sizes_vec(&param_types, true);
+            let overall_type_head_size = abi_head_sizes_sum(&param_types, true);
+
+            let ret_var = (0..overall_type_head_vec.len())
+                .map(|i| format!("value_{}", i))
+                .collect_vec();
+
+            emit!(ctx.writer, "(value, pos) {} ", return_value);
+            ctx.emit_block(|| {
+                emitln!(
+                    ctx.writer,
+                    "let tail := add(pos, {})",
+                    overall_type_head_size
+                );
+
+                assert!(real_offsets.len() == overall_type_head_vec.len());
+                let mut head_pos = 0;
+                for (stack_pos, (((ty, ty_size), move_ty), real_offset)) in overall_type_head_vec
+                    .iter()
+                    .zip(move_tys.iter())
+                    .zip(real_offsets.iter())
+                    .enumerate()
+                {
+                    let is_static = ty.is_static();
+                    let local_typ_var = vec![ret_var[stack_pos].clone()];
+                    let memory_func = ctx.memory_load_builtin_fun(&move_ty);
+                    if local_typ_var.len() == 1 {
+                        emitln!(
+                            ctx.writer,
+                            "let {} := {}",
+                            local_typ_var[0].clone(),
+                            gen.call_builtin_str(
+                                ctx,
+                                memory_func,
+                                std::iter::once(format!("add(value, {})", real_offset))
+                            )
+                        );
+                        if options.in_place {
+                            emitln!(
+                                ctx.writer,
+                                "pos := {}({}, pos)",
+                                gen.generate_abi_encoding_type_with_updated_pos(
+                                    ctx,
+                                    &ty.clone(),
+                                    &SignatureDataLocation::Memory,
+                                    &move_ty,
+                                    sub_option.clone()
+                                ),
+                                local_typ_var[0].clone()
+                            );
+                        } else {
+                            if is_static {
+                                emitln!(
+                                    ctx.writer,
+                                    "{}({}, add(pos, {}))",
+                                    gen.generate_abi_encoding_type(
+                                        ctx,
+                                        &ty.clone(),
+                                        &SignatureDataLocation::Memory,
+                                        &move_ty,
+                                        sub_option.clone()
+                                    ),
+                                    local_typ_var[0].clone(),
+                                    head_pos
+                                );
+                            } else {
+                                emitln!(
+                                    ctx.writer,
+                                    "mstore(add(pos, {}), sub(tail, pos))",
+                                    head_pos
+                                );
+                                emitln!(
+                                    ctx.writer,
+                                    "tail := {}({}, tail)",
+                                    gen.generate_abi_encoding_type(
+                                        ctx,
+                                        &ty.clone(),
+                                        &SignatureDataLocation::Memory,
+                                        &move_ty,
+                                        sub_option.clone()
+                                    ),
+                                    local_typ_var[0].clone()
+                                );
+                            }
+                            head_pos += ty_size;
+                        }
+                    }
+                }
+                if !ty.is_static() && options.in_place {
+                    emitln!(ctx.writer, "end := pos");
+                } else if !ty.is_static() && !options.in_place {
+                    emitln!(ctx.writer, "end := tail");
+                }
+            })
+        };
+        self.need_auxiliary_function(function_name, Box::new(generate_fun))
+    }
+
     pub(crate) fn generate_abi_tuple_encoding(
         &mut self,
         ctx: &Context,
@@ -1252,15 +1538,15 @@ impl Generator {
             in_place: false,
         };
         let name_prefix = "abi_encode_tuple";
-        let function_name = format!(
+        let mut function_name = format!(
             "{}_{}_{}{}",
             name_prefix,
             mangle_solidity_types(&param_types),
             ctx.mangle_types(&move_tys),
             options.to_suffix()
-        )
-        .replace("[", "_")
-        .replace("]", "_");
+        );
+        let re = Regex::new(r"[()\[\],]").unwrap();
+        function_name = re.replace_all(&function_name, "_").to_string();
 
         let generate_fun = move |gen: &mut Generator, ctx: &Context| {
             let mut value_params = (0..param_types.len())
@@ -1373,15 +1659,15 @@ impl Generator {
             in_place: true,
         };
         let name_prefix = "abi_encode_tuple_packed";
-        let function_name = format!(
+        let mut function_name = format!(
             "{}_{}_{}{}",
             name_prefix,
             mangle_solidity_types(&param_types),
             ctx.mangle_types(&move_tys),
             options.to_suffix()
-        )
-        .replace("[", "_")
-        .replace("]", "_");
+        );
+        let re = Regex::new(r"[()\[\],]").unwrap();
+        function_name = re.replace_all(&function_name, "_").to_string();
 
         let generate_fun = move |gen: &mut Generator, ctx: &Context| {
             let mut value_params = (0..param_types.len())
@@ -1433,14 +1719,15 @@ impl Generator {
         move_tys: Vec<Type>,
     ) -> String {
         let name_prefix = "packed_hashed_";
-        let function_name = format!(
+        let mut function_name = format!(
             "{}_{}_{}",
             name_prefix,
             mangle_solidity_types(&tys),
             ctx.mangle_types(&move_tys)
-        )
-        .replace("[", "_")
-        .replace("]", "_");
+        );
+        let re = Regex::new(r"[()\[\],]").unwrap();
+        function_name = re.replace_all(&function_name, "_").to_string();
+
         let generate_fun = move |gen: &mut Generator, ctx: &Context| {
             let mut value_params = (0..tys.len()).map(|i| format!("value_{}", i)).join(", ");
             emit!(ctx.writer, "({}) -> hash ", value_params);

@@ -10,10 +10,12 @@ use crate::{
     events::EventSignature,
     evm_transformation::EvmTransformationProcessor,
     native_functions::NativeFunctions,
+    solidity_ty::SolidityType,
     yul_functions,
     yul_functions::YulFunction,
     Options,
 };
+use anyhow::anyhow;
 use codespan::FileId;
 use itertools::Itertools;
 use move_model::{
@@ -41,6 +43,9 @@ use std::{
 /// Address at which the EVM modules are stored.
 const EVM_MODULE_ADDRESS: &str = "0x2";
 
+/// Address at which the EVM modules are stored.
+const STD_MODULE_ADDRESS: &str = "0x1";
+
 /// Immutable context passed through the compilation.
 pub(crate) struct Context<'a> {
     /// The program options.
@@ -59,6 +64,13 @@ pub(crate) struct Context<'a> {
     pub(crate) file_id_map: BTreeMap<FileId, (usize, String)>,
     /// Mapping of event structs to corresponding event signatures
     pub(crate) event_signature_map: RefCell<BTreeMap<QualifiedInstId<StructId>, EventSignature>>,
+    /// Vector of abi structs
+    pub(crate) abi_structs: RefCell<Vec<QualifiedInstId<StructId>>>,
+    /// Mapping of abi structs to corresponding solidity types
+    pub(crate) abi_struct_signature_map: RefCell<BTreeMap<QualifiedInstId<StructId>, SolidityType>>,
+    /// Mapping of abi structs names to abi structs
+    pub(crate) abi_struct_name_map: RefCell<BTreeMap<String, QualifiedInstId<StructId>>>,
+
     /// A code writer where we emit JSON-ABI.
     pub abi_writer: CodeWriter,
 }
@@ -128,9 +140,15 @@ impl<'a> Context<'a> {
             struct_layout: Default::default(),
             native_funs: NativeFunctions::default(),
             event_signature_map: Default::default(),
+            abi_structs: Default::default(),
+            abi_struct_signature_map: Default::default(),
+            abi_struct_name_map: Default::default(),
             abi_writer,
         };
         ctx.native_funs = NativeFunctions::create(&ctx);
+        ctx.build_abi_struct_vec();
+        ctx.build_abi_struct_name_map();
+        ctx.build_abi_struct_signature_map();
         ctx.build_event_signature_map();
         ctx
     }
@@ -168,7 +186,8 @@ impl<'a> Context<'a> {
                     || attributes::is_fallback_fun(fun)
             }
         };
-        let external_name = ModuleName::from_str("0x2", env.symbol_pool().make("ExternalResult"));
+        let external_name =
+            ModuleName::from_str(EVM_MODULE_ADDRESS, env.symbol_pool().make("ExternalResult"));
         for module in env.get_modules() {
             if *module.get_name() == external_name {
                 for fun in module.get_functions() {
@@ -321,7 +340,6 @@ impl<'a> Context<'a> {
     fn get_target_structs(&self, p: impl Fn(&StructEnv) -> bool) -> Vec<StructEnv<'a>> {
         self.env
             .get_modules()
-            .filter(|m| m.is_target())
             .map(|m| m.into_structs().filter(|f| p(f)))
             .flatten()
             .collect()
@@ -356,8 +374,103 @@ impl<'a> Context<'a> {
         }
     }
 
+    /// Build the vec of abi_structs
+    pub fn build_abi_struct_vec(&self) {
+        let abi_structs_vec = self.get_target_structs(attributes::is_abi_struct);
+        let mut abi_structs_ref = self.abi_structs.borrow_mut();
+        for st_env in abi_structs_vec {
+            abi_structs_ref.push(st_env.get_qualified_id().instantiate(vec![]));
+        }
+
+        // Add structs in the stdlib that can be serialized
+        let p = |st_env: &StructEnv| {
+            let name = st_env.get_full_name_with_address(); // only consider String for now
+            name == format!("{}::ASCII::String", STD_MODULE_ADDRESS)
+        };
+        let built_in_structs = self.get_target_structs(p);
+        for st_env in built_in_structs {
+            abi_structs_ref.push(st_env.get_qualified_id().instantiate(vec![]));
+        }
+    }
+
+    /// Build the map from name to abi structs
+    pub fn build_abi_struct_name_map(&self) {
+        let mut abi_struct_name_map_ref = self.abi_struct_name_map.borrow_mut();
+        let abi_struct_ref = self.abi_structs.borrow();
+        for st_id in abi_struct_ref.iter() {
+            let st_env = self.env.get_struct(st_id.to_qualified_id());
+            let abi_sig_str_opt = attributes::extract_abi_struct_signature(&st_env);
+            let struct_name = if let Some(abi_sig_str) = abi_sig_str_opt {
+                let name_right_idx_opt = abi_sig_str.find('(');
+                if let Some(name_right_idx) = name_right_idx_opt {
+                    abi_sig_str[..name_right_idx].to_string()
+                } else {
+                    panic!("unexpected token");
+                }
+            } else {
+                let mut full_name = st_env.get_full_name_with_address();
+                if let Some(i) = full_name.rfind(':') {
+                    full_name = full_name[i + 1..].to_string();
+                }
+                full_name
+            };
+            if abi_struct_name_map_ref.get(&struct_name).is_none() {
+                abi_struct_name_map_ref.insert(struct_name.clone(), st_id.clone());
+            } else {
+                self.env.error(&st_env.get_loc(), "duplicated struct names");
+            }
+        }
+    }
+
+    /// Build the signature map for abi struct
+    pub fn build_abi_struct_signature_map(&self) {
+        let abi_struct_ref = self.abi_structs.borrow();
+        for st_id in abi_struct_ref.iter() {
+            let st_env = self.env.get_struct(st_id.to_qualified_id());
+            if let Err(msg) = self.build_abi_struct(&st_env) {
+                self.env.error(&st_env.get_loc(), &format!("{}", msg));
+            }
+        }
+    }
+
+    /// Construct the struct type
+    pub fn build_abi_struct(&self, st_env: &StructEnv<'_>) -> anyhow::Result<SolidityType> {
+        assert!(self.is_structs_abi(st_env));
+        assert!(self.check_no_generics_struct(st_env));
+        let mut struct_type = SolidityType::generate_default_struct_type(self, st_env);
+        let abi_sig_str_opt = attributes::extract_abi_struct_signature(st_env);
+        if let Some(abi_sig_str) = abi_sig_str_opt {
+            struct_type = SolidityType::parse_struct_type(self, &abi_sig_str, st_env)?;
+        }
+        let st_id = &st_env.get_qualified_id().instantiate(vec![]);
+        let mut abi_struct_signature_map_ref = self.abi_struct_signature_map.borrow_mut();
+        if abi_struct_signature_map_ref.get(st_id).is_none() {
+            abi_struct_signature_map_ref.insert(st_id.clone(), struct_type.clone());
+        }
+        drop(abi_struct_signature_map_ref);
+        Ok(struct_type)
+    }
+
     // --------------------------------------------------------------------------------------------
     // Checks
+
+    /// Check whether abi structs exist in the signature map; if not, create and add it to the map
+    pub fn check_or_create_struct_abi(&self, name: &str) -> anyhow::Result<SolidityType> {
+        let abi_struct_name_map_ref = self.abi_struct_name_map.borrow();
+        let st_id_opt = abi_struct_name_map_ref.get(name);
+        if let Some(st_id) = st_id_opt {
+            let abi_struct_signature_map_ref = self.abi_struct_signature_map.borrow();
+            let struct_ty_opt = abi_struct_signature_map_ref.get(st_id);
+            if let Some(struct_ty) = struct_ty_opt {
+                return Ok(struct_ty.clone());
+            } else {
+                let struct_env = self.env.get_struct(st_id.to_qualified_id());
+                drop(abi_struct_signature_map_ref);
+                return self.build_abi_struct(&struct_env);
+            }
+        }
+        Err(anyhow!("cannot create struct abi:{}", name))
+    }
 
     /// Check whether given Move struct has no generics; report error otherwise.
     pub fn check_no_generics_struct(&self, st: &StructEnv<'_>) -> bool {
@@ -481,6 +594,11 @@ impl<'a> Context<'a> {
 
     // --------------------------------------------------------------------------------------------
     // Types
+
+    /// Check whether it is an abi struct or a builtin String type
+    pub fn is_structs_abi(&self, st: &StructEnv<'_>) -> bool {
+        attributes::is_abi_struct(st) || self.is_string(st.get_qualified_id())
+    }
 
     /// Returns whether the struct identified by module_id and struct_id is the native U256 struct.
     pub fn is_u256(&self, struct_id: QualifiedId<StructId>) -> bool {

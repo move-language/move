@@ -224,8 +224,7 @@ impl<'input> Lexer<'input> {
         // a multi-line or single-line comment.
         loop {
             // Trim only the whitespace characters we recognize: newline(\n|\r\n), tab, and space.
-            text = text.trim_start_matches("\r\n");
-            text = text.trim_start_matches(|c: char| matches!(c, '\n' | '\t' | ' '));
+            text = text.trim_start_matches(|c: char| matches!(c, '\r' | '\n' | '\t' | ' '));
 
             if text.starts_with("/*") {
                 // Strip multi-line comments like '/* ... */' or '/** ... */'.

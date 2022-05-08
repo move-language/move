@@ -465,13 +465,16 @@ impl Symbolicator {
                 &self.files,
                 &self.file_id_mapping,
             ) {
-                Some(loc) => tp_scope.insert(
-                    tp.user_specified_name.value,
-                    DefLoc {
-                        fhash: tp.user_specified_name.loc.file_hash(),
-                        start: loc,
-                    },
-                ),
+                Some(start) => {
+                    let tname = tp.user_specified_name.value;
+                    let fhash = tp.user_specified_name.loc.file_hash();
+                    // enter self-definition for type param
+                    use_defs.insert(
+                        start.line,
+                        UseDef::new(references, fhash, start, fhash, start, &tname),
+                    );
+                    tp_scope.insert(tname, DefLoc { fhash, start })
+                }
                 None => {
                     debug_assert!(false);
                     continue;
@@ -601,11 +604,27 @@ impl Symbolicator {
             LValue_::Var(var, _) => {
                 self.add_def(&var.loc(), &var.value(), scope, references, use_defs);
             }
-            LValue_::Unpack(ident, name, _, fields) => {
-                self.unpack_symbols(&ident.value, name, fields, scope, references, use_defs);
+            LValue_::Unpack(ident, name, tparams, fields) => {
+                self.unpack_symbols(
+                    &ident.value,
+                    name,
+                    tparams,
+                    fields,
+                    scope,
+                    references,
+                    use_defs,
+                );
             }
-            LValue_::BorrowUnpack(_, ident, name, _, fields) => {
-                self.unpack_symbols(&ident.value, name, fields, scope, references, use_defs);
+            LValue_::BorrowUnpack(_, ident, name, tparams, fields) => {
+                self.unpack_symbols(
+                    &ident.value,
+                    name,
+                    tparams,
+                    fields,
+                    scope,
+                    references,
+                    use_defs,
+                );
             }
             LValue_::Ignore => (),
         }
@@ -616,6 +635,7 @@ impl Symbolicator {
         &self,
         ident: &ModuleIdent_,
         name: &StructName,
+        tparams: &Vec<Type>,
         fields: &Fields<(Type, LValue)>,
         scope: &mut Scope,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
@@ -628,6 +648,10 @@ impl Symbolicator {
             self.add_field_use_def(ident, &name.value(), fname, &fpos, references, use_defs);
             // add definition of a variable used for struct field unpacking
             self.lvalue_symbols(lvalue, scope, references, use_defs);
+        }
+        // add type params
+        for t in tparams {
+            self.add_type_use_def(t, references, use_defs);
         }
     }
 
@@ -649,10 +673,11 @@ impl Symbolicator {
                 from_user: _,
                 var: v,
             } => self.add_local_use_def(&v.value(), &v.loc(), references, scope_stack, use_defs),
-            E::Pack(ident, name, _, fields) => {
+            E::Pack(ident, name, tparams, fields) => {
                 self.pack_symbols(
                     &ident.value,
                     name,
+                    tparams,
                     fields,
                     scope_stack,
                     references,
@@ -669,6 +694,7 @@ impl Symbolicator {
         &self,
         ident: &ModuleIdent_,
         name: &StructName,
+        tparams: &Vec<Type>,
         fields: &Fields<(Type, Exp)>,
         scope_stack: &mut VecDeque<Scope>,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
@@ -681,6 +707,10 @@ impl Symbolicator {
             self.add_field_use_def(ident, &name.value(), fname, &fpos, references, use_defs);
             // add field initialization expression
             self.exp_symbols(init_exp, scope_stack, references, use_defs);
+        }
+        // add type params
+        for t in tparams {
+            self.add_type_use_def(t, references, use_defs);
         }
     }
 
@@ -780,7 +810,7 @@ impl Symbolicator {
     /// Add use of a type identifier
     fn add_type_use_def(
         &self,
-        sp!(_, typ): &Type,
+        sp!(pos, typ): &Type,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
@@ -788,7 +818,7 @@ impl Symbolicator {
             Type_::Ref(_, t) => self.add_type_use_def(t, references, use_defs),
             Type_::Param(tparam) => {
                 let sp!(use_pos, use_name) = tparam.user_specified_name;
-                match Self::get_start_loc(&use_pos, &self.files, &self.file_id_mapping) {
+                match Self::get_start_loc(pos, &self.files, &self.file_id_mapping) {
                     Some(name_start) => match self.type_params.get(&use_name) {
                         Some(def_loc) => {
                             use_defs.insert(
@@ -1066,8 +1096,9 @@ fn symbols_build_test() {
 
     let symbols = Symbolicator::get_symbols(path.as_path()).unwrap();
 
-    path.push("sources/M1.move");
-    let cpath = fs::canonicalize(&path).unwrap();
+    let mut fpath = path.clone();
+    fpath.push("sources/M1.move");
+    let cpath = fs::canonicalize(&fpath).unwrap();
 
     let mod_ident = symbols.mod_ident_map.get(&cpath).unwrap();
     let mod_symbols = symbols.mod_use_defs.get(mod_ident).unwrap();
@@ -1241,5 +1272,84 @@ fn symbols_build_test() {
         2,
         11,
         "M2.move",
+    );
+
+    let mut fpath = path.clone();
+    fpath.push("sources/M3.move");
+    let cpath = fs::canonicalize(&fpath).unwrap();
+
+    let mod_ident = symbols.mod_ident_map.get(&cpath).unwrap();
+    let mod_symbols = symbols.mod_use_defs.get(mod_ident).unwrap();
+
+    // generic type in generic type definition (type_param_arg function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        6,
+        23,
+        6,
+        23,
+        "M3.move",
+    );
+
+    // generic type in param type (type_param_arg function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        3,
+        6,
+        33,
+        6,
+        23,
+        "M3.move",
+    );
+
+    // generic type in return type (type_param_arg function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        4,
+        6,
+        37,
+        6,
+        23,
+        "M3.move",
+    );
+
+    // generic type in struct param type (struct_type_param_arg function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        4,
+        10,
+        52,
+        10,
+        30,
+        "M3.move",
+    );
+
+    // generic type in struct return type (struct_type_param_arg function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        6,
+        10,
+        69,
+        10,
+        30,
+        "M3.move",
+    );
+
+    // generic type in pack (pack_type_param function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        15,
+        20,
+        14,
+        24,
+        "M3.move",
     );
 }

@@ -17,14 +17,18 @@ use move_binary_format::{
     },
     views::{FunctionHandleView, ViewInternals},
 };
-use move_core_types::value::MoveValue;
+use move_core_types::{
+    language_storage::{self, CORE_CODE_ADDRESS},
+    value::MoveValue,
+};
 use move_model::{
     ast::{ConditionKind, TempIndex},
-    model::{FunctionEnv, Loc, StructId},
+    model::{FunId, FunctionEnv, Loc, ModuleId, StructId},
     ty::{PrimitiveType, Type},
 };
 use std::{
     collections::{BTreeMap, BTreeSet},
+    convert::TryInto,
     matches,
 };
 
@@ -190,6 +194,24 @@ impl<'a> StacklessBytecodeGenerator<'a> {
         }
 
         let attr_id = self.new_loc_attr(code_offset);
+
+        let global_env = self.func_env.module_env.env;
+        let mut vec_module_id_opt: Option<ModuleId> = None;
+        let mut mk_vec_function_operation = |name: &str, tys: Vec<Type>| -> Operation {
+            let vec_module_env = vec_module_id_opt.get_or_insert_with(|| {
+                let vec_module = global_env.to_module_name(&language_storage::ModuleId::new(
+                    CORE_CODE_ADDRESS,
+                    move_core_types::identifier::Identifier::new("Vector").unwrap(),
+                ));
+                global_env
+                    .find_module(&vec_module)
+                    .expect("unexpected reference to module not found in global env")
+                    .get_id()
+            });
+
+            let vec_fun = FunId::new(global_env.symbol_pool().make(name));
+            Operation::Function(*vec_module_env, vec_fun, tys)
+        };
 
         let mk_call = |op: Operation, dsts: Vec<usize>, srcs: Vec<usize>| -> Bytecode {
             Bytecode::Call(attr_id, dsts, op, srcs, None)
@@ -1081,15 +1103,137 @@ impl<'a> StacklessBytecodeGenerator<'a> {
 
             MoveBytecode::Nop => self.code.push(Bytecode::Nop(attr_id)),
 
-            // TODO: implement the translation when the the vector-related bytecode is ready
-            MoveBytecode::VecPack(..)
-            | MoveBytecode::VecLen(_)
-            | MoveBytecode::VecImmBorrow(_)
-            | MoveBytecode::VecMutBorrow(_)
-            | MoveBytecode::VecPushBack(_)
-            | MoveBytecode::VecPopBack(_)
-            | MoveBytecode::VecUnpack(..)
-            | MoveBytecode::VecSwap(_) => unimplemented!("Vector bytecode not supported yet"),
+            // TODO full prover support for vector bytecode instructions
+            // These should go to non-functional call operations
+            MoveBytecode::VecLen(sig) => {
+                let tys = self.get_type_params(*sig);
+                let operand_index = self.temp_stack.pop().unwrap();
+                let temp_index = self.temp_count;
+                self.local_types.push(Type::Primitive(PrimitiveType::U64));
+                self.temp_count += 1;
+                self.temp_stack.push(temp_index);
+                self.code.push(Bytecode::Call(
+                    attr_id,
+                    vec![temp_index],
+                    mk_vec_function_operation("length", tys),
+                    vec![operand_index],
+                    None,
+                ))
+            }
+            MoveBytecode::VecMutBorrow(sig) | MoveBytecode::VecImmBorrow(sig) => {
+                let is_mut = match bytecode {
+                    MoveBytecode::VecMutBorrow(_) => true,
+                    MoveBytecode::VecImmBorrow(_) => false,
+                    _ => unreachable!(),
+                };
+                let [ty]: [Type; 1] = self.get_type_params(*sig).try_into().unwrap();
+                let operand2_index = self.temp_stack.pop().unwrap();
+                let operand1_index = self.temp_stack.pop().unwrap();
+                let temp_index = self.temp_count;
+                self.local_types
+                    .push(Type::Reference(is_mut, Box::new(ty.clone())));
+                self.temp_count += 1;
+                self.temp_stack.push(temp_index);
+                let vec_fun = if is_mut { "borrow_mut" } else { "borrow" };
+                self.code.push(Bytecode::Call(
+                    attr_id,
+                    vec![temp_index],
+                    mk_vec_function_operation(vec_fun, vec![ty]),
+                    vec![operand1_index, operand2_index],
+                    None,
+                ))
+            }
+            MoveBytecode::VecPushBack(sig) => {
+                let tys = self.get_type_params(*sig);
+                let operand2_index = self.temp_stack.pop().unwrap();
+                let operand1_index = self.temp_stack.pop().unwrap();
+                self.code.push(Bytecode::Call(
+                    attr_id,
+                    vec![],
+                    mk_vec_function_operation("push_back", tys),
+                    vec![operand1_index, operand2_index],
+                    None,
+                ))
+            }
+            MoveBytecode::VecPopBack(sig) => {
+                let [ty]: [Type; 1] = self.get_type_params(*sig).try_into().unwrap();
+                let operand_index = self.temp_stack.pop().unwrap();
+                let temp_index = self.temp_count;
+                self.local_types.push(ty.clone());
+                self.temp_count += 1;
+                self.temp_stack.push(temp_index);
+                self.code.push(Bytecode::Call(
+                    attr_id,
+                    vec![temp_index],
+                    mk_vec_function_operation("pop_back", vec![ty]),
+                    vec![operand_index],
+                    None,
+                ))
+            }
+            MoveBytecode::VecSwap(sig) => {
+                let tys = self.get_type_params(*sig);
+                let operand3_index = self.temp_stack.pop().unwrap();
+                let operand2_index = self.temp_stack.pop().unwrap();
+                let operand1_index = self.temp_stack.pop().unwrap();
+                self.code.push(Bytecode::Call(
+                    attr_id,
+                    vec![],
+                    mk_vec_function_operation("swap", tys),
+                    vec![operand1_index, operand2_index, operand3_index],
+                    None,
+                ))
+            }
+            MoveBytecode::VecPack(sig, n) => {
+                let n = *n as usize;
+                let [ty]: [Type; 1] = self.get_type_params(*sig).try_into().unwrap();
+                let operands = self.temp_stack.split_off(self.temp_stack.len() - n);
+                let temp_index = self.temp_count;
+                self.local_types.push(Type::Vector(Box::new(ty.clone())));
+                self.temp_count += 1;
+                self.temp_stack.push(temp_index);
+
+                self.code.push(Bytecode::Call(
+                    attr_id,
+                    vec![temp_index],
+                    mk_vec_function_operation("empty", vec![ty.clone()]),
+                    vec![],
+                    None,
+                ));
+                for operand in operands {
+                    self.code.push(Bytecode::Call(
+                        attr_id,
+                        vec![],
+                        mk_vec_function_operation("push_back", vec![ty.clone()]),
+                        vec![temp_index, operand],
+                        None,
+                    ));
+                }
+            }
+            MoveBytecode::VecUnpack(sig, n) => {
+                let n = *n as usize;
+                let [ty]: [Type; 1] = self.get_type_params(*sig).try_into().unwrap();
+                let operand_index = self.temp_stack.pop().unwrap();
+                let temps = (0..n).map(|idx| self.temp_count + idx).collect::<Vec<_>>();
+                self.local_types.extend(vec![ty.clone(); n]);
+                self.temp_count += n;
+                self.temp_stack.extend(&temps);
+                for temp in temps {
+                    self.code.push(Bytecode::Call(
+                        attr_id,
+                        vec![temp],
+                        mk_vec_function_operation("pop_back", vec![ty.clone()]),
+                        vec![operand_index],
+                        None,
+                    ));
+                }
+                self.code.push(Bytecode::Call(
+                    attr_id,
+                    vec![],
+                    mk_vec_function_operation("destroy_empty", vec![ty]),
+                    vec![operand_index],
+                    None,
+                ))
+            }
         }
     }
 

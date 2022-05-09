@@ -87,11 +87,15 @@ fn extract_decls(
         .flat_map(|(m, mdef)| {
             mdef.functions
                 .key_cloned_iter()
-                .filter(|(_, fdef)| {
-                    !fdef
-                        .attributes
-                        .contains_key_(&fake_natives::FAKE_NATIVE_ATTR)
-                })
+                // TODO full prover support for vector bytecode instructions
+                // TODO filter out fake natives
+                // These cannot be filtered out due to lacking prover support for the operations
+                // .filter(|(_, fdef)| {
+                //     cfg!(feature = "evm-backend")
+                //         || !fdef
+                //             .attributes
+                //             .contains_key_(&fake_natives::FAKE_NATIVE_ATTR)
+                // })
                 .map(move |(f, fdef)| {
                     let key = (m, f);
                     let seen = seen_structs(&fdef.signature);
@@ -187,11 +191,15 @@ fn module(
     let functions = mdef
         .functions
         .into_iter()
-        .filter(|(_, fdef)| {
-            !fdef
-                .attributes
-                .contains_key_(&fake_natives::FAKE_NATIVE_ATTR)
-        })
+        // TODO full prover support for vector bytecode instructions
+        // TODO filter out fake natives
+        // These cannot be filtered out due to lacking prover support for the operations
+        // .filter(|(_, fdef)| {
+        //     cfg!(feature = "evm-backend")
+        //         || !fdef
+        //             .attributes
+        //             .contains_key_(&fake_natives::FAKE_NATIVE_ATTR)
+        // })
         .map(|(f, fdef)| {
             let (res, info) = function(&mut context, Some(&ident), f, fdef);
             collected_function_infos.add(f, info).unwrap();
@@ -1089,8 +1097,10 @@ fn module_call(
 ) {
     use IR::Bytecode_ as B;
     match fake_natives::resolve_builtin(&mident, &fname) {
-        Some(mk_bytecode) => code.push(sp(loc, mk_bytecode(base_types(context, tys)))),
-        None => {
+        Some(mk_bytecode) if !cfg!(feature = "evm-backend") => {
+            code.push(sp(loc, mk_bytecode(base_types(context, tys))))
+        }
+        _ => {
             let (m, n) = context.qualified_function_name(&mident, fname);
             code.push(sp(loc, B::Call(m, n, base_types(context, tys))))
         }

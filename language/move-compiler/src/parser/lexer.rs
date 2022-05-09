@@ -223,7 +223,7 @@ impl<'input> Lexer<'input> {
         // Loop until we find text that isn't whitespace, and that isn't part of
         // a multi-line or single-line comment.
         loop {
-            // Trim only the whitespace characters we recognize: newline(\n|\r\n), tab, and space.
+            // Trim the whitespace characters.
             text = trim_whitespace(text);
 
             if text.starts_with("/*") {
@@ -638,14 +638,14 @@ fn get_name_token(name: &str) -> Tok {
     }
 }
 
-// Trim the whitespace characters, include: lf(\n), crlf(\r\n), tab, and space.
+// Trim the whitespace characters, include: space, tab, lf(\n) and crlf(\r\n).
 fn trim_whitespace(text: &str) -> &str {
     let mut pos = 0;
     let mut iter = text.chars();
 
     while let Some(chr) = iter.next() {
         match chr {
-            ' ' | '\n' | '\t' => pos += 1,
+            ' ' | '\t' | '\n' => pos += 1,
             '\r' => {
                 let nch = iter.next();
                 if nch.is_some() && nch.unwrap() == '\n' {

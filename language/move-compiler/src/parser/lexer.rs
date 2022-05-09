@@ -213,7 +213,7 @@ impl<'input> Lexer<'input> {
     /// (`/// .. <newline>` and `/** .. */`) will be not included in extracted comment string. The
     /// span in the returned map, however, covers the whole region of the comment, including the
     /// delimiters.
-    fn trim_start_whitespace_and_comments(&mut self, offset: usize) -> Result<&'input str, Diagnostic> {
+    fn trim_whitespace_and_comments(&mut self, offset: usize) -> Result<&'input str, Diagnostic> {
         let mut text = &self.text[offset..];
 
         // A helper function to compute the index of the start of the given substring.
@@ -313,7 +313,7 @@ impl<'input> Lexer<'input> {
     // Look ahead to the next token after the current one and return it, and its starting offset,
     // without advancing the state of the lexer.
     pub fn lookahead_with_start_loc(&mut self) -> Result<(Tok, usize), Diagnostic> {
-        let text = self.trim_start_whitespace_and_comments(self.cur_end)?;
+        let text = self.trim_whitespace_and_comments(self.cur_end)?;
         let next_start = self.text.len() - text.len();
         let (tok, _) = find_token(self.file_hash, text, next_start)?;
         Ok((tok, next_start))
@@ -328,10 +328,10 @@ impl<'input> Lexer<'input> {
     // Look ahead to the next two tokens after the current one and return them without advancing
     // the state of the lexer.
     pub fn lookahead2(&mut self) -> Result<(Tok, Tok), Diagnostic> {
-        let text = self.trim_start_whitespace_and_comments(self.cur_end)?;
+        let text = self.trim_whitespace_and_comments(self.cur_end)?;
         let offset = self.text.len() - text.len();
         let (first, length) = find_token(self.file_hash, text, offset)?;
-        let text2 = self.trim_start_whitespace_and_comments(offset + length)?;
+        let text2 = self.trim_whitespace_and_comments(offset + length)?;
         let offset2 = self.text.len() - text2.len();
         let (second, _) = find_token(self.file_hash, text2, offset2)?;
         Ok((first, second))
@@ -386,7 +386,7 @@ impl<'input> Lexer<'input> {
 
     pub fn advance(&mut self) -> Result<(), Diagnostic> {
         self.prev_end = self.cur_end;
-        let text = self.trim_start_whitespace_and_comments(self.cur_end)?;
+        let text = self.trim_whitespace_and_comments(self.cur_end)?;
         self.cur_start = self.text.len() - text.len();
         let (token, len) = find_token(self.file_hash, text, self.cur_start)?;
         self.cur_end = self.cur_start + len;

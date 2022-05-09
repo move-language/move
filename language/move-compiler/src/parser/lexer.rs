@@ -646,14 +646,7 @@ fn trim_start_whitespace(text: &str) -> &str {
     while let Some(chr) = iter.next() {
         match chr {
             ' ' | '\t' | '\n' => pos += 1,
-            '\r' => {
-                if let Some('\n') = iter.next() {
-                    pos += 2;
-                    continue;
-                }
-
-                break;
-            }
+            '\r' if matches!(iter.next(), Some('\n')) => pos += 2,
             _ => break,
         };
     }

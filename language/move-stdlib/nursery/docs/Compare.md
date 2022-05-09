@@ -12,8 +12,7 @@ Utilities for comparing Move values based on their representation in BCS.
 -  [Function `cmp_u64`](#0x1_Compare_cmp_u64)
 
 
-<pre><code><b>use</b> <a href="">0x1::Vector</a>;
-</code></pre>
+<pre><code></code></pre>
 
 
 

@@ -224,7 +224,7 @@ impl<'input> Lexer<'input> {
         // a multi-line or single-line comment.
         loop {
             // Trim only the whitespace characters we recognize: newline(\n|\r\n), tab, and space.
-            text = text.trim_start_matches(|c: char| matches!(c, '\r' | '\n' | '\t' | ' '));
+            text = trim_whitespace(text);
 
             if text.starts_with("/*") {
                 // Strip multi-line comments like '/* ... */' or '/** ... */'.
@@ -635,5 +635,70 @@ fn get_name_token(name: &str) -> Tok {
         "use" => Tok::Use,
         "while" => Tok::While,
         _ => Tok::Identifier,
+    }
+}
+
+// Trim the whitespace characters, include: lf(\n), crlf(\r\n), tab, and space.
+fn trim_whitespace(text: &str) -> &str {
+    let mut pos = 0;
+    let mut iter = text.chars();
+
+    while let Some(chr) = iter.next() {
+        match chr {
+            ' ' | '\n' | '\t' => pos += 1,
+            '\r' => {
+                let nch = iter.next();
+                if nch.is_some() && nch.unwrap() == '\n' {
+                    pos += 2;
+                    continue;
+                }
+
+                break;
+            }
+            _ => break,
+        };
+    }
+
+    &text[pos..]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::trim_whitespace;
+
+    #[test]
+    fn test_trim_whitespace() {
+        assert_eq!(trim_whitespace("\n"), "");
+        assert_eq!(trim_whitespace("\r\n"), "");
+        assert_eq!(trim_whitespace("\t"), "");
+        assert_eq!(trim_whitespace(" "), "");
+
+        assert_eq!(trim_whitespace("\nxxx"), "xxx");
+        assert_eq!(trim_whitespace("\r\nxxx"), "xxx");
+        assert_eq!(trim_whitespace("\txxx"), "xxx");
+        assert_eq!(trim_whitespace(" xxx"), "xxx");
+
+        assert_eq!(trim_whitespace(" \r\n"), "");
+        assert_eq!(trim_whitespace("\t\r\n"), "");
+        assert_eq!(trim_whitespace("\n\r\n"), "");
+        assert_eq!(trim_whitespace("\r\n "), "");
+        assert_eq!(trim_whitespace("\r\n\t"), "");
+        assert_eq!(trim_whitespace("\r\n\n"), "");
+
+        assert_eq!(trim_whitespace(" \r\nxxx"), "xxx");
+        assert_eq!(trim_whitespace("\t\r\nxxx"), "xxx");
+        assert_eq!(trim_whitespace("\n\r\nxxx"), "xxx");
+        assert_eq!(trim_whitespace("\r\n xxx"), "xxx");
+        assert_eq!(trim_whitespace("\r\n\txxx"), "xxx");
+        assert_eq!(trim_whitespace("\r\n\nxxx"), "xxx");
+
+        assert_eq!(trim_whitespace(" \r\n\r\n"), "");
+        assert_eq!(trim_whitespace("\r\n \t\n"), "");
+
+        assert_eq!(trim_whitespace(" \r\n\r\nxxx"), "xxx");
+        assert_eq!(trim_whitespace("\r\n \t\nxxx"), "xxx");
+
+        assert_eq!(trim_whitespace(" \r\n\r\nxxx\n"), "xxx\n");
+        assert_eq!(trim_whitespace("\r\n \t\nxxx\r\n"), "xxx\r\n");
     }
 }

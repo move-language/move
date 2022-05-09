@@ -24,7 +24,7 @@ use move_command_line_common::files::FileHash;
 use move_compiler::{
     diagnostics,
     expansion::ast::{Fields, ModuleIdent_},
-    naming::ast::{StructFields, Type, TypeName_, Type_},
+    naming::ast::{StructDefinition, StructFields, TParam, Type, TypeName_, Type_},
     parser::ast::StructName,
     shared::Identifier,
     typing::ast::{
@@ -448,6 +448,31 @@ impl Symbolicator {
         for (_, _, fun) in &mod_def.functions {
             self.fun_symbols(fun, references, use_defs);
         }
+        // TODO: for now we are skipping constants as they can only have primitive type values, but
+        // this can change in the future
+        for (_, _, struct_def) in &mod_def.structs {
+            self.struct_symbols(struct_def, references, use_defs);
+        }
+    }
+
+    /// Get symbols for function a definition
+    fn struct_symbols(
+        &mut self,
+        struct_def: &StructDefinition,
+        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
+        use_defs: &mut UseDefMap,
+    ) {
+        // create scope designated to contain type parameters (if any)
+        let mut tp_scope = Scope::new();
+        for stp in &struct_def.type_parameters {
+            self.add_type_param(&stp.param, &mut tp_scope, references, use_defs);
+        }
+        self.type_params = tp_scope;
+        if let StructFields::Defined(fields) = &struct_def.fields {
+            for (_, _, (_, t)) in fields {
+                self.add_type_use_def(t, references, use_defs);
+            }
+        }
     }
 
     /// Get symbols for function a definition
@@ -460,27 +485,7 @@ impl Symbolicator {
         // create scope designated to contain type parameters (if any)
         let mut tp_scope = Scope::new();
         for tp in &fun.signature.type_parameters {
-            let exists = match Self::get_start_loc(
-                &tp.user_specified_name.loc,
-                &self.files,
-                &self.file_id_mapping,
-            ) {
-                Some(start) => {
-                    let tname = tp.user_specified_name.value;
-                    let fhash = tp.user_specified_name.loc.file_hash();
-                    // enter self-definition for type param
-                    use_defs.insert(
-                        start.line,
-                        UseDef::new(references, fhash, start, fhash, start, &tname),
-                    );
-                    tp_scope.insert(tname, DefLoc { fhash, start })
-                }
-                None => {
-                    debug_assert!(false);
-                    continue;
-                }
-            };
-            debug_assert!(exists.is_none());
+            self.add_type_param(tp, &mut tp_scope, references, use_defs);
         }
         self.type_params = tp_scope;
 
@@ -715,6 +720,36 @@ impl Symbolicator {
     }
 
     /// Helper functions
+
+    /// Add type parameter to a scope holding type params
+    fn add_type_param(
+        &mut self,
+        tp: &TParam,
+        tp_scope: &mut Scope,
+        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
+        use_defs: &mut UseDefMap,
+    ) {
+        match Self::get_start_loc(
+            &tp.user_specified_name.loc,
+            &self.files,
+            &self.file_id_mapping,
+        ) {
+            Some(start) => {
+                let tname = tp.user_specified_name.value;
+                let fhash = tp.user_specified_name.loc.file_hash();
+                // enter self-definition for type param
+                use_defs.insert(
+                    start.line,
+                    UseDef::new(references, fhash, start, fhash, start, &tname),
+                );
+                let exists = tp_scope.insert(tname, DefLoc { fhash, start });
+                debug_assert!(exists.is_none());
+            }
+            None => {
+                debug_assert!(false);
+            }
+        };
+    }
 
     /// Add use of a struct identifier
     fn add_struct_use_def(
@@ -1281,6 +1316,30 @@ fn symbols_build_test() {
     let mod_ident = symbols.mod_ident_map.get(&cpath).unwrap();
     let mod_symbols = symbols.mod_use_defs.get(mod_ident).unwrap();
 
+    // generic type in struct definition
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        2,
+        23,
+        2,
+        23,
+        "M3.move",
+    );
+
+    // generic type in struct field definition
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        3,
+        20,
+        2,
+        23,
+        "M3.move",
+    );
+
     // generic type in generic type definition (type_param_arg function)
     assert_use_def(
         mod_symbols,
@@ -1350,6 +1409,30 @@ fn symbols_build_test() {
         20,
         14,
         24,
+        "M3.move",
+    );
+
+    // field type in struct field definition which itself is a struct
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        23,
+        20,
+        2,
+        11,
+        "M3.move",
+    );
+
+    // generic type in struct field definition which itself is a struct
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        2,
+        23,
+        32,
+        22,
+        30,
         "M3.move",
     );
 }

@@ -20,5 +20,8 @@ module Basic::M3 {
         param
     }
 
+    struct AnotherParamStruct<T> {
+        some_field: ParamStruct<T>,
+    }
 
 }

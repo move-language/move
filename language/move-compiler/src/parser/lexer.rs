@@ -213,7 +213,7 @@ impl<'input> Lexer<'input> {
     /// (`/// .. <newline>` and `/** .. */`) will be not included in extracted comment string. The
     /// span in the returned map, however, covers the whole region of the comment, including the
     /// delimiters.
-    fn trim_whitespace_and_comments(&mut self, offset: usize) -> Result<&'input str, Diagnostic> {
+    fn trim_start_whitespace_and_comments(&mut self, offset: usize) -> Result<&'input str, Diagnostic> {
         let mut text = &self.text[offset..];
 
         // A helper function to compute the index of the start of the given substring.
@@ -223,8 +223,8 @@ impl<'input> Lexer<'input> {
         // Loop until we find text that isn't whitespace, and that isn't part of
         // a multi-line or single-line comment.
         loop {
-            // Trim the whitespace characters.
-            text = trim_whitespace(text);
+            // Trim the start whitespace characters.
+            text = trim_start_whitespace(text);
 
             if text.starts_with("/*") {
                 // Strip multi-line comments like '/* ... */' or '/** ... */'.
@@ -313,7 +313,7 @@ impl<'input> Lexer<'input> {
     // Look ahead to the next token after the current one and return it, and its starting offset,
     // without advancing the state of the lexer.
     pub fn lookahead_with_start_loc(&mut self) -> Result<(Tok, usize), Diagnostic> {
-        let text = self.trim_whitespace_and_comments(self.cur_end)?;
+        let text = self.trim_start_whitespace_and_comments(self.cur_end)?;
         let next_start = self.text.len() - text.len();
         let (tok, _) = find_token(self.file_hash, text, next_start)?;
         Ok((tok, next_start))
@@ -328,10 +328,10 @@ impl<'input> Lexer<'input> {
     // Look ahead to the next two tokens after the current one and return them without advancing
     // the state of the lexer.
     pub fn lookahead2(&mut self) -> Result<(Tok, Tok), Diagnostic> {
-        let text = self.trim_whitespace_and_comments(self.cur_end)?;
+        let text = self.trim_start_whitespace_and_comments(self.cur_end)?;
         let offset = self.text.len() - text.len();
         let (first, length) = find_token(self.file_hash, text, offset)?;
-        let text2 = self.trim_whitespace_and_comments(offset + length)?;
+        let text2 = self.trim_start_whitespace_and_comments(offset + length)?;
         let offset2 = self.text.len() - text2.len();
         let (second, _) = find_token(self.file_hash, text2, offset2)?;
         Ok((first, second))
@@ -386,7 +386,7 @@ impl<'input> Lexer<'input> {
 
     pub fn advance(&mut self) -> Result<(), Diagnostic> {
         self.prev_end = self.cur_end;
-        let text = self.trim_whitespace_and_comments(self.cur_end)?;
+        let text = self.trim_start_whitespace_and_comments(self.cur_end)?;
         self.cur_start = self.text.len() - text.len();
         let (token, len) = find_token(self.file_hash, text, self.cur_start)?;
         self.cur_end = self.cur_start + len;
@@ -638,8 +638,8 @@ fn get_name_token(name: &str) -> Tok {
     }
 }
 
-// Trim the whitespace characters, include: space, tab, lf(\n) and crlf(\r\n).
-fn trim_whitespace(text: &str) -> &str {
+// Trim the start whitespace characters, include: space, tab, lf(\n) and crlf(\r\n).
+fn trim_start_whitespace(text: &str) -> &str {
     let mut pos = 0;
     let mut iter = text.chars();
 
@@ -647,8 +647,7 @@ fn trim_whitespace(text: &str) -> &str {
         match chr {
             ' ' | '\t' | '\n' => pos += 1,
             '\r' => {
-                let nch = iter.next();
-                if nch.is_some() && nch.unwrap() == '\n' {
+                if let Some('\n') = iter.next() {
                     pos += 2;
                     continue;
                 }
@@ -664,41 +663,46 @@ fn trim_whitespace(text: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
-    use super::trim_whitespace;
+    use super::trim_start_whitespace;
 
     #[test]
-    fn test_trim_whitespace() {
-        assert_eq!(trim_whitespace("\n"), "");
-        assert_eq!(trim_whitespace("\r\n"), "");
-        assert_eq!(trim_whitespace("\t"), "");
-        assert_eq!(trim_whitespace(" "), "");
+    fn test_trim_start_whitespace() {
+        assert_eq!(trim_start_whitespace("\r"), "\r");
+        assert_eq!(trim_start_whitespace("\rxxx"), "\rxxx");
+        assert_eq!(trim_start_whitespace("\t\rxxx"), "\rxxx");
+        assert_eq!(trim_start_whitespace("\r\n\rxxx"), "\rxxx");
 
-        assert_eq!(trim_whitespace("\nxxx"), "xxx");
-        assert_eq!(trim_whitespace("\r\nxxx"), "xxx");
-        assert_eq!(trim_whitespace("\txxx"), "xxx");
-        assert_eq!(trim_whitespace(" xxx"), "xxx");
+        assert_eq!(trim_start_whitespace("\n"), "");
+        assert_eq!(trim_start_whitespace("\r\n"), "");
+        assert_eq!(trim_start_whitespace("\t"), "");
+        assert_eq!(trim_start_whitespace(" "), "");
 
-        assert_eq!(trim_whitespace(" \r\n"), "");
-        assert_eq!(trim_whitespace("\t\r\n"), "");
-        assert_eq!(trim_whitespace("\n\r\n"), "");
-        assert_eq!(trim_whitespace("\r\n "), "");
-        assert_eq!(trim_whitespace("\r\n\t"), "");
-        assert_eq!(trim_whitespace("\r\n\n"), "");
+        assert_eq!(trim_start_whitespace("\nxxx"), "xxx");
+        assert_eq!(trim_start_whitespace("\r\nxxx"), "xxx");
+        assert_eq!(trim_start_whitespace("\txxx"), "xxx");
+        assert_eq!(trim_start_whitespace(" xxx"), "xxx");
 
-        assert_eq!(trim_whitespace(" \r\nxxx"), "xxx");
-        assert_eq!(trim_whitespace("\t\r\nxxx"), "xxx");
-        assert_eq!(trim_whitespace("\n\r\nxxx"), "xxx");
-        assert_eq!(trim_whitespace("\r\n xxx"), "xxx");
-        assert_eq!(trim_whitespace("\r\n\txxx"), "xxx");
-        assert_eq!(trim_whitespace("\r\n\nxxx"), "xxx");
+        assert_eq!(trim_start_whitespace(" \r\n"), "");
+        assert_eq!(trim_start_whitespace("\t\r\n"), "");
+        assert_eq!(trim_start_whitespace("\n\r\n"), "");
+        assert_eq!(trim_start_whitespace("\r\n "), "");
+        assert_eq!(trim_start_whitespace("\r\n\t"), "");
+        assert_eq!(trim_start_whitespace("\r\n\n"), "");
 
-        assert_eq!(trim_whitespace(" \r\n\r\n"), "");
-        assert_eq!(trim_whitespace("\r\n \t\n"), "");
+        assert_eq!(trim_start_whitespace(" \r\nxxx"), "xxx");
+        assert_eq!(trim_start_whitespace("\t\r\nxxx"), "xxx");
+        assert_eq!(trim_start_whitespace("\n\r\nxxx"), "xxx");
+        assert_eq!(trim_start_whitespace("\r\n xxx"), "xxx");
+        assert_eq!(trim_start_whitespace("\r\n\txxx"), "xxx");
+        assert_eq!(trim_start_whitespace("\r\n\nxxx"), "xxx");
 
-        assert_eq!(trim_whitespace(" \r\n\r\nxxx"), "xxx");
-        assert_eq!(trim_whitespace("\r\n \t\nxxx"), "xxx");
+        assert_eq!(trim_start_whitespace(" \r\n\r\n"), "");
+        assert_eq!(trim_start_whitespace("\r\n \t\n"), "");
 
-        assert_eq!(trim_whitespace(" \r\n\r\nxxx\n"), "xxx\n");
-        assert_eq!(trim_whitespace("\r\n \t\nxxx\r\n"), "xxx\r\n");
+        assert_eq!(trim_start_whitespace(" \r\n\r\nxxx"), "xxx");
+        assert_eq!(trim_start_whitespace("\r\n \t\nxxx"), "xxx");
+
+        assert_eq!(trim_start_whitespace(" \r\n\r\nxxx\n"), "xxx\n");
+        assert_eq!(trim_start_whitespace("\r\n \t\nxxx\r\n"), "xxx\r\n");
     }
 }

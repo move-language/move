@@ -1822,7 +1822,7 @@ fn symbols_build_test() {
         16,
         "M4.move",
     );
-    // var name in loop condition (while_loop function)
+    // var name in while loop condition (while_loop function)
     assert_use_def(
         mod_symbols,
         &symbols.file_name_mapping,
@@ -1833,7 +1833,7 @@ fn symbols_build_test() {
         12,
         "M4.move",
     );
-    // var name in loop's inner block (while_loop function)
+    // var name in while loop's inner block (while_loop function)
     assert_use_def(
         mod_symbols,
         &symbols.file_name_mapping,
@@ -1844,7 +1844,7 @@ fn symbols_build_test() {
         12,
         "M4.move",
     );
-    // redefined var name in loop's inner block (while_loop function)
+    // redefined var name in while loop's inner block (while_loop function)
     assert_use_def(
         mod_symbols,
         &symbols.file_name_mapping,
@@ -1855,8 +1855,7 @@ fn symbols_build_test() {
         20,
         "M4.move",
     );
-    println!("SYMS: {:?}", mod_symbols.get(26).unwrap());
-    // var name in loop's main block (while_loop function)
+    // var name in while loop's main block (while_loop function)
     assert_use_def(
         mod_symbols,
         &symbols.file_name_mapping,
@@ -1864,6 +1863,28 @@ fn symbols_build_test() {
         26,
         12,
         18,
+        12,
+        "M4.move",
+    );
+    // redefined var name in while loop's inner block (loop function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        40,
+        23,
+        39,
+        20,
+        "M4.move",
+    );
+    // var name in loop's main block (loop function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        43,
+        16,
+        34,
         12,
         "M4.move",
     );

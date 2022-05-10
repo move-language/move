@@ -30,6 +30,25 @@ module Basic::M4 {
         tmp
     }
 
+    fun loop_loop(): u64 {
+
+        let tmp = 7;
+
+        loop {
+            let tmp2 = 1;
+            {
+                let tmp = tmp;
+                tmp2 = tmp - tmp2;
+            };
+            tmp = tmp2;
+            if (tmp == 0) {
+                break
+            }
+        };
+
+        tmp
+    }
+
 
 
 

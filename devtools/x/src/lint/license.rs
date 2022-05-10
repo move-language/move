@@ -3,27 +3,28 @@
 
 use x_lint::prelude::*;
 
-static ALLOWED_LICENSE_HEADERS: &[&str] = &[
-    "Copyright (c) The Move Contributors\n\
-    SPDX-License-Identifier: Apache-2.0\n\
-    ",
-    "Copyright (c) The Diem Core Contributors\n\
-    SPDX-License-Identifier: Apache-2.0\n\
-    ",
-    "Copyright (c) The Move Contributors\n\
-    Copyright (c) The Diem Core Contributors\n\
-    SPDX-License-Identifier: Apache-2.0\n\
-    ",
-];
+static DIEM_CORE_CONTRIBUTORS: &str = "Copyright (c) The Diem Core Contributors";
+static MOVE_CONTRIBUTORS: &str = "Copyright (c) The Move Contributors";
+static LICENSE_IDENTIFIER: &str = "SPDX-License-Identifier: Apache-2.0";
 
-fn has_license<'a>(maybe_license: impl Iterator<Item = &'a str>) -> bool {
-    let maybe = maybe_license.collect::<Vec<_>>();
-    for allowed in ALLOWED_LICENSE_HEADERS {
-        if allowed.lines().eq(maybe.clone().into_iter()) {
-            return true;
+fn has_license<'a>(mut lines: impl Iterator<Item = &'a str>) -> bool {
+    let first = match lines.next() {
+        Some(line) => line,
+        None => return false,
+    };
+    let maybe_move_line = if first == DIEM_CORE_CONTRIBUTORS {
+        match lines.next() {
+            Some(line) => line,
+            None => return false,
         }
-    }
-    false
+    } else {
+        first
+    };
+    let maybe_license_identifier = match lines.next() {
+        Some(line) => line,
+        None => return false,
+    };
+    maybe_move_line == MOVE_CONTRIBUTORS && maybe_license_identifier == LICENSE_IDENTIFIER
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -67,7 +68,6 @@ impl ContentLinter for LicenseHeader {
                 let maybe_license = content
                     .lines()
                     .skip_while(|line| line.is_empty())
-                    .take(2)
                     .map(|s| s.trim_start_matches("// "));
                 !has_license(maybe_license)
             }
@@ -76,7 +76,6 @@ impl ContentLinter for LicenseHeader {
                     .lines()
                     .skip_while(|line| line.starts_with("#!"))
                     .skip_while(|line| line.is_empty())
-                    .take(2)
                     .map(|s| s.trim_start_matches("# "));
                 !has_license(maybe_license)
             }

@@ -23,7 +23,7 @@ use url::Url;
 use move_command_line_common::files::FileHash;
 use move_compiler::{
     diagnostics,
-    expansion::ast::{Fields, ModuleIdent_},
+    expansion::ast::{Fields, ModuleIdent, ModuleIdent_},
     naming::ast::{StructDefinition, StructFields, TParam, Type, TypeName_, Type_},
     parser::ast::StructName,
     shared::Identifier,
@@ -67,16 +67,19 @@ pub struct UseDef {
     def_loc: DefLoc,
 }
 
+#[derive(Debug)]
 struct FieldDef {
     name: Symbol,
     start: Position,
 }
 
+#[derive(Debug)]
 struct StructDef {
     name_start: Position,
     field_defs: Vec<FieldDef>,
 }
 
+#[derive(Debug)]
 struct ModuleDefs {
     /// File where this module is located
     fhash: FileHash,
@@ -100,6 +103,8 @@ pub struct Symbolicator {
     /// Scope to contain type params where relevant (e.g. when
     /// processing function definition)
     type_params: Scope,
+    /// Current processed module (always set before module processing starts)
+    current_mod: Option<ModuleIdent_>,
 }
 
 pub struct Symbols {
@@ -278,10 +283,12 @@ impl Symbolicator {
             files,
             file_id_mapping,
             type_params: Scope::new(),
+            current_mod: Option::None,
         };
 
         for (_, module_ident, module_def) in modules {
             let use_defs = mod_use_defs.get_mut(module_ident).unwrap();
+            symbolicator.current_mod = Some(*module_ident);
             symbolicator.mod_symbols(module_def, &mut references, use_defs);
         }
 
@@ -678,6 +685,17 @@ impl Symbolicator {
                 from_user: _,
                 var: v,
             } => self.add_local_use_def(&v.value(), &v.loc(), references, scope_stack, use_defs),
+            E::Use(v) => {
+                self.add_local_use_def(&v.value(), &v.loc(), references, scope_stack, use_defs)
+            }
+            E::Constant(mod_ident_opt, name) => self.add_const_use_def(
+                mod_ident_opt,
+                &name.value(),
+                &name.loc(),
+                references,
+                use_defs,
+            ),
+
             E::Pack(ident, name, tparams, fields) => {
                 self.pack_symbols(
                     &ident.value,
@@ -751,14 +769,13 @@ impl Symbolicator {
         };
     }
 
-    /// Add use of a struct identifier
-    fn add_struct_use_def(
+    /// Add use of one of identifiers defined at the module level
+    fn add_outer_use_def(
         &self,
         module_ident: &ModuleIdent_,
         use_name: &Symbol,
         use_pos: &Loc,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
+        mut add_fn: impl FnMut(&Symbol, Position, &ModuleDefs),
     ) {
         let name_start = match Self::get_start_loc(use_pos, &self.files, &self.file_id_mapping) {
             Some(v) => v,
@@ -775,23 +792,76 @@ impl Symbolicator {
                 return;
             }
         };
+        add_fn(use_name, name_start, mod_defs);
+    }
 
-        match mod_defs.structs.get(use_name) {
-            Some(def) => {
-                use_defs.insert(
-                    name_start.line,
-                    UseDef::new(
-                        references,
-                        use_pos.file_hash(),
-                        name_start,
-                        self.mod_outer_defs.get(module_ident).unwrap().fhash,
-                        def.name_start,
-                        use_name,
-                    ),
-                );
-            }
-            None => debug_assert!(false),
+    /// Add use of a const identifier
+    fn add_const_use_def(
+        &self,
+        module_ident_opt: &Option<ModuleIdent>,
+        use_name: &Symbol,
+        use_pos: &Loc,
+        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
+        use_defs: &mut UseDefMap,
+    ) {
+        let module_ident = match module_ident_opt {
+            Some(v) => v.value,
+            None => self.current_mod.unwrap(),
         };
+
+        self.add_outer_use_def(
+            &module_ident,
+            use_name,
+            use_pos,
+            |use_name, name_start, mod_defs| match mod_defs.constants.get(use_name) {
+                Some(def_start) => {
+                    use_defs.insert(
+                        name_start.line,
+                        UseDef::new(
+                            references,
+                            use_pos.file_hash(),
+                            name_start,
+                            self.mod_outer_defs.get(&module_ident).unwrap().fhash,
+                            *def_start,
+                            use_name,
+                        ),
+                    );
+                }
+                None => debug_assert!(false),
+            },
+        );
+    }
+
+    /// Add use of a struct identifier
+    fn add_struct_use_def(
+        &self,
+        module_ident: &ModuleIdent_,
+        use_name: &Symbol,
+        use_pos: &Loc,
+        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
+        use_defs: &mut UseDefMap,
+    ) {
+        self.add_outer_use_def(
+            module_ident,
+            use_name,
+            use_pos,
+            |use_name, name_start, mod_defs| match mod_defs.structs.get(use_name) {
+                Some(def) => {
+                    use_defs.insert(
+                        name_start.line,
+                        UseDef::new(
+                            references,
+                            use_pos.file_hash(),
+                            name_start,
+                            self.mod_outer_defs.get(module_ident).unwrap().fhash,
+                            def.name_start,
+                            use_name,
+                        ),
+                    );
+                }
+                None => debug_assert!(false),
+            },
+        );
     }
 
     /// Add use of a struct field identifier
@@ -804,42 +874,31 @@ impl Symbolicator {
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
-        let name_start = match Self::get_start_loc(use_pos, &self.files, &self.file_id_mapping) {
-            Some(v) => v,
-            None => {
-                debug_assert!(false);
-                return;
-            }
-        };
-
-        let mod_defs = match self.mod_outer_defs.get(module_ident) {
-            Some(v) => v,
-            None => {
-                debug_assert!(false);
-                return;
-            }
-        };
-
-        match mod_defs.structs.get(struct_name) {
-            Some(def) => {
-                for fdef in &def.field_defs {
-                    if fdef.name == *use_name {
-                        use_defs.insert(
-                            name_start.line,
-                            UseDef::new(
-                                references,
-                                use_pos.file_hash(),
-                                name_start,
-                                self.mod_outer_defs.get(module_ident).unwrap().fhash,
-                                fdef.start,
-                                use_name,
-                            ),
-                        );
+        self.add_outer_use_def(
+            module_ident,
+            use_name,
+            use_pos,
+            |use_name, name_start, mod_defs| match mod_defs.structs.get(struct_name) {
+                Some(def) => {
+                    for fdef in &def.field_defs {
+                        if fdef.name == *use_name {
+                            use_defs.insert(
+                                name_start.line,
+                                UseDef::new(
+                                    references,
+                                    use_pos.file_hash(),
+                                    name_start,
+                                    self.mod_outer_defs.get(module_ident).unwrap().fhash,
+                                    fdef.start,
+                                    use_name,
+                                ),
+                            );
+                        }
                     }
                 }
-            }
-            None => debug_assert!(false),
-        };
+                None => debug_assert!(false),
+            },
+        );
     }
 
     /// Add use of a type identifier
@@ -1284,8 +1343,18 @@ fn symbols_build_test() {
         8,
         "M1.move",
     );
-
-    // other module struct name
+    // const in pack (pack function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        3,
+        20,
+        43,
+        6,
+        10,
+        "M1.move",
+    );
+    // other module struct name (other_mod_struct function)
     assert_use_def(
         mod_symbols,
         &symbols.file_name_mapping,
@@ -1296,8 +1365,7 @@ fn symbols_build_test() {
         11,
         "M2.move",
     );
-
-    // other module struct name imported
+    // other module struct name imported (other_mod_struct_import function)
     assert_use_def(
         mod_symbols,
         &symbols.file_name_mapping,

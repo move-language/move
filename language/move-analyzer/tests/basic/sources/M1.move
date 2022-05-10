@@ -18,7 +18,7 @@ module Basic::M1 {
     }
 
     fun pack(): SomeStruct {
-        let ret = SomeStruct { some_field: 7 };
+        let ret = SomeStruct { some_field: SOME_CONST };
         ret
     }
 

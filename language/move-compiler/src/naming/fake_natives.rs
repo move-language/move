@@ -1,5 +1,9 @@
-// Copyright (c) The Diem Core Contributors
+// Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
+
+//! This module verifies the usage of the "fake native" functions. These functions are declared
+//! as 'native`, but do not appear in the compiled module. For developer sanity, they must be marked
+//! with the `FAKE_NATIVE_ATTR`
 
 use std::convert::TryInto;
 
@@ -18,6 +22,7 @@ use move_ir_types::ast as IR;
 pub const FAKE_NATIVE_ATTR: AttributeName_ =
     AttributeName_::Known(KnownAttribute::Native(NativeAttribute::BytecodeInstruction));
 
+/// verify `FAKE_NATIVE_ATTR` usage
 pub fn function(
     env: &mut CompilationEnv,
     module_opt: Option<ModuleIdent>,
@@ -74,6 +79,8 @@ pub fn function(
     }
 }
 
+/// Resolve the mapping for a module + function name to a bytecode instruction.
+/// The function should already be verified by `function` above
 pub fn resolve_builtin(
     module: &ModuleIdent,
     function: &FunctionName,

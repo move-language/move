@@ -91,6 +91,7 @@ fn extract_decls(
                 // TODO filter out fake natives
                 // These cannot be filtered out due to lacking prover support for the operations
                 // .filter(|(_, fdef)| {
+                //     // TODO full evm support for vector bytecode instructions
                 //     cfg!(feature = "evm-backend")
                 //         || !fdef
                 //             .attributes
@@ -195,6 +196,7 @@ fn module(
         // TODO filter out fake natives
         // These cannot be filtered out due to lacking prover support for the operations
         // .filter(|(_, fdef)| {
+        //     // TODO full evm support for vector bytecode instructions
         //     cfg!(feature = "evm-backend")
         //         || !fdef
         //             .attributes
@@ -1097,6 +1099,7 @@ fn module_call(
 ) {
     use IR::Bytecode_ as B;
     match fake_natives::resolve_builtin(&mident, &fname) {
+        // TODO full evm support for vector bytecode instructions
         Some(mk_bytecode) if !cfg!(feature = "evm-backend") => {
             code.push(sp(loc, mk_bytecode(base_types(context, tys))))
         }

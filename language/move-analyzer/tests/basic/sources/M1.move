@@ -23,7 +23,7 @@ module Basic::M1 {
     }
 
     fun other_mod_struct(): Basic::M2::SomeOtherStruct {
-        Basic::M2::some_other_struct(7)
+        Basic::M2::some_other_struct(SOME_CONST)
     }
 
     use Basic::M2::{Self, SomeOtherStruct};
@@ -35,6 +35,10 @@ module Basic::M1 {
     fun acq(addr: address): u64 acquires SomeStruct {
         let val = borrow_global<SomeStruct>(addr);
         val.some_field
+    }
+
+    fun multi_arg_call(): u64 {
+        M2::multi_arg(SOME_CONST, SOME_CONST)
     }
 
 

@@ -28,8 +28,8 @@ use move_compiler::{
     parser::ast::StructName,
     shared::Identifier,
     typing::ast::{
-        Exp, Function, FunctionBody_, LValue, LValueList, LValue_, ModuleDefinition, SequenceItem,
-        SequenceItem_, UnannotatedExp_,
+        Exp, ExpListItem, Function, FunctionBody_, LValue, LValueList, LValue_, ModuleCall,
+        ModuleDefinition, SequenceItem, SequenceItem_, UnannotatedExp_,
     },
     PASS_TYPING,
 };
@@ -706,7 +706,9 @@ impl Symbolicator {
                 references,
                 use_defs,
             ),
-
+            E::ModuleCall(mod_call) => {
+                self.mod_call_symbols(mod_call, scope_stack, references, use_defs)
+            }
             E::Pack(ident, name, tparams, fields) => {
                 self.pack_symbols(
                     &ident.value,
@@ -718,9 +720,45 @@ impl Symbolicator {
                     use_defs,
                 );
             }
-
+            E::ExpList(list_items) => {
+                for item in list_items {
+                    let exp = match item {
+                        // TODO: are types important for symbolication here (and, more generally,
+                        // what's a splat?)
+                        ExpListItem::Single(e, _) => e,
+                        ExpListItem::Splat(_, e, _) => e,
+                    };
+                    self.exp_symbols(exp, scope_stack, references, use_defs);
+                }
+            }
             _ => (),
         }
+    }
+
+    fn mod_call_symbols(
+        &self,
+        mod_call: &ModuleCall,
+        scope_stack: &mut VecDeque<Scope>,
+        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
+        use_defs: &mut UseDefMap,
+    ) {
+        // handle function name
+        let sp!(_, mod_ident) = mod_call.module;
+        self.add_fun_use_def(
+            &mod_ident,
+            &mod_call.name.value(),
+            &mod_call.name.loc(),
+            references,
+            use_defs,
+        );
+
+        // handle type parameters
+        for t in &mod_call.type_arguments {
+            self.add_type_use_def(t, references, use_defs);
+        }
+
+        // handle arguments
+        self.exp_symbols(&mod_call.arguments, scope_stack, references, use_defs);
     }
 
     /// Get symbols for the pack expression
@@ -833,6 +871,38 @@ impl Symbolicator {
                             use_pos.file_hash(),
                             name_start,
                             self.mod_outer_defs.get(&module_ident).unwrap().fhash,
+                            *def_start,
+                            use_name,
+                        ),
+                    );
+                }
+                None => debug_assert!(false),
+            },
+        );
+    }
+
+    /// Add use of a function identifier
+    fn add_fun_use_def(
+        &self,
+        module_ident: &ModuleIdent_,
+        use_name: &Symbol,
+        use_pos: &Loc,
+        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
+        use_defs: &mut UseDefMap,
+    ) {
+        self.add_outer_use_def(
+            module_ident,
+            use_name,
+            use_pos,
+            |use_name, name_start, mod_defs| match mod_defs.functions.get(use_name) {
+                Some(def_start) => {
+                    use_defs.insert(
+                        name_start.line,
+                        UseDef::new(
+                            references,
+                            use_pos.file_hash(),
+                            name_start,
+                            self.mod_outer_defs.get(module_ident).unwrap().fhash,
                             *def_start,
                             use_name,
                         ),
@@ -1376,6 +1446,28 @@ fn symbols_build_test() {
         11,
         "M2.move",
     );
+    // function name in a call (other_mod_struct function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        25,
+        19,
+        6,
+        15,
+        "M2.move",
+    );
+    // const in param (other_mod_struct function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        25,
+        37,
+        6,
+        10,
+        "M1.move",
+    );
     // other module struct name imported (other_mod_struct_import function)
     assert_use_def(
         mod_symbols,
@@ -1396,6 +1488,29 @@ fn symbols_build_test() {
         41,
         2,
         11,
+        "M1.move",
+    );
+    // const in first param (other_mod_struct function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        40,
+        22,
+        6,
+        10,
+        "M1.move",
+    );
+    println!("SYMBOLS {:?}", mod_symbols.get(40).unwrap());
+    // const in second param (other_mod_struct function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        2,
+        40,
+        34,
+        6,
+        10,
         "M1.move",
     );
 

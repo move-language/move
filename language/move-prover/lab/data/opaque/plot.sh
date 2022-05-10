@@ -1,5 +1,6 @@
 #!/bin/sh
 # Copyright (c) The Diem Core Contributors
+# Copyright (c) The Move Contributors
 # SPDX-License-Identifier: Apache-2.0
 
 FUN_RESULTS="opaque.fun_data ignore_internal_opaque.fun_data ignore_opaque.fun_data"

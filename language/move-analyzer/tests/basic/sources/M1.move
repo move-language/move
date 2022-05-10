@@ -1,6 +1,6 @@
 module Basic::M1 {
 
-    struct SomeStruct has key {
+    struct SomeStruct has key, drop {
         some_field: u64,
     }
 
@@ -39,6 +39,11 @@ module Basic::M1 {
 
     fun multi_arg_call(): u64 {
         M2::multi_arg(SOME_CONST, SOME_CONST)
+    }
+
+    fun vec(): vector<SomeStruct> {
+        let s = SomeStruct{ some_field: 7 };
+        vector<SomeStruct>[SomeStruct{ some_field: 42 }, s]
     }
 
 

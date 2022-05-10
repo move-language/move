@@ -28,8 +28,8 @@ use move_compiler::{
     parser::ast::StructName,
     shared::Identifier,
     typing::ast::{
-        Exp, ExpListItem, Function, FunctionBody_, LValue, LValueList, LValue_, ModuleCall,
-        ModuleDefinition, SequenceItem, SequenceItem_, UnannotatedExp_,
+        BuiltinFunction_, Exp, ExpListItem, Function, FunctionBody_, LValue, LValueList, LValue_,
+        ModuleCall, ModuleDefinition, SequenceItem, SequenceItem_, UnannotatedExp_,
     },
     PASS_TYPING,
 };
@@ -520,8 +520,8 @@ impl Symbolicator {
         scope_stack.push_front(fn_scope);
 
         match &fun.body.value {
-            FunctionBody_::Defined(s) => {
-                for seq_item in s {
+            FunctionBody_::Defined(sequence) => {
+                for seq_item in sequence {
                     self.seq_item_symbols(&mut scope_stack, seq_item, references, use_defs);
                 }
             }
@@ -708,6 +708,46 @@ impl Symbolicator {
             ),
             E::ModuleCall(mod_call) => {
                 self.mod_call_symbols(mod_call, scope_stack, references, use_defs)
+            }
+            E::Builtin(builtin_fun, exp) => {
+                use BuiltinFunction_ as BF;
+                match &builtin_fun.value {
+                    BF::MoveTo(t) => self.add_type_use_def(t, references, use_defs),
+                    BF::MoveFrom(t) => self.add_type_use_def(t, references, use_defs),
+                    BF::BorrowGlobal(_, t) => self.add_type_use_def(t, references, use_defs),
+                    BF::Exists(t) => self.add_type_use_def(t, references, use_defs),
+                    BF::Freeze(t) => self.add_type_use_def(t, references, use_defs),
+                    _ => (),
+                }
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+            }
+            E::Vector(_, _, t, exp) => {
+                self.add_type_use_def(t, references, use_defs);
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+            }
+            E::IfElse(cond, t, f) => {
+                self.exp_symbols(cond, scope_stack, references, use_defs);
+                self.exp_symbols(t, scope_stack, references, use_defs);
+                self.exp_symbols(f, scope_stack, references, use_defs);
+            }
+            E::While(cond, body) => {
+                self.exp_symbols(cond, scope_stack, references, use_defs);
+                self.exp_symbols(body, scope_stack, references, use_defs);
+            }
+            E::Loop { has_break: _, body } => {
+                self.exp_symbols(body, scope_stack, references, use_defs);
+            }
+            E::Block(sequence) => {
+                // a block is a new var scope
+                scope_stack.push_front(Scope::new());
+                for seq_item in sequence {
+                    self.seq_item_symbols(scope_stack, seq_item, references, use_defs);
+                }
+                scope_stack.pop_front();
+            }
+            E::BinopExp(lhs, _, _, rhs) => {
+                self.exp_symbols(lhs, scope_stack, references, use_defs);
+                self.exp_symbols(rhs, scope_stack, references, use_defs);
             }
             E::Pack(ident, name, tparams, fields) => {
                 self.pack_symbols(
@@ -1490,7 +1530,29 @@ fn symbols_build_test() {
         11,
         "M1.move",
     );
-    // const in first param (other_mod_struct function)
+    // struct name in builtin type param (acq function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        35,
+        32,
+        2,
+        11,
+        "M1.move",
+    );
+    // param name in builtin (acq function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        2,
+        35,
+        44,
+        34,
+        12,
+        "M1.move",
+    );
+    // const in first param (multi_arg_call function)
     assert_use_def(
         mod_symbols,
         &symbols.file_name_mapping,
@@ -1501,8 +1563,7 @@ fn symbols_build_test() {
         10,
         "M1.move",
     );
-    println!("SYMBOLS {:?}", mod_symbols.get(40).unwrap());
-    // const in second param (other_mod_struct function)
+    // const in second param (multi_arg_call function)
     assert_use_def(
         mod_symbols,
         &symbols.file_name_mapping,
@@ -1511,6 +1572,50 @@ fn symbols_build_test() {
         34,
         6,
         10,
+        "M1.move",
+    );
+    // vector constructor type (vec function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        45,
+        15,
+        2,
+        11,
+        "M1.move",
+    );
+    // vector constructor first element struct type (vec function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        45,
+        27,
+        2,
+        11,
+        "M1.move",
+    );
+    // vector constructor first element struct field (vec function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        2,
+        45,
+        39,
+        3,
+        8,
+        "M1.move",
+    );
+    // vector constructor second element var (vec function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        3,
+        45,
+        57,
+        44,
+        12,
         "M1.move",
     );
 
@@ -1639,5 +1744,57 @@ fn symbols_build_test() {
         22,
         30,
         "M3.move",
+    );
+
+    let mut fpath = path.clone();
+    fpath.push("sources/M4.move");
+    let cpath = fs::canonicalize(&fpath).unwrap();
+
+    let mod_ident = symbols.mod_ident_map.get(&cpath).unwrap();
+    let mod_symbols = symbols.mod_use_defs.get(mod_ident).unwrap();
+
+    // param name in RHS (if_cond function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        4,
+        18,
+        2,
+        16,
+        "M4.move",
+    );
+    // param name in RHS (if_cond function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        6,
+        22,
+        4,
+        12,
+        "M4.move",
+    );
+    // var in if's true branch (if_cond function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        7,
+        12,
+        4,
+        12,
+        "M4.move",
+    );
+    // redefined var in if's false branch (if_cond function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        10,
+        12,
+        9,
+        16,
+        "M4.move",
     );
 }

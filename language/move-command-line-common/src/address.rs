@@ -71,9 +71,9 @@ impl NumericalAddress {
             // But currently the only way this should fail is if the number is too long
             {
                 Err(format!(
-                    "Invalid address literal. The numeric value is too large. The maximum size is \
-                     {} bytes",
-                    AccountAddress::LENGTH
+                    "Invalid address literal. The numeric value is too large. \
+                    The maximum size is {} bytes",
+                    AccountAddress::LENGTH,
                 ))
             }
         }

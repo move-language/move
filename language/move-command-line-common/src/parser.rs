@@ -293,10 +293,15 @@ impl<'a, I: Iterator<Item = (ValueToken, &'a str)>> Parser<'a, ValueToken, I> {
 
 pub fn parse_address_impl(tok: ValueToken, contents: &str) -> Result<ParsedAddress> {
     Ok(match tok {
-        ValueToken::Number => ParsedAddress::Numerical(
-            NumericalAddress::parse_str(contents)
-                .map_err(|s| anyhow!("Failed to parse numerical address: {}", s))?,
-        ),
+        ValueToken::Number => {
+            ParsedAddress::Numerical(NumericalAddress::parse_str(contents).map_err(|s| {
+                anyhow!(
+                    "Failed to parse numerical address '{}'. Got error: {}",
+                    contents,
+                    s
+                )
+            })?)
+        }
         ValueToken::Ident => ParsedAddress::Named(contents.to_owned()),
         _ => bail!("unexpected token {}, expected identifier or number", tok),
     })
@@ -357,11 +362,11 @@ pub fn parse_address_number(s: &str) -> Option<([u8; AccountAddress::LENGTH], Nu
 
 #[cfg(test)]
 mod tests {
-    use crate::address::NumericalAddress;
-    use crate::address::ParsedAddress;
-    use crate::types::ParsedStructType;
-    use crate::types::ParsedType;
-    use crate::values::ParsedValue;
+    use crate::{
+        address::{NumericalAddress, ParsedAddress},
+        types::{ParsedStructType, ParsedType},
+        values::ParsedValue,
+    };
     use move_core_types::account_address::AccountAddress;
 
     #[allow(clippy::unreadable_literal)]

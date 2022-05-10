@@ -1,4 +1,5 @@
 // Copyright (c) The Diem Core Contributors
+// Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 // Basic theory for vectors using arrays. This version of vectors is not extensional.

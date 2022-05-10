@@ -1,4 +1,5 @@
 // Copyright (c) The Diem Core Contributors
+// Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! Noise is a [protocol framework](https://noiseprotocol.org/) which we use in Diem to

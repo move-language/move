@@ -1,4 +1,5 @@
 // Copyright (c) The Diem Core Contributors
+// Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module provides definitions of tag types to be used by MIRAI analyzing diem-crypto.

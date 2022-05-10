@@ -1,5 +1,6 @@
 #!/bin/bash
 # Copyright (c) The Diem Core Contributors
+# Copyright (c) The Move Contributors
 # SPDX-License-Identifier: Apache-2.0
 
 # Hardhat packages, along with their dependencies, are not checked into the Move repo.

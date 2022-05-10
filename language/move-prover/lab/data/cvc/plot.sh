@@ -1,5 +1,6 @@
 #!/bin/sh
 # Copyright (c) The Diem Core Contributors
+# Copyright (c) The Move Contributors
 # SPDX-License-Identifier: Apache-2.0
 
 FUN_RESULTS="experiments/z3_boogie_array.fun_data experiments/cvc_boogie_array.fun_data"

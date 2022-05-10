@@ -1,5 +1,6 @@
 #!/bin/bash
 # Copyright (c) The Diem Core Contributors
+# Copyright (c) The Move Contributors
 # SPDX-License-Identifier: Apache-2.0
 
 # A script to check stability of a verification outcome. This runs the same prover

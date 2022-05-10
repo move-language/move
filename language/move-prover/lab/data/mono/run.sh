@@ -1,5 +1,6 @@
 #!/bin/sh
 # Copyright (c) The Diem Core Contributors
+# Copyright (c) The Move Contributors
 # SPDX-License-Identifier: Apache-2.0
 
 echo "This lab cannot be run at head because the poly backend has been removed!"

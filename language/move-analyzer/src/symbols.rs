@@ -542,6 +542,17 @@ impl Symbolicator {
         scope_stack.pop_front();
         debug_assert!(scope_stack.is_empty());
 
+        // process optional "acquires" clause
+        for name in fun.acquires.keys() {
+            self.add_struct_use_def(
+                &self.current_mod.unwrap(),
+                &name.value(),
+                &name.loc(),
+                references,
+                use_defs,
+            );
+        }
+
         // clear type params from the scope
         self.type_params.clear();
     }
@@ -1375,6 +1386,17 @@ fn symbols_build_test() {
         2,
         11,
         "M2.move",
+    );
+    // struct name in acquires (acq function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        2,
+        34,
+        41,
+        2,
+        11,
+        "M1.move",
     );
 
     let mut fpath = path.clone();

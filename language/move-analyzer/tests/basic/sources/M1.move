@@ -1,6 +1,6 @@
 module Basic::M1 {
 
-    struct SomeStruct {
+    struct SomeStruct has key {
         some_field: u64,
     }
 
@@ -30,6 +30,11 @@ module Basic::M1 {
 
     fun other_mod_struct_import(): SomeOtherStruct {
         M2::some_other_struct(7)
+    }
+
+    fun acq(addr: address): u64 acquires SomeStruct {
+        let val = borrow_global<SomeStruct>(addr);
+        val.some_field
     }
 
 

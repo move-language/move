@@ -19,6 +19,7 @@ use move_command_line_common::{
     env::read_bool_env_var,
     files::{MOVE_EXTENSION, MOVE_IR_EXTENSION},
     testing::{format_diff, read_env_update_baseline, EXP_EXT},
+    types::ParsedType,
     values::{ParsableValue, ParsedValue},
 };
 use move_compiler::{
@@ -86,6 +87,13 @@ impl<'a> CompiledState<'a> {
             .map(|arg| arg.into_concrete_value(&|s| Some(self.resolve_named_address(s))))
             .collect()
     }
+
+    pub fn resolve_type_args(&self, type_args: Vec<ParsedType>) -> Result<Vec<TypeTag>> {
+        type_args
+            .into_iter()
+            .map(|arg| arg.into_type_tag(&|s| Some(self.resolve_named_address(s))))
+            .collect()
+    }
 }
 
 fn merge_output(left: Option<String>, right: Option<String>) -> Option<String> {
@@ -99,7 +107,7 @@ fn merge_output(left: Option<String>, right: Option<String>) -> Option<String> {
     }
 }
 
-pub trait MoveTestAdapter<'a> {
+pub trait MoveTestAdapter<'a>: Sized {
     type ExtraPublishArgs: Parser;
     type ExtraValueArgs: ParsableValue;
     type ExtraRunArgs: Parser;
@@ -112,7 +120,7 @@ pub trait MoveTestAdapter<'a> {
         default_syntax: SyntaxChoice,
         option: Option<&'a FullyCompiledProgram>,
         init_data: Option<TaskInput<(InitCommand, Self::ExtraInitArgs)>>,
-    ) -> Self;
+    ) -> (Self, Option<String>);
     fn publish_module(
         &mut self,
         module: CompiledModule,
@@ -305,6 +313,7 @@ pub trait MoveTestAdapter<'a> {
                     SyntaxChoice::IR => (compile_ir_script(state.dep_modules(), data_path)?, None),
                 };
                 let args = self.compiled_state().resolve_args(args)?;
+                let type_args = self.compiled_state().resolve_type_args(type_args)?;
                 let (output, return_values) =
                     self.execute_script(script, type_args, signers, args, gas_budget, extra_args)?;
                 let rendered_return_value = display_return_values(return_values);
@@ -330,6 +339,7 @@ pub trait MoveTestAdapter<'a> {
                 );
                 let addr = self.compiled_state().resolve_address(&raw_addr);
                 let module_id = ModuleId::new(addr, module_name);
+                let type_args = self.compiled_state().resolve_type_args(type_args)?;
                 let args = self.compiled_state().resolve_args(args)?;
                 let (output, return_values) = self.call_function(
                     &module_id,
@@ -673,7 +683,11 @@ where
             None
         }
     };
-    let mut adapter = Adapter::init(default_syntax, fully_compiled_program_opt, init_opt);
+    let (mut adapter, result_opt) =
+        Adapter::init(default_syntax, fully_compiled_program_opt, init_opt);
+    if let Some(result) = result_opt {
+        output.push_str(&format!("\ninit:\n{}\n", result))
+    }
     for task in tasks {
         handle_known_task(&mut output, &mut adapter, task);
     }

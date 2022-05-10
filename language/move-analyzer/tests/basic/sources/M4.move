@@ -14,5 +14,23 @@ module Basic::M4 {
         ret
     }
 
+    fun while_loop(): u64 {
+
+        let tmp = 7;
+
+        while (tmp > 0) {
+            let tmp2 = 1;
+            {
+                let tmp = tmp;
+                tmp2 = tmp - tmp2;
+            };
+            tmp = tmp2;
+        };
+
+        tmp
+    }
+
+
+
 
 }

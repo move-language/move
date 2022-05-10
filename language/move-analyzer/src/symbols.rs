@@ -499,25 +499,21 @@ impl Symbolicator {
         let mut scope_stack = VecDeque::new();
         // scope for the main function scope (for parameters and
         // function body)
-        let mut fn_scope = Scope::new();
+        let fn_scope = Scope::new();
+        scope_stack.push_front(fn_scope);
 
         for (pname, ptype) in &fun.signature.parameters {
             self.add_type_use_def(ptype, references, use_defs);
 
             // add definition of the parameter
-            if let Some(def_loc) = self.add_def(
+            self.add_def(
                 &pname.loc(),
                 &pname.value(),
-                &mut fn_scope,
+                &mut scope_stack,
                 references,
                 use_defs,
-            ) {
-                let exists = fn_scope.insert(pname.value(), def_loc);
-                // TODO: enable assertion when all scoping rules are in place
-                //                debug_assert!(exists.is_none());
-            }
+            );
         }
-        scope_stack.push_front(fn_scope);
 
         match &fun.body.value {
             FunctionBody_::Defined(sequence) => {
@@ -588,14 +584,20 @@ impl Symbolicator {
         match &seq_item.value {
             I::Seq(e) => self.exp_symbols(e, scope_stack, references, use_defs),
             I::Declare(lvalues) => {
-                self.lvalue_list_symbols(lvalues, scope_stack, references, use_defs)
+                self.lvalue_list_symbols(true, lvalues, scope_stack, references, use_defs)
             }
-            I::Bind(lvalues, _, e) => {
+            I::Bind(lvalues, opt_types, e) => {
                 // process RHS first to avoid accidentally binding its
                 // identifiers to LHS (which now will be put into the
                 // current scope only after RHS is processed)
                 self.exp_symbols(e, scope_stack, references, use_defs);
-                self.lvalue_list_symbols(lvalues, scope_stack, references, use_defs);
+                for opt_t in opt_types {
+                    match opt_t {
+                        Some(t) => self.add_type_use_def(&t, references, use_defs),
+                        None => (),
+                    }
+                }
+                self.lvalue_list_symbols(true, lvalues, scope_stack, references, use_defs);
             }
         }
     }
@@ -603,48 +605,60 @@ impl Symbolicator {
     /// Get symbols for a list of lvalues
     fn lvalue_list_symbols(
         &self,
+        define: bool,
         lvalues: &LValueList,
         scope_stack: &mut VecDeque<Scope>,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
-        let mut scope = scope_stack.pop_front().unwrap(); // scope stack guaranteed non-empty
         for lval in &lvalues.value {
-            self.lvalue_symbols(lval, &mut scope, references, use_defs);
+            self.lvalue_symbols(define, lval, scope_stack, references, use_defs);
         }
-        scope_stack.push_front(scope);
     }
 
     /// Get symbols for a single lvalue
     fn lvalue_symbols(
         &self,
+        define: bool,
         lval: &LValue,
-        scope: &mut Scope,
+        scope_stack: &mut VecDeque<Scope>,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
         match &lval.value {
             LValue_::Var(var, _) => {
-                self.add_def(&var.loc(), &var.value(), scope, references, use_defs);
+                if define {
+                    self.add_def(&var.loc(), &var.value(), scope_stack, references, use_defs);
+                } else {
+                    self.add_local_use_def(
+                        &var.value(),
+                        &var.loc(),
+                        references,
+                        scope_stack,
+                        use_defs,
+                    )
+                }
             }
             LValue_::Unpack(ident, name, tparams, fields) => {
                 self.unpack_symbols(
+                    define,
                     &ident.value,
                     name,
                     tparams,
                     fields,
-                    scope,
+                    scope_stack,
                     references,
                     use_defs,
                 );
             }
             LValue_::BorrowUnpack(_, ident, name, tparams, fields) => {
                 self.unpack_symbols(
+                    define,
                     &ident.value,
                     name,
                     tparams,
                     fields,
-                    scope,
+                    scope_stack,
                     references,
                     use_defs,
                 );
@@ -656,11 +670,12 @@ impl Symbolicator {
     /// Get symbols for the unpack statement
     fn unpack_symbols(
         &self,
+        define: bool,
         ident: &ModuleIdent_,
         name: &StructName,
         tparams: &Vec<Type>,
         fields: &Fields<(Type, LValue)>,
-        scope: &mut Scope,
+        scope_stack: &mut VecDeque<Scope>,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
@@ -669,8 +684,8 @@ impl Symbolicator {
         for (fpos, fname, (_, (_, lvalue))) in fields {
             // add use of the field name
             self.add_field_use_def(ident, &name.value(), fname, &fpos, references, use_defs);
-            // add definition of a variable used for struct field unpacking
-            self.lvalue_symbols(lvalue, scope, references, use_defs);
+            // add definition or use of a variable used for struct field unpacking
+            self.lvalue_symbols(define, lvalue, scope_stack, references, use_defs);
         }
         // add type params
         for t in tparams {
@@ -744,6 +759,16 @@ impl Symbolicator {
                     self.seq_item_symbols(scope_stack, seq_item, references, use_defs);
                 }
                 scope_stack.pop_front();
+            }
+            E::Assign(lvalues, opt_types, e) => {
+                self.lvalue_list_symbols(false, lvalues, scope_stack, references, use_defs);
+                for opt_t in opt_types {
+                    match opt_t {
+                        Some(t) => self.add_type_use_def(t, references, use_defs),
+                        None => (),
+                    }
+                }
+                self.exp_symbols(e, scope_stack, references, use_defs);
             }
             E::BinopExp(lhs, _, _, rhs) => {
                 self.exp_symbols(lhs, scope_stack, references, use_defs);
@@ -1076,18 +1101,20 @@ impl Symbolicator {
         &self,
         pos: &Loc,
         name: &Symbol,
-        scope: &mut Scope,
+        scope_stack: &mut VecDeque<Scope>,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
-    ) -> Option<DefLoc> {
+    ) {
         match Self::get_start_loc(pos, &self.files, &self.file_id_mapping) {
             Some(name_start) => {
                 let def_loc = DefLoc {
                     fhash: pos.file_hash(),
                     start: name_start,
                 };
+                let mut scope = scope_stack.pop_front().unwrap(); // scope stack guaranteed non-empty
                 let exists = scope.insert(*name, def_loc.clone());
                 // should be only one def with the same name in a given scope
+                scope_stack.push_front(scope);
 
                 // TODO: enable assertion when all scoping rules are in place
                 //                debug_assert!(exists.is_none());
@@ -1104,11 +1131,9 @@ impl Symbolicator {
                         name,
                     ),
                 );
-                Some(def_loc)
             }
             None => {
                 debug_assert!(false);
-                None
             }
         }
     }
@@ -1795,6 +1820,51 @@ fn symbols_build_test() {
         12,
         9,
         16,
+        "M4.move",
+    );
+    // var name in loop condition (while_loop function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        20,
+        15,
+        18,
+        12,
+        "M4.move",
+    );
+    // var name in loop's inner block (while_loop function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        23,
+        26,
+        18,
+        12,
+        "M4.move",
+    );
+    // redefined var name in loop's inner block (while_loop function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        24,
+        23,
+        23,
+        20,
+        "M4.move",
+    );
+    println!("SYMS: {:?}", mod_symbols.get(26).unwrap());
+    // var name in loop's main block (while_loop function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        26,
+        12,
+        18,
+        12,
         "M4.move",
     );
 }

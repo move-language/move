@@ -46,5 +46,12 @@ module Basic::M1 {
         vector<SomeStruct>[SomeStruct{ some_field: 42 }, s]
     }
 
+    fun unpack_no_assign(s: SomeStruct): u64 {
+        let value: u64;
+        SomeStruct { some_field: value } = s;
+        value
+    }
+
+
 
 }

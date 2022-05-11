@@ -78,7 +78,23 @@ impl AsyncVM {
         virtual_time: u128,
         move_resolver: &'r mut S,
     ) -> AsyncSession<'r, 'l, S> {
-        let extensions = make_extensions(for_actor, virtual_time, true);
+        self.new_session_with_extensions(
+            for_actor,
+            virtual_time,
+            move_resolver,
+            NativeContextExtensions::default(),
+        )
+    }
+
+    /// Creates a new session.
+    pub fn new_session_with_extensions<'r, 'l, S: MoveResolver>(
+        &'l self,
+        for_actor: AccountAddress,
+        virtual_time: u128,
+        move_resolver: &'r mut S,
+        ext: NativeContextExtensions<'r>,
+    ) -> AsyncSession<'r, 'l, S> {
+        let extensions = make_extensions(ext, for_actor, virtual_time, true);
         AsyncSession {
             vm: self,
             vm_session: self
@@ -329,12 +345,12 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
     }
 }
 
-fn make_extensions<'a>(
+fn make_extensions(
+    mut exts: NativeContextExtensions,
     actor_addr: AccountAddress,
     virtual_time: u128,
     in_initializer: bool,
-) -> NativeContextExtensions<'a> {
-    let mut exts = NativeContextExtensions::default();
+) -> NativeContextExtensions {
     exts.add(AsyncExtension {
         current_actor: actor_addr,
         sent: vec![],

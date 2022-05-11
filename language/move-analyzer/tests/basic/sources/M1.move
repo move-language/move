@@ -1,6 +1,6 @@
 module Basic::M1 {
 
-    struct SomeStruct has key, drop {
+    struct SomeStruct has key, drop, store {
         some_field: u64,
     }
 
@@ -80,4 +80,8 @@ module Basic::M1 {
         !p
     }
 
+    fun temp_borrow(): u64 {
+        let tmp = &SOME_CONST;
+        *tmp
+    }
 }

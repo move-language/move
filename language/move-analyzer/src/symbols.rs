@@ -812,6 +812,12 @@ impl Symbolicator {
                     self.exp_symbols(exp, scope_stack, references, use_defs);
                 }
             }
+            E::TempBorrow(_, exp) => {
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+            }
+            E::BorrowLocal(_, var) => {
+                self.add_local_use_def(&var.value(), &var.loc(), references, scope_stack, use_defs)
+            }
             _ => (),
         }
     }
@@ -1659,6 +1665,17 @@ fn symbols_build_test() {
         12,
         "M1.move",
     );
+    // borrow local (mut function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        56,
+        21,
+        55,
+        12,
+        "M1.move",
+    );
     // LHS in mutation statement (mut function)
     assert_use_def(
         mod_symbols,
@@ -1723,6 +1740,17 @@ fn symbols_build_test() {
         9,
         78,
         14,
+        "M1.move",
+    );
+    // temp borrow (temp_borrow function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        83,
+        19,
+        6,
+        10,
         "M1.move",
     );
 

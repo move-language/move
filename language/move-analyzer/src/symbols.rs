@@ -829,6 +829,11 @@ impl Symbolicator {
             E::BorrowLocal(_, var) => {
                 self.add_local_use_def(&var.value(), &var.loc(), references, scope_stack, use_defs)
             }
+            E::Cast(exp, t) => {
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+                self.add_type_id_use_def(t, references, use_defs);
+            }
+
             _ => (),
         }
     }
@@ -1865,6 +1870,17 @@ fn symbols_build_test() {
         8,
         "M1.move",
     );
+    // variable in cast (cast function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        114,
+        9,
+        113,
+        12,
+        "M1.move",
+    );
 
     let mut fpath = path.clone();
     fpath.push("sources/M3.move");
@@ -1884,7 +1900,6 @@ fn symbols_build_test() {
         23,
         "M3.move",
     );
-
     // generic type in struct field definition
     assert_use_def(
         mod_symbols,
@@ -1896,7 +1911,6 @@ fn symbols_build_test() {
         23,
         "M3.move",
     );
-
     // generic type in generic type definition (type_param_arg function)
     assert_use_def(
         mod_symbols,
@@ -1920,7 +1934,6 @@ fn symbols_build_test() {
         23,
         "M3.move",
     );
-
     // generic type in return type (type_param_arg function)
     assert_use_def(
         mod_symbols,
@@ -1932,7 +1945,6 @@ fn symbols_build_test() {
         23,
         "M3.move",
     );
-
     // generic type in struct param type (struct_type_param_arg function)
     assert_use_def(
         mod_symbols,
@@ -1944,7 +1956,6 @@ fn symbols_build_test() {
         30,
         "M3.move",
     );
-
     // generic type in struct return type (struct_type_param_arg function)
     assert_use_def(
         mod_symbols,
@@ -1956,7 +1967,6 @@ fn symbols_build_test() {
         30,
         "M3.move",
     );
-
     // generic type in pack (pack_type_param function)
     assert_use_def(
         mod_symbols,
@@ -1968,7 +1978,6 @@ fn symbols_build_test() {
         24,
         "M3.move",
     );
-
     // field type in struct field definition which itself is a struct
     assert_use_def(
         mod_symbols,
@@ -1980,7 +1989,6 @@ fn symbols_build_test() {
         11,
         "M3.move",
     );
-
     // generic type in struct field definition which itself is a struct
     assert_use_def(
         mod_symbols,

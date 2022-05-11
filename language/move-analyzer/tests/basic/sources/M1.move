@@ -110,4 +110,9 @@ module Basic::M1 {
         *r
     }
 
+    fun cast(): u64 {
+        let tmp: u128 = 42;
+        (tmp as u64)
+    }
+
 }

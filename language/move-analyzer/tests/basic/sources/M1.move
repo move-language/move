@@ -52,6 +52,22 @@ module Basic::M1 {
         value
     }
 
+    fun mut(): u64 {
+        let tmp = 7;
+        let r = &mut tmp;
+        *r = SOME_CONST;
+        tmp
+    }
 
+    fun ret(p: bool): u64 {
+        if (p) {
+            return SOME_CONST
+        };
+        7
+    }
+
+    fun abort_call() {
+        abort SOME_CONST
+    }
 
 }

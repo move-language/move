@@ -770,6 +770,16 @@ impl Symbolicator {
                 }
                 self.exp_symbols(e, scope_stack, references, use_defs);
             }
+            E::Mutate(lhs, rhs) => {
+                self.exp_symbols(lhs, scope_stack, references, use_defs);
+                self.exp_symbols(rhs, scope_stack, references, use_defs);
+            }
+            E::Return(exp) => {
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+            }
+            E::Abort(exp) => {
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+            }
             E::BinopExp(lhs, _, _, rhs) => {
                 self.exp_symbols(lhs, scope_stack, references, use_defs);
                 self.exp_symbols(rhs, scope_stack, references, use_defs);
@@ -1641,6 +1651,50 @@ fn symbols_build_test() {
         57,
         44,
         12,
+        "M1.move",
+    );
+    // LHS in mutation statement (mut function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        57,
+        9,
+        56,
+        12,
+        "M1.move",
+    );
+    // RHS in mutation statement (mut function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        57,
+        13,
+        6,
+        10,
+        "M1.move",
+    );
+    // returned value (ret function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        63,
+        19,
+        6,
+        10,
+        "M1.move",
+    );
+    // abort value (abort_call function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        69,
+        14,
+        6,
+        10,
         "M1.move",
     );
 

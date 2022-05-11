@@ -70,4 +70,14 @@ module Basic::M1 {
         abort SOME_CONST
     }
 
+    fun deref(): u64 {
+        let tmp = 7;
+        let r = &tmp;
+        *r
+    }
+
+    fun unary(p: bool):bool {
+        !p
+    }
+
 }

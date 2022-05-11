@@ -780,6 +780,12 @@ impl Symbolicator {
             E::Abort(exp) => {
                 self.exp_symbols(exp, scope_stack, references, use_defs);
             }
+            E::Dereference(exp) => {
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+            }
+            E::UnaryExp(_, exp) => {
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+            }
             E::BinopExp(lhs, _, _, rhs) => {
                 self.exp_symbols(lhs, scope_stack, references, use_defs);
                 self.exp_symbols(rhs, scope_stack, references, use_defs);
@@ -1695,6 +1701,28 @@ fn symbols_build_test() {
         14,
         6,
         10,
+        "M1.move",
+    );
+    // dereference (deref function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        75,
+        9,
+        74,
+        12,
+        "M1.move",
+    );
+    // unary operator (unary function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        79,
+        9,
+        78,
+        14,
         "M1.move",
     );
 

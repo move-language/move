@@ -526,10 +526,10 @@ impl Symbolicator {
 
         // pop the main function scope
         scope_stack.pop_front();
-        debug_assert!(scope_stack.len() == 0);
+        debug_assert!(scope_stack.is_empty());
 
         // after processing the function body, create a scope to process return types
-        let mut ret_scope = Scope::new();
+        let ret_scope = Scope::new();
         scope_stack.push_front(ret_scope);
 
         self.add_type_use_def(&fun.signature.return_type, references, use_defs);
@@ -593,7 +593,7 @@ impl Symbolicator {
                 self.exp_symbols(e, scope_stack, references, use_defs);
                 for opt_t in opt_types {
                     match opt_t {
-                        Some(t) => self.add_type_use_def(&t, references, use_defs),
+                        Some(t) => self.add_type_use_def(t, references, use_defs),
                         None => (),
                     }
                 }

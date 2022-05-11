@@ -84,4 +84,30 @@ module Basic::M1 {
         let tmp = &SOME_CONST;
         *tmp
     }
+
+    struct OuterStruct has key, drop {
+        some_struct: SomeStruct,
+    }
+
+    fun chain_access(): u64 {
+        let inner = SomeStruct{ some_field: 42 };
+        let outer = OuterStruct{ some_struct: inner };
+        outer.some_struct.some_field
+    }
+
+    fun chain_access_block(): u64 {
+        let inner = SomeStruct{ some_field: 42 };
+        let outer = OuterStruct{ some_struct: inner };
+        {
+            outer
+        }.some_struct.some_field
+    }
+
+    fun chain_access_borrow(): u64 {
+        let inner = SomeStruct{ some_field: 42 };
+        let outer = OuterStruct{ some_struct: inner };
+        let r = &outer.some_struct.some_field;
+        *r
+    }
+
 }

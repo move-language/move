@@ -477,7 +477,7 @@ impl Symbolicator {
         self.type_params = tp_scope;
         if let StructFields::Defined(fields) = &struct_def.fields {
             for (_, _, (_, t)) in fields {
-                self.add_type_use_def(t, references, use_defs);
+                self.add_type_id_use_def(t, references, use_defs);
             }
         }
     }
@@ -503,7 +503,7 @@ impl Symbolicator {
         scope_stack.push_front(fn_scope);
 
         for (pname, ptype) in &fun.signature.parameters {
-            self.add_type_use_def(ptype, references, use_defs);
+            self.add_type_id_use_def(ptype, references, use_defs);
 
             // add definition of the parameter
             self.add_def(
@@ -532,7 +532,7 @@ impl Symbolicator {
         let ret_scope = Scope::new();
         scope_stack.push_front(ret_scope);
 
-        self.add_type_use_def(&fun.signature.return_type, references, use_defs);
+        self.add_type_id_use_def(&fun.signature.return_type, references, use_defs);
 
         // pop the return parameters scope
         scope_stack.pop_front();
@@ -593,7 +593,7 @@ impl Symbolicator {
                 self.exp_symbols(e, scope_stack, references, use_defs);
                 for opt_t in opt_types {
                     match opt_t {
-                        Some(t) => self.add_type_use_def(t, references, use_defs),
+                        Some(t) => self.add_type_id_use_def(t, references, use_defs),
                         None => (),
                     }
                 }
@@ -689,7 +689,7 @@ impl Symbolicator {
         }
         // add type params
         for t in tparams {
-            self.add_type_use_def(t, references, use_defs);
+            self.add_type_id_use_def(t, references, use_defs);
         }
     }
 
@@ -727,17 +727,17 @@ impl Symbolicator {
             E::Builtin(builtin_fun, exp) => {
                 use BuiltinFunction_ as BF;
                 match &builtin_fun.value {
-                    BF::MoveTo(t) => self.add_type_use_def(t, references, use_defs),
-                    BF::MoveFrom(t) => self.add_type_use_def(t, references, use_defs),
-                    BF::BorrowGlobal(_, t) => self.add_type_use_def(t, references, use_defs),
-                    BF::Exists(t) => self.add_type_use_def(t, references, use_defs),
-                    BF::Freeze(t) => self.add_type_use_def(t, references, use_defs),
+                    BF::MoveTo(t) => self.add_type_id_use_def(t, references, use_defs),
+                    BF::MoveFrom(t) => self.add_type_id_use_def(t, references, use_defs),
+                    BF::BorrowGlobal(_, t) => self.add_type_id_use_def(t, references, use_defs),
+                    BF::Exists(t) => self.add_type_id_use_def(t, references, use_defs),
+                    BF::Freeze(t) => self.add_type_id_use_def(t, references, use_defs),
                     _ => (),
                 }
                 self.exp_symbols(exp, scope_stack, references, use_defs);
             }
             E::Vector(_, _, t, exp) => {
-                self.add_type_use_def(t, references, use_defs);
+                self.add_type_id_use_def(t, references, use_defs);
                 self.exp_symbols(exp, scope_stack, references, use_defs);
             }
             E::IfElse(cond, t, f) => {
@@ -764,7 +764,7 @@ impl Symbolicator {
                 self.lvalue_list_symbols(false, lvalues, scope_stack, references, use_defs);
                 for opt_t in opt_types {
                     match opt_t {
-                        Some(t) => self.add_type_use_def(t, references, use_defs),
+                        Some(t) => self.add_type_id_use_def(t, references, use_defs),
                         None => (),
                     }
                 }
@@ -812,11 +812,49 @@ impl Symbolicator {
                     self.exp_symbols(exp, scope_stack, references, use_defs);
                 }
             }
+            E::Borrow(_, exp, field) => {
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+                // get expression type to match fname to a struct def
+                self.add_field_type_use_def(
+                    &exp.ty,
+                    &field.value(),
+                    &field.loc(),
+                    references,
+                    use_defs,
+                );
+            }
             E::TempBorrow(_, exp) => {
                 self.exp_symbols(exp, scope_stack, references, use_defs);
             }
             E::BorrowLocal(_, var) => {
                 self.add_local_use_def(&var.value(), &var.loc(), references, scope_stack, use_defs)
+            }
+            _ => (),
+        }
+    }
+
+    /// Add a type for a struct field given its type
+    fn add_field_type_use_def(
+        &self,
+        sp!(_, typ): &Type,
+        use_name: &Symbol,
+        use_pos: &Loc,
+        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
+        use_defs: &mut UseDefMap,
+    ) {
+        match typ {
+            Type_::Ref(_, t) => {
+                self.add_field_type_use_def(t, use_name, use_pos, references, use_defs)
+            }
+            Type_::Apply(_, sp!(_, TypeName_::ModuleType(sp!(_, mod_ident), struct_name)), _) => {
+                self.add_field_use_def(
+                    mod_ident,
+                    &struct_name.value(),
+                    use_name,
+                    use_pos,
+                    references,
+                    use_defs,
+                );
             }
             _ => (),
         }
@@ -841,7 +879,7 @@ impl Symbolicator {
 
         // handle type parameters
         for t in &mod_call.type_arguments {
-            self.add_type_use_def(t, references, use_defs);
+            self.add_type_id_use_def(t, references, use_defs);
         }
 
         // handle arguments
@@ -869,7 +907,7 @@ impl Symbolicator {
         }
         // add type params
         for t in tparams {
-            self.add_type_use_def(t, references, use_defs);
+            self.add_type_id_use_def(t, references, use_defs);
         }
     }
 
@@ -1070,14 +1108,14 @@ impl Symbolicator {
     }
 
     /// Add use of a type identifier
-    fn add_type_use_def(
+    fn add_type_id_use_def(
         &self,
         sp!(pos, typ): &Type,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
         match typ {
-            Type_::Ref(_, t) => self.add_type_use_def(t, references, use_defs),
+            Type_::Ref(_, t) => self.add_type_id_use_def(t, references, use_defs),
             Type_::Param(tparam) => {
                 let sp!(use_pos, use_name) = tparam.user_specified_name;
                 match Self::get_start_loc(pos, &self.files, &self.file_id_mapping) {
@@ -1111,7 +1149,7 @@ impl Symbolicator {
                     );
                 } // otherwise nothing to be done for other type names
                 for t in tparams {
-                    self.add_type_use_def(t, references, use_defs);
+                    self.add_type_id_use_def(t, references, use_defs);
                 }
             }
             _ => (), // nothing to be done for the other types
@@ -1134,7 +1172,7 @@ impl Symbolicator {
                     start: name_start,
                 };
                 let mut scope = scope_stack.pop_front().unwrap(); // scope stack guaranteed non-empty
-                let exists = scope.insert(*name, def_loc.clone());
+                let exists = scope.insert(*name, def_loc);
                 // should be only one def with the same name in a given scope
                 scope_stack.push_front(scope);
 
@@ -1398,7 +1436,6 @@ fn symbols_build_test() {
         8,
         "M1.move",
     );
-
     // param var (unpack function)
     assert_use_def(
         mod_symbols,
@@ -1465,7 +1502,6 @@ fn symbols_build_test() {
         15,
         "M1.move",
     );
-
     // copied var in an assignment (cp function)
     assert_use_def(
         mod_symbols,
@@ -1477,7 +1513,6 @@ fn symbols_build_test() {
         11,
         "M1.move",
     );
-
     // struct name return type (pack function)
     assert_use_def(
         mod_symbols,
@@ -1751,6 +1786,83 @@ fn symbols_build_test() {
         19,
         6,
         10,
+        "M1.move",
+    );
+    // chain access first element (chain_access function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        94,
+        8,
+        93,
+        12,
+        "M1.move",
+    );
+    // chain second element (chain_access function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        94,
+        14,
+        88,
+        8,
+        "M1.move",
+    );
+    // chain access third element (chain_access function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        2,
+        94,
+        26,
+        3,
+        8,
+        "M1.move",
+    );
+    // chain second element after the block (chain_access_block function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        102,
+        10,
+        88,
+        8,
+        "M1.move",
+    );
+    // chain access first element when borrowing (chain_access_borrow function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        108,
+        17,
+        107,
+        12,
+        "M1.move",
+    );
+    // chain second element when borrowing (chain_access_borrow function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        2,
+        108,
+        23,
+        88,
+        8,
+        "M1.move",
+    );
+    // chain access third element when borrowing (chain_access_borrow function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        3,
+        108,
+        35,
+        3,
+        8,
         "M1.move",
     );
 

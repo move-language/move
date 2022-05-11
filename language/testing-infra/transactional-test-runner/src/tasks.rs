@@ -9,11 +9,11 @@ use clap::*;
 use move_command_line_common::{
     address::ParsedAddress,
     files::{MOVE_EXTENSION, MOVE_IR_EXTENSION},
-    types::ParsedStructType,
+    types::{ParsedStructType, ParsedType},
     values::{ParsableValue, ParsedValue},
 };
 use move_compiler::shared::NumericalAddress;
-use move_core_types::{identifier::Identifier, language_storage::TypeTag, parser};
+use move_core_types::identifier::Identifier;
 use std::{convert::TryInto, fmt::Debug, path::Path, str::FromStr};
 use tempfile::NamedTempFile;
 
@@ -256,12 +256,12 @@ pub struct RunCommand<ExtraValueArgs: ParsableValue> {
     pub args: Vec<ParsedValue<ExtraValueArgs>>,
     #[clap(
         long = "type-args",
-        parse(try_from_str = parser::parse_type_tag),
+        parse(try_from_str = ParsedType::parse),
         takes_value(true),
         multiple_values(true),
         multiple_occurrences(true)
     )]
-    pub type_args: Vec<TypeTag>,
+    pub type_args: Vec<ParsedType>,
     #[clap(long = "gas-budget")]
     pub gas_budget: Option<u64>,
     #[clap(long = "syntax")]

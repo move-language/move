@@ -87,7 +87,7 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
         default_syntax: SyntaxChoice,
         pre_compiled_deps: Option<&'a FullyCompiledProgram>,
         task_opt: Option<TaskInput<(InitCommand, EmptyCommand)>>,
-    ) -> Self {
+    ) -> (Self, Option<String>) {
         let additional_mapping = match task_opt.map(|t| t.command) {
             Some((InitCommand { named_addresses }, _)) => {
                 verify_and_create_named_address_mapping(named_addresses).unwrap()
@@ -140,7 +140,7 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
                 .compiled_state
                 .add_and_generate_interface_file(module.clone());
         }
-        adapter
+        (adapter, None)
     }
 
     fn publish_module(

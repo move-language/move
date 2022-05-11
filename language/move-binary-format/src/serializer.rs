@@ -10,7 +10,9 @@
 
 use crate::{file_format::*, file_format_common::*};
 use anyhow::{bail, Result};
-use move_core_types::{account_address::AccountAddress, identifier::Identifier};
+use move_core_types::{
+    account_address::AccountAddress, identifier::Identifier, metadata::Metadata,
+};
 
 impl CompiledScript {
     /// Serializes a `CompiledScript` into a binary. The mutable `Vec<u8>` will contain the
@@ -136,6 +138,14 @@ fn serialize_constant_size(binary: &mut BinaryData, len: usize) -> Result<()> {
     write_as_uleb128(binary, len as u64, CONSTANT_SIZE_MAX)
 }
 
+fn serialize_metadata_key_size(binary: &mut BinaryData, len: usize) -> Result<()> {
+    write_as_uleb128(binary, len as u64, METADATA_KEY_SIZE_MAX)
+}
+
+fn serialize_metadata_value_size(binary: &mut BinaryData, len: usize) -> Result<()> {
+    write_as_uleb128(binary, len as u64, METADATA_VALUE_SIZE_MAX)
+}
+
 fn serialize_field_count(binary: &mut BinaryData, len: usize) -> Result<()> {
     write_as_uleb128(binary, len as u64, FIELD_COUNT_MAX)
 }
@@ -218,6 +228,7 @@ struct CommonSerializer {
     identifiers: (u32, u32),
     address_identifiers: (u32, u32),
     constant_pool: (u32, u32),
+    metadata: (u32, u32),
 }
 
 /// Holds data to compute the header of a module binary.
@@ -284,6 +295,7 @@ trait CommonTables {
     fn get_address_identifiers(&self) -> &[AccountAddress];
     fn get_constant_pool(&self) -> &[Constant];
     fn get_signatures(&self) -> &[Signature];
+    fn get_metadata(&self) -> &[Metadata];
 }
 
 impl CommonTables for CompiledScript {
@@ -318,6 +330,10 @@ impl CommonTables for CompiledScript {
     fn get_signatures(&self) -> &[Signature] {
         &self.signatures
     }
+
+    fn get_metadata(&self) -> &[Metadata] {
+        &self.metadata
+    }
 }
 
 impl CommonTables for CompiledModule {
@@ -351,6 +367,10 @@ impl CommonTables for CompiledModule {
 
     fn get_signatures(&self) -> &[Signature] {
         &self.signatures
+    }
+
+    fn get_metadata(&self) -> &[Metadata] {
+        &self.metadata
     }
 }
 
@@ -458,11 +478,25 @@ fn serialize_address(binary: &mut BinaryData, address: &AccountAddress) -> Resul
 /// - `data` bytes in increasing index order
 fn serialize_constant(binary: &mut BinaryData, constant: &Constant) -> Result<()> {
     serialize_signature_token(binary, &constant.type_)?;
-    serialize_constant_size(binary, constant.data.len())?;
-    for byte in &constant.data {
+    serialize_byte_blob(binary, serialize_constant_size, &constant.data)
+}
+
+/// Serialize a metadata entry.
+fn serialize_metadata_entry(binary: &mut BinaryData, metadata: &Metadata) -> Result<()> {
+    serialize_byte_blob(binary, serialize_metadata_key_size, &metadata.key)?;
+    serialize_byte_blob(binary, serialize_metadata_value_size, &metadata.value)
+}
+
+/// Serialize a byte blob.
+fn serialize_byte_blob(
+    binary: &mut BinaryData,
+    size_serializer: impl Fn(&mut BinaryData, usize) -> Result<()>,
+    blob: &[u8],
+) -> Result<()> {
+    size_serializer(binary, blob.len())?;
+    for byte in blob {
         binary.push(*byte)?;
     }
-
     Ok(())
 }
 
@@ -909,6 +943,7 @@ impl CommonSerializer {
             identifiers: (0, 0),
             address_identifiers: (0, 0),
             constant_pool: (0, 0),
+            metadata: (0, 0),
         }
     }
 
@@ -970,6 +1005,12 @@ impl CommonSerializer {
             self.constant_pool.0,
             self.constant_pool.1,
         )?;
+        serialize_table_index(
+            binary,
+            TableType::METADATA,
+            self.metadata.0,
+            self.metadata.1,
+        )?;
         Ok(())
     }
 
@@ -988,6 +1029,7 @@ impl CommonSerializer {
         self.serialize_identifiers(binary, tables.get_identifiers())?;
         self.serialize_address_identifiers(binary, tables.get_address_identifiers())?;
         self.serialize_constants(binary, tables.get_constant_pool())?;
+        self.serialize_metadata(binary, tables.get_metadata())?;
         Ok(())
     }
 
@@ -1110,6 +1152,19 @@ impl CommonSerializer {
                 serialize_constant(binary, constant)?;
             }
             self.constant_pool.1 = checked_calculate_table_size(binary, self.constant_pool.0)?;
+        }
+        Ok(())
+    }
+
+    /// Serializes metadata.
+    fn serialize_metadata(&mut self, binary: &mut BinaryData, metadata: &[Metadata]) -> Result<()> {
+        if !metadata.is_empty() {
+            self.table_count += 1;
+            self.metadata.0 = check_index_in_binary(binary.len())?;
+            for entry in metadata {
+                serialize_metadata_entry(binary, entry)?;
+            }
+            self.metadata.1 = checked_calculate_table_size(binary, self.metadata.0)?;
         }
         Ok(())
     }

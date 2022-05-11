@@ -62,6 +62,9 @@ pub const IDENTIFIER_SIZE_MAX: u64 = 65535;
 
 pub const CONSTANT_SIZE_MAX: u64 = 65535;
 
+pub const METADATA_KEY_SIZE_MAX: u64 = 1023;
+pub const METADATA_VALUE_SIZE_MAX: u64 = 65535;
+
 pub const SIGNATURE_SIZE_MAX: u64 = 255;
 
 pub const ACQUIRES_COUNT_MAX: u64 = 255;
@@ -97,6 +100,7 @@ pub enum TableType {
     FIELD_HANDLE            = 0xD,
     FIELD_INST              = 0xE,
     FRIEND_DECLS            = 0xF,
+    METADATA                = 0x10,
 }
 
 /// Constants for signature blob values.
@@ -379,8 +383,12 @@ pub const VERSION_4: u32 = 4;
 ///  +/- script and public(script) verification is now adapter specific
 pub const VERSION_5: u32 = 5;
 
+/// Version 6: changes compared with version 5
+///  + metadata
+pub const VERSION_6: u32 = 6;
+
 // Mark which version is the latest version
-pub const VERSION_MAX: u32 = VERSION_5;
+pub const VERSION_MAX: u32 = VERSION_6;
 
 pub(crate) mod versioned_data {
     use crate::{errors::*, file_format_common::*};

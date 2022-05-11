@@ -591,9 +591,14 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                         let callee_target = &self
                             .targets
                             .get_target(callee_env, &FunctionVariant::Baseline);
-                        if let Some(callee_an) =
+                        let native_an;
+                        let callee_an_opt = if callee_env.is_native() {
+                            native_an = native_annotation(callee_env);
+                            Some(&native_an)
+                        } else {
                             callee_target.get_annotations().get::<BorrowAnnotation>()
-                        {
+                        };
+                        if let Some(callee_an) = callee_an_opt {
                             state.instantiate(
                                 callee_target,
                                 targs,

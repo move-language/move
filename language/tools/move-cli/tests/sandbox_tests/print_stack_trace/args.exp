@@ -5,12 +5,12 @@ Call Stack:
 
         Code:
             [12] LdU64(1)
-            [13] CallGeneric(2)
+            [13] VecImmBorrow(2)
             [14] StLoc(2)
-          > [15] CallGeneric(3)
+          > [15] CallGeneric(0)
             [16] StLoc(4)
             [17] ImmBorrowLoc(4)
-            [18] CallGeneric(4)
+            [18] CallGeneric(1)
 
         Locals:
             [0] -
@@ -95,10 +95,10 @@ Call Stack:
     [0] main
 
         Code:
-            [18] CallGeneric(4)
+            [18] CallGeneric(1)
             [19] MoveLoc(2)
             [20] Pop
-          > [21] CallGeneric(5)
+          > [21] CallGeneric(2)
             [22] Pop
             [23] Ret
 

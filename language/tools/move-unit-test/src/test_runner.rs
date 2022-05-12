@@ -483,7 +483,10 @@ impl SharedTestingConfig {
                     // Expected the test the abort with a specific `code`, and it did abort with
                     // that abort code
                     (Some(ExpectedFailure::ExpectedWithCode(code)), Some(other_code))
-                        if err.major_status() == StatusCode::ABORTED && *code == other_code =>
+                        if matches!(
+                            err.major_status(),
+                            StatusCode::ABORTED | StatusCode::VECTOR_OPERATION_ERROR
+                        ) && *code == other_code =>
                     {
                         output.pass(function_name);
                         stats.test_success(test_run_info, test_plan);

@@ -8,7 +8,7 @@ The project is undergoing daily changes. Pull Requests will be reviewed and resp
 
 (Write your motivation for proposed changes here.)
 
-### Have you read the [Contributing Guidelines on pull requests](https://github.com/move-language/move/blob/main/CONTRIBUTING.md#pull-requests)?
+### Have you read the [Contributing Guidelines on pull requests](https://github.com/move-language/move/blob/main/CONTRIBUTING.md#developer-workflow)?
 
 (Write your answer here.)
 

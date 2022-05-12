@@ -1,24 +1,11 @@
 Running Move unit tests
-[ FAIL    ] 0x1::A::native_abort_good_right_code
+[ PASS    ] 0x1::A::native_abort_good_right_code
 [ FAIL    ] 0x1::A::native_abort_good_wrong_code
 [ FAIL    ] 0x1::A::native_abort_unexpected_abort
 
 Test failures:
 
 Failures in 0x1::A:
-
-┌── native_abort_good_right_code ──────
-│ error[E11001]: test failure
-│    ┌─ native_abort.move:18:9
-│    │
-│ 17 │     fun native_abort_good_right_code() {
-│    │         ---------------------------- In this function in 0x1::A
-│ 18 │         Vector::borrow(&Vector::empty<u64>(), 1);
-│    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Test did not abort with expected code. Expected test to abort with 1 but instead it aborted with 1 here
-│ 
-│ 
-└──────────────────
-
 
 ┌── native_abort_good_wrong_code ──────
 │ error[E11001]: test failure
@@ -45,4 +32,4 @@ Failures in 0x1::A:
 │ 
 └──────────────────
 
-Test result: FAILED. Total tests: 3; passed: 0; failed: 3
+Test result: FAILED. Total tests: 3; passed: 1; failed: 2

@@ -16,6 +16,8 @@ use crate::{
     },
     to_bytecode, typing, unit_test,
 };
+use anyhow::bail;
+use move_binary_format::file_format_common::{VERSION_5, VERSION_MAX};
 use move_command_line_common::files::{
     extension_equals, find_filenames, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION, SOURCE_MAP_EXTENSION,
 };
@@ -536,11 +538,23 @@ pub fn sanity_check_compiled_units(
 
 /// Given a file map and a set of compiled programs, saves the compiled programs to disk
 pub fn output_compiled_units(
+    bytecode_version: &Option<u32>,
     emit_source_maps: bool,
     files: FilesSourceText,
     compiled_units: Vec<AnnotatedCompiledUnit>,
     out_dir: &str,
 ) -> anyhow::Result<()> {
+    // Validate supported bytecode version.
+    if let Some(v) = bytecode_version {
+        if *v < VERSION_5 || *v > VERSION_MAX {
+            bail!(
+                "The requested bytecode version v{} is not supported. Only v{} to v{} are. ",
+                *v,
+                VERSION_5,
+                VERSION_MAX
+            )
+        }
+    }
     const SCRIPT_SUB_DIR: &str = "scripts";
     const MODULE_SUB_DIR: &str = "modules";
     fn num_digits(n: usize) -> usize {
@@ -558,7 +572,7 @@ pub fn output_compiled_units(
             }
 
             $path.set_extension(MOVE_COMPILED_EXTENSION);
-            fs::write($path.as_path(), &$unit.serialize())?
+            fs::write($path.as_path(), &$unit.serialize(bytecode_version))?
         }};
     }
 

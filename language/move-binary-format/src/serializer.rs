@@ -7,6 +7,13 @@
 //! This module exposes two entry points for serialization of `CompiledScript` and
 //! `CompiledModule`. The entry points are exposed on the main structs `CompiledScript` and
 //! `CompiledModule`.
+//!
+//! **Versioning**
+//!
+//! A note about versioning. The serializer supports writing file_format versions >= v5. The
+//! entry points get the version number passed in and generate compatible formats. However,
+//! not all of the newer language constructs might be supported for older versions, leading to
+//! serialization errors.
 
 use crate::{file_format::*, file_format_common::*};
 use anyhow::{bail, Result};
@@ -18,8 +25,18 @@ impl CompiledScript {
     /// Serializes a `CompiledScript` into a binary. The mutable `Vec<u8>` will contain the
     /// binary blob on return.
     pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
+        self.serialize_for_version(&None, binary)
+    }
+
+    /// Serialize into binary, at given version.
+    pub fn serialize_for_version(
+        &self,
+        bytecode_version: &Option<u32>,
+        binary: &mut Vec<u8>,
+    ) -> Result<()> {
+        let version = bytecode_version.unwrap_or(VERSION_MAX);
         let mut binary_data = BinaryData::from(binary.clone());
-        let mut ser = ScriptSerializer::new(VERSION_MAX);
+        let mut ser = ScriptSerializer::new(version);
         let mut temp = BinaryData::new();
 
         ser.common.serialize_common_tables(&mut temp, self)?;
@@ -186,8 +203,18 @@ impl CompiledModule {
     /// Serializes a `CompiledModule` into a binary. The mutable `Vec<u8>` will contain the
     /// binary blob on return.
     pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
+        self.serialize_for_version(&None, binary)
+    }
+
+    /// Serialize into binary, at given version.
+    pub fn serialize_for_version(
+        &self,
+        bytecode_version: &Option<u32>,
+        binary: &mut Vec<u8>,
+    ) -> Result<()> {
+        let version = bytecode_version.unwrap_or(VERSION_MAX);
         let mut binary_data = BinaryData::from(binary.clone());
-        let mut ser = ModuleSerializer::new(VERSION_MAX);
+        let mut ser = ModuleSerializer::new(version);
         let mut temp = BinaryData::new();
         ser.serialize_tables(&mut temp, self)?;
         if temp.len() > u32::max_value() as usize {
@@ -932,6 +959,8 @@ fn checked_calculate_table_size(binary: &mut BinaryData, start: u32) -> Result<u
 
 impl CommonSerializer {
     pub fn new(major_version: u32) -> CommonSerializer {
+        // We only started supporting different versions since VERSION_5
+        assert!(major_version >= VERSION_5);
         CommonSerializer {
             major_version,
             table_count: 0,
@@ -1005,12 +1034,15 @@ impl CommonSerializer {
             self.constant_pool.0,
             self.constant_pool.1,
         )?;
-        serialize_table_index(
-            binary,
-            TableType::METADATA,
-            self.metadata.0,
-            self.metadata.1,
-        )?;
+        if self.major_version >= VERSION_6 {
+            // Metadata was not introduced before v6, so do not generate it for lower versions.
+            serialize_table_index(
+                binary,
+                TableType::METADATA,
+                self.metadata.0,
+                self.metadata.1,
+            )?;
+        }
         Ok(())
     }
 
@@ -1029,7 +1061,9 @@ impl CommonSerializer {
         self.serialize_identifiers(binary, tables.get_identifiers())?;
         self.serialize_address_identifiers(binary, tables.get_address_identifiers())?;
         self.serialize_constants(binary, tables.get_constant_pool())?;
-        self.serialize_metadata(binary, tables.get_metadata())?;
+        if self.major_version >= VERSION_6 {
+            self.serialize_metadata(binary, tables.get_metadata())?;
+        }
         Ok(())
     }
 

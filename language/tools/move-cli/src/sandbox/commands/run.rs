@@ -11,6 +11,7 @@ use crate::{
 };
 use anyhow::{anyhow, bail, Result};
 use move_binary_format::file_format::CompiledModule;
+use move_command_line_common::env::get_bytecode_version_from_env;
 use move_core_types::{
     account_address::AccountAddress,
     errmap::ErrorMapping,
@@ -42,6 +43,7 @@ pub fn run(
     if !script_path.exists() {
         bail!("Script file {:?} does not exist", script_path)
     };
+    let bytecode_version = get_bytecode_version_from_env();
 
     let bytecode = if is_bytecode_file(script_path) {
         assert!(
@@ -60,7 +62,7 @@ move run` must be applied to a module inside `storage/`",
             .find(|unit| unit.unit.source_map().check(&file_contents));
         // script source file; package is already compiled so load it up
         match script_opt {
-            Some(unit) => unit.unit.serialize(),
+            Some(unit) => unit.unit.serialize(&bytecode_version),
             None => bail!("Unable to find script in file {:?}", script_path),
         }
     };

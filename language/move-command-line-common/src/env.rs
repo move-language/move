@@ -2,6 +2,17 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+/// An environment variable which can be set to cause the move compiler to generate
+/// file formats at a given version. Only version v5 and greater are supported.
+const BYTECODE_VERSION_ENV_VAR: &str = "MOVE_BYTECODE_VERSION";
+
+/// Get the bytecode version from the environment variable.
+pub fn get_bytecode_version_from_env() -> Option<u32> {
+    std::env::var(BYTECODE_VERSION_ENV_VAR)
+        .ok()
+        .and_then(|s| s.parse::<u32>().ok())
+}
+
 pub fn read_env_var(v: &str) -> String {
     std::env::var(v).unwrap_or_else(|_| String::new())
 }

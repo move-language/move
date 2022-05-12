@@ -5,6 +5,7 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
+use move_command_line_common::env::get_bytecode_version_from_env;
 use move_compiler::{self, shared::NumericalAddress, Compiler, Flags};
 
 /// Compile the user modules in `sources` against the dependencies in `interface_files`, placing
@@ -25,5 +26,11 @@ pub fn compile(
         Compiler::from_files(sources, interface_files, named_address_mapping)
             .set_flags(Flags::empty().set_sources_shadow_deps(sources_shadow_deps))
             .build_and_report()?;
-    move_compiler::output_compiled_units(emit_source_map, files, compiled_units, output_dir)
+    move_compiler::output_compiled_units(
+        &get_bytecode_version_from_env(),
+        emit_source_map,
+        files,
+        compiled_units,
+        output_dir,
+    )
 }

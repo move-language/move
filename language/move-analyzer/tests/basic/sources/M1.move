@@ -115,4 +115,9 @@ module Basic::M1 {
         (tmp as u64)
     }
 
+    fun annot(): u64 {
+        let tmp = (SOME_CONST: u64);
+        tmp
+    }
+
 }

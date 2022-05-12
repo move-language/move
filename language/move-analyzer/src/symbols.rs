@@ -833,6 +833,10 @@ impl Symbolicator {
                 self.exp_symbols(exp, scope_stack, references, use_defs);
                 self.add_type_id_use_def(t, references, use_defs);
             }
+            E::Annotate(exp, t) => {
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+                self.add_type_id_use_def(t, references, use_defs);
+            }
 
             _ => (),
         }
@@ -1879,6 +1883,17 @@ fn symbols_build_test() {
         9,
         113,
         12,
+        "M1.move",
+    );
+    // constant in an annotation (annot function)
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        118,
+        19,
+        6,
+        10,
         "M1.move",
     );
 

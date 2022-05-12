@@ -200,7 +200,7 @@ pub enum ProverOptions {
 }
 
 /// Encapsulates the possible returned states when running unit tests on a move package.
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum UnitTestResult {
     Success,
     Failure,

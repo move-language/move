@@ -169,8 +169,11 @@ impl ResolvingGraph {
 
         if !unresolved_addresses.is_empty() {
             bail!(
-                "Unresolved addresses found: [\n{}\n]",
-                unresolved_addresses.join("\n")
+                "Unresolved addresses found: [\n{}\n]\n\
+                To fix this, add an entry for each unresolved address to the [addresses] section of {}/Move.toml: \
+                e.g.,\n[addresses]\nStd = \"0x1\"",
+                unresolved_addresses.join("\n"),
+                root_package_path.to_string_lossy()
             )
         }
 

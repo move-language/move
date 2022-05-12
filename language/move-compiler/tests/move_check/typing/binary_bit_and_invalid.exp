@@ -128,15 +128,6 @@ error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_bit_and_invalid.move:15:9
    │
 15 │         1 & false & @0x0 & 0;
-   │         ^^^^^^^^^
-   │         │ │
-   │         │ Found: '_'. But expected: 'u8', 'u64', 'u128'
-   │         Invalid argument to '&'
-
-error[E04003]: built-in operation not supported
-   ┌─ tests/move_check/typing/binary_bit_and_invalid.move:15:9
-   │
-15 │         1 & false & @0x0 & 0;
    │         ^^^^^^^^^^^^^^^^
    │         │           │
    │         │           Found: 'address'. But expected: 'u8', 'u64', 'u128'
@@ -150,14 +141,6 @@ error[E04007]: incompatible types
    │         │ │  
    │         │ Incompatible arguments to '&'
    │         Found: integer. It is not compatible with the other type.
-
-error[E04003]: built-in operation not supported
-   ┌─ tests/move_check/typing/binary_bit_and_invalid.move:15:21
-   │
-15 │         1 & false & @0x0 & 0;
-   │           -         ^^^^ Invalid argument to '&'
-   │           │          
-   │           Found: '_'. But expected: 'u8', 'u64', 'u128'
 
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/binary_bit_and_invalid.move:15:26

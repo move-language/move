@@ -1,21 +1,14 @@
-**Work in Progress**
+# Move-on-EVM Examples
 
 This directory contains (a growing set of) examples of "Move-on-EVM", a programming model in Move for EVM.
 
 - [Token.move](./sources/Token.move) contains an implementation of ERC20 which is intended to be compliant and callable
   from other EVM code (Move or otherwise).
 - [Faucet.move](./sources/Faucet.move) contains the faucet example from the Ethereum book.
+- [ERC20.move](./sources/ERC20.move) contains another implementation of the ERC20 standard which uses a single `struct` to represent the contract state.
+- [ERC165.move](./sources/ERC165.move) contains a sample implementation of the ERC165 standard.
+- [ERC721.move](./sources/ERC721.move) contains an implementation of ERC721 which is the standard for non-fungible tokens.
+- [ERC1155.move](./sources/ERC1155.move) contains an implementation of ERC1155 which is the standard for multi-tokens.
+- [TestUniswap.move](./sources/TestUniswap.move) and [TestUniswapLiquidity.move](./sources/TestUniswapLiquidity.move) are the sample client modules of `Uniswap`.
 
-The basic programming model is as follows:
-
-- The module [Evm.move](./sources/Evm.move) contains the API of a Move contract to the EVM. It encapsulates access to
-  the transaction context and other EVM builtins.
-- In the current model, *each Move EVM contract has its own isolated address space*. That is, `borrow_global` et. al
-  work on memory private to this contract. This reflects the setup of the EVM most naturally, where storage between
-  contracts cannot be shared apart from via accessor contract functions.
-- In order to allow a contract to store to its own private memory, there is currently a pseudo function
-  `Evm::sign(addr)` which allows a contract to convert any address into a signer for its own private memory. Eventually,
-  we may want to remove the requirement to have a signer for move_to in the EVM context.
-- Move EVM contracts use attributes to indicate the usage of structs for storage and events, and for functions to be
-  callable from other contracts. It is expected that there is some codegen of Move from these attributes. Specifically,
-  functions marked as `callable` have a generated API for cross-contract EVM call and delegate invocations.
+This directory is a Move package. To build the source files, use `move package build`. Moreover, use `move package test` to run the unit tests located in the `tests` directory.

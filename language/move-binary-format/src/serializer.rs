@@ -25,13 +25,13 @@ impl CompiledScript {
     /// Serializes a `CompiledScript` into a binary. The mutable `Vec<u8>` will contain the
     /// binary blob on return.
     pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
-        self.serialize_for_version(&None, binary)
+        self.serialize_for_version(None, binary)
     }
 
     /// Serialize into binary, at given version.
     pub fn serialize_for_version(
         &self,
-        bytecode_version: &Option<u32>,
+        bytecode_version: Option<u32>,
         binary: &mut Vec<u8>,
     ) -> Result<()> {
         let version = bytecode_version.unwrap_or(VERSION_MAX);
@@ -203,13 +203,13 @@ impl CompiledModule {
     /// Serializes a `CompiledModule` into a binary. The mutable `Vec<u8>` will contain the
     /// binary blob on return.
     pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
-        self.serialize_for_version(&None, binary)
+        self.serialize_for_version(None, binary)
     }
 
     /// Serialize into binary, at given version.
     pub fn serialize_for_version(
         &self,
-        bytecode_version: &Option<u32>,
+        bytecode_version: Option<u32>,
         binary: &mut Vec<u8>,
     ) -> Result<()> {
         let version = bytecode_version.unwrap_or(VERSION_MAX);

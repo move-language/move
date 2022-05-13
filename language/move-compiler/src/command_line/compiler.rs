@@ -538,7 +538,7 @@ pub fn sanity_check_compiled_units(
 
 /// Given a file map and a set of compiled programs, saves the compiled programs to disk
 pub fn output_compiled_units(
-    bytecode_version: &Option<u32>,
+    bytecode_version: Option<u32>,
     emit_source_maps: bool,
     files: FilesSourceText,
     compiled_units: Vec<AnnotatedCompiledUnit>,
@@ -546,10 +546,10 @@ pub fn output_compiled_units(
 ) -> anyhow::Result<()> {
     // Validate supported bytecode version.
     if let Some(v) = bytecode_version {
-        if *v < VERSION_5 || *v > VERSION_MAX {
+        if !(VERSION_5..=VERSION_MAX).contains(&v) {
             bail!(
                 "The requested bytecode version v{} is not supported. Only v{} to v{} are. ",
-                *v,
+                v,
                 VERSION_5,
                 VERSION_MAX
             )

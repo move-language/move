@@ -17,7 +17,7 @@ use proptest::{
 
 mod constants;
 mod functions;
-mod metdata;
+mod metadata;
 mod signature;
 mod types;
 
@@ -27,7 +27,7 @@ use functions::{
 };
 
 use crate::proptest_types::{
-    metdata::MetadataGen,
+    metadata::MetadataGen,
     signature::SignatureGen,
     types::{StDefnMaterializeState, StructDefinitionGen, StructHandleGen},
 };

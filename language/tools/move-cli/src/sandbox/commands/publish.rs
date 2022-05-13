@@ -65,7 +65,7 @@ pub fn publish(
         match override_ordering {
             None => {
                 for unit in package.root_modules() {
-                    let module_bytes = unit.unit.serialize(&bytecode_version);
+                    let module_bytes = unit.unit.serialize(bytecode_version);
                     let id = module(&unit.unit)?.self_id();
                     let sender = *id.address();
 
@@ -90,7 +90,7 @@ pub fn publish(
                     match module_map.get(name) {
                         None => bail!("Invalid module name in publish ordering: {}", name),
                         Some(unit) => {
-                            let module_bytes = unit.unit.serialize(&bytecode_version);
+                            let module_bytes = unit.unit.serialize(bytecode_version);
                             module_bytes_vec.push(module_bytes);
                             if sender_opt.is_none() {
                                 sender_opt = Some(*module(&unit.unit)?.self_id().address());
@@ -136,7 +136,7 @@ pub fn publish(
         let mut serialized_modules = vec![];
         for unit in package.all_modules() {
             let id = module(&unit.unit)?.self_id();
-            let module_bytes = unit.unit.serialize(&bytecode_version);
+            let module_bytes = unit.unit.serialize(bytecode_version);
             serialized_modules.push((id, module_bytes));
         }
         state.save_modules(&serialized_modules)?;

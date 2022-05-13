@@ -2,11 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::BTreeMap;
-
 use anyhow::Result;
 use move_command_line_common::env::get_bytecode_version_from_env;
 use move_compiler::{self, shared::NumericalAddress, Compiler, Flags};
+use std::collections::BTreeMap;
 
 /// Compile the user modules in `sources` against the dependencies in `interface_files`, placing
 /// the resulting binaries in `output_dir`.
@@ -27,7 +26,7 @@ pub fn compile(
             .set_flags(Flags::empty().set_sources_shadow_deps(sources_shadow_deps))
             .build_and_report()?;
     move_compiler::output_compiled_units(
-        &get_bytecode_version_from_env(),
+        get_bytecode_version_from_env(),
         emit_source_map,
         files,
         compiled_units,

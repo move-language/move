@@ -341,8 +341,8 @@ impl Flags {
         self.flavor == flavor
     }
 
-    pub fn bytecode_version(&self) -> &Option<u32> {
-        &self.bytecode_version
+    pub fn bytecode_version(&self) -> Option<u32> {
+        self.bytecode_version
     }
 }
 

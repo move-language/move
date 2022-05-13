@@ -348,7 +348,7 @@ impl OnDiskCompiledPackage {
                 .with_extension(MOVE_COMPILED_EXTENSION),
             compiled_unit
                 .unit
-                .serialize(&get_bytecode_version_from_env())
+                .serialize(get_bytecode_version_from_env())
                 .as_slice(),
         )?;
         self.save_under(
@@ -583,7 +583,7 @@ impl CompiledPackage {
 
             if resolution_graph.build_options.generate_abis {
                 compiled_abis = Some(Self::build_abis(
-                    &get_bytecode_version_from_env(),
+                    get_bytecode_version_from_env(),
                     &model,
                     &root_compiled_units,
                 ));
@@ -729,7 +729,7 @@ impl CompiledPackage {
     }
 
     fn build_abis(
-        bytecode_version: &Option<u32>,
+        bytecode_version: Option<u32>,
         model: &GlobalEnv,
         compiled_units: &[CompiledUnitWithSource],
     ) -> Vec<(String, Vec<u8>)> {

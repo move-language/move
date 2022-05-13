@@ -523,6 +523,14 @@ fn build_common_tables(
                 load_constant_pool(binary, table, common.get_constant_pool())?;
             }
             TableType::METADATA => {
+                if binary.version() < VERSION_6 {
+                    return Err(
+                        PartialVMError::new(StatusCode::MALFORMED).with_message(format!(
+                            "metadata declarations not applicable in bytecode version {}",
+                            binary.version()
+                        )),
+                    );
+                }
                 load_metadata(binary, table, common.get_metadata())?;
             }
             TableType::IDENTIFIERS => {

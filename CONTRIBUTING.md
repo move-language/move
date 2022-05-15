@@ -11,7 +11,7 @@ linting, testing, and building the documentation, run the following:
 ```bash
 git clone https://github.com/move-language/move.git
 cd move
-./scripts/dev_setup.sh
+./scripts/dev_setup.sh # with optional [-t -b -p -y -d -n], see the script for more details
 cargo build
 cargo xtest
 ```

@@ -28,8 +28,7 @@ request workflow is as follows:
    documentation builds.
 4. Ensure all tests and lints pass on each and every commit that is part of
    your pull request. `cargo x lint && cargo xfmt && cargo xclippy --all-targets`
-5. If you haven't already, complete the Contributor License Agreement (CLA).
-6. Submit your pull request.
+5. Submit your pull request.
 
 ## Authoring Clean Commits
 

@@ -3,7 +3,7 @@ id: contributing
 title: Contributing to Move
 ---
 
-To contribute to the Diem Core implementation, first start with the proper
+To contribute to the Move implementation, first start with the proper
 development copy.
 
 To get the development installation with all the necessary dependencies for
@@ -11,7 +11,7 @@ linting, testing, and building the documentation, run the following:
 ```bash
 git clone https://github.com/move-language/move.git
 cd move
-./scripts/dev_setup.sh
+./scripts/dev_setup.sh # with optional [-t -b -p -y -d -n -v], see the script for more details
 cargo build
 cargo xtest
 ```
@@ -28,8 +28,7 @@ request workflow is as follows:
    documentation builds.
 4. Ensure all tests and lints pass on each and every commit that is part of
    your pull request. `cargo x lint && cargo xfmt && cargo xclippy --all-targets`
-5. If you haven't already, complete the Contributor License Agreement (CLA).
-6. Submit your pull request.
+5. Submit your pull request.
 
 ## Authoring Clean Commits
 

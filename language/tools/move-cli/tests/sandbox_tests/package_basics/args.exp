@@ -53,7 +53,7 @@ Command `package coverage bytecode --module AModule`:
 module 1.AModule {
 
 
-public double_except_three(): u64 {
+public double_except_three(x: u64): u64 {
 B0:
 [6]	0: CopyLoc[0](x: u64)
 [6]	1: LdU64(3)
@@ -75,49 +75,49 @@ Command `package disassemble --package MoveStdlib --name Errors`:
 module 1.Errors {
 
 
-public already_published(): u64 {
+public already_published(reason: u64): u64 {
 B0:
 	0: LdAddr[0](U8: [6])
 	1: MoveLoc[0](reason: u64)
 	2: Call[6](make(u8, u64): u64)
 	3: Ret
 }
-public custom(): u64 {
+public custom(reason: u64): u64 {
 B0:
 	0: LdAddr[1](U8: [255])
 	1: MoveLoc[0](reason: u64)
 	2: Call[6](make(u8, u64): u64)
 	3: Ret
 }
-public internal(): u64 {
+public internal(reason: u64): u64 {
 B0:
 	0: LdAddr[2](U8: [10])
 	1: MoveLoc[0](reason: u64)
 	2: Call[6](make(u8, u64): u64)
 	3: Ret
 }
-public invalid_argument(): u64 {
+public invalid_argument(reason: u64): u64 {
 B0:
 	0: LdAddr[3](U8: [7])
 	1: MoveLoc[0](reason: u64)
 	2: Call[6](make(u8, u64): u64)
 	3: Ret
 }
-public invalid_state(): u64 {
+public invalid_state(reason: u64): u64 {
 B0:
 	0: LdAddr[4](U8: [1])
 	1: MoveLoc[0](reason: u64)
 	2: Call[6](make(u8, u64): u64)
 	3: Ret
 }
-public limit_exceeded(): u64 {
+public limit_exceeded(reason: u64): u64 {
 B0:
 	0: LdAddr[5](U8: [8])
 	1: MoveLoc[0](reason: u64)
 	2: Call[6](make(u8, u64): u64)
 	3: Ret
 }
-make(): u64 {
+make(category: u8, reason: u64): u64 {
 B0:
 	0: MoveLoc[0](category: u8)
 	1: CastU64
@@ -127,28 +127,28 @@ B0:
 	5: Add
 	6: Ret
 }
-public not_published(): u64 {
+public not_published(reason: u64): u64 {
 B0:
 	0: LdAddr[6](U8: [5])
 	1: MoveLoc[0](reason: u64)
 	2: Call[6](make(u8, u64): u64)
 	3: Ret
 }
-public requires_address(): u64 {
+public requires_address(reason: u64): u64 {
 B0:
 	0: LdAddr[7](U8: [2])
 	1: MoveLoc[0](reason: u64)
 	2: Call[6](make(u8, u64): u64)
 	3: Ret
 }
-public requires_capability(): u64 {
+public requires_capability(reason: u64): u64 {
 B0:
 	0: LdAddr[8](U8: [4])
 	1: MoveLoc[0](reason: u64)
 	2: Call[6](make(u8, u64): u64)
 	3: Ret
 }
-public requires_role(): u64 {
+public requires_role(reason: u64): u64 {
 B0:
 	0: LdAddr[9](U8: [3])
 	1: MoveLoc[0](reason: u64)

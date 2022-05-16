@@ -984,6 +984,13 @@ impl<'a> Disassembler<'a> {
         parameters: SignatureIndex,
         code: Option<&CodeUnit>,
     ) -> Result<String> {
+        debug_assert_eq!(
+            function_source_map.parameters.len(),
+            self.source_mapper.bytecode.signature_at(parameters).len(),
+            "Arity mismatch between function source map and bytecode for function {}",
+            name
+        );
+
         let visibility_modifier = match function {
             Some(function) => match function.0.visibility {
                 Visibility::Private => {
@@ -1015,7 +1022,7 @@ impl<'a> Disassembler<'a> {
             .signature_at(parameters)
             .0
             .iter()
-            .zip(function_source_map.locals.iter())
+            .zip(function_source_map.parameters.iter())
             .map(|(tok, (name, _))| {
                 Ok(format!(
                     "{}: {}",

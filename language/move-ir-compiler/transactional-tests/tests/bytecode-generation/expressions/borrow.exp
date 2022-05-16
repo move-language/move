@@ -46,7 +46,7 @@ struct T {
 	u: u64
 }
 
-f(loc0: &T) {
+f(Arg0: &T) {
 B0:
 	0: MoveLoc[0](Arg0: &T)
 	1: ImmBorrowField[0](T.u: u64)
@@ -55,7 +55,7 @@ B0:
 	4: Pop
 	5: Ret
 }
-g(loc0: &mut T) {
+g(Arg0: &mut T) {
 B0:
 	0: MoveLoc[0](Arg0: &mut T)
 	1: ImmBorrowField[0](T.u: u64)
@@ -64,7 +64,7 @@ B0:
 	4: Pop
 	5: Ret
 }
-public h(loc0: &mut T) {
+public h(Arg0: &mut T) {
 B0:
 	0: MoveLoc[0](Arg0: &mut T)
 	1: MutBorrowField[0](T.u: u64)
@@ -82,7 +82,7 @@ struct T<Ty0> {
 	u: Ty0
 }
 
-f(loc0: &T<u64>) {
+f(Arg0: &T<u64>) {
 B0:
 	0: MoveLoc[0](Arg0: &T<u64>)
 	1: ImmBorrowFieldGeneric[0](T.u: Ty0)
@@ -91,7 +91,7 @@ B0:
 	4: Pop
 	5: Ret
 }
-g(loc0: &mut T<u128>) {
+g(Arg0: &mut T<u128>) {
 B0:
 	0: MoveLoc[0](Arg0: &mut T<u128>)
 	1: ImmBorrowFieldGeneric[1](T.u: Ty0)

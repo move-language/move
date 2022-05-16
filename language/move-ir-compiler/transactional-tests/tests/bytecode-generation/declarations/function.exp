@@ -7,7 +7,7 @@ struct Coin {
 	value: u64
 }
 
-public value(loc0: &Coin): u64 {
+public value(Arg0: &Coin): u64 {
 B0:
 	0: MoveLoc[0](Arg0: &Coin)
 	1: ImmBorrowField[0](Coin.value: u64)
@@ -16,7 +16,7 @@ B0:
 	4: ReadRef
 	5: Ret
 }
-public deposit(loc0: &mut Coin, loc1: Coin) {
+public deposit(Arg0: &mut Coin, Arg1: Coin) {
 L0:	loc2: &Coin
 L1:	loc3: u64
 L2:	loc4: u64

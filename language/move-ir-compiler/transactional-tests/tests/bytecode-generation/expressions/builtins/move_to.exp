@@ -13,7 +13,7 @@ B0:
 	1: Pack[0](T)
 	2: Ret
 }
-f() {
+f(Arg0: signer) {
 B0:
 	0: ImmBorrowLoc[0](Arg0: signer)
 	1: Call[0](new(): T)

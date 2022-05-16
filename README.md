@@ -11,7 +11,7 @@ This repository is the official home of the Move virtual machine, bytecode verif
 
 ## Community
 
-* Join us on the [Move Discord](https://discord.gg/vTepKPdF).
+* Join us on the [Move Discord](https://discord.gg/cPUmhe24Mz).
 * Browse code and content from the community at [awesome-move](https://github.com/MystenLabs/awesome-move).
 
 ## License

@@ -739,7 +739,10 @@ fn handle_expected_output(test_path: &Path, output: impl AsRef<str>) -> Result<(
     if !exp_path.exists() {
         std::fs::write(&exp_path, "").unwrap();
     }
-    let expected_output = std::fs::read_to_string(&exp_path).unwrap();
+    let expected_output = std::fs::read_to_string(&exp_path)
+        .unwrap()
+        .replace("\r\n", "\n")
+        .replace("\r", "\n");
     if output != expected_output {
         let msg = format!(
             "Expected errors differ from actual errors:\n{}",

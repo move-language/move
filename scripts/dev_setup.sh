@@ -507,24 +507,24 @@ if [[ "$(uname)" == "Linux" ]]; then
       echo "WARNING: dnf package manager support is experimental"
       PACKAGE_MANAGER="dnf"
     fi
-  elif [[ -f /etc/debian_version ]] && command -v yum &> /dev/null; then
+  elif [[ -f /etc/debian_version ]] && command -v apt-get &>/dev/null; then
     PACKAGE_MANAGER="apt-get"
-  elif [[ -f /etc/arch-release ]] && command -v pacman &> /dev/null; then
+  elif [[ -f /etc/arch-release ]] && command -v pacman &>/dev/null; then
     PACKAGE_MANAGER="pacman"
-  elif [[ -f /etc/alpine-release ]] && command -v apk &> /dev/null; then
+  elif [[ -f /etc/alpine-release ]] && command -v apk &>/dev/null; then
     PACKAGE_MANAGER="apk"
   fi
   # if no default PACKAGE_MANAGER detected, pick one that's installed, this is usually useless
   if [[ $PACKAGE_MANAGER == "" ]]; then
-    if command -v yum &> /dev/null; then
+    if command -v yum &>/dev/null; then
       PACKAGE_MANAGER="yum"
-    elif command -v apt-get &> /dev/null; then
+    elif command -v apt-get &>/dev/null; then
       PACKAGE_MANAGER="apt-get"
-    elif command -v pacman &> /dev/null; then
+    elif command -v pacman &>/dev/null; then
       PACKAGE_MANAGER="pacman"
-    elif command -v apk &> /dev/null; then
+    elif command -v apk &>/dev/null; then
       PACKAGE_MANAGER="apk"
-    elif command -v dnf &> /dev/null; then
+    elif command -v dnf &>/dev/null; then
       echo "WARNING: dnf package manager support is experimental"
       PACKAGE_MANAGER="dnf"
     else
@@ -533,7 +533,7 @@ if [[ "$(uname)" == "Linux" ]]; then
     fi
   fi
 elif [[ "$(uname)" == "Darwin" ]]; then
-  if command -v brew &> /dev/null; then
+  if command -v brew &>/dev/null; then
     PACKAGE_MANAGER="brew"
   else
     echo "Missing package manager Homebrew (https://brew.sh/). Abort"

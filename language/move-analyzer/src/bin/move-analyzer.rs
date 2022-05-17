@@ -97,17 +97,19 @@ fn main() {
     let initialize_params: lsp_types::InitializeParams =
         serde_json::from_value(client_response).expect("could not deserialize client capabilities");
 
-    eprintln!("symbolication started");
+    let symbols = if symbols::DEFS_AND_REFS_SUPPORT {
+        eprintln!("symbolication started");
 
-    let symbols = match initialize_params.root_uri {
-        Some(uri) => match symbols::Symbolicator::get_symbols(&uri.to_file_path().unwrap()) {
-            Ok(v) => v,
-            Err(_) => symbols::Symbolicator::empty_symbols(),
-        },
-        None => symbols::Symbolicator::empty_symbols(),
+        match initialize_params.root_uri {
+            Some(uri) => match symbols::Symbolicator::get_symbols(&uri.to_file_path().unwrap()) {
+                Ok(v) => v,
+                Err(_) => symbols::Symbolicator::empty_symbols(),
+            },
+            None => symbols::Symbolicator::empty_symbols(),
+        }
+    } else {
+        symbols::Symbolicator::empty_symbols()
     };
-
-    eprintln!("symbolication finished");
 
     loop {
         match context.connection.receiver.recv() {

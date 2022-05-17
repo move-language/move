@@ -6,4 +6,4 @@ version = "0.0.1"
 MoveStdlib = { local = "../../../move-stdlib/", addr_subst = { "Std" = "0x1" } }
 
 [addresses]
-Basic = "0xCAFE"
+Symbols = "0xCAFE"

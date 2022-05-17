@@ -1,4 +1,4 @@
-module Symols::M2 {
+module Symbols::M2 {
 
     struct SomeOtherStruct has drop {
         some_field: u64,

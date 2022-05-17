@@ -259,9 +259,6 @@ impl UseDefMap {
 impl Symbolicator {
     /// Main driver to get symbols for the whole package
     pub fn get_symbols(pkg_path: &Path) -> Result<Symbols> {
-        if !DEFS_AND_REFS_SUPPORT {
-            return Ok(Self::empty_symbols());
-        }
         let build_config = move_package::BuildConfig {
             test_mode: true,
             install_dir: Some(tempdir().unwrap().path().to_path_buf()),
@@ -1231,9 +1228,10 @@ impl Symbolicator {
                     start: name_start,
                 };
                 let mut scope = scope_stack.pop_front().unwrap(); // scope stack guaranteed non-empty
-                let exists = scope.insert(*name, def_loc);
-                // should be only one def with the same name in a given scope
-                debug_assert!(exists.is_none());
+                scope.insert(*name, def_loc);
+                // in other languages only one definition is allowed per scope but in move an (and
+                // in rust) a variable can be re-defined in the same scope replacing the previous
+                // definition
                 scope_stack.push_front(scope);
 
                 // enter self-definition for def name
@@ -1622,7 +1620,7 @@ fn symbols_test() {
         &symbols.file_name_mapping,
         1,
         24,
-        39,
+        41,
         2,
         11,
         "M2.move",
@@ -1633,7 +1631,7 @@ fn symbols_test() {
         &symbols.file_name_mapping,
         0,
         25,
-        19,
+        21,
         6,
         15,
         "M2.move",
@@ -1644,7 +1642,7 @@ fn symbols_test() {
         &symbols.file_name_mapping,
         1,
         25,
-        37,
+        39,
         6,
         10,
         "M1.move",
@@ -2183,13 +2181,4 @@ fn symbols_test() {
         12,
         "M4.move",
     );
-}
-
-#[test]
-/// Tests if a larger piece of Move code (standard library) get processed by the symbolicator
-/// without errors
-fn symbols_parse_test() {
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.push("../move-stdlib");
-    Symbolicator::get_symbols(path.as_path()).unwrap();
 }

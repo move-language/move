@@ -22,11 +22,11 @@ module Symbols::M1 {
         ret
     }
 
-    fun other_mod_struct(): Basic::M2::SomeOtherStruct {
-        Basic::M2::some_other_struct(SOME_CONST)
+    fun other_mod_struct(): Symbols::M2::SomeOtherStruct {
+        Symbols::M2::some_other_struct(SOME_CONST)
     }
 
-    use Basic::M2::{Self, SomeOtherStruct};
+    use Symbols::M2::{Self, SomeOtherStruct};
 
     fun other_mod_struct_import(): SomeOtherStruct {
         M2::some_other_struct(7)

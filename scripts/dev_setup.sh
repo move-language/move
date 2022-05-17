@@ -496,33 +496,49 @@ if [ "$(whoami)" != 'root' ]; then
   PRE_COMMAND=(sudo)
 fi
 
-PACKAGE_MANAGER=
 if [[ "$(uname)" == "Linux" ]]; then
-	if command -v yum &> /dev/null; then
-		PACKAGE_MANAGER="yum"
-	elif command -v apt-get &> /dev/null; then
-		PACKAGE_MANAGER="apt-get"
-	elif command -v pacman &> /dev/null; then
-		PACKAGE_MANAGER="pacman"
-  elif command -v apk &>/dev/null; then
-		PACKAGE_MANAGER="apk"
-  elif command -v dnf &>/dev/null; then
-    echo "WARNING: dnf package manager support is experimental"
-    PACKAGE_MANAGER="dnf"
-	else
-		echo "Unable to find supported package manager (yum, apt-get, dnf, or pacman). Abort"
-		exit 1
-	fi
+  # check for default package manager for linux
+  if [[ -f /etc/redhat-release ]]; then
+    # use yum by default
+    if command -v yum &>/dev/null; then
+      PACKAGE_MANAGER="yum"
+    elif command -v dnf &>/dev/null; then
+      # dnf is the updated default since Red Hat Enterprise Linux 8, CentOS 8, Fedora 22, and any distros based on these
+      echo "WARNING: dnf package manager support is experimental"
+      PACKAGE_MANAGER="dnf"
+    fi
+  elif [[ -f /etc/debian_version ]] && command -v yum &> /dev/null; then
+    PACKAGE_MANAGER="apt-get"
+  elif [[ -f /etc/arch-release ]] && command -v pacman &> /dev/null; then
+    PACKAGE_MANAGER="pacman"
+  elif [[ -f /etc/alpine-release ]] && command -v apk &> /dev/null; then
+    PACKAGE_MANAGER="apk"
+  fi
+  # if no default PACKAGE_MANAGER detected, pick one that's installed, this is usually useless
+  if [[ $PACKAGE_MANAGER == "" ]]; then
+    if command -v yum &> /dev/null; then
+      PACKAGE_MANAGER="yum"
+    elif command -v apt-get &> /dev/null; then
+      PACKAGE_MANAGER="apt-get"
+    elif command -v pacman &> /dev/null; then
+      PACKAGE_MANAGER="pacman"
+    elif command -v apk &> /dev/null; then
+      PACKAGE_MANAGER="apk"
+    elif command -v dnf &> /dev/null; then
+      echo "WARNING: dnf package manager support is experimental"
+      PACKAGE_MANAGER="dnf"
+    fi
+  fi
 elif [[ "$(uname)" == "Darwin" ]]; then
-	if command -v brew &>/dev/null; then
-		PACKAGE_MANAGER="brew"
-	else
-		echo "Missing package manager Homebrew (https://brew.sh/). Abort"
-		exit 1
-	fi
+  if command -v brew &> /dev/null; then
+    PACKAGE_MANAGER="brew"
+  else
+    echo "Missing package manager Homebrew (https://brew.sh/). Abort"
+    exit 1
+  fi
 else
-	echo "Unknown OS. Abort."
-	exit 1
+  echo "Unknown OS. Abort."
+  exit 1
 fi
 
 if [[ "$BATCH_MODE" == "false" ]]; then

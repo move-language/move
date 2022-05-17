@@ -335,7 +335,7 @@ pub fn run_one(
     }
 
     let expected_output = fs::read_to_string(exp_path).unwrap_or_else(|_| "".to_string());
-    if expected_output != output {
+    if expected_output.trim() != output.trim() {
         anyhow::bail!(
             "Expected output differs from actual output:\n{}",
             format_diff(expected_output, output)

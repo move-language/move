@@ -35,6 +35,7 @@ impl CompiledScript {
         binary: &mut Vec<u8>,
     ) -> Result<()> {
         let version = bytecode_version.unwrap_or(VERSION_MAX);
+        validate_version(version)?;
         let mut binary_data = BinaryData::from(binary.clone());
         let mut ser = ScriptSerializer::new(version);
         let mut temp = BinaryData::new();
@@ -199,6 +200,19 @@ fn serialize_local_index(binary: &mut BinaryData, idx: u8) -> Result<()> {
     write_as_uleb128(binary, idx, LOCAL_INDEX_MAX)
 }
 
+fn validate_version(version: u32) -> Result<()> {
+    if !(VERSION_MIN..=VERSION_MAX).contains(&version) {
+        bail!(
+            "The requested bytecode version {} is not supported. Only {} to {} are.",
+            version,
+            VERSION_MIN,
+            VERSION_MAX
+        )
+    } else {
+        Ok(())
+    }
+}
+
 impl CompiledModule {
     /// Serializes a `CompiledModule` into a binary. The mutable `Vec<u8>` will contain the
     /// binary blob on return.
@@ -213,6 +227,7 @@ impl CompiledModule {
         binary: &mut Vec<u8>,
     ) -> Result<()> {
         let version = bytecode_version.unwrap_or(VERSION_MAX);
+        validate_version(version)?;
         let mut binary_data = BinaryData::from(binary.clone());
         let mut ser = ModuleSerializer::new(version);
         let mut temp = BinaryData::new();
@@ -959,8 +974,6 @@ fn checked_calculate_table_size(binary: &mut BinaryData, start: u32) -> Result<u
 
 impl CommonSerializer {
     pub fn new(major_version: u32) -> CommonSerializer {
-        // We only started supporting different versions since VERSION_5
-        assert!(major_version >= VERSION_5);
         CommonSerializer {
             major_version,
             table_count: 0,
@@ -1034,8 +1047,8 @@ impl CommonSerializer {
             self.constant_pool.0,
             self.constant_pool.1,
         )?;
-        if self.major_version >= VERSION_6 {
-            // Metadata was not introduced before v6, so do not generate it for lower versions.
+        if self.major_version >= VERSION_5 {
+            // Metadata was not introduced before v5, so do not generate it for lower versions.
             serialize_table_index(
                 binary,
                 TableType::METADATA,
@@ -1061,7 +1074,7 @@ impl CommonSerializer {
         self.serialize_identifiers(binary, tables.get_identifiers())?;
         self.serialize_address_identifiers(binary, tables.get_address_identifiers())?;
         self.serialize_constants(binary, tables.get_constant_pool())?;
-        if self.major_version >= VERSION_6 {
+        if self.major_version >= VERSION_5 {
             self.serialize_metadata(binary, tables.get_metadata())?;
         }
         Ok(())

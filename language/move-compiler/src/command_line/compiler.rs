@@ -16,8 +16,6 @@ use crate::{
     },
     to_bytecode, typing, unit_test,
 };
-use anyhow::bail;
-use move_binary_format::file_format_common::{VERSION_5, VERSION_MAX};
 use move_command_line_common::files::{
     extension_equals, find_filenames, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION, SOURCE_MAP_EXTENSION,
 };
@@ -544,17 +542,6 @@ pub fn output_compiled_units(
     compiled_units: Vec<AnnotatedCompiledUnit>,
     out_dir: &str,
 ) -> anyhow::Result<()> {
-    // Validate supported bytecode version.
-    if let Some(v) = bytecode_version {
-        if !(VERSION_5..=VERSION_MAX).contains(&v) {
-            bail!(
-                "The requested bytecode version v{} is not supported. Only v{} to v{} are. ",
-                v,
-                VERSION_5,
-                VERSION_MAX
-            )
-        }
-    }
     const SCRIPT_SUB_DIR: &str = "scripts";
     const MODULE_SUB_DIR: &str = "modules";
     fn num_digits(n: usize) -> usize {

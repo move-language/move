@@ -27,7 +27,7 @@ cd "$SCRIPT_PATH/.." || exit
 function usage {
   echo "Usage:"
   echo "Installs or updates necessary dev tools for Move."
-  echo "-b batch mode, no user interactions and miminal output"
+  echo "-b batch mode, no user interactions and minimal output"
   echo "-p update ${HOME}/.profile"
   echo "-t install build tools"
   echo "-y installs or updates Move prover tools: z3, cvc5, dotnet, boogie"

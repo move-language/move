@@ -1,4 +1,4 @@
-module Basic::M3 {
+module Symbols::M3 {
 
     struct ParamStruct<T> {
         some_field: T,

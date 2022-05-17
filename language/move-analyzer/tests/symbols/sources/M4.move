@@ -1,4 +1,4 @@
-module Basic::M4 {
+module Symbols::M4 {
 
     fun if_cond(tmp: u64): u64 {
 

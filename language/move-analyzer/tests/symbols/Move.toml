@@ -1,5 +1,5 @@
 [package]
-name = "Basic"
+name = "Symbols"
 version = "0.0.1"
 
 [dependencies]

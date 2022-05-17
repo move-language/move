@@ -1,10 +1,50 @@
-// Copyright (c) The Diem Core Contributors
+// Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! This module is responsible for building symbolication information
-//! on top of compiler IR, including identifier definitions to be used
-//! for implementing go-to-def and go-to-references language server
-//! commands.
+//! This module is responsible for building symbolication information on top of compiler's typed
+//! AST, in particular identifier definitions to be used for implementing go-to-def and
+//! go-to-references language server commands.
+//!
+//! There are two main structs that are used at different phases of the process, the Symbolicator
+//! struct is used when building symbolication information and the Symbols struct is summarizes the
+//! symbolication results and is used by the language server find definitions and references.
+//!
+//! Here is a brief description of how the symbolication information is encoded. Each identifier is
+//! in the source code of a given module is represented by its location (UseLoc struct): line
+//! number, starting and ending column, and hash of the source file where this identifier is
+//! located). A definition for each identifier (if any - e.g., built-in type definitions are
+//! excluded as there is no place in source code where they are defined) is also represented by its
+//! location in the source code (DefLoc struct): line, starting column and a hash of the source
+//! file where it's located. The symbolication process maps each identifier with its definition - a
+//! per module map is keyed on the line number where the identifier is located, and the map entry
+//! contains a list of identifier/definition pairs ordered by the column where the identifier starts.
+//!
+//! For example consider the following code fragment (0-based line numbers on the left and 0-based
+//! column numbers at the bottom):
+//!
+//! 7: const SOME_CONST: u64 = 42;
+//! 8:
+//! 9: SOME_CONST + SOME_CONST
+//!    |     |  |   | |      |
+//!    0     6  9  13 15    22
+//!
+//! Symbolication information for this code fragment would look as follows assuming that this code
+//! is stored in a file with hash FHASH (note that identifier in the definition of the constant maps
+//! to itself):
+//!
+//! [7] -> [UseLoc(7:6-13, FHASH), DefLoc(7:6, FHASH)]
+//! [9] -> [UseLoc(9:0-9 , FHASH), DefLoc((7:6, FHASH)], [UseLoc(9:13-22, FHASH), DefLoc((7:6, FHASH)]
+//!
+//! Including line number (and file hash) with the (use) identifier location may appear redundant,
+//! but it's needed to allow accumulating uses with each definition to support
+//! go-to-references. This is done in a global map from an identifier location (DefLoc) to a set of
+//! use locations (UseLoc) - we find a all references of a given identifier by first finding its
+//! definition and then using this definition as a key to the global map.
+//!
+//! Symbolication algorithm first analyzes all top-level definitions from all modules and then
+//! processes function bodies and struct definitions to match uses to definitions. For local
+//! definitions, the symbolicator builds a scope stack, entering encountered definitions and
+//! matching uses to a definition in the innermost scope.
 
 use crate::context::Context;
 use anyhow::Result;
@@ -37,7 +77,12 @@ use move_ir_types::location::*;
 use move_package::compilation::build_plan::BuildPlan;
 use move_symbol_pool::Symbol;
 
+/// Enabling/disabling the language server reporting readiness to support go-to-def and
+/// go-to-references to the IDE.
+pub const DEFS_AND_REFS_SUPPORT: bool = false;
+
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+/// Location of a definition's identifier
 struct DefLoc {
     /// File where the definition of the identifier starts
     fhash: FileHash,
@@ -45,6 +90,7 @@ struct DefLoc {
     start: Position,
 }
 
+/// Location of a use's identifier
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 struct UseLoc {
     /// File where this use identifier starts
@@ -55,30 +101,34 @@ struct UseLoc {
     col_end: u32,
 }
 
+/// Information about both the use identifier (source file is specified wherever an instance of this
+/// struct is used) and the definition identifier
 #[derive(Debug, Clone, Eq)]
 pub struct UseDef {
-    /// Column where the (use) identifier location starts on a given
-    /// line (use this field for sorting uses on the line)
+    /// Column where the (use) identifier location starts on a given line (use this field for
+    /// sorting uses on the line)
     col_start: u32,
-    /// Column where the (use) identifier location ends on a given
-    /// line
+    /// Column where the (use) identifier location ends on a given line
     col_end: u32,
     /// Location of the definition
     def_loc: DefLoc,
 }
 
+/// Definition of a struct field
 #[derive(Debug)]
 struct FieldDef {
     name: Symbol,
     start: Position,
 }
 
+/// Definition of a struct
 #[derive(Debug)]
 struct StructDef {
     name_start: Position,
     field_defs: Vec<FieldDef>,
 }
 
+/// Module-level definitions
 #[derive(Debug)]
 struct ModuleDefs {
     /// File where this module is located
@@ -91,22 +141,24 @@ struct ModuleDefs {
     functions: BTreeMap<Symbol, Position>,
 }
 
+/// Holds information about local definitions in a given scope
+type Scope = BTreeMap<Symbol, DefLoc>;
+
+/// Data used during symbolication
 pub struct Symbolicator {
     /// Outermost definitions in a module (structs, consts, functions)
     mod_outer_defs: BTreeMap<ModuleIdent_, ModuleDefs>,
-    /// A mapping from file names to file content (used to obtain
-    /// source file locations)
+    /// A mapping from file names to file content (used to obtain source file locations)
     files: SimpleFiles<Symbol, String>,
-    /// A mapping from file hashes to file IDs (used to obtain source
-    /// file locations)
+    /// A mapping from file hashes to file IDs (used to obtain source file locations)
     file_id_mapping: BTreeMap<FileHash, usize>,
-    /// Scope to contain type params where relevant (e.g. when
-    /// processing function definition)
+    /// Scope to contain type params where relevant (e.g. when processing function definition)
     type_params: Scope,
     /// Current processed module (always set before module processing starts)
     current_mod: Option<ModuleIdent_>,
 }
 
+/// Result of the symbolication process
 pub struct Symbols {
     /// A map from def locations to all the references (uses)
     references: BTreeMap<DefLoc, BTreeSet<UseLoc>>,
@@ -117,9 +169,6 @@ pub struct Symbols {
     /// A mapping from file hashes to file names
     file_name_mapping: BTreeMap<FileHash, Symbol>,
 }
-
-/// Scope for the purpose of definition resolution
-type Scope = BTreeMap<Symbol, DefLoc>;
 
 impl UseDef {
     fn new(
@@ -179,8 +228,8 @@ impl PartialEq for UseDef {
     }
 }
 
-/// Maps a line number to a list of use-def pairs on a given line
-/// (use-def set is sorted by col_start)
+/// Maps a line number to a list of use-def pairs on a given line (use-def set is sorted by
+/// col_start)
 #[derive(Debug)]
 struct UseDefMap(BTreeMap<u32, BTreeSet<UseDef>>);
 
@@ -210,6 +259,9 @@ impl UseDefMap {
 impl Symbolicator {
     /// Main driver to get symbols for the whole package
     pub fn get_symbols(pkg_path: &Path) -> Result<Symbols> {
+        if !DEFS_AND_REFS_SUPPORT {
+            return Ok(Self::empty_symbols());
+        }
         let build_config = move_package::BuildConfig {
             test_mode: true,
             install_dir: Some(tempdir().unwrap().path().to_path_buf()),
@@ -220,9 +272,8 @@ impl Symbolicator {
 
         let resolution_graph = build_config.resolution_graph_for_package(pkg_path)?;
 
-        // get source files to be able to correlate positions (in terms of
-        // byte offsets) with actual file locations (in terms of
-        // line/column numbers)
+        // get source files to be able to correlate positions (in terms of byte offsets) with actual
+        // file locations (in terms of line/column numbers)
         let source_files = &resolution_graph.file_sources();
         let mut files = SimpleFiles::new();
         let mut file_id_mapping = BTreeMap::new();
@@ -235,7 +286,7 @@ impl Symbolicator {
 
         let build_plan = BuildPlan::create(resolution_graph)?;
         let mut typed_ast = vec![];
-        let pkg = build_plan.compile_with_driver(&mut std::io::sink(), |compiler| {
+        build_plan.compile_with_driver(&mut std::io::sink(), |compiler| {
             let (files, comments_and_compiler_res) = compiler.run::<PASS_TYPING>().unwrap();
             let (_, compiler) =
                 diagnostics::unwrap_or_report_diagnostics(&files, comments_and_compiler_res);
@@ -267,8 +318,8 @@ impl Symbolicator {
             match source_files.get(&pos.file_hash()) {
                 Some((fpath, _)) => {
                     mod_ident_map.insert(
-                        // if canonicalization fails, simply use
-                        // "regular" path to continue processing
+                        // if canonicalization fails, simply use "regular" path to continue
+                        // processing
                         fs::canonicalize(fpath.as_str())
                             .unwrap_or_else(|_| PathBuf::from(fpath.as_str())),
                         *module_ident,
@@ -587,9 +638,8 @@ impl Symbolicator {
                 self.lvalue_list_symbols(true, lvalues, scope_stack, references, use_defs)
             }
             I::Bind(lvalues, opt_types, e) => {
-                // process RHS first to avoid accidentally binding its
-                // identifiers to LHS (which now will be put into the
-                // current scope only after RHS is processed)
+                // process RHS first to avoid accidentally binding its identifiers to LHS (which now
+                // will be put into the current scope only after RHS is processed)
                 self.exp_symbols(e, scope_stack, references, use_defs);
                 for opt_t in opt_types {
                     match opt_t {
@@ -1183,10 +1233,8 @@ impl Symbolicator {
                 let mut scope = scope_stack.pop_front().unwrap(); // scope stack guaranteed non-empty
                 let exists = scope.insert(*name, def_loc);
                 // should be only one def with the same name in a given scope
+                debug_assert!(exists.is_none());
                 scope_stack.push_front(scope);
-
-                // TODO: enable assertion when all scoping rules are in place
-                //                debug_assert!(exists.is_none());
 
                 // enter self-definition for def name
                 use_defs.insert(
@@ -1207,9 +1255,8 @@ impl Symbolicator {
         }
     }
 
-    /// Add a use for and identifier whose definition is expected to
-    /// be local to a function, and pair it with an appropriate
-    /// definition
+    /// Add a use for and identifier whose definition is expected to be local to a function, and
+    /// pair it with an appropriate definition
     fn add_local_use_def(
         &self,
         use_name: &Symbol,
@@ -1246,6 +1293,7 @@ impl Symbolicator {
     }
 }
 
+/// Handles go-to-def request of the language server
 pub fn on_go_to_def_request(context: &Context, request: &Request, symbols: &Symbols) {
     let parameters = serde_json::from_value::<GotoDefinitionParams>(request.params.clone())
         .expect("could not deserialize go-to-def request");
@@ -1267,10 +1315,8 @@ pub fn on_go_to_def_request(context: &Context, request: &Request, symbols: &Symb
         col,
         request.id.clone(),
         |u| {
-            // TODO: Do we need beginning and end of the
-            // definition? Does not seem to make a
-            // difference from the IDE perspective as the
-            // cursor goes to the beginning anyway (at
+            // TODO: Do we need beginning and end of the definition? Does not seem to make a
+            // difference from the IDE perspective as the cursor goes to the beginning anyway (at
             // least in VSCode).
             let range = Range {
                 start: u.def_loc.start,
@@ -1286,6 +1332,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request, symbols: &Symb
     );
 }
 
+/// Handles go-to-references request of the language server
 pub fn on_references_request(context: &Context, request: &Request, symbols: &Symbols) {
     let parameters = serde_json::from_value::<ReferenceParams>(request.params.clone())
         .expect("could not deserialize references request");
@@ -1336,6 +1383,7 @@ pub fn on_references_request(context: &Context, request: &Request, symbols: &Sym
     );
 }
 
+/// Helper function to handle language server queries related to identifier uses
 pub fn on_use_request(
     context: &Context,
     symbols: &Symbols,
@@ -1365,8 +1413,8 @@ pub fn on_use_request(
     }
 
     eprintln!("about to send use response");
-    // unwrap will succeed based on the logic above which the compiler
-    // is unable to figure out without using Option
+    // unwrap will succeed based on the logic above which the compiler is unable to figure out
+    // without using Option
     let response = lsp_server::Response::new_ok(id, result.unwrap());
     context
         .connection
@@ -1375,6 +1423,7 @@ pub fn on_use_request(
         .expect("could not send use response");
 }
 
+#[cfg(test)]
 fn assert_use_def(
     mod_symbols: &UseDefMap,
     file_name_mapping: &BTreeMap<FileHash, Symbol>,
@@ -1398,10 +1447,11 @@ fn assert_use_def(
 }
 
 #[test]
-fn symbols_build_test() {
+/// Tests if symbolication information for specific Move constructs has been constructed correctly.
+fn symbols_test() {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
-    path.push("tests/basic");
+    path.push("tests/symbols");
 
     let symbols = Symbolicator::get_symbols(path.as_path()).unwrap();
 
@@ -2133,4 +2183,13 @@ fn symbols_build_test() {
         12,
         "M4.move",
     );
+}
+
+#[test]
+/// Tests if a larger piece of Move code (standard library) get processed by the symbolicator
+/// without errors
+fn symbols_parse_test() {
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    path.push("../move-stdlib");
+    Symbolicator::get_symbols(path.as_path()).unwrap();
 }

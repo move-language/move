@@ -1,4 +1,4 @@
-module Basic::M1 {
+module Symbols::M1 {
 
     struct SomeStruct has key, drop, store {
         some_field: u64,

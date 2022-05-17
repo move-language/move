@@ -83,8 +83,8 @@ fn main() {
                 work_done_progress: None,
             },
         }),
-        definition_provider: Some(OneOf::Left(true)),
-        references_provider: Some(OneOf::Left(true)),
+        definition_provider: Some(OneOf::Left(symbols::DEFS_AND_REFS_SUPPORT)),
+        references_provider: Some(OneOf::Left(symbols::DEFS_AND_REFS_SUPPORT)),
         ..Default::default()
     })
     .expect("could not serialize server capabilities");
@@ -96,6 +96,7 @@ fn main() {
 
     let initialize_params: lsp_types::InitializeParams =
         serde_json::from_value(client_response).expect("could not deserialize client capabilities");
+
     eprintln!("symbolication started");
 
     let symbols = match initialize_params.root_uri {

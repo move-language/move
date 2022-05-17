@@ -4,7 +4,8 @@
 
 use crate::{check_bounds::BoundsChecker, errors::*, file_format::*, file_format_common::*};
 use move_core_types::{
-    account_address::AccountAddress, identifier::Identifier, vm_status::StatusCode,
+    account_address::AccountAddress, identifier::Identifier, metadata::Metadata,
+    vm_status::StatusCode,
 };
 use std::{collections::HashSet, convert::TryInto, io::Read};
 
@@ -218,6 +219,14 @@ fn load_constant_size(cursor: &mut VersionedCursor) -> BinaryLoaderResult<usize>
     read_uleb_internal(cursor, CONSTANT_SIZE_MAX)
 }
 
+fn load_metadata_key_size(cursor: &mut VersionedCursor) -> BinaryLoaderResult<usize> {
+    read_uleb_internal(cursor, METADATA_KEY_SIZE_MAX)
+}
+
+fn load_metadata_value_size(cursor: &mut VersionedCursor) -> BinaryLoaderResult<usize> {
+    read_uleb_internal(cursor, METADATA_VALUE_SIZE_MAX)
+}
+
 fn load_identifier_size(cursor: &mut VersionedCursor) -> BinaryLoaderResult<usize> {
     read_uleb_internal(cursor, IDENTIFIER_SIZE_MAX)
 }
@@ -386,6 +395,7 @@ trait CommonTables {
     fn get_identifiers(&mut self) -> &mut IdentifierPool;
     fn get_address_identifiers(&mut self) -> &mut AddressIdentifierPool;
     fn get_constant_pool(&mut self) -> &mut ConstantPool;
+    fn get_metadata(&mut self) -> &mut Vec<Metadata>;
 }
 
 impl CommonTables for CompiledScript {
@@ -420,6 +430,10 @@ impl CommonTables for CompiledScript {
     fn get_constant_pool(&mut self) -> &mut ConstantPool {
         &mut self.constant_pool
     }
+
+    fn get_metadata(&mut self) -> &mut Vec<Metadata> {
+        &mut self.metadata
+    }
 }
 
 impl CommonTables for CompiledModule {
@@ -453,6 +467,10 @@ impl CommonTables for CompiledModule {
 
     fn get_constant_pool(&mut self) -> &mut ConstantPool {
         &mut self.constant_pool
+    }
+
+    fn get_metadata(&mut self) -> &mut Vec<Metadata> {
+        &mut self.metadata
     }
 }
 
@@ -503,6 +521,17 @@ fn build_common_tables(
             }
             TableType::CONSTANT_POOL => {
                 load_constant_pool(binary, table, common.get_constant_pool())?;
+            }
+            TableType::METADATA => {
+                if binary.version() < VERSION_5 {
+                    return Err(
+                        PartialVMError::new(StatusCode::MALFORMED).with_message(format!(
+                            "metadata declarations not applicable in bytecode version {}",
+                            binary.version()
+                        )),
+                    );
+                }
+                load_metadata(binary, table, common.get_metadata())?;
             }
             TableType::IDENTIFIERS => {
                 load_identifiers(binary, table, common.get_identifiers())?;
@@ -562,6 +591,7 @@ fn build_module_tables(
             | TableType::IDENTIFIERS
             | TableType::ADDRESS_IDENTIFIERS
             | TableType::CONSTANT_POOL
+            | TableType::METADATA
             | TableType::SIGNATURES => {
                 continue;
             }
@@ -585,7 +615,8 @@ fn build_script_tables(
             | TableType::SIGNATURES
             | TableType::IDENTIFIERS
             | TableType::ADDRESS_IDENTIFIERS
-            | TableType::CONSTANT_POOL => {
+            | TableType::CONSTANT_POOL
+            | TableType::METADATA => {
                 continue;
             }
             TableType::STRUCT_DEFS
@@ -782,7 +813,38 @@ fn load_constant_pool(
 /// Build a single `Constant`
 fn load_constant(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Constant> {
     let type_ = load_signature_token(cursor)?;
-    let size = load_constant_size(cursor)?;
+    let data = load_byte_blob(cursor, load_constant_size)?;
+    Ok(Constant { type_, data })
+}
+
+/// Builds a metadata vector.
+fn load_metadata(
+    binary: &VersionedBinary,
+    table: &Table,
+    metadata: &mut Vec<Metadata>,
+) -> BinaryLoaderResult<()> {
+    let start = table.offset as usize;
+    let end = start + table.count as usize;
+    let mut cursor = binary.new_cursor(start, end);
+    while cursor.position() < u64::from(table.count) {
+        metadata.push(load_metadata_entry(&mut cursor)?)
+    }
+    Ok(())
+}
+
+/// Build a single metadata entry.
+fn load_metadata_entry(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Metadata> {
+    let key = load_byte_blob(cursor, load_metadata_key_size)?;
+    let value = load_byte_blob(cursor, load_metadata_value_size)?;
+    Ok(Metadata { key, value })
+}
+
+/// Helper to load a byte blob with specific size loader.
+fn load_byte_blob(
+    cursor: &mut VersionedCursor,
+    size_loader: impl Fn(&mut VersionedCursor) -> BinaryLoaderResult<usize>,
+) -> BinaryLoaderResult<Vec<u8>> {
+    let size = size_loader(cursor)?;
     let mut data: Vec<u8> = vec![0u8; size];
     let count = cursor.read(&mut data).map_err(|_| {
         PartialVMError::new(StatusCode::MALFORMED)
@@ -790,9 +852,9 @@ fn load_constant(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Constant> {
     })?;
     if count != size {
         return Err(PartialVMError::new(StatusCode::MALFORMED)
-            .with_message("Bad Constant data size".to_string()));
+            .with_message("Bad byte blob size".to_string()));
     }
-    Ok(Constant { type_, data })
+    Ok(data)
 }
 
 /// Builds the `SignaturePool`.
@@ -1420,6 +1482,7 @@ impl TableType {
             0xD => Ok(TableType::FIELD_HANDLE),
             0xE => Ok(TableType::FIELD_INST),
             0xF => Ok(TableType::FRIEND_DECLS),
+            0x10 => Ok(TableType::METADATA),
             _ => Err(PartialVMError::new(StatusCode::UNKNOWN_TABLE_TYPE)),
         }
     }

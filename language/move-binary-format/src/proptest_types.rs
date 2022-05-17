@@ -17,6 +17,7 @@ use proptest::{
 
 mod constants;
 mod functions;
+mod metadata;
 mod signature;
 mod types;
 
@@ -26,6 +27,7 @@ use functions::{
 };
 
 use crate::proptest_types::{
+    metadata::MetadataGen,
     signature::SignatureGen,
     types::{StDefnMaterializeState, StructDefinitionGen, StructHandleGen},
 };
@@ -132,6 +134,7 @@ impl CompiledModuleStrategyGen {
         let address_pool_strat = btree_set(any::<AccountAddress>(), 1..=self.size);
         let identifiers_strat = btree_set(any::<Identifier>(), 5..=self.size + 5);
         let constant_pool_strat = ConstantPoolGen::strategy(0..=self.size, 0..=self.size);
+        let metadata_strat = MetadataGen::strategy(0..=self.size);
 
         // The number of PropIndex instances in each tuple represents the number of pointers out
         // from an instance of that particular kind of node.
@@ -201,7 +204,12 @@ impl CompiledModuleStrategyGen {
         // Note that prop_test only allows a tuple of length up to 10
         (
             self_idx_strat,
-            (address_pool_strat, identifiers_strat, constant_pool_strat),
+            (
+                address_pool_strat,
+                identifiers_strat,
+                constant_pool_strat,
+                metadata_strat,
+            ),
             module_handles_strat,
             (struct_handles_strat, struct_defs_strat),
             random_sigs_strat,
@@ -211,7 +219,7 @@ impl CompiledModuleStrategyGen {
             .prop_map(
                 |(
                     self_idx_gen,
-                    (address_identifier_gens, identifier_gens, constant_pool_gen),
+                    (address_identifier_gens, identifier_gens, constant_pool_gen, metdata_gen),
                     module_handles_gen,
                     (struct_handle_gens, struct_def_gens),
                     random_sigs_gens,
@@ -226,6 +234,7 @@ impl CompiledModuleStrategyGen {
                     let identifiers_len = identifiers.len();
                     let constant_pool = constant_pool_gen.constant_pool();
                     let constant_pool_len = constant_pool.len();
+                    let metadata = metdata_gen.metadata();
 
                     //
                     // module handles
@@ -378,6 +387,7 @@ impl CompiledModuleStrategyGen {
                         identifiers,
                         address_identifiers,
                         constant_pool,
+                        metadata,
                     }
                 },
             )

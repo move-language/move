@@ -11,6 +11,7 @@ pub mod errmap;
 pub mod gas_schedule;
 pub mod identifier;
 pub mod language_storage;
+pub mod metadata;
 pub mod move_resource;
 pub mod parser;
 #[cfg(any(test, feature = "fuzzing"))]

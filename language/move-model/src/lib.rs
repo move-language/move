@@ -415,6 +415,7 @@ fn script_into_module(compiled_script: CompiledScript) -> CompiledModule {
         identifiers: script.identifiers,
         address_identifiers: script.address_identifiers,
         constant_pool: script.constant_pool,
+        metadata: script.metadata,
 
         struct_defs: vec![],
         function_defs: vec![main_def],

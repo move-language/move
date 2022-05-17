@@ -94,6 +94,7 @@ fn no_verify_locals_good() {
         ],
         address_identifiers: vec![AccountAddress::new([0; AccountAddress::LENGTH])],
         constant_pool: vec![],
+        metadata: vec![],
         struct_defs: vec![],
         function_defs: vec![
             FunctionDefinition {

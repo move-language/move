@@ -171,6 +171,7 @@ fn make_module() -> CompiledModule {
                 data: AccountAddress::random().to_vec(),
             },
         ],
+        metadata: vec![],
         field_handles: vec![],
         friend_decls: vec![],
         struct_def_instantiations: vec![],

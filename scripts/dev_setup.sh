@@ -527,6 +527,9 @@ if [[ "$(uname)" == "Linux" ]]; then
     elif command -v dnf &> /dev/null; then
       echo "WARNING: dnf package manager support is experimental"
       PACKAGE_MANAGER="dnf"
+    else
+      echo "Unable to find supported package manager (yum, apt-get, dnf, or pacman). Abort"
+      exit 1
     fi
   fi
 elif [[ "$(uname)" == "Darwin" ]]; then

@@ -21,7 +21,7 @@ DOTNET_VERSION=5.0
 BOOGIE_VERSION=2.9.6
 SOLC_VERSION="v0.8.11+commit.d7f03943"
 
-SCRIPT_PATH="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
+SCRIPT_PATH="$(cd "$(dirname "$0")" >/dev/null 2>&1 && pwd)"
 cd "$SCRIPT_PATH/.." || exit
 
 function usage {
@@ -41,12 +41,11 @@ function usage {
 
 function add_to_profile {
   eval "$1"
-  FOUND=$(grep -c "$1" < "${HOME}/.profile" || true)  # grep error return would kill the script.
+  FOUND=$(grep -c "$1" <"${HOME}/.profile" || true) # grep error return would kill the script.
   if [ "$FOUND" == "0" ]; then
-    echo "$1" >> "${HOME}"/.profile
+    echo "$1" >>"${HOME}"/.profile
   fi
 }
-
 
 # It is important to keep all path updates together to allow this script to work well when run in github actions
 # inside of a docker image created using this script.   GHA wipes the home directory via docker mount options, so
@@ -110,10 +109,10 @@ function install_rustup {
   echo installing rust.
   BATCH_MODE=$1
   if [[ "$OPT_DIR" == "true" ]]; then
-     export RUSTUP_HOME=/opt/rustup/
-     mkdir -p "$RUSTUP_HOME" || true
-     export CARGO_HOME=/opt/cargo/
-     mkdir -p "$CARGO_HOME" || true
+    export RUSTUP_HOME=/opt/rustup/
+    mkdir -p "$RUSTUP_HOME" || true
+    export CARGO_HOME=/opt/cargo/
+    mkdir -p "$CARGO_HOME" || true
   fi
 
   # Install Rust
@@ -122,11 +121,11 @@ function install_rustup {
   fi
   VERSION="$(rustup --version || true)"
   if [ -n "$VERSION" ]; then
-	  if [[ "${BATCH_MODE}" == "false" ]]; then
+    if [[ "${BATCH_MODE}" == "false" ]]; then
       echo "Rustup is already installed, version: $VERSION"
     fi
   else
-	  curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
+    curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
     if [[ -n "${CARGO_HOME}" ]]; then
       PATH="${CARGO_HOME}/bin:${PATH}"
     else
@@ -198,7 +197,7 @@ function install_tidy {
   PACKAGE_MANAGER=$1
   #Differently named packages for tidy
   if [[ "$PACKAGE_MANAGER" == "apk" ]]; then
-    apk --update add --no-cache  -X http://dl-cdn.alpinelinux.org/alpine/edge/testing tidyhtml
+    apk --update add --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/testing tidyhtml
   else
     install_pkg tidy "$PACKAGE_MANAGER"
   fi
@@ -220,7 +219,7 @@ function install_gcc_powerpc_linux_gnu {
 
 function install_toolchain {
   version=$1
-  FOUND=$(rustup show | grep -c "$version" || true )
+  FOUND=$(rustup show | grep -c "$version" || true)
   if [[ "$FOUND" == "0" ]]; then
     echo "Installing ${version} of rust toolchain"
     rustup install "$version"
@@ -234,38 +233,38 @@ function install_dotnet {
   mkdir -p "${DOTNET_INSTALL_DIR}" || true
   if [[ $("${DOTNET_INSTALL_DIR}/dotnet" --list-sdks | grep -c "^${DOTNET_VERSION}" || true) == "0" ]]; then
     if [[ "$(uname)" == "Linux" ]]; then
-        # Install various prerequisites for .dotnet. There are known bugs
-        # in the dotnet installer to warn even if they are present. We try
-        # to install anyway based on the warnings the dotnet installer creates.
-        if [ "$PACKAGE_MANAGER" == "apk" ]; then
-          install_pkg icu "$PACKAGE_MANAGER"
-          install_pkg zlib "$PACKAGE_MANAGER"
-          install_pkg libintl "$PACKAGE_MANAGER"
-          install_pkg libcurl "$PACKAGE_MANAGER"
-        elif [ "$PACKAGE_MANAGER" == "apt-get" ]; then
-          install_pkg gettext "$PACKAGE_MANAGER"
-          install_pkg zlib1g "$PACKAGE_MANAGER"
-        elif [ "$PACKAGE_MANAGER" == "yum" ] || [ "$PACKAGE_MANAGER" == "dnf" ]; then
-          install_pkg icu "$PACKAGE_MANAGER"
-          install_pkg zlib "$PACKAGE_MANAGER"
-        elif [ "$PACKAGE_MANAGER" == "pacman" ]; then
-          install_pkg icu "$PACKAGE_MANAGER"
-          install_pkg zlib "$PACKAGE_MANAGER"
-        fi
+      # Install various prerequisites for .dotnet. There are known bugs
+      # in the dotnet installer to warn even if they are present. We try
+      # to install anyway based on the warnings the dotnet installer creates.
+      if [ "$PACKAGE_MANAGER" == "apk" ]; then
+        install_pkg icu "$PACKAGE_MANAGER"
+        install_pkg zlib "$PACKAGE_MANAGER"
+        install_pkg libintl "$PACKAGE_MANAGER"
+        install_pkg libcurl "$PACKAGE_MANAGER"
+      elif [ "$PACKAGE_MANAGER" == "apt-get" ]; then
+        install_pkg gettext "$PACKAGE_MANAGER"
+        install_pkg zlib1g "$PACKAGE_MANAGER"
+      elif [ "$PACKAGE_MANAGER" == "yum" ] || [ "$PACKAGE_MANAGER" == "dnf" ]; then
+        install_pkg icu "$PACKAGE_MANAGER"
+        install_pkg zlib "$PACKAGE_MANAGER"
+      elif [ "$PACKAGE_MANAGER" == "pacman" ]; then
+        install_pkg icu "$PACKAGE_MANAGER"
+        install_pkg zlib "$PACKAGE_MANAGER"
+      fi
     fi
     # Below we need to (a) set TERM variable because the .net installer expects it and it is not set
     # in some environments (b) use bash not sh because the installer uses bash features.
     if [[ "$(uname)" == "Darwin" ]]; then
-        # On Macs with M1 chip the dotnet-install.sh script will
-        # attempt to download the Arm64 version which does not exist
-        # for .NET 5.x so for now we have to force x64 version instead
-        # to work for both architectures (in emulation mode for the M1
-        # chip).
-        curl -sSL https://dot.net/v1/dotnet-install.sh \
-            | TERM=linux /bin/bash -s -- --channel $DOTNET_VERSION --install-dir "${DOTNET_INSTALL_DIR}" --version latest --architecture "x64"
+      # On Macs with M1 chip the dotnet-install.sh script will
+      # attempt to download the Arm64 version which does not exist
+      # for .NET 5.x so for now we have to force x64 version instead
+      # to work for both architectures (in emulation mode for the M1
+      # chip).
+      curl -sSL https://dot.net/v1/dotnet-install.sh |
+        TERM=linux /bin/bash -s -- --channel $DOTNET_VERSION --install-dir "${DOTNET_INSTALL_DIR}" --version latest --architecture "x64"
     else
-        curl -sSL https://dot.net/v1/dotnet-install.sh \
-            | TERM=linux /bin/bash -s -- --channel $DOTNET_VERSION --install-dir "${DOTNET_INSTALL_DIR}" --version latest
+      curl -sSL https://dot.net/v1/dotnet-install.sh |
+        TERM=linux /bin/bash -s -- --channel $DOTNET_VERSION --install-dir "${DOTNET_INSTALL_DIR}" --version latest
     fi
   else
     echo Dotnet already installed.
@@ -290,8 +289,8 @@ function install_z3 {
     echo "you may want to remove the shared instance to avoid version confusion"
   fi
   if command -v "${INSTALL_DIR}z3" &>/dev/null && [[ "$("${INSTALL_DIR}z3" --version || true)" =~ .*${Z3_VERSION}.* ]]; then
-     echo "Z3 ${Z3_VERSION} already installed"
-     return
+    echo "Z3 ${Z3_VERSION} already installed"
+    return
   fi
   if [[ "$(uname)" == "Linux" ]]; then
     Z3_PKG="z3-$Z3_VERSION-x64-glibc-2.28"
@@ -322,8 +321,8 @@ function install_cvc5 {
     echo "you may want to remove the shared instance to avoid version confusion"
   fi
   if command -v "${INSTALL_DIR}cvc5" &>/dev/null && [[ "$("${INSTALL_DIR}cvc5" --version || true)" =~ .*${CVC5_VERSION}.* ]]; then
-     echo "cvc5 ${CVC5_VERSION} already installed"
-     return
+    echo "cvc5 ${CVC5_VERSION} already installed"
+    return
   fi
   if [[ "$(uname)" == "Linux" ]]; then
     CVC5_PKG="cvc5-Linux"
@@ -346,13 +345,13 @@ function install_cvc5 {
 }
 
 function install_nodejs {
-    if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-      curl -fsSL https://deb.nodesource.com/setup_14.x | "${PRE_COMMAND[@]}" bash -
-      "${PRE_COMMAND[@]}" apt-get install -y nodejs
-    else
-      install_pkg nodejs "$PACKAGE_MANAGER"
-    fi
-    install_pkg npm "$PACKAGE_MANAGER"
+  if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
+    curl -fsSL https://deb.nodesource.com/setup_14.x | "${PRE_COMMAND[@]}" bash -
+    "${PRE_COMMAND[@]}" apt-get install -y nodejs
+  else
+    install_pkg nodejs "$PACKAGE_MANAGER"
+  fi
+  install_pkg npm "$PACKAGE_MANAGER"
 }
 
 function install_solidity {
@@ -371,7 +370,7 @@ function install_solidity {
 }
 
 function welcome_message {
-cat <<EOF
+  cat <<EOF
 Welcome to Move!
 
 This script will download and install the necessary dependencies needed to
@@ -381,7 +380,7 @@ Based on your selection, these tools will be included:
 EOF
 
   if [[ "$INSTALL_BUILD_TOOLS" == "true" ]]; then
-cat <<EOF
+    cat <<EOF
 Build tools (since -t or no option was provided):
   * Rust (and the necessary components, e.g. rust-fmt, clippy)
   * CMake
@@ -394,7 +393,7 @@ EOF
   fi
 
   if [[ "$INSTALL_PROVER" == "true" ]]; then
-cat <<EOF
+    cat <<EOF
 Move prover tools (since -y was provided):
   * z3
   * cvc5
@@ -404,86 +403,86 @@ EOF
   fi
 
   if [[ "$INSTALL_SOLIDITY" == "true" ]]; then
-cat <<EOF
+    cat <<EOF
 Solidity compiler (since -d was provided):
   * solc
 EOF
   fi
 
   if [[ "$INSTALL_PROFILE" == "true" ]]; then
-cat <<EOF
+    cat <<EOF
 Moreover, ~/.profile will be updated (since -p was provided).
 EOF
   fi
 
-cat <<EOF
+  cat <<EOF
 If you'd prefer to install these dependencies yourself, please exit this script
 now with Ctrl-C.
 EOF
 }
 
-BATCH_MODE=false;
-VERBOSE=false;
-INSTALL_BUILD_TOOLS=false;
-INSTALL_PROFILE=false;
-INSTALL_PROVER=false;
-INSTALL_SOLIDITY=false;
-INSTALL_INDIVIDUAL=false;
-INSTALL_PACKAGES=();
+BATCH_MODE=false
+VERBOSE=false
+INSTALL_BUILD_TOOLS=false
+INSTALL_PROFILE=false
+INSTALL_PROVER=false
+INSTALL_SOLIDITY=false
+INSTALL_INDIVIDUAL=false
+INSTALL_PACKAGES=()
 INSTALL_DIR="${HOME}/bin/"
 OPT_DIR="false"
 
 #parse args
 while getopts "btpvydh:i:n" arg; do
   case "$arg" in
-    b)
-      BATCH_MODE="true"
-      ;;
-    t)
-      INSTALL_BUILD_TOOLS="true"
-      ;;
-    p)
-      INSTALL_PROFILE="true"
-      ;;
-    v)
-      VERBOSE=true
-      ;;
-    y)
-      INSTALL_PROVER="true"
-      ;;
-    d)
-      INSTALL_SOLIDITY="true"
-      ;;
-    i)
-      INSTALL_INDIVIDUAL="true"
-      echo "$OPTARG"
-      INSTALL_PACKAGES+=("$OPTARG")
-      ;;
-    n)
-      OPT_DIR="true"
-      ;;
-    *)
-      usage;
-      exit 0;
-      ;;
+  b)
+    BATCH_MODE="true"
+    ;;
+  t)
+    INSTALL_BUILD_TOOLS="true"
+    ;;
+  p)
+    INSTALL_PROFILE="true"
+    ;;
+  v)
+    VERBOSE=true
+    ;;
+  y)
+    INSTALL_PROVER="true"
+    ;;
+  d)
+    INSTALL_SOLIDITY="true"
+    ;;
+  i)
+    INSTALL_INDIVIDUAL="true"
+    echo "$OPTARG"
+    INSTALL_PACKAGES+=("$OPTARG")
+    ;;
+  n)
+    OPT_DIR="true"
+    ;;
+  *)
+    usage
+    exit 0
+    ;;
   esac
 done
 
 if [[ "$VERBOSE" == "true" ]]; then
-	set -x
+  set -x
 fi
 
-if [[ "$INSTALL_BUILD_TOOLS" == "false" ]] && \
-   [[ "$INSTALL_PROFILE" == "false" ]] && \
-   [[ "$INSTALL_PROVER" == "false" ]] && \
-   [[ "$INSTALL_SOLIDITY" == "false" ]] && \
-   [[ "$INSTALL_INDIVIDUAL" == "false" ]]; then
-   INSTALL_BUILD_TOOLS="true"
+if [[ "$INSTALL_BUILD_TOOLS" == "false" ]] &&
+  [[ "$INSTALL_PROFILE" == "false" ]] &&
+  [[ "$INSTALL_PROVER" == "false" ]] &&
+  [[ "$INSTALL_SOLIDITY" == "false" ]] &&
+  [[ "$INSTALL_INDIVIDUAL" == "false" ]]; then
+  INSTALL_BUILD_TOOLS="true"
 fi
 
 if [ ! -f rust-toolchain ]; then
-	echo "Unknown location. Please run this from the move repository. Abort."
-	exit 1
+  echo "Unknown location. Please run this from the move repository. Abort."
+  exit 1
 fi
 
 if [[ "${OPT_DIR}" == "true" ]]; then
@@ -545,24 +544,24 @@ else
 fi
 
 if [[ "$BATCH_MODE" == "false" ]]; then
-    welcome_message
-    printf "Proceed with installing necessary dependencies? (y/N) > "
-    read -e -r input
-    if [[ "$input" != "y"* ]]; then
-	    echo "Exiting..."
-	    exit 0
-    fi
+  welcome_message
+  printf "Proceed with installing necessary dependencies? (y/N) > "
+  read -e -r input
+  if [[ "$input" != "y"* ]]; then
+    echo "Exiting..."
+    exit 0
+  fi
 fi
 
 if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
-	if [[ "$BATCH_MODE" == "false" ]]; then
+  if [[ "$BATCH_MODE" == "false" ]]; then
     echo "Updating apt-get......"
   fi
-	"${PRE_COMMAND[@]}" apt-get update
+  "${PRE_COMMAND[@]}" apt-get update
   if [[ "$BATCH_MODE" == "false" ]]; then
-   echo "Installing ca-certificates......"
+    echo "Installing ca-certificates......"
   fi
-	install_pkg ca-certificates "$PACKAGE_MANAGER"
+  install_pkg ca-certificates "$PACKAGE_MANAGER"
 fi
 
 if [[ "$INSTALL_PROFILE" == "true" ]]; then
@@ -570,7 +569,6 @@ if [[ "$INSTALL_PROFILE" == "true" ]]; then
 fi
 
 install_pkg curl "$PACKAGE_MANAGER"
-
 
 if [[ "$INSTALL_BUILD_TOOLS" == "true" ]]; then
   install_build_essentials "$PACKAGE_MANAGER"
@@ -592,10 +590,9 @@ if [[ "$INSTALL_BUILD_TOOLS" == "true" ]]; then
 fi
 
 if [[ "$INSTALL_INDIVIDUAL" == "true" ]]; then
-  for (( i=0; i < ${#INSTALL_PACKAGES[@]}; i++ ));
-  do
+  for ((i = 0; i < ${#INSTALL_PACKAGES[@]}; i++)); do
     PACKAGE=${INSTALL_PACKAGES[$i]}
-    if ! command -v "install_${PACKAGE}" &> /dev/null; then
+    if ! command -v "install_${PACKAGE}" &>/dev/null; then
       install_pkg "$PACKAGE" "$PACKAGE_MANAGER"
     else
       "install_${PACKAGE}"
@@ -621,7 +618,7 @@ if [[ "$INSTALL_SOLIDITY" == "true" ]]; then
 fi
 
 if [[ "${BATCH_MODE}" == "false" ]]; then
-cat <<EOF
+  cat <<EOF
 Finished installing all dependencies.
 
 You should now be able to build the project by running:

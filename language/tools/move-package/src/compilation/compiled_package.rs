@@ -17,8 +17,12 @@ use move_abigen::{Abigen, AbigenOptions};
 use move_binary_format::file_format::{CompiledModule, CompiledScript};
 use move_bytecode_source_map::utils::source_map_from_file;
 use move_bytecode_utils::Modules;
-use move_command_line_common::files::{
-    extension_equals, find_filenames, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION, SOURCE_MAP_EXTENSION,
+use move_command_line_common::{
+    env::get_bytecode_version_from_env,
+    files::{
+        extension_equals, find_filenames, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION,
+        SOURCE_MAP_EXTENSION,
+    },
 };
 use move_compiler::{
     compiled_unit::{
@@ -342,7 +346,10 @@ impl OnDiskCompiledPackage {
             category_dir
                 .join(&file_path)
                 .with_extension(MOVE_COMPILED_EXTENSION),
-            compiled_unit.unit.serialize().as_slice(),
+            compiled_unit
+                .unit
+                .serialize(get_bytecode_version_from_env())
+                .as_slice(),
         )?;
         self.save_under(
             CompiledPackageLayout::SourceMaps
@@ -575,7 +582,11 @@ impl CompiledPackage {
             }
 
             if resolution_graph.build_options.generate_abis {
-                compiled_abis = Some(Self::build_abis(&model, &root_compiled_units));
+                compiled_abis = Some(Self::build_abis(
+                    get_bytecode_version_from_env(),
+                    &model,
+                    &root_compiled_units,
+                ));
             }
         };
 
@@ -718,14 +729,21 @@ impl CompiledPackage {
     }
 
     fn build_abis(
+        bytecode_version: Option<u32>,
         model: &GlobalEnv,
         compiled_units: &[CompiledUnitWithSource],
     ) -> Vec<(String, Vec<u8>)> {
         let bytecode_map: BTreeMap<_, _> = compiled_units
             .iter()
             .map(|unit| match &unit.unit {
-                CompiledUnit::Script(script) => (script.name.to_string(), unit.unit.serialize()),
-                CompiledUnit::Module(module) => (module.name.to_string(), unit.unit.serialize()),
+                CompiledUnit::Script(script) => (
+                    script.name.to_string(),
+                    unit.unit.serialize(bytecode_version),
+                ),
+                CompiledUnit::Module(module) => (
+                    module.name.to_string(),
+                    unit.unit.serialize(bytecode_version),
+                ),
             })
             .collect();
         let abi_options = AbigenOptions {

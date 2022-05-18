@@ -189,15 +189,15 @@ impl CompiledUnit {
         }
     }
 
-    pub fn serialize(&self) -> Vec<u8> {
+    pub fn serialize(&self, bytecode_version: Option<u32>) -> Vec<u8> {
         let mut serialized = Vec::<u8>::new();
         match self {
-            Self::Module(NamedCompiledModule { module, .. }) => {
-                module.serialize(&mut serialized).unwrap()
-            }
-            Self::Script(NamedCompiledScript { script, .. }) => {
-                script.serialize(&mut serialized).unwrap()
-            }
+            Self::Module(NamedCompiledModule { module, .. }) => module
+                .serialize_for_version(bytecode_version, &mut serialized)
+                .unwrap(),
+            Self::Script(NamedCompiledScript { script, .. }) => script
+                .serialize_for_version(bytecode_version, &mut serialized)
+                .unwrap(),
         };
         serialized
     }

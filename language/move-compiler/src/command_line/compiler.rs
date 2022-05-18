@@ -536,6 +536,7 @@ pub fn sanity_check_compiled_units(
 
 /// Given a file map and a set of compiled programs, saves the compiled programs to disk
 pub fn output_compiled_units(
+    bytecode_version: Option<u32>,
     emit_source_maps: bool,
     files: FilesSourceText,
     compiled_units: Vec<AnnotatedCompiledUnit>,
@@ -558,7 +559,7 @@ pub fn output_compiled_units(
             }
 
             $path.set_extension(MOVE_COMPILED_EXTENSION);
-            fs::write($path.as_path(), &$unit.serialize())?
+            fs::write($path.as_path(), &$unit.serialize(bytecode_version))?
         }};
     }
 

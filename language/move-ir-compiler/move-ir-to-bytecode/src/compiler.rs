@@ -382,6 +382,7 @@ pub fn compile_script<'a>(
         identifiers,
         address_identifiers,
         constant_pool,
+        metadata: vec![],
 
         type_parameters: sig.type_parameters,
         parameters: parameters_sig_idx,
@@ -478,6 +479,7 @@ pub fn compile_module<'a>(
         identifiers,
         address_identifiers,
         constant_pool,
+        metadata: vec![],
         struct_defs,
         function_defs,
     };
@@ -556,6 +558,7 @@ fn compile_explicit_dependency_declarations(
             identifiers,
             address_identifiers,
             constant_pool,
+            metadata: vec![],
             struct_defs: vec![],
             function_defs: vec![],
         };

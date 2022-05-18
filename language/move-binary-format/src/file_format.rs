@@ -38,6 +38,7 @@ use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
+    metadata::Metadata,
     vm_status::StatusCode,
 };
 #[cfg(any(test, feature = "fuzzing"))]
@@ -1716,11 +1717,12 @@ pub struct CompiledScript {
     /// Constant pool. The constant values used in the transaction.
     pub constant_pool: ConstantPool,
 
+    pub metadata: Vec<Metadata>,
+
+    pub code: CodeUnit,
     pub type_parameters: Vec<AbilitySet>,
 
     pub parameters: SignatureIndex,
-
-    pub code: CodeUnit,
 }
 
 impl CompiledScript {
@@ -1767,6 +1769,8 @@ pub struct CompiledModule {
     pub address_identifiers: AddressIdentifierPool,
     /// Constant pool. The constant values used in the module.
     pub constant_pool: ConstantPool,
+
+    pub metadata: Vec<Metadata>,
 
     /// Types defined in this module.
     pub struct_defs: Vec<StructDefinition>,
@@ -1818,6 +1822,7 @@ impl Arbitrary for CompiledScript {
                         identifiers,
                         address_identifiers,
                         constant_pool: vec![],
+                        metadata: vec![],
                         type_parameters,
                         parameters,
                         code,
@@ -1878,6 +1883,7 @@ impl Arbitrary for CompiledModule {
                         identifiers,
                         address_identifiers,
                         constant_pool: vec![],
+                        metadata: vec![],
                         struct_defs,
                         function_defs,
                     }
@@ -1948,6 +1954,7 @@ pub fn empty_module() -> CompiledModule {
         identifiers: vec![self_module_name().to_owned()],
         address_identifiers: vec![AccountAddress::ZERO],
         constant_pool: vec![],
+        metadata: vec![],
         function_defs: vec![],
         struct_defs: vec![],
         struct_handles: vec![],
@@ -2028,6 +2035,7 @@ pub fn empty_script() -> CompiledScript {
         identifiers: vec![],
         address_identifiers: vec![],
         constant_pool: vec![],
+        metadata: vec![],
 
         type_parameters: vec![],
         parameters: SignatureIndex(0),

@@ -10,6 +10,7 @@ use crate::{
     NativeFunctionRecord,
 };
 use anyhow::{bail, Result};
+use move_command_line_common::env::get_bytecode_version_from_env;
 use move_core_types::gas_schedule::CostTable;
 use move_package::compilation::compiled_package::CompiledPackage;
 use move_vm_runtime::move_vm::MoveVM;
@@ -52,6 +53,8 @@ pub fn publish(
         }
     }
 
+    let bytecode_version = get_bytecode_version_from_env();
+
     // use the the publish_module API from the VM if we do not allow breaking changes
     if !ignore_breaking_changes {
         let vm = MoveVM::new(natives).unwrap();
@@ -62,7 +65,7 @@ pub fn publish(
         match override_ordering {
             None => {
                 for unit in package.root_modules() {
-                    let module_bytes = unit.unit.serialize();
+                    let module_bytes = unit.unit.serialize(bytecode_version);
                     let id = module(&unit.unit)?.self_id();
                     let sender = *id.address();
 
@@ -87,7 +90,7 @@ pub fn publish(
                     match module_map.get(name) {
                         None => bail!("Invalid module name in publish ordering: {}", name),
                         Some(unit) => {
-                            let module_bytes = unit.unit.serialize();
+                            let module_bytes = unit.unit.serialize(bytecode_version);
                             module_bytes_vec.push(module_bytes);
                             if sender_opt.is_none() {
                                 sender_opt = Some(*module(&unit.unit)?.self_id().address());
@@ -133,7 +136,7 @@ pub fn publish(
         let mut serialized_modules = vec![];
         for unit in package.all_modules() {
             let id = module(&unit.unit)?.self_id();
-            let module_bytes = unit.unit.serialize();
+            let module_bytes = unit.unit.serialize(bytecode_version);
             serialized_modules.push((id, module_bytes));
         }
         state.save_modules(&serialized_modules)?;

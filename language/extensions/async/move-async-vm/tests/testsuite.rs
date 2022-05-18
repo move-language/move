@@ -156,7 +156,7 @@ impl Harness {
             self.log(format!("publishing {}", id));
             session
                 .get_move_session()
-                .publish_module(cu.serialize(), test_account(), gas)?
+                .publish_module(cu.serialize(None), test_account(), gas)?
         }
         Ok(())
     }
@@ -368,7 +368,7 @@ impl<'a> ModuleResolver for HarnessProxy<'a> {
             .harness
             .module_cache
             .get(id.name())
-            .map(|c| c.serialize()))
+            .map(|c| c.serialize(None)))
     }
 }
 

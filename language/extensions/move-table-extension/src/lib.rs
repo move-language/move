@@ -367,18 +367,14 @@ fn native_add_box(
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    assert!(ty_args.len() == 3);
-    assert!(args.len() == 3);
+    assert_eq!(ty_args.len(), 3);
+    assert_eq!(args.len(), 3);
 
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
 
     let val = args.pop_back().unwrap();
-    let key = args
-        .pop_back()
-        .unwrap()
-        .value_as::<Reference>()?
-        .read_ref()?;
+    let key = args.pop_back().unwrap();
     let handle = get_table_handle(&pop_arg!(args, StructRef))?;
 
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
@@ -398,17 +394,13 @@ fn native_borrow_box(
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    assert!(ty_args.len() == 3);
-    assert!(args.len() == 2);
+    assert_eq!(ty_args.len(), 3);
+    assert_eq!(args.len(), 2);
 
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
 
-    let key = args
-        .pop_back()
-        .unwrap()
-        .value_as::<Reference>()?
-        .read_ref()?;
+    let key = args.pop_back().unwrap();
     let handle = get_table_handle(&pop_arg!(args, StructRef))?;
 
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
@@ -427,17 +419,13 @@ fn native_contains_box(
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    assert!(ty_args.len() == 3);
-    assert!(args.len() == 2);
+    assert_eq!(ty_args.len(), 3);
+    assert_eq!(args.len(), 2);
 
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
 
-    let key = args
-        .pop_back()
-        .unwrap()
-        .value_as::<Reference>()?
-        .read_ref()?;
+    let key = args.pop_back().unwrap();
     let handle = get_table_handle(&pop_arg!(args, StructRef))?;
 
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
@@ -456,17 +444,13 @@ fn native_remove_box(
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    assert!(ty_args.len() == 3);
-    assert!(args.len() == 2);
+    assert_eq!(ty_args.len(), 3);
+    assert_eq!(args.len(), 2);
 
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
 
-    let key = args
-        .pop_back()
-        .unwrap()
-        .value_as::<Reference>()?
-        .read_ref()?;
+    let key = args.pop_back().unwrap();
     let handle = get_table_handle(&pop_arg!(args, StructRef))?;
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
     let (val, key_size, val_size) = table.remove(table_context, &key)?;
@@ -484,8 +468,8 @@ fn native_destroy_empty_box(
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    assert!(ty_args.len() == 3);
-    assert!(args.len() == 1);
+    assert_eq!(ty_args.len(), 3);
+    assert_eq!(args.len(), 1);
 
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
@@ -509,8 +493,8 @@ fn native_drop_unchecked_box(
     ty_args: Vec<Type>,
     args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    assert!(ty_args.len() == 3);
-    assert!(args.len() == 1);
+    assert_eq!(ty_args.len(), 3);
+    assert_eq!(args.len(), 1);
 
     Ok(NativeResult::ok(InternalGasUnits::new(0_u64), smallvec![]))
 }

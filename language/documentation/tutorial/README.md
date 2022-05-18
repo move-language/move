@@ -28,7 +28,7 @@ If you haven't already, open your terminal and clone [the Diem repository](https
 
 ```bash
 git clone https://github.com/diem/diem.git
-git clone https://github.com/diem/move.git
+git clone https://github.com/move-language/move.git
 ```
 
 Go to the `diem` directory and run the `dev_setup.sh` script:

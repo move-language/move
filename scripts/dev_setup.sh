@@ -32,6 +32,7 @@ function usage {
   echo "-t install build tools"
   echo "-y installs or updates Move prover tools: z3, cvc5, dotnet, boogie"
   echo "-d installs the solidity compiler"
+  echo "-g installs Git (required by the Move CLI)"
   echo "-v verbose mode"
   echo "-i installs an individual tool by name"
   echo "-n will target the /opt/ dir rather than the $HOME dir.  /opt/bin/, /opt/rustup/, and /opt/dotnet/ rather than $HOME/bin/, $HOME/.rustup/, and $HOME/.dotnet/"
@@ -409,6 +410,13 @@ Solidity compiler (since -d was provided):
 EOF
   fi
 
+  if [[ "$INSTALL_GIT" == "true" ]]; then
+    cat <<EOF
+Version control system (since -g was provided):
+  * git
+EOF
+  fi
+
   if [[ "$INSTALL_PROFILE" == "true" ]]; then
     cat <<EOF
 Moreover, ~/.profile will be updated (since -p was provided).
@@ -427,44 +435,48 @@ INSTALL_BUILD_TOOLS=false
 INSTALL_PROFILE=false
 INSTALL_PROVER=false
 INSTALL_SOLIDITY=false
+INSTALL_GIT=false
 INSTALL_INDIVIDUAL=false
 INSTALL_PACKAGES=()
 INSTALL_DIR="${HOME}/bin/"
 OPT_DIR="false"
 
 #parse args
-while getopts "btpvydh:i:n" arg; do
+while getopts "btpvydgh:i:n" arg; do
   case "$arg" in
-  b)
-    BATCH_MODE="true"
-    ;;
-  t)
-    INSTALL_BUILD_TOOLS="true"
-    ;;
-  p)
-    INSTALL_PROFILE="true"
-    ;;
-  v)
-    VERBOSE=true
-    ;;
-  y)
-    INSTALL_PROVER="true"
-    ;;
-  d)
-    INSTALL_SOLIDITY="true"
-    ;;
-  i)
-    INSTALL_INDIVIDUAL="true"
-    echo "$OPTARG"
-    INSTALL_PACKAGES+=("$OPTARG")
-    ;;
-  n)
-    OPT_DIR="true"
-    ;;
-  *)
-    usage
-    exit 0
-    ;;
+    b)
+      BATCH_MODE="true"
+      ;;
+    t)
+      INSTALL_BUILD_TOOLS="true"
+      ;;
+    p)
+      INSTALL_PROFILE="true"
+      ;;
+    v)
+      VERBOSE="true"
+      ;;
+    y)
+      INSTALL_PROVER="true"
+      ;;
+    d)
+      INSTALL_SOLIDITY="true"
+      ;;
+    g)
+      INSTALL_GIT="true"
+      ;;
+    i)
+      INSTALL_INDIVIDUAL="true"
+      echo "$OPTARG"
+      INSTALL_PACKAGES+=("$OPTARG")
+      ;;
+    n)
+      OPT_DIR="true"
+      ;;
+    *)
+      usage
+      exit 0
+      ;;
   esac
 done
 
@@ -472,10 +484,11 @@ if [[ "$VERBOSE" == "true" ]]; then
   set -x
 fi
 
-if [[ "$INSTALL_BUILD_TOOLS" == "false" ]] &&
-  [[ "$INSTALL_PROFILE" == "false" ]] &&
-  [[ "$INSTALL_PROVER" == "false" ]] &&
-  [[ "$INSTALL_SOLIDITY" == "false" ]] &&
+if [[ "$INSTALL_BUILD_TOOLS" == "false" ]] && \
+  [[ "$INSTALL_PROFILE" == "false" ]] && \
+  [[ "$INSTALL_PROVER" == "false" ]] && \
+  [[ "$INSTALL_SOLIDITY" == "false" ]] && \
+  [[ "$INSTALL_GIT" == "false" ]] && \
   [[ "$INSTALL_INDIVIDUAL" == "false" ]]; then
   INSTALL_BUILD_TOOLS="true"
 fi
@@ -615,6 +628,10 @@ fi
 
 if [[ "$INSTALL_SOLIDITY" == "true" ]]; then
   install_solidity
+fi
+
+if [[ "$INSTALL_GIT" == "true" ]]; then
+  install_pkg git "$PACKAGE_MANAGER"
 fi
 
 if [[ "${BATCH_MODE}" == "false" ]]; then

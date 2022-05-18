@@ -241,6 +241,9 @@ jobs:
         uses: actions/setup-ruby@v1
         with:
           ruby-version: 2.6.x
+      - name: Disable TCP/UDP Offloading
+        shell: bash
+        run: sudo ethtool -K eth0 tx off rx off
       - name: Run Checks
         run: |
           gem install awesome_bot

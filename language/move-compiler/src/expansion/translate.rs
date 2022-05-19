@@ -403,7 +403,7 @@ fn module_(
     assert!(context.address == None);
     assert!(address == None);
     set_sender_address(context, &name, module_address);
-    let _ = check_restricted_name_all_cases(context, "module", &name.0);
+    let _ = check_restricted_name_all_cases(context, NameCase::Module, &name.0);
     if name.value().starts_with(|c| c == '_') {
         let msg = format!(
             "Invalid module name '{}'. Module names cannot start with '_'",
@@ -869,7 +869,8 @@ fn use_(context: &mut Context, acc: &mut AliasMapBuilder, u: P::UseDecl) {
     macro_rules! add_module_alias {
         ($ident:expr, $alias_opt:expr) => {{
             let alias: Name = $alias_opt.unwrap_or_else(|| $ident.value.module.0.clone());
-            if let Err(()) = check_restricted_name_all_cases(context, "module alias", &alias) {
+            if let Err(()) = check_restricted_name_all_cases(context, NameCase::ModuleAlias, &alias)
+            {
                 return;
             }
 
@@ -2437,7 +2438,7 @@ fn check_valid_address_name_(
     use P::LeadingNameAccess_ as LN;
     match ln_ {
         LN::AnonymousAddress(_) => Ok(()),
-        LN::Name(n) => check_restricted_name_all_cases_(env, "address", n),
+        LN::Name(n) => check_restricted_name_all_cases_(env, NameCase::Address, n),
     }
 }
 
@@ -2455,7 +2456,7 @@ fn check_valid_local_name(context: &mut Context, v: &Var) {
             .env
             .add_diag(diag!(Declarations::InvalidName, (v.loc(), msg)));
     }
-    let _ = check_restricted_name_all_cases(context, "variable", &v.0);
+    let _ = check_restricted_name_all_cases(context, NameCase::Variable, &v.0);
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -2467,12 +2468,44 @@ enum ModuleMemberKind {
 }
 
 impl ModuleMemberKind {
-    pub fn case(&self) -> &'static str {
+    fn case(self) -> NameCase {
         match self {
-            ModuleMemberKind::Function => "function",
-            ModuleMemberKind::Constant => "constant",
-            ModuleMemberKind::Struct => "struct",
-            ModuleMemberKind::Schema => "schema",
+            ModuleMemberKind::Constant => NameCase::Constant,
+            ModuleMemberKind::Function => NameCase::Function,
+            ModuleMemberKind::Struct => NameCase::Struct,
+            ModuleMemberKind::Schema => NameCase::Schema,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+enum NameCase {
+    Constant,
+    Function,
+    Struct,
+    Schema,
+    Module,
+    ModuleMemberAlias(ModuleMemberKind),
+    ModuleAlias,
+    Variable,
+    Address,
+}
+
+impl NameCase {
+    const fn name(&self) -> &'static str {
+        match self {
+            NameCase::Constant => "constant",
+            NameCase::Function => "function",
+            NameCase::Struct => "struct",
+            NameCase::Schema => "schema",
+            NameCase::Module => "module",
+            NameCase::ModuleMemberAlias(ModuleMemberKind::Function) => "function alias",
+            NameCase::ModuleMemberAlias(ModuleMemberKind::Constant) => "constant alias",
+            NameCase::ModuleMemberAlias(ModuleMemberKind::Struct) => "struct alias",
+            NameCase::ModuleMemberAlias(ModuleMemberKind::Schema) => "schema alias",
+            NameCase::ModuleAlias => "module alias",
+            NameCase::Variable => "variable",
+            NameCase::Address => "address",
         }
     }
 }
@@ -2497,7 +2530,7 @@ fn check_valid_module_member_alias(
         context,
         member,
         &alias,
-        &format!("{} alias", member.case()),
+        NameCase::ModuleMemberAlias(member),
     ) {
         Err(()) => None,
         Ok(()) => Some(alias),
@@ -2508,7 +2541,7 @@ fn check_valid_module_member_name_impl(
     context: &mut Context,
     member: ModuleMemberKind,
     n: &Name,
-    case: &str,
+    case: NameCase,
 ) -> Result<(), ()> {
     use ModuleMemberKind as M;
     fn upper_first_letter(s: &str) -> String {
@@ -2518,15 +2551,14 @@ fn check_valid_module_member_name_impl(
             Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
         }
     }
-    let lcase = case;
     match member {
         M::Function => {
             if n.value.starts_with(|c| c == '_') {
                 let msg = format!(
                     "Invalid {} name '{}'. {} names cannot start with '_'",
-                    lcase,
+                    case.name(),
                     n,
-                    upper_first_letter(case),
+                    upper_first_letter(case.name()),
                 );
                 context
                     .env
@@ -2538,9 +2570,9 @@ fn check_valid_module_member_name_impl(
             if !is_valid_struct_constant_or_schema_name(&n.value) {
                 let msg = format!(
                     "Invalid {} name '{}'. {} names must start with 'A'..'Z'",
-                    lcase,
+                    case.name(),
                     n,
-                    upper_first_letter(case),
+                    upper_first_letter(case.name()),
                 );
                 context
                     .env
@@ -2553,20 +2585,20 @@ fn check_valid_module_member_name_impl(
     // TODO move these names to a more central place?
     check_restricted_names(
         context,
-        lcase,
+        case,
         n,
         crate::naming::ast::BuiltinFunction_::all_names(),
     )?;
     check_restricted_names(
         context,
-        lcase,
+        case,
         n,
         crate::naming::ast::BuiltinTypeName_::all_names(),
     )?;
 
     // Restricting Self for now in the case where we ever have impls
     // Otherwise, we could allow it
-    check_restricted_name_all_cases(context, lcase, n)?;
+    check_restricted_name_all_cases(context, case, n)?;
 
     Ok(())
 }
@@ -2577,17 +2609,24 @@ pub fn is_valid_struct_constant_or_schema_name(s: &str) -> bool {
 
 // Checks for a restricted name in any decl case
 // Self and vector are not allowed
-fn check_restricted_name_all_cases(context: &mut Context, case: &str, n: &Name) -> Result<(), ()> {
+fn check_restricted_name_all_cases(
+    context: &mut Context,
+    case: NameCase,
+    n: &Name,
+) -> Result<(), ()> {
     check_restricted_name_all_cases_(context.env, case, n)
 }
 
 fn check_restricted_name_all_cases_(
     env: &mut CompilationEnv,
-    case: &str,
+    case: NameCase,
     n: &Name,
 ) -> Result<(), ()> {
     let n_str = n.value.as_str();
-    if n_str == ModuleName::SELF_NAME || n_str == crate::naming::ast::BuiltinTypeName_::VECTOR {
+    let can_be_vector = matches!(case, NameCase::Module | NameCase::ModuleAlias);
+    if n_str == ModuleName::SELF_NAME
+        || (!can_be_vector && n_str == crate::naming::ast::BuiltinTypeName_::VECTOR)
+    {
         env.add_diag(restricted_name_error(case, n.loc, n_str));
         Err(())
     } else {
@@ -2597,7 +2636,7 @@ fn check_restricted_name_all_cases_(
 
 fn check_restricted_names(
     context: &mut Context,
-    case: &str,
+    case: NameCase,
     sp!(loc, n_): &Name,
     all_names: &BTreeSet<Symbol>,
 ) -> Result<(), ()> {
@@ -2609,8 +2648,8 @@ fn check_restricted_names(
     }
 }
 
-fn restricted_name_error(case: &str, loc: Loc, restricted: &str) -> Diagnostic {
-    let a_or_an = match case.chars().next().unwrap() {
+fn restricted_name_error(case: NameCase, loc: Loc, restricted: &str) -> Diagnostic {
+    let a_or_an = match case.name().chars().next().unwrap() {
         // TODO this is not exhaustive to the indefinite article rules in English
         // but 'case' is never user generated, so it should be okay for a while/forever...
         'a' | 'e' | 'i' | 'o' | 'u' => "an",
@@ -2620,7 +2659,7 @@ fn restricted_name_error(case: &str, loc: Loc, restricted: &str) -> Diagnostic {
         "Invalid {case} name '{restricted}'. '{restricted}' is restricted and cannot be used to \
          name {a_or_an} {case}",
         a_or_an = a_or_an,
-        case = case,
+        case = case.name(),
         restricted = restricted,
     );
     diag!(NameResolution::ReservedName, (loc, msg))

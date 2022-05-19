@@ -15,9 +15,8 @@ use move_model::{
     emit, emitln,
     model::{GlobalEnv, QualifiedInstId, StructEnv, StructId},
     pragmas::{
-        ADDITION_OVERFLOW_UNCHECKED_PRAGMA,
-        SUBTRACTION_UNDERFLOW_UNCHECKED_PRAGMA,
-        SEED_PRAGMA, TIMEOUT_PRAGMA
+        ADDITION_OVERFLOW_UNCHECKED_PRAGMA, SEED_PRAGMA, SUBTRACTION_UNDERFLOW_UNCHECKED_PRAGMA,
+        TIMEOUT_PRAGMA,
     },
     ty::{PrimitiveType, Type},
 };

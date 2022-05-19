@@ -1,6 +1,6 @@
 //# publish
 module 0x42.Token {
-    import 0x1.Signer;
+    import 0x1.signer;
 
     struct T has key {balance: u64}
 
@@ -45,7 +45,7 @@ module 0x42.Token {
         z = Self.new(0);
         Self.publish(copy(account), move(z));
 
-        addr1 = Signer.address_of(move(account));
+        addr1 = signer.address_of(move(account));
         // returns mut reference, test its usage
         struct1 = borrow_global_mut<T>(copy(addr1));
 

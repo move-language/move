@@ -1,6 +1,6 @@
 //# publish
 module 0x42.M {
-    import 0x1.Signer;
+    import 0x1.signer;
 
     struct Foo has key {
         x: u8,
@@ -15,7 +15,7 @@ module 0x42.M {
     public bar(account: &signer): u8 acquires Foo {
         let x: u8;
     label b0:
-        Foo { x } = move_from<Foo>(Signer.address_of(move(account)));
+        Foo { x } = move_from<Foo>(signer.address_of(move(account)));
         return move(x);
     }
 }

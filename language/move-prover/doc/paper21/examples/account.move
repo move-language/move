@@ -7,25 +7,25 @@ module 0x42::Account {
   fun withdraw(account: address, amount: u64) acquires Account {
     // assert!(amount <= AccountLimits::max_decrease(), Errors::invalid_argument()); // MISSING
     let balance = &mut borrow_global_mut<Account>(account).balance;
-    assert!(*balance >= amount, Errors::limit_exceeded());
+    assert!(*balance >= amount, errors::limit_exceeded());
     // assert!(*balance - amount >= AccountLimits::min_balance(), Errors::invalid_argument()); // MISSING
     *balance = *balance - amount;
   }
 
   fun deposit(account: address, amount: u64) acquires Account {
     let balance = &mut borrow_global_mut<Account>(account).balance;
-    assert!(*balance <= Limits::max_u64() - amount, Errors::limit_exceeded());
+    assert!(*balance <= Limits::max_u64() - amount, errors::limit_exceeded());
     *balance = *balance + amount;
   }
 
   public(script) fun transfer(from: &signer, to: address, amount: u64) acquires Account {
-    assert!(Signer::address_of(from) != to, Errors::invalid_argument());
-    withdraw(Signer::address_of(from), amount);
+    assert!(signer::address_of(from) != to, errors::invalid_argument());
+    withdraw(signer::address_of(from), amount);
     deposit(to, amount);
   }
 
   spec transfer {
-    let from_addr = Signer::address_of(from);
+    let from_addr = signer::address_of(from);
     aborts_if from_addr == to;
     aborts_if bal(from_addr) < amount;
     aborts_if bal(to) + amount > Limits::max_u64();
@@ -50,7 +50,7 @@ module 0x42::Account {
   use 0x42::Errors;
   use 0x42::Limits;
   use 0x42::AccountLimits;
-  use Std::Signer;
+  use std::signer;
 }
 
 module 0x42::Errors {

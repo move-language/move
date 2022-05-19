@@ -1,9 +1,9 @@
 /// This module defines structs and methods to initialize VM configurations,
 /// including different costs of running the VM.
 module CoreFramework::ParallelExecutionConfig {
-    use Std::Capability::Cap;
-    use Std::Errors;
-    use Std::Option::{Self, Option};
+    use std::capability::Cap;
+    use std::errors;
+    use std::option::{Self, Option};
     use CoreFramework::DiemConfig;
     use CoreFramework::DiemTimestamp;
     use CoreFramework::SystemAddresses;
@@ -32,12 +32,12 @@ module CoreFramework::ParallelExecutionConfig {
 
         assert!(
             !exists<ParallelExecutionConfigChainMarker<T>>(@CoreResources),
-            Errors::already_published(ECHAIN_MARKER)
+            errors::already_published(ECHAIN_MARKER)
         );
 
         assert!(
             !exists<ParallelExecutionConfig>(@CoreResources),
-            Errors::already_published(ECONFIG)
+            errors::already_published(ECONFIG)
         );
 
         move_to(account, ParallelExecutionConfigChainMarker<T>{});
@@ -45,7 +45,7 @@ module CoreFramework::ParallelExecutionConfig {
         move_to(
             account,
             ParallelExecutionConfig {
-                read_write_analysis_result: Option::none(),
+                read_write_analysis_result: option::none(),
             },
         );
     }
@@ -57,10 +57,10 @@ module CoreFramework::ParallelExecutionConfig {
         DiemTimestamp::assert_operating();
         assert!(
             exists<ParallelExecutionConfigChainMarker<T>>(@CoreResources),
-            Errors::not_published(ECHAIN_MARKER)
+            errors::not_published(ECHAIN_MARKER)
         );
         let result_ref = &mut borrow_global_mut<ParallelExecutionConfig>(@CoreResources).read_write_analysis_result;
-        *result_ref = Option::some(read_write_inference_result);
+        *result_ref = option::some(read_write_inference_result);
         DiemConfig::reconfigure();
     }
 
@@ -70,10 +70,10 @@ module CoreFramework::ParallelExecutionConfig {
         DiemTimestamp::assert_operating();
         assert!(
             exists<ParallelExecutionConfigChainMarker<T>>(@CoreResources),
-            Errors::not_published(ECHAIN_MARKER)
+            errors::not_published(ECHAIN_MARKER)
         );
         let result_ref = &mut borrow_global_mut<ParallelExecutionConfig>(@CoreResources).read_write_analysis_result;
-        *result_ref = Option::none();
+        *result_ref = option::none();
         DiemConfig::reconfigure();
     }
 }

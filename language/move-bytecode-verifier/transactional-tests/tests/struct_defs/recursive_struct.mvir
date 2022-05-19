@@ -29,7 +29,7 @@ module 0x1.M1 {
 
 //# publish
 module 0x1.M2 {
-    import 0x1.Signer;
+    import 0x1.signer;
 
     struct X { y: vector<Self.Y> }
     struct Y { x: vector<Self.X> }
@@ -37,13 +37,13 @@ module 0x1.M2 {
     // would blow up the vm
     public ex(account: &signer): bool {
     label b0:
-        return exists<X>(Signer.address_of(move(account)));
+        return exists<X>(signer.address_of(move(account)));
     }
 
     // would blow up the vm
     public borrow(account: &signer) acquires X {
     label b0:
-        _ = borrow_global<X>(Signer.address_of(move(account)));
+        _ = borrow_global<X>(signer.address_of(move(account)));
         return;
     }
 }

@@ -2,7 +2,7 @@
 
 module 0x1::Borrow {
     // ensure that borrows get counted as reads when appropriate
-    use Std::Vector;
+    use std::vector;
 
     struct S has key { }
 
@@ -18,11 +18,11 @@ module 0x1::Borrow {
 
     // expected: read v/size
     fun borrow_vec(v: &vector<u64>) {
-        let _ = Vector::borrow(v, 7);
+        let _ = vector::borrow(v, 7);
     }
 
     // expected: read v/size
     fun borrow_vec_mut(v: &mut vector<u64>) {
-        let _ = Vector::borrow_mut<u64>(v, 7);
+        let _ = vector::borrow_mut<u64>(v, 7);
     }
 }

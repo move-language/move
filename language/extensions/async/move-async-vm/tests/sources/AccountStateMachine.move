@@ -15,7 +15,7 @@
 // instance: 0x3 AccountStateMachine 0x5
 module Test::AccountStateMachine {
     use Async::Actor::{self, virtual_time};
-    use Std::Vector;
+    use std::vector;
 
     // TODO: constants are not working with async vm. Need a special initialization for them?
     // const MAX: u64 = 43;
@@ -36,7 +36,7 @@ module Test::AccountStateMachine {
 
     #[init]
     fun init(): Account {
-        Account{value: 0, xfer_id_counter: 0, pending: Vector::empty()}
+        Account{value: 0, xfer_id_counter: 0, pending: vector::empty()}
     }
 
     #[message]
@@ -86,7 +86,7 @@ module Test::AccountStateMachine {
         // Do not initiate the transfer if there are not enough funds.
         assert!(this.value >= v, 1);
         let xfer_id = new_xfer_id(this);
-        Vector::push_back(&mut this.pending, PendingTransfer{xfer_id, amount: v, initiated_at: virtual_time()});
+        vector::push_back(&mut this.pending, PendingTransfer{xfer_id, amount: v, initiated_at: virtual_time()});
         // Call into a special version of deposit which calls us back once done.
         send_xfer_deposit(dest, v, self(), xfer_id);
     }
@@ -107,8 +107,8 @@ module Test::AccountStateMachine {
     #[message]
     fun xfer_finish(this: &mut Account, xfer_id: u64) {
         let i = find_xfer(this, xfer_id);
-        let amount = Vector::borrow(&this.pending, i).amount;
-        Vector::remove(&mut this.pending, i);
+        let amount = vector::borrow(&this.pending, i).amount;
+        vector::remove(&mut this.pending, i);
         withdraw(this, amount);
         // Call end of test here.
         send_end(@4)
@@ -117,10 +117,10 @@ module Test::AccountStateMachine {
     fun find_xfer(this: &Account, xfer_id: u64): u64 {
         let pending = &this.pending;
         let i = 0;
-        while (i < Vector::length(pending) && Vector::borrow(pending, i).xfer_id != xfer_id) {
+        while (i < vector::length(pending) && vector::borrow(pending, i).xfer_id != xfer_id) {
             i = i + 1;
         };
-        assert!(i < Vector::length(pending), 3);
+        assert!(i < vector::length(pending), 3);
         i
     }
 
@@ -129,10 +129,10 @@ module Test::AccountStateMachine {
     fun cleanup(this: &mut Account) {
         let pending = &mut this.pending;
         let i = 0;
-        while (i < Vector::length(pending)) {
-            let p = Vector::borrow(pending, i);
+        while (i < vector::length(pending)) {
+            let p = vector::borrow(pending, i);
             if (virtual_time() - p.initiated_at >= 1000000000) {
-                Vector::remove(pending, i);
+                vector::remove(pending, i);
             } else {
                 i = i + 1;
             }

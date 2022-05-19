@@ -5,10 +5,10 @@ module DiemFramework::SharedEd25519PublicKeyTests {
     use DiemFramework::SharedEd25519PublicKey;
     use DiemFramework::XUS::XUS;
 
-    use Std::Signer;
+    use std::signer;
 
     fun setup(dr: &signer, tc: &signer, account: &signer) {
-        let addr = Signer::address_of(account);
+        let addr = signer::address_of(account);
 
         Genesis::setup(dr, tc);
         DiemAccount::create_parent_vasp_account<XUS>(tc, addr, x"0d3e1bd412376e933a0e794d65b41f97", b"", false);
@@ -20,7 +20,7 @@ module DiemFramework::SharedEd25519PublicKeyTests {
         let tc = &tc;
         let account = &account;
 
-        let addr = Signer::address_of(account);
+        let addr = signer::address_of(account);
 
         setup(dr, tc, account);
 
@@ -53,7 +53,7 @@ module DiemFramework::SharedEd25519PublicKeyTests {
     fun get_key_for_non_shared_account_should_fail(dr: signer, tc: signer, account: signer) {
         setup(&dr, &tc, &account);
 
-        SharedEd25519PublicKey::key(Signer::address_of(&account));
+        SharedEd25519PublicKey::key(signer::address_of(&account));
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, account = @0x100)]

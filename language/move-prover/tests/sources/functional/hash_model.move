@@ -1,7 +1,7 @@
 
 
 module 0x42::TestHash {
-    use Std::Hash;
+    use std::hash;
     spec module {
         pragma verify = true;
     }
@@ -12,8 +12,8 @@ module 0x42::TestHash {
 
     fun hash_test1(v1: vector<u8>, v2: vector<u8>): (vector<u8>, vector<u8>)
     {
-        let h1 = Hash::sha2_256(v1);
-        let h2 = Hash::sha2_256(v2);
+        let h1 = hash::sha2_256(v1);
+        let h2 = hash::sha2_256(v2);
         (h1, h2)
     }
     spec hash_test1 {
@@ -27,8 +27,8 @@ module 0x42::TestHash {
 
     fun hash_test2(v1: vector<u8>, v2: vector<u8>): bool
     {
-        let h1 = Hash::sha2_256(v1);
-        let h2 = Hash::sha2_256(v2);
+        let h1 = hash::sha2_256(v1);
+        let h2 = hash::sha2_256(v2);
         h1 == h2
     }
     spec hash_test2 {
@@ -38,8 +38,8 @@ module 0x42::TestHash {
 
     fun hash_test1_incorrect(v1: vector<u8>, v2: vector<u8>): (vector<u8>, vector<u8>)
     {
-        let h1 = Hash::sha2_256(v1);
-        let h2 = Hash::sha2_256(v2);
+        let h1 = hash::sha2_256(v1);
+        let h2 = hash::sha2_256(v2);
         (h1, h2)
     }
     spec hash_test1_incorrect {
@@ -55,8 +55,8 @@ module 0x42::TestHash {
 
     fun hash_test3(v1: vector<u8>, v2: vector<u8>): (vector<u8>, vector<u8>)
     {
-        let h1 = Hash::sha3_256(v1);
-        let h2 = Hash::sha3_256(v2);
+        let h1 = hash::sha3_256(v1);
+        let h2 = hash::sha3_256(v2);
         (h1, h2)
     }
     spec hash_test3 {
@@ -70,8 +70,8 @@ module 0x42::TestHash {
 
     fun hash_test4(v1: vector<u8>, v2: vector<u8>): bool
     {
-        let h1 = Hash::sha3_256(v1);
-        let h2 = Hash::sha3_256(v2);
+        let h1 = hash::sha3_256(v1);
+        let h2 = hash::sha3_256(v2);
         h1 == h2
     }
     spec hash_test4 {
@@ -81,8 +81,8 @@ module 0x42::TestHash {
 
     fun hash_test2_incorrect(v1: vector<u8>, v2: vector<u8>): (vector<u8>, vector<u8>)
     {
-        let h1 = Hash::sha2_256(v1);
-        let h2 = Hash::sha2_256(v2);
+        let h1 = hash::sha2_256(v1);
+        let h2 = hash::sha2_256(v2);
         (h1, h2)
     }
     spec hash_test2_incorrect {

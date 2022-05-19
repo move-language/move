@@ -1,7 +1,7 @@
 /// Module implementing an odd coin, where only odd number of coins can be
 /// transferred each time.
 module NamedAddr::MyOddCoin {
-    use Std::Signer;
+    use std::signer;
     use NamedAddr::BasicCoin;
 
     struct MyOddCoin has drop {}
@@ -10,7 +10,7 @@ module NamedAddr::MyOddCoin {
 
     public fun setup_and_mint(account: &signer, amount: u64) {
         BasicCoin::publish_balance<MyOddCoin>(account);
-        BasicCoin::mint<MyOddCoin>(Signer::address_of(account), amount, MyOddCoin {});
+        BasicCoin::mint<MyOddCoin>(signer::address_of(account), amount, MyOddCoin {});
     }
 
     public fun transfer(from: &signer, to: address, amount: u64) {

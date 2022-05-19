@@ -49,7 +49,7 @@ fn compile_yul_to_bytecode_bytes(filename: &str) -> Result<Vec<u8>> {
     ];
     let mut named_address_map = move_stdlib_named_addresses();
     named_address_map.insert(
-        "Std".to_string(),
+        "std".to_string(),
         NumericalAddress::parse_str("0x1").unwrap(),
     );
     named_address_map.insert(

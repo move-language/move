@@ -616,30 +616,30 @@ fn call_native_function(
 ) {
     // native fun. use handwritten model
     match (module_name, fun_name) {
-        ("BCS", "to_bytes") => {
+        ("bcs", "to_bytes") => {
             if state.locals.local_exists(args[0], func_env) {
                 state.record_access(args[0], Access::Read, func_env)
             }
         }
-        ("Signer", "borrow_address") => {
+        ("signer", "borrow_address") => {
             if state.locals.local_exists(args[0], func_env) {
                 // treat as identity function
                 state.assign_local(rets[0], args[0], func_env)
             }
         }
-        ("Vector", "borrow_mut") | ("Vector", "borrow") => {
+        ("vector", "borrow_mut") | ("vector", "borrow") => {
             if state.locals.local_exists(args[0], func_env) {
                 // this will look at vector length. record as read of an index
                 state.access_offset(args[0], Offset::VectorIndex, Access::Read, func_env);
                 state.assign_offset(rets[0], args[0], Offset::VectorIndex, None, func_env)
             }
         }
-        ("Vector", "length") | ("Vector", "is_empty") => {
+        ("vector", "length") | ("vector", "is_empty") => {
             if state.locals.local_exists(args[0], func_env) {
                 state.record_access(args[0], Access::Read, func_env)
             }
         }
-        ("Vector", "pop_back") => {
+        ("vector", "pop_back") => {
             if state.locals.local_exists(args[0], func_env) {
                 // this will look at vector length. record as read of an index
                 state.access_offset(args[0], Offset::VectorIndex, Access::Read, func_env);
@@ -653,7 +653,7 @@ fn call_native_function(
                 )
             }
         }
-        ("Vector", "push_back") | ("Vector", "append") | ("Vector", "swap") => {
+        ("vector", "push_back") | ("vector", "append") | ("vector", "swap") => {
             if state.locals.local_exists(args[0], func_env) {
                 // this will look at vector length. record as read of an index
                 state.access_offset(args[0], Offset::VectorIndex, Access::Read, func_env);
@@ -661,7 +661,7 @@ fn call_native_function(
                 state.access_offset(args[0], Offset::VectorIndex, Access::Write, func_env);
             }
         }
-        ("Vector", "contains") => {
+        ("vector", "contains") => {
             if state.locals.local_exists(args[0], func_env) {
                 state.record_access(args[0], Access::Read, func_env); // reads the length + contents
             }
@@ -680,9 +680,9 @@ fn call_native_function(
                 state.assign_local(rets[0], args[0], func_env)
             }
         }
-        ("Vector", "empty") | ("Vector", "destroy_empty") | ("Vector", "reverse") => (),
-        ("Event", "write_to_event_store") => (),
-        ("Hash", "sha3_256") | ("Hash", "sha2_256") => (),
+        ("vector", "empty") | ("vector", "destroy_empty") | ("vector", "reverse") => (),
+        ("event", "write_to_event_store") => (),
+        ("hash", "sha3_256") | ("hash", "sha2_256") => (),
         ("Signature", "ed25519_validate_pubkey") | ("Signature", "ed25519_verify") => (),
         (m, f) => {
             panic!("Unsupported native function {:?}::{:?}", m, f)

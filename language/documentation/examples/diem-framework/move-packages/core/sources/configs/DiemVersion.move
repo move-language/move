@@ -1,7 +1,7 @@
 /// Maintains the version number for the blockchain.
 module CoreFramework::DiemVersion {
-    use Std::Capability::Cap;
-    use Std::Errors;
+    use std::capability::Cap;
+    use std::errors;
     use CoreFramework::DiemConfig;
     use CoreFramework::DiemTimestamp;
     use CoreFramework::SystemAddresses;
@@ -28,12 +28,12 @@ module CoreFramework::DiemVersion {
 
         assert!(
             !exists<VersionChainMarker<T>>(@CoreResources),
-            Errors::already_published(ECHAIN_MARKER)
+            errors::already_published(ECHAIN_MARKER)
         );
 
         assert!(
             !exists<DiemVersion>(@CoreResources),
-            Errors::already_published(ECONFIG)
+            errors::already_published(ECONFIG)
         );
 
         move_to(
@@ -48,13 +48,13 @@ module CoreFramework::DiemVersion {
 
     /// Updates the major version to a larger version.
     public fun set<T>(major: u64, _cap: &Cap<T>) acquires DiemVersion {
-        assert!(exists<VersionChainMarker<T>>(@CoreResources), Errors::not_published(ECHAIN_MARKER));
-        assert!(exists<DiemVersion>(@CoreResources), Errors::not_published(ECONFIG));
+        assert!(exists<VersionChainMarker<T>>(@CoreResources), errors::not_published(ECHAIN_MARKER));
+        assert!(exists<DiemVersion>(@CoreResources), errors::not_published(ECONFIG));
         let old_major = *&borrow_global<DiemVersion>(@CoreResources).major;
 
         assert!(
             old_major < major,
-            Errors::invalid_argument(EINVALID_MAJOR_VERSION_NUMBER)
+            errors::invalid_argument(EINVALID_MAJOR_VERSION_NUMBER)
         );
 
         let config = borrow_global_mut<DiemVersion>(@CoreResources);

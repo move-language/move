@@ -1,7 +1,7 @@
 script {
-    use Std::Vector;
+    use std::vector;
     fun bad_borrow() {
-        let v = Vector::empty<bool>();
-        let _ref = Vector::borrow(&v, 0);
+        let v = vector::empty<bool>();
+        let _ref = vector::borrow(&v, 0);
     }
 }

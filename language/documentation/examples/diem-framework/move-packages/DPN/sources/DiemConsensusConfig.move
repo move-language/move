@@ -3,7 +3,7 @@
 module DiemFramework::DiemConsensusConfig {
     use DiemFramework::DiemConfig::{Self, DiemConfig};
     use DiemFramework::Roles;
-    use Std::Vector;
+    use std::vector;
 
     struct DiemConsensusConfig has copy, drop, store {
         config: vector<u8>,
@@ -12,7 +12,7 @@ module DiemFramework::DiemConsensusConfig {
     /// Publishes the DiemConsensusConfig config.
     public fun initialize(dr_account: &signer) {
         Roles::assert_diem_root(dr_account);
-        DiemConfig::publish_new_config(dr_account, DiemConsensusConfig { config: Vector::empty() });
+        DiemConfig::publish_new_config(dr_account, DiemConsensusConfig { config: vector::empty() });
     }
     spec initialize {
         /// Must abort if the signer does not have the DiemRoot role [[H12]][PERMISSION].
@@ -20,7 +20,7 @@ module DiemFramework::DiemConsensusConfig {
 
         include DiemConfig::PublishNewConfigAbortsIf<DiemConsensusConfig>;
         include DiemConfig::PublishNewConfigEnsures<DiemConsensusConfig>{
-            payload: DiemConsensusConfig { config: Vector::empty() }
+            payload: DiemConsensusConfig { config: vector::empty() }
         };
     }
 

@@ -3,7 +3,7 @@
 module DiemFramework::PaymentScripts {
     use DiemFramework::DiemAccount;
     use DiemFramework::DualAttestation;
-    use Std::Signer;
+    use std::signer;
 
     /// # Summary
     /// Transfers a given number of coins in a specified currency from one account to another.
@@ -135,17 +135,17 @@ module DiemFramework::PaymentScripts {
     spec peer_to_peer_with_metadata {
         include PeerToPeer<Currency>{payer_signer: payer};
         include DualAttestation::AssertPaymentOkAbortsIf<Currency>{
-            payer: Signer::address_of(payer),
+            payer: signer::address_of(payer),
             value: amount
         };
     }
 
     spec peer_to_peer_by_signers {
-        include PeerToPeer<Currency>{payer_signer: payer, payee: Signer::address_of(payee)};
+        include PeerToPeer<Currency>{payer_signer: payer, payee: signer::address_of(payee)};
     }
 
     spec schema PeerToPeer<Currency> {
-        use Std::Errors;
+        use std::errors;
 
         payer_signer: signer;
         payee: address;
@@ -153,7 +153,7 @@ module DiemFramework::PaymentScripts {
         metadata: vector<u8>;
 
         include DiemAccount::TransactionChecks{sender: payer_signer}; // properties checked by the prologue.
-        let payer_addr = Signer::address_of(payer_signer);
+        let payer_addr = signer::address_of(payer_signer);
         let cap = DiemAccount::spec_get_withdraw_cap(payer_addr);
         include DiemAccount::ExtractWithdrawCapAbortsIf{sender_addr: payer_addr};
         include DiemAccount::PayFromAbortsIf<Currency>{cap: cap};
@@ -170,18 +170,18 @@ module DiemFramework::PaymentScripts {
             == old(DiemAccount::balance<Currency>(payee));
 
         aborts_with [check]
-            Errors::NOT_PUBLISHED,
-            Errors::INVALID_STATE,
-            Errors::INVALID_ARGUMENT,
-            Errors::LIMIT_EXCEEDED;
+            errors::NOT_PUBLISHED,
+            errors::INVALID_STATE,
+            errors::INVALID_ARGUMENT,
+            errors::LIMIT_EXCEEDED;
 
         include DiemAccount::PayFromEmits<Currency>{cap: cap};
 
         /// **Access Control:**
         /// Both the payer and the payee must hold the balances of the Currency. Only Designated Dealers,
         /// Parent VASPs, and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][ROLE][[D4]][ROLE][[D5]][ROLE][[D6]][ROLE][[D7]][ROLE].
-        aborts_if !exists<DiemAccount::Balance<Currency>>(payer_addr) with Errors::NOT_PUBLISHED;
-        aborts_if !exists<DiemAccount::Balance<Currency>>(payee) with Errors::INVALID_ARGUMENT;
+        aborts_if !exists<DiemAccount::Balance<Currency>>(payer_addr) with errors::NOT_PUBLISHED;
+        aborts_if !exists<DiemAccount::Balance<Currency>>(payee) with errors::INVALID_ARGUMENT;
     }
 
 }

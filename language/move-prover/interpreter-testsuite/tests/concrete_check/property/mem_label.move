@@ -1,5 +1,5 @@
 module 0x2::A {
-    use Std::Signer;
+    use std::signer;
 
     struct R1<T: store> has key { f: T }
 
@@ -13,7 +13,7 @@ module 0x2::A {
 
     #[test(s=@0x2)]
     public fun check_mem_label_set(s: &signer) acquires R1 {
-        let a = Signer::address_of(s);
+        let a = signer::address_of(s);
         let r = R1 { f: false };
         move_to(s, r);
         mutate_r1(a);
@@ -42,7 +42,7 @@ module 0x2::A {
 
     #[test(s=@0x2)]
     public fun check_mem_label_swap(s: &signer) acquires R2 {
-        let a = Signer::address_of(s);
+        let a = signer::address_of(s);
         let r = R2 { f1: true, f2: false };
         move_to(s, r);
         mutate_r2(a);

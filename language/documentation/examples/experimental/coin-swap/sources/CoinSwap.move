@@ -1,6 +1,6 @@
 module CoinSwap::CoinSwap {
-    use Std::Signer;
-    use Std::Errors;
+    use std::signer;
+    use std::errors;
     use BasicCoin::BasicCoin;
     use CoinSwap::PoolToken;
 
@@ -27,13 +27,13 @@ module CoinSwap::CoinSwap {
         // TODO: Alternatively, `struct LiquidityPool` could be refactored to actually hold the coin (e.g., coin1: CoinType1).
         BasicCoin::publish_balance<CoinType1>(coinswap);
         BasicCoin::publish_balance<CoinType2>(coinswap);
-        assert!(Signer::address_of(coinswap) == @CoinSwap, Errors::invalid_argument(ECOINSWAP_ADDRESS));
-        assert!(!exists<LiquidityPool<CoinType1, CoinType2>>(Signer::address_of(coinswap)), Errors::already_published(EPOOL));
+        assert!(signer::address_of(coinswap) == @CoinSwap, errors::invalid_argument(ECOINSWAP_ADDRESS));
+        assert!(!exists<LiquidityPool<CoinType1, CoinType2>>(signer::address_of(coinswap)), errors::already_published(EPOOL));
         move_to(coinswap, LiquidityPool<CoinType1, CoinType2>{coin1, coin2, share});
 
         // Transfer the initial liquidity of CoinType1 and CoinType2 to the pool under @CoinSwap.
-        BasicCoin::transfer<CoinType1>(requester, Signer::address_of(coinswap), coin1, witness1);
-        BasicCoin::transfer<CoinType2>(requester, Signer::address_of(coinswap), coin2, witness2);
+        BasicCoin::transfer<CoinType1>(requester, signer::address_of(coinswap), coin1, witness1);
+        BasicCoin::transfer<CoinType2>(requester, signer::address_of(coinswap), coin2, witness2);
 
         // Mint PoolToken and deposit it in the account of requester.
         PoolToken::setup_and_mint<CoinType1, CoinType2>(requester, share);
@@ -53,15 +53,15 @@ module CoinSwap::CoinSwap {
         witness1: CoinType1,
         witness2: CoinType2
     ) acquires LiquidityPool {
-        assert!(Signer::address_of(coinswap) == @CoinSwap, Errors::invalid_argument(ECOINSWAP_ADDRESS));
-        assert!(exists<LiquidityPool<CoinType1, CoinType2>>(Signer::address_of(coinswap)), Errors::not_published(EPOOL));
-        let pool = borrow_global_mut<LiquidityPool<CoinType1, CoinType2>>(Signer::address_of(coinswap));
+        assert!(signer::address_of(coinswap) == @CoinSwap, errors::invalid_argument(ECOINSWAP_ADDRESS));
+        assert!(exists<LiquidityPool<CoinType1, CoinType2>>(signer::address_of(coinswap)), errors::not_published(EPOOL));
+        let pool = borrow_global_mut<LiquidityPool<CoinType1, CoinType2>>(signer::address_of(coinswap));
         let coin2 = get_input_price(coin1, pool.coin1, pool.coin2);
         pool.coin1 = pool.coin1 + coin1;
         pool.coin2 = pool.coin2 - coin2;
 
-        BasicCoin::transfer<CoinType1>(requester, Signer::address_of(coinswap), coin1, witness1);
-        BasicCoin::transfer<CoinType2>(coinswap, Signer::address_of(requester), coin2, witness2);
+        BasicCoin::transfer<CoinType1>(requester, signer::address_of(coinswap), coin1, witness1);
+        BasicCoin::transfer<CoinType2>(coinswap, signer::address_of(requester), coin2, witness2);
     }
 
     public fun add_liquidity<CoinType1: drop, CoinType2: drop>(
@@ -83,7 +83,7 @@ module CoinSwap::CoinSwap {
 
         BasicCoin::transfer<CoinType1>(account, @CoinSwap, coin1, witness1);
         BasicCoin::transfer<CoinType2>(account, @CoinSwap, coin2, witness2);
-        PoolToken::mint<CoinType1, CoinType2>(Signer::address_of(account), share_minted)
+        PoolToken::mint<CoinType1, CoinType2>(signer::address_of(account), share_minted)
     }
 
     public fun remove_liquidity<CoinType1: drop, CoinType2: drop>(
@@ -102,8 +102,8 @@ module CoinSwap::CoinSwap {
         pool.coin2 = pool.coin2 - coin2_removed;
         pool.share = pool.share - share;
 
-        BasicCoin::transfer<CoinType1>(coinswap, Signer::address_of(requester), coin1_removed, witness1);
-        BasicCoin::transfer<CoinType2>(coinswap, Signer::address_of(requester), coin2_removed, witness2);
-        PoolToken::burn<CoinType1, CoinType2>(Signer::address_of(requester), share)
+        BasicCoin::transfer<CoinType1>(coinswap, signer::address_of(requester), coin1_removed, witness1);
+        BasicCoin::transfer<CoinType2>(coinswap, signer::address_of(requester), coin2_removed, witness2);
+        PoolToken::burn<CoinType1, CoinType2>(signer::address_of(requester), share)
     }
 }

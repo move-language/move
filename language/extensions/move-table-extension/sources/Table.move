@@ -1,6 +1,6 @@
 /// Type of large-scale storage tables.
 module Extensions::Table {
-    use Std::Errors;
+    use std::errors;
 
     // TODO: native code should not use reasons to signal logical type of error. Instead,
     // use Errors::ALREADY_PUBLISHED and Errors::NOT_PUBLISHED.
@@ -25,7 +25,7 @@ module Extensions::Table {
 
     /// Destroy a table. The table must be empty to succeed.
     public fun destroy_empty<K: copy + drop, V>(table: Table<K, V>) {
-        assert!(table.length == 0, Errors::invalid_state(ENOT_EMPTY));
+        assert!(table.length == 0, errors::invalid_state(ENOT_EMPTY));
         destroy_empty_box<K, V, Box<V>>(&table);
         drop_unchecked_box<K, V, Box<V>>(table)
     }

@@ -4,7 +4,7 @@
 // dep: ../../move-stdlib/sources/Signer.move
 
 module 0x42::SmokeTest {
-    use Std::Signer;
+    use std::signer;
 
     // -----------------
     // Basic Ops
@@ -39,7 +39,7 @@ module 0x42::SmokeTest {
     }
 
     fun exists_resource(sender: &signer): bool {
-        exists<R>(Signer::address_of(sender))
+        exists<R>(signer::address_of(sender))
     }
 
     fun move_from_addr(a: address) acquires R {

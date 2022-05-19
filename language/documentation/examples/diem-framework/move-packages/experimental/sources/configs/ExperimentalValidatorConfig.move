@@ -1,5 +1,5 @@
 module ExperimentalFramework::ExperimentalValidatorConfig {
-    use Std::Capability;
+    use std::capability;
     use CoreFramework::ValidatorConfig;
 
     friend ExperimentalFramework::ExperimentalAccount;
@@ -8,7 +8,7 @@ module ExperimentalFramework::ExperimentalValidatorConfig {
 
     public fun initialize(account: &signer) {
         ValidatorConfig::initialize<ExperimentalValidatorConfig>(account);
-        Capability::create(account, &ExperimentalValidatorConfig{});
+        capability::create(account, &ExperimentalValidatorConfig{});
     }
 
     public(friend) fun publish(
@@ -19,7 +19,7 @@ module ExperimentalFramework::ExperimentalValidatorConfig {
         ValidatorConfig::publish(
             validator_account,
             human_name,
-            Capability::acquire(root_account, &ExperimentalValidatorConfig{})
+            capability::acquire(root_account, &ExperimentalValidatorConfig{})
         );
     }
 }

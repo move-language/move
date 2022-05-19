@@ -8,8 +8,8 @@
 module DiemFramework::Roles {
     use DiemFramework::CoreAddresses;
     use DiemFramework::DiemTimestamp;
-    use Std::Errors;
-    use Std::Signer;
+    use std::errors;
+    use std::signer;
     friend DiemFramework::DiemAccount;
 
     #[test_only]
@@ -77,7 +77,7 @@ module DiemFramework::Roles {
     spec grant_diem_root_role {
         include DiemTimestamp::AbortsIfNotGenesis;
         include CoreAddresses::AbortsIfNotDiemRoot{account: dr_account};
-        include GrantRole{addr: Signer::address_of(dr_account), role_id: DIEM_ROOT_ROLE_ID};
+        include GrantRole{addr: signer::address_of(dr_account), role_id: DIEM_ROOT_ROLE_ID};
     }
 
     /// Publishes treasury compliance role. Granted only in genesis.
@@ -95,7 +95,7 @@ module DiemFramework::Roles {
         include DiemTimestamp::AbortsIfNotGenesis;
         include CoreAddresses::AbortsIfNotTreasuryCompliance{account: treasury_compliance_account};
         include AbortsIfNotDiemRoot{account: dr_account};
-        include GrantRole{addr: Signer::address_of(treasury_compliance_account), role_id: TREASURY_COMPLIANCE_ROLE_ID};
+        include GrantRole{addr: signer::address_of(treasury_compliance_account), role_id: TREASURY_COMPLIANCE_ROLE_ID};
     }
 
     /// Publishes a DesignatedDealer `RoleId` under `new_account`.
@@ -109,7 +109,7 @@ module DiemFramework::Roles {
     }
     spec new_designated_dealer_role {
         include AbortsIfNotTreasuryCompliance{account: creating_account};
-        include GrantRole{addr: Signer::address_of(new_account), role_id: DESIGNATED_DEALER_ROLE_ID};
+        include GrantRole{addr: signer::address_of(new_account), role_id: DESIGNATED_DEALER_ROLE_ID};
     }
 
     /// Publish a Validator `RoleId` under `new_account`.
@@ -123,7 +123,7 @@ module DiemFramework::Roles {
     }
     spec new_validator_role {
         include AbortsIfNotDiemRoot{account: creating_account};
-        include GrantRole{addr: Signer::address_of(new_account), role_id: VALIDATOR_ROLE_ID};
+        include GrantRole{addr: signer::address_of(new_account), role_id: VALIDATOR_ROLE_ID};
     }
 
     /// Publish a ValidatorOperator `RoleId` under `new_account`.
@@ -137,7 +137,7 @@ module DiemFramework::Roles {
     }
     spec new_validator_operator_role {
         include AbortsIfNotDiemRoot{account: creating_account};
-        include GrantRole{addr: Signer::address_of(new_account), role_id: VALIDATOR_OPERATOR_ROLE_ID};
+        include GrantRole{addr: signer::address_of(new_account), role_id: VALIDATOR_OPERATOR_ROLE_ID};
     }
 
     /// Publish a ParentVASP `RoleId` under `new_account`.
@@ -151,7 +151,7 @@ module DiemFramework::Roles {
     }
     spec new_parent_vasp_role {
         include AbortsIfNotTreasuryCompliance{account: creating_account};
-        include GrantRole{addr: Signer::address_of(new_account), role_id: PARENT_VASP_ROLE_ID};
+        include GrantRole{addr: signer::address_of(new_account), role_id: PARENT_VASP_ROLE_ID};
     }
 
     /// Publish a ChildVASP `RoleId` under `new_account`.
@@ -165,18 +165,18 @@ module DiemFramework::Roles {
     }
     spec new_child_vasp_role {
         include AbortsIfNotParentVasp{account: creating_account};
-        include GrantRole{addr: Signer::address_of(new_account), role_id: CHILD_VASP_ROLE_ID};
+        include GrantRole{addr: signer::address_of(new_account), role_id: CHILD_VASP_ROLE_ID};
     }
 
     /// Helper function to grant a role.
     fun grant_role(account: &signer, role_id: u64) {
-        assert!(!exists<RoleId>(Signer::address_of(account)), Errors::already_published(EROLE_ID));
+        assert!(!exists<RoleId>(signer::address_of(account)), errors::already_published(EROLE_ID));
         move_to(account, RoleId { role_id });
     }
     spec grant_role {
         pragma opaque;
-        include GrantRole{addr: Signer::address_of(account)};
-        let addr = Signer::address_of(account);
+        include GrantRole{addr: signer::address_of(account)};
+        let addr = signer::address_of(account);
         // Requires to satisfy global invariants.
         requires role_id == DIEM_ROOT_ROLE_ID ==> addr == @DiemRoot;
         requires role_id == TREASURY_COMPLIANCE_ROLE_ID ==> addr == @TreasuryCompliance;
@@ -184,7 +184,7 @@ module DiemFramework::Roles {
     spec schema GrantRole {
         addr: address;
         role_id: num;
-        aborts_if exists<RoleId>(addr) with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<RoleId>(addr) with errors::ALREADY_PUBLISHED;
         ensures exists<RoleId>(addr);
         ensures global<RoleId>(addr).role_id == role_id;
         modifies global<RoleId>(addr);
@@ -194,7 +194,7 @@ module DiemFramework::Roles {
     // Role Checking
 
     fun has_role(account: &signer, role_id: u64): bool acquires RoleId {
-       let addr = Signer::address_of(account);
+       let addr = signer::address_of(account);
        exists<RoleId>(addr)
            && borrow_global<RoleId>(addr).role_id == role_id
     }
@@ -228,7 +228,7 @@ module DiemFramework::Roles {
     }
 
     public fun get_role_id(a: address): u64 acquires RoleId {
-        assert!(exists<RoleId>(a), Errors::not_published(EROLE_ID));
+        assert!(exists<RoleId>(a), errors::not_published(EROLE_ID));
         borrow_global<RoleId>(a).role_id
     }
 
@@ -248,9 +248,9 @@ module DiemFramework::Roles {
     /// Assert that the account is diem root.
     public fun assert_diem_root(account: &signer) acquires RoleId {
         CoreAddresses::assert_diem_root(account);
-        let addr = Signer::address_of(account);
-        assert!(exists<RoleId>(addr), Errors::not_published(EROLE_ID));
-        assert!(borrow_global<RoleId>(addr).role_id == DIEM_ROOT_ROLE_ID, Errors::requires_role(EDIEM_ROOT));
+        let addr = signer::address_of(account);
+        assert!(exists<RoleId>(addr), errors::not_published(EROLE_ID));
+        assert!(borrow_global<RoleId>(addr).role_id == DIEM_ROOT_ROLE_ID, errors::requires_role(EDIEM_ROOT));
     }
     spec assert_diem_root {
         pragma opaque;
@@ -261,11 +261,11 @@ module DiemFramework::Roles {
     /// Assert that the account is treasury compliance.
     public fun assert_treasury_compliance(account: &signer) acquires RoleId {
         CoreAddresses::assert_treasury_compliance(account);
-        let addr = Signer::address_of(account);
-        assert!(exists<RoleId>(addr), Errors::not_published(EROLE_ID));
+        let addr = signer::address_of(account);
+        assert!(exists<RoleId>(addr), errors::not_published(EROLE_ID));
         assert!(
             borrow_global<RoleId>(addr).role_id == TREASURY_COMPLIANCE_ROLE_ID,
-            Errors::requires_role(ETREASURY_COMPLIANCE)
+            errors::requires_role(ETREASURY_COMPLIANCE)
         )
     }
     spec assert_treasury_compliance {
@@ -275,11 +275,11 @@ module DiemFramework::Roles {
 
     /// Assert that the account has the parent vasp role.
     public fun assert_parent_vasp_role(account: &signer) acquires RoleId {
-        let addr = Signer::address_of(account);
-        assert!(exists<RoleId>(addr), Errors::not_published(EROLE_ID));
+        let addr = signer::address_of(account);
+        assert!(exists<RoleId>(addr), errors::not_published(EROLE_ID));
         assert!(
             borrow_global<RoleId>(addr).role_id == PARENT_VASP_ROLE_ID,
-            Errors::requires_role(EPARENT_VASP)
+            errors::requires_role(EPARENT_VASP)
         )
     }
     spec assert_parent_vasp_role {
@@ -289,26 +289,26 @@ module DiemFramework::Roles {
 
     /// Assert that the account has the child vasp role.
     public fun assert_child_vasp_role(account: &signer) acquires RoleId {
-        let addr = Signer::address_of(account);
-        assert!(exists<RoleId>(addr), Errors::not_published(EROLE_ID));
+        let addr = signer::address_of(account);
+        assert!(exists<RoleId>(addr), errors::not_published(EROLE_ID));
         assert!(
             borrow_global<RoleId>(addr).role_id == CHILD_VASP_ROLE_ID,
-            Errors::requires_role(ECHILD_VASP)
+            errors::requires_role(ECHILD_VASP)
         )
     }
     spec assert_child_vasp_role {
         pragma opaque;
-        include AbortsIfNotChildVasp{account: Signer::address_of(account)};
+        include AbortsIfNotChildVasp{account: signer::address_of(account)};
     }
 
 
     /// Assert that the account has the designated dealer role.
     public fun assert_designated_dealer(account: &signer) acquires RoleId {
-        let addr = Signer::address_of(account);
-        assert!(exists<RoleId>(addr), Errors::not_published(EROLE_ID));
+        let addr = signer::address_of(account);
+        assert!(exists<RoleId>(addr), errors::not_published(EROLE_ID));
         assert!(
             borrow_global<RoleId>(addr).role_id == DESIGNATED_DEALER_ROLE_ID,
-            Errors::requires_role(EDESIGNATED_DEALER)
+            errors::requires_role(EDESIGNATED_DEALER)
         )
     }
     spec assert_designated_dealer {
@@ -318,11 +318,11 @@ module DiemFramework::Roles {
 
     /// Assert that the account has the validator role.
     public fun assert_validator(validator_account: &signer) acquires RoleId {
-        let validator_addr = Signer::address_of(validator_account);
-        assert!(exists<RoleId>(validator_addr), Errors::not_published(EROLE_ID));
+        let validator_addr = signer::address_of(validator_account);
+        assert!(exists<RoleId>(validator_addr), errors::not_published(EROLE_ID));
         assert!(
             borrow_global<RoleId>(validator_addr).role_id == VALIDATOR_ROLE_ID,
-            Errors::requires_role(EVALIDATOR)
+            errors::requires_role(EVALIDATOR)
         )
     }
     spec assert_validator {
@@ -332,11 +332,11 @@ module DiemFramework::Roles {
 
     /// Assert that the account has the validator operator role.
     public fun assert_validator_operator(validator_operator_account: &signer) acquires RoleId {
-        let validator_operator_addr = Signer::address_of(validator_operator_account);
-        assert!(exists<RoleId>(validator_operator_addr), Errors::not_published(EROLE_ID));
+        let validator_operator_addr = signer::address_of(validator_operator_account);
+        assert!(exists<RoleId>(validator_operator_addr), errors::not_published(EROLE_ID));
         assert!(
             borrow_global<RoleId>(validator_operator_addr).role_id == VALIDATOR_OPERATOR_ROLE_ID,
-            Errors::requires_role(EVALIDATOR_OPERATOR)
+            errors::requires_role(EVALIDATOR_OPERATOR)
         )
     }
     spec assert_validator_operator {
@@ -346,12 +346,12 @@ module DiemFramework::Roles {
 
     /// Assert that the account has either the parent vasp or designated dealer role.
     public fun assert_parent_vasp_or_designated_dealer(account: &signer) acquires RoleId {
-        let addr = Signer::address_of(account);
-        assert!(exists<RoleId>(addr), Errors::not_published(EROLE_ID));
+        let addr = signer::address_of(account);
+        assert!(exists<RoleId>(addr), errors::not_published(EROLE_ID));
         let role_id = borrow_global<RoleId>(addr).role_id;
         assert!(
             role_id == PARENT_VASP_ROLE_ID || role_id == DESIGNATED_DEALER_ROLE_ID,
-            Errors::requires_role(EPARENT_VASP_OR_DESIGNATED_DEALER)
+            errors::requires_role(EPARENT_VASP_OR_DESIGNATED_DEALER)
         );
     }
     spec assert_parent_vasp_or_designated_dealer {
@@ -360,12 +360,12 @@ module DiemFramework::Roles {
     }
 
     public fun assert_parent_vasp_or_child_vasp(account: &signer) acquires RoleId {
-        let addr = Signer::address_of(account);
-        assert!(exists<RoleId>(addr), Errors::not_published(EROLE_ID));
+        let addr = signer::address_of(account);
+        assert!(exists<RoleId>(addr), errors::not_published(EROLE_ID));
         let role_id = borrow_global<RoleId>(addr).role_id;
         assert!(
             role_id == PARENT_VASP_ROLE_ID || role_id == CHILD_VASP_ROLE_ID,
-            Errors::requires_role(EPARENT_VASP_OR_CHILD_VASP)
+            errors::requires_role(EPARENT_VASP_OR_CHILD_VASP)
         );
     }
     spec assert_parent_vasp_or_child_vasp {
@@ -523,11 +523,11 @@ module DiemFramework::Roles {
         }
 
         fun spec_signed_by_treasury_compliance_role(): bool {
-            exists a: address: Signer::is_txn_signer_addr(a) && spec_has_treasury_compliance_role_addr(a)
+            exists a: address: signer::is_txn_signer_addr(a) && spec_has_treasury_compliance_role_addr(a)
         }
 
         fun spec_signed_by_diem_root_role(): bool {
-            exists a: address: Signer::is_txn_signer_addr(a) && spec_has_diem_root_role_addr(a)
+            exists a: address: signer::is_txn_signer_addr(a) && spec_has_diem_root_role_addr(a)
         }
     }
 
@@ -540,71 +540,71 @@ module DiemFramework::Roles {
     spec schema AbortsIfNotDiemRoot {
         account: signer;
         include CoreAddresses::AbortsIfNotDiemRoot;
-        let addr = Signer::address_of(account);
-        aborts_if !exists<RoleId>(addr) with Errors::NOT_PUBLISHED;
-        aborts_if global<RoleId>(addr).role_id != DIEM_ROOT_ROLE_ID with Errors::REQUIRES_ROLE;
+        let addr = signer::address_of(account);
+        aborts_if !exists<RoleId>(addr) with errors::NOT_PUBLISHED;
+        aborts_if global<RoleId>(addr).role_id != DIEM_ROOT_ROLE_ID with errors::REQUIRES_ROLE;
     }
 
     spec schema AbortsIfNotTreasuryCompliance {
         account: signer;
         include CoreAddresses::AbortsIfNotTreasuryCompliance;
-        let addr = Signer::address_of(account);
-        aborts_if !exists<RoleId>(addr) with Errors::NOT_PUBLISHED;
-        aborts_if global<RoleId>(addr).role_id != TREASURY_COMPLIANCE_ROLE_ID with Errors::REQUIRES_ROLE;
+        let addr = signer::address_of(account);
+        aborts_if !exists<RoleId>(addr) with errors::NOT_PUBLISHED;
+        aborts_if global<RoleId>(addr).role_id != TREASURY_COMPLIANCE_ROLE_ID with errors::REQUIRES_ROLE;
     }
 
     spec schema AbortsIfNotParentVasp {
         account: signer;
-        let addr = Signer::address_of(account);
-        aborts_if !exists<RoleId>(addr) with Errors::NOT_PUBLISHED;
-        aborts_if global<RoleId>(addr).role_id != PARENT_VASP_ROLE_ID with Errors::REQUIRES_ROLE;
+        let addr = signer::address_of(account);
+        aborts_if !exists<RoleId>(addr) with errors::NOT_PUBLISHED;
+        aborts_if global<RoleId>(addr).role_id != PARENT_VASP_ROLE_ID with errors::REQUIRES_ROLE;
     }
 
     spec schema AbortsIfNotChildVasp {
         account: address;
-        aborts_if !exists<RoleId>(account) with Errors::NOT_PUBLISHED;
-        aborts_if global<RoleId>(account).role_id != CHILD_VASP_ROLE_ID with Errors::REQUIRES_ROLE;
+        aborts_if !exists<RoleId>(account) with errors::NOT_PUBLISHED;
+        aborts_if global<RoleId>(account).role_id != CHILD_VASP_ROLE_ID with errors::REQUIRES_ROLE;
     }
 
     spec schema AbortsIfNotDesignatedDealer {
         account: signer;
-        let addr = Signer::address_of(account);
-        aborts_if !exists<RoleId>(addr) with Errors::NOT_PUBLISHED;
-        aborts_if global<RoleId>(addr).role_id != DESIGNATED_DEALER_ROLE_ID with Errors::REQUIRES_ROLE;
+        let addr = signer::address_of(account);
+        aborts_if !exists<RoleId>(addr) with errors::NOT_PUBLISHED;
+        aborts_if global<RoleId>(addr).role_id != DESIGNATED_DEALER_ROLE_ID with errors::REQUIRES_ROLE;
     }
 
     spec schema AbortsIfNotParentVaspOrDesignatedDealer {
         account: signer;
-        let addr = Signer::address_of(account);
-        aborts_if !exists<RoleId>(addr) with Errors::NOT_PUBLISHED;
+        let addr = signer::address_of(account);
+        aborts_if !exists<RoleId>(addr) with errors::NOT_PUBLISHED;
         let role_id = global<RoleId>(addr).role_id;
         aborts_if role_id != PARENT_VASP_ROLE_ID && role_id != DESIGNATED_DEALER_ROLE_ID
-            with Errors::REQUIRES_ROLE;
+            with errors::REQUIRES_ROLE;
     }
 
     spec schema AbortsIfNotParentVaspOrChildVasp {
         account: signer;
-        let addr = Signer::address_of(account);
-        aborts_if !exists<RoleId>(addr) with Errors::NOT_PUBLISHED;
+        let addr = signer::address_of(account);
+        aborts_if !exists<RoleId>(addr) with errors::NOT_PUBLISHED;
         let role_id = global<RoleId>(addr).role_id;
         aborts_if role_id != PARENT_VASP_ROLE_ID && role_id != CHILD_VASP_ROLE_ID
-            with Errors::REQUIRES_ROLE;
+            with errors::REQUIRES_ROLE;
     }
 
     spec schema AbortsIfNotValidator {
         account: signer;
-        let addr = Signer::address_of(account);
+        let addr = signer::address_of(account);
         //validator_addr: address;
-        aborts_if !exists<RoleId>(addr) with Errors::NOT_PUBLISHED;
-        aborts_if global<RoleId>(addr).role_id != VALIDATOR_ROLE_ID with Errors::REQUIRES_ROLE;
+        aborts_if !exists<RoleId>(addr) with errors::NOT_PUBLISHED;
+        aborts_if global<RoleId>(addr).role_id != VALIDATOR_ROLE_ID with errors::REQUIRES_ROLE;
     }
 
     spec schema AbortsIfNotValidatorOperator {
         account: signer;
-        let addr = Signer::address_of(account);
+        let addr = signer::address_of(account);
         //validator_operator_addr: address;
-        aborts_if !exists<RoleId>(addr) with Errors::NOT_PUBLISHED;
+        aborts_if !exists<RoleId>(addr) with errors::NOT_PUBLISHED;
         aborts_if global<RoleId>(addr).role_id != VALIDATOR_OPERATOR_ROLE_ID
-            with Errors::REQUIRES_ROLE;
+            with errors::REQUIRES_ROLE;
     }
 }

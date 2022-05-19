@@ -1,6 +1,6 @@
 #[evm_contract]
 module 0x2::M {
-    use Std::Vector;
+    use std::vector;
 
     // Test type checking on arguments and return values
 
@@ -25,43 +25,43 @@ module 0x2::M {
 
     #[evm_test]
     fun test_decode_error() {
-        let v = Vector::empty<u64>();
-        Vector::push_back(&mut v, 42);
+        let v = vector::empty<u64>();
+        vector::push_back(&mut v, 42);
         decode_wrong_input_type(v);
     }
 
     #[evm_test]
     fun test_decode_sig_error() {
-        let v = Vector::empty<u64>();
-        Vector::push_back(&mut v, 42);
+        let v = vector::empty<u64>();
+        vector::push_back(&mut v, 42);
         decode_wrong_input_type_sig(v);
     }
 
     #[evm_test]
     fun test_encode_error() {
-        let v = Vector::empty<u64>();
-        Vector::push_back(&mut v, 42);
+        let v = vector::empty<u64>();
+        vector::push_back(&mut v, 42);
         encode_wrong_input_type(v);
     }
 
     #[evm_test]
     fun test_encode_sig_error() {
-        let v = Vector::empty<u64>();
-        Vector::push_back(&mut v, 42);
+        let v = vector::empty<u64>();
+        vector::push_back(&mut v, 42);
         encode_wrong_input_type_sig(v);
     }
 
     #[evm_test]
     fun test_encode_packed_error() {
-        let v = Vector::empty<u64>();
-        Vector::push_back(&mut v, 42);
+        let v = vector::empty<u64>();
+        vector::push_back(&mut v, 42);
         encode_wrong_input_type_packed(v);
     }
 
     #[evm_test]
     fun test_encode_packed_sig_error() {
-        let v = Vector::empty<u64>();
-        Vector::push_back(&mut v, 42);
+        let v = vector::empty<u64>();
+        vector::push_back(&mut v, 42);
         encode_wrong_input_type_packed_sig(v);
     }
 

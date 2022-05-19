@@ -5,7 +5,7 @@
 module Evm::IERC721Metadata {
     use Evm::Evm::{bytes_xor, bytes4, keccak256};
     use Evm::Result::{Result};
-    use Std::ASCII::{String};
+    use std::ascii::{String};
     use Evm::U256::{U256};
 
     #[external]

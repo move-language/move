@@ -4,10 +4,10 @@
 
 //# run --signers A
 script {
-    use Std::Signer;
+    use std::signer;
 
     fun main(s: signer) {
-        assert!(Signer::address_of(&s) == @42, 1000);
+        assert!(signer::address_of(&s) == @42, 1000);
     }
 }
 

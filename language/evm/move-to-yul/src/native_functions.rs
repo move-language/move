@@ -419,7 +419,7 @@ impl NativeFunctions {
     }
 
     fn define_move_functions(&mut self, ctx: &Context) {
-        let signer = &self.find_module(ctx, "0x1", "Signer");
+        let signer = &self.find_module(ctx, "0x1", "signer");
 
         self.define(ctx, signer, "borrow_address", |_, ctx: &Context, _| {
             emitln!(

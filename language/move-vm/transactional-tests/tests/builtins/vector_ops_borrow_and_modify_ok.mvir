@@ -43,20 +43,20 @@ label b0:
 
 //# run --signers 0x1
 import 0x1.M;
-import 0x1.Signer;
+import 0x1.signer;
 
 main(s: signer) {
 label b0:
-    M.borrow_and_modify(Signer.address_of(&s));
+    M.borrow_and_modify(signer.address_of(&s));
     return;
 }
 
 //# run --signers 0x1
 import 0x1.M;
-import 0x1.Signer;
+import 0x1.signer;
 
 main(s: signer) {
 label b0:
-    M.verify_effects(Signer.address_of(&s));
+    M.verify_effects(signer.address_of(&s));
     return;
 }

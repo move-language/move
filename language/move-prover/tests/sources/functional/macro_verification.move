@@ -5,7 +5,7 @@
 
 /// This file contains some simulated expansions of functional macros and sketches how they can be verified.
 module 0x42::FunMacros {
-    use Std::Vector;
+    use std::vector;
 
     /// Simulates `foreach!(v, |x| *x = *x + 1 spec  { ensures x == old(x) + 1; })`
     /// where `macro foreach!<T>(v: &mut vector<T>, action: |&mut T|)`
@@ -14,8 +14,8 @@ module 0x42::FunMacros {
     /// with the lambda.
     fun foreach(v: &mut vector<u64>) {
         let i = 0;
-        while (i < Vector::length(v)) {
-            let x = Vector::borrow_mut(v, i);
+        while (i < vector::length(v)) {
+            let x = vector::borrow_mut(v, i);
             *x = *x + 1;
             i = i + 1;
         }
@@ -40,8 +40,8 @@ module 0x42::FunMacros {
     fun reduce(v: &vector<u64>) : u64 {
         let i = 0;
         let sum = 0;
-        while (i < Vector::length(v)) {
-            let x = Vector::borrow(v, i);
+        while (i < vector::length(v)) {
+            let x = vector::borrow(v, i);
             sum = sum + *x;
             i = i + 1;
         }
@@ -65,10 +65,10 @@ module 0x42::FunMacros {
     }
 
     fun reduce_test(x: u64, y: u64, z: u64): u64 {
-        let v = Vector::empty();
-        Vector::push_back(&mut v, x);
-        Vector::push_back(&mut v, y);
-        Vector::push_back(&mut v, z);
+        let v = vector::empty();
+        vector::push_back(&mut v, x);
+        vector::push_back(&mut v, y);
+        vector::push_back(&mut v, z);
         reduce(&v)
     }
     spec reduce_test {
@@ -82,8 +82,8 @@ module 0x42::FunMacros {
     /// For index_of, we do not need any invariant at the lambda, as it's spec can be fully derived.
     fun index_of(v: &vector<u64>): u64 {
         let i = 0;
-        while (i < Vector::length(v)) {
-            let x = Vector::borrow(v, i);
+        while (i < vector::length(v)) {
+            let x = vector::borrow(v, i);
             if (*x > 2) return i;
             i = i + 1;
         }

@@ -1,14 +1,14 @@
 // dep: ../../move-stdlib/sources/Vector.move
 
 module 0x2::ReadVector {
-    use Std::Vector;
+    use std::vector;
 
     struct S has drop { a: vector<address> }
     struct Glob has key { b: bool }
 
     fun extract_addr_from_vec(s: S): address {
         let S { a } = s;
-        *Vector::borrow(&a, 0)
+        *vector::borrow(&a, 0)
     } // ret |-> { Formal(0)/a/0 }
 
     fun read_addr_from_vec(s: S): bool acquires Glob {

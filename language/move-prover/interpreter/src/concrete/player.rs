@@ -162,28 +162,28 @@ impl<'env> FunctionContext<'env> {
 
         // dispatch
         match (addr, module_name.as_str(), function_name.as_str()) {
-            (DIEM_CORE_ADDR, "Vector", "empty") => {
+            (DIEM_CORE_ADDR, "vector", "empty") => {
                 if cfg!(debug_assertions) {
                     assert_eq!(srcs.len(), 0);
                 }
                 let res = self.native_vector_empty();
                 Ok(vec![res])
             }
-            (DIEM_CORE_ADDR, "Vector", "length") => {
+            (DIEM_CORE_ADDR, "vector", "length") => {
                 if cfg!(debug_assertions) {
                     assert_eq!(srcs.len(), 1);
                 }
                 let res = self.native_vector_length(dummy_state.del_value(0));
                 Ok(vec![res])
             }
-            (DIEM_CORE_ADDR, "Vector", "borrow") => {
+            (DIEM_CORE_ADDR, "vector", "borrow") => {
                 if cfg!(debug_assertions) {
                     assert_eq!(srcs.len(), 2);
                 }
                 self.native_vector_borrow(dummy_state.del_value(0), dummy_state.del_value(1))
                     .map(|res| vec![res])
             }
-            (DIEM_CORE_ADDR, "Vector", "borrow_mut") => {
+            (DIEM_CORE_ADDR, "vector", "borrow_mut") => {
                 if cfg!(debug_assertions) {
                     assert_eq!(srcs.len(), 2);
                 }
@@ -194,7 +194,7 @@ impl<'env> FunctionContext<'env> {
                 )
                 .map(|res| vec![res])
             }
-            (DIEM_CORE_ADDR, "Vector", "push_back") => {
+            (DIEM_CORE_ADDR, "vector", "push_back") => {
                 if cfg!(debug_assertions) {
                     assert_eq!(srcs.len(), 2);
                 }
@@ -203,7 +203,7 @@ impl<'env> FunctionContext<'env> {
                 local_state.put_value_override(*srcs.get(0).unwrap(), res);
                 Ok(vec![])
             }
-            (DIEM_CORE_ADDR, "Vector", "pop_back") => {
+            (DIEM_CORE_ADDR, "vector", "pop_back") => {
                 if cfg!(debug_assertions) {
                     assert_eq!(srcs.len(), 1);
                 }
@@ -216,7 +216,7 @@ impl<'env> FunctionContext<'env> {
                     Err(e) => Err(e),
                 }
             }
-            (DIEM_CORE_ADDR, "Vector", "destroy_empty") => {
+            (DIEM_CORE_ADDR, "vector", "destroy_empty") => {
                 if cfg!(debug_assertions) {
                     assert_eq!(srcs.len(), 1);
                 }
@@ -229,7 +229,7 @@ impl<'env> FunctionContext<'env> {
                     Err(e) => Err(e),
                 }
             }
-            (DIEM_CORE_ADDR, "Vector", "swap") => {
+            (DIEM_CORE_ADDR, "vector", "swap") => {
                 if cfg!(debug_assertions) {
                     assert_eq!(srcs.len(), 3);
                 }
@@ -246,35 +246,35 @@ impl<'env> FunctionContext<'env> {
                     Err(e) => Err(e),
                 }
             }
-            (DIEM_CORE_ADDR, "Signer", "borrow_address") => {
+            (DIEM_CORE_ADDR, "signer", "borrow_address") => {
                 if cfg!(debug_assertions) {
                     assert_eq!(srcs.len(), 1);
                 }
                 let res = self.native_signer_borrow_address(dummy_state.del_value(0));
                 Ok(vec![res])
             }
-            (DIEM_CORE_ADDR, "Hash", "sha2_256") => {
+            (DIEM_CORE_ADDR, "hash", "sha2_256") => {
                 if cfg!(debug_assertions) {
                     assert_eq!(srcs.len(), 1);
                 }
                 let res = self.native_hash_sha2_256(dummy_state.del_value(0));
                 Ok(vec![res])
             }
-            (DIEM_CORE_ADDR, "Hash", "sha3_256") => {
+            (DIEM_CORE_ADDR, "hash", "sha3_256") => {
                 if cfg!(debug_assertions) {
                     assert_eq!(srcs.len(), 1);
                 }
                 let res = self.native_hash_sha3_256(dummy_state.del_value(0));
                 Ok(vec![res])
             }
-            (DIEM_CORE_ADDR, "BCS", "to_bytes") => {
+            (DIEM_CORE_ADDR, "bcs", "to_bytes") => {
                 if cfg!(debug_assertions) {
                     assert_eq!(srcs.len(), 1);
                 }
                 self.native_bcs_to_bytes(dummy_state.del_value(0))
                     .map(|res| vec![res])
             }
-            (DIEM_CORE_ADDR, "Event", "write_to_event_store") => {
+            (DIEM_CORE_ADDR, "event", "write_to_event_store") => {
                 if cfg!(debug_assertions) {
                     assert_eq!(srcs.len(), 3);
                 }

@@ -4,8 +4,8 @@ module Evm::ERC20 {
     use Evm::Evm::{sender, self, sign, emit};
     use Evm::Table::{Self, Table};
     use Evm::U256::{Self, U256};
-    use Std::ASCII::{String};
-    use Std::Errors;
+    use std::ascii::{String};
+    use std::errors;
 
     #[event]
     struct Transfer {
@@ -83,7 +83,7 @@ module Evm::ERC20 {
     #[callable]
     /// Transfers the amount from the sending account to the given account
     public fun transfer(to: address, amount: U256): bool acquires State {
-        assert!(sender() != to, Errors::invalid_argument(0));
+        assert!(sender() != to, errors::invalid_argument(0));
         do_transfer(sender(), to, amount);
         true
     }
@@ -92,10 +92,10 @@ module Evm::ERC20 {
     /// Transfers the amount on behalf of the `from` account to the given account.
     /// This evaluates and adjusts the allowance.
     public fun transferFrom(from: address, to: address, amount: U256): bool acquires State {
-        assert!(sender() != to, Errors::invalid_argument(0));
+        assert!(sender() != to, errors::invalid_argument(0));
         let s = borrow_global_mut<State>(self());
         let allowance_for_sender = mut_allowance(s, from, sender());
-        assert!(U256::le(copy amount, *allowance_for_sender), Errors::limit_exceeded(0));
+        assert!(U256::le(copy amount, *allowance_for_sender), errors::limit_exceeded(0));
         *allowance_for_sender = U256::sub(*allowance_for_sender, copy amount);
         do_transfer(from, to, amount);
         true
@@ -125,7 +125,7 @@ module Evm::ERC20 {
     fun do_transfer(from: address, to: address, amount: U256) acquires State {
         let s = borrow_global_mut<State>(self());
         let from_bal = mut_balanceOf(s, from);
-        assert!(U256::le(copy amount, *from_bal), Errors::limit_exceeded(0));
+        assert!(U256::le(copy amount, *from_bal), errors::limit_exceeded(0));
         *from_bal = U256::sub(*from_bal, copy amount);
         let to_bal = mut_balanceOf(s, to);
         *to_bal = U256::add(*to_bal, copy amount);

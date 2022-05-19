@@ -21,12 +21,12 @@ module M {
     }
 
     #[test_only]
-    use Std::Signer;
+    use std::signer;
 
     #[test(a=@0x1, b=@0x2)]
     fun test_correct_signer_arg_addrs(a: signer, b: signer) {
-        assert!(Signer::address_of(&a) == @0x1, 0);
-        assert!(Signer::address_of(&b) == @0x2, 1);
+        assert!(signer::address_of(&a) == @0x1, 0);
+        assert!(signer::address_of(&b) == @0x2, 1);
     }
 }
 }

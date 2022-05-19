@@ -4,8 +4,8 @@
 /// with that nonce has not yet been executed.
 /// When nonce X is recorded, all transactions with nonces lower then X-128 will abort.
 module DiemFramework::SlidingNonce {
-    use Std::Signer;
-    use Std::Errors;
+    use std::signer;
+    use std::errors;
     friend DiemFramework::DiemAccount;
 
     struct SlidingNonce has key {
@@ -34,7 +34,7 @@ module DiemFramework::SlidingNonce {
     /// Calls `try_record_nonce` and aborts transaction if returned code is non-0
     public fun record_nonce_or_abort(account: &signer, seq_nonce: u64) acquires SlidingNonce {
         let code = try_record_nonce(account, seq_nonce);
-        assert!(code == 0, Errors::invalid_argument(code));
+        assert!(code == 0, errors::invalid_argument(code));
     }
 
     spec record_nonce_or_abort {
@@ -44,8 +44,8 @@ module DiemFramework::SlidingNonce {
     spec schema RecordNonceAbortsIf {
         account: signer;
         seq_nonce: u64;
-        aborts_if !exists<SlidingNonce>(Signer::address_of(account)) with Errors::NOT_PUBLISHED;
-        aborts_if spec_try_record_nonce(account, seq_nonce) != 0 with Errors::INVALID_ARGUMENT;
+        aborts_if !exists<SlidingNonce>(signer::address_of(account)) with errors::NOT_PUBLISHED;
+        aborts_if spec_try_record_nonce(account, seq_nonce) != 0 with errors::INVALID_ARGUMENT;
     }
 
     /// # Explanation of the Algorithm
@@ -193,8 +193,8 @@ module DiemFramework::SlidingNonce {
         if (seq_nonce == 0) {
             return 0
         };
-        assert!(exists<SlidingNonce>(Signer::address_of(account)), Errors::not_published(ESLIDING_NONCE));
-        let t = borrow_global_mut<SlidingNonce>(Signer::address_of(account));
+        assert!(exists<SlidingNonce>(signer::address_of(account)), errors::not_published(ESLIDING_NONCE));
+        let t = borrow_global_mut<SlidingNonce>(signer::address_of(account));
         // The `seq_nonce` is outside the current window to the "left" and is
         // no longer valid since we can't shift the window back.
         if (t.min_nonce > seq_nonce) {
@@ -248,10 +248,10 @@ module DiemFramework::SlidingNonce {
         /// >Note: Verification is turned off. For verifying callers, this is effectively abstracted into a function
         /// that returns arbitrary results because `spec_try_record_nonce` is uninterpreted.
         pragma opaque, verify = false;
-        aborts_if !exists<SlidingNonce>(Signer::address_of(account)) with Errors::NOT_PUBLISHED;
-        modifies global<SlidingNonce>(Signer::address_of(account));
+        aborts_if !exists<SlidingNonce>(signer::address_of(account)) with errors::NOT_PUBLISHED;
+        modifies global<SlidingNonce>(signer::address_of(account));
         ensures result == spec_try_record_nonce(account, seq_nonce);
-        ensures exists<SlidingNonce>(Signer::address_of(account));
+        ensures exists<SlidingNonce>(signer::address_of(account));
     }
 
     /// Specification version of `Self::try_record_nonce`.
@@ -260,16 +260,16 @@ module DiemFramework::SlidingNonce {
     /// Publishes nonce resource for `account`
     /// This is required before other functions in this module can be called for `account`
     public(friend) fun publish(account: &signer) {
-        assert!(!exists<SlidingNonce>(Signer::address_of(account)), Errors::already_published(ENONCE_ALREADY_PUBLISHED));
+        assert!(!exists<SlidingNonce>(signer::address_of(account)), errors::already_published(ENONCE_ALREADY_PUBLISHED));
         move_to(account, SlidingNonce {  min_nonce: 0, nonce_mask: 0 });
     }
     spec publish {
         pragma opaque;
-        modifies global<SlidingNonce>(Signer::address_of(account));
-        aborts_if exists<SlidingNonce>(Signer::address_of(account)) with Errors::ALREADY_PUBLISHED;
-        ensures exists<SlidingNonce>(Signer::address_of(account));
-        ensures global<SlidingNonce>(Signer::address_of(account)).min_nonce == 0;
-        ensures global<SlidingNonce>(Signer::address_of(account)).nonce_mask == 0;
+        modifies global<SlidingNonce>(signer::address_of(account));
+        aborts_if exists<SlidingNonce>(signer::address_of(account)) with errors::ALREADY_PUBLISHED;
+        ensures exists<SlidingNonce>(signer::address_of(account));
+        ensures global<SlidingNonce>(signer::address_of(account)).min_nonce == 0;
+        ensures global<SlidingNonce>(signer::address_of(account)).nonce_mask == 0;
     }
 
     // =================================================================

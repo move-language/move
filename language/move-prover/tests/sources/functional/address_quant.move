@@ -1,7 +1,7 @@
 // Tests of quantification over addresses.
 module 0x42::AddressQuant {
 
-    use Std::Signer;
+    use std::signer;
     struct R has key {
         x: u64
     }
@@ -21,7 +21,7 @@ module 0x42::AddressQuant {
     }
 
     public fun initialize(sndr: &signer, special_addr: address) {
-        assert!(Signer::address_of(sndr) == special_addr, 0);
+        assert!(signer::address_of(sndr) == special_addr, 0);
         move_to<R>(sndr, R{x:1});
     }
     spec initialize {

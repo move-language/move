@@ -3,7 +3,7 @@ module 0x2::Tables {
     use Evm::Evm::sign;
     use Evm::Table::{Self, Table};
     use Evm::U256::{u256_from_words, U256, sub, zero, one};
-    use Std::Vector;
+    use std::vector;
 
     struct S<phantom K, phantom V> has key {
         t: Table<K, V>
@@ -49,24 +49,24 @@ module 0x2::Tables {
     fun test_vector() acquires S {
         let t = Table::empty<u8, vector<address>>();
 
-        Table::insert(&mut t, &42, Vector::singleton<address>(@0x1012));
+        Table::insert(&mut t, &42, vector::singleton<address>(@0x1012));
         assert!(Table::contains(&t, &42), 101);
         assert!(!Table::contains(&t, &0), 102);
-        assert!(Vector::length(Table::borrow(&t, &42)) == 1, 103);
-        assert!(*Vector::borrow(Table::borrow(&t, &42), 0) == @0x1012, 104);
+        assert!(vector::length(Table::borrow(&t, &42)) == 1, 103);
+        assert!(*vector::borrow(Table::borrow(&t, &42), 0) == @0x1012, 104);
 
         move_to(&sign(@0x42), S { t });
 
         let s = borrow_global_mut<S<u8, vector<address>>>(@0x42);
         let v_mut_ref = Table::borrow_mut(&mut s.t, &42);
-        Vector::push_back(v_mut_ref, @0x1013);
-        assert!(Vector::length(Table::borrow(&s.t, &42)) == 2, 105);
-        assert!(*Vector::borrow(Table::borrow(&s.t, &42), 1) == @0x1013, 106);
+        vector::push_back(v_mut_ref, @0x1013);
+        assert!(vector::length(Table::borrow(&s.t, &42)) == 2, 105);
+        assert!(*vector::borrow(Table::borrow(&s.t, &42), 1) == @0x1013, 106);
 
         let v = Table::remove(&mut s.t, &42);
-        assert!(Vector::length(&v) == 2, 107);
-        assert!(*Vector::borrow(&v, 0) == @0x1012, 108);
-        assert!(*Vector::borrow(&v, 1) == @0x1013, 109);
+        assert!(vector::length(&v) == 2, 107);
+        assert!(*vector::borrow(&v, 0) == @0x1012, 108);
+        assert!(*vector::borrow(&v, 1) == @0x1013, 109);
         assert!(!Table::contains(&s.t, &42), 110);
     }
 

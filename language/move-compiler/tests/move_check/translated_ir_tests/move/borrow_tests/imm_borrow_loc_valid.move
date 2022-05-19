@@ -1,12 +1,12 @@
 module 0x8675309::Tester {
-    use Std::Signer;
+    use std::signer;
 
     struct Data has key { v1: u64, v2: u64 }
     struct Box has key { f: u64 }
 
     // the resource struct is here to just give a feeling why the computation might not be reorderable
     fun bump_and_pick(account: &signer, b1: &mut Box, b2: &mut Box): &u64 acquires Data {
-        let sender = Signer::address_of(account);
+        let sender = signer::address_of(account);
         let data = borrow_global_mut<Data>(sender);
         b1.f = data.v1;
         b2.f = data.v2;
@@ -14,7 +14,7 @@ module 0x8675309::Tester {
     }
 
     fun larger_field(account: &signer, drop: address, result: &mut u64) acquires Box, Data {
-        let sender = Signer::address_of(account);
+        let sender = signer::address_of(account);
         let b1 = move_from<Box>(sender);
         let b2 = move_from<Box>(drop);
 

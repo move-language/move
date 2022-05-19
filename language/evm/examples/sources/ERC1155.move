@@ -8,9 +8,9 @@ module Evm::ERC1155 {
     use Evm::Table::{Self, Table};
     use Evm::Result;
     use Evm::U256::{Self, U256};
-    use Std::ASCII::{String};
-    use Std::Errors;
-    use Std::Vector;
+    use std::ascii::{String};
+    use std::errors;
+    use std::vector;
 
     #[event]
     struct TransferSingle {
@@ -83,16 +83,16 @@ module Evm::ERC1155 {
     #[callable, view]
     /// Get the balance of multiple account/token pairs.
     public fun balanceOfBatch(accounts: vector<address>, ids: vector<U256>): vector<U256> acquires State {
-        assert!(Vector::length(&accounts) == Vector::length(&ids), Errors::invalid_argument(0));
-        let len = Vector::length(&accounts);
+        assert!(vector::length(&accounts) == vector::length(&ids), errors::invalid_argument(0));
+        let len = vector::length(&accounts);
         let i = 0;
-        let balances = Vector::empty<U256>();
+        let balances = vector::empty<U256>();
         while(i < len) {
-            Vector::push_back(
+            vector::push_back(
                 &mut balances,
                 balanceOf(
-                    *Vector::borrow(&accounts, i),
-                    *Vector::borrow(&ids, i)
+                    *vector::borrow(&accounts, i),
+                    *vector::borrow(&ids, i)
                 )
             );
             i = i + 1;
@@ -119,10 +119,10 @@ module Evm::ERC1155 {
     #[callable]
     /// Transfers `_value` amount of an `_id` from the `_from` address to the `_to` address specified (with safety call).
     public fun safeTransferFrom(from: address, to: address, id: U256, amount: U256, _data: vector<u8>) acquires State {
-        assert!(from == sender() || isApprovalForAll(from, sender()), Errors::invalid_argument(0));
+        assert!(from == sender() || isApprovalForAll(from, sender()), errors::invalid_argument(0));
         let s = borrow_global_mut<State>(self());
         let mut_balance_from = mut_balanceOf(s, copy id, from);
-        assert!(U256::le(copy amount, *mut_balance_from), Errors::invalid_argument(0));
+        assert!(U256::le(copy amount, *mut_balance_from), errors::invalid_argument(0));
         *mut_balance_from = U256::sub(*mut_balance_from, copy amount);
         let mut_balance_to = mut_balanceOf(s, copy id, to);
         *mut_balance_to = U256::add(*mut_balance_to, copy amount);
@@ -136,20 +136,20 @@ module Evm::ERC1155 {
     #[callable]
     /// Transfers `_value` amount of an `_id` from the `_from` address to the `_to` address specified (with safety call).
     public fun safeBatchTransferFrom(from: address, to: address, ids: vector<U256>, amounts: vector<U256>, data: vector<u8>) acquires State {
-        assert!(from == sender() || isApprovalForAll(from, sender()), Errors::invalid_argument(0));
-        assert!(Vector::length(&amounts) == Vector::length(&ids), Errors::invalid_argument(0));
-        let len = Vector::length(&amounts);
+        assert!(from == sender() || isApprovalForAll(from, sender()), errors::invalid_argument(0));
+        assert!(vector::length(&amounts) == vector::length(&ids), errors::invalid_argument(0));
+        let len = vector::length(&amounts);
         let i = 0;
 
         let operator = sender();
         let s = borrow_global_mut<State>(self());
 
         while(i < len) {
-            let id = *Vector::borrow(&ids, i);
-            let amount = *Vector::borrow(&amounts, i);
+            let id = *vector::borrow(&ids, i);
+            let amount = *vector::borrow(&amounts, i);
 
             let mut_balance_from = mut_balanceOf(s, copy id, from);
-            assert!(U256::le(copy amount, *mut_balance_from), Errors::invalid_argument(0));
+            assert!(U256::le(copy amount, *mut_balance_from), errors::invalid_argument(0));
             *mut_balance_from = U256::sub(*mut_balance_from, copy amount);
             let mut_balance_to = mut_balanceOf(s, id, to);
             *mut_balance_to = U256::add(*mut_balance_to, amount);
@@ -176,7 +176,7 @@ module Evm::ERC1155 {
     #[callable]
     // Query if this contract implements a certain interface.
     public fun mint(to: address, id: U256, amount: U256, _data: vector<u8>) acquires State {
-        assert!(sender() == owner(), Errors::invalid_argument(0)); // Only owner can mint.
+        assert!(sender() == owner(), errors::invalid_argument(0)); // Only owner can mint.
         let s = borrow_global_mut<State>(self());
         let mut_balance_to = mut_balanceOf(s, copy id, to);
         *mut_balance_to = U256::add(*mut_balance_to, copy amount);
@@ -187,16 +187,16 @@ module Evm::ERC1155 {
     #[callable]
     // Query if this contract implements a certain interface.
     public fun mintBatch(to: address, ids: vector<U256>, amounts: vector<U256>, _data: vector<u8>) acquires State {
-        assert!(sender() == owner(), Errors::invalid_argument(0)); // Only owner can mint.
-        assert!(Vector::length(&amounts) == Vector::length(&ids), Errors::invalid_argument(0));
-        let len = Vector::length(&amounts);
+        assert!(sender() == owner(), errors::invalid_argument(0)); // Only owner can mint.
+        assert!(vector::length(&amounts) == vector::length(&ids), errors::invalid_argument(0));
+        let len = vector::length(&amounts);
         let i = 0;
 
         let s = borrow_global_mut<State>(self());
 
         while(i < len) {
-            let id = *Vector::borrow(&ids, i);
-            let amount = *Vector::borrow(&amounts, i);
+            let id = *vector::borrow(&ids, i);
+            let amount = *vector::borrow(&amounts, i);
 
             let mut_balance_to = mut_balanceOf(s, id, to);
             *mut_balance_to = U256::add(*mut_balance_to, amount);
@@ -243,11 +243,11 @@ module Evm::ERC1155 {
             if (Result::is_ok(&result)) {
                 let retval = Result::unwrap(result);
                 let expected = IERC1155Receiver::selector_onERC1155Received();
-                assert!(retval == expected, Errors::custom(0));
+                assert!(retval == expected, errors::custom(0));
             }
             else {
                 let _error = Result::unwrap_err(result);
-                abort(Errors::custom(1)) // TODO: abort with the `_error` value.
+                abort(errors::custom(1)) // TODO: abort with the `_error` value.
             }
         }
     }
@@ -259,11 +259,11 @@ module Evm::ERC1155 {
             if (Result::is_ok(&result)) {
                 let retval = Result::unwrap(result);
                 let expected = IERC1155Receiver::selector_onERC1155BatchReceived();
-                assert!(retval == expected, Errors::custom(0));
+                assert!(retval == expected, errors::custom(0));
             }
             else {
                 let _error = Result::unwrap_err(result);
-                abort(Errors::custom(1)) // TODO: abort with the `_error` value.
+                abort(errors::custom(1)) // TODO: abort with the `_error` value.
             }
         }
     }

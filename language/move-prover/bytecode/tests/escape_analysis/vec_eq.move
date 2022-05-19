@@ -1,7 +1,7 @@
 // dep: ../../move-stdlib/sources/Vector.move
 
 module 0x1::VecEq {
-    use Std::Vector;
+    use std::vector;
 
     struct G { v: vector<u64> }
 
@@ -10,7 +10,7 @@ module 0x1::VecEq {
     }
 
     public fun new(): G {
-        G { v: Vector::singleton(10) }
+        G { v: vector::singleton(10) }
     }
 
     // should complain
@@ -20,6 +20,6 @@ module 0x1::VecEq {
 
     // should also complain
     public fun leak_index_into_v(g: &mut G): &mut u64 {
-        Vector::borrow_mut(&mut g.v, 0)
+        vector::borrow_mut(&mut g.v, 0)
     }
 }

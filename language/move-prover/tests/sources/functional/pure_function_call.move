@@ -1,20 +1,20 @@
 module 0x42::TestPureFun {
 
-    use Std::Signer;
-    use Std::Vector;
+    use std::signer;
+    use std::vector;
     struct T has key {
         x: u64,
     }
 
     public fun init(dr_account: &signer): bool {
-        assert!(Signer::address_of(dr_account) == @0xA550C18, 0);
+        assert!(signer::address_of(dr_account) == @0xA550C18, 0);
         move_to(dr_account, T { x: 2 });
         false
     }
 
     spec init {
-        aborts_if Signer::address_of(dr_account) != @0xA550C18;
-        aborts_if exists<T>(Signer::address_of(dr_account));
+        aborts_if signer::address_of(dr_account) != @0xA550C18;
+        aborts_if exists<T>(signer::address_of(dr_account));
         ensures dr_x() == pure_f_2();
     }
 
@@ -52,11 +52,11 @@ module 0x42::TestPureFun {
     }
 
     public fun get_elem(v: &vector<T>): u64 {
-        Vector::borrow(v, 0).x
+        vector::borrow(v, 0).x
     }
 
     spec get_elem {
-        aborts_if Vector::is_empty(v);
+        aborts_if vector::is_empty(v);
     }
 
     spec module {

@@ -1,6 +1,6 @@
 //# publish
 module 0x1.A {
-    import 0x1.Signer;
+    import 0x1.signer;
     struct T has key {v: u64}
 
     public A0(account: &signer, addr: address) acquires T {
@@ -8,7 +8,7 @@ module 0x1.A {
         let y: &mut Self.T;
         let sender: address;
     label b0:
-        sender = Signer.address_of(move(account));
+        sender = signer.address_of(move(account));
         x = borrow_global_mut<T>(move(sender));
         y = borrow_global_mut<T>(move(addr)); // cannot acquire T, still borrowed
         _ = move(x);

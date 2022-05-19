@@ -4,10 +4,10 @@
 // procedures that they inline (e.g., `verify_model_remove`).
 // This file also verifies the actual Move implementations of non-native functions (e.g., `verify_remove`).
 module 0x42::VerifyVector {
-    use Std::Vector;
+    use std::vector;
 
     fun verify_model_empty<Element>() : vector<Element> {
-        Vector::empty<Element>() // inlining the built-in Boogie procedure
+        vector::empty<Element>() // inlining the built-in Boogie procedure
     }
     spec verify_model_empty {
         ensures len(result) == 0;
@@ -15,7 +15,7 @@ module 0x42::VerifyVector {
 
     // Return the length of the vector.
     fun verify_model_length<Element>(v: &vector<Element>): u64 {
-        Vector::length(v) // inlining the built-in Boogie procedure
+        vector::length(v) // inlining the built-in Boogie procedure
     }
     spec verify_model_length {
         ensures result == len(v);
@@ -23,7 +23,7 @@ module 0x42::VerifyVector {
 
     // Acquire an immutable reference to the ith element of the vector.
     fun verify_model_borrow<Element>(v: &vector<Element>, i: u64): &Element {
-        Vector::borrow(v, i) // inlining the built-in Boogie procedure
+        vector::borrow(v, i) // inlining the built-in Boogie procedure
     }
     spec verify_model_borrow {
         aborts_if i >= len(v);
@@ -32,7 +32,7 @@ module 0x42::VerifyVector {
 
     // Add an element to the end of the vector.
     fun verify_model_push_back<Element>(v: &mut vector<Element>, e: Element) {
-        Vector::push_back(v, e); // inlining the built-in Boogie procedure
+        vector::push_back(v, e); // inlining the built-in Boogie procedure
     }
     spec verify_model_push_back {
         ensures len(v) == len(old(v)) + 1;
@@ -42,7 +42,7 @@ module 0x42::VerifyVector {
 
     // Get mutable reference to the ith element in the vector, abort if out of bound.
     fun verify_model_borrow_mut<Element>(v: &mut vector<Element>, i: u64): &mut Element {
-        Vector::borrow_mut(v, i) // inlining the built-in Boogie procedure
+        vector::borrow_mut(v, i) // inlining the built-in Boogie procedure
     }
     spec verify_model_borrow_mut {
         aborts_if i >= len(v);
@@ -51,7 +51,7 @@ module 0x42::VerifyVector {
 
     // Pop an element from the end of vector, abort if the vector is empty.
     fun verify_model_pop_back<Element>(v: &mut vector<Element>): Element {
-        Vector::pop_back(v) // inlining the built-in Boogie procedure
+        vector::pop_back(v) // inlining the built-in Boogie procedure
     }
     spec verify_model_pop_back {
         aborts_if len(v) == 0;
@@ -62,7 +62,7 @@ module 0x42::VerifyVector {
 
     // Destroy the vector, abort if not empty.
     fun verify_model_destroy_empty<Element>(v: vector<Element>) {
-        Vector::destroy_empty(v); // inlining the built-in Boogie procedure
+        vector::destroy_empty(v); // inlining the built-in Boogie procedure
     }
     spec verify_model_destroy_empty {
         aborts_if len(v) > 0;
@@ -71,7 +71,7 @@ module 0x42::VerifyVector {
 
     // Swaps the elements at the i'th and j'th indices in the vector.
     fun verify_model_swap<Element>(v: &mut vector<Element>, i: u64, j: u64) {
-        Vector::swap(v, i, j); // inlining the built-in Boogie procedure
+        vector::swap(v, i, j); // inlining the built-in Boogie procedure
     }
     spec verify_model_swap {
         aborts_if i >= len(v);
@@ -81,8 +81,8 @@ module 0x42::VerifyVector {
 
     // Return an vector of size one containing `e`
     fun verify_singleton<Element>(e: Element): vector<Element> {
-        let v = Vector::empty();
-        Vector::push_back(&mut v, e);
+        let v = vector::empty();
+        vector::push_back(&mut v, e);
         v
     }
     spec verify_singleton {
@@ -93,7 +93,7 @@ module 0x42::VerifyVector {
 
     // Reverses the order of the elements in the vector in place.
     fun verify_reverse<Element>(v: &mut vector<Element>) {
-        let vlen = Vector::length(v);
+        let vlen = vector::length(v);
         if (vlen == 0) return ();
 
         let front_index = 0;
@@ -108,7 +108,7 @@ module 0x42::VerifyVector {
             };
             (front_index < back_index)
         }) {
-            Vector::swap(v, front_index, back_index);
+            vector::swap(v, front_index, back_index);
             front_index = front_index + 1;
             back_index = back_index - 1;
         };
@@ -120,7 +120,7 @@ module 0x42::VerifyVector {
 
     // Reverses the order of the elements in the vector in place.
     fun verify_model_reverse<Element>(v: &mut vector<Element>) {
-        Vector::reverse(v); // inlining the built-in Boogie procedure
+        vector::reverse(v); // inlining the built-in Boogie procedure
     }
     spec verify_model_reverse {
         aborts_if false;
@@ -130,7 +130,7 @@ module 0x42::VerifyVector {
     // Moves all of the elements of the `other` vector into the `v` vector.
     fun verify_append<Element>(v: &mut vector<Element>, other: vector<Element>) {
         let o = &mut other;
-        Vector::reverse(o);
+        vector::reverse(o);
         while ({
             spec {
                 invariant len(v) >= len(old(v));
@@ -140,11 +140,11 @@ module 0x42::VerifyVector {
                 invariant forall k in 0..len(o): o[k] == other[len(other)-1-k];
                 invariant forall k in len(old(v))..len(v): v[k] == other[k-len(old(v))];
             };
-            !Vector::is_empty(o)
+            !vector::is_empty(o)
         }) {
-            Vector::push_back(v, Vector::pop_back(o))
+            vector::push_back(v, vector::pop_back(o))
         };
-        Vector::destroy_empty(other);
+        vector::destroy_empty(other);
     }
     spec verify_append {
         ensures len(v) == old(len(v)) + len(other);
@@ -154,7 +154,7 @@ module 0x42::VerifyVector {
 
     // Moves all of the elements of the `other` vector into the `lhs` vector.
     fun verify_model_append<Element>(lhs: &mut vector<Element>, other: vector<Element>) {
-        Vector::append(lhs, other) // inlining the built-in Boogie procedure
+        vector::append(lhs, other) // inlining the built-in Boogie procedure
     }
     spec verify_model_append {
         ensures len(lhs) == old(len(lhs) + len(other));
@@ -164,7 +164,7 @@ module 0x42::VerifyVector {
 
     // Return true if the vector has no elements
     fun verify_is_empty<Element>(v: &vector<Element>): bool {
-        Vector::length(v) == 0
+        vector::length(v) == 0
     }
     spec verify_is_empty {
         ensures result == (len(v) == 0);
@@ -172,7 +172,7 @@ module 0x42::VerifyVector {
 
     // Return true if the vector has no elements
     fun verify_model_is_empty<Element>(v: &vector<Element>): bool {
-        Vector::is_empty(v) // inlining the built-in Boogie procedure
+        vector::is_empty(v) // inlining the built-in Boogie procedure
     }
     spec verify_model_is_empty {
         ensures result == (len(v) == 0);
@@ -182,14 +182,14 @@ module 0x42::VerifyVector {
     // Otherwise returns (false, 0).
     fun verify_index_of<Element>(v: &vector<Element>, e: &Element): (bool, u64) {
         let i = 0;
-        let len = Vector::length(v);
+        let len = vector::length(v);
         while ({
             spec {
                 invariant !(exists j in 0..i: v[j]==e);
             };
             i < len
         }) {
-            if (Vector::borrow(v, i) == e) return (true, i);
+            if (vector::borrow(v, i) == e) return (true, i);
             i = i + 1;
         };
         (false, 0)
@@ -203,7 +203,7 @@ module 0x42::VerifyVector {
     }
 
     fun verify_model_index_of<Element>(v: &vector<Element>, e: &Element): (bool, u64) {
-        Vector::index_of(v, e) // inlining the built-in Boogie procedure
+        vector::index_of(v, e) // inlining the built-in Boogie procedure
     }
     spec verify_model_index_of {
         aborts_if false;
@@ -216,14 +216,14 @@ module 0x42::VerifyVector {
     // Return true if `e` is in the vector `v`
     fun verify_contains<Element>(v: &vector<Element>, e: &Element): bool {
         let i = 0;
-        let len = Vector::length(v);
+        let len = vector::length(v);
         while ({
             spec {
                invariant !(exists j in 0..i: v[j]==e);
             };
             i < len
         }) {
-            if (Vector::borrow(v, i) == e) return true;
+            if (vector::borrow(v, i) == e) return true;
             i = i + 1;
         };
         spec {
@@ -238,7 +238,7 @@ module 0x42::VerifyVector {
 
     // Return true if `e` is in the vector `v`
     fun verify_model_contains<Element>(v: &vector<Element>, e: &Element): bool {
-        Vector::contains(v, e) // inlining the built-in Boogie procedure.
+        vector::contains(v, e) // inlining the built-in Boogie procedure.
     }
     spec verify_model_contains {
         aborts_if false;
@@ -248,7 +248,7 @@ module 0x42::VerifyVector {
     // Remove the `i`th element E of the vector, shifting all subsequent elements
     // It is O(n) and preserves ordering
     fun verify_remove<Element>(v: &mut vector<Element>, j: u64): Element {
-        let vlen = Vector::length(v);
+        let vlen = vector::length(v);
         let i = j;
         // i out of bounds; abort
         if (i >= vlen) abort 10;
@@ -265,10 +265,10 @@ module 0x42::VerifyVector {
             };
             i < vlen
             }) {
-            Vector::swap(v, i, i + 1);
+            vector::swap(v, i, i + 1);
             i = i + 1;
         };
-        Vector::pop_back(v)
+        vector::pop_back(v)
     }
     spec verify_remove {
         aborts_if j >= len(v);
@@ -281,7 +281,7 @@ module 0x42::VerifyVector {
     // Remove the `i`th element E of the vector, shifting all subsequent elements
     // It is O(n) and preserves ordering
     fun verify_model_remove<Element>(v: &mut vector<Element>, i: u64): Element {
-        Vector::remove(v, i) // inlining the built-in Boogie procedure.
+        vector::remove(v, i) // inlining the built-in Boogie procedure.
     }
     spec verify_model_remove {
         aborts_if i >= len(v);
@@ -295,9 +295,9 @@ module 0x42::VerifyVector {
     // and then popping it off
     // It is O(1), but does not preserve ordering
     fun verify_swap_remove<Element>(v: &mut vector<Element>, i: u64): Element {
-        let last_idx = Vector::length(v) - 1;
-        Vector::swap(v, i, last_idx);
-        Vector::pop_back(v)
+        let last_idx = vector::length(v) - 1;
+        vector::swap(v, i, last_idx);
+        vector::pop_back(v)
     }
     spec verify_swap_remove {
         aborts_if i >= len(v);
@@ -310,7 +310,7 @@ module 0x42::VerifyVector {
     // and then popping it off
     // It is O(1), but does not preserve ordering
     fun verify_model_swap_remove<Element>(v: &mut vector<Element>, i: u64): Element {
-        Vector::swap_remove(v, i) // inlining the built-in Boogie procedure.
+        vector::swap_remove(v, i) // inlining the built-in Boogie procedure.
     }
     spec verify_model_swap_remove {
         aborts_if i >= len(v);

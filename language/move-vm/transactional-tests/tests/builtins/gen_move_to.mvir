@@ -1,6 +1,6 @@
 //# publish
 module 0x1.M {
-    import 0x1.Signer;
+    import 0x1.signer;
 
     // Structures
     //
@@ -75,7 +75,7 @@ module 0x1.M {
         let value: Self.Value;
         let v: u64;
     label b0:
-        sender = Signer.address_of(move(account));
+        sender = signer.address_of(move(account));
         some_of_value = move_from<Some<Self.Value>>(move(sender));
         Some<Self.Value> { v: value } = move(some_of_value);
         Value { val: v } = move(value);
@@ -99,7 +99,7 @@ module 0x1.M {
         let some_of_t: Self.Some<T>;
         let t: T;
     label b0:
-        sender = Signer.address_of(move(account));
+        sender = signer.address_of(move(account));
         some_of_t = move_from<Some<T>>(move(sender));
         Some<T> { v: t } = move(some_of_t);
 
@@ -110,7 +110,7 @@ module 0x1.M {
     public some_exists<T: store>(account: &signer): bool {
         let sender: address;
     label b0:
-        sender = Signer.address_of(move(account));
+        sender = signer.address_of(move(account));
         return exists<Some<T>>(move(sender));
     }
 
@@ -122,7 +122,7 @@ module 0x1.M {
         let val_ref: &T;
         let equal: bool;
     label b0:
-        sender = Signer.address_of(move(account));
+        sender = signer.address_of(move(account));
         some = borrow_global<Some<T>>(move(sender));
         inner_ref = &move(some).Some<T>::v;
         val_ref = &val;
@@ -135,7 +135,7 @@ module 0x1.M {
         let sender: address;
         let some: &mut Self.Some<T>;
     label b0:
-        sender = Signer.address_of(move(account));
+        sender = signer.address_of(move(account));
         some = borrow_global_mut<Some<T>>(move(sender));
         *(&mut move(some).Some<T>::v) = move(val);
         return;

@@ -220,7 +220,7 @@ impl Harness {
         // Create address map. We are mapping all aliases to TEST_ADDR for simplicity.
         let test_addr = NumericalAddress::parse_str(TEST_ADDR).unwrap();
         let address_map: BTreeMap<String, NumericalAddress> = vec![
-            ("Std".to_string(), test_addr),
+            ("std".to_string(), test_addr),
             ("Async".to_string(), test_addr),
             ("Test".to_string(), test_addr),
         ]

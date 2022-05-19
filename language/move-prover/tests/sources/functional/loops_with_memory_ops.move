@@ -1,12 +1,12 @@
 module 0x42::VerifyLoopsWithMemoryOps {
 
-    use Std::Vector;
+    use std::vector;
     spec module {
         pragma verify=true;
     }
 
     public fun nested_loop1(a: &mut vector<u64>, b: &mut vector<u64>) {
-        let length = Vector::length(a);
+        let length = vector::length(a);
         spec {
             assume length > 0;
             assume length == len(b);
@@ -21,8 +21,8 @@ module 0x42::VerifyLoopsWithMemoryOps {
             };
             (i < length)
         }) {
-            let x = Vector::borrow_mut(a, i);
-            let y = Vector::borrow_mut(b, i);
+            let x = vector::borrow_mut(a, i);
+            let y = vector::borrow_mut(b, i);
             loop {
                 loop {
                     if (*x <= *y) {
@@ -54,14 +54,14 @@ module 0x42::VerifyLoopsWithMemoryOps {
     // via introducing a new bytecode / call-operation named "PointerOf", which
     // takes a mutable reference and returns its "location" and "path".
     public fun nested_loop2(a: &mut vector<u64>, b: &mut vector<u64>) {
-        let length = Vector::length(a);
+        let length = vector::length(a);
         spec {
             assume length > 0;
             assume length == len(b);
         };
         let i = 0;
-        let x = Vector::borrow_mut(a, i);
-        let y = Vector::borrow_mut(b, i);
+        let x = vector::borrow_mut(a, i);
+        let y = vector::borrow_mut(b, i);
         loop {
             spec {
                 invariant length == len(a);
@@ -86,8 +86,8 @@ module 0x42::VerifyLoopsWithMemoryOps {
             if (i == length) {
                 break
             };
-            x = Vector::borrow_mut(a, i);
-            y = Vector::borrow_mut(b, i);
+            x = vector::borrow_mut(a, i);
+            y = vector::borrow_mut(b, i);
         };
         spec {
             assert forall m in 0..length: a[m] == b[m];

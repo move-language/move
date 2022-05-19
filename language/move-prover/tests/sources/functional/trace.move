@@ -2,7 +2,7 @@
 // separate_baseline: cvc5
 // separate_baseline: simplify
 module 0x42::TestTracing {
-    use Std::Signer;
+    use std::signer;
 
     spec module {
         pragma verify = true;
@@ -30,7 +30,7 @@ module 0x42::TestTracing {
         move_to<R>(s, R{x: x - 1})
     }
     spec publish_invalid {
-        let addr = Signer::address_of(s);
+        let addr = signer::address_of(s);
         ensures exists<R>(addr) ==> global<R>(addr).x == x;
     }
 

@@ -61,11 +61,11 @@ module DiemFramework::ApprovalGroup {
 #[test_only]
 module DiemFramework::ColdWallet {
     use DiemFramework::XUS::XUS;
-    use Std::Hash;
-    use Std::BCS;
+    use std::hash;
+    use std::bcs;
     use DiemFramework::Diem;
-    use Std::Vector;
-    use Std::Signer;
+    use std::vector;
+    use std::signer;
     use DiemFramework::ApprovalGroup;
 
     struct ColdWallet has key {
@@ -124,18 +124,18 @@ module DiemFramework::ColdWallet {
         // TODO: Move doesn't support string now. As a workaround,
         // TODO: the prefix is the hex encoding of "coldwallet.transaction"
         let constant = x"636F6C6477616C6C65742E7472616E73616374696F6E";
-        let payer_bytes = BCS::to_bytes(&payer);
+        let payer_bytes = bcs::to_bytes(&payer);
 
         let transaction_bytes = copy payer_bytes;
-        Vector::append(&mut transaction_bytes, constant);
+        vector::append(&mut transaction_bytes, constant);
 
-        let payee_bytes = BCS::to_bytes(&payee);
-        let amount_bytes = BCS::to_bytes(&amount);
-        let seq_bytes = BCS::to_bytes(&wallet.sequence_num);
+        let payee_bytes = bcs::to_bytes(&payee);
+        let amount_bytes = bcs::to_bytes(&amount);
+        let seq_bytes = bcs::to_bytes(&wallet.sequence_num);
 
-        Vector::append(&mut transaction_bytes, payee_bytes);
-        Vector::append(&mut transaction_bytes, amount_bytes);
-        Vector::append(&mut transaction_bytes, seq_bytes);
+        vector::append(&mut transaction_bytes, payee_bytes);
+        vector::append(&mut transaction_bytes, amount_bytes);
+        vector::append(&mut transaction_bytes, seq_bytes);
 
         transaction_bytes
     }
@@ -153,7 +153,7 @@ module DiemFramework::ColdWallet {
         pk2: vector<u8>,
         sig2: vector<u8>
     ) acquires ColdWallet {
-        let payer = Signer::address_of(payer_);
+        let payer = signer::address_of(payer_);
         let payer_ref = borrow_global_mut<ColdWallet>(payer);
         let account_balance = Diem::value(&payer_ref.balance);
         assert!(amount <= account_balance, 1001);
@@ -167,7 +167,7 @@ module DiemFramework::ColdWallet {
         );
 
 
-        let hash = Hash::sha3_256(transaction_bytes);
+        let hash = hash::sha3_256(transaction_bytes);
         let has_authority = ApprovalGroup::has_authority(
             &payer_ref.genesis_group,
             pk1,
@@ -194,7 +194,7 @@ module DiemFramework::WalletModuleTests {
     use DiemFramework::Genesis;
     use DiemFramework::DiemAccount;
     use DiemFramework::XUS::XUS;
-    use Std::Signer;
+    use std::signer;
 
     use DiemFramework::ApprovalGroup;
     use DiemFramework::ColdWallet;
@@ -203,7 +203,7 @@ module DiemFramework::WalletModuleTests {
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, account = @0xc2422587142d78bdf5a8068b8f9a2859)]
     fun wallet_module_test(dr: signer, tc: signer, account: signer) {
         Genesis::setup(&dr, &tc);
-        DiemAccount::create_parent_vasp_account<XUS>(&tc, Signer::address_of(&account), x"355b32f571f894cfd431ab40dc950037", b"", false);
+        DiemAccount::create_parent_vasp_account<XUS>(&tc, signer::address_of(&account), x"355b32f571f894cfd431ab40dc950037", b"", false);
 
         let genesis_group = ApprovalGroup::create(x"1234", x"5678", x"abc123");
         ColdWallet::create(&account, genesis_group);

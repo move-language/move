@@ -1,9 +1,9 @@
 module CoreFramework::Account {
-    use Std::BCS;
-    use Std::Errors;
-    use Std::Signer;
-    use Std::Hash;
-    use Std::Vector;
+    use std::bcs;
+    use std::errors;
+    use std::signer;
+    use std::hash;
+    use std::vector;
     use CoreFramework::ChainId;
     use CoreFramework::DiemConfig;
     use CoreFramework::SystemAddresses;
@@ -65,7 +65,7 @@ module CoreFramework::Account {
         writeset_epilogue_name: vector<u8>,
         currency_code_required: bool,
     ) {
-        assert!(Signer::address_of(account) == @CoreResources, Errors::requires_address(ENOT_CORE_FRAMEWORK));
+        assert!(signer::address_of(account) == @CoreResources, errors::requires_address(ENOT_CORE_FRAMEWORK));
         move_to(account, Marker<T> {});
         move_to(account, ChainSpecificAccountInfo {
             module_addr,
@@ -81,18 +81,18 @@ module CoreFramework::Account {
     }
 
     fun assert_is_marker<T>() {
-        assert!(exists<Marker<T>>(@CoreResources), Errors::invalid_argument(ENOT_MARKER_TYPE))
+        assert!(exists<Marker<T>>(@CoreResources), errors::invalid_argument(ENOT_MARKER_TYPE))
     }
 
     /// Construct an authentication key, aborting if the prefix is not valid.
     fun create_authentication_key(account: &signer, auth_key_prefix: vector<u8>): vector<u8> {
         let authentication_key = auth_key_prefix;
-        Vector::append(
-            &mut authentication_key, BCS::to_bytes(Signer::borrow_address(account))
+        vector::append(
+            &mut authentication_key, bcs::to_bytes(signer::borrow_address(account))
         );
         assert!(
-            Vector::length(&authentication_key) == 32,
-            Errors::invalid_argument(EMALFORMED_AUTHENTICATION_KEY)
+            vector::length(&authentication_key) == 32,
+            errors::invalid_argument(EMALFORMED_AUTHENTICATION_KEY)
         );
         authentication_key
     }
@@ -127,7 +127,7 @@ module CoreFramework::Account {
     ): (signer, vector<u8>) {
         assert_is_marker<T>();
         // there cannot be an Account resource under new_addr already.
-        assert!(!exists<Account>(new_address), Errors::already_published(EACCOUNT));
+        assert!(!exists<Account>(new_address), errors::already_published(EACCOUNT));
 
         let new_account = create_signer(new_address);
         let authentication_key = create_authentication_key(&new_account, authentication_key_prefix);
@@ -159,11 +159,11 @@ module CoreFramework::Account {
         account: &signer,
         new_auth_key: vector<u8>,
     ) acquires Account {
-        let addr = Signer::address_of(account);
-        assert!(exists_at(addr), Errors::not_published(EACCOUNT));
+        let addr = signer::address_of(account);
+        assert!(exists_at(addr), errors::not_published(EACCOUNT));
         assert!(
-            Vector::length(&new_auth_key) == 32,
-            Errors::invalid_argument(EMALFORMED_AUTHENTICATION_KEY)
+            vector::length(&new_auth_key) == 32,
+            errors::invalid_argument(EMALFORMED_AUTHENTICATION_KEY)
         );
         let account_resource = borrow_global_mut<Account>(addr);
         account_resource.authentication_key = new_auth_key;
@@ -175,29 +175,29 @@ module CoreFramework::Account {
         txn_public_key: vector<u8>,
         chain_id: u8,
     ) acquires Account {
-        let transaction_sender = Signer::address_of(account);
-        assert!(ChainId::get() == chain_id, Errors::invalid_argument(PROLOGUE_EBAD_CHAIN_ID));
-        assert!(exists<Account>(transaction_sender), Errors::invalid_argument(PROLOGUE_EACCOUNT_DNE));
+        let transaction_sender = signer::address_of(account);
+        assert!(ChainId::get() == chain_id, errors::invalid_argument(PROLOGUE_EBAD_CHAIN_ID));
+        assert!(exists<Account>(transaction_sender), errors::invalid_argument(PROLOGUE_EACCOUNT_DNE));
         let sender_account = borrow_global<Account>(transaction_sender);
         assert!(
-            Hash::sha3_256(txn_public_key) == *&sender_account.authentication_key,
-            Errors::invalid_argument(PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY),
+            hash::sha3_256(txn_public_key) == *&sender_account.authentication_key,
+            errors::invalid_argument(PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY),
         );
         assert!(
             (txn_sequence_number as u128) < MAX_U64,
-            Errors::limit_exceeded(PROLOGUE_ESEQUENCE_NUMBER_TOO_BIG)
+            errors::limit_exceeded(PROLOGUE_ESEQUENCE_NUMBER_TOO_BIG)
         );
 
         assert!(
             txn_sequence_number >= sender_account.sequence_number,
-            Errors::invalid_argument(PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD)
+            errors::invalid_argument(PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD)
         );
 
         // [PCA12]: Check that the transaction's sequence number matches the
         // current sequence number. Otherwise sequence number is too new by [PCA11].
         assert!(
             txn_sequence_number == sender_account.sequence_number,
-            Errors::invalid_argument(PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW)
+            errors::invalid_argument(PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW)
         );
     }
 
@@ -205,12 +205,12 @@ module CoreFramework::Account {
     /// Called by the Adaptor
     public fun epilogue<T>(account: &signer, _witness: &T) acquires Account {
         assert_is_marker<T>();
-        let addr = Signer::address_of(account);
+        let addr = signer::address_of(account);
         let old_sequence_number = get_sequence_number(addr);
 
         assert!(
             (old_sequence_number as u128) < MAX_U64,
-            Errors::limit_exceeded(ESEQUENCE_NUMBER_TOO_BIG)
+            errors::limit_exceeded(ESEQUENCE_NUMBER_TOO_BIG)
         );
 
         // Increment sequence number

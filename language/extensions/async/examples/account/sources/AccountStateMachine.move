@@ -8,7 +8,7 @@
 module This::AccountStateMachine {
 
     use Async::Actor::{self, epoch_time};
-    use Std::Vector;
+    use std::vector;
 
     const MAX: u64 = 43;
     const MAX_TRANSFER_AGE: u128 = 100000000;
@@ -28,7 +28,7 @@ module This::AccountStateMachine {
 
     #[init]
     fun init(): Account {
-        Account{value: 0, xfer_id_counter: 0, pending: Vector::empty()}
+        Account{value: 0, xfer_id_counter: 0, pending: vector::empty()}
     }
 
     #[message]
@@ -48,7 +48,7 @@ module This::AccountStateMachine {
         // Do not initiate the transfer if there are not enough funds.
         assert!(this.value >= v, 1);
         let xfer_id = new_xfer_id(this);
-        Vector::push_back(&mut this.pending, PendingTransfer{xfer_id, amount: v, initiated_at: epoch_time()});
+        vector::push_back(&mut this.pending, PendingTransfer{xfer_id, amount: v, initiated_at: epoch_time()});
         // Call into a special version of deposit which calls us back once done.
         send_xfer_deposit(dest, v, self(), xfer_id);
     }
@@ -69,18 +69,18 @@ module This::AccountStateMachine {
     #[message]
     fun xfer_finish(this: &mut Account, xfer_id: u64) {
         let i = find_xfer(this, xfer_id);
-        let amount = Vector::borrow(&this.pending, i).amount;
-        Vector::remove(&mut this.pending, i);
+        let amount = vector::borrow(&this.pending, i).amount;
+        vector::remove(&mut this.pending, i);
         withdraw(this, amount)
     }
 
     fun find_xfer(this: &Account, xfer_id: u64): u64 {
         let pending = &this.pending;
         let i = 0;
-        while (i < Vector::length(pending) && Vector::borrow(pending, i).xfer_id != xfer_id) {
+        while (i < vector::length(pending) && vector::borrow(pending, i).xfer_id != xfer_id) {
             i = i + 1;
         };
-        assert!(i < Vector::length(pending), 3);
+        assert!(i < vector::length(pending), 3);
         i
     }
 
@@ -89,10 +89,10 @@ module This::AccountStateMachine {
     fun cleanup(this: &mut Account) {
         let pending = &mut this.pending;
         let i = 0;
-        while (i < Vector::length(pending)) {
-            let p = Vector::borrow(pending, i);
+        while (i < vector::length(pending)) {
+            let p = vector::borrow(pending, i);
             if (epoch_time() - p.initiated_at >= MAX_TRANSFER_AGE) {
-                Vector::remove(pending, i);
+                vector::remove(pending, i);
             } else {
                 i = i + 1;
             }

@@ -4,7 +4,7 @@
 /** They may use different limiters. */
 module 0x42::M {
     /** There can be no doc comment on uses. */
-    use Std::Option::Option;
+    use std::option::Option;
 
     /// This is f.
     fun f() { }

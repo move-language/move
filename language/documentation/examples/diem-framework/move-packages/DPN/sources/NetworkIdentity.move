@@ -2,10 +2,10 @@
 module DiemFramework::NetworkIdentity {
     use DiemFramework::DiemTimestamp;
     use DiemFramework::Roles;
-    use Std::Errors;
-    use Std::Event::{Self, EventHandle};
-    use Std::Signer;
-    use Std::Vector;
+    use std::errors;
+    use std::event::{Self, EventHandle};
+    use std::signer;
+    use std::vector;
 
     /// Holder for all `NetworkIdentity` in an account
     struct NetworkIdentity has key {
@@ -46,11 +46,11 @@ module DiemFramework::NetworkIdentity {
     public fun initialize_network_identity_event_handle(tc_account: &signer) {
         Roles::assert_treasury_compliance(tc_account);
         assert!(
-            !exists<NetworkIdentityEventHandle>(Signer::address_of(tc_account)),
-            Errors::already_published(ENETWORK_ID_EVENT_HANDLE_INVALID)
+            !exists<NetworkIdentityEventHandle>(signer::address_of(tc_account)),
+            errors::already_published(ENETWORK_ID_EVENT_HANDLE_INVALID)
         );
         let event_handle = NetworkIdentityEventHandle {
-            identity_change_events: Event::new_event_handle<NetworkIdentityChangeNotification>(tc_account),
+            identity_change_events: event::new_event_handle<NetworkIdentityChangeNotification>(tc_account),
         };
         move_to(
             tc_account,
@@ -64,11 +64,11 @@ module DiemFramework::NetworkIdentity {
 
     /// Initialize `NetworkIdentity` with an empty list
     fun initialize_network_identity(account: &signer) {
-        let identities = Vector::empty<vector<u8>>();
+        let identities = vector::empty<vector<u8>>();
         move_to(account, NetworkIdentity { identities });
     }
     spec initialize_network_identity {
-        let account_addr = Signer::address_of(account);
+        let account_addr = signer::address_of(account);
         modifies global<NetworkIdentity>(account_addr);
     }
 
@@ -76,36 +76,36 @@ module DiemFramework::NetworkIdentity {
     public fun get(account_addr: address): vector<vector<u8>> acquires NetworkIdentity {
         assert!(
             exists<NetworkIdentity>(account_addr),
-            Errors::not_published(ENETWORK_ID_DOESNT_EXIST)
+            errors::not_published(ENETWORK_ID_DOESNT_EXIST)
         );
         *&borrow_global<NetworkIdentity>(account_addr).identities
     }
     spec get {
-        aborts_if !exists<NetworkIdentity>(account_addr) with Errors::NOT_PUBLISHED;
+        aborts_if !exists<NetworkIdentity>(account_addr) with errors::NOT_PUBLISHED;
         ensures result == global<NetworkIdentity>(account_addr).identities;
     }
 
     /// Update and create if not exist `NetworkIdentity`
     public fun add_identities(account: &signer, to_add: vector<vector<u8>>) acquires NetworkIdentity, NetworkIdentityEventHandle {
-        assert!(tc_network_identity_event_handle_exists(), Errors::not_published(ENETWORK_ID_EVENT_HANDLE_INVALID));
-        let num_to_add = Vector::length(&to_add);
-        assert!(num_to_add > 0, Errors::invalid_argument(ENETWORK_ID_NO_INPUT));
+        assert!(tc_network_identity_event_handle_exists(), errors::not_published(ENETWORK_ID_EVENT_HANDLE_INVALID));
+        let num_to_add = vector::length(&to_add);
+        assert!(num_to_add > 0, errors::invalid_argument(ENETWORK_ID_NO_INPUT));
 
-        if (!exists<NetworkIdentity>(Signer::address_of(account))) {
+        if (!exists<NetworkIdentity>(signer::address_of(account))) {
             initialize_network_identity(account);
         };
-        let account_addr = Signer::address_of(account);
+        let account_addr = signer::address_of(account);
         let identity = borrow_global_mut<NetworkIdentity>(account_addr);
         let identities = &mut identity.identities;
 
         assert!(
-            Vector::length(identities) + num_to_add <= MAX_ADDR_IDENTITIES,
-            Errors::limit_exceeded(ENETWORK_ID_LIMIT_EXCEEDED)
+            vector::length(identities) + num_to_add <= MAX_ADDR_IDENTITIES,
+            errors::limit_exceeded(ENETWORK_ID_LIMIT_EXCEEDED)
         );
 
         let has_change = add_members_internal(identities, &to_add);
         if (has_change) {
-            Event::emit_event(
+            event::emit_event(
                 &mut borrow_global_mut<NetworkIdentityEventHandle>(@TreasuryCompliance).identity_change_events,
                 NetworkIdentityChangeNotification {
                     account: account_addr,
@@ -117,7 +117,7 @@ module DiemFramework::NetworkIdentity {
     }
     spec add_identities {
         pragma verify=false; // TODO: due to timeout
-        let account_addr = Signer::address_of(account);
+        let account_addr = signer::address_of(account);
         let prior_identities = if (exists<NetworkIdentity>(account_addr)) {
             global<NetworkIdentity>(account_addr).identities
         } else {
@@ -132,10 +132,10 @@ module DiemFramework::NetworkIdentity {
             time_rotated_seconds: DiemTimestamp::spec_now_seconds(),
         };
 
-        aborts_if !tc_network_identity_event_handle_exists() with Errors::NOT_PUBLISHED;
-        aborts_if len(to_add) == 0 with Errors::INVALID_ARGUMENT;
+        aborts_if !tc_network_identity_event_handle_exists() with errors::NOT_PUBLISHED;
+        aborts_if len(to_add) == 0 with errors::INVALID_ARGUMENT;
         aborts_if len(prior_identities) + len(to_add) > MAX_U64;
-        aborts_if len(prior_identities) + len(to_add) > MAX_ADDR_IDENTITIES with Errors::LIMIT_EXCEEDED;
+        aborts_if len(prior_identities) + len(to_add) > MAX_ADDR_IDENTITIES with errors::LIMIT_EXCEEDED;
         include has_change ==> DiemTimestamp::AbortsIfNotOperating;
         include AddMembersInternalEnsures<vector<u8>> {
             old_members: prior_identities,
@@ -147,18 +147,18 @@ module DiemFramework::NetworkIdentity {
 
     /// Remove `NetworkIdentity`, skipping if it doesn't exist
     public fun remove_identities(account: &signer, to_remove: vector<vector<u8>>) acquires NetworkIdentity, NetworkIdentityEventHandle {
-        assert!(tc_network_identity_event_handle_exists(), Errors::not_published(ENETWORK_ID_EVENT_HANDLE_INVALID));
-        let num_to_remove = Vector::length(&to_remove);
-        assert!(num_to_remove > 0, Errors::invalid_argument(ENETWORK_ID_NO_INPUT));
+        assert!(tc_network_identity_event_handle_exists(), errors::not_published(ENETWORK_ID_EVENT_HANDLE_INVALID));
+        let num_to_remove = vector::length(&to_remove);
+        assert!(num_to_remove > 0, errors::invalid_argument(ENETWORK_ID_NO_INPUT));
         assert!(
             num_to_remove <= MAX_ADDR_IDENTITIES,
-            Errors::limit_exceeded(ENETWORK_ID_LIMIT_EXCEEDED)
+            errors::limit_exceeded(ENETWORK_ID_LIMIT_EXCEEDED)
         );
 
-        let account_addr = Signer::address_of(account);
+        let account_addr = signer::address_of(account);
         assert!(
             exists<NetworkIdentity>(account_addr),
-            Errors::not_published(ENETWORK_ID_DOESNT_EXIST)
+            errors::not_published(ENETWORK_ID_DOESNT_EXIST)
         );
 
         let identity = borrow_global_mut<NetworkIdentity>(account_addr);
@@ -166,7 +166,7 @@ module DiemFramework::NetworkIdentity {
 
         let has_change = remove_members_internal(identities, &to_remove);
         if (has_change) {
-            Event::emit_event(
+            event::emit_event(
                 &mut borrow_global_mut<NetworkIdentityEventHandle>(@TreasuryCompliance).identity_change_events,
                 NetworkIdentityChangeNotification {
                     account: account_addr,
@@ -177,7 +177,7 @@ module DiemFramework::NetworkIdentity {
         };
     }
     spec remove_identities {
-        let account_addr = Signer::address_of(account);
+        let account_addr = signer::address_of(account);
         let prior_identities = global<NetworkIdentity>(account_addr).identities;
         let has_change = (exists e in to_remove: contains(prior_identities, e));
 
@@ -188,10 +188,10 @@ module DiemFramework::NetworkIdentity {
             time_rotated_seconds: DiemTimestamp::spec_now_seconds(),
         };
 
-        aborts_if !tc_network_identity_event_handle_exists() with Errors::NOT_PUBLISHED;
-        aborts_if len(to_remove) == 0 with Errors::INVALID_ARGUMENT;
-        aborts_if len(to_remove) > MAX_ADDR_IDENTITIES with Errors::LIMIT_EXCEEDED;
-        aborts_if !exists<NetworkIdentity>(account_addr) with Errors::NOT_PUBLISHED;
+        aborts_if !tc_network_identity_event_handle_exists() with errors::NOT_PUBLISHED;
+        aborts_if len(to_remove) == 0 with errors::INVALID_ARGUMENT;
+        aborts_if len(to_remove) > MAX_ADDR_IDENTITIES with errors::LIMIT_EXCEEDED;
+        aborts_if !exists<NetworkIdentity>(account_addr) with errors::NOT_PUBLISHED;
         include has_change ==> DiemTimestamp::AbortsIfNotOperating;
         include RemoveMembersInternalEnsures<vector<u8>> {
             old_members: prior_identities,
@@ -214,8 +214,8 @@ module DiemFramework::NetworkIdentity {
         members: &mut vector<T>,
         to_add: &vector<T>,
     ): bool {
-        let num_to_add = Vector::length(to_add);
-        let num_existing = Vector::length(members);
+        let num_to_add = vector::length(to_add);
+        let num_existing = vector::length(members);
 
         let i = 0;
         while ({
@@ -237,14 +237,14 @@ module DiemFramework::NetworkIdentity {
             };
             (i < num_to_add)
         }) {
-            let entry = Vector::borrow(to_add, i);
-            if (!Vector::contains(members, entry)) {
-                Vector::push_back(members, *entry);
+            let entry = vector::borrow(to_add, i);
+            if (!vector::contains(members, entry)) {
+                vector::push_back(members, *entry);
             };
             i = i + 1;
         };
 
-        Vector::length(members) > num_existing
+        vector::length(members) > num_existing
     }
     spec add_members_internal {
         pragma opaque;
@@ -284,8 +284,8 @@ module DiemFramework::NetworkIdentity {
         members: &mut vector<T>,
         to_remove: &vector<T>,
     ): bool {
-        let num_existing = Vector::length(members);
-        let num_to_remove = Vector::length(to_remove);
+        let num_existing = vector::length(members);
+        let num_to_remove = vector::length(to_remove);
 
         let i = 0;
         while ({
@@ -307,15 +307,15 @@ module DiemFramework::NetworkIdentity {
             };
             (i < num_to_remove)
         }) {
-            let entry = Vector::borrow(to_remove, i);
-            let (exist, index) = Vector::index_of(members, entry);
+            let entry = vector::borrow(to_remove, i);
+            let (exist, index) = vector::index_of(members, entry);
             if (exist) {
-                Vector::swap_remove(members, index);
+                vector::swap_remove(members, index);
             };
             i = i + 1;
         };
 
-        Vector::length(members) < num_existing
+        vector::length(members) < num_existing
     }
     spec remove_members_internal {
         // TODO: due to the complexity of the loop invariants and the extensive use of quantifiers in the spec, this

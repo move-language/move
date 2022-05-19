@@ -1,6 +1,6 @@
 module 0x42::TestResources {
 
-    use Std::Signer;
+    use std::signer;
     spec module {
         pragma verify = true;
     }
@@ -17,26 +17,26 @@ module 0x42::TestResources {
         move_to<R>(account, R{x:1});
     }
     spec create_resource_at_signer {
-        aborts_if exists<R>(Signer::address_of(account));
-        ensures exists<R>(Signer::address_of(account));
+        aborts_if exists<R>(signer::address_of(account));
+        ensures exists<R>(signer::address_of(account));
     }
 
     public fun create_resource(account: &signer) {
         move_to<R>(account, R{x:1});
     }
     spec create_resource {
-        aborts_if exists<R>(Signer::address_of(account));
-        ensures exists<R>(Signer::address_of(account));
+        aborts_if exists<R>(signer::address_of(account));
+        ensures exists<R>(signer::address_of(account));
     }
 
     public fun create_resource_incorrect(account: &signer) {
-        if(exists<R>(Signer::address_of(account))) {
+        if(exists<R>(signer::address_of(account))) {
             abort 1
         };
     }
     spec create_resource_incorrect {
-     aborts_if exists<R>(Signer::address_of(account));
-     ensures exists<R>(Signer::address_of(account));
+     aborts_if exists<R>(signer::address_of(account));
+     ensures exists<R>(signer::address_of(account));
     }
 
     public fun move_from_addr(a: address) acquires R {
@@ -54,11 +54,11 @@ module 0x42::TestResources {
     }
     spec move_from_addr_to_sender {
         aborts_if !exists<R>(a);
-        aborts_if (Signer::address_of(account) != a) && exists<R>(Signer::address_of(account));
-        ensures exists<R>(Signer::address_of(account));
-        ensures (Signer::address_of(account) != a) ==> !exists<R>(a);
-        ensures old(global<R>(a).x) == global<R>(Signer::address_of(account)).x;
-        ensures old(global<R>(a)) == global<R>(Signer::address_of(account));
+        aborts_if (signer::address_of(account) != a) && exists<R>(signer::address_of(account));
+        ensures exists<R>(signer::address_of(account));
+        ensures (signer::address_of(account) != a) ==> !exists<R>(a);
+        ensures old(global<R>(a).x) == global<R>(signer::address_of(account)).x;
+        ensures old(global<R>(a)) == global<R>(signer::address_of(account));
     }
 
     public fun move_from_addr_and_return(a: address): R acquires R {
@@ -74,26 +74,26 @@ module 0x42::TestResources {
     }
 
     public fun move_from_sender_and_return(account: &signer): R acquires R {
-        let r = move_from<R>(Signer::address_of(account));
+        let r = move_from<R>(signer::address_of(account));
         let R{x: x} = r;
         R{x: x}
     }
     spec move_from_sender_and_return {
-        aborts_if !exists<R>(Signer::address_of(account));
-        ensures result.x == old(global<R>(Signer::address_of(account)).x);
-        ensures result == old(global<R>(Signer::address_of(account)));
+        aborts_if !exists<R>(signer::address_of(account));
+        ensures result.x == old(global<R>(signer::address_of(account)).x);
+        ensures result == old(global<R>(signer::address_of(account)));
     }
 
     public fun move_from_sender_to_sender(account: &signer) acquires R {
-        let r = move_from<R>(Signer::address_of(account));
+        let r = move_from<R>(signer::address_of(account));
         let R{x: x} = r;
         move_to<R>(account, R{x: x});
     }
     spec move_from_sender_to_sender {
-        aborts_if !exists<R>(Signer::address_of(account));
-        ensures exists<R>(Signer::address_of(account));
-        ensures old(global<R>(Signer::address_of(account)).x) == global<R>(Signer::address_of(account)).x;
-        ensures old(global<R>(Signer::address_of(account))) == global<R>(Signer::address_of(account));
+        aborts_if !exists<R>(signer::address_of(account));
+        ensures exists<R>(signer::address_of(account));
+        ensures old(global<R>(signer::address_of(account)).x) == global<R>(signer::address_of(account)).x;
+        ensures old(global<R>(signer::address_of(account))) == global<R>(signer::address_of(account));
     }
 
     public fun borrow_global_mut_correct(a: address) acquires R {
@@ -239,28 +239,28 @@ module 0x42::TestResources {
     }
 
     public fun spec_pack_A(account: &signer): A {
-        A{ addr: Signer::address_of(account), val: 7 }
+        A{ addr: signer::address_of(account), val: 7 }
     }
     spec spec_pack_A {
         aborts_if false;
-        ensures result.addr == Signer::address_of(account);
+        ensures result.addr == signer::address_of(account);
         ensures result.val == 7;
-        ensures result == A{ addr: Signer::address_of(account), val: 7 };
-        ensures result == A{ val: 7, addr: Signer::address_of(account) };
+        ensures result == A{ addr: signer::address_of(account), val: 7 };
+        ensures result == A{ val: 7, addr: signer::address_of(account) };
     }
 
     public fun spec_pack_B(account: &signer): B {
-        B{ val: 77, a: A{ addr: Signer::address_of(account), val: 7 }}
+        B{ val: 77, a: A{ addr: signer::address_of(account), val: 7 }}
     }
     spec spec_pack_B {
         aborts_if false;
         ensures result.val == 77;
         ensures result.a.val == 7;
-        ensures result.a.addr == Signer::address_of(account);
-        ensures result == B{ val: 77, a: A{ addr: Signer::address_of(account), val: 7 }};
-        ensures result == B{ val: 77, a: A{ val: 7, addr: Signer::address_of(account)}};
-        ensures result == B{ a: A{ addr: Signer::address_of(account), val: 7 }, val: 77 };
-        ensures result == B{ a: A{ val: 7, addr: Signer::address_of(account)}, val: 77 };
+        ensures result.a.addr == signer::address_of(account);
+        ensures result == B{ val: 77, a: A{ addr: signer::address_of(account), val: 7 }};
+        ensures result == B{ val: 77, a: A{ val: 7, addr: signer::address_of(account)}};
+        ensures result == B{ a: A{ addr: signer::address_of(account), val: 7 }, val: 77 };
+        ensures result == B{ a: A{ val: 7, addr: signer::address_of(account)}, val: 77 };
     }
 
     // ------------

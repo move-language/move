@@ -1,8 +1,8 @@
 // Script 1, sender: alice
 script {
-use Std::Offer;
+use std::offer;
 fun multi_offer(account: signer) {
-    Offer::create(&account, 0, @0xA11CE);
-    Offer::create(&account, 0, @0x4);
+    offer::create(&account, 0, @0xA11CE);
+    offer::create(&account, 0, @0x4);
 }
 }

@@ -1,6 +1,6 @@
 //# publish
 module 0x1.Tester {
-    import 0x1.Signer;
+    import 0x1.signer;
 
     struct Data has key { v1: u64, v2: u64 }
     struct Box has key { f: u64 }
@@ -10,7 +10,7 @@ module 0x1.Tester {
         let sender: address;
         let data: &mut Self.Data;
     label b0:
-        sender = Signer.address_of(move(account));
+        sender = signer.address_of(move(account));
         data = borrow_global_mut<Data>(move(sender));
         *&mut copy(b1).Box::f = *&copy(data).Data::v1;
         *&mut copy(b2).Box::f = *&move(data).Data::v2;
@@ -29,7 +29,7 @@ module 0x1.Tester {
         let returned_ref: &u64;
         let dump: u64;
     label b0:
-        b1 = move_from<Box>(Signer.address_of(copy(account)));
+        b1 = move_from<Box>(signer.address_of(copy(account)));
         b2 = move_from<Box>(move(drop));
 
         assert(*&(&b1).Box::f == 0, 42);

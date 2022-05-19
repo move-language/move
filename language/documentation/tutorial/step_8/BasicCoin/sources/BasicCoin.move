@@ -1,7 +1,7 @@
 /// This module defines a minimal and generic Coin and Balance.
 module NamedAddr::BasicCoin {
-    use Std::Errors;
-    use Std::Signer;
+    use std::errors;
+    use std::signer;
 
     /// Error codes
     const ENOT_MODULE_OWNER: u64 = 0;
@@ -21,7 +21,7 @@ module NamedAddr::BasicCoin {
     /// minting or transferring to the account.
     public fun publish_balance<CoinType>(account: &signer) {
         let empty_coin = Coin<CoinType> { value: 0 };
-        assert!(!exists<Balance<CoinType>>(Signer::address_of(account)), Errors::already_published(EALREADY_HAS_BALANCE));
+        assert!(!exists<Balance<CoinType>>(signer::address_of(account)), errors::already_published(EALREADY_HAS_BALANCE));
         move_to(account, Balance<CoinType> { coin:  empty_coin });
     }
 
@@ -44,14 +44,14 @@ module NamedAddr::BasicCoin {
     /// Transfers `amount` of tokens from `from` to `to`. This method requires a witness with `CoinType` so that the
     /// module that owns `CoinType` can decide the transferring policy.
     public fun transfer<CoinType: drop>(from: &signer, to: address, amount: u64, _witness: CoinType) acquires Balance {
-        let from_addr = Signer::address_of(from);
+        let from_addr = signer::address_of(from);
         assert!(from_addr != to, EEQUAL_ADDR);
         let check = withdraw<CoinType>(from_addr, amount);
         deposit<CoinType>(to, check);
     }
 
     spec transfer{
-        let addr_from = Signer::address_of(from);
+        let addr_from = signer::address_of(from);
 
         let balance_from = global<Balance<CoinType>>(addr_from).coin.value;
         let balance_to = global<Balance<CoinType>>(to).coin.value;

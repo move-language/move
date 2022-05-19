@@ -3,9 +3,9 @@ module DiemFramework::AccountFreezing {
     use DiemFramework::DiemTimestamp;
     use DiemFramework::CoreAddresses;
     use DiemFramework::Roles;
-    use Std::Event::{Self, EventHandle};
-    use Std::Errors;
-    use Std::Signer;
+    use std::event::{Self, EventHandle};
+    use std::errors;
+    use std::signer;
     friend DiemFramework::DiemAccount;
 
     struct FreezingBit has key {
@@ -49,31 +49,31 @@ module DiemFramework::AccountFreezing {
         DiemTimestamp::assert_genesis();
         CoreAddresses::assert_diem_root(dr_account);
         assert!(
-            !exists<FreezeEventsHolder>(Signer::address_of(dr_account)),
-            Errors::already_published(EFREEZE_EVENTS_HOLDER)
+            !exists<FreezeEventsHolder>(signer::address_of(dr_account)),
+            errors::already_published(EFREEZE_EVENTS_HOLDER)
         );
         move_to(dr_account, FreezeEventsHolder {
-            freeze_event_handle: Event::new_event_handle(dr_account),
-            unfreeze_event_handle: Event::new_event_handle(dr_account),
+            freeze_event_handle: event::new_event_handle(dr_account),
+            unfreeze_event_handle: event::new_event_handle(dr_account),
         });
     }
     spec initialize {
         include DiemTimestamp::AbortsIfNotGenesis;
         include CoreAddresses::AbortsIfNotDiemRoot{account: dr_account};
-        let addr = Signer::address_of(dr_account);
-        aborts_if exists<FreezeEventsHolder>(addr) with Errors::ALREADY_PUBLISHED;
+        let addr = signer::address_of(dr_account);
+        aborts_if exists<FreezeEventsHolder>(addr) with errors::ALREADY_PUBLISHED;
         ensures exists<FreezeEventsHolder>(addr);
     }
 
     public(friend) fun create(account: &signer) {
-        let addr = Signer::address_of(account);
-        assert!(!exists<FreezingBit>(addr), Errors::already_published(EFREEZING_BIT));
+        let addr = signer::address_of(account);
+        assert!(!exists<FreezingBit>(addr), errors::already_published(EFREEZING_BIT));
         move_to(account, FreezingBit { is_frozen: false })
     }
     spec create {
-        let addr = Signer::address_of(account);
+        let addr = signer::address_of(account);
         modifies global<FreezingBit>(addr);
-        aborts_if exists<FreezingBit>(addr) with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<FreezingBit>(addr) with errors::ALREADY_PUBLISHED;
         ensures spec_account_is_not_frozen(addr);
     }
 
@@ -86,12 +86,12 @@ module DiemFramework::AccountFreezing {
         DiemTimestamp::assert_operating();
         Roles::assert_treasury_compliance(account);
         // The diem root account and TC cannot be frozen
-        assert!(frozen_address != @DiemRoot, Errors::invalid_argument(ECANNOT_FREEZE_DIEM_ROOT));
-        assert!(frozen_address != @TreasuryCompliance, Errors::invalid_argument(ECANNOT_FREEZE_TC));
-        assert!(exists<FreezingBit>(frozen_address), Errors::not_published(EFREEZING_BIT));
+        assert!(frozen_address != @DiemRoot, errors::invalid_argument(ECANNOT_FREEZE_DIEM_ROOT));
+        assert!(frozen_address != @TreasuryCompliance, errors::invalid_argument(ECANNOT_FREEZE_TC));
+        assert!(exists<FreezingBit>(frozen_address), errors::not_published(EFREEZING_BIT));
         borrow_global_mut<FreezingBit>(frozen_address).is_frozen = true;
-        let initiator_address = Signer::address_of(account);
-        Event::emit_event<FreezeAccountEvent>(
+        let initiator_address = signer::address_of(account);
+        event::emit_event<FreezeAccountEvent>(
             &mut borrow_global_mut<FreezeEventsHolder>(@DiemRoot).freeze_event_handle,
             FreezeAccountEvent {
                 initiator_address,
@@ -102,9 +102,9 @@ module DiemFramework::AccountFreezing {
     spec freeze_account {
         include DiemTimestamp::AbortsIfNotOperating;
         include Roles::AbortsIfNotTreasuryCompliance;
-        aborts_if frozen_address == @DiemRoot with Errors::INVALID_ARGUMENT;
-        aborts_if frozen_address == @TreasuryCompliance with Errors::INVALID_ARGUMENT;
-        aborts_if !exists<FreezingBit>(frozen_address) with Errors::NOT_PUBLISHED;
+        aborts_if frozen_address == @DiemRoot with errors::INVALID_ARGUMENT;
+        aborts_if frozen_address == @TreasuryCompliance with errors::INVALID_ARGUMENT;
+        aborts_if !exists<FreezingBit>(frozen_address) with errors::NOT_PUBLISHED;
         ensures spec_account_is_frozen(frozen_address);
         include FreezeAccountEmits;
     }
@@ -113,7 +113,7 @@ module DiemFramework::AccountFreezing {
         frozen_address: address;
         let handle = global<FreezeEventsHolder>(@DiemRoot).freeze_event_handle;
         let msg = FreezeAccountEvent {
-            initiator_address: Signer::address_of(account),
+            initiator_address: signer::address_of(account),
             frozen_address
         };
         emits msg to handle;
@@ -127,10 +127,10 @@ module DiemFramework::AccountFreezing {
     acquires FreezingBit, FreezeEventsHolder {
         DiemTimestamp::assert_operating();
         Roles::assert_treasury_compliance(account);
-        assert!(exists<FreezingBit>(unfrozen_address), Errors::not_published(EFREEZING_BIT));
+        assert!(exists<FreezingBit>(unfrozen_address), errors::not_published(EFREEZING_BIT));
         borrow_global_mut<FreezingBit>(unfrozen_address).is_frozen = false;
-        let initiator_address = Signer::address_of(account);
-        Event::emit_event<UnfreezeAccountEvent>(
+        let initiator_address = signer::address_of(account);
+        event::emit_event<UnfreezeAccountEvent>(
             &mut borrow_global_mut<FreezeEventsHolder>(@DiemRoot).unfreeze_event_handle,
             UnfreezeAccountEvent {
                 initiator_address,
@@ -141,7 +141,7 @@ module DiemFramework::AccountFreezing {
     spec unfreeze_account {
         include DiemTimestamp::AbortsIfNotOperating;
         include Roles::AbortsIfNotTreasuryCompliance;
-        aborts_if !exists<FreezingBit>(unfrozen_address) with Errors::NOT_PUBLISHED;
+        aborts_if !exists<FreezingBit>(unfrozen_address) with errors::NOT_PUBLISHED;
         ensures !spec_account_is_frozen(unfrozen_address);
         include UnfreezeAccountEmits;
     }
@@ -150,7 +150,7 @@ module DiemFramework::AccountFreezing {
         unfrozen_address: address;
         let handle = global<FreezeEventsHolder>(@DiemRoot).unfreeze_event_handle;
         let msg = UnfreezeAccountEvent {
-            initiator_address: Signer::address_of(account),
+            initiator_address: signer::address_of(account),
             unfrozen_address
         };
         emits msg to handle;
@@ -169,7 +169,7 @@ module DiemFramework::AccountFreezing {
 
     /// Assert that an account is not frozen.
     public fun assert_not_frozen(account: address) acquires FreezingBit {
-        assert!(!account_is_frozen(account), Errors::invalid_state(EACCOUNT_FROZEN));
+        assert!(!account_is_frozen(account), errors::invalid_state(EACCOUNT_FROZEN));
     }
     spec assert_not_frozen {
         pragma opaque;
@@ -177,7 +177,7 @@ module DiemFramework::AccountFreezing {
     }
     spec schema AbortsIfFrozen {
         account: address;
-        aborts_if spec_account_is_frozen(account) with Errors::INVALID_STATE;
+        aborts_if spec_account_is_frozen(account) with errors::INVALID_STATE;
     }
 
     #[test_only]

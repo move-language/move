@@ -2,7 +2,7 @@
 address 0x1 {
 
 module M1 {
-    use Std::Signer;
+    use std::signer;
     use 0x1::M2;
     use 0x1::M3;
 
@@ -13,8 +13,8 @@ module M1 {
 
     spec f1 {
         pragma opaque;
-        modifies global<M2::R2>(Signer::address_of(s));
-        modifies global<M3::R3>(Signer::address_of(s));
+        modifies global<M2::R2>(signer::address_of(s));
+        modifies global<M3::R3>(signer::address_of(s));
     }
 
     spec f1 {
@@ -28,7 +28,7 @@ module M1 {
 }
 
 module M2 {
-    use Std::Signer;
+    use std::signer;
     friend 0x1::M1;
     friend 0x1::M4;
 
@@ -40,13 +40,13 @@ module M2 {
 
     spec f2 {
         pragma opaque;
-        modifies global<R2>(Signer::address_of(s));
-        ensures exists<R2>(Signer::address_of(s));
+        modifies global<R2>(signer::address_of(s));
+        ensures exists<R2>(signer::address_of(s));
     }
 }
 
 module M3 {
-    use Std::Signer;
+    use std::signer;
     friend 0x1::M1;
     friend 0x1::M4;
 
@@ -58,13 +58,13 @@ module M3 {
 
     spec f3 {
         pragma opaque;
-        modifies global<R3>(Signer::address_of(s));
-        ensures exists<R3>(Signer::address_of(s));
+        modifies global<R3>(signer::address_of(s));
+        ensures exists<R3>(signer::address_of(s));
     }
 }
 
 module M4 {
-    use Std::Signer;
+    use std::signer;
     use 0x1::M2;
     use 0x1::M3;
 
@@ -74,8 +74,8 @@ module M4 {
     }
     spec f4 {
         pragma opaque;
-        modifies global<M2::R2>(Signer::address_of(s));
-        modifies global<M3::R3>(Signer::address_of(s));
+        modifies global<M2::R2>(signer::address_of(s));
+        modifies global<M3::R3>(signer::address_of(s));
     }
 
     spec f4 {
@@ -88,8 +88,8 @@ module M4 {
     }
     spec f5_incorrect {
         pragma opaque;
-        modifies global<M2::R2>(Signer::address_of(s));
-        modifies global<M3::R3>(Signer::address_of(s));
+        modifies global<M2::R2>(signer::address_of(s));
+        modifies global<M3::R3>(signer::address_of(s));
     }
 
 

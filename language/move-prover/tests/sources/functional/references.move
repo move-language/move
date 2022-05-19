@@ -1,6 +1,6 @@
 module 0x42::TestReferences {
 
-    use Std::Vector;
+    use std::vector;
 
     spec module {
         pragma verify = true;
@@ -22,14 +22,14 @@ module 0x42::TestReferences {
     }
 
     fun ref_param_vec(r: &vector<T>): u64 {
-        Vector::length(r)
+        vector::length(r)
     }
     spec ref_param_vec {
         ensures result == len(r);
     }
 
     fun ref_return(r: &vector<T>, i: u64): &T {
-        Vector::borrow(r, i)
+        vector::borrow(r, i)
     }
     spec ref_return {
         ensures result == r[i];
@@ -97,9 +97,9 @@ module 0x42::TestReferences {
     // ---------------------------
 
     fun mutate_vector(): vector<u64> {
-        let v = Vector::empty();
-        Vector::push_back(&mut v, 1);
-        let r = Vector::borrow_mut(&mut v, 0);
+        let v = vector::empty();
+        vector::push_back(&mut v, 1);
+        let r = vector::borrow_mut(&mut v, 0);
         *r = 0;
         v
     }
@@ -108,7 +108,7 @@ module 0x42::TestReferences {
     }
 
     fun mutate_vector_param(v: &mut vector<u64>) {
-        let r = Vector::borrow_mut(v, 0);
+        let r = vector::borrow_mut(v, 0);
         *r = *r + 1;
     }
     spec mutate_vector_param {

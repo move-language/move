@@ -1,13 +1,13 @@
 #[evm_contract]
 module 0x2::M {
-    use Std::Vector;
+    use std::vector;
 
     // Semantic tests for encoding bytes
 
     // bytes4
     #[callable(sig=b"test_static_bytes(bytes4,uint8) returns (bytes5)")]
     fun test_static_bytes_length(v: vector<u8>, c: u8): vector<u8> {
-        Vector::push_back(&mut v, c);
+        vector::push_back(&mut v, c);
         v
     }
 

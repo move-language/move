@@ -1,6 +1,6 @@
 #[test_only]
 module ExperimentalFramework::MultiTokenTests {
-    use Std::GUID;
+    use std::guid;
     use ExperimentalFramework::MultiToken;
     use ExperimentalFramework::MultiTokenBalance;
 
@@ -28,8 +28,8 @@ module ExperimentalFramework::MultiTokenTests {
         MultiTokenBalance::publish_balance<Game>(&creator);
         MultiTokenBalance::publish_balance<Game>(&user);
 
-        let token1_id = GUID::create_id(creator_addr, 0);
-        let token2_id = GUID::create_id(creator_addr, 1);
+        let token1_id = guid::create_id(creator_addr, 0);
+        let token2_id = guid::create_id(creator_addr, 1);
 
         /*
         ===============================================================

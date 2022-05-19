@@ -4,10 +4,10 @@
 
 module DiemFramework::CRSN {
     use DiemFramework::Roles;
-    use Std::BitVector::{Self, BitVector};
-    use Std::Event::{Self, EventHandle};
-    use Std::Signer;
-    use Std::Errors;
+    use std::bit_vector::{Self, BitVector};
+    use std::event::{Self, EventHandle};
+    use std::signer;
+    use std::errors;
 
     friend DiemFramework::DiemAccount;
 
@@ -67,43 +67,43 @@ module DiemFramework::CRSN {
 
     public fun allow_crsns(account: &signer) {
         Roles::assert_diem_root(account);
-        assert!(!exists<CRSNsAllowed>(Signer::address_of(account)), Errors::invalid_state(EALREADY_INITIALIZED));
+        assert!(!exists<CRSNsAllowed>(signer::address_of(account)), errors::invalid_state(EALREADY_INITIALIZED));
         move_to(account, CRSNsAllowed { })
     }
 
     /// Publish a DSN under `account`. Cannot already have a DSN published.
     public(friend) fun publish(account: &signer, min_nonce: u64, size: u64) {
-        assert!(!has_crsn(Signer::address_of(account)), Errors::invalid_state(EHAS_CRSN));
-        assert!(size > 0, Errors::invalid_argument(EZERO_SIZE_CRSN));
-        assert!(size <= MAX_CRSN_SIZE, Errors::invalid_argument(ECRSN_SIZE_TOO_LARGE));
-        assert!(exists<CRSNsAllowed>(@DiemRoot), Errors::invalid_state(ENOT_INITIALIZED));
+        assert!(!has_crsn(signer::address_of(account)), errors::invalid_state(EHAS_CRSN));
+        assert!(size > 0, errors::invalid_argument(EZERO_SIZE_CRSN));
+        assert!(size <= MAX_CRSN_SIZE, errors::invalid_argument(ECRSN_SIZE_TOO_LARGE));
+        assert!(exists<CRSNsAllowed>(@DiemRoot), errors::invalid_state(ENOT_INITIALIZED));
         move_to(account, CRSN {
             min_nonce,
             size,
-            slots: BitVector::new(size),
-            force_shift_events: Event::new_event_handle<ForceShiftEvent>(account),
+            slots: bit_vector::new(size),
+            force_shift_events: event::new_event_handle<ForceShiftEvent>(account),
         })
     }
     spec publish {
-        include BitVector::NewAbortsIf{length: size};
-        aborts_if !exists<CRSNsAllowed>(@DiemRoot) with Errors::INVALID_STATE;
-        aborts_if has_crsn(Signer::address_of(account)) with Errors::INVALID_STATE;
-        aborts_if size == 0 with Errors::INVALID_ARGUMENT;
-        aborts_if size > MAX_CRSN_SIZE with Errors::INVALID_ARGUMENT;
-        ensures exists<CRSN>(Signer::address_of(account));
+        include bit_vector::NewAbortsIf{length: size};
+        aborts_if !exists<CRSNsAllowed>(@DiemRoot) with errors::INVALID_STATE;
+        aborts_if has_crsn(signer::address_of(account)) with errors::INVALID_STATE;
+        aborts_if size == 0 with errors::INVALID_ARGUMENT;
+        aborts_if size > MAX_CRSN_SIZE with errors::INVALID_ARGUMENT;
+        ensures exists<CRSN>(signer::address_of(account));
     }
 
     /// Record `sequence_nonce` under the `account`. Returns true if
     /// `sequence_nonce` is accepted, returns false if the `sequence_nonce` is rejected.
     public(friend) fun record(account: &signer, sequence_nonce: u64): bool
     acquires CRSN {
-        let addr = Signer::address_of(account);
+        let addr = signer::address_of(account);
         if (check(account, sequence_nonce)) {
             // CRSN exists by `check`.
             let crsn = borrow_global_mut<CRSN>(addr);
             // accept nonce
             let scaled_nonce = sequence_nonce - crsn.min_nonce;
-            BitVector::set(&mut crsn.slots, scaled_nonce);
+            bit_vector::set(&mut crsn.slots, scaled_nonce);
             shift_window_right(crsn);
             return true
         } else if (exists<CRSN>(addr)) { // window was force shifted in this transaction
@@ -119,7 +119,7 @@ module DiemFramework::CRSN {
         // is completely specified. The behavior of this function is abstracted
         // out for now in order to make a progress in verifying the epilogue
         // functions in the DiemAccount module.
-        modifies global<CRSN>(Signer::address_of(account));
+        modifies global<CRSN>(signer::address_of(account));
         aborts_if [abstract] false;
         ensures [abstract] result == true;
     }
@@ -128,45 +128,45 @@ module DiemFramework::CRSN {
     /// will be accepted, and `false` otherwise.
     public(friend) fun check(account: &signer, sequence_nonce: u64): bool
     acquires CRSN {
-        let addr = Signer::address_of(account);
-        assert!(has_crsn(addr), Errors::invalid_state(ENO_CRSN));
+        let addr = signer::address_of(account);
+        assert!(has_crsn(addr), errors::invalid_state(ENO_CRSN));
         let crsn = borrow_global_mut<CRSN>(addr);
 
         // Don't accept if it's outside of the window
         if ((sequence_nonce < crsn.min_nonce) ||
-            ((sequence_nonce as u128) >= (crsn.min_nonce as u128) + (BitVector::length(&crsn.slots) as u128))) {
+            ((sequence_nonce as u128) >= (crsn.min_nonce as u128) + (bit_vector::length(&crsn.slots) as u128))) {
             false
         } else {
             // scaled nonce is the index in the window
             let scaled_nonce = sequence_nonce - crsn.min_nonce;
 
             // Bit already set, reject, otherwise accept
-            !BitVector::is_index_set(&crsn.slots, scaled_nonce)
+            !bit_vector::is_index_set(&crsn.slots, scaled_nonce)
         }
     }
     spec check {
-        modifies global<CRSN>(Signer::address_of(account));
-        include CheckAbortsIf{addr: Signer::address_of(account)};
+        modifies global<CRSN>(signer::address_of(account));
+        include CheckAbortsIf{addr: signer::address_of(account)};
     }
     spec schema CheckAbortsIf {
         addr: address;
         sequence_nonce: u64;
         let crsn = global<CRSN>(addr);
         let scaled_nonce = sequence_nonce - crsn.min_nonce;
-        aborts_if !has_crsn(addr) with Errors::INVALID_STATE;
+        aborts_if !has_crsn(addr) with errors::INVALID_STATE;
         include has_crsn(addr) &&
                 (sequence_nonce >= crsn.min_nonce) &&
-                (sequence_nonce + crsn.min_nonce < BitVector::length(crsn.slots))
-        ==> BitVector::IsIndexSetAbortsIf{bitvector: crsn.slots, bit_index: scaled_nonce };
+                (sequence_nonce + crsn.min_nonce < bit_vector::length(crsn.slots))
+        ==> bit_vector::IsIndexSetAbortsIf{bitvector: crsn.slots, bit_index: scaled_nonce };
     }
     spec fun spec_check(addr: address, sequence_nonce: u64): bool {
         let crsn = global<CRSN>(addr);
         if ((sequence_nonce < crsn.min_nonce) ||
-            (sequence_nonce >= crsn.min_nonce + BitVector::length(crsn.slots))) {
+            (sequence_nonce >= crsn.min_nonce + bit_vector::length(crsn.slots))) {
             false
         } else {
             let scaled_nonce = sequence_nonce - crsn.min_nonce;
-            !BitVector::spec_is_index_set(crsn.slots, scaled_nonce)
+            !bit_vector::spec_is_index_set(crsn.slots, scaled_nonce)
         }
     }
 
@@ -175,18 +175,18 @@ module DiemFramework::CRSN {
     /// then shifted over set bits as define by the `shift_window_right` function.
     public fun force_expire(account: &signer, shift_amount: u64)
     acquires CRSN {
-        assert!(shift_amount > 0, Errors::invalid_argument(EINVALID_SHIFT));
-        let addr = Signer::address_of(account);
-        assert!(has_crsn(addr), Errors::invalid_state(ENO_CRSN));
+        assert!(shift_amount > 0, errors::invalid_argument(EINVALID_SHIFT));
+        let addr = signer::address_of(account);
+        assert!(has_crsn(addr), errors::invalid_state(ENO_CRSN));
         let crsn = borrow_global_mut<CRSN>(addr);
 
-        Event::emit_event(&mut crsn.force_shift_events, ForceShiftEvent {
+        event::emit_event(&mut crsn.force_shift_events, ForceShiftEvent {
             current_min_nonce: crsn.min_nonce,
             shift_amount: shift_amount,
             bits_at_shift: *&crsn.slots,
         });
 
-        BitVector::shift_left(&mut crsn.slots, shift_amount);
+        bit_vector::shift_left(&mut crsn.slots, shift_amount);
 
         crsn.min_nonce = crsn.min_nonce + shift_amount;
         // shift over any set bits
@@ -194,7 +194,7 @@ module DiemFramework::CRSN {
     }
 
     spec force_expire {
-        let addr = Signer::address_of(account);
+        let addr = signer::address_of(account);
         ensures global<CRSN>(addr).min_nonce == old(global<CRSN>(addr)).min_nonce + shift_amount;
     }
     /// Return whether this address has a CRSN resource published under it.
@@ -203,11 +203,11 @@ module DiemFramework::CRSN {
     }
 
     fun shift_window_right(crsn: &mut CRSN) {
-        let index = BitVector::longest_set_sequence_starting_at(&crsn.slots, 0);
+        let index = bit_vector::longest_set_sequence_starting_at(&crsn.slots, 0);
 
         // if there is no run of set bits return early
         if (index == 0) return;
-        BitVector::shift_left(&mut crsn.slots, index);
+        bit_vector::shift_left(&mut crsn.slots, index);
         crsn.min_nonce = crsn.min_nonce + index;
     }
 

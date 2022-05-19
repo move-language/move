@@ -3,12 +3,12 @@ module DiemFramework::ValidatorOperatorConfigTests {
     use DiemFramework::ValidatorOperatorConfig as VOC;
     use DiemFramework::Roles;
     use DiemFramework::Genesis;
-    use Std::UnitTest;
-    use Std::Vector;
-    use Std::Signer;
+    use std::unit_test;
+    use std::vector;
+    use std::signer;
 
     fun get_signer(): signer {
-        Vector::pop_back(&mut UnitTest::create_signers_for_testing(1))
+        vector::pop_back(&mut unit_test::create_signers_for_testing(1))
     }
 
     #[test]
@@ -40,7 +40,7 @@ module DiemFramework::ValidatorOperatorConfigTests {
         let s = get_signer();
         Roles::new_validator_operator_role(&dr, &s);
         VOC::publish(&s, &dr, x"");
-        assert!(VOC::has_validator_operator_config(Signer::address_of(&s)), 0);
+        assert!(VOC::has_validator_operator_config(signer::address_of(&s)), 0);
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
@@ -65,6 +65,6 @@ module DiemFramework::ValidatorOperatorConfigTests {
         let s = get_signer();
         Roles::new_validator_operator_role(&dr, &s);
         VOC::publish(&s, &dr, b"test");
-        assert!(VOC::get_human_name(Signer::address_of(&s)) == b"test", 0);
+        assert!(VOC::get_human_name(signer::address_of(&s)) == b"test", 0);
     }
 }

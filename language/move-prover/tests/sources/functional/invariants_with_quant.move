@@ -1,14 +1,14 @@
 module 0x42::TestQuantInvariant {
-    use Std::Vector;
+    use std::vector;
     spec module {
         pragma verify = true;
     }
 
     fun vector_of_proper_positives(): vector<u64> {
-        let v = Vector::empty();
-        Vector::push_back(&mut v, 1);
-        Vector::push_back(&mut v, 2);
-        Vector::push_back(&mut v, 3);
+        let v = vector::empty();
+        vector::push_back(&mut v, 1);
+        vector::push_back(&mut v, 2);
+        vector::push_back(&mut v, 3);
         v
     }
     spec vector_of_proper_positives {

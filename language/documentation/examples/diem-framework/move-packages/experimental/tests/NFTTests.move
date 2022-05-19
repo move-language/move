@@ -1,9 +1,9 @@
 #[test_only]
 module 0x1::NFTTests {
-    use Std::GUID;
+    use std::guid;
     use 0x1::NFT;
     use 0x1::NFTGallery;
-    use Std::Option;
+    use std::option;
 
     /// A test token type to instantiate generic Tokens with.
     struct Game has copy, store, drop {
@@ -41,8 +41,8 @@ module 0x1::NFTTests {
         NFTGallery::publish_gallery<Pokemon>(&creator);
         NFTGallery::publish_gallery<Game>(&user);
 
-        let token1_id = GUID::create_id(creator_addr, 0);
-        let token2_id = GUID::create_id(creator_addr, 1);
+        let token1_id = guid::create_id(creator_addr, 0);
+        let token2_id = guid::create_id(creator_addr, 1);
 
         /*
         ===============================================================
@@ -55,13 +55,13 @@ module 0x1::NFTTests {
             Game { name: b"Mario", edition: 2008 },
             b"nintendo.com",
             10,
-            Option::none(),
+            option::none(),
         );
         assert!(NFT::get_balance(&token1) == 10, EMINT_FAILED);
         assert!(NFT::get_supply(&token1) == 10, EMINT_FAILED);
         assert!(NFT::get_content_uri(&token1) == b"nintendo.com", EMINT_FAILED);
         assert!(NFT::get_metadata(&token1) == Game { name: b"Mario", edition: 2008, }, EMINT_FAILED);
-        assert!(NFT::get_parent_id(&token1) == Option::none(), EMINT_FAILED);
+        assert!(NFT::get_parent_id(&token1) == option::none(), EMINT_FAILED);
 
 
         // Add all 10 tokens to creator's own account
@@ -77,7 +77,7 @@ module 0x1::NFTTests {
             Game { name: b"ChromeDino", edition: 2015 },
             b"google.com",
             233,
-            Option::none(),
+            option::none(),
         );
         NFTGallery::add_to_gallery<Game>(creator_addr, token2);
         assert!(NFTGallery::has_token<Game>(creator_addr, &token2_id), EMINT_FAILED);
@@ -97,7 +97,7 @@ module 0x1::NFTTests {
             Collection { name: b"Pokemon" },
             b"nintendo.com",
             1,
-            Option::none(),
+            option::none(),
         );
 
         let pikachu = NFT::create<Pokemon>(
@@ -105,14 +105,14 @@ module 0x1::NFTTests {
             Pokemon { name: b"Pikachu", type: b"electric", },
             b"nintendo.com",
             10,
-            Option::some(NFT::id(&collection)),
+            option::some(NFT::id(&collection)),
         );
         let charmander = NFT::create<Pokemon>(
             &creator,
             Pokemon { name: b"Charmander", type: b"fire", },
             b"nintendo.com",
             10,
-            Option::some(NFT::id(&collection)),
+            option::some(NFT::id(&collection)),
         );
 
         let pikachu_id = NFT::id(&pikachu);
@@ -121,7 +121,7 @@ module 0x1::NFTTests {
         assert!(NFTGallery::get_token_supply<Pokemon>(creator_addr, &pikachu_id) == 10, ECOLLECTION_FAILED);
         assert!(NFTGallery::get_token_content_uri<Pokemon>(creator_addr, &pikachu_id) == b"nintendo.com", ECOLLECTION_FAILED);
         assert!(NFTGallery::get_token_metadata<Pokemon>(creator_addr, &pikachu_id) == Pokemon { name: b"Pikachu", type: b"electric", }, ECOLLECTION_FAILED);
-        assert!(NFTGallery::get_token_parent_id<Pokemon>(creator_addr, &pikachu_id) == Option::some(NFT::id(&collection)), ECOLLECTION_FAILED);
+        assert!(NFTGallery::get_token_parent_id<Pokemon>(creator_addr, &pikachu_id) == option::some(NFT::id(&collection)), ECOLLECTION_FAILED);
 
         NFTGallery::add_to_gallery<Pokemon>(creator_addr, charmander);
         NFTGallery::add_to_gallery<Collection>(creator_addr, collection);
@@ -173,18 +173,18 @@ module 0x1::NFTTests {
             Game { name: b"Mario", edition: 2008 },
             b"nintendo.com",
             1,
-            Option::none(),
+            option::none(),
         );
         assert!(NFT::is_data_inlined(&nft), EMINT_FAILED);
         assert!(NFT::get_balance(&nft) == 1, EMINT_FAILED);
         assert!(NFT::get_supply(&nft) == 1, EMINT_FAILED);
         assert!(NFT::get_content_uri(&nft) == b"nintendo.com", EMINT_FAILED);
         assert!(NFT::get_metadata(&nft) == Game { name: b"Mario", edition: 2008, }, EMINT_FAILED);
-        assert!(NFT::get_parent_id(&nft) == Option::none(), EMINT_FAILED);
+        assert!(NFT::get_parent_id(&nft) == option::none(), EMINT_FAILED);
 
         let nft_id = NFT::id(&nft);
-        let nft_creator_addr = GUID::id_creator_address(&nft_id);
-        let nft_creation_num = GUID::id_creation_num(&nft_id);
+        let nft_creator_addr = guid::id_creator_address(&nft_id);
+        let nft_creation_num = guid::id_creation_num(&nft_id);
         NFTGallery::add_to_gallery<Game>(creator_addr, nft);
         assert!(NFTGallery::has_token<Game>(creator_addr, &nft_id), EMINT_FAILED);
 

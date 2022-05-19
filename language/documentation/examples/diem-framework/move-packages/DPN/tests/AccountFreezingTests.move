@@ -2,7 +2,7 @@
 module DiemFramework::AccountFreezingTests {
     use DiemFramework::AccountFreezing as AF;
     use DiemFramework::Genesis;
-    use Std::Signer;
+    use std::signer;
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
     #[expected_failure(abort_code = 1)]
@@ -19,7 +19,7 @@ module DiemFramework::AccountFreezingTests {
 
     #[test(a = @0x2)]
     fun create_new(a: signer) {
-        let a_addr = Signer::address_of(&a);
+        let a_addr = signer::address_of(&a);
         AF::create_for_test(&a);
         AF::assert_not_frozen(a_addr);
     }
@@ -33,7 +33,7 @@ module DiemFramework::AccountFreezingTests {
 
     #[test(a = @0x2)]
     fun create_new_not_frozen(a: signer) {
-        let a_addr = Signer::address_of(&a);
+        let a_addr = signer::address_of(&a);
         AF::create_for_test(&a);
         AF::assert_not_frozen(a_addr);
     }
@@ -76,7 +76,7 @@ module DiemFramework::AccountFreezingTests {
 
     #[test(a = @0x2, tc = @TreasuryCompliance, dr = @DiemRoot)]
     fun account_frozen_after_freeze(a: signer, tc: signer, dr: signer) {
-        let a_addr = Signer::address_of(&a);
+        let a_addr = signer::address_of(&a);
         Genesis::setup(&dr, &tc);
         AF::create_for_test(&a);
         AF::assert_not_frozen(a_addr);
@@ -108,7 +108,7 @@ module DiemFramework::AccountFreezingTests {
 
     #[test(a = @0x2, tc = @TreasuryCompliance, dr = @DiemRoot)]
     fun account_unfrozen_after_unfreeze(a: signer, tc: signer, dr: signer) {
-        let a_addr = Signer::address_of(&a);
+        let a_addr = signer::address_of(&a);
         Genesis::setup(&dr, &tc);
 
         AF::create_for_test(&a);

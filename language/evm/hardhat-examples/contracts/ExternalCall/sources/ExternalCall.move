@@ -4,7 +4,7 @@ module Evm::ExternalCall {
     use Evm::Evm::Unit;
     use Evm::Evm::{abort_with, isContract, require, sender};
     use Evm::U256::{U256};
-    use Std::Vector;
+    use std::vector;
 
     #[external(sig=b"forty_two() returns (uint64)")]
     public native fun external_call_forty_two(contract: address): u64;

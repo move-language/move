@@ -1,10 +1,10 @@
 /// Module managing VASP domains.
 module DiemFramework::VASPDomain {
     use DiemFramework::Roles;
-    use Std::Errors;
-    use Std::Event::{Self, EventHandle};
-    use Std::Signer;
-    use Std::Vector;
+    use std::errors;
+    use std::event::{Self, EventHandle};
+    use std::signer;
+    use std::vector;
     friend DiemFramework::DiemAccount;
     friend DiemFramework::AccountAdministrationScripts;
 
@@ -62,7 +62,7 @@ module DiemFramework::VASPDomain {
     const EINVALID_VASP_DOMAIN: u64 = 5;
 
     fun create_vasp_domain(domain: vector<u8>): VASPDomain {
-        assert!(Vector::length(&domain) <= DOMAIN_LENGTH, Errors::invalid_argument(EINVALID_VASP_DOMAIN));
+        assert!(vector::length(&domain) <= DOMAIN_LENGTH, errors::invalid_argument(EINVALID_VASP_DOMAIN));
         VASPDomain{ domain }
     }
     spec create_vasp_domain {
@@ -71,7 +71,7 @@ module DiemFramework::VASPDomain {
     }
     spec schema CreateVASPDomainAbortsIf {
         domain: vector<u8>;
-        aborts_if Vector::length(domain) > DOMAIN_LENGTH with Errors::INVALID_ARGUMENT;
+        aborts_if vector::length(domain) > DOMAIN_LENGTH with errors::INVALID_ARGUMENT;
     }
 
     /// Publish a `VASPDomains` resource under `created` with an empty `domains`.
@@ -82,27 +82,27 @@ module DiemFramework::VASPDomain {
     ) {
         Roles::assert_parent_vasp_role(vasp_account);
         assert!(
-            !exists<VASPDomains>(Signer::address_of(vasp_account)),
-            Errors::already_published(EVASP_DOMAINS)
+            !exists<VASPDomains>(signer::address_of(vasp_account)),
+            errors::already_published(EVASP_DOMAINS)
         );
         move_to(vasp_account, VASPDomains {
-            domains: Vector::empty(),
+            domains: vector::empty(),
         })
     }
     spec publish_vasp_domains {
-        let vasp_addr = Signer::address_of(vasp_account);
+        let vasp_addr = signer::address_of(vasp_account);
         include Roles::AbortsIfNotParentVasp{account: vasp_account};
         include PublishVASPDomainsAbortsIf;
         include PublishVASPDomainsEnsures;
     }
     spec schema PublishVASPDomainsAbortsIf {
         vasp_addr: address;
-        aborts_if has_vasp_domains(vasp_addr) with Errors::ALREADY_PUBLISHED;
+        aborts_if has_vasp_domains(vasp_addr) with errors::ALREADY_PUBLISHED;
     }
     spec schema PublishVASPDomainsEnsures {
         vasp_addr: address;
         ensures exists<VASPDomains>(vasp_addr);
-        ensures Vector::is_empty(global<VASPDomains>(vasp_addr).domains);
+        ensures vector::is_empty(global<VASPDomains>(vasp_addr).domains);
     }
 
     public fun has_vasp_domains(addr: address): bool {
@@ -121,21 +121,21 @@ module DiemFramework::VASPDomain {
     ) {
         Roles::assert_treasury_compliance(tc_account);
         assert!(
-            !exists<VASPDomainManager>(Signer::address_of(tc_account)),
-            Errors::already_published(EVASP_DOMAIN_MANAGER)
+            !exists<VASPDomainManager>(signer::address_of(tc_account)),
+            errors::already_published(EVASP_DOMAIN_MANAGER)
         );
         move_to(
             tc_account,
             VASPDomainManager {
-                vasp_domain_events: Event::new_event_handle<VASPDomainEvent>(tc_account),
+                vasp_domain_events: event::new_event_handle<VASPDomainEvent>(tc_account),
             }
         );
     }
     spec publish_vasp_domain_manager {
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
-        aborts_if tc_domain_manager_exists() with Errors::ALREADY_PUBLISHED;
-        ensures exists<VASPDomainManager>(Signer::address_of(tc_account));
-        modifies global<VASPDomainManager>(Signer::address_of(tc_account));
+        aborts_if tc_domain_manager_exists() with errors::ALREADY_PUBLISHED;
+        ensures exists<VASPDomainManager>(signer::address_of(tc_account));
+        modifies global<VASPDomainManager>(signer::address_of(tc_account));
     }
 
     /// Add a VASPDomain to a parent VASP's VASPDomains resource.
@@ -148,23 +148,23 @@ module DiemFramework::VASPDomain {
         domain: vector<u8>,
     ) acquires VASPDomainManager, VASPDomains {
         Roles::assert_treasury_compliance(tc_account);
-        assert!(tc_domain_manager_exists(), Errors::not_published(EVASP_DOMAIN_MANAGER));
+        assert!(tc_domain_manager_exists(), errors::not_published(EVASP_DOMAIN_MANAGER));
         assert!(
             exists<VASPDomains>(address),
-            Errors::not_published(EVASP_DOMAINS_NOT_PUBLISHED)
+            errors::not_published(EVASP_DOMAINS_NOT_PUBLISHED)
         );
 
         let account_domains = borrow_global_mut<VASPDomains>(address);
         let vasp_domain = create_vasp_domain(domain);
 
         assert!(
-            !Vector::contains(&account_domains.domains, &vasp_domain),
-            Errors::invalid_argument(EVASP_DOMAIN_ALREADY_EXISTS)
+            !vector::contains(&account_domains.domains, &vasp_domain),
+            errors::invalid_argument(EVASP_DOMAIN_ALREADY_EXISTS)
         );
 
-        Vector::push_back(&mut account_domains.domains, copy vasp_domain);
+        vector::push_back(&mut account_domains.domains, copy vasp_domain);
 
-        Event::emit_event(
+        event::emit_event(
             &mut borrow_global_mut<VASPDomainManager>(@TreasuryCompliance).vasp_domain_events,
             VASPDomainEvent {
                 removed: false,
@@ -185,9 +185,9 @@ module DiemFramework::VASPDomain {
         let domains = global<VASPDomains>(address).domains;
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         include CreateVASPDomainAbortsIf;
-        aborts_if !exists<VASPDomains>(address) with Errors::NOT_PUBLISHED;
-        aborts_if !tc_domain_manager_exists() with Errors::NOT_PUBLISHED;
-        aborts_if contains(domains, VASPDomain { domain }) with Errors::INVALID_ARGUMENT;
+        aborts_if !exists<VASPDomains>(address) with errors::NOT_PUBLISHED;
+        aborts_if !tc_domain_manager_exists() with errors::NOT_PUBLISHED;
+        aborts_if contains(domains, VASPDomain { domain }) with errors::INVALID_ARGUMENT;
     }
     spec schema AddVASPDomainEnsures {
         address: address;
@@ -214,23 +214,23 @@ module DiemFramework::VASPDomain {
         domain: vector<u8>,
     ) acquires VASPDomainManager, VASPDomains {
         Roles::assert_treasury_compliance(tc_account);
-        assert!(tc_domain_manager_exists(), Errors::not_published(EVASP_DOMAIN_MANAGER));
+        assert!(tc_domain_manager_exists(), errors::not_published(EVASP_DOMAIN_MANAGER));
         assert!(
             exists<VASPDomains>(address),
-            Errors::not_published(EVASP_DOMAINS_NOT_PUBLISHED)
+            errors::not_published(EVASP_DOMAINS_NOT_PUBLISHED)
         );
 
         let account_domains = borrow_global_mut<VASPDomains>(address);
         let vasp_domain = create_vasp_domain(domain);
 
-        let (has, index) = Vector::index_of(&account_domains.domains, &vasp_domain);
+        let (has, index) = vector::index_of(&account_domains.domains, &vasp_domain);
         if (has) {
-            Vector::remove(&mut account_domains.domains, index);
+            vector::remove(&mut account_domains.domains, index);
         } else {
-            abort Errors::invalid_argument(EVASP_DOMAIN_NOT_FOUND)
+            abort errors::invalid_argument(EVASP_DOMAIN_NOT_FOUND)
         };
 
-        Event::emit_event(
+        event::emit_event(
             &mut borrow_global_mut<VASPDomainManager>(@TreasuryCompliance).vasp_domain_events,
             VASPDomainEvent {
                 removed: true,
@@ -251,9 +251,9 @@ module DiemFramework::VASPDomain {
         let domains = global<VASPDomains>(address).domains;
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         include CreateVASPDomainAbortsIf;
-        aborts_if !exists<VASPDomains>(address) with Errors::NOT_PUBLISHED;
-        aborts_if !tc_domain_manager_exists() with Errors::NOT_PUBLISHED;
-        aborts_if !contains(domains, VASPDomain { domain }) with Errors::INVALID_ARGUMENT;
+        aborts_if !exists<VASPDomains>(address) with errors::NOT_PUBLISHED;
+        aborts_if !tc_domain_manager_exists() with errors::NOT_PUBLISHED;
+        aborts_if !contains(domains, VASPDomain { domain }) with errors::INVALID_ARGUMENT;
     }
     spec schema RemoveVASPDomainEnsures {
         address: address;
@@ -277,11 +277,11 @@ module DiemFramework::VASPDomain {
     public fun has_vasp_domain(addr: address, domain: vector<u8>): bool acquires VASPDomains {
         assert!(
             exists<VASPDomains>(addr),
-            Errors::not_published(EVASP_DOMAINS_NOT_PUBLISHED)
+            errors::not_published(EVASP_DOMAINS_NOT_PUBLISHED)
         );
         let account_domains = borrow_global<VASPDomains>(addr);
         let vasp_domain = create_vasp_domain(domain);
-        Vector::contains(&account_domains.domains, &vasp_domain)
+        vector::contains(&account_domains.domains, &vasp_domain)
     }
     spec has_vasp_domain {
         include HasVASPDomainAbortsIf;
@@ -292,7 +292,7 @@ module DiemFramework::VASPDomain {
         addr: address;
         domain: vector<u8>;
         include CreateVASPDomainAbortsIf;
-        aborts_if !exists<VASPDomains>(addr) with Errors::NOT_PUBLISHED;
+        aborts_if !exists<VASPDomains>(addr) with errors::NOT_PUBLISHED;
     }
 
     public fun tc_domain_manager_exists(): bool {

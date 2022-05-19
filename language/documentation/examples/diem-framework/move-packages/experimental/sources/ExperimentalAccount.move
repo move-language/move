@@ -3,8 +3,8 @@
 /// transaction in addition to the core prologue and epilogue.
 
 module ExperimentalFramework::ExperimentalAccount {
-    use Std::Event;
-    use Std::Errors;
+    use std::event;
+    use std::errors;
     use CoreFramework::Account;
     use CoreFramework::DiemTimestamp;
     use CoreFramework::SystemAddresses;
@@ -14,7 +14,7 @@ module ExperimentalFramework::ExperimentalAccount {
 
     /// A resource that holds the event handle for all the past WriteSet transactions that have been committed on chain.
     struct DiemWriteSetManager has key {
-        upgrade_events: Event::EventHandle<AdminTransactionEvent>,
+        upgrade_events: event::EventHandle<AdminTransactionEvent>,
     }
 
     /// Message for committed WriteSet transaction.
@@ -70,11 +70,11 @@ module ExperimentalFramework::ExperimentalAccount {
     fun create_core_account(account_address: address, auth_key_prefix: vector<u8>): (signer, vector<u8>) {
         assert!(
             account_address != @VMReserved,
-            Errors::invalid_argument(ECANNOT_CREATE_AT_VM_RESERVED)
+            errors::invalid_argument(ECANNOT_CREATE_AT_VM_RESERVED)
         );
         assert!(
             account_address != @CoreFramework,
-            Errors::invalid_argument(ECANNOT_CREATE_AT_CORE_CODE)
+            errors::invalid_argument(ECANNOT_CREATE_AT_CORE_CODE)
         );
         Account::create_account(account_address, auth_key_prefix, &ExperimentalAccountMarker{})
     }
@@ -133,12 +133,12 @@ module ExperimentalFramework::ExperimentalAccount {
         SystemAddresses::assert_core_resource(&dr_account);
         assert!(
             !exists<DiemWriteSetManager>(@CoreResources),
-            Errors::already_published(EWRITESET_MANAGER)
+            errors::already_published(EWRITESET_MANAGER)
         );
         move_to(
             &dr_account,
             DiemWriteSetManager {
-                upgrade_events: Event::new_event_handle<AdminTransactionEvent>(&dr_account),
+                upgrade_events: event::new_event_handle<AdminTransactionEvent>(&dr_account),
             }
         );
     }

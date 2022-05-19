@@ -2,7 +2,7 @@
 module 0x2::M {
     use Evm::ExternalResult::{Self, ExternalResult};
     use Evm::U256::{Self, U256};
-    use Std::Vector;
+    use std::vector;
 
     #[evm_test]
     fun extract_value(){
@@ -13,24 +13,24 @@ module 0x2::M {
 
     #[evm_test]
     fun extract_err_data(){
-        let v = Vector::empty<u8>();
-        Vector::push_back(&mut v, 42u8);
+        let v = vector::empty<u8>();
+        vector::push_back(&mut v, 42u8);
         let v2 = pack_err_data<u64>(v);
         assert!(ExternalResult::is_err_data(&v2), 102);
         let v3 = ExternalResult::unwrap_err_data(v2);
-        assert!(Vector::length(&v3) == 1, 103);
-        assert!(*Vector::borrow(&v3, 0) == 42, 104);
+        assert!(vector::length(&v3) == 1, 103);
+        assert!(*vector::borrow(&v3, 0) == 42, 104);
     }
 
     #[evm_test]
     fun extract_err_reason() {
-        let v = Vector::empty<u8>();
-        Vector::push_back(&mut v, 42u8);
+        let v = vector::empty<u8>();
+        vector::push_back(&mut v, 42u8);
         let v2 = pack_err_reason<u64>(v);
         assert!(ExternalResult::is_err_reason(&v2), 105);
         let v3 = ExternalResult::unwrap_err_reason(v2);
-        assert!(Vector::length(&v3) == 1, 106);
-        assert!(*Vector::borrow(&v3, 0) == 42, 107);
+        assert!(vector::length(&v3) == 1, 106);
+        assert!(*vector::borrow(&v3, 0) == 42, 107);
     }
 
     #[evm_test]

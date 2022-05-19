@@ -1,7 +1,7 @@
 // dep: ../../move-stdlib/sources/Vector.move
 
 module 0x2::Collection {
-    use Std::Vector;
+    use std::vector;
 
     struct Collection<T> has drop {
         items: vector<T>,
@@ -9,12 +9,12 @@ module 0x2::Collection {
     }
 
     public fun borrow_mut<T>(c: &mut Collection<T>, i: u64): &mut T {
-        Vector::borrow_mut(&mut c.items, i)
+        vector::borrow_mut(&mut c.items, i)
     }
 
     public fun make_collection<T>(): Collection<T> {
         Collection {
-            items: Vector::empty(),
+            items: vector::empty(),
             owner: @0x2,
         }
     }

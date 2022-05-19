@@ -70,7 +70,7 @@ module Token {
 address 0x3 {
 
 module OneToOneMarket {
-    use Std::Signer;
+    use std::signer;
     use 0x2::Map;
     use 0x2::Token;
 
@@ -93,7 +93,7 @@ module OneToOneMarket {
     }
 
     fun accept<AssetType: copy + drop + store>(account: &signer, init: Token::Coin<AssetType>) {
-        let sender = Signer::address_of(account);
+        let sender = signer::address_of(account);
         assert!(!exists<Pool<AssetType>>(sender), 42);
         move_to(account, Pool<AssetType> { coin: init })
     }
@@ -157,7 +157,7 @@ module OneToOneMarket {
     fun update_deposit_record<In: copy + drop + store, Out: copy + drop + store>(account: &signer, pool_owner: address, amount: u64)
         acquires DepositRecord
     {
-        let sender = Signer::address_of(account);
+        let sender = signer::address_of(account);
         if (!exists<DepositRecord<In, Out>>(sender)) {
             move_to(account, DepositRecord<In, Out> { record: Map::empty() })
         };
@@ -172,7 +172,7 @@ module OneToOneMarket {
     fun update_borrow_record<In: copy + drop + store, Out: copy + drop + store>(account: &signer, pool_owner: address, amount: u64)
         acquires BorrowRecord
     {
-        let sender = Signer::address_of(account);
+        let sender = signer::address_of(account);
         if (!exists<BorrowRecord<In, Out>>(sender)) {
             move_to(account, BorrowRecord<In, Out> { record: Map::empty() })
         };
@@ -187,7 +187,7 @@ module OneToOneMarket {
     fun deposited_amount<In: copy + drop + store, Out: copy + drop + store>(account: &signer, pool_owner: address): u64
         acquires DepositRecord
     {
-        let sender = Signer::address_of(account);
+        let sender = signer::address_of(account);
         if (!exists<DepositRecord<In, Out>>(sender)) return 0;
 
         let record = &borrow_global<DepositRecord<In, Out>>(sender).record;
@@ -198,7 +198,7 @@ module OneToOneMarket {
     fun borrowed_amount<In: copy + drop + store, Out: copy + drop + store>(account: &signer, pool_owner: address): u64
         acquires BorrowRecord
     {
-        let sender = Signer::address_of(account);
+        let sender = signer::address_of(account);
         if (!exists<BorrowRecord<In, Out>>(sender)) return 0;
 
         let record = &borrow_global<BorrowRecord<In, Out>>(sender).record;
@@ -213,7 +213,7 @@ address 0x70DD {
 
 module ToddNickels {
     use 0x2::Token;
-    use Std::Signer;
+    use std::signer;
 
     struct T has copy, drop, store {}
 
@@ -222,12 +222,12 @@ module ToddNickels {
     }
 
     public fun init(account: &signer) {
-        assert!(Signer::address_of(account) == @0x70DD, 42);
+        assert!(signer::address_of(account) == @0x70DD, 42);
         move_to(account, Wallet { nickels: Token::create(T{}, 0) })
     }
 
     public fun mint(account: &signer): Token::Coin<T> {
-        assert!(Signer::address_of(account) == @0x70DD, 42);
+        assert!(signer::address_of(account) == @0x70DD, 42);
         Token::create(T{}, 5)
     }
 

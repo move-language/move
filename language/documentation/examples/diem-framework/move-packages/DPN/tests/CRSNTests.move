@@ -2,8 +2,8 @@
 module DiemFramework::CRSNTests {
     use DiemFramework::CRSN;
     use DiemFramework::Genesis;
-    use Std::Signer;
-    use Std::BitVector;
+    use std::signer;
+    use std::bit_vector;
 
     #[test_only]
     public fun setup(dr: &signer, tc: &signer, _: &signer) {
@@ -28,34 +28,34 @@ module DiemFramework::CRSNTests {
     #[test(a=@0xCAFE, tc = @TreasuryCompliance, dr = @DiemRoot)]
     public fun publish_exists_after_small_size(a: signer, tc: signer, dr: signer) {
         setup(&dr, &tc, &a);
-        let addr = Signer::address_of(&a);
+        let addr = signer::address_of(&a);
 
         CRSN::test_publish(&a, 0, 10);
         assert!(CRSN::has_crsn(addr), 0);
         assert!(CRSN::min_nonce(addr)  == 0, 1);
-        assert!(BitVector::length(&CRSN::slots(addr)) == 10, 2);
+        assert!(bit_vector::length(&CRSN::slots(addr)) == 10, 2);
     }
 
     #[test(a=@0xCAFE, tc = @TreasuryCompliance, dr = @DiemRoot)]
     public fun publish_exists_after_medium_size(a: signer, tc: signer, dr: signer) {
         setup(&dr, &tc, &a);
-        let addr = Signer::address_of(&a);
+        let addr = signer::address_of(&a);
 
         CRSN::test_publish(&a, 20, 128);
         assert!(CRSN::has_crsn(addr), 0);
         assert!(CRSN::min_nonce(addr) == 20, 1);
-        assert!(BitVector::length(&CRSN::slots(addr)) == 128, 2);
+        assert!(bit_vector::length(&CRSN::slots(addr)) == 128, 2);
     }
 
     #[test(a=@0xCAFE, tc = @TreasuryCompliance, dr = @DiemRoot)]
     public fun publish_exists_after_large_size(a: signer, tc: signer, dr: signer) {
         setup(&dr, &tc, &a);
-        let addr = Signer::address_of(&a);
+        let addr = signer::address_of(&a);
 
         CRSN::test_publish(&a, 505, CRSN::max_crsn_size());
         assert!(CRSN::has_crsn(addr), 0);
         assert!(CRSN::min_nonce(addr) == 505, 1);
-        assert!(BitVector::length(&CRSN::slots(addr)) == CRSN::max_crsn_size(), 2);
+        assert!(bit_vector::length(&CRSN::slots(addr)) == CRSN::max_crsn_size(), 2);
     }
 
 
@@ -90,7 +90,7 @@ module DiemFramework::CRSNTests {
     #[test(a=@0xCAFE, tc = @TreasuryCompliance, dr = @DiemRoot)]
     public fun test_has_crsn(a: signer, tc: signer, dr: signer) {
         setup(&dr, &tc, &a);
-        let addr = Signer::address_of(&a);
+        let addr = signer::address_of(&a);
         assert!(!CRSN::has_crsn(addr), 0);
         CRSN::test_publish(&a, 0, 10);
         assert!(CRSN::has_crsn(addr), 1);
@@ -132,13 +132,13 @@ module DiemFramework::CRSNTests {
         assert!(CRSN::test_record(&a, 100), 0);
         assert!(!CRSN::test_check(&a, 100), 1);
         assert!(CRSN::test_record(&a, 100), 1);
-        assert!(CRSN::min_nonce(Signer::address_of(&a)) == 101, 2);
+        assert!(CRSN::min_nonce(signer::address_of(&a)) == 101, 2);
     }
 
     #[test(a=@0xCAFE, tc = @TreasuryCompliance, dr = @DiemRoot)]
     public fun multiple_shifts_of_window(a: signer, tc: signer, dr: signer) {
         setup(&dr, &tc, &a);
-        let addr = Signer::address_of(&a);
+        let addr = signer::address_of(&a);
         CRSN::test_publish(&a, 100, 10);
         assert!(CRSN::test_record(&a, 101), 0);
         assert!(CRSN::test_record(&a, 102), 0);
@@ -182,7 +182,7 @@ module DiemFramework::CRSNTests {
     #[test(a=@0xCAFE, tc = @TreasuryCompliance, dr = @DiemRoot)]
     public fun force_expire_single(a: signer, tc: signer, dr: signer) {
         setup(&dr, &tc, &a);
-        let addr = Signer::address_of(&a);
+        let addr = signer::address_of(&a);
         CRSN::test_publish(&a, 100, 10);
         CRSN::test_force_expire(&a, 1);
         assert!(CRSN::min_nonce(addr) == 101, 1);
@@ -191,7 +191,7 @@ module DiemFramework::CRSNTests {
     #[test(a=@0xCAFE, tc = @TreasuryCompliance, dr = @DiemRoot)]
     public fun force_expire_shift_over_set_bits(a: signer, tc: signer, dr: signer) {
         setup(&dr, &tc, &a);
-        let addr = Signer::address_of(&a);
+        let addr = signer::address_of(&a);
         CRSN::test_publish(&a, 0, 100);
         assert!(CRSN::test_record(&a, 1), 0);
         assert!(CRSN::test_record(&a, 2), 0);
@@ -203,7 +203,7 @@ module DiemFramework::CRSNTests {
     #[test(a=@0xCAFE, tc = @TreasuryCompliance, dr = @DiemRoot)]
     public fun force_expire_past_set_bits(a: signer, tc: signer, dr: signer) {
         setup(&dr, &tc, &a);
-        let addr = Signer::address_of(&a);
+        let addr = signer::address_of(&a);
         CRSN::test_publish(&a, 0, 100);
         assert!(CRSN::test_record(&a, 1), 0);
         assert!(CRSN::test_record(&a, 2), 0);
@@ -215,7 +215,7 @@ module DiemFramework::CRSNTests {
         let slots = CRSN::slots(addr);
 
         while (i < len) {
-            assert!(!BitVector::is_index_set(&slots, i), 2);
+            assert!(!bit_vector::is_index_set(&slots, i), 2);
             i = i + 1;
         }
     }
@@ -223,7 +223,7 @@ module DiemFramework::CRSNTests {
     #[test(a=@0xCAFE, tc = @TreasuryCompliance, dr = @DiemRoot)]
     public fun force_expire_past_window_size(a: signer, tc: signer, dr: signer) {
         setup(&dr, &tc, &a);
-        let addr = Signer::address_of(&a);
+        let addr = signer::address_of(&a);
         CRSN::test_publish(&a, 0, 100);
         assert!(CRSN::test_record(&a, 1), 0);
         assert!(CRSN::test_record(&a, 2), 0);
@@ -235,7 +235,7 @@ module DiemFramework::CRSNTests {
         let slots = CRSN::slots(addr);
 
         while (i < len) {
-            assert!(!BitVector::is_index_set(&slots, i), 2);
+            assert!(!bit_vector::is_index_set(&slots, i), 2);
             i = i + 1;
         }
     }

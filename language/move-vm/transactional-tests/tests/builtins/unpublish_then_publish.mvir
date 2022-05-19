@@ -1,6 +1,6 @@
 //# publish
 module 0x1.M {
-    import 0x1.Signer;
+    import 0x1.signer;
 
     struct R has key { x: bool }
 
@@ -13,7 +13,7 @@ module 0x1.M {
     public test(s: &signer) acquires R {
         let r: Self.R;
     label b0:
-        r = move_from<R>(Signer.address_of(copy(s)));
+        r = move_from<R>(signer.address_of(copy(s)));
         move_to<R>(move(s), move(r));
         return;
     }

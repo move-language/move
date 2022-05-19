@@ -2,12 +2,12 @@
 module DiemFramework::RolesTests{
     use DiemFramework::Roles;
     use DiemFramework::Genesis;
-    use Std::UnitTest;
-    use Std::Vector;
-    use Std::Signer;
+    use std::unit_test;
+    use std::vector;
+    use std::signer;
 
     fun get_account(): signer {
-        Vector::pop_back(&mut UnitTest::create_signers_for_testing(1))
+        vector::pop_back(&mut unit_test::create_signers_for_testing(1))
     }
 
     #[test]
@@ -285,8 +285,8 @@ module DiemFramework::RolesTests{
     fun grant_child_vasp_role_parent_vasp_granter(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let (account, pvasp) = {
-            let accounts = UnitTest::create_signers_for_testing(2);
-            (Vector::pop_back(&mut accounts), Vector::pop_back(&mut accounts))
+            let accounts = unit_test::create_signers_for_testing(2);
+            (vector::pop_back(&mut accounts), vector::pop_back(&mut accounts))
         };
         assert!(!Roles::has_child_VASP_role(&account), 0);
         Roles::new_parent_vasp_role(&tc, &pvasp);
@@ -301,8 +301,8 @@ module DiemFramework::RolesTests{
     fun double_grant_child_vasp_role_tc_granter(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let (account, pvasp) = {
-            let accounts = UnitTest::create_signers_for_testing(2);
-            (Vector::pop_back(&mut accounts), Vector::pop_back(&mut accounts))
+            let accounts = unit_test::create_signers_for_testing(2);
+            (vector::pop_back(&mut accounts), vector::pop_back(&mut accounts))
         };
         Roles::new_parent_vasp_role(&tc, &pvasp);
         Roles::new_child_vasp_role(&pvasp, &account);
@@ -313,11 +313,11 @@ module DiemFramework::RolesTests{
     fun who_can_hold_balance(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let (dd_account, child_account, pvasp) = {
-            let accounts = UnitTest::create_signers_for_testing(3);
+            let accounts = unit_test::create_signers_for_testing(3);
             (
-                Vector::pop_back(&mut accounts),
-                Vector::pop_back(&mut accounts),
-                Vector::pop_back(&mut accounts)
+                vector::pop_back(&mut accounts),
+                vector::pop_back(&mut accounts),
+                vector::pop_back(&mut accounts)
             )
         };
 
@@ -335,13 +335,13 @@ module DiemFramework::RolesTests{
     fun role_ids(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let (validator_account, validator_operator_account, dd_account, child_account, pvasp) = {
-            let accounts = UnitTest::create_signers_for_testing(5);
+            let accounts = unit_test::create_signers_for_testing(5);
             (
-                Vector::pop_back(&mut accounts),
-                Vector::pop_back(&mut accounts),
-                Vector::pop_back(&mut accounts),
-                Vector::pop_back(&mut accounts),
-                Vector::pop_back(&mut accounts),
+                vector::pop_back(&mut accounts),
+                vector::pop_back(&mut accounts),
+                vector::pop_back(&mut accounts),
+                vector::pop_back(&mut accounts),
+                vector::pop_back(&mut accounts),
             )
         };
 
@@ -351,13 +351,13 @@ module DiemFramework::RolesTests{
         Roles::new_validator_role(&dr, &validator_account);
         Roles::new_validator_operator_role(&dr, &validator_operator_account);
 
-        assert!(Roles::get_role_id(Signer::address_of(&dr)) == 0, 0);
-        assert!(Roles::get_role_id(Signer::address_of(&tc)) == 1, 1);
-        assert!(Roles::get_role_id(Signer::address_of(&dd_account)) == 2, 2);
-        assert!(Roles::get_role_id(Signer::address_of(&validator_account)) == 3, 3);
-        assert!(Roles::get_role_id(Signer::address_of(&validator_operator_account)) == 4, 4);
-        assert!(Roles::get_role_id(Signer::address_of(&pvasp)) == 5, 5);
-        assert!(Roles::get_role_id(Signer::address_of(&child_account)) == 6, 6);
+        assert!(Roles::get_role_id(signer::address_of(&dr)) == 0, 0);
+        assert!(Roles::get_role_id(signer::address_of(&tc)) == 1, 1);
+        assert!(Roles::get_role_id(signer::address_of(&dd_account)) == 2, 2);
+        assert!(Roles::get_role_id(signer::address_of(&validator_account)) == 3, 3);
+        assert!(Roles::get_role_id(signer::address_of(&validator_operator_account)) == 4, 4);
+        assert!(Roles::get_role_id(signer::address_of(&pvasp)) == 5, 5);
+        assert!(Roles::get_role_id(signer::address_of(&child_account)) == 6, 6);
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]

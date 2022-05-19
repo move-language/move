@@ -84,17 +84,17 @@ module DiemFramework::AccountCreationScripts {
     }
 
     spec create_child_vasp_account {
-        use Std::Signer;
-        use Std::Errors;
+        use std::signer;
+        use std::errors;
         use DiemFramework::DualAttestation;
         use DiemFramework::Roles;
 
         include DiemAccount::TransactionChecks{sender: parent_vasp}; // properties checked by the prologue.
-        let parent_addr = Signer::address_of(parent_vasp);
+        let parent_addr = signer::address_of(parent_vasp);
         let parent_cap = DiemAccount::spec_get_withdraw_cap(parent_addr);
         include DiemAccount::CreateChildVASPAccountAbortsIf<CoinType>{
             parent: parent_vasp, new_account_address: child_address};
-        aborts_if child_initial_balance > max_u64() with Errors::LIMIT_EXCEEDED;
+        aborts_if child_initial_balance > max_u64() with errors::LIMIT_EXCEEDED;
         include (child_initial_balance > 0) ==>
             DiemAccount::ExtractWithdrawCapAbortsIf{sender_addr: parent_addr};
         include (child_initial_balance > 0) ==> DualAttestation::AssertPaymentOkAbortsIf<CoinType>{
@@ -120,12 +120,12 @@ module DiemFramework::AccountCreationScripts {
             == old(DiemAccount::balance<CoinType>(parent_addr)) - child_initial_balance;
 
         aborts_with [check]
-            Errors::REQUIRES_ROLE,
-            Errors::ALREADY_PUBLISHED,
-            Errors::LIMIT_EXCEEDED,
-            Errors::NOT_PUBLISHED,
-            Errors::INVALID_STATE,
-            Errors::INVALID_ARGUMENT;
+            errors::REQUIRES_ROLE,
+            errors::ALREADY_PUBLISHED,
+            errors::LIMIT_EXCEEDED,
+            errors::NOT_PUBLISHED,
+            errors::INVALID_STATE,
+            errors::INVALID_ARGUMENT;
 
         // TODO: fix emit specs below
         /*
@@ -213,7 +213,7 @@ module DiemFramework::AccountCreationScripts {
     ///   Diem root address before checking the role, and the role abort is unreachable in practice, since
     ///   only Diem root has the Diem root role.
     spec create_validator_operator_account {
-        use Std::Errors;
+        use std::errors;
         use DiemFramework::Roles;
 
         include DiemAccount::TransactionChecks{sender: dr_account}; // properties checked by the prologue.
@@ -222,11 +222,11 @@ module DiemFramework::AccountCreationScripts {
         include DiemAccount::CreateValidatorOperatorAccountEnsures;
 
         aborts_with [check]
-            Errors::INVALID_ARGUMENT,
-            Errors::NOT_PUBLISHED,
-            Errors::REQUIRES_ADDRESS,
-            Errors::ALREADY_PUBLISHED,
-            Errors::REQUIRES_ROLE;
+            errors::INVALID_ARGUMENT,
+            errors::NOT_PUBLISHED,
+            errors::REQUIRES_ADDRESS,
+            errors::ALREADY_PUBLISHED,
+            errors::REQUIRES_ROLE;
 
         include DiemAccount::MakeAccountEmits;
 
@@ -307,7 +307,7 @@ module DiemFramework::AccountCreationScripts {
     ///   Diem root address before checking the role, and the role abort is unreachable in practice, since
     ///   only Diem root has the Diem root role.
     spec create_validator_account {
-        use Std::Errors;
+        use std::errors;
         use DiemFramework::Roles;
 
         include DiemAccount::TransactionChecks{sender: dr_account}; // properties checked by the prologue.
@@ -316,11 +316,11 @@ module DiemFramework::AccountCreationScripts {
         include DiemAccount::CreateValidatorAccountEnsures;
 
         aborts_with [check]
-            Errors::INVALID_ARGUMENT,
-            Errors::NOT_PUBLISHED,
-            Errors::REQUIRES_ADDRESS,
-            Errors::ALREADY_PUBLISHED,
-            Errors::REQUIRES_ROLE;
+            errors::INVALID_ARGUMENT,
+            errors::NOT_PUBLISHED,
+            errors::REQUIRES_ADDRESS,
+            errors::ALREADY_PUBLISHED,
+            errors::REQUIRES_ROLE;
 
         include DiemAccount::MakeAccountEmits;
 
@@ -395,7 +395,7 @@ module DiemFramework::AccountCreationScripts {
     }
 
     spec create_parent_vasp_account {
-        use Std::Errors;
+        use std::errors;
         use DiemFramework::Roles;
 
         include DiemAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
@@ -404,11 +404,11 @@ module DiemFramework::AccountCreationScripts {
         include DiemAccount::CreateParentVASPAccountEnsures<CoinType>;
 
         aborts_with [check]
-            Errors::INVALID_ARGUMENT,
-            Errors::REQUIRES_ADDRESS,
-            Errors::NOT_PUBLISHED,
-            Errors::ALREADY_PUBLISHED,
-            Errors::REQUIRES_ROLE;
+            errors::INVALID_ARGUMENT,
+            errors::REQUIRES_ADDRESS,
+            errors::NOT_PUBLISHED,
+            errors::ALREADY_PUBLISHED,
+            errors::REQUIRES_ROLE;
 
         include DiemAccount::MakeAccountEmits;
 
@@ -485,7 +485,7 @@ module DiemFramework::AccountCreationScripts {
     }
 
     spec create_designated_dealer {
-        use Std::Errors;
+        use std::errors;
         use DiemFramework::Roles;
 
         include DiemAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
@@ -495,11 +495,11 @@ module DiemFramework::AccountCreationScripts {
         include DiemAccount::CreateDesignatedDealerEnsures<Currency>{new_account_address: addr};
 
         aborts_with [check]
-            Errors::INVALID_ARGUMENT,
-            Errors::REQUIRES_ADDRESS,
-            Errors::NOT_PUBLISHED,
-            Errors::ALREADY_PUBLISHED,
-            Errors::REQUIRES_ROLE;
+            errors::INVALID_ARGUMENT,
+            errors::REQUIRES_ADDRESS,
+            errors::NOT_PUBLISHED,
+            errors::ALREADY_PUBLISHED,
+            errors::REQUIRES_ROLE;
 
         include DiemAccount::MakeAccountEmits{new_account_address: addr};
 

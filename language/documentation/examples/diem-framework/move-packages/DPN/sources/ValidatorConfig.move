@@ -5,12 +5,12 @@
 /// of the `DiemSystem::DiemSystem.validators` vector).
 module DiemFramework::ValidatorConfig {
     use DiemFramework::DiemTimestamp;
-    use Std::Errors;
+    use std::errors;
     use DiemFramework::Signature;
     use DiemFramework::Roles;
     use DiemFramework::ValidatorOperatorConfig;
-    use Std::Option::{Self, Option};
-    use Std::Signer;
+    use std::option::{Self, Option};
+    use std::signer;
     friend DiemFramework::DiemAccount;
 
     #[test_only]
@@ -57,30 +57,30 @@ module DiemFramework::ValidatorConfig {
         Roles::assert_diem_root(dr_account);
         Roles::assert_validator(validator_account);
         assert!(
-            !exists<ValidatorConfig>(Signer::address_of(validator_account)),
-            Errors::already_published(EVALIDATOR_CONFIG)
+            !exists<ValidatorConfig>(signer::address_of(validator_account)),
+            errors::already_published(EVALIDATOR_CONFIG)
         );
         move_to(validator_account, ValidatorConfig {
-            config: Option::none(),
-            operator_account: Option::none(),
+            config: option::none(),
+            operator_account: option::none(),
             human_name,
         });
     }
 
     spec publish {
         include PublishAbortsIf;
-        ensures exists_config(Signer::address_of(validator_account));
+        ensures exists_config(signer::address_of(validator_account));
     }
 
     spec schema PublishAbortsIf {
         validator_account: signer;
         dr_account: signer;
-        let validator_addr = Signer::address_of(validator_account);
+        let validator_addr = signer::address_of(validator_account);
         include DiemTimestamp::AbortsIfNotOperating;
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
         include Roles::AbortsIfNotValidator{account: validator_account};
         aborts_if exists_config(validator_addr)
-            with Errors::ALREADY_PUBLISHED;
+            with errors::ALREADY_PUBLISHED;
     }
 
     /// Returns true if a ValidatorConfig resource exists under addr.
@@ -91,7 +91,7 @@ module DiemFramework::ValidatorConfig {
     /// Describes abort if ValidatorConfig does not exist.
     spec schema AbortsIfNoValidatorConfig {
         addr: address;
-        aborts_if !exists_config(addr) with Errors::NOT_PUBLISHED;
+        aborts_if !exists_config(addr) with errors::NOT_PUBLISHED;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -106,11 +106,11 @@ module DiemFramework::ValidatorConfig {
         // resource is published.
         assert!(
             ValidatorOperatorConfig::has_validator_operator_config(operator_addr),
-            Errors::invalid_argument(ENOT_A_VALIDATOR_OPERATOR)
+            errors::invalid_argument(ENOT_A_VALIDATOR_OPERATOR)
         );
-        let sender = Signer::address_of(validator_account);
-        assert!(exists_config(sender), Errors::not_published(EVALIDATOR_CONFIG));
-        (borrow_global_mut<ValidatorConfig>(sender)).operator_account = Option::some(operator_addr);
+        let sender = signer::address_of(validator_account);
+        assert!(exists_config(sender), errors::not_published(EVALIDATOR_CONFIG));
+        (borrow_global_mut<ValidatorConfig>(sender)).operator_account = option::some(operator_addr);
     }
     spec set_operator {
         /// Must abort if the signer does not have the Validator role [[H16]][PERMISSION].
@@ -123,18 +123,18 @@ module DiemFramework::ValidatorConfig {
         /// Must abort if the signer does not have the Validator role [B24].
         validator_account: signer;
         operator_addr: address;
-        let validator_addr = Signer::address_of(validator_account);
+        let validator_addr = signer::address_of(validator_account);
         include Roles::AbortsIfNotValidator{account: validator_account};
         aborts_if !ValidatorOperatorConfig::has_validator_operator_config(operator_addr)
-            with Errors::INVALID_ARGUMENT;
+            with errors::INVALID_ARGUMENT;
         include AbortsIfNoValidatorConfig{addr: validator_addr};
-        aborts_if !ValidatorOperatorConfig::has_validator_operator_config(operator_addr) with Errors::NOT_PUBLISHED;
+        aborts_if !ValidatorOperatorConfig::has_validator_operator_config(operator_addr) with errors::NOT_PUBLISHED;
     }
 
     spec schema SetOperatorEnsures {
         validator_account: signer;
         operator_addr: address;
-        let validator_addr = Signer::address_of(validator_account);
+        let validator_addr = signer::address_of(validator_account);
         ensures spec_has_operator(validator_addr);
         ensures get_operator(validator_addr) == operator_addr;
         /// The signer can only change its own operator account [[H16]][PERMISSION].
@@ -146,18 +146,18 @@ module DiemFramework::ValidatorConfig {
     /// The old config is preserved.
     public fun remove_operator(validator_account: &signer) acquires ValidatorConfig {
         Roles::assert_validator(validator_account);
-        let sender = Signer::address_of(validator_account);
+        let sender = signer::address_of(validator_account);
         // Config field remains set
-        assert!(exists_config(sender), Errors::not_published(EVALIDATOR_CONFIG));
-        (borrow_global_mut<ValidatorConfig>(sender)).operator_account = Option::none();
+        assert!(exists_config(sender), errors::not_published(EVALIDATOR_CONFIG));
+        (borrow_global_mut<ValidatorConfig>(sender)).operator_account = option::none();
     }
 
     spec remove_operator {
         /// Must abort if the signer does not have the Validator role [[H16]][PERMISSION].
-        let sender = Signer::address_of(validator_account);
+        let sender = signer::address_of(validator_account);
         include Roles::AbortsIfNotValidator{account: validator_account};
         include AbortsIfNoValidatorConfig{addr: sender};
-        ensures !spec_has_operator(Signer::address_of(validator_account));
+        ensures !spec_has_operator(signer::address_of(validator_account));
 
         /// The signer can only change its own operator account [[H16]][PERMISSION].
         ensures forall addr: address where addr != sender:
@@ -179,17 +179,17 @@ module DiemFramework::ValidatorConfig {
         fullnode_network_addresses: vector<u8>,
     ) acquires ValidatorConfig {
         assert!(
-            Signer::address_of(validator_operator_account) == get_operator(validator_addr),
-            Errors::invalid_argument(EINVALID_TRANSACTION_SENDER)
+            signer::address_of(validator_operator_account) == get_operator(validator_addr),
+            errors::invalid_argument(EINVALID_TRANSACTION_SENDER)
         );
         assert!(
             Signature::ed25519_validate_pubkey(copy consensus_pubkey),
-            Errors::invalid_argument(EINVALID_CONSENSUS_KEY)
+            errors::invalid_argument(EINVALID_CONSENSUS_KEY)
         );
         // TODO(valerini): verify the proof of posession for consensus_pubkey
-        assert!(exists_config(validator_addr), Errors::not_published(EVALIDATOR_CONFIG));
+        assert!(exists_config(validator_addr), errors::not_published(EVALIDATOR_CONFIG));
         let t_ref = borrow_global_mut<ValidatorConfig>(validator_addr);
-        t_ref.config = Option::some(Config {
+        t_ref.config = option::some(Config {
             consensus_pubkey,
             validator_network_addresses,
             fullnode_network_addresses,
@@ -203,7 +203,7 @@ module DiemFramework::ValidatorConfig {
         ensures global<ValidatorConfig>(validator_addr)
                 == update_field(old(global<ValidatorConfig>(validator_addr)),
                                 config,
-                                Option::spec_some(Config {
+                                option::spec_some(Config {
                                                  consensus_pubkey,
                                                  validator_network_addresses,
                                                  fullnode_network_addresses,
@@ -213,10 +213,10 @@ module DiemFramework::ValidatorConfig {
         validator_operator_account: signer;
         validator_addr: address;
         consensus_pubkey: vector<u8>;
-        aborts_if Signer::address_of(validator_operator_account) != get_operator(validator_addr)
-            with Errors::INVALID_ARGUMENT;
+        aborts_if signer::address_of(validator_operator_account) != get_operator(validator_addr)
+            with errors::INVALID_ARGUMENT;
         include AbortsIfGetOperator{addr: validator_addr};
-        aborts_if !Signature::ed25519_validate_pubkey(consensus_pubkey) with Errors::INVALID_ARGUMENT;
+        aborts_if !Signature::ed25519_validate_pubkey(consensus_pubkey) with errors::INVALID_ARGUMENT;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -230,7 +230,7 @@ module DiemFramework::ValidatorConfig {
     /// that if the validator account becomes valid, it stays valid, e.g.
     /// all validators in the Validator Set are valid
     public fun is_valid(addr: address): bool acquires ValidatorConfig {
-        exists<ValidatorConfig>(addr) && Option::is_some(&borrow_global<ValidatorConfig>(addr).config)
+        exists<ValidatorConfig>(addr) && option::is_some(&borrow_global<ValidatorConfig>(addr).config)
     }
 
     spec is_valid {
@@ -242,28 +242,28 @@ module DiemFramework::ValidatorConfig {
     /// Get Config
     /// Aborts if there is no ValidatorConfig resource or if its config is empty
     public fun get_config(addr: address): Config acquires ValidatorConfig {
-        assert!(exists_config(addr), Errors::not_published(EVALIDATOR_CONFIG));
+        assert!(exists_config(addr), errors::not_published(EVALIDATOR_CONFIG));
         let config = &borrow_global<ValidatorConfig>(addr).config;
-        assert!(Option::is_some(config), Errors::invalid_argument(EVALIDATOR_CONFIG));
-        *Option::borrow(config)
+        assert!(option::is_some(config), errors::invalid_argument(EVALIDATOR_CONFIG));
+        *option::borrow(config)
     }
 
     spec get_config {
         pragma opaque;
         include AbortsIfNoValidatorConfig;
-        aborts_if Option::is_none(global<ValidatorConfig>(addr).config) with Errors::INVALID_ARGUMENT;
+        aborts_if option::is_none(global<ValidatorConfig>(addr).config) with errors::INVALID_ARGUMENT;
         ensures result == spec_get_config(addr);
     }
 
     /// Returns the config published under addr.
     spec fun spec_get_config(addr: address): Config {
-        Option::borrow(global<ValidatorConfig>(addr).config)
+        option::borrow(global<ValidatorConfig>(addr).config)
     }
 
     /// Get validator's account human name
     /// Aborts if there is no ValidatorConfig resource
     public fun get_human_name(addr: address): vector<u8> acquires ValidatorConfig {
-        assert!(exists<ValidatorConfig>(addr), Errors::not_published(EVALIDATOR_CONFIG));
+        assert!(exists<ValidatorConfig>(addr), errors::not_published(EVALIDATOR_CONFIG));
         let t_ref = borrow_global<ValidatorConfig>(addr);
         *&t_ref.human_name
     }
@@ -278,10 +278,10 @@ module DiemFramework::ValidatorConfig {
     /// Aborts if there is no ValidatorConfig resource or
     /// if the operator_account is unset
     public fun get_operator(addr: address): address acquires ValidatorConfig {
-        assert!(exists<ValidatorConfig>(addr), Errors::not_published(EVALIDATOR_CONFIG));
+        assert!(exists<ValidatorConfig>(addr), errors::not_published(EVALIDATOR_CONFIG));
         let t_ref = borrow_global<ValidatorConfig>(addr);
-        assert!(Option::is_some(&t_ref.operator_account), Errors::invalid_argument(EVALIDATOR_CONFIG));
-        *Option::borrow(&t_ref.operator_account)
+        assert!(option::is_some(&t_ref.operator_account), errors::invalid_argument(EVALIDATOR_CONFIG));
+        *option::borrow(&t_ref.operator_account)
     }
 
     spec get_operator {
@@ -293,7 +293,7 @@ module DiemFramework::ValidatorConfig {
     spec schema AbortsIfGetOperator {
         addr: address;
         include AbortsIfNoValidatorConfig;
-        aborts_if !spec_has_operator(addr) with Errors::INVALID_ARGUMENT;
+        aborts_if !spec_has_operator(addr) with errors::INVALID_ARGUMENT;
     }
 
     /// Get consensus_pubkey from Config
@@ -320,7 +320,7 @@ module DiemFramework::ValidatorConfig {
     spec module {
         invariant update forall a: address where old(exists<ValidatorConfig>(a)) && exists<ValidatorConfig>(a):
             old(global<ValidatorConfig>(a).operator_account) != global<ValidatorConfig>(a).operator_account
-                ==> Signer::is_txn_signer_addr(a) && Roles::spec_has_validator_role_addr(a);
+                ==> signer::is_txn_signer_addr(a) && Roles::spec_has_validator_role_addr(a);
     }
 
     /// # Validity of Validators
@@ -357,6 +357,6 @@ module DiemFramework::ValidatorConfig {
 
     /// Returns true if addr has an operator account.
     spec fun spec_has_operator(addr: address): bool {
-        Option::is_some(global<ValidatorConfig>(addr).operator_account)
+        option::is_some(global<ValidatorConfig>(addr).operator_account)
     }
 }

@@ -22,7 +22,7 @@ module 0x1.Token {
 }
 
 //# run --signers 0x1
-import 0x1.Signer;
+import 0x1.signer;
 import 0x1.Token;
 main(account: signer) {
     let z: Token.T;
@@ -33,7 +33,7 @@ main(account: signer) {
 label b0:
     z = Token.new();
     Token.publish(&account, move(z));
-    sender = Signer.address_of(&account);
+    sender = signer.address_of(&account);
     exists1 = Token.has(copy(sender));
     assert(copy(exists1), 42);
 

@@ -7,11 +7,11 @@ module DiemFramework::Diem {
     use DiemFramework::RegisteredCurrencies;
     use DiemFramework::Roles;
     use DiemFramework::DiemTimestamp;
-    use Std::Errors;
-    use Std::Event::{Self, EventHandle};
-    use Std::FixedPoint32::{Self, FixedPoint32};
-    use Std::Signer;
-    use Std::Vector;
+    use std::errors;
+    use std::event::{Self, EventHandle};
+    use std::fixed_point32::{Self, FixedPoint32};
+    use std::signer;
+    use std::vector;
 
     friend DiemFramework::DesignatedDealer;
     friend DiemFramework::XDX;
@@ -271,8 +271,8 @@ module DiemFramework::Diem {
         Roles::assert_treasury_compliance(tc_account);
         assert_is_currency<CoinType>();
         assert!(
-            !exists<BurnCapability<CoinType>>(Signer::address_of(tc_account)),
-            Errors::already_published(EBURN_CAPABILITY)
+            !exists<BurnCapability<CoinType>>(signer::address_of(tc_account)),
+            errors::already_published(EBURN_CAPABILITY)
         );
         move_to(tc_account, cap)
     }
@@ -286,11 +286,11 @@ module DiemFramework::Diem {
         /// Must abort if tc_account does not have the TreasuryCompliance role.
         /// Only a TreasuryCompliance account can have the BurnCapability [[H3]][PERMISSION].
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
-        aborts_if exists<BurnCapability<CoinType>>(Signer::address_of(tc_account)) with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<BurnCapability<CoinType>>(signer::address_of(tc_account)) with errors::ALREADY_PUBLISHED;
     }
     spec schema PublishBurnCapEnsures<CoinType> {
         tc_account: &signer;
-        ensures exists<BurnCapability<CoinType>>(Signer::address_of(tc_account));
+        ensures exists<BurnCapability<CoinType>>(signer::address_of(tc_account));
     }
 
     /// Mints `amount` of currency. The `account` must hold a
@@ -298,8 +298,8 @@ module DiemFramework::Diem {
     /// to be successful.
     public fun mint<CoinType>(account: &signer, value: u64): Diem<CoinType>
     acquires CurrencyInfo, MintCapability {
-        let addr = Signer::address_of(account);
-        assert!(exists<MintCapability<CoinType>>(addr), Errors::requires_capability(EMINT_CAPABILITY));
+        let addr = signer::address_of(account);
+        assert!(exists<MintCapability<CoinType>>(addr), errors::requires_capability(EMINT_CAPABILITY));
         mint_with_capability(
             value,
             borrow_global<MintCapability<CoinType>>(addr)
@@ -309,7 +309,7 @@ module DiemFramework::Diem {
         modifies global<CurrencyInfo<CoinType>>(@CurrencyInfo);
         ensures exists<CurrencyInfo<CoinType>>(@CurrencyInfo);
         /// Must abort if the account does not have the MintCapability [[H1]][PERMISSION].
-        aborts_if !exists<MintCapability<CoinType>>(Signer::address_of(account)) with Errors::REQUIRES_CAPABILITY;
+        aborts_if !exists<MintCapability<CoinType>>(signer::address_of(account)) with errors::REQUIRES_CAPABILITY;
 
         include MintAbortsIf<CoinType>;
         include MintEnsures<CoinType>;
@@ -326,8 +326,8 @@ module DiemFramework::Diem {
         preburn_address: address,
         amount: u64,
     ) acquires BurnCapability, CurrencyInfo, PreburnQueue {
-        let addr = Signer::address_of(account);
-        assert!(exists<BurnCapability<CoinType>>(addr), Errors::requires_capability(EBURN_CAPABILITY));
+        let addr = signer::address_of(account);
+        assert!(exists<BurnCapability<CoinType>>(addr), errors::requires_capability(EBURN_CAPABILITY));
         burn_with_capability(
             preburn_address,
             borrow_global<BurnCapability<CoinType>>(addr),
@@ -344,7 +344,7 @@ module DiemFramework::Diem {
         preburn_address: address;
 
         /// Must abort if the account does not have the BurnCapability [[H3]][PERMISSION].
-        aborts_if !exists<BurnCapability<CoinType>>(Signer::address_of(account)) with Errors::REQUIRES_CAPABILITY;
+        aborts_if !exists<BurnCapability<CoinType>>(signer::address_of(account)) with errors::REQUIRES_CAPABILITY;
         include BurnWithCapabilityAbortsIf<CoinType>;
     }
     spec schema BurnEnsures<CoinType> {
@@ -354,7 +354,7 @@ module DiemFramework::Diem {
     }
     spec schema AbortsIfNoPreburnQueue<CoinType> {
         preburn_address: address;
-        aborts_if !exists<PreburnQueue<CoinType>>(preburn_address) with Errors::NOT_PUBLISHED;
+        aborts_if !exists<PreburnQueue<CoinType>>(preburn_address) with errors::NOT_PUBLISHED;
     }
 
     /// Cancels the `Preburn` request in the `PreburnQueue` resource held
@@ -369,8 +369,8 @@ module DiemFramework::Diem {
         amount: u64,
     ): Diem<CoinType> acquires BurnCapability, CurrencyInfo, PreburnQueue {
         assert_is_currency<CoinType>();
-        let addr = Signer::address_of(account);
-        assert!(exists<BurnCapability<CoinType>>(addr), Errors::requires_capability(EBURN_CAPABILITY));
+        let addr = signer::address_of(account);
+        assert!(exists<BurnCapability<CoinType>>(addr), errors::requires_capability(EBURN_CAPABILITY));
         cancel_burn_with_capability(
             preburn_address,
             borrow_global<BurnCapability<CoinType>>(addr),
@@ -401,7 +401,7 @@ module DiemFramework::Diem {
         preburn_address: address;
         amount: u64;
         /// Must abort if the account does not have the BurnCapability [[H3]][PERMISSION].
-        aborts_if !exists<BurnCapability<CoinType>>(Signer::address_of(account)) with Errors::REQUIRES_CAPABILITY;
+        aborts_if !exists<BurnCapability<CoinType>>(signer::address_of(account)) with errors::REQUIRES_CAPABILITY;
         include CancelBurnWithCapAbortsIf<CoinType>;
     }
 
@@ -418,13 +418,13 @@ module DiemFramework::Diem {
         let currency_code = currency_code<CoinType>();
         // update market cap resource to reflect minting
         let info = borrow_global_mut<CurrencyInfo<CoinType>>(@CurrencyInfo);
-        assert!(info.can_mint, Errors::invalid_state(EMINTING_NOT_ALLOWED));
-        assert!(MAX_U128 - info.total_value >= (value as u128), Errors::limit_exceeded(ECURRENCY_INFO));
+        assert!(info.can_mint, errors::invalid_state(EMINTING_NOT_ALLOWED));
+        assert!(MAX_U128 - info.total_value >= (value as u128), errors::limit_exceeded(ECURRENCY_INFO));
         info.total_value = info.total_value + (value as u128);
         // don't emit mint events for synthetic currenices as this does not
         // change the total value of fiat currencies held on-chain.
         if (!info.is_synthetic) {
-            Event::emit_event(
+            event::emit_event(
                 &mut info.mint_events,
                 MintEvent{
                     amount: value,
@@ -447,8 +447,8 @@ module DiemFramework::Diem {
     spec schema MintAbortsIf<CoinType> {
         value: u64;
         include AbortsIfNoCurrency<CoinType>;
-        aborts_if !spec_currency_info<CoinType>().can_mint with Errors::INVALID_STATE;
-        aborts_if spec_currency_info<CoinType>().total_value + value > max_u128() with Errors::LIMIT_EXCEEDED;
+        aborts_if !spec_currency_info<CoinType>().can_mint with errors::INVALID_STATE;
+        aborts_if spec_currency_info<CoinType>().total_value + value > max_u128() with errors::LIMIT_EXCEEDED;
     }
     spec schema MintEnsures<CoinType> {
         value: u64;
@@ -484,18 +484,18 @@ module DiemFramework::Diem {
     ) acquires CurrencyInfo {
         let coin_value = value(&coin);
         // Throw if already occupied
-        assert!(value(&preburn.to_burn) == 0, Errors::invalid_state(EPREBURN_OCCUPIED));
+        assert!(value(&preburn.to_burn) == 0, errors::invalid_state(EPREBURN_OCCUPIED));
         deposit(&mut preburn.to_burn, coin);
         let currency_code = currency_code<CoinType>();
         let info = borrow_global_mut<CurrencyInfo<CoinType>>(@CurrencyInfo);
-        assert!(MAX_U64 - info.preburn_value >= coin_value, Errors::limit_exceeded(ECOIN));
+        assert!(MAX_U64 - info.preburn_value >= coin_value, errors::limit_exceeded(ECOIN));
         info.preburn_value = info.preburn_value + coin_value;
         // don't emit preburn events for synthetic currenices as this does not
         // change the total value of fiat currencies held on-chain, and
         // therefore no off-chain movement of the backing coins needs to be
         // performed.
         if (!info.is_synthetic) {
-            Event::emit_event(
+            event::emit_event(
                 &mut info.preburn_events,
                 PreburnEvent{
                     amount: coin_value,
@@ -516,13 +516,13 @@ module DiemFramework::Diem {
     spec schema PreburnWithResourceAbortsIf<CoinType> {
         amount: u64;
         preburn: Preburn<CoinType>;
-        aborts_if preburn.to_burn.value > 0 with Errors::INVALID_STATE;
+        aborts_if preburn.to_burn.value > 0 with errors::INVALID_STATE;
         include PreburnAbortsIf<CoinType>;
     }
     spec schema PreburnAbortsIf<CoinType> {
         amount: u64;
         include AbortsIfNoCurrency<CoinType>;
-        aborts_if spec_currency_info<CoinType>().preburn_value + amount > MAX_U64 with Errors::LIMIT_EXCEEDED;
+        aborts_if spec_currency_info<CoinType>().preburn_value + amount > MAX_U64 with errors::LIMIT_EXCEEDED;
     }
     spec schema PreburnEnsures<CoinType> {
         amount: u64;
@@ -573,30 +573,30 @@ module DiemFramework::Diem {
     fun publish_preburn_queue<CoinType>(
         account: &signer
     ) {
-        let account_addr = Signer::address_of(account);
+        let account_addr = signer::address_of(account);
         Roles::assert_designated_dealer(account);
         assert_is_currency<CoinType>();
         assert!(
             !exists<Preburn<CoinType>>(account_addr),
-            Errors::invalid_state(EPREBURN)
+            errors::invalid_state(EPREBURN)
         );
         assert!(
             !exists<PreburnQueue<CoinType>>(account_addr),
-            Errors::already_published(EPREBURN_QUEUE)
+            errors::already_published(EPREBURN_QUEUE)
         );
         move_to(account, PreburnQueue<CoinType> {
-            preburns: Vector::empty()
+            preburns: vector::empty()
         })
     }
     spec publish_preburn_queue {
         pragma opaque;
-        let account_addr = Signer::address_of(account);
+        let account_addr = signer::address_of(account);
         modifies global<PreburnQueue<CoinType>>(account_addr);
         // the preburn queue cannot already exist
-        aborts_if exists<PreburnQueue<CoinType>>(account_addr) with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<PreburnQueue<CoinType>>(account_addr) with errors::ALREADY_PUBLISHED;
         // There cannot be a preburn resource published at the same time as a
         // `PreburnQueue` resource of the same currency.
-        aborts_if exists<Preburn<CoinType>>(account_addr) with Errors::INVALID_STATE;
+        aborts_if exists<Preburn<CoinType>>(account_addr) with errors::INVALID_STATE;
         include PublishPreburnQueueAbortsIf<CoinType>;
         include PublishPreburnQueueEnsures<CoinType>;
     }
@@ -607,13 +607,13 @@ module DiemFramework::Diem {
     }
     spec schema PublishPreburnQueueEnsures<CoinType> {
         account: signer;
-        let account_addr = Signer::address_of(account);
+        let account_addr = signer::address_of(account);
         // The preburn queue is published at the end of this function,
         ensures exists<PreburnQueue<CoinType>>(account_addr);
         // there cannot be a preburn resource for the same currency as the account,
         ensures !exists<Preburn<CoinType>>(account_addr);
         // and the preburn queue is empty
-        ensures Vector::length(global<PreburnQueue<CoinType>>(account_addr).preburns) == 0;
+        ensures vector::length(global<PreburnQueue<CoinType>>(account_addr).preburns) == 0;
     }
 
     /// Publish a `Preburn` resource under `account`. This function is
@@ -626,12 +626,12 @@ module DiemFramework::Diem {
     ) acquires CurrencyInfo {
         Roles::assert_designated_dealer(account);
         Roles::assert_treasury_compliance(tc_account);
-        assert!(!is_synthetic_currency<CoinType>(), Errors::invalid_argument(EIS_SYNTHETIC_CURRENCY));
+        assert!(!is_synthetic_currency<CoinType>(), errors::invalid_argument(EIS_SYNTHETIC_CURRENCY));
         publish_preburn_queue<CoinType>(account)
     }
     spec publish_preburn_queue_to_account {
         pragma opaque;
-        let account_addr = Signer::address_of(account);
+        let account_addr = signer::address_of(account);
         modifies global<PreburnQueue<CoinType>>(account_addr);
         /// The premission "PreburnCurrency" is granted to DesignatedDealer [[H4]][PERMISSION].
         /// Must abort if the account does not have the DesignatedDealer role.
@@ -643,9 +643,9 @@ module DiemFramework::Diem {
 
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         include AbortsIfNoCurrency<CoinType>;
-        aborts_if is_synthetic_currency<CoinType>() with Errors::INVALID_ARGUMENT;
-        aborts_if exists<PreburnQueue<CoinType>>(account_addr) with Errors::ALREADY_PUBLISHED;
-        aborts_if exists<Preburn<CoinType>>(account_addr) with Errors::INVALID_STATE;
+        aborts_if is_synthetic_currency<CoinType>() with errors::INVALID_ARGUMENT;
+        aborts_if exists<PreburnQueue<CoinType>>(account_addr) with errors::ALREADY_PUBLISHED;
+        aborts_if exists<Preburn<CoinType>>(account_addr) with errors::INVALID_STATE;
 
     }
 
@@ -670,7 +670,7 @@ module DiemFramework::Diem {
     fun upgrade_preburn<CoinType>(account: &signer)
     acquires Preburn, PreburnQueue {
         Roles::assert_designated_dealer(account);
-        let sender = Signer::address_of(account);
+        let sender = signer::address_of(account);
         let preburn_exists = exists<Preburn<CoinType>>(sender);
         let preburn_queue_exists = exists<PreburnQueue<CoinType>>(sender);
         // The DD must already have an existing `Preburn` resource, and not a
@@ -691,7 +691,7 @@ module DiemFramework::Diem {
         }
     }
     spec upgrade_preburn {
-        let account_addr = Signer::address_of(account);
+        let account_addr = signer::address_of(account);
         modifies global<Preburn<CoinType>>(account_addr);
         modifies global<PreburnQueue<CoinType>>(account_addr);
         include UpgradePreburnAbortsIf<CoinType>;
@@ -699,7 +699,7 @@ module DiemFramework::Diem {
     }
     spec schema UpgradePreburnAbortsIf<CoinType> {
         account: signer;
-        let account_addr = Signer::address_of(account);
+        let account_addr = signer::address_of(account);
         let upgrade = exists<Preburn<CoinType>>(account_addr) && !exists<PreburnQueue<CoinType>>(account_addr);
         /// Must abort if the account doesn't have the `PreburnQueue` or
         /// `Preburn` resource to satisfy [[H4]][PERMISSION] of `preburn_to`.
@@ -708,7 +708,7 @@ module DiemFramework::Diem {
     }
     spec schema UpgradePreburnEnsures<CoinType> {
         account: signer;
-        let account_addr = Signer::address_of(account);
+        let account_addr = signer::address_of(account);
         let upgrade = exists<Preburn<CoinType>>(account_addr) && !exists<PreburnQueue<CoinType>>(account_addr);
         let preburn = global<Preburn<CoinType>>(account_addr);
         ensures upgrade ==>
@@ -724,35 +724,35 @@ module DiemFramework::Diem {
     /// number of preburn requests does not exceed `MAX_OUTSTANDING_PREBURNS`.
     fun add_preburn_to_queue<CoinType>(account: &signer, preburn: PreburnWithMetadata<CoinType>)
     acquires PreburnQueue {
-        let account_addr = Signer::address_of(account);
-        assert!(exists<PreburnQueue<CoinType>>(account_addr), Errors::invalid_state(EPREBURN_QUEUE));
-        assert!(value(&preburn.preburn.to_burn) > 0, Errors::invalid_argument(EPREBURN));
+        let account_addr = signer::address_of(account);
+        assert!(exists<PreburnQueue<CoinType>>(account_addr), errors::invalid_state(EPREBURN_QUEUE));
+        assert!(value(&preburn.preburn.to_burn) > 0, errors::invalid_argument(EPREBURN));
         let preburns = &mut borrow_global_mut<PreburnQueue<CoinType>>(account_addr).preburns;
         assert!(
-            Vector::length(preburns) < MAX_OUTSTANDING_PREBURNS,
-            Errors::limit_exceeded(EPREBURN_QUEUE)
+            vector::length(preburns) < MAX_OUTSTANDING_PREBURNS,
+            errors::limit_exceeded(EPREBURN_QUEUE)
         );
-        Vector::push_back(preburns, preburn);
+        vector::push_back(preburns, preburn);
     }
     spec add_preburn_to_queue {
         pragma opaque;
-        let account_addr = Signer::address_of(account);
+        let account_addr = signer::address_of(account);
         let preburns = global<PreburnQueue<CoinType>>(account_addr).preburns;
         let post post_preburns = global<PreburnQueue<CoinType>>(account_addr).preburns;
         modifies global<PreburnQueue<CoinType>>(account_addr);
-        aborts_if !exists<PreburnQueue<CoinType>>(account_addr) with Errors::INVALID_STATE;
+        aborts_if !exists<PreburnQueue<CoinType>>(account_addr) with errors::INVALID_STATE;
         include AddPreburnToQueueAbortsIf<CoinType>;
         ensures exists<PreburnQueue<CoinType>>(account_addr);
-        ensures Vector::eq_push_back(post_preburns, preburns, preburn);
+        ensures vector::eq_push_back(post_preburns, preburns, preburn);
     }
     spec schema AddPreburnToQueueAbortsIf<CoinType> {
         account: signer;
         preburn: PreburnWithMetadata<CoinType>;
-        let account_addr = Signer::address_of(account);
-        aborts_if preburn.preburn.to_burn.value == 0 with Errors::INVALID_ARGUMENT;
+        let account_addr = signer::address_of(account);
+        aborts_if preburn.preburn.to_burn.value == 0 with errors::INVALID_ARGUMENT;
         aborts_if exists<PreburnQueue<CoinType>>(account_addr) &&
-            Vector::length(global<PreburnQueue<CoinType>>(account_addr).preburns) >= MAX_OUTSTANDING_PREBURNS
-            with Errors::LIMIT_EXCEEDED;
+            vector::length(global<PreburnQueue<CoinType>>(account_addr).preburns) >= MAX_OUTSTANDING_PREBURNS
+            with errors::LIMIT_EXCEEDED;
     }
 
     /// Sends `coin` to the preburn queue for `account`, where it will wait to either be burned
@@ -767,8 +767,8 @@ module DiemFramework::Diem {
     ) acquires CurrencyInfo, Preburn, PreburnQueue {
         Roles::assert_designated_dealer(account);
         // any coin that is preburned needs to have a nonzero value
-        assert!(value(&coin) > 0, Errors::invalid_argument(ECOIN));
-        let sender = Signer::address_of(account);
+        assert!(value(&coin) > 0, errors::invalid_argument(ECOIN));
+        let sender = signer::address_of(account);
         // After an upgrade a `Preburn` resource no longer exists in this
         // currency, and it is replaced with a `PreburnQueue` resource
         // for the same currency.
@@ -786,13 +786,13 @@ module DiemFramework::Diem {
         pragma disable_invariants_in_body;
         include PreburnToAbortsIf<CoinType>{amount: coin.value};
         include PreburnToEnsures<CoinType>{amount: coin.value};
-        let account_addr = Signer::address_of(account);
+        let account_addr = signer::address_of(account);
         include PreburnWithResourceEmits<CoinType>{amount: coin.value, preburn_address: account_addr};
     }
     spec schema PreburnToAbortsIf<CoinType> {
         account: signer;
         amount: u64;
-        let account_addr = Signer::address_of(account);
+        let account_addr = signer::address_of(account);
         /// Must abort if the account doesn't have the PreburnQueue or Preburn resource, or has not
         /// the correct role [[H4]][PERMISSION].
         aborts_if !(exists<Preburn<CoinType>>(account_addr) || exists<PreburnQueue<CoinType>>(account_addr));
@@ -804,7 +804,7 @@ module DiemFramework::Diem {
     spec schema PreburnToEnsures<CoinType> {
         account: signer;
         amount: u64;
-        let account_addr = Signer::address_of(account);
+        let account_addr = signer::address_of(account);
         /// Removes the preburn resource if it exists
         modifies global<Preburn<CoinType>>(account_addr);
         /// Publishes if it doesn't exists. Updates its state either way.
@@ -822,11 +822,11 @@ module DiemFramework::Diem {
     /// * a preburn request with the correct value for `amount` cannot be found in the preburn queue for `preburn_address`;
     fun remove_preburn_from_queue<CoinType>(preburn_address: address, amount: u64): PreburnWithMetadata<CoinType>
     acquires PreburnQueue {
-        assert!(exists<PreburnQueue<CoinType>>(preburn_address), Errors::not_published(EPREBURN_QUEUE));
+        assert!(exists<PreburnQueue<CoinType>>(preburn_address), errors::not_published(EPREBURN_QUEUE));
         // We search from the head of the queue
         let index = 0;
         let preburn_queue = &mut borrow_global_mut<PreburnQueue<CoinType>>(preburn_address).preburns;
-        let queue_length = Vector::length(preburn_queue);
+        let queue_length = vector::length(preburn_queue);
 
         while ({
             spec {
@@ -835,9 +835,9 @@ module DiemFramework::Diem {
             };
             (index < queue_length)
         }) {
-            let elem = Vector::borrow(preburn_queue, index);
+            let elem = vector::borrow(preburn_queue, index);
             if (value(&elem.preburn.to_burn) == amount) {
-                let preburn = Vector::remove(preburn_queue, index);
+                let preburn = vector::remove(preburn_queue, index);
                 // Make sure that the value is correct
                 return preburn
             };
@@ -850,7 +850,7 @@ module DiemFramework::Diem {
         };
 
         // If we didn't return already, we couldn't find a preburn with a matching value.
-        abort Errors::invalid_state(EPREBURN_NOT_FOUND)
+        abort errors::invalid_state(EPREBURN_NOT_FOUND)
     }
     spec remove_preburn_from_queue {
         pragma opaque;
@@ -863,8 +863,8 @@ module DiemFramework::Diem {
         preburn_address: address;
         amount: u64;
         let preburn_queue = global<PreburnQueue<CoinType>>(preburn_address).preburns;
-        aborts_if !exists<PreburnQueue<CoinType>>(preburn_address) with Errors::NOT_PUBLISHED;
-        aborts_if forall i in 0..len(preburn_queue): preburn_queue[i].preburn.to_burn.value != amount with Errors::INVALID_STATE;
+        aborts_if !exists<PreburnQueue<CoinType>>(preburn_address) with errors::NOT_PUBLISHED;
+        aborts_if forall i in 0..len(preburn_queue): preburn_queue[i].preburn.to_burn.value != amount with errors::INVALID_STATE;
     }
     /// > TODO: See this cannot currently be expressed in the MSL.
     /// > See https://github.com/diem/diem/issues/7615 for more information.
@@ -933,20 +933,20 @@ module DiemFramework::Diem {
     ) acquires CurrencyInfo {
         let currency_code = currency_code<CoinType>();
         // Abort if no coin present in preburn area
-        assert!(preburn.to_burn.value > 0, Errors::invalid_state(EPREBURN_EMPTY));
+        assert!(preburn.to_burn.value > 0, errors::invalid_state(EPREBURN_EMPTY));
         // destroy the coin in Preburn area
         let Diem { value } = withdraw_all<CoinType>(&mut preburn.to_burn);
         // update the market cap
         assert_is_currency<CoinType>();
         let info = borrow_global_mut<CurrencyInfo<CoinType>>(@CurrencyInfo);
-        assert!(info.total_value >= (value as u128), Errors::limit_exceeded(ECURRENCY_INFO));
+        assert!(info.total_value >= (value as u128), errors::limit_exceeded(ECURRENCY_INFO));
         info.total_value = info.total_value - (value as u128);
-        assert!(info.preburn_value >= value, Errors::limit_exceeded(EPREBURN));
+        assert!(info.preburn_value >= value, errors::limit_exceeded(EPREBURN));
         info.preburn_value = info.preburn_value - value;
         // don't emit burn events for synthetic currenices as this does not
         // change the total value of fiat currencies held on-chain.
         if (!info.is_synthetic) {
-            Event::emit_event(
+            event::emit_event(
                 &mut info.burn_events,
                 BurnEvent {
                     amount: value,
@@ -968,9 +968,9 @@ module DiemFramework::Diem {
         include AbortsIfNoCurrency<CoinType>;
         let to_burn = preburn.to_burn.value;
         let info = spec_currency_info<CoinType>();
-        aborts_if to_burn == 0 with Errors::INVALID_STATE;
-        aborts_if info.total_value < to_burn with Errors::LIMIT_EXCEEDED;
-        aborts_if info.preburn_value < to_burn with Errors::LIMIT_EXCEEDED;
+        aborts_if to_burn == 0 with errors::INVALID_STATE;
+        aborts_if info.total_value < to_burn with errors::LIMIT_EXCEEDED;
+        aborts_if info.preburn_value < to_burn with errors::LIMIT_EXCEEDED;
     }
     spec schema BurnWithResourceCapEnsures<CoinType> {
         preburn: Preburn<CoinType>;
@@ -1010,12 +1010,12 @@ module DiemFramework::Diem {
         // update the market cap
         let currency_code = currency_code<CoinType>();
         let info = borrow_global_mut<CurrencyInfo<CoinType>>(@CurrencyInfo);
-        assert!(info.preburn_value >= amount, Errors::limit_exceeded(EPREBURN));
+        assert!(info.preburn_value >= amount, errors::limit_exceeded(EPREBURN));
         info.preburn_value = info.preburn_value - amount;
         // Don't emit cancel burn events for synthetic currencies. cancel_burn
         // shouldn't be be used for synthetic coins in the first place.
         if (!info.is_synthetic) {
-            Event::emit_event(
+            event::emit_event(
                 &mut info.cancel_burn_events,
                 CancelBurnEvent {
                     amount,
@@ -1044,7 +1044,7 @@ module DiemFramework::Diem {
         let info = global<CurrencyInfo<CoinType>>(@CurrencyInfo);
         include AbortsIfNoCurrency<CoinType>;
         include RemovePreburnFromQueueAbortsIf<CoinType>;
-        aborts_if info.preburn_value < amount with Errors::LIMIT_EXCEEDED;
+        aborts_if info.preburn_value < amount with errors::LIMIT_EXCEEDED;
     }
     spec schema CancelBurnWithCapEnsures<CoinType> {
         preburn_address: address;
@@ -1076,7 +1076,7 @@ module DiemFramework::Diem {
         preburn_address: address,
         capability: &BurnCapability<CoinType>
     ) acquires CurrencyInfo {
-        assert!(coin.value > 0, Errors::invalid_argument(ECOIN));
+        assert!(coin.value > 0, errors::invalid_argument(ECOIN));
         preburn_with_resource(coin, preburn, preburn_address);
         burn_with_resource_cap(preburn, preburn_address, capability);
     }
@@ -1093,11 +1093,11 @@ module DiemFramework::Diem {
     spec schema BurnNowAbortsIf<CoinType> {
         coin: Diem<CoinType>;
         preburn: Preburn<CoinType>;
-        aborts_if coin.value == 0 with Errors::INVALID_ARGUMENT;
+        aborts_if coin.value == 0 with errors::INVALID_ARGUMENT;
         include PreburnWithResourceAbortsIf<CoinType>{amount: coin.value};
         // The aborts condition for the burn is simplified because of previous call to preburn.
         let info = spec_currency_info<CoinType>();
-        aborts_if info.total_value < coin.value with Errors::LIMIT_EXCEEDED;
+        aborts_if info.total_value < coin.value with errors::LIMIT_EXCEEDED;
     }
 
     /// Removes and returns the `BurnCapability<CoinType>` from `account`.
@@ -1105,8 +1105,8 @@ module DiemFramework::Diem {
     /// published `BurnCapability<CoinType>` resource at the top-level.
     public(friend) fun remove_burn_capability<CoinType>(account: &signer): BurnCapability<CoinType>
     acquires BurnCapability {
-        let addr = Signer::address_of(account);
-        assert!(exists<BurnCapability<CoinType>>(addr), Errors::requires_capability(EBURN_CAPABILITY));
+        let addr = signer::address_of(account);
+        assert!(exists<BurnCapability<CoinType>>(addr), errors::requires_capability(EBURN_CAPABILITY));
         move_from<BurnCapability<CoinType>>(addr)
     }
     spec remove_burn_capability {
@@ -1115,7 +1115,7 @@ module DiemFramework::Diem {
     }
     spec schema AbortsIfNoBurnCapability<CoinType> {
         account: signer;
-        aborts_if !exists<BurnCapability<CoinType>>(Signer::address_of(account)) with Errors::REQUIRES_CAPABILITY;
+        aborts_if !exists<BurnCapability<CoinType>>(signer::address_of(account)) with errors::REQUIRES_CAPABILITY;
     }
 
     /// Returns the total value of `Diem<CoinType>` that is waiting to be
@@ -1149,7 +1149,7 @@ module DiemFramework::Diem {
         (coin, other)
     }
     spec split {
-        aborts_if coin.value < amount with Errors::LIMIT_EXCEEDED;
+        aborts_if coin.value < amount with errors::LIMIT_EXCEEDED;
         ensures result_1.value == coin.value - amount;
         ensures result_2.value == amount;
     }
@@ -1162,7 +1162,7 @@ module DiemFramework::Diem {
     /// value of the passed-in `coin`.
     public fun withdraw<CoinType>(coin: &mut Diem<CoinType>, amount: u64): Diem<CoinType> {
         // Check that `amount` is less than the coin's value
-        assert!(coin.value >= amount, Errors::limit_exceeded(EAMOUNT_EXCEEDS_COIN_VALUE));
+        assert!(coin.value >= amount, errors::limit_exceeded(EAMOUNT_EXCEEDS_COIN_VALUE));
         coin.value = coin.value - amount;
         Diem { value: amount }
     }
@@ -1175,7 +1175,7 @@ module DiemFramework::Diem {
     spec schema WithdrawAbortsIf<CoinType> {
         coin: Diem<CoinType>;
         amount: u64;
-        aborts_if coin.value < amount with Errors::LIMIT_EXCEEDED;
+        aborts_if coin.value < amount with errors::LIMIT_EXCEEDED;
     }
 
     /// Return a `Diem<CoinType>` worth `coin.value` and reduces the `value` of the input `coin` to
@@ -1199,7 +1199,7 @@ module DiemFramework::Diem {
     }
     spec join {
         pragma opaque;
-        aborts_if coin1.value + coin2.value > max_u64() with Errors::LIMIT_EXCEEDED;
+        aborts_if coin1.value + coin2.value > max_u64() with errors::LIMIT_EXCEEDED;
         ensures result.value == coin1.value + coin2.value;
     }
 
@@ -1209,7 +1209,7 @@ module DiemFramework::Diem {
     /// The `check` coin is consumed in the process
     public fun deposit<CoinType>(coin: &mut Diem<CoinType>, check: Diem<CoinType>) {
         let Diem { value } = check;
-        assert!(MAX_U64 - coin.value >= value, Errors::limit_exceeded(ECOIN));
+        assert!(MAX_U64 - coin.value >= value, errors::limit_exceeded(ECOIN));
         coin.value = coin.value + value;
     }
     spec deposit {
@@ -1220,7 +1220,7 @@ module DiemFramework::Diem {
     spec schema DepositAbortsIf<CoinType> {
         coin: Diem<CoinType>;
         check: Diem<CoinType>;
-        aborts_if coin.value + check.value > MAX_U64 with Errors::LIMIT_EXCEEDED;
+        aborts_if coin.value + check.value > MAX_U64 with errors::LIMIT_EXCEEDED;
     }
 
     /// Destroy a zero-value coin. Calls will fail if the `value` in the passed-in `coin` is non-zero
@@ -1228,11 +1228,11 @@ module DiemFramework::Diem {
     /// a `BurnCapability` for the specific `CoinType`.
     public fun destroy_zero<CoinType>(coin: Diem<CoinType>) {
         let Diem { value } = coin;
-        assert!(value == 0, Errors::invalid_argument(EDESTRUCTION_OF_NONZERO_COIN))
+        assert!(value == 0, errors::invalid_argument(EDESTRUCTION_OF_NONZERO_COIN))
     }
     spec destroy_zero {
         pragma opaque;
-        aborts_if coin.value > 0 with Errors::INVALID_ARGUMENT;
+        aborts_if coin.value > 0 with errors::INVALID_ARGUMENT;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1263,10 +1263,10 @@ module DiemFramework::Diem {
         // Operational constraint that it must be stored under a specific address.
         CoreAddresses::assert_currency_info(dr_account);
         assert!(
-            !exists<CurrencyInfo<CoinType>>(Signer::address_of(dr_account)),
-            Errors::already_published(ECURRENCY_INFO)
+            !exists<CurrencyInfo<CoinType>>(signer::address_of(dr_account)),
+            errors::already_published(ECURRENCY_INFO)
         );
-        assert!(0 < scaling_factor && scaling_factor <= MAX_SCALING_FACTOR, Errors::invalid_argument(ECURRENCY_INFO));
+        assert!(0 < scaling_factor && scaling_factor <= MAX_SCALING_FACTOR, errors::invalid_argument(ECURRENCY_INFO));
         move_to(dr_account, CurrencyInfo<CoinType> {
             total_value: 0,
             preburn_value: 0,
@@ -1276,11 +1276,11 @@ module DiemFramework::Diem {
             fractional_part,
             currency_code: copy currency_code,
             can_mint: true,
-            mint_events: Event::new_event_handle<MintEvent>(dr_account),
-            burn_events: Event::new_event_handle<BurnEvent>(dr_account),
-            preburn_events: Event::new_event_handle<PreburnEvent>(dr_account),
-            cancel_burn_events: Event::new_event_handle<CancelBurnEvent>(dr_account),
-            exchange_rate_update_events: Event::new_event_handle<ToXDXExchangeRateUpdateEvent>(dr_account)
+            mint_events: event::new_event_handle<MintEvent>(dr_account),
+            burn_events: event::new_event_handle<BurnEvent>(dr_account),
+            preburn_events: event::new_event_handle<PreburnEvent>(dr_account),
+            cancel_burn_events: event::new_event_handle<CancelBurnEvent>(dr_account),
+            exchange_rate_update_events: event::new_event_handle<ToXDXExchangeRateUpdateEvent>(dr_account)
         });
         RegisteredCurrencies::add_currency_code(
             dr_account,
@@ -1301,10 +1301,10 @@ module DiemFramework::Diem {
         /// Must abort if the signer does not have the DiemRoot role [[H8]][PERMISSION].
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
 
-        aborts_if scaling_factor == 0 || scaling_factor > MAX_SCALING_FACTOR with Errors::INVALID_ARGUMENT;
+        aborts_if scaling_factor == 0 || scaling_factor > MAX_SCALING_FACTOR with errors::INVALID_ARGUMENT;
         include CoreAddresses::AbortsIfNotCurrencyInfo{account: dr_account};
-        aborts_if exists<CurrencyInfo<CoinType>>(Signer::address_of(dr_account))
-            with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<CurrencyInfo<CoinType>>(signer::address_of(dr_account))
+            with errors::ALREADY_PUBLISHED;
         include RegisteredCurrencies::AddCurrencyCodeAbortsIf;
     }
 
@@ -1345,8 +1345,8 @@ module DiemFramework::Diem {
                 currency_code,
             );
         assert!(
-            !exists<MintCapability<CoinType>>(Signer::address_of(tc_account)),
-            Errors::already_published(EMINT_CAPABILITY)
+            !exists<MintCapability<CoinType>>(signer::address_of(tc_account)),
+            errors::already_published(EMINT_CAPABILITY)
         );
         move_to(tc_account, mint_cap);
         publish_burn_capability<CoinType>(tc_account, burn_cap);
@@ -1367,7 +1367,7 @@ module DiemFramework::Diem {
         /// Only a TreasuryCompliance account can have the BurnCapability [[H3]][PERMISSION].
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
 
-        aborts_if exists<MintCapability<CoinType>>(Signer::address_of(tc_account)) with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<MintCapability<CoinType>>(signer::address_of(tc_account)) with errors::ALREADY_PUBLISHED;
         include RegisterCurrencyAbortsIf<CoinType>;
         include PublishBurnCapAbortsIfs<CoinType>;
     }
@@ -1375,7 +1375,7 @@ module DiemFramework::Diem {
         tc_account: signer;
         to_xdx_exchange_rate: FixedPoint32;
         fractional_part: u64;
-        ensures spec_has_mint_capability<CoinType>(Signer::address_of(tc_account));
+        ensures spec_has_mint_capability<CoinType>(signer::address_of(tc_account));
         ensures spec_xdx_exchange_rate<CoinType>() == to_xdx_exchange_rate;
     }
 
@@ -1396,7 +1396,7 @@ module DiemFramework::Diem {
     public fun approx_xdx_for_value<FromCoinType>(from_value: u64): u64
     acquires CurrencyInfo {
         let xdx_exchange_rate = xdx_exchange_rate<FromCoinType>();
-        FixedPoint32::multiply_u64(from_value, xdx_exchange_rate)
+        fixed_point32::multiply_u64(from_value, xdx_exchange_rate)
     }
     spec approx_xdx_for_value {
         pragma opaque;
@@ -1407,7 +1407,7 @@ module DiemFramework::Diem {
         from_value: num;
         include AbortsIfNoCurrency<CoinType>;
         let xdx_exchange_rate = spec_xdx_exchange_rate<CoinType>();
-        include FixedPoint32::MultiplyAbortsIf{val: from_value, multiplier: xdx_exchange_rate};
+        include fixed_point32::MultiplyAbortsIf{val: from_value, multiplier: xdx_exchange_rate};
     }
 
     /// Returns the value of the coin in the `FromCoinType` currency in XDX.
@@ -1484,14 +1484,14 @@ module DiemFramework::Diem {
         Roles::assert_treasury_compliance(tc_account);
         assert_is_currency<FromCoinType>();
         // XDX is not allowed to update the exchange rate.
-        assert!(currency_code<FromCoinType>() != b"XDX", Errors::invalid_argument(ECOIN));
+        assert!(currency_code<FromCoinType>() != b"XDX", errors::invalid_argument(ECOIN));
         let currency_info = borrow_global_mut<CurrencyInfo<FromCoinType>>(@CurrencyInfo);
         currency_info.to_xdx_exchange_rate = xdx_exchange_rate;
-        Event::emit_event(
+        event::emit_event(
             &mut currency_info.exchange_rate_update_events,
             ToXDXExchangeRateUpdateEvent {
                 currency_code: *&currency_info.currency_code,
-                new_to_xdx_exchange_rate: FixedPoint32::get_raw_value(*&currency_info.to_xdx_exchange_rate),
+                new_to_xdx_exchange_rate: fixed_point32::get_raw_value(*&currency_info.to_xdx_exchange_rate),
             }
         );
     }
@@ -1507,7 +1507,7 @@ module DiemFramework::Diem {
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
 
         include AbortsIfNoCurrency<FromCoinType>;
-        aborts_if spec_currency_code<FromCoinType>() == b"XDX" with Errors::INVALID_ARGUMENT;
+        aborts_if spec_currency_code<FromCoinType>() == b"XDX" with errors::INVALID_ARGUMENT;
     }
     spec schema UpdateXDXExchangeRateEnsures<FromCoinType> {
         xdx_exchange_rate: FixedPoint32;
@@ -1519,7 +1519,7 @@ module DiemFramework::Diem {
         let handle = global<CurrencyInfo<FromCoinType>>(@CurrencyInfo).exchange_rate_update_events;
         let msg = ToXDXExchangeRateUpdateEvent {
             currency_code: global<CurrencyInfo<FromCoinType>>(@CurrencyInfo).currency_code,
-            new_to_xdx_exchange_rate: FixedPoint32::get_raw_value(xdx_exchange_rate)
+            new_to_xdx_exchange_rate: fixed_point32::get_raw_value(xdx_exchange_rate)
         };
         emits msg to handle;
     }
@@ -1576,23 +1576,23 @@ module DiemFramework::Diem {
 
     /// Asserts that `CoinType` is a registered currency.
     public fun assert_is_currency<CoinType>() {
-        assert!(is_currency<CoinType>(), Errors::not_published(ECURRENCY_INFO));
+        assert!(is_currency<CoinType>(), errors::not_published(ECURRENCY_INFO));
     }
     spec assert_is_currency {
         pragma opaque;
         include AbortsIfNoCurrency<CoinType>;
     }
     spec schema AbortsIfNoCurrency<CoinType> {
-        aborts_if !spec_is_currency<CoinType>() with Errors::NOT_PUBLISHED;
+        aborts_if !spec_is_currency<CoinType>() with errors::NOT_PUBLISHED;
     }
 
     public fun assert_is_SCS_currency<CoinType>() acquires CurrencyInfo {
         assert_is_currency<CoinType>();
-        assert!(is_SCS_currency<CoinType>(), Errors::invalid_state(ECURRENCY_INFO));
+        assert!(is_SCS_currency<CoinType>(), errors::invalid_state(ECURRENCY_INFO));
     }
     spec schema AbortsIfNoSCSCurrency<CoinType> {
         include AbortsIfNoCurrency<CoinType>;
-        aborts_if !is_SCS_currency<CoinType>() with Errors::INVALID_STATE;
+        aborts_if !is_SCS_currency<CoinType>() with errors::INVALID_STATE;
     }
 
     // =================================================================
@@ -1876,7 +1876,7 @@ module DiemFramework::Diem {
 
         /// Specification version of `Self::approx_xdx_for_value`.
         fun spec_approx_xdx_for_value<CoinType>(value: num):  num {
-            FixedPoint32::spec_multiply_u64(value, spec_xdx_exchange_rate<CoinType>())
+            fixed_point32::spec_multiply_u64(value, spec_xdx_exchange_rate<CoinType>())
         }
 
         /// Returns the `to_xdx_exchange_rate` of CoinType
@@ -1917,22 +1917,22 @@ module DiemFramework::Diem {
         }
 
         fun spec_signed_by_mint_capability_owner<CoinType>(): bool {
-            (exists a: address: Signer::is_txn_signer_addr(a)
+            (exists a: address: signer::is_txn_signer_addr(a)
                 && spec_has_mint_capability<CoinType>(a))
         }
 
         fun spec_signed_by_burn_capability_owner<CoinType>(): bool {
-            (exists a: address: Signer::is_txn_signer_addr(a)
+            (exists a: address: signer::is_txn_signer_addr(a)
                 && spec_has_burn_capability<CoinType>(a))
         }
 
         fun spec_signed_by_preburn_queue_owner<CoinType>(): bool {
-            (exists a: address: Signer::is_txn_signer_addr(a)
+            (exists a: address: signer::is_txn_signer_addr(a)
             && spec_has_preburn_queue<CoinType>(a))
         }
 
         fun spec_signed_by_preburn_owner<CoinType>(): bool {
-            (exists a: address: Signer::is_txn_signer_addr(a)
+            (exists a: address: signer::is_txn_signer_addr(a)
             && spec_has_preburn<CoinType>(a))
         }
     }

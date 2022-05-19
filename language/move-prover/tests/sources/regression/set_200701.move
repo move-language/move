@@ -1,9 +1,9 @@
 module 0x42::TestSet {
-    use Std::Vector;
+    use std::vector;
 
     // Issue #4872.
     public fun remove_everything(v: &mut vector<u64>) {
-        let i = Vector::length(v);
+        let i = vector::length(v);
         while ({
             spec {
                 // The following doesn't work
@@ -16,7 +16,7 @@ module 0x42::TestSet {
         })
         {
             i = i - 1;
-            _  = Vector::swap_remove(v, i);
+            _  = vector::swap_remove(v, i);
         }
     }
 

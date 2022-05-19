@@ -28,7 +28,7 @@ module A {
 
 module B {
     use 0x0::A;
-    use Std::Signer;
+    use std::signer;
 
     struct T has key {
         x: u64
@@ -49,8 +49,8 @@ module B {
     }
     spec move_to_test {
         pragma opaque = true;
-        ensures global<T>(Signer::address_of(account)).x == 2;
-        modifies global<T>(Signer::address_of(account));
+        ensures global<T>(signer::address_of(account)).x == 2;
+        modifies global<T>(signer::address_of(account));
     }
 
     public fun move_from_test(addr: address): T acquires T {

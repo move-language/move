@@ -1,5 +1,5 @@
 module 0x2::A {
-    use Std::Signer;
+    use std::signer;
 
     struct R has key {
         f1: bool,
@@ -8,7 +8,7 @@ module 0x2::A {
 
     #[test(s=@0x2)]
     public fun check_global_basics_ok(s: &signer) {
-        let a = Signer::address_of(s);
+        let a = signer::address_of(s);
         spec {
             assert !exists<R>(a);
         };
@@ -23,7 +23,7 @@ module 0x2::A {
 
     #[test(s=@0x2)]
     public fun check_global_basics_fail(s: &signer) {
-        let a = Signer::address_of(s);
+        let a = signer::address_of(s);
         spec {
             assert global<R>(a).f2 == 42;
         };

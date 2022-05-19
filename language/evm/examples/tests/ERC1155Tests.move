@@ -1,21 +1,21 @@
 module Evm::ERC1155Tests {
     use Evm::Evm::sender;
     use Evm::U256::{zero, one, u256_from_u128};
-    use Std::Vector;
+    use std::vector;
     use Evm::ERC1155;
-    use Std::ASCII::{string};
+    use std::ascii::{string};
 
     const Alice: address = @0x8877;
     const Bob: address = @0x8888;
 
     #[test]
     fun test_create() {
-        ERC1155::create(string(Vector::empty<u8>()));
+        ERC1155::create(string(vector::empty<u8>()));
     }
 
     #[test]
     fun test_balance_of() {
-        ERC1155::create(string(Vector::empty<u8>()));
+        ERC1155::create(string(vector::empty<u8>()));
         let id1 = one();
         let id2 = u256_from_u128(22);
         assert!(ERC1155::balanceOf(sender(), id1) == zero(), 100);
@@ -28,11 +28,11 @@ module Evm::ERC1155Tests {
 
     #[test]
     fun test_mint() {
-        ERC1155::create(string(Vector::empty<u8>()));
+        ERC1155::create(string(vector::empty<u8>()));
 
         let id1 = one();
         let id2 = u256_from_u128(22);
-        let dummy_data = Vector::empty<u8>();
+        let dummy_data = vector::empty<u8>();
 
         ERC1155::mint(Alice, id1, u256_from_u128(100), copy dummy_data);
         ERC1155::mint(Bob, id2, u256_from_u128(1000), copy dummy_data);
@@ -48,11 +48,11 @@ module Evm::ERC1155Tests {
     #[test]
     #[expected_failure(abort_code = 124)]
     fun test_transfer() {
-        ERC1155::create(string(Vector::empty<u8>()));
+        ERC1155::create(string(vector::empty<u8>()));
 
         let id1 = one();
         let id2 = u256_from_u128(22);
-        let dummy_data = Vector::empty<u8>();
+        let dummy_data = vector::empty<u8>();
 
         ERC1155::mint(sender(), id1, u256_from_u128(100), copy dummy_data);
         ERC1155::mint(sender(), id2, u256_from_u128(1000), copy dummy_data);

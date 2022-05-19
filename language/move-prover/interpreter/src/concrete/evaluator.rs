@@ -759,7 +759,7 @@ impl<'env> Evaluator<'env> {
 
         // dispatch
         let result = match (addr, module_name.as_str(), function_name.as_str()) {
-            (DIEM_CORE_ADDR, "Signer", "spec_address_of") => {
+            (DIEM_CORE_ADDR, "signer", "spec_address_of") => {
                 if cfg!(debug_assertions) {
                     assert_eq!(arg_vals.len(), 1);
                 }

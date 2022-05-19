@@ -6,8 +6,8 @@
 module DiemFramework::XDX {
     use DiemFramework::AccountLimits;
     use DiemFramework::CoreAddresses;
-    use Std::Errors;
-    use Std::FixedPoint32;
+    use std::errors;
+    use std::fixed_point32;
     use DiemFramework::Diem;
     use DiemFramework::DiemTimestamp;
 
@@ -53,10 +53,10 @@ module DiemFramework::XDX {
         // Operational constraint
         CoreAddresses::assert_currency_info(dr_account);
         // Reserve must not exist.
-        assert!(!exists<Reserve>(@DiemRoot), Errors::already_published(ERESERVE));
+        assert!(!exists<Reserve>(@DiemRoot), errors::already_published(ERESERVE));
         let (mint_cap, burn_cap) = Diem::register_currency<XDX>(
             dr_account,
-            FixedPoint32::create_from_rational(1, 1), // exchange rate to XDX
+            fixed_point32::create_from_rational(1, 1), // exchange rate to XDX
             true,    // is_synthetic
             1000000, // scaling_factor = 10^6
             1000,    // fractional_part = 10^3
@@ -71,7 +71,7 @@ module DiemFramework::XDX {
     spec initialize {
        use DiemFramework::Roles;
         include CoreAddresses::AbortsIfNotCurrencyInfo{account: dr_account};
-        aborts_if exists<Reserve>(@DiemRoot) with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<Reserve>(@DiemRoot) with errors::ALREADY_PUBLISHED;
         include Diem::RegisterCurrencyAbortsIf<XDX>{
             currency_code: b"XDX",
             scaling_factor: 1000000
@@ -79,7 +79,7 @@ module DiemFramework::XDX {
         include AccountLimits::PublishUnrestrictedLimitsAbortsIf<XDX>{publish_account: dr_account};
 
         include Diem::RegisterCurrencyEnsures<XDX>{
-            to_xdx_exchange_rate: FixedPoint32::spec_create_from_rational(1, 1),
+            to_xdx_exchange_rate: fixed_point32::spec_create_from_rational(1, 1),
             is_synthetic: true,
             fractional_part: 1000
         };
@@ -133,7 +133,7 @@ module DiemFramework::XDX {
 
         /// After genesis, the exchange rate to XDX is always equal to 1.0.
         invariant [suspendable] DiemTimestamp::is_operating()
-             ==> Diem::spec_xdx_exchange_rate<XDX>() == FixedPoint32::spec_create_from_rational(1, 1);
+             ==> Diem::spec_xdx_exchange_rate<XDX>() == fixed_point32::spec_create_from_rational(1, 1);
 
         /// After genesis, XDX is always a synthetic currency.
         invariant [suspendable] DiemTimestamp::is_operating()

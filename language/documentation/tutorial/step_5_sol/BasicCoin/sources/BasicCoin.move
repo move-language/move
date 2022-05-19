@@ -1,7 +1,7 @@
 /// This module defines a minimal Coin and Balance.
 module NamedAddr::BasicCoin {
-    use Std::Errors;
-    use Std::Signer;
+    use std::errors;
+    use std::signer;
 
     /// Address of the owner of this module
     const MODULE_OWNER: address = @NamedAddr;
@@ -24,14 +24,14 @@ module NamedAddr::BasicCoin {
     /// minting or transferring to the account.
     public fun publish_balance(account: &signer) {
         let empty_coin = Coin { value: 0 };
-        assert!(!exists<Balance>(Signer::address_of(account)), Errors::already_published(EALREADY_HAS_BALANCE));
+        assert!(!exists<Balance>(signer::address_of(account)), errors::already_published(EALREADY_HAS_BALANCE));
         move_to(account, Balance { coin:  empty_coin });
     }
 
     /// Mint `amount` tokens to `mint_addr`. Mint must be approved by the module owner.
     public fun mint(module_owner: &signer, mint_addr: address, amount: u64) acquires Balance {
         // Only the owner of the module can initialize this module
-        assert!(Signer::address_of(module_owner) == MODULE_OWNER, Errors::requires_address(ENOT_MODULE_OWNER));
+        assert!(signer::address_of(module_owner) == MODULE_OWNER, errors::requires_address(ENOT_MODULE_OWNER));
 
         // Deposit `amount` of tokens to `mint_addr`'s balance
         deposit(mint_addr, Coin { value: amount });
@@ -44,7 +44,7 @@ module NamedAddr::BasicCoin {
 
     /// Transfers `amount` of tokens from `from` to `to`.
     public fun transfer(from: &signer, to: address, amount: u64) acquires Balance {
-        let check = withdraw(Signer::address_of(from), amount);
+        let check = withdraw(signer::address_of(from), amount);
         deposit(to, check);
     }
 
@@ -52,7 +52,7 @@ module NamedAddr::BasicCoin {
     fun withdraw(addr: address, amount: u64) : Coin acquires Balance {
         let balance = balance_of(addr);
         // balance must be greater than the withdraw amount
-        assert!(balance >= amount, Errors::limit_exceeded(EINSUFFICIENT_BALANCE));
+        assert!(balance >= amount, errors::limit_exceeded(EINSUFFICIENT_BALANCE));
         let balance_ref = &mut borrow_global_mut<Balance>(addr).coin.value;
         *balance_ref = balance - amount;
         Coin { value: amount }
@@ -72,13 +72,13 @@ module NamedAddr::BasicCoin {
         // Make sure the address we've chosen doesn't match the module
         // owner address
         publish_balance(&account);
-        assert!(Signer::address_of(&account) != MODULE_OWNER, 0);
+        assert!(signer::address_of(&account) != MODULE_OWNER, 0);
         mint(&account, @0x1, 10);
     }
 
     #[test(account = @NamedAddr)]
     fun mint_check_balance(account: signer) acquires Balance {
-        let addr = Signer::address_of(&account);
+        let addr = signer::address_of(&account);
         publish_balance(&account);
         mint(&account, @NamedAddr, 42);
         assert!(balance_of(addr) == 42, 0);
@@ -86,7 +86,7 @@ module NamedAddr::BasicCoin {
 
     #[test(account = @0x1)]
     fun publish_balance_has_zero(account: signer) acquires Balance {
-        let addr = Signer::address_of(&account);
+        let addr = signer::address_of(&account);
         publish_balance(&account);
         assert!(balance_of(addr) == 0, 0);
     }
@@ -114,7 +114,7 @@ module NamedAddr::BasicCoin {
     #[test(account = @0x1)]
     #[expected_failure] // This test should fail
     fun withdraw_too_much(account: signer) acquires Balance {
-        let addr = Signer::address_of(&account);
+        let addr = signer::address_of(&account);
         publish_balance(&account);
         Coin { value: _ } = withdraw(addr, 1);
     }
@@ -123,7 +123,7 @@ module NamedAddr::BasicCoin {
     fun can_withdraw_amount(account: signer) acquires Balance {
         publish_balance(&account);
         let amount = 1000;
-        let addr = Signer::address_of(&account);
+        let addr = signer::address_of(&account);
         mint(&account, addr, amount);
         let Coin { value } = withdraw(addr, amount);
         assert!(value == amount, 0);

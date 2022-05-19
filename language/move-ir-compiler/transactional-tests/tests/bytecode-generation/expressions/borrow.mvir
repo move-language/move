@@ -94,7 +94,7 @@ module 0x3d4.M {
 // Attempting an immutable borrow of the field of a struct type defined in a
 // separate module is invalid.
 module 0x3d4.N {
-    import 0x1.Signer;
+    import 0x1.signer;
     import 0x3d4.M;
 
     f(account: signer) {
@@ -122,7 +122,7 @@ label b0:
 // Attempting a mutable borrow of the field of a struct type defined in a
 // separate module is invalid.
 module 0x3d4.O {
-    import 0x1.Signer;
+    import 0x1.signer;
     import 0x3d4.M;
 
     f(account: signer) {

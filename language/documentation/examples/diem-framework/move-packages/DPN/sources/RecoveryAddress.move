@@ -2,9 +2,9 @@
 module DiemFramework::RecoveryAddress {
     use DiemFramework::DiemAccount::{Self, KeyRotationCapability};
     use DiemFramework::VASP;
-    use Std::Errors;
-    use Std::Signer;
-    use Std::Vector;
+    use std::errors;
+    use std::signer;
+    use std::vector;
 
     /// A resource that holds the `KeyRotationCapability`s for several accounts belonging to the
     /// same VASP. A VASP account that delegates its `KeyRotationCapability` to
@@ -41,9 +41,9 @@ module DiemFramework::RecoveryAddress {
     /// Aborts if `recovery_account` has delegated its `KeyRotationCapability`, already has a
     /// `RecoveryAddress` resource, or is not a VASP.
     public fun publish(recovery_account: &signer, rotation_cap: KeyRotationCapability) {
-        let addr = Signer::address_of(recovery_account);
+        let addr = signer::address_of(recovery_account);
         // Only VASPs can create a recovery address
-        assert!(VASP::is_vasp(addr), Errors::invalid_argument(ENOT_A_VASP));
+        assert!(VASP::is_vasp(addr), errors::invalid_argument(ENOT_A_VASP));
         // put the rotation capability for the recovery account itself in `rotation_caps`. This
         // ensures two things:
         // (1) It's not possible to get into a "recovery cycle" where A is the recovery account for
@@ -51,12 +51,12 @@ module DiemFramework::RecoveryAddress {
         // (2) rotation_caps is always nonempty
         assert!(
             *DiemAccount::key_rotation_capability_address(&rotation_cap) == addr,
-             Errors::invalid_argument(EKEY_ROTATION_DEPENDENCY_CYCLE)
+             errors::invalid_argument(EKEY_ROTATION_DEPENDENCY_CYCLE)
         );
-        assert!(!exists<RecoveryAddress>(addr), Errors::already_published(ERECOVERY_ADDRESS));
+        assert!(!exists<RecoveryAddress>(addr), errors::already_published(ERECOVERY_ADDRESS));
         move_to(
             recovery_account,
-            RecoveryAddress { rotation_caps: Vector::singleton(rotation_cap) }
+            RecoveryAddress { rotation_caps: vector::singleton(rotation_cap) }
         )
     }
     spec publish {
@@ -66,16 +66,16 @@ module DiemFramework::RecoveryAddress {
     spec schema PublishAbortsIf {
         recovery_account: signer;
         rotation_cap: KeyRotationCapability;
-        let addr = Signer::address_of(recovery_account);
-        aborts_if !VASP::is_vasp(addr) with Errors::INVALID_ARGUMENT;
-        aborts_if spec_is_recovery_address(addr) with Errors::ALREADY_PUBLISHED;
+        let addr = signer::address_of(recovery_account);
+        aborts_if !VASP::is_vasp(addr) with errors::INVALID_ARGUMENT;
+        aborts_if spec_is_recovery_address(addr) with errors::ALREADY_PUBLISHED;
         aborts_if DiemAccount::key_rotation_capability_address(rotation_cap) != addr
-            with Errors::INVALID_ARGUMENT;
+            with errors::INVALID_ARGUMENT;
     }
     spec schema PublishEnsures {
         recovery_account: signer;
         rotation_cap: KeyRotationCapability;
-        let addr = Signer::address_of(recovery_account);
+        let addr = signer::address_of(recovery_account);
         ensures spec_is_recovery_address(addr);
         ensures len(spec_get_rotation_caps(addr)) == 1;
         ensures spec_get_rotation_caps(addr)[0] == rotation_cap;
@@ -91,19 +91,19 @@ module DiemFramework::RecoveryAddress {
         new_key: vector<u8>
     ) acquires RecoveryAddress {
         // Check that `recovery_address` has a `RecoveryAddress` resource
-        assert!(exists<RecoveryAddress>(recovery_address), Errors::not_published(ERECOVERY_ADDRESS));
-        let sender = Signer::address_of(account);
+        assert!(exists<RecoveryAddress>(recovery_address), errors::not_published(ERECOVERY_ADDRESS));
+        let sender = signer::address_of(account);
         assert!(
             // The original owner of a key rotation capability can rotate its own key
             sender == to_recover ||
             // The owner of the `RecoveryAddress` resource can rotate any key
             sender == recovery_address,
-            Errors::invalid_argument(ECANNOT_ROTATE_KEY)
+            errors::invalid_argument(ECANNOT_ROTATE_KEY)
         );
 
         let caps = &borrow_global<RecoveryAddress>(recovery_address).rotation_caps;
         let i = 0;
-        let len = Vector::length(caps);
+        let len = vector::length(caps);
         while ({
             spec {
                 invariant i <= len;
@@ -112,7 +112,7 @@ module DiemFramework::RecoveryAddress {
             (i < len)
         })
         {
-            let cap = Vector::borrow(caps, i);
+            let cap = vector::borrow(caps, i);
             if (DiemAccount::key_rotation_capability_address(cap) == &to_recover) {
                 DiemAccount::rotate_authentication_key(cap, new_key);
                 return
@@ -124,7 +124,7 @@ module DiemFramework::RecoveryAddress {
             assert forall j in 0..len: caps[j].account_address != to_recover;
         };
         // Couldn't find `to_recover` in the account recovery resource; abort
-        abort Errors::invalid_argument(EACCOUNT_NOT_RECOVERABLE)
+        abort errors::invalid_argument(EACCOUNT_NOT_RECOVERABLE)
     }
     spec rotate_authentication_key {
         include RotateAuthenticationKeyAbortsIf;
@@ -135,12 +135,12 @@ module DiemFramework::RecoveryAddress {
         recovery_address: address;
         to_recover: address;
         new_key: vector<u8>;
-        aborts_if !spec_is_recovery_address(recovery_address) with Errors::NOT_PUBLISHED;
-        aborts_if !DiemAccount::exists_at(to_recover) with Errors::NOT_PUBLISHED;
-        aborts_if len(new_key) != 32 with Errors::INVALID_ARGUMENT;
-        aborts_if !spec_holds_key_rotation_cap_for(recovery_address, to_recover) with Errors::INVALID_ARGUMENT;
-        aborts_if !(Signer::address_of(account) == recovery_address
-                    || Signer::address_of(account) == to_recover) with Errors::INVALID_ARGUMENT;
+        aborts_if !spec_is_recovery_address(recovery_address) with errors::NOT_PUBLISHED;
+        aborts_if !DiemAccount::exists_at(to_recover) with errors::NOT_PUBLISHED;
+        aborts_if len(new_key) != 32 with errors::INVALID_ARGUMENT;
+        aborts_if !spec_holds_key_rotation_cap_for(recovery_address, to_recover) with errors::INVALID_ARGUMENT;
+        aborts_if !(signer::address_of(account) == recovery_address
+                    || signer::address_of(account) == to_recover) with errors::INVALID_ARGUMENT;
     }
     spec schema RotateAuthenticationKeyEnsures {
         to_recover: address;
@@ -154,21 +154,21 @@ module DiemFramework::RecoveryAddress {
     public fun add_rotation_capability(to_recover: KeyRotationCapability, recovery_address: address)
     acquires RecoveryAddress {
         // Check that `recovery_address` has a `RecoveryAddress` resource
-        assert!(exists<RecoveryAddress>(recovery_address), Errors::not_published(ERECOVERY_ADDRESS));
+        assert!(exists<RecoveryAddress>(recovery_address), errors::not_published(ERECOVERY_ADDRESS));
         // Only accept the rotation capability if both accounts belong to the same VASP
         let to_recover_address = *DiemAccount::key_rotation_capability_address(&to_recover);
         assert!(
             VASP::is_same_vasp(recovery_address, to_recover_address),
-            Errors::invalid_argument(EINVALID_KEY_ROTATION_DELEGATION)
+            errors::invalid_argument(EINVALID_KEY_ROTATION_DELEGATION)
         );
 
         let recovery_caps = &mut borrow_global_mut<RecoveryAddress>(recovery_address).rotation_caps;
         assert!(
-            Vector::length(recovery_caps) < MAX_REGISTERED_KEYS,
-            Errors::limit_exceeded(EMAX_KEYS_REGISTERED)
+            vector::length(recovery_caps) < MAX_REGISTERED_KEYS,
+            errors::limit_exceeded(EMAX_KEYS_REGISTERED)
         );
 
-        Vector::push_back(recovery_caps, to_recover);
+        vector::push_back(recovery_caps, to_recover);
     }
     spec add_rotation_capability {
         include AddRotationCapabilityAbortsIf;
@@ -177,10 +177,10 @@ module DiemFramework::RecoveryAddress {
     spec schema AddRotationCapabilityAbortsIf {
         to_recover: KeyRotationCapability;
         recovery_address: address;
-        aborts_if !spec_is_recovery_address(recovery_address) with Errors::NOT_PUBLISHED;
-        aborts_if len(global<RecoveryAddress>(recovery_address).rotation_caps) >= MAX_REGISTERED_KEYS with Errors::LIMIT_EXCEEDED;
+        aborts_if !spec_is_recovery_address(recovery_address) with errors::NOT_PUBLISHED;
+        aborts_if len(global<RecoveryAddress>(recovery_address).rotation_caps) >= MAX_REGISTERED_KEYS with errors::LIMIT_EXCEEDED;
         let to_recover_address = DiemAccount::key_rotation_capability_address(to_recover);
-        aborts_if !VASP::spec_is_same_vasp(recovery_address, to_recover_address) with Errors::INVALID_ARGUMENT;
+        aborts_if !VASP::spec_is_same_vasp(recovery_address, to_recover_address) with errors::INVALID_ARGUMENT;
     }
     spec schema AddRotationCapabilityEnsures {
         to_recover: KeyRotationCapability;

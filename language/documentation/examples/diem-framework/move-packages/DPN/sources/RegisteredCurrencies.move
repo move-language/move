@@ -4,8 +4,8 @@ module DiemFramework::RegisteredCurrencies {
     use DiemFramework::DiemConfig;
     use DiemFramework::DiemTimestamp;
     use DiemFramework::Roles;
-    use Std::Errors;
-    use Std::Vector;
+    use std::errors;
+    use std::vector;
 
     /// A DiemConfig config holding all of the currency codes for registered
     /// currencies. The inner vector<u8>'s are string representations of
@@ -24,7 +24,7 @@ module DiemFramework::RegisteredCurrencies {
         Roles::assert_diem_root(dr_account);
         DiemConfig::publish_new_config(
             dr_account,
-            RegisteredCurrencies { currency_codes: Vector::empty() }
+            RegisteredCurrencies { currency_codes: vector::empty() }
         );
     }
     spec initialize {
@@ -40,7 +40,7 @@ module DiemFramework::RegisteredCurrencies {
     }
     spec schema InitializeEnsures {
         include DiemConfig::PublishNewConfigEnsures<RegisteredCurrencies>{
-            payload: RegisteredCurrencies { currency_codes: Vector::empty() }
+            payload: RegisteredCurrencies { currency_codes: vector::empty() }
         };
         ensures len(get_currency_codes()) == 0;
     }
@@ -52,10 +52,10 @@ module DiemFramework::RegisteredCurrencies {
     ) {
         let config = DiemConfig::get<RegisteredCurrencies>();
         assert!(
-            !Vector::contains(&config.currency_codes, &currency_code),
-            Errors::invalid_argument(ECURRENCY_CODE_ALREADY_TAKEN)
+            !vector::contains(&config.currency_codes, &currency_code),
+            errors::invalid_argument(ECURRENCY_CODE_ALREADY_TAKEN)
         );
-        Vector::push_back(&mut config.currency_codes, currency_code);
+        vector::push_back(&mut config.currency_codes, currency_code);
         DiemConfig::set(dr_account, config);
     }
     spec add_currency_code {
@@ -70,12 +70,12 @@ module DiemFramework::RegisteredCurrencies {
         aborts_if contains(
             DiemConfig::get<RegisteredCurrencies>().currency_codes,
             currency_code
-        ) with Errors::INVALID_ARGUMENT;
+        ) with errors::INVALID_ARGUMENT;
     }
     spec schema AddCurrencyCodeEnsures {
         currency_code: vector<u8>;
         // The resulting currency_codes is the one before this function is called, with the new one added to the end.
-        ensures Vector::eq_push_back(get_currency_codes(), old(get_currency_codes()), currency_code);
+        ensures vector::eq_push_back(get_currency_codes(), old(get_currency_codes()), currency_code);
         include DiemConfig::SetEnsures<RegisteredCurrencies> {payload: DiemConfig::get<RegisteredCurrencies>()};
     }
 

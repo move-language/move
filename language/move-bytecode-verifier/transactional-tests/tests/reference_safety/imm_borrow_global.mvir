@@ -30,7 +30,7 @@ module 0x1.A {
 
 //# publish
 module 0x1.Tester {
-    import 0x1.Signer;
+    import 0x1.signer;
     import 0x1.A;
 
     struct Pair has key { x: A.Coin, y: A.Coin }
@@ -49,7 +49,7 @@ module 0x1.Tester {
     public test(account: &signer) acquires Pair {
         let sender: address;
     label b0:
-        sender = Signer.address_of(copy(account));
+        sender = signer.address_of(copy(account));
         move_to<Pair>(move(account), Pair { x: A.new(), y: A.new() });
         assert(Self.test_eq(copy(sender), copy(sender)), 42);
         return;

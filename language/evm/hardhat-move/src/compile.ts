@@ -158,7 +158,7 @@ async function generateArtifactsForPackage(hardhatRootPath: string, packagePath:
     return ok(artifacts);
 }
 
-export async function buildPackageAndGenerateArtifacts(arch: string, movePath: string, hardhatRootPath: string, packagePath: string): Promise<Result<Artifact[], MoveBuildError | ChainedError>> {
+async function buildPackage(arch: string, movePath: string, packagePath: string): Promise<Result<number, MoveBuildError | ChainedError>> {
     let buildRes = await movePackageBuild(arch, movePath, packagePath);
     if (buildRes.isErr()) {
         let e = buildRes.error;
@@ -166,14 +166,17 @@ export async function buildPackageAndGenerateArtifacts(arch: string, movePath: s
         return err(e);
     }
 
+    console.log(`Successfully built ${packagePath}`);
+    return ok(0);
+}
+
+async function generateArtifacts(hardhatRootPath: string, packagePath: string): Promise<Result<Artifact[], MoveBuildError | ChainedError>> {
     let genArtifactsRes = await generateArtifactsForPackage(hardhatRootPath, packagePath);
     if (genArtifactsRes.isErr()) {
         let e = genArtifactsRes.error;
         console.log(`Failed to build ${packagePath}\n${e}`);
         return err(genArtifactsRes.error);
     }
-
-    console.log(`Successfully built ${packagePath}`);
 
     return ok(genArtifactsRes.value);
 }
@@ -196,14 +199,17 @@ export async function compile(
     console.log("Building %d Move package%s...", packagePaths.length, plural);
 
     let buildResults = await Promise.all(
-        packagePaths.map(path => buildPackageAndGenerateArtifacts(arch, movePath, config.paths.root, path.toString())));
+        packagePaths.map(path => buildPackage(arch, movePath, path.toString())));
+
+    let genArtifactResults = await Promise.all(
+        packagePaths.map(path => generateArtifacts(config.paths.root, path.toString()))); 
 
     let failedToBuildAll = false;
     console.assert(packagePaths.length == buildResults.length);
     for (let idx in packagePaths) {
 
         let packagePathRel = Path.relative(config.paths.root, packagePaths[idx].toString());
-        let res = buildResults[idx];
+        let res = genArtifactResults[idx];
 
         if (res.isOk()) {
             let contractNames = [];

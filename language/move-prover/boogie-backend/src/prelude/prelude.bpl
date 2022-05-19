@@ -328,6 +328,11 @@ procedure {:inline 1} $Sub(src1: int, src2: int) returns (dst: int)
     dst := src1 - src2;
 }
 
+procedure {:inline 1} $Sub_unchecked(src1: int, src2: int) returns (dst: int)
+{
+    dst := src1 - src2;
+}
+
 // uninterpreted function to return an undefined value.
 function $undefined_int(): int;
 

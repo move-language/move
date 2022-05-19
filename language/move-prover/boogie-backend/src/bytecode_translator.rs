@@ -14,7 +14,11 @@ use move_model::{
     code_writer::CodeWriter,
     emit, emitln,
     model::{GlobalEnv, QualifiedInstId, StructEnv, StructId},
-    pragmas::{ADDITION_OVERFLOW_UNCHECKED_PRAGMA, SEED_PRAGMA, TIMEOUT_PRAGMA},
+    pragmas::{
+        ADDITION_OVERFLOW_UNCHECKED_PRAGMA, 
+        SUBTRACTION_UNDERFLOW_UNCHECKED_PRAGMA, 
+        SEED_PRAGMA, TIMEOUT_PRAGMA
+    },
     ty::{PrimitiveType, Type},
 };
 use move_stackless_bytecode::{
@@ -1252,10 +1256,18 @@ impl<'env> FunctionTranslator<'env> {
                         let dest = dests[0];
                         let op1 = srcs[0];
                         let op2 = srcs[1];
+                        let unchecked = if fun_target
+                        .is_pragma_true(SUBTRACTION_UNDERFLOW_UNCHECKED_PRAGMA, || false)
+                        {
+                            "_unchecked"
+                        } else {
+                            ""
+                        };
                         emitln!(
                             writer,
-                            "call {} := $Sub({}, {});",
+                            "call {} := $Sub{}({}, {});",
                             str_local(dest),
+                            unchecked,
                             str_local(op1),
                             str_local(op2)
                         );

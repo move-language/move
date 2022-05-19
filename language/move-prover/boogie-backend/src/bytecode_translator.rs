@@ -15,8 +15,8 @@ use move_model::{
     emit, emitln,
     model::{GlobalEnv, QualifiedInstId, StructEnv, StructId},
     pragmas::{
-        ADDITION_OVERFLOW_UNCHECKED_PRAGMA, 
-        SUBTRACTION_UNDERFLOW_UNCHECKED_PRAGMA, 
+        ADDITION_OVERFLOW_UNCHECKED_PRAGMA,
+        SUBTRACTION_UNDERFLOW_UNCHECKED_PRAGMA,
         SEED_PRAGMA, TIMEOUT_PRAGMA
     },
     ty::{PrimitiveType, Type},
@@ -1257,7 +1257,7 @@ impl<'env> FunctionTranslator<'env> {
                         let op1 = srcs[0];
                         let op2 = srcs[1];
                         let unchecked = if fun_target
-                        .is_pragma_true(SUBTRACTION_UNDERFLOW_UNCHECKED_PRAGMA, || false)
+                            .is_pragma_true(SUBTRACTION_UNDERFLOW_UNCHECKED_PRAGMA, || false)
                         {
                             "_unchecked"
                         } else {

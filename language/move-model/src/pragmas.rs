@@ -50,6 +50,9 @@ pub const ALWAYS_ABORTS_TEST_PRAGMA: &str = "always_aborts_test";
 /// for overflow.
 pub const ADDITION_OVERFLOW_UNCHECKED_PRAGMA: &str = "addition_overflow_unchecked";
 
+/// Pragma indicating that subtractions should not be checked for underflow
+pub const SUBTRACTION_UNDERFLOW_UNCHECKED_PRAGMA: &str = "subtraction_underflow_unchecked";
+
 /// Pragma indicating that aborts from this function shall be ignored.
 pub const ASSUME_NO_ABORT_FROM_HERE_PRAGMA: &str = "assume_no_abort_from_here";
 
@@ -98,6 +101,7 @@ pub fn is_pragma_valid_for_block(target: &SpecBlockContext<'_>, pragma: &str) ->
                 | REQUIRES_IF_ABORTS_PRAGMA
                 | ALWAYS_ABORTS_TEST_PRAGMA
                 | ADDITION_OVERFLOW_UNCHECKED_PRAGMA
+                | SUBTRACTION_UNDERFLOW_UNCHECKED_PRAGMA
                 | ASSUME_NO_ABORT_FROM_HERE_PRAGMA
                 | EXPORT_ENSURES_PRAGMA
                 | FRIEND_PRAGMA

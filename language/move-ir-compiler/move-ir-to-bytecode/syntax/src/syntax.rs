@@ -1187,33 +1187,32 @@ fn parse_ability(tokens: &mut Lexer) -> Result<(Ability, Loc), ParseError<Loc, a
 
 fn parse_type(tokens: &mut Lexer) -> Result<Type, ParseError<Loc, anyhow::Error>> {
     let t = match tokens.peek() {
-        Tok::Address => {
+        Tok::NameValue if matches!(tokens.content(), "address") => {
             tokens.advance()?;
             Type::Address
         }
-        Tok::Signer => {
-            tokens.advance()?;
-            Type::Signer
-        }
-        Tok::U8 => {
+        Tok::NameValue if matches!(tokens.content(), "u8") => {
             tokens.advance()?;
             Type::U8
         }
-        Tok::U64 => {
+        Tok::NameValue if matches!(tokens.content(), "u64") => {
             tokens.advance()?;
             Type::U64
         }
-        Tok::U128 => {
+        Tok::NameValue if matches!(tokens.content(), "u128") => {
             tokens.advance()?;
             Type::U128
         }
-        Tok::Bool => {
+        Tok::NameValue if matches!(tokens.content(), "bool") => {
             tokens.advance()?;
             Type::Bool
         }
-        Tok::Vector => {
+        Tok::NameValue if matches!(tokens.content(), "signer") => {
             tokens.advance()?;
-            consume_token(tokens, Tok::Less)?;
+            Type::Signer
+        }
+        Tok::NameBeginTyValue if matches!(tokens.content(), "vector<") => {
+            tokens.advance()?;
             let ty = parse_type(tokens)?;
             adjust_token(tokens, &[Tok::Greater])?;
             consume_token(tokens, Tok::Greater)?;

@@ -50,10 +50,8 @@ pub enum Tok {
     /// Aborts if in the spec language
     AbortsIf,
     Acquires,
-    Address,
     As,
     Assert,
-    Bool,
     BorrowGlobal,
     BorrowGlobalMut,
     Copy,
@@ -91,15 +89,10 @@ pub enum Tok {
     SpecReturn,
     /// Return statement in the Move language
     Return,
-    Signer,
     Struct,
     SucceedsIf,
     Synthetic,
     True,
-    U8,
-    U64,
-    U128,
-    Vector,
     VecPack(u64),
     VecLen,
     VecImmBorrow,
@@ -268,7 +261,6 @@ impl<'input> Lexer<'input> {
                             }
                         }
                         Some('<') => match name {
-                            "vector" => (Tok::Vector, len),
                             "vec_len" => (Tok::VecLen, len),
                             "vec_imm_borrow" => (Tok::VecImmBorrow, len),
                             "vec_mut_borrow" => (Tok::VecMutBorrow, len),
@@ -454,9 +446,7 @@ fn get_name_token(name: &str) -> Tok {
         "abort" => Tok::Abort,
         "aborts_if" => Tok::AbortsIf,
         "acquires" => Tok::Acquires,
-        "address" => Tok::Address,
         "as" => Tok::As,
-        "bool" => Tok::Bool,
         "copy" => Tok::Copy,
         "ensures" => Tok::Ensures,
         "false" => Tok::False,
@@ -483,14 +473,10 @@ fn get_name_token(name: &str) -> Tok {
         "RET" => Tok::SpecReturn,
         "return" => Tok::Return,
         "script" => Tok::Script,
-        "signer" => Tok::Signer,
         "struct" => Tok::Struct,
         "succeeds_if" => Tok::SucceedsIf,
         "synthetic" => Tok::Synthetic,
         "true" => Tok::True,
-        "u8" => Tok::U8,
-        "u64" => Tok::U64,
-        "u128" => Tok::U128,
         _ => Tok::NameValue,
     }
 }

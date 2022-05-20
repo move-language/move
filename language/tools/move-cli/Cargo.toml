@@ -21,6 +21,7 @@ tempfile = "3.2.0"
 walkdir = "2.3.1"
 codespan-reporting = "0.11.1"
 itertools = "0.10.0"
+serde_json = "1.0"
 toml_edit =  { version = "0.14.3", features = ["easy"] }
 
 bcs = "0.1.2"
@@ -48,6 +49,7 @@ move-unit-test = { path = "../move-unit-test" }
 move-errmapgen = { path = "../../move-prover/move-errmapgen" }
 move-bytecode-source-map = { path = "../../move-ir-compiler/move-bytecode-source-map" }
 move-bytecode-viewer = { path = "../move-bytecode-viewer" }
+reqwest = { version = "0.10", features = ["blocking", "json"] }
 
 [dev-dependencies]
 datatest-stable = "0.1.1"

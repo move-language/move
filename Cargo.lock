@@ -2750,6 +2750,7 @@ dependencies = [
  "petgraph 0.5.1",
  "ptree",
  "regex",
+ "reqwest",
  "serde 1.0.130",
  "serde_yaml",
  "sha2",

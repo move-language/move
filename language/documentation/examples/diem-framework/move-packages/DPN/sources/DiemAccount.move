@@ -2082,6 +2082,7 @@ module DiemFramework::DiemAccount {
         )
     }
     spec epilogue {
+        pragma verify=false; // TODO: time out
         include EpilogueCommonAbortsIf<Token>;
         include EpilogueCommonEnsures<Token>;
     }
@@ -2156,6 +2157,7 @@ module DiemFramework::DiemAccount {
         }
     }
     spec epilogue_common {
+        pragma verify=false; // TODO: time out
         include EpilogueCommonAbortsIf<Token>;
         include EpilogueCommonEnsures<Token>;
     }

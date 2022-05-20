@@ -1,6 +1,3 @@
-
-
-
 // This file is created to verify the vector module in the standard library.
 // This file is basically a clone of `stdlib/modules/vector.move` with renaming the module and function names.
 // In this file, the functions with prefix of `verify_model` are verifying the corresponding built-in Boogie
@@ -8,7 +5,6 @@
 // This file also verifies the actual Move implementations of non-native functions (e.g., `verify_remove`).
 module 0x42::VerifyVector {
     use Std::Vector;
-
 
     fun verify_model_empty<Element>() : vector<Element> {
         Vector::empty<Element>() // inlining the built-in Boogie procedure

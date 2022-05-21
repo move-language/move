@@ -463,15 +463,14 @@ impl Symbolicator {
         }
 
         let fhash = loc.file_hash();
-        (
-            ModuleDefs {
-                fhash,
-                structs,
-                constants,
-                functions,
-            },
-            use_def_map,
-        )
+        let module_defs = ModuleDefs {
+            fhash,
+            structs,
+            constants,
+            functions,
+        };
+
+        (module_defs, use_def_map)
     }
 
     /// Get symbols for the whole module

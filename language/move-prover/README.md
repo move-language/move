@@ -1,7 +1,7 @@
 ---
 id: move-prover
 title: Formal verification code
-custom_edit_url: https://github.com/diem/move/edit/main/language/move-prover/README.md
+custom_edit_url: https://github.com/move-language/move/edit/main/language/move-prover/README.md
 ---
 
 
@@ -24,7 +24,7 @@ For more information, refer to the documentation:
 
 -  [To be done] Move Prover Whitepaper
 -  [Move Prover User Guide](./doc/user/prover-guide.md)
--  [Move Specification Language](./doc/user/move-model.md)
+-  [Move Specification Language](./doc/user/spec-lang.md)
 -  [Installation](./doc/user/install.md)
 -  [Testing](./tests/README.md)
 -  [To be done] Move Prover Developer Guide

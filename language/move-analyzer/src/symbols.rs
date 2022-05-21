@@ -81,7 +81,7 @@ use move_symbol_pool::Symbol;
 /// go-to-references to the IDE.
 pub const DEFS_AND_REFS_SUPPORT: bool = false;
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Copy)]
 /// Location of a definition's identifier
 struct DefLoc {
     /// File where the definition of the identifier starts
@@ -91,7 +91,7 @@ struct DefLoc {
 }
 
 /// Location of a use's identifier
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Copy)]
 struct UseLoc {
     /// File where this use identifier starts
     fhash: FileHash,
@@ -103,7 +103,7 @@ struct UseLoc {
 
 /// Information about both the use identifier (source file is specified wherever an instance of this
 /// struct is used) and the definition identifier
-#[derive(Debug, Clone, Eq)]
+#[derive(Debug, Clone, Eq, Copy)]
 pub struct UseDef {
     /// Column where the (use) identifier location starts on a given line (use this field for
     /// sorting uses on the line)
@@ -184,29 +184,22 @@ impl UseDef {
             start: def_start,
         };
         let col_end = use_start.character + use_name.len() as u32;
-        let use_def = Self {
-            col_start: use_start.character,
-            col_end,
-            def_loc: def_loc.clone(),
-        };
-
         let use_loc = UseLoc {
             fhash: use_fhash,
             start: use_start,
             col_end,
         };
 
-        match references.get_mut(&def_loc) {
-            Some(v) => {
-                v.insert(use_loc);
-            }
-            None => {
-                let mut s = BTreeSet::new();
-                s.insert(use_loc);
-                references.insert(def_loc, s);
-            }
+        references
+            .entry(def_loc)
+            .or_insert_with(BTreeSet::new)
+            .insert(use_loc);
+
+        Self {
+            col_start: use_start.character,
+            col_end,
+            def_loc,
         }
-        use_def
     }
 }
 
@@ -239,16 +232,7 @@ impl UseDefMap {
     }
 
     fn insert(&mut self, key: u32, val: UseDef) {
-        match self.0.get_mut(&key) {
-            Some(v) => {
-                v.insert(val);
-            }
-            None => {
-                let mut s = BTreeSet::new();
-                s.insert(val);
-                self.0.insert(key, s);
-            }
-        }
+        self.0.entry(key).or_insert_with(BTreeSet::new).insert(val);
     }
 
     fn get(&self, key: u32) -> Option<BTreeSet<UseDef>> {
@@ -312,18 +296,17 @@ impl Symbolicator {
             );
             mod_outer_defs.insert(*module_ident, defs);
             mod_use_defs.insert(*module_ident, symbols);
-            match source_files.get(&pos.file_hash()) {
-                Some((fpath, _)) => {
-                    mod_ident_map.insert(
-                        // if canonicalization fails, simply use "regular" path to continue
-                        // processing
-                        fs::canonicalize(fpath.as_str())
-                            .unwrap_or_else(|_| PathBuf::from(fpath.as_str())),
-                        *module_ident,
-                    );
-                }
+
+            let fpath = match source_files.get(&pos.file_hash()) {
+                Some((p, _)) => p,
                 None => continue,
-            }
+            };
+
+            mod_ident_map.insert(
+                // if canonicalization fails, simply use "regular" path to continue processing
+                fs::canonicalize(fpath.as_str()).unwrap_or_else(|_| PathBuf::from(fpath.as_str())),
+                *module_ident,
+            );
         }
 
         let mut symbolicator = Symbolicator {
@@ -374,111 +357,109 @@ impl Symbolicator {
         let mut use_def_map = UseDefMap::new();
 
         for (pos, name, def) in &mod_def.structs {
-            match Self::get_start_loc(&pos, files, file_id_mapping) {
-                Some(name_start) => {
-                    let mut field_defs = vec![];
-                    if let StructFields::Defined(fields) = &def.fields {
-                        for (fpos, fname, _) in fields {
-                            match Self::get_start_loc(&fpos, files, file_id_mapping) {
-                                Some(start) => {
-                                    field_defs.push(FieldDef {
-                                        name: *fname,
-                                        start,
-                                    });
-                                    // enter self-definition for field name
-                                    use_def_map.insert(
-                                        start.line,
-                                        UseDef::new(
-                                            references,
-                                            fpos.file_hash(),
-                                            start,
-                                            fpos.file_hash(),
-                                            start,
-                                            fname,
-                                        ),
-                                    )
-                                }
-                                None => {
-                                    debug_assert!(false);
-                                    continue;
-                                }
-                            };
+            // process field structs first
+            let mut field_defs = vec![];
+            if let StructFields::Defined(fields) = &def.fields {
+                for (fpos, fname, _) in fields {
+                    let start = match Self::get_start_loc(&fpos, files, file_id_mapping) {
+                        Some(s) => s,
+                        None => {
+                            debug_assert!(false);
+                            continue;
                         }
                     };
-
-                    structs.insert(
-                        *name,
-                        StructDef {
-                            name_start,
-                            field_defs,
-                        },
-                    );
-                    // enter self-definition for struct name
+                    field_defs.push(FieldDef {
+                        name: *fname,
+                        start,
+                    });
+                    // enter self-definition for field name
                     use_def_map.insert(
-                        name_start.line,
+                        start.line,
                         UseDef::new(
                             references,
-                            pos.file_hash(),
-                            name_start,
-                            pos.file_hash(),
-                            name_start,
-                            name,
+                            fpos.file_hash(),
+                            start,
+                            fpos.file_hash(),
+                            start,
+                            fname,
                         ),
                     );
                 }
+            };
+
+            // process the struct itself
+            let name_start = match Self::get_start_loc(&pos, files, file_id_mapping) {
+                Some(s) => s,
                 None => {
                     debug_assert!(false);
                     continue;
                 }
             };
+            structs.insert(
+                *name,
+                StructDef {
+                    name_start,
+                    field_defs,
+                },
+            );
+            // enter self-definition for struct name
+            use_def_map.insert(
+                name_start.line,
+                UseDef::new(
+                    references,
+                    pos.file_hash(),
+                    name_start,
+                    pos.file_hash(),
+                    name_start,
+                    name,
+                ),
+            );
         }
 
         for (pos, name, _) in &mod_def.constants {
-            match Self::get_start_loc(&pos, files, file_id_mapping) {
-                Some(name_start) => {
-                    constants.insert(*name, name_start);
-                    // enter self-definition for const name
-                    use_def_map.insert(
-                        name_start.line,
-                        UseDef::new(
-                            references,
-                            pos.file_hash(),
-                            name_start,
-                            pos.file_hash(),
-                            name_start,
-                            name,
-                        ),
-                    );
-                }
+            let name_start = match Self::get_start_loc(&pos, files, file_id_mapping) {
+                Some(s) => s,
                 None => {
                     debug_assert!(false);
                     continue;
                 }
             };
+            constants.insert(*name, name_start);
+            // enter self-definition for const name
+            use_def_map.insert(
+                name_start.line,
+                UseDef::new(
+                    references,
+                    pos.file_hash(),
+                    name_start,
+                    pos.file_hash(),
+                    name_start,
+                    name,
+                ),
+            );
         }
 
         for (pos, name, _) in &mod_def.functions {
-            match Self::get_start_loc(&pos, files, file_id_mapping) {
-                Some(name_start) => {
-                    functions.insert(*name, name_start);
-                    // enter self-definition for const name
-                    use_def_map.insert(
-                        name_start.line,
-                        UseDef::new(
-                            references,
-                            pos.file_hash(),
-                            name_start,
-                            pos.file_hash(),
-                            name_start,
-                            name,
-                        ),
-                    );
-                }
+            let name_start = match Self::get_start_loc(&pos, files, file_id_mapping) {
+                Some(s) => s,
                 None => {
                     debug_assert!(false);
                     continue;
                 }
             };
+            functions.insert(*name, name_start);
+            // enter self-definition for const name
+            use_def_map.insert(
+                name_start.line,
+                UseDef::new(
+                    references,
+                    pos.file_hash(),
+                    name_start,
+                    pos.file_hash(),
+                    name_start,
+                    name,
+                ),
+            );
         }
 
         let fhash = loc.file_hash();

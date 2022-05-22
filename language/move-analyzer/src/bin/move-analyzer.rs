@@ -9,6 +9,7 @@ use lsp_types::{
     TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
     WorkDoneProgressOptions,
 };
+use std::sync::{Arc, Mutex};
 
 use move_analyzer::{
     completion::on_completion_request,
@@ -42,6 +43,7 @@ fn main() {
     let mut context = Context {
         connection,
         files: VirtualFileSystem::default(),
+        symbols: Arc::new(Mutex::new(symbols::Symbolicator::empty_symbols())),
     };
     let capabilities = serde_json::to_value(lsp_types::ServerCapabilities {
         // The server receives notifications from the client as users open, close,
@@ -97,18 +99,12 @@ fn main() {
     let initialize_params: lsp_types::InitializeParams =
         serde_json::from_value(client_response).expect("could not deserialize client capabilities");
 
-    let symbols = if symbols::DEFS_AND_REFS_SUPPORT {
-        eprintln!("symbolication started");
-
-        match initialize_params.root_uri {
-            Some(uri) => match symbols::Symbolicator::get_symbols(&uri.to_file_path().unwrap()) {
-                Ok(v) => v,
-                Err(_) => symbols::Symbolicator::empty_symbols(),
-            },
-            None => symbols::Symbolicator::empty_symbols(),
+    let mut symbolicator_runner = symbols::SymbolicatorRunner::idle();
+    if symbols::DEFS_AND_REFS_SUPPORT {
+        if let Some(uri) = initialize_params.root_uri {
+            symbolicator_runner = symbols::SymbolicatorRunner::new(&uri, context.symbols.clone());
+            symbolicator_runner.run();
         }
-    } else {
-        symbols::Symbolicator::empty_symbols()
     };
 
     loop {
@@ -124,7 +120,7 @@ fn main() {
                             // It ought to, especially once it begins processing requests that may
                             // take a long time to respond to.
                         }
-                        _ => on_notification(&mut context, &notification),
+                        _ => on_notification(&mut context, &symbolicator_runner, &notification),
                     }
                 }
             },
@@ -136,6 +132,7 @@ fn main() {
     }
 
     io_threads.join().expect("I/O threads could not finish");
+    symbolicator_runner.quit();
     eprintln!("Shut down language server '{}'.", exe);
 }
 
@@ -143,10 +140,10 @@ fn on_request(context: &Context, request: &Request, symbols: &symbols::Symbols) 
     match request.method.as_str() {
         lsp_types::request::Completion::METHOD => on_completion_request(context, request),
         lsp_types::request::GotoDefinition::METHOD => {
-            symbols::on_go_to_def_request(context, request, symbols)
+            symbols::on_go_to_def_request(context, request, &context.symbols.lock().unwrap())
         }
         lsp_types::request::References::METHOD => {
-            symbols::on_references_request(context, request, symbols)
+            symbols::on_references_request(context, request, &context.symbols.lock().unwrap())
         }
         _ => todo!("handle request '{}' from client", request.method),
     }
@@ -156,13 +153,21 @@ fn on_response(_context: &Context, _response: &Response) {
     todo!("handle response from client");
 }
 
-fn on_notification(context: &mut Context, notification: &Notification) {
+fn on_notification(
+    context: &mut Context,
+    symbolicator_runner: &symbols::SymbolicatorRunner,
+    notification: &Notification,
+) {
     match notification.method.as_str() {
         lsp_types::notification::DidOpenTextDocument::METHOD
         | lsp_types::notification::DidChangeTextDocument::METHOD
         | lsp_types::notification::DidSaveTextDocument::METHOD
         | lsp_types::notification::DidCloseTextDocument::METHOD => {
-            on_text_document_sync_notification(&mut context.files, notification)
+            on_text_document_sync_notification(
+                &mut context.files,
+                symbolicator_runner,
+                notification,
+            )
         }
         _ => todo!("handle notification '{}' from client", notification.method),
     }

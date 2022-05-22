@@ -16,6 +16,8 @@ use lsp_types::{
     DidOpenTextDocumentParams, DidSaveTextDocumentParams,
 };
 
+use crate::symbols;
+
 /// A mapping from identifiers (file names, potentially, but not necessarily) to their contents.
 #[derive(Debug, Default)]
 pub struct VirtualFileSystem {
@@ -49,6 +51,7 @@ impl VirtualFileSystem {
 /// Updates the given virtual file system based on the text document sync notification that was sent.
 pub fn on_text_document_sync_notification(
     files: &mut VirtualFileSystem,
+    symbolicator_runner: &symbols::SymbolicatorRunner,
     notification: &Notification,
 ) {
     match notification.method.as_str() {
@@ -78,6 +81,7 @@ pub fn on_text_document_sync_notification(
                 parameters.text_document.uri.path(),
                 &parameters.text.unwrap(),
             );
+            symbolicator_runner.run();
         }
         lsp_types::notification::DidCloseTextDocument::METHOD => {
             let parameters =

@@ -49,14 +49,25 @@
 use crate::context::Context;
 use anyhow::Result;
 use codespan_reporting::files::{Files, SimpleFiles};
+<<<<<<< HEAD
 use im::ordmap::OrdMap;
+=======
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
 use lsp_server::{Request, RequestId};
 use lsp_types::{GotoDefinitionParams, Location, Position, Range, ReferenceParams};
 use std::{
     cmp,
+<<<<<<< HEAD
     collections::{BTreeMap, BTreeSet},
     fs,
     path::{Path, PathBuf},
+=======
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    fs,
+    path::{Path, PathBuf},
+    sync::{Arc, Condvar, Mutex},
+    thread,
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
 };
 use tempfile::tempdir;
 use url::Url;
@@ -80,7 +91,11 @@ use move_symbol_pool::Symbol;
 
 /// Enabling/disabling the language server reporting readiness to support go-to-def and
 /// go-to-references to the IDE.
+<<<<<<< HEAD
 pub const DEFS_AND_REFS_SUPPORT: bool = false;
+=======
+pub const DEFS_AND_REFS_SUPPORT: bool = true;
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Copy)]
 /// Location of a definition's identifier
@@ -142,6 +157,12 @@ struct ModuleDefs {
     functions: BTreeMap<Symbol, Position>,
 }
 
+<<<<<<< HEAD
+=======
+/// Holds information about local definitions in a given scope
+type Scope = BTreeMap<Symbol, DefLoc>;
+
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
 /// Data used during symbolication
 pub struct Symbolicator {
     /// Outermost definitions in a module (structs, consts, functions)
@@ -150,12 +171,25 @@ pub struct Symbolicator {
     files: SimpleFiles<Symbol, String>,
     /// A mapping from file hashes to file IDs (used to obtain source file locations)
     file_id_mapping: BTreeMap<FileHash, usize>,
+<<<<<<< HEAD
     /// Contains type params where relevant (e.g. when processing function definition)
     type_params: BTreeMap<Symbol, DefLoc>,
+=======
+    /// Scope to contain type params where relevant (e.g. when processing function definition)
+    type_params: Scope,
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
     /// Current processed module (always set before module processing starts)
     current_mod: Option<ModuleIdent_>,
 }
 
+<<<<<<< HEAD
+=======
+/// Maps a line number to a list of use-def pairs on a given line (use-def set is sorted by
+/// col_start)
+#[derive(Debug)]
+struct UseDefMap(BTreeMap<u32, BTreeSet<UseDef>>);
+
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
 /// Result of the symbolication process
 pub struct Symbols {
     /// A map from def locations to all the references (uses)
@@ -168,6 +202,94 @@ pub struct Symbols {
     file_name_mapping: BTreeMap<FileHash, Symbol>,
 }
 
+<<<<<<< HEAD
+=======
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Copy)]
+enum RunnerState {
+    Run,
+    Wait,
+    Quit,
+}
+
+/// Data used during symbolication running and symbolication info updating
+pub struct SymbolicatorRunner {
+    mtx_cvar: Arc<(Mutex<RunnerState>, Condvar)>,
+}
+
+impl SymbolicatorRunner {
+    /// Create a new idle runner (one that does not actually symbolicate)
+    pub fn idle() -> Self {
+        let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
+        SymbolicatorRunner { mtx_cvar }
+    }
+
+    /// Create a new runner
+    pub fn new(uri: &Url, symbols: Arc<Mutex<Symbols>>) -> Self {
+        let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
+        let thread_mtx_cvar = mtx_cvar.clone();
+        let pkg_path = uri.to_file_path().unwrap();
+
+        thread::spawn(move || {
+            let (mtx, cvar) = &*thread_mtx_cvar;
+            // infinite loop to wait for symbolication requests
+            loop {
+                let get_symbols = {
+                    // hold the lock only as long as it takes to get the data, rather than through
+                    // the whole symbolication process (hence a separate scope here)
+                    let mut symbolicate = mtx.lock().unwrap();
+                    if *symbolicate == RunnerState::Quit {
+                        break;
+                    }
+                    if *symbolicate == RunnerState::Run {
+                        *symbolicate = RunnerState::Wait;
+                        true
+                    } else {
+                        // wait for next request
+                        symbolicate = cvar.wait(symbolicate).unwrap();
+                        if *symbolicate == RunnerState::Quit {
+                            break;
+                        }
+                        if *symbolicate == RunnerState::Run {
+                            *symbolicate = RunnerState::Wait;
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                };
+                if get_symbols {
+                    eprintln!("symbolication started");
+                    match Symbolicator::get_symbols(&pkg_path) {
+                        Ok(syms) => {
+                            eprintln!("symbolication finished");
+                            let mut old_symbols = symbols.lock().unwrap();
+                            *old_symbols = syms;
+                        }
+                        Err(err) => eprintln!("symbolication failed: {:?}", err),
+                    }
+                }
+            }
+        });
+
+        SymbolicatorRunner { mtx_cvar }
+    }
+
+    pub fn run(&self) {
+        let (mtx, cvar) = &*self.mtx_cvar;
+        let mut symbolicate = mtx.lock().unwrap();
+        *symbolicate = RunnerState::Run;
+        cvar.notify_one();
+    }
+
+    pub fn quit(&self) {
+        let (mtx, cvar) = &*self.mtx_cvar;
+        let mut symbolicate = mtx.lock().unwrap();
+        *symbolicate = RunnerState::Quit;
+        cvar.notify_one();
+    }
+}
+
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
 impl UseDef {
     fn new(
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
@@ -219,11 +341,14 @@ impl PartialEq for UseDef {
     }
 }
 
+<<<<<<< HEAD
 /// Maps a line number to a list of use-def pairs on a given line (use-def set is sorted by
 /// col_start)
 #[derive(Debug)]
 struct UseDefMap(BTreeMap<u32, BTreeSet<UseDef>>);
 
+=======
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
 impl UseDefMap {
     fn new() -> Self {
         Self(BTreeMap::new())
@@ -264,21 +389,34 @@ impl Symbolicator {
         }
 
         let build_plan = BuildPlan::create(resolution_graph)?;
+<<<<<<< HEAD
         let mut typed_ast = None;
+=======
+        let mut typed_ast = vec![];
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
         build_plan.compile_with_driver(&mut std::io::sink(), |compiler| {
             let (files, comments_and_compiler_res) = compiler.run::<PASS_TYPING>().unwrap();
             let (_, compiler) =
                 diagnostics::unwrap_or_report_diagnostics(&files, comments_and_compiler_res);
             let (compiler, typed_program) = compiler.into_ast();
+<<<<<<< HEAD
             typed_ast = Some(typed_program.clone());
+=======
+            typed_ast.push(typed_program.clone());
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
             let compilation_result = compiler.at_typing(typed_program).build();
 
             let (units, _) = diagnostics::unwrap_or_report_diagnostics(&files, compilation_result);
             Ok((files, units))
         })?;
 
+<<<<<<< HEAD
         debug_assert!(typed_ast.is_some());
         let modules = &typed_ast.unwrap().modules;
+=======
+        debug_assert!(typed_ast.len() == 1);
+        let modules = &typed_ast.get(0).unwrap().modules;
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
 
         let mut mod_outer_defs = BTreeMap::new();
         let mut references = BTreeMap::new();
@@ -311,8 +449,13 @@ impl Symbolicator {
             mod_outer_defs,
             files,
             file_id_mapping,
+<<<<<<< HEAD
             type_params: BTreeMap::new(),
             current_mod: None,
+=======
+            type_params: Scope::new(),
+            current_mod: Option::None,
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
         };
 
         for (_, module_ident, module_def) in modules {
@@ -496,7 +639,11 @@ impl Symbolicator {
         use_defs: &mut UseDefMap,
     ) {
         // create scope designated to contain type parameters (if any)
+<<<<<<< HEAD
         let mut tp_scope = BTreeMap::new();
+=======
+        let mut tp_scope = Scope::new();
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
         for stp in &struct_def.type_parameters {
             self.add_type_param(&stp.param, &mut tp_scope, references, use_defs);
         }
@@ -516,15 +663,27 @@ impl Symbolicator {
         use_defs: &mut UseDefMap,
     ) {
         // create scope designated to contain type parameters (if any)
+<<<<<<< HEAD
         let mut tp_scope = BTreeMap::new();
+=======
+        let mut tp_scope = Scope::new();
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
         for tp in &fun.signature.type_parameters {
             self.add_type_param(tp, &mut tp_scope, references, use_defs);
         }
         self.type_params = tp_scope;
 
+<<<<<<< HEAD
         // scope for the main function scope (for parameters and
         // function body)
         let mut scope = OrdMap::new();
+=======
+        let mut scope_stack = VecDeque::new();
+        // scope for the main function scope (for parameters and
+        // function body)
+        let fn_scope = Scope::new();
+        scope_stack.push_front(fn_scope);
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
 
         for (pname, ptype) in &fun.signature.parameters {
             self.add_type_id_use_def(ptype, references, use_defs);
@@ -533,7 +692,11 @@ impl Symbolicator {
             self.add_def(
                 &pname.loc(),
                 &pname.value(),
+<<<<<<< HEAD
                 &mut scope,
+=======
+                &mut scope_stack,
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
                 references,
                 use_defs,
             );
@@ -542,14 +705,35 @@ impl Symbolicator {
         match &fun.body.value {
             FunctionBody_::Defined(sequence) => {
                 for seq_item in sequence {
+<<<<<<< HEAD
                     self.seq_item_symbols(&mut scope, seq_item, references, use_defs);
+=======
+                    self.seq_item_symbols(&mut scope_stack, seq_item, references, use_defs);
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
                 }
             }
             FunctionBody_::Native => (),
         }
 
+<<<<<<< HEAD
         // process return types
         self.add_type_id_use_def(&fun.signature.return_type, references, use_defs);
+=======
+        // pop the main function scope
+        scope_stack.pop_front();
+        debug_assert!(scope_stack.is_empty());
+
+        // after processing the function body, create a scope to process return types
+        let ret_scope = Scope::new();
+        scope_stack.push_front(ret_scope);
+
+        self.add_type_id_use_def(&fun.signature.return_type, references, use_defs);
+
+        // pop the return parameters scope
+        scope_stack.pop_front();
+        debug_assert!(scope_stack.is_empty());
+
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
         // process optional "acquires" clause
         for name in fun.acquires.keys() {
             self.add_struct_use_def(
@@ -587,28 +771,46 @@ impl Symbolicator {
     /// Get symbols for a sequence representing function body
     fn seq_item_symbols(
         &self,
+<<<<<<< HEAD
         scope: &mut OrdMap<Symbol, DefLoc>,
+=======
+        scope_stack: &mut VecDeque<Scope>,
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
         seq_item: &SequenceItem,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
         use SequenceItem_ as I;
         match &seq_item.value {
+<<<<<<< HEAD
             I::Seq(e) => self.exp_symbols(e, scope, references, use_defs),
             I::Declare(lvalues) => {
                 self.lvalue_list_symbols(true, lvalues, scope, references, use_defs)
+=======
+            I::Seq(e) => self.exp_symbols(e, scope_stack, references, use_defs),
+            I::Declare(lvalues) => {
+                self.lvalue_list_symbols(true, lvalues, scope_stack, references, use_defs)
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
             }
             I::Bind(lvalues, opt_types, e) => {
                 // process RHS first to avoid accidentally binding its identifiers to LHS (which now
                 // will be put into the current scope only after RHS is processed)
+<<<<<<< HEAD
                 self.exp_symbols(e, scope, references, use_defs);
+=======
+                self.exp_symbols(e, scope_stack, references, use_defs);
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
                 for opt_t in opt_types {
                     match opt_t {
                         Some(t) => self.add_type_id_use_def(t, references, use_defs),
                         None => (),
                     }
                 }
+<<<<<<< HEAD
                 self.lvalue_list_symbols(true, lvalues, scope, references, use_defs);
+=======
+                self.lvalue_list_symbols(true, lvalues, scope_stack, references, use_defs);
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
             }
         }
     }
@@ -618,12 +820,20 @@ impl Symbolicator {
         &self,
         define: bool,
         lvalues: &LValueList,
+<<<<<<< HEAD
         scope: &mut OrdMap<Symbol, DefLoc>,
+=======
+        scope_stack: &mut VecDeque<Scope>,
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
         for lval in &lvalues.value {
+<<<<<<< HEAD
             self.lvalue_symbols(define, lval, scope, references, use_defs);
+=======
+            self.lvalue_symbols(define, lval, scope_stack, references, use_defs);
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
         }
     }
 
@@ -632,16 +842,32 @@ impl Symbolicator {
         &self,
         define: bool,
         lval: &LValue,
+<<<<<<< HEAD
         scope: &mut OrdMap<Symbol, DefLoc>,
+=======
+        scope_stack: &mut VecDeque<Scope>,
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
         match &lval.value {
             LValue_::Var(var, _) => {
                 if define {
+<<<<<<< HEAD
                     self.add_def(&var.loc(), &var.value(), scope, references, use_defs);
                 } else {
                     self.add_local_use_def(&var.value(), &var.loc(), references, scope, use_defs)
+=======
+                    self.add_def(&var.loc(), &var.value(), scope_stack, references, use_defs);
+                } else {
+                    self.add_local_use_def(
+                        &var.value(),
+                        &var.loc(),
+                        references,
+                        scope_stack,
+                        use_defs,
+                    )
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
                 }
             }
             LValue_::Unpack(ident, name, tparams, fields) => {
@@ -651,7 +877,11 @@ impl Symbolicator {
                     name,
                     tparams,
                     fields,
+<<<<<<< HEAD
                     scope,
+=======
+                    scope_stack,
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
                     references,
                     use_defs,
                 );
@@ -663,7 +893,11 @@ impl Symbolicator {
                     name,
                     tparams,
                     fields,
+<<<<<<< HEAD
                     scope,
+=======
+                    scope_stack,
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
                     references,
                     use_defs,
                 );
@@ -680,7 +914,11 @@ impl Symbolicator {
         name: &StructName,
         tparams: &Vec<Type>,
         fields: &Fields<(Type, LValue)>,
+<<<<<<< HEAD
         scope: &mut OrdMap<Symbol, DefLoc>,
+=======
+        scope_stack: &mut VecDeque<Scope>,
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
@@ -690,7 +928,11 @@ impl Symbolicator {
             // add use of the field name
             self.add_field_use_def(ident, &name.value(), fname, &fpos, references, use_defs);
             // add definition or use of a variable used for struct field unpacking
+<<<<<<< HEAD
             self.lvalue_symbols(define, lvalue, scope, references, use_defs);
+=======
+            self.lvalue_symbols(define, lvalue, scope_stack, references, use_defs);
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
         }
         // add type params
         for t in tparams {
@@ -702,7 +944,11 @@ impl Symbolicator {
     fn exp_symbols(
         &self,
         exp: &Exp,
+<<<<<<< HEAD
         scope: &mut OrdMap<Symbol, DefLoc>,
+=======
+        scope_stack: &mut VecDeque<Scope>,
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
@@ -711,12 +957,23 @@ impl Symbolicator {
             E::Move {
                 from_user: _,
                 var: v,
+<<<<<<< HEAD
             } => self.add_local_use_def(&v.value(), &v.loc(), references, scope, use_defs),
             E::Copy {
                 from_user: _,
                 var: v,
             } => self.add_local_use_def(&v.value(), &v.loc(), references, scope, use_defs),
             E::Use(v) => self.add_local_use_def(&v.value(), &v.loc(), references, scope, use_defs),
+=======
+            } => self.add_local_use_def(&v.value(), &v.loc(), references, scope_stack, use_defs),
+            E::Copy {
+                from_user: _,
+                var: v,
+            } => self.add_local_use_def(&v.value(), &v.loc(), references, scope_stack, use_defs),
+            E::Use(v) => {
+                self.add_local_use_def(&v.value(), &v.loc(), references, scope_stack, use_defs)
+            }
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
             E::Constant(mod_ident_opt, name) => self.add_const_use_def(
                 mod_ident_opt,
                 &name.value(),
@@ -724,7 +981,13 @@ impl Symbolicator {
                 references,
                 use_defs,
             ),
+<<<<<<< HEAD
             E::ModuleCall(mod_call) => self.mod_call_symbols(mod_call, scope, references, use_defs),
+=======
+            E::ModuleCall(mod_call) => {
+                self.mod_call_symbols(mod_call, scope_stack, references, use_defs)
+            }
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
             E::Builtin(builtin_fun, exp) => {
                 use BuiltinFunction_ as BF;
                 match &builtin_fun.value {
@@ -735,6 +998,7 @@ impl Symbolicator {
                     BF::Freeze(t) => self.add_type_id_use_def(t, references, use_defs),
                     _ => (),
                 }
+<<<<<<< HEAD
                 self.exp_symbols(exp, scope, references, use_defs);
             }
             E::Vector(_, _, t, exp) => {
@@ -762,12 +1026,43 @@ impl Symbolicator {
             }
             E::Assign(lvalues, opt_types, e) => {
                 self.lvalue_list_symbols(false, lvalues, scope, references, use_defs);
+=======
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+            }
+            E::Vector(_, _, t, exp) => {
+                self.add_type_id_use_def(t, references, use_defs);
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+            }
+            E::IfElse(cond, t, f) => {
+                self.exp_symbols(cond, scope_stack, references, use_defs);
+                self.exp_symbols(t, scope_stack, references, use_defs);
+                self.exp_symbols(f, scope_stack, references, use_defs);
+            }
+            E::While(cond, body) => {
+                self.exp_symbols(cond, scope_stack, references, use_defs);
+                self.exp_symbols(body, scope_stack, references, use_defs);
+            }
+            E::Loop { has_break: _, body } => {
+                self.exp_symbols(body, scope_stack, references, use_defs);
+            }
+            E::Block(sequence) => {
+                // a block is a new var scope
+                scope_stack.push_front(Scope::new());
+                for seq_item in sequence {
+                    self.seq_item_symbols(scope_stack, seq_item, references, use_defs);
+                }
+                scope_stack.pop_front();
+            }
+            E::Assign(lvalues, opt_types, e) => {
+                self.lvalue_list_symbols(false, lvalues, scope_stack, references, use_defs);
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
                 for opt_t in opt_types {
                     match opt_t {
                         Some(t) => self.add_type_id_use_def(t, references, use_defs),
                         None => (),
                     }
                 }
+<<<<<<< HEAD
                 self.exp_symbols(e, scope, references, use_defs);
             }
             E::Mutate(lhs, rhs) => {
@@ -789,6 +1084,29 @@ impl Symbolicator {
             E::BinopExp(lhs, _, _, rhs) => {
                 self.exp_symbols(lhs, scope, references, use_defs);
                 self.exp_symbols(rhs, scope, references, use_defs);
+=======
+                self.exp_symbols(e, scope_stack, references, use_defs);
+            }
+            E::Mutate(lhs, rhs) => {
+                self.exp_symbols(lhs, scope_stack, references, use_defs);
+                self.exp_symbols(rhs, scope_stack, references, use_defs);
+            }
+            E::Return(exp) => {
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+            }
+            E::Abort(exp) => {
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+            }
+            E::Dereference(exp) => {
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+            }
+            E::UnaryExp(_, exp) => {
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+            }
+            E::BinopExp(lhs, _, _, rhs) => {
+                self.exp_symbols(lhs, scope_stack, references, use_defs);
+                self.exp_symbols(rhs, scope_stack, references, use_defs);
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
             }
             E::Pack(ident, name, tparams, fields) => {
                 self.pack_symbols(
@@ -796,7 +1114,11 @@ impl Symbolicator {
                     name,
                     tparams,
                     fields,
+<<<<<<< HEAD
                     scope,
+=======
+                    scope_stack,
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
                     references,
                     use_defs,
                 );
@@ -809,11 +1131,19 @@ impl Symbolicator {
                         ExpListItem::Single(e, _) => e,
                         ExpListItem::Splat(_, e, _) => e,
                     };
+<<<<<<< HEAD
                     self.exp_symbols(exp, scope, references, use_defs);
                 }
             }
             E::Borrow(_, exp, field) => {
                 self.exp_symbols(exp, scope, references, use_defs);
+=======
+                    self.exp_symbols(exp, scope_stack, references, use_defs);
+                }
+            }
+            E::Borrow(_, exp, field) => {
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
                 // get expression type to match fname to a struct def
                 self.add_field_type_use_def(
                     &exp.ty,
@@ -824,6 +1154,7 @@ impl Symbolicator {
                 );
             }
             E::TempBorrow(_, exp) => {
+<<<<<<< HEAD
                 self.exp_symbols(exp, scope, references, use_defs);
             }
             E::BorrowLocal(_, var) => {
@@ -835,6 +1166,19 @@ impl Symbolicator {
             }
             E::Annotate(exp, t) => {
                 self.exp_symbols(exp, scope, references, use_defs);
+=======
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+            }
+            E::BorrowLocal(_, var) => {
+                self.add_local_use_def(&var.value(), &var.loc(), references, scope_stack, use_defs)
+            }
+            E::Cast(exp, t) => {
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+                self.add_type_id_use_def(t, references, use_defs);
+            }
+            E::Annotate(exp, t) => {
+                self.exp_symbols(exp, scope_stack, references, use_defs);
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
                 self.add_type_id_use_def(t, references, use_defs);
             }
 
@@ -872,7 +1216,11 @@ impl Symbolicator {
     fn mod_call_symbols(
         &self,
         mod_call: &ModuleCall,
+<<<<<<< HEAD
         scope: &mut OrdMap<Symbol, DefLoc>,
+=======
+        scope_stack: &mut VecDeque<Scope>,
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
@@ -892,7 +1240,11 @@ impl Symbolicator {
         }
 
         // handle arguments
+<<<<<<< HEAD
         self.exp_symbols(&mod_call.arguments, scope, references, use_defs);
+=======
+        self.exp_symbols(&mod_call.arguments, scope_stack, references, use_defs);
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
     }
 
     /// Get symbols for the pack expression
@@ -902,7 +1254,11 @@ impl Symbolicator {
         name: &StructName,
         tparams: &Vec<Type>,
         fields: &Fields<(Type, Exp)>,
+<<<<<<< HEAD
         scope: &mut OrdMap<Symbol, DefLoc>,
+=======
+        scope_stack: &mut VecDeque<Scope>,
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
@@ -912,7 +1268,11 @@ impl Symbolicator {
             // add use of the field name
             self.add_field_use_def(ident, &name.value(), fname, &fpos, references, use_defs);
             // add field initialization expression
+<<<<<<< HEAD
             self.exp_symbols(init_exp, scope, references, use_defs);
+=======
+            self.exp_symbols(init_exp, scope_stack, references, use_defs);
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
         }
         // add type params
         for t in tparams {
@@ -926,7 +1286,11 @@ impl Symbolicator {
     fn add_type_param(
         &mut self,
         tp: &TParam,
+<<<<<<< HEAD
         tp_scope: &mut BTreeMap<Symbol, DefLoc>,
+=======
+        tp_scope: &mut Scope,
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
@@ -1170,7 +1534,11 @@ impl Symbolicator {
         &self,
         pos: &Loc,
         name: &Symbol,
+<<<<<<< HEAD
         scope: &mut OrdMap<Symbol, DefLoc>,
+=======
+        scope_stack: &mut VecDeque<Scope>,
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
@@ -1180,10 +1548,18 @@ impl Symbolicator {
                     fhash: pos.file_hash(),
                     start: name_start,
                 };
+<<<<<<< HEAD
+=======
+                let mut scope = scope_stack.pop_front().unwrap(); // scope stack guaranteed non-empty
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
                 scope.insert(*name, def_loc);
                 // in other languages only one definition is allowed per scope but in move an (and
                 // in rust) a variable can be re-defined in the same scope replacing the previous
                 // definition
+<<<<<<< HEAD
+=======
+                scope_stack.push_front(scope);
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
 
                 // enter self-definition for def name
                 use_defs.insert(
@@ -1211,7 +1587,11 @@ impl Symbolicator {
         use_name: &Symbol,
         use_pos: &Loc,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
+<<<<<<< HEAD
         scope: &OrdMap<Symbol, DefLoc>,
+=======
+        scope_stack: &VecDeque<Scope>,
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
         use_defs: &mut UseDefMap,
     ) {
         let name_start = match Self::get_start_loc(use_pos, &self.files, &self.file_id_mapping) {
@@ -1222,6 +1602,7 @@ impl Symbolicator {
             }
         };
 
+<<<<<<< HEAD
         if let Some(def_loc) = scope.get(use_name) {
             use_defs.insert(
                 name_start.line,
@@ -1237,6 +1618,25 @@ impl Symbolicator {
         } else {
             debug_assert!(false);
         }
+=======
+        for s in scope_stack {
+            if let Some(def_loc) = s.get(use_name) {
+                use_defs.insert(
+                    name_start.line,
+                    UseDef::new(
+                        references,
+                        use_pos.file_hash(),
+                        name_start,
+                        def_loc.fhash,
+                        def_loc.start,
+                        use_name,
+                    ),
+                );
+                return;
+            }
+        }
+        debug_assert!(false);
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
     }
 }
 
@@ -1340,7 +1740,11 @@ pub fn on_use_request(
     id: RequestId,
     use_def_action: impl Fn(&UseDef) -> Option<serde_json::Value>,
 ) {
+<<<<<<< HEAD
     let mut result = None;
+=======
+    let mut result = Option::<serde_json::Value>::None;
+>>>>>>> 8a48fe92a (Added async symbolication on file saves)
 
     let mut use_def_found = false;
     if let Some(mod_ident) = symbols.mod_ident_map.get(&PathBuf::from(use_fpath)) {

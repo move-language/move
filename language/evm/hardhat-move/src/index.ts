@@ -8,11 +8,22 @@ import {
 } from "./task-names";
 import { compile } from "./compile"
 import { MoveBuild } from "./types";
-import { DEFAULT_MOVE_ARCH } from "./constants"
+import { DEFAULT_ARCH } from "./constants"
 import { locateMoveExecutablePath } from "./executable"
 
 extendConfig((config, userConfig) => {
-    const defaultConfig = userConfig.move ?? { arch: DEFAULT_MOVE_ARCH };
+    let defaultConfig: Partial<MoveBuild> = {};
+    if (userConfig.move) {
+        // in order to handle corner case: { move: {} } in hardhat.config.js
+        const isEmpty = Object.keys(userConfig.move).length === 0;
+        if (isEmpty) {
+            defaultConfig = { arch: DEFAULT_ARCH };
+        }
+    }
+    const isEmpty = Object.keys(defaultConfig).length === 0;
+    if (isEmpty) {
+        defaultConfig = userConfig.move ?? { arch: DEFAULT_ARCH };
+    }
     config.move = { ...defaultConfig, ...config.move };
 });
 
@@ -71,7 +82,7 @@ subtask(TASK_COMPILE_MOVE_RUN_BINARY)
 
 subtask(TASK_COMPILE_MOVE_GET_BUILD)
     .setAction(async (): Promise<MoveBuild> => {
-        let arch = DEFAULT_MOVE_ARCH;
+        let arch = DEFAULT_ARCH;
 
         let locateRes = await locateMoveExecutablePath();
         if (locateRes.isErr()) {

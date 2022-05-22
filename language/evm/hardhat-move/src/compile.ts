@@ -6,6 +6,7 @@ import { executeChildProcess } from "./executable"
 import { readTextFile, resultify, readDir } from "./util"
 import { Artifacts as ArtifactsImpl } from "hardhat/internal/artifacts";
 import { Artifact, Artifacts, HardhatConfig } from "hardhat/types";
+import { ARCH_ETHEREUM } from "./constants";
 
 // Utilities to List Move packages in the Contracts Directory
 async function isMovePackage(path: Fs.PathLike): Promise<boolean> {
@@ -178,6 +179,7 @@ async function generateArtifacts(hardhatRootPath: string, packagePath: string): 
         return err(genArtifactsRes.error);
     }
 
+    console.log(`Successfully generate ABI for ${packagePath}`);
     return ok(genArtifactsRes.value);
 }
 
@@ -201,13 +203,29 @@ export async function compile(
     let buildResults = await Promise.all(
         packagePaths.map(path => buildPackage(arch, movePath, path.toString())));
 
-    let genArtifactResults = await Promise.all(
-        packagePaths.map(path => generateArtifacts(config.paths.root, path.toString()))); 
-
     let failedToBuildAll = false;
     console.assert(packagePaths.length == buildResults.length);
-    for (let idx in packagePaths) {
 
+    for (let idx in packagePaths) {
+        let res = buildResults[idx];
+        if (!res.isOk()) {
+            failedToBuildAll = true;
+        }
+    }
+
+    if (failedToBuildAll) {
+        // TODO: terminate gracefully
+        throw new Error("Failed to build one or more Move packages");
+    }
+
+    if (arch != ARCH_ETHEREUM) return;
+
+    let genArtifactResults = await Promise.all(
+        packagePaths.map(path => generateArtifacts(config.paths.root, path.toString())));
+
+    let failedToGenABIAll = false;
+    console.assert(packagePaths.length == genArtifactResults.length);
+    for (let idx in packagePaths) {
         let packagePathRel = Path.relative(config.paths.root, packagePaths[idx].toString());
         let res = genArtifactResults[idx];
 
@@ -224,12 +242,12 @@ export async function compile(
             artifactsImpl.addValidArtifacts([{ sourceName: packagePathRel, artifacts: contractNames }]);
         }
         else {
-            failedToBuildAll = true;
+            failedToGenABIAll = true;
         }
     }
 
-    if (failedToBuildAll) {
+    if (failedToGenABIAll) {
         // TODO: terminate gracefully
-        throw new Error("Failed to build one or more Move packages");
+        throw new Error("Failed to generate ABI for one or more Move packages");
     }
 }

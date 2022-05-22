@@ -110,7 +110,9 @@ fn main() {
     loop {
         match context.connection.receiver.recv() {
             Ok(message) => match message {
-                Message::Request(request) => on_request(&context, &request, &symbols),
+                Message::Request(request) => {
+                    on_request(&context, &request, &context.symbols.lock().unwrap())
+                }
                 Message::Response(response) => on_response(&context, &response),
                 Message::Notification(notification) => {
                     match notification.method.as_str() {

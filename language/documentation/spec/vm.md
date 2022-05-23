@@ -55,7 +55,7 @@ So a reference to a loaded module does not perform any fetching from the
 network, or verification, or transformations into runtime structures
 (e.g. linking).
 
-In a typical client, onsistency of the code cache can be broken by a system transaction
+In a typical client, consistency of the code cache can be broken by a system transaction
 that performs a hard upgrade, requiring the adapter to stop processing
 transactions until a restart takes place. Other clients may have different
 "code models" (e.g. some form of versioning).

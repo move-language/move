@@ -266,21 +266,21 @@ impl Symbolicator {
         }
 
         let build_plan = BuildPlan::create(resolution_graph)?;
-        let mut typed_ast = vec![];
+        let mut typed_ast = None;
         build_plan.compile_with_driver(&mut std::io::sink(), |compiler| {
             let (files, comments_and_compiler_res) = compiler.run::<PASS_TYPING>().unwrap();
             let (_, compiler) =
                 diagnostics::unwrap_or_report_diagnostics(&files, comments_and_compiler_res);
             let (compiler, typed_program) = compiler.into_ast();
-            typed_ast.push(typed_program.clone());
+            typed_ast = Some(typed_program.clone());
             let compilation_result = compiler.at_typing(typed_program).build();
 
             let (units, _) = diagnostics::unwrap_or_report_diagnostics(&files, compilation_result);
             Ok((files, units))
         })?;
 
-        debug_assert!(typed_ast.len() == 1);
-        let modules = &typed_ast.get(0).unwrap().modules;
+        debug_assert!(typed_ast.is_some());
+        let modules = &typed_ast.unwrap().modules;
 
         let mut mod_outer_defs = BTreeMap::new();
         let mut references = BTreeMap::new();
@@ -314,7 +314,7 @@ impl Symbolicator {
             files,
             file_id_mapping,
             type_params: Scope::new(),
-            current_mod: Option::None,
+            current_mod: None,
         };
 
         for (_, module_ident, module_def) in modules {
@@ -1371,7 +1371,7 @@ pub fn on_use_request(
     id: RequestId,
     use_def_action: impl Fn(&UseDef) -> Option<serde_json::Value>,
 ) {
-    let mut result = Option::<serde_json::Value>::None;
+    let mut result = None;
 
     let mut use_def_found = false;
     if let Some(mod_ident) = symbols.mod_ident_map.get(&PathBuf::from(use_fpath)) {

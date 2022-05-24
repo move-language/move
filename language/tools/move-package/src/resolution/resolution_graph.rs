@@ -23,7 +23,7 @@ use ptree::{print_tree, TreeBuilder};
 use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet},
-    fs::read_to_string,
+    fs,
     path::{Path, PathBuf},
     process::Command,
     rc::Rc,
@@ -500,7 +500,7 @@ impl ResolvingGraph {
         mut root_path: PathBuf,
     ) -> Result<(SourceManifest, PathBuf)> {
         root_path.push(&dep.local);
-        match std::fs::read_to_string(&root_path.join(SourcePackageLayout::Manifest.path())) {
+        match fs::read_to_string(&root_path.join(SourcePackageLayout::Manifest.path())) {
             Ok(contents) => {
                 let source_package: SourceManifest =
                     parse_move_manifest_string(contents).and_then(parse_source_manifest)?;
@@ -710,6 +710,23 @@ impl ResolvedGraph {
             .iter()
             .map(|(name, addr)| (*name, *addr))
     }
+
+    pub fn file_sources(&self) -> BTreeMap<FileHash, (Symbol, String)> {
+        self.package_table
+            .iter()
+            .flat_map(|(_, rpkg)| {
+                rpkg.get_sources(&self.build_options)
+                    .unwrap()
+                    .iter()
+                    .map(|fname| {
+                        let contents = fs::read_to_string(Path::new(fname.as_str())).unwrap();
+                        let fhash = FileHash::new(&contents);
+                        (fhash, (*fname, contents))
+                    })
+                    .collect::<BTreeMap<_, _>>()
+            })
+            .collect()
+    }
 }
 
 impl ResolvedPackage {
@@ -768,24 +785,5 @@ impl ResolvedPackage {
         } else {
             self.source_package.dependencies.keys().copied().collect()
         }
-    }
-}
-
-impl ResolvedGraph {
-    pub fn file_sources(&self) -> BTreeMap<FileHash, (Symbol, String)> {
-        self.package_table
-            .iter()
-            .flat_map(|(_, rpkg)| {
-                rpkg.get_sources(&self.build_options)
-                    .unwrap()
-                    .iter()
-                    .map(|fname| {
-                        let contents = read_to_string(Path::new(fname.as_str())).unwrap();
-                        let fhash = FileHash::new(&contents);
-                        (fhash, (*fname, contents))
-                    })
-                    .collect::<BTreeMap<_, _>>()
-            })
-            .collect()
     }
 }

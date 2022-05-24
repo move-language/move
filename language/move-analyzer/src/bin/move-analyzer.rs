@@ -110,9 +110,7 @@ fn main() {
     loop {
         match context.connection.receiver.recv() {
             Ok(message) => match message {
-                Message::Request(request) => {
-                    on_request(&context, &request, &context.symbols.lock().unwrap())
-                }
+                Message::Request(request) => on_request(&context, &request),
                 Message::Response(response) => on_response(&context, &response),
                 Message::Notification(notification) => {
                     match notification.method.as_str() {
@@ -138,7 +136,7 @@ fn main() {
     eprintln!("Shut down language server '{}'.", exe);
 }
 
-fn on_request(context: &Context, request: &Request, symbols: &symbols::Symbols) {
+fn on_request(context: &Context, request: &Request) {
     match request.method.as_str() {
         lsp_types::request::Completion::METHOD => on_completion_request(context, request),
         lsp_types::request::GotoDefinition::METHOD => {

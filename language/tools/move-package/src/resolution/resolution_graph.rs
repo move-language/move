@@ -15,7 +15,7 @@ use crate::{
     BuildConfig,
 };
 use anyhow::{bail, Context, Result};
-use move_command_line_common::files::find_move_filenames;
+use move_command_line_common::files::{find_move_filenames, FileHash};
 use move_core_types::account_address::AccountAddress;
 use move_symbol_pool::Symbol;
 use petgraph::{algo, graphmap::DiGraphMap, Outgoing};
@@ -23,6 +23,7 @@ use ptree::{print_tree, TreeBuilder};
 use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet},
+    fs,
     path::{Path, PathBuf},
     process::Command,
     rc::Rc,
@@ -499,7 +500,7 @@ impl ResolvingGraph {
         mut root_path: PathBuf,
     ) -> Result<(SourceManifest, PathBuf)> {
         root_path.push(&dep.local);
-        match std::fs::read_to_string(&root_path.join(SourcePackageLayout::Manifest.path())) {
+        match fs::read_to_string(&root_path.join(SourcePackageLayout::Manifest.path())) {
             Ok(contents) => {
                 let source_package: SourceManifest =
                     parse_move_manifest_string(contents).and_then(parse_source_manifest)?;
@@ -708,6 +709,23 @@ impl ResolvedGraph {
             .resolution_table
             .iter()
             .map(|(name, addr)| (*name, *addr))
+    }
+
+    pub fn file_sources(&self) -> BTreeMap<FileHash, (Symbol, String)> {
+        self.package_table
+            .iter()
+            .flat_map(|(_, rpkg)| {
+                rpkg.get_sources(&self.build_options)
+                    .unwrap()
+                    .iter()
+                    .map(|fname| {
+                        let contents = fs::read_to_string(Path::new(fname.as_str())).unwrap();
+                        let fhash = FileHash::new(&contents);
+                        (fhash, (*fname, contents))
+                    })
+                    .collect::<BTreeMap<_, _>>()
+            })
+            .collect()
     }
 }
 

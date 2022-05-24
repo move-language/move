@@ -5,13 +5,15 @@
 use clap::Parser;
 use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
-    notification::Notification as _, request::Request as _, CompletionOptions, SaveOptions,
+    notification::Notification as _, request::Request as _, CompletionOptions, OneOf, SaveOptions,
     TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
     WorkDoneProgressOptions,
 };
+
 use move_analyzer::{
     completion::on_completion_request,
     context::Context,
+    symbols,
     vfs::{on_text_document_sync_notification, VirtualFileSystem},
 };
 
@@ -81,18 +83,38 @@ fn main() {
                 work_done_progress: None,
             },
         }),
+        definition_provider: Some(OneOf::Left(symbols::DEFS_AND_REFS_SUPPORT)),
+        references_provider: Some(OneOf::Left(symbols::DEFS_AND_REFS_SUPPORT)),
         ..Default::default()
     })
     .expect("could not serialize server capabilities");
-    context
+
+    let client_response: serde_json::Value = context
         .connection
         .initialize(capabilities)
         .expect("could not initialize the connection");
 
+    let initialize_params: lsp_types::InitializeParams =
+        serde_json::from_value(client_response).expect("could not deserialize client capabilities");
+
+    let symbols = if symbols::DEFS_AND_REFS_SUPPORT {
+        eprintln!("symbolication started");
+
+        match initialize_params.root_uri {
+            Some(uri) => match symbols::Symbolicator::get_symbols(&uri.to_file_path().unwrap()) {
+                Ok(v) => v,
+                Err(_) => symbols::Symbolicator::empty_symbols(),
+            },
+            None => symbols::Symbolicator::empty_symbols(),
+        }
+    } else {
+        symbols::Symbolicator::empty_symbols()
+    };
+
     loop {
         match context.connection.receiver.recv() {
             Ok(message) => match message {
-                Message::Request(request) => on_request(&context, &request),
+                Message::Request(request) => on_request(&context, &request, &symbols),
                 Message::Response(response) => on_response(&context, &response),
                 Message::Notification(notification) => {
                     match notification.method.as_str() {
@@ -117,9 +139,15 @@ fn main() {
     eprintln!("Shut down language server '{}'.", exe);
 }
 
-fn on_request(context: &Context, request: &Request) {
+fn on_request(context: &Context, request: &Request, symbols: &symbols::Symbols) {
     match request.method.as_str() {
         lsp_types::request::Completion::METHOD => on_completion_request(context, request),
+        lsp_types::request::GotoDefinition::METHOD => {
+            symbols::on_go_to_def_request(context, request, symbols)
+        }
+        lsp_types::request::References::METHOD => {
+            symbols::on_references_request(context, request, symbols)
+        }
         _ => todo!("handle request '{}' from client", request.method),
     }
 }

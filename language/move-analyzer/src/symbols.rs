@@ -49,11 +49,12 @@
 use crate::context::Context;
 use anyhow::Result;
 use codespan_reporting::files::{Files, SimpleFiles};
+use im::ordmap::OrdMap;
 use lsp_server::{Request, RequestId};
 use lsp_types::{GotoDefinitionParams, Location, Position, Range, ReferenceParams};
 use std::{
     cmp,
-    collections::{BTreeMap, BTreeSet, VecDeque},
+    collections::{BTreeMap, BTreeSet},
     fs,
     path::{Path, PathBuf},
 };
@@ -141,9 +142,6 @@ struct ModuleDefs {
     functions: BTreeMap<Symbol, Position>,
 }
 
-/// Holds information about local definitions in a given scope
-type Scope = BTreeMap<Symbol, DefLoc>;
-
 /// Data used during symbolication
 pub struct Symbolicator {
     /// Outermost definitions in a module (structs, consts, functions)
@@ -152,8 +150,8 @@ pub struct Symbolicator {
     files: SimpleFiles<Symbol, String>,
     /// A mapping from file hashes to file IDs (used to obtain source file locations)
     file_id_mapping: BTreeMap<FileHash, usize>,
-    /// Scope to contain type params where relevant (e.g. when processing function definition)
-    type_params: Scope,
+    /// Contains type params where relevant (e.g. when processing function definition)
+    type_params: BTreeMap<Symbol, DefLoc>,
     /// Current processed module (always set before module processing starts)
     current_mod: Option<ModuleIdent_>,
 }
@@ -313,7 +311,7 @@ impl Symbolicator {
             mod_outer_defs,
             files,
             file_id_mapping,
-            type_params: Scope::new(),
+            type_params: BTreeMap::new(),
             current_mod: None,
         };
 
@@ -498,7 +496,7 @@ impl Symbolicator {
         use_defs: &mut UseDefMap,
     ) {
         // create scope designated to contain type parameters (if any)
-        let mut tp_scope = Scope::new();
+        let mut tp_scope = BTreeMap::new();
         for stp in &struct_def.type_parameters {
             self.add_type_param(&stp.param, &mut tp_scope, references, use_defs);
         }
@@ -518,17 +516,15 @@ impl Symbolicator {
         use_defs: &mut UseDefMap,
     ) {
         // create scope designated to contain type parameters (if any)
-        let mut tp_scope = Scope::new();
+        let mut tp_scope = BTreeMap::new();
         for tp in &fun.signature.type_parameters {
             self.add_type_param(tp, &mut tp_scope, references, use_defs);
         }
         self.type_params = tp_scope;
 
-        let mut scope_stack = VecDeque::new();
         // scope for the main function scope (for parameters and
         // function body)
-        let fn_scope = Scope::new();
-        scope_stack.push_front(fn_scope);
+        let mut scope = OrdMap::new();
 
         for (pname, ptype) in &fun.signature.parameters {
             self.add_type_id_use_def(ptype, references, use_defs);
@@ -537,7 +533,7 @@ impl Symbolicator {
             self.add_def(
                 &pname.loc(),
                 &pname.value(),
-                &mut scope_stack,
+                &mut scope,
                 references,
                 use_defs,
             );
@@ -546,26 +542,14 @@ impl Symbolicator {
         match &fun.body.value {
             FunctionBody_::Defined(sequence) => {
                 for seq_item in sequence {
-                    self.seq_item_symbols(&mut scope_stack, seq_item, references, use_defs);
+                    self.seq_item_symbols(&mut scope, seq_item, references, use_defs);
                 }
             }
             FunctionBody_::Native => (),
         }
 
-        // pop the main function scope
-        scope_stack.pop_front();
-        debug_assert!(scope_stack.is_empty());
-
-        // after processing the function body, create a scope to process return types
-        let ret_scope = Scope::new();
-        scope_stack.push_front(ret_scope);
-
+        // process return types
         self.add_type_id_use_def(&fun.signature.return_type, references, use_defs);
-
-        // pop the return parameters scope
-        scope_stack.pop_front();
-        debug_assert!(scope_stack.is_empty());
-
         // process optional "acquires" clause
         for name in fun.acquires.keys() {
             self.add_struct_use_def(
@@ -603,28 +587,28 @@ impl Symbolicator {
     /// Get symbols for a sequence representing function body
     fn seq_item_symbols(
         &self,
-        scope_stack: &mut VecDeque<Scope>,
+        scope: &mut OrdMap<Symbol, DefLoc>,
         seq_item: &SequenceItem,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
         use SequenceItem_ as I;
         match &seq_item.value {
-            I::Seq(e) => self.exp_symbols(e, scope_stack, references, use_defs),
+            I::Seq(e) => self.exp_symbols(e, scope, references, use_defs),
             I::Declare(lvalues) => {
-                self.lvalue_list_symbols(true, lvalues, scope_stack, references, use_defs)
+                self.lvalue_list_symbols(true, lvalues, scope, references, use_defs)
             }
             I::Bind(lvalues, opt_types, e) => {
                 // process RHS first to avoid accidentally binding its identifiers to LHS (which now
                 // will be put into the current scope only after RHS is processed)
-                self.exp_symbols(e, scope_stack, references, use_defs);
+                self.exp_symbols(e, scope, references, use_defs);
                 for opt_t in opt_types {
                     match opt_t {
                         Some(t) => self.add_type_id_use_def(t, references, use_defs),
                         None => (),
                     }
                 }
-                self.lvalue_list_symbols(true, lvalues, scope_stack, references, use_defs);
+                self.lvalue_list_symbols(true, lvalues, scope, references, use_defs);
             }
         }
     }
@@ -634,12 +618,12 @@ impl Symbolicator {
         &self,
         define: bool,
         lvalues: &LValueList,
-        scope_stack: &mut VecDeque<Scope>,
+        scope: &mut OrdMap<Symbol, DefLoc>,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
         for lval in &lvalues.value {
-            self.lvalue_symbols(define, lval, scope_stack, references, use_defs);
+            self.lvalue_symbols(define, lval, scope, references, use_defs);
         }
     }
 
@@ -648,22 +632,16 @@ impl Symbolicator {
         &self,
         define: bool,
         lval: &LValue,
-        scope_stack: &mut VecDeque<Scope>,
+        scope: &mut OrdMap<Symbol, DefLoc>,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
         match &lval.value {
             LValue_::Var(var, _) => {
                 if define {
-                    self.add_def(&var.loc(), &var.value(), scope_stack, references, use_defs);
+                    self.add_def(&var.loc(), &var.value(), scope, references, use_defs);
                 } else {
-                    self.add_local_use_def(
-                        &var.value(),
-                        &var.loc(),
-                        references,
-                        scope_stack,
-                        use_defs,
-                    )
+                    self.add_local_use_def(&var.value(), &var.loc(), references, scope, use_defs)
                 }
             }
             LValue_::Unpack(ident, name, tparams, fields) => {
@@ -673,7 +651,7 @@ impl Symbolicator {
                     name,
                     tparams,
                     fields,
-                    scope_stack,
+                    scope,
                     references,
                     use_defs,
                 );
@@ -685,7 +663,7 @@ impl Symbolicator {
                     name,
                     tparams,
                     fields,
-                    scope_stack,
+                    scope,
                     references,
                     use_defs,
                 );
@@ -702,7 +680,7 @@ impl Symbolicator {
         name: &StructName,
         tparams: &Vec<Type>,
         fields: &Fields<(Type, LValue)>,
-        scope_stack: &mut VecDeque<Scope>,
+        scope: &mut OrdMap<Symbol, DefLoc>,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
@@ -712,7 +690,7 @@ impl Symbolicator {
             // add use of the field name
             self.add_field_use_def(ident, &name.value(), fname, &fpos, references, use_defs);
             // add definition or use of a variable used for struct field unpacking
-            self.lvalue_symbols(define, lvalue, scope_stack, references, use_defs);
+            self.lvalue_symbols(define, lvalue, scope, references, use_defs);
         }
         // add type params
         for t in tparams {
@@ -724,7 +702,7 @@ impl Symbolicator {
     fn exp_symbols(
         &self,
         exp: &Exp,
-        scope_stack: &mut VecDeque<Scope>,
+        scope: &mut OrdMap<Symbol, DefLoc>,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
@@ -733,14 +711,12 @@ impl Symbolicator {
             E::Move {
                 from_user: _,
                 var: v,
-            } => self.add_local_use_def(&v.value(), &v.loc(), references, scope_stack, use_defs),
+            } => self.add_local_use_def(&v.value(), &v.loc(), references, scope, use_defs),
             E::Copy {
                 from_user: _,
                 var: v,
-            } => self.add_local_use_def(&v.value(), &v.loc(), references, scope_stack, use_defs),
-            E::Use(v) => {
-                self.add_local_use_def(&v.value(), &v.loc(), references, scope_stack, use_defs)
-            }
+            } => self.add_local_use_def(&v.value(), &v.loc(), references, scope, use_defs),
+            E::Use(v) => self.add_local_use_def(&v.value(), &v.loc(), references, scope, use_defs),
             E::Constant(mod_ident_opt, name) => self.add_const_use_def(
                 mod_ident_opt,
                 &name.value(),
@@ -748,9 +724,7 @@ impl Symbolicator {
                 references,
                 use_defs,
             ),
-            E::ModuleCall(mod_call) => {
-                self.mod_call_symbols(mod_call, scope_stack, references, use_defs)
-            }
+            E::ModuleCall(mod_call) => self.mod_call_symbols(mod_call, scope, references, use_defs),
             E::Builtin(builtin_fun, exp) => {
                 use BuiltinFunction_ as BF;
                 match &builtin_fun.value {
@@ -761,61 +735,60 @@ impl Symbolicator {
                     BF::Freeze(t) => self.add_type_id_use_def(t, references, use_defs),
                     _ => (),
                 }
-                self.exp_symbols(exp, scope_stack, references, use_defs);
+                self.exp_symbols(exp, scope, references, use_defs);
             }
             E::Vector(_, _, t, exp) => {
                 self.add_type_id_use_def(t, references, use_defs);
-                self.exp_symbols(exp, scope_stack, references, use_defs);
+                self.exp_symbols(exp, scope, references, use_defs);
             }
             E::IfElse(cond, t, f) => {
-                self.exp_symbols(cond, scope_stack, references, use_defs);
-                self.exp_symbols(t, scope_stack, references, use_defs);
-                self.exp_symbols(f, scope_stack, references, use_defs);
+                self.exp_symbols(cond, scope, references, use_defs);
+                self.exp_symbols(t, scope, references, use_defs);
+                self.exp_symbols(f, scope, references, use_defs);
             }
             E::While(cond, body) => {
-                self.exp_symbols(cond, scope_stack, references, use_defs);
-                self.exp_symbols(body, scope_stack, references, use_defs);
+                self.exp_symbols(cond, scope, references, use_defs);
+                self.exp_symbols(body, scope, references, use_defs);
             }
             E::Loop { has_break: _, body } => {
-                self.exp_symbols(body, scope_stack, references, use_defs);
+                self.exp_symbols(body, scope, references, use_defs);
             }
             E::Block(sequence) => {
                 // a block is a new var scope
-                scope_stack.push_front(Scope::new());
+                let mut new_scope = scope.clone();
                 for seq_item in sequence {
-                    self.seq_item_symbols(scope_stack, seq_item, references, use_defs);
+                    self.seq_item_symbols(&mut new_scope, seq_item, references, use_defs);
                 }
-                scope_stack.pop_front();
             }
             E::Assign(lvalues, opt_types, e) => {
-                self.lvalue_list_symbols(false, lvalues, scope_stack, references, use_defs);
+                self.lvalue_list_symbols(false, lvalues, scope, references, use_defs);
                 for opt_t in opt_types {
                     match opt_t {
                         Some(t) => self.add_type_id_use_def(t, references, use_defs),
                         None => (),
                     }
                 }
-                self.exp_symbols(e, scope_stack, references, use_defs);
+                self.exp_symbols(e, scope, references, use_defs);
             }
             E::Mutate(lhs, rhs) => {
-                self.exp_symbols(lhs, scope_stack, references, use_defs);
-                self.exp_symbols(rhs, scope_stack, references, use_defs);
+                self.exp_symbols(lhs, scope, references, use_defs);
+                self.exp_symbols(rhs, scope, references, use_defs);
             }
             E::Return(exp) => {
-                self.exp_symbols(exp, scope_stack, references, use_defs);
+                self.exp_symbols(exp, scope, references, use_defs);
             }
             E::Abort(exp) => {
-                self.exp_symbols(exp, scope_stack, references, use_defs);
+                self.exp_symbols(exp, scope, references, use_defs);
             }
             E::Dereference(exp) => {
-                self.exp_symbols(exp, scope_stack, references, use_defs);
+                self.exp_symbols(exp, scope, references, use_defs);
             }
             E::UnaryExp(_, exp) => {
-                self.exp_symbols(exp, scope_stack, references, use_defs);
+                self.exp_symbols(exp, scope, references, use_defs);
             }
             E::BinopExp(lhs, _, _, rhs) => {
-                self.exp_symbols(lhs, scope_stack, references, use_defs);
-                self.exp_symbols(rhs, scope_stack, references, use_defs);
+                self.exp_symbols(lhs, scope, references, use_defs);
+                self.exp_symbols(rhs, scope, references, use_defs);
             }
             E::Pack(ident, name, tparams, fields) => {
                 self.pack_symbols(
@@ -823,7 +796,7 @@ impl Symbolicator {
                     name,
                     tparams,
                     fields,
-                    scope_stack,
+                    scope,
                     references,
                     use_defs,
                 );
@@ -836,11 +809,11 @@ impl Symbolicator {
                         ExpListItem::Single(e, _) => e,
                         ExpListItem::Splat(_, e, _) => e,
                     };
-                    self.exp_symbols(exp, scope_stack, references, use_defs);
+                    self.exp_symbols(exp, scope, references, use_defs);
                 }
             }
             E::Borrow(_, exp, field) => {
-                self.exp_symbols(exp, scope_stack, references, use_defs);
+                self.exp_symbols(exp, scope, references, use_defs);
                 // get expression type to match fname to a struct def
                 self.add_field_type_use_def(
                     &exp.ty,
@@ -851,17 +824,17 @@ impl Symbolicator {
                 );
             }
             E::TempBorrow(_, exp) => {
-                self.exp_symbols(exp, scope_stack, references, use_defs);
+                self.exp_symbols(exp, scope, references, use_defs);
             }
             E::BorrowLocal(_, var) => {
-                self.add_local_use_def(&var.value(), &var.loc(), references, scope_stack, use_defs)
+                self.add_local_use_def(&var.value(), &var.loc(), references, scope, use_defs)
             }
             E::Cast(exp, t) => {
-                self.exp_symbols(exp, scope_stack, references, use_defs);
+                self.exp_symbols(exp, scope, references, use_defs);
                 self.add_type_id_use_def(t, references, use_defs);
             }
             E::Annotate(exp, t) => {
-                self.exp_symbols(exp, scope_stack, references, use_defs);
+                self.exp_symbols(exp, scope, references, use_defs);
                 self.add_type_id_use_def(t, references, use_defs);
             }
 
@@ -899,7 +872,7 @@ impl Symbolicator {
     fn mod_call_symbols(
         &self,
         mod_call: &ModuleCall,
-        scope_stack: &mut VecDeque<Scope>,
+        scope: &mut OrdMap<Symbol, DefLoc>,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
@@ -919,7 +892,7 @@ impl Symbolicator {
         }
 
         // handle arguments
-        self.exp_symbols(&mod_call.arguments, scope_stack, references, use_defs);
+        self.exp_symbols(&mod_call.arguments, scope, references, use_defs);
     }
 
     /// Get symbols for the pack expression
@@ -929,7 +902,7 @@ impl Symbolicator {
         name: &StructName,
         tparams: &Vec<Type>,
         fields: &Fields<(Type, Exp)>,
-        scope_stack: &mut VecDeque<Scope>,
+        scope: &mut OrdMap<Symbol, DefLoc>,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
@@ -939,7 +912,7 @@ impl Symbolicator {
             // add use of the field name
             self.add_field_use_def(ident, &name.value(), fname, &fpos, references, use_defs);
             // add field initialization expression
-            self.exp_symbols(init_exp, scope_stack, references, use_defs);
+            self.exp_symbols(init_exp, scope, references, use_defs);
         }
         // add type params
         for t in tparams {
@@ -953,7 +926,7 @@ impl Symbolicator {
     fn add_type_param(
         &mut self,
         tp: &TParam,
-        tp_scope: &mut Scope,
+        tp_scope: &mut BTreeMap<Symbol, DefLoc>,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
@@ -1197,7 +1170,7 @@ impl Symbolicator {
         &self,
         pos: &Loc,
         name: &Symbol,
-        scope_stack: &mut VecDeque<Scope>,
+        scope: &mut OrdMap<Symbol, DefLoc>,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
     ) {
@@ -1207,12 +1180,10 @@ impl Symbolicator {
                     fhash: pos.file_hash(),
                     start: name_start,
                 };
-                let mut scope = scope_stack.pop_front().unwrap(); // scope stack guaranteed non-empty
                 scope.insert(*name, def_loc);
                 // in other languages only one definition is allowed per scope but in move an (and
                 // in rust) a variable can be re-defined in the same scope replacing the previous
                 // definition
-                scope_stack.push_front(scope);
 
                 // enter self-definition for def name
                 use_defs.insert(
@@ -1240,7 +1211,7 @@ impl Symbolicator {
         use_name: &Symbol,
         use_pos: &Loc,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        scope_stack: &VecDeque<Scope>,
+        scope: &OrdMap<Symbol, DefLoc>,
         use_defs: &mut UseDefMap,
     ) {
         let name_start = match Self::get_start_loc(use_pos, &self.files, &self.file_id_mapping) {
@@ -1251,23 +1222,21 @@ impl Symbolicator {
             }
         };
 
-        for s in scope_stack {
-            if let Some(def_loc) = s.get(use_name) {
-                use_defs.insert(
-                    name_start.line,
-                    UseDef::new(
-                        references,
-                        use_pos.file_hash(),
-                        name_start,
-                        def_loc.fhash,
-                        def_loc.start,
-                        use_name,
-                    ),
-                );
-                return;
-            }
+        if let Some(def_loc) = scope.get(use_name) {
+            use_defs.insert(
+                name_start.line,
+                UseDef::new(
+                    references,
+                    use_pos.file_hash(),
+                    name_start,
+                    def_loc.fhash,
+                    def_loc.start,
+                    use_name,
+                ),
+            );
+        } else {
+            debug_assert!(false);
         }
-        debug_assert!(false);
     }
 }
 

@@ -207,23 +207,23 @@ impl SymbolicatorRunner {
                     // hold the lock only as long as it takes to get the data, rather than through
                     // the whole symbolication process (hence a separate scope here)
                     let mut symbolicate = mtx.lock().unwrap();
-                    if *symbolicate == RunnerState::Quit {
-                        break;
-                    }
-                    if *symbolicate == RunnerState::Run {
-                        *symbolicate = RunnerState::Wait;
-                        true
-                    } else {
-                        // wait for next request
-                        symbolicate = cvar.wait(symbolicate).unwrap();
-                        if *symbolicate == RunnerState::Quit {
-                            break;
-                        }
-                        if *symbolicate == RunnerState::Run {
+                    match *symbolicate {
+                        RunnerState::Quit => break,
+                        RunnerState::Run => {
                             *symbolicate = RunnerState::Wait;
                             true
-                        } else {
-                            false
+                        }
+                        RunnerState::Wait => {
+                            // wait for next request
+                            symbolicate = cvar.wait(symbolicate).unwrap();
+                            match *symbolicate {
+                                RunnerState::Quit => break,
+                                RunnerState::Run => {
+                                    *symbolicate = RunnerState::Wait;
+                                    true
+                                }
+                                RunnerState::Wait => false,
+                            }
                         }
                     }
                 };

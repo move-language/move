@@ -47,7 +47,7 @@
 //! matching uses to a definition in the innermost scope.
 
 use crate::context::Context;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use codespan_reporting::files::{Files, SimpleFiles};
 use im::ordmap::OrdMap;
 use lsp_server::{Request, RequestId};
@@ -57,13 +57,14 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
     path::{Path, PathBuf},
+    sync::{Arc, Condvar, Mutex},
+    thread,
 };
 use tempfile::tempdir;
 use url::Url;
 
 use move_command_line_common::files::FileHash;
 use move_compiler::{
-    diagnostics,
     expansion::ast::{Fields, ModuleIdent, ModuleIdent_},
     naming::ast::{StructDefinition, StructFields, TParam, Type, TypeName_, Type_},
     parser::ast::StructName,
@@ -156,6 +157,11 @@ pub struct Symbolicator {
     current_mod: Option<ModuleIdent_>,
 }
 
+/// Maps a line number to a list of use-def pairs on a given line (use-def set is sorted by
+/// col_start)
+#[derive(Debug)]
+struct UseDefMap(BTreeMap<u32, BTreeSet<UseDef>>);
+
 /// Result of the symbolication process
 pub struct Symbols {
     /// A map from def locations to all the references (uses)
@@ -166,6 +172,91 @@ pub struct Symbols {
     mod_ident_map: BTreeMap<PathBuf, ModuleIdent_>,
     /// A mapping from file hashes to file names
     file_name_mapping: BTreeMap<FileHash, Symbol>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Copy)]
+enum RunnerState {
+    Run,
+    Wait,
+    Quit,
+}
+
+/// Data used during symbolication running and symbolication info updating
+pub struct SymbolicatorRunner {
+    mtx_cvar: Arc<(Mutex<RunnerState>, Condvar)>,
+}
+
+impl SymbolicatorRunner {
+    /// Create a new idle runner (one that does not actually symbolicate)
+    pub fn idle() -> Self {
+        let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
+        SymbolicatorRunner { mtx_cvar }
+    }
+
+    /// Create a new runner
+    pub fn new(uri: &Url, symbols: Arc<Mutex<Symbols>>) -> Self {
+        let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
+        let thread_mtx_cvar = mtx_cvar.clone();
+        let pkg_path = uri.to_file_path().unwrap();
+
+        thread::spawn(move || {
+            let (mtx, cvar) = &*thread_mtx_cvar;
+            // infinite loop to wait for symbolication requests
+            loop {
+                let get_symbols = {
+                    // hold the lock only as long as it takes to get the data, rather than through
+                    // the whole symbolication process (hence a separate scope here)
+                    let mut symbolicate = mtx.lock().unwrap();
+                    match *symbolicate {
+                        RunnerState::Quit => break,
+                        RunnerState::Run => {
+                            *symbolicate = RunnerState::Wait;
+                            true
+                        }
+                        RunnerState::Wait => {
+                            // wait for next request
+                            symbolicate = cvar.wait(symbolicate).unwrap();
+                            match *symbolicate {
+                                RunnerState::Quit => break,
+                                RunnerState::Run => {
+                                    *symbolicate = RunnerState::Wait;
+                                    true
+                                }
+                                RunnerState::Wait => false,
+                            }
+                        }
+                    }
+                };
+                if get_symbols {
+                    eprintln!("symbolication started");
+                    match Symbolicator::get_symbols(&pkg_path) {
+                        Ok(syms) => {
+                            eprintln!("symbolication finished");
+                            let mut old_symbols = symbols.lock().unwrap();
+                            *old_symbols = syms;
+                        }
+                        Err(err) => eprintln!("symbolication failed: {:?}", err),
+                    }
+                }
+            }
+        });
+
+        SymbolicatorRunner { mtx_cvar }
+    }
+
+    pub fn run(&self) {
+        let (mtx, cvar) = &*self.mtx_cvar;
+        let mut symbolicate = mtx.lock().unwrap();
+        *symbolicate = RunnerState::Run;
+        cvar.notify_one();
+    }
+
+    pub fn quit(&self) {
+        let (mtx, cvar) = &*self.mtx_cvar;
+        let mut symbolicate = mtx.lock().unwrap();
+        *symbolicate = RunnerState::Quit;
+        cvar.notify_one();
+    }
 }
 
 impl UseDef {
@@ -219,11 +310,6 @@ impl PartialEq for UseDef {
     }
 }
 
-/// Maps a line number to a list of use-def pairs on a given line (use-def set is sorted by
-/// col_start)
-#[derive(Debug)]
-struct UseDefMap(BTreeMap<u32, BTreeSet<UseDef>>);
-
 impl UseDefMap {
     fn new() -> Self {
         Self(BTreeMap::new())
@@ -266,14 +352,24 @@ impl Symbolicator {
         let build_plan = BuildPlan::create(resolution_graph)?;
         let mut typed_ast = None;
         build_plan.compile_with_driver(&mut std::io::sink(), |compiler| {
-            let (files, comments_and_compiler_res) = compiler.run::<PASS_TYPING>().unwrap();
-            let (_, compiler) =
-                diagnostics::unwrap_or_report_diagnostics(&files, comments_and_compiler_res);
+            eprintln!("compiling to typed AST");
+            let (files, compilation_result) = compiler.run::<PASS_TYPING>().unwrap();
+            eprintln!("compiled to typed AST");
+            let (_, compiler) = match compilation_result {
+                Ok(v) => v,
+                Err(_) => bail!("typed AST compilation failed"),
+            };
+            eprintln!("reported typed AST diagnostics");
             let (compiler, typed_program) = compiler.into_ast();
             typed_ast = Some(typed_program.clone());
+            eprintln!("compiling to bytecode");
             let compilation_result = compiler.at_typing(typed_program).build();
-
-            let (units, _) = diagnostics::unwrap_or_report_diagnostics(&files, compilation_result);
+            eprintln!("compiled to bytecode");
+            let (units, _) = match compilation_result {
+                Ok(v) => v,
+                Err(_) => bail!("bytecode compilation failed"),
+            };
+            eprintln!("reported bytecode diagnostics");
             Ok((files, units))
         })?;
 

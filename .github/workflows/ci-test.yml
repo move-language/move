@@ -258,3 +258,17 @@ jobs:
           # Don't look in git or target dirs. Don't check png, bib, tex, js, or shell files
           # We allow links to be redirects, allow duplicates, and we also allow Too Many Requests (429) errors
           find . -not \( -path "./.git*" -prune \) -not \( -path "./target" -prune \) -type f -not -name "*.png" -not -name "*.sh" -not -name "*.bib" -not -name "*.tex" -not -name "*.js" | while read arg; do awesome_bot --allow-redirect --allow-dupe --allow 429 --skip-save-results $arg; done
+
+  build-move-cli-docker-image:
+    name: Build Docker image for the Move CLI
+    runs-on: ubuntu-latest
+    needs:
+      - prepare
+    steps:
+      - uses: actions/checkout@v2.4.0
+      - name: Build Dockerfile
+        run: "docker build -t move/cli -f docker/move-cli/Dockerfile ."
+      - name: Build BasicCoin Move module
+        run: |
+          cd ./language/documentation/tutorial/step_1/BasicCoin
+          docker run -v `pwd`:/project move/cli package build

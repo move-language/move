@@ -145,7 +145,7 @@ fn convert_loc(file_mapping: &FileMapping, loc: Loc) -> (FileId, Range<usize>) {
     (id, range)
 }
 
-pub fn render_diagnostic(
+fn render_diagnostic(
     file_mapping: &FileMapping,
     diag: Diagnostic,
 ) -> csr::diagnostic::Diagnostic<FileId> {

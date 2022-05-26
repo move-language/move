@@ -20,8 +20,7 @@ ENV PATH "/opt/cargo/bin:/usr/lib/golang/bin:/opt/bin:${DOTNET_ROOT}:${DOTNET_RO
 RUN mkdir -p /github/home && \
     mkdir -p /opt/cargo/ && \
     mkdir -p /opt/git/ && \
-    /move/scripts/dev_setup.sh -t -b -p -y -d -n && \
-    apt-get install -y git && \
+    /move/scripts/dev_setup.sh -t -b -p -y -d -g -n && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

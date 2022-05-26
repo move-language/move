@@ -71,7 +71,6 @@ pub(crate) struct Context<'a> {
     pub(crate) abi_struct_signature_map: RefCell<BTreeMap<QualifiedInstId<StructId>, SolidityType>>,
     /// Mapping of abi structs names to abi structs
     pub(crate) abi_struct_name_map: RefCell<BTreeMap<String, QualifiedInstId<StructId>>>,
-
     /// A code writer where we emit JSON-ABI.
     pub abi_writer: CodeWriter,
 }

@@ -14,8 +14,13 @@ use move_model::{
 };
 
 use crate::{
-    abi_signature::ABIJsonSignature, attributes, context::Context, functions::FunctionGenerator,
-    solidity_ty::SoliditySignature, yul_functions::YulFunction, Options,
+    abi_signature::{from_event_sig, from_solidity_sig},
+    attributes,
+    context::Context,
+    functions::FunctionGenerator,
+    solidity_ty::SoliditySignature,
+    yul_functions::YulFunction,
+    Options,
 };
 
 use crate::context::Contract;
@@ -197,26 +202,18 @@ impl Generator {
             .cloned()
             .collect_vec();
         for sig in &event_sigs {
-            res.push(serde_json::to_string_pretty(&ABIJsonSignature::from_event_sig(sig)).unwrap());
+            res.push(serde_json::to_string_pretty(&from_event_sig(sig)).unwrap());
         }
         for (sig, attr) in &self.solidity_sigs {
             res.push(
-                serde_json::to_string_pretty(&ABIJsonSignature::from_solidity_sig(
-                    sig,
-                    Some(*attr),
-                    "function",
-                ))
-                .unwrap(),
+                serde_json::to_string_pretty(&from_solidity_sig(sig, Some(*attr), "function"))
+                    .unwrap(),
             );
         }
         if let Some(constructor) = &self.constructor_sig {
             res.push(
-                serde_json::to_string_pretty(&ABIJsonSignature::from_solidity_sig(
-                    constructor,
-                    None,
-                    "constructor",
-                ))
-                .unwrap(),
+                serde_json::to_string_pretty(&from_solidity_sig(constructor, None, "constructor"))
+                    .unwrap(),
             );
         }
         emitln!(ctx.abi_writer, "[");

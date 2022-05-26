@@ -9,16 +9,7 @@ use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::collections::{BTreeMap, HashMap};
 
-fn severity(s: Severity) -> DiagnosticSeverity {
-    match s {
-        Severity::Bug => DiagnosticSeverity::Error,
-        Severity::Error => DiagnosticSeverity::Error,
-        Severity::Warning => DiagnosticSeverity::Warning,
-        Severity::Note => DiagnosticSeverity::Information,
-        Severity::Help => DiagnosticSeverity::Hint,
-    }
-}
-
+/// Converts diagnostics from the codespan format to the format understood by the language server.
 pub fn lsp_diagnostics(
     diagnostics: &Vec<(
         codespan_reporting::diagnostic::Severity,
@@ -55,6 +46,8 @@ pub fn lsp_diagnostics(
     lsp_diagnostics
 }
 
+/// Produces empty diagnostics in the format understood by the language server for all files that
+/// the language server is aware of.
 pub fn lsp_empty_diagnostics(
     file_name_mapping: &BTreeMap<FileHash, Symbol>,
 ) -> BTreeMap<Symbol, Vec<Diagnostic>> {
@@ -63,4 +56,16 @@ pub fn lsp_empty_diagnostics(
         lsp_diagnostics.insert(*n, vec![]);
     }
     lsp_diagnostics
+}
+
+/// Converts diagnostic severity level from the codespan format to the format understood by the
+/// language server.
+fn severity(s: Severity) -> DiagnosticSeverity {
+    match s {
+        Severity::Bug => DiagnosticSeverity::Error,
+        Severity::Error => DiagnosticSeverity::Error,
+        Severity::Warning => DiagnosticSeverity::Warning,
+        Severity::Note => DiagnosticSeverity::Information,
+        Severity::Help => DiagnosticSeverity::Hint,
+    }
 }

@@ -8,6 +8,8 @@ use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
 use std::collections::HashMap;
 
+/// Converts a location from the byte index format to the line/character (Position) format, where
+/// line/character are 0-based.
 pub fn get_loc(
     fhash: &FileHash,
     pos: ByteIndex,

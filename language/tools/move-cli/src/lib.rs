@@ -11,6 +11,7 @@ use move_package::BuildConfig;
 pub mod base;
 pub mod experimental;
 pub mod sandbox;
+mod login;
 
 /// Default directory where saved Move resources live
 pub const DEFAULT_STORAGE_DIR: &str = "storage";
@@ -91,6 +92,8 @@ pub enum Command {
         #[clap(subcommand)]
         cmd: experimental::cli::ExperimentalCommand,
     },
+    #[clap(name = "login")]
+    Login,
 }
 
 pub fn run_cli(
@@ -121,6 +124,7 @@ pub fn run_cli(
             &storage_dir,
         ),
         Command::Experimental { storage_dir, cmd } => cmd.handle_command(&move_args, &storage_dir),
+        Command::Login => login::cli::handle_login_commands(),
     }
 }
 

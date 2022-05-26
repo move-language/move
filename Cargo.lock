@@ -635,6 +635,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "combine"
+version = "4.6.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a604e93b79d1808327a6fca85a6f2d69de66461e7620f5a4cbf5fb4d1d7c948"
+dependencies = [
+ "bytes",
+ "memchr",
+]
+
+[[package]]
 name = "config"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1764,6 +1774,34 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92620684d99f750bae383ecb3be3748142d6095760afd5cbcf2261e9a279d780"
 
 [[package]]
+name = "hakari"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f48905a7968260802691e8b6cc2e9426822b79eaf9164d07f2212e9327181b3e"
+dependencies = [
+ "atomicwrites",
+ "bimap",
+ "camino",
+ "cfg-if 1.0.0",
+ "debug-ignore",
+ "diffy",
+ "guppy",
+ "guppy-workspace-hack",
+ "include_dir",
+ "indenter",
+ "itertools 0.10.1",
+ "owo-colors",
+ "pathdiff",
+ "rayon",
+ "serde 1.0.130",
+ "strip-ansi-escapes",
+ "target-spec",
+ "toml",
+ "toml_edit 0.10.1",
+ "twox-hash",
+]
+
+[[package]]
 name = "half"
 version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2443,6 +2481,7 @@ dependencies = [
  "serde 1.0.130",
  "serde_yaml",
  "tempfile",
+ "toml_edit 0.14.4",
  "walkdir",
 ]
 
@@ -5168,6 +5207,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a31142970826733df8241ef35dc040ef98c679ab14d7c3e54d827099b3acecaa"
 dependencies = [
  "indexmap",
+ "serde 1.0.130",
+]
+
+[[package]]
+name = "toml_edit"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2782eb01c48f7f6f66d63bebe64dd8302dbf6bc0be0d65a85a1854d472e2dfa8"
+dependencies = [
+ "combine",
+ "indexmap",
+ "itertools 0.10.1",
+ "kstring",
+]
+
+[[package]]
+name = "toml_edit"
+version = "0.14.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5376256e44f2443f8896ac012507c19a012df0fe8758b55246ae51a2279db51f"
+dependencies = [
+ "combine",
+ "indexmap",
+ "itertools 0.10.1",
  "serde 1.0.130",
 ]
 

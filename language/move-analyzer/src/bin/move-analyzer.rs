@@ -3,13 +3,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use clap::Parser;
+use crossbeam::channel::{bounded, select};
 use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
-    notification::Notification as _, request::Request as _, CompletionOptions, OneOf, SaveOptions,
-    TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
+    notification::Notification as _, request::Request as _, CompletionOptions, Diagnostic, OneOf,
+    SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
     WorkDoneProgressOptions,
 };
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::BTreeMap,
+    path::Path,
+    sync::{Arc, Mutex},
+};
 
 use move_analyzer::{
     completion::on_completion_request,
@@ -17,6 +22,8 @@ use move_analyzer::{
     symbols,
     vfs::{on_text_document_sync_notification, VirtualFileSystem},
 };
+use move_symbol_pool::Symbol;
+use url::Url;
 
 #[derive(Parser)]
 #[clap(author, version, about)]
@@ -99,36 +106,56 @@ fn main() {
     let initialize_params: lsp_types::InitializeParams =
         serde_json::from_value(client_response).expect("could not deserialize client capabilities");
 
+    let (diag_sender, diag_receiver) = bounded::<BTreeMap<Symbol, Vec<Diagnostic>>>(0);
     let mut symbolicator_runner = symbols::SymbolicatorRunner::idle();
     if symbols::DEFS_AND_REFS_SUPPORT {
         if let Some(uri) = initialize_params.root_uri {
-            symbolicator_runner = symbols::SymbolicatorRunner::new(&uri, context.symbols.clone());
+            symbolicator_runner =
+                symbols::SymbolicatorRunner::new(&uri, context.symbols.clone(), diag_sender);
             symbolicator_runner.run();
         }
     };
 
     loop {
-        match context.connection.receiver.recv() {
-            Ok(message) => match message {
-                Message::Request(request) => on_request(&context, &request),
-                Message::Response(response) => on_response(&context, &response),
-                Message::Notification(notification) => {
-                    match notification.method.as_str() {
-                        lsp_types::notification::Exit::METHOD => break,
-                        lsp_types::notification::Cancel::METHOD => {
-                            // TODO: Currently the server does not implement request cancellation.
-                            // It ought to, especially once it begins processing requests that may
-                            // take a long time to respond to.
+        select! {
+            recv(diag_receiver) -> message => {
+                match message {
+                    Ok(diags) => {
+                        for (k, v) in diags {
+                            let url = Url::from_file_path(Path::new(&k.to_string())).unwrap();
+                            let params = lsp_types::PublishDiagnosticsParams::new(url, v, None);
+                            let notification = Notification::new(lsp_types::notification::PublishDiagnostics::METHOD.to_string(), params);
+                            if let Err(err) = context
+                                .connection
+                                .sender
+                                .send(lsp_server::Message::Notification(notification)) {
+                                    eprintln!("could not send completion response: {:?}", err);
+                                }
+
                         }
-                        _ => on_notification(&mut context, &symbolicator_runner, &notification),
-                    }
+                    },
+                    Err(error) => eprintln!("symbolicator message error: {:?}", error),
                 }
             },
-            Err(error) => {
-                eprintln!("error: {:?}", error);
-                break;
+            recv(context.connection.receiver) -> message => {
+                match message {
+                    Ok(Message::Request(request)) => on_request(&context, &request),
+                    Ok(Message::Response(response)) => on_response(&context, &response),
+                    Ok(Message::Notification(notification)) => {
+                        match notification.method.as_str() {
+                            lsp_types::notification::Exit::METHOD => break,
+                            lsp_types::notification::Cancel::METHOD => {
+                                // TODO: Currently the server does not implement request cancellation.
+                                // It ought to, especially once it begins processing requests that may
+                                // take a long time to respond to.
+                            }
+                            _ => on_notification(&mut context, &symbolicator_runner, &notification),
+                        }
+                    }
+                    Err(error) => eprintln!("IDE message error: {:?}", error),
+                }
             }
-        }
+        };
     }
 
     io_threads.join().expect("I/O threads could not finish");
@@ -140,17 +167,17 @@ fn on_request(context: &Context, request: &Request) {
     match request.method.as_str() {
         lsp_types::request::Completion::METHOD => on_completion_request(context, request),
         lsp_types::request::GotoDefinition::METHOD => {
-            symbols::on_go_to_def_request(context, request, &context.symbols.lock().unwrap())
+            symbols::on_go_to_def_request(context, request, &context.symbols.lock().unwrap());
         }
         lsp_types::request::References::METHOD => {
-            symbols::on_references_request(context, request, &context.symbols.lock().unwrap())
+            symbols::on_references_request(context, request, &context.symbols.lock().unwrap());
         }
-        _ => todo!("handle request '{}' from client", request.method),
+        _ => eprintln!("handle request '{}' from client", request.method),
     }
 }
 
 fn on_response(_context: &Context, _response: &Response) {
-    todo!("handle response from client");
+    eprintln!("handle response from client");
 }
 
 fn on_notification(
@@ -169,6 +196,6 @@ fn on_notification(
                 notification,
             )
         }
-        _ => todo!("handle notification '{}' from client", notification.method),
+        _ => eprintln!("handle notification '{}' from client", notification.method),
     }
 }

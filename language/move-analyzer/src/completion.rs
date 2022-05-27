@@ -6,12 +6,9 @@ use crate::context::Context;
 use lsp_server::Request;
 use lsp_types::{CompletionItem, CompletionItemKind, CompletionParams, Position};
 use move_command_line_common::files::FileHash;
-use move_compiler::{
-    diagnostics::Diagnostic,
-    parser::{
-        keywords::{BUILTINS, CONTEXTUAL_KEYWORDS, KEYWORDS},
-        lexer::{Lexer, Tok},
-    },
+use move_compiler::parser::{
+    keywords::{BUILTINS, CONTEXTUAL_KEYWORDS, KEYWORDS},
+    lexer::{Lexer, Tok},
 };
 use std::collections::HashSet;
 
@@ -54,8 +51,7 @@ fn builtins() -> Vec<CompletionItem> {
 }
 
 /// Lexes the Move source file at the given path and returns a list of completion items
-/// corresponding to the non-keyword identifiers therein. If lexing produces diagnostics, those are
-/// also returned.
+/// corresponding to the non-keyword identifiers therein.
 ///
 /// Currently, this does not perform semantic analysis to determine whether the identifiers
 /// returned are valid at the request's cursor position. However, this list of identifiers is akin
@@ -63,14 +59,13 @@ fn builtins() -> Vec<CompletionItem> {
 /// server did not initialize with a response indicating it's capable of providing completions. In
 /// the future, the server should be modified to return semantically valid completion items, not
 /// simple textual suggestions.
-fn identifiers(buffer: &str) -> (Vec<CompletionItem>, Vec<Diagnostic>) {
+fn identifiers(buffer: &str) -> Vec<CompletionItem> {
     let mut lexer = Lexer::new(buffer, FileHash::new(buffer));
-    if let Err(diagnostic) = lexer.advance() {
-        return (vec![], vec![diagnostic]);
+    if lexer.advance().is_err() {
+        return vec![];
     }
 
     let mut ids = HashSet::new();
-    let mut diagnostics = vec![];
     while lexer.peek() != Tok::EOF {
         // Some tokens, such as "phantom", are contextual keywords that are only reserved in
         // certain contexts. Since for now this language server doesn't analyze semantic context,
@@ -83,8 +78,8 @@ fn identifiers(buffer: &str) -> (Vec<CompletionItem>, Vec<Diagnostic>) {
             // context of the request cursor's position.
             ids.insert(lexer.content());
         }
-        if let Err(diagnostic) = lexer.advance() {
-            diagnostics.push(diagnostic)
+        if lexer.advance().is_err() {
+            break;
         }
     }
 
@@ -94,7 +89,7 @@ fn identifiers(buffer: &str) -> (Vec<CompletionItem>, Vec<Diagnostic>) {
         .iter()
         .map(|label| completion_item(label, CompletionItemKind::Text))
         .collect();
-    (items, diagnostics)
+    items
 }
 
 /// Returns the token corresponding to the "trigger character" that precedes the user's cursor,
@@ -128,6 +123,7 @@ fn get_cursor_token(buffer: &str, position: &Position) -> Option<Tok> {
 ///
 /// The completions returned depend upon where the user's cursor is positioned.
 pub fn on_completion_request(context: &Context, request: &Request) {
+    eprintln!("handling completion request");
     let parameters = serde_json::from_value::<CompletionParams>(request.params.clone())
         .expect("could not deserialize completion request");
 
@@ -161,30 +157,18 @@ pub fn on_completion_request(context: &Context, request: &Request) {
     }
 
     if let Some(buffer) = &buffer {
-        let (identifiers, diagnostics) = identifiers(buffer);
+        let identifiers = identifiers(buffer);
         items.extend_from_slice(&identifiers);
-        if !diagnostics.is_empty() {
-            // TODO: A language server is capable of surfacing diagnostics to its client, but to do so
-            // would require us to translate move_compiler's diagnostic location (a private member
-            // represented as a byte offset) to a line and column number. The move_compiler::diagnostics
-            // module currently only allows for printing a set of diagnostics to stderr, but that could
-            // be changed. (If this server *was* to surface diagnostics, it would also be responsible
-            // for notifying the client when the diagnostics were fixed and ought to be cleared. It
-            // would be a poor user experience to only surface and clear diagnostics here, when
-            // responding to a completion request.)
-            eprintln!(
-                "encountered {} diagnostic(s) while lexing '{}'",
-                diagnostics.len(),
-                path
-            );
-        }
     }
 
     let result = serde_json::to_value(items).expect("could not serialize completion response");
+    eprintln!("about to send completion response");
     let response = lsp_server::Response::new_ok(request.id.clone(), result);
-    context
+    if let Err(err) = context
         .connection
         .sender
         .send(lsp_server::Message::Response(response))
-        .expect("could not send completion response");
+    {
+        eprintln!("could not send completion response: {:?}", err);
+    }
 }

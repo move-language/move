@@ -86,7 +86,7 @@ use move_symbol_pool::Symbol;
 
 /// Enabling/disabling the language server reporting readiness to support go-to-def and
 /// go-to-references to the IDE.
-pub const DEFS_AND_REFS_SUPPORT: bool = false;
+pub const DEFS_AND_REFS_SUPPORT: bool = true;
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Copy)]
 /// Location of a definition's identifier

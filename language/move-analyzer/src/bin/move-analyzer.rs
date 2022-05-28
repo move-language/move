@@ -2,6 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::Result;
 use clap::Parser;
 use crossbeam::channel::{bounded, select};
 use lsp_server::{Connection, Message, Notification, Request, Response};
@@ -106,7 +107,7 @@ fn main() {
     let initialize_params: lsp_types::InitializeParams =
         serde_json::from_value(client_response).expect("could not deserialize client capabilities");
 
-    let (diag_sender, diag_receiver) = bounded::<BTreeMap<Symbol, Vec<Diagnostic>>>(0);
+    let (diag_sender, diag_receiver) = bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
     let mut symbolicator_runner = symbols::SymbolicatorRunner::idle();
     if symbols::DEFS_AND_REFS_SUPPORT {
         if let Some(uri) = initialize_params.root_uri {
@@ -116,22 +117,47 @@ fn main() {
         }
     };
 
+    let mut missing_manifest_reported = false;
     loop {
         select! {
             recv(diag_receiver) -> message => {
                 match message {
-                    Ok(diags) => {
-                        for (k, v) in diags {
-                            let url = Url::from_file_path(Path::new(&k.to_string())).unwrap();
-                            let params = lsp_types::PublishDiagnosticsParams::new(url, v, None);
-                            let notification = Notification::new(lsp_types::notification::PublishDiagnostics::METHOD.to_string(), params);
-                            if let Err(err) = context
-                                .connection
-                                .sender
-                                .send(lsp_server::Message::Notification(notification)) {
-                                    eprintln!("could not send completion response: {:?}", err);
+                    Ok(result) => {
+                        match result {
+                            Ok(diags) => {
+                                for (k, v) in diags {
+                                    let url = Url::from_file_path(Path::new(&k.to_string())).unwrap();
+                                    let params = lsp_types::PublishDiagnosticsParams::new(url, v, None);
+                                    let notification = Notification::new(lsp_types::notification::PublishDiagnostics::METHOD.to_string(), params);
+                                    if let Err(err) = context
+                                        .connection
+                                        .sender
+                                        .send(lsp_server::Message::Notification(notification)) {
+                                            eprintln!("could not send diagnostics response: {:?}", err);
+                                        };
                                 }
-
+                            },
+                            Err(err) => {
+                                let typ = lsp_types::MessageType::Error;
+                                let message = format!("{err}");
+                                let missing_manifest = message.starts_with("Unable to find package manifest");
+                                if !missing_manifest || !missing_manifest_reported {
+                                    // report missing manifest only once to avoid re-generating
+                                    // user-visible error in cases when the developer decides to
+                                    // keep editing a file that does not belong to a packages
+                                    let params = lsp_types::ShowMessageParams { typ, message };
+                                    let notification = Notification::new(lsp_types::notification::ShowMessage::METHOD.to_string(), params);
+                                    if let Err(err) = context
+                                        .connection
+                                        .sender
+                                        .send(lsp_server::Message::Notification(notification)) {
+                                            eprintln!("could not send compiler error response: {:?}", err);
+                                        };
+                                }
+                                if missing_manifest {
+                                    missing_manifest_reported = true;
+                                }
+                            },
                         }
                     },
                     Err(error) => eprintln!("symbolicator message error: {:?}", error),

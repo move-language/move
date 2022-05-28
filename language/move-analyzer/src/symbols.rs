@@ -86,7 +86,7 @@ use move_symbol_pool::Symbol;
 
 /// Enabling/disabling the language server reporting readiness to support go-to-def and
 /// go-to-references to the IDE.
-pub const DEFS_AND_REFS_SUPPORT: bool = false;
+pub const DEFS_AND_REFS_SUPPORT: bool = true;
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Copy)]
 /// Location of a definition's identifier
@@ -202,7 +202,7 @@ impl SymbolicatorRunner {
     pub fn new(
         uri: &Url,
         symbols: Arc<Mutex<Symbols>>,
-        sender: Sender<BTreeMap<Symbol, Vec<Diagnostic>>>,
+        sender: Sender<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>,
     ) -> Self {
         let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
         let thread_mtx_cvar = mtx_cvar.clone();
@@ -248,11 +248,16 @@ impl SymbolicatorRunner {
                                 *old_symbols = new_symbols;
                             }
                             // set/reset (previous) diagnostics
-                            if let Err(err) = sender.send(lsp_diagnostics) {
+                            if let Err(err) = sender.send(Ok(lsp_diagnostics)) {
                                 eprintln!("could not pass diagnostics: {:?}", err);
                             }
                         }
-                        Err(err) => eprintln!("symbolication failed: {:?}", err),
+                        Err(err) => {
+                            eprintln!("symbolication failed: {:?}", err);
+                            if let Err(err) = sender.send(Err(err)) {
+                                eprintln!("could not compiler error: {:?}", err);
+                            }
+                        }
                     }
                 }
             }

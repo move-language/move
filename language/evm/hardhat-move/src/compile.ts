@@ -4,10 +4,8 @@ import { Result, ok, err } from "neverthrow";
 import { MoveBuildError, ChainedError } from "./types"
 import { executeChildProcess } from "./executable"
 import { readTextFile, resultify, readDir } from "./util"
-import { localPathToSourceName } from "hardhat/utils/source-names";
 import { Artifacts as ArtifactsImpl } from "hardhat/internal/artifacts";
 import { Artifact, Artifacts, HardhatConfig } from "hardhat/types";
-import { ARCH_ETHEREUM } from "./constants";
 
 // Utilities to List Move packages in the Contracts Directory
 async function isMovePackage(path: Fs.PathLike): Promise<boolean> {
@@ -34,8 +32,8 @@ export async function listMovePackages(contractsPath: Fs.PathLike): Promise<Arra
     return (await Promise.all(promises)).filter((path): path is String => path !== null)
 }
 
-async function movePackageBuild(arch: string, movePath: string, packagePath: string): Promise<Result<void, MoveBuildError>> {
-    let cmd = `${movePath} package build --path ${packagePath} --arch ${arch}`;
+async function movePackageBuild(movePath: string, packagePath: string): Promise<Result<void, MoveBuildError>> {
+    let cmd = `${movePath} package build --path ${packagePath} --arch ethereum`;
 
     let [e, stdout, stderr] = await executeChildProcess(cmd);
     if (e !== null) {
@@ -114,7 +112,7 @@ async function generateArtifact(hardhatRootPath: string, packagePath: string, co
     }
     let abi = loadAbiRes.value;
 
-    let sourcePath = await localPathToSourceName(hardhatRootPath, packagePath);
+    let sourcePath = Path.relative(hardhatRootPath, packagePath);
 
     let artifact: Artifact = {
         "_format": "hh-move-artifact-1",
@@ -158,8 +156,8 @@ async function generateArtifactsForPackage(hardhatRootPath: string, packagePath:
     return ok(artifacts);
 }
 
-async function buildPackage(arch: string, movePath: string, packagePath: string): Promise<Result<number, MoveBuildError | ChainedError>> {
-    let buildRes = await movePackageBuild(arch, movePath, packagePath);
+async function buildPackage(movePath: string, packagePath: string): Promise<Result<number, MoveBuildError | ChainedError>> {
+    let buildRes = await movePackageBuild(movePath, packagePath);
     if (buildRes.isErr()) {
         let e = buildRes.error;
         console.log(`\nFailed to build ${packagePath}\n${e.stdout}${e.stderr}`);
@@ -183,14 +181,12 @@ async function generateArtifacts(hardhatRootPath: string, packagePath: string): 
 }
 
 export async function compile(
-    arch: string,
     movePath: string,
     artifacts: Artifacts,
     config: HardhatConfig
 ) {
     let packagePaths: String[] = await listMovePackages(config.paths.sources);
     const isRootMovePackage = await isMovePackage(config.paths.root)
-    console.log("is root:", isRootMovePackage);
     if (isRootMovePackage) {
         packagePaths = [...packagePaths, config.paths.root];
     }
@@ -204,7 +200,7 @@ export async function compile(
     console.log("Building %d Move package%s...", packagePaths.length, plural);
 
     let buildResults = await Promise.all(
-        packagePaths.map(path => buildPackage(arch, movePath, path.toString())));
+        packagePaths.map(path => buildPackage(movePath, path.toString())));
 
     let failedToBuildAll = false;
     console.assert(packagePaths.length == buildResults.length);
@@ -220,8 +216,6 @@ export async function compile(
         // TODO: terminate gracefully
         throw new Error("Failed to build one or more Move packages");
     }
-
-    if (arch != ARCH_ETHEREUM) return;
 
     let genArtifactResults = await Promise.all(
         packagePaths.map(path => generateArtifacts(config.paths.root, path.toString())));

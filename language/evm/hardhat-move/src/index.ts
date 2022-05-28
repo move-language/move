@@ -8,22 +8,10 @@ import {
 } from "./task-names";
 import { compile } from "./compile"
 import { MoveBuild } from "./types";
-import { DEFAULT_ARCH } from "./constants"
 import { locateMoveExecutablePath } from "./executable"
 
 extendConfig((config, userConfig) => {
-    let defaultConfig: Partial<MoveBuild> = {};
-    if (userConfig.move) {
-        // in order to handle corner case: { move: {} } in hardhat.config.js
-        const isEmpty = Object.keys(userConfig.move).length === 0;
-        if (isEmpty) {
-            defaultConfig = { arch: DEFAULT_ARCH };
-        }
-    }
-    const isEmpty = Object.keys(defaultConfig).length === 0;
-    if (isEmpty) {
-        defaultConfig = userConfig.move ?? { arch: DEFAULT_ARCH };
-    }
+    const defaultConfig = {};
     config.move = { ...defaultConfig, ...config.move };
 });
 
@@ -39,7 +27,6 @@ subtask(TASK_COMPILE_GET_COMPILATION_TASKS,
 subtask(TASK_COMPILE_MOVE)
     .addParam("quiet", undefined, undefined, types.boolean)
     .setAction(async ({ quiet }: { quiet: boolean }, { artifacts, config, run }) => {
-        const arch = config.move.arch;
         const compilerPath = config.move.compilerPath;
 
         let movePath: string;
@@ -55,7 +42,6 @@ subtask(TASK_COMPILE_MOVE)
         await run(
             TASK_COMPILE_MOVE_RUN_BINARY,
             {
-                arch: arch,
                 movePath: movePath,
                 artifacts: artifacts,
                 config: config
@@ -64,36 +50,31 @@ subtask(TASK_COMPILE_MOVE)
     });
 
 subtask(TASK_COMPILE_MOVE_RUN_BINARY)
-    .addParam("arch", undefined, undefined, types.string)
     .addParam("movePath", undefined, undefined, types.string)
     .setAction(async ({
-        arch,
         movePath,
         artifacts,
         config
     }: {
-        arch: string,
         movePath: string,
         artifacts: Artifacts,
         config: HardhatConfig
     }) => {
-        await compile(arch, movePath, artifacts, config);
+        await compile(movePath, artifacts, config);
     });
 
 subtask(TASK_COMPILE_MOVE_GET_BUILD)
     .setAction(async (): Promise<MoveBuild> => {
-        let arch = DEFAULT_ARCH;
-
         let locateRes = await locateMoveExecutablePath();
         if (locateRes.isErr()) {
             console.log("Failed to locate the `move` executable.");
             console.log(locateRes.error);
             let compilerPath = ""
-            return { compilerPath, arch };
+            return { compilerPath };
         }
         let compilerPath = locateRes.value;
 
-        return { compilerPath, arch };
+        return { compilerPath };
     });
 
 module.exports = {};

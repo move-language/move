@@ -1,7 +1,6 @@
 import * as ChildProcess from "child_process";
 
 export interface MoveBuild {
-  arch: string;
   compilerPath: string;
 }
 

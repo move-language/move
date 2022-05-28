@@ -4,6 +4,7 @@ import { Result, ok, err } from "neverthrow";
 import { MoveBuildError, ChainedError } from "./types"
 import { executeChildProcess } from "./executable"
 import { readTextFile, resultify, readDir } from "./util"
+import { localPathToSourceName } from "hardhat/utils/source-names";
 import { Artifacts as ArtifactsImpl } from "hardhat/internal/artifacts";
 import { Artifact, Artifacts, HardhatConfig } from "hardhat/types";
 import { ARCH_ETHEREUM } from "./constants";
@@ -15,9 +16,7 @@ async function isMovePackage(path: Fs.PathLike): Promise<boolean> {
 
     if (stats.isDirectory()) {
         let manifestPath = Path.join(path.toString(), "Move.toml");
-        let manifestStats: Fs.Stats = await Fs.promises.stat(manifestPath);
-
-        return manifestStats.isFile();
+        return Fs.existsSync(manifestPath);
     }
 
     return false;
@@ -115,7 +114,7 @@ async function generateArtifact(hardhatRootPath: string, packagePath: string, co
     }
     let abi = loadAbiRes.value;
 
-    let sourcePath = Path.relative(hardhatRootPath, packagePath);
+    let sourcePath = await localPathToSourceName(hardhatRootPath, packagePath);
 
     let artifact: Artifact = {
         "_format": "hh-move-artifact-1",
@@ -189,8 +188,12 @@ export async function compile(
     artifacts: Artifacts,
     config: HardhatConfig
 ) {
-    let packagePaths: String[] = await listMovePackages(Path.join(config.paths.root, "sources"));
-    packagePaths = [...packagePaths, config.paths.root];
+    let packagePaths: String[] = await listMovePackages(config.paths.sources);
+    const isRootMovePackage = await isMovePackage(config.paths.root)
+    console.log("is root:", isRootMovePackage);
+    if (isRootMovePackage) {
+        packagePaths = [...packagePaths, config.paths.root];
+    }
 
     if (packagePaths.length == 0) {
         console.log("No Move contracts to compile");

@@ -10,7 +10,13 @@ Right now this plugin is still experimental and requires some manual steps to se
 Step 1: compile and install the `move` executable
 ```
 cd language/tools/move-cli
-cargo install --path .
+cargo install --path . --features evm-backend
+```
+
+additionally, if you want to run the evm related test for `move-cli`, please make sure to setup `SOLC_EXE` environment variable correctly with the latest version of Solidity compiler executable and run
+```
+cd language/tools/move-cli
+cargo test --features evm-backend
 ```
 
 Step 2: set up the dev environment for `hardhat-move`

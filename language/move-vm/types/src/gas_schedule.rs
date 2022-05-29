@@ -19,7 +19,7 @@ use move_binary_format::{
 use move_core_types::{
     gas_schedule::{
         AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasConstants, GasCost, GasUnits,
-        InternalGasUnits, MAX_TRANSACTION_SIZE_IN_BYTES,
+        InternalGasUnits,
     },
     vm_status::StatusCode,
 };
@@ -451,7 +451,6 @@ pub fn calculate_intrinsic_gas(
     transaction_size: AbstractMemorySize<GasCarrier>,
     gas_constants: &GasConstants,
 ) -> InternalGasUnits<GasCarrier> {
-    debug_assert!(transaction_size.get() <= MAX_TRANSACTION_SIZE_IN_BYTES as GasCarrier);
     let min_transaction_fee = gas_constants.min_transaction_gas_units;
 
     if transaction_size.get() > gas_constants.large_transaction_cutoff.get() {

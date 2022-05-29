@@ -9,18 +9,21 @@ use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
     notification::Notification as _, request::Request as _, CompletionOptions, Diagnostic, OneOf,
     SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
-    WorkDoneProgressOptions,
+    WorkDoneProgressOptions, GotoDefinitionParams,
 };
 use std::{
+    fs,
     collections::BTreeMap,
     path::Path,
     sync::{Arc, Mutex},
+    collections::HashMap,
 };
 
 use move_analyzer::{
     completion::on_completion_request,
     context::Context,
     symbols,
+    symbols::Symbols,
     vfs::{on_text_document_sync_notification, VirtualFileSystem},
 };
 use move_symbol_pool::Symbol;
@@ -48,10 +51,11 @@ fn main() {
     );
 
     let (connection, io_threads) = Connection::stdio();
+    let symbols_map = HashMap::new();
     let mut context = Context {
         connection,
         files: VirtualFileSystem::default(),
-        symbols: Arc::new(Mutex::new(symbols::Symbolicator::empty_symbols())),
+        symbols: Arc::new(Mutex::new(symbols_map)),
     };
     let capabilities = serde_json::to_value(lsp_types::ServerCapabilities {
         // The server receives notifications from the client as users open, close,
@@ -111,9 +115,31 @@ fn main() {
     let mut symbolicator_runner = symbols::SymbolicatorRunner::idle();
     if symbols::DEFS_AND_REFS_SUPPORT {
         if let Some(uri) = initialize_params.root_uri {
-            symbolicator_runner =
-                symbols::SymbolicatorRunner::new(&uri, context.symbols.clone(), diag_sender);
-            symbolicator_runner.run();
+            let pkg_path = uri.to_file_path().unwrap();
+            let paths = fs::read_dir(&pkg_path).unwrap();
+
+            for path in paths {
+                let raw_path = path.unwrap();
+                let path_str = &raw_path.path();
+                let is_dir = !raw_path.metadata().unwrap().is_file();
+                let metafile_path = format!("{}/{}", path_str.display(), "Move.toml");
+                let is_move_package = is_dir && Path::new(&metafile_path).exists();
+
+                if is_move_package {
+                    let sub_uri = Url::from_file_path(Path::new(&path_str)).unwrap();
+                    symbolicator_runner =
+                        symbols::SymbolicatorRunner::new(&sub_uri, context.symbols.clone(), diag_sender.clone());
+                    symbolicator_runner.run();
+                }
+            }
+
+            let metafile_path = format!("{}/{}", &pkg_path.as_path().display().to_string(), "Move.toml");
+            let is_move_package = Path::new(&metafile_path).exists();
+            if is_move_package {
+                symbolicator_runner =
+                    symbols::SymbolicatorRunner::new(&uri, context.symbols.clone(), diag_sender.clone());
+                symbolicator_runner.run();
+            }
         }
     };
 
@@ -189,14 +215,34 @@ fn main() {
     eprintln!("Shut down language server '{}'.", exe);
 }
 
+fn symbolic_request(context: &Context, request: &Request, action: fn(context: &Context, request: &Request, symbols: &Symbols) -> ()) {
+    let symbols = context.symbols.lock().unwrap();
+    let parameters = serde_json::from_value::<GotoDefinitionParams>(request.params.clone())
+        .expect("could not deserialize go-to-def request");
+
+    let fpath = parameters
+        .text_document_position_params
+        .text_document
+        .uri
+        .path();
+
+    let keys = symbols.keys().clone().collect::<Vec<&String>>();
+    let satisfied = keys.into_iter().find(|&k| fpath.starts_with(k));
+
+    if let Some(root) = satisfied {
+        let target = symbols.get(root).unwrap();
+        action(context, request, &target);
+    }
+}
+
 fn on_request(context: &Context, request: &Request) {
     match request.method.as_str() {
         lsp_types::request::Completion::METHOD => on_completion_request(context, request),
         lsp_types::request::GotoDefinition::METHOD => {
-            symbols::on_go_to_def_request(context, request, &context.symbols.lock().unwrap());
+            symbolic_request(context, request, symbols::on_go_to_def_request);
         }
         lsp_types::request::References::METHOD => {
-            symbols::on_references_request(context, request, &context.symbols.lock().unwrap());
+            symbolic_request(context, request, symbols::on_references_request);
         }
         _ => eprintln!("handle request '{}' from client", request.method),
     }

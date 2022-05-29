@@ -50,6 +50,7 @@ use crate::{
     context::Context,
     diagnostics::{lsp_diagnostics, lsp_empty_diagnostics},
     utils::get_loc,
+    symbols,
 };
 use anyhow::Result;
 use codespan_reporting::files::SimpleFiles;
@@ -90,7 +91,7 @@ pub const DEFS_AND_REFS_SUPPORT: bool = true;
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Copy)]
 /// Location of a definition's identifier
-struct DefLoc {
+pub struct DefLoc {
     /// File where the definition of the identifier starts
     fhash: FileHash,
     /// Location where the definition of the identifier starts
@@ -99,7 +100,7 @@ struct DefLoc {
 
 /// Location of a use's identifier
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Copy)]
-struct UseLoc {
+pub struct UseLoc {
     /// File where this use identifier starts
     fhash: FileHash,
     /// Location where this use identifier starts
@@ -165,18 +166,18 @@ pub struct Symbolicator {
 /// Maps a line number to a list of use-def pairs on a given line (use-def set is sorted by
 /// col_start)
 #[derive(Debug)]
-struct UseDefMap(BTreeMap<u32, BTreeSet<UseDef>>);
+pub struct UseDefMap(BTreeMap<u32, BTreeSet<UseDef>>);
 
 /// Result of the symbolication process
 pub struct Symbols {
     /// A map from def locations to all the references (uses)
-    references: BTreeMap<DefLoc, BTreeSet<UseLoc>>,
+    pub references: BTreeMap<DefLoc, BTreeSet<UseLoc>>,
     /// A mapping from uses to definitions in a module
-    mod_use_defs: BTreeMap<ModuleIdent_, UseDefMap>,
+    pub mod_use_defs: BTreeMap<ModuleIdent_, UseDefMap>,
     /// A mapping from paths to module IDs
-    mod_ident_map: BTreeMap<PathBuf, ModuleIdent_>,
+    pub mod_ident_map: BTreeMap<PathBuf, ModuleIdent_>,
     /// A mapping from file hashes to file names
-    file_name_mapping: BTreeMap<FileHash, Symbol>,
+    pub file_name_mapping: BTreeMap<FileHash, Symbol>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Copy)]
@@ -201,7 +202,7 @@ impl SymbolicatorRunner {
     /// Create a new runner
     pub fn new(
         uri: &Url,
-        symbols: Arc<Mutex<Symbols>>,
+        symbols: Arc<Mutex<HashMap<String, Symbols>>>,
         sender: Sender<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>,
     ) -> Self {
         let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
@@ -245,7 +246,8 @@ impl SymbolicatorRunner {
                                 // replace symbols only if they have been actually recomputed,
                                 // otherwise keep the old (possibly out-dated) symbolication info
                                 let mut old_symbols = symbols.lock().unwrap();
-                                *old_symbols = new_symbols;
+                                *old_symbols.entry(pkg_path.as_path().display().to_string())
+                                            .or_insert(symbols::Symbolicator::empty_symbols()) = new_symbols;
                             }
                             // set/reset (previous) diagnostics
                             if let Err(err) = sender.send(Ok(lsp_diagnostics)) {

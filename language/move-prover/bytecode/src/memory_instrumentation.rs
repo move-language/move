@@ -36,7 +36,7 @@ impl FunctionTargetProcessor for MemoryInstrumentationProcessor {
         func_env: &FunctionEnv<'_>,
         mut data: FunctionData,
     ) -> FunctionData {
-        if func_env.is_native() {
+        if func_env.is_native_or_intrinsic() {
             return data;
         }
         let borrow_annotation = data

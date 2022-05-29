@@ -104,6 +104,7 @@ pub fn is_pragma_valid_for_block(target: &SpecBlockContext<'_>, pragma: &str) ->
                 | DISABLE_INVARIANTS_IN_BODY_PRAGMA
                 | DELEGATE_INVARIANTS_TO_CALLER_PRAGMA
         ),
+        Struct(..) => matches!(pragma, INTRINSIC_PRAGMA),
         _ => false,
     }
 }

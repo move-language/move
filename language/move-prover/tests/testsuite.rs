@@ -76,21 +76,6 @@ fn get_features() -> &'static [Feature] {
                 runner: |p| test_runner_for_feature(p, get_feature_by_name("default")),
                 enabling_condition: |_, _| true,
             },
-            // Tests with spec simplification pipeline enabled
-            Feature {
-                name: "simplify",
-                flags: &[
-                    "--ignore-pragma-opaque-internal-only",
-                    "--simplify",
-                    "inline",
-                ],
-                inclusion_mode: InclusionMode::Implicit,
-                enable_in_ci: true,
-                only_if_requested: false,
-                separate_baseline: false,
-                runner: |p| test_runner_for_feature(p, get_feature_by_name("simplify")),
-                enabling_condition: |_, _| true,
-            },
             // Tests with cvc5 as a backend for boogie.
             Feature {
                 name: "cvc5",
@@ -195,6 +180,8 @@ fn get_flags_and_baseline(
     let dep_flags = vec![
         // stdlib is commonly required
         "--dependency=../move-stdlib/sources",
+        // table extension is required
+        "--dependency=../extensions/move-table-extension/sources",
     ];
 
     let (base_flags, baseline_path) =
@@ -217,6 +204,9 @@ fn get_flags_and_baseline(
 
     // Add flag assigning an address to the stdlib.
     flags.push("--named-addresses=Std=0x1".to_string());
+
+    // Add flag assigning an address to stdlib extensions.
+    flags.push("--named-addresses=Extensions=0x2".to_string());
 
     // Add flags specific to the feature.
     flags.extend(feature.flags.iter().map(|f| f.to_string()));

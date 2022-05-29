@@ -15,10 +15,11 @@ use crate::{
 use move_binary_format::file_format::CodeOffset;
 use move_model::{
     model::FunctionEnv,
-    native::{EVENT_EMIT_EVENT, VECTOR_BORROW_MUT},
+    well_known::{EVENT_EMIT_EVENT, VECTOR_BORROW_MUT},
 };
 
 use crate::dataflow_domains::{AbstractDomain, JoinResult};
+use move_model::well_known::TABLE_BORROW_MUT;
 use std::collections::BTreeSet;
 
 pub struct CleanAndOptimizeProcessor();
@@ -112,16 +113,9 @@ impl<'a> TransferFunctions for Optimizer<'a> {
                         && callee_env.is_native_or_intrinsic()
                     {
                         // Exploit knowledge about builtin functions
-                        let pool = callee_env.symbol_pool();
-                        !matches!(
-                            format!(
-                                "{}::{}",
-                                callee_env.module_env.get_name().display_full(pool),
-                                callee_env.get_name().display(pool)
-                            )
-                            .as_str(),
-                            VECTOR_BORROW_MUT | EVENT_EMIT_EVENT
-                        )
+                        !(callee_env.is_well_known(VECTOR_BORROW_MUT)
+                            || callee_env.is_well_known(EVENT_EMIT_EVENT)
+                            || callee_env.is_well_known(TABLE_BORROW_MUT))
                     } else {
                         true
                     };

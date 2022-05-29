@@ -4,7 +4,6 @@
 
 //! Analysis which computes information needed in backends for monomorphization. This
 //! computes the distinct type instantiations in the model for structs and inlined functions.
-//! It also eliminates type quantification (`forall coin_type: type:: P`).
 
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -22,6 +21,7 @@ use move_model::{
         SpecVarId, StructEnv, StructId,
     },
     ty::{Type, TypeDisplayContext, TypeInstantiationDerivation, TypeUnificationAdapter, Variance},
+    well_known::TABLE_TABLE,
 };
 
 use crate::{
@@ -40,6 +40,7 @@ pub struct MonoInfo {
     pub spec_vars: BTreeMap<QualifiedId<SpecVarId>, BTreeSet<Vec<Type>>>,
     pub type_params: BTreeSet<u16>,
     pub vec_inst: BTreeSet<Type>,
+    pub table_inst: BTreeSet<(Type, Type)>,
     pub native_inst: BTreeMap<ModuleId, BTreeSet<Vec<Type>>>,
     pub axioms: Vec<Condition>,
 }
@@ -448,7 +449,11 @@ impl<'a> Analyzer<'a> {
     }
 
     fn add_struct(&mut self, struct_: StructEnv<'_>, targs: &[Type]) {
-        if struct_.is_native_or_intrinsic() && !targs.is_empty() {
+        if struct_.is_well_known(TABLE_TABLE) {
+            self.info
+                .table_inst
+                .insert((targs[0].clone(), targs[1].clone()));
+        } else if struct_.is_native_or_intrinsic() && !targs.is_empty() {
             self.info
                 .native_inst
                 .entry(struct_.module_env.get_id())

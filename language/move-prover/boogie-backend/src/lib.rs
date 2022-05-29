@@ -35,6 +35,7 @@ const VECTOR_SMT_ARRAY_THEORY: &[u8] = include_bytes!("prelude/vector-smt-array-
 const VECTOR_SMT_ARRAY_EXT_THEORY: &[u8] =
     include_bytes!("prelude/vector-smt-array-ext-theory.bpl");
 const MULTISET_ARRAY_THEORY: &[u8] = include_bytes!("prelude/multiset-array-theory.bpl");
+const TABLE_ARRAY_THEORY: &[u8] = include_bytes!("prelude/table-array-theory.bpl");
 
 const BCS_MODULE: &str = "0x1::BCS";
 const EVENT_MODULE: &str = "0x1::Event";
@@ -80,6 +81,7 @@ pub fn add_prelude(
     };
     templates.push(templ("vector-theory", vector_theory));
     templates.push(templ("multiset-theory", MULTISET_ARRAY_THEORY));
+    templates.push(templ("table-theory", TABLE_ARRAY_THEORY));
 
     let mut tera = Tera::default();
     tera.add_raw_templates(templates)?;
@@ -103,6 +105,25 @@ pub fn add_prelude(
         .into_iter()
         .collect_vec();
     context.insert("vec_instances", &vec_instances);
+    let table_instances = mono_info
+        .table_inst
+        .iter()
+        .map(|(kty, vty)| {
+            (
+                TypeInfo::new(env, options, kty),
+                TypeInfo::new(env, options, vty),
+            )
+        })
+        .collect_vec();
+    let table_key_instances = mono_info
+        .table_inst
+        .iter()
+        .map(|(kty, _)| kty)
+        .unique()
+        .map(|ty| TypeInfo::new(env, options, ty))
+        .collect_vec();
+    context.insert("table_instances", &table_instances);
+    context.insert("table_key_instances", &table_key_instances);
     let filter_native = |module: &str| {
         mono_info
             .native_inst
@@ -122,6 +143,13 @@ pub fn add_prelude(
     context.insert("bcs_instances", &bcs_instances);
     let event_instances = filter_native(EVENT_MODULE);
     context.insert("event_instances", &event_instances);
+
+    // TODO: we have defined {{Std}} for adaptable resolution of stdlib addresses but
+    //   not used it yet in the templates.
+    let std_addr = format!("${}", env.get_stdlib_address());
+    let ext_addr = format!("${}", env.get_extlib_address());
+    context.insert("Std", &std_addr);
+    context.insert("Ext", &ext_addr);
 
     let expanded_content = tera.render("prelude", &context)?;
     emitln!(writer, &expanded_content);

@@ -19,6 +19,7 @@ options provided to the prover.
 {% import "native" as native %}
 {% include "vector-theory" %}
 {% include "multiset-theory" %}
+{% include "table-theory" %}
 
 
 // ============================================================================================
@@ -241,6 +242,15 @@ axiom $EXEC_FAILURE_CODE == -1;
 procedure {:inline 1} $ExecFailureAbort() {
     $abort_flag := true;
     $abort_code := $EXEC_FAILURE_CODE;
+}
+
+procedure {:inline 1} $Abort(code: int) {
+    $abort_flag := true;
+    $abort_code := code;
+}
+
+function {:inline} $StdError(cat: int, reason: int): int {
+    reason * 256 + cat
 }
 
 procedure {:inline 1} $InitVerification() {
@@ -480,6 +490,26 @@ function {:inline} $SliceVecByRange<T>(v: Vec T, r: $Range): Vec T {
 // Native Vector implementation for element type `{{instance.suffix}}`
 
 {{ native::vector_module(instance=instance) -}}
+{%- endfor %}
+
+// ==================================================================================
+// Native Table
+
+{%- for instance in table_key_instances %}
+
+// ----------------------------------------------------------------------------------
+// Native Table key encoding for type `({{instance.suffix}}`
+
+{{ native::table_key_encoding(instance=instance) -}}
+{%- endfor %}
+
+{%- for instance in table_instances %}
+
+// ----------------------------------------------------------------------------------
+// Native Table implementation for type `({{instance.0.suffix}},{{instance.1.suffix}})`
+
+
+{{ native::table_module(instance=instance) -}}
 {%- endfor %}
 
 // ==================================================================================

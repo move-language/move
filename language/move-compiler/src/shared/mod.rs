@@ -290,6 +290,11 @@ pub struct Flags {
         long = cli::SHADOW,
     )]
     shadow: bool,
+
+    /// Internal flag used by the model builder to maintain functions which would be otherwise
+    /// included only in tests, without creating the unit test code regular tests do.
+    #[clap(skip)]
+    keep_testing_functions: bool,
 }
 
 impl Flags {
@@ -299,6 +304,7 @@ impl Flags {
             shadow: false,
             flavor: "".to_string(),
             bytecode_version: None,
+            keep_testing_functions: false,
         }
     }
 
@@ -308,12 +314,20 @@ impl Flags {
             shadow: false,
             flavor: "".to_string(),
             bytecode_version: None,
+            keep_testing_functions: false,
         }
     }
 
     pub fn set_flavor(self, flavor: impl ToString) -> Self {
         Self {
             flavor: flavor.to_string(),
+            ..self
+        }
+    }
+
+    pub fn set_keep_testing_functions(self, value: bool) -> Self {
+        Self {
+            keep_testing_functions: value,
             ..self
         }
     }
@@ -331,6 +345,10 @@ impl Flags {
 
     pub fn is_testing(&self) -> bool {
         self.test
+    }
+
+    pub fn keep_testing_functions(&self) -> bool {
+        self.test || self.keep_testing_functions
     }
 
     pub fn sources_shadow_deps(&self) -> bool {

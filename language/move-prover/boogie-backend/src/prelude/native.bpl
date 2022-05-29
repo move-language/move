@@ -206,6 +206,145 @@ $1_Vector_index_of{{S}}(v: Vec ({{T}}), e: {{T}}) returns (res1: bool, res2: int
 }
 {% endmacro vector_module %}
 
+{# Tables
+   =======
+#}
+
+{% macro table_key_encoding(instance) %}
+{%- set K = instance.name -%}
+{%- set S = "'" ~ instance.suffix ~ "'" -%}
+
+function $EncodeKey{{S}}(k: {{K}}): int;
+axiom (
+  forall k1, k2: {{K}} :: {$EncodeKey{{S}}(k1), $EncodeKey{{S}}(k2)}
+    $IsEqual{{S}}(k1, k2) <==> $EncodeKey{{S}}(k1) == $EncodeKey{{S}}(k2)
+);
+{% endmacro table_key_encoding %}
+
+
+{% macro table_module(instance) %}
+{%- set K = instance.0.name -%}
+{%- set V = instance.1.name -%}
+{%- set Self = "Table int (" ~ V ~ ")" -%}
+{%- set S = "'" ~ instance.0.suffix ~ "_" ~ instance.1.suffix ~ "'" -%}
+{%- set SV = "'" ~ instance.1.suffix ~ "'" -%}
+{%- set ENC = "$EncodeKey'" ~ instance.0.suffix ~ "'" -%}
+
+
+function $IsEqual'table{{S}}'(t1: {{Self}}, t2: {{Self}}): bool {
+    // TODO: do we need to encode table identity?
+    t1 == t2
+}
+
+// Not inlined.
+function $IsValid'table{{S}}'(t: {{Self}}): bool {
+    $IsValid'u64'(LenTable(t)) &&
+    (forall i: int:: ContainsTable(t, i) ==> $IsValid{{SV}}(GetTable(t, i)))
+}
+
+procedure {:inline 2} {{Ext}}_Table_new{{S}}() returns (v: {{Self}}) {
+    v := EmptyTable();
+}
+
+procedure {:inline 2} {{Ext}}_Table_destroy_empty{{S}}(t: {{Self}}) {
+    if (LenTable(t) != 0) {
+        call $Abort($StdError(1/*INVALID_STATE*/, 102/*ENOT_EMPTY*/));
+    }
+}
+
+procedure {:inline 2} {{Ext}}_Table_drop_unchecked{{S}}(t: {{Self}}) {
+}
+
+procedure {:inline 2} {{Ext}}_Table_length{{S}}(t: ({{Self}})) returns (l: int) {
+    l := LenTable(t);
+}
+
+procedure {:inline 2} {{Ext}}_Table_empty{{S}}(t: ({{Self}})) returns (r: bool) {
+    r := LenTable(t) == 0;
+}
+
+procedure {:inline 2} {{Ext}}_Table_contains{{S}}(t: ({{Self}}), k: {{K}}) returns (r: bool) {
+    r := ContainsTable(t, {{ENC}}(k));
+}
+
+procedure {:inline 2} {{Ext}}_Table_add{{S}}(m: $Mutation ({{Self}}), k: {{K}}, v: {{V}}) returns (m': $Mutation({{Self}})) {
+    var enc_k: int;
+    var t: {{Self}};
+    enc_k := {{ENC}}(k);
+    t := $Dereference(m);
+    if (ContainsTable(t, enc_k)) {
+        call $Abort($StdError(7/*INVALID_ARGUMENTS*/, 100/*EALREADY_EXISTS*/));
+    } else {
+        m' := $UpdateMutation(m, AddTable(t, enc_k, v));
+    }
+}
+
+procedure {:inline 2} {{Ext}}_Table_remove{{S}}(m: $Mutation ({{Self}}), k: {{K}})
+returns (v: {{V}}, m': $Mutation({{Self}})) {
+    var enc_k: int;
+    var t: {{Self}};
+    enc_k := {{ENC}}(k);
+    t := $Dereference(m);
+    if (!ContainsTable(t, enc_k)) {
+        call $Abort($StdError(7/*INVALID_ARGUMENTS*/, 101/*ENOT_FOUND*/));
+    } else {
+        v := GetTable(t, enc_k);
+        m' := $UpdateMutation(m, RemoveTable(t, enc_k));
+    }
+}
+
+procedure {:inline 2} {{Ext}}_Table_borrow{{S}}(t: {{Self}}, k: {{K}}) returns (v: {{V}}) {
+    var enc_k: int;
+    enc_k := {{ENC}}(k);
+    if (!ContainsTable(t, enc_k)) {
+        call $Abort($StdError(7/*INVALID_ARGUMENTS*/, 101/*ENOT_FOUND*/));
+    } else {
+        v := GetTable(t, {{ENC}}(k));
+    }
+}
+
+procedure {:inline 2} {{Ext}}_Table_borrow_mut{{S}}(m: $Mutation ({{Self}}), k: {{K}})
+returns (dst: $Mutation ({{V}}), m': $Mutation ({{Self}})) {
+    var enc_k: int;
+    var t: {{Self}};
+    enc_k := {{ENC}}(k);
+    t := $Dereference(m);
+    if (!ContainsTable(t, enc_k)) {
+        call $Abort($StdError(7/*INVALID_ARGUMENTS*/, 101/*ENOT_FOUND*/));
+    } else {
+        dst := $Mutation(l#$Mutation(m), ExtendVec(p#$Mutation(m), enc_k), GetTable(t, enc_k));
+        m' := m;
+    }
+}
+
+function {:inline} {{Ext}}_Table_spec_table{{S}}(): {{Self}} {
+    EmptyTable()
+}
+
+function {:inline} {{Ext}}_Table_spec_len{{S}}(t: {{Self}}): int {
+    LenTable(t)
+}
+
+function {:inline} {{Ext}}_Table_spec_contains{{S}}(t: {{Self}}, k: {{K}}): bool {
+    ContainsTable(t, {{ENC}}(k))
+}
+
+
+function {:inline} {{Ext}}_Table_spec_add{{S}}(t: {{Self}}, k: {{K}}, v: {{V}}): {{Self}} {
+    AddTable(t, {{ENC}}(k), v)
+}
+
+function {:inline} {{Ext}}_Table_spec_remove{{S}}(t: {{Self}}, k: {{K}}): {{Self}} {
+    RemoveTable(t, {{ENC}}(k))
+}
+
+function {:inline} {{Ext}}_Table_spec_get{{S}}(t: {{Self}}, k: {{K}}): {{V}} {
+    GetTable(t, {{ENC}}(k))
+}
+
+
+{% endmacro table_module %}
+
 
 {# BCS
    ====

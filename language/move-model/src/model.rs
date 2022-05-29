@@ -77,6 +77,7 @@ use crate::{
 use crate::ast::Attribute;
 use move_binary_format::file_format::CodeOffset;
 pub use move_binary_format::file_format::{AbilitySet, Visibility as FunctionVisibility};
+use move_command_line_common::address::NumericalAddress;
 
 // =================================================================================================
 /// # Constants
@@ -460,6 +461,8 @@ pub struct GlobalEnv {
     /// A mapping from file hash to file name and associated FileId. Though this information is
     /// already in `source_files`, we can't get it out of there so need to book keep here.
     file_hash_map: BTreeMap<FileHash, (String, FileId)>,
+    /// A mapping from file id to associated alias map.
+    file_alias_map: BTreeMap<FileId, Rc<BTreeMap<Symbol, NumericalAddress>>>,
     /// Bijective mapping between FileId and a plain int. FileId's are themselves wrappers around
     /// ints, but the inner representation is opaque and cannot be accessed. This is used so we
     /// can emit FileId's to generated code and read them back.
@@ -499,6 +502,9 @@ pub struct GlobalEnv {
     pub used_spec_funs: BTreeSet<QualifiedId<SpecFunId>>,
     /// A type-indexed container for storing extension data in the environment.
     extensions: RefCell<BTreeMap<TypeId, Box<dyn Any>>>,
+    /// The address of the standard and extension libaries.
+    stdlib_address: Option<BigUint>,
+    extlib_address: Option<BigUint>,
 }
 
 /// Struct a helper type for implementing fmt::Display depending on GlobalEnv
@@ -536,6 +542,7 @@ impl GlobalEnv {
             unknown_move_ir_loc,
             internal_loc,
             file_hash_map,
+            file_alias_map: BTreeMap::new(),
             file_id_to_idx,
             file_idx_to_id,
             file_id_is_dep: BTreeSet::new(),
@@ -549,6 +556,8 @@ impl GlobalEnv {
             global_invariants_for_memory: Default::default(),
             used_spec_funs: BTreeSet::new(),
             extensions: Default::default(),
+            stdlib_address: None,
+            extlib_address: None,
         }
     }
 
@@ -632,11 +641,20 @@ impl GlobalEnv {
     pub fn add_source(
         &mut self,
         file_hash: FileHash,
+        address_aliases: Rc<BTreeMap<Symbol, NumericalAddress>>,
         file_name: &str,
         source: &str,
         is_dep: bool,
     ) -> FileId {
         let file_id = self.source_files.add(file_name, source.to_string());
+        self.stdlib_address =
+            self.resolve_std_address_alias(self.stdlib_address.clone(), "Std", &address_aliases);
+        self.extlib_address = self.resolve_std_address_alias(
+            self.extlib_address.clone(),
+            "Extensions",
+            &address_aliases,
+        );
+        self.file_alias_map.insert(file_id, address_aliases);
         self.file_hash_map
             .insert(file_hash, (file_name.to_string(), file_id));
         let file_idx = self.file_id_to_idx.len() as u16;
@@ -646,6 +664,33 @@ impl GlobalEnv {
             self.file_id_is_dep.insert(file_id);
         }
         file_id
+    }
+
+    fn resolve_std_address_alias(
+        &self,
+        def: Option<BigUint>,
+        name: &str,
+        aliases: &BTreeMap<Symbol, NumericalAddress>,
+    ) -> Option<BigUint> {
+        let name_sym = self.symbol_pool().make(name);
+        if let Some(a) = aliases.get(&name_sym) {
+            let addr = BigUint::from_bytes_be(a.as_ref());
+            if matches!(&def, Some(other_addr) if &addr != other_addr) {
+                self.error(
+                    &self.unknown_loc,
+                    &format!(
+                        "Ambiguous definition of standard address alias `{}` (`0x{} != 0x{}`).\
+                                 This alias currently must be unique across all packages.",
+                        name,
+                        addr,
+                        def.unwrap()
+                    ),
+                );
+            }
+            Some(addr)
+        } else {
+            def
+        }
     }
 
     /// Find all target modules and return in a vector
@@ -1639,6 +1684,16 @@ impl GlobalEnv {
             type_param_names: None,
         }
     }
+
+    /// Returns the address where the standard lib is defined.
+    pub fn get_stdlib_address(&self) -> BigUint {
+        self.stdlib_address.clone().unwrap_or_else(|| 1u16.into())
+    }
+
+    /// Returns the address where the extensions libs are defined.
+    pub fn get_extlib_address(&self) -> BigUint {
+        self.extlib_address.clone().unwrap_or_else(|| 2u16.into())
+    }
 }
 
 impl Default for GlobalEnv {
@@ -2452,6 +2507,22 @@ impl<'env> StructEnv<'env> {
         }
     }
 
+    /// Returns true if this struct has the pragma intrinsic set to true.
+    pub fn is_intrinsic(&self) -> bool {
+        self.is_pragma_true(INTRINSIC_PRAGMA, || false)
+    }
+
+    /// Returns true if this is the well-known native or intrinsic struct of the given name.
+    pub fn is_well_known(&self, name: &str) -> bool {
+        let env = self.module_env.env;
+        if !self.is_native() && !self.is_intrinsic() {
+            return false;
+        }
+        let addr = self.module_env.get_name().addr();
+        (addr == &env.get_stdlib_address() || addr == &env.get_extlib_address())
+            && self.get_full_name_str() == name
+    }
+
     /// Determines whether this struct is the well-known vector type.
     pub fn is_vector(&self) -> bool {
         let name = self.symbol_pool().string(self.module_env.get_name().name());
@@ -3102,8 +3173,21 @@ impl<'env> FunctionEnv<'env> {
         self.is_pragma_true(INTRINSIC_PRAGMA, || false)
     }
 
+    /// Returns true if function is either native or intrinsic.
     pub fn is_native_or_intrinsic(&self) -> bool {
         self.is_native() || self.is_intrinsic()
+    }
+
+    /// Returns true if this is the well-known native or intrinsic function of the given name.
+    /// The function must reside either in stdlib or extlib address domain.
+    pub fn is_well_known(&self, name: &str) -> bool {
+        let env = self.module_env.env;
+        if !self.is_native_or_intrinsic() {
+            return false;
+        }
+        let addr = self.module_env.get_name().addr();
+        (addr == &env.get_stdlib_address() || addr == &env.get_extlib_address())
+            && self.get_full_name_str() == name
     }
 
     /// Returns true if this function is opaque.

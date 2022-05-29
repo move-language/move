@@ -18,8 +18,8 @@ use move_binary_format::file_format::CodeOffset;
 use move_model::{
     ast::TempIndex,
     model::{FunctionEnv, GlobalEnv, QualifiedInstId},
-    native::VECTOR_BORROW_MUT,
     ty::Type,
+    well_known::{TABLE_BORROW_MUT, VECTOR_BORROW_MUT},
 };
 use std::{
     borrow::BorrowMut,
@@ -365,7 +365,7 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
         func_env: &FunctionEnv<'_>,
         mut data: FunctionData,
     ) -> FunctionData {
-        let borrow_annotation = if func_env.is_native() {
+        let borrow_annotation = if func_env.is_native_or_intrinsic() {
             native_annotation(func_env)
         } else {
             let func_target = FunctionTarget::new(func_env, &data);
@@ -413,28 +413,21 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
 }
 
 fn native_annotation(fun_env: &FunctionEnv) -> BorrowAnnotation {
-    let pool = fun_env.symbol_pool();
-    match format!(
-        "{}::{}",
-        fun_env.module_env.get_name().display_full(pool),
-        fun_env.get_name().display(pool)
-    )
-    .as_str()
-    {
-        VECTOR_BORROW_MUT => {
-            let mut an = BorrowAnnotation::default();
-            let param_node = BorrowNode::Reference(0);
-            let return_node = BorrowNode::ReturnPlaceholder(0);
-            let edge = BorrowEdge::Index;
-            an.summary
-                .borrowed_by
-                .entry(param_node)
-                .or_default()
-                .insert((return_node, edge));
-            an.summary.consolidate();
-            an
-        }
-        _ => BorrowAnnotation::default(),
+    if fun_env.is_well_known(VECTOR_BORROW_MUT) || fun_env.is_well_known(TABLE_BORROW_MUT) {
+        // Create an edge from the first parameter to the return value.
+        let mut an = BorrowAnnotation::default();
+        let param_node = BorrowNode::Reference(0);
+        let return_node = BorrowNode::ReturnPlaceholder(0);
+        let edge = BorrowEdge::Index;
+        an.summary
+            .borrowed_by
+            .entry(param_node)
+            .or_default()
+            .insert((return_node, edge));
+        an.summary.consolidate();
+        an
+    } else {
+        BorrowAnnotation::default()
     }
 }
 
@@ -592,7 +585,7 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                             .targets
                             .get_target(callee_env, &FunctionVariant::Baseline);
                         let native_an;
-                        let callee_an_opt = if callee_env.is_native() {
+                        let callee_an_opt = if callee_env.is_native_or_intrinsic() {
                             native_an = native_annotation(callee_env);
                             Some(&native_an)
                         } else {

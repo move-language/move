@@ -9,7 +9,7 @@
 //! - Similarly, we also *may* want the spec module not be able to see target module `use`
 //!   declarations, and require it to repeat them.
 //! A solution to both problems can be to mark names introduced by `use` to whether they
-//! are for specs or not, and allow the older to resolve only in spec contexts.
+//! are for specs or not, and allow the later to resolve only in spec contexts.
 
 use crate::{
     diag,

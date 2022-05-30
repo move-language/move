@@ -176,7 +176,7 @@ move package build
   book](https://move-language.github.io/move/packages.html)
 * More information on the `Move.toml` file can be found in the [package section of the Move book](https://move-language.github.io/move/packages.html#movetoml).
 * Move also supports the idea of [named
-  addresses](https://move-language.github.io/move/address.html#named-addresses) Named
+  addresses](https://move-language.github.io/move/address.html#named-addresses), Named
   addresses are a way to parametrize Move source code so that you can compile
   the module using different values for `NamedAddr` to get different bytecode
   that you can deploy, depending on what address(es) you control. They are used quite frequently, and can be defined in the `Move.toml` file in the `[addresses]` section, e.g.,

@@ -708,7 +708,7 @@ public fun transfer<CoinType: drop>(from: &signer, to: address, amount: u64, _wi
 The method transfers the `amount` of coin from the account of `from` to the address `to`. The specification is given below:
 
 ```
-spec transfer {
+    spec transfer {
         let addr_from = signer::address_of(from);
 
         let balance_from = global<Balance<CoinType>>(addr_from).coin.value;

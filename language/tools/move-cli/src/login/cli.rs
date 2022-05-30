@@ -1,9 +1,9 @@
-use std::{fs, io};
+use anyhow::{bail, Result};
 use std::fs::File;
 use std::path::PathBuf;
-use anyhow::{bail, Result};
-use toml_edit::easy::Value;
+use std::{fs, io};
 use toml_edit::easy::map::Map;
+use toml_edit::easy::Value;
 
 pub fn handle_login_commands(config: move_package::BuildConfig) -> Result<()> {
     let url: &str;
@@ -12,23 +12,33 @@ pub fn handle_login_commands(config: move_package::BuildConfig) -> Result<()> {
     } else {
         url = "https://movey.net";
     }
-    println!("please paste the API Token found on {}/settings/tokens below", url);
+    println!(
+        "Please paste the API Token found on {}/settings/tokens below",
+        url
+    );
     let mut line = String::new();
-    match io::stdin().read_line(&mut line) {
-        Ok(_) => {
-            if let Some('\n') = line.chars().next_back() {
-                line.pop();
+    loop {
+        match io::stdin().read_line(&mut line) {
+            Ok(_) => {
+                if let Some('\n') = line.chars().next_back() {
+                    line.pop();
+                }
+                if let Some('\r') = line.chars().next_back() {
+                    line.pop();
+                }
+                if line.len() != 0 {
+                    break;
+                }
+                println!("Invalid API Token. Try again!");
             }
-            if let Some('\r') = line.chars().next_back() {
-                line.pop();
+            Err(err) => {
+                bail!("Error reading file: {}", err);
             }
-            print!("{}", line);
-        }
-        Err(err) => {
-            bail!("Error reading file: {}", err);
         }
     }
-    save_credential(line, config.test_mode)
+    save_credential(line, config.test_mode)?;
+    println!("Token for Movey saved.");
+    Ok(())
 }
 
 pub fn save_credential(token: String, is_test_mode: bool) -> Result<()> {
@@ -52,23 +62,28 @@ pub fn save_credential(token: String, is_test_mode: bool) -> Result<()> {
     match fs::read_to_string(&credential_path) {
         Ok(contents) => {
             old_contents = contents;
-        },
+        }
         Err(error) => bail!("Error reading input: {}", error),
     }
-    let mut toml: Value = old_contents.parse()
+    let mut toml: Value = old_contents
+        .parse()
         .map_err(|e| anyhow::Error::from(e).context("could not parse input as TOML"))?;
 
     if let Some(registry) = toml.as_table_mut().unwrap().get_mut("registry") {
         if let Some(toml_token) = registry.as_table_mut().unwrap().get_mut("token") {
             *toml_token = Value::String(token);
         } else {
-            registry.as_table_mut().unwrap()
+            registry
+                .as_table_mut()
+                .unwrap()
                 .insert(String::from("token"), Value::String(token));
         }
     } else {
         let mut value = Map::new();
         value.insert(String::from("token"), Value::String(token));
-        toml.as_table_mut().unwrap().insert(String::from("registry"), Value::Table(value));
+        toml.as_table_mut()
+            .unwrap()
+            .insert(String::from("registry"), Value::Table(value));
     }
 
     let new_contents = toml.to_string();
@@ -96,85 +111,127 @@ fn set_permissions(file: &File, mode: u32) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use std::env;
-    use home::home_dir;
     use super::*;
+    use home::home_dir;
+    use std::env;
 
-    fn setup_home_path() -> String {
-        let move_home = env::var("MOVE_HOME").unwrap_or_else(|_| {
+    fn setup_move_home() -> (String, String) {
+        let mut move_home = env::var("MOVE_HOME").unwrap_or_else(|_| {
             env::var("HOME").unwrap_or_else(|_| {
                 let home_dir = home_dir().unwrap().to_string_lossy().to_string();
                 env::set_var("HOME", &home_dir);
                 home_dir
             })
         });
-        let credential_file = move_home + "/.move/test/credential.toml";
-        return credential_file;
+        move_home.push_str("/.move/test");
+        let credential_path = move_home.clone() + "/credential.toml";
+        return (move_home, credential_path);
+    }
+
+    fn clean_up() {
+        let (move_home, _) = setup_move_home();
+        let _ = fs::remove_dir_all(move_home);
     }
 
     #[test]
     fn save_credential_works_if_no_credential_file_exists() {
-        let credential_file = setup_home_path();
-        let _ = fs::remove_file(&credential_file);
+        let (move_home, credential_path) = setup_move_home();
+        let _ = fs::remove_dir_all(&move_home);
 
         save_credential(String::from("test_token"), true).unwrap();
 
-        let contents = fs::read_to_string(&credential_file).expect("Unable to read file");
+        let contents = fs::read_to_string(&credential_path).expect("Unable to read file");
         let mut toml: Value = contents.parse().unwrap();
         let registry = toml.as_table_mut().unwrap().get_mut("registry").unwrap();
         let token = registry.as_table_mut().unwrap().get_mut("token").unwrap();
         assert!(token.to_string().contains("test_token"));
+
+        clean_up();
     }
 
     #[test]
-    fn save_credential_works_if_credential_file_is_empty() {
-        let credential_file = setup_home_path();
+    fn save_credential_works_if_empty_credential_file_exists() {
+        let (move_home, credential_path) = setup_move_home();
 
-        let _ = fs::remove_file(&credential_file);
-        File::create(&credential_file).unwrap();
+        let _ = fs::remove_dir_all(&move_home);
+        fs::create_dir_all(&move_home).unwrap();
+        File::create(&credential_path).unwrap();
+
+        let contents = fs::read_to_string(&credential_path).expect("Unable to read file");
+        let mut toml: Value = contents.parse().unwrap();
+        assert!(toml.as_table_mut().unwrap().get_mut("registry").is_none());
 
         save_credential(String::from("test_token"), true).unwrap();
 
-        let contents = fs::read_to_string(&credential_file).expect("Unable to read file");
+        let contents = fs::read_to_string(&credential_path).expect("Unable to read file");
         let mut toml: Value = contents.parse().unwrap();
         let registry = toml.as_table_mut().unwrap().get_mut("registry").unwrap();
         let token = registry.as_table_mut().unwrap().get_mut("token").unwrap();
         assert!(token.to_string().contains("test_token"));
+
+        clean_up();
     }
 
     #[test]
-    fn save_credential_works_with_old_token_field() {
-        let credential_file = setup_home_path();
-        File::create(&credential_file).unwrap();
+    fn save_credential_works_if_token_field_exists() {
+        let (move_home, credential_path) = setup_move_home();
 
-        let old_content = String::from("[registry]\ntoken = \"old_test_token\"\n");
-        fs::write(&credential_file, old_content).expect("Unable to write file");
+        let _ = fs::remove_dir_all(&move_home);
+        fs::create_dir_all(&move_home).unwrap();
+        File::create(&credential_path).unwrap();
 
-        save_credential(String::from("test_token"), true).unwrap();
+        let old_content =
+            String::from("[registry]\ntoken = \"old_test_token\"\nversion = \"0.0.0\"\n");
+        fs::write(&credential_path, old_content).expect("Unable to write file");
 
-        let contents = fs::read_to_string(&credential_file).expect("Unable to read file");
+        let contents = fs::read_to_string(&credential_path).expect("Unable to read file");
         let mut toml: Value = contents.parse().unwrap();
         let registry = toml.as_table_mut().unwrap().get_mut("registry").unwrap();
         let token = registry.as_table_mut().unwrap().get_mut("token").unwrap();
-        assert!(token.to_string().contains("test_token"));
+        assert!(token.to_string().contains("old_test_token"));
+        assert!(!token.to_string().contains("new_world"));
+
+        save_credential(String::from("new_world"), true).unwrap();
+
+        let contents = fs::read_to_string(&credential_path).expect("Unable to read file");
+        let mut toml: Value = contents.parse().unwrap();
+        let registry = toml.as_table_mut().unwrap().get_mut("registry").unwrap();
+        let token = registry.as_table_mut().unwrap().get_mut("token").unwrap();
+        assert!(token.to_string().contains("new_world"));
         assert!(!token.to_string().contains("old_test_token"));
+        let version = registry.as_table_mut().unwrap().get_mut("version").unwrap();
+        assert!(version.to_string().contains("0.0.0"));
+
+        clean_up();
     }
 
     #[test]
-    fn save_credential_works_with_old_empty_token_field() {
-        let credential_file = setup_home_path();
-        File::create(&credential_file).unwrap();
+    fn save_credential_works_if_empty_token_field_exists() {
+        let (move_home, credential_path) = setup_move_home();
 
-        let old_content = String::from("[registry]\ntoken = \"\"\n");
-        fs::write(&credential_file, old_content).expect("Unable to write file");
+        let _ = fs::remove_dir_all(&move_home);
+        fs::create_dir_all(&move_home).unwrap();
+        File::create(&credential_path).unwrap();
+
+        let old_content = String::from("[registry]\ntoken = \"\"\nversion = \"0.0.0\"\n");
+        fs::write(&credential_path, old_content).expect("Unable to write file");
+
+        let contents = fs::read_to_string(&credential_path).expect("Unable to read file");
+        let mut toml: Value = contents.parse().unwrap();
+        let registry = toml.as_table_mut().unwrap().get_mut("registry").unwrap();
+        let token = registry.as_table_mut().unwrap().get_mut("token").unwrap();
+        assert!(!token.to_string().contains("test_token"));
 
         save_credential(String::from("test_token"), true).unwrap();
 
-        let contents = fs::read_to_string(&credential_file).expect("Unable to read file");
+        let contents = fs::read_to_string(&credential_path).expect("Unable to read file");
         let mut toml: Value = contents.parse().unwrap();
         let registry = toml.as_table_mut().unwrap().get_mut("registry").unwrap();
         let token = registry.as_table_mut().unwrap().get_mut("token").unwrap();
         assert!(token.to_string().contains("test_token"));
-        assert!(!token.to_string().contains("old_test_token"));
+        let version = registry.as_table_mut().unwrap().get_mut("version").unwrap();
+        assert!(version.to_string().contains("0.0.0"));
+
+        clean_up();
     }
 }

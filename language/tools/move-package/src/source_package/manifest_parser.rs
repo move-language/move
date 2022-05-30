@@ -328,7 +328,6 @@ fn parse_dependency(tval: TV) -> Result<PM::Dependency> {
                 }
                 (None, Some(git)) => {
                     // Look to see if a MOVE_HOME has been set. Otherwise default to $HOME
-                    // let a = std::env::var("MOVE_HOME").unwrap();
                     let move_home = std::env::var("MOVE_HOME").unwrap_or_else(|_| {
                         format!(
                             "{}/.move",

@@ -62,7 +62,7 @@ You should see something like this along with a list and description of a
 number of commands:
 
 ```
-move-package 
+move-package
 Execute a package command. Executed in the current directory or the closest containing Move package
 
 USAGE:

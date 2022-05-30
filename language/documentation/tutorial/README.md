@@ -24,7 +24,7 @@ Now let's get started!
 
 ## Step 0: Installation<span id="Step0"><span>
 
-If you haven't already, open your terminal and clone the [the Move repository](https://github.com/move-language/move):
+If you haven't already, open your terminal and clone [the Move repository](https://github.com/move-language/move):
 
 ```bash
 git clone https://github.com/move-language/move.git

@@ -235,6 +235,8 @@ module 0xCAFE::BasicCoin {
         let addr = signer::address_of(&account);
         mint(account, 10);
         // Make sure there is a `Coin` resource under `addr` with a value of `10`.
+        // We can access this resource and its value since we are in the
+        // same module that defined the `Coin` resource.
         assert!(borrow_global<Coin>(addr).value == 10, 0);
     }
 }
@@ -273,17 +275,17 @@ assertion fails the unit test will fail.
   ```
     ┌── test_mint_10 ──────
     │ error[E11001]: test failure
-    │    ┌─ step_2/BasicCoin/sources/FirstModule.move:22:9
+    │    ┌─ ./sources/FirstModule.move:24:9
     │    │
     │ 18 │     fun test_mint_10(account: signer) acquires Coin {
     │    │         ------------ In this function in 0xcafe::BasicCoin
     │    ·
-    │ 22 │         assert!(borrow_global<Coin>(addr).value == 11, 0);
+    │ 24 │         assert!(borrow_global<Coin>(addr).value == 11, 0);
     │    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Test was not expected to abort but it aborted with 0 here
     │
     │
     │ ────── Storage state at point of failure ──────
-    │ 0xcafe:
+    │ 0xc0ffee:
     │       => key 0xcafe::BasicCoin::Coin {
     │           value: 10
     │       }
@@ -477,7 +479,7 @@ move package test
 You should see something like this:
 
 ```
-BUILDING MoveStdlib
+INCLUDING DEPENDENCY MoveStdlib
 BUILDING BasicCoin
 Running Move unit tests
 [ PASS    ] 0xcafe::BasicCoin::can_withdraw_amount
@@ -597,7 +599,7 @@ which outputs the following error information:
 
 ```
 error: abort not covered by any of the `aborts_if` clauses
-   ┌─ language/documentation/tutorial/step_7/BasicCoin/sources/BasicCoin.move:38:5
+   ┌─ ./sources/BasicCoin.move:38:5
    │
 35 │           borrow_global<Balance<CoinType>>(owner).coin.value
    │           ------------- abort happened here with execution failure
@@ -607,9 +609,9 @@ error: abort not covered by any of the `aborts_if` clauses
 40 │ │     }
    │ ╰─────^
    │
-   =     at language/documentation/hackathon-tutorial/step_7/BasicCoin/sources/BasicCoin.move:34: balance_of
+   =     at ./sources/BasicCoin.move:34: balance_of
    =         owner = 0x29
-   =     at language/documentation/hackathon-tutorial/step_7/BasicCoin/sources/BasicCoin.move:35: balance_of
+   =     at ./sources/BasicCoin.move:35: balance_of
    =         ABORTED
 
 Error: exiting with verification errors
@@ -644,7 +646,7 @@ fun withdraw<CoinType>(addr: address, amount: u64) : Coin<CoinType> acquires Bal
 The method withdraws tokens with value `amount` from the address `addr` and returns a created Coin of value `amount`.  The method `withdraw` aborts when 1) `addr` does not have the resource `Balance<CoinType>` or 2) the number of tokens in `addr` is smaller than `amount`. We can define conditions like this:
 
 ```
-   spec withdraw {
+    spec withdraw {
         let balance = global<Balance<CoinType>>(addr).coin.value;
         aborts_if !exists<Balance<CoinType>>(addr);
         aborts_if balance < amount;
@@ -657,7 +659,7 @@ As we can see here, a spec block can contain let bindings which introduce names 
 The next step is to define functional properties, which are described in the two `ensures` clauses below. First, by using the `let post` binding, `balance_post` represents the balance of `addr` after the execution, which should be equal to `balance - amount`. Then, the return value (denoted as `result`) should be a coin with value `amount`.
 
 ```
-   spec withdraw {
+    spec withdraw {
         let balance = global<Balance<CoinType>>(addr).coin.value;
         aborts_if !exists<Balance<CoinType>>(addr);
         aborts_if balance < amount;

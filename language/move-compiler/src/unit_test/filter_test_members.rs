@@ -330,7 +330,7 @@ fn should_remove_node(env: &CompilationEnv, attrs: &[P::Attributes], is_source_d
     let is_test_only = flattened_attrs
         .iter()
         .any(|attr| matches!(attr.1, TestingAttribute::Test | TestingAttribute::TestOnly));
-    is_test_only && !env.flags().is_testing()
+    is_test_only && !env.flags().keep_testing_functions()
         || (!is_source_def
             && flattened_attrs
                 .iter()

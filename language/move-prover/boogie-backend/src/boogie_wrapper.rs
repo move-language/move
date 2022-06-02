@@ -4,7 +4,12 @@
 
 //! Wrapper around the boogie program. Allows to call boogie and analyze the output.
 
-use std::{collections::BTreeMap, fs, num::ParseIntError, option::Option::None};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fs,
+    num::ParseIntError,
+    option::Option::None,
+};
 
 use anyhow::anyhow;
 use codespan::{ByteIndex, ColumnIndex, LineIndex, Location, Span};
@@ -20,15 +25,16 @@ use move_binary_format::file_format::FunctionDefinitionIndex;
 use move_model::{
     ast::TempIndex,
     code_writer::CodeWriter,
-    model::{FunId, GlobalEnv, Loc, ModuleId, NodeId, QualifiedId, StructId},
+    model::{FunId, GlobalEnv, Loc, ModuleId, NodeId, QualifiedId, StructEnv},
     ty::{PrimitiveType, Type},
+    well_known::TABLE_TABLE,
 };
 use move_stackless_bytecode::function_target_pipeline::{FunctionTargetsHolder, FunctionVariant};
 
 // DEBUG
 // use backtrace::Backtrace;
 use crate::{
-    boogie_helpers::boogie_struct_name,
+    boogie_helpers::{boogie_inst_suffix, boogie_struct_name},
     options::{BoogieOptions, VectorTheory},
     prover_task_runner::{ProverTaskRunner, RunBoogieWithSeeds},
 };
@@ -963,6 +969,16 @@ pub struct ModelValueVector {
     default: ModelValue,
 }
 
+#[derive(Debug)]
+pub struct ModelValueTable {
+    /// The known keys. This might be more than we know a value for.
+    keys: BTreeSet<usize>,
+    /// The known value assignments
+    values: BTreeMap<usize, ModelValue>,
+    /// Whether the table is open, i.e. has more entries than the model determined.
+    open: bool,
+}
+
 impl ModelValue {
     /// Makes a literal from a str.
     fn literal(s: &str) -> ModelValue {
@@ -1047,6 +1063,40 @@ impl ModelValue {
                 default,
             })
         }
+    }
+
+    /// Extracts a table from a model value.
+    fn extract_table(
+        &self,
+        model: &Model,
+        _key_ty: &Type,
+        _val_ty: &Type,
+    ) -> Option<ModelValueTable> {
+        let args = self.extract_list_ctor_prefix("Table_")?;
+        if args.len() != 3 {
+            return None;
+        }
+        let (val_map, _val_default) = args[0].extract_select_int_map(model)?;
+        let (dom_map, dom_default) = args[1].extract_select_int_map(model)?;
+        let size = args[2].extract_number()?;
+        let key_exists_by_default = extract_bool(&dom_default).unwrap_or(false);
+        let mut keys = BTreeSet::new();
+        let mut values = BTreeMap::new();
+        for (key, exists) in dom_map {
+            if extract_bool(&exists).unwrap_or(false) {
+                keys.insert(key);
+            }
+        }
+        for (key, value) in val_map {
+            if key_exists_by_default {
+                keys.insert(key);
+            }
+            if keys.contains(&key) {
+                values.insert(key, value);
+            }
+        }
+        let open = values.len() < size;
+        Some(ModelValueTable { keys, values, open })
     }
 
     /// Extract memory content from the model
@@ -1152,6 +1202,44 @@ impl ModelValue {
                 Some(elems[0].clone())
             }
         })
+    }
+
+    /// Extracts a $Select map with self the variable in the model.
+    fn extract_select_int_map(
+        &self,
+        model: &Model,
+    ) -> Option<(BTreeMap<usize, ModelValue>, ModelValue)> {
+        let map = model
+            .vars
+            .get(&ModelValue::literal(&deduct_table_name(
+                self.extract_literal()?,
+            )?))?
+            .extract_map()?;
+        let mut values = BTreeMap::new();
+        let mut default = Self::error();
+        for (key, value) in map {
+            if let ModelValue::List(elems) = key {
+                if elems.len() == 2 && &elems[0] == self {
+                    if let Some(idx) = elems[1].extract_number() {
+                        values.insert(idx, value.clone());
+                    }
+                }
+            } else if key == &ModelValue::literal("else") {
+                default = value.clone();
+            }
+        }
+        Some((values, default))
+    }
+
+    /// Extract a reverse mapping of values encoded by integers.
+    fn extract_encoding_map(&self) -> Option<BTreeMap<usize, ModelValue>> {
+        let mut res = BTreeMap::new();
+        for (key, val) in self.extract_map()? {
+            if key != &ModelValue::literal("else") {
+                res.insert(val.extract_number()?, key.clone());
+            }
+        }
+        Some(res)
     }
 
     fn extract_map(&self) -> Option<&BTreeMap<ModelValue, ModelValue>> {
@@ -1284,7 +1372,12 @@ impl ModelValue {
             }
             Type::Vector(param) => self.pretty_vector(wrapper, model, param),
             Type::Struct(module_id, struct_id, params) => {
-                self.pretty_struct(wrapper, model, *module_id, *struct_id, params)
+                let struct_env = wrapper.env.get_struct_qid(module_id.qualified(*struct_id));
+                if struct_env.is_well_known(TABLE_TABLE) {
+                    self.pretty_table(wrapper, model, &params[0], &params[1])
+                } else {
+                    self.pretty_struct(wrapper, model, &struct_env, params)
+                }
             }
             Type::Reference(_, bt) => {
                 Some(PrettyDoc::text("&").append(self.pretty(wrapper, model, &*bt)?))
@@ -1360,12 +1453,9 @@ impl ModelValue {
         &self,
         wrapper: &BoogieWrapper,
         model: &Model,
-        module_id: ModuleId,
-        struct_id: StructId,
+        struct_env: &StructEnv,
         inst: &[Type],
     ) -> Option<PrettyDoc> {
-        let module_env = wrapper.env.get_module(module_id);
-        let struct_env = module_env.get_struct(struct_id);
         let entries = if struct_env.is_native_or_intrinsic() {
             let mut rep = self.extract_literal()?.to_string();
             if rep.starts_with("T@") {
@@ -1407,11 +1497,52 @@ impl ModelValue {
                     .module_env
                     .get_name()
                     .name()
-                    .display(module_env.symbol_pool()),
-                struct_env.get_name().display(module_env.symbol_pool())
+                    .display(struct_env.symbol_pool()),
+                struct_env.get_name().display(struct_env.symbol_pool())
             ))
             .append(Self::pretty_vec_or_struct_body(entries)),
         )
+    }
+
+    /// Pretty prints a table.
+    pub fn pretty_table(
+        &self,
+        wrapper: &BoogieWrapper,
+        model: &Model,
+        key_ty: &Type,
+        val_ty: &Type,
+    ) -> Option<PrettyDoc> {
+        // Compute the encoding map. Table keys are encoded as ints, and this finds the
+        // function table of $EncodeKey and turns into a map from int to encoded ModelValue.
+        let encoding_key = format!(
+            "$EncodeKey{}",
+            boogie_inst_suffix(wrapper.env, &[key_ty.clone()])
+        );
+        let encoding_map = model
+            .vars
+            .get(&ModelValue::literal(&encoding_key))?
+            .extract_encoding_map()?;
+        // Build the entries to display
+        let ModelValueTable { keys, values, open } = self.extract_table(model, key_ty, val_ty)?;
+        let mut entries = vec![];
+        for key in keys {
+            let key_rep = if let Some(k) = encoding_map.get(&key) {
+                k.pretty_or_raw(wrapper, model, key_ty)
+            } else {
+                PrettyDoc::text("?")
+            };
+            let val_rep = if let Some(val) = values.get(&key) {
+                val.pretty_or_raw(wrapper, model, val_ty)
+            } else {
+                PrettyDoc::text("?")
+            };
+            entries.push(key_rep.append(PrettyDoc::text(": ")).append(val_rep))
+        }
+        if open {
+            // Append a marker to indicate this table is open ended.
+            entries.push(PrettyDoc::text(".."));
+        }
+        Some(PrettyDoc::text("Table").append(Self::pretty_vec_or_struct_body(entries)))
     }
 
     /// Pretty prints the global memory

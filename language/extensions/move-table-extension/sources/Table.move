@@ -2,7 +2,8 @@
 module Extensions::Table {
     use Std::Errors;
 
-    // native code raises this with Errors::invalid_arguments()
+    // TODO: native code should not use reasons to signal logical type of error. Instead,
+    // use Errors::ALREADY_PUBLISHED and Errors::NOT_PUBLISHED.
     const EALREADY_EXISTS: u64 = 100;
     // native code raises this with Errors::invalid_arguments()
     const ENOT_FOUND: u64 = 101;

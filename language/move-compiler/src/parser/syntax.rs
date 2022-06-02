@@ -2366,8 +2366,9 @@ fn parse_script(
 
 // Parse an optional specification block:
 //     SpecBlockTarget =
-//          "fun" <Identifier>
-//        | "struct <Identifier>
+//          <Identifier>
+//        |  "fun" <Identifier>  # deprecated
+//        | "struct <Identifier> # deprecated
 //        | "module"
 //        | "schema" <Identifier> <OptionalTypeParameters>
 //        | <empty>

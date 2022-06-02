@@ -10,7 +10,10 @@ use itertools::Itertools;
 #[allow(unused_imports)]
 use log::warn;
 use move_symbol_pool::Symbol as MoveSymbol;
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet, HashMap},
+    rc::Rc,
+};
 
 use builder::module_builder::ModuleBuilder;
 use move_binary_format::{
@@ -42,6 +45,7 @@ use crate::{
     model::{FunId, FunctionData, GlobalEnv, Loc, ModuleData, ModuleId, StructId},
     options::ModelBuilderOptions,
     simplifier::{SpecRewriter, SpecRewriterPipeline},
+    symbol::{Symbol, SymbolPool},
 };
 
 pub mod ast;
@@ -50,20 +54,23 @@ pub mod code_writer;
 pub mod exp_generator;
 pub mod exp_rewriter;
 pub mod model;
-pub mod native;
 pub mod options;
 pub mod pragmas;
 pub mod simplifier;
 pub mod spec_translator;
 pub mod symbol;
 pub mod ty;
+pub mod well_known;
 
 // =================================================================================================
 // Entry Point
 
 /// Build the move model with default compilation flags and default options and no named addresses.
 /// This collects transitive dependencies for move sources from the provided directory list.
-pub fn run_model_builder<Paths: Into<MoveSymbol>, NamedAddress: Into<MoveSymbol>>(
+pub fn run_model_builder<
+    Paths: Into<MoveSymbol> + Clone,
+    NamedAddress: Into<MoveSymbol> + Clone,
+>(
     move_sources: Vec<PackagePaths<Paths, NamedAddress>>,
     deps: Vec<PackagePaths<Paths, NamedAddress>>,
 ) -> anyhow::Result<GlobalEnv> {
@@ -73,7 +80,10 @@ pub fn run_model_builder<Paths: Into<MoveSymbol>, NamedAddress: Into<MoveSymbol>
 /// Build the move model with default compilation flags and custom options and a set of provided
 /// named addreses.
 /// This collects transitive dependencies for move sources from the provided directory list.
-pub fn run_model_builder_with_options<Paths: Into<MoveSymbol>, NamedAddress: Into<MoveSymbol>>(
+pub fn run_model_builder_with_options<
+    Paths: Into<MoveSymbol> + Clone,
+    NamedAddress: Into<MoveSymbol> + Clone,
+>(
     move_sources: Vec<PackagePaths<Paths, NamedAddress>>,
     deps: Vec<PackagePaths<Paths, NamedAddress>>,
     options: ModelBuilderOptions,
@@ -89,8 +99,8 @@ pub fn run_model_builder_with_options<Paths: Into<MoveSymbol>, NamedAddress: Int
 /// Build the move model with custom compilation flags and custom options
 /// This collects transitive dependencies for move sources from the provided directory list.
 pub fn run_model_builder_with_options_and_compilation_flags<
-    Paths: Into<MoveSymbol>,
-    NamedAddress: Into<MoveSymbol>,
+    Paths: Into<MoveSymbol> + Clone,
+    NamedAddress: Into<MoveSymbol> + Clone,
 >(
     move_sources: Vec<PackagePaths<Paths, NamedAddress>>,
     deps: Vec<PackagePaths<Paths, NamedAddress>>,
@@ -100,6 +110,10 @@ pub fn run_model_builder_with_options_and_compilation_flags<
     let mut env = GlobalEnv::new();
     env.set_extension(options);
 
+    // Compute this now because the compiler consumes move sources and deps. We need it later
+    // to attach an alias definition to a module.
+    let address_aliases = create_file_to_address_aliases(env.symbol_pool(), &move_sources, &deps);
+
     // Step 1: parse the program to get comments and a separation of targets and dependencies.
     let (files, comments_and_compiler_res) = Compiler::from_package_paths(move_sources, deps)
         .set_flags(flags)
@@ -107,8 +121,15 @@ pub fn run_model_builder_with_options_and_compilation_flags<
     let (comment_map, compiler) = match comments_and_compiler_res {
         Err(diags) => {
             // Add source files so that the env knows how to translate locations of parse errors
+            let empty_alias = Rc::new(BTreeMap::new());
             for (fhash, (fname, fsrc)) in &files {
-                env.add_source(*fhash, fname.as_str(), fsrc, /* is_dep */ false);
+                env.add_source(
+                    *fhash,
+                    empty_alias.clone(),
+                    fname.as_str(),
+                    fsrc,
+                    /* is_dep */ false,
+                );
             }
             add_move_lang_diagnostics(&mut env, diags);
             return Ok(env);
@@ -124,7 +145,17 @@ pub fn run_model_builder_with_options_and_compilation_flags<
         .collect();
     for fhash in files.keys().sorted() {
         let (fname, fsrc) = files.get(fhash).unwrap();
-        env.add_source(*fhash, fname.as_str(), fsrc, dep_files.contains(fhash));
+        let aliases = address_aliases
+            .get(fname)
+            .cloned()
+            .unwrap_or_else(|| Rc::new(BTreeMap::new()));
+        env.add_source(
+            *fhash,
+            aliases,
+            fname.as_str(),
+            fsrc,
+            dep_files.contains(fhash),
+        );
     }
 
     // Add any documentation comments found by the Move compiler to the env.
@@ -223,6 +254,29 @@ pub fn run_model_builder_with_options_and_compilation_flags<
     // plus expanded AST. This will populate the environment including any errors.
     run_spec_checker(&mut env, units, expansion_ast);
     Ok(env)
+}
+
+fn create_file_to_address_aliases<
+    Paths: Into<MoveSymbol> + Clone,
+    NamedAddress: Into<MoveSymbol> + Clone,
+>(
+    pool: &SymbolPool,
+    move_sources: &[PackagePaths<Paths, NamedAddress>],
+    deps: &[PackagePaths<Paths, NamedAddress>],
+) -> HashMap<MoveSymbol, Rc<BTreeMap<Symbol, NumericalAddress>>> {
+    let mut res = HashMap::<MoveSymbol, _>::new();
+    for pkg in move_sources.iter().chain(deps.iter()) {
+        let aliases = Rc::new(
+            pkg.named_address_map
+                .iter()
+                .map(|(k, v)| (pool.make(k.clone().into().as_ref()), *v))
+                .collect::<BTreeMap<_, _>>(),
+        );
+        for path in &pkg.paths {
+            res.insert(path.clone().into(), aliases.clone());
+        }
+    }
+    res
 }
 
 fn collect_related_modules_recursive<'a>(

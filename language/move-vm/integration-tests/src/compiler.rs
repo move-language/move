@@ -22,7 +22,7 @@ pub fn compile_units(s: &str) -> Result<Vec<AnnotatedCompiledUnit>> {
         vec![],
         move_stdlib::move_stdlib_named_addresses(),
     )
-    .build_and_report()?;
+    .build_and_report(true)?;
 
     dir.close()?;
 
@@ -44,7 +44,7 @@ pub fn compile_modules_in_file(path: &Path) -> Result<Vec<CompiledModule>> {
         vec![],
         std::collections::BTreeMap::<String, _>::new(),
     )
-    .build_and_report()?;
+    .build_and_report(true)?;
 
     expect_modules(units).collect()
 }

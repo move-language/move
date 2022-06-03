@@ -329,7 +329,11 @@ static PRECOMPILED_MOVE_STDLIB: Lazy<FullyCompiledProgram> = Lazy::new(|| {
         Ok(stdlib) => stdlib,
         Err((files, errors)) => {
             eprintln!("!!!Standard library failed to compile!!!");
-            move_compiler::diagnostics::report_diagnostics(&files, errors, true)
+            move_compiler::diagnostics::report_diagnostics(&files, errors, true);
+            // this will never be reached as report_diagnostics will actually already exit the
+            // process, but there is no way to figure this out statically anymore as it's controlled
+            // by the last argument to this function
+            std::process::exit(1);
         }
     }
 });
@@ -345,11 +349,17 @@ static MOVE_STDLIB_COMPILED: Lazy<Vec<CompiledModule>> = Lazy::new(|| {
     match units_res {
         Err(diags) => {
             eprintln!("!!!Standard library failed to compile!!!");
-            move_compiler::diagnostics::report_diagnostics(&files, diags, true)
+            move_compiler::diagnostics::report_diagnostics(&files, diags, true);
+            // see comment in PRECOMPILED_MOVE_STDLIB initializer for why this should never be
+            // reached
+            std::process::exit(1);
         }
         Ok((_, warnings)) if !warnings.is_empty() => {
             eprintln!("!!!Standard library failed to compile!!!");
-            move_compiler::diagnostics::report_diagnostics(&files, warnings, true)
+            move_compiler::diagnostics::report_diagnostics(&files, warnings, true);
+            // see comment in PRECOMPILED_MOVE_STDLIB initializer for why this should never be
+            // reached
+            std::process::exit(1);
         }
         Ok((units, _warnings)) => units
             .into_iter()

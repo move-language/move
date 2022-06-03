@@ -41,7 +41,7 @@ fn compile_modules() -> Vec<CompiledModule> {
         vec![],
         move_stdlib::move_stdlib_named_addresses(),
     )
-    .build_and_report()
+    .build_and_report(true)
     .expect("Error compiling...");
     compiled_units
         .into_iter()

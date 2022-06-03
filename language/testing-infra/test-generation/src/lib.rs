@@ -60,7 +60,7 @@ static STORAGE_WITH_MOVE_STDLIB: Lazy<InMemoryStorage> = Lazy::new(|| {
         vec![],
         move_stdlib::move_stdlib_named_addresses(),
     )
-    .build_and_report()
+    .build_and_report(true)
     .unwrap();
     let compiled_modules = compiled_units.into_iter().map(|unit| match unit {
         AnnotatedCompiledUnit::Module(annot_module) => annot_module.named_module.module,

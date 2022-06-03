@@ -61,7 +61,7 @@ pub fn run_test(path: &Path) -> datatest_stable::Result<()> {
                 .into())
             }
             (true, _) => match BuildPlan::create(resolved_package)
-                .and_then(|bp| bp.compile(&mut Vec::new()))
+                .and_then(|bp| bp.compile(&mut Vec::new(), true))
             {
                 Ok(mut pkg) => {
                     pkg.compiled_package_info.source_digest =

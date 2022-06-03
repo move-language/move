@@ -98,8 +98,8 @@ impl BuildPlan {
         })
     }
 
-    pub fn compile<W: Write>(&self, writer: &mut W) -> Result<CompiledPackage> {
-        self.compile_with_driver(writer, |compiler| compiler.build_and_report())
+    pub fn compile<W: Write>(&self, writer: &mut W, should_exit: bool) -> Result<CompiledPackage> {
+        self.compile_with_driver(writer, |compiler| compiler.build_and_report(should_exit))
     }
 
     pub fn compile_with_driver<W: Write>(

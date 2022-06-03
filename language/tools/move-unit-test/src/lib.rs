@@ -166,22 +166,35 @@ impl UnitTestingConfig {
                 .set_flags(Flags::testing())
                 .run::<PASS_CFGIR>()
                 .unwrap();
-        let (_, compiler) =
-            diagnostics::unwrap_or_report_diagnostics(&files, comments_and_compiler_res);
+        let (_, compiler) = match diagnostics::result_or_report_diagnostics(
+            &files,
+            comments_and_compiler_res,
+            true,
+        ) {
+            Some(v) => v,
+            // this will never be reached as result_or_report_diagnostics will actually already exit
+            // the process, but there is no way to figure this out statically anymore as it's
+            // controlled by the last argument to this function
+            None => std::process::exit(1),
+        };
 
         let (mut compiler, cfgir) = compiler.into_ast();
         let compilation_env = compiler.compilation_env();
         let test_plan = unit_test::plan_builder::construct_test_plan(compilation_env, None, &cfgir);
 
         if let Err(diags) = compilation_env.check_diags_at_or_above_severity(Severity::Warning) {
-            diagnostics::report_diagnostics(&files, diags);
+            diagnostics::report_diagnostics(&files, diags, true);
         }
 
         let compilation_result = compiler.at_cfgir(cfgir).build();
 
         let (units, warnings) =
-            diagnostics::unwrap_or_report_diagnostics(&files, compilation_result);
-        diagnostics::report_warnings(&files, warnings);
+            match diagnostics::result_or_report_diagnostics(&files, compilation_result, true) {
+                Some(v) => v,
+                // see comment earlier in this function for why this should never be reached
+                None => std::process::exit(1),
+            };
+        diagnostics::report_warnings(&files, warnings, true);
         test_plan.map(|tests| TestPlan::new(tests, files, units))
     }
 

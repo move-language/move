@@ -83,7 +83,7 @@ pub fn main() -> anyhow::Result<()> {
         move_compiler::Compiler::from_files(source_files, dependencies, named_addr_map)
             .set_interface_files_dir(interface_files_dir)
             .set_flags(flags)
-            .build_and_report()?;
+            .build_and_report(true)?;
     move_compiler::output_compiled_units(
         bytecode_version,
         emit_source_map,

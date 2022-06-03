@@ -24,7 +24,7 @@ pub fn compile(
     let (files, compiled_units) =
         Compiler::from_files(sources, interface_files, named_address_mapping)
             .set_flags(Flags::empty().set_sources_shadow_deps(sources_shadow_deps))
-            .build_and_report()?;
+            .build_and_report(true)?;
     move_compiler::output_compiled_units(
         get_bytecode_version_from_env(),
         emit_source_map,

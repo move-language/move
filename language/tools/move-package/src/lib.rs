@@ -154,9 +154,20 @@ pub struct ModelConfig {
 impl BuildConfig {
     /// Compile the package at `path` or the containing Move package.
     pub fn compile_package<W: Write>(self, path: &Path, writer: &mut W) -> Result<CompiledPackage> {
+        self.compile_package_process_exit(path, writer, true)
+    }
+
+    /// Compile the package at `path` or the containing Move package, with the compilation process
+    /// exiting on failure/warning or not depending on the value of the should_exit argument.
+    pub fn compile_package_process_exit<W: Write>(
+        self,
+        path: &Path,
+        writer: &mut W,
+        should_exit: bool,
+    ) -> Result<CompiledPackage> {
         let resolved_graph = self.resolution_graph_for_package(path)?;
         let mutx = PackageLock::lock();
-        let ret = BuildPlan::create(resolved_graph)?.compile(writer);
+        let ret = BuildPlan::create(resolved_graph)?.compile(writer, should_exit);
         mutx.unlock();
         ret
     }

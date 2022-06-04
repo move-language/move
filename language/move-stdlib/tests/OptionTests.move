@@ -1,7 +1,7 @@
 #[test_only]
 module Std::OptionTests {
     use Std::Option;
-
+    use Std::Vector;
 
     #[test]
     fun option_none_is_none() {
@@ -152,5 +152,19 @@ module Std::OptionTests {
     #[expected_failure(abort_code = 7)]
     fun destroy_none_some() {
         Option::destroy_none(Option::some<u64>(0));
+    }
+
+    #[test]
+    fun into_vec_some() {
+        let v = Option::to_vec(Option::some<u64>(0));
+        assert!(Vector::length(&v) == 1, 0);
+        let x = Vector::pop_back(&mut v);
+        assert!(x == 0, 1);
+    }
+
+    #[test]
+    fun into_vec_none() {
+        let v: vector<u64> = Option::to_vec(Option::none());
+        assert!(Vector::is_empty(&v), 0);
     }
 }

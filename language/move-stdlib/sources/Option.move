@@ -233,6 +233,18 @@ module Std::Option {
         aborts_if is_some(t) with Errors::INVALID_ARGUMENT;
     }
 
+    /// Convert `t` into a vector of length 1 if it is `Some`,
+    /// and an empty vector otherwise
+    public fun to_vec<Element>(t: Option<Element>): vector<Element> {
+        let Option { vec } = t;
+        vec
+    }
+    spec to_vec {
+        pragma opaque;
+        aborts_if false;
+        ensures result == t.vec;
+    }
+
     spec module {} // switch documentation context back to module level
 
     spec module {

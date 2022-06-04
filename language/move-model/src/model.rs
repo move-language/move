@@ -648,7 +648,7 @@ impl GlobalEnv {
     ) -> FileId {
         let file_id = self.source_files.add(file_name, source.to_string());
         self.stdlib_address =
-            self.resolve_std_address_alias(self.stdlib_address.clone(), "Std", &address_aliases);
+            self.resolve_std_address_alias(self.stdlib_address.clone(), "std", &address_aliases);
         self.extlib_address = self.resolve_std_address_alias(
             self.extlib_address.clone(),
             "Extensions",

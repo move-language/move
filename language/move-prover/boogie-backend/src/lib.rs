@@ -148,7 +148,7 @@ pub fn add_prelude(
     //   not used it yet in the templates.
     let std_addr = format!("${}", env.get_stdlib_address());
     let ext_addr = format!("${}", env.get_extlib_address());
-    context.insert("Std", &std_addr);
+    context.insert("std", &std_addr);
     context.insert("Ext", &ext_addr);
 
     let expanded_content = tera.render("prelude", &context)?;

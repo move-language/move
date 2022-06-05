@@ -1,4 +1,4 @@
-// dep: BCS
+// dep: bcs
 // dep: Runtime
 // actor: 0x3 Basic State init start count_down
 // instance: 0x3 Basic 0x4

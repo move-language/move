@@ -6,7 +6,7 @@
 /// transactional semantics of Move. This version implements an additional `cleanup` message which cancels
 /// pending transactions over a certain age.
 
-// dep: BCS
+// dep: bcs
 // dep: vector
 // dep: Runtime
 // dep: Actor

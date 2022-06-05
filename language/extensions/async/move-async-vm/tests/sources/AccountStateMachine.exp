@@ -1,7 +1,7 @@
 publishing Actor
-publishing BCS
 publishing Runtime
-publishing Vector
+publishing bcs
+publishing vector
 publishing AccountStateMachine
 actor 0x4 created from 0x3::AccountStateMachine
   SUCCESS

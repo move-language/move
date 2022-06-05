@@ -1,5 +1,5 @@
 address 0x1e {}
-address /* '0x1' is 'Std' */ 0x1 {
+address /* '0x1' is 'std' */ 0x1 {
     module ModuleOne {
         fun access_chains() {
             let i1 = 0xdde::Name::INTEGER;
@@ -7,7 +7,7 @@ address /* '0x1' is 'Std' */ 0x1 {
         }
     }
 }
-address Std /* 'Std' is '0x1' */ {
+address std /* 'std' is '0x1' */ {
     module ModuleTwo { /* ... */ }
 }
 

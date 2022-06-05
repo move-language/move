@@ -1,4 +1,4 @@
-module Std::AModule {
+module std::AModule {
     use std::errors;
 
     /// x was three

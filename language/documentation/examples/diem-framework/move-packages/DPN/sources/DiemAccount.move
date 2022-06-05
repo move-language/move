@@ -1658,7 +1658,7 @@ module DiemFramework::DiemAccount {
         chain_id: u8,
     ) acquires DiemAccount, Balance {
         assert!(
-            DiemTransactionPublishingoption::is_module_allowed(&sender),
+            DiemTransactionPublishingOption::is_module_allowed(&sender),
             errors::invalid_state(PROLOGUE_EMODULE_NOT_ALLOWED),
         );
 
@@ -1698,9 +1698,9 @@ module DiemFramework::DiemAccount {
             txn_expiration_time_seconds,
         };
         /// Aborts only in genesis. Does not need to be handled.
-        include DiemTransactionPublishingoption::AbortsIfNoTransactionPublishingOption;
+        include DiemTransactionPublishingOption::AbortsIfNoTransactionPublishingOption;
         /// Covered: L75 (Match 9)
-        aborts_if !DiemTransactionPublishingoption::spec_is_module_allowed(sender) with errors::INVALID_STATE;
+        aborts_if !DiemTransactionPublishingOption::spec_is_module_allowed(sender) with errors::INVALID_STATE;
     }
 
     /// The prologue for script transaction
@@ -1715,7 +1715,7 @@ module DiemFramework::DiemAccount {
         script_hash: vector<u8>,
     ) acquires DiemAccount, Balance {
         assert!(
-            DiemTransactionPublishingoption::is_script_allowed(&sender, &script_hash),
+            DiemTransactionPublishingOption::is_script_allowed(&sender, &script_hash),
             errors::invalid_state(PROLOGUE_ESCRIPT_NOT_ALLOWED),
         );
 
@@ -1749,9 +1749,9 @@ module DiemFramework::DiemAccount {
         let transaction_sender = signer::address_of(sender);
         include PrologueCommonAbortsIf<Token> {transaction_sender};
         /// Aborts only in Genesis. Does not need to be handled.
-        include DiemTransactionPublishingoption::AbortsIfNoTransactionPublishingOption;
+        include DiemTransactionPublishingOption::AbortsIfNoTransactionPublishingOption;
         /// Covered: L74 (Match 8)
-        aborts_if !DiemTransactionPublishingoption::spec_is_script_allowed(sender, script_hash) with errors::INVALID_STATE;
+        aborts_if !DiemTransactionPublishingOption::spec_is_script_allowed(sender, script_hash) with errors::INVALID_STATE;
     }
 
     /// The prologue for WriteSet transaction

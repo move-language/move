@@ -108,7 +108,7 @@ module DiemFramework::Genesis {
         DiemAccount::rotate_authentication_key(&tc_rotate_key_cap, tc_auth_key);
         DiemAccount::restore_key_rotation_capability(tc_rotate_key_cap);
 
-        DiemTransactionPublishingoption::initialize(
+        DiemTransactionPublishingOption::initialize(
             dr_account,
             initial_script_allow_list,
             is_open_module,

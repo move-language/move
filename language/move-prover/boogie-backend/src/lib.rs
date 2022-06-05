@@ -37,6 +37,7 @@ const VECTOR_SMT_ARRAY_EXT_THEORY: &[u8] =
 const MULTISET_ARRAY_THEORY: &[u8] = include_bytes!("prelude/multiset-array-theory.bpl");
 const TABLE_ARRAY_THEORY: &[u8] = include_bytes!("prelude/table-array-theory.bpl");
 
+// TODO use named addresses
 const BCS_MODULE: &str = "0x1::bcs";
 const EVENT_MODULE: &str = "0x1::event";
 

@@ -24,6 +24,7 @@ This module defines the Option type and its methods to represent and handle an o
 -  [Function `destroy_with_default`](#0x1_Option_destroy_with_default)
 -  [Function `destroy_some`](#0x1_Option_destroy_some)
 -  [Function `destroy_none`](#0x1_Option_destroy_none)
+-  [Function `to_vec`](#0x1_Option_to_vec)
 -  [Module Specification](#@Module_Specification_1)
     -  [Helper Schema](#@Helper_Schema_2)
 
@@ -799,6 +800,47 @@ Aborts if <code>t</code> holds a value
 
 <pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> <a href="Option.md#0x1_Option_is_some">is_some</a>(t) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_Option_to_vec"></a>
+
+## Function `to_vec`
+
+Convert <code>t</code> into a vector of length 1 if it is <code>Some</code>,
+and an empty vector otherwise
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="Option.md#0x1_Option_to_vec">to_vec</a>&lt;Element&gt;(t: <a href="Option.md#0x1_Option_Option">Option::Option</a>&lt;Element&gt;): vector&lt;Element&gt;
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="Option.md#0x1_Option_to_vec">to_vec</a>&lt;Element&gt;(t: <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt;): vector&lt;Element&gt; {
+    <b>let</b> <a href="Option.md#0x1_Option">Option</a> { vec } = t;
+    vec
+}
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == t.vec;
 </code></pre>
 
 

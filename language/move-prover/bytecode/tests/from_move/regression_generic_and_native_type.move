@@ -1,5 +1,5 @@
-// dep: ../../move-stdlib/sources/Signer.move
-// dep: ../../move-stdlib/sources/Vector.move
+// dep: ../../move-stdlib/sources/signer.move
+// dep: ../../move-stdlib/sources/vector.move
 
 // Regression test for a bug in handling generic mutual borrow, as well as parameter types of native functions.
 

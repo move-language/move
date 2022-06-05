@@ -152,7 +152,7 @@ module 0x2::Vectors {
         assert!(*&vector::borrow(&v, 1).y == false, 105);
         assert!(*&vector::borrow(&v, 1).z == 123, 106);
         // TODO: uncomment this after we've implemented equality for struct
-        // assert!(*Vector::borrow(&v, 0) == S { x: 90, y: false, z: 1028 }, 104);
+        // assert!(*vector::borrow(&v, 0) == S { x: 90, y: false, z: 1028 }, 104);
 
         let s2_ref = vector::borrow_mut(&mut v, 1);
         *&mut s2_ref.x = 10;

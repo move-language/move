@@ -1,4 +1,4 @@
-// dep: ../../move-stdlib/sources/Vector.move
+// dep: ../../move-stdlib/sources/vector.move
 
 module 0x1::TestMutRef {
     use std::vector;

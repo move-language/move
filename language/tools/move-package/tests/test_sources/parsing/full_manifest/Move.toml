@@ -5,7 +5,7 @@ license = "license"
 authors = ["some author"]
 
 [addresses]
-Std = "_"
+std = "_"
 CoreAddr = "0x1"
 C = "0x1"
 OtherD = "_"

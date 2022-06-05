@@ -2,7 +2,7 @@ Move prover returns: exiting with verification errors
 error: post-condition does not hold
     ┌─ tests/sources/functional/choice.move:301:9
     │
-301 │ ╭         ensures !(get_ballot<Proposal>(Signer::address_of(ballot_account), result).expiration_timestamp_secs
+301 │ ╭         ensures !(get_ballot<Proposal>(signer::address_of(ballot_account), result).expiration_timestamp_secs
 302 │ │             <= 0);
     │ ╰──────────────────^
     │
@@ -26,7 +26,7 @@ error: post-condition does not hold
 error: post-condition does not hold
    ┌─ tests/sources/functional/choice.move:55:9
    │
-55 │         ensures choice == Signer::address_of(s2);
+55 │         ensures choice == signer::address_of(s2);
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
    =     at tests/sources/functional/choice.move:45: populate_R

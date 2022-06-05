@@ -19,7 +19,7 @@ use std::{fs::File, io::Read};
 const FLAGS: &[&str] = &[
     "--verbose=warn",
     "--dependency=../../move-stdlib/sources",
-    "--named-addresses=Std=0x1",
+    "--named-addresses=std=0x1",
     "--docgen",
 ];
 

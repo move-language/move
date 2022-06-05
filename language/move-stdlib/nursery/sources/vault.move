@@ -68,7 +68,7 @@
 /// let read_cap = Vault::acquire_read_cap<Content>(other_signer);
 /// ...
 /// // The granted capability can be revoked. There is no need to have the other signer for this.
-/// Vault::revoke_read_cap(&delegate_cap, Signer::address_of(other_signer));
+/// Vault::revoke_read_cap(&delegate_cap, signer::address_of(other_signer));
 /// ```
 ///
 /// ## Abilities

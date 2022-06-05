@@ -7,7 +7,7 @@ authors = ["some author"]
 [unknown_field]
 
 [addresses]
-Std = "_"
+std = "_"
 CoreAddr = "0x1"
 C = "0x1"
 OtherD = "_"

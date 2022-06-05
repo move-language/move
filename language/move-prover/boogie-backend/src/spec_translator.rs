@@ -1366,12 +1366,12 @@ impl<'env> SpecTranslator<'env> {
                     };
                     emit!(
                         self.writer,
-                        &format!(" && $1_Signer_is_txn_signer({})", target)
+                        &format!(" && $1_signer_is_txn_signer({})", target)
                     );
                     emit!(
                         self.writer,
                         &format!(
-                            " && $1_Signer_is_txn_signer_addr($addr#$signer({}))",
+                            " && $1_signer_is_txn_signer_addr($addr#$signer({}))",
                             target
                         )
                     );

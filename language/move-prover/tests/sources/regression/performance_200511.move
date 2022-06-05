@@ -86,7 +86,7 @@ module 0x42::Test {
         ensures eq_append(global<T>(signer::address_of(sender)).sent_events.guid, bcs::serialize(3), bcs::serialize(fresh_address));
 
         // Correct version of the above ensures:
-        //ensures eq_append(global<T>(Signer::address_of(sender)).received_events.guid, BCS::serialize(0), BCS::serialize(fresh_address));
-        //ensures eq_append(global<T>(Signer::address_of(sender)).sent_events.guid, BCS::serialize(1), BCS::serialize(fresh_address));
+        //ensures eq_append(global<T>(signer::address_of(sender)).received_events.guid, BCS::serialize(0), BCS::serialize(fresh_address));
+        //ensures eq_append(global<T>(signer::address_of(sender)).sent_events.guid, BCS::serialize(1), BCS::serialize(fresh_address));
     }
 }

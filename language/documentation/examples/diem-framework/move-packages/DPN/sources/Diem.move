@@ -874,8 +874,8 @@ module DiemFramework::Diem {
         ensures old(exists<PreburnQueue<CoinType>>(preburn_address)) ==> exists<PreburnQueue<CoinType>>(preburn_address);
         // let preburn_queue = global<PreburnQueue<CoinType>>(preburn_address).preburns;
         // let preburn = Preburn { to_burn: Diem { value: amount }};
-        // let (found, index) = Vector::index_of(preburn_queue, preburn);
-        // ensures found ==> Vector::eq_remove_elem_at_index(index, preburn_queue, old(preburn_queue));
+        // let (found, index) = vector::index_of(preburn_queue, preburn);
+        // ensures found ==> vector::eq_remove_elem_at_index(index, preburn_queue, old(preburn_queue));
     }
 
     /// Permanently removes the coins in the oldest preburn request in the

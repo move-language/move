@@ -1,7 +1,7 @@
 
-<a name="0x1_Vault"></a>
+<a name="0x1_vault"></a>
 
-# Module `0x1::Vault`
+# Module `0x1::vault`
 
 A module which implements secure memory (called a *vault*) of some content which can only be operated
 on if authorized by a signer. Authorization is managed by
@@ -84,7 +84,7 @@ Vault::delegate_read_cap(&delegate_cap, other_signer);
 let read_cap = Vault::acquire_read_cap<Content>(other_signer);
 ...
 // The granted capability can be revoked. There is no need to have the other signer for this.
-Vault::revoke_read_cap(&delegate_cap, Signer::address_of(other_signer));
+Vault::revoke_read_cap(&delegate_cap, signer::address_of(other_signer));
 ```
 
 
@@ -94,69 +94,69 @@ Vault::revoke_read_cap(&delegate_cap, Signer::address_of(other_signer));
 
 
 Currently, we require that the <code>Content</code> type of a vault has the <code>drop</code> ability in order to instantiate
-a capability type like <code><a href="Vault.md#0x1_Vault_ReadCap">ReadCap</a>&lt;Content&gt;</code>. Without this, capabilities themselves would need to have an
+a capability type like <code><a href="vault.md#0x1_vault_ReadCap">ReadCap</a>&lt;Content&gt;</code>. Without this, capabilities themselves would need to have an
 explicit release function, which makes little sense as they are pure values. We expect the Move
 language to have 'phantom type parameters' or similar features added, which will allows us to have
-<code><a href="Vault.md#0x1_Vault_ReadCap">ReadCap</a>&lt;Content&gt;</code> droppable and copyable without <code>Content</code> needing the same.
+<code><a href="vault.md#0x1_vault_ReadCap">ReadCap</a>&lt;Content&gt;</code> droppable and copyable without <code>Content</code> needing the same.
 
 
 -  [Overview](#@Overview_0)
     -  [Capabilities](#@Capabilities_1)
     -  [Delegation](#@Delegation_2)
     -  [Abilities](#@Abilities_3)
--  [Struct `ReadCap`](#0x1_Vault_ReadCap)
--  [Struct `ModifyCap`](#0x1_Vault_ModifyCap)
--  [Struct `DelegateCap`](#0x1_Vault_DelegateCap)
--  [Struct `TransferCap`](#0x1_Vault_TransferCap)
--  [Struct `CapType`](#0x1_Vault_CapType)
--  [Struct `VaultDelegateEvent`](#0x1_Vault_VaultDelegateEvent)
--  [Struct `VaultTransferEvent`](#0x1_Vault_VaultTransferEvent)
--  [Resource `Vault`](#0x1_Vault_Vault)
--  [Resource `VaultDelegates`](#0x1_Vault_VaultDelegates)
--  [Resource `VaultEvents`](#0x1_Vault_VaultEvents)
--  [Resource `VaultDelegate`](#0x1_Vault_VaultDelegate)
--  [Struct `ReadAccessor`](#0x1_Vault_ReadAccessor)
--  [Struct `ModifyAccessor`](#0x1_Vault_ModifyAccessor)
+-  [Struct `ReadCap`](#0x1_vault_ReadCap)
+-  [Struct `ModifyCap`](#0x1_vault_ModifyCap)
+-  [Struct `DelegateCap`](#0x1_vault_DelegateCap)
+-  [Struct `TransferCap`](#0x1_vault_TransferCap)
+-  [Struct `CapType`](#0x1_vault_CapType)
+-  [Struct `VaultDelegateEvent`](#0x1_vault_VaultDelegateEvent)
+-  [Struct `VaultTransferEvent`](#0x1_vault_VaultTransferEvent)
+-  [Resource `Vault`](#0x1_vault_Vault)
+-  [Resource `VaultDelegates`](#0x1_vault_VaultDelegates)
+-  [Resource `VaultEvents`](#0x1_vault_VaultEvents)
+-  [Resource `VaultDelegate`](#0x1_vault_VaultDelegate)
+-  [Struct `ReadAccessor`](#0x1_vault_ReadAccessor)
+-  [Struct `ModifyAccessor`](#0x1_vault_ModifyAccessor)
 -  [Constants](#@Constants_4)
--  [Function `read_cap_type`](#0x1_Vault_read_cap_type)
--  [Function `modify_cap_type`](#0x1_Vault_modify_cap_type)
--  [Function `delegate_cap_type`](#0x1_Vault_delegate_cap_type)
--  [Function `transfer_cap_type`](#0x1_Vault_transfer_cap_type)
--  [Function `new`](#0x1_Vault_new)
--  [Function `is_delegation_enabled`](#0x1_Vault_is_delegation_enabled)
--  [Function `enable_delegation`](#0x1_Vault_enable_delegation)
--  [Function `enable_events`](#0x1_Vault_enable_events)
--  [Function `remove_vault`](#0x1_Vault_remove_vault)
--  [Function `acquire_read_cap`](#0x1_Vault_acquire_read_cap)
--  [Function `acquire_modify_cap`](#0x1_Vault_acquire_modify_cap)
--  [Function `acquire_delegate_cap`](#0x1_Vault_acquire_delegate_cap)
--  [Function `acquire_transfer_cap`](#0x1_Vault_acquire_transfer_cap)
--  [Function `validate_cap`](#0x1_Vault_validate_cap)
--  [Function `read_accessor`](#0x1_Vault_read_accessor)
--  [Function `borrow`](#0x1_Vault_borrow)
--  [Function `release_read_accessor`](#0x1_Vault_release_read_accessor)
--  [Function `modify_accessor`](#0x1_Vault_modify_accessor)
--  [Function `borrow_mut`](#0x1_Vault_borrow_mut)
--  [Function `release_modify_accessor`](#0x1_Vault_release_modify_accessor)
--  [Function `delegate`](#0x1_Vault_delegate)
--  [Function `revoke`](#0x1_Vault_revoke)
--  [Function `revoke_all`](#0x1_Vault_revoke_all)
--  [Function `remove_element`](#0x1_Vault_remove_element)
--  [Function `add_element`](#0x1_Vault_add_element)
--  [Function `emit_delegate_event`](#0x1_Vault_emit_delegate_event)
--  [Function `transfer`](#0x1_Vault_transfer)
+-  [Function `read_cap_type`](#0x1_vault_read_cap_type)
+-  [Function `modify_cap_type`](#0x1_vault_modify_cap_type)
+-  [Function `delegate_cap_type`](#0x1_vault_delegate_cap_type)
+-  [Function `transfer_cap_type`](#0x1_vault_transfer_cap_type)
+-  [Function `new`](#0x1_vault_new)
+-  [Function `is_delegation_enabled`](#0x1_vault_is_delegation_enabled)
+-  [Function `enable_delegation`](#0x1_vault_enable_delegation)
+-  [Function `enable_events`](#0x1_vault_enable_events)
+-  [Function `remove_vault`](#0x1_vault_remove_vault)
+-  [Function `acquire_read_cap`](#0x1_vault_acquire_read_cap)
+-  [Function `acquire_modify_cap`](#0x1_vault_acquire_modify_cap)
+-  [Function `acquire_delegate_cap`](#0x1_vault_acquire_delegate_cap)
+-  [Function `acquire_transfer_cap`](#0x1_vault_acquire_transfer_cap)
+-  [Function `validate_cap`](#0x1_vault_validate_cap)
+-  [Function `read_accessor`](#0x1_vault_read_accessor)
+-  [Function `borrow`](#0x1_vault_borrow)
+-  [Function `release_read_accessor`](#0x1_vault_release_read_accessor)
+-  [Function `modify_accessor`](#0x1_vault_modify_accessor)
+-  [Function `borrow_mut`](#0x1_vault_borrow_mut)
+-  [Function `release_modify_accessor`](#0x1_vault_release_modify_accessor)
+-  [Function `delegate`](#0x1_vault_delegate)
+-  [Function `revoke`](#0x1_vault_revoke)
+-  [Function `revoke_all`](#0x1_vault_revoke_all)
+-  [Function `remove_element`](#0x1_vault_remove_element)
+-  [Function `add_element`](#0x1_vault_add_element)
+-  [Function `emit_delegate_event`](#0x1_vault_emit_delegate_event)
+-  [Function `transfer`](#0x1_vault_transfer)
 
 
-<pre><code><b>use</b> <a href="">0x1::Errors</a>;
-<b>use</b> <a href="">0x1::Event</a>;
-<b>use</b> <a href="">0x1::Option</a>;
-<b>use</b> <a href="">0x1::Signer</a>;
-<b>use</b> <a href="">0x1::Vector</a>;
+<pre><code><b>use</b> <a href="">0x1::errors</a>;
+<b>use</b> <a href="">0x1::event</a>;
+<b>use</b> <a href="">0x1::option</a>;
+<b>use</b> <a href="">0x1::signer</a>;
+<b>use</b> <a href="">0x1::vector</a>;
 </code></pre>
 
 
 
-<a name="0x1_Vault_ReadCap"></a>
+<a name="0x1_vault_ReadCap"></a>
 
 ## Struct `ReadCap`
 
@@ -165,7 +165,7 @@ stored but can be freely copied and dropped.
 TODO: remove <code>drop</code> on <code>Content</code> here and elsewhere once we have phantom type parameters.
 
 
-<pre><code><b>struct</b> <a href="Vault.md#0x1_Vault_ReadCap">ReadCap</a>&lt;Content: drop, store&gt; <b>has</b> <b>copy</b>, drop
+<pre><code><b>struct</b> <a href="vault.md#0x1_vault_ReadCap">ReadCap</a>&lt;Content: drop, store&gt; <b>has</b> <b>copy</b>, drop
 </code></pre>
 
 
@@ -192,14 +192,14 @@ TODO: remove <code>drop</code> on <code>Content</code> here and elsewhere once w
 
 </details>
 
-<a name="0x1_Vault_ModifyCap"></a>
+<a name="0x1_vault_ModifyCap"></a>
 
 ## Struct `ModifyCap`
 
 A capability to modify the content of the vault.
 
 
-<pre><code><b>struct</b> <a href="Vault.md#0x1_Vault_ModifyCap">ModifyCap</a>&lt;Content: drop, store&gt; <b>has</b> <b>copy</b>, drop
+<pre><code><b>struct</b> <a href="vault.md#0x1_vault_ModifyCap">ModifyCap</a>&lt;Content: drop, store&gt; <b>has</b> <b>copy</b>, drop
 </code></pre>
 
 
@@ -226,14 +226,14 @@ A capability to modify the content of the vault.
 
 </details>
 
-<a name="0x1_Vault_DelegateCap"></a>
+<a name="0x1_vault_DelegateCap"></a>
 
 ## Struct `DelegateCap`
 
 A capability to delegate access to the vault.
 
 
-<pre><code><b>struct</b> <a href="Vault.md#0x1_Vault_DelegateCap">DelegateCap</a>&lt;Content: drop, store&gt; <b>has</b> <b>copy</b>, drop
+<pre><code><b>struct</b> <a href="vault.md#0x1_vault_DelegateCap">DelegateCap</a>&lt;Content: drop, store&gt; <b>has</b> <b>copy</b>, drop
 </code></pre>
 
 
@@ -260,14 +260,14 @@ A capability to delegate access to the vault.
 
 </details>
 
-<a name="0x1_Vault_TransferCap"></a>
+<a name="0x1_vault_TransferCap"></a>
 
 ## Struct `TransferCap`
 
 A capability to transfer ownership of the vault.
 
 
-<pre><code><b>struct</b> <a href="Vault.md#0x1_Vault_TransferCap">TransferCap</a>&lt;Content: drop, store&gt; <b>has</b> <b>copy</b>, drop
+<pre><code><b>struct</b> <a href="vault.md#0x1_vault_TransferCap">TransferCap</a>&lt;Content: drop, store&gt; <b>has</b> <b>copy</b>, drop
 </code></pre>
 
 
@@ -294,15 +294,15 @@ A capability to transfer ownership of the vault.
 
 </details>
 
-<a name="0x1_Vault_CapType"></a>
+<a name="0x1_vault_CapType"></a>
 
 ## Struct `CapType`
 
-A type describing a capability. This is used for functions like <code><a href="Vault.md#0x1_Vault_delegate">Self::delegate</a></code> where we need to
+A type describing a capability. This is used for functions like <code><a href="vault.md#0x1_vault_delegate">Self::delegate</a></code> where we need to
 specify capability types.
 
 
-<pre><code><b>struct</b> <a href="Vault.md#0x1_Vault_CapType">CapType</a> <b>has</b> <b>copy</b>, drop, store
+<pre><code><b>struct</b> <a href="vault.md#0x1_vault_CapType">CapType</a> <b>has</b> <b>copy</b>, drop, store
 </code></pre>
 
 
@@ -323,14 +323,14 @@ specify capability types.
 
 </details>
 
-<a name="0x1_Vault_VaultDelegateEvent"></a>
+<a name="0x1_vault_VaultDelegateEvent"></a>
 
 ## Struct `VaultDelegateEvent`
 
 An event which we generate on vault access delegation or revocation if event generation is enabled.
 
 
-<pre><code><b>struct</b> <a href="Vault.md#0x1_Vault_VaultDelegateEvent">VaultDelegateEvent</a> <b>has</b> drop, store
+<pre><code><b>struct</b> <a href="vault.md#0x1_vault_VaultDelegateEvent">VaultDelegateEvent</a> <b>has</b> drop, store
 </code></pre>
 
 
@@ -341,7 +341,7 @@ An event which we generate on vault access delegation or revocation if event gen
 
 <dl>
 <dt>
-<code>metadata: vector&lt;u8&gt;</code>
+<code>metadata: <a href="">vector</a>&lt;u8&gt;</code>
 </dt>
 <dd>
 
@@ -365,7 +365,7 @@ An event which we generate on vault access delegation or revocation if event gen
 
 </dd>
 <dt>
-<code>cap: <a href="Vault.md#0x1_Vault_CapType">Vault::CapType</a></code>
+<code>cap: <a href="vault.md#0x1_vault_CapType">vault::CapType</a></code>
 </dt>
 <dd>
 
@@ -381,14 +381,14 @@ An event which we generate on vault access delegation or revocation if event gen
 
 </details>
 
-<a name="0x1_Vault_VaultTransferEvent"></a>
+<a name="0x1_vault_VaultTransferEvent"></a>
 
 ## Struct `VaultTransferEvent`
 
 An event which we generate on vault transfer if event generation is enabled.
 
 
-<pre><code><b>struct</b> <a href="Vault.md#0x1_Vault_VaultTransferEvent">VaultTransferEvent</a> <b>has</b> drop, store
+<pre><code><b>struct</b> <a href="vault.md#0x1_vault_VaultTransferEvent">VaultTransferEvent</a> <b>has</b> drop, store
 </code></pre>
 
 
@@ -399,7 +399,7 @@ An event which we generate on vault transfer if event generation is enabled.
 
 <dl>
 <dt>
-<code>metadata: vector&lt;u8&gt;</code>
+<code>metadata: <a href="">vector</a>&lt;u8&gt;</code>
 </dt>
 <dd>
 
@@ -427,14 +427,14 @@ An event which we generate on vault transfer if event generation is enabled.
 
 </details>
 
-<a name="0x1_Vault_Vault"></a>
+<a name="0x1_vault_Vault"></a>
 
 ## Resource `Vault`
 
 Private. The vault representation.
 
 
-<pre><code><b>struct</b> <a href="Vault.md#0x1_Vault">Vault</a>&lt;Content: store&gt; <b>has</b> key
+<pre><code><b>struct</b> <a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content: store&gt; <b>has</b> key
 </code></pre>
 
 
@@ -445,7 +445,7 @@ Private. The vault representation.
 
 <dl>
 <dt>
-<code>content: <a href="_Option">Option::Option</a>&lt;Content&gt;</code>
+<code>content: <a href="_Option">option::Option</a>&lt;Content&gt;</code>
 </dt>
 <dd>
  The content. If the option is empty, the content is currently moved into an
@@ -456,14 +456,14 @@ Private. The vault representation.
 
 </details>
 
-<a name="0x1_Vault_VaultDelegates"></a>
+<a name="0x1_vault_VaultDelegates"></a>
 
 ## Resource `VaultDelegates`
 
 Private. If the vault supports delegation, information about the delegates.
 
 
-<pre><code><b>struct</b> <a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>&lt;Content: store&gt; <b>has</b> key
+<pre><code><b>struct</b> <a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>&lt;Content: store&gt; <b>has</b> key
 </code></pre>
 
 
@@ -474,7 +474,7 @@ Private. If the vault supports delegation, information about the delegates.
 
 <dl>
 <dt>
-<code>delegates: vector&lt;<b>address</b>&gt;</code>
+<code>delegates: <a href="">vector</a>&lt;<b>address</b>&gt;</code>
 </dt>
 <dd>
  The currently authorized delegates.
@@ -484,14 +484,14 @@ Private. If the vault supports delegation, information about the delegates.
 
 </details>
 
-<a name="0x1_Vault_VaultEvents"></a>
+<a name="0x1_vault_VaultEvents"></a>
 
 ## Resource `VaultEvents`
 
 Private. If event generation is enabled, contains the event generators.
 
 
-<pre><code><b>struct</b> <a href="Vault.md#0x1_Vault_VaultEvents">VaultEvents</a>&lt;Content: store&gt; <b>has</b> key
+<pre><code><b>struct</b> <a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a>&lt;Content: store&gt; <b>has</b> key
 </code></pre>
 
 
@@ -502,20 +502,20 @@ Private. If event generation is enabled, contains the event generators.
 
 <dl>
 <dt>
-<code>metadata: vector&lt;u8&gt;</code>
+<code>metadata: <a href="">vector</a>&lt;u8&gt;</code>
 </dt>
 <dd>
  Metadata which identifies this vault. This information is used
  in events generated by this module.
 </dd>
 <dt>
-<code>delegate_events: <a href="_EventHandle">Event::EventHandle</a>&lt;<a href="Vault.md#0x1_Vault_VaultDelegateEvent">Vault::VaultDelegateEvent</a>&gt;</code>
+<code>delegate_events: <a href="_EventHandle">event::EventHandle</a>&lt;<a href="vault.md#0x1_vault_VaultDelegateEvent">vault::VaultDelegateEvent</a>&gt;</code>
 </dt>
 <dd>
  Event handle for vault delegation.
 </dd>
 <dt>
-<code>transfer_events: <a href="_EventHandle">Event::EventHandle</a>&lt;<a href="Vault.md#0x1_Vault_VaultTransferEvent">Vault::VaultTransferEvent</a>&gt;</code>
+<code>transfer_events: <a href="_EventHandle">event::EventHandle</a>&lt;<a href="vault.md#0x1_vault_VaultTransferEvent">vault::VaultTransferEvent</a>&gt;</code>
 </dt>
 <dd>
  Event handle for vault transfer.
@@ -525,7 +525,7 @@ Private. If event generation is enabled, contains the event generators.
 
 </details>
 
-<a name="0x1_Vault_VaultDelegate"></a>
+<a name="0x1_vault_VaultDelegate"></a>
 
 ## Resource `VaultDelegate`
 
@@ -533,7 +533,7 @@ Private. A value stored at a delegates address pointing to the owner of the vaul
 describes the capabilities granted to this delegate.
 
 
-<pre><code><b>struct</b> <a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>&lt;Content: store&gt; <b>has</b> key
+<pre><code><b>struct</b> <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>&lt;Content: store&gt; <b>has</b> key
 </code></pre>
 
 
@@ -550,7 +550,7 @@ describes the capabilities granted to this delegate.
 
 </dd>
 <dt>
-<code>granted_caps: vector&lt;<a href="Vault.md#0x1_Vault_CapType">Vault::CapType</a>&gt;</code>
+<code>granted_caps: <a href="">vector</a>&lt;<a href="vault.md#0x1_vault_CapType">vault::CapType</a>&gt;</code>
 </dt>
 <dd>
 
@@ -560,14 +560,14 @@ describes the capabilities granted to this delegate.
 
 </details>
 
-<a name="0x1_Vault_ReadAccessor"></a>
+<a name="0x1_vault_ReadAccessor"></a>
 
 ## Struct `ReadAccessor`
 
 A read accessor for the content of the vault.
 
 
-<pre><code><b>struct</b> <a href="Vault.md#0x1_Vault_ReadAccessor">ReadAccessor</a>&lt;Content: drop, store&gt;
+<pre><code><b>struct</b> <a href="vault.md#0x1_vault_ReadAccessor">ReadAccessor</a>&lt;Content: drop, store&gt;
 </code></pre>
 
 
@@ -594,14 +594,14 @@ A read accessor for the content of the vault.
 
 </details>
 
-<a name="0x1_Vault_ModifyAccessor"></a>
+<a name="0x1_vault_ModifyAccessor"></a>
 
 ## Struct `ModifyAccessor`
 
 A modify accessor for the content of the vault.
 
 
-<pre><code><b>struct</b> <a href="Vault.md#0x1_Vault_ModifyAccessor">ModifyAccessor</a>&lt;Content: drop, store&gt;
+<pre><code><b>struct</b> <a href="vault.md#0x1_vault_ModifyAccessor">ModifyAccessor</a>&lt;Content: drop, store&gt;
 </code></pre>
 
 
@@ -633,77 +633,77 @@ A modify accessor for the content of the vault.
 ## Constants
 
 
-<a name="0x1_Vault_EACCESSOR_INCONSISTENCY"></a>
+<a name="0x1_vault_EACCESSOR_INCONSISTENCY"></a>
 
 
 
-<pre><code><b>const</b> <a href="Vault.md#0x1_Vault_EACCESSOR_INCONSISTENCY">EACCESSOR_INCONSISTENCY</a>: u64 = 3;
+<pre><code><b>const</b> <a href="vault.md#0x1_vault_EACCESSOR_INCONSISTENCY">EACCESSOR_INCONSISTENCY</a>: u64 = 3;
 </code></pre>
 
 
 
-<a name="0x1_Vault_EACCESSOR_IN_USE"></a>
+<a name="0x1_vault_EACCESSOR_IN_USE"></a>
 
 
 
-<pre><code><b>const</b> <a href="Vault.md#0x1_Vault_EACCESSOR_IN_USE">EACCESSOR_IN_USE</a>: u64 = 2;
+<pre><code><b>const</b> <a href="vault.md#0x1_vault_EACCESSOR_IN_USE">EACCESSOR_IN_USE</a>: u64 = 2;
 </code></pre>
 
 
 
-<a name="0x1_Vault_EDELEGATE"></a>
+<a name="0x1_vault_EDELEGATE"></a>
 
 
 
-<pre><code><b>const</b> <a href="Vault.md#0x1_Vault_EDELEGATE">EDELEGATE</a>: u64 = 1;
+<pre><code><b>const</b> <a href="vault.md#0x1_vault_EDELEGATE">EDELEGATE</a>: u64 = 1;
 </code></pre>
 
 
 
-<a name="0x1_Vault_EDELEGATE_TO_SELF"></a>
+<a name="0x1_vault_EDELEGATE_TO_SELF"></a>
 
 
 
-<pre><code><b>const</b> <a href="Vault.md#0x1_Vault_EDELEGATE_TO_SELF">EDELEGATE_TO_SELF</a>: u64 = 4;
+<pre><code><b>const</b> <a href="vault.md#0x1_vault_EDELEGATE_TO_SELF">EDELEGATE_TO_SELF</a>: u64 = 4;
 </code></pre>
 
 
 
-<a name="0x1_Vault_EDELEGATION_NOT_ENABLED"></a>
+<a name="0x1_vault_EDELEGATION_NOT_ENABLED"></a>
 
 
 
-<pre><code><b>const</b> <a href="Vault.md#0x1_Vault_EDELEGATION_NOT_ENABLED">EDELEGATION_NOT_ENABLED</a>: u64 = 5;
+<pre><code><b>const</b> <a href="vault.md#0x1_vault_EDELEGATION_NOT_ENABLED">EDELEGATION_NOT_ENABLED</a>: u64 = 5;
 </code></pre>
 
 
 
-<a name="0x1_Vault_EEVENT"></a>
+<a name="0x1_vault_EEVENT"></a>
 
 
 
-<pre><code><b>const</b> <a href="Vault.md#0x1_Vault_EEVENT">EEVENT</a>: u64 = 6;
+<pre><code><b>const</b> <a href="vault.md#0x1_vault_EEVENT">EEVENT</a>: u64 = 6;
 </code></pre>
 
 
 
-<a name="0x1_Vault_EVAULT"></a>
+<a name="0x1_vault_EVAULT"></a>
 
 
 
-<pre><code><b>const</b> <a href="Vault.md#0x1_Vault_EVAULT">EVAULT</a>: u64 = 0;
+<pre><code><b>const</b> <a href="vault.md#0x1_vault_EVAULT">EVAULT</a>: u64 = 0;
 </code></pre>
 
 
 
-<a name="0x1_Vault_read_cap_type"></a>
+<a name="0x1_vault_read_cap_type"></a>
 
 ## Function `read_cap_type`
 
 Creates a read capability type.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_read_cap_type">read_cap_type</a>(): <a href="Vault.md#0x1_Vault_CapType">Vault::CapType</a>
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_read_cap_type">read_cap_type</a>(): <a href="vault.md#0x1_vault_CapType">vault::CapType</a>
 </code></pre>
 
 
@@ -712,21 +712,21 @@ Creates a read capability type.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_read_cap_type">read_cap_type</a>(): <a href="Vault.md#0x1_Vault_CapType">CapType</a> { <a href="Vault.md#0x1_Vault_CapType">CapType</a>{ code : 0 } }
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_read_cap_type">read_cap_type</a>(): <a href="vault.md#0x1_vault_CapType">CapType</a> { <a href="vault.md#0x1_vault_CapType">CapType</a>{ code : 0 } }
 </code></pre>
 
 
 
 </details>
 
-<a name="0x1_Vault_modify_cap_type"></a>
+<a name="0x1_vault_modify_cap_type"></a>
 
 ## Function `modify_cap_type`
 
 Creates a modify  capability type.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_modify_cap_type">modify_cap_type</a>(): <a href="Vault.md#0x1_Vault_CapType">Vault::CapType</a>
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_modify_cap_type">modify_cap_type</a>(): <a href="vault.md#0x1_vault_CapType">vault::CapType</a>
 </code></pre>
 
 
@@ -735,21 +735,21 @@ Creates a modify  capability type.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_modify_cap_type">modify_cap_type</a>(): <a href="Vault.md#0x1_Vault_CapType">CapType</a> { <a href="Vault.md#0x1_Vault_CapType">CapType</a>{ code : 1 } }
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_modify_cap_type">modify_cap_type</a>(): <a href="vault.md#0x1_vault_CapType">CapType</a> { <a href="vault.md#0x1_vault_CapType">CapType</a>{ code : 1 } }
 </code></pre>
 
 
 
 </details>
 
-<a name="0x1_Vault_delegate_cap_type"></a>
+<a name="0x1_vault_delegate_cap_type"></a>
 
 ## Function `delegate_cap_type`
 
 Creates a delegate  capability type.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_delegate_cap_type">delegate_cap_type</a>(): <a href="Vault.md#0x1_Vault_CapType">Vault::CapType</a>
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_delegate_cap_type">delegate_cap_type</a>(): <a href="vault.md#0x1_vault_CapType">vault::CapType</a>
 </code></pre>
 
 
@@ -758,21 +758,21 @@ Creates a delegate  capability type.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_delegate_cap_type">delegate_cap_type</a>(): <a href="Vault.md#0x1_Vault_CapType">CapType</a> { <a href="Vault.md#0x1_Vault_CapType">CapType</a>{ code : 2 } }
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_delegate_cap_type">delegate_cap_type</a>(): <a href="vault.md#0x1_vault_CapType">CapType</a> { <a href="vault.md#0x1_vault_CapType">CapType</a>{ code : 2 } }
 </code></pre>
 
 
 
 </details>
 
-<a name="0x1_Vault_transfer_cap_type"></a>
+<a name="0x1_vault_transfer_cap_type"></a>
 
 ## Function `transfer_cap_type`
 
 Creates a transfer  capability type.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_transfer_cap_type">transfer_cap_type</a>(): <a href="Vault.md#0x1_Vault_CapType">Vault::CapType</a>
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_transfer_cap_type">transfer_cap_type</a>(): <a href="vault.md#0x1_vault_CapType">vault::CapType</a>
 </code></pre>
 
 
@@ -781,21 +781,21 @@ Creates a transfer  capability type.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_transfer_cap_type">transfer_cap_type</a>(): <a href="Vault.md#0x1_Vault_CapType">CapType</a> { <a href="Vault.md#0x1_Vault_CapType">CapType</a>{ code : 3 } }
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_transfer_cap_type">transfer_cap_type</a>(): <a href="vault.md#0x1_vault_CapType">CapType</a> { <a href="vault.md#0x1_vault_CapType">CapType</a>{ code : 3 } }
 </code></pre>
 
 
 
 </details>
 
-<a name="0x1_Vault_new"></a>
+<a name="0x1_vault_new"></a>
 
 ## Function `new`
 
 Creates new vault for the given signer. The vault is populated with the <code>initial_content</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_new">new</a>&lt;Content: store&gt;(owner: &signer, initial_content: Content)
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_new">new</a>&lt;Content: store&gt;(owner: &<a href="">signer</a>, initial_content: Content)
 </code></pre>
 
 
@@ -804,13 +804,13 @@ Creates new vault for the given signer. The vault is populated with the <code>in
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_new">new</a>&lt;Content: store&gt;(owner: &signer,  initial_content: Content) {
-    <b>let</b> addr = <a href="_address_of">Signer::address_of</a>(owner);
-    <b>assert</b>!(!<b>exists</b>&lt;<a href="Vault.md#0x1_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="_already_published">Errors::already_published</a>(<a href="Vault.md#0x1_Vault_EVAULT">EVAULT</a>));
-    <b>move_to</b>&lt;<a href="Vault.md#0x1_Vault">Vault</a>&lt;Content&gt;&gt;(
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_new">new</a>&lt;Content: store&gt;(owner: &<a href="">signer</a>,  initial_content: Content) {
+    <b>let</b> addr = <a href="_address_of">signer::address_of</a>(owner);
+    <b>assert</b>!(!<b>exists</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="_already_published">errors::already_published</a>(<a href="vault.md#0x1_vault_EVAULT">EVAULT</a>));
+    <b>move_to</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(
         owner,
-        <a href="Vault.md#0x1_Vault">Vault</a>{
-            content: <a href="_some">Option::some</a>(initial_content)
+        <a href="vault.md#0x1_vault_Vault">Vault</a>{
+            content: <a href="_some">option::some</a>(initial_content)
         }
     )
 }
@@ -820,7 +820,7 @@ Creates new vault for the given signer. The vault is populated with the <code>in
 
 </details>
 
-<a name="0x1_Vault_is_delegation_enabled"></a>
+<a name="0x1_vault_is_delegation_enabled"></a>
 
 ## Function `is_delegation_enabled`
 
@@ -828,7 +828,7 @@ Returns <code><b>true</b></code> if the delegation functionality has been enable
 Returns <code><b>false</b></code> otherwise.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_is_delegation_enabled">is_delegation_enabled</a>&lt;Content: store&gt;(owner: &signer): bool
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_is_delegation_enabled">is_delegation_enabled</a>&lt;Content: store&gt;(owner: &<a href="">signer</a>): bool
 </code></pre>
 
 
@@ -837,10 +837,10 @@ Returns <code><b>false</b></code> otherwise.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_is_delegation_enabled">is_delegation_enabled</a>&lt;Content: store&gt;(owner: &signer): bool {
-    <b>let</b> addr = <a href="_address_of">Signer::address_of</a>(owner);
-    <b>assert</b>!(<b>exists</b>&lt;<a href="Vault.md#0x1_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="_not_published">Errors::not_published</a>(<a href="Vault.md#0x1_Vault_EVAULT">EVAULT</a>));
-    <b>exists</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(addr)
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_is_delegation_enabled">is_delegation_enabled</a>&lt;Content: store&gt;(owner: &<a href="">signer</a>): bool {
+    <b>let</b> addr = <a href="_address_of">signer::address_of</a>(owner);
+    <b>assert</b>!(<b>exists</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="_not_published">errors::not_published</a>(<a href="vault.md#0x1_vault_EVAULT">EVAULT</a>));
+    <b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(addr)
 }
 </code></pre>
 
@@ -848,14 +848,14 @@ Returns <code><b>false</b></code> otherwise.
 
 </details>
 
-<a name="0x1_Vault_enable_delegation"></a>
+<a name="0x1_vault_enable_delegation"></a>
 
 ## Function `enable_delegation`
 
 Enables delegation functionality for this vault. By default, vaults to not support delegation.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_enable_delegation">enable_delegation</a>&lt;Content: store&gt;(owner: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_enable_delegation">enable_delegation</a>&lt;Content: store&gt;(owner: &<a href="">signer</a>)
 </code></pre>
 
 
@@ -864,9 +864,9 @@ Enables delegation functionality for this vault. By default, vaults to not suppo
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_enable_delegation">enable_delegation</a>&lt;Content: store&gt;(owner: &signer) {
-    <b>assert</b>!(!<a href="Vault.md#0x1_Vault_is_delegation_enabled">is_delegation_enabled</a>&lt;Content&gt;(owner), <a href="_already_published">Errors::already_published</a>(<a href="Vault.md#0x1_Vault_EDELEGATE">EDELEGATE</a>));
-    <b>move_to</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(owner, <a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>{delegates: <a href="_empty">Vector::empty</a>()})
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_enable_delegation">enable_delegation</a>&lt;Content: store&gt;(owner: &<a href="">signer</a>) {
+    <b>assert</b>!(!<a href="vault.md#0x1_vault_is_delegation_enabled">is_delegation_enabled</a>&lt;Content&gt;(owner), <a href="_already_published">errors::already_published</a>(<a href="vault.md#0x1_vault_EDELEGATE">EDELEGATE</a>));
+    <b>move_to</b>&lt;<a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(owner, <a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>{delegates: <a href="_empty">vector::empty</a>()})
 }
 </code></pre>
 
@@ -874,7 +874,7 @@ Enables delegation functionality for this vault. By default, vaults to not suppo
 
 </details>
 
-<a name="0x1_Vault_enable_events"></a>
+<a name="0x1_vault_enable_events"></a>
 
 ## Function `enable_events`
 
@@ -882,7 +882,7 @@ Enables event generation for this vault. This passed metadata is used to identif
 the vault in events.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_enable_events">enable_events</a>&lt;Content: store&gt;(owner: &signer, metadata: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_enable_events">enable_events</a>&lt;Content: store&gt;(owner: &<a href="">signer</a>, metadata: <a href="">vector</a>&lt;u8&gt;)
 </code></pre>
 
 
@@ -891,16 +891,16 @@ the vault in events.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_enable_events">enable_events</a>&lt;Content: store&gt;(owner: &signer, metadata: vector&lt;u8&gt;) {
-    <b>let</b> addr = <a href="_address_of">Signer::address_of</a>(owner);
-    <b>assert</b>!(<b>exists</b>&lt;<a href="Vault.md#0x1_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="_not_published">Errors::not_published</a>(<a href="Vault.md#0x1_Vault_EVAULT">EVAULT</a>));
-    <b>assert</b>!(!<b>exists</b>&lt;<a href="Vault.md#0x1_Vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(addr), <a href="_already_published">Errors::already_published</a>(<a href="Vault.md#0x1_Vault_EEVENT">EEVENT</a>));
-    <b>move_to</b>&lt;<a href="Vault.md#0x1_Vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_enable_events">enable_events</a>&lt;Content: store&gt;(owner: &<a href="">signer</a>, metadata: <a href="">vector</a>&lt;u8&gt;) {
+    <b>let</b> addr = <a href="_address_of">signer::address_of</a>(owner);
+    <b>assert</b>!(<b>exists</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="_not_published">errors::not_published</a>(<a href="vault.md#0x1_vault_EVAULT">EVAULT</a>));
+    <b>assert</b>!(!<b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(addr), <a href="_already_published">errors::already_published</a>(<a href="vault.md#0x1_vault_EEVENT">EEVENT</a>));
+    <b>move_to</b>&lt;<a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(
         owner,
-        <a href="Vault.md#0x1_Vault_VaultEvents">VaultEvents</a>{
+        <a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a>{
             metadata,
-            delegate_events: <a href="_new_event_handle">Event::new_event_handle</a>&lt;<a href="Vault.md#0x1_Vault_VaultDelegateEvent">VaultDelegateEvent</a>&gt;(owner),
-            transfer_events: <a href="_new_event_handle">Event::new_event_handle</a>&lt;<a href="Vault.md#0x1_Vault_VaultTransferEvent">VaultTransferEvent</a>&gt;(owner),
+            delegate_events: <a href="_new_event_handle">event::new_event_handle</a>&lt;<a href="vault.md#0x1_vault_VaultDelegateEvent">VaultDelegateEvent</a>&gt;(owner),
+            transfer_events: <a href="_new_event_handle">event::new_event_handle</a>&lt;<a href="vault.md#0x1_vault_VaultTransferEvent">VaultTransferEvent</a>&gt;(owner),
         }
     );
 }
@@ -910,7 +910,7 @@ the vault in events.
 
 </details>
 
-<a name="0x1_Vault_remove_vault"></a>
+<a name="0x1_vault_remove_vault"></a>
 
 ## Function `remove_vault`
 
@@ -918,7 +918,7 @@ Removes a vault and all its associated data, returning the current content. In o
 this to succeed, there must be no active accessor for the vault.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_remove_vault">remove_vault</a>&lt;Content: drop, store&gt;(owner: &signer): Content
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_remove_vault">remove_vault</a>&lt;Content: drop, store&gt;(owner: &<a href="">signer</a>): Content
 </code></pre>
 
 
@@ -927,25 +927,25 @@ this to succeed, there must be no active accessor for the vault.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_remove_vault">remove_vault</a>&lt;Content: store + drop&gt;(owner: &signer): Content
-<b>acquires</b> <a href="Vault.md#0x1_Vault">Vault</a>, <a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>, <a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>, <a href="Vault.md#0x1_Vault_VaultEvents">VaultEvents</a> {
-    <b>let</b> addr = <a href="_address_of">Signer::address_of</a>(owner);
-    <b>assert</b>!(<b>exists</b>&lt;<a href="Vault.md#0x1_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="_not_published">Errors::not_published</a>(<a href="Vault.md#0x1_Vault_EVAULT">EVAULT</a>));
-    <b>let</b> <a href="Vault.md#0x1_Vault">Vault</a>{content} = <b>move_from</b>&lt;<a href="Vault.md#0x1_Vault">Vault</a>&lt;Content&gt;&gt;(addr);
-    <b>assert</b>!(<a href="_is_some">Option::is_some</a>(&content), <a href="_invalid_state">Errors::invalid_state</a>(<a href="Vault.md#0x1_Vault_EACCESSOR_IN_USE">EACCESSOR_IN_USE</a>));
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_remove_vault">remove_vault</a>&lt;Content: store + drop&gt;(owner: &<a href="">signer</a>): Content
+<b>acquires</b> <a href="vault.md#0x1_vault_Vault">Vault</a>, <a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>, <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>, <a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a> {
+    <b>let</b> addr = <a href="_address_of">signer::address_of</a>(owner);
+    <b>assert</b>!(<b>exists</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="_not_published">errors::not_published</a>(<a href="vault.md#0x1_vault_EVAULT">EVAULT</a>));
+    <b>let</b> <a href="vault.md#0x1_vault_Vault">Vault</a>{content} = <b>move_from</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(addr);
+    <b>assert</b>!(<a href="_is_some">option::is_some</a>(&content), <a href="_invalid_state">errors::invalid_state</a>(<a href="vault.md#0x1_vault_EACCESSOR_IN_USE">EACCESSOR_IN_USE</a>));
 
-    <b>if</b> (<b>exists</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(addr)) {
-        <b>let</b> delegate_cap = <a href="Vault.md#0x1_Vault_DelegateCap">DelegateCap</a>&lt;Content&gt;{vault_address: addr, authority: addr};
-        <a href="Vault.md#0x1_Vault_revoke_all">revoke_all</a>(&delegate_cap);
+    <b>if</b> (<b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(addr)) {
+        <b>let</b> delegate_cap = <a href="vault.md#0x1_vault_DelegateCap">DelegateCap</a>&lt;Content&gt;{vault_address: addr, authority: addr};
+        <a href="vault.md#0x1_vault_revoke_all">revoke_all</a>(&delegate_cap);
     };
-    <b>if</b> (<b>exists</b>&lt;<a href="Vault.md#0x1_Vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(addr)) {
-        <b>let</b> <a href="Vault.md#0x1_Vault_VaultEvents">VaultEvents</a>{metadata: _metadata, delegate_events, transfer_events} =
-            <b>move_from</b>&lt;<a href="Vault.md#0x1_Vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(addr);
-        <a href="_destroy_handle">Event::destroy_handle</a>(delegate_events);
-        <a href="_destroy_handle">Event::destroy_handle</a>(transfer_events);
+    <b>if</b> (<b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(addr)) {
+        <b>let</b> <a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a>{metadata: _metadata, delegate_events, transfer_events} =
+            <b>move_from</b>&lt;<a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(addr);
+        <a href="_destroy_handle">event::destroy_handle</a>(delegate_events);
+        <a href="_destroy_handle">event::destroy_handle</a>(transfer_events);
     };
 
-    <a href="_extract">Option::extract</a>(&<b>mut</b> content)
+    <a href="_extract">option::extract</a>(&<b>mut</b> content)
 }
 </code></pre>
 
@@ -953,7 +953,7 @@ this to succeed, there must be no active accessor for the vault.
 
 </details>
 
-<a name="0x1_Vault_acquire_read_cap"></a>
+<a name="0x1_vault_acquire_read_cap"></a>
 
 ## Function `acquire_read_cap`
 
@@ -961,7 +961,7 @@ Acquires the capability to read the vault. The passed signer must either be the 
 of the vault or a delegate with appropriate access.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_acquire_read_cap">acquire_read_cap</a>&lt;Content: drop, store&gt;(requester: &signer): <a href="Vault.md#0x1_Vault_ReadCap">Vault::ReadCap</a>&lt;Content&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_acquire_read_cap">acquire_read_cap</a>&lt;Content: drop, store&gt;(requester: &<a href="">signer</a>): <a href="vault.md#0x1_vault_ReadCap">vault::ReadCap</a>&lt;Content&gt;
 </code></pre>
 
 
@@ -970,10 +970,10 @@ of the vault or a delegate with appropriate access.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_acquire_read_cap">acquire_read_cap</a>&lt;Content: store + drop&gt;(requester: &signer): <a href="Vault.md#0x1_Vault_ReadCap">ReadCap</a>&lt;Content&gt;
-<b>acquires</b> <a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a> {
-    <b>let</b> (vault_address, authority) = <a href="Vault.md#0x1_Vault_validate_cap">validate_cap</a>&lt;Content&gt;(requester, <a href="Vault.md#0x1_Vault_read_cap_type">read_cap_type</a>());
-    <a href="Vault.md#0x1_Vault_ReadCap">ReadCap</a>{ vault_address, authority }
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_acquire_read_cap">acquire_read_cap</a>&lt;Content: store + drop&gt;(requester: &<a href="">signer</a>): <a href="vault.md#0x1_vault_ReadCap">ReadCap</a>&lt;Content&gt;
+<b>acquires</b> <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a> {
+    <b>let</b> (vault_address, authority) = <a href="vault.md#0x1_vault_validate_cap">validate_cap</a>&lt;Content&gt;(requester, <a href="vault.md#0x1_vault_read_cap_type">read_cap_type</a>());
+    <a href="vault.md#0x1_vault_ReadCap">ReadCap</a>{ vault_address, authority }
 }
 </code></pre>
 
@@ -981,7 +981,7 @@ of the vault or a delegate with appropriate access.
 
 </details>
 
-<a name="0x1_Vault_acquire_modify_cap"></a>
+<a name="0x1_vault_acquire_modify_cap"></a>
 
 ## Function `acquire_modify_cap`
 
@@ -989,7 +989,7 @@ Acquires the capability to modify the vault. The passed signer must either be th
 of the vault or a delegate with appropriate access.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_acquire_modify_cap">acquire_modify_cap</a>&lt;Content: drop, store&gt;(requester: &signer): <a href="Vault.md#0x1_Vault_ModifyCap">Vault::ModifyCap</a>&lt;Content&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_acquire_modify_cap">acquire_modify_cap</a>&lt;Content: drop, store&gt;(requester: &<a href="">signer</a>): <a href="vault.md#0x1_vault_ModifyCap">vault::ModifyCap</a>&lt;Content&gt;
 </code></pre>
 
 
@@ -998,10 +998,10 @@ of the vault or a delegate with appropriate access.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_acquire_modify_cap">acquire_modify_cap</a>&lt;Content: store + drop&gt;(requester: &signer): <a href="Vault.md#0x1_Vault_ModifyCap">ModifyCap</a>&lt;Content&gt;
-<b>acquires</b> <a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a> {
-    <b>let</b> (vault_address, authority) = <a href="Vault.md#0x1_Vault_validate_cap">validate_cap</a>&lt;Content&gt;(requester, <a href="Vault.md#0x1_Vault_modify_cap_type">modify_cap_type</a>());
-    <a href="Vault.md#0x1_Vault_ModifyCap">ModifyCap</a>{ vault_address, authority }
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_acquire_modify_cap">acquire_modify_cap</a>&lt;Content: store + drop&gt;(requester: &<a href="">signer</a>): <a href="vault.md#0x1_vault_ModifyCap">ModifyCap</a>&lt;Content&gt;
+<b>acquires</b> <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a> {
+    <b>let</b> (vault_address, authority) = <a href="vault.md#0x1_vault_validate_cap">validate_cap</a>&lt;Content&gt;(requester, <a href="vault.md#0x1_vault_modify_cap_type">modify_cap_type</a>());
+    <a href="vault.md#0x1_vault_ModifyCap">ModifyCap</a>{ vault_address, authority }
 }
 </code></pre>
 
@@ -1009,7 +1009,7 @@ of the vault or a delegate with appropriate access.
 
 </details>
 
-<a name="0x1_Vault_acquire_delegate_cap"></a>
+<a name="0x1_vault_acquire_delegate_cap"></a>
 
 ## Function `acquire_delegate_cap`
 
@@ -1017,7 +1017,7 @@ Acquires the capability to delegate access to the vault. The passed signer must 
 of the vault or a delegate with appropriate access.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_acquire_delegate_cap">acquire_delegate_cap</a>&lt;Content: drop, store&gt;(requester: &signer): <a href="Vault.md#0x1_Vault_DelegateCap">Vault::DelegateCap</a>&lt;Content&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_acquire_delegate_cap">acquire_delegate_cap</a>&lt;Content: drop, store&gt;(requester: &<a href="">signer</a>): <a href="vault.md#0x1_vault_DelegateCap">vault::DelegateCap</a>&lt;Content&gt;
 </code></pre>
 
 
@@ -1026,10 +1026,10 @@ of the vault or a delegate with appropriate access.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_acquire_delegate_cap">acquire_delegate_cap</a>&lt;Content: store + drop&gt;(requester: &signer): <a href="Vault.md#0x1_Vault_DelegateCap">DelegateCap</a>&lt;Content&gt;
-<b>acquires</b> <a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a> {
-    <b>let</b> (vault_address, authority) = <a href="Vault.md#0x1_Vault_validate_cap">validate_cap</a>&lt;Content&gt;(requester, <a href="Vault.md#0x1_Vault_delegate_cap_type">delegate_cap_type</a>());
-    <a href="Vault.md#0x1_Vault_DelegateCap">DelegateCap</a>{ vault_address, authority }
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_acquire_delegate_cap">acquire_delegate_cap</a>&lt;Content: store + drop&gt;(requester: &<a href="">signer</a>): <a href="vault.md#0x1_vault_DelegateCap">DelegateCap</a>&lt;Content&gt;
+<b>acquires</b> <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a> {
+    <b>let</b> (vault_address, authority) = <a href="vault.md#0x1_vault_validate_cap">validate_cap</a>&lt;Content&gt;(requester, <a href="vault.md#0x1_vault_delegate_cap_type">delegate_cap_type</a>());
+    <a href="vault.md#0x1_vault_DelegateCap">DelegateCap</a>{ vault_address, authority }
 }
 </code></pre>
 
@@ -1037,7 +1037,7 @@ of the vault or a delegate with appropriate access.
 
 </details>
 
-<a name="0x1_Vault_acquire_transfer_cap"></a>
+<a name="0x1_vault_acquire_transfer_cap"></a>
 
 ## Function `acquire_transfer_cap`
 
@@ -1045,7 +1045,7 @@ Acquires the capability to transfer the vault. The passed signer must either be 
 of the vault or a delegate with appropriate access.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_acquire_transfer_cap">acquire_transfer_cap</a>&lt;Content: drop, store&gt;(requester: &signer): <a href="Vault.md#0x1_Vault_TransferCap">Vault::TransferCap</a>&lt;Content&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_acquire_transfer_cap">acquire_transfer_cap</a>&lt;Content: drop, store&gt;(requester: &<a href="">signer</a>): <a href="vault.md#0x1_vault_TransferCap">vault::TransferCap</a>&lt;Content&gt;
 </code></pre>
 
 
@@ -1054,10 +1054,10 @@ of the vault or a delegate with appropriate access.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_acquire_transfer_cap">acquire_transfer_cap</a>&lt;Content: store + drop&gt;(requester: &signer): <a href="Vault.md#0x1_Vault_TransferCap">TransferCap</a>&lt;Content&gt;
-<b>acquires</b> <a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a> {
-    <b>let</b> (vault_address, authority) = <a href="Vault.md#0x1_Vault_validate_cap">validate_cap</a>&lt;Content&gt;(requester, <a href="Vault.md#0x1_Vault_transfer_cap_type">transfer_cap_type</a>());
-    <a href="Vault.md#0x1_Vault_TransferCap">TransferCap</a>{ vault_address, authority }
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_acquire_transfer_cap">acquire_transfer_cap</a>&lt;Content: store + drop&gt;(requester: &<a href="">signer</a>): <a href="vault.md#0x1_vault_TransferCap">TransferCap</a>&lt;Content&gt;
+<b>acquires</b> <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a> {
+    <b>let</b> (vault_address, authority) = <a href="vault.md#0x1_vault_validate_cap">validate_cap</a>&lt;Content&gt;(requester, <a href="vault.md#0x1_vault_transfer_cap_type">transfer_cap_type</a>());
+    <a href="vault.md#0x1_vault_TransferCap">TransferCap</a>{ vault_address, authority }
 }
 </code></pre>
 
@@ -1065,7 +1065,7 @@ of the vault or a delegate with appropriate access.
 
 </details>
 
-<a name="0x1_Vault_validate_cap"></a>
+<a name="0x1_vault_validate_cap"></a>
 
 ## Function `validate_cap`
 
@@ -1073,7 +1073,7 @@ Private. Validates whether a capability can be acquired by the given signer. Ret
 pair of the vault address and the used authority.
 
 
-<pre><code><b>fun</b> <a href="Vault.md#0x1_Vault_validate_cap">validate_cap</a>&lt;Content: drop, store&gt;(requester: &signer, cap: <a href="Vault.md#0x1_Vault_CapType">Vault::CapType</a>): (<b>address</b>, <b>address</b>)
+<pre><code><b>fun</b> <a href="vault.md#0x1_vault_validate_cap">validate_cap</a>&lt;Content: drop, store&gt;(requester: &<a href="">signer</a>, cap: <a href="vault.md#0x1_vault_CapType">vault::CapType</a>): (<b>address</b>, <b>address</b>)
 </code></pre>
 
 
@@ -1082,17 +1082,17 @@ pair of the vault address and the used authority.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="Vault.md#0x1_Vault_validate_cap">validate_cap</a>&lt;Content: store + drop&gt;(requester: &signer, cap: <a href="Vault.md#0x1_Vault_CapType">CapType</a>): (<b>address</b>, <b>address</b>)
-<b>acquires</b> <a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a> {
-    <b>let</b> addr = <a href="_address_of">Signer::address_of</a>(requester);
-    <b>if</b> (<b>exists</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr)) {
-        // The signer is a delegate. Check it's granted capabilities.
-        <b>let</b> delegate = <b>borrow_global</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr);
-        <b>assert</b>!(<a href="_contains">Vector::contains</a>(&delegate.granted_caps, &cap), <a href="_requires_capability">Errors::requires_capability</a>(<a href="Vault.md#0x1_Vault_EDELEGATE">EDELEGATE</a>));
+<pre><code><b>fun</b> <a href="vault.md#0x1_vault_validate_cap">validate_cap</a>&lt;Content: store + drop&gt;(requester: &<a href="">signer</a>, cap: <a href="vault.md#0x1_vault_CapType">CapType</a>): (<b>address</b>, <b>address</b>)
+<b>acquires</b> <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a> {
+    <b>let</b> addr = <a href="_address_of">signer::address_of</a>(requester);
+    <b>if</b> (<b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr)) {
+        // The <a href="">signer</a> is a delegate. Check it's granted capabilities.
+        <b>let</b> delegate = <b>borrow_global</b>&lt;<a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr);
+        <b>assert</b>!(<a href="_contains">vector::contains</a>(&delegate.granted_caps, &cap), <a href="_requires_capability">errors::requires_capability</a>(<a href="vault.md#0x1_vault_EDELEGATE">EDELEGATE</a>));
         (delegate.vault_address, addr)
     } <b>else</b> {
         // If it is not a delegate, it must be the owner <b>to</b> succeed.
-        <b>assert</b>!(<b>exists</b>&lt;<a href="Vault.md#0x1_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="_not_published">Errors::not_published</a>(<a href="Vault.md#0x1_Vault_EVAULT">EVAULT</a>));
+        <b>assert</b>!(<b>exists</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="_not_published">errors::not_published</a>(<a href="vault.md#0x1_vault_EVAULT">EVAULT</a>));
         (addr, addr)
     }
 }
@@ -1102,7 +1102,7 @@ pair of the vault address and the used authority.
 
 </details>
 
-<a name="0x1_Vault_read_accessor"></a>
+<a name="0x1_vault_read_accessor"></a>
 
 ## Function `read_accessor`
 
@@ -1110,10 +1110,10 @@ Creates a read accessor for the content in the vault based on a read capability.
 
 Only one accessor (whether read or modify) for the same vault can exist at a time, and this
 function will abort if one is in use. An accessor must be explicitly released using
-<code><a href="Vault.md#0x1_Vault_release_read_accessor">Self::release_read_accessor</a></code>.
+<code><a href="vault.md#0x1_vault_release_read_accessor">Self::release_read_accessor</a></code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_read_accessor">read_accessor</a>&lt;Content: drop, store&gt;(cap: &<a href="Vault.md#0x1_Vault_ReadCap">Vault::ReadCap</a>&lt;Content&gt;): <a href="Vault.md#0x1_Vault_ReadAccessor">Vault::ReadAccessor</a>&lt;Content&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_read_accessor">read_accessor</a>&lt;Content: drop, store&gt;(cap: &<a href="vault.md#0x1_vault_ReadCap">vault::ReadCap</a>&lt;Content&gt;): <a href="vault.md#0x1_vault_ReadAccessor">vault::ReadAccessor</a>&lt;Content&gt;
 </code></pre>
 
 
@@ -1122,11 +1122,11 @@ function will abort if one is in use. An accessor must be explicitly released us
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_read_accessor">read_accessor</a>&lt;Content: store + drop&gt;(cap: &<a href="Vault.md#0x1_Vault_ReadCap">ReadCap</a>&lt;Content&gt;): <a href="Vault.md#0x1_Vault_ReadAccessor">ReadAccessor</a>&lt;Content&gt;
-<b>acquires</b> <a href="Vault.md#0x1_Vault">Vault</a> {
-    <b>let</b> content = &<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="Vault.md#0x1_Vault">Vault</a>&lt;Content&gt;&gt;(cap.vault_address).content;
-    <b>assert</b>!(<a href="_is_some">Option::is_some</a>(content), <a href="_invalid_state">Errors::invalid_state</a>(<a href="Vault.md#0x1_Vault_EACCESSOR_IN_USE">EACCESSOR_IN_USE</a>));
-    <a href="Vault.md#0x1_Vault_ReadAccessor">ReadAccessor</a>{ vault_address: cap.vault_address, content: <a href="_extract">Option::extract</a>(content) }
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_read_accessor">read_accessor</a>&lt;Content: store + drop&gt;(cap: &<a href="vault.md#0x1_vault_ReadCap">ReadCap</a>&lt;Content&gt;): <a href="vault.md#0x1_vault_ReadAccessor">ReadAccessor</a>&lt;Content&gt;
+<b>acquires</b> <a href="vault.md#0x1_vault_Vault">Vault</a> {
+    <b>let</b> content = &<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(cap.vault_address).content;
+    <b>assert</b>!(<a href="_is_some">option::is_some</a>(content), <a href="_invalid_state">errors::invalid_state</a>(<a href="vault.md#0x1_vault_EACCESSOR_IN_USE">EACCESSOR_IN_USE</a>));
+    <a href="vault.md#0x1_vault_ReadAccessor">ReadAccessor</a>{ vault_address: cap.vault_address, content: <a href="_extract">option::extract</a>(content) }
 }
 </code></pre>
 
@@ -1134,14 +1134,14 @@ function will abort if one is in use. An accessor must be explicitly released us
 
 </details>
 
-<a name="0x1_Vault_borrow"></a>
+<a name="0x1_vault_borrow"></a>
 
 ## Function `borrow`
 
 Returns a reference to the content represented by a read accessor.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_borrow">borrow</a>&lt;Content: drop, store&gt;(accessor: &<a href="Vault.md#0x1_Vault_ReadAccessor">Vault::ReadAccessor</a>&lt;Content&gt;): &Content
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_borrow">borrow</a>&lt;Content: drop, store&gt;(accessor: &<a href="vault.md#0x1_vault_ReadAccessor">vault::ReadAccessor</a>&lt;Content&gt;): &Content
 </code></pre>
 
 
@@ -1150,7 +1150,7 @@ Returns a reference to the content represented by a read accessor.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_borrow">borrow</a>&lt;Content: store + drop&gt;(accessor: &<a href="Vault.md#0x1_Vault_ReadAccessor">ReadAccessor</a>&lt;Content&gt;): &Content {
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_borrow">borrow</a>&lt;Content: store + drop&gt;(accessor: &<a href="vault.md#0x1_vault_ReadAccessor">ReadAccessor</a>&lt;Content&gt;): &Content {
     &accessor.content
 }
 </code></pre>
@@ -1159,14 +1159,14 @@ Returns a reference to the content represented by a read accessor.
 
 </details>
 
-<a name="0x1_Vault_release_read_accessor"></a>
+<a name="0x1_vault_release_read_accessor"></a>
 
 ## Function `release_read_accessor`
 
 Releases read accessor.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_release_read_accessor">release_read_accessor</a>&lt;Content: drop, store&gt;(accessor: <a href="Vault.md#0x1_Vault_ReadAccessor">Vault::ReadAccessor</a>&lt;Content&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_release_read_accessor">release_read_accessor</a>&lt;Content: drop, store&gt;(accessor: <a href="vault.md#0x1_vault_ReadAccessor">vault::ReadAccessor</a>&lt;Content&gt;)
 </code></pre>
 
 
@@ -1175,14 +1175,14 @@ Releases read accessor.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_release_read_accessor">release_read_accessor</a>&lt;Content: store + drop&gt;(accessor: <a href="Vault.md#0x1_Vault_ReadAccessor">ReadAccessor</a>&lt;Content&gt;)
-<b>acquires</b> <a href="Vault.md#0x1_Vault">Vault</a> {
-    <b>let</b> <a href="Vault.md#0x1_Vault_ReadAccessor">ReadAccessor</a>{ content: new_content, vault_address } = accessor;
-    <b>let</b> content = &<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="Vault.md#0x1_Vault">Vault</a>&lt;Content&gt;&gt;(vault_address).content;
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_release_read_accessor">release_read_accessor</a>&lt;Content: store + drop&gt;(accessor: <a href="vault.md#0x1_vault_ReadAccessor">ReadAccessor</a>&lt;Content&gt;)
+<b>acquires</b> <a href="vault.md#0x1_vault_Vault">Vault</a> {
+    <b>let</b> <a href="vault.md#0x1_vault_ReadAccessor">ReadAccessor</a>{ content: new_content, vault_address } = accessor;
+    <b>let</b> content = &<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(vault_address).content;
     // We (should be/are) able <b>to</b> prove that the below cannot happen, but we leave the assertion
     // here anyway for double safety.
-    <b>assert</b>!(<a href="_is_none">Option::is_none</a>(content), <a href="_internal">Errors::internal</a>(<a href="Vault.md#0x1_Vault_EACCESSOR_INCONSISTENCY">EACCESSOR_INCONSISTENCY</a>));
-    <a href="_fill">Option::fill</a>(content, new_content);
+    <b>assert</b>!(<a href="_is_none">option::is_none</a>(content), <a href="_internal">errors::internal</a>(<a href="vault.md#0x1_vault_EACCESSOR_INCONSISTENCY">EACCESSOR_INCONSISTENCY</a>));
+    <a href="_fill">option::fill</a>(content, new_content);
 }
 </code></pre>
 
@@ -1190,16 +1190,16 @@ Releases read accessor.
 
 </details>
 
-<a name="0x1_Vault_modify_accessor"></a>
+<a name="0x1_vault_modify_accessor"></a>
 
 ## Function `modify_accessor`
 
 Creates a modify accessor for the content in the vault based on a modify capability. This
-is similar like <code><a href="Vault.md#0x1_Vault_read_accessor">Self::read_accessor</a></code> but the returned accessor will allow to mutate
+is similar like <code><a href="vault.md#0x1_vault_read_accessor">Self::read_accessor</a></code> but the returned accessor will allow to mutate
 the content.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_modify_accessor">modify_accessor</a>&lt;Content: drop, store&gt;(cap: &<a href="Vault.md#0x1_Vault_ModifyCap">Vault::ModifyCap</a>&lt;Content&gt;): <a href="Vault.md#0x1_Vault_ModifyAccessor">Vault::ModifyAccessor</a>&lt;Content&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_modify_accessor">modify_accessor</a>&lt;Content: drop, store&gt;(cap: &<a href="vault.md#0x1_vault_ModifyCap">vault::ModifyCap</a>&lt;Content&gt;): <a href="vault.md#0x1_vault_ModifyAccessor">vault::ModifyAccessor</a>&lt;Content&gt;
 </code></pre>
 
 
@@ -1208,11 +1208,11 @@ the content.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_modify_accessor">modify_accessor</a>&lt;Content: store + drop&gt;(cap: &<a href="Vault.md#0x1_Vault_ModifyCap">ModifyCap</a>&lt;Content&gt;): <a href="Vault.md#0x1_Vault_ModifyAccessor">ModifyAccessor</a>&lt;Content&gt;
-<b>acquires</b> <a href="Vault.md#0x1_Vault">Vault</a> {
-    <b>let</b> content = &<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="Vault.md#0x1_Vault">Vault</a>&lt;Content&gt;&gt;(cap.vault_address).content;
-    <b>assert</b>!(<a href="_is_some">Option::is_some</a>(content), <a href="_invalid_state">Errors::invalid_state</a>(<a href="Vault.md#0x1_Vault_EACCESSOR_IN_USE">EACCESSOR_IN_USE</a>));
-    <a href="Vault.md#0x1_Vault_ModifyAccessor">ModifyAccessor</a>{ vault_address: cap.vault_address, content: <a href="_extract">Option::extract</a>(content) }
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_modify_accessor">modify_accessor</a>&lt;Content: store + drop&gt;(cap: &<a href="vault.md#0x1_vault_ModifyCap">ModifyCap</a>&lt;Content&gt;): <a href="vault.md#0x1_vault_ModifyAccessor">ModifyAccessor</a>&lt;Content&gt;
+<b>acquires</b> <a href="vault.md#0x1_vault_Vault">Vault</a> {
+    <b>let</b> content = &<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(cap.vault_address).content;
+    <b>assert</b>!(<a href="_is_some">option::is_some</a>(content), <a href="_invalid_state">errors::invalid_state</a>(<a href="vault.md#0x1_vault_EACCESSOR_IN_USE">EACCESSOR_IN_USE</a>));
+    <a href="vault.md#0x1_vault_ModifyAccessor">ModifyAccessor</a>{ vault_address: cap.vault_address, content: <a href="_extract">option::extract</a>(content) }
 }
 </code></pre>
 
@@ -1220,14 +1220,14 @@ the content.
 
 </details>
 
-<a name="0x1_Vault_borrow_mut"></a>
+<a name="0x1_vault_borrow_mut"></a>
 
 ## Function `borrow_mut`
 
 Returns a mutable reference to the content represented by a modify accessor.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_borrow_mut">borrow_mut</a>&lt;Content: drop, store&gt;(accessor: &<b>mut</b> <a href="Vault.md#0x1_Vault_ModifyAccessor">Vault::ModifyAccessor</a>&lt;Content&gt;): &<b>mut</b> Content
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_borrow_mut">borrow_mut</a>&lt;Content: drop, store&gt;(accessor: &<b>mut</b> <a href="vault.md#0x1_vault_ModifyAccessor">vault::ModifyAccessor</a>&lt;Content&gt;): &<b>mut</b> Content
 </code></pre>
 
 
@@ -1236,7 +1236,7 @@ Returns a mutable reference to the content represented by a modify accessor.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_borrow_mut">borrow_mut</a>&lt;Content: store + drop&gt;(accessor: &<b>mut</b> <a href="Vault.md#0x1_Vault_ModifyAccessor">ModifyAccessor</a>&lt;Content&gt;): &<b>mut</b> Content {
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_borrow_mut">borrow_mut</a>&lt;Content: store + drop&gt;(accessor: &<b>mut</b> <a href="vault.md#0x1_vault_ModifyAccessor">ModifyAccessor</a>&lt;Content&gt;): &<b>mut</b> Content {
     &<b>mut</b> accessor.content
 }
 </code></pre>
@@ -1245,7 +1245,7 @@ Returns a mutable reference to the content represented by a modify accessor.
 
 </details>
 
-<a name="0x1_Vault_release_modify_accessor"></a>
+<a name="0x1_vault_release_modify_accessor"></a>
 
 ## Function `release_modify_accessor`
 
@@ -1253,7 +1253,7 @@ Releases a modify accessor. This will ensure that any modifications are written 
 to the vault.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_release_modify_accessor">release_modify_accessor</a>&lt;Content: drop, store&gt;(accessor: <a href="Vault.md#0x1_Vault_ModifyAccessor">Vault::ModifyAccessor</a>&lt;Content&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_release_modify_accessor">release_modify_accessor</a>&lt;Content: drop, store&gt;(accessor: <a href="vault.md#0x1_vault_ModifyAccessor">vault::ModifyAccessor</a>&lt;Content&gt;)
 </code></pre>
 
 
@@ -1262,14 +1262,14 @@ to the vault.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_release_modify_accessor">release_modify_accessor</a>&lt;Content: store + drop&gt;(accessor: <a href="Vault.md#0x1_Vault_ModifyAccessor">ModifyAccessor</a>&lt;Content&gt;)
-<b>acquires</b> <a href="Vault.md#0x1_Vault">Vault</a> {
-    <b>let</b> <a href="Vault.md#0x1_Vault_ModifyAccessor">ModifyAccessor</a>{ content: new_content, vault_address } = accessor;
-    <b>let</b> content = &<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="Vault.md#0x1_Vault">Vault</a>&lt;Content&gt;&gt;(vault_address).content;
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_release_modify_accessor">release_modify_accessor</a>&lt;Content: store + drop&gt;(accessor: <a href="vault.md#0x1_vault_ModifyAccessor">ModifyAccessor</a>&lt;Content&gt;)
+<b>acquires</b> <a href="vault.md#0x1_vault_Vault">Vault</a> {
+    <b>let</b> <a href="vault.md#0x1_vault_ModifyAccessor">ModifyAccessor</a>{ content: new_content, vault_address } = accessor;
+    <b>let</b> content = &<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(vault_address).content;
     // We (should be/are) able <b>to</b> prove that the below cannot happen, but we leave the assertion
     // here anyway for double safety.
-    <b>assert</b>!(<a href="_is_none">Option::is_none</a>(content), <a href="_internal">Errors::internal</a>(<a href="Vault.md#0x1_Vault_EACCESSOR_INCONSISTENCY">EACCESSOR_INCONSISTENCY</a>));
-    <a href="_fill">Option::fill</a>(content, new_content);
+    <b>assert</b>!(<a href="_is_none">option::is_none</a>(content), <a href="_internal">errors::internal</a>(<a href="vault.md#0x1_vault_EACCESSOR_INCONSISTENCY">EACCESSOR_INCONSISTENCY</a>));
+    <a href="_fill">option::fill</a>(content, new_content);
 }
 </code></pre>
 
@@ -1277,7 +1277,7 @@ to the vault.
 
 </details>
 
-<a name="0x1_Vault_delegate"></a>
+<a name="0x1_vault_delegate"></a>
 
 ## Function `delegate`
 
@@ -1285,7 +1285,7 @@ Delegates the right to acquire a capability of the given type. Delegation must h
 during vault creation for this to succeed.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_delegate">delegate</a>&lt;Content: drop, store&gt;(cap: &<a href="Vault.md#0x1_Vault_DelegateCap">Vault::DelegateCap</a>&lt;Content&gt;, to_signer: &signer, cap_type: <a href="Vault.md#0x1_Vault_CapType">Vault::CapType</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_delegate">delegate</a>&lt;Content: drop, store&gt;(cap: &<a href="vault.md#0x1_vault_DelegateCap">vault::DelegateCap</a>&lt;Content&gt;, to_signer: &<a href="">signer</a>, cap_type: <a href="vault.md#0x1_vault_CapType">vault::CapType</a>)
 </code></pre>
 
 
@@ -1294,33 +1294,33 @@ during vault creation for this to succeed.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_delegate">delegate</a>&lt;Content: store + drop&gt;(cap: &<a href="Vault.md#0x1_Vault_DelegateCap">DelegateCap</a>&lt;Content&gt;, to_signer: &signer, cap_type: <a href="Vault.md#0x1_Vault_CapType">CapType</a>)
-<b>acquires</b> <a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>, <a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>, <a href="Vault.md#0x1_Vault_VaultEvents">VaultEvents</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_delegate">delegate</a>&lt;Content: store + drop&gt;(cap: &<a href="vault.md#0x1_vault_DelegateCap">DelegateCap</a>&lt;Content&gt;, to_signer: &<a href="">signer</a>, cap_type: <a href="vault.md#0x1_vault_CapType">CapType</a>)
+<b>acquires</b> <a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>, <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>, <a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a> {
     <b>assert</b>!(
-        <b>exists</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(cap.vault_address),
-        <a href="_invalid_state">Errors::invalid_state</a>(<a href="Vault.md#0x1_Vault_EDELEGATION_NOT_ENABLED">EDELEGATION_NOT_ENABLED</a>)
+        <b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(cap.vault_address),
+        <a href="_invalid_state">errors::invalid_state</a>(<a href="vault.md#0x1_vault_EDELEGATION_NOT_ENABLED">EDELEGATION_NOT_ENABLED</a>)
     );
 
-    <b>let</b> addr = <a href="_address_of">Signer::address_of</a>(to_signer);
-    <b>assert</b>!(addr != cap.vault_address, <a href="_invalid_argument">Errors::invalid_argument</a>(<a href="Vault.md#0x1_Vault_EDELEGATE_TO_SELF">EDELEGATE_TO_SELF</a>));
+    <b>let</b> addr = <a href="_address_of">signer::address_of</a>(to_signer);
+    <b>assert</b>!(addr != cap.vault_address, <a href="_invalid_argument">errors::invalid_argument</a>(<a href="vault.md#0x1_vault_EDELEGATE_TO_SELF">EDELEGATE_TO_SELF</a>));
 
-    <b>if</b> (!<b>exists</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr)) {
-        // Create <a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a> <b>if</b> it is not yet existing.
-        <b>move_to</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(
+    <b>if</b> (!<b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr)) {
+        // Create <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a> <b>if</b> it is not yet existing.
+        <b>move_to</b>&lt;<a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(
             to_signer,
-            <a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>{vault_address: cap.vault_address, granted_caps: <a href="_empty">Vector::empty</a>()}
+            <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>{vault_address: cap.vault_address, granted_caps: <a href="_empty">vector::empty</a>()}
         );
-        // Add the the delegate <b>to</b> <a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>.
-        <b>let</b> vault_delegates = <b>borrow_global_mut</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(cap.vault_address);
-        <a href="Vault.md#0x1_Vault_add_element">add_element</a>(&<b>mut</b> vault_delegates.delegates, addr);
+        // Add the the delegate <b>to</b> <a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>.
+        <b>let</b> vault_delegates = <b>borrow_global_mut</b>&lt;<a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(cap.vault_address);
+        <a href="vault.md#0x1_vault_add_element">add_element</a>(&<b>mut</b> vault_delegates.delegates, addr);
     };
 
     // Grant the capability.
-    <b>let</b> delegate = <b>borrow_global_mut</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr);
-    <a href="Vault.md#0x1_Vault_add_element">add_element</a>(&<b>mut</b> delegate.granted_caps, *&cap_type);
+    <b>let</b> delegate = <b>borrow_global_mut</b>&lt;<a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr);
+    <a href="vault.md#0x1_vault_add_element">add_element</a>(&<b>mut</b> delegate.granted_caps, *&cap_type);
 
-    // Generate event
-    <a href="Vault.md#0x1_Vault_emit_delegate_event">emit_delegate_event</a>(cap, cap_type, addr, <b>false</b>);
+    // Generate <a href="">event</a>
+    <a href="vault.md#0x1_vault_emit_delegate_event">emit_delegate_event</a>(cap, cap_type, addr, <b>false</b>);
 }
 </code></pre>
 
@@ -1328,14 +1328,14 @@ during vault creation for this to succeed.
 
 </details>
 
-<a name="0x1_Vault_revoke"></a>
+<a name="0x1_vault_revoke"></a>
 
 ## Function `revoke`
 
 Revokes the delegated right to acquire a capability of given type.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_revoke">revoke</a>&lt;Content: drop, store&gt;(cap: &<a href="Vault.md#0x1_Vault_DelegateCap">Vault::DelegateCap</a>&lt;Content&gt;, addr: <b>address</b>, cap_type: <a href="Vault.md#0x1_Vault_CapType">Vault::CapType</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_revoke">revoke</a>&lt;Content: drop, store&gt;(cap: &<a href="vault.md#0x1_vault_DelegateCap">vault::DelegateCap</a>&lt;Content&gt;, addr: <b>address</b>, cap_type: <a href="vault.md#0x1_vault_CapType">vault::CapType</a>)
 </code></pre>
 
 
@@ -1344,27 +1344,27 @@ Revokes the delegated right to acquire a capability of given type.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_revoke">revoke</a>&lt;Content: store + drop&gt;(cap: &<a href="Vault.md#0x1_Vault_DelegateCap">DelegateCap</a>&lt;Content&gt;, addr: <b>address</b>, cap_type: <a href="Vault.md#0x1_Vault_CapType">CapType</a>)
-<b>acquires</b> <a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>, <a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>, <a href="Vault.md#0x1_Vault_VaultEvents">VaultEvents</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_revoke">revoke</a>&lt;Content: store + drop&gt;(cap: &<a href="vault.md#0x1_vault_DelegateCap">DelegateCap</a>&lt;Content&gt;, addr: <b>address</b>, cap_type: <a href="vault.md#0x1_vault_CapType">CapType</a>)
+<b>acquires</b> <a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>, <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>, <a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a> {
     <b>assert</b>!(
-        <b>exists</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(cap.vault_address),
-        <a href="_invalid_state">Errors::invalid_state</a>(<a href="Vault.md#0x1_Vault_EDELEGATION_NOT_ENABLED">EDELEGATION_NOT_ENABLED</a>)
+        <b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(cap.vault_address),
+        <a href="_invalid_state">errors::invalid_state</a>(<a href="vault.md#0x1_vault_EDELEGATION_NOT_ENABLED">EDELEGATION_NOT_ENABLED</a>)
     );
-    <b>assert</b>!(<b>exists</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr), <a href="_not_published">Errors::not_published</a>(<a href="Vault.md#0x1_Vault_EDELEGATE">EDELEGATE</a>));
+    <b>assert</b>!(<b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr), <a href="_not_published">errors::not_published</a>(<a href="vault.md#0x1_vault_EDELEGATE">EDELEGATE</a>));
 
-    <b>let</b> delegate = <b>borrow_global_mut</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr);
-    <a href="Vault.md#0x1_Vault_remove_element">remove_element</a>(&<b>mut</b> delegate.granted_caps, &cap_type);
+    <b>let</b> delegate = <b>borrow_global_mut</b>&lt;<a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr);
+    <a href="vault.md#0x1_vault_remove_element">remove_element</a>(&<b>mut</b> delegate.granted_caps, &cap_type);
 
     // If the granted caps of this delegate drop <b>to</b> zero, remove it.
-    <b>if</b> (<a href="_is_empty">Vector::is_empty</a>(&delegate.granted_caps)) {
-        <b>let</b> <a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>{ vault_address: _owner, granted_caps: _granted_caps} =
-            <b>move_from</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr);
-        <b>let</b> vault_delegates = <b>borrow_global_mut</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(cap.vault_address);
-        <a href="Vault.md#0x1_Vault_remove_element">remove_element</a>(&<b>mut</b> vault_delegates.delegates, &addr);
+    <b>if</b> (<a href="_is_empty">vector::is_empty</a>(&delegate.granted_caps)) {
+        <b>let</b> <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>{ vault_address: _owner, granted_caps: _granted_caps} =
+            <b>move_from</b>&lt;<a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr);
+        <b>let</b> vault_delegates = <b>borrow_global_mut</b>&lt;<a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(cap.vault_address);
+        <a href="vault.md#0x1_vault_remove_element">remove_element</a>(&<b>mut</b> vault_delegates.delegates, &addr);
     };
 
-    // Generate event.
-    <a href="Vault.md#0x1_Vault_emit_delegate_event">emit_delegate_event</a>(cap, cap_type, addr, <b>true</b>);
+    // Generate <a href="">event</a>.
+    <a href="vault.md#0x1_vault_emit_delegate_event">emit_delegate_event</a>(cap, cap_type, addr, <b>true</b>);
 }
 </code></pre>
 
@@ -1372,14 +1372,14 @@ Revokes the delegated right to acquire a capability of given type.
 
 </details>
 
-<a name="0x1_Vault_revoke_all"></a>
+<a name="0x1_vault_revoke_all"></a>
 
 ## Function `revoke_all`
 
 Revokes all delegate rights for this vault.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_revoke_all">revoke_all</a>&lt;Content: drop, store&gt;(cap: &<a href="Vault.md#0x1_Vault_DelegateCap">Vault::DelegateCap</a>&lt;Content&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_revoke_all">revoke_all</a>&lt;Content: drop, store&gt;(cap: &<a href="vault.md#0x1_vault_DelegateCap">vault::DelegateCap</a>&lt;Content&gt;)
 </code></pre>
 
 
@@ -1388,20 +1388,20 @@ Revokes all delegate rights for this vault.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_revoke_all">revoke_all</a>&lt;Content: store + drop&gt;(cap: &<a href="Vault.md#0x1_Vault_DelegateCap">DelegateCap</a>&lt;Content&gt;)
-<b>acquires</b> <a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>, <a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>, <a href="Vault.md#0x1_Vault_VaultEvents">VaultEvents</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_revoke_all">revoke_all</a>&lt;Content: store + drop&gt;(cap: &<a href="vault.md#0x1_vault_DelegateCap">DelegateCap</a>&lt;Content&gt;)
+<b>acquires</b> <a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>, <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>, <a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a> {
     <b>assert</b>!(
-        <b>exists</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(cap.vault_address),
-        <a href="_invalid_state">Errors::invalid_state</a>(<a href="Vault.md#0x1_Vault_EDELEGATION_NOT_ENABLED">EDELEGATION_NOT_ENABLED</a>)
+        <b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(cap.vault_address),
+        <a href="_invalid_state">errors::invalid_state</a>(<a href="vault.md#0x1_vault_EDELEGATION_NOT_ENABLED">EDELEGATION_NOT_ENABLED</a>)
     );
-    <b>let</b> delegates = &<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(cap.vault_address).delegates;
-    <b>while</b> (!<a href="_is_empty">Vector::is_empty</a>(delegates)) {
-        <b>let</b> addr = <a href="_pop_back">Vector::pop_back</a>(delegates);
-        <b>let</b> <a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>{ vault_address: _vault_address, granted_caps} =
-            <b>move_from</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(cap.vault_address);
-        <b>while</b> (!<a href="_is_empty">Vector::is_empty</a>(&granted_caps)) {
-            <b>let</b> cap_type = <a href="_pop_back">Vector::pop_back</a>(&<b>mut</b> granted_caps);
-            <a href="Vault.md#0x1_Vault_emit_delegate_event">emit_delegate_event</a>(cap, cap_type, addr, <b>true</b>);
+    <b>let</b> delegates = &<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(cap.vault_address).delegates;
+    <b>while</b> (!<a href="_is_empty">vector::is_empty</a>(delegates)) {
+        <b>let</b> addr = <a href="_pop_back">vector::pop_back</a>(delegates);
+        <b>let</b> <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>{ vault_address: _vault_address, granted_caps} =
+            <b>move_from</b>&lt;<a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(cap.vault_address);
+        <b>while</b> (!<a href="_is_empty">vector::is_empty</a>(&granted_caps)) {
+            <b>let</b> cap_type = <a href="_pop_back">vector::pop_back</a>(&<b>mut</b> granted_caps);
+            <a href="vault.md#0x1_vault_emit_delegate_event">emit_delegate_event</a>(cap, cap_type, addr, <b>true</b>);
         }
     }
 }
@@ -1411,14 +1411,14 @@ Revokes all delegate rights for this vault.
 
 </details>
 
-<a name="0x1_Vault_remove_element"></a>
+<a name="0x1_vault_remove_element"></a>
 
 ## Function `remove_element`
 
 Helper to remove an element from a vector.
 
 
-<pre><code><b>fun</b> <a href="Vault.md#0x1_Vault_remove_element">remove_element</a>&lt;E: drop&gt;(v: &<b>mut</b> vector&lt;E&gt;, x: &E)
+<pre><code><b>fun</b> <a href="vault.md#0x1_vault_remove_element">remove_element</a>&lt;E: drop&gt;(v: &<b>mut</b> <a href="">vector</a>&lt;E&gt;, x: &E)
 </code></pre>
 
 
@@ -1427,10 +1427,10 @@ Helper to remove an element from a vector.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="Vault.md#0x1_Vault_remove_element">remove_element</a>&lt;E: drop&gt;(v: &<b>mut</b> vector&lt;E&gt;, x: &E) {
-    <b>let</b> (found, index) = <a href="_index_of">Vector::index_of</a>(v, x);
+<pre><code><b>fun</b> <a href="vault.md#0x1_vault_remove_element">remove_element</a>&lt;E: drop&gt;(v: &<b>mut</b> <a href="">vector</a>&lt;E&gt;, x: &E) {
+    <b>let</b> (found, index) = <a href="_index_of">vector::index_of</a>(v, x);
     <b>if</b> (found) {
-        <a href="_remove">Vector::remove</a>(v, index);
+        <a href="_remove">vector::remove</a>(v, index);
     }
 }
 </code></pre>
@@ -1439,14 +1439,14 @@ Helper to remove an element from a vector.
 
 </details>
 
-<a name="0x1_Vault_add_element"></a>
+<a name="0x1_vault_add_element"></a>
 
 ## Function `add_element`
 
 Helper to add an element to a vector.
 
 
-<pre><code><b>fun</b> <a href="Vault.md#0x1_Vault_add_element">add_element</a>&lt;E: drop&gt;(v: &<b>mut</b> vector&lt;E&gt;, x: E)
+<pre><code><b>fun</b> <a href="vault.md#0x1_vault_add_element">add_element</a>&lt;E: drop&gt;(v: &<b>mut</b> <a href="">vector</a>&lt;E&gt;, x: E)
 </code></pre>
 
 
@@ -1455,9 +1455,9 @@ Helper to add an element to a vector.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="Vault.md#0x1_Vault_add_element">add_element</a>&lt;E: drop&gt;(v: &<b>mut</b> vector&lt;E&gt;, x: E) {
-    <b>if</b> (!<a href="_contains">Vector::contains</a>(v, &x)) {
-        <a href="_push_back">Vector::push_back</a>(v, x)
+<pre><code><b>fun</b> <a href="vault.md#0x1_vault_add_element">add_element</a>&lt;E: drop&gt;(v: &<b>mut</b> <a href="">vector</a>&lt;E&gt;, x: E) {
+    <b>if</b> (!<a href="_contains">vector::contains</a>(v, &x)) {
+        <a href="_push_back">vector::push_back</a>(v, x)
     }
 }
 </code></pre>
@@ -1466,14 +1466,14 @@ Helper to add an element to a vector.
 
 </details>
 
-<a name="0x1_Vault_emit_delegate_event"></a>
+<a name="0x1_vault_emit_delegate_event"></a>
 
 ## Function `emit_delegate_event`
 
 Emits a delegation or revocation event if event generation is enabled.
 
 
-<pre><code><b>fun</b> <a href="Vault.md#0x1_Vault_emit_delegate_event">emit_delegate_event</a>&lt;Content: drop, store&gt;(cap: &<a href="Vault.md#0x1_Vault_DelegateCap">Vault::DelegateCap</a>&lt;Content&gt;, cap_type: <a href="Vault.md#0x1_Vault_CapType">Vault::CapType</a>, delegate: <b>address</b>, is_revoked: bool)
+<pre><code><b>fun</b> <a href="vault.md#0x1_vault_emit_delegate_event">emit_delegate_event</a>&lt;Content: drop, store&gt;(cap: &<a href="vault.md#0x1_vault_DelegateCap">vault::DelegateCap</a>&lt;Content&gt;, cap_type: <a href="vault.md#0x1_vault_CapType">vault::CapType</a>, delegate: <b>address</b>, is_revoked: bool)
 </code></pre>
 
 
@@ -1482,22 +1482,22 @@ Emits a delegation or revocation event if event generation is enabled.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="Vault.md#0x1_Vault_emit_delegate_event">emit_delegate_event</a>&lt;Content: store + drop&gt;(
-       cap: &<a href="Vault.md#0x1_Vault_DelegateCap">DelegateCap</a>&lt;Content&gt;,
-       cap_type: <a href="Vault.md#0x1_Vault_CapType">CapType</a>,
+<pre><code><b>fun</b> <a href="vault.md#0x1_vault_emit_delegate_event">emit_delegate_event</a>&lt;Content: store + drop&gt;(
+       cap: &<a href="vault.md#0x1_vault_DelegateCap">DelegateCap</a>&lt;Content&gt;,
+       cap_type: <a href="vault.md#0x1_vault_CapType">CapType</a>,
        delegate: <b>address</b>,
        is_revoked: bool
-) <b>acquires</b> <a href="Vault.md#0x1_Vault_VaultEvents">VaultEvents</a> {
-    <b>if</b> (<b>exists</b>&lt;<a href="Vault.md#0x1_Vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(cap.vault_address)) {
-        <b>let</b> event = <a href="Vault.md#0x1_Vault_VaultDelegateEvent">VaultDelegateEvent</a>{
-            metadata: *&<b>borrow_global</b>&lt;<a href="Vault.md#0x1_Vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(cap.vault_address).metadata,
+) <b>acquires</b> <a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a> {
+    <b>if</b> (<b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(cap.vault_address)) {
+        <b>let</b> <a href="">event</a> = <a href="vault.md#0x1_vault_VaultDelegateEvent">VaultDelegateEvent</a>{
+            metadata: *&<b>borrow_global</b>&lt;<a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(cap.vault_address).metadata,
             vault_address: cap.vault_address,
             authority: cap.authority,
             delegate,
             cap: cap_type,
             is_revoked
         };
-        <a href="_emit_event">Event::emit_event</a>(&<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="Vault.md#0x1_Vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(cap.vault_address).delegate_events, event);
+        <a href="_emit_event">event::emit_event</a>(&<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(cap.vault_address).delegate_events, <a href="">event</a>);
     }
 }
 </code></pre>
@@ -1506,7 +1506,7 @@ Emits a delegation or revocation event if event generation is enabled.
 
 </details>
 
-<a name="0x1_Vault_transfer"></a>
+<a name="0x1_vault_transfer"></a>
 
 ## Function `transfer`
 
@@ -1514,7 +1514,7 @@ Transfers ownership of the vault to a new signer. All delegations are revoked be
 and the new owner must re-create delegates as needed.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_transfer">transfer</a>&lt;Content: drop, store&gt;(cap: &<a href="Vault.md#0x1_Vault_TransferCap">Vault::TransferCap</a>&lt;Content&gt;, to_owner: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_transfer">transfer</a>&lt;Content: drop, store&gt;(cap: &<a href="vault.md#0x1_vault_TransferCap">vault::TransferCap</a>&lt;Content&gt;, to_owner: &<a href="">signer</a>)
 </code></pre>
 
 
@@ -1523,34 +1523,34 @@ and the new owner must re-create delegates as needed.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Vault.md#0x1_Vault_transfer">transfer</a>&lt;Content: store + drop&gt;(cap: &<a href="Vault.md#0x1_Vault_TransferCap">TransferCap</a>&lt;Content&gt;, to_owner: &signer)
-<b>acquires</b> <a href="Vault.md#0x1_Vault">Vault</a>, <a href="Vault.md#0x1_Vault_VaultEvents">VaultEvents</a>, <a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>, <a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a> {
-    <b>let</b> new_addr = <a href="_address_of">Signer::address_of</a>(to_owner);
-    <b>assert</b>!(!<b>exists</b>&lt;<a href="Vault.md#0x1_Vault">Vault</a>&lt;Content&gt;&gt;(new_addr), <a href="_already_published">Errors::already_published</a>(<a href="Vault.md#0x1_Vault_EVAULT">EVAULT</a>));
+<pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_transfer">transfer</a>&lt;Content: store + drop&gt;(cap: &<a href="vault.md#0x1_vault_TransferCap">TransferCap</a>&lt;Content&gt;, to_owner: &<a href="">signer</a>)
+<b>acquires</b> <a href="vault.md#0x1_vault_Vault">Vault</a>, <a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a>, <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>, <a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a> {
+    <b>let</b> new_addr = <a href="_address_of">signer::address_of</a>(to_owner);
+    <b>assert</b>!(!<b>exists</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(new_addr), <a href="_already_published">errors::already_published</a>(<a href="vault.md#0x1_vault_EVAULT">EVAULT</a>));
     <b>assert</b>!(
-        <a href="_is_some">Option::is_some</a>(&<b>borrow_global</b>&lt;<a href="Vault.md#0x1_Vault">Vault</a>&lt;Content&gt;&gt;(cap.vault_address).content),
-        <a href="_invalid_state">Errors::invalid_state</a>(<a href="Vault.md#0x1_Vault_EACCESSOR_IN_USE">EACCESSOR_IN_USE</a>)
+        <a href="_is_some">option::is_some</a>(&<b>borrow_global</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(cap.vault_address).content),
+        <a href="_invalid_state">errors::invalid_state</a>(<a href="vault.md#0x1_vault_EACCESSOR_IN_USE">EACCESSOR_IN_USE</a>)
     );
 
     // Revoke all delegates.
-    <b>if</b> (<b>exists</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(cap.vault_address)) {
-        <b>let</b> delegate_cap = <a href="Vault.md#0x1_Vault_DelegateCap">DelegateCap</a>&lt;Content&gt;{vault_address: cap.vault_address, authority: cap.authority };
-        <a href="Vault.md#0x1_Vault_revoke_all">revoke_all</a>(&delegate_cap);
+    <b>if</b> (<b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(cap.vault_address)) {
+        <b>let</b> delegate_cap = <a href="vault.md#0x1_vault_DelegateCap">DelegateCap</a>&lt;Content&gt;{vault_address: cap.vault_address, authority: cap.authority };
+        <a href="vault.md#0x1_vault_revoke_all">revoke_all</a>(&delegate_cap);
     };
 
-    // Emit event <b>if</b> event generation is enabled. We emit the event on the <b>old</b> vault not the new one.
-    <b>if</b> (<b>exists</b>&lt;<a href="Vault.md#0x1_Vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(cap.vault_address)) {
-        <b>let</b> event = <a href="Vault.md#0x1_Vault_VaultTransferEvent">VaultTransferEvent</a> {
-            metadata: *&<b>borrow_global</b>&lt;<a href="Vault.md#0x1_Vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(cap.vault_address).metadata,
+    // Emit <a href="">event</a> <b>if</b> <a href="">event</a> generation is enabled. We emit the <a href="">event</a> on the <b>old</b> <a href="vault.md#0x1_vault">vault</a> not the new one.
+    <b>if</b> (<b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(cap.vault_address)) {
+        <b>let</b> <a href="">event</a> = <a href="vault.md#0x1_vault_VaultTransferEvent">VaultTransferEvent</a> {
+            metadata: *&<b>borrow_global</b>&lt;<a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(cap.vault_address).metadata,
             vault_address: cap.vault_address,
             authority: cap.authority,
             new_vault_address: new_addr
         };
-        <a href="_emit_event">Event::emit_event</a>(&<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="Vault.md#0x1_Vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(cap.vault_address).transfer_events, event);
+        <a href="_emit_event">event::emit_event</a>(&<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(cap.vault_address).transfer_events, <a href="">event</a>);
     };
 
-    // Move the vault.
-    <b>move_to</b>&lt;<a href="Vault.md#0x1_Vault">Vault</a>&lt;Content&gt;&gt;(to_owner, <b>move_from</b>&lt;<a href="Vault.md#0x1_Vault">Vault</a>&lt;Content&gt;&gt;(cap.vault_address));
+    // Move the <a href="vault.md#0x1_vault">vault</a>.
+    <b>move_to</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(to_owner, <b>move_from</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(cap.vault_address));
 }
 </code></pre>
 

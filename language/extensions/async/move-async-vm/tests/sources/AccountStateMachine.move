@@ -7,7 +7,7 @@
 /// pending transactions over a certain age.
 
 // dep: BCS
-// dep: Vector
+// dep: vector
 // dep: Runtime
 // dep: Actor
 // actor: 0x3 AccountStateMachine Account init start end verify deposit withdraw xfer xfer_deposit xfer_finish cleanup

@@ -1,9 +1,9 @@
 // exclude_for: cvc5
 module 0x42::VerifySort {
-	use 0x1::Vector;
+	use 0x1::vector;
 
 	public fun verify_sort(v: &mut vector<u64>) {
-		let vlen = Vector::length(v);
+		let vlen = vector::length(v);
 		spec {
 			assume vlen == 45;
 		};
@@ -30,8 +30,8 @@ module 0x42::VerifySort {
 			(i < vlen - 1)
 		})
 		{
-			if (*Vector::borrow(v, i) > *Vector::borrow(v, j)) {
-				Vector::swap(v, i, j);
+			if (*vector::borrow(v, i) > *vector::borrow(v, j)) {
+				vector::swap(v, i, j);
 			};
 
 			if (j < vlen - 1 ) {
@@ -62,7 +62,7 @@ module 0x42::VerifySort {
 
 	// Assume that `v` only contains 0 or 1.
 	public fun two_way_sort(v: &mut vector<u64>) {
-		let _vlen = Vector::length(v);
+		let _vlen = vector::length(v);
 		// TODO: complete the function.
 	}
 	spec two_way_sort {
@@ -71,7 +71,7 @@ module 0x42::VerifySort {
 
 	// Assume that `v` only contains 0, 1 or 2.
 	public fun three_way_sort(v: &mut vector<u64>) {
-		let _vlen = Vector::length(v);
+		let _vlen = vector::length(v);
 		// TODO: complete the function.
 	}
 	spec three_way_sort {

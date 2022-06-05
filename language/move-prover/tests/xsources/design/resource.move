@@ -17,7 +17,7 @@ module Trafo {
   }
 
   public fun dummy_need_signer_use_in_move(account: &signer): address {
-      // Move bug: we can't use Signer in specs if not also used in code.
+      // Move bug: we can't use signer in specs if not also used in code.
       signer::address_of(account)
   }
 }

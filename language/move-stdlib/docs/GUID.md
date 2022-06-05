@@ -1,44 +1,44 @@
 
-<a name="0x1_GUID"></a>
+<a name="0x1_guid"></a>
 
-# Module `0x1::GUID`
+# Module `0x1::guid`
 
 A module for generating globally unique identifiers
 
 
--  [Resource `Generator`](#0x1_GUID_Generator)
--  [Struct `GUID`](#0x1_GUID_GUID)
--  [Struct `ID`](#0x1_GUID_ID)
--  [Resource `CreateCapability`](#0x1_GUID_CreateCapability)
+-  [Resource `Generator`](#0x1_guid_Generator)
+-  [Struct `GUID`](#0x1_guid_GUID)
+-  [Struct `ID`](#0x1_guid_ID)
+-  [Resource `CreateCapability`](#0x1_guid_CreateCapability)
 -  [Constants](#@Constants_0)
--  [Function `gen_create_capability`](#0x1_GUID_gen_create_capability)
--  [Function `create_id`](#0x1_GUID_create_id)
--  [Function `create_with_capability`](#0x1_GUID_create_with_capability)
--  [Function `create`](#0x1_GUID_create)
--  [Function `create_impl`](#0x1_GUID_create_impl)
--  [Function `publish_generator`](#0x1_GUID_publish_generator)
--  [Function `id`](#0x1_GUID_id)
--  [Function `creator_address`](#0x1_GUID_creator_address)
--  [Function `id_creator_address`](#0x1_GUID_id_creator_address)
--  [Function `creation_num`](#0x1_GUID_creation_num)
--  [Function `id_creation_num`](#0x1_GUID_id_creation_num)
--  [Function `eq_id`](#0x1_GUID_eq_id)
--  [Function `get_next_creation_num`](#0x1_GUID_get_next_creation_num)
+-  [Function `gen_create_capability`](#0x1_guid_gen_create_capability)
+-  [Function `create_id`](#0x1_guid_create_id)
+-  [Function `create_with_capability`](#0x1_guid_create_with_capability)
+-  [Function `create`](#0x1_guid_create)
+-  [Function `create_impl`](#0x1_guid_create_impl)
+-  [Function `publish_generator`](#0x1_guid_publish_generator)
+-  [Function `id`](#0x1_guid_id)
+-  [Function `creator_address`](#0x1_guid_creator_address)
+-  [Function `id_creator_address`](#0x1_guid_id_creator_address)
+-  [Function `creation_num`](#0x1_guid_creation_num)
+-  [Function `id_creation_num`](#0x1_guid_id_creation_num)
+-  [Function `eq_id`](#0x1_guid_eq_id)
+-  [Function `get_next_creation_num`](#0x1_guid_get_next_creation_num)
 
 
-<pre><code><b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+<pre><code><b>use</b> <a href="signer.md#0x1_signer">0x1::signer</a>;
 </code></pre>
 
 
 
-<a name="0x1_GUID_Generator"></a>
+<a name="0x1_guid_Generator"></a>
 
 ## Resource `Generator`
 
 A generator for new GUIDs.
 
 
-<pre><code><b>struct</b> <a href="GUID.md#0x1_GUID_Generator">Generator</a> <b>has</b> key
+<pre><code><b>struct</b> <a href="guid.md#0x1_guid_Generator">Generator</a> <b>has</b> key
 </code></pre>
 
 
@@ -59,14 +59,14 @@ A generator for new GUIDs.
 
 </details>
 
-<a name="0x1_GUID_GUID"></a>
+<a name="0x1_guid_GUID"></a>
 
 ## Struct `GUID`
 
 A globally unique identifier derived from the sender's address and a counter
 
 
-<pre><code><b>struct</b> <a href="GUID.md#0x1_GUID">GUID</a> <b>has</b> drop, store
+<pre><code><b>struct</b> <a href="guid.md#0x1_guid_GUID">GUID</a> <b>has</b> drop, store
 </code></pre>
 
 
@@ -77,7 +77,7 @@ A globally unique identifier derived from the sender's address and a counter
 
 <dl>
 <dt>
-<code>id: <a href="GUID.md#0x1_GUID_ID">GUID::ID</a></code>
+<code>id: <a href="guid.md#0x1_guid_ID">guid::ID</a></code>
 </dt>
 <dd>
 
@@ -87,14 +87,14 @@ A globally unique identifier derived from the sender's address and a counter
 
 </details>
 
-<a name="0x1_GUID_ID"></a>
+<a name="0x1_guid_ID"></a>
 
 ## Struct `ID`
 
 A non-privileged identifier that can be freely created by anyone. Useful for looking up GUID's.
 
 
-<pre><code><b>struct</b> <a href="GUID.md#0x1_GUID_ID">ID</a> <b>has</b> <b>copy</b>, drop, store
+<pre><code><b>struct</b> <a href="guid.md#0x1_guid_ID">ID</a> <b>has</b> <b>copy</b>, drop, store
 </code></pre>
 
 
@@ -121,14 +121,14 @@ A non-privileged identifier that can be freely created by anyone. Useful for loo
 
 </details>
 
-<a name="0x1_GUID_CreateCapability"></a>
+<a name="0x1_guid_CreateCapability"></a>
 
 ## Resource `CreateCapability`
 
 A capability to create a privileged identifier on behalf of the given address
 
 
-<pre><code><b>struct</b> <a href="GUID.md#0x1_GUID_CreateCapability">CreateCapability</a> <b>has</b> drop, store, key
+<pre><code><b>struct</b> <a href="guid.md#0x1_guid_CreateCapability">CreateCapability</a> <b>has</b> drop, store, key
 </code></pre>
 
 
@@ -154,24 +154,24 @@ A capability to create a privileged identifier on behalf of the given address
 ## Constants
 
 
-<a name="0x1_GUID_EGUID_GENERATOR_NOT_PUBLISHED"></a>
+<a name="0x1_guid_EGUID_GENERATOR_NOT_PUBLISHED"></a>
 
 GUID generator must be published ahead of first usage of <code>create_with_capability</code> function.
 
 
-<pre><code><b>const</b> <a href="GUID.md#0x1_GUID_EGUID_GENERATOR_NOT_PUBLISHED">EGUID_GENERATOR_NOT_PUBLISHED</a>: u64 = 0;
+<pre><code><b>const</b> <a href="guid.md#0x1_guid_EGUID_GENERATOR_NOT_PUBLISHED">EGUID_GENERATOR_NOT_PUBLISHED</a>: u64 = 0;
 </code></pre>
 
 
 
-<a name="0x1_GUID_gen_create_capability"></a>
+<a name="0x1_guid_gen_create_capability"></a>
 
 ## Function `gen_create_capability`
 
 Generates a capability to create the privileged GUID on behalf of the signer
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_gen_create_capability">gen_create_capability</a>(account: &signer): <a href="GUID.md#0x1_GUID_CreateCapability">GUID::CreateCapability</a>
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_gen_create_capability">gen_create_capability</a>(account: &<a href="signer.md#0x1_signer">signer</a>): <a href="guid.md#0x1_guid_CreateCapability">guid::CreateCapability</a>
 </code></pre>
 
 
@@ -180,12 +180,12 @@ Generates a capability to create the privileged GUID on behalf of the signer
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_gen_create_capability">gen_create_capability</a>(account: &signer): <a href="GUID.md#0x1_GUID_CreateCapability">CreateCapability</a> {
-    <b>let</b> addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    <b>if</b> (!<b>exists</b>&lt;<a href="GUID.md#0x1_GUID_Generator">Generator</a>&gt;(addr)) {
-        <b>move_to</b>(account, <a href="GUID.md#0x1_GUID_Generator">Generator</a> { counter: 0 })
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_gen_create_capability">gen_create_capability</a>(account: &<a href="signer.md#0x1_signer">signer</a>): <a href="guid.md#0x1_guid_CreateCapability">CreateCapability</a> {
+    <b>let</b> addr = <a href="signer.md#0x1_signer_address_of">signer::address_of</a>(account);
+    <b>if</b> (!<b>exists</b>&lt;<a href="guid.md#0x1_guid_Generator">Generator</a>&gt;(addr)) {
+        <b>move_to</b>(account, <a href="guid.md#0x1_guid_Generator">Generator</a> { counter: 0 })
     };
-    <a href="GUID.md#0x1_GUID_CreateCapability">CreateCapability</a> { addr }
+    <a href="guid.md#0x1_guid_CreateCapability">CreateCapability</a> { addr }
 }
 </code></pre>
 
@@ -193,14 +193,14 @@ Generates a capability to create the privileged GUID on behalf of the signer
 
 </details>
 
-<a name="0x1_GUID_create_id"></a>
+<a name="0x1_guid_create_id"></a>
 
 ## Function `create_id`
 
 Create a non-privileged id from <code>addr</code> and <code>creation_num</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_create_id">create_id</a>(addr: <b>address</b>, creation_num: u64): <a href="GUID.md#0x1_GUID_ID">GUID::ID</a>
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_create_id">create_id</a>(addr: <b>address</b>, creation_num: u64): <a href="guid.md#0x1_guid_ID">guid::ID</a>
 </code></pre>
 
 
@@ -209,8 +209,8 @@ Create a non-privileged id from <code>addr</code> and <code>creation_num</code>
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_create_id">create_id</a>(addr: <b>address</b>, creation_num: u64): <a href="GUID.md#0x1_GUID_ID">ID</a> {
-    <a href="GUID.md#0x1_GUID_ID">ID</a> { creation_num, addr }
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_create_id">create_id</a>(addr: <b>address</b>, creation_num: u64): <a href="guid.md#0x1_guid_ID">ID</a> {
+    <a href="guid.md#0x1_guid_ID">ID</a> { creation_num, addr }
 }
 </code></pre>
 
@@ -218,13 +218,13 @@ Create a non-privileged id from <code>addr</code> and <code>creation_num</code>
 
 </details>
 
-<a name="0x1_GUID_create_with_capability"></a>
+<a name="0x1_guid_create_with_capability"></a>
 
 ## Function `create_with_capability`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_create_with_capability">create_with_capability</a>(addr: <b>address</b>, _cap: &<a href="GUID.md#0x1_GUID_CreateCapability">GUID::CreateCapability</a>): <a href="GUID.md#0x1_GUID_GUID">GUID::GUID</a>
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_create_with_capability">create_with_capability</a>(addr: <b>address</b>, _cap: &<a href="guid.md#0x1_guid_CreateCapability">guid::CreateCapability</a>): <a href="guid.md#0x1_guid_GUID">guid::GUID</a>
 </code></pre>
 
 
@@ -233,9 +233,9 @@ Create a non-privileged id from <code>addr</code> and <code>creation_num</code>
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_create_with_capability">create_with_capability</a>(addr: <b>address</b>, _cap: &<a href="GUID.md#0x1_GUID_CreateCapability">CreateCapability</a>): <a href="GUID.md#0x1_GUID">GUID</a> <b>acquires</b> <a href="GUID.md#0x1_GUID_Generator">Generator</a> {
-    <b>assert</b>!(<b>exists</b>&lt;<a href="GUID.md#0x1_GUID_Generator">Generator</a>&gt;(addr), <a href="GUID.md#0x1_GUID_EGUID_GENERATOR_NOT_PUBLISHED">EGUID_GENERATOR_NOT_PUBLISHED</a>);
-    <a href="GUID.md#0x1_GUID_create_impl">create_impl</a>(addr)
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_create_with_capability">create_with_capability</a>(addr: <b>address</b>, _cap: &<a href="guid.md#0x1_guid_CreateCapability">CreateCapability</a>): <a href="guid.md#0x1_guid_GUID">GUID</a> <b>acquires</b> <a href="guid.md#0x1_guid_Generator">Generator</a> {
+    <b>assert</b>!(<b>exists</b>&lt;<a href="guid.md#0x1_guid_Generator">Generator</a>&gt;(addr), <a href="guid.md#0x1_guid_EGUID_GENERATOR_NOT_PUBLISHED">EGUID_GENERATOR_NOT_PUBLISHED</a>);
+    <a href="guid.md#0x1_guid_create_impl">create_impl</a>(addr)
 }
 </code></pre>
 
@@ -243,15 +243,15 @@ Create a non-privileged id from <code>addr</code> and <code>creation_num</code>
 
 </details>
 
-<a name="0x1_GUID_create"></a>
+<a name="0x1_guid_create"></a>
 
 ## Function `create`
 
-Create and return a new GUID. Creates a <code><a href="GUID.md#0x1_GUID_Generator">Generator</a></code> under <code>account</code>
+Create and return a new GUID. Creates a <code><a href="guid.md#0x1_guid_Generator">Generator</a></code> under <code>account</code>
 if it does not already have one
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_create">create</a>(account: &signer): <a href="GUID.md#0x1_GUID_GUID">GUID::GUID</a>
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_create">create</a>(account: &<a href="signer.md#0x1_signer">signer</a>): <a href="guid.md#0x1_guid_GUID">guid::GUID</a>
 </code></pre>
 
 
@@ -260,12 +260,12 @@ if it does not already have one
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_create">create</a>(account: &signer): <a href="GUID.md#0x1_GUID">GUID</a> <b>acquires</b> <a href="GUID.md#0x1_GUID_Generator">Generator</a> {
-    <b>let</b> addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    <b>if</b> (!<b>exists</b>&lt;<a href="GUID.md#0x1_GUID_Generator">Generator</a>&gt;(addr)) {
-        <b>move_to</b>(account, <a href="GUID.md#0x1_GUID_Generator">Generator</a> { counter: 0 })
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_create">create</a>(account: &<a href="signer.md#0x1_signer">signer</a>): <a href="guid.md#0x1_guid_GUID">GUID</a> <b>acquires</b> <a href="guid.md#0x1_guid_Generator">Generator</a> {
+    <b>let</b> addr = <a href="signer.md#0x1_signer_address_of">signer::address_of</a>(account);
+    <b>if</b> (!<b>exists</b>&lt;<a href="guid.md#0x1_guid_Generator">Generator</a>&gt;(addr)) {
+        <b>move_to</b>(account, <a href="guid.md#0x1_guid_Generator">Generator</a> { counter: 0 })
     };
-    <a href="GUID.md#0x1_GUID_create_impl">create_impl</a>(addr)
+    <a href="guid.md#0x1_guid_create_impl">create_impl</a>(addr)
 }
 </code></pre>
 
@@ -273,13 +273,13 @@ if it does not already have one
 
 </details>
 
-<a name="0x1_GUID_create_impl"></a>
+<a name="0x1_guid_create_impl"></a>
 
 ## Function `create_impl`
 
 
 
-<pre><code><b>fun</b> <a href="GUID.md#0x1_GUID_create_impl">create_impl</a>(addr: <b>address</b>): <a href="GUID.md#0x1_GUID_GUID">GUID::GUID</a>
+<pre><code><b>fun</b> <a href="guid.md#0x1_guid_create_impl">create_impl</a>(addr: <b>address</b>): <a href="guid.md#0x1_guid_GUID">guid::GUID</a>
 </code></pre>
 
 
@@ -288,11 +288,11 @@ if it does not already have one
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="GUID.md#0x1_GUID_create_impl">create_impl</a>(addr: <b>address</b>): <a href="GUID.md#0x1_GUID">GUID</a> <b>acquires</b> <a href="GUID.md#0x1_GUID_Generator">Generator</a> {
-    <b>let</b> generator = <b>borrow_global_mut</b>&lt;<a href="GUID.md#0x1_GUID_Generator">Generator</a>&gt;(addr);
+<pre><code><b>fun</b> <a href="guid.md#0x1_guid_create_impl">create_impl</a>(addr: <b>address</b>): <a href="guid.md#0x1_guid_GUID">GUID</a> <b>acquires</b> <a href="guid.md#0x1_guid_Generator">Generator</a> {
+    <b>let</b> generator = <b>borrow_global_mut</b>&lt;<a href="guid.md#0x1_guid_Generator">Generator</a>&gt;(addr);
     <b>let</b> creation_num = generator.counter;
     generator.counter = creation_num + 1;
-    <a href="GUID.md#0x1_GUID">GUID</a> { id: <a href="GUID.md#0x1_GUID_ID">ID</a> { creation_num, addr } }
+    <a href="guid.md#0x1_guid_GUID">GUID</a> { id: <a href="guid.md#0x1_guid_ID">ID</a> { creation_num, addr } }
 }
 </code></pre>
 
@@ -300,14 +300,14 @@ if it does not already have one
 
 </details>
 
-<a name="0x1_GUID_publish_generator"></a>
+<a name="0x1_guid_publish_generator"></a>
 
 ## Function `publish_generator`
 
 Publish a Generator resource under <code>account</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_publish_generator">publish_generator</a>(account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_publish_generator">publish_generator</a>(account: &<a href="signer.md#0x1_signer">signer</a>)
 </code></pre>
 
 
@@ -316,8 +316,8 @@ Publish a Generator resource under <code>account</code>
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_publish_generator">publish_generator</a>(account: &signer) {
-    <b>move_to</b>(account, <a href="GUID.md#0x1_GUID_Generator">Generator</a> { counter: 0 })
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_publish_generator">publish_generator</a>(account: &<a href="signer.md#0x1_signer">signer</a>) {
+    <b>move_to</b>(account, <a href="guid.md#0x1_guid_Generator">Generator</a> { counter: 0 })
 }
 </code></pre>
 
@@ -325,14 +325,14 @@ Publish a Generator resource under <code>account</code>
 
 </details>
 
-<a name="0x1_GUID_id"></a>
+<a name="0x1_guid_id"></a>
 
 ## Function `id`
 
 Get the non-privileged ID associated with a GUID
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_id">id</a>(guid: &<a href="GUID.md#0x1_GUID_GUID">GUID::GUID</a>): <a href="GUID.md#0x1_GUID_ID">GUID::ID</a>
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_id">id</a>(<a href="guid.md#0x1_guid">guid</a>: &<a href="guid.md#0x1_guid_GUID">guid::GUID</a>): <a href="guid.md#0x1_guid_ID">guid::ID</a>
 </code></pre>
 
 
@@ -341,8 +341,8 @@ Get the non-privileged ID associated with a GUID
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_id">id</a>(guid: &<a href="GUID.md#0x1_GUID">GUID</a>): <a href="GUID.md#0x1_GUID_ID">ID</a> {
-    *&guid.id
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_id">id</a>(<a href="guid.md#0x1_guid">guid</a>: &<a href="guid.md#0x1_guid_GUID">GUID</a>): <a href="guid.md#0x1_guid_ID">ID</a> {
+    *&<a href="guid.md#0x1_guid">guid</a>.id
 }
 </code></pre>
 
@@ -350,14 +350,14 @@ Get the non-privileged ID associated with a GUID
 
 </details>
 
-<a name="0x1_GUID_creator_address"></a>
+<a name="0x1_guid_creator_address"></a>
 
 ## Function `creator_address`
 
 Return the account address that created the GUID
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_creator_address">creator_address</a>(guid: &<a href="GUID.md#0x1_GUID_GUID">GUID::GUID</a>): <b>address</b>
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_creator_address">creator_address</a>(<a href="guid.md#0x1_guid">guid</a>: &<a href="guid.md#0x1_guid_GUID">guid::GUID</a>): <b>address</b>
 </code></pre>
 
 
@@ -366,8 +366,8 @@ Return the account address that created the GUID
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_creator_address">creator_address</a>(guid: &<a href="GUID.md#0x1_GUID">GUID</a>): <b>address</b> {
-    guid.id.addr
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_creator_address">creator_address</a>(<a href="guid.md#0x1_guid">guid</a>: &<a href="guid.md#0x1_guid_GUID">GUID</a>): <b>address</b> {
+    <a href="guid.md#0x1_guid">guid</a>.id.addr
 }
 </code></pre>
 
@@ -375,14 +375,14 @@ Return the account address that created the GUID
 
 </details>
 
-<a name="0x1_GUID_id_creator_address"></a>
+<a name="0x1_guid_id_creator_address"></a>
 
 ## Function `id_creator_address`
 
 Return the account address that created the GUID::ID
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_id_creator_address">id_creator_address</a>(id: &<a href="GUID.md#0x1_GUID_ID">GUID::ID</a>): <b>address</b>
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_id_creator_address">id_creator_address</a>(id: &<a href="guid.md#0x1_guid_ID">guid::ID</a>): <b>address</b>
 </code></pre>
 
 
@@ -391,7 +391,7 @@ Return the account address that created the GUID::ID
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_id_creator_address">id_creator_address</a>(id: &<a href="GUID.md#0x1_GUID_ID">ID</a>): <b>address</b> {
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_id_creator_address">id_creator_address</a>(id: &<a href="guid.md#0x1_guid_ID">ID</a>): <b>address</b> {
     id.addr
 }
 </code></pre>
@@ -400,14 +400,14 @@ Return the account address that created the GUID::ID
 
 </details>
 
-<a name="0x1_GUID_creation_num"></a>
+<a name="0x1_guid_creation_num"></a>
 
 ## Function `creation_num`
 
 Return the creation number associated with the GUID
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_creation_num">creation_num</a>(guid: &<a href="GUID.md#0x1_GUID_GUID">GUID::GUID</a>): u64
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_creation_num">creation_num</a>(<a href="guid.md#0x1_guid">guid</a>: &<a href="guid.md#0x1_guid_GUID">guid::GUID</a>): u64
 </code></pre>
 
 
@@ -416,8 +416,8 @@ Return the creation number associated with the GUID
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_creation_num">creation_num</a>(guid: &<a href="GUID.md#0x1_GUID">GUID</a>): u64 {
-    guid.id.creation_num
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_creation_num">creation_num</a>(<a href="guid.md#0x1_guid">guid</a>: &<a href="guid.md#0x1_guid_GUID">GUID</a>): u64 {
+    <a href="guid.md#0x1_guid">guid</a>.id.creation_num
 }
 </code></pre>
 
@@ -425,14 +425,14 @@ Return the creation number associated with the GUID
 
 </details>
 
-<a name="0x1_GUID_id_creation_num"></a>
+<a name="0x1_guid_id_creation_num"></a>
 
 ## Function `id_creation_num`
 
 Return the creation number associated with the GUID::ID
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_id_creation_num">id_creation_num</a>(id: &<a href="GUID.md#0x1_GUID_ID">GUID::ID</a>): u64
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_id_creation_num">id_creation_num</a>(id: &<a href="guid.md#0x1_guid_ID">guid::ID</a>): u64
 </code></pre>
 
 
@@ -441,7 +441,7 @@ Return the creation number associated with the GUID::ID
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_id_creation_num">id_creation_num</a>(id: &<a href="GUID.md#0x1_GUID_ID">ID</a>): u64 {
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_id_creation_num">id_creation_num</a>(id: &<a href="guid.md#0x1_guid_ID">ID</a>): u64 {
     id.creation_num
 }
 </code></pre>
@@ -450,14 +450,14 @@ Return the creation number associated with the GUID::ID
 
 </details>
 
-<a name="0x1_GUID_eq_id"></a>
+<a name="0x1_guid_eq_id"></a>
 
 ## Function `eq_id`
 
 Return true if the GUID's ID is <code>id</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_eq_id">eq_id</a>(guid: &<a href="GUID.md#0x1_GUID_GUID">GUID::GUID</a>, id: &<a href="GUID.md#0x1_GUID_ID">GUID::ID</a>): bool
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_eq_id">eq_id</a>(<a href="guid.md#0x1_guid">guid</a>: &<a href="guid.md#0x1_guid_GUID">guid::GUID</a>, id: &<a href="guid.md#0x1_guid_ID">guid::ID</a>): bool
 </code></pre>
 
 
@@ -466,8 +466,8 @@ Return true if the GUID's ID is <code>id</code>
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_eq_id">eq_id</a>(guid: &<a href="GUID.md#0x1_GUID">GUID</a>, id: &<a href="GUID.md#0x1_GUID_ID">ID</a>): bool {
-    &guid.id == id
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_eq_id">eq_id</a>(<a href="guid.md#0x1_guid">guid</a>: &<a href="guid.md#0x1_guid_GUID">GUID</a>, id: &<a href="guid.md#0x1_guid_ID">ID</a>): bool {
+    &<a href="guid.md#0x1_guid">guid</a>.id == id
 }
 </code></pre>
 
@@ -475,14 +475,14 @@ Return true if the GUID's ID is <code>id</code>
 
 </details>
 
-<a name="0x1_GUID_get_next_creation_num"></a>
+<a name="0x1_guid_get_next_creation_num"></a>
 
 ## Function `get_next_creation_num`
 
 Return the number of the next GUID to be created by <code>addr</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_get_next_creation_num">get_next_creation_num</a>(addr: <b>address</b>): u64
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_get_next_creation_num">get_next_creation_num</a>(addr: <b>address</b>): u64
 </code></pre>
 
 
@@ -491,11 +491,11 @@ Return the number of the next GUID to be created by <code>addr</code>
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="GUID.md#0x1_GUID_get_next_creation_num">get_next_creation_num</a>(addr: <b>address</b>): u64 <b>acquires</b> <a href="GUID.md#0x1_GUID_Generator">Generator</a> {
-    <b>if</b> (!<b>exists</b>&lt;<a href="GUID.md#0x1_GUID_Generator">Generator</a>&gt;(addr)) {
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_get_next_creation_num">get_next_creation_num</a>(addr: <b>address</b>): u64 <b>acquires</b> <a href="guid.md#0x1_guid_Generator">Generator</a> {
+    <b>if</b> (!<b>exists</b>&lt;<a href="guid.md#0x1_guid_Generator">Generator</a>&gt;(addr)) {
         0
     } <b>else</b> {
-        <b>borrow_global</b>&lt;<a href="GUID.md#0x1_GUID_Generator">Generator</a>&gt;(addr).counter
+        <b>borrow_global</b>&lt;<a href="guid.md#0x1_guid_Generator">Generator</a>&gt;(addr).counter
     }
 }
 </code></pre>

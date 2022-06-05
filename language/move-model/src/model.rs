@@ -3200,12 +3200,16 @@ impl<'env> FunctionEnv<'env> {
         self.definition_view().visibility()
     }
 
+    /// Return true if the function is an entry fucntion
+    pub fn is_entry(&self) -> bool {
+        self.definition_view().is_entry()
+    }
+
     /// Return the visibility string for this function. Useful for formatted printing.
     pub fn visibility_str(&self) -> &str {
         match self.visibility() {
             Visibility::Public => "public ",
             Visibility::Friend => "public(friend) ",
-            Visibility::Script => "public(script) ",
             Visibility::Private => "",
         }
     }
@@ -3213,8 +3217,9 @@ impl<'env> FunctionEnv<'env> {
     /// Return whether this function is exposed outside of the module.
     pub fn is_exposed(&self) -> bool {
         self.module_env.is_script_module()
+            || self.definition_view().is_entry()
             || match self.definition_view().visibility() {
-                Visibility::Public | Visibility::Script | Visibility::Friend => true,
+                Visibility::Public | Visibility::Friend => true,
                 Visibility::Private => false,
             }
     }
@@ -3222,8 +3227,9 @@ impl<'env> FunctionEnv<'env> {
     /// Return whether this function is exposed outside of the module.
     pub fn has_unknown_callers(&self) -> bool {
         self.module_env.is_script_module()
+            || self.definition_view().is_entry()
             || match self.definition_view().visibility() {
-                Visibility::Public | Visibility::Script => true,
+                Visibility::Public => true,
                 Visibility::Private | Visibility::Friend => false,
             }
     }
@@ -3231,8 +3237,7 @@ impl<'env> FunctionEnv<'env> {
     /// Returns true if the function is a script function
     pub fn is_script(&self) -> bool {
         // The main function of a scipt is a script function
-        self.module_env.is_script_module()
-            || self.definition_view().visibility() == Visibility::Script
+        self.module_env.is_script_module() || self.definition_view().is_entry()
     }
 
     /// Return true if this function is a friend function

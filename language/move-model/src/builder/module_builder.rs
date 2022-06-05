@@ -402,9 +402,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         et.enter_scope();
         let params = et.analyze_and_add_params(&def.signature.parameters, true);
         let result_type = et.translate_type(&def.signature.return_type);
+        let is_entry = matches!(def.visibility, PA::Visibility::Script(_));
         let visibility = match def.visibility {
-            PA::Visibility::Public(_) => FunctionVisibility::Public,
-            PA::Visibility::Script(_) => FunctionVisibility::Script,
+            PA::Visibility::Public(_) | PA::Visibility::Script(_) => FunctionVisibility::Public,
             PA::Visibility::Friend(_) => FunctionVisibility::Friend,
             PA::Visibility::Internal => FunctionVisibility::Private,
         };
@@ -416,6 +416,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             et.parent.module_id,
             fun_id,
             visibility,
+            is_entry,
             type_params.clone(),
             params.clone(),
             result_type.clone(),
@@ -3042,10 +3043,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             fun_name.display(env.symbol_pool())
                         )
                     });
-                    let has_unknown_caller = matches!(
-                        fun_entry.visibility,
-                        FunctionVisibility::Public | FunctionVisibility::Script
-                    );
+                    let has_unknown_caller =
+                        matches!(fun_entry.visibility, FunctionVisibility::Public)
+                            || fun_entry.is_entry;
                     if has_unknown_caller && options.ignore_pragma_opaque_internal_only {
                         continue;
                     }

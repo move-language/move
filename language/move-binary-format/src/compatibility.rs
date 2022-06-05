@@ -110,14 +110,16 @@ impl Compatibility {
             let is_vis_compatible = match (old_func.visibility, new_func.visibility) {
                 (Visibility::Public, Visibility::Public) => true,
                 (Visibility::Public, _) => false,
-                (Visibility::Script, Visibility::Script) => true,
-                (Visibility::Script, _) => false,
                 (Visibility::Friend, Visibility::Public)
                 | (Visibility::Friend, Visibility::Friend) => true,
                 (Visibility::Friend, _) => false,
-                (Visibility::Private, _) => unreachable!("A private function can never be exposed"),
+                (Visibility::Private, _) => true,
             };
+            // If it was an entry function, it must remain one.
+            // If it was not an entry function, it is allowed to become one.
+            let is_entry_compatible = !old_func.is_entry || new_func.is_entry;
             if !is_vis_compatible
+                || !is_entry_compatible
                 || old_func.parameters != new_func.parameters
                 || old_func.return_ != new_func.return_
                 || !fun_type_parameters_compatibile(

@@ -1261,24 +1261,43 @@ fn load_function_def(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Functio
     //                 the function is a native function
     // - in VERSION_2 onwards: the flags only represent the visibility info and we need to
     //                 advance the cursor to read up the next byte as flags
-    let (visibility, mut extra_flags) = if cursor.version() == VERSION_1 {
-        let is_public_bit = Visibility::Public as u8;
-        let vis = if (flags & is_public_bit) != 0 {
-            flags ^= is_public_bit;
+    // - in VERSION_5 onwards: script visibility has been deprecated for an entry function flag
+    let (visibility, is_entry, mut extra_flags) = if cursor.version() == VERSION_1 {
+        let vis = if (flags & FunctionDefinition::DEPRECATED_PUBLIC_BIT) != 0 {
+            flags ^= FunctionDefinition::DEPRECATED_PUBLIC_BIT;
             Visibility::Public
         } else {
             Visibility::Private
         };
-        (vis, flags)
+        (vis, false, flags)
+    } else if cursor.version() < VERSION_5 {
+        let (vis, is_entry) = if flags == Visibility::DEPRECATED_SCRIPT {
+            (Visibility::Public, true)
+        } else {
+            let vis = flags.try_into().map_err(|_| {
+                PartialVMError::new(StatusCode::MALFORMED)
+                    .with_message("Invalid visibility byte".to_string())
+            })?;
+            (vis, false)
+        };
+        let extra_flags = cursor.read_u8().map_err(|_| {
+            PartialVMError::new(StatusCode::MALFORMED).with_message("Unexpected EOF".to_string())
+        })?;
+        (vis, is_entry, extra_flags)
     } else {
         let vis = flags.try_into().map_err(|_| {
             PartialVMError::new(StatusCode::MALFORMED)
                 .with_message("Invalid visibility byte".to_string())
         })?;
-        let extra_flags = cursor.read_u8().map_err(|_| {
+
+        let mut extra_flags = cursor.read_u8().map_err(|_| {
             PartialVMError::new(StatusCode::MALFORMED).with_message("Unexpected EOF".to_string())
         })?;
-        (vis, extra_flags)
+        let is_entry = (extra_flags & FunctionDefinition::ENTRY) != 0;
+        if is_entry {
+            extra_flags ^= FunctionDefinition::ENTRY;
+        }
+        (vis, is_entry, extra_flags)
     };
 
     let acquires_global_resources = load_struct_definition_indices(cursor)?;
@@ -1298,6 +1317,7 @@ fn load_function_def(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Functio
     Ok(FunctionDefinition {
         function,
         visibility,
+        is_entry,
         acquires_global_resources,
         code: code_unit,
     })

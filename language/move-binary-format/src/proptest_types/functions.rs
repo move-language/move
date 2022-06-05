@@ -355,6 +355,7 @@ pub struct FunctionDefinitionGen {
     parameters: SignatureGen,
     return_: SignatureGen,
     visibility: Visibility,
+    is_entry: bool,
     acquires: Vec<PropIndex>,
     code: CodeUnitGen,
 }
@@ -374,15 +375,17 @@ impl FunctionDefinitionGen {
             SignatureGen::strategy(arg_count.clone()),
             SignatureGen::strategy(return_count),
             any::<Visibility>(),
+            any::<bool>(),
             vec(any::<PropIndex>(), acquires_count.into()),
             CodeUnitGen::strategy(arg_count, code_len),
         )
             .prop_map(
-                |(name, parameters, return_, visibility, acquires, code)| Self {
+                |(name, parameters, return_, visibility, is_entry, acquires, code)| Self {
                     name,
                     parameters,
                     return_,
                     visibility,
+                    is_entry,
                     acquires,
                     code,
                 },
@@ -426,6 +429,7 @@ impl FunctionDefinitionGen {
         Some(FunctionDefinition {
             function: function_handle,
             visibility: self.visibility,
+            is_entry: self.is_entry,
             acquires_global_resources,
             code: Some(self.code.materialize(state)),
         })

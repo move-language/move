@@ -17,9 +17,8 @@ use move_compiler::shared::PackagePaths;
 use move_docgen::Docgen;
 use move_errmapgen::ErrmapGen;
 use move_model::{
-    code_writer::CodeWriter,
-    model::{FunctionVisibility, GlobalEnv},
-    parse_addresses_from_options, run_model_builder_with_options,
+    code_writer::CodeWriter, model::GlobalEnv, parse_addresses_from_options,
+    run_model_builder_with_options,
 };
 use move_prover_boogie_backend::{
     add_prelude, boogie_wrapper::BoogieWrapper, bytecode_translator::BoogieTranslator,
@@ -284,7 +283,7 @@ fn print_script_reach(env: &GlobalEnv) {
 
     for m in &target_modules {
         for f in m.get_functions() {
-            if matches!(f.visibility(), FunctionVisibility::Script) {
+            if f.is_entry() {
                 let qualified_id = f.get_qualified_id();
                 func_ids.insert(qualified_id);
                 let trans_funcs = f.get_transitive_closure_of_called_functions();

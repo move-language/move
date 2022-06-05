@@ -4,13 +4,12 @@
 
 //! This module contains verification of usage of dependencies for modules and scripts.
 use move_binary_format::{
-    access::{ModuleAccess, ScriptAccess},
+    access::ModuleAccess,
     binary_views::BinaryIndexedView,
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
-        AbilitySet, Bytecode, CodeOffset, CompiledModule, CompiledScript, FunctionDefinitionIndex,
-        FunctionHandleIndex, ModuleHandleIndex, SignatureToken, StructHandleIndex,
-        StructTypeParameter, TableIndex, Visibility,
+        AbilitySet, CompiledModule, CompiledScript, FunctionHandleIndex, ModuleHandleIndex,
+        SignatureToken, StructHandleIndex, StructTypeParameter, TableIndex, Visibility,
     },
     IndexKind,
 };
@@ -92,7 +91,7 @@ impl<'a, 'b> Context<'a, 'b> {
                     func_def.visibility,
                 );
                 let may_be_called = match func_def.visibility {
-                    Visibility::Public | Visibility::Script => true,
+                    Visibility::Public => true,
                     Visibility::Friend => self_module
                         .as_ref()
                         .map_or(false, |self_id| friend_module_ids.contains(self_id)),
@@ -152,8 +151,7 @@ fn verify_module_impl<'a>(
 
     verify_imported_modules(context)?;
     verify_imported_structs(context)?;
-    verify_imported_functions(context)?;
-    verify_all_script_visibility_usage(context)
+    verify_imported_functions(context)
 }
 
 pub fn verify_script<'a>(
@@ -171,8 +169,7 @@ pub fn verify_script_impl<'a>(
 
     verify_imported_modules(context)?;
     verify_imported_structs(context)?;
-    verify_imported_functions(context)?;
-    verify_all_script_visibility_usage(context)
+    verify_imported_functions(context)
 }
 
 fn verify_imported_modules(context: &Context) -> PartialVMResult<()> {
@@ -475,68 +472,4 @@ fn compare_structs(
     } else {
         Ok(())
     }
-}
-
-fn verify_all_script_visibility_usage(context: &Context) -> PartialVMResult<()> {
-    match &context.resolver {
-        BinaryIndexedView::Module(m) => {
-            for (idx, fdef) in m.function_defs().iter().enumerate() {
-                let code = match &fdef.code {
-                    None => continue,
-                    Some(code) => &code.code,
-                };
-                verify_script_visibility_usage(
-                    context,
-                    fdef.visibility,
-                    FunctionDefinitionIndex(idx as TableIndex),
-                    code,
-                )?
-            }
-            Ok(())
-        }
-        BinaryIndexedView::Script(s) => verify_script_visibility_usage(
-            context,
-            Visibility::Script,
-            FunctionDefinitionIndex(0),
-            &s.code().code,
-        ),
-    }
-}
-
-fn verify_script_visibility_usage(
-    context: &Context,
-    current_visibility: Visibility,
-    fdef_idx: FunctionDefinitionIndex,
-    code: &[Bytecode],
-) -> PartialVMResult<()> {
-    for (idx, instr) in code.iter().enumerate() {
-        let idx = idx as CodeOffset;
-        let fhandle_idx = match instr {
-            Bytecode::Call(fhandle_idx) => fhandle_idx,
-            Bytecode::CallGeneric(finst_idx) => {
-                &context
-                    .resolver
-                    .function_instantiation_at(*finst_idx)
-                    .handle
-            }
-            _ => continue,
-        };
-        let fhandle_vis = context.function_visibilities[fhandle_idx];
-        match (current_visibility, fhandle_vis) {
-            (Visibility::Script, Visibility::Script) => (),
-            (_, Visibility::Script) => {
-                return Err(PartialVMError::new(
-                    StatusCode::CALLED_SCRIPT_VISIBLE_FROM_NON_SCRIPT_VISIBLE,
-                )
-                .at_code_offset(fdef_idx, idx)
-                .with_message(
-                    "script-visible functions can only be called from scripts or other \
-                    script-visibile functions"
-                        .to_string(),
-                ));
-            }
-            _ => (),
-        }
-    }
-    Ok(())
 }

@@ -79,6 +79,7 @@ pub struct Struct {
 #[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Function {
     pub visibility: Visibility,
+    pub is_entry: bool,
     pub type_parameters: Vec<AbilitySet>,
     pub parameters: Vec<Type>,
     pub return_: Vec<Type>,
@@ -105,9 +106,13 @@ impl Module {
         let exposed_functions = m
             .function_defs()
             .iter()
-            .filter(|func_def| match func_def.visibility {
-                Visibility::Public | Visibility::Script | Visibility::Friend => true,
-                Visibility::Private => false,
+            .filter(|func_def| {
+                let is_vis_exposed = match func_def.visibility {
+                    Visibility::Public | Visibility::Friend => true,
+                    Visibility::Private => false,
+                };
+                let is_entry_exposed = func_def.is_entry;
+                is_vis_exposed || is_entry_exposed
             })
             .map(|func_def| Function::new(m, func_def))
             .collect();
@@ -299,6 +304,7 @@ impl Function {
         let name = m.identifier_at(fhandle.name).to_owned();
         let f = Function {
             visibility: def.visibility,
+            is_entry: def.is_entry,
             type_parameters: fhandle.type_parameters.clone(),
             parameters: m
                 .signature_at(fhandle.parameters)

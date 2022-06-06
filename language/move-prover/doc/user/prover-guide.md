@@ -37,7 +37,7 @@ Now, to call the prover simply use one of the following commands:
 
 ```shell script
 move package -p <path> prove  # Prove the sources of the package at <path>
-move package prove            # Equivalent to move `package -p . prove`
+move package prove            # Equivalent to `move package -p . prove`
 ```
 
 ### Target Filtering
@@ -73,6 +73,7 @@ To see the list of all command line options, use `move package prove -- --help`.
 
 You can also create a prover configuration file, named `Prover.toml` which lives side-by-side with the `Move.toml`
 file. For example, to enable tracing by default for a package, you use a `Prover.toml` with the following content:
+- [Move Specification Language](#move-specification-language)
 
 ```toml
 [prover]

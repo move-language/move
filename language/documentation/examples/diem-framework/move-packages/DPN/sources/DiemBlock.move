@@ -3,14 +3,14 @@ module DiemFramework::DiemBlock {
     use DiemFramework::CoreAddresses;
     use DiemFramework::DiemSystem;
     use DiemFramework::DiemTimestamp;
-    use Std::Errors;
-    use Std::Event;
+    use std::errors;
+    use std::event;
 
     struct BlockMetadata has key {
         /// Height of the current block
         height: u64,
         /// Handle where events with the time of new blocks are emitted
-        new_block_events: Event::EventHandle<Self::NewBlockEvent>,
+        new_block_events: event::EventHandle<Self::NewBlockEvent>,
     }
 
     struct NewBlockEvent has drop, store {
@@ -34,19 +34,19 @@ module DiemFramework::DiemBlock {
         // Operational constraint, only callable by the Association address
         CoreAddresses::assert_diem_root(account);
 
-        assert!(!is_initialized(), Errors::already_published(EBLOCK_METADATA));
+        assert!(!is_initialized(), errors::already_published(EBLOCK_METADATA));
         move_to<BlockMetadata>(
             account,
             BlockMetadata {
                 height: 0,
-                new_block_events: Event::new_event_handle<Self::NewBlockEvent>(account),
+                new_block_events: event::new_event_handle<Self::NewBlockEvent>(account),
             }
         );
     }
     spec initialize_block_metadata {
         include DiemTimestamp::AbortsIfNotGenesis;
         include CoreAddresses::AbortsIfNotDiemRoot;
-        aborts_if is_initialized() with Errors::ALREADY_PUBLISHED;
+        aborts_if is_initialized() with errors::ALREADY_PUBLISHED;
         ensures is_initialized();
         ensures get_current_block_height() == 0;
     }
@@ -72,13 +72,13 @@ module DiemFramework::DiemBlock {
         // Authorization
         assert!(
             proposer == @VMReserved || DiemSystem::is_validator(proposer),
-            Errors::requires_address(EVM_OR_VALIDATOR)
+            errors::requires_address(EVM_OR_VALIDATOR)
         );
 
         let block_metadata_ref = borrow_global_mut<BlockMetadata>(@DiemRoot);
         DiemTimestamp::update_global_time(&vm, proposer, timestamp);
         block_metadata_ref.height = block_metadata_ref.height + 1;
-        Event::emit_event<NewBlockEvent>(
+        event::emit_event<NewBlockEvent>(
             &mut block_metadata_ref.new_block_events,
             NewBlockEvent {
                 round,
@@ -92,7 +92,7 @@ module DiemFramework::DiemBlock {
         include DiemTimestamp::AbortsIfNotOperating;
         include CoreAddresses::AbortsIfNotVM{account: vm};
         aborts_if proposer != @VMReserved && !DiemSystem::spec_is_validator(proposer)
-            with Errors::REQUIRES_ADDRESS;
+            with errors::REQUIRES_ADDRESS;
         ensures DiemTimestamp::spec_now_microseconds() == timestamp;
         ensures get_current_block_height() == old(get_current_block_height()) + 1;
 
@@ -116,7 +116,7 @@ module DiemFramework::DiemBlock {
 
     /// Get the current block height
     public fun get_current_block_height(): u64 acquires BlockMetadata {
-        assert!(is_initialized(), Errors::not_published(EBLOCK_METADATA));
+        assert!(is_initialized(), errors::not_published(EBLOCK_METADATA));
         borrow_global<BlockMetadata>(@DiemRoot).height
     }
 

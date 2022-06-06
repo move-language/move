@@ -1,6 +1,6 @@
 // separate_baseline: simplify
 module 0x42::TestGlobalVars {
-    use Std::Signer;
+    use std::signer;
 
     // ================================================================================
     // Counting
@@ -87,10 +87,10 @@ module 0x42::TestGlobalVars {
 
     fun assert_access(s: &signer) {
         // Do some assertions which validate access
-        assert!(Signer::address_of(s) == @0, 1);
+        assert!(signer::address_of(s) == @0, 1);
     }
     spec assert_access {
-        aborts_if Signer::address_of(s) != @0;
+        aborts_if signer::address_of(s) != @0;
         update access_verified = true;
     }
 

@@ -1,6 +1,6 @@
 #[test_only]
 module Extensions::TableTests {
-    use Std::Vector;
+    use std::vector;
     use Extensions::Table as T;
 
     struct S<phantom K: copy + drop, phantom V> has key {
@@ -95,24 +95,24 @@ module Extensions::TableTests {
     fun test_vector(s: signer) acquires S {
         let t = T::new<u8, vector<address>>();
 
-        T::add(&mut t, 42, Vector::singleton<address>(@0x1012));
+        T::add(&mut t, 42, vector::singleton<address>(@0x1012));
         assert!(T::contains(&t, 42), 101);
         assert!(!T::contains(&t, 0), 102);
-        assert!(Vector::length(T::borrow(&t, 42)) == 1, 103);
-        assert!(*Vector::borrow(T::borrow(&t, 42), 0) == @0x1012, 104);
+        assert!(vector::length(T::borrow(&t, 42)) == 1, 103);
+        assert!(*vector::borrow(T::borrow(&t, 42), 0) == @0x1012, 104);
 
         move_to(&s, S { t });
 
         let s = borrow_global_mut<S<u8, vector<address>>>(@0x42);
         let v_mut_ref = T::borrow_mut(&mut s.t, 42);
-        Vector::push_back(v_mut_ref, @0x1013);
-        assert!(Vector::length(T::borrow(&s.t, 42)) == 2, 105);
-        assert!(*Vector::borrow(T::borrow(&s.t, 42), 1) == @0x1013, 106);
+        vector::push_back(v_mut_ref, @0x1013);
+        assert!(vector::length(T::borrow(&s.t, 42)) == 2, 105);
+        assert!(*vector::borrow(T::borrow(&s.t, 42), 1) == @0x1013, 106);
 
         let v = T::remove(&mut s.t, 42);
-        assert!(Vector::length(&v) == 2, 107);
-        assert!(*Vector::borrow(&v, 0) == @0x1012, 108);
-        assert!(*Vector::borrow(&v, 1) == @0x1013, 109);
+        assert!(vector::length(&v) == 2, 107);
+        assert!(*vector::borrow(&v, 0) == @0x1012, 108);
+        assert!(*vector::borrow(&v, 1) == @0x1013, 109);
         assert!(!T::contains(&s.t, 42), 110);
     }
 

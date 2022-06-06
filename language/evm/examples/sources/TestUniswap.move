@@ -4,7 +4,7 @@ module Evm::TestUniswap {
     use Evm::IUniswapV2Router;
     use Evm::U256::{Self, U256, u256_from_words};
     use Evm::Evm::{sender, self, block_timestamp};
-    use Std::Vector;
+    use std::vector;
 
     // Swap tokenIn for tokenOut.
     public fun swap(
@@ -21,19 +21,19 @@ module Evm::TestUniswap {
         IERC20::call_transferFrom(tokenIn, sender(), self(), copy amountIn);
         IERC20::call_approve(tokenIn, const_UNISWAP_V2_ROUTER, copy amountIn);
 
-        let path = Vector::empty<address>();
+        let path = vector::empty<address>();
 
         if(tokenIn == const_WETH || tokenOut == const_WETH) {
             // Directly swapping tokenIn for tokenOut.
-            Vector::push_back(&mut path, tokenIn);
-            Vector::push_back(&mut path, tokenOut);
+            vector::push_back(&mut path, tokenIn);
+            vector::push_back(&mut path, tokenOut);
         }
         else {
             // Swapping tokenIn for WETH, and then WETH for tokenOut.
             // Bridging is needed because UniswapV2 cannot directly swap two ERC20 token types.
-            Vector::push_back(&mut path, tokenIn);
-            Vector::push_back(&mut path, const_WETH);
-            Vector::push_back(&mut path, tokenOut);
+            vector::push_back(&mut path, tokenIn);
+            vector::push_back(&mut path, const_WETH);
+            vector::push_back(&mut path, tokenOut);
         };
 
         IUniswapV2Router::call_swapExactTokensForTokens(

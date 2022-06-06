@@ -4,7 +4,7 @@ module DiemFramework::XUS {
     use DiemFramework::Diem;
     use DiemFramework::DiemTimestamp;
     use DiemFramework::Roles;
-    use Std::FixedPoint32;
+    use std::fixed_point32;
 
     /// The type tag representing the `XUS` currency on-chain.
     struct XUS { }
@@ -20,7 +20,7 @@ module DiemFramework::XUS {
         Diem::register_SCS_currency<XUS>(
             dr_account,
             tc_account,
-            FixedPoint32::create_from_rational(1, 1), // exchange rate to XDX
+            fixed_point32::create_from_rational(1, 1), // exchange rate to XDX
             1000000, // scaling_factor = 10^6
             100,     // fractional_part = 10^2
             b"XUS"
@@ -35,7 +35,7 @@ module DiemFramework::XUS {
         };
         include AccountLimits::PublishUnrestrictedLimitsAbortsIf<XUS>{publish_account: dr_account};
         include Diem::RegisterSCSCurrencyEnsures<XUS>{
-            to_xdx_exchange_rate: FixedPoint32::spec_create_from_rational(1, 1),
+            to_xdx_exchange_rate: fixed_point32::spec_create_from_rational(1, 1),
             fractional_part: 100
         };
         include AccountLimits::PublishUnrestrictedLimitsEnsures<XUS>{publish_account: dr_account};

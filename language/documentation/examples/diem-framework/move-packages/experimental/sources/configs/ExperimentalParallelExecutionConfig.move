@@ -1,5 +1,5 @@
 module ExperimentalFramework::ExperimentalParallelExecutionConfig {
-    use Std::Capability;
+    use std::capability;
     use CoreFramework::ParallelExecutionConfig;
 
     struct ExperimentalParallelExecutionConfig has drop {}
@@ -8,7 +8,7 @@ module ExperimentalFramework::ExperimentalParallelExecutionConfig {
         account: &signer,
     ) {
         ParallelExecutionConfig::initialize_parallel_execution<ExperimentalParallelExecutionConfig>(account);
-        Capability::create<ExperimentalParallelExecutionConfig>(
+        capability::create<ExperimentalParallelExecutionConfig>(
             account,
             &ExperimentalParallelExecutionConfig {}
         );
@@ -20,13 +20,13 @@ module ExperimentalFramework::ExperimentalParallelExecutionConfig {
     ) {
         ParallelExecutionConfig::enable_parallel_execution_with_config(
             read_write_inference_result,
-            &Capability::acquire(account, &ExperimentalParallelExecutionConfig {}),
+            &capability::acquire(account, &ExperimentalParallelExecutionConfig {}),
         );
     }
 
     public fun disable_parallel_execution(account: &signer) {
         ParallelExecutionConfig::disable_parallel_execution(
-            &Capability::acquire(account, &ExperimentalParallelExecutionConfig {}),
+            &capability::acquire(account, &ExperimentalParallelExecutionConfig {}),
         );
     }
 }

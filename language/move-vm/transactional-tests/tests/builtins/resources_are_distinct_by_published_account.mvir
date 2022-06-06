@@ -1,7 +1,7 @@
 //# publish
 module 0x42.Account {
     import 0x1.Account;
-    import 0x1.Signer;
+    import 0x1.signer;
 
     struct T has key {sequence_number: u64}
 
@@ -35,7 +35,7 @@ module 0x42.Account {
         c1 = Self.new(112);
         Self.publish(copy(account), move(c1));
 
-        sender = Signer.address_of(copy(account));
+        sender = signer.address_of(copy(account));
 
         sequence_number = Account.sequence_number(copy(sender));
         assert(copy(sequence_number) == 1, 42);

@@ -1,12 +1,12 @@
 module 0x8675309::Tester {
-    use Std::Signer;
+    use std::signer;
 
     struct Initializer has key { x: u64, y: u64 }
     struct Point has copy, drop { x: u64, y: u64 }
 
     // the resource struct is here to just give a feeling why the computation might not be reorderable
     fun set_and_pick(account: &signer, p: &mut Point): &mut u64 acquires Initializer {
-        let sender = Signer::address_of(account);
+        let sender = signer::address_of(account);
         let init = borrow_global_mut<Initializer>(sender);
         p.x = init.x;
         p.y = init.y;

@@ -1,7 +1,7 @@
 #[evm_contract]
 module Evm::ABIStruct {
-    use Std::Vector;
-    use Std::ASCII::{Self, String};
+    use std::vector;
+    use std::ascii::{Self, String};
     use Evm::Evm::{emit};
 
 

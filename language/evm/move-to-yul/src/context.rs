@@ -386,7 +386,7 @@ impl<'a> Context<'a> {
         // Add structs in the stdlib that can be serialized
         let p = |st_env: &StructEnv| {
             let name = st_env.get_full_name_with_address(); // only consider String for now
-            name == format!("{}::ASCII::String", STD_MODULE_ADDRESS)
+            name == format!("{}::ascii::String", STD_MODULE_ADDRESS)
         };
         let built_in_structs = self.get_target_structs(p);
         for st_env in built_in_structs {

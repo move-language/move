@@ -1,6 +1,6 @@
 //# publish
 module 0x42.Test {
-    import 0x1.Signer;
+    import 0x1.signer;
 
     struct Config has copy, drop, store { b: bool }
 
@@ -33,7 +33,7 @@ module 0x42.Test {
         let config_ref: &mut Self.Config;
         let b_ref: &mut bool;
     label b0:
-        t_ref = borrow_global_mut<T>(Signer.address_of(move(account)));
+        t_ref = borrow_global_mut<T>(signer.address_of(move(account)));
         config_ref = &mut move(t_ref).T::config;
         b_ref = &mut move(config_ref).Config::b;
         *move(b_ref) = move(b);
@@ -46,7 +46,7 @@ module 0x42.Test {
 
 //# run --signers 0x1
 import 0x42.Test;
-import 0x1.Signer;
+import 0x1.signer;
 
 main(account: signer) {
     let sender: address;
@@ -55,7 +55,7 @@ main(account: signer) {
 label b0:
     Test.publish_config(&account, false);
 
-    sender = Signer.address_of(&account);
+    sender = signer.address_of(&account);
     config = Test.config(copy(sender));
     assert(Test.value(&config) == false, 77);
 

@@ -7,11 +7,11 @@ module DiemFramework::DualAttestation {
     use DiemFramework::Roles;
     use DiemFramework::Signature;
     use DiemFramework::VASP;
-    use Std::BCS;
-    use Std::Errors;
-    use Std::Event::{Self, EventHandle};
-    use Std::Signer;
-    use Std::Vector;
+    use std::bcs;
+    use std::errors;
+    use std::event::{Self, EventHandle};
+    use std::signer;
+    use std::vector;
     friend DiemFramework::DiemAccount;
 
     /// This resource holds an entity's globally unique name and all of the metadata it needs to
@@ -99,24 +99,24 @@ module DiemFramework::DualAttestation {
         Roles::assert_parent_vasp_or_designated_dealer(created);
         Roles::assert_treasury_compliance(creator);
         assert!(
-            !exists<Credential>(Signer::address_of(created)),
-            Errors::already_published(ECREDENTIAL)
+            !exists<Credential>(signer::address_of(created)),
+            errors::already_published(ECREDENTIAL)
         );
         move_to(created, Credential {
             human_name,
-            base_url: Vector::empty(),
-            compliance_public_key: Vector::empty(),
+            base_url: vector::empty(),
+            compliance_public_key: vector::empty(),
             // For testnet and V1, so it should never expire. So set to u64::MAX
             expiration_date: U64_MAX,
-            compliance_key_rotation_events: Event::new_event_handle<ComplianceKeyRotationEvent>(created),
-            base_url_rotation_events: Event::new_event_handle<BaseUrlRotationEvent>(created),
+            compliance_key_rotation_events: event::new_event_handle<ComplianceKeyRotationEvent>(created),
+            base_url_rotation_events: event::new_event_handle<BaseUrlRotationEvent>(created),
         })
     }
     spec publish_credential {
         /// The permission "RotateDualAttestationInfo" is granted to ParentVASP and DesignatedDealer [[H17]][PERMISSION].
         include Roles::AbortsIfNotParentVaspOrDesignatedDealer{account: created};
         include Roles::AbortsIfNotTreasuryCompliance{account: creator};
-        aborts_if spec_has_credential(Signer::address_of(created)) with Errors::ALREADY_PUBLISHED;
+        aborts_if spec_has_credential(signer::address_of(created)) with errors::ALREADY_PUBLISHED;
     }
     spec fun spec_has_credential(addr: address): bool {
         exists<Credential>(addr)
@@ -124,11 +124,11 @@ module DiemFramework::DualAttestation {
 
     /// Rotate the base URL for `account` to `new_url`
     public fun rotate_base_url(account: &signer, new_url: vector<u8>) acquires Credential {
-        let addr = Signer::address_of(account);
-        assert!(exists<Credential>(addr), Errors::not_published(ECREDENTIAL));
+        let addr = signer::address_of(account);
+        assert!(exists<Credential>(addr), errors::not_published(ECREDENTIAL));
         let credential = borrow_global_mut<Credential>(addr);
         credential.base_url = copy new_url;
-        Event::emit_event(&mut credential.base_url_rotation_events, BaseUrlRotationEvent {
+        event::emit_event(&mut credential.base_url_rotation_events, BaseUrlRotationEvent {
             new_base_url: new_url,
             time_rotated_seconds: DiemTimestamp::now_seconds(),
         });
@@ -140,7 +140,7 @@ module DiemFramework::DualAttestation {
     }
     spec schema RotateBaseUrlAbortsIf {
         account: signer;
-        let sender = Signer::address_of(account);
+        let sender = signer::address_of(account);
 
         /// Must abort if the account does not have the resource Credential [[H17]][PERMISSION].
         include AbortsIfNoCredential{addr: sender};
@@ -149,12 +149,12 @@ module DiemFramework::DualAttestation {
     }
     spec schema AbortsIfNoCredential {
         addr: address;
-        aborts_if !spec_has_credential(addr) with Errors::NOT_PUBLISHED;
+        aborts_if !spec_has_credential(addr) with errors::NOT_PUBLISHED;
     }
     spec schema RotateBaseUrlEnsures {
         account: signer;
         new_url: vector<u8>;
-        let sender = Signer::address_of(account);
+        let sender = signer::address_of(account);
 
         ensures global<Credential>(sender).base_url == new_url;
         /// The sender can only rotate its own base url [[H17]][PERMISSION].
@@ -164,7 +164,7 @@ module DiemFramework::DualAttestation {
     spec schema RotateBaseUrlEmits {
         account: signer;
         new_url: vector<u8>;
-        let sender = Signer::address_of(account);
+        let sender = signer::address_of(account);
         let handle = global<Credential>(sender).base_url_rotation_events;
         let msg = BaseUrlRotationEvent {
             new_base_url: new_url,
@@ -178,12 +178,12 @@ module DiemFramework::DualAttestation {
         account: &signer,
         new_key: vector<u8>,
     ) acquires Credential {
-        let addr = Signer::address_of(account);
-        assert!(exists<Credential>(addr), Errors::not_published(ECREDENTIAL));
-        assert!(Signature::ed25519_validate_pubkey(copy new_key), Errors::invalid_argument(EINVALID_PUBLIC_KEY));
+        let addr = signer::address_of(account);
+        assert!(exists<Credential>(addr), errors::not_published(ECREDENTIAL));
+        assert!(Signature::ed25519_validate_pubkey(copy new_key), errors::invalid_argument(EINVALID_PUBLIC_KEY));
         let credential = borrow_global_mut<Credential>(addr);
         credential.compliance_public_key = copy new_key;
-        Event::emit_event(&mut credential.compliance_key_rotation_events, ComplianceKeyRotationEvent {
+        event::emit_event(&mut credential.compliance_key_rotation_events, ComplianceKeyRotationEvent {
             new_compliance_public_key: new_key,
             time_rotated_seconds: DiemTimestamp::now_seconds(),
         });
@@ -198,18 +198,18 @@ module DiemFramework::DualAttestation {
         account: signer;
         new_key: vector<u8>;
 
-        let sender = Signer::address_of(account);
+        let sender = signer::address_of(account);
         /// Must abort if the account does not have the resource Credential [[H17]][PERMISSION].
         include AbortsIfNoCredential{addr: sender};
 
         include DiemTimestamp::AbortsIfNotOperating;
-        aborts_if !Signature::ed25519_validate_pubkey(new_key) with Errors::INVALID_ARGUMENT;
+        aborts_if !Signature::ed25519_validate_pubkey(new_key) with errors::INVALID_ARGUMENT;
     }
     spec schema RotateCompliancePublicKeyEnsures {
         account: signer;
         new_key: vector<u8>;
 
-        let sender = Signer::address_of(account);
+        let sender = signer::address_of(account);
         ensures global<Credential>(sender).compliance_public_key == new_key;
         /// The sender only rotates its own compliance_public_key [[H17]][PERMISSION].
         ensures forall addr1: address where addr1 != sender:
@@ -218,7 +218,7 @@ module DiemFramework::DualAttestation {
     spec schema RotateCompliancePublicKeyEmits {
         account: signer;
         new_key: vector<u8>;
-        let sender = Signer::address_of(account);
+        let sender = signer::address_of(account);
         let handle = global<Credential>(sender).compliance_key_rotation_events;
         let msg = ComplianceKeyRotationEvent {
             new_compliance_public_key: new_key,
@@ -230,7 +230,7 @@ module DiemFramework::DualAttestation {
     /// Return the human-readable name for the VASP account.
     /// Aborts if `addr` does not have a `Credential` resource.
     public fun human_name(addr: address): vector<u8> acquires Credential {
-        assert!(exists<Credential>(addr), Errors::not_published(ECREDENTIAL));
+        assert!(exists<Credential>(addr), errors::not_published(ECREDENTIAL));
         *&borrow_global<Credential>(addr).human_name
     }
     spec human_name {
@@ -242,7 +242,7 @@ module DiemFramework::DualAttestation {
     /// Return the base URL for `addr`.
     /// Aborts if `addr` does not have a `Credential` resource.
     public fun base_url(addr: address): vector<u8> acquires Credential {
-        assert!(exists<Credential>(addr), Errors::not_published(ECREDENTIAL));
+        assert!(exists<Credential>(addr), errors::not_published(ECREDENTIAL));
         *&borrow_global<Credential>(addr).base_url
     }
     spec base_url {
@@ -258,7 +258,7 @@ module DiemFramework::DualAttestation {
     /// Return the compliance public key for `addr`.
     /// Aborts if `addr` does not have a `Credential` resource.
     public fun compliance_public_key(addr: address): vector<u8> acquires Credential {
-        assert!(exists<Credential>(addr), Errors::not_published(ECREDENTIAL));
+        assert!(exists<Credential>(addr), errors::not_published(ECREDENTIAL));
         *&borrow_global<Credential>(addr).compliance_public_key
     }
     spec compliance_public_key {
@@ -274,7 +274,7 @@ module DiemFramework::DualAttestation {
     /// Return the expiration date `addr`
     /// Aborts if `addr` does not have a `Credential` resource.
     public fun expiration_date(addr: address): u64  acquires Credential {
-        assert!(exists<Credential>(addr), Errors::not_published(ECREDENTIAL));
+        assert!(exists<Credential>(addr), errors::not_published(ECREDENTIAL));
         *&borrow_global<Credential>(addr).expiration_date
     }
     spec expiration_date {
@@ -332,7 +332,7 @@ module DiemFramework::DualAttestation {
     spec schema DualAttestationRequiredAbortsIf<Token> {
         deposit_value: num;
         include Diem::ApproxXdmForValueAbortsIf<Token>{from_value: deposit_value};
-        aborts_if !spec_is_published() with Errors::NOT_PUBLISHED;
+        aborts_if !spec_is_published() with errors::NOT_PUBLISHED;
     }
     spec fun spec_is_inter_vasp(payer: address, payee: address): bool {
         VASP::is_vasp(payer) && VASP::is_vasp(payee)
@@ -354,9 +354,9 @@ module DiemFramework::DualAttestation {
         payer: address, metadata: vector<u8>, deposit_value: u64
     ): vector<u8> {
         let message = metadata;
-        Vector::append(&mut message, BCS::to_bytes(&payer));
-        Vector::append(&mut message, BCS::to_bytes(&deposit_value));
-        Vector::append(&mut message, DOMAIN_SEPARATOR);
+        vector::append(&mut message, bcs::to_bytes(&payer));
+        vector::append(&mut message, bcs::to_bytes(&deposit_value));
+        vector::append(&mut message, DOMAIN_SEPARATOR);
         message
     }
     spec dual_attestation_message {
@@ -382,26 +382,26 @@ module DiemFramework::DualAttestation {
     ) acquires Credential {
         // sanity check of signature validity
         assert!(
-            Vector::length(&metadata_signature) == 64,
-            Errors::invalid_argument(EMALFORMED_METADATA_SIGNATURE)
+            vector::length(&metadata_signature) == 64,
+            errors::invalid_argument(EMALFORMED_METADATA_SIGNATURE)
         );
         // sanity check of payee compliance key validity
         let payee_compliance_key = compliance_public_key(credential_address(payee));
         assert!(
-            !Vector::is_empty(&payee_compliance_key),
-            Errors::invalid_state(EPAYEE_COMPLIANCE_KEY_NOT_SET)
+            !vector::is_empty(&payee_compliance_key),
+            errors::invalid_state(EPAYEE_COMPLIANCE_KEY_NOT_SET)
         );
         // sanity check of payee base URL validity
         let payee_base_url = base_url(credential_address(payee));
         assert!(
-            !Vector::is_empty(&payee_base_url),
-            Errors::invalid_state(EPAYEE_BASE_URL_NOT_SET)
+            !vector::is_empty(&payee_base_url),
+            errors::invalid_state(EPAYEE_BASE_URL_NOT_SET)
         );
         // cryptographic check of signature validity
         let message = dual_attestation_message(payer, metadata, deposit_value);
         assert!(
             Signature::ed25519_verify(metadata_signature, payee_compliance_key, message),
-            Errors::invalid_argument(EINVALID_METADATA_SIGNATURE),
+            errors::invalid_argument(EINVALID_METADATA_SIGNATURE),
         );
     }
     spec assert_signature_is_valid {
@@ -415,10 +415,10 @@ module DiemFramework::DualAttestation {
         metadata: vector<u8>;
         deposit_value: u64;
         include AbortsIfNoCredential{addr: spec_credential_address(payee)};
-        aborts_if Vector::is_empty(spec_compliance_public_key(spec_credential_address(payee))) with Errors::INVALID_STATE;
-        aborts_if Vector::is_empty(spec_base_url(spec_credential_address(payee))) with Errors::INVALID_STATE;
+        aborts_if vector::is_empty(spec_compliance_public_key(spec_credential_address(payee))) with errors::INVALID_STATE;
+        aborts_if vector::is_empty(spec_base_url(spec_credential_address(payee))) with errors::INVALID_STATE;
         aborts_if !spec_signature_is_valid(payer, payee, metadata_signature, metadata, deposit_value)
-            with Errors::INVALID_ARGUMENT;
+            with errors::INVALID_ARGUMENT;
     }
 
     /// Returns true if signature is valid.
@@ -431,7 +431,7 @@ module DiemFramework::DualAttestation {
     ): bool {
         let payee_compliance_key = spec_compliance_public_key(spec_credential_address(payee));
         len(metadata_signature) == 64 &&
-            !Vector::is_empty(payee_compliance_key) &&
+            !vector::is_empty(payee_compliance_key) &&
             Signature::ed25519_verify(
                 metadata_signature,
                 payee_compliance_key,
@@ -454,7 +454,7 @@ module DiemFramework::DualAttestation {
         metadata: vector<u8>,
         metadata_signature: vector<u8>
     ) acquires Credential, Limit {
-        if (!Vector::is_empty(&metadata_signature) || // allow opt-in dual attestation
+        if (!vector::is_empty(&metadata_signature) || // allow opt-in dual attestation
             dual_attestation_required<Currency>(payer, payee, value)
         ) {
           assert_signature_is_valid(payer, payee, metadata_signature, metadata, value)
@@ -483,9 +483,9 @@ module DiemFramework::DualAttestation {
     public fun initialize(dr_account: &signer) {
         DiemTimestamp::assert_genesis();
         CoreAddresses::assert_diem_root(dr_account); // operational constraint.
-        assert!(!exists<Limit>(@DiemRoot), Errors::already_published(ELIMIT));
+        assert!(!exists<Limit>(@DiemRoot), errors::already_published(ELIMIT));
         let initial_limit = (INITIAL_DUAL_ATTESTATION_LIMIT as u128) * (Diem::scaling_factor<XDX>() as u128);
-        assert!(initial_limit <= MAX_U64, Errors::limit_exceeded(ELIMIT));
+        assert!(initial_limit <= MAX_U64, errors::limit_exceeded(ELIMIT));
         move_to(
             dr_account,
             Limit {
@@ -496,21 +496,21 @@ module DiemFramework::DualAttestation {
     spec initialize {
         include DiemTimestamp::AbortsIfNotGenesis;
         include CoreAddresses::AbortsIfNotDiemRoot{account: dr_account};
-        aborts_if exists<Limit>(@DiemRoot) with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<Limit>(@DiemRoot) with errors::ALREADY_PUBLISHED;
         let initial_limit = INITIAL_DUAL_ATTESTATION_LIMIT * Diem::spec_scaling_factor<XDX>();
-        aborts_if initial_limit > MAX_U64 with Errors::LIMIT_EXCEEDED;
+        aborts_if initial_limit > MAX_U64 with errors::LIMIT_EXCEEDED;
         include Diem::AbortsIfNoCurrency<XDX>; // for scaling_factor.
         ensures global<Limit>(@DiemRoot).micro_xdx_limit == initial_limit;
     }
 
     /// Return the current dual attestation limit in microdiem
     public fun get_cur_microdiem_limit(): u64 acquires Limit {
-        assert!(exists<Limit>(@DiemRoot), Errors::not_published(ELIMIT));
+        assert!(exists<Limit>(@DiemRoot), errors::not_published(ELIMIT));
         borrow_global<Limit>(@DiemRoot).micro_xdx_limit
     }
     spec get_cur_microdiem_limit {
         pragma opaque;
-        aborts_if !spec_is_published() with Errors::NOT_PUBLISHED;
+        aborts_if !spec_is_published() with errors::NOT_PUBLISHED;
         ensures result == spec_get_cur_microdiem_limit();
     }
 
@@ -518,7 +518,7 @@ module DiemFramework::DualAttestation {
     /// Aborts if `tc_account` does not have the TreasuryCompliance role
     public fun set_microdiem_limit(tc_account: &signer, micro_xdx_limit: u64) acquires Limit {
         Roles::assert_treasury_compliance(tc_account);
-        assert!(exists<Limit>(@DiemRoot), Errors::not_published(ELIMIT));
+        assert!(exists<Limit>(@DiemRoot), errors::not_published(ELIMIT));
         borrow_global_mut<Limit>(@DiemRoot).micro_xdx_limit = micro_xdx_limit;
     }
     spec set_microdiem_limit {
@@ -526,7 +526,7 @@ module DiemFramework::DualAttestation {
         /// The permission UpdateDualAttestationLimit is granted to TreasuryCompliance.
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
 
-        aborts_if !spec_is_published() with Errors::NOT_PUBLISHED;
+        aborts_if !spec_is_published() with errors::NOT_PUBLISHED;
         ensures global<Limit>(@DiemRoot).micro_xdx_limit == micro_xdx_limit;
     }
 
@@ -570,11 +570,11 @@ module DiemFramework::DualAttestation {
         /// Only the one who owns Credential can rotate the dual attenstation info [[H17]][PERMISSION].
         invariant update forall a: address where old(spec_has_credential(a)):
             global<Credential>(a).compliance_public_key != old(global<Credential>(a).compliance_public_key)
-		     ==> Signer::is_txn_signer_addr(a);
+		     ==> signer::is_txn_signer_addr(a);
 
         invariant update forall a: address where old(spec_has_credential(a)):
             global<Credential>(a).base_url != old(global<Credential>(a).base_url)
-		     ==> Signer::is_txn_signer_addr(a);
+		     ==> signer::is_txn_signer_addr(a);
 
         /// The permission "RotateDualAttestationInfo(addr)" is not transferred [[J17]][PERMISSION].
         /// resource struct `Credential` is persistent.

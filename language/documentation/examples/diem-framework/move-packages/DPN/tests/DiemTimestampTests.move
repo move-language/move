@@ -2,11 +2,11 @@
 module DiemFramework::DiemTimestampTests {
     use DiemFramework::Genesis;
     use DiemFramework::DiemTimestamp;
-    use Std::Vector;
-    use Std::UnitTest;
+    use std::vector;
+    use std::unit_test;
 
     fun get_signer(): signer {
-        Vector::pop_back(&mut UnitTest::create_signers_for_testing(1))
+        vector::pop_back(&mut unit_test::create_signers_for_testing(1))
     }
 
     #[test]

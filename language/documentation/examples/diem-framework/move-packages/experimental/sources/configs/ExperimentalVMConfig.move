@@ -1,5 +1,5 @@
 module ExperimentalFramework::ExperimentalVMConfig {
-    use Std::Capability;
+    use std::capability;
     use CoreFramework::DiemVMConfig;
 
     struct ExperimentalVMConfig has drop {}
@@ -11,7 +11,7 @@ module ExperimentalFramework::ExperimentalVMConfig {
         native_schedule: vector<u8>,
     ) {
         DiemVMConfig::initialize<ExperimentalVMConfig>(account, instruction_schedule, native_schedule);
-        Capability::create<ExperimentalVMConfig>(account, &ExperimentalVMConfig {});
+        capability::create<ExperimentalVMConfig>(account, &ExperimentalVMConfig {});
     }
 
     public fun set_gas_constants(
@@ -40,7 +40,7 @@ module ExperimentalFramework::ExperimentalVMConfig {
             max_transaction_size_in_bytes,
             gas_unit_scaling_factor,
             default_account_size,
-            &Capability::acquire(account, &ExperimentalVMConfig {}),
+            &capability::acquire(account, &ExperimentalVMConfig {}),
         );
     }
 }

@@ -96,24 +96,24 @@ pub fn resolve_builtin(
             module.value().as_str(),
             function.value().as_str(),
         ) {
-            ("Std", "Vector", "empty") => |tys| IR::Bytecode_::VecPack(expect_one_ty_arg(tys), 0),
-            ("Std", "Vector", "length") => |tys| IR::Bytecode_::VecLen(expect_one_ty_arg(tys)),
-            ("Std", "Vector", "borrow") => {
+            ("std", "vector", "empty") => |tys| IR::Bytecode_::VecPack(expect_one_ty_arg(tys), 0),
+            ("std", "vector", "length") => |tys| IR::Bytecode_::VecLen(expect_one_ty_arg(tys)),
+            ("std", "vector", "borrow") => {
                 |tys| IR::Bytecode_::VecImmBorrow(expect_one_ty_arg(tys))
             }
-            ("Std", "Vector", "push_back") => {
+            ("std", "vector", "push_back") => {
                 |tys| IR::Bytecode_::VecPushBack(expect_one_ty_arg(tys))
             }
-            ("Std", "Vector", "borrow_mut") => {
+            ("std", "vector", "borrow_mut") => {
                 |tys| IR::Bytecode_::VecMutBorrow(expect_one_ty_arg(tys))
             }
-            ("Std", "Vector", "pop_back") => {
+            ("std", "vector", "pop_back") => {
                 |tys| IR::Bytecode_::VecPopBack(expect_one_ty_arg(tys))
             }
-            ("Std", "Vector", "destroy_empty") => {
+            ("std", "vector", "destroy_empty") => {
                 |tys| IR::Bytecode_::VecUnpack(expect_one_ty_arg(tys), 0)
             }
-            ("Std", "Vector", "swap") => |tys| IR::Bytecode_::VecSwap(expect_one_ty_arg(tys)),
+            ("std", "vector", "swap") => |tys| IR::Bytecode_::VecSwap(expect_one_ty_arg(tys)),
             _ => return None,
         },
     )

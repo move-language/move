@@ -3,8 +3,8 @@
 module DiemFramework::AccountLimits {
     use DiemFramework::DiemTimestamp;
     use DiemFramework::Roles;
-    use Std::Errors;
-    use Std::Signer;
+    use std::errors;
+    use std::signer;
     friend DiemFramework::XDX;
     friend DiemFramework::XUS;
 
@@ -78,7 +78,7 @@ module DiemFramework::AccountLimits {
         addr: address,
         _cap: &AccountLimitMutationCapability,
     ): bool acquires LimitsDefinition, Window {
-        assert!(exists<Window<CoinType>>(addr), Errors::not_published(EWINDOW));
+        assert!(exists<Window<CoinType>>(addr), errors::not_published(EWINDOW));
         can_receive_and_update_window<CoinType>(
             amount,
             borrow_global_mut<Window<CoinType>>(addr),
@@ -101,7 +101,7 @@ module DiemFramework::AccountLimits {
     }
     spec schema AbortsIfNoWindow<CoinType> {
         addr: address;
-        aborts_if !exists<Window<CoinType>>(addr) with Errors::NOT_PUBLISHED;
+        aborts_if !exists<Window<CoinType>>(addr) with errors::NOT_PUBLISHED;
     }
     spec fun spec_update_deposit_limits<CoinType>(amount: u64, addr: address): bool {
         spec_receiving_limits_ok(global<Window<CoinType>>(addr), amount)
@@ -115,7 +115,7 @@ module DiemFramework::AccountLimits {
         addr: address,
         _cap: &AccountLimitMutationCapability,
     ): bool acquires LimitsDefinition, Window {
-        assert!(exists<Window<CoinType>>(addr), Errors::not_published(EWINDOW));
+        assert!(exists<Window<CoinType>>(addr), errors::not_published(EWINDOW));
         can_withdraw_and_update_window<CoinType>(
             amount,
             borrow_global_mut<Window<CoinType>>(addr),
@@ -148,11 +148,11 @@ module DiemFramework::AccountLimits {
         limit_address: address,
     ) {
         Roles::assert_diem_root(dr_account);
-        assert!(exists<LimitsDefinition<CoinType>>(limit_address), Errors::not_published(ELIMITS_DEFINITION));
+        assert!(exists<LimitsDefinition<CoinType>>(limit_address), errors::not_published(ELIMITS_DEFINITION));
         Roles::assert_parent_vasp_or_child_vasp(to_limit);
         assert!(
-            !exists<Window<CoinType>>(Signer::address_of(to_limit)),
-            Errors::already_published(EWINDOW)
+            !exists<Window<CoinType>>(signer::address_of(to_limit)),
+            errors::already_published(EWINDOW)
         );
         move_to(
             to_limit,
@@ -177,15 +177,15 @@ module DiemFramework::AccountLimits {
         include Roles::AbortsIfNotParentVaspOrChildVasp{account: to_limit};
 
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
-        aborts_if !exists<LimitsDefinition<CoinType>>(limit_address) with Errors::NOT_PUBLISHED;
-        aborts_if exists<Window<CoinType>>(Signer::address_of(to_limit)) with Errors::ALREADY_PUBLISHED;
+        aborts_if !exists<LimitsDefinition<CoinType>>(limit_address) with errors::NOT_PUBLISHED;
+        aborts_if exists<Window<CoinType>>(signer::address_of(to_limit)) with errors::ALREADY_PUBLISHED;
     }
 
     spec schema PublishWindowEnsures<CoinType> {
         to_limit: signer;
-        ensures global<Window<CoinType>>(Signer::address_of(to_limit)).window_inflow == 0;
-        ensures global<Window<CoinType>>(Signer::address_of(to_limit)).window_outflow == 0;
-        ensures global<Window<CoinType>>(Signer::address_of(to_limit)).tracked_balance == 0;
+        ensures global<Window<CoinType>>(signer::address_of(to_limit)).window_inflow == 0;
+        ensures global<Window<CoinType>>(signer::address_of(to_limit)).window_outflow == 0;
+        ensures global<Window<CoinType>>(signer::address_of(to_limit)).tracked_balance == 0;
     }
     /// Unrestricted limits are represented by setting all fields in the
     /// limits definition to `MAX_U64`. Anyone can publish an unrestricted
@@ -195,8 +195,8 @@ module DiemFramework::AccountLimits {
     /// resource once it's published.
     public(friend) fun publish_unrestricted_limits<CoinType>(publish_account: &signer) {
         assert!(
-            !exists<LimitsDefinition<CoinType>>(Signer::address_of(publish_account)),
-            Errors::already_published(ELIMITS_DEFINITION)
+            !exists<LimitsDefinition<CoinType>>(signer::address_of(publish_account)),
+            errors::already_published(ELIMITS_DEFINITION)
         );
         move_to(
             publish_account,
@@ -214,12 +214,12 @@ module DiemFramework::AccountLimits {
     }
     spec schema PublishUnrestrictedLimitsAbortsIf<CoinType> {
         publish_account: signer;
-        aborts_if exists<LimitsDefinition<CoinType>>(Signer::address_of(publish_account))
-            with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<LimitsDefinition<CoinType>>(signer::address_of(publish_account))
+            with errors::ALREADY_PUBLISHED;
     }
     spec schema PublishUnrestrictedLimitsEnsures<CoinType> {
         publish_account: signer;
-        ensures exists<LimitsDefinition<CoinType>>(Signer::address_of(publish_account));
+        ensures exists<LimitsDefinition<CoinType>>(signer::address_of(publish_account));
     }
 
     // #[test_only]
@@ -243,7 +243,7 @@ module DiemFramework::AccountLimits {
         new_time_period: u64,
     ) acquires LimitsDefinition {
         Roles::assert_treasury_compliance(tc_account);
-        assert!(exists<LimitsDefinition<CoinType>>(limit_address), Errors::not_published(ELIMITS_DEFINITION));
+        assert!(exists<LimitsDefinition<CoinType>>(limit_address), errors::not_published(ELIMITS_DEFINITION));
 
         // As we don't have Optionals for txn scripts, in update_account_limit_definition.move
         // we use 0 value to represent a None (ie no update to that variable)
@@ -256,7 +256,7 @@ module DiemFramework::AccountLimits {
     spec update_limits_definition {
         modifies global<LimitsDefinition<CoinType>>(limit_address);
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
-        aborts_if !exists<LimitsDefinition<CoinType>>(limit_address) with Errors::NOT_PUBLISHED;
+        aborts_if !exists<LimitsDefinition<CoinType>>(limit_address) with errors::NOT_PUBLISHED;
         ensures exists<LimitsDefinition<CoinType>>(limit_address);
         let old_limits_def = global<LimitsDefinition<CoinType>>(limit_address);
         let post new_limits_def = global<LimitsDefinition<CoinType>>(limit_address);
@@ -289,14 +289,14 @@ module DiemFramework::AccountLimits {
         Roles::assert_treasury_compliance(tc_account);
         let window = borrow_global_mut<Window<CoinType>>(window_address);
         if (aggregate_balance != 0)  { window.tracked_balance = aggregate_balance };
-        assert!(exists<LimitsDefinition<CoinType>>(new_limit_address), Errors::not_published(ELIMITS_DEFINITION));
+        assert!(exists<LimitsDefinition<CoinType>>(new_limit_address), errors::not_published(ELIMITS_DEFINITION));
         window.limit_address = new_limit_address;
     }
     spec update_window_info {
         modifies global<Window<CoinType>>(window_address);
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         aborts_if !exists<Window<CoinType>>(window_address);
-        aborts_if !exists<LimitsDefinition<CoinType>>(new_limit_address) with Errors::NOT_PUBLISHED;
+        aborts_if !exists<LimitsDefinition<CoinType>>(new_limit_address) with errors::NOT_PUBLISHED;
         ensures exists<Window<CoinType>>(window_address);
         let old_window = global<Window<CoinType>>(window_address);
         let post new_window = global<Window<CoinType>>(window_address);
@@ -317,7 +317,7 @@ module DiemFramework::AccountLimits {
     /// the inflow and outflow records.
     fun reset_window<CoinType>(window: &mut Window<CoinType>, limits_definition: &LimitsDefinition<CoinType>) {
         let current_time = DiemTimestamp::now_microseconds();
-        assert!(window.window_start <= MAX_U64 - limits_definition.time_period, Errors::limit_exceeded(EWINDOW));
+        assert!(window.window_start <= MAX_U64 - limits_definition.time_period, errors::limit_exceeded(EWINDOW));
         if (current_time > window.window_start + limits_definition.time_period) {
             window.window_start = current_time;
             window.window_inflow = 0;
@@ -333,7 +333,7 @@ module DiemFramework::AccountLimits {
         window: Window<CoinType>;
         limits_definition: LimitsDefinition<CoinType>;
         include DiemTimestamp::AbortsIfNotOperating;
-        aborts_if window.window_start + limits_definition.time_period > max_u64() with Errors::LIMIT_EXCEEDED;
+        aborts_if window.window_start + limits_definition.time_period > max_u64() with errors::LIMIT_EXCEEDED;
     }
     spec schema ResetWindowEnsures<CoinType> {
         window: Window<CoinType>;
@@ -374,7 +374,7 @@ module DiemFramework::AccountLimits {
         amount: u64,
         receiving: &mut Window<CoinType>,
     ): bool acquires LimitsDefinition {
-        assert!(exists<LimitsDefinition<CoinType>>(receiving.limit_address), Errors::not_published(ELIMITS_DEFINITION));
+        assert!(exists<LimitsDefinition<CoinType>>(receiving.limit_address), errors::not_published(ELIMITS_DEFINITION));
         let limits_definition = borrow_global<LimitsDefinition<CoinType>>(receiving.limit_address);
         // If the limits are unrestricted then don't do any more work.
         if (is_unrestricted(limits_definition)) return true;
@@ -382,10 +382,10 @@ module DiemFramework::AccountLimits {
         reset_window(receiving, limits_definition);
         // Check that the inflow is OK
         // TODO(wrwg): instead of aborting if the below additions overflow, we should perhaps just have ok false.
-        assert!(receiving.window_inflow <= MAX_U64 - amount, Errors::limit_exceeded(EWINDOW));
+        assert!(receiving.window_inflow <= MAX_U64 - amount, errors::limit_exceeded(EWINDOW));
         let inflow_ok = (receiving.window_inflow + amount) <= limits_definition.max_inflow;
         // Check that the holding after the deposit is OK
-        assert!(receiving.tracked_balance <= MAX_U64 - amount, Errors::limit_exceeded(EWINDOW));
+        assert!(receiving.tracked_balance <= MAX_U64 - amount, errors::limit_exceeded(EWINDOW));
         let holding_ok = (receiving.tracked_balance + amount) <= limits_definition.max_holding;
         // The account with `receiving` window can receive the payment so record it.
         if (inflow_ok && holding_ok) {
@@ -402,7 +402,7 @@ module DiemFramework::AccountLimits {
     spec schema CanReceiveAbortsIf<CoinType> {
         amount: num;
         receiving: Window<CoinType>;
-        aborts_if !exists<LimitsDefinition<CoinType>>(receiving.limit_address) with Errors::NOT_PUBLISHED;
+        aborts_if !exists<LimitsDefinition<CoinType>>(receiving.limit_address) with errors::NOT_PUBLISHED;
         include !spec_window_unrestricted<CoinType>(receiving) ==> CanReceiveRestrictedAbortsIf<CoinType>;
     }
     spec schema CanReceiveRestrictedAbortsIf<CoinType> {
@@ -412,8 +412,8 @@ module DiemFramework::AccountLimits {
             window: receiving,
             limits_definition: spec_window_limits<CoinType>(receiving)
         };
-        aborts_if spec_window_reset(receiving).window_inflow + amount > max_u64() with Errors::LIMIT_EXCEEDED;
-        aborts_if spec_window_reset(receiving).tracked_balance + amount > max_u64() with Errors::LIMIT_EXCEEDED;
+        aborts_if spec_window_reset(receiving).window_inflow + amount > max_u64() with errors::LIMIT_EXCEEDED;
+        aborts_if spec_window_reset(receiving).tracked_balance + amount > max_u64() with errors::LIMIT_EXCEEDED;
     }
     spec schema CanReceiveEnsures<CoinType> {
         amount: num;
@@ -461,14 +461,14 @@ module DiemFramework::AccountLimits {
         amount: u64,
         sending: &mut Window<CoinType>,
     ): bool acquires LimitsDefinition {
-        assert!(exists<LimitsDefinition<CoinType>>(sending.limit_address), Errors::not_published(ELIMITS_DEFINITION));
+        assert!(exists<LimitsDefinition<CoinType>>(sending.limit_address), errors::not_published(ELIMITS_DEFINITION));
         let limits_definition = borrow_global<LimitsDefinition<CoinType>>(sending.limit_address);
         // If the limits are unrestricted then don't do any more work.
         if (is_unrestricted(limits_definition)) return true;
 
         reset_window(sending, limits_definition);
         // Check outflow is OK
-        assert!(sending.window_outflow <= MAX_U64 - amount, Errors::limit_exceeded(EWINDOW));
+        assert!(sending.window_outflow <= MAX_U64 - amount, errors::limit_exceeded(EWINDOW));
         let outflow_ok = sending.window_outflow + amount <= limits_definition.max_outflow;
         // Flow is OK, so record it.
         if (outflow_ok) {
@@ -486,7 +486,7 @@ module DiemFramework::AccountLimits {
     spec schema CanWithdrawAbortsIf<CoinType> {
         amount: u64;
         sending: &mut Window<CoinType>;
-        aborts_if !exists<LimitsDefinition<CoinType>>(sending.limit_address) with Errors::NOT_PUBLISHED;
+        aborts_if !exists<LimitsDefinition<CoinType>>(sending.limit_address) with errors::NOT_PUBLISHED;
         include !spec_window_unrestricted(sending) ==> CanWithdrawRestrictedAbortsIf<CoinType>;
     }
     spec schema CanWithdrawRestrictedAbortsIf<CoinType> {
@@ -496,7 +496,7 @@ module DiemFramework::AccountLimits {
             window: sending,
             limits_definition: spec_window_limits<CoinType>(sending)
         };
-        aborts_if spec_window_reset(sending).window_outflow + amount > MAX_U64 with Errors::LIMIT_EXCEEDED;
+        aborts_if spec_window_reset(sending).window_outflow + amount > MAX_U64 with errors::LIMIT_EXCEEDED;
     }
     spec schema CanWithdrawEnsures<CoinType> {
         result: bool;

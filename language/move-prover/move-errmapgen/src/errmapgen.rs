@@ -34,7 +34,7 @@ impl Default for ErrmapOptions {
             error_prefix: "E".to_string(),
             error_category_module: ModuleId::new(
                 AccountAddress::from_hex_literal("0x1").unwrap(),
-                Identifier::new("Errors").unwrap(),
+                Identifier::new("errors").unwrap(),
             ),
             output_file: MOVE_ERROR_DESC_EXTENSION.to_string(),
         }

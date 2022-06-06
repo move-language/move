@@ -1,80 +1,80 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-public intrinsic fun Vector::contains<#0>($t0|v: &vector<#0>, $t1|e: &#0): bool;
+public intrinsic fun vector::contains<#0>($t0|v: &vector<#0>, $t1|e: &#0): bool;
 
 
 [variant baseline]
-public intrinsic fun Vector::index_of<#0>($t0|v: &vector<#0>, $t1|e: &#0): (bool, u64);
+public intrinsic fun vector::index_of<#0>($t0|v: &vector<#0>, $t1|e: &#0): (bool, u64);
 
 
 [variant baseline]
-public intrinsic fun Vector::append<#0>($t0|lhs: &mut vector<#0>, $t1|other: vector<#0>);
+public intrinsic fun vector::append<#0>($t0|lhs: &mut vector<#0>, $t1|other: vector<#0>);
 
 
 [variant baseline]
-public native fun Vector::borrow<#0>($t0|v: &vector<#0>, $t1|i: u64): &#0;
+public native fun vector::borrow<#0>($t0|v: &vector<#0>, $t1|i: u64): &#0;
 
 
 [variant baseline]
-public native fun Vector::borrow_mut<#0>($t0|v: &mut vector<#0>, $t1|i: u64): &mut #0;
+public native fun vector::borrow_mut<#0>($t0|v: &mut vector<#0>, $t1|i: u64): &mut #0;
 
 
 [variant baseline]
-public native fun Vector::destroy_empty<#0>($t0|v: vector<#0>);
+public native fun vector::destroy_empty<#0>($t0|v: vector<#0>);
 
 
 [variant baseline]
-public native fun Vector::empty<#0>(): vector<#0>;
+public native fun vector::empty<#0>(): vector<#0>;
 
 
 [variant baseline]
-public intrinsic fun Vector::is_empty<#0>($t0|v: &vector<#0>): bool;
+public intrinsic fun vector::is_empty<#0>($t0|v: &vector<#0>): bool;
 
 
 [variant baseline]
-public native fun Vector::length<#0>($t0|v: &vector<#0>): u64;
+public native fun vector::length<#0>($t0|v: &vector<#0>): u64;
 
 
 [variant baseline]
-public native fun Vector::pop_back<#0>($t0|v: &mut vector<#0>): #0;
+public native fun vector::pop_back<#0>($t0|v: &mut vector<#0>): #0;
 
 
 [variant baseline]
-public native fun Vector::push_back<#0>($t0|v: &mut vector<#0>, $t1|e: #0);
+public native fun vector::push_back<#0>($t0|v: &mut vector<#0>, $t1|e: #0);
 
 
 [variant baseline]
-public intrinsic fun Vector::remove<#0>($t0|v: &mut vector<#0>, $t1|i: u64): #0;
+public intrinsic fun vector::remove<#0>($t0|v: &mut vector<#0>, $t1|i: u64): #0;
 
 
 [variant baseline]
-public intrinsic fun Vector::reverse<#0>($t0|v: &mut vector<#0>);
+public intrinsic fun vector::reverse<#0>($t0|v: &mut vector<#0>);
 
 
 [variant baseline]
-public fun Vector::singleton<#0>($t0|e: #0): vector<#0> {
+public fun vector::singleton<#0>($t0|e: #0): vector<#0> {
      var $t1|v: vector<#0>
      var $t2: vector<#0>
      var $t3: &mut vector<#0>
      var $t4: #0
      var $t5: vector<#0>
-  0: $t2 := Vector::empty<#0>()
+  0: $t2 := vector::empty<#0>()
   1: $t1 := $t2
   2: $t3 := borrow_local($t1)
   3: $t4 := move($t0)
-  4: Vector::push_back<#0>($t3, $t4)
+  4: vector::push_back<#0>($t3, $t4)
   5: $t5 := move($t1)
   6: return $t5
 }
 
 
 [variant baseline]
-public native fun Vector::swap<#0>($t0|v: &mut vector<#0>, $t1|i: u64, $t2|j: u64);
+public native fun vector::swap<#0>($t0|v: &mut vector<#0>, $t1|i: u64, $t2|j: u64);
 
 
 [variant baseline]
-public intrinsic fun Vector::swap_remove<#0>($t0|v: &mut vector<#0>, $t1|i: u64): #0;
+public intrinsic fun vector::swap_remove<#0>($t0|v: &mut vector<#0>, $t1|i: u64): #0;
 
 
 [variant baseline]
@@ -129,16 +129,16 @@ fun TestMutRef::call_return_ref_different_path_vec($t0|b: bool): TestMutRef::V {
      var $t17: u64
      var $t18: &mut u64
      var $t19: TestMutRef::V
-  0: $t5 := Vector::empty<u64>()
+  0: $t5 := vector::empty<u64>()
   1: $t1 := $t5
-  2: $t6 := Vector::empty<TestMutRef::T>()
+  2: $t6 := vector::empty<TestMutRef::T>()
   3: $t3 := $t6
   4: $t7 := borrow_local($t1)
   5: $t8 := 1
-  6: Vector::push_back<u64>($t7, $t8)
+  6: vector::push_back<u64>($t7, $t8)
   7: $t9 := borrow_local($t1)
   8: $t10 := 2
-  9: Vector::push_back<u64>($t9, $t10)
+  9: vector::push_back<u64>($t9, $t10)
  10: $t11 := move($t1)
  11: $t12 := move($t3)
  12: $t13 := pack TestMutRef::V($t11, $t12)
@@ -182,24 +182,24 @@ fun TestMutRef::call_return_ref_different_path_vec2($t0|b: bool): TestMutRef::V 
      var $t23: u64
      var $t24: &mut u64
      var $t25: TestMutRef::V
-  0: $t5 := Vector::empty<u64>()
+  0: $t5 := vector::empty<u64>()
   1: $t1 := $t5
-  2: $t6 := Vector::empty<TestMutRef::T>()
+  2: $t6 := vector::empty<TestMutRef::T>()
   3: $t3 := $t6
   4: $t7 := borrow_local($t1)
   5: $t8 := 1
-  6: Vector::push_back<u64>($t7, $t8)
+  6: vector::push_back<u64>($t7, $t8)
   7: $t9 := borrow_local($t1)
   8: $t10 := 2
-  9: Vector::push_back<u64>($t9, $t10)
+  9: vector::push_back<u64>($t9, $t10)
  10: $t11 := borrow_local($t3)
  11: $t12 := 3
  12: $t13 := pack TestMutRef::T($t12)
- 13: Vector::push_back<TestMutRef::T>($t11, $t13)
+ 13: vector::push_back<TestMutRef::T>($t11, $t13)
  14: $t14 := borrow_local($t3)
  15: $t15 := 4
  16: $t16 := pack TestMutRef::T($t15)
- 17: Vector::push_back<TestMutRef::T>($t14, $t16)
+ 17: vector::push_back<TestMutRef::T>($t14, $t16)
  18: $t17 := move($t1)
  19: $t18 := move($t3)
  20: $t19 := pack TestMutRef::V($t17, $t18)
@@ -243,24 +243,24 @@ fun TestMutRef::call_return_ref_different_path_vec2_incorrect($t0|b: bool): Test
      var $t23: u64
      var $t24: &mut u64
      var $t25: TestMutRef::V
-  0: $t5 := Vector::empty<u64>()
+  0: $t5 := vector::empty<u64>()
   1: $t1 := $t5
-  2: $t6 := Vector::empty<TestMutRef::T>()
+  2: $t6 := vector::empty<TestMutRef::T>()
   3: $t3 := $t6
   4: $t7 := borrow_local($t1)
   5: $t8 := 1
-  6: Vector::push_back<u64>($t7, $t8)
+  6: vector::push_back<u64>($t7, $t8)
   7: $t9 := borrow_local($t1)
   8: $t10 := 2
-  9: Vector::push_back<u64>($t9, $t10)
+  9: vector::push_back<u64>($t9, $t10)
  10: $t11 := borrow_local($t3)
  11: $t12 := 3
  12: $t13 := pack TestMutRef::T($t12)
- 13: Vector::push_back<TestMutRef::T>($t11, $t13)
+ 13: vector::push_back<TestMutRef::T>($t11, $t13)
  14: $t14 := borrow_local($t3)
  15: $t15 := 4
  16: $t16 := pack TestMutRef::T($t15)
- 17: Vector::push_back<TestMutRef::T>($t14, $t16)
+ 17: vector::push_back<TestMutRef::T>($t14, $t16)
  18: $t17 := move($t1)
  19: $t18 := move($t3)
  20: $t19 := pack TestMutRef::V($t17, $t18)
@@ -362,14 +362,14 @@ fun TestMutRef::return_ref_different_path_vec($t0|b: bool, $t1|x: &mut TestMutRe
   3: $t4 := move($t1)
   4: $t5 := borrow_field<TestMutRef::V>.is($t4)
   5: $t6 := 1
-  6: $t7 := Vector::borrow_mut<u64>($t5, $t6)
+  6: $t7 := vector::borrow_mut<u64>($t5, $t6)
   7: $t2 := $t7
   8: goto 16
   9: label L2
  10: $t8 := move($t1)
  11: $t9 := borrow_field<TestMutRef::V>.is($t8)
  12: $t10 := 0
- 13: $t11 := Vector::borrow_mut<u64>($t9, $t10)
+ 13: $t11 := vector::borrow_mut<u64>($t9, $t10)
  14: $t2 := $t11
  15: goto 16
  16: label L3
@@ -398,14 +398,14 @@ fun TestMutRef::return_ref_different_path_vec2($t0|b: bool, $t1|x: &mut TestMutR
   3: $t4 := move($t1)
   4: $t5 := borrow_field<TestMutRef::V>.is($t4)
   5: $t6 := 1
-  6: $t7 := Vector::borrow_mut<u64>($t5, $t6)
+  6: $t7 := vector::borrow_mut<u64>($t5, $t6)
   7: $t2 := $t7
   8: goto 17
   9: label L2
  10: $t8 := move($t1)
  11: $t9 := borrow_field<TestMutRef::V>.ts($t8)
  12: $t10 := 0
- 13: $t11 := Vector::borrow_mut<TestMutRef::T>($t9, $t10)
+ 13: $t11 := vector::borrow_mut<TestMutRef::T>($t9, $t10)
  14: $t12 := borrow_field<TestMutRef::T>.value($t11)
  15: $t2 := $t12
  16: goto 17
@@ -450,70 +450,70 @@ fun TestMutRef::return_ref_different_root($t0|b: bool, $t1|x: &mut TestMutRef::T
 ============ after pipeline `borrow_strong` ================
 
 [variant baseline]
-public intrinsic fun Vector::contains<#0>($t0|v: vector<#0>, $t1|e: #0): bool;
+public intrinsic fun vector::contains<#0>($t0|v: vector<#0>, $t1|e: #0): bool;
 
 
 [variant baseline]
-public intrinsic fun Vector::index_of<#0>($t0|v: vector<#0>, $t1|e: #0): (bool, u64);
+public intrinsic fun vector::index_of<#0>($t0|v: vector<#0>, $t1|e: #0): (bool, u64);
 
 
 [variant baseline]
-public intrinsic fun Vector::append<#0>($t0|lhs: &mut vector<#0>, $t1|other: vector<#0>);
+public intrinsic fun vector::append<#0>($t0|lhs: &mut vector<#0>, $t1|other: vector<#0>);
 
 
 [variant baseline]
-public native fun Vector::borrow<#0>($t0|v: vector<#0>, $t1|i: u64): #0;
+public native fun vector::borrow<#0>($t0|v: vector<#0>, $t1|i: u64): #0;
 
 
 [variant baseline]
-public native fun Vector::borrow_mut<#0>($t0|v: &mut vector<#0>, $t1|i: u64): &mut #0;
+public native fun vector::borrow_mut<#0>($t0|v: &mut vector<#0>, $t1|i: u64): &mut #0;
 
 
 [variant baseline]
-public native fun Vector::destroy_empty<#0>($t0|v: vector<#0>);
+public native fun vector::destroy_empty<#0>($t0|v: vector<#0>);
 
 
 [variant baseline]
-public native fun Vector::empty<#0>(): vector<#0>;
+public native fun vector::empty<#0>(): vector<#0>;
 
 
 [variant baseline]
-public intrinsic fun Vector::is_empty<#0>($t0|v: vector<#0>): bool;
+public intrinsic fun vector::is_empty<#0>($t0|v: vector<#0>): bool;
 
 
 [variant baseline]
-public native fun Vector::length<#0>($t0|v: vector<#0>): u64;
+public native fun vector::length<#0>($t0|v: vector<#0>): u64;
 
 
 [variant baseline]
-public native fun Vector::pop_back<#0>($t0|v: &mut vector<#0>): #0;
+public native fun vector::pop_back<#0>($t0|v: &mut vector<#0>): #0;
 
 
 [variant baseline]
-public native fun Vector::push_back<#0>($t0|v: &mut vector<#0>, $t1|e: #0);
+public native fun vector::push_back<#0>($t0|v: &mut vector<#0>, $t1|e: #0);
 
 
 [variant baseline]
-public intrinsic fun Vector::remove<#0>($t0|v: &mut vector<#0>, $t1|i: u64): #0;
+public intrinsic fun vector::remove<#0>($t0|v: &mut vector<#0>, $t1|i: u64): #0;
 
 
 [variant baseline]
-public intrinsic fun Vector::reverse<#0>($t0|v: &mut vector<#0>);
+public intrinsic fun vector::reverse<#0>($t0|v: &mut vector<#0>);
 
 
 [variant baseline]
-public fun Vector::singleton<#0>($t0|e: #0): vector<#0> {
+public fun vector::singleton<#0>($t0|e: #0): vector<#0> {
      var $t1|v: vector<#0>
      var $t2: &mut vector<#0>
      var $t3: vector<#0>
      # live_nodes: LocalRoot($t0)
-  0: $t1 := Vector::empty<#0>()
+  0: $t1 := vector::empty<#0>()
      # live_nodes: LocalRoot($t0)
   1: $t2 := borrow_local($t1)
      # live_nodes: LocalRoot($t0), Reference($t2)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t2))}
      # borrows_from: Reference($t2) -> {(@, LocalRoot($t1))}
-  2: Vector::push_back<#0>($t2, $t0)
+  2: vector::push_back<#0>($t2, $t0)
      # live_nodes: LocalRoot($t0)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t2))}
      # borrows_from: Reference($t2) -> {(@, LocalRoot($t1))}
@@ -527,11 +527,11 @@ public fun Vector::singleton<#0>($t0|e: #0): vector<#0> {
 
 
 [variant baseline]
-public native fun Vector::swap<#0>($t0|v: &mut vector<#0>, $t1|i: u64, $t2|j: u64);
+public native fun vector::swap<#0>($t0|v: &mut vector<#0>, $t1|i: u64, $t2|j: u64);
 
 
 [variant baseline]
-public intrinsic fun Vector::swap_remove<#0>($t0|v: &mut vector<#0>, $t1|i: u64): #0;
+public intrinsic fun vector::swap_remove<#0>($t0|v: &mut vector<#0>, $t1|i: u64): #0;
 
 
 [variant baseline]
@@ -599,9 +599,9 @@ fun TestMutRef::call_return_ref_different_path_vec($t0|b: bool): TestMutRef::V {
      var $t13: u64
      var $t14: TestMutRef::V
      # live_nodes: LocalRoot($t0)
-  0: $t1 := Vector::empty<u64>()
+  0: $t1 := vector::empty<u64>()
      # live_nodes: LocalRoot($t0)
-  1: $t5 := Vector::empty<TestMutRef::T>()
+  1: $t5 := vector::empty<TestMutRef::T>()
      # live_nodes: LocalRoot($t0)
   2: $t6 := borrow_local($t1)
      # live_nodes: LocalRoot($t0), Reference($t6)
@@ -611,7 +611,7 @@ fun TestMutRef::call_return_ref_different_path_vec($t0|b: bool): TestMutRef::V {
      # live_nodes: LocalRoot($t0), Reference($t6)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}
      # borrows_from: Reference($t6) -> {(@, LocalRoot($t1))}
-  4: Vector::push_back<u64>($t6, $t7)
+  4: vector::push_back<u64>($t6, $t7)
      # live_nodes: LocalRoot($t0)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}
      # borrows_from: Reference($t6) -> {(@, LocalRoot($t1))}
@@ -623,7 +623,7 @@ fun TestMutRef::call_return_ref_different_path_vec($t0|b: bool): TestMutRef::V {
      # live_nodes: LocalRoot($t0), Reference($t8)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6)), (@, Reference($t8))}
      # borrows_from: Reference($t6) -> {(@, LocalRoot($t1))}, Reference($t8) -> {(@, LocalRoot($t1))}
-  7: Vector::push_back<u64>($t8, $t9)
+  7: vector::push_back<u64>($t8, $t9)
      # live_nodes: LocalRoot($t0)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6)), (@, Reference($t8))}
      # borrows_from: Reference($t6) -> {(@, LocalRoot($t1))}, Reference($t8) -> {(@, LocalRoot($t1))}
@@ -689,9 +689,9 @@ fun TestMutRef::call_return_ref_different_path_vec2($t0|b: bool): TestMutRef::V 
      var $t19: u64
      var $t20: TestMutRef::V
      # live_nodes: LocalRoot($t0)
-  0: $t1 := Vector::empty<u64>()
+  0: $t1 := vector::empty<u64>()
      # live_nodes: LocalRoot($t0)
-  1: $t3 := Vector::empty<TestMutRef::T>()
+  1: $t3 := vector::empty<TestMutRef::T>()
      # live_nodes: LocalRoot($t0)
   2: $t5 := borrow_local($t1)
      # live_nodes: LocalRoot($t0), Reference($t5)
@@ -701,7 +701,7 @@ fun TestMutRef::call_return_ref_different_path_vec2($t0|b: bool): TestMutRef::V 
      # live_nodes: LocalRoot($t0), Reference($t5)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t5))}
      # borrows_from: Reference($t5) -> {(@, LocalRoot($t1))}
-  4: Vector::push_back<u64>($t5, $t6)
+  4: vector::push_back<u64>($t5, $t6)
      # live_nodes: LocalRoot($t0)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t5))}
      # borrows_from: Reference($t5) -> {(@, LocalRoot($t1))}
@@ -713,7 +713,7 @@ fun TestMutRef::call_return_ref_different_path_vec2($t0|b: bool): TestMutRef::V 
      # live_nodes: LocalRoot($t0), Reference($t7)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t5)), (@, Reference($t7))}
      # borrows_from: Reference($t5) -> {(@, LocalRoot($t1))}, Reference($t7) -> {(@, LocalRoot($t1))}
-  7: Vector::push_back<u64>($t7, $t8)
+  7: vector::push_back<u64>($t7, $t8)
      # live_nodes: LocalRoot($t0)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t5)), (@, Reference($t7))}
      # borrows_from: Reference($t5) -> {(@, LocalRoot($t1))}, Reference($t7) -> {(@, LocalRoot($t1))}
@@ -729,7 +729,7 @@ fun TestMutRef::call_return_ref_different_path_vec2($t0|b: bool): TestMutRef::V 
      # live_nodes: LocalRoot($t0), Reference($t9)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t5)), (@, Reference($t7))}, LocalRoot($t3) -> {(@, Reference($t9))}
      # borrows_from: Reference($t5) -> {(@, LocalRoot($t1))}, Reference($t7) -> {(@, LocalRoot($t1))}, Reference($t9) -> {(@, LocalRoot($t3))}
- 11: Vector::push_back<TestMutRef::T>($t9, $t11)
+ 11: vector::push_back<TestMutRef::T>($t9, $t11)
      # live_nodes: LocalRoot($t0)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t5)), (@, Reference($t7))}, LocalRoot($t3) -> {(@, Reference($t9))}
      # borrows_from: Reference($t5) -> {(@, LocalRoot($t1))}, Reference($t7) -> {(@, LocalRoot($t1))}, Reference($t9) -> {(@, LocalRoot($t3))}
@@ -745,7 +745,7 @@ fun TestMutRef::call_return_ref_different_path_vec2($t0|b: bool): TestMutRef::V 
      # live_nodes: LocalRoot($t0), Reference($t12)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t5)), (@, Reference($t7))}, LocalRoot($t3) -> {(@, Reference($t9)), (@, Reference($t12))}
      # borrows_from: Reference($t5) -> {(@, LocalRoot($t1))}, Reference($t7) -> {(@, LocalRoot($t1))}, Reference($t9) -> {(@, LocalRoot($t3))}, Reference($t12) -> {(@, LocalRoot($t3))}
- 15: Vector::push_back<TestMutRef::T>($t12, $t14)
+ 15: vector::push_back<TestMutRef::T>($t12, $t14)
      # live_nodes: LocalRoot($t0)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t5)), (@, Reference($t7))}, LocalRoot($t3) -> {(@, Reference($t9)), (@, Reference($t12))}
      # borrows_from: Reference($t5) -> {(@, LocalRoot($t1))}, Reference($t7) -> {(@, LocalRoot($t1))}, Reference($t9) -> {(@, LocalRoot($t3))}, Reference($t12) -> {(@, LocalRoot($t3))}
@@ -816,9 +816,9 @@ fun TestMutRef::call_return_ref_different_path_vec2_incorrect($t0|b: bool): Test
      var $t19: u64
      var $t20: TestMutRef::V
      # live_nodes: LocalRoot($t0)
-  0: $t1 := Vector::empty<u64>()
+  0: $t1 := vector::empty<u64>()
      # live_nodes: LocalRoot($t0)
-  1: $t3 := Vector::empty<TestMutRef::T>()
+  1: $t3 := vector::empty<TestMutRef::T>()
      # live_nodes: LocalRoot($t0)
   2: $t5 := borrow_local($t1)
      # live_nodes: LocalRoot($t0), Reference($t5)
@@ -828,7 +828,7 @@ fun TestMutRef::call_return_ref_different_path_vec2_incorrect($t0|b: bool): Test
      # live_nodes: LocalRoot($t0), Reference($t5)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t5))}
      # borrows_from: Reference($t5) -> {(@, LocalRoot($t1))}
-  4: Vector::push_back<u64>($t5, $t6)
+  4: vector::push_back<u64>($t5, $t6)
      # live_nodes: LocalRoot($t0)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t5))}
      # borrows_from: Reference($t5) -> {(@, LocalRoot($t1))}
@@ -840,7 +840,7 @@ fun TestMutRef::call_return_ref_different_path_vec2_incorrect($t0|b: bool): Test
      # live_nodes: LocalRoot($t0), Reference($t7)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t5)), (@, Reference($t7))}
      # borrows_from: Reference($t5) -> {(@, LocalRoot($t1))}, Reference($t7) -> {(@, LocalRoot($t1))}
-  7: Vector::push_back<u64>($t7, $t8)
+  7: vector::push_back<u64>($t7, $t8)
      # live_nodes: LocalRoot($t0)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t5)), (@, Reference($t7))}
      # borrows_from: Reference($t5) -> {(@, LocalRoot($t1))}, Reference($t7) -> {(@, LocalRoot($t1))}
@@ -856,7 +856,7 @@ fun TestMutRef::call_return_ref_different_path_vec2_incorrect($t0|b: bool): Test
      # live_nodes: LocalRoot($t0), Reference($t9)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t5)), (@, Reference($t7))}, LocalRoot($t3) -> {(@, Reference($t9))}
      # borrows_from: Reference($t5) -> {(@, LocalRoot($t1))}, Reference($t7) -> {(@, LocalRoot($t1))}, Reference($t9) -> {(@, LocalRoot($t3))}
- 11: Vector::push_back<TestMutRef::T>($t9, $t11)
+ 11: vector::push_back<TestMutRef::T>($t9, $t11)
      # live_nodes: LocalRoot($t0)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t5)), (@, Reference($t7))}, LocalRoot($t3) -> {(@, Reference($t9))}
      # borrows_from: Reference($t5) -> {(@, LocalRoot($t1))}, Reference($t7) -> {(@, LocalRoot($t1))}, Reference($t9) -> {(@, LocalRoot($t3))}
@@ -872,7 +872,7 @@ fun TestMutRef::call_return_ref_different_path_vec2_incorrect($t0|b: bool): Test
      # live_nodes: LocalRoot($t0), Reference($t12)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t5)), (@, Reference($t7))}, LocalRoot($t3) -> {(@, Reference($t9)), (@, Reference($t12))}
      # borrows_from: Reference($t5) -> {(@, LocalRoot($t1))}, Reference($t7) -> {(@, LocalRoot($t1))}, Reference($t9) -> {(@, LocalRoot($t3))}, Reference($t12) -> {(@, LocalRoot($t3))}
- 15: Vector::push_back<TestMutRef::T>($t12, $t14)
+ 15: vector::push_back<TestMutRef::T>($t12, $t14)
      # live_nodes: LocalRoot($t0)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t5)), (@, Reference($t7))}, LocalRoot($t3) -> {(@, Reference($t9)), (@, Reference($t12))}
      # borrows_from: Reference($t5) -> {(@, LocalRoot($t1))}, Reference($t7) -> {(@, LocalRoot($t1))}, Reference($t9) -> {(@, LocalRoot($t3))}, Reference($t12) -> {(@, LocalRoot($t3))}
@@ -1036,7 +1036,7 @@ fun TestMutRef::return_ref_different_path_vec($t0|b: bool, $t1|x: &mut TestMutRe
      # live_nodes: LocalRoot($t0), Reference($t1), Reference($t3)
      # borrowed_by: Reference($t1) -> {(.is (vector<u64>), Reference($t3))}
      # borrows_from: Reference($t3) -> {(.is (vector<u64>), Reference($t1))}
-  4: $t2 := Vector::borrow_mut<u64>($t3, $t4)
+  4: $t2 := vector::borrow_mut<u64>($t3, $t4)
      # live_nodes: LocalRoot($t0), Reference($t1), Reference($t2)
      # moved_nodes: Reference($t3)
      # borrowed_by: Reference($t1) -> {(.is (vector<u64>), Reference($t3))}, Reference($t3) -> {([], Reference($t2))}
@@ -1053,7 +1053,7 @@ fun TestMutRef::return_ref_different_path_vec($t0|b: bool, $t1|x: &mut TestMutRe
      # live_nodes: LocalRoot($t0), Reference($t1), Reference($t5)
      # borrowed_by: Reference($t1) -> {(.is (vector<u64>), Reference($t5))}
      # borrows_from: Reference($t5) -> {(.is (vector<u64>), Reference($t1))}
-  9: $t2 := Vector::borrow_mut<u64>($t5, $t6)
+  9: $t2 := vector::borrow_mut<u64>($t5, $t6)
      # live_nodes: LocalRoot($t0), Reference($t1), Reference($t2)
      # moved_nodes: Reference($t3), Reference($t5)
      # borrowed_by: Reference($t1) -> {(.is (vector<u64>), Reference($t3)), (.is (vector<u64>), Reference($t5))}, Reference($t3) -> {([], Reference($t2))}, Reference($t5) -> {([], Reference($t2))}
@@ -1093,7 +1093,7 @@ fun TestMutRef::return_ref_different_path_vec2($t0|b: bool, $t1|x: &mut TestMutR
      # live_nodes: LocalRoot($t0), Reference($t1), Reference($t3)
      # borrowed_by: Reference($t1) -> {(.is (vector<u64>), Reference($t3))}
      # borrows_from: Reference($t3) -> {(.is (vector<u64>), Reference($t1))}
-  4: $t2 := Vector::borrow_mut<u64>($t3, $t4)
+  4: $t2 := vector::borrow_mut<u64>($t3, $t4)
      # live_nodes: LocalRoot($t0), Reference($t1), Reference($t2)
      # moved_nodes: Reference($t3)
      # borrowed_by: Reference($t1) -> {(.is (vector<u64>), Reference($t3))}, Reference($t3) -> {([], Reference($t2))}
@@ -1110,7 +1110,7 @@ fun TestMutRef::return_ref_different_path_vec2($t0|b: bool, $t1|x: &mut TestMutR
      # live_nodes: LocalRoot($t0), Reference($t1), Reference($t5)
      # borrowed_by: Reference($t1) -> {(.ts (vector<TestMutRef::T>), Reference($t5))}
      # borrows_from: Reference($t5) -> {(.ts (vector<TestMutRef::T>), Reference($t1))}
-  9: $t7 := Vector::borrow_mut<TestMutRef::T>($t5, $t6)
+  9: $t7 := vector::borrow_mut<TestMutRef::T>($t5, $t6)
      # live_nodes: LocalRoot($t0), Reference($t1), Reference($t7)
      # moved_nodes: Reference($t5)
      # borrowed_by: Reference($t1) -> {(.ts (vector<TestMutRef::T>), Reference($t5))}, Reference($t5) -> {([], Reference($t7))}
@@ -1177,7 +1177,7 @@ fun TestMutRef::return_ref_different_root($t0|b: bool, $t1|x: &mut TestMutRef::T
 
 ==== borrow analysis summaries ====
 
-fun Vector::borrow_mut[baseline]
+fun vector::borrow_mut[baseline]
 borrowed_by: Reference($t0) -> {([], Return(0))}
 borrows_from: Return(0) -> {([], Reference($t0))}
 

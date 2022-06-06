@@ -2,8 +2,8 @@
 // TODO(cvc5): this test requires a separate baseline because cvc5 produces false positives for some of choices
 // separate_baseline: simplify
 module 0x42::TestSome {
-    use Std::Signer;
-    use Std::Vector;
+    use std::signer;
+    use std::vector;
 
     // Basic tests
     // ===========
@@ -47,24 +47,24 @@ module 0x42::TestSome {
         move_to<R>(s2, R{x: 2});
     }
     spec populate_R {
-        let a1 = Signer::address_of(s1);
-        let a2 = Signer::address_of(s2);
+        let a1 = signer::address_of(s1);
+        let a2 = signer::address_of(s2);
         /// The requires guarantees that there is no other address which can satisfy the choice below.
         requires forall a: address: !exists<R>(a);
         let choice = choose a: address where exists<R>(a) && global<R>(a).x == 2;
-        ensures choice == Signer::address_of(s2);
+        ensures choice == signer::address_of(s2);
     }
 
     // Testing min choice
     // ==================
 
     fun test_min(): vector<u64> {
-        let v = Vector::empty<u64>();
+        let v = vector::empty<u64>();
         let v_ref = &mut v;
-        Vector::push_back(v_ref, 1);
-        Vector::push_back(v_ref, 2);
-        Vector::push_back(v_ref, 3);
-        Vector::push_back(v_ref, 2);
+        vector::push_back(v_ref, 1);
+        vector::push_back(v_ref, 2);
+        vector::push_back(v_ref, 3);
+        vector::push_back(v_ref, 2);
         v
     }
     spec test_min {
@@ -72,13 +72,13 @@ module 0x42::TestSome {
     }
 
     fun test_not_using_min_incorrect(): vector<u64> {
-        let v = Vector::empty<u64>();
+        let v = vector::empty<u64>();
         let v_ref = &mut v;
-        Vector::push_back(v_ref, 1);
-        Vector::push_back(v_ref, 2);
-        Vector::push_back(v_ref, 3);
-        Vector::push_back(v_ref, 2);
-        Vector::push_back(v_ref, 2);
+        vector::push_back(v_ref, 1);
+        vector::push_back(v_ref, 2);
+        vector::push_back(v_ref, 3);
+        vector::push_back(v_ref, 2);
+        vector::push_back(v_ref, 2);
         v
     }
     spec test_not_using_min_incorrect {
@@ -298,7 +298,7 @@ module 0x42::TestSome {
     }
 
     spec create_ballot {
-        ensures !(get_ballot<Proposal>(Signer::address_of(ballot_account), result).expiration_timestamp_secs
+        ensures !(get_ballot<Proposal>(signer::address_of(ballot_account), result).expiration_timestamp_secs
             <= 0);
     }
 

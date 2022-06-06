@@ -4,8 +4,8 @@
 module DiemFramework::ChainId {
     use DiemFramework::CoreAddresses;
     use DiemFramework::DiemTimestamp;
-    use Std::Errors;
-    use Std::Signer;
+    use std::errors;
+    use std::signer;
 
     struct ChainId has key {
         id: u8
@@ -18,17 +18,17 @@ module DiemFramework::ChainId {
     public fun initialize(dr_account: &signer, id: u8) {
         DiemTimestamp::assert_genesis();
         CoreAddresses::assert_diem_root(dr_account);
-        assert!(!exists<ChainId>(Signer::address_of(dr_account)), Errors::already_published(ECHAIN_ID));
+        assert!(!exists<ChainId>(signer::address_of(dr_account)), errors::already_published(ECHAIN_ID));
         move_to(dr_account, ChainId { id })
     }
 
     spec initialize {
         pragma opaque;
-        let dr_addr = Signer::address_of(dr_account);
+        let dr_addr = signer::address_of(dr_account);
         modifies global<ChainId>(dr_addr);
         include DiemTimestamp::AbortsIfNotGenesis;
         include CoreAddresses::AbortsIfNotDiemRoot{account: dr_account};
-        aborts_if exists<ChainId>(dr_addr) with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<ChainId>(dr_addr) with errors::ALREADY_PUBLISHED;
         ensures exists<ChainId>(dr_addr);
     }
 

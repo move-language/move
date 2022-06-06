@@ -4,10 +4,10 @@
 /// struct (the `Self::ValidatorConfig` in a `DiemConfig::ValidatorInfo` which is a member
 /// of the `DiemSystem::DiemSystem.validators` vector).
 module CoreFramework::ValidatorConfig {
-    use Std::Capability::Cap;
-    use Std::Errors;
-    use Std::Option::{Self, Option};
-    use Std::Signer;
+    use std::capability::Cap;
+    use std::errors;
+    use std::option::{Self, Option};
+    use std::signer;
     use CoreFramework::DiemTimestamp;
     use CoreFramework::ValidatorOperatorConfig;
     use CoreFramework::Signature;
@@ -49,7 +49,7 @@ module CoreFramework::ValidatorConfig {
 
         assert!(
             !exists<ValidatorConfigChainMarker<T>>(@CoreResources),
-            Errors::already_published(ECHAIN_MARKER)
+            errors::already_published(ECHAIN_MARKER)
         );
         move_to(account, ValidatorConfigChainMarker<T>{});
     }
@@ -69,16 +69,16 @@ module CoreFramework::ValidatorConfig {
         DiemTimestamp::assert_operating();
         assert!(
             exists<ValidatorConfigChainMarker<T>>(@CoreResources),
-            Errors::not_published(ECHAIN_MARKER)
+            errors::not_published(ECHAIN_MARKER)
         );
 
         assert!(
-            !exists<ValidatorConfig>(Signer::address_of(validator_account)),
-            Errors::already_published(EVALIDATOR_CONFIG)
+            !exists<ValidatorConfig>(signer::address_of(validator_account)),
+            errors::already_published(EVALIDATOR_CONFIG)
         );
         move_to(validator_account, ValidatorConfig {
-            config: Option::none(),
-            operator_account: Option::none(),
+            config: option::none(),
+            operator_account: option::none(),
             human_name,
         });
     }
@@ -97,20 +97,20 @@ module CoreFramework::ValidatorConfig {
     public fun set_operator(validator_account: &signer, operator_addr: address) acquires ValidatorConfig {
         assert!(
             ValidatorOperatorConfig::has_validator_operator_config(operator_addr),
-            Errors::invalid_argument(ENOT_A_VALIDATOR_OPERATOR)
+            errors::invalid_argument(ENOT_A_VALIDATOR_OPERATOR)
         );
-        let sender = Signer::address_of(validator_account);
-        assert!(exists_config(sender), Errors::not_published(EVALIDATOR_CONFIG));
-        (borrow_global_mut<ValidatorConfig>(sender)).operator_account = Option::some(operator_addr);
+        let sender = signer::address_of(validator_account);
+        assert!(exists_config(sender), errors::not_published(EVALIDATOR_CONFIG));
+        (borrow_global_mut<ValidatorConfig>(sender)).operator_account = option::some(operator_addr);
     }
 
     /// Removes an operator account, setting a corresponding field to Option::none.
     /// The old config is preserved.
     public fun remove_operator(validator_account: &signer) acquires ValidatorConfig {
-        let sender = Signer::address_of(validator_account);
+        let sender = signer::address_of(validator_account);
         // Config field remains set
-        assert!(exists_config(sender), Errors::not_published(EVALIDATOR_CONFIG));
-        (borrow_global_mut<ValidatorConfig>(sender)).operator_account = Option::none();
+        assert!(exists_config(sender), errors::not_published(EVALIDATOR_CONFIG));
+        (borrow_global_mut<ValidatorConfig>(sender)).operator_account = option::none();
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -128,17 +128,17 @@ module CoreFramework::ValidatorConfig {
         fullnode_network_addresses: vector<u8>,
     ) acquires ValidatorConfig {
         assert!(
-            Signer::address_of(validator_operator_account) == get_operator(validator_addr),
-            Errors::invalid_argument(EINVALID_TRANSACTION_SENDER)
+            signer::address_of(validator_operator_account) == get_operator(validator_addr),
+            errors::invalid_argument(EINVALID_TRANSACTION_SENDER)
         );
         assert!(
             Signature::ed25519_validate_pubkey(copy consensus_pubkey),
-            Errors::invalid_argument(EINVALID_CONSENSUS_KEY)
+            errors::invalid_argument(EINVALID_CONSENSUS_KEY)
         );
         // TODO(valerini): verify the proof of posession for consensus_pubkey
-        assert!(exists_config(validator_addr), Errors::not_published(EVALIDATOR_CONFIG));
+        assert!(exists_config(validator_addr), errors::not_published(EVALIDATOR_CONFIG));
         let t_ref = borrow_global_mut<ValidatorConfig>(validator_addr);
-        t_ref.config = Option::some(Config {
+        t_ref.config = option::some(Config {
             consensus_pubkey,
             validator_network_addresses,
             fullnode_network_addresses,
@@ -156,22 +156,22 @@ module CoreFramework::ValidatorConfig {
     /// that if the validator account becomes valid, it stays valid, e.g.
     /// all validators in the Validator Set are valid
     public fun is_valid(addr: address): bool acquires ValidatorConfig {
-        exists<ValidatorConfig>(addr) && Option::is_some(&borrow_global<ValidatorConfig>(addr).config)
+        exists<ValidatorConfig>(addr) && option::is_some(&borrow_global<ValidatorConfig>(addr).config)
     }
 
     /// Get Config
     /// Aborts if there is no ValidatorConfig resource or if its config is empty
     public fun get_config(addr: address): Config acquires ValidatorConfig {
-        assert!(exists_config(addr), Errors::not_published(EVALIDATOR_CONFIG));
+        assert!(exists_config(addr), errors::not_published(EVALIDATOR_CONFIG));
         let config = &borrow_global<ValidatorConfig>(addr).config;
-        assert!(Option::is_some(config), Errors::invalid_argument(EVALIDATOR_CONFIG));
-        *Option::borrow(config)
+        assert!(option::is_some(config), errors::invalid_argument(EVALIDATOR_CONFIG));
+        *option::borrow(config)
     }
 
     /// Get validator's account human name
     /// Aborts if there is no ValidatorConfig resource
     public fun get_human_name(addr: address): vector<u8> acquires ValidatorConfig {
-        assert!(exists<ValidatorConfig>(addr), Errors::not_published(EVALIDATOR_CONFIG));
+        assert!(exists<ValidatorConfig>(addr), errors::not_published(EVALIDATOR_CONFIG));
         let t_ref = borrow_global<ValidatorConfig>(addr);
         *&t_ref.human_name
     }
@@ -180,10 +180,10 @@ module CoreFramework::ValidatorConfig {
     /// Aborts if there is no ValidatorConfig resource or
     /// if the operator_account is unset
     public fun get_operator(addr: address): address acquires ValidatorConfig {
-        assert!(exists<ValidatorConfig>(addr), Errors::not_published(EVALIDATOR_CONFIG));
+        assert!(exists<ValidatorConfig>(addr), errors::not_published(EVALIDATOR_CONFIG));
         let t_ref = borrow_global<ValidatorConfig>(addr);
-        assert!(Option::is_some(&t_ref.operator_account), Errors::invalid_argument(EVALIDATOR_CONFIG));
-        *Option::borrow(&t_ref.operator_account)
+        assert!(option::is_some(&t_ref.operator_account), errors::invalid_argument(EVALIDATOR_CONFIG));
+        *option::borrow(&t_ref.operator_account)
     }
 
     /// Get consensus_pubkey from Config

@@ -1,9 +1,9 @@
 module 0x8675309::A {
-    use Std::Signer;
+    use std::signer;
     struct T1 has key {v: u64}
 
     public fun test(account: &signer) {
-        borrow_global_mut<T1>(Signer::address_of(account));
+        borrow_global_mut<T1>(signer::address_of(account));
     }
 
 }

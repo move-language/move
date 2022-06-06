@@ -526,36 +526,36 @@ function {:inline} $SliceVecByRange<T>(v: Vec T, r: $Range): Vec T {
 // assert that sha2/3 are injections without using global quantified axioms.
 
 
-function $1_Hash_sha2(val: Vec int): Vec int;
+function $1_hash_sha2(val: Vec int): Vec int;
 
 // This says that Hash_sha2 is bijective.
-axiom (forall v1,v2: Vec int :: {$1_Hash_sha2(v1), $1_Hash_sha2(v2)}
-       $IsEqual'vec'u8''(v1, v2) <==> $IsEqual'vec'u8''($1_Hash_sha2(v1), $1_Hash_sha2(v2)));
+axiom (forall v1,v2: Vec int :: {$1_hash_sha2(v1), $1_hash_sha2(v2)}
+       $IsEqual'vec'u8''(v1, v2) <==> $IsEqual'vec'u8''($1_hash_sha2(v1), $1_hash_sha2(v2)));
 
-procedure $1_Hash_sha2_256(val: Vec int) returns (res: Vec int);
-ensures res == $1_Hash_sha2(val);     // returns Hash_sha2 Value
+procedure $1_hash_sha2_256(val: Vec int) returns (res: Vec int);
+ensures res == $1_hash_sha2(val);     // returns Hash_sha2 Value
 ensures $IsValid'vec'u8''(res);    // result is a legal vector of U8s.
 ensures LenVec(res) == 32;               // result is 32 bytes.
 
 // Spec version of Move native function.
-function {:inline} $1_Hash_$sha2_256(val: Vec int): Vec int {
-    $1_Hash_sha2(val)
+function {:inline} $1_hash_$sha2_256(val: Vec int): Vec int {
+    $1_hash_sha2(val)
 }
 
 // similarly for Hash_sha3
-function $1_Hash_sha3(val: Vec int): Vec int;
+function $1_hash_sha3(val: Vec int): Vec int;
 
-axiom (forall v1,v2: Vec int :: {$1_Hash_sha3(v1), $1_Hash_sha3(v2)}
-       $IsEqual'vec'u8''(v1, v2) <==> $IsEqual'vec'u8''($1_Hash_sha3(v1), $1_Hash_sha3(v2)));
+axiom (forall v1,v2: Vec int :: {$1_hash_sha3(v1), $1_hash_sha3(v2)}
+       $IsEqual'vec'u8''(v1, v2) <==> $IsEqual'vec'u8''($1_hash_sha3(v1), $1_hash_sha3(v2)));
 
-procedure $1_Hash_sha3_256(val: Vec int) returns (res: Vec int);
-ensures res == $1_Hash_sha3(val);     // returns Hash_sha3 Value
+procedure $1_hash_sha3_256(val: Vec int) returns (res: Vec int);
+ensures res == $1_hash_sha3(val);     // returns Hash_sha3 Value
 ensures $IsValid'vec'u8''(res);    // result is a legal vector of U8s.
 ensures LenVec(res) == 32;               // result is 32 bytes.
 
 // Spec version of Move native function.
-function {:inline} $1_Hash_$sha3_256(val: Vec int): Vec int {
-    $1_Hash_sha3(val)
+function {:inline} $1_hash_$sha3_256(val: Vec int): Vec int {
+    $1_hash_sha3(val)
 }
 
 // ==================================================================================
@@ -596,18 +596,18 @@ function {:inline} $IsEqual'signer'(s1: $signer, s2: $signer): bool {
     s1 == s2
 }
 
-procedure {:inline 1} $1_Signer_borrow_address(signer: $signer) returns (res: int) {
+procedure {:inline 1} $1_signer_borrow_address(signer: $signer) returns (res: int) {
     res := $addr#$signer(signer);
 }
 
-function {:inline} $1_Signer_$borrow_address(signer: $signer): int
+function {:inline} $1_signer_$borrow_address(signer: $signer): int
 {
     $addr#$signer(signer)
 }
 
-function $1_Signer_is_txn_signer(s: $signer): bool;
+function $1_signer_is_txn_signer(s: $signer): bool;
 
-function $1_Signer_is_txn_signer_addr(a: int): bool;
+function $1_signer_is_txn_signer_addr(a: int): bool;
 
 
 // ==================================================================================
@@ -641,7 +641,7 @@ procedure {:inline 1} $1_Signature_ed25519_verify(
 
 
 // ==================================================================================
-// Native BCS::serialize
+// Native bcs::serialize
 
 {%- for instance in bcs_instances %}
 
@@ -661,14 +661,14 @@ procedure {:inline 1} $1_Signature_ed25519_verify(
 {% set_global emit_generic_event = false %}
 
 // Generic code for dealing with mutations (havoc) still requires type and memory declarations.
-type $1_Event_EventHandleGenerator;
-var $1_Event_EventHandleGenerator_$memory: $Memory $1_Event_EventHandleGenerator;
+type $1_event_EventHandleGenerator;
+var $1_event_EventHandleGenerator_$memory: $Memory $1_event_EventHandleGenerator;
 
 // Abstract type of event handles.
-type $1_Event_EventHandle;
+type $1_event_EventHandle;
 
 // Global state to implement uniqueness of event handles.
-var $1_Event_EventHandles: [$1_Event_EventHandle]bool;
+var $1_event_EventHandles: [$1_event_EventHandle]bool;
 
 // Universal representation of an an event. For each concrete event type, we generate a constructor.
 type {:datatype} $EventRep;
@@ -676,7 +676,7 @@ type {:datatype} $EventRep;
 // Representation of EventStore that consists of event streams.
 type {:datatype} $EventStore;
 function {:constructor} $EventStore(
-    counter: int, streams: [$1_Event_EventHandle]Multiset $EventRep): $EventStore;
+    counter: int, streams: [$1_event_EventHandle]Multiset $EventRep): $EventStore;
 
 // Global state holding EventStore.
 var $es: $EventStore;
@@ -687,7 +687,7 @@ procedure {:inline 1} $InitEventStore() {
 
 function {:inline} $EventStore__is_empty(es: $EventStore): bool {
     (counter#$EventStore(es) == 0) &&
-    (forall handle: $1_Event_EventHandle ::
+    (forall handle: $1_event_EventHandle ::
         (var stream := streams#$EventStore(es)[handle];
         IsEmptyMultiset(stream)))
 }
@@ -695,7 +695,7 @@ function {:inline} $EventStore__is_empty(es: $EventStore): bool {
 // This function returns (es1 - es2). This function assumes that es2 is a subset of es1.
 function {:inline} $EventStore__subtract(es1: $EventStore, es2: $EventStore): $EventStore {
     $EventStore(counter#$EventStore(es1)-counter#$EventStore(es2),
-        (lambda handle: $1_Event_EventHandle ::
+        (lambda handle: $1_event_EventHandle ::
         SubtractMultiset(
             streams#$EventStore(es1)[handle],
             streams#$EventStore(es2)[handle])))
@@ -703,7 +703,7 @@ function {:inline} $EventStore__subtract(es1: $EventStore, es2: $EventStore): $E
 
 function {:inline} $EventStore__is_subset(es1: $EventStore, es2: $EventStore): bool {
     (counter#$EventStore(es1) <= counter#$EventStore(es2)) &&
-    (forall handle: $1_Event_EventHandle ::
+    (forall handle: $1_event_EventHandle ::
         IsSubsetMultiset(
             streams#$EventStore(es1)[handle],
             streams#$EventStore(es2)[handle]

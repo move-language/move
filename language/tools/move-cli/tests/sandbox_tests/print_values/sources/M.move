@@ -1,7 +1,7 @@
 address 0x2 {
 module M {
-    use Std::Debug;
-    use Std::Vector;
+    use std::debug;
+    use std::vector;
 
     struct Foo has drop {}
     struct Bar has drop { x: u128, y: Foo, z: bool }
@@ -9,22 +9,22 @@ module M {
 
     public fun test()  {
         let x = 42;
-        Debug::print(&x);
+        debug::print(&x);
 
-        let v = Vector::empty();
-        Vector::push_back(&mut v, 100);
-        Vector::push_back(&mut v, 200);
-        Vector::push_back(&mut v, 300);
-        Debug::print(&v);
+        let v = vector::empty();
+        vector::push_back(&mut v, 100);
+        vector::push_back(&mut v, 200);
+        vector::push_back(&mut v, 300);
+        debug::print(&v);
 
         let foo = Foo {};
-        Debug::print(&foo);
+        debug::print(&foo);
 
         let bar = Bar { x: 404, y: Foo {}, z: true };
-        Debug::print(&bar);
+        debug::print(&bar);
 
         let box = Box { x: Foo {} };
-        Debug::print(&box);
+        debug::print(&box);
     }
 }
 }

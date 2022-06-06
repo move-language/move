@@ -82,7 +82,7 @@ pub(crate) fn prepare_with_override(
     let mut named_addresses = BTreeMap::new();
     if !options.no_default_named_addresses {
         let default_mapping = [
-            ("Std", "0x1"),
+            ("std", "0x1"),
             ("DiemFramework", "0x1"),
             ("DiemRoot", "0xA550C18"),
             ("CurrencyInfo", "0xA550C18"),

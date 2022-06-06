@@ -648,7 +648,7 @@ impl GlobalEnv {
     ) -> FileId {
         let file_id = self.source_files.add(file_name, source.to_string());
         self.stdlib_address =
-            self.resolve_std_address_alias(self.stdlib_address.clone(), "Std", &address_aliases);
+            self.resolve_std_address_alias(self.stdlib_address.clone(), "std", &address_aliases);
         self.extlib_address = self.resolve_std_address_alias(
             self.extlib_address.clone(),
             "Extensions",
@@ -1041,7 +1041,7 @@ impl GlobalEnv {
             let struct_env = module_env.get_struct(*sid);
             let module_name = module_env.get_name();
             module_name.addr() == &BigUint::one()
-                && &*self.symbol_pool.string(module_name.name()) == "Event"
+                && &*self.symbol_pool.string(module_name.name()) == "event"
                 && &*self.symbol_pool.string(struct_env.get_name()) == "EventHandle"
         } else {
             false
@@ -2527,7 +2527,7 @@ impl<'env> StructEnv<'env> {
     pub fn is_vector(&self) -> bool {
         let name = self.symbol_pool().string(self.module_env.get_name().name());
         let addr = self.module_env.get_name().addr();
-        name.as_ref() == "Vector" && addr == &BigUint::from(0_u64)
+        name.as_ref() == "vector" && addr == &BigUint::from(0_u64)
     }
 
     /// Returns true if this struct is ghost memory for a specification variable.

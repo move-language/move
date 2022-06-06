@@ -1,6 +1,6 @@
 module 0x42::TestGlobalInvariants {
 
-    use Std::Signer;
+    use std::signer;
     spec module {
         pragma verify = true;
     }
@@ -31,8 +31,8 @@ module 0x42::TestGlobalInvariants {
         move_to<R>(account, R{x: 0});
     }
     spec create_R {
-        requires !exists<R>(Signer::address_of(account));
-        requires !exists<S>(Signer::address_of(account));
+        requires !exists<R>(signer::address_of(account));
+        requires !exists<S>(signer::address_of(account));
     }
 
     public fun create_R_invalid(account: &signer) {
@@ -41,27 +41,27 @@ module 0x42::TestGlobalInvariants {
     }
 
     public fun get_S_x(account: &signer): u64 acquires S {
-        assert!(exists<R>(Signer::address_of(account)), 0);
-        borrow_global<S>(Signer::address_of(account)).x
+        assert!(exists<R>(signer::address_of(account)), 0);
+        borrow_global<S>(signer::address_of(account)).x
     }
     spec get_S_x {
         // We do not need the aborts for exists<S> because exists<R> implies this.
-        aborts_if !exists<R>(Signer::address_of(account));
-        ensures result == global<S>(Signer::address_of(account)).x;
+        aborts_if !exists<R>(signer::address_of(account));
+        ensures result == global<S>(signer::address_of(account)).x;
     }
 
     public fun remove_S_invalid(account: &signer) acquires S {
         // We cannot remove an S if there is an R.
-        assert!(exists<R>(Signer::address_of(account)), 0);
-        let S{x:_} = move_from<S>(Signer::address_of(account));
+        assert!(exists<R>(signer::address_of(account)), 0);
+        let S{x:_} = move_from<S>(signer::address_of(account));
     }
     spec remove_S_invalid {
-        aborts_if !exists<R>(Signer::address_of(account));
+        aborts_if !exists<R>(signer::address_of(account));
     }
 
     public fun remove_R_invalid(account: &signer) acquires R {
         // We cannot remove an R because of the update invariant.
-        assert!(exists<R>(Signer::address_of(account)), 0);
-        let R{x:_} = move_from<R>(Signer::address_of(account));
+        assert!(exists<R>(signer::address_of(account)), 0);
+        let R{x:_} = move_from<R>(signer::address_of(account));
     }
 }

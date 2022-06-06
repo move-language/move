@@ -115,8 +115,8 @@ object "A2_M" {
                     case 3 {
                         // $t11 := borrow_local($t0)
                         $t11 := $MakePtr(false, $locals)
-                        // $t12 := Vector::length<vector<vector<u8>>>($t11)
-                        $t12 := A1_Vector_length$vec$vec$u8$$$($t11)
+                        // $t12 := vector::length<vector<vector<u8>>>($t11)
+                        $t12 := A1_vector_length$vec$vec$u8$$$($t11)
                         // $t13 := 0
                         $t13 := 0
                         // $t6 := $t13
@@ -136,10 +136,10 @@ object "A2_M" {
                         // label L0
                         // $t17 := borrow_local($t0)
                         $t17 := $MakePtr(false, $locals)
-                        // $t18 := Vector::borrow<vector<vector<u8>>>($t17, $t1)
-                        $t18 := A1_Vector_borrow$vec$vec$u8$$$($t17, i)
-                        // $t19 := Vector::length<vector<u8>>($t18)
-                        $t19 := A1_Vector_length$vec$u8$$($t18)
+                        // $t18 := vector::borrow<vector<vector<u8>>>($t17, $t1)
+                        $t18 := A1_vector_borrow$vec$vec$u8$$$($t17, i)
+                        // $t19 := vector::length<vector<u8>>($t18)
+                        $t19 := A1_vector_length$vec$u8$$($t18)
                         // $t20 := 0
                         $t20 := 0
                         // $t2 := $t20
@@ -166,16 +166,16 @@ object "A2_M" {
                     }
                     case 7 {
                         // label L3
-                        // $t22 := Vector::borrow<vector<u8>>($t18, $t2)
-                        $t22 := A1_Vector_borrow$vec$u8$$($t18, j)
-                        // $t23 := Vector::length<u8>($t22)
-                        $t23 := A1_Vector_length$u8$($t22)
+                        // $t22 := vector::borrow<vector<u8>>($t18, $t2)
+                        $t22 := A1_vector_borrow$vec$u8$$($t18, j)
+                        // $t23 := vector::length<u8>($t22)
+                        $t23 := A1_vector_length$u8$($t22)
                         // $t24 := 1
                         $t24 := 1
                         // $t25 := -($t23, $t24)
                         $t25 := $Sub($t23, $t24)
-                        // $t26 := Vector::borrow<u8>($t22, $t25)
-                        $t26 := A1_Vector_borrow$u8$($t22, $t25)
+                        // $t26 := vector::borrow<u8>($t22, $t25)
+                        $t26 := A1_vector_borrow$u8$($t22, $t25)
                         // $t27 := read_ref($t26)
                         $t27 := $LoadU8($t26)
                         // $t7 := +($t7, $t23)
@@ -210,14 +210,14 @@ object "A2_M" {
                 $t1 := $MakePtr(false, $locals)
                 // $t2 := borrow_local($t0)
                 $t2 := $MakePtr(false, $locals)
-                // $t3 := Vector::length<u8>($t2)
-                $t3 := A1_Vector_length$u8$($t2)
+                // $t3 := vector::length<u8>($t2)
+                $t3 := A1_vector_length$u8$($t2)
                 // $t4 := 1
                 $t4 := 1
                 // $t5 := -($t3, $t4)
                 $t5 := $Sub($t3, $t4)
-                // $t6 := Vector::borrow<u8>($t1, $t5)
-                $t6 := A1_Vector_borrow$u8$($t1, $t5)
+                // $t6 := vector::borrow<u8>($t1, $t5)
+                $t6 := A1_vector_borrow$u8$($t1, $t5)
                 // $t7 := read_ref($t6)
                 $t7 := $LoadU8($t6)
                 // return $t7
@@ -231,8 +231,8 @@ object "A2_M" {
                 mstore($locals, v)
                 // $t1 := borrow_local($t0)
                 $t1 := $MakePtr(false, $locals)
-                // $t2 := Vector::length<u8>($t1)
-                $t2 := A1_Vector_length$u8$($t1)
+                // $t2 := vector::length<u8>($t1)
+                $t2 := A1_vector_length$u8$($t1)
                 // return $t2
                 $result := $t2
                 $Free($locals, 32)
@@ -246,14 +246,14 @@ object "A2_M" {
                 $t1 := $MakePtr(false, $locals)
                 // $t2 := borrow_local($t0)
                 $t2 := $MakePtr(false, $locals)
-                // $t3 := Vector::length<u8>($t2)
-                $t3 := A1_Vector_length$u8$($t2)
+                // $t3 := vector::length<u8>($t2)
+                $t3 := A1_vector_length$u8$($t2)
                 // $t4 := 1
                 $t4 := 1
                 // $t5 := -($t3, $t4)
                 $t5 := $Sub($t3, $t4)
-                // $t6 := Vector::borrow<u8>($t1, $t5)
-                $t6 := A1_Vector_borrow$u8$($t1, $t5)
+                // $t6 := vector::borrow<u8>($t1, $t5)
+                $t6 := A1_vector_borrow$u8$($t1, $t5)
                 // $t7 := read_ref($t6)
                 $t7 := $LoadU8($t6)
                 // return $t7
@@ -267,8 +267,8 @@ object "A2_M" {
                 mstore($locals, v)
                 // $t1 := borrow_local($t0)
                 $t1 := $MakePtr(false, $locals)
-                // $t2 := Vector::length<u8>($t1)
-                $t2 := A1_Vector_length$u8$($t1)
+                // $t2 := vector::length<u8>($t1)
+                $t2 := A1_vector_length$u8$($t1)
                 // return $t2
                 $result := $t2
                 $Free($locals, 32)
@@ -280,16 +280,16 @@ object "A2_M" {
                 mstore($locals, v)
                 // $t2 := borrow_local($t0)
                 $t2 := $MakePtr(false, $locals)
-                // $t3 := Vector::length<u8>($t2)
-                $t3 := A1_Vector_length$u8$($t2)
+                // $t3 := vector::length<u8>($t2)
+                $t3 := A1_vector_length$u8$($t2)
                 // $t4 := borrow_local($t0)
                 $t4 := $MakePtr(false, $locals)
                 // $t5 := 1
                 $t5 := 1
                 // $t6 := -($t3, $t5)
                 $t6 := $Sub($t3, $t5)
-                // $t7 := Vector::borrow<u8>($t4, $t6)
-                $t7 := A1_Vector_borrow$u8$($t4, $t6)
+                // $t7 := vector::borrow<u8>($t4, $t6)
+                $t7 := A1_vector_borrow$u8$($t4, $t6)
                 // $t8 := read_ref($t7)
                 $t8 := $LoadU8($t7)
                 // return ($t3, $t8)
@@ -298,38 +298,38 @@ object "A2_M" {
                 $Free($locals, 32)
             }
 
-            function A1_Vector_borrow$u8$(v_ref, i) -> e_ptr {
+            function A1_vector_borrow$u8$(v_ref, i) -> e_ptr {
                 let v_offs := $LoadU256(v_ref)
                 let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
                 let size := $LoadU64(v_ptr)
                 if $GtEq(i, size) { $AbortBuiltin() }
                 e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 1)))
             }
-            function A1_Vector_length$u8$(v_ref) -> len {
+            function A1_vector_length$u8$(v_ref) -> len {
                 let v_offs := $LoadU256(v_ref)
                 let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
                 len := $LoadU64(v_ptr)
             }
-            function A1_Vector_borrow$vec$u8$$(v_ref, i) -> e_ptr {
+            function A1_vector_borrow$vec$u8$$(v_ref, i) -> e_ptr {
                 let v_offs := $LoadU256(v_ref)
                 let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
                 let size := $LoadU64(v_ptr)
                 if $GtEq(i, size) { $AbortBuiltin() }
                 e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 32)))
             }
-            function A1_Vector_length$vec$u8$$(v_ref) -> len {
+            function A1_vector_length$vec$u8$$(v_ref) -> len {
                 let v_offs := $LoadU256(v_ref)
                 let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
                 len := $LoadU64(v_ptr)
             }
-            function A1_Vector_borrow$vec$vec$u8$$$(v_ref, i) -> e_ptr {
+            function A1_vector_borrow$vec$vec$u8$$$(v_ref, i) -> e_ptr {
                 let v_offs := $LoadU256(v_ref)
                 let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
                 let size := $LoadU64(v_ptr)
                 if $GtEq(i, size) { $AbortBuiltin() }
                 e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 32)))
             }
-            function A1_Vector_length$vec$vec$u8$$$(v_ref) -> len {
+            function A1_vector_length$vec$vec$u8$$$(v_ref) -> len {
                 let v_offs := $LoadU256(v_ref)
                 let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
                 len := $LoadU64(v_ptr)

@@ -17,20 +17,20 @@ module M1 {
 }
 
 module M2 {
-    use Std::Signer;
+    use std::signer;
 
     struct X has key, store { y: vector<Y> }
     struct Y has key, store { x: vector<X> }
 
     // blows up the vm
     public fun ex(account: &signer): bool {
-        let sender = Signer::address_of(account);
+        let sender = signer::address_of(account);
         exists<X>(sender)
     }
 
     // blows up the VM
     public fun borrow(account: &signer) acquires X {
-        let sender = Signer::address_of(account);
+        let sender = signer::address_of(account);
         _ = borrow_global<X>(sender)
     }
 }

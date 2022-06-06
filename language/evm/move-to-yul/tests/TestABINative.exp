@@ -64,14 +64,14 @@ object "test_A2_M_test_decode_two_bytes1" {
                     default { $block := 4 }
                 }
                 case 3 {
-                    // $t2 := Vector::empty<u8>()
-                    mstore($locals, A1_Vector_empty$u8$())
+                    // $t2 := vector::empty<u8>()
+                    mstore($locals, A1_vector_empty$u8$())
                     // $t5 := borrow_local($t2)
                     $t5 := $MakePtr(false, $locals)
                     // $t6 := 42
                     $t6 := 42
-                    // Vector::push_back<u8>($t5, $t6)
-                    A1_Vector_push_back$u8$($t5, $t6)
+                    // vector::push_back<u8>($t5, $t6)
+                    A1_vector_push_back$u8$($t5, $t6)
                     // $t7 := 1
                     $t7 := 1
                     // $t0 := $t7
@@ -85,8 +85,8 @@ object "test_A2_M_test_decode_two_bytes1" {
                     $t10 := $MakePtr(false, $locals)
                     // $t11 := 0
                     $t11 := 0
-                    // Vector::push_back<u8>($t10, $t11)
-                    A1_Vector_push_back$u8$($t10, $t11)
+                    // vector::push_back<u8>($t10, $t11)
+                    A1_vector_push_back$u8$($t10, $t11)
                     // $t12 := 1
                     $t12 := 1
                     // $t0 := +($t0, $t12)
@@ -100,8 +100,8 @@ object "test_A2_M_test_decode_two_bytes1" {
                     $t13 := $MakePtr(false, $locals)
                     // $t14 := 43
                     $t14 := 43
-                    // Vector::push_back<u8>($t13, $t14)
-                    A1_Vector_push_back$u8$($t13, $t14)
+                    // vector::push_back<u8>($t13, $t14)
+                    A1_vector_push_back$u8$($t13, $t14)
                     // $t15 := 1
                     $t15 := 1
                     // $t1 := $t15
@@ -126,8 +126,8 @@ object "test_A2_M_test_decode_two_bytes1" {
                     $t18 := $MakePtr(false, $locals)
                     // $t19 := 0
                     $t19 := 0
-                    // Vector::push_back<u8>($t18, $t19)
-                    A1_Vector_push_back$u8$($t18, $t19)
+                    // vector::push_back<u8>($t18, $t19)
+                    A1_vector_push_back$u8$($t18, $t19)
                     // $t20 := 1
                     $t20 := 1
                     // $t1 := +($t1, $t20)
@@ -147,8 +147,8 @@ object "test_A2_M_test_decode_two_bytes1" {
                     mstore(add($locals, 32), $t22)
                     // $t24 := borrow_local($t3)
                     $t24 := $MakePtr(false, add($locals, 32))
-                    // $t25 := Vector::length<u8>($t24)
-                    $t25 := A1_Vector_length$u8$($t24)
+                    // $t25 := vector::length<u8>($t24)
+                    $t25 := A1_vector_length$u8$($t24)
                     // $t26 := 1
                     $t26 := 1
                     // $t27 := ==($t25, $t26)
@@ -174,8 +174,8 @@ object "test_A2_M_test_decode_two_bytes1" {
                     // label L11
                     // $t29 := borrow_local($t4)
                     $t29 := $MakePtr(false, add($locals, 64))
-                    // $t30 := Vector::length<u8>($t29)
-                    $t30 := A1_Vector_length$u8$($t29)
+                    // $t30 := vector::length<u8>($t29)
+                    $t30 := A1_vector_length$u8$($t29)
                     // $t31 := 1
                     $t31 := 1
                     // $t32 := ==($t30, $t31)
@@ -203,8 +203,8 @@ object "test_A2_M_test_decode_two_bytes1" {
                     $t34 := $MakePtr(false, add($locals, 32))
                     // $t35 := 0
                     $t35 := 0
-                    // $t36 := Vector::borrow<u8>($t34, $t35)
-                    $t36 := A1_Vector_borrow$u8$($t34, $t35)
+                    // $t36 := vector::borrow<u8>($t34, $t35)
+                    $t36 := A1_vector_borrow$u8$($t34, $t35)
                     // $t37 := read_ref($t36)
                     $t37 := $LoadU8($t36)
                     // $t38 := 42
@@ -234,8 +234,8 @@ object "test_A2_M_test_decode_two_bytes1" {
                     $t41 := $MakePtr(false, add($locals, 64))
                     // $t42 := 0
                     $t42 := 0
-                    // $t43 := Vector::borrow<u8>($t41, $t42)
-                    $t43 := A1_Vector_borrow$u8$($t41, $t42)
+                    // $t43 := vector::borrow<u8>($t41, $t42)
+                    $t43 := A1_vector_borrow$u8$($t41, $t42)
                     // $t44 := read_ref($t43)
                     $t44 := $LoadU8($t43)
                     // $t45 := 43
@@ -268,14 +268,14 @@ object "test_A2_M_test_decode_two_bytes1" {
             }
         }
 
-        function A1_Vector_borrow$u8$(v_ref, i) -> e_ptr {
+        function A1_vector_borrow$u8$(v_ref, i) -> e_ptr {
             let v_offs := $LoadU256(v_ref)
             let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
             let size := $LoadU64(v_ptr)
             if $GtEq(i, size) { $AbortBuiltin() }
             e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 1)))
         }
-        function A1_Vector_length$u8$(v_ref) -> len {
+        function A1_vector_length$u8$(v_ref) -> len {
             let v_offs := $LoadU256(v_ref)
             let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
             len := $LoadU64(v_ptr)
@@ -288,7 +288,7 @@ object "test_A2_M_test_decode_two_bytes1" {
             if gt($t3, 0xffffffffffffffff) { $AbortBuiltin() }
             $result0, $result1 := abi_decode_tuple_$bytes1_bytes1$_$vec$u8$_vec$u8$$_from_memory($t1, $t3)
         }
-        function A1_Vector_push_back$u8$(v_ref, e) {
+        function A1_vector_push_back$u8$(v_ref, e) {
             let v_offs := $LoadU256(v_ref)
             let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
             let size := $LoadU64(v_ptr)
@@ -302,7 +302,7 @@ object "test_A2_M_test_decode_two_bytes1" {
                 $StoreU256(v_ref, new_v_offs)
             }
         }
-        function A1_Vector_empty$u8$() -> vector {
+        function A1_vector_empty$u8$() -> vector {
             vector := $Malloc(34)
             $MemoryStoreU64(add(vector, 8), 2)
         }
@@ -635,8 +635,8 @@ object "test_A2_M_test_decode_two_u8" {
                     default { $block := 4 }
                 }
                 case 3 {
-                    // $t2 := Vector::empty<u8>()
-                    mstore($locals, A1_Vector_empty$u8$())
+                    // $t2 := vector::empty<u8>()
+                    mstore($locals, A1_vector_empty$u8$())
                     // $t5 := 1
                     $t5 := 1
                     // $t0 := $t5
@@ -650,8 +650,8 @@ object "test_A2_M_test_decode_two_u8" {
                     $t8 := $MakePtr(false, $locals)
                     // $t9 := 0
                     $t9 := 0
-                    // Vector::push_back<u8>($t8, $t9)
-                    A1_Vector_push_back$u8$($t8, $t9)
+                    // vector::push_back<u8>($t8, $t9)
+                    A1_vector_push_back$u8$($t8, $t9)
                     // $t10 := 1
                     $t10 := 1
                     // $t0 := +($t0, $t10)
@@ -665,8 +665,8 @@ object "test_A2_M_test_decode_two_u8" {
                     $t11 := $MakePtr(false, $locals)
                     // $t12 := 42
                     $t12 := 42
-                    // Vector::push_back<u8>($t11, $t12)
-                    A1_Vector_push_back$u8$($t11, $t12)
+                    // vector::push_back<u8>($t11, $t12)
+                    A1_vector_push_back$u8$($t11, $t12)
                     // $t13 := 1
                     $t13 := 1
                     // $t1 := $t13
@@ -691,8 +691,8 @@ object "test_A2_M_test_decode_two_u8" {
                     $t16 := $MakePtr(false, $locals)
                     // $t17 := 0
                     $t17 := 0
-                    // Vector::push_back<u8>($t16, $t17)
-                    A1_Vector_push_back$u8$($t16, $t17)
+                    // vector::push_back<u8>($t16, $t17)
+                    A1_vector_push_back$u8$($t16, $t17)
                     // $t18 := 1
                     $t18 := 1
                     // $t1 := +($t1, $t18)
@@ -706,8 +706,8 @@ object "test_A2_M_test_decode_two_u8" {
                     $t19 := $MakePtr(false, $locals)
                     // $t20 := 43
                     $t20 := 43
-                    // Vector::push_back<u8>($t19, $t20)
-                    A1_Vector_push_back$u8$($t19, $t20)
+                    // vector::push_back<u8>($t19, $t20)
+                    A1_vector_push_back$u8$($t19, $t20)
                     // $t21 := move($t2)
                     $t21 := mload($locals)
                     // ($t22, $t23) := M::decode_two_u8($t21)
@@ -773,7 +773,7 @@ object "test_A2_M_test_decode_two_u8" {
             if gt($t3, 0xffffffffffffffff) { $AbortBuiltin() }
             $result0, $result1 := abi_decode_tuple_$uint8_uint8$_$u8_u8$_from_memory($t1, $t3)
         }
-        function A1_Vector_push_back$u8$(v_ref, e) {
+        function A1_vector_push_back$u8$(v_ref, e) {
             let v_offs := $LoadU256(v_ref)
             let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
             let size := $LoadU64(v_ptr)
@@ -787,7 +787,7 @@ object "test_A2_M_test_decode_two_u8" {
                 $StoreU256(v_ref, new_v_offs)
             }
         }
-        function A1_Vector_empty$u8$() -> vector {
+        function A1_vector_empty$u8$() -> vector {
             vector := $Malloc(34)
             $MemoryStoreU64(add(vector, 8), 2)
         }
@@ -1483,8 +1483,8 @@ object "test_A2_M_test_encode_packed_uint16" {
                     mstore($locals, A2_M_encode_packed($t3, $t4))
                     // $t5 := borrow_local($t0)
                     $t5 := $MakePtr(false, $locals)
-                    // $t6 := Vector::length<u8>($t5)
-                    $t6 := A1_Vector_length$u8$($t5)
+                    // $t6 := vector::length<u8>($t5)
+                    $t6 := A1_vector_length$u8$($t5)
                     // $t7 := 4
                     $t7 := 4
                     // $t8 := ==($t6, $t7)
@@ -1503,7 +1503,7 @@ object "test_A2_M_test_encode_packed_uint16" {
             }
         }
 
-        function A1_Vector_length$u8$(v_ref) -> len {
+        function A1_vector_length$u8$(v_ref) -> len {
             let v_offs := $LoadU256(v_ref)
             let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
             len := $LoadU64(v_ptr)
@@ -1699,14 +1699,14 @@ object "test_A2_M_test_marshalling_two_bytes1" {
                     default { $block := 4 }
                 }
                 case 3 {
-                    // $t2 := Vector::empty<u8>()
-                    mstore($locals, A1_Vector_empty$u8$())
+                    // $t2 := vector::empty<u8>()
+                    mstore($locals, A1_vector_empty$u8$())
                     // $t6 := borrow_local($t2)
                     $t6 := $MakePtr(false, $locals)
                     // $t7 := 42
                     $t7 := 42
-                    // Vector::push_back<u8>($t6, $t7)
-                    A1_Vector_push_back$u8$($t6, $t7)
+                    // vector::push_back<u8>($t6, $t7)
+                    A1_vector_push_back$u8$($t6, $t7)
                     // $t8 := 1
                     $t8 := 1
                     // $t0 := $t8
@@ -1720,8 +1720,8 @@ object "test_A2_M_test_marshalling_two_bytes1" {
                     $t11 := $MakePtr(false, $locals)
                     // $t12 := 0
                     $t12 := 0
-                    // Vector::push_back<u8>($t11, $t12)
-                    A1_Vector_push_back$u8$($t11, $t12)
+                    // vector::push_back<u8>($t11, $t12)
+                    A1_vector_push_back$u8$($t11, $t12)
                     // $t13 := 1
                     $t13 := 1
                     // $t0 := +($t0, $t13)
@@ -1735,8 +1735,8 @@ object "test_A2_M_test_marshalling_two_bytes1" {
                     $t14 := $MakePtr(false, $locals)
                     // $t15 := 43
                     $t15 := 43
-                    // Vector::push_back<u8>($t14, $t15)
-                    A1_Vector_push_back$u8$($t14, $t15)
+                    // vector::push_back<u8>($t14, $t15)
+                    A1_vector_push_back$u8$($t14, $t15)
                     // $t16 := 1
                     $t16 := 1
                     // $t1 := $t16
@@ -1761,8 +1761,8 @@ object "test_A2_M_test_marshalling_two_bytes1" {
                     $t19 := $MakePtr(false, $locals)
                     // $t20 := 0
                     $t20 := 0
-                    // Vector::push_back<u8>($t19, $t20)
-                    A1_Vector_push_back$u8$($t19, $t20)
+                    // vector::push_back<u8>($t19, $t20)
+                    A1_vector_push_back$u8$($t19, $t20)
                     // $t21 := 1
                     $t21 := 1
                     // $t1 := +($t1, $t21)
@@ -1828,7 +1828,7 @@ object "test_A2_M_test_marshalling_two_bytes1" {
             if gt($t3, 0xffffffffffffffff) { $AbortBuiltin() }
             $result0, $result1 := abi_decode_tuple_$bytes1_bytes1$_$vec$u8$_vec$u8$$_from_memory($t1, $t3)
         }
-        function A1_Vector_push_back$u8$(v_ref, e) {
+        function A1_vector_push_back$u8$(v_ref, e) {
             let v_offs := $LoadU256(v_ref)
             let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
             let size := $LoadU64(v_ptr)
@@ -1842,7 +1842,7 @@ object "test_A2_M_test_marshalling_two_bytes1" {
                 $StoreU256(v_ref, new_v_offs)
             }
         }
-        function A1_Vector_empty$u8$() -> vector {
+        function A1_vector_empty$u8$() -> vector {
             vector := $Malloc(34)
             $MemoryStoreU64(add(vector, 8), 2)
         }
@@ -2192,8 +2192,8 @@ object "test_A2_M_test_marshalling_two_u8" {
                     default { $block := 4 }
                 }
                 case 3 {
-                    // $t2 := Vector::empty<u8>()
-                    mstore($locals, A1_Vector_empty$u8$())
+                    // $t2 := vector::empty<u8>()
+                    mstore($locals, A1_vector_empty$u8$())
                     // $t6 := 1
                     $t6 := 1
                     // $t0 := $t6
@@ -2207,8 +2207,8 @@ object "test_A2_M_test_marshalling_two_u8" {
                     $t9 := $MakePtr(false, $locals)
                     // $t10 := 0
                     $t10 := 0
-                    // Vector::push_back<u8>($t9, $t10)
-                    A1_Vector_push_back$u8$($t9, $t10)
+                    // vector::push_back<u8>($t9, $t10)
+                    A1_vector_push_back$u8$($t9, $t10)
                     // $t11 := 1
                     $t11 := 1
                     // $t0 := +($t0, $t11)
@@ -2222,8 +2222,8 @@ object "test_A2_M_test_marshalling_two_u8" {
                     $t12 := $MakePtr(false, $locals)
                     // $t13 := 42
                     $t13 := 42
-                    // Vector::push_back<u8>($t12, $t13)
-                    A1_Vector_push_back$u8$($t12, $t13)
+                    // vector::push_back<u8>($t12, $t13)
+                    A1_vector_push_back$u8$($t12, $t13)
                     // $t14 := 1
                     $t14 := 1
                     // $t1 := $t14
@@ -2248,8 +2248,8 @@ object "test_A2_M_test_marshalling_two_u8" {
                     $t17 := $MakePtr(false, $locals)
                     // $t18 := 0
                     $t18 := 0
-                    // Vector::push_back<u8>($t17, $t18)
-                    A1_Vector_push_back$u8$($t17, $t18)
+                    // vector::push_back<u8>($t17, $t18)
+                    A1_vector_push_back$u8$($t17, $t18)
                     // $t19 := 1
                     $t19 := 1
                     // $t1 := +($t1, $t19)
@@ -2263,8 +2263,8 @@ object "test_A2_M_test_marshalling_two_u8" {
                     $t20 := $MakePtr(false, $locals)
                     // $t21 := 43
                     $t21 := 43
-                    // Vector::push_back<u8>($t20, $t21)
-                    A1_Vector_push_back$u8$($t20, $t21)
+                    // vector::push_back<u8>($t20, $t21)
+                    A1_vector_push_back$u8$($t20, $t21)
                     // $t22 := copy($t2)
                     $t22 := mload($locals)
                     // ($t23, $t24) := M::decode_two_u8($t22)
@@ -2367,7 +2367,7 @@ object "test_A2_M_test_marshalling_two_u8" {
             if gt($t3, 0xffffffffffffffff) { $AbortBuiltin() }
             $result0, $result1 := abi_decode_tuple_$uint8_uint8$_$u8_u8$_from_memory($t1, $t3)
         }
-        function A1_Vector_push_back$u8$(v_ref, e) {
+        function A1_vector_push_back$u8$(v_ref, e) {
             let v_offs := $LoadU256(v_ref)
             let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
             let size := $LoadU64(v_ptr)
@@ -2381,7 +2381,7 @@ object "test_A2_M_test_marshalling_two_u8" {
                 $StoreU256(v_ref, new_v_offs)
             }
         }
-        function A1_Vector_empty$u8$() -> vector {
+        function A1_vector_empty$u8$() -> vector {
             vector := $Malloc(34)
             $MemoryStoreU64(add(vector, 8), 2)
         }

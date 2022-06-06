@@ -5,8 +5,8 @@ module DiemFramework::VASP {
     use DiemFramework::DiemTimestamp;
     use DiemFramework::Roles;
     use DiemFramework::AccountLimits;
-    use Std::Errors;
-    use Std::Signer;
+    use std::errors;
+    use std::signer;
     friend DiemFramework::DiemAccount;
 
     /// Each VASP has a unique root account that holds a `ParentVASP` resource. This resource holds
@@ -44,8 +44,8 @@ module DiemFramework::VASP {
         DiemTimestamp::assert_operating();
         Roles::assert_treasury_compliance(tc_account);
         Roles::assert_parent_vasp_role(vasp);
-        let vasp_addr = Signer::address_of(vasp);
-        assert!(!is_vasp(vasp_addr), Errors::already_published(EPARENT_OR_CHILD_VASP));
+        let vasp_addr = signer::address_of(vasp);
+        assert!(!is_vasp(vasp_addr), errors::already_published(EPARENT_OR_CHILD_VASP));
         move_to(vasp, ParentVASP { num_children: 0 });
     }
 
@@ -53,8 +53,8 @@ module DiemFramework::VASP {
         include DiemTimestamp::AbortsIfNotOperating;
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         include Roles::AbortsIfNotParentVasp{account: vasp};
-        let vasp_addr = Signer::address_of(vasp);
-        aborts_if is_vasp(vasp_addr) with Errors::ALREADY_PUBLISHED;
+        let vasp_addr = signer::address_of(vasp);
+        aborts_if is_vasp(vasp_addr) with errors::ALREADY_PUBLISHED;
         include PublishParentVASPEnsures{vasp_addr: vasp_addr};
     }
 
@@ -72,33 +72,33 @@ module DiemFramework::VASP {
     ) acquires ParentVASP {
         Roles::assert_parent_vasp_role(parent);
         Roles::assert_child_vasp_role(child);
-        let child_vasp_addr = Signer::address_of(child);
-        assert!(!is_vasp(child_vasp_addr), Errors::already_published(EPARENT_OR_CHILD_VASP));
-        let parent_vasp_addr = Signer::address_of(parent);
-        assert!(is_parent(parent_vasp_addr), Errors::invalid_argument(ENOT_A_PARENT_VASP));
+        let child_vasp_addr = signer::address_of(child);
+        assert!(!is_vasp(child_vasp_addr), errors::already_published(EPARENT_OR_CHILD_VASP));
+        let parent_vasp_addr = signer::address_of(parent);
+        assert!(is_parent(parent_vasp_addr), errors::invalid_argument(ENOT_A_PARENT_VASP));
         let num_children = &mut borrow_global_mut<ParentVASP>(parent_vasp_addr).num_children;
         // Abort if creating this child account would put the parent VASP over the limit
-        assert!(*num_children < MAX_CHILD_ACCOUNTS, Errors::limit_exceeded(ETOO_MANY_CHILDREN));
+        assert!(*num_children < MAX_CHILD_ACCOUNTS, errors::limit_exceeded(ETOO_MANY_CHILDREN));
         *num_children = *num_children + 1;
         move_to(child, ChildVASP { parent_vasp_addr });
     }
     spec publish_child_vasp_credential {
-        let child_addr = Signer::address_of(child);
+        let child_addr = signer::address_of(child);
         include PublishChildVASPAbortsIf{child_addr};
         // NB: This aborts condition is separated out so that `PublishChildVASPAbortsIf` can be used in
         //     `DiemAccount::create_child_vasp_account` since this doesn't hold of the new account in the pre-state.
         include Roles::AbortsIfNotChildVasp{account: child_addr};
-        include PublishChildVASPEnsures{parent_addr: Signer::address_of(parent), child_addr: child_addr};
+        include PublishChildVASPEnsures{parent_addr: signer::address_of(parent), child_addr: child_addr};
     }
 
     spec schema PublishChildVASPAbortsIf {
         parent: signer;
         child_addr: address;
-        let parent_addr = Signer::address_of(parent);
+        let parent_addr = signer::address_of(parent);
         include Roles::AbortsIfNotParentVasp{account: parent};
-        aborts_if is_vasp(child_addr) with Errors::ALREADY_PUBLISHED;
-        aborts_if !is_parent(parent_addr) with Errors::INVALID_ARGUMENT;
-        aborts_if spec_num_children(parent_addr) + 1 > MAX_CHILD_ACCOUNTS with Errors::LIMIT_EXCEEDED;
+        aborts_if is_vasp(child_addr) with errors::ALREADY_PUBLISHED;
+        aborts_if !is_parent(parent_addr) with errors::INVALID_ARGUMENT;
+        aborts_if spec_num_children(parent_addr) + 1 > MAX_CHILD_ACCOUNTS with errors::LIMIT_EXCEEDED;
     }
 
     spec schema PublishChildVASPEnsures {
@@ -128,12 +128,12 @@ module DiemFramework::VASP {
         } else if (is_child(addr)) {
             borrow_global<ChildVASP>(addr).parent_vasp_addr
         } else { // wrong account type, abort
-            abort(Errors::invalid_argument(ENOT_A_VASP))
+            abort(errors::invalid_argument(ENOT_A_VASP))
         }
     }
     spec parent_address {
         pragma opaque;
-        aborts_if !is_parent(addr) && !is_child(addr) with Errors::INVALID_ARGUMENT;
+        aborts_if !is_parent(addr) && !is_child(addr) with errors::INVALID_ARGUMENT;
         ensures result == spec_parent_address(addr);
     }
     spec module {
@@ -208,7 +208,7 @@ module DiemFramework::VASP {
         *&borrow_global<ParentVASP>(parent_address(addr)).num_children
     }
     spec num_children {
-        aborts_if !is_vasp(addr) with Errors::INVALID_ARGUMENT;
+        aborts_if !is_vasp(addr) with errors::INVALID_ARGUMENT;
     }
     /// Spec version of `Self::num_children`.
     spec fun spec_num_children(parent: address): u64 {

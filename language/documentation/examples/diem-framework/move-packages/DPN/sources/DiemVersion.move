@@ -4,7 +4,7 @@ module DiemFramework::DiemVersion {
     use DiemFramework::DiemConfig::{Self, DiemConfig};
     use DiemFramework::DiemTimestamp;
     use DiemFramework::Roles;
-    use Std::Errors;
+    use std::errors;
 
     struct DiemVersion has copy, drop, store {
         major: u64,
@@ -41,7 +41,7 @@ module DiemFramework::DiemVersion {
 
         assert!(
             old_config.major < major,
-            Errors::invalid_argument(EINVALID_MAJOR_VERSION_NUMBER)
+            errors::invalid_argument(EINVALID_MAJOR_VERSION_NUMBER)
         );
 
         DiemConfig::set<DiemVersion>(
@@ -54,7 +54,7 @@ module DiemFramework::DiemVersion {
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
 
         include DiemTimestamp::AbortsIfNotOperating;
-        aborts_if DiemConfig::get<DiemVersion>().major >= major with Errors::INVALID_ARGUMENT;
+        aborts_if DiemConfig::get<DiemVersion>().major >= major with errors::INVALID_ARGUMENT;
         include DiemConfig::SetAbortsIf<DiemVersion>{account: dr_account};
         include DiemConfig::SetEnsures<DiemVersion>{payload: DiemVersion { major }};
     }

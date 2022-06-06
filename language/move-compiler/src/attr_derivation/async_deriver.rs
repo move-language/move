@@ -97,7 +97,7 @@ fn derive_module_for_async(
                     let name_exp = new_simple_name_exp(loc, sign.parameters[i + 1].0 .0);
                     args.push(new_call_exp(
                         loc,
-                        new_full_name(loc, "Std", "BCS", "to_bytes"),
+                        new_full_name(loc, "std", "bcs", "to_bytes"),
                         vec![new_borrow_exp(loc, name_exp)],
                     ));
                 }

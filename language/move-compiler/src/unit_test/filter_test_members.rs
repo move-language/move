@@ -26,8 +26,8 @@ impl<'env> Context<'env> {
 // Filtering of test-annotated module members
 //***************************************************************************
 
-const UNIT_TEST_MODULE_NAME: &str = "UnitTest";
-const STDLIB_ADDRESS_NAME: &str = "Std";
+const UNIT_TEST_MODULE_NAME: &str = "unit_test";
+const STDLIB_ADDRESS_NAME: &str = "std";
 
 // This filters out all test, and test-only annotated module member from `prog` if the `test` flag
 // in `compilation_env` is not set. If the test flag is set, no filtering is performed, and instead

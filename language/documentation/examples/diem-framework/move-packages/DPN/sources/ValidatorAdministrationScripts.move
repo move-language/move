@@ -66,7 +66,7 @@ module ValidatorAdministrationScripts {
 
     spec add_validator_and_reconfigure {
         use DiemFramework::DiemAccount;
-        use Std::Errors;
+        use std::errors;
         use DiemFramework::Roles;
         use DiemFramework::DiemConfig;
 
@@ -86,12 +86,12 @@ module ValidatorAdministrationScripts {
         /// in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
         aborts_with [check]
             0, // Odd error code in assert on second statement in add_validator_and_reconfigure
-            Errors::INVALID_ARGUMENT,
-            Errors::NOT_PUBLISHED,
-            Errors::REQUIRES_ADDRESS,
-            Errors::INVALID_STATE,
-            Errors::LIMIT_EXCEEDED,
-            Errors::REQUIRES_ROLE;
+            errors::INVALID_ARGUMENT,
+            errors::NOT_PUBLISHED,
+            errors::REQUIRES_ADDRESS,
+            errors::INVALID_STATE,
+            errors::LIMIT_EXCEEDED,
+            errors::REQUIRES_ROLE;
 
         include DiemConfig::ReconfigureEmits;
 
@@ -157,24 +157,24 @@ module ValidatorAdministrationScripts {
     /// Access control rule is that only the validator operator for a validator may set
     /// call this, but there is an aborts_if in SetConfigAbortsIf that tests that directly.
     spec register_validator_config {
-        use Std::Errors;
+        use std::errors;
         use DiemFramework::DiemAccount;
-        use Std::Signer;
+        use std::signer;
 
         include DiemAccount::TransactionChecks{sender: validator_operator_account}; // properties checked by the prologue.
         include ValidatorConfig::SetConfigAbortsIf {validator_addr: validator_account};
         ensures ValidatorConfig::is_valid(validator_account);
 
         aborts_with [check]
-            Errors::INVALID_ARGUMENT,
-            Errors::NOT_PUBLISHED;
+            errors::INVALID_ARGUMENT,
+            errors::NOT_PUBLISHED;
 
         /// **Access Control:**
         /// Only the Validator Operator account which has been registered with the validator can
         /// update the validator's configuration [[H15]][PERMISSION].
-        aborts_if Signer::address_of(validator_operator_account) !=
+        aborts_if signer::address_of(validator_operator_account) !=
                     ValidatorConfig::get_operator(validator_account)
-                        with Errors::INVALID_ARGUMENT;
+                        with errors::INVALID_ARGUMENT;
     }
 
     /// # Summary
@@ -234,7 +234,7 @@ module ValidatorAdministrationScripts {
 
     spec remove_validator_and_reconfigure {
         use DiemFramework::DiemAccount;
-        use Std::Errors;
+        use std::errors;
         use DiemFramework::Roles;
         use DiemFramework::DiemConfig;
 
@@ -254,11 +254,11 @@ module ValidatorAdministrationScripts {
         /// in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
         aborts_with [check]
             0, // Odd error code in assert on second statement in add_validator_and_reconfigure
-            Errors::INVALID_ARGUMENT,
-            Errors::NOT_PUBLISHED,
-            Errors::REQUIRES_ADDRESS,
-            Errors::INVALID_STATE,
-            Errors::REQUIRES_ROLE;
+            errors::INVALID_ARGUMENT,
+            errors::NOT_PUBLISHED,
+            errors::REQUIRES_ADDRESS,
+            errors::INVALID_STATE,
+            errors::REQUIRES_ROLE;
 
         include DiemConfig::ReconfigureEmits;
 
@@ -327,8 +327,8 @@ module ValidatorAdministrationScripts {
         use DiemFramework::DiemConfig;
         use DiemFramework::DiemSystem;
         use DiemFramework::DiemTimestamp;
-        use Std::Errors;
-        use Std::Signer;
+        use std::errors;
+        use std::signer;
 
          // properties checked by the prologue.
        include DiemAccount::TransactionChecks{sender: validator_operator_account};
@@ -364,27 +364,27 @@ module ValidatorAdministrationScripts {
         let validator_index = DiemSystem::spec_index_of_validator(DiemSystem::spec_get_validators(), validator_account);
         let last_config_time = DiemSystem::spec_get_validators()[validator_index].last_config_update_time;
         aborts_if is_validator_info_updated && last_config_time > DiemSystem::MAX_U64 - DiemSystem::FIVE_MINUTES
-            with Errors::LIMIT_EXCEEDED;
+            with errors::LIMIT_EXCEEDED;
         aborts_if is_validator_info_updated && DiemTimestamp::spec_now_microseconds() <= last_config_time + DiemSystem::FIVE_MINUTES
-            with Errors::LIMIT_EXCEEDED;
+            with errors::LIMIT_EXCEEDED;
 
         /// This reports a possible INVALID_STATE abort, which comes from an assert in DiemConfig::reconfigure_
         /// that config.last_reconfiguration_time is not in the future. This is a system error that a user
         /// for which there is no useful recovery except to resubmit the transaction.
         aborts_with [check]
-            Errors::NOT_PUBLISHED,
-            Errors::REQUIRES_ROLE,
-            Errors::INVALID_ARGUMENT,
-            Errors::INVALID_STATE;
+            errors::NOT_PUBLISHED,
+            errors::REQUIRES_ROLE,
+            errors::INVALID_ARGUMENT,
+            errors::INVALID_STATE;
 
         include is_validator_info_updated ==> DiemConfig::ReconfigureEmits;
 
         /// **Access Control:**
         /// Only the Validator Operator account which has been registered with the validator can
         /// update the validator's configuration [[H15]][PERMISSION].
-        aborts_if Signer::address_of(validator_operator_account) !=
+        aborts_if signer::address_of(validator_operator_account) !=
                     ValidatorConfig::get_operator(validator_account)
-                        with Errors::INVALID_ARGUMENT;
+                        with errors::INVALID_ARGUMENT;
     }
 
     /// # Summary
@@ -437,11 +437,11 @@ module ValidatorAdministrationScripts {
 
     spec set_validator_operator {
         use DiemFramework::DiemAccount;
-        use Std::Signer;
-        use Std::Errors;
+        use std::signer;
+        use std::errors;
         use DiemFramework::Roles;
 
-        let account_addr = Signer::address_of(account);
+        let account_addr = signer::address_of(account);
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
         // next is due to abort in get_human_name
         include ValidatorConfig::AbortsIfNoValidatorConfig{addr: account_addr};
@@ -454,9 +454,9 @@ module ValidatorAdministrationScripts {
         /// because CapabilityHolder is published during initialization (Genesis).
         aborts_with [check]
             0, // Odd error code in assert on second statement in add_validator_and_reconfigure
-            Errors::INVALID_ARGUMENT,
-            Errors::NOT_PUBLISHED,
-            Errors::REQUIRES_ROLE;
+            errors::INVALID_ARGUMENT,
+            errors::NOT_PUBLISHED,
+            errors::REQUIRES_ROLE;
 
         /// **Access Control:**
         /// Only a Validator account can set its Validator Operator [[H16]][PERMISSION].
@@ -523,11 +523,11 @@ module ValidatorAdministrationScripts {
 
     spec set_validator_operator_with_nonce_admin {
         use DiemFramework::DiemAccount;
-        use Std::Signer;
-        use Std::Errors;
+        use std::signer;
+        use std::errors;
         use DiemFramework::Roles;
 
-        let account_addr = Signer::address_of(account);
+        let account_addr = signer::address_of(account);
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
         include SlidingNonce::RecordNonceAbortsIf{seq_nonce: sliding_nonce, account: dr_account};
         // next is due to abort in get_human_name
@@ -539,9 +539,9 @@ module ValidatorAdministrationScripts {
 
         aborts_with [check]
             0, // Odd error code in assert on second statement in add_validator_and_reconfigure
-            Errors::INVALID_ARGUMENT,
-            Errors::NOT_PUBLISHED,
-            Errors::REQUIRES_ROLE;
+            errors::INVALID_ARGUMENT,
+            errors::NOT_PUBLISHED,
+            errors::REQUIRES_ROLE;
 
         /// **Access Control:**
         /// Only the Diem Root account can process the admin scripts [[H9]][PERMISSION].

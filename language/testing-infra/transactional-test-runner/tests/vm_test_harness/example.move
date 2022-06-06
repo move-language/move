@@ -25,7 +25,7 @@ module A::N {
     }
 
     public fun take(s: &signer): u64 acquires R {
-        let R { v } = move_from(Std::Signer::address_of(s));
+        let R { v } = move_from(std::signer::address_of(s));
         v
     }
 

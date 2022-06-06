@@ -1,13 +1,13 @@
 module 0x42::TestPureFun {
 
-    use Std::Signer;
-    use Std::Vector;
+    use std::signer;
+    use std::vector;
     struct T has key {
         x: u64,
     }
 
     public fun init(account: &signer): bool {
-        if (exists<T>(Signer::address_of(account))) {
+        if (exists<T>(signer::address_of(account))) {
             return true
         };
         move_to(account, T { x: 0 });
@@ -15,7 +15,7 @@ module 0x42::TestPureFun {
     }
 
     spec init {
-        ensures get_x(Signer::address_of(account)) == 0;
+        ensures get_x(signer::address_of(account)) == 0;
     }
 
     public fun get_x(addr: address): u64 acquires T {
@@ -23,7 +23,7 @@ module 0x42::TestPureFun {
     }
 
     public fun increment_x_incorrect(account: &signer) acquires T {
-        let t = borrow_global_mut<T>(Signer::address_of(account));
+        let t = borrow_global_mut<T>(signer::address_of(account));
         t.x = t.x + 1;
     }
 
@@ -48,12 +48,12 @@ module 0x42::TestPureFun {
     }
 
     public fun remove_elem(v: &mut vector<T>): T {
-        Vector::pop_back(v)
+        vector::pop_back(v)
     }
 
     spec remove_elem {
         // error: calling impure function `pop_back` is not allowed.
-        ensures result == Vector::pop_back(old(v));
+        ensures result == vector::pop_back(old(v));
     }
 
     spec module {

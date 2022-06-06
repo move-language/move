@@ -45,14 +45,14 @@ object "A2_M" {
             function A2_M_test_string() -> $result {
                 let $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11
                 let $locals := $Malloc(64)
-                // $t1 := Vector::empty<u8>()
-                mstore($locals, A1_Vector_empty$u8$())
+                // $t1 := vector::empty<u8>()
+                mstore($locals, A1_vector_empty$u8$())
                 // $t2 := borrow_local($t1)
                 $t2 := $MakePtr(false, $locals)
                 // $t3 := 65
                 $t3 := 65
-                // Vector::push_back<u8>($t2, $t3)
-                A1_Vector_push_back$u8$($t2, $t3)
+                // vector::push_back<u8>($t2, $t3)
+                A1_vector_push_back$u8$($t2, $t3)
                 // $t4 := 0x42
                 $t4 := 0x42
                 // $t0 := Evm::sign($t4)
@@ -131,28 +131,28 @@ object "A2_M" {
             function A2_M_test_vec_u64() -> $result0, $result1 {
                 let $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21
                 let $locals := $Malloc(96)
-                // $t1 := Vector::empty<u8>()
-                mstore($locals, A1_Vector_empty$u8$())
+                // $t1 := vector::empty<u8>()
+                mstore($locals, A1_vector_empty$u8$())
                 // $t3 := borrow_local($t1)
                 $t3 := $MakePtr(false, $locals)
                 // $t4 := 65
                 $t4 := 65
-                // Vector::push_back<u8>($t3, $t4)
-                A1_Vector_push_back$u8$($t3, $t4)
-                // $t2 := Vector::empty<U256::U256>()
-                mstore(add($locals, 32), A1_Vector_empty$A2_U256_U256$())
+                // vector::push_back<u8>($t3, $t4)
+                A1_vector_push_back$u8$($t3, $t4)
+                // $t2 := vector::empty<U256::U256>()
+                mstore(add($locals, 32), A1_vector_empty$A2_U256_U256$())
                 // $t5 := borrow_local($t2)
                 $t5 := $MakePtr(false, add($locals, 32))
                 // $t6 := 64
                 $t6 := 64
-                // Vector::push_back<U256::U256>($t5, $t6)
-                A1_Vector_push_back$A2_U256_U256$($t5, $t6)
+                // vector::push_back<U256::U256>($t5, $t6)
+                A1_vector_push_back$A2_U256_U256$($t5, $t6)
                 // $t7 := borrow_local($t2)
                 $t7 := $MakePtr(false, add($locals, 32))
                 // $t8 := 65
                 $t8 := 65
-                // Vector::push_back<U256::U256>($t7, $t8)
-                A1_Vector_push_back$A2_U256_U256$($t7, $t8)
+                // vector::push_back<U256::U256>($t7, $t8)
+                A1_vector_push_back$A2_U256_U256$($t7, $t8)
                 // $t9 := 0x42
                 $t9 := 0x42
                 // $t0 := Evm::sign($t9)
@@ -278,7 +278,7 @@ object "A2_M" {
             function A2_Evm_sign(addr) -> signer {
               signer := addr
             }
-            function A1_Vector_push_back$A2_U256_U256$(v_ref, e) {
+            function A1_vector_push_back$A2_U256_U256$(v_ref, e) {
                 let v_offs := $LoadU256(v_ref)
                 let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
                 let size := $LoadU64(v_ptr)
@@ -292,11 +292,11 @@ object "A2_M" {
                     $StoreU256(v_ref, new_v_offs)
                 }
             }
-            function A1_Vector_empty$A2_U256_U256$() -> vector {
+            function A1_vector_empty$A2_U256_U256$() -> vector {
                 vector := $Malloc(96)
                 $MemoryStoreU64(add(vector, 8), 2)
             }
-            function A1_Vector_push_back$u8$(v_ref, e) {
+            function A1_vector_push_back$u8$(v_ref, e) {
                 let v_offs := $LoadU256(v_ref)
                 let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
                 let size := $LoadU64(v_ptr)
@@ -310,7 +310,7 @@ object "A2_M" {
                     $StoreU256(v_ref, new_v_offs)
                 }
             }
-            function A1_Vector_empty$u8$() -> vector {
+            function A1_vector_empty$u8$() -> vector {
                 vector := $Malloc(34)
                 $MemoryStoreU64(add(vector, 8), 2)
             }

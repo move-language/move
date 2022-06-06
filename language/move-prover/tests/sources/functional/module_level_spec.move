@@ -13,7 +13,7 @@ module 0x42::TestModule {
 }
 
 spec 0x42::TestModule {
-    use Std::Signer;
+    use std::signer;
 
     invariant forall addr: address where exists<R>(addr): global<R>(addr).value > 0;
 
@@ -29,7 +29,7 @@ spec 0x42::TestModule {
     spec schema Store {
         s: signer;
         value: u64;
-        let addr = Signer::address_of(s);
+        let addr = signer::address_of(s);
         ensures exists<R>(addr);
         ensures global<R>(addr).value == value;
     }

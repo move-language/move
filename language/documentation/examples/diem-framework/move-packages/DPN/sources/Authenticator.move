@@ -1,10 +1,10 @@
 /// Move representation of the authenticator types used in Diem. The supported types are Ed25519 (single-sig)
 /// and MultiEd25519 (K-of-N multisig).
 module DiemFramework::Authenticator {
-    use Std::Errors;
-    use Std::Hash;
-    use Std::BCS;
-    use Std::Vector;
+    use std::errors;
+    use std::hash;
+    use std::bcs;
+    use std::vector;
 
     /// A multi-ed25519 public key
     struct MultiEd25519PublicKey has copy, drop, store {
@@ -39,16 +39,16 @@ module DiemFramework::Authenticator {
         threshold: u8
     ): MultiEd25519PublicKey {
         // check threshold requirements
-        let len = Vector::length(&public_keys);
-        assert!(threshold != 0, Errors::invalid_argument(EZERO_THRESHOLD));
+        let len = vector::length(&public_keys);
+        assert!(threshold != 0, errors::invalid_argument(EZERO_THRESHOLD));
         assert!(
             (threshold as u64) <= len,
-            Errors::invalid_argument(ENOT_ENOUGH_KEYS_FOR_THRESHOLD)
+            errors::invalid_argument(ENOT_ENOUGH_KEYS_FOR_THRESHOLD)
         );
         // the multied25519 signature scheme allows at most 32 keys
         assert!(
             len <= MAX_MULTI_ED25519_KEYS,
-            Errors::invalid_argument(ENUM_KEYS_ABOVE_MAX_THRESHOLD)
+            errors::invalid_argument(ENUM_KEYS_ABOVE_MAX_THRESHOLD)
         );
 
         MultiEd25519PublicKey { public_keys, threshold }
@@ -56,8 +56,8 @@ module DiemFramework::Authenticator {
 
     /// Compute an authentication key for the ed25519 public key `public_key`
     public fun ed25519_authentication_key(public_key: vector<u8>): vector<u8> {
-        Vector::push_back(&mut public_key, SINGLE_ED25519_SCHEME_ID);
-        Hash::sha3_256(public_key)
+        vector::push_back(&mut public_key, SINGLE_ED25519_SCHEME_ID);
+        hash::sha3_256(public_key)
     }
     spec ed25519_authentication_key {
         pragma opaque = true;
@@ -71,20 +71,20 @@ module DiemFramework::Authenticator {
     /// Compute a multied25519 account authentication key for the policy `k`
     public fun multi_ed25519_authentication_key(k: &MultiEd25519PublicKey): vector<u8> {
         let public_keys = &k.public_keys;
-        let len = Vector::length(public_keys);
-        let authentication_key_preimage = Vector::empty();
+        let len = vector::length(public_keys);
+        let authentication_key_preimage = vector::empty();
         let i = 0;
         while (i < len) {
-            let public_key = *Vector::borrow(public_keys, i);
-            Vector::append(
+            let public_key = *vector::borrow(public_keys, i);
+            vector::append(
                 &mut authentication_key_preimage,
                 public_key
             );
             i = i + 1;
         };
-        Vector::append(&mut authentication_key_preimage, BCS::to_bytes(&k.threshold));
-        Vector::push_back(&mut authentication_key_preimage, MULTI_ED25519_SCHEME_ID);
-        Hash::sha3_256(authentication_key_preimage)
+        vector::append(&mut authentication_key_preimage, bcs::to_bytes(&k.threshold));
+        vector::push_back(&mut authentication_key_preimage, MULTI_ED25519_SCHEME_ID);
+        hash::sha3_256(authentication_key_preimage)
     }
     spec multi_ed25519_authentication_key {
         pragma opaque;

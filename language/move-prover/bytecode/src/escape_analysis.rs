@@ -260,7 +260,7 @@ impl<'a> TransferFunctions for EscapeAnalysis<'a> {
                             callee_fun_env.module_env.get_identifier().as_str(),
                             callee_fun_env.get_identifier().as_str(),
                         ) {
-                            ("Vector", "borrow_mut") | ("Vector", "borrow") => {
+                            ("vector", "borrow_mut") | ("vector", "borrow") => {
                                 let vec_arg = 0;
                                 let to_propagate = match state.get_local_index(&args[vec_arg]) {
                                     AbsValue::OkRef => {

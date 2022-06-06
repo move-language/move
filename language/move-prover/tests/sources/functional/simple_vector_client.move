@@ -1,7 +1,7 @@
 // This file consists of a series of test cases which are client functions
 // using the standard vector module.
 module 0x42::TestVector {
-    use Std::Vector;
+    use std::vector;
 
     spec module {
         pragma verify = true;
@@ -26,8 +26,8 @@ module 0x42::TestVector {
     // succeeds. [] == [].
     fun test_empty() : (vector<u64>, vector<u64>)
     {
-        let ev1 = Vector::empty<u64>();
-        let ev2 = Vector::empty<u64>();
+        let ev1 = vector::empty<u64>();
+        let ev2 = vector::empty<u64>();
         (ev1, ev2)
     }
     spec test_empty {
@@ -39,10 +39,10 @@ module 0x42::TestVector {
     // succeeds. [1] == [1]
     fun test_push() : (vector<u64>, vector<u64>)
     {
-        let ev1 = Vector::empty<u64>();
-        let ev2 = Vector::empty<u64>();
-        Vector::push_back(&mut ev1, 1);
-        Vector::push_back(&mut ev2, 1);
+        let ev1 = vector::empty<u64>();
+        let ev2 = vector::empty<u64>();
+        vector::push_back(&mut ev1, 1);
+        vector::push_back(&mut ev2, 1);
         (ev1, ev2)
     }
     spec test_push {
@@ -54,10 +54,10 @@ module 0x42::TestVector {
     //succeeds. [] == [].
     fun test_push_pop() : (vector<u64>, vector<u64>)
     {
-        let ev1 = Vector::empty<u64>();
-        let ev2 = Vector::empty<u64>();
-        Vector::push_back(&mut ev1, 1);
-        Vector::pop_back(&mut ev1);
+        let ev1 = vector::empty<u64>();
+        let ev2 = vector::empty<u64>();
+        vector::push_back(&mut ev1, 1);
+        vector::pop_back(&mut ev1);
         (ev1, ev2)
     }
     spec test_push_pop {
@@ -67,11 +67,11 @@ module 0x42::TestVector {
     //succeeds. [1,2] != [1].
     fun test_neq1() : (vector<u64>, vector<u64>)
     {
-        let ev1 = Vector::empty<u64>();
-        let ev2 = Vector::empty<u64>();
-        Vector::push_back(&mut ev1, 1);
-        Vector::push_back(&mut ev1, 2);
-        Vector::push_back(&mut ev2, 1);
+        let ev1 = vector::empty<u64>();
+        let ev2 = vector::empty<u64>();
+        vector::push_back(&mut ev1, 1);
+        vector::push_back(&mut ev1, 2);
+        vector::push_back(&mut ev2, 1);
         (ev1, ev2)
     }
     spec test_neq1 {
@@ -81,10 +81,10 @@ module 0x42::TestVector {
     // succeeds. [1] == [0]
     fun test_neq2() : (vector<u64>, vector<u64>)
     {
-        let ev1 = Vector::empty<u64>();
-        let ev2 = Vector::empty<u64>();
-        Vector::push_back(&mut ev1, 1);
-        Vector::push_back(&mut ev2, 0);
+        let ev1 = vector::empty<u64>();
+        let ev2 = vector::empty<u64>();
+        vector::push_back(&mut ev1, 1);
+        vector::push_back(&mut ev2, 0);
         (ev1, ev2)
     }
     spec test_neq2 {
@@ -94,9 +94,9 @@ module 0x42::TestVector {
     // succeeds. reverse([]) == [].
     fun test_reverse1() : (vector<u64>, vector<u64>)
     {
-        let ev1 = Vector::empty<u64>();
-        let ev2 = Vector::empty<u64>();
-        Vector::reverse(&mut ev1);
+        let ev1 = vector::empty<u64>();
+        let ev2 = vector::empty<u64>();
+        vector::reverse(&mut ev1);
         (ev1, ev2)
     }
     spec test_reverse1 {
@@ -106,13 +106,13 @@ module 0x42::TestVector {
     // succeeds. reverse([1,2]) == [2,1].
     fun test_reverse2() : (vector<u64>, vector<u64>)
     {
-        let ev1 = Vector::empty<u64>();
-        let ev2 = Vector::empty<u64>();
-        Vector::push_back(&mut ev1, 1);
-        Vector::push_back(&mut ev1, 2);
-        Vector::push_back(&mut ev2, 2);
-        Vector::push_back(&mut ev2, 1);
-        Vector::reverse(&mut ev1);
+        let ev1 = vector::empty<u64>();
+        let ev2 = vector::empty<u64>();
+        vector::push_back(&mut ev1, 1);
+        vector::push_back(&mut ev1, 2);
+        vector::push_back(&mut ev2, 2);
+        vector::push_back(&mut ev2, 1);
+        vector::reverse(&mut ev1);
         (ev1, ev2)
     }
     spec test_reverse2 {
@@ -122,13 +122,13 @@ module 0x42::TestVector {
     // succeeds. reverse([1,2]) != [1,2].
     fun test_reverse3() : (vector<u64>, vector<u64>)
     {
-        let ev1 = Vector::empty<u64>();
-        let ev2 = Vector::empty<u64>();
-        Vector::push_back(&mut ev1, 1);
-        Vector::push_back(&mut ev1, 2);
-        Vector::push_back(&mut ev2, 1);
-        Vector::push_back(&mut ev2, 2);
-        Vector::reverse(&mut ev1);
+        let ev1 = vector::empty<u64>();
+        let ev2 = vector::empty<u64>();
+        vector::push_back(&mut ev1, 1);
+        vector::push_back(&mut ev1, 2);
+        vector::push_back(&mut ev2, 1);
+        vector::push_back(&mut ev2, 2);
+        vector::reverse(&mut ev1);
         (ev1, ev2)
     }
     spec test_reverse3 {
@@ -138,14 +138,14 @@ module 0x42::TestVector {
     // succeeds. swap([1,2],0,1) == [2,1].
     fun test_swap() : (vector<u64>, vector<u64>)
     {
-        let ev1 = Vector::empty<u64>();
-        let ev2 = Vector::empty<u64>();
-        Vector::push_back(&mut ev1, 1);
-        Vector::push_back(&mut ev1, 2);
-        Vector::push_back(&mut ev2, 2);
-        Vector::push_back(&mut ev2, 1);
-        Vector::swap(&mut ev1, 0, 0);
-        Vector::swap(&mut ev1, 0, 1);
+        let ev1 = vector::empty<u64>();
+        let ev2 = vector::empty<u64>();
+        vector::push_back(&mut ev1, 1);
+        vector::push_back(&mut ev1, 2);
+        vector::push_back(&mut ev2, 2);
+        vector::push_back(&mut ev2, 1);
+        vector::swap(&mut ev1, 0, 0);
+        vector::swap(&mut ev1, 0, 1);
         (ev1, ev2)
     }
     spec test_swap {
@@ -155,9 +155,9 @@ module 0x42::TestVector {
     // succeeds. Always aborts because the first index argument of `swap` is out-of-bounds.
     fun test_swap_abort1()
     {
-        let ev1 = Vector::empty<u64>();
-        Vector::push_back(&mut ev1, 1);
-        Vector::swap(&mut ev1, 1, 0);
+        let ev1 = vector::empty<u64>();
+        vector::push_back(&mut ev1, 1);
+        vector::swap(&mut ev1, 1, 0);
     }
     spec test_swap_abort1 {
         aborts_if true;
@@ -166,9 +166,9 @@ module 0x42::TestVector {
     // succeeds. Always aborts because the second index argument of `swap` is out-of-bounds.
     fun test_swap_abort2()
     {
-        let ev1 = Vector::empty<u64>();
-        Vector::push_back(&mut ev1, 1);
-        Vector::swap(&mut ev1, 0, 1);
+        let ev1 = vector::empty<u64>();
+        vector::push_back(&mut ev1, 1);
+        vector::swap(&mut ev1, 0, 1);
     }
     spec test_swap_abort2 {
         aborts_if true;
@@ -177,20 +177,20 @@ module 0x42::TestVector {
     // succeeds. len([1]) = len([]) + 1.
     fun test_length1() : (u64, u64)
     {
-        let ev1 = Vector::empty<u64>();
-        let ev2 = Vector::empty<u64>();
-        Vector::push_back(&mut ev1, 1);
-        (Vector::length(&ev1), Vector::length(&ev2))
+        let ev1 = vector::empty<u64>();
+        let ev2 = vector::empty<u64>();
+        vector::push_back(&mut ev1, 1);
+        (vector::length(&ev1), vector::length(&ev2))
     }
     spec test_length1 {
         ensures result_1 == result_2 + 1;
     }
 
     fun vector_of_proper_positives(): vector<u64> {
-        let v = Vector::empty();
-        Vector::push_back(&mut v, 1);
-        Vector::push_back(&mut v, 2);
-        Vector::push_back(&mut v, 3);
+        let v = vector::empty();
+        vector::push_back(&mut v, 1);
+        vector::push_back(&mut v, 2);
+        vector::push_back(&mut v, 3);
         v
     }
     spec vector_of_proper_positives {
@@ -201,9 +201,9 @@ module 0x42::TestVector {
     // succeeds. 7 == 7.
     fun test_borrow1() : u64
     {
-        let v = Vector::empty<u64>();
-        Vector::push_back(&mut v, 7);
-        *Vector::borrow(&v, 0)
+        let v = vector::empty<u64>();
+        vector::push_back(&mut v, 7);
+        *vector::borrow(&v, 0)
     }
     spec test_borrow1 {
         ensures result == 7;
@@ -212,9 +212,9 @@ module 0x42::TestVector {
     // succeeds. 7 != 7.
     fun test_borrow2() : u64
     {
-        let v = Vector::empty<u64>();
-        Vector::push_back(&mut v, 0);
-        *Vector::borrow(&v, 0)
+        let v = vector::empty<u64>();
+        vector::push_back(&mut v, 0);
+        *vector::borrow(&v, 0)
     }
     spec test_borrow2 {
         ensures result != 7;
@@ -223,9 +223,9 @@ module 0x42::TestVector {
     // succeeds. Always aborts due to the out-of-bounds index used.
     fun test_borrow3() : u64
     {
-        let v = Vector::empty<u64>();
-        Vector::push_back(&mut v, 7);
-        *Vector::borrow(&v, 1)
+        let v = vector::empty<u64>();
+        vector::push_back(&mut v, 7);
+        *vector::borrow(&v, 1)
     }
     spec test_borrow3 {
         aborts_if true;
@@ -233,16 +233,16 @@ module 0x42::TestVector {
 
     fun test_slice() : (vector<u64>,vector<u64>)
     {
-        let ev1 = Vector::empty<u64>();
-        let ev2 = Vector::empty<u64>();
-        Vector::push_back(&mut ev1, 1);
-        Vector::push_back(&mut ev1, 2);
-        Vector::push_back(&mut ev2, 0);
-        Vector::push_back(&mut ev2, 1);
-        Vector::push_back(&mut ev2, 2);
-        Vector::push_back(&mut ev2, 3);
-        Vector::push_back(&mut ev2, 1);
-        Vector::push_back(&mut ev2, 2);
+        let ev1 = vector::empty<u64>();
+        let ev2 = vector::empty<u64>();
+        vector::push_back(&mut ev1, 1);
+        vector::push_back(&mut ev1, 2);
+        vector::push_back(&mut ev2, 0);
+        vector::push_back(&mut ev2, 1);
+        vector::push_back(&mut ev2, 2);
+        vector::push_back(&mut ev2, 3);
+        vector::push_back(&mut ev2, 1);
+        vector::push_back(&mut ev2, 2);
         (ev1, ev2)
     }
     spec test_slice {
@@ -258,13 +258,13 @@ module 0x42::TestVector {
     {
         let b1: bool;
         let b2: bool;
-        let ev1 = Vector::empty<u64>();
-        Vector::push_back(&mut ev1, 1);
-        Vector::push_back(&mut ev1, 2);
-        Vector::push_back(&mut ev1, 3);
-        Vector::push_back(&mut ev1, 5);
-        b1 = Vector::contains(&ev1, &3);
-        b2 = Vector::contains(&ev1, &4);
+        let ev1 = vector::empty<u64>();
+        vector::push_back(&mut ev1, 1);
+        vector::push_back(&mut ev1, 2);
+        vector::push_back(&mut ev1, 3);
+        vector::push_back(&mut ev1, 5);
+        b1 = vector::contains(&ev1, &3);
+        b2 = vector::contains(&ev1, &4);
         (ev1, b1, b2)
     }
     spec test_contains {
@@ -288,16 +288,16 @@ module 0x42::TestVector {
         let b2: bool;
         let i1: u64;
         let i2: u64;
-        let ev1 = Vector::empty<u64>();
-        Vector::push_back(&mut ev1, 1);
-        Vector::push_back(&mut ev1, 2);
-        Vector::push_back(&mut ev1, 3);
-        Vector::push_back(&mut ev1, 7);
-        Vector::push_back(&mut ev1, 7);
-        Vector::push_back(&mut ev1, 1);
-        Vector::reverse(&mut ev1);
-        (b1, i1) = Vector::index_of<u64>(&ev1, &4);
-        (b2, i2) = Vector::index_of<u64>(&ev1, &7);
+        let ev1 = vector::empty<u64>();
+        vector::push_back(&mut ev1, 1);
+        vector::push_back(&mut ev1, 2);
+        vector::push_back(&mut ev1, 3);
+        vector::push_back(&mut ev1, 7);
+        vector::push_back(&mut ev1, 7);
+        vector::push_back(&mut ev1, 1);
+        vector::reverse(&mut ev1);
+        (b1, i1) = vector::index_of<u64>(&ev1, &4);
+        (b2, i2) = vector::index_of<u64>(&ev1, &7);
         (ev1, b1, i1, b2, i2)
     }
     spec test_index_of {
@@ -319,11 +319,11 @@ module 0x42::TestVector {
     {
         let x: u64;
         let y: u64;
-        x = Vector::length(&v);
-        Vector::push_back(&mut v, 1);
-        Vector::push_back(&mut v, 2);
-        Vector::push_back(&mut v, 3);
-        y = Vector::length(&v);
+        x = vector::length(&v);
+        vector::push_back(&mut v, 1);
+        vector::push_back(&mut v, 2);
+        vector::push_back(&mut v, 3);
+        y = vector::length(&v);
         (x, y)
     }
     spec test_length2 {
@@ -332,9 +332,9 @@ module 0x42::TestVector {
 
     fun test_length3(v: vector<u64>) : (u64, u64)
     {
-        let l = Vector::length(&v);
-        Vector::push_back(&mut v, 1);
-        (l, Vector::length(&v))
+        let l = vector::length(&v);
+        vector::push_back(&mut v, 1);
+        (l, vector::length(&v))
     }
     spec test_length3 {
         ensures len(v) == result_1;
@@ -343,9 +343,9 @@ module 0x42::TestVector {
 
     fun test_length4(v: &mut vector<u64>) : (u64, u64)
     {
-        let l = Vector::length(v);
-        Vector::push_back(v, 1);
-        (l, Vector::length(v))
+        let l = vector::length(v);
+        vector::push_back(v, 1);
+        (l, vector::length(v))
     }
     spec test_length4 {
         ensures len(old(v)) == result_1;
@@ -366,8 +366,8 @@ module 0x42::TestVector {
     // succeeds. reverse(reverse(v)) == v.
     fun test_id2(v: vector<u64>) : vector<u64>
     {
-        Vector::reverse(&mut v);
-        Vector::reverse(&mut v);
+        vector::reverse(&mut v);
+        vector::reverse(&mut v);
         v
     }
     spec test_id2 {
@@ -377,18 +377,18 @@ module 0x42::TestVector {
     // succeeds. reverse(some_obscure_reverse_routine(v)) == v.
     fun test_id3(v: vector<u64>) : vector<u64>
     {
-        let l: u64 = Vector::length(&v);
+        let l: u64 = vector::length(&v);
         if(l <= 1) {
         }
         else {
             if(l <= 3) {
-                Vector::swap(&mut v, 0, l-1);
+                vector::swap(&mut v, 0, l-1);
             }
             else {
-                Vector::reverse(&mut v);
+                vector::reverse(&mut v);
             }
         };
-        Vector::reverse(&mut v);
+        vector::reverse(&mut v);
         v
     }
     spec test_id3 {
@@ -398,9 +398,9 @@ module 0x42::TestVector {
     // succeeds. If the input vector is empty, destroy it, and return a new empty vector.
     fun test_destroy_empty1(v: vector<u64>) : vector<u64>
     {
-        if(Vector::is_empty(&v)) {
-            Vector::destroy_empty(v);
-            Vector::empty<u64>()
+        if(vector::is_empty(&v)) {
+            vector::destroy_empty(v);
+            vector::empty<u64>()
         }
         else {
             v
@@ -413,11 +413,11 @@ module 0x42::TestVector {
     // succeeds. If the input vector is empty, destroy it, and return a new empty vector.
     fun test_destroy_empty2(v: vector<u64>)
     {
-        if(Vector::is_empty(&v)) {
-            Vector::swap(&mut v, 0, 0);
+        if(vector::is_empty(&v)) {
+            vector::swap(&mut v, 0, 0);
         }
         else {
-            Vector::destroy_empty(v);
+            vector::destroy_empty(v);
         }
     }
     spec test_destroy_empty2 {
@@ -426,8 +426,8 @@ module 0x42::TestVector {
 
     fun test_borrow_mut(v: &mut vector<u64>) : u64
     {
-        let x = *Vector::borrow(v, 0);
-        *Vector::borrow_mut(v, 0) = 7;
+        let x = *vector::borrow(v, 0);
+        *vector::borrow_mut(v, 0) = 7;
         x
     }
     spec test_borrow_mut {
@@ -444,21 +444,21 @@ module 0x42::TestVector {
     }
 
     fun none<E>(): T<E> {
-        T<E> {v: Vector::empty<E>()}
+        T<E> {v: vector::empty<E>()}
     }
 
     fun some<E>(e: E): T<E> {
-        let v = Vector::empty<E>();
-        Vector::push_back(&mut v, e);
+        let v = vector::empty<E>();
+        vector::push_back(&mut v, e);
         T<E> {v: v}
     }
 
     fun unwrap_or<E: copy + drop>(x: T<E>, e: E): E {
         let T<E> {v : v} = x;
-        if (Vector::is_empty<E>(&v))
+        if (vector::is_empty<E>(&v))
             e
         else
-            Vector::pop_back<E>(&mut v)
+            vector::pop_back<E>(&mut v)
     }
 
     fun option_type(): (u64, u64) {

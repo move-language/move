@@ -1,7 +1,7 @@
 CompiledPackageInfo {
     package_name: "test",
     address_alias_instantiation: {
-        "Std": 00000000000000000000000000000001,
+        "std": 00000000000000000000000000000001,
     },
     source_digest: Some(
         "ELIDED_FOR_TEST",

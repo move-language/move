@@ -1,13 +1,13 @@
-// dep: ../../move-stdlib/sources/Signer.move
-// dep: ../../move-stdlib/sources/Vector.move
+// dep: ../../move-stdlib/sources/signer.move
+// dep: ../../move-stdlib/sources/vector.move
 
 // Regression test for a bug in handling generic mutual borrow, as well as parameter types of native functions.
 
 address 0x1 {
 
 module Diem {
-    use Std::Signer;
-    use Std::Vector;
+    use std::signer;
+    use std::vector;
 
     // A resource representing a fungible token
     struct T<phantom Token> has key, store {
@@ -33,7 +33,7 @@ module Diem {
         coin: T<Token>
     ) acquires Info {
         let coin_value = value(&coin);
-        Vector::push_back(
+        vector::push_back(
             &mut preburn_ref.requests,
             coin
         );
@@ -42,7 +42,7 @@ module Diem {
     }
 
     public fun preburn_to<Token: store>(account: &signer, coin: T<Token>) acquires Info, Preburn {
-        preburn(borrow_global_mut<Preburn<Token>>(Signer::address_of(account)), coin)
+        preburn(borrow_global_mut<Preburn<Token>>(signer::address_of(account)), coin)
     }
 
     public fun market_cap<Token: store>(): u128 acquires Info {

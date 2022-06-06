@@ -3,9 +3,9 @@ module DiemFramework::DesignatedDealer {
     use DiemFramework::Diem;
     use DiemFramework::Roles;
     use DiemFramework::XUS::XUS;
-    use Std::Errors;
-    use Std::Event;
-    use Std::Signer;
+    use std::errors;
+    use std::event;
+    use std::signer;
     friend DiemFramework::DiemAccount;
 
     /// A `DesignatedDealer` always holds this `Dealer` resource regardless of the
@@ -13,12 +13,12 @@ module DiemFramework::DesignatedDealer {
     /// currencies will be emitted on `mint_event_handle`.
     struct Dealer has key {
         /// Handle for mint events
-        mint_event_handle: Event::EventHandle<ReceivedMintEvent>,
+        mint_event_handle: event::EventHandle<ReceivedMintEvent>,
     }
 
     spec schema AbortsIfNoDealer {
         dd_addr: address;
-        aborts_if !exists<Dealer>(dd_addr) with Errors::NOT_PUBLISHED;
+        aborts_if !exists<Dealer>(dd_addr) with errors::NOT_PUBLISHED;
     }
 
     /// The `TierInfo` resource holds the information needed to track which
@@ -67,8 +67,8 @@ module DiemFramework::DesignatedDealer {
     ){
         Roles::assert_treasury_compliance(tc_account);
         Roles::assert_designated_dealer(dd);
-        assert!(!exists<Dealer>(Signer::address_of(dd)), Errors::already_published(EDEALER));
-        move_to(dd, Dealer { mint_event_handle: Event::new_event_handle<ReceivedMintEvent>(dd) });
+        assert!(!exists<Dealer>(signer::address_of(dd)), errors::already_published(EDEALER));
+        move_to(dd, Dealer { mint_event_handle: event::new_event_handle<ReceivedMintEvent>(dd) });
         if (add_all_currencies) {
             add_currency<XUS>(dd, tc_account);
         } else {
@@ -78,17 +78,17 @@ module DiemFramework::DesignatedDealer {
     spec publish_designated_dealer_credential {
         pragma opaque;
 
-        let dd_addr = Signer::address_of(dd);
+        let dd_addr = signer::address_of(dd);
 
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         include Roles::AbortsIfNotDesignatedDealer{account: dd};
-        aborts_if exists<Dealer>(dd_addr) with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<Dealer>(dd_addr) with errors::ALREADY_PUBLISHED;
         include if (add_all_currencies) AddCurrencyAbortsIf<XUS>{dd_addr: dd_addr}
                 else AddCurrencyAbortsIf<CoinType>{dd_addr: dd_addr};
 
         modifies global<Dealer>(dd_addr);
         ensures exists<Dealer>(dd_addr);
-        modifies global<Event::EventHandleGenerator>(dd_addr);
+        modifies global<event::EventHandleGenerator>(dd_addr);
         modifies global<Diem::PreburnQueue<CoinType>>(dd_addr);
         modifies global<Diem::PreburnQueue<XUS>>(dd_addr);
     }
@@ -102,8 +102,8 @@ module DiemFramework::DesignatedDealer {
     /// multi-signer transactions in order to add a new currency to an existing DD.
     public(friend) fun add_currency<CoinType>(dd: &signer, tc_account: &signer) {
         Roles::assert_treasury_compliance(tc_account);
-        let dd_addr = Signer::address_of(dd);
-        assert!(exists_at(dd_addr), Errors::not_published(EDEALER));
+        let dd_addr = signer::address_of(dd);
+        assert!(exists_at(dd_addr), errors::not_published(EDEALER));
         Diem::publish_preburn_queue_to_account<CoinType>(dd, tc_account);
     }
     // #[test_only] TODO: uncomment once unit tests are fully migrated
@@ -113,7 +113,7 @@ module DiemFramework::DesignatedDealer {
     spec add_currency {
         pragma opaque;
 
-        let dd_addr = Signer::address_of(dd);
+        let dd_addr = signer::address_of(dd);
 
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         include Roles::AbortsIfNotDesignatedDealer{account: dd};
@@ -125,9 +125,9 @@ module DiemFramework::DesignatedDealer {
     spec schema AddCurrencyAbortsIf<CoinType> {
         dd_addr: address;
         include Diem::AbortsIfNoCurrency<CoinType>;
-        aborts_if Diem::is_synthetic_currency<CoinType>() with Errors::INVALID_ARGUMENT;
-        aborts_if exists<Diem::PreburnQueue<CoinType>>(dd_addr) with Errors::ALREADY_PUBLISHED;
-        aborts_if exists<Diem::Preburn<CoinType>>(dd_addr) with Errors::INVALID_STATE;
+        aborts_if Diem::is_synthetic_currency<CoinType>() with errors::INVALID_ARGUMENT;
+        aborts_if exists<Diem::PreburnQueue<CoinType>>(dd_addr) with errors::ALREADY_PUBLISHED;
+        aborts_if exists<Diem::Preburn<CoinType>>(dd_addr) with errors::INVALID_STATE;
     }
 
     public fun tiered_mint<CoinType>(
@@ -139,8 +139,8 @@ module DiemFramework::DesignatedDealer {
         _tier_index: u64,
     ): Diem::Diem<CoinType> acquires Dealer, TierInfo {
         Roles::assert_treasury_compliance(tc_account);
-        assert!(amount > 0, Errors::invalid_argument(EINVALID_MINT_AMOUNT));
-        assert!(exists_at(dd_addr), Errors::not_published(EDEALER));
+        assert!(amount > 0, errors::invalid_argument(EINVALID_MINT_AMOUNT));
+        assert!(exists_at(dd_addr), errors::not_published(EDEALER));
 
         // Delete deprecated `TierInfo` resources.
         // TODO: delete this code once there are no more TierInfo resources in the system
@@ -149,7 +149,7 @@ module DiemFramework::DesignatedDealer {
         };
 
         // Send ReceivedMintEvent
-        Event::emit_event<ReceivedMintEvent>(
+        event::emit_event<ReceivedMintEvent>(
             &mut borrow_global_mut<Dealer>(dd_addr).mint_event_handle,
             ReceivedMintEvent {
                 currency_code: Diem::currency_code<CoinType>(),
@@ -181,9 +181,9 @@ module DiemFramework::DesignatedDealer {
         dd_addr: address;
         amount: u64;
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
-        aborts_if amount == 0 with Errors::INVALID_ARGUMENT;
+        aborts_if amount == 0 with errors::INVALID_ARGUMENT;
         include AbortsIfNoDealer;
-        aborts_if !exists<Diem::MintCapability<CoinType>>(Signer::address_of(tc_account)) with Errors::REQUIRES_CAPABILITY;
+        aborts_if !exists<Diem::MintCapability<CoinType>>(signer::address_of(tc_account)) with errors::REQUIRES_CAPABILITY;
         include Diem::MintAbortsIf<CoinType>{value: amount};
     }
     spec schema TieredMintEmits<CoinType> {

@@ -1,10 +1,10 @@
 module ExperimentalFramework::MultiTokenBalance {
-    use Std::Errors;
-    use Std::GUID;
+    use std::errors;
+    use std::guid;
     use ExperimentalFramework::MultiToken::{Self, Token};
-    use Std::Option::{Self, Option};
-    use Std::Signer;
-    use Std::Vector;
+    use std::option::{Self, Option};
+    use std::signer;
+    use std::vector;
 
     /// Balance holding tokens of `TokenType` as well as information of approved operators.
     struct TokenBalance<phantom TokenType: store> has key {
@@ -21,11 +21,11 @@ module ExperimentalFramework::MultiTokenBalance {
         global<TokenBalance<TokenType>>(addr).gallery
     }
 
-    spec fun is_in_gallery<TokenType>(gallery: vector<Token<TokenType>>, token_id: GUID::ID): bool {
+    spec fun is_in_gallery<TokenType>(gallery: vector<Token<TokenType>>, token_id: guid::ID): bool {
         exists i in range(gallery): gallery[i].id == token_id
     }
 
-    spec fun find_token_index_by_id<TokenType>(gallery: vector<Token<TokenType>>, id: GUID::ID): u64 {
+    spec fun find_token_index_by_id<TokenType>(gallery: vector<Token<TokenType>>, id: guid::ID): u64 {
         choose i in range(gallery) where gallery[i].id == id
     }
 
@@ -54,7 +54,7 @@ module ExperimentalFramework::MultiTokenBalance {
             MultiToken::join<TokenType>(&mut token, original_token);
         };
         let gallery = &mut borrow_global_mut<TokenBalance<TokenType>>(owner).gallery;
-        Vector::push_back(gallery, token);
+        vector::push_back(gallery, token);
     }
 
 
@@ -78,13 +78,13 @@ module ExperimentalFramework::MultiTokenBalance {
     }
 
     /// Remove a token of certain id from the owner's gallery and return it.
-    fun remove_from_gallery<TokenType: store>(owner: address, id: &GUID::ID): Token<TokenType>
+    fun remove_from_gallery<TokenType: store>(owner: address, id: &guid::ID): Token<TokenType>
     acquires TokenBalance {
         assert!(exists<TokenBalance<TokenType>>(owner), EBALANCE_NOT_PUBLISHED);
         let gallery = &mut borrow_global_mut<TokenBalance<TokenType>>(owner).gallery;
         let index_opt = index_of_token<TokenType>(gallery, id);
-        assert!(Option::is_some(&index_opt), Errors::limit_exceeded(EID_NOT_FOUND));
-        Vector::remove(gallery, Option::extract(&mut index_opt))
+        assert!(option::is_some(&index_opt), errors::limit_exceeded(EID_NOT_FOUND));
+        vector::remove(gallery, option::extract(&mut index_opt))
     }
 
     spec remove_from_gallery {
@@ -95,32 +95,32 @@ module ExperimentalFramework::MultiTokenBalance {
     }
 
     /// Finds the index of token with the given id in the gallery.
-    fun index_of_token<TokenType: store>(gallery: &vector<Token<TokenType>>, id: &GUID::ID): Option<u64> {
+    fun index_of_token<TokenType: store>(gallery: &vector<Token<TokenType>>, id: &guid::ID): Option<u64> {
         let i = 0;
-        let len = Vector::length(gallery);
+        let len = vector::length(gallery);
         while ({spec {
             invariant i >= 0;
             invariant i <= len(gallery);
             invariant forall k in 0..i: gallery[k].id != id;
         };(i < len)}) {
-            if (MultiToken::id<TokenType>(Vector::borrow(gallery, i)) == *id) {
-                return Option::some(i)
+            if (MultiToken::id<TokenType>(vector::borrow(gallery, i)) == *id) {
+                return option::some(i)
             };
             i = i + 1;
         };
-        Option::none()
+        option::none()
     }
 
     spec index_of_token{
         let min_token_idx = choose min i in range(gallery) where gallery[i].id == id;
-        let post res_id = Option::borrow(result);
-        ensures is_in_gallery(gallery, id) <==> (Option::is_some(result) && res_id == min_token_idx);
-        ensures result ==  Option::spec_none() <==> !is_in_gallery(gallery, id);
+        let post res_id = option::borrow(result);
+        ensures is_in_gallery(gallery, id) <==> (option::is_some(result) && res_id == min_token_idx);
+        ensures result ==  option::spec_none() <==> !is_in_gallery(gallery, id);
     }
 
     /// Returns whether the owner has a token with given id.
-    public fun has_token<TokenType: store>(owner: address, token_id: &GUID::ID): bool acquires TokenBalance {
-        Option::is_some(&index_of_token(&borrow_global<TokenBalance<TokenType>>(owner).gallery, token_id))
+    public fun has_token<TokenType: store>(owner: address, token_id: &guid::ID): bool acquires TokenBalance {
+        option::is_some(&index_of_token(&borrow_global<TokenBalance<TokenType>>(owner).gallery, token_id))
     }
 
     spec has_token {
@@ -128,16 +128,16 @@ module ExperimentalFramework::MultiTokenBalance {
         ensures result <==> is_in_gallery(gallery, token_id);
     }
 
-    public fun get_token_balance<TokenType: store>(owner: address, token_id: &GUID::ID
+    public fun get_token_balance<TokenType: store>(owner: address, token_id: &guid::ID
     ): u64 acquires TokenBalance {
         let gallery = &borrow_global<TokenBalance<TokenType>>(owner).gallery;
         let index_opt = index_of_token<TokenType>(gallery, token_id);
 
-        if (Option::is_none(&index_opt)) {
+        if (option::is_none(&index_opt)) {
             0
         } else {
-            let index = Option::extract(&mut index_opt);
-            MultiToken::balance(Vector::borrow(gallery, index))
+            let index = option::extract(&mut index_opt);
+            MultiToken::balance(vector::borrow(gallery, index))
         }
     }
 
@@ -158,12 +158,12 @@ module ExperimentalFramework::MultiTokenBalance {
         creator: address,
         creation_num: u64
     ) acquires TokenBalance {
-        let owner = Signer::address_of(&account);
+        let owner = signer::address_of(&account);
 
         assert!(amount > 0, EINVALID_AMOUNT_OF_TRANSFER);
 
         // Remove NFT from `owner`'s gallery
-        let id = GUID::create_id(creator, creation_num);
+        let id = guid::create_id(creator, creation_num);
         let token = remove_from_gallery<TokenType>(owner, &id);
 
         assert!(amount <= MultiToken::balance(&token), EINVALID_AMOUNT_OF_TRANSFER);
@@ -186,13 +186,13 @@ module ExperimentalFramework::MultiTokenBalance {
     }
 
     spec transfer_multi_token_between_galleries {
-        let owner = Signer::address_of(account);
+        let owner = signer::address_of(account);
         let gallery_owner = get_token_balance_gallery<TokenType>(owner);
         let gallery_to = get_token_balance_gallery<TokenType>(to);
         let post post_gallery_owner = get_token_balance_gallery<TokenType>(owner);
         let post post_gallery_to = get_token_balance_gallery<TokenType>(to);
 
-        let id = GUID::create_id(creator, creation_num);
+        let id = guid::create_id(creator, creation_num);
 
         let min_token_idx = find_token_index_by_id(gallery_owner, id);
         let min_token_idx_to = find_token_index_by_id(gallery_to, id);
@@ -227,12 +227,12 @@ module ExperimentalFramework::MultiTokenBalance {
     }
 
     public fun publish_balance<TokenType: store>(account: &signer) {
-        assert!(!exists<TokenBalance<TokenType>>(Signer::address_of(account)), EBALANCE_ALREADY_PUBLISHED);
-        move_to(account, TokenBalance<TokenType> { gallery: Vector::empty() });
+        assert!(!exists<TokenBalance<TokenType>>(signer::address_of(account)), EBALANCE_ALREADY_PUBLISHED);
+        move_to(account, TokenBalance<TokenType> { gallery: vector::empty() });
     }
 
     spec publish_balance {
-        let addr = Signer::address_of(account);
+        let addr = signer::address_of(account);
         aborts_if exists<TokenBalance<TokenType>>(addr);
         ensures exists<TokenBalance<TokenType>>(addr);
     }

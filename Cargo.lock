@@ -2724,6 +2724,7 @@ dependencies = [
 name = "move-stdlib"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "dir-diff",
  "file_diff",
  "log",

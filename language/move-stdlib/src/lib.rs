@@ -71,7 +71,7 @@ pub fn move_nursery_files() -> Vec<String> {
 }
 
 pub fn move_stdlib_named_addresses() -> BTreeMap<String, NumericalAddress> {
-    let mapping = [("Std", "0x1")];
+    let mapping = [("std", "0x1")];
     mapping
         .iter()
         .map(|(name, addr)| (name.to_string(), NumericalAddress::parse_str(addr).unwrap()))

@@ -1,7 +1,7 @@
 // This file consists of a series of test cases which are client functions
 // using the standard vector module.
 module 0x42::TestStrongEdges {
-    use Std::Vector;
+    use std::vector;
 
     spec module {
         pragma verify = true;
@@ -34,8 +34,8 @@ module 0x42::TestStrongEdges {
 
     fun vec_edge(v: &mut vector<u64>) : u64
     {
-        let x = *Vector::borrow(v, 0);
-        *Vector::borrow_mut(v, 0) = 7;
+        let x = *vector::borrow(v, 0);
+        *vector::borrow_mut(v, 0) = 7;
         x
     }
     spec vec_edge {

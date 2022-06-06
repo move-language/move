@@ -1,7 +1,7 @@
 #[evm_contract]
 module 0x2::M {
-    use Std::Vector;
-    use Std::ASCII::{Self, String};
+    use std::vector;
+    use std::ascii::{Self, String};
     use Evm::Evm::{emit};
 
     #[decode(sig=b"decode_S(bytes) returns (S)")]
@@ -43,15 +43,15 @@ module 0x2::M {
     }
 
     fun pack_S2(x: u128): S2 {
-        let v = Vector::empty<u128>();
-        Vector::push_back(&mut v, x);
+        let v = vector::empty<u128>();
+        vector::push_back(&mut v, x);
         S2{x:v}
     }
 
     fun pack_S(a: u64, b: bool): S {
-        let v = Vector::empty<S2>();
+        let v = vector::empty<S2>();
         let s2 = pack_S2((a as u128));
-        Vector::push_back(&mut v, s2);
+        vector::push_back(&mut v, s2);
         S{a, b, c: v}
     }
 
@@ -66,39 +66,39 @@ module 0x2::M {
         assert!(_s.b == true, 103);
         let s2 = s.c;
         let _s2 = _s.c;
-        assert!(Vector::length(&s2) == 1, 104);
-        assert!(Vector::length(&_s2) == 1, 105);
-        let _s2x = Vector::borrow(&_s2, 0);
-        assert!(*Vector::borrow(&_s2x.x, 0) == 42, 106);
+        assert!(vector::length(&s2) == 1, 104);
+        assert!(vector::length(&_s2) == 1, 105);
+        let _s2x = vector::borrow(&_s2, 0);
+        assert!(*vector::borrow(&_s2x.x, 0) == 42, 106);
     }
 
     #[evm_test]
     fun test_abi_String() {
         let i = 0;
         let end = 128;
-        let vec = Vector::empty();
+        let vec = vector::empty();
 
         while (i < end) {
-            assert!(ASCII::is_valid_char(i), 0);
-            Vector::push_back(&mut vec, i);
+            assert!(ascii::is_valid_char(i), 0);
+            vector::push_back(&mut vec, i);
             i = i + 1;
         };
 
-        let str = ASCII::string(vec);
+        let str = ascii::string(vec);
         let v = encode_String(str);
         let _str = decode_String(v);
 
-        assert!(Vector::length(ASCII::as_bytes(&_str)) == 128, 100);
+        assert!(vector::length(ascii::as_bytes(&_str)) == 128, 100);
         // This call to all_characters_printable will lead to solc compiler error:
         // Error: Cannot use builtin function name "byte" as identifier name.
         // let byte, i, len...
         // assert!(!ASCII::all_characters_printable(&_str), 1);
-        let bytes = ASCII::into_bytes(_str);
-        assert!(Vector::length(&bytes) == 128, 99);
+        let bytes = ascii::into_bytes(_str);
+        assert!(vector::length(&bytes) == 128, 99);
 
         i = 0;
         while (i < end) {
-            assert!(*Vector::borrow(&bytes, (i as u64)) == i, (i as u64));
+            assert!(*vector::borrow(&bytes, (i as u64)) == i, (i as u64));
             i = i + 1;
         };
 
@@ -116,7 +116,7 @@ module 0x2::M {
 
     #[callable(sig=b"test_array(S[][2]) returns (S[])")]
     fun test_array(v: vector<vector<S>>): vector<S> {
-        *Vector::borrow(&v, 0)
+        *vector::borrow(&v, 0)
     }
 
     #[callable(sig=b"test_s_struct(String) returns (String)")]

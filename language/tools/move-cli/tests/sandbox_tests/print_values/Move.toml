@@ -3,7 +3,7 @@ name = "print_values"
 version = "0.0.0"
 
 [addresses]
-Std = "0x1"
+std = "0x1"
 
 [dependencies]
 MoveNursery = { local = "../../../../../move-stdlib/nursery" }

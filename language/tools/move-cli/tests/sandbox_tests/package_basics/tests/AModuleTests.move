@@ -1,6 +1,6 @@
 #[test_only]
-module Std::AModuleTests {
-    use Std::AModule;
+module std::AModuleTests {
+    use std::AModule;
 
     #[test]
     fun double_zero_zero() {

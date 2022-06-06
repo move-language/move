@@ -5,7 +5,7 @@ module Evm::ERC1155Mock {
     use Evm::Table::{Self, Table};
     use Evm::ExternalResult::{Self, ExternalResult};
     use Evm::U256::{Self, U256};
-    use Std::Vector;
+    use std::vector;
 
     // ---------------------
     // For test only
@@ -159,16 +159,16 @@ module Evm::ERC1155Mock {
     #[callable(sig=b"balanceOfBatch(address[],uint256[]) returns (uint256[])"), view]
     /// Get the balance of multiple account/token pairs.
     public fun balanceOfBatch(accounts: vector<address>, ids: vector<U256>): vector<U256> acquires State {
-        require(Vector::length(&accounts) == Vector::length(&ids), b"ERC1155: accounts and ids length mismatch");
-        let len = Vector::length(&accounts);
+        require(vector::length(&accounts) == vector::length(&ids), b"ERC1155: accounts and ids length mismatch");
+        let len = vector::length(&accounts);
         let i = 0;
-        let balances = Vector::empty<U256>();
+        let balances = vector::empty<U256>();
         while(i < len) {
-            Vector::push_back(
+            vector::push_back(
                 &mut balances,
                 balanceOf(
-                    *Vector::borrow(&accounts, i),
-                    *Vector::borrow(&ids, i)
+                    *vector::borrow(&accounts, i),
+                    *vector::borrow(&ids, i)
                 )
             );
             i = i + 1;
@@ -217,16 +217,16 @@ module Evm::ERC1155Mock {
     public fun safeBatchTransferFrom(from: address, to: address, ids: vector<U256>, amounts: vector<U256>, data: vector<u8>) acquires State {
         require(to != @0x0, b"ERC1155: transfer to the zero address");
         require(from == sender() || isApprovedForAll(from, sender()), b"ERC1155: transfer caller is not owner nor approved");
-        require(Vector::length(&amounts) == Vector::length(&ids), b"ERC1155: ids and amounts length mismatch");
-        let len = Vector::length(&amounts);
+        require(vector::length(&amounts) == vector::length(&ids), b"ERC1155: ids and amounts length mismatch");
+        let len = vector::length(&amounts);
         let i = 0;
 
         let operator = sender();
         let s = borrow_global_mut<State>(self());
 
         while(i < len) {
-            let id = *Vector::borrow(&ids, i);
-            let amount = *Vector::borrow(&amounts, i);
+            let id = *vector::borrow(&ids, i);
+            let amount = *vector::borrow(&amounts, i);
 
             let mut_balance_from = mut_balanceOf(s, copy id, from);
             require(U256::le(copy amount, *mut_balance_from), b"ERC1155: insufficient balance for transfer");
@@ -265,15 +265,15 @@ module Evm::ERC1155Mock {
     /// Internal function for mintBatch
     fun mintBatch_(to: address, ids: vector<U256>, amounts: vector<U256>, _data: vector<u8>) acquires State {
         require(to != @0x0, b"ERC1155: mint to the zero address");
-        require(Vector::length(&amounts) == Vector::length(&ids), b"ERC1155: ids and amounts length mismatch");
-        let len = Vector::length(&amounts);
+        require(vector::length(&amounts) == vector::length(&ids), b"ERC1155: ids and amounts length mismatch");
+        let len = vector::length(&amounts);
         let i = 0;
 
         let s = borrow_global_mut<State>(self());
 
         while(i < len) {
-            let id = *Vector::borrow(&ids, i);
-            let amount = *Vector::borrow(&amounts, i);
+            let id = *vector::borrow(&ids, i);
+            let amount = *vector::borrow(&amounts, i);
 
             let mut_balance_to = mut_balanceOf(s, id, to);
             *mut_balance_to = U256::add(*mut_balance_to, amount);
@@ -294,13 +294,13 @@ module Evm::ERC1155Mock {
 
     public fun burnBatch_(owner: address, ids: vector<U256>, amounts: vector<U256>) acquires State {
         require(owner != @0x0, b"ERC1155: burn from the zero address");
-        require(Vector::length(&amounts) == Vector::length(&ids), b"ERC1155: ids and amounts length mismatch");
-        let len = Vector::length(&amounts);
+        require(vector::length(&amounts) == vector::length(&ids), b"ERC1155: ids and amounts length mismatch");
+        let len = vector::length(&amounts);
         let i = 0;
         let s = borrow_global_mut<State>(self());
         while(i < len) {
-            let id = *Vector::borrow(&ids, i);
-            let amount = *Vector::borrow(&amounts, i);
+            let id = *vector::borrow(&ids, i);
+            let amount = *vector::borrow(&amounts, i);
 
             let mut_balance_owner = mut_balanceOf(s, id, owner);
             require(U256::ge(*mut_balance_owner, amount), b"ERC1155: burn amount exceeds balance");

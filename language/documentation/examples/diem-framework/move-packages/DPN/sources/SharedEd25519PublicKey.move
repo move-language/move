@@ -5,8 +5,8 @@ module DiemFramework::SharedEd25519PublicKey {
     use DiemFramework::Authenticator;
     use DiemFramework::DiemAccount;
     use DiemFramework::Signature;
-    use Std::Errors;
-    use Std::Signer;
+    use std::errors;
+    use std::signer;
 
     /// A resource that forces the account associated with `rotation_cap` to use a ed25519
     /// authentication key derived from `key`
@@ -33,7 +33,7 @@ module DiemFramework::SharedEd25519PublicKey {
             rotation_cap: DiemAccount::extract_key_rotation_capability(account)
         };
         rotate_key_(&mut t, key);
-        assert!(!exists_at(Signer::address_of(account)), Errors::already_published(ESHARED_KEY));
+        assert!(!exists_at(signer::address_of(account)), errors::already_published(ESHARED_KEY));
         move_to(account, t);
     }
     spec publish {
@@ -43,7 +43,7 @@ module DiemFramework::SharedEd25519PublicKey {
     spec schema PublishAbortsIf {
         account: signer;
         key: vector<u8>;
-        let addr = Signer::address_of(account);
+        let addr = signer::address_of(account);
         include DiemAccount::ExtractKeyRotationCapabilityAbortsIf;
         include RotateKey_AbortsIf {
                 shared_key: SharedEd25519PublicKey {
@@ -52,12 +52,12 @@ module DiemFramework::SharedEd25519PublicKey {
                 },
                 new_public_key: key
         };
-        aborts_if exists_at(addr) with Errors::ALREADY_PUBLISHED;
+        aborts_if exists_at(addr) with errors::ALREADY_PUBLISHED;
     }
     spec schema PublishEnsures {
         account: signer;
         key: vector<u8>;
-        let addr = Signer::address_of(account);
+        let addr = signer::address_of(account);
 
         ensures exists_at(addr);
         include RotateKey_Ensures { shared_key: global<SharedEd25519PublicKey>(addr), new_public_key: key};
@@ -67,7 +67,7 @@ module DiemFramework::SharedEd25519PublicKey {
         // Cryptographic check of public key validity
         assert!(
             Signature::ed25519_validate_pubkey(copy new_public_key),
-            Errors::invalid_argument(EMALFORMED_PUBLIC_KEY)
+            errors::invalid_argument(EMALFORMED_PUBLIC_KEY)
         );
         DiemAccount::rotate_authentication_key(
             &shared_key.rotation_cap,
@@ -82,7 +82,7 @@ module DiemFramework::SharedEd25519PublicKey {
     spec schema RotateKey_AbortsIf {
         shared_key: SharedEd25519PublicKey;
         new_public_key: vector<u8>;
-        aborts_if !Signature::ed25519_validate_pubkey(new_public_key) with Errors::INVALID_ARGUMENT;
+        aborts_if !Signature::ed25519_validate_pubkey(new_public_key) with errors::INVALID_ARGUMENT;
         include DiemAccount::RotateAuthenticationKeyAbortsIf {
             cap: shared_key.rotation_cap,
             new_authentication_key: Authenticator::spec_ed25519_authentication_key(new_public_key)
@@ -101,8 +101,8 @@ module DiemFramework::SharedEd25519PublicKey {
     /// Aborts if the sender does not have a `SharedEd25519PublicKey` resource.
     /// Aborts if the length of `new_public_key` is not 32.
     public fun rotate_key(account: &signer, new_public_key: vector<u8>) acquires SharedEd25519PublicKey {
-        let addr = Signer::address_of(account);
-        assert!(exists_at(addr), Errors::not_published(ESHARED_KEY));
+        let addr = signer::address_of(account);
+        assert!(exists_at(addr), errors::not_published(ESHARED_KEY));
         rotate_key_(borrow_global_mut<SharedEd25519PublicKey>(addr), new_public_key);
     }
     spec rotate_key {
@@ -112,21 +112,21 @@ module DiemFramework::SharedEd25519PublicKey {
     spec schema RotateKeyAbortsIf {
         account: signer;
         new_public_key: vector<u8>;
-        let addr = Signer::address_of(account);
-        aborts_if !exists_at(addr) with Errors::NOT_PUBLISHED;
+        let addr = signer::address_of(account);
+        aborts_if !exists_at(addr) with errors::NOT_PUBLISHED;
         include RotateKey_AbortsIf {shared_key: global<SharedEd25519PublicKey>(addr)};
     }
     spec schema RotateKeyEnsures {
         account: signer;
         new_public_key: vector<u8>;
-        let addr = Signer::address_of(account);
+        let addr = signer::address_of(account);
         include RotateKey_Ensures {shared_key: global<SharedEd25519PublicKey>(addr)};
     }
 
     /// Return the public key stored under `addr`.
     /// Aborts if `addr` does not hold a `SharedEd25519PublicKey` resource.
     public fun key(addr: address): vector<u8> acquires SharedEd25519PublicKey {
-        assert!(exists_at(addr), Errors::not_published(ESHARED_KEY));
+        assert!(exists_at(addr), errors::not_published(ESHARED_KEY));
         *&borrow_global<SharedEd25519PublicKey>(addr).key
     }
 

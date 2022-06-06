@@ -9,9 +9,9 @@ module Evm::ERC721 {
     use Evm::IERC165;
     use Evm::Table::{Self, Table};
     use Evm::U256::{Self, U256};
-    use Std::ASCII::{Self, String};
-    use Std::Errors;
-    use Std::Vector;
+    use std::ascii::{Self, String};
+    use std::errors;
+    use std::vector;
 
     #[event]
     struct Transfer {
@@ -88,7 +88,7 @@ module Evm::ERC721 {
     /// Get the name.
     public fun tokenURI(tokenId: U256): String {
         let baseURI = b""; // TODO: Implement this.
-        ASCII::string(tokenURI_with_baseURI(baseURI, tokenId))
+        ascii::string(tokenURI_with_baseURI(baseURI, tokenId))
     }
 
     #[callable]
@@ -124,9 +124,9 @@ module Evm::ERC721 {
     ///  TO CONFIRM THAT `_to` IS CAPABLE OF RECEIVING NFTS OR ELSE
     ///  THEY MAY BE PERMANENTLY LOST
     public fun transferFrom(from: address, to: address, tokenId: U256) acquires State {
-        assert!(isApprovedOrOwner(sender(), copy tokenId), Errors::invalid_argument(0));
-        assert!(ownerOf(copy tokenId) == from, Errors::invalid_argument(0));
-        assert!(to != @0x0, Errors::invalid_argument(0));
+        assert!(isApprovedOrOwner(sender(), copy tokenId), errors::invalid_argument(0));
+        assert!(ownerOf(copy tokenId) == from, errors::invalid_argument(0));
+        assert!(to != @0x0, errors::invalid_argument(0));
 
         // Clear approvals from the previous owner
         approve(@0x0, copy tokenId);
@@ -149,9 +149,9 @@ module Evm::ERC721 {
     /// Change or reaffirm the approved address for an NFT.
     public fun approve(approved: address, tokenId: U256) acquires State {
         let owner = ownerOf(copy tokenId);
-        assert!(owner != @0x0, Errors::invalid_argument(0));
-        assert!(approved != owner, Errors::invalid_argument(0));
-        assert!(sender() == owner || isApprovedForAll(owner, sender()), Errors::invalid_argument(0));
+        assert!(owner != @0x0, errors::invalid_argument(0));
+        assert!(approved != owner, errors::invalid_argument(0));
+        assert!(sender() == owner || isApprovedForAll(owner, sender()), errors::invalid_argument(0));
 
         let s = borrow_global_mut<State>(self());
         *mut_tokenApproval(s, copy tokenId) = approved;
@@ -170,7 +170,7 @@ module Evm::ERC721 {
     /// Get the approved address for a single NFT.
     public fun getApproved(tokenId: U256): address acquires State {
         let s = borrow_global_mut<State>(self());
-        assert!(tokenExists(s, copy tokenId), Errors::invalid_argument(0));
+        assert!(tokenExists(s, copy tokenId), errors::invalid_argument(0));
         *mut_tokenApproval(s, tokenId)
     }
 
@@ -184,7 +184,7 @@ module Evm::ERC721 {
     /// Helper function to return true iff `spender` is the owner or an approved one for `tokenId`.
     fun isApprovedOrOwner(spender: address, tokenId: U256): bool acquires State {
         let s = borrow_global_mut<State>(self());
-        assert!(tokenExists(s, copy tokenId), Errors::invalid_argument(0));
+        assert!(tokenExists(s, copy tokenId), errors::invalid_argument(0));
         let owner = ownerOf(copy tokenId);
         return (spender == owner || getApproved(tokenId) == spender || isApprovedForAll(owner, spender))
     }
@@ -230,15 +230,15 @@ module Evm::ERC721 {
             if (Result::is_ok(&result)) {
                 let retval = Result::unwrap(result);
                 let expected = IERC721Receiver::selector_onERC721Received();
-                assert!(retval == expected, Errors::custom(0));
+                assert!(retval == expected, errors::custom(0));
             }
             else {
                 let error_reason = Result::unwrap_err(result);
-                if(Vector::length(&error_reason) == 0) {
-                    abort(Errors::custom(1)) // ERC721: transfer to non ERC721Receiver implementer
+                if(vector::length(&error_reason) == 0) {
+                    abort(errors::custom(1)) // ERC721: transfer to non ERC721Receiver implementer
                 }
                 else {
-                    abort(Errors::custom(2)) // TODO: abort with the `_error` value.
+                    abort(errors::custom(2)) // TODO: abort with the `_error` value.
                 }
             }
         }

@@ -13,7 +13,7 @@ module DiemFramework::TreasuryComplianceScripts {
     use DiemFramework::AccountFreezing;
     use DiemFramework::DualAttestation;
     use DiemFramework::VASPDomain;
-    use Std::FixedPoint32;
+    use std::fixed_point32;
 
     /// # Summary
     /// Cancels and returns the coins held in the preburn area under
@@ -69,7 +69,7 @@ module DiemFramework::TreasuryComplianceScripts {
     }
 
     spec cancel_burn_with_amount {
-        use Std::Errors;
+        use std::errors;
         use DiemFramework::Diem;
 
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
@@ -102,11 +102,11 @@ module DiemFramework::TreasuryComplianceScripts {
         };
 
         aborts_with [check]
-            Errors::REQUIRES_CAPABILITY,
-            Errors::NOT_PUBLISHED,
-            Errors::INVALID_ARGUMENT,
-            Errors::LIMIT_EXCEEDED,
-            Errors::INVALID_STATE;
+            errors::REQUIRES_CAPABILITY,
+            errors::NOT_PUBLISHED,
+            errors::INVALID_ARGUMENT,
+            errors::LIMIT_EXCEEDED,
+            errors::INVALID_STATE;
 
         /// **Access Control:**
         /// Only the account with the burn capability can cancel burning [[H3]][PERMISSION].
@@ -172,7 +172,7 @@ module DiemFramework::TreasuryComplianceScripts {
         Diem::burn<Token>(&account, preburn_address, amount)
     }
     spec burn_with_amount {
-        use Std::Errors;
+        use std::errors;
         use DiemFramework::DiemAccount;
 
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
@@ -181,11 +181,11 @@ module DiemFramework::TreasuryComplianceScripts {
         include Diem::BurnEnsures<Token>;
 
         aborts_with [check]
-            Errors::INVALID_ARGUMENT,
-            Errors::REQUIRES_CAPABILITY,
-            Errors::NOT_PUBLISHED,
-            Errors::INVALID_STATE,
-            Errors::LIMIT_EXCEEDED;
+            errors::INVALID_ARGUMENT,
+            errors::REQUIRES_CAPABILITY,
+            errors::NOT_PUBLISHED,
+            errors::INVALID_STATE,
+            errors::LIMIT_EXCEEDED;
 
         include Diem::BurnWithResourceCapEmits<Token>{preburn: Diem::spec_make_preburn(amount)};
 
@@ -245,12 +245,12 @@ module DiemFramework::TreasuryComplianceScripts {
     }
 
     spec preburn {
-        use Std::Errors;
-        use Std::Signer;
+        use std::errors;
+        use std::signer;
         use DiemFramework::Diem;
 
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
-        let account_addr = Signer::address_of(account);
+        let account_addr = signer::address_of(account);
         let cap = DiemAccount::spec_get_withdraw_cap(account_addr);
         include DiemAccount::ExtractWithdrawCapAbortsIf{sender_addr: account_addr};
         include DiemAccount::PreburnAbortsIf<Token>{dd: account, cap: cap};
@@ -259,10 +259,10 @@ module DiemFramework::TreasuryComplianceScripts {
         include DiemAccount::PreburnEmits<Token>{dd: account, cap: cap};
 
         aborts_with [check]
-            Errors::NOT_PUBLISHED,
-            Errors::INVALID_STATE,
-            Errors::REQUIRES_ROLE,
-            Errors::LIMIT_EXCEEDED;
+            errors::NOT_PUBLISHED,
+            errors::INVALID_STATE,
+            errors::REQUIRES_ROLE,
+            errors::LIMIT_EXCEEDED;
 
         /// **Access Control:**
         /// Only the account with a Preburn resource or PreburnQueue resource can preburn [[H4]][PERMISSION].
@@ -376,7 +376,7 @@ module DiemFramework::TreasuryComplianceScripts {
     }
 
     spec tiered_mint {
-        use Std::Errors;
+        use std::errors;
         use DiemFramework::Roles;
 
         include DiemAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
@@ -385,13 +385,13 @@ module DiemFramework::TreasuryComplianceScripts {
         include DiemAccount::TieredMintEnsures<CoinType>;
 
         aborts_with [check]
-            Errors::INVALID_ARGUMENT,
-            Errors::REQUIRES_ADDRESS,
-            Errors::NOT_PUBLISHED,
-            Errors::REQUIRES_CAPABILITY,
-            Errors::INVALID_STATE,
-            Errors::LIMIT_EXCEEDED,
-            Errors::REQUIRES_ROLE;
+            errors::INVALID_ARGUMENT,
+            errors::REQUIRES_ADDRESS,
+            errors::NOT_PUBLISHED,
+            errors::REQUIRES_CAPABILITY,
+            errors::INVALID_STATE,
+            errors::LIMIT_EXCEEDED,
+            errors::REQUIRES_ROLE;
 
         include DiemAccount::TieredMintEmits<CoinType>;
 
@@ -569,24 +569,24 @@ module DiemFramework::TreasuryComplianceScripts {
             new_exchange_rate_denominator: u64,
     ) {
         SlidingNonce::record_nonce_or_abort(&tc_account, sliding_nonce);
-        let rate = FixedPoint32::create_from_rational(
+        let rate = fixed_point32::create_from_rational(
                 new_exchange_rate_numerator,
                 new_exchange_rate_denominator,
         );
         Diem::update_xdx_exchange_rate<Currency>(&tc_account, rate);
     }
     spec update_exchange_rate {
-        use Std::Errors;
+        use std::errors;
         use DiemFramework::DiemAccount;
         use DiemFramework::Roles;
 
         include DiemAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
         include SlidingNonce::RecordNonceAbortsIf{ account: tc_account, seq_nonce: sliding_nonce };
-        include FixedPoint32::CreateFromRationalAbortsIf{
+        include fixed_point32::CreateFromRationalAbortsIf{
                numerator: new_exchange_rate_numerator,
                denominator: new_exchange_rate_denominator
         };
-        let rate = FixedPoint32::spec_create_from_rational(
+        let rate = fixed_point32::spec_create_from_rational(
                 new_exchange_rate_numerator,
                 new_exchange_rate_denominator
         );
@@ -595,11 +595,11 @@ module DiemFramework::TreasuryComplianceScripts {
         include Diem::UpdateXDXExchangeRateEmits<Currency>{xdx_exchange_rate: rate};
 
         aborts_with [check]
-            Errors::INVALID_ARGUMENT,
-            Errors::REQUIRES_ADDRESS,
-            Errors::LIMIT_EXCEEDED,
-            Errors::REQUIRES_ROLE,
-            Errors::NOT_PUBLISHED;
+            errors::INVALID_ARGUMENT,
+            errors::REQUIRES_ADDRESS,
+            errors::LIMIT_EXCEEDED,
+            errors::REQUIRES_ROLE,
+            errors::NOT_PUBLISHED;
 
         /// **Access Control:**
         /// Only the Treasury Compliance account can update the exchange rate [[H5]][PERMISSION].
@@ -673,16 +673,16 @@ module DiemFramework::TreasuryComplianceScripts {
         VASPDomain::add_vasp_domain(&tc_account, address, domain);
     }
     spec add_vasp_domain {
-        use Std::Errors;
+        use std::errors;
         include DiemAccount::TransactionChecks{sender: tc_account}; // properties checked by the prologue.
         include VASPDomain::AddVASPDomainAbortsIf;
         include VASPDomain::AddVASPDomainEnsures;
         include VASPDomain::AddVASPDomainEmits;
         aborts_with [check]
-            Errors::REQUIRES_ROLE,
-            Errors::REQUIRES_ADDRESS,
-            Errors::NOT_PUBLISHED,
-            Errors::INVALID_ARGUMENT;
+            errors::REQUIRES_ROLE,
+            errors::REQUIRES_ADDRESS,
+            errors::NOT_PUBLISHED,
+            errors::INVALID_ARGUMENT;
     }
 
     /// # Summary
@@ -717,11 +717,11 @@ module DiemFramework::TreasuryComplianceScripts {
         VASPDomain::remove_vasp_domain(&tc_account, address, domain);
     }
     spec remove_vasp_domain {
-        use Std::Errors;
+        use std::errors;
         aborts_with [check]
-            Errors::REQUIRES_ROLE,
-            Errors::REQUIRES_ADDRESS,
-            Errors::NOT_PUBLISHED,
-            Errors::INVALID_ARGUMENT;
+            errors::REQUIRES_ROLE,
+            errors::REQUIRES_ADDRESS,
+            errors::NOT_PUBLISHED,
+            errors::INVALID_ARGUMENT;
     }
 }

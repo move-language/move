@@ -5,7 +5,7 @@
 module 0x2::NativeFunctions {
     use Evm::Evm::{Self, abort_with, to_string, concat};
     use Evm::U256::{zero, one, u256_from_u128, u256_from_words};
-    use Std::Signer;
+    use std::signer;
 
     #[callable]
     fun call_native_functions() {
@@ -29,7 +29,7 @@ module 0x2::NativeFunctions {
     #[evm_test]
     fun test_signer_address_of() {
         let s = Evm::sign(@0x42);
-        assert!(Signer::address_of(&s) == @0x42, 101);
+        assert!(signer::address_of(&s) == @0x42, 101);
     }
 
     #[evm_test]

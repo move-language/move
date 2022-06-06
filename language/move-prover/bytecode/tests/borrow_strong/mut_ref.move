@@ -1,7 +1,7 @@
-// dep: ../../move-stdlib/sources/Vector.move
+// dep: ../../move-stdlib/sources/vector.move
 
 module 0x1::TestMutRef {
-    use Std::Vector;
+    use std::vector;
 
     struct T has copy, drop { value: u64 }
     struct R has copy, drop { value: u64 }
@@ -54,14 +54,14 @@ module 0x1::TestMutRef {
     // Different path into one vector
 
     fun return_ref_different_path_vec(b: bool, x: &mut V): &mut u64 {
-        if (b) Vector::borrow_mut(&mut x.is, 1)  else Vector::borrow_mut(&mut x.is, 0)
+        if (b) vector::borrow_mut(&mut x.is, 1)  else vector::borrow_mut(&mut x.is, 0)
     }
 
     fun call_return_ref_different_path_vec(b: bool): V {
-        let is = Vector::empty();
-        let ts = Vector::empty();
-        Vector::push_back(&mut is, 1);
-        Vector::push_back(&mut is, 2);
+        let is = vector::empty();
+        let ts = vector::empty();
+        vector::push_back(&mut is, 1);
+        vector::push_back(&mut is, 2);
         let x = V{is, ts};
         let r = return_ref_different_path_vec(b, &mut x);
         *r = 5;
@@ -75,16 +75,16 @@ module 0x1::TestMutRef {
     // Different path into a vector or a vector of structs subfield
 
     fun return_ref_different_path_vec2(b: bool, x: &mut V): &mut u64 {
-        if (b) Vector::borrow_mut(&mut x.is, 1) else &mut (Vector::borrow_mut(&mut x.ts, 0)).value
+        if (b) vector::borrow_mut(&mut x.is, 1) else &mut (vector::borrow_mut(&mut x.ts, 0)).value
     }
 
     fun call_return_ref_different_path_vec2(b: bool): V {
-        let is = Vector::empty();
-        let ts = Vector::empty();
-        Vector::push_back(&mut is, 1);
-        Vector::push_back(&mut is, 2);
-        Vector::push_back(&mut ts, T{value: 3});
-        Vector::push_back(&mut ts, T{value: 4});
+        let is = vector::empty();
+        let ts = vector::empty();
+        vector::push_back(&mut is, 1);
+        vector::push_back(&mut is, 2);
+        vector::push_back(&mut ts, T{value: 3});
+        vector::push_back(&mut ts, T{value: 4});
         let x = V{is, ts};
         let r = return_ref_different_path_vec2(b, &mut x);
         *r = 5;
@@ -98,12 +98,12 @@ module 0x1::TestMutRef {
     // Some as above but with invariant violation.
 
     fun call_return_ref_different_path_vec2_incorrect(b: bool): V {
-        let is = Vector::empty();
-        let ts = Vector::empty();
-        Vector::push_back(&mut is, 1);
-        Vector::push_back(&mut is, 2);
-        Vector::push_back(&mut ts, T{value: 3});
-        Vector::push_back(&mut ts, T{value: 4});
+        let is = vector::empty();
+        let ts = vector::empty();
+        vector::push_back(&mut is, 1);
+        vector::push_back(&mut is, 2);
+        vector::push_back(&mut ts, T{value: 3});
+        vector::push_back(&mut ts, T{value: 4});
         let x = V{is, ts};
         let r = return_ref_different_path_vec2(b, &mut x);
         *r = 0;

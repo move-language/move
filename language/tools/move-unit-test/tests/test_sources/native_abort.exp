@@ -13,7 +13,7 @@ Failures in 0x1::A:
 │    │
 │ 11 │     fun native_abort_good_wrong_code() {
 │    │         ---------------------------- In this function in 0x1::A
-│ 12 │         Vector::borrow(&Vector::empty<u64>(), 1);
+│ 12 │         vector::borrow(&vector::empty<u64>(), 1);
 │    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Test did not abort with expected code. Expected test to abort with 0 but instead it aborted with 1 here
 │ 
 │ 
@@ -26,7 +26,7 @@ Failures in 0x1::A:
 │   │
 │ 5 │     fun native_abort_unexpected_abort() {
 │   │         ----------------------------- In this function in 0x1::A
-│ 6 │         Vector::borrow(&Vector::empty<u64>(), 1);
+│ 6 │         vector::borrow(&vector::empty<u64>(), 1);
 │   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Test was not expected to abort but it aborted with 1 here
 │ 
 │ 

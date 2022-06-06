@@ -1,5 +1,5 @@
 module 0x42::M {
-    use Std::Signer;
+    use std::signer;
 
     struct S<X: store> has key { x: X }
 
@@ -8,8 +8,8 @@ module 0x42::M {
         move_to<S<u8>>(&account, S { x: 0 });
     }
     spec test1 {
-        aborts_if exists<S<X>>(Signer::address_of(account));
-        aborts_if exists<S<u8>>(Signer::address_of(account));
+        aborts_if exists<S<X>>(signer::address_of(account));
+        aborts_if exists<S<u8>>(signer::address_of(account));
 
         // NOTE: besides the above aborts_if conditions, this function
         // also aborts if the type parameter `X` is instantiated with `u8`.
@@ -24,8 +24,8 @@ module 0x42::M {
         move_to<S<T2>>(&account, S { x: t2 });
     }
     spec test2 {
-        aborts_if exists<S<T1>>(Signer::address_of(account));
-        aborts_if exists<S<T2>>(Signer::address_of(account));
+        aborts_if exists<S<T1>>(signer::address_of(account));
+        aborts_if exists<S<T2>>(signer::address_of(account));
 
         // NOTE: besides the above aborts_if conditions, this function
         // also aborts if type parameters `T1` and `T2` are the same.`
@@ -37,17 +37,17 @@ module 0x42::M {
 }
 
 module 0x42::N {
-    use Std::Signer;
+    use std::signer;
 
     struct S<X: store + drop> has key { x: X }
 
     public fun test1<X: store + drop>(account: signer, x: X) acquires S {
         move_to<S<u8>>(&account, S { x: 0 });
-        let r = borrow_global_mut<S<X>>(Signer::address_of(&account));
+        let r = borrow_global_mut<S<X>>(signer::address_of(&account));
         *&mut r.x = x;
     }
     spec test1 {
-        ensures global<S<u8>>(Signer::address_of(account)).x == 0;
+        ensures global<S<u8>>(signer::address_of(account)).x == 0;
 
         // NOTE: the `ensures` condition might not hold when `X == u8`.
         //
@@ -59,11 +59,11 @@ module 0x42::N {
         account: signer, t1: T1, t2: T2
     ) acquires S {
         move_to<S<T1>>(&account, S { x: t1 });
-        let r = borrow_global_mut<S<T2>>(Signer::address_of(&account));
+        let r = borrow_global_mut<S<T2>>(signer::address_of(&account));
         *&mut r.x = t2;
     }
     spec test2 {
-        ensures global<S<T1>>(Signer::address_of(account)).x == t1;
+        ensures global<S<T1>>(signer::address_of(account)).x == t1;
 
         // NOTE: the `ensures` condition might not hold when `T1 == T2`.
         //

@@ -1,6 +1,6 @@
 //# publish
 module 0x1.A {
-    import 0x1.Signer;
+    import 0x1.signer;
     struct T1 has key {v: u64}
     struct T2 has key {v: u64}
     get_v(x: &mut Self.T1): &mut u64 {
@@ -10,20 +10,20 @@ module 0x1.A {
     acquires_t1(account: &signer) acquires T1 {
         let v: u64;
     label b0:
-        T1 { v } = move_from<T1>(Signer.address_of(move(account)));
+        T1 { v } = move_from<T1>(signer.address_of(move(account)));
         return;
     }
     acquires_t2(account: &signer) acquires T2 {
         let v: u64;
     label b0:
-        T2 { v } = move_from<T2>(Signer.address_of(move(account)));
+        T2 { v } = move_from<T2>(signer.address_of(move(account)));
         return;
     }
     public test1(account: &signer) acquires T1, T2 {
         let x: &mut Self.T1;
         let y: &mut u64;
     label b0:
-        x = borrow_global_mut<T1>(Signer.address_of(copy(account)));
+        x = borrow_global_mut<T1>(signer.address_of(copy(account)));
         y = Self.get_v(move(x));
         Self.acquires_t1(copy(account)); // error T1 still acquired
         Self.acquires_t2(move(account));
@@ -34,7 +34,7 @@ module 0x1.A {
 
 //# publish
 module 0x1.A2 {
-    import 0x1.Signer;
+    import 0x1.signer;
     struct T1 has key {v: u64}
     struct T2 has key {v: u64}
     get_v(x: &mut Self.T1): &mut u64 {
@@ -44,20 +44,20 @@ module 0x1.A2 {
     acquires_t1(account: &signer) acquires T1 {
         let v: u64;
     label b0:
-        T1 { v } = move_from<T1>(Signer.address_of(move(account)));
+        T1 { v } = move_from<T1>(signer.address_of(move(account)));
         return;
     }
     acquires_t2(account: &signer) acquires T2 {
         let v: u64;
     label b0:
-        T2 { v } = move_from<T2>(Signer.address_of(move(account)));
+        T2 { v } = move_from<T2>(signer.address_of(move(account)));
         return;
     }
     public test2(account: &signer) acquires T1, T2 {
         let x: &mut Self.T1;
         let y: &mut u64;
     label b0:
-        x = borrow_global_mut<T1>(Signer.address_of(copy(account)));
+        x = borrow_global_mut<T1>(signer.address_of(copy(account)));
         y = Self.get_v(move(x));
         Self.acquires_t2(copy(account));
         Self.acquires_t1(move(account)); // error T1 still acquired
@@ -69,7 +69,7 @@ module 0x1.A2 {
 
 //# publish
 module 0x1.A3 {
-    import 0x1.Signer;
+    import 0x1.signer;
     struct T1 has key {v: u64}
     struct T2 has key {v: u64}
     get_v(x: &mut Self.T1): &mut u64 {
@@ -79,20 +79,20 @@ module 0x1.A3 {
     acquires_t1(account: &signer) acquires T1 {
         let v: u64;
     label b0:
-        T1 { v } = move_from<T1>(Signer.address_of(move(account)));
+        T1 { v } = move_from<T1>(signer.address_of(move(account)));
         return;
     }
     acquires_t2(account: &signer) acquires T2 {
         let v: u64;
     label b0:
-        T2 { v } = move_from<T2>(Signer.address_of(move(account)));
+        T2 { v } = move_from<T2>(signer.address_of(move(account)));
         return;
     }
     public test3(account: &signer) acquires T1, T2 {
         let x: &mut Self.T1;
         let y: &mut u64;
     label b0:
-        x = borrow_global_mut<T1>(Signer.address_of(copy(account)));
+        x = borrow_global_mut<T1>(signer.address_of(copy(account)));
         y = Self.get_v(move(x));
         Self.acquires_t1(copy(account)); // error T1 still acquired
         _ = move(y);

@@ -3,7 +3,7 @@ module Evm::Token {
     use Evm::Evm::{self, sender, sign};
     use Evm::Table::{Self, Table};
     use Evm::U256::{Self, U256};
-    use Std::Errors;
+    use std::errors;
 
     /// Represents the state of this contract. This is located at `borrow_global<State>(self())`.
     struct State has key {
@@ -54,7 +54,7 @@ module Evm::Token {
     #[callable(sig=b"transfer(address, uint256) returns (bool)")]
     /// Transfers the amount from the sending account to the given account
     public fun transfer(to: address, amount: U256): bool acquires State {
-        assert!(sender() != to, Errors::invalid_argument(0));
+        assert!(sender() != to, errors::invalid_argument(0));
         do_transfer(sender(), to, amount);
         true
     }
@@ -62,7 +62,7 @@ module Evm::Token {
     fun do_transfer(from: address, to: address, amount: U256) acquires State {
         let s = borrow_global_mut<State>(self());
         let from_bal = mut_balanceOf(s, from);
-        assert!(U256::le(copy amount, *from_bal), Errors::limit_exceeded(0));
+        assert!(U256::le(copy amount, *from_bal), errors::limit_exceeded(0));
         *from_bal = U256::sub(*from_bal, copy amount);
         let to_bal = mut_balanceOf(s, to);
         *to_bal = U256::add(*to_bal, copy amount);

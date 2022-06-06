@@ -24,8 +24,8 @@ fn test_malformed_resource() {
     // Compile the modules and scripts.
     // TODO: find a better way to include the Signer module.
     let code = r#"
-        address Std {
-            module Signer {
+        address std {
+            module signer {
                 native public fun borrow_address(s: &signer): &address;
 
                 public fun address_of(s: &signer): address {
@@ -35,7 +35,7 @@ fn test_malformed_resource() {
         }
 
         module {{ADDR}}::M {
-            use Std::Signer;
+            use std::signer;
 
             struct Foo has key { x: u64, y: bool }
 
@@ -44,7 +44,7 @@ fn test_malformed_resource() {
             }
 
             public fun check(s: &signer) acquires Foo {
-                let foo = borrow_global<Foo>(Signer::address_of(s));
+                let foo = borrow_global<Foo>(signer::address_of(s));
                 assert!(foo.x == 123 && foo.y == false, 42);
             }
         }
@@ -579,8 +579,8 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
     let mut gas_status = GasStatus::new_unmetered();
 
     let code = r#"
-        address Std {
-            module Signer {
+        address std {
+            module signer {
                 native public fun borrow_address(s: &signer): &address;
 
                 public fun address_of(s: &signer): address {
@@ -590,14 +590,14 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
         }
 
         module {{ADDR}}::M {
-            use Std::Signer;
+            use std::signer;
 
             struct R has key {}
 
             public fun foo() {}
 
             public fun bar(sender: &signer) acquires R {
-                _ = borrow_global<R>(Signer::address_of(sender));
+                _ = borrow_global<R>(signer::address_of(sender));
             }
         }
     "#;

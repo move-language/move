@@ -4,7 +4,7 @@ module DiemFramework::DiemVMConfig {
     use DiemFramework::DiemConfig::{Self, DiemConfig};
     use DiemFramework::DiemTimestamp;
     use DiemFramework::Roles;
-    use Std::Errors;
+    use std::errors;
 
     /// The provided gas constants were inconsistent.
     const EGAS_CONSTANT_INCONSISTENCY: u64 = 0;
@@ -153,11 +153,11 @@ module DiemFramework::DiemVMConfig {
         Roles::assert_diem_root(dr_account);
         assert!(
             min_price_per_gas_unit <= max_price_per_gas_unit,
-            Errors::invalid_argument(EGAS_CONSTANT_INCONSISTENCY)
+            errors::invalid_argument(EGAS_CONSTANT_INCONSISTENCY)
         );
         assert!(
             min_transaction_gas_units <= maximum_number_of_gas_units,
-            Errors::invalid_argument(EGAS_CONSTANT_INCONSISTENCY)
+            errors::invalid_argument(EGAS_CONSTANT_INCONSISTENCY)
         );
 
         let config = DiemConfig::get<DiemVMConfig>();
@@ -182,8 +182,8 @@ module DiemFramework::DiemVMConfig {
         /// No one can update DiemVMConfig except for the Diem Root account [[H11]][PERMISSION].
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
         include DiemConfig::SetAbortsIf<DiemVMConfig>{account: dr_account };
-        aborts_if min_price_per_gas_unit > max_price_per_gas_unit with Errors::INVALID_ARGUMENT;
-        aborts_if min_transaction_gas_units > maximum_number_of_gas_units with Errors::INVALID_ARGUMENT;
+        aborts_if min_price_per_gas_unit > max_price_per_gas_unit with errors::INVALID_ARGUMENT;
+        aborts_if min_transaction_gas_units > maximum_number_of_gas_units with errors::INVALID_ARGUMENT;
         let config = DiemConfig::spec_get_config<DiemVMConfig>();
         ensures DiemConfig::spec_is_published<DiemVMConfig>();
         ensures DiemConfig::get<DiemVMConfig>() == DiemVMConfig {

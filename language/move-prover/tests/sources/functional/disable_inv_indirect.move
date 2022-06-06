@@ -1,5 +1,5 @@
 module 0x1::M1 {
-    //use Std::Signer;
+    //use std::signer;
 
     struct R has key { v: u64 }
 

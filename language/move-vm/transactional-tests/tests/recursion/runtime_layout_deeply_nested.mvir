@@ -1,6 +1,6 @@
 //# publish
 module 0x42.M {
-    import 0x1.Signer;
+    import 0x1.signer;
 
     struct Box<T> has key, store { x: T }
     struct Box3<T> has store { x: Self.Box<Self.Box<T>> }

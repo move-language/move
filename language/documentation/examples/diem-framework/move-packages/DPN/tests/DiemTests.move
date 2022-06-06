@@ -3,13 +3,13 @@ module DiemFramework::DiemTests {
     use DiemFramework::XUS::XUS;
     use DiemFramework::Genesis;
     use DiemFramework::Diem;
-    use Std::Signer;
+    use std::signer;
 
     struct R<T> has key { x: T }
     struct FakeCoin has store { value: u64 }
 
     fun fetch<T: store>(account: &signer): T acquires R {
-        let R { x } = move_from<R<T>>(Signer::address_of(account));
+        let R { x } = move_from<R<T>>(signer::address_of(account));
         x
     }
 

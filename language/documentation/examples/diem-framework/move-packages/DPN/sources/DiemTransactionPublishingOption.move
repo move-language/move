@@ -3,9 +3,9 @@ module DiemFramework::DiemTransactionPublishingOption {
     use DiemFramework::DiemConfig::{Self, DiemConfig};
     use DiemFramework::DiemTimestamp;
     use DiemFramework::Roles;
-    use Std::Errors;
-    use Std::Signer;
-    use Std::Vector;
+    use std::errors;
+    use std::signer;
+    use std::vector;
 
     const SCRIPT_HASH_LENGTH: u64 = 32;
 
@@ -68,17 +68,17 @@ module DiemFramework::DiemTransactionPublishingOption {
         if (transactions_halted()) return false;
 
         // The adapter passes an empty hash for script functions. All script functions are allowed
-        if (Vector::is_empty(hash)) return true;
+        if (vector::is_empty(hash)) return true;
 
         let publish_option = DiemConfig::get<DiemTransactionPublishingOption>();
         // allowlist empty = open publishing, anyone can send txes
-        Vector::is_empty(&publish_option.script_allow_list)
+        vector::is_empty(&publish_option.script_allow_list)
             // fixed allowlist. check inclusion
-            || Vector::contains(&publish_option.script_allow_list, hash)
+            || vector::contains(&publish_option.script_allow_list, hash)
     }
     spec is_script_allowed {
         include
-            !Roles::has_diem_root_role(account) && !transactions_halted() && !Vector::is_empty(hash)
+            !Roles::has_diem_root_role(account) && !transactions_halted() && !vector::is_empty(hash)
             ==> DiemConfig::AbortsIfNotPublished<DiemTransactionPublishingOption>{};
     }
     spec schema AbortsIfNoTransactionPublishingOption {
@@ -100,7 +100,7 @@ module DiemFramework::DiemTransactionPublishingOption {
         Roles::assert_diem_root(dr_account);
         let publish_option = DiemConfig::get<DiemTransactionPublishingOption>();
 
-        publish_option.script_allow_list = Vector::empty();
+        publish_option.script_allow_list = vector::empty();
         DiemConfig::set<DiemTransactionPublishingOption>(dr_account, publish_option);
     }
     spec set_open_script {
@@ -132,8 +132,8 @@ module DiemFramework::DiemTransactionPublishingOption {
     public fun halt_all_transactions(dr_account: &signer) {
         Roles::assert_diem_root(dr_account);
         assert!(
-            !exists<HaltAllTransactions>(Signer::address_of(dr_account)),
-            Errors::already_published(EHALT_ALL_TRANSACTIONS),
+            !exists<HaltAllTransactions>(signer::address_of(dr_account)),
+            errors::already_published(EHALT_ALL_TRANSACTIONS),
         );
         move_to(dr_account, HaltAllTransactions {});
     }
@@ -141,10 +141,10 @@ module DiemFramework::DiemTransactionPublishingOption {
     /// If called, transactions can be sent from any account once again
     public fun resume_transactions(dr_account: &signer) acquires HaltAllTransactions {
         Roles::assert_diem_root(dr_account);
-        let dr_address = Signer::address_of(dr_account);
+        let dr_address = signer::address_of(dr_account);
         assert!(
             exists<HaltAllTransactions>(dr_address),
-            Errors::already_published(EHALT_ALL_TRANSACTIONS),
+            errors::already_published(EHALT_ALL_TRANSACTIONS),
         );
 
         let HaltAllTransactions {} = move_from<HaltAllTransactions>(dr_address);
@@ -181,8 +181,8 @@ module DiemFramework::DiemTransactionPublishingOption {
         fun spec_is_script_allowed(account: signer, hash: vector<u8>): bool {
             let publish_option = DiemConfig::spec_get_config<DiemTransactionPublishingOption>();
             Roles::has_diem_root_role(account) || (!transactions_halted() && (
-                Vector::is_empty(hash) ||
-                    (Vector::is_empty(publish_option.script_allow_list)
+                vector::is_empty(hash) ||
+                    (vector::is_empty(publish_option.script_allow_list)
                         || contains(publish_option.script_allow_list, hash))
             ))
         }

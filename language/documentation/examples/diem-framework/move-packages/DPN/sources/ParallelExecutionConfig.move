@@ -4,7 +4,7 @@ module DiemFramework::ParallelExecutionConfig {
     use DiemFramework::DiemConfig::{Self, DiemConfig};
     use DiemFramework::DiemTimestamp;
     use DiemFramework::Roles;
-    use Std::Option::{Self, Option};
+    use std::option::{Self, Option};
 
     /// The struct to hold the read/write set analysis result for the whole Diem Framework.
     struct ParallelExecutionConfig has copy, drop, store {
@@ -22,7 +22,7 @@ module DiemFramework::ParallelExecutionConfig {
         DiemConfig::publish_new_config(
             dr_account,
             ParallelExecutionConfig {
-                read_write_analysis_result: Option::none(),
+                read_write_analysis_result: option::none(),
             },
         );
     }
@@ -34,7 +34,7 @@ module DiemFramework::ParallelExecutionConfig {
         DiemTimestamp::assert_operating();
         Roles::assert_diem_root(dr_account);
         DiemConfig::set(dr_account, ParallelExecutionConfig {
-            read_write_analysis_result: Option::some(read_write_inference_result),
+            read_write_analysis_result: option::some(read_write_inference_result),
         });
     }
 
@@ -44,7 +44,7 @@ module DiemFramework::ParallelExecutionConfig {
         DiemTimestamp::assert_operating();
         Roles::assert_diem_root(dr_account);
         DiemConfig::set(dr_account, ParallelExecutionConfig {
-            read_write_analysis_result: Option::none(),
+            read_write_analysis_result: option::none(),
         });
     }
 
@@ -55,7 +55,7 @@ module DiemFramework::ParallelExecutionConfig {
         include DiemConfig::PublishNewConfigAbortsIf<ParallelExecutionConfig>;
         include DiemConfig::PublishNewConfigEnsures<ParallelExecutionConfig> {
             payload: ParallelExecutionConfig {
-                read_write_analysis_result: Option::none(),
+                read_write_analysis_result: option::none(),
             }};
     }
 
@@ -81,7 +81,7 @@ module DiemFramework::ParallelExecutionConfig {
         include DiemConfig::SetAbortsIf<ParallelExecutionConfig>{account: dr_account };
         ensures DiemConfig::spec_is_published<ParallelExecutionConfig>();
         ensures DiemConfig::get<ParallelExecutionConfig>() == ParallelExecutionConfig {
-            read_write_analysis_result: Option::none(),
+            read_write_analysis_result: option::none(),
         };
         ensures old(DiemConfig::spec_has_config()) == DiemConfig::spec_has_config();
     }

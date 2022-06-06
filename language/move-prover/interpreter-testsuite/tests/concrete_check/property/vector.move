@@ -1,17 +1,17 @@
 module 0x2::A {
-    use Std::Vector;
+    use std::vector;
 
     #[test]
     public fun check_vector() {
-        let a = Vector::empty();
-        let b = Vector::empty();
+        let a = vector::empty();
+        let b = vector::empty();
         spec {
             assert len(a) == 0;
             assert a == vec();
         };
 
-        Vector::push_back(&mut a, 42u128);
-        Vector::push_back(&mut b, 0u128);
+        vector::push_back(&mut a, 42u128);
+        vector::push_back(&mut b, 0u128);
         spec {
             assert len(a) == 1;
             assert a == vec(42);

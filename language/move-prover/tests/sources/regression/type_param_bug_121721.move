@@ -51,8 +51,8 @@
 
 module 0x2::Bug7 {
 
-    use Std::Signer;
-    use Std::Vector;
+    use std::signer;
+    use std::vector;
 
     struct BallotID has store, copy, drop {
         counter: u64,
@@ -81,7 +81,7 @@ module 0x2::Bug7 {
         ballot_account: &signer,
         proposal: Proposal,
     ): BallotID acquires Ballots, BallotCounter {
-        let ballot_address = Signer::address_of(ballot_account);
+        let ballot_address = signer::address_of(ballot_account);
 
         if (!exists<BallotCounter>(ballot_address)) {
             move_to(ballot_account, BallotCounter {
@@ -93,7 +93,7 @@ module 0x2::Bug7 {
         if (!exists<Ballots<Proposal>>(ballot_address)) {
             move_to(ballot_account, Ballots<Proposal> {
                 proposal,
-                ballots: Vector::empty(),
+                ballots: vector::empty(),
             });
         };
 
@@ -105,7 +105,7 @@ module 0x2::Bug7 {
         let ballot = Ballot {
             ballot_id: *&ballot_id,
         };
-        Vector::push_back(ballots, *&ballot);
+        vector::push_back(ballots, *&ballot);
         ballot_id
     }
 
@@ -123,7 +123,7 @@ module 0x2::Bug7 {
     /// incr_counter increments the counter stored under the signer's
     /// account
     fun incr_counter(account: &signer): u64 acquires BallotCounter {
-        let addr = Signer::address_of(account);
+        let addr = signer::address_of(account);
         let counter = &mut borrow_global_mut<BallotCounter>(addr).counter;
         let count = *counter;
         *counter = *counter + 1;

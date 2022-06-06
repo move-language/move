@@ -3,7 +3,7 @@ module 0x2::M {
     use Evm::U256::{Self, U256, u256_from_words};
     use Evm::ExternalResult::{Self, ExternalResult};
     use Evm::Evm::Unit;
-    use Std::Vector;
+    use std::vector;
 
     #[external]
     public native fun no_para(contract: address);
@@ -70,7 +70,7 @@ module 0x2::M {
         let from_addr = @4;
         let to_addr = @5;
         let token_id = u256_from_words(x, y);
-        let data = Vector::empty<u8>();
+        let data = vector::empty<u8>();
         safe_transfer_form(contract_addr, from_addr, to_addr, token_id, data)
     }
 
@@ -86,7 +86,7 @@ module 0x2::M {
     fun test_multi_ret(): (vector<U256>, U256) {
         let contract_addr = @3;
         let v = u256_from_words(0, 0);
-        let data = Vector::empty<U256>();
+        let data = vector::empty<U256>();
         multi_ret(contract_addr, v, data)
     }
 

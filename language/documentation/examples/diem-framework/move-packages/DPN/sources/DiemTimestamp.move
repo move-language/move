@@ -13,7 +13,7 @@
 /// which reflect that the system has been successfully initialized.
 module DiemFramework::DiemTimestamp {
     use DiemFramework::CoreAddresses;
-    use Std::Errors;
+    use std::errors;
     friend DiemFramework::Genesis;
 
     /// A singleton resource holding the current Unix time in microseconds
@@ -78,10 +78,10 @@ module DiemFramework::DiemTimestamp {
         let now = global_timer.microseconds;
         if (proposer == @VMReserved) {
             // NIL block with null address as proposer. Timestamp must be equal.
-            assert!(now == timestamp, Errors::invalid_argument(ETIMESTAMP));
+            assert!(now == timestamp, errors::invalid_argument(ETIMESTAMP));
         } else {
             // Normal block. Time must advance
-            assert!(now < timestamp, Errors::invalid_argument(ETIMESTAMP));
+            assert!(now < timestamp, errors::invalid_argument(ETIMESTAMP));
         };
         global_timer.microseconds = timestamp;
     }
@@ -105,7 +105,7 @@ module DiemFramework::DiemTimestamp {
                 now >= timestamp
              }
             )
-            with Errors::INVALID_ARGUMENT;
+            with errors::INVALID_ARGUMENT;
     }
 
     /// Gets the current time in microseconds.
@@ -142,7 +142,7 @@ module DiemFramework::DiemTimestamp {
 
     /// Helper function to assert genesis state.
     public fun assert_genesis() {
-        assert!(is_genesis(), Errors::invalid_state(ENOT_GENESIS));
+        assert!(is_genesis(), errors::invalid_state(ENOT_GENESIS));
     }
     spec assert_genesis {
         pragma opaque = true;
@@ -151,7 +151,7 @@ module DiemFramework::DiemTimestamp {
 
     /// Helper schema to specify that a function aborts if not in genesis.
     spec schema AbortsIfNotGenesis {
-        aborts_if !is_genesis() with Errors::INVALID_STATE;
+        aborts_if !is_genesis() with errors::INVALID_STATE;
     }
 
     /// Helper function to determine if Diem is operating. This is the same as `!is_genesis()` and is provided
@@ -162,7 +162,7 @@ module DiemFramework::DiemTimestamp {
 
     /// Helper function to assert operating (!genesis) state.
     public fun assert_operating() {
-        assert!(is_operating(), Errors::invalid_state(ENOT_OPERATING));
+        assert!(is_operating(), errors::invalid_state(ENOT_OPERATING));
     }
     spec assert_operating {
         pragma opaque = true;
@@ -171,7 +171,7 @@ module DiemFramework::DiemTimestamp {
 
     /// Helper schema to specify that a function aborts if not operating.
     spec schema AbortsIfNotOperating {
-        aborts_if !is_operating() with Errors::INVALID_STATE;
+        aborts_if !is_operating() with errors::INVALID_STATE;
     }
 
     // ====================

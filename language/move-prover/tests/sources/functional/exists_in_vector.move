@@ -1,7 +1,7 @@
 // This file contain various test cases for existentially quantifying vectors.
 module 0x42::VectorExists {
 
-    use Std::Vector;
+    use std::vector;
     spec module {
         fun e_in_v_vec(e: u64, v: vector<u64>): bool {
             exists x in v: x == e
@@ -52,7 +52,7 @@ module 0x42::VectorExists {
     }
 
     public fun push_one(v: &mut vector<u64>) {
-        Vector::push_back(v, 1);
+        vector::push_back(v, 1);
     }
     spec push_one {
         pragma verify=false;

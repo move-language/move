@@ -1,5 +1,5 @@
 module 0x2::A {
-    use Std::Vector;
+    use std::vector;
 
     struct X has copy, drop { value: u64 }
     struct Y has copy, drop { value: u64 }
@@ -41,19 +41,19 @@ module 0x2::A {
     // Return reference with different path in vec
     fun return_ref_different_path_vec(cond: bool, v: &mut V, i1: u64, i2: u64): &mut u64 {
         if (cond) {
-            Vector::borrow_mut(&mut v.is, i1)
+            vector::borrow_mut(&mut v.is, i1)
         } else {
-            Vector::borrow_mut(&mut v.is, i2)
+            vector::borrow_mut(&mut v.is, i2)
         }
     }
 
     // TODO there is a bug in spec_instrumenter that produces wrong goto labels:
     // #[test]
     public fun return_ref_path_vec_1(): V {
-        let is = Vector::empty();
-        let ts = Vector::empty();
-        Vector::push_back(&mut is, 1);
-        Vector::push_back(&mut is, 2);
+        let is = vector::empty();
+        let ts = vector::empty();
+        vector::push_back(&mut is, 1);
+        vector::push_back(&mut is, 2);
         let v = V { is, ts };
         let p = return_ref_different_path_vec(true, &mut v, 0, 1);
         *p = 5;

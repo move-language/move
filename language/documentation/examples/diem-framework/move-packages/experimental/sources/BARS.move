@@ -1,11 +1,11 @@
 module 0x1::BARSToken {
-    use Std::Option;
+    use std::option;
     #[test_only]
-    use Std::Signer;
+    use std::signer;
     use 0x1::NFT;
     use 0x1::NFTGallery;
     #[test_only]
-    use Std::GUID;
+    use std::guid;
 
     // Error codes
     /// Function can only be called by the module owner
@@ -61,13 +61,13 @@ module 0x1::BARSToken {
             create_bars_token(bars_account, artist_name),
             content_uri,
             amount,
-            Option::none(),
+            option::none(),
         );
         NFTGallery::add_to_gallery(artist, token);
     }
 
     fun create_bars_token(address: &signer, artist_name: vector<u8>): BARSToken {
-        assert!(Std::Signer::address_of(address) == @BARS, ENOT_BARS_OWNER);
+        assert!(std::signer::address_of(address) == @BARS, ENOT_BARS_OWNER);
         BARSToken { artist_name }
     }
 
@@ -85,8 +85,8 @@ module 0x1::BARSToken {
         register_user_internal(&artist);
         register_user_internal(&collector);
 
-        let token_id = GUID::create_id(ArtistAddr, 0);
-        mint_internal(&bars_account, Signer::address_of(&artist), b"kanye", b"yeezy.com", 7);
+        let token_id = guid::create_id(ArtistAddr, 0);
+        mint_internal(&bars_account, signer::address_of(&artist), b"kanye", b"yeezy.com", 7);
 
         assert!(NFTGallery::has_token<BARSToken>(ArtistAddr, &token_id), EMINT_FAILED);
         assert!(NFTGallery::get_token_balance<BARSToken>(ArtistAddr, &token_id) == 7, EMINT_FAILED);
@@ -96,7 +96,7 @@ module 0x1::BARSToken {
         // Transfer 6 units of the token from creator to user
         NFTGallery::transfer_token_between_galleries<BARSToken>(
             artist, // from
-            Signer::address_of(&collector), // to
+            signer::address_of(&collector), // to
             6, // amount
             ArtistAddr, // token.id.addr
             0, // token.id.creation_num

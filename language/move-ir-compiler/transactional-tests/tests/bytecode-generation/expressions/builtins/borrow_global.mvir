@@ -1,14 +1,14 @@
 //# print-bytecode --input=module
 // Borrowing a global of a type defined as part of the same module is valid.
 module 0x1d6.M {
-    import 0x1.Signer;
+    import 0x1.signer;
 
     struct T has key { b: bool }
 
     f(account: signer) {
         let r: &Self.T;
     label b0:
-        r = borrow_global<T>(Signer.address_of(&account));
+        r = borrow_global<T>(signer.address_of(&account));
         return;
     }
 }
@@ -21,13 +21,13 @@ module 0x2d6.M {
 //# print-bytecode --input=module
 // Borrowing a global of a type defined in a different module is invalid.
 module 0x2d6.N {
-    import 0x1.Signer;
+    import 0x1.signer;
     import 0x2d6.M;
 
     f(account: signer) {
         let r: &M.T;
     label b0:
-        r = borrow_global<T>(Signer.address_of(&account));
+        r = borrow_global<T>(signer.address_of(&account));
         return;
     }
 }
@@ -35,12 +35,12 @@ module 0x2d6.N {
 //# print-bytecode
 // Borrowing a global of a struct type within a script (which cannot define its own struct types)
 // is invalid.
-import 0x1.Signer;
+import 0x1.signer;
 import 0x2d6.M;
 
 main(account: signer) {
     let r: &M.T;
 label b0:
-    r = borrow_global<T>(Signer.address_of(&account));
+    r = borrow_global<T>(signer.address_of(&account));
     return;
 }

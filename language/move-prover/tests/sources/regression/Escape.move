@@ -1,7 +1,7 @@
 address 0x1 {
 
 module Escape {
-    use Std::Signer;
+    use std::signer;
 
     struct IndoorThing has key, store { }
 
@@ -10,7 +10,7 @@ module Escape {
     struct Wrapper<Thing: key + store> has key { thing: Thing }
 
     public fun initialize(account: &signer) {
-        let owner = Signer::address_of(account);
+        let owner = signer::address_of(account);
         assert!(owner == @0x123, 0);
         move_to<Wrapper<IndoorThing>>(account, Wrapper{ thing: IndoorThing {} });
         move_to<Wrapper<OutdoorThing>>(account, Wrapper { thing: OutdoorThing {}});

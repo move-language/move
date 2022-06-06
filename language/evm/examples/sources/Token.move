@@ -2,8 +2,8 @@
 /// An implementation of ERC20.
 module Evm::ERC20Token {
     use Evm::Evm::{sender, self, sign};
-    use Std::Errors;
-    use Std::Vector;
+    use std::errors;
+    use std::vector;
 
     #[storage]
     /// Represents the state of this contract. This is located at `borrow_global<State>(self())`.
@@ -36,7 +36,7 @@ module Evm::ERC20Token {
         move_to<State>(&sign(self()), State{decimals, total_supply: initial_amount});
 
         // Initialize senders balance with initial amount
-        move_to<Account>(&sign(sender()), Account{value: initial_amount, allowances: Vector::empty()});
+        move_to<Account>(&sign(sender()), Account{value: initial_amount, allowances: vector::empty()});
     }
 
     #[callable, view]
@@ -56,8 +56,8 @@ module Evm::ERC20Token {
     public fun allowance(owner: address, spender: address): u128 acquires Account {
         let allowances = &borrow_global<Account>(owner).allowances;
         let i = index_of_allowance(allowances, spender);
-        if (i < Vector::length(allowances)) {
-            Vector::borrow(allowances, i).amount
+        if (i < vector::length(allowances)) {
+            vector::borrow(allowances, i).amount
         } else {
             0
         }
@@ -74,7 +74,7 @@ module Evm::ERC20Token {
     #[callable]
     /// Transfers the amount from the sending account to the given account
     public fun transfer(to: address, amount: u128) acquires Account {
-        assert!(sender() != to, Errors::invalid_argument(0));
+        assert!(sender() != to, errors::invalid_argument(0));
         do_transfer(sender(), to, amount)
     }
 
@@ -85,7 +85,7 @@ module Evm::ERC20Token {
     public fun transfer_from(from: address, to: address, amount: u128) acquires Account {
         let allowances = &mut borrow_global_mut<Account>(from).allowances;
         let allowance = mut_allowance(allowances, sender());
-        assert!(allowance.amount >= amount, Errors::limit_exceeded(0));
+        assert!(allowance.amount >= amount, errors::limit_exceeded(0));
         allowance.amount = allowance.amount - amount;
         do_transfer(from, to, amount)
     }
@@ -95,7 +95,7 @@ module Evm::ERC20Token {
         create_account_if_not_present(from);
         create_account_if_not_present(to);
         let from_acc = borrow_global_mut<Account>(from);
-        assert!(from_acc.value >= amount, Errors::limit_exceeded(0));
+        assert!(from_acc.value >= amount, errors::limit_exceeded(0));
         from_acc.value = from_acc.value - amount;
         let to_acc = borrow_global_mut<Account>(to);
         to_acc.value = to_acc.value + amount;
@@ -105,9 +105,9 @@ module Evm::ERC20Token {
     /// vector if not present.
     fun index_of_allowance(allowances: &vector<Allowance>, spender: address): u64 {
         let i = 0;
-        let l = Vector::length(allowances);
+        let l = vector::length(allowances);
         while (i < l) {
-            if (Vector::borrow(allowances, i).spender == spender) {
+            if (vector::borrow(allowances, i).spender == spender) {
                 return i
             };
             i = i + 1;
@@ -118,16 +118,16 @@ module Evm::ERC20Token {
     /// Helper function to return a mut ref to the allowance of a spender.
     fun mut_allowance(allowances: &mut vector<Allowance>, spender: address): &mut Allowance {
         let i = index_of_allowance(allowances, spender);
-        if (i == Vector::length(allowances)) {
-            Vector::push_back(allowances, Allowance{spender, amount: 0})
+        if (i == vector::length(allowances)) {
+            vector::push_back(allowances, Allowance{spender, amount: 0})
         };
-        Vector::borrow_mut(allowances, i)
+        vector::borrow_mut(allowances, i)
     }
 
     /// Helper function to create an account with a zero balance and no allowances.
     fun create_account_if_not_present(owner: address) {
         if (!exists<Account>(owner)) {
-            move_to<Account>(&sign(owner), Account{value: 0, allowances: Vector::empty()})
+            move_to<Account>(&sign(owner), Account{value: 0, allowances: vector::empty()})
         }
     }
 

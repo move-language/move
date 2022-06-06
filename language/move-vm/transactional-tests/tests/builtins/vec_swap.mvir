@@ -1,15 +1,15 @@
 //# publish
 module 0x1.M {
-    import 0x1.Vector;
+    import 0x1.vector;
 
     struct R has key { v: vector<u64> }
 
     public publish(s: &signer) {
         let v: vector<u64>;
     label b0:
-        v = Vector.empty<u64>();
-        Vector.push_back<u64>(&mut v, 100);
-        Vector.push_back<u64>(&mut v, 200);
+        v = vector.empty<u64>();
+        vector.push_back<u64>(&mut v, 100);
+        vector.push_back<u64>(&mut v, 200);
         move_to<R>(move(s), R { v: move(v) });
         return;
     }
@@ -18,7 +18,7 @@ module 0x1.M {
         let r: &mut Self.R;
     label b0:
         r = borrow_global_mut<R>(move(addr));
-        Vector.swap<u64>(&mut move(r).R::v, 0, 1);
+        vector.swap<u64>(&mut move(r).R::v, 0, 1);
         return;
     }
 
@@ -26,8 +26,8 @@ module 0x1.M {
         let v: &vector<u64>;
     label b0:
         v = & borrow_global<R>(move(addr)).R::v;
-        assert(*Vector.borrow<u64>(copy(v), 0) == 200, 1000);
-        assert(*Vector.borrow<u64>(move(v), 1) == 100, 1001);
+        assert(*vector.borrow<u64>(copy(v), 0) == 200, 1000);
+        assert(*vector.borrow<u64>(move(v), 1) == 100, 1001);
         return;
     }
 }
@@ -43,20 +43,20 @@ label b0:
 
 //# run --signers 0x1
 import 0x1.M;
-import 0x1.Signer;
+import 0x1.signer;
 
 main(s: signer) {
 label b0:
-    M.borrow_and_swap(Signer.address_of(&s));
+    M.borrow_and_swap(signer.address_of(&s));
     return;
 }
 
 //# run --signers 0x1
 import 0x1.M;
-import 0x1.Signer;
+import 0x1.signer;
 
 main(s: signer) {
 label b0:
-    M.verify_effects(Signer.address_of(&s));
+    M.verify_effects(signer.address_of(&s));
     return;
 }

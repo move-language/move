@@ -1,6 +1,6 @@
 //# publish
 module 0x1.Token {
-    import 0x1.Signer;
+    import 0x1.signer;
 
     struct T has key {v: u64}
 
@@ -38,7 +38,7 @@ module 0x1.Token {
         let tref: &mut Self.T;
         let y: Self.T;
     label b0:
-        addr = Signer.address_of(copy(account));
+        addr = signer.address_of(copy(account));
         t = Self.new(0);
         Self.publish(copy(account), move(t));
         tref = borrow_global_mut<T>(move(addr));

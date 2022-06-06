@@ -29,7 +29,7 @@ module 0x1.YYZ {
 //# publish
 module 0x1.M {
     import 0x1.Coin;
-    import 0x1.Signer;
+    import 0x1.signer;
     import 0x1.YYZ;
 
     struct Foo<T> has store { x: T }
@@ -66,7 +66,7 @@ module 0x1.M {
         let foo_ref: &Self.Foo<Coin.Coin<YYZ.YYZ>>;
         let coin_ref: &Coin.Coin<YYZ.YYZ>;
     label b0:
-        sender = Signer.address_of(copy(account));
+        sender = signer.address_of(copy(account));
         coin_wrapper_ref = borrow_global<CoinWrapper>(move(sender));
         foo_ref = &move(coin_wrapper_ref).CoinWrapper::f;
         coin_ref = &move(foo_ref).Foo<Coin.Coin<YYZ.YYZ>>::x;
@@ -80,7 +80,7 @@ module 0x1.M {
         let foo_ref: &Self.Foo<Self.Inner>;
         let inner_ref: &Self.Inner;
     label b0:
-        sender = Signer.address_of(copy(account));
+        sender = signer.address_of(copy(account));
         inner_wrapper_ref = borrow_global<InnerWrapper>(move(sender));
         foo_ref = &move(inner_wrapper_ref).InnerWrapper::f;
         inner_ref = &move(foo_ref).Foo<Self.Inner>::x;
@@ -95,7 +95,7 @@ module 0x1.M {
         let f: Self.Foo<Coin.Coin<YYZ.YYZ>>;
         let x: Coin.Coin<YYZ.YYZ>;
     label b0:
-        sender = Signer.address_of(copy(account));
+        sender = signer.address_of(copy(account));
         coin_wrapper = move_from<CoinWrapper>(move(sender));
         CoinWrapper {f} = move(coin_wrapper);
         Foo<Coin.Coin<YYZ.YYZ>> {x} = move(f);

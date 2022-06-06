@@ -26,14 +26,14 @@ Module 00000000000000000000000000000001::AModule
 | % Move Coverage: 100.00  |
 +-------------------------+
 Command `package coverage source --module AModule`:
-module Std::AModule {
-    use Std::Errors;
+module std::AModule {
+    use std::errors;
 
     /// x was three
     const E_IS_THREE: u64 = 0;
 
     public fun double_except_three(x: u64): u64 {
-        assert!(x != 3, Errors::invalid_argument(E_IS_THREE));
+        assert!(x != 3, errors::invalid_argument(E_IS_THREE));
         x * x
     }
 
@@ -70,95 +70,23 @@ B2:
 [4]	10: Ret
 }
 }
-Command `package disassemble --package MoveStdlib --name Errors`:
+Command `package disassemble --package MoveStdlib --name signer`:
 // Move bytecode v5
-module 1.Errors {
+module 1.signer {
 
 
-public already_published(reason: u64): u64 {
+public address_of(s: &signer): address {
 B0:
-	0: LdAddr[0](U8: [6])
-	1: MoveLoc[0](reason: u64)
-	2: Call[6](make(u8, u64): u64)
+	0: MoveLoc[0](s: &signer)
+	1: Call[1](borrow_address(&signer): &address)
+	2: ReadRef
 	3: Ret
 }
-public custom(reason: u64): u64 {
-B0:
-	0: LdAddr[1](U8: [255])
-	1: MoveLoc[0](reason: u64)
-	2: Call[6](make(u8, u64): u64)
-	3: Ret
-}
-public internal(reason: u64): u64 {
-B0:
-	0: LdAddr[2](U8: [10])
-	1: MoveLoc[0](reason: u64)
-	2: Call[6](make(u8, u64): u64)
-	3: Ret
-}
-public invalid_argument(reason: u64): u64 {
-B0:
-	0: LdAddr[3](U8: [7])
-	1: MoveLoc[0](reason: u64)
-	2: Call[6](make(u8, u64): u64)
-	3: Ret
-}
-public invalid_state(reason: u64): u64 {
-B0:
-	0: LdAddr[4](U8: [1])
-	1: MoveLoc[0](reason: u64)
-	2: Call[6](make(u8, u64): u64)
-	3: Ret
-}
-public limit_exceeded(reason: u64): u64 {
-B0:
-	0: LdAddr[5](U8: [8])
-	1: MoveLoc[0](reason: u64)
-	2: Call[6](make(u8, u64): u64)
-	3: Ret
-}
-make(category: u8, reason: u64): u64 {
-B0:
-	0: MoveLoc[0](category: u8)
-	1: CastU64
-	2: MoveLoc[1](reason: u64)
-	3: LdU8(8)
-	4: Shl
-	5: Add
-	6: Ret
-}
-public not_published(reason: u64): u64 {
-B0:
-	0: LdAddr[6](U8: [5])
-	1: MoveLoc[0](reason: u64)
-	2: Call[6](make(u8, u64): u64)
-	3: Ret
-}
-public requires_address(reason: u64): u64 {
-B0:
-	0: LdAddr[7](U8: [2])
-	1: MoveLoc[0](reason: u64)
-	2: Call[6](make(u8, u64): u64)
-	3: Ret
-}
-public requires_capability(reason: u64): u64 {
-B0:
-	0: LdAddr[8](U8: [4])
-	1: MoveLoc[0](reason: u64)
-	2: Call[6](make(u8, u64): u64)
-	3: Ret
-}
-public requires_role(reason: u64): u64 {
-B0:
-	0: LdAddr[9](U8: [3])
-	1: MoveLoc[0](reason: u64)
-	2: Call[6](make(u8, u64): u64)
-	3: Ret
-}
+native public borrow_address(s: &signer): &address
 }
 Command `package errmap`:
 Command `package info`:
 PackageBasics
-├─ Std:0x1
+├─ std:0x1
 └─ MoveStdlib
-   └─ Std:0x1
+   └─ std:0x1

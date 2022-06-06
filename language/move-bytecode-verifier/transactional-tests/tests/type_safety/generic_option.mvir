@@ -2,7 +2,7 @@
 
 // example using generics in a few common/interesting/non-trivial ways
 module 0x42.Option {
-    import 0x1.Vector;
+    import 0x1.vector;
 
     struct T<E> has copy, drop, store {
         v: vector<E>
@@ -10,14 +10,14 @@ module 0x42.Option {
 
     public none<E: store>(): Self.T<E> {
     label b0:
-        return T<E> { v: Vector.empty<E>() };
+        return T<E> { v: vector.empty<E>() };
     }
 
     public some<E: store>(e: E): Self.T<E> {
         let v: vector<E>;
     label b0:
-        v = Vector.empty<E>();
-        Vector.push_back<E>(&mut v, move(e));
+        v = vector.empty<E>();
+        vector.push_back<E>(&mut v, move(e));
         return T<E> { v: move(v) };
     }
 
@@ -25,9 +25,9 @@ module 0x42.Option {
         let v: vector<E>;
     label b0:
         T<E> { v: v } = move(x);
-        jump_if (Vector.is_empty<E>(&v)) b2;
+        jump_if (vector.is_empty<E>(&v)) b2;
     label b1:
-        return Vector.pop_back<E>(&mut v);
+        return vector.pop_back<E>(&mut v);
     label b2:
         return move(e);
     }

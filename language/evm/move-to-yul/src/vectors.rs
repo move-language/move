@@ -339,7 +339,7 @@ impl Generator {
 impl NativeFunctions {
     /// Define vector functions for a specific instantiation.
     pub(crate) fn define_vector_functions(&mut self, ctx: &Context) {
-        let vector = &self.find_module(ctx, "0x1", "Vector");
+        let vector = &self.find_module(ctx, "0x1", "vector");
 
         self.define(ctx, vector, "empty", crate::vectors::define_empty_fun);
         self.define(ctx, vector, "length", crate::vectors::define_length_fun);

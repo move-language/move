@@ -4,15 +4,15 @@ module DiemFramework::ValidatorConfigTests {
     use DiemFramework::ValidatorOperatorConfig as VOC;
     use DiemFramework::Roles;
     use DiemFramework::Genesis;
-    use Std::UnitTest;
-    use Std::Vector;
-    use Std::Signer;
+    use std::unit_test;
+    use std::vector;
+    use std::signer;
 
     const VALID_PUBKEY: vector<u8> = x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
 
     fun signer_at(index: u64): signer {
-        let signers = UnitTest::create_signers_for_testing(index + 1);
-        Vector::pop_back(&mut signers)
+        let signers = unit_test::create_signers_for_testing(index + 1);
+        vector::pop_back(&mut signers)
     }
 
     #[test]
@@ -80,12 +80,12 @@ module DiemFramework::ValidatorConfigTests {
         let operator = signer_at(1);
         Roles::new_validator_role(&dr, &validator);
         VOC::publish(&operator, &dr, x"");
-        VC::set_operator(&validator, Signer::address_of(&operator));
+        VC::set_operator(&validator, signer::address_of(&operator));
     }
 
     #[test_only]
     fun set_operator(dr: &signer, validator: &signer, operator: &signer) {
-        let operator_addr = Signer::address_of(operator);
+        let operator_addr = signer::address_of(operator);
         Roles::new_validator_role(dr, validator);
         Roles::new_validator_operator_role(dr, operator);
         VC::publish(validator, dr, x"FF");
@@ -98,8 +98,8 @@ module DiemFramework::ValidatorConfigTests {
         Genesis::setup(&dr, &tc);
         let validator = signer_at(0);
         let operator = signer_at(1);
-        let operator_addr = Signer::address_of(&operator);
-        let validator_addr = Signer::address_of(&validator);
+        let operator_addr = signer::address_of(&operator);
+        let validator_addr = signer::address_of(&validator);
         set_operator(&dr, &validator, &operator);
         assert!(VC::get_operator(validator_addr) == operator_addr, 0);
     }
@@ -126,8 +126,8 @@ module DiemFramework::ValidatorConfigTests {
         Genesis::setup(&dr, &tc);
         let validator = signer_at(0);
         let operator = signer_at(1);
-        let operator_addr = Signer::address_of(&operator);
-        let validator_addr = Signer::address_of(&validator);
+        let operator_addr = signer::address_of(&operator);
+        let validator_addr = signer::address_of(&validator);
         set_operator(&dr, &validator, &operator);
         assert!(VC::get_operator(validator_addr) == operator_addr, 0);
         VC::remove_operator(&validator);
@@ -141,7 +141,7 @@ module DiemFramework::ValidatorConfigTests {
         let validator = signer_at(0);
         let operator = signer_at(1);
         let other_operator = signer_at(2);
-        let validator_addr = Signer::address_of(&validator);
+        let validator_addr = signer::address_of(&validator);
         set_operator(&dr, &validator, &operator);
         VC::set_config(&other_operator, validator_addr, x"", x"", x"")
     }
@@ -152,7 +152,7 @@ module DiemFramework::ValidatorConfigTests {
         Genesis::setup(&dr, &tc);
         let validator = signer_at(0);
         let operator = signer_at(1);
-        let validator_addr = Signer::address_of(&validator);
+        let validator_addr = signer::address_of(&validator);
         set_operator(&dr, &validator, &operator);
         VC::set_config(&operator, validator_addr, x"", x"", x"")
     }
@@ -162,8 +162,8 @@ module DiemFramework::ValidatorConfigTests {
         Genesis::setup(&dr, &tc);
         let validator = signer_at(0);
         let operator = signer_at(1);
-        let validator_addr = Signer::address_of(&validator);
-        let operator_addr = Signer::address_of(&operator);
+        let validator_addr = signer::address_of(&validator);
+        let operator_addr = signer::address_of(&operator);
         set_operator(&dr, &validator, &operator);
         VC::set_config(&operator, validator_addr, VALID_PUBKEY, x"AA", x"BB");
         assert!(VC::is_valid(validator_addr), 0);
@@ -186,7 +186,7 @@ module DiemFramework::ValidatorConfigTests {
         Genesis::setup(&dr, &tc);
         let validator = signer_at(0);
         let operator = signer_at(1);
-        let validator_addr = Signer::address_of(&validator);
+        let validator_addr = signer::address_of(&validator);
         set_operator(&dr, &validator, &operator);
         VC::get_config(validator_addr);
     }
@@ -208,7 +208,7 @@ module DiemFramework::ValidatorConfigTests {
     fun get_operator_not_set(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let validator = signer_at(0);
-        let validator_addr = Signer::address_of(&validator);
+        let validator_addr = signer::address_of(&validator);
 
         Roles::new_validator_role(&dr, &validator);
         VC::publish(&validator, &dr, x"FF");

@@ -1,6 +1,6 @@
 #[test_only]
 module DiemFramework::AccountLimitsTests {
-    use Std::Signer;
+    use std::signer;
     use DiemFramework::Genesis;
     use DiemFramework::AccountLimits;
     use DiemFramework::XUS::XUS;
@@ -17,7 +17,7 @@ module DiemFramework::AccountLimitsTests {
         Roles::new_parent_vasp_role(tc, vasp);
 
         AccountLimits::publish_unrestricted_limits_for_testing<XUS>(vasp);
-        AccountLimits::publish_window<XUS>(dr, vasp, Signer::address_of(vasp));
+        AccountLimits::publish_window<XUS>(dr, vasp, signer::address_of(vasp));
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, vasp = @0x2)]
@@ -38,14 +38,14 @@ module DiemFramework::AccountLimitsTests {
     fun publish_window_twice(dr: signer, tc: signer, vasp: signer) {
         setup(&dr, &tc, &vasp);
 
-        AccountLimits::publish_window<XUS>(&dr, &vasp, Signer::address_of(&vasp));
+        AccountLimits::publish_window<XUS>(&dr, &vasp, signer::address_of(&vasp));
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, vasp = @0x2)]
     #[expected_failure(abort_code = 2)]
     fun publish_window_non_diem_root(dr: signer, tc: signer, vasp: signer) {
         setup(&dr, &tc, &vasp);
-        AccountLimits::publish_window<XUS>(&vasp, &vasp, Signer::address_of(&vasp));
+        AccountLimits::publish_window<XUS>(&vasp, &vasp, signer::address_of(&vasp));
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, vasp = @0x2)]
@@ -67,7 +67,7 @@ module DiemFramework::AccountLimitsTests {
         setup(&dr, &tc, &vasp);
         AccountLimits::update_limits_definition<XUS>(
             &tc,
-            Signer::address_of(&vasp),
+            signer::address_of(&vasp),
             100, /* new_max_inflow */
             200, /* new_max_outflow */
             150, /* new_max_holding_balance */
@@ -80,7 +80,7 @@ module DiemFramework::AccountLimitsTests {
         setup(&dr, &tc, &vasp);
         AccountLimits::update_limits_definition<XUS>(
             &tc,
-            Signer::address_of(&vasp),
+            signer::address_of(&vasp),
             0, /* new_max_inflow */
             0, /* new_max_outflow */
             150, /* new_max_holding_balance */
@@ -93,7 +93,7 @@ module DiemFramework::AccountLimitsTests {
         setup(&dr, &tc, &vasp);
         AccountLimits::update_limits_definition<XUS>(
             &tc,
-            Signer::address_of(&vasp),
+            signer::address_of(&vasp),
             100, /* new_max_inflow */
             200, /* new_max_outflow */
             150, /* new_max_holding_balance */
@@ -101,7 +101,7 @@ module DiemFramework::AccountLimitsTests {
         );
         AccountLimits::update_limits_definition<XUS>(
             &tc,
-            Signer::address_of(&vasp),
+            signer::address_of(&vasp),
             0, /* new_max_inflow */
             0, /* new_max_outflow */
             150, /* new_max_holding_balance */
@@ -115,7 +115,7 @@ module DiemFramework::AccountLimitsTests {
         setup(&dr, &tc, &vasp);
         AccountLimits::update_limits_definition<XUS>(
             &dr,
-            Signer::address_of(&vasp),
+            signer::address_of(&vasp),
             100, /* new_max_inflow */
             200, /* new_max_outflow */
             150, /* new_max_holding_balance */
@@ -140,7 +140,7 @@ module DiemFramework::AccountLimitsTests {
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, vasp = @0x2)]
     fun update_window_info(dr: signer, tc: signer, vasp: signer) {
         setup(&dr, &tc, &vasp);
-        let vasp_addr = Signer::address_of(&vasp);
+        let vasp_addr = signer::address_of(&vasp);
         AccountLimits::update_window_info<XUS>(
             &tc,
             vasp_addr,
@@ -165,7 +165,7 @@ module DiemFramework::AccountLimitsTests {
     #[expected_failure(abort_code = 258)]
     fun update_window_info_non_tc(dr: signer, tc: signer, vasp: signer) {
         setup(&dr, &tc, &vasp);
-        let vasp_addr = Signer::address_of(&vasp);
+        let vasp_addr = signer::address_of(&vasp);
         AccountLimits::update_window_info<XUS>(
             &dr,
             vasp_addr,
@@ -177,7 +177,7 @@ module DiemFramework::AccountLimitsTests {
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, vasp = @0x2)]
     fun has_limits_published(dr: signer, tc: signer, vasp: signer) {
         setup(&dr, &tc, &vasp);
-        assert!(AccountLimits::has_limits_published<XUS>(Signer::address_of(&vasp)), 1);
+        assert!(AccountLimits::has_limits_published<XUS>(signer::address_of(&vasp)), 1);
         assert!(!AccountLimits::has_limits_published<XUS>(@0x42 /* non-exsistent */), 3);
     }
 }

@@ -1,8 +1,8 @@
 /// This module defines structs and methods to initialize VM configurations,
 /// including different costs of running the VM.
 module CoreFramework::DiemVMConfig {
-    use Std::Capability::Cap;
-    use Std::Errors;
+    use std::capability::Cap;
+    use std::errors;
     use CoreFramework::DiemConfig;
     use CoreFramework::DiemTimestamp;
     use CoreFramework::SystemAddresses;
@@ -89,12 +89,12 @@ module CoreFramework::DiemVMConfig {
 
         assert!(
             !exists<VMConfigChainMarker<T>>(@CoreResources),
-            Errors::already_published(ECHAIN_MARKER)
+            errors::already_published(ECHAIN_MARKER)
         );
 
         assert!(
             !exists<DiemVMConfig>(@CoreResources),
-            Errors::already_published(ECONFIG)
+            errors::already_published(ECONFIG)
         );
 
         move_to(account, VMConfigChainMarker<T>{});
@@ -141,18 +141,18 @@ module CoreFramework::DiemVMConfig {
     ) acquires DiemVMConfig {
         DiemTimestamp::assert_operating();
 
-        assert!(exists<VMConfigChainMarker<T>>(@CoreResources), Errors::not_published(ECHAIN_MARKER));
+        assert!(exists<VMConfigChainMarker<T>>(@CoreResources), errors::not_published(ECHAIN_MARKER));
 
         assert!(
             min_price_per_gas_unit <= max_price_per_gas_unit,
-            Errors::invalid_argument(EGAS_CONSTANT_INCONSISTENCY)
+            errors::invalid_argument(EGAS_CONSTANT_INCONSISTENCY)
         );
         assert!(
             min_transaction_gas_units <= maximum_number_of_gas_units,
-            Errors::invalid_argument(EGAS_CONSTANT_INCONSISTENCY)
+            errors::invalid_argument(EGAS_CONSTANT_INCONSISTENCY)
         );
 
-        assert!(exists<DiemVMConfig>(@CoreResources), Errors::not_published(ECONFIG));
+        assert!(exists<DiemVMConfig>(@CoreResources), errors::not_published(ECONFIG));
 
         let gas_constants = &mut borrow_global_mut<DiemVMConfig>(@CoreResources).gas_schedule.gas_constants;
 

@@ -2,7 +2,7 @@
 ////
 /// This currently only represents a basic subset of what we may want to expose.
 module Evm::Evm {
-    use Std::Vector;
+    use std::vector;
     use Evm::U256::{Self, U256};
 
     /// Returns the address of the executing contract.
@@ -37,12 +37,12 @@ module Evm::Evm {
     /// Returns the first four bytes of `data`.
     /// This is the equivalent to the type casting operation `bytes4` in Solidity.
     public fun bytes4(data: vector<u8>): vector<u8> {
-        assert!(Vector::length(&data) >= 4, 0);
-        let res = Vector::empty<u8>();
-        Vector::push_back(&mut res, *Vector::borrow(&data, 0));
-        Vector::push_back(&mut res, *Vector::borrow(&data, 1));
-        Vector::push_back(&mut res, *Vector::borrow(&data, 2));
-        Vector::push_back(&mut res, *Vector::borrow(&data, 3));
+        assert!(vector::length(&data) >= 4, 0);
+        let res = vector::empty<u8>();
+        vector::push_back(&mut res, *vector::borrow(&data, 0));
+        vector::push_back(&mut res, *vector::borrow(&data, 1));
+        vector::push_back(&mut res, *vector::borrow(&data, 2));
+        vector::push_back(&mut res, *vector::borrow(&data, 3));
         res
     }
 
@@ -74,8 +74,8 @@ module Evm::Evm {
     //   bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";\
     // TODO: this probably belongs in ERC721.move?
     public fun tokenURI_with_baseURI(baseURI: vector<u8>, tokenId: U256): vector<u8> {
-        if (Vector::length(&baseURI) == 0) {
-            Vector::empty()
+        if (vector::length(&baseURI) == 0) {
+            vector::empty()
         } else {
             concat(baseURI, to_string(tokenId))
         }

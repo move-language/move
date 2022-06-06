@@ -24,7 +24,7 @@ const FLAVOR_PATH: &str = "flavors/";
 
 fn default_testing_addresses() -> BTreeMap<String, NumericalAddress> {
     let mapping = [
-        ("Std", "0x1"),
+        ("std", "0x1"),
         ("M", "0x1"),
         ("A", "0x42"),
         ("B", "0x42"),

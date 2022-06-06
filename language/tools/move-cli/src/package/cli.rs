@@ -576,7 +576,7 @@ version = \"0.0.0\"
 MoveStdlib = {{ git = \"https://github.com/move-language/move.git\", subdir = \"language/move-stdlib\", rev = \"main\" }}
 
 [addresses]
-Std = \"0x1\"
+std = \"0x1\"
 ", name)?;
     Ok(())
 }

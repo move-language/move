@@ -7,7 +7,7 @@ use crate::{
     cfgir::{ast as G, translate::move_value_from_value_},
     compiled_unit::*,
     diag,
-    expansion::ast::{AbilitySet, Address, ModuleIdent, ModuleIdent_, SpecId},
+    expansion::ast::{AbilitySet, Address, ModuleIdent, ModuleIdent_, SpecId, Visibility},
     hlir::{
         ast::{self as H, Value_},
         translate::{display_var, DisplayVar},
@@ -18,7 +18,7 @@ use crate::{
     },
     parser::ast::{
         Ability, Ability_, BinOp, BinOp_, ConstantName, Field, FunctionName, StructName, UnaryOp,
-        UnaryOp_, Var, Visibility,
+        UnaryOp_, Var,
     },
     shared::{unique_map::UniqueMap, *},
     FullyCompiledProgram,
@@ -546,6 +546,7 @@ fn function(
     let G::Function {
         attributes: _attributes,
         visibility: v,
+        entry,
         signature,
         acquires,
         body,
@@ -580,6 +581,7 @@ fn function(
     let name = context.function_definition_name(m, f);
     let ir_function = IR::Function_ {
         visibility: v,
+        is_entry: entry.is_some(),
         signature,
         acquires,
         specifications: vec![],
@@ -594,7 +596,6 @@ fn function(
 fn visibility(v: Visibility) -> IR::FunctionVisibility {
     match v {
         Visibility::Public(_) => IR::FunctionVisibility::Public,
-        Visibility::Script(_) => IR::FunctionVisibility::Script,
         Visibility::Friend(_) => IR::FunctionVisibility::Friend,
         Visibility::Internal => IR::FunctionVisibility::Internal,
     }

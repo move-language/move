@@ -52,7 +52,7 @@ module ValidatorAdministrationScripts {
     /// * `ValidatorAdministrationScripts::set_validator_operator_with_nonce_admin`
     /// * `ValidatorAdministrationScripts::set_validator_config_and_reconfigure`
 
-    public(script) fun add_validator_and_reconfigure(
+    public entry fun add_validator_and_reconfigure(
         dr_account: signer,
         sliding_nonce: u64,
         validator_name: vector<u8>,
@@ -137,7 +137,7 @@ module ValidatorAdministrationScripts {
     /// * `ValidatorAdministrationScripts::set_validator_operator_with_nonce_admin`
     /// * `ValidatorAdministrationScripts::set_validator_config_and_reconfigure`
 
-    public(script) fun register_validator_config(
+    public entry fun register_validator_config(
         validator_operator_account: signer,
         // TODO Rename to validator_addr, since it is an address.
         validator_account: address,
@@ -220,7 +220,7 @@ module ValidatorAdministrationScripts {
     /// * `ValidatorAdministrationScripts::set_validator_operator_with_nonce_admin`
     /// * `ValidatorAdministrationScripts::set_validator_config_and_reconfigure`
 
-    public(script) fun remove_validator_and_reconfigure(
+    public entry fun remove_validator_and_reconfigure(
         dr_account: signer,
         sliding_nonce: u64,
         validator_name: vector<u8>,
@@ -305,7 +305,7 @@ module ValidatorAdministrationScripts {
     /// * `ValidatorAdministrationScripts::set_validator_operator_with_nonce_admin`
     /// * `ValidatorAdministrationScripts::register_validator_config`
 
-    public(script) fun set_validator_config_and_reconfigure(
+    public entry fun set_validator_config_and_reconfigure(
         validator_operator_account: signer,
         validator_account: address,
         consensus_pubkey: vector<u8>,
@@ -426,7 +426,7 @@ module ValidatorAdministrationScripts {
     /// * `ValidatorAdministrationScripts::set_validator_operator_with_nonce_admin`
     /// * `ValidatorAdministrationScripts::set_validator_config_and_reconfigure`
 
-    public(script) fun set_validator_operator(
+    public entry fun set_validator_operator(
         account: signer,
         operator_name: vector<u8>,
         operator_account: address
@@ -509,7 +509,7 @@ module ValidatorAdministrationScripts {
     /// * `ValidatorAdministrationScripts::set_validator_operator`
     /// * `ValidatorAdministrationScripts::set_validator_config_and_reconfigure`
 
-    public(script) fun set_validator_operator_with_nonce_admin(
+    public entry fun set_validator_operator_with_nonce_admin(
         dr_account: signer,
         account: signer,
         sliding_nonce: u64,

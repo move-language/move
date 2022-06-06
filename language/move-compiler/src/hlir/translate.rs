@@ -256,14 +256,20 @@ fn script(context: &mut Context, tscript: T::Script) -> H::Script {
 fn function(context: &mut Context, _name: FunctionName, f: T::Function) -> H::Function {
     assert!(context.has_empty_locals());
     assert!(context.tmp_counter == 0);
-    let attributes = f.attributes;
-    let visibility = f.visibility;
-    let signature = function_signature(context, f.signature);
-    let acquires = f.acquires;
-    let body = function_body(context, &signature, f.body);
+    let T::Function {
+        attributes,
+        visibility,
+        entry,
+        signature,
+        acquires,
+        body,
+    } = f;
+    let signature = function_signature(context, signature);
+    let body = function_body(context, &signature, body);
     H::Function {
         attributes,
         visibility,
+        entry,
         signature,
         acquires,
         body,

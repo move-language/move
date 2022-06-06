@@ -12,7 +12,6 @@ use crate::{
     },
     parser::ast::{
         self as P, Ability, ConstantName, Field, FunctionName, ModuleName, StructName, Var,
-        Visibility,
     },
     shared::{known_attributes::AttributePosition, unique_map::UniqueMap, *},
     FullyCompiledProgram,
@@ -509,17 +508,17 @@ fn script_(context: &mut Context, package_name: Option<Symbol>, pscript: P::Scri
     check_valid_module_member_name(context, ModuleMemberKind::Function, pfunction.name.0);
     let (function_name, function) = function_(context, pfunction);
     match &function.visibility {
-        Visibility::Public(loc) | Visibility::Script(loc) | Visibility::Friend(loc) => {
+        E::Visibility::Public(loc) | E::Visibility::Friend(loc) => {
             let msg = format!(
-                "Extraneous '{}' modifier. Script functions are always '{}'",
+                "Invalid '{}' visibility modifier. \
+                Script functions are not callable from other Move functions.",
                 function.visibility,
-                Visibility::SCRIPT,
             );
             context
                 .env
                 .add_diag(diag!(Declarations::UnnecessaryItem, (*loc, msg)));
         }
-        Visibility::Internal => (),
+        E::Visibility::Internal => (),
     }
     match &function.body {
         sp!(_, E::FunctionBody_::Defined(_)) => (),
@@ -1154,13 +1153,15 @@ fn function_(context: &mut Context, pfunction: P::Function) -> (FunctionName, E:
         attributes: pattributes,
         loc,
         name,
-        visibility,
+        visibility: pvisibility,
+        entry,
         signature: psignature,
         body: pbody,
         acquires,
     } = pfunction;
     assert!(context.exp_specs.is_empty());
     let attributes = flatten_attributes(context, AttributePosition::Function, pattributes);
+    let visibility = visibility(context, pvisibility);
     let (old_aliases, signature) = function_signature(context, psignature);
     let acquires = acquires
         .into_iter()
@@ -1172,6 +1173,7 @@ fn function_(context: &mut Context, pfunction: P::Function) -> (FunctionName, E:
         attributes,
         loc,
         visibility,
+        entry,
         signature,
         acquires,
         body,
@@ -1179,6 +1181,18 @@ fn function_(context: &mut Context, pfunction: P::Function) -> (FunctionName, E:
     };
     context.set_to_outer_scope(old_aliases);
     (name, fdef)
+}
+
+fn visibility(context: &mut Context, pvisibility: P::Visibility) -> E::Visibility {
+    match pvisibility {
+        P::Visibility::Public(loc) => E::Visibility::Public(loc),
+        P::Visibility::Script(loc) => {
+            debug_assert!(context.env.has_diags());
+            E::Visibility::Public(loc)
+        }
+        P::Visibility::Friend(loc) => E::Visibility::Friend(loc),
+        P::Visibility::Internal => E::Visibility::Internal,
+    }
 }
 
 fn function_signature(

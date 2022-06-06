@@ -3,11 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    expansion::ast::{Attributes, Friend, ModuleIdent},
+    expansion::ast::{Attributes, Friend, ModuleIdent, Visibility},
     hlir::ast::{
         BaseType, Command, Command_, FunctionSignature, Label, SingleType, StructDefinition,
     },
-    parser::ast::{ConstantName, FunctionName, StructName, Var, Visibility},
+    parser::ast::{ConstantName, FunctionName, StructName, Var, ENTRY_MODIFIER},
     shared::{ast_debug::*, unique_map::UniqueMap},
 };
 use move_core_types::value::MoveValue;
@@ -92,6 +92,7 @@ pub type FunctionBody = Spanned<FunctionBody_>;
 pub struct Function {
     pub attributes: Attributes,
     pub visibility: Visibility,
+    pub entry: Option<Loc>,
     pub signature: FunctionSignature,
     pub acquires: BTreeMap<StructName, Loc>,
     pub body: FunctionBody,
@@ -313,6 +314,7 @@ impl AstDebug for (FunctionName, &Function) {
             Function {
                 attributes,
                 visibility,
+                entry,
                 signature,
                 acquires,
                 body,
@@ -320,6 +322,9 @@ impl AstDebug for (FunctionName, &Function) {
         ) = self;
         attributes.ast_debug(w);
         visibility.ast_debug(w);
+        if entry.is_some() {
+            w.write(&format!("{} ", ENTRY_MODIFIER));
+        }
         if let FunctionBody_::Native = &body.value {
             w.write("native ");
         }

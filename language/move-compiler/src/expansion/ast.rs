@@ -4,8 +4,8 @@
 
 use crate::{
     parser::ast::{
-        Ability, Ability_, BinOp, ConstantName, Field, FunctionName, ModuleName, QuantKind,
-        SpecApplyPattern, StructName, UnaryOp, Var, Visibility,
+        self as P, Ability, Ability_, BinOp, ConstantName, Field, FunctionName, ModuleName,
+        QuantKind, SpecApplyPattern, StructName, UnaryOp, Var, ENTRY_MODIFIER,
     },
     shared::{
         ast_debug::*, known_attributes::KnownAttribute, unique_map::UniqueMap,
@@ -170,6 +170,13 @@ pub enum StructFields {
 // Functions
 //**************************************************************************************************
 
+#[derive(PartialEq, Debug, Clone)]
+pub enum Visibility {
+    Public(Loc),
+    Friend(Loc),
+    Internal,
+}
+
 #[derive(PartialEq, Clone, Debug)]
 pub struct FunctionSignature {
     pub type_parameters: Vec<(Name, AbilitySet)>,
@@ -192,6 +199,7 @@ pub struct Function {
     pub attributes: Attributes,
     pub loc: Loc,
     pub visibility: Visibility,
+    pub entry: Option<Loc>,
     pub signature: FunctionSignature,
     pub acquires: Vec<ModuleAccess>,
     pub body: FunctionBody,
@@ -663,6 +671,19 @@ impl AbilitySet {
     }
 }
 
+impl Visibility {
+    pub const PUBLIC: &'static str = P::Visibility::PUBLIC;
+    pub const FRIEND: &'static str = P::Visibility::FRIEND;
+    pub const INTERNAL: &'static str = P::Visibility::INTERNAL;
+
+    pub fn loc(&self) -> Option<Loc> {
+        match self {
+            Visibility::Public(loc) | Visibility::Friend(loc) => Some(*loc),
+            Visibility::Internal => None,
+        }
+    }
+}
+
 //**************************************************************************************************
 // Iter
 //**************************************************************************************************
@@ -758,6 +779,20 @@ impl fmt::Display for ModuleAccess_ {
             Name(n) => write!(f, "{}", n),
             ModuleAccess(m, n) => write!(f, "{}::{}", m, n),
         }
+    }
+}
+
+impl fmt::Display for Visibility {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match &self {
+                Visibility::Public(_) => Visibility::PUBLIC,
+                Visibility::Friend(_) => Visibility::FRIEND,
+                Visibility::Internal => Visibility::INTERNAL,
+            }
+        )
     }
 }
 
@@ -1189,6 +1224,7 @@ impl AstDebug for (FunctionName, &Function) {
                 attributes,
                 loc: _loc,
                 visibility,
+                entry,
                 signature,
                 acquires,
                 body,
@@ -1197,6 +1233,9 @@ impl AstDebug for (FunctionName, &Function) {
         ) = self;
         attributes.ast_debug(w);
         visibility.ast_debug(w);
+        if entry.is_some() {
+            w.write(&format!("{} ", ENTRY_MODIFIER));
+        }
         if let FunctionBody_::Native = &body.value {
             w.write("native ");
         }
@@ -1211,6 +1250,12 @@ impl AstDebug for (FunctionName, &Function) {
             FunctionBody_::Defined(body) => w.block(|w| body.ast_debug(w)),
             FunctionBody_::Native => w.writeln(";"),
         }
+    }
+}
+
+impl AstDebug for Visibility {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        w.write(&format!("{} ", self))
     }
 }
 

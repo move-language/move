@@ -46,7 +46,7 @@ module ExperimentalFramework::AccountCreationScripts {
     /// * `ValidatorAdministrationScripts::set_validator_operator_with_nonce_admin`
     /// * `ValidatorAdministrationScripts::set_validator_config_and_reconfigure`
 
-    public(script) fun create_validator_operator_account(
+    public entry fun create_validator_operator_account(
         dr_account: signer,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
@@ -108,7 +108,7 @@ module ExperimentalFramework::AccountCreationScripts {
     /// * `ValidatorAdministrationScripts::set_validator_operator_with_nonce_admin`
     /// * `ValidatorAdministrationScripts::set_validator_config_and_reconfigure`
 
-    public(script) fun create_validator_account(
+    public entry fun create_validator_account(
         dr_account: signer,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
@@ -126,7 +126,7 @@ module ExperimentalFramework::AccountCreationScripts {
     // Basic account creation script.
     // No roles attached, no conditions checked.
     ////////////////////////////////////////////////////////////////
-    public(script) fun create_account(
+    public entry fun create_account(
         _account: signer,
         new_account_address: address,
         auth_key_prefix: vector<u8>,

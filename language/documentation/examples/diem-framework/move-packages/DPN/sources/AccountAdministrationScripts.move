@@ -38,7 +38,7 @@ module DiemFramework::AccountAdministrationScripts {
     /// * `AccountCreationScripts::create_parent_vasp_account`
     /// * `PaymentScripts::peer_to_peer_with_metadata`
 
-    public(script) fun add_currency_to_account<Currency>(account: signer) {
+    public entry fun add_currency_to_account<Currency>(account: signer) {
         DiemAccount::add_currency<Currency>(&account);
     }
     spec add_currency_to_account {
@@ -102,7 +102,7 @@ module DiemFramework::AccountAdministrationScripts {
     /// * `AccountAdministrationScripts::create_recovery_address`
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
 
-    public(script) fun add_recovery_rotation_capability(to_recover_account: signer, recovery_address: address) {
+    public entry fun add_recovery_rotation_capability(to_recover_account: signer, recovery_address: address) {
         RecoveryAddress::add_rotation_capability(
             DiemAccount::extract_key_rotation_capability(&to_recover_account), recovery_address
         )
@@ -160,7 +160,7 @@ module DiemFramework::AccountAdministrationScripts {
     /// # Related Scripts
     /// * `AccountAdministrationScripts::rotate_shared_ed25519_public_key`
 
-    public(script) fun publish_shared_ed25519_public_key(account: signer, public_key: vector<u8>) {
+    public entry fun publish_shared_ed25519_public_key(account: signer, public_key: vector<u8>) {
         SharedEd25519PublicKey::publish(&account, public_key)
     }
     spec publish_shared_ed25519_public_key {
@@ -203,7 +203,7 @@ module DiemFramework::AccountAdministrationScripts {
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin`
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
 
-    public(script) fun rotate_authentication_key(account: signer, new_key: vector<u8>) {
+    public entry fun rotate_authentication_key(account: signer, new_key: vector<u8>) {
         let key_rotation_capability = DiemAccount::extract_key_rotation_capability(&account);
         DiemAccount::rotate_authentication_key(&key_rotation_capability, new_key);
         DiemAccount::restore_key_rotation_capability(key_rotation_capability);
@@ -264,7 +264,7 @@ module DiemFramework::AccountAdministrationScripts {
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin`
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
 
-    public(script) fun rotate_authentication_key_with_nonce(account: signer, sliding_nonce: u64, new_key: vector<u8>) {
+    public entry fun rotate_authentication_key_with_nonce(account: signer, sliding_nonce: u64, new_key: vector<u8>) {
         SlidingNonce::record_nonce_or_abort(&account, sliding_nonce);
         let key_rotation_capability = DiemAccount::extract_key_rotation_capability(&account);
         DiemAccount::rotate_authentication_key(&key_rotation_capability, new_key);
@@ -328,7 +328,7 @@ module DiemFramework::AccountAdministrationScripts {
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce`
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
 
-    public(script) fun rotate_authentication_key_with_nonce_admin(dr_account: signer, account: signer, sliding_nonce: u64, new_key: vector<u8>) {
+    public entry fun rotate_authentication_key_with_nonce_admin(dr_account: signer, account: signer, sliding_nonce: u64, new_key: vector<u8>) {
         SlidingNonce::record_nonce_or_abort(&dr_account, sliding_nonce);
         let key_rotation_capability = DiemAccount::extract_key_rotation_capability(&account);
         DiemAccount::rotate_authentication_key(&key_rotation_capability, new_key);
@@ -395,7 +395,7 @@ module DiemFramework::AccountAdministrationScripts {
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce`
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin`
 
-    public(script) fun rotate_authentication_key_with_recovery_address(
+    public entry fun rotate_authentication_key_with_recovery_address(
             account: signer,
             recovery_address: address,
             to_recover: address,
@@ -462,7 +462,7 @@ module DiemFramework::AccountAdministrationScripts {
     /// * `AccountCreationScripts::create_designated_dealer`
     /// * `AccountAdministrationScripts::rotate_dual_attestation_info`
 
-    public(script) fun rotate_dual_attestation_info(account: signer, new_url: vector<u8>, new_key: vector<u8>) {
+    public entry fun rotate_dual_attestation_info(account: signer, new_url: vector<u8>, new_key: vector<u8>) {
         DualAttestation::rotate_base_url(&account, new_url);
         DualAttestation::rotate_compliance_public_key(&account, new_key)
     }
@@ -516,7 +516,7 @@ module DiemFramework::AccountAdministrationScripts {
     /// # Related Scripts
     /// * `AccountAdministrationScripts::publish_shared_ed25519_public_key`
 
-    public(script) fun rotate_shared_ed25519_public_key(account: signer, public_key: vector<u8>) {
+    public entry fun rotate_shared_ed25519_public_key(account: signer, public_key: vector<u8>) {
         SharedEd25519PublicKey::rotate_key(&account, public_key)
     }
     spec rotate_shared_ed25519_public_key {
@@ -563,7 +563,7 @@ module DiemFramework::AccountAdministrationScripts {
     /// * `Script::add_recovery_rotation_capability`
     /// * `Script::rotate_authentication_key_with_recovery_address`
 
-    public(script) fun create_recovery_address(account: signer) {
+    public entry fun create_recovery_address(account: signer) {
         RecoveryAddress::publish(&account, DiemAccount::extract_key_rotation_capability(&account))
     }
 
@@ -612,7 +612,7 @@ module DiemFramework::AccountAdministrationScripts {
     /// | ----------------            | --------------            | -------------                                                                  |
     /// | `Errors::ALREADY_PUBLISHED` | `VASPDomain::EVASP_DOMAINS` | A `VASPDomain::VASPDomains` resource has already been published under `account`. |
     /// | `Errors::REQUIRES_ROLE`     | `Roles::EPARENT_VASP`     | The sending `account` was not a parent VASP account.                           |
-    public(script) fun create_vasp_domains(account: signer) {
+    public entry fun create_vasp_domains(account: signer) {
         VASPDomain::publish_vasp_domains(&account)
     }
     spec create_vasp_domains {
@@ -654,7 +654,7 @@ module DiemFramework::AccountAdministrationScripts {
     /// | ----------------           | --------------          | -------------                                                  |
     /// | `Errors::INVALID_STATE`    | `CRSN::EHAS_CRSN`       | A `CRSN::CRSN` resource was already published under `account`. |
     /// | `Errors::INVALID_ARGUMENT` | `CRSN::EZERO_SIZE_CRSN` | The `crsn_size` was zero.                                      |
-    public(script) fun opt_in_to_crsn(account: signer, crsn_size: u64) {
+    public entry fun opt_in_to_crsn(account: signer, crsn_size: u64) {
         DiemAccount::publish_crsn(&account, crsn_size)
     }
 
@@ -682,7 +682,7 @@ module DiemFramework::AccountAdministrationScripts {
     /// | Error Category          | Error Reason     | Description                                               |
     /// | ----------------        | --------------   | -------------                                             |
     /// | `Errors::INVALID_STATE` | `CRSN::ENO_CRSN` | A `CRSN::CRSN` resource is not published under `account`. |
-    public(script) fun force_expire(account: signer, shift_amount: u64) {
+    public entry fun force_expire(account: signer, shift_amount: u64) {
         CRSN::force_expire(&account, shift_amount)
     }
 }

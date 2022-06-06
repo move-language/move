@@ -19,7 +19,7 @@ module 0x1::BARSToken {
     /// mint and receive tokens.
     /// Note that this also gives BARS account a capability to mint BARS NFTs on behalf of the user.
     /// (the NFTs of other types cannot be created by BARS account).
-    public(script) fun register_bars_user(user: signer) {
+    public entry fun register_bars_user(user: signer) {
         register_user_internal(&user);
     }
 
@@ -37,7 +37,7 @@ module 0x1::BARSToken {
     }
 
     /// BARS account mints `amount` copies of BARS tokens to the artist's account.
-    public(script) fun mint_bars(
+    public entry fun mint_bars(
         bars_account: signer,
         artist: address,
         artist_name: vector<u8>,
@@ -79,7 +79,7 @@ module 0x1::BARSToken {
     const ArtistAddr: address = @0x42;
 
     #[test(admin=@DiemRoot, bars_account=@BARS, artist=@0x42, collector=@0x43)]
-    public(script) fun test_bars(admin: signer, bars_account: signer, artist: signer, collector: signer) {
+    public entry fun test_bars(admin: signer, bars_account: signer, artist: signer, collector: signer) {
         NFT::nft_initialize(admin);
 
         register_user_internal(&artist);

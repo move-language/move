@@ -489,6 +489,7 @@ fn function(
         attributes,
         loc: _,
         visibility,
+        entry,
         signature,
         acquires,
         body,
@@ -500,6 +501,7 @@ fn function(
     let f = N::Function {
         attributes,
         visibility,
+        entry,
         signature,
         acquires,
         body,

@@ -230,6 +230,9 @@ pub enum StructFields {
 
 new_name!(FunctionName);
 
+pub const NATIVE_MODIFIER: &str = "native";
+pub const ENTRY_MODIFIER: &str = "entry";
+
 #[derive(PartialEq, Clone, Debug)]
 pub struct FunctionSignature {
     pub type_parameters: Vec<(Name, Vec<Ability>)>,
@@ -261,6 +264,7 @@ pub struct Function {
     pub attributes: Vec<Attributes>,
     pub loc: Loc,
     pub visibility: Visibility,
+    pub entry: Option<Loc>,
     pub signature: FunctionSignature,
     pub acquires: Vec<NameAccessChain>,
     pub name: FunctionName,
@@ -1457,6 +1461,7 @@ impl AstDebug for Function {
             attributes,
             loc: _loc,
             visibility,
+            entry,
             signature,
             acquires,
             name,
@@ -1464,6 +1469,9 @@ impl AstDebug for Function {
         } = self;
         attributes.ast_debug(w);
         visibility.ast_debug(w);
+        if entry.is_some() {
+            w.write(&format!("{} ", ENTRY_MODIFIER));
+        }
         if let FunctionBody_::Native = &body.value {
             w.write("native ");
         }

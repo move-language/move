@@ -93,7 +93,7 @@ module 0x1::NFTGallery {
     /// Transfer `amount` of token with id `GUID::id(creator, creation_num)` from `owner`'s
     /// balance to `to`'s balance. This operation has to be done by either the owner or an
     /// approved operator of the owner.
-    public(script) fun transfer_token_between_galleries<TokenType: copy + store + drop>(
+    public entry fun transfer_token_between_galleries<TokenType: copy + store + drop>(
         account: signer,
         to: address,
         amount: u64,

@@ -1780,7 +1780,6 @@ fn parse_function_visibility(
         };
         match sub_public_vis {
             None => FunctionVisibility::Public,
-            Some(Tok::Script) => FunctionVisibility::Script,
             Some(Tok::Friend) => FunctionVisibility::Friend,
             _ => panic!("Unexpected token that is not a visibility modifier"),
         }
@@ -1822,6 +1821,12 @@ fn parse_function_decl(
     };
 
     let visibility = parse_function_visibility(tokens)?;
+    let is_entry = if tokens.peek() == Tok::NameValue && tokens.content() == "entry" {
+        tokens.advance()?;
+        true
+    } else {
+        false
+    };
 
     let (name, type_parameters) = parse_name_and_type_parameters(tokens, parse_type_parameter)?;
     consume_token(tokens, Tok::LParen)?;
@@ -1852,6 +1857,7 @@ fn parse_function_decl(
     let func_name = FunctionName(name);
     let func = Function_::new(
         visibility,
+        is_entry,
         args,
         ret.unwrap_or_default(),
         type_parameters,
@@ -1912,6 +1918,7 @@ fn parse_script(tokens: &mut Lexer) -> Result<Script, ParseError<Loc, anyhow::Er
     let end_loc = tokens.previous_end_loc();
     let main = Function_::new(
         FunctionVisibility::Public,
+        /* is_entry */ true,
         args,
         vec![],
         type_formals,

@@ -424,6 +424,7 @@ fn parse_name_access_chain_<'a, F: FnOnce() -> &'a str>(
 
 struct Modifiers {
     visibility: Option<Visibility>,
+    entry: Option<Loc>,
     native: Option<Loc>,
 }
 
@@ -431,6 +432,7 @@ impl Modifiers {
     fn empty() -> Self {
         Self {
             visibility: None,
+            entry: None,
             native: None,
         }
     }
@@ -472,6 +474,20 @@ fn parse_module_member_modifiers(context: &mut Context) -> Result<Modifiers, Dia
                     ))
                 }
                 mods.native = Some(loc)
+            }
+            Tok::Identifier if context.tokens.content() == ENTRY_MODIFIER => {
+                let loc = current_token_loc(context.tokens);
+                context.tokens.advance()?;
+                if let Some(prev_loc) = mods.entry {
+                    let msg = format!("Duplicate '{}' modifier", ENTRY_MODIFIER);
+                    let prev_msg = format!("'{}' modifier previously given here", ENTRY_MODIFIER);
+                    context.env.add_diag(diag!(
+                        Declarations::DuplicateItem,
+                        (loc, msg),
+                        (prev_loc, prev_msg)
+                    ))
+                }
+                mods.entry = Some(loc)
             }
             _ => break,
         }
@@ -1775,7 +1791,27 @@ fn parse_function_decl(
     modifiers: Modifiers,
     context: &mut Context,
 ) -> Result<Function, Diagnostic> {
-    let Modifiers { visibility, native } = modifiers;
+    let Modifiers {
+        visibility,
+        mut entry,
+        native,
+    } = modifiers;
+
+    if let Some(Visibility::Script(vloc)) = visibility {
+        let msg = format!(
+            "'{script}' is deprecated in favor of the '{entry}' modifier. \
+            Replace with '{public} {entry}'",
+            script = Visibility::SCRIPT,
+            public = Visibility::PUBLIC,
+            entry = ENTRY_MODIFIER,
+        );
+        context
+            .env
+            .add_diag(diag!(Uncategorized::DeprecatedWillBeRemoved, (vloc, msg,)));
+        if entry.is_none() {
+            entry = Some(vloc)
+        }
+    }
 
     // "fun" <FunctionDefName>
     consume_token(context.tokens, Tok::Fun)?;
@@ -1848,6 +1884,7 @@ fn parse_function_decl(
         attributes,
         loc,
         visibility: visibility.unwrap_or(Visibility::Internal),
+        entry,
         signature,
         acquires,
         name,
@@ -1880,7 +1917,11 @@ fn parse_struct_decl(
     modifiers: Modifiers,
     context: &mut Context,
 ) -> Result<StructDefinition, Diagnostic> {
-    let Modifiers { visibility, native } = modifiers;
+    let Modifiers {
+        visibility,
+        entry,
+        native,
+    } = modifiers;
     if let Some(vis) = visibility {
         let msg = format!(
             "Invalid struct declaration. Structs cannot have visibility modifiers as they are \
@@ -1890,6 +1931,15 @@ fn parse_struct_decl(
         context
             .env
             .add_diag(diag!(Syntax::InvalidModifier, (vis.loc().unwrap(), msg)));
+    }
+    if let Some(loc) = entry {
+        let msg = format!(
+            "Invalid constant declaration. '{}' is used only on functions",
+            ENTRY_MODIFIER
+        );
+        context
+            .env
+            .add_diag(diag!(Syntax::InvalidModifier, (loc, msg)));
     }
 
     consume_token(context.tokens, Tok::Struct)?;
@@ -1979,13 +2029,26 @@ fn parse_constant_decl(
     modifiers: Modifiers,
     context: &mut Context,
 ) -> Result<Constant, Diagnostic> {
-    let Modifiers { visibility, native } = modifiers;
+    let Modifiers {
+        visibility,
+        entry,
+        native,
+    } = modifiers;
     if let Some(vis) = visibility {
         let msg = "Invalid constant declaration. Constants cannot have visibility modifiers as \
                    they are always internal";
         context
             .env
             .add_diag(diag!(Syntax::InvalidModifier, (vis.loc().unwrap(), msg)));
+    }
+    if let Some(loc) = entry {
+        let msg = format!(
+            "Invalid constant declaration. '{}' is used only on functions",
+            ENTRY_MODIFIER
+        );
+        context
+            .env
+            .add_diag(diag!(Syntax::InvalidModifier, (loc, msg)));
     }
     if let Some(loc) = native {
         let msg = "Invalid constant declaration. 'native' constants are not supported";

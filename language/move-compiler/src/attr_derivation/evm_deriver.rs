@@ -63,6 +63,7 @@ fn derive_module_for_evm(mod_def: &mut ModuleDefinition) {
                     call_name,
                     attrs,
                     Visibility::Public(loc),
+                    None,
                     sign,
                 ));
             }

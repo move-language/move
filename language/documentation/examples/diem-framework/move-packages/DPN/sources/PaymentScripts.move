@@ -60,7 +60,7 @@ module DiemFramework::PaymentScripts {
     /// * `AccountCreationScripts::create_parent_vasp_account`
     /// * `AccountAdministrationScripts::add_currency_to_account`
     /// * `PaymentScripts::peer_to_peer_by_signers`
-    public(script) fun peer_to_peer_with_metadata<Currency>(
+    public entry fun peer_to_peer_with_metadata<Currency>(
         payer: signer,
         payee: address,
         amount: u64,
@@ -119,7 +119,7 @@ module DiemFramework::PaymentScripts {
     /// * `AccountCreationScripts::create_parent_vasp_account`
     /// * `AccountAdministrationScripts::add_currency_to_account`
     /// * `PaymentScripts::peer_to_peer_with_metadata`
-    public(script) fun peer_to_peer_by_signers<Currency>(
+    public entry fun peer_to_peer_by_signers<Currency>(
         payer: signer,
         payee: signer,
         amount: u64,

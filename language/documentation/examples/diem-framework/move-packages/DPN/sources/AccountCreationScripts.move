@@ -60,7 +60,7 @@ module DiemFramework::AccountCreationScripts {
     /// * `AccountAdministrationScripts::add_recovery_rotation_capability`
     /// * `AccountAdministrationScripts::create_recovery_address`
 
-    public(script) fun create_child_vasp_account<CoinType>(
+    public entry fun create_child_vasp_account<CoinType>(
         parent_vasp: signer,
         child_address: address,
         auth_key_prefix: vector<u8>,
@@ -189,7 +189,7 @@ module DiemFramework::AccountCreationScripts {
     /// * `ValidatorAdministrationScripts::set_validator_operator_with_nonce_admin`
     /// * `ValidatorAdministrationScripts::set_validator_config_and_reconfigure`
 
-    public(script) fun create_validator_operator_account(
+    public entry fun create_validator_operator_account(
         dr_account: signer,
         sliding_nonce: u64,
         new_account_address: address,
@@ -283,7 +283,7 @@ module DiemFramework::AccountCreationScripts {
     /// * `ValidatorAdministrationScripts::set_validator_operator_with_nonce_admin`
     /// * `ValidatorAdministrationScripts::set_validator_config_and_reconfigure`
 
-    public(script) fun create_validator_account(
+    public entry fun create_validator_account(
         dr_account: signer,
         sliding_nonce: u64,
         new_account_address: address,
@@ -376,7 +376,7 @@ module DiemFramework::AccountCreationScripts {
     /// * `AccountAdministrationScripts::create_recovery_address`
     /// * `AccountAdministrationScripts::rotate_dual_attestation_info`
 
-    public(script) fun create_parent_vasp_account<CoinType>(
+    public entry fun create_parent_vasp_account<CoinType>(
         tc_account: signer,
         sliding_nonce: u64,
         new_account_address: address,
@@ -466,7 +466,7 @@ module DiemFramework::AccountCreationScripts {
     /// * `PaymentScripts::peer_to_peer_with_metadata`
     /// * `AccountAdministrationScripts::rotate_dual_attestation_info`
 
-    public(script) fun create_designated_dealer<Currency>(
+    public entry fun create_designated_dealer<Currency>(
         tc_account: signer,
         sliding_nonce: u64,
         addr: address,

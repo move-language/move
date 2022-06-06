@@ -134,6 +134,7 @@ fn function(
     let N::Function {
         attributes,
         visibility,
+        entry,
         mut signature,
         body: n_body,
         acquires,
@@ -166,6 +167,7 @@ fn function(
     T::Function {
         attributes,
         visibility,
+        entry,
         signature,
         acquires,
         body,

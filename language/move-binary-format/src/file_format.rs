@@ -410,10 +410,15 @@ pub enum Visibility {
     Private = 0x0,
     /// Accessible by any module or script outside of its declaring module.
     Public = 0x1,
-    /// Accessible by any script or other `Script` functions from any module
-    Script = 0x2,
+    // DEPRECATED for separate entry modifier
+    // Accessible by any script or other `Script` functions from any module
+    // Script = 0x2,
     /// Accessible by this module as well as modules declared in the friend list.
     Friend = 0x3,
+}
+
+impl Visibility {
+    pub const DEPRECATED_SCRIPT: u8 = 0x2;
 }
 
 impl Default for Visibility {
@@ -429,7 +434,6 @@ impl std::convert::TryFrom<u8> for Visibility {
         match v {
             x if x == Visibility::Private as u8 => Ok(Visibility::Private),
             x if x == Visibility::Public as u8 => Ok(Visibility::Public),
-            x if x == Visibility::Script as u8 => Ok(Visibility::Script),
             x if x == Visibility::Friend as u8 => Ok(Visibility::Friend),
             _ => Err(()),
         }
@@ -446,6 +450,8 @@ pub struct FunctionDefinition {
     pub function: FunctionHandleIndex,
     /// The visibility of this function.
     pub visibility: Visibility,
+    /// Marker if the function is intended as an entry function. That is
+    pub is_entry: bool,
     /// List of locally defined types (declared in this module) with the `Key` ability
     /// that the procedure might access, either through: BorrowGlobal, MoveFrom, or transitively
     /// through another procedure
@@ -471,8 +477,14 @@ impl FunctionDefinition {
         self.code.is_none()
     }
 
+    // Deprecated public bit, deprecated in favor a the Visibility enum
+    pub const DEPRECATED_PUBLIC_BIT: u8 = 0b01;
+
     /// A native function implemented in Rust.
-    pub const NATIVE: u8 = 0x2;
+    pub const NATIVE: u8 = 0b10;
+
+    /// An entry function, intended to be used as an entry point to execution
+    pub const ENTRY: u8 = 0b100;
 }
 
 // Signature
@@ -1991,6 +2003,7 @@ pub fn basic_test_module() -> CompiledModule {
     m.function_defs.push(FunctionDefinition {
         function: FunctionHandleIndex(0),
         visibility: Visibility::Private,
+        is_entry: false,
         acquires_global_resources: vec![],
         code: Some(CodeUnit {
             locals: SignatureIndex(0),

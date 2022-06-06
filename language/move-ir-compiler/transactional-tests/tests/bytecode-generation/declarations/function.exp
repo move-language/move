@@ -52,11 +52,11 @@ task 1 'print-bytecode'. lines 33-46:
 module 4d10.M {
 
 
-public(script) f() {
+entry public f() {
 B0:
 	0: Ret
 }
-public(script) g() {
+entry public g() {
 B0:
 	0: Call[0](f())
 	1: Ret

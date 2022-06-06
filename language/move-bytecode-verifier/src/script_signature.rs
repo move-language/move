@@ -18,7 +18,7 @@ use move_binary_format::{
     errors::{Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
         CompiledModule, CompiledScript, FunctionDefinitionIndex, SignatureIndex, SignatureToken,
-        TableIndex, Visibility,
+        TableIndex,
     },
     file_format_common::{VERSION_1, VERSION_5},
     IndexKind,
@@ -27,7 +27,7 @@ use move_core_types::{identifier::IdentStr, vm_status::StatusCode};
 
 pub type FnCheckScriptSignature = fn(
     &BinaryIndexedView,
-    Visibility,
+    /* is_entry */ bool,
     SignatureIndex,
     Option<SignatureIndex>,
 ) -> PartialVMResult<()>;
@@ -44,14 +44,8 @@ pub fn verify_script(
     let resolver = &BinaryIndexedView::Script(script);
     let parameters = script.parameters;
     let return_ = None;
-    verify_main_signature_impl(
-        resolver,
-        Visibility::Script,
-        parameters,
-        return_,
-        check_signature,
-    )
-    .map_err(|e| e.finish(Location::Script))
+    verify_main_signature_impl(resolver, true, parameters, return_, check_signature)
+        .map_err(|e| e.finish(Location::Script))
 }
 
 pub fn verify_module(
@@ -67,7 +61,7 @@ pub fn verify_module(
         .function_defs()
         .iter()
         .enumerate()
-        .filter(|(_idx, fdef)| matches!(fdef.visibility, Visibility::Script))
+        .filter(|(_idx, fdef)| fdef.is_entry)
     {
         verify_module_function_signature(
             module,
@@ -115,7 +109,7 @@ fn verify_module_function_signature(
     let return_ = fhandle.return_;
     verify_main_signature_impl(
         resolver,
-        fdef.visibility,
+        fdef.is_entry,
         parameters,
         Some(return_),
         check_signature,
@@ -128,23 +122,22 @@ fn verify_module_function_signature(
 
 fn verify_main_signature_impl(
     resolver: &BinaryIndexedView,
-    visibility: Visibility,
+    is_entry: bool,
     parameters_idx: SignatureIndex,
     return_idx: Option<SignatureIndex>,
     check_signature: FnCheckScriptSignature,
 ) -> PartialVMResult<()> {
-    let deprecated_logic =
-        resolver.version() < VERSION_5 && matches!(visibility, Visibility::Script);
+    let deprecated_logic = resolver.version() < VERSION_5 && is_entry;
 
     if deprecated_logic {
-        legacy_script_signature_checks(resolver, visibility, parameters_idx, return_idx)?;
+        legacy_script_signature_checks(resolver, is_entry, parameters_idx, return_idx)?;
     }
-    check_signature(resolver, visibility, parameters_idx, return_idx)
+    check_signature(resolver, is_entry, parameters_idx, return_idx)
 }
 
 pub fn no_additional_script_signature_checks(
     _resolver: &BinaryIndexedView,
-    _visibility: Visibility,
+    _is_entry: bool,
     _parameters: SignatureIndex,
     _return_type: Option<SignatureIndex>,
 ) -> PartialVMResult<()> {
@@ -153,7 +146,7 @@ pub fn no_additional_script_signature_checks(
 
 pub fn legacy_script_signature_checks(
     resolver: &BinaryIndexedView,
-    _visibility: Visibility,
+    _is_entry: bool,
     parameters_idx: SignatureIndex,
     return_idx: Option<SignatureIndex>,
 ) -> PartialVMResult<()> {

@@ -14,7 +14,7 @@ use move_binary_format::{
     access::ModuleAccess,
     compatibility::Compatibility,
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
-    file_format::{LocalIndex, Visibility},
+    file_format::LocalIndex,
     normalized, CompiledModule, IndexKind,
 };
 use move_bytecode_verifier::script_signature;
@@ -384,29 +384,28 @@ impl VMRuntime {
         data_store: &mut impl DataStore,
         gas_status: &mut GasStatus,
         extensions: &mut NativeContextExtensions,
-        bypass_visibility: bool,
+        bypass_declared_entry_check: bool,
     ) -> VMResult<SerializedReturnValues> {
         use move_binary_format::{binary_views::BinaryIndexedView, file_format::SignatureIndex};
-        fn check_visibility(
+        fn check_is_entry(
             _resolver: &BinaryIndexedView,
-            visibility: Visibility,
+            is_entry: bool,
             _parameters_idx: SignatureIndex,
             _return_idx: Option<SignatureIndex>,
         ) -> PartialVMResult<()> {
-            match visibility {
-                Visibility::Script => Ok(()),
-                Visibility::Private | Visibility::Public | Visibility::Friend => {
-                    Err(PartialVMError::new(
-                        StatusCode::EXECUTE_SCRIPT_FUNCTION_CALLED_ON_NON_SCRIPT_VISIBLE,
-                    ))
-                }
+            if is_entry {
+                Ok(())
+            } else {
+                Err(PartialVMError::new(
+                    StatusCode::EXECUTE_ENTRY_FUNCTION_CALLED_ON_NON_ENTRY_FUNCTION,
+                ))
             }
         }
 
-        let additional_signature_checks = if bypass_visibility {
+        let additional_signature_checks = if bypass_declared_entry_check {
             move_bytecode_verifier::no_additional_script_signature_checks
         } else {
-            check_visibility
+            check_is_entry
         };
         // load the function
         let (

@@ -446,7 +446,8 @@ fn script_into_module(compiled_script: CompiledScript) -> CompiledModule {
     // Create a function definition for the main function.
     let main_def = FunctionDefinition {
         function: main_handle_idx,
-        visibility: Visibility::Script,
+        visibility: Visibility::Public,
+        is_entry: true,
         acquires_global_resources: vec![],
         code: Some(script.code),
     };

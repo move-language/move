@@ -15,7 +15,7 @@ use move_core_types::{
     language_storage::TypeTag,
 };
 use move_model::{
-    model::{FunctionEnv, FunctionVisibility, GlobalEnv, ModuleEnv},
+    model::{FunctionEnv, GlobalEnv, ModuleEnv},
     ty,
 };
 use serde::{Deserialize, Serialize};
@@ -131,7 +131,7 @@ impl<'env> Abigen<'env> {
                     let func_ident = IdentStr::new(&func_name).unwrap();
                     // only pick up script functions that also have a script-callable signature.
                     // and check all arguments have a valid type tag
-                    func.visibility() == FunctionVisibility::Script
+                    func.is_entry()
                         && script_signature::verify_module_function_signature_by_name(
                             module,
                             func_ident,

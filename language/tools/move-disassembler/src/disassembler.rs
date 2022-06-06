@@ -991,6 +991,11 @@ impl<'a> Disassembler<'a> {
             name
         );
 
+        let entry_modifier = if function.map(|(f, _)| f.is_entry).unwrap_or(false) {
+            "entry "
+        } else {
+            ""
+        };
         let visibility_modifier = match function {
             Some(function) => match function.0.visibility {
                 Visibility::Private => {
@@ -1000,7 +1005,6 @@ impl<'a> Disassembler<'a> {
                         ""
                     }
                 }
-                Visibility::Script => "public(script) ",
                 Visibility::Friend => "public(friend) ",
                 Visibility::Public => "public ",
             },
@@ -1062,14 +1066,9 @@ impl<'a> Disassembler<'a> {
         Ok(self.format_function_coverage(
             name,
             format!(
-                "{native_modifier}{visibility_modifier}{name}{ty_params}({params}){ret_type}{body}",
-                native_modifier = native_modifier,
-                visibility_modifier = visibility_modifier,
-                name = name,
-                ty_params = ty_params,
+                "{entry_modifier}{native_modifier}{visibility_modifier}{name}{ty_params}({params}){ret_type}{body}",
                 params = &params.join(", "),
                 ret_type = Self::format_ret_type(&ret_type),
-                body = body,
             ),
         ))
     }

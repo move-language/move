@@ -594,36 +594,6 @@ fn serialize_field_definition(
     serialize_signature_token(binary, &field_definition.signature.0)
 }
 
-/// Serializes a `FunctionDefinition`.
-///
-/// A `FunctionDefinition` gets serialized as follows:
-/// - `FunctionDefinition.function` as a ULEB128 (index into the `FunctionHandle` table)
-/// - `FunctionDefinition.visibility` 1 byte for the visibility modifier of the function
-/// - `FunctionDefinition.flags` 1 byte for the flags of the function
-///   The flags now has only one bit used:
-///   - bit 0x2: native indicator, indicates whether the function is a native function.
-/// - `FunctionDefinition.code` a variable size stream for the `CodeUnit`
-fn serialize_function_definition(
-    binary: &mut BinaryData,
-    function_definition: &FunctionDefinition,
-) -> Result<()> {
-    serialize_function_handle_index(binary, &function_definition.function)?;
-
-    binary.push(function_definition.visibility as u8)?;
-    let is_native = if function_definition.is_native() {
-        FunctionDefinition::NATIVE
-    } else {
-        0
-    };
-    binary.push(is_native)?;
-
-    serialize_acquires(binary, &function_definition.acquires_global_resources)?;
-    if let Some(code) = &function_definition.code {
-        serialize_code_unit(binary, code)?;
-    }
-    Ok(())
-}
-
 fn serialize_field_handle(binary: &mut BinaryData, field_handle: &FieldHandle) -> Result<()> {
     serialize_struct_def_index(binary, &field_handle.owner)?;
     serialize_field_offset(binary, field_handle.field)?;
@@ -1376,9 +1346,53 @@ impl ModuleSerializer {
             self.common.table_count = self.common.table_count.wrapping_add(1); // the count will bound to a small number
             self.function_defs.0 = check_index_in_binary(binary.len())?;
             for function_definition in function_definitions {
-                serialize_function_definition(binary, function_definition)?;
+                self.serialize_function_definition(binary, function_definition)?;
             }
             self.function_defs.1 = checked_calculate_table_size(binary, self.function_defs.0)?;
+        }
+        Ok(())
+    }
+
+    /// Serializes a `FunctionDefinition`.
+    ///
+    /// A `FunctionDefinition` gets serialized as follows:
+    /// - `FunctionDefinition.function` as a ULEB128 (index into the `FunctionHandle` table)
+    /// - `FunctionDefinition.visibility` 1 byte for the visibility modifier of the function
+    /// - `FunctionDefinition.flags` 1 byte for the flags of the function
+    ///   The flags now has only one bit used:
+    ///   - bit 0x2: native indicator, indicates whether the function is a native function.
+    /// - `FunctionDefinition.code` a variable size stream for the `CodeUnit`
+    fn serialize_function_definition(
+        &mut self,
+        binary: &mut BinaryData,
+        function_definition: &FunctionDefinition,
+    ) -> Result<()> {
+        serialize_function_handle_index(binary, &function_definition.function)?;
+
+        let mut flags = 0;
+        if self.common.major_version < VERSION_5 {
+            let visibility = if function_definition.visibility == Visibility::Public
+                && function_definition.is_entry
+            {
+                Visibility::DEPRECATED_SCRIPT
+            } else {
+                function_definition.visibility as u8
+            };
+            binary.push(visibility)?;
+        } else {
+            binary.push(function_definition.visibility as u8)?;
+            if function_definition.is_entry {
+                flags |= FunctionDefinition::ENTRY;
+            }
+        }
+        if function_definition.is_native() {
+            flags |= FunctionDefinition::NATIVE
+        }
+        binary.push(flags)?;
+
+        serialize_acquires(binary, &function_definition.acquires_global_resources)?;
+        if let Some(code) = &function_definition.code {
+            serialize_code_unit(binary, code)?;
         }
         Ok(())
     }

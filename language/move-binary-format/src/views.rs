@@ -481,6 +481,10 @@ impl<'a, T: ModuleAccess> FunctionDefinitionView<'a, T> {
         self.function_def.visibility
     }
 
+    pub fn is_entry(&self) -> bool {
+        self.function_def.is_entry
+    }
+
     pub fn is_native(&self) -> bool {
         self.function_def.is_native()
     }

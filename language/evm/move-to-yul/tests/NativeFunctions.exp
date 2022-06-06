@@ -706,8 +706,8 @@ object "test_A2_NativeFunctions_test_signer_address_of" {
                     mstore($locals, A2_Evm_sign($t1))
                     // $t2 := borrow_local($t0)
                     $t2 := $MakePtr(false, $locals)
-                    // $t3 := Signer::address_of($t2)
-                    $t3 := A1_Signer_address_of($t2)
+                    // $t3 := signer::address_of($t2)
+                    $t3 := A1_signer_address_of($t2)
                     // $t4 := 0x42
                     $t4 := 0x42
                     // $t5 := ==($t3, $t4)
@@ -720,17 +720,17 @@ object "test_A2_NativeFunctions_test_signer_address_of" {
             }
         }
 
-        function A1_Signer_address_of(s) -> $result {
+        function A1_signer_address_of(s) -> $result {
             let $t1, $t2
-            // $t1 := Signer::borrow_address($t0)
-            $t1 := A1_Signer_borrow_address(s)
+            // $t1 := signer::borrow_address($t0)
+            $t1 := A1_signer_borrow_address(s)
             // $t2 := read_ref($t1)
             $t2 := $LoadU256($t1)
             // return $t2
             $result := $t2
         }
 
-        function A1_Signer_borrow_address(signer_ref) -> addr_ref {
+        function A1_signer_borrow_address(signer_ref) -> addr_ref {
           addr_ref := signer_ref
         }
         function A2_Evm_sign(addr) -> signer {

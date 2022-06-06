@@ -3286,8 +3286,8 @@ object "test_A2_Tables_test_vector" {
                     $t27 := $MakePtr(false, add($locals, 63))
                     // $t28 := 0x1012
                     $t28 := 0x1012
-                    // $t29 := Vector::singleton<address>($t28)
-                    $t29 := A1_Vector_singleton$address$($t28)
+                    // $t29 := vector::singleton<address>($t28)
+                    $t29 := A1_vector_singleton$address$($t28)
                     // Table::insert<u8, vector<address>>($t25, $t27, $t29)
                     A2_Table_insert$u8_vec$address$$($t25, $t27, $t29)
                     // $t30 := borrow_local($t22)
@@ -3324,8 +3324,8 @@ object "test_A2_Tables_test_vector" {
                     $t43 := $MakePtr(false, add($locals, 159))
                     // $t44 := Table::borrow<u8, vector<address>>($t41, $t43)
                     $t44 := A2_Table_borrow$u8_vec$address$$($t41, $t43)
-                    // $t45 := Vector::length<address>($t44)
-                    $t45 := A1_Vector_length$address$($t44)
+                    // $t45 := vector::length<address>($t44)
+                    $t45 := A1_vector_length$address$($t44)
                     // $t46 := 1
                     $t46 := 1
                     // $t47 := ==($t45, $t46)
@@ -3356,8 +3356,8 @@ object "test_A2_Tables_test_vector" {
                     $t52 := A2_Table_borrow$u8_vec$address$$($t49, $t51)
                     // $t53 := 0
                     $t53 := 0
-                    // $t54 := Vector::borrow<address>($t52, $t53)
-                    $t54 := A1_Vector_borrow$address$($t52, $t53)
+                    // $t54 := vector::borrow<address>($t52, $t53)
+                    $t54 := A1_vector_borrow$address$($t52, $t53)
                     // $t55 := read_ref($t54)
                     $t55 := $LoadU256($t54)
                     // $t56 := 0x1012
@@ -3428,8 +3428,8 @@ object "test_A2_Tables_test_vector" {
                     $t68 := A2_Table_borrow_mut$u8_vec$address$$($t65, $t67)
                     // $t69 := 0x1013
                     $t69 := 0x1013
-                    // Vector::push_back<address>($t68, $t69)
-                    A1_Vector_push_back$address$($t68, $t69)
+                    // vector::push_back<address>($t68, $t69)
+                    A1_vector_push_back$address$($t68, $t69)
                     // $t70 := borrow_field<Tables::S<u8, vector<address>>>.t($t64)
                     $t70 := $t64
                     // $t71 := 42
@@ -3440,8 +3440,8 @@ object "test_A2_Tables_test_vector" {
                     $t72 := $MakePtr(false, add($locals, 287))
                     // $t73 := Table::borrow<u8, vector<address>>($t70, $t72)
                     $t73 := A2_Table_borrow$u8_vec$address$$($t70, $t72)
-                    // $t74 := Vector::length<address>($t73)
-                    $t74 := A1_Vector_length$address$($t73)
+                    // $t74 := vector::length<address>($t73)
+                    $t74 := A1_vector_length$address$($t73)
                     // $t75 := 2
                     $t75 := 2
                     // $t76 := ==($t74, $t75)
@@ -3473,8 +3473,8 @@ object "test_A2_Tables_test_vector" {
                     $t81 := A2_Table_borrow$u8_vec$address$$($t78, $t80)
                     // $t82 := 1
                     $t82 := 1
-                    // $t83 := Vector::borrow<address>($t81, $t82)
-                    $t83 := A1_Vector_borrow$address$($t81, $t82)
+                    // $t83 := vector::borrow<address>($t81, $t82)
+                    $t83 := A1_vector_borrow$address$($t81, $t82)
                     // $t84 := read_ref($t83)
                     $t84 := $LoadU256($t83)
                     // $t85 := 0x1013
@@ -3508,8 +3508,8 @@ object "test_A2_Tables_test_vector" {
                     mstore(add($locals, 352), A2_Table_remove$u8_vec$address$$($t88, $t90))
                     // $t91 := borrow_local($t23)
                     $t91 := $MakePtr(false, add($locals, 352))
-                    // $t92 := Vector::length<address>($t91)
-                    $t92 := A1_Vector_length$address$($t91)
+                    // $t92 := vector::length<address>($t91)
+                    $t92 := A1_vector_length$address$($t91)
                     // $t93 := 2
                     $t93 := 2
                     // $t94 := ==($t92, $t93)
@@ -3533,8 +3533,8 @@ object "test_A2_Tables_test_vector" {
                     $t96 := $MakePtr(false, add($locals, 352))
                     // $t97 := 0
                     $t97 := 0
-                    // $t98 := Vector::borrow<address>($t96, $t97)
-                    $t98 := A1_Vector_borrow$address$($t96, $t97)
+                    // $t98 := vector::borrow<address>($t96, $t97)
+                    $t98 := A1_vector_borrow$address$($t96, $t97)
                     // $t99 := read_ref($t98)
                     $t99 := $LoadU256($t98)
                     // $t100 := 0x1012
@@ -3560,8 +3560,8 @@ object "test_A2_Tables_test_vector" {
                     $t103 := $MakePtr(false, add($locals, 352))
                     // $t104 := 1
                     $t104 := 1
-                    // $t105 := Vector::borrow<address>($t103, $t104)
-                    $t105 := A1_Vector_borrow$address$($t103, $t104)
+                    // $t105 := vector::borrow<address>($t103, $t104)
+                    $t105 := A1_vector_borrow$address$($t103, $t104)
                     // $t106 := read_ref($t105)
                     $t106 := $LoadU256($t105)
                     // $t107 := 0x1013
@@ -3623,14 +3623,14 @@ object "test_A2_Tables_test_vector" {
             let word := sload(storage_key)
             res := $LogicalNot(iszero(word))
         }
-        function A1_Vector_borrow$address$(v_ref, i) -> e_ptr {
+        function A1_vector_borrow$address$(v_ref, i) -> e_ptr {
             let v_offs := $LoadU256(v_ref)
             let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
             let size := $LoadU64(v_ptr)
             if $GtEq(i, size) { $AbortBuiltin() }
             e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 32)))
         }
-        function A1_Vector_length$address$(v_ref) -> len {
+        function A1_vector_length$address$(v_ref) -> len {
             let v_offs := $LoadU256(v_ref)
             let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
             len := $LoadU64(v_ptr)
@@ -3671,7 +3671,7 @@ object "test_A2_Tables_test_vector" {
             }
             value_ref := $MakePtr(true, value_offs)
         }
-        function A1_Vector_push_back$address$(v_ref, e) {
+        function A1_vector_push_back$address$(v_ref, e) {
             let v_offs := $LoadU256(v_ref)
             let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
             let size := $LoadU64(v_ptr)
@@ -3720,15 +3720,15 @@ object "test_A2_Tables_test_vector" {
             $AlignedStorageStore(vector_ref_dst, $linked_dst_1833323706)
             sstore(storage_key, vector_ref_dst)
         }
-        function A1_Vector_singleton$address$(e) -> $result {
+        function A1_vector_singleton$address$(e) -> $result {
             let $t2, $t3
             let $locals := $Malloc(32)
-            // $t1 := Vector::empty<#0>()
-            mstore($locals, A1_Vector_empty$address$())
+            // $t1 := vector::empty<#0>()
+            mstore($locals, A1_vector_empty$address$())
             // $t2 := borrow_local($t1)
             $t2 := $MakePtr(false, $locals)
-            // Vector::push_back<#0>($t2, $t0)
-            A1_Vector_push_back$address$($t2, e)
+            // vector::push_back<#0>($t2, $t0)
+            A1_vector_push_back$address$($t2, e)
             // $t3 := move($t1)
             $t3 := mload($locals)
             // return $t3
@@ -3736,7 +3736,7 @@ object "test_A2_Tables_test_vector" {
             $Free($locals, 32)
         }
 
-        function A1_Vector_empty$address$() -> vector {
+        function A1_vector_empty$address$() -> vector {
             vector := $Malloc(96)
             $MemoryStoreU64(add(vector, 8), 2)
         }

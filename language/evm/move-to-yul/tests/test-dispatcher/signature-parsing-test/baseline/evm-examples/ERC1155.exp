@@ -461,5 +461,5 @@ object "A2_ERC1155" {
  warning: unused alias
   ┌─ tests/test-dispatcher/signature-parsing-test/baseline/evm-examples/ERC1155.move:4:22
   │
-4 │     use Std::ASCII::{String};
+4 │     use std::ascii::{String};
   │                      ^^^^^^ Unused 'use' of alias 'String'. Consider removing it

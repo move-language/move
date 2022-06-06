@@ -25,6 +25,7 @@ walkdir = "2.3.1"
 smallvec = "1.6.1"
 sha2 = "0.9.3"
 sha3 = "0.9.1"
+anyhow = "1.0.52"
 
 [dev-dependencies]
 move-unit-test = { path = "../tools/move-unit-test" }

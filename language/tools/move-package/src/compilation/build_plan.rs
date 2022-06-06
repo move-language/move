@@ -9,8 +9,7 @@ use crate::{
 use anyhow::Result;
 use move_compiler::{
     compiled_unit::AnnotatedCompiledUnit,
-    diagnostics::FilesSourceText,
-    diagnostics::{report_diagnostics_no_exit, report_warnings},
+    diagnostics::{report_diagnostics_no_exit, report_warnings, FilesSourceText},
     Compiler,
 };
 use petgraph::algo::toposort;

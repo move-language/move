@@ -55,20 +55,26 @@ pub struct Diagnostics {
 // Reporting
 //**************************************************************************************************
 
+/// Report diagnostics and exit the process
 pub fn report_diagnostics(files: &FilesSourceText, diags: Diagnostics) -> ! {
-    report_diagnostics_impl(files, diags);
+    report_diagnostics_impl(files, diags, true);
     std::process::exit(1)
 }
 
-pub fn report_warnings(files: &FilesSourceText, warnings: Diagnostics) {
+/// Report diagnostics without exiting the process
+pub fn report_diagnostics_no_exit(files: &FilesSourceText, diags: Diagnostics) {
+    report_diagnostics_impl(files, diags, false);
+}
+
+pub fn report_warnings(files: &FilesSourceText, warnings: Diagnostics, should_exit: bool) {
     if warnings.is_empty() {
         return;
     }
     debug_assert!(warnings.max_severity().unwrap() == Severity::Warning);
-    report_diagnostics_impl(files, warnings)
+    report_diagnostics_impl(files, warnings, should_exit)
 }
 
-fn report_diagnostics_impl(files: &FilesSourceText, diags: Diagnostics) {
+fn report_diagnostics_impl(files: &FilesSourceText, diags: Diagnostics, should_exit: bool) {
     let color_choice = match read_env_var(COLOR_MODE_ENV_VAR).as_str() {
         "NONE" => ColorChoice::Never,
         "ANSI" => ColorChoice::AlwaysAnsi,
@@ -77,7 +83,9 @@ fn report_diagnostics_impl(files: &FilesSourceText, diags: Diagnostics) {
     };
     let mut writer = StandardStream::stderr(color_choice);
     output_diagnostics(&mut writer, files, diags);
-    std::process::exit(1)
+    if should_exit {
+        std::process::exit(1);
+    }
 }
 
 pub fn unwrap_or_report_diagnostics<T>(files: &FilesSourceText, res: Result<T, Diagnostics>) -> T {

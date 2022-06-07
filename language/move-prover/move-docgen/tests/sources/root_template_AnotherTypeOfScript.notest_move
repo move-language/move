@@ -2,9 +2,9 @@ address 0x1 {
 module AnotherTypeOfScript {
 
     /// This is a script
-    public(script) fun script3() {}
+    entry fun script3() {}
 
     /// This is another script
-    public(script) fun script4() {}
+    entry fun script4() {}
 }
 }

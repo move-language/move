@@ -519,10 +519,8 @@ fn parse_visibility(context: &mut Context) -> Result<Visibility, Diagnostic> {
         Some(Tok::Friend) => Visibility::Friend(loc),
         _ => {
             let msg = format!(
-                "Invalid visibility modifier. Consider removing it or using one of '{}', '{}', or \
-                 '{}'",
+                "Invalid visibility modifier. Consider removing it or using '{}' or '{}'",
                 Visibility::PUBLIC,
-                Visibility::SCRIPT,
                 Visibility::FRIEND
             );
             return Err(diag!(Syntax::UnexpectedToken, (loc, msg)));

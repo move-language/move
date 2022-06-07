@@ -57,7 +57,7 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     /// The Move VM MUST return an invariant violation if the caller fails to follow any of the
     /// rules above.
     ///
-    /// The VM will check that the function has public(script) visibility.
+    /// The VM will check that the function is marked as an 'entry' function.
     ///
     /// Currently if any other error occurs during execution, the Move VM will simply propagate that
     /// error back to the outer environment without handling/translating it. This behavior may be

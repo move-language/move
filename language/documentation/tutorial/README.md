@@ -376,7 +376,7 @@ The Ethereum blockchain state might look like this:
 
 We have created a Move package for you in folder `step_4` called `BasicCoin`. The `sources` folder contains source code for
 all your Move modules in the package, including `BasicCoin.move`. In this section, we will take a closer look at the
-implementation of the methods inside [`BasicCoin.move`](./step_4/BasicCoin/sources/BasicCoin.move).
+implementation of the methods inside [`BasicCoin.move`](./step_4/sources/BasicCoin.move).
 
 ### Compiling our code
 
@@ -387,7 +387,7 @@ move package build
 ```
 
 ### Implementation of methods
-Now let's take a closer look at the implementation of the methods inside [`BasicCoin.move`]((./step_4/BasicCoin/sources/BasicCoin.move)).
+Now let's take a closer look at the implementation of the methods inside [`BasicCoin.move`](./step_4/BasicCoin/sources/BasicCoin.move).
 
 <details>
 <summary>Method <code>publish_balance</code></summary>

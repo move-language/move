@@ -2427,6 +2427,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-ethereum-abi"
+version = "0.1.0"
+dependencies = [
+ "serde 1.0.130",
+ "serde_json",
+]
+
+[[package]]
 name = "move-explain"
 version = "0.1.0"
 dependencies = [
@@ -2798,6 +2806,7 @@ dependencies = [
  "move-command-line-common",
  "move-compiler",
  "move-core-types",
+ "move-ethereum-abi",
  "move-ir-types",
  "move-model",
  "move-prover-boogie-backend",

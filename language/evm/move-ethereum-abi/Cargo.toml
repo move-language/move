@@ -1,0 +1,16 @@
+[package]
+name = "move-ethereum-abi"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Move Ethereum ABI"
+publish = false
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+# external dependencies
+serde = { version = "1.0.124", features = ["derive"] }
+serde_json = "1.0.64"
+
+[lib]
+doctest = false

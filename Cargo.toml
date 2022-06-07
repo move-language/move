@@ -11,6 +11,7 @@ members = [
     "language/documentation/examples/diem-framework/crates/crypto-derive",
     "language/documentation/examples/diem-framework/crates/natives",
     "language/evm/exec-utils",
+    "language/evm/move-ethereum-abi",
     "language/evm/move-to-yul",
     "language/extensions/async/move-async-vm",
     "language/extensions/move-table-extension",

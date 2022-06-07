@@ -11,13 +11,13 @@ Move is a new programming language developed to provide a safe and programmable 
 
 The Move language directory consists of four main parts:
 
-- [virtual machine](vm/) (VM) &mdash; contains the bytecode format, a bytecode interpreter, and infrastructure for executing a block of transactions. This directory also contains the infrastructure to generate the genesis block.
+- [virtual machine](move-vm) (VM) &mdash; contains the bytecode format, a bytecode interpreter, and infrastructure for executing a block of transactions. This directory also contains the infrastructure to generate the genesis block.
 
-- [bytecode verifier](bytecode-verifier/) &mdash; contains a static analysis tool for rejecting invalid Move bytecode. The virtual machine runs the bytecode verifier on any new Move code it encounters before executing it. The compiler runs the bytecode verifier on its output and surfaces the errors to the programmer.
+- [bytecode verifier](move-bytecode-verifier) &mdash; contains a static analysis tool for rejecting invalid Move bytecode. The virtual machine runs the bytecode verifier on any new Move code it encounters before executing it. The compiler runs the bytecode verifier on its output and surfaces the errors to the programmer.
 
-- [move-compiler](move-compiler/) &mdash; contains the Move source language compiler.
+- [move-compiler](move-compiler) &mdash; contains the Move source language compiler.
 
-- [standard library](stdlib/) &mdash; contains the Move code for the core system modules (such as `DiemAccount`), as well as the standard library transaction scripts.
+- [standard library](move-stdlib) &mdash; contains the Move code for the core system modules (such as `DiemAccount`), as well as the standard library transaction scripts.
 
 ## How the Move Language Fits Into Diem Core
 

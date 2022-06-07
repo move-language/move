@@ -41,7 +41,7 @@ This is a public function
 
 ## Function `this_is_a_public_script_fun`
 
-This is a public script function
+This is a public entry function
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="different_visbilities.md#0x2_TestViz_this_is_a_public_script_fun">this_is_a_public_script_fun</a>()
@@ -53,7 +53,7 @@ This is a public script function
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="different_visbilities.md#0x2_TestViz_this_is_a_public_script_fun">this_is_a_public_script_fun</a>() {}
+<pre><code><b>public</b> entry <b>fun</b> <a href="different_visbilities.md#0x2_TestViz_this_is_a_public_script_fun">this_is_a_public_script_fun</a>() {}
 </code></pre>
 
 

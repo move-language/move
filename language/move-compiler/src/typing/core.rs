@@ -5,12 +5,12 @@
 use crate::{
     diag,
     diagnostics::{codes::NameResolution, Diagnostic},
-    expansion::ast::{AbilitySet, ModuleIdent},
+    expansion::ast::{AbilitySet, ModuleIdent, Visibility},
     naming::ast::{
         self as N, BuiltinTypeName_, FunctionSignature, StructDefinition, StructTypeParameter,
         TParam, TParamID, TVar, Type, TypeName, TypeName_, Type_,
     },
-    parser::ast::{Ability_, ConstantName, Field, FunctionName, StructName, Var, Visibility},
+    parser::ast::{Ability_, ConstantName, Field, FunctionName, StructName, Var},
     shared::{unique_map::UniqueMap, *},
     FullyCompiledProgram,
 };
@@ -273,23 +273,6 @@ impl<'env> Context<'env> {
 
     pub fn is_current_function(&self, m: &ModuleIdent, f: &FunctionName) -> bool {
         self.is_current_module(m) && matches!(&self.current_function, Some(curf) if curf == f)
-    }
-
-    fn is_in_script_context(&self) -> bool {
-        match (&self.current_module, &self.current_function) {
-            // in a constant
-            (_, None) => false,
-            // in a script function
-            (None, Some(_)) => true,
-            // in a module function
-            (Some(current_m), Some(current_f)) => {
-                let current_finfo = self.function_info(current_m, current_f);
-                match &current_finfo.visibility {
-                    Visibility::Public(_) | Visibility::Friend(_) | Visibility::Internal => false,
-                    Visibility::Script(_) => true,
-                }
-            }
-        }
     }
 
     fn current_module_is_a_friend_of(&self, m: &ModuleIdent) -> bool {
@@ -825,29 +808,15 @@ pub fn make_function_type(
         Visibility::Internal if in_current_module => (),
         Visibility::Internal => {
             let internal_msg = format!(
-                "This function is internal to its module. Only '{}', '{}', and '{}' functions can \
+                "This function is internal to its module. Only '{}' and '{}' functions can \
                  be called outside of their module",
                 Visibility::PUBLIC,
-                Visibility::SCRIPT,
                 Visibility::FRIEND
             );
             context.env.add_diag(diag!(
                 TypeSafety::Visibility,
                 (loc, format!("Invalid call to '{}::{}'", m, f)),
                 (defined_loc, internal_msg),
-            ));
-        }
-        Visibility::Script(_) if context.is_in_script_context() => (),
-        Visibility::Script(vis_loc) => {
-            let internal_msg = format!(
-                "This function can only be called from a script context, i.e. a 'script' function \
-                 or a '{}' function",
-                Visibility::SCRIPT
-            );
-            context.env.add_diag(diag!(
-                TypeSafety::ScriptContext,
-                (loc, format!("Invalid call to '{}::{}'", m, f)),
-                (vis_loc, internal_msg),
             ));
         }
         Visibility::Friend(_) if in_current_module || context.current_module_is_a_friend_of(m) => {}

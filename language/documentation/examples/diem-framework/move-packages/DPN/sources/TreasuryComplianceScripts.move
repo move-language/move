@@ -64,7 +64,7 @@ module DiemFramework::TreasuryComplianceScripts {
     /// * `TreasuryComplianceScripts::burn_with_amount`
     /// * `TreasuryComplianceScripts::preburn`
 
-    public(script) fun cancel_burn_with_amount<Token>(account: signer, preburn_address: address, amount: u64) {
+    public entry fun cancel_burn_with_amount<Token>(account: signer, preburn_address: address, amount: u64) {
         DiemAccount::cancel_burn<Token>(&account, preburn_address, amount)
     }
 
@@ -167,7 +167,7 @@ module DiemFramework::TreasuryComplianceScripts {
     /// * `TreasuryComplianceScripts::cancel_burn_with_amount`
     /// * `TreasuryComplianceScripts::preburn`
 
-    public(script) fun burn_with_amount<Token>(account: signer, sliding_nonce: u64, preburn_address: address, amount: u64) {
+    public entry fun burn_with_amount<Token>(account: signer, sliding_nonce: u64, preburn_address: address, amount: u64) {
         SlidingNonce::record_nonce_or_abort(&account, sliding_nonce);
         Diem::burn<Token>(&account, preburn_address, amount)
     }
@@ -238,7 +238,7 @@ module DiemFramework::TreasuryComplianceScripts {
     /// * `TreasuryComplianceScripts::burn_with_amount`
     /// * `TreasuryComplianceScripts::burn_txn_fees`
 
-    public(script) fun preburn<Token>(account: signer, amount: u64) {
+    public entry fun preburn<Token>(account: signer, amount: u64) {
         let withdraw_cap = DiemAccount::extract_withdraw_capability(&account);
         DiemAccount::preburn<Token>(&account, &withdraw_cap, amount);
         DiemAccount::restore_withdraw_capability(withdraw_cap);
@@ -305,7 +305,7 @@ module DiemFramework::TreasuryComplianceScripts {
     /// * `TreasuryComplianceScripts::burn_with_amount`
     /// * `TreasuryComplianceScripts::cancel_burn_with_amount`
 
-    public(script) fun burn_txn_fees<CoinType>(tc_account: signer) {
+    public entry fun burn_txn_fees<CoinType>(tc_account: signer) {
         TransactionFee::burn_fees<CoinType>(&tc_account);
     }
 
@@ -362,7 +362,7 @@ module DiemFramework::TreasuryComplianceScripts {
     /// * `PaymentScripts::peer_to_peer_with_metadata`
     /// * `AccountAdministrationScripts::rotate_dual_attestation_info`
 
-    public(script) fun tiered_mint<CoinType>(
+    public entry fun tiered_mint<CoinType>(
         tc_account: signer,
         sliding_nonce: u64,
         designated_dealer_address: address,
@@ -444,7 +444,7 @@ module DiemFramework::TreasuryComplianceScripts {
     /// # Related Scripts
     /// * `TreasuryComplianceScripts::unfreeze_account`
 
-    public(script) fun freeze_account(tc_account: signer, sliding_nonce: u64, to_freeze_account: address) {
+    public entry fun freeze_account(tc_account: signer, sliding_nonce: u64, to_freeze_account: address) {
         SlidingNonce::record_nonce_or_abort(&tc_account, sliding_nonce);
         AccountFreezing::freeze_account(&tc_account, to_freeze_account);
     }
@@ -483,7 +483,7 @@ module DiemFramework::TreasuryComplianceScripts {
     /// # Related Scripts
     /// * `TreasuryComplianceScripts::freeze_account`
 
-    public(script) fun unfreeze_account(account: signer, sliding_nonce: u64, to_unfreeze_account: address) {
+    public entry fun unfreeze_account(account: signer, sliding_nonce: u64, to_unfreeze_account: address) {
         SlidingNonce::record_nonce_or_abort(&account, sliding_nonce);
         AccountFreezing::unfreeze_account(&account, to_unfreeze_account);
     }
@@ -517,7 +517,7 @@ module DiemFramework::TreasuryComplianceScripts {
     /// * `TreasuryComplianceScripts::update_exchange_rate`
     /// * `TreasuryComplianceScripts::update_minting_ability`
 
-    public(script) fun update_dual_attestation_limit(
+    public entry fun update_dual_attestation_limit(
             tc_account: signer,
             sliding_nonce: u64,
             new_micro_xdx_limit: u64
@@ -562,7 +562,7 @@ module DiemFramework::TreasuryComplianceScripts {
     /// * `TreasuryComplianceScripts::update_dual_attestation_limit`
     /// * `TreasuryComplianceScripts::update_minting_ability`
 
-    public(script) fun update_exchange_rate<Currency>(
+    public entry fun update_exchange_rate<Currency>(
             tc_account: signer,
             sliding_nonce: u64,
             new_exchange_rate_numerator: u64,
@@ -634,7 +634,7 @@ module DiemFramework::TreasuryComplianceScripts {
     /// * `TreasuryComplianceScripts::update_dual_attestation_limit`
     /// * `TreasuryComplianceScripts::update_exchange_rate`
 
-    public(script) fun update_minting_ability<Currency>(
+    public entry fun update_minting_ability<Currency>(
         tc_account: signer,
         allow_minting: bool
     ) {
@@ -665,7 +665,7 @@ module DiemFramework::TreasuryComplianceScripts {
     /// | `Errors::NOT_PUBLISHED`    | `VASPDomain::EVASP_DOMAINS_NOT_PUBLISHED` | `address` does not have a `VASPDomain::VASPDomains` resource published under it.                                                         |
     /// | `Errors::INVALID_ARGUMENT` | `VASPDomain::EDOMAIN_ALREADY_EXISTS`         | The `domain` already exists in the list of `VASPDomain::VASPDomain`s  in the `VASPDomain::VASPDomains` resource published under `address`. |
     /// | `Errors::INVALID_ARGUMENT` | `VASPDomain::EINVALID_VASP_DOMAIN`        | The `domain` is greater in length than `VASPDomain::DOMAIN_LENGTH`.                                                                        |
-    public(script) fun add_vasp_domain (
+    public entry fun add_vasp_domain (
         tc_account: signer,
         address: address,
         domain: vector<u8>,
@@ -709,7 +709,7 @@ module DiemFramework::TreasuryComplianceScripts {
     /// | `Errors::NOT_PUBLISHED`    | `VASPDomain::EVASP_DOMAINS_NOT_PUBLISHED` | `address` does not have a `VASPDomain::VASPDomains` resource published under it.                                                         |
     /// | `Errors::INVALID_ARGUMENT` | `VASPDomain::EINVALID_VASP_DOMAIN`        | The `domain` is greater in length than `VASPDomain::DOMAIN_LENGTH`.                                                                        |
     /// | `Errors::INVALID_ARGUMENT` | `VASPDomain::EVASP_DOMAIN_NOT_FOUND`              | The `domain` does not exist in the list of `VASPDomain::VASPDomain`s  in the `VASPDomain::VASPDomains` resource published under `address`. |
-    public(script) fun remove_vasp_domain (
+    public entry fun remove_vasp_domain (
         tc_account: signer,
         address: address,
         domain: vector<u8>,

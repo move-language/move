@@ -402,11 +402,11 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         et.enter_scope();
         let params = et.analyze_and_add_params(&def.signature.parameters, true);
         let result_type = et.translate_type(&def.signature.return_type);
-        let is_entry = matches!(def.visibility, PA::Visibility::Script(_));
+        let is_entry = def.entry.is_some();
         let visibility = match def.visibility {
-            PA::Visibility::Public(_) | PA::Visibility::Script(_) => FunctionVisibility::Public,
-            PA::Visibility::Friend(_) => FunctionVisibility::Friend,
-            PA::Visibility::Internal => FunctionVisibility::Private,
+            EA::Visibility::Public(_) => FunctionVisibility::Public,
+            EA::Visibility::Friend(_) => FunctionVisibility::Friend,
+            EA::Visibility::Internal => FunctionVisibility::Private,
         };
         let loc = et.to_loc(&def.loc);
         et.parent.parent.define_fun(

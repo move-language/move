@@ -83,7 +83,7 @@ address 0x1 {
         const EINLINE_DATA_OP: u64 = 10;
 
         /// Initialize this module
-        public(script) fun nft_initialize(account: signer) {
+        public entry fun nft_initialize(account: signer) {
             assert!(signer::address_of(&account) == ADMIN, ENOT_ADMIN);
             move_to(&account, Admin {
                 mint_events: event::new_event_handle<MintEvent>(&account),

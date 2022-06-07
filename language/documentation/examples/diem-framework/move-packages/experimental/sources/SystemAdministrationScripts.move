@@ -28,7 +28,7 @@ module ExperimentalFramework::SystemAdministrationScripts {
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                   | `account` is not the Diem Root account.                                                    |
     /// | `Errors::INVALID_ARGUMENT` | `DiemVersion::EINVALID_MAJOR_VERSION_NUMBER`  | `major` is less-than or equal to the current major version stored on-chain.                |
 
-    public(script) fun update_diem_version(account: signer, _sliding_nonce: u64, major: u64) {
+    public entry fun update_diem_version(account: signer, _sliding_nonce: u64, major: u64) {
         ExperimentalVersion::set(&account, major)
     }
 
@@ -62,7 +62,7 @@ module ExperimentalFramework::SystemAdministrationScripts {
     /// | ----------------           | --------------                              | -------------                                                                              |
     /// | `Errors::INVALID_ARGUMENT` | `DiemVMConfig::EGAS_CONSTANT_INCONSISTENCY` | The provided gas constants are inconsistent.                                               |
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                 | `account` is not the Diem Root account.                                                    |
-    public(script) fun set_gas_constants(
+    public entry fun set_gas_constants(
         dr_account: signer,
         _sliding_nonce: u64,
         global_memory_per_byte_cost: u64,
@@ -112,7 +112,7 @@ module ExperimentalFramework::SystemAdministrationScripts {
     /// | ----------------           | --------------                                | -------------                                                                              |
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                   | `account` is not the Diem Root account.                                                    |
 
-    public(script) fun initialize_diem_consensus_config(account: signer, _sliding_nonce: u64) {
+    public entry fun initialize_diem_consensus_config(account: signer, _sliding_nonce: u64) {
         ExperimentalConsensusConfig::initialize(&account);
     }
 
@@ -136,7 +136,7 @@ module ExperimentalFramework::SystemAdministrationScripts {
     /// | ----------------           | --------------                                | -------------                                                                              |
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                   | `account` is not the Diem Root account.                                                    |
 
-    public(script) fun update_diem_consensus_config(account: signer, _sliding_nonce: u64, config: vector<u8>) {
+    public entry fun update_diem_consensus_config(account: signer, _sliding_nonce: u64, config: vector<u8>) {
         ExperimentalConsensusConfig::set(&account, config)
     }
 }

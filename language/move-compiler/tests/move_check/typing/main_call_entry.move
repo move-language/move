@@ -1,6 +1,6 @@
 address 0x2 {
 module X {
-    public(script) fun foo() {}
+    public entry fun foo() {}
 }
 }
 

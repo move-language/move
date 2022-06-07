@@ -380,14 +380,19 @@ pub(crate) fn move_value_from_value_(v_: Value_) -> MoveValue {
 //**************************************************************************************************
 
 fn function(context: &mut Context, _name: FunctionName, f: H::Function) -> G::Function {
-    let attributes = f.attributes;
-    let visibility = f.visibility;
-    let signature = f.signature;
-    let acquires = f.acquires;
-    let body = function_body(context, &signature, &acquires, f.body);
+    let H::Function {
+        attributes,
+        visibility,
+        entry,
+        signature,
+        acquires,
+        body,
+    } = f;
+    let body = function_body(context, &signature, &acquires, body);
     G::Function {
         attributes,
         visibility,
+        entry,
         signature,
         acquires,
         body,

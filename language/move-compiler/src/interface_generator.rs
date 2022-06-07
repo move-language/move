@@ -219,8 +219,9 @@ fn write_function_def(ctx: &mut Context, fdef: &FunctionDefinition) -> String {
     let parameters = &ctx.module.signature_at(fhandle.parameters).0;
     let return_ = &ctx.module.signature_at(fhandle.return_).0;
     format!(
-        "    native {}fun {}{}({}){};",
+        "    native {}{}fun {}{}({}){};",
         write_visibility(fdef.visibility, fdef.is_entry),
+        if fdef.is_entry { "entry " } else { "" },
         ctx.module.identifier_at(fhandle.name),
         write_fun_type_parameters(&fhandle.type_parameters),
         write_parameters(ctx, parameters),
@@ -230,7 +231,6 @@ fn write_function_def(ctx: &mut Context, fdef: &FunctionDefinition) -> String {
 
 fn write_visibility(visibility: Visibility, is_entry: bool) -> String {
     match visibility {
-        Visibility::Public if is_entry => "public(script) ",
         Visibility::Public => "public ",
         _ if is_entry => panic!("ICE non-public entry functions are not yet supported"),
         Visibility::Friend => "public(friend) ",

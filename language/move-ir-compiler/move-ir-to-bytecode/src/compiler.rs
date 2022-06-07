@@ -842,10 +842,9 @@ fn compile_function(
 
     let ast_function = ast_function.value;
 
-    let is_entry = matches!(ast_function.visibility, FunctionVisibility::Script);
+    let is_entry = ast_function.is_entry;
     let visibility = match ast_function.visibility {
         FunctionVisibility::Public => Visibility::Public,
-        FunctionVisibility::Script => Visibility::Public,
         FunctionVisibility::Friend => Visibility::Friend,
         FunctionVisibility::Internal => Visibility::Private,
     };

@@ -5,12 +5,12 @@
 module 0x42.M {
     struct S has drop { f: u64 }
 
-    public(script) foo(s: Self.S, i: &Self.S, m: &mut Self.S) {
+    public entry foo(s: Self.S, i: &Self.S, m: &mut Self.S) {
         label l0:
         return;
     }
 
-    public(script) foo_gen<T: drop>(s:T, i: &T, m: &mut T) {
+    public entry foo_gen<T: drop>(s:T, i: &T, m: &mut T) {
         label l0:
         return;
     }

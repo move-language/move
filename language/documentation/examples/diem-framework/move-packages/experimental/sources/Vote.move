@@ -307,7 +307,7 @@ module ExperimentalFramework::Vote {
     /// gc_ballots deletes all the expired ballots of the type `Proposal`
     /// under the provided address `addr`. The signer can be anybody
     /// and does not need to have the same address as `addr`
-    public(script) fun gc_ballots<Proposal: store + drop>(
+    public entry fun gc_ballots<Proposal: store + drop>(
         _signer: signer,
         addr: address,
     ) acquires Ballots {

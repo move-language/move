@@ -29,7 +29,7 @@ module A::N {
         v
     }
 
-    public(script) fun ex(_s: signer, _u: u64) {
+    public entry fun ex(_s: signer, _u: u64) {
         abort 0
     }
 }

@@ -151,7 +151,7 @@ module ExperimentalFramework::MultiTokenBalance {
     /// Transfer `amount` of token with id `GUID::id(creator, creation_num)` from `owner`'s
     /// balance to `to`'s balance. This operation has to be done by either the owner or an
     /// approved operator of the owner.
-    public(script) fun transfer_multi_token_between_galleries<TokenType: store>(
+    public entry fun transfer_multi_token_between_galleries<TokenType: store>(
         account: signer,
         to: address,
         amount: u64,

@@ -31,14 +31,14 @@ module 0x3d10.Example {
 }
 
 //# print-bytecode --input=module
-// Functions may be declared with `public(script)` visibility.
+// Functions may be declared with entry modifier
 module 0x4d10.M {
-    public(script) f() {
+    public entry f() {
     label b0:
         return;
     }
 
-    public(script) g() {
+    public entry g() {
     label b0:
         Self.f();
         return;

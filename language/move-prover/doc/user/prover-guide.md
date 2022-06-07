@@ -29,7 +29,7 @@ alias move="cargo run --release --quiet --package move-cli --"
 We assume in the sequel that the Move CLI is reachable from the command line via the `move` command
 (defined by an alias as above or by other means).
 
-In order to call the CLI, you must have a [*move package*](https://diem.github.io/move/packages.html). In the simplest
+In order to call the CLI, you must have a [*move package*](https://move-language.github.io/move/packages.html). In the simplest
 case, a Move package is defined by a directory with a set of `.move` files in it and a manifest of the name `Move.toml`.
 You can create a package `<name>` in a sub-directory by calling `move package new <name>`.
 

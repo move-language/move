@@ -732,7 +732,7 @@ The method transfers the `amount` of coin from the account of `from` to the addr
 The `ensures` clauses specify that the `amount` number of tokens is deducted from `addr_from` and added to `to`. However, the prover will generate the error information as below:
 
 ```
-   ┌─ language/documentation/hackathon-tutorial/step_7/BasicCoin/sources/BasicCoin.move:62:9
+   ┌─ ./sources/BasicCoin.move:62:9
    │
 62 │         ensures balance_from_post == balance_from - amount;
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -8,7 +8,7 @@ module 0x2::ERC1155 {
     #[callable(sig=b"uri() returns (string memory) "), view]
     /// Returns the name of the token
     public fun uri(): String {
-        Std::ASCII::string(b"abc") // TODO: this leads to compilation error "type needs to be struct or vector"
+        std::ascii::String(b"abc") // TODO: this leads to compilation error "type needs to be struct or vector"
     }
     */
 

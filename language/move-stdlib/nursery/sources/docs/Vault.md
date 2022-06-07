@@ -1302,11 +1302,6 @@ during vault creation for this to succeed.
     );
 
     <b>let</b> addr = <a href="_address_of">signer::address_of</a>(to_signer);
-    <b>assert</b>(addr != cap.vault_address, <a href="_invalid_argument">errors::invalid_argument</a>(<a href="Vault.md#0x1_Vault_EDELEGATE_TO_SELF">EDELEGATE_TO_SELF</a>));
-
-    <b>if</b> (!<b>exists</b>&lt;<a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr)) {
-        // Create <a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a> <b>if</b> it is not yet existing.
-        move_to&lt;<a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(
             to_signer,
             <a href="Vault.md#0x1_Vault_VaultDelegate">VaultDelegate</a>{vault_address: cap.vault_address, granted_caps: <a href="_empty">vector::empty</a>()}
         );

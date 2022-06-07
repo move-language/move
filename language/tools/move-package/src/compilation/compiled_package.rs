@@ -536,7 +536,10 @@ impl CompiledPackage {
         // invoke the compiler
         let paths = {
             let mut v = deps_package_paths.clone();
-            v.push(sources_package_paths.clone());
+            // Skip project files in the compilation process. Used in external IDE integrations.
+            if !resolution_graph.build_options.only_deps {
+                v.push(sources_package_paths.clone());
+            }
             v
         };
         let compiler = Compiler::from_package_paths(paths, vec![]).set_flags(flags);

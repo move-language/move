@@ -25,7 +25,7 @@ module NamedAddr::BasicCoin {
     public fun publish_balance(account: &signer) {
         // TODO: add an assert to check that `account` doesn't already have a `Balance` resource.
         let empty_coin = Coin { value: 0 };
-        move_to(account, Balance { coin:  empty_coin });
+        move_to(account, Balance { coin: empty_coin });
     }
 
     /// Initialize this module.

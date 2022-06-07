@@ -25,7 +25,7 @@ module NamedAddr::BasicCoin {
     public fun publish_balance(account: &signer) {
         let empty_coin = Coin { value: 0 };
         assert!(!exists<Balance>(signer::address_of(account)), errors::already_published(EALREADY_HAS_BALANCE));
-        move_to(account, Balance { coin:  empty_coin });
+        move_to(account, Balance { coin: empty_coin });
     }
 
     /// Mint `amount` tokens to `mint_addr`. Mint must be approved by the module owner.

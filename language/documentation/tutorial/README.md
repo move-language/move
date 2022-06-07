@@ -732,7 +732,8 @@ The method transfers the `amount` of coin from the account of `from` to the addr
 The `ensures` clauses specify that the `amount` number of tokens is deducted from `addr_from` and added to `to`. However, the prover will generate the error information as below:
 
 ```
-   ┌─ ./sources/BasicCoin.move:62:9
+error: post-condition does not hold
+   ┌─ ./sources/BasicCoin.move:57:9
    │
 62 │         ensures balance_from_post == balance_from - amount;
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -78,7 +78,7 @@ a command or subcommand with the `--help` flag will print documentation.
 
 Before running the next steps, `cd` to the tutorial directory:
 ```bash
-cd <path_to_move_repo>/language/documentation/tutorial
+cd language/documentation/tutorial
 ```
 
 

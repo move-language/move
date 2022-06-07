@@ -107,18 +107,16 @@ fn run_test_impl(path: &Path) -> anyhow::Result<()> {
         if exp_exists {
             let expected = fs::read_to_string(&exp_path)?;
             if expected != cleaned_output {
-                anyhow::bail!(
+                let msg = format!(
                     "Expected outputs differ for {:?}:\n{}",
                     exp_path,
                     format_diff(expected, cleaned_output)
                 );
+                anyhow::bail!(add_update_baseline_fix(msg));
             }
         } else {
-            anyhow::bail!(
-                "No expected output found for {:?}.\
-                    You probably want to rerun with `env UPDATE_BASELINE=1`",
-                path
-            );
+            let msg = format!("No expected output found for {:?}", path);
+            anyhow::bail!(add_update_baseline_fix(msg));
         }
     }
 

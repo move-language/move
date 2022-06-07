@@ -104,12 +104,12 @@ pub fn run_test(path: &Path) -> datatest_stable::Result<()> {
     if exp_exists {
         let expected = fs::read_to_string(&exp_path)?;
         if expected != output {
-            return Err(anyhow::format_err!(
+            let msg = format!(
                 "Expected outputs differ for {:?}:\n{}",
                 exp_path,
                 format_diff(expected, output)
-            )
-            .into());
+            );
+            anyhow::bail!(add_update_baseline_fix(msg))
         }
     } else {
         return Err(anyhow::format_err!(

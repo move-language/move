@@ -19,7 +19,7 @@ use move_command_line_common::{
     address::ParsedAddress,
     env::read_bool_env_var,
     files::{MOVE_EXTENSION, MOVE_IR_EXTENSION},
-    testing::{format_diff, read_env_update_baseline, EXP_EXT},
+    testing::{add_update_baseline_fix, format_diff, read_env_update_baseline, EXP_EXT},
     types::ParsedType,
     values::{ParsableValue, ParsedValue},
 };
@@ -748,7 +748,7 @@ fn handle_expected_output(test_path: &Path, output: impl AsRef<str>) -> Result<(
             "Expected errors differ from actual errors:\n{}",
             format_diff(expected_output, output),
         );
-        anyhow::bail!(msg)
+        anyhow::bail!(add_update_baseline_fix(msg))
     } else {
         Ok(())
     }

@@ -4,7 +4,7 @@
 
 use move_command_line_common::{
     env::read_bool_env_var,
-    testing::{format_diff, read_env_update_baseline, EXP_EXT, OUT_EXT},
+    testing::{add_update_baseline_fix, format_diff, read_env_update_baseline, EXP_EXT, OUT_EXT},
 };
 use move_compiler::{
     compiled_unit::AnnotatedCompiledUnit,
@@ -126,14 +126,14 @@ fn run_test(path: &Path, exp_path: &Path, out_path: &Path, flags: Flags) -> anyh
                 "Expected success. Unexpected diagnostics:\n{}",
                 rendered_diags
             );
-            anyhow::bail!(msg)
+            anyhow::bail!(add_update_baseline_fix(msg))
         }
         (false, true) => {
             let msg = format!(
                 "Unexpected success. Expected diagnostics:\n{}",
                 fs::read_to_string(exp_path)?
             );
-            anyhow::bail!(msg)
+            anyhow::bail!(add_update_baseline_fix(msg))
         }
         (true, true) => {
             let expected_diags = fs::read_to_string(exp_path)?;
@@ -142,7 +142,7 @@ fn run_test(path: &Path, exp_path: &Path, out_path: &Path, flags: Flags) -> anyh
                     "Expected diagnostics differ from actual diagnostics:\n{}",
                     format_diff(expected_diags, rendered_diags),
                 );
-                anyhow::bail!(msg)
+                anyhow::bail!(add_update_baseline_fix(msg))
             } else {
                 Ok(())
             }

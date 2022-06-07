@@ -7,7 +7,7 @@ use crate::{sandbox::utils::module, DEFAULT_BUILD_DIR, DEFAULT_STORAGE_DIR};
 use move_command_line_common::{
     env::read_bool_env_var,
     files::{find_filenames, path_to_string},
-    testing::{format_diff, read_env_update_baseline, EXP_EXT},
+    testing::{add_update_baseline_fix, format_diff, read_env_update_baseline, EXP_EXT},
 };
 use move_compiler::command_line::COLOR_MODE_ENV_VAR;
 use move_coverage::coverage_map::{CoverageMap, ExecCoverageMapWithModules};
@@ -336,10 +336,11 @@ pub fn run_one(
 
     let expected_output = fs::read_to_string(exp_path).unwrap_or_else(|_| "".to_string());
     if expected_output != output {
-        anyhow::bail!(
+        let msg = format!(
             "Expected output differs from actual output:\n{}",
             format_diff(expected_output, output)
-        )
+        );
+        anyhow::bail!(add_update_baseline_fix(msg))
     } else {
         Ok(cov_info)
     }

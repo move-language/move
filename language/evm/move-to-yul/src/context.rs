@@ -11,7 +11,7 @@ use crate::{
     events::EventSignature,
     evm_transformation::EvmTransformationProcessor,
     native_functions::NativeFunctions,
-    solidity_ty::SolidityType,
+    solidity_ty::{SoliditySignature, SolidityType},
     yul_functions,
     yul_functions::YulFunction,
     Options,
@@ -71,6 +71,18 @@ pub(crate) struct Context<'a> {
     pub(crate) abi_struct_signature_map: RefCell<BTreeMap<QualifiedInstId<StructId>, SolidityType>>,
     /// Mapping of abi structs names to abi structs
     pub(crate) abi_struct_name_map: RefCell<BTreeMap<String, QualifiedInstId<StructId>>>,
+    /// Solidity signature for callable functions
+    pub(crate) callable_function_map: RefCell<
+        BTreeMap<QualifiedInstId<FunId>, (SoliditySignature, attributes::FunctionAttribute)>,
+    >,
+    /// Solidity signature for the constructor function
+    pub(crate) constructor_triple: RefCell<
+        Option<(
+            QualifiedInstId<FunId>,
+            SoliditySignature,
+            attributes::FunctionAttribute,
+        )>,
+    >,
     /// A code writer where we emit JSON-ABI.
     pub abi_writer: CodeWriter,
 }
@@ -143,6 +155,8 @@ impl<'a> Context<'a> {
             abi_structs: Default::default(),
             abi_struct_signature_map: Default::default(),
             abi_struct_name_map: Default::default(),
+            callable_function_map: Default::default(),
+            constructor_triple: Default::default(),
             abi_writer,
         };
         ctx.native_funs = NativeFunctions::create(&ctx);
@@ -347,6 +361,32 @@ impl<'a> Context<'a> {
 
     // --------------------------------------------------------------------------------------------
     // Signature Event Map
+
+    /// Build the callable signature map
+    pub fn build_callable_signature_map(
+        &self,
+        sig: &SoliditySignature,
+        attr: attributes::FunctionAttribute,
+        fun: &FunctionEnv,
+    ) {
+        let mut callable_signature_map_ref = self.callable_function_map.borrow_mut();
+        let fun_id = fun.get_qualified_id().instantiate(vec![]);
+        if callable_signature_map_ref.get(&fun_id).is_none() {
+            callable_signature_map_ref.insert(fun_id, (sig.clone(), attr));
+        }
+    }
+
+    /// Build the constructor
+    pub fn build_constructor(
+        &self,
+        sig: &SoliditySignature,
+        attr: attributes::FunctionAttribute,
+        fun: &FunctionEnv,
+    ) {
+        let fun_id = fun.get_qualified_id().instantiate(vec![]);
+        self.constructor_triple
+            .replace(Some((fun_id, sig.clone(), attr)));
+    }
 
     /// Build the event signature map
     pub fn build_event_signature_map(&self) {

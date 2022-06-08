@@ -2,7 +2,9 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_command_line_common::testing::{format_diff, read_env_update_baseline, EXP_EXT};
+use move_command_line_common::testing::{
+    add_update_baseline_fix, format_diff, read_env_update_baseline, EXP_EXT,
+};
 use move_package::{
     compilation::{build_plan::BuildPlan, model_builder::ModelBuilder},
     resolution::resolution_graph as RG,
@@ -104,12 +106,12 @@ pub fn run_test(path: &Path) -> datatest_stable::Result<()> {
     if exp_exists {
         let expected = fs::read_to_string(&exp_path)?;
         if expected != output {
-            return Err(anyhow::format_err!(
+            let msg = format!(
                 "Expected outputs differ for {:?}:\n{}",
                 exp_path,
                 format_diff(expected, output)
-            )
-            .into());
+            );
+            return Err(anyhow::format_err!(add_update_baseline_fix(msg)).into());
         }
     } else {
         return Err(anyhow::format_err!(

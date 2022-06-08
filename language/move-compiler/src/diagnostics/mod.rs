@@ -57,13 +57,15 @@ pub struct Diagnostics {
 
 /// Report diagnostics and exit the process
 pub fn report_diagnostics(files: &FilesSourceText, diags: Diagnostics) -> ! {
-    report_diagnostics_impl(files, diags, true);
+    let should_exit = true;
+    report_diagnostics_impl(files, diags, should_exit);
     std::process::exit(1)
 }
 
 /// Report diagnostics without exiting the process
 pub fn report_diagnostics_no_exit(files: &FilesSourceText, diags: Diagnostics) {
-    report_diagnostics_impl(files, diags, false);
+    let should_exit = false;
+    report_diagnostics_impl(files, diags, should_exit);
 }
 
 pub fn report_warnings(files: &FilesSourceText, warnings: Diagnostics, should_exit: bool) {

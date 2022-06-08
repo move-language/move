@@ -251,7 +251,8 @@ impl<'a> Compiler<'a> {
     pub fn build_and_report(self) -> anyhow::Result<(FilesSourceText, Vec<AnnotatedCompiledUnit>)> {
         let (files, units_res) = self.build()?;
         let (units, warnings) = unwrap_or_report_diagnostics(&files, units_res);
-        report_warnings(&files, warnings, false);
+        let should_exit = false;
+        report_warnings(&files, warnings, should_exit);
         Ok((files, units))
     }
 }
@@ -375,7 +376,8 @@ macro_rules! ast_stepped_compilers {
                 ) -> Vec<AnnotatedCompiledUnit> {
                     let units_result = self.build();
                     let (units, warnings) = unwrap_or_report_diagnostics(&files, units_result);
-                    report_warnings(&files, warnings, false);
+                    let should_exit = false;
+                    report_warnings(&files, warnings, should_exit);
                     units
                 }
             }

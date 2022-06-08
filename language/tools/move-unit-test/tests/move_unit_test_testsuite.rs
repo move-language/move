@@ -2,7 +2,9 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_command_line_common::testing::{format_diff, read_env_update_baseline, EXP_EXT};
+use move_command_line_common::testing::{
+    add_update_baseline_fix, format_diff, read_env_update_baseline, EXP_EXT,
+};
 use move_unit_test::{self, UnitTestingConfig};
 use regex::RegexBuilder;
 use std::{

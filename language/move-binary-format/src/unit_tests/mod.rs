@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod binary_tests;
+mod compatibility_tests;
 mod deserializer_tests;
 mod number_tests;
 mod signature_token_tests;

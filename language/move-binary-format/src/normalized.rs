@@ -89,6 +89,7 @@ pub struct Function {
 /// function declarations.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Module {
+    pub file_format_version: u32,
     pub address: AccountAddress,
     pub name: Identifier,
     pub friends: Vec<ModuleId>,
@@ -118,6 +119,7 @@ impl Module {
             .collect();
 
         Self {
+            file_format_version: m.version(),
             address: *m.address(),
             name: m.name().to_owned(),
             friends,

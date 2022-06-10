@@ -23,7 +23,7 @@ Equality and non-equality also work over user defined types!
 
 ```move=
 address 0x42 {
-module Example {
+module example {
     struct S has copy, drop { f: u64, s: vector<u8> }
 
     fun always_true(): bool {
@@ -99,7 +99,7 @@ with either equality `==` or non-equality `!=`, the value would be destroyed whi
 
 ```move=
 address 0x42 {
-module Example {
+module example {
     struct Coin has store { value: u64 }
     fun invalid(c1: Coin, c2: Coin) {
         c1 == c2 // ERROR!
@@ -114,7 +114,7 @@ reference types have the [`drop` ability](./abilities.md). For example
 
 ```move=
 address 0x42 {
-module Example {
+module example {
     struct Coin as store { value: u64 }
     fun swap_if_equal(c1: Coin, c2: Coin): (Coin, Coin) {
         let are_equal = &c1 == &c2; // valid

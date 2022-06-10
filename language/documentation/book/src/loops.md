@@ -77,15 +77,15 @@ fun pop_smallest_while_not_equal(
     v1: vector<u64>,
     v2: vector<u64>,
 ): vector<u64> {
-    let result = Vector::empty();
-    while (!Vector::is_empty(&v1) && !Vector::is_empty(&v2)) {
-        let u1 = *Vector::borrow(&v1, Vector::length(&v1) - 1);
-        let u2 = *Vector::borrow(&v1, Vector::length(&v1) - 1);
+    let result = vector::empty();
+    while (!vector::is_empty(&v1) && !vector::is_empty(&v2)) {
+        let u1 = *vector::borrow(&v1, vector::length(&v1) - 1);
+        let u2 = *vector::borrow(&v1, vector::length(&v1) - 1);
         let popped =
-            if (u1 < u2) Vector::pop_back(&mut v1)
-            else if (u2 < u1) Vector::pop_back(&mut v2)
+            if (u1 < u2) vector::pop_back(&mut v1)
+            else if (u2 < u1) vector::pop_back(&mut v2)
             else break; // Here, `break` has type `u64`
-        Vector::push_back(&mut result, popped);
+        vector::push_back(&mut result, popped);
     };
 
     result
@@ -98,16 +98,16 @@ fun pick(
     v1: &vector<address>,
     v2: &vector<address>
 ): vector<address> {
-    let len1 = Vector::length(v1);
-    let len2 = Vector::length(v2);
-    let result = Vector::empty();
-    while (!Vector::is_empty(&indexes)) {
-        let index = Vector::pop_back(&mut indexes);
+    let len1 = vector::length(v1);
+    let len2 = vector::length(v2);
+    let result = vector::empty();
+    while (!vector::is_empty(&indexes)) {
+        let index = vector::pop_back(&mut indexes);
         let chosen_vector =
             if (index < len1) v1
             else if (index < len2) v2
             else continue; // Here, `continue` has type `&vector<address>`
-        Vector::push_back(&mut result, *Vector::borrow(chosen_vector, index))
+        vector::push_back(&mut result, *vector::borrow(chosen_vector, index))
     };
 
     result

@@ -56,7 +56,7 @@ authors* = [<string>]            # e.g., ["Joe Smith (joesmith@noemail.com)", "J
 
 [addresses]  # (Optional section) Declares named addresses in this package and instantiates named addresses in the package graph
 # One or more lines declaring named addresses in the following format
-<addr_name> = "_" | "<hex_address>" # e.g., Std = "_" or Addr = "0xC0FFEECAFE"
+<addr_name> = "_" | "<hex_address>" # e.g., std = "_" or my_addr = "0xC0FFEECAFE"
 
 [dependencies] # (Optional section) Paths to dependencies and instantiations or renamings of named addresses from each dependency
 # One or more lines declaring dependencies in the following format
@@ -65,7 +65,7 @@ authors* = [<string>]            # e.g., ["Joe Smith (joesmith@noemail.com)", "J
 
 [dev-addresses] # (Optional section) Same as [addresses] section, but only included in "dev" and "test" modes
 # One or more lines declaring dev named addresses in the following format
-<addr_name> = "_" | "<hex_address>" # e.g., Std = "_" or Addr = "0xC0FFEECAFE"
+<addr_name> = "_" | "<hex_address>" # e.g., std = "_" or my_addr = "0xC0FFEECAFE"
 
 [dev-dependencies] # (Optional section) Same as [dependencies] section, but only included in "dev" and "test" modes
 # One or more lines declaring dev dependencies in the following format
@@ -91,17 +91,17 @@ version = "0.0.0"
 license = "Apache 2.0"
 
 [addresses]
-AddressToBeFilledIn = "_"
-SpecifiedAddress = "0xB0B"
+address_to_be_filled_in = "_"
+specified_address = "0xB0B"
 
 [dependencies]
 # Local dependency
-LocalDep = { local = "projects/move-awesomeness", addr_subst = { "Std" = "0x1" } }
+LocalDep = { local = "projects/move-awesomeness", addr_subst = { "std" = "0x1" } }
 # Git dependency
 MoveStdlib = { git = "https://github.com/diem/diem.git", subdir="language/move-stdlib", rev = "56ab033cc403b489e891424a629e76f643d4fb6b" }
 
 [dev-addresses] # For use when developing this module
-AddressToBeFilledIn = "0x101010101"
+address_to_be_filled_in = "0x101010101"
 ```
 
 Most of the sections in the package manifest are self explanatory, but named
@@ -123,12 +123,12 @@ individually:
 
 Let's say we have a Move module in `example_pkg/sources/A.move` as follows:
 ```move
-module NamedAddr::A {
-    public fun x(): address { @NamedAddr }
+module named_addr::A {
+    public fun x(): address { @named_addr }
 }
 ```
 
-We could in `example_pkg/Move.toml` declare the named address `NamedAddr` in
+We could in `example_pkg/Move.toml` declare the named address `named_addr` in
 two different ways. The first:
 
 ```
@@ -136,27 +136,27 @@ two different ways. The first:
 name = "ExamplePkg"
 ...
 [addresses]
-NamedAddr = "_"
+named_addr = "_"
 ```
 
-Declares `NamedAddr` as a named address in the package `ExamplePkg` and
+Declares `named_addr` as a named address in the package `ExamplePkg` and
 that _this address can be any valid address value_. Therefore an importing
-package can pick the value of the named address `NamedAddr` to be any address
+package can pick the value of the named address `named_addr` to be any address
 it wishes. Intuitively you can think of this as parameterizing the package
-`ExamplePkg` by the named address `NamedAddr`, and the package can then be
+`ExamplePkg` by the named address `named_addr`, and the package can then be
 instantiated later on by an importing package.
 
-`NamedAddr` can also be declared as:
+`named_addr` can also be declared as:
 
 ```
 [package]
 name = "ExamplePkg"
 ...
 [addresses]
-NamedAddr = "0xCAFE"
+named_addr = "0xCAFE"
 ```
 
-which states that the named address `NamedAddr` is exactly `0xCAFE` and cannot be
+which states that the named address `named_addr` is exactly `0xCAFE` and cannot be
 changed. This is useful so other importing packages can use this named
 address without needing to worry about the exact value assigned to it.
 
@@ -183,7 +183,7 @@ Additionally, every named address in a package is exported. Because of this and
 the above scoping rules each package can be viewed as coming with a set of
 named addresses that will be brought into scope when the package is imported,
 e.g., if the `ExamplePkg` package was imported, that importation would bring
-into scope the `NamedAddr` named address. Because of this, if `P` imports two
+into scope the `named_addr` named address. Because of this, if `P` imports two
 packages `P1` and `P2` both of which declare a named address `N` an issue
 arises in `P`: which "`N`" is meant when `N` is referred to in `P`? The one
 from `P1` or `P2`? To prevent this ambiguity around which package a named
@@ -232,17 +232,17 @@ address. This is what the `[dev-addresses]` section solves. This section can
 set values for named addresses, but cannot introduce any named addresses.
 Additionally, only the `[dev-addresses]` in the root package are included in
 `dev` mode. For example a root package with the following manifest would not compile
-outside of `dev` mode since `NamedAddr` would be uninstantiated:
+outside of `dev` mode since `named_addr` would be uninstantiated:
 
 ```
 [package]
 name = "ExamplePkg"
 ...
 [addresses]
-NamedAddr = "_"
+named_addr = "_"
 
 [dev-addresses]
-NamedAddr = "0xC0FFEE"
+named_addr = "0xC0FFEE"
 ```
 
 ## Usage, Artifacts, and Data Structures

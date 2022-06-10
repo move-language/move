@@ -4,11 +4,11 @@ This section lays out some basic coding conventions for Move that the Move team 
 
 ## Naming
 
-- **Module names**: should be camel case, e.g., `FixedPoint32`, `Vector`
+- **Module names**: should be lower snake case, e.g., `fixed_point32`, `vector`
 - **Type names**: should be camel case if they are not a native type, e.g., `Coin`, `RoleId`
 - **Function names**: should be lower snake case, e.g., `destroy_empty`
 - **Constant names**: should be upper snake case, e.g., `REQUIRES_CAPABILITY`
-- Generic types should be descriptive, or anti-descriptive where appropriate, e.g., `T` or `Element` for the Vector generic type parameter. Most of the time the "main" type in a module should be the same name as the module e.g., `Option::Option`, `FixedPoint32::FixedPoint32`.
+- Generic types should be descriptive, or anti-descriptive where appropriate, e.g., `T` or `Element` for the Vector generic type parameter. Most of the time the "main" type in a module should be the same name as the module e.g., `option::Option`, `fixed_point32::FixedPoint32`.
 - **Module file names**: should be the same as the module name e.g., `Option.move`
 - **Script file names**: should be lower snake case and should match the name of the “main” function in the script.
 - **Mixed file names**: If the file contains multiple modules and/or scripts, the file name should be lower_snake_case, where the name does not match any particular module/script inside.
@@ -22,7 +22,7 @@ This section lays out some basic coding conventions for Move that the Move team 
 For example, if there is a module
 
 ```move=
-module 0x1::Foo {
+module 0x1::foo {
     struct Foo { }
     const CONST_FOO: u64 = 0;
     public fun do_foo(): Foo { Foo{} }
@@ -33,12 +33,12 @@ module 0x1::Foo {
 this would be imported and used as:
 
 ```move=
-module 0x1::Bar {
-    use 0x1::Foo::{Self, Foo};
+module 0x1::bar {
+    use 0x1::foo::{Self, Foo};
 
     public fun do_bar(x: u64): Foo {
         if (x == 10) {
-            Foo::do_foo()
+            foo::do_foo()
         } else {
             abort 0
         }
@@ -50,14 +50,14 @@ module 0x1::Bar {
 And, if there is a local name-clash when importing two modules:
 
 ```move=
-module OtherFoo {
+module other_foo {
     struct Foo {}
     ...
 }
 
-module 0x1::Importer {
-    use 0x1::OtherFoo::Foo as OtherFoo;
-    use 0x1::Foo::Foo;
+module 0x1::importer {
+    use 0x1::other_foo::Foo as OtherFoo;
+    use 0x1::foo::Foo;
 ....
 }
 ```

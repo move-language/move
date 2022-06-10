@@ -88,48 +88,48 @@ fun byte_and_hex_strings() {
 
 ## Operations
 
-`vector` supports the following operations via the `Std::Vector` module in the Move standard
+`vector` supports the following operations via the `std::vector` module in the Move standard
 library:
 
 | Function                                                   | Description                                              | Aborts?                 |
 | ---------------------------------------------------------- | -------------------------------------------------------- | ----------------------- |
-| `Vector::empty<T>(): vector<T>`                            | Create an empty vector that can store values of type `T` | Never                   |
-| `Vector::singleton<T>(t: T): vector<T>`                    | Create a vector of size 1 containing `t`                 | Never                   |
-| `Vector::push_back<T>(v: &mut vector<T>, t: T)`            | Add `t` to the end of `v`                                | Never                   |
-| `Vector::pop_back<T>(v: &mut vector<T>): T`                | Remove and return the last element in `v`                | If `v` is empty         |
-| `Vector::borrow<T>(v: &vector<T>, i: u64): &T`             | Return an immutable reference to the `T` at index `i`    | If `i` is not in bounds |
-| `Vector::borrow_mut<T>(v: &mut vector<T>, i: u64): &mut T` | Return an mutable reference to the `T` at index `i`      | If `i` is not in bounds |
-| `Vector::destroy_empty<T>(v: vector<T>)`                   | Delete `v`                                               | If `v` is not empty     |
-| `Vector::append<T>(v1: &mut vector<T>, v2: vector<T>)`     | Add the elements in `v2` to the end of `v1`              | If `i` is not in bounds |
+| `vector::empty<T>(): vector<T>`                            | Create an empty vector that can store values of type `T` | Never                   |
+| `vector::singleton<T>(t: T): vector<T>`                    | Create a vector of size 1 containing `t`                 | Never                   |
+| `vector::push_back<T>(v: &mut vector<T>, t: T)`            | Add `t` to the end of `v`                                | Never                   |
+| `vector::pop_back<T>(v: &mut vector<T>): T`                | Remove and return the last element in `v`                | If `v` is empty         |
+| `vector::borrow<T>(v: &vector<T>, i: u64): &T`             | Return an immutable reference to the `T` at index `i`    | If `i` is not in bounds |
+| `vector::borrow_mut<T>(v: &mut vector<T>, i: u64): &mut T` | Return an mutable reference to the `T` at index `i`      | If `i` is not in bounds |
+| `vector::destroy_empty<T>(v: vector<T>)`                   | Delete `v`                                               | If `v` is not empty     |
+| `vector::append<T>(v1: &mut vector<T>, v2: vector<T>)`     | Add the elements in `v2` to the end of `v1`              | If `i` is not in bounds |
 
 More operations may be added overtime
 
 ## Example
 
 ```move
-use Std::Vector;
+use std::vector;
 
-let v = Vector::empty<u64>();
-Vector::push_back(&mut v, 5);
-Vector::push_back(&mut v, 6);
+let v = vector::empty<u64>();
+vector::push_back(&mut v, 5);
+vector::push_back(&mut v, 6);
 
-assert!(*Vector::borrow(&v, 0) == 5, 42);
-assert!(*Vector::borrow(&v, 1) == 6, 42);
-assert!(Vector::pop_back(&mut v) == 6, 42);
-assert!(Vector::pop_back(&mut v) == 5, 42);
+assert!(*vector::borrow(&v, 0) == 5, 42);
+assert!(*vector::borrow(&v, 1) == 6, 42);
+assert!(vector::pop_back(&mut v) == 6, 42);
+assert!(vector::pop_back(&mut v) == 5, 42);
 ```
 
 ## Destroying and copying `vector`s
 
 Some behaviors of `vector<T>` depend on the abilities of the element type, `T`. For example, vectors
 containing elements that do not have `drop` cannot be implicitly discarded like `v` in the example
-above--they must be explicitly destroyed with `Vector::destroy_empty`.
+above--they must be explicitly destroyed with `vector::destroy_empty`.
 
-Note that `Vector::destroy_empty` will abort at runtime unless `vec` contains zero elements:
+Note that `vector::destroy_empty` will abort at runtime unless `vec` contains zero elements:
 
 ```move
 fun destroy_any_vector<T>(vec: vector<T>) {
-    Vector::destroy_empty(vec) // deleting this line will cause a compiler error
+    vector::destroy_empty(vec) // deleting this line will cause a compiler error
 }
 ```
 
@@ -147,7 +147,7 @@ Similarly, vectors cannot be copied unless the element type has `copy`. In other
 implicitly copied:
 
 ```move
-let x = Vector::singleton<u64>(10);
+let x = vector::singleton<u64>(10);
 let y = copy x; // compiler error without the copy!
 ```
 

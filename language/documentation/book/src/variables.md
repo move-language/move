@@ -101,7 +101,7 @@ Some examples of explicit type annotations:
 
 ```move=
 address 0x42 {
-module Example {
+module example {
 
     struct S { f: u64, g: u64 }
 
@@ -128,9 +128,9 @@ In some cases, a local type annotation is required if the type system cannot inf
 commonly occurs when the type argument for a generic type cannot be inferred. For example:
 
 ```move
-let _v1 = Vector::empty(); // ERROR!
+let _v1 = vector::empty(); // ERROR!
 //        ^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
-let v2: vector<u64> = Vector::empty(); // no error
+let v2: vector<u64> = vector::empty(); // no error
 ```
 
 In a rarer case, the type system might not be able to infer a type for divergent code (where all the
@@ -200,7 +200,7 @@ Here is a more complicated example:
 
 ```move
 address 0x42 {
-module Example {
+module example {
     struct X { f: u64 }
     struct Y { x1: X, x2: X }
 
@@ -278,7 +278,7 @@ This behavior can also work with nested structs.
 
 ```move
 address 0x42 {
-module Example {
+module example {
     struct X { f: u64 }
     struct Y { x1: X, x2: X }
 
@@ -403,7 +403,7 @@ The assignment uses the same pattern syntax scheme as `let` bindings:
 
 ```move=
 address 0x42 {
-module Example {
+module example {
     struct X { f: u64 }
 
     fun new_x(): X {
@@ -467,9 +467,9 @@ modify_ref(&mut x);
 This sort of modification is how you modify structs and vectors!
 
 ```move
-let v = Vector::empty();
-Vector::push_back(&mut v, 100);
-assert!(*Vector::borrow(&v, 0) == 100, 42)
+let v = vector::empty();
+vector::push_back(&mut v, 100);
+assert!(*vector::borrow(&v, 0) == 100, 42)
 ```
 
 For more details, see [Move references](./references.md).
@@ -537,7 +537,7 @@ Function calls are another common expression of type `()`. Function calls that m
 commonly used as statements.
 
 ```move
-{ let v = Vector::empty(); Vector::push_back(&mut v, 1); v }
+{ let v = vector::empty(); vector::push_back(&mut v, 1); v }
 ```
 
 This is not just limited to `()` types---any expression can be used as a statement in a sequence!
@@ -587,9 +587,9 @@ another expression.)
 
 ```move
 let my_vector: vector<vector<u8>> = {
-    let v = Vector::empty();
-    Vector::push_back(&mut v, b"hello");
-    Vector::push_back(&mut v, b"goodbye");
+    let v = vector::empty();
+    vector::push_back(&mut v, b"hello");
+    vector::push_back(&mut v, b"goodbye");
     v
 };
 ```
@@ -626,7 +626,7 @@ function.
 
 ```move
 address 0x42 {
-    module Example {
+    module example {
         struct Coin has store { value: u64 }
 
         fun unused_resource(): Coin {

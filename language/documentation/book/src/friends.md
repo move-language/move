@@ -12,8 +12,8 @@ A module can declare other modules as friends via friend declaration statements,
 
   ```move
   address 0x42 {
-  module A {
-      friend 0x42::B;
+  module a {
+      friend 0x42::b;
   }
   }
   ```
@@ -22,9 +22,9 @@ A module can declare other modules as friends via friend declaration statements,
 
   ```move
   address 0x42 {
-  module A {
-      use 0x42::B;
-      friend B;
+  module a {
+      use 0x42::b;
+      friend b;
   }
   }
   ```
@@ -34,9 +34,9 @@ In the example below, both `0x42::B` and `0x42::C` are considered as friends of 
 
 ```move
 address 0x42 {
-module A {
-    friend 0x42::B;
-    friend 0x42::C;
+module a {
+    friend 0x42::b;
+    friend 0x42::c;
 }
 }
 ```
@@ -56,12 +56,12 @@ Friend declarations are subject to the following rules:
 
   ```move=
   address 0x42 {
-  module M { friend Self; // ERROR! }
+  module m { friend Self; // ERROR! }
   //                ^^^^ Cannot declare the module itself as a friend
   }
 
   address 0x43 {
-  module M { friend 0x43::M; // ERROR! }
+  module m { friend 0x43::M; // ERROR! }
   //                ^^^^^^^ Cannot declare the module itself as a friend
   }
   ```
@@ -70,8 +70,8 @@ Friend declarations are subject to the following rules:
 
   ```move=
   address 0x42 {
-  module M { friend 0x42::Nonexistent; // ERROR! }
-  //                ^^^^^^^^^^^^^^^^^ Unbound module '0x42::Nonexistent'
+  module m { friend 0x42::nonexistent; // ERROR! }
+  //                ^^^^^^^^^^^^^^^^^ Unbound module '0x42::nonexistent'
   }
   ```
 
@@ -79,37 +79,37 @@ Friend declarations are subject to the following rules:
 
   ```move=
   address 0x42 {
-  module M {}
+  module m {}
   }
 
   address 0x43 {
-  module N { friend 0x42::M; // ERROR! }
+  module n { friend 0x42::m; // ERROR! }
   //                ^^^^^^^ Cannot declare modules out of the current address as a friend
   }
   ```
 
 - Friends relationships cannot create cyclic module dependencies.
 
-  Cycles are not allowed in the friend relationships, e.g., the relation `0x2::A` friends `0x2::B` friends `0x2::C` friends `0x2::A` is not allowed.
+  Cycles are not allowed in the friend relationships, e.g., the relation `0x2::a` friends `0x2::b` friends `0x2::c` friends `0x2::a` is not allowed.
 More generally, declaring a friend module adds a dependency upon the current module to the friend module (because the purpose is for the friend to call functions in the current module).
 If that friend module is already used, either directly or transitively, a cycle of dependencies would be created.
   ```move=
   address 0x2 {
-  module A {
-      use 0x2::C;
-      friend 0x2::B;
+  module a {
+      use 0x2::c;
+      friend 0x2::b;
 
       public fun a() {
-          C::c()
+          c::c()
       }
   }
 
-  module B {
-      friend 0x2::C; // ERROR!
-  //         ^^^^^^ This friend relationship creates a dependency cycle: '0x2::B' is a friend of '0x2::A' uses '0x2::C' is a friend of '0x2::B'
+  module b {
+      friend 0x2::c; // ERROR!
+  //         ^^^^^^ This friend relationship creates a dependency cycle: '0x2::b' is a friend of '0x2::a' uses '0x2::c' is a friend of '0x2::b'
   }
 
-  module C {
+  module c {
       public fun c() {}
   }
   }
@@ -119,13 +119,13 @@ If that friend module is already used, either directly or transitively, a cycle 
 
   ```move=
   address 0x42 {
-  module A {}
+  module a {}
 
-  module M {
-      use 0x42::A as AliasedA;
+  module m {
+      use 0x42::a as aliased_a;
       friend 0x42::A;
-      friend AliasedA; // ERROR!
-  //         ^^^^^^^^ Duplicate friend declaration '0x42::A'. Friend declarations in a module must be unique
+      friend aliased_a; // ERROR!
+  //         ^^^^^^^^^ Duplicate friend declaration '0x42::a'. Friend declarations in a module must be unique
   }
   }
   ```

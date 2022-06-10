@@ -9,17 +9,17 @@ module std::compare {
     const LESS_THAN: u8 = 1;
     const GREATER_THAN: u8 = 2;
 
-    /// Compare vectors `v1` and `v2` using (1) vector contents from right to left and then
+    /// compare vectors `v1` and `v2` using (1) vector contents from right to left and then
     /// (2) vector length to break ties.
     /// Returns either `EQUAL` (0u8), `LESS_THAN` (1u8), or `GREATER_THAN` (2u8).
     ///
     /// This function is designed to compare BCS (Binary Canonical Serialization)-encoded values
-    /// (i.e., vectors produced by `BCS::to_bytes`). A typical client will call
-    /// `Compare::cmp_bcs_bytes(BCS::to_bytes(&t1), BCS::to_bytes(&t2))`. The comparison provides the
+    /// (i.e., vectors produced by `bcs::to_bytes`). A typical client will call
+    /// `compare::cmp_bcs_bytes(bcs::to_bytes(&t1), bcs::to_bytes(&t2))`. The comparison provides the
     /// following guarantees w.r.t the original values t1 and t2:
     /// - `cmp_bcs_bytes(bcs(t1), bcs(t2)) == LESS_THAN` iff `cmp_bcs_bytes(t2, t1) == GREATER_THAN`
-    /// - `Compare::cmp<T>(t1, t2) == EQUAL` iff `t1 == t2` and (similarly)
-    ///   `Compare::cmp<T>(t1, t2) != EQUAL` iff `t1 != t2`, where `==` and `!=` denote the Move
+    /// - `compare::cmp<T>(t1, t2) == EQUAL` iff `t1 == t2` and (similarly)
+    ///   `compare::cmp<T>(t1, t2) != EQUAL` iff `t1 != t2`, where `==` and `!=` denote the Move
     ///    bytecode operations for polymorphic equality.
     /// - for all primitive types `T` with `<` and `>` comparison operators exposed in Move bytecode
     ///   (`u8`, `u64`, `u128`), we have
@@ -44,7 +44,7 @@ module std::compare {
         let len_cmp = cmp_u64(i1, i2);
 
         // BCS uses little endian encoding for all integer types, so we choose to compare from left
-        // to right. Going right to left would make the behavior of Compare.cmp diverge from the
+        // to right. Going right to left would make the behavior of compare::cmp diverge from the
         // bytecode operators < and > on integer values (which would be confusing).
         while (i1 > 0 && i2 > 0) {
             i1 = i1 - 1;

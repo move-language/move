@@ -135,7 +135,7 @@ needed where a `&T` was supplied. For example
 
 ```move=
 address 0x42 {
-module Example {
+module example {
     fun read_and_assign(store: &mut u64, new_value: &u64) {
         *store = *new_value
     }
@@ -176,7 +176,7 @@ error:
     ┌── example.move:15:9 ───
     │
  15 │         read_and_assign(x, y); // invalid!
-    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x42::Example::read_and_assign'. Invalid argument for parameter 'store'
+    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x42::example::read_and_assign'. Invalid argument for parameter 'store'
     ·
   8 │         let x: &u64 = &0;
     │                ---- The type: '&u64'

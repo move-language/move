@@ -227,7 +227,7 @@ module 0xCAFE::BasicCoin {
     // address value of `0xC0FFEE`.
     #[test(account = @0xC0FFEE)]
     fun test_mint_10(account: signer) acquires Coin {
-        let addr = Signer::address_of(&account);
+        let addr = signer::address_of(&account);
         mint(account, 10);
         // Make sure there is a `Coin` resource under `addr` with a value of `10`.
         assert!(borrow_global<Coin>(addr).value == 10, 0);
@@ -402,11 +402,11 @@ move_to(account, Balance { coin:  empty_coin });
 `mint` method mints coins to a given account. Here we require that `mint` must be approved
 by the module owner. We enforce this using the assert statement:
 ```
-assert!(Signer::address_of(&module_owner) == MODULE_OWNER, Errors::requires_address(ENOT_MODULE_OWNER));
+assert!(signer::address_of(&module_owner) == MODULE_OWNER, errors::requires_address(ENOT_MODULE_OWNER));
 ```
 Assert statements in Move can be used in this way: `assert!(<predicate>, <abort_code>);`. This means that if the `<predicate>`
 is false, then abort the transaction with `<abort_code>`. Here `MODULE_OWNER` and `ENOT_MODULE_OWNER` are both constants
-defined at the beginning of the module. And `Errors` module defines common error categories we can use.
+defined at the beginning of the module. And `errors` module defines common error categories we can use.
 It is important to note that Move is transactional in its execution -- so
 if an [abort](https://move-language.github.io/move/abort-and-assert.html) is raised no unwinding of state
 needs to be performed, as no changes from that transaction will be persisted to the blockchain.
@@ -709,7 +709,7 @@ The method transfers the `amount` of coin from the account of `from` to the addr
 
 ```
 spec transfer {
-        let addr_from = Signer::address_of(from);
+        let addr_from = signer::address_of(from);
 
         let balance_from = global<Balance<CoinType>>(addr_from).coin.value;
         let balance_to = global<Balance<CoinType>>(to).coin.value;

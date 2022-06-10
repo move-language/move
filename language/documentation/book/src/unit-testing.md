@@ -78,13 +78,13 @@ A module and any of its members can be declared as test only. In such a case the
 
 ```
 #[test_only] // test only attributes can be attached to modules
-module ABC { ... }
+module abc { ... }
 
 #[test_only] // test only attributes can be attached to named addresses
 address ADDR = @0x1;
 
 #[test_only] // .. to uses
-use 0x1::SomeOtherModule;
+use 0x1::some_other_module;
 
 #[test_only] // .. to structs
 struct SomeStruct { ... }
@@ -121,14 +121,14 @@ Next add the following to the `Move.toml`:
 
 ```
 [dependencies]
-MoveStdlib = { git = "https://github.com/diem/diem.git", subdir="language/move-stdlib", rev = "56ab033cc403b489e891424a629e76f643d4fb6b", addr_subst = { "Std" = "0x1" } }
+MoveStdlib = { git = "https://github.com/diem/diem.git", subdir="language/move-stdlib", rev = "56ab033cc403b489e891424a629e76f643d4fb6b", addr_subst = { "std" = "0x1" } }
 ```
 
 Next add the following module under the `sources` directory:
 
 ```
-// filename: sources/MyModule.move
-module 0x1::MyModule {
+// filename: sources/my_module.move
+module 0x1::my_module {
 
     struct MyCoin has key { value: u64 }
 
@@ -180,9 +180,9 @@ $ move package test
 BUILDING MoveStdlib
 BUILDING TestExample
 Running Move unit tests
-[ PASS    ] 0x1::MyModule::make_sure_non_zero_coin_passes
-[ PASS    ] 0x1::MyModule::make_sure_zero_coin_fails
-[ PASS    ] 0x1::MyModule::test_has_coin
+[ PASS    ] 0x1::my_module::make_sure_non_zero_coin_passes
+[ PASS    ] 0x1::my_module::make_sure_zero_coin_fails
+[ PASS    ] 0x1::my_module::test_has_coin
 Test result: OK. Total tests: 3; passed: 3; failed: 0
 ```
 
@@ -196,8 +196,8 @@ $ move package test -f zero_coin
 CACHED MoveStdlib
 BUILDING TestExample
 Running Move unit tests
-[ PASS    ] 0x1::MyModule::make_sure_non_zero_coin_passes
-[ PASS    ] 0x1::MyModule::make_sure_zero_coin_fails
+[ PASS    ] 0x1::my_module::make_sure_non_zero_coin_passes
+[ PASS    ] 0x1::my_module::make_sure_zero_coin_fails
 Test result: OK. Total tests: 2; passed: 2; failed: 0
 ```
 
@@ -209,13 +209,13 @@ $ move package test -i 0
 CACHED MoveStdlib
 BUILDING TestExample
 Running Move unit tests
-[ TIMEOUT ] 0x1::MyModule::make_sure_non_zero_coin_passes
-[ TIMEOUT ] 0x1::MyModule::make_sure_zero_coin_fails
-[ TIMEOUT ] 0x1::MyModule::test_has_coin
+[ TIMEOUT ] 0x1::my_module::make_sure_non_zero_coin_passes
+[ TIMEOUT ] 0x1::my_module::make_sure_zero_coin_fails
+[ TIMEOUT ] 0x1::my_module::test_has_coin
 
 Test failures:
 
-Failures in 0x1::MyModule:
+Failures in 0x1::my_module:
 
 ┌── make_sure_non_zero_coin_passes ──────
 │ Test timed out
@@ -242,30 +242,30 @@ $ move package test -s
 CACHED MoveStdlib
 BUILDING TestExample
 Running Move unit tests
-[ PASS    ] 0x1::MyModule::make_sure_non_zero_coin_passes
-[ PASS    ] 0x1::MyModule::make_sure_zero_coin_fails
-[ PASS    ] 0x1::MyModule::test_has_coin
+[ PASS    ] 0x1::my_module::make_sure_non_zero_coin_passes
+[ PASS    ] 0x1::my_module::make_sure_zero_coin_fails
+[ PASS    ] 0x1::my_module::test_has_coin
 
 Test Statistics:
 
-┌───────────────────────────────────────────────┬────────────┬───────────────────────────┐
-│                   Test Name                   │    Time    │   Instructions Executed   │
-├───────────────────────────────────────────────┼────────────┼───────────────────────────┤
-│ 0x1::MyModule::make_sure_non_zero_coin_passes │   0.009    │             1             │
-├───────────────────────────────────────────────┼────────────┼───────────────────────────┤
-│ 0x1::MyModule::make_sure_zero_coin_fails      │   0.008    │             1             │
-├───────────────────────────────────────────────┼────────────┼───────────────────────────┤
-│ 0x1::MyModule::test_has_coin                  │   0.008    │             1             │
-└───────────────────────────────────────────────┴────────────┴───────────────────────────┘
+┌────────────────────────────────────────────────┬────────────┬───────────────────────────┐
+│                   Test Name                    │    Time    │   Instructions Executed   │
+├────────────────────────────────────────────────┼────────────┼───────────────────────────┤
+│ 0x1::my_module::make_sure_non_zero_coin_passes │   0.009    │             1             │
+├────────────────────────────────────────────────┼────────────┼───────────────────────────┤
+│ 0x1::my_module::make_sure_zero_coin_fails      │   0.008    │             1             │
+├────────────────────────────────────────────────┼────────────┼───────────────────────────┤
+│ 0x1::my_module::test_has_coin                  │   0.008    │             1             │
+└────────────────────────────────────────────────┴────────────┴───────────────────────────┘
 
 Test result: OK. Total tests: 3; passed: 3; failed: 0
 ```
 
 #### `-g` or `--state-on-error`
-These flags will print the global state for any test failures. e.g., if we added the following (failing) test to the `MyModule` example:
+These flags will print the global state for any test failures. e.g., if we added the following (failing) test to the `my_module` example:
 
 ```
-module 0x1::MyModule {
+module 0x1::my_module {
     ...
     #[test(a = @0x1)]
     fun test_has_coin_bad(a: signer) {
@@ -283,21 +283,21 @@ $ move package test -g
 CACHED MoveStdlib
 BUILDING TestExample
 Running Move unit tests
-[ PASS    ] 0x1::MyModule::make_sure_non_zero_coin_passes
-[ PASS    ] 0x1::MyModule::make_sure_zero_coin_fails
-[ PASS    ] 0x1::MyModule::test_has_coin
-[ FAIL    ] 0x1::MyModule::test_has_coin_bad
+[ PASS    ] 0x1::my_module::make_sure_non_zero_coin_passes
+[ PASS    ] 0x1::my_module::make_sure_zero_coin_fails
+[ PASS    ] 0x1::my_module::test_has_coin
+[ FAIL    ] 0x1::my_module::test_has_coin_bad
 
 Test failures:
 
-Failures in 0x1::MyModule:
+Failures in 0x1::my_module:
 
 ┌── test_has_coin_bad ──────
 │ error[E11001]: test failure
-│    ┌─ /home/tzakian/TestExample/sources/MyModule.move:47:10
+│    ┌─ /home/tzakian/TestExample/sources/my_module.move:47:10
 │    │
 │ 44 │      fun test_has_coin_bad(a: signer) {
-│    │          ----------------- In this function in 0x1::MyModule
+│    │          ----------------- In this function in 0x1::my_module
 │    ·
 │ 47 │          assert!(has_coin(@0x2), 1);
 │    │          ^^^^^^^^^^^^^^^^^^^^^^^^^^ Test was not expected to abort but it aborted with 1 here
@@ -305,7 +305,7 @@ Failures in 0x1::MyModule:
 │
 │ ────── Storage state at point of failure ──────
 │ 0x1:
-│       => key 0x1::MyModule::MyCoin {
+│       => key 0x1::my_module::MyCoin {
 │           value: 1
 │       }
 │

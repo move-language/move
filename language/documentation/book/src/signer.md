@@ -28,9 +28,9 @@ will automatically create `signer` values and pass them into the script:
 
 ```move=
 script {
-    use Std::Signer;
+    use std::signer;
     fun main(s: signer) {
-        assert!(Signer::address_of(&s) == @0x42, 0);
+        assert!(signer::address_of(&s) == @0x42, 0);
     }
 }
 ```
@@ -42,7 +42,7 @@ to any other arguments. In other words, all of the signer arguments must come fi
 
 ```move=
 script {
-    use Std::Signer;
+    use std::signer;
     fun main(s1: signer, s2: signer, x: u64, y: u8) {
         // ...
     }
@@ -55,12 +55,12 @@ swap between `s1` and `s2`.
 
 ## `signer` Operators
 
-The `Std::Signer` standard library module provides two utility functions over `signer` values:
+The `std::signer` standard library module provides two utility functions over `signer` values:
 
 | Function                                    | Description                                                   |
 | ------------------------------------------- | ------------------------------------------------------------- |
-| `Signer::address_of(&signer): address`      | Return the `address` wrapped by this `&signer`.               |
-| `Signer::borrow_address(&signer): &address` | Return a reference to the `address` wrapped by this `&signer` |
+| `signer::address_of(&signer): address`      | Return the `address` wrapped by this `&signer`.               |
+| `signer::borrow_address(&signer): &address` | Return a reference to the `address` wrapped by this `&signer` |
 
 In addition, the `move_to<T>(&signer, T)` [global storage operator](./global-storage-operators.md)
 requires a `&signer` argument to publish a resource `T` under `signer.address`'s account. This

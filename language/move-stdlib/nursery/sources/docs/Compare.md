@@ -58,12 +58,12 @@ Compare vectors <code>v1</code> and <code>v2</code> using (1) vector contents fr
 Returns either <code><a href="Compare.md#0x1_Compare_EQUAL">EQUAL</a></code> (0u8), <code><a href="Compare.md#0x1_Compare_LESS_THAN">LESS_THAN</a></code> (1u8), or <code><a href="Compare.md#0x1_Compare_GREATER_THAN">GREATER_THAN</a></code> (2u8).
 
 This function is designed to compare BCS (Binary Canonical Serialization)-encoded values
-(i.e., vectors produced by <code><a href="_to_bytes">BCS::to_bytes</a></code>). A typical client will call
-<code><a href="Compare.md#0x1_Compare_cmp_bcs_bytes">Compare::cmp_bcs_bytes</a>(<a href="_to_bytes">BCS::to_bytes</a>(&t1), <a href="_to_bytes">BCS::to_bytes</a>(&t2))</code>. The comparison provides the
+(i.e., vectors produced by <code><a href="_to_bytes">bcs::to_bytes</a></code>). A typical client will call
+<code><a href="Compare.md#0x1_Compare_cmp_bcs_bytes">compare::cmp_bcs_bytes</a>(<a href="_to_bytes">bcs::to_bytes</a>(&t1), <a href="_to_bytes">bcs::to_bytes</a>(&t2))</code>. The comparison provides the
 following guarantees w.r.t the original values t1 and t2:
 - <code><a href="Compare.md#0x1_Compare_cmp_bcs_bytes">cmp_bcs_bytes</a>(bcs(t1), bcs(t2)) == <a href="Compare.md#0x1_Compare_LESS_THAN">LESS_THAN</a></code> iff <code><a href="Compare.md#0x1_Compare_cmp_bcs_bytes">cmp_bcs_bytes</a>(t2, t1) == <a href="Compare.md#0x1_Compare_GREATER_THAN">GREATER_THAN</a></code>
-- <code>Compare::cmp&lt;T&gt;(t1, t2) == <a href="Compare.md#0x1_Compare_EQUAL">EQUAL</a></code> iff <code>t1 == t2</code> and (similarly)
-<code>Compare::cmp&lt;T&gt;(t1, t2) != <a href="Compare.md#0x1_Compare_EQUAL">EQUAL</a></code> iff <code>t1 != t2</code>, where <code>==</code> and <code>!=</code> denote the Move
+- <code>compare::cmp&lt;T&gt;(t1, t2) == <a href="Compare.md#0x1_Compare_EQUAL">EQUAL</a></code> iff <code>t1 == t2</code> and (similarly)
+<code>compare::cmp&lt;T&gt;(t1, t2) != <a href="Compare.md#0x1_Compare_EQUAL">EQUAL</a></code> iff <code>t1 != t2</code>, where <code>==</code> and <code>!=</code> denote the Move
 bytecode operations for polymorphic equality.
 - for all primitive types <code>T</code> with <code>&lt;</code> and <code>&gt;</code> comparison operators exposed in Move bytecode
 (<code>u8</code>, <code>u64</code>, <code>u128</code>), we have
@@ -94,8 +94,8 @@ Keep this in mind when using this function to compare addresses.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Compare.md#0x1_Compare_cmp_bcs_bytes">cmp_bcs_bytes</a>(v1: &vector&lt;u8&gt;, v2: &vector&lt;u8&gt;): u8 {
-    <b>let</b> i1 = <a href="_length">Vector::length</a>(v1);
-    <b>let</b> i2 = <a href="_length">Vector::length</a>(v2);
+    <b>let</b> i1 = <a href="_length">vector::length</a>(v1);
+    <b>let</b> i2 = <a href="_length">vector::length</a>(v2);
     <b>let</b> len_cmp = <a href="Compare.md#0x1_Compare_cmp_u64">cmp_u64</a>(i1, i2);
 
     // <a href="">BCS</a> uses little endian encoding for all integer types, so we choose <b>to</b> compare from left
@@ -104,7 +104,7 @@ Keep this in mind when using this function to compare addresses.
     <b>while</b> (i1 &gt; 0 && i2 &gt; 0) {
         i1 = i1 - 1;
         i2 = i2 - 1;
-        <b>let</b> elem_cmp = <a href="Compare.md#0x1_Compare_cmp_u8">cmp_u8</a>(*<a href="_borrow">Vector::borrow</a>(v1, i1), *<a href="_borrow">Vector::borrow</a>(v2, i2));
+        <b>let</b> elem_cmp = <a href="Compare.md#0x1_Compare_cmp_u8">cmp_u8</a>(*<a href="_borrow">vector::borrow</a>(v1, i1), *<a href="_borrow">vector::borrow</a>(v2, i2));
         <b>if</b> (elem_cmp != 0) <b>return</b> elem_cmp
         // <b>else</b>, compare next element
     };

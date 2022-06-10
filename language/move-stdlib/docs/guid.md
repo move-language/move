@@ -379,7 +379,7 @@ Return the account address that created the GUID
 
 ## Function `id_creator_address`
 
-Return the account address that created the GUID::ID
+Return the account address that created the guid::ID
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_id_creator_address">id_creator_address</a>(id: &<a href="guid.md#0x1_guid_ID">guid::ID</a>): <b>address</b>
@@ -429,7 +429,7 @@ Return the creation number associated with the GUID
 
 ## Function `id_creation_num`
 
-Return the creation number associated with the GUID::ID
+Return the creation number associated with the guid::ID
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_id_creation_num">id_creation_num</a>(id: &<a href="guid.md#0x1_guid_ID">guid::ID</a>): u64

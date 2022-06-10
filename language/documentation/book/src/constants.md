@@ -28,12 +28,12 @@ script {
 }
 
 address 0x42 {
-module Example {
+module example {
 
     const MY_ADDRESS: address = @0x42;
 
     public fun permissioned(s: &signer) {
-        assert!(Std::Signer::address_of(s) == MY_ADDRESS, 0);
+        assert!(std::signer::address_of(s) == MY_ADDRESS, 0);
     }
 
 }

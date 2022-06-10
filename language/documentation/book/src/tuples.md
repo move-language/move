@@ -39,7 +39,7 @@ Sometimes, tuples with two elements are called "pairs" and tuples with three ele
 
 ```move=
 address 0x42 {
-module Example {
+module example {
     // all 3 of these functions are equivalent
 
     // when no return type is provided, it is assumed to be `()`
@@ -74,7 +74,7 @@ For example:
 
 ```move=
 address 0x42 {
-module Example {
+module example {
     // all 3 of these functions are equivalent
     fun returns_unit() {}
     fun returns_2_values(): (bool, bool) { (true, false) }

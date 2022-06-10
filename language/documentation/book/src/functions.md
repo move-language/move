@@ -22,23 +22,23 @@ Module functions, by default, can only be called within the same module. These i
 
 ```move=
 address 0x42 {
-module M {
+module m {
     fun foo(): u64 { 0 }
     fun calls_foo(): u64 { foo() } // valid
 }
 
 module other {
-    fun calls_M_foo(): u64 {
-        0x42::M::foo() // ERROR!
-//      ^^^^^^^^^^^^ 'foo' is internal to '0x42::M'
+    fun calls_m_foo(): u64 {
+        0x42::m::foo() // ERROR!
+//      ^^^^^^^^^^^^ 'foo' is internal to '0x42::m'
     }
 }
 }
 
 script {
-    fun calls_M_foo(): u64 {
-        0x42::M::foo() // ERROR!
-//      ^^^^^^^^^^^^ 'foo' is internal to '0x42::M'
+    fun calls_m_foo(): u64 {
+        0x42::m::foo() // ERROR!
+//      ^^^^^^^^^^^^ 'foo' is internal to '0x42::m'
     }
 }
 ```
@@ -54,21 +54,21 @@ A `public` function can be called by *any* function defined in *any* module or s
 
 ```move=
 address 0x42 {
-module M {
+module m {
     public fun foo(): u64 { 0 }
     fun calls_foo(): u64 { foo() } // valid
 }
 
 module other {
-    fun calls_M_foo(): u64 {
-        0x42::M::foo() // valid
+    fun calls_m_foo(): u64 {
+        0x42::m::foo() // valid
     }
 }
 }
 
 script {
-    fun calls_M_foo(): u64 {
-        0x42::M::foo() // valid
+    fun calls_m_foo(): u64 {
+        0x42::m::foo() // valid
     }
 }
 ```
@@ -83,30 +83,30 @@ Note that since we cannot declare a script to be a friend of a module, the funct
 
 ```move=
 address 0x42 {
-module M {
-    friend 0x42::N;  // friend declaration
+module m {
+    friend 0x42::n;  // friend declaration
     public(friend) fun foo(): u64 { 0 }
     fun calls_foo(): u64 { foo() } // valid
 }
 
-module N {
-    fun calls_M_foo(): u64 {
-        0x42::M::foo() // valid
+module n {
+    fun calls_m_foo(): u64 {
+        0x42::m::foo() // valid
     }
 }
 
 module other {
-    fun calls_M_foo(): u64 {
-        0x42::M::foo() // ERROR!
-//      ^^^^^^^^^^^^ 'foo' can only be called from a 'friend' of module '0x42::M'
+    fun calls_m_foo(): u64 {
+        0x42::m::foo() // ERROR!
+//      ^^^^^^^^^^^^ 'foo' can only be called from a 'friend' of module '0x42::m'
     }
 }
 }
 
 script {
-    fun calls_M_foo(): u64 {
-        0x42::M::foo() // ERROR!
-//      ^^^^^^^^^^^^ 'foo' can only be called from a 'friend' of module '0x42::M'
+    fun calls_m_foo(): u64 {
+        0x42::m::foo() // ERROR!
+//      ^^^^^^^^^^^^ 'foo' can only be called from a 'friend' of module '0x42::m'
     }
 }
 ```
@@ -121,29 +121,29 @@ Essentially, this rule implies that once the execution transitions to a non-scri
 
 ```move=
 address 0x42 {
-module M {
+module m {
     public(script) fun foo(): u64 { 0 }
     fun calls_foo(): u64 { foo() } // ERROR!
 //                         ^^^ 'foo' can only be called from a script context
 }
 
-module N {
-    fun calls_M_foo(): u64 {
-        0x42::M::foo() // ERROR!
+module n {
+    fun calls_m_foo(): u64 {
+        0x42::m::foo() // ERROR!
 //      ^^^^^^^^^^^^ 'foo' can only be called from a script context
     }
 }
 
 module other {
-    public(script) fun calls_M_foo(): u64 {
-        0x42::M::foo() // valid
+    public(script) fun calls_m_foo(): u64 {
+        0x42::m::foo() // valid
     }
 }
 }
 
 script {
-    fun calls_M_foo(): u64 {
-        0x42::M::foo() // valid
+    fun calls_m_foo(): u64 {
+        0x42::m::foo() // valid
     }
 }
 ```
@@ -189,7 +189,7 @@ This is very common for functions that create new or empty data structures
 
 ```move=
 address 0x42 {
-module Example {
+module example {
   struct Counter { count: u64 }
 
   fun new_counter(): Counter {
@@ -206,7 +206,7 @@ When a function accesses a resource using `move_from`, `borrow_global`, or `borr
 
 ```move=
 address 0x42 {
-module Example {
+module example {
 
     struct Balance has key { value: u64 }
 
@@ -226,7 +226,7 @@ module Example {
 
 ```move=
 address 0x42 {
-module Example {
+module example {
 
     struct Balance has key { value: u64 }
 
@@ -247,9 +247,9 @@ module Example {
 }
 
 address 0x42 {
-module Other {
+module other {
     fun extract_balance(addr: address): u64 {
-        0x42::Example::extract_balance(addr) // no acquires needed
+        0x42::example::extract_balance(addr) // no acquires needed
     }
 }
 }
@@ -259,8 +259,8 @@ A function can `acquire` as many resources as it needs to
 
 ```move=
 address 0x42 {
-module Example {
-    use Std::Vector;
+module example {
+    use std::vector;
 
     struct Balance has key { value: u64 }
     struct Box<T> has key { items: vector<T> }
@@ -273,9 +273,9 @@ module Example {
         let balance = borrow_global_mut<Balance>(addr); // acquires needed
         balance.value = balance.value - 2;
         let box1 = borrow_global_mut<Box<Item1>>(addr); // acquires needed
-        Vector::push_back(&mut box1.items, item1);
+        vector::push_back(&mut box1.items, item1);
         let box2 = borrow_global_mut<Box<Item2>>(addr); // acquires needed
-        Vector::push_back(&mut box2.items, item2);
+        vector::push_back(&mut box2.items, item2);
     }
 }
 }
@@ -338,10 +338,10 @@ Some functions do not have a body specified, and instead have the body provided 
 
 Without modifying the VM source code, a programmer cannot add new native functions. Furthermore, it is the intent that `native` functions are used for either standard library code or for functionality needed for the given Move environment.
 
-Most `native` functions you will likely see are in standard library code such as `Vector`
+Most `native` functions you will likely see are in standard library code such as `vector`
 
 ```move=
-module Std::Vector {
+module std::vector {
     native public fun empty<Element>(): vector<Element>;
     ...
 }
@@ -353,17 +353,17 @@ When calling a function, the name can be specified either through an alias or fu
 
 ```move=
 address 0x42 {
-module Example {
+module example {
     public fun zero(): u64 { 0 }
 }
 }
 
 script {
-    use 0x42::Example::{Self, zero};
+    use 0x42::example::{Self, zero};
     fun call_zero() {
         // With the `use` above all of these calls are equivalent
-        0x42::Example::zero();
-        Example::zero();
+        0x42::example::zero();
+        example::zero();
         zero();
     }
 }
@@ -373,7 +373,7 @@ When calling a function, an argument must be given for every parameter.
 
 ```move=
 address 0x42 {
-module Example {
+module example {
     public fun takes_none(): u64 { 0 }
     public fun takes_one(x: u64): u64 { x }
     public fun takes_two(x: u64, y: u64): u64 { x + y }
@@ -382,12 +382,12 @@ module Example {
 }
 
 script {
-    use 0x42::Example;
+    use 0x42::example;
     fun call_all() {
-        Example::takes_none();
-        Example::takes_one(0);
-        Example::takes_two(0, 1);
-        Example::takes_three(0, 1, 2);
+        example::takes_none();
+        example::takes_one(0);
+        example::takes_two(0, 1);
+        example::takes_three(0, 1, 2);
     }
 }
 ```
@@ -396,16 +396,16 @@ Type arguments can be either specified or inferred. Both calls are equivalent.
 
 ```move=
 address 0x42 {
-module Example {
+module example {
     public fun id<T>(x: T): T { x }
 }
 }
 
 script {
-    use 0x42::Example;
+    use 0x42::example;
     fun call_all() {
-        Example::id(0);
-        Example::id<u64>(0);
+        example::id(0);
+        example::id<u64>(0);
     }
 }
 ```
@@ -458,17 +458,17 @@ Note that the body of this function could also have been written as `if (y > x) 
 However `return` really shines is in exiting deep within other control flow constructs. In this example, the function iterates through a vector to find the index of a given value:
 
 ```move=
-use Std::Vector;
-use Std::Option::{Self, Option};
+use std::vector;
+use std::option::{Self, Option};
 fun index_of<T>(v: &vector<T>, target: &T): Option<u64> {
     let i = 0;
-    let n = Vector::length(v);
+    let n = vector::length(v);
     while (i < n) {
-        if (Vector::borrow(v, i) == target) return Option::some(i);
+        if (vector::borrow(v, i) == target) return option::some(i);
         i = i + 1
     };
 
-    Option::none()
+    option::none()
 }
 ```
 

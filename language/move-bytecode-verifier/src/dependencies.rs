@@ -560,7 +560,7 @@ fn verify_script_visibility_usage(
                 .at_code_offset(fdef_idx, idx)
                 .with_message(
                     "script-visible functions can only be called from scripts or other \
-                    script-visibile functions"
+                    script-visible functions"
                         .to_string(),
                 ));
             }

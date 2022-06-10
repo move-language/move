@@ -4,8 +4,6 @@ title: Move Source Language
 custom_edit_url: https://github.com/move-language/move/edit/main/language/move-compiler/README.md
 ---
 
-## Code under this subtree is experimental. It is out of scope for the Diem Bug Bounty until it is no longer marked experimental.
-
 # Move Source Language
 
 ## Summary

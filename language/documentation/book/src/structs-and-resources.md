@@ -21,7 +21,7 @@ Structs must be defined inside a module:
 
 ```move
 address 0x2 {
-module M {
+module m {
     struct Foo { x: u64, y: bool }
     struct Bar {}
     struct Baz { foo: Foo, }
@@ -44,7 +44,7 @@ a storage schema), structs can be granted [abilities](./abilities.md) by annotat
 
 ```move=
 address 0x2 {
-module M {
+module m {
     struct Foo has copy, drop { x: u64, y: bool }
 }
 }
@@ -75,7 +75,7 @@ value for each field:
 
 ```move=
 address 0x2 {
-module M {
+module m {
     struct Foo has drop { x: u64, y: bool }
     struct Baz has drop { foo: Foo }
 
@@ -104,7 +104,7 @@ Struct values can be destroyed by binding or assigning them patterns.
 
 ```move=
 address 0x2 {
-module M {
+module m {
     struct Foo { x: u64, y: bool }
     struct Bar { foo: Foo }
     struct Baz {}
@@ -277,9 +277,9 @@ provide publis APIs for them. The end of the chapter contains some examples of t
 However, struct _types_ are always visible to another module or script:
 
 ```move=
-// M.move
+// m.move
 address 0x2 {
-module M {
+module m {
     struct Foo has drop { x: u64 }
 
     public fun new_foo(): Foo {
@@ -290,22 +290,22 @@ module M {
 ```
 
 ```move=
-// N.move
+// n.move
 address 0x2 {
-module N {
-    use 0x2::M;
+module n {
+    use 0x2::m;
 
     struct Wrapper has drop {
-        foo: M::Foo
+        foo: m::Foo
     }
 
-    fun f1(foo: M::Foo) {
+    fun f1(foo: m::Foo) {
         let x = foo.x;
         //      ^ error! cannot access fields of `foo` here
     }
 
     fun f2() {
-        let foo_wrapper = Wrapper { foo: M::new_foo() };
+        let foo_wrapper = Wrapper { foo: m::new_foo() };
     }
 }
 }
@@ -322,7 +322,7 @@ circulation.
 
 ```move=
 address 0x2 {
-module M {
+module m {
     struct Foo { x: u64 }
 
     public fun copying_resource() {
@@ -352,7 +352,7 @@ resource:
 
 ```move=
 address 0x2 {
-module M {
+module m {
     struct Foo { x: u64 }
 
     public fun destroying_resource1_fixed() {
@@ -372,7 +372,7 @@ languages:
 
 ```move=
 address 0x2 {
-module M {
+module m {
     struct Foo has copy, drop { x: u64 }
 
     public fun run() {
@@ -408,7 +408,7 @@ Here are two short examples of how you might use structs to represent valuable d
 
 ```move=
 address 0x2 {
-module M {
+module m {
     // We do not want the Coin to be copied because that would be duplicating this "money",
     // so we do not give the struct the 'copy' ability.
     // Similarly, we do not want programmers to destroy coins, so we do not give the struct the
@@ -459,7 +459,7 @@ module M {
 
 ```move=
 address 0x2 {
-module Point {
+module point {
     struct Point has copy, drop, store {
         x: u64,
         y: u64,
@@ -499,7 +499,7 @@ module Point {
 
 ```move=
 address 0x2 {
-module Circle {
+module circle {
     use 0x2::Point::{Self, Point};
 
     struct Circle has copy, drop, store {

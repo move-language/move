@@ -64,8 +64,8 @@ The simple `Counter` module below exercises each of the five global storage oper
 
 ```move
 address 0x42 {
-module Counter {
-    use Std::Signer;
+module counter {
+    use std::signer;
 
     /// Resource that wraps an integer counter
     struct Counter has key { i: u64 }
@@ -90,14 +90,14 @@ module Counter {
 
     /// Reset the value of `account`'s `Counter` to 0
     public fun reset(account: &signer) acquires Counter {
-        let c_ref = &mut borrow_global_mut<Counter>(Signer::address_of(account)).i;
+        let c_ref = &mut borrow_global_mut<Counter>(signer::address_of(account)).i;
         *c_ref = 0
     }
 
     /// Delete the `Counter` resource under `account` and return its value
     public fun delete(account: &signer): u64 acquires Counter {
         // remove the Counter resource
-        let c = move_from<Counter>(Signer::address_of(account));
+        let c = move_from<Counter>(signer::address_of(account));
         // "Unpack" the `Counter` resource into its fields. This is a
         // privileged operation that can only be done inside the module
         // that declares the `Counter` resource
@@ -115,17 +115,17 @@ module Counter {
 
 ## Annotating functions with `acquires`
 
-In the `Counter` example, you might have noticed that the `get_count`, `increment`, `reset`, and `delete` functions are annotated with `acquires Counter`. A Move function `M::f` must be annotated with `acquires T` if and only if:
+In the `counter` example, you might have noticed that the `get_count`, `increment`, `reset`, and `delete` functions are annotated with `acquires Counter`. A Move function `m::f` must be annotated with `acquires T` if and only if:
 
-- The body of `M::f` contains a `move_from<T>`, `borrow_global_mut<T>`, or `borrow_global<T>` instruction, or
-- The body of `M::f` invokes a function `M::g` declared in the same module that is annotated with `acquires`
+- The body of `m::f` contains a `move_from<T>`, `borrow_global_mut<T>`, or `borrow_global<T>` instruction, or
+- The body of `m::f` invokes a function `m::g` declared in the same module that is annotated with `acquires`
 
 For example, the following function inside `Counter` would need an `acquires` annotation:
 
 ```move
 // Needs `acquires` because `increment` is annotated with `acquires`
 fun call_increment(addr: address): u64 acquires Counter {
-    Counter::increment(addr)
+    counter::increment(addr)
 }
 ```
 
@@ -133,13 +133,13 @@ However, the same function *outside* `Counter` would not need an annotation:
 
 ```move
 address 0x43 {
-module M {
-   use 0x42::Counter;
+module m {
+   use 0x42::counter;
 
    // Ok. Only need annotation when resource acquired by callee is declared
    // in the same module
    fun call_increment(addr: address): u64 {
-       Counter::increment(addr)
+       counter::increment(addr)
    }
 }
 }
@@ -149,7 +149,7 @@ If a function touches multiple resources, it needs multiple `acquires`:
 
 ```move=
 address 0x42 {
-module TwoResources {
+module two_resources {
     struct R1 has key { f: u64 }
     struct R2 has key { g: u64 }
 
@@ -164,7 +164,7 @@ The `acquires` annotation does not take generic type parameters into account:
 
 ```move=
 address 0x42 {
-module M {
+module m {
     struct R<T> has key { t: T }
 
     // `acquires R`, not `acquires R<T>`
@@ -198,7 +198,7 @@ This example illustrates how the Move type system uses `acquires` to prevent a d
 
 ```move=
 address 0x42 {
-module Dangling {
+module dangling {
     struct T has key { f: u64 }
 
     fun borrow_then_remove_bad(a: address) acquires T {
@@ -224,7 +224,7 @@ The restriction on returning global references prevents a similar, but even more
 
 ```move=
 address 0x42 {
-module M1 {
+module m1 {
     struct T has key {}
 
     public fun ret_t_ref(a: address): &T acquires T {
@@ -236,15 +236,15 @@ module M1 {
     }
 }
 
-module M2 {
+module m2 {
     fun borrow_then_remove_bad(a: address) {
-        let t_ref = M1::ret_t_ref(a);
-        let t = M1::remove_t(a); // t_ref now dangling!
+        let t_ref = m1::ret_t_ref(a);
+        let t = m1::remove_t(a); // t_ref now dangling!
     }
 }
 }
 ```
 
-Line 16 acquires a reference to a global resource `M1::T`, then line 17 removes that same resource, which makes `t_ref` dangle. In this case, `acquires` annotations do not help us because the `borrow_then_remove_bad` function is outside of the `M1` module that declares `T` (recall that `acquires` annotations can only be used for resources declared in the current module). Instead, the type system avoids this problem by preventing the return of a global reference at line 6.
+Line 16 acquires a reference to a global resource `m1::T`, then line 17 removes that same resource, which makes `t_ref` dangle. In this case, `acquires` annotations do not help us because the `borrow_then_remove_bad` function is outside of the `m1` module that declares `T` (recall that `acquires` annotations can only be used for resources declared in the current module). Instead, the type system avoids this problem by preventing the return of a global reference at line 6.
 
 Fancier type systems that would allow returning global references without sacrificing reference safety are possible, and we may consider them in future iterations of Move. We chose the current design because it strikes a good balance between expressivity, annotation burden, and type system complexity.

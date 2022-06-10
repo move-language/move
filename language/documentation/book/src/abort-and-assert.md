@@ -29,11 +29,11 @@ In this example, the function will pop two items off of the vector, but will abo
 vector does not have two items
 
 ```move=
-use Std::Vector;
+use std::vector;
 fun pop_twice<T>(v: &mut vector<T>): (T, T) {
-    if (Vector::length(v) < 2) abort 42;
+    if (vector::length(v) < 2) abort 42;
 
-    (Vector::pop_back(v), Vector::pop_back(v))
+    (vector::pop_back(v), vector::pop_back(v))
 }
 ```
 
@@ -41,12 +41,12 @@ This is even more useful deep inside a control-flow construct. For example, this
 that all numbers in the vector are less than the specified `bound`. And aborts otherwise
 
 ```move=
-use Std::Vector;
+use std::vector;
 fun check_vec(v: &vector<u64>, bound: u64) {
     let i = 0;
-    let n = Vector::length(v);
+    let n = vector::length(v);
     while (i < n) {
-        let cur = *Vector::borrow(v, i);
+        let cur = *vector::borrow(v, i);
         if (cur > bound) abort 42;
         i = i + 1;
     }
@@ -74,23 +74,23 @@ if (condition) () else abort code
 rewritten using `assert`
 
 ```move=
-use Std::Vector;
+use std::vector;
 fun pop_twice<T>(v: &mut vector<T>): (T, T) {
-    assert!(Vector::length(v) >= 2, 42); // Now uses 'assert'
+    assert!(vector::length(v) >= 2, 42); // Now uses 'assert'
 
-    (Vector::pop_back(v), Vector::pop_back(v))
+    (vector::pop_back(v), vector::pop_back(v))
 }
 ```
 
 and
 
 ```move=
-use Std::Vector;
+use std::vector;
 fun check_vec(v: &vector<u64>, bound: u64) {
     let i = 0;
-    let n = Vector::length(v);
+    let n = vector::length(v);
     while (i < n) {
-        let cur = *Vector::borrow(v, i);
+        let cur = *vector::borrow(v, i);
         assert!(cur <= bound, 42); // Now uses 'assert'
         i = i + 1;
     }
@@ -129,7 +129,7 @@ For example
 
 ```move=
 address 0x2 {
-module Example {
+module example {
     public fun aborts() {
         abort 42
     }
@@ -138,13 +138,13 @@ module Example {
 
 script {
     fun always_aborts() {
-        0x2::Example::aborts()
+        0x2::example::aborts()
     }
 }
 ```
 
-If a transaction, such as the script `always_aborts` above, calls `0x2::Example::aborts`, the VM
-would produce an error that indicated the module `0x2::Example` and the code `42`.
+If a transaction, such as the script `always_aborts` above, calls `0x2::example::aborts`, the VM
+would produce an error that indicated the module `0x2::example` and the code `42`.
 
 This can be useful for having multiple aborts being grouped together inside a module.
 
@@ -152,33 +152,33 @@ In this example, the module has two separate error codes used in multiple functi
 
 ```move=
 address 0x42 {
-module Example {
+module example {
 
-    use Std::Vector;
+    use std::vector;
 
     const EMPTY_VECTOR: u64 = 0;
     const INDEX_OUT_OF_BOUNDS: u64 = 1;
 
     // move i to j, move j to k, move k to i
     public fun rotate_three<T>(v: &mut vector<T>, i: u64, j: u64, k: u64) {
-        let n = Vector::length(v);
+        let n = vector::length(v);
         assert!(n > 0, EMPTY_VECTOR);
         assert!(i < n, INDEX_OUT_OF_BOUNDS);
         assert!(j < n, INDEX_OUT_OF_BOUNDS);
         assert!(k < n, INDEX_OUT_OF_BOUNDS);
 
-        Vector::swap(v, i, k);
-        Vector::swap(v, j, k);
+        vector::swap(v, i, k);
+        vector::swap(v, j, k);
     }
 
     public fun remove_twice<T>(v: &mut vector<T>, i: u64, j: u64): (T, T) {
-        let n = Vector::length(v);
+        let n = vector::length(v);
         assert!(n > 0, EMPTY_VECTOR);
         assert!(i < n, INDEX_OUT_OF_BOUNDS);
         assert!(j < n, INDEX_OUT_OF_BOUNDS);
         assert!(i > j, INDEX_OUT_OF_BOUNDS);
 
-        (Vector::remove<T>(v, i), Vector::remove<T>(v, j))
+        (vector::remove<T>(v, i), vector::remove<T>(v, j))
     }
 }
 }

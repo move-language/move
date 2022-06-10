@@ -25,17 +25,17 @@
 /// struct Content has store { ssn: u64 }
 /// ...
 /// // Create new vault
-/// Vault::new(signer, b"My Vault", Content{ ssn: 525659745 });
+/// vault::new(signer, b"My Vault", Content{ ssn: 525659745 });
 /// ...
 /// // Obtain a read capability
-/// let read_cap = Vault::acquire_read_cap<Content>(signer);
+/// let read_cap = vault::acquire_read_cap<Content>(signer);
 /// process(&read_cap)
 /// ...
-/// fun process(cap: &Vault::ReadCap<Content>) {
-///     let accessor = Vault::read_accessor(cap);
-///     let content = Vault::borrow(accessor);
+/// fun process(cap: &vault::ReadCap<Content>) {
+///     let accessor = vault::read_accessor(cap);
+///     let content = vault::borrow(accessor);
 ///     << do something with `content: &Content` >>
-///     Vault::release_read_accessor(accessor);
+///     vault::release_read_accessor(accessor);
 /// }
 /// ```
 ///
@@ -56,19 +56,19 @@
 /// Example:
 ///
 /// ```move
-/// Vault::new(signer, b"My Vault", Content{ ssn: 525659745 });
+/// vault::new(signer, b"My Vault", Content{ ssn: 525659745 });
 /// // Enable delegation for this vault. Only the owning signer can do this.
-/// Vault::enable_delegation<Content>(signer);
+/// vault::enable_delegation<Content>(signer);
 /// ...
 /// // Delegate read capability to some other signer.
-/// let delegate_cap = Vault::acquire_delegate_cap<Content>(signer);
-/// Vault::delegate_read_cap(&delegate_cap, other_signer);
+/// let delegate_cap = vault::acquire_delegate_cap<Content>(signer);
+/// vault::delegate_read_cap(&delegate_cap, other_signer);
 /// ...
 /// // Other signer can now acquire read cap
-/// let read_cap = Vault::acquire_read_cap<Content>(other_signer);
+/// let read_cap = vault::acquire_read_cap<Content>(other_signer);
 /// ...
 /// // The granted capability can be revoked. There is no need to have the other signer for this.
-/// Vault::revoke_read_cap(&delegate_cap, signer::address_of(other_signer));
+/// vault::revoke_read_cap(&delegate_cap, signer::address_of(other_signer));
 /// ```
 ///
 /// ## Abilities

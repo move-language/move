@@ -7,7 +7,7 @@
 ///
 /// Offer solves this problem by providing an `Offer` resource.  To move a struct `T` from
 /// account A to B, account A first publishes an `Offer<T>` resource at `address_of(A)`,
-/// using the `Offer::create` function.
+/// using the `offer::create` function.
 /// Then account B, in a separate transaction, can move the struct `T` from the `Offer` at
 /// A's address to the desired destination. B accesses the resource using the `redeem` function,
 /// which aborts unless the `for` field is B's address (preventing other addresses from

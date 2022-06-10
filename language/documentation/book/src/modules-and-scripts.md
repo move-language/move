@@ -26,13 +26,13 @@ arguments, and must not return a value. Here is an example with each of these co
 ```move
 script {
     // Import the Debug module published at the named account address Std.
-    use Std::Debug;
+    use std::debug;
 
     const ONE: u64 = 1;
 
     fun main(x: u64) {
         let sum = x + ONE;
-        Debug::print(&sum)
+        debug::print(&sum)
     }
 }
 ```
@@ -57,7 +57,7 @@ For example:
 module 0x42::Test {
     struct Example has copy, drop { i: u64 }
 
-    use Std::Debug;
+    use std::debug;
     friend 0x42::AnotherTest;
 
     const ONE: u64 = 1;
@@ -65,7 +65,7 @@ module 0x42::Test {
     public fun print(x: u64) {
         let sum = x + ONE;
         let example = Example { i: sum };
-        Debug::print(&sum)
+        debug::print(&sum)
     }
 }
 ```
@@ -75,15 +75,15 @@ The `module 0x42::Test` part specifies that the module `Test` will be published 
 Modules can also be declared using [named addresses](./address.md). For example:
 
 ```move
-module TestAddr::Test {
+module test_addr::test {
     struct Example has copy, drop { a: address}
 
-    use Std::Debug;
-    friend TestAddr::AnotherTest;
+    use std::debug;
+    friend test_addr::another_test;
 
     public fun print() {
-        let example = Example { a: @TestAddr};
-        Debug::print(&example)
+        let example = Example { a: @test_addr};
+        debug::print(&example)
     }
 }
 ```
@@ -95,18 +95,18 @@ level. For example if we had the following code:
 ```move=
 script {
     fun example() {
-        MyAddr::M::foo(@MyAddr);
+        my_addr::m::foo(@my_addr);
     }
 }
 ```
 
-and we compiled it with `MyAddr` set to `0xC0FFEE`, then it would be equivalent
+and we compiled it with `my_addr` set to `0xC0FFEE`, then it would be equivalent
 to the following operationally:
 
 ```move=
 script {
     fun example() {
-        0xC0FFEE::M::foo(@0xC0FFEE);
+        0xC0FFEE::m::foo(@0xC0FFEE);
     }
 }
 ```
@@ -119,10 +119,10 @@ Module names can start with letters `a` to `z` or letters `A` to `Z`. After the 
 
 ```move
 module my_module {}
-module FooBar42 {}
+module foo_bar_42 {}
 ```
 
-Typically, module names start with an uppercase letter. A module named `MyModule` should be stored in a source file named `MyModule.move`.
+Typically, module names start with an uppercase letter. A module named `my_module` should be stored in a source file named `my_module.move`.
 
 All elements inside a `module` block can appear in any order.
 Fundamentally, a module is a collection of [`types`](./structs-and-resources.md) and [`functions`](./functions.md).

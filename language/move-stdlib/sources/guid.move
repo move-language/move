@@ -81,7 +81,7 @@ module std::guid {
         guid.id.addr
     }
 
-    /// Return the account address that created the GUID::ID
+    /// Return the account address that created the guid::ID
     public fun id_creator_address(id: &ID): address {
         id.addr
     }
@@ -91,7 +91,7 @@ module std::guid {
         guid.id.creation_num
     }
 
-    /// Return the creation number associated with the GUID::ID
+    /// Return the creation number associated with the guid::ID
     public fun id_creation_num(id: &ID): u64 {
         id.creation_num
     }

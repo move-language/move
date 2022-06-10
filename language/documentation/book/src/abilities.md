@@ -219,7 +219,7 @@ struct NoAbilities {}
 struct MyResource<T> has key { f: T }
 
 fun valid(account: &signer) acquires MyResource {
-    let addr = Signer::address_of(account);
+    let addr = signer::address_of(account);
      // Valid, 'MyResource<u64>' has 'key'
     let has_resource = exists<MyResource<u64>>(addr);
     if (!has_resource) {

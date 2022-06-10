@@ -2,7 +2,7 @@
 
 Generics can be used to define functions and structs over different input data types. This language feature is sometimes referred to as *parametric polymorphism*. In Move, we will often use the term generics interchangeably with type parameters and type arguments.
 
-Generics are commonly used in library code, such as in Vector, to declare code that works over any possible instantiation (that satisfies the specified constraints). In other frameworks, generic code can sometimes be used to interact with global storage many different ways that all still share the same implementation.
+Generics are commonly used in library code, such as in vector, to declare code that works over any possible instantiation (that satisfies the specified constraints). In other frameworks, generic code can sometimes be used to interact with global storage many different ways that all still share the same implementation.
 
 ## Declaring Type Parameters
 
@@ -103,14 +103,14 @@ Note: when the compiler is unable to infer the types, you'll need annotate them 
 
 ```move=
 address 0x2 {
-module M {
-    using Std::Vector;
+module m {
+    using std::vector;
 
     fun foo() {
-        // let v = Vector::new();
+        // let v = vector::new();
         //                    ^ The compiler cannot figure out the element type.
 
-        let v = Vector::new<u64>();
+        let v = vector::new<u64>();
         //                 ^~~~~ Must annotate manually.
     }
 }
@@ -121,13 +121,13 @@ However, the compiler will be able to infer the type if that return value is use
 
 ```move=
 address 0x2 {
-module M {
-    using Std::Vector;
+module m {
+    using std::vector;
 
     fun foo() {
-        let v = Vector::new();
+        let v = vector::new();
         //                 ^ <u64> is inferred
-        Vector::push_back(&mut v, 42);
+        vector::push_back(&mut v, 42);
     }
 }
 }
@@ -151,7 +151,7 @@ This can be convenient when modeling certain concepts. Here is an example:
 
 ```move=
 address 0x2 {
-module M {
+module m {
     // Currency Specifiers
     struct Currency1 {}
     struct Currency2 {}
@@ -407,7 +407,7 @@ Allowed:
 
 ```move=
 address 0x2 {
-module M {
+module m {
     struct A<T> {}
 
     // Finitely many types -- allowed.
@@ -429,7 +429,7 @@ Not allowed:
 
 ```move=
 address 0x2 {
-module M {
+module m {
     struct A<T> {}
 
     // Infinitely many types -- NOT allowed.
@@ -444,7 +444,7 @@ module M {
 
 ```move=
 address 0x2 {
-module N {
+module n {
     struct A<T> {}
 
     // Infinitely many types -- NOT allowed.
@@ -468,7 +468,7 @@ Note, the check for type level recursions is based on a conservative analysis on
 
 ```move=
 address 0x2 {
-module M {
+module m {
     struct A<T> {}
 
     fun foo<T>(n: u64) {

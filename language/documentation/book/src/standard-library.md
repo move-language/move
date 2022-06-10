@@ -4,11 +4,11 @@ The Move standard library exposes interfaces that implement the following functi
 * [Basic operations on vectors](#vector).
 * [Option types and operations on`Option` types](#option).
 * [A common error encoding code interface for abort codes](#errors).
-* [32-bit precision fixed-point numbers](#fixedpoint32).
+* [32-bit precision fixed-point numbers](#fixed_point32).
 
-## Vector
+## vector
 
-The `Vector` module defines a number of operations over the primitive
+The `vector` module defines a number of operations over the primitive
 [`vector`](./vector.md) type. The module is published under the
 named address `Std` and consists of a number of native functions, as
 well as functions defined in Move. The API for this module is as follows.
@@ -165,9 +165,9 @@ Return whether the vector `v` is empty.
 
 ---------------------------------------------------------------------------
 
-## Option
+## option
 
-The `Option` module defines a generic option type `Option<T>` that represents a
+The `option` module defines a generic option type `Option<T>` that represents a
 value of type `T` that may, or may not, be present. It is published under the named address `Std`.
 
 The Move option type is internally represented as a singleton vector, and may
@@ -177,7 +177,7 @@ couple notable exceptions since the option can contain a value of kind `resource
 Particularly, certain operations such as `get_with_default` and
 `destroy_with_default` require that the element type `T` be of `copyable` kind.
 
-The API for the `Option` module is as as follows
+The API for the `option` module is as as follows
 
 ### Types
 
@@ -323,11 +323,11 @@ contain a value. Will abort if `opt_elem` contains a value.
     public fun destroy_none<Element>(opt_elem: Option<Element>);
 ```
 
-## Errors
+## errors
 
-Recall that each abort code in Move is represented as an unsigned 64-bit integer. The `Errors` module defines a common interface that can be used to "tag" each of these abort codes so that they can represent both the error **category** along with an error **reason**.
+Recall that each abort code in Move is represented as an unsigned 64-bit integer. The `errors` module defines a common interface that can be used to "tag" each of these abort codes so that they can represent both the error **category** along with an error **reason**.
 
-Error categories are declared as constants in the `Errors` module and are globally unique with respect to this module. Error reasons on the other hand are module-specific error codes, and can provide greater detail (perhaps, even a particular _reason_) about the specific error condition. This representation of a category and reason for each error code is done by dividing the abort code into two sections.
+Error categories are declared as constants in the `errors` module and are globally unique with respect to this module. Error reasons on the other hand are module-specific error codes, and can provide greater detail (perhaps, even a particular _reason_) about the specific error condition. This representation of a category and reason for each error code is done by dividing the abort code into two sections.
 
 The lower 8 bits of the abort code hold the *error category*. The remaining 56 bits of the abort code hold the *error reason*.
 The reason should be a unique number relative to the module which raised the error and can be used to obtain more information about the error at hand. It should mostly be used for diagnostic purposes as error reasons may change over time if the module is updated.
@@ -336,7 +336,7 @@ The reason should be a unique number relative to the module which raised the err
 |----------|--------|
 | 8 bits   | 56 bits|
 
-Since error categories are globally stable, these present the most stable API and should in general be what is used by clients to determine the messages they may present to users (whereas the reason is useful for diagnostic purposes). There are public functions in the `Errors` module for creating an abort code of each error category with a specific `reason` number (represented as a `u64`).
+Since error categories are globally stable, these present the most stable API and should in general be what is used by clients to determine the messages they may present to users (whereas the reason is useful for diagnostic purposes). There are public functions in the `errors` module for creating an abort code of each error category with a specific `reason` number (represented as a `u64`).
 
 ### Constants
 
@@ -484,10 +484,10 @@ Used for extension points, should be not used under most circumstances. Construc
 
 ---------------------------------------------------------------------------
 
-## FixedPoint32
+## fixed_point32
 
 
-The `FixedPoint32` module defines a fixed-point numeric type with 32 integer bits and 32 fractional bits. Internally, this is represented as a `u64` integer wrapped in a struct to make a unique `FixedPoint32` type. Since the numeric representation is a binary one, some decimal values may not be exactly representable, but it provides more than 9 decimal digits of precision both before and after the decimal point (18 digits total). For comparison, double precision floating-point has less than 16 decimal digits of precision, so you should be careful about using floating-point to convert these values to decimal.
+The `fixed_point32` module defines a fixed-point numeric type with 32 integer bits and 32 fractional bits. Internally, this is represented as a `u64` integer wrapped in a struct to make a unique `fixed_point32` type. Since the numeric representation is a binary one, some decimal values may not be exactly representable, but it provides more than 9 decimal digits of precision both before and after the decimal point (18 digits total). For comparison, double precision floating-point has less than 16 decimal digits of precision, so you should be careful about using floating-point to convert these values to decimal.
 
 ### Types
 
@@ -514,7 +514,7 @@ Divide a u64 integer by a fixed-point number, truncating any fractional part of 
 ```
 
 ---------------------------------------------------------------------------
-Create a fixed-point value from a rational number specified by its numerator and denominator. Calling this function should be preferred for using `FixedPoint32::create_from_raw_value` which is also available. This will abort if the denominator is zero. It will also abort if the numerator is nonzero and the ratio is not in the range $2^{-32}\ldots2^{32}-1$. When specifying decimal fractions, be careful about rounding errors: if you round to display $N$ digits after the decimal point, you can use a denominator of $10^N$ to avoid numbers where the very small imprecision in the binary representation could change the rounding, e.g., 0.0125 will round down to 0.012 instead of up to 0.013.
+Create a fixed-point value from a rational number specified by its numerator and denominator. Calling this function should be preferred for using `fixed_point32::create_from_raw_value` which is also available. This will abort if the denominator is zero. It will also abort if the numerator is nonzero and the ratio is not in the range $2^{-32}\ldots2^{32}-1$. When specifying decimal fractions, be careful about rounding errors: if you round to display $N$ digits after the decimal point, you can use a denominator of $10^N$ to avoid numbers where the very small imprecision in the binary representation could change the rounding, e.g., 0.0125 will round down to 0.012 instead of up to 0.013.
 
 ```move
     public fun create_from_rational(numerator: u64, denominator: u64): FixedPoint32;

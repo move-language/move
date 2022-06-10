@@ -33,8 +33,8 @@ Named addresses only exist at the source language level and will be fully
 substituted for their value at the bytecode level. Because of this, modules
 and module members _must_ be accessed through the module's named address
 and not through the numerical value assigned to the named address during
-compilation, e.g., `use MyAddr::Foo` is _not_ equivalent to `use 0x2::Foo`
-even if the Move program is compiled with `MyAddr` set to `0x2`. This
+compilation, e.g., `use my_addr::foo` is _not_ equivalent to `use 0x2::foo`
+even if the Move program is compiled with `my_addr` set to `0x2`. This
 distinction is discussed in more detail in the section on [Modules and
 Scripts](./modules-and-scripts.md).
 
@@ -45,17 +45,17 @@ let a1: address = @0x1; // shorthand for 0x00000000000000000000000000000001
 let a2: address = @0x42; // shorthand for 0x00000000000000000000000000000042
 let a3: address = @0xDEADBEEF; // shorthand for 0x000000000000000000000000DEADBEEF
 let a4: address = @0x0000000000000000000000000000000A;
-let a5: address = @Std; // Assigns `a5` the value of the named address `Std`
+let a5: address = @std; // Assigns `a5` the value of the named address `std`
 let a6: address = @66;
 let a7: address = @0x42;
 
-module 66::SomeModule {   // Not in expression context, so no @ needed
-    use 0x1::OtherModule; // Not in expression context so no @ needed
-    use Std::Vector;      // Can use a named address as a namespace item when using other modules
+module 66::some_module {   // Not in expression context, so no @ needed
+    use 0x1::other_module; // Not in expression context so no @ needed
+    use std::vector;       // Can use a named address as a namespace item when using other modules
     ...
 }
 
-module Std::OtherModule {  // Can use a named address as a namespace item to declare a module
+module std::other_module {  // Can use a named address as a namespace item to declare a module
     ...
 }
 ```

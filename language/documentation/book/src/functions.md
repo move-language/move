@@ -43,7 +43,7 @@ script {
 }
 ```
 
-To allow access from other modules or from scripts, the function must be declared `public`, `public(friend)`, or `public(script)`.
+To allow access from other modules or from scripts, the function must be declared `public` or `public(friend)`.
 
 #### `public` visibility
 
@@ -111,39 +111,70 @@ script {
 }
 ```
 
-#### `public(script)` visibility
+### `entry` modifier
 
-The `public(script)` modifier is designed to allow module functions to be safely and directly invoked much like scripts. A `public(script)` function can only be called from a *script* context, which is either:
-- the function defined in a transaction script, or
-- another `public(script)` function.
+The `entry` modifier is designed to allow module functions to be safely and directly invoked much like scripts. This allows module writers to specify which functions can be to begin execution. The module writer then knows that any non-`entry` function will be called from a Move program already in execution.
 
-Essentially, this rule implies that once the execution transitions to a non-script context via a call to any non-`public(script)` function, there is no turning back, i.e., there is no way to call a `public(script)` function again.
+Essentially, `entry` functions are the "main" functions of a module, and they specify where Move programs start executing.
+
+Note though, an `entry` function _can_ still be called by other Move functions. So while they _can_ serve as the start of a Move program, they aren't restricted to that case.
+
+For example:
 
 ```move=
 address 0x42 {
 module m {
-    public(script) fun foo(): u64 { 0 }
-    fun calls_foo(): u64 { foo() } // ERROR!
-//                         ^^^ 'foo' can only be called from a script context
+    public entry fun foo(): u64 { 0 }
+    fun calls_foo(): u64 { foo() } // valid!
 }
 
 module n {
     fun calls_m_foo(): u64 {
-        0x42::m::foo() // ERROR!
-//      ^^^^^^^^^^^^ 'foo' can only be called from a script context
+        0x42::m::foo() // valid!
     }
 }
 
 module other {
-    public(script) fun calls_m_foo(): u64 {
-        0x42::m::foo() // valid
+    public entry fun calls_m_foo(): u64 {
+        0x42::m::foo() // valid!
     }
 }
 }
 
 script {
     fun calls_m_foo(): u64 {
-        0x42::m::foo() // valid
+        0x42::m::foo() // valid!
+    }
+}
+```
+
+Even internal functions can be marked as `entry`! This let's you guarantee that the function is called only at the beginning of execution (assuming you do not call it elsewhere in your module)
+
+```move=
+address 0x42 {
+module m {
+    entry fun foo(): u64 { 0 } // valid! entry functions do not have to be public
+}
+
+module n {
+    fun calls_m_foo(): u64 {
+        0x42::m::foo() // ERROR!
+//      ^^^^^^^^^^^^ 'foo' is internal to '0x42::m'
+    }
+}
+
+module other {
+    public entry fun calls_m_foo(): u64 {
+        0x42::m::foo() // ERROR!
+//      ^^^^^^^^^^^^ 'foo' is internal to '0x42::m'
+    }
+}
+}
+
+script {
+    fun calls_m_foo(): u64 {
+        0x42::m::foo() // ERROR!
+//      ^^^^^^^^^^^^ 'foo' is internal to '0x42::m'
     }
 }
 ```

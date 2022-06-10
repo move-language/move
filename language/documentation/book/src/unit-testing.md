@@ -38,7 +38,7 @@ public fun test_will_error_and_pass() { 1/0; }
 public fun test_will_error_and_fail() { 1/0; }
 
 #[test, expected_failure] // Can have multiple in one attribute. This test will pass.
-public(script) fun this_other_test_will_abort_and_pass() { abort 1 }
+public fun this_other_test_will_abort_and_pass() { abort 1 }
 ```
 
 With arguments, a test annotation takes the form `#[test(<param_name_1> = <address>, ..., <param_name_n> = <address>)]`. If a function is annotated in such a manner, the function's parameters must be a permutation of the parameters <`param_name_1>, ..., <param_name_n>`, i.e., the order of these parameters as they occur in the function and their order in the test annotation do not have to be the same, but they must be able to be matched up with each other by name.

@@ -4,6 +4,7 @@
 
 use crate::{
     file_format::{AbilitySet, StructTypeParameter, Visibility},
+    file_format_common::VERSION_5,
     normalized::Module,
 };
 use std::collections::BTreeSet;
@@ -14,6 +15,7 @@ use std::collections::BTreeSet;
 /// `{ struct_and_function_linking: true, struct_layout: false }`: Dependent modules that reference functions or types in this module may not link. However, fixing, recompiling, and redeploying all dependent modules will work--no data migration needed.
 /// `{ type_and_function_linking: true, struct_layout: false }`: Attempting to read structs published by this module will now fail at runtime. However, dependent modules will continue to link. Requires data migration, but no changes to dependent modules.
 /// `{ type_and_function_linking: false, struct_layout: false }`: Everything is broken. Need both a data migration and changes to dependent modules.
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct Compatibility {
     /// If false, dependent modules that reference functions or structs in this module may not link
     pub struct_and_function_linking: bool,
@@ -108,16 +110,27 @@ impl Compatibility {
                 }
             };
             let is_vis_compatible = match (old_func.visibility, new_func.visibility) {
+                // public must remain public
                 (Visibility::Public, Visibility::Public) => true,
                 (Visibility::Public, _) => false,
+                // friend can become public or remain friend
                 (Visibility::Friend, Visibility::Public)
                 | (Visibility::Friend, Visibility::Friend) => true,
                 (Visibility::Friend, _) => false,
+                // private can become public or friend, or stay private
                 (Visibility::Private, _) => true,
             };
-            // If it was an entry function, it must remain one.
-            // If it was not an entry function, it is allowed to become one.
-            let is_entry_compatible = !old_func.is_entry || new_func.is_entry;
+            let is_entry_compatible = if old_module.file_format_version < VERSION_5
+                && new_module.file_format_version < VERSION_5
+            {
+                // if it was public(script), it must remain pubic(script)
+                // if it was not public(script), it _cannot_ become public(script)
+                old_func.is_entry == new_func.is_entry
+            } else {
+                // If it was an entry function, it must remain one.
+                // If it was not an entry function, it is allowed to become one.
+                !old_func.is_entry || new_func.is_entry
+            };
             if !is_vis_compatible
                 || !is_entry_compatible
                 || old_func.parameters != new_func.parameters

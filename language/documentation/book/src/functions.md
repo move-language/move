@@ -148,7 +148,7 @@ script {
 }
 ```
 
-Even internal functions can be marked as `entry`! This let's you guarantee that the function is called only at the beginning of execution (assuming you do not call it elsewhere in your module)
+Even internal functions can be marked as `entry`! This lets you guarantee that the function is called only at the beginning of execution (assuming you do not call it elsewhere in your module)
 
 ```move=
 address 0x42 {

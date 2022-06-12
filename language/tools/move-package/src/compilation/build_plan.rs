@@ -9,7 +9,7 @@ use crate::{
 use anyhow::Result;
 use move_compiler::{
     compiled_unit::AnnotatedCompiledUnit,
-    diagnostics::{report_diagnostics_no_exit, report_warnings, FilesSourceText},
+    diagnostics::{report_diagnostics_to_color_buffer, report_warnings, FilesSourceText},
     Compiler,
 };
 use petgraph::algo::toposort;
@@ -113,13 +113,15 @@ impl BuildPlan {
             let (files, units_res) = compiler.build()?;
             match units_res {
                 Ok((units, warning_diags)) => {
-                    let should_exit = false;
-                    report_warnings(&files, warning_diags, should_exit);
+                    report_warnings(&files, warning_diags);
                     Ok((files, units))
                 }
                 Err(error_diags) => {
                     assert!(!error_diags.is_empty());
-                    report_diagnostics_no_exit(&files, error_diags);
+                    let diags_buf = report_diagnostics_to_color_buffer(&files, error_diags);
+                    if let Err(err) = std::io::stdout().write_all(&diags_buf) {
+                        anyhow::bail!("Cannot output compiler diagnostics: {}", err);
+                    }
                     anyhow::bail!("Compilation error");
                 }
             }

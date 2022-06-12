@@ -181,8 +181,7 @@ impl UnitTestingConfig {
 
         let (units, warnings) =
             diagnostics::unwrap_or_report_diagnostics(&files, compilation_result);
-        let should_exit = true;
-        diagnostics::report_warnings(&files, warnings, should_exit);
+        diagnostics::report_warnings(&files, warnings);
         test_plan.map(|tests| TestPlan::new(tests, files, units))
     }
 

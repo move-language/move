@@ -91,16 +91,17 @@ fun byte_and_hex_strings() {
 `vector` supports the following operations via the `std::vector` module in the Move standard
 library:
 
-| Function                                                   | Description                                              | Aborts?                 |
-| ---------------------------------------------------------- | -------------------------------------------------------- | ----------------------- |
-| `vector::empty<T>(): vector<T>`                            | Create an empty vector that can store values of type `T` | Never                   |
-| `vector::singleton<T>(t: T): vector<T>`                    | Create a vector of size 1 containing `t`                 | Never                   |
-| `vector::push_back<T>(v: &mut vector<T>, t: T)`            | Add `t` to the end of `v`                                | Never                   |
-| `vector::pop_back<T>(v: &mut vector<T>): T`                | Remove and return the last element in `v`                | If `v` is empty         |
-| `vector::borrow<T>(v: &vector<T>, i: u64): &T`             | Return an immutable reference to the `T` at index `i`    | If `i` is not in bounds |
-| `vector::borrow_mut<T>(v: &mut vector<T>, i: u64): &mut T` | Return an mutable reference to the `T` at index `i`      | If `i` is not in bounds |
-| `vector::destroy_empty<T>(v: vector<T>)`                   | Delete `v`                                               | If `v` is not empty     |
-| `vector::append<T>(v1: &mut vector<T>, v2: vector<T>)`     | Add the elements in `v2` to the end of `v1`              | If `i` is not in bounds |
+| Function                                                   | Description                                                   | Aborts?                 |
+| ---------------------------------------------------------- | ------------------------------------------------------------- | ----------------------- |
+| `vector::empty<T>(): vector<T>`                            | Create an empty vector that can store values of type `T`      | Never                   |
+| `vector::singleton<T>(t: T): vector<T>`                    | Create a vector of size 1 containing `t`                      | Never                   |
+| `vector::push_back<T>(v: &mut vector<T>, t: T)`            | Add `t` to the end of `v`                                     | Never                   |
+| `vector::pop_back<T>(v: &mut vector<T>): T`                | Remove and return the last element in `v`                     | If `v` is empty         |
+| `vector::borrow<T>(v: &vector<T>, i: u64): &T`             | Return an immutable reference to the `T` at index `i`         | If `i` is not in bounds |
+| `vector::borrow_mut<T>(v: &mut vector<T>, i: u64): &mut T` | Return an mutable reference to the `T` at index `i`           | If `i` is not in bounds |
+| `vector::destroy_empty<T>(v: vector<T>)`                   | Delete `v`                                                    | If `v` is not empty     |
+| `vector::append<T>(v1: &mut vector<T>, v2: vector<T>)`     | Add the elements in `v2` to the end of `v1`                   | If `i` is not in bounds |
+| `vector::reverse<T>(v: &mut vector<T>)`                    | Reverses the order of the elements in the vector `v` in place | Never                   |
 
 More operations may be added overtime
 

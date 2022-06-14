@@ -56,7 +56,8 @@ pub struct Diagnostics {
 //**************************************************************************************************
 
 pub fn report_diagnostics(files: &FilesSourceText, diags: Diagnostics) -> ! {
-    report_diagnostics_impl(files, diags);
+    let should_exit = true;
+    report_diagnostics_impl(files, diags, should_exit);
     std::process::exit(1)
 }
 
@@ -65,10 +66,10 @@ pub fn report_warnings(files: &FilesSourceText, warnings: Diagnostics) {
         return;
     }
     debug_assert!(warnings.max_severity().unwrap() == Severity::Warning);
-    report_diagnostics_impl(files, warnings)
+    report_diagnostics_impl(files, warnings, false)
 }
 
-fn report_diagnostics_impl(files: &FilesSourceText, diags: Diagnostics) {
+fn report_diagnostics_impl(files: &FilesSourceText, diags: Diagnostics, should_exit: bool) {
     let color_choice = match read_env_var(COLOR_MODE_ENV_VAR).as_str() {
         "NONE" => ColorChoice::Never,
         "ANSI" => ColorChoice::AlwaysAnsi,
@@ -77,7 +78,9 @@ fn report_diagnostics_impl(files: &FilesSourceText, diags: Diagnostics) {
     };
     let mut writer = StandardStream::stderr(color_choice);
     output_diagnostics(&mut writer, files, diags);
-    std::process::exit(1)
+    if should_exit {
+        std::process::exit(1);
+    }
 }
 
 pub fn unwrap_or_report_diagnostics<T>(files: &FilesSourceText, res: Result<T, Diagnostics>) -> T {

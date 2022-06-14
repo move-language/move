@@ -7,7 +7,11 @@ use crate::{
     source_package::parsed_manifest::PackageName,
 };
 use anyhow::Result;
-use move_compiler::{compiled_unit::AnnotatedCompiledUnit, diagnostics::FilesSourceText, Compiler};
+use move_compiler::{
+    compiled_unit::AnnotatedCompiledUnit,
+    diagnostics::{report_diagnostics_to_color_buffer, report_warnings, FilesSourceText},
+    Compiler,
+};
 use petgraph::algo::toposort;
 use std::{collections::BTreeSet, io::Write, path::Path};
 
@@ -98,8 +102,30 @@ impl BuildPlan {
         })
     }
 
+    /// Compilation results in the process exit upon warning/failure
     pub fn compile<W: Write>(&self, writer: &mut W) -> Result<CompiledPackage> {
         self.compile_with_driver(writer, |compiler| compiler.build_and_report())
+    }
+
+    /// Compilation process does not exit even if warnings/failures are encountered
+    pub fn compile_no_exit<W: Write>(&self, writer: &mut W) -> Result<CompiledPackage> {
+        self.compile_with_driver(writer, |compiler| {
+            let (files, units_res) = compiler.build()?;
+            match units_res {
+                Ok((units, warning_diags)) => {
+                    report_warnings(&files, warning_diags);
+                    Ok((files, units))
+                }
+                Err(error_diags) => {
+                    assert!(!error_diags.is_empty());
+                    let diags_buf = report_diagnostics_to_color_buffer(&files, error_diags);
+                    if let Err(err) = std::io::stdout().write_all(&diags_buf) {
+                        anyhow::bail!("Cannot output compiler diagnostics: {}", err);
+                    }
+                    anyhow::bail!("Compilation error");
+                }
+            }
+        })
     }
 
     pub fn compile_with_driver<W: Write>(

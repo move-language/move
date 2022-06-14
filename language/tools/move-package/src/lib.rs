@@ -157,11 +157,26 @@ pub struct ModelConfig {
 }
 
 impl BuildConfig {
-    /// Compile the package at `path` or the containing Move package.
+    /// Compile the package at `path` or the containing Move package. Exit process on warning or
+    /// failure.
     pub fn compile_package<W: Write>(self, path: &Path, writer: &mut W) -> Result<CompiledPackage> {
         let resolved_graph = self.resolution_graph_for_package(path)?;
         let mutx = PackageLock::lock();
         let ret = BuildPlan::create(resolved_graph)?.compile(writer);
+        mutx.unlock();
+        ret
+    }
+
+    /// Compile the package at `path` or the containing Move package. Do not exit process on warning
+    /// or failure.
+    pub fn compile_package_no_exit<W: Write>(
+        self,
+        path: &Path,
+        writer: &mut W,
+    ) -> Result<CompiledPackage> {
+        let resolved_graph = self.resolution_graph_for_package(path)?;
+        let mutx = PackageLock::lock();
+        let ret = BuildPlan::create(resolved_graph)?.compile_no_exit(writer);
         mutx.unlock();
         ret
     }

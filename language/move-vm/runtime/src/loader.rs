@@ -1131,7 +1131,7 @@ impl Loader {
         self.module_cache.read().structs.get(idx.0).map(Arc::clone)
     }
 
-    fn abilities(&self, ty: &Type) -> PartialVMResult<AbilitySet> {
+    pub(crate) fn abilities(&self, ty: &Type) -> PartialVMResult<AbilitySet> {
         match ty {
             Type::Bool | Type::U8 | Type::U64 | Type::U128 | Type::Address => {
                 Ok(AbilitySet::PRIMITIVES)

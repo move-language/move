@@ -6,7 +6,10 @@ use crate::{
     data_cache::TransactionDataCache, native_extensions::NativeContextExtensions,
     runtime::VMRuntime,
 };
-use move_binary_format::{errors::*, file_format::LocalIndex};
+use move_binary_format::{
+    errors::*,
+    file_format::{AbilitySet, LocalIndex},
+};
 use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet, Event},
@@ -258,6 +261,14 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     /// Helpful when paired with load_type, or any other API that returns 'Type'
     pub fn get_struct_type(&self, index: CachedStructIndex) -> Option<Arc<StructType>> {
         self.runtime.loader().get_struct_type(index)
+    }
+
+    // Get the abilities for this type, at it's particular instantiation
+    pub fn get_type_abilities(&self, ty: &Type) -> VMResult<AbilitySet> {
+        self.runtime
+            .loader()
+            .abilities(ty)
+            .map_err(|e| e.finish(Location::Undefined))
     }
 
     pub fn get_data_store(&mut self) -> &mut dyn DataStore {

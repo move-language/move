@@ -4,11 +4,11 @@
 
 use crate::{
     expansion::ast::{
-        ability_constraints_ast_debug, ability_modifiers_ast_debug, AbilitySet, AbilitySetIntoIter,
-        Address, Attributes, Fields, Friend, ModuleIdent, SpecId, Value, Value_, Visibility,
+        ability_constraints_ast_debug, ability_modifiers_ast_debug, AbilitySet, Attributes, Fields,
+        Friend, ModuleIdent, SpecId, Value, Value_, Visibility,
     },
     parser::ast::{
-        Ability, BinOp, ConstantName, Field, FunctionName, StructName, UnaryOp, Var, ENTRY_MODIFIER,
+        BinOp, ConstantName, Field, FunctionName, StructName, UnaryOp, Var, ENTRY_MODIFIER,
     },
     shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
@@ -560,80 +560,6 @@ impl fmt::Display for TypeName_ {
             Builtin(b) => write!(f, "{}", b),
             ModuleType(m, n) => write!(f, "{}::{}", m, n),
         }
-    }
-}
-
-impl fmt::Display for Type_ {
-    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        match self {
-            Type_::Unit => write!(f, "()"),
-            Type_::Ref(mut_, s) => {
-                if *mut_ {
-                    write!(f, "&mut {}", s)
-                } else {
-                    write!(f, "& {}", s)
-                }
-            }
-            Type_::Param(tp) => {
-                if tp.abilities.is_empty() {
-                    write!(f, "{}", tp.user_specified_name)
-                } else {
-                    write!(
-                        f,
-                        "{}: {}",
-                        tp.user_specified_name,
-                        format_delim::<Ability, AbilitySetIntoIter>(
-                            tp.abilities.clone().into_iter(),
-                            " + "
-                        )
-                    )
-                }
-            }
-            Type_::Apply(_, sp!(_, type_name), ss) => match type_name {
-                TypeName_::Multiple(_) => {
-                    write!(f, "({})", format_comma(ss))
-                }
-                TypeName_::Builtin(name) => {
-                    if ss.is_empty() {
-                        write!(f, "{}", name)
-                    } else {
-                        write!(f, "{}<{}>", name, format_comma(ss))
-                    }
-                }
-                TypeName_::ModuleType(sp!(_, module_ident), struct_name) => {
-                    let addr = addr_to_string(&module_ident.address);
-                    if ss.is_empty() {
-                        write!(
-                            f,
-                            "{}::{}::{}",
-                            addr,
-                            module_ident.module.value(),
-                            struct_name
-                        )
-                    } else {
-                        write!(
-                            f,
-                            "{}::{}::{}<{}>",
-                            addr,
-                            module_ident.module.value(),
-                            struct_name,
-                            format_comma(ss)
-                        )
-                    }
-                }
-            },
-            Type_::Var(tv) => write!(f, "var type ({})", tv.0),
-            Type_::Anything => write!(f, "_"),
-            Type_::UnresolvedError => write!(f, "invalid type"),
-        }
-    }
-}
-
-pub fn addr_to_string(addr: &Address) -> String {
-    match addr {
-        Address::Numerical(None, sp!(_, bytes)) => format!("{}", bytes),
-        Address::Numerical(Some(name), _) => format!("{}", name),
-        Address::NamedUnassigned(name) => format!("{}", name),
     }
 }
 

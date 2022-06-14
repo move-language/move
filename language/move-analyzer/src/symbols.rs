@@ -73,10 +73,10 @@ use url::Url;
 
 use move_command_line_common::files::FileHash;
 use move_compiler::{
-    expansion::ast::{Fields, ModuleIdent, ModuleIdent_},
-    naming::ast::{addr_to_string, StructDefinition, StructFields, TParam, Type, TypeName_, Type_},
-    parser::ast::StructName,
-    shared::{format_comma, Identifier},
+    expansion::ast::{AbilitySetIntoIter, Address, Fields, ModuleIdent, ModuleIdent_},
+    naming::ast::{StructDefinition, StructFields, TParam, Type, TypeName_, Type_},
+    parser::ast::{Ability, StructName},
+    shared::{format_delim, Identifier},
     typing::ast::{
         BuiltinFunction_, Exp, ExpListItem, Function, FunctionBody_, LValue, LValueList, LValue_,
         ModuleCall, ModuleDefinition, SequenceItem, SequenceItem_, UnannotatedExp_,
@@ -114,6 +114,7 @@ struct UseLoc {
 /// Information about a type of an identifier. The reason we need an additional enum is that there
 /// is not direct representation of a function type in the Type enum.
 #[derive(Debug, Clone, Eq, PartialEq)]
+#[allow(clippy::large_enum_variant)]
 pub enum IdentType {
     RegularType(Type),
     FunctionType(
@@ -212,11 +213,20 @@ pub struct SymbolicatorRunner {
 impl fmt::Display for IdentType {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         match self {
-            Self::RegularType(t) => write!(f, "{}", t),
+            Self::RegularType(t) => {
+                // Technically, we could use error_format function here to display the "regular"
+                // type, but the original intent of this function is subtly different that we need
+                // (i.e., to be used by compiler error messages) which, for example, results in
+                // verbosity that is not needed here.
+                //
+                // It also seems like a reasonable idea to be able to tune user experience in the
+                // IDE independently on how compiler error messages are generated.
+                write!(f, "{}", type_to_ide_string(t))
+            }
             Self::FunctionType(mod_ident, name, type_args, args, ret, acquires) => {
                 let type_args_str = if !type_args.is_empty() {
                     let mut s = "<".to_string();
-                    s.push_str(format_comma(type_args).as_str());
+                    s.push_str(type_list_to_ide_string(type_args).as_str());
                     s.push('>');
                     s
                 } else {
@@ -224,30 +234,99 @@ impl fmt::Display for IdentType {
                 };
                 let acquires_str = if !acquires.is_empty() {
                     let mut s = " acquires ".to_string();
-                    s.push_str(format_comma(acquires).as_str());
+                    s.push_str(type_list_to_ide_string(acquires).as_str());
                     s
                 } else {
                     "".to_string()
                 };
                 let ret_str = match ret {
                     sp!(_, Type_::Unit) => "".to_string(),
-                    _ => format!(": {}", ret),
+                    _ => format!(": {}", type_to_ide_string(ret)),
                 };
 
                 write!(
                     f,
                     "fun {}::{}::{}{}({}){}{}",
-                    addr_to_string(&mod_ident.address),
+                    addr_to_ide_string(&mod_ident.address),
                     mod_ident.module.value(),
                     name,
                     type_args_str,
-                    format_comma(args),
+                    type_list_to_ide_string(args),
                     ret_str,
                     acquires_str
                 )
             }
         }
     }
+}
+
+fn type_to_ide_string(sp!(_, t): &Type) -> String {
+    match t {
+        Type_::Unit => "()".to_string(),
+        Type_::Ref(mut_, s) => format!(
+            "&{} {}",
+            if *mut_ { "mut" } else { "" },
+            type_to_ide_string(s)
+        ),
+        Type_::Param(tp) => {
+            if tp.abilities.is_empty() {
+                format!("{}", tp.user_specified_name)
+            } else {
+                format!(
+                    "{}: {}",
+                    tp.user_specified_name,
+                    format_delim::<Ability, AbilitySetIntoIter>(
+                        tp.abilities.clone().into_iter(),
+                        " + "
+                    )
+                )
+            }
+        }
+        Type_::Apply(_, sp!(_, type_name), ss) => match type_name {
+            TypeName_::Multiple(_) => {
+                format!("({})", type_list_to_ide_string(ss))
+            }
+            TypeName_::Builtin(name) => {
+                if ss.is_empty() {
+                    format!("{}", name)
+                } else {
+                    format!("{}<{}>", name, type_list_to_ide_string(ss))
+                }
+            }
+            TypeName_::ModuleType(sp!(_, module_ident), struct_name) => {
+                let addr = addr_to_ide_string(&module_ident.address);
+                format!(
+                    "{}::{}::{}{}",
+                    addr,
+                    module_ident.module.value(),
+                    struct_name,
+                    if ss.is_empty() {
+                        "".to_string()
+                    } else {
+                        format!("<{}>", type_list_to_ide_string(ss))
+                    }
+                )
+            }
+        },
+        Type_::Anything => "_".to_string(),
+        _ => "invalid type".to_string(),
+    }
+}
+
+pub fn addr_to_ide_string(addr: &Address) -> String {
+    match addr {
+        Address::Numerical(None, sp!(_, bytes)) => format!("{}", bytes),
+        Address::Numerical(Some(name), _) => format!("{}", name),
+        Address::NamedUnassigned(name) => format!("{}", name),
+    }
+}
+
+fn type_list_to_ide_string(items: &[Type]) -> String {
+    items
+        .iter()
+        .map(type_to_ide_string)
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 impl SymbolicatorRunner {
@@ -670,7 +749,7 @@ impl Symbolicator {
             functions.insert(*name, name_start);
             // enter self-definition for function name
             let use_type = IdentType::FunctionType(
-                mod_ident.value.clone(),
+                mod_ident.value,
                 *name,
                 fun.signature
                     .type_parameters

@@ -23,7 +23,8 @@ pub trait ControlFlowGraph {
     /// Successors of the block ID in the bytecode vector
     fn successors(&self, block_id: BlockId) -> &Vec<BlockId>;
 
-    fn next_block(&self, block_id: BlockId) -> Option<CodeOffset>;
+    /// Return the next block in traversal order
+    fn next_block(&self, block_id: BlockId) -> Option<BlockId>;
 
     /// Iterator over the indexes of instructions in this block
     fn instr_indexes(&self, block_id: BlockId) -> Box<dyn Iterator<Item = CodeOffset>>;

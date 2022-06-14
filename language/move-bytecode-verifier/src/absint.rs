@@ -50,7 +50,7 @@ pub type InvariantMap<State, AnalysisError> =
 /// Auxiliary data can be stored in self.
 pub trait TransferFunctions {
     type State: AbstractDomain;
-    type AnalysisError: Clone;
+    type AnalysisError;
 
     /// Execute local@instr found at index local@index in the current basic block from pre-state
     /// local@pre.

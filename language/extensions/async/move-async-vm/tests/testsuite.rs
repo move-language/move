@@ -97,12 +97,12 @@ impl Harness {
                 addr.short_str_lossless(),
                 actor.short_str_lossless()
             ));
-            let result = {
+            {
                 let mut proxy = HarnessProxy { harness: self };
                 let session = self.vm.new_session(addr, 0, &mut proxy);
-                session.new_actor(&actor, addr, &mut gas)
+                let result = session.new_actor(&actor, addr, &mut gas);
+                self.handle_result(&mut mailbox, result);
             };
-            self.handle_result(&mut mailbox, result);
 
             // Put a start message for this actor into the mailbox.
             let entry_point_id = Identifier::from_str("start")?;

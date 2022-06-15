@@ -1,4 +1,5 @@
 use std::fs;
+use anyhow::{Result, Context, bail};
 use toml_edit::easy::Value;
 
 pub fn get_move_home_path(is_test_mode: bool) -> String {
@@ -18,20 +19,26 @@ pub fn get_credential_path(is_test_mode: bool) -> String {
     get_move_home_path(is_test_mode) + "/credential.toml"
 }
 
-pub fn get_registry_api_token(is_test_mode: bool) -> String {
+pub fn get_registry_api_token(is_test_mode: bool) -> Result<String> {
+    match get_api_token(is_test_mode) {
+        Ok(content) => Ok(content),
+        Err(_) => bail!("There seems to be an error with your Movey credential. \
+            Please run `move login` and follow the instructions.")
+    }
+}
+
+fn get_api_token(is_test_mode: bool) -> Result<String> {
     let move_home = get_move_home_path(is_test_mode);
     let credential_path = move_home.clone() + "/credential.toml";
-    let contents = fs::read_to_string(&credential_path).expect("Unable to read credential.toml");
-    let mut toml: Value = contents.parse().expect("Unable to parse credential.toml");
-    let registry = toml
-        .as_table_mut()
-        .unwrap()
+    
+    let contents = fs::read_to_string(&credential_path)?;
+    let mut toml: Value = contents.parse()?;
+    let registry = toml.as_table_mut()
+        .context("None")?
         .get_mut("registry")
-        .expect("Unable to get [registry] table in credential.toml");
-    let token = registry
-        .as_table_mut()
-        .unwrap()
+        .context("None")?;
+    let token = registry.as_table_mut().context("None")?
         .get_mut("token")
-        .expect("Unable to get token");
-    token.to_string().replace("\"", "")
+        .context("None")?;
+    Ok(token.to_string().replace("\"", ""))
 }

@@ -2,6 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::env::home_dir;
+use std::fs::{self, File};
+use std::io::Write;
+use move_cli::sandbox::commands::test;
 use move_cli::{base::movey_login::MOVEY_CREDENTIAL_PATH, sandbox::commands::test};
 use move_command_line_common::movey_constants::MOVEY_URL;
 #[cfg(unix)]
@@ -109,6 +113,47 @@ fn upload_package_to_movey_with_no_head_commit_id_should_panic() {
     assert!(!output.status.success());
     let error = String::from_utf8_lossy(output.stderr.as_slice()).to_string();
     assert!(error.contains("invalid HEAD commit id"));
+}
+
+#[test]
+fn upload_package_to_movey_with_no_credential_should_panic() {
+    let home = home_dir().unwrap().to_string_lossy().to_string() + "/.move/test";
+    let credential_file = home.clone() + "/credential.toml";
+    let _ = fs::remove_file(&credential_file);
+    
+    init_git(PACKAGE_PATH, 0);
+    let output = Command::new(CLI_EXE)
+        .current_dir(PACKAGE_PATH)
+        .args(["package", "upload", "--test"])
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    let error = String::from_utf8_lossy(output.stderr.as_slice()).to_string();
+    assert!(error.contains("There seems to be an error with your Movey credential. \
+        Please run `move login` and follow the instructions."));
+}
+
+#[test]
+fn upload_package_to_movey_with_bad_credential_should_panic() {
+    let home = home_dir().unwrap().to_string_lossy().to_string() + "/.move/test";
+    let credential_file = home.clone() + "/credential.toml";
+    let _ = fs::remove_file(&credential_file);
+    
+    fs::create_dir_all(&home).unwrap();
+    let mut file = File::create(&credential_file).unwrap();
+    let bad_content = String::from("[registry]\ntoken=\n");
+    file.write(&bad_content.as_bytes()).unwrap();
+
+    init_git(PACKAGE_PATH, 0);
+    let output = Command::new(CLI_EXE)
+        .current_dir(PACKAGE_PATH)
+        .args(["package", "upload", "--test"])
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    let error = String::from_utf8_lossy(output.stderr.as_slice()).to_string();
+    assert!(error.contains("There seems to be an error with your Movey credential. \
+        Please run `move login` and follow the instructions."));
 }
 
 // flag == 0: all git command are run

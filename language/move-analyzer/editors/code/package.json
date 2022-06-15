@@ -89,7 +89,6 @@
 		"lint": "tsfmt --verify && eslint . --ext ts --max-warnings 0",
 		"fix": "tsfmt --replace && eslint . --ext ts --fix",
 		"pretest": "npm run compile && npm run lint",
-		"test": "node ./out/tests/runTests.js",
 		"vscode:prepublish": "npm run pretest",
 		"package": "vsce package -o move-analyzer.vsix",
 		"publish": "npm run pretest && vsce publish"

@@ -78,11 +78,11 @@ fn upload_package_to_movey_works() {
         .unwrap();
     assert!(output.status.success());
     let res_path = format!("{}{}", PACKAGE_PATH, "/request-body.txt");
-    let data = std::fs::read_to_string(&res_path).unwrap();
+    let data = fs::read_to_string(&res_path).unwrap();
     assert!(data.contains("rev"));
     assert!(data.contains("\"github_repo_url\":\"https://github.com/diem/move\""));
     assert!(data.contains("\"description\":\"Description test\""));
-    std::fs::remove_file(&res_path).unwrap();
+    fs::remove_file(&res_path).unwrap();
 }
 
 #[test]

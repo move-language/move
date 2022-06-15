@@ -62,13 +62,6 @@
                 }
             }
         },
-        "grammars": [
-            {
-                "language": "move",
-                "scopeName": "source.move",
-                "path": "./move.tmLanguage.json"
-            }
-        ],
         "languages": [
             {
                 "id": "move",
@@ -101,6 +94,9 @@
         "package": "vsce package -o move-analyzer.vsix",
         "publish": "npm run pretest && npm run test && vsce publish"
     },
+    "extensionDependencies": [
+	    "damirka.move-syntax"
+    ],
     "dependencies": {
         "vscode-languageclient": "6.1.4"
     },

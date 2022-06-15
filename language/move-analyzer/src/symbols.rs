@@ -171,10 +171,8 @@ struct UseDefMap(BTreeMap<u32, BTreeSet<UseDef>>);
 pub struct Symbols {
     /// A map from def locations to all the references (uses)
     references: BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-    /// A mapping from uses to definitions in a module
-    mod_use_defs: BTreeMap<ModuleIdent_, UseDefMap>,
-    /// A mapping from paths to module IDs
-    mod_ident_map: BTreeMap<PathBuf, ModuleIdent_>,
+    /// A mapping from uses to definitions in a file
+    file_use_defs: BTreeMap<PathBuf, UseDefMap>,
     /// A mapping from file hashes to file names
     file_name_mapping: BTreeMap<FileHash, Symbol>,
 }
@@ -346,6 +344,14 @@ impl UseDefMap {
     fn get(&self, key: u32) -> Option<BTreeSet<UseDef>> {
         self.0.get(&key).cloned()
     }
+
+    fn elements(self) -> BTreeMap<u32, BTreeSet<UseDef>> {
+        self.0
+    }
+
+    fn extend(&mut self, use_defs: BTreeMap<u32, BTreeSet<UseDef>>) {
+        self.0.extend(use_defs);
+    }
 }
 
 impl Symbolicator {
@@ -424,7 +430,6 @@ impl Symbolicator {
         let mut mod_outer_defs = BTreeMap::new();
         let mut references = BTreeMap::new();
         let mut mod_use_defs = BTreeMap::new();
-        let mut mod_ident_map = BTreeMap::new();
         for (pos, module_ident, module_def) in modules {
             let (defs, symbols) = Self::get_mod_outer_defs(
                 &pos,
@@ -435,17 +440,6 @@ impl Symbolicator {
             );
             mod_outer_defs.insert(*module_ident, defs);
             mod_use_defs.insert(*module_ident, symbols);
-
-            let fpath = match source_files.get(&pos.file_hash()) {
-                Some((p, _)) => p,
-                None => continue,
-            };
-
-            mod_ident_map.insert(
-                // if canonicalization fails, simply use "regular" path to continue processing
-                fs::canonicalize(fpath.as_str()).unwrap_or_else(|_| PathBuf::from(fpath.as_str())),
-                *module_ident,
-            );
         }
 
         let mut symbolicator = Symbolicator {
@@ -456,17 +450,30 @@ impl Symbolicator {
             current_mod: None,
         };
 
-        for (_, module_ident, module_def) in modules {
-            let use_defs = mod_use_defs.get_mut(module_ident).unwrap();
+        let mut file_use_defs = BTreeMap::new();
+        for (pos, module_ident, module_def) in modules {
+            let mut use_defs = mod_use_defs.remove(module_ident).unwrap();
             symbolicator.current_mod = Some(*module_ident);
-            symbolicator.mod_symbols(module_def, &mut references, use_defs);
+            symbolicator.mod_symbols(module_def, &mut references, &mut use_defs);
+
+            let fpath = match source_files.get(&pos.file_hash()) {
+                Some((p, _)) => p,
+                None => continue,
+            };
+
+            file_use_defs
+                .entry(
+                    fs::canonicalize(fpath.as_str())
+                        .unwrap_or_else(|_| PathBuf::from(fpath.as_str())),
+                )
+                .or_insert_with(UseDefMap::new)
+                .extend(use_defs.elements());
         }
 
         let lsp_diagnostics = lsp_empty_diagnostics(&file_name_mapping);
         let symbols = Symbols {
             references,
-            mod_use_defs,
-            mod_ident_map,
+            file_use_defs,
             file_name_mapping,
         };
         Ok((Some(symbols), lsp_diagnostics))
@@ -475,8 +482,7 @@ impl Symbolicator {
     /// Get empty symbols
     pub fn empty_symbols() -> Symbols {
         Symbols {
-            mod_use_defs: BTreeMap::new(),
-            mod_ident_map: BTreeMap::new(),
+            file_use_defs: BTreeMap::new(),
             references: BTreeMap::new(),
             file_name_mapping: BTreeMap::new(),
         }
@@ -1475,14 +1481,12 @@ pub fn on_use_request(
     let mut result = None;
 
     let mut use_def_found = false;
-    if let Some(mod_ident) = symbols.mod_ident_map.get(&PathBuf::from(use_fpath)) {
-        if let Some(mod_symbols) = symbols.mod_use_defs.get(mod_ident) {
-            if let Some(uses) = mod_symbols.get(use_line) {
-                for u in uses {
-                    if use_col >= u.col_start && use_col <= u.col_end {
-                        result = use_def_action(&u);
-                        use_def_found = true;
-                    }
+    if let Some(mod_symbols) = symbols.file_use_defs.get(&PathBuf::from(use_fpath)) {
+        if let Some(uses) = mod_symbols.get(use_line) {
+            for u in uses {
+                if use_col >= u.col_start && use_col <= u.col_end {
+                    result = use_def_action(&u);
+                    use_def_found = true;
                 }
             }
         }
@@ -1541,8 +1545,7 @@ fn symbols_test() {
     fpath.push("sources/M1.move");
     let cpath = fs::canonicalize(&fpath).unwrap();
 
-    let mod_ident = symbols.mod_ident_map.get(&cpath).unwrap();
-    let mod_symbols = symbols.mod_use_defs.get(mod_ident).unwrap();
+    let mod_symbols = symbols.file_use_defs.get(&cpath).unwrap();
 
     // struct def name
     assert_use_def(
@@ -2033,8 +2036,7 @@ fn symbols_test() {
     fpath.push("sources/M3.move");
     let cpath = fs::canonicalize(&fpath).unwrap();
 
-    let mod_ident = symbols.mod_ident_map.get(&cpath).unwrap();
-    let mod_symbols = symbols.mod_use_defs.get(mod_ident).unwrap();
+    let mod_symbols = symbols.file_use_defs.get(&cpath).unwrap();
 
     // generic type in struct definition
     assert_use_def(
@@ -2152,8 +2154,7 @@ fn symbols_test() {
     fpath.push("sources/M4.move");
     let cpath = fs::canonicalize(&fpath).unwrap();
 
-    let mod_ident = symbols.mod_ident_map.get(&cpath).unwrap();
-    let mod_symbols = symbols.mod_use_defs.get(mod_ident).unwrap();
+    let mod_symbols = symbols.file_use_defs.get(&cpath).unwrap();
 
     // param name in RHS (if_cond function)
     assert_use_def(
@@ -2263,6 +2264,17 @@ fn symbols_test() {
         16,
         34,
         12,
+        "M4.move",
+    );
+    // const in a different module in the same file
+    assert_use_def(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        55,
+        10,
+        55,
+        10,
         "M4.move",
     );
 }

@@ -30,6 +30,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let deps = vec![
         path_from_crate_root("../stdlib/sources"),
         path_from_crate_root("../../move-stdlib/sources"),
+        path_from_crate_root("../../extensions/async/move-async-lib/sources"),
     ];
     let mut named_address_map = move_stdlib_named_addresses();
     named_address_map.insert(
@@ -39,6 +40,10 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     named_address_map.insert(
         "Evm".to_string(),
         NumericalAddress::parse_str("0x2").unwrap(),
+    );
+    named_address_map.insert(
+        "Async".to_string(),
+        NumericalAddress::parse_str("0x1").unwrap(),
     );
     let env = run_model_builder_with_options_and_compilation_flags(
         vec![PackagePaths {
@@ -52,7 +57,9 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
             named_address_map,
         }],
         ModelBuilderOptions::default(),
-        move_compiler::Flags::empty().set_sources_shadow_deps(true),
+        move_compiler::Flags::empty()
+            .set_sources_shadow_deps(true)
+            .set_flavor("async"),
     )?;
     for exp in std::iter::once(String::new()).chain(experiments.into_iter()) {
         let mut options = Options {

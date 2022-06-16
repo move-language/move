@@ -83,6 +83,25 @@ impl NativeFunctions {
                         )
                     }
                 }
+            } else if fun.get_full_name_str().contains("send_")
+                && attributes::has_attr(
+                    fun.module_env.env,
+                    fun.module_env.get_attributes(),
+                    "actor",
+                    false,
+                )
+            {
+                let fun_name = fun.get_full_name_str();
+                let mut st_name = String::from(&fun_name[fun_name.find("send_").unwrap() + 5..]);
+                st_name.replace_range(0..1, &st_name[0..1].to_uppercase());
+                let ev_signature_map = ctx.event_signature_map.borrow();
+                for (st_id, sig) in ev_signature_map.iter() {
+                    let st_env = ctx.env.get_struct(st_id.to_qualified_id());
+                    if st_name == st_env.get_name().display(st_env.symbol_pool()).to_string() {
+                        events::define_emit_fun_for_send(gen, ctx, sig, fun_id);
+                        break;
+                    }
+                }
             } else if attributes::is_decode(fun) {
                 self.define_decode_fun(gen, ctx, fun_id, attributes::extract_decode_signature(fun));
             } else if attributes::is_encode(fun) {
@@ -164,6 +183,7 @@ impl NativeFunctions {
     fn define_evm_functions(&mut self, ctx: &Context) {
         // TODO: may want to have symbolic representation of addr (which is 'Eth')
         let evm = &self.find_module(ctx, "0x2", "Evm");
+        let async_actor_lib = &self.find_module(ctx, "0x1", "Actor");
 
         self.define(ctx, evm, "sign", |_, ctx: &Context, _| {
             emitln!(
@@ -184,6 +204,31 @@ impl NativeFunctions {
 }"
             );
         });
+
+        self.define(ctx, async_actor_lib, "self", |_, ctx: &Context, _| {
+            emitln!(
+                ctx.writer,
+                "\
+() -> addr {
+  addr := address()
+}"
+            );
+        });
+
+        self.define(
+            ctx,
+            async_actor_lib,
+            "virtual_time",
+            |_, ctx: &Context, _| {
+                emitln!(
+                    ctx.writer,
+                    "\
+() -> virtual_time {
+    virtual_time := timestamp()
+}"
+                );
+            },
+        );
 
         self.define(ctx, evm, "abort_with", |gen, ctx: &Context, _| {
             emitln!(

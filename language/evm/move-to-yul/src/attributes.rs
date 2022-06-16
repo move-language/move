@@ -29,6 +29,12 @@ const ENCODE_ATTR: &str = "encode";
 const ENCODE_PACKED_ATTR: &str = "encode_packed";
 const ABI_STRUCT_ATTR: &str = "abi_struct";
 
+// For async move contracts
+const ACTOR_ATTR: &str = "actor";
+const STATE_ATTR: &str = "state";
+const INIT_ATTR: &str = "init";
+const MESSAGE_ATTR: &str = "message";
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) enum FunctionAttribute {
     Payable,
@@ -154,6 +160,7 @@ pub fn has_attr(env: &GlobalEnv, attrs: &[Attribute], name: &str, simple_flag: b
 /// Check whether the module has a `#[evm_contract]` attribute.
 pub fn is_evm_contract_module(module: &ModuleEnv) -> bool {
     has_attr(module.env, module.get_attributes(), CONTRACT_ATTR, false)
+        || has_attr(module.env, module.get_attributes(), ACTOR_ATTR, false)
 }
 
 /// Check whether the module has a `#[evm_arith]` attribute.
@@ -168,7 +175,7 @@ pub fn is_storage_struct(str: &StructEnv) -> bool {
         str.get_attributes(),
         STORAGE_ATTR,
         false,
-    )
+    ) || has_attr(str.module_env.env, str.get_attributes(), STATE_ATTR, false)
 }
 
 /// Check whether the struct has a `#[event]` attribute.
@@ -183,12 +190,18 @@ pub fn is_callable_fun(fun: &FunctionEnv<'_>) -> bool {
         fun.get_attributes(),
         CALLABLE_ATTR,
         false,
+    ) || has_attr(
+        fun.module_env.env,
+        fun.get_attributes(),
+        MESSAGE_ATTR,
+        false,
     )
 }
 
-/// Check whether the function has a `#[create]` attribute.
+/// Check whether the function has a `#[create]` or `#[init]` attribute.
 pub fn is_create_fun(fun: &FunctionEnv<'_>) -> bool {
     has_attr(fun.module_env.env, fun.get_attributes(), CREATE_ATTR, false)
+        || has_attr(fun.module_env.env, fun.get_attributes(), INIT_ATTR, false)
 }
 
 /// Check whether the function has a `#[payable]` attribute.

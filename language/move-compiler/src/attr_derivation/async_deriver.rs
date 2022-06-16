@@ -5,12 +5,12 @@
 use crate::{
     attr_derivation::{
         find_attr_slice, new_borrow_exp, new_call_exp, new_full_name, new_fun, new_simple_name_exp,
-        new_simple_type, new_u64, new_var,
+        new_simple_type, new_struct, new_u64, new_var,
     },
     diag,
     parser::ast::{
-        Definition, Exp, Exp_, Function, FunctionName, LeadingNameAccess_, ModuleDefinition,
-        ModuleMember, NameAccessChain_, StructName, Type, Type_, Visibility,
+        Definition, Exp, Exp_, Field, Function, FunctionName, LeadingNameAccess_, ModuleDefinition,
+        ModuleMember, NameAccessChain_, StructFields, StructName, Type, Type_, Visibility,
     },
     shared::{CompilationEnv, NamedAddressMap},
 };
@@ -50,6 +50,7 @@ fn derive_module_for_async(
 
     // Go over the functions marked as #[message]
     let mut new_funs = vec![];
+    let mut new_structs = vec![];
     for mem in &mod_def.members {
         if let ModuleMember::Function(fun_def) = mem {
             if let Some(attr) = find_attr_slice(&fun_def.attributes, MESSAGE_ATTR) {
@@ -61,6 +62,7 @@ fn derive_module_for_async(
                 // Replace the first parameter which is a reference to the actor state with an
                 // actor address.
                 let mut sign = fun_def.signature.clone();
+                let mut fields = vec![];
                 if sign.parameters.is_empty() {
                     env.add_diag(diag!(
                         Derivation::DeriveFailed,
@@ -76,6 +78,10 @@ fn derive_module_for_async(
                     new_var(loc, "actor"),
                     new_simple_type(loc, "address", vec![]),
                 );
+                fields.push((
+                    Field(sp(loc, Symbol::from("actor"))),
+                    new_simple_type(loc, "address", vec![]),
+                ));
 
                 // Create a call `Actor::send__<N>(actor, message_hash, BCS::to_bytes(&arg1), ..)`.
                 let param_count = sign.parameters.len() - 1;
@@ -93,6 +99,11 @@ fn derive_module_for_async(
                 }
                 let mut args = vec![new_simple_name_exp(loc, sp(loc, Symbol::from("actor")))];
                 args.push(message_hash(env, address_map, loc, mod_def, fun_def));
+                fields.push((
+                    Field(sp(loc, Symbol::from("message_hash"))),
+                    new_simple_type(loc, "u64", vec![]),
+                ));
+
                 for i in 0..param_count {
                     let name_exp = new_simple_name_exp(loc, sign.parameters[i + 1].0 .0);
                     args.push(new_call_exp(
@@ -100,6 +111,9 @@ fn derive_module_for_async(
                         new_full_name(loc, "std", "bcs", "to_bytes"),
                         vec![new_borrow_exp(loc, name_exp)],
                     ));
+                    let var = &sign.parameters[i + 1].0;
+                    let ty = &sign.parameters[i + 1].1;
+                    fields.push((Field(sp(loc, var.0.value)), ty.clone()));
                 }
                 let internal_send_name = format!("send__{}", param_count);
                 let send_call = new_call_exp(
@@ -117,11 +131,22 @@ fn derive_module_for_async(
                     sign,
                     send_call,
                 ));
+
+                let mut struct_name = fun_def.name.to_string();
+                struct_name.replace_range(0..1, &struct_name[0..1].to_uppercase());
+                new_structs.push(new_struct(
+                    loc,
+                    StructName(sp(loc, Symbol::from(struct_name))),
+                    StructFields::Defined(fields),
+                ));
             }
         }
     }
     for fun_def in new_funs {
         mod_def.members.push(ModuleMember::Function(fun_def))
+    }
+    for st_def in new_structs {
+        mod_def.members.push(ModuleMember::Struct(st_def))
     }
 }
 

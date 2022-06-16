@@ -73,10 +73,10 @@ use url::Url;
 
 use move_command_line_common::files::FileHash;
 use move_compiler::{
-    expansion::ast::{AbilitySetIntoIter, Address, Fields, ModuleIdent, ModuleIdent_},
+    expansion::ast::{Address, Fields, ModuleIdent, ModuleIdent_},
     naming::ast::{StructDefinition, StructFields, TParam, Type, TypeName_, Type_},
-    parser::ast::{Ability, StructName},
-    shared::{format_delim, Identifier},
+    parser::ast::StructName,
+    shared::Identifier,
     typing::ast::{
         BuiltinFunction_, Exp, ExpListItem, Function, FunctionBody_, LValue, LValueList, LValue_,
         ModuleCall, ModuleDefinition, SequenceItem, SequenceItem_, UnannotatedExp_,

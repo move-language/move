@@ -226,7 +226,7 @@ impl fmt::Display for IdentType {
             Self::FunctionType(mod_ident, name, type_args, args, ret, acquires) => {
                 let type_args_str = if !type_args.is_empty() {
                     let mut s = "<".to_string();
-                    s.push_str(type_list_to_ide_string(type_args).as_str());
+                    s.push_str(&type_list_to_ide_string(type_args));
                     s.push('>');
                     s
                 } else {
@@ -234,7 +234,7 @@ impl fmt::Display for IdentType {
                 };
                 let acquires_str = if !acquires.is_empty() {
                     let mut s = " acquires ".to_string();
-                    s.push_str(type_list_to_ide_string(acquires).as_str());
+                    s.push_str(&type_list_to_ide_string(acquires));
                     s
                 } else {
                     "".to_string()
@@ -269,18 +269,7 @@ fn type_to_ide_string(sp!(_, t): &Type) -> String {
             type_to_ide_string(s)
         ),
         Type_::Param(tp) => {
-            if tp.abilities.is_empty() {
-                format!("{}", tp.user_specified_name)
-            } else {
-                format!(
-                    "{}: {}",
-                    tp.user_specified_name,
-                    format_delim::<Ability, AbilitySetIntoIter>(
-                        tp.abilities.clone().into_iter(),
-                        " + "
-                    )
-                )
-            }
+            format!("{}", tp.user_specified_name)
         }
         Type_::Apply(_, sp!(_, type_name), ss) => match type_name {
             TypeName_::Multiple(_) => {
@@ -309,7 +298,8 @@ fn type_to_ide_string(sp!(_, t): &Type) -> String {
             }
         },
         Type_::Anything => "_".to_string(),
-        _ => "invalid type".to_string(),
+        Type_::Var(_) => "invalid type (var)".to_string(),
+        Type_::UnresolvedError => "invalid type (unresolved)".to_string(),
     }
 }
 
@@ -2481,7 +2471,7 @@ fn symbols_test() {
         6,
         23,
         "M3.move",
-        "T: copy + drop",
+        "T",
     );
     // parameter (type_param_arg function)
     assert_use_def(
@@ -2493,7 +2483,7 @@ fn symbols_test() {
         6,
         39,
         "M3.move",
-        "T: copy + drop",
+        "T",
     );
     // generic type in param type (type_param_arg function)
     assert_use_def(
@@ -2505,7 +2495,7 @@ fn symbols_test() {
         6,
         23,
         "M3.move",
-        "T: copy + drop",
+        "T",
     );
     // generic type in return type (type_param_arg function)
     assert_use_def(
@@ -2517,7 +2507,7 @@ fn symbols_test() {
         6,
         23,
         "M3.move",
-        "T: copy + drop",
+        "T",
     );
     // generic type in struct param type (struct_type_param_arg function)
     assert_use_def(
@@ -2565,7 +2555,7 @@ fn symbols_test() {
         2,
         11,
         "M3.move",
-        "Symbols::M3::ParamStruct<T: copy>",
+        "Symbols::M3::ParamStruct<T>",
     );
     // generic type in struct field definition which itself is a struct
     assert_use_def(
@@ -2577,7 +2567,7 @@ fn symbols_test() {
         22,
         30,
         "M3.move",
-        "T: copy",
+        "T",
     );
 
     let mut fpath = path.clone();

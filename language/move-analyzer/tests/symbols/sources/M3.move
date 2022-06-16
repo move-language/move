@@ -4,7 +4,7 @@ module Symbols::M3 {
         some_field: T,
     }
 
-    fun type_param_arg<T>(param: T): T {
+    fun type_param_arg<T: copy + drop>(param: T): T {
         param
     }
 
@@ -20,7 +20,7 @@ module Symbols::M3 {
         param
     }
 
-    struct AnotherParamStruct<T> {
+    struct AnotherParamStruct<T: copy> {
         some_field: ParamStruct<T>,
     }
 

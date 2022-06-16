@@ -7,9 +7,9 @@ use clap::Parser;
 use crossbeam::channel::{bounded, select};
 use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
-    notification::Notification as _, request::Request as _, CompletionOptions, Diagnostic, OneOf,
-    SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
-    WorkDoneProgressOptions,
+    notification::Notification as _, request::Request as _, CompletionOptions, Diagnostic,
+    HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
+    TextDocumentSyncOptions, WorkDoneProgressOptions,
 };
 use std::{
     collections::BTreeMap,
@@ -77,7 +77,7 @@ fn main() {
             },
         )),
         selection_range_provider: None,
-        hover_provider: None,
+        hover_provider: Some(HoverProviderCapability::Simple(true)),
         // The server provides completions as a user is typing.
         completion_provider: Some(CompletionOptions {
             resolve_provider: None,
@@ -197,6 +197,9 @@ fn on_request(context: &Context, request: &Request) {
         }
         lsp_types::request::References::METHOD => {
             symbols::on_references_request(context, request, &context.symbols.lock().unwrap());
+        }
+        lsp_types::request::HoverRequest::METHOD => {
+            symbols::on_hover_request(context, request, &context.symbols.lock().unwrap());
         }
         _ => eprintln!("handle request '{}' from client", request.method),
     }

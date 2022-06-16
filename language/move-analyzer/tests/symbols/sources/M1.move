@@ -59,11 +59,11 @@ module Symbols::M1 {
         tmp
     }
 
-    fun ret(p: bool): u64 {
-        if (p) {
+    fun ret(p1: bool, p2: u64): u64 {
+        if (p1) {
             return SOME_CONST
         };
-        7
+        p2
     }
 
     fun abort_call() {

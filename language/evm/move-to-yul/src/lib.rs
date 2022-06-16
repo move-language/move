@@ -4,6 +4,8 @@
 
 #![forbid(unsafe_code)]
 
+mod abi_move_metadata;
+pub use abi_move_metadata::parse_metadata_to_move_sig;
 mod abi_native_functions;
 mod abi_signature;
 mod attributes;
@@ -30,6 +32,7 @@ use codespan_reporting::{
     term::termcolor::{ColorChoice, StandardStream, WriteColor},
 };
 use move_compiler::shared::PackagePaths;
+use move_core_types::metadata::Metadata;
 use move_model::{
     model::GlobalEnv, options::ModelBuilderOptions, parse_addresses_from_options,
     run_model_builder_with_options,
@@ -89,6 +92,43 @@ pub fn run_to_yul<W: WriteColor>(error_writer: &mut W, mut options: Options) -> 
         fs::write(options.abi_output, &abi_content)?;
     }
     Ok(())
+}
+
+/// Generate metadata for move-ethereum-abi
+pub fn run_to_abi_metadata<W: WriteColor>(
+    error_writer: &mut W,
+    options: Options,
+) -> anyhow::Result<Vec<Metadata>> {
+    // Run the model builder.
+    let addrs = parse_addresses_from_options(options.named_address_mapping.clone())?;
+    let env = run_model_builder_with_options(
+        vec![PackagePaths {
+            name: None,
+            paths: options.sources.clone(),
+            named_address_map: addrs.clone(),
+        }],
+        vec![PackagePaths {
+            name: None,
+            paths: options.dependencies.clone(),
+            named_address_map: addrs,
+        }],
+        ModelBuilderOptions::default(),
+    )?;
+    // If the model contains any errors, report them now and exit.
+    check_errors(
+        &env,
+        &options,
+        error_writer,
+        "exiting with Move build errors",
+    )?;
+    let metadata_vec = Generator::generate_abi_metadata(&options, &env);
+    check_errors(
+        &env,
+        &options,
+        error_writer,
+        "exiting with Yul generation errors",
+    )?;
+    Ok(metadata_vec)
 }
 
 pub fn check_errors<W: WriteColor>(

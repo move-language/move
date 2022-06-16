@@ -4,7 +4,9 @@
 
 use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
 use itertools::Itertools;
-use move_core_types::{identifier::IdentStr, language_storage::ModuleId, value::MoveValue};
+use move_core_types::{
+    identifier::IdentStr, language_storage::ModuleId, metadata::Metadata, value::MoveValue,
+};
 use std::collections::{BTreeMap, BTreeSet};
 
 use move_model::{
@@ -14,6 +16,7 @@ use move_model::{
 };
 
 use crate::{
+    abi_move_metadata::generate_abi_move_metadata,
     abi_signature::{from_event_sig, from_solidity_sig},
     attributes,
     context::Context,
@@ -134,6 +137,28 @@ impl Generator {
             Ok(ctx.writer.extract_result())
         }
     }
+
+    /// Generate metadata
+    pub(crate) fn generate_abi_metadata(options: &Options, env: &GlobalEnv) -> Vec<Metadata> {
+        let ctx = &Context::new(options, env, false);
+        let mut meta_vec = vec![];
+        for contract in ctx.derive_contracts() {
+            let module = &ctx.env.get_module(contract.module);
+            if !module.is_target() {
+                // Ignore contract from module not target of compilation
+                continue;
+            }
+            let mut gen = Generator::default();
+            gen.compute_ethereum_signatures(ctx, &contract);
+            let metadata = generate_abi_move_metadata(
+                ctx,
+                contract.receive.is_some(),
+                contract.fallback.is_some(),
+            );
+            meta_vec.push(metadata);
+        }
+        meta_vec
+    }
 }
 
 // ================================================================================================
@@ -190,6 +215,44 @@ impl Generator {
         });
         // Generate JSON-ABI
         self.generate_abi_string(ctx);
+    }
+
+    /// Compute ethereum signatures and returns whether
+    pub(crate) fn compute_ethereum_signatures(&mut self, ctx: &Context, contract: &Contract) {
+        let module = &ctx.env.get_module(contract.module);
+        let constructor_opt = contract.constructor.map(|f| module.get_function(f));
+        if let Some(constructor) = constructor_opt {
+            let solidity_sig_constructor = self.get_solidity_signature(ctx, &constructor, false);
+            if let Some(fun_attr_opt) = attributes::construct_fun_attribute(&constructor) {
+                ctx.build_constructor(&solidity_sig_constructor, fun_attr_opt, &constructor);
+            }
+        }
+
+        let callables = contract
+            .callables
+            .iter()
+            .map(|f| module.get_function(*f))
+            .collect_vec();
+
+        for fun in callables {
+            if !self.is_suitable_for_dispatch(ctx, &fun) {
+                ctx.env.diag(
+                    Severity::Warning,
+                    &fun.get_loc(),
+                    "cannot dispatch this function because of unsupported parameter types",
+                );
+                continue;
+            }
+            let sig = self.get_solidity_signature(ctx, &fun, true);
+            if let Some(fun_attr_opt) = attributes::construct_fun_attribute(&fun) {
+                ctx.build_callable_signature_map(&sig, fun_attr_opt, &fun);
+            } else {
+                ctx.env.error(
+                    &fun.get_loc(),
+                    "callable functions can only have one attribute among payable, pure and view",
+                );
+            }
+        }
     }
 
     /// Generate JSON-ABI

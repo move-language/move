@@ -534,7 +534,7 @@ impl Symbolicator {
             typed_ast = Some(typed_program.clone());
             eprintln!("compiling to bytecode");
             let compilation_result = compiler.at_typing(typed_program).build();
-            let (units, _) = match compilation_result {
+            let (units, diags) = match compilation_result {
                 Ok(v) => v,
                 Err(diags) => {
                     diagnostics = Some(diags);
@@ -542,6 +542,11 @@ impl Symbolicator {
                     return Ok((files, vec![]));
                 }
             };
+            // warning diagnostics (if any) since compilation succeeded
+            if !diags.is_empty() {
+                // assign only if non-empty, otherwise return None to reset previous diagnostics
+                diagnostics = Some(diags);
+            }
             eprintln!("compiled to bytecode");
             Ok((files, units))
         })?;

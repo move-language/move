@@ -49,7 +49,10 @@ module Symbols::M4 {
         tmp
     }
 
+}
 
+module Symbols::M5 {
 
+    const SOME_CONST: u64 = 7;
 
 }

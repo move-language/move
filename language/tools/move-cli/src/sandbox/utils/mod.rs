@@ -470,12 +470,8 @@ pub(crate) fn explain_execution_error(
 
             if let Some(error_desc) = error_descriptions.get_explanation(&id, abort_code) {
                 println!(
-                    " Abort code details:\nReason:\n  Name: {}\n  Description:{}\nCategory:\n  \
-                     Name: {}\n  Description:{}",
-                    error_desc.reason.code_name,
-                    error_desc.reason.code_description,
-                    error_desc.category.code_name,
-                    error_desc.category.code_description,
+                    " Abort code details:\nName: {}\nDescription:{}",
+                    error_desc.code_name, error_desc.code_description,
                 )
             } else {
                 println!()

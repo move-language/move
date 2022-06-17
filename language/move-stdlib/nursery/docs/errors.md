@@ -546,6 +546,3 @@ A function to create an error from from a category and a reason.
 
 
 </details>
-
-
-[//]: # ("File containing references which can be used from documentation")

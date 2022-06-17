@@ -37,7 +37,7 @@ module std::option_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 263)]
+    #[expected_failure(abort_code = 1)]
     fun option_borrow_none() {
         option::borrow(&option::none<u64>());
     }
@@ -51,7 +51,7 @@ module std::option_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 263)]
+    #[expected_failure(abort_code = 1)]
     fun borrow_mut_none() {
         option::borrow_mut(&mut option::none<u64>());
     }

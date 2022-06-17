@@ -49,11 +49,8 @@ fn main() {
             args.location, args.abort_code
         ),
         Some(error_desc) => println!(
-            "Category:\n  Name: {}\n  Description: {}\nReason:\n  Name: {}\n  Description: {}",
-            error_desc.category.code_name,
-            error_desc.category.code_description,
-            error_desc.reason.code_name,
-            error_desc.reason.code_description,
+            "Name: {}\nDescription: {}",
+            error_desc.code_name, error_desc.code_description,
         ),
     }
 }

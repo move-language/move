@@ -7,6 +7,6 @@ mod functions;
 mod util;
 
 pub use events::MoveEventAnnotator;
-pub use functions::{MoveCall, FunctionCallAnnotator};
+pub use functions::{FunctionCallAnnotator, MoveCall};
 
 const LRU_CACHE_SIZE: usize = 1_000;

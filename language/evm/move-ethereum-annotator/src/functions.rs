@@ -1,11 +1,12 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::util::{convert_rlp_value, ModuleCache};
+use crate::util::{convert_move_value, convert_rlp_value, ModuleCache};
 use anyhow::{anyhow, bail, Result};
 use move_core_types::{
-    identifier::Identifier, language_storage::ModuleId, resolver::ModuleResolver,
+    identifier::Identifier, language_storage::ModuleId, resolver::ModuleResolver, value::MoveValue,
 };
+use move_vm_runtime::session::SerializedReturnValues;
 
 pub struct FunctionCallAnnotator<R: ModuleResolver>(ModuleCache<R>);
 
@@ -51,5 +52,34 @@ impl<R: ModuleResolver> FunctionCallAnnotator<R> {
             function_name,
             data,
         })
+    }
+
+    pub fn encode_return_value(
+        &mut self,
+        module_id: &ModuleId,
+        call_data: &[u8],
+        return_value: SerializedReturnValues,
+    ) -> Result<Vec<u8>> {
+        if call_data.len() < 4 {
+            bail!("Call data needs at least 4 bytes for the selector")
+        }
+
+        let mut selector: [u8; 4] = [0; 4];
+        selector.copy_from_slice(&call_data[0..4]);
+
+        let (_, func_sig) = self.0.get_function(module_id, selector)?;
+
+        let mut tokens = vec![];
+        for (bytes, layout) in return_value.return_values {
+            let move_value =
+                MoveValue::simple_deserialize(bytes.as_slice(), &layout).map_err(|err| {
+                    anyhow!("Failed to deserialize from move return value: {:?}", err)
+                })?;
+            tokens.push(convert_move_value(&move_value))
+        }
+
+        func_sig
+            .encode_input(tokens.as_slice())
+            .map_err(|err| anyhow!("Unable to encode to ethereum format: {:?}", err))
     }
 }

@@ -2,9 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    vm_status::{VMStatus, StatusCode},
-};
+use crate::vm_status::{VMStatus, StatusCode};
 
 #[test]
 fn test_stats_code() {

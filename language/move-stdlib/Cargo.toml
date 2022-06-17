@@ -1,6 +1,6 @@
 [package]
 name = "move-stdlib"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2018"
 authors = ["Diem Association <opensource@diem.com>"]
 description = "Diem stdlib"

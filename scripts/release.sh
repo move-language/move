@@ -1,4 +1,8 @@
 #!/bin/bash
+# Copyright (c) The Diem Core Contributors
+# Copyright (c) The Move Contributors
+# SPDX-License-Identifier: Apache-2.0
+
 rm -rf move-artifacts/*
 mkdir -p move-artifacts/
 BINS="move move-analyzer move-bytecode-viewer move-disassembler move-prover move-to-yul prover-lab"

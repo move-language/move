@@ -28,8 +28,15 @@ async function main(): Promise<void> {
         // program that is considered to be the "test suite" for the extension.
         const extensionTestsPath = path.resolve(__dirname, 'index.js');
 
+        // The workspace
+        const testWorkspacePath = path.resolve(__dirname, './lsp-demo/lsp-demo.code-workspace');
+
         // Download VS Code, unzip it, and run the "test suite" program.
-        await runTests({ extensionDevelopmentPath, extensionTestsPath });
+        await runTests({
+            extensionDevelopmentPath,
+            extensionTestsPath,
+            launchArgs: [testWorkspacePath],
+        });
     } catch (_err: unknown) {
         console.error('Failed to run tests');
         process.exit(1);

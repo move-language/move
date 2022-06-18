@@ -110,7 +110,7 @@
         "max-len": [
             "warn",
             {
-                "code": 100,
+                "code": 120,
                 "ignoreUrls": true
             }
         ],
@@ -210,6 +210,8 @@
         "@typescript-eslint/unified-signatures": "warn",
 
         // The following are eslint-plugin-tsdoc rules:
-        "tsdoc/syntax": "warn"
+        "tsdoc/syntax": "warn",
+
+        "@typescript-eslint/no-unsafe-return": "off"
     }
 }

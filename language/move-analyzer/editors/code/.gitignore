@@ -7,3 +7,4 @@ out
 .vscode-test
 # VS Code extension package (VSIX) archive
 *.vsix
+yarn.lock

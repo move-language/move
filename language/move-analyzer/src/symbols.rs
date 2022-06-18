@@ -533,7 +533,7 @@ impl Symbolicator {
             typed_ast = Some(typed_program.clone());
             eprintln!("compiling to bytecode");
             let compilation_result = compiler.at_typing(typed_program).build();
-            let (units, diags) = match compilation_result {
+            let (units, _) = match compilation_result {
                 Ok(v) => v,
                 Err(diags) => {
                     diagnostics = Some(diags);
@@ -541,11 +541,6 @@ impl Symbolicator {
                     return Ok((files, vec![]));
                 }
             };
-            // warning diagnostics (if any) since compilation succeeded
-            if !diags.is_empty() {
-                // assign only if non-empty, otherwise return None to reset previous diagnostics
-                diagnostics = Some(diags);
-            }
             eprintln!("compiled to bytecode");
             Ok((files, units))
         })?;
@@ -1776,8 +1771,8 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request, symbols: 
         line,
         col,
         request.id.clone(),
-        |u| {
-            u.type_def_loc.map(|def_loc| {
+        |u| match u.type_def_loc {
+            Some(def_loc) => {
                 let range = Range {
                     start: def_loc.start,
                     end: def_loc.start,
@@ -1787,8 +1782,9 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request, symbols: 
                     uri: Url::from_file_path(path.as_str()).unwrap(),
                     range,
                 };
-                serde_json::to_value(loc).unwrap()
-            })
+                Some(serde_json::to_value(loc).unwrap())
+            }
+            None => Some(serde_json::to_value(Option::<lsp_types::Location>::None).unwrap()),
         },
     );
 }

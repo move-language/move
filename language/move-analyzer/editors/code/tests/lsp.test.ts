@@ -22,7 +22,7 @@ Mocha.suite('LSP', () => {
         await sleep(1000);
 
         // 3. execute command
-        const exec: vscode.TaskExecution = await vscode.commands.executeCommand('serverVersion');
+        const exec: vscode.TaskExecution = await vscode.commands.executeCommand('move-analyzer.serverVersion');
         const exitCode = await taskResult(exec);
         await sleep(1000);
         assert.strictEqual(0, exitCode);

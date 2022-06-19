@@ -36,6 +36,9 @@ async function main(): Promise<void> {
             extensionDevelopmentPath,
             extensionTestsPath,
             launchArgs: [testWorkspacePath],
+            extensionTestsEnv: {
+                'mode': process.env['mode'] ?? 'test',
+            },
         });
     } catch (_err: unknown) {
         console.error('Failed to run tests');

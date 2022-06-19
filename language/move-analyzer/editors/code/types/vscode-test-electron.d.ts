@@ -7,6 +7,7 @@ declare module '@vscode/test-electron' {
         extensionDevelopmentPath?: string;
         extensionTestsPath?: string;
         launchArgs?: string[];
+        extensionTestsEnv?: { [key: string]: string };
         // N.B.: vscode-test's definition of `TestOptions` contains many more fields:
         // https://github.com/microsoft/vscode-test/blob/v1.6.1/lib/runTest.ts#L9-L79
     }

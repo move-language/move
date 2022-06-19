@@ -206,12 +206,14 @@
         ],
         "@typescript-eslint/strict-boolean-expressions": "warn",
         "@typescript-eslint/switch-exhaustiveness-check": "warn",
-        "@typescript-eslint/type-annotation-spacing": "warn",
         "@typescript-eslint/unified-signatures": "warn",
 
         // The following are eslint-plugin-tsdoc rules:
         "tsdoc/syntax": "warn",
 
-        "@typescript-eslint/no-unsafe-return": "off"
+        "@typescript-eslint/no-unsafe-return": "off",
+        "@typescript-eslint/type-annotation-spacing": "off",
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/no-unsafe-assignment": "off"
     }
 }

@@ -67,4 +67,5 @@ export function activate(extensionContext: Readonly<vscode.ExtensionContext>): v
     // All other utilities provided by this extension occur via the language server.
     context.startClient();
     context.registerCommand('textDocumentCompletion', commands.textDocumentCompletion);
+    context.registerCommand('textDocumentDocumentSymbol', commands.textDocumentDocumentSymbol);
 }

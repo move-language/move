@@ -59,6 +59,7 @@ use lsp_server::{Request, RequestId};
 use lsp_types::{
     Diagnostic, GotoDefinitionParams, Hover, HoverContents, HoverParams, LanguageString, Location,
     MarkedString, Position, Range, ReferenceParams,
+    DocumentSymbolParams, SymbolInformation, SymbolKind
 };
 use std::{
     cmp,
@@ -1809,6 +1810,60 @@ pub fn on_use_request(
     // unwrap will succeed based on the logic above which the compiler is unable to figure out
     // without using Option
     let response = lsp_server::Response::new_ok(id, result.unwrap());
+    if let Err(err) = context
+        .connection
+        .sender
+        .send(lsp_server::Message::Response(response))
+    {
+        eprintln!("could not send use response: {:?}", err);
+    }
+}
+
+/// Handles definition request of the language server
+pub fn on_document_symbol_request(context: &Context, request: &Request, symbols: &Symbols) {
+    let parameters = serde_json::from_value::<DocumentSymbolParams>(request.params.clone())
+        .expect("could not deserialize document symbol request");
+
+    let fpath = parameters.text_document.uri.path();
+    let symbols = symbols.file_use_defs.get(&PathBuf::from(fpath)).unwrap();
+
+    let mut defs:Vec<SymbolInformation> = vec![];
+
+    let mut clone_syms = symbols.clone();
+
+    for (line, uses) in clone_syms.elements() {
+        for u in uses {
+            let range = Range {
+                start: u.def_loc.start,
+                end: u.def_loc.start,
+            };
+
+
+            match u.use_type {
+                IdentType::RegularType(r) => {
+
+                },
+                IdentType::FunctionType(f,s,..)=>{
+                    let def = SymbolInformation {
+                        name: format!("{}", s.as_str()),
+                        kind: SymbolKind::Function,
+                        location: Location {
+                            uri: Url::from_file_path(fpath).unwrap(),
+                            range,
+                        },
+                        tags: Some(vec![]),
+                        deprecated: Some(false),
+                        container_name: None,
+                    };
+                    
+                    defs.push(def);
+                }
+            }
+        }   // for u in uses
+    } // for (line, uses) in symbols
+
+    // unwrap will succeed based on the logic above which the compiler is unable to figure out
+    let response = lsp_server::Response::new_ok(request.id.clone(), defs);
     if let Err(err) = context
         .connection
         .sender

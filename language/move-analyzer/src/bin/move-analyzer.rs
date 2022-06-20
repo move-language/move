@@ -10,6 +10,7 @@ use lsp_types::{
     notification::Notification as _, request::Request as _, CompletionOptions, Diagnostic,
     HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
     TextDocumentSyncOptions, WorkDoneProgressOptions,
+    DocumentSymbolOptions,
 };
 use std::{
     collections::BTreeMap,
@@ -95,6 +96,7 @@ fn main() {
         }),
         definition_provider: Some(OneOf::Left(symbols::DEFS_AND_REFS_SUPPORT)),
         references_provider: Some(OneOf::Left(symbols::DEFS_AND_REFS_SUPPORT)),
+        document_symbol_provider: Some(OneOf::Left(true)),
         ..Default::default()
     })
     .expect("could not serialize server capabilities");
@@ -200,7 +202,10 @@ fn on_request(context: &Context, request: &Request) {
         }
         lsp_types::request::HoverRequest::METHOD => {
             symbols::on_hover_request(context, request, &context.symbols.lock().unwrap());
-        }
+        },
+        lsp_types::request::DocumentSymbolRequest::METHOD => {
+            symbols::on_document_symbol_request(context, request, &context.symbols.lock().unwrap());
+        },
         _ => eprintln!("handle request '{}' from client", request.method),
     }
 }

@@ -39,4 +39,33 @@ Mocha.suite('LSP', () => {
 
         assert.deepStrictEqual(ret.length > 0, true);
     });
+
+    Mocha.test('textDocument/documentSymbol', async () => {
+        const ext = vscode.extensions.getExtension('move.move-analyzer');
+        assert.ok(ext);
+
+        await ext.activate();
+        await sleep(1000);
+
+        // 1. get workdir
+        const workDir = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
+
+        // 2. open doc
+        const docs = await vscode.workspace.openTextDocument(path.join(workDir, 'sources/M1.move'));
+        await vscode.window.showTextDocument(docs);
+        await sleep(1000);
+
+        // 3. execute command
+        const params: lc.DocumentSymbolParams = {
+            textDocument: {
+                uri: docs.uri.toString(),
+            },
+        };
+
+        const ret: Array<lc.DocumentSymbol> = await vscode.commands.executeCommand(
+            'move-analyzer.textDocumentDocumentSymbol', params,
+        );
+
+        assert.deepStrictEqual(ret.length > 0, true);
+    });
 });

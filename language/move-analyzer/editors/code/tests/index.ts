@@ -28,7 +28,7 @@ export async function run(): Promise<void> {
         color: true,
         // The default timeout of 2000 miliseconds can sometimes be too quick, since the extension
         // tests need to launch VS Code first.
-        timeout: 5000,
+        timeout: 1000 * 60 * 5, // 5m
     });
 
     const testsRoot = path.resolve(__dirname, '..');

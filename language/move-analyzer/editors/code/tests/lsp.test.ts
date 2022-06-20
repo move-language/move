@@ -2,8 +2,9 @@ import * as assert from 'assert';
 import * as Mocha from 'mocha';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import * as lc from 'vscode-languageclient';
 
-import { sleep, taskResult } from './utils';
+import { sleep } from './utils';
 
 Mocha.suite('LSP', () => {
     Mocha.test('textDocument/completion', async () => {
@@ -22,15 +23,20 @@ Mocha.suite('LSP', () => {
         await sleep(1000);
 
         // 3. execute command
-        const params = {
-            uri: docs.uri,
-            postion: docs.positionAt(0),
+        const params: lc.CompletionParams = {
+            context: {
+                triggerKind: lc.CompletionTriggerKind.TriggerCharacter,
+            },
+            textDocument: {
+                uri: docs.uri.toString(),
+            },
+            position: lc.Position.create(36, 24),
         };
 
-        const exec: vscode.TaskExecution = await vscode.commands.executeCommand('move-analyzer.textDocumentCompletion',
-            params);
-        const exitCode = await taskResult(exec);
-        await sleep(1000);
-        assert.strictEqual(0, exitCode);
+        const ret: Array<lc.CompletionItem> = await vscode.commands.executeCommand(
+            'move-analyzer.textDocumentCompletion', params,
+        );
+
+        assert.deepStrictEqual(ret.length > 0, true);
     });
 });

@@ -18,8 +18,8 @@ Command `package coverage summary --summarize-functions`:
 +-------------------------+
 Module 00000000000000000000000000000001::AModule
 	fun double_except_three
-		total: 11
-		covered: 11
+		total: 10
+		covered: 10
 		% coverage: 100.00
 >>> % Module coverage: 100.00
 +-------------------------+
@@ -27,13 +27,12 @@ Module 00000000000000000000000000000001::AModule
 +-------------------------+
 Command `package coverage source --module AModule`:
 module std::AModule {
-    use std::errors;
 
     /// x was three
     const E_IS_THREE: u64 = 0;
 
     public fun double_except_three(x: u64): u64 {
-        assert!(x != 3, errors::invalid_argument(E_IS_THREE));
+        assert!(x != 3, E_IS_THREE);
         x * x
     }
 
@@ -58,16 +57,15 @@ B0:
 [6]	0: CopyLoc[0](x: u64)
 [6]	1: LdU64(3)
 [6]	2: Neq
-[6]	3: BrTrue(7)
+[6]	3: BrTrue(6)
 B1:
 [2]	4: LdAddr[0](U64: [0, 0, 0, 0, 0, 0, 0, 0])
-[2]	5: Call[1](invalid_argument(u64): u64)
-[2]	6: Abort
+[2]	5: Abort
 B2:
-[4]	7: CopyLoc[0](x: u64)
-[4]	8: MoveLoc[0](x: u64)
-[4]	9: Mul
-[4]	10: Ret
+[4]	6: CopyLoc[0](x: u64)
+[4]	7: MoveLoc[0](x: u64)
+[4]	8: Mul
+[4]	9: Ret
 }
 }
 Command `package disassemble --package MoveStdlib --name signer`:

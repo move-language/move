@@ -996,7 +996,7 @@ module DiemFramework::DiemAccount {
     spec schema RestoreKeyRotationCapabilityAbortsIf {
         cap: KeyRotationCapability;
         aborts_if !exists_at(cap.account_address) with errors::NOT_PUBLISHED;
-        aborts_if !delegated_key_rotation_capability(cap.account_address) with errors::INVALID_ARGUMENT;
+        aborts_if !delegated_key_rotation_capability(cap.account_address) with option::EOPTION_IS_SET;
     }
     spec schema RestoreKeyRotationCapabilityEnsures {
         cap: KeyRotationCapability;

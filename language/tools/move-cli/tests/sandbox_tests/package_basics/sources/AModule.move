@@ -1,11 +1,10 @@
 module std::AModule {
-    use std::errors;
 
     /// x was three
     const E_IS_THREE: u64 = 0;
 
     public fun double_except_three(x: u64): u64 {
-        assert!(x != 3, errors::invalid_argument(E_IS_THREE));
+        assert!(x != 3, E_IS_THREE);
         x * x
     }
 

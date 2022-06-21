@@ -116,10 +116,4 @@
 		"vsce": "^2.5.1",
 		"vscode-test": "^1.6.1"
 	},
-	"__metadata": {
-		"id": "71e74fc8-23c2-47b7-8594-ed00192d96a6",
-		"publisherDisplayName": "move",
-		"publisherId": "40d7def1-c662-4965-9ead-c06109c7cc6d",
-		"isPreReleaseVersion": false
-	}
 }

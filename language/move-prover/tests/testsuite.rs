@@ -180,6 +180,7 @@ fn get_flags_and_baseline(
     let dep_flags = vec![
         // stdlib is commonly required
         "--dependency=../move-stdlib/sources",
+        "--dependency=../move-stdlib/nursery/sources",
         // table extension is required
         "--dependency=../extensions/move-table-extension/sources",
     ];

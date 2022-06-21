@@ -304,6 +304,26 @@ fn type_to_ide_string(sp!(_, t): &Type) -> String {
     }
 }
 
+fn type_to_lsp_symbol_kind(sp!(_, t): &Type) -> SymbolKind {
+    match t {
+        Type_::Unit => SymbolKind::Null,
+        Type_::Ref(_, _) => SymbolKind::Interface,
+        Type_::Param(_) => SymbolKind::Variable,
+        Type_::Apply(_, sp!(_, type_name), _) => match type_name {
+            TypeName_::Multiple(_) => SymbolKind::Array,
+            TypeName_::Builtin(name) => match name.to_string().as_str() {
+                "bool" => SymbolKind::Boolean,
+                "u8" | "u16" | "u32" | "u64" | "u128" | "usize" => SymbolKind::Number,
+            },
+            TypeName_::ModuleType(_, _) => SymbolKind::Module,
+        },
+        Type_::Anything => SymbolKind::Variable,
+        Type_::Var(_) => SymbolKind::Variable,
+        Type_::UnresolvedError => SymbolKind::Variable,
+    }
+       
+}
+
 pub fn addr_to_ide_string(addr: &Address) -> String {
     match addr {
         Address::Numerical(None, sp!(_, bytes)) => format!("{}", bytes),
@@ -1825,38 +1845,52 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
         .expect("could not deserialize document symbol request");
 
     let fpath = parameters.text_document.uri.path();
-    let symbols = symbols.file_use_defs.get(&PathBuf::from(fpath)).unwrap();
+    let use_defs = symbols.file_use_defs.get(&PathBuf::from(fpath)).unwrap();
 
     let mut defs:Vec<SymbolInformation> = vec![];
+    let mut clone_use_defs = use_defs.clone();
 
-    let mut clone_syms = symbols.clone();
-
-    for (line, uses) in clone_syms.elements() {
+    for (line, uses) in clone_use_defs.elements() {
         for u in uses {
+            let path = symbols.file_name_mapping.get(&u.def_loc.fhash).unwrap();
+            if !path.eq_ignore_ascii_case(fpath) {
+                // Only show definitions from the current file
+                continue;
+            }
+            
             let range = Range {
                 start: u.def_loc.start,
                 end: u.def_loc.start,
             };
-
+            let loc = Location {
+                uri: Url::from_file_path(path.as_str()).unwrap(),
+                range,
+            };
 
             match u.use_type {
-                IdentType::RegularType(r) => {
-
-                },
-                IdentType::FunctionType(f,s,..)=>{
-                    let def = SymbolInformation {
-                        name: format!("{}", s.as_str()),
-                        kind: SymbolKind::Function,
-                        location: Location {
-                            uri: Url::from_file_path(fpath).unwrap(),
-                            range,
-                        },
+                IdentType::RegularType(t) => {
+                    let symbol = SymbolInformation {
+                        name: type_to_ide_string(&t),
+                        kind: type_to_lsp_symbol_kind(&t),
+                        location: loc,
                         tags: Some(vec![]),
                         deprecated: Some(false),
                         container_name: None,
                     };
                     
-                    defs.push(def);
+                    defs.push(symbol);
+                },
+                IdentType::FunctionType(f,s,..)=>{
+                    let symbol = SymbolInformation {
+                        name: format!("{}", s.as_str()),
+                        kind: SymbolKind::Function,
+                        location: loc,
+                        tags: Some(vec![]),
+                        deprecated: Some(false),
+                        container_name: None,
+                    };
+                    
+                    defs.push(symbol);
                 }
             }
         }   // for u in uses

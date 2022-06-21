@@ -186,7 +186,7 @@ pub struct Symbolicator {
 
 /// Maps a line number to a list of use-def pairs on a given line (use-def set is sorted by
 /// col_start)
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 struct UseDefMap(BTreeMap<u32, BTreeSet<UseDef>>);
 
 /// Result of the symbolication process
@@ -314,6 +314,12 @@ fn type_to_lsp_symbol_kind(sp!(_, t): &Type) -> SymbolKind {
             TypeName_::Builtin(name) => match name.to_string().as_str() {
                 "bool" => SymbolKind::Boolean,
                 "u8" | "u16" | "u32" | "u64" | "u128" | "usize" => SymbolKind::Number,
+                "i8" | "i16" | "i32" | "i64" | "i128" | "isize" => SymbolKind::Number,
+                "f32" | "f64" => SymbolKind::Number,
+                "str" => SymbolKind::String,
+                "char" => SymbolKind::String,
+                "()" => SymbolKind::Null,
+                _ => SymbolKind::Interface,
             },
             TypeName_::ModuleType(_, _) => SymbolKind::Module,
         },
@@ -1839,7 +1845,7 @@ pub fn on_use_request(
     }
 }
 
-/// Handles definition request of the language server
+/// Handles document symbol request of the language server
 pub fn on_document_symbol_request(context: &Context, request: &Request, symbols: &Symbols) {
     let parameters = serde_json::from_value::<DocumentSymbolParams>(request.params.clone())
         .expect("could not deserialize document symbol request");
@@ -1848,9 +1854,9 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
     let use_defs = symbols.file_use_defs.get(&PathBuf::from(fpath)).unwrap();
 
     let mut defs:Vec<SymbolInformation> = vec![];
-    let mut clone_use_defs = use_defs.clone();
+    let clone_use_defs = use_defs.clone();
 
-    for (line, uses) in clone_use_defs.elements() {
+    for (_, uses) in clone_use_defs.elements() {
         for u in uses {
             let path = symbols.file_name_mapping.get(&u.def_loc.fhash).unwrap();
             if !path.eq_ignore_ascii_case(fpath) {
@@ -1880,7 +1886,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
                     
                     defs.push(symbol);
                 },
-                IdentType::FunctionType(f,s,..)=>{
+                IdentType::FunctionType(_f,s,..)=>{
                     let symbol = SymbolInformation {
                         name: format!("{}", s.as_str()),
                         kind: SymbolKind::Function,

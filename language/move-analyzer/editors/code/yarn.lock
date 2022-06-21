@@ -126,6 +126,11 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-14.18.21.tgz#0155ee46f6be28b2ff0342ca1a9b9fd4468bef41"
   integrity sha512-x5W9s+8P4XteaxT/jKF0PSb7XEvo5VmqEWgsMlyeY4ZlLK8I6aH6g5TPPyDlLAep+GYf4kefb7HFyc7PAO3m+Q==
 
+"@types/normalize-path@^3.0.0":
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/@types/normalize-path/-/normalize-path-3.0.0.tgz#bb5c46cab77b93350b4cf8d7ff1153f47189ae31"
+  integrity sha512-Nd8y/5t/7CRakPYiyPzr/IAfYusy1FkcZYFEAcoMZkwpJv2n4Wm+olW+e7xBdHEXhOnWdG9ddbar0gqZWS4x5Q==
+
 "@types/vscode@^1.58.2":
   version "1.68.0"
   resolved "https://registry.yarnpkg.com/@types/vscode/-/vscode-1.68.0.tgz#c0864e4ea43c509bfc6b53f4e91aa923fd0475b8"
@@ -550,13 +555,6 @@ concat-map@0.0.1:
   version "0.0.1"
   resolved "https://registry.yarnpkg.com/concat-map/-/concat-map-0.0.1.tgz#d8a96bd77fd68df7793a73036a3ba0d5405d477b"
   integrity sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==
-
-copy-assets@^1.0.3:
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/copy-assets/-/copy-assets-1.0.3.tgz#45e5fc097d446fbb2a90a783377573e9ce6cce97"
-  integrity sha512-cWXjEvDXOfVvT53XHPV6AG0W+Re9sf3ga2FsNQ8RG0xCurF17pt+G0BgvavrJQ7FYydlpNwf0+6z4TZ+rtc0Fw==
-  dependencies:
-    minimist "^1.2.5"
 
 copyfiles@2.4.1:
   version "2.4.1"
@@ -1414,7 +1412,7 @@ minimatch@^3.0.3, minimatch@^3.0.4, minimatch@^3.1.1:
   dependencies:
     brace-expansion "^1.1.7"
 
-minimist@^1.2.0, minimist@^1.2.3, minimist@^1.2.5, minimist@^1.2.6:
+minimist@^1.2.0, minimist@^1.2.3, minimist@^1.2.6:
   version "1.2.6"
   resolved "https://registry.yarnpkg.com/minimist/-/minimist-1.2.6.tgz#8637a5b759ea0d6e98702cfb3a9283323c93af44"
   integrity sha512-Jsjnk4bw3YJqYzbdyBiNsPWHPfO++UGG749Cxs6peCu5Xg4nrena6OVxOYxrQTqww0Jmwt+Ref8rggumkTLz9Q==

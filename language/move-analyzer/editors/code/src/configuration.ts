@@ -4,6 +4,7 @@
 
 import * as os from 'os';
 import * as vscode from 'vscode';
+import * as path from 'path';
 
 /**
  * User-defined configuration values, such as those specified in VS Code settings.
@@ -26,12 +27,12 @@ export class Configuration {
     /** The path to the move-analyzer executable. */
     get serverPath(): string {
         const defaultName = '~/.cargo/bin/move-analyzer';
-        const path = this.configuration.get<string>('server.path', defaultName);
+        const serverPath = this.configuration.get<string>('server.path', defaultName);
 
-        if (path.startsWith('~/')) {
-            return os.homedir() + path.slice('~'.length);
+        if (serverPath.startsWith('~/')) {
+            return os.homedir() + serverPath.slice('~'.length);
         }
 
-        return path;
+        return path.resolve(serverPath);
     }
 }

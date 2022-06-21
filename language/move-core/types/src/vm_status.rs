@@ -132,7 +132,7 @@ impl VMStatus {
                 debug_assert!(code != StatusCode::ABORTED);
                 debug_assert!(
                     code.status_type() != StatusType::Execution || code == StatusCode::OUT_OF_GAS
-                    );
+                );
                 code
             }
         }

@@ -115,5 +115,5 @@
 		"typescript-formatter": "^7.2.2",
 		"vsce": "^2.5.1",
 		"vscode-test": "^1.6.1"
-	},
+	}
 }

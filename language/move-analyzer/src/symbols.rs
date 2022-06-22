@@ -57,9 +57,9 @@ use crossbeam::channel::Sender;
 use im::ordmap::OrdMap;
 use lsp_server::{Request, RequestId};
 use lsp_types::{
-    Diagnostic, GotoDefinitionParams, Hover, HoverContents, HoverParams, LanguageString, Location,
-    MarkedString, Position, Range, ReferenceParams,
-    DocumentSymbolParams, SymbolInformation, SymbolKind
+    Diagnostic, DocumentSymbolParams, GotoDefinitionParams, Hover, HoverContents, HoverParams,
+    LanguageString, Location, MarkedString, Position, Range, ReferenceParams, SymbolInformation,
+    SymbolKind,
 };
 use std::{
     cmp,
@@ -144,24 +144,26 @@ pub struct UseDef {
 }
 
 /// Definition of a struct field
-#[derive(Debug)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
 struct FieldDef {
     name: Symbol,
     start: Position,
 }
 
 /// Definition of a struct
-#[derive(Debug)]
+#[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq)]
 struct StructDef {
     name_start: Position,
     field_defs: Vec<FieldDef>,
 }
 
 /// Module-level definitions
-#[derive(Debug)]
+#[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq)]
 struct ModuleDefs {
     /// File where this module is located
     fhash: FileHash,
+    /// Location where this module is located
+    start: Position,
     /// Struct definitions
     structs: BTreeMap<Symbol, StructDef>,
     /// Const definitions
@@ -197,6 +199,8 @@ pub struct Symbols {
     file_use_defs: BTreeMap<PathBuf, UseDefMap>,
     /// A mapping from file hashes to file names
     file_name_mapping: BTreeMap<FileHash, Symbol>,
+    /// A mapping from filePath to ModuleDefs
+    file_mods: BTreeMap<PathBuf, BTreeSet<ModuleDefs>>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Copy)]
@@ -306,7 +310,7 @@ fn type_to_ide_string(sp!(_, t): &Type) -> String {
 
 fn type_to_lsp_symbol_kind(sp!(_, t): &Type) -> SymbolKind {
     match t {
-        Type_::Unit => SymbolKind::Null,
+        Type_::Unit => SymbolKind::Namespace,
         Type_::Ref(_, _) => SymbolKind::Interface,
         Type_::Param(_) => SymbolKind::Variable,
         Type_::Apply(_, sp!(_, type_name), _) => match type_name {
@@ -327,7 +331,6 @@ fn type_to_lsp_symbol_kind(sp!(_, t): &Type) -> SymbolKind {
         Type_::Var(_) => SymbolKind::Variable,
         Type_::UnresolvedError => SymbolKind::Variable,
     }
-       
 }
 
 pub fn addr_to_ide_string(addr: &Address) -> String {
@@ -594,6 +597,8 @@ impl Symbolicator {
         let mut mod_outer_defs = BTreeMap::new();
         let mut references = BTreeMap::new();
         let mut mod_use_defs = BTreeMap::new();
+        let mut file_mods = BTreeMap::new();
+
         for (pos, module_ident, module_def) in modules {
             let (defs, symbols) = Self::get_mod_outer_defs(
                 &pos,
@@ -603,6 +608,17 @@ impl Symbolicator {
                 &files,
                 &file_id_mapping,
             );
+
+            let cloned_defs = defs.clone();
+            let path = file_name_mapping.get(&cloned_defs.fhash.clone()).unwrap();
+            file_mods
+                .entry(
+                    fs::canonicalize(path.as_str())
+                        .unwrap_or_else(|_| PathBuf::from(path.as_str())),
+                )
+                .or_insert_with(BTreeSet::new)
+                .insert(cloned_defs);
+
             mod_outer_defs.insert(*module_ident, defs);
             mod_use_defs.insert(*module_ident, symbols);
         }
@@ -640,6 +656,7 @@ impl Symbolicator {
             references,
             file_use_defs,
             file_name_mapping,
+            file_mods,
         };
         Ok((Some(symbols), lsp_diagnostics))
     }
@@ -650,6 +667,7 @@ impl Symbolicator {
             file_use_defs: BTreeMap::new(),
             references: BTreeMap::new(),
             file_name_mapping: BTreeMap::new(),
+            file_mods: BTreeMap::new(),
         }
     }
 
@@ -804,8 +822,17 @@ impl Symbolicator {
         }
 
         let fhash = loc.file_hash();
+        let start = match Self::get_start_loc(&loc, files, file_id_mapping) {
+            Some(s) => s,
+            None => {
+                debug_assert!(false);
+                return (ModuleDefs { structs, functions, constants }, use_def_map);
+            }
+        };
+
         let module_defs = ModuleDefs {
             fhash,
+            start,
             structs,
             constants,
             functions,
@@ -1853,53 +1880,55 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
     let fpath = parameters.text_document.uri.path();
     let use_defs = symbols.file_use_defs.get(&PathBuf::from(fpath)).unwrap();
 
-    let mut defs:Vec<SymbolInformation> = vec![];
+    let mut defs: Vec<SymbolInformation> = vec![];
     let clone_use_defs = use_defs.clone();
 
-    for (_, uses) in clone_use_defs.elements() {
+    for (line, uses) in clone_use_defs.elements() {
         for u in uses {
-            let path = symbols.file_name_mapping.get(&u.def_loc.fhash).unwrap();
-            if !path.eq_ignore_ascii_case(fpath) {
-                // Only show definitions from the current file
+            if !is_def_self(symbols, &u, line, fpath) {
                 continue;
             }
-            
+
             let range = Range {
                 start: u.def_loc.start,
                 end: u.def_loc.start,
             };
+
+            let path = symbols.file_name_mapping.get(&u.def_loc.fhash).unwrap();
             let loc = Location {
                 uri: Url::from_file_path(path.as_str()).unwrap(),
                 range,
             };
 
+            let use_type_name = format!("{}", u.use_type);
+
             match u.use_type {
                 IdentType::RegularType(t) => {
                     let symbol = SymbolInformation {
-                        name: type_to_ide_string(&t),
+                        name: use_type_name,
                         kind: type_to_lsp_symbol_kind(&t),
                         location: loc,
                         tags: Some(vec![]),
                         deprecated: Some(false),
                         container_name: None,
                     };
-                    
+
                     defs.push(symbol);
-                },
-                IdentType::FunctionType(_f,s,..)=>{
+                }
+                IdentType::FunctionType(_f, _s, ..) => {
                     let symbol = SymbolInformation {
-                        name: format!("{}", s.as_str()),
+                        name: use_type_name,
                         kind: SymbolKind::Function,
                         location: loc,
                         tags: Some(vec![]),
                         deprecated: Some(false),
                         container_name: None,
                     };
-                    
+
                     defs.push(symbol);
                 }
             }
-        }   // for u in uses
+        } // for u in uses
     } // for (line, uses) in symbols
 
     // unwrap will succeed based on the logic above which the compiler is unable to figure out
@@ -1911,6 +1940,18 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
     {
         eprintln!("could not send use response: {:?}", err);
     }
+}
+
+fn is_def_self(symbols: &Symbols, u: &UseDef, line: u32, fpath: &str) -> bool {
+    let path = symbols.file_name_mapping.get(&u.def_loc.fhash).unwrap();
+    if path.eq_ignore_ascii_case(fpath)
+        && line == u.def_loc.start.line
+        && u.col_start == u.def_loc.start.character
+    {
+        return true;
+    }
+
+    return false;
 }
 
 #[cfg(test)]

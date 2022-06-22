@@ -62,10 +62,14 @@ Mocha.suite('LSP', () => {
             },
         };
 
-        const ret: Array<lc.DocumentSymbol> = await vscode.commands.executeCommand(
+        const syms: Array<lc.SymbolInformation> = await vscode.commands.executeCommand(
             'move-analyzer.textDocumentDocumentSymbol', params,
         );
 
-        assert.deepStrictEqual(ret.length > 0, true);
+        console.log('syms: ', syms);
+
+        assert.ok(syms);
+        assert.deepStrictEqual(syms[0]?.kind, lc.SymbolKind.Function);
+        assert.deepStrictEqual(syms[0]?.name, '0xCAFE::M1');
     });
 });

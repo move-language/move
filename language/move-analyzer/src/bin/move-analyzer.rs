@@ -9,8 +9,7 @@ use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
     notification::Notification as _, request::Request as _, CompletionOptions, Diagnostic,
     HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
-    TextDocumentSyncOptions, WorkDoneProgressOptions,
-    DocumentSymbolOptions,
+    TextDocumentSyncOptions, WorkDoneProgressOptions
 };
 use std::{
     collections::BTreeMap,

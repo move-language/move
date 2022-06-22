@@ -58,7 +58,7 @@ use im::ordmap::OrdMap;
 use lsp_server::{Request, RequestId};
 use lsp_types::{
     Diagnostic, DocumentSymbolParams, GotoDefinitionParams, Hover, HoverContents, HoverParams,
-    LanguageString, Location, MarkedString, Position, Range, ReferenceParams, SymbolInformation,
+    LanguageString, Location, MarkedString, Position, Range, ReferenceParams, DocumentSymbol,
     SymbolKind,
 };
 use std::{
@@ -164,6 +164,8 @@ struct ModuleDefs {
     fhash: FileHash,
     /// Location where this module is located
     start: Position,
+    /// Module name
+    name: ModuleIdent_,
     /// Struct definitions
     structs: BTreeMap<Symbol, StructDef>,
     /// Const definitions
@@ -821,18 +823,20 @@ impl Symbolicator {
             );
         }
 
+        let name = mod_ident.value.clone();
         let fhash = loc.file_hash();
         let start = match Self::get_start_loc(&loc, files, file_id_mapping) {
             Some(s) => s,
             None => {
                 debug_assert!(false);
-                return (ModuleDefs { structs, functions, constants }, use_def_map);
+                return (ModuleDefs { fhash, start: Position{line:0, character:0}, name, structs, constants, functions }, use_def_map);
             }
         };
 
         let module_defs = ModuleDefs {
             fhash,
             start,
+            name,
             structs,
             constants,
             functions,
@@ -1878,58 +1882,92 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
         .expect("could not deserialize document symbol request");
 
     let fpath = parameters.text_document.uri.path();
-    let use_defs = symbols.file_use_defs.get(&PathBuf::from(fpath)).unwrap();
+    let empty_mods:BTreeSet<ModuleDefs> = BTreeSet::new();
+    let mods = symbols.file_mods.get(&PathBuf::from(fpath)).unwrap_or(&empty_mods);
 
-    let mut defs: Vec<SymbolInformation> = vec![];
-    let clone_use_defs = use_defs.clone();
+    let mut defs: Vec<DocumentSymbol> = vec![];
+    for mod_def in mods {
+        let name = mod_def.name.module.clone().to_string();
+        let detail = Some(mod_def.name.clone().to_string());
+        let kind = SymbolKind::Module;
+        let range = Range {
+            start: mod_def.start,
+            end: mod_def.start,
+        };
+        let selection_range = range.clone();
+        let mut children = vec![];
 
-    for (line, uses) in clone_use_defs.elements() {
-        for u in uses {
-            if !is_def_self(symbols, &u, line, fpath) {
-                continue;
-            }
-
-            let range = Range {
-                start: u.def_loc.start,
-                end: u.def_loc.start,
+        let cloned_struct_def = mod_def.structs.clone();
+        for (sym, struct_def) in cloned_struct_def {
+            let struct_range = Range {
+                start: struct_def.name_start,
+                end: struct_def.name_start,
             };
 
-            let path = symbols.file_name_mapping.get(&u.def_loc.fhash).unwrap();
-            let loc = Location {
-                uri: Url::from_file_path(path.as_str()).unwrap(),
-                range,
+            let mut fields:Vec<DocumentSymbol> = vec![];
+            handle_struct_fields(struct_def, &mut fields);
+
+            children.push(DocumentSymbol {
+                name: sym.clone().to_string(),
+                detail: None,
+                kind: SymbolKind::Struct,
+                range: struct_range,
+                selection_range: struct_range,
+                children: Some(fields),
+                tags: Some(vec![]),
+                deprecated: Some(false),
+            });
+        }
+
+        let cloned_const_def = mod_def.constants.clone();
+        for (sym, const_def_pos) in cloned_const_def {
+            let const_range = Range {
+                start: const_def_pos,
+                end: const_def_pos,
             };
 
-            let use_type_name = format!("{}", u.use_type);
+            children.push(DocumentSymbol {
+                name: sym.clone().to_string(),
+                detail: None,
+                kind: SymbolKind::Constant,
+                range: const_range,
+                selection_range: const_range,
+                children: None,
+                tags: Some(vec![]),
+                deprecated: Some(false),
+            });
+        }
 
-            match u.use_type {
-                IdentType::RegularType(t) => {
-                    let symbol = SymbolInformation {
-                        name: use_type_name,
-                        kind: type_to_lsp_symbol_kind(&t),
-                        location: loc,
-                        tags: Some(vec![]),
-                        deprecated: Some(false),
-                        container_name: None,
-                    };
+        let cloned_func_def = mod_def.functions.clone();
+        for (sym, func_def_pos) in cloned_func_def {
+            let func_range = Range {
+                start: func_def_pos,
+                end: func_def_pos,
+            };
 
-                    defs.push(symbol);
-                }
-                IdentType::FunctionType(_f, _s, ..) => {
-                    let symbol = SymbolInformation {
-                        name: use_type_name,
-                        kind: SymbolKind::Function,
-                        location: loc,
-                        tags: Some(vec![]),
-                        deprecated: Some(false),
-                        container_name: None,
-                    };
+            children.push(DocumentSymbol {
+                name: sym.clone().to_string(),
+                detail: None,
+                kind: SymbolKind::Function,
+                range: func_range,
+                selection_range: func_range,
+                children: None,
+                tags: Some(vec![]),
+                deprecated: Some(false),
+            });
+        }
 
-                    defs.push(symbol);
-                }
-            }
-        } // for u in uses
-    } // for (line, uses) in symbols
+        defs.push(DocumentSymbol {
+            name,
+            detail,
+            kind,
+            range,
+            selection_range,
+            children: Some(children),
+            tags: Some(vec![]),
+            deprecated: Some(false),
+        });
+    }
 
     // unwrap will succeed based on the logic above which the compiler is unable to figure out
     let response = lsp_server::Response::new_ok(request.id.clone(), defs);
@@ -1942,16 +1980,27 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
     }
 }
 
-fn is_def_self(symbols: &Symbols, u: &UseDef, line: u32, fpath: &str) -> bool {
-    let path = symbols.file_name_mapping.get(&u.def_loc.fhash).unwrap();
-    if path.eq_ignore_ascii_case(fpath)
-        && line == u.def_loc.start.line
-        && u.col_start == u.def_loc.start.character
-    {
-        return true;
-    }
+/// Helper function to handle struct fields
+fn handle_struct_fields(struct_def: StructDef, fields: &mut Vec<DocumentSymbol>) {
+    let clonded_fileds = struct_def.field_defs;
 
-    return false;
+    for field_def in clonded_fileds {
+        let field_range = Range {
+            start: field_def.start,
+            end: field_def.start,
+        };
+    
+        fields.push(DocumentSymbol {
+            name: field_def.name.clone().to_string(),
+            detail: None,
+            kind: SymbolKind::Field,
+            range: field_range,
+            selection_range: field_range,
+            children: None,
+            tags: Some(vec![]),
+            deprecated: Some(false),
+        });
+    }
 }
 
 #[cfg(test)]

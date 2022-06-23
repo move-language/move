@@ -51,7 +51,7 @@ use crate::{
     diagnostics::{lsp_diagnostics, lsp_empty_diagnostics},
     utils::get_loc,
 };
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use codespan_reporting::files::SimpleFiles;
 use crossbeam::channel::Sender;
 use im::ordmap::OrdMap;
@@ -200,9 +200,9 @@ pub struct Symbols {
     file_name_mapping: BTreeMap<FileHash, Symbol>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Copy)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 enum RunnerState {
-    Run,
+    Run(Option<PathBuf>),
     Wait,
     Quit,
 }
@@ -326,52 +326,59 @@ impl SymbolicatorRunner {
 
     /// Create a new runner
     pub fn new(
-        uri: &Url,
         symbols: Arc<Mutex<Symbols>>,
         sender: Sender<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>,
     ) -> Self {
         let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
         let thread_mtx_cvar = mtx_cvar.clone();
-        let pkg_path = uri.to_file_path().unwrap();
 
         thread::spawn(move || {
             let (mtx, cvar) = &*thread_mtx_cvar;
             // infinite loop to wait for symbolication requests
             loop {
-                let get_symbols = {
+                let pkg_path_opt = {
                     // hold the lock only as long as it takes to get the data, rather than through
                     // the whole symbolication process (hence a separate scope here)
                     let mut symbolicate = mtx.lock().unwrap();
-                    match *symbolicate {
+                    match symbolicate.clone() {
                         RunnerState::Quit => break,
-                        RunnerState::Run => {
+                        RunnerState::Run(root_dir) => {
                             *symbolicate = RunnerState::Wait;
-                            true
+                            Some(root_dir)
                         }
                         RunnerState::Wait => {
                             // wait for next request
                             symbolicate = cvar.wait(symbolicate).unwrap();
-                            match *symbolicate {
+                            match symbolicate.clone() {
                                 RunnerState::Quit => break,
-                                RunnerState::Run => {
+                                RunnerState::Run(root_dir) => {
                                     *symbolicate = RunnerState::Wait;
-                                    true
+                                    Some(root_dir)
                                 }
-                                RunnerState::Wait => false,
+                                RunnerState::Wait => None,
                             }
                         }
                     }
                 };
-                if get_symbols {
+                if let Some(pkg_path) = pkg_path_opt {
+                    if pkg_path.is_none() {
+                        if let Err(err) =
+                            sender.send(Err(anyhow!("Unable to find package manifest")))
+                        {
+                            eprintln!("could not pass missing manifest error: {:?}", err);
+                        }
+                        continue;
+                    }
                     eprintln!("symbolication started");
-                    match Symbolicator::get_symbols(&pkg_path) {
+                    match Symbolicator::get_symbols(pkg_path.unwrap().as_path()) {
                         Ok((symbols_opt, lsp_diagnostics)) => {
                             eprintln!("symbolication finished");
                             if let Some(new_symbols) = symbols_opt {
-                                // replace symbols only if they have been actually recomputed,
-                                // otherwise keep the old (possibly out-dated) symbolication info
+                                // merge the new symbols with the old ones to support a
+                                // (potentially) new project/package that symbolication information
+                                // was built for
                                 let mut old_symbols = symbols.lock().unwrap();
-                                *old_symbols = new_symbols;
+                                (*old_symbols).merge(new_symbols);
                             }
                             // set/reset (previous) diagnostics
                             if let Err(err) = sender.send(Ok(lsp_diagnostics)) {
@@ -381,7 +388,7 @@ impl SymbolicatorRunner {
                         Err(err) => {
                             eprintln!("symbolication failed: {:?}", err);
                             if let Err(err) = sender.send(Err(err)) {
-                                eprintln!("could not compiler error: {:?}", err);
+                                eprintln!("could not pass compiler error: {:?}", err);
                             }
                         }
                     }
@@ -392,11 +399,11 @@ impl SymbolicatorRunner {
         SymbolicatorRunner { mtx_cvar }
     }
 
-    pub fn run(&self) {
+    pub fn run(&self, root_path: Option<PathBuf>) {
         eprintln!("scheduling run");
         let (mtx, cvar) = &*self.mtx_cvar;
         let mut symbolicate = mtx.lock().unwrap();
-        *symbolicate = RunnerState::Run;
+        *symbolicate = RunnerState::Run(root_path);
         cvar.notify_one();
         eprintln!("scheduled run");
     }
@@ -482,6 +489,14 @@ impl UseDefMap {
 
     fn extend(&mut self, use_defs: BTreeMap<u32, BTreeSet<UseDef>>) {
         self.0.extend(use_defs);
+    }
+}
+
+impl Symbols {
+    fn merge(&mut self, other: Self) {
+        self.references.extend(other.references);
+        self.file_use_defs.extend(other.file_use_defs);
+        self.file_name_mapping.extend(other.file_name_mapping);
     }
 }
 

@@ -212,6 +212,8 @@ jobs:
       - prepare
     steps:
       - uses: actions/checkout@v2.4.0
+      - name: install rust toolchain
+        uses: actions-rs/toolchain@v1
       - name: Use Node.js 14
         uses: actions/setup-node@v2.4.0
         with:

@@ -2028,7 +2028,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
         for (sym, func_def) in cloned_func_def {
             let func_range = Range {
                 start: func_def.start,
-                end: func_def.start, 
+                end: func_def.start,
             };
 
             let mut detail = None;
@@ -2080,7 +2080,7 @@ fn handle_struct_fields(struct_def: StructDef, fields: &mut Vec<DocumentSymbol>)
             start: field_def.start,
             end: field_def.start,
         };
-    
+
         fields.push(DocumentSymbol {
             name: field_def.name.clone().to_string(),
             detail: None,

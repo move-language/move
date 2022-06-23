@@ -37,7 +37,7 @@ module Symbols::M1 {
         val.some_field
     }
 
-    #[test] 
+    #[test]
     #[expected_failure]
     fun this_is_a_test() {
         1/0;

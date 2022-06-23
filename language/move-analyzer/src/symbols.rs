@@ -1963,6 +1963,7 @@ pub fn on_use_request(
 }
 
 /// Handles document symbol request of the language server
+#[allow(deprecated)]
 pub fn on_document_symbol_request(context: &Context, request: &Request, symbols: &Symbols) {
     let parameters = serde_json::from_value::<DocumentSymbolParams>(request.params.clone())
         .expect("could not deserialize document symbol request");
@@ -2001,7 +2002,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
                 selection_range: struct_range,
                 children: Some(fields),
                 tags: Some(vec![]),
-                deprecated: None,
+                deprecated: Some(false),
             });
         }
 
@@ -2072,6 +2073,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
 }
 
 /// Helper function to handle struct fields
+#[allow(deprecated)]
 fn handle_struct_fields(struct_def: StructDef, fields: &mut Vec<DocumentSymbol>) {
     let clonded_fileds = struct_def.field_defs;
 

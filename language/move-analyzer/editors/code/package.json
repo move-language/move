@@ -62,13 +62,6 @@
                 }
             }
         },
-        "grammars": [
-            {
-                "language": "move",
-                "scopeName": "source.move",
-                "path": "./move.tmLanguage.json"
-            }
-        ],
         "languages": [
             {
                 "id": "move",
@@ -96,11 +89,13 @@
         "lint": "tsfmt --verify && eslint . --ext ts --max-warnings 0",
         "fix": "tsfmt --replace && eslint . --ext ts --fix",
         "pretest": "npm run compile && npm run lint",
-        "test": "node ./out/tests/runTests.js",
         "vscode:prepublish": "npm run pretest",
         "package": "vsce package -o move-analyzer.vsix",
-        "publish": "npm run pretest && npm run test && vsce publish"
+        "publish": "npm run pretest && vsce publish"
     },
+    "extensionDependencies": [
+         "damirka.move-syntax"
+    ],
     "dependencies": {
         "vscode-languageclient": "6.1.4"
     },

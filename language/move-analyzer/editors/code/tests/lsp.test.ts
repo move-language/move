@@ -29,12 +29,13 @@ Mocha.suite('LSP', () => {
             },
         };
 
-        const syms: Array<lc.DocumentSymbol> = await vscode.commands.executeCommand(
-            'move-analyzer.textDocumentDocumentSymbol', params,
-        );
+        const syms: Array<lc.SymbolInformation> | Array<lc.DocumentSymbol> | null = await
+            vscode.commands.executeCommand(
+                'move-analyzer.textDocumentDocumentSymbol', params,
+            );
 
         assert.ok(syms);
         assert.deepStrictEqual(syms[0]?.kind, lc.SymbolKind.Module);
-        assert.deepStrictEqual(syms[0]?.name, 'M1');
+        assert.deepStrictEqual(syms[0].name, 'M1');
     });
 });

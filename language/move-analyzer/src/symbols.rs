@@ -724,7 +724,7 @@ impl Symbolicator {
 
         let use_def_map = UseDefMap::new();
 
-        let name = mod_ident.value.clone();
+        let name = mod_ident.value;
         let fhash = loc.file_hash();
         let start = match Self::get_start_loc(&loc, files, file_id_mapping) {
             Some(s) => s,
@@ -1980,7 +1980,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
             start: mod_def.start,
             end: mod_def.start,
         };
-        let selection_range = range.clone();
+
         let mut children = vec![];
 
         let cloned_struct_def = mod_def.structs.clone();
@@ -2001,7 +2001,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
                 selection_range: struct_range,
                 children: Some(fields),
                 tags: Some(vec![]),
-                deprecated: Some(false),
+                deprecated: None,
             });
         }
 
@@ -2038,7 +2038,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
 
             children.push(DocumentSymbol {
                 name: sym.clone().to_string(),
-                detail: detail,
+                detail,
                 kind: SymbolKind::Function,
                 range: func_range,
                 selection_range: func_range,
@@ -2053,7 +2053,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
             detail,
             kind,
             range,
-            selection_range,
+            selection_range: range,
             children: Some(children),
             tags: Some(vec![]),
             deprecated: Some(false),

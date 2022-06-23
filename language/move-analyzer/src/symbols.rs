@@ -523,7 +523,12 @@ impl UseDefMap {
 
 impl Symbols {
     fn merge(&mut self, other: Self) {
-        self.references.extend(other.references);
+        for (k, v) in other.references {
+            self.references
+                .entry(k)
+                .or_insert_with(BTreeSet::new)
+                .extend(v);
+        }
         self.file_use_defs.extend(other.file_use_defs);
         self.file_name_mapping.extend(other.file_name_mapping);
     }

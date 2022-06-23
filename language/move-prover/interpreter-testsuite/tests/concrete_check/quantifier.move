@@ -40,8 +40,8 @@ module 0x2::A {
     }
 
     spec init_vector_failure {
-        ensures exists i: u64 where (i == len(result)-1): result[i] == 1;
-        ensures exists i: u64: (i == len(result)-1) ==> result[i] == 1;
-        ensures exists i: u64 : result[i] == 1;
+        ensures exists i: u64 where (i == len(result) - 1): result[i] == 1;
+        ensures exists i: u64: (i == len(result) - 1) ==> result[i] == 1;
+        ensures exists i: u64: result[i] == 1;
     }
 }

@@ -92,7 +92,7 @@
 		}
 	},
 	"scripts": {
-		"compile": "tsc -p ./",
+		"compile": "tsc -p ./ && cd ../../ && cargo build",
 		"watch": "tsc -watch -p ./",
 		"lint": "tsfmt --verify && eslint . --ext ts --max-warnings 0",
 		"fix": "tsfmt --replace && eslint . --ext ts --fix",

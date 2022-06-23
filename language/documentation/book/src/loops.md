@@ -50,7 +50,7 @@ The `break` expression cannot be used outside of a loop.
 
 ### `continue`
 
-The `continue` expression skips the rest of the loop and continuess to the next iteration. This loop uses `continue` to compute the sum of `1, 2, ..., n`, except when the number is divisible by 10:
+The `continue` expression skips the rest of the loop and continues to the next iteration. This loop uses `continue` to compute the sum of `1, 2, ..., n`, except when the number is divisible by 10:
 
 ```move
 fun sum_intermediate(n: u64): u64 {

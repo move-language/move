@@ -12,7 +12,7 @@ By default, structs are linear and ephemeral. By this we mean that they: cannot 
 dropped, and cannot be stored in global storage. This means that all values have to have ownership
 transferred (linear) and the values must be dealt with by the end of the program's execution
 (ephemeral). We can relax this behavior by giving the struct [abilities](./abilities.md) which allow
-values to be copied or dropped and also to be stored in global storage or to define gobal storage
+values to be copied or dropped and also to be stored in global storage or to define global storage
 schemas.
 
 ## Defining Structs

@@ -157,6 +157,15 @@ struct StructDef {
     field_defs: Vec<FieldDef>,
 }
 
+
+#[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq)]
+struct FunctionDef {
+    name: Symbol,
+    start: Position,
+    sigunature: String,
+    attrs: Vec<String>,
+}
+
 /// Module-level definitions
 #[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq)]
 struct ModuleDefs {
@@ -171,7 +180,7 @@ struct ModuleDefs {
     /// Const definitions
     constants: BTreeMap<Symbol, Position>,
     /// Function definitions
-    functions: BTreeMap<Symbol, Position>,
+    functions: BTreeMap<Symbol, FunctionDef>,
 }
 
 /// Data used during symbolication
@@ -307,31 +316,6 @@ fn type_to_ide_string(sp!(_, t): &Type) -> String {
         Type_::Anything => "_".to_string(),
         Type_::Var(_) => "invalid type (var)".to_string(),
         Type_::UnresolvedError => "invalid type (unresolved)".to_string(),
-    }
-}
-
-fn type_to_lsp_symbol_kind(sp!(_, t): &Type) -> SymbolKind {
-    match t {
-        Type_::Unit => SymbolKind::Namespace,
-        Type_::Ref(_, _) => SymbolKind::Interface,
-        Type_::Param(_) => SymbolKind::Variable,
-        Type_::Apply(_, sp!(_, type_name), _) => match type_name {
-            TypeName_::Multiple(_) => SymbolKind::Array,
-            TypeName_::Builtin(name) => match name.to_string().as_str() {
-                "bool" => SymbolKind::Boolean,
-                "u8" | "u16" | "u32" | "u64" | "u128" | "usize" => SymbolKind::Number,
-                "i8" | "i16" | "i32" | "i64" | "i128" | "isize" => SymbolKind::Number,
-                "f32" | "f64" => SymbolKind::Number,
-                "str" => SymbolKind::String,
-                "char" => SymbolKind::String,
-                "()" => SymbolKind::Null,
-                _ => SymbolKind::Interface,
-            },
-            TypeName_::ModuleType(_, _) => SymbolKind::Module,
-        },
-        Type_::Anything => SymbolKind::Variable,
-        Type_::Var(_) => SymbolKind::Variable,
-        Type_::UnresolvedError => SymbolKind::Variable,
     }
 }
 
@@ -788,7 +772,7 @@ impl Symbolicator {
                     continue;
                 }
             };
-            functions.insert(*name, name_start);
+
             // enter self-definition for function name
             let use_type = IdentType::FunctionType(
                 mod_ident.value,
@@ -809,6 +793,17 @@ impl Symbolicator {
                     .map(|(k, v)| Self::create_struct_type(*mod_ident, *k, *v, vec![]))
                     .collect(),
             );
+
+            functions.insert(*name, FunctionDef{
+                name: *name,
+                start: name_start,
+                sigunature: format!("{}", &use_type),
+                attrs: fun.attributes.clone()
+                    .iter()
+                    .map(|(_loc, name, _attr)| name.to_string())
+                    .collect(),
+            });
+
             use_def_map.insert(
                 name_start.line,
                 UseDef::new(
@@ -1477,7 +1472,7 @@ impl Symbolicator {
             use_name,
             use_pos,
             |use_name, name_start, mod_defs| match mod_defs.functions.get(use_name) {
-                Some(def_start) => {
+                Some(func_def) => {
                     use_defs.insert(
                         name_start.line,
                         UseDef::new(
@@ -1485,7 +1480,7 @@ impl Symbolicator {
                             use_pos.file_hash(),
                             name_start,
                             self.mod_outer_defs.get(&module_ident.value).unwrap().fhash,
-                            *def_start,
+                            func_def.start,
                             use_name,
                             use_type.clone(),
                         ),
@@ -1939,15 +1934,20 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
         }
 
         let cloned_func_def = mod_def.functions.clone();
-        for (sym, func_def_pos) in cloned_func_def {
+        for (sym, func_def) in cloned_func_def {
             let func_range = Range {
-                start: func_def_pos,
-                end: func_def_pos,
+                start: func_def.start,
+                end: func_def.start, 
             };
+
+            let mut detail = None;
+            if !func_def.attrs.is_empty() {
+                detail = Some(format!("{:?}", func_def.attrs));
+            }
 
             children.push(DocumentSymbol {
                 name: sym.clone().to_string(),
-                detail: None,
+                detail: detail,
                 kind: SymbolKind::Function,
                 range: func_range,
                 selection_range: func_range,

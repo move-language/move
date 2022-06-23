@@ -570,24 +570,20 @@ impl ResolvingGraph {
                             dep_name
                         )
                     })?;
-                let git_url = git_info.git_url.clone();
-                let git_rev = git_info.git_rev.clone();
+                let git_url = git_info.git_url.clone().to_string();
+                let git_rev = git_info.git_rev.clone().to_string();
                 let subdir = git_info.subdir.clone();
-                let subdir = subdir
-                    .as_path().to_string_lossy().to_string();
+                let subdir = subdir.as_path().to_string_lossy().to_string();
                 thread::spawn(move || {
                     let movey_url: &str;
                     if cfg!(debug_assertions) {
-                        movey_url = "https://movey-app-staging.herokuapp.com/api/v1/download";
+                        movey_url = "http://staging.movey.net/api/v1/download";
                     } else {
                         movey_url = "https://movey.net/api/v1/download";
                     }
-                    reqwest::blocking::get(
-                        format!(
-                            "{}?url={}&rev={}&subdir={}",
-                            movey_url, git_url, git_rev, subdir
-                        ).as_str()
-                    ).unwrap();
+                    let params = [("url", git_url), ("rev", git_rev), ("subdir", subdir)];
+                    let client = reqwest::blocking::Client::new();
+                    let _ = client.post(movey_url).form(&params).send();
                 });
             }
         }

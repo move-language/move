@@ -15,7 +15,6 @@ use lsp_types::{
     notification::Notification as _, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
     DidOpenTextDocumentParams, DidSaveTextDocumentParams,
 };
-use std::path::{Path, PathBuf};
 
 use crate::symbols;
 
@@ -65,7 +64,7 @@ pub fn on_text_document_sync_notification(
                 parameters.text_document.uri.path(),
                 &parameters.text_document.text,
             );
-            symbolicator_runner.run(root_dir(parameters.text_document.uri.path()));
+            symbolicator_runner.run(parameters.text_document.uri.path());
         }
         lsp_types::notification::DidChangeTextDocument::METHOD => {
             let parameters =
@@ -84,7 +83,7 @@ pub fn on_text_document_sync_notification(
                 parameters.text_document.uri.path(),
                 &parameters.text.unwrap(),
             );
-            symbolicator_runner.run(root_dir(parameters.text_document.uri.path()));
+            symbolicator_runner.run(parameters.text_document.uri.path());
         }
         lsp_types::notification::DidCloseTextDocument::METHOD => {
             let parameters =
@@ -95,21 +94,4 @@ pub fn on_text_document_sync_notification(
         _ => eprintln!("invalid notification '{}'", notification.method),
     }
     eprintln!("text document notification handled");
-}
-
-/// Returns a path to a directory containing Move.toml file corresponding to the Move source file
-/// passed as argument or None if no such directory can be found.
-/// is located.
-fn root_dir(move_file_path: &str) -> Option<PathBuf> {
-    let p = Path::new(move_file_path);
-    let mut parent_opt = p.parent();
-    while parent_opt.is_some() {
-        let parent_path = parent_opt.unwrap();
-        let manifest_path = parent_path.join("Move.toml");
-        if manifest_path.is_file() {
-            return Some(manifest_path);
-        }
-        parent_opt = parent_path.parent();
-    }
-    None
 }

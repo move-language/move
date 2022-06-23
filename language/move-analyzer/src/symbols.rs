@@ -202,7 +202,7 @@ pub struct Symbols {
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 enum RunnerState {
-    Run(Option<PathBuf>),
+    Run(PathBuf),
     Wait,
     Quit,
 }
@@ -331,12 +331,16 @@ impl SymbolicatorRunner {
     ) -> Self {
         let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
         let thread_mtx_cvar = mtx_cvar.clone();
+        let runner = SymbolicatorRunner { mtx_cvar };
 
         thread::spawn(move || {
             let (mtx, cvar) = &*thread_mtx_cvar;
+            // Locations opened in the IDE (files or directories) for which manifest file is missing
+            let mut missing_manifests = BTreeSet::new();
             // infinite loop to wait for symbolication requests
+            eprintln!("starting symbolicator runner loop");
             loop {
-                let pkg_path_opt = {
+                let starting_path_opt = {
                     // hold the lock only as long as it takes to get the data, rather than through
                     // the whole symbolication process (hence a separate scope here)
                     let mut symbolicate = mtx.lock().unwrap();
@@ -360,8 +364,15 @@ impl SymbolicatorRunner {
                         }
                     }
                 };
-                if let Some(pkg_path) = pkg_path_opt {
-                    if pkg_path.is_none() {
+                if let Some(starting_path) = starting_path_opt {
+                    let root_dir = Self::root_dir(&starting_path);
+                    if root_dir.is_none() && !missing_manifests.contains(&starting_path) {
+                        eprintln!("reporting missing manifest");
+
+                        // report missing manifest file only once to avoid cluttering IDE's UI in
+                        // cases when developer indeed intended to open a standalone file that was
+                        // not meant to compile
+                        missing_manifests.insert(starting_path);
                         if let Err(err) =
                             sender.send(Err(anyhow!("Unable to find package manifest")))
                         {
@@ -370,13 +381,18 @@ impl SymbolicatorRunner {
                         continue;
                     }
                     eprintln!("symbolication started");
-                    match Symbolicator::get_symbols(pkg_path.unwrap().as_path()) {
+                    match Symbolicator::get_symbols(root_dir.unwrap().as_path()) {
                         Ok((symbols_opt, lsp_diagnostics)) => {
                             eprintln!("symbolication finished");
                             if let Some(new_symbols) = symbols_opt {
                                 // merge the new symbols with the old ones to support a
                                 // (potentially) new project/package that symbolication information
                                 // was built for
+                                //
+                                // TODO: we may consider "unloading" symbolication information when
+                                // files/directories are being closed but as with other performance
+                                // optimizations (e.g. incrementalizatino of the vfs), let's wait
+                                // until we know we actually need it
                                 let mut old_symbols = symbols.lock().unwrap();
                                 (*old_symbols).merge(new_symbols);
                             }
@@ -396,14 +412,14 @@ impl SymbolicatorRunner {
             }
         });
 
-        SymbolicatorRunner { mtx_cvar }
+        runner
     }
 
-    pub fn run(&self, root_path: Option<PathBuf>) {
-        eprintln!("scheduling run");
+    pub fn run(&self, starting_path: &str) {
+        eprintln!("scheduling run for {}", starting_path);
         let (mtx, cvar) = &*self.mtx_cvar;
         let mut symbolicate = mtx.lock().unwrap();
-        *symbolicate = RunnerState::Run(root_path);
+        *symbolicate = RunnerState::Run(PathBuf::from(starting_path));
         cvar.notify_one();
         eprintln!("scheduled run");
     }
@@ -413,6 +429,19 @@ impl SymbolicatorRunner {
         let mut symbolicate = mtx.lock().unwrap();
         *symbolicate = RunnerState::Quit;
         cvar.notify_one();
+    }
+
+    fn root_dir(starting_path: &Path) -> Option<PathBuf> {
+        let mut current_path_opt = Some(starting_path);
+        while current_path_opt.is_some() {
+            let current_path = current_path_opt.unwrap();
+            let manifest_path = current_path.join("Move.toml");
+            if manifest_path.is_file() {
+                return Some(current_path.to_path_buf());
+            }
+            current_path_opt = current_path.parent();
+        }
+        None
     }
 }
 

@@ -68,8 +68,6 @@ export class Context {
      * "initialize," read [the Language Server Protocol specification](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize).
      **/
     startClient(): void {
-        console.log('serverPath:', this.configuration.serverPath);
-
         const executable: lc.Executable = {
             command: this.configuration.serverPath,
         };

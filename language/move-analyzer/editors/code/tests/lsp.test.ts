@@ -12,7 +12,7 @@ Mocha.suite('LSP', () => {
         assert.ok(ext);
 
         await ext.activate();
-        await sleep(1000);
+        await sleep(3000);
 
         // 1. get workdir
         const workDir = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';

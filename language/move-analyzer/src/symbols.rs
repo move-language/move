@@ -57,9 +57,9 @@ use crossbeam::channel::Sender;
 use im::ordmap::OrdMap;
 use lsp_server::{Request, RequestId};
 use lsp_types::{
-    request::GotoTypeDefinitionParams, Diagnostic, GotoDefinitionParams, Hover, HoverContents,
-    HoverParams, LanguageString, Location, MarkedString, Position, Range, ReferenceParams,
-    DocumentSymbol, SymbolKind, DocumentSymbolParams
+    request::GotoTypeDefinitionParams, Diagnostic, DocumentSymbol, DocumentSymbolParams,
+    GotoDefinitionParams, Hover, HoverContents, HoverParams, LanguageString, Location,
+    MarkedString, Position, Range, ReferenceParams, SymbolKind,
 };
 use std::{
     cmp,
@@ -577,8 +577,13 @@ impl Symbolicator {
         let mut file_mods = BTreeMap::new();
 
         for (pos, module_ident, module_def) in modules {
-            let (defs, symbols) =
-                Self::get_mod_outer_defs(&pos, &sp(pos, *module_ident), module_def, &files, &file_id_mapping);
+            let (defs, symbols) = Self::get_mod_outer_defs(
+                &pos,
+                &sp(pos, *module_ident),
+                module_def,
+                &files,
+                &file_id_mapping,
+            );
 
             let cloned_defs = defs.clone();
             let path = file_name_mapping.get(&cloned_defs.fhash.clone()).unwrap();
@@ -712,14 +717,19 @@ impl Symbolicator {
                     continue;
                 }
             };
-            functions.insert(*name, FunctionDef{
-                name: *name,
-                start: name_start,
-                attrs: func.attributes.clone()
-                    .iter()
-                    .map(|(_loc, name, _attr)| name.to_string())
-                    .collect(),
-            });
+            functions.insert(
+                *name,
+                FunctionDef {
+                    name: *name,
+                    start: name_start,
+                    attrs: func
+                        .attributes
+                        .clone()
+                        .iter()
+                        .map(|(_loc, name, _attr)| name.to_string())
+                        .collect(),
+                },
+            );
         }
 
         let use_def_map = UseDefMap::new();
@@ -730,7 +740,20 @@ impl Symbolicator {
             Some(s) => s,
             None => {
                 debug_assert!(false);
-                return (ModuleDefs { fhash, start: Position{line:0, character:0}, name, structs, constants, functions }, use_def_map);
+                return (
+                    ModuleDefs {
+                        fhash,
+                        start: Position {
+                            line: 0,
+                            character: 0,
+                        },
+                        name,
+                        structs,
+                        constants,
+                        functions,
+                    },
+                    use_def_map,
+                );
             }
         };
 
@@ -1969,8 +1992,11 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
         .expect("could not deserialize document symbol request");
 
     let fpath = parameters.text_document.uri.path();
-    let empty_mods:BTreeSet<ModuleDefs> = BTreeSet::new();
-    let mods = symbols.file_mods.get(&PathBuf::from(fpath)).unwrap_or(&empty_mods);
+    let empty_mods: BTreeSet<ModuleDefs> = BTreeSet::new();
+    let mods = symbols
+        .file_mods
+        .get(&PathBuf::from(fpath))
+        .unwrap_or(&empty_mods);
 
     let mut defs: Vec<DocumentSymbol> = vec![];
     for mod_def in mods {
@@ -1991,7 +2017,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
                 end: struct_def.name_start,
             };
 
-            let mut fields:Vec<DocumentSymbol> = vec![];
+            let mut fields: Vec<DocumentSymbol> = vec![];
             handle_struct_fields(struct_def, &mut fields);
 
             children.push(DocumentSymbol {

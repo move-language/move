@@ -207,10 +207,10 @@ fn on_request(context: &Context, request: &Request) {
         }
         lsp_types::request::HoverRequest::METHOD => {
             symbols::on_hover_request(context, request, &context.symbols.lock().unwrap());
-        },
+        }
         lsp_types::request::DocumentSymbolRequest::METHOD => {
             symbols::on_document_symbol_request(context, request, &context.symbols.lock().unwrap());
-        },
+        }
         _ => eprintln!("handle request '{}' from client", request.method),
     }
 }

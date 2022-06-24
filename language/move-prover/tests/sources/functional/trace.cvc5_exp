@@ -30,7 +30,7 @@ error: global memory invariant does not hold
    =         Values:  {Address(0): <redacted>, Default: empty}
    =     at tests/sources/functional/trace.move:29: publish_invalid
    =     at tests/sources/functional/trace.move:33: publish_invalid (spec)
-   =         `let addr = Signer::address_of(s);` = <redacted>
+   =         `let addr = signer::address_of(s);` = <redacted>
    =     at tests/sources/functional/trace.move:29: publish_invalid
    =         s = <redacted>
    =         x = <redacted>
@@ -54,7 +54,7 @@ error: post-condition does not hold
    = Execution Trace:
    =     at tests/sources/functional/trace.move:29: publish_invalid
    =     at tests/sources/functional/trace.move:33: publish_invalid (spec)
-   =         `let addr = Signer::address_of(s);` = <redacted>
+   =         `let addr = signer::address_of(s);` = <redacted>
    =     at tests/sources/functional/trace.move:29: publish_invalid
    =         s = <redacted>
    =         x = <redacted>

@@ -8,16 +8,48 @@ import * as vscode from 'vscode';
 import * as lc from 'vscode-languageclient';
 import { log } from './log';
 
+
+class OnReady {
+    private _resolve: any;
+    private _reject: any;
+    private _used: boolean;
+
+    constructor(_resolve: any, _reject: any) {
+        this._resolve = _resolve;
+        this._reject = _reject;
+        this._used = false;
+    }
+
+    get isUsed() {
+        return this._used;
+    }
+
+    resolve() {
+        this._used = true;
+        this._resolve();
+    }
+
+    reject(error: any) {
+        this._used = true;
+        this._reject(error);
+    }
+}
+
 /** Information passed along to each VS Code command defined by this extension. */
 export class Context {
-    private client: lc.LanguageClient | undefined;
+    private _client: lc.LanguageClient | undefined;
+    private _onReady: Promise<void>;
+    private _onReadyCallbacks: OnReady | undefined;
 
     private constructor(
         private readonly extensionContext: Readonly<vscode.ExtensionContext>,
         readonly configuration: Readonly<Configuration>,
         client: lc.LanguageClient | undefined = undefined,
     ) {
-        this.client = client;
+        this._client = client;
+        this._onReady = new Promise((resolve, reject) => {
+            this._onReadyCallbacks = new OnReady(resolve, reject);
+        });
     }
 
     static create(
@@ -99,7 +131,23 @@ export class Context {
         log.info('Starting client...');
         const disposable = client.start();
         this.extensionContext.subscriptions.push(disposable);
-        this.client = client;
+        this._client = client;
+
+        this._client.onReady().then(() => {
+            log.info('Client ready.');
+
+            client.onNotification('telemetry/event', (...params: Array<any>) => {
+                log.info('Event:' + JSON.stringify(params));
+
+                if (params[0].event_type === 'move-analyzer-extension-startup') {
+                    this._onReadyCallbacks?.resolve();
+                } else {
+                    this._onReadyCallbacks?.reject("Unexpected event type: " + params[0].event_type);
+                }
+            });
+        }, (err) => {
+            log.info(`Client failed to start: ${err}`);
+        });
     }
 
     /**
@@ -108,6 +156,10 @@ export class Context {
      * @returns lc.LanguageClient
      */
     getClient(): lc.LanguageClient | undefined {
-        return this.client;
+        return this._client;
+    }
+
+    onReady(): Promise<void> {
+        return this._onReady;
     }
 }

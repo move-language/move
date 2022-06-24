@@ -112,11 +112,13 @@ fn main() {
         serde_json::from_value(client_response).expect("could not deserialize client capabilities");
 
     let (diag_sender, diag_receiver) = bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
+    let (events_sender, events_receiver) = bounded::<Result<symbols::SymbolicatorEvent>>(0);
+
     let mut symbolicator_runner = symbols::SymbolicatorRunner::idle();
     if symbols::DEFS_AND_REFS_SUPPORT {
         if let Some(uri) = initialize_params.root_uri {
             symbolicator_runner =
-                symbols::SymbolicatorRunner::new(&uri, context.symbols.clone(), diag_sender);
+                symbols::SymbolicatorRunner::new(&uri, context.symbols.clone(), diag_sender, events_sender);
             symbolicator_runner.run();
         }
     };
@@ -165,6 +167,26 @@ fn main() {
                         }
                     },
                     Err(error) => eprintln!("symbolicator message error: {:?}", error),
+                }
+            },
+            recv(events_receiver) -> event => {
+                match event {
+                    Ok(result) => {
+                        match result {
+                            Ok(event) => {
+                                eprintln!("send SymbolicatorEvent: {:?}", event);
+                                let notification = Notification::new(lsp_types::notification::TelemetryEvent::METHOD.to_string(), event);
+                                if let Err(err) = context
+                                    .connection
+                                    .sender
+                                    .send(lsp_server::Message::Notification(notification)) {
+                                        eprintln!("could not send events response: {:?}", err);
+                                    };
+                            },
+                            Err(err) => eprintln!("symbolicator event error: {:?}", err),
+                        }
+                    },
+                    Err(error) => eprintln!("symbolicator event error: {:?}", error),
                 }
             },
             recv(context.connection.receiver) -> message => {

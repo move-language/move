@@ -71,6 +71,7 @@ use std::{
 };
 use tempfile::tempdir;
 use url::Url;
+use serde::{Deserialize, Serialize};
 
 use move_command_line_common::files::FileHash;
 use move_compiler::{
@@ -181,6 +182,20 @@ struct ModuleDefs {
     constants: BTreeMap<Symbol, Position>,
     /// Function definitions
     functions: BTreeMap<Symbol, FunctionDef>,
+}
+
+
+#[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq, Serialize, Deserialize)]
+enum SymbolicatorEventType {
+    Succcess,
+    FailedWithDiagnostics,
+    FailedWithError,
+}
+
+#[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SymbolicatorEvent {
+    /// The event type
+    event_type: SymbolicatorEventType
 }
 
 /// Data used during symbolication
@@ -343,6 +358,7 @@ impl SymbolicatorRunner {
         uri: &Url,
         symbols: Arc<Mutex<Symbols>>,
         sender: Sender<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>,
+        events_sender: Sender<Result<SymbolicatorEvent>>,
     ) -> Self {
         let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
         let thread_mtx_cvar = mtx_cvar.clone();
@@ -386,14 +402,34 @@ impl SymbolicatorRunner {
                                 // otherwise keep the old (possibly out-dated) symbolication info
                                 let mut old_symbols = symbols.lock().unwrap();
                                 *old_symbols = new_symbols;
+
+                                // send telemetry event
+                                eprintln!("send symbolication success event");
+                                events_sender.send(Ok(SymbolicatorEvent {
+                                event_type: SymbolicatorEventType::Succcess,
+                                })).unwrap();
                             }
+
                             // set/reset (previous) diagnostics
                             if let Err(err) = sender.send(Ok(lsp_diagnostics)) {
                                 eprintln!("could not pass diagnostics: {:?}", err);
+
+                                // send telemetry event
+                                eprintln!("send symbolication failed with diagnostics event");
+                                events_sender.send(Ok(SymbolicatorEvent {
+                                event_type: SymbolicatorEventType::FailedWithDiagnostics,
+                                })).unwrap();
                             }
                         }
                         Err(err) => {
                             eprintln!("symbolication failed: {:?}", err);
+
+                            // send telemetry event
+                            eprintln!("send symbolication with error event");
+                            events_sender.send(Ok(SymbolicatorEvent {
+                               event_type: SymbolicatorEventType::FailedWithError,
+                            })).unwrap();
+
                             if let Err(err) = sender.send(Err(err)) {
                                 eprintln!("could not compiler error: {:?}", err);
                             }
@@ -599,6 +635,8 @@ impl Symbolicator {
             mod_use_defs.insert(*module_ident, symbols);
         }
 
+        eprintln!("get_symbols loaded file_mods length: {:?}", file_mods.len());
+
         let mut symbolicator = Symbolicator {
             mod_outer_defs,
             files,
@@ -635,6 +673,9 @@ impl Symbolicator {
             file_name_mapping,
             file_mods,
         };
+
+        eprintln!("get_symbols load complete");
+
         Ok((Some(symbols), lsp_diagnostics))
     }
 
@@ -1997,6 +2038,8 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
         .file_mods
         .get(&PathBuf::from(fpath))
         .unwrap_or(&empty_mods);
+
+    eprintln!("on_document_symbol_request mods length: {:?}", mods.len());
 
     let mut defs: Vec<DocumentSymbol> = vec![];
     for mod_def in mods {

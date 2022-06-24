@@ -106,6 +106,7 @@ library:
 | `vector::reverse<T>(v: &mut vector<T>)`                    | Reverses the order of the elements in the vector `v` in place | Never                   |
 | `vector::index_of<T>(v: &vector<T>, e: &T): bool` | Return `(true, i)` if `e` is in the vector `v` at index `i`. Otherwise, returns `(false, 0)`.| Never |
 | `vector::remove<T>(v: &mut vector<T>, i: u64): T` | Remove the `i`th element of the vector `v`, shifting all subsequent elements. This is O(n) and preserves ordering of elements in the vector. | If `i` is out of bounds. |
+| `vector::swap_remove<T>(v: &mut vector<T>, i: u64): T` | Swap the `i`th element of the vector `v` with the last element and then pop the vector, This is O(1), but does not preserve ordering of elements in the vector. | If `i` is out of bounds. |
 
 More operations may be added overtime
 

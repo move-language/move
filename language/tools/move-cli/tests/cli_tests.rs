@@ -2,7 +2,8 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::env::home_dir;
+use home::home_dir;
+use move_cli::sandbox::commands::test;
 use std::fs::{self, File};
 use std::io::Write;
 use move_cli::sandbox::commands::test;
@@ -79,9 +80,8 @@ fn upload_package_to_movey_works() {
 
     fs::create_dir_all(&home).unwrap();
     let mut file = File::create(&credential_file).unwrap();
-    let credential_content = String::from(
-            "[registry]\ntoken=\"eb8xZkyr78FNL528j7q39zcdS6mxjBXt\"\n"
-    );
+    let credential_content =
+        String::from("[registry]\ntoken=\"eb8xZkyr78FNL528j7q39zcdS6mxjBXt\"\n");
     file.write(&credential_content.as_bytes()).unwrap();
 
     init_git(PACKAGE_PATH, 0);
@@ -95,7 +95,6 @@ fn upload_package_to_movey_works() {
     let data = fs::read_to_string(&res_path).unwrap();
     assert!(data.contains("rev"));
     assert!(data.contains("\"github_repo_url\":\"https://github.com/diem/move\""));
-    assert!(data.contains("\"description\":\"Description test\""));
     fs::remove_file(&res_path).unwrap();
 
     clean_up(&home);
@@ -140,8 +139,10 @@ fn upload_package_to_movey_with_no_credential_should_panic() {
         .unwrap();
     assert!(!output.status.success());
     let error = String::from_utf8_lossy(output.stderr.as_slice()).to_string();
-    assert!(error.contains("There seems to be an error with your Movey credential. \
-        Please run `move login` and follow the instructions."));
+    assert!(error.contains(
+        "There seems to be an error with your Movey credential. \
+        Please run `move login` and follow the instructions."
+    ));
 
     clean_up(&home);
 }
@@ -164,8 +165,10 @@ fn upload_package_to_movey_with_bad_credential_should_panic() {
         .unwrap();
     assert!(!output.status.success());
     let error = String::from_utf8_lossy(output.stderr.as_slice()).to_string();
-    assert!(error.contains("There seems to be an error with your Movey credential. \
-        Please run `move login` and follow the instructions."));
+    assert!(error.contains(
+        "There seems to be an error with your Movey credential. \
+        Please run `move login` and follow the instructions."
+    ));
 
     clean_up(&home);
 }
@@ -181,26 +184,31 @@ fn init_git(package_path: &str, flag: i32) {
     Command::new("git")
         .current_dir(package_path)
         .args(&["init"])
-        .output().unwrap();
+        .output()
+        .unwrap();
     if flag != 1 {
         Command::new("git")
             .current_dir(package_path)
             .args(&["remote", "add", "origin", "git@github.com:diem/move.git"])
-            .output().unwrap();
+            .output()
+            .unwrap();
     }
     Command::new("touch")
         .current_dir(package_path)
         .args(&["simplefile"])
-        .output().unwrap();
+        .output()
+        .unwrap();
     Command::new("git")
         .current_dir(package_path)
         .args(&["add", "simplefile"])
-        .output().unwrap();
-    if flag != 2{
+        .output()
+        .unwrap();
+    if flag != 2 {
         Command::new("git")
             .current_dir(package_path)
             .args(&["commit", "-m", "initial commit"])
-            .output().unwrap();
+            .output()
+            .unwrap();
     }
 #[test]
 fn save_credential_works() {

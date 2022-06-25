@@ -24,7 +24,7 @@ Now let's get started!
 
 ## Step 0: Installation<span id="Step0"><span>
 
-If you haven't already, open your terminal and clone the [the Move repository](https://github.com/move-language/move):
+If you haven't already, open your terminal and clone [the Move repository](https://github.com/move-language/move):
 
 ```bash
 git clone https://github.com/move-language/move.git
@@ -62,9 +62,14 @@ You should see something like this along with a list and description of a
 number of commands:
 
 ```
-...
+move-package
+Execute a package command. Executed in the current directory or the closest containing Move package
+
 USAGE:
-    move package [FLAGS] [OPTIONS] <SUBCOMMAND>
+    move package [OPTIONS] <SUBCOMMAND>
+
+OPTIONS:
+        --abi                          Generate ABIs for packages
 ...
 ```
 
@@ -73,7 +78,7 @@ a command or subcommand with the `--help` flag will print documentation.
 
 Before running the next steps, `cd` to the tutorial directory:
 ```bash
-cd <path_to_move_repo>/language/documentation/tutorial
+cd <path_to_move>/language/documentation/tutorial
 ```
 
 
@@ -171,7 +176,7 @@ move package build
   book](https://move-language.github.io/move/packages.html)
 * More information on the `Move.toml` file can be found in the [package section of the Move book](https://move-language.github.io/move/packages.html#movetoml).
 * Move also supports the idea of [named
-  addresses](https://move-language.github.io/move/address.html#named-addresses) Named
+  addresses](https://move-language.github.io/move/address.html#named-addresses), Named
   addresses are a way to parametrize Move source code so that you can compile
   the module using different values for `NamedAddr` to get different bytecode
   that you can deploy, depending on what address(es) you control. They are used quite frequently, and can be defined in the `Move.toml` file in the `[addresses]` section, e.g.,
@@ -230,6 +235,8 @@ module 0xCAFE::BasicCoin {
         let addr = signer::address_of(&account);
         mint(account, 10);
         // Make sure there is a `Coin` resource under `addr` with a value of `10`.
+        // We can access this resource and its value since we are in the
+        // same module that defined the `Coin` resource.
         assert!(borrow_global<Coin>(addr).value == 10, 0);
     }
 }
@@ -268,17 +275,17 @@ assertion fails the unit test will fail.
   ```
     ┌── test_mint_10 ──────
     │ error[E11001]: test failure
-    │    ┌─ step_2/BasicCoin/sources/FirstModule.move:22:9
+    │    ┌─ ./sources/FirstModule.move:24:9
     │    │
     │ 18 │     fun test_mint_10(account: signer) acquires Coin {
     │    │         ------------ In this function in 0xcafe::BasicCoin
     │    ·
-    │ 22 │         assert!(borrow_global<Coin>(addr).value == 11, 0);
+    │ 24 │         assert!(borrow_global<Coin>(addr).value == 11, 0);
     │    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Test was not expected to abort but it aborted with 0 here
     │
     │
     │ ────── Storage state at point of failure ──────
-    │ 0xcafe:
+    │ 0xc0ffee:
     │       => key 0xcafe::BasicCoin::Coin {
     │           value: 10
     │       }
@@ -369,7 +376,7 @@ The Ethereum blockchain state might look like this:
 
 We have created a Move package for you in folder `step_4` called `BasicCoin`. The `sources` folder contains source code for
 all your Move modules in the package, including `BasicCoin.move`. In this section, we will take a closer look at the
-implementation of the methods inside [`BasicCoin.move`](./step_4/BasicCoin/sources/BasicCoin.move).
+implementation of the methods inside [`BasicCoin.move`](./step_4/sources/BasicCoin.move).
 
 ### Compiling our code
 
@@ -380,7 +387,7 @@ move package build
 ```
 
 ### Implementation of methods
-Now let's take a closer look at the implementation of the methods inside [`BasicCoin.move`]((./step_4/BasicCoin/sources/BasicCoin.move)).
+Now let's take a closer look at the implementation of the methods inside [`BasicCoin.move`](./step_4/BasicCoin/sources/BasicCoin.move).
 
 <details>
 <summary>Method <code>publish_balance</code></summary>
@@ -472,7 +479,7 @@ move package test
 You should see something like this:
 
 ```
-BUILDING MoveStdlib
+INCLUDING DEPENDENCY MoveStdlib
 BUILDING BasicCoin
 Running Move unit tests
 [ PASS    ] 0xcafe::BasicCoin::can_withdraw_amount
@@ -592,7 +599,7 @@ which outputs the following error information:
 
 ```
 error: abort not covered by any of the `aborts_if` clauses
-   ┌─ language/documentation/tutorial/step_7/BasicCoin/sources/BasicCoin.move:38:5
+   ┌─ ./sources/BasicCoin.move:38:5
    │
 35 │           borrow_global<Balance<CoinType>>(owner).coin.value
    │           ------------- abort happened here with execution failure
@@ -602,9 +609,9 @@ error: abort not covered by any of the `aborts_if` clauses
 40 │ │     }
    │ ╰─────^
    │
-   =     at language/documentation/hackathon-tutorial/step_7/BasicCoin/sources/BasicCoin.move:34: balance_of
+   =     at ./sources/BasicCoin.move:34: balance_of
    =         owner = 0x29
-   =     at language/documentation/hackathon-tutorial/step_7/BasicCoin/sources/BasicCoin.move:35: balance_of
+   =     at ./sources/BasicCoin.move:35: balance_of
    =         ABORTED
 
 Error: exiting with verification errors
@@ -639,7 +646,7 @@ fun withdraw<CoinType>(addr: address, amount: u64) : Coin<CoinType> acquires Bal
 The method withdraws tokens with value `amount` from the address `addr` and returns a created Coin of value `amount`.  The method `withdraw` aborts when 1) `addr` does not have the resource `Balance<CoinType>` or 2) the number of tokens in `addr` is smaller than `amount`. We can define conditions like this:
 
 ```
-   spec withdraw {
+    spec withdraw {
         let balance = global<Balance<CoinType>>(addr).coin.value;
         aborts_if !exists<Balance<CoinType>>(addr);
         aborts_if balance < amount;
@@ -652,7 +659,7 @@ As we can see here, a spec block can contain let bindings which introduce names 
 The next step is to define functional properties, which are described in the two `ensures` clauses below. First, by using the `let post` binding, `balance_post` represents the balance of `addr` after the execution, which should be equal to `balance - amount`. Then, the return value (denoted as `result`) should be a coin with value `amount`.
 
 ```
-   spec withdraw {
+    spec withdraw {
         let balance = global<Balance<CoinType>>(addr).coin.value;
         aborts_if !exists<Balance<CoinType>>(addr);
         aborts_if balance < amount;
@@ -708,7 +715,7 @@ public fun transfer<CoinType: drop>(from: &signer, to: address, amount: u64, _wi
 The method transfers the `amount` of coin from the account of `from` to the address `to`. The specification is given below:
 
 ```
-spec transfer {
+    spec transfer {
         let addr_from = signer::address_of(from);
 
         let balance_from = global<Balance<CoinType>>(addr_from).coin.value;
@@ -725,7 +732,8 @@ spec transfer {
 The `ensures` clauses specify that the `amount` number of tokens is deducted from `addr_from` and added to `to`. However, the prover will generate the error information as below:
 
 ```
-   ┌─ language/documentation/hackathon-tutorial/step_7/BasicCoin/sources/BasicCoin.move:62:9
+error: post-condition does not hold
+   ┌─ ./sources/BasicCoin.move:57:9
    │
 62 │         ensures balance_from_post == balance_from - amount;
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -25,7 +25,7 @@ arguments, and must not return a value. Here is an example with each of these co
 
 ```move
 script {
-    // Import the Debug module published at the named account address Std.
+    // Import the Debug module published at the named account address std.
     use std::debug;
 
     const ONE: u64 = 1;

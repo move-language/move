@@ -169,7 +169,7 @@ struct NoAbilities {}
 struct MyResource has key { f: u64 }
 
 fun valid(account: &signer) acquires MyResource {
-    let addr = Signer::address_of(account);
+    let addr = signer::address_of(account);
     let has_resource = exists<MyResource>(addr); // Valid, 'MyResource' has 'key'
     if (!has_resource) {
         move_to(account, MyResource { f: 0 }) // Valid, 'MyResource' has 'key'
@@ -314,7 +314,7 @@ struct NoAbilities {}
 struct MyResource<T> has key { f: T }
 
 fun valid(account: &signer) acquires MyResource {
-    let addr = Signer::address_of(account);
+    let addr = signer::address_of(account);
      // Valid, 'MyResource<u64>' has 'key'
     let has_resource = exists<MyResource<u64>>(addr);
     if (!has_resource) {

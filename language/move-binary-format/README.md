@@ -1,7 +1,7 @@
 ---
 id: vm
 title: Virtual Machine
-custom_edit_url: https://github.com/diem/move/edit/main/language/move-binary-format/README.md
+custom_edit_url: https://github.com/move-language/move/edit/main/language/move-binary-format/README.md
 ---
 
 
@@ -14,7 +14,7 @@ metering logical abstraction is also defined there.
 
 The MoveVM is a stack machine with a static type system. The MoveVM honors
 the specification of the Move language through a mix of file format,
-verification (for reference [bytcode verifier README](https://github.com/diem/move/blob/main/language/move-bytecode-verifier/README.md))
+verification (for reference [bytecode verifier README](https://github.com/move-language/move/blob/main/language/move-bytecode-verifier/README.md))
 and runtime constraints. The structure of the file format allows the
 definition of modules, types (resources and unrestricted types), and
 functions. Code is expressed via bytecode instructions, which may have
@@ -40,7 +40,7 @@ The `CompiledModule` and `CompiledScript` definitions in
 `diem/language/move-binary-format/src/file_format.rs` are the top-level structs for a Move
 *Module* or *Transaction Script*, respectively. These structs provide a
 simple abstraction over the file format. Additionally, a set of
-[*Views*](https://github.com/diem/move/blob/main/language/move-binary-format/src/views.rs) are defined to easily navigate and inspect
+[*Views*](https://github.com/move-language/move/blob/main/language/move-binary-format/src/views.rs) are defined to easily navigate and inspect
 `CompiledModule`s and `CompiledScript`s.
 
 ## Folder Structure

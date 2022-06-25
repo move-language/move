@@ -1,7 +1,7 @@
 ---
 id: move-unit-test
 title: Move Unit Testing Framework
-custom_edit_url: https://github.com/diem/move/edit/main/language/tools/move-unit-test
+custom_edit_url: https://github.com/move-language/move/edit/main/language/tools/move-unit-test/README.md
 ---
 
 # Summary
@@ -18,7 +18,7 @@ VM and the result of the interpreter will be compared and an error will
 be raised if they are not equal.
 
 Detailed information on how to use unit tests as a user of Move can be
-found [here](https://diem.github.io/move/unit-testing.html).
+found [here](https://move-language.github.io/move/unit-testing.html).
 
 ## Test Runner
 

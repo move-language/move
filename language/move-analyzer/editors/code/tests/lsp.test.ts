@@ -25,7 +25,7 @@ Mocha.suite('LSP', () => {
             },
         };
 
-        const syms: Array<lc.DocumentSymbol> = await
+        const syms: Array<lc.DocumentSymbol> | undefined = await
             vscode.commands.executeCommand(
                 'move-analyzer.textDocumentDocumentSymbol', params,
             );

@@ -12,8 +12,8 @@ export async function textDocumentDocumentSymbol(context: Readonly<Context>, par
         return Promise.reject(new Error('No language client connected.'));
     }
 
-    // Wait for the language client to be ready.
-    await context.onReady();
+    // Wait for the language server's symbolicator to be ready.
+    await context.onSymbolicatorReady();
 
     // Send the request to the language client.
     return client.sendRequest(lc.DocumentSymbolRequest.type, params);

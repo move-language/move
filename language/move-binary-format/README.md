@@ -40,7 +40,7 @@ The `CompiledModule` and `CompiledScript` definitions in
 `diem/language/move-binary-format/src/file_format.rs` are the top-level structs for a Move
 *Module* or *Transaction Script*, respectively. These structs provide a
 simple abstraction over the file format. Additionally, a set of
-[*Views*](https://github.com/diem/move/blob/main/language/move-binary-format/src/views.rs) are defined to easily navigate and inspect
+[*Views*](https://github.com/move-language/move/blob/main/language/move-binary-format/src/views.rs) are defined to easily navigate and inspect
 `CompiledModule`s and `CompiledScript`s.
 
 ## Folder Structure

@@ -1,6 +1,8 @@
-use std::collections::BTreeMap;
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AnalyzerEventType {

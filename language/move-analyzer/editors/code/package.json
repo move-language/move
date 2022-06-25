@@ -26,7 +26,7 @@
     "main": "./out/src/main.js",
     "activationEvents": [
         "onLanguage:move",
-		"workspaceContains:Move.toml"
+        "workspaceContains:Move.toml"
     ],
     "contributes": {
         "commands": [
@@ -90,10 +90,10 @@
         "watch": "tsc -watch -p ./",
         "lint": "tsfmt --verify && eslint . --ext ts --max-warnings 0",
         "fix": "tsfmt --replace && eslint . --ext ts --fix",
-		"copy-tests-files": "copyfiles \"tests/**/*.move\" \"tests/**/*.exp\" \"tests/**/*.toml\" \"tests/**/*.code-workspace\" out",
+        "copy-tests-files": "copyfiles \"tests/**/*.move\" \"tests/**/*.exp\" \"tests/**/*.toml\" \"tests/**/*.code-workspace\" out",
         "pretest": "npm run clean && npm run compile && npm run lint && npm run copy-tests-files",
-		"test": "node ./out/tests/runTests.js",
-		"dev": "npm run pretest && mode=dev node ./out/tests/runTests.js",
+        "test": "node ./out/tests/runTests.js",
+        "dev": "npm run pretest && mode=dev node ./out/tests/runTests.js",
         "vscode:prepublish": "npm run pretest",
         "package": "vsce package -o move-analyzer.vsix",
         "publish": "npm run pretest && vsce publish"
@@ -112,7 +112,7 @@
         "@typescript-eslint/eslint-plugin": "^4.33.0",
         "@typescript-eslint/parser": "^4.33.0",
         "@vscode/test-electron": "^2.0.0",
-		"copyfiles": "2.4.1",
+        "copyfiles": "2.4.1",
         "eslint": "^7.32.0",
         "eslint-plugin-tsdoc": "^0.2.14",
         "glob": "^7.1.7",

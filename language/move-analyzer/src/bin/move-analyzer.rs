@@ -169,7 +169,7 @@ fn main() {
                     Ok(result) => {
                         match result {
                             Ok(event) => {
-                                eprintln!("send SymbolicatorEvent: {:?}", event);
+                                eprintln!("send analyzer event: {:?}", event);
                                 let notification = Notification::new(lsp_types::notification::TelemetryEvent::METHOD.to_string(), event);
                                 if let Err(err) = context
                                     .connection

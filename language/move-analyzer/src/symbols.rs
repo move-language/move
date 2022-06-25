@@ -590,6 +590,7 @@ impl Symbols {
         }
         self.file_use_defs.extend(other.file_use_defs);
         self.file_name_mapping.extend(other.file_name_mapping);
+        self.file_mods.extend(other.file_mods);
     }
 }
 

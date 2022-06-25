@@ -1,7 +1,7 @@
 ---
 id: move-package
 title: Move Package
-custom_edit_url: https://github.com/move-language/move/edit/main/language/tools/move-package
+custom_edit_url: https://github.com/move-language/move/edit/main/language/tools/move-package/README.md
 ---
 
 # Summary

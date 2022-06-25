@@ -1,7 +1,7 @@
 ---
 id: move-book
 title: Move Book
-custom_edit_url: https://github.com/move-language/move/edit/main/language/documentation/book
+custom_edit_url: https://github.com/move-language/move/edit/main/language/documentation/book/README.md
 ---
 
 In order to update the Move book and preview changes to it you'll need to

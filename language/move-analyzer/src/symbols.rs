@@ -2112,6 +2112,27 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
 
         let mut children = vec![];
 
+        // handle constants
+        let cloned_const_def = mod_def.constants.clone();
+        for (sym, const_def_pos) in cloned_const_def {
+            let const_range = Range {
+                start: const_def_pos,
+                end: const_def_pos,
+            };
+
+            children.push(DocumentSymbol {
+                name: sym.clone().to_string(),
+                detail: None,
+                kind: SymbolKind::Constant,
+                range: const_range,
+                selection_range: const_range,
+                children: None,
+                tags: Some(vec![]),
+                deprecated: Some(false),
+            });
+        }
+
+        // handle structs
         let cloned_struct_def = mod_def.structs.clone();
         for (sym, struct_def) in cloned_struct_def {
             let struct_range = Range {
@@ -2134,25 +2155,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
             });
         }
 
-        let cloned_const_def = mod_def.constants.clone();
-        for (sym, const_def_pos) in cloned_const_def {
-            let const_range = Range {
-                start: const_def_pos,
-                end: const_def_pos,
-            };
-
-            children.push(DocumentSymbol {
-                name: sym.clone().to_string(),
-                detail: None,
-                kind: SymbolKind::Constant,
-                range: const_range,
-                selection_range: const_range,
-                children: None,
-                tags: Some(vec![]),
-                deprecated: Some(false),
-            });
-        }
-
+        // handle functions
         let cloned_func_def = mod_def.functions.clone();
         for (sym, func_def) in cloned_func_def {
             let func_range = Range {

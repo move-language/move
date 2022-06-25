@@ -85,7 +85,7 @@
         }
     },
     "scripts": {
-		"clean": "rm -rf ./out",
+        "clean": "rm -rf ./out",
         "compile": "tsc -p ./ && cd ../../ && cargo build",
         "watch": "tsc -watch -p ./",
         "lint": "tsfmt --verify && eslint . --ext ts --max-warnings 0",

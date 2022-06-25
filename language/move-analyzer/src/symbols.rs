@@ -61,6 +61,7 @@ use lsp_types::{
     GotoDefinitionParams, Hover, HoverContents, HoverParams, LanguageString, Location,
     MarkedString, Position, Range, ReferenceParams, SymbolKind,
 };
+
 use std::{
     cmp,
     collections::{BTreeMap, BTreeSet, HashMap},
@@ -71,7 +72,6 @@ use std::{
 };
 use tempfile::tempdir;
 use url::Url;
-use serde::{Deserialize, Serialize};
 
 use move_command_line_common::files::FileHash;
 use move_compiler::{
@@ -88,6 +88,8 @@ use move_compiler::{
 use move_ir_types::location::*;
 use move_package::compilation::build_plan::BuildPlan;
 use move_symbol_pool::Symbol;
+
+use crate::events::{AnalyzerEvent, AnalyzerEventType};
 
 /// Enabling/disabling the language server reporting readiness to support go-to-def and
 /// go-to-references to the IDE.
@@ -182,20 +184,6 @@ struct ModuleDefs {
     constants: BTreeMap<Symbol, Position>,
     /// Function definitions
     functions: BTreeMap<Symbol, FunctionDef>,
-}
-
-
-#[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq, Serialize, Deserialize)]
-enum SymbolicatorEventType {
-    Succcess,
-    FailedWithDiagnostics,
-    FailedWithError,
-}
-
-#[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SymbolicatorEvent {
-    /// The event type
-    event_type: SymbolicatorEventType
 }
 
 /// Data used during symbolication
@@ -358,7 +346,7 @@ impl SymbolicatorRunner {
         uri: &Url,
         symbols: Arc<Mutex<Symbols>>,
         sender: Sender<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>,
-        events_sender: Sender<Result<SymbolicatorEvent>>,
+        events_sender: Sender<Result<AnalyzerEvent>>,
     ) -> Self {
         let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
         let thread_mtx_cvar = mtx_cvar.clone();
@@ -405,9 +393,15 @@ impl SymbolicatorRunner {
 
                                 // send telemetry event
                                 eprintln!("send symbolication success event");
-                                events_sender.send(Ok(SymbolicatorEvent {
-                                event_type: SymbolicatorEventType::Succcess,
-                                })).unwrap();
+
+                                let mut event_data = BTreeMap::new();
+                                event_data.insert("result".to_string(), "success".to_string());
+                                events_sender
+                                    .send(Ok(AnalyzerEvent {
+                                        event_type: AnalyzerEventType::SymbolicatorEvent,
+                                        event_data,
+                                    }))
+                                    .unwrap();
                             }
 
                             // set/reset (previous) diagnostics
@@ -416,9 +410,17 @@ impl SymbolicatorRunner {
 
                                 // send telemetry event
                                 eprintln!("send symbolication failed with diagnostics event");
-                                events_sender.send(Ok(SymbolicatorEvent {
-                                event_type: SymbolicatorEventType::FailedWithDiagnostics,
-                                })).unwrap();
+                                let mut event_data = BTreeMap::new();
+                                event_data.insert(
+                                    "result".to_string(),
+                                    "failed_with_diagnostics".to_string(),
+                                );
+                                events_sender
+                                    .send(Ok(AnalyzerEvent {
+                                        event_type: AnalyzerEventType::SymbolicatorEvent,
+                                        event_data,
+                                    }))
+                                    .unwrap();
                             }
                         }
                         Err(err) => {
@@ -426,9 +428,16 @@ impl SymbolicatorRunner {
 
                             // send telemetry event
                             eprintln!("send symbolication with error event");
-                            events_sender.send(Ok(SymbolicatorEvent {
-                               event_type: SymbolicatorEventType::FailedWithError,
-                            })).unwrap();
+                            let mut event_data = BTreeMap::new();
+                            event_data
+                                .insert("result".to_string(), "failed_with_error".to_string());
+                            event_data.insert("error".to_string(), format!("{:?}", err));
+                            events_sender
+                                .send(Ok(AnalyzerEvent {
+                                    event_type: AnalyzerEventType::SymbolicatorEvent,
+                                    event_data,
+                                }))
+                                .unwrap();
 
                             if let Err(err) = sender.send(Err(err)) {
                                 eprintln!("could not compiler error: {:?}", err);

@@ -20,6 +20,7 @@ use std::{
 use move_analyzer::{
     completion::on_completion_request,
     context::Context,
+    events::AnalyzerEvent,
     symbols,
     vfs::{on_text_document_sync_notification, VirtualFileSystem},
 };
@@ -112,13 +113,17 @@ fn main() {
         serde_json::from_value(client_response).expect("could not deserialize client capabilities");
 
     let (diag_sender, diag_receiver) = bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
-    let (events_sender, events_receiver) = bounded::<Result<symbols::SymbolicatorEvent>>(0);
+    let (events_sender, events_receiver) = bounded::<Result<AnalyzerEvent>>(0);
 
     let mut symbolicator_runner = symbols::SymbolicatorRunner::idle();
     if symbols::DEFS_AND_REFS_SUPPORT {
         if let Some(uri) = initialize_params.root_uri {
-            symbolicator_runner =
-                symbols::SymbolicatorRunner::new(&uri, context.symbols.clone(), diag_sender, events_sender);
+            symbolicator_runner = symbols::SymbolicatorRunner::new(
+                &uri,
+                context.symbols.clone(),
+                diag_sender,
+                events_sender,
+            );
             symbolicator_runner.run();
         }
     };

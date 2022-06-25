@@ -8,16 +8,57 @@ import * as vscode from 'vscode';
 import * as lc from 'vscode-languageclient';
 import { log } from './log';
 
+/**
+ * OnReady The ready event is fired when the language client is ready to accept
+ */
+export class OnReady {
+    private readonly _ready: Promise<void>;
+
+    private _resolve: (() => void) | undefined;
+
+    private _reject: ((reason: string) => void) | undefined;
+
+    constructor() {
+        this._ready = new Promise<void>((resolve, reject) => {
+            this._resolve = resolve;
+            this._reject = reject;
+        });
+    }
+
+    public async wait(): Promise<void> {
+        return this._ready;
+    }
+
+    public resolve(): void {
+        if (this._resolve !== undefined) {
+            this._resolve();
+        }
+    }
+
+    public reject(reason: string): void {
+        if (this._reject !== undefined) {
+            this._reject(reason);
+        }
+    }
+
+} // OnReady
+
 /** Information passed along to each VS Code command defined by this extension. */
 export class Context {
-    private client: lc.LanguageClient | undefined;
+    private _client: lc.LanguageClient | undefined;
+
+    private _ready: boolean;
+
+    private readonly _onReadyCallbacks: Array<OnReady>;
 
     private constructor(
         private readonly extensionContext: Readonly<vscode.ExtensionContext>,
         readonly configuration: Readonly<Configuration>,
         client: lc.LanguageClient | undefined = undefined,
     ) {
-        this.client = client;
+        this._client = client;
+        this._ready = false;
+        this._onReadyCallbacks = [];
     }
 
     static create(
@@ -99,7 +140,26 @@ export class Context {
         log.info('Starting client...');
         const disposable = client.start();
         this.extensionContext.subscriptions.push(disposable);
-        this.client = client;
+        this._client = client;
+
+        this._client.onReady().then(() => {
+            log.info('Client ready.');
+
+            client.onNotification('telemetry/event', (...params: Array<any>) => {
+                log.info('Event:' + JSON.stringify(params));
+
+                /* eslint @typescript-eslint/no-unsafe-member-access: off */
+                if (params[0] !== undefined && params[0].event_type === 'SymbolicatorEvent') {
+                    if (params[0].event_data.result === 'success') {
+                        this._resoleCallbacks();
+                    } else {
+                        this._rejectCallbacks(params[0].event_data.result);
+                    }
+                }
+            });
+        }, (err) => {
+            log.info(`Client failed to start: ${err}`);
+        });
     }
 
     /**
@@ -108,6 +168,31 @@ export class Context {
      * @returns lc.LanguageClient
      */
     getClient(): lc.LanguageClient | undefined {
-        return this.client;
+        return this._client;
     }
-}
+
+    /**
+     * Returns whether the language server is ready to accept requests.
+     *
+     * @returns Promise<void>
+     *
+     */
+    async onReady(): Promise<void> {
+        if (this._ready) {
+            return Promise.resolve();
+        }
+
+        const onReady = new OnReady();
+        this._onReadyCallbacks.push(onReady);
+        return onReady.wait();
+    }
+
+    _resoleCallbacks(): void {
+        this._ready = true;
+        this._onReadyCallbacks.forEach(callback => callback.resolve());
+    }
+
+    _rejectCallbacks(reason: string): void {
+        this._onReadyCallbacks.forEach(callback => callback.reject(reason));
+    }
+} // Context

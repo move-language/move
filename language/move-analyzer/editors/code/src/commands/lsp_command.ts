@@ -12,5 +12,9 @@ export async function textDocumentDocumentSymbol(context: Readonly<Context>, par
         return Promise.reject(new Error('No language client connected.'));
     }
 
+    // Wait for the language client to be ready.
+    await context.onReady();
+
+    // Send the request to the language client.
     return client.sendRequest(lc.DocumentSymbolRequest.type, params);
 }

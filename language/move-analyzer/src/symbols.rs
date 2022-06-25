@@ -51,7 +51,7 @@ use crate::{
     diagnostics::{lsp_diagnostics, lsp_empty_diagnostics},
     utils::get_loc,
 };
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use codespan_reporting::files::SimpleFiles;
 use crossbeam::channel::Sender;
 use im::ordmap::OrdMap;
@@ -61,6 +61,7 @@ use lsp_types::{
     GotoDefinitionParams, Hover, HoverContents, HoverParams, LanguageString, Location,
     MarkedString, Position, Range, ReferenceParams, SymbolKind,
 };
+
 use std::{
     cmp,
     collections::{BTreeMap, BTreeSet, HashMap},
@@ -87,6 +88,8 @@ use move_compiler::{
 use move_ir_types::location::*;
 use move_package::compilation::build_plan::BuildPlan;
 use move_symbol_pool::Symbol;
+
+use crate::events::{AnalyzerEvent, AnalyzerEventType};
 
 /// Enabling/disabling the language server reporting readiness to support go-to-def and
 /// go-to-references to the IDE.
@@ -214,9 +217,9 @@ pub struct Symbols {
     file_mods: BTreeMap<PathBuf, BTreeSet<ModuleDefs>>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Copy)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 enum RunnerState {
-    Run,
+    Run(PathBuf),
     Wait,
     Quit,
 }
@@ -340,62 +343,127 @@ impl SymbolicatorRunner {
 
     /// Create a new runner
     pub fn new(
-        uri: &Url,
         symbols: Arc<Mutex<Symbols>>,
         sender: Sender<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>,
+        events_sender: Sender<Result<AnalyzerEvent>>,
     ) -> Self {
         let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
         let thread_mtx_cvar = mtx_cvar.clone();
-        let pkg_path = uri.to_file_path().unwrap();
+        let runner = SymbolicatorRunner { mtx_cvar };
 
         thread::spawn(move || {
             let (mtx, cvar) = &*thread_mtx_cvar;
+            // Locations opened in the IDE (files or directories) for which manifest file is missing
+            let mut missing_manifests = BTreeSet::new();
             // infinite loop to wait for symbolication requests
+            eprintln!("starting symbolicator runner loop");
             loop {
-                let get_symbols = {
+                let starting_path_opt = {
                     // hold the lock only as long as it takes to get the data, rather than through
                     // the whole symbolication process (hence a separate scope here)
                     let mut symbolicate = mtx.lock().unwrap();
-                    match *symbolicate {
+                    match symbolicate.clone() {
                         RunnerState::Quit => break,
-                        RunnerState::Run => {
+                        RunnerState::Run(root_dir) => {
                             *symbolicate = RunnerState::Wait;
-                            true
+                            Some(root_dir)
                         }
                         RunnerState::Wait => {
                             // wait for next request
                             symbolicate = cvar.wait(symbolicate).unwrap();
-                            match *symbolicate {
+                            match symbolicate.clone() {
                                 RunnerState::Quit => break,
-                                RunnerState::Run => {
+                                RunnerState::Run(root_dir) => {
                                     *symbolicate = RunnerState::Wait;
-                                    true
+                                    Some(root_dir)
                                 }
-                                RunnerState::Wait => false,
+                                RunnerState::Wait => None,
                             }
                         }
                     }
                 };
-                if get_symbols {
+                if let Some(starting_path) = starting_path_opt {
+                    let root_dir = Self::root_dir(&starting_path);
+                    if root_dir.is_none() && !missing_manifests.contains(&starting_path) {
+                        eprintln!("reporting missing manifest");
+
+                        // report missing manifest file only once to avoid cluttering IDE's UI in
+                        // cases when developer indeed intended to open a standalone file that was
+                        // not meant to compile
+                        missing_manifests.insert(starting_path);
+                        if let Err(err) =
+                            sender.send(Err(anyhow!("Unable to find package manifest")))
+                        {
+                            eprintln!("could not pass missing manifest error: {:?}", err);
+                        }
+                        continue;
+                    }
                     eprintln!("symbolication started");
-                    match Symbolicator::get_symbols(&pkg_path) {
+                    match Symbolicator::get_symbols(root_dir.unwrap().as_path()) {
                         Ok((symbols_opt, lsp_diagnostics)) => {
                             eprintln!("symbolication finished");
                             if let Some(new_symbols) = symbols_opt {
-                                // replace symbols only if they have been actually recomputed,
-                                // otherwise keep the old (possibly out-dated) symbolication info
+                                // merge the new symbols with the old ones to support a
+                                // (potentially) new project/package that symbolication information
+                                // was built for
+                                //
+                                // TODO: we may consider "unloading" symbolication information when
+                                // files/directories are being closed but as with other performance
+                                // optimizations (e.g. incrementalizatino of the vfs), let's wait
+                                // until we know we actually need it
                                 let mut old_symbols = symbols.lock().unwrap();
-                                *old_symbols = new_symbols;
+                                (*old_symbols).merge(new_symbols);
+
+                                // send telemetry event
+                                eprintln!("send symbolication success event");
+
+                                let mut event_data = BTreeMap::new();
+                                event_data.insert("result".to_string(), "success".to_string());
+                                events_sender
+                                    .send(Ok(AnalyzerEvent {
+                                        event_type: AnalyzerEventType::SymbolicatorEvent,
+                                        event_data,
+                                    }))
+                                    .unwrap();
                             }
+
                             // set/reset (previous) diagnostics
                             if let Err(err) = sender.send(Ok(lsp_diagnostics)) {
                                 eprintln!("could not pass diagnostics: {:?}", err);
+
+                                // send telemetry event
+                                eprintln!("send symbolication failed with diagnostics event");
+                                let mut event_data = BTreeMap::new();
+                                event_data.insert(
+                                    "result".to_string(),
+                                    "failed_with_diagnostics".to_string(),
+                                );
+                                events_sender
+                                    .send(Ok(AnalyzerEvent {
+                                        event_type: AnalyzerEventType::SymbolicatorEvent,
+                                        event_data,
+                                    }))
+                                    .unwrap();
                             }
                         }
                         Err(err) => {
                             eprintln!("symbolication failed: {:?}", err);
+
+                            // send telemetry event
+                            eprintln!("send symbolication with error event");
+                            let mut event_data = BTreeMap::new();
+                            event_data
+                                .insert("result".to_string(), "failed_with_error".to_string());
+                            event_data.insert("error".to_string(), format!("{:?}", err));
+                            events_sender
+                                .send(Ok(AnalyzerEvent {
+                                    event_type: AnalyzerEventType::SymbolicatorEvent,
+                                    event_data,
+                                }))
+                                .unwrap();
+
                             if let Err(err) = sender.send(Err(err)) {
-                                eprintln!("could not compiler error: {:?}", err);
+                                eprintln!("could not pass compiler error: {:?}", err);
                             }
                         }
                     }
@@ -403,14 +471,14 @@ impl SymbolicatorRunner {
             }
         });
 
-        SymbolicatorRunner { mtx_cvar }
+        runner
     }
 
-    pub fn run(&self) {
-        eprintln!("scheduling run");
+    pub fn run(&self, starting_path: &str) {
+        eprintln!("scheduling run for {}", starting_path);
         let (mtx, cvar) = &*self.mtx_cvar;
         let mut symbolicate = mtx.lock().unwrap();
-        *symbolicate = RunnerState::Run;
+        *symbolicate = RunnerState::Run(PathBuf::from(starting_path));
         cvar.notify_one();
         eprintln!("scheduled run");
     }
@@ -420,6 +488,19 @@ impl SymbolicatorRunner {
         let mut symbolicate = mtx.lock().unwrap();
         *symbolicate = RunnerState::Quit;
         cvar.notify_one();
+    }
+
+    fn root_dir(starting_path: &Path) -> Option<PathBuf> {
+        let mut current_path_opt = Some(starting_path);
+        while current_path_opt.is_some() {
+            let current_path = current_path_opt.unwrap();
+            let manifest_path = current_path.join("Move.toml");
+            if manifest_path.is_file() {
+                return Some(current_path.to_path_buf());
+            }
+            current_path_opt = current_path.parent();
+        }
+        None
     }
 }
 
@@ -496,6 +577,20 @@ impl UseDefMap {
 
     fn extend(&mut self, use_defs: BTreeMap<u32, BTreeSet<UseDef>>) {
         self.0.extend(use_defs);
+    }
+}
+
+impl Symbols {
+    fn merge(&mut self, other: Self) {
+        for (k, v) in other.references {
+            self.references
+                .entry(k)
+                .or_insert_with(BTreeSet::new)
+                .extend(v);
+        }
+        self.file_use_defs.extend(other.file_use_defs);
+        self.file_name_mapping.extend(other.file_name_mapping);
+        self.file_mods.extend(other.file_mods);
     }
 }
 
@@ -599,6 +694,8 @@ impl Symbolicator {
             mod_use_defs.insert(*module_ident, symbols);
         }
 
+        eprintln!("get_symbols loaded file_mods length: {:?}", file_mods.len());
+
         let mut symbolicator = Symbolicator {
             mod_outer_defs,
             files,
@@ -635,6 +732,9 @@ impl Symbolicator {
             file_name_mapping,
             file_mods,
         };
+
+        eprintln!("get_symbols load complete");
+
         Ok((Some(symbols), lsp_diagnostics))
     }
 
@@ -1997,6 +2097,8 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
         .file_mods
         .get(&PathBuf::from(fpath))
         .unwrap_or(&empty_mods);
+
+    eprintln!("on_document_symbol_request mods length: {:?}", mods.len());
 
     let mut defs: Vec<DocumentSymbol> = vec![];
     for mod_def in mods {

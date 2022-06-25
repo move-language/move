@@ -20,7 +20,7 @@ module NamedAddr::BasicCoin {
 
     public fun publish_balance<CoinType>(account: &signer) {
         let empty_coin = Coin<CoinType> { value: 0 };
-        assert!(!exists<Balance<CoinType>>(Signer::address_of(account)), Errors::already_published(EALREADY_HAS_BALANCE));
+        assert!(!exists<Balance<CoinType>>(signer::address_of(account)), errors::already_published(EALREADY_HAS_BALANCE));
         move_to(account, Balance<CoinType> { coin: empty_coin });
     }
 

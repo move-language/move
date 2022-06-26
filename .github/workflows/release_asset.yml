@@ -1,5 +1,5 @@
 # When the release is published, this workflow is automatically triggered,
-# the move-related binaries are automatically packaged, and uploaded to 
+# the move-related binaries are automatically packaged, and uploaded to
 # the release's Assets
 
 name: Release asset bot

@@ -1,7 +1,8 @@
 #!/bin/bash
-# Copyright (c) The Diem Core Contributors
 # Copyright (c) The Move Contributors
 # SPDX-License-Identifier: Apache-2.0
+#
+# A script to package the move binary into a zip package.
 
 rm -rf move-artifacts/*
 mkdir -p move-artifacts/

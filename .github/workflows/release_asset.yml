@@ -1,3 +1,7 @@
+# When the release is published, this workflow is automatically triggered,
+# the move-related binaries are automatically packaged, and uploaded to
+# the release's Assets
+
 name: Release asset bot
 
 on:
@@ -28,17 +32,10 @@ jobs:
           command: build
           args: --release
 
-      - name: build move release asset
-        run: bash ./scripts/release.sh ${{ matrix.platform }}
+      - name: package move asset
+        run: ./scripts/package_asset.sh ${{ matrix.platform }}
 
-      - name: upload artifact asset
-        uses: actions/upload-artifact@v2
-        if: ${{ github.event_name != 'release'}}
-        with:
-          name: move-${{ matrix.platform }}.zip
-          path: ./move-${{ matrix.platform }}.zip
-
-      - name: upload move release asset
+      - name: upload move asset
         if: ${{ github.event_name == 'release'}}
         id: upload-release-asset
         uses: actions/upload-release-asset@v1

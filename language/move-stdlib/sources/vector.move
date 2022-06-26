@@ -47,7 +47,7 @@ module std::vector {
 
     #[bytecode_instruction]
     /// Swaps the elements at the `i`th and `j`th indices in the vector `v`.
-    /// Aborts if `i`or `j` is out of bounds.
+    /// Aborts if `i` or `j` is out of bounds.
     native public fun swap<Element>(v: &mut vector<Element>, i: u64, j: u64);
 
     /// Return an vector of size one containing element `e`.

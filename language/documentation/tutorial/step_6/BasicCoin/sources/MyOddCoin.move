@@ -22,11 +22,10 @@ module NamedAddr::MyOddCoin {
     /*
         Unit tests
     */
-
     #[test(from = @0x42, to = @0x10)]
     fun test_odd_success(from: signer, to: signer) {
-        setup_and_mint(&from ,42);
-        setup_and_mint(&to ,10);
+        setup_and_mint(&from, 42);
+        setup_and_mint(&to, 10);
 
         // transfer an odd number of coins so this should succeed.
         transfer(&from, @0x10, 7);
@@ -38,8 +37,8 @@ module NamedAddr::MyOddCoin {
     #[test(from = @0x42, to = @0x10)]
     #[expected_failure]
     fun test_not_odd_failure(from: signer, to: signer) {
-        setup_and_mint(&from ,42);
-        setup_and_mint(&to ,10);
+        setup_and_mint(&from, 42);
+        setup_and_mint(&to, 10);
 
         // transfer an even number of coins so this should fail.
         transfer(&from, @0x10, 8);

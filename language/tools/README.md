@@ -1,7 +1,7 @@
 ---
 id: tools
 title: Move Tools
-custom_edit_url: https://github.com/diem/move/edit/main/language/tools
+custom_edit_url: https://github.com/move-language/move/edit/main/language/tools/README.md
 ---
 
 # Summary

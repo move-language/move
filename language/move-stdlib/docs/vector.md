@@ -225,7 +225,7 @@ Aborts if <code>v</code> is not empty.
 ## Function `swap`
 
 Swaps the elements at the <code>i</code>th and <code>j</code>th indices in the vector <code>v</code>.
-Aborts if <code>i</code>or <code>j</code> is out of bounds.
+Aborts if <code>i</code> or <code>j</code> is out of bounds.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="vector.md#0x1_vector_swap">swap</a>&lt;Element&gt;(v: &<b>mut</b> <a href="vector.md#0x1_vector">vector</a>&lt;Element&gt;, i: u64, j: u64)

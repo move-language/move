@@ -120,4 +120,17 @@ module Symbols::M1 {
         tmp
     }
 
+    fun struct_param(p: SomeOtherStruct): SomeOtherStruct {
+        p
+    }
+
+    fun struct_var(p: bool): SomeOtherStruct {
+        let tmp = M2::some_other_struct(7);
+        if (p) {
+            tmp
+        } else {
+            M2::some_other_struct(42)
+        }
+    }
+
 }

@@ -9,7 +9,7 @@ use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
     notification::Notification as _, request::Request as _, CompletionOptions, Diagnostic,
     HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
-    TextDocumentSyncOptions, WorkDoneProgressOptions,
+    TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
 };
 use std::{
     collections::BTreeMap,
@@ -94,6 +94,9 @@ fn main() {
             },
         }),
         definition_provider: Some(OneOf::Left(symbols::DEFS_AND_REFS_SUPPORT)),
+        type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(
+            symbols::DEFS_AND_REFS_SUPPORT,
+        )),
         references_provider: Some(OneOf::Left(symbols::DEFS_AND_REFS_SUPPORT)),
         ..Default::default()
     })
@@ -110,14 +113,13 @@ fn main() {
     let (diag_sender, diag_receiver) = bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
     let mut symbolicator_runner = symbols::SymbolicatorRunner::idle();
     if symbols::DEFS_AND_REFS_SUPPORT {
+        symbolicator_runner =
+            symbols::SymbolicatorRunner::new(context.symbols.clone(), diag_sender);
         if let Some(uri) = initialize_params.root_uri {
-            symbolicator_runner =
-                symbols::SymbolicatorRunner::new(&uri, context.symbols.clone(), diag_sender);
-            symbolicator_runner.run();
+            symbolicator_runner.run(uri.path());
         }
     };
 
-    let mut missing_manifest_reported = false;
     loop {
         select! {
             recv(diag_receiver) -> message => {
@@ -140,23 +142,17 @@ fn main() {
                             Err(err) => {
                                 let typ = lsp_types::MessageType::Error;
                                 let message = format!("{err}");
-                                let missing_manifest = message.starts_with("Unable to find package manifest");
-                                if !missing_manifest || !missing_manifest_reported {
                                     // report missing manifest only once to avoid re-generating
                                     // user-visible error in cases when the developer decides to
                                     // keep editing a file that does not belong to a packages
                                     let params = lsp_types::ShowMessageParams { typ, message };
-                                    let notification = Notification::new(lsp_types::notification::ShowMessage::METHOD.to_string(), params);
-                                    if let Err(err) = context
-                                        .connection
-                                        .sender
-                                        .send(lsp_server::Message::Notification(notification)) {
-                                            eprintln!("could not send compiler error response: {:?}", err);
-                                        };
-                                }
-                                if missing_manifest {
-                                    missing_manifest_reported = true;
-                                }
+                                let notification = Notification::new(lsp_types::notification::ShowMessage::METHOD.to_string(), params);
+                                if let Err(err) = context
+                                    .connection
+                                    .sender
+                                    .send(lsp_server::Message::Notification(notification)) {
+                                        eprintln!("could not send compiler error response: {:?}", err);
+                                    };
                             },
                         }
                     },
@@ -194,6 +190,9 @@ fn on_request(context: &Context, request: &Request) {
         lsp_types::request::Completion::METHOD => on_completion_request(context, request),
         lsp_types::request::GotoDefinition::METHOD => {
             symbols::on_go_to_def_request(context, request, &context.symbols.lock().unwrap());
+        }
+        lsp_types::request::GotoTypeDefinition::METHOD => {
+            symbols::on_go_to_type_def_request(context, request, &context.symbols.lock().unwrap());
         }
         lsp_types::request::References::METHOD => {
             symbols::on_references_request(context, request, &context.symbols.lock().unwrap());

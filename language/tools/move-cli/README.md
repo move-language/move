@@ -8,7 +8,7 @@ three main subcommands:
 * **sandbox commands**: are commands that allow you to write Move modules and scripts, write and run scripts and tests, and view the resulting state of execution in a local sandboxed environment.
 * **experimental commands**: are experimental commands that are currently in development.
 
-Every Move CLI command, with the exception of `package create`, is expected to be run within the context of a [Move package](https://diem.github.io/move/packages.html).
+Every Move CLI command, with the exception of `package create`, is expected to be run within the context of a [Move package](https://move-language.github.io/move/packages.html).
 
 ## Installation
 ```shell
@@ -103,7 +103,7 @@ $ cd readme
 
 ### Compiling and running scripts
 
-Let's first start out with a simple script that prints its [`signer`](https://diem.github.io/move/signer.html).
+Let's first start out with a simple script that prints its [`signer`](https://move-language.github.io/move/signer.html).
 Create a file named `sources/debug_script.move` and type the following into it:
 
 ```rust
@@ -118,7 +118,7 @@ fun debug_script(account: signer) {
 
 Before we can run this however, we need to import the Move standard library
 nursery in order to have access to the `Debug` module and `Std` [named
-address](https://diem.github.io/move/address.html#named-addresses).
+address](https://move-language.github.io/move/address.html#named-addresses).
 You can specify dependencies locally, or using a Git URL. Here, we will specify
 it using Git, so add the following to the `Move.toml` file in the `readme`
 directory:

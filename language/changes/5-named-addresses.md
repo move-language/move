@@ -11,7 +11,7 @@ level elements (outside of modules and scripts) in Move Packages, or passed as
 arguments to the Move compiler.
 
 With the landing of this feature, Move standard library modules now reside under the address `Std`,
-e.g. `Std::Vector`. Similarly, Diem Framework modules now reside under the address `DiemFramework`,
+e.g. `std::vector`. Similarly, Diem Framework modules now reside under the address `DiemFramework`,
 e.g. `DiemFramework::XUS`.
 
 Named address declarations are opaque, meaning they must be accessed via the name and not their
@@ -52,7 +52,7 @@ operator any valid address can be used. For example:
 let _: u8 = 0x1u8;
 let _: u64 = 0x42u64;
 let _: u128 = 0x42u128;
-let a1: address = @Std;
+let a1: address = @std;
 let a2: address = @66;
 let a3: address = @0x42;
 ```
@@ -167,7 +167,7 @@ See the 'Future Work' section below for details about how this might work in the
 Since, all standard library modules and all Diem Framework modules live in `Std` and `DiemFramework`
 respectively, source code must be updated to use those named addresses. The named addresses are
 opaque, so the numeric values can no longer be used to access the modules. For example, any use of
-`0x1::Vector` must now be `Std::Vector`.
+`0x1::Vector` must now be `std::vector`.
 
 Note, as this is just a syntactic change, the compiled module binaries will not be affected.
 

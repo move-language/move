@@ -9,7 +9,7 @@ import * as lc from 'vscode-languageclient';
 import { log } from './log';
 
 /**
- * OnReady The ready event is fired when the language client is ready to accept
+ * The observer for ready event.
  */
 export class OnReady {
     private readonly _ready: Promise<void>;

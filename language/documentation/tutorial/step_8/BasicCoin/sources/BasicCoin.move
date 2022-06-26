@@ -22,7 +22,7 @@ module NamedAddr::BasicCoin {
     public fun publish_balance<CoinType>(account: &signer) {
         let empty_coin = Coin<CoinType> { value: 0 };
         assert!(!exists<Balance<CoinType>>(signer::address_of(account)), errors::already_published(EALREADY_HAS_BALANCE));
-        move_to(account, Balance<CoinType> { coin:  empty_coin });
+        move_to(account, Balance<CoinType> { coin: empty_coin });
     }
 
     /// Mint `amount` tokens to `mint_addr`. This method requires a witness with `CoinType` so that the
@@ -50,7 +50,7 @@ module NamedAddr::BasicCoin {
         deposit<CoinType>(to, check);
     }
 
-    spec transfer{
+    spec transfer {
         let addr_from = signer::address_of(from);
 
         let balance_from = global<Balance<CoinType>>(addr_from).coin.value;

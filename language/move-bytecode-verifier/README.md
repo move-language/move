@@ -1,7 +1,7 @@
 ---
 id: bytecode-verifier
 title: Bytecode Verifier
-custom_edit_url: https://github.com/diem/move/edit/main/language/move-bytecode-verifier/README.md
+custom_edit_url: https://github.com/move-language/move/edit/main/language/move-bytecode-verifier/README.md
 ---
 
 

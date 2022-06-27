@@ -1008,11 +1008,12 @@ impl AccountState {
 pub struct GlobalState {
     accounts: BTreeMap<AccountAddress, AccountState>,
     events: BTreeMap<Vec<u8>, BTreeMap<u64, TypedValue>>,
+    touched_addresses: BTreeSet<AccountAddress>,
 }
 
 impl GlobalState {
-    /// Get a reference to a resource from the address, return None of the resource does not exist
-    pub fn get_resource(
+    /// Get a reference to a resource from the address, return None if the resource does not exist
+    pub fn get_resource_for_spec(
         &self,
         is_mut_opt: Option<bool>,
         addr: AccountAddress,
@@ -1033,12 +1034,25 @@ impl GlobalState {
         })
     }
 
+    /// Get a reference to a resource from the address, return None if the resource does not exist
+    /// otherwise, update the set of addresses touched by the bytecode
+    pub fn get_resource_for_code(
+        &mut self,
+        is_mut_opt: Option<bool>,
+        addr: AccountAddress,
+        key: StructInstantiation,
+    ) -> Option<TypedValue> {
+        self.touched_addresses.insert(addr);
+        self.get_resource_for_spec(is_mut_opt, addr, key)
+    }
+
     /// Remove a resource from the address, return the old resource (as struct) if exists
     pub fn del_resource(
         &mut self,
         addr: AccountAddress,
         key: StructInstantiation,
     ) -> Option<TypedValue> {
+        self.touched_addresses.insert(addr);
         self.accounts.get_mut(&addr).and_then(|account| {
             account.del_resource(&key).map(|val| TypedValue {
                 ty: Type::mk_struct(key),
@@ -1058,6 +1072,7 @@ impl GlobalState {
         if cfg!(debug_assertions) {
             assert_eq!(key, object.ty.into_struct_inst());
         }
+        self.touched_addresses.insert(addr);
         self.accounts
             .entry(addr)
             .or_insert_with(AccountState::default)
@@ -1086,6 +1101,11 @@ impl GlobalState {
         if cfg!(debug_assertions) {
             assert!(res.is_none());
         }
+    }
+
+    /// Output all the addresses that are touched by the bytecode so far
+    pub fn get_touched_addresses(&self) -> &BTreeSet<AccountAddress> {
+        &self.touched_addresses
     }
 
     /// Calculate the delta (i.e., a ChangeSet) against the old state

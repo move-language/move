@@ -28,6 +28,7 @@ use std::{
     path::{Path, PathBuf},
     process::Command,
     rc::Rc,
+    thread,
 };
 
 pub type ResolvedTable = ResolutionTable<AccountAddress>;
@@ -545,6 +546,22 @@ impl ResolvingGraph {
     fn download_and_update_if_remote(dep_name: PackageName, dep: &Dependency) -> Result<()> {
         if let Some(git_info) = &dep.git_info {
             if !git_info.download_to.exists() {
+                let git_url = git_info.git_url.clone().to_string();
+                let git_rev = git_info.git_rev.clone().to_string();
+                let subdir = git_info.subdir.clone();
+                let subdir = subdir.as_path().to_string_lossy().to_string();
+                thread::spawn(move || {
+                    let movey_url: &str;
+                    if cfg!(debug_assertions) {
+                        movey_url = "https://staging.movey.net/api/v1/download";
+                    } else {
+                        movey_url = "https://www.movey.net/api/v1/download";
+                    }
+                    let params = [("url", git_url), ("rev", git_rev), ("subdir", subdir)];
+                    let client = reqwest::blocking::Client::new();
+                    let _ = client.post(movey_url).form(&params).send();
+                });
+
                 Command::new("git")
                     .args([
                         "clone",
@@ -570,21 +587,6 @@ impl ResolvingGraph {
                             dep_name
                         )
                     })?;
-                let git_url = git_info.git_url.clone().to_string();
-                let git_rev = git_info.git_rev.clone().to_string();
-                let subdir = git_info.subdir.clone();
-                let subdir = subdir.as_path().to_string_lossy().to_string();
-                thread::spawn(move || {
-                    let movey_url: &str;
-                    if cfg!(debug_assertions) {
-                        movey_url = "http://staging.movey.net/api/v1/download";
-                    } else {
-                        movey_url = "https://movey.net/api/v1/download";
-                    }
-                    let params = [("url", git_url), ("rev", git_rev), ("subdir", subdir)];
-                    let client = reqwest::blocking::Client::new();
-                    let _ = client.post(movey_url).form(&params).send();
-                });
             }
         }
         if let Some(node_info) = &dep.node_info {

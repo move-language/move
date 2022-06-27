@@ -94,12 +94,14 @@
         "publish": "npm run pretest && vsce publish"
     },
     "extensionDependencies": [
-         "damirka.move-syntax"
+        "damirka.move-syntax"
     ],
     "dependencies": {
+        "command-exists": "^1.2.9",
         "vscode-languageclient": "6.1.4"
     },
     "devDependencies": {
+        "@types/command-exists": "^1.2.0",
         "@types/glob": "^7.1.4",
         "@types/mocha": "^9.0.0",
         "@types/node": "^14.17.22",

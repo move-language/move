@@ -572,7 +572,8 @@ impl Symbolicator {
             let (_, compiler) = match compilation_result {
                 Ok(v) => v,
                 Err(diags) => {
-                    diagnostics = Some(diags);
+                    let failure = true;
+                    diagnostics = Some((diags, failure));
                     eprintln!("typed AST compilation failed");
                     return Ok((files, vec![]));
                 }
@@ -582,27 +583,43 @@ impl Symbolicator {
             typed_ast = Some(typed_program.clone());
             eprintln!("compiling to bytecode");
             let compilation_result = compiler.at_typing(typed_program).build();
-            let (units, _) = match compilation_result {
+            let (units, diags) = match compilation_result {
                 Ok(v) => v,
                 Err(diags) => {
-                    diagnostics = Some(diags);
+                    let failure = false;
+                    diagnostics = Some((diags, failure));
                     eprintln!("bytecode compilation failed");
                     return Ok((files, vec![]));
                 }
             };
+            // warning diagnostics (if any) since compilation succeeded
+            if !diags.is_empty() {
+                // assign only if non-empty, otherwise return None to reset previous diagnostics
+                let failure = false;
+                diagnostics = Some((diags, failure));
+            }
             eprintln!("compiled to bytecode");
             Ok((files, units))
         })?;
 
-        debug_assert!(typed_ast.is_some() || diagnostics.is_some());
-        if let Some(compiler_diagnostics) = diagnostics {
+        let mut ide_diagnostics = lsp_empty_diagnostics(&file_name_mapping);
+        if let Some((compiler_diagnostics, failure)) = diagnostics {
             let lsp_diagnostics = lsp_diagnostics(
                 &compiler_diagnostics.into_codespan_format(),
                 &files,
                 &file_id_mapping,
                 &file_name_mapping,
             );
-            return Ok((None, lsp_diagnostics));
+            // start with empty diagnostics for all files and replace them with actual diagnostics
+            // only for files that have failures/warnings so that diagnostics for all other files
+            // (that no longer have failures/warnings) are reset
+            ide_diagnostics.extend(lsp_diagnostics);
+            if failure {
+                // just return diagnostics as we don't have typed AST that we can use to compute
+                // symbolication information
+                debug_assert!(typed_ast.is_none());
+                return Ok((None, ide_diagnostics));
+            }
         }
 
         let modules = &typed_ast.unwrap().modules;
@@ -645,13 +662,12 @@ impl Symbolicator {
                 .extend(use_defs.elements());
         }
 
-        let lsp_diagnostics = lsp_empty_diagnostics(&file_name_mapping);
         let symbols = Symbols {
             references,
             file_use_defs,
             file_name_mapping,
         };
-        Ok((Some(symbols), lsp_diagnostics))
+        Ok((Some(symbols), ide_diagnostics))
     }
 
     /// Get empty symbols

@@ -1,6 +1,6 @@
+use anyhow::{bail, Context, Result};
 use std::fs;
-use anyhow::{Result, Context, bail};
-use toml_edit::easy::{Value};
+use toml_edit::easy::Value;
 
 pub fn get_move_home_path(is_test_mode: bool) -> String {
     let mut home = std::env::var("MOVE_HOME").unwrap_or_else(|_| {
@@ -23,21 +23,25 @@ pub fn get_registry_api_token(is_test_mode: bool) -> Result<String> {
     if let Ok(content) = get_api_token(is_test_mode) {
         Ok(content)
     } else {
-        bail!("There seems to be an error with your Movey credential. \
-            Please run `move login` and follow the instructions.")
+        bail!(
+            "There seems to be an error with your Movey credential. \
+            Please run `move login` and follow the instructions."
+        )
     }
 }
 
 fn get_api_token(is_test_mode: bool) -> Result<String> {
     let credential_path = get_credential_path(is_test_mode);
-    
+
     let contents = fs::read_to_string(&credential_path)?;
     let mut toml: Value = contents.parse()?;
-    let registry = toml.as_table_mut()
+    let registry = toml
+        .as_table_mut()
         .context("Error parsing credential.toml")?
         .get_mut("registry")
         .context("Error parsing credential.toml")?;
-    let token = registry.as_table_mut()
+    let token = registry
+        .as_table_mut()
         .context("Error parsing token")?
         .get_mut("token")
         .context("Error parsing token")?;
@@ -73,13 +77,13 @@ mod tests {
     #[test]
     fn get_api_token_works() {
         let (move_home, credential_path) = setup_move_home();
-        
+
         let _ = fs::create_dir_all(&move_home);
         File::create(&credential_path).unwrap();
 
         let content = "[registry]\ntoken = \"a sample token\"";
         fs::write(&credential_path, content).unwrap();
-        
+
         let token = get_api_token(true).unwrap();
         assert!(token.contains("a sample token"));
 

@@ -40,10 +40,6 @@ fn run_metatest() {
 }
 
 const PACKAGE_PATH: &str = "./tests/upload_tests/valid_package";
-#[cfg(debug_assertions)]
-const CLI_EXE: &str = "../../../../../../target/debug/move";
-#[cfg(not(debug_assertions))]
-const CLI_EXE: &str = "../../../../../../target/release/move";
 
 #[test]
 fn cross_process_locking_git_deps() {
@@ -76,7 +72,8 @@ fn upload_package_to_movey_works() {
     file.write(&credential_content.as_bytes()).unwrap();
 
     init_git(PACKAGE_PATH, 0);
-    let output = Command::new(CLI_EXE)
+    let cli_exe = env!("CARGO_BIN_EXE_move");
+    let output = Command::new(cli_exe)
         .current_dir(PACKAGE_PATH)
         .args(["package", "upload", "--test"])
         .output()
@@ -94,7 +91,8 @@ fn upload_package_to_movey_works() {
 #[test]
 fn upload_package_to_movey_with_no_remote_should_panic() {
     init_git(PACKAGE_PATH, 1);
-    let output = Command::new(CLI_EXE)
+    let cli_exe = env!("CARGO_BIN_EXE_move");
+    let output = Command::new(cli_exe)
         .current_dir(PACKAGE_PATH)
         .args(["package", "upload", "--test"])
         .output()
@@ -107,7 +105,8 @@ fn upload_package_to_movey_with_no_remote_should_panic() {
 #[test]
 fn upload_package_to_movey_with_no_head_commit_id_should_panic() {
     init_git(PACKAGE_PATH, 2);
-    let output = Command::new(CLI_EXE)
+    let cli_exe = env!("CARGO_BIN_EXE_move");
+    let output = Command::new(cli_exe)
         .current_dir(PACKAGE_PATH)
         .args(["package", "upload", "--test"])
         .output()
@@ -123,7 +122,8 @@ fn upload_package_to_movey_with_no_credential_should_panic() {
     let _ = fs::remove_file(&credential_file);
 
     init_git(PACKAGE_PATH, 0);
-    let output = Command::new(CLI_EXE)
+    let cli_exe = env!("CARGO_BIN_EXE_move");
+    let output = Command::new(cli_exe)
         .current_dir(PACKAGE_PATH)
         .args(["package", "upload", "--test"])
         .output()
@@ -149,7 +149,8 @@ fn upload_package_to_movey_with_bad_credential_should_panic() {
     file.write(&bad_content.as_bytes()).unwrap();
 
     init_git(PACKAGE_PATH, 0);
-    let output = Command::new(CLI_EXE)
+    let cli_exe = env!("CARGO_BIN_EXE_move");
+    let output = Command::new(cli_exe)
         .current_dir(PACKAGE_PATH)
         .args(["package", "upload", "--test"])
         .output()

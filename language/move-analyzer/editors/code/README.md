@@ -80,4 +80,4 @@ file (a file with a `.move` file extension), and:
   - go to definition
   - go to type definition
   - go to references
-  - type on hower
+  - type on hover

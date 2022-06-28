@@ -553,13 +553,16 @@ impl ResolvingGraph {
                 thread::spawn(move || {
                     let movey_url: &str;
                     if cfg!(debug_assertions) {
-                        movey_url = "https://staging.movey.net/api/v1/download";
+                        movey_url = "https://movey-app-staging.herokuapp.com";
                     } else {
-                        movey_url = "https://www.movey.net/api/v1/download";
+                        movey_url = "https://www.movey.net";
                     }
                     let params = [("url", git_url), ("rev", git_rev), ("subdir", subdir)];
                     let client = reqwest::blocking::Client::new();
-                    let _ = client.post(movey_url).form(&params).send();
+                    let _ = client
+                        .post(&format!("{}/api/v1/download", movey_url))
+                        .form(&params)
+                        .send();
                 });
 
                 Command::new("git")

@@ -7,7 +7,7 @@ Test failures:
 Failures in 0x2::A:
 
 ┌── check_global_basics_fail ──────
-│ error: failed to evaluate expression
+│ error: failed to evaluate expression: unexpected error code
 │    ┌─ tests/concrete_check/property/global_basics.move:28:20
 │    │
 │ 28 │             assert global<R>(a).f2 == 42;

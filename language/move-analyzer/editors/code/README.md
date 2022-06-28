@@ -74,7 +74,7 @@ file (a file with a `.move` file extension), and:
 - Place your cursor on a delimiter, such as `<`, `(`, or `{`, and its corresponding delimiter --
   `>`, `)`, or `}` -- will be highlighted.
 - As you type, Move keywords will appear as completion suggestions.
-- If the opened Move source file is located withing a buildable project (a `Move.toml` file can be
+- If the opened Move source file is located within a buildable project (a `Move.toml` file can be
   found in one of its parent directories), the following advanced features will be available:
   - compiler diagnostics
   - go to definition

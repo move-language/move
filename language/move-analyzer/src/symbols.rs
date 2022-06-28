@@ -89,8 +89,6 @@ use move_ir_types::location::*;
 use move_package::compilation::build_plan::BuildPlan;
 use move_symbol_pool::Symbol;
 
-use crate::events::{AnalyzerEvent, AnalyzerEventType};
-
 /// Enabling/disabling the language server reporting readiness to support go-to-def and
 /// go-to-references to the IDE.
 pub const DEFS_AND_REFS_SUPPORT: bool = true;
@@ -345,7 +343,6 @@ impl SymbolicatorRunner {
     pub fn new(
         symbols: Arc<Mutex<Symbols>>,
         sender: Sender<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>,
-        events_sender: Sender<Result<AnalyzerEvent>>,
     ) -> Self {
         let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
         let thread_mtx_cvar = mtx_cvar.clone();
@@ -413,54 +410,15 @@ impl SymbolicatorRunner {
                                 // until we know we actually need it
                                 let mut old_symbols = symbols.lock().unwrap();
                                 (*old_symbols).merge(new_symbols);
-
-                                // send telemetry event
-                                eprintln!("send symbolication success event");
-
-                                let mut event_data = BTreeMap::new();
-                                event_data.insert("result".to_string(), "success".to_string());
-                                events_sender
-                                    .send(Ok(AnalyzerEvent {
-                                        event_type: AnalyzerEventType::SymbolicatorEvent,
-                                        event_data,
-                                    }))
-                                    .unwrap();
                             }
 
                             // set/reset (previous) diagnostics
                             if let Err(err) = sender.send(Ok(lsp_diagnostics)) {
                                 eprintln!("could not pass diagnostics: {:?}", err);
-
-                                // send telemetry event
-                                eprintln!("send symbolication failed with diagnostics event");
-                                let mut event_data = BTreeMap::new();
-                                event_data.insert(
-                                    "result".to_string(),
-                                    "failed_with_diagnostics".to_string(),
-                                );
-                                events_sender
-                                    .send(Ok(AnalyzerEvent {
-                                        event_type: AnalyzerEventType::SymbolicatorEvent,
-                                        event_data,
-                                    }))
-                                    .unwrap();
                             }
                         }
                         Err(err) => {
                             eprintln!("symbolication failed: {:?}", err);
-
-                            // send telemetry event
-                            eprintln!("send symbolication with error event");
-                            let mut event_data = BTreeMap::new();
-                            event_data
-                                .insert("result".to_string(), "failed_with_error".to_string());
-                            event_data.insert("error".to_string(), format!("{:?}", err));
-                            events_sender
-                                .send(Ok(AnalyzerEvent {
-                                    event_type: AnalyzerEventType::SymbolicatorEvent,
-                                    event_data,
-                                }))
-                                .unwrap();
 
                             if let Err(err) = sender.send(Err(err)) {
                                 eprintln!("could not pass compiler error: {:?}", err);
@@ -2104,7 +2062,12 @@ pub fn on_use_request(
 
 /// Handles document symbol request of the language server
 #[allow(deprecated)]
-pub fn on_document_symbol_request(context: &Context, request: &Request, symbols: &Symbols) {
+pub fn on_document_symbol_request(
+    context: &Context,
+    symbolicator_runner: &SymbolicatorRunner,
+    request: &Request,
+    symbols: &Symbols,
+) {
     let parameters = serde_json::from_value::<DocumentSymbolParams>(request.params.clone())
         .expect("could not deserialize document symbol request");
 
@@ -2116,6 +2079,10 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
         .unwrap_or(&empty_mods);
 
     eprintln!("on_document_symbol_request mods length: {:?}", mods.len());
+
+    if mods.len()==0 {
+        symbolicator_runner.run(parameters.text_document.uri.path());
+    }
 
     let mut defs: Vec<DocumentSymbol> = vec![];
     for mod_def in mods {

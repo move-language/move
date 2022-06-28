@@ -47,18 +47,12 @@ export class OnReady {
 export class Context {
     private _client: lc.LanguageClient | undefined;
 
-    private _symbolicatorReady: boolean;
-
-    private readonly _onSymbolicatorReadyCallbacks: Array<OnReady>;
-
     private constructor(
         private readonly extensionContext: Readonly<vscode.ExtensionContext>,
         readonly configuration: Readonly<Configuration>,
         client: lc.LanguageClient | undefined = undefined,
     ) {
         this._client = client;
-        this._symbolicatorReady = false;
-        this._onSymbolicatorReadyCallbacks = [];
     }
 
     static create(
@@ -141,25 +135,6 @@ export class Context {
         const disposable = client.start();
         this.extensionContext.subscriptions.push(disposable);
         this._client = client;
-
-        this._client.onReady().then(() => {
-            log.info('Client ready.');
-
-            client.onNotification('telemetry/event', (...params: Array<any>) => {
-                log.info('Event:' + JSON.stringify(params));
-
-                /* eslint @typescript-eslint/no-unsafe-member-access: off */
-                if (params[0] !== undefined && params[0].event_type === 'SymbolicatorEvent') {
-                    if (params[0].event_data.result === 'success') {
-                        this._resoleSymbolicatorCallbacks();
-                    } else {
-                        this._rejectSymbolicatorCallbacks(params[0].event_data.result);
-                    }
-                }
-            });
-        }, (err) => {
-            log.info(`Client failed to start: ${err}`);
-        });
     }
 
     /**
@@ -169,30 +144,5 @@ export class Context {
      */
     getClient(): lc.LanguageClient | undefined {
         return this._client;
-    }
-
-    /**
-     * Returns whether the language server's symbolicator is ready to accept requests.
-     *
-     * @returns Promise<void>
-     *
-     */
-    async onSymbolicatorReady(): Promise<void> {
-        if (this._symbolicatorReady) {
-            return Promise.resolve();
-        }
-
-        const onReady = new OnReady();
-        this._onSymbolicatorReadyCallbacks.push(onReady);
-        return onReady.wait();
-    }
-
-    _resoleSymbolicatorCallbacks(): void {
-        this._symbolicatorReady = true;
-        this._onSymbolicatorReadyCallbacks.forEach(callback => callback.resolve());
-    }
-
-    _rejectSymbolicatorCallbacks(reason: string): void {
-        this._onSymbolicatorReadyCallbacks.forEach(callback => callback.reject(reason));
     }
 } // Context

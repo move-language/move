@@ -32,27 +32,30 @@ pub fn lsp_diagnostics(
                 let related_info_opt = if labels.is_empty() {
                     None
                 } else {
-                    let mut related_info = vec![];
-                    for (lloc, lmsg) in labels {
-                        if let Some(lstart) =
-                            get_loc(&lloc.file_hash(), lloc.start(), files, file_id_mapping)
-                        {
-                            if let Some(lend) =
-                                get_loc(&lloc.file_hash(), lloc.end(), files, file_id_mapping)
-                            {
+                    Some(
+                        labels
+                            .iter()
+                            .filter_map(|(lloc, lmsg)| {
+                                let lstart = get_loc(
+                                    &lloc.file_hash(),
+                                    lloc.start(),
+                                    files,
+                                    file_id_mapping,
+                                )?;
+                                let lend =
+                                    get_loc(&lloc.file_hash(), lloc.end(), files, file_id_mapping)?;
                                 let lpath = file_name_mapping.get(&lloc.file_hash()).unwrap();
                                 let lpos = Location::new(
                                     Url::from_file_path(lpath.as_str()).unwrap(),
                                     Range::new(lstart, lend),
                                 );
-                                related_info.push(DiagnosticRelatedInformation {
+                                Some(DiagnosticRelatedInformation {
                                     location: lpos,
                                     message: lmsg.to_string(),
-                                });
-                            }
-                        }
-                    }
-                    Some(related_info)
+                                })
+                            })
+                            .collect(),
+                    )
                 };
                 lsp_diagnostics
                     .entry(*fpath)

@@ -102,13 +102,10 @@ fn main() {
     })
     .expect("could not serialize server capabilities");
 
-    let client_response: serde_json::Value = context
+    context
         .connection
         .initialize(capabilities)
         .expect("could not initialize the connection");
-
-    let initialize_params: lsp_types::InitializeParams =
-        serde_json::from_value(client_response).expect("could not deserialize client capabilities");
 
     let (diag_sender, diag_receiver) = bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
     let mut symbolicator_runner = symbols::SymbolicatorRunner::idle();

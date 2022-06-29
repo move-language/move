@@ -31,7 +31,7 @@ The `move-analyzer` language server is a Rust program that is part of
       variable.
 
 To confirm that you've installed the language server program successfully, execute
-`move-analyzer --version` on the command line. You should see the output `move-analyzer 0.0.0`.
+`move-analyzer --version` on the command line. You should see the output `move-analyzer 1.0.0`.
 
 ### 2. Installing the move-analyzer Visual Studio Code extension
 
@@ -52,7 +52,7 @@ bottom-right of your Visual Studio Code screen when opening a Move file, it mean
 `move-analyzer` executable could not be found in your `PATH`. You may try the following:
 
 1. Confirm that invoking `move-analyzer --version` in a command-line terminal prints out
-   `move-analyzer 0.0.0`. If it doesn't, then retry the instructions in [step 1](./Step1). If it
+   `move-analyzer 1.0.0`. If it doesn't, then retry the instructions in [step 1](./Step1). If it
    does successfully print this text out, try closing and re-opening the Visual Studio Code
    application, as it may not have picked up the udpates to your `PATH`.
 2. If you installed the `move-analyzer` executable to a different location that is outside of your
@@ -65,8 +65,8 @@ bottom-right of your Visual Studio Code screen when opening a Move file, it mean
 
 ## Features
 
-Here are some of the features of the move-analyzer Visual Studio Code extension. Open a file with a
-`.move` file extension, and:
+Here are some of the features of the move-analyzer Visual Studio Code extension. Open a Move source
+file (a file with a `.move` file extension), and:
 
 - See Move keywords and types highlighted in appropriate colors.
 - Comment and un-comment lines of code using the `⌘/` shortcut on macOS (or the menu command "Edit >
@@ -74,3 +74,10 @@ Here are some of the features of the move-analyzer Visual Studio Code extension.
 - Place your cursor on a delimiter, such as `<`, `(`, or `{`, and its corresponding delimiter --
   `>`, `)`, or `}` -- will be highlighted.
 - As you type, Move keywords will appear as completion suggestions.
+- If the opened Move source file is located within a buildable project (a `Move.toml` file can be
+  found in one of its parent directories), the following advanced features will be available:
+  - compiler diagnostics
+  - go to definition
+  - go to type definition
+  - go to references
+  - type on hover

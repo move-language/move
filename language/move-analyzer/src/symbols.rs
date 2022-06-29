@@ -433,19 +433,15 @@ impl SymbolicatorRunner {
 
     /// Finds manifest file in a subdirectory of a Move source file passed as argument
     fn root_dir(starting_path: &Path) -> Option<PathBuf> {
-        eprintln!("Looking for manifest file");
         let mut current_path_opt = Some(starting_path);
         while current_path_opt.is_some() {
             let current_path = current_path_opt.unwrap();
-            eprintln!("Current manifest file search path: {:?}", current_path);
             let manifest_path = current_path.join("Move.toml");
             if manifest_path.is_file() {
-                eprintln!("Found manifest file path: {:?}", current_path);
                 return Some(current_path.to_path_buf());
             }
             current_path_opt = current_path.parent();
         }
-        eprintln!("Did not find manifest file path");
         None
     }
 }

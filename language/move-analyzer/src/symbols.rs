@@ -427,6 +427,7 @@ impl SymbolicatorRunner {
                     }
                 }
             }
+            
         });
 
         runner
@@ -439,6 +440,38 @@ impl SymbolicatorRunner {
         *symbolicate = RunnerState::Run(PathBuf::from(starting_path));
         cvar.notify_one();
         eprintln!("scheduled run");
+    }
+
+    pub fn run_sync(&self, starting_path: &str, symbols: Arc<Mutex<Symbols>>) {
+        let path = PathBuf::from(starting_path);
+        let root_dir = Self::root_dir(&path);
+        if root_dir.is_none() {
+            eprintln!("reporting missing manifest");
+            return
+        }
+
+        eprintln!("symbolication started");
+        match Symbolicator::get_symbols(root_dir.unwrap().as_path()) {
+            Ok((symbols_opt, _lsp_diagnostics)) => {
+                eprintln!("symbolication finished");
+
+                if let Some(new_symbols) = symbols_opt {
+                    // merge the new symbols with the old ones to support a
+                    // (potentially) new project/package that symbolication information
+                    // was built for
+                    //
+                    // TODO: we may consider "unloading" symbolication information when
+                    // files/directories are being closed but as with other performance
+                    // optimizations (e.g. incrementalizatino of the vfs), let's wait
+                    // until we know we actually need it
+                    let mut old_symbols = symbols.lock().unwrap();
+                    (*old_symbols).merge(new_symbols);
+                }
+            }
+            Err(err) => {
+                eprintln!("symbolication failed: {:?}", err);
+            }
+        }
     }
 
     pub fn quit(&self) {
@@ -2081,7 +2114,7 @@ pub fn on_document_symbol_request(
     eprintln!("on_document_symbol_request mods length: {:?}", mods.len());
 
     if mods.len()==0 {
-        symbolicator_runner.run(parameters.text_document.uri.path());
+        symbolicator_runner.run_sync(parameters.text_document.uri.path(), context.symbols.clone());
     }
 
     let mut defs: Vec<DocumentSymbol> = vec![];

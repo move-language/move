@@ -115,9 +115,6 @@ fn main() {
     if symbols::DEFS_AND_REFS_SUPPORT {
         symbolicator_runner =
             symbols::SymbolicatorRunner::new(context.symbols.clone(), diag_sender);
-        if let Some(uri) = initialize_params.root_uri {
-            symbolicator_runner.run(uri.path());
-        }
     };
 
     loop {

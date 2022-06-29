@@ -431,6 +431,7 @@ impl SymbolicatorRunner {
         cvar.notify_one();
     }
 
+    /// Finds manifest file in a subdirectory of a Move source file passed as argument
     fn root_dir(starting_path: &Path) -> Option<PathBuf> {
         eprintln!("Looking for manifest file");
         let mut current_path_opt = Some(starting_path);

@@ -138,7 +138,7 @@ module std::option {
     /// Convert a `some` option to a `none` by removing and returning the value stored inside `t`
     /// Aborts if `t` does not hold a value
     public fun extract<Element>(t: &mut Option<Element>): Element {
-        assert!(is_some(t), EOPTION_IS_SET);
+        assert!(is_some(t), EOPTION_NOT_SET);
         vector::pop_back(&mut t.vec)
     }
     spec extract {
@@ -254,6 +254,6 @@ module std::option {
 
     spec schema AbortsIfNone<Element> {
         t: Option<Element>;
-        aborts_if is_none(t) with EOPTION_IS_SET;
+        aborts_if is_none(t) with EOPTION_NOT_SET;
     }
 }

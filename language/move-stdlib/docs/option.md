@@ -523,7 +523,7 @@ Aborts if <code>t</code> does not hold a value
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="option.md#0x1_option_extract">extract</a>&lt;Element&gt;(t: &<b>mut</b> <a href="option.md#0x1_option_Option">Option</a>&lt;Element&gt;): Element {
-    <b>assert</b>!(<a href="option.md#0x1_option_is_some">is_some</a>(t), <a href="option.md#0x1_option_EOPTION_IS_SET">EOPTION_IS_SET</a>);
+    <b>assert</b>!(<a href="option.md#0x1_option_is_some">is_some</a>(t), <a href="option.md#0x1_option_EOPTION_NOT_SET">EOPTION_NOT_SET</a>);
     <a href="vector.md#0x1_vector_pop_back">vector::pop_back</a>(&<b>mut</b> t.vec)
 }
 </code></pre>
@@ -869,7 +869,7 @@ and an empty vector otherwise
 
 <pre><code><b>schema</b> <a href="option.md#0x1_option_AbortsIfNone">AbortsIfNone</a>&lt;Element&gt; {
     t: <a href="option.md#0x1_option_Option">Option</a>&lt;Element&gt;;
-    <b>aborts_if</b> <a href="option.md#0x1_option_is_none">is_none</a>(t) <b>with</b> <a href="option.md#0x1_option_EOPTION_IS_SET">EOPTION_IS_SET</a>;
+    <b>aborts_if</b> <a href="option.md#0x1_option_is_none">is_none</a>(t) <b>with</b> <a href="option.md#0x1_option_EOPTION_NOT_SET">EOPTION_NOT_SET</a>;
 }
 </code></pre>
 

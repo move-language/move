@@ -69,6 +69,7 @@ use std::{
     path::{Path, PathBuf},
     sync::{Arc, Condvar, Mutex},
     thread,
+    time::Duration,
 };
 use tempfile::tempdir;
 use url::Url;
@@ -225,6 +226,7 @@ enum RunnerState {
 /// Data used during symbolication running and symbolication info updating
 pub struct SymbolicatorRunner {
     mtx_cvar: Arc<(Mutex<RunnerState>, Condvar)>,
+    symboling: Arc<Mutex<bool>>,
 }
 
 impl fmt::Display for IdentType {
@@ -336,7 +338,7 @@ impl SymbolicatorRunner {
     /// Create a new idle runner (one that does not actually symbolicate)
     pub fn idle() -> Self {
         let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
-        SymbolicatorRunner { mtx_cvar }
+        SymbolicatorRunner { mtx_cvar, symboling: Arc::new(Mutex::new(false)) }
     }
 
     /// Create a new runner
@@ -346,10 +348,13 @@ impl SymbolicatorRunner {
     ) -> Self {
         let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
         let thread_mtx_cvar = mtx_cvar.clone();
-        let runner = SymbolicatorRunner { mtx_cvar };
+        let symboling = Arc::new(Mutex::new(false));
+        let thread_symboling = symboling.clone();
+        let runner = SymbolicatorRunner { mtx_cvar, symboling };
 
         thread::spawn(move || {
             let (mtx, cvar) = &*thread_mtx_cvar;
+            let mutex_symboling = &*thread_symboling;
             // Locations opened in the IDE (files or directories) for which manifest file is missing
             let mut missing_manifests = BTreeSet::new();
             // infinite loop to wait for symbolication requests
@@ -379,6 +384,7 @@ impl SymbolicatorRunner {
                         }
                     }
                 };
+                
                 if let Some(starting_path) = starting_path_opt {
                     let root_dir = Self::root_dir(&starting_path);
                     if root_dir.is_none() && !missing_manifests.contains(&starting_path) {
@@ -396,6 +402,9 @@ impl SymbolicatorRunner {
                         continue;
                     }
                     eprintln!("symbolication started");
+                    let mut symboling = mutex_symboling.lock().unwrap();
+                    *symboling = true;
+
                     match Symbolicator::get_symbols(root_dir.unwrap().as_path()) {
                         Ok((symbols_opt, lsp_diagnostics)) => {
                             eprintln!("symbolication finished");
@@ -425,9 +434,10 @@ impl SymbolicatorRunner {
                             }
                         }
                     }
+
+                    *symboling = false;
                 }
             }
-            
         });
 
         runner
@@ -442,36 +452,19 @@ impl SymbolicatorRunner {
         eprintln!("scheduled run");
     }
 
-    pub fn run_sync(&self, starting_path: &str, symbols: Arc<Mutex<Symbols>>) {
-        let path = PathBuf::from(starting_path);
-        let root_dir = Self::root_dir(&path);
-        if root_dir.is_none() {
-            eprintln!("reporting missing manifest");
-            return
+    pub fn is_symbolicating(&self) -> bool {
+        let symboling = self.symboling.lock().unwrap();
+        *symboling
+    }
+
+    pub fn wait_symbolicating_finished(&self) {
+        let symboling = self.symboling.lock().unwrap();
+        while *symboling {
+            eprintln!("wait_symbolicating...");
+            thread::sleep(Duration::from_millis(100));
         }
 
-        eprintln!("symbolication started");
-        match Symbolicator::get_symbols(root_dir.unwrap().as_path()) {
-            Ok((symbols_opt, _lsp_diagnostics)) => {
-                eprintln!("symbolication finished");
-
-                if let Some(new_symbols) = symbols_opt {
-                    // merge the new symbols with the old ones to support a
-                    // (potentially) new project/package that symbolication information
-                    // was built for
-                    //
-                    // TODO: we may consider "unloading" symbolication information when
-                    // files/directories are being closed but as with other performance
-                    // optimizations (e.g. incrementalizatino of the vfs), let's wait
-                    // until we know we actually need it
-                    let mut old_symbols = symbols.lock().unwrap();
-                    (*old_symbols).merge(new_symbols);
-                }
-            }
-            Err(err) => {
-                eprintln!("symbolication failed: {:?}", err);
-            }
-        }
+        eprintln!("wait_symbolicating finished");
     }
 
     pub fn quit(&self) {
@@ -2106,15 +2099,20 @@ pub fn on_document_symbol_request(
 
     let fpath = parameters.text_document.uri.path();
     let empty_mods: BTreeSet<ModuleDefs> = BTreeSet::new();
-    let mods = symbols
+    let mut mods = symbols
         .file_mods
         .get(&PathBuf::from(fpath))
         .unwrap_or(&empty_mods);
 
     eprintln!("on_document_symbol_request mods length: {:?}", mods.len());
 
-    if mods.len()==0 {
-        symbolicator_runner.run_sync(parameters.text_document.uri.path(), context.symbols.clone());
+    if mods.len() == 0 && symbolicator_runner.is_symbolicating() {
+        symbolicator_runner.wait_symbolicating_finished();
+
+        mods = symbols
+            .file_mods
+            .get(&PathBuf::from(fpath))
+            .unwrap_or(&empty_mods);
     }
 
     let mut defs: Vec<DocumentSymbol> = vec![];

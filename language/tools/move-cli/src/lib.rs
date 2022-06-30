@@ -93,7 +93,10 @@ pub enum Command {
         cmd: experimental::cli::ExperimentalCommand,
     },
     #[clap(name = "login")]
-    Login,
+    Login {
+        #[clap(long = "test-path")]
+        test_path: Option<String>,
+    },
 }
 
 pub fn run_cli(
@@ -124,7 +127,7 @@ pub fn run_cli(
             &storage_dir,
         ),
         Command::Experimental { storage_dir, cmd } => cmd.handle_command(&move_args, &storage_dir),
-        Command::Login => login::cli::handle_login_commands(move_args.build_config.clone()),
+        Command::Login { test_path } => login::cli::handle_login_commands(test_path.clone()),
     }
 }
 

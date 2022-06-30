@@ -66,12 +66,12 @@ fn cross_process_locking_git_deps() {
 #[test]
 fn save_credential_works() {
     let cli_exe = env!("CARGO_BIN_EXE_move");
-    let (move_home, credential_path) = setup_move_home();
+    let (move_home, credential_path) = setup_move_home("/save_credential_works");
     assert!(fs::read_to_string(&credential_path).is_err());
 
     match std::process::Command::new(cli_exe)
         .current_dir(".")
-        .args(["login"])
+        .args(["login", "--test", "--test-path", "/save_credential_works"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
@@ -112,7 +112,8 @@ fn save_credential_works() {
 #[test]
 fn save_credential_fails_if_undeletable_credential_file_exists() {
     let cli_exe = env!("CARGO_BIN_EXE_move");
-    let (move_home, credential_path) = setup_move_home();
+    let (move_home, credential_path) =
+        setup_move_home("/save_credential_fails_if_undeletable_credential_file_exists");
     let file = File::create(&credential_path).unwrap();
     let mut perms = file.metadata().unwrap().permissions();
     perms.set_mode(0o000);
@@ -120,7 +121,12 @@ fn save_credential_fails_if_undeletable_credential_file_exists() {
 
     match std::process::Command::new(cli_exe)
         .current_dir(".")
-        .args(["login"])
+        .args([
+            "login",
+            "--test",
+            "--test-path",
+            "/save_credential_fails_if_undeletable_credential_file_exists",
+        ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -159,9 +165,8 @@ fn save_credential_fails_if_undeletable_credential_file_exists() {
     clean_up(&move_home)
 }
 
-fn setup_move_home() -> (String, String) {
-    let move_home = home_dir().unwrap().to_string_lossy().to_string() + "/.move/test";
-    env::set_var("MOVE_HOME", &move_home);
+fn setup_move_home(test_path: &str) -> (String, String) {
+    let move_home = home_dir().unwrap().to_string_lossy().to_string() + "/.move" + test_path;
     let _ = fs::remove_dir_all(&move_home);
     fs::create_dir_all(&move_home).unwrap();
     let credential_path = move_home.clone() + "/credential.toml";

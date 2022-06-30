@@ -1,3 +1,7 @@
+// Copyright (c) The Diem Core Contributors
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use anyhow::{bail, Result};
 use std::fs::File;
 use std::path::PathBuf;
@@ -5,7 +9,11 @@ use std::{fs, io};
 use toml_edit::easy::map::Map;
 use toml_edit::easy::Value;
 
-pub fn handle_login_commands(config: move_package::BuildConfig) -> Result<()> {
+pub struct TestMode {
+    pub test_path: String,
+}
+
+pub fn handle_login_commands(test_path: Option<String>) -> Result<()> {
     let url: &str;
     if cfg!(debug_assertions) {
         url = "https://movey-app-staging.herokuapp.com";
@@ -36,20 +44,26 @@ pub fn handle_login_commands(config: move_package::BuildConfig) -> Result<()> {
             }
         }
     }
-    save_credential(line, config.test_mode)?;
+    let mut test_mode: Option<TestMode> = None;
+    if let Some(path) = test_path {
+        test_mode = Some(TestMode { test_path: path });
+    }
+    save_credential(line, test_mode)?;
     println!("Token for Movey saved.");
     Ok(())
 }
 
-pub fn save_credential(token: String, is_test_mode: bool) -> Result<()> {
+pub fn save_credential(token: String, test_mode: Option<TestMode>) -> Result<()> {
     let mut move_home = std::env::var("MOVE_HOME").unwrap_or_else(|_| {
         format!(
             "{}/.move",
             std::env::var("HOME").expect("env var 'HOME' must be set")
         )
     });
-    if is_test_mode {
-        move_home.push_str("/test")
+    if let Some(test_mode) = test_mode {
+        if !test_mode.test_path.is_empty() {
+            move_home.push_str(&test_mode.test_path);
+        }
     }
     fs::create_dir_all(&move_home)?;
     let credential_path = move_home + "/credential.toml";
@@ -115,7 +129,7 @@ mod tests {
     use home::home_dir;
     use std::env;
 
-    fn setup_move_home() -> (String, String) {
+    fn setup_move_home(test_path: &str) -> (String, String) {
         let mut move_home = env::var("MOVE_HOME").unwrap_or_else(|_| {
             env::var("HOME").unwrap_or_else(|_| {
                 let home_dir = home_dir().unwrap().to_string_lossy().to_string();
@@ -123,22 +137,30 @@ mod tests {
                 home_dir
             })
         });
-        move_home.push_str("/.move/test");
+        move_home.push_str("/.move");
+        if !test_path.is_empty() {
+            move_home.push_str(&test_path);
+        } else {
+            move_home.push_str("/test");
+        }
         let credential_path = move_home.clone() + "/credential.toml";
         return (move_home, credential_path);
     }
 
-    fn clean_up() {
-        let (move_home, _) = setup_move_home();
+    fn clean_up(move_home: &str) {
         let _ = fs::remove_dir_all(move_home);
     }
 
     #[test]
     fn save_credential_works_if_no_credential_file_exists() {
-        let (move_home, credential_path) = setup_move_home();
+        let (move_home, credential_path) =
+            setup_move_home("/save_credential_works_if_no_credential_file_exists");
         let _ = fs::remove_dir_all(&move_home);
 
-        save_credential(String::from("test_token"), true).unwrap();
+        let test_mode = Some(TestMode {
+            test_path: String::from("/save_credential_works_if_no_credential_file_exists"),
+        });
+        save_credential(String::from("test_token"), test_mode).unwrap();
 
         let contents = fs::read_to_string(&credential_path).expect("Unable to read file");
         let mut toml: Value = contents.parse().unwrap();
@@ -146,12 +168,13 @@ mod tests {
         let token = registry.as_table_mut().unwrap().get_mut("token").unwrap();
         assert!(token.to_string().contains("test_token"));
 
-        clean_up();
+        clean_up(&move_home);
     }
 
     #[test]
     fn save_credential_works_if_empty_credential_file_exists() {
-        let (move_home, credential_path) = setup_move_home();
+        let (move_home, credential_path) =
+            setup_move_home("/save_credential_works_if_empty_credential_file_exists");
 
         let _ = fs::remove_dir_all(&move_home);
         fs::create_dir_all(&move_home).unwrap();
@@ -161,7 +184,10 @@ mod tests {
         let mut toml: Value = contents.parse().unwrap();
         assert!(toml.as_table_mut().unwrap().get_mut("registry").is_none());
 
-        save_credential(String::from("test_token"), true).unwrap();
+        let test_mode = Some(TestMode {
+            test_path: String::from("/save_credential_works_if_empty_credential_file_exists"),
+        });
+        save_credential(String::from("test_token"), test_mode).unwrap();
 
         let contents = fs::read_to_string(&credential_path).expect("Unable to read file");
         let mut toml: Value = contents.parse().unwrap();
@@ -169,12 +195,13 @@ mod tests {
         let token = registry.as_table_mut().unwrap().get_mut("token").unwrap();
         assert!(token.to_string().contains("test_token"));
 
-        clean_up();
+        clean_up(&move_home);
     }
 
     #[test]
     fn save_credential_works_if_token_field_exists() {
-        let (move_home, credential_path) = setup_move_home();
+        let (move_home, credential_path) =
+            setup_move_home("/save_credential_works_if_token_field_exists");
 
         let _ = fs::remove_dir_all(&move_home);
         fs::create_dir_all(&move_home).unwrap();
@@ -191,7 +218,10 @@ mod tests {
         assert!(token.to_string().contains("old_test_token"));
         assert!(!token.to_string().contains("new_world"));
 
-        save_credential(String::from("new_world"), true).unwrap();
+        let test_mode = Some(TestMode {
+            test_path: String::from("/save_credential_works_if_token_field_exists"),
+        });
+        save_credential(String::from("new_world"), test_mode).unwrap();
 
         let contents = fs::read_to_string(&credential_path).expect("Unable to read file");
         let mut toml: Value = contents.parse().unwrap();
@@ -202,12 +232,13 @@ mod tests {
         let version = registry.as_table_mut().unwrap().get_mut("version").unwrap();
         assert!(version.to_string().contains("0.0.0"));
 
-        clean_up();
+        clean_up(&move_home);
     }
 
     #[test]
     fn save_credential_works_if_empty_token_field_exists() {
-        let (move_home, credential_path) = setup_move_home();
+        let (move_home, credential_path) =
+            setup_move_home("/save_credential_works_if_empty_token_field_exists");
 
         let _ = fs::remove_dir_all(&move_home);
         fs::create_dir_all(&move_home).unwrap();
@@ -222,7 +253,10 @@ mod tests {
         let token = registry.as_table_mut().unwrap().get_mut("token").unwrap();
         assert!(!token.to_string().contains("test_token"));
 
-        save_credential(String::from("test_token"), true).unwrap();
+        let test_mode = Some(TestMode {
+            test_path: String::from("/save_credential_works_if_empty_token_field_exists"),
+        });
+        save_credential(String::from("test_token"), test_mode).unwrap();
 
         let contents = fs::read_to_string(&credential_path).expect("Unable to read file");
         let mut toml: Value = contents.parse().unwrap();
@@ -232,6 +266,6 @@ mod tests {
         let version = registry.as_table_mut().unwrap().get_mut("version").unwrap();
         assert!(version.to_string().contains("0.0.0"));
 
-        clean_up();
+        clean_up(&move_home);
     }
 }

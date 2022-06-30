@@ -10,3 +10,4 @@ CoreResources = "0xA550C18"
 
 [dependencies]
 MoveStdlib = { local = "../../../../../move-stdlib" }
+MoveNursery = { local = "../../../../../move-stdlib/nursery" }

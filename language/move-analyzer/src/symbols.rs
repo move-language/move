@@ -68,8 +68,8 @@ use std::{
     fmt, fs,
     path::{Path, PathBuf},
     sync::{Arc, Condvar, Mutex},
-    thread,
-    time::Duration,
+    thread, 
+    time,
 };
 use tempfile::tempdir;
 use url::Url;
@@ -226,7 +226,7 @@ enum RunnerState {
 /// Data used during symbolication running and symbolication info updating
 pub struct SymbolicatorRunner {
     mtx_cvar: Arc<(Mutex<RunnerState>, Condvar)>,
-    symboling: Arc<Mutex<bool>>,
+    symboling: Arc<(Mutex<bool>, Condvar)>,
 }
 
 impl fmt::Display for IdentType {
@@ -338,7 +338,7 @@ impl SymbolicatorRunner {
     /// Create a new idle runner (one that does not actually symbolicate)
     pub fn idle() -> Self {
         let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
-        SymbolicatorRunner { mtx_cvar, symboling: Arc::new(Mutex::new(false)) }
+        SymbolicatorRunner { mtx_cvar, symboling: Arc::new((Mutex::new(false), Condvar::new())) }
     }
 
     /// Create a new runner
@@ -348,13 +348,13 @@ impl SymbolicatorRunner {
     ) -> Self {
         let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
         let thread_mtx_cvar = mtx_cvar.clone();
-        let symboling = Arc::new(Mutex::new(false));
+        let symboling = Arc::new((Mutex::new(false), Condvar::new()));
         let thread_symboling = symboling.clone();
         let runner = SymbolicatorRunner { mtx_cvar, symboling };
 
         thread::spawn(move || {
             let (mtx, cvar) = &*thread_mtx_cvar;
-            let mutex_symboling = &*thread_symboling;
+            let (mutex_symboling, cvar_symboling) = &*thread_symboling;
             // Locations opened in the IDE (files or directories) for which manifest file is missing
             let mut missing_manifests = BTreeSet::new();
             // infinite loop to wait for symbolication requests
@@ -385,6 +385,7 @@ impl SymbolicatorRunner {
                     }
                 };
                 
+
                 if let Some(starting_path) = starting_path_opt {
                     let root_dir = Self::root_dir(&starting_path);
                     if root_dir.is_none() && !missing_manifests.contains(&starting_path) {
@@ -402,8 +403,15 @@ impl SymbolicatorRunner {
                         continue;
                     }
                     eprintln!("symbolication started");
-                    let mut symboling = mutex_symboling.lock().unwrap();
-                    *symboling = true;
+
+
+                    //symbolicate the files
+                    {
+                        eprintln!("symbolication started lock");
+                        let mut symboling = mutex_symboling.lock().unwrap();
+                        *symboling = true;
+                        cvar_symboling.notify_all();
+                    }
 
                     match Symbolicator::get_symbols(root_dir.unwrap().as_path()) {
                         Ok((symbols_opt, lsp_diagnostics)) => {
@@ -435,7 +443,13 @@ impl SymbolicatorRunner {
                         }
                     }
 
-                    *symboling = false;
+                    //symbolicate the files
+                    {
+                        eprintln!("symbolication finished unlock");
+                        let mut symboling = mutex_symboling.lock().unwrap();
+                        *symboling = false;
+                        cvar_symboling.notify_all();
+                    }
                 }
             }
         });
@@ -452,19 +466,20 @@ impl SymbolicatorRunner {
         eprintln!("scheduled run");
     }
 
-    pub fn is_symbolicating(&self) -> bool {
-        let symboling = self.symboling.lock().unwrap();
-        *symboling
-    }
-
     pub fn wait_symbolicating_finished(&self) {
-        let symboling = self.symboling.lock().unwrap();
-        while *symboling {
-            eprintln!("wait_symbolicating...");
-            thread::sleep(Duration::from_millis(100));
+        let (mutex_symboling, _cvar_symboling) = &*self.symboling;
+
+        loop {
+            let symboling = mutex_symboling.lock().unwrap();
+            if !*symboling {
+                break;
+            }
+
+            thread::sleep(time::Duration::from_millis(100));
+            eprintln!("waiting for symbolicator to finish");
         }
 
-        eprintln!("wait_symbolicating finished");
+        eprintln!("wait for symbolicator finished");
     }
 
     pub fn quit(&self) {
@@ -2106,7 +2121,7 @@ pub fn on_document_symbol_request(
 
     eprintln!("on_document_symbol_request mods length: {:?}", mods.len());
 
-    if mods.len() == 0 && symbolicator_runner.is_symbolicating() {
+    if mods.len() == 0 {
         symbolicator_runner.wait_symbolicating_finished();
 
         mods = symbols

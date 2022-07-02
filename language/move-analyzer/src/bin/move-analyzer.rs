@@ -203,7 +203,7 @@ fn on_request(context: &Context, symbolicator_runner: &symbols::SymbolicatorRunn
             symbols::on_hover_request(context, request, &context.symbols.lock().unwrap());
         }
         lsp_types::request::DocumentSymbolRequest::METHOD => {
-            symbols::on_document_symbol_request(context, symbolicator_runner, request, &context.symbols.lock().unwrap());
+            symbols::on_document_symbol_request(context, symbolicator_runner, request);
         }
         _ => eprintln!("handle request '{}' from client", request.method),
     }

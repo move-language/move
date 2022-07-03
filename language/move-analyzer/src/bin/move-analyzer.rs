@@ -180,7 +180,11 @@ fn main() {
     eprintln!("Shut down language server '{}'.", exe);
 }
 
-fn on_request(context: &Context, symbolicator_runner: &symbols::SymbolicatorRunner, request: &Request) {
+fn on_request(
+    context: &Context,
+    symbolicator_runner: &symbols::SymbolicatorRunner,
+    request: &Request,
+) {
     match request.method.as_str() {
         lsp_types::request::Completion::METHOD => on_completion_request(context, request),
         lsp_types::request::GotoDefinition::METHOD => {

@@ -422,7 +422,6 @@ impl SymbolicatorRunner {
                     match Symbolicator::get_symbols(root_dir.unwrap().as_path()) {
                         Ok((symbols_opt, lsp_diagnostics)) => {
                             eprintln!("symbolication finished");
-                            
                             if let Some(new_symbols) = symbols_opt {
                                 // merge the new symbols with the old ones to support a
                                 // (potentially) new project/package that symbolication information
@@ -470,7 +469,8 @@ impl SymbolicatorRunner {
                             {
                                 eprintln!("set symboling result error");
                                 let mut symboling_result = mutex_symboling_result.lock().unwrap();
-                                *symboling_result = SymbolicatorResult::FailWithError(format!("{:?}", err));
+                                *symboling_result =
+                                    SymbolicatorResult::FailWithError(format!("{:?}", err));
                                 cvar_symboling.notify_all();
                             }
 

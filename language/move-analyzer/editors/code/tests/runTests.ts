@@ -35,7 +35,7 @@ async function main(): Promise<void> {
         await runTests({
             extensionDevelopmentPath,
             extensionTestsPath,
-            launchArgs: [testWorkspacePath],
+            launchArgs: ['--install-extension', 'damirka.move-syntax', testWorkspacePath],
         });
     } catch (_err: unknown) {
         console.error('Failed to run tests');

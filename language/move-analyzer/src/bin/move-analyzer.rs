@@ -20,7 +20,6 @@ use std::{
 use move_analyzer::{
     completion::on_completion_request,
     context::Context,
-    events::AnalyzerEvent,
     symbols,
     vfs::{on_text_document_sync_notification, VirtualFileSystem},
 };
@@ -28,7 +27,7 @@ use move_symbol_pool::Symbol;
 use url::Url;
 
 #[derive(Parser)]
-#[clap(author, version, about)]
+#[clap(author, version = "1.0.0", about)]
 struct Options {}
 
 fn main() {
@@ -104,25 +103,16 @@ fn main() {
     })
     .expect("could not serialize server capabilities");
 
-    let client_response: serde_json::Value = context
+    context
         .connection
         .initialize(capabilities)
         .expect("could not initialize the connection");
 
-    let initialize_params: lsp_types::InitializeParams =
-        serde_json::from_value(client_response).expect("could not deserialize client capabilities");
-
     let (diag_sender, diag_receiver) = bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
-    let (events_sender, events_receiver) = bounded::<Result<AnalyzerEvent>>(0);
-
     let mut symbolicator_runner = symbols::SymbolicatorRunner::idle();
     if symbols::DEFS_AND_REFS_SUPPORT {
         symbolicator_runner =
-            symbols::SymbolicatorRunner::new(context.symbols.clone(), diag_sender, events_sender);
-
-        if let Some(uri) = initialize_params.root_uri {
-            symbolicator_runner.run(uri.path());
-        }
+            symbols::SymbolicatorRunner::new(context.symbols.clone(), diag_sender);
     };
 
     loop {
@@ -164,29 +154,9 @@ fn main() {
                     Err(error) => eprintln!("symbolicator message error: {:?}", error),
                 }
             },
-            recv(events_receiver) -> event => {
-                match event {
-                    Ok(result) => {
-                        match result {
-                            Ok(event) => {
-                                eprintln!("send analyzer event: {:?}", event);
-                                let notification = Notification::new(lsp_types::notification::TelemetryEvent::METHOD.to_string(), event);
-                                if let Err(err) = context
-                                    .connection
-                                    .sender
-                                    .send(lsp_server::Message::Notification(notification)) {
-                                        eprintln!("could not send events response: {:?}", err);
-                                    };
-                            },
-                            Err(err) => eprintln!("symbolicator event error: {:?}", err),
-                        }
-                    },
-                    Err(error) => eprintln!("symbolicator event error: {:?}", error),
-                }
-            },
             recv(context.connection.receiver) -> message => {
                 match message {
-                    Ok(Message::Request(request)) => on_request(&context, &request),
+                    Ok(Message::Request(request)) => on_request(&context, &symbolicator_runner, &request),
                     Ok(Message::Response(response)) => on_response(&context, &response),
                     Ok(Message::Notification(notification)) => {
                         match notification.method.as_str() {
@@ -210,7 +180,11 @@ fn main() {
     eprintln!("Shut down language server '{}'.", exe);
 }
 
-fn on_request(context: &Context, request: &Request) {
+fn on_request(
+    context: &Context,
+    symbolicator_runner: &symbols::SymbolicatorRunner,
+    request: &Request,
+) {
     match request.method.as_str() {
         lsp_types::request::Completion::METHOD => on_completion_request(context, request),
         lsp_types::request::GotoDefinition::METHOD => {
@@ -226,7 +200,7 @@ fn on_request(context: &Context, request: &Request) {
             symbols::on_hover_request(context, request, &context.symbols.lock().unwrap());
         }
         lsp_types::request::DocumentSymbolRequest::METHOD => {
-            symbols::on_document_symbol_request(context, request, &context.symbols.lock().unwrap());
+            symbols::on_document_symbol_request(context, symbolicator_runner, request);
         }
         _ => eprintln!("handle request '{}' from client", request.method),
     }

@@ -4,7 +4,6 @@
 
 use std::{
     collections::HashMap,
-    fmt,
     fs::{create_dir_all, read_to_string},
     io::Write,
     path::{Path, PathBuf},
@@ -285,8 +284,13 @@ pub fn handle_package_commands(
     // This is the exceptional command as it doesn't need a package to run, so we can't count on
     // being able to root ourselves.
     if let PackageCommand::New { name } = cmd {
-        let creation_path = Path::new(&path).join(name);
-        create_move_package(name, &creation_path)?;
+        create_move_package(path,
+                            name,
+                            "0.0.0",
+                            "MoveStdlib",
+                            "{ git = \"https://github.com/move-language/move.git\", subdir = \"language/move-stdlib\", rev = \"main\" }",
+                            "std",
+                            "0x1")?;
         return Ok(());
     }
 
@@ -560,23 +564,31 @@ pub fn run_move_unit_tests(
     Ok(UnitTestResult::Success)
 }
 
-pub fn create_move_package<S: AsRef<str> + fmt::Display>(
-    name: S,
-    creation_path: &Path,
+pub fn create_move_package(
+    path: &Path,
+    name: &String,
+    version: &str,
+    dep_name: &str,
+    dep_val: &str,
+    addr_name: &str,
+    addr_val: &str,
 ) -> Result<()> {
+    let creation_path = Path::new(path).join(name);
     create_dir_all(creation_path.join(SourcePackageLayout::Sources.path()))?;
     let mut w = std::fs::File::create(creation_path.join(SourcePackageLayout::Manifest.path()))?;
     writeln!(
         &mut w,
         "[package]
 name = \"{}\"
-version = \"0.0.0\"
+version = \"{}\"
 
 [dependencies]
-MoveStdlib = {{ git = \"https://github.com/move-language/move.git\", subdir = \"language/move-stdlib\", rev = \"main\" }}
+{} = {}
 
 [addresses]
-std = \"0x1\"
-", name)?;
+{} = \"{}\"
+",
+        name, version, dep_name, dep_val, addr_name, addr_val
+    )?;
     Ok(())
 }

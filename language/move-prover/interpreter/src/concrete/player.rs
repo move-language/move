@@ -1100,7 +1100,7 @@ impl<'env> FunctionContext<'env> {
         let env = self.target.global_env();
         let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &self.ty_args);
         let addr = op_addr.into_address();
-        match global_state.get_resource(None, addr, inst) {
+        match global_state.get_resource_for_code(None, addr, inst) {
             None => Err(self.sys_abort(StatusCode::MISSING_DATA)),
             Some(object) => Ok(object),
         }
@@ -1118,7 +1118,7 @@ impl<'env> FunctionContext<'env> {
         let env = self.target.global_env();
         let inst = convert_model_struct_type(env, module_id, struct_id, ty_args, &self.ty_args);
         let addr = op_addr.into_address();
-        match global_state.get_resource(Some(is_mut), addr, inst) {
+        match global_state.get_resource_for_code(Some(is_mut), addr, inst) {
             None => Err(self.sys_abort(StatusCode::MISSING_DATA)),
             Some(object) => Ok(object),
         }

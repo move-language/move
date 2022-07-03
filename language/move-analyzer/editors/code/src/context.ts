@@ -8,41 +8,6 @@ import * as lc from 'vscode-languageclient';
 import { log } from './log';
 import { sync as commandExistsSync } from 'command-exists';
 
-/**
- * The observer for ready event.
- */
-export class OnReady {
-    private readonly _ready: Promise<void>;
-
-    private _resolve: (() => void) | undefined;
-
-    private _reject: ((reason: string) => void) | undefined;
-
-    constructor() {
-        this._ready = new Promise<void>((resolve, reject) => {
-            this._resolve = resolve;
-            this._reject = reject;
-        });
-    }
-
-    public async wait(): Promise<void> {
-        return this._ready;
-    }
-
-    public resolve(): void {
-        if (this._resolve !== undefined) {
-            this._resolve();
-        }
-    }
-
-    public reject(reason: string): void {
-        if (this._reject !== undefined) {
-            this._reject(reason);
-        }
-    }
-
-} // OnReady
-
 /** Information passed along to each VS Code command defined by this extension. */
 export class Context {
     private _client: lc.LanguageClient | undefined;

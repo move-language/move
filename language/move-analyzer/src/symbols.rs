@@ -772,7 +772,6 @@ impl Symbolicator {
                 .extend(use_defs.elements());
         }
 
-        let lsp_diagnostics = lsp_empty_diagnostics(&file_name_mapping);
         let symbols = Symbols {
             references,
             file_use_defs,
@@ -782,7 +781,7 @@ impl Symbolicator {
 
         eprintln!("get_symbols load complete");
 
-        Ok((Some(symbols), lsp_diagnostics))
+        Ok((Some(symbols), ide_diagnostics))
     }
 
     /// Get empty symbols

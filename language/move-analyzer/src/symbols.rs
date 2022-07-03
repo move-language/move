@@ -67,9 +67,8 @@ use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     fmt, fs,
     path::{Path, PathBuf},
-    sync::{Arc, Condvar, Mutex, RwLock},
-    thread, 
-    time,
+    sync::{Arc, Condvar, Mutex},
+    thread,
 };
 use tempfile::tempdir;
 use url::Url;
@@ -226,14 +225,15 @@ enum RunnerState {
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum SymbolicatorResult {
     None,
-    Ok,
-    Err(String),
+    Success,
+    FailWithDiagnostics,
+    FailWithError(String),
 }
 
 /// Data used during symbolication running and symbolication info updating
 pub struct SymbolicatorRunner {
     mtx_cvar: Arc<(Mutex<RunnerState>, Condvar)>,
-    symboling_result: Arc<(RwLock<SymbolicatorResult>, Condvar)>,
+    symboling_result: Arc<(Mutex<SymbolicatorResult>, Condvar)>,
 }
 
 impl fmt::Display for IdentType {
@@ -345,7 +345,10 @@ impl SymbolicatorRunner {
     /// Create a new idle runner (one that does not actually symbolicate)
     pub fn idle() -> Self {
         let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
-        SymbolicatorRunner { mtx_cvar, symboling_result: Arc::new((RwLock::new(SymbolicatorResult::None), Condvar::new())) }
+        SymbolicatorRunner {
+            mtx_cvar,
+            symboling_result: Arc::new((Mutex::new(SymbolicatorResult::None), Condvar::new())),
+        }
     }
 
     /// Create a new runner
@@ -355,13 +358,16 @@ impl SymbolicatorRunner {
     ) -> Self {
         let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
         let thread_mtx_cvar = mtx_cvar.clone();
-        let symboling_result = Arc::new((RwLock::new(SymbolicatorResult::None), Condvar::new()));
+        let symboling_result = Arc::new((Mutex::new(SymbolicatorResult::None), Condvar::new()));
         let thread_symboling_result = symboling_result.clone();
-        let runner = SymbolicatorRunner { mtx_cvar, symboling_result };
+        let runner = SymbolicatorRunner {
+            mtx_cvar,
+            symboling_result,
+        };
 
         thread::spawn(move || {
             let (mtx, cvar) = &*thread_mtx_cvar;
-            let (mutex_symboling_result, _cvar_symboling) = &*thread_symboling_result;
+            let (mutex_symboling_result, cvar_symboling) = &*thread_symboling_result;
             // Locations opened in the IDE (files or directories) for which manifest file is missing
             let mut missing_manifests = BTreeSet::new();
             // infinite loop to wait for symbolication requests
@@ -392,7 +398,6 @@ impl SymbolicatorRunner {
                         }
                     }
                 };
-                
 
                 if let Some(starting_path) = starting_path_opt {
                     let root_dir = Self::root_dir(&starting_path);
@@ -415,6 +420,7 @@ impl SymbolicatorRunner {
                     match Symbolicator::get_symbols(root_dir.unwrap().as_path()) {
                         Ok((symbols_opt, lsp_diagnostics)) => {
                             eprintln!("symbolication finished");
+                            
                             if let Some(new_symbols) = symbols_opt {
                                 // merge the new symbols with the old ones to support a
                                 // (potentially) new project/package that symbolication information
@@ -428,28 +434,42 @@ impl SymbolicatorRunner {
                                 let mut old_symbols = symbols.lock().unwrap();
                                 (*old_symbols).merge(new_symbols);
                                 eprintln!("merging symbols finished");
+
+                                // set symboling result
+                                {
+                                    eprintln!("set symboling result ok");
+                                    let mut symboling_result =
+                                        mutex_symboling_result.lock().unwrap();
+                                    *symboling_result = SymbolicatorResult::Success;
+                                    cvar_symboling.notify_all();
+                                }
                             }
 
-                            // set/reset (previous) diagnostics
-                            if let Err(err) = sender.send(Ok(lsp_diagnostics)) {
-                                eprintln!("could not pass diagnostics: {:?}", err);
-                            }
+                            if !lsp_diagnostics.is_empty() {
+                                // set symboling result
+                                {
+                                    eprintln!("set symboling result ok");
+                                    let mut symboling_result =
+                                        mutex_symboling_result.lock().unwrap();
+                                    *symboling_result = SymbolicatorResult::FailWithDiagnostics;
+                                    cvar_symboling.notify_all();
+                                }
 
-                            // set/reset symboling result
-                            {
-                                eprintln!("set symboling result ok");
-                                let mut symboling_result = mutex_symboling_result.write().unwrap();
-                                *symboling_result = SymbolicatorResult::Ok;
+                                eprintln!("reporting lsp diagnostics");
+                                if let Err(err) = sender.send(Err(anyhow!("LSP diagnostics"))) {
+                                    eprintln!("could not pass lsp diagnostics error: {:?}", err);
+                                }
                             }
                         }
                         Err(err) => {
                             eprintln!("symbolication failed: {:?}", err);
 
-                            // set/reset symboling result
+                            // set symboling result
                             {
                                 eprintln!("set symboling result error");
-                                let mut symboling_result = mutex_symboling_result.write().unwrap();
-                                *symboling_result = SymbolicatorResult::Err(format!("{:?}", err));
+                                let mut symboling_result = mutex_symboling_result.lock().unwrap();
+                                *symboling_result = SymbolicatorResult::FailWithError(format!("{:?}", err));
+                                cvar_symboling.notify_all();
                             }
 
                             if let Err(err) = sender.send(Err(err)) {
@@ -475,13 +495,10 @@ impl SymbolicatorRunner {
 
     pub fn wait_symbolicating_finished(&self) -> SymbolicatorResult {
         eprintln!("waiting for symbolication to finish");
-
-        let (mutex_symboling_result, _cvar_symboling) = &*self.symboling_result;
-        let mut symboling_result = mutex_symboling_result.read().unwrap();
-        while *symboling_result == SymbolicatorResult::None {
-            eprintln!("waiting for symbolication...");
-            thread::sleep(time::Duration::from_millis(100));
-            symboling_result = mutex_symboling_result.read().unwrap();
+        let (mutex_symboling_result, cvar_symboling) = &*self.symboling_result;
+        let mut symboling_result = mutex_symboling_result.lock().unwrap();
+        if *symboling_result == SymbolicatorResult::None {
+            symboling_result = cvar_symboling.wait(symboling_result).unwrap();
         }
 
         eprintln!("waiting for symbolication finished");
@@ -2112,6 +2129,16 @@ pub fn on_use_request(
     }
 }
 
+fn has_file_mods(context: &Context, fpath: &str) -> bool {
+    let symbols_lock = context.symbols.lock().unwrap();
+    let empty_mods: BTreeSet<ModuleDefs> = BTreeSet::new();
+    let mods = symbols_lock
+        .file_mods
+        .get(&PathBuf::from(fpath))
+        .unwrap_or(&empty_mods);
+    !mods.is_empty()
+}
+
 /// Handles document symbol request of the language server
 #[allow(deprecated)]
 pub fn on_document_symbol_request(
@@ -2123,27 +2150,17 @@ pub fn on_document_symbol_request(
         .expect("could not deserialize document symbol request");
 
     let fpath = parameters.text_document.uri.path();
-    
-    let mods: BTreeSet<ModuleDefs> = BTreeSet::new();
-    {
-        let empty_mods: BTreeSet<ModuleDefs> = BTreeSet::new();
-        let mut symbols_lock = context.symbols.lock().unwrap();
-        let mut mods = symbols_lock.file_mods
-            .get(&PathBuf::from(fpath))
-            .unwrap_or(&empty_mods);
-    }
 
-    eprintln!("on_document_symbol_request mods length: {:?}", mods.len());
-
-    if mods.len() == 0 {
+    if !has_file_mods(context, fpath) {
         symbolicator_runner.run_sync(fpath);
-
-        let mut symbols_lock = context.symbols.lock().unwrap();
-        mods = symbols_lock
-            .file_mods
-            .get(&PathBuf::from(fpath))
-            .unwrap_or(&empty_mods);
     }
+
+    let symbols = context.symbols.lock().unwrap();
+    let empty_mods: BTreeSet<ModuleDefs> = BTreeSet::new();
+    let mods = symbols
+        .file_mods
+        .get(&PathBuf::from(fpath))
+        .unwrap_or(&empty_mods);
 
     let mut defs: Vec<DocumentSymbol> = vec![];
     for mod_def in mods {

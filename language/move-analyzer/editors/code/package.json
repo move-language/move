@@ -111,7 +111,7 @@
 		"@types/vscode": "^1.58.2",
 		"@typescript-eslint/eslint-plugin": "^4.33.0",
 		"@typescript-eslint/parser": "^4.33.0",
-		"@vscode/test-electron": "^1.6.1",
+		"@vscode/test-electron": "^2.0.0",
 		"eslint": "^7.32.0",
 		"eslint-plugin-tsdoc": "^0.2.14",
 		"glob": "^7.1.7",

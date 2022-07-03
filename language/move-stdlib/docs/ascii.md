@@ -24,8 +24,7 @@ that characters are valid ASCII, and that strings consist of only valid ASCII ch
 -  [Function `is_printable_char`](#0x1_ascii_is_printable_char)
 
 
-<pre><code><b>use</b> <a href="errors.md#0x1_errors">0x1::errors</a>;
-<b>use</b> <a href="option.md#0x1_option">0x1::option</a>;
+<pre><code><b>use</b> <a href="option.md#0x1_option">0x1::option</a>;
 </code></pre>
 
 
@@ -146,7 +145,7 @@ Convert a <code>byte</code> into a <code><a href="ascii.md#0x1_ascii_Char">Char<
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="ascii.md#0x1_ascii_char">char</a>(byte: u8): <a href="ascii.md#0x1_ascii_Char">Char</a> {
-    <b>assert</b>!(<a href="ascii.md#0x1_ascii_is_valid_char">is_valid_char</a>(byte), <a href="errors.md#0x1_errors_invalid_argument">errors::invalid_argument</a>(<a href="ascii.md#0x1_ascii_EINVALID_ASCII_CHARACTER">EINVALID_ASCII_CHARACTER</a>));
+    <b>assert</b>!(<a href="ascii.md#0x1_ascii_is_valid_char">is_valid_char</a>(byte), <a href="ascii.md#0x1_ascii_EINVALID_ASCII_CHARACTER">EINVALID_ASCII_CHARACTER</a>);
     <a href="ascii.md#0x1_ascii_Char">Char</a> { byte }
 }
 </code></pre>
@@ -160,7 +159,7 @@ Convert a <code>byte</code> into a <code><a href="ascii.md#0x1_ascii_Char">Char<
 
 
 
-<pre><code><b>aborts_if</b> !<a href="ascii.md#0x1_ascii_is_valid_char">is_valid_char</a>(byte) <b>with</b> <a href="errors.md#0x1_errors_INVALID_ARGUMENT">errors::INVALID_ARGUMENT</a>;
+<pre><code><b>aborts_if</b> !<a href="ascii.md#0x1_ascii_is_valid_char">is_valid_char</a>(byte) <b>with</b> <a href="ascii.md#0x1_ascii_EINVALID_ASCII_CHARACTER">EINVALID_ASCII_CHARACTER</a>;
 </code></pre>
 
 
@@ -188,7 +187,7 @@ Convert a vector of bytes <code>bytes</code> into an <code><a href="ascii.md#0x1
    <b>let</b> x = <a href="ascii.md#0x1_ascii_try_string">try_string</a>(bytes);
    <b>assert</b>!(
         <a href="option.md#0x1_option_is_some">option::is_some</a>(&x),
-        <a href="errors.md#0x1_errors_invalid_argument">errors::invalid_argument</a>(<a href="ascii.md#0x1_ascii_EINVALID_ASCII_CHARACTER">EINVALID_ASCII_CHARACTER</a>)
+        <a href="ascii.md#0x1_ascii_EINVALID_ASCII_CHARACTER">EINVALID_ASCII_CHARACTER</a>
    );
    <a href="option.md#0x1_option_destroy_some">option::destroy_some</a>(x)
 }
@@ -203,7 +202,7 @@ Convert a vector of bytes <code>bytes</code> into an <code><a href="ascii.md#0x1
 
 
 
-<pre><code><b>aborts_if</b> <b>exists</b> i in 0..len(bytes): !<a href="ascii.md#0x1_ascii_is_valid_char">is_valid_char</a>(bytes[i]) <b>with</b> <a href="errors.md#0x1_errors_INVALID_ARGUMENT">errors::INVALID_ARGUMENT</a>;
+<pre><code><b>aborts_if</b> <b>exists</b> i in 0..len(bytes): !<a href="ascii.md#0x1_ascii_is_valid_char">is_valid_char</a>(bytes[i]) <b>with</b> <a href="ascii.md#0x1_ascii_EINVALID_ASCII_CHARACTER">EINVALID_ASCII_CHARACTER</a>;
 </code></pre>
 
 

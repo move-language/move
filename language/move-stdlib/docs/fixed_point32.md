@@ -18,8 +18,7 @@ a 32-bit fractional part.
 -  [Module Specification](#@Module_Specification_1)
 
 
-<pre><code><b>use</b> <a href="errors.md#0x1_errors">0x1::errors</a>;
-</code></pre>
+<pre><code></code></pre>
 
 
 
@@ -151,7 +150,7 @@ overflows.
     // so rescale it by shifting away the low bits.
     <b>let</b> product = unscaled_product &gt;&gt; 32;
     // Check whether the value is too large.
-    <b>assert</b>!(product &lt;= <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a>, <a href="errors.md#0x1_errors_limit_exceeded">errors::limit_exceeded</a>(<a href="fixed_point32.md#0x1_fixed_point32_EMULTIPLICATION">EMULTIPLICATION</a>));
+    <b>assert</b>!(product &lt;= <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a>, <a href="fixed_point32.md#0x1_fixed_point32_EMULTIPLICATION">EMULTIPLICATION</a>);
     (product <b>as</b> u64)
 }
 </code></pre>
@@ -179,7 +178,7 @@ overflows.
 <pre><code><b>schema</b> <a href="fixed_point32.md#0x1_fixed_point32_MultiplyAbortsIf">MultiplyAbortsIf</a> {
     val: num;
     multiplier: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>;
-    <b>aborts_if</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_multiply_u64">spec_multiply_u64</a>(val, multiplier) &gt; <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a> <b>with</b> <a href="errors.md#0x1_errors_LIMIT_EXCEEDED">errors::LIMIT_EXCEEDED</a>;
+    <b>aborts_if</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_multiply_u64">spec_multiply_u64</a>(val, multiplier) &gt; <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a> <b>with</b> <a href="fixed_point32.md#0x1_fixed_point32_EMULTIPLICATION">EMULTIPLICATION</a>;
 }
 </code></pre>
 
@@ -218,13 +217,13 @@ is zero or if the quotient overflows.
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_divide_u64">divide_u64</a>(val: u64, divisor: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): u64 {
     // Check for division by zero.
-    <b>assert</b>!(divisor.value != 0, <a href="errors.md#0x1_errors_invalid_argument">errors::invalid_argument</a>(<a href="fixed_point32.md#0x1_fixed_point32_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>));
+    <b>assert</b>!(divisor.value != 0, <a href="fixed_point32.md#0x1_fixed_point32_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>);
     // First convert <b>to</b> 128 bits and then shift left <b>to</b>
     // add 32 fractional zero bits <b>to</b> the dividend.
     <b>let</b> scaled_value = (val <b>as</b> u128) &lt;&lt; 32;
     <b>let</b> quotient = scaled_value / (divisor.value <b>as</b> u128);
     // Check whether the value is too large.
-    <b>assert</b>!(quotient &lt;= <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a>, <a href="errors.md#0x1_errors_limit_exceeded">errors::limit_exceeded</a>(<a href="fixed_point32.md#0x1_fixed_point32_EDIVISION">EDIVISION</a>));
+    <b>assert</b>!(quotient &lt;= <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a>, <a href="fixed_point32.md#0x1_fixed_point32_EDIVISION">EDIVISION</a>);
     // the value may be too large, which will cause the cast <b>to</b> fail
     // <b>with</b> an arithmetic error.
     (quotient <b>as</b> u64)
@@ -254,8 +253,8 @@ is zero or if the quotient overflows.
 <pre><code><b>schema</b> <a href="fixed_point32.md#0x1_fixed_point32_DivideAbortsIf">DivideAbortsIf</a> {
     val: num;
     divisor: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>;
-    <b>aborts_if</b> divisor.value == 0 <b>with</b> <a href="errors.md#0x1_errors_INVALID_ARGUMENT">errors::INVALID_ARGUMENT</a>;
-    <b>aborts_if</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_divide_u64">spec_divide_u64</a>(val, divisor) &gt; <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a> <b>with</b> <a href="errors.md#0x1_errors_LIMIT_EXCEEDED">errors::LIMIT_EXCEEDED</a>;
+    <b>aborts_if</b> divisor.value == 0 <b>with</b> <a href="fixed_point32.md#0x1_fixed_point32_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>;
+    <b>aborts_if</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_divide_u64">spec_divide_u64</a>(val, divisor) &gt; <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a> <b>with</b> <a href="fixed_point32.md#0x1_fixed_point32_EDIVISION">EDIVISION</a>;
 }
 </code></pre>
 
@@ -306,12 +305,12 @@ rounding, e.g., 0.0125 will round down to 0.012 instead of up to 0.013.
     // fractional bits.
     <b>let</b> scaled_numerator = (numerator <b>as</b> u128) &lt;&lt; 64;
     <b>let</b> scaled_denominator = (denominator <b>as</b> u128) &lt;&lt; 32;
-    <b>assert</b>!(scaled_denominator != 0, <a href="errors.md#0x1_errors_invalid_argument">errors::invalid_argument</a>(<a href="fixed_point32.md#0x1_fixed_point32_EDENOMINATOR">EDENOMINATOR</a>));
+    <b>assert</b>!(scaled_denominator != 0, <a href="fixed_point32.md#0x1_fixed_point32_EDENOMINATOR">EDENOMINATOR</a>);
     <b>let</b> quotient = scaled_numerator / scaled_denominator;
-    <b>assert</b>!(quotient != 0 || numerator == 0, <a href="errors.md#0x1_errors_invalid_argument">errors::invalid_argument</a>(<a href="fixed_point32.md#0x1_fixed_point32_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>));
+    <b>assert</b>!(quotient != 0 || numerator == 0, <a href="fixed_point32.md#0x1_fixed_point32_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>);
     // Return the quotient <b>as</b> a fixed-point number. We first need <b>to</b> check whether the cast
     // can succeed.
-    <b>assert</b>!(quotient &lt;= <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a>, <a href="errors.md#0x1_errors_limit_exceeded">errors::limit_exceeded</a>(<a href="fixed_point32.md#0x1_fixed_point32_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>));
+    <b>assert</b>!(quotient &lt;= <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a>, <a href="fixed_point32.md#0x1_fixed_point32_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>);
     <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> { value: (quotient <b>as</b> u64) }
 }
 </code></pre>
@@ -342,9 +341,9 @@ rounding, e.g., 0.0125 will round down to 0.012 instead of up to 0.013.
     <b>let</b> scaled_numerator = numerator &lt;&lt; 64;
     <b>let</b> scaled_denominator = denominator &lt;&lt; 32;
     <b>let</b> quotient = scaled_numerator / scaled_denominator;
-    <b>aborts_if</b> scaled_denominator == 0 <b>with</b> <a href="errors.md#0x1_errors_INVALID_ARGUMENT">errors::INVALID_ARGUMENT</a>;
-    <b>aborts_if</b> quotient == 0 && scaled_numerator != 0 <b>with</b> <a href="errors.md#0x1_errors_INVALID_ARGUMENT">errors::INVALID_ARGUMENT</a>;
-    <b>aborts_if</b> quotient &gt; <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a> <b>with</b> <a href="errors.md#0x1_errors_LIMIT_EXCEEDED">errors::LIMIT_EXCEEDED</a>;
+    <b>aborts_if</b> scaled_denominator == 0 <b>with</b> <a href="fixed_point32.md#0x1_fixed_point32_EDENOMINATOR">EDENOMINATOR</a>;
+    <b>aborts_if</b> quotient == 0 && scaled_numerator != 0 <b>with</b> <a href="fixed_point32.md#0x1_fixed_point32_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>;
+    <b>aborts_if</b> quotient &gt; <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a> <b>with</b> <a href="fixed_point32.md#0x1_fixed_point32_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>;
 }
 </code></pre>
 

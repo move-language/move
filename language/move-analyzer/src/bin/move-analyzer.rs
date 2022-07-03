@@ -27,7 +27,7 @@ use move_symbol_pool::Symbol;
 use url::Url;
 
 #[derive(Parser)]
-#[clap(author, version, about)]
+#[clap(author, version = "1.0.0", about)]
 struct Options {}
 
 fn main() {
@@ -103,23 +103,16 @@ fn main() {
     })
     .expect("could not serialize server capabilities");
 
-    let client_response: serde_json::Value = context
+    context
         .connection
         .initialize(capabilities)
         .expect("could not initialize the connection");
-
-    let initialize_params: lsp_types::InitializeParams =
-        serde_json::from_value(client_response).expect("could not deserialize client capabilities");
 
     let (diag_sender, diag_receiver) = bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
     let mut symbolicator_runner = symbols::SymbolicatorRunner::idle();
     if symbols::DEFS_AND_REFS_SUPPORT {
         symbolicator_runner =
             symbols::SymbolicatorRunner::new(context.symbols.clone(), diag_sender);
-
-        if let Some(uri) = initialize_params.root_uri {
-            symbolicator_runner.run(uri.path());
-        }
     };
 
     loop {

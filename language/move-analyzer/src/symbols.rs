@@ -408,9 +408,11 @@ impl SymbolicatorRunner {
                         // cases when developer indeed intended to open a standalone file that was
                         // not meant to compile
                         missing_manifests.insert(starting_path);
-                        if let Err(err) =
-                            sender.send(Err(anyhow!("Unable to find package manifest")))
-                        {
+                        if let Err(err) = sender.send(Err(anyhow!(
+                            "Unable to find package manifest. Make sure that
+                            the source files are located in a sub-directory of a package containing
+                            a Move.toml file. "
+                        ))) {
                             eprintln!("could not pass missing manifest error: {:?}", err);
                         }
                         continue;
@@ -517,6 +519,7 @@ impl SymbolicatorRunner {
         cvar.notify_one();
     }
 
+    /// Finds manifest file in a subdirectory of a Move source file passed as argument
     fn root_dir(starting_path: &Path) -> Option<PathBuf> {
         let mut current_path_opt = Some(starting_path);
         while current_path_opt.is_some() {

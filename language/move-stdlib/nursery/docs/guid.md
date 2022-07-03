@@ -26,7 +26,7 @@ A module for generating globally unique identifiers
 -  [Function `get_next_creation_num`](#0x1_guid_get_next_creation_num)
 
 
-<pre><code><b>use</b> <a href="signer.md#0x1_signer">0x1::signer</a>;
+<pre><code><b>use</b> <a href="">0x1::signer</a>;
 </code></pre>
 
 
@@ -171,7 +171,7 @@ GUID generator must be published ahead of first usage of <code>create_with_capab
 Generates a capability to create the privileged GUID on behalf of the signer
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_gen_create_capability">gen_create_capability</a>(account: &<a href="signer.md#0x1_signer">signer</a>): <a href="guid.md#0x1_guid_CreateCapability">guid::CreateCapability</a>
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_gen_create_capability">gen_create_capability</a>(account: &<a href="">signer</a>): <a href="guid.md#0x1_guid_CreateCapability">guid::CreateCapability</a>
 </code></pre>
 
 
@@ -180,8 +180,8 @@ Generates a capability to create the privileged GUID on behalf of the signer
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_gen_create_capability">gen_create_capability</a>(account: &<a href="signer.md#0x1_signer">signer</a>): <a href="guid.md#0x1_guid_CreateCapability">CreateCapability</a> {
-    <b>let</b> addr = <a href="signer.md#0x1_signer_address_of">signer::address_of</a>(account);
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_gen_create_capability">gen_create_capability</a>(account: &<a href="">signer</a>): <a href="guid.md#0x1_guid_CreateCapability">CreateCapability</a> {
+    <b>let</b> addr = <a href="_address_of">signer::address_of</a>(account);
     <b>if</b> (!<b>exists</b>&lt;<a href="guid.md#0x1_guid_Generator">Generator</a>&gt;(addr)) {
         <b>move_to</b>(account, <a href="guid.md#0x1_guid_Generator">Generator</a> { counter: 0 })
     };
@@ -251,7 +251,7 @@ Create and return a new GUID. Creates a <code><a href="guid.md#0x1_guid_Generato
 if it does not already have one
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_create">create</a>(account: &<a href="signer.md#0x1_signer">signer</a>): <a href="guid.md#0x1_guid_GUID">guid::GUID</a>
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_create">create</a>(account: &<a href="">signer</a>): <a href="guid.md#0x1_guid_GUID">guid::GUID</a>
 </code></pre>
 
 
@@ -260,8 +260,8 @@ if it does not already have one
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_create">create</a>(account: &<a href="signer.md#0x1_signer">signer</a>): <a href="guid.md#0x1_guid_GUID">GUID</a> <b>acquires</b> <a href="guid.md#0x1_guid_Generator">Generator</a> {
-    <b>let</b> addr = <a href="signer.md#0x1_signer_address_of">signer::address_of</a>(account);
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_create">create</a>(account: &<a href="">signer</a>): <a href="guid.md#0x1_guid_GUID">GUID</a> <b>acquires</b> <a href="guid.md#0x1_guid_Generator">Generator</a> {
+    <b>let</b> addr = <a href="_address_of">signer::address_of</a>(account);
     <b>if</b> (!<b>exists</b>&lt;<a href="guid.md#0x1_guid_Generator">Generator</a>&gt;(addr)) {
         <b>move_to</b>(account, <a href="guid.md#0x1_guid_Generator">Generator</a> { counter: 0 })
     };
@@ -307,7 +307,7 @@ if it does not already have one
 Publish a Generator resource under <code>account</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_publish_generator">publish_generator</a>(account: &<a href="signer.md#0x1_signer">signer</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_publish_generator">publish_generator</a>(account: &<a href="">signer</a>)
 </code></pre>
 
 
@@ -316,7 +316,7 @@ Publish a Generator resource under <code>account</code>
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_publish_generator">publish_generator</a>(account: &<a href="signer.md#0x1_signer">signer</a>) {
+<pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid_publish_generator">publish_generator</a>(account: &<a href="">signer</a>) {
     <b>move_to</b>(account, <a href="guid.md#0x1_guid_Generator">Generator</a> { counter: 0 })
 }
 </code></pre>
@@ -503,6 +503,3 @@ Return the number of the next GUID to be created by <code>addr</code>
 
 
 </details>
-
-
-[//]: # ("File containing references which can be used from documentation")

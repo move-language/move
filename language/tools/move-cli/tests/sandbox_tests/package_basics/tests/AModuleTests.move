@@ -8,7 +8,7 @@ module std::AModuleTests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 7)]
+    #[expected_failure(abort_code = 0)]
     fun double_three() {
         AModule::double_except_three(3);
     }

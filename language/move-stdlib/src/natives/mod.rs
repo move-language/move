@@ -6,6 +6,7 @@ pub mod bcs;
 pub mod event;
 pub mod hash;
 pub mod signer;
+pub mod string;
 pub mod vector;
 
 #[cfg(feature = "testing")]
@@ -27,6 +28,14 @@ pub fn all_natives(move_std_addr: AccountAddress) -> NativeFunctionTable {
         ("hash", "sha2_256", hash::native_sha2_256),
         ("hash", "sha3_256", hash::native_sha3_256),
         ("signer", "borrow_address", signer::native_borrow_address),
+        ("string", "internal_check_utf8", string::native_check_utf8),
+        (
+            "string",
+            "internal_is_char_boundary",
+            string::native_is_char_boundary,
+        ),
+        ("string", "internal_sub_string", string::native_sub_string),
+        ("string", "internal_index_of", string::native_index_of),
         ("vector", "length", vector::native_length),
         ("vector", "empty", vector::native_empty),
         ("vector", "borrow", vector::native_borrow),

@@ -1,4 +1,4 @@
-Command `package test --evm`:
+Command `test --evm`:
 INCLUDING DEPENDENCY MoveStdlib
 BUILDING StandaloneModule
 Running Move unit tests

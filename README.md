@@ -21,7 +21,7 @@ docker build -t move/cli -f docker/move-cli/Dockerfile .
 
 ```
 cd ./language/documentation/tutorial/step_1/BasicCoin
-docker run -v `pwd`:/project move/cli package build
+docker run -v `pwd`:/project move/cli build
 ```
 
 ## Community

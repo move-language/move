@@ -1,4 +1,4 @@
-Command `package test --evm`:
+Command `test --evm`:
 INCLUDING DEPENDENCY Bar
 INCLUDING DEPENDENCY MoveStdlib
 BUILDING Foo

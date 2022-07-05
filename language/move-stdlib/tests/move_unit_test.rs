@@ -20,6 +20,7 @@ fn run_tests_for_pkg(path_to_pkg: impl Into<String>) {
         UnitTestingConfig::default_with_bound(Some(100_000)),
         all_natives(AccountAddress::from_hex_literal("0x1").unwrap()),
         /* compute_coverage */ false,
+        &mut std::io::stdout(),
     )
     .unwrap();
     if result != UnitTestResult::Success {

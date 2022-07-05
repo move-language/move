@@ -408,7 +408,7 @@ $ cat readme/args.txt
 ## Arg files can have comments!
 sandbox run sources/debug_script.move --signers 0xf
 sandbox run sources/debug_script.move --signers 0xf
-package build
+build
 sandbox publish
 sandbox view storage/0x00000000000000000000000000000002/modules/Test.mv
 sandbox run sources/test_script.move --signers 0xf -v

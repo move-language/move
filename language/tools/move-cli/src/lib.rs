@@ -2,11 +2,14 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use base::{
+    build::Build, coverage::Coverage, disassemble::Disassemble, errmap::Errmap, info::Info,
+    new::New, prove::Prove, test::Test,
+};
 use move_package::BuildConfig;
 
 pub mod base;
 pub mod experimental;
-pub mod package;
 pub mod sandbox;
 
 /// Default directory where saved Move resources live
@@ -64,14 +67,18 @@ pub struct MoveCLI {
 }
 
 #[derive(Parser)]
+pub enum Base {}
+
+#[derive(Parser)]
 pub enum Command {
-    /// Execute a package command. Executed in the current directory or the closest containing Move
-    /// package.
-    #[clap(name = "package")]
-    Package {
-        #[clap(subcommand)]
-        cmd: package::cli::PackageCommand,
-    },
+    Build(Build),
+    Coverage(Coverage),
+    Disassemble(Disassemble),
+    Errmap(Errmap),
+    Info(Info),
+    New(New),
+    Prove(Prove),
+    Test(Test),
     /// Execute a sandbox command.
     #[clap(name = "sandbox")]
     Sandbox {
@@ -98,24 +105,26 @@ pub fn run_cli(
     natives: Vec<NativeFunctionRecord>,
     cost_table: &CostTable,
     error_descriptions: &ErrorMapping,
-    move_args: &Move,
-    cmd: &Command,
+    move_args: Move,
+    cmd: Command,
 ) -> Result<()> {
     match cmd {
+        Command::Build(c) => c.execute(&move_args.package_path, move_args.build_config),
+        Command::Coverage(c) => c.execute(&move_args.package_path, move_args.build_config),
+        Command::Disassemble(c) => c.execute(&move_args.package_path, move_args.build_config),
+        Command::Errmap(c) => c.execute(&move_args.package_path, move_args.build_config),
+        Command::Info(c) => c.execute(&move_args.package_path, move_args.build_config),
+        Command::New(c) => c.execute_with_defaults(&move_args.package_path),
+        Command::Prove(c) => c.execute(&move_args.package_path, move_args.build_config),
+        Command::Test(c) => c.execute(&move_args.package_path, move_args.build_config, natives),
         Command::Sandbox { storage_dir, cmd } => cmd.handle_command(
             natives,
             cost_table,
             error_descriptions,
-            move_args,
-            storage_dir,
+            &move_args,
+            &storage_dir,
         ),
-        Command::Experimental { storage_dir, cmd } => cmd.handle_command(move_args, storage_dir),
-        Command::Package { cmd } => package::cli::handle_package_commands(
-            &move_args.package_path,
-            move_args.build_config.clone(),
-            cmd,
-            natives,
-        ),
+        Command::Experimental { storage_dir, cmd } => cmd.handle_command(&move_args, &storage_dir),
     }
 }
 
@@ -129,7 +138,7 @@ pub fn move_cli(
         natives,
         cost_table,
         error_descriptions,
-        &args.move_args,
-        &args.cmd,
+        args.move_args,
+        args.cmd,
     )
 }

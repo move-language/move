@@ -11,4 +11,4 @@ This directory contains (a growing set of) examples of "Move-on-EVM", a programm
 - [ERC1155.move](./sources/ERC1155.move) contains an implementation of ERC1155 which is the standard for multi-tokens.
 - [TestUniswap.move](./sources/TestUniswap.move) and [TestUniswapLiquidity.move](./sources/TestUniswapLiquidity.move) are the sample client modules of `Uniswap`.
 
-This directory is a Move package. To build the source files, use `move package build`. Moreover, use `move package test` to run the unit tests located in the `tests` directory.
+This directory is a Move package. To build the source files, use `move build`. Moreover, use `move test` to run the unit tests located in the `tests` directory.

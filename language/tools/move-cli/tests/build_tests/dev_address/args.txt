@@ -1,1 +1,1 @@
-package build -v -d
+build -v -d

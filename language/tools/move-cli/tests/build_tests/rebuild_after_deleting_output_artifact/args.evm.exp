@@ -1,17 +1,17 @@
-Command `package build -v --arch ethereum`:
+Command `build -v --arch ethereum`:
 COMPILING Foo to Yul
 GENERATING EVM bytecote from Yul
-Command `package build -v --arch ethereum`:
+Command `build -v --arch ethereum`:
 CACHED Foo
 External Command `rm build/evm/Foo.yul`:
-Command `package build -v --arch ethereum`:
+Command `build -v --arch ethereum`:
 COMPILING Foo to Yul
 GENERATING EVM bytecote from Yul
 External Command `rm build/evm/Foo.bin`:
-Command `package build -v --arch ethereum`:
+Command `build -v --arch ethereum`:
 COMPILING Foo to Yul
 GENERATING EVM bytecote from Yul
 External Command `rm build/evm/Foo.abi.json`:
-Command `package build -v --arch ethereum`:
+Command `build -v --arch ethereum`:
 COMPILING Foo to Yul
 GENERATING EVM bytecote from Yul

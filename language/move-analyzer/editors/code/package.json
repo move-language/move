@@ -3,7 +3,7 @@
 	"displayName": "move-analyzer",
 	"description": "A language server and basic grammar for the Move programming language.",
 	"publisher": "move",
-    "icon": "images/move.png",
+	"icon": "images/move.png",
 	"license": "Apache-2.0",
 	"version": "0.0.8",
 	"preview": true,

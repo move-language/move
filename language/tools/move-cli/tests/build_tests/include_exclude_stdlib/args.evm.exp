@@ -1,4 +1,4 @@
-Command `package build -v --arch ethereum`:
+Command `build -v --arch ethereum`:
 COMPILING build_include_exclude_stdlib to Yul
 exiting with Move build errors Failed to compile Move into Yul ERROR
 [0m[1m[38;5;9merror[0m[1m: unbound module[0m
@@ -15,6 +15,6 @@ exiting with Move build errors Failed to compile Move into Yul ERROR
 
 
 Error: exiting with Move build errors
-Command `-d -v package build --arch ethereum`:
+Command `-d -v build --arch ethereum`:
 COMPILING MoveStdlib, build_include_exclude_stdlib to Yul
 GENERATING EVM bytecote from Yul

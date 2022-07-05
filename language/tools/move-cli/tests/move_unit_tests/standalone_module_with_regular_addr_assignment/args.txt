@@ -1,1 +1,1 @@
-package test
+test

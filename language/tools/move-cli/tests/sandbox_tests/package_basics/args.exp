@@ -1,7 +1,7 @@
-Command `package build`:
+Command `build`:
 INCLUDING DEPENDENCY MoveStdlib
 BUILDING PackageBasics
-Command `package test --coverage --threads 1`:
+Command `test --coverage --threads 1`:
 INCLUDING DEPENDENCY MoveStdlib
 BUILDING PackageBasics
 Running Move unit tests
@@ -12,7 +12,7 @@ Running Move unit tests
 [ PASS    ] 0x1::AModuleTests::double_zero_zero
 [ PASS    ] 0x1::AModuleTests::double_zero_zero_wrong
 Test result: OK. Total tests: 6; passed: 6; failed: 0
-Command `package coverage summary --summarize-functions`:
+Command `coverage summary --summarize-functions`:
 +-------------------------+
 | Move Coverage Summary   |
 +-------------------------+
@@ -25,7 +25,7 @@ Module 00000000000000000000000000000001::AModule
 +-------------------------+
 | % Move Coverage: 100.00  |
 +-------------------------+
-Command `package coverage source --module AModule`:
+Command `coverage source --module AModule`:
 module std::AModule {
 
     /// x was three
@@ -47,7 +47,7 @@ module std::AModule {
         double_except_three(3);
     }
 }
-Command `package coverage bytecode --module AModule`:
+Command `coverage bytecode --module AModule`:
 // Move bytecode v5
 module 1.AModule {
 
@@ -68,7 +68,7 @@ B2:
 [4]	9: Ret
 }
 }
-Command `package disassemble --package MoveStdlib --name signer`:
+Command `disassemble --package MoveStdlib --name signer`:
 // Move bytecode v5
 module 1.signer {
 
@@ -82,8 +82,8 @@ B0:
 }
 native public borrow_address(s: &signer): &address
 }
-Command `package errmap`:
-Command `package info`:
+Command `errmap`:
+Command `info`:
 PackageBasics
 ├─ std:0x1
 └─ MoveStdlib

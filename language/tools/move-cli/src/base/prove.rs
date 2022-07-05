@@ -1,11 +1,9 @@
-// Copyright (c) The Diem Core Contributors
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Support for the prover in the package system.
-
-use crate::package::cli;
+use super::reroot_path;
 use anyhow::bail;
+use clap::Parser;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 use colored::Colorize;
 use move_package::{BuildConfig, ModelConfig};
@@ -16,6 +14,51 @@ use std::{
     time::Instant,
 };
 use tempfile::TempDir;
+
+#[derive(Parser, Debug)]
+pub enum ProverOptions {
+    // Pass through unknown commands to the prover Clap parser
+    #[clap(
+        external_subcommand,
+        takes_value(true),
+        multiple_values(true),
+        multiple_occurrences(true)
+    )]
+    Options(Vec<String>),
+}
+
+/// Run the Move Prover on the package at `path`. If no path is provided defaults to current
+/// directory. Use `.. prove .. -- <options>` to pass on options to the prover.
+#[derive(Parser)]
+#[clap(name = "prove")]
+pub struct Prove {
+    /// The target filter used to prune the modules to verify. Modules with a name that contains
+    /// this string will be part of verification.
+    #[clap(short = 't', long = "target")]
+    target_filter: Option<String>,
+    /// Internal field indicating that this prover run is for a test.
+    #[clap(skip)]
+    for_test: bool,
+    /// Any options passed to the prover.
+    #[clap(subcommand)]
+    options: Option<ProverOptions>,
+}
+
+impl Prove {
+    pub fn execute(self, path: &Path, config: BuildConfig) -> anyhow::Result<()> {
+        let rerooted_path = reroot_path(path)?;
+        let Self {
+            target_filter,
+            for_test,
+            options,
+        } = self;
+        let opts = match options {
+            Some(ProverOptions::Options(opts)) => opts,
+            _ => vec![],
+        };
+        run_move_prover(config, &rerooted_path, &target_filter, for_test, &opts)
+    }
+}
 
 // =================================================================================================
 // API for Rust unit tests
@@ -66,18 +109,12 @@ impl ProverTest {
         //   parallelize package based tests.
         let saved_cd = std::env::current_dir().expect("current directory");
         let pkg_path = path_in_crate(std::mem::take(&mut self.path));
-        let res = cli::handle_package_commands(
-            &pkg_path,
-            move_package::BuildConfig::default(),
-            &cli::PackageCommand::Prove {
-                target_filter: None,
-                for_test: true,
-                options: Some(cli::ProverOptions::Options(std::mem::take(
-                    &mut self.options,
-                ))),
-            },
-            vec![], // prover does not need natives
-        );
+        let cmd = Prove {
+            target_filter: None,
+            for_test: true,
+            options: Some(ProverOptions::Options(std::mem::take(&mut self.options))),
+        };
+        let res = cmd.execute(&pkg_path, move_package::BuildConfig::default());
         std::env::set_current_dir(saved_cd).expect("restore current directory");
         res.unwrap()
     }

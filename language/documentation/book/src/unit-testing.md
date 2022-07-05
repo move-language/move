@@ -95,7 +95,7 @@ fun test_only_function(...) { ... }
 
 ## Running Unit Tests
 
-Unit tests for a Move package can be run with the [`move package test`
+Unit tests for a Move package can be run with the [`move test`
 command](./packages.md).
 
 When running tests, every test will either `PASS`, `FAIL`, or `TIMEOUT`. If a test case fails, the location of the failure along with the function name that caused the failure will be reported if possible. You can see an example of this below.
@@ -105,7 +105,7 @@ A test will be marked as timing out if it exceeds the maximum number of instruct
 There are also a number of options that can be passed to the unit testing binary to fine-tune testing and to help debug failing tests. These can be found using the the help flag:
 
 ```
-$ move package -h
+$ move -h
 ```
 
 ## Example
@@ -114,7 +114,7 @@ A simple module using some of the unit testing features is shown in the followin
 
 First create an empty package and change directory into it:
 ```
-$ move package new TestExample; cd TestExample
+$ move new TestExample; cd TestExample
 ```
 
 Next add the following to the `Move.toml`:
@@ -173,10 +173,10 @@ module 0x1::my_module {
 
 ### Running Tests
 
-You can then run these tests with the `move package test` command:
+You can then run these tests with the `move test` command:
 
 ```
-$ move package test
+$ move test
 BUILDING MoveStdlib
 BUILDING TestExample
 Running Move unit tests
@@ -192,7 +192,7 @@ Test result: OK. Total tests: 3; passed: 3; failed: 0
 This will only run tests whose fully qualified name contains `<str>`. For example if we wanted to only run tests with `"zero_coin"` in their name:
 
 ```
-$ move package test -f zero_coin
+$ move test -f zero_coin
 CACHED MoveStdlib
 BUILDING TestExample
 Running Move unit tests
@@ -205,7 +205,7 @@ Test result: OK. Total tests: 2; passed: 2; failed: 0
 This bounds the number of instructions that can be executed for any one test to `<bound>`:
 
 ```
-$ move package test -i 0
+$ move test -i 0
 CACHED MoveStdlib
 BUILDING TestExample
 Running Move unit tests
@@ -238,7 +238,7 @@ Test result: FAILED. Total tests: 3; passed: 0; failed: 3
 With these flags you can gather statistics about the tests run and report the runtime and instructions executed for each test. For example, if we wanted to see the statistics for the tests in the example above:
 
 ```
-$ move package test -s
+$ move test -s
 CACHED MoveStdlib
 BUILDING TestExample
 Running Move unit tests
@@ -279,7 +279,7 @@ module 0x1::my_module {
 we would get get the following output when running the tests:
 
 ```
-$ move package test -g
+$ move test -g
 CACHED MoveStdlib
 BUILDING TestExample
 Running Move unit tests

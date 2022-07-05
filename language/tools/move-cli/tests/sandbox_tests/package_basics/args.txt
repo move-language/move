@@ -1,8 +1,8 @@
-package build
-package test --coverage --threads 1
-package coverage summary --summarize-functions
-package coverage source --module AModule
-package coverage bytecode --module AModule
-package disassemble --package MoveStdlib --name signer
-package errmap
-package info
+build
+test --coverage --threads 1
+coverage summary --summarize-functions
+coverage source --module AModule
+coverage bytecode --module AModule
+disassemble --package MoveStdlib --name signer
+errmap
+info

@@ -29,15 +29,15 @@ alias move="cargo run --release --quiet --package move-cli --"
 We assume in the sequel that the Move CLI is reachable from the command line via the `move` command
 (defined by an alias as above or by other means).
 
-In order to call the CLI, you must have a [*move package*](https://move-language.github.io/move/packages.html). In the simplest
+In order to call the CLI, you must have a [*move *](https://move-language.github.io/move/packages.html). In the simplest
 case, a Move package is defined by a directory with a set of `.move` files in it and a manifest of the name `Move.toml`.
-You can create a package `<name>` in a sub-directory by calling `move package new <name>`.
+You can create a package `<name>` in a sub-directory by calling `move new <name>`.
 
 Now, to call the prover simply use one of the following commands:
 
 ```shell script
-move package -p <path> prove  # Prove the sources of the package at <path>
-move package prove            # Equivalent to `move package -p . prove`
+move -p <path> prove  # Prove the sources of the package at <path>
+move prove            # Equivalent to `move -p . prove`
 ```
 
 ### Target Filtering
@@ -47,7 +47,7 @@ often more effective to focus verification on particular files. You do this with
 `-t` (`--target`) option:
 
 ```shell script
-move package prove -t DiemConfig
+move prove -t DiemConfig
 ```
 
 In general, if the string provided via the `-t` option is contained somewhere in the file name of a source, that source
@@ -55,19 +55,19 @@ will be included for verification.
 
 > NOTE: the Move prover ensures that there is no semantic difference between verifying modules one-by-one
 > or all at once. However, if your goal is to verify all modules, verifying them in a single
-> `move package prove` run will be significantly faster then sequentially.
+> `move prove` run will be significantly faster then sequentially.
 
 ### Prover Options
 
 The prover has a number of options which are not directly handled by the CLI but rather passed through. You pass options
-through with an invocation like `move package prove -- <options>`. The most commonly used option is the `-t` (`--trace`)
+through with an invocation like `move prove -- <options>`. The most commonly used option is the `-t` (`--trace`)
 option which lets the prover produce richer diagnosis when it encounters errors:
 
 ```shell script
-move package prove -t DiemConfig -- -t
+move prove -t DiemConfig -- -t
 ```
 
-To see the list of all command line options, use `move package prove -- --help`.
+To see the list of all command line options, use `move prove -- --help`.
 
 ### Prover Configuration File
 
@@ -113,7 +113,7 @@ proc_cores = 4
 > HINT: for local verification, you may want to set proc_cores to an aggressive number
 > (your actual cores) to speed up the turn-around cycle.
 
-> NOTE: To let the prover dump all the available toml options, use `move package prove -- --print-config`. This
+> NOTE: To let the prover dump all the available toml options, use `move prove -- --print-config`. This
 > will, however, contain many more unrelated and potentially defunct experimental options.
 
 ## Prover Tests

@@ -46,30 +46,30 @@ i.e., `move <command> --help`.
 Package commands provide wrappers with sane defaults around other commands
 that are provided either by various Move tools, compiler, or prover.
 
-The `move package new` command will create a new empty Move package:
+The `move new` command will create a new empty Move package:
 ```shell
-$ move package new <package_name> # Create a Move package <package_name> under the current dir
-$ move package new <package_name> -p <path> # Create a Move package <package_name> under path <path>
+$ move new <package_name> # Create a Move package <package_name> under the current dir
+$ move new <package_name> -p <path> # Create a Move package <package_name> under path <path>
 ```
 
 From within a package's root directory, you can build the modules and/or scripts that you have written in the package with:
 ```shell
-$ move package build # Builds the Move package you are currently in
-$ move package build -p <path> # Builds the Move package at <path>
+$ move build # Builds the Move package you are currently in
+$ move build -p <path> # Builds the Move package at <path>
 ```
 
 The compiled artifacts will by default be stored in the `build` directory. You
 can change where the build artifacts are saved by passing the optional `--build-dir` flag:
 
 ```shell
-$ move package build --build-dir <path_to_save_to> # Build current Move package and save artifacts under <path_to_save_to>
+$ move build --build-dir <path_to_save_to> # Build current Move package and save artifacts under <path_to_save_to>
 ```
 
 You can verify the specifications in a Move package using the Move Prover with the `prove` command:
 
 ```shell
-$ move package prove # Verify the specifications in the current package
-$ move package prove -p <path> # Verify the specifications in the package at <path>
+$ move prove # Verify the specifications in the current package
+$ move prove -p <path> # Verify the specifications in the package at <path>
 ```
 
 In order to run the Move Prover [additional tools need to be
@@ -82,8 +82,8 @@ and
 You can also run unit tests in a package using the `test` command
 
 ```shell
-$ move package test # Run Move unit tests in the current package
-$ move package test -p <path> # Run Move unit tests in the package at <path>
+$ move test # Run Move unit tests in the current package
+$ move test -p <path> # Run Move unit tests in the package at <path>
 ```
 ## Sandbox Commands
 
@@ -97,7 +97,7 @@ Each sandbox command is run in the context of a Move package. So let's create a
 Move package that we'll use for the code in this README and `cd` into it:
 
 ```shell
-$ move package new readme
+$ move new readme
 $ cd readme
 ```
 
@@ -189,7 +189,7 @@ module 0x2::Test {
 Now, try
 
 ```shell
-$ move package build
+$ move build
 ```
 
 This will cause the CLI to compile and typecheck the modules under
@@ -250,13 +250,13 @@ public write() {
 ```
 
 You can also look at the compiled bytecode before publishing to `storage` by
-running either `move package disassemble --name <module_name>` or `move package
+running either `move disassemble --name <module_name>` or `move
 disassemble --name <module_name> --interactive` to interactively inspect the
 bytecode and how it relates to the Move source code:
 
 ```shell
-$ move package disassemble --name Test --interactive # You can quit by pressing "q"
-$ move package disassemble --name Test
+$ move disassemble --name Test --interactive # You can quit by pressing "q"
+$ move disassemble --name Test
 // Move bytecode v4
 module 2.Test {
 struct Resource has key {
@@ -408,7 +408,7 @@ $ cat readme/args.txt
 ## Arg files can have comments!
 sandbox run sources/debug_script.move --signers 0xf
 sandbox run sources/debug_script.move --signers 0xf
-package build
+build
 sandbox publish
 sandbox view storage/0x00000000000000000000000000000002/modules/Test.mv
 sandbox run sources/test_script.move --signers 0xf -v

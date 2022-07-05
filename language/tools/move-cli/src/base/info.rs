@@ -4,7 +4,7 @@
 use super::reroot_path;
 use clap::*;
 use move_package::BuildConfig;
-use std::path::Path;
+use std::path::PathBuf;
 
 /// Print address information.
 #[derive(Parser)]
@@ -12,7 +12,7 @@ use std::path::Path;
 pub struct Info;
 
 impl Info {
-    pub fn execute(self, path: &Path, config: BuildConfig) -> anyhow::Result<()> {
+    pub fn execute(self, path: Option<PathBuf>, config: BuildConfig) -> anyhow::Result<()> {
         let rerooted_path = reroot_path(path)?;
         config
             .resolution_graph_for_package(&rerooted_path)?

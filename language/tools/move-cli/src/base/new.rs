@@ -3,7 +3,12 @@
 
 use clap::*;
 use move_package::source_package::layout::SourcePackageLayout;
-use std::{fmt::Display, fs::create_dir_all, io::Write, path::Path};
+use std::{
+    fmt::Display,
+    fs::create_dir_all,
+    io::Write,
+    path::{Path, PathBuf},
+};
 
 pub const MOVE_STDLIB_PACKAGE_NAME: &str = "MoveStdlib";
 pub const MOVE_STDLIB_PACKAGE_PATH: &str = "{ \
@@ -23,7 +28,7 @@ pub struct New {
 }
 
 impl New {
-    pub fn execute_with_defaults(self, path: &Path) -> anyhow::Result<()> {
+    pub fn execute_with_defaults(self, path: Option<PathBuf>) -> anyhow::Result<()> {
         self.execute(
             path,
             "0.0.0",
@@ -34,23 +39,30 @@ impl New {
 
     pub fn execute(
         self,
-        path: &Path,
+        path: Option<PathBuf>,
         version: &str,
         deps: impl IntoIterator<Item = (impl Display, impl Display)>,
         addrs: impl IntoIterator<Item = (impl Display, impl Display)>,
     ) -> anyhow::Result<()> {
         // TODO warn on build config flags
         let Self { name } = self;
+        let p: PathBuf;
+        let path: &Path = match path {
+            Some(path) => {
+                p = path;
+                &p
+            }
+            None => Path::new(&name),
+        };
         create_dir_all(path.join(SourcePackageLayout::Sources.path()))?;
         let mut w = std::fs::File::create(path.join(SourcePackageLayout::Manifest.path()))?;
         writeln!(
             &mut w,
             "[package]
-    name = \"{name}\"
-    version = \"{version}\"
+name = \"{name}\"
+version = \"{version}\"
 
-    [dependencies]
-    "
+[dependencies]"
         )?;
         for (dep_name, dep_val) in deps {
             writeln!(w, "{dep_name} = {dep_val}")?;
@@ -59,9 +71,7 @@ impl New {
         writeln!(
             w,
             "
-
-    [addresses]
-    "
+[addresses]"
         )?;
         for (addr_name, addr_val) in addrs {
             writeln!(w, "{addr_name} =  \"{addr_val}\"")?;

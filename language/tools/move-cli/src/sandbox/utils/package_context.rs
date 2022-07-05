@@ -15,7 +15,8 @@ pub struct PackageContext {
 }
 
 impl PackageContext {
-    pub fn new(path: &Path, build_config: &BuildConfig) -> Result<Self> {
+    pub fn new(path: &Option<PathBuf>, build_config: &BuildConfig) -> Result<Self> {
+        let path = path.as_deref().unwrap_or(Path::new("."));
         let build_dir = build_config
             .install_dir
             .as_ref()
@@ -67,6 +68,6 @@ impl PackageContext {
 
 impl Default for PackageContext {
     fn default() -> Self {
-        Self::new(&std::env::current_dir().unwrap(), &BuildConfig::default()).unwrap()
+        Self::new(&None, &BuildConfig::default()).unwrap()
     }
 }

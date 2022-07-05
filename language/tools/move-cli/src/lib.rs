@@ -36,14 +36,8 @@ type NativeFunctionRecord = (AccountAddress, Identifier, Identifier, NativeFunct
 #[clap(author, version, about)]
 pub struct Move {
     /// Path to a package which the command should be run with respect to.
-    #[clap(
-        long = "path",
-        short = 'p',
-        global = true,
-        parse(from_os_str),
-        default_value = "."
-    )]
-    package_path: PathBuf,
+    #[clap(long = "path", short = 'p', global = true, parse(from_os_str))]
+    package_path: Option<PathBuf>,
 
     /// Print additional diagnostics if available.
     #[clap(short = 'v', global = true)]
@@ -109,14 +103,14 @@ pub fn run_cli(
     cmd: Command,
 ) -> Result<()> {
     match cmd {
-        Command::Build(c) => c.execute(&move_args.package_path, move_args.build_config),
-        Command::Coverage(c) => c.execute(&move_args.package_path, move_args.build_config),
-        Command::Disassemble(c) => c.execute(&move_args.package_path, move_args.build_config),
-        Command::Errmap(c) => c.execute(&move_args.package_path, move_args.build_config),
-        Command::Info(c) => c.execute(&move_args.package_path, move_args.build_config),
-        Command::New(c) => c.execute_with_defaults(&move_args.package_path),
-        Command::Prove(c) => c.execute(&move_args.package_path, move_args.build_config),
-        Command::Test(c) => c.execute(&move_args.package_path, move_args.build_config, natives),
+        Command::Build(c) => c.execute(move_args.package_path, move_args.build_config),
+        Command::Coverage(c) => c.execute(move_args.package_path, move_args.build_config),
+        Command::Disassemble(c) => c.execute(move_args.package_path, move_args.build_config),
+        Command::Errmap(c) => c.execute(move_args.package_path, move_args.build_config),
+        Command::Info(c) => c.execute(move_args.package_path, move_args.build_config),
+        Command::New(c) => c.execute_with_defaults(move_args.package_path),
+        Command::Prove(c) => c.execute(move_args.package_path, move_args.build_config),
+        Command::Test(c) => c.execute(move_args.package_path, move_args.build_config, natives),
         Command::Sandbox { storage_dir, cmd } => cmd.handle_command(
             natives,
             cost_table,

@@ -45,7 +45,7 @@ pub struct Prove {
 }
 
 impl Prove {
-    pub fn execute(self, path: &Path, config: BuildConfig) -> anyhow::Result<()> {
+    pub fn execute(self, path: Option<PathBuf>, config: BuildConfig) -> anyhow::Result<()> {
         let rerooted_path = reroot_path(path)?;
         let Self {
             target_filter,
@@ -114,7 +114,7 @@ impl ProverTest {
             for_test: true,
             options: Some(ProverOptions::Options(std::mem::take(&mut self.options))),
         };
-        let res = cmd.execute(&pkg_path, move_package::BuildConfig::default());
+        let res = cmd.execute(Some(pkg_path), move_package::BuildConfig::default());
         std::env::set_current_dir(saved_cd).expect("restore current directory");
         res.unwrap()
     }

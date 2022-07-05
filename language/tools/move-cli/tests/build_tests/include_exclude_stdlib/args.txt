@@ -1,2 +1,2 @@
-package build -v
--d -v package build
+build -v
+-d -v build

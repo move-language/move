@@ -1,8 +1,8 @@
-package build -v --arch ethereum
-package build -v --arch ethereum
+build -v --arch ethereum
+build -v --arch ethereum
 > rm build/evm/Foo.yul
-package build -v --arch ethereum
+build -v --arch ethereum
 > rm build/evm/Foo.bin
-package build -v --arch ethereum
+build -v --arch ethereum
 > rm build/evm/Foo.abi.json
-package build -v --arch ethereum
+build -v --arch ethereum

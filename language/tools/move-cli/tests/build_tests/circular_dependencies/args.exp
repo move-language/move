@@ -1,4 +1,4 @@
-Command `package build -v`:
+Command `build -v`:
 Error: Unable to resolve packages for package 'Foo'
 
 Caused by:

@@ -3,9 +3,7 @@
 
 use clap::*;
 use move_package::source_package::layout::SourcePackageLayout;
-use std::fmt::Display;
-use std::io::Write;
-use std::{fs::create_dir_all, path::Path};
+use std::{fmt::Display, fs::create_dir_all, io::Write, path::Path};
 
 pub const MOVE_STDLIB_PACKAGE_NAME: &str = "MoveStdlib";
 pub const MOVE_STDLIB_PACKAGE_PATH: &str = "{ \

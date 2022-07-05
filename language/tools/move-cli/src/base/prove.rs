@@ -8,8 +8,8 @@ use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 use colored::Colorize;
 use move_package::{BuildConfig, ModelConfig};
 use move_prover::run_move_prover_with_model;
-use std::io::Write;
 use std::{
+    io::Write,
     path::{Path, PathBuf},
     time::Instant,
 };

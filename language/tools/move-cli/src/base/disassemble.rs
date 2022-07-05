@@ -34,8 +34,7 @@ impl Disassemble {
         // Make sure the package is built
         let package = config.compile_package(&rerooted_path, &mut Vec::new())?;
         let needle_package = package_name
-            .as_ref()
-            .map(|s| s.as_str())
+            .as_deref()
             .unwrap_or(package.compiled_package_info.package_name.as_str());
         match package
             .get_module_by_name(needle_package, &module_or_script_name)

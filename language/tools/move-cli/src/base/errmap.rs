@@ -29,7 +29,7 @@ impl Errmap {
         } = self;
         let mut errmap_options = move_errmapgen::ErrmapOptions::default();
         if let Some(err_prefix) = error_prefix {
-            errmap_options.error_prefix = err_prefix.to_string();
+            errmap_options.error_prefix = err_prefix;
         }
         errmap_options.output_file = output_file
             .with_extension(move_command_line_common::files::MOVE_ERROR_DESC_EXTENSION)

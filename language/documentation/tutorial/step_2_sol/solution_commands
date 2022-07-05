@@ -1,11 +1,11 @@
 # Exercise 1
-move package test -g
+move test -g
 
 # Exercise 2
-move package test --coverage
+move test --coverage
 
 Followed by:
 
-move package coverage summary
-move package coverage summary --summarize-functions
-move package coverage source --module BasicCoin
+move coverage summary
+move coverage summary --summarize-functions
+move coverage source --module BasicCoin

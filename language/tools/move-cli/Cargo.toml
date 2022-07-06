@@ -53,7 +53,6 @@ reqwest = { version = "0.10", features = ["blocking", "json"] }
 
 [dev-dependencies]
 datatest-stable = "0.1.1"
-home = "0.5.3"
 
 [[bin]]
 name = "move"

@@ -11,6 +11,7 @@ pub mod movey_login;
 pub mod new;
 pub mod prove;
 pub mod test;
+pub mod upload;
 
 use move_package::source_package::layout::SourcePackageLayout;
 use std::path::PathBuf;

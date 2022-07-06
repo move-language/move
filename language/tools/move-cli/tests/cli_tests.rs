@@ -2,7 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use home::home_dir;
 use move_cli::sandbox::commands::test;
 use std::fs::{self, File};
 use std::io::Write;
@@ -80,20 +79,20 @@ fn upload_package_to_movey_works() {
     let mut file = File::create(&credential_file).unwrap();
     let credential_content =
         String::from("[registry]\ntoken=\"eb8xZkyr78FNL528j7q39zcdS6mxjBXt\"\n");
-    file.write(&credential_content.as_bytes()).unwrap();
+    file.write_all(&credential_content.as_bytes()).unwrap();
     let package_path = format!("{}/valid_package", UPLOAD_PACKAGE_PATH);
     init_git(&package_path, 0);
     let cli_exe = env!("CARGO_BIN_EXE_move");
     let output = Command::new(cli_exe)
         .current_dir(&package_path)
-        .args(["package", "upload", "--test", "--test-path", &test_path])
+        .args(["upload", "--test", "--test-path", &test_path])
         .output()
         .unwrap();
     assert!(output.status.success());
     let res_path = format!("{}/request-body.txt", &package_path);
     let data = fs::read_to_string(&res_path).unwrap();
     assert!(data.contains("rev"));
-    assert!(data.contains("\"github_repo_url\":\"https://github.com/diem/move\""));
+    assert!(data.contains("\"github_repo_url\":\"https://github.com/move-language/move\""));
     fs::remove_file(&res_path).unwrap();
 
     clean_up(&home, &package_path);
@@ -106,7 +105,7 @@ fn upload_package_to_movey_with_no_remote_should_panic() {
     let cli_exe = env!("CARGO_BIN_EXE_move");
     let output = Command::new(cli_exe)
         .current_dir(&package_path)
-        .args(["package", "upload", "--test"])
+        .args(["upload", "--test"])
         .output()
         .unwrap();
     assert!(!output.status.success());
@@ -122,7 +121,7 @@ fn upload_package_to_movey_with_no_head_commit_id_should_panic() {
     let cli_exe = env!("CARGO_BIN_EXE_move");
     let output = Command::new(cli_exe)
         .current_dir(&package_path)
-        .args(["package", "upload", "--test"])
+        .args(["upload", "--test"])
         .output()
         .unwrap();
     assert!(!output.status.success());
@@ -142,16 +141,19 @@ fn upload_package_to_movey_with_no_credential_should_panic() {
     let cli_exe = env!("CARGO_BIN_EXE_move");
     let output = Command::new(cli_exe)
         .current_dir(&package_path)
-        .args(["package", "upload", "--test", "--test-path", &test_path])
+        .args(["upload", "--test", "--test-path", &test_path])
         .output()
         .unwrap();
     assert!(!output.status.success());
     let error = String::from_utf8_lossy(output.stderr.as_slice()).to_string();
-    assert!(error.contains(
-        "There seems to be an error with your Movey credential. \
-        Please run `move login` and follow the instructions."
-    ));
-
+    assert!(
+        error.contains(
+            "There seems to be an error with your Movey credential. \
+            Please run `move login` and follow the instructions."
+        ),
+        "Received: {}",
+        error
+    );
     clean_up(&home, &package_path);
 }
 
@@ -164,23 +166,26 @@ fn upload_package_to_movey_with_bad_credential_should_panic() {
     fs::create_dir_all(&home).unwrap();
     let mut file = File::create(&credential_file).unwrap();
     let bad_content = String::from("[registry]\ntoken=\n");
-    file.write(&bad_content.as_bytes()).unwrap();
+    file.write_all(&bad_content.as_bytes()).unwrap();
 
     let package_path = format!("{}/bad_credential_package", UPLOAD_PACKAGE_PATH);
     init_git(&package_path, 0);
     let cli_exe = env!("CARGO_BIN_EXE_move");
     let output = Command::new(cli_exe)
         .current_dir(&package_path)
-        .args(["package", "upload", "--test", "--test-path", &test_path])
+        .args(["upload", "--test", "--test-path", &test_path])
         .output()
         .unwrap();
     assert!(!output.status.success());
     let error = String::from_utf8_lossy(output.stderr.as_slice()).to_string();
-    assert!(error.contains(
-        "There seems to be an error with your Movey credential. \
-        Please run `move login` and follow the instructions."
-    ));
-
+    assert!(
+        error.contains(
+            "There seems to be an error with your Movey credential. \
+            Please run `move login` and follow the instructions."
+        ),
+        "Received: {}",
+        error
+    );
     clean_up(&home, &package_path);
 }
 
@@ -196,24 +201,29 @@ fn init_git(package_path: &str, flag: i32) {
     if flag != 1 {
         Command::new("git")
             .current_dir(package_path)
-            .args(&["remote", "add", "origin", "git@github.com:diem/move.git"])
+            .args(&[
+                "remote",
+                "add",
+                "test-origin",
+                "git@github.com:move-language/move.git",
+            ])
             .output()
             .unwrap();
     }
-    Command::new("touch")
-        .current_dir(package_path)
-        .args(&["simple_file"])
-        .output()
-        .unwrap();
-    Command::new("git")
-        .current_dir(package_path)
-        .args(&["add", "simple_file"])
-        .output()
-        .unwrap();
     if flag != 2 {
         Command::new("git")
             .current_dir(package_path)
-            .args(&["commit", "-m", "initial commit"])
+            .args(&["config", "user.email", "\"you@example.com\""])
+            .output()
+            .unwrap();
+        Command::new("git")
+            .current_dir(package_path)
+            .args(&["config", "user.name", "\"Your Name\""])
+            .output()
+            .unwrap();
+        Command::new("git")
+            .current_dir(package_path)
+            .args(&["commit", "--allow-empty", "-m", "initial commit"])
             .output()
             .unwrap();
     }
@@ -334,12 +344,15 @@ fn clean_up(move_home: &str, package_path: &str) {
     if !move_home.is_empty() {
         let _ = fs::remove_dir_all(move_home);
     }
-    fs::remove_file(format!("{}/simple_file", package_path)).unwrap();
+    let _ = fs::remove_file(format!("{}/simple_file", package_path));
     fs::remove_dir_all(format!("{}/.git", package_path)).unwrap();
 }
 
 fn setup_move_home(test_path: &str) -> (String, String) {
-    let mut move_home = home_dir().unwrap().to_string_lossy().to_string() + "/.move/test";
+    let cwd = std::env::current_dir().unwrap();
+    let mut move_home: String = String::from(cwd.to_string_lossy());
+    std::env::set_var("TEST_MOVE_HOME", &move_home);
+
     if !test_path.is_empty() {
         move_home.push_str(&test_path);
     }

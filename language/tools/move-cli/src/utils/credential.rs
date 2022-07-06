@@ -12,19 +12,19 @@ pub struct TestMode {
 }
 
 pub fn get_move_home_path(test_mode: Option<TestMode>) -> String {
-    let mut move_home = std::env::var("MOVE_HOME").unwrap_or_else(|_| {
-        format!(
-            "{}/.move",
-            std::env::var("HOME").expect("env var 'HOME' must be set")
-        )
-    });
+    let mut move_home;
     if let Some(test_mode) = test_mode {
-        if !move_home.contains("/test") {
-            move_home.push_str("/test");
-        }
+        move_home = std::env::var("TEST_MOVE_HOME").unwrap();
         if !test_mode.test_path.is_empty() {
             move_home.push_str(&test_mode.test_path);
         }
+    } else {
+        move_home = std::env::var("MOVE_HOME").unwrap_or_else(|_| {
+            format!(
+                "{}/.move",
+                std::env::var("HOME").expect("env var 'HOME' must be set")
+            )
+        });
     }
     move_home
 }
@@ -65,26 +65,18 @@ fn get_api_token(test_mode: Option<TestMode>) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use home::home_dir;
-    use std::env;
-    use std::fs::File;
+    use std::{env, fs::File};
 
     fn setup_move_home(test_path: &str) -> (String, String) {
-        let mut move_home = env::var("MOVE_HOME").unwrap_or_else(|_| {
-            env::var("HOME").unwrap_or_else(|_| {
-                let home_dir = home_dir().unwrap().to_string_lossy().to_string();
-                env::set_var("HOME", &home_dir);
-                home_dir
-            })
-        });
-        move_home.push_str("/.move/test");
+        let cwd = env::current_dir().unwrap();
+        let mut move_home: String = String::from(cwd.to_string_lossy());
+        env::set_var("TEST_MOVE_HOME", &move_home);
+
         if !test_path.is_empty() {
             move_home.push_str(&test_path);
         }
-
         let credential_path = move_home.clone() + "/credential.toml";
-
-        return (move_home, credential_path);
+        (move_home, credential_path)
     }
 
     fn clean_up(move_home: &str) {

@@ -26,6 +26,7 @@ fn run_tests_for_pkg(path_to_pkg: impl Into<String>) {
         UnitTestingConfig::default_with_bound(Some(100_000)),
         natives,
         /* compute_coverage */ false,
+        &mut std::io::stdout(),
     )
     .unwrap();
     if res != UnitTestResult::Success {

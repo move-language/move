@@ -15,7 +15,7 @@ use move_compiler::{
 use move_coverage::coverage_map::{output_map_to_file, CoverageMap};
 use move_package::{compilation::build_plan::BuildPlan, BuildConfig};
 use move_unit_test::UnitTestingConfig;
-use std::{collections::HashMap, fs, path::Path, process::ExitStatus};
+use std::{collections::HashMap, fs, io::Write, path::Path, process::ExitStatus};
 // if windows
 #[cfg(target_family = "windows")]
 use std::os::windows::process::ExitStatusExt;
@@ -119,6 +119,7 @@ impl Test {
             unit_test_config,
             natives,
             compute_coverage,
+            &mut std::io::stdout(),
         )?;
 
         // Return a non-zero exit code if any test failed
@@ -136,12 +137,13 @@ pub enum UnitTestResult {
     Failure,
 }
 
-pub fn run_move_unit_tests(
+pub fn run_move_unit_tests<W: Write + Send>(
     pkg_path: &Path,
     mut build_config: move_package::BuildConfig,
     mut unit_test_config: UnitTestingConfig,
     natives: Vec<NativeFunctionRecord>,
     compute_coverage: bool,
+    writer: &mut W,
 ) -> Result<UnitTestResult> {
     let mut test_plan = None;
     build_config.test_mode = true;
@@ -185,7 +187,7 @@ pub fn run_move_unit_tests(
     // Move package system, to first grab the compilation env, construct the test plan from it, and
     // then save it, before resuming the rest of the compilation and returning the results and
     // control back to the Move package system.
-    build_plan.compile_with_driver(&mut std::io::stdout(), |compiler| {
+    build_plan.compile_with_driver(writer, |compiler| {
         let (files, comments_and_compiler_res) = compiler.run::<PASS_CFGIR>().unwrap();
         let (_, compiler) =
             diagnostics::unwrap_or_report_diagnostics(&files, comments_and_compiler_res);
@@ -230,7 +232,7 @@ pub fn run_move_unit_tests(
     // Run the tests. If any of the tests fail, then we don't produce a coverage report, so cleanup
     // the trace files.
     if !unit_test_config
-        .run_and_report_unit_tests(test_plan, Some(natives), std::io::stdout())
+        .run_and_report_unit_tests(test_plan, Some(natives), writer)
         .unwrap()
         .1
     {

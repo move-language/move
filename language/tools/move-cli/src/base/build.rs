@@ -4,7 +4,7 @@
 use super::reroot_path;
 use clap::*;
 use move_package::{Architecture, BuildConfig};
-use std::path::Path;
+use std::path::PathBuf;
 
 /// Build the package at `path`. If no path is provided defaults to current directory.
 #[derive(Parser)]
@@ -12,7 +12,7 @@ use std::path::Path;
 pub struct Build;
 
 impl Build {
-    pub fn execute(self, path: &Path, config: BuildConfig) -> anyhow::Result<()> {
+    pub fn execute(self, path: Option<PathBuf>, config: BuildConfig) -> anyhow::Result<()> {
         let rerooted_path = reroot_path(path)?;
         let architecture = config.architecture.unwrap_or(Architecture::Move);
 

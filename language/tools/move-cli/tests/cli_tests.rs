@@ -5,14 +5,11 @@
 use move_cli::sandbox::commands::test;
 #[cfg(unix)]
 use std::fs::File;
-use std::io::Write;
-use std::{env, fs};
+use std::{env, fs, io::Write};
 
-use home::home_dir;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use std::path::PathBuf;
-use std::process::Stdio;
+use std::{path::PathBuf, process::Stdio};
 use toml_edit::easy::Value;
 
 pub const CLI_METATEST_PATH: [&str; 3] = ["tests", "metatests", "args.txt"];
@@ -82,7 +79,7 @@ fn save_credential_works() {
                 .stdin
                 .as_ref()
                 .unwrap()
-                .write(token.as_bytes())
+                .write_all(token.as_bytes())
                 .unwrap();
             match child.wait_with_output() {
                 Ok(output) => {
@@ -138,7 +135,7 @@ fn save_credential_fails_if_undeletable_credential_file_exists() {
                 .stdin
                 .as_ref()
                 .unwrap()
-                .write(token.as_bytes())
+                .write_all(token.as_bytes())
                 .unwrap();
             match child.wait_with_output() {
                 Ok(output) => {
@@ -166,11 +163,14 @@ fn save_credential_fails_if_undeletable_credential_file_exists() {
 }
 
 fn setup_move_home(test_path: &str) -> (String, String) {
-    let move_home = home_dir().unwrap().to_string_lossy().to_string() + "/.move" + test_path;
+    let cwd = env::current_dir().unwrap();
+    let mut move_home: String = String::from(cwd.to_string_lossy());
+    env::set_var("TEST_MOVE_HOME", &move_home);
+    move_home.push_str(&test_path);
     let _ = fs::remove_dir_all(&move_home);
     fs::create_dir_all(&move_home).unwrap();
     let credential_path = move_home.clone() + "/credential.toml";
-    return (move_home, credential_path);
+    (move_home, credential_path)
 }
 
 fn clean_up(move_home: &str) {

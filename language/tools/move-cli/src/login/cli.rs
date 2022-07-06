@@ -3,11 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Result};
-use std::fs::File;
-use std::path::PathBuf;
-use std::{fs, io};
-use toml_edit::easy::map::Map;
-use toml_edit::easy::Value;
+use std::{fs, fs::File, io, path::PathBuf};
+use toml_edit::easy::{map::Map, Value};
 
 pub struct TestMode {
     pub test_path: String,
@@ -34,7 +31,7 @@ pub fn handle_login_commands(test_path: Option<String>) -> Result<()> {
                 if let Some('\r') = line.chars().next_back() {
                     line.pop();
                 }
-                if line.len() != 0 {
+                if !line.is_empty() {
                     break;
                 }
                 println!("Invalid API Token. Try again!");
@@ -54,20 +51,23 @@ pub fn handle_login_commands(test_path: Option<String>) -> Result<()> {
 }
 
 pub fn save_credential(token: String, test_mode: Option<TestMode>) -> Result<()> {
-    let mut move_home = std::env::var("MOVE_HOME").unwrap_or_else(|_| {
-        format!(
-            "{}/.move",
-            std::env::var("HOME").expect("env var 'HOME' must be set")
-        )
-    });
+    let mut move_home;
     if let Some(test_mode) = test_mode {
+        move_home = std::env::var("TEST_MOVE_HOME").unwrap();
         if !test_mode.test_path.is_empty() {
             move_home.push_str(&test_mode.test_path);
         }
+    } else {
+        move_home = std::env::var("MOVE_HOME").unwrap_or_else(|_| {
+            format!(
+                "{}/.move",
+                std::env::var("HOME").expect("env var 'HOME' must be set")
+            )
+        });
     }
     fs::create_dir_all(&move_home)?;
     let credential_path = move_home + "/credential.toml";
-    let credential_file = PathBuf::from(&credential_path.clone());
+    let credential_file = PathBuf::from(&credential_path);
     if !credential_file.exists() {
         File::create(&credential_path)?;
     }
@@ -126,25 +126,19 @@ fn set_permissions(file: &File, mode: u32) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use home::home_dir;
     use std::env;
 
     fn setup_move_home(test_path: &str) -> (String, String) {
-        let mut move_home = env::var("MOVE_HOME").unwrap_or_else(|_| {
-            env::var("HOME").unwrap_or_else(|_| {
-                let home_dir = home_dir().unwrap().to_string_lossy().to_string();
-                env::set_var("HOME", &home_dir);
-                home_dir
-            })
-        });
-        move_home.push_str("/.move");
+        let cwd = env::current_dir().unwrap();
+        let mut move_home: String = String::from(cwd.to_string_lossy());
+        env::set_var("TEST_MOVE_HOME", &move_home);
         if !test_path.is_empty() {
             move_home.push_str(&test_path);
         } else {
             move_home.push_str("/test");
         }
         let credential_path = move_home.clone() + "/credential.toml";
-        return (move_home, credential_path);
+        (move_home, credential_path)
     }
 
     fn clean_up(move_home: &str) {

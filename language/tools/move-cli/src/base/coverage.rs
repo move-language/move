@@ -44,7 +44,7 @@ pub enum CoverageSummaryOptions {
 #[clap(name = "coverage")]
 pub struct Coverage {
     #[clap(subcommand)]
-    options: CoverageSummaryOptions,
+    pub options: CoverageSummaryOptions,
 }
 
 impl Coverage {

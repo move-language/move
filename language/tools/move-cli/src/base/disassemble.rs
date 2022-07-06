@@ -14,13 +14,13 @@ use std::path::PathBuf;
 pub struct Disassemble {
     /// Start a disassembled bytecode-to-source explorer
     #[clap(long = "interactive")]
-    interactive: bool,
+    pub interactive: bool,
     /// The package name. If not provided defaults to current package modules only
     #[clap(long = "package")]
-    package_name: Option<String>,
+    pub package_name: Option<String>,
     /// The name of the module or script in the package to disassemble
     #[clap(long = "name")]
-    module_or_script_name: String,
+    pub module_or_script_name: String,
 }
 
 impl Disassemble {

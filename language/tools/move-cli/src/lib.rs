@@ -37,15 +37,15 @@ type NativeFunctionRecord = (AccountAddress, Identifier, Identifier, NativeFunct
 pub struct Move {
     /// Path to a package which the command should be run with respect to.
     #[clap(long = "path", short = 'p', global = true, parse(from_os_str))]
-    package_path: Option<PathBuf>,
+    pub package_path: Option<PathBuf>,
 
     /// Print additional diagnostics if available.
     #[clap(short = 'v', global = true)]
-    verbose: bool,
+    pub verbose: bool,
 
     /// Package build options
     #[clap(flatten)]
-    build_config: BuildConfig,
+    pub build_config: BuildConfig,
 }
 
 /// MoveCLI is the CLI that will be executed by the `move-cli` command
@@ -54,14 +54,11 @@ pub struct Move {
 #[derive(Parser)]
 pub struct MoveCLI {
     #[clap(flatten)]
-    move_args: Move,
+    pub move_args: Move,
 
     #[clap(subcommand)]
-    cmd: Command,
+    pub cmd: Command,
 }
-
-#[derive(Parser)]
-pub enum Base {}
 
 #[derive(Parser)]
 pub enum Command {

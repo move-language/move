@@ -24,7 +24,7 @@ pub const MOVE_STDLIB_ADDR_VALUE: &str = "0x1";
 #[clap(name = "new")]
 pub struct New {
     /// The name of the package to be created.
-    name: String,
+    pub name: String,
 }
 
 impl New {

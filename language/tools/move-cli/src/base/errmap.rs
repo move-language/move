@@ -14,10 +14,10 @@ pub struct Errmap {
     /// The prefix that all error reasons within modules will be prefixed with, e.g., "E" if
     /// all error reasons are "E_CANNOT_PERFORM_OPERATION", "E_CANNOT_ACCESS", etc.
     #[clap(long)]
-    error_prefix: Option<String>,
+    pub error_prefix: Option<String>,
     /// The file to serialize the generated error map to.
     #[clap(long, default_value = "error_map", parse(from_os_str))]
-    output_file: PathBuf,
+    pub output_file: PathBuf,
 }
 
 impl Errmap {

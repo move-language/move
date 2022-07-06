@@ -35,13 +35,13 @@ pub struct Prove {
     /// The target filter used to prune the modules to verify. Modules with a name that contains
     /// this string will be part of verification.
     #[clap(short = 't', long = "target")]
-    target_filter: Option<String>,
+    pub target_filter: Option<String>,
     /// Internal field indicating that this prover run is for a test.
     #[clap(skip)]
-    for_test: bool,
+    pub for_test: bool,
     /// Any options passed to the prover.
     #[clap(subcommand)]
-    options: Option<ProverOptions>,
+    pub options: Option<ProverOptions>,
 }
 
 impl Prove {

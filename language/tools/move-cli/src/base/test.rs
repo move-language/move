@@ -43,14 +43,14 @@ pub struct Test {
         short = 'i',
         long = "instructions"
     )]
-    instruction_execution_bound: u64,
+    pub instruction_execution_bound: u64,
     /// A filter string to determine which unit tests to run. A unit test will be run only if it
     /// contains this string in its fully qualified (<addr>::<module_name>::<fn_name>) name.
     #[clap(name = "filter", short = 'f', long = "filter")]
-    filter: Option<String>,
+    pub filter: Option<String>,
     /// List all tests
     #[clap(name = "list", short = 'l', long = "list")]
-    list: bool,
+    pub list: bool,
     /// Number of threads to use for running tests.
     #[clap(
         name = "num_threads",
@@ -58,29 +58,29 @@ pub struct Test {
         short = 't',
         long = "threads"
     )]
-    num_threads: usize,
+    pub num_threads: usize,
     /// Report test statistics at the end of testing
     #[clap(name = "report_statistics", short = 's', long = "statistics")]
-    report_statistics: bool,
+    pub report_statistics: bool,
     /// Show the storage state at the end of execution of a failing test
     #[clap(name = "global_state_on_error", short = 'g', long = "state_on_error")]
-    report_storage_on_error: bool,
+    pub report_storage_on_error: bool,
     /// Use the stackless bytecode interpreter to run the tests and cross check its results with
     /// the execution result from Move VM.
     #[clap(long = "stackless")]
-    check_stackless_vm: bool,
+    pub check_stackless_vm: bool,
     /// Verbose mode
     #[clap(long = "verbose")]
-    verbose_mode: bool,
+    pub verbose_mode: bool,
     /// Collect coverage information for later use with the various `package coverage` subcommands
     #[clap(long = "coverage")]
-    compute_coverage: bool,
+    pub compute_coverage: bool,
 
     /// Use the EVM-based execution backend.
     /// Does not work with --stackless.
     #[cfg(feature = "evm-backend")]
     #[structopt(long = "evm")]
-    evm: bool,
+    pub evm: bool,
 }
 
 impl Test {

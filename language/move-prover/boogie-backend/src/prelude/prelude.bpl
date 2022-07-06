@@ -20,7 +20,9 @@ options provided to the prover.
 {% include "vector-theory" %}
 {% include "multiset-theory" %}
 {% include "table-theory" %}
-
+{%- if options.custom_natives -%}
+{% include "custom-natives" %}
+{%- endif %}
 
 // ============================================================================================
 // Primitive Types

@@ -41,6 +41,16 @@ impl VectorTheory {
     }
 }
 
+/// Options to define custom native functions to include in generated Boogie file.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomNativeOptions {
+    /// Path to the custom template file.
+    pub template_path: String,
+    /// List of (module name, module instance key) tuples, used to generate instantiated
+    /// versions of generic native functions.
+    pub module_instance_names: Vec<(String, String)>,
+}
+
 /// Boogie options.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -106,6 +116,8 @@ pub struct BoogieOptions {
     pub vector_theory: VectorTheory,
     /// Whether to generate a z3 trace file and where to put it.
     pub z3_trace_file: Option<String>,
+    /// Options to define user-custom native funs.
+    pub custom_natives: Option<CustomNativeOptions>,
 }
 
 impl Default for BoogieOptions {
@@ -140,6 +152,7 @@ impl Default for BoogieOptions {
             hard_timeout_secs: 0,
             vector_theory: VectorTheory::BoogieArray,
             z3_trace_file: None,
+            custom_natives: None,
         }
     }
 }

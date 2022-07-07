@@ -44,8 +44,8 @@ impl VectorTheory {
 /// Options to define custom native functions to include in generated Boogie file.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CustomNativeOptions {
-    /// Path to the custom template file.
-    pub template_path: String,
+    /// Bytes of the custom template.
+    pub template_bytes: Vec<u8>,
     /// List of (module name, module instance key) tuples, used to generate instantiated
     /// versions of generic native functions.
     pub module_instance_names: Vec<(String, String)>,

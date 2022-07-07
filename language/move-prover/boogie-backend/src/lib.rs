@@ -154,12 +154,7 @@ pub fn add_prelude(
     if let Some(custom_native_options) = options.custom_natives.clone() {
         templates.push(templ(
             "custom-natives",
-            &std::fs::read(&custom_native_options.template_path).unwrap_or_else(|_| {
-                panic!(
-                    "cannot read custom template file {}",
-                    &custom_native_options.template_path
-                )
-            }),
+            &custom_native_options.template_bytes,
         ));
         for (module_name, instance_name) in custom_native_options.module_instance_names {
             context.insert(instance_name, &filter_native(&module_name));

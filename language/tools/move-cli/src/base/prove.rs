@@ -56,7 +56,15 @@ impl Prove {
             Some(ProverOptions::Options(opts)) => opts,
             _ => vec![],
         };
-        run_move_prover(config, &rerooted_path, &target_filter, for_test, &opts)
+        let mut args = vec!["package".to_string()];
+        let prover_toml = Path::new(&rerooted_path).join("Prover.toml");
+        if prover_toml.exists() {
+            args.push(format!("--config={}", prover_toml.to_string_lossy()));
+        }
+        args.extend(opts.iter().cloned());
+        let options = move_prover::cli::Options::create_from_args(&args)?;
+
+        run_move_prover(config, &rerooted_path, &target_filter, for_test, options)
     }
 }
 
@@ -146,18 +154,11 @@ pub fn run_move_prover(
     path: &Path,
     target_filter: &Option<String>,
     for_test: bool,
-    options: &[String],
+    mut options: move_prover::cli::Options,
 ) -> anyhow::Result<()> {
     // Always run the prover in dev mode, so addresses get default assignments
     config.dev_mode = true;
 
-    let mut args = vec!["package".to_string()];
-    let prover_toml = Path::new(&path).join("Prover.toml");
-    if prover_toml.exists() {
-        args.push(format!("--config={}", prover_toml.to_string_lossy()));
-    }
-    args.extend(options.iter().cloned());
-    let mut options = move_prover::cli::Options::create_from_args(&args)?;
     if !options.move_sources.is_empty() {
         bail!(
             "move prover options must not specify sources as those are given \

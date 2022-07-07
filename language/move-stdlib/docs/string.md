@@ -10,7 +10,6 @@ The <code><a href="string.md#0x1_string">string</a></code> module defines the <c
 -  [Constants](#@Constants_0)
 -  [Function `utf8`](#0x1_string_utf8)
 -  [Function `try_utf8`](#0x1_string_try_utf8)
--  [Function `utf8_unchecked`](#0x1_string_utf8_unchecked)
 -  [Function `bytes`](#0x1_string_bytes)
 -  [Function `is_empty`](#0x1_string_is_empty)
 -  [Function `length`](#0x1_string_length)
@@ -35,7 +34,7 @@ The <code><a href="string.md#0x1_string">string</a></code> module defines the <c
 
 ## Struct `String`
 
-A <code><a href="string.md#0x1_string_String">String</a></code> holds an immutable sequence of bytes which is guaranteed to be in utf8 format.
+A <code><a href="string.md#0x1_string_String">String</a></code> holds a sequence of bytes which is guaranteed to be in utf8 format.
 
 
 <pre><code><b>struct</b> <a href="string.md#0x1_string_String">String</a> <b>has</b> <b>copy</b>, drop, store
@@ -132,31 +131,6 @@ Tries to create a new string from a sequence of bytes.
     } <b>else</b> {
         <a href="option.md#0x1_option_none">option::none</a>()
     }
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_string_utf8_unchecked"></a>
-
-## Function `utf8_unchecked`
-
-Creates a new string from a sequence of bytes. Performs no checks.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="string.md#0x1_string_utf8_unchecked">utf8_unchecked</a>(bytes: <a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;): <a href="string.md#0x1_string_String">string::String</a>
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="string.md#0x1_string_utf8_unchecked">utf8_unchecked</a>(bytes: <a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;): <a href="string.md#0x1_string_String">String</a> {
-    <a href="string.md#0x1_string_String">String</a>{bytes}
 }
 </code></pre>
 
@@ -326,8 +300,8 @@ boundary.
 
 ## Function `sub_string`
 
-Returns a sub-string using the given byte indices, where is the first position and j is the start of the first
-byte not included (or the length of the string). The indices must be at valid utf8 char boundaries,
+Returns a sub-string using the given byte indices, where <code>i</code> is the first byte position and <code>j</code> is the start
+of the first byte not included (or the length of the string). The indices must be at valid utf8 char boundaries,
 guaranteeing that the result is valid utf8.
 
 

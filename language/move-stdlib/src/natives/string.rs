@@ -47,12 +47,13 @@ pub fn native_is_char_boundary(
     let i = pop_arg!(args, u64);
     let s_arg = pop_arg!(args, VectorRef);
     let s_ref = s_arg.as_bytes_ref();
-    unsafe {
-        let ok = std::str::from_utf8_unchecked(s_ref.as_slice()).is_char_boundary(i as usize);
-        // TODO: extensible native cost tables
-        let cost = native_gas(context.cost_table(), NativeCostIndex::PUSH_BACK, 1);
-        NativeResult::map_partial_vm_result_one(cost, Ok(Value::bool(ok)))
-    }
+    let ok = unsafe {
+        // This is safe because we guarantee the bytes to be utf8.
+        std::str::from_utf8_unchecked(s_ref.as_slice()).is_char_boundary(i as usize)
+    };
+    // TODO: extensible native cost tables
+    let cost = native_gas(context.cost_table(), NativeCostIndex::PUSH_BACK, 1);
+    NativeResult::map_partial_vm_result_one(cost, Ok(Value::bool(ok)))
 }
 
 pub fn native_sub_string(
@@ -65,13 +66,14 @@ pub fn native_sub_string(
     let i = pop_arg!(args, u64) as usize;
     let s_arg = pop_arg!(args, VectorRef);
     let s_ref = s_arg.as_bytes_ref();
-    unsafe {
-        let s_str = std::str::from_utf8_unchecked(s_ref.as_slice());
-        let v = Value::vector_u8((&s_str[i..j]).as_bytes().iter().cloned());
-        // TODO: extensible native cost tables
-        let cost = native_gas(context.cost_table(), NativeCostIndex::PUSH_BACK, 1);
-        NativeResult::map_partial_vm_result_one(cost, Ok(v))
-    }
+    let s_str = unsafe {
+        // This is safe because we guarantee the bytes to be utf8.
+        std::str::from_utf8_unchecked(s_ref.as_slice())
+    };
+    let v = Value::vector_u8((&s_str[i..j]).as_bytes().iter().cloned());
+    // TODO: extensible native cost tables
+    let cost = native_gas(context.cost_table(), NativeCostIndex::PUSH_BACK, 1);
+    NativeResult::map_partial_vm_result_one(cost, Ok(v))
 }
 
 pub fn native_index_of(
@@ -80,19 +82,17 @@ pub fn native_index_of(
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(args.len() == 2);
-    unsafe {
-        let r_arg = pop_arg!(args, VectorRef);
-        let r_ref = r_arg.as_bytes_ref();
-        let r_str = std::str::from_utf8_unchecked(r_ref.as_slice());
-        let s_arg = pop_arg!(args, VectorRef);
-        let s_ref = s_arg.as_bytes_ref();
-        let s_str = std::str::from_utf8_unchecked(s_ref.as_slice());
-        let pos = match s_str.find(r_str) {
-            Some(size) => size,
-            None => s_str.len(),
-        };
-        // TODO: extensible native cost tables
-        let cost = native_gas(context.cost_table(), NativeCostIndex::LENGTH, 1);
-        NativeResult::map_partial_vm_result_one(cost, Ok(Value::u64(pos as u64)))
-    }
+    let r_arg = pop_arg!(args, VectorRef);
+    let r_ref = r_arg.as_bytes_ref();
+    let r_str = unsafe { std::str::from_utf8_unchecked(r_ref.as_slice()) };
+    let s_arg = pop_arg!(args, VectorRef);
+    let s_ref = s_arg.as_bytes_ref();
+    let s_str = unsafe { std::str::from_utf8_unchecked(s_ref.as_slice()) };
+    let pos = match s_str.find(r_str) {
+        Some(size) => size,
+        None => s_str.len(),
+    };
+    // TODO: extensible native cost tables
+    let cost = native_gas(context.cost_table(), NativeCostIndex::LENGTH, 1);
+    NativeResult::map_partial_vm_result_one(cost, Ok(Value::u64(pos as u64)))
 }

@@ -9,7 +9,7 @@ module std::string {
     /// Index out of range.
     const EINVALID_INDEX: u64 = 2;
 
-    /// A `String` holds an immutable sequence of bytes which is guaranteed to be in utf8 format.
+    /// A `String` holds a sequence of bytes which is guaranteed to be in utf8 format.
     struct String has copy, drop, store {
         bytes: vector<u8>,
     }
@@ -27,11 +27,6 @@ module std::string {
         } else {
             option::none()
         }
-    }
-
-    /// Creates a new string from a sequence of bytes. Performs no checks.
-    public fun utf8_unchecked(bytes: vector<u8>): String {
-        String{bytes}
     }
 
     /// Returns a reference to the underlying byte vector.
@@ -72,8 +67,8 @@ module std::string {
         *s = front;
     }
 
-    /// Returns a sub-string using the given byte indices, where is the first position and j is the start of the first
-    /// byte not included (or the length of the string). The indices must be at valid utf8 char boundaries,
+    /// Returns a sub-string using the given byte indices, where `i` is the first byte position and `j` is the start
+    /// of the first byte not included (or the length of the string). The indices must be at valid utf8 char boundaries,
     /// guaranteeing that the result is valid utf8.
     public fun sub_string(s: &String, i: u64, j: u64): String {
         let bytes = &s.bytes;

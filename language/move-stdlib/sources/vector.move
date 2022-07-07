@@ -9,9 +9,7 @@
 /// Move functions here because many have loops, requiring loop invariants to prove, and
 /// the return on investment didn't seem worth it for these simple functions.
 module std::vector {
-
-    /// The index into the vector is out of bounds
-    const EINDEX_OUT_OF_BOUNDS: u64 = 0;
+    use std::errors;
 
     #[bytecode_instruction]
     /// Create an empty vector.
@@ -135,7 +133,7 @@ module std::vector {
     public fun remove<Element>(v: &mut vector<Element>, i: u64): Element {
         let len = length(v);
         // i out of bounds; abort
-        if (i >= len) abort EINDEX_OUT_OF_BOUNDS;
+        if (i >= len) abort errors::out_of_range();
 
         len = len - 1;
         while (i < len) swap(v, i, { i = i + 1; i });
@@ -149,7 +147,7 @@ module std::vector {
     /// This is O(1), but does not preserve ordering of elements in the vector.
     /// Aborts if `i` is out of bounds.
     public fun swap_remove<Element>(v: &mut vector<Element>, i: u64): Element {
-        assert!(!is_empty(v), EINDEX_OUT_OF_BOUNDS);
+        assert!(!is_empty(v), errors::invalid_argument());
         let last_idx = length(v) - 1;
         swap(v, i, last_idx);
         pop_back(v)

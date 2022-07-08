@@ -4,7 +4,6 @@
 
 #![forbid(unsafe_code)]
 
-extern crate core;
 macro_rules! debug_write {
     ($($toks: tt)*) => {
         write!($($toks)*).map_err(|_|

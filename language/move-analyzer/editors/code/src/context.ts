@@ -59,23 +59,23 @@ export class Context {
      * [2]: https://github.com/rust-lang/vscode-rust/blob/660b412701fe2ea62fad180c40ee4f8a60571c61/src/extension.ts#L287:L287
      */
     configureLanguage(): void {
-      const disposable = vscode.languages.setLanguageConfiguration('move', {
-        onEnterRules: [
-          {
-            // Doc single-line comment
-            // e.g. ///|
-            beforeText: /^\s*\/{3}.*$/,
-            action: { indentAction: IndentAction.None, appendText: '/// ' },
-          },
-          {
-            // Parent doc single-line comment
-            // e.g. //!|
-            beforeText: /^\s*\/{2}!.*$/,
-            action: { indentAction: IndentAction.None, appendText: '//! ' },
-          },
-        ],
-      });
-      this.extensionContext.subscriptions.push(disposable);
+        const disposable = vscode.languages.setLanguageConfiguration('move', {
+            onEnterRules: [
+                {
+                    // Doc single-line comment
+                    // e.g. ///|
+                    beforeText: /^\s*\/{3}.*$/,
+                    action: { indentAction: IndentAction.None, appendText: '/// ' },
+                },
+                {
+                    // Parent doc single-line comment
+                    // e.g. //!|
+                    beforeText: /^\s*\/{2}!.*$/,
+                    action: { indentAction: IndentAction.None, appendText: '//! ' },
+                },
+            ],
+        });
+        this.extensionContext.subscriptions.push(disposable);
     }
 
     /**

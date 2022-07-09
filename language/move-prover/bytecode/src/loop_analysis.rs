@@ -172,6 +172,72 @@ impl LoopAnalysisProcessor {
                             });
                         }
 
+                        // trace implicitly reassigned variables after havocking
+                        let affected_variables: BTreeSet<_> = loop_info
+                            .val_targets
+                            .iter()
+                            .chain(loop_info.mut_targets.iter().map(|(idx, _)| idx))
+                            .collect();
+
+                        // Only emit this for user declared locals, not for ones introduced
+                        // by stack elimination.
+                        let affected_non_temporary_variables: BTreeSet<_> = affected_variables
+                            .into_iter()
+                            .filter(|&idx| !func_env.is_temporary(*idx))
+                            .collect();
+
+                        if affected_non_temporary_variables.is_empty() {
+                            // no user declared local is havocked
+                            builder.set_next_debug_comment(format!(
+                                "info: enter loop {}",
+                                match loop_info.invariants.is_empty() {
+                                    true => "",
+                                    false => ", loop invariant holds at current state",
+                                }
+                            ));
+                        } else {
+                            // show the havocked locals to user
+                            let affected_non_temporary_variable_names: Vec<_> =
+                                affected_non_temporary_variables
+                                    .iter()
+                                    .map(|&idx| {
+                                        func_env
+                                            .symbol_pool()
+                                            .string(func_env.get_local_name(*idx))
+                                            .to_string()
+                                    })
+                                    .collect();
+                            let joined_variables_names_str =
+                                affected_non_temporary_variable_names.join(", ");
+                            builder.set_next_debug_comment(format!(
+                                "info: enter loop, variable(s) {} havocked and reassigned",
+                                joined_variables_names_str
+                            ));
+                        }
+
+                        // track the new values of havocked user declared locals
+                        for idx_ in &affected_non_temporary_variables {
+                            let idx = *idx_;
+                            builder.emit_with(|id| {
+                                Bytecode::Call(
+                                    id,
+                                    vec![],
+                                    Operation::TraceLocal(*idx),
+                                    vec![*idx],
+                                    None,
+                                )
+                            });
+                        }
+
+                        // after showing the havocked locals and their new values, show the following message
+                        if !affected_non_temporary_variables.is_empty()
+                            && !loop_info.invariants.is_empty()
+                        {
+                            builder.set_next_debug_comment(
+                                "info: loop invariant holds at current state".to_string(),
+                            );
+                        }
+
                         // add an additional assumption that the loop did not abort
                         let exp =
                             builder.mk_not(builder.mk_bool_call(ast::Operation::AbortFlag, vec![]));

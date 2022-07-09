@@ -97,6 +97,7 @@ pub enum TraceEntry {
     Exp(NodeId, ModelValue),
     SubExp(NodeId, ModelValue),
     GlobalMem(NodeId, ModelValue),
+    InfoLine(String),
 }
 
 // Error message matching
@@ -385,6 +386,10 @@ impl<'env> BoogieWrapper<'env> {
                             }
                         }
                     }
+                    InfoLine(info_line) => {
+                        // information that should be displayed to the user
+                        display.push(format!("    {}", info_line));
+                    }
                     _ => {}
                 }
             }
@@ -649,6 +654,10 @@ impl<'env> BoogieWrapper<'env> {
                 let value = self.extract_value(value)?;
                 Ok(TraceEntry::GlobalMem(node_id, value))
             }
+            "info" => match value {
+                Some(info_line) => Ok(TraceEntry::InfoLine(info_line.trim().to_string())),
+                None => Ok(TraceEntry::InfoLine("".to_string())),
+            },
             _ => Err(ModelParseError::new(&format!(
                 "unrecognized augmented trace entry `{}`",
                 name

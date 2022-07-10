@@ -883,13 +883,37 @@ fn parse_sequence(context: &mut Context) -> Result<Sequence, Diagnostic> {
 //          | "(" <Exp> ":" <Type> ")"
 //          | "(" <Exp> "as" <Type> ")"
 //          | "{" <Sequence>
+//          | "if" "(" <Exp> ")" <Exp> "else" "{" <Exp> "}"
+//          | "if" "(" <Exp> ")" "{" <Exp> "}"
+//          | "if" "(" <Exp> ")" <Exp> ("else" <Exp>)?
+//          | "while" "(" <Exp> ")" "{" <Exp> "}"
+//          | "while" "(" <Exp> ")" <Exp> (SpecBlock)?
+//          | "loop" <Exp>
+//          | "loop" "{" <Exp> "}"
+//          | "return" "{" <Exp> "}"
+//          | "return" <Exp>?
+//          | "abort" "{" <Exp> "}"
+//          | "abort" <Exp>
 fn parse_term(context: &mut Context) -> Result<Exp, Diagnostic> {
     const VECTOR_IDENT: &str = "vector";
 
     let start_loc = context.tokens.start_loc();
     let term = match context.tokens.peek() {
+        tok if is_control_exp(tok) => {
+            let (control_exp, ends_in_block) = parse_control_exp(context)?;
+            if !ends_in_block || at_end_of_exp(context) {
+                return Ok(control_exp);
+            }
+
+            return parse_binop_exp(context, control_exp, /* min_prec */ 1);
+        }
         Tok::Break => {
             context.tokens.advance()?;
+            if at_start_of_exp(context) {
+                let mut diag = unexpected_token_error(context.tokens, "the end of an expression");
+                diag.add_note("'break' with a value is not yet supported");
+                return Err(diag);
+            }
             Exp_::Break
         }
 
@@ -1010,6 +1034,119 @@ fn parse_term(context: &mut Context) -> Result<Exp, Diagnostic> {
     ))
 }
 
+fn is_control_exp(tok: Tok) -> bool {
+    matches!(
+        tok,
+        Tok::If | Tok::While | Tok::Loop | Tok::Return | Tok::Abort
+    )
+}
+
+// if there is a block, only parse the block, not any subsequent tokens
+// e.g.           if (cond) e1 else { e2 } + 1
+// should be,    (if (cond) e1 else { e2 }) + 1
+// AND NOT,       if (cond) e1 else ({ e2 } + 1)
+// But otherwise, if (cond) e1 else e2 + 1
+// should be,     if (cond) e1 else (e2 + 1)
+fn parse_control_exp(context: &mut Context) -> Result<(Exp, bool), Diagnostic> {
+    fn parse_exp_or_sequence(context: &mut Context) -> Result<(Exp, bool), Diagnostic> {
+        match context.tokens.peek() {
+            Tok::LBrace => {
+                let block_start_loc = context.tokens.start_loc();
+                context.tokens.advance()?; // consume the LBrace
+                let block_ = Exp_::Block(parse_sequence(context)?);
+                let block_end_loc = context.tokens.previous_end_loc();
+                let exp = spanned(
+                    context.tokens.file_hash(),
+                    block_start_loc,
+                    block_end_loc,
+                    block_,
+                );
+                Ok((exp, true))
+            }
+            _ => Ok((parse_exp(context)?, false)),
+        }
+    }
+    let start_loc = context.tokens.start_loc();
+    let (exp_, ends_in_block) = match context.tokens.peek() {
+        Tok::If => {
+            context.tokens.advance()?;
+            consume_token(context.tokens, Tok::LParen)?;
+            let eb = Box::new(parse_exp(context)?);
+            consume_token(context.tokens, Tok::RParen)?;
+            let (et, ends_in_block) = parse_exp_or_sequence(context)?;
+            let (ef, ends_in_block) = if match_token(context.tokens, Tok::Else)? {
+                let (ef, ends_in_block) = parse_exp_or_sequence(context)?;
+                (Some(Box::new(ef)), ends_in_block)
+            } else {
+                (None, ends_in_block)
+            };
+            (Exp_::IfElse(eb, Box::new(et), ef), ends_in_block)
+        }
+        Tok::While => {
+            context.tokens.advance()?;
+            consume_token(context.tokens, Tok::LParen)?;
+            let econd = parse_exp(context)?;
+            consume_token(context.tokens, Tok::RParen)?;
+            let (eloop, ends_in_block) = parse_exp_or_sequence(context)?;
+            let (econd, ends_in_block) = if context.tokens.peek() == Tok::Spec {
+                // Parse a loop invariant. Also validate that only `invariant`
+                // properties are contained in the spec block. This is
+                // transformed into `while ({spec { .. }; cond) body`.
+                let spec = parse_spec_block(vec![], context)?;
+                for member in &spec.value.members {
+                    match member.value {
+                        // Ok
+                        SpecBlockMember_::Condition {
+                            kind: sp!(_, SpecConditionKind_::Invariant(..)),
+                            ..
+                        } => (),
+                        _ => {
+                            return Err(diag!(
+                                Syntax::InvalidSpecBlockMember,
+                                (member.loc, "only 'invariant' allowed here")
+                            ))
+                        }
+                    }
+                }
+                let spec_seq = sp(
+                    spec.loc,
+                    SequenceItem_::Seq(Box::new(sp(spec.loc, Exp_::Spec(spec)))),
+                );
+                let loc = econd.loc;
+                let spec_block = Exp_::Block((vec![], vec![spec_seq], None, Box::new(Some(econd))));
+                (sp(loc, spec_block), true)
+            } else {
+                (econd, ends_in_block)
+            };
+            (Exp_::While(Box::new(econd), Box::new(eloop)), ends_in_block)
+        }
+        Tok::Loop => {
+            context.tokens.advance()?;
+            let (eloop, ends_in_block) = parse_exp_or_sequence(context)?;
+            (Exp_::Loop(Box::new(eloop)), ends_in_block)
+        }
+        Tok::Return => {
+            context.tokens.advance()?;
+            let (e, ends_in_block) = if !at_start_of_exp(context) {
+                (None, false)
+            } else {
+                let (e, ends_in_block) = parse_exp_or_sequence(context)?;
+                (Some(Box::new(e)), ends_in_block)
+            };
+            (Exp_::Return(e), ends_in_block)
+        }
+        Tok::Abort => {
+            context.tokens.advance()?;
+            let (e, ends_in_block) = parse_exp_or_sequence(context)?;
+            (Exp_::Abort(Box::new(e)), ends_in_block)
+        }
+        _ => unreachable!(),
+    };
+    let end_loc = context.tokens.previous_end_loc();
+    let exp = spanned(context.tokens.file_hash(), start_loc, end_loc, exp_);
+    Ok((exp, ends_in_block))
+}
+
 // Parse a pack, call, or other reference to a name:
 //      NameExp =
 //          <NameAccessChain> <OptionalTypeArgs> "{" Comma<ExpField> "}"
@@ -1096,15 +1233,39 @@ fn at_end_of_exp(context: &mut Context) -> bool {
     )
 }
 
+fn at_start_of_exp(context: &mut Context) -> bool {
+    matches!(
+        context.tokens.peek(),
+        // value
+        Tok::NumValue
+            | Tok::NumTypedValue
+            | Tok::ByteStringValue
+            | Tok::Identifier
+            | Tok::AtSign
+            | Tok::Copy
+            | Tok::Move
+            | Tok::False
+            | Tok::True
+            | Tok::Amp
+            | Tok::AmpMut
+            | Tok::Star
+            | Tok::Exclaim
+            | Tok::LParen
+            | Tok::LBrace
+            | Tok::Abort
+            | Tok::Break
+            | Tok::Continue
+            | Tok::If
+            | Tok::Loop
+            | Tok::Return
+            | Tok::While
+    )
+}
+
 // Parse an expression:
 //      Exp =
 //            <LambdaBindList> <Exp>        spec only
 //          | <Quantifier>                  spec only
-//          | "if" "(" <Exp> ")" <Exp> ("else" <Exp>)?
-//          | "while" "(" <Exp> ")" <Exp> (SpecBlock)?
-//          | "loop" <Exp>
-//          | "return" <Exp>?
-//          | "abort" <Exp>
 //          | <BinOpExp>
 //          | <UnaryExp> "=" <Exp>
 fn parse_exp(context: &mut Context) -> Result<Exp, Diagnostic> {
@@ -1116,82 +1277,6 @@ fn parse_exp(context: &mut Context) -> Result<Exp, Diagnostic> {
             Exp_::Lambda(bindings, body)
         }
         Tok::Identifier if is_quant(context) => parse_quant(context)?,
-        Tok::If => {
-            context.tokens.advance()?;
-            consume_token(context.tokens, Tok::LParen)?;
-            let eb = Box::new(parse_exp(context)?);
-            consume_token(context.tokens, Tok::RParen)?;
-            let et = Box::new(parse_exp(context)?);
-            let ef = if match_token(context.tokens, Tok::Else)? {
-                Some(Box::new(parse_exp(context)?))
-            } else {
-                None
-            };
-            Exp_::IfElse(eb, et, ef)
-        }
-        Tok::While => {
-            context.tokens.advance()?;
-            consume_token(context.tokens, Tok::LParen)?;
-            let econd = parse_exp(context)?;
-            consume_token(context.tokens, Tok::RParen)?;
-            let eloop = Box::new(parse_exp(context)?);
-            let econd = if context.tokens.peek() == Tok::Spec {
-                // Parse a loop invariant. Also validate that only `invariant`
-                // properties are contained in the spec block. This is
-                // transformed into `while ({spec { .. }; cond) body`.
-                let spec = parse_spec_block(vec![], context)?;
-                for member in &spec.value.members {
-                    match member.value {
-                        SpecBlockMember_::Condition {
-                            kind: sp!(_, SpecConditionKind_::Invariant(..)),
-                            ..
-                        } => {
-                            // Ok
-                        }
-                        _ => {
-                            return Err(diag!(
-                                Syntax::InvalidSpecBlockMember,
-                                (member.loc, "only 'invariant' allowed here")
-                            ))
-                        }
-                    }
-                }
-                sp(
-                    econd.loc,
-                    Exp_::Block((
-                        vec![],
-                        vec![sp(
-                            spec.loc,
-                            SequenceItem_::Seq(Box::new(sp(spec.loc, Exp_::Spec(spec)))),
-                        )],
-                        None,
-                        Box::new(Some(econd)),
-                    )),
-                )
-            } else {
-                econd
-            };
-            Exp_::While(Box::new(econd), eloop)
-        }
-        Tok::Loop => {
-            context.tokens.advance()?;
-            let eloop = Box::new(parse_exp(context)?);
-            Exp_::Loop(eloop)
-        }
-        Tok::Return => {
-            context.tokens.advance()?;
-            let e = if at_end_of_exp(context) {
-                None
-            } else {
-                Some(Box::new(parse_exp(context)?))
-            };
-            Exp_::Return(e)
-        }
-        Tok::Abort => {
-            context.tokens.advance()?;
-            let e = Box::new(parse_exp(context)?);
-            Exp_::Abort(e)
-        }
         _ => {
             // This could be either an assignment or a binary operator
             // expression.

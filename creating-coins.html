@@ -3,29 +3,36 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>First Tutorial: Creating Coins</title>
+        <title>Move Tutorial - The Move Book</title>
+                
+
         <!-- Custom HTML head -->
+        
+
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
-        <meta name="description" content="">
+        <meta name="description" content="Move book maintained by the Move core team.">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
-        <link rel="icon" href="favicon.svg">
-        <link rel="shortcut icon" href="favicon.png">
-        <link rel="stylesheet" href="css/variables.css">
+                <link rel="icon" href="favicon.svg">
+                        <link rel="shortcut icon" href="favicon.png">
+                <link rel="stylesheet" href="css/variables.css">
         <link rel="stylesheet" href="css/general.css">
         <link rel="stylesheet" href="css/chrome.css">
-        <link rel="stylesheet" href="css/print.css" media="print">
+                <link rel="stylesheet" href="css/print.css" media="print">
+        
         <!-- Fonts -->
         <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
-        <link rel="stylesheet" href="fonts/fonts.css">
+                <link rel="stylesheet" href="fonts/fonts.css">
+        
         <!-- Highlight.js Stylesheets -->
         <link rel="stylesheet" href="highlight.css">
         <link rel="stylesheet" href="tomorrow-night.css">
         <link rel="stylesheet" href="ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
-    </head>
+        
+            </head>
     <body>
         <!-- Provide site root to javascript -->
         <script type="text/javascript">
@@ -75,14 +82,14 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="modules-and-scripts.html"><strong aria-hidden="true">1.</strong> Modules and Scripts</a></li><li class="chapter-item expanded "><a href="creating-coins.html" class="active"><strong aria-hidden="true">2.</strong> First Tutorial: Creating Coins</a></li><li class="chapter-item expanded "><a href="integers.html"><strong aria-hidden="true">3.</strong> Integers</a></li><li class="chapter-item expanded "><a href="bool.html"><strong aria-hidden="true">4.</strong> Bool</a></li><li class="chapter-item expanded "><a href="address.html"><strong aria-hidden="true">5.</strong> Address</a></li><li class="chapter-item expanded "><a href="vector.html"><strong aria-hidden="true">6.</strong> Vector</a></li><li class="chapter-item expanded "><a href="signer.html"><strong aria-hidden="true">7.</strong> Signer</a></li><li class="chapter-item expanded "><a href="references.html"><strong aria-hidden="true">8.</strong> References</a></li><li class="chapter-item expanded "><a href="tuples.html"><strong aria-hidden="true">9.</strong> Tuples and Unit</a></li><li class="chapter-item expanded "><a href="variables.html"><strong aria-hidden="true">10.</strong> Local Variables and Scopes</a></li><li class="chapter-item expanded "><a href="equality.html"><strong aria-hidden="true">11.</strong> Equality</a></li><li class="chapter-item expanded "><a href="abort-and-assert.html"><strong aria-hidden="true">12.</strong> Abort and Assert</a></li><li class="chapter-item expanded "><a href="conditionals.html"><strong aria-hidden="true">13.</strong> Conditionals</a></li><li class="chapter-item expanded "><a href="loops.html"><strong aria-hidden="true">14.</strong> While and Loop</a></li><li class="chapter-item expanded "><a href="functions.html"><strong aria-hidden="true">15.</strong> Functions</a></li><li class="chapter-item expanded "><a href="structs-and-resources.html"><strong aria-hidden="true">16.</strong> Structs and Resources</a></li><li class="chapter-item expanded "><a href="constants.html"><strong aria-hidden="true">17.</strong> Constants</a></li><li class="chapter-item expanded "><a href="generics.html"><strong aria-hidden="true">18.</strong> Generics</a></li><li class="chapter-item expanded "><a href="abilities.html"><strong aria-hidden="true">19.</strong> Type Abilities</a></li><li class="chapter-item expanded "><a href="uses.html"><strong aria-hidden="true">20.</strong> Uses and Aliases</a></li><li class="chapter-item expanded "><a href="friends.html"><strong aria-hidden="true">21.</strong> Friends</a></li><li class="chapter-item expanded "><a href="packages.html"><strong aria-hidden="true">22.</strong> Packages</a></li><li class="chapter-item expanded "><a href="unit-testing.html"><strong aria-hidden="true">23.</strong> Unit Tests</a></li><li class="chapter-item expanded "><a href="global-storage-structure.html"><strong aria-hidden="true">24.</strong> Global Storage Structure</a></li><li class="chapter-item expanded "><a href="global-storage-operators.html"><strong aria-hidden="true">25.</strong> Global Storage Operators</a></li><li class="chapter-item expanded "><a href="standard-library.html"><strong aria-hidden="true">26.</strong> Standard Library</a></li><li class="chapter-item expanded "><a href="coding-conventions.html"><strong aria-hidden="true">27.</strong> Coding Conventions</a></li></ol>
-            </div>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="chapter-item expanded "><a href="modules-and-scripts.html"><strong aria-hidden="true">1.</strong> Modules and Scripts</a></li><li class="chapter-item expanded "><a href="creating-coins.html" class="active"><strong aria-hidden="true">2.</strong> Move Tutorial</a></li><li class="chapter-item expanded "><a href="integers.html"><strong aria-hidden="true">3.</strong> Integers</a></li><li class="chapter-item expanded "><a href="bool.html"><strong aria-hidden="true">4.</strong> Bool</a></li><li class="chapter-item expanded "><a href="address.html"><strong aria-hidden="true">5.</strong> Address</a></li><li class="chapter-item expanded "><a href="vector.html"><strong aria-hidden="true">6.</strong> Vector</a></li><li class="chapter-item expanded "><a href="signer.html"><strong aria-hidden="true">7.</strong> Signer</a></li><li class="chapter-item expanded "><a href="references.html"><strong aria-hidden="true">8.</strong> References</a></li><li class="chapter-item expanded "><a href="tuples.html"><strong aria-hidden="true">9.</strong> Tuples and Unit</a></li><li class="chapter-item expanded "><a href="variables.html"><strong aria-hidden="true">10.</strong> Local Variables and Scopes</a></li><li class="chapter-item expanded "><a href="equality.html"><strong aria-hidden="true">11.</strong> Equality</a></li><li class="chapter-item expanded "><a href="abort-and-assert.html"><strong aria-hidden="true">12.</strong> Abort and Assert</a></li><li class="chapter-item expanded "><a href="conditionals.html"><strong aria-hidden="true">13.</strong> Conditionals</a></li><li class="chapter-item expanded "><a href="loops.html"><strong aria-hidden="true">14.</strong> While and Loop</a></li><li class="chapter-item expanded "><a href="functions.html"><strong aria-hidden="true">15.</strong> Functions</a></li><li class="chapter-item expanded "><a href="structs-and-resources.html"><strong aria-hidden="true">16.</strong> Structs and Resources</a></li><li class="chapter-item expanded "><a href="constants.html"><strong aria-hidden="true">17.</strong> Constants</a></li><li class="chapter-item expanded "><a href="generics.html"><strong aria-hidden="true">18.</strong> Generics</a></li><li class="chapter-item expanded "><a href="abilities.html"><strong aria-hidden="true">19.</strong> Type Abilities</a></li><li class="chapter-item expanded "><a href="uses.html"><strong aria-hidden="true">20.</strong> Uses and Aliases</a></li><li class="chapter-item expanded "><a href="friends.html"><strong aria-hidden="true">21.</strong> Friends</a></li><li class="chapter-item expanded "><a href="packages.html"><strong aria-hidden="true">22.</strong> Packages</a></li><li class="chapter-item expanded "><a href="unit-testing.html"><strong aria-hidden="true">23.</strong> Unit Tests</a></li><li class="chapter-item expanded "><a href="global-storage-structure.html"><strong aria-hidden="true">24.</strong> Global Storage Structure</a></li><li class="chapter-item expanded "><a href="global-storage-operators.html"><strong aria-hidden="true">25.</strong> Global Storage Operators</a></li><li class="chapter-item expanded "><a href="standard-library.html"><strong aria-hidden="true">26.</strong> Standard Library</a></li><li class="chapter-item expanded "><a href="coding-conventions.html"><strong aria-hidden="true">27.</strong> Coding Conventions</a></li></ol>            </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
         <div id="page-wrapper" class="page-wrapper">
 
             <div class="page">
+                
                 <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky bordered">
                     <div class="left-buttons">
@@ -99,21 +106,28 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                                                <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
-                    </div>
+                                            </div>
 
-                    <h1 class="menu-title"></h1>
+                    <h1 class="menu-title">The Move Book</h1>
 
                     <div class="right-buttons">
-                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                                                <a href="print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
+                                                                        <a href="https://github.com/move-language/move" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                                                                        <a href="https://github.com/move-language/move/edit/main/language/documentation/book/src/creating-coins.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+                        
                     </div>
                 </div>
 
-                <div id="search-wrapper" class="hidden">
+                                <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
                         <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
                     </form>
@@ -123,6 +137,7 @@
                         </ul>
                     </div>
                 </div>
+                
                 <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
                 <script type="text/javascript">
                     document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
@@ -134,233 +149,56 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="tutorial---creating-coins"><a class="header" href="#tutorial---creating-coins">Tutorial - Creating Coins</a></h1>
-<p>Move is a language about resources. Resources describe certain types of values that cannot be copied or forgotten about; they must always be moved from one place to another.</p>
-<p>Resources are a valuable tool for representing things that should be scarce like assets. For a cryptocurrency, the value of a coin that can be copied is nothing, and you'd like to know that smart contracts you write don't accidentally lose resources. Move makes resources a first class primitive in the language, and enforces many invariants useful for scarce values.</p>
-<p>In this first tutorial, we'll implement a simple coin and show off some of the ways that Move helps write correct code when creating, manipulating, and destroying coins.</p>
-<p>Let's get started!</p>
-<h2 id="modules-and-scripts"><a class="header" href="#modules-and-scripts">Modules and Scripts</a></h2>
-<p>Move code can exist in two forms, as modules or as transaction scripts.</p>
-<p>Move modules contain type definitions and code and expose these through a set of public functions that operate on those types. Modules are published at specific address, and that address is part of the fully qualified module name. Most Move code you will write will be in the form of modules.</p>
-<p>Transaction scripts are functions that can take any number of arguments and return nothing. These can call any published module's public functions attempt to achieve a specific change in the global state. Scripts only change global state if they are successful; if they abort any changes they have previously made will be discarded.</p>
-<p>To make this concrete, we're going to create a module <code>0x2::Coin</code> which defines a simple digital coin and some public functions for managing coins. After publishing this module, we'll use transaction scripts to interact with it.</p>
-<h2 id="move-cli-and-project-structure"><a class="header" href="#move-cli-and-project-structure">Move CLI and Project Structure</a></h2>
-<p>Before we jump into the code, let's install the Move CLI and talk briefly about project structure.</p>
-<p>To install the Move CLI just use <code>cargo install</code>. If you don't already have a Rust toolchain installed, you should install <a href="https://rustup.rs/">Rustup</a> which will install the latest stable toolchain.</p>
-<pre><code class="language-shell">$ cargo install --git https://github.com/diem/diem move-cli
-</code></pre>
-<p>This will install the <code>move</code> binary in your Cargo binary directory. On macOS and Linux this is usually <code>~/.cargo/bin</code>. You'll want to make sure this location is in your <code>PATH</code> environment variable.</p>
-<p>Now you should be able to run the Move CLI:</p>
-<pre><code class="language-shell">$ move
-Move 0.1.0
-CLI frontend for Move compiler and VM
-
-USAGE:
-    move [FLAGS] [OPTIONS] &lt;SUBCOMMAND&gt;
-  ...
-</code></pre>
-<p>Let's create a directory for our new Move project:</p>
-<pre><code class="language-shell">$ mkdir toycoin
-$ cd toycoin
-$ mkdir -p src/modules
-$ mkdir -p src/scripts
-</code></pre>
-<p>We've created a directory called <code>toycoin</code> which has a subdirectory <code>src</code> for the modules we'll create as well as the transaction scripts. Now we can write some code!</p>
-<h2 id="creating-our-coin"><a class="header" href="#creating-our-coin">Creating Our Coin</a></h2>
-<p>We'll call our module <code>Coin</code>, and we'll publish it at address <code>0x2</code>. The Move standard library is published at the named address <code>Std</code>, and for simplicity we'll use <code>0x2</code> for our tutorial code. Any address will work, as long as the address the modules are published to and the address the modules are accessed from is the same.</p>
-<p>In our module we'll define a new type <code>Coin</code>, which will be a structure with a single field <code>value</code>, containing the number of coins. The type of the <code>value</code> field is <code>u64</code>, which is, as you might have guessed, an unsigned 64-bit integer.</p>
-<p>Our module <code>Coin</code>, and our type <code>Coin</code> both share the same name, and this is another convention used by Move programmers to name the main type in a module the same as the module itself. This doesn't cause a problem as in the Move language as the context of where <code>Coin</code> appears will always make the name unambiguous.</p>
-<p>Here's a first draft of our <code>Coin</code> module, which we'll define in <code>src/modules/Coin.move</code>:</p>
-<pre><code class="language-move=">address 0x2 {
-    module Coin {
-
-        struct Coin {
-            value: u64,
-        }
-
-    }
-}
-</code></pre>
-<p>In order to publish our module, we use the Move CLI:</p>
-<pre><code class="language-shell">$ move sandbox publish src/modules
-</code></pre>
-<p>To test our <code>Coin</code> module we'll create a small script that creates a value of our <code>Coin</code> type. The following code should go into <code>src/scripts/test-coin.move</code>:</p>
-<pre><code class="language-move=">script {
-
-    use 0x2::Coin::Coin;
-
-    fun main() {
-        let _coin = Coin { value: 100 };
-    }
-
-}
-</code></pre>
-<p>First, on line 3, we can declare an alias for the type with a <code>use</code> statement. Note that the full location and name of the type includes the address and the module. After this <code>use</code> statement, we may refer to the type by its short name <code>Coin</code>.</p>
-<p>Scripts contain a single function definition that has no return value. The function can take any number of arguments and type arguments, but for our purposes we don't need any arguments at all.</p>
-<p>On line 6, we use <code>let</code> to bind the variable <code>_coin</code> to a constructed value of 100 coin. Note that we prefix the variable name with an underscore to signal to the compiler that we don't intend to use this variable. In a real program, we'd remove the underscore and the variable would get used later in the program.</p>
-<p>Let's run our scripts <code>test-coin.move</code> with the Move CLI:</p>
-<pre><code class="language-shell">$ move sandbox run src/scripts/test-coin.move
-error:
-
-   ┌── scripts/test-coin.move:6:21 ───
-   │
- 6 │         let _coin = Coin::Coin { value: 100 };
-   │                     ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid instantiation of '0x2::Coin::Coin'.
-All structs can only be constructed in the module in which they are declared
-   │
-</code></pre>
-<p>Uh oh! Something went wrong! The error message tells us that we can't construct values of this type in scripts. Only the module itself may construct a <code>Coin</code>.</p>
-<p>We'll have to add a constructor to our module to do this.</p>
-<h3 id="minting"><a class="header" href="#minting">Minting</a></h3>
-<p>Let's create a function in <code>Coin.move</code> to create coins. We'll call our function <code>mint</code>.</p>
-<pre><code class="language-move=">address 0x2 {
-    module Coin {
-
-        struct Coin {
-            value: u64,
-        }
-
-        public fun mint(value: u64): Coin {
-            Coin { value }
-        }
-
-    }
-}
-</code></pre>
-<p>We declare the function public to indicate that other modules and scripts are allowed to call it. Functions that are not public can only be called from within the same module.</p>
-<p>Our function takes a <code>u64</code> value and returns the constructed <code>Coin</code>.</p>
-<p>Remember to always re-publish your module after making changes with</p>
-<pre><code class="language-shell">$ move sandbox publish src/modules
-</code></pre>
-<p>otherwise our script won't be able to catch those changes.</p>
-<p>With this change, we should be able to update our script <code>test-coin.move</code> to call our new constructor:</p>
-<pre><code class="language-move=">script {
-
-    use 0x2::Coin;
-
-    fun main() {
-        let _coin = Coin::mint(100);
-    }
-
-}
-</code></pre>
-<p>Let's run our script:</p>
-<pre><code class="language-shell">$ move run src/scripts/test-coin.move
-</code></pre>
-<p>The script still failed!</p>
-<pre><code class="language-shell">$ move sandbox run src/scripts/test-coin.move
-error:
-
-   ┌── src/scripts/test-coin.move:6:36 ───
-   │
- 6 │         let _coin = Coin::mint(100);
-   │                                    ^ Invalid return
-   ·
- 6 │         let _coin = Coin::mint(100);
-   │             ----- The local '_coin' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
-   │
-</code></pre>
-<p>By default, all <code>struct</code>s declared in Move are <em>resources</em>, that is they cannot be copied and they cannot be dropped. The Move compiler is telling us that it is invalid to ignore a resource value. If ignored, the value would just disappear, but since it is a resource type, we must do something with it. We must move it somewhere.</p>
-<blockquote>
-<p><strong>Note</strong>: If we wanted the value to be ignorable we could add <code>has drop</code> to the declaration of
-the <code>Coin</code>. This would tell the type system that it is okay for values of type <code>Coin</code> to be
-ignored</p>
-<pre><code class="language-move=">address 0x2 {
-    module Coin {
-        struct Coin has drop {
-            value: u64,
-        }
-
-        public fun mint(value: u64): Coin {
-            Coin { value }
-        }
-    }
-}
-</code></pre>
-<p>Then the script from above would work just fine. However, this would not be very useful for
-implementing coins. If the coin had real value, and you weren't very careful about making sure you
-used the coin somehow, it might disappear and the value it represented would be lost forever.</p>
-</blockquote>
-<p>Move is designed around the concept of resources. Resources behave like money or an asset in that they can only be moved around, never copied. In addition, while we've seen that Move already restricts the construction of types, resources must have controlled destruction as well. Only the module that defines a resource type is able to destroy that type.</p>
-<p>Let's create a a <code>burn</code> function that will destroy coins as well as a function to retrieve the value of a coin. Add the following functions to <code>Coin.move</code>:</p>
-<pre><code class="language-move=">        public fun value(coin: &amp;Coin): u64 {
-            coin.value
-        }
-
-        public fun burn(coin: Coin): u64 {
-            let Coin { value } = coin;
-            value
-        }
-</code></pre>
-<p>These are both declared public so they can be used by scripts and other modules.</p>
-<p>Notice that the function <code>value</code> takes a reference to a <code>Coin</code>. This is a read-only value, but more critically, when passing a reference to a function the value is not moved. Compare this to <code>burn</code> which takes an actual, owned <code>Coin</code> value. Calling this function with a coin will move the coin into the function and out of the caller's scope.</p>
-<p>The <code>value</code> function simply returns the internal <code>u64</code> value. Scripts and other modules can't directly access the interior fields of a module's types, so we need public accessor functions if that data should be available outside the module.</p>
-<p>The <code>burn</code> function uses pattern matching to unpack the <code>Coin</code> into just its internal value. This essentially destroys the resource and returns a normal <code>u64</code> value. We return the value of the coin to let the caller know how much money just disappeared. (see <a href="./structs-and-resources.html#destroying-structs-via-pattern-matching">Structs and Resources</a>)</p>
-<p>Again, we must republish:</p>
-<pre><code class="language-shell">$ move sandbox publish src/modules
-</code></pre>
-<p>Now we can write a slightly more complicated script that tests our <code>Coin</code> module. We'll mint a coin, display its value, and then burn it. Add this code to <code>src/scripts/test-burn.move</code>:</p>
-<pre><code class="language-move=">script {
-    use Std::Debug;
-    use 0x2::Coin;
-
-    fun main() {
-        let coin = Coin::mint(100);
-
-        Debug::print(&amp;Coin::value(&amp;coin));
-
-        Coin::burn(coin);
-    }
-}
-</code></pre>
-<p>Give it a try with <code>move run</code>:</p>
-<pre><code class="language-shell">$ move run src/scripts/test-burn.move
-[debug] 100
-</code></pre>
-<p>The only new thing in our script is the use of the standard library function <code>Debug::print</code> which takes a reference to a type and prints a human readable string respresentation of it.</p>
-<p>Note that we pass references using <code>&amp;</code> to <code>Debug::print</code> and <code>Coin::value</code>. Also, since we move <code>coin</code> into the <code>burn</code> function, it no longer exists in our script's scope and because our script compiles we can be sure that we didn't accidentally lose some money. The only way to get rid of a coin we create is to move it somewhere else.</p>
-<h2 id="wrap-up"><a class="header" href="#wrap-up">Wrap Up</a></h2>
-<p>In this tutorial, we learned how to get the Move CLI and how to use it to publish and run Move code.</p>
-<p>Move code is made of up modules, which are published at specific addresses in global storage, and transaction scripts which can call public module functions and cause changes to global storage. These scripts either complete successfully or abort making no changes to global storage.</p>
-<p>As we created our first coin, we learned the difference between normal types and resource types, and how the Move compiler and virtual machine enforce invariants about which code can construct types, access fields, and whether values can be copied and destroyed.</p>
-<!-- In the next tutorial, we'll build on our coin to implement accounts with balances. -->
+                        <h1 id="move-tutorial"><a class="header" href="#move-tutorial">Move Tutorial</a></h1>
+<p>Please refer to the <a href="https://github.com/move-language/move/tree/main/language/documentation/tutorial">Move Tutorial</a>.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="modules-and-scripts.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                                    <a rel="prev" href="modules-and-scripts.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
-                            <a rel="next" href="integers.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        
+                                                    <a rel="next" href="integers.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
+                        
                         <div style="clear: both"></div>
                     </nav>
                 </div>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="modules-and-scripts.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                    <a rel="prev" href="modules-and-scripts.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
-                    <a rel="next" href="integers.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                
+                                    <a rel="next" href="integers.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
-            </nav>
+                            </nav>
 
         </div>
 
-        <script type="text/javascript">
+        
+        
+        
+                <script type="text/javascript">
             window.playground_copyable = true;
         </script>
-        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        
+        
+                <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
         <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
         <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        
         <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
         <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
         <script src="book.js" type="text/javascript" charset="utf-8"></script>
 
         <!-- Custom JS scripts -->
+        
+        
     </body>
 </html>

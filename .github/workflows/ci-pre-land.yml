@@ -1,10 +1,10 @@
-name: ci
+# CI jobs to be run upon the code lands to the main branch or GitHub Action test branches.
+
+name: ci-pre-land
 
 on:
-  push:
-    branches: [main, gha-test-*]
   pull_request:
-    branches: [main]
+    branches: [main, gha-test-*]
 
 jobs:
   prepare:
@@ -272,26 +272,3 @@ jobs:
         run: |
           cd ./language/documentation/tutorial/step_1/BasicCoin
           docker run -v `pwd`:/project move/cli build
-
-  generate-documentation:
-    name: Generate the Move Book using mdBook
-    runs-on: ubuntu-20.04
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup mdBook
-        uses: peaceiris/actions-mdbook@v1
-        with:
-          mdbook-version: '0.4.10'
-          # mdbook-version: 'latest'
-
-      - run: mdbook build language/documentation/book
-
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        if: ${{ github.ref == 'refs/heads/main' }}
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./language/documentation/book/book

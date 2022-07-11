@@ -8,10 +8,10 @@ pub mod docgen;
 pub mod errmap;
 pub mod info;
 pub mod movey_login;
+pub mod movey_upload;
 pub mod new;
 pub mod prove;
 pub mod test;
-pub mod upload;
 
 use move_package::source_package::layout::SourcePackageLayout;
 use std::path::PathBuf;

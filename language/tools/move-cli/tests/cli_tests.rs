@@ -77,22 +77,24 @@ fn upload_package_to_movey_works() {
 
     fs::create_dir_all(&home).unwrap();
     let mut file = File::create(&credential_file).unwrap();
-    let credential_content =
-        String::from("[registry]\ntoken=\"eb8xZkyr78FNL528j7q39zcdS6mxjBXt\"\n");
+    let credential_content = String::from("[registry]\ntoken=\"test-token\"\n");
     file.write_all(&credential_content.as_bytes()).unwrap();
     let package_path = format!("{}/valid_package", UPLOAD_PACKAGE_PATH);
-    init_git(&package_path, 0);
+    init_git(&package_path, true);
     let cli_exe = env!("CARGO_BIN_EXE_move");
     let output = Command::new(cli_exe)
         .current_dir(&package_path)
-        .args(["upload", "--test", "--test-path", &test_path])
+        .args(["movey-upload", "--test", "--test-path", &test_path])
         .output()
         .unwrap();
+
     assert!(output.status.success());
     let res_path = format!("{}/request-body.txt", &package_path);
     let data = fs::read_to_string(&res_path).unwrap();
-    assert!(data.contains("rev"));
-    assert!(data.contains("\"github_repo_url\":\"https://github.com/move-language/move\""));
+    assert!(data.contains(r#""total_files":2"#), "{}", data);
+    assert!(data.contains(r#""token":"test-token""#));
+    assert!(data.contains(r#""subdir":"\n""#), "{}", data);
+    assert!(data.contains(r#""github_repo_url":"https://github.com/move-language/move""#));
     fs::remove_file(&res_path).unwrap();
 
     clean_up(&home, &package_path);
@@ -101,32 +103,17 @@ fn upload_package_to_movey_works() {
 #[test]
 fn upload_package_to_movey_with_no_remote_should_panic() {
     let package_path = format!("{}/no_git_remote_package", UPLOAD_PACKAGE_PATH);
-    init_git(&package_path, 1);
+    init_git(&package_path, false);
     let cli_exe = env!("CARGO_BIN_EXE_move");
     let output = Command::new(cli_exe)
         .current_dir(&package_path)
-        .args(["upload", "--test"])
+        .args(["movey-upload", "--test"])
         .output()
         .unwrap();
+
     assert!(!output.status.success());
     let error = String::from_utf8_lossy(output.stderr.as_slice()).to_string();
     assert!(error.contains("invalid git repository"));
-    clean_up("", &package_path);
-}
-
-#[test]
-fn upload_package_to_movey_with_no_head_commit_id_should_panic() {
-    let package_path = format!("{}/no_commit_id_package", UPLOAD_PACKAGE_PATH);
-    init_git(&package_path, 2);
-    let cli_exe = env!("CARGO_BIN_EXE_move");
-    let output = Command::new(cli_exe)
-        .current_dir(&package_path)
-        .args(["upload", "--test"])
-        .output()
-        .unwrap();
-    assert!(!output.status.success());
-    let error = String::from_utf8_lossy(output.stderr.as_slice()).to_string();
-    assert!(error.contains("invalid HEAD commit id"), "{}", error);
     clean_up("", &package_path);
 }
 
@@ -137,13 +124,14 @@ fn upload_package_to_movey_with_no_credential_should_panic() {
     let _ = fs::remove_file(&credential_file);
 
     let package_path = format!("{}/no_credential_package", UPLOAD_PACKAGE_PATH);
-    init_git(&package_path, 0);
+    init_git(&package_path, true);
     let cli_exe = env!("CARGO_BIN_EXE_move");
     let output = Command::new(cli_exe)
         .current_dir(&package_path)
-        .args(["upload", "--test", "--test-path", &test_path])
+        .args(["movey-upload", "--test", "--test-path", &test_path])
         .output()
         .unwrap();
+
     assert!(!output.status.success());
     let error = String::from_utf8_lossy(output.stderr.as_slice()).to_string();
     assert!(
@@ -169,13 +157,14 @@ fn upload_package_to_movey_with_bad_credential_should_panic() {
     file.write_all(&bad_content.as_bytes()).unwrap();
 
     let package_path = format!("{}/bad_credential_package", UPLOAD_PACKAGE_PATH);
-    init_git(&package_path, 0);
+    init_git(&package_path, true);
     let cli_exe = env!("CARGO_BIN_EXE_move");
     let output = Command::new(cli_exe)
         .current_dir(&package_path)
-        .args(["upload", "--test", "--test-path", &test_path])
+        .args(["movey-upload", "--test", "--test-path", &test_path])
         .output()
         .unwrap();
+
     assert!(!output.status.success());
     let error = String::from_utf8_lossy(output.stderr.as_slice()).to_string();
     assert!(
@@ -189,16 +178,20 @@ fn upload_package_to_movey_with_bad_credential_should_panic() {
     clean_up(&home, &package_path);
 }
 
-// flag == 0: all git command are run
-// flag == 1: missing git add remote command
-// flag == 2: missing git commit command
-fn init_git(package_path: &str, flag: i32) {
+// is_valid == true: all git commands are run
+// is_valid == false: missing git remote add command
+fn init_git(package_path: &str, is_valid: bool) {
     Command::new("git")
         .current_dir(package_path)
         .args(&["init"])
         .output()
         .unwrap();
-    if flag != 1 {
+    Command::new("git")
+        .current_dir(package_path)
+        .args(&["add", "."])
+        .output()
+        .unwrap();
+    if is_valid {
         Command::new("git")
             .current_dir(package_path)
             .args(&[
@@ -356,6 +349,6 @@ fn setup_move_home(test_path: &str) -> (String, String) {
     if !test_path.is_empty() {
         move_home.push_str(&test_path);
     }
-    let credential_file = move_home.clone() + "/credential.toml";
+    let credential_file = move_home.clone() + MOVEY_API_KEY_PATH;
     (move_home, credential_file)
 }

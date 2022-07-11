@@ -3,8 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Context, Result};
+use move_package::source_package::manifest_parser::MOVE_HOME;
 use std::fs;
 use toml_edit::easy::Value;
+
+pub const MOVEY_API_KEY_PATH: &str = "/movey_api_key.toml";
 
 #[derive(Clone)]
 pub struct TestMode {
@@ -19,18 +22,13 @@ pub fn get_move_home_path(test_mode: Option<TestMode>) -> String {
             move_home.push_str(&test_mode.test_path);
         }
     } else {
-        move_home = std::env::var("MOVE_HOME").unwrap_or_else(|_| {
-            format!(
-                "{}/.move",
-                std::env::var("HOME").expect("env var 'HOME' must be set")
-            )
-        });
+        move_home = MOVE_HOME.clone();
     }
     move_home
 }
 
 pub fn get_credential_path(test_mode: Option<TestMode>) -> String {
-    get_move_home_path(test_mode) + "/credential.toml"
+    get_move_home_path(test_mode) + MOVEY_API_KEY_PATH
 }
 
 pub fn get_registry_api_token(test_mode: Option<TestMode>) -> Result<String> {
@@ -51,9 +49,9 @@ fn get_api_token(test_mode: Option<TestMode>) -> Result<String> {
     let mut toml: Value = contents.parse()?;
     let registry = toml
         .as_table_mut()
-        .context("Error parsing credential.toml")?
+        .context(format!("Error parsing {}", MOVEY_API_KEY_PATH))?
         .get_mut("registry")
-        .context("Error parsing credential.toml")?;
+        .context(format!("Error parsing {}", MOVEY_API_KEY_PATH))?;
     let token = registry
         .as_table_mut()
         .context("Error parsing token")?
@@ -75,7 +73,7 @@ mod tests {
         if !test_path.is_empty() {
             move_home.push_str(&test_path);
         }
-        let credential_path = move_home.clone() + "/credential.toml";
+        let credential_path = move_home.clone() + MOVEY_API_KEY_PATH;
         (move_home, credential_path)
     }
 

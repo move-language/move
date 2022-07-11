@@ -44,6 +44,11 @@ type ResolvingTable = ResolutionTable<ResolvingNamedAddress>;
 type ResolvingGraph = ResolutionGraph<ResolvingNamedAddress>;
 type ResolvingPackage = ResolutionPackage<ResolvingNamedAddress>;
 
+#[cfg(debug_assertions)]
+pub const MOVEY_URL: &str = "https://movey-app-staging.herokuapp.com";
+#[cfg(not(debug_assertions))]
+pub const MOVEY_URL: &str = "https://www.movey.net";
+
 #[derive(Debug, Clone)]
 pub struct ResolvingNamedAddress {
     value: Rc<RefCell<Option<AccountAddress>>>,
@@ -551,16 +556,10 @@ impl ResolvingGraph {
                 let subdir = git_info.subdir.clone();
                 let subdir = subdir.as_path().to_string_lossy().to_string();
                 thread::spawn(move || {
-                    let movey_url: &str;
-                    if cfg!(debug_assertions) {
-                        movey_url = "https://movey-app-staging.herokuapp.com";
-                    } else {
-                        movey_url = "https://www.movey.net";
-                    }
                     let params = [("url", git_url), ("rev", git_rev), ("subdir", subdir)];
                     let client = reqwest::blocking::Client::new();
                     let _ = client
-                        .post(&format!("{}/api/v1/download", movey_url))
+                        .post(&format!("{}/api/v1/download", MOVEY_URL))
                         .form(&params)
                         .send();
                 });

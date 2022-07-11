@@ -14,7 +14,7 @@ A generic module for role-based access control (RBAC).
 -  [Function `assert_has_role`](#0x1_role_assert_has_role)
 
 
-<pre><code><b>use</b> <a href="errors.md#0x1_errors">0x1::errors</a>;
+<pre><code><b>use</b> <a href="">0x1::error</a>;
 <b>use</b> <a href="">0x1::signer</a>;
 </code></pre>
 
@@ -79,7 +79,7 @@ expected to be a function of the module that defines <code>Type</code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="role.md#0x1_role_assign_role">assign_role</a>&lt;Type&gt;(<b>to</b>: &<a href="">signer</a>, _witness: &Type) {
-    <b>assert</b>!(!<a href="role.md#0x1_role_has_role">has_role</a>&lt;Type&gt;(<a href="_address_of">signer::address_of</a>(<b>to</b>)), <a href="errors.md#0x1_errors_already_published">errors::already_published</a>(<a href="role.md#0x1_role_EROLE">EROLE</a>));
+    <b>assert</b>!(!<a href="role.md#0x1_role_has_role">has_role</a>&lt;Type&gt;(<a href="_address_of">signer::address_of</a>(<b>to</b>)), <a href="_already_exists">error::already_exists</a>(<a href="role.md#0x1_role_EROLE">EROLE</a>));
     <b>move_to</b>&lt;<a href="role.md#0x1_role_Role">Role</a>&lt;Type&gt;&gt;(<b>to</b>, <a href="role.md#0x1_role_Role">Role</a>&lt;Type&gt;{});
 }
 </code></pre>
@@ -106,7 +106,7 @@ expected to be a function of the module that defines <code>Type</code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="role.md#0x1_role_revoke_role">revoke_role</a>&lt;Type&gt;(from: &<a href="">signer</a>, _witness: &Type) <b>acquires</b> <a href="role.md#0x1_role_Role">Role</a> {
-    <b>assert</b>!(<a href="role.md#0x1_role_has_role">has_role</a>&lt;Type&gt;(<a href="_address_of">signer::address_of</a>(from)), <a href="errors.md#0x1_errors_not_published">errors::not_published</a>(<a href="role.md#0x1_role_EROLE">EROLE</a>));
+    <b>assert</b>!(<a href="role.md#0x1_role_has_role">has_role</a>&lt;Type&gt;(<a href="_address_of">signer::address_of</a>(from)), <a href="_not_found">error::not_found</a>(<a href="role.md#0x1_role_EROLE">EROLE</a>));
     <b>let</b> <a href="role.md#0x1_role_Role">Role</a>&lt;Type&gt;{} = <b>move_from</b>&lt;<a href="role.md#0x1_role_Role">Role</a>&lt;Type&gt;&gt;(<a href="_address_of">signer::address_of</a>(from));
 }
 </code></pre>
@@ -157,7 +157,7 @@ assert! that the account has the role.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="role.md#0x1_role_assert_has_role">assert_has_role</a>&lt;Type&gt;(account: &<a href="">signer</a>) {
-    <b>assert</b>!(<a href="role.md#0x1_role_has_role">has_role</a>&lt;Type&gt;(<a href="_address_of">signer::address_of</a>(account)), <a href="errors.md#0x1_errors_not_published">errors::not_published</a>(<a href="role.md#0x1_role_EROLE">EROLE</a>));
+    <b>assert</b>!(<a href="role.md#0x1_role_has_role">has_role</a>&lt;Type&gt;(<a href="_address_of">signer::address_of</a>(account)), <a href="_not_found">error::not_found</a>(<a href="role.md#0x1_role_EROLE">EROLE</a>));
 }
 </code></pre>
 

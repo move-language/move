@@ -503,8 +503,8 @@ object "A3_AccountStateMachine" {
                     case 2 {
                         // label L0
                         // destroy($t0)
-                        // $t8 := 0
-                        $t8 := 0
+                        // $t8 := 131072
+                        $t8 := 131072
                         // abort($t8)
                         $Abort($t8)
                     }

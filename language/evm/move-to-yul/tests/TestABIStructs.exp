@@ -2207,8 +2207,8 @@ object "test_A2_M_test_abi_String" {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t4 := 0
-                    $t4 := 0
+                    // $t4 := 65536
+                    $t4 := 65536
                     // abort($t4)
                     $Abort($t4)
                 }
@@ -2453,8 +2453,8 @@ object "test_A2_M_test_abi_String" {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t5 := 1
-                    $t5 := 1
+                    // $t5 := 262145
+                    $t5 := 262145
                     // abort($t5)
                     $Abort($t5)
                 }

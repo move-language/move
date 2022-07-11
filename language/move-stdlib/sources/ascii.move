@@ -3,7 +3,9 @@
 module std::ascii {
     use std::vector;
     use std::option::{Self, Option};
-    use std::errors;
+
+    /// An invalid ASCII character was encountered when creating an ASCII string.
+    const EINVALID_ASCII_CHARACTER: u64 = 0x10000;
 
    /// The `String` struct holds a vector of bytes that all represent
    /// valid ASCII characters. Note that these ASCII characters may not all
@@ -27,11 +29,11 @@ module std::ascii {
 
     /// Convert a `byte` into a `Char` that is checked to make sure it is valid ASCII.
     public fun char(byte: u8): Char {
-        assert!(is_valid_char(byte), errors::invalid_argument());
+        assert!(is_valid_char(byte), EINVALID_ASCII_CHARACTER);
         Char { byte }
     }
     spec char {
-        aborts_if !is_valid_char(byte) with INVALID_ARGUMENT;
+        aborts_if !is_valid_char(byte) with EINVALID_ASCII_CHARACTER;
     }
 
     /// Convert a vector of bytes `bytes` into an `String`. Aborts if
@@ -40,12 +42,12 @@ module std::ascii {
        let x = try_string(bytes);
        assert!(
             option::is_some(&x),
-            errors::invalid_argument()
+            EINVALID_ASCII_CHARACTER
        );
        option::destroy_some(x)
     }
     spec string {
-        aborts_if exists i in 0..len(bytes): !is_valid_char(bytes[i]) with INVALID_ARGUMENT;
+        aborts_if exists i in 0..len(bytes): !is_valid_char(bytes[i]) with EINVALID_ASCII_CHARACTER;
     }
 
     /// Convert a vector of bytes `bytes` into an `String`. Returns

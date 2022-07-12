@@ -23,19 +23,23 @@ pub fn publish(
     package: &CompiledPackage,
     no_republish: bool,
     ignore_breaking_changes: bool,
+    with_deps: bool,
     override_ordering: Option<&[String]>,
     verbose: bool,
 ) -> Result<()> {
+    let modules_to_publish = if with_deps {
+        package.all_modules().collect::<Vec<_>>()
+    } else {
+        package.root_modules().collect::<Vec<_>>()
+    };
+
     if verbose {
-        println!(
-            "Found {} modules",
-            package.root_modules().collect::<Vec<_>>().len()
-        );
+        println!("Found {} modules", modules_to_publish.len());
     }
 
     if no_republish {
-        let republished = package
-            .root_modules()
+        let republished = modules_to_publish
+            .iter()
             .filter_map(|unit| {
                 let id = module(&unit.unit).ok()?.self_id();
                 if state.has_module(&id) {
@@ -64,7 +68,7 @@ pub fn publish(
         let mut has_error = false;
         match override_ordering {
             None => {
-                for unit in package.root_modules() {
+                for unit in &modules_to_publish {
                     let module_bytes = unit.unit.serialize(bytecode_version);
                     let id = module(&unit.unit)?.self_id();
                     let sender = *id.address();
@@ -78,9 +82,8 @@ pub fn publish(
                 }
             }
             Some(ordering) => {
-                let module_map: BTreeMap<_, _> = package
-                    .root_modules()
-                    .into_iter()
+                let module_map: BTreeMap<_, _> = modules_to_publish
+                    .iter()
                     .map(|unit| (unit.unit.name().to_string(), unit))
                     .collect();
 
@@ -134,7 +137,7 @@ pub fn publish(
         // backward incompatible changes, as as result, if this flag is set, we skip the VM process
         // and force the CLI to override the on-disk state directly
         let mut serialized_modules = vec![];
-        for unit in package.all_modules() {
+        for unit in modules_to_publish {
             let id = module(&unit.unit)?.self_id();
             let module_bytes = unit.unit.serialize(bytecode_version);
             serialized_modules.push((id, module_bytes));

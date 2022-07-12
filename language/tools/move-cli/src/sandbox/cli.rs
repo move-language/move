@@ -39,6 +39,10 @@ pub enum SandboxCommand {
         /// modules in all its dependencies.
         #[clap(long = "with-deps")]
         with_deps: bool,
+        /// If set, all modules at once as a bundle. The default is to publish
+        /// modules sequentially.
+        #[clap(long = "bundle")]
+        bundle: bool,
         /// Manually specify the publishing order of modules.
         #[clap(
             long = "override-ordering",
@@ -188,6 +192,7 @@ impl SandboxCommand {
                 no_republish,
                 ignore_breaking_changes,
                 with_deps,
+                bundle,
                 override_ordering,
             } => {
                 let context =
@@ -201,6 +206,7 @@ impl SandboxCommand {
                     *no_republish,
                     *ignore_breaking_changes,
                     *with_deps,
+                    *bundle,
                     override_ordering.as_ref().map(|o| o.as_slice()),
                     move_args.verbose,
                 )

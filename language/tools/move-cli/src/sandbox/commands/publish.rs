@@ -115,13 +115,9 @@ pub fn publish(
                     let res =
                         session.publish_module_bundle(module_bytes_vec, sender, &mut gas_status);
                     if let Err(err) = res {
-                        if modules_to_publish.len() == 1 {
-                            explain_publish_error(err, state, modules_to_publish[0])?;
-                        } else {
-                            // TODO (mengxu): explain publish errors in multi-module publishing
-                            println!("Invalid multi-module publishing: {}", err);
-                            has_error = true;
-                        }
+                        // TODO (mengxu): explain publish errors in multi-module publishing
+                        println!("Invalid multi-module publishing: {}", err);
+                        has_error = true;
                     }
                 }
             }

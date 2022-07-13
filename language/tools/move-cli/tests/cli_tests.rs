@@ -2,7 +2,8 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_cli::sandbox::commands::test;
+use move_cli::{movey_login::cli::MOVEY_API_KEY_PATH, sandbox::commands::test};
+use move_command_line_common::movey::MOVEY_URL;
 #[cfg(unix)]
 use std::fs::File;
 use std::{env, fs, io::Write};
@@ -68,7 +69,12 @@ fn save_credential_works() {
 
     match std::process::Command::new(cli_exe)
         .current_dir(".")
-        .args(["login", "--test", "--test-path", "/save_credential_works"])
+        .args([
+            "movey-login",
+            "--test",
+            "--test-path",
+            "/save_credential_works",
+        ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
@@ -83,10 +89,10 @@ fn save_credential_works() {
                 .unwrap();
             match child.wait_with_output() {
                 Ok(output) => {
-                    assert!(String::from_utf8_lossy(&output.stdout).contains(
-                        "Please paste the API Token found on \
-                                https://movey-app-staging.herokuapp.com/settings/tokens below"
-                    ));
+                    assert!(String::from_utf8_lossy(&output.stdout).contains(&format!(
+                        "Please paste the API Token found on {}/settings/tokens below",
+                        MOVEY_URL
+                    )));
                     Ok(())
                 }
                 Err(error) => Err(error),
@@ -119,7 +125,7 @@ fn save_credential_fails_if_undeletable_credential_file_exists() {
     match std::process::Command::new(cli_exe)
         .current_dir(".")
         .args([
-            "login",
+            "movey-login",
             "--test",
             "--test-path",
             "/save_credential_fails_if_undeletable_credential_file_exists",
@@ -139,10 +145,10 @@ fn save_credential_fails_if_undeletable_credential_file_exists() {
                 .unwrap();
             match child.wait_with_output() {
                 Ok(output) => {
-                    assert!(String::from_utf8_lossy(&output.stdout).contains(
-                        "Please paste the API Token found on \
-                                    https://movey-app-staging.herokuapp.com/settings/tokens below"
-                    ));
+                    assert!(String::from_utf8_lossy(&output.stdout).contains(&format!(
+                        "Please paste the API Token found on {}/settings/tokens below",
+                        MOVEY_URL
+                    )));
                     assert!(String::from_utf8_lossy(&output.stderr)
                         .contains("Error: Error reading input: Permission denied (os error 13)"));
                     Ok(())
@@ -169,7 +175,7 @@ fn setup_move_home(test_path: &str) -> (String, String) {
     move_home.push_str(&test_path);
     let _ = fs::remove_dir_all(&move_home);
     fs::create_dir_all(&move_home).unwrap();
-    let credential_path = move_home.clone() + "/credential.toml";
+    let credential_path = move_home.clone() + MOVEY_API_KEY_PATH;
     (move_home, credential_path)
 }
 

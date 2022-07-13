@@ -3,23 +3,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Result};
+use move_command_line_common::{env::MOVE_HOME, movey::MOVEY_URL};
 use std::{fs, fs::File, io, path::PathBuf};
 use toml_edit::easy::{map::Map, Value};
+
+pub const MOVEY_API_KEY_PATH: &str = "/movey_api_key.toml";
 
 pub struct TestMode {
     pub test_path: String,
 }
 
-pub fn handle_login_commands(test_path: Option<String>) -> Result<()> {
-    let url: &str;
-    if cfg!(debug_assertions) {
-        url = "https://movey-app-staging.herokuapp.com";
-    } else {
-        url = "https://movey.net";
-    }
+pub fn handle_movey_login_commands(test_path: Option<String>) -> Result<()> {
     println!(
         "Please paste the API Token found on {}/settings/tokens below",
-        url
+        MOVEY_URL
     );
     let mut line = String::new();
     loop {
@@ -58,15 +55,10 @@ pub fn save_credential(token: String, test_mode: Option<TestMode>) -> Result<()>
             move_home.push_str(&test_mode.test_path);
         }
     } else {
-        move_home = std::env::var("MOVE_HOME").unwrap_or_else(|_| {
-            format!(
-                "{}/.move",
-                std::env::var("HOME").expect("env var 'HOME' must be set")
-            )
-        });
+        move_home = MOVE_HOME.clone();
     }
     fs::create_dir_all(&move_home)?;
-    let credential_path = move_home + "/credential.toml";
+    let credential_path = move_home + MOVEY_API_KEY_PATH;
     let credential_file = PathBuf::from(&credential_path);
     if !credential_file.exists() {
         File::create(&credential_path)?;
@@ -137,7 +129,7 @@ mod tests {
         } else {
             move_home.push_str("/test");
         }
-        let credential_path = move_home.clone() + "/credential.toml";
+        let credential_path = move_home.clone() + MOVEY_API_KEY_PATH;
         (move_home, credential_path)
     }
 

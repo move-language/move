@@ -4,6 +4,7 @@
 
 use crate::{source_package::parsed_manifest as PM, Architecture};
 use anyhow::{bail, format_err, Context, Result};
+use move_command_line_common::env::MOVE_HOME;
 use move_core_types::account_address::{AccountAddress, AccountAddressParseError};
 use move_symbol_pool::symbol::Symbol;
 use std::{
@@ -328,15 +329,7 @@ fn parse_dependency(tval: TV) -> Result<PM::Dependency> {
                 }
                 (None, Some(git)) => {
                     // Look to see if a MOVE_HOME has been set. Otherwise default to $HOME
-                    let move_home = std::env::var("MOVE_HOME").unwrap_or_else(|_| {
-                        format!(
-                            "{}/.move",
-                            dirs_next::home_dir()
-                                .expect("user's home directory not found")
-                                .to_str()
-                                .unwrap()
-                        )
-                    });
+                    let move_home = MOVE_HOME.clone();
                     let rev_name = match table.remove("rev") {
                         None => bail!("Git revision not supplied for dependency"),
                         Some(r) => Symbol::from(

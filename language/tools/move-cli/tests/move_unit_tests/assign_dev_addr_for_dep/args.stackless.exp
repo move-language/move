@@ -1,4 +1,4 @@
-Command `package test --stackless`:
+Command `test --stackless`:
 INCLUDING DEPENDENCY Bar
 INCLUDING DEPENDENCY MoveStdlib
 BUILDING Foo

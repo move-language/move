@@ -1,4 +1,4 @@
-Command `package build -v --only-deps`:
+Command `build -v --only-deps`:
 INCLUDING DEPENDENCY MoveStdlib
 BUILDING OnlyDeps
 External Command `cat build/OnlyDeps/sources/A.move`:

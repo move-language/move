@@ -222,18 +222,9 @@ enum RunnerState {
     Quit,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
-pub enum SymbolicatorResult {
-    None,
-    Success,
-    FailWithDiagnostics,
-    FailWithError(String),
-}
-
 /// Data used during symbolication running and symbolication info updating
 pub struct SymbolicatorRunner {
     mtx_cvar: Arc<(Mutex<RunnerState>, Condvar)>,
-    symboling_result: Arc<(Mutex<SymbolicatorResult>, Condvar)>,
 }
 
 impl fmt::Display for IdentType {
@@ -345,10 +336,7 @@ impl SymbolicatorRunner {
     /// Create a new idle runner (one that does not actually symbolicate)
     pub fn idle() -> Self {
         let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
-        SymbolicatorRunner {
-            mtx_cvar,
-            symboling_result: Arc::new((Mutex::new(SymbolicatorResult::None), Condvar::new())),
-        }
+        SymbolicatorRunner { mtx_cvar }
     }
 
     /// Create a new runner
@@ -358,16 +346,10 @@ impl SymbolicatorRunner {
     ) -> Self {
         let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
         let thread_mtx_cvar = mtx_cvar.clone();
-        let symboling_result = Arc::new((Mutex::new(SymbolicatorResult::None), Condvar::new()));
-        let thread_symboling_result = symboling_result.clone();
-        let runner = SymbolicatorRunner {
-            mtx_cvar,
-            symboling_result,
-        };
+        let runner = SymbolicatorRunner { mtx_cvar };
 
         thread::spawn(move || {
             let (mtx, cvar) = &*thread_mtx_cvar;
-            let (mutex_symboling_result, cvar_symboling) = &*thread_symboling_result;
             // Locations opened in the IDE (files or directories) for which manifest file is missing
             let mut missing_manifests = BTreeSet::new();
             // infinite loop to wait for symbolication requests
@@ -435,27 +417,9 @@ impl SymbolicatorRunner {
                                 let mut old_symbols = symbols.lock().unwrap();
                                 (*old_symbols).merge(new_symbols);
                                 eprintln!("merging symbols finished");
-
-                                // set symboling result
-                                {
-                                    eprintln!("set symboling result ok");
-                                    let mut symboling_result =
-                                        mutex_symboling_result.lock().unwrap();
-                                    *symboling_result = SymbolicatorResult::Success;
-                                    cvar_symboling.notify_all();
-                                }
                             }
 
                             if !lsp_diagnostics.is_empty() {
-                                // set symboling result
-                                {
-                                    eprintln!("set symboling result ok");
-                                    let mut symboling_result =
-                                        mutex_symboling_result.lock().unwrap();
-                                    *symboling_result = SymbolicatorResult::FailWithDiagnostics;
-                                    cvar_symboling.notify_all();
-                                }
-
                                 eprintln!("reporting lsp diagnostics");
                                 if let Err(err) = sender.send(Err(anyhow!("LSP diagnostics"))) {
                                     eprintln!("could not pass lsp diagnostics error: {:?}", err);
@@ -464,15 +428,6 @@ impl SymbolicatorRunner {
                         }
                         Err(err) => {
                             eprintln!("symbolication failed: {:?}", err);
-
-                            // set symboling result
-                            {
-                                eprintln!("set symboling result error");
-                                let mut symboling_result = mutex_symboling_result.lock().unwrap();
-                                *symboling_result =
-                                    SymbolicatorResult::FailWithError(format!("{:?}", err));
-                                cvar_symboling.notify_all();
-                            }
 
                             if let Err(err) = sender.send(Err(err)) {
                                 eprintln!("could not pass compiler error: {:?}", err);
@@ -495,23 +450,6 @@ impl SymbolicatorRunner {
         eprintln!("scheduled run");
     }
 
-    pub fn wait_symbolicating_finished(&self) -> SymbolicatorResult {
-        eprintln!("waiting for symbolication to finish");
-        let (mutex_symboling_result, cvar_symboling) = &*self.symboling_result;
-        let mut symboling_result = mutex_symboling_result.lock().unwrap();
-        if *symboling_result == SymbolicatorResult::None {
-            symboling_result = cvar_symboling.wait(symboling_result).unwrap();
-        }
-
-        eprintln!("waiting for symbolication finished");
-        (*symboling_result).clone()
-    }
-
-    pub fn run_sync(&self, starting_path: &str) {
-        self.run(starting_path);
-        self.wait_symbolicating_finished();
-    }
-
     pub fn quit(&self) {
         let (mtx, cvar) = &*self.mtx_cvar;
         let mut symbolicate = mtx.lock().unwrap();
@@ -519,8 +457,8 @@ impl SymbolicatorRunner {
         cvar.notify_one();
     }
 
-    /// Finds manifest file in a subdirectory of a Move source file passed as argument
-    fn root_dir(starting_path: &Path) -> Option<PathBuf> {
+    /// Finds manifest file in a (sub)directory of the starting path passed as argument
+    pub fn root_dir(starting_path: &Path) -> Option<PathBuf> {
         let mut current_path_opt = Some(starting_path);
         while current_path_opt.is_some() {
             let current_path = current_path_opt.unwrap();
@@ -611,7 +549,7 @@ impl UseDefMap {
 }
 
 impl Symbols {
-    fn merge(&mut self, other: Self) {
+    pub fn merge(&mut self, other: Self) {
         for (k, v) in other.references {
             self.references
                 .entry(k)
@@ -2131,33 +2069,13 @@ pub fn on_use_request(
     }
 }
 
-fn has_file_mods(context: &Context, fpath: &str) -> bool {
-    let symbols_lock = context.symbols.lock().unwrap();
-    let empty_mods: BTreeSet<ModuleDefs> = BTreeSet::new();
-    let mods = symbols_lock
-        .file_mods
-        .get(&PathBuf::from(fpath))
-        .unwrap_or(&empty_mods);
-    !mods.is_empty()
-}
-
 /// Handles document symbol request of the language server
 #[allow(deprecated)]
-pub fn on_document_symbol_request(
-    context: &Context,
-    symbolicator_runner: &SymbolicatorRunner,
-    request: &Request,
-) {
+pub fn on_document_symbol_request(context: &Context, request: &Request, symbols: &Symbols) {
     let parameters = serde_json::from_value::<DocumentSymbolParams>(request.params.clone())
         .expect("could not deserialize document symbol request");
 
     let fpath = parameters.text_document.uri.path();
-
-    if !has_file_mods(context, fpath) {
-        symbolicator_runner.run_sync(fpath);
-    }
-
-    let symbols = context.symbols.lock().unwrap();
     let empty_mods: BTreeSet<ModuleDefs> = BTreeSet::new();
     let mods = symbols
         .file_mods

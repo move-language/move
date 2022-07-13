@@ -1,6 +1,5 @@
 /// This module defines a minimal Coin and Balance.
 module NamedAddr::BasicCoin {
-    use std::errors;
     use std::signer;
 
     /// Address of the owner of this module
@@ -31,7 +30,7 @@ module NamedAddr::BasicCoin {
     /// Initialize this module.
     public fun mint(module_owner: &signer, mint_addr: address, amount: u64) {
         // Only the owner of the module can initialize this module
-        assert!(signer::address_of(module_owner) == MODULE_OWNER, errors::requires_address(ENOT_MODULE_OWNER));
+        assert!(signer::address_of(module_owner) == MODULE_OWNER, ENOT_MODULE_OWNER);
 
         // Deposit `amount` of tokens to `mint_addr`'s balance
         deposit(mint_addr, Coin { value: amount });
@@ -52,7 +51,7 @@ module NamedAddr::BasicCoin {
     fun withdraw(addr: address, amount: u64) : Coin acquires Balance {
         let balance = balance_of(addr);
         // balance must be greater than the withdraw amount
-        assert!(balance >= amount, errors::limit_exceeded(EINSUFFICIENT_BALANCE));
+        assert!(balance >= amount, EINSUFFICIENT_BALANCE);
         let balance_ref = &mut borrow_global_mut<Balance>(addr).coin.value;
         *balance_ref = balance - amount;
         Coin { value: amount }

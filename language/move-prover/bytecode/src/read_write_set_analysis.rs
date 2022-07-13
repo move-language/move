@@ -681,6 +681,10 @@ fn call_native_function(
             }
         }
         ("vector", "empty") | ("vector", "destroy_empty") | ("vector", "reverse") => (),
+        ("string", "internal_check_utf8")
+        | ("string", "internal_is_char_boundary")
+        | ("string", "internal_sub_string")
+        | ("string", "internal_index_of") => (),
         ("event", "write_to_event_store") => (),
         ("hash", "sha3_256") | ("hash", "sha2_256") => (),
         ("Signature", "ed25519_validate_pubkey") | ("Signature", "ed25519_verify") => (),

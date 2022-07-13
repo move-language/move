@@ -1,4 +1,4 @@
-Command `package build -v`:
+Command `build -v`:
 BUILDING build_include_exclude_stdlib
 error[E03002]: unbound module
   ┌─ ./sources/UseSigner.move:3:7
@@ -12,6 +12,6 @@ error[E03002]: unbound module
 6 │     signer::address_of(account)
   │     ^^^^^^ Unbound module alias 'signer'
 
-Command `-d -v package build`:
+Command `-d -v build`:
 INCLUDING DEPENDENCY MoveStdlib
 BUILDING build_include_exclude_stdlib

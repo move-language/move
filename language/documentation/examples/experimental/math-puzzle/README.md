@@ -30,7 +30,7 @@ In `sources/puzzlie.move`, the function `Puzzle::puzzle` is constructed to take 
 
 Use the following command to run Move Prover:
 ```
-move package prove
+move prove
 ```
 
 The following is the expected output of Move Prover:

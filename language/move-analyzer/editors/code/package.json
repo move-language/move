@@ -3,8 +3,9 @@
 	"displayName": "move-analyzer",
 	"description": "A language server and basic grammar for the Move programming language.",
 	"publisher": "move",
+	"icon": "images/move.png",
 	"license": "Apache-2.0",
-	"version": "0.0.7",
+	"version": "0.0.9",
 	"preview": true,
 	"homepage": "https://github.com/move-language/move",
 	"repository": {

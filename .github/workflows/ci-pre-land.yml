@@ -1,10 +1,10 @@
-name: ci-test
+# CI jobs to be run upon the code lands to the main branch or GitHub Action test branches.
+
+name: ci-pre-land
 
 on:
-  push:
-    branches: [main, gha-test-*]
   pull_request:
-    branches: [main]
+    branches: [main, gha-test-*]
 
 jobs:
   prepare:
@@ -21,7 +21,7 @@ jobs:
         name: determine changes
         uses: diem/actions/changes@faadd16607b77dfa2231a8f366883e01717b3225
         with:
-          workflow-file: ci-test.yml
+          workflow-file: ci.yml
           github-token: ${{secrets.GITHUB_TOKEN}}
       - id: any-changes-found
         name: determine if there are any files listed in the CHANGES_CHANGED_FILE_OUTPUTFILE.
@@ -217,7 +217,7 @@ jobs:
       - name: Use Node.js 14
         uses: actions/setup-node@v2.4.0
         with:
-          node-version: '14'
+          node-version: "14"
       - name: Install NPM dependencies
         working-directory: language/move-analyzer/editors/code
         run: npm install
@@ -273,4 +273,4 @@ jobs:
       - name: Build BasicCoin Move module
         run: |
           cd ./language/documentation/tutorial/step_1/BasicCoin
-          docker run -v `pwd`:/project move/cli package build
+          docker run -v `pwd`:/project move/cli build

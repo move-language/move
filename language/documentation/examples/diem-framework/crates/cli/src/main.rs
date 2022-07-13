@@ -49,13 +49,13 @@ fn main() -> Result<()> {
     let num_natives = natives.len();
 
     let args = DfCli::parse();
-    match &args.cmd {
+    match args.cmd {
         DfCommands::Command(cmd) => move_cli::run_cli(
             natives,
             &cost_table(num_natives),
             // TODO: implement this
             &ErrorMapping::default(),
-            &args.move_args,
+            args.move_args,
             cmd,
         ),
     }

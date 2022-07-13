@@ -153,7 +153,7 @@ async function locateMoveExecutablePath(): Promise<Result<string, Error>> {
 
 class MoveBuildError {
     exec_err: ChildProcess.ExecException;
-    // TODO: right now, `move package build` outputs its build errors to stdout instead of stderr.
+    // TODO: right now, `move build` outputs its build errors to stdout instead of stderr.
     // This may not be ideal and we may want to fix it and then revisit the error definition here.
     stdout: string;
     stderr: string;
@@ -166,7 +166,7 @@ class MoveBuildError {
 }
 
 async function movePackageBuild(movePath: string, packagePath: string): Promise<Result<void, MoveBuildError>> {
-    let cmd = `${movePath} package build --path ${packagePath} --arch ethereum`;
+    let cmd = `${movePath} build --path ${packagePath} --arch ethereum`;
 
     let [e, stdout, stderr] = await executeChildProcess(cmd);
 

@@ -23,19 +23,46 @@ pub fn publish(
     package: &CompiledPackage,
     no_republish: bool,
     ignore_breaking_changes: bool,
+    with_deps: bool,
+    bundle: bool,
     override_ordering: Option<&[String]>,
     verbose: bool,
 ) -> Result<()> {
+    // collect all modules compiled
+    let compiled_modules = if with_deps {
+        package.all_modules().collect::<Vec<_>>()
+    } else {
+        package.root_modules().collect::<Vec<_>>()
+    };
     if verbose {
-        println!(
-            "Found {} modules",
-            package.root_modules().collect::<Vec<_>>().len()
-        );
+        println!("Found {} modules", compiled_modules.len());
     }
 
+    // order the modules for publishing
+    let modules_to_publish = match override_ordering {
+        Some(ordering) => {
+            let module_map: BTreeMap<_, _> = compiled_modules
+                .into_iter()
+                .map(|unit| (unit.unit.name().to_string(), unit))
+                .collect();
+
+            let mut ordered_modules = vec![];
+            for name in ordering {
+                match module_map.get(name) {
+                    None => bail!("Invalid module name in publish ordering: {}", name),
+                    Some(unit) => {
+                        ordered_modules.push(*unit);
+                    }
+                }
+            }
+            ordered_modules
+        }
+        None => compiled_modules,
+    };
+
     if no_republish {
-        let republished = package
-            .root_modules()
+        let republished = modules_to_publish
+            .iter()
             .filter_map(|unit| {
                 let id = module(&unit.unit).ok()?.self_id();
                 if state.has_module(&id) {
@@ -60,59 +87,52 @@ pub fn publish(
         let vm = MoveVM::new(natives).unwrap();
         let mut gas_status = get_gas_status(cost_table, None)?;
         let mut session = vm.new_session(state);
-
         let mut has_error = false;
-        match override_ordering {
-            None => {
-                for unit in package.root_modules() {
-                    let module_bytes = unit.unit.serialize(bytecode_version);
-                    let id = module(&unit.unit)?.self_id();
-                    let sender = *id.address();
 
-                    let res = session.publish_module(module_bytes, sender, &mut gas_status);
-                    if let Err(err) = res {
-                        explain_publish_error(err, state, unit)?;
-                        has_error = true;
-                        break;
+        if bundle {
+            // publish all modules together as a bundle
+            let mut sender_opt = None;
+            let mut module_bytes_vec = vec![];
+            for unit in &modules_to_publish {
+                let module_bytes = unit.unit.serialize(bytecode_version);
+                module_bytes_vec.push(module_bytes);
+
+                let module_address = *module(&unit.unit)?.self_id().address();
+                match &sender_opt {
+                    None => {
+                        sender_opt = Some(module_address);
+                    }
+                    Some(val) => {
+                        if val != &module_address {
+                            bail!("All modules in the bundle must share the same address");
+                        }
                     }
                 }
             }
-            Some(ordering) => {
-                let module_map: BTreeMap<_, _> = package
-                    .root_modules()
-                    .into_iter()
-                    .map(|unit| (unit.unit.name().to_string(), unit))
-                    .collect();
-
-                let mut sender_opt = None;
-                let mut module_bytes_vec = vec![];
-                for name in ordering {
-                    match module_map.get(name) {
-                        None => bail!("Invalid module name in publish ordering: {}", name),
-                        Some(unit) => {
-                            let module_bytes = unit.unit.serialize(bytecode_version);
-                            module_bytes_vec.push(module_bytes);
-                            if sender_opt.is_none() {
-                                sender_opt = Some(*module(&unit.unit)?.self_id().address());
-                            }
-                        }
+            match sender_opt {
+                None => bail!("No modules to publish"),
+                Some(sender) => {
+                    let res =
+                        session.publish_module_bundle(module_bytes_vec, sender, &mut gas_status);
+                    if let Err(err) = res {
+                        // TODO (mengxu): explain publish errors in multi-module publishing
+                        println!("Invalid multi-module publishing: {}", err);
+                        has_error = true;
                     }
                 }
+            }
+        } else {
+            // publish modules sequentially, one module at a time
+            for unit in &modules_to_publish {
+                let module_bytes = unit.unit.serialize(bytecode_version);
+                let id = module(&unit.unit)?.self_id();
+                let sender = *id.address();
 
-                match sender_opt {
-                    None => bail!("No modules to publish"),
-                    Some(sender) => {
-                        let res = session.publish_module_bundle(
-                            module_bytes_vec,
-                            sender,
-                            &mut gas_status,
-                        );
-                        if let Err(err) = res {
-                            // TODO (mengxu): explain publish errors in multi-module publishing
-                            println!("Invalid multi-module publishing: {}", err);
-                            has_error = true;
-                        }
-                    }
+                let res = session.publish_module(module_bytes, sender, &mut gas_status);
+                if let Err(err) = res {
+                    explain_publish_error(err, state, unit)?;
+                    has_error = true;
+                    break;
                 }
             }
         }
@@ -134,7 +154,7 @@ pub fn publish(
         // backward incompatible changes, as as result, if this flag is set, we skip the VM process
         // and force the CLI to override the on-disk state directly
         let mut serialized_modules = vec![];
-        for unit in package.all_modules() {
+        for unit in modules_to_publish {
             let id = module(&unit.unit)?.self_id();
             let module_bytes = unit.unit.serialize(bytecode_version);
             serialized_modules.push((id, module_bytes));

@@ -10,7 +10,7 @@ use move_package::BuildConfig;
 
 pub mod base;
 pub mod experimental;
-pub mod login;
+pub mod movey_login;
 pub mod sandbox;
 
 /// Default directory where saved Move resources live
@@ -100,8 +100,8 @@ pub enum Command {
         #[clap(subcommand)]
         cmd: experimental::cli::ExperimentalCommand,
     },
-    #[clap(name = "login")]
-    Login {
+    #[clap(name = "movey-login")]
+    MoveyLogin {
         #[clap(long = "test-path")]
         test_path: Option<String>,
     },
@@ -131,7 +131,9 @@ pub fn run_cli(
             &storage_dir,
         ),
         Command::Experimental { storage_dir, cmd } => cmd.handle_command(&move_args, &storage_dir),
-        Command::Login { test_path } => login::cli::handle_login_commands(test_path),
+        Command::MoveyLogin { test_path } => {
+            movey_login::cli::handle_movey_login_commands(test_path)
+        }
     }
 }
 

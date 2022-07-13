@@ -336,9 +336,7 @@ impl SymbolicatorRunner {
     /// Create a new idle runner (one that does not actually symbolicate)
     pub fn idle() -> Self {
         let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
-        SymbolicatorRunner {
-            mtx_cvar,
-        }
+        SymbolicatorRunner { mtx_cvar }
     }
 
     /// Create a new runner
@@ -348,9 +346,7 @@ impl SymbolicatorRunner {
     ) -> Self {
         let mtx_cvar = Arc::new((Mutex::new(RunnerState::Wait), Condvar::new()));
         let thread_mtx_cvar = mtx_cvar.clone();
-        let runner = SymbolicatorRunner {
-            mtx_cvar,
-        };
+        let runner = SymbolicatorRunner { mtx_cvar };
 
         thread::spawn(move || {
             let (mtx, cvar) = &*thread_mtx_cvar;
@@ -2075,11 +2071,7 @@ pub fn on_use_request(
 
 /// Handles document symbol request of the language server
 #[allow(deprecated)]
-pub fn on_document_symbol_request(
-    context: &Context,
-    request: &Request, 
-    symbols: &Symbols,
-) {
+pub fn on_document_symbol_request(context: &Context, request: &Request, symbols: &Symbols) {
     let parameters = serde_json::from_value::<DocumentSymbolParams>(request.params.clone())
         .expect("could not deserialize document symbol request");
 

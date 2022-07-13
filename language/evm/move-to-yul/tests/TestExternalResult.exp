@@ -385,8 +385,8 @@ object "test_A2_M_extract_err_data" {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t5 := 1
-                    $t5 := 1
+                    // $t5 := 262145
+                    $t5 := 262145
                     // abort($t5)
                     $Abort($t5)
                 }
@@ -462,8 +462,8 @@ object "test_A2_M_extract_err_data" {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t4 := 0
-                    $t4 := 0
+                    // $t4 := 262144
+                    $t4 := 262144
                     // abort($t4)
                     $Abort($t4)
                 }
@@ -532,8 +532,8 @@ object "test_A2_M_extract_err_data" {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t4 := 0
-                    $t4 := 0
+                    // $t4 := 262144
+                    $t4 := 262144
                     // abort($t4)
                     $Abort($t4)
                 }
@@ -579,8 +579,8 @@ object "test_A2_M_extract_err_data" {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t4 := 0
-                    $t4 := 0
+                    // $t4 := 262144
+                    $t4 := 262144
                     // abort($t4)
                     $Abort($t4)
                 }
@@ -1261,8 +1261,8 @@ object "test_A2_M_extract_err_reason" {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t5 := 1
-                    $t5 := 1
+                    // $t5 := 262145
+                    $t5 := 262145
                     // abort($t5)
                     $Abort($t5)
                 }
@@ -1338,8 +1338,8 @@ object "test_A2_M_extract_err_reason" {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t4 := 0
-                    $t4 := 0
+                    // $t4 := 262144
+                    $t4 := 262144
                     // abort($t4)
                     $Abort($t4)
                 }
@@ -1408,8 +1408,8 @@ object "test_A2_M_extract_err_reason" {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t4 := 0
-                    $t4 := 0
+                    // $t4 := 262144
+                    $t4 := 262144
                     // abort($t4)
                     $Abort($t4)
                 }
@@ -1455,8 +1455,8 @@ object "test_A2_M_extract_err_reason" {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t4 := 0
-                    $t4 := 0
+                    // $t4 := 262144
+                    $t4 := 262144
                     // abort($t4)
                     $Abort($t4)
                 }
@@ -2053,8 +2053,8 @@ object "test_A2_M_extract_panic_code" {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t5 := 1
-                    $t5 := 1
+                    // $t5 := 262145
+                    $t5 := 262145
                     // abort($t5)
                     $Abort($t5)
                 }
@@ -2113,8 +2113,8 @@ object "test_A2_M_extract_panic_code" {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t4 := 0
-                    $t4 := 0
+                    // $t4 := 262144
+                    $t4 := 262144
                     // abort($t4)
                     $Abort($t4)
                 }
@@ -2183,8 +2183,8 @@ object "test_A2_M_extract_panic_code" {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t4 := 0
-                    $t4 := 0
+                    // $t4 := 262144
+                    $t4 := 262144
                     // abort($t4)
                     $Abort($t4)
                 }
@@ -2709,8 +2709,8 @@ object "test_A2_M_extract_value" {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t5 := 1
-                    $t5 := 1
+                    // $t5 := 262145
+                    $t5 := 262145
                     // abort($t5)
                     $Abort($t5)
                 }
@@ -2769,8 +2769,8 @@ object "test_A2_M_extract_value" {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t4 := 0
-                    $t4 := 0
+                    // $t4 := 262144
+                    $t4 := 262144
                     // abort($t4)
                     $Abort($t4)
                 }
@@ -2839,8 +2839,8 @@ object "test_A2_M_extract_value" {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t4 := 0
-                    $t4 := 0
+                    // $t4 := 262144
+                    $t4 := 262144
                     // abort($t4)
                     $Abort($t4)
                 }

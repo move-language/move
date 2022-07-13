@@ -32,21 +32,21 @@ module std::bit_vector_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 0)]
+    #[expected_failure(abort_code = 0x20000)]
     fun set_bit_out_of_bounds() {
         let bitvector = bit_vector::new(bit_vector::word_size());
         bit_vector::set(&mut bitvector, bit_vector::word_size());
     }
 
     #[test]
-    #[expected_failure(abort_code = 0)]
+    #[expected_failure(abort_code = 0x20000)]
     fun unset_bit_out_of_bounds() {
         let bitvector = bit_vector::new(bit_vector::word_size());
         bit_vector::unset(&mut bitvector, bit_vector::word_size());
     }
 
     #[test]
-    #[expected_failure(abort_code = 0)]
+    #[expected_failure(abort_code = 0x20000)]
     fun index_bit_out_of_bounds() {
         let bitvector = bit_vector::new(bit_vector::word_size());
         bit_vector::is_index_set(&mut bitvector, bit_vector::word_size());
@@ -210,7 +210,7 @@ module std::bit_vector_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(abort_code = 0x20001)]
     fun empty_bitvector() {
         bit_vector::new(0);
     }

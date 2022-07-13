@@ -11,7 +11,7 @@
 module std::vector {
 
     /// The index into the vector is out of bounds
-    const EINDEX_OUT_OF_BOUNDS: u64 = 0;
+    const EINDEX_OUT_OF_BOUNDS: u64 = 0x20000;
 
     #[bytecode_instruction]
     /// Create an empty vector.

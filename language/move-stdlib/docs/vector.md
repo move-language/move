@@ -50,7 +50,7 @@ the return on investment didn't seem worth it for these simple functions.
 The index into the vector is out of bounds
 
 
-<pre><code><b>const</b> <a href="vector.md#0x1_vector_EINDEX_OUT_OF_BOUNDS">EINDEX_OUT_OF_BOUNDS</a>: u64 = 0;
+<pre><code><b>const</b> <a href="vector.md#0x1_vector_EINDEX_OUT_OF_BOUNDS">EINDEX_OUT_OF_BOUNDS</a>: u64 = 131072;
 </code></pre>
 
 

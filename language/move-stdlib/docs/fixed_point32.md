@@ -78,7 +78,7 @@ decimal.
 The denominator provided was zero
 
 
-<pre><code><b>const</b> <a href="fixed_point32.md#0x1_fixed_point32_EDENOMINATOR">EDENOMINATOR</a>: u64 = 0;
+<pre><code><b>const</b> <a href="fixed_point32.md#0x1_fixed_point32_EDENOMINATOR">EDENOMINATOR</a>: u64 = 65537;
 </code></pre>
 
 
@@ -88,7 +88,7 @@ The denominator provided was zero
 The quotient value would be too large to be held in a <code>u64</code>
 
 
-<pre><code><b>const</b> <a href="fixed_point32.md#0x1_fixed_point32_EDIVISION">EDIVISION</a>: u64 = 1;
+<pre><code><b>const</b> <a href="fixed_point32.md#0x1_fixed_point32_EDIVISION">EDIVISION</a>: u64 = 131074;
 </code></pre>
 
 
@@ -98,7 +98,7 @@ The quotient value would be too large to be held in a <code>u64</code>
 A division by zero was encountered
 
 
-<pre><code><b>const</b> <a href="fixed_point32.md#0x1_fixed_point32_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>: u64 = 3;
+<pre><code><b>const</b> <a href="fixed_point32.md#0x1_fixed_point32_EDIVISION_BY_ZERO">EDIVISION_BY_ZERO</a>: u64 = 65540;
 </code></pre>
 
 
@@ -108,7 +108,7 @@ A division by zero was encountered
 The multiplied value would be too large to be held in a <code>u64</code>
 
 
-<pre><code><b>const</b> <a href="fixed_point32.md#0x1_fixed_point32_EMULTIPLICATION">EMULTIPLICATION</a>: u64 = 2;
+<pre><code><b>const</b> <a href="fixed_point32.md#0x1_fixed_point32_EMULTIPLICATION">EMULTIPLICATION</a>: u64 = 131075;
 </code></pre>
 
 
@@ -118,7 +118,7 @@ The multiplied value would be too large to be held in a <code>u64</code>
 The computed ratio when converting to a <code><a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a></code> would be unrepresentable
 
 
-<pre><code><b>const</b> <a href="fixed_point32.md#0x1_fixed_point32_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>: u64 = 4;
+<pre><code><b>const</b> <a href="fixed_point32.md#0x1_fixed_point32_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>: u64 = 131077;
 </code></pre>
 
 
@@ -225,7 +225,7 @@ is zero or if the quotient overflows.
     // Check whether the value is too large.
     <b>assert</b>!(quotient &lt;= <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a>, <a href="fixed_point32.md#0x1_fixed_point32_EDIVISION">EDIVISION</a>);
     // the value may be too large, which will cause the cast <b>to</b> fail
-    // <b>with</b> an arithmetic error.
+    // <b>with</b> an arithmetic <a href="error.md#0x1_error">error</a>.
     (quotient <b>as</b> u64)
 }
 </code></pre>

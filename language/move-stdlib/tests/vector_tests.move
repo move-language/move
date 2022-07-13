@@ -228,14 +228,14 @@ module std::vector_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 0)]
+    #[expected_failure(abort_code = 0x20000)]
     fun remove_empty_vector() {
         let v = V::empty<u64>();
         V::remove(&mut v, 0);
     }
 
     #[test]
-    #[expected_failure(abort_code = 0)]
+    #[expected_failure(abort_code = 0x20000)]
     fun remove_out_of_bound_index() {
         let v = V::empty<u64>();
         V::push_back(&mut v, 0);
@@ -319,7 +319,7 @@ module std::vector_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 0)]
+    #[expected_failure(abort_code = 0x20000)]
     fun swap_remove_empty() {
         let v = V::empty<u64>();
         V::swap_remove(&mut v, 0);

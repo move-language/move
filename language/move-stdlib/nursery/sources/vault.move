@@ -80,7 +80,7 @@
 /// `ReadCap<Content>` droppable and copyable without `Content` needing the same.
 module std::vault {
 
-    use std::errors;
+    use std::error;
     use std::event;
     use std::option;
     use std::signer;
@@ -205,7 +205,7 @@ module std::vault {
     /// Creates new vault for the given signer. The vault is populated with the `initial_content`.
     public fun new<Content: store>(owner: &signer,  initial_content: Content) {
         let addr = signer::address_of(owner);
-        assert!(!exists<Vault<Content>>(addr), errors::already_published(EVAULT));
+        assert!(!exists<Vault<Content>>(addr), error::already_exists(EVAULT));
         move_to<Vault<Content>>(
             owner,
             Vault{
@@ -218,13 +218,13 @@ module std::vault {
     /// Returns `false` otherwise.
     public fun is_delegation_enabled<Content: store>(owner: &signer): bool {
         let addr = signer::address_of(owner);
-        assert!(exists<Vault<Content>>(addr), errors::not_published(EVAULT));
+        assert!(exists<Vault<Content>>(addr), error::not_found(EVAULT));
         exists<VaultDelegates<Content>>(addr)
     }
 
     /// Enables delegation functionality for this vault. By default, vaults to not support delegation.
     public fun enable_delegation<Content: store>(owner: &signer) {
-        assert!(!is_delegation_enabled<Content>(owner), errors::already_published(EDELEGATE));
+        assert!(!is_delegation_enabled<Content>(owner), error::already_exists(EDELEGATE));
         move_to<VaultDelegates<Content>>(owner, VaultDelegates{delegates: vector::empty()})
     }
 
@@ -232,8 +232,8 @@ module std::vault {
     /// the vault in events.
     public fun enable_events<Content: store>(owner: &signer, metadata: vector<u8>) {
         let addr = signer::address_of(owner);
-        assert!(exists<Vault<Content>>(addr), errors::not_published(EVAULT));
-        assert!(!exists<VaultEvents<Content>>(addr), errors::already_published(EEVENT));
+        assert!(exists<Vault<Content>>(addr), error::not_found(EVAULT));
+        assert!(!exists<VaultEvents<Content>>(addr), error::already_exists(EEVENT));
         move_to<VaultEvents<Content>>(
             owner,
             VaultEvents{
@@ -249,9 +249,9 @@ module std::vault {
     public fun remove_vault<Content: store + drop>(owner: &signer): Content
     acquires Vault, VaultDelegates, VaultDelegate, VaultEvents {
         let addr = signer::address_of(owner);
-        assert!(exists<Vault<Content>>(addr), errors::not_published(EVAULT));
+        assert!(exists<Vault<Content>>(addr), error::not_found(EVAULT));
         let Vault{content} = move_from<Vault<Content>>(addr);
-        assert!(option::is_some(&content), errors::invalid_state(EACCESSOR_IN_USE));
+        assert!(option::is_some(&content), error::invalid_state(EACCESSOR_IN_USE));
 
         if (exists<VaultDelegates<Content>>(addr)) {
             let delegate_cap = DelegateCap<Content>{vault_address: addr, authority: addr};
@@ -310,11 +310,11 @@ module std::vault {
         if (exists<VaultDelegate<Content>>(addr)) {
             // The signer is a delegate. Check it's granted capabilities.
             let delegate = borrow_global<VaultDelegate<Content>>(addr);
-            assert!(vector::contains(&delegate.granted_caps, &cap), errors::requires_capability(EDELEGATE));
+            assert!(vector::contains(&delegate.granted_caps, &cap), error::permission_denied(EDELEGATE));
             (delegate.vault_address, addr)
         } else {
             // If it is not a delegate, it must be the owner to succeed.
-            assert!(exists<Vault<Content>>(addr), errors::not_published(EVAULT));
+            assert!(exists<Vault<Content>>(addr), error::not_found(EVAULT));
             (addr, addr)
         }
     }
@@ -337,7 +337,7 @@ module std::vault {
     public fun read_accessor<Content: store + drop>(cap: &ReadCap<Content>): ReadAccessor<Content>
     acquires Vault {
         let content = &mut borrow_global_mut<Vault<Content>>(cap.vault_address).content;
-        assert!(option::is_some(content), errors::invalid_state(EACCESSOR_IN_USE));
+        assert!(option::is_some(content), error::invalid_state(EACCESSOR_IN_USE));
         ReadAccessor{ vault_address: cap.vault_address, content: option::extract(content) }
     }
 
@@ -353,7 +353,7 @@ module std::vault {
         let content = &mut borrow_global_mut<Vault<Content>>(vault_address).content;
         // We (should be/are) able to prove that the below cannot happen, but we leave the assertion
         // here anyway for double safety.
-        assert!(option::is_none(content), errors::internal(EACCESSOR_INCONSISTENCY));
+        assert!(option::is_none(content), error::internal(EACCESSOR_INCONSISTENCY));
         option::fill(content, new_content);
     }
 
@@ -372,7 +372,7 @@ module std::vault {
     public fun modify_accessor<Content: store + drop>(cap: &ModifyCap<Content>): ModifyAccessor<Content>
     acquires Vault {
         let content = &mut borrow_global_mut<Vault<Content>>(cap.vault_address).content;
-        assert!(option::is_some(content), errors::invalid_state(EACCESSOR_IN_USE));
+        assert!(option::is_some(content), error::invalid_state(EACCESSOR_IN_USE));
         ModifyAccessor{ vault_address: cap.vault_address, content: option::extract(content) }
     }
 
@@ -389,7 +389,7 @@ module std::vault {
         let content = &mut borrow_global_mut<Vault<Content>>(vault_address).content;
         // We (should be/are) able to prove that the below cannot happen, but we leave the assertion
         // here anyway for double safety.
-        assert!(option::is_none(content), errors::internal(EACCESSOR_INCONSISTENCY));
+        assert!(option::is_none(content), error::internal(EACCESSOR_INCONSISTENCY));
         option::fill(content, new_content);
     }
 
@@ -403,11 +403,11 @@ module std::vault {
     acquires VaultDelegates, VaultDelegate, VaultEvents {
         assert!(
             exists<VaultDelegates<Content>>(cap.vault_address),
-            errors::invalid_state(EDELEGATION_NOT_ENABLED)
+            error::invalid_state(EDELEGATION_NOT_ENABLED)
         );
 
         let addr = signer::address_of(to_signer);
-        assert!(addr != cap.vault_address, errors::invalid_argument(EDELEGATE_TO_SELF));
+        assert!(addr != cap.vault_address, error::invalid_argument(EDELEGATE_TO_SELF));
 
         if (!exists<VaultDelegate<Content>>(addr)) {
             // Create VaultDelegate if it is not yet existing.
@@ -433,9 +433,9 @@ module std::vault {
     acquires VaultDelegates, VaultDelegate, VaultEvents {
         assert!(
             exists<VaultDelegates<Content>>(cap.vault_address),
-            errors::invalid_state(EDELEGATION_NOT_ENABLED)
+            error::invalid_state(EDELEGATION_NOT_ENABLED)
         );
-        assert!(exists<VaultDelegate<Content>>(addr), errors::not_published(EDELEGATE));
+        assert!(exists<VaultDelegate<Content>>(addr), error::not_found(EDELEGATE));
 
         let delegate = borrow_global_mut<VaultDelegate<Content>>(addr);
         remove_element(&mut delegate.granted_caps, &cap_type);
@@ -457,7 +457,7 @@ module std::vault {
     acquires VaultDelegates, VaultDelegate, VaultEvents {
         assert!(
             exists<VaultDelegates<Content>>(cap.vault_address),
-            errors::invalid_state(EDELEGATION_NOT_ENABLED)
+            error::invalid_state(EDELEGATION_NOT_ENABLED)
         );
         let delegates = &mut borrow_global_mut<VaultDelegates<Content>>(cap.vault_address).delegates;
         while (!vector::is_empty(delegates)) {
@@ -514,10 +514,10 @@ module std::vault {
     public fun transfer<Content: store + drop>(cap: &TransferCap<Content>, to_owner: &signer)
     acquires Vault, VaultEvents, VaultDelegate, VaultDelegates {
         let new_addr = signer::address_of(to_owner);
-        assert!(!exists<Vault<Content>>(new_addr), errors::already_published(EVAULT));
+        assert!(!exists<Vault<Content>>(new_addr), error::already_exists(EVAULT));
         assert!(
             option::is_some(&borrow_global<Vault<Content>>(cap.vault_address).content),
-            errors::invalid_state(EACCESSOR_IN_USE)
+            error::invalid_state(EACCESSOR_IN_USE)
         );
 
         // Revoke all delegates.

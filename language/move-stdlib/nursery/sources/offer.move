@@ -15,7 +15,7 @@
 /// redeemed it.
 module std::offer {
   use std::signer;
-  use std::errors;
+  use std::error;
 
   /// A wrapper around value `offered` that can be claimed by the address stored in `for`.
   struct Offer<Offered> has key { offered: Offered, for: address }
@@ -32,14 +32,13 @@ module std::offer {
   /// Publish a value of type `Offered` under the sender's account. The value can be claimed by
   /// either the `for` address or the transaction sender.
   public fun create<Offered: store>(account: &signer, offered: Offered, for: address) {
-    assert!(!exists<Offer<Offered>>(signer::address_of(account)), errors::already_published(EOFFER_ALREADY_CREATED));
+    assert!(!exists<Offer<Offered>>(signer::address_of(account)), error::already_exists(EOFFER_ALREADY_CREATED));
     move_to(account, Offer<Offered> { offered, for });
   }
   spec create {
     /// Offer a struct to the account under address `for` by
     /// placing the offer under the signer's address
-    aborts_if exists<Offer<Offered>>(signer::address_of(account))
-        with errors::ALREADY_PUBLISHED;
+    aborts_if exists<Offer<Offered>>(signer::address_of(account));
     ensures exists<Offer<Offered>>(signer::address_of(account));
     ensures global<Offer<Offered>>(signer::address_of(account)) == Offer<Offered> { offered: offered, for: for };
   }
@@ -49,20 +48,18 @@ module std::offer {
   /// publisher `offer_address`.
   /// Also fails if there is no `Offer<Offered>` published.
   public fun redeem<Offered: store>(account: &signer, offer_address: address): Offered acquires Offer {
-    assert!(exists<Offer<Offered>>(offer_address), errors::not_published(EOFFER_DOES_NOT_EXIST));
+    assert!(exists<Offer<Offered>>(offer_address), error::not_found(EOFFER_DOES_NOT_EXIST));
     let Offer<Offered> { offered, for } = move_from<Offer<Offered>>(offer_address);
     let sender = signer::address_of(account);
-    assert!(sender == for || sender == offer_address, errors::invalid_argument(EOFFER_DNE_FOR_ACCOUNT));
+    assert!(sender == for || sender == offer_address, error::invalid_argument(EOFFER_DNE_FOR_ACCOUNT));
     offered
   }
   spec redeem {
     /// Aborts if there is no offer under `offer_address` or if the account
     /// cannot redeem the offer.
     /// Ensures that the offered struct under `offer_address` is removed.
-    aborts_if !exists<Offer<Offered>>(offer_address)
-        with errors::NOT_PUBLISHED;
-    aborts_if !is_allowed_recipient<Offered>(offer_address, signer::address_of(account))
-        with errors::INVALID_ARGUMENT;
+    aborts_if !exists<Offer<Offered>>(offer_address);
+    aborts_if !is_allowed_recipient<Offered>(offer_address, signer::address_of(account));
     ensures !exists<Offer<Offered>>(offer_address);
     ensures result == old(global<Offer<Offered>>(offer_address).offered);
   }
@@ -81,14 +78,14 @@ module std::offer {
   // Returns the address of the `Offered` type stored at `offer_address.
   // Fails if no such `Offer` exists.
   public fun address_of<Offered: store>(offer_address: address): address acquires Offer {
-    assert!(exists<Offer<Offered>>(offer_address), errors::not_published(EOFFER_DOES_NOT_EXIST));
+    assert!(exists<Offer<Offered>>(offer_address), error::not_found(EOFFER_DOES_NOT_EXIST));
     borrow_global<Offer<Offered>>(offer_address).for
   }
   spec address_of {
     /// Aborts is there is no offer resource `Offer` at the `offer_address`.
     /// Returns the address of the intended recipient of the Offer
     /// under the `offer_address`.
-    aborts_if !exists<Offer<Offered>>(offer_address) with errors::NOT_PUBLISHED;
+    aborts_if !exists<Offer<Offered>>(offer_address);
     ensures result == global<Offer<Offered>>(offer_address).for;
   }
 

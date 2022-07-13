@@ -63,7 +63,7 @@
 The provided index is out of bounds
 
 
-<pre><code><b>const</b> <a href="bit_vector.md#0x1_bit_vector_EINDEX">EINDEX</a>: u64 = 0;
+<pre><code><b>const</b> <a href="bit_vector.md#0x1_bit_vector_EINDEX">EINDEX</a>: u64 = 131072;
 </code></pre>
 
 
@@ -73,7 +73,7 @@ The provided index is out of bounds
 An invalid length of bitvector was given
 
 
-<pre><code><b>const</b> <a href="bit_vector.md#0x1_bit_vector_ELENGTH">ELENGTH</a>: u64 = 1;
+<pre><code><b>const</b> <a href="bit_vector.md#0x1_bit_vector_ELENGTH">ELENGTH</a>: u64 = 131073;
 </code></pre>
 
 

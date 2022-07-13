@@ -18,15 +18,15 @@ module std::fixed_point32 {
     const MAX_U64: u128 = 18446744073709551615;
 
     /// The denominator provided was zero
-    const EDENOMINATOR: u64 = 0;
+    const EDENOMINATOR: u64 = 0x10001;
     /// The quotient value would be too large to be held in a `u64`
-    const EDIVISION: u64 = 1;
+    const EDIVISION: u64 = 0x20002;
     /// The multiplied value would be too large to be held in a `u64`
-    const EMULTIPLICATION: u64 = 2;
+    const EMULTIPLICATION: u64 = 0x20003;
     /// A division by zero was encountered
-    const EDIVISION_BY_ZERO: u64 = 3;
+    const EDIVISION_BY_ZERO: u64 = 0x10004;
     /// The computed ratio when converting to a `FixedPoint32` would be unrepresentable
-    const ERATIO_OUT_OF_RANGE: u64 = 4;
+    const ERATIO_OUT_OF_RANGE: u64 = 0x20005;
 
     /// Multiply a u64 integer by a fixed-point number, truncating any
     /// fractional part of the product. This will abort if the product

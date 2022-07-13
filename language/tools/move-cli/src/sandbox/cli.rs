@@ -35,6 +35,14 @@ pub enum SandboxCommand {
         /// Set this flag to ignore breaking changes checks and publish anyway.
         #[clap(long = "ignore-breaking-changes")]
         ignore_breaking_changes: bool,
+        /// If set, publish not only the modules in this package but also
+        /// modules in all its dependencies.
+        #[clap(long = "with-deps")]
+        with_deps: bool,
+        /// If set, all modules at once as a bundle. The default is to publish
+        /// modules sequentially.
+        #[clap(long = "bundle")]
+        bundle: bool,
         /// Manually specify the publishing order of modules.
         #[clap(
             long = "override-ordering",
@@ -183,6 +191,8 @@ impl SandboxCommand {
             SandboxCommand::Publish {
                 no_republish,
                 ignore_breaking_changes,
+                with_deps,
+                bundle,
                 override_ordering,
             } => {
                 let context =
@@ -195,6 +205,8 @@ impl SandboxCommand {
                     context.package(),
                     *no_republish,
                     *ignore_breaking_changes,
+                    *with_deps,
+                    *bundle,
                     override_ordering.as_ref().map(|o| o.as_slice()),
                     move_args.verbose,
                 )

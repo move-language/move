@@ -67,7 +67,7 @@ export class Context {
      * To read more about the messages sent and responses received by this client, such as
      * "initialize," read [the Language Server Protocol specification](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize).
      **/
-    startClient(): void {
+    async startClient(): Promise<void> {
         const executable: lc.Executable = {
             command: this.configuration.serverPath,
         };
@@ -100,6 +100,7 @@ export class Context {
         const disposable = client.start();
         this.extensionContext.subscriptions.push(disposable);
         this._client = client;
+        await this._client.onReady();
     }
 
     /**

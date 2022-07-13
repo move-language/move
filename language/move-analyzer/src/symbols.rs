@@ -2073,16 +2073,6 @@ pub fn on_use_request(
     }
 }
 
-fn has_file_mods(context: &Context, fpath: &str) -> bool {
-    let symbols_lock = context.symbols.lock().unwrap();
-    let empty_mods: BTreeSet<ModuleDefs> = BTreeSet::new();
-    let mods = symbols_lock
-        .file_mods
-        .get(&PathBuf::from(fpath))
-        .unwrap_or(&empty_mods);
-    !mods.is_empty()
-}
-
 /// Handles document symbol request of the language server
 #[allow(deprecated)]
 pub fn on_document_symbol_request(

@@ -186,7 +186,7 @@ fn main() {
             },
             recv(context.connection.receiver) -> message => {
                 match message {
-                    Ok(Message::Request(request)) => on_request(&context, &symbolicator_runner, &request),
+                    Ok(Message::Request(request)) => on_request(&context, &request),
                     Ok(Message::Response(response)) => on_response(&context, &response),
                     Ok(Message::Notification(notification)) => {
                         match notification.method.as_str() {
@@ -212,7 +212,6 @@ fn main() {
 
 fn on_request(
     context: &Context,
-    symbolicator_runner: &symbols::SymbolicatorRunner,
     request: &Request,
 ) {
     match request.method.as_str() {

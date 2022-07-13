@@ -84,9 +84,6 @@ pub fn add_prelude(
     templates.push(templ("multiset-theory", MULTISET_ARRAY_THEORY));
     templates.push(templ("table-theory", TABLE_ARRAY_THEORY));
 
-    let mut tera = Tera::default();
-    tera.add_raw_templates(templates)?;
-
     let mut context = Context::new();
     context.insert("options", options);
 
@@ -151,6 +148,21 @@ pub fn add_prelude(
     let ext_addr = format!("${}", env.get_extlib_address());
     context.insert("std", &std_addr);
     context.insert("Ext", &ext_addr);
+
+    // If a custom Boogie template is provided, add it as part of the templates and
+    // add all type instances that use generic functions in the provided modules to the context.
+    if let Some(custom_native_options) = options.custom_natives.clone() {
+        templates.push(templ(
+            "custom-natives",
+            &custom_native_options.template_bytes,
+        ));
+        for (module_name, instance_name) in custom_native_options.module_instance_names {
+            context.insert(instance_name, &filter_native(&module_name));
+        }
+    }
+
+    let mut tera = Tera::default();
+    tera.add_raw_templates(templates)?;
 
     let expanded_content = tera.render("prelude", &context)?;
     emitln!(writer, &expanded_content);

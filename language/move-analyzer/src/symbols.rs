@@ -519,8 +519,8 @@ impl SymbolicatorRunner {
         cvar.notify_one();
     }
 
-    /// Finds manifest file in a subdirectory of a Move source file passed as argument
-    fn root_dir(starting_path: &Path) -> Option<PathBuf> {
+    /// Finds manifest file in a (sub)directory of the starting path passed as argument
+    pub fn root_dir(starting_path: &Path) -> Option<PathBuf> {
         let mut current_path_opt = Some(starting_path);
         while current_path_opt.is_some() {
             let current_path = current_path_opt.unwrap();
@@ -611,7 +611,7 @@ impl UseDefMap {
 }
 
 impl Symbols {
-    fn merge(&mut self, other: Self) {
+    pub fn merge(&mut self, other: Self) {
         for (k, v) in other.references {
             self.references
                 .entry(k)

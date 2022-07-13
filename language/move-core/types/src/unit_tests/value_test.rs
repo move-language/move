@@ -48,6 +48,40 @@ fn struct_deserialization() {
     );
 }
 
+/// A test which verifies that the BCS representation of
+/// a struct with a single field is equivalent to the BCS
+/// of the value in this field. It also tests
+/// that BCS serialization of utf8 strings is equivalent
+/// to the BCS serialization of vector<u8> of the bytes of
+/// the string.
+#[test]
+fn struct_one_field_equiv_value() {
+    let val = MoveValue::Vector(vec![
+        MoveValue::U8(1),
+        MoveValue::U8(22),
+        MoveValue::U8(13),
+        MoveValue::U8(99),
+    ]);
+    let s1 = MoveValue::Struct(MoveStruct::Runtime(vec![val.clone()]))
+        .simple_serialize()
+        .unwrap();
+    let s2 = val.simple_serialize().unwrap();
+    assert_eq!(s1, s2);
+
+    let utf8_str = "çå∞≠¢õß∂ƒ∫";
+    let vec_u8 = MoveValue::Vector(
+        utf8_str
+            .as_bytes()
+            .iter()
+            .map(|c| MoveValue::U8(*c))
+            .collect(),
+    );
+    assert_eq!(
+        bcs::to_bytes(utf8_str).unwrap(),
+        vec_u8.simple_serialize().unwrap()
+    )
+}
+
 #[test]
 fn nested_typed_struct_deserialization() {
     let struct_type = StructTag {

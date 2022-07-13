@@ -55,7 +55,7 @@ cargo install --path language/tools/move-cli
 You can check that it is working by running the following command:
 
 ```bash
-move package --help
+move --help
 ```
 
 You should see something like this along with a list and description of a
@@ -66,7 +66,7 @@ move-package
 Execute a package command. Executed in the current directory or the closest containing Move package
 
 USAGE:
-    move package [OPTIONS] <SUBCOMMAND>
+    move [OPTIONS] <SUBCOMMAND>
 
 OPTIONS:
         --abi                          Generate ABIs for packages
@@ -158,10 +158,10 @@ Let's take a look at this function and what it's saying:
 * It creates a `Coin` with the given value and stores it under the
   `account` using the `move_to` operator.
 
-Let's make sure it builds! This can be done with the `package build` command from within the package folder ([`step_1/BasicCoin`](./step_1/BasicCoin/)):
+Let's make sure it builds! This can be done with the `build` command from within the package folder ([`step_1/BasicCoin`](./step_1/BasicCoin/)):
 
 ```bash
-move package build
+move build
 ```
 
 <details>
@@ -169,7 +169,7 @@ move package build
 
 * You can create an empty Move package by calling:
     ```bash
-    move package new <pkg_name>
+    move new <pkg_name>
     ```
 * Move code can also live a number of other places.  More information on the
   Move package system can be found in the [Move
@@ -218,7 +218,7 @@ unit tests in Rust if you're familiar with them -- tests are annotated with
 You can run the tests with the `package test` command:
 
 ```bash
-move package test
+move test
 ```
 
 Let's now take a look at the contents of the [`FirstModule.move`
@@ -270,7 +270,7 @@ assertion fails the unit test will fail.
 
 #### Exercises
 * Change the assertion to `11` so that the test fails. Find a flag that you can
-  pass to the `move package test` command that will show you the global state when
+  pass to the `move test` command that will show you the global state when
   the test fails. It should look something like this:
   ```
     ┌── test_mint_10 ──────
@@ -293,7 +293,7 @@ assertion fails the unit test will fail.
     └──────────────────
   ```
 * Find a flag that allows you to gather test coverage information, and
-  then play around with using the `move package coverage` command to look at
+  then play around with using the `move coverage` command to look at
   coverage statistics and source coverage.
 
 </details>
@@ -383,7 +383,7 @@ implementation of the methods inside [`BasicCoin.move`](./step_4/sources/BasicCo
 Let's first try building the code using Move package by running the following command
 in [`step_4/BasicCoin`](./step_4/BasicCoin) folder:
 ```bash
-move package build
+move build
 ```
 
 ### Implementation of methods
@@ -473,7 +473,7 @@ take a look at some tools we can use to help us write tests.
 To get started, run the `package test` command in the [`step_5/BasicCoin`](./step_5/BasicCoin) folder
 
 ```bash
-move package test
+move test
 ```
 
 You should see something like this:
@@ -592,7 +592,7 @@ Informally speaking, the block `spec balance_of {...}` contains the property spe
 
 Let's first run the prover using the following command inside [`BasicCoin` directory](./step_7/BasicCoin/):
 ```bash
-move package prove
+move prove
 ```
 
 which outputs the following error information:
@@ -627,7 +627,7 @@ The prover basically tells us that we need to explicitly specify the condition u
 ```
 After adding this condition, try running the `prove` command again to confirm that there are no verification errors:
 ```bash
-move package prove
+move prove
 ```
 Apart from the abort condition, we also want to define the functional properties. In Step 8, we will give more detailed introduction to the prover by specifying properties for the methods defined the `BasicCoin` module.
 

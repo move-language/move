@@ -20,7 +20,9 @@ options provided to the prover.
 {% include "vector-theory" %}
 {% include "multiset-theory" %}
 {% include "table-theory" %}
-
+{%- if options.custom_natives -%}
+{% include "custom-natives" %}
+{%- endif %}
 
 // ============================================================================================
 // Primitive Types
@@ -557,6 +559,26 @@ ensures LenVec(res) == 32;               // result is 32 bytes.
 function {:inline} $1_hash_$sha3_256(val: Vec int): Vec int {
     $1_hash_sha3(val)
 }
+
+// ==================================================================================
+// Native string
+
+// TODO: correct implementation of strings
+
+procedure {:inline 1} $1_string_internal_check_utf8(x: Vec int) returns (r: bool) {
+}
+
+procedure {:inline 1} $1_string_internal_sub_string(x: Vec int, i: int, j: int) returns (r: Vec int) {
+}
+
+procedure {:inline 1} $1_string_internal_index_of(x: Vec int, y: Vec int) returns (r: int) {
+}
+
+procedure {:inline 1} $1_string_internal_is_char_boundary(x: Vec int, i: int) returns (r: bool) {
+}
+
+
+
 
 // ==================================================================================
 // Native diem_account

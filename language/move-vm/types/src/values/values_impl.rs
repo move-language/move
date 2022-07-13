@@ -1610,6 +1610,15 @@ impl VectorRef {
         Ok(Value(self.0.borrow_elem(idx)?))
     }
 
+    /// Returns a Refcell reference to the underlying vector of a `&vector<u8>` value.
+    pub fn as_bytes_ref(&self) -> std::cell::Ref<'_, Vec<u8>> {
+        let c = self.0.container();
+        match c {
+            Container::VecU8(r) => r.borrow(),
+            _ => panic!("can only be called on vector<u8>"),
+        }
+    }
+
     pub fn pop(&self, type_param: &Type) -> PartialVMResult<Value> {
         let c = self.0.container();
         check_elem_layout(type_param, c)?;

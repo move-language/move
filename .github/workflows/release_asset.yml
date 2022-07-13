@@ -33,7 +33,7 @@ jobs:
           args: --release
 
       - name: package move asset
-        run: ./scripts/package_asset.sh ${{ matrix.platform }}
+        run: bash ./scripts/package_asset.sh ${{ matrix.platform }}
 
       - name: upload move asset
         if: ${{ github.event_name == 'release'}}

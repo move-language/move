@@ -1,1 +1,1 @@
-package build -v -d --arch ethereum
+build -v -d --arch ethereum

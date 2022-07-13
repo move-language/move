@@ -29,7 +29,11 @@ The `move-analyzer` language server is a Rust program that is part of the
    2. Invoke `cargo install --git https://github.com/move-language/move move-analyzer` to install the
       `move-analyzer` language server in your Cargo binary directory. On macOS and Linux, this is
       usually `~/.cargo/bin`. You'll want to make sure this location is in your `PATH` environment
-      variable.
+      variable. If you plan to use the language server with Move language flavors different from core Move,
+      you should specify an additional option to `cargo install` command as different Move flavors
+      may enforce different max length of the Move address type: `--features "address20"` option for Move
+      flavors requiring 20-byte long addresses (e.g., Sui Move) and `--features "address32"` option
+      for Move flavors requiring 32-byte long addresses (e.g., Aptos Move).
 
 To confirm that you've installed the language server program successfully, execute
 `move-analyzer --version` on the command line. You should see the output `move-analyzer 1.0.0`.

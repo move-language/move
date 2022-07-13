@@ -5,7 +5,7 @@
 /// actors state. This creates a little more code, but also is somehow more transparent and true to the
 /// transactional semantics of Move. This version implements an additional `cleanup` message which cancels
 /// pending transactions over a certain age.
-module This::AccountStateMachine {
+module 0x3::AccountStateMachine {
 
     use Async::Actor::{self, virtual_time};
     use std::vector;
@@ -61,9 +61,9 @@ module This::AccountStateMachine {
     }
 
     #[message]
-    fun xfer_deposit(this: &mut Account, v: u64, caller: address, xfer_id: u64) {
+    fun xfer_deposit(this: &mut Account, v: u64, caller_: address, xfer_id: u64) {
         deposit(this, v);
-        send_xfer_finish(caller, xfer_id);
+        send_xfer_finish(caller_, xfer_id);
     }
 
     #[message]
@@ -91,7 +91,7 @@ module This::AccountStateMachine {
         let i = 0;
         while (i < vector::length(pending)) {
             let p = vector::borrow(pending, i);
-            if (epoch_time() - p.initiated_at >= MAX_TRANSFER_AGE) {
+            if (virtual_time() - p.initiated_at >= MAX_TRANSFER_AGE) {
                 vector::remove(pending, i);
             } else {
                 i = i + 1;

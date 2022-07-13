@@ -21,7 +21,7 @@ use move_model::{
     ty::Type,
 };
 use move_stackless_bytecode::function_target_pipeline::FunctionVariant;
-use sha3::{Digest, Keccak256};
+use sha3::{Digest, Keccak256, Sha3_256};
 
 pub(crate) const COMPATIBILITY_ERROR: &str =
     "event signature is not compatible with the move struct";
@@ -184,6 +184,173 @@ impl EventSignature {
         }
         Ok((ret_vec, indexed_count))
     }
+}
+
+/// Generate event emit functions for send_<name> in async move contracts
+/// example: the function send_foo(actor: address, args) will emit an ethereum event
+/// Foo(actor, message_hash, args) where encoding follows the ethereum standard
+/// TODO: add a sequence number to the event to help perform deduplication on the listener side
+pub(crate) fn define_emit_fun_for_send(
+    gen: &mut FunctionGenerator,
+    ctx: &Context,
+    event_sig: &EventSignature,
+    fun_id: &QualifiedInstId<FunId>,
+) {
+    let fun = ctx.env.get_function(fun_id.to_qualified_id());
+    let target = &ctx.targets.get_target(&fun, &FunctionVariant::Baseline);
+
+    // Emit function header
+    let params = (0..target.get_parameter_count()).map(|idx| ctx.make_local_name(target, idx));
+    let params_str = params.clone().join(",");
+    let params_vec = params.collect_vec();
+
+    let mut local_name_idx = target.get_parameter_count();
+
+    emit!(
+        ctx.writer,
+        "function {}({}) ",
+        ctx.make_function_name(fun_id),
+        params_str
+    );
+
+    // Generate the function body
+    ctx.emit_block(|| {
+        let signature_types = &event_sig.para_types;
+        let topic_0_var = ctx.make_local_name(target, local_name_idx);
+        local_name_idx += 1;
+        let event_sig_str = event_sig.to_string();
+        let topic_0_hash = format!("0x{:x}", Keccak256::digest(event_sig_str.as_bytes()));
+
+        emitln!(ctx.writer, "let {} := {}", topic_0_var, topic_0_hash);
+
+        // Compute the message hash following the logic in move_compiler::attr_derivation::async_deriver::message_hash
+        // message_hash is the first 8 bytes of Sha3_256::digest(address::module_name::foo)
+        // example: 0x00000000000000000000000000000003::AccountStateMachine::deposit
+        let message_str = format!(
+            "0x{}::{}",
+            fun.module_env.self_address(),
+            fun.get_full_name_str().replace("send_", "")
+        );
+        let hash_bytes = Sha3_256::digest(message_str.as_bytes());
+        let message_hash_str = &format!("0x{:x}", hash_bytes)[0..10];
+        let message_hash_var = ctx.make_local_name(target, local_name_idx);
+        local_name_idx += 1;
+        emitln!(
+            ctx.writer,
+            "let {} := {}",
+            message_hash_var,
+            message_hash_str
+        );
+
+        let mut indexed_paras = vec![];
+        let mut indexed_vars = vec![topic_0_var];
+        let mut unindexed_paras = vec![];
+        let mut unindexed_vars = vec![];
+
+        // For async move, there is no index for any parameters
+        // TODO: consider index receipient address and hash_messages by default
+        // TODO: consider add a sig to the attribute #[message] to specify index other parameters, e.g.
+        // #message[sig=b"xfer(address indexed, address indexed, uint128 indexed)]
+        for (i, (_, solidity_ty, move_ty, indexed_flag, _)) in signature_types.iter().enumerate() {
+            let mut var = if i == 0 {
+                params_vec.get(0).unwrap().to_string()
+            } else if i == 1 {
+                message_hash_var.clone()
+            } else {
+                params_vec.get(i - 1).unwrap().to_string()
+            };
+
+            if *indexed_flag {
+                indexed_paras.push((solidity_ty.clone(), move_ty.clone()));
+                if !solidity_ty.is_value_type() {
+                    // for non-value type
+                    let new_var = ctx.make_local_name(target, local_name_idx);
+                    local_name_idx += 1;
+                    emitln!(
+                        ctx.writer,
+                        "let {} := {}({})",
+                        new_var,
+                        gen.parent.generate_packed_hashed(
+                            ctx,
+                            vec![solidity_ty.clone()],
+                            vec![SignatureDataLocation::Memory],
+                            vec![move_ty.clone()]
+                        ),
+                        var
+                    );
+                    var = new_var;
+                }
+                indexed_vars.push(var.clone());
+            } else {
+                unindexed_paras.push((solidity_ty.clone(), move_ty.clone()));
+                unindexed_vars.push(var.clone());
+            }
+        }
+
+        ctx.emit_block(|| {
+            let pos_var = ctx.make_local_name(target, local_name_idx);
+            local_name_idx += 1;
+            let end_var = ctx.make_local_name(target, local_name_idx);
+            local_name_idx += 1;
+            emitln!(
+                ctx.writer,
+                "let {} := mload({})",
+                pos_var,
+                substitute_placeholders("${MEM_SIZE_LOC}").unwrap()
+            );
+            // Create dummy signature location
+            let sig_para_locs = vec![SignatureDataLocation::Memory; unindexed_paras.len()];
+            let para_types = unindexed_paras
+                .iter()
+                .map(|(_, move_ty)| move_ty.clone())
+                .collect_vec();
+            let sig_para_vec = unindexed_paras
+                .iter()
+                .map(|(solidity_ty, _)| solidity_ty.clone())
+                .collect_vec();
+            // Generate encoding function for unindexed parameters
+            let encode_unindexed = gen.parent.generate_abi_tuple_encoding(
+                ctx,
+                sig_para_vec,
+                sig_para_locs,
+                para_types,
+            );
+            let unindexed_str = if !unindexed_vars.is_empty() {
+                format!(", {}", unindexed_vars.join(","))
+            } else {
+                "".to_string()
+            };
+            emitln!(
+                ctx.writer,
+                "let {} := {}({}{})",
+                end_var,
+                encode_unindexed,
+                pos_var,
+                unindexed_str
+            );
+            // Generate the code to call log opcode
+            let indexed_str = if !indexed_vars.is_empty() {
+                format!(", {}", indexed_vars.join(","))
+            } else {
+                "".to_string()
+            };
+            emitln!(
+                ctx.writer,
+                "log{}({}, sub({}, {}){})",
+                event_sig.indexed_count,
+                pos_var,
+                end_var,
+                pos_var,
+                indexed_str
+            );
+            emitln!(
+                ctx.writer,
+                "mstore({}, {})",
+                substitute_placeholders("${MEM_SIZE_LOC}").unwrap(),
+                end_var
+            );
+        });
+    });
 }
 
 /// Generate emit functions

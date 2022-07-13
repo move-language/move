@@ -46,6 +46,7 @@ fn compile_yul_to_bytecode_bytes(filename: &str) -> Result<Vec<u8>> {
     let deps = vec![
         path_from_crate_root("../stdlib/sources"),
         path_from_crate_root("../../move-stdlib/sources"),
+        path_from_crate_root("../../extensions/async/move-async-lib/sources"),
     ];
     let mut named_address_map = move_stdlib_named_addresses();
     named_address_map.insert(
@@ -55,6 +56,10 @@ fn compile_yul_to_bytecode_bytes(filename: &str) -> Result<Vec<u8>> {
     named_address_map.insert(
         "Evm".to_string(),
         NumericalAddress::parse_str("0x2").unwrap(),
+    );
+    named_address_map.insert(
+        "Async".to_string(),
+        NumericalAddress::parse_str("0x1").unwrap(),
     );
     let env = run_model_builder_with_options(
         vec![PackagePaths {

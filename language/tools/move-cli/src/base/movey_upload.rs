@@ -4,7 +4,8 @@
 use crate::utils::{credential, credential::TestMode};
 use anyhow::bail;
 use clap::*;
-use move_package::{resolution::resolution_graph::MOVEY_URL, BuildConfig};
+use move_command_line_common::movey;
+use move_package::BuildConfig;
 use reqwest::blocking::Client;
 use std::{fs, path::PathBuf, process::Command};
 
@@ -102,7 +103,7 @@ impl MoveyUpload {
         } else {
             let client = Client::new();
             let response = client
-                .post(&format!("{}/api/v1/post_package/", MOVEY_URL))
+                .post(&format!("{}/api/v1/post_package/", movey::MOVEY_URL))
                 .json(&movey_upload_request)
                 .send()
                 .unwrap();
@@ -112,7 +113,7 @@ impl MoveyUpload {
                 println!(
                     "Upload failed. Please check your token (you can find it on {}) \
                         and try again.",
-                    MOVEY_URL
+                    movey::MOVEY_URL
                 );
             }
         }

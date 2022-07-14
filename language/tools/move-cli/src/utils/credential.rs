@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Context, Result};
-use move_package::source_package::manifest_parser::MOVE_HOME;
-use std::fs;
+use move_command_line_common::env::MOVE_HOME;
+use std::{env, fs};
 use toml_edit::easy::Value;
 
 pub const MOVEY_API_KEY_PATH: &str = "/movey_api_key.toml";
@@ -17,7 +17,7 @@ pub struct TestMode {
 pub fn get_move_home_path(test_mode: Option<TestMode>) -> String {
     let mut move_home;
     if let Some(test_mode) = test_mode {
-        move_home = std::env::var("TEST_MOVE_HOME").unwrap();
+        move_home = env::var("TEST_MOVE_HOME").unwrap();
         if !test_mode.test_path.is_empty() {
             move_home.push_str(&test_mode.test_path);
         }

@@ -287,7 +287,7 @@ a_move_package
 ...
 └── build
     ├── <dep_pkg_name>
-    │   ├── BuildInfo.yaml
+    │   ├── BuildInfo.toml
     │   ├── bytecode_modules
     │   │   └── *.mv
     │   ├── source_maps
@@ -301,7 +301,7 @@ a_move_package
     │       └── *.move
     ...
     └── <dep_pkg_name>
-        ├── BuildInfo.yaml
+        ├── BuildInfo.toml
         ...
         └── sources
 ```

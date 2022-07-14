@@ -37,7 +37,7 @@ pub const MODULES_DIR: &str = "modules";
 pub const EVENTS_DIR: &str = "events";
 
 /// file under `DEFAULT_BUILD_DIR` where a registry of generated struct layouts are stored
-pub const STRUCT_LAYOUTS_FILE: &str = "struct_layouts.yaml";
+pub const STRUCT_LAYOUTS_FILE: &str = "struct_layouts.toml";
 
 #[derive(Debug)]
 pub struct OnDiskStateView {
@@ -332,7 +332,7 @@ impl OnDiskStateView {
         Ok(fs::write(path, &module_bytes)?)
     }
 
-    /// Save the YAML encoding `layout` on disk under `build_dir/layouts/id`.
+    /// Save the TOML encoding `layout` on disk under `build_dir/layouts/id`.
     pub fn save_struct_layouts(&self, layouts: &str) -> Result<()> {
         let layouts_file = self.struct_layouts_file();
         if !layouts_file.exists() {

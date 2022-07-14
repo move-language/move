@@ -1172,12 +1172,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "31ad93652f40969dead8d4bf897a41e9462095152eb21c56e5830537e41179dd"
 
 [[package]]
-name = "dtoa"
-version = "0.4.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88d7ed2934d741c6b37e33e3832298e8850b53fd2d2bea03873375596c7cea4e"
-
-[[package]]
 name = "duct"
 version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2406,8 +2400,8 @@ dependencies = [
  "read-write-set",
  "read-write-set-dynamic",
  "serde 1.0.130",
- "serde_yaml",
  "tempfile",
+ "toml",
  "walkdir",
 ]
 
@@ -2701,7 +2695,6 @@ dependencies = [
  "ptree",
  "regex",
  "serde 1.0.130",
- "serde_yaml",
  "sha2",
  "tempfile",
  "termcolor",
@@ -4470,18 +4463,6 @@ dependencies = [
  "proc-macro2 1.0.28",
  "quote 1.0.9",
  "syn 1.0.74",
-]
-
-[[package]]
-name = "serde_yaml"
-version = "0.8.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15654ed4ab61726bf918a39cb8d98a2e2995b002387807fa6ba58fdf7f59bb23"
-dependencies = [
- "dtoa",
- "linked-hash-map",
- "serde 1.0.130",
- "yaml-rust",
 ]
 
 [[package]]

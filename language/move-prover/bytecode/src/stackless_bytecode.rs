@@ -1196,7 +1196,7 @@ impl<'a> std::fmt::Display for BorrowEdgeDisplay<'a> {
                     field_type.display(&tctx),
                 )
             }
-            Index => write!(f, "[]"),
+            Index => write!(f, "[]BLAH"),
             Direct => write!(f, "@"),
             Hyper(es) => {
                 write!(

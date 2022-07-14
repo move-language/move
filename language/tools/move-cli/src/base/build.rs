@@ -14,6 +14,10 @@ pub struct Build;
 impl Build {
     pub fn execute(self, path: Option<PathBuf>, config: BuildConfig) -> anyhow::Result<()> {
         let rerooted_path = reroot_path(path)?;
+        if config.fetch_deps_only {
+            config.download_deps_for_package(&rerooted_path)?;
+            return Ok(());
+        }
         let architecture = config.architecture.unwrap_or(Architecture::Move);
 
         match architecture {

@@ -27,7 +27,7 @@ use crate::{
     },
     package_lock::PackageLock,
     resolution::resolution_graph::{ResolutionGraph, ResolvedGraph},
-    source_package::{layout, manifest_parser},
+    source_package::manifest_parser,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -126,9 +126,9 @@ pub struct BuildConfig {
     #[clap(long = "arch", global = true, parse(try_from_str = Architecture::try_parse_from_str))]
     pub architecture: Option<Architecture>,
 
-    /// Only compile dependencies
-    #[clap(long = "only-deps", global = true)]
-    pub only_deps: bool,
+    /// Only fetch dependency repos to MOVE_HOME
+    #[clap(long = "fetch-deps-only", global = true)]
+    pub fetch_deps_only: bool,
 }
 
 impl Default for BuildConfig {
@@ -142,7 +142,7 @@ impl Default for BuildConfig {
             force_recompilation: false,
             additional_named_addresses: BTreeMap::new(),
             architecture: None,
-            only_deps: false,
+            fetch_deps_only: false,
         }
     }
 }
@@ -207,14 +207,29 @@ impl BuildConfig {
         ret
     }
 
+    pub fn download_deps_for_package(mut self, path: &Path) -> Result<()> {
+        if self.test_mode {
+            self.dev_mode = true;
+        }
+        let path = SourcePackageLayout::try_find_root(path)?;
+        let toml_manifest =
+            self.parse_toml_manifest(path.join(SourcePackageLayout::Manifest.path()))?;
+        let mutx = PackageLock::lock();
+        // This should be locked as it inspects the environment for `MOVE_HOME` which could
+        // possibly be set by a different process in parallel.
+        let manifest = manifest_parser::parse_source_manifest(toml_manifest)?;
+        ResolutionGraph::download_dependency_repos(manifest, self, path)?;
+        mutx.unlock();
+        Ok(())
+    }
+
     pub fn resolution_graph_for_package(mut self, path: &Path) -> Result<ResolvedGraph> {
         if self.test_mode {
             self.dev_mode = true;
         }
         let path = SourcePackageLayout::try_find_root(path)?;
-        let manifest_string =
-            std::fs::read_to_string(path.join(layout::SourcePackageLayout::Manifest.path()))?;
-        let toml_manifest = manifest_parser::parse_move_manifest_string(manifest_string)?;
+        let toml_manifest =
+            self.parse_toml_manifest(path.join(SourcePackageLayout::Manifest.path()))?;
         let mutx = PackageLock::lock();
         // This should be locked as it inspects the environment for `MOVE_HOME` which could
         // possibly be set by a different process in parallel.
@@ -223,5 +238,10 @@ impl BuildConfig {
         let ret = resolution_graph.resolve();
         mutx.unlock();
         ret
+    }
+
+    fn parse_toml_manifest(&self, path: PathBuf) -> Result<toml::Value> {
+        let manifest_string = std::fs::read_to_string(path)?;
+        manifest_parser::parse_move_manifest_string(manifest_string)
     }
 }

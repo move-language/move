@@ -16,7 +16,10 @@ use crate::{
     BuildConfig,
 };
 use anyhow::{bail, Context, Result};
-use move_command_line_common::files::{find_move_filenames, FileHash};
+use move_command_line_common::{
+    files::{find_move_filenames, FileHash},
+    movey,
+};
 use move_core_types::account_address::AccountAddress;
 use move_symbol_pool::Symbol;
 use petgraph::{algo, graphmap::DiGraphMap, Outgoing};
@@ -43,11 +46,6 @@ type ResolutionTable<T> = BTreeMap<NamedAddress, T>;
 type ResolvingTable = ResolutionTable<ResolvingNamedAddress>;
 type ResolvingGraph = ResolutionGraph<ResolvingNamedAddress>;
 type ResolvingPackage = ResolutionPackage<ResolvingNamedAddress>;
-
-#[cfg(debug_assertions)]
-pub const MOVEY_URL: &str = "https://movey-app-staging.herokuapp.com";
-#[cfg(not(debug_assertions))]
-pub const MOVEY_URL: &str = "https://www.movey.net";
 
 #[derive(Debug, Clone)]
 pub struct ResolvingNamedAddress {
@@ -559,7 +557,7 @@ impl ResolvingGraph {
                     let params = [("url", git_url), ("rev", git_rev), ("subdir", subdir)];
                     let client = reqwest::blocking::Client::new();
                     let _ = client
-                        .post(&format!("{}/api/v1/download", MOVEY_URL))
+                        .post(&format!("{}/api/v1/download", movey::MOVEY_URL))
                         .form(&params)
                         .send();
                 });

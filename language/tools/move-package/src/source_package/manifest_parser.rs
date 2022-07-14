@@ -7,7 +7,6 @@ use anyhow::{bail, format_err, Context, Result};
 use move_command_line_common::env::MOVE_HOME;
 use move_core_types::account_address::{AccountAddress, AccountAddressParseError};
 use move_symbol_pool::symbol::Symbol;
-use once_cell::sync::Lazy;
 use std::{
     collections::{BTreeMap, BTreeSet},
     path::{Path, PathBuf},
@@ -35,18 +34,6 @@ const KNOWN_NAMES: &[&str] = &[
 ];
 
 const REQUIRED_FIELDS: &[&str] = &[PACKAGE_NAME];
-
-pub static MOVE_HOME: Lazy<String> = Lazy::new(|| {
-    std::env::var("MOVE_HOME").unwrap_or_else(|_| {
-        format!(
-            "{}/.move",
-            dirs_next::home_dir()
-                .expect("user's home directory not found")
-                .to_str()
-                .unwrap()
-        )
-    })
-});
 
 pub fn parse_move_manifest_from_file(path: &Path) -> Result<PM::SourceManifest> {
     let file_contents = if path.is_file() {

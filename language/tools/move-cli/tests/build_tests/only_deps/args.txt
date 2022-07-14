@@ -1,3 +1,0 @@
-build -v --only-deps
-> cat build/OnlyDeps/sources/A.move
-> ls build/OnlyDeps/sources/dependencies

@@ -4,17 +4,16 @@
 
 //! Implementation of native functions for utf8 strings.
 
+use crate::natives::helpers::make_module_natives;
 use move_binary_format::errors::PartialVMResult;
-use move_vm_runtime::native_functions::NativeContext;
+use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
 use move_vm_types::{
-    gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
-    natives::function::{native_gas, NativeResult},
+    natives::function::NativeResult,
     pop_arg,
     values::{Value, VectorRef},
 };
-
-use std::collections::VecDeque;
+use std::{collections::VecDeque, sync::Arc};
 
 // The implementation approach delegates all utf8 handling to Rust.
 // This is possible without copying of bytes because (a) we can
@@ -24,8 +23,18 @@ use std::collections::VecDeque;
 // create a `&str` view on the bytes without a copy. Once we have this
 // view, we can call ut8 functions like length, substring, etc.
 
-pub fn native_check_utf8(
-    context: &mut NativeContext,
+/***************************************************************************************************
+ * native fun internal_check_utf8
+ **************************************************************************************************/
+#[derive(Debug, Clone)]
+pub struct CheckUtf8GasParameters {
+    pub base_cost: u64,
+    pub unit_cost: u64,
+}
+
+fn native_check_utf8(
+    gas_params: &CheckUtf8GasParameters,
+    _context: &mut NativeContext,
     _ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
@@ -34,12 +43,31 @@ pub fn native_check_utf8(
     let s_ref = s_arg.as_bytes_ref();
     let ok = std::str::from_utf8(s_ref.as_slice()).is_ok();
     // TODO: extensible native cost tables
-    let cost = native_gas(context.cost_table(), NativeCostIndex::PUSH_BACK, 1);
+
+    let cost = gas_params.base_cost + gas_params.unit_cost * s_ref.as_slice().len() as u64;
+
     NativeResult::map_partial_vm_result_one(cost, Ok(Value::bool(ok)))
 }
 
-pub fn native_is_char_boundary(
-    context: &mut NativeContext,
+pub fn make_native_check_utf8(gas_params: CheckUtf8GasParameters) -> NativeFunction {
+    Arc::new(
+        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
+            native_check_utf8(&gas_params, context, ty_args, args)
+        },
+    )
+}
+
+/***************************************************************************************************
+ * native fun internal_is_char_boundary
+ **************************************************************************************************/
+#[derive(Debug, Clone)]
+pub struct IsCharBoundaryGasParameters {
+    pub base_cost: u64,
+}
+
+fn native_is_char_boundary(
+    gas_params: &IsCharBoundaryGasParameters,
+    _context: &mut NativeContext,
     _ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
@@ -51,19 +79,41 @@ pub fn native_is_char_boundary(
         // This is safe because we guarantee the bytes to be utf8.
         std::str::from_utf8_unchecked(s_ref.as_slice()).is_char_boundary(i as usize)
     };
-    // TODO: extensible native cost tables
-    let cost = native_gas(context.cost_table(), NativeCostIndex::PUSH_BACK, 1);
-    NativeResult::map_partial_vm_result_one(cost, Ok(Value::bool(ok)))
+    NativeResult::map_partial_vm_result_one(gas_params.base_cost, Ok(Value::bool(ok)))
 }
 
-pub fn native_sub_string(
-    context: &mut NativeContext,
+pub fn make_native_is_char_boundary(gas_params: IsCharBoundaryGasParameters) -> NativeFunction {
+    Arc::new(
+        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
+            native_is_char_boundary(&gas_params, context, ty_args, args)
+        },
+    )
+}
+
+/***************************************************************************************************
+ * native fun internal_is_sub_string
+ **************************************************************************************************/
+#[derive(Debug, Clone)]
+pub struct SubStringGasParameters {
+    pub base_cost: u64,
+    pub unit_cost: u64,
+}
+
+fn native_sub_string(
+    gas_params: &SubStringGasParameters,
+    _context: &mut NativeContext,
     _ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(args.len() == 3);
     let j = pop_arg!(args, u64) as usize;
     let i = pop_arg!(args, u64) as usize;
+
+    if j < i {
+        // TODO: what abort code should we use here?
+        return Ok(NativeResult::err(gas_params.base_cost, 1));
+    }
+
     let s_arg = pop_arg!(args, VectorRef);
     let s_ref = s_arg.as_bytes_ref();
     let s_str = unsafe {
@@ -71,13 +121,31 @@ pub fn native_sub_string(
         std::str::from_utf8_unchecked(s_ref.as_slice())
     };
     let v = Value::vector_u8((&s_str[i..j]).as_bytes().iter().cloned());
-    // TODO: extensible native cost tables
-    let cost = native_gas(context.cost_table(), NativeCostIndex::PUSH_BACK, 1);
+
+    let cost = gas_params.base_cost + gas_params.unit_cost * (j - i) as u64;
     NativeResult::map_partial_vm_result_one(cost, Ok(v))
 }
 
-pub fn native_index_of(
-    context: &mut NativeContext,
+pub fn make_native_sub_string(gas_params: SubStringGasParameters) -> NativeFunction {
+    Arc::new(
+        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
+            native_sub_string(&gas_params, context, ty_args, args)
+        },
+    )
+}
+
+/***************************************************************************************************
+ * native fun internal_index_of
+ **************************************************************************************************/
+#[derive(Debug, Clone)]
+pub struct IndexOfGasParameters {
+    pub base_cost: u64,
+    pub unit_cost: u64,
+}
+
+fn native_index_of(
+    gas_params: &IndexOfGasParameters,
+    _context: &mut NativeContext,
     _ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
@@ -92,7 +160,48 @@ pub fn native_index_of(
         Some(size) => size,
         None => s_str.len(),
     };
-    // TODO: extensible native cost tables
-    let cost = native_gas(context.cost_table(), NativeCostIndex::LENGTH, 1);
+    let cost = gas_params.base_cost + gas_params.unit_cost * pos as u64;
     NativeResult::map_partial_vm_result_one(cost, Ok(Value::u64(pos as u64)))
+}
+
+pub fn make_native_index_of(gas_params: IndexOfGasParameters) -> NativeFunction {
+    Arc::new(
+        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
+            native_index_of(&gas_params, context, ty_args, args)
+        },
+    )
+}
+
+/***************************************************************************************************
+ * module
+ **************************************************************************************************/
+#[derive(Debug, Clone)]
+pub struct GasParameters {
+    pub check_utf8: CheckUtf8GasParameters,
+    pub is_char_boundary: IsCharBoundaryGasParameters,
+    pub sub_string: SubStringGasParameters,
+    pub index_of: IndexOfGasParameters,
+}
+
+pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
+    let natives = [
+        (
+            "internal_check_utf8",
+            make_native_check_utf8(gas_params.check_utf8),
+        ),
+        (
+            "internal_is_char_boundary",
+            make_native_is_char_boundary(gas_params.is_char_boundary),
+        ),
+        (
+            "internal_sub_string",
+            make_native_sub_string(gas_params.sub_string),
+        ),
+        (
+            "internal_index_of",
+            make_native_index_of(gas_params.index_of),
+        ),
+    ];
+
+    make_module_natives(natives)
 }

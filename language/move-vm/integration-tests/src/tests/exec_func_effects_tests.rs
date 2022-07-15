@@ -9,7 +9,6 @@ use move_binary_format::errors::VMResult;
 use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet, Event},
-    gas_schedule::GasAlgebra,
     identifier::Identifier,
     language_storage::ModuleId,
     value::{serialize_values, MoveValue},
@@ -17,7 +16,6 @@ use move_core_types::{
 };
 use move_vm_runtime::{move_vm::MoveVM, session::SerializedReturnValues};
 use move_vm_test_utils::InMemoryStorage;
-use move_vm_types::gas_schedule::GasStatus;
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
 const TEST_MODULE_ID: &str = "M";
@@ -39,7 +37,6 @@ fn fail_arg_deserialize() {
     for value in values {
         for name in FUN_NAMES {
             let err = run(&mod_code, name, value.clone())
-                .1
                 .map(|_| ())
                 .expect_err("Should have failed to deserialize non-u64 type to u64");
             assert_eq!(
@@ -54,7 +51,7 @@ fn fail_arg_deserialize() {
 #[test]
 fn mutref_output_success() {
     let mod_code = setup_module();
-    let (_gas_used, result) = run(&mod_code, USE_MUTREF_LABEL, MoveValue::U64(1));
+    let result = run(&mod_code, USE_MUTREF_LABEL, MoveValue::U64(1));
     let (_, _, ret_values) = result.unwrap();
     assert_eq!(1, ret_values.mutable_reference_outputs.len());
     let parsed = parse_u64_arg(&ret_values.mutable_reference_outputs.first().unwrap().1);
@@ -84,32 +81,27 @@ fn run(
     module: &ModuleCode,
     fun_name: &str,
     arg_val0: MoveValue,
-) -> (
-    /* gas used */ u64,
-    VMResult<(ChangeSet, Vec<Event>, SerializedReturnValues)>,
-) {
+) -> VMResult<(ChangeSet, Vec<Event>, SerializedReturnValues)> {
     let module_id = &module.0;
     let modules = vec![module.clone()];
     let (vm, storage) = setup_vm(&modules);
     let mut session = vm.new_session(&storage);
 
     let fun_name = Identifier::new(fun_name).unwrap();
-    let mut gas_status = GasStatus::new_unmetered();
-    let gas_start = gas_status.remaining_gas().get();
+
     let res = session
         .execute_function_bypass_visibility(
             module_id,
             &fun_name,
             vec![],
             serialize_values(&vec![arg_val0]),
-            &mut gas_status,
+            &mut (),
         )
         .and_then(|ret_values| {
             let (change_set, events) = session.finish()?;
             Ok((change_set, events, ret_values))
         });
-    let gas_used = gas_start - gas_status.remaining_gas().get();
-    (gas_used, res)
+    res
 }
 
 type ModuleCode = (ModuleId, String);

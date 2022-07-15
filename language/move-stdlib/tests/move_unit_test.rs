@@ -4,7 +4,10 @@
 
 use move_cli::base::test::{run_move_unit_tests, UnitTestResult};
 use move_core_types::account_address::AccountAddress;
-use move_stdlib::{natives::all_natives, path_in_crate};
+use move_stdlib::{
+    natives::{all_natives, GasParameters},
+    path_in_crate,
+};
 use move_unit_test::UnitTestingConfig;
 use tempfile::tempdir;
 
@@ -18,7 +21,11 @@ fn run_tests_for_pkg(path_to_pkg: impl Into<String>) {
             ..Default::default()
         },
         UnitTestingConfig::default_with_bound(Some(100_000)),
-        all_natives(AccountAddress::from_hex_literal("0x1").unwrap()),
+        all_natives(
+            AccountAddress::from_hex_literal("0x1").unwrap(),
+            // TODO: is this correct?
+            GasParameters::zeros(),
+        ),
         /* compute_coverage */ false,
         &mut std::io::stdout(),
     )

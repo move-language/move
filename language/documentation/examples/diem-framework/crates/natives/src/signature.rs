@@ -6,17 +6,13 @@ use diem_crypto::{ed25519, traits::*};
 use move_binary_format::errors::PartialVMResult;
 use move_vm_runtime::native_functions::NativeContext;
 use move_vm_types::{
-    gas_schedule::NativeCostIndex,
-    loaded_data::runtime_types::Type,
-    natives::function::{native_gas, NativeResult},
-    pop_arg,
-    values::Value,
+    loaded_data::runtime_types::Type, natives::function::NativeResult, pop_arg, values::Value,
 };
 use smallvec::smallvec;
 use std::{collections::VecDeque, convert::TryFrom};
 
 pub fn native_ed25519_publickey_validation(
-    context: &mut NativeContext,
+    _context: &mut NativeContext,
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
@@ -25,11 +21,7 @@ pub fn native_ed25519_publickey_validation(
 
     let key_bytes = pop_arg!(arguments, Vec<u8>);
 
-    let cost = native_gas(
-        context.cost_table(),
-        NativeCostIndex::ED25519_VALIDATE_KEY,
-        key_bytes.len(),
-    );
+    let cost = 26 * usize::max(key_bytes.len(), 1) as u64;
 
     // This deserialization performs point-on-curve and small subgroup checks
     let valid = ed25519::Ed25519PublicKey::try_from(&key_bytes[..]).is_ok();
@@ -37,7 +29,7 @@ pub fn native_ed25519_publickey_validation(
 }
 
 pub fn native_ed25519_signature_verification(
-    context: &mut NativeContext,
+    _context: &mut NativeContext,
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
@@ -48,11 +40,7 @@ pub fn native_ed25519_signature_verification(
     let pubkey = pop_arg!(arguments, Vec<u8>);
     let signature = pop_arg!(arguments, Vec<u8>);
 
-    let cost = native_gas(
-        context.cost_table(),
-        NativeCostIndex::ED25519_VERIFY,
-        msg.len(),
-    );
+    let cost = 62 * usize::max(msg.len(), 1) as u64;
 
     let sig = match ed25519::Ed25519Signature::try_from(signature.as_slice()) {
         Ok(sig) => sig,

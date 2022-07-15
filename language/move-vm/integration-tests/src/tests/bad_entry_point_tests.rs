@@ -12,7 +12,6 @@ use move_core_types::{
 };
 use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::{BlankStorage, InMemoryStorage};
-use move_vm_types::gas_schedule::GasStatus;
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
 
@@ -24,7 +23,6 @@ fn call_non_existent_module() {
     let mut sess = vm.new_session(&storage);
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("M").unwrap());
     let fun_name = Identifier::new("foo").unwrap();
-    let mut gas_status = GasStatus::new_unmetered();
 
     let err = sess
         .execute_function_bypass_visibility(
@@ -32,7 +30,7 @@ fn call_non_existent_module() {
             &fun_name,
             vec![],
             serialize_values(&vec![MoveValue::Signer(TEST_ADDR)]),
-            &mut gas_status,
+            &mut (),
         )
         .unwrap_err();
 
@@ -59,7 +57,6 @@ fn call_non_existent_function() {
     let mut sess = vm.new_session(&storage);
 
     let fun_name = Identifier::new("foo").unwrap();
-    let mut gas_status = GasStatus::new_unmetered();
 
     let err = sess
         .execute_function_bypass_visibility(
@@ -67,7 +64,7 @@ fn call_non_existent_function() {
             &fun_name,
             vec![],
             serialize_values(&vec![MoveValue::Signer(TEST_ADDR)]),
-            &mut gas_status,
+            &mut (),
         )
         .unwrap_err();
 

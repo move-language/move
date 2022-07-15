@@ -999,6 +999,7 @@ dependencies = [
  "move-cli",
  "move-core-types",
  "move-stdlib",
+ "move-vm-test-utils",
  "move-vm-types",
 ]
 
@@ -2291,6 +2292,7 @@ dependencies = [
  "move-prover-test-utils",
  "move-stdlib",
  "move-vm-runtime",
+ "move-vm-test-utils",
  "move-vm-types",
  "sha3 0.9.1",
  "smallvec",
@@ -2401,6 +2403,7 @@ dependencies = [
  "move-table-extension",
  "move-unit-test",
  "move-vm-runtime",
+ "move-vm-test-utils",
  "move-vm-types",
  "once_cell",
  "read-write-set",
@@ -3070,8 +3073,12 @@ name = "move-vm-test-utils"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "move-binary-format",
  "move-core-types",
  "move-table-extension",
+ "move-vm-types",
+ "once_cell",
+ "serde 1.0.130",
 ]
 
 [[package]]
@@ -5127,13 +5134,14 @@ dependencies = [
 
 [[package]]
 name = "trybuild"
-version = "1.0.53"
+version = "1.0.63"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d664de8ea7e531ad4c0f5a834f20b8cb2b8e6dfe88d05796ee7887518ed67b9"
+checksum = "764b9e244b482a9b81bde596aa37aa6f1347bf8007adab25e59f901b32b4e0a0"
 dependencies = [
  "glob",
- "lazy_static 1.4.0",
+ "once_cell",
  "serde 1.0.130",
+ "serde_derive",
  "serde_json",
  "termcolor",
  "toml",

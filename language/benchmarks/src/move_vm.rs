@@ -12,7 +12,6 @@ use move_core_types::{
 };
 use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::BlankStorage;
-use move_vm_types::gas_schedule::GasStatus;
 use once_cell::sync::Lazy;
 use std::path::PathBuf;
 
@@ -27,6 +26,7 @@ pub fn bench<M: Measurement + 'static>(c: &mut Criterion<M>, fun: &str) {
     let modules = compile_modules();
     let move_vm = MoveVM::new(move_stdlib::natives::all_natives(
         AccountAddress::from_hex_literal("0x1").unwrap(),
+        move_stdlib::natives::GasParameters::zeros(),
     ))
     .unwrap();
     execute(c, &move_vm, modules, fun);
@@ -65,7 +65,6 @@ fn execute<M: Measurement + 'static>(
     let storage = BlankStorage::new();
     let sender = CORE_CODE_ADDRESS;
     let mut session = move_vm.new_session(&storage);
-    let mut gas_status = GasStatus::new_unmetered();
 
     for module in modules {
         let mut mod_blob = vec![];
@@ -73,7 +72,7 @@ fn execute<M: Measurement + 'static>(
             .serialize(&mut mod_blob)
             .expect("Module serialization error");
         session
-            .publish_module(mod_blob, sender, &mut gas_status)
+            .publish_module(mod_blob, sender, &mut ())
             .expect("Module must load");
     }
 
@@ -90,7 +89,7 @@ fn execute<M: Measurement + 'static>(
                     fun_name,
                     vec![],
                     Vec::<Vec<u8>>::new(),
-                    &mut gas_status,
+                    &mut (),
                 )
                 .unwrap_or_else(|err| {
                     panic!(

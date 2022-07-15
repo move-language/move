@@ -4,7 +4,7 @@
 
 use crate::{
     logging::expect_no_verification_errors,
-    native_functions::{NativeFunction, NativeFunctions},
+    native_functions::{NativeFunction, NativeFunctions, UnboxedNativeFunction},
     session::LoadedFunctionInstantiation,
 };
 use move_binary_format::{
@@ -1971,8 +1971,8 @@ impl Function {
         self.native.is_some()
     }
 
-    pub(crate) fn get_native(&self) -> PartialVMResult<NativeFunction> {
-        self.native.ok_or_else(|| {
+    pub(crate) fn get_native(&self) -> PartialVMResult<&UnboxedNativeFunction> {
+        self.native.as_ref().map(|f| &**f).ok_or_else(|| {
             PartialVMError::new(StatusCode::UNREACHABLE)
                 .with_message("Missing Native Function".to_string())
         })

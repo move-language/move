@@ -2,11 +2,18 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::ops::Add;
+
 use move_binary_format::{
     errors::{PartialVMError, PartialVMResult},
     file_format::{AbilitySet, StructDefinitionIndex, StructTypeParameter},
 };
-use move_core_types::{identifier::Identifier, language_storage::ModuleId, vm_status::StatusCode};
+use move_core_types::{
+    gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
+    identifier::Identifier,
+    language_storage::ModuleId,
+    vm_status::StatusCode,
+};
 
 pub const TYPE_DEPTH_MAX: usize = 256;
 
@@ -97,5 +104,25 @@ impl Type {
             },
             1,
         )
+    }
+
+    const BASE_MEMORY_SIZE: GasCarrier = 1;
+
+    pub fn size(&self) -> AbstractMemorySize<GasCarrier> {
+        use Type::*;
+
+        match self {
+            TyParam(_) | Bool | U8 | U64 | U128 | Address | Signer => {
+                AbstractMemorySize::new(Type::BASE_MEMORY_SIZE)
+            }
+            Vector(ty) | Reference(ty) | MutableReference(ty) => {
+                AbstractMemorySize::new(Type::BASE_MEMORY_SIZE).map2(ty.size(), Add::add)
+            }
+            Struct(_) => AbstractMemorySize::new(Type::BASE_MEMORY_SIZE),
+            StructInstantiation(_, tys) => tys.iter().fold(
+                AbstractMemorySize::new(Type::BASE_MEMORY_SIZE),
+                |acc, ty| acc.map2(ty.size(), Add::add),
+            ),
+        }
     }
 }

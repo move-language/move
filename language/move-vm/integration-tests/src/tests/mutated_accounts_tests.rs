@@ -11,7 +11,6 @@ use move_core_types::{
 };
 use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::InMemoryStorage;
-use move_vm_types::gas_schedule::GasStatus;
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
 
@@ -46,8 +45,6 @@ fn mutated_accounts() {
     let vm = MoveVM::new(vec![]).unwrap();
     let mut sess = vm.new_session(&storage);
 
-    let mut gas_status = GasStatus::new_unmetered();
-
     let publish = Identifier::new("publish").unwrap();
     let flip = Identifier::new("flip").unwrap();
     let get = Identifier::new("get").unwrap();
@@ -59,7 +56,7 @@ fn mutated_accounts() {
         &publish,
         vec![],
         serialize_values(&vec![MoveValue::Signer(account1)]),
-        &mut gas_status,
+        &mut (),
     )
     .unwrap();
 
@@ -73,7 +70,7 @@ fn mutated_accounts() {
         &get,
         vec![],
         serialize_values(&vec![MoveValue::Address(account1)]),
-        &mut gas_status,
+        &mut (),
     )
     .unwrap();
 
@@ -84,7 +81,7 @@ fn mutated_accounts() {
         &flip,
         vec![],
         serialize_values(&vec![MoveValue::Address(account1)]),
-        &mut gas_status,
+        &mut (),
     )
     .unwrap();
     assert_eq!(sess.num_mutated_accounts(&TEST_ADDR), 2);
@@ -98,7 +95,7 @@ fn mutated_accounts() {
         &get,
         vec![],
         serialize_values(&vec![MoveValue::Address(account1)]),
-        &mut gas_status,
+        &mut (),
     )
     .unwrap();
 

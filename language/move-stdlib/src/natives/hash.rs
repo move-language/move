@@ -2,22 +2,30 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::natives::helpers::make_module_natives;
 use move_binary_format::errors::PartialVMResult;
-use move_vm_runtime::native_functions::NativeContext;
+use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
 use move_vm_types::{
-    gas_schedule::NativeCostIndex,
-    loaded_data::runtime_types::Type,
-    natives::function::{native_gas, NativeResult},
-    pop_arg,
-    values::Value,
+    loaded_data::runtime_types::Type, natives::function::NativeResult, pop_arg, values::Value,
 };
 use sha2::{Digest, Sha256};
 use sha3::Sha3_256;
 use smallvec::smallvec;
-use std::collections::VecDeque;
+use std::{collections::VecDeque, sync::Arc};
 
-pub fn native_sha2_256(
-    context: &mut NativeContext,
+/***************************************************************************************************
+ * native fun sha2_256
+ **************************************************************************************************/
+#[derive(Debug, Clone)]
+pub struct Sha2_256GasParameters {
+    pub base_cost: u64,
+    pub unit_cost: u64,
+}
+
+#[inline]
+fn native_sha2_256(
+    gas_params: &Sha2_256GasParameters,
+    _context: &mut NativeContext,
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
@@ -26,11 +34,7 @@ pub fn native_sha2_256(
 
     let hash_arg = pop_arg!(arguments, Vec<u8>);
 
-    let cost = native_gas(
-        context.cost_table(),
-        NativeCostIndex::SHA2_256,
-        hash_arg.len(),
-    );
+    let cost = gas_params.base_cost + gas_params.unit_cost * usize::max(hash_arg.len(), 1) as u64;
 
     let hash_vec = Sha256::digest(hash_arg.as_slice()).to_vec();
     Ok(NativeResult::ok(
@@ -39,8 +43,27 @@ pub fn native_sha2_256(
     ))
 }
 
-pub fn native_sha3_256(
-    context: &mut NativeContext,
+pub fn make_native_sha2_256(gas_params: Sha2_256GasParameters) -> NativeFunction {
+    Arc::new(
+        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
+            native_sha2_256(&gas_params, context, ty_args, args)
+        },
+    )
+}
+
+/***************************************************************************************************
+ * native fun sha3_256
+ **************************************************************************************************/
+#[derive(Debug, Clone)]
+pub struct Sha3_256GasParameters {
+    pub base_cost: u64,
+    pub unit_cost: u64,
+}
+
+#[inline]
+fn native_sha3_256(
+    gas_params: &Sha3_256GasParameters,
+    _context: &mut NativeContext,
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
@@ -49,15 +72,37 @@ pub fn native_sha3_256(
 
     let hash_arg = pop_arg!(arguments, Vec<u8>);
 
-    let cost = native_gas(
-        context.cost_table(),
-        NativeCostIndex::SHA3_256,
-        hash_arg.len(),
-    );
+    let cost = gas_params.base_cost + gas_params.unit_cost * usize::max(hash_arg.len(), 1) as u64;
 
     let hash_vec = Sha3_256::digest(hash_arg.as_slice()).to_vec();
     Ok(NativeResult::ok(
         cost,
         smallvec![Value::vector_u8(hash_vec)],
     ))
+}
+
+pub fn make_native_sha3_256(gas_params: Sha3_256GasParameters) -> NativeFunction {
+    Arc::new(
+        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
+            native_sha3_256(&gas_params, context, ty_args, args)
+        },
+    )
+}
+
+/***************************************************************************************************
+ * module
+ **************************************************************************************************/
+#[derive(Debug, Clone)]
+pub struct GasParameters {
+    pub sha2_256: Sha2_256GasParameters,
+    pub sha3_256: Sha3_256GasParameters,
+}
+
+pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
+    let natives = [
+        ("sha2_256", make_native_sha2_256(gas_params.sha2_256)),
+        ("sha3_256", make_native_sha3_256(gas_params.sha3_256)),
+    ];
+
+    make_module_natives(natives)
 }

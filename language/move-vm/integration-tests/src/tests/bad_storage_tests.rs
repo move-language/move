@@ -15,7 +15,6 @@ use move_core_types::{
 };
 use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::{DeltaStorage, InMemoryStorage};
-use move_vm_types::gas_schedule::GasStatus;
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
 
@@ -86,10 +85,9 @@ fn test_malformed_resource() {
 
     let vm = MoveVM::new(move_stdlib::natives::all_natives(
         AccountAddress::from_hex_literal("0x1").unwrap(),
+        move_stdlib::natives::GasParameters::zeros(),
     ))
     .unwrap();
-
-    let mut gas_status = GasStatus::new_unmetered();
 
     // Execute the first script to publish a resource Foo.
     let mut script_blob = vec![];
@@ -99,7 +97,7 @@ fn test_malformed_resource() {
         script_blob,
         vec![],
         vec![MoveValue::Signer(TEST_ADDR).simple_serialize().unwrap()],
-        &mut gas_status,
+        &mut (),
     )
     .map(|_| ())
     .unwrap();
@@ -117,7 +115,7 @@ fn test_malformed_resource() {
             script_blob.clone(),
             vec![],
             vec![MoveValue::Signer(TEST_ADDR).simple_serialize().unwrap()],
-            &mut gas_status,
+            &mut (),
         )
         .map(|_| ())
         .unwrap();
@@ -144,7 +142,7 @@ fn test_malformed_resource() {
                 script_blob,
                 vec![],
                 vec![MoveValue::Signer(TEST_ADDR).simple_serialize().unwrap()],
-                &mut gas_status,
+                &mut (),
             )
             .map(|_| ())
             .unwrap_err();
@@ -172,8 +170,6 @@ fn test_malformed_module() {
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("M").unwrap());
     let fun_name = Identifier::new("foo").unwrap();
 
-    let mut gas_status = GasStatus::new_unmetered();
-
     // Publish M and call M::foo. No errors should be thrown.
     {
         let mut storage = InMemoryStorage::new();
@@ -185,7 +181,7 @@ fn test_malformed_module() {
             &fun_name,
             vec![],
             Vec::<Vec<u8>>::new(),
-            &mut gas_status,
+            &mut (),
         )
         .unwrap();
     }
@@ -211,7 +207,7 @@ fn test_malformed_module() {
                 &fun_name,
                 vec![],
                 Vec::<Vec<u8>>::new(),
-                &mut gas_status,
+                &mut (),
             )
             .unwrap_err();
         assert_eq!(err.status_type(), StatusType::InvariantViolation);
@@ -231,7 +227,6 @@ fn test_unverifiable_module() {
     let mut units = compile_units(&code).unwrap();
     let m = as_module(units.pop().unwrap());
 
-    let mut gas_status = GasStatus::new_unmetered();
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("M").unwrap());
     let fun_name = Identifier::new("foo").unwrap();
 
@@ -251,7 +246,7 @@ fn test_unverifiable_module() {
             &fun_name,
             vec![],
             Vec::<Vec<u8>>::new(),
-            &mut gas_status,
+            &mut (),
         )
         .unwrap();
     }
@@ -276,7 +271,7 @@ fn test_unverifiable_module() {
                 &fun_name,
                 vec![],
                 Vec::<Vec<u8>>::new(),
-                &mut gas_status,
+                &mut (),
             )
             .unwrap_err();
 
@@ -308,8 +303,6 @@ fn test_missing_module_dependency() {
     let mut blob_n = vec![];
     n.serialize(&mut blob_n).unwrap();
 
-    let mut gas_status = GasStatus::new_unmetered();
-
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("N").unwrap());
     let fun_name = Identifier::new("bar").unwrap();
 
@@ -328,7 +321,7 @@ fn test_missing_module_dependency() {
             &fun_name,
             vec![],
             Vec::<Vec<u8>>::new(),
-            &mut gas_status,
+            &mut (),
         )
         .unwrap();
     }
@@ -348,7 +341,7 @@ fn test_missing_module_dependency() {
                 &fun_name,
                 vec![],
                 Vec::<Vec<u8>>::new(),
-                &mut gas_status,
+                &mut (),
             )
             .unwrap_err();
 
@@ -380,8 +373,6 @@ fn test_malformed_module_denpency() {
     let mut blob_n = vec![];
     n.serialize(&mut blob_n).unwrap();
 
-    let mut gas_status = GasStatus::new_unmetered();
-
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("N").unwrap());
     let fun_name = Identifier::new("bar").unwrap();
 
@@ -400,7 +391,7 @@ fn test_malformed_module_denpency() {
             &fun_name,
             vec![],
             Vec::<Vec<u8>>::new(),
-            &mut gas_status,
+            &mut (),
         )
         .unwrap();
     }
@@ -426,7 +417,7 @@ fn test_malformed_module_denpency() {
                 &fun_name,
                 vec![],
                 Vec::<Vec<u8>>::new(),
-                &mut gas_status,
+                &mut (),
             )
             .unwrap_err();
 
@@ -456,8 +447,6 @@ fn test_unverifiable_module_dependency() {
     let mut blob_n = vec![];
     n.serialize(&mut blob_n).unwrap();
 
-    let mut gas_status = GasStatus::new_unmetered();
-
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("N").unwrap());
     let fun_name = Identifier::new("bar").unwrap();
 
@@ -479,7 +468,7 @@ fn test_unverifiable_module_dependency() {
             &fun_name,
             vec![],
             Vec::<Vec<u8>>::new(),
-            &mut gas_status,
+            &mut (),
         )
         .unwrap();
     }
@@ -505,7 +494,7 @@ fn test_unverifiable_module_dependency() {
                 &fun_name,
                 vec![],
                 Vec::<Vec<u8>>::new(),
-                &mut gas_status,
+                &mut (),
             )
             .unwrap_err();
 
@@ -549,7 +538,6 @@ const LIST_OF_ERROR_CODES: &[StatusCode] = &[
 
 #[test]
 fn test_storage_returns_bogus_error_when_loading_module() {
-    let mut gas_status = GasStatus::new_unmetered();
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("N").unwrap());
     let fun_name = Identifier::new("bar").unwrap();
 
@@ -566,7 +554,7 @@ fn test_storage_returns_bogus_error_when_loading_module() {
                 &fun_name,
                 vec![],
                 Vec::<Vec<u8>>::new(),
-                &mut gas_status,
+                &mut (),
             )
             .unwrap_err();
 
@@ -576,8 +564,6 @@ fn test_storage_returns_bogus_error_when_loading_module() {
 
 #[test]
 fn test_storage_returns_bogus_error_when_loading_resource() {
-    let mut gas_status = GasStatus::new_unmetered();
-
     let code = r#"
         address std {
             module signer {
@@ -626,6 +612,7 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
 
         let vm = MoveVM::new(move_stdlib::natives::all_natives(
             AccountAddress::from_hex_literal("0x1").unwrap(),
+            move_stdlib::natives::GasParameters::zeros(),
         ))
         .unwrap();
         let mut sess = vm.new_session(&storage);
@@ -635,7 +622,7 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
             &foo_name,
             vec![],
             Vec::<Vec<u8>>::new(),
-            &mut gas_status,
+            &mut (),
         )
         .unwrap();
 
@@ -645,7 +632,7 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
                 &bar_name,
                 vec![],
                 serialize_values(&vec![MoveValue::Signer(TEST_ADDR)]),
-                &mut gas_status,
+                &mut (),
             )
             .unwrap_err();
 

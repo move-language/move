@@ -34,8 +34,7 @@ use move_vm_runtime::{
     move_vm::MoveVM,
     session::{SerializedReturnValues, Session},
 };
-use move_vm_test_utils::InMemoryStorage;
-use move_vm_types::gas_schedule::GasStatus;
+use move_vm_test_utils::{gas_schedule::GasStatus, InMemoryStorage};
 use once_cell::sync::Lazy;
 
 const STD_ADDR: AccountAddress = AccountAddress::ONE;
@@ -292,10 +291,15 @@ impl<'a> SimpleVMTestAdapter<'a> {
         f: impl FnOnce(&mut Session<InMemoryStorage>, &mut GasStatus) -> VMResult<Ret>,
     ) -> VMResult<Ret> {
         // start session
-        let vm = MoveVM::new(move_stdlib::natives::all_natives(STD_ADDR)).unwrap();
+        let vm = MoveVM::new(move_stdlib::natives::all_natives(
+            STD_ADDR,
+            // TODO: is this correct?
+            move_stdlib::natives::GasParameters::zeros(),
+        ))
+        .unwrap();
         let (mut session, mut gas_status) = {
             let gas_status = move_cli::sandbox::utils::get_gas_status(
-                &move_vm_types::gas_schedule::INITIAL_COST_SCHEDULE,
+                &move_vm_test_utils::gas_schedule::INITIAL_COST_SCHEDULE,
                 gas_budget,
             )
             .unwrap();

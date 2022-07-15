@@ -15,10 +15,7 @@ use crate::{
     BuildConfig,
 };
 use anyhow::{bail, Context, Result};
-use move_command_line_common::{
-    files::{find_move_filenames, FileHash},
-    movey,
-};
+use move_command_line_common::files::{find_move_filenames, FileHash};
 use move_core_types::account_address::AccountAddress;
 use move_symbol_pool::Symbol;
 use petgraph::{algo, graphmap::DiGraphMap, Outgoing};
@@ -30,7 +27,6 @@ use std::{
     path::{Path, PathBuf},
     process::Command,
     rc::Rc,
-    thread,
 };
 
 pub type ResolvedTable = ResolutionTable<AccountAddress>;
@@ -522,19 +518,6 @@ impl ResolvingGraph {
     fn download_and_update_if_repo(dep_name: PackageName, dep: &Dependency) -> Result<()> {
         if let Some(git_info) = &dep.git_info {
             if !git_info.download_to.exists() {
-                let git_url = git_info.git_url.clone().to_string();
-                let git_rev = git_info.git_rev.clone().to_string();
-                let subdir = git_info.subdir.clone();
-                let subdir = subdir.as_path().to_string_lossy().to_string();
-                thread::spawn(move || {
-                    let params = [("url", git_url), ("rev", git_rev), ("subdir", subdir)];
-                    let client = reqwest::blocking::Client::new();
-                    let _ = client
-                        .post(&format!("{}/api/v1/download", movey::MOVEY_URL))
-                        .form(&params)
-                        .send();
-                });
-
                 Command::new("git")
                     .args([
                         "clone",

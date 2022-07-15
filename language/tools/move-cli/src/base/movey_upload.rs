@@ -1,13 +1,13 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::utils::{credential, credential::TestMode};
+use crate::utils::movey_credential;
 use anyhow::bail;
 use clap::*;
-use move_command_line_common::movey;
+use move_command_line_common::{env::MOVE_HOME, movey};
 use move_package::BuildConfig;
 use reqwest::blocking::Client;
-use std::{fs, path::PathBuf, process::Command};
+use std::{fs, process::Command};
 
 #[derive(serde::Serialize, Default)]
 pub struct MoveyUploadRequest {
@@ -21,12 +21,12 @@ pub struct MoveyUploadRequest {
 #[derive(Parser)]
 #[clap(name = "movey-upload")]
 pub struct MoveyUpload {
-    #[clap(long = "test-path")]
-    test_path: Option<String>,
+    #[clap(long = "test-token")]
+    test_token: Option<String>,
 }
 
 impl MoveyUpload {
-    pub fn execute(self, _path: Option<PathBuf>, config: BuildConfig) -> anyhow::Result<()> {
+    pub fn execute(self, config: BuildConfig) -> anyhow::Result<()> {
         let mut movey_upload_request: MoveyUploadRequest = Default::default();
         let mut output = Command::new("git")
             .current_dir(".")
@@ -83,15 +83,15 @@ impl MoveyUpload {
         }
         movey_upload_request.total_files = total_files;
         movey_upload_request.token = if config.test_mode {
-            let test = if let Some(path) = self.test_path {
-                path
+            // if running in test mode, get token from CLI option or hardcoded fallback instead of reading from movey_api_key.toml
+            // to separate MoveyUpload::execute logic from others
+            if let Some(token) = self.test_token {
+                token
             } else {
-                String::new()
-            };
-            let test_mode = TestMode { test_path: test };
-            credential::get_registry_api_token(Some(test_mode))?
+                "test-token".to_string()
+            }
         } else {
-            credential::get_registry_api_token(None)?
+            movey_credential::get_registry_api_token(&MOVE_HOME.clone())?
         };
 
         if config.test_mode {
@@ -105,16 +105,20 @@ impl MoveyUpload {
             let response = client
                 .post(&format!("{}/api/v1/post_package/", movey::MOVEY_URL))
                 .json(&movey_upload_request)
-                .send()
-                .unwrap();
-            if response.status().as_u16() == 200 {
-                println!("Your package has been successfully uploaded to Movey")
-            } else {
-                println!(
-                    "Upload failed. Please check your token (you can find it on {}) \
-                        and try again.",
-                    movey::MOVEY_URL
-                );
+                .send();
+            match response {
+                Ok(response) => {
+                    if response.status().is_success() {
+                        println!("Your package has been successfully uploaded to Movey")
+                    } else if response.status().is_client_error() {
+                        println!("Error: {}", response.text()?)
+                    } else if response.status().is_server_error() {
+                        println!("Error: An unexpected error occurred. Please try again later");
+                    }
+                }
+                Err(_) => {
+                    println!("Error: An unexpected error occurred. Please try again later");
+                }
             }
         }
         Ok(())

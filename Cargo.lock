@@ -1011,6 +1011,7 @@ dependencies = [
  "move-cli",
  "move-core-types",
  "move-stdlib",
+ "move-vm-test-utils",
  "move-vm-types",
 ]
 
@@ -2322,6 +2323,7 @@ dependencies = [
  "move-prover-test-utils",
  "move-stdlib",
  "move-vm-runtime",
+ "move-vm-test-utils",
  "move-vm-types",
  "sha3 0.9.1",
  "smallvec",
@@ -2432,6 +2434,7 @@ dependencies = [
  "move-table-extension",
  "move-unit-test",
  "move-vm-runtime",
+ "move-vm-test-utils",
  "move-vm-types",
  "once_cell",
  "read-write-set",
@@ -3101,8 +3104,12 @@ name = "move-vm-test-utils"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "move-binary-format",
  "move-core-types",
  "move-table-extension",
+ "move-vm-types",
+ "once_cell",
+ "serde 1.0.130",
 ]
 
 [[package]]

@@ -36,7 +36,7 @@ use move_core_types::{
 };
 use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::{DeltaStorage, InMemoryStorage};
-use move_vm_types::gas_schedule::GasStatus;
+use move_vm_types::gas::UnmeteredGasMeter;
 use once_cell::sync::Lazy;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{fs, io::Write, panic, thread};
@@ -126,6 +126,7 @@ fn execute_function_in_module(
     {
         let vm = MoveVM::new(move_stdlib::natives::all_natives(
             AccountAddress::from_hex_literal("0x1").unwrap(),
+            move_stdlib::natives::GasParameters::zeros(),
         ))
         .unwrap();
 
@@ -136,13 +137,12 @@ fn execute_function_in_module(
         let delta_storage = DeltaStorage::new(storage, &changeset);
         let mut sess = vm.new_session(&delta_storage);
 
-        let mut gas_status = GasStatus::new_unmetered();
         sess.execute_function_bypass_visibility(
             &module_id,
             entry_name,
             ty_args,
             args,
-            &mut gas_status,
+            &mut UnmeteredGasMeter,
         )?;
 
         Ok(())

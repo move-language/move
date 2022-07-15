@@ -18,7 +18,7 @@ use move_compiler::{
 use move_core_types::{
     account_address::AccountAddress,
     effects::ChangeSet,
-    gas_schedule::{CostTable, GasAlgebra, GasCost, GasUnits},
+    gas_schedule::{GasAlgebra, GasUnits},
     identifier::IdentStr,
     value::serialize_values,
     vm_status::StatusCode,
@@ -34,8 +34,10 @@ use move_stackless_bytecode_interpreter::{
     StacklessBytecodeInterpreter,
 };
 use move_vm_runtime::{move_vm::MoveVM, native_functions::NativeFunctionTable};
-use move_vm_test_utils::InMemoryStorage;
-use move_vm_types::gas_schedule::{zero_cost_schedule, GasStatus};
+use move_vm_test_utils::{
+    gas_schedule::{zero_cost_schedule, CostTable, GasCost, GasStatus},
+    InMemoryStorage,
+};
 use rayon::prelude::*;
 use std::{collections::BTreeMap, io::Write, marker::Send, sync::Mutex, time::Instant};
 
@@ -75,12 +77,9 @@ pub struct TestRunner {
 
 /// A gas schedule where every instruction has a cost of "1". This is used to bound execution of a
 /// test to a certain number of ticks.
-fn unit_cost_table(num_of_native_funcs: usize) -> CostTable {
-    let mut cost_schedule = zero_cost_schedule(num_of_native_funcs);
+fn unit_cost_table() -> CostTable {
+    let mut cost_schedule = zero_cost_schedule();
     cost_schedule.instruction_table.iter_mut().for_each(|cost| {
-        *cost = GasCost::new(1, 1);
-    });
-    cost_schedule.native_table.iter_mut().for_each(|cost| {
         *cost = GasCost::new(1, 1);
     });
     cost_schedule
@@ -142,6 +141,8 @@ impl TestRunner {
         save_storage_state_on_failure: bool,
         report_stacktrace_on_abort: bool,
         tests: TestPlan,
+        // TODO: maybe we should require the clients to always pass in a list of native functions so
+        // we don't have to make assumptions about their gas parameters.
         native_function_table: Option<NativeFunctionTable>,
         named_address_values: BTreeMap<String, NumericalAddress>,
         #[cfg(feature = "evm-backend")] evm: bool,
@@ -154,9 +155,11 @@ impl TestRunner {
         let modules = tests.module_info.values().map(|info| &info.module);
         let starting_storage_state = setup_test_storage(modules)?;
         let native_function_table = native_function_table.unwrap_or_else(|| {
-            move_stdlib::natives::all_natives(AccountAddress::from_hex_literal("0x1").unwrap())
+            move_stdlib::natives::all_natives(
+                AccountAddress::from_hex_literal("0x1").unwrap(),
+                move_stdlib::natives::GasParameters::zeros(),
+            )
         });
-        let num_of_native_funcs = native_function_table.len();
         Ok(Self {
             testing_config: SharedTestingConfig {
                 save_storage_state_on_failure,
@@ -164,7 +167,12 @@ impl TestRunner {
                 starting_storage_state,
                 execution_bound,
                 native_function_table,
-                cost_table: unit_cost_table(num_of_native_funcs),
+                // TODO: our current implementation uses a unit cost table to prevent programs from
+                // running indefinitely. This should probably be done in a different way, like halting
+                // after executing a certain number of instructions or setting a timer.
+                //
+                // From the API standpoint, we should let the client specify the cost table.
+                cost_table: unit_cost_table(),
                 source_files,
                 check_stackless_vm,
                 verbose,

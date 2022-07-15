@@ -7,90 +7,164 @@ pub mod event;
 pub mod hash;
 pub mod signer;
 pub mod string;
-pub mod vector;
-
 #[cfg(feature = "testing")]
 pub mod unit_test;
+pub mod vector;
 
 #[cfg(feature = "testing")]
 pub mod debug;
 
-use move_core_types::account_address::AccountAddress;
-use move_vm_runtime::{
-    native_functions,
-    native_functions::{NativeFunction, NativeFunctionTable},
-};
+mod helpers;
 
-pub fn all_natives(move_std_addr: AccountAddress) -> NativeFunctionTable {
-    const NATIVES: &[(&str, &str, NativeFunction)] = &[
-        ("bcs", "to_bytes", bcs::native_to_bytes),
-        ("event", "write_to_event_store", event::write_to_event_store),
-        ("hash", "sha2_256", hash::native_sha2_256),
-        ("hash", "sha3_256", hash::native_sha3_256),
-        ("signer", "borrow_address", signer::native_borrow_address),
-        ("string", "internal_check_utf8", string::native_check_utf8),
-        (
-            "string",
-            "internal_is_char_boundary",
-            string::native_is_char_boundary,
-        ),
-        ("string", "internal_sub_string", string::native_sub_string),
-        ("string", "internal_index_of", string::native_index_of),
-        ("vector", "length", vector::native_length),
-        ("vector", "empty", vector::native_empty),
-        ("vector", "borrow", vector::native_borrow),
-        ("vector", "borrow_mut", vector::native_borrow),
-        ("vector", "push_back", vector::native_push_back),
-        ("vector", "pop_back", vector::native_pop),
-        ("vector", "destroy_empty", vector::native_destroy_empty),
-        ("vector", "swap", vector::native_swap),
-        #[cfg(feature = "testing")]
-        ("debug", "print", debug::native_print),
-        #[cfg(feature = "testing")]
-        (
-            "debug",
-            "print_stack_trace",
-            debug::native_print_stack_trace,
-        ),
-        #[cfg(feature = "testing")]
-        (
-            "unit_test",
-            "create_signers_for_testing",
-            unit_test::native_create_signers_for_testing,
-        ),
-    ];
-    native_functions::make_table(move_std_addr, NATIVES)
+use move_core_types::account_address::AccountAddress;
+use move_vm_runtime::native_functions::{make_table_from_iter, NativeFunctionTable};
+
+#[derive(Debug, Clone)]
+pub struct GasParameters {
+    bcs: bcs::GasParameters,
+    hash: hash::GasParameters,
+    signer: signer::GasParameters,
+    string: string::GasParameters,
+    vector: vector::GasParameters,
+
+    #[cfg(feature = "testing")]
+    unit_test: unit_test::GasParameters,
 }
 
-pub fn all_natives_old_names(move_std_addr: AccountAddress) -> NativeFunctionTable {
-    const NATIVES: &[(&str, &str, NativeFunction)] = &[
-        ("BCS", "to_bytes", bcs::native_to_bytes),
-        ("Event", "write_to_event_store", event::write_to_event_store),
-        ("Hash", "sha2_256", hash::native_sha2_256),
-        ("Hash", "sha3_256", hash::native_sha3_256),
-        ("Signer", "borrow_address", signer::native_borrow_address),
-        ("Vector", "length", vector::native_length),
-        ("Vector", "empty", vector::native_empty),
-        ("Vector", "borrow", vector::native_borrow),
-        ("Vector", "borrow_mut", vector::native_borrow),
-        ("Vector", "push_back", vector::native_push_back),
-        ("Vector", "pop_back", vector::native_pop),
-        ("Vector", "destroy_empty", vector::native_destroy_empty),
-        ("Vector", "swap", vector::native_swap),
-        #[cfg(feature = "testing")]
-        ("Debug", "print", debug::native_print),
-        #[cfg(feature = "testing")]
-        (
-            "Debug",
-            "print_stack_trace",
-            debug::native_print_stack_trace,
-        ),
-        #[cfg(feature = "testing")]
-        (
-            "UnitTest",
-            "create_signers_for_testing",
-            unit_test::native_create_signers_for_testing,
-        ),
-    ];
-    native_functions::make_table(move_std_addr, NATIVES)
+impl GasParameters {
+    pub fn zeros() -> Self {
+        Self {
+            bcs: bcs::GasParameters {
+                to_bytes: bcs::ToBytesGasParameters {
+                    input_unit_cost: 0,
+                    output_unit_cost: 0,
+                    legacy_min_output_size: 0,
+                    failure_cost: 0,
+                },
+            },
+
+            hash: hash::GasParameters {
+                sha2_256: hash::Sha2_256GasParameters {
+                    base_cost: 0,
+                    unit_cost: 0,
+                    legacy_min_input_len: 0,
+                },
+                sha3_256: hash::Sha3_256GasParameters {
+                    base_cost: 0,
+                    unit_cost: 0,
+                    legacy_min_input_len: 0,
+                },
+            },
+            signer: signer::GasParameters {
+                borrow_address: signer::BorrowAddressGasParameters { base_cost: 0 },
+            },
+            string: string::GasParameters {
+                check_utf8: string::CheckUtf8GasParameters {
+                    base_cost: 0,
+                    unit_cost: 0,
+                },
+                is_char_boundary: string::IsCharBoundaryGasParameters { base_cost: 0 },
+                sub_string: string::SubStringGasParameters {
+                    base_cost: 0,
+                    unit_cost: 0,
+                },
+                index_of: string::IndexOfGasParameters {
+                    base_cost: 0,
+                    unit_cost: 0,
+                },
+            },
+            vector: vector::GasParameters {
+                empty: vector::EmptyGasParameters { base_cost: 0 },
+                length: vector::LengthGasParameters { base_cost: 0 },
+                push_back: vector::PushBackGasParameters {
+                    base_cost: 0,
+                    legacy_unit_cost: 0,
+                },
+                borrow: vector::BorrowGasParameters { base_cost: 0 },
+                pop_back: vector::PopBackGasParameters { base_cost: 0 },
+                destroy_empty: vector::DestroyEmptyGasParameters { base_cost: 0 },
+                swap: vector::SwapGasParameters { base_cost: 0 },
+            },
+            #[cfg(feature = "testing")]
+            unit_test: unit_test::GasParameters {
+                create_signers_for_testing: unit_test::CreateSignersForTestingGasParameters {
+                    base_cost: 0,
+                    unit_cost: 0,
+                },
+            },
+        }
+    }
+}
+
+pub fn all_natives(
+    move_std_addr: AccountAddress,
+    gas_params: GasParameters,
+) -> NativeFunctionTable {
+    let mut natives = vec![];
+
+    macro_rules! add_natives {
+        ($module_name: expr, $natives: expr) => {
+            natives.extend(
+                $natives.map(|(func_name, func)| ($module_name.to_string(), func_name, func)),
+            );
+        };
+    }
+
+    add_natives!("bcs", bcs::make_all(gas_params.bcs));
+    add_natives!("hash", hash::make_all(gas_params.hash));
+    add_natives!("signer", signer::make_all(gas_params.signer));
+    add_natives!("string", string::make_all(gas_params.string));
+    add_natives!("vector", vector::make_all(gas_params.vector));
+    #[cfg(feature = "testing")]
+    {
+        add_natives!("unit_test", unit_test::make_all(gas_params.unit_test));
+    }
+
+    make_table_from_iter(move_std_addr, natives)
+}
+
+#[derive(Debug, Clone)]
+pub struct NurseryGasParameters {
+    event: event::GasParameters,
+
+    #[cfg(feature = "testing")]
+    debug: debug::GasParameters,
+}
+
+impl NurseryGasParameters {
+    pub fn zeros() -> Self {
+        Self {
+            event: event::GasParameters {
+                write_to_event_store: event::WriteToEventStoreGasParameters { unit_cost: 0 },
+            },
+            #[cfg(feature = "testing")]
+            debug: debug::GasParameters {
+                print: debug::PrintGasParameters { base_cost: 0 },
+                print_stack_trace: debug::PrintStackTraceGasParameters { base_cost: 0 },
+            },
+        }
+    }
+}
+
+pub fn nursery_natives(
+    move_std_addr: AccountAddress,
+    gas_params: NurseryGasParameters,
+) -> NativeFunctionTable {
+    let mut natives = vec![];
+
+    macro_rules! add_natives {
+        ($module_name: expr, $natives: expr) => {
+            natives.extend(
+                $natives.map(|(func_name, func)| ($module_name.to_string(), func_name, func)),
+            );
+        };
+    }
+
+    add_natives!("event", event::make_all(gas_params.event));
+    #[cfg(feature = "testing")]
+    {
+        add_natives!("debug", debug::make_all(gas_params.debug));
+    }
+
+    make_table_from_iter(move_std_addr, natives)
 }

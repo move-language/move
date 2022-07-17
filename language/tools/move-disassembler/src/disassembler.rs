@@ -456,7 +456,7 @@ impl<'a> Disassembler<'a> {
             Bytecode::LdConst(idx) => {
                 let constant = self.source_mapper.bytecode.constant_at(*idx);
                 Ok(format!(
-                    "LdAddr[{}]({:?}: {:?})",
+                    "LdConst[{}]({:?}: {:?})",
                     idx, &constant.type_, &constant.data
                 ))
             }

@@ -6,6 +6,8 @@ use move_binary_format::errors::PartialVMResult;
 use move_core_types::gas_schedule::ONE_GAS_UNIT;
 use move_vm_runtime::native_functions::NativeContext;
 #[allow(unused_imports)]
+use move_vm_types::values::debug::print_reference_with_type;
+#[allow(unused_imports)]
 use move_vm_types::values::{values_impl::debug::print_reference, Reference};
 #[allow(unused_imports)]
 use move_vm_types::{
@@ -30,8 +32,9 @@ pub fn native_print(
         let ty = ty_args.pop().unwrap();
         let r = pop_arg!(args, Reference);
 
+        let type_tag = context.type_to_type_tag(&ty)?;
         let mut buf = String::new();
-        print_reference(&mut buf, &r)?;
+        print_reference_with_type(&mut buf, &type_tag, &r)?;
         println!("[debug] {}", buf);
     }
 

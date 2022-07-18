@@ -2180,6 +2180,8 @@ impl Display for Locals {
 
 #[allow(dead_code)]
 pub mod debug {
+    use move_core_types::language_storage::TypeTag;
+
     use super::*;
     use std::fmt::Write;
 
@@ -2302,6 +2304,22 @@ pub mod debug {
             Container::VecU128(r) => print_slice_elem(buf, &*r.borrow(), idx, print_u128),
             Container::VecBool(r) => print_slice_elem(buf, &*r.borrow(), idx, print_bool),
             Container::VecAddress(r) => print_slice_elem(buf, &*r.borrow(), idx, print_address),
+        }
+    }
+
+    /// Prints a [Reference] with the given [TypeTag].
+    pub fn print_reference_with_type<B: Write>(
+        buf: &mut B,
+        type_tag: &TypeTag,
+        r: &Reference,
+    ) -> PartialVMResult<()> {
+        write!(buf, "[{}] ", &type_tag).map_err(|_| {
+            PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                .with_message("debug print - could not print type tag".to_string())
+        })?;
+        match &r.0 {
+            ReferenceImpl::ContainerRef(r) => print_container_ref(buf, r),
+            ReferenceImpl::IndexedRef(r) => print_indexed_ref(buf, r),
         }
     }
 

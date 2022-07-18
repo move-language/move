@@ -35,3 +35,11 @@ pub fn verify_string(file_hash: FileHash, string: &str) -> Result<(), Diagnostic
         }
     }
 }
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CommentKind {
+    DocComment,      //  /// comment
+    SignleLine,      //  // comment
+    BlockComment,    // /* comment */
+    DocBlockComment, // /** comment */
+}

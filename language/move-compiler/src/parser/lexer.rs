@@ -10,6 +10,8 @@ use move_command_line_common::files::FileHash;
 use move_ir_types::location::Loc;
 use std::fmt;
 
+use super::comments::CommentKind;
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Tok {
     EOF,
@@ -80,6 +82,8 @@ pub enum Tok {
     Friend,
     NumSign,
     AtSign,
+    Comment(CommentKind),
+    Whitespace,
 }
 
 impl fmt::Display for Tok {
@@ -154,6 +158,11 @@ impl fmt::Display for Tok {
             Friend => "friend",
             NumSign => "#",
             AtSign => "@",
+            Comment(CommentKind::DocComment) => "///[Comment]",
+            Comment(CommentKind::SignleLine) => "//[Comment]",
+            Comment(CommentKind::BlockComment) => "/*[Comment]*/",
+            Comment(CommentKind::DocBlockComment) => "/**[Comment]*/",
+            Whitespace => " ",
         };
         fmt::Display::fmt(s, formatter)
     }
@@ -528,13 +537,22 @@ fn find_token(
                 (Tok::Period, 1)
             }
         }
-        '/' => (Tok::Slash, 1),
+        '/' => {
+            if text.starts_with("/*") {
+                return find_block_comment(text, file_hash);
+            } else if text.starts_with("//") {
+                find_comment(text)
+            } else {
+                (Tok::Slash, 1)
+            }
+        }
         ';' => (Tok::Semicolon, 1),
         '^' => (Tok::Caret, 1),
         '{' => (Tok::LBrace, 1),
         '}' => (Tok::RBrace, 1),
         '#' => (Tok::NumSign, 1),
         '@' => (Tok::AtSign, 1),
+        ' ' | '\t' | '\n' | '\r' => (Tok::Whitespace, 1),
         _ => {
             let loc = make_loc(file_hash, start_offset, start_offset);
             return Err(diag!(
@@ -545,6 +563,77 @@ fn find_token(
     };
 
     Ok((tok, len))
+}
+
+// find comments like '//...\n' or doc comments '///...\n'
+// the argument text must start with '//'
+fn find_comment(text: &str) -> (Tok, usize) {
+    let is_doc = text.starts_with("///") && !text.starts_with("////");
+    let comment_end = text.trim_start_matches(|c: char| c != '\n');
+    let length = text.len() - comment_end.len();
+    // If this was a documentation comment, record it in our map.
+    if is_doc {
+        (Tok::Comment(CommentKind::DocComment), length)
+    } else {
+        (Tok::Comment(CommentKind::SignleLine), length)
+    }
+}
+
+// find multi-line comments like '/* ... */' or '/** ... */'.
+// These can be nested, as in '/* /* ... */ */', so record the
+// start locations of each nested comment as a stack. The
+// boolean indicates whether it's a documentation comment.
+// the argument text_ must start with '/*'
+fn find_block_comment(text_: &str, file_hash: FileHash) -> Result<(Tok, usize), Diagnostic> {
+    let mut text = &text_[0..];
+    let len = text.len();
+    let get_offset = |substring: &str| len - substring.len();
+    let mut locs: Vec<(usize, bool)> = vec![];
+    let is_doc = text_.starts_with("/**");
+    loop {
+        text = text.trim_start_matches(|c: char| c != '/' && c != '*');
+        if text.is_empty() {
+            // We've reached the end of string while searching for a
+            // terminating '*/'.
+            let loc = *locs.last().unwrap();
+            // Highlight the '/**' if it's a documentation comment, or the '/*'
+            // otherwise.
+            let location = make_loc(file_hash, loc.0, loc.0 + if loc.1 { 3 } else { 2 });
+            return Err(diag!(
+                Syntax::InvalidDocComment,
+                (location, "Unclosed block comment"),
+            ));
+        } else if text.starts_with("/*") {
+            // We've found a (perhaps nested) multi-line comment.
+            let start = get_offset(text);
+            text = &text[2..];
+
+            // Check if this is a documentation comment: '/**', but not '/***'.
+            // A documentation comment cannot be nested within another comment.
+            let is_doc = text.starts_with('*') && !text.starts_with("**") && locs.is_empty();
+
+            locs.push((start, is_doc));
+        } else if text.starts_with("*/") {
+            // We've found a multi-line comment terminator that ends
+            // our innermost nested comment.
+            locs.pop().unwrap();
+            text = &text[2..];
+
+            // If this terminated our last comment, exit the loop.
+            if locs.is_empty() {
+                break;
+            }
+        } else {
+            // This is a solitary '/' or '*' that isn't part of any comment delimiter.
+            // Skip over it.
+            text = &text[1..];
+        }
+    }
+    if is_doc {
+        Ok((Tok::Comment(CommentKind::DocBlockComment), get_offset(text)))
+    } else {
+        Ok((Tok::Comment(CommentKind::BlockComment), get_offset(text)))
+    }
 }
 
 // Return the length of the substring matching [a-zA-Z0-9_]. Note that
@@ -657,7 +746,45 @@ fn trim_start_whitespace(text: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
-    use super::trim_start_whitespace;
+    use super::{diag, find_token, trim_start_whitespace, Tok};
+    use crate::parser::{comments::CommentKind, syntax::make_loc};
+    use move_command_line_common::files::FileHash;
+
+    #[test]
+    fn test_find_comment() {
+        assert_eq!(
+            find_token(FileHash::empty(), "/* foo */ sdasd", 0),
+            Ok((Tok::Comment(CommentKind::BlockComment), 9))
+        );
+        assert_eq!(
+            find_token(
+                FileHash::empty(),
+                "/* comment /* embedded comment */  */ foo",
+                0
+            ),
+            Ok((Tok::Comment(CommentKind::BlockComment), 37))
+        );
+        assert_eq!(
+            find_token(FileHash::empty(), "/** foo */ bar", 0),
+            Ok((Tok::Comment(CommentKind::DocBlockComment), 10))
+        );
+        assert_eq!(
+            find_token(FileHash::empty(), "// foo bar\n new line", 0),
+            Ok((Tok::Comment(CommentKind::SignleLine), 10))
+        );
+        assert_eq!(
+            find_token(FileHash::empty(), "/// foo bar\n new line", 0),
+            Ok((Tok::Comment(CommentKind::DocComment), 11))
+        );
+        let location = make_loc(FileHash::empty(), 0, 2);
+        assert_eq!(
+            find_token(FileHash::empty(), "/* unclosed comments", 0),
+            Err(diag!(
+                Syntax::InvalidDocComment,
+                (location, "Unclosed block comment"),
+            ))
+        )
+    }
 
     #[test]
     fn test_trim_start_whitespace() {

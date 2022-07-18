@@ -207,7 +207,11 @@ jobs:
 
   build-move-analyzer-vscode-extension:
     name: Build VS Code extension for move-analyzer
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-20.04, macos-10.15, windows-2022]
+    runs-on: ${{ matrix.os }}
     needs:
       - prepare
     steps:

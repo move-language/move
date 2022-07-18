@@ -92,7 +92,7 @@
 		"copy-tests-files": "copyfiles \"tests/**/*.move\" \"tests/**/*.exp\" \"tests/**/*.toml\" \"tests/**/*.code-workspace\" out",
 		"pretest": "npm run compile && npm run lint && npm run copy-tests-files",
 		"test": "node ./out/tests/runTests.js",
-		"dev": "npm run pretest && mode=dev node ./out/tests/runTests.js",
+		"dev": "npm run pretest && cross-env mode=dev node ./out/tests/runTests.js",
 		"vscode:prepublish": "npm run pretest",
 		"package": "vsce package -o move-analyzer.vsix",
 		"publish": "npm run pretest && npm run test && vsce publish"
@@ -113,6 +113,8 @@
 		"@typescript-eslint/eslint-plugin": "^4.33.0",
 		"@typescript-eslint/parser": "^4.33.0",
 		"@vscode/test-electron": "^2.0.0",
+		"copyfiles": "2.4.1",
+		"cross-env": "^7.0.3",
 		"eslint": "^7.32.0",
 		"eslint-plugin-tsdoc": "^0.2.14",
 		"glob": "^7.1.7",
@@ -120,8 +122,7 @@
 		"typescript": "^4.4.4",
 		"typescript-formatter": "^7.2.2",
 		"vsce": "^2.5.1",
-		"vscode-test": "^1.6.1",
-		"copyfiles": "2.4.1"
+		"vscode-test": "^1.6.1"
 	},
 	"__metadata": {
 		"id": "71e74fc8-23c2-47b7-8594-ed00192d96a6",

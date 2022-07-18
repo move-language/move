@@ -5,6 +5,6 @@
 		}
 	],
 	"settings": {
-		"move-analyzer.server.path": "../../../../target/debug/move-analyzer"
+		"move-analyzer.server.path": "../../../../../../target/debug/move-analyzer.exe"
 	}
 }

@@ -35,3 +35,23 @@ pub fn verify_string(file_hash: FileHash, string: &str) -> Result<(), Diagnostic
         }
     }
 }
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CommentKind {
+    DocComment,      //  /// comment
+    SignleLine,      //  // comment
+    BlockComment,    // /* comment */
+    DocBlockComment, // /** comment */
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Comment {
+    pub kind: CommentKind,
+    pub range: Loc,
+}
+
+impl Comment {
+    pub fn new(kind: CommentKind, range: Loc) -> Self {
+        Comment { kind, range }
+    }
+}

@@ -223,7 +223,7 @@ pub fn run_one(
     for args_line in args_file {
         let args_line = args_line?;
 
-        if let Some(external_cmd) = args_line.strip_prefix(">") {
+        if let Some(external_cmd) = args_line.strip_prefix('>') {
             let external_cmd = external_cmd.trim_start();
             let mut cmd_iter = external_cmd.split_ascii_whitespace();
 

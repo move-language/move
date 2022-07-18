@@ -3,7 +3,7 @@ name = "x-core"
 version = "0.1.0"
 authors = ["Diem Association <opensource@diem.com>"]
 description = "Core data structures used by x"
-edition = "2018"
+edition = "2021"
 publish = false
 license = "Apache-2.0"
 

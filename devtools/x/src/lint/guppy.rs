@@ -12,6 +12,7 @@ use guppy::{
     graph::{feature::FeatureFilterFn, PackagePublish},
     Version,
 };
+use std::fmt::Write as FmtWrite;
 use std::{
     collections::{BTreeMap, HashMap},
     iter,
@@ -270,9 +271,7 @@ impl<'cfg> ProjectLinter for DirectDepDups<'cfg> {
             if versions.len() > 1 {
                 let mut msg = format!("duplicate direct dependency '{}':\n", direct_dep);
                 for (version, packages) in versions {
-                    msg.push_str(&format!("  * {} (", version));
-                    msg.push_str(&packages.join(", "));
-                    msg.push_str(")\n");
+                    writeln!(&mut msg, "  * {} ({})", version, &packages.join(", ")).unwrap();
                 }
                 out.write(LintLevel::Error, msg);
             }
@@ -361,12 +360,14 @@ impl<'cfg> PackageLinter for OverlayFeatures<'cfg> {
         if !overlays.is_empty() {
             let mut msg = "overlay features enabled by default:\n".to_string();
             for (from_feature, to_package, to_feature) in overlays {
-                msg.push_str(&format!(
-                    "  * {} -> {}/{}\n",
+                writeln!(
+                    &mut msg,
+                    "  * {} -> {}/{}",
                     feature_str(from_feature),
                     to_package,
                     feature_str(to_feature)
-                ));
+                )
+                .unwrap();
             }
             msg.push_str("Use a line in the [features] section instead.\n");
             out.write(LintLevel::Error, msg);

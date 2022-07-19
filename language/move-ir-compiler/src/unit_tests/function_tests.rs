@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::unit_tests::testutils::compile_module_string;
+use std::fmt::Write;
 
 fn generate_function(name: &str, num_formals: usize, num_locals: usize) -> String {
     let mut code = format!("public {}(", name);
@@ -10,7 +11,7 @@ fn generate_function(name: &str, num_formals: usize, num_locals: usize) -> Strin
     code.reserve(30 * (num_formals + num_locals));
 
     for i in 0..num_formals {
-        code.push_str(&format!("formal_{}: u64", i));
+        write!(&mut code, "formal_{}: u64", i).unwrap();
         if i < num_formals - 1 {
             code.push_str(", ");
         }
@@ -19,11 +20,11 @@ fn generate_function(name: &str, num_formals: usize, num_locals: usize) -> Strin
     code.push_str(") {\n");
 
     for i in 0..num_locals {
-        code.push_str(&format!("let x_{}: u64;\n", i));
+        writeln!(&mut code, "let x_{}: u64;", i).unwrap();
     }
     code.push_str("label b0:\n");
     for i in 0..num_locals {
-        code.push_str(&format!("x_{} = {};\n", i, i));
+        writeln!(&mut code, "x_{} = {};", i, i).unwrap();
     }
 
     code.push_str("return;");

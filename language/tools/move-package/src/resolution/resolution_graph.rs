@@ -518,7 +518,7 @@ impl ResolvingGraph {
     pub fn download_dependency_repos(
         manifest: SourceManifest,
         build_options: &BuildConfig,
-        root_path: PathBuf,
+        root_path: &Path,
     ) -> Result<()> {
         // include dev dependencies if in dev mode
         let additional_deps = if build_options.dev_mode {
@@ -530,10 +530,11 @@ impl ResolvingGraph {
         for (dep_name, dep) in manifest.dependencies.iter().chain(additional_deps.iter()) {
             Self::download_and_update_if_repo(*dep_name, dep)?;
 
-            let (dep_manifest, _) = Self::parse_package_manifest(dep, dep_name, root_path.clone())
-                .with_context(|| format!("While processing dependency '{}'", *dep_name))?;
+            let (dep_manifest, _) =
+                Self::parse_package_manifest(dep, dep_name, root_path.to_path_buf())
+                    .with_context(|| format!("While processing dependency '{}'", *dep_name))?;
             // download dependencies of dependencies
-            Self::download_dependency_repos(dep_manifest, &build_options, root_path.clone())?;
+            Self::download_dependency_repos(dep_manifest, &build_options, root_path)?;
         }
         Ok(())
     }

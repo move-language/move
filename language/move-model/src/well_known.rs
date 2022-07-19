@@ -8,6 +8,6 @@
 //! declarations. It can be extended on the go.
 
 pub const VECTOR_BORROW_MUT: &str = "vector::borrow_mut";
-pub const TABLE_BORROW_MUT: &str = "Table::borrow_mut";
+pub const TABLE_BORROW_MUT: &str = "table::borrow_mut";
 pub const EVENT_EMIT_EVENT: &str = "event::emit_event";
-pub const TABLE_TABLE: &str = "Table::Table";
+pub const TABLE_TABLE: &str = "table::Table";

@@ -322,14 +322,14 @@ pub fn table_natives(table_addr: AccountAddress) -> NativeFunctionTable {
     native_functions::make_table(
         table_addr,
         &[
-            ("Table", "new_table_handle", native_new_table_handle),
-            ("Table", "add_box", native_add_box),
-            ("Table", "borrow_box", native_borrow_box),
-            ("Table", "borrow_box_mut", native_borrow_box),
-            ("Table", "remove_box", native_remove_box),
-            ("Table", "contains_box", native_contains_box),
-            ("Table", "destroy_empty_box", native_destroy_empty_box),
-            ("Table", "drop_unchecked_box", native_drop_unchecked_box),
+            ("table", "new_table_handle", native_new_table_handle),
+            ("table", "add_box", native_add_box),
+            ("table", "borrow_box", native_borrow_box),
+            ("table", "borrow_box_mut", native_borrow_box),
+            ("table", "remove_box", native_remove_box),
+            ("table", "contains_box", native_contains_box),
+            ("table", "destroy_empty_box", native_destroy_empty_box),
+            ("table", "drop_unchecked_box", native_drop_unchecked_box),
         ],
     )
 }

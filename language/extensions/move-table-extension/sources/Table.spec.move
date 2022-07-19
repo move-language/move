@@ -1,5 +1,5 @@
 /// Specifications of the `Table` module.
-spec Extensions::Table {
+spec extensions::table {
 
     // Make most of the public API intrinsic. Those functions have custom specifications in the prover.
 

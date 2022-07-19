@@ -1,5 +1,5 @@
 /// Type of large-scale storage tables.
-module Extensions::Table {
+module extensions::table {
     use std::errors;
 
     // TODO: native code should not use reasons to signal logical type of error. Instead,

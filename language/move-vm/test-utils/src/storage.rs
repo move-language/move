@@ -246,8 +246,12 @@ impl InMemoryStorage {
             changes,
         } = changes;
         self.tables.retain(|h, _| !removed_tables.contains(h));
-        self.tables
-            .extend(new_tables.into_iter().map(|h| (h, BTreeMap::default())));
+        self.tables.extend(
+            new_tables
+                .keys()
+                .into_iter()
+                .map(|h| (*h, BTreeMap::default())),
+        );
         for (h, c) in changes {
             assert!(
                 self.tables.contains_key(&h),

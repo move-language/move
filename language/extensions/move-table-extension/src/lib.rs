@@ -12,6 +12,7 @@ use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{GasAlgebra, GasCarrier, InternalGasUnits},
+    language_storage::TypeTag,
     value::MoveTypeLayout,
     vm_status::StatusCode,
 };
@@ -49,10 +50,31 @@ impl Display for TableHandle {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct TableInfo {
+    pub key_type: TypeTag,
+    pub value_type: TypeTag,
+}
+
+impl TableInfo {
+    pub fn new(key_type: TypeTag, value_type: TypeTag) -> Self {
+        Self {
+            key_type,
+            value_type,
+        }
+    }
+}
+
+impl Display for TableInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Table<{}, {}>", self.key_type, self.value_type)
+    }
+}
+
 /// A table change set.
 #[derive(Default)]
 pub struct TableChangeSet {
-    pub new_tables: BTreeSet<TableHandle>,
+    pub new_tables: BTreeMap<TableHandle, TableInfo>,
     pub removed_tables: BTreeSet<TableHandle>,
     pub changes: BTreeMap<TableHandle, TableChange>,
 }
@@ -116,7 +138,7 @@ const _NOT_EMPTY: u64 = (102 << 8) + _ECATEGORY_INVALID_STATE as u64;
 /// of the overall context so we can mutate while still accessing the overall context.
 #[derive(Default)]
 struct TableData {
-    new_tables: BTreeSet<TableHandle>,
+    new_tables: BTreeMap<TableHandle, TableInfo>,
     removed_tables: BTreeSet<TableHandle>,
     tables: BTreeMap<TableHandle, Table>,
 }
@@ -336,9 +358,10 @@ pub fn table_natives(table_addr: AccountAddress) -> NativeFunctionTable {
 
 fn native_new_table_handle(
     context: &mut NativeContext,
-    mut _ty_args: Vec<Type>,
+    ty_args: Vec<Type>,
     args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
+    assert_eq!(ty_args.len(), 2);
     assert!(args.is_empty());
 
     let table_context = context.extensions().get::<NativeTableContext>();
@@ -352,7 +375,12 @@ fn native_new_table_handle(
     Digest::update(&mut digest, table_data.new_tables.len().to_be_bytes());
     let bytes: [u8; 16] = digest.finalize()[0..16].try_into().unwrap();
     let id = u128::from_be_bytes(bytes);
-    assert!(table_data.new_tables.insert(TableHandle(id)));
+    let key_type = context.type_to_type_tag(&ty_args[0])?;
+    let value_type = context.type_to_type_tag(&ty_args[1])?;
+    assert!(table_data
+        .new_tables
+        .insert(TableHandle(id), TableInfo::new(key_type, value_type))
+        .is_none());
 
     Ok(NativeResult::ok(
         table_context

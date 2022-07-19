@@ -72,7 +72,10 @@ fn print_table_extension<W: Write>(w: &mut W, extensions: &mut NativeContextExte
             writeln!(
                 w,
                 "new tables {}",
-                cs.new_tables.iter().map(|h| h.to_string()).join(", ")
+                cs.new_tables
+                    .iter()
+                    .map(|(k, v)| format!("{}<{},{}>", k, v.key_type, v.value_type))
+                    .join(", ")
             )
             .unwrap();
         }

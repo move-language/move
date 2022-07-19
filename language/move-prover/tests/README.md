@@ -88,26 +88,8 @@ MVP_TEST_FLAGS="-T=20" cargo test -p move-prover
 
 If the flag `--check-inconsistency` is given, the prover not only verifies a target, but also checks if there is any
 inconsistent assumption in the verification. If the environment variable `MVP_TEST_INCONSISTENCY=1` is set, `cargo test`
-will perform the inconsistency check while running the tests in `../../../diem-move/diem-framework`
-and `../../move-stdlib` (i.e., the prover will run those tests with the flag `--check-inconsistency`).
+will perform the inconsistency check while running the tests in `sources` (i.e., the prover will run those tests with the flag `--check-inconsistency`).
 
 ```shell script
 MVP_TEST_INCONSISTENCY=1 cargo test -p move-prover
 ```
-
-## Code coverage
-
-Analyzing the test coverage of the diem repo is regularly done in CI, and the result updates the online report at
-
-* https://ci-artifacts.diem.com/coverage/unit-coverage/latest/index.html
-* https://codecov.io/gh/diem/diem (reports significantly less coverage due to panic unwinding being considered a branch)
-
-Note that this report is based on the the coverage test when the environment variable `BOOGIE_EXE`
-is not set. So, the coverage result may not be as accurate as expected because all verifications with Boogie/Z3 are
-skipped during the test.
-
-To run the coverage test locally, one can use `cargo xtest html-cov-dir="/some/dir"`. Keep in mind what is compiled and
-run when targeting a single crate is not the same as is run/built with multiple crates due to cargo's feature
-unification.
-
-For any questions regarding code coverage, please use the Cadiem slack channel "#code_coverage".

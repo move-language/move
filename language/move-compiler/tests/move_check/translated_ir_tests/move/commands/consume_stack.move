@@ -10,7 +10,7 @@ module 0x8675309::M {
     }
 
     // ImmBorrowLoc(0),
-    // LdAddr(1),
+    // LdConst(1),
     // ImmBorrowGlobal(StructDefinitionIndex(4)),
     // ImmBorrowField(FieldHandleIndex(0)),
     // Call(45),

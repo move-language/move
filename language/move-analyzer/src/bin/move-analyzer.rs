@@ -53,6 +53,12 @@ fn main() {
         files: VirtualFileSystem::default(),
         symbols: Arc::new(Mutex::new(symbols::Symbolicator::empty_symbols())),
     };
+
+    let (id, client_response) = context
+        .connection
+        .initialize_start()
+        .expect("could not start connection initialization");
+
     let capabilities = serde_json::to_value(lsp_types::ServerCapabilities {
         // The server receives notifications from the client as users open, close,
         // and modify documents.
@@ -102,17 +108,41 @@ fn main() {
     })
     .expect("could not serialize server capabilities");
 
-    context
-        .connection
-        .initialize(capabilities)
-        .expect("could not initialize the connection");
-
     let (diag_sender, diag_receiver) = bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
     let mut symbolicator_runner = symbols::SymbolicatorRunner::idle();
     if symbols::DEFS_AND_REFS_SUPPORT {
+        let initialize_params: lsp_types::InitializeParams =
+            serde_json::from_value(client_response)
+                .expect("could not deserialize client capabilities");
+
         symbolicator_runner =
             symbols::SymbolicatorRunner::new(context.symbols.clone(), diag_sender);
+
+        // If initialization information from the client contains a path to the directory being
+        // opened, try to initialize symbols before sending response to the client. Do not bother
+        // with diagnostics as they will be recomputed whenever the first source file is opened. The
+        // main reason for this is to enable unit tests that rely on the symbolication information
+        // to be available right after the client is initialized.
+        if let Some(uri) = initialize_params.root_uri {
+            if let Some(p) = symbols::SymbolicatorRunner::root_dir(Path::new(uri.path())) {
+                if let Ok((Some(new_symbols), _)) = symbols::Symbolicator::get_symbols(p.as_path())
+                {
+                    let mut old_symbols = context.symbols.lock().unwrap();
+                    (*old_symbols).merge(new_symbols);
+                }
+            }
+        }
     };
+
+    context
+        .connection
+        .initialize_finish(
+            id,
+            serde_json::json!({
+                "capabilities": capabilities,
+            }),
+        )
+        .expect("could not finish connection initialization");
 
     loop {
         select! {

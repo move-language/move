@@ -459,6 +459,8 @@ impl SymbolicatorRunner {
 
     /// Finds manifest file in a (sub)directory of the starting path passed as argument
     pub fn root_dir(starting_path: &Path) -> Option<PathBuf> {
+        eprintln!("find root for path: {}", starting_path.to_str().unwrap());
+
         let mut current_path_opt = Some(starting_path);
         while current_path_opt.is_some() {
             let current_path = current_path_opt.unwrap();

@@ -70,6 +70,11 @@ export class Context {
     async startClient(): Promise<void> {
         const executable: lc.Executable = {
             command: this.configuration.serverPath,
+            options: {
+                env: {
+                    'RUST_BACKTRACE': '1',
+                },
+            },
         };
         const serverOptions: lc.ServerOptions = {
             run: executable,

@@ -229,7 +229,7 @@ impl<Loc: Copy, Lbl: Clone + Ord + Debug> Debug for BorrowEdge<Loc, Lbl> {
 // Iteration
 //**********************************************************************************************
 
-impl<'a, Loc: Copy, Lbl: Clone + Ord> IntoIterator for BorrowEdgeSet<Loc, Lbl> {
+impl<Loc: Copy, Lbl: Clone + Ord> IntoIterator for BorrowEdgeSet<Loc, Lbl> {
     type Item = BorrowEdge<Loc, Lbl>;
     type IntoIter = std::collections::btree_set::IntoIter<BorrowEdge<Loc, Lbl>>;
 

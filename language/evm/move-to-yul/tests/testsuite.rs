@@ -17,6 +17,7 @@ use move_prover_test_utils::{baseline_test::verify_or_update_baseline, extract_t
 use move_stdlib::move_stdlib_named_addresses;
 use move_to_yul::{generator::Generator, options::Options};
 use primitive_types::{H160, U256};
+use std::fmt::Write;
 use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
@@ -116,16 +117,19 @@ fn run_tests(
     let mut res = String::new();
     res.push_str("!! Unit tests\n\n");
     for (fun, source) in test_cases {
-        res.push_str(&format!(
-            "// test of {}\n",
+        writeln!(
+            &mut res,
+            "// test of {}",
             env.get_function(*fun).get_full_name_str()
-        ));
+        )
+        .unwrap();
         res.push_str(source);
-        res.push_str(&format!(
-            "===> Test result of {}: {}\n\n",
+        writeln!(
+            &mut res,
+            "===> Test result of {}: {}\n",
             env.get_function(*fun).get_full_name_str(),
             execute_test(env, source)?
-        ));
+        )?;
     }
     Ok(res)
 }

@@ -21,6 +21,7 @@ use move_ir_types::{
     sp,
 };
 use move_symbol_pool::Symbol;
+use std::fmt::Write;
 use std::{
     clone::Clone,
     collections::{
@@ -195,24 +196,26 @@ fn label_verification_error(
 ) -> Result<()> {
     let mut message = "Invalid block labels".to_string();
     if !redeclared.is_empty() {
-        message.push_str(&format!(
+        write!(
+            &mut message,
             ", labels were declared twice ({})",
             redeclared
                 .iter()
                 .map(|l| l.to_string())
                 .collect::<Vec<_>>()
-                .join(", "),
-        ));
+                .join(", ")
+        )?;
     }
     if !undeclared.is_empty() {
-        message.push_str(&format!(
+        write!(
+            &mut message,
             ", labels were used without being declared ({})",
             undeclared
                 .iter()
                 .map(|l| l.to_string())
                 .collect::<Vec<_>>()
-                .join(", "),
-        ));
+                .join(", ")
+        )?;
     }
     bail!(message);
 }

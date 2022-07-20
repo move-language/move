@@ -207,10 +207,7 @@ impl BuildConfig {
         ret
     }
 
-    pub fn download_deps_for_package(mut self, path: &Path) -> Result<()> {
-        if self.test_mode {
-            self.dev_mode = true;
-        }
+    pub fn download_deps_for_package(&self, path: &Path) -> Result<()> {
         let path = SourcePackageLayout::try_find_root(path)?;
         let toml_manifest =
             self.parse_toml_manifest(path.join(SourcePackageLayout::Manifest.path()))?;
@@ -218,7 +215,7 @@ impl BuildConfig {
         // This should be locked as it inspects the environment for `MOVE_HOME` which could
         // possibly be set by a different process in parallel.
         let manifest = manifest_parser::parse_source_manifest(toml_manifest)?;
-        ResolutionGraph::download_dependency_repos(manifest, &self, &path)?;
+        ResolutionGraph::download_dependency_repos(&manifest, self, &path)?;
         mutx.unlock();
         Ok(())
     }

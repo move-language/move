@@ -516,7 +516,7 @@ impl ResolvingGraph {
     }
 
     pub fn download_dependency_repos(
-        manifest: SourceManifest,
+        manifest: &SourceManifest,
         build_options: &BuildConfig,
         root_path: &Path,
     ) -> Result<()> {
@@ -534,7 +534,7 @@ impl ResolvingGraph {
                 Self::parse_package_manifest(dep, dep_name, root_path.to_path_buf())
                     .with_context(|| format!("While processing dependency '{}'", *dep_name))?;
             // download dependencies of dependencies
-            Self::download_dependency_repos(dep_manifest, &build_options, root_path)?;
+            Self::download_dependency_repos(&dep_manifest, &build_options, root_path)?;
         }
         Ok(())
     }

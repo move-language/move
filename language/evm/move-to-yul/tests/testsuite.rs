@@ -17,9 +17,9 @@ use move_prover_test_utils::{baseline_test::verify_or_update_baseline, extract_t
 use move_stdlib::move_stdlib_named_addresses;
 use move_to_yul::{generator::Generator, options::Options};
 use primitive_types::{H160, U256};
-use std::fmt::Write;
 use std::{
     collections::BTreeMap,
+    fmt::Write,
     path::{Path, PathBuf},
 };
 

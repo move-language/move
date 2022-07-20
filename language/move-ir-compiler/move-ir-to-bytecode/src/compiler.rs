@@ -21,13 +21,13 @@ use move_ir_types::{
     sp,
 };
 use move_symbol_pool::Symbol;
-use std::fmt::Write;
 use std::{
     clone::Clone,
     collections::{
         hash_map::Entry::{Occupied, Vacant},
         BTreeSet, HashMap, HashSet,
     },
+    fmt::Write,
 };
 
 macro_rules! record_src_loc {

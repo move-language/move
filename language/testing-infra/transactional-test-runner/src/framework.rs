@@ -39,10 +39,9 @@ use move_ir_types::location::Spanned;
 use move_symbol_pool::Symbol;
 use move_vm_runtime::session::SerializedReturnValues;
 use rayon::iter::Either;
-use std::fmt::Write as FmtWrite;
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
-    fmt::Debug,
+    fmt::{Debug, Write as FmtWrite},
     io::Write,
     path::Path,
 };

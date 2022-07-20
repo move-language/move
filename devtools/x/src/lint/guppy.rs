@@ -12,9 +12,9 @@ use guppy::{
     graph::{feature::FeatureFilterFn, PackagePublish},
     Version,
 };
-use std::fmt::Write as FmtWrite;
 use std::{
     collections::{BTreeMap, HashMap},
+    fmt::Write as FmtWrite,
     iter,
 };
 use x_core::{WorkspaceStatus, XCoreContext};

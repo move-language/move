@@ -23,10 +23,10 @@ use num::BigUint;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::fmt::Write as FmtWrite;
 use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet, VecDeque},
+    fmt::Write as FmtWrite,
     fs::{self, File},
     io::{Read, Write},
     path::{Path, PathBuf},

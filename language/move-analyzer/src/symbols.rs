@@ -421,8 +421,9 @@ impl SymbolicatorRunner {
 
                             if !lsp_diagnostics.is_empty() {
                                 eprintln!("reporting lsp diagnostics");
-                                if let Err(err) = sender.send(Err(anyhow!("LSP diagnostics"))) {
-                                    eprintln!("could not pass lsp diagnostics error: {:?}", err);
+                                // set/reset (previous) diagnostics
+                                if let Err(err) = sender.send(Ok(lsp_diagnostics)) {
+                                    eprintln!("could not pass diagnostics: {:?}", err);
                                 }
                             }
                         }

@@ -1,7 +1,7 @@
 #[test_only]
-module Extensions::TableTests {
+module extensions::table_tests {
     use std::vector;
-    use Extensions::Table as T;
+    use extensions::table as T;
 
     struct S<phantom K: copy + drop, phantom V> has key {
         t: T::Table<K, V>

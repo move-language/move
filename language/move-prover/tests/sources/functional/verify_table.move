@@ -1,15 +1,15 @@
 // This file verifies the intrinsic Table implementation.
 module 0x42::VerifyTable {
-    use Extensions::Table::{Self, Table};
-    use Extensions::Table::{spec_get, spec_len, spec_contains};
+    use extensions::table::{Self, Table};
+    use extensions::table::{spec_get, spec_len, spec_contains};
 
     // TODO: test precise aborts behavior of all table functions
 
     fun add(): Table<u8, u64> {
-        let t = Table::new<u8, u64>();
-        Table::add(&mut t, 1, 2);
-        Table::add(&mut t, 2, 3);
-        Table::add(&mut t, 3, 4);
+        let t = table::new<u8, u64>();
+        table::add(&mut t, 1, 2);
+        table::add(&mut t, 2, 3);
+        table::add(&mut t, 3, 4);
         t
     }
     spec add {
@@ -21,10 +21,10 @@ module 0x42::VerifyTable {
     }
 
     fun add_fail(): Table<u8, u64> {
-        let t = Table::new<u8, u64>();
-        Table::add(&mut t, 1, 2);
-        Table::add(&mut t, 2, 3);
-        Table::add(&mut t, 3, 4);
+        let t = table::new<u8, u64>();
+        table::add(&mut t, 1, 2);
+        table::add(&mut t, 2, 3);
+        table::add(&mut t, 3, 4);
         t
     }
     spec add_fail {
@@ -32,9 +32,9 @@ module 0x42::VerifyTable {
     }
 
     fun add_fail_exists(k1: u8, k2: u8): Table<u8, u64> {
-        let t = Table::new<u8, u64>();
-        Table::add(&mut t, k1, 2);
-        Table::add(&mut t, k2, 3);
+        let t = table::new<u8, u64>();
+        table::add(&mut t, k1, 2);
+        table::add(&mut t, k2, 3);
         t
     }
     spec add_fail_exists {
@@ -43,7 +43,7 @@ module 0x42::VerifyTable {
 
     fun remove(): Table<u8, u64> {
         let t = add();
-        Table::remove(&mut t, 2);
+        table::remove(&mut t, 2);
         t
     }
     spec remove {
@@ -54,10 +54,10 @@ module 0x42::VerifyTable {
     }
 
     fun contains_and_length(): (bool, bool, u64, Table<u8, u64>) {
-        let t = Table::new<u8, u64>();
-        Table::add(&mut t, 1, 2);
-        Table::add(&mut t, 2, 3);
-        (Table::contains(&t, 1), Table::contains(&t, 3), Table::length(&t), t)
+        let t = table::new<u8, u64>();
+        table::add(&mut t, 1, 2);
+        table::add(&mut t, 2, 3);
+        (table::contains(&t, 1), table::contains(&t, 3), table::length(&t), t)
     }
     spec contains_and_length {
         ensures result_1 == true;
@@ -66,9 +66,9 @@ module 0x42::VerifyTable {
     }
 
     fun borrow(): (u64, Table<u8, u64>) {
-        let t = Table::new<u8, u64>();
-        Table::add(&mut t, 1, 2);
-        let r = Table::borrow(&t, 1);
+        let t = table::new<u8, u64>();
+        table::add(&mut t, 1, 2);
+        let r = table::borrow(&t, 1);
         (*r, t)
     }
     spec borrow {
@@ -78,10 +78,10 @@ module 0x42::VerifyTable {
     }
 
     fun borrow_mut(): Table<u8, u64> {
-        let t = Table::new<u8, u64>();
-        Table::add(&mut t, 1, 2);
-        Table::add(&mut t, 2, 3);
-        let r = Table::borrow_mut(&mut t, 1);
+        let t = table::new<u8, u64>();
+        table::add(&mut t, 1, 2);
+        table::add(&mut t, 2, 3);
+        let r = table::borrow_mut(&mut t, 1);
         *r = 4;
         t
     }
@@ -104,9 +104,9 @@ module 0x42::VerifyTable {
     }
 
     fun make_R(): R {
-        let t = Table::new<Key, u64>();
-        Table::add(&mut t, Key{v: vector[1, 2]}, 22);
-        Table::add(&mut t, Key{v: vector[2, 3]}, 23);
+        let t = table::new<Key, u64>();
+        table::add(&mut t, Key{v: vector[1, 2]}, 22);
+        table::add(&mut t, Key{v: vector[2, 3]}, 23);
         R{t}
     }
 
@@ -136,7 +136,7 @@ module 0x42::VerifyTable {
 
     fun borrow_mut_R(): R {
         let r = make_R();
-        let x = Table::borrow_mut(&mut r.t, Key{v: vector[1, 2]});
+        let x = table::borrow_mut(&mut r.t, Key{v: vector[1, 2]});
         *x = *x * 2;
         r
     }

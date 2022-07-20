@@ -17,10 +17,10 @@ use move_package::{
     source_package::{layout::SourcePackageLayout, manifest_parser::parse_move_manifest_from_file},
     BuildConfig,
 };
-use std::fmt::Write as FmtWrite;
 use std::{
     collections::{BTreeMap, HashMap},
     env,
+    fmt::Write as FmtWrite,
     fs::{self, File},
     io::{self, BufRead, Write},
     path::{Path, PathBuf},

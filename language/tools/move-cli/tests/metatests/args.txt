@@ -4,3 +4,4 @@ sandbox exp-test -p dummy
 sandbox exp-test -p cov/plain --track-cov
 sandbox exp-test -p cov/two-runs-same-module --track-cov
 sandbox exp-test -p cov/two-runs-diff-module --track-cov
+docgen smoketest

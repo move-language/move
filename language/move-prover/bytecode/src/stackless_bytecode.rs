@@ -295,6 +295,16 @@ impl BorrowEdge {
         }
     }
 
+    pub fn reverse(self) -> BorrowEdge {
+        if let BorrowEdge::Hyper(edges) = self {
+            let mut new_edges: Vec<BorrowEdge> = edges.to_vec();
+            new_edges.reverse();
+            BorrowEdge::Hyper(new_edges)
+        } else {
+            self
+        }
+    }
+
     pub fn instantiate(&self, params: &[Type]) -> Self {
         match self {
             Self::Field(qid, offset) => Self::Field(qid.instantiate_ref(params), *offset),

@@ -4,6 +4,7 @@
 pub mod build;
 pub mod coverage;
 pub mod disassemble;
+pub mod docgen;
 pub mod errmap;
 pub mod info;
 pub mod new;

@@ -1190,6 +1190,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "dunce"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "453440c271cf5577fd2a40e4942540cb7d0d2f85e27c8d07dd0023c925a67541"
+
+[[package]]
 name = "ed25519"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2261,6 +2267,7 @@ dependencies = [
  "clap 3.1.8",
  "codespan-reporting",
  "crossbeam",
+ "dunce",
  "im",
  "lsp-server",
  "lsp-types",

@@ -63,7 +63,7 @@ use lsp_types::{
 use std::{
     cmp,
     collections::{BTreeMap, BTreeSet, HashMap},
-    fmt, fs,
+    fmt,
     path::{Path, PathBuf},
     sync::{Arc, Condvar, Mutex},
     thread,
@@ -333,7 +333,9 @@ impl SymbolicatorRunner {
         let thread_mtx_cvar = mtx_cvar.clone();
         let runner = SymbolicatorRunner { mtx_cvar };
 
-        thread::spawn(move || {
+        thread::Builder::new()
+            .stack_size(16 * 1024 * 1024) // building Move code requires a larger stack size on Windows
+            .spawn(move || {
             let (mtx, cvar) = &*thread_mtx_cvar;
             // Locations opened in the IDE (files or directories) for which manifest file is missing
             let mut missing_manifests = BTreeSet::new();
@@ -412,16 +414,16 @@ impl SymbolicatorRunner {
                     }
                 }
             }
-        });
+        }).unwrap();
 
         runner
     }
 
-    pub fn run(&self, starting_path: &str) {
-        eprintln!("scheduling run for {}", starting_path);
+    pub fn run(&self, starting_path: PathBuf) {
+        eprintln!("scheduling run for {:?}", starting_path);
         let (mtx, cvar) = &*self.mtx_cvar;
         let mut symbolicate = mtx.lock().unwrap();
-        *symbolicate = RunnerState::Run(PathBuf::from(starting_path));
+        *symbolicate = RunnerState::Run(starting_path);
         cvar.notify_one();
         eprintln!("scheduled run");
     }
@@ -658,7 +660,7 @@ impl Symbolicator {
 
             file_use_defs
                 .entry(
-                    fs::canonicalize(fpath.as_str())
+                    dunce::canonicalize(fpath.as_str())
                         .unwrap_or_else(|_| PathBuf::from(fpath.as_str())),
                 )
                 .or_insert_with(UseDefMap::new)
@@ -1788,7 +1790,8 @@ pub fn on_go_to_def_request(context: &Context, request: &Request, symbols: &Symb
         .text_document_position_params
         .text_document
         .uri
-        .path();
+        .to_file_path()
+        .unwrap();
     let loc = parameters.text_document_position_params.position;
     let line = loc.line;
     let col = loc.character;
@@ -1796,7 +1799,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request, symbols: &Symb
     on_use_request(
         context,
         symbols,
-        fpath,
+        &fpath,
         line,
         col,
         request.id.clone(),
@@ -1827,7 +1830,8 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request, symbols: 
         .text_document_position_params
         .text_document
         .uri
-        .path();
+        .to_file_path()
+        .unwrap();
     let loc = parameters.text_document_position_params.position;
     let line = loc.line;
     let col = loc.character;
@@ -1835,7 +1839,7 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request, symbols: 
     on_use_request(
         context,
         symbols,
-        fpath,
+        &fpath,
         line,
         col,
         request.id.clone(),
@@ -1862,7 +1866,12 @@ pub fn on_references_request(context: &Context, request: &Request, symbols: &Sym
     let parameters = serde_json::from_value::<ReferenceParams>(request.params.clone())
         .expect("could not deserialize references request");
 
-    let fpath = parameters.text_document_position.text_document.uri.path();
+    let fpath = parameters
+        .text_document_position
+        .text_document
+        .uri
+        .to_file_path()
+        .unwrap();
     let loc = parameters.text_document_position.position;
     let line = loc.line;
     let col = loc.character;
@@ -1871,7 +1880,7 @@ pub fn on_references_request(context: &Context, request: &Request, symbols: &Sym
     on_use_request(
         context,
         symbols,
-        fpath,
+        &fpath,
         line,
         col,
         request.id.clone(),
@@ -1917,7 +1926,8 @@ pub fn on_hover_request(context: &Context, request: &Request, symbols: &Symbols)
         .text_document_position_params
         .text_document
         .uri
-        .path();
+        .to_file_path()
+        .unwrap();
     let loc = parameters.text_document_position_params.position;
     let line = loc.line;
     let col = loc.character;
@@ -1925,7 +1935,7 @@ pub fn on_hover_request(context: &Context, request: &Request, symbols: &Symbols)
     on_use_request(
         context,
         symbols,
-        fpath,
+        &fpath,
         line,
         col,
         request.id.clone(),
@@ -1945,7 +1955,7 @@ pub fn on_hover_request(context: &Context, request: &Request, symbols: &Symbols)
 pub fn on_use_request(
     context: &Context,
     symbols: &Symbols,
-    use_fpath: &str,
+    use_fpath: &PathBuf,
     use_line: u32,
     use_col: u32,
     id: RequestId,
@@ -1954,7 +1964,7 @@ pub fn on_use_request(
     let mut result = None;
 
     let mut use_def_found = false;
-    if let Some(mod_symbols) = symbols.file_use_defs.get(&PathBuf::from(use_fpath)) {
+    if let Some(mod_symbols) = symbols.file_use_defs.get(use_fpath) {
         if let Some(uses) = mod_symbols.get(use_line) {
             for u in uses {
                 if use_col >= u.col_start && use_col <= u.col_end {
@@ -2034,7 +2044,7 @@ fn symbols_test() {
 
     let mut fpath = path.clone();
     fpath.push("sources/M1.move");
-    let cpath = fs::canonicalize(&fpath).unwrap();
+    let cpath = dunce::canonicalize(&fpath).unwrap();
 
     let mod_symbols = symbols.file_use_defs.get(&cpath).unwrap();
 
@@ -2717,7 +2727,7 @@ fn symbols_test() {
 
     let mut fpath = path.clone();
     fpath.push("sources/M3.move");
-    let cpath = fs::canonicalize(&fpath).unwrap();
+    let cpath = dunce::canonicalize(&fpath).unwrap();
 
     let mod_symbols = symbols.file_use_defs.get(&cpath).unwrap();
 
@@ -2867,7 +2877,7 @@ fn symbols_test() {
 
     let mut fpath = path.clone();
     fpath.push("sources/M4.move");
-    let cpath = fs::canonicalize(&fpath).unwrap();
+    let cpath = dunce::canonicalize(&fpath).unwrap();
 
     let mod_symbols = symbols.file_use_defs.get(&cpath).unwrap();
 

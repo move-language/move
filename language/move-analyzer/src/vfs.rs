@@ -15,19 +15,19 @@ use lsp_types::{
     notification::Notification as _, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
     DidOpenTextDocumentParams, DidSaveTextDocumentParams,
 };
-
+use std::path::PathBuf;
 use crate::symbols;
 
 /// A mapping from identifiers (file names, potentially, but not necessarily) to their contents.
 #[derive(Debug, Default)]
 pub struct VirtualFileSystem {
-    files: std::collections::HashMap<String, String>,
+    files: std::collections::HashMap<PathBuf, String>,
 }
 
 impl VirtualFileSystem {
     /// Returns a reference to the buffer corresponding to the given identifier, or `None` if it
     /// is not present in the system.
-    pub fn get(&self, identifier: &str) -> Option<&str> {
+    pub fn get(&self, identifier: &PathBuf) -> Option<&str> {
         self.files.get(identifier).map(|s| s.as_str())
     }
 
@@ -37,13 +37,13 @@ impl VirtualFileSystem {
     /// from the client, instead of completely replacing them each time. The rust-analyzer has a
     /// 'vfs' module that is capable of doing just that, but it is not published on crates.io. If
     /// we could help get it published, we could use it here.
-    pub fn update(&mut self, identifier: &str, content: &str) {
+    pub fn update(&mut self, identifier: PathBuf, content: &str) {
         self.files
-            .insert(identifier.to_string(), content.to_string());
+            .insert(identifier, content.to_string());
     }
 
     /// Removes the buffer and its identifier from the system.
-    pub fn remove(&mut self, identifier: &str) {
+    pub fn remove(&mut self, identifier: &PathBuf) {
         self.files.remove(identifier);
     }
 }
@@ -61,17 +61,17 @@ pub fn on_text_document_sync_notification(
                 serde_json::from_value::<DidOpenTextDocumentParams>(notification.params.clone())
                     .expect("could not deserialize notification");
             files.update(
-                parameters.text_document.uri.path(),
+                parameters.text_document.uri.to_file_path().unwrap(),
                 &parameters.text_document.text,
             );
-            symbolicator_runner.run(parameters.text_document.uri.path());
+            symbolicator_runner.run(parameters.text_document.uri.to_file_path().unwrap());
         }
         lsp_types::notification::DidChangeTextDocument::METHOD => {
             let parameters =
                 serde_json::from_value::<DidChangeTextDocumentParams>(notification.params.clone())
                     .expect("could not deserialize notification");
             files.update(
-                parameters.text_document.uri.path(),
+                parameters.text_document.uri.to_file_path().unwrap(),
                 &parameters.content_changes.last().unwrap().text,
             );
         }
@@ -80,16 +80,16 @@ pub fn on_text_document_sync_notification(
                 serde_json::from_value::<DidSaveTextDocumentParams>(notification.params.clone())
                     .expect("could not deserialize notification");
             files.update(
-                parameters.text_document.uri.path(),
+                parameters.text_document.uri.to_file_path().unwrap(),
                 &parameters.text.unwrap(),
             );
-            symbolicator_runner.run(parameters.text_document.uri.path());
+            symbolicator_runner.run(parameters.text_document.uri.to_file_path().unwrap());
         }
         lsp_types::notification::DidCloseTextDocument::METHOD => {
             let parameters =
                 serde_json::from_value::<DidCloseTextDocumentParams>(notification.params.clone())
                     .expect("could not deserialize notification");
-            files.remove(parameters.text_document.uri.path());
+            files.remove(&parameters.text_document.uri.to_file_path().unwrap());
         }
         _ => eprintln!("invalid notification '{}'", notification.method),
     }

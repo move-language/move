@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use base::{
-    build::Build, coverage::Coverage, disassemble::Disassemble, errmap::Errmap, info::Info,
-    new::New, prove::Prove, test::Test,
+    build::Build, coverage::Coverage, disassemble::Disassemble, docgen::Docgen, errmap::Errmap,
+    info::Info, new::New, prove::Prove, test::Test,
 };
 use move_package::BuildConfig;
 
@@ -65,6 +65,7 @@ pub enum Command {
     Build(Build),
     Coverage(Coverage),
     Disassemble(Disassemble),
+    Docgen(Docgen),
     Errmap(Errmap),
     Info(Info),
     New(New),
@@ -103,6 +104,7 @@ pub fn run_cli(
         Command::Build(c) => c.execute(move_args.package_path, move_args.build_config),
         Command::Coverage(c) => c.execute(move_args.package_path, move_args.build_config),
         Command::Disassemble(c) => c.execute(move_args.package_path, move_args.build_config),
+        Command::Docgen(c) => c.execute(move_args.package_path, move_args.build_config),
         Command::Errmap(c) => c.execute(move_args.package_path, move_args.build_config),
         Command::Info(c) => c.execute(move_args.package_path, move_args.build_config),
         Command::New(c) => c.execute_with_defaults(move_args.package_path),

@@ -3,10 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Context, Result};
+use move_command_line_common::movey::MOVEY_URL;
 use std::fs;
 use toml_edit::easy::Value;
 
-pub const MOVEY_API_KEY_PATH: &str = "/movey_api_key.toml";
+pub const MOVEY_API_KEY_PATH: &str = "/movey_credential.toml";
 
 pub fn get_registry_api_token(move_home: &str) -> Result<String> {
     if let Ok(content) = get_api_token(&move_home) {
@@ -37,6 +38,26 @@ fn get_api_token(move_home: &str) -> Result<String> {
     Ok(token.to_string().replace("\"", ""))
 }
 
+pub fn get_movey_url(move_home: &str) -> Result<String> {
+    let credential_path = format!("{}{}", move_home, MOVEY_API_KEY_PATH);
+    let contents = fs::read_to_string(&credential_path)?;
+    let mut toml: Value = contents.parse()?;
+    let registry = toml
+        .as_table_mut()
+        .context(format!("Error parsing {}", MOVEY_API_KEY_PATH))?
+        .get_mut("registry")
+        .context(format!("Error parsing {}", MOVEY_API_KEY_PATH))?;
+    let movey_url = registry
+        .as_table_mut()
+        .context("Error parsing url")?
+        .get_mut("url");
+    if let Some(url) = movey_url {
+        Ok(url.to_string().replace("\"", ""))
+    } else {
+        Ok(MOVEY_URL.to_string())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -62,11 +83,14 @@ mod tests {
         let _ = fs::create_dir_all(&move_home);
         File::create(&credential_path).unwrap();
 
-        let content = "[registry]\ntoken = \"a sample token\"";
+        let content = r#"
+            [registry]
+            token = "test-token"
+            "#;
         fs::write(&credential_path, content).unwrap();
 
         let token = get_registry_api_token(&move_home).unwrap();
-        assert!(token.contains("a sample token"));
+        assert!(token.contains("test-token"));
 
         clean_up(&move_home)
     }
@@ -104,15 +128,58 @@ mod tests {
         fs::create_dir_all(&move_home).unwrap();
         File::create(&credential_path).unwrap();
 
-        let content = "[registry]\ntoken = a sample token";
-        fs::write(&credential_path, content).unwrap();
+        let missing_double_quote = r#"
+            [registry]
+            token = test-token
+            "#;
+        fs::write(&credential_path, missing_double_quote).unwrap();
         let token = get_registry_api_token(&move_home);
         assert!(token.is_err());
 
-        let content = "[registry]\ntokens = \"a sample token\"";
-        fs::write(&credential_path, content).unwrap();
+        let wrong_token_field = r#"
+            [registry]
+            tokens = "test-token"
+            "#;
+        fs::write(&credential_path, wrong_token_field).unwrap();
         let token = get_registry_api_token(&move_home);
         assert!(token.is_err());
+
+        clean_up(&move_home)
+    }
+
+    #[test]
+    fn get_movey_url_works() {
+        let test_path = String::from("/get_movey_url_works");
+        let (move_home, credential_path) = setup_move_home(&test_path);
+        let _ = fs::create_dir_all(&move_home);
+        File::create(&credential_path).unwrap();
+        let content = r#"
+            [registry]
+            token = "test-token"
+            url = "test-url"
+            "#;
+        fs::write(&credential_path, content).unwrap();
+
+        let url = get_movey_url(&move_home).unwrap();
+        assert_eq!(url, "test-url");
+
+        clean_up(&move_home)
+    }
+
+    #[test]
+    fn get_movey_url_returns_default_url_if_url_field_not_existed() {
+        let test_path = String::from("/get_movey_url_returns_default_url_if_url_field_not_existed");
+        let (move_home, credential_path) = setup_move_home(&test_path);
+        let _ = fs::create_dir_all(&move_home);
+        File::create(&credential_path).unwrap();
+        let content = r#"
+            [registry]
+            token = "test-token"
+            "#;
+        fs::write(&credential_path, content).unwrap();
+
+        let url = get_movey_url(&move_home).unwrap();
+        assert_eq!(url, MOVEY_URL);
 
         clean_up(&move_home)
     }

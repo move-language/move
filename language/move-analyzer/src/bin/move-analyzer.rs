@@ -124,7 +124,7 @@ fn main() {
         // main reason for this is to enable unit tests that rely on the symbolication information
         // to be available right after the client is initialized.
         if let Some(uri) = initialize_params.root_uri {
-            if let Some(p) = symbols::SymbolicatorRunner::root_dir(Path::new(uri.path())) {
+            if let Some(p) = symbols::SymbolicatorRunner::root_dir(&uri.to_file_path().unwrap()) {
                 if let Ok((Some(new_symbols), _)) = symbols::Symbolicator::get_symbols(p.as_path())
                 {
                     let mut old_symbols = context.symbols.lock().unwrap();

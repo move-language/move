@@ -12,6 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.52"
 codespan-reporting = "0.11.1"
+dunce = "1.0.2"
 im = "15.1.0"
 lsp-server = "0.5.1"
 lsp-types = "0.90.1"

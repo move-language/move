@@ -9,6 +9,7 @@ pub mod ast;
 pub mod comments;
 pub mod keywords;
 pub(crate) mod merge_spec_modules;
+pub mod parsed_tree;
 
 use crate::{
     attr_derivation,

@@ -80,6 +80,7 @@ error: induction case of the loop invariant does not hold
     =     loop invariant holds at current state
     =     at tests/sources/functional/loops.move:225: loop_invariant_induction_invalid
     =     at tests/sources/functional/loops.move:221: loop_invariant_induction_invalid
+    =     at tests/sources/functional/loops.move:227: loop_invariant_induction_invalid
     =         x = <redacted>
     =     at tests/sources/functional/loops.move:223: loop_invariant_induction_invalid
 
@@ -100,6 +101,7 @@ error: induction case of the loop invariant does not hold
     =         y = <redacted>
     =     loop invariant holds at current state
     =     at tests/sources/functional/loops.move:191: loop_with_two_back_edges_incorrect
+    =     at tests/sources/functional/loops.move:192: loop_with_two_back_edges_incorrect
     =         y = <redacted>
     =     at tests/sources/functional/loops.move:193: loop_with_two_back_edges_incorrect
     =     at tests/sources/functional/loops.move:189: loop_with_two_back_edges_incorrect
@@ -141,6 +143,7 @@ error: induction case of the loop invariant does not hold
     =         y = <redacted>
     =     loop invariant holds at current state
     =     at tests/sources/functional/loops.move:147: nested_loop_inner_invariant_incorrect
+    =     at tests/sources/functional/loops.move:150: nested_loop_inner_invariant_incorrect
     =         y = <redacted>
     =     at tests/sources/functional/loops.move:145: nested_loop_inner_invariant_incorrect
 
@@ -163,5 +166,7 @@ error: induction case of the loop invariant does not hold
     =     at tests/sources/functional/loops.move:122: nested_loop_outer_invariant_incorrect
     =     enter loop, variable(s) y havocked and reassigned
     =         y = <redacted>
+    =     at tests/sources/functional/loops.move:128: nested_loop_outer_invariant_incorrect
+    =     at tests/sources/functional/loops.move:131: nested_loop_outer_invariant_incorrect
     =         x = <redacted>
     =     at tests/sources/functional/loops.move:119: nested_loop_outer_invariant_incorrect

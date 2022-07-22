@@ -263,7 +263,7 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         self.runtime.loader().get_struct_type(index)
     }
 
-    // Get the abilities for this type, at it's particular instantiation
+    /// Gets the abilities for this type, at it's particular instantiation
     pub fn get_type_abilities(&self, ty: &Type) -> VMResult<AbilitySet> {
         self.runtime
             .loader()
@@ -271,8 +271,14 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
             .map_err(|e| e.finish(Location::Undefined))
     }
 
+    /// Gets the underlying data store
     pub fn get_data_store(&mut self) -> &mut dyn DataStore {
         &mut self.data_cache
+    }
+
+    /// Gets the underlying native extensions.
+    pub fn get_native_extensions(&mut self) -> &mut NativeContextExtensions<'r> {
+        &mut self.native_extensions
     }
 }
 

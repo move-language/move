@@ -1,0 +1,6 @@
+processed 5 tasks
+
+task 3 'view'. lines 26-26:
+key 0x2a::M::Foo {
+    x: 500
+}

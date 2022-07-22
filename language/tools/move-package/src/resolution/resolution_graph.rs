@@ -8,8 +8,8 @@ use crate::{
         layout::SourcePackageLayout,
         manifest_parser::{parse_move_manifest_string, parse_source_manifest},
         parsed_manifest::{
-            Dependency, FileName, NamedAddress, PackageDigest, PackageName, SourceManifest,
-            SubstOrRename,
+            Dependencies, Dependency, FileName, NamedAddress, PackageDigest, PackageName,
+            SourceManifest, SubstOrRename,
         },
     },
     BuildConfig,
@@ -521,10 +521,12 @@ impl ResolvingGraph {
         root_path: &Path,
     ) -> Result<()> {
         // include dev dependencies if in dev mode
+        let empty_deps;
         let additional_deps = if build_options.dev_mode {
-            manifest.dev_dependencies.clone()
+            &manifest.dev_dependencies
         } else {
-            BTreeMap::new()
+            empty_deps = Dependencies::new();
+            &empty_deps
         };
 
         for (dep_name, dep) in manifest.dependencies.iter().chain(additional_deps.iter()) {

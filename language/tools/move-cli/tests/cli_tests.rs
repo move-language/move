@@ -71,26 +71,123 @@ const UPLOAD_PACKAGE_PATH: &str = "./tests/upload_tests";
 
 #[test]
 fn upload_package_to_movey_works() {
-    let package_path = format!("{}/valid_package", UPLOAD_PACKAGE_PATH);
+    let package_path = format!("{}/valid_package1", UPLOAD_PACKAGE_PATH);
     init_git(&package_path, true);
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/post_package/")
+            .header("content-type", "application/json")
+            .json_body(json!({
+            "github_repo_url":"https://github.com/move-language/move",
+            "total_files":2,
+            "token":"test-token",
+            "subdir":"\n"
+            }));
+        then.status(200);
+    });
+    init_stub_registry_file(&package_path, &server.base_url());
+    let relative_package_path = PathBuf::from(&package_path);
+    let absolute_package_path =
+        path_to_string(&relative_package_path.canonicalize().unwrap()).unwrap();
 
     let cli_exe = env!("CARGO_BIN_EXE_move");
     let output = Command::new(cli_exe)
-        .current_dir(&package_path)
-        .args(["movey-upload", "--test", "--test-token", "test-token"])
+        .env("MOVE_HOME", &absolute_package_path)
+        .current_dir(&absolute_package_path)
+        .args(["movey-upload"])
         .output()
         .unwrap();
 
     assert!(output.status.success());
-    let res_path = format!("{}/request-body.txt", &package_path);
-    let data = fs::read_to_string(&res_path).unwrap();
-    assert!(data.contains(r#""total_files":2"#), "{}", data);
-    assert!(data.contains(r#""token":"test-token""#));
-    assert!(data.contains(r#""subdir":"\n""#), "{}", data);
-    assert!(data.contains(r#""github_repo_url":"https://github.com/move-language/move""#));
+    let output = String::from_utf8_lossy(output.stdout.as_slice()).to_string();
+    assert!(
+        output.contains("Your package has been successfully uploaded to Movey"),
+        "{}",
+        output
+    );
 
-    fs::remove_file(&res_path).unwrap();
-    clean_up(&package_path);
+    clean_up(&absolute_package_path);
+}
+
+#[test]
+fn upload_package_to_movey_prints_error_message_if_server_respond_4xx() {
+    let package_path = format!("{}/valid_package2", UPLOAD_PACKAGE_PATH);
+    init_git(&package_path, true);
+
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/post_package/")
+            .header("content-type", "application/json")
+            .json_body(json!({
+            "github_repo_url":"https://github.com/move-language/move",
+            "total_files":2,
+            "token":"test-token",
+            "subdir":"\n"
+            }));
+        then.status(400).body("Invalid Api token");
+    });
+    init_stub_registry_file(&package_path, &server.base_url());
+    let relative_package_path = PathBuf::from(&package_path);
+    let absolute_package_path =
+        path_to_string(&relative_package_path.canonicalize().unwrap()).unwrap();
+
+    let cli_exe = env!("CARGO_BIN_EXE_move");
+    let output = Command::new(cli_exe)
+        .env("MOVE_HOME", &absolute_package_path)
+        .current_dir(&absolute_package_path)
+        .args(["movey-upload"])
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    let output = String::from_utf8_lossy(output.stderr.as_slice()).to_string();
+    assert!(output.contains("Error: Invalid Api token"), "{}", output);
+
+    clean_up(&absolute_package_path);
+}
+
+#[test]
+fn upload_package_to_movey_prints_hardcoded_error_message_if_server_respond_5xx() {
+    let package_path = format!("{}/valid_package3", UPLOAD_PACKAGE_PATH);
+    init_git(&package_path, true);
+
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/post_package/")
+            .header("content-type", "application/json")
+            .json_body(json!({
+            "github_repo_url":"https://github.com/move-language/move",
+            "total_files":2,
+            "token":"test-token",
+            "subdir":"\n"
+            }));
+        then.status(500).body("Invalid Api token");
+    });
+    init_stub_registry_file(&package_path, &server.base_url());
+    let relative_package_path = PathBuf::from(&package_path);
+    let absolute_package_path =
+        path_to_string(&relative_package_path.canonicalize().unwrap()).unwrap();
+
+    let cli_exe = env!("CARGO_BIN_EXE_move");
+    let output = Command::new(cli_exe)
+        .env("MOVE_HOME", &absolute_package_path)
+        .current_dir(&absolute_package_path)
+        .args(["movey-upload"])
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    let output = String::from_utf8_lossy(output.stderr.as_slice()).to_string();
+    assert!(
+        output.contains("Error: An unexpected error occurred. Please try again later"),
+        "{}",
+        output
+    );
+
+    clean_up(&absolute_package_path);
 }
 
 #[test]
@@ -101,7 +198,7 @@ fn upload_package_to_movey_with_no_remote_should_panic() {
     let cli_exe = env!("CARGO_BIN_EXE_move");
     let output = Command::new(cli_exe)
         .current_dir(&package_path)
-        .args(["movey-upload", "--test"])
+        .args(["movey-upload"])
         .output()
         .unwrap();
 
@@ -270,4 +367,19 @@ fn clean_up(move_home: &str) {
 fn clean_up(package_path: &str) {
     let _ = fs::remove_file(format!("{}/simple_file", package_path));
     fs::remove_dir_all(format!("{}/.git", package_path)).unwrap();
+    let credential_path = format!("{}{}", package_path, MOVEY_API_KEY_PATH);
+    let _ = fs::remove_file(&credential_path);
+}
+
+fn init_stub_registry_file(package_path: &str, base_url: &str) {
+    let credential_path = format!("{}{}", package_path, MOVEY_API_KEY_PATH);
+    let content = format!(
+        r#"
+        [registry]
+        token = "test-token"
+        url = "{}"
+        "#,
+        base_url
+    );
+    fs::write(credential_path, content).expect("Unable to write file");
 }

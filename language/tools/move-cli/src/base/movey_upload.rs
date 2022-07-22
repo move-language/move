@@ -1,13 +1,15 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::utils::movey_credential;
+use std::{env, fs::File, path::PathBuf, process::Command};
+
 use anyhow::bail;
 use clap::*;
-use move_command_line_common::{env::MOVE_HOME, movey};
-use move_package::BuildConfig;
 use reqwest::blocking::Client;
-use std::{fs, process::Command};
+
+use move_command_line_common::env::MOVE_HOME;
+
+use crate::utils::movey_credential;
 
 #[derive(serde::Serialize, Default)]
 pub struct MoveyUploadRequest {
@@ -17,16 +19,30 @@ pub struct MoveyUploadRequest {
     subdir: String,
 }
 
-/// Upload the package to Movey.net.
+/// Upload the package metadata to Movey.net.
 #[derive(Parser)]
 #[clap(name = "movey-upload")]
-pub struct MoveyUpload {
-    #[clap(long = "test-token")]
-    test_token: Option<String>,
-}
+pub struct MoveyUpload;
 
 impl MoveyUpload {
-    pub fn execute(self, config: BuildConfig) -> anyhow::Result<()> {
+    pub fn execute(self, path: Option<PathBuf>) -> anyhow::Result<()> {
+        if let Some(path) = path {
+            if path.exists() && path.is_dir() {
+                let _ = env::set_current_dir(&path);
+            } else {
+                bail!("invalid directory")
+            }
+        }
+        // make sure it's a Move project
+        let move_toml = File::open("Move.toml");
+        if move_toml.is_err() {
+            bail!("Move.toml not found")
+        }
+        let metadata = move_toml.unwrap().metadata()?;
+        if metadata.len() == 0 {
+            bail!("Move.toml not found")
+        }
+
         let mut movey_upload_request: MoveyUploadRequest = Default::default();
         let mut output = Command::new("git")
             .current_dir(".")
@@ -82,44 +98,31 @@ impl MoveyUpload {
             }
         }
         movey_upload_request.total_files = total_files;
-        movey_upload_request.token = if config.test_mode {
-            // if running in test mode, get token from CLI option or hardcoded fallback instead of reading from movey_api_key.toml
-            // to separate MoveyUpload::execute logic from others
-            if let Some(token) = self.test_token {
-                token
-            } else {
-                "test-token".to_string()
-            }
-        } else {
-            movey_credential::get_registry_api_token(&MOVE_HOME.clone())?
-        };
-
-        if config.test_mode {
-            fs::write(
-                "./request-body.txt",
-                serde_json::to_string(&movey_upload_request).expect("invalid request body"),
-            )
-            .expect("unable to write file");
-        } else {
-            let client = Client::new();
-            let response = client
-                .post(&format!("{}/api/v1/post_package/", movey::MOVEY_URL))
-                .json(&movey_upload_request)
-                .send();
-            match response {
-                Ok(response) => {
-                    if response.status().is_success() {
-                        println!("Your package has been successfully uploaded to Movey")
-                    } else if response.status().is_client_error() {
-                        println!("Error: {}", response.text()?)
-                    } else if response.status().is_server_error() {
-                        println!("Error: An unexpected error occurred. Please try again later");
+        movey_upload_request.token = movey_credential::get_registry_api_token(&MOVE_HOME)?;
+        let movey_url = movey_credential::get_movey_url(&MOVE_HOME);
+        match movey_url {
+            Ok(url) => {
+                let client = Client::new();
+                let response = client
+                    .post(&format!("{}/api/v1/post_package/", &url))
+                    .json(&movey_upload_request)
+                    .send();
+                match response {
+                    Ok(response) => {
+                        if response.status().is_success() {
+                            println!("Your package has been successfully uploaded to Movey")
+                        } else if response.status().is_client_error() {
+                            bail!("Error: {}", response.text()?)
+                        } else if response.status().is_server_error() {
+                            bail!("Error: An unexpected error occurred. Please try again later");
+                        }
+                    }
+                    Err(_) => {
+                        bail!("Error: An unexpected error occurred. Please try again later");
                     }
                 }
-                Err(_) => {
-                    println!("Error: An unexpected error occurred. Please try again later");
-                }
             }
+            Err(_) => bail!("Error: An unexpected error occurred. Please try again later"),
         }
         Ok(())
     }

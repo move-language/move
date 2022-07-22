@@ -1,7 +1,0 @@
-Command `build -v --only-deps`:
-INCLUDING DEPENDENCY MoveStdlib
-BUILDING OnlyDeps
-External Command `cat build/OnlyDeps/sources/A.move`:
-cat: build/OnlyDeps/sources/A.move: No such file or directory
-External Command `ls build/OnlyDeps/sources/dependencies`:
-MoveStdlib

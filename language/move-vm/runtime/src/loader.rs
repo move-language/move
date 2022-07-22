@@ -626,10 +626,10 @@ impl Loader {
     //
     // All modules in the bundle to be published must be loadable. This function performs all
     // verification steps to load these modules without actually loading them into the code cache.
-    pub(crate) fn verify_module_bundle_for_publication(
+    pub(crate) fn verify_module_bundle_for_publication<'a>(
         &self,
         modules: &[CompiledModule],
-        data_store: &mut impl DataStore,
+        data_store: &'a mut dyn DataStore,
     ) -> VMResult<()> {
         let mut bundle_unverified: BTreeSet<_> = modules.iter().map(|m| m.self_id()).collect();
         let mut bundle_verified = BTreeMap::new();
@@ -659,12 +659,12 @@ impl Loader {
     //   bundle. Basically, this represents the modules appears before `M` in the bundle vector.
     // - the `bundle_unverified` argument tracks the modules that have not been verified when `M`
     //   is being verified, i.e., the modules appears after `M` in the bundle vector.
-    fn verify_module_for_publication(
+    fn verify_module_for_publication<'a>(
         &self,
         module: &CompiledModule,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
         bundle_unverified: &BTreeSet<ModuleId>,
-        data_store: &impl DataStore,
+        data_store: &'a dyn DataStore,
     ) -> VMResult<()> {
         // Performs all verification steps to load the module without loading it, i.e., the new
         // module will NOT show up in `module_cache`. In the module republishing case, it means
@@ -825,22 +825,22 @@ impl Loader {
 
     // The interface for module loading. Aligned with `load_type` and `load_function`, this function
     // verifies that the module is OK instead of expect it.
-    pub(crate) fn load_module(
+    pub(crate) fn load_module<'a>(
         &self,
         id: &ModuleId,
-        data_store: &impl DataStore,
+        data_store: &'a dyn DataStore,
     ) -> VMResult<Arc<Module>> {
         self.load_module_internal(id, &BTreeMap::new(), &BTreeSet::new(), data_store)
     }
 
     // Load the transitive closure of the target module first, and then verify that the modules in
     // the closure do not have cyclic dependencies.
-    fn load_module_internal(
+    fn load_module_internal<'a>(
         &self,
         id: &ModuleId,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
         bundle_unverified: &BTreeSet<ModuleId>,
-        data_store: &impl DataStore,
+        data_store: &'a dyn DataStore,
     ) -> VMResult<Arc<Module>> {
         // if the module is already in the code cache, load the cached version
         if let Some(cached) = self.module_cache.read().module_at(id) {
@@ -867,10 +867,10 @@ impl Loader {
     }
 
     // Load, deserialize, and check the module with the bytecode verifier, without linking
-    fn load_and_verify_module(
+    fn load_and_verify_module<'a>(
         &self,
         id: &ModuleId,
-        data_store: &impl DataStore,
+        data_store: &'a dyn DataStore,
         allow_loading_failure: bool,
     ) -> VMResult<CompiledModule> {
         // bytes fetching, allow loading to fail if the flag is set
@@ -903,11 +903,11 @@ impl Loader {
 
     // Everything in `load_and_verify_module` and also recursively load and verify all the
     // dependencies of the target module.
-    fn load_and_verify_module_and_dependencies(
+    fn load_and_verify_module_and_dependencies<'a>(
         &self,
         id: &ModuleId,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
-        data_store: &impl DataStore,
+        data_store: &'a dyn DataStore,
         visited: &mut BTreeSet<ModuleId>,
         friends_discovered: &mut BTreeSet<ModuleId>,
         allow_module_loading_failure: bool,
@@ -943,11 +943,11 @@ impl Loader {
     }
 
     // downward exploration of the module's dependency graph
-    fn load_and_verify_dependencies(
+    fn load_and_verify_dependencies<'a>(
         &self,
         module: &CompiledModule,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
-        data_store: &impl DataStore,
+        data_store: &'a dyn DataStore,
         visited: &mut BTreeSet<ModuleId>,
         friends_discovered: &mut BTreeSet<ModuleId>,
         allow_dependency_loading_failure: bool,
@@ -998,12 +998,12 @@ impl Loader {
     // Everything in `load_and_verify_module_and_dependencies` and also recursively load and verify
     // all the friends modules of the newly loaded modules, until the friends frontier covers the
     // whole closure.
-    fn load_and_verify_module_and_dependencies_and_friends(
+    fn load_and_verify_module_and_dependencies_and_friends<'a>(
         &self,
         id: &ModuleId,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
         bundle_unverified: &BTreeSet<ModuleId>,
-        data_store: &impl DataStore,
+        data_store: &'a dyn DataStore,
         allow_module_loading_failure: bool,
     ) -> VMResult<Arc<Module>> {
         // load the closure of the module in terms of dependency relation
@@ -1032,12 +1032,12 @@ impl Loader {
     }
 
     // upward exploration of the module's dependency graph
-    fn load_and_verify_friends(
+    fn load_and_verify_friends<'a>(
         &self,
         friends_discovered: BTreeSet<ModuleId>,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
         bundle_unverified: &BTreeSet<ModuleId>,
-        data_store: &impl DataStore,
+        data_store: &'a dyn DataStore,
         allow_friend_loading_failure: bool,
     ) -> VMResult<()> {
         // for each new module discovered in the frontier, load them fully and expand the frontier.

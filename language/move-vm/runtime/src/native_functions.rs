@@ -10,7 +10,7 @@ use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::CostTable,
     identifier::Identifier,
-    language_storage::TypeTag,
+    language_storage::{ModuleId, TypeTag},
     value::MoveTypeLayout,
     vm_status::{StatusCode, StatusType},
 };
@@ -137,6 +137,34 @@ impl<'a, 'b> NativeContext<'a, 'b> {
 
     pub fn events(&self) -> &Vec<(Vec<u8>, u64, Type, MoveTypeLayout, Value)> {
         self.data_store.events()
+    }
+
+    pub fn publish_modules(
+        &mut self,
+        modules: Vec<Vec<u8>>,
+        sender: AccountAddress,
+    ) -> PartialVMResult<()> {
+        let compiled_modules = crate::module_validator::validate_and_compile_modules(
+            &modules,
+            sender,
+            self.data_store,
+            self.resolver.loader(),
+        )
+        .map_err(|e| e.to_partial())?;
+
+        // All modules verified, publish them to data cache
+        for (module, blob) in compiled_modules.into_iter().zip(modules.into_iter()) {
+            self.data_store
+                .publish_module(&module.self_id(), blob)
+                .map_err(|e| e.to_partial())?;
+        }
+        Ok(())
+    }
+
+    pub fn exists_module(&self, module_id: &ModuleId) -> PartialVMResult<bool> {
+        self.data_store
+            .exists_module(module_id)
+            .map_err(|e| e.to_partial())
     }
 
     pub fn type_to_type_tag(&self, ty: &Type) -> PartialVMResult<TypeTag> {

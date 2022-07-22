@@ -10,13 +10,13 @@
 //! basically just a mapping from file identifier (this could be the file's path were it to be
 //! saved) to its textual contents.
 
+use crate::symbols;
 use lsp_server::Notification;
 use lsp_types::{
     notification::Notification as _, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
     DidOpenTextDocumentParams, DidSaveTextDocumentParams,
 };
 use std::path::PathBuf;
-use crate::symbols;
 
 /// A mapping from identifiers (file names, potentially, but not necessarily) to their contents.
 #[derive(Debug, Default)]
@@ -38,8 +38,7 @@ impl VirtualFileSystem {
     /// 'vfs' module that is capable of doing just that, but it is not published on crates.io. If
     /// we could help get it published, we could use it here.
     pub fn update(&mut self, identifier: PathBuf, content: &str) {
-        self.files
-            .insert(identifier, content.to_string());
+        self.files.insert(identifier, content.to_string());
     }
 
     /// Removes the buffer and its identifier from the system.

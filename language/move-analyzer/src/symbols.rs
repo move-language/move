@@ -334,9 +334,7 @@ impl SymbolicatorRunner {
         let runner = SymbolicatorRunner { mtx_cvar };
 
         thread::Builder::new()
-            // building Move code requires a larger stack size on Windows (16MB has been chosen
-            // rather arbitrarily)
-            .stack_size(16 * 1024 * 1024)
+            .stack_size(16 * 1024 * 1024) // building Move code requires a larger stack size on Windows
             .spawn(move || {
                 let (mtx, cvar) = &*thread_mtx_cvar;
                 // Locations opened in the IDE (files or directories) for which manifest file is missing

@@ -127,10 +127,18 @@ pub fn on_completion_request(context: &Context, request: &Request) {
     let parameters = serde_json::from_value::<CompletionParams>(request.params.clone())
         .expect("could not deserialize completion request");
 
-    let path = parameters.text_document_position.text_document.uri.to_file_path().unwrap();
+    let path = parameters
+        .text_document_position
+        .text_document
+        .uri
+        .to_file_path()
+        .unwrap();
     let buffer = context.files.get(&path);
     if buffer.is_none() {
-        eprintln!("Could not read '{:?}' when handling completion request", path);
+        eprintln!(
+            "Could not read '{:?}' when handling completion request",
+            path
+        );
     }
 
     // The completion items we provide depend upon where the user's cursor is positioned.

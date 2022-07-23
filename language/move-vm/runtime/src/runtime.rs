@@ -75,6 +75,7 @@ impl VMRuntime {
         sender: AccountAddress,
         data_store: &mut impl DataStore,
         _gas_status: &mut GasStatus,
+        compat_check: bool,
     ) -> VMResult<()> {
         // deserialize the modules. Perform bounds check. After this indexes can be
         // used with the `[]` operator
@@ -114,7 +115,7 @@ impl VMRuntime {
         // changing the bytecode format to include an `is_upgradable` flag in the CompiledModule.
         for module in &compiled_modules {
             let module_id = module.self_id();
-            if data_store.exists_module(&module_id)? {
+            if data_store.exists_module(&module_id)? && compat_check {
                 let old_module_ref = self.loader.load_module(&module_id, data_store)?;
                 let old_module = old_module_ref.module();
                 let old_m = normalized::Module::new(old_module);

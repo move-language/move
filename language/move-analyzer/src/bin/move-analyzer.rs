@@ -120,12 +120,12 @@ fn main() {
             symbols::SymbolicatorRunner::new(context.symbols.clone(), diag_sender);
 
         // If initialization information from the client contains a path to the directory being
-        // opened, try to initialize symbols before sending response to the client.D o not bother
+        // opened, try to initialize symbols before sending response to the client. Do not bother
         // with diagnostics as they will be recomputed whenever the first source file is opened. The
         // main reason for this is to enable unit tests that rely on the symbolication information
         // to be available right after the client is initialized.
         if let Some(uri) = initialize_params.root_uri {
-            if let Some(p) = symbols::SymbolicatorRunner::root_dir(uri.to_file_path().unwrap().as_path()) {
+            if let Some(p) = symbols::SymbolicatorRunner::root_dir(&uri.to_file_path().unwrap()) {
                 if let Ok((Some(new_symbols), _)) = symbols::Symbolicator::get_symbols(p.as_path())
                 {
                     let mut old_symbols = context.symbols.lock().unwrap();

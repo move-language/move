@@ -15,7 +15,7 @@ module std::capability_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 5)]
+    #[expected_failure(abort_code = 0x60000)]
     fun test_failure() {
         let (owner, other) = create_two_signers();
         capability::create(&owner, &Feature{});
@@ -32,7 +32,7 @@ module std::capability_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 5)]
+    #[expected_failure(abort_code = 0x60000)]
     fun test_delegate_failure_after_revoke() {
         let (owner, delegate) = create_two_signers();
         capability::create(&owner, &Feature{});

@@ -147,7 +147,7 @@ language to have 'phantom type parameters' or similar features added, which will
 -  [Function `transfer`](#0x1_vault_transfer)
 
 
-<pre><code><b>use</b> <a href="errors.md#0x1_errors">0x1::errors</a>;
+<pre><code><b>use</b> <a href="">0x1::error</a>;
 <b>use</b> <a href="event.md#0x1_event">0x1::event</a>;
 <b>use</b> <a href="">0x1::option</a>;
 <b>use</b> <a href="">0x1::signer</a>;
@@ -806,7 +806,7 @@ Creates new vault for the given signer. The vault is populated with the <code>in
 
 <pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_new">new</a>&lt;Content: store&gt;(owner: &<a href="">signer</a>,  initial_content: Content) {
     <b>let</b> addr = <a href="_address_of">signer::address_of</a>(owner);
-    <b>assert</b>!(!<b>exists</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="errors.md#0x1_errors_already_published">errors::already_published</a>(<a href="vault.md#0x1_vault_EVAULT">EVAULT</a>));
+    <b>assert</b>!(!<b>exists</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="_already_exists">error::already_exists</a>(<a href="vault.md#0x1_vault_EVAULT">EVAULT</a>));
     <b>move_to</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(
         owner,
         <a href="vault.md#0x1_vault_Vault">Vault</a>{
@@ -839,7 +839,7 @@ Returns <code><b>false</b></code> otherwise.
 
 <pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_is_delegation_enabled">is_delegation_enabled</a>&lt;Content: store&gt;(owner: &<a href="">signer</a>): bool {
     <b>let</b> addr = <a href="_address_of">signer::address_of</a>(owner);
-    <b>assert</b>!(<b>exists</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="errors.md#0x1_errors_not_published">errors::not_published</a>(<a href="vault.md#0x1_vault_EVAULT">EVAULT</a>));
+    <b>assert</b>!(<b>exists</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="_not_found">error::not_found</a>(<a href="vault.md#0x1_vault_EVAULT">EVAULT</a>));
     <b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(addr)
 }
 </code></pre>
@@ -865,7 +865,7 @@ Enables delegation functionality for this vault. By default, vaults to not suppo
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_enable_delegation">enable_delegation</a>&lt;Content: store&gt;(owner: &<a href="">signer</a>) {
-    <b>assert</b>!(!<a href="vault.md#0x1_vault_is_delegation_enabled">is_delegation_enabled</a>&lt;Content&gt;(owner), <a href="errors.md#0x1_errors_already_published">errors::already_published</a>(<a href="vault.md#0x1_vault_EDELEGATE">EDELEGATE</a>));
+    <b>assert</b>!(!<a href="vault.md#0x1_vault_is_delegation_enabled">is_delegation_enabled</a>&lt;Content&gt;(owner), <a href="_already_exists">error::already_exists</a>(<a href="vault.md#0x1_vault_EDELEGATE">EDELEGATE</a>));
     <b>move_to</b>&lt;<a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(owner, <a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>{delegates: <a href="_empty">vector::empty</a>()})
 }
 </code></pre>
@@ -893,8 +893,8 @@ the vault in events.
 
 <pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_enable_events">enable_events</a>&lt;Content: store&gt;(owner: &<a href="">signer</a>, metadata: <a href="">vector</a>&lt;u8&gt;) {
     <b>let</b> addr = <a href="_address_of">signer::address_of</a>(owner);
-    <b>assert</b>!(<b>exists</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="errors.md#0x1_errors_not_published">errors::not_published</a>(<a href="vault.md#0x1_vault_EVAULT">EVAULT</a>));
-    <b>assert</b>!(!<b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(addr), <a href="errors.md#0x1_errors_already_published">errors::already_published</a>(<a href="vault.md#0x1_vault_EEVENT">EEVENT</a>));
+    <b>assert</b>!(<b>exists</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="_not_found">error::not_found</a>(<a href="vault.md#0x1_vault_EVAULT">EVAULT</a>));
+    <b>assert</b>!(!<b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(addr), <a href="_already_exists">error::already_exists</a>(<a href="vault.md#0x1_vault_EEVENT">EEVENT</a>));
     <b>move_to</b>&lt;<a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a>&lt;Content&gt;&gt;(
         owner,
         <a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a>{
@@ -930,9 +930,9 @@ this to succeed, there must be no active accessor for the vault.
 <pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_remove_vault">remove_vault</a>&lt;Content: store + drop&gt;(owner: &<a href="">signer</a>): Content
 <b>acquires</b> <a href="vault.md#0x1_vault_Vault">Vault</a>, <a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>, <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>, <a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a> {
     <b>let</b> addr = <a href="_address_of">signer::address_of</a>(owner);
-    <b>assert</b>!(<b>exists</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="errors.md#0x1_errors_not_published">errors::not_published</a>(<a href="vault.md#0x1_vault_EVAULT">EVAULT</a>));
+    <b>assert</b>!(<b>exists</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="_not_found">error::not_found</a>(<a href="vault.md#0x1_vault_EVAULT">EVAULT</a>));
     <b>let</b> <a href="vault.md#0x1_vault_Vault">Vault</a>{content} = <b>move_from</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(addr);
-    <b>assert</b>!(<a href="_is_some">option::is_some</a>(&content), <a href="errors.md#0x1_errors_invalid_state">errors::invalid_state</a>(<a href="vault.md#0x1_vault_EACCESSOR_IN_USE">EACCESSOR_IN_USE</a>));
+    <b>assert</b>!(<a href="_is_some">option::is_some</a>(&content), <a href="_invalid_state">error::invalid_state</a>(<a href="vault.md#0x1_vault_EACCESSOR_IN_USE">EACCESSOR_IN_USE</a>));
 
     <b>if</b> (<b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(addr)) {
         <b>let</b> delegate_cap = <a href="vault.md#0x1_vault_DelegateCap">DelegateCap</a>&lt;Content&gt;{vault_address: addr, authority: addr};
@@ -1088,11 +1088,11 @@ pair of the vault address and the used authority.
     <b>if</b> (<b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr)) {
         // The <a href="">signer</a> is a delegate. Check it's granted capabilities.
         <b>let</b> delegate = <b>borrow_global</b>&lt;<a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr);
-        <b>assert</b>!(<a href="_contains">vector::contains</a>(&delegate.granted_caps, &cap), <a href="errors.md#0x1_errors_requires_capability">errors::requires_capability</a>(<a href="vault.md#0x1_vault_EDELEGATE">EDELEGATE</a>));
+        <b>assert</b>!(<a href="_contains">vector::contains</a>(&delegate.granted_caps, &cap), <a href="_permission_denied">error::permission_denied</a>(<a href="vault.md#0x1_vault_EDELEGATE">EDELEGATE</a>));
         (delegate.vault_address, addr)
     } <b>else</b> {
         // If it is not a delegate, it must be the owner <b>to</b> succeed.
-        <b>assert</b>!(<b>exists</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="errors.md#0x1_errors_not_published">errors::not_published</a>(<a href="vault.md#0x1_vault_EVAULT">EVAULT</a>));
+        <b>assert</b>!(<b>exists</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(addr), <a href="_not_found">error::not_found</a>(<a href="vault.md#0x1_vault_EVAULT">EVAULT</a>));
         (addr, addr)
     }
 }
@@ -1125,7 +1125,7 @@ function will abort if one is in use. An accessor must be explicitly released us
 <pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_read_accessor">read_accessor</a>&lt;Content: store + drop&gt;(cap: &<a href="vault.md#0x1_vault_ReadCap">ReadCap</a>&lt;Content&gt;): <a href="vault.md#0x1_vault_ReadAccessor">ReadAccessor</a>&lt;Content&gt;
 <b>acquires</b> <a href="vault.md#0x1_vault_Vault">Vault</a> {
     <b>let</b> content = &<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(cap.vault_address).content;
-    <b>assert</b>!(<a href="_is_some">option::is_some</a>(content), <a href="errors.md#0x1_errors_invalid_state">errors::invalid_state</a>(<a href="vault.md#0x1_vault_EACCESSOR_IN_USE">EACCESSOR_IN_USE</a>));
+    <b>assert</b>!(<a href="_is_some">option::is_some</a>(content), <a href="_invalid_state">error::invalid_state</a>(<a href="vault.md#0x1_vault_EACCESSOR_IN_USE">EACCESSOR_IN_USE</a>));
     <a href="vault.md#0x1_vault_ReadAccessor">ReadAccessor</a>{ vault_address: cap.vault_address, content: <a href="_extract">option::extract</a>(content) }
 }
 </code></pre>
@@ -1181,7 +1181,7 @@ Releases read accessor.
     <b>let</b> content = &<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(vault_address).content;
     // We (should be/are) able <b>to</b> prove that the below cannot happen, but we leave the assertion
     // here anyway for double safety.
-    <b>assert</b>!(<a href="_is_none">option::is_none</a>(content), <a href="errors.md#0x1_errors_internal">errors::internal</a>(<a href="vault.md#0x1_vault_EACCESSOR_INCONSISTENCY">EACCESSOR_INCONSISTENCY</a>));
+    <b>assert</b>!(<a href="_is_none">option::is_none</a>(content), <a href="_internal">error::internal</a>(<a href="vault.md#0x1_vault_EACCESSOR_INCONSISTENCY">EACCESSOR_INCONSISTENCY</a>));
     <a href="_fill">option::fill</a>(content, new_content);
 }
 </code></pre>
@@ -1211,7 +1211,7 @@ the content.
 <pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_modify_accessor">modify_accessor</a>&lt;Content: store + drop&gt;(cap: &<a href="vault.md#0x1_vault_ModifyCap">ModifyCap</a>&lt;Content&gt;): <a href="vault.md#0x1_vault_ModifyAccessor">ModifyAccessor</a>&lt;Content&gt;
 <b>acquires</b> <a href="vault.md#0x1_vault_Vault">Vault</a> {
     <b>let</b> content = &<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(cap.vault_address).content;
-    <b>assert</b>!(<a href="_is_some">option::is_some</a>(content), <a href="errors.md#0x1_errors_invalid_state">errors::invalid_state</a>(<a href="vault.md#0x1_vault_EACCESSOR_IN_USE">EACCESSOR_IN_USE</a>));
+    <b>assert</b>!(<a href="_is_some">option::is_some</a>(content), <a href="_invalid_state">error::invalid_state</a>(<a href="vault.md#0x1_vault_EACCESSOR_IN_USE">EACCESSOR_IN_USE</a>));
     <a href="vault.md#0x1_vault_ModifyAccessor">ModifyAccessor</a>{ vault_address: cap.vault_address, content: <a href="_extract">option::extract</a>(content) }
 }
 </code></pre>
@@ -1268,7 +1268,7 @@ to the vault.
     <b>let</b> content = &<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(vault_address).content;
     // We (should be/are) able <b>to</b> prove that the below cannot happen, but we leave the assertion
     // here anyway for double safety.
-    <b>assert</b>!(<a href="_is_none">option::is_none</a>(content), <a href="errors.md#0x1_errors_internal">errors::internal</a>(<a href="vault.md#0x1_vault_EACCESSOR_INCONSISTENCY">EACCESSOR_INCONSISTENCY</a>));
+    <b>assert</b>!(<a href="_is_none">option::is_none</a>(content), <a href="_internal">error::internal</a>(<a href="vault.md#0x1_vault_EACCESSOR_INCONSISTENCY">EACCESSOR_INCONSISTENCY</a>));
     <a href="_fill">option::fill</a>(content, new_content);
 }
 </code></pre>
@@ -1298,11 +1298,11 @@ during vault creation for this to succeed.
 <b>acquires</b> <a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>, <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>, <a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a> {
     <b>assert</b>!(
         <b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(cap.vault_address),
-        <a href="errors.md#0x1_errors_invalid_state">errors::invalid_state</a>(<a href="vault.md#0x1_vault_EDELEGATION_NOT_ENABLED">EDELEGATION_NOT_ENABLED</a>)
+        <a href="_invalid_state">error::invalid_state</a>(<a href="vault.md#0x1_vault_EDELEGATION_NOT_ENABLED">EDELEGATION_NOT_ENABLED</a>)
     );
 
     <b>let</b> addr = <a href="_address_of">signer::address_of</a>(to_signer);
-    <b>assert</b>!(addr != cap.vault_address, <a href="errors.md#0x1_errors_invalid_argument">errors::invalid_argument</a>(<a href="vault.md#0x1_vault_EDELEGATE_TO_SELF">EDELEGATE_TO_SELF</a>));
+    <b>assert</b>!(addr != cap.vault_address, <a href="_invalid_argument">error::invalid_argument</a>(<a href="vault.md#0x1_vault_EDELEGATE_TO_SELF">EDELEGATE_TO_SELF</a>));
 
     <b>if</b> (!<b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr)) {
         // Create <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a> <b>if</b> it is not yet existing.
@@ -1348,9 +1348,9 @@ Revokes the delegated right to acquire a capability of given type.
 <b>acquires</b> <a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>, <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>, <a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a> {
     <b>assert</b>!(
         <b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(cap.vault_address),
-        <a href="errors.md#0x1_errors_invalid_state">errors::invalid_state</a>(<a href="vault.md#0x1_vault_EDELEGATION_NOT_ENABLED">EDELEGATION_NOT_ENABLED</a>)
+        <a href="_invalid_state">error::invalid_state</a>(<a href="vault.md#0x1_vault_EDELEGATION_NOT_ENABLED">EDELEGATION_NOT_ENABLED</a>)
     );
-    <b>assert</b>!(<b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr), <a href="errors.md#0x1_errors_not_published">errors::not_published</a>(<a href="vault.md#0x1_vault_EDELEGATE">EDELEGATE</a>));
+    <b>assert</b>!(<b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr), <a href="_not_found">error::not_found</a>(<a href="vault.md#0x1_vault_EDELEGATE">EDELEGATE</a>));
 
     <b>let</b> delegate = <b>borrow_global_mut</b>&lt;<a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>&lt;Content&gt;&gt;(addr);
     <a href="vault.md#0x1_vault_remove_element">remove_element</a>(&<b>mut</b> delegate.granted_caps, &cap_type);
@@ -1392,7 +1392,7 @@ Revokes all delegate rights for this vault.
 <b>acquires</b> <a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>, <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>, <a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a> {
     <b>assert</b>!(
         <b>exists</b>&lt;<a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(cap.vault_address),
-        <a href="errors.md#0x1_errors_invalid_state">errors::invalid_state</a>(<a href="vault.md#0x1_vault_EDELEGATION_NOT_ENABLED">EDELEGATION_NOT_ENABLED</a>)
+        <a href="_invalid_state">error::invalid_state</a>(<a href="vault.md#0x1_vault_EDELEGATION_NOT_ENABLED">EDELEGATION_NOT_ENABLED</a>)
     );
     <b>let</b> delegates = &<b>mut</b> <b>borrow_global_mut</b>&lt;<a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a>&lt;Content&gt;&gt;(cap.vault_address).delegates;
     <b>while</b> (!<a href="_is_empty">vector::is_empty</a>(delegates)) {
@@ -1526,10 +1526,10 @@ and the new owner must re-create delegates as needed.
 <pre><code><b>public</b> <b>fun</b> <a href="vault.md#0x1_vault_transfer">transfer</a>&lt;Content: store + drop&gt;(cap: &<a href="vault.md#0x1_vault_TransferCap">TransferCap</a>&lt;Content&gt;, to_owner: &<a href="">signer</a>)
 <b>acquires</b> <a href="vault.md#0x1_vault_Vault">Vault</a>, <a href="vault.md#0x1_vault_VaultEvents">VaultEvents</a>, <a href="vault.md#0x1_vault_VaultDelegate">VaultDelegate</a>, <a href="vault.md#0x1_vault_VaultDelegates">VaultDelegates</a> {
     <b>let</b> new_addr = <a href="_address_of">signer::address_of</a>(to_owner);
-    <b>assert</b>!(!<b>exists</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(new_addr), <a href="errors.md#0x1_errors_already_published">errors::already_published</a>(<a href="vault.md#0x1_vault_EVAULT">EVAULT</a>));
+    <b>assert</b>!(!<b>exists</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(new_addr), <a href="_already_exists">error::already_exists</a>(<a href="vault.md#0x1_vault_EVAULT">EVAULT</a>));
     <b>assert</b>!(
         <a href="_is_some">option::is_some</a>(&<b>borrow_global</b>&lt;<a href="vault.md#0x1_vault_Vault">Vault</a>&lt;Content&gt;&gt;(cap.vault_address).content),
-        <a href="errors.md#0x1_errors_invalid_state">errors::invalid_state</a>(<a href="vault.md#0x1_vault_EACCESSOR_IN_USE">EACCESSOR_IN_USE</a>)
+        <a href="_invalid_state">error::invalid_state</a>(<a href="vault.md#0x1_vault_EACCESSOR_IN_USE">EACCESSOR_IN_USE</a>)
     );
 
     // Revoke all delegates.

@@ -934,8 +934,8 @@ object "A2_M" {
                     switch $block
                     case 2 {
                         // label L1
-                        // $t5 := 1
-                        $t5 := 1
+                        // $t5 := 262145
+                        $t5 := 262145
                         // abort($t5)
                         $Abort($t5)
                     }
@@ -1002,8 +1002,8 @@ object "A2_M" {
                     switch $block
                     case 2 {
                         // label L1
-                        // $t4 := 0
-                        $t4 := 0
+                        // $t4 := 262144
+                        $t4 := 262144
                         // abort($t4)
                         $Abort($t4)
                     }
@@ -1055,8 +1055,8 @@ object "A2_M" {
                     switch $block
                     case 2 {
                         // label L1
-                        // $t4 := 0
-                        $t4 := 0
+                        // $t4 := 262144
+                        $t4 := 262144
                         // abort($t4)
                         $Abort($t4)
                     }
@@ -1175,8 +1175,8 @@ object "A2_M" {
                     switch $block
                     case 2 {
                         // label L1
-                        // $t5 := 1
-                        $t5 := 1
+                        // $t5 := 262145
+                        $t5 := 262145
                         // abort($t5)
                         $Abort($t5)
                     }

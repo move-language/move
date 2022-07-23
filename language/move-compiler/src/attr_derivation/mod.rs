@@ -10,7 +10,8 @@ use crate::{
     parser::ast::{
         Attribute, AttributeValue, Attribute_, Attributes, Definition, Exp, Exp_, Function,
         FunctionBody_, FunctionName, FunctionSignature, LeadingNameAccess_, NameAccessChain,
-        NameAccessChain_, Type, Type_, Value_, Var, Visibility,
+        NameAccessChain_, StructDefinition, StructFields, StructName, Type, Type_, Value_, Var,
+        Visibility,
     },
     shared::{CompilationEnv, Name, NamedAddressMap},
 };
@@ -20,6 +21,8 @@ mod evm_deriver;
 
 const EVM_FLAVOR: &str = "evm";
 const ASYNC_FLAVOR: &str = "async";
+
+const EVENT_ATTR: &str = "event";
 
 /// Entry point for deriving definitions from attributes for the given module. Depending on the
 /// flavor specified via the flags, this is dispatching to the according attribute processor.
@@ -130,6 +133,22 @@ pub fn new_fun(
             loc,
             FunctionBody_::Defined((vec![], vec![], None, Box::new(Some(def)))),
         ),
+    }
+}
+
+/// Helper to create a new struct declaration.
+pub fn new_struct(loc: Loc, name: StructName, fields: StructFields) -> StructDefinition {
+    StructDefinition {
+        attributes: vec![sp(
+            // #[event]
+            loc,
+            vec![new_attr(loc, EVENT_ATTR, vec![])],
+        )],
+        loc,
+        abilities: vec![],
+        name,
+        type_parameters: vec![],
+        fields,
     }
 }
 

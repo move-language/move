@@ -65,7 +65,7 @@ use lsp_types::{
 use std::{
     cmp,
     collections::{BTreeMap, BTreeSet, HashMap},
-    fmt, fs,
+    fmt,
     path::{Path, PathBuf},
     sync::{Arc, Condvar, Mutex},
     thread,
@@ -348,105 +348,98 @@ impl SymbolicatorRunner {
         let thread_mtx_cvar = mtx_cvar.clone();
         let runner = SymbolicatorRunner { mtx_cvar };
 
-        thread::spawn(move || {
-            let (mtx, cvar) = &*thread_mtx_cvar;
-            // Locations opened in the IDE (files or directories) for which manifest file is missing
-            let mut missing_manifests = BTreeSet::new();
-            // infinite loop to wait for symbolication requests
-            eprintln!("starting symbolicator runner loop");
-
-            loop {
-                let starting_path_opt = {
-                    // hold the lock only as long as it takes to get the data, rather than through
-                    // the whole symbolication process (hence a separate scope here)
-                    let mut symbolicate = mtx.lock().unwrap();
-                    match symbolicate.clone() {
-                        RunnerState::Quit => break,
-                        RunnerState::Run(root_dir) => {
-                            *symbolicate = RunnerState::Wait;
-                            Some(root_dir)
-                        }
-                        RunnerState::Wait => {
-                            // wait for next request
-                            symbolicate = cvar.wait(symbolicate).unwrap();
-                            match symbolicate.clone() {
-                                RunnerState::Quit => break,
-                                RunnerState::Run(root_dir) => {
-                                    *symbolicate = RunnerState::Wait;
-                                    Some(root_dir)
+        thread::Builder::new()
+            .stack_size(16 * 1024 * 1024) // building Move code requires a larger stack size on Windows
+            .spawn(move || {
+                let (mtx, cvar) = &*thread_mtx_cvar;
+                // Locations opened in the IDE (files or directories) for which manifest file is missing
+                let mut missing_manifests = BTreeSet::new();
+                // infinite loop to wait for symbolication requests
+                eprintln!("starting symbolicator runner loop");
+                loop {
+                    let starting_path_opt = {
+                        // hold the lock only as long as it takes to get the data, rather than through
+                        // the whole symbolication process (hence a separate scope here)
+                        let mut symbolicate = mtx.lock().unwrap();
+                        match symbolicate.clone() {
+                            RunnerState::Quit => break,
+                            RunnerState::Run(root_dir) => {
+                                *symbolicate = RunnerState::Wait;
+                                Some(root_dir)
+                            }
+                            RunnerState::Wait => {
+                                // wait for next request
+                                symbolicate = cvar.wait(symbolicate).unwrap();
+                                match symbolicate.clone() {
+                                    RunnerState::Quit => break,
+                                    RunnerState::Run(root_dir) => {
+                                        *symbolicate = RunnerState::Wait;
+                                        Some(root_dir)
+                                    }
+                                    RunnerState::Wait => None,
                                 }
-                                RunnerState::Wait => None,
                             }
                         }
-                    }
-                };
+                    };
+                    if let Some(starting_path) = starting_path_opt {
+                        let root_dir = Self::root_dir(&starting_path);
+                        if root_dir.is_none() && !missing_manifests.contains(&starting_path) {
+                            eprintln!("reporting missing manifest");
 
-                if let Some(starting_path) = starting_path_opt {
-                    let root_dir = Self::root_dir(&starting_path);
-                    if root_dir.is_none() && !missing_manifests.contains(&starting_path) {
-                        eprintln!("reporting missing manifest");
-
-                        // report missing manifest file only once to avoid cluttering IDE's UI in
-                        // cases when developer indeed intended to open a standalone file that was
-                        // not meant to compile
-                        missing_manifests.insert(starting_path);
-                        if let Err(err) = sender.send(Err(anyhow!(
-                            "Unable to find package manifest. Make sure that
+                            // report missing manifest file only once to avoid cluttering IDE's UI in
+                            // cases when developer indeed intended to open a standalone file that was
+                            // not meant to compile
+                            missing_manifests.insert(starting_path);
+                            if let Err(err) = sender.send(Err(anyhow!(
+                                "Unable to find package manifest. Make sure that
                             the source files are located in a sub-directory of a package containing
                             a Move.toml file. "
-                        ))) {
-                            eprintln!("could not pass missing manifest error: {:?}", err);
-                        }
-                        continue;
-                    }
-                    eprintln!("symbolication started");
-
-                    match Symbolicator::get_symbols(root_dir.unwrap().as_path()) {
-                        Ok((symbols_opt, lsp_diagnostics)) => {
-                            eprintln!("symbolication finished");
-                            if let Some(new_symbols) = symbols_opt {
-                                // merge the new symbols with the old ones to support a
-                                // (potentially) new project/package that symbolication information
-                                // was built for
-                                //
-                                // TODO: we may consider "unloading" symbolication information when
-                                // files/directories are being closed but as with other performance
-                                // optimizations (e.g. incrementalizatino of the vfs), let's wait
-                                // until we know we actually need it
-                                eprintln!("merging symbols");
-                                let mut old_symbols = symbols.lock().unwrap();
-                                (*old_symbols).merge(new_symbols);
-                                eprintln!("merging symbols finished");
+                            ))) {
+                                eprintln!("could not pass missing manifest error: {:?}", err);
                             }
-
-                            if !lsp_diagnostics.is_empty() {
-                                eprintln!("reporting lsp diagnostics");
+                            continue;
+                        }
+                        eprintln!("symbolication started");
+                        match Symbolicator::get_symbols(root_dir.unwrap().as_path()) {
+                            Ok((symbols_opt, lsp_diagnostics)) => {
+                                eprintln!("symbolication finished");
+                                if let Some(new_symbols) = symbols_opt {
+                                    // merge the new symbols with the old ones to support a
+                                    // (potentially) new project/package that symbolication information
+                                    // was built for
+                                    //
+                                    // TODO: we may consider "unloading" symbolication information when
+                                    // files/directories are being closed but as with other performance
+                                    // optimizations (e.g. incrementalizatino of the vfs), let's wait
+                                    // until we know we actually need it
+                                    let mut old_symbols = symbols.lock().unwrap();
+                                    (*old_symbols).merge(new_symbols);
+                                }
                                 // set/reset (previous) diagnostics
                                 if let Err(err) = sender.send(Ok(lsp_diagnostics)) {
                                     eprintln!("could not pass diagnostics: {:?}", err);
                                 }
                             }
-                        }
-                        Err(err) => {
-                            eprintln!("symbolication failed: {:?}", err);
-
-                            if let Err(err) = sender.send(Err(err)) {
-                                eprintln!("could not pass compiler error: {:?}", err);
+                            Err(err) => {
+                                eprintln!("symbolication failed: {:?}", err);
+                                if let Err(err) = sender.send(Err(err)) {
+                                    eprintln!("could not pass compiler error: {:?}", err);
+                                }
                             }
                         }
                     }
                 }
-            }
-        });
+            })
+            .unwrap();
 
         runner
     }
 
-    pub fn run(&self, starting_path: &str) {
-        eprintln!("scheduling run for {}", starting_path);
+    pub fn run(&self, starting_path: PathBuf) {
+        eprintln!("scheduling run for {:?}", starting_path);
         let (mtx, cvar) = &*self.mtx_cvar;
         let mut symbolicate = mtx.lock().unwrap();
-        *symbolicate = RunnerState::Run(PathBuf::from(starting_path));
+        *symbolicate = RunnerState::Run(starting_path);
         cvar.notify_one();
         eprintln!("scheduled run");
     }
@@ -460,8 +453,6 @@ impl SymbolicatorRunner {
 
     /// Finds manifest file in a (sub)directory of the starting path passed as argument
     pub fn root_dir(starting_path: &Path) -> Option<PathBuf> {
-        eprintln!("find root for path: {}", starting_path.to_str().unwrap());
-
         let mut current_path_opt = Some(starting_path);
         while current_path_opt.is_some() {
             let current_path = current_path_opt.unwrap();
@@ -672,7 +663,7 @@ impl Symbolicator {
             let path = file_name_mapping.get(&cloned_defs.fhash.clone()).unwrap();
             file_mods
                 .entry(
-                    fs::canonicalize(path.as_str())
+                    dunce::canonicalize(path.as_str())
                         .unwrap_or_else(|_| PathBuf::from(path.as_str())),
                 )
                 .or_insert_with(BTreeSet::new)
@@ -706,7 +697,7 @@ impl Symbolicator {
 
             file_use_defs
                 .entry(
-                    fs::canonicalize(fpath.as_str())
+                    dunce::canonicalize(fpath.as_str())
                         .unwrap_or_else(|_| PathBuf::from(fpath.as_str())),
                 )
                 .or_insert_with(UseDefMap::new)
@@ -1879,7 +1870,8 @@ pub fn on_go_to_def_request(context: &Context, request: &Request, symbols: &Symb
         .text_document_position_params
         .text_document
         .uri
-        .path();
+        .to_file_path()
+        .unwrap();
     let loc = parameters.text_document_position_params.position;
     let line = loc.line;
     let col = loc.character;
@@ -1887,7 +1879,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request, symbols: &Symb
     on_use_request(
         context,
         symbols,
-        fpath,
+        &fpath,
         line,
         col,
         request.id.clone(),
@@ -1918,7 +1910,8 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request, symbols: 
         .text_document_position_params
         .text_document
         .uri
-        .path();
+        .to_file_path()
+        .unwrap();
     let loc = parameters.text_document_position_params.position;
     let line = loc.line;
     let col = loc.character;
@@ -1926,7 +1919,7 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request, symbols: 
     on_use_request(
         context,
         symbols,
-        fpath,
+        &fpath,
         line,
         col,
         request.id.clone(),
@@ -1953,7 +1946,12 @@ pub fn on_references_request(context: &Context, request: &Request, symbols: &Sym
     let parameters = serde_json::from_value::<ReferenceParams>(request.params.clone())
         .expect("could not deserialize references request");
 
-    let fpath = parameters.text_document_position.text_document.uri.path();
+    let fpath = parameters
+        .text_document_position
+        .text_document
+        .uri
+        .to_file_path()
+        .unwrap();
     let loc = parameters.text_document_position.position;
     let line = loc.line;
     let col = loc.character;
@@ -1962,7 +1960,7 @@ pub fn on_references_request(context: &Context, request: &Request, symbols: &Sym
     on_use_request(
         context,
         symbols,
-        fpath,
+        &fpath,
         line,
         col,
         request.id.clone(),
@@ -2008,7 +2006,8 @@ pub fn on_hover_request(context: &Context, request: &Request, symbols: &Symbols)
         .text_document_position_params
         .text_document
         .uri
-        .path();
+        .to_file_path()
+        .unwrap();
     let loc = parameters.text_document_position_params.position;
     let line = loc.line;
     let col = loc.character;
@@ -2016,7 +2015,7 @@ pub fn on_hover_request(context: &Context, request: &Request, symbols: &Symbols)
     on_use_request(
         context,
         symbols,
-        fpath,
+        &fpath,
         line,
         col,
         request.id.clone(),
@@ -2036,7 +2035,7 @@ pub fn on_hover_request(context: &Context, request: &Request, symbols: &Symbols)
 pub fn on_use_request(
     context: &Context,
     symbols: &Symbols,
-    use_fpath: &str,
+    use_fpath: &PathBuf,
     use_line: u32,
     use_col: u32,
     id: RequestId,
@@ -2045,7 +2044,7 @@ pub fn on_use_request(
     let mut result = None;
 
     let mut use_def_found = false;
-    if let Some(mod_symbols) = symbols.file_use_defs.get(&PathBuf::from(use_fpath)) {
+    if let Some(mod_symbols) = symbols.file_use_defs.get(use_fpath) {
         if let Some(uses) = mod_symbols.get(use_line) {
             for u in uses {
                 if use_col >= u.col_start && use_col <= u.col_end {
@@ -2265,7 +2264,7 @@ fn symbols_test() {
 
     let mut fpath = path.clone();
     fpath.push("sources/M1.move");
-    let cpath = fs::canonicalize(&fpath).unwrap();
+    let cpath = dunce::canonicalize(&fpath).unwrap();
 
     let mod_symbols = symbols.file_use_defs.get(&cpath).unwrap();
 
@@ -2948,7 +2947,7 @@ fn symbols_test() {
 
     let mut fpath = path.clone();
     fpath.push("sources/M3.move");
-    let cpath = fs::canonicalize(&fpath).unwrap();
+    let cpath = dunce::canonicalize(&fpath).unwrap();
 
     let mod_symbols = symbols.file_use_defs.get(&cpath).unwrap();
 
@@ -3098,7 +3097,7 @@ fn symbols_test() {
 
     let mut fpath = path.clone();
     fpath.push("sources/M4.move");
-    let cpath = fs::canonicalize(&fpath).unwrap();
+    let cpath = dunce::canonicalize(&fpath).unwrap();
 
     let mod_symbols = symbols.file_use_defs.get(&cpath).unwrap();
 

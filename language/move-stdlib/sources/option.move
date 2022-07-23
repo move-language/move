@@ -15,10 +15,10 @@ module std::option {
 
     /// The `Option` is in an invalid state for the operation attempted.
     /// The `Option` is `Some` while it should be `None`.
-    const EOPTION_IS_SET: u64 = 0;
+    const EOPTION_IS_SET: u64 = 0x40000;
     /// The `Option` is in an invalid state for the operation attempted.
     /// The `Option` is `None` while it should be `Some`.
-    const EOPTION_NOT_SET: u64 = 1;
+    const EOPTION_NOT_SET: u64 = 0x40001;
 
     /// Return an empty `Option`
     public fun none<Element>(): Option<Element> {

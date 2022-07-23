@@ -5,7 +5,7 @@ module std::ascii {
     use std::option::{Self, Option};
 
     /// An invalid ASCII character was encountered when creating an ASCII string.
-    const EINVALID_ASCII_CHARACTER: u64 = 0;
+    const EINVALID_ASCII_CHARACTER: u64 = 0x10000;
 
    /// The `String` struct holds a vector of bytes that all represent
    /// valid ASCII characters. Note that these ASCII characters may not all

@@ -22,7 +22,11 @@ error: post-condition does not hold
    =         `invariant forall j in 0..i: v[j] == old(v)[j] + 1;` = <redacted>
    =     at tests/sources/functional/macro_verification.move:26: foreach
    =         `invariant forall j in i..len(v): v[j] == old(v)[j];` = <redacted>
+   =     enter loop, variable(s) v, i havocked and reassigned
+   =         v = <redacted>
+   =         i = <redacted>
    =         `invariant forall j in i..len(v): v[j] == old(v)[j];` = <redacted>
+   =     loop invariant holds at current state
    =     at tests/sources/functional/macro_verification.move:23: foreach
    =         `invariant i >= 0 && i <= len(v);` = <redacted>
    =     at tests/sources/functional/macro_verification.move:24: foreach
@@ -62,7 +66,11 @@ error: post-condition does not hold
    =         `invariant i >= 0 && i <= len(v);` = <redacted>
    =     at tests/sources/functional/macro_verification.move:50: reduce
    =         `invariant sum == spec_sum(v, i);` = <redacted>
+   =     enter loop, variable(s) i, sum havocked and reassigned
+   =         i = <redacted>
+   =         sum = <redacted>
    =         `invariant sum == spec_sum(v, i);` = <redacted>
+   =     loop invariant holds at current state
    =     at tests/sources/functional/macro_verification.move:49: reduce
    =         `invariant i >= 0 && i <= len(v);` = <redacted>
    =     at tests/sources/functional/macro_verification.move:50: reduce
@@ -108,6 +116,10 @@ error: post-condition does not hold
    =     at tests/sources/functional/macro_verification.move:48: reduce
    =     at tests/sources/functional/macro_verification.move:49: reduce
    =     at tests/sources/functional/macro_verification.move:50: reduce
+   =     enter loop, variable(s) i, sum havocked and reassigned
+   =         i = <redacted>
+   =         sum = <redacted>
+   =     loop invariant holds at current state
    =     at tests/sources/functional/macro_verification.move:49: reduce
    =     at tests/sources/functional/macro_verification.move:50: reduce
    =     at tests/sources/functional/macro_verification.move:43: reduce

@@ -63,6 +63,11 @@ impl Prove {
         }
         args.extend(opts.iter().cloned());
         let options = move_prover::cli::Options::create_from_args(&args)?;
+        if for_test {
+            options.setup_logging_for_test();
+        } else {
+            options.setup_logging();
+        }
 
         run_move_prover(config, &rerooted_path, &target_filter, for_test, options)
     }
@@ -183,9 +188,6 @@ pub fn run_move_prover(
     let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
     if for_test {
         options.set_quiet();
-        options.setup_logging_for_test();
-    } else {
-        options.setup_logging();
     }
     let now = Instant::now();
     let model = config.move_model_for_package(

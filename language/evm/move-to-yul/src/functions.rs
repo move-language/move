@@ -43,11 +43,13 @@ impl<'a> FunctionGenerator<'a> {
         let fun = &ctx.env.get_function(fun_id.to_qualified_id());
         // TODO: change back to is_native_or_intrinsic if we decide to implement
         // intrinsic functions (such as reverse, contains, is_empty) in the Vector module as well
-        if fun.is_native() {
+        // TODO: create a compilation flag to gate "send_"
+        if fun.is_native() || fun.get_full_name_str().contains("send_") {
             // Special treatment for native functions, which have custom generators.
             ctx.native_funs.gen_native_function(self, ctx, fun_id);
             return;
         }
+
         let target = &ctx.targets.get_target(fun, &FunctionVariant::Baseline);
 
         // Emit function header
@@ -341,14 +343,16 @@ impl<'a> FunctionGenerator<'a> {
                     // Move function call
                     Function(m, f, inst) => {
                         print_loc();
-                        self.move_call(
-                            ctx,
-                            target,
-                            dest,
-                            m.qualified(*f)
-                                .instantiate(Type::instantiate_slice(inst, &fun_id.inst)),
-                            srcs.iter().map(local),
-                        )
+                        let fun_id = m
+                            .qualified(*f)
+                            .instantiate(Type::instantiate_slice(inst, &fun_id.inst));
+                        let fun = &ctx.env.get_function(fun_id.to_qualified_id());
+                        if fun.get_name_string().contains("send__")
+                            || fun.get_name_string().contains("bcs::to_bytes")
+                        {
+                            return;
+                        }
+                        self.move_call(ctx, target, dest, fun_id, srcs.iter().map(local))
                     }
 
                     // Packing and unpacking of structs

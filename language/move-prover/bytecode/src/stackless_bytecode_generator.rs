@@ -1200,14 +1200,26 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     vec![],
                     None,
                 ));
-                for operand in operands {
-                    self.code.push(Bytecode::Call(
-                        attr_id,
-                        vec![],
-                        mk_vec_function_operation("push_back", vec![ty.clone()]),
-                        vec![temp_index, operand],
-                        None,
+                if !operands.is_empty() {
+                    let mut_ref_index = self.temp_count;
+                    self.local_types.push(Type::Reference(
+                        true,
+                        Box::new(Type::Vector(Box::new(ty.clone()))),
                     ));
+                    self.temp_count += 1;
+
+                    self.code
+                        .push(mk_unary(Operation::BorrowLoc, mut_ref_index, temp_index));
+
+                    for operand in operands {
+                        self.code.push(Bytecode::Call(
+                            attr_id,
+                            vec![],
+                            mk_vec_function_operation("push_back", vec![ty.clone()]),
+                            vec![mut_ref_index, operand],
+                            None,
+                        ));
+                    }
                 }
             }
             MoveBytecode::VecUnpack(sig, n) => {
@@ -1218,15 +1230,29 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.local_types.extend(vec![ty.clone(); n]);
                 self.temp_count += n;
                 self.temp_stack.extend(&temps);
-                for temp in temps {
-                    self.code.push(Bytecode::Call(
-                        attr_id,
-                        vec![temp],
-                        mk_vec_function_operation("pop_back", vec![ty.clone()]),
-                        vec![operand_index],
-                        None,
+
+                if !temps.is_empty() {
+                    let mut_ref_index = self.temp_count;
+                    self.local_types.push(Type::Reference(
+                        true,
+                        Box::new(Type::Vector(Box::new(ty.clone()))),
                     ));
+                    self.temp_count += 1;
+
+                    self.code
+                        .push(mk_unary(Operation::BorrowLoc, mut_ref_index, operand_index));
+
+                    for temp in temps {
+                        self.code.push(Bytecode::Call(
+                            attr_id,
+                            vec![temp],
+                            mk_vec_function_operation("pop_back", vec![ty.clone()]),
+                            vec![mut_ref_index],
+                            None,
+                        ));
+                    }
                 }
+
                 self.code.push(Bytecode::Call(
                     attr_id,
                     vec![],

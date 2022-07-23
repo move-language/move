@@ -37,7 +37,7 @@ module std::option_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(abort_code = 0x40001)]
     fun option_borrow_none() {
         option::borrow(&option::none<u64>());
     }
@@ -51,7 +51,7 @@ module std::option_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(abort_code = 0x40001)]
     fun borrow_mut_none() {
         option::borrow_mut(&mut option::none<u64>());
     }
@@ -80,7 +80,7 @@ module std::option_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(abort_code = 0x40001)]
     fun extract_none() {
         option::extract(&mut option::none<u64>());
     }
@@ -107,7 +107,7 @@ module std::option_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(abort_code = 0x40001)]
     fun swap_none() {
         option::swap(&mut option::none<u64>(), 1);
     }
@@ -121,7 +121,7 @@ module std::option_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 0)]
+    #[expected_failure(abort_code = 0x40000)]
     fun fill_some() {
         option::fill(&mut option::some(3), 0);
     }
@@ -138,7 +138,7 @@ module std::option_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(abort_code = 0x40001)]
     fun destroy_some_none() {
         option::destroy_some(option::none<u64>());
     }
@@ -149,7 +149,7 @@ module std::option_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 0)]
+    #[expected_failure(abort_code = 0x40000)]
     fun destroy_none_some() {
         option::destroy_none(option::some<u64>(0));
     }

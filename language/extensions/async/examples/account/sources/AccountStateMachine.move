@@ -7,7 +7,7 @@
 /// pending transactions over a certain age.
 module This::AccountStateMachine {
 
-    use Async::Actor::{self, epoch_time};
+    use Async::Actor::{self, virtual_time};
     use std::vector;
 
     const MAX: u64 = 43;
@@ -48,7 +48,7 @@ module This::AccountStateMachine {
         // Do not initiate the transfer if there are not enough funds.
         assert!(this.value >= v, 1);
         let xfer_id = new_xfer_id(this);
-        vector::push_back(&mut this.pending, PendingTransfer{xfer_id, amount: v, initiated_at: epoch_time()});
+        vector::push_back(&mut this.pending, PendingTransfer{xfer_id, amount: v, initiated_at: virtual_time()});
         // Call into a special version of deposit which calls us back once done.
         send_xfer_deposit(dest, v, self(), xfer_id);
     }

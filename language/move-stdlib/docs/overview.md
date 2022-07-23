@@ -15,6 +15,7 @@ This is the root document for the Move stdlib module documentation. The Move std
 -  [`0x1::ascii`](ascii.md#0x1_ascii)
 -  [`0x1::bcs`](bcs.md#0x1_bcs)
 -  [`0x1::bit_vector`](bit_vector.md#0x1_bit_vector)
+-  [`0x1::error`](error.md#0x1_error)
 -  [`0x1::fixed_point32`](fixed_point32.md#0x1_fixed_point32)
 -  [`0x1::hash`](hash.md#0x1_hash)
 -  [`0x1::option`](option.md#0x1_option)

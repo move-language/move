@@ -728,7 +728,17 @@ impl<'env> FunctionTranslator<'env> {
 
         // Print debug comments.
         if let Some(comment) = fun_target.get_debug_comment(attr_id) {
-            emitln!(writer, "// {}", comment);
+            if comment.starts_with("info: ") {
+                // if the comment is annotated with "info: ", it should be displayed to the user
+                emitln!(
+                    writer,
+                    "assume {{:print \"${}(){}\"}} true;",
+                    &comment[..4],
+                    &comment[4..]
+                );
+            } else {
+                emitln!(writer, "// {}", comment);
+            }
         }
 
         // Track location for execution traces.

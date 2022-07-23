@@ -797,20 +797,9 @@ impl Frame {
                         interpreter.operand_stack.push(Value::u128(*int_const))?;
                     }
                     Bytecode::LdConst(idx) => {
-                        let constant = resolver.constant_at(*idx);
-                        gas_status.charge_instr_with_size(
-                            Opcodes::LD_CONST,
-                            AbstractMemorySize::new(constant.data.len() as GasCarrier),
-                        )?;
-                        interpreter.operand_stack.push(
-                            Value::deserialize_constant(constant).ok_or_else(|| {
-                                PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
-                                    .with_message(
-                                    "Verifier failed to verify the deserialization of constants"
-                                        .to_owned(),
-                                )
-                            })?,
-                        )?
+                        let value = resolver.constant_at(*idx)?;
+                        gas_status.charge_instr_with_size(Opcodes::LD_CONST, value.size())?;
+                        interpreter.operand_stack.push(value)?;
                     }
                     Bytecode::LdTrue => {
                         gas_status.charge_instr(Opcodes::LD_TRUE)?;

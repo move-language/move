@@ -12,12 +12,13 @@ use move_binary_format::{
     binary_views::BinaryIndexedView,
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
-        AbilitySet, Bytecode, CompiledModule, CompiledScript, Constant, ConstantPoolIndex,
-        FieldHandleIndex, FieldInstantiationIndex, FunctionDefinition, FunctionDefinitionIndex,
-        FunctionHandleIndex, FunctionInstantiationIndex, Signature, SignatureIndex, SignatureToken,
+        AbilitySet, Bytecode, CompiledModule, CompiledScript, ConstantPoolIndex, FieldHandleIndex,
+        FieldInstantiationIndex, FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex,
+        FunctionInstantiationIndex, Signature, SignatureIndex, SignatureToken,
         StructDefInstantiationIndex, StructDefinition, StructDefinitionIndex,
         StructFieldInformation, TableIndex,
     },
+    internals::ModuleIndex,
     IndexKind,
 };
 use move_bytecode_verifier::{self, cyclic_dependencies, dependencies};
@@ -30,6 +31,7 @@ use move_core_types::{
 use move_vm_types::{
     data_store::DataStore,
     loaded_data::runtime_types::{CachedStructIndex, StructType, Type},
+    values::Value,
 };
 use parking_lot::RwLock;
 use sha3::{Digest, Sha3_256};
@@ -1204,10 +1206,10 @@ impl<'a> Resolver<'a> {
     // Constant resolution
     //
 
-    pub(crate) fn constant_at(&self, idx: ConstantPoolIndex) -> &Constant {
+    pub(crate) fn constant_at(&self, idx: ConstantPoolIndex) -> PartialVMResult<Value> {
         match &self.binary {
-            BinaryType::Module(module) => module.module.constant_at(idx),
-            BinaryType::Script(script) => script.script.constant_at(idx),
+            BinaryType::Module(module) => module.consts[idx.into_index()].copy_value(),
+            BinaryType::Script(script) => script.consts[idx.into_index()].copy_value(),
         }
     }
 
@@ -1398,6 +1400,11 @@ pub(crate) struct Module {
     // `VecMutBorrow(SignatureIndex)`, the `SignatureIndex` maps to a single `SignatureToken`, and
     // hence, a single type.
     single_signature_token_map: BTreeMap<SignatureIndex, Type>,
+
+    // list of deserialized constants
+    // Constants are stored in the CompiledModule in BCS but this requires deserialization for each
+    // call to LdConst. We use an already deserialized list of values here to avoid the computation
+    consts: Vec<Value>,
 }
 
 impl Module {
@@ -1417,6 +1424,7 @@ impl Module {
         let mut function_map = HashMap::new();
         let mut struct_map = HashMap::new();
         let mut single_signature_token_map = BTreeMap::new();
+        let mut consts = vec![];
 
         let mut create = || {
             for struct_handle in module.struct_handles() {
@@ -1563,6 +1571,15 @@ impl Module {
                 field_instantiations.push(FieldInstantiation { offset, owner });
             }
 
+            module.constant_pool.iter().try_for_each(|c| {
+                Value::deserialize_constant(c)
+                    .ok_or_else(|| {
+                        PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(
+                            "Verifier failed to verify the deserialization of constants".to_owned(),
+                        )
+                    })
+                    .map(|v| consts.push(v))
+            })?;
             Ok(())
         };
 
@@ -1580,6 +1597,7 @@ impl Module {
                 function_map,
                 struct_map,
                 single_signature_token_map,
+                consts,
             }),
             Err(err) => Err((err, module)),
         }
@@ -1660,6 +1678,9 @@ struct Script {
 
     // a map of single-token signature indices to type
     single_signature_token_map: BTreeMap<SignatureIndex, Type>,
+
+    // list of deserialized constants
+    consts: Vec<Value>,
 }
 
 impl Script {
@@ -1796,6 +1817,22 @@ impl Script {
             }
         }
 
+        let mut consts = vec![];
+        script
+            .constant_pool
+            .iter()
+            .try_for_each(|c| {
+                Value::deserialize_constant(c)
+                    .ok_or_else(|| {
+                        PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(
+                            "Verifier failed to verify the deserialization of constants".to_owned(),
+                        )
+                    })
+                    .map(|v| consts.push(v))
+                // TODO: remove this unwrap
+            })
+            .unwrap();
+
         Ok(Self {
             script,
             struct_refs,
@@ -1805,6 +1842,7 @@ impl Script {
             parameter_tys,
             return_tys,
             single_signature_token_map,
+            consts,
         })
     }
 

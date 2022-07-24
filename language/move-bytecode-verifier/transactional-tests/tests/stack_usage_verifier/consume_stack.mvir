@@ -18,7 +18,7 @@ module 0x1.M {
     }
 
     // ImmBorrowLoc(0),
-    // LdAddr(1),
+    // LdConst(1),
     // ImmBorrowGlobal(StructDefinitionIndex(4)),
     // ImmBorrowField(FieldHandleIndex(0)),
     // Call(45),

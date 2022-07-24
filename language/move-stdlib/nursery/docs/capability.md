@@ -110,7 +110,7 @@ is_valid_delegate_for_feature(d);
 -  [Module Specification](#@Module_Specification_4)
 
 
-<pre><code><b>use</b> <a href="errors.md#0x1_errors">0x1::errors</a>;
+<pre><code><b>use</b> <a href="">0x1::error</a>;
 <b>use</b> <a href="">0x1::signer</a>;
 <b>use</b> <a href="">0x1::vector</a>;
 </code></pre>
@@ -272,7 +272,7 @@ they own the <code>Feature</code> type parameter.
 
 <pre><code><b>public</b> <b>fun</b> <a href="capability.md#0x1_capability_create">create</a>&lt;Feature&gt;(owner: &<a href="">signer</a>, _feature_witness: &Feature) {
     <b>let</b> addr = <a href="_address_of">signer::address_of</a>(owner);
-    <b>assert</b>!(!<b>exists</b>&lt;<a href="capability.md#0x1_capability_CapState">CapState</a>&lt;Feature&gt;&gt;(addr), <a href="errors.md#0x1_errors_already_published">errors::already_published</a>(<a href="capability.md#0x1_capability_ECAP">ECAP</a>));
+    <b>assert</b>!(!<b>exists</b>&lt;<a href="capability.md#0x1_capability_CapState">CapState</a>&lt;Feature&gt;&gt;(addr), <a href="_already_exists">error::already_exists</a>(<a href="capability.md#0x1_capability_ECAP">ECAP</a>));
     <b>move_to</b>&lt;<a href="capability.md#0x1_capability_CapState">CapState</a>&lt;Feature&gt;&gt;(owner, <a href="capability.md#0x1_capability_CapState">CapState</a>{ delegates: <a href="_empty">vector::empty</a>() });
 }
 </code></pre>
@@ -358,12 +358,12 @@ Helper to validate an acquire. Returns the root address of the capability.
     <b>if</b> (<b>exists</b>&lt;<a href="capability.md#0x1_capability_CapDelegateState">CapDelegateState</a>&lt;Feature&gt;&gt;(addr)) {
         <b>let</b> root_addr = <b>borrow_global</b>&lt;<a href="capability.md#0x1_capability_CapDelegateState">CapDelegateState</a>&lt;Feature&gt;&gt;(addr).root;
         // double check that requester is actually registered <b>as</b> a delegate
-        <b>assert</b>!(<b>exists</b>&lt;<a href="capability.md#0x1_capability_CapState">CapState</a>&lt;Feature&gt;&gt;(root_addr), <a href="errors.md#0x1_errors_invalid_state">errors::invalid_state</a>(<a href="capability.md#0x1_capability_EDELEGATE">EDELEGATE</a>));
+        <b>assert</b>!(<b>exists</b>&lt;<a href="capability.md#0x1_capability_CapState">CapState</a>&lt;Feature&gt;&gt;(root_addr), <a href="_invalid_state">error::invalid_state</a>(<a href="capability.md#0x1_capability_EDELEGATE">EDELEGATE</a>));
         <b>assert</b>!(<a href="_contains">vector::contains</a>(&<b>borrow_global</b>&lt;<a href="capability.md#0x1_capability_CapState">CapState</a>&lt;Feature&gt;&gt;(root_addr).delegates, &addr),
-               <a href="errors.md#0x1_errors_invalid_state">errors::invalid_state</a>(<a href="capability.md#0x1_capability_EDELEGATE">EDELEGATE</a>));
+               <a href="_invalid_state">error::invalid_state</a>(<a href="capability.md#0x1_capability_EDELEGATE">EDELEGATE</a>));
         root_addr
     } <b>else</b> {
-        <b>assert</b>!(<b>exists</b>&lt;<a href="capability.md#0x1_capability_CapState">CapState</a>&lt;Feature&gt;&gt;(addr), <a href="errors.md#0x1_errors_not_published">errors::not_published</a>(<a href="capability.md#0x1_capability_ECAP">ECAP</a>));
+        <b>assert</b>!(<b>exists</b>&lt;<a href="capability.md#0x1_capability_CapState">CapState</a>&lt;Feature&gt;&gt;(addr), <a href="_not_found">error::not_found</a>(<a href="capability.md#0x1_capability_ECAP">ECAP</a>));
         addr
     }
 }

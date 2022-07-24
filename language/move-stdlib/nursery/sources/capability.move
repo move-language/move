@@ -72,7 +72,7 @@
 /// ```
 ///
 module std::capability {
-    use std::errors;
+    use std::error;
     use std::signer;
     use std::vector;
 
@@ -104,7 +104,7 @@ module std::capability {
     /// they own the `Feature` type parameter.
     public fun create<Feature>(owner: &signer, _feature_witness: &Feature) {
         let addr = signer::address_of(owner);
-        assert!(!exists<CapState<Feature>>(addr), errors::already_published(ECAP));
+        assert!(!exists<CapState<Feature>>(addr), error::already_exists(ECAP));
         move_to<CapState<Feature>>(owner, CapState{ delegates: vector::empty() });
     }
 
@@ -130,12 +130,12 @@ module std::capability {
         if (exists<CapDelegateState<Feature>>(addr)) {
             let root_addr = borrow_global<CapDelegateState<Feature>>(addr).root;
             // double check that requester is actually registered as a delegate
-            assert!(exists<CapState<Feature>>(root_addr), errors::invalid_state(EDELEGATE));
+            assert!(exists<CapState<Feature>>(root_addr), error::invalid_state(EDELEGATE));
             assert!(vector::contains(&borrow_global<CapState<Feature>>(root_addr).delegates, &addr),
-                   errors::invalid_state(EDELEGATE));
+                   error::invalid_state(EDELEGATE));
             root_addr
         } else {
-            assert!(exists<CapState<Feature>>(addr), errors::not_published(ECAP));
+            assert!(exists<CapState<Feature>>(addr), error::not_found(ECAP));
             addr
         }
     }

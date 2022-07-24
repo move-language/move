@@ -93,7 +93,7 @@ impl FunctionTargetProcessor for DebugInstrumenter {
                     for idx in affected_variables {
                         // Only emit this for user declared locals, not for ones introduced
                         // by stack elimination.
-                        if idx < fun_env.get_local_count() {
+                        if !fun_env.is_temporary(idx) {
                             builder.emit_with(|id| {
                                 Call(id, vec![], Operation::TraceLocal(idx), vec![idx], None)
                             });

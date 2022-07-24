@@ -2,9 +2,9 @@ module std::bit_vector {
     use std::vector;
 
     /// The provided index is out of bounds
-    const EINDEX: u64 = 0;
+    const EINDEX: u64 = 0x20000;
     /// An invalid length of bitvector was given
-    const ELENGTH: u64 = 1;
+    const ELENGTH: u64 = 0x20001;
 
     const WORD_SIZE: u64 = 1;
     /// The maximum allowed bitvector size

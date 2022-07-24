@@ -292,7 +292,7 @@ impl<'a> Context<'a> {
             }
         };
         // Identify special functions.
-        let constructor = self.identify_function(module, is_create_fun, "#[create]");
+        let constructor = self.identify_function(module, is_create_fun, "#[create]/#[init]");
         let receive = self.identify_function(module, is_receive_fun, "#[receive]");
         let fallback = self.identify_function(module, is_fallback_fun, "#[fallback]");
 

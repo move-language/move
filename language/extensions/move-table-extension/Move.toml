@@ -3,12 +3,11 @@ name = "MoveTableExtension"
 version = "1.0.0"
 
 [addresses]
-std = "_"
-Extensions = "_"
+extensions = "_"
 
 [dev-addresses]
 std = "0x1"
-Extensions = "0x2"
+extensions = "0x2"
 
 [dependencies]
 MoveStdlib = { local = "../../move-stdlib" }

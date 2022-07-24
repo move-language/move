@@ -574,6 +574,11 @@ impl Interpreter {
     }
 
     fn get_internal_state(&self) -> ExecutionState {
+        self.get_stack_frames(usize::MAX)
+    }
+
+    /// Get count stack frames starting from the top of the stack.
+    pub(crate) fn get_stack_frames(&self, count: usize) -> ExecutionState {
         // collect frames in the reverse order as this is what is
         // normally expected from the stack trace (outermost frame
         // is the last one)
@@ -582,6 +587,7 @@ impl Interpreter {
             .0
             .iter()
             .rev()
+            .take(count)
             .map(|frame| {
                 (
                     frame.function.module_id().cloned(),
@@ -1043,7 +1049,7 @@ impl Frame {
                                 self.function.pretty_string(),
                                 self.pc,
                             ));
-                        if cfg!(feature = "testing") {
+                        if cfg!(feature = "testing") || cfg!(feature = "stacktrace") {
                             return Err(error.with_exec_state(interpreter.get_internal_state()));
                         } else {
                             return Err(error);

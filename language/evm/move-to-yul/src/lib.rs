@@ -31,11 +31,11 @@ use codespan_reporting::{
     diagnostic::Severity,
     term::termcolor::{ColorChoice, StandardStream, WriteColor},
 };
-use move_compiler::shared::PackagePaths;
+use move_compiler::{shared::PackagePaths, Flags};
 use move_core_types::metadata::Metadata;
 use move_model::{
     model::GlobalEnv, options::ModelBuilderOptions, parse_addresses_from_options,
-    run_model_builder_with_options,
+    run_model_builder_with_options_and_compilation_flags,
 };
 use std::fs;
 
@@ -49,7 +49,7 @@ pub fn run_to_yul_errors_to_stderr(options: Options) -> anyhow::Result<()> {
 pub fn run_to_yul<W: WriteColor>(error_writer: &mut W, mut options: Options) -> anyhow::Result<()> {
     // Run the model builder.
     let addrs = parse_addresses_from_options(options.named_address_mapping.clone())?;
-    let env = run_model_builder_with_options(
+    let env = run_model_builder_with_options_and_compilation_flags(
         vec![PackagePaths {
             name: None,
             paths: options.sources.clone(),
@@ -61,6 +61,7 @@ pub fn run_to_yul<W: WriteColor>(error_writer: &mut W, mut options: Options) -> 
             named_address_map: addrs,
         }],
         ModelBuilderOptions::default(),
+        Flags::empty().set_flavor("async"),
     )?;
     // If the model contains any errors, report them now and exit.
     check_errors(
@@ -101,7 +102,7 @@ pub fn run_to_abi_metadata<W: WriteColor>(
 ) -> anyhow::Result<Vec<Metadata>> {
     // Run the model builder.
     let addrs = parse_addresses_from_options(options.named_address_mapping.clone())?;
-    let env = run_model_builder_with_options(
+    let env = run_model_builder_with_options_and_compilation_flags(
         vec![PackagePaths {
             name: None,
             paths: options.sources.clone(),
@@ -113,6 +114,7 @@ pub fn run_to_abi_metadata<W: WriteColor>(
             named_address_map: addrs,
         }],
         ModelBuilderOptions::default(),
+        Flags::empty().set_flavor("async"),
     )?;
     // If the model contains any errors, report them now and exit.
     check_errors(

@@ -123,7 +123,7 @@ An ASCII character.
 An invalid ASCII character was encountered when creating an ASCII string.
 
 
-<pre><code><b>const</b> <a href="ascii.md#0x1_ascii_EINVALID_ASCII_CHARACTER">EINVALID_ASCII_CHARACTER</a>: u64 = 0;
+<pre><code><b>const</b> <a href="ascii.md#0x1_ascii_EINVALID_ASCII_CHARACTER">EINVALID_ASCII_CHARACTER</a>: u64 = 65536;
 </code></pre>
 
 

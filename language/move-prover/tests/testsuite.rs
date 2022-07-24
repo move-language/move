@@ -207,7 +207,7 @@ fn get_flags_and_baseline(
     flags.push("--named-addresses=std=0x1".to_string());
 
     // Add flag assigning an address to stdlib extensions.
-    flags.push("--named-addresses=Extensions=0x2".to_string());
+    flags.push("--named-addresses=extensions=0x2".to_string());
 
     // Add flags specific to the feature.
     flags.extend(feature.flags.iter().map(|f| f.to_string()));

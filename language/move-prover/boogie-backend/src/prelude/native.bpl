@@ -242,32 +242,32 @@ function $IsValid'table{{S}}'(t: {{Self}}): bool {
     (forall i: int:: ContainsTable(t, i) ==> $IsValid{{SV}}(GetTable(t, i)))
 }
 
-procedure {:inline 2} {{Ext}}_Table_new{{S}}() returns (v: {{Self}}) {
+procedure {:inline 2} {{Ext}}_table_new{{S}}() returns (v: {{Self}}) {
     v := EmptyTable();
 }
 
-procedure {:inline 2} {{Ext}}_Table_destroy_empty{{S}}(t: {{Self}}) {
+procedure {:inline 2} {{Ext}}_table_destroy_empty{{S}}(t: {{Self}}) {
     if (LenTable(t) != 0) {
         call $Abort($StdError(1/*INVALID_STATE*/, 102/*ENOT_EMPTY*/));
     }
 }
 
-procedure {:inline 2} {{Ext}}_Table_drop_unchecked{{S}}(t: {{Self}}) {
+procedure {:inline 2} {{Ext}}_table_drop_unchecked{{S}}(t: {{Self}}) {
 }
 
-procedure {:inline 2} {{Ext}}_Table_length{{S}}(t: ({{Self}})) returns (l: int) {
+procedure {:inline 2} {{Ext}}_table_length{{S}}(t: ({{Self}})) returns (l: int) {
     l := LenTable(t);
 }
 
-procedure {:inline 2} {{Ext}}_Table_empty{{S}}(t: ({{Self}})) returns (r: bool) {
+procedure {:inline 2} {{Ext}}_table_empty{{S}}(t: ({{Self}})) returns (r: bool) {
     r := LenTable(t) == 0;
 }
 
-procedure {:inline 2} {{Ext}}_Table_contains{{S}}(t: ({{Self}}), k: {{K}}) returns (r: bool) {
+procedure {:inline 2} {{Ext}}_table_contains{{S}}(t: ({{Self}}), k: {{K}}) returns (r: bool) {
     r := ContainsTable(t, {{ENC}}(k));
 }
 
-procedure {:inline 2} {{Ext}}_Table_add{{S}}(m: $Mutation ({{Self}}), k: {{K}}, v: {{V}}) returns (m': $Mutation({{Self}})) {
+procedure {:inline 2} {{Ext}}_table_add{{S}}(m: $Mutation ({{Self}}), k: {{K}}, v: {{V}}) returns (m': $Mutation({{Self}})) {
     var enc_k: int;
     var t: {{Self}};
     enc_k := {{ENC}}(k);
@@ -279,7 +279,7 @@ procedure {:inline 2} {{Ext}}_Table_add{{S}}(m: $Mutation ({{Self}}), k: {{K}}, 
     }
 }
 
-procedure {:inline 2} {{Ext}}_Table_remove{{S}}(m: $Mutation ({{Self}}), k: {{K}})
+procedure {:inline 2} {{Ext}}_table_remove{{S}}(m: $Mutation ({{Self}}), k: {{K}})
 returns (v: {{V}}, m': $Mutation({{Self}})) {
     var enc_k: int;
     var t: {{Self}};
@@ -293,7 +293,7 @@ returns (v: {{V}}, m': $Mutation({{Self}})) {
     }
 }
 
-procedure {:inline 2} {{Ext}}_Table_borrow{{S}}(t: {{Self}}, k: {{K}}) returns (v: {{V}}) {
+procedure {:inline 2} {{Ext}}_table_borrow{{S}}(t: {{Self}}, k: {{K}}) returns (v: {{V}}) {
     var enc_k: int;
     enc_k := {{ENC}}(k);
     if (!ContainsTable(t, enc_k)) {
@@ -303,7 +303,7 @@ procedure {:inline 2} {{Ext}}_Table_borrow{{S}}(t: {{Self}}, k: {{K}}) returns (
     }
 }
 
-procedure {:inline 2} {{Ext}}_Table_borrow_mut{{S}}(m: $Mutation ({{Self}}), k: {{K}})
+procedure {:inline 2} {{Ext}}_table_borrow_mut{{S}}(m: $Mutation ({{Self}}), k: {{K}})
 returns (dst: $Mutation ({{V}}), m': $Mutation ({{Self}})) {
     var enc_k: int;
     var t: {{Self}};
@@ -317,28 +317,28 @@ returns (dst: $Mutation ({{V}}), m': $Mutation ({{Self}})) {
     }
 }
 
-function {:inline} {{Ext}}_Table_spec_table{{S}}(): {{Self}} {
+function {:inline} {{Ext}}_table_spec_table{{S}}(): {{Self}} {
     EmptyTable()
 }
 
-function {:inline} {{Ext}}_Table_spec_len{{S}}(t: {{Self}}): int {
+function {:inline} {{Ext}}_table_spec_len{{S}}(t: {{Self}}): int {
     LenTable(t)
 }
 
-function {:inline} {{Ext}}_Table_spec_contains{{S}}(t: {{Self}}, k: {{K}}): bool {
+function {:inline} {{Ext}}_table_spec_contains{{S}}(t: {{Self}}, k: {{K}}): bool {
     ContainsTable(t, {{ENC}}(k))
 }
 
 
-function {:inline} {{Ext}}_Table_spec_add{{S}}(t: {{Self}}, k: {{K}}, v: {{V}}): {{Self}} {
+function {:inline} {{Ext}}_table_spec_add{{S}}(t: {{Self}}, k: {{K}}, v: {{V}}): {{Self}} {
     AddTable(t, {{ENC}}(k), v)
 }
 
-function {:inline} {{Ext}}_Table_spec_remove{{S}}(t: {{Self}}, k: {{K}}): {{Self}} {
+function {:inline} {{Ext}}_table_spec_remove{{S}}(t: {{Self}}, k: {{K}}): {{Self}} {
     RemoveTable(t, {{ENC}}(k))
 }
 
-function {:inline} {{Ext}}_Table_spec_get{{S}}(t: {{Self}}, k: {{K}}): {{V}} {
+function {:inline} {{Ext}}_table_spec_get{{S}}(t: {{Self}}, k: {{K}}): {{V}} {
     GetTable(t, {{ENC}}(k))
 }
 

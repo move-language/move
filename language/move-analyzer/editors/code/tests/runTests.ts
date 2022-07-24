@@ -30,7 +30,10 @@ async function main(): Promise<void> {
         const extensionTestsPath = path.resolve(__dirname, 'index.js');
 
         // The workspace
-        const testWorkspacePath = path.resolve(__dirname, './lsp-demo/lsp-demo.code-workspace');
+        let testWorkspacePath = path.resolve(__dirname, './lsp-demo/lsp-demo.code-workspace');
+        if (process.platform === 'win32') {
+            testWorkspacePath = path.resolve(__dirname, './lsp-demo/lsp-demo-win.code-workspace');
+        }
 
         // Install vscode and depends extension
         const vscodeVersion = '1.64.0';

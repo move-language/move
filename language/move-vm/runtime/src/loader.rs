@@ -1654,9 +1654,6 @@ impl Module {
 // (rather then "compiled") to make available data needed for execution
 // #[derive(Debug)]
 struct Script {
-    // primitive pools
-    script: CompiledScript,
-
     // types as indexes into the Loader type list
     // REVIEW: why is this unused?
     #[allow(dead_code)]
@@ -1834,7 +1831,6 @@ impl Script {
             .unwrap();
 
         Ok(Self {
-            script,
             struct_refs,
             function_refs,
             function_instantiations,

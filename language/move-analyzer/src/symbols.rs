@@ -2077,11 +2077,13 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
     let parameters = serde_json::from_value::<DocumentSymbolParams>(request.params.clone())
         .expect("could not deserialize document symbol request");
 
-    let fpath = parameters.text_document.uri.path();
+    let fpath = parameters.text_document.uri.to_file_path().unwrap();
+    eprintln!("on_document_symbol_request: {:?}", fpath);
+
     let empty_mods: BTreeSet<ModuleDefs> = BTreeSet::new();
     let mods = symbols
         .file_mods
-        .get(&PathBuf::from(fpath))
+        .get(&fpath)
         .unwrap_or(&empty_mods);
 
     let mut defs: Vec<DocumentSymbol> = vec![];

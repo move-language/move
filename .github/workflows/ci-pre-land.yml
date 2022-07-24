@@ -206,7 +206,7 @@ jobs:
   #           /tmp/benches
 
   test-move-analyzer-vscode-extension:
-    name: Build VS Code extension for move-analyzer
+    name: Test VS Code extension for move-analyzer
     strategy:
       fail-fast: false
       matrix:

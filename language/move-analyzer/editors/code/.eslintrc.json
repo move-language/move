@@ -106,7 +106,7 @@
         "function-call-argument-newline": ["warn", "consistent"],
         "function-paren-newline": ["warn", "consistent"],
         "key-spacing": "warn",
-        "linebreak-style": "warn",
+        "linebreak-style": "off",
         "max-len": [
             "warn",
             {

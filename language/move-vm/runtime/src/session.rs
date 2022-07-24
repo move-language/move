@@ -178,6 +178,9 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     ///
     /// In case an invariant violation occurs, the whole Session should be considered corrupted and
     /// one shall not proceed with effect generation.
+    ///
+    /// This operation performs compatibility checks if a module is replaced. See also
+    /// `move_binary_format::compatibility`.
     pub fn publish_module_bundle(
         &mut self,
         modules: Vec<Vec<u8>>,
@@ -185,7 +188,18 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         gas_status: &mut GasStatus,
     ) -> VMResult<()> {
         self.runtime
-            .publish_module_bundle(modules, sender, &mut self.data_cache, gas_status)
+            .publish_module_bundle(modules, sender, &mut self.data_cache, gas_status, true)
+    }
+
+    /// Same like `publish_module_bundle` but relaxes compatibility checks.
+    pub fn publish_module_bundle_relax_compatibility(
+        &mut self,
+        modules: Vec<Vec<u8>>,
+        sender: AccountAddress,
+        gas_status: &mut GasStatus,
+    ) -> VMResult<()> {
+        self.runtime
+            .publish_module_bundle(modules, sender, &mut self.data_cache, gas_status, false)
     }
 
     pub fn num_mutated_accounts(&self, sender: &AccountAddress) -> u64 {

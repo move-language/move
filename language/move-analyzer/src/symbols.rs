@@ -2081,10 +2081,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
     eprintln!("on_document_symbol_request: {:?}", fpath);
 
     let empty_mods: BTreeSet<ModuleDefs> = BTreeSet::new();
-    let mods = symbols
-        .file_mods
-        .get(&fpath)
-        .unwrap_or(&empty_mods);
+    let mods = symbols.file_mods.get(&fpath).unwrap_or(&empty_mods);
 
     let mut defs: Vec<DocumentSymbol> = vec![];
     for mod_def in mods {

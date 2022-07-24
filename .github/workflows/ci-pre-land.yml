@@ -205,7 +205,7 @@ jobs:
   #         path: |
   #           /tmp/benches
 
-  build-move-analyzer-vscode-extension:
+  test-move-analyzer-vscode-extension:
     name: Build VS Code extension for move-analyzer
     strategy:
       fail-fast: false
@@ -238,6 +238,26 @@ jobs:
         with:
           working-directory: language/move-analyzer/editors/code
           run: npm run test
+
+  release-move-analyzer-vscode-extension:
+    name: Release VS Code extension for move-analyzer
+    runs-on: ubuntu-20.04
+    needs:
+      - prepare
+    steps:
+      - uses: actions/checkout@v2.4.0
+      - name: install rust toolchain
+        uses: actions-rs/toolchain@v1
+      - name: Use Node.js 14
+        uses: actions/setup-node@v2.4.0
+        with:
+          node-version: "14"
+      - name: Install NPM dependencies
+        working-directory: language/move-analyzer/editors/code
+        run: npm install
+      - name: Build the extension
+        working-directory: language/move-analyzer/editors/code
+        run: npm run pretest
       - name: Package the extension
         working-directory: language/move-analyzer/editors/code
         run: npm run package

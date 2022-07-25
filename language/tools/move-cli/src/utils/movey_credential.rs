@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Context, Result};
-use move_command_line_common::movey::MOVEY_URL;
+use move_command_line_common::movey_constants::MOVEY_URL;
 use std::fs;
 use toml_edit::easy::Value;
 

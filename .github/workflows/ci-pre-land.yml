@@ -272,3 +272,21 @@ jobs:
         run: |
           cd ./language/documentation/tutorial/step_1/BasicCoin
           docker run -v `pwd`:/project move/cli build
+
+  prover-tests:
+    name: Test the Move Prover
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2.4.0
+      - uses: ./.github/actions/build-setup
+      - uses: actions/cache@v2.1.6
+        with:
+          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: "crates-${{ runner.os }}"
+      - name: Run the prover tests (including the inconsistency check)
+        shell: bash
+        run: |
+          MVP_TEST_INCONSISTENCY=1 cargo test -p move-prover --release
+          MVP_TEST_FEATURE=cvc5 cargo test -p move-prover --release
+      - uses: ./.github/actions/build-teardown

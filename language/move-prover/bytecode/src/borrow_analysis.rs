@@ -260,7 +260,7 @@ impl BorrowInfo {
     ) {
         for (dest, edge) in outgoing.iter() {
             let mut path = prefix.to_owned();
-            path.extend(edge.flatten().into_iter().cloned());
+            path.push(edge.clone());
             if let Some(succs) = ret_info.borrows_from.get(dest) {
                 self.construct_hyper_edges(leaf, ret_info, path, succs);
             } else {
@@ -269,7 +269,13 @@ impl BorrowInfo {
                     path.pop().unwrap()
                 } else {
                     path.reverse();
-                    BorrowEdge::Hyper(path)
+                    let flattened = path
+                        .iter()
+                        .map(|e| e.flatten().into_iter())
+                        .flatten()
+                        .cloned()
+                        .collect();
+                    BorrowEdge::Hyper(flattened)
                 };
                 self.borrowed_by
                     .entry(dest.clone())

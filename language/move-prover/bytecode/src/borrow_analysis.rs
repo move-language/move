@@ -214,7 +214,7 @@ impl BorrowInfo {
                 self.borrows_from
                     .entry(dst.clone())
                     .or_default()
-                    .insert((src.clone(), edge.clone()));
+                    .insert((src.clone(), edge.clone().reverse()));
             }
         }
     }
@@ -260,7 +260,7 @@ impl BorrowInfo {
     ) {
         for (dest, edge) in outgoing.iter() {
             let mut path = prefix.to_owned();
-            path.extend(edge.flatten().into_iter().cloned());
+            path.extend(edge.clone().reverse().flatten().into_iter().cloned());
             if let Some(succs) = ret_info.borrows_from.get(dest) {
                 self.construct_hyper_edges(leaf, ret_info, path, succs);
             } else {
@@ -268,7 +268,6 @@ impl BorrowInfo {
                 let edge = if path.len() == 1 {
                     path.pop().unwrap()
                 } else {
-                    path.reverse();
                     BorrowEdge::Hyper(path)
                 };
                 self.borrowed_by
@@ -308,7 +307,7 @@ impl BorrowInfo {
                         self.add_edge(
                             actual_in_node.clone(),
                             out_node.clone(),
-                            edge.instantiate(callee_targs),
+                            edge.instantiate(callee_targs).reverse(),
                         );
                         self.moved_nodes.insert(actual_in_node);
                     }

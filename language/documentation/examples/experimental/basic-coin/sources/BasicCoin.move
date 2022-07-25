@@ -1,6 +1,6 @@
 /// This module defines a minimal and generic Coin and Balance.
 module BasicCoin::BasicCoin {
-    use std::errors;
+    use std::error;
     use std::signer;
 
     /// Error codes
@@ -20,7 +20,7 @@ module BasicCoin::BasicCoin {
 
     public fun publish_balance<CoinType>(account: &signer) {
         let empty_coin = Coin<CoinType> { value: 0 };
-        assert!(!exists<Balance<CoinType>>(signer::address_of(account)), errors::already_published(EALREADY_HAS_BALANCE));
+        assert!(!exists<Balance<CoinType>>(signer::address_of(account)), error::already_exists(EALREADY_HAS_BALANCE));
         move_to(account, Balance<CoinType> { coin:  empty_coin });
     }
 

@@ -487,14 +487,9 @@ impl Options {
                     .help("whether to run experimental pipeline")
             )
             .arg(
-                Arg::new("weak-edges")
-                    .long("weak-edges")
-                    .help("whether to use exclusively weak edges in borrow analysis")
-            )
-            .arg(
-                Arg::new("exp_mut_param")
-                    .long("exp-mut-param")
-                    .help("exp_mut_param experiment")
+                Arg::new("prophecy")
+                    .long("prophecy")
+                    .help("whether to use prophecy variables to model mutable borrows")
             )
             .arg(
                 Arg::new("check-inconsistency")
@@ -748,6 +743,10 @@ impl Options {
         }
         if matches.is_present("generate-smt") {
             options.backend.generate_smt = true;
+        }
+
+        if matches.is_present("prophecy") {
+            options.prover.use_prophecy_variable = true;
         }
 
         if matches.is_present("check-inconsistency") {

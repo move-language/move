@@ -50,6 +50,9 @@ pub struct ProverOptions {
     /// Whether to assume wellformedness when elements are read from memory, instead of on
     /// function entry.
     pub assume_wellformed_on_access: bool,
+    /// Whether to use prophecy variables to model mutable borrowing, instead of using the
+    /// IsParent + WriteBack mechanism.
+    pub use_prophecy_variable: bool,
     /// Indicates that we should do any mutations
     pub mutation: bool,
     /// Indicates that we should use the add-subtract mutation on the given block
@@ -97,6 +100,7 @@ impl Default for ProverOptions {
             verify_scope: VerificationScope::All,
             resource_wellformed_axiom: false,
             assume_wellformed_on_access: false,
+            use_prophecy_variable: false,
             mutation: false,
             mutation_add_sub: 0,
             mutation_sub_add: 0,

@@ -6,6 +6,7 @@ pub mod coverage;
 pub mod disassemble;
 pub mod errmap;
 pub mod info;
+pub mod movey_upload;
 pub mod new;
 pub mod prove;
 pub mod test;

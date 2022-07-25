@@ -13,6 +13,7 @@ members = [
     "language/evm/exec-utils",
     "language/evm/extract-ethereum-abi",
     "language/evm/move-ethereum-abi",
+    "language/evm/move-ethereum-annotator",
     "language/evm/move-to-yul",
     "language/extensions/async/move-async-vm",
     "language/extensions/move-table-extension",

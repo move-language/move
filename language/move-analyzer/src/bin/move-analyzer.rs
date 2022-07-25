@@ -15,6 +15,7 @@ use std::{
     collections::BTreeMap,
     path::Path,
     sync::{Arc, Mutex},
+    thread,
 };
 
 use move_analyzer::{
@@ -48,10 +49,11 @@ fn main() {
     );
 
     let (connection, io_threads) = Connection::stdio();
+    let symbols = Arc::new(Mutex::new(symbols::Symbolicator::empty_symbols()));
     let mut context = Context {
         connection,
         files: VirtualFileSystem::default(),
-        symbols: Arc::new(Mutex::new(symbols::Symbolicator::empty_symbols())),
+        symbols: symbols.clone(),
     };
 
     let (id, client_response) = context
@@ -115,8 +117,7 @@ fn main() {
             serde_json::from_value(client_response)
                 .expect("could not deserialize client capabilities");
 
-        symbolicator_runner =
-            symbols::SymbolicatorRunner::new(context.symbols.clone(), diag_sender);
+        symbolicator_runner = symbols::SymbolicatorRunner::new(symbols.clone(), diag_sender);
 
         // If initialization information from the client contains a path to the directory being
         // opened, try to initialize symbols before sending response to the client. Do not bother
@@ -125,11 +126,21 @@ fn main() {
         // to be available right after the client is initialized.
         if let Some(uri) = initialize_params.root_uri {
             if let Some(p) = symbols::SymbolicatorRunner::root_dir(&uri.to_file_path().unwrap()) {
-                if let Ok((Some(new_symbols), _)) = symbols::Symbolicator::get_symbols(p.as_path())
-                {
-                    let mut old_symbols = context.symbols.lock().unwrap();
-                    (*old_symbols).merge(new_symbols);
-                }
+                // need to evaluate in a separate thread to allow for a larger stack size (needed on
+                // Windows)
+                thread::Builder::new()
+                    .stack_size(symbols::STACK_SIZE_BYTES)
+                    .spawn(move || {
+                        if let Ok((Some(new_symbols), _)) =
+                            symbols::Symbolicator::get_symbols(p.as_path())
+                        {
+                            let mut old_symbols = symbols.lock().unwrap();
+                            (*old_symbols).merge(new_symbols);
+                        }
+                    })
+                    .unwrap()
+                    .join()
+                    .unwrap();
             }
         }
     };

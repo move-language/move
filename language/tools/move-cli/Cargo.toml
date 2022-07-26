@@ -21,6 +21,8 @@ tempfile = "3.2.0"
 walkdir = "2.3.1"
 codespan-reporting = "0.11.1"
 itertools = "0.10.0"
+toml_edit =  { version = "0.14.3", features = ["easy"] }
+
 bcs = "0.1.2"
 move-bytecode-verifier = { path = "../../move-bytecode-verifier" }
 move-disassembler = { path = "../move-disassembler" }

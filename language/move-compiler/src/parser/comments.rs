@@ -2,9 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{diag, diagnostics::Diagnostics};
+use crate::{diag, diagnostics::Diagnostics, shared::Name};
 use move_command_line_common::{character_sets::is_permitted_chars, files::FileHash};
 use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
 use std::collections::BTreeMap;
 
 /// Types to represent comments.
@@ -34,4 +35,18 @@ pub fn verify_string(file_hash: FileHash, string: &str) -> Result<(), Diagnostic
             )]))
         }
     }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CommentKind {
+    DocComment,      //  /// comment
+    SignleLine,      //  // comment
+    BlockComment,    // /* comment */
+    DocBlockComment, // /** comment */
+}
+
+#[derive(Debug, Clone)]
+pub struct Comment {
+    pub content: Name,
+    pub kind: CommentKind,
 }

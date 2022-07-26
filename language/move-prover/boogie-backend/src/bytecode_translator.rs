@@ -748,6 +748,11 @@ impl<'env> FunctionTranslator<'env> {
             *last_tracked_loc = None;
         }
         self.track_loc(last_tracked_loc, &loc);
+        if matches!(bytecode, Label(_, _)) {
+            // For labels, retrack the location after the label itself, so
+            // the information will not be missing if we jump to this label
+            *last_tracked_loc = None;
+        }
 
         // Helper function to get a a string for a local
         let str_local = |idx: usize| format!("$t{}", idx);

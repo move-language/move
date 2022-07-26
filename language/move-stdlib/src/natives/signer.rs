@@ -2,20 +2,33 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::natives::helpers::make_module_natives;
 use move_binary_format::errors::PartialVMResult;
-use move_vm_runtime::native_functions::NativeContext;
+use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
 use move_vm_types::{
-    gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
-    natives::function::{native_gas, NativeResult},
+    natives::function::NativeResult,
     pop_arg,
     values::{values_impl::SignerRef, Value},
 };
 use smallvec::smallvec;
-use std::collections::VecDeque;
+use std::{collections::VecDeque, sync::Arc};
 
-pub fn native_borrow_address(
-    context: &mut NativeContext,
+/***************************************************************************************************
+ * native fun borrow_address
+ *
+ *   gas cost: base_cost
+ *
+ **************************************************************************************************/
+#[derive(Debug, Clone)]
+pub struct BorrowAddressGasParameters {
+    pub base_cost: u64,
+}
+
+#[inline]
+fn native_borrow_address(
+    gas_params: &BorrowAddressGasParameters,
+    _context: &mut NativeContext,
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
@@ -23,10 +36,34 @@ pub fn native_borrow_address(
     debug_assert!(arguments.len() == 1);
 
     let signer_reference = pop_arg!(arguments, SignerRef);
-    let cost = native_gas(context.cost_table(), NativeCostIndex::SIGNER_BORROW, 1);
 
     Ok(NativeResult::ok(
-        cost,
+        gas_params.base_cost,
         smallvec![signer_reference.borrow_signer()?],
     ))
+}
+
+pub fn make_native_borrow_address(gas_params: BorrowAddressGasParameters) -> NativeFunction {
+    Arc::new(
+        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
+            native_borrow_address(&gas_params, context, ty_args, args)
+        },
+    )
+}
+
+/***************************************************************************************************
+ * module
+ **************************************************************************************************/
+#[derive(Debug, Clone)]
+pub struct GasParameters {
+    pub borrow_address: BorrowAddressGasParameters,
+}
+
+pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
+    let natives = [(
+        "borrow_address",
+        make_native_borrow_address(gas_params.borrow_address),
+    )];
+
+    make_module_natives(natives)
 }

@@ -92,6 +92,9 @@ use move_symbol_pool::Symbol;
 /// Enabling/disabling the language server reporting readiness to support go-to-def and
 /// go-to-references to the IDE.
 pub const DEFS_AND_REFS_SUPPORT: bool = true;
+// Building Move code requires a larger stack size on Windows (16M has been chosen somewhat
+// arbitrarily)
+pub const STACK_SIZE_BYTES: usize = 16 * 1024 * 1024;
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Copy)]
 /// Location of a definition's identifier
@@ -349,7 +352,7 @@ impl SymbolicatorRunner {
         let runner = SymbolicatorRunner { mtx_cvar };
 
         thread::Builder::new()
-            .stack_size(16 * 1024 * 1024) // building Move code requires a larger stack size on Windows
+            .stack_size(STACK_SIZE_BYTES)
             .spawn(move || {
                 let (mtx, cvar) = &*thread_mtx_cvar;
                 // Locations opened in the IDE (files or directories) for which manifest file is missing
@@ -673,7 +676,7 @@ impl Symbolicator {
             mod_use_defs.insert(*module_ident, symbols);
         }
 
-        eprintln!("get_symbols loaded file_mods length: {:?}", file_mods.len());
+        eprintln!("get_symbols loaded file_mods length: {}", file_mods.len());
 
         let mut symbolicator = Symbolicator {
             mod_outer_defs,

@@ -43,6 +43,8 @@ error: unknown assertion failed
    =     at tests/sources/functional/loops_with_memory_ops.move:74: nested_loop2
    =     enter loop, variable(s) y havocked and reassigned
    =         y = <redacted>
+   =     at tests/sources/functional/loops_with_memory_ops.move:80: nested_loop2
+   =     at tests/sources/functional/loops_with_memory_ops.move:81: nested_loop2
    =         b = <redacted>
    =         a = <redacted>
    =     at tests/sources/functional/loops_with_memory_ops.move:85: nested_loop2
@@ -94,11 +96,14 @@ error: induction case of the loop invariant does not hold
    =     at tests/sources/functional/loops_with_memory_ops.move:74: nested_loop2
    =     enter loop, variable(s) y havocked and reassigned
    =         y = <redacted>
+   =     at tests/sources/functional/loops_with_memory_ops.move:80: nested_loop2
+   =     at tests/sources/functional/loops_with_memory_ops.move:81: nested_loop2
    =         b = <redacted>
    =         a = <redacted>
    =     at tests/sources/functional/loops_with_memory_ops.move:85: nested_loop2
    =         i = <redacted>
    =     at tests/sources/functional/loops_with_memory_ops.move:86: nested_loop2
+   =     at tests/sources/functional/loops_with_memory_ops.move:89: nested_loop2
    =         a = <redacted>
    =         x = <redacted>
    =     at tests/sources/functional/loops_with_memory_ops.move:90: nested_loop2

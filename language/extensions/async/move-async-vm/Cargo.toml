@@ -5,7 +5,7 @@ authors = ["Diem Association <opensource@diem.com>"]
 description = "Wrapper for the Move VM for the asynchronous execution flavor"
 repository = "https://github.com/diem/move"
 license = "Apache-2.0"
-edition = "2018"
+edition = "2021"
 publish = false
 
 [dependencies]
@@ -21,6 +21,7 @@ move-core-types = { path = "../../../move-core/types" }
 move-compiler = { path = "../../../move-compiler" }
 move-vm-types = { path = "../../../move-vm/types" }
 move-vm-runtime = { path = "../../../move-vm/runtime", features = ["debugging"] }
+move-vm-test-utils = { path = "../../../move-vm/test-utils" }
 move-binary-format = { path = "../../../move-binary-format" }
 
 [dev-dependencies]

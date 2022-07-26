@@ -12,7 +12,7 @@ use move_core_types::{
 };
 use move_vm_runtime::{move_vm::MoveVM, session::SerializedReturnValues};
 use move_vm_test_utils::InMemoryStorage;
-use move_vm_types::gas_schedule::GasStatus;
+use move_vm_types::gas::UnmeteredGasMeter;
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
 
@@ -51,7 +51,6 @@ fn run(
     let mut sess = vm.new_session(&storage);
 
     let fun_name = Identifier::new("foo").unwrap();
-    let mut gas_status = GasStatus::new_unmetered();
 
     let args: Vec<_> = args
         .into_iter()
@@ -66,7 +65,7 @@ fn run(
         &fun_name,
         ty_args,
         args,
-        &mut gas_status,
+        &mut UnmeteredGasMeter,
     )?;
 
     Ok(return_values

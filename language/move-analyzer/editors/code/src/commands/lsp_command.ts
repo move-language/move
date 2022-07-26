@@ -5,7 +5,10 @@ import type { Context } from '../context';
 /**
  * An LSP command textDocument/documentSymbol
  */
-export async function textDocumentDocumentSymbol(context: Readonly<Context>, params: lc.DocumentSymbolParams)
+export async function textDocumentDocumentSymbol(
+    context: Readonly<Context>,
+    params: lc.DocumentSymbolParams,
+    )
     : Promise<Array<lc.SymbolInformation> | Array<lc.DocumentSymbol> | null> {
     const client = context.getClient();
     if (client === undefined) {

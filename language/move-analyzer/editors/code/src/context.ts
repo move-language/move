@@ -46,11 +46,13 @@ export class Context {
         name: Readonly<string>,
         command: (context: Readonly<Context>, ...args: Array<any>) => any,
     ): void {
-        const disposable = vscode.commands.registerCommand(`move-analyzer.${name}`, async (...args: Array<any>)
-            : Promise<any> => {
-            const ret = await command(this, ...args);
-            return ret;
-        });
+        const disposable = vscode.commands.registerCommand(
+            `move-analyzer.${name}`,
+            async (...args: Array<any>) : Promise<any> => {
+                const ret = await command(this, ...args);
+                return ret;
+            },
+        );
 
         this.extensionContext.subscriptions.push(disposable);
     }

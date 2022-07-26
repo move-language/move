@@ -21,11 +21,7 @@ use move_model::{
     ty::Type,
     well_known::{TABLE_BORROW_MUT, VECTOR_BORROW_MUT},
 };
-use std::{
-    borrow::BorrowMut,
-    collections::{BTreeMap, BTreeSet},
-    fmt,
-};
+use std::{borrow::BorrowMut, collections::BTreeMap, fmt};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Default)]
 pub struct BorrowInfo {
@@ -44,44 +40,29 @@ pub struct BorrowInfo {
     borrows_from: MapDomain<BorrowNode, SetDomain<(BorrowNode, BorrowEdge)>>,
 }
 
+/// Represents a write-back from a source node to a destination node with the associated edge
+#[derive(Debug, Clone)]
+pub struct WriteBackAction {
+    pub src: BorrowNode,
+    pub dst: BorrowNode,
+    pub edge: BorrowEdge,
+}
+
 impl BorrowInfo {
     /// Gets the children of this node.
-    pub fn get_children(&self, node: &BorrowNode) -> Vec<&BorrowNode> {
+    fn get_children(&self, node: &BorrowNode) -> Vec<&BorrowNode> {
         self.borrowed_by
             .get(node)
             .map(|s| s.iter().map(|(n, _)| n).collect_vec())
-            .unwrap_or_else(Vec::new)
+            .unwrap_or_default()
     }
 
-    /// Gets the parents of this node.
-    pub fn get_parents(&self, node: &BorrowNode) -> Vec<&BorrowNode> {
+    /// Gets the parents (together with the edges) of this node.
+    fn get_incoming(&self, node: &BorrowNode) -> Vec<(&BorrowNode, &BorrowEdge)> {
         self.borrows_from
             .get(node)
-            .map(|s| s.iter().map(|(n, _)| n).collect_vec())
-            .unwrap_or_else(Vec::new)
-    }
-
-    /// Gets incoming edges (together with sources) of this node.
-    pub fn get_incoming(&self, node: &BorrowNode) -> SetDomain<(BorrowNode, BorrowEdge)> {
-        self.borrows_from.get(node).cloned().unwrap_or_default()
-    }
-
-    /// Returns true if this node is conditional, that is, it borrows from multiple parents,
-    /// or has a transient child which is conditional.
-    pub fn is_conditional(&self, node: &BorrowNode) -> bool {
-        if let Some(parents) = self.borrows_from.get(node) {
-            // If there are more than one parent for this node, it is
-            // conditional.
-            if parents.len() > 1 {
-                return true;
-            }
-        }
-        if let Some(childs) = self.borrowed_by.get(node) {
-            // Otherwise we look for a child that is conditional.
-            childs.iter().any(|(c, _)| self.is_conditional(c))
-        } else {
-            false
-        }
+            .map(|s| s.iter().map(|(n, e)| (n, e)).collect_vec())
+            .unwrap_or_default()
     }
 
     /// Checks whether a node is in use. A node is used if it is in the live_nodes set
@@ -96,44 +77,74 @@ impl BorrowInfo {
         }
     }
 
-    /// Checks whether this is a moved node.
-    pub fn is_moved(&self, node: &BorrowNode) -> bool {
-        self.moved_nodes.contains(node)
-    }
-
     /// Returns nodes which are dying from this to the next state. This includes those which
     /// are directly dying plus those from which they borrow. Returns nodes in child-first order.
-    pub fn dying_nodes(&self, next: &BorrowInfo) -> Vec<BorrowNode> {
-        let mut visited = BTreeSet::new();
+    pub fn dying_nodes(&self, next: &BorrowInfo) -> Vec<(BorrowNode, Vec<Vec<WriteBackAction>>)> {
         let mut result = vec![];
         for dying in self.live_nodes.difference(&next.live_nodes) {
-            // Collect ancestors, but exclude those which are still in use. Some nodes may be
-            // dying regards direct usage in instructions, but they may still be ancestors of
-            // living nodes (this is what `is_in_use` checks for).
-            if !next.is_in_use(dying) {
-                self.collect_ancestors(&mut visited, &mut result, dying, &|n| !next.is_in_use(n));
+            if next.is_in_use(dying) {
+                continue;
             }
+
+            // Collect ancestors trees until reaching an ancestor that is still in use.
+            let dying_trees = self.collect_dying_ancestor_trees(dying, next);
+            result.push((dying.clone(), dying_trees));
         }
         result
     }
 
-    /// Collects this node and ancestors, inserting them in child-first order into the
-    /// given vector. Ancestors are only added if they fulfill the predicate.
-    fn collect_ancestors<P>(
+    /// Start from this node and follow-up the borrow chain until reaching a live/in-use ancestor.
+    /// Collect possible paths (from this node to a live ancestor) and return them in the DFS order.
+    fn collect_dying_ancestor_trees(
         &self,
-        visited: &mut BTreeSet<BorrowNode>,
-        order: &mut Vec<BorrowNode>,
         node: &BorrowNode,
-        cond: &P,
-    ) where
-        P: Fn(&BorrowNode) -> bool,
-    {
-        if visited.insert(node.clone()) {
-            order.push(node.clone());
-            for parent in self.get_parents(node) {
-                if cond(parent) {
-                    self.collect_ancestors(visited, order, parent, cond);
+        next: &BorrowInfo,
+    ) -> Vec<Vec<WriteBackAction>> {
+        let mut trees = vec![];
+        self.collect_dying_ancestor_trees_recursive(node, next, vec![], &mut trees);
+        trees
+    }
+
+    fn collect_dying_ancestor_trees_recursive(
+        &self,
+        node: &BorrowNode,
+        next: &BorrowInfo,
+        order: Vec<WriteBackAction>,
+        trees: &mut Vec<Vec<WriteBackAction>>,
+    ) {
+        match node {
+            BorrowNode::LocalRoot(..) | BorrowNode::GlobalRoot(..) => {
+                trees.push(order);
+            }
+            BorrowNode::Reference(..) => {
+                if next.is_in_use(node) {
+                    // stop at a live reference
+                    trees.push(order);
+                } else {
+                    let incoming = self.get_incoming(node);
+                    if incoming.is_empty() {
+                        // when the borrow reference node has no incoming edges, it means that this
+                        // reference is a function argument.
+                        trees.push(order);
+                    } else {
+                        // when there are incoming edges, this borrow occurs within the body
+                        // of this function and this node need to be further traced upwards.
+                        for (parent, edge) in incoming {
+                            let mut appended = order.clone();
+                            appended.push(WriteBackAction {
+                                src: node.clone(),
+                                dst: parent.clone(),
+                                edge: edge.clone(),
+                            });
+                            self.collect_dying_ancestor_trees_recursive(
+                                parent, next, appended, trees,
+                            );
+                        }
+                    }
                 }
+            }
+            BorrowNode::ReturnPlaceholder(..) => {
+                unreachable!("placeholder node type is not expected here");
             }
         }
     }
@@ -260,7 +271,7 @@ impl BorrowInfo {
     ) {
         for (dest, edge) in outgoing.iter() {
             let mut path = prefix.to_owned();
-            path.extend(edge.flatten().into_iter().cloned());
+            path.push(edge.clone());
             if let Some(succs) = ret_info.borrows_from.get(dest) {
                 self.construct_hyper_edges(leaf, ret_info, path, succs);
             } else {
@@ -269,7 +280,13 @@ impl BorrowInfo {
                     path.pop().unwrap()
                 } else {
                     path.reverse();
-                    BorrowEdge::Hyper(path)
+                    let flattened = path
+                        .iter()
+                        .map(|e| e.flatten().into_iter())
+                        .flatten()
+                        .cloned()
+                        .collect();
+                    BorrowEdge::Hyper(flattened)
                 };
                 self.borrowed_by
                     .entry(dest.clone())

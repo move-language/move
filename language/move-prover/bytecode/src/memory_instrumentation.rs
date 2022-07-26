@@ -107,6 +107,8 @@ impl<'a> Instrumenter<'a> {
     }
 
     fn memory_instrumentation(&mut self, code_offset: CodeOffset, bytecode: &Bytecode) {
+        let param_count = self.builder.get_target().get_parameter_count();
+
         let borrow_annotation_at = self
             .borrow_annotation
             .get_borrow_info_at(code_offset)
@@ -138,59 +140,111 @@ impl<'a> Instrumenter<'a> {
 
         // Generate PackRef for nodes which go out of scope, as well as WriteBack.
         let attr_id = bytecode.get_attr_id();
-        for node in before.dying_nodes(after) {
-            if let BorrowNode::Reference(idx) = &node {
-                // Generate write_back for this reference.
-                let is_conditional = before.is_conditional(&node);
-                for (parent, edge) in before.get_incoming(&node) {
-                    self.builder.set_loc_from_attr(attr_id);
-                    let skip_label_opt = match parent {
-                        BorrowNode::Reference(..) if is_conditional => {
-                            let temp = self.builder.new_temp(BOOL_TYPE.clone());
-                            self.builder.emit_with(|id| {
-                                Bytecode::Call(
-                                    id,
-                                    vec![temp],
-                                    Operation::IsParent(parent.clone(), edge.clone()),
-                                    vec![*idx],
-                                    None,
-                                )
-                            });
-                            let update_label = self.builder.new_label();
-                            let skip_label = self.builder.new_label();
-                            self.builder.emit_with(|id| {
-                                Bytecode::Branch(id, update_label, skip_label, temp)
-                            });
-                            self.builder
-                                .emit_with(|id| Bytecode::Label(id, update_label));
-                            Some(skip_label)
-                        }
-                        _ => None,
+        for (node, ancestors) in before.dying_nodes(after) {
+            // we only care about references that occurs in the function body
+            let node_idx = match node {
+                BorrowNode::LocalRoot(..) | BorrowNode::GlobalRoot(..) => {
+                    continue;
+                }
+                BorrowNode::Reference(idx) => {
+                    if idx < param_count {
+                        continue;
+                    }
+                    idx
+                }
+                BorrowNode::ReturnPlaceholder(..) => {
+                    unreachable!("Unexpected placeholder borrow node");
+                }
+            };
+
+            // Generate write_back for this reference.
+            let is_conditional = ancestors.len() > 1;
+            for tree in ancestors {
+                let parent = match tree.first() {
+                    Some(action) => {
+                        // the src node of the first action must be the node itself
+                        assert!(matches!(
+                            action.src,
+                            BorrowNode::Reference(idx) if idx == node_idx
+                        ));
+                        action
+                    }
+                    None => {
+                        unreachable!(
+                            "The ancestor tree should contain at least one write-back action"
+                        );
+                    }
+                };
+
+                // decide on whether we need IsParent checks
+                self.builder.set_loc_from_attr(attr_id);
+                let skip_label_opt = match parent.dst {
+                    BorrowNode::Reference(..) if is_conditional => {
+                        let temp = self.builder.new_temp(BOOL_TYPE.clone());
+                        self.builder.emit_with(|id| {
+                            Bytecode::Call(
+                                id,
+                                vec![temp],
+                                Operation::IsParent(parent.dst.clone(), parent.edge.clone()),
+                                vec![node_idx],
+                                None,
+                            )
+                        });
+                        let update_label = self.builder.new_label();
+                        let skip_label = self.builder.new_label();
+                        self.builder
+                            .emit_with(|id| Bytecode::Branch(id, update_label, skip_label, temp));
+                        self.builder
+                            .emit_with(|id| Bytecode::Label(id, update_label));
+                        Some(skip_label)
+                    }
+                    _ => None,
+                };
+
+                // issue a chain of write-back actions
+                for action in &tree {
+                    // obtain the source of the write-back
+                    let src_idx = match &action.src {
+                        BorrowNode::Reference(idx) => *idx,
+                        _ => unreachable!(
+                            "The source of a write-back action must always be a reference"
+                        ),
                     };
+
+                    // decide if we need a pack-ref (i.e., data structure invariant checking)
                     if matches!(
-                        parent,
+                        action.dst,
                         BorrowNode::LocalRoot(..) | BorrowNode::GlobalRoot(..)
                     ) {
                         // On write-back to a root, "pack" the reference i.e. validate all its
                         // invariants.
-                        let ty = &self.builder.get_target().get_local_type(*idx).to_owned();
+                        let ty = &self.builder.get_target().get_local_type(src_idx).to_owned();
                         if self.is_pack_ref_ty(ty) {
                             self.builder.emit_with(|id| {
-                                Bytecode::Call(id, vec![], Operation::PackRefDeep, vec![*idx], None)
+                                Bytecode::Call(
+                                    id,
+                                    vec![],
+                                    Operation::PackRefDeep,
+                                    vec![src_idx],
+                                    None,
+                                )
                             });
                         }
                     }
+
+                    // emit the write-back
                     self.builder.emit_with(|id| {
                         Bytecode::Call(
                             id,
                             vec![],
-                            Operation::WriteBack(parent.clone(), edge),
-                            vec![*idx],
+                            Operation::WriteBack(action.dst.clone(), action.edge.clone()),
+                            vec![src_idx],
                             None,
                         )
                     });
-                    // Add a trace for written back value if it's a user variable.
-                    match parent {
+
+                    // add a trace for written back value if it's a user variable.
+                    match action.dst {
                         BorrowNode::LocalRoot(temp) | BorrowNode::Reference(temp) => {
                             if temp < self.builder.fun_env.get_local_count() {
                                 self.builder.emit_with(|id| {
@@ -206,9 +260,11 @@ impl<'a> Instrumenter<'a> {
                         }
                         _ => {}
                     }
-                    if let Some(label) = skip_label_opt {
-                        self.builder.emit_with(|id| Bytecode::Label(id, label));
-                    }
+                }
+
+                // continued from IsParent check
+                if let Some(label) = skip_label_opt {
+                    self.builder.emit_with(|id| Bytecode::Label(id, label));
                 }
             }
         }

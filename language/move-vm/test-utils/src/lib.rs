@@ -6,4 +6,5 @@
 
 mod storage;
 
+pub mod gas_schedule;
 pub use storage::{BlankStorage, DeltaStorage, InMemoryStorage};

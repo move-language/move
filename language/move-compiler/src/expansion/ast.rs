@@ -725,7 +725,7 @@ impl Iterator for AbilitySetIntoIter {
     }
 }
 
-impl<'a> IntoIterator for AbilitySet {
+impl IntoIterator for AbilitySet {
     type Item = Ability;
     type IntoIter = AbilitySetIntoIter;
 

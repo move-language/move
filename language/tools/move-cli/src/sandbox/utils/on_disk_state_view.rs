@@ -138,7 +138,7 @@ impl OnDiskStateView {
             return None;
         }
         let name = Identifier::new(p.file_stem().unwrap().to_str().unwrap()).unwrap();
-        match p.parent().map(|parent| parent.parent()).flatten() {
+        match p.parent().and_then(|parent| parent.parent()) {
             Some(parent) => {
                 let addr =
                     AccountAddress::from_hex_literal(parent.file_stem().unwrap().to_str().unwrap())

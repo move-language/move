@@ -5,7 +5,7 @@ authors = ["Diem Association <opensource@diem.com>"]
 description = "Move prover Boogie backend"
 license = "Apache-2.0"
 publish = false
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 async-trait = "0.1.42"

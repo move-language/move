@@ -398,7 +398,7 @@ impl SolidityType {
                 let error_msg = "illegal type name";
                 return Err(anyhow!(error_msg));
             }
-            ctx.check_or_create_struct_abi(&trimmed_ty_str)
+            ctx.check_or_create_struct_abi(trimmed_ty_str)
         }
     }
 

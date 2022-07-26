@@ -27,6 +27,7 @@ use std::{
         hash_map::Entry::{Occupied, Vacant},
         BTreeSet, HashMap, HashSet,
     },
+    fmt::Write,
 };
 
 macro_rules! record_src_loc {
@@ -195,24 +196,26 @@ fn label_verification_error(
 ) -> Result<()> {
     let mut message = "Invalid block labels".to_string();
     if !redeclared.is_empty() {
-        message.push_str(&format!(
+        write!(
+            &mut message,
             ", labels were declared twice ({})",
             redeclared
                 .iter()
                 .map(|l| l.to_string())
                 .collect::<Vec<_>>()
-                .join(", "),
-        ));
+                .join(", ")
+        )?;
     }
     if !undeclared.is_empty() {
-        message.push_str(&format!(
+        write!(
+            &mut message,
             ", labels were used without being declared ({})",
             undeclared
                 .iter()
                 .map(|l| l.to_string())
                 .collect::<Vec<_>>()
-                .join(", "),
-        ));
+                .join(", ")
+        )?;
     }
     bail!(message);
 }

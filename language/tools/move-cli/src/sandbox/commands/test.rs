@@ -20,6 +20,7 @@ use move_package::{
 use std::{
     collections::{BTreeMap, HashMap},
     env,
+    fmt::Write as FmtWrite,
     fs::{self, File},
     io::{self, BufRead, Write},
     path::{Path, PathBuf},
@@ -223,7 +224,7 @@ pub fn run_one(
     for args_line in args_file {
         let args_line = args_line?;
 
-        if let Some(external_cmd) = args_line.strip_prefix(">") {
+        if let Some(external_cmd) = args_line.strip_prefix('>') {
             let external_cmd = external_cmd.trim_start();
             let mut cmd_iter = external_cmd.split_ascii_whitespace();
 
@@ -238,7 +239,7 @@ pub fn run_one(
             }
             let cmd_output = command.output()?;
 
-            output += &format!("External Command `{}`:\n", external_cmd);
+            writeln!(&mut output, "External Command `{}`:", external_cmd)?;
             output += std::str::from_utf8(&cmd_output.stdout)?;
             output += std::str::from_utf8(&cmd_output.stderr)?;
 
@@ -269,7 +270,7 @@ pub fn run_one(
         }
 
         let cmd_output = cli_command_template().args(args_iter).output()?;
-        output += &format!("Command `{}`:\n", args_line);
+        writeln!(&mut output, "Command `{}`:", args_line)?;
         output += std::str::from_utf8(&cmd_output.stdout)?;
         output += std::str::from_utf8(&cmd_output.stderr)?;
     }

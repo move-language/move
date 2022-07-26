@@ -41,7 +41,7 @@ use move_vm_runtime::session::SerializedReturnValues;
 use rayon::iter::Either;
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
-    fmt::Debug,
+    fmt::{Debug, Write as FmtWrite},
     io::Write,
     path::Path,
 };
@@ -667,11 +667,13 @@ where
     .collect::<VecDeque<_>>();
     assert!(!tasks.is_empty());
     let num_tasks = tasks.len();
-    output.push_str(&format!(
-        "processed {} task{}\n",
+    writeln!(
+        &mut output,
+        "processed {} task{}",
         num_tasks,
         if num_tasks > 1 { "s" } else { "" }
-    ));
+    )
+    .unwrap();
 
     let first_task = tasks.pop_front().unwrap();
     let init_opt = match &first_task.command {
@@ -687,7 +689,7 @@ where
     let (mut adapter, result_opt) =
         Adapter::init(default_syntax, fully_compiled_program_opt, init_opt);
     if let Some(result) = result_opt {
-        output.push_str(&format!("\ninit:\n{}\n", result))
+        writeln!(output, "\ninit:\n{}", result)?;
     }
     for task in tasks {
         handle_known_task(&mut output, &mut adapter, task);
@@ -720,10 +722,13 @@ fn handle_known_task<'a, Adapter: MoveTestAdapter<'a>>(
         Err(e) => format!("Error: {}", e),
     };
     assert!(!result_string.is_empty());
-    output.push_str(&format!(
-        "\ntask {} '{}'. lines {}-{}:\n{}\n",
+
+    writeln!(
+        output,
+        "\ntask {} '{}'. lines {}-{}:\n{}",
         task_number, task_name, start_line, stop_line, result_string
-    ));
+    )
+    .unwrap();
 }
 
 fn handle_expected_output(test_path: &Path, output: impl AsRef<str>) -> Result<()> {

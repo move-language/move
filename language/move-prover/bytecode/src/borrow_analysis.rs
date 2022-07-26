@@ -23,7 +23,7 @@ use move_model::{
 };
 use std::{borrow::BorrowMut, collections::BTreeMap, fmt};
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Default)]
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, Default)]
 pub struct BorrowInfo {
     /// Contains the nodes which are alive. This excludes nodes which are alive because
     /// other nodes which are alive borrow from them.
@@ -41,9 +41,10 @@ pub struct BorrowInfo {
 }
 
 /// Represents a write-back from a source node to a destination node with the associated edge
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct WriteBackAction {
-    pub src: BorrowNode,
+    /// the `src` of a write-back action must be a reference
+    pub src: TempIndex,
     pub dst: BorrowNode,
     pub edge: BorrowEdge,
 }
@@ -116,7 +117,7 @@ impl BorrowInfo {
             BorrowNode::LocalRoot(..) | BorrowNode::GlobalRoot(..) => {
                 trees.push(order);
             }
-            BorrowNode::Reference(..) => {
+            BorrowNode::Reference(index) => {
                 if next.is_in_use(node) {
                     // stop at a live reference
                     trees.push(order);
@@ -132,7 +133,7 @@ impl BorrowInfo {
                         for (parent, edge) in incoming {
                             let mut appended = order.clone();
                             appended.push(WriteBackAction {
-                                src: node.clone(),
+                                src: *index,
                                 dst: parent.clone(),
                                 edge: edge.clone(),
                             });

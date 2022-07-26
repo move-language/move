@@ -673,7 +673,7 @@ impl Symbolicator {
             mod_use_defs.insert(*module_ident, symbols);
         }
 
-        eprintln!("get_symbols loaded file_mods length: {:?}", file_mods.len());
+        eprintln!("get_symbols loaded file_mods length: {}", file_mods.len());
 
         let mut symbolicator = Symbolicator {
             mod_outer_defs,

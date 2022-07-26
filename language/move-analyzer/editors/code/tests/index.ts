@@ -18,7 +18,7 @@ export async function run(): Promise<void> {
     const mode = process.env['mode'] || 'test';
     if (mode === 'dev') {
         return new Promise((resolve) => {
-            setTimeout(resolve, 1000 * 60 * 15); // 15分钟休息一下
+            setTimeout(resolve, 1000 * 60 * 15); // Development mode, set a timeout of 15 minutes
         });
     }
 

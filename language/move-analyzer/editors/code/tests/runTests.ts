@@ -11,7 +11,11 @@
 
 import * as path from 'path';
 import * as cp from 'child_process';
-import { runTests, downloadAndUnzipVSCode, resolveCliArgsFromVSCodeExecutablePath } from '@vscode/test-electron';
+import {
+    runTests,
+    downloadAndUnzipVSCode,
+    resolveCliArgsFromVSCodeExecutablePath,
+} from '@vscode/test-electron';
 
 /**
  * Launches a VS Code instance to run tests.

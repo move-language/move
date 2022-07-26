@@ -623,10 +623,10 @@ impl<'env> FunctionTranslator<'env> {
             emitln!(writer, "$t{} := _$t{};", idx, idx);
         }
 
-        // Initialize mutations to have empty paths so $IsParentMutation works correctly.
+        // Initialize mutations to have uninitialized locations s.t. is_parent works correctly.
         for i in num_args..fun_target.get_local_count() {
             if self.get_local_type(i).is_mutable_reference() {
-                emitln!(writer, "assume IsEmptyVec(p#$Mutation($t{}));", i);
+                emitln!(writer, "assume l#$Mutation($t{}) == $Uninitialized();", i);
             }
         }
 
@@ -892,7 +892,15 @@ impl<'env> FunctionTranslator<'env> {
                                     _ => unreachable!(),
                                 })
                                 .collect_vec();
-                            if edge_pattern.len() == 1 {
+                            if edge_pattern.is_empty() {
+                                emitln!(
+                                    writer,
+                                    "{} := $IsSameMutation({}, {});",
+                                    str_local(dests[0]),
+                                    str_local(*parent),
+                                    src_str
+                                );
+                            } else if edge_pattern.len() == 1 {
                                 emitln!(
                                     writer,
                                     "{} := $IsParentMutation({}, {}, {});",

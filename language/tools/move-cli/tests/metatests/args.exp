@@ -34,3 +34,10 @@ Module 00000000000000000000000000000042::M2
 		covered: 1
 		% coverage: 100.00
 >>> % Module coverage: 100.00
+Command `docgen smoketest`:
+error: Found argument 'smoketest' which wasn't expected, or isn't valid in this context
+
+USAGE:
+    move docgen [OPTIONS]
+
+For more information try --help

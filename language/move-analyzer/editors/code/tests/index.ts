@@ -14,6 +14,14 @@ import * as path from 'path';
 /* eslint-disable */
 // deno-lint-ignore require-await
 export async function run(): Promise<void> {
+    // dev mode
+    const mode = process.env['mode'] || 'test';
+    if (mode === 'dev') {
+        return new Promise((resolve) => {
+            setTimeout(resolve, 1000 * 60 * 15); // Development mode, set a timeout of 15 minutes
+        });
+    }
+
     /* eslint-disable */
     const suite = new Mocha({
         ui: 'tdd',

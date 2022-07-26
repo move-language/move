@@ -6,8 +6,11 @@ import { Configuration } from './configuration';
 import { Context } from './context';
 import { Extension } from './extension';
 import { log } from './log';
+
 import * as childProcess from 'child_process';
 import * as vscode from 'vscode';
+import * as commands from './commands';
+
 
 /**
  * An extension command that displays the version of the server that this extension
@@ -41,7 +44,7 @@ async function serverVersion(context: Readonly<Context>): Promise<void> {
  * Activation events for this extension are listed in its `package.json` file, under the key
  * `"activationEvents"`.
  */
-export function activate(extensionContext: Readonly<vscode.ExtensionContext>): void {
+export async function activate(extensionContext: Readonly<vscode.ExtensionContext>): Promise<void> {
     const extension = new Extension();
     log.info(`${extension.identifier} version ${extension.version}`);
 
@@ -63,5 +66,6 @@ export function activate(extensionContext: Readonly<vscode.ExtensionContext>): v
     context.registerCommand('serverVersion', serverVersion);
 
     // All other utilities provided by this extension occur via the language server.
-    context.startClient();
+    await context.startClient();
+    context.registerCommand('textDocumentDocumentSymbol', commands.textDocumentDocumentSymbol);
 }

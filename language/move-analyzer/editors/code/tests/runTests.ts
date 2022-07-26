@@ -10,7 +10,12 @@
  */
 
 import * as path from 'path';
-import { runTests } from '@vscode/test-electron';
+import * as cp from 'child_process';
+import {
+    runTests,
+    downloadAndUnzipVSCode,
+    resolveCliArgsFromVSCodeExecutablePath,
+} from '@vscode/test-electron';
 
 /**
  * Launches a VS Code instance to run tests.
@@ -28,8 +33,29 @@ async function main(): Promise<void> {
         // program that is considered to be the "test suite" for the extension.
         const extensionTestsPath = path.resolve(__dirname, 'index.js');
 
+        // The workspace
+        let testWorkspacePath = path.resolve(__dirname, './lsp-demo/lsp-demo.code-workspace');
+        if (process.platform === 'win32') {
+            testWorkspacePath = path.resolve(__dirname, './lsp-demo/lsp-demo-win.code-workspace');
+        }
+
+        // Install vscode and depends extension
+        const vscodeVersion = '1.64.0';
+        const vscodeExecutablePath = await downloadAndUnzipVSCode(vscodeVersion);
+        const [cli, ...args] = resolveCliArgsFromVSCodeExecutablePath(vscodeExecutablePath);
+        const newCli = cli ?? 'code';
+        cp.spawnSync(newCli, [...args, '--install-extension', 'damirka.move-syntax', '--force'], {
+            encoding: 'utf-8',
+            stdio: 'inherit',
+        });
+
         // Download VS Code, unzip it, and run the "test suite" program.
-        await runTests({ extensionDevelopmentPath, extensionTestsPath });
+        await runTests({
+            vscodeExecutablePath: vscodeExecutablePath,
+            extensionDevelopmentPath,
+            extensionTestsPath,
+            launchArgs: [testWorkspacePath],
+        });
     } catch (_err: unknown) {
         console.error('Failed to run tests');
         process.exit(1);

@@ -1,11 +1,5 @@
 module 0x2::A {
-    // use std::signer;
     use std::vector;
-
-    struct R has key { i: u64 }
-
-    struct S has key { i: u64 }
-
 
     #[test]
     public fun vector_choose_success(): vector<u64> {
@@ -22,7 +16,7 @@ module 0x2::A {
         ensures (choose min i in 0..len(result) where result[i] == 1) == 0;
     }
 
-    #[test, expected_failure]
+    #[test]
     public fun vector_choose_unsatisfied_predicate(): vector<u64> {
         let v = vector::empty<u64>();
         vector::push_back(&mut v, 1);
@@ -35,7 +29,7 @@ module 0x2::A {
         let post choice = choose i in 0..len(result) where result[i] == 3;
     }
 
-    #[test, expected_failure]
+    #[test]
     public fun vector_choose_min_unsatisfied_predicate(): vector<u64> {
         let v = vector::empty<u64>();
         vector::push_back(&mut v, 1);
@@ -48,14 +42,14 @@ module 0x2::A {
         let post choice_min = choose min i in 0..len(result) where result[i] == 3;
     }
 
-    #[test, expected_failure]
+    #[test]
     public fun simple_number_range_failure(): u64 { 1 }
 
     spec simple_number_range_failure {
         ensures result <= (choose x: u64 where x >= 4);
     }
 
-    #[test, expected_failure]
+    #[test]
     public fun simple_number_min_range_failure(): u64 { 1 }
 
     spec simple_number_min_range_failure {

@@ -69,16 +69,19 @@ pub struct LocalState {
     termination: TerminationStatus,
     /// mutable parameters that gets destroyed during the execution
     destroyed_args: BTreeMap<TempIndex, TypedValue>,
+    /// whether specification checking needs to be skipped
+    skip_specs: bool,
 }
 
 impl LocalState {
-    pub fn new(slots: Vec<LocalSlot>) -> Self {
+    pub fn new(slots: Vec<LocalSlot>, skip_specs: bool) -> Self {
         Self {
             slots,
             pc: 0,
             pc_branch: false,
             termination: TerminationStatus::None,
             destroyed_args: BTreeMap::new(),
+            skip_specs,
         }
     }
 
@@ -207,5 +210,15 @@ impl LocalState {
     /// Consume and reduce the state into termination status
     pub fn into_termination_status(self) -> TerminationStatus {
         self.termination
+    }
+
+    /// Mark the spec checking disabled for the rest of the function
+    pub fn skip_specs(&mut self) {
+        self.skip_specs = true;
+    }
+
+    /// Check whether we are skipping the specs
+    pub fn is_spec_skipped(&self) -> bool {
+        self.skip_specs
     }
 }

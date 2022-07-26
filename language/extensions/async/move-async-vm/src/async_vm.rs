@@ -24,12 +24,15 @@ use move_vm_runtime::{
     native_functions::NativeFunction,
     session::{SerializedReturnValues, Session},
 };
-use move_vm_types::{
-    gas_schedule::GasStatus,
-    values::{Reference, Value},
-};
+use move_vm_test_utils::gas_schedule::GasStatus;
+use move_vm_types::values::{Reference, Value};
 
-use crate::{actor_metadata, actor_metadata::ActorMetadata, natives, natives::AsyncExtension};
+use crate::{
+    actor_metadata,
+    actor_metadata::ActorMetadata,
+    natives,
+    natives::{AsyncExtension, GasParameters as ActorGasParameters},
+};
 
 /// Represents an instance of an async VM.
 pub struct AsyncVM {
@@ -40,7 +43,12 @@ pub struct AsyncVM {
 
 impl AsyncVM {
     /// Creates a new VM, registering the given natives and actors.
-    pub fn new<I, A>(async_lib_addr: AccountAddress, natives: I, actors: A) -> VMResult<Self>
+    pub fn new<I, A>(
+        async_lib_addr: AccountAddress,
+        natives: I,
+        actors: A,
+        actor_gas_parameters: ActorGasParameters,
+    ) -> VMResult<Self>
     where
         I: IntoIterator<Item = (AccountAddress, Identifier, Identifier, NativeFunction)>,
         A: IntoIterator<Item = ActorMetadata>,
@@ -62,9 +70,9 @@ impl AsyncVM {
             .collect();
         Ok(AsyncVM {
             move_vm: MoveVM::new(
-                natives
-                    .into_iter()
-                    .chain(natives::actor_natives(async_lib_addr).into_iter()),
+                natives.into_iter().chain(
+                    natives::actor_natives(async_lib_addr, actor_gas_parameters).into_iter(),
+                ),
             )?,
             actor_metadata,
             message_table,

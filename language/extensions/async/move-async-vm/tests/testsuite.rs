@@ -8,6 +8,7 @@ use move_async_vm::{
     actor_metadata,
     actor_metadata::ActorMetadata,
     async_vm::{AsyncResult, AsyncSession, AsyncVM, Message},
+    natives::GasParameters as ActorGasParameters,
 };
 use move_binary_format::access::ModuleAccess;
 use move_command_line_common::testing::EXP_EXT;
@@ -23,7 +24,7 @@ use move_core_types::{
     resolver::{ModuleResolver, ResourceResolver},
 };
 use move_prover_test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives};
-use move_vm_types::gas_schedule::GasStatus;
+use move_vm_test_utils::gas_schedule::GasStatus;
 use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet, VecDeque},
@@ -237,8 +238,14 @@ impl Harness {
             resource_store: Default::default(),
             vm: AsyncVM::new(
                 test_account(),
-                move_stdlib::natives::all_natives(test_account()),
+                move_stdlib::natives::all_natives(
+                    test_account(),
+                    // We may want to switch to a different gas schedule in the future, but for now,
+                    // the all-zero one should be enough.
+                    move_stdlib::natives::GasParameters::zeros(),
+                ),
                 actor_metadata,
+                ActorGasParameters::zeros(),
             )?,
             actor_instances,
         };

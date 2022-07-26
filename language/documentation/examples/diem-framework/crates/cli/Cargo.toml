@@ -16,6 +16,7 @@ move-stdlib = { path = "../../../../../move-stdlib" }
 move-core-types = { path = "../../../../../move-core/types" }
 move-vm-types = { path = "../../../../../move-vm/types" }
 move-cli = { path = "../../../../../tools/move-cli" }
+move-vm-test-utils = { path = "../../../../../move-vm/test-utils" }
 
 diem-framework-natives = { path = "../natives" }
 

@@ -10,15 +10,12 @@
 use better_any::{Tid, TidAble};
 use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_core_types::{
-    account_address::AccountAddress,
-    gas_schedule::{GasAlgebra, GasCarrier, InternalGasUnits},
-    language_storage::TypeTag,
-    value::MoveTypeLayout,
+    account_address::AccountAddress, language_storage::TypeTag, value::MoveTypeLayout,
     vm_status::StatusCode,
 };
 use move_vm_runtime::{
     native_functions,
-    native_functions::{NativeContext, NativeFunctionTable},
+    native_functions::{NativeContext, NativeFunction, NativeFunctionTable},
 };
 use move_vm_types::{
     loaded_data::runtime_types::Type,
@@ -33,6 +30,7 @@ use std::{
     collections::{btree_map::Entry, BTreeMap, BTreeSet, VecDeque},
     convert::TryInto,
     fmt::Display,
+    sync::Arc,
 };
 
 // ===========================================================================================
@@ -93,12 +91,7 @@ pub trait TableResolver {
         key: &[u8],
     ) -> Result<Option<Vec<u8>>, anyhow::Error>;
 
-    fn operation_cost(
-        &self,
-        op: TableOperation,
-        key_size: usize,
-        val_size: usize,
-    ) -> InternalGasUnits<GasCarrier>;
+    fn operation_cost(&self, op: TableOperation, key_size: usize, val_size: usize) -> u64;
 }
 
 /// A table operation, for supporting cost calculation.
@@ -341,19 +334,30 @@ impl Table {
 
 /// Returns all natives for tables.
 pub fn table_natives(table_addr: AccountAddress) -> NativeFunctionTable {
-    native_functions::make_table(
-        table_addr,
-        &[
-            ("table", "new_table_handle", native_new_table_handle),
-            ("table", "add_box", native_add_box),
-            ("table", "borrow_box", native_borrow_box),
-            ("table", "borrow_box_mut", native_borrow_box),
-            ("table", "remove_box", native_remove_box),
-            ("table", "contains_box", native_contains_box),
-            ("table", "destroy_empty_box", native_destroy_empty_box),
-            ("table", "drop_unchecked_box", native_drop_unchecked_box),
-        ],
-    )
+    let natives: [(&str, &str, NativeFunction); 8] = [
+        (
+            "table",
+            "new_table_handle",
+            Arc::new(native_new_table_handle),
+        ),
+        ("table", "add_box", Arc::new(native_add_box)),
+        ("table", "borrow_box", Arc::new(native_borrow_box)),
+        ("table", "borrow_box_mut", Arc::new(native_borrow_box)),
+        ("table", "remove_box", Arc::new(native_remove_box)),
+        ("table", "contains_box", Arc::new(native_contains_box)),
+        (
+            "table",
+            "destroy_empty_box",
+            Arc::new(native_destroy_empty_box),
+        ),
+        (
+            "table",
+            "drop_unchecked_box",
+            Arc::new(native_drop_unchecked_box),
+        ),
+    ];
+
+    native_functions::make_table_from_iter(table_addr, natives)
 }
 
 fn native_new_table_handle(
@@ -524,7 +528,7 @@ fn native_drop_unchecked_box(
     assert_eq!(ty_args.len(), 3);
     assert_eq!(args.len(), 1);
 
-    Ok(NativeResult::ok(InternalGasUnits::new(0_u64), smallvec![]))
+    Ok(NativeResult::ok(0, smallvec![]))
 }
 
 // =========================================================================================

@@ -1,5 +1,5 @@
+// separate_baseline: cvc5
 module 0x42::VerifyLoopsWithMemoryOps {
-
     use std::vector;
     spec module {
         pragma verify=true;

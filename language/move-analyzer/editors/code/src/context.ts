@@ -10,14 +10,14 @@ import { sync as commandExistsSync } from 'command-exists';
 
 /** Information passed along to each VS Code command defined by this extension. */
 export class Context {
-    private _client: lc.LanguageClient | undefined;
+    private client: lc.LanguageClient | undefined;
 
     private constructor(
         private readonly extensionContext: Readonly<vscode.ExtensionContext>,
         readonly configuration: Readonly<Configuration>,
         client: lc.LanguageClient | undefined = undefined,
     ) {
-        this._client = client;
+        this.client = client;
     }
 
     static create(
@@ -101,11 +101,11 @@ export class Context {
         log.info('Starting client...');
         const disposable = client.start();
         this.extensionContext.subscriptions.push(disposable);
-        this._client = client;
+        this.client = client;
 
         // Wait for the Move Language Server initialization to complete,
         // especially the first symbol table parsing is completed
-        await this._client.onReady();
+        await this.client.onReady();
     }
 
     /**
@@ -114,6 +114,6 @@ export class Context {
      * @returns lc.LanguageClient
      */
     getClient(): lc.LanguageClient | undefined {
-        return this._client;
+        return this.client;
     }
 } // Context

@@ -43,6 +43,9 @@ async function serverVersion(context: Readonly<Context>): Promise<void> {
  *
  * Activation events for this extension are listed in its `package.json` file, under the key
  * `"activationEvents"`.
+ *
+ * In order to achieve synchronous activation, mark the function as an asynchronous function,
+ * so that you can wait for the activation to complete by await
  */
 export async function activate(extensionContext: Readonly<vscode.ExtensionContext>): Promise<void> {
     const extension = new Extension();

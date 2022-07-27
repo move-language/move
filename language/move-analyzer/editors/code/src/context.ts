@@ -72,11 +72,6 @@ export class Context {
     async startClient(): Promise<void> {
         const executable: lc.Executable = {
             command: this.configuration.serverPath,
-            options: {
-                env: {
-                    'RUST_BACKTRACE': '1',
-                },
-            },
         };
         const serverOptions: lc.ServerOptions = {
             run: executable,
@@ -107,6 +102,9 @@ export class Context {
         const disposable = client.start();
         this.extensionContext.subscriptions.push(disposable);
         this._client = client;
+
+        // Wait for the Move Language Server initialization to complete,
+        // especially the first symbol table parsing is completed
         await this._client.onReady();
     }
 

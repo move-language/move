@@ -216,6 +216,30 @@ impl<'a> LiveVarAnalysis<'a> {
         let label_to_code_offset = Bytecode::label_offsets(&code);
         let mut transformed_code = vec![];
         let mut new_bytecodes = vec![];
+
+        // insert marks for uninitialized mutable references
+        let num_args = self.func_target.get_parameter_count();
+        if let Some(info) = annotations.get(&0) {
+            for index in &info.before {
+                // only mark the mutable references conditionally defined in function body as uninit
+                if *index >= num_args
+                    && self
+                        .func_target
+                        .get_local_type(*index)
+                        .is_mutable_reference()
+                {
+                    transformed_code.push(Bytecode::Call(
+                        self.new_attr_id(),
+                        vec![],
+                        Operation::Uninit,
+                        vec![*index],
+                        None,
+                    ));
+                }
+            }
+        }
+
+        // optimize the function body
         let mut skip_next = false;
         for code_offset in 0..code.len() {
             if skip_next {

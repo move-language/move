@@ -388,7 +388,6 @@ impl<'env> FunctionContext<'env> {
     ) {
         let from_val = match kind {
             AssignKind::Move => local_state.del_value(src),
-            // TODO (mengxu): what exactly is the semantic of Store here? Why not just use Copy?
             AssignKind::Copy | AssignKind::Store => local_state.get_value(src),
         };
         let into_val = from_val.assign_cast(local_state.get_type(dst).clone());
@@ -439,6 +438,24 @@ impl<'env> FunctionContext<'env> {
         // operations that does not need to have the argument in storage
         match op {
             // built-ins
+            Operation::Uninit => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 1);
+                }
+                self.handle_uninit(srcs[0], local_state);
+                return Ok(());
+            }
+            Operation::Destroy => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 1);
+                }
+                self.handle_destroy(srcs[0], local_state);
+                return Ok(());
+            }
+            Operation::Stop => {
+                // we should never see the Stop operation in interpreter mode
+                unreachable!()
+            }
             Operation::Havoc(kind) => {
                 if cfg!(debug_assertions) {
                     assert_eq!(srcs.len(), 1);
@@ -747,18 +764,6 @@ impl<'env> FunctionContext<'env> {
                 let object = self.handle_freeze_ref(typed_args.remove(0));
                 Ok(vec![object])
             }
-            // built-in
-            Operation::Destroy => {
-                if cfg!(debug_assertions) {
-                    assert_eq!(typed_args.len(), 1);
-                }
-                self.handle_destroy(srcs[0], local_state);
-                Ok(vec![])
-            }
-            Operation::Stop => {
-                // we should never see the Stop operation in interpreter mode
-                unreachable!()
-            }
             // cast
             Operation::CastU8 | Operation::CastU64 | Operation::CastU128 => {
                 if cfg!(debug_assertions) {
@@ -850,7 +855,10 @@ impl<'env> FunctionContext<'env> {
             // event (TODO: not supported yet)
             Operation::EmitEvent | Operation::EventStoreDiverge => Ok(vec![]),
             // already handled
-            Operation::Havoc(..)
+            Operation::Stop
+            | Operation::Uninit
+            | Operation::Destroy
+            | Operation::Havoc(..)
             | Operation::TraceLocal(..)
             | Operation::TraceReturn(..)
             | Operation::TraceAbort
@@ -1471,10 +1479,23 @@ impl<'env> FunctionContext<'env> {
         ref_val.freeze_ref()
     }
 
+    fn handle_uninit(&self, local_idx: TempIndex, local_state: &mut LocalState) {
+        if cfg!(debug_assertions) {
+            assert!(!local_state.has_value(local_idx));
+        }
+        local_state.mark_uninit(local_idx);
+    }
+
     fn handle_destroy(&self, local_idx: TempIndex, local_state: &mut LocalState) {
-        let val = local_state.del_value(local_idx);
-        if local_idx < self.target.get_parameter_count() {
-            local_state.save_destroyed_arg(local_idx, val);
+        if local_state.unset_uninit(local_idx) {
+            if cfg!(debug_assertions) {
+                assert!(!local_state.has_value(local_idx));
+            }
+        } else {
+            let val = local_state.del_value(local_idx);
+            if local_idx < self.target.get_parameter_count() {
+                local_state.save_destroyed_arg(local_idx, val);
+            }
         }
     }
 

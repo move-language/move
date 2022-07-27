@@ -1,5 +1,6 @@
 module 0x2::A {
-    #[test]
+    // TODO(mengxu) needs to stabalize the borrow model first
+    // #[test]
     public fun if_else(): (u64, u64) {
         let a = 1;
         let b = 2;

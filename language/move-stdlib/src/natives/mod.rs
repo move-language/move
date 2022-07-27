@@ -21,14 +21,14 @@ use move_vm_runtime::native_functions::{make_table_from_iter, NativeFunctionTabl
 
 #[derive(Debug, Clone)]
 pub struct GasParameters {
-    bcs: bcs::GasParameters,
-    hash: hash::GasParameters,
-    signer: signer::GasParameters,
-    string: string::GasParameters,
-    vector: vector::GasParameters,
+    pub bcs: bcs::GasParameters,
+    pub hash: hash::GasParameters,
+    pub signer: signer::GasParameters,
+    pub string: string::GasParameters,
+    pub vector: vector::GasParameters,
 
     #[cfg(feature = "testing")]
-    unit_test: unit_test::GasParameters,
+    pub unit_test: unit_test::GasParameters,
 }
 
 impl GasParameters {

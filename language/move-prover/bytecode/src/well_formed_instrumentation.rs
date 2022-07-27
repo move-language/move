@@ -105,8 +105,7 @@ impl FunctionTargetProcessor for WellFormedInstrumentationProcessor {
                         Operation::Global(None),
                         vec![zero_addr],
                     );
-                    let eq_with_init =
-                        builder.mk_bool_call(Operation::Identical, vec![mem_access, mem_val]);
+                    let eq_with_init = builder.mk_identical(mem_access, mem_val);
                     builder.emit_prop(PropKind::Assume, eq_with_init);
                 }
             }

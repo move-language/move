@@ -40,7 +40,7 @@ async function main(): Promise<void> {
         }
 
         // Install vscode and depends extension
-        const vscodeVersion = '1.64.0';
+        const vscodeVersion = '1.69.2';
         const vscodeExecutablePath = await downloadAndUnzipVSCode(vscodeVersion);
         const [cli, ...args] = resolveCliArgsFromVSCodeExecutablePath(vscodeExecutablePath);
         const newCli = cli ?? 'code';

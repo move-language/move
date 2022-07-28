@@ -571,7 +571,7 @@ source ~/.profile
 ```
 ## Step 7:  Use the Move prover<span id="Step7"><span>
 
-Smart contracts deployed on the blockchain may maniputate high-value assets. As a technique that uses strict
+Smart contracts deployed on the blockchain may manipulate high-value assets. As a technique that uses strict
 mathematical methods to describe behavior and reason correctness of computer systems, formal verification
 has been used in blockchains to prevent bugs in smart contracts. [
 The Move prover](https://github.com/move-language/move/blob/main/language/move-prover/doc/user/prover-guide.md)

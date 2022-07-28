@@ -71,7 +71,6 @@ pub struct FunctionContext<'env> {
     holder: &'env FunctionTargetsHolder,
     target: FunctionTarget<'env>,
     ty_args: Vec<BaseType>,
-    skip_specs: bool,
     label_offsets: BTreeMap<Label, CodeOffset>,
     // debug
     level: usize,
@@ -82,7 +81,6 @@ impl<'env> FunctionContext<'env> {
         holder: &'env FunctionTargetsHolder,
         target: FunctionTarget<'env>,
         ty_args: Vec<BaseType>,
-        skip_specs: bool,
         level: usize,
     ) -> Self {
         let label_offsets = Bytecode::label_offsets(target.get_bytecode());
@@ -90,7 +88,6 @@ impl<'env> FunctionContext<'env> {
             holder,
             target,
             ty_args,
-            skip_specs,
             label_offsets,
             level,
         }
@@ -115,13 +112,14 @@ impl<'env> FunctionContext<'env> {
     /// Execute a user function with value arguments.
     pub fn exec_user_function(
         &self,
+        skip_specs: bool,
         typed_args: Vec<TypedValue>,
         global_state: &mut GlobalState,
         eval_state: &mut EvalState,
     ) -> ExecResult<LocalState> {
         let instructions = self.target.get_bytecode();
         let debug_bytecode = self.get_settings().verbose_bytecode;
-        let mut local_state = self.prepare_local_state(typed_args);
+        let mut local_state = self.prepare_local_state(skip_specs, typed_args);
         while !local_state.is_terminated() {
             let pc = local_state.get_pc() as usize;
             let bytecode = instructions.get(pc).unwrap();
@@ -147,7 +145,7 @@ impl<'env> FunctionContext<'env> {
         local_state: &mut LocalState,
         global_state: &mut GlobalState,
     ) -> ExecResult<Vec<TypedValue>> {
-        let mut dummy_state = self.prepare_local_state(typed_args);
+        let mut dummy_state = self.prepare_local_state(local_state.is_spec_skipped(), typed_args);
         if cfg!(debug_assertions) {
             assert_eq!(dummy_state.num_slots(), srcs.len());
         }
@@ -359,13 +357,13 @@ impl<'env> FunctionContext<'env> {
                 eval_state,
             ),
             Bytecode::Prop(_, PropKind::Assert, exp) => {
-                if !self.skip_specs {
+                if !local_state.is_spec_skipped() {
                     self.handle_prop_assert(exp, eval_state, local_state, global_state)
                 }
             }
             Bytecode::Prop(_, PropKind::Assume, exp) => {
-                if !self.skip_specs {
-                    self.handle_prop_assume(exp, eval_state, local_state, global_state)
+                if !local_state.is_spec_skipped() {
+                    self.handle_prop_assume(exp, eval_state, local_state, global_state)?
                 }
             }
             // expressions (TODO: not supported yet)
@@ -940,8 +938,12 @@ impl<'env> FunctionContext<'env> {
             .collect();
 
         // execute the user function
-        let mut callee_state =
-            callee_ctxt.exec_user_function(typed_args, global_state, eval_state)?;
+        let mut callee_state = callee_ctxt.exec_user_function(
+            local_state.is_spec_skipped(),
+            typed_args,
+            global_state,
+            eval_state,
+        )?;
 
         // update mutable arguments
         for (callee_idx, origin_idx) in mut_args {
@@ -1847,7 +1849,7 @@ impl<'env> FunctionContext<'env> {
         eval_state: &EvalState,
         local_state: &mut LocalState,
         global_state: &GlobalState,
-    ) {
+    ) -> ExecResult<()> {
         let evaluator = Evaluator::new(
             self.holder,
             &self.target,
@@ -1861,10 +1863,15 @@ impl<'env> FunctionContext<'env> {
         match evaluator.check_assume(exp) {
             None => (),
             // handle let-bindings
-            Some((local_idx, local_val)) => {
+            Some(Ok((local_idx, local_val))) => {
                 local_state.put_value_override(local_idx, local_val);
             }
+            Some(Err(_)) => {
+                // unable to find a satisfiable value for a let-binding
+                local_state.skip_specs();
+            }
         }
+        Ok(())
     }
 
     //
@@ -2188,16 +2195,10 @@ impl<'env> FunctionContext<'env> {
             .collect();
 
         // build the context
-        FunctionContext::new(
-            self.holder,
-            callee_target,
-            callee_ty_insts,
-            self.skip_specs,
-            self.level + 1,
-        )
+        FunctionContext::new(self.holder, callee_target, callee_ty_insts, self.level + 1)
     }
 
-    fn prepare_local_state(&self, typed_args: Vec<TypedValue>) -> LocalState {
+    fn prepare_local_state(&self, skip_specs: bool, typed_args: Vec<TypedValue>) -> LocalState {
         let target = &self.target;
         let env = target.global_env();
 
@@ -2241,7 +2242,7 @@ impl<'env> FunctionContext<'env> {
             let slot = LocalSlot::new_tmp(name, ty);
             local_slots.push(slot);
         }
-        LocalState::new(local_slots)
+        LocalState::new(local_slots, skip_specs)
     }
 }
 
@@ -2260,8 +2261,9 @@ pub fn entrypoint(
     global_state: &mut GlobalState,
 ) -> ExecResult<Vec<TypedValue>> {
     let mut eval_state = EvalState::default();
-    let ctxt = FunctionContext::new(holder, target, ty_args.to_vec(), skip_specs, level);
-    let local_state = ctxt.exec_user_function(typed_args, global_state, &mut eval_state)?;
+    let ctxt = FunctionContext::new(holder, target, ty_args.to_vec(), level);
+    let local_state =
+        ctxt.exec_user_function(skip_specs, typed_args, global_state, &mut eval_state)?;
     let termination = local_state.into_termination_status();
     match termination {
         TerminationStatus::Abort(abort_info) => Err(abort_info),

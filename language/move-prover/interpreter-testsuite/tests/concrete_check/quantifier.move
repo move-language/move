@@ -31,7 +31,7 @@ module 0x2::A {
         ensures exists i in 0..len(result): result[i] == 1;
     }
 
-    #[test, expected_failure]
+    #[test]
     public fun init_vector_failure(): vector<u64> {
         let v = vector::empty<u64>();
         vector::push_back(&mut v, 1);

@@ -546,11 +546,11 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                 let dest_node = self.borrow_node(*dest);
                 let src_node = self.borrow_node(*src);
                 match kind {
-                    AssignKind::Move | AssignKind::Store => {
+                    AssignKind::Move => {
                         self.remap_borrow_node(state, &src_node, &dest_node);
                         state.moved_nodes.insert(src_node);
                     }
-                    AssignKind::Copy => {
+                    AssignKind::Copy | AssignKind::Store => {
                         state.add_node(dest_node.clone());
                         state.add_edge(src_node, dest_node, BorrowEdge::Direct);
                     }

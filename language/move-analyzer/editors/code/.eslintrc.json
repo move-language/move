@@ -139,7 +139,6 @@
         // * All @typescript-eslint rules: https://github.com/typescript-eslint/typescript-eslint/tree/v4.31.1/packages/eslint-plugin/docs/rules
         // * The rules included in @typescript-eslint/recommended: https://github.com/typescript-eslint/typescript-eslint/blob/v4.31.1/packages/eslint-plugin/src/configs/recommended.ts
         // * The rules included in @typescript-eslint/recommended-requiring-type-checking: https://github.com/typescript-eslint/typescript-eslint/blob/v4.31.1/packages/eslint-plugin/src/configs/recommended-requiring-type-checking.ts
-        "@typescript-eslint/array-type": ["warn", { "default": "generic" }],
         "@typescript-eslint/ban-tslint-comment": "warn",
         "@typescript-eslint/brace-style": "warn",
         "@typescript-eslint/comma-dangle": [
@@ -215,6 +214,7 @@
         "@typescript-eslint/type-annotation-spacing": "off",
         "@typescript-eslint/no-explicit-any": "off",
         "@typescript-eslint/no-unsafe-assignment": "off",
-        "@typescript-eslint/restrict-template-expressions": "off"
+        "@typescript-eslint/restrict-template-expressions": "off",
+        "@typescript-eslint/array-type": "off"
     }
 }

@@ -9,7 +9,7 @@ Mocha.suite('LSP', () => {
         const ext = vscode.extensions.getExtension('move.move-analyzer');
         assert.ok(ext);
 
-        await ext.activate();
+        await ext.activate(); // Synchronous waiting for activation to complete
 
         // 1. get workdir
         const workDir = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';

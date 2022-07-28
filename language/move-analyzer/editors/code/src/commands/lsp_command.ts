@@ -1,5 +1,9 @@
-
-import * as lc from 'vscode-languageclient';
+import type {
+    DocumentSymbolParams,
+    SymbolInformation,
+    DocumentSymbol,
+} from 'vscode-languageclient';
+import { DocumentSymbolRequest } from 'vscode-languageclient';
 import type { Context } from '../context';
 
 /**
@@ -7,14 +11,14 @@ import type { Context } from '../context';
  */
 export async function textDocumentDocumentSymbol(
     context: Readonly<Context>,
-    params: lc.DocumentSymbolParams,
+    params: DocumentSymbolParams,
     )
-    : Promise<Array<lc.SymbolInformation> | Array<lc.DocumentSymbol> | null> {
+    : Promise<SymbolInformation[] | DocumentSymbol[] | null> {
     const client = context.getClient();
     if (client === undefined) {
         return Promise.reject(new Error('No language client connected.'));
     }
 
     // Send the request to the language client.
-    return client.sendRequest(lc.DocumentSymbolRequest.type, params);
+    return client.sendRequest(DocumentSymbolRequest.type, params);
 }

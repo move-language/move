@@ -1,0 +1,9 @@
+Command `new --path . Foo`:
+Command `build`:
+INCLUDING DEPENDENCY MoveStdlib
+BUILDING Foo
+Command `docgen --quiet --template template.md`:
+External Command `grep documentation doc/Foo.md`:
+Test documentation comment
+External Command `cat doc/template.md`:
+This is a test template

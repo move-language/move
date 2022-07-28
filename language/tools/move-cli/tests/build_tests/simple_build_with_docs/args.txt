@@ -1,0 +1,5 @@
+new --path . Foo
+build
+docgen --quiet --template template.md
+> grep documentation doc/Foo.md
+> cat doc/template.md

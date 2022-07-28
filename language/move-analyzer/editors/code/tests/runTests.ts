@@ -9,6 +9,7 @@
  * https://code.visualstudio.com/api/working-with-extensions/testing-extension#the-test-script
  */
 
+import * as os from 'os';
 import * as path from 'path';
 import * as cp from 'child_process';
 import {
@@ -49,12 +50,17 @@ async function main(): Promise<void> {
             stdio: 'inherit',
         });
 
+        // Because the default vscode userDataDir is too long,
+        // v1.69.2 will report an error when running test.
+        // So generate a short
+        const userDataDir = path.join(os.tmpdir(), 'vscode-test');
+
         // Download VS Code, unzip it, and run the "test suite" program.
         await runTests({
             vscodeExecutablePath: vscodeExecutablePath,
             extensionDevelopmentPath,
             extensionTestsPath,
-            launchArgs: [testWorkspacePath],
+            launchArgs: [testWorkspacePath, '--user-data-dir', userDataDir],
         });
     } catch (_err: unknown) {
         console.error('Failed to run tests');

@@ -130,6 +130,10 @@ pub struct BuildConfig {
     /// Only fetch dependency repos to MOVE_HOME
     #[clap(long = "fetch-deps-only", global = true)]
     pub fetch_deps_only: bool,
+
+    /// Skip the call to Movey API to increase download count
+    #[clap(long = "skip-movey-call", global = true)]
+    pub skip_movey_call: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd)]

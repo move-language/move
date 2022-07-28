@@ -19,5 +19,6 @@ CompiledPackageInfo {
         additional_named_addresses: {},
         architecture: None,
         fetch_deps_only: false,
+        skip_movey_call: true,
     },
 }

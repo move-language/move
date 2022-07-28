@@ -16,7 +16,10 @@ use crate::{
     BuildConfig,
 };
 use anyhow::{bail, Context, Result};
-use move_command_line_common::files::{find_move_filenames, FileHash};
+use move_command_line_common::{
+    files::{find_move_filenames, FileHash},
+    movey_constants,
+};
 use move_core_types::account_address::AccountAddress;
 use move_symbol_pool::Symbol;
 use petgraph::{algo, graphmap::DiGraphMap, Outgoing};
@@ -28,6 +31,7 @@ use std::{
     path::{Path, PathBuf},
     process::Command,
     rc::Rc,
+    thread
 };
 
 pub type ResolvedTable = ResolutionTable<AccountAddress>;
@@ -388,7 +392,11 @@ impl ResolvingGraph {
         dep: Dependency,
         root_path: PathBuf,
     ) -> Result<(Renaming, ResolvingTable)> {
-        Self::download_and_update_if_remote(dep_name_in_pkg, &dep)?;
+        Self::download_and_update_if_repo(
+            dep_name_in_pkg,
+            &dep,
+            self.build_options.skip_movey_call
+        )?;
         let (dep_package, dep_package_dir) =
             Self::parse_package_manifest(&dep, &dep_name_in_pkg, root_path)
                 .with_context(|| format!("While processing dependency '{}'", dep_name_in_pkg))?;
@@ -526,7 +534,7 @@ impl ResolvingGraph {
         };
 
         for (dep_name, dep) in manifest.dependencies.iter().chain(additional_deps.iter()) {
-            Self::download_and_update_if_remote(*dep_name, dep)?;
+            Self::download_and_update_if_repo(*dep_name, dep, build_options.skip_movey_call)?;
 
             let (dep_manifest, _) =
                 Self::parse_package_manifest(dep, dep_name, root_path.to_path_buf())
@@ -537,9 +545,19 @@ impl ResolvingGraph {
         Ok(())
     }
 
-    fn download_and_update_if_remote(dep_name: PackageName, dep: &Dependency) -> Result<()> {
+    fn download_and_update_if_repo(
+        dep_name: PackageName,
+        dep: &Dependency,
+        skip_movey_call: bool
+    ) -> Result<()> {
         if let Some(git_info) = &dep.git_info {
             if !git_info.download_to.exists() {
+                if !skip_movey_call {
+                    let git_url = git_info.git_url.as_str().to_string();
+                    let git_rev = git_info.git_rev.as_str().to_string();
+                    let subdir = git_info.subdir.to_string_lossy().to_string();
+                    Self::increase_movey_download_count(git_url, git_rev, subdir);
+                }
                 Command::new("git")
                     .args([
                         "clone",
@@ -571,6 +589,17 @@ impl ResolvingGraph {
             package_hooks::resolve_custom_dependency(dep_name, node_info)?
         }
         Ok(())
+    }
+
+    fn increase_movey_download_count(git_url: String, git_rev: String, subdir: String) {
+        thread::spawn(move || {
+            let params = [("url", git_url), ("rev", git_rev), ("subdir", subdir)];
+            let client = reqwest::blocking::Client::new();
+            let _ = client
+                .post(&format!("{}/api/v1/download", movey_constants::MOVEY_URL))
+                .form(&params)
+                .send();
+        });
     }
 }
 

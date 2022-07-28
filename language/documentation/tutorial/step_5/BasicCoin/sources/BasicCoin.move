@@ -91,7 +91,7 @@ module NamedAddr::BasicCoin {
     }
 
     #[test(account = @0x1)]
-    #[expected_failure(abort_code = 518)] // Can specify an abort code
+    #[expected_failure(abort_code = 2)] // Can specify an abort code
     fun publish_balance_already_exists(account: signer) {
         publish_balance(&account);
         publish_balance(&account);

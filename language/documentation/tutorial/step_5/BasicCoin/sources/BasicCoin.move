@@ -97,7 +97,7 @@ module NamedAddr::BasicCoin {
         publish_balance(&account);
     }
 
-    // EXERCISE: Write `balance_dne` test here!
+    // EXERCISE: Write `balance_of_dne` test here!
 
     #[test]
     #[expected_failure]

@@ -142,7 +142,7 @@ impl<'env> Evaluator<'env> {
     /// Check whether an assume expression holds, unless the assume expression represents a `let`
     /// binding. In that case, return the `TypedValue` of the let-binding as well as the local
     /// variable (index) the value should bind to.
-    pub fn check_assume(&self, exp: &Exp) -> Option<(TempIndex, TypedValue)> {
+    pub fn check_assume(&self, exp: &Exp) -> Option<EvalResult<(TempIndex, TypedValue)>> {
         // NOTE: `let` bindings are translated to `Assume(Identical($t, <exp>));`. This should be
         // treated as an assignment.
         if let ExpData::Call(_, Operation::Identical, args) = exp.as_ref() {
@@ -164,8 +164,10 @@ impl<'env> Evaluator<'env> {
                     self.local_state.get_type(local_idx).get_base_type()
                 );
             }
-            let local_val = self.evaluate(&args[1]).unwrap();
-            Some((local_idx, TypedValue::fuse_base(local_ty, local_val)))
+            match self.evaluate(&args[1]) {
+                Ok(val) => Some(Ok((local_idx, TypedValue::fuse_base(local_ty, val)))),
+                Err(err) => Some(Err(err)),
+            }
         } else {
             // for all other cases, treat with as an assertion
             self.check_assert(exp);
@@ -651,6 +653,13 @@ impl<'env> Evaluator<'env> {
             let r_vals = self.prepare_range(r_exp)?;
             vals_vec.push(r_vals);
         }
+        let choose_val_range = match kind {
+            QuantKind::Forall | QuantKind::Exists => None,
+            QuantKind::Choose | QuantKind::ChooseMin => {
+                assert_eq!(vals_vec.len(), 1);
+                Some(vals_vec[0].clone())
+            }
+        };
 
         let mut loop_results = vec![];
         for val_vec in vals_vec.into_iter().multi_cartesian_product() {
@@ -682,19 +691,49 @@ impl<'env> Evaluator<'env> {
             }
         }
 
-        let quant_result = match kind {
+        match kind {
             QuantKind::Forall => {
                 let v = loop_results.into_iter().all(|r| r.into_bool());
-                BaseValue::mk_bool(v)
+                let quant_result = BaseValue::mk_bool(v);
+                Ok(quant_result)
             }
             QuantKind::Exists => {
                 let v = loop_results.into_iter().any(|r| r.into_bool());
-                BaseValue::mk_bool(v)
+                let quant_result = BaseValue::mk_bool(v);
+                Ok(quant_result)
             }
-            // TODO (mengxu) support choose operators
-            QuantKind::Choose | QuantKind::ChooseMin => unimplemented!(),
-        };
-        Ok(quant_result)
+            QuantKind::Choose => {
+                let choose_val_range_vec = choose_val_range.unwrap();
+                let mut v_results: Vec<_> = choose_val_range_vec
+                    .into_iter()
+                    .zip(loop_results.into_iter())
+                    .filter_map(|(val, r)| if r.into_bool() { Some(val) } else { None })
+                    .collect();
+
+                match v_results.pop() {
+                    None => {
+                        self.record_evaluation_failure(body, "choose fails to satisfy a predicate");
+                        Err(Self::eval_failure_code())
+                    }
+                    Some(v) => Ok(v),
+                }
+            }
+            QuantKind::ChooseMin => {
+                let choose_val_range_vec = choose_val_range.unwrap();
+                let mut v_results: Vec<_> = choose_val_range_vec
+                    .into_iter()
+                    .zip(loop_results.into_iter())
+                    .filter_map(|(val, r)| if r.into_bool() { Some(val) } else { None })
+                    .collect();
+
+                if v_results.is_empty() {
+                    self.record_evaluation_failure(body, "choose min fails to satisfy a predicate");
+                    Err(Self::eval_failure_code())
+                } else {
+                    Ok(v_results.remove(0))
+                }
+            }
+        }
     }
 
     //

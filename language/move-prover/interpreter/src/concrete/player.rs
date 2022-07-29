@@ -386,11 +386,25 @@ impl<'env> FunctionContext<'env> {
         kind: &AssignKind,
         local_state: &mut LocalState,
     ) {
-        let from_val = match kind {
-            AssignKind::Move => local_state.del_value(src),
-            AssignKind::Copy | AssignKind::Store => local_state.get_value(src),
+        let into_val = match kind {
+            AssignKind::Move => {
+                let from_val = local_state.del_value(src);
+                from_val.assign_cast(local_state.get_type(dst).clone())
+            }
+            AssignKind::Copy => {
+                let from_val = local_state.get_value(src);
+                from_val.assign_cast(local_state.get_type(dst).clone())
+            }
+            AssignKind::Store => {
+                let from_val = local_state.get_value(src);
+                let into_ty = local_state.get_type(dst).clone();
+                if from_val.get_ty().is_ref(Some(true)) {
+                    from_val.borrow_direct(into_ty, src)
+                } else {
+                    from_val.assign_cast(into_ty)
+                }
+            }
         };
-        let into_val = from_val.assign_cast(local_state.get_type(dst).clone());
         local_state.put_value_override(dst, into_val);
     }
 
@@ -1175,6 +1189,7 @@ impl<'env> FunctionContext<'env> {
 
         let (_, _, ptr) = op_val.decompose();
         let is_parent = match ptr {
+            Pointer::RefDirect(idx) => idx == parent_idx,
             Pointer::RefField(idx, _) => idx == parent_idx,
             Pointer::RefElement(idx, _) => idx == parent_idx,
             Pointer::ArgRef(idx, _) => idx == parent_idx,
@@ -1242,9 +1257,10 @@ impl<'env> FunctionContext<'env> {
         }
         match op_val.get_ptr() {
             Pointer::Local(root_idx) => {
-                if *root_idx == local_root {
-                    local_state.put_value_override(local_root, op_val.read_ref());
+                if cfg!(debug_assertions) {
+                    assert_eq!(*root_idx, local_root);
                 }
+                local_state.put_value_override(local_root, op_val.read_ref());
             }
             _ => unreachable!(),
         }
@@ -1261,10 +1277,18 @@ impl<'env> FunctionContext<'env> {
             let new_ty = op_val.get_ty();
             assert!(new_ty.is_ref(Some(true)));
             assert_eq!(new_ty, old_val.get_ty());
+        }
 
-            // check pointer validity
-            match op_val.get_ptr() {
-                Pointer::RetRef(trace) => {
+        let new_val = match op_val.get_ptr() {
+            Pointer::RefDirect(parent_idx) => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(*parent_idx, local_ref);
+                }
+                old_val.update_ref_direct(op_val)
+            }
+            Pointer::RetRef(trace) => {
+                // check pointer validity
+                if cfg!(debug_assertions) {
                     assert_eq!(trace.len(), 1);
                     match trace.get(0).unwrap() {
                         Pointer::ArgRef(ref_idx, original_ptr) => {
@@ -1274,10 +1298,10 @@ impl<'env> FunctionContext<'env> {
                         _ => unreachable!(),
                     }
                 }
-                _ => unreachable!(),
+                op_val.unbox_from_mut_ref_ret()
             }
-        }
-        let new_val = op_val.unbox_from_mut_ref_ret();
+            _ => unreachable!(),
+        };
         local_state.put_value(local_ref, new_val);
     }
 

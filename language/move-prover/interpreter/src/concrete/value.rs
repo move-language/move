@@ -135,6 +135,7 @@ pub enum Pointer {
     None,
     Global(AccountAddress),
     Local(TempIndex),
+    RefDirect(TempIndex),
     RefField(TempIndex, usize),
     RefElement(TempIndex, usize),
     ArgRef(TempIndex, Box<Pointer>),
@@ -493,6 +494,18 @@ impl TypedValue {
         }
     }
 
+    /// Create a reference that is a direct borrow of another reference value
+    pub fn borrow_direct(self, ty: Type, local_idx: TempIndex) -> TypedValue {
+        if cfg!(debug_assertions) {
+            assert!(ty.is_compatible_for_assign(&self.ty));
+        }
+        TypedValue {
+            ty,
+            val: self.val,
+            ptr: Pointer::RefDirect(local_idx),
+        }
+    }
+
     /// Create a reference to the base value
     pub fn borrow_local(self, is_mut: bool, local_idx: TempIndex) -> TypedValue {
         TypedValue {
@@ -572,6 +585,9 @@ impl TypedValue {
         ) {
             match cur {
                 Pointer::ArgRef(_, _) => trace.push(cur.clone()),
+                Pointer::RefDirect(idx) => {
+                    follow_return_pointers_recursive(ptrs.get(idx).unwrap(), ptrs, trace);
+                }
                 Pointer::RefField(idx, _) | Pointer::RefElement(idx, _) => {
                     trace.push(cur.clone());
                     follow_return_pointers_recursive(ptrs.get(idx).unwrap(), ptrs, trace);
@@ -620,6 +636,21 @@ impl TypedValue {
             ty,
             val,
             ptr: unboxed_ptr,
+        }
+    }
+
+    /// update the reference directly
+    pub fn update_ref_direct(self, ref_val: TypedValue) -> TypedValue {
+        let (old_ty, _, old_ptr) = self.decompose();
+        let (new_ty, new_val, _) = ref_val.decompose();
+        if cfg!(debug_assertions) {
+            assert!(old_ty.is_ref(Some(true)));
+            assert_eq!(old_ty, new_ty);
+        }
+        TypedValue {
+            ty: old_ty,
+            val: new_val,
+            ptr: old_ptr,
         }
     }
 

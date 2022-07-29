@@ -1,2 +1,4 @@
 Running Move unit tests
-Test result: OK. Total tests: 0; passed: 0; failed: 0
+[ PASS    ] 0x2::A::if_else_1
+[ PASS    ] 0x2::A::if_else_2
+Test result: OK. Total tests: 2; passed: 2; failed: 0

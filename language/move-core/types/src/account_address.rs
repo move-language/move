@@ -223,7 +223,12 @@ impl FromStr for AccountAddress {
     type Err = AccountAddressParseError;
 
     fn from_str(s: &str) -> Result<Self, AccountAddressParseError> {
-        Self::from_hex(s)
+        // Accept 0xADDRESS or ADDRESS
+        if let Ok(address) = AccountAddress::from_hex_literal(s) {
+            Ok(address)
+        } else {
+            Self::from_hex(s)
+        }
     }
 }
 

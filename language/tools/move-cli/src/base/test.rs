@@ -37,13 +37,8 @@ compile_error!("Unsupported OS, currently we only support windows and unix famil
 #[clap(name = "test")]
 pub struct Test {
     /// Bound the number of instructions that can be executed by any one test.
-    #[clap(
-        name = "instructions",
-        default_value = "5000",
-        short = 'i',
-        long = "instructions"
-    )]
-    pub instruction_execution_bound: u64,
+    #[clap(name = "instructions", short = 'i', long = "instructions")]
+    pub instruction_execution_bound: Option<u64>,
     /// A filter string to determine which unit tests to run. A unit test will be run only if it
     /// contains this string in its fully qualified (<addr>::<module_name>::<fn_name>) name.
     #[clap(name = "filter", short = 'f', long = "filter")]

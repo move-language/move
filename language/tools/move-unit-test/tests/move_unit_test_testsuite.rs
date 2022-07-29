@@ -82,7 +82,7 @@ fn run_test_impl(path: &Path) -> anyhow::Result<()> {
     let source_files = vec![path.to_str().unwrap().to_owned()];
     let unit_test_config = UnitTestingConfig {
         num_threads: 1,
-        instruction_execution_bound: 1000,
+        instruction_execution_bound: Some(1000),
         source_files,
         dep_files: move_stdlib::move_stdlib_files(),
         named_address_values: move_stdlib::move_stdlib_named_addresses()

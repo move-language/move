@@ -14,7 +14,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
 
     let source_files = vec![path.to_str().unwrap().to_owned()];
     let config = UnitTestingConfig {
-        instruction_execution_bound: 5000,
+        instruction_execution_bound: Some(5000),
         num_threads: 1,
         source_files,
         dep_files: move_stdlib_files(),

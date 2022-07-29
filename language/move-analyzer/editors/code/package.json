@@ -26,7 +26,8 @@
 	],
 	"main": "./out/src/main.js",
 	"activationEvents": [
-		"onLanguage:move"
+		"onLanguage:move",
+		"workspaceContains:Move.toml"
 	],
 	"contributes": {
 		"commands": [
@@ -94,7 +95,7 @@
 		"test": "node ./out/tests/runTests.js",
 		"dev": "npm run pretest && cross-env mode=dev node ./out/tests/runTests.js",
 		"vscode:prepublish": "npm run pretest",
-		"package": "vsce package -o move-analyzer.vsix",
+		"package": "npm run pretest && vsce package -o move-analyzer.vsix",
 		"publish": "npm run pretest && npm run test && vsce publish"
 	},
 	"extensionDependencies": [
@@ -102,7 +103,8 @@
 	],
 	"dependencies": {
 		"command-exists": "^1.2.9",
-		"vscode-languageclient": "6.1.4"
+		"vscode-languageclient": "6.1.4",
+		"lru-cache": "^4.1.3"
 	},
 	"devDependencies": {
 		"@types/command-exists": "^1.2.0",

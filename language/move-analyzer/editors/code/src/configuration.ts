@@ -35,6 +35,12 @@ export class Configuration {
             return defaultName;
         }
 
+        if (serverPath === defaultName) {
+            // If the program set by the user is through PATH,
+            // it will return directly if specified
+            return defaultName;
+        }
+
         if (serverPath.startsWith('~/')) {
             serverPath = os.homedir() + serverPath.slice('~'.length);
         }

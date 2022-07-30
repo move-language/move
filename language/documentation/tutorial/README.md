@@ -232,7 +232,7 @@ module 0xCAFE::BasicCoin {
     // address value of `0xC0FFEE`.
     #[test(account = @0xC0FFEE)]
     fun test_mint_10(account: signer) acquires Coin {
-        let addr = signer::address_of(&account);
+        let addr = 0x1::signer::address_of(&account);
         mint(account, 10);
         // Make sure there is a `Coin` resource under `addr` with a value of `10`.
         // We can access this resource and its value since we are in the

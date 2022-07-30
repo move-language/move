@@ -29,14 +29,12 @@ module Test {
         move_to(s, R { f: v });
     }
 
-    // TODO (mengxu), after mono, the global invariant is changed to Base::has_b() ==> true...
-    // #[test(s=@0x2)]
+    #[test(s=@0x2)]
     public fun check_0x2_pass(s: &signer) {
         put_r(s, true);
     }
 
-    // TODO (mengxu), after mono, the global invariant is changed to Base::has_b() ==> true...
-    // #[test(s=@0x1)]
+    #[test(s=@0x1)]
     public fun check_0x1_fail(s: &signer) {
         put_r(s, true);
     }
@@ -48,9 +46,8 @@ module Test {
     }
 
     spec module {
-        invariant update
-            Base::has_b() ==>
-                (forall t: type where has_r<t>(): old(has_r<t>()));
+        invariant<T> update
+            (Base::has_b() && has_r<T>()) ==> old(has_r<T>());
     }
 }
 }

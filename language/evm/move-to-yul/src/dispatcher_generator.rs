@@ -261,8 +261,8 @@ impl Generator {
     /// Generate optional receive function.
     fn optional_receive(&mut self, ctx: &Context, receive: &Option<FunctionEnv<'_>>) -> bool {
         if let Some(receive) = receive {
-            ctx.check_no_generics(&receive);
-            if !attributes::is_payable_fun(&receive) {
+            ctx.check_no_generics(receive);
+            if !attributes::is_payable_fun(receive) {
                 ctx.env
                     .error(&receive.get_loc(), "receive function must be payable")
             }
@@ -309,8 +309,8 @@ impl Generator {
         fallback: &Option<FunctionEnv<'_>>,
     ) {
         if let Some(fallback) = fallback {
-            ctx.check_no_generics(&fallback);
-            if !attributes::is_payable_fun(&fallback) {
+            ctx.check_no_generics(fallback);
+            if !attributes::is_payable_fun(fallback) {
                 self.generate_call_value_check(ctx, REVERT_ERR_NON_PAYABLE_FUN);
             }
             let fun_id = &fallback
@@ -560,7 +560,7 @@ impl Generator {
                         );
                     });
                     head_pos += ty_size;
-                    let memory_func = ctx.memory_store_builtin_fun(&move_ty);
+                    let memory_func = ctx.memory_store_builtin_fun(move_ty);
                     if local_typ_var.len() == 1 {
                         gen.call_builtin(
                             ctx,
@@ -1454,7 +1454,7 @@ impl Generator {
                 {
                     let is_static = ty.is_static();
                     let local_typ_var = vec![ret_var[stack_pos].clone()];
-                    let memory_func = ctx.memory_load_builtin_fun(&move_ty);
+                    let memory_func = ctx.memory_load_builtin_fun(move_ty);
                     if local_typ_var.len() == 1 {
                         emitln!(
                             ctx.writer,
@@ -1474,7 +1474,7 @@ impl Generator {
                                     ctx,
                                     &ty.clone(),
                                     &SignatureDataLocation::Memory,
-                                    &move_ty,
+                                    move_ty,
                                     sub_option.clone()
                                 ),
                                 local_typ_var[0].clone()
@@ -1488,7 +1488,7 @@ impl Generator {
                                         ctx,
                                         &ty.clone(),
                                         &SignatureDataLocation::Memory,
-                                        &move_ty,
+                                        move_ty,
                                         sub_option.clone()
                                     ),
                                     local_typ_var[0].clone(),
@@ -1507,7 +1507,7 @@ impl Generator {
                                         ctx,
                                         &ty.clone(),
                                         &SignatureDataLocation::Memory,
-                                        &move_ty,
+                                        move_ty,
                                         sub_option.clone()
                                     ),
                                     local_typ_var[0].clone()

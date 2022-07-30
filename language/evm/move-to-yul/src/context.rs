@@ -354,8 +354,7 @@ impl<'a> Context<'a> {
     fn get_target_structs(&self, p: impl Fn(&StructEnv) -> bool) -> Vec<StructEnv<'a>> {
         self.env
             .get_modules()
-            .map(|m| m.into_structs().filter(|f| p(f)))
-            .flatten()
+            .flat_map(|m| m.into_structs().filter(|f| p(f)))
             .collect()
     }
 
@@ -608,7 +607,7 @@ impl<'a> Context<'a> {
             .get_local_name(idx)
             .display(target.symbol_pool())
             .to_string()
-            .replace("#", "_")
+            .replace('#', "_")
     }
 
     /// Make name for a result.

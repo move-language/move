@@ -1051,7 +1051,7 @@ fn define_destroy_empty_fun(
 
 /// Generate equality method for the vector type.
 pub(crate) fn equality_fun(gen: &mut Generator, ctx: &Context, ty: &Type) {
-    let elem_type = get_elem_type(&ty).unwrap();
+    let elem_type = get_elem_type(ty).unwrap();
     if ctx.type_allocates_memory(&elem_type) {
         emitln!(
             ctx.writer,

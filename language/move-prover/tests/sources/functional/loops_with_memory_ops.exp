@@ -6,6 +6,8 @@ error: unknown assertion failed
    │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
    =     at tests/sources/functional/loops_with_memory_ops.move:56: nested_loop2
+   =     at <internal>:1
+   =     at tests/sources/functional/loops_with_memory_ops.move:56: nested_loop2
    =         a = <redacted>
    =         b = <redacted>
    =     at tests/sources/functional/loops_with_memory_ops.move:57: nested_loop2
@@ -43,13 +45,10 @@ error: unknown assertion failed
    =         y = <redacted>
    =     at tests/sources/functional/loops_with_memory_ops.move:80: nested_loop2
    =     at tests/sources/functional/loops_with_memory_ops.move:81: nested_loop2
-   =     at <internal>:1
-   =     at tests/sources/functional/loops_with_memory_ops.move:81: nested_loop2
    =         b = <redacted>
-   =     at <internal>:1
-   =     at tests/sources/functional/loops_with_memory_ops.move:81: nested_loop2
-   =     at <internal>:1
-   =     at tests/sources/functional/loops_with_memory_ops.move:81: nested_loop2
+   =         b = <redacted>
+   =         a = <redacted>
+   =         a = <redacted>
    =     at tests/sources/functional/loops_with_memory_ops.move:85: nested_loop2
    =         i = <redacted>
    =     at tests/sources/functional/loops_with_memory_ops.move:86: nested_loop2
@@ -61,6 +60,8 @@ error: induction case of the loop invariant does not hold
 70 │                 invariant forall n in 0..i: a[n] == b[n];
    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
+   =     at tests/sources/functional/loops_with_memory_ops.move:56: nested_loop2
+   =     at <internal>:1
    =     at tests/sources/functional/loops_with_memory_ops.move:56: nested_loop2
    =         a = <redacted>
    =         b = <redacted>
@@ -103,8 +104,7 @@ error: induction case of the loop invariant does not hold
    =     at tests/sources/functional/loops_with_memory_ops.move:81: nested_loop2
    =     at <internal>:1
    =     at tests/sources/functional/loops_with_memory_ops.move:81: nested_loop2
-   =     at <internal>:1
-   =     at tests/sources/functional/loops_with_memory_ops.move:81: nested_loop2
+   =         a = <redacted>
    =     at <internal>:1
    =     at tests/sources/functional/loops_with_memory_ops.move:81: nested_loop2
    =     at tests/sources/functional/loops_with_memory_ops.move:85: nested_loop2

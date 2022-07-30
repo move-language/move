@@ -10,6 +10,8 @@ error: post-condition does not hold
    =         v = <redacted>
    = Execution Trace:
    =     at tests/sources/functional/macro_verification.move:15: foreach
+   =     at <internal>:1
+   =     at tests/sources/functional/macro_verification.move:15: foreach
    =         v = <redacted>
    =     at tests/sources/functional/macro_verification.move:16: foreach
    =         i = <redacted>

@@ -113,6 +113,9 @@ function {:constructor} $Local(i: int): $Location;
 // when mutation ends.
 function {:constructor} $Param(i: int): $Location;
 
+// The location of an uninitialized mutation. Using this to make sure that the location
+// will not be equal to any valid mutation locations, i.e., $Local, $Global, or $Param.
+function {:constructor} $Uninitialized(): $Location;
 
 // A mutable reference which also carries its current value. Since mutable references
 // are single threaded in Move, we can keep them together and treat them as a value
@@ -144,7 +147,12 @@ function {:inline} $ChildMutation<T1, T2>(m: $Mutation T1, offset: int, v: T2): 
     $Mutation(l#$Mutation(m), ExtendVec(p#$Mutation(m), offset), v)
 }
 
-// Return true of the mutation is a parent of a child which was derived with the given edge offset. This
+// Return true if two mutations share the location and path
+function {:inline} $IsSameMutation<T1, T2>(parent: $Mutation T1, child: $Mutation T2 ): bool {
+    l#$Mutation(parent) == l#$Mutation(child) && p#$Mutation(parent) == p#$Mutation(child)
+}
+
+// Return true if the mutation is a parent of a child which was derived with the given edge offset. This
 // is used to implement write-back choices.
 function {:inline} $IsParentMutation<T1, T2>(parent: $Mutation T1, edge: int, child: $Mutation T2 ): bool {
     l#$Mutation(parent) == l#$Mutation(child) &&
@@ -158,7 +166,7 @@ function {:inline} $IsParentMutation<T1, T2>(parent: $Mutation T1, edge: int, ch
     ))))
 }
 
-// Return true of the mutation is a parent of a child, for hyper edge.
+// Return true if the mutation is a parent of a child, for hyper edge.
 function {:inline} $IsParentMutationHyper<T1, T2>(parent: $Mutation T1, hyper_edge: Vec int, child: $Mutation T2 ): bool {
     l#$Mutation(parent) == l#$Mutation(child) &&
     (var pp := p#$Mutation(parent);

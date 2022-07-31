@@ -142,6 +142,8 @@ pub struct UseDef {
     def_loc: DefLoc,
     /// Location of the type definition
     type_def_loc: Option<DefLoc>,
+    /// Doc string for the relevant identifier/function
+    doc_string: String,
 }
 
 /// Definition of a struct field
@@ -458,6 +460,7 @@ impl UseDef {
         use_name: &Symbol,
         use_type: IdentType,
         type_def_loc: Option<DefLoc>,
+        doc_string: String,
     ) -> Self {
         let def_loc = DefLoc {
             fhash: def_fhash,
@@ -480,6 +483,7 @@ impl UseDef {
             use_type,
             def_loc,
             type_def_loc,
+            doc_string,
         }
     }
 }
@@ -714,7 +718,6 @@ impl Symbolicator {
                 }
             };
 
-            // process the struct itself
             let name_start = match Self::get_start_loc(&pos, files, file_id_mapping) {
                 Some(s) => s,
                 None => {
@@ -775,6 +778,13 @@ impl Symbolicator {
         for (pos, name, fun) in &mod_def.functions {
             // enter self-definition for function name (unwrap safe - done when inserting def)
             let name_start = Self::get_start_loc(&pos, &self.files, &self.file_id_mapping).unwrap();
+            let doc_string = Self::extract_doc_string(
+                &name_start,
+                &pos.file_hash(),
+                &self.files,
+                &self.file_id_mapping,
+            );
+
             let use_type = IdentType::FunctionType(
                 self.current_mod.unwrap().value,
                 *name,
@@ -808,6 +818,7 @@ impl Symbolicator {
                     name,
                     use_type,
                     ident_type_def,
+                    doc_string,
                 ),
             );
             self.fun_symbols(fun, references, use_defs);
@@ -816,6 +827,12 @@ impl Symbolicator {
         for (pos, name, c) in &mod_def.constants {
             // enter self-definition for const name (unwrap safe - done when inserting def)
             let name_start = Self::get_start_loc(&pos, &self.files, &self.file_id_mapping).unwrap();
+            let doc_string = Self::extract_doc_string(
+                &name_start,
+                &pos.file_hash(),
+                &self.files,
+                &self.file_id_mapping,
+            );
             let ident_type = IdentType::RegularType(c.signature.clone());
             let ident_type_def = self.ident_type_def_loc(&ident_type);
             use_defs.insert(
@@ -829,6 +846,7 @@ impl Symbolicator {
                     name,
                     ident_type,
                     ident_type_def,
+                    doc_string,
                 ),
             );
         }
@@ -836,6 +854,12 @@ impl Symbolicator {
         for (pos, name, struct_def) in &mod_def.structs {
             // enter self-definition for struct name (unwrap safe - done when inserting def)
             let name_start = Self::get_start_loc(&pos, &self.files, &self.file_id_mapping).unwrap();
+            let doc_string = Self::extract_doc_string(
+                &name_start,
+                &pos.file_hash(),
+                &self.files,
+                &self.file_id_mapping,
+            );
             let ident_type = IdentType::RegularType(Self::create_struct_type(
                 self.current_mod.unwrap(),
                 StructName(sp(pos, *name)),
@@ -854,6 +878,7 @@ impl Symbolicator {
                     name,
                     ident_type,
                     ident_type_def,
+                    doc_string,
                 ),
             );
 
@@ -892,6 +917,7 @@ impl Symbolicator {
                         fname,
                         ident_type,
                         ident_type_def,
+                        String::new(),
                     ),
                 );
             }
@@ -964,6 +990,36 @@ impl Symbolicator {
         file_id_mapping: &HashMap<FileHash, usize>,
     ) -> Option<Position> {
         get_loc(&pos.file_hash(), pos.start(), files, file_id_mapping)
+    }
+
+    fn extract_doc_string(
+        name_start: &Position,
+        file_hash: &FileHash,
+        files: &SimpleFiles<Symbol, String>,
+        file_id_mapping: &HashMap<FileHash, usize>,
+    ) -> String {
+        let mut doc_string = String::new();
+        if let Some(file_id) = file_id_mapping.get(file_hash) {
+            if let Ok(file_contents) = files.get(*file_id) {
+                let split: Vec<&str> = file_contents.source().lines().collect();
+
+                if (name_start.line > 0) {
+                    let mut iter = (name_start.line - 1) as usize;
+                    let mut line_before = split[iter].trim();
+
+                    while let Some(stripped_line) = line_before.strip_prefix("///") {
+                        doc_string = format!("{}\n{}", stripped_line, doc_string);
+                        if (iter == 0) {
+                            break;
+                        }
+                        iter = iter - 1;
+                        line_before = split[iter].trim();
+                    }
+                }
+            }
+        };
+
+        doc_string
     }
 
     /// Get symbols for a sequence representing function body
@@ -1405,6 +1461,7 @@ impl Symbolicator {
                         &tname,
                         ident_type,
                         ident_type_def,
+                        String::new(),
                     ),
                 );
                 let exists = tp_scope.insert(tname, DefLoc { fhash, start });
@@ -1476,6 +1533,7 @@ impl Symbolicator {
                             use_name,
                             ident_type,
                             ident_type_def,
+                            String::new(),
                         ),
                     );
                 }
@@ -1511,6 +1569,7 @@ impl Symbolicator {
                             use_name,
                             use_type.clone(),
                             self.ident_type_def_loc(&use_type),
+                            String::new(),
                         ),
                     );
                 }
@@ -1548,6 +1607,7 @@ impl Symbolicator {
                             use_name,
                             ident_type,
                             ident_type_def,
+                            String::new(),
                         ),
                     );
                 }
@@ -1588,6 +1648,7 @@ impl Symbolicator {
                                     use_name,
                                     ident_type,
                                     ident_type_def,
+                                    String::new(),
                                 ),
                             );
                         }
@@ -1626,6 +1687,7 @@ impl Symbolicator {
                                     &use_name,
                                     ident_type,
                                     ident_type_def,
+                                    String::new(),
                                 ),
                             );
                         }
@@ -1688,6 +1750,7 @@ impl Symbolicator {
                         name,
                         ident_type,
                         ident_type_def,
+                        String::new(),
                     ),
                 );
             }
@@ -1730,6 +1793,7 @@ impl Symbolicator {
                     use_name,
                     ident_type,
                     ident_type_def,
+                    String::new(),
                 ),
             );
         } else {
@@ -1932,7 +1996,11 @@ pub fn on_hover_request(context: &Context, request: &Request, symbols: &Symbols)
         |u| {
             let lang_string = LanguageString {
                 language: "".to_string(),
-                value: format!("{}", u.use_type),
+                value: if !u.doc_string.is_empty() {
+                    format!("{}\n\n{}", u.use_type, u.doc_string)
+                } else {
+                    format!("{}", u.use_type)
+                },
             };
             let contents = HoverContents::Scalar(MarkedString::LanguageString(lang_string));
             let range = None;

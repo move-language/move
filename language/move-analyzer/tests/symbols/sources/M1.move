@@ -18,6 +18,7 @@ module Symbols::M1 {
         value
     }
 
+    /// Single line docstrings work fine as well.
     fun cp(value: u64): u64 {
         let ret = value;
         ret

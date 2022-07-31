@@ -61,7 +61,7 @@ use lsp_types::{
     HoverParams, LanguageString, Location, MarkedString, Position, Range, ReferenceParams,
 };
 use std::{
-    cmp,
+    clone, cmp,
     collections::{BTreeMap, BTreeSet, HashMap},
     fmt, fs,
     path::{Path, PathBuf},
@@ -181,6 +181,8 @@ pub struct Symbolicator {
     files: SimpleFiles<Symbol, String>,
     /// A mapping from file hashes to file IDs (used to obtain source file locations)
     file_id_mapping: HashMap<FileHash, usize>,
+    // A mapping from file IDs to a split vector of the lines in each file (used to build docstrings)
+    file_id_to_lines: HashMap<usize, Vec<String>>,
     /// Contains type params where relevant (e.g. when processing function definition)
     type_params: BTreeMap<Symbol, DefLoc>,
     /// Current processed module (always set before module processing starts)
@@ -564,11 +566,14 @@ impl Symbolicator {
         let source_files = &resolution_graph.file_sources();
         let mut files = SimpleFiles::new();
         let mut file_id_mapping = HashMap::new();
+        let mut file_id_to_lines = HashMap::new();
         let mut file_name_mapping = BTreeMap::new();
         for (fhash, (fname, source)) in source_files {
             let id = files.add(*fname, source.clone());
             file_id_mapping.insert(*fhash, id);
             file_name_mapping.insert(*fhash, *fname);
+            let lines: Vec<String> = source.lines().map(String::from).collect();
+            file_id_to_lines.insert(id, lines);
         }
 
         let build_plan = BuildPlan::create(resolution_graph)?;
@@ -644,6 +649,7 @@ impl Symbolicator {
             mod_outer_defs,
             files,
             file_id_mapping,
+            file_id_to_lines,
             type_params: BTreeMap::new(),
             current_mod: None,
         };
@@ -778,12 +784,7 @@ impl Symbolicator {
         for (pos, name, fun) in &mod_def.functions {
             // enter self-definition for function name (unwrap safe - done when inserting def)
             let name_start = Self::get_start_loc(&pos, &self.files, &self.file_id_mapping).unwrap();
-            let doc_string = Self::extract_doc_string(
-                &name_start,
-                &pos.file_hash(),
-                &self.files,
-                &self.file_id_mapping,
-            );
+            let doc_string = self.extract_doc_string(&name_start, &pos.file_hash());
 
             let use_type = IdentType::FunctionType(
                 self.current_mod.unwrap().value,
@@ -827,12 +828,7 @@ impl Symbolicator {
         for (pos, name, c) in &mod_def.constants {
             // enter self-definition for const name (unwrap safe - done when inserting def)
             let name_start = Self::get_start_loc(&pos, &self.files, &self.file_id_mapping).unwrap();
-            let doc_string = Self::extract_doc_string(
-                &name_start,
-                &pos.file_hash(),
-                &self.files,
-                &self.file_id_mapping,
-            );
+            let doc_string = self.extract_doc_string(&name_start, &pos.file_hash());
             let ident_type = IdentType::RegularType(c.signature.clone());
             let ident_type_def = self.ident_type_def_loc(&ident_type);
             use_defs.insert(
@@ -854,12 +850,7 @@ impl Symbolicator {
         for (pos, name, struct_def) in &mod_def.structs {
             // enter self-definition for struct name (unwrap safe - done when inserting def)
             let name_start = Self::get_start_loc(&pos, &self.files, &self.file_id_mapping).unwrap();
-            let doc_string = Self::extract_doc_string(
-                &name_start,
-                &pos.file_hash(),
-                &self.files,
-                &self.file_id_mapping,
-            );
+            let doc_string = self.extract_doc_string(&name_start, &pos.file_hash());
             let ident_type = IdentType::RegularType(Self::create_struct_type(
                 self.current_mod.unwrap(),
                 StructName(sp(pos, *name)),
@@ -992,20 +983,13 @@ impl Symbolicator {
         get_loc(&pos.file_hash(), pos.start(), files, file_id_mapping)
     }
 
-    fn extract_doc_string(
-        name_start: &Position,
-        file_hash: &FileHash,
-        files: &SimpleFiles<Symbol, String>,
-        file_id_mapping: &HashMap<FileHash, usize>,
-    ) -> String {
+    fn extract_doc_string(&mut self, name_start: &Position, file_hash: &FileHash) -> String {
         let mut doc_string = String::new();
-        if let Some(file_id) = file_id_mapping.get(file_hash) {
-            if let Ok(file_contents) = files.get(*file_id) {
-                let split: Vec<&str> = file_contents.source().lines().collect();
-
+        if let Some(file_id) = self.file_id_mapping.get(file_hash) {
+            if let Some(fileLines) = self.file_id_to_lines.get(file_id) {
                 if (name_start.line > 0) {
                     let mut iter = (name_start.line - 1) as usize;
-                    let mut line_before = split[iter].trim();
+                    let mut line_before = fileLines[iter].trim();
 
                     while let Some(stripped_line) = line_before.strip_prefix("///") {
                         doc_string = format!("{}\n{}", stripped_line, doc_string);
@@ -1013,7 +997,7 @@ impl Symbolicator {
                             break;
                         }
                         iter = iter - 1;
-                        line_before = split[iter].trim();
+                        line_before = fileLines[iter].trim();
                     }
                 }
             }

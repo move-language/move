@@ -6,6 +6,7 @@
 
 use crate::function_target_pipeline::FunctionTargetsHolder;
 use move_model::model::GlobalEnv;
+use std::fmt::Write;
 
 pub mod access_path;
 pub mod access_path_trie;
@@ -54,13 +55,13 @@ pub fn print_targets_for_test(
     targets: &FunctionTargetsHolder,
 ) -> String {
     let mut text = String::new();
-    text.push_str(&format!("============ {} ================\n", header));
+    writeln!(&mut text, "============ {} ================", header).unwrap();
     for module_env in env.get_modules() {
         for func_env in module_env.get_functions() {
             for (variant, target) in targets.get_targets(&func_env) {
                 if !target.data.code.is_empty() || target.func_env.is_native_or_intrinsic() {
                     target.register_annotation_formatters_for_test();
-                    text += &format!("\n[variant {}]\n{}\n", variant, target);
+                    writeln!(&mut text, "\n[variant {}]\n{}", variant, target).unwrap();
                 }
             }
         }

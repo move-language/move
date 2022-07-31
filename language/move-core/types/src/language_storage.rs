@@ -5,11 +5,15 @@
 use crate::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
+    parser::{parse_struct_tag, parse_type_tag},
 };
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter};
+use std::{
+    fmt::{Display, Formatter},
+    str::FromStr,
+};
 
 pub const CODE_TAG: u8 = 0;
 pub const RESOURCE_TAG: u8 = 1;
@@ -38,12 +42,19 @@ pub enum TypeTag {
     Struct(StructTag),
 }
 
+impl FromStr for TypeTag {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        parse_type_tag(s)
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
 pub struct StructTag {
     pub address: AccountAddress,
     pub module: Identifier,
     pub name: Identifier,
-    // TODO: rename to "type_args" (or better "ty_args"?)
     // alias for compatibility with old json serialized data.
     #[serde(rename = "type_args", alias = "type_params")]
     pub type_params: Vec<TypeTag>,
@@ -58,6 +69,14 @@ impl StructTag {
 
     pub fn module_id(&self) -> ModuleId {
         ModuleId::new(self.address, self.module.to_owned())
+    }
+}
+
+impl FromStr for StructTag {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        parse_struct_tag(s)
     }
 }
 

@@ -232,7 +232,7 @@ module 0xCAFE::BasicCoin {
     // address value of `0xC0FFEE`.
     #[test(account = @0xC0FFEE)]
     fun test_mint_10(account: signer) acquires Coin {
-        let addr = signer::address_of(&account);
+        let addr = 0x1::signer::address_of(&account);
         mint(account, 10);
         // Make sure there is a `Coin` resource under `addr` with a value of `10`.
         // We can access this resource and its value since we are in the
@@ -571,7 +571,7 @@ source ~/.profile
 ```
 ## Step 7:  Use the Move prover<span id="Step7"><span>
 
-Smart contracts deployed on the blockchain may maniputate high-value assets. As a technique that uses strict
+Smart contracts deployed on the blockchain may manipulate high-value assets. As a technique that uses strict
 mathematical methods to describe behavior and reason correctness of computer systems, formal verification
 has been used in blockchains to prevent bugs in smart contracts. [
 The Move prover](https://github.com/move-language/move/blob/main/language/move-prover/doc/user/prover-guide.md)

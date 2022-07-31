@@ -155,8 +155,7 @@ pub fn plot_benchmarks_to_file(fname: &str, benchmarks: &[Benchmark]) -> anyhow:
     let data_points = joined.len() as u32;
     let max_duration = joined
         .iter()
-        .map(|(_, e)| e.iter().map(|(_, d)| *d))
-        .flatten()
+        .flat_map(|(_, e)| e.iter().map(|(_, d)| *d))
         .filter_map(|r| {
             if let Result::Duration(d) | Result::Error(d) = r {
                 Some(d)

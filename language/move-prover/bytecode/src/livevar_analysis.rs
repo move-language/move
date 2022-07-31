@@ -216,6 +216,30 @@ impl<'a> LiveVarAnalysis<'a> {
         let label_to_code_offset = Bytecode::label_offsets(&code);
         let mut transformed_code = vec![];
         let mut new_bytecodes = vec![];
+
+        // insert marks for uninitialized mutable references
+        let num_args = self.func_target.get_parameter_count();
+        if let Some(info) = annotations.get(&0) {
+            for index in &info.before {
+                // only mark the mutable references conditionally defined in function body as uninit
+                if *index >= num_args
+                    && self
+                        .func_target
+                        .get_local_type(*index)
+                        .is_mutable_reference()
+                {
+                    transformed_code.push(Bytecode::Call(
+                        self.new_attr_id(),
+                        vec![],
+                        Operation::Uninit,
+                        vec![*index],
+                        None,
+                    ));
+                }
+            }
+        }
+
+        // optimize the function body
         let mut skip_next = false;
         for code_offset in 0..code.len() {
             if skip_next {
@@ -252,7 +276,9 @@ impl<'a> LiveVarAnalysis<'a> {
                     // Drop this load/assign as it is not used.
                 }
                 Bytecode::Call(attr_id, dests, oper, srcs, aa)
-                    if code_offset + 1 < code.len() && dests.len() == 1 =>
+                    if code_offset + 1 < code.len()
+                        && dests.len() == 1
+                        && !matches!(oper, Operation::BorrowLoc | Operation::BorrowGlobal(..)) =>
                 {
                     // Catch the common case where we have:
                     //
@@ -263,6 +289,11 @@ impl<'a> LiveVarAnalysis<'a> {
                     // This is an artifact from transformation from stack to stackless bytecode.
                     // Copy propagation cannot catch this case because it does not have the
                     // livevar information about $t.
+                    //
+                    // With one exception: if the called operation is a BorrowLocal or BorrowGlobal (i.e., an operation
+                    // that creates a root mutable reference), do not optimize it away as we need this local/global root
+                    // reference for our IsParent test. An alternative (i.e., one way to get rid of this exception) is
+                    // to support IsParent test against local and global directly, but that is more complicated.
                     let next_code_offset = code_offset + 1;
                     if let Bytecode::Assign(_, dest, src, _) = &code[next_code_offset] {
                         let annotation_at = &annotations[&(next_code_offset as CodeOffset)];

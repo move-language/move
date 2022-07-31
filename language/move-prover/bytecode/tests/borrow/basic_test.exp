@@ -407,7 +407,8 @@ fun TestBorrow::test7($t0|b: bool) {
      var $t4: u64
      var $t5: u64
      var $t6: &mut TestBorrow::R
-     var $t7: u64
+     var $t7: &mut TestBorrow::R
+     var $t8: u64
      # live_nodes: LocalRoot($t0)
   0: $t4 := 3
      # live_nodes: LocalRoot($t0)
@@ -425,7 +426,7 @@ fun TestBorrow::test7($t0|b: bool) {
      # live_nodes: LocalRoot($t0), Reference($t3), Reference($t6)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}, Reference($t6) -> {(@, Reference($t3))}
      # borrows_from: Reference($t3) -> {(@, Reference($t6))}, Reference($t6) -> {(@, LocalRoot($t1))}
-  6: if ($t0) goto 14 else goto 17
+  6: if ($t0) goto 15 else goto 18
      # live_nodes: LocalRoot($t0), Reference($t6)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}, Reference($t6) -> {(@, Reference($t3))}
      # borrows_from: Reference($t3) -> {(@, Reference($t6))}, Reference($t6) -> {(@, LocalRoot($t1))}
@@ -437,47 +438,51 @@ fun TestBorrow::test7($t0|b: bool) {
      # live_nodes: LocalRoot($t0)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}, Reference($t6) -> {(@, Reference($t3))}
      # borrows_from: Reference($t3) -> {(@, Reference($t6))}, Reference($t6) -> {(@, LocalRoot($t1))}
-  9: $t3 := borrow_local($t2)
+  9: $t7 := borrow_local($t2)
+     # live_nodes: LocalRoot($t0), Reference($t7)
+     # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}, LocalRoot($t2) -> {(@, Reference($t7))}, Reference($t6) -> {(@, Reference($t3))}
+     # borrows_from: Reference($t3) -> {(@, Reference($t6))}, Reference($t6) -> {(@, LocalRoot($t1))}, Reference($t7) -> {(@, LocalRoot($t2))}
+ 10: $t3 := $t7
      # live_nodes: LocalRoot($t0), Reference($t3)
-     # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}, LocalRoot($t2) -> {(@, Reference($t3))}, Reference($t6) -> {(@, Reference($t3))}
-     # borrows_from: Reference($t3) -> {(@, LocalRoot($t2)), (@, Reference($t6))}, Reference($t6) -> {(@, LocalRoot($t1))}
- 10: label L2
+     # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}, LocalRoot($t2) -> {(@, Reference($t7))}, Reference($t6) -> {(@, Reference($t3))}, Reference($t7) -> {(@, Reference($t3))}
+     # borrows_from: Reference($t3) -> {(@, Reference($t6)), (@, Reference($t7))}, Reference($t6) -> {(@, LocalRoot($t1))}, Reference($t7) -> {(@, LocalRoot($t2))}
+ 11: label L2
      # live_nodes: LocalRoot($t0), Reference($t3)
-     # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}, LocalRoot($t2) -> {(@, Reference($t3))}, Reference($t6) -> {(@, Reference($t3))}
-     # borrows_from: Reference($t3) -> {(@, LocalRoot($t2)), (@, Reference($t6))}, Reference($t6) -> {(@, LocalRoot($t1))}
- 11: $t7 := 0
+     # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}, LocalRoot($t2) -> {(@, Reference($t7))}, Reference($t6) -> {(@, Reference($t3))}, Reference($t7) -> {(@, Reference($t3))}
+     # borrows_from: Reference($t3) -> {(@, Reference($t6)), (@, Reference($t7))}, Reference($t6) -> {(@, LocalRoot($t1))}, Reference($t7) -> {(@, LocalRoot($t2))}
+ 12: $t8 := 0
      # live_nodes: LocalRoot($t0), Reference($t3)
-     # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}, LocalRoot($t2) -> {(@, Reference($t3))}, Reference($t6) -> {(@, Reference($t3))}
-     # borrows_from: Reference($t3) -> {(@, LocalRoot($t2)), (@, Reference($t6))}, Reference($t6) -> {(@, LocalRoot($t1))}
- 12: TestBorrow::test3($t3, $t7)
+     # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}, LocalRoot($t2) -> {(@, Reference($t7))}, Reference($t6) -> {(@, Reference($t3))}, Reference($t7) -> {(@, Reference($t3))}
+     # borrows_from: Reference($t3) -> {(@, Reference($t6)), (@, Reference($t7))}, Reference($t6) -> {(@, LocalRoot($t1))}, Reference($t7) -> {(@, LocalRoot($t2))}
+ 13: TestBorrow::test3($t3, $t8)
      # live_nodes: LocalRoot($t0)
-     # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}, LocalRoot($t2) -> {(@, Reference($t3))}, Reference($t6) -> {(@, Reference($t3))}
-     # borrows_from: Reference($t3) -> {(@, LocalRoot($t2)), (@, Reference($t6))}, Reference($t6) -> {(@, LocalRoot($t1))}
- 13: return ()
+     # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}, LocalRoot($t2) -> {(@, Reference($t7))}, Reference($t6) -> {(@, Reference($t3))}, Reference($t7) -> {(@, Reference($t3))}
+     # borrows_from: Reference($t3) -> {(@, Reference($t6)), (@, Reference($t7))}, Reference($t6) -> {(@, LocalRoot($t1))}, Reference($t7) -> {(@, LocalRoot($t2))}
+ 14: return ()
      # live_nodes: LocalRoot($t0), Reference($t3), Reference($t6)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}, Reference($t6) -> {(@, Reference($t3))}
      # borrows_from: Reference($t3) -> {(@, Reference($t6))}, Reference($t6) -> {(@, LocalRoot($t1))}
- 14: label L3
+ 15: label L3
      # live_nodes: LocalRoot($t0), Reference($t3), Reference($t6)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}, Reference($t6) -> {(@, Reference($t3))}
      # borrows_from: Reference($t3) -> {(@, Reference($t6))}, Reference($t6) -> {(@, LocalRoot($t1))}
- 15: destroy($t3)
+ 16: destroy($t3)
      # live_nodes: LocalRoot($t0), Reference($t6)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}, Reference($t6) -> {(@, Reference($t3))}
      # borrows_from: Reference($t3) -> {(@, Reference($t6))}, Reference($t6) -> {(@, LocalRoot($t1))}
- 16: goto 7
+ 17: goto 7
      # live_nodes: LocalRoot($t0), Reference($t3), Reference($t6)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}, Reference($t6) -> {(@, Reference($t3))}
      # borrows_from: Reference($t3) -> {(@, Reference($t6))}, Reference($t6) -> {(@, LocalRoot($t1))}
- 17: label L4
+ 18: label L4
      # live_nodes: LocalRoot($t0), Reference($t3), Reference($t6)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}, Reference($t6) -> {(@, Reference($t3))}
      # borrows_from: Reference($t3) -> {(@, Reference($t6))}, Reference($t6) -> {(@, LocalRoot($t1))}
- 18: destroy($t6)
+ 19: destroy($t6)
      # live_nodes: LocalRoot($t0), Reference($t3)
      # borrowed_by: LocalRoot($t1) -> {(@, Reference($t6))}, Reference($t6) -> {(@, Reference($t3))}
      # borrows_from: Reference($t3) -> {(@, Reference($t6))}, Reference($t6) -> {(@, LocalRoot($t1))}
- 19: goto 10
+ 20: goto 11
 }
 
 
@@ -488,15 +493,18 @@ fun TestBorrow::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: &mut TestBorrow::R) {
      var $t5|t_ref: &mut TestBorrow::R
      var $t6: u64
      var $t7: u64
-     var $t8: u64
-     var $t9: bool
-     var $t10: u64
+     var $t8: &mut TestBorrow::R
+     var $t9: u64
+     var $t10: bool
      var $t11: u64
      var $t12: u64
-     var $t13: bool
-     var $t14: u64
-     var $t15: u64
-     var $t16: u64
+     var $t13: u64
+     var $t14: bool
+     var $t15: &mut TestBorrow::R
+     var $t16: &mut TestBorrow::R
+     var $t17: u64
+     var $t18: u64
+     var $t19: u64
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2)
   0: $t6 := 3
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2)
@@ -506,143 +514,155 @@ fun TestBorrow::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: &mut TestBorrow::R) {
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2)
   3: $t4 := pack TestBorrow::R($t7)
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2)
-  4: $t5 := borrow_local($t4)
+  4: $t8 := borrow_local($t4)
+     # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t8)
+     # borrowed_by: LocalRoot($t4) -> {(@, Reference($t8))}
+     # borrows_from: Reference($t8) -> {(@, LocalRoot($t4))}
+  5: $t5 := $t8
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t5)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
-  5: label L7
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+  6: label L7
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t5)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
-  6: $t8 := 0
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+  7: $t9 := 0
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t5)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
-  7: $t9 := <($t8, $t1)
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+  8: $t10 := <($t9, $t1)
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t5)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
-  8: if ($t9) goto 9 else goto 25
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+  9: if ($t10) goto 10 else goto 28
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t5)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
-  9: label L0
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 10: label L0
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t5)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 10: destroy($t5)
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 11: destroy($t5)
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 11: $t10 := 2
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 12: $t11 := 2
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 12: $t11 := /($t1, $t10)
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 13: $t12 := /($t1, $t11)
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 13: $t12 := 0
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 14: $t13 := 0
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 14: $t13 := ==($t11, $t12)
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 15: $t14 := ==($t12, $t13)
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 15: if ($t13) goto 16 else goto 19
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 16: if ($t14) goto 17 else goto 21
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 16: label L3
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 17: label L3
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 17: $t5 := borrow_local($t3)
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 18: $t15 := borrow_local($t3)
+     # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t15)
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 19: $t5 := $t15
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t5)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 18: goto 21
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 20: goto 24
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 19: label L5
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 21: label L5
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 20: $t5 := borrow_local($t4)
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 22: $t16 := borrow_local($t4)
+     # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t16)
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 23: $t5 := $t16
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t5)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 21: label L6
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 24: label L6
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t5)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 22: $t14 := 1
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 25: $t17 := 1
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t5)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 23: $t1 := -($t1, $t14)
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 26: $t1 := -($t1, $t17)
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t5)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 24: goto 5
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 27: goto 6
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t5)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 25: label L2
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 28: label L2
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t5)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 26: if ($t0) goto 27 else goto 32
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 29: if ($t0) goto 30 else goto 35
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t5)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 27: label L8
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 30: label L8
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t5)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 28: destroy($t5)
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 31: destroy($t5)
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 29: $t15 := 0
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 32: $t18 := 0
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 30: TestBorrow::test3($t2, $t15)
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 33: TestBorrow::test3($t2, $t18)
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 31: goto 36
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 34: goto 39
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t5)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 32: label L10
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 35: label L10
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t5)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 33: destroy($t2)
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 36: destroy($t2)
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t5)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 34: $t16 := 0
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 37: $t19 := 0
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2), Reference($t5)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 35: TestBorrow::test3($t5, $t16)
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 38: TestBorrow::test3($t5, $t19)
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 36: label L11
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 39: label L11
      # live_nodes: LocalRoot($t0), LocalRoot($t1), Reference($t2)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 37: trace_local[r_ref]($t2)
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 40: trace_local[r_ref]($t2)
      # live_nodes: LocalRoot($t0), LocalRoot($t1)
-     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t5))}, LocalRoot($t4) -> {(@, Reference($t5))}
-     # borrows_from: Reference($t5) -> {(@, LocalRoot($t3)), (@, LocalRoot($t4))}
- 38: return ()
+     # borrowed_by: LocalRoot($t3) -> {(@, Reference($t15))}, LocalRoot($t4) -> {(@, Reference($t8)), (@, Reference($t16))}, Reference($t8) -> {(@, Reference($t5))}, Reference($t15) -> {(@, Reference($t5))}, Reference($t16) -> {(@, Reference($t5))}
+     # borrows_from: Reference($t5) -> {(@, Reference($t8)), (@, Reference($t15)), (@, Reference($t16))}, Reference($t8) -> {(@, LocalRoot($t4))}, Reference($t15) -> {(@, LocalRoot($t3))}, Reference($t16) -> {(@, LocalRoot($t4))}
+ 41: return ()
 }
 
 

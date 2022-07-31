@@ -96,4 +96,35 @@ module 0x42::Test {
         aborts_if !cond && !exists<V<B>>(a);
         ensures if (cond) global<V<A>>(a).x == 0 else global<V<B>>(a).x == 0;
     }
+
+    public fun diff_local_simple(cond: bool) {
+        let v1 = 0;
+        let v2 = 0;
+
+        let r = if (cond) { &mut v1  } else { &mut v2  };
+        *r = 1;
+
+        spec {
+            assert (cond)  ==> (v1 == 1 && v2 == 0);
+            assert (!cond) ==> (v1 == 0 && v2 == 1);
+        }
+    }
+
+    public fun diff_local_global_mix_simple(cond: bool) acquires T {
+        let t = T { x : 0  };
+        let r = if (cond) { borrow_global_mut<T>(@0x1) } else { &mut t  };
+        r.x = 1;
+
+        spec {
+            assert (cond)  ==> t.x == 0;
+            assert (!cond) ==> t.x == 1;
+        };
+
+        let T { x : _ } = t;
+    }
+    spec diff_local_global_mix_simple {
+        aborts_if cond && !exists<T>(@0x1);
+        ensures (cond)  ==> global<T>(@0x1).x == 1;
+        ensures (!cond) ==> global<T>(@0x1).x == old(global<T>(@0x1).x);
+    }
 }

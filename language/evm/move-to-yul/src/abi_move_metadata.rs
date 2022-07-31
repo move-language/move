@@ -26,7 +26,7 @@ pub(crate) fn generate_abi_move_metadata(ctx: &Context, receive: bool, fallback:
         let st_env = ctx.env.get_struct(key.to_qualified_id());
         event_map.insert(
             st_env.get_identifier().unwrap().to_string(),
-            from_event_sig(ctx.event_signature_map.borrow().get(&key).unwrap()),
+            from_event_sig(ctx.event_signature_map.borrow().get(key).unwrap()),
         );
     }
 
@@ -34,7 +34,7 @@ pub(crate) fn generate_abi_move_metadata(ctx: &Context, receive: bool, fallback:
     let mut func_map = BTreeMap::new();
     for (key, (solidity_sig, attr)) in ctx.callable_function_map.borrow().iter() {
         let fun = ctx.env.get_function(key.to_qualified_id());
-        let abi_sig = from_solidity_sig(&solidity_sig, Some(*attr), "function");
+        let abi_sig = from_solidity_sig(solidity_sig, Some(*attr), "function");
         func_map.insert(fun.get_identifier().to_string(), abi_sig);
     }
 

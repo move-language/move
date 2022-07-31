@@ -210,6 +210,21 @@ impl<'env> FunctionDataBuilder<'env> {
         (temp, temp_exp)
     }
 
+    /// Similar to `emit_let`, but with the temporary created as identical to the dereference of
+    /// the mutation (if the `def` argument is a mutable reference).
+    pub fn emit_let_skip_reference(&mut self, def: Exp) -> (TempIndex, Exp) {
+        let ty = self
+            .global_env()
+            .get_node_type(def.node_id())
+            .skip_reference()
+            .clone();
+        let temp = self.new_temp(ty);
+        let temp_exp = self.mk_temporary(temp);
+        let definition = self.mk_identical(temp_exp.clone(), def);
+        self.emit_with(|id| Bytecode::Prop(id, PropKind::Assume, definition));
+        (temp, temp_exp)
+    }
+
     /// Emits a new temporary with a havoced value of given type.
     pub fn emit_let_havoc(&mut self, ty: Type) -> (TempIndex, Exp) {
         let havoc_kind = if ty.is_mutable_reference() {

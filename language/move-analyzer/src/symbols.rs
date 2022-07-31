@@ -61,7 +61,7 @@ use lsp_types::{
     HoverParams, LanguageString, Location, MarkedString, Position, Range, ReferenceParams,
 };
 use std::{
-    clone, cmp,
+    cmp,
     collections::{BTreeMap, BTreeSet, HashMap},
     fmt, fs,
     path::{Path, PathBuf},
@@ -731,6 +731,7 @@ impl Symbolicator {
                     continue;
                 }
             };
+
             structs.insert(
                 *name,
                 StructDef {
@@ -897,6 +898,7 @@ impl Symbolicator {
                 let start = Self::get_start_loc(&fpos, &self.files, &self.file_id_mapping).unwrap();
                 let ident_type = IdentType::RegularType(t.clone());
                 let ident_type_def = self.ident_type_def_loc(&ident_type);
+                let doc_string = self.extract_doc_string(&start, &fpos.file_hash());
                 use_defs.insert(
                     start.line,
                     UseDef::new(
@@ -908,7 +910,7 @@ impl Symbolicator {
                         fname,
                         ident_type,
                         ident_type_def,
-                        String::new(),
+                        doc_string,
                     ),
                 );
             }
@@ -983,21 +985,21 @@ impl Symbolicator {
         get_loc(&pos.file_hash(), pos.start(), files, file_id_mapping)
     }
 
-    fn extract_doc_string(&mut self, name_start: &Position, file_hash: &FileHash) -> String {
+    fn extract_doc_string(&self, name_start: &Position, file_hash: &FileHash) -> String {
         let mut doc_string = String::new();
         if let Some(file_id) = self.file_id_mapping.get(file_hash) {
-            if let Some(fileLines) = self.file_id_to_lines.get(file_id) {
-                if (name_start.line > 0) {
+            if let Some(file_lines) = self.file_id_to_lines.get(file_id) {
+                if name_start.line > 0 {
                     let mut iter = (name_start.line - 1) as usize;
-                    let mut line_before = fileLines[iter].trim();
+                    let mut line_before = file_lines[iter].trim();
 
                     while let Some(stripped_line) = line_before.strip_prefix("///") {
                         doc_string = format!("{}\n{}", stripped_line, doc_string);
-                        if (iter == 0) {
+                        if iter == 0 {
                             break;
                         }
-                        iter = iter - 1;
-                        line_before = fileLines[iter].trim();
+                        iter -= 1;
+                        line_before = file_lines[iter].trim();
                     }
                 }
             }
@@ -1434,6 +1436,8 @@ impl Symbolicator {
                     Type_::Param(tp.clone()),
                 ));
                 let ident_type_def = self.ident_type_def_loc(&ident_type);
+
+                let doc_string = self.extract_doc_string(&start, &fhash);
                 use_defs.insert(
                     start.line,
                     UseDef::new(
@@ -1445,7 +1449,7 @@ impl Symbolicator {
                         &tname,
                         ident_type,
                         ident_type_def,
-                        String::new(),
+                        doc_string,
                     ),
                 );
                 let exists = tp_scope.insert(tname, DefLoc { fhash, start });
@@ -1505,19 +1509,22 @@ impl Symbolicator {
             |use_name, name_start, mod_defs| match mod_defs.constants.get(use_name) {
                 Some(def_start) => {
                     let ident_type = IdentType::RegularType(use_type.clone());
+                    let def_fhash = self.mod_outer_defs.get(&module_ident).unwrap().fhash;
+                    let doc_string = self.extract_doc_string(def_start, &def_fhash);
                     let ident_type_def = self.ident_type_def_loc(&ident_type);
+
                     use_defs.insert(
                         name_start.line,
                         UseDef::new(
                             references,
                             use_pos.file_hash(),
                             name_start,
-                            self.mod_outer_defs.get(&module_ident).unwrap().fhash,
+                            def_fhash,
                             *def_start,
                             use_name,
                             ident_type,
                             ident_type_def,
-                            String::new(),
+                            doc_string,
                         ),
                     );
                 }
@@ -1542,18 +1549,20 @@ impl Symbolicator {
             use_pos,
             |use_name, name_start, mod_defs| match mod_defs.functions.get(use_name) {
                 Some(def_start) => {
+                    let def_fhash = self.mod_outer_defs.get(&module_ident.value).unwrap().fhash;
+                    let doc_string = self.extract_doc_string(def_start, &def_fhash);
                     use_defs.insert(
                         name_start.line,
                         UseDef::new(
                             references,
                             use_pos.file_hash(),
                             name_start,
-                            self.mod_outer_defs.get(&module_ident.value).unwrap().fhash,
+                            def_fhash,
                             *def_start,
                             use_name,
                             use_type.clone(),
                             self.ident_type_def_loc(&use_type),
-                            String::new(),
+                            doc_string,
                         ),
                     );
                 }
@@ -1579,19 +1588,22 @@ impl Symbolicator {
             |use_name, name_start, mod_defs| match mod_defs.structs.get(use_name) {
                 Some(def) => {
                     let ident_type = IdentType::RegularType(use_type.clone());
+
                     let ident_type_def = self.ident_type_def_loc(&ident_type);
+                    let def_fhash = self.mod_outer_defs.get(module_ident).unwrap().fhash;
+                    let doc_string = self.extract_doc_string(&def.name_start, &def_fhash);
                     use_defs.insert(
                         name_start.line,
                         UseDef::new(
                             references,
                             use_pos.file_hash(),
                             name_start,
-                            self.mod_outer_defs.get(module_ident).unwrap().fhash,
+                            def_fhash,
                             def.name_start,
                             use_name,
                             ident_type,
                             ident_type_def,
-                            String::new(),
+                            doc_string,
                         ),
                     );
                 }
@@ -1621,18 +1633,21 @@ impl Symbolicator {
                         if fdef.name == *use_name {
                             let ident_type = IdentType::RegularType(use_type.clone());
                             let ident_type_def = self.ident_type_def_loc(&ident_type);
+
+                            let def_fhash = self.mod_outer_defs.get(module_ident).unwrap().fhash;
+                            let doc_string = self.extract_doc_string(&fdef.start, &def_fhash);
                             use_defs.insert(
                                 name_start.line,
                                 UseDef::new(
                                     references,
                                     use_pos.file_hash(),
                                     name_start,
-                                    self.mod_outer_defs.get(module_ident).unwrap().fhash,
+                                    def_fhash,
                                     fdef.start,
                                     use_name,
                                     ident_type,
                                     ident_type_def,
-                                    String::new(),
+                                    doc_string,
                                 ),
                             );
                         }
@@ -1660,6 +1675,8 @@ impl Symbolicator {
                         Some(def_loc) => {
                             let ident_type = IdentType::RegularType(id_type.clone());
                             let ident_type_def = self.ident_type_def_loc(&ident_type);
+                            let doc_string =
+                                self.extract_doc_string(&def_loc.start, &def_loc.fhash);
                             use_defs.insert(
                                 name_start.line,
                                 UseDef::new(
@@ -1671,7 +1688,7 @@ impl Symbolicator {
                                     &use_name,
                                     ident_type,
                                     ident_type_def,
-                                    String::new(),
+                                    doc_string,
                                 ),
                             );
                         }
@@ -1720,6 +1737,8 @@ impl Symbolicator {
                 // in rust) a variable can be re-defined in the same scope replacing the previous
                 // definition
 
+                let doc_string = self.extract_doc_string(&name_start, &pos.file_hash());
+
                 // enter self-definition for def name
                 let ident_type = IdentType::RegularType(use_type);
                 let ident_type_def = self.ident_type_def_loc(&ident_type);
@@ -1734,7 +1753,7 @@ impl Symbolicator {
                         name,
                         ident_type,
                         ident_type_def,
-                        String::new(),
+                        doc_string,
                     ),
                 );
             }
@@ -1764,6 +1783,7 @@ impl Symbolicator {
         };
 
         if let Some(def_loc) = scope.get(use_name) {
+            let doc_string = self.extract_doc_string(&def_loc.start, &def_loc.fhash);
             let ident_type = IdentType::RegularType(use_type);
             let ident_type_def = self.ident_type_def_loc(&ident_type);
             use_defs.insert(
@@ -1777,7 +1797,7 @@ impl Symbolicator {
                     use_name,
                     ident_type,
                     ident_type_def,
-                    String::new(),
+                    doc_string,
                 ),
             );
         } else {

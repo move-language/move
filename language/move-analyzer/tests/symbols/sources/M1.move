@@ -3,6 +3,7 @@ module Symbols::M1 {
     /// A docstring for a struct
     /// This struct contains some_field of u64
     struct SomeStruct has key, drop, store {
+        /// A docstring for a field in a struct
         some_field: u64,
     }
 

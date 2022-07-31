@@ -86,4 +86,5 @@ Move source file (a file with a `.move` file extension) and:
   - go to type definition
   - go to references
   - type on hover
-  - outline
+  - outline view showing symbol tree for Move source files
+

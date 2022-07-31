@@ -1,10 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
-
 use anyhow::{bail, Result};
 use clap::Parser;
 use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
+use std::fmt::Write;
 
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 use move_core_types::{
@@ -202,7 +202,7 @@ impl<'env> StacklessBytecodeInterpreter<'env> {
                 for func_env in module_env.get_functions() {
                     for (variant, target) in targets.get_targets(&func_env) {
                         target.register_annotation_formatters_for_test();
-                        text += &format!("[variant {}]\n{}\n", variant, target);
+                        writeln!(&mut text, "[variant {}]\n{}", variant, target).unwrap();
                     }
                 }
             }
@@ -339,7 +339,8 @@ fn verbose_stepwise_processing(
             for (_, target) in targets.get_targets(&func_env) {
                 if !target.data.code.is_empty() {
                     target.register_annotation_formatters_for_test();
-                    text += &format!("[{}-{}]\n{}\n", step, name, target);
+
+                    writeln!(&mut text, "[{}-{}]\n{}", step, name, target).unwrap();
                 }
             }
         }

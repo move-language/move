@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    borrow_analysis::BorrowAnnotation,
+    borrow_analysis::{BorrowAnnotation, WriteBackAction},
     function_data_builder::FunctionDataBuilder,
     function_target::FunctionData,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
@@ -20,6 +20,7 @@ use move_model::{
     model::{FunctionEnv, StructEnv},
     ty::{Type, BOOL_TYPE},
 };
+use std::collections::BTreeSet;
 
 pub struct MemoryInstrumentationProcessor {}
 
@@ -106,6 +107,39 @@ impl<'a> Instrumenter<'a> {
             .any(|fe| self.is_pack_ref_ty(&fe.get_type()))
     }
 
+    /// Calculate the differentiating factor for a particular write-back chain (among the tree)
+    fn get_differentiation_factors(tree: &[Vec<WriteBackAction>], index: usize) -> BTreeSet<usize> {
+        // utility function to first the first different action among two chains
+        fn index_of_first_different_action(
+            base: &[WriteBackAction],
+            another: &[WriteBackAction],
+        ) -> usize {
+            for ((i, a1), a2) in base.iter().enumerate().zip(another.iter()) {
+                if a1 != a2 {
+                    return i;
+                }
+            }
+            unreachable!("Two write-back action chains cannot be exactly the same");
+        }
+
+        // derive all the borrow edges that uniquely differentiate this chain
+        let base = &tree[index];
+        let diffs = tree
+            .iter()
+            .enumerate()
+            .filter_map(|(i, chain)| {
+                if i == index {
+                    None
+                } else {
+                    Some(index_of_first_different_action(base, chain))
+                }
+            })
+            .collect();
+
+        // return the indices of the actions that differentiate this borrow chain
+        diffs
+    }
+
     fn memory_instrumentation(&mut self, code_offset: CodeOffset, bytecode: &Bytecode) {
         let param_count = self.builder.get_target().get_parameter_count();
 
@@ -140,6 +174,8 @@ impl<'a> Instrumenter<'a> {
 
         // Generate PackRef for nodes which go out of scope, as well as WriteBack.
         let attr_id = bytecode.get_attr_id();
+        self.builder.set_loc_from_attr(attr_id);
+
         for (node, ancestors) in before.dying_nodes(after) {
             // we only care about references that occurs in the function body
             let node_idx = match node {
@@ -159,73 +195,91 @@ impl<'a> Instrumenter<'a> {
 
             // Generate write_back for this reference.
             let is_conditional = ancestors.len() > 1;
-            for tree in ancestors {
-                let parent = match tree.first() {
-                    Some(action) => {
-                        // the src node of the first action must be the node itself
-                        assert!(matches!(
-                            action.src,
-                            BorrowNode::Reference(idx) if idx == node_idx
-                        ));
-                        action
-                    }
-                    None => {
-                        unreachable!(
-                            "The ancestor tree should contain at least one write-back action"
-                        );
-                    }
-                };
+            for (chain_index, chain) in ancestors.iter().enumerate() {
+                // sanity check: the src node of the first action must be the node itself
+                assert_eq!(
+                    chain
+                        .first()
+                        .expect("The write-back chain should contain at action")
+                        .src,
+                    node_idx
+                );
 
-                // decide on whether we need IsParent checks
-                self.builder.set_loc_from_attr(attr_id);
-                let skip_label_opt = match parent.dst {
-                    BorrowNode::Reference(..) if is_conditional => {
+                // decide on whether we need IsParent checks and how to instrument the checks
+                let skip_label_opt = if is_conditional {
+                    let factors = Self::get_differentiation_factors(&ancestors, chain_index);
+                    let mut last_is_parent_temp = None;
+
+                    for idx in factors {
+                        let action = &chain[idx];
                         let temp = self.builder.new_temp(BOOL_TYPE.clone());
                         self.builder.emit_with(|id| {
                             Bytecode::Call(
                                 id,
                                 vec![temp],
-                                Operation::IsParent(parent.dst.clone(), parent.edge.clone()),
-                                vec![node_idx],
+                                Operation::IsParent(action.dst.clone(), action.edge.clone()),
+                                vec![action.src],
                                 None,
                             )
                         });
-                        let update_label = self.builder.new_label();
-                        let skip_label = self.builder.new_label();
-                        self.builder
-                            .emit_with(|id| Bytecode::Branch(id, update_label, skip_label, temp));
-                        self.builder
-                            .emit_with(|id| Bytecode::Label(id, update_label));
-                        Some(skip_label)
+
+                        let combined_temp = match last_is_parent_temp {
+                            None => temp,
+                            Some(last_temp) => {
+                                let temp_conjunction = self.builder.new_temp(BOOL_TYPE.clone());
+                                self.builder.emit_with(|id| {
+                                    Bytecode::Call(
+                                        id,
+                                        vec![temp_conjunction],
+                                        Operation::And,
+                                        vec![last_temp, temp],
+                                        None,
+                                    )
+                                });
+                                temp_conjunction
+                            }
+                        };
+                        last_is_parent_temp = Some(combined_temp);
                     }
-                    _ => None,
+
+                    let update_label = self.builder.new_label();
+                    let skip_label = self.builder.new_label();
+                    self.builder.emit_with(|id| {
+                        Bytecode::Branch(
+                            id,
+                            update_label,
+                            skip_label,
+                            last_is_parent_temp
+                                .expect("There should be at least one IsParent call for a conditional write-back"),
+                        )
+                    });
+                    self.builder
+                        .emit_with(|id| Bytecode::Label(id, update_label));
+                    Some(skip_label)
+                } else {
+                    None
                 };
 
                 // issue a chain of write-back actions
-                for action in &tree {
-                    // obtain the source of the write-back
-                    let src_idx = match &action.src {
-                        BorrowNode::Reference(idx) => *idx,
-                        _ => unreachable!(
-                            "The source of a write-back action must always be a reference"
-                        ),
-                    };
-
+                for action in chain {
                     // decide if we need a pack-ref (i.e., data structure invariant checking)
                     if matches!(
                         action.dst,
                         BorrowNode::LocalRoot(..) | BorrowNode::GlobalRoot(..)
                     ) {
-                        // On write-back to a root, "pack" the reference i.e. validate all its
-                        // invariants.
-                        let ty = &self.builder.get_target().get_local_type(src_idx).to_owned();
+                        // On write-back to a root, "pack" the reference i.e. validate all its invariants.
+                        let ty = &self
+                            .builder
+                            .get_target()
+                            .get_local_type(action.src)
+                            .to_owned();
                         if self.is_pack_ref_ty(ty) {
                             self.builder.emit_with(|id| {
                                 Bytecode::Call(
                                     id,
                                     vec![],
                                     Operation::PackRefDeep,
-                                    vec![src_idx],
+                                    vec![action.src],
                                     None,
                                 )
                             });
@@ -238,7 +292,7 @@ impl<'a> Instrumenter<'a> {
                             id,
                             vec![],
                             Operation::WriteBack(action.dst.clone(), action.edge.clone()),
-                            vec![src_idx],
+                            vec![action.src],
                             None,
                         )
                     });

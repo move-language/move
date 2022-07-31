@@ -8,8 +8,7 @@ module 0x2::A {
         s.f2
     }
 
-    // TODO (mengxu) there is a bug that tries to destroy a value instead of reference
-    // #[test]
+    #[test]
     public fun destroy(): S {
         let s = S { f1: true, f2: 42 };
         let p = &s;

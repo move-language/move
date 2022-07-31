@@ -90,6 +90,27 @@ fun TestEliminateImmRefs::test4(): u64 {
   7: return $t6
 }
 
+
+[variant baseline]
+fun TestEliminateImmRefs::test5(): TestEliminateImmRefs::R {
+     var $t0|p: &TestEliminateImmRefs::R
+     var $t1|r: TestEliminateImmRefs::R
+     var $t2: u64
+     var $t3: TestEliminateImmRefs::R
+     var $t4: &TestEliminateImmRefs::R
+     var $t5: &TestEliminateImmRefs::R
+     var $t6: TestEliminateImmRefs::R
+  0: $t2 := 3
+  1: $t3 := pack TestEliminateImmRefs::R($t2)
+  2: $t1 := $t3
+  3: $t4 := borrow_local($t1)
+  4: $t0 := $t4
+  5: $t5 := move($t0)
+  6: destroy($t5)
+  7: $t6 := move($t1)
+  8: return $t6
+}
+
 ============ after pipeline `eliminate_imm_refs` ================
 
 [variant baseline]
@@ -179,5 +200,25 @@ fun TestEliminateImmRefs::test4(): u64 {
   4: $t1 := $t4
   5: $t5 := move($t1)
   6: $t6 := TestEliminateImmRefs::test3($t5)
+  7: return $t6
+}
+
+
+[variant baseline]
+fun TestEliminateImmRefs::test5(): TestEliminateImmRefs::R {
+     var $t0|p: TestEliminateImmRefs::R
+     var $t1|r: TestEliminateImmRefs::R
+     var $t2: u64
+     var $t3: TestEliminateImmRefs::R
+     var $t4: TestEliminateImmRefs::R
+     var $t5: TestEliminateImmRefs::R
+     var $t6: TestEliminateImmRefs::R
+  0: $t2 := 3
+  1: $t3 := pack TestEliminateImmRefs::R($t2)
+  2: $t1 := $t3
+  3: $t4 := copy($t1)
+  4: $t0 := $t4
+  5: $t5 := move($t0)
+  6: $t6 := move($t1)
   7: return $t6
 }

@@ -623,13 +623,6 @@ impl<'env> FunctionTranslator<'env> {
             emitln!(writer, "$t{} := _$t{};", idx, idx);
         }
 
-        // Initialize mutations to have empty paths so $IsParentMutation works correctly.
-        for i in num_args..fun_target.get_local_count() {
-            if self.get_local_type(i).is_mutable_reference() {
-                emitln!(writer, "assume IsEmptyVec(p#$Mutation($t{}));", i);
-            }
-        }
-
         // Initial assumptions
         if variant.is_verified() {
             self.translate_verify_entry_assumptions(fun_target);
@@ -892,7 +885,15 @@ impl<'env> FunctionTranslator<'env> {
                                     _ => unreachable!(),
                                 })
                                 .collect_vec();
-                            if edge_pattern.len() == 1 {
+                            if edge_pattern.is_empty() {
+                                emitln!(
+                                    writer,
+                                    "{} := $IsSameMutation({}, {});",
+                                    str_local(dests[0]),
+                                    str_local(*parent),
+                                    src_str
+                                );
+                            } else if edge_pattern.len() == 1 {
                                 emitln!(
                                     writer,
                                     "{} := $IsParentMutation({}, {}, {});",
@@ -1444,6 +1445,13 @@ impl<'env> FunctionTranslator<'env> {
                             bytecode
                         );
                     }
+                    Uninit => {
+                        emitln!(
+                            writer,
+                            "assume l#$Mutation($t{}) == $Uninitialized();",
+                            srcs[0]
+                        );
+                    }
                     Destroy => {}
                     TraceLocal(idx) => {
                         self.track_local(*idx, srcs[0]);
@@ -1456,14 +1464,6 @@ impl<'env> FunctionTranslator<'env> {
                     EmitEvent => {
                         let msg = srcs[0];
                         let handle = srcs[1];
-                        let translate_local = |idx: usize| {
-                            let ty = &self.get_local_type(idx);
-                            if ty.is_mutable_reference() {
-                                format!("$Dereference({})", str_local(idx))
-                            } else {
-                                str_local(idx)
-                            }
-                        };
                         let suffix = boogie_type_suffix(env, &self.get_local_type(msg));
                         emit!(
                             writer,
@@ -1471,7 +1471,7 @@ impl<'env> FunctionTranslator<'env> {
                             if srcs.len() > 2 { "Cond" } else { "" },
                             suffix
                         );
-                        emit!(writer, "{}, {}", translate_local(handle), str_local(msg));
+                        emit!(writer, "{}, {}", str_local(handle), str_local(msg));
                         if srcs.len() > 2 {
                             emit!(writer, ", {}", str_local(srcs[2]));
                         }

@@ -19,6 +19,7 @@ use move_to_yul::{generator::Generator, options::Options};
 use primitive_types::{H160, U256};
 use std::{
     collections::BTreeMap,
+    fmt::Write,
     path::{Path, PathBuf},
 };
 
@@ -116,16 +117,19 @@ fn run_tests(
     let mut res = String::new();
     res.push_str("!! Unit tests\n\n");
     for (fun, source) in test_cases {
-        res.push_str(&format!(
-            "// test of {}\n",
+        writeln!(
+            &mut res,
+            "// test of {}",
             env.get_function(*fun).get_full_name_str()
-        ));
+        )
+        .unwrap();
         res.push_str(source);
-        res.push_str(&format!(
-            "===> Test result of {}: {}\n\n",
+        writeln!(
+            &mut res,
+            "===> Test result of {}: {}\n",
             env.get_function(*fun).get_full_name_str(),
             execute_test(env, source)?
-        ));
+        )?;
     }
     Ok(res)
 }

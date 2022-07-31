@@ -149,7 +149,8 @@ impl<'a> Optimizer<'a> {
 
         // Transform code.
         let mut new_instrs = vec![];
-        for (code_offset, instr) in instrs.into_iter().enumerate() {
+        let mut should_skip = BTreeSet::new();
+        for (code_offset, instr) in instrs.iter().enumerate() {
             use BorrowNode::*;
             use Bytecode::*;
             use Operation::*;
@@ -162,38 +163,73 @@ impl<'a> Optimizer<'a> {
                     true
                 }
             };
-            if !new_instrs.is_empty() {
-                // Perform peephole optimization
-                match (&new_instrs[new_instrs.len() - 1], &instr) {
-                    (Call(_, _, UnpackRef, srcs1, _), Call(_, _, PackRef, srcs2, _))
-                        if srcs1[0] == srcs2[0] =>
-                    {
-                        // skip this redundant unpack/pack pair.
-                        new_instrs.pop();
-                        continue;
-                    }
-                    (Call(_, dests, IsParent(..), srcs, _), Branch(_, _, _, tmp))
-                        if dests[0] == *tmp
-                            && !is_unwritten(code_offset as CodeOffset, &Reference(srcs[0])) =>
-                    {
-                        // skip this obsolete IsParent check
-                        new_instrs.pop();
-                        continue;
-                    }
-                    _ => {}
+
+            // Perform peephole optimization
+            match (new_instrs.last(), instr) {
+                (None, _) => {}
+                (Some(Call(_, _, UnpackRef, srcs1, _)), Call(_, _, PackRef, srcs2, _))
+                    if srcs1[0] == srcs2[0] =>
+                {
+                    // skip this redundant unpack/pack pair.
+                    new_instrs.pop();
+                    continue;
                 }
+                (Some(Call(_, dests, IsParent(..), srcs, _)), Branch(_, _, _, tmp))
+                    if dests[0] == *tmp
+                        && !is_unwritten(code_offset as CodeOffset, &Reference(srcs[0])) =>
+                {
+                    assert!(matches!(instrs[code_offset + 1], Label(..)));
+                    // skip this obsolete IsParent check when all WriteBacks in this block are redundant
+                    let mut block_cursor = code_offset + 2;
+                    let mut skip_branch = true;
+                    loop {
+                        match &instrs[block_cursor] {
+                            Call(_, _, WriteBack(_, _), srcs, _) => {
+                                if is_unwritten(block_cursor as CodeOffset, &Reference(srcs[0])) {
+                                    skip_branch = false;
+                                    break;
+                                }
+                                // skip redundant write-backs
+                                should_skip.insert(block_cursor);
+                            }
+                            Call(_, _, TraceLocal(_), _, _) => {
+                                // since the previous write-back is skipped, this trace local is redundant as well
+                                should_skip.insert(block_cursor);
+                            }
+                            _ => {
+                                break;
+                            }
+                        }
+                        block_cursor += 1;
+                    }
+                    if skip_branch {
+                        // get rid of the label as well
+                        should_skip.insert(code_offset + 1);
+                        new_instrs.pop();
+                        continue;
+                    }
+                }
+                (Some(_), _) => {}
             }
-            // Remove unnecessary WriteBack
-            match &instr {
+
+            // Do not include this instruction if it is marked as skipped
+            if should_skip.contains(&code_offset) {
+                continue;
+            }
+
+            // Other cases for skipping the instruction
+            match instr {
+                // Remove unnecessary WriteBack
                 Call(_, _, WriteBack(..), srcs, _)
                     if !is_unwritten(code_offset as CodeOffset, &Reference(srcs[0])) =>
                 {
-                    // skip this obsolete WriteBack
                     continue;
                 }
                 _ => {}
             }
-            new_instrs.push(instr);
+
+            // This instruction should be included
+            new_instrs.push(instr.clone());
         }
         new_instrs
     }

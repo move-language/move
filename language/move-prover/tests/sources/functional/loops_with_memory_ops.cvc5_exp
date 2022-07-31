@@ -6,6 +6,8 @@ error: unknown assertion failed
    │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
    =     at tests/sources/functional/loops_with_memory_ops.move:56: nested_loop2
+   =     at <internal>:1
+   =     at tests/sources/functional/loops_with_memory_ops.move:56: nested_loop2
    =         a = <redacted>
    =         b = <redacted>
    =     at tests/sources/functional/loops_with_memory_ops.move:57: nested_loop2
@@ -58,6 +60,8 @@ error: induction case of the loop invariant does not hold
 70 │                 invariant forall n in 0..i: a[n] == b[n];
    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
+   =     at tests/sources/functional/loops_with_memory_ops.move:56: nested_loop2
+   =     at <internal>:1
    =     at tests/sources/functional/loops_with_memory_ops.move:56: nested_loop2
    =         a = <redacted>
    =         b = <redacted>

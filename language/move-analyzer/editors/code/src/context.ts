@@ -98,6 +98,8 @@ export class Context {
      *
      * To read more about the messages sent and responses received by this client, such as
      * "initialize," read [the Language Server Protocol specification](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize).
+     * 
+     * In order to synchronously wait for the client to be completely ready, we need to mark the function as asynchronous
      **/
     async startClient(): Promise<void> {
         const executable: lc.Executable = {

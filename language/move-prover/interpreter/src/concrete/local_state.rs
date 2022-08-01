@@ -170,6 +170,11 @@ impl LocalState {
             .iter()
             .enumerate()
             .filter_map(|(idx, slot)| slot.get_content().map(|(_, ptr)| (idx, ptr)))
+            .chain(
+                self.destroyed_args
+                    .iter()
+                    .map(|(idx, val)| (*idx, val.get_ptr())),
+            )
             .collect()
     }
 

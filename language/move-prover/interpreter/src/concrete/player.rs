@@ -1448,7 +1448,7 @@ impl<'env> FunctionContext<'env> {
                 // TODO (mengxu): refactor the code to remove this clone
                 let mut cur = op_val.clone();
                 for (i, (val, edge)) in path.into_iter().zip(edges.iter()).rev().enumerate() {
-                    let ptr = trace.get(steps - 1 - i).unwrap();
+                    let ptr = trace.get(i).unwrap();
                     let sub = match edge {
                         BorrowEdge::Field(_, field_num) => {
                             val.update_ref_struct_field(*field_num, cur)

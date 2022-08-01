@@ -23,7 +23,10 @@ pub fn choose_variant<'env>(
                 }
             }
             FunctionVariant::Verification(VerificationFlavor::Regular) => {
-                target_variant = Some(target);
+                // TODO (mengxu): think about a way to handle ghost type parameters
+                if target.data.ghost_type_param_count == 0 {
+                    target_variant = Some(target);
+                }
             }
             _ => (),
         }

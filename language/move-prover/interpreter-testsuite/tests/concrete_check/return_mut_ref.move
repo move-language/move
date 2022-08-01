@@ -47,8 +47,7 @@ module 0x2::A {
         }
     }
 
-    // TODO there is a bug in spec_instrumenter that produces wrong goto labels:
-    // #[test]
+    #[test]
     public fun return_ref_path_vec_1(): V {
         let is = vector::empty();
         let ts = vector::empty();

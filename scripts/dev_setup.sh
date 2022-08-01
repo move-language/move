@@ -15,10 +15,10 @@
 # fast fail.
 set -eo pipefail
 
-Z3_VERSION=4.8.13
+Z3_VERSION=4.10.2
 CVC5_VERSION=0.0.3
-DOTNET_VERSION=5.0
-BOOGIE_VERSION=2.9.6
+DOTNET_VERSION=6.0
+BOOGIE_VERSION=2.13.4
 SOLC_VERSION="v0.8.11+commit.d7f03943"
 
 SCRIPT_PATH="$(cd "$(dirname "$0")" >/dev/null 2>&1 && pwd)"
@@ -294,7 +294,7 @@ function install_z3 {
     return
   fi
   if [[ "$(uname)" == "Linux" ]]; then
-    Z3_PKG="z3-$Z3_VERSION-x64-glibc-2.28"
+    Z3_PKG="z3-$Z3_VERSION-x64-glibc-2.31"
   elif [[ "$(uname)" == "Darwin" ]]; then
     Z3_PKG="z3-$Z3_VERSION-x64-osx-10.16"
   else
@@ -306,7 +306,7 @@ function install_z3 {
   mkdir -p "$TMPFILE"/
   (
     cd "$TMPFILE" || exit
-    curl -LOs "https://github.com/junkil-park/z3/releases/download/z3-$Z3_VERSION/$Z3_PKG.zip"
+    curl -LOs "https://github.com/Z3Prover/z3/releases/download/z3-$Z3_VERSION/$Z3_PKG.zip"
     unzip -q "$Z3_PKG.zip"
     cp "$Z3_PKG/bin/z3" "${INSTALL_DIR}"
     chmod +x "${INSTALL_DIR}z3"

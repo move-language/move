@@ -1682,7 +1682,7 @@ impl<'s> ModelParser<'s> {
 
     fn parse_key(&mut self) -> Result<ModelValue, ModelParseError> {
         let mut comps = vec![];
-        while !self.looking_at("->") {
+        while !self.looking_at("->") && self.at < self.input.len() {
             let value = self.parse_value()?;
             comps.push(value);
         }

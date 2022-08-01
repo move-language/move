@@ -57,9 +57,11 @@ use crossbeam::channel::Sender;
 use im::ordmap::OrdMap;
 use lsp_server::{Request, RequestId};
 use lsp_types::{
-    request::GotoTypeDefinitionParams, Diagnostic, GotoDefinitionParams, Hover, HoverContents,
-    HoverParams, LanguageString, Location, MarkedString, Position, Range, ReferenceParams,
+    request::GotoTypeDefinitionParams, Diagnostic, DocumentSymbol, DocumentSymbolParams,
+    GotoDefinitionParams, Hover, HoverContents, HoverParams, LanguageString, Location,
+    MarkedString, Position, Range, ReferenceParams, SymbolKind,
 };
+
 use std::{
     cmp,
     collections::{BTreeMap, BTreeSet, HashMap},
@@ -148,30 +150,41 @@ pub struct UseDef {
 }
 
 /// Definition of a struct field
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq)]
 struct FieldDef {
     name: Symbol,
     start: Position,
 }
 
 /// Definition of a struct
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq)]
 struct StructDef {
     name_start: Position,
     field_defs: Vec<FieldDef>,
 }
 
+#[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq)]
+struct FunctionDef {
+    name: Symbol,
+    start: Position,
+    attrs: Vec<String>,
+}
+
 /// Module-level definitions
-#[derive(Debug)]
+#[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq)]
 struct ModuleDefs {
     /// File where this module is located
     fhash: FileHash,
+    /// Location where this module is located
+    start: Position,
+    /// Module name
+    name: ModuleIdent_,
     /// Struct definitions
     structs: BTreeMap<Symbol, StructDef>,
     /// Const definitions
     constants: BTreeMap<Symbol, Position>,
     /// Function definitions
-    functions: BTreeMap<Symbol, Position>,
+    functions: BTreeMap<Symbol, FunctionDef>,
 }
 
 /// Data used during symbolication
@@ -190,7 +203,7 @@ pub struct Symbolicator {
 
 /// Maps a line number to a list of use-def pairs on a given line (use-def set is sorted by
 /// col_start)
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 struct UseDefMap(BTreeMap<u32, BTreeSet<UseDef>>);
 
 /// Result of the symbolication process
@@ -201,6 +214,8 @@ pub struct Symbols {
     file_use_defs: BTreeMap<PathBuf, UseDefMap>,
     /// A mapping from file hashes to file names
     file_name_mapping: BTreeMap<FileHash, Symbol>,
+    /// A mapping from filePath to ModuleDefs
+    file_mods: BTreeMap<PathBuf, BTreeSet<ModuleDefs>>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -540,6 +555,7 @@ impl Symbols {
         }
         self.file_use_defs.extend(other.file_use_defs);
         self.file_name_mapping.extend(other.file_name_mapping);
+        self.file_mods.extend(other.file_mods);
     }
 }
 
@@ -635,12 +651,32 @@ impl Symbolicator {
 
         let mut mod_outer_defs = BTreeMap::new();
         let mut mod_use_defs = BTreeMap::new();
+        let mut file_mods = BTreeMap::new();
+
         for (pos, module_ident, module_def) in modules {
-            let (defs, symbols) =
-                Self::get_mod_outer_defs(&pos, module_def, &files, &file_id_mapping);
+            let (defs, symbols) = Self::get_mod_outer_defs(
+                &pos,
+                &sp(pos, *module_ident),
+                module_def,
+                &files,
+                &file_id_mapping,
+            );
+
+            let cloned_defs = defs.clone();
+            let path = file_name_mapping.get(&cloned_defs.fhash.clone()).unwrap();
+            file_mods
+                .entry(
+                    dunce::canonicalize(path.as_str())
+                        .unwrap_or_else(|_| PathBuf::from(path.as_str())),
+                )
+                .or_insert_with(BTreeSet::new)
+                .insert(cloned_defs);
+
             mod_outer_defs.insert(*module_ident, defs);
             mod_use_defs.insert(*module_ident, symbols);
         }
+
+        eprintln!("get_symbols loaded file_mods length: {}", file_mods.len());
 
         let mut symbolicator = Symbolicator {
             mod_outer_defs,
@@ -675,7 +711,11 @@ impl Symbolicator {
             references,
             file_use_defs,
             file_name_mapping,
+            file_mods,
         };
+
+        eprintln!("get_symbols load complete");
+
         Ok((Some(symbols), ide_diagnostics))
     }
 
@@ -685,6 +725,7 @@ impl Symbolicator {
             file_use_defs: BTreeMap::new(),
             references: BTreeMap::new(),
             file_name_mapping: BTreeMap::new(),
+            file_mods: BTreeMap::new(),
         }
     }
 
@@ -693,6 +734,7 @@ impl Symbolicator {
     /// Get symbols for outer definitions in the module (functions, structs, and consts)
     fn get_mod_outer_defs(
         loc: &Loc,
+        mod_ident: &ModuleIdent,
         mod_def: &ModuleDefinition,
         files: &SimpleFiles<Symbol, String>,
         file_id_mapping: &HashMap<FileHash, usize>,
@@ -748,7 +790,7 @@ impl Symbolicator {
             constants.insert(*name, name_start);
         }
 
-        for (pos, name, _) in &mod_def.functions {
+        for (pos, name, func) in &mod_def.functions {
             let name_start = match Self::get_start_loc(&pos, files, file_id_mapping) {
                 Some(s) => s,
                 None => {
@@ -756,18 +798,55 @@ impl Symbolicator {
                     continue;
                 }
             };
-            functions.insert(*name, name_start);
+            functions.insert(
+                *name,
+                FunctionDef {
+                    name: *name,
+                    start: name_start,
+                    attrs: func
+                        .attributes
+                        .clone()
+                        .iter()
+                        .map(|(_loc, name, _attr)| name.to_string())
+                        .collect(),
+                },
+            );
         }
 
+        let use_def_map = UseDefMap::new();
+
+        let name = mod_ident.value;
         let fhash = loc.file_hash();
+        let start = match Self::get_start_loc(&loc, files, file_id_mapping) {
+            Some(s) => s,
+            None => {
+                debug_assert!(false);
+                return (
+                    ModuleDefs {
+                        fhash,
+                        start: Position {
+                            line: 0,
+                            character: 0,
+                        },
+                        name,
+                        structs,
+                        constants,
+                        functions,
+                    },
+                    use_def_map,
+                );
+            }
+        };
+
         let module_defs = ModuleDefs {
+            name,
+            start,
             fhash,
             structs,
             constants,
             functions,
         };
 
-        let use_def_map = UseDefMap::new();
         (module_defs, use_def_map)
     }
 
@@ -1505,7 +1584,7 @@ impl Symbolicator {
             use_name,
             use_pos,
             |use_name, name_start, mod_defs| match mod_defs.functions.get(use_name) {
-                Some(def_start) => {
+                Some(func_def) => {
                     use_defs.insert(
                         name_start.line,
                         UseDef::new(
@@ -1513,7 +1592,7 @@ impl Symbolicator {
                             use_pos.file_hash(),
                             name_start,
                             self.mod_outer_defs.get(&module_ident.value).unwrap().fhash,
-                            *def_start,
+                            func_def.start,
                             use_name,
                             use_type.clone(),
                             self.ident_type_def_loc(&use_type),
@@ -1992,6 +2071,145 @@ pub fn on_use_request(
         .send(lsp_server::Message::Response(response))
     {
         eprintln!("could not send use response: {:?}", err);
+    }
+}
+
+/// Handles document symbol request of the language server
+#[allow(deprecated)]
+pub fn on_document_symbol_request(context: &Context, request: &Request, symbols: &Symbols) {
+    let parameters = serde_json::from_value::<DocumentSymbolParams>(request.params.clone())
+        .expect("could not deserialize document symbol request");
+
+    let fpath = parameters.text_document.uri.to_file_path().unwrap();
+    eprintln!("on_document_symbol_request: {:?}", fpath);
+
+    let empty_mods: BTreeSet<ModuleDefs> = BTreeSet::new();
+    let mods = symbols.file_mods.get(&fpath).unwrap_or(&empty_mods);
+
+    let mut defs: Vec<DocumentSymbol> = vec![];
+    for mod_def in mods {
+        let name = mod_def.name.module.clone().to_string();
+        let detail = Some(mod_def.name.clone().to_string());
+        let kind = SymbolKind::Module;
+        let range = Range {
+            start: mod_def.start,
+            end: mod_def.start,
+        };
+
+        let mut children = vec![];
+
+        // handle constants
+        let cloned_const_def = mod_def.constants.clone();
+        for (sym, const_def_pos) in cloned_const_def {
+            let const_range = Range {
+                start: const_def_pos,
+                end: const_def_pos,
+            };
+
+            children.push(DocumentSymbol {
+                name: sym.clone().to_string(),
+                detail: None,
+                kind: SymbolKind::Constant,
+                range: const_range,
+                selection_range: const_range,
+                children: None,
+                tags: Some(vec![]),
+                deprecated: Some(false),
+            });
+        }
+
+        // handle structs
+        let cloned_struct_def = mod_def.structs.clone();
+        for (sym, struct_def) in cloned_struct_def {
+            let struct_range = Range {
+                start: struct_def.name_start,
+                end: struct_def.name_start,
+            };
+
+            let mut fields: Vec<DocumentSymbol> = vec![];
+            handle_struct_fields(struct_def, &mut fields);
+
+            children.push(DocumentSymbol {
+                name: sym.clone().to_string(),
+                detail: None,
+                kind: SymbolKind::Struct,
+                range: struct_range,
+                selection_range: struct_range,
+                children: Some(fields),
+                tags: Some(vec![]),
+                deprecated: Some(false),
+            });
+        }
+
+        // handle functions
+        let cloned_func_def = mod_def.functions.clone();
+        for (sym, func_def) in cloned_func_def {
+            let func_range = Range {
+                start: func_def.start,
+                end: func_def.start,
+            };
+
+            let mut detail = None;
+            if !func_def.attrs.is_empty() {
+                detail = Some(format!("{:?}", func_def.attrs));
+            }
+
+            children.push(DocumentSymbol {
+                name: sym.clone().to_string(),
+                detail,
+                kind: SymbolKind::Function,
+                range: func_range,
+                selection_range: func_range,
+                children: None,
+                tags: Some(vec![]),
+                deprecated: Some(false),
+            });
+        }
+
+        defs.push(DocumentSymbol {
+            name,
+            detail,
+            kind,
+            range,
+            selection_range: range,
+            children: Some(children),
+            tags: Some(vec![]),
+            deprecated: Some(false),
+        });
+    }
+
+    // unwrap will succeed based on the logic above which the compiler is unable to figure out
+    let response = lsp_server::Response::new_ok(request.id.clone(), defs);
+    if let Err(err) = context
+        .connection
+        .sender
+        .send(lsp_server::Message::Response(response))
+    {
+        eprintln!("could not send use response: {:?}", err);
+    }
+}
+
+/// Helper function to handle struct fields
+#[allow(deprecated)]
+fn handle_struct_fields(struct_def: StructDef, fields: &mut Vec<DocumentSymbol>) {
+    let clonded_fileds = struct_def.field_defs;
+
+    for field_def in clonded_fileds {
+        let field_range = Range {
+            start: field_def.start,
+            end: field_def.start,
+        };
+
+        fields.push(DocumentSymbol {
+            name: field_def.name.clone().to_string(),
+            detail: None,
+            kind: SymbolKind::Field,
+            range: field_range,
+            selection_range: field_range,
+            children: None,
+            tags: Some(vec![]),
+            deprecated: Some(false),
+        });
     }
 }
 

@@ -106,7 +106,7 @@
         "function-call-argument-newline": ["warn", "consistent"],
         "function-paren-newline": ["warn", "consistent"],
         "key-spacing": "warn",
-        "linebreak-style": "warn",
+        "linebreak-style": "off", // We use different linebreak styles. ref https://eslint.org/docs/latest/rules/linebreak-style
         "max-len": [
             "warn",
             {
@@ -139,7 +139,6 @@
         // * All @typescript-eslint rules: https://github.com/typescript-eslint/typescript-eslint/tree/v4.31.1/packages/eslint-plugin/docs/rules
         // * The rules included in @typescript-eslint/recommended: https://github.com/typescript-eslint/typescript-eslint/blob/v4.31.1/packages/eslint-plugin/src/configs/recommended.ts
         // * The rules included in @typescript-eslint/recommended-requiring-type-checking: https://github.com/typescript-eslint/typescript-eslint/blob/v4.31.1/packages/eslint-plugin/src/configs/recommended-requiring-type-checking.ts
-        "@typescript-eslint/array-type": ["warn", { "default": "generic" }],
         "@typescript-eslint/ban-tslint-comment": "warn",
         "@typescript-eslint/brace-style": "warn",
         "@typescript-eslint/comma-dangle": [
@@ -158,7 +157,7 @@
         "@typescript-eslint/keyword-spacing": "warn",
         "@typescript-eslint/lines-between-class-members": "warn",
         "@typescript-eslint/member-delimiter-style": "warn",
-        "@typescript-eslint/naming-convention": "warn",
+        "@typescript-eslint/naming-convention": "off",
         "@typescript-eslint/no-base-to-string": "warn",
         "@typescript-eslint/no-confusing-non-null-assertion": "warn",
         "@typescript-eslint/no-duplicate-imports": "warn",
@@ -206,10 +205,16 @@
         ],
         "@typescript-eslint/strict-boolean-expressions": "warn",
         "@typescript-eslint/switch-exhaustiveness-check": "warn",
-        "@typescript-eslint/type-annotation-spacing": "warn",
         "@typescript-eslint/unified-signatures": "warn",
 
         // The following are eslint-plugin-tsdoc rules:
-        "tsdoc/syntax": "warn"
+        "tsdoc/syntax": "warn",
+
+        "@typescript-eslint/no-unsafe-return": "off",
+        "@typescript-eslint/type-annotation-spacing": "off",
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/no-unsafe-assignment": "off",
+        "@typescript-eslint/restrict-template-expressions": "off",
+        "@typescript-eslint/array-type": "off"
     }
 }

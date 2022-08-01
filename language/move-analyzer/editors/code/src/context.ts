@@ -11,10 +11,15 @@ import { IndentAction } from 'vscode';
 
 /** Information passed along to each VS Code command defined by this extension. */
 export class Context {
+    private client: lc.LanguageClient | undefined;
+
     private constructor(
         private readonly extensionContext: Readonly<vscode.ExtensionContext>,
         readonly configuration: Readonly<Configuration>,
-    ) { }
+        client: lc.LanguageClient | undefined = undefined,
+    ) {
+        this.client = client;
+    }
 
     static create(
         extensionContext: Readonly<vscode.ExtensionContext>,
@@ -40,12 +45,16 @@ export class Context {
      */
     registerCommand(
         name: Readonly<string>,
-        command: (context: Readonly<Context>) => Promise<void>,
+        command: (context: Readonly<Context>, ...args: Array<any>) => any,
     ): void {
-        const disposable = vscode.commands.registerCommand(`move-analyzer.${name}`, async () => {
-            const com = await command(this);
-            return com;
-        });
+        const disposable = vscode.commands.registerCommand(
+            `move-analyzer.${name}`,
+            async (...args: Array<any>) : Promise<any> => {
+                const ret = await command(this, ...args);
+                return ret;
+            },
+        );
+
         this.extensionContext.subscriptions.push(disposable);
     }
 
@@ -89,8 +98,11 @@ export class Context {
      *
      * To read more about the messages sent and responses received by this client, such as
      * "initialize," read [the Language Server Protocol specification](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize).
+     *
+     * In order to synchronously wait for the client to be completely ready,
+     * we need to mark the function as asynchronous
      **/
-    startClient(): void {
+    async startClient(): Promise<void> {
         const executable: lc.Executable = {
             command: this.configuration.serverPath,
         };
@@ -122,5 +134,19 @@ export class Context {
         log.info('Starting client...');
         const disposable = client.start();
         this.extensionContext.subscriptions.push(disposable);
+        this.client = client;
+
+        // Wait for the Move Language Server initialization to complete,
+        // especially the first symbol table parsing is completed
+        await this.client.onReady();
     }
-}
+
+    /**
+     * Returns the client that this extension interacts with.
+     *
+     * @returns lc.LanguageClient
+     */
+    getClient(): lc.LanguageClient | undefined {
+        return this.client;
+    }
+} // Context

@@ -1,25 +1,17 @@
 module Symbols::M1 {
 
-    /// A docstring for a struct
-    /// This struct contains some_field of u64
     struct SomeStruct has key, drop, store {
-        /// A docstring for a field in a struct
         some_field: u64,
     }
 
-    /// A docstring for a constant
-    /// This const contains the answer to the universe
     const SOME_CONST: u64 = 42;
 
 
-    /// This is an unpack function written in move
-    /// It makes it super easy to unpack SomeStruct.
     fun unpack(s: SomeStruct): u64 {
         let SomeStruct { some_field: value } = s;
         value
     }
 
-    /// Single line docstrings work fine as well.
     fun cp(value: u64): u64 {
         let ret = value;
         ret

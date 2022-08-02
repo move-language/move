@@ -3,7 +3,7 @@ module Symbols::M2 {
     /// A struct with the drop property
     /// The drop property is great.
     struct SomeOtherStruct has drop {
-        // A doc string for a field in some other struct
+        /// A doc string for a field in some other struct
         some_field: u64,
     }
 

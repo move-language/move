@@ -34,6 +34,7 @@ impl New {
             "0.0.0",
             [(MOVE_STDLIB_PACKAGE_NAME, MOVE_STDLIB_PACKAGE_PATH)],
             [(MOVE_STDLIB_ADDR_NAME, MOVE_STDLIB_ADDR_VALUE)],
+            "",
         )
     }
 
@@ -43,6 +44,7 @@ impl New {
         version: &str,
         deps: impl IntoIterator<Item = (impl Display, impl Display)>,
         addrs: impl IntoIterator<Item = (impl Display, impl Display)>,
+        custom: &str, // anything else that needs to end up being in Move.toml (or empty string)
     ) -> anyhow::Result<()> {
         // TODO warn on build config flags
         let Self { name } = self;
@@ -75,6 +77,9 @@ version = \"{version}\"
         )?;
         for (addr_name, addr_val) in addrs {
             writeln!(w, "{addr_name} =  \"{addr_val}\"")?;
+        }
+        if !custom.is_empty() {
+            writeln!(w, "{}", custom)?;
         }
         Ok(())
     }

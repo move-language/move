@@ -1,15 +1,12 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{env, fs::File, path::PathBuf, process::Command};
-
+use crate::utils::movey_credential;
 use anyhow::bail;
 use clap::*;
-use reqwest::blocking::Client;
-
 use move_command_line_common::env::MOVE_HOME;
-
-use crate::utils::movey_credential;
+use reqwest::blocking::Client;
+use std::{env, fs::File, path::PathBuf, process::Command};
 
 #[derive(serde::Serialize, Default)]
 pub struct MoveyUploadRequest {
@@ -104,7 +101,7 @@ impl MoveyUpload {
             Ok(url) => {
                 let client = Client::new();
                 let response = client
-                    .post(&format!("{}/api/v1/post_package/", &url))
+                    .post(&format!("{}/api/v1/packages/register", &url))
                     .json(&movey_upload_request)
                     .send();
                 match response {
@@ -112,17 +109,17 @@ impl MoveyUpload {
                         if response.status().is_success() {
                             println!("Your package has been successfully uploaded to Movey")
                         } else if response.status().is_client_error() {
-                            bail!("Error: {}", response.text()?)
+                            bail!("{}", response.text()?)
                         } else if response.status().is_server_error() {
-                            bail!("Error: An unexpected error occurred. Please try again later");
+                            bail!("An unexpected error occurred. Please try again later");
                         }
                     }
                     Err(_) => {
-                        bail!("Error: An unexpected error occurred. Please try again later");
+                        bail!("An unexpected error occurred. Please try again later");
                     }
                 }
             }
-            Err(_) => bail!("Error: An unexpected error occurred. Please try again later"),
+            Err(_) => bail!("An unexpected error occurred. Please try again later"),
         }
         Ok(())
     }

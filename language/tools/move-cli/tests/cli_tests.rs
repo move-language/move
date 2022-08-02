@@ -74,18 +74,7 @@ fn upload_package_to_movey_works() {
     let package_path = format!("{}/valid_package1", UPLOAD_PACKAGE_PATH);
     init_git(&package_path, true);
     let server = MockServer::start();
-    server.mock(|when, then| {
-        when.method(POST)
-            .path("/api/v1/post_package/")
-            .header("content-type", "application/json")
-            .json_body(json!({
-            "github_repo_url":"https://github.com/move-language/move",
-            "total_files":2,
-            "token":"test-token",
-            "subdir":"\n"
-            }));
-        then.status(200);
-    });
+    let server_mock = init_server_mock(&server, 200, None);
     init_stub_registry_file(&package_path, &server.base_url());
     let relative_package_path = PathBuf::from(&package_path);
     let absolute_package_path =
@@ -99,6 +88,7 @@ fn upload_package_to_movey_works() {
         .output()
         .unwrap();
 
+    server_mock.assert();
     assert!(output.status.success());
     let output = String::from_utf8_lossy(output.stdout.as_slice()).to_string();
     assert!(
@@ -114,20 +104,8 @@ fn upload_package_to_movey_works() {
 fn upload_package_to_movey_prints_error_message_if_server_respond_4xx() {
     let package_path = format!("{}/valid_package2", UPLOAD_PACKAGE_PATH);
     init_git(&package_path, true);
-
     let server = MockServer::start();
-    server.mock(|when, then| {
-        when.method(POST)
-            .path("/api/v1/post_package/")
-            .header("content-type", "application/json")
-            .json_body(json!({
-            "github_repo_url":"https://github.com/move-language/move",
-            "total_files":2,
-            "token":"test-token",
-            "subdir":"\n"
-            }));
-        then.status(400).body("Invalid Api token");
-    });
+    let server_mock = init_server_mock(&server, 400, Some("Invalid Api token"));
     init_stub_registry_file(&package_path, &server.base_url());
     let relative_package_path = PathBuf::from(&package_path);
     let absolute_package_path =
@@ -141,6 +119,7 @@ fn upload_package_to_movey_prints_error_message_if_server_respond_4xx() {
         .output()
         .unwrap();
 
+    server_mock.assert();
     assert!(!output.status.success());
     let output = String::from_utf8_lossy(output.stderr.as_slice()).to_string();
     assert!(output.contains("Error: Invalid Api token"), "{}", output);
@@ -152,20 +131,8 @@ fn upload_package_to_movey_prints_error_message_if_server_respond_4xx() {
 fn upload_package_to_movey_prints_hardcoded_error_message_if_server_respond_5xx() {
     let package_path = format!("{}/valid_package3", UPLOAD_PACKAGE_PATH);
     init_git(&package_path, true);
-
     let server = MockServer::start();
-    server.mock(|when, then| {
-        when.method(POST)
-            .path("/api/v1/post_package/")
-            .header("content-type", "application/json")
-            .json_body(json!({
-            "github_repo_url":"https://github.com/move-language/move",
-            "total_files":2,
-            "token":"test-token",
-            "subdir":"\n"
-            }));
-        then.status(500).body("Invalid Api token");
-    });
+    let server_mock = init_server_mock(&server, 500, Some("Invalid Api token"));
     init_stub_registry_file(&package_path, &server.base_url());
     let relative_package_path = PathBuf::from(&package_path);
     let absolute_package_path =
@@ -179,6 +146,7 @@ fn upload_package_to_movey_prints_hardcoded_error_message_if_server_respond_5xx(
         .output()
         .unwrap();
 
+    server_mock.assert();
     assert!(!output.status.success());
     let output = String::from_utf8_lossy(output.stderr.as_slice()).to_string();
     assert!(
@@ -367,12 +335,12 @@ fn clean_up(move_home: &str) {
 fn clean_up(package_path: &str) {
     let _ = fs::remove_file(format!("{}/simple_file", package_path));
     fs::remove_dir_all(format!("{}/.git", package_path)).unwrap();
-    let credential_path = format!("{}{}", package_path, MOVEY_API_KEY_PATH);
+    let credential_path = format!("{}{}", package_path, MOVEY_CREDENTIAL_PATH);
     let _ = fs::remove_file(&credential_path);
 }
 
 fn init_stub_registry_file(package_path: &str, base_url: &str) {
-    let credential_path = format!("{}{}", package_path, MOVEY_API_KEY_PATH);
+    let credential_path = format!("{}{}", package_path, MOVEY_CREDENTIAL_PATH);
     let content = format!(
         r#"
         [registry]
@@ -382,4 +350,23 @@ fn init_stub_registry_file(package_path: &str, base_url: &str) {
         base_url
     );
     fs::write(credential_path, content).expect("Unable to write file");
+}
+
+fn init_server_mock<'a>(
+    server: &'a MockServer,
+    status_code: u16,
+    response_body: Option<&str>,
+) -> Mock<'a> {
+    server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/packages/register")
+            .header("content-type", "application/json")
+            .json_body(json!({
+            "github_repo_url": "https://github.com/move-language/move",
+            "total_files": 2,
+            "token": "test-token",
+            "subdir": "\n"
+            }));
+        then.status(status_code).body(response_body.unwrap_or(""));
+    })
 }

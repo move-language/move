@@ -7,7 +7,7 @@ use move_command_line_common::movey_constants::MOVEY_URL;
 use std::fs;
 use toml_edit::easy::Value;
 
-pub const MOVEY_API_KEY_PATH: &str = "/movey_credential.toml";
+pub const MOVEY_CREDENTIAL_PATH: &str = "/movey_credential.toml";
 
 pub fn get_registry_api_token(move_home: &str) -> Result<String> {
     if let Ok(content) = get_api_token(&move_home) {
@@ -20,42 +20,40 @@ pub fn get_registry_api_token(move_home: &str) -> Result<String> {
     }
 }
 
-fn get_api_token(move_home: &str) -> Result<String> {
-    let credential_path = format!("{}{}", move_home, MOVEY_API_KEY_PATH);
-
+pub fn get_api_token(move_home: &str) -> Result<String> {
+    let credential_path = format!("{}{}", move_home, MOVEY_CREDENTIAL_PATH);
     let contents = fs::read_to_string(&credential_path)?;
     let mut toml: Value = contents.parse()?;
-    let registry = toml
-        .as_table_mut()
-        .context(format!("Error parsing {}", MOVEY_API_KEY_PATH))?
-        .get_mut("registry")
-        .context(format!("Error parsing {}", MOVEY_API_KEY_PATH))?;
-    let token = registry
-        .as_table_mut()
-        .context("Error parsing token")?
-        .get_mut("token")
-        .context("Error parsing token")?;
+
+    let token = get_registry_field(&mut toml, "token")?;
     Ok(token.to_string().replace("\"", ""))
 }
 
 pub fn get_movey_url(move_home: &str) -> Result<String> {
-    let credential_path = format!("{}{}", move_home, MOVEY_API_KEY_PATH);
+    let credential_path = format!("{}{}", move_home, MOVEY_CREDENTIAL_PATH);
     let contents = fs::read_to_string(&credential_path)?;
     let mut toml: Value = contents.parse()?;
-    let registry = toml
-        .as_table_mut()
-        .context(format!("Error parsing {}", MOVEY_API_KEY_PATH))?
-        .get_mut("registry")
-        .context(format!("Error parsing {}", MOVEY_API_KEY_PATH))?;
-    let movey_url = registry
-        .as_table_mut()
-        .context("Error parsing url")?
-        .get_mut("url");
-    if let Some(url) = movey_url {
+
+    let movey_url = get_registry_field(&mut toml, "url");
+    if let Ok(url) = movey_url {
         Ok(url.to_string().replace("\"", ""))
     } else {
         Ok(MOVEY_URL.to_string())
     }
+}
+
+fn get_registry_field<'a>(toml: &'a mut Value, field: &'a str) -> Result<&'a mut Value> {
+    let registry = toml
+        .as_table_mut()
+        .context(format!("Error parsing {}", MOVEY_CREDENTIAL_PATH))?
+        .get_mut("registry")
+        .context(format!("Error parsing {}", MOVEY_CREDENTIAL_PATH))?;
+    let value = registry
+        .as_table_mut()
+        .context("Error parsing registry table")?
+        .get_mut(field)
+        .context("Error parsing token")?;
+    Ok(value)
 }
 
 #[cfg(test)]
@@ -67,7 +65,7 @@ mod tests {
         let cwd = env::current_dir().unwrap();
         let mut move_home: String = String::from(cwd.to_string_lossy());
         move_home.push_str(&test_path);
-        let credential_path = move_home.clone() + MOVEY_API_KEY_PATH;
+        let credential_path = move_home.clone() + MOVEY_CREDENTIAL_PATH;
 
         (move_home, credential_path)
     }

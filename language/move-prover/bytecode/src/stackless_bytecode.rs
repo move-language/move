@@ -128,6 +128,7 @@ pub enum Operation {
     GetGlobal(ModuleId, StructId, Vec<Type>),
 
     // Builtins
+    Uninit,
     Destroy,
     ReadRef,
     WriteRef,
@@ -199,6 +200,7 @@ impl Operation {
             Operation::BorrowGlobal(_, _, _) => true,
             Operation::GetField(_, _, _, _) => false,
             Operation::GetGlobal(_, _, _) => true,
+            Operation::Uninit => false,
             Operation::Destroy => false,
             Operation::ReadRef => false,
             Operation::WriteRef => false,
@@ -969,6 +971,9 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
             }
 
             // Builtins
+            Uninit => {
+                write!(f, "uninit")?;
+            }
             Destroy => {
                 write!(f, "destroy")?;
             }

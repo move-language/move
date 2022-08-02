@@ -562,6 +562,7 @@ impl<'a> FunctionGenerator<'a> {
                     | EventStoreDiverge
                     | OpaqueCallBegin(_, _, _)
                     | OpaqueCallEnd(_, _, _)
+                    | Uninit
                     | Havoc(_)
                     | Stop
                     | TraceGlobalMem(_) => {}

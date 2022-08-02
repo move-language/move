@@ -5,44 +5,42 @@
 pub mod account;
 pub mod signature;
 
-use move_core_types::{account_address::AccountAddress, identifier::Identifier};
-use move_vm_runtime::native_functions::{NativeFunction, NativeFunctionTable};
+use std::sync::Arc;
+
+use move_core_types::account_address::AccountAddress;
+use move_vm_runtime::native_functions::{
+    make_table_from_iter, NativeFunction, NativeFunctionTable,
+};
 
 pub fn all_natives(diem_framework_addr: AccountAddress) -> NativeFunctionTable {
-    const NATIVES: &[(&str, &str, NativeFunction)] = &[
+    let natives: [(&str, &str, NativeFunction); 5] = [
         // TODO: Remove once/if DPN is moved over to use the core framework
         (
             "DiemAccount",
             "create_signer",
-            account::native_create_signer,
+            Arc::new(account::native_create_signer),
         ),
         (
             "DiemAccount",
             "destroy_signer",
-            account::native_destroy_signer,
+            Arc::new(account::native_destroy_signer),
         ),
         (
             "Signature",
             "ed25519_validate_pubkey",
-            signature::native_ed25519_publickey_validation,
+            Arc::new(signature::native_ed25519_publickey_validation),
         ),
         (
             "Signature",
             "ed25519_verify",
-            signature::native_ed25519_signature_verification,
+            Arc::new(signature::native_ed25519_signature_verification),
         ),
-        ("Account", "create_signer", account::native_create_signer),
+        (
+            "Account",
+            "create_signer",
+            Arc::new(account::native_create_signer),
+        ),
     ];
-    NATIVES
-        .iter()
-        .cloned()
-        .map(|(module_name, func_name, func)| {
-            (
-                diem_framework_addr,
-                Identifier::new(module_name).unwrap(),
-                Identifier::new(func_name).unwrap(),
-                func,
-            )
-        })
-        .collect()
+
+    make_table_from_iter(diem_framework_addr, natives)
 }

@@ -223,7 +223,12 @@ impl FromStr for AccountAddress {
     type Err = AccountAddressParseError;
 
     fn from_str(s: &str) -> Result<Self, AccountAddressParseError> {
-        Self::from_hex(s)
+        // Accept 0xADDRESS or ADDRESS
+        if let Ok(address) = AccountAddress::from_hex_literal(s) {
+            Ok(address)
+        } else {
+            Self::from_hex(s)
+        }
     }
 }
 
@@ -234,7 +239,7 @@ impl<'de> Deserialize<'de> for AccountAddress {
     {
         if deserializer.is_human_readable() {
             let s = <String>::deserialize(deserializer)?;
-            AccountAddress::from_hex(s).map_err(D::Error::custom)
+            AccountAddress::from_str(&s).map_err(D::Error::custom)
         } else {
             // In order to preserve the Serde data model and help analysis tools,
             // make sure to wrap our value in a container with the same name

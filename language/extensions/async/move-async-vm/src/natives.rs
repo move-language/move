@@ -11,20 +11,13 @@ use move_vm_runtime::{
     native_functions::{NativeContext, NativeFunction},
 };
 use move_vm_types::{
-    gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
-    natives::function::{native_gas, NativeResult},
+    natives::function::NativeResult,
     pop_arg,
     values::{Value, Vector},
 };
 use smallvec::smallvec;
-use std::collections::VecDeque;
-
-// TODO: make cost tables extensible; right now we forward to one of the predefined cost indices
-// as an approximation.
-const SELF_COST_INDEX: NativeCostIndex = NativeCostIndex::LENGTH;
-const SEND_COST_INDEX: NativeCostIndex = NativeCostIndex::EMIT_EVENT;
-const EPOCH_TIME_INDEX: NativeCostIndex = NativeCostIndex::LENGTH;
+use std::{collections::VecDeque, sync::Arc};
 
 /// Environment extension for the Move VM which we pass down to native functions,
 /// to implement message sending and retrieval of actor address.
@@ -36,39 +29,112 @@ pub struct AsyncExtension {
     pub in_initializer: bool,
 }
 
+#[derive(Clone, Debug)]
+pub struct GasParameters {
+    pub self_: SelfGasParameters,
+    pub send: SendGasParameters,
+    pub virtual_time: VirtualTimeGasParameters,
+}
+
+impl GasParameters {
+    pub fn zeros() -> Self {
+        Self {
+            self_: SelfGasParameters { base_cost: 0 },
+            send: SendGasParameters {
+                base_cost: 0,
+                unit_cost: 0,
+            },
+            virtual_time: VirtualTimeGasParameters { base_cost: 0 },
+        }
+    }
+}
+
 pub fn actor_natives(
     async_addr: AccountAddress,
+    gas_params: GasParameters,
 ) -> Vec<(AccountAddress, Identifier, Identifier, NativeFunction)> {
-    const NATIVES: &[(&str, &str, NativeFunction)] = &[
-        ("Actor", "self", native_self),
-        ("Actor", "virtual_time", native_virtual_time),
-        ("Runtime", "send__0", native_send),
-        ("Runtime", "send__1", native_send),
-        ("Runtime", "send__2", native_send),
-        ("Runtime", "send__3", native_send),
-        ("Runtime", "send__4", native_send),
-        ("Runtime", "send__5", native_send),
-        ("Runtime", "send__6", native_send),
-        ("Runtime", "send__7", native_send),
-        ("Runtime", "send__8", native_send),
+    let natives = [
+        ("Actor", "self", make_native_self(gas_params.self_)),
+        (
+            "Actor",
+            "virtual_time",
+            make_native_virtual_time(gas_params.virtual_time),
+        ),
+        (
+            "Runtime",
+            "send__0",
+            make_native_send(gas_params.send.clone()),
+        ),
+        (
+            "Runtime",
+            "send__1",
+            make_native_send(gas_params.send.clone()),
+        ),
+        (
+            "Runtime",
+            "send__2",
+            make_native_send(gas_params.send.clone()),
+        ),
+        (
+            "Runtime",
+            "send__3",
+            make_native_send(gas_params.send.clone()),
+        ),
+        (
+            "Runtime",
+            "send__4",
+            make_native_send(gas_params.send.clone()),
+        ),
+        (
+            "Runtime",
+            "send__5",
+            make_native_send(gas_params.send.clone()),
+        ),
+        (
+            "Runtime",
+            "send__6",
+            make_native_send(gas_params.send.clone()),
+        ),
+        (
+            "Runtime",
+            "send__7",
+            make_native_send(gas_params.send.clone()),
+        ),
+        ("Runtime", "send__8", make_native_send(gas_params.send)),
     ];
-    native_functions::make_table(async_addr, NATIVES)
+    native_functions::make_table_from_iter(async_addr, natives)
+}
+
+#[derive(Clone, Debug)]
+pub struct SelfGasParameters {
+    base_cost: u64,
 }
 
 fn native_self(
+    gas_params: &SelfGasParameters,
     context: &mut NativeContext,
     mut _ty_args: Vec<Type>,
     mut _args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    let cost = native_gas(context.cost_table(), SELF_COST_INDEX, 1);
     let ext = context.extensions().get::<AsyncExtension>();
     Ok(NativeResult::ok(
-        cost,
+        gas_params.base_cost,
         smallvec![Value::address(ext.current_actor)],
     ))
 }
 
+fn make_native_self(gas_params: SelfGasParameters) -> NativeFunction {
+    Arc::new(move |context, ty_args, args| native_self(&gas_params, context, ty_args, args))
+}
+
+#[derive(Clone, Debug)]
+pub struct SendGasParameters {
+    base_cost: u64,
+    unit_cost: u64,
+}
+
 fn native_send(
+    gas_params: &SendGasParameters,
     context: &mut NativeContext,
     mut _ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
@@ -82,19 +148,34 @@ fn native_send(
     let message_hash = pop_arg!(args, u64);
     let target = pop_arg!(args, AccountAddress);
     ext.sent.push((target, message_hash, bcs_args));
-    let cost = native_gas(context.cost_table(), SEND_COST_INDEX, args.len());
+
+    let cost = gas_params.base_cost + gas_params.unit_cost * args.len() as u64;
+
     Ok(NativeResult::ok(cost, smallvec![]))
 }
 
+fn make_native_send(gas_params: SendGasParameters) -> NativeFunction {
+    Arc::new(move |context, ty_args, args| native_send(&gas_params, context, ty_args, args))
+}
+
+#[derive(Clone, Debug)]
+pub struct VirtualTimeGasParameters {
+    base_cost: u64,
+}
+
 fn native_virtual_time(
+    gas_params: &VirtualTimeGasParameters,
     context: &mut NativeContext,
     mut _ty_args: Vec<Type>,
     mut _args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
-    let cost = native_gas(context.cost_table(), EPOCH_TIME_INDEX, 1);
     let ext = context.extensions().get::<AsyncExtension>();
     Ok(NativeResult::ok(
-        cost,
+        gas_params.base_cost,
         smallvec![Value::u128(ext.virtual_time)],
     ))
+}
+
+fn make_native_virtual_time(gas_params: VirtualTimeGasParameters) -> NativeFunction {
+    Arc::new(move |context, ty_args, args| native_virtual_time(&gas_params, context, ty_args, args))
 }

@@ -15,7 +15,7 @@ use move_vm_runtime::native_functions::NativeContextExtensions;
 fn run() {
     let resource_resolver = unimplemented!(); // a resource resolver the adapter provides
     let txn_hash = unimplemented!(); // a unique hash for table creation for this transaction
-    let table_resolver = unimplemented!(); // a remote table resover the adapter provides
+    let table_resolver = unimplemented!(); // a remote table resolver the adapter provides
     let std_addr = unimplemented!(); // address where to deploy the std lib
     let extension_addr = unimplemented!(); // address where to deploy the table extension
 

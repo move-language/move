@@ -18,9 +18,6 @@
 //! function.
 
 use crate::values::Value;
-use move_core_types::gas_schedule::{
-    AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, InternalGasUnits,
-};
 use smallvec::{smallvec, SmallVec};
 
 pub use move_binary_format::errors::{PartialVMError, PartialVMResult};
@@ -36,15 +33,14 @@ pub use move_core_types::vm_status::StatusCode;
 /// Errors (typically user errors and aborts) that are logically part of the function execution
 /// must be expressed in a `NativeResult` with a cost and a VMStatus.
 pub struct NativeResult {
-    /// The cost for running that function, whether successfully or not.
-    pub cost: InternalGasUnits<GasCarrier>,
     /// Result of execution. This is either the return values or the error to report.
+    pub cost: u64,
     pub result: Result<SmallVec<[Value; 1]>, u64>,
 }
 
 impl NativeResult {
     /// Return values of a successful execution.
-    pub fn ok(cost: InternalGasUnits<GasCarrier>, values: SmallVec<[Value; 1]>) -> Self {
+    pub fn ok(cost: u64, values: SmallVec<[Value; 1]>) -> Self {
         NativeResult {
             cost,
             result: Ok(values),
@@ -55,7 +51,7 @@ impl NativeResult {
     /// failure of the VM which would raise a `PartialVMError` error directly.
     /// The only thing the funciton can specify is its abort code, as if it had invoked the `Abort`
     /// bytecode instruction
-    pub fn err(cost: InternalGasUnits<GasCarrier>, abort_code: u64) -> Self {
+    pub fn err(cost: u64, abort_code: u64) -> Self {
         NativeResult {
             cost,
             result: Err(abort_code),
@@ -64,7 +60,7 @@ impl NativeResult {
 
     /// Convert a PartialVMResult<()> into a PartialVMResult<NativeResult>
     pub fn map_partial_vm_result_empty(
-        cost: InternalGasUnits<GasCarrier>,
+        cost: u64,
         res: PartialVMResult<()>,
     ) -> PartialVMResult<Self> {
         let result = match res {
@@ -85,7 +81,7 @@ impl NativeResult {
 
     /// Convert a PartialVMResult<Value> into a PartialVMResult<NativeResult>
     pub fn map_partial_vm_result_one(
-        cost: InternalGasUnits<GasCarrier>,
+        cost: u64,
         res: PartialVMResult<Value>,
     ) -> PartialVMResult<Self> {
         let result = match res {
@@ -103,19 +99,6 @@ impl NativeResult {
         };
         Ok(result)
     }
-}
-
-/// Return the native gas entry in `CostTable` for the given key.
-/// The key is the specific native function index known to `CostTable`.
-pub fn native_gas(
-    table: &CostTable,
-    native_table_idx: impl Into<u8>,
-    size: usize,
-) -> InternalGasUnits<GasCarrier> {
-    let gas_amt = table.native_cost(native_table_idx.into());
-    let memory_size = AbstractMemorySize::new(std::cmp::max(1, size) as GasCarrier);
-    debug_assert!(memory_size.get() > 0);
-    gas_amt.total().mul(memory_size)
 }
 
 /// Return the argument at the top of the stack.

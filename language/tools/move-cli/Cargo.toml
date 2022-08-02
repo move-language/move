@@ -7,7 +7,7 @@ repository = "https://github.com/diem/diem"
 homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 anyhow = "1.0.52"
@@ -35,6 +35,7 @@ move-table-extension = { path = "../../extensions/move-table-extension", optiona
 move-symbol-pool = { path = "../../move-symbol-pool" }
 move-vm-types = { path = "../../move-vm/types" }
 move-vm-runtime = { path = "../../move-vm/runtime", features = ["debugging"] }
+move-vm-test-utils = { path = "../../move-vm/test-utils" }
 read-write-set = { path = "../read-write-set" }
 read-write-set-dynamic = { path = "../read-write-set/dynamic" }
 move-resource-viewer = { path = "../move-resource-viewer" }

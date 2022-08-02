@@ -11,7 +11,7 @@ ResolutionGraph {
         force_recompilation: false,
         additional_named_addresses: {},
         architecture: None,
-        only_deps: false,
+        fetch_deps_only: false,
     },
     root_package: SourceManifest {
         package: PackageInfo {

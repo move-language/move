@@ -660,8 +660,13 @@ impl<'a> Instrumenter<'a> {
                 if let Some(c) = &cond {
                     self.emit_traces(&callee_spec, c);
                 }
+
                 let temp_msg = self.builder.emit_let(msg).0;
-                let temp_handle = self.builder.emit_let(handle).0;
+                // the event handle needs to be let-bound without the reference as we do not want
+                // to create mutable references via Assume(Identical) as it complicates both
+                // the live var analysis and the borrow analysis.
+                let temp_handle = self.builder.emit_let_skip_reference(handle).0;
+
                 let mut temp_list = vec![temp_msg, temp_handle];
                 if let Some(cond) = cond {
                     temp_list.push(self.builder.emit_let(cond).0);

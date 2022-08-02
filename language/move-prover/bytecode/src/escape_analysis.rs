@@ -295,6 +295,9 @@ impl<'a> TransferFunctions for EscapeAnalysis<'a> {
                 WriteRef | MoveTo(..) => {
                     // these operations do not assign any locals
                 }
+                Uninit => {
+                    // this operation is just a marker and does not assign any locals
+                }
                 Destroy => {
                     state.remove(&args[0]);
                 }

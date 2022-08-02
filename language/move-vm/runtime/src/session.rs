@@ -20,7 +20,7 @@ use move_core_types::{
 };
 use move_vm_types::{
     data_store::DataStore,
-    gas_schedule::GasStatus,
+    gas::GasMeter,
     loaded_data::runtime_types::{CachedStructIndex, StructType, Type},
 };
 use std::{borrow::Borrow, sync::Arc};
@@ -74,7 +74,7 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         function_name: &IdentStr,
         ty_args: Vec<TypeTag>,
         args: Vec<impl Borrow<[u8]>>,
-        gas_status: &mut GasStatus,
+        gas_meter: &mut impl GasMeter,
     ) -> VMResult<SerializedReturnValues> {
         let bypass_declared_entry_check = false;
         self.runtime.execute_function(
@@ -83,7 +83,7 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
             ty_args,
             args,
             &mut self.data_cache,
-            gas_status,
+            gas_meter,
             &mut self.native_extensions,
             bypass_declared_entry_check,
         )
@@ -96,7 +96,7 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         function_name: &IdentStr,
         ty_args: Vec<TypeTag>,
         args: Vec<impl Borrow<[u8]>>,
-        gas_status: &mut GasStatus,
+        gas_meter: &mut impl GasMeter,
     ) -> VMResult<SerializedReturnValues> {
         let bypass_declared_entry_check = true;
         self.runtime.execute_function(
@@ -105,7 +105,7 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
             ty_args,
             args,
             &mut self.data_cache,
-            gas_status,
+            gas_meter,
             &mut self.native_extensions,
             bypass_declared_entry_check,
         )
@@ -132,14 +132,14 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         script: impl Borrow<[u8]>,
         ty_args: Vec<TypeTag>,
         args: Vec<impl Borrow<[u8]>>,
-        gas_status: &mut GasStatus,
+        gas_meter: &mut impl GasMeter,
     ) -> VMResult<SerializedReturnValues> {
         self.runtime.execute_script(
             script,
             ty_args,
             args,
             &mut self.data_cache,
-            gas_status,
+            gas_meter,
             &mut self.native_extensions,
         )
     }
@@ -161,9 +161,9 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         &mut self,
         module: Vec<u8>,
         sender: AccountAddress,
-        gas_status: &mut GasStatus,
+        gas_meter: &mut impl GasMeter,
     ) -> VMResult<()> {
-        self.publish_module_bundle(vec![module], sender, gas_status)
+        self.publish_module_bundle(vec![module], sender, gas_meter)
     }
 
     /// Publish a series of modules.
@@ -178,14 +178,28 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     ///
     /// In case an invariant violation occurs, the whole Session should be considered corrupted and
     /// one shall not proceed with effect generation.
+    ///
+    /// This operation performs compatibility checks if a module is replaced. See also
+    /// `move_binary_format::compatibility`.
     pub fn publish_module_bundle(
         &mut self,
         modules: Vec<Vec<u8>>,
         sender: AccountAddress,
-        gas_status: &mut GasStatus,
+        gas_meter: &mut impl GasMeter,
     ) -> VMResult<()> {
         self.runtime
-            .publish_module_bundle(modules, sender, &mut self.data_cache, gas_status)
+            .publish_module_bundle(modules, sender, &mut self.data_cache, gas_meter, true)
+    }
+
+    /// Same like `publish_module_bundle` but relaxes compatibility checks.
+    pub fn publish_module_bundle_relax_compatibility(
+        &mut self,
+        modules: Vec<Vec<u8>>,
+        sender: AccountAddress,
+        gas_meter: &mut impl GasMeter,
+    ) -> VMResult<()> {
+        self.runtime
+            .publish_module_bundle(modules, sender, &mut self.data_cache, gas_meter, false)
     }
 
     pub fn num_mutated_accounts(&self, sender: &AccountAddress) -> u64 {
@@ -263,7 +277,7 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         self.runtime.loader().get_struct_type(index)
     }
 
-    // Get the abilities for this type, at it's particular instantiation
+    /// Gets the abilities for this type, at it's particular instantiation
     pub fn get_type_abilities(&self, ty: &Type) -> VMResult<AbilitySet> {
         self.runtime
             .loader()
@@ -271,8 +285,14 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
             .map_err(|e| e.finish(Location::Undefined))
     }
 
+    /// Gets the underlying data store
     pub fn get_data_store(&mut self) -> &mut dyn DataStore {
         &mut self.data_cache
+    }
+
+    /// Gets the underlying native extensions.
+    pub fn get_native_extensions(&mut self) -> &mut NativeContextExtensions<'r> {
+        &mut self.native_extensions
     }
 }
 

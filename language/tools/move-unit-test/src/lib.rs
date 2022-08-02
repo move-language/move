@@ -26,17 +26,15 @@ use std::{
     sync::Mutex,
 };
 
+/// The default value bounding the number of instructions executed in a test.
+const DEFAULT_EXECUTION_BOUND: u64 = 100_000;
+
 #[derive(Debug, Parser, Clone)]
 #[clap(author, version, about)]
 pub struct UnitTestingConfig {
     /// Bound the number of instructions that can be executed by any one test.
-    #[clap(
-        name = "instructions",
-        default_value = "5000",
-        short = 'i',
-        long = "instructions"
-    )]
-    pub instruction_execution_bound: u64,
+    #[clap(name = "instructions", short = 'i', long = "instructions")]
+    pub instruction_execution_bound: Option<u64>,
 
     /// A filter string to determine which unit tests to run
     #[clap(name = "filter", short = 'f', long = "filter")]
@@ -127,7 +125,7 @@ impl UnitTestingConfig {
     /// Create a unit testing config for use with `register_move_unit_tests`
     pub fn default_with_bound(bound: Option<u64>) -> Self {
         Self {
-            instruction_execution_bound: bound.unwrap_or(5000),
+            instruction_execution_bound: bound.or(Some(DEFAULT_EXECUTION_BOUND)),
             filter: None,
             num_threads: 8,
             report_statistics: false,
@@ -225,7 +223,8 @@ impl UnitTestingConfig {
 
         writeln!(shared_writer.lock().unwrap(), "Running Move unit tests")?;
         let mut test_runner = TestRunner::new(
-            self.instruction_execution_bound,
+            self.instruction_execution_bound
+                .unwrap_or(DEFAULT_EXECUTION_BOUND),
             self.num_threads,
             self.check_stackless_vm,
             self.verbose,

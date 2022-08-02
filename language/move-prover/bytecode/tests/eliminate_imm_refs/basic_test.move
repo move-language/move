@@ -29,4 +29,11 @@ module 0x42::TestEliminateImmRefs {
         let r_ref = & r;
         test3(r_ref)
     }
+
+    fun test5() : R {
+        let r = R {x: 3};
+        let p = &r;
+        let _ = p;
+        r
+    }
 }

@@ -71,7 +71,6 @@ pub struct FunctionContext<'env> {
     holder: &'env FunctionTargetsHolder,
     target: FunctionTarget<'env>,
     ty_args: Vec<BaseType>,
-    skip_specs: bool,
     label_offsets: BTreeMap<Label, CodeOffset>,
     // debug
     level: usize,
@@ -82,7 +81,6 @@ impl<'env> FunctionContext<'env> {
         holder: &'env FunctionTargetsHolder,
         target: FunctionTarget<'env>,
         ty_args: Vec<BaseType>,
-        skip_specs: bool,
         level: usize,
     ) -> Self {
         let label_offsets = Bytecode::label_offsets(target.get_bytecode());
@@ -90,7 +88,6 @@ impl<'env> FunctionContext<'env> {
             holder,
             target,
             ty_args,
-            skip_specs,
             label_offsets,
             level,
         }
@@ -115,13 +112,14 @@ impl<'env> FunctionContext<'env> {
     /// Execute a user function with value arguments.
     pub fn exec_user_function(
         &self,
+        skip_specs: bool,
         typed_args: Vec<TypedValue>,
         global_state: &mut GlobalState,
         eval_state: &mut EvalState,
     ) -> ExecResult<LocalState> {
         let instructions = self.target.get_bytecode();
         let debug_bytecode = self.get_settings().verbose_bytecode;
-        let mut local_state = self.prepare_local_state(typed_args);
+        let mut local_state = self.prepare_local_state(skip_specs, typed_args);
         while !local_state.is_terminated() {
             let pc = local_state.get_pc() as usize;
             let bytecode = instructions.get(pc).unwrap();
@@ -147,7 +145,7 @@ impl<'env> FunctionContext<'env> {
         local_state: &mut LocalState,
         global_state: &mut GlobalState,
     ) -> ExecResult<Vec<TypedValue>> {
-        let mut dummy_state = self.prepare_local_state(typed_args);
+        let mut dummy_state = self.prepare_local_state(local_state.is_spec_skipped(), typed_args);
         if cfg!(debug_assertions) {
             assert_eq!(dummy_state.num_slots(), srcs.len());
         }
@@ -359,13 +357,13 @@ impl<'env> FunctionContext<'env> {
                 eval_state,
             ),
             Bytecode::Prop(_, PropKind::Assert, exp) => {
-                if !self.skip_specs {
+                if !local_state.is_spec_skipped() {
                     self.handle_prop_assert(exp, eval_state, local_state, global_state)
                 }
             }
             Bytecode::Prop(_, PropKind::Assume, exp) => {
-                if !self.skip_specs {
-                    self.handle_prop_assume(exp, eval_state, local_state, global_state)
+                if !local_state.is_spec_skipped() {
+                    self.handle_prop_assume(exp, eval_state, local_state, global_state)?
                 }
             }
             // expressions (TODO: not supported yet)
@@ -388,12 +386,25 @@ impl<'env> FunctionContext<'env> {
         kind: &AssignKind,
         local_state: &mut LocalState,
     ) {
-        let from_val = match kind {
-            AssignKind::Move => local_state.del_value(src),
-            // TODO (mengxu): what exactly is the semantic of Store here? Why not just use Copy?
-            AssignKind::Copy | AssignKind::Store => local_state.get_value(src),
+        let into_val = match kind {
+            AssignKind::Move => {
+                let from_val = local_state.del_value(src);
+                from_val.assign_cast(local_state.get_type(dst).clone())
+            }
+            AssignKind::Copy => {
+                let from_val = local_state.get_value(src);
+                from_val.assign_cast(local_state.get_type(dst).clone())
+            }
+            AssignKind::Store => {
+                let from_val = local_state.get_value(src);
+                let into_ty = local_state.get_type(dst).clone();
+                if from_val.get_ty().is_ref(Some(true)) {
+                    from_val.borrow_direct(into_ty, src)
+                } else {
+                    from_val.assign_cast(into_ty)
+                }
+            }
         };
-        let into_val = from_val.assign_cast(local_state.get_type(dst).clone());
         local_state.put_value_override(dst, into_val);
     }
 
@@ -441,6 +452,24 @@ impl<'env> FunctionContext<'env> {
         // operations that does not need to have the argument in storage
         match op {
             // built-ins
+            Operation::Uninit => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 1);
+                }
+                self.handle_uninit(srcs[0], local_state);
+                return Ok(());
+            }
+            Operation::Destroy => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 1);
+                }
+                self.handle_destroy(srcs[0], local_state);
+                return Ok(());
+            }
+            Operation::Stop => {
+                // we should never see the Stop operation in interpreter mode
+                unreachable!()
+            }
             Operation::Havoc(kind) => {
                 if cfg!(debug_assertions) {
                     assert_eq!(srcs.len(), 1);
@@ -749,18 +778,6 @@ impl<'env> FunctionContext<'env> {
                 let object = self.handle_freeze_ref(typed_args.remove(0));
                 Ok(vec![object])
             }
-            // built-in
-            Operation::Destroy => {
-                if cfg!(debug_assertions) {
-                    assert_eq!(typed_args.len(), 1);
-                }
-                self.handle_destroy(srcs[0], local_state);
-                Ok(vec![])
-            }
-            Operation::Stop => {
-                // we should never see the Stop operation in interpreter mode
-                unreachable!()
-            }
             // cast
             Operation::CastU8 | Operation::CastU64 | Operation::CastU128 => {
                 if cfg!(debug_assertions) {
@@ -852,7 +869,10 @@ impl<'env> FunctionContext<'env> {
             // event (TODO: not supported yet)
             Operation::EmitEvent | Operation::EventStoreDiverge => Ok(vec![]),
             // already handled
-            Operation::Havoc(..)
+            Operation::Stop
+            | Operation::Uninit
+            | Operation::Destroy
+            | Operation::Havoc(..)
             | Operation::TraceLocal(..)
             | Operation::TraceReturn(..)
             | Operation::TraceAbort
@@ -940,8 +960,12 @@ impl<'env> FunctionContext<'env> {
             .collect();
 
         // execute the user function
-        let mut callee_state =
-            callee_ctxt.exec_user_function(typed_args, global_state, eval_state)?;
+        let mut callee_state = callee_ctxt.exec_user_function(
+            local_state.is_spec_skipped(),
+            typed_args,
+            global_state,
+            eval_state,
+        )?;
 
         // update mutable arguments
         for (callee_idx, origin_idx) in mut_args {
@@ -1165,6 +1189,7 @@ impl<'env> FunctionContext<'env> {
 
         let (_, _, ptr) = op_val.decompose();
         let is_parent = match ptr {
+            Pointer::RefDirect(idx) => idx == parent_idx,
             Pointer::RefField(idx, _) => idx == parent_idx,
             Pointer::RefElement(idx, _) => idx == parent_idx,
             Pointer::ArgRef(idx, _) => idx == parent_idx,
@@ -1232,9 +1257,10 @@ impl<'env> FunctionContext<'env> {
         }
         match op_val.get_ptr() {
             Pointer::Local(root_idx) => {
-                if *root_idx == local_root {
-                    local_state.put_value_override(local_root, op_val.read_ref());
+                if cfg!(debug_assertions) {
+                    assert_eq!(*root_idx, local_root);
                 }
+                local_state.put_value_override(local_root, op_val.read_ref());
             }
             _ => unreachable!(),
         }
@@ -1251,10 +1277,18 @@ impl<'env> FunctionContext<'env> {
             let new_ty = op_val.get_ty();
             assert!(new_ty.is_ref(Some(true)));
             assert_eq!(new_ty, old_val.get_ty());
+        }
 
-            // check pointer validity
-            match op_val.get_ptr() {
-                Pointer::RetRef(trace) => {
+        let new_val = match op_val.get_ptr() {
+            Pointer::RefDirect(parent_idx) => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(*parent_idx, local_ref);
+                }
+                old_val.update_ref_direct(op_val)
+            }
+            Pointer::RetRef(trace) => {
+                // check pointer validity
+                if cfg!(debug_assertions) {
                     assert_eq!(trace.len(), 1);
                     match trace.get(0).unwrap() {
                         Pointer::ArgRef(ref_idx, original_ptr) => {
@@ -1264,10 +1298,10 @@ impl<'env> FunctionContext<'env> {
                         _ => unreachable!(),
                     }
                 }
-                _ => unreachable!(),
+                op_val.unbox_from_mut_ref_ret()
             }
-        }
-        let new_val = op_val.unbox_from_mut_ref_ret();
+            _ => unreachable!(),
+        };
         local_state.put_value(local_ref, new_val);
     }
 
@@ -1414,7 +1448,7 @@ impl<'env> FunctionContext<'env> {
                 // TODO (mengxu): refactor the code to remove this clone
                 let mut cur = op_val.clone();
                 for (i, (val, edge)) in path.into_iter().zip(edges.iter()).rev().enumerate() {
-                    let ptr = trace.get(steps - 1 - i).unwrap();
+                    let ptr = trace.get(i).unwrap();
                     let sub = match edge {
                         BorrowEdge::Field(_, field_num) => {
                             val.update_ref_struct_field(*field_num, cur)
@@ -1469,10 +1503,23 @@ impl<'env> FunctionContext<'env> {
         ref_val.freeze_ref()
     }
 
+    fn handle_uninit(&self, local_idx: TempIndex, local_state: &mut LocalState) {
+        if cfg!(debug_assertions) {
+            assert!(!local_state.has_value(local_idx));
+        }
+        local_state.mark_uninit(local_idx);
+    }
+
     fn handle_destroy(&self, local_idx: TempIndex, local_state: &mut LocalState) {
-        let val = local_state.del_value(local_idx);
-        if local_idx < self.target.get_parameter_count() {
-            local_state.save_destroyed_arg(local_idx, val);
+        if local_state.unset_uninit(local_idx) {
+            if cfg!(debug_assertions) {
+                assert!(!local_state.has_value(local_idx));
+            }
+        } else {
+            let val = local_state.del_value(local_idx);
+            if local_idx < self.target.get_parameter_count() {
+                local_state.save_destroyed_arg(local_idx, val);
+            }
         }
     }
 
@@ -1847,7 +1894,7 @@ impl<'env> FunctionContext<'env> {
         eval_state: &EvalState,
         local_state: &mut LocalState,
         global_state: &GlobalState,
-    ) {
+    ) -> ExecResult<()> {
         let evaluator = Evaluator::new(
             self.holder,
             &self.target,
@@ -1861,10 +1908,15 @@ impl<'env> FunctionContext<'env> {
         match evaluator.check_assume(exp) {
             None => (),
             // handle let-bindings
-            Some((local_idx, local_val)) => {
+            Some(Ok((local_idx, local_val))) => {
                 local_state.put_value_override(local_idx, local_val);
             }
+            Some(Err(_)) => {
+                // unable to find a satisfiable value for a let-binding
+                local_state.skip_specs();
+            }
         }
+        Ok(())
     }
 
     //
@@ -2188,16 +2240,10 @@ impl<'env> FunctionContext<'env> {
             .collect();
 
         // build the context
-        FunctionContext::new(
-            self.holder,
-            callee_target,
-            callee_ty_insts,
-            self.skip_specs,
-            self.level + 1,
-        )
+        FunctionContext::new(self.holder, callee_target, callee_ty_insts, self.level + 1)
     }
 
-    fn prepare_local_state(&self, typed_args: Vec<TypedValue>) -> LocalState {
+    fn prepare_local_state(&self, skip_specs: bool, typed_args: Vec<TypedValue>) -> LocalState {
         let target = &self.target;
         let env = target.global_env();
 
@@ -2241,7 +2287,7 @@ impl<'env> FunctionContext<'env> {
             let slot = LocalSlot::new_tmp(name, ty);
             local_slots.push(slot);
         }
-        LocalState::new(local_slots)
+        LocalState::new(local_slots, skip_specs)
     }
 }
 
@@ -2260,8 +2306,9 @@ pub fn entrypoint(
     global_state: &mut GlobalState,
 ) -> ExecResult<Vec<TypedValue>> {
     let mut eval_state = EvalState::default();
-    let ctxt = FunctionContext::new(holder, target, ty_args.to_vec(), skip_specs, level);
-    let local_state = ctxt.exec_user_function(typed_args, global_state, &mut eval_state)?;
+    let ctxt = FunctionContext::new(holder, target, ty_args.to_vec(), level);
+    let local_state =
+        ctxt.exec_user_function(skip_specs, typed_args, global_state, &mut eval_state)?;
     let termination = local_state.into_termination_status();
     match termination {
         TerminationStatus::Abort(abort_info) => Err(abort_info),

@@ -97,6 +97,7 @@ pub enum TraceEntry {
     Exp(NodeId, ModelValue),
     SubExp(NodeId, ModelValue),
     GlobalMem(NodeId, ModelValue),
+    InfoLine(String),
 }
 
 // Error message matching
@@ -385,6 +386,10 @@ impl<'env> BoogieWrapper<'env> {
                             }
                         }
                     }
+                    InfoLine(info_line) => {
+                        // information that should be displayed to the user
+                        display.push(format!("    {}", info_line));
+                    }
                     _ => {}
                 }
             }
@@ -560,7 +565,12 @@ impl<'env> BoogieWrapper<'env> {
 
         if let Some(cap) = MODEL_REGION.captures(&out[*at..]) {
             *at = usize::saturating_add(*at, cap.get(0).unwrap().end());
-            match model.parse(self, cap.name("mod").unwrap().as_str()) {
+
+            // Cuts out the state info block which is not used currently.
+            let re = Regex::new(r"(?m)\*\*\* STATE(?s:.)*?\*\*\* END_STATE\n").unwrap();
+            let remnant = re.replace(cap.name("mod").unwrap().as_str(), "");
+
+            match model.parse(self, remnant.as_ref()) {
                 Ok(_) => {}
                 Err(parse_error) => {
                     let context_module = self
@@ -649,6 +659,10 @@ impl<'env> BoogieWrapper<'env> {
                 let value = self.extract_value(value)?;
                 Ok(TraceEntry::GlobalMem(node_id, value))
             }
+            "info" => match value {
+                Some(info_line) => Ok(TraceEntry::InfoLine(info_line.trim().to_string())),
+                None => Ok(TraceEntry::InfoLine("".to_string())),
+            },
             _ => Err(ModelParseError::new(&format!(
                 "unrecognized augmented trace entry `{}`",
                 name
@@ -1673,7 +1687,7 @@ impl<'s> ModelParser<'s> {
 
     fn parse_key(&mut self) -> Result<ModelValue, ModelParseError> {
         let mut comps = vec![];
-        while !self.looking_at("->") {
+        while !self.looking_at("->") && self.at < self.input.len() {
             let value = self.parse_value()?;
             comps.push(value);
         }

@@ -1138,6 +1138,30 @@ impl VMValueCast<Vec<u8>> for Value {
     }
 }
 
+impl VMValueCast<Vec<Value>> for Value {
+    fn cast(self) -> PartialVMResult<Vec<Value>> {
+        match self.0 {
+            ValueImpl::Container(Container::Vec(c)) => {
+                Ok(take_unique_ownership(c)?.into_iter().map(Value).collect())
+            }
+            ValueImpl::Address(_)
+            | ValueImpl::Bool(_)
+            | ValueImpl::U8(_)
+            | ValueImpl::U64(_)
+            | ValueImpl::U128(_) => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+                .with_message(
+                    "cannot cast a specialized vector into a non-specialized one".to_string(),
+                )),
+            v => Err(
+                PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
+                    "cannot cast {:?} to vector<non-specialized-type>",
+                    v,
+                )),
+            ),
+        }
+    }
+}
+
 impl VMValueCast<SignerRef> for Value {
     fn cast(self) -> PartialVMResult<SignerRef> {
         match self.0 {

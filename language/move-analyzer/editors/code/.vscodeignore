@@ -5,7 +5,7 @@
 
 **/*
 !images/move.png
-!out/src/*
+!out/src/**/*
 !node_modules/**/*
 !language-configuration.json
 !move.tmLanguage.json

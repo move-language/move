@@ -5,7 +5,7 @@
 	"publisher": "move",
 	"icon": "images/move.png",
 	"license": "Apache-2.0",
-	"version": "0.0.9",
+	"version": "0.0.10",
 	"preview": true,
 	"homepage": "https://github.com/move-language/move",
 	"repository": {
@@ -26,7 +26,8 @@
 	],
 	"main": "./out/src/main.js",
 	"activationEvents": [
-		"onLanguage:move"
+		"onLanguage:move",
+		"workspaceContains:Move.toml"
 	],
 	"contributes": {
 		"commands": [
@@ -85,14 +86,16 @@
 		}
 	},
 	"scripts": {
-		"compile": "tsc -p ./",
+		"compile": "tsc -p ./ && cd ../../ && cargo build",
 		"watch": "tsc -watch -p ./",
-		"lint": "tsfmt --verify && eslint . --ext ts --max-warnings 0",
-		"fix": "tsfmt --replace && eslint . --ext ts --fix",
-		"pretest": "npm run compile && npm run lint",
+		"lint": "eslint . --ext ts --max-warnings 0",
+		"fix": "eslint . --ext ts --fix",
+		"copy-tests-files": "copyfiles \"tests/**/*.move\" \"tests/**/*.exp\" \"tests/**/*.toml\" \"tests/**/*.code-workspace\" out",
+		"pretest": "npm run compile && npm run lint && npm run copy-tests-files",
 		"test": "node ./out/tests/runTests.js",
+		"dev": "npm run pretest && cross-env mode=dev node ./out/tests/runTests.js",
 		"vscode:prepublish": "npm run pretest",
-		"package": "vsce package -o move-analyzer.vsix",
+		"package": "npm run pretest && vsce package -o move-analyzer.vsix",
 		"publish": "npm run pretest && npm run test && vsce publish"
 	},
 	"extensionDependencies": [
@@ -100,19 +103,24 @@
 	],
 	"dependencies": {
 		"command-exists": "^1.2.9",
-		"vscode-languageclient": "6.1.4"
+		"vscode-languageclient": "6.1.4",
+		"lru-cache": "^4.1.3"
 	},
 	"devDependencies": {
 		"@types/command-exists": "^1.2.0",
+		"@types/fs-extra": "^9.0.13",
 		"@types/glob": "^7.1.4",
 		"@types/mocha": "^9.0.0",
 		"@types/node": "^14.17.22",
 		"@types/vscode": "^1.58.2",
 		"@typescript-eslint/eslint-plugin": "^4.33.0",
 		"@typescript-eslint/parser": "^4.33.0",
-		"@vscode/test-electron": "^1.6.1",
+		"@vscode/test-electron": "^2.0.0",
+		"copyfiles": "2.4.1",
+		"cross-env": "^7.0.3",
 		"eslint": "^7.32.0",
 		"eslint-plugin-tsdoc": "^0.2.14",
+		"fs-extra": "10.0.1",
 		"glob": "^7.1.7",
 		"mocha": "^9.1.1",
 		"typescript": "^4.4.4",

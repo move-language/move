@@ -58,13 +58,8 @@ impl TableResolver for BlankStorage {
         Ok(None)
     }
 
-    fn operation_cost(
-        &self,
-        _op: TableOperation,
-        _key_size: usize,
-        _val_size: usize,
-    ) -> InternalGasUnits<GasCarrier> {
-        InternalGasUnits::new(1)
+    fn operation_cost(&self, _op: TableOperation, _key_size: usize, _val_size: usize) -> u64 {
+        1
     }
 }
 
@@ -119,12 +114,7 @@ impl<'a, 'b, S: TableResolver> TableResolver for DeltaStorage<'a, 'b, S> {
         self.base.resolve_table_entry(handle, key)
     }
 
-    fn operation_cost(
-        &self,
-        op: TableOperation,
-        key_size: usize,
-        val_size: usize,
-    ) -> InternalGasUnits<GasCarrier> {
+    fn operation_cost(&self, op: TableOperation, key_size: usize, val_size: usize) -> u64 {
         // TODO: No support for table deltas
         self.base.operation_cost(op, key_size, val_size)
     }
@@ -246,8 +236,12 @@ impl InMemoryStorage {
             changes,
         } = changes;
         self.tables.retain(|h, _| !removed_tables.contains(h));
-        self.tables
-            .extend(new_tables.into_iter().map(|h| (h, BTreeMap::default())));
+        self.tables.extend(
+            new_tables
+                .keys()
+                .into_iter()
+                .map(|h| (*h, BTreeMap::default())),
+        );
         for (h, c) in changes {
             assert!(
                 self.tables.contains_key(&h),
@@ -336,12 +330,7 @@ impl TableResolver for InMemoryStorage {
         Ok(self.tables.get(handle).and_then(|t| t.get(key).cloned()))
     }
 
-    fn operation_cost(
-        &self,
-        _op: TableOperation,
-        _key_size: usize,
-        _val_size: usize,
-    ) -> InternalGasUnits<GasCarrier> {
-        InternalGasUnits::new(1)
+    fn operation_cost(&self, _op: TableOperation, _key_size: usize, _val_size: usize) -> u64 {
+        1
     }
 }

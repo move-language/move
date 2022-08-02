@@ -2,20 +2,30 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::natives::helpers::make_module_natives;
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::gas_schedule::GasAlgebra;
-use move_vm_runtime::native_functions::NativeContext;
+use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
 use move_vm_types::{
-    gas_schedule::NativeCostIndex,
-    loaded_data::runtime_types::Type,
-    natives::function::{native_gas, NativeResult},
-    pop_arg,
-    values::Value,
+    loaded_data::runtime_types::Type, natives::function::NativeResult, pop_arg, values::Value,
 };
 use smallvec::smallvec;
-use std::collections::VecDeque;
+use std::{collections::VecDeque, sync::Arc};
 
-pub fn write_to_event_store(
+/***************************************************************************************************
+ * [NURSERY-ONLY] native fun write_to_event_store
+ *
+ *   gas cost: base_cost
+ *
+ **************************************************************************************************/
+#[derive(Debug, Clone)]
+pub struct WriteToEventStoreGasParameters {
+    pub unit_cost: u64,
+}
+
+#[inline]
+fn native_write_to_event_store(
+    gas_params: &WriteToEventStoreGasParameters,
     context: &mut NativeContext,
     mut ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
@@ -28,15 +38,38 @@ pub fn write_to_event_store(
     let seq_num = pop_arg!(arguments, u64);
     let guid = pop_arg!(arguments, Vec<u8>);
 
-    let cost = native_gas(
-        context.cost_table(),
-        NativeCostIndex::EMIT_EVENT,
-        msg.size().get() as usize,
-    );
+    let cost = gas_params.unit_cost * u64::max(msg.size().get(), 1);
 
     if !context.save_event(guid, seq_num, ty, msg)? {
         return Ok(NativeResult::err(cost, 0));
     }
 
     Ok(NativeResult::ok(cost, smallvec![]))
+}
+
+pub fn make_native_write_to_event_store(
+    gas_params: WriteToEventStoreGasParameters,
+) -> NativeFunction {
+    Arc::new(
+        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
+            native_write_to_event_store(&gas_params, context, ty_args, args)
+        },
+    )
+}
+
+/***************************************************************************************************
+ * module
+ **************************************************************************************************/
+#[derive(Debug, Clone)]
+pub struct GasParameters {
+    pub write_to_event_store: WriteToEventStoreGasParameters,
+}
+
+pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
+    let natives = [(
+        "write_to_event_store",
+        make_native_write_to_event_store(gas_params.write_to_event_store),
+    )];
+
+    make_module_natives(natives)
 }

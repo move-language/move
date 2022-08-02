@@ -13,7 +13,7 @@ use move_core_types::{
 };
 use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::InMemoryStorage;
-use move_vm_types::gas_schedule::GasStatus;
+use move_vm_types::gas::UnmeteredGasMeter;
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
 
@@ -60,14 +60,19 @@ fn run(
     let mut sess = vm.new_session(&storage);
 
     let fun_name = Identifier::new("foo").unwrap();
-    let mut gas_status = GasStatus::new_unmetered();
 
     let args: Vec<_> = args
         .into_iter()
         .map(|val| val.simple_serialize().unwrap())
         .collect();
 
-    sess.execute_function_bypass_visibility(&module_id, &fun_name, ty_args, args, &mut gas_status)?;
+    sess.execute_function_bypass_visibility(
+        &module_id,
+        &fun_name,
+        ty_args,
+        args,
+        &mut UnmeteredGasMeter,
+    )?;
 
     Ok(())
 }

@@ -3,7 +3,7 @@ name = "diem-crypto"
 version = "0.0.3"
 authors = ["Diem Association <opensource@diem.com>"]
 publish = false
-edition = "2018"
+edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
@@ -41,7 +41,8 @@ ripemd160 = "0.9.1"
 criterion = "0.3.4"
 sha3 = "0.9.1"
 serde_json = "1.0.64"
-trybuild = "1.0.41"
+# TODO: some tests will fail if this is set to 1.0.63
+trybuild = "=1.0.53"
 
 [features]
 default = ["fiat"]

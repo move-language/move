@@ -23,7 +23,7 @@ specified explicitly:
 
 ```move
 vector<T>[]: vector<T>
-vecctor<T>[e1, ..., en]: vector<T>
+vector<T>[e1, ..., en]: vector<T>
 ```
 
 #### Example Vector Literals

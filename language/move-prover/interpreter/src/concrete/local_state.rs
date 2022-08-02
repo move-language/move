@@ -5,7 +5,7 @@
 //! This file implements the information needed in the local interpretation context, i.e., the
 //! context created and updated when interpreting a single function.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use move_binary_format::errors::{Location, PartialVMError, VMError};
 use move_core_types::vm_status::StatusCode;
@@ -69,16 +69,22 @@ pub struct LocalState {
     termination: TerminationStatus,
     /// mutable parameters that gets destroyed during the execution
     destroyed_args: BTreeMap<TempIndex, TypedValue>,
+    /// whether specification checking needs to be skipped
+    skip_specs: bool,
+    /// local mutable references that are explicitly marked as uninit
+    uninit_mut_refs: BTreeSet<TempIndex>,
 }
 
 impl LocalState {
-    pub fn new(slots: Vec<LocalSlot>) -> Self {
+    pub fn new(slots: Vec<LocalSlot>, skip_specs: bool) -> Self {
         Self {
             slots,
             pc: 0,
             pc_branch: false,
             termination: TerminationStatus::None,
             destroyed_args: BTreeMap::new(),
+            skip_specs,
+            uninit_mut_refs: BTreeSet::new(),
         }
     }
 
@@ -125,6 +131,18 @@ impl LocalState {
         self.destroyed_args.remove(&index).unwrap()
     }
 
+    /// Mark a mutable reference is uninitialized explicitly
+    pub fn mark_uninit(&mut self, index: TempIndex) {
+        let inserted = self.uninit_mut_refs.insert(index);
+        if cfg!(debug_assertions) {
+            assert!(inserted);
+        }
+    }
+    /// Unset the mark that the mutable reference is uninitialized, return True if unset
+    pub fn unset_uninit(&mut self, index: TempIndex) -> bool {
+        self.uninit_mut_refs.remove(&index)
+    }
+
     /// Get the current PC location (i.e., which bytecode to be executed)
     pub fn get_pc(&self) -> CodeOffset {
         self.pc
@@ -152,6 +170,11 @@ impl LocalState {
             .iter()
             .enumerate()
             .filter_map(|(idx, slot)| slot.get_content().map(|(_, ptr)| (idx, ptr)))
+            .chain(
+                self.destroyed_args
+                    .iter()
+                    .map(|(idx, val)| (*idx, val.get_ptr())),
+            )
             .collect()
     }
 
@@ -207,5 +230,15 @@ impl LocalState {
     /// Consume and reduce the state into termination status
     pub fn into_termination_status(self) -> TerminationStatus {
         self.termination
+    }
+
+    /// Mark the spec checking disabled for the rest of the function
+    pub fn skip_specs(&mut self) {
+        self.skip_specs = true;
+    }
+
+    /// Check whether we are skipping the specs
+    pub fn is_spec_skipped(&self) -> bool {
+        self.skip_specs
     }
 }

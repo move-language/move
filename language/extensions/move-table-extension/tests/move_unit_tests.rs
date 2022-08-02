@@ -11,8 +11,10 @@ use tempfile::tempdir;
 
 fn run_tests_for_pkg(path_to_pkg: impl Into<String>) {
     let pkg_path = path_in_crate(path_to_pkg);
-    let mut natives =
-        move_stdlib::natives::all_natives(AccountAddress::from_hex_literal("0x1").unwrap());
+    let mut natives = move_stdlib::natives::all_natives(
+        AccountAddress::from_hex_literal("0x1").unwrap(),
+        move_stdlib::natives::GasParameters::zeros(),
+    );
     natives.append(&mut table_natives(
         AccountAddress::from_hex_literal("0x2").unwrap(),
     ));

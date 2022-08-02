@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use base::{
-    build::Build, coverage::Coverage, disassemble::Disassemble, errmap::Errmap, info::Info,
-    new::New, prove::Prove, test::Test,
+    build::Build, coverage::Coverage, disassemble::Disassemble, docgen::Docgen, errmap::Errmap,
+    info::Info, new::New, prove::Prove, test::Test,
 };
 use move_package::BuildConfig;
 
@@ -24,10 +24,10 @@ const BCS_EXTENSION: &str = "bcs";
 use anyhow::Result;
 use clap::Parser;
 use move_core_types::{
-    account_address::AccountAddress, errmap::ErrorMapping, gas_schedule::CostTable,
-    identifier::Identifier,
+    account_address::AccountAddress, errmap::ErrorMapping, identifier::Identifier,
 };
 use move_vm_runtime::native_functions::NativeFunction;
+use move_vm_test_utils::gas_schedule::CostTable;
 use std::path::PathBuf;
 
 type NativeFunctionRecord = (AccountAddress, Identifier, Identifier, NativeFunction);
@@ -65,6 +65,7 @@ pub enum Command {
     Build(Build),
     Coverage(Coverage),
     Disassemble(Disassemble),
+    Docgen(Docgen),
     Errmap(Errmap),
     Info(Info),
     New(New),
@@ -99,10 +100,14 @@ pub fn run_cli(
     move_args: Move,
     cmd: Command,
 ) -> Result<()> {
+    // TODO: right now, the gas metering story for move-cli (as a library) is a bit of a mess.
+    //         1. It's still using the old CostTable.
+    //         2. The CostTable only affects sandbox runs, but not unit tests, which use a unit cost table.
     match cmd {
         Command::Build(c) => c.execute(move_args.package_path, move_args.build_config),
         Command::Coverage(c) => c.execute(move_args.package_path, move_args.build_config),
         Command::Disassemble(c) => c.execute(move_args.package_path, move_args.build_config),
+        Command::Docgen(c) => c.execute(move_args.package_path, move_args.build_config),
         Command::Errmap(c) => c.execute(move_args.package_path, move_args.build_config),
         Command::Info(c) => c.execute(move_args.package_path, move_args.build_config),
         Command::New(c) => c.execute_with_defaults(move_args.package_path),

@@ -28,7 +28,7 @@ use move_core_types::{
 };
 use move_vm_types::{
     data_store::DataStore,
-    gas_schedule::GasStatus,
+    gas::GasMeter,
     loaded_data::runtime_types::Type,
     values::{Locals, Reference, VMValueCast, Value},
 };
@@ -74,7 +74,8 @@ impl VMRuntime {
         modules: Vec<Vec<u8>>,
         sender: AccountAddress,
         data_store: &mut impl DataStore,
-        _gas_status: &mut GasStatus,
+        _gas_meter: &mut impl GasMeter,
+        compat_check: bool,
     ) -> VMResult<()> {
         // deserialize the modules. Perform bounds check. After this indexes can be
         // used with the `[]` operator
@@ -114,7 +115,7 @@ impl VMRuntime {
         // changing the bytecode format to include an `is_upgradable` flag in the CompiledModule.
         for module in &compiled_modules {
             let module_id = module.self_id();
-            if data_store.exists_module(&module_id)? {
+            if data_store.exists_module(&module_id)? && compat_check {
                 let old_module_ref = self.loader.load_module(&module_id, data_store)?;
                 let old_module = old_module_ref.module();
                 let old_m = normalized::Module::new(old_module);
@@ -317,7 +318,7 @@ impl VMRuntime {
         return_types: Vec<Type>,
         serialized_args: Vec<impl Borrow<[u8]>>,
         data_store: &mut impl DataStore,
-        gas_status: &mut GasStatus,
+        gas_meter: &mut impl GasMeter,
         extensions: &mut NativeContextExtensions,
     ) -> VMResult<SerializedReturnValues> {
         let arg_types = param_types
@@ -347,7 +348,7 @@ impl VMRuntime {
             ty_args,
             deserialized_args,
             data_store,
-            gas_status,
+            gas_meter,
             extensions,
             &self.loader,
         )?;
@@ -382,7 +383,7 @@ impl VMRuntime {
         ty_args: Vec<TypeTag>,
         serialized_args: Vec<impl Borrow<[u8]>>,
         data_store: &mut impl DataStore,
-        gas_status: &mut GasStatus,
+        gas_meter: &mut impl GasMeter,
         extensions: &mut NativeContextExtensions,
         bypass_declared_entry_check: bool,
     ) -> VMResult<SerializedReturnValues> {
@@ -434,7 +435,7 @@ impl VMRuntime {
             return_,
             serialized_args,
             data_store,
-            gas_status,
+            gas_meter,
             extensions,
         )
     }
@@ -446,7 +447,7 @@ impl VMRuntime {
         ty_args: Vec<TypeTag>,
         serialized_args: Vec<impl Borrow<[u8]>>,
         data_store: &mut impl DataStore,
-        gas_status: &mut GasStatus,
+        gas_meter: &mut impl GasMeter,
         extensions: &mut NativeContextExtensions,
     ) -> VMResult<SerializedReturnValues> {
         // load the script, perform verification
@@ -468,7 +469,7 @@ impl VMRuntime {
             return_,
             serialized_args,
             data_store,
-            gas_status,
+            gas_meter,
             extensions,
         )
     }

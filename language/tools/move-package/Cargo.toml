@@ -47,6 +47,7 @@ whoami = { version = "1.2.1" }
 
 [dev-dependencies]
 datatest-stable = "0.1.1"
+httpmock = "0.6.6"
 
 [[test]]
 name = "test_runner"

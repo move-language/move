@@ -825,6 +825,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "concurrent-queue"
+version = "1.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af4780a44ab5696ea9e28294517f1fffb421a83a25af521333c838635509db9c"
+dependencies = [
+ "cache-padded",
+]
+
+[[package]]
 name = "combine"
 version = "4.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3313,6 +3322,7 @@ dependencies = [
  "dirs-next",
  "evm-exec-utils",
  "hex",
+ "httpmock",
  "itertools 0.10.1",
  "move-abigen",
  "move-binary-format",

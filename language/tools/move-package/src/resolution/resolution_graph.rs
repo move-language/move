@@ -9,7 +9,7 @@ use crate::{
         layout::SourcePackageLayout,
         manifest_parser::{parse_move_manifest_string, parse_source_manifest},
         parsed_manifest::{
-            Dependencies, Dependency, FileName, NamedAddress, PackageDigest, PackageName,
+            Dependencies, Dependency, FileName, GitInfo, NamedAddress, PackageDigest, PackageName,
             SourceManifest, SubstOrRename,
         },
     },
@@ -31,7 +31,7 @@ use std::{
     path::{Path, PathBuf},
     process::Command,
     rc::Rc,
-    thread
+    thread,
 };
 
 pub type ResolvedTable = ResolutionTable<AccountAddress>;
@@ -395,7 +395,7 @@ impl ResolvingGraph {
         Self::download_and_update_if_repo(
             dep_name_in_pkg,
             &dep,
-            self.build_options.skip_movey_call
+            self.build_options.skip_movey_call,
         )?;
         let (dep_package, dep_package_dir) =
             Self::parse_package_manifest(&dep, &dep_name_in_pkg, root_path)
@@ -548,16 +548,15 @@ impl ResolvingGraph {
     fn download_and_update_if_repo(
         dep_name: PackageName,
         dep: &Dependency,
-        skip_movey_call: bool
+        skip_movey_call: bool,
     ) -> Result<()> {
         if let Some(git_info) = &dep.git_info {
             if !git_info.download_to.exists() {
-                if !skip_movey_call {
-                    let git_url = git_info.git_url.as_str().to_string();
-                    let git_rev = git_info.git_rev.as_str().to_string();
-                    let subdir = git_info.subdir.to_string_lossy().to_string();
-                    Self::increase_movey_download_count(git_url, git_rev, subdir);
-                }
+                increase_movey_download_count(
+                    movey_constants::MOVEY_URL.to_string(),
+                    git_info,
+                    skip_movey_call,
+                );
                 Command::new("git")
                     .args([
                         "clone",
@@ -589,17 +588,6 @@ impl ResolvingGraph {
             package_hooks::resolve_custom_dependency(dep_name, node_info)?
         }
         Ok(())
-    }
-
-    fn increase_movey_download_count(git_url: String, git_rev: String, subdir: String) {
-        thread::spawn(move || {
-            let params = [("url", git_url), ("rev", git_rev), ("subdir", subdir)];
-            let client = reqwest::blocking::Client::new();
-            let _ = client
-                .post(&format!("{}/api/v1/download", movey_constants::MOVEY_URL))
-                .form(&params)
-                .send();
-        });
     }
 }
 
@@ -840,5 +828,128 @@ impl ResolvedPackage {
         } else {
             self.source_package.dependencies.keys().copied().collect()
         }
+    }
+}
+
+fn increase_movey_download_count(movey_url: String, git_info: &GitInfo, skip_movey_call: bool) {
+    if skip_movey_call {
+        return;
+    }
+    let git_url = git_info.git_url.as_str().to_string();
+    let git_rev = git_info.git_rev.as_str().to_string();
+    let subdir = git_info.subdir.to_string_lossy().to_string();
+    thread::spawn(move || {
+        let params = [("url", git_url), ("rev", git_rev), ("subdir", subdir)];
+        let client = reqwest::blocking::Client::new();
+        let _ = client
+            .post(&format!("{}/api/v1/packages/count", movey_url))
+            .form(&params)
+            .send();
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        resolution::resolution_graph::increase_movey_download_count,
+        source_package::parsed_manifest::GitInfo,
+    };
+    use httpmock::{prelude::*, Mock};
+    use move_symbol_pool::Symbol;
+    use std::{path::PathBuf, thread, time};
+
+    fn init_mock_server<'a>(
+        server: &'a MockServer,
+        git_info: &'a GitInfo,
+        status_code: u16,
+    ) -> Mock<'a> {
+        server.mock(|when, then| {
+            when.method(POST)
+                .path("/api/v1/packages/count")
+                .x_www_form_urlencoded_tuple("url", git_info.git_url.as_str())
+                .x_www_form_urlencoded_tuple("rev", git_info.git_rev.as_str())
+                .x_www_form_urlencoded_tuple("subdir", "test subdir");
+            then.status(status_code);
+        })
+    }
+
+    #[test]
+    fn increase_movey_download_count_calls_movey_api() {
+        let git_url = Symbol::from("test git url");
+        let git_rev = Symbol::from("test git rev");
+        let subdir = PathBuf::from("test subdir");
+        let git_info = GitInfo {
+            git_url,
+            git_rev,
+            subdir,
+            download_to: Default::default(),
+        };
+        let server = MockServer::start();
+        let server_mock = init_mock_server(&server, &git_info, 200);
+        increase_movey_download_count(server.base_url(), &git_info, false);
+        // make sure the spawn thread has enough time to run
+        let twenty_millis = time::Duration::from_millis(20);
+        thread::sleep(twenty_millis);
+        server_mock.assert();
+    }
+
+    #[test]
+    fn increase_movey_download_count_not_calls_movey_api_if_skip_movey_call_flag_is_true() {
+        let git_url = Symbol::from("test git url");
+        let git_rev = Symbol::from("test git rev");
+        let subdir = PathBuf::from("test subdir");
+        let git_info = GitInfo {
+            git_url,
+            git_rev,
+            subdir,
+            download_to: Default::default(),
+        };
+        let server = MockServer::start();
+        let server_mock = init_mock_server(&server, &git_info, 200);
+        increase_movey_download_count(server.base_url(), &git_info, true);
+        // make sure the spawn thread has enough time to run
+        let twenty_millis = time::Duration::from_millis(20);
+        thread::sleep(twenty_millis);
+        server_mock.assert_hits(0);
+    }
+
+    #[test]
+    fn increase_movey_download_count_not_throw_error_if_movey_returns_4xx() {
+        let git_url = Symbol::from("test git url");
+        let git_rev = Symbol::from("test git rev");
+        let subdir = PathBuf::from("test subdir");
+        let git_info = GitInfo {
+            git_url,
+            git_rev,
+            subdir,
+            download_to: Default::default(),
+        };
+        let server = MockServer::start();
+        let server_mock = init_mock_server(&server, &git_info, 400);
+        increase_movey_download_count(server.base_url(), &git_info, false);
+        // make sure the spawn thread has enough time to run
+        let twenty_millis = time::Duration::from_millis(20);
+        thread::sleep(twenty_millis);
+        server_mock.assert();
+    }
+
+    #[test]
+    fn increase_movey_download_count_not_throw_error_if_movey_returns_5xx() {
+        let git_url = Symbol::from("test git url");
+        let git_rev = Symbol::from("test git rev");
+        let subdir = PathBuf::from("test subdir");
+        let git_info = GitInfo {
+            git_url,
+            git_rev,
+            subdir,
+            download_to: Default::default(),
+        };
+        let server = MockServer::start();
+        let server_mock = init_mock_server(&server, &git_info, 500);
+        increase_movey_download_count(server.base_url(), &git_info, false);
+        // make sure the spawn thread has enough time to run
+        let twenty_millis = time::Duration::from_millis(20);
+        thread::sleep(twenty_millis);
+        server_mock.assert();
     }
 }

@@ -19,7 +19,7 @@ const DEFAULT_BOOGIE_FLAGS: &[&str] = &[
     "-proverOpt:O:model_validate=true",
 ];
 
-const MIN_BOOGIE_VERSION: &str = "2.13.4";
+const MIN_BOOGIE_VERSION: &str = "2.15.7";
 const MIN_Z3_VERSION: &str = "4.10.2";
 const MIN_CVC5_VERSION: &str = "0.0.3";
 

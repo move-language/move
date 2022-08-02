@@ -565,7 +565,12 @@ impl<'env> BoogieWrapper<'env> {
 
         if let Some(cap) = MODEL_REGION.captures(&out[*at..]) {
             *at = usize::saturating_add(*at, cap.get(0).unwrap().end());
-            match model.parse(self, cap.name("mod").unwrap().as_str()) {
+
+            // Cuts out the state info block which is not used currently.
+            let re = Regex::new(r"(?m)\*\*\* STATE(?s:.)*?\*\*\* END_STATE\n").unwrap();
+            let remnant = re.replace(cap.name("mod").unwrap().as_str(), "");
+
+            match model.parse(self, remnant.as_ref()) {
                 Ok(_) => {}
                 Err(parse_error) => {
                     let context_module = self

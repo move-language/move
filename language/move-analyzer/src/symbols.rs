@@ -2286,7 +2286,7 @@ fn handle_struct_fields(struct_def: StructDef, fields: &mut Vec<DocumentSymbol>)
 }
 
 #[cfg(test)]
-fn assert_use_def(
+fn assert_use_def_with_doc_string(
     mod_symbols: &UseDefMap,
     file_name_mapping: &BTreeMap<FileHash, Symbol>,
     use_idx: usize,
@@ -2297,6 +2297,7 @@ fn assert_use_def(
     def_file: &str,
     type_str: &str,
     type_def: Option<(u32, u32, &str)>,
+    doc_string: &str,
 ) {
     let uses = mod_symbols.get(use_line).unwrap();
     let use_def = uses.iter().nth(use_idx).unwrap();
@@ -2309,6 +2310,8 @@ fn assert_use_def(
         .as_str()
         .ends_with(def_file));
     assert!(type_str == format!("{}", use_def.use_type));
+
+    assert!(doc_string.to_string() == format!("{}", use_def.doc_string));
     match use_def.type_def_loc {
         Some(type_def_loc) => {
             let tdef_line = type_def.unwrap().0;
@@ -2324,6 +2327,229 @@ fn assert_use_def(
         }
         None => assert!(type_def.is_none()),
     }
+}
+
+#[cfg(test)]
+fn assert_use_def(
+    mod_symbols: &UseDefMap,
+    file_name_mapping: &BTreeMap<FileHash, Symbol>,
+    use_idx: usize,
+    use_line: u32,
+    use_col: u32,
+    def_line: u32,
+    def_col: u32,
+    def_file: &str,
+    type_str: &str,
+    type_def: Option<(u32, u32, &str)>,
+) {
+    assert_use_def_with_doc_string(
+        mod_symbols,
+        file_name_mapping,
+        use_idx,
+        use_line,
+        use_col,
+        def_line,
+        def_col,
+        def_file,
+        type_str,
+        type_def,
+        "",
+    )
+}
+
+#[test]
+/// Tests if symbolication + doc_string information for documented Move constructs is constructed correctly.
+fn docstring_test() {
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+
+    path.push("tests/symbols");
+
+    let (symbols_opt, _) = Symbolicator::get_symbols(path.as_path()).unwrap();
+    let symbols = symbols_opt.unwrap();
+
+    let mut fpath = path.clone();
+    fpath.push("sources/M6.move");
+    let cpath = dunce::canonicalize(&fpath).unwrap();
+
+    let mod_symbols = symbols.file_use_defs.get(&cpath).unwrap();
+
+    // println!("{:#?}", mod_symbols);
+    // struct def name
+    assert_use_def_with_doc_string(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        4,
+        11,
+        4,
+        11,
+        "M6.move",
+        "Symbols::M6::DocumentedStruct",
+        Some((4, 11, "M6.move")),
+        " This is a documented struct\n With a multi-line docstring\n",
+    );
+
+    // const def name
+    assert_use_def_with_doc_string(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        10,
+        10,
+        10,
+        10,
+        "M6.move",
+        "u64",
+        None,
+        " Constant containing the answer to the universe\n",
+    );
+
+    // function def name
+    assert_use_def_with_doc_string(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        14,
+        8,
+        14,
+        8,
+        "M6.move",
+        "fun Symbols::M6::unpack(Symbols::M6::DocumentedStruct): u64",
+        None,
+        " A documented function that unpacks a DocumentedStruct\n",
+    );
+    // param var (unpack function)
+    assert_use_def_with_doc_string(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        14,
+        15,
+        14,
+        15,
+        "M6.move",
+        "Symbols::M6::DocumentedStruct",
+        Some((4, 11, "M6.move")),
+        " A documented function that unpacks a DocumentedStruct\n",
+    );
+    // struct name in param type (unpack function)
+    assert_use_def_with_doc_string(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        2,
+        14,
+        18,
+        4,
+        11,
+        "M6.move",
+        "Symbols::M6::DocumentedStruct",
+        Some((4, 11, "M6.move")),
+        " This is a documented struct\n With a multi-line docstring\n",
+    );
+    // struct name in unpack (unpack function)
+    assert_use_def_with_doc_string(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        15,
+        12,
+        4,
+        11,
+        "M6.move",
+        "Symbols::M6::DocumentedStruct",
+        Some((4, 11, "M6.move")),
+        " This is a documented struct\n With a multi-line docstring\n",
+    );
+    // field name in unpack (unpack function)
+    assert_use_def_with_doc_string(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        15,
+        31,
+        6,
+        8,
+        "M6.move",
+        "u64",
+        None,
+        " A documented field\n",
+    );
+    // moved var in unpack assignment (unpack function)
+    assert_use_def_with_doc_string(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        3,
+        15,
+        59,
+        14,
+        15,
+        "M6.move",
+        "Symbols::M6::DocumentedStruct",
+        Some((4, 11, "M6.move")),
+        " A documented function that unpacks a DocumentedStruct\n",
+    );
+
+    /* Test doc_string construction for struct/function imported from another module */
+
+    // other module struct name (other_doc_struct function)
+    assert_use_def_with_doc_string(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        19,
+        41,
+        3,
+        11,
+        "M7.move",
+        "Symbols::M7::OtherDocStruct",
+        Some((3, 11, "M7.move")),
+        " Documented struct in another module\n",
+    );
+
+    // function name in a call (other_doc_struct function)
+    assert_use_def_with_doc_string(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        0,
+        20,
+        21,
+        9,
+        15,
+        "M7.move",
+        "fun Symbols::M7::create_other_struct(u64): Symbols::M7::OtherDocStruct",
+        Some((3, 11, "M7.move")),
+        " Documented initializer in another module\n",
+    );
+
+    // const in param (other_doc_struct function)
+    assert_use_def_with_doc_string(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        20,
+        41,
+        10,
+        10,
+        "M6.move",
+        "u64",
+        None,
+        " Constant containing the answer to the universe\n",
+    );
+
+    // other documented struct name imported (other_doc_struct_import function)
+    assert_use_def_with_doc_string(
+        mod_symbols,
+        &symbols.file_name_mapping,
+        1,
+        25,
+        35,
+        3,
+        11,
+        "M7.move",
+        "Symbols::M7::OtherDocStruct",
+        Some((3, 11, "M7.move")),
+        " Documented struct in another module\n",
+    );
 }
 
 #[test]

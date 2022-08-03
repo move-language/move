@@ -30,6 +30,7 @@ pub const KEYWORDS: &[&str] = &[
     "true",
     "use",
     "while",
+    "signer",
 ];
 
 pub const CONTEXTUAL_KEYWORDS: &[&str] = &[
@@ -64,6 +65,8 @@ pub const CONTEXTUAL_KEYWORDS: &[&str] = &[
     "where",
     "with",
 ];
+
+pub const PRIMITIVE_TYPES: &[&str] = &["u8", "u64", "u128", "bool", "vector"];
 
 pub const BUILTINS: &[&str] = &[
     "assert",

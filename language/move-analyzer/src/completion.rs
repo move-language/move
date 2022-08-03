@@ -7,7 +7,7 @@ use lsp_server::Request;
 use lsp_types::{CompletionItem, CompletionItemKind, CompletionParams, Position};
 use move_command_line_common::files::FileHash;
 use move_compiler::parser::{
-    keywords::{BUILTINS, CONTEXTUAL_KEYWORDS, KEYWORDS},
+    keywords::{BUILTINS, CONTEXTUAL_KEYWORDS, KEYWORDS, PRIMITIVE_TYPES},
     lexer::{Lexer, Tok},
 };
 use std::collections::HashSet;
@@ -31,6 +31,7 @@ fn keywords() -> Vec<CompletionItem> {
     KEYWORDS
         .iter()
         .chain(CONTEXTUAL_KEYWORDS.iter())
+        .chain(PRIMITIVE_TYPES.iter())
         .map(|label| {
             let kind = if label == &"copy" || label == &"move" {
                 CompletionItemKind::Operator
@@ -39,6 +40,14 @@ fn keywords() -> Vec<CompletionItem> {
             };
             completion_item(label, kind)
         })
+        .collect()
+}
+
+/// Return a list of completion items of Move's primitive types
+fn primitive_types() -> Vec<CompletionItem> {
+    PRIMITIVE_TYPES
+        .iter()
+        .map(|label| completion_item(label, CompletionItemKind::Keyword))
         .collect()
 }
 
@@ -148,9 +157,7 @@ pub fn on_completion_request(context: &Context, request: &Request) {
     let mut items = vec![];
     match cursor {
         Some(Tok::Colon) => {
-            // If the user's cursor is positioned after a single `:`, do not provide any completion
-            // items at all -- this is a "mis-fire" of the "trigger character" `:`.
-            return;
+            items.extend_from_slice(&primitive_types());
         }
         Some(Tok::Period) | Some(Tok::ColonColon) => {
             // `.` or `::` must be followed by identifiers, which are added to the completion items

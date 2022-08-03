@@ -29,9 +29,6 @@ pub struct BorrowInfo {
     /// other nodes which are alive borrow from them.
     live_nodes: SetDomain<BorrowNode>,
 
-    /// Contains the nodes which have been moved via a move instruction.
-    moved_nodes: SetDomain<BorrowNode>,
-
     /// Forward borrow information.
     borrowed_by: MapDomain<BorrowNode, SetDomain<(BorrowNode, BorrowEdge)>>,
 
@@ -151,10 +148,7 @@ impl BorrowInfo {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.live_nodes.is_empty()
-            && self.moved_nodes.is_empty()
-            && self.borrowed_by.is_empty()
-            && self.borrows_from.is_empty()
+        self.live_nodes.is_empty() && self.borrowed_by.is_empty() && self.borrows_from.is_empty()
     }
 
     pub fn borrow_info_str(&self, func_target: &FunctionTarget<'_>) -> String {
@@ -167,13 +161,6 @@ impl BorrowInfo {
         add(
             "live_nodes",
             self.live_nodes
-                .iter()
-                .map(|node| format!("{}", node.display(func_target)))
-                .join(", "),
-        );
-        add(
-            "moved_nodes",
-            self.moved_nodes
                 .iter()
                 .map(|node| format!("{}", node.display(func_target)))
                 .join(", "),
@@ -208,7 +195,7 @@ impl BorrowInfo {
         self.live_nodes.insert(node);
     }
 
-    fn remove_node(&mut self, node: &BorrowNode) {
+    fn del_node(&mut self, node: &BorrowNode) {
         self.live_nodes.remove(node);
     }
 
@@ -324,11 +311,10 @@ impl BorrowInfo {
                     if let BorrowNode::Reference(in_idx) = in_node {
                         let actual_in_node = BorrowNode::Reference(get_in(*in_idx));
                         self.add_edge(
-                            actual_in_node.clone(),
+                            actual_in_node,
                             out_node.clone(),
                             edge.instantiate(callee_targs),
                         );
-                        self.moved_nodes.insert(actual_in_node);
                     }
                 }
             } else {
@@ -510,26 +496,6 @@ impl<'a> BorrowAnalysis<'a> {
             BorrowNode::LocalRoot(idx)
         }
     }
-
-    fn remap_borrow_node(&self, state: &mut BorrowInfo, from: &BorrowNode, to: &BorrowNode) {
-        let remap = |node: BorrowNode| if &node == from { to.clone() } else { node };
-        state.live_nodes = std::mem::take(&mut state.live_nodes)
-            .into_iter()
-            .map(remap)
-            .collect();
-        state.borrowed_by = std::mem::take(&mut state.borrowed_by)
-            .into_iter()
-            .map(|(src, dests)| {
-                (
-                    remap(src),
-                    dests
-                        .into_iter()
-                        .map(|(node, edges)| (remap(node), edges))
-                        .collect(),
-                )
-            })
-            .collect()
-    }
 }
 
 impl<'a> TransferFunctions for BorrowAnalysis<'a> {
@@ -542,18 +508,31 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
             .livevar_annotation
             .get_live_var_info_at(code_offset)
             .expect("livevar annotation");
+
         match instr {
             Assign(_, dest, src, kind) => {
                 let dest_node = self.borrow_node(*dest);
+                state.add_node(dest_node.clone());
+
                 let src_node = self.borrow_node(*src);
                 match kind {
                     AssignKind::Move => {
-                        self.remap_borrow_node(state, &src_node, &dest_node);
-                        state.moved_nodes.insert(src_node);
+                        assert!(!self.func_target.get_local_type(*src).is_reference());
+                        assert!(!self.func_target.get_local_type(*dest).is_reference());
+                        state.del_node(&src_node);
                     }
-                    AssignKind::Copy | AssignKind::Store => {
-                        state.add_node(dest_node.clone());
-                        state.add_edge(src_node, dest_node, BorrowEdge::Direct);
+                    AssignKind::Copy => {
+                        assert!(!self.func_target.get_local_type(*src).is_reference());
+                        assert!(!self.func_target.get_local_type(*dest).is_reference());
+                    }
+                    AssignKind::Store => {
+                        if self.func_target.get_local_type(*src).is_mutable_reference() {
+                            assert!(self
+                                .func_target
+                                .get_local_type(*dest)
+                                .is_mutable_reference());
+                            state.add_edge(src_node, dest_node, BorrowEdge::Direct);
+                        }
                     }
                 }
             }
@@ -644,14 +623,13 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
         }
 
         // Update live_vars.
-
         for idx in livevar_annotation_at
             .before
             .difference(&livevar_annotation_at.after)
         {
             if self.func_target.get_local_type(*idx).is_reference() {
                 let node = self.borrow_node(*idx);
-                state.remove_node(&node);
+                state.del_node(&node);
             }
         }
     }
@@ -662,11 +640,8 @@ impl<'a> DataflowAnalysis for BorrowAnalysis<'a> {}
 impl AbstractDomain for BorrowInfo {
     fn join(&mut self, other: &Self) -> JoinResult {
         let live_changed = self.live_nodes.join(&other.live_nodes);
-        let moved_changed = self.moved_nodes.join(&other.moved_nodes);
         let borrowed_changed = self.borrowed_by.join(&other.borrowed_by);
-        borrowed_changed
-            .combine(moved_changed)
-            .combine(live_changed)
+        borrowed_changed.combine(live_changed)
     }
 }
 

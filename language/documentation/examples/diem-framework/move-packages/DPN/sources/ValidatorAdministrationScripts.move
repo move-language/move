@@ -545,7 +545,7 @@ module ValidatorAdministrationScripts {
 
         /// **Access Control:**
         /// Only the Diem Root account can process the admin scripts [[H9]][PERMISSION].
-        requires Roles::has_diem_root_role(dr_account); /// This is ensured by DiemAccount::writeset_prologue.
+        requires Roles::has_diem_root_role(dr_account); // This is ensured by DiemAccount::writeset_prologue.
         /// Only a Validator account can set its Validator Operator [[H16]][PERMISSION].
         include Roles::AbortsIfNotValidator;
     }

@@ -378,7 +378,7 @@ module DiemFramework::Roles {
     spec module {} // switch to module documentation context
 
     /// # Persistence of Roles
-
+    ///
     /// Once an account at an address is granted a role it will remain an account role for all time.
     spec module {
         invariant update
@@ -387,7 +387,7 @@ module DiemFramework::Roles {
     }
 
     /// # Access Control
-
+    ///
     /// In this section, the conditions from the [requirements for access control][ACCESS_CONTROL] are systematically
     /// applied to the functions in this module. While some of those conditions have already been
     /// included in individual function specifications, listing them here again gives additional

@@ -164,7 +164,7 @@ module DiemFramework::DiemTransactionPublishingOption {
     }
 
     /// # Access Control
-
+    ///
     /// Only `set_open_script`, and `set_open_module` can modify the
     /// DiemTransactionPublishingOption config [[H11]][PERMISSION]
     spec schema DiemVersionRemainsSame {

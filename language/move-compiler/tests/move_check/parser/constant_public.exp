@@ -2,5 +2,5 @@ error[E01003]: invalid modifier
   ┌─ tests/move_check/parser/constant_public.move:3:5
   │
 3 │     public const Foo: u64 = 0;
-  │     ^^^^^^ Invalid constant declaration. Constants cannot have visibility modifiers as they are always internal
+  │     ^^^^^^^^^^^^ Invalid constant declaration. Modifiers 'public', 'native', 'entry' are not supported for constant.
 

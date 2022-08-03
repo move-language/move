@@ -534,7 +534,7 @@ module DiemFramework::DualAttestation {
     spec module {} // switch documentation context back to module level
 
     /// # Initialization
-
+    ///
     /// The Limit resource should be published after genesis
     spec module {
         invariant [suspendable] DiemTimestamp::is_operating() ==> spec_is_published();

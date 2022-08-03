@@ -76,7 +76,7 @@ module DiemFramework::ValidatorOperatorConfig {
     spec module {} // switch documentation context back to module level
 
     /// # Consistency Between Resources and Roles
-
+    ///
     /// If an address has a ValidatorOperatorConfig resource, it has a validator operator role.
     spec module {
         invariant forall addr: address where has_validator_operator_config(addr):

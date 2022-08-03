@@ -356,7 +356,7 @@ module DiemFramework::AccountAdministrationScripts {
 
         /// **Access Control:**
         /// Only the Diem Root account can process the admin scripts [[H9]][PERMISSION].
-        requires Roles::has_diem_root_role(dr_account); /// This is ensured by DiemAccount::writeset_prologue.
+        requires Roles::has_diem_root_role(dr_account); // This is ensured by DiemAccount::writeset_prologue.
         /// The account can rotate its own authentication key unless
         /// it has delegrated the capability [[H18]][PERMISSION][[J18]][PERMISSION].
         include DiemAccount::AbortsIfDelegatedKeyRotationCapability{account: account};
@@ -416,10 +416,10 @@ module DiemFramework::AccountAdministrationScripts {
             errors::NOT_PUBLISHED,
             errors::INVALID_ARGUMENT;
 
-        /// **Access Control:**
-        /// The delegatee at the recovery address has to hold the key rotation capability for
-        /// the address to recover. The address of the transaction signer has to be either
-        /// the delegatee's address or the address to recover [[H18]][PERMISSION][[J18]][PERMISSION].
+        // **Access Control:**
+        // The delegatee at the recovery address has to hold the key rotation capability for
+        // the address to recover. The address of the transaction signer has to be either
+        // the delegatee's address or the address to recover [[H18]][PERMISSION][[J18]][PERMISSION].
         let account_addr = signer::address_of(account);
         aborts_if !RecoveryAddress::spec_holds_key_rotation_cap_for(recovery_address, to_recover) with errors::INVALID_ARGUMENT;
         aborts_if !(account_addr == recovery_address || account_addr == to_recover) with errors::INVALID_ARGUMENT;

@@ -35,13 +35,13 @@ error[E04013]: invalid statement or expression in constant
    ┌─ tests/move_check/parser/constants_blocks.move:12:9
    │
 12 │         let x = 0;
-   │         ^^^^^^^^^ 'let' declarations are not supported in constants
+   │         ^^^^^^^^^^ 'let' declarations are not supported in constants
 
 error[E04013]: invalid statement or expression in constant
    ┌─ tests/move_check/parser/constants_blocks.move:13:9
    │
 13 │         let y = 1;
-   │         ^^^^^^^^^ 'let' declarations are not supported in constants
+   │         ^^^^^^^^^^ 'let' declarations are not supported in constants
 
 error[E04013]: invalid statement or expression in constant
    ┌─ tests/move_check/parser/constants_blocks.move:19:9

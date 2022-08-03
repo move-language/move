@@ -217,7 +217,7 @@ module DiemFramework::DiemVMConfig {
     }
 
     /// # Access Control
-
+    ///
     /// The permission "UpdateVMConfig" is granted to DiemRoot [[H11]][PERMISSION].
     spec module {
         invariant [suspendable] forall addr: address

@@ -47,7 +47,7 @@ module DiemFramework::DiemConsensusConfig {
     spec module {} // Switch to module documentation context
 
     /// # Access Control
-
+    ///
     /// The permission "UpdateDiemConsensusConfig" is granted to DiemRoot [[H12]][PERMISSION].
     spec module {
         invariant [suspendable] forall addr: address

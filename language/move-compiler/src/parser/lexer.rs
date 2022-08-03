@@ -2,15 +2,13 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    diag, diagnostics::Diagnostic, parser::syntax::make_loc, shared::CompilationEnv,
-    FileCommentMap, MatchedFileCommentMap,
-};
+use crate::{diag, diagnostics::Diagnostic, parser::syntax::make_loc};
 use move_command_line_common::files::FileHash;
 use move_ir_types::location::Loc;
-use std::fmt;
+use move_symbol_pool::Symbol;
+use std::{fmt, mem};
 
-use super::comments::CommentKind;
+use super::{comments::CommentKind, cst::ParsedToken, token_range::TokenRange};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Tok {
@@ -88,6 +86,13 @@ pub enum Tok {
     Tab,   // "\t"
     LF,    // "\n"
     CR,    // "\r",
+}
+
+pub fn is_comment_spaces(token: Tok) -> bool {
+    matches!(
+        token,
+        Tok::Comment(_) | Tok::Space | Tok::Tab | Tok::LF | Tok::CR
+    )
 }
 
 impl fmt::Display for Tok {
@@ -176,15 +181,51 @@ impl fmt::Display for Tok {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Token {
+    pub kind: Tok,
+    pub content: Symbol,
+    pub loc: Loc,
+}
+
+impl Token {
+    pub fn new(kind: Tok, content: Symbol, loc: Loc) -> Self {
+        Token { kind, content, loc }
+    }
+}
+
+// FidelityToken contains one non-comment-or-space token with the spac tokens and comment tokens
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FidelityToken<'a> {
+    // non-comment-or-space  token
+    pub token: Token,
+    // tokens including space and comments which wraps the non-comment-or-space token
+    pub tokens: Vec<Token>,
+    pub content: &'a str,
+}
+
+impl<'a> FidelityToken<'a> {
+    pub fn new(token: Token, tokens: Vec<Token>, content: &'a str) -> Self {
+        FidelityToken {
+            token,
+            tokens,
+            content,
+        }
+    }
+
+    pub fn content(&self) -> &str {
+        self.token.content.as_str()
+    }
+}
+
 pub struct Lexer<'input> {
     text: &'input str,
     file_hash: FileHash,
-    doc_comments: FileCommentMap,
-    matched_doc_comments: MatchedFileCommentMap,
     prev_end: usize,
     cur_start: usize,
     cur_end: usize,
-    token: Tok,
+    token: FidelityToken<'input>,
+    cached_tokens: Vec<Token>,
 }
 
 impl<'input> Lexer<'input> {
@@ -192,21 +233,26 @@ impl<'input> Lexer<'input> {
         Lexer {
             text,
             file_hash,
-            doc_comments: FileCommentMap::new(),
-            matched_doc_comments: MatchedFileCommentMap::new(),
             prev_end: 0,
             cur_start: 0,
             cur_end: 0,
-            token: Tok::EOF,
+            token: FidelityToken::new(
+                Token::new(Tok::BOF, Symbol::from(""), Loc::new(file_hash, 0, 0)),
+                Vec::new(),
+                text,
+            ),
+            cached_tokens: vec![],
         }
     }
 
     pub fn peek(&self) -> Tok {
-        self.token
+        self.token.token.kind
     }
 
     pub fn content(&self) -> &'input str {
-        &self.text[self.cur_start..self.cur_end]
+        let start_loc = self.token.token.loc.start() as usize;
+        let end_loc = self.token.token.loc.end() as usize;
+        &self.text[start_loc..end_loc]
     }
 
     pub fn file_hash(&self) -> FileHash {
@@ -214,210 +260,98 @@ impl<'input> Lexer<'input> {
     }
 
     pub fn start_loc(&self) -> usize {
-        self.cur_start
+        self.current_loc().start() as usize
     }
 
     pub fn previous_end_loc(&self) -> usize {
         self.prev_end
     }
 
-    /// Strips line and block comments from input source, and collects documentation comments,
-    /// putting them into a map indexed by the span of the comment region. Comments in the original
-    /// source will be replaced by spaces, such that positions of source items stay unchanged.
-    /// Block comments can be nested.
-    ///
-    /// Documentation comments are comments which start with
-    /// `///` or `/**`, but not `////` or `/***`. The actually comment delimiters
-    /// (`/// .. <newline>` and `/** .. */`) will be not included in extracted comment string. The
-    /// span in the returned map, however, covers the whole region of the comment, including the
-    /// delimiters.
-    fn trim_whitespace_and_comments(&mut self, offset: usize) -> Result<&'input str, Diagnostic> {
-        let mut text = &self.text[offset..];
-
-        // A helper function to compute the index of the start of the given substring.
-        let len = text.len();
-        let get_offset = |substring: &str| offset + len - substring.len();
-
-        // Loop until we find text that isn't whitespace, and that isn't part of
-        // a multi-line or single-line comment.
-        loop {
-            // Trim the start whitespace characters.
-            text = trim_start_whitespace(text);
-
-            if text.starts_with("/*") {
-                // Strip multi-line comments like '/* ... */' or '/** ... */'.
-                // These can be nested, as in '/* /* ... */ */', so record the
-                // start locations of each nested comment as a stack. The
-                // boolean indicates whether it's a documentation comment.
-                let mut locs: Vec<(usize, bool)> = vec![];
-                loop {
-                    text = text.trim_start_matches(|c: char| c != '/' && c != '*');
-                    if text.is_empty() {
-                        // We've reached the end of string while searching for a
-                        // terminating '*/'.
-                        let loc = *locs.last().unwrap();
-                        // Highlight the '/**' if it's a documentation comment, or the '/*'
-                        // otherwise.
-                        let location =
-                            make_loc(self.file_hash, loc.0, loc.0 + if loc.1 { 3 } else { 2 });
-                        return Err(diag!(
-                            Syntax::InvalidDocComment,
-                            (location, "Unclosed block comment"),
-                        ));
-                    } else if text.starts_with("/*") {
-                        // We've found a (perhaps nested) multi-line comment.
-                        let start = get_offset(text);
-                        text = &text[2..];
-
-                        // Check if this is a documentation comment: '/**', but not '/***'.
-                        // A documentation comment cannot be nested within another comment.
-                        let is_doc =
-                            text.starts_with('*') && !text.starts_with("**") && locs.is_empty();
-
-                        locs.push((start, is_doc));
-                    } else if text.starts_with("*/") {
-                        // We've found a multi-line comment terminator that ends
-                        // our innermost nested comment.
-                        let loc = locs.pop().unwrap();
-                        text = &text[2..];
-
-                        // If this was a documentation comment, record it in our map.
-                        if loc.1 {
-                            let end = get_offset(text);
-                            self.doc_comments.insert(
-                                (loc.0 as u32, end as u32),
-                                self.text[(loc.0 + 3)..(end - 2)].to_string(),
-                            );
-                        }
-
-                        // If this terminated our last comment, exit the loop.
-                        if locs.is_empty() {
-                            break;
-                        }
-                    } else {
-                        // This is a solitary '/' or '*' that isn't part of any comment delimiter.
-                        // Skip over it.
-                        text = &text[1..];
-                    }
-                }
-
-                // Continue the loop immediately after the multi-line comment.
-                // There may be whitespace or another comment following this one.
-                continue;
-            } else if text.starts_with("//") {
-                let start = get_offset(text);
-                let is_doc = text.starts_with("///") && !text.starts_with("////");
-                text = text.trim_start_matches(|c: char| c != '\n');
-
-                // If this was a documentation comment, record it in our map.
-                if is_doc {
-                    let end = get_offset(text);
-                    let mut comment = &self.text[(start + 3)..end];
-                    comment = comment.trim_end_matches(|c: char| c == '\r');
-
-                    self.doc_comments
-                        .insert((start as u32, end as u32), comment.to_string());
-                }
-
-                // Continue the loop on the following line, which may contain leading
-                // whitespace or comments of its own.
-                continue;
-            }
-            break;
-        }
-        Ok(text)
+    pub fn current_loc(&self) -> Loc {
+        self.token.token.loc
     }
 
-    // Look ahead to the next token after the current one and return it, and its starting offset,
-    // without advancing the state of the lexer.
-    pub fn lookahead_with_start_loc(&mut self) -> Result<(Tok, usize), Diagnostic> {
-        let text = self.trim_whitespace_and_comments(self.cur_end)?;
-        let next_start = self.text.len() - text.len();
-        let (tok, _) = find_token(self.file_hash, text, next_start)?;
-        Ok((tok, next_start))
+    // take all the cached tokens out
+    pub fn take_tokens(&mut self) -> Vec<Token> {
+        mem::take(&mut self.cached_tokens)
     }
 
-    // Look ahead to the next token after the current one and return it without advancing
-    // the state of the lexer.
-    pub fn lookahead(&mut self) -> Result<Tok, Diagnostic> {
-        Ok(self.lookahead_with_start_loc()?.0)
+    pub fn peek_fadelity(&self) -> &FidelityToken {
+        &self.token
     }
 
-    // Look ahead to the next two tokens after the current one and return them without advancing
-    // the state of the lexer.
-    pub fn lookahead2(&mut self) -> Result<(Tok, Tok), Diagnostic> {
-        let text = self.trim_whitespace_and_comments(self.cur_end)?;
-        let offset = self.text.len() - text.len();
-        let (first, length) = find_token(self.file_hash, text, offset)?;
-        let text2 = self.trim_whitespace_and_comments(offset + length)?;
-        let offset2 = self.text.len() - text2.len();
-        let (second, _) = find_token(self.file_hash, text2, offset2)?;
-        Ok((first, second))
+    pub fn current_token(&self) -> Token {
+        self.token.token
+    }
+    pub fn token_range(&self, start: usize, end: usize) -> TokenRange {
+        TokenRange::new(start, end)
     }
 
-    // Matches the doc comments after the last token (or the beginning of the file) to the position
-    // of the current token. This moves the comments out of `doc_comments` and
-    // into `matched_doc_comments`. At the end of parsing, if `doc_comments` is not empty, errors
-    // for stale doc comments will be produced.
-    //
-    // Calling this function during parsing effectively marks a valid point for documentation
-    // comments. The documentation comments are not stored in the AST, but can be retrieved by
-    // using the start position of an item as an index into `matched_doc_comments`.
-    pub fn match_doc_comments(&mut self) {
-        let start = self.previous_end_loc() as u32;
-        let end = self.cur_start as u32;
-        let mut matched = vec![];
-        let merged = self
-            .doc_comments
-            .range((start, start)..(end, end))
-            .map(|(span, s)| {
-                matched.push(*span);
-                s.clone()
-            })
-            .collect::<Vec<String>>()
-            .join("\n");
-        for span in matched {
-            self.doc_comments.remove(&span);
-        }
-        self.matched_doc_comments.insert(end, merged);
+    pub fn tokens(&self) -> &[Token] {
+        &self.cached_tokens
     }
 
-    // At the end of parsing, checks whether there are any unmatched documentation comments,
-    // producing errors if so. Otherwise returns a map from file position to associated
-    // documentation.
-    pub fn check_and_get_doc_comments(
-        &mut self,
-        env: &mut CompilationEnv,
-    ) -> MatchedFileCommentMap {
-        let msg = "Documentation comment cannot be matched to a language item";
-        let diags = self
-            .doc_comments
-            .iter()
-            .map(|((start, end), _)| {
-                let loc = Loc::new(self.file_hash, *start, *end);
-                diag!(Syntax::InvalidDocComment, (loc, msg))
-            })
-            .collect();
-        env.add_diags(diags);
-        std::mem::take(&mut self.matched_doc_comments)
+    pub fn tokens_loc(&self) -> usize {
+        self.cached_tokens.len()
     }
 
-    pub fn advance(&mut self) -> Result<(), Diagnostic> {
-        self.prev_end = self.cur_end;
-        let text = self.trim_whitespace_and_comments(self.cur_end)?;
-        self.cur_start = self.text.len() - text.len();
-        let (token, len) = find_token(self.file_hash, text, self.cur_start)?;
+    pub fn lookahead(&self) -> Result<Tok, Diagnostic> {
+        self.lookahead_fidelity().map(|t| t.token.kind)
+    }
+
+    pub fn lookahead_fidelity(&self) -> Result<FidelityToken, Diagnostic> {
+        let text = &self.text[self.cur_end..];
+        Ok(find_fidelity_token(self.file_hash, text, self.cur_end)?.0)
+    }
+
+    pub fn lookahead2(&self) -> Result<(Tok, Tok), Diagnostic> {
+        let text = &self.text[self.cur_end..];
+        let (tok1, len) = find_fidelity_token(self.file_hash, text, self.cur_end)?;
+        let text2 = &self.text[self.cur_end + len..];
+        let (tok2, _) = find_fidelity_token(self.file_hash, text2, self.cur_end + len)?;
+        Ok((tok1.token.kind, tok2.token.kind))
+    }
+
+    pub fn advance(&mut self) -> Result<ParsedToken, Diagnostic> {
+        let start_token_index = self.tokens_loc();
+        let pre_token = self.current_token();
+        self.cached_tokens.append(&mut self.token.tokens);
+        self.prev_end = self.token.token.loc.end() as usize;
+        self.cur_start = self.cur_end;
+        let text = &self.text[self.cur_start..];
+        let (token, len) = find_fidelity_token(self.file_hash, text, self.cur_start)?;
         self.cur_end = self.cur_start + len;
         self.token = token;
-        Ok(())
+        let end_token_index = self.tokens_loc();
+        let parsed_token = ParsedToken::new(
+            pre_token,
+            self.token_range(start_token_index, end_token_index),
+        );
+        Ok(parsed_token)
     }
 
-    // Replace the current token. The lexer will always match the longest token,
-    // but sometimes the parser will prefer to replace it with a shorter one,
-    // e.g., ">" instead of ">>".
-    pub fn replace_token(&mut self, token: Tok, len: usize) {
-        self.token = token;
-        self.cur_end = self.cur_start + len
+    // While parsing a list and expecting a ">" token to mark the end, replace
+    // a ">>" token with the expected ">". This handles the situation where there
+    // are nested type parameters that result in two adjacent ">" tokens, e.g.,
+    // "A<B<C>>".
+    pub fn adjust_token(&mut self, end_token: Tok) {
+        if self.peek() == Tok::GreaterGreater && end_token == Tok::Greater {
+            let token = Token::new(
+                Tok::Greater,
+                Symbol::from(">"),
+                Loc::new(
+                    self.file_hash,
+                    self.cur_start as u32,
+                    (self.cur_start + 1) as u32,
+                ),
+            );
+            self.token = FidelityToken::new(
+                token,
+                vec![token],
+                &self.text[self.cur_start..self.cur_start + 1],
+            );
+            self.cur_end = self.cur_start + 1
+        }
     }
 }
 
@@ -547,7 +481,7 @@ pub fn find_token(
         }
         '/' => {
             if text.starts_with("/*") {
-                return find_block_comment(text, file_hash);
+                return find_block_comment(text, start_offset, file_hash);
             } else if text.starts_with("//") {
                 find_comment(text)
             } else {
@@ -576,6 +510,116 @@ pub fn find_token(
     Ok((tok, len))
 }
 
+// Find the fidelity token
+// This function would group comments and spaces based on new line
+// Example:
+//
+// """
+// // comment1
+// Token1 // comment2
+// // comment3
+//
+// // comment4
+// Token2
+// """"
+//
+// lexing with the function find_fidelity_token. It would generate two tokens.
+// The first one would be `FidelityToken{token: Token1, tokens: vec![comment1, LF, Token1, Space, comment2]}`.
+// The second one would be `FidelityToken{token: Token1, tokens: vec![comment3, LF, LF,comment4, Token2]}`
+//
+// The leading comments would not be split if newline exists but the trailing comment would be split .
+pub fn find_fidelity_token(
+    file_hash: FileHash,
+    text: &str,
+    start_offset: usize,
+) -> Result<(FidelityToken, usize), Diagnostic> {
+    let mut cur_text = text;
+    let mut text_len = 0;
+    let mut new_tokens: Vec<Token> = Vec::new();
+    let mut non_comment_token: Option<Token> = None;
+    let mut cur_offset = start_offset;
+    loop {
+        let (tok, length) = find_token(file_hash, cur_text, cur_offset)?;
+        let range = Loc::new(file_hash, cur_offset as u32, (cur_offset + length) as u32);
+
+        match tok {
+            Tok::Comment(kind) => {
+                let content = match kind {
+                    CommentKind::DocComment => Symbol::from(&cur_text[3..length]),
+                    CommentKind::SignleLine => Symbol::from(&cur_text[2..length]),
+                    CommentKind::BlockComment => Symbol::from(&cur_text[2..length - 2]),
+                    CommentKind::DocBlockComment => Symbol::from(&cur_text[3..length - 2]),
+                };
+                let new_token = Token::new(tok, content, range);
+                new_tokens.push(new_token);
+
+                cur_offset += length;
+                text_len += length;
+                cur_text = &cur_text[length..];
+            }
+            Tok::LF => {
+                let content = Symbol::from(&cur_text[..length]);
+                let new_token = Token::new(tok, content, range);
+                new_tokens.push(new_token);
+                cur_offset += length;
+                text_len += length;
+                cur_text = &cur_text[length..];
+
+                if non_comment_token.is_some() {
+                    break;
+                }
+            }
+            Tok::Space | Tok::Tab | Tok::CR => {
+                let content = Symbol::from(&cur_text[..length]);
+                let new_token = Token::new(tok, content, range);
+                new_tokens.push(new_token);
+                cur_offset += length;
+                text_len += length;
+                cur_text = &cur_text[length..];
+            }
+            Tok::EOF => {
+                let content = Symbol::from(&cur_text[..length]);
+                let new_token = Token::new(tok, content, range);
+                if non_comment_token.is_some() {
+                    break;
+                } else {
+                    new_tokens.push(new_token);
+                    non_comment_token = Some(new_token);
+                }
+            }
+            _ => {
+                let content = Symbol::from(&cur_text[..length]);
+                let new_token = Token::new(tok, content, range);
+                if non_comment_token.is_none() {
+                    new_tokens.push(new_token);
+                    non_comment_token = Some(new_token);
+                    cur_offset += length;
+                    text_len += length;
+                    cur_text = &cur_text[length..];
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+    non_comment_token
+        .map(|_| {
+            (
+                FidelityToken::new(non_comment_token.unwrap(), new_tokens, &text[0..text_len]),
+                text_len,
+            )
+        })
+        .ok_or_else(|| {
+            diag!(
+                Bug::TokenizedFailure,
+                (
+                    Loc::new(file_hash, start_offset as u32, cur_offset as u32),
+                    "Could not find valid token."
+                )
+            )
+        })
+}
+
 // find comments like '//...\n' or doc comments '///...\n'
 // the argument text must start with '//'
 fn find_comment(text: &str) -> (Tok, usize) {
@@ -595,7 +639,11 @@ fn find_comment(text: &str) -> (Tok, usize) {
 // start locations of each nested comment as a stack. The
 // boolean indicates whether it's a documentation comment.
 // the argument text_ must start with '/*'
-fn find_block_comment(text_: &str, file_hash: FileHash) -> Result<(Tok, usize), Diagnostic> {
+fn find_block_comment(
+    text_: &str,
+    off_set: usize,
+    file_hash: FileHash,
+) -> Result<(Tok, usize), Diagnostic> {
     let mut text = &text_[0..];
     let len = text.len();
     let get_offset = |substring: &str| len - substring.len();
@@ -609,7 +657,11 @@ fn find_block_comment(text_: &str, file_hash: FileHash) -> Result<(Tok, usize), 
             let loc = *locs.last().unwrap();
             // Highlight the '/**' if it's a documentation comment, or the '/*'
             // otherwise.
-            let location = make_loc(file_hash, loc.0, loc.0 + if loc.1 { 3 } else { 2 });
+            let location = make_loc(
+                file_hash,
+                off_set + loc.0,
+                off_set + loc.0 + if loc.1 { 3 } else { 2 },
+            );
             return Err(diag!(
                 Syntax::InvalidDocComment,
                 (location, "Unclosed block comment"),
@@ -739,28 +791,165 @@ fn get_name_token(name: &str) -> Tok {
     }
 }
 
-// Trim the start whitespace characters, include: space, tab, lf(\n) and crlf(\r\n).
-fn trim_start_whitespace(text: &str) -> &str {
-    let mut pos = 0;
-    let mut iter = text.chars();
-
-    while let Some(chr) = iter.next() {
-        match chr {
-            ' ' | '\t' | '\n' => pos += 1,
-            '\r' if matches!(iter.next(), Some('\n')) => pos += 2,
-            _ => break,
-        };
-    }
-
-    &text[pos..]
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{diag, find_token, trim_start_whitespace, Tok};
+    use super::{diag, find_fidelity_token, find_token, FidelityToken, Lexer, Tok, Token};
     use crate::parser::{comments::CommentKind, syntax::make_loc};
     use move_command_line_common::files::FileHash;
 
+    use move_ir_types::location::Loc;
+    use move_symbol_pool::Symbol;
+
+    #[test]
+    fn test_find_fidelity_token_trailing_comment() {
+        let file_hash = FileHash::empty();
+        let text = "ident /*comment*/ ,";
+        let (token, length) = find_fidelity_token(file_hash, text, 0).unwrap();
+
+        let expected_tokens = vec![
+            Token::new(
+                Tok::Identifier,
+                Symbol::from("ident"),
+                Loc::new(file_hash, 0, 5),
+            ),
+            Token::new(Tok::Space, Symbol::from(" "), Loc::new(file_hash, 5, 6)),
+            Token::new(
+                Tok::Comment(CommentKind::BlockComment),
+                Symbol::from("comment"),
+                Loc::new(file_hash, 6, 17),
+            ),
+            Token::new(Tok::Space, Symbol::from(" "), Loc::new(file_hash, 17, 18)),
+        ];
+
+        let expected = FidelityToken::new(
+            Token::new(
+                Tok::Identifier,
+                Symbol::from("ident"),
+                Loc::new(file_hash, 0, 5),
+            ),
+            expected_tokens,
+            "ident /*comment*/ ",
+        );
+        assert_eq!(token, expected);
+        assert_eq!(length, 18)
+    }
+
+    #[test]
+    fn test_find_fidelity_token_leading_comment() {
+        let file_hash = FileHash::empty();
+        let text = "//comment\n ident ,";
+        let (token, length) = find_fidelity_token(file_hash, text, 0).unwrap();
+
+        let expected_tokens = vec![
+            Token::new(
+                Tok::Comment(CommentKind::SignleLine),
+                Symbol::from("comment"),
+                Loc::new(file_hash, 0, 9),
+            ),
+            Token::new(Tok::LF, Symbol::from("\n"), Loc::new(file_hash, 9, 10)),
+            Token::new(Tok::Space, Symbol::from(" "), Loc::new(file_hash, 10, 11)),
+            Token::new(
+                Tok::Identifier,
+                Symbol::from("ident"),
+                Loc::new(file_hash, 11, 16),
+            ),
+            Token::new(Tok::Space, Symbol::from(" "), Loc::new(file_hash, 16, 17)),
+        ];
+
+        let expected = FidelityToken::new(
+            Token::new(
+                Tok::Identifier,
+                Symbol::from("ident"),
+                Loc::new(file_hash, 11, 16),
+            ),
+            expected_tokens,
+            "//comment\n ident ",
+        );
+        assert_eq!(token, expected);
+        assert_eq!(length, 17)
+    }
+
+    #[test]
+    fn test_find_fidelity_token_eof() {
+        let file_hash = FileHash::empty();
+        let text = "//comment\n ";
+        let (token, length) = find_fidelity_token(file_hash, text, 0).unwrap();
+
+        let expected_tokens = vec![
+            Token::new(
+                Tok::Comment(CommentKind::SignleLine),
+                Symbol::from("comment"),
+                Loc::new(file_hash, 0, 9),
+            ),
+            Token::new(Tok::LF, Symbol::from("\n"), Loc::new(file_hash, 9, 10)),
+            Token::new(Tok::Space, Symbol::from(" "), Loc::new(file_hash, 10, 11)),
+            Token::new(Tok::EOF, Symbol::from(""), Loc::new(file_hash, 11, 11)),
+        ];
+
+        let expected = FidelityToken::new(
+            Token::new(Tok::EOF, Symbol::from(""), Loc::new(file_hash, 11, 11)),
+            expected_tokens,
+            "//comment\n ",
+        );
+        assert_eq!(token, expected);
+        assert_eq!(length, 11)
+    }
+
+    #[test]
+
+    fn test_lexer() {
+        let mut lexer = Lexer::new("hello you are great", FileHash::empty());
+
+        let _ = lexer.advance();
+        assert_eq!(
+            lexer.token,
+            FidelityToken::new(
+                Token::new(
+                    Tok::Identifier,
+                    Symbol::from("hello"),
+                    Loc::new(FileHash::empty(), 0, 5)
+                ),
+                vec![
+                    Token::new(
+                        Tok::Identifier,
+                        Symbol::from("hello"),
+                        Loc::new(FileHash::empty(), 0, 5)
+                    ),
+                    Token::new(
+                        Tok::Space,
+                        Symbol::from(" "),
+                        Loc::new(FileHash::empty(), 5, 6)
+                    ),
+                ],
+                "hello "
+            )
+        );
+
+        let _ = lexer.advance();
+        assert_eq!(
+            lexer.token,
+            FidelityToken::new(
+                Token::new(
+                    Tok::Identifier,
+                    Symbol::from("you"),
+                    Loc::new(FileHash::empty(), 6, 9)
+                ),
+                vec![
+                    Token::new(
+                        Tok::Identifier,
+                        Symbol::from("you"),
+                        Loc::new(FileHash::empty(), 6, 9)
+                    ),
+                    Token::new(
+                        Tok::Space,
+                        Symbol::from(" "),
+                        Loc::new(FileHash::empty(), 9, 10)
+                    ),
+                ],
+                "you "
+            )
+        )
+    }
     #[test]
     fn test_find_comment() {
         assert_eq!(
@@ -794,47 +983,15 @@ mod tests {
                 Syntax::InvalidDocComment,
                 (location, "Unclosed block comment"),
             ))
+        );
+
+        let location2 = make_loc(FileHash::empty(), 0, 3);
+        assert_eq!(
+            find_token(FileHash::empty(), "/** unclosed comments", 0),
+            Err(diag!(
+                Syntax::InvalidDocComment,
+                (location2, "Unclosed block comment"),
+            ))
         )
-    }
-
-    #[test]
-    fn test_trim_start_whitespace() {
-        assert_eq!(trim_start_whitespace("\r"), "\r");
-        assert_eq!(trim_start_whitespace("\rxxx"), "\rxxx");
-        assert_eq!(trim_start_whitespace("\t\rxxx"), "\rxxx");
-        assert_eq!(trim_start_whitespace("\r\n\rxxx"), "\rxxx");
-
-        assert_eq!(trim_start_whitespace("\n"), "");
-        assert_eq!(trim_start_whitespace("\r\n"), "");
-        assert_eq!(trim_start_whitespace("\t"), "");
-        assert_eq!(trim_start_whitespace(" "), "");
-
-        assert_eq!(trim_start_whitespace("\nxxx"), "xxx");
-        assert_eq!(trim_start_whitespace("\r\nxxx"), "xxx");
-        assert_eq!(trim_start_whitespace("\txxx"), "xxx");
-        assert_eq!(trim_start_whitespace(" xxx"), "xxx");
-
-        assert_eq!(trim_start_whitespace(" \r\n"), "");
-        assert_eq!(trim_start_whitespace("\t\r\n"), "");
-        assert_eq!(trim_start_whitespace("\n\r\n"), "");
-        assert_eq!(trim_start_whitespace("\r\n "), "");
-        assert_eq!(trim_start_whitespace("\r\n\t"), "");
-        assert_eq!(trim_start_whitespace("\r\n\n"), "");
-
-        assert_eq!(trim_start_whitespace(" \r\nxxx"), "xxx");
-        assert_eq!(trim_start_whitespace("\t\r\nxxx"), "xxx");
-        assert_eq!(trim_start_whitespace("\n\r\nxxx"), "xxx");
-        assert_eq!(trim_start_whitespace("\r\n xxx"), "xxx");
-        assert_eq!(trim_start_whitespace("\r\n\txxx"), "xxx");
-        assert_eq!(trim_start_whitespace("\r\n\nxxx"), "xxx");
-
-        assert_eq!(trim_start_whitespace(" \r\n\r\n"), "");
-        assert_eq!(trim_start_whitespace("\r\n \t\n"), "");
-
-        assert_eq!(trim_start_whitespace(" \r\n\r\nxxx"), "xxx");
-        assert_eq!(trim_start_whitespace("\r\n \t\nxxx"), "xxx");
-
-        assert_eq!(trim_start_whitespace(" \r\n\r\nxxx\n"), "xxx\n");
-        assert_eq!(trim_start_whitespace("\r\n \t\nxxx\r\n"), "xxx\r\n");
     }
 }

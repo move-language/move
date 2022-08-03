@@ -10,7 +10,7 @@
 /// Capabilities are unforgeable tokens which represent the right to perform a particular
 /// operation on the vault. To acquire a capability instance, authentication via a signer is needed.
 /// This signer must either be the owner of the vault, or someone the capability has been delegated to.
-////
+///
 /// Once acquired, a capability can be passed to other functions to perform the operation it enables.
 /// Specifically, those called functions do not need to have access to the original signer. This is a key
 /// property of capability based security as it prevents granting more rights to code than needed.
@@ -103,7 +103,7 @@ module std::vault {
 
     /// A capability to read the content of the vault. Notice that the capability cannot be
     /// stored but can be freely copied and dropped.
-    //
+    ///
     /// TODO: remove `drop` on `Content` here and elsewhere once we have phantom type parameters.
     struct ReadCap<phantom Content: store + drop> has copy, drop {
         vault_address: address,

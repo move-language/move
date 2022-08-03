@@ -114,6 +114,7 @@ codes!(
         SpecContextRestricted:
             { msg: "syntax item restricted to spec contexts", severity: BlockingError },
         InvalidSpecBlockMember: { msg: "invalid spec block member", severity: NonblockingError },
+        InvalidNameAccessChain: {msg: "invalid name access chain", severity: NonblockingError},
     ],
     // errors for any rules around declaration items
     Declarations: [
@@ -136,6 +137,10 @@ codes!(
         InvalidNonPhantomUse:
             { msg: "invalid non-phantom type parameter usage", severity: Warning },
         InvalidAttribute: { msg: "invalid attribute", severity: NonblockingError },
+        InvalidExpression: {msg: "invalid expresstion declaration", severity: NonblockingError},
+        InvalidSpecStatement: { msg: "invalid spec statement declaration", severity: NonblockingError },
+        InvalidLet: {msg:"invalid let expresstion", severity: NonblockingError } ,
+        InvalidUse:{ msg: "invalid 'use' declaration", severity: NonblockingError },
     ],
     // errors name resolution, mostly expansion/translate and naming/translate
     NameResolution: [
@@ -233,6 +238,7 @@ codes!(
     Bug: [
         BytecodeGeneration: { msg: "BYTECODE GENERATION FAILED", severity: Bug },
         BytecodeVerification: { msg: "BYTECODE VERIFICATION FAILED", severity: Bug },
+        TokenizedFailure: { msg: "TOKENIZE CHARACTOR FAILED", severity: Bug },
     ],
     Derivation: [
         DeriveFailed: { msg: "attribute derivation failed", severity: BlockingError }

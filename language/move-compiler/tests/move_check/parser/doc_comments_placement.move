@@ -1,5 +1,5 @@
 /// This is documentation for module M.
-
+///
 /// Documentation comments can have multiple blocks.
 /** They may use different limiters. */
 module 0x42::M {

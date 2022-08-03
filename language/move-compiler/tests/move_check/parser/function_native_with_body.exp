@@ -1,9 +1,9 @@
-error[E01002]: unexpected token
-  ┌─ tests/move_check/parser/function_native_with_body.move:3:21
+error[E02007]: invalid 'fun' declaration
+  ┌─ tests/move_check/parser/function_native_with_body.move:3:5
   │
 3 │     native fun fn() {}
-  │                     ^
-  │                     │
-  │                     Unexpected '{'
-  │                     Expected ';'
+  │     ^^^^^^^^^^^^^^^^^^
+  │     │               │
+  │     │               Remove '{..}' here.
+  │     Function body '{..}' is not expected in  native function
 

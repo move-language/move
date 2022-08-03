@@ -403,16 +403,16 @@ module ExperimentalFramework::Vote {
         count
     }
 
-    ///****************************************************************
-    /// Specs
-    ///****************************************************************
+    //****************************************************************
+    // Specs
+    //****************************************************************
 
     /// I (DD) was experimenting with some new ideas about top-down specification.
     /// This is a partial specification, but it does have some interesting properties
     /// and is good for testing the Prover.
-
+    ///
     /// A "Ballot" keeps track of an election for a "Proposal" type at a particular address.
-
+    ///
     /// To conduct an election at a particular address, there must be a BallotCounter
     /// published at that address.  This keeps track of a counter that is used to generate
     /// unique BallotIDs.
@@ -498,7 +498,7 @@ module ExperimentalFramework::Vote {
     /// State expired -- The `BallotID` is in a `Ballots<Proposal>.ballots` vector for some Proposal and
     ///    address but is expired.  It will be removed from the ballots vector and change to the dead state
     ///    if and when it is garbage-collected.
-
+    ///
     /// A BallotID is in the expired state if it is in the ballots vector and the
     /// current time is >= the expiration time.
     spec fun is_expired<Proposal>(ballot_address: address, ballot_id: BallotID): bool {

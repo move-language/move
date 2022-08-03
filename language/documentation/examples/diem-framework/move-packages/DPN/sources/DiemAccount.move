@@ -1552,7 +1552,7 @@ module DiemFramework::DiemAccount {
         move_to(account, Balance<Token>{ coin: Diem::zero<Token>() })
     }
     spec add_currency {
-        /// An account must exist at the address
+        // An account must exist at the address
         let addr = signer::address_of(account);
         aborts_if !exists_at(addr) with errors::NOT_PUBLISHED;
         include AddCurrencyAbortsIf<Token>;
@@ -2335,7 +2335,7 @@ module DiemFramework::DiemAccount {
     spec module {} // switch documentation context back to module level
 
     /// # Access Control
-
+    ///
     /// ## Key Rotation Capability
     spec module {
         /// the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [[H18]][PERMISSION].
@@ -2538,7 +2538,7 @@ module DiemFramework::DiemAccount {
     }
 
     /// # Helper Functions and Schemas
-
+    ///
     /// ## Capabilities
 
     spec module {

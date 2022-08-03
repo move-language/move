@@ -90,7 +90,7 @@ module DiemFramework::ParallelExecutionConfig {
     spec module { } // Switch documentation context to module level.
 
     /// # Access Control
-
+    ///
     /// The permission "UpdateParallelExecutionConfig" is granted to DiemRoot [[H11]][PERMISSION].
     spec module {
         invariant [suspendable] forall addr: address

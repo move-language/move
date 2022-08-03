@@ -29,12 +29,13 @@ use move_binary_format::{
 };
 use move_compiler::{
     self,
+    command_line::compiler::PASS_TRANSLATE,
     compiled_unit::{self, AnnotatedCompiledScript, AnnotatedCompiledUnit},
     diagnostics::Diagnostics,
     expansion::ast::{self as E, Address, ModuleDefinition, ModuleIdent, ModuleIdent_},
     parser::ast::{self as P, ModuleName as ParserModuleName},
     shared::{parse_named_address, unique_map::UniqueMap, NumericalAddress, PackagePaths},
-    Compiler, Flags, PASS_COMPILATION, PASS_EXPANSION, PASS_PARSER,
+    Compiler, Flags, PASS_COMPILATION, PASS_EXPANSION,
 };
 use move_core_types::{account_address::AccountAddress, identifier::Identifier};
 use move_ir_types::location::sp;
@@ -114,7 +115,7 @@ pub fn run_model_builder_with_options_and_compilation_flags<
     // Step 1: parse the program to get comments and a separation of targets and dependencies.
     let (files, comments_and_compiler_res) = Compiler::from_package_paths(move_sources, deps)
         .set_flags(flags)
-        .run::<PASS_PARSER>()?;
+        .run::<PASS_TRANSLATE>()?;
     let (comment_map, compiler) = match comments_and_compiler_res {
         Err(diags) => {
             // Add source files so that the env knows how to translate locations of parse errors
@@ -200,7 +201,8 @@ pub fn run_model_builder_with_options_and_compilation_flags<
             lib_definitions: vec![],
         }
     };
-    let (compiler, expansion_ast) = match compiler.at_parser(parsed_prog).run::<PASS_EXPANSION>() {
+    let (compiler, expansion_ast) = match compiler.at_translate(parsed_prog).run::<PASS_EXPANSION>()
+    {
         Err(diags) => {
             add_move_lang_diagnostics(&mut env, diags);
             return Ok(env);

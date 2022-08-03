@@ -1,3 +1,22 @@
+error[E06001]: unused value without 'drop'
+   ┌─ tests/move_check/typing/bind_pop_resource.move:4:14
+   │  
+ 2 │       struct R {}
+   │              - To satisfy the constraint, the 'drop' ability would need to be added here
+ 3 │   
+ 4 │       fun t0() {
+   │ ╭──────────────^
+ 5 │ │         let _: R = R{};
+ 6 │ │         // the following is an invalid binding too but its error message will
+ 7 │ │         // not show because the compilation fails early at the typing phase
+ 8 │ │         let _r: R = R{};
+   │ │             --  - The type '0x8675309::M::R' does not have the ability 'drop'
+   │ │             │    
+   │ │             The local variable '_r' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
+ 9 │ │         let (_, _):(R, R) = (R{}, R{});
+10 │ │     }
+   │ ╰─────^ Invalid return
+
 error[E05001]: ability constraint not satisfied
   ┌─ tests/move_check/typing/bind_pop_resource.move:5:13
   │
@@ -30,17 +49,4 @@ error[E05001]: ability constraint not satisfied
   │                 ^      - The type '0x8675309::M::R' does not have the ability 'drop'
   │                 │       
   │                 Cannot ignore values without the 'drop' ability. The value must be used
-
-error[E06001]: unused value without 'drop'
-  ┌─ tests/move_check/typing/bind_pop_resource.move:9:39
-  │
-2 │     struct R {}
-  │            - To satisfy the constraint, the 'drop' ability would need to be added here
-  ·
-8 │         let _r: R = R{};
-  │             --  - The type '0x8675309::M::R' does not have the ability 'drop'
-  │             │    
-  │             The local variable '_r' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
-9 │         let (_, _):(R, R) = (R{}, R{});
-  │                                       ^ Invalid return
 

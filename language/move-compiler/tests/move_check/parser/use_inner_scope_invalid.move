@@ -7,3 +7,4 @@ module M {
         foo(x)
     }
 }
+}

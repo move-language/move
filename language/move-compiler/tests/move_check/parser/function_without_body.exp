@@ -1,9 +1,6 @@
-error[E01002]: unexpected token
-  ┌─ tests/move_check/parser/function_without_body.move:3:13
+error[E02007]: invalid 'fun' declaration
+  ┌─ tests/move_check/parser/function_without_body.move:3:5
   │
 3 │     fun fn();
-  │             ^
-  │             │
-  │             Unexpected ';'
-  │             Expected '{'
+  │     ^^^^^^^^^ Expected body '{..}' for function.
 

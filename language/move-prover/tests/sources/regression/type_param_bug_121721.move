@@ -134,7 +134,7 @@ module 0x2::Bug7 {
     ///****************************************************************
     /// Specs
     ///****************************************************************
-
+    ///
     /// Get the ballots vector from published Ballots<Proposal>
     /// CAUTION: Returns an arbitrary value if no Ballots<Proposal> is publised at ballot_address.
     spec fun get_ballots<Proposal>(ballot_address: address): vector<Ballot> {

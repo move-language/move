@@ -1,6 +1,13 @@
-error[E01002]: unexpected token
-  ┌─ tests/move_check/parser/extra_text_after_main.move:6:1
-  │
-6 │ fun foo() {
-  │ ^^^ Unexpected characters after end of 'script' function
+error[E02005]: invalid 'script' declaration
+  ┌─ tests/move_check/parser/extra_text_after_main.move:2:1
+  │    
+2 │ ╭   script {
+3 │ │   fun main() {
+4 │ │   }
+5 │ │   
+6 │ │ ╭ fun foo() {
+7 │ │ │ }
+  │ │ ╰─' Found the second function in 'Script'
+8 │ │   }
+  │ ╰───^ Expected only one function in 'Script'
 

@@ -8,8 +8,8 @@ use crate::{
     compiled_unit,
     compiled_unit::AnnotatedCompiledUnit,
     diagnostics::{codes::Severity, *},
-    expansion, hlir, interface_generator, naming, parser,
-    parser::{comments::*, *},
+    expansion, hlir, interface_generator, naming,
+    parser::{self, comments::*, syntax::parse_program},
     shared::{
         CompilationEnv, Flags, IndexedPackagePath, NamedAddressMap, NamedAddressMaps,
         NumericalAddress, PackagePaths,
@@ -53,16 +53,18 @@ pub struct SteppedCompiler<'a, const P: Pass> {
 pub type Pass = u8;
 pub const EMPTY_COMPILER: Pass = 0;
 pub const PASS_PARSER: Pass = 1;
-pub const PASS_EXPANSION: Pass = 2;
-pub const PASS_NAMING: Pass = 3;
-pub const PASS_TYPING: Pass = 4;
-pub const PASS_HLIR: Pass = 5;
-pub const PASS_CFGIR: Pass = 6;
-pub const PASS_COMPILATION: Pass = 7;
+pub const PASS_TRANSLATE: Pass = 2;
+pub const PASS_EXPANSION: Pass = 3;
+pub const PASS_NAMING: Pass = 4;
+pub const PASS_TYPING: Pass = 5;
+pub const PASS_HLIR: Pass = 6;
+pub const PASS_CFGIR: Pass = 7;
+pub const PASS_COMPILATION: Pass = 8;
 
 #[derive(Debug)]
 enum PassResult {
-    Parser(parser::ast::Program),
+    Parser(parser::cst::Program),
+    Translate(parser::ast::Program),
     Expansion(expansion::ast::Program),
     Naming(naming::ast::Program),
     Typing(typing::ast::Program),
@@ -75,7 +77,8 @@ enum PassResult {
 pub struct FullyCompiledProgram {
     // TODO don't store this...
     pub files: FilesSourceText,
-    pub parser: parser::ast::Program,
+    pub parser: parser::cst::Program,
+    pub ast: parser::ast::Program,
     pub expansion: expansion::ast::Program,
     pub naming: naming::ast::Program,
     pub typing: typing::ast::Program,
@@ -214,9 +217,11 @@ impl<'a> Compiler<'a> {
             &compiled_module_named_address_mapping,
         )?;
         let mut compilation_env = CompilationEnv::new(flags);
-        let (source_text, pprog_and_comments_res) =
-            parse_program(&mut compilation_env, maps, targets, deps)?;
-        let res: Result<_, Diagnostics> = pprog_and_comments_res.and_then(|(pprog, comments)| {
+        let (source_text, pprog_res) = parse_program(&mut compilation_env, targets, deps, maps)?;
+        let mut comments = CommentMap::new();
+
+        let res: Result<_, Diagnostics> = pprog_res.and_then(|pprog| {
+            find_comments(&pprog, &mut compilation_env, &mut comments)?;
             SteppedCompiler::new_at_parser(compilation_env, pre_compiled_lib, pprog)
                 .run::<TARGET>()
                 .map(|compiler| (comments, compiler))
@@ -295,10 +300,10 @@ impl<'a, const P: Pass> SteppedCompiler<'a, P> {
 }
 
 macro_rules! ast_stepped_compilers {
-    ($(($pass:ident, $mod:ident, $result:ident, $at_ast:ident, $new:ident)),*) => {
+    ($(($pass:ident, $program:ty, $result:ident, $at_ast:ident, $new:ident)),*) => {
         impl<'a> SteppedCompiler<'a, EMPTY_COMPILER> {
             $(
-                pub fn $at_ast(self, ast: $mod::ast::Program) -> SteppedCompiler<'a, {$pass}> {
+                pub fn $at_ast(self, ast: $program) -> SteppedCompiler<'a, {$pass}> {
                     let Self {
                         compilation_env,
                         pre_compiled_lib,
@@ -308,7 +313,7 @@ macro_rules! ast_stepped_compilers {
                     SteppedCompiler::$new(
                         compilation_env,
                         pre_compiled_lib,
-                        ast
+                        ast,
                     )
                 }
             )*
@@ -319,7 +324,7 @@ macro_rules! ast_stepped_compilers {
                 fn $new(
                     compilation_env: CompilationEnv,
                     pre_compiled_lib: Option<&'a FullyCompiledProgram>,
-                    ast: $mod::ast::Program,
+                    ast: $program,
                 ) -> Self {
                     Self {
                         compilation_env,
@@ -334,7 +339,7 @@ macro_rules! ast_stepped_compilers {
                     self.run_impl()
                 }
 
-                pub fn into_ast(self) -> (SteppedCompiler<'a, EMPTY_COMPILER>, $mod::ast::Program) {
+                pub fn into_ast(self) -> (SteppedCompiler<'a, EMPTY_COMPILER>, $program) {
                     let Self {
                         compilation_env,
                         pre_compiled_lib,
@@ -384,18 +389,49 @@ macro_rules! ast_stepped_compilers {
 }
 
 ast_stepped_compilers!(
-    (PASS_PARSER, parser, Parser, at_parser, new_at_parser),
+    (
+        PASS_PARSER,
+        parser::cst::Program,
+        Parser,
+        at_parser,
+        new_at_parser
+    ),
+    (
+        PASS_TRANSLATE,
+        parser::ast::Program,
+        Translate,
+        at_translate,
+        new_at_translate
+    ),
     (
         PASS_EXPANSION,
-        expansion,
+        expansion::ast::Program,
         Expansion,
         at_expansion,
         new_at_expansion
     ),
-    (PASS_NAMING, naming, Naming, at_naming, new_at_naming),
-    (PASS_TYPING, typing, Typing, at_typing, new_at_typing),
-    (PASS_HLIR, hlir, HLIR, at_hlir, new_at_hlir),
-    (PASS_CFGIR, cfgir, CFGIR, at_cfgir, new_at_cfgir)
+    (
+        PASS_NAMING,
+        naming::ast::Program,
+        Naming,
+        at_naming,
+        new_at_naming
+    ),
+    (
+        PASS_TYPING,
+        typing::ast::Program,
+        Typing,
+        at_typing,
+        new_at_typing
+    ),
+    (PASS_HLIR, hlir::ast::Program, HLIR, at_hlir, new_at_hlir),
+    (
+        PASS_CFGIR,
+        cfgir::ast::Program,
+        CFGIR,
+        at_cfgir,
+        new_at_cfgir
+    )
 );
 
 impl<'a> SteppedCompiler<'a, PASS_COMPILATION> {
@@ -434,6 +470,7 @@ pub fn construct_pre_compiled_lib<Paths: Into<Symbol>, NamedAddress: Into<Symbol
     let mut compilation_env = empty_compiler.compilation_env;
     let start = PassResult::Parser(ast);
     let mut parser = None;
+    let mut translate = None;
     let mut expansion = None;
     let mut naming = None;
     let mut typing = None;
@@ -445,6 +482,10 @@ pub fn construct_pre_compiled_lib<Paths: Into<Symbol>, NamedAddress: Into<Symbol
         PassResult::Parser(prog) => {
             assert!(parser.is_none());
             parser = Some(prog.clone())
+        }
+        PassResult::Translate(prog) => {
+            assert!(translate.is_none());
+            translate = Some(prog.clone())
         }
         PassResult::Expansion(eprog) => {
             assert!(expansion.is_none());
@@ -482,6 +523,7 @@ pub fn construct_pre_compiled_lib<Paths: Into<Symbol>, NamedAddress: Into<Symbol
         Ok(_) => Ok(Ok(FullyCompiledProgram {
             files,
             parser: parser.unwrap(),
+            ast: translate.unwrap(),
             expansion: expansion.unwrap(),
             naming: naming.unwrap(),
             typing: typing.unwrap(),
@@ -723,6 +765,7 @@ impl PassResult {
     pub fn equivalent_pass(&self) -> Pass {
         match self {
             PassResult::Parser(_) => PASS_PARSER,
+            PassResult::Translate(_) => PASS_TRANSLATE,
             PassResult::Expansion(_) => PASS_EXPANSION,
             PassResult::Naming(_) => PASS_NAMING,
             PassResult::Typing(_) => PASS_TYPING,
@@ -751,6 +794,17 @@ fn run(
 
     match cur {
         PassResult::Parser(prog) => {
+            let prog = parser::translate::translate_program(compilation_env, &prog);
+            compilation_env.check_diags_at_or_above_severity(Severity::BlockingError)?;
+            run(
+                compilation_env,
+                pre_compiled_lib,
+                PassResult::Translate(prog),
+                until,
+                result_check,
+            )
+        }
+        PassResult::Translate(prog) => {
             let prog = parser::merge_spec_modules::program(compilation_env, prog);
             let prog = unit_test::filter_test_members::program(compilation_env, prog);
             let prog = verification::ast_filter::program(compilation_env, prog);

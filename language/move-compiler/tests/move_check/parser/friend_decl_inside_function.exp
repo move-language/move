@@ -1,9 +1,6 @@
-error[E01002]: unexpected token
+error[E02011]: invalid 'friend' declaration
   ┌─ tests/move_check/parser/friend_decl_inside_function.move:6:9
   │
 6 │         friend 0x42::A;
-  │         ^^^^^^
-  │         │
-  │         Unexpected 'friend'
-  │         Expected an expression term
+  │         ^^^^^^^^^^^^^^^ 'friend' is not allowed in expression sequence
 

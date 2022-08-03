@@ -118,10 +118,10 @@ pub fn program(
             assert!(pre_compiled.parser.lib_definitions.is_empty());
             all_module_members(
                 compilation_env,
-                &pre_compiled.parser.named_address_maps,
+                &pre_compiled.ast.named_address_maps,
                 &mut members,
                 false,
-                &pre_compiled.parser.source_definitions,
+                &pre_compiled.ast.source_definitions,
             );
         }
         members

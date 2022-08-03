@@ -153,7 +153,7 @@ module DiemFramework::ValidatorConfig {
     }
 
     spec remove_operator {
-        /// Must abort if the signer does not have the Validator role [[H16]][PERMISSION].
+        // Must abort if the signer does not have the Validator role [[H16]][PERMISSION].
         let sender = signer::address_of(validator_account);
         include Roles::AbortsIfNotValidator{account: validator_account};
         include AbortsIfNoValidatorConfig{addr: sender};
@@ -315,7 +315,7 @@ module DiemFramework::ValidatorConfig {
     }
 
     /// # Access Control
-
+    ///
     /// The permission "{Set,Remove}ValidatorOperator(addr)" is granted to Validator [[H16]][PERMISSION]
     spec module {
         invariant update forall a: address where old(exists<ValidatorConfig>(a)) && exists<ValidatorConfig>(a):
@@ -324,7 +324,7 @@ module DiemFramework::ValidatorConfig {
     }
 
     /// # Validity of Validators
-
+    ///
     /// See comment on `ValidatorConfig::set_config` -- DiemSystem depends on this.
     spec module {
         /// A validator stays valid once it becomes valid.
@@ -354,7 +354,7 @@ module DiemFramework::ValidatorConfig {
     }
 
     /// # Helper Function
-
+    ///
     /// Returns true if addr has an operator account.
     spec fun spec_has_operator(addr: address): bool {
         option::is_some(global<ValidatorConfig>(addr).operator_account)

@@ -86,7 +86,7 @@ module DiemFramework::XUS {
     }
 
     /// # Access Control
-
+    ///
     /// ## Minting
 
     spec module {

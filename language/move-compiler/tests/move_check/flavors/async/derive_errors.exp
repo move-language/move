@@ -69,12 +69,6 @@ error[E13001]: attribute derivation failed
 22 │     #[message] fun f7(_x: &A, _a1: u64, _a2: u64, _a3: u64, _a4: u64, _a5: u64, _a6: u64,
    │       ^^^^^^^ too many arguments for message handler (current max is 8)
 
-error[E03003]: unbound module member
-   ┌─ tests/move_check/flavors/async/derive_errors.move:22:7
-   │
-22 │     #[message] fun f7(_x: &A, _a1: u64, _a2: u64, _a3: u64, _a4: u64, _a5: u64, _a6: u64,
-   │       ^^^^^^^ Invalid module access. Unbound function 'send__9' in module '(Async=0x20)::Runtime'
-
 error[E13001]: attribute derivation failed
    ┌─ tests/move_check/flavors/async/derive_errors.move:24:32
    │

@@ -71,7 +71,7 @@ module DiemFramework::DiemVersion {
     }
 
     /// # Access Control
-
+    ///
     /// The permission "UpdateDiemProtocolVersion" is granted to DiemRoot [[H10]][PERMISSION].
     spec module {
         invariant [suspendable] forall addr: address

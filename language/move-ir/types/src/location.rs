@@ -43,6 +43,18 @@ impl Loc {
         }
     }
 
+    pub fn between(first: &Loc, second: &Loc) -> Loc {
+        Loc::new(first.file_hash(), first.start(), second.end())
+    }
+
+    pub fn loc_end(loc: &Loc) -> Loc {
+        Loc::new(loc.file_hash(), loc.end(), loc.end())
+    }
+
+    pub fn loc_start(loc: &Loc) -> Loc {
+        Loc::new(loc.file_hash(), loc.start(), loc.start())
+    }
+
     pub fn file_hash(self) -> FileHash {
         self.file_hash
     }
@@ -105,6 +117,10 @@ impl<T> Spanned<T> {
             value,
             loc: Loc::new(FileHash::empty(), 0, 0),
         }
+    }
+
+    pub fn loc(&self) -> Loc {
+        self.loc
     }
 }
 

@@ -1793,9 +1793,9 @@ module DiemFramework::Diem {
             where exists<Preburn<CoinType>>(addr):
             spec_is_currency<CoinType>();
 
-        /// A `PreburnQueue` resource can only be published holding a currency type.
-        /// >TODO: This assertion is causing a violation for unknown reasons, probably
-        /// a prover bug.
+        // A `PreburnQueue` resource can only be published holding a currency type.
+        // >TODO: This assertion is causing a violation for unknown reasons, probably
+        // a prover bug.
         // invariant<CoinType> forall addr: address
         //     where exists<PreburnQueue<CoinType>>(addr):
         //     spec_is_currency<CoinType>();

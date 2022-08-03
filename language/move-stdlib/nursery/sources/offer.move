@@ -94,7 +94,7 @@ module std::offer {
 
   spec module {} // switch documentation context back to module level
 
-  /// # Access Control
+  // # Access Control
 
   /// ## Creation of Offers
 

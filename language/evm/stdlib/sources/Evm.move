@@ -1,5 +1,5 @@
 /// Module which provides access to EVM functionality, including information about the executing transaction.
-////
+///
 /// This currently only represents a basic subset of what we may want to expose.
 module Evm::Evm {
     use std::vector;

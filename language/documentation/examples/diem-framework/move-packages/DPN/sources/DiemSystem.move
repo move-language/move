@@ -588,7 +588,7 @@ module DiemFramework::DiemSystem {
     }
 
     /// # Access Control
-
+    ///
     /// Access control requirements for validator set are a bit more complicated than
     /// many parts of the framework because of `update_config_and_reconfigure`.
     /// That function updates the validator info (e.g., the network address) for a
@@ -642,7 +642,7 @@ module DiemFramework::DiemSystem {
     }
 
     /// # Helper Functions
-
+    ///
     /// Fetches the currently published validator set from the published DiemConfig<DiemSystem>
     /// resource.
     spec fun spec_get_validators(): vector<ValidatorInfo> {

@@ -76,7 +76,7 @@ impl MoveVM {
     /// outdated. This can happen if the adapter executed a particular code publishing transaction
     /// but decided to not commit the result to the data store. Because the code cache currently
     /// does not support deletion, the cache will, incorrectly, still contain this module.
-    pub fn invalidate_loader_cache(&self) {
-        self.runtime.invalidate_loader_cache()
+    pub fn mark_loader_cache_as_invalid(&self) {
+        self.runtime.mark_loader_cache_as_invalid()
     }
 }

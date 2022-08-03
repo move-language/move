@@ -442,7 +442,7 @@ pub(crate) struct Loader {
     type_cache: RwLock<TypeCache>,
     natives: NativeFunctions,
 
-    // A boolean indicating that this cache has become invalid and needs to be flushed
+    // A boolean indicating that this cache has become outdated and needs to be flushed
     // for the next session. This is to work around multiple bugs in the loader architecture:
     //
     // - After module upgrade, the new module version isn't yet in the cache, which causes
@@ -477,7 +477,7 @@ impl Loader {
     }
 
     /// Mark this cache as invalidated.
-    pub(crate) fn invalidate(&self) {
+    pub(crate) fn mark_as_invalid(&self) {
         *self.invalidated.write() = true;
     }
 

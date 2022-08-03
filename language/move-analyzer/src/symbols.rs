@@ -2373,7 +2373,6 @@ fn docstring_test() {
 
     let mod_symbols = symbols.file_use_defs.get(&cpath).unwrap();
 
-    // println!("{:#?}", mod_symbols);
     // struct def name
     assert_use_def_with_doc_string(
         mod_symbols,

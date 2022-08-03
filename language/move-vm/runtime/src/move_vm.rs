@@ -79,4 +79,11 @@ impl MoveVM {
     pub fn mark_loader_cache_as_invalid(&self) {
         self.runtime.mark_loader_cache_as_invalid()
     }
+
+    /// If the loader cache has been invalidated (either by the above call or by internal logic)
+    /// flush it so it is valid again. Notice that should only be called if there are no
+    /// outstanding sessions created from this VM.
+    pub fn flush_loader_cache_if_invalidated(&self) {
+        self.runtime.flush_loader_cache_if_invalidated()
+    }
 }

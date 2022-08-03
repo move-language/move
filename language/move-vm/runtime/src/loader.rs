@@ -441,6 +441,17 @@ pub(crate) struct Loader {
     module_cache: RwLock<ModuleCache>,
     type_cache: RwLock<TypeCache>,
     natives: NativeFunctions,
+
+    // A boolean indicating that this cache has become invalid and needs to be flushed
+    // for the next session. This is to work around multiple bugs in the loader architecture:
+    //
+    // - After module upgrade, the new module version isn't yet in the cache, which causes
+    //   inconsistencies if this module is accessed subsequently. The logic for upgrading
+    //   inside of this module will set this flag.
+    // - An external call on the VM may set this flag as well. For example, if module
+    //   publishing succeeds but the transaction is not committed to global storage, the
+    ///  module is still in the cache if it shouldn't.
+    invalidated: RwLock<bool>,
 }
 
 impl Loader {
@@ -450,7 +461,24 @@ impl Loader {
             module_cache: RwLock::new(ModuleCache::new()),
             type_cache: RwLock::new(TypeCache::new()),
             natives,
+            invalidated: RwLock::new(false),
         }
+    }
+
+    /// Flush this cache if it is marked as invalidated.
+    pub(crate) fn flush_if_invalidated(&self) {
+        let mut invalidated = self.invalidated.write();
+        if *invalidated {
+            *self.scripts.write() = ScriptCache::new();
+            *self.module_cache.write() = ModuleCache::new();
+            *self.type_cache.write() = TypeCache::new();
+            *invalidated = false;
+        }
+    }
+
+    /// Mark this cache as invalidated.
+    pub(crate) fn invalidate(&self) {
+        *self.invalidated.write() = true;
     }
 
     //

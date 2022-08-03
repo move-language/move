@@ -71,4 +71,12 @@ impl MoveVM {
             )
             .map(|arc_module| arc_module.arc_module())
     }
+
+    /// Allows the adapter to announce to the VM that the code loading cache should be considered
+    /// outdated. This can happen if the adapter executed a particular code publishing transaction
+    /// but decided to not commit the result to the data store. Because the code cache currently
+    /// does not support deletion, the cache will, incorrectly, still contain this module.
+    pub fn invalidate_loader_cache(&self) {
+        self.runtime.invalidate_loader_cache()
+    }
 }

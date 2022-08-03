@@ -132,8 +132,8 @@ pub struct BuildConfig {
     pub fetch_deps_only: bool,
 
     /// Skip the call to Movey API to increase download count
-    #[clap(long = "skip-movey-call", global = true)]
-    pub skip_movey_call: bool,
+    #[clap(long = "skip-movey", global = true)]
+    pub skip_movey: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd)]

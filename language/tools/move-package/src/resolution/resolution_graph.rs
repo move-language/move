@@ -392,11 +392,16 @@ impl ResolvingGraph {
         dep: Dependency,
         root_path: PathBuf,
     ) -> Result<(Renaming, ResolvingTable)> {
-        Self::download_and_update_if_repo(
-            dep_name_in_pkg,
-            &dep,
-            self.build_options.skip_movey_call,
-        )?;
+        if let Some(git_info) = &dep.git_info {
+            if !git_info.download_to.exists() {
+                Self::increase_movey_download_count(
+                    movey_constants::MOVEY_URL.to_string(),
+                    git_info,
+                    self.build_options.skip_movey,
+                );
+            }
+        }
+        Self::download_and_update_if_repo(dep_name_in_pkg, &dep)?;
         let (dep_package, dep_package_dir) =
             Self::parse_package_manifest(&dep, &dep_name_in_pkg, root_path)
                 .with_context(|| format!("While processing dependency '{}'", dep_name_in_pkg))?;
@@ -534,8 +539,16 @@ impl ResolvingGraph {
         };
 
         for (dep_name, dep) in manifest.dependencies.iter().chain(additional_deps.iter()) {
-            Self::download_and_update_if_repo(*dep_name, dep, build_options.skip_movey_call)?;
-
+            if let Some(git_info) = &dep.git_info {
+                if !git_info.download_to.exists() {
+                    Self::increase_movey_download_count(
+                        movey_constants::MOVEY_URL.to_string(),
+                        git_info,
+                        build_options.skip_movey,
+                    );
+                }
+            }
+            Self::download_and_update_if_repo(*dep_name, dep)?;
             let (dep_manifest, _) =
                 Self::parse_package_manifest(dep, dep_name, root_path.to_path_buf())
                     .with_context(|| format!("While processing dependency '{}'", *dep_name))?;
@@ -545,18 +558,9 @@ impl ResolvingGraph {
         Ok(())
     }
 
-    fn download_and_update_if_repo(
-        dep_name: PackageName,
-        dep: &Dependency,
-        skip_movey_call: bool,
-    ) -> Result<()> {
+    fn download_and_update_if_repo(dep_name: PackageName, dep: &Dependency) -> Result<()> {
         if let Some(git_info) = &dep.git_info {
             if !git_info.download_to.exists() {
-                increase_movey_download_count(
-                    movey_constants::MOVEY_URL.to_string(),
-                    git_info,
-                    skip_movey_call,
-                );
                 Command::new("git")
                     .args([
                         "clone",
@@ -588,6 +592,23 @@ impl ResolvingGraph {
             package_hooks::resolve_custom_dependency(dep_name, node_info)?
         }
         Ok(())
+    }
+
+    fn increase_movey_download_count(movey_url: String, git_info: &GitInfo, skip_movey: bool) {
+        if skip_movey {
+            return;
+        }
+        let git_url = git_info.git_url.as_str().to_string();
+        let git_rev = git_info.git_rev.as_str().to_string();
+        let subdir = git_info.subdir.to_string_lossy().to_string();
+        thread::spawn(move || {
+            let params = [("url", git_url), ("rev", git_rev), ("subdir", subdir)];
+            let client = reqwest::blocking::Client::new();
+            let _ = client
+                .post(&format!("{}/api/v1/packages/count", movey_url))
+                .form(&params)
+                .send();
+        });
     }
 }
 
@@ -831,28 +852,10 @@ impl ResolvedPackage {
     }
 }
 
-fn increase_movey_download_count(movey_url: String, git_info: &GitInfo, skip_movey_call: bool) {
-    if skip_movey_call {
-        return;
-    }
-    let git_url = git_info.git_url.as_str().to_string();
-    let git_rev = git_info.git_rev.as_str().to_string();
-    let subdir = git_info.subdir.to_string_lossy().to_string();
-    thread::spawn(move || {
-        let params = [("url", git_url), ("rev", git_rev), ("subdir", subdir)];
-        let client = reqwest::blocking::Client::new();
-        let _ = client
-            .post(&format!("{}/api/v1/packages/count", movey_url))
-            .form(&params)
-            .send();
-    });
-}
-
 #[cfg(test)]
 mod tests {
     use crate::{
-        resolution::resolution_graph::increase_movey_download_count,
-        source_package::parsed_manifest::GitInfo,
+        resolution::resolution_graph::ResolvingGraph, source_package::parsed_manifest::GitInfo,
     };
     use httpmock::{prelude::*, Mock};
     use move_symbol_pool::Symbol;
@@ -886,7 +889,7 @@ mod tests {
         };
         let server = MockServer::start();
         let server_mock = init_mock_server(&server, &git_info, 200);
-        increase_movey_download_count(server.base_url(), &git_info, false);
+        ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, false);
         // make sure the spawn thread has enough time to run
         let twenty_millis = time::Duration::from_millis(20);
         thread::sleep(twenty_millis);
@@ -894,7 +897,7 @@ mod tests {
     }
 
     #[test]
-    fn increase_movey_download_count_not_calls_movey_api_if_skip_movey_call_flag_is_true() {
+    fn increase_movey_download_count_not_calls_movey_api_if_skip_movey_flag_is_true() {
         let git_url = Symbol::from("test git url");
         let git_rev = Symbol::from("test git rev");
         let subdir = PathBuf::from("test subdir");
@@ -906,7 +909,7 @@ mod tests {
         };
         let server = MockServer::start();
         let server_mock = init_mock_server(&server, &git_info, 200);
-        increase_movey_download_count(server.base_url(), &git_info, true);
+        ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, true);
         // make sure the spawn thread has enough time to run
         let twenty_millis = time::Duration::from_millis(20);
         thread::sleep(twenty_millis);
@@ -926,7 +929,7 @@ mod tests {
         };
         let server = MockServer::start();
         let server_mock = init_mock_server(&server, &git_info, 400);
-        increase_movey_download_count(server.base_url(), &git_info, false);
+        ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, false);
         // make sure the spawn thread has enough time to run
         let twenty_millis = time::Duration::from_millis(20);
         thread::sleep(twenty_millis);
@@ -946,7 +949,7 @@ mod tests {
         };
         let server = MockServer::start();
         let server_mock = init_mock_server(&server, &git_info, 500);
-        increase_movey_download_count(server.base_url(), &git_info, false);
+        ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, false);
         // make sure the spawn thread has enough time to run
         let twenty_millis = time::Duration::from_millis(20);
         thread::sleep(twenty_millis);

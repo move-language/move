@@ -210,7 +210,11 @@ impl TestRunner {
                 let tests = std::mem::take(&mut module_test.tests);
                 module_test.tests = tests
                     .into_iter()
-                    .filter(|(test_name, _)| test_name.as_str().contains(test_name_slice))
+                    .filter(|(test_name, _)| {
+                        let full_name =
+                            format!("{}::{}", module_id.name().as_str(), test_name.as_str());
+                        full_name.contains(test_name_slice)
+                    })
                     .collect();
             }
         }

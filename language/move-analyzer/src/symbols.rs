@@ -1070,6 +1070,7 @@ impl Symbolicator {
         get_loc(&pos.file_hash(), pos.start(), files, file_id_mapping)
     }
 
+    /// Extracts the docstring (/// or /** ... */) for a given definition by traversing up from the line definition
     fn extract_doc_string(&self, name_start: &Position, file_hash: &FileHash) -> String {
         let mut doc_string = String::new();
         if let Some(file_id) = self.file_id_mapping.get(file_hash) {
@@ -1078,13 +1079,51 @@ impl Symbolicator {
                     let mut iter = (name_start.line - 1) as usize;
                     let mut line_before = file_lines[iter].trim();
 
-                    while let Some(stripped_line) = line_before.strip_prefix("///") {
-                        doc_string = format!("{}\n{}", stripped_line, doc_string);
-                        if iter == 0 {
-                            break;
+                    // Detect the two different types of docstrings
+                    if line_before.starts_with("///") {
+                        while let Some(stripped_line) = line_before.strip_prefix("///") {
+                            doc_string = format!("{}\n{}", stripped_line.trim(), doc_string);
+                            if iter == 0 {
+                                break;
+                            }
+                            iter -= 1;
+                            line_before = file_lines[iter].trim();
                         }
+                    } else if line_before.starts_with("*/") {
+                        let mut doc_string_found = false;
                         iter -= 1;
                         line_before = file_lines[iter].trim();
+
+                        // Loop condition is just a safe guard.
+                        while !doc_string_found {
+                            if line_before.starts_with("/*") {
+                                let is_doc = line_before.starts_with("/**")
+                                    && !line_before.starts_with("/***");
+
+                                // Invalid doc_string start prefix so reset doc_string and break the loop
+                                if !is_doc {
+                                    doc_string = String::new();
+                                    break;
+                                } else {
+                                    line_before =
+                                        line_before.strip_prefix("/**").unwrap_or("").trim();
+                                    doc_string_found = true;
+                                }
+                            }
+
+                            doc_string = format!("{}\n{}", line_before, doc_string);
+
+                            if iter == 0 {
+                                break;
+                            }
+
+                            iter -= 1;
+                            line_before = file_lines[iter].trim();
+                        }
+
+                        if !doc_string_found {
+                            doc_string = String::new();
+                        }
                     }
                 }
             }

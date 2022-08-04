@@ -468,6 +468,11 @@ pub(crate) struct Loader {
     //   is a major execution bottleneck. We should be able to reuse a cache for the lifetime of
     //   the adapter/node, not just a VM or even session (as effectively today).
     invalidated: RwLock<bool>,
+
+    // Collects the cache hits on module loads. This information can be read and reset by
+    // an adapter to reason about read/write conflicts of code publishing transactions and
+    // other transactions.
+    module_cache_hits: RwLock<BTreeSet<ModuleId>>,
 }
 
 impl Loader {
@@ -478,7 +483,14 @@ impl Loader {
             type_cache: RwLock::new(TypeCache::new()),
             natives,
             invalidated: RwLock::new(false),
+            module_cache_hits: RwLock::new(BTreeSet::new()),
         }
+    }
+
+    /// Gets and clears module cache hits. A cache hit may also be caused indirectly by
+    /// loading a function or a type.
+    pub(crate) fn get_and_clear_module_cache_hits(&self) -> BTreeSet<ModuleId> {
+        std::mem::take(&mut self.module_cache_hits.write())
     }
 
     /// Flush this cache if it is marked as invalidated.
@@ -888,6 +900,7 @@ impl Loader {
     ) -> VMResult<Arc<Module>> {
         // if the module is already in the code cache, load the cached version
         if let Some(cached) = self.module_cache.read().module_at(id) {
+            self.module_cache_hits.write().insert(id.clone());
             return Ok(cached);
         }
 

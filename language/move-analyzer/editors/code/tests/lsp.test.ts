@@ -72,8 +72,8 @@ Mocha.suite('LSP', () => {
                 uri: docs.uri.toString(),
             },
             position: {
-                line: 4,
-                character: 11,
+                line: 26,
+                character: 8,
             },
         };
 
@@ -85,7 +85,8 @@ Mocha.suite('LSP', () => {
 
         assert.ok(hoverResult);
         assert.deepStrictEqual((hoverResult.contents as MarkupContent).value,
-            'Symbols::M6::DocumentedStruct\n\n This is a documented struct\n With a multi-line docstring\n');
+            // eslint-disable-next-line max-len
+            'fun Symbols::M6::other_doc_struct(): Symbols::M7::OtherDocStruct\n\n\nThis is a multiline docstring\n\nThis docstring has empty lines.\n\nIt uses the ** format instead of ///\n\n');
 
     });
 
@@ -110,7 +111,7 @@ Mocha.suite('LSP', () => {
                 uri: docs.uri.toString(),
             },
             position: {
-                line: 19,
+                line: 26,
                 character: 41,
             },
         };
@@ -124,7 +125,7 @@ Mocha.suite('LSP', () => {
 
         assert.ok(hoverResult);
         assert.deepStrictEqual((hoverResult.contents as MarkupContent).value,
-            'Symbols::M7::OtherDocStruct\n\n Documented struct in another module\n');
+            'Symbols::M7::OtherDocStruct\n\nDocumented struct in another module\n');
 
     });
 });

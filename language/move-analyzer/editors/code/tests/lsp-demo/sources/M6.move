@@ -17,8 +17,21 @@ module Symbols::M6 {
         value
     }
 
+    /**
+       This is a multiline docstring
+
+       This docstring has empty lines.
+       
+       It uses the ** format instead of ///
+    */
     fun other_doc_struct(): Symbols::M7::OtherDocStruct {
         Symbols::M7::create_other_struct(DOCUMENTED_CONSTANT)
+    }
+
+    /** Asterix based single-line docstring */
+    fun acq(addr: address): u64 acquires DocumentedStruct {
+        let val = borrow_global<DocumentedStruct>(addr);
+        val.documented_field
     }
 
     use Symbols::M7::{Self, OtherDocStruct};
@@ -26,5 +39,4 @@ module Symbols::M6 {
     fun other_doc_struct_import(): OtherDocStruct {
         M7::create_other_struct(7)
     }
-
 }

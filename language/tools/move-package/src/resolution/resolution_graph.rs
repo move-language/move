@@ -861,23 +861,7 @@ mod tests {
     use move_symbol_pool::Symbol;
     use std::{path::PathBuf, thread, time};
 
-    fn init_mock_server<'a>(
-        server: &'a MockServer,
-        git_info: &'a GitInfo,
-        status_code: u16,
-    ) -> Mock<'a> {
-        server.mock(|when, then| {
-            when.method(POST)
-                .path("/api/v1/packages/count")
-                .x_www_form_urlencoded_tuple("url", git_info.git_url.as_str())
-                .x_www_form_urlencoded_tuple("rev", git_info.git_rev.as_str())
-                .x_www_form_urlencoded_tuple("subdir", "test subdir");
-            then.status(status_code);
-        })
-    }
-
-    #[test]
-    fn increase_movey_download_count_calls_movey_api() {
+    fn init_mock_server(server: &MockServer, status_code: u16) -> (Mock, GitInfo) {
         let git_url = Symbol::from("test git url");
         let git_rev = Symbol::from("test git rev");
         let subdir = PathBuf::from("test subdir");
@@ -887,8 +871,22 @@ mod tests {
             subdir,
             download_to: Default::default(),
         };
+        let server_mock = server.mock(|when, then| {
+            when.method(POST)
+                .path("/api/v1/packages/count")
+                .x_www_form_urlencoded_tuple("url", git_info.git_url.as_str())
+                .x_www_form_urlencoded_tuple("rev", git_info.git_rev.as_str())
+                .x_www_form_urlencoded_tuple("subdir", "test subdir");
+            then.status(status_code);
+        });
+
+        (server_mock, git_info)
+    }
+
+    #[test]
+    fn increase_movey_download_count_calls_movey_api() {
         let server = MockServer::start();
-        let server_mock = init_mock_server(&server, &git_info, 200);
+        let (server_mock, git_info) = init_mock_server(&server, 200);
         ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, false);
         // make sure the spawn thread has enough time to run
         let twenty_millis = time::Duration::from_millis(20);
@@ -898,17 +896,8 @@ mod tests {
 
     #[test]
     fn increase_movey_download_count_not_calls_movey_api_if_skip_movey_flag_is_true() {
-        let git_url = Symbol::from("test git url");
-        let git_rev = Symbol::from("test git rev");
-        let subdir = PathBuf::from("test subdir");
-        let git_info = GitInfo {
-            git_url,
-            git_rev,
-            subdir,
-            download_to: Default::default(),
-        };
         let server = MockServer::start();
-        let server_mock = init_mock_server(&server, &git_info, 200);
+        let (server_mock, git_info) = init_mock_server(&server, 200);
         ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, true);
         // make sure the spawn thread has enough time to run
         let twenty_millis = time::Duration::from_millis(20);
@@ -918,17 +907,8 @@ mod tests {
 
     #[test]
     fn increase_movey_download_count_not_throw_error_if_movey_returns_4xx() {
-        let git_url = Symbol::from("test git url");
-        let git_rev = Symbol::from("test git rev");
-        let subdir = PathBuf::from("test subdir");
-        let git_info = GitInfo {
-            git_url,
-            git_rev,
-            subdir,
-            download_to: Default::default(),
-        };
         let server = MockServer::start();
-        let server_mock = init_mock_server(&server, &git_info, 400);
+        let (server_mock, git_info) = init_mock_server(&server, 400);
         ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, false);
         // make sure the spawn thread has enough time to run
         let twenty_millis = time::Duration::from_millis(20);
@@ -938,17 +918,8 @@ mod tests {
 
     #[test]
     fn increase_movey_download_count_not_throw_error_if_movey_returns_5xx() {
-        let git_url = Symbol::from("test git url");
-        let git_rev = Symbol::from("test git rev");
-        let subdir = PathBuf::from("test subdir");
-        let git_info = GitInfo {
-            git_url,
-            git_rev,
-            subdir,
-            download_to: Default::default(),
-        };
         let server = MockServer::start();
-        let server_mock = init_mock_server(&server, &git_info, 500);
+        let (server_mock, git_info) = init_mock_server(&server, 500);
         ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, false);
         // make sure the spawn thread has enough time to run
         let twenty_millis = time::Duration::from_millis(20);

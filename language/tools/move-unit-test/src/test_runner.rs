@@ -211,7 +211,8 @@ impl TestRunner {
                 module_test.tests = tests
                     .into_iter()
                     .filter(|(test_name, _)| {
-                        let full_name = format!("{}::{}", module_id.name().as_str(), test_name.as_str());
+                        let full_name =
+                            format!("{}::{}", module_id.name().as_str(), test_name.as_str());
                         full_name.contains(test_name_slice)
                     })
                     .collect();

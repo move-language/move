@@ -49,12 +49,16 @@ impl VMRuntime {
         })
     }
 
+    pub(crate) fn mark_loader_cache_as_invalid(&self) {
+        self.loader.mark_as_invalid()
+    }
+
+    pub(crate) fn flush_loader_cache_if_invalidated(&self) {
+        self.loader.flush_if_invalidated()
+    }
+
     pub fn new_session<'r, S: MoveResolver>(&self, remote: &'r S) -> Session<'r, '_, S> {
-        Session {
-            runtime: self,
-            data_cache: TransactionDataCache::new(remote, &self.loader),
-            native_extensions: NativeContextExtensions::default(),
-        }
+        self.new_session_with_extensions(remote, NativeContextExtensions::default())
     }
 
     pub fn new_session_with_extensions<'r, S: MoveResolver>(
@@ -193,6 +197,11 @@ impl VMRuntime {
 
         // All modules verified, publish them to data cache
         for (module, blob) in compiled_modules.into_iter().zip(modules.into_iter()) {
+            if data_store.exists_module(&module.self_id())? {
+                // This is an upgrade, so invalidate the loader cache, which still contains the
+                // old module.
+                self.loader.mark_as_invalid();
+            }
             data_store.publish_module(&module.self_id(), blob)?;
         }
         Ok(())

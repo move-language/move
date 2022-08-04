@@ -488,9 +488,31 @@ impl Loader {
     }
 
     /// Gets and clears module cache hits. A cache hit may also be caused indirectly by
-    /// loading a function or a type.
+    /// loading a function or a type. This not only returns the direct hit, but also
+    /// indirect ones, that is all dependencies.
     pub(crate) fn get_and_clear_module_cache_hits(&self) -> BTreeSet<ModuleId> {
-        std::mem::take(&mut self.module_cache_hits.write())
+        let mut result = BTreeSet::new();
+        let hits: BTreeSet<ModuleId> = std::mem::take(&mut self.module_cache_hits.write());
+        for id in hits {
+            self.transitive_dep_closure(&id, &mut result)
+        }
+        result
+    }
+
+    fn transitive_dep_closure(&self, id: &ModuleId, visited: &mut BTreeSet<ModuleId>) {
+        if !visited.insert(id.clone()) {
+            return;
+        }
+        let entry = self.module_cache.read();
+        for dep in entry
+            .modules
+            .get(id)
+            .unwrap()
+            .module
+            .immediate_dependencies()
+        {
+            self.transitive_dep_closure(&dep, visited)
+        }
     }
 
     /// Flush this cache if it is marked as invalidated.

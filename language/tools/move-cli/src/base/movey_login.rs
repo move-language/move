@@ -1,4 +1,3 @@
-// Copyright (c) The Diem Core Contributors
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
@@ -45,8 +44,7 @@ impl MoveyLogin {
         let credential_path = move_home + MOVEY_CREDENTIAL_PATH;
         let credential_file = PathBuf::from(&credential_path);
         if !credential_file.exists() {
-            let credential_file = File::create(&credential_path)?;
-            set_permissions(&credential_file, 0o600)?;
+            create_credential_file(&credential_path)?;
         }
 
         let old_contents: String;
@@ -56,9 +54,12 @@ impl MoveyLogin {
             }
             Err(error) => bail!("Error reading input: {}", error),
         }
-        let mut toml: Value = old_contents
-            .parse()
-            .map_err(|e| anyhow::Error::from(e).context("could not parse input as TOML"))?;
+        let mut toml: Value = old_contents.parse().map_err(|e| {
+            anyhow::Error::from(e).context(format!(
+                "could not parse input at {} as TOML",
+                &credential_path
+            ))
+        })?;
 
         // only update token key, keep the rest of the file intact
         if let Some(registry) = toml.as_table_mut().unwrap().get_mut("registry") {
@@ -85,19 +86,28 @@ impl MoveyLogin {
 }
 
 #[cfg(unix)]
-fn set_permissions(file: &File, mode: u32) -> Result<()> {
+fn create_credential_file(credential_path: &str) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
+    let credential_file = File::create(&credential_path)?;
 
-    let mut perms = file.metadata()?.permissions();
-    perms.set_mode(mode);
-    file.set_permissions(perms)?;
+    let mut perms = credential_file.metadata()?.permissions();
+    perms.set_mode(0o600);
+    credential_file.set_permissions(perms)?;
     Ok(())
 }
 
-#[cfg(not(unix))]
+#[cfg(windows)]
 #[allow(unused)]
-fn set_permissions(file: &File, mode: u32) -> Result<()> {
+fn create_credential_file(credential_path: &str) -> Result<()> {
+    let windows_path = credential_path.replace("/", "\\");
+    File::create(&windows_path)?;
     Ok(())
+}
+
+#[cfg(not(any(unix, windows)))]
+#[allow(unused)]
+fn create_credential_file(credential_path: &str) -> Result<()> {
+    bail!("OS not supported")
 }
 
 #[cfg(test)]

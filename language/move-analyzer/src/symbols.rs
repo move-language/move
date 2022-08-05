@@ -1074,61 +1074,67 @@ impl Symbolicator {
     /// Extracts the docstring (/// or /** ... */) for a given definition by traversing up from the line definition
     fn extract_doc_string(&self, name_start: &Position, file_hash: &FileHash) -> String {
         let mut doc_string = String::new();
-        if let Some(file_id) = self.file_id_mapping.get(file_hash) {
-            if let Some(file_lines) = self.file_id_to_lines.get(file_id) {
-                if name_start.line > 0 {
-                    let mut iter = (name_start.line - 1) as usize;
-                    let mut line_before = file_lines[iter].trim();
-
-                    // Detect the two different types of docstrings
-                    if line_before.starts_with("///") {
-                        while let Some(stripped_line) = line_before.strip_prefix("///") {
-                            doc_string = format!("{}\n{}", stripped_line.trim(), doc_string);
-                            if iter == 0 {
-                                break;
-                            }
-                            iter -= 1;
-                            line_before = file_lines[iter].trim();
-                        }
-                    } else if line_before.ends_with("*/") {
-                        let mut doc_string_found = false;
-                        line_before = file_lines[iter].strip_suffix("*/").unwrap_or("").trim();
-
-                        // Loop condition is a safe guard.
-                        while !doc_string_found {
-                            // We found the start of the docstring
-                            if line_before.starts_with("/*") {
-                                let is_doc = line_before.starts_with("/**")
-                                    && !line_before.starts_with("/***");
-
-                                // Invalid doc_string start prefix so reset doc_string and break the loop
-                                if !is_doc {
-                                    doc_string = String::new();
-                                    break;
-                                } else {
-                                    line_before =
-                                        line_before.strip_prefix("/**").unwrap_or("").trim();
-                                    doc_string_found = true;
-                                }
-                            }
-
-                            doc_string = format!("{}\n{}", line_before, doc_string);
-
-                            if iter == 0 {
-                                break;
-                            }
-
-                            iter -= 1;
-                            line_before = file_lines[iter].trim();
-                        }
-
-                        if !doc_string_found {
-                            doc_string = String::new();
-                        }
-                    }
-                }
-            }
+        let file_id = match self.file_id_mapping.get(file_hash) {
+            None => return doc_string,
+            Some(v) => v,
         };
+
+        let file_lines = match self.file_id_to_lines.get(file_id) {
+            None => return doc_string,
+            Some(v) => v,
+        };
+
+        if name_start.line == 0 {
+            return doc_string;
+        }
+
+        let mut iter = (name_start.line - 1) as usize;
+        let mut line_before = file_lines[iter].trim();
+
+        // Detect the two different types of docstrings
+        if line_before.starts_with("///") {
+            while let Some(stripped_line) = line_before.strip_prefix("///") {
+                doc_string = format!("{}\n{}", stripped_line.trim(), doc_string);
+                if iter == 0 {
+                    break;
+                }
+                iter -= 1;
+                line_before = file_lines[iter].trim();
+            }
+        } else if line_before.ends_with("*/") {
+            let mut doc_string_found = false;
+            line_before = file_lines[iter].strip_suffix("*/").unwrap_or("").trim();
+
+            // Loop condition is a safe guard.
+            while !doc_string_found {
+                // We found the start of the multi-line comment/docstring
+                if line_before.starts_with("/*") {
+                    let is_doc = line_before.starts_with("/**") && !line_before.starts_with("/***");
+
+                    // Invalid doc_string start prefix so return empty doc string.
+                    if !is_doc {
+                        return String::new();
+                    }
+
+                    line_before = line_before.strip_prefix("/**").unwrap_or("").trim();
+                    doc_string_found = true;
+                }
+
+                doc_string = format!("{}\n{}", line_before, doc_string);
+
+                if iter == 0 {
+                    break;
+                }
+
+                iter -= 1;
+                line_before = file_lines[iter].trim();
+            }
+
+            // No doc_string found - return String::new();
+            if !doc_string_found {
+                return String::new();
+            }
+        }
 
         doc_string
     }

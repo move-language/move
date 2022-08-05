@@ -49,14 +49,6 @@ impl VMRuntime {
         })
     }
 
-    pub(crate) fn mark_loader_cache_as_invalid(&self) {
-        self.loader.mark_as_invalid()
-    }
-
-    pub(crate) fn flush_loader_cache_if_invalidated(&self) {
-        self.loader.flush_if_invalidated()
-    }
-
     pub fn new_session<'r, S: MoveResolver>(&self, remote: &'r S) -> Session<'r, '_, S> {
         self.new_session_with_extensions(remote, NativeContextExtensions::default())
     }

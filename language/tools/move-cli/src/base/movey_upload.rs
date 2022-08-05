@@ -101,13 +101,17 @@ impl MoveyUpload {
             Ok(url) => {
                 let client = Client::new();
                 let response = client
-                    .post(&format!("{}/api/v1/packages/register", &url))
+                    .post(&format!("{}/api/v1/packages/upload", &url))
                     .json(&movey_upload_request)
                     .send();
                 match response {
                     Ok(response) => {
                         if response.status().is_success() {
-                            println!("Your package has been successfully uploaded to Movey")
+                            println!(
+                                "Your package has been successfully uploaded to Movey at {}/packages/{}",
+                                url,
+                                response.text()?
+                            );
                         } else if response.status().is_client_error() {
                             bail!("{}", response.text()?)
                         } else if response.status().is_server_error() {

@@ -359,7 +359,7 @@ fn init_server_mock<'a>(
 ) -> Mock<'a> {
     server.mock(|when, then| {
         when.method(POST)
-            .path("/api/v1/packages/register")
+            .path("/api/v1/packages/upload")
             .header("content-type", "application/json")
             .json_body(json!({
             "github_repo_url": "https://github.com/move-language/move",

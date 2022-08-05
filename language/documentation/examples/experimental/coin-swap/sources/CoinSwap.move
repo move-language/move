@@ -1,6 +1,6 @@
 module CoinSwap::CoinSwap {
     use std::signer;
-    use std::errors;
+    use std::error;
     use BasicCoin::BasicCoin;
     use CoinSwap::PoolToken;
 
@@ -27,8 +27,8 @@ module CoinSwap::CoinSwap {
         // TODO: Alternatively, `struct LiquidityPool` could be refactored to actually hold the coin (e.g., coin1: CoinType1).
         BasicCoin::publish_balance<CoinType1>(coinswap);
         BasicCoin::publish_balance<CoinType2>(coinswap);
-        assert!(signer::address_of(coinswap) == @CoinSwap, errors::invalid_argument(ECOINSWAP_ADDRESS));
-        assert!(!exists<LiquidityPool<CoinType1, CoinType2>>(signer::address_of(coinswap)), errors::already_published(EPOOL));
+        assert!(signer::address_of(coinswap) == @CoinSwap, error::invalid_argument(ECOINSWAP_ADDRESS));
+        assert!(!exists<LiquidityPool<CoinType1, CoinType2>>(signer::address_of(coinswap)), error::already_exists(EPOOL));
         move_to(coinswap, LiquidityPool<CoinType1, CoinType2>{coin1, coin2, share});
 
         // Transfer the initial liquidity of CoinType1 and CoinType2 to the pool under @CoinSwap.
@@ -53,8 +53,8 @@ module CoinSwap::CoinSwap {
         witness1: CoinType1,
         witness2: CoinType2
     ) acquires LiquidityPool {
-        assert!(signer::address_of(coinswap) == @CoinSwap, errors::invalid_argument(ECOINSWAP_ADDRESS));
-        assert!(exists<LiquidityPool<CoinType1, CoinType2>>(signer::address_of(coinswap)), errors::not_published(EPOOL));
+        assert!(signer::address_of(coinswap) == @CoinSwap, error::invalid_argument(ECOINSWAP_ADDRESS));
+        assert!(exists<LiquidityPool<CoinType1, CoinType2>>(signer::address_of(coinswap)), error::not_found(EPOOL));
         let pool = borrow_global_mut<LiquidityPool<CoinType1, CoinType2>>(signer::address_of(coinswap));
         let coin2 = get_input_price(coin1, pool.coin1, pool.coin2);
         pool.coin1 = pool.coin1 + coin1;

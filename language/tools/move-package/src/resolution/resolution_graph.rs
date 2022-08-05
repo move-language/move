@@ -883,14 +883,18 @@ mod tests {
         (server_mock, git_info)
     }
 
+    fn wait() {
+        let twenty_millis = time::Duration::from_millis(20);
+        thread::sleep(twenty_millis);
+    }
+
     #[test]
     fn increase_movey_download_count_calls_movey_api() {
         let server = MockServer::start();
         let (server_mock, git_info) = init_mock_server(&server, 200);
         ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, false);
         // make sure the spawn thread has enough time to run
-        let twenty_millis = time::Duration::from_millis(20);
-        thread::sleep(twenty_millis);
+        wait();
         server_mock.assert();
     }
 
@@ -900,8 +904,7 @@ mod tests {
         let (server_mock, git_info) = init_mock_server(&server, 200);
         ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, true);
         // make sure the spawn thread has enough time to run
-        let twenty_millis = time::Duration::from_millis(20);
-        thread::sleep(twenty_millis);
+        wait();
         server_mock.assert_hits(0);
     }
 
@@ -911,8 +914,7 @@ mod tests {
         let (server_mock, git_info) = init_mock_server(&server, 400);
         ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, false);
         // make sure the spawn thread has enough time to run
-        let twenty_millis = time::Duration::from_millis(20);
-        thread::sleep(twenty_millis);
+        wait();
         server_mock.assert();
     }
 
@@ -922,8 +924,7 @@ mod tests {
         let (server_mock, git_info) = init_mock_server(&server, 500);
         ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, false);
         // make sure the spawn thread has enough time to run
-        let twenty_millis = time::Duration::from_millis(20);
-        thread::sleep(twenty_millis);
+        wait();
         server_mock.assert();
     }
 }

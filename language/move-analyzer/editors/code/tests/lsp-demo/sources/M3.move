@@ -1,8 +1,7 @@
-module Symbols::M7 {
+module Symbols::M3 {
 
     /// Documented struct in another module
     struct OtherDocStruct has drop {
-        /// Documented field in another module
         some_field: u64,
     }
 

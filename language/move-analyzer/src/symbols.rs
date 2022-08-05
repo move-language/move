@@ -772,6 +772,7 @@ impl Symbolicator {
                 }
             };
 
+            // process the struct itself
             let name_start = match Self::get_start_loc(&pos, files, file_id_mapping) {
                 Some(s) => s,
                 None => {

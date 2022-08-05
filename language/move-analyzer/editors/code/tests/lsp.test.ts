@@ -62,7 +62,7 @@ Mocha.suite('LSP', () => {
 
         // 2. open doc
         const docs = await vscode.workspace.openTextDocument(
-            path.join(workDir, 'sources/M6.move'),
+            path.join(workDir, 'sources/M2.move'),
         );
         await vscode.window.showTextDocument(docs);
 
@@ -72,7 +72,7 @@ Mocha.suite('LSP', () => {
                 uri: docs.uri.toString(),
             },
             position: {
-                line: 26,
+                line: 12,
                 character: 8,
             },
         };
@@ -86,7 +86,7 @@ Mocha.suite('LSP', () => {
         assert.ok(hoverResult);
         assert.deepStrictEqual((hoverResult.contents as MarkupContent).value,
             // eslint-disable-next-line max-len
-            'fun Symbols::M6::other_doc_struct(): Symbols::M7::OtherDocStruct\n\n\nThis is a multiline docstring\n\nThis docstring has empty lines.\n\nIt uses the ** format instead of ///\n\n');
+            'fun Symbols::M2::other_doc_struct(): Symbols::M3::OtherDocStruct\n\n\nThis is a multiline docstring\n\nThis docstring has empty lines.\n\nIt uses the ** format instead of ///\n\n');
 
     });
 
@@ -101,7 +101,7 @@ Mocha.suite('LSP', () => {
 
         // 2. open doc
         const docs = await vscode.workspace.openTextDocument(
-            path.join(workDir, 'sources/M6.move'),
+            path.join(workDir, 'sources/M2.move'),
         );
         await vscode.window.showTextDocument(docs);
 
@@ -111,8 +111,8 @@ Mocha.suite('LSP', () => {
                 uri: docs.uri.toString(),
             },
             position: {
-                line: 26,
-                character: 41,
+                line: 18,
+                character: 35,
             },
         };
 
@@ -125,7 +125,7 @@ Mocha.suite('LSP', () => {
 
         assert.ok(hoverResult);
         assert.deepStrictEqual((hoverResult.contents as MarkupContent).value,
-            'Symbols::M7::OtherDocStruct\n\nDocumented struct in another module\n');
+            'Symbols::M3::OtherDocStruct\n\nDocumented struct in another module\n');
 
     });
 });

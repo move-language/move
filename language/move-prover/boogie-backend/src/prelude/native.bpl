@@ -246,6 +246,10 @@ procedure {:inline 2} {{Ext}}_table_new{{S}}() returns (v: {{Self}}) {
     v := EmptyTable();
 }
 
+procedure {:inline 2} {{Ext}}_table_destroy{{S}}(t: {{Self}}) {
+    // no-op
+}
+
 procedure {:inline 2} {{Ext}}_table_destroy_empty{{S}}(t: {{Self}}) {
     if (LenTable(t) != 0) {
         call $Abort($StdError(1/*INVALID_STATE*/, 102/*ENOT_EMPTY*/));
@@ -428,6 +432,18 @@ returns (res: $Mutation $1_event_EventHandle{{S}}) {
     handle := $Dereference(handle_mut);
     $es := $ExtendEventStore{{S}}($es, handle, msg);
     res := handle_mut;
+}
+
+procedure {:inline 1} $1_event_guid{{S}}(handle_ref: $1_event_EventHandle{{S}})
+returns (res: int) {
+    // TODO: temporarily mocked. The return type needs to be fixed.
+    res := 0;
+}
+
+procedure {:inline 1} $1_event_counter{{S}}(handle_ref: $1_event_EventHandle{{S}})
+returns (res: int) {
+    // TODO: temporarily mocked.
+    res := 0;
 }
 
 procedure {:inline 1} $1_event_destroy_handle{{S}}(handle: $1_event_EventHandle{{S}}) {

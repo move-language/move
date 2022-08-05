@@ -2,7 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{context::Context, symbols::{FunctionUseDefMap, Symbols}};
+use crate::{
+    context::Context,
+    symbols::{FunctionIdentTypeMap, Symbols},
+};
 use lsp_server::Request;
 use lsp_types::{CompletionItem, CompletionItemKind, CompletionParams, Position};
 use move_command_line_common::files::FileHash;
@@ -68,7 +71,10 @@ fn builtins() -> Vec<CompletionItem> {
 /// server did not initialize with a response indicating it's capable of providing completions. In
 /// the future, the server should be modified to return semantically valid completion items, not
 /// simple textual suggestions.
-fn identifiers(buffer: &str, function_use_def: Option<&FunctionUseDefMap>) -> Vec<CompletionItem> {
+fn identifiers(
+    buffer: &str,
+    function_use_def: Option<&FunctionIdentTypeMap>,
+) -> Vec<CompletionItem> {
     let mut lexer = Lexer::new(buffer, FileHash::new(buffer));
     if lexer.advance().is_err() {
         return vec![];
@@ -185,7 +191,7 @@ pub fn on_completion_request(context: &Context, request: &Request, symbols: &Sym
     }
 
     if let Some(buffer) = &buffer {
-        let identifiers = identifiers(buffer, symbols.file_functions.get(&path));
+        let identifiers = identifiers(buffer, symbols.get_file_functions().get(&path));
         items.extend_from_slice(&identifiers);
     }
 

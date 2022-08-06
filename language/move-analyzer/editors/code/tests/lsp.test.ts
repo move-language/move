@@ -4,6 +4,14 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import * as lc from 'vscode-languageclient';
 import type { MarkupContent } from 'vscode-languageclient';
+import { CompletionItemKind } from 'vscode-languageclient';
+
+const isFunctionInCompletionItems = (fnName: string, items: vscode.CompletionItem[]): boolean => {
+    return (
+        items.find((item) => item.label === fnName && item.kind === CompletionItemKind.Function) !==
+        undefined
+    );
+};
 
 Mocha.suite('LSP', () => {
     Mocha.test('textDocument/documentSymbol', async () => {
@@ -126,6 +134,44 @@ Mocha.suite('LSP', () => {
         assert.ok(hoverResult);
         assert.deepStrictEqual((hoverResult.contents as MarkupContent).value,
             'Symbols::M3::OtherDocStruct\n\nDocumented struct in another module\n');
+    });
 
+    Mocha.test('textDocument/completion', async () => {
+        const ext = vscode.extensions.getExtension('move.move-analyzer');
+        assert.ok(ext);
+
+        await ext.activate(); // Synchronous waiting for activation to complete
+
+        // 1. get workdir
+        const workDir = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
+
+        // 2. open doc
+        const docs = await vscode.workspace.openTextDocument(
+            path.join(workDir, 'sources/Completions.move'),
+        );
+        await vscode.window.showTextDocument(docs);
+
+        // 3. execute command
+        const params: lc.CompletionParams = {
+            textDocument: {
+                uri: docs.uri.toString(),
+            },
+            position: {
+                line: 12,
+                character: 1,
+            },
+        };
+
+        const items = await vscode.commands.executeCommand<Array<vscode.CompletionItem>>(
+            'move-analyzer.textDocumentCompletion',
+            params,
+        );
+
+        assert.ok(items);
+
+        // Items should return all functions defined in the file
+        assert.strictEqual(isFunctionInCompletionItems('add', items), true);
+        assert.strictEqual(isFunctionInCompletionItems('subtract', items), true);
+        assert.strictEqual(isFunctionInCompletionItems('divide', items), true);
     });
 });

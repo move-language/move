@@ -21,7 +21,7 @@ module Symbols::M6 {
        This is a multiline docstring
 
        This docstring has empty lines.
-       
+
        It uses the ** format instead of ///
     */
     fun other_doc_struct(): Symbols::M7::OtherDocStruct {

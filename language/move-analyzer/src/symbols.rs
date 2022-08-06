@@ -2357,7 +2357,7 @@ fn assert_use_def_with_doc_string(
         .ends_with(def_file));
     assert!(type_str == format!("{}", use_def.use_type));
 
-    assert!(doc_string.to_string() == format!("{}", use_def.doc_string));
+    assert!(doc_string == use_def.doc_string);
     match use_def.type_def_loc {
         Some(type_def_loc) => {
             let tdef_line = type_def.unwrap().0;

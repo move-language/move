@@ -486,11 +486,9 @@ Used for extension points, should be not used under most circumstances. Construc
 
 ## fixed_point32
 
-
 The `fixed_point32` module defines a fixed-point numeric type with 32 integer bits and 32 fractional bits. Internally, this is represented as a `u64` integer wrapped in a struct to make a unique `fixed_point32` type. Since the numeric representation is a binary one, some decimal values may not be exactly representable, but it provides more than 9 decimal digits of precision both before and after the decimal point (18 digits total). For comparison, double precision floating-point has less than 16 decimal digits of precision, so you should be careful about using floating-point to convert these values to decimal.
 
 ### Types
-
 
 Represents a fixed-point numeric number with 32 fractional bits.
 

@@ -205,4 +205,3 @@ let b =
     else abort 42;
 //       ^^^^^^^^ `abort 42` has type `bool`
 ```
-````

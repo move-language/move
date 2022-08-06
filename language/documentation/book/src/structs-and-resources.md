@@ -394,7 +394,7 @@ module m {
 
 Only structs with the `key` ability can be saved directly in
 [persistent global storage](./global-storage-operators.md). All values stored within those `key`
-structs must have the `store` abilities. See the [ability](./abilities] and
+structs must have the `store` abilities. See the [ability](./abilities) and
 [global storage](./global-storage-operators.md) chapters for more detail.
 
 ## Examples

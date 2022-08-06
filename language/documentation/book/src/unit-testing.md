@@ -113,6 +113,7 @@ $ move -h
 A simple module using some of the unit testing features is shown in the following example:
 
 First create an empty package and change directory into it:
+
 ```
 $ move new TestExample; cd TestExample
 ```

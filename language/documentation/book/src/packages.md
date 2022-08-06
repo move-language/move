@@ -122,6 +122,7 @@ individually:
 ### Declaration
 
 Let's say we have a Move module in `example_pkg/sources/A.move` as follows:
+
 ```move
 module named_addr::A {
     public fun x(): address { @named_addr }

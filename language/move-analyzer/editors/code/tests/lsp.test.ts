@@ -13,6 +13,15 @@ const isFunctionInCompletionItems = (fnName: string, items: vscode.CompletionIte
     );
 };
 
+const isKeywordInCompletionItems = (label: string, items: vscode.CompletionItem[]): boolean => {
+    return (
+        items.find((item) => item.label === label && item.kind === CompletionItemKind.Keyword) !==
+        undefined
+    );
+};
+
+const PRIMITIVE_TYPES = ['u8', 'u64', 'u128', 'bool', 'vector'];
+
 Mocha.suite('LSP', () => {
     Mocha.test('textDocument/documentSymbol', async () => {
         const ext = vscode.extensions.getExtension('move.move-analyzer');
@@ -173,5 +182,37 @@ Mocha.suite('LSP', () => {
         assert.strictEqual(isFunctionInCompletionItems('add', items), true);
         assert.strictEqual(isFunctionInCompletionItems('subtract', items), true);
         assert.strictEqual(isFunctionInCompletionItems('divide', items), true);
+
+        // Items also include all primitive types because they are keywords
+        PRIMITIVE_TYPES.forEach((primitive) => {
+            assert.strictEqual(isKeywordInCompletionItems(primitive, items), true);
+        });
+
+        const colonParams: lc.CompletionParams = {
+            textDocument: {
+                uri: docs.uri.toString(),
+            },
+            // The position of the character ":"
+            position: {
+                line: 9,
+                character: 15,
+            },
+        };
+
+        const itemsOnColon = await vscode.commands.executeCommand<Array<vscode.CompletionItem>>(
+            'move-analyzer.textDocumentCompletion',
+            colonParams,
+        );
+
+        assert.ok(itemsOnColon);
+
+        const keywordsOnColon = itemsOnColon.filter(i => i.kind === CompletionItemKind.Keyword);
+        // Primitive types are the only keywords returned after the inserting the colon
+        assert.strictEqual(keywordsOnColon.length, PRIMITIVE_TYPES.length);
+
+        // Final safety check
+        PRIMITIVE_TYPES.forEach((primitive) => {
+            assert.strictEqual(isKeywordInCompletionItems(primitive, keywordsOnColon), true);
+        });
     });
 });

@@ -100,10 +100,9 @@ fn identifiers(
 
     // The completion item kind "text" indicates that the item is based on simple textual matching,
     // not any deeper semantic analysis.
-    let items = ids
-        .iter()
+    ids.iter()
         .map(|label| {
-            let item = if let Some(fun_data) = function_use_def {
+            if let Some(fun_data) = function_use_def {
                 if fun_data.clone().contains_key(&label.to_string()) {
                     completion_item(label, CompletionItemKind::Function)
                 } else {
@@ -111,13 +110,9 @@ fn identifiers(
                 }
             } else {
                 completion_item(label, CompletionItemKind::Text)
-            };
-
-            item
+            }
         })
-        .collect();
-
-    items
+        .collect()
 }
 
 /// Returns the token corresponding to the "trigger character" that precedes the user's cursor,

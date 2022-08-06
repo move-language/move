@@ -1611,7 +1611,7 @@ impl<'env> FunctionTranslator<'env> {
                     let field_env = &struct_env.get_field_by_offset(*offset);
                     let sel_fun = boogie_field_sel(field_env, &memory.inst);
                     let new_dest = format!("{}({})", sel_fun, (*mk_dest)());
-                    let new_dest_ty = &self.inst(&field_env.get_type());
+                    let new_dest_ty = &field_env.get_type().instantiate(&memory.inst);
                     let mut new_dest_needed = false;
                     let new_src = self.translate_write_back_update(
                         new_dest_ty,

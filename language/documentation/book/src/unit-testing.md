@@ -276,7 +276,7 @@ module 0x1::my_module {
 }
 ```
 
-we would get get the following output when running the tests:
+we would get the following output when running the tests:
 
 ```
 $ move test -g

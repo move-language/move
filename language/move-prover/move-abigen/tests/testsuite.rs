@@ -27,6 +27,10 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let mut options = Options::create_from_args(&args)?;
     options.setup_logging_for_test();
     options.abigen.compiled_script_directory = "tests/sources".to_string();
+    options.move_deps.push("../../move-stdlib".to_string());
+    options
+        .move_named_address_values
+        .push("std=0x1".to_string());
 
     test_abigen(path, options, "abi")?;
 

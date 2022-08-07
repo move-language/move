@@ -4,6 +4,8 @@
 
 #![forbid(unsafe_code)]
 
+extern crate core;
+
 mod abigen;
 
 pub use crate::abigen::*;

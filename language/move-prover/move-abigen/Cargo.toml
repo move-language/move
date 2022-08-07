@@ -10,6 +10,7 @@ license = "Apache-2.0"
 # diem dependencies
 move-model = { path = "../../move-model" }
 move-core-types = { path = "../../move-core/types" }
+move-binary-format = { path = "../../move-binary-format" }
 move-bytecode-verifier = { path = "../../move-bytecode-verifier" }
 move-command-line-common = { path = "../../move-command-line-common" }
 bcs = "0.1.2"

@@ -23,6 +23,7 @@ ResolutionGraph {
             ),
             authors: [],
             license: None,
+            custom_properties: {},
         },
         addresses: Some(
             {
@@ -52,6 +53,7 @@ ResolutionGraph {
                     ),
                     authors: [],
                     license: None,
+                    custom_properties: {},
                 },
                 addresses: Some(
                     {

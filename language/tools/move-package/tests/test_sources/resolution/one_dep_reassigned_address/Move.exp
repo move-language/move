@@ -23,6 +23,7 @@ ResolutionGraph {
             ),
             authors: [],
             license: None,
+            custom_properties: {},
         },
         addresses: Some(
             {
@@ -46,6 +47,7 @@ ResolutionGraph {
                 version: None,
                 digest: None,
                 git_info: None,
+                node_info: None,
             },
         },
         dev_dependencies: {},
@@ -77,6 +79,7 @@ ResolutionGraph {
                     ),
                     authors: [],
                     license: None,
+                    custom_properties: {},
                 },
                 addresses: Some(
                     {
@@ -109,6 +112,7 @@ ResolutionGraph {
                     ),
                     authors: [],
                     license: None,
+                    custom_properties: {},
                 },
                 addresses: Some(
                     {
@@ -132,6 +136,7 @@ ResolutionGraph {
                         version: None,
                         digest: None,
                         git_info: None,
+                        node_info: None,
                     },
                 },
                 dev_dependencies: {},

@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    package_hooks,
     resolution::digest::compute_digest,
     source_package::{
         layout::SourcePackageLayout,
@@ -392,7 +393,7 @@ impl ResolvingGraph {
         dep: Dependency,
         root_path: PathBuf,
     ) -> Result<(Renaming, ResolvingTable)> {
-        Self::download_and_update_if_repo(dep_name_in_pkg, &dep)?;
+        Self::download_and_update_if_remote(dep_name_in_pkg, &dep)?;
         let (dep_package, dep_package_dir) =
             Self::parse_package_manifest(&dep, &dep_name_in_pkg, root_path)
                 .with_context(|| format!("While processing dependency '{}'", dep_name_in_pkg))?;
@@ -530,7 +531,7 @@ impl ResolvingGraph {
         };
 
         for (dep_name, dep) in manifest.dependencies.iter().chain(additional_deps.iter()) {
-            Self::download_and_update_if_repo(*dep_name, dep)?;
+            Self::download_and_update_if_remote(*dep_name, dep)?;
 
             let (dep_manifest, _) =
                 Self::parse_package_manifest(dep, dep_name, root_path.to_path_buf())
@@ -541,7 +542,7 @@ impl ResolvingGraph {
         Ok(())
     }
 
-    fn download_and_update_if_repo(dep_name: PackageName, dep: &Dependency) -> Result<()> {
+    fn download_and_update_if_remote(dep_name: PackageName, dep: &Dependency) -> Result<()> {
         if let Some(git_info) = &dep.git_info {
             if !git_info.download_to.exists() {
                 Command::new("git")
@@ -570,6 +571,9 @@ impl ResolvingGraph {
                         )
                     })?;
             }
+        }
+        if let Some(node_info) = &dep.node_info {
+            package_hooks::resolve_node_dependency(dep_name, node_info)?
         }
         Ok(())
     }

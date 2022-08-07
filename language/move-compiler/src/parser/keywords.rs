@@ -30,7 +30,6 @@ pub const KEYWORDS: &[&str] = &[
     "true",
     "use",
     "while",
-    "signer",
 ];
 
 pub const CONTEXTUAL_KEYWORDS: &[&str] = &[

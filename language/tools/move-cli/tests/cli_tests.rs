@@ -339,6 +339,7 @@ fn clean_up(package_path: &str) {
     let _ = fs::remove_file(&credential_path);
 }
 
+// create a dummy move_credential.toml file for testing
 fn init_stub_registry_file(package_path: &str, base_url: &str) {
     let credential_path = format!("{}{}", package_path, MOVEY_CREDENTIAL_PATH);
     let content = format!(
@@ -352,6 +353,7 @@ fn init_stub_registry_file(package_path: &str, base_url: &str) {
     fs::write(credential_path, content).expect("Unable to write file");
 }
 
+// create a mock server to check if the request is sent or not, also returns a stub response for testing
 fn init_server_mock<'a>(
     server: &'a MockServer,
     status_code: u16,

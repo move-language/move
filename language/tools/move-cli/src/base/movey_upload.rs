@@ -8,6 +8,7 @@ use move_command_line_common::env::MOVE_HOME;
 use reqwest::blocking::Client;
 use std::{env, fs::File, path::PathBuf, process::Command};
 
+// Metadata that will be collected by Movey
 #[derive(serde::Serialize, Default)]
 pub struct MoveyUploadRequest {
     github_repo_url: String,
@@ -40,6 +41,7 @@ impl MoveyUpload {
             bail!("Move.toml not found")
         }
 
+        // use git command to get the repository url
         let mut movey_upload_request: MoveyUploadRequest = Default::default();
         let mut output = Command::new("git")
             .current_dir(".")
@@ -59,19 +61,20 @@ impl MoveyUpload {
                     bail!("invalid remote url")
                 }
                 // convert ssh url to https
-                if tokens[1].starts_with("git@github.com") {
-                    let https_url = tokens[1]
-                        .replace(":", "/")
-                        .replace("git@", "https://")
-                        .replace(".git", "");
-                    movey_upload_request.github_repo_url = https_url;
-                    break;
-                }
-                movey_upload_request.github_repo_url = String::from(tokens[1]);
-                break;
+                let https_url = if tokens[1].starts_with("git@github.com") {
+                    tokens[1].replace(":", "/").replace("git@", "https://")
+                } else {
+                    String::from(tokens[1])
+                };
+                movey_upload_request.github_repo_url = if https_url.ends_with(".git") {
+                    https_url[..https_url.len() - 4].to_string()
+                } else {
+                    https_url
+                };
             }
         }
 
+        // use git command to get the subdir if move package is not on the top level
         output = Command::new("git")
             .current_dir(".")
             .args(&["rev-parse", "--show-prefix"])
@@ -80,6 +83,7 @@ impl MoveyUpload {
         let subdir = String::from_utf8_lossy(output.stdout.as_slice());
         movey_upload_request.subdir = String::from(subdir);
 
+        // use git command to count total files
         output = Command::new("git")
             .current_dir(".")
             .args(&["ls-files"])

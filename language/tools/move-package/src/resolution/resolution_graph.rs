@@ -883,9 +883,10 @@ mod tests {
         (server_mock, git_info)
     }
 
-    fn wait() {
-        let twenty_millis = time::Duration::from_millis(20);
-        thread::sleep(twenty_millis);
+    fn wait(wait_time: Option<u64>) {
+        // make sure the spawn thread has enough time to run
+        let millis = time::Duration::from_millis(wait_time.unwrap_or(20));
+        thread::sleep(millis);
     }
 
     #[test]
@@ -893,9 +894,8 @@ mod tests {
         let server = MockServer::start();
         let (server_mock, git_info) = init_mock_server(&server, 200);
         ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, false);
-        // make sure the spawn thread has enough time to run
-        wait();
-        server_mock.assert();
+        wait(None);
+        server_mock.assert_hits(1);
     }
 
     #[test]
@@ -903,8 +903,7 @@ mod tests {
         let server = MockServer::start();
         let (server_mock, git_info) = init_mock_server(&server, 200);
         ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, true);
-        // make sure the spawn thread has enough time to run
-        wait();
+        wait(None);
         server_mock.assert_hits(0);
     }
 
@@ -913,9 +912,8 @@ mod tests {
         let server = MockServer::start();
         let (server_mock, git_info) = init_mock_server(&server, 400);
         ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, false);
-        // make sure the spawn thread has enough time to run
-        wait();
-        server_mock.assert();
+        wait(None);
+        server_mock.assert_hits(1);
     }
 
     #[test]
@@ -923,8 +921,7 @@ mod tests {
         let server = MockServer::start();
         let (server_mock, git_info) = init_mock_server(&server, 500);
         ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, false);
-        // make sure the spawn thread has enough time to run
-        wait();
-        server_mock.assert();
+        wait(None);
+        server_mock.assert_hits(1);
     }
 }

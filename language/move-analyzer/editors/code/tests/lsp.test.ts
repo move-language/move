@@ -207,7 +207,7 @@ Mocha.suite('LSP', () => {
         assert.ok(itemsOnColon);
 
         const keywordsOnColon = itemsOnColon.filter(i => i.kind === CompletionItemKind.Keyword);
-        // Primitive types are the only keywords returned after the inserting the colon
+        // Primitive types are the only keywords returned after inserting the colon
         assert.strictEqual(keywordsOnColon.length, PRIMITIVE_TYPES.length);
 
         // Final safety check

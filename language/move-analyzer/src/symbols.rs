@@ -210,6 +210,10 @@ pub struct Symbolicator {
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct UseDefMap(BTreeMap<u32, BTreeSet<UseDef>>);
 
+/// Maps a function name to its usage definition
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct FunctionIdentTypeMap(BTreeMap<String, IdentType>);
+
 /// Result of the symbolication process
 pub struct Symbols {
     /// A map from def locations to all the references (uses)
@@ -218,6 +222,8 @@ pub struct Symbols {
     file_use_defs: BTreeMap<PathBuf, UseDefMap>,
     /// A mapping from file hashes to file names
     file_name_mapping: BTreeMap<FileHash, Symbol>,
+    /// A mapping from filePath to function definitions
+    file_functions: BTreeMap<PathBuf, FunctionIdentTypeMap>,
     /// A mapping from filePath to ModuleDefs
     file_mods: BTreeMap<PathBuf, BTreeSet<ModuleDefs>>,
 }
@@ -551,6 +557,20 @@ impl UseDefMap {
     }
 }
 
+impl FunctionIdentTypeMap {
+    fn new() -> Self {
+        Self(BTreeMap::new())
+    }
+
+    fn insert(&mut self, key: String, val: IdentType) {
+        self.0.entry(key).or_insert_with(|| val);
+    }
+
+    pub fn contains_key(self, key: &String) -> bool {
+        self.0.contains_key(key)
+    }
+}
+
 impl Symbols {
     pub fn merge(&mut self, other: Self) {
         for (k, v) in other.references {
@@ -561,7 +581,12 @@ impl Symbols {
         }
         self.file_use_defs.extend(other.file_use_defs);
         self.file_name_mapping.extend(other.file_name_mapping);
+        self.file_functions.extend(other.file_functions);
         self.file_mods.extend(other.file_mods);
+    }
+
+    pub fn get_file_functions(&self) -> &BTreeMap<PathBuf, FunctionIdentTypeMap> {
+        &self.file_functions
     }
 }
 
@@ -698,21 +723,31 @@ impl Symbolicator {
 
         let mut references = BTreeMap::new();
         let mut file_use_defs = BTreeMap::new();
+        let mut file_functions = BTreeMap::new();
+        let mut function_ident_type = FunctionIdentTypeMap::new();
+
         for (pos, module_ident, module_def) in modules {
             let mut use_defs = mod_use_defs.remove(module_ident).unwrap();
             symbolicator.current_mod = Some(sp(pos, *module_ident));
-            symbolicator.mod_symbols(module_def, &mut references, &mut use_defs);
+            symbolicator.mod_symbols(
+                module_def,
+                &mut references,
+                &mut use_defs,
+                &mut function_ident_type,
+            );
 
             let fpath = match source_files.get(&pos.file_hash()) {
                 Some((p, _)) => p,
                 None => continue,
             };
 
+            let fpath_buffer = dunce::canonicalize(fpath.as_str())
+                .unwrap_or_else(|_| PathBuf::from(fpath.as_str()));
+
+            file_functions.insert(fpath_buffer.to_owned(), function_ident_type.clone());
+
             file_use_defs
-                .entry(
-                    dunce::canonicalize(fpath.as_str())
-                        .unwrap_or_else(|_| PathBuf::from(fpath.as_str())),
-                )
+                .entry(fpath_buffer)
                 .or_insert_with(UseDefMap::new)
                 .extend(use_defs.elements());
         }
@@ -722,6 +757,7 @@ impl Symbolicator {
             file_use_defs,
             file_name_mapping,
             file_mods,
+            file_functions,
         };
 
         eprintln!("get_symbols load complete");
@@ -736,6 +772,7 @@ impl Symbolicator {
             references: BTreeMap::new(),
             file_name_mapping: BTreeMap::new(),
             file_mods: BTreeMap::new(),
+            file_functions: BTreeMap::new(),
         }
     }
 
@@ -867,6 +904,7 @@ impl Symbolicator {
         mod_def: &ModuleDefinition,
         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
         use_defs: &mut UseDefMap,
+        function_ident_type: &mut FunctionIdentTypeMap,
     ) {
         for (pos, name, fun) in &mod_def.functions {
             // enter self-definition for function name (unwrap safe - done when inserting def)
@@ -895,21 +933,21 @@ impl Symbolicator {
                     .collect(),
             );
             let ident_type_def = self.ident_type_def_loc(&use_type);
-            use_defs.insert(
-                name_start.line,
-                UseDef::new(
-                    references,
-                    pos.file_hash(),
-                    name_start,
-                    pos.file_hash(),
-                    name_start,
-                    name,
-                    use_type,
-                    ident_type_def,
-                    doc_string,
-                ),
+            let use_def = UseDef::new(
+                references,
+                pos.file_hash(),
+                name_start,
+                pos.file_hash(),
+                name_start,
+                name,
+                use_type.clone(),
+                ident_type_def,
+                doc_string,
             );
+
+            use_defs.insert(name_start.line, use_def);
             self.fun_symbols(fun, references, use_defs);
+            function_ident_type.insert(name.to_string(), use_type);
         }
 
         for (pos, name, c) in &mod_def.constants {

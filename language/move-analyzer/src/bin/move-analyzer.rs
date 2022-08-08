@@ -223,7 +223,9 @@ fn main() {
 
 fn on_request(context: &Context, request: &Request) {
     match request.method.as_str() {
-        lsp_types::request::Completion::METHOD => on_completion_request(context, request),
+        lsp_types::request::Completion::METHOD => {
+            on_completion_request(context, request, &context.symbols.lock().unwrap())
+        }
         lsp_types::request::GotoDefinition::METHOD => {
             symbols::on_go_to_def_request(context, request, &context.symbols.lock().unwrap());
         }

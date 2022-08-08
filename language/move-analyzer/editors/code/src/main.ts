@@ -75,4 +75,5 @@ export async function activate(extensionContext: Readonly<vscode.ExtensionContex
     await context.startClient();
     context.registerCommand('textDocumentDocumentSymbol', commands.textDocumentDocumentSymbol);
     context.registerCommand('textDocumentHover', commands.textDocumentHover);
+    context.registerCommand('textDocumentCompletion', commands.textDocumentCompletion);
 }

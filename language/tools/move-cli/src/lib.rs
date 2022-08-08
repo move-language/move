@@ -4,7 +4,7 @@
 
 use base::{
     build::Build, coverage::Coverage, disassemble::Disassemble, docgen::Docgen, errmap::Errmap,
-    info::Info, new::New, prove::Prove, test::Test,
+    info::Info, movey_login::MoveyLogin, new::New, prove::Prove, test::Test,
 };
 use move_package::BuildConfig;
 
@@ -91,6 +91,8 @@ pub enum Command {
         #[clap(subcommand)]
         cmd: experimental::cli::ExperimentalCommand,
     },
+    #[clap(name = "movey-login")]
+    MoveyLogin(MoveyLogin),
 }
 
 pub fn run_cli(
@@ -121,6 +123,7 @@ pub fn run_cli(
             &storage_dir,
         ),
         Command::Experimental { storage_dir, cmd } => cmd.handle_command(&move_args, &storage_dir),
+        Command::MoveyLogin(c) => c.execute(),
     }
 }
 

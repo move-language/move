@@ -9,7 +9,7 @@ use std::{collections::BTreeMap, rc::Rc};
 
 use bytecode_interpreter_crypto::{
     ed25519_deserialize_public_key, ed25519_deserialize_signature, ed25519_verify_signature,
-    sha2_256_of, sha3_256_of,
+    sha2_256_of, sha3_256_of, keccak_256_of
 };
 use move_binary_format::errors::Location;
 use move_core_types::{
@@ -263,6 +263,13 @@ impl<'env> FunctionContext<'env> {
                     assert_eq!(srcs.len(), 1);
                 }
                 let res = self.native_hash_sha3_256(dummy_state.del_value(0));
+                Ok(vec![res])
+            }
+            (DIEM_CORE_ADDR, "hash", "keccak_256") => {
+                if cfg!(debug_assertions) {
+                    assert_eq!(srcs.len(), 1);
+                }
+                let res = self.native_hash_keccak_256(dummy_state.del_value(0));
                 Ok(vec![res])
             }
             (DIEM_CORE_ADDR, "bcs", "to_bytes") => {
@@ -2079,6 +2086,22 @@ impl<'env> FunctionContext<'env> {
             .map(|e| e.into_u8())
             .collect();
         let digest = sha3_256_of(&bytes);
+        let hashed = digest.into_iter().map(TypedValue::mk_u8).collect();
+        TypedValue::mk_vector(elem_ty, hashed)
+    }
+
+    fn native_hash_keccak_256(&self, bytes_val: TypedValue) -> TypedValue {
+        let elem_ty = BaseType::mk_u8();
+        if cfg!(debug_assertions) {
+            assert_eq!(self.ty_args.len(), 0);
+            assert!(bytes_val.get_ty().is_vector_of(&elem_ty));
+        }
+        let bytes: Vec<_> = bytes_val
+            .into_vector()
+            .into_iter()
+            .map(|e| e.into_u8())
+            .collect();
+        let digest = keccak_256_of(&bytes);
         let hashed = digest.into_iter().map(TypedValue::mk_u8).collect();
         TypedValue::mk_vector(elem_ty, hashed)
     }

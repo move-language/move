@@ -54,6 +54,11 @@ impl GasParameters {
                     unit_cost: 0,
                     legacy_min_input_len: 0,
                 },
+                keccak_256: hash::Keccak256gasParameters {
+                    base_cost: 0,
+                    unit_cost: 0,
+                    legacy_min_input_len: 0,
+                },
             },
             signer: signer::GasParameters {
                 borrow_address: signer::BorrowAddressGasParameters { base_cost: 0 },

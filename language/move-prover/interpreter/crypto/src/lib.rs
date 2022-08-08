@@ -18,7 +18,7 @@ use ed25519_dalek::{
     PUBLIC_KEY_LENGTH as ED25519_PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH as ED25519_SIGNATURE_LENGTH,
 };
 use sha2::{Digest, Sha256};
-use sha3::Sha3_256;
+use sha3::{Sha3_256, Keccak256};
 use std::cmp::Ordering;
 
 /// The order of ed25519 as defined in [RFC8032](https://tools.ietf.org/html/rfc8032).
@@ -34,6 +34,10 @@ pub fn sha2_256_of(bytes: &[u8]) -> Vec<u8> {
 
 pub fn sha3_256_of(bytes: &[u8]) -> Vec<u8> {
     Sha3_256::digest(bytes).to_vec()
+}
+
+pub fn keccak_256_of(bytes: &[u8]) -> Vec<u8> {
+    Keccak256::digest(bytes).to_vec()
 }
 
 // Ed25519

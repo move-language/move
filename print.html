@@ -394,7 +394,7 @@ literals.</p>
 <p>To distinguish when an address is being used in an expression context or not, the
 syntax when using an address differs depending on the context where it's used:</p>
 <ul>
-<li>When an address is used as an expression the address must be prefixed by the <code>@</code> character, i.e., <code>@</code><a href="./integers.html"><code>&lt;numerical_value&gt;</code></a><code>or</code>@&lt;named_address_identifier&gt;`.</li>
+<li>When an address is used as an expression the address must be prefixed by the <code>@</code> character, i.e., <code>@</code><a href="./integers.html"><code>&lt;numerical_value&gt;</code></a> or <code>@&lt;named_address_identifier&gt;</code>.</li>
 <li>Outside of expression contexts, the address may be written without the leading <code>@</code> character, i.e., <a href="./integers.html"><code>&lt;numerical_value&gt;</code></a> or <code>&lt;named_address_identifier&gt;</code>.</li>
 </ul>
 <p>In general, you can think of <code>@</code> as an operator that takes an address from being a namespace item to being an expression item.</p>
@@ -1728,7 +1728,6 @@ value on some branches, but not all. For example:</p>
     else abort 42;
 //       ^^^^^^^^ `abort 42` has type `bool`
 </code></pre>
-<pre><code></code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="conditionals"><a class="header" href="#conditionals">Conditionals</a></h1>
 <p>An <code>if</code> expression specifies that some code should only be evaluated if a certain condition is true. For example:</p>
 <pre><code class="language-move">if (x &gt; 5) x = x - 5
@@ -2613,7 +2612,7 @@ module m {
 <h2 id="storing-resources-in-global-storage"><a class="header" href="#storing-resources-in-global-storage">Storing Resources in Global Storage</a></h2>
 <p>Only structs with the <code>key</code> ability can be saved directly in
 <a href="./global-storage-operators.html">persistent global storage</a>. All values stored within those <code>key</code>
-structs must have the <code>store</code> abilities. See the <a href="./abilities.html">ability</a> and
+structs must have the <code>store</code> ability. See the <a href="./abilities">ability</a> and
 <a href="./global-storage-operators.html">global storage</a> chapters for more detail.</p>
 <h2 id="examples-3"><a class="header" href="#examples-3">Examples</a></h2>
 <p>Here are two short examples of how you might use structs to represent valuable data (in the case of

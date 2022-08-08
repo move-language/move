@@ -7,12 +7,13 @@ use log::{debug, info, warn};
 
 use anyhow::bail;
 use heck::SnakeCase;
+use move_binary_format::file_format::Ability;
 use move_bytecode_verifier::script_signature;
 use move_command_line_common::files::MOVE_COMPILED_EXTENSION;
 use move_core_types::{
     abi::{ArgumentABI, ScriptABI, ScriptFunctionABI, TransactionScriptABI, TypeArgumentABI},
     identifier::IdentStr,
-    language_storage::TypeTag,
+    language_storage::{StructTag, TypeTag},
 };
 use move_model::{
     model::{FunctionEnv, GlobalEnv, ModuleEnv},
@@ -150,7 +151,10 @@ impl<'env> Abigen<'env> {
                                 _ => false,
                             })
                             .all(|param| {
-                                matches!(self.get_type_tag(&param.1), Err(_) | Ok(Some(_)))
+                                matches!(
+                                    self.get_type_tag(&param.1, module_env),
+                                    Err(_) | Ok(Some(_))
+                                )
                             })
                         && func.get_return_count() == 0
                 })
@@ -188,10 +192,15 @@ impl<'env> Abigen<'env> {
                 ty::Type::Reference(false, inner) => {
                     !matches!(&**inner, ty::Type::Primitive(ty::PrimitiveType::Signer))
                 }
+                ty::Type::Struct(module_id, struct_id, _) => {
+                    let struct_module_env = module_env.env.get_module(*module_id);
+                    let abilities = struct_module_env.get_struct(*struct_id).get_abilities();
+                    abilities.has_ability(Ability::Copy) && !abilities.has_ability(Ability::Key)
+                }
                 _ => true,
             })
             .map(|param| {
-                let tag = self.get_type_tag(&param.1)?.unwrap();
+                let tag = self.get_type_tag(&param.1, module_env)?.unwrap();
                 Ok(ArgumentABI::new(
                     symbol_pool.string(param.0).to_string(),
                     tag,
@@ -247,7 +256,11 @@ impl<'env> Abigen<'env> {
         }
     }
 
-    fn get_type_tag(&self, ty0: &ty::Type) -> anyhow::Result<Option<TypeTag>> {
+    fn get_type_tag(
+        &self,
+        ty0: &ty::Type,
+        module_env: &ModuleEnv<'env>,
+    ) -> anyhow::Result<Option<TypeTag>> {
         use ty::Type::*;
         let tag = match ty0 {
             Primitive(prim) => {
@@ -265,14 +278,38 @@ impl<'env> Abigen<'env> {
                 }
             }
             Vector(ty) => {
-                let tag = match self.get_type_tag(ty)? {
+                let tag = match self.get_type_tag(ty, module_env)? {
                     Some(tag) => tag,
                     None => return Ok(None),
                 };
                 TypeTag::Vector(Box::new(tag))
             }
+            Struct(module_id, struct_id, vec_type) => {
+                let expect_msg = format!("type {:?} is not allowed in scription function", ty0);
+                let struct_module_env = module_env.env.get_module(*module_id);
+                let abilities = struct_module_env.get_struct(*struct_id).get_abilities();
+                if abilities.has_ability(Ability::Copy) && !abilities.has_ability(Ability::Key) {
+                    TypeTag::Struct(StructTag {
+                        address: *struct_module_env.self_address(),
+                        module: struct_module_env.get_identifier(),
+                        name: struct_module_env
+                            .get_struct(*struct_id)
+                            .get_identifier()
+                            .unwrap_or_else(|| panic!("{}", expect_msg)),
+                        type_params: vec_type
+                            .iter()
+                            .map(|e| {
+                                self.get_type_tag(e, module_env)
+                                    .unwrap_or_else(|_| panic!("{}", expect_msg))
+                            })
+                            .map(|e| e.unwrap_or_else(|| panic!("{}", expect_msg)))
+                            .collect(),
+                    })
+                } else {
+                    return Ok(None);
+                }
+            }
             Tuple(_)
-            | Struct(_, _, _)
             | TypeParameter(_)
             | Fun(_, _)
             | TypeDomain(_)

@@ -319,7 +319,7 @@ fn parse_dependency(tval: TV) -> Result<PM::Dependency> {
                     "git",
                     "rev",
                     "subdir",
-                    "node",
+                    "url",
                     "address",
                     "package",
                 ],
@@ -335,7 +335,7 @@ fn parse_dependency(tval: TV) -> Result<PM::Dependency> {
             match (
                 table.remove("local"),
                 table.remove("git"),
-                table.remove("node"),
+                table.remove("url"),
             ) {
                 (Some(local), None, None) => {
                     let local_str = local

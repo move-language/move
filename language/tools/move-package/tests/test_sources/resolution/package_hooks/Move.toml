@@ -3,4 +3,4 @@ name = "test"
 version = "0.0.0"
 
 [dependencies]
-Pkg = { node = "localhost:8080", address = "0x1", package = "framework" }
+Pkg = { url = "localhost:8080", address = "0x1", package = "framework" }

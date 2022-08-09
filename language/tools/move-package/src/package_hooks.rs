@@ -7,6 +7,8 @@ use move_symbol_pool::Symbol;
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
 
+// TODO: remove static hooks and refactor this crate for better customizability
+
 /// A trait providing hooks to customize the package system for a particular Move application.
 /// An instance of the trait can be registered globally.
 pub trait PackageHooks {

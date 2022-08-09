@@ -573,7 +573,7 @@ impl ResolvingGraph {
             }
         }
         if let Some(node_info) = &dep.node_info {
-            package_hooks::resolve_node_dependency(dep_name, node_info)?
+            package_hooks::resolve_custom_dependency(dep_name, node_info)?
         }
         Ok(())
     }

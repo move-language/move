@@ -181,8 +181,8 @@ pub fn parse_dependencies(tval: TV) -> Result<PM::Dependencies> {
         TV::Table(table) => {
             let mut deps = BTreeMap::new();
             for (dep_name, dep) in table.into_iter() {
-                let dep_name_ident = PM::PackageName::from(dep_name);
-                let dep = parse_dependency(dep)?;
+                let dep_name_ident = PM::PackageName::from(dep_name.clone());
+                let dep = parse_dependency(&dep_name, dep)?;
                 deps.insert(dep_name_ident, dep);
             }
             Ok(deps)
@@ -306,24 +306,24 @@ fn parse_address_literal(address_str: &str) -> Result<AccountAddress, AccountAdd
     AccountAddress::from_hex_literal(address_str)
 }
 
-fn parse_dependency(tval: TV) -> Result<PM::Dependency> {
+fn parse_dependency(dep_name: &str, tval: TV) -> Result<PM::Dependency> {
     match tval {
         TV::Table(mut table) => {
-            warn_if_unknown_field_names(
-                &table,
-                &[
-                    "addr_subst",
-                    "version",
-                    "local",
-                    "digest",
-                    "git",
-                    "rev",
-                    "subdir",
-                    "url",
-                    "address",
-                    "package",
-                ],
-            );
+            let mut known_fields = vec![
+                "addr_subst",
+                "version",
+                "local",
+                "digest",
+                "git",
+                "rev",
+                "subdir",
+                "address",
+            ];
+            let custom_key_opt = &package_hooks::custom_dependency_key();
+            if let Some(key) = custom_key_opt {
+                known_fields.push(key.as_ref())
+            }
+            warn_if_unknown_field_names(&table, known_fields.as_slice());
             let subst = table
                 .remove("addr_subst")
                 .map(parse_substitution)
@@ -335,7 +335,11 @@ fn parse_dependency(tval: TV) -> Result<PM::Dependency> {
             match (
                 table.remove("local"),
                 table.remove("git"),
-                table.remove("url"),
+                if let Some(key) = custom_key_opt {
+                    table.remove(key)
+                } else {
+                    None
+                },
             ) {
                 (Some(local), None, None) => {
                     let local_str = local
@@ -392,14 +396,8 @@ fn parse_dependency(tval: TV) -> Result<PM::Dependency> {
                         node_info,
                     })
                 }
-                (None, None, Some(node)) => {
-                    let package_name = match table.remove("package") {
-                        None => bail!("Package not supplied for 'node' dependency"),
-                        Some(r) => Symbol::from(
-                            r.as_str()
-                                .ok_or_else(|| format_err!("Node package not a string"))?,
-                        ),
-                    };
+                (None, None, Some(custom_key)) => {
+                    let package_name = Symbol::from(dep_name);
                     let address = match table.remove("address") {
                         None => bail!("Address not supplied for 'node' dependency"),
                         Some(r) => Symbol::from(
@@ -408,7 +406,7 @@ fn parse_dependency(tval: TV) -> Result<PM::Dependency> {
                         ),
                     };
                     // Downloaded packages are of the form <sanitized_node_url>_<address>_<package>
-                    let node_url = node
+                    let node_url = custom_key
                         .as_str()
                         .ok_or_else(|| anyhow::anyhow!("Git URL not a string"))?;
                     let local_path = PathBuf::from(MOVE_HOME.clone()).join(format!(
@@ -417,7 +415,7 @@ fn parse_dependency(tval: TV) -> Result<PM::Dependency> {
                         address,
                         package_name
                     ));
-                    node_info = Some(PM::NodeInfo {
+                    node_info = Some(PM::CustomDepInfo {
                         node_url: Symbol::from(node_url),
                         package_address: address,
                         package_name,
@@ -433,7 +431,18 @@ fn parse_dependency(tval: TV) -> Result<PM::Dependency> {
                     })
                 }
                 _ => {
-                    bail!("must provide exactly one of 'local', 'git', or 'node' paths for dependency.")
+                    let mut keys = vec!["local", "git"];
+                    if let Some(k) = custom_key_opt {
+                        keys.push(k.as_str())
+                    }
+                    let keys = keys
+                        .into_iter()
+                        .map(|s| format!("'{}'", s))
+                        .collect::<Vec<_>>();
+                    bail!(
+                        "must provide exactly one of {} for dependency.",
+                        keys.join(" or ")
+                    )
                 }
             }
         }

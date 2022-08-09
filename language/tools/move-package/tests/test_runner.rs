@@ -13,7 +13,7 @@ use move_package::{
     resolution::resolution_graph as RG,
     source_package::{
         manifest_parser as MP,
-        parsed_manifest::{NodeInfo, PackageDigest},
+        parsed_manifest::{CustomDepInfo, PackageDigest},
     },
     BuildConfig, ModelConfig,
 };
@@ -140,7 +140,15 @@ impl PackageHooks for TestHooks {
         vec!["test_hooks_field".to_owned()]
     }
 
-    fn resolve_node_dependency(&self, dep_name: Symbol, info: &NodeInfo) -> anyhow::Result<()> {
+    fn custom_dependency_key(&self) -> Option<String> {
+        Some("custom".to_owned())
+    }
+
+    fn resolve_custom_dependency(
+        &self,
+        dep_name: Symbol,
+        info: &CustomDepInfo,
+    ) -> anyhow::Result<()> {
         bail!(
             "TestHooks resolve dep {} = {} {} {}",
             dep_name,

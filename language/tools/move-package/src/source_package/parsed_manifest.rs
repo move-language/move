@@ -44,7 +44,7 @@ pub struct Dependency {
     pub version: Option<Version>,
     pub digest: Option<PackageDigest>,
     pub git_info: Option<GitInfo>,
-    pub node_info: Option<NodeInfo>,
+    pub node_info: Option<CustomDepInfo>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -61,7 +61,7 @@ pub struct GitInfo {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct NodeInfo {
+pub struct CustomDepInfo {
     /// The url of the node to download from
     pub node_url: Symbol,
     /// The address where the package is published. The representation depends

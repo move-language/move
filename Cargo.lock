@@ -2733,6 +2733,7 @@ dependencies = [
  "dirs-next",
  "evm-exec-utils",
  "hex",
+ "itertools 0.10.1",
  "move-abigen",
  "move-binary-format",
  "move-bytecode-source-map",

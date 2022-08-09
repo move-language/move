@@ -252,7 +252,7 @@ module example {
 
 Inside a given scope, all aliases introduced by `use` declarations must be unique.
 
-For a module, this means aliases introduced by `use` cannot overla
+For a module, this means aliases introduced by `use` cannot overlap
 
 ```move=
 address 0x42 {

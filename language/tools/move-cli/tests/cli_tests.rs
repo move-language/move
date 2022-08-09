@@ -2,22 +2,21 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_cli::sandbox::commands::test;
-use std::fs::{self, File};
-use std::io::Write;
-use move_cli::sandbox::commands::test;
+use httpmock::{prelude::*, Mock};
 use move_cli::{base::movey_login::MOVEY_CREDENTIAL_PATH, sandbox::commands::test};
-use move_command_line_common::movey_constants::MOVEY_URL;
+use move_command_line_common::{files, movey_constants::MOVEY_URL};
+use serde_json::json;
 #[cfg(unix)]
 use std::fs::File;
-use std::{env, fs, io::Write};
-
-use std::path::PathBuf;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use std::{path::PathBuf, process::Stdio};
+use std::{
+    env, fs,
+    io::Write,
+    path::PathBuf,
+    process::{Command, Stdio},
+};
 use toml_edit::easy::Value;
-use std::process::Command;
 
 pub const CLI_METATEST_PATH: [&str; 3] = ["tests", "metatests", "args.txt"];
 
@@ -78,7 +77,7 @@ fn upload_package_to_movey_works() {
     init_stub_registry_file(&package_path, &server.base_url());
     let relative_package_path = PathBuf::from(&package_path);
     let absolute_package_path =
-        path_to_string(&relative_package_path.canonicalize().unwrap()).unwrap();
+        files::path_to_string(&relative_package_path.canonicalize().unwrap()).unwrap();
 
     let cli_exe = env!("CARGO_BIN_EXE_move");
     let output = Command::new(cli_exe)
@@ -109,7 +108,7 @@ fn upload_package_to_movey_prints_error_message_if_server_respond_4xx() {
     init_stub_registry_file(&package_path, &server.base_url());
     let relative_package_path = PathBuf::from(&package_path);
     let absolute_package_path =
-        path_to_string(&relative_package_path.canonicalize().unwrap()).unwrap();
+        files::path_to_string(&relative_package_path.canonicalize().unwrap()).unwrap();
 
     let cli_exe = env!("CARGO_BIN_EXE_move");
     let output = Command::new(cli_exe)
@@ -136,7 +135,7 @@ fn upload_package_to_movey_prints_hardcoded_error_message_if_server_respond_5xx(
     init_stub_registry_file(&package_path, &server.base_url());
     let relative_package_path = PathBuf::from(&package_path);
     let absolute_package_path =
-        path_to_string(&relative_package_path.canonicalize().unwrap()).unwrap();
+        files::path_to_string(&relative_package_path.canonicalize().unwrap()).unwrap();
 
     let cli_exe = env!("CARGO_BIN_EXE_move");
     let output = Command::new(cli_exe)
@@ -201,8 +200,6 @@ fn init_git(package_path: &str, is_valid: bool) {
             ])
             .output()
             .unwrap();
-    }
-    if flag != 2 {
         Command::new("git")
             .current_dir(package_path)
             .args(&["config", "user.email", "\"you@example.com\""])
@@ -219,13 +216,14 @@ fn init_git(package_path: &str, is_valid: bool) {
             .output()
             .unwrap();
     }
+}
 #[test]
 fn save_credential_works() {
     let cli_exe = env!("CARGO_BIN_EXE_move");
     let (move_home, credential_path) = setup_move_home("/save_credential_works");
     assert!(fs::read_to_string(&credential_path).is_err());
 
-    match std::process::Command::new(cli_exe)
+    match Command::new(cli_exe)
         .env("MOVE_HOME", &move_home)
         .current_dir(".")
         .args(["movey-login"])
@@ -262,7 +260,7 @@ fn save_credential_works() {
     let token = registry.as_table_mut().unwrap().get_mut("token").unwrap();
     assert!(token.to_string().contains("test_token"));
 
-    clean_up(&move_home)
+    let _ = fs::remove_dir_all(move_home);
 }
 
 #[cfg(unix)]
@@ -315,7 +313,7 @@ fn save_credential_fails_if_undeletable_credential_file_exists() {
     file.set_permissions(perms).unwrap();
     let _ = fs::remove_file(&credential_path);
 
-    clean_up(&move_home)
+    let _ = fs::remove_dir_all(move_home);
 }
 
 fn setup_move_home(test_path: &str) -> (String, String) {
@@ -328,12 +326,7 @@ fn setup_move_home(test_path: &str) -> (String, String) {
     (move_home, credential_path)
 }
 
-fn clean_up(move_home: &str) {
-    let _ = fs::remove_dir_all(move_home);
-}
-
 fn clean_up(package_path: &str) {
-    let _ = fs::remove_file(format!("{}/simple_file", package_path));
     fs::remove_dir_all(format!("{}/.git", package_path)).unwrap();
     let credential_path = format!("{}{}", package_path, MOVEY_CREDENTIAL_PATH);
     let _ = fs::remove_file(&credential_path);

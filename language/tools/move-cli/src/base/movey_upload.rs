@@ -112,7 +112,7 @@ impl MoveyUpload {
                     Ok(response) => {
                         if response.status().is_success() {
                             println!(
-                                "Your package has been successfully uploaded to Movey at {}/packages/{}",
+                                "Your package has been successfully uploaded to Movey at {}/packages/{}.",
                                 url,
                                 response.text()?
                             );

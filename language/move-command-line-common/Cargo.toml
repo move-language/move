@@ -12,7 +12,6 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.52"
 difference = "2.0.0"
-dirs-next = "2.0.0"
 walkdir = "2.3.1"
 sha2 = "0.9.3"
 hex = "0.4.3"

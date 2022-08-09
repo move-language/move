@@ -9,7 +9,7 @@ use std::{collections::BTreeMap, rc::Rc};
 
 use bytecode_interpreter_crypto::{
     ed25519_deserialize_public_key, ed25519_deserialize_signature, ed25519_verify_signature,
-    sha2_256_of, sha3_256_of, keccak_256_of
+    keccak_256_of, sha2_256_of, sha3_256_of,
 };
 use move_binary_format::errors::Location;
 use move_core_types::{

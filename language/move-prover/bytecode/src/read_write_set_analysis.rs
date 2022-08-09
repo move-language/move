@@ -689,7 +689,7 @@ fn call_native_function(
         | ("string", "internal_sub_string")
         | ("string", "internal_index_of") => (),
         ("event", "write_to_event_store") => (),
-        ("hash", "sha3_256") | ("hash", "sha2_256") | ("hash", "keccak_256")=> (),
+        ("hash", "sha3_256") | ("hash", "sha2_256") | ("hash", "keccak_256") => (),
         ("Signature", "ed25519_validate_pubkey") | ("Signature", "ed25519_verify") => (),
         (m, f) => {
             panic!("Unsupported native function {:?}::{:?}", m, f)

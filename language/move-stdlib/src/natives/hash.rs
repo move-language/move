@@ -9,7 +9,7 @@ use move_vm_types::{
     loaded_data::runtime_types::Type, natives::function::NativeResult, pop_arg, values::Value,
 };
 use sha2::{Digest, Sha256};
-use sha3::{Sha3_256, Keccak256};
+use sha3::{Keccak256, Sha3_256};
 use smallvec::smallvec;
 use std::{collections::VecDeque, sync::Arc};
 
@@ -105,42 +105,42 @@ pub fn make_native_sha3_256(gas_params: Sha3_256GasParameters) -> NativeFunction
  *   gas cost: base_cost + unit_cost * max(input_length_in_bytes, legacy_min_input_len)
  *
  **************************************************************************************************/
- #[derive(Debug, Clone)]
- pub struct Keccak256gasParameters {
-     pub base_cost: u64,
-     pub unit_cost: u64,
-     pub legacy_min_input_len: usize,
- }
- 
- #[inline]
- fn native_keccak_256(
-     gas_params: &Keccak256gasParameters,
-     _context: &mut NativeContext,
-     _ty_args: Vec<Type>,
-     mut arguments: VecDeque<Value>,
- ) -> PartialVMResult<NativeResult> {
-     debug_assert!(_ty_args.is_empty());
-     debug_assert!(arguments.len() == 1);
- 
-     let hash_arg = pop_arg!(arguments, Vec<u8>);
- 
-     let cost = gas_params.base_cost
-         + gas_params.unit_cost * usize::max(hash_arg.len(), gas_params.legacy_min_input_len) as u64;
- 
-     let hash_vec = Keccak256::digest(hash_arg.as_slice()).to_vec();
-     Ok(NativeResult::ok(
-         cost,
-         smallvec![Value::vector_u8(hash_vec)],
-     ))
- }
- 
- pub fn make_native_keccak_256(gas_params: Keccak256gasParameters) -> NativeFunction {
-     Arc::new(
-         move |context, ty_args, args| -> PartialVMResult<NativeResult> {
+#[derive(Debug, Clone)]
+pub struct Keccak256gasParameters {
+    pub base_cost: u64,
+    pub unit_cost: u64,
+    pub legacy_min_input_len: usize,
+}
+
+#[inline]
+fn native_keccak_256(
+    gas_params: &Keccak256gasParameters,
+    _context: &mut NativeContext,
+    _ty_args: Vec<Type>,
+    mut arguments: VecDeque<Value>,
+) -> PartialVMResult<NativeResult> {
+    debug_assert!(_ty_args.is_empty());
+    debug_assert!(arguments.len() == 1);
+
+    let hash_arg = pop_arg!(arguments, Vec<u8>);
+
+    let cost = gas_params.base_cost
+        + gas_params.unit_cost * usize::max(hash_arg.len(), gas_params.legacy_min_input_len) as u64;
+
+    let hash_vec = Keccak256::digest(hash_arg.as_slice()).to_vec();
+    Ok(NativeResult::ok(
+        cost,
+        smallvec![Value::vector_u8(hash_vec)],
+    ))
+}
+
+pub fn make_native_keccak_256(gas_params: Keccak256gasParameters) -> NativeFunction {
+    Arc::new(
+        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
             native_keccak_256(&gas_params, context, ty_args, args)
-         },
-     )
- }
+        },
+    )
+}
 
 /***************************************************************************************************
  * module

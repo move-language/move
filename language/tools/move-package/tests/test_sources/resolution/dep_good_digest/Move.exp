@@ -23,6 +23,7 @@ ResolutionGraph {
             ),
             authors: [],
             license: None,
+            custom_properties: {},
         },
         addresses: Some(
             {
@@ -48,6 +49,7 @@ ResolutionGraph {
                     "6A88B7888D6049EB0121900E22B6FA2C0E702F042C8C8D4FD62AD5C990B9F9A8",
                 ),
                 git_info: None,
+                node_info: None,
             },
         },
         dev_dependencies: {},
@@ -79,6 +81,7 @@ ResolutionGraph {
                     ),
                     authors: [],
                     license: None,
+                    custom_properties: {},
                 },
                 addresses: Some(
                     {
@@ -109,6 +112,7 @@ ResolutionGraph {
                     ),
                     authors: [],
                     license: None,
+                    custom_properties: {},
                 },
                 addresses: Some(
                     {
@@ -134,6 +138,7 @@ ResolutionGraph {
                             "6A88B7888D6049EB0121900E22B6FA2C0E702F042C8C8D4FD62AD5C990B9F9A8",
                         ),
                         git_info: None,
+                        node_info: None,
                     },
                 },
                 dev_dependencies: {},

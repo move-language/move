@@ -23,6 +23,7 @@ ResolutionGraph {
             ),
             authors: [],
             license: None,
+            custom_properties: {},
         },
         addresses: None,
         dev_address_assignments: None,
@@ -40,6 +41,7 @@ ResolutionGraph {
                 version: None,
                 digest: None,
                 git_info: None,
+                node_info: None,
             },
             "D": Dependency {
                 local: "./deps_only/D",
@@ -53,6 +55,7 @@ ResolutionGraph {
                 version: None,
                 digest: None,
                 git_info: None,
+                node_info: None,
             },
         },
         dev_dependencies: {},
@@ -94,6 +97,7 @@ ResolutionGraph {
                     ),
                     authors: [],
                     license: None,
+                    custom_properties: {},
                 },
                 addresses: Some(
                     {
@@ -126,6 +130,7 @@ ResolutionGraph {
                     ),
                     authors: [],
                     license: None,
+                    custom_properties: {},
                 },
                 addresses: Some(
                     {
@@ -158,6 +163,7 @@ ResolutionGraph {
                     ),
                     authors: [],
                     license: None,
+                    custom_properties: {},
                 },
                 addresses: None,
                 dev_address_assignments: None,
@@ -175,6 +181,7 @@ ResolutionGraph {
                         version: None,
                         digest: None,
                         git_info: None,
+                        node_info: None,
                     },
                     "D": Dependency {
                         local: "./deps_only/D",
@@ -188,6 +195,7 @@ ResolutionGraph {
                         version: None,
                         digest: None,
                         git_info: None,
+                        node_info: None,
                     },
                 },
                 dev_dependencies: {},

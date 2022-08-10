@@ -861,7 +861,10 @@ mod tests {
     use move_symbol_pool::Symbol;
     use std::{path::PathBuf, thread, time};
 
-    fn init_mock_server(server: &MockServer, status_code: u16) -> (Mock, GitInfo) {
+    fn mock_movey_count_request_with_response_status_code(
+        server: &MockServer,
+        status_code: u16,
+    ) -> (Mock, GitInfo) {
         let git_url = Symbol::from("test git url");
         let git_rev = Symbol::from("test git rev");
         let subdir = PathBuf::from("test subdir");
@@ -883,45 +886,49 @@ mod tests {
         (server_mock, git_info)
     }
 
-    fn wait(wait_time: Option<u64>) {
+    fn test_thread_wait(wait_time: Option<u64>) {
         // make sure the spawn thread has enough time to run
-        let millis = time::Duration::from_millis(wait_time.unwrap_or(20));
-        thread::sleep(millis);
+        let thread_sleep_time = time::Duration::from_millis(wait_time.unwrap_or(20));
+        thread::sleep(thread_sleep_time);
     }
 
     #[test]
     fn increase_movey_download_count_calls_movey_api() {
         let server = MockServer::start();
-        let (server_mock, git_info) = init_mock_server(&server, 200);
+        let (server_mock, git_info) =
+            mock_movey_count_request_with_response_status_code(&server, 200);
         ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, false);
-        wait(None);
+        test_thread_wait(None);
         server_mock.assert_hits(1);
     }
 
     #[test]
     fn increase_movey_download_count_not_calls_movey_api_if_skip_movey_flag_is_true() {
         let server = MockServer::start();
-        let (server_mock, git_info) = init_mock_server(&server, 200);
+        let (server_mock, git_info) =
+            mock_movey_count_request_with_response_status_code(&server, 200);
         ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, true);
-        wait(None);
+        test_thread_wait(None);
         server_mock.assert_hits(0);
     }
 
     #[test]
     fn increase_movey_download_count_not_throw_error_if_movey_returns_4xx() {
         let server = MockServer::start();
-        let (server_mock, git_info) = init_mock_server(&server, 400);
+        let (server_mock, git_info) =
+            mock_movey_count_request_with_response_status_code(&server, 400);
         ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, false);
-        wait(None);
+        test_thread_wait(None);
         server_mock.assert_hits(1);
     }
 
     #[test]
     fn increase_movey_download_count_not_throw_error_if_movey_returns_5xx() {
         let server = MockServer::start();
-        let (server_mock, git_info) = init_mock_server(&server, 500);
+        let (server_mock, git_info) =
+            mock_movey_count_request_with_response_status_code(&server, 500);
         ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, false);
-        wait(None);
+        test_thread_wait(None);
         server_mock.assert_hits(1);
     }
 }

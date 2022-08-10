@@ -67,13 +67,12 @@ fn cross_process_locking_git_deps() {
 }
 
 const UPLOAD_PACKAGE_PATH: &str = "./tests/upload_tests";
-
 #[test]
 fn upload_package_to_movey_works() {
     let package_path = format!("{}/valid_package1", UPLOAD_PACKAGE_PATH);
     init_git(&package_path, true);
     let server = MockServer::start();
-    let server_mock = init_server_mock(&server, 200, None);
+    let server_mock = mock_movey_upload_with_response_body_and_status_code(&server, 200, None);
     init_stub_registry_file(&package_path, &server.base_url());
     let relative_package_path = PathBuf::from(&package_path);
     let absolute_package_path =
@@ -104,7 +103,11 @@ fn upload_package_to_movey_prints_error_message_if_server_respond_4xx() {
     let package_path = format!("{}/valid_package2", UPLOAD_PACKAGE_PATH);
     init_git(&package_path, true);
     let server = MockServer::start();
-    let server_mock = init_server_mock(&server, 400, Some("Invalid Api token"));
+    let server_mock = mock_movey_upload_with_response_body_and_status_code(
+        &server,
+        400,
+        Some("Invalid Api token"),
+    );
     init_stub_registry_file(&package_path, &server.base_url());
     let relative_package_path = PathBuf::from(&package_path);
     let absolute_package_path =
@@ -131,7 +134,11 @@ fn upload_package_to_movey_prints_hardcoded_error_message_if_server_respond_5xx(
     let package_path = format!("{}/valid_package3", UPLOAD_PACKAGE_PATH);
     init_git(&package_path, true);
     let server = MockServer::start();
-    let server_mock = init_server_mock(&server, 500, Some("Invalid Api token"));
+    let server_mock = mock_movey_upload_with_response_body_and_status_code(
+        &server,
+        500,
+        Some("Invalid Api token"),
+    );
     init_stub_registry_file(&package_path, &server.base_url());
     let relative_package_path = PathBuf::from(&package_path);
     let absolute_package_path =
@@ -347,7 +354,7 @@ fn init_stub_registry_file(package_path: &str, base_url: &str) {
 }
 
 // create a mock server to check if the request is sent or not, also returns a stub response for testing
-fn init_server_mock<'a>(
+fn mock_movey_upload_with_response_body_and_status_code<'a>(
     server: &'a MockServer,
     status_code: u16,
     response_body: Option<&str>,

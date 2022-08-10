@@ -16,6 +16,19 @@ use move_binary_format::{
     file_format::{CompiledModule, CompiledScript},
 };
 
+#[derive(Debug, Clone)]
+pub struct VerifierConfig {
+    pub max_loop_depth: Option<usize>,
+}
+
+impl Default for VerifierConfig {
+    fn default() -> Self {
+        Self {
+            max_loop_depth: None,
+        }
+    }
+}
+
 /// Helper for a "canonical" verification of a module.
 ///
 /// Clients that rely on verification should call the proper passes
@@ -27,6 +40,10 @@ use move_binary_format::{
 /// minimize the code locations that need to be updated should a new checker
 /// is introduced.
 pub fn verify_module(module: &CompiledModule) -> VMResult<()> {
+    verify_module_with_config(&VerifierConfig::default(), module)
+}
+
+pub fn verify_module_with_config(config: &VerifierConfig, module: &CompiledModule) -> VMResult<()> {
     BoundsChecker::verify_module(module).map_err(|e| {
         // We can't point the error at the module, because if bounds-checking
         // failed, we cannot safely index into module's handle to itself.
@@ -40,7 +57,7 @@ pub fn verify_module(module: &CompiledModule) -> VMResult<()> {
     ability_field_requirements::verify_module(module)?;
     RecursiveStructDefChecker::verify_module(module)?;
     InstantiationLoopChecker::verify_module(module)?;
-    CodeUnitVerifier::verify_module(module)?;
+    CodeUnitVerifier::verify_module(config, module)?;
     script_signature::verify_module(module, no_additional_script_signature_checks)
 }
 
@@ -55,11 +72,15 @@ pub fn verify_module(module: &CompiledModule) -> VMResult<()> {
 /// minimize the code locations that need to be updated should a new checker
 /// is introduced.
 pub fn verify_script(script: &CompiledScript) -> VMResult<()> {
+    verify_script_with_config(&VerifierConfig::default(), script)
+}
+
+pub fn verify_script_with_config(config: &VerifierConfig, script: &CompiledScript) -> VMResult<()> {
     BoundsChecker::verify_script(script).map_err(|e| e.finish(Location::Script))?;
     DuplicationChecker::verify_script(script)?;
     SignatureChecker::verify_script(script)?;
     InstructionConsistency::verify_script(script)?;
     constants::verify_script(script)?;
-    CodeUnitVerifier::verify_script(script)?;
+    CodeUnitVerifier::verify_script(config, script)?;
     script_signature::verify_script(script, no_additional_script_signature_checks)
 }

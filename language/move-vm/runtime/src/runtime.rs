@@ -17,7 +17,7 @@ use move_binary_format::{
     file_format::LocalIndex,
     normalized, CompiledModule, IndexKind,
 };
-use move_bytecode_verifier::script_signature;
+use move_bytecode_verifier::{script_signature, VerifierConfig};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
@@ -43,9 +43,10 @@ pub(crate) struct VMRuntime {
 impl VMRuntime {
     pub(crate) fn new(
         natives: impl IntoIterator<Item = (AccountAddress, Identifier, Identifier, NativeFunction)>,
+        verifier_config: VerifierConfig,
     ) -> PartialVMResult<Self> {
         Ok(VMRuntime {
-            loader: Loader::new(NativeFunctions::new(natives)?),
+            loader: Loader::new(NativeFunctions::new(natives)?, verifier_config),
         })
     }
 

@@ -3084,6 +3084,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "move-binary-format",
+ "move-bytecode-verifier",
  "move-compiler",
  "move-core-types",
  "move-stdlib",

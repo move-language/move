@@ -7,6 +7,7 @@
 //! - All forward jumps do not enter into the middle of a loop
 //! - All "breaks" (forward, loop-exiting jumps) go to the "end" of the loop
 //! - All "continues" (back jumps in a loop) are only to the current loop
+use crate::verifier::VerifierConfig;
 use move_binary_format::{
     errors::{PartialVMError, PartialVMResult},
     file_format::{Bytecode, CodeOffset, CodeUnit, FunctionDefinitionIndex},
@@ -15,6 +16,7 @@ use move_core_types::vm_status::StatusCode;
 use std::{collections::HashSet, convert::TryInto};
 
 pub fn verify(
+    verifier_config: &VerifierConfig,
     current_function_opt: Option<FunctionDefinitionIndex>,
     code: &CodeUnit,
 ) -> PartialVMResult<()> {
@@ -36,7 +38,7 @@ pub fn verify(
         code: &code.code,
     };
     let labels = instruction_labels(context);
-    check_jumps(context, labels)
+    check_jumps(verifier_config, context, labels)
 }
 
 #[derive(Clone, Copy)]
@@ -95,13 +97,23 @@ fn instruction_labels(context: &ControlFlowVerifier) -> Vec<Label> {
 //   - All forward jumps do not enter into the middle of a loop
 //   - All "breaks" go to the "end" of the loop
 //   - All back jumps are only to the current loop
-fn check_jumps(context: &ControlFlowVerifier, labels: Vec<Label>) -> PartialVMResult<()> {
+//   - Nested loops do not exceed a given depth
+fn check_jumps(
+    verifier_config: &VerifierConfig,
+    context: &ControlFlowVerifier,
+    labels: Vec<Label>,
+) -> PartialVMResult<()> {
     // All back jumps are only to the current loop
     check_continues(context, &labels)?;
     // All "breaks" go to the "end" of the loop
     check_breaks(context, &labels)?;
+
+    let loop_depth = count_loop_depth(&labels);
+
     // All forward jumps do not enter into the middle of a loop
-    check_no_loop_splits(context, &labels)
+    check_no_loop_splits(context, &labels, &loop_depth)?;
+    // Nested loops do not exceed a given depth
+    check_loop_depth(verifier_config, context, &labels, &loop_depth)
 }
 
 fn check_code<
@@ -185,14 +197,17 @@ fn check_breaks(context: &ControlFlowVerifier, labels: &[Label]) -> PartialVMRes
     })
 }
 
-fn check_no_loop_splits(context: &ControlFlowVerifier, labels: &[Label]) -> PartialVMResult<()> {
+fn check_no_loop_splits(
+    context: &ControlFlowVerifier,
+    labels: &[Label],
+    loop_depth: &[usize],
+) -> PartialVMResult<()> {
     let is_break = |loop_stack: &Vec<(CodeOffset, CodeOffset)>, jump_target: CodeOffset| -> bool {
         match loop_stack.last() {
             None => false,
             Some((_cur_loop_head, last_continue)) => jump_target > *last_continue,
         }
     };
-    let loop_depth = count_loop_depth(labels);
     check_code(context, labels, |loop_stack, i, instr| {
         match instr {
             // Forward jump/"break"
@@ -214,6 +229,24 @@ fn check_no_loop_splits(context: &ControlFlowVerifier, labels: &[Label]) -> Part
             }
             _ => Ok(()),
         }
+    })
+}
+
+fn check_loop_depth(
+    verifier_config: &VerifierConfig,
+    context: &ControlFlowVerifier,
+    labels: &[Label],
+    loop_depth: &[usize],
+) -> PartialVMResult<()> {
+    let max_depth = match verifier_config.max_loop_depth {
+        Some(depth) => depth,
+        None => return Ok(()),
+    };
+    check_code(context, labels, |_loop_stack, i, _instr| {
+        if loop_depth[i as usize] > max_depth {
+            return Err(context.error(StatusCode::LOOP_MAX_DEPTH_REACHED, i));
+        }
+        Ok(())
     })
 }
 

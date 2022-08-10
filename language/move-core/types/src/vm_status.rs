@@ -599,6 +599,8 @@ pub enum StatusCode {
     INVALID_PHANTOM_TYPE_PARAM_POSITION = 1108,
     VEC_UPDATE_EXISTS_MUTABLE_BORROW_ERROR = 1109,
     VEC_BORROW_ELEMENT_EXISTS_MUTABLE_BORROW_ERROR = 1110,
+    // Loops are too deeply nested.
+    LOOP_MAX_DEPTH_REACHED = 1111,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.

@@ -12,6 +12,7 @@ use move_binary_format::{
     errors::{Location, VMResult},
     CompiledModule,
 };
+use move_bytecode_verifier::VerifierConfig;
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, language_storage::ModuleId,
     resolver::MoveResolver,
@@ -25,8 +26,16 @@ impl MoveVM {
     pub fn new(
         natives: impl IntoIterator<Item = (AccountAddress, Identifier, Identifier, NativeFunction)>,
     ) -> VMResult<Self> {
+        Self::new_with_verifier_config(natives, VerifierConfig::default())
+    }
+
+    pub fn new_with_verifier_config(
+        natives: impl IntoIterator<Item = (AccountAddress, Identifier, Identifier, NativeFunction)>,
+        verifier_config: VerifierConfig,
+    ) -> VMResult<Self> {
         Ok(Self {
-            runtime: VMRuntime::new(natives).map_err(|err| err.finish(Location::Undefined))?,
+            runtime: VMRuntime::new(natives, verifier_config)
+                .map_err(|err| err.finish(Location::Undefined))?,
         })
     }
 

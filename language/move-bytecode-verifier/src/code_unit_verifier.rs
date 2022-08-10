@@ -7,7 +7,7 @@
 //! abstract_interpreter.rs. CodeUnitVerifier simply orchestrates calls into these two files.
 use crate::{
     acquires_list_verifier::AcquiresVerifier, control_flow, locals_safety, reference_safety,
-    stack_usage_verifier::StackUsageVerifier, type_safety,
+    stack_usage_verifier::StackUsageVerifier, type_safety, verifier::VerifierConfig,
 };
 use move_binary_format::{
     access::ModuleAccess,
@@ -28,26 +28,39 @@ pub struct CodeUnitVerifier<'a> {
 }
 
 impl<'a> CodeUnitVerifier<'a> {
-    pub fn verify_module(module: &'a CompiledModule) -> VMResult<()> {
-        Self::verify_module_impl(module).map_err(|e| e.finish(Location::Module(module.self_id())))
+    pub fn verify_module(
+        verifier_config: &VerifierConfig,
+        module: &'a CompiledModule,
+    ) -> VMResult<()> {
+        Self::verify_module_impl(verifier_config, module)
+            .map_err(|e| e.finish(Location::Module(module.self_id())))
     }
 
-    fn verify_module_impl(module: &'a CompiledModule) -> PartialVMResult<()> {
+    fn verify_module_impl(
+        verifier_config: &VerifierConfig,
+        module: &'a CompiledModule,
+    ) -> PartialVMResult<()> {
         for (idx, function_definition) in module.function_defs().iter().enumerate() {
             let index = FunctionDefinitionIndex(idx as TableIndex);
-            Self::verify_function(index, function_definition, module)
+            Self::verify_function(verifier_config, index, function_definition, module)
                 .map_err(|err| err.at_index(IndexKind::FunctionDefinition, index.0))?
         }
         Ok(())
     }
 
-    pub fn verify_script(module: &'a CompiledScript) -> VMResult<()> {
-        Self::verify_script_impl(module).map_err(|e| e.finish(Location::Script))
+    pub fn verify_script(
+        verifier_config: &VerifierConfig,
+        module: &'a CompiledScript,
+    ) -> VMResult<()> {
+        Self::verify_script_impl(verifier_config, module).map_err(|e| e.finish(Location::Script))
     }
 
-    fn verify_script_impl(script: &'a CompiledScript) -> PartialVMResult<()> {
+    fn verify_script_impl(
+        verifier_config: &VerifierConfig,
+        script: &'a CompiledScript,
+    ) -> PartialVMResult<()> {
         // create `FunctionView` and `BinaryIndexedView`
-        control_flow::verify(None, &script.code)?;
+        control_flow::verify(verifier_config, None, &script.code)?;
         let function_view = FunctionView::script(script);
         let resolver = BinaryIndexedView::Script(script);
         //verify
@@ -60,6 +73,7 @@ impl<'a> CodeUnitVerifier<'a> {
     }
 
     fn verify_function(
+        verifier_config: &VerifierConfig,
         index: FunctionDefinitionIndex,
         function_definition: &'a FunctionDefinition,
         module: &'a CompiledModule,
@@ -71,7 +85,7 @@ impl<'a> CodeUnitVerifier<'a> {
         };
         // create `FunctionView` and `BinaryIndexedView`
         let function_handle = module.function_handle_at(function_definition.function);
-        control_flow::verify(Some(index), code)?;
+        control_flow::verify(verifier_config, Some(index), code)?;
         let function_view = FunctionView::function(module, index, code, function_handle);
         let resolver = BinaryIndexedView::Module(module);
         let mut name_def_map = HashMap::new();

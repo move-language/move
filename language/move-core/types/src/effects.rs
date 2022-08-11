@@ -7,60 +7,114 @@ use crate::{
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
 };
-use anyhow::{format_err, Error, Result};
+use anyhow::{bail, Result};
 use std::collections::btree_map::{self, BTreeMap};
 
-/// A collection of changes to modules and resources under a Move account.
+/// A storage operation.
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub enum Op<T> {
+    /// Inserts some new data into an empty slot.
+    New(T),
+    /// Modifies some data that currently exists.
+    Modify(T),
+    /// Deletes some data that currently exists.
+    Delete,
+}
+
+impl<T> Op<T> {
+    pub fn as_ref(&self) -> Op<&T> {
+        use Op::*;
+
+        match self {
+            New(data) => New(data),
+            Modify(data) => Modify(data),
+            Delete => Delete,
+        }
+    }
+
+    pub fn map<F, U>(self, f: F) -> Op<U>
+    where
+        F: FnOnce(T) -> U,
+    {
+        use Op::*;
+
+        match self {
+            New(data) => New(f(data)),
+            Modify(data) => Modify(f(data)),
+            Delete => Delete,
+        }
+    }
+
+    pub fn ok(self) -> Option<T> {
+        use Op::*;
+
+        match self {
+            New(data) | Modify(data) => Some(data),
+            Delete => None,
+        }
+    }
+}
+
+/// A collection of resource and module operations on a Move account.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct AccountChangeSet {
-    modules: BTreeMap<Identifier, Option<Vec<u8>>>,
-    resources: BTreeMap<StructTag, Option<Vec<u8>>>,
+    modules: BTreeMap<Identifier, Op<Vec<u8>>>,
+    resources: BTreeMap<StructTag, Op<Vec<u8>>>,
 }
 
-fn publish_checked<K, V, F>(map: &mut BTreeMap<K, Option<V>>, k: K, v: V, make_err: F) -> Result<()>
+/// This implements an algorithm to squash two change sets together by merging pairs of operations
+/// on the same item together. This is similar to squashing two commits in a version control system.
+///
+/// It should be noted that all operation types have some implied pre and post conditions:
+///   - New
+///     - before: data doesn't exist
+///     - after: data exists (new)
+///   - Modify
+///     - before: data exists
+///     - after: data exists (modified)
+///   - Delete
+///     - before: data exists
+///     - after: data does not exist (deleted)
+///
+/// It is possible to have a pair of operations resulting in conflicting states, in which case the
+/// squash will fail.
+fn squash<K, V>(map: &mut BTreeMap<K, Op<V>>, other: BTreeMap<K, Op<V>>) -> Result<()>
 where
     K: Ord,
-    F: FnOnce() -> Error,
 {
-    match map.entry(k) {
-        btree_map::Entry::Occupied(entry) => {
-            let r = entry.into_mut();
-            match r {
-                Some(_) => return Err(make_err()),
-                None => *r = Some(v),
-            }
-        }
-        btree_map::Entry::Vacant(entry) => {
-            entry.insert(Some(v));
-        }
-    }
-    Ok(())
-}
+    use btree_map::Entry::*;
+    use Op::*;
 
-fn unpublish_checked<K, V, F>(map: &mut BTreeMap<K, Option<V>>, k: K, make_err: F) -> Result<()>
-where
-    K: Ord,
-    F: FnOnce() -> Error,
-{
-    match map.entry(k) {
-        btree_map::Entry::Occupied(entry) => {
-            let r = entry.into_mut();
-            match r {
-                Some(_) => *r = None,
-                None => return Err(make_err()),
+    for (key, op) in other.into_iter() {
+        match map.entry(key) {
+            Occupied(mut entry) => {
+                let r = entry.get_mut();
+                match (r.as_ref(), op) {
+                    (Modify(_) | New(_), New(_)) | (Delete, Delete | Modify(_)) => {
+                        bail!("The given change sets cannot be squashed")
+                    }
+                    (Modify(_), Modify(data)) => *r = Modify(data),
+                    (New(_), Modify(data)) => *r = New(data),
+                    (Modify(_), Delete) => *r = Delete,
+                    (Delete, New(data)) => *r = Modify(data),
+                    (New(_), Delete) => {
+                        entry.remove();
+                    }
+                }
+            }
+            Vacant(entry) => {
+                entry.insert(op);
             }
         }
-        btree_map::Entry::Vacant(entry) => {
-            entry.insert(None);
-        }
     }
+
     Ok(())
 }
 
 impl AccountChangeSet {
     pub fn from_modules_resources(
-        modules: BTreeMap<Identifier, Option<Vec<u8>>>,
-        resources: BTreeMap<StructTag, Option<Vec<u8>>>,
+        modules: BTreeMap<Identifier, Op<Vec<u8>>>,
+        resources: BTreeMap<StructTag, Op<Vec<u8>>>,
     ) -> Self {
         Self { modules, resources }
     }
@@ -72,28 +126,54 @@ impl AccountChangeSet {
         }
     }
 
+    pub fn add_module_op(&mut self, name: Identifier, op: Op<Vec<u8>>) -> Result<()> {
+        use btree_map::Entry::*;
+
+        match self.modules.entry(name) {
+            Occupied(entry) => bail!("Module {} already exists", entry.key()),
+            Vacant(entry) => {
+                entry.insert(op);
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn add_resource_op(&mut self, struct_tag: StructTag, op: Op<Vec<u8>>) -> Result<()> {
+        use btree_map::Entry::*;
+
+        match self.resources.entry(struct_tag) {
+            Occupied(entry) => bail!("Resource {} already exists", entry.key()),
+            Vacant(entry) => {
+                entry.insert(op);
+            }
+        }
+
+        Ok(())
+    }
+
     pub fn into_inner(
         self,
     ) -> (
-        BTreeMap<Identifier, Option<Vec<u8>>>,
-        BTreeMap<StructTag, Option<Vec<u8>>>,
+        BTreeMap<Identifier, Op<Vec<u8>>>,
+        BTreeMap<StructTag, Op<Vec<u8>>>,
     ) {
         (self.modules, self.resources)
     }
 
-    pub fn into_resources(self) -> BTreeMap<StructTag, Option<Vec<u8>>> {
+    pub fn into_resources(self) -> BTreeMap<StructTag, Op<Vec<u8>>> {
         self.resources
     }
 
-    pub fn into_modules(self) -> BTreeMap<Identifier, Option<Vec<u8>>> {
+    pub fn into_modules(self) -> BTreeMap<Identifier, Op<Vec<u8>>> {
         self.modules
     }
 
-    pub fn modules(&self) -> &BTreeMap<Identifier, Option<Vec<u8>>> {
+    pub fn modules(&self) -> &BTreeMap<Identifier, Op<Vec<u8>>> {
         &self.modules
     }
 
-    pub fn resources(&self) -> &BTreeMap<StructTag, Option<Vec<u8>>> {
+    pub fn resources(&self) -> &BTreeMap<StructTag, Op<Vec<u8>>> {
         &self.resources
     }
 
@@ -102,53 +182,12 @@ impl AccountChangeSet {
     }
 
     pub fn squash(&mut self, other: Self) -> Result<()> {
-        for (name, blob_opt) in other.modules {
-            match blob_opt {
-                Some(blob) => self.publish_module(name, blob)?,
-                None => self.unpublish_module(name)?,
-            }
-        }
-        for (struct_tag, blob_opt) in other.resources {
-            match blob_opt {
-                Some(blob) => self.publish_resource(struct_tag, blob)?,
-                None => self.unpublish_resource(struct_tag)?,
-            }
-        }
-        Ok(())
-    }
-
-    pub fn publish_or_overwrite_module(&mut self, name: Identifier, blob: Vec<u8>) {
-        self.modules.insert(name, Some(blob));
-    }
-
-    pub fn publish_or_overwrite_resource(&mut self, struct_tag: StructTag, blob: Vec<u8>) {
-        self.resources.insert(struct_tag, Some(blob));
-    }
-
-    pub fn publish_module(&mut self, name: Identifier, blob: Vec<u8>) -> Result<()> {
-        publish_checked(&mut self.modules, name, blob, || {
-            format_err!("module already published")
-        })
-    }
-
-    pub fn unpublish_module(&mut self, name: Identifier) -> Result<()> {
-        unpublish_checked(&mut self.modules, name, || {
-            format_err!("module already unpublished")
-        })
-    }
-
-    pub fn publish_resource(&mut self, struct_tag: StructTag, blob: Vec<u8>) -> Result<()> {
-        publish_checked(&mut self.resources, struct_tag, blob, || {
-            format_err!("resource already published")
-        })
-    }
-
-    pub fn unpublish_resource(&mut self, struct_tag: StructTag) -> Result<()> {
-        unpublish_checked(&mut self.resources, struct_tag, || {
-            format_err!("resource already unpublished")
-        })
+        squash(&mut self.modules, other.modules)?;
+        squash(&mut self.resources, other.resources)
     }
 }
+
+// TODO: ChangeSet does not have a canonical representation so the derived Ord is not sound.
 
 /// A collection of changes to a Move state. Each AccountChangeSet in the domain of `accounts`
 /// is guaranteed to be nonempty
@@ -162,6 +201,24 @@ impl ChangeSet {
         Self {
             accounts: BTreeMap::new(),
         }
+    }
+
+    pub fn add_account_changeset(
+        &mut self,
+        addr: AccountAddress,
+        account_changeset: AccountChangeSet,
+    ) -> Result<()> {
+        match self.accounts.entry(addr) {
+            btree_map::Entry::Occupied(_) => bail!(
+                "Failed to add account change set. Account {} already exists.",
+                addr
+            ),
+            btree_map::Entry::Vacant(entry) => {
+                entry.insert(account_changeset);
+            }
+        }
+
+        Ok(())
     }
 
     pub fn accounts(&self) -> &BTreeMap<AccountAddress, AccountChangeSet> {
@@ -179,61 +236,19 @@ impl ChangeSet {
         }
     }
 
-    pub fn publish_or_overwrite_account_change_set(
-        &mut self,
-        addr: AccountAddress,
-        account_change_set: AccountChangeSet,
-    ) {
-        if !account_change_set.is_empty() {
-            self.accounts.insert(addr, account_change_set);
-        }
+    pub fn add_module_op(&mut self, module_id: ModuleId, op: Op<Vec<u8>>) -> Result<()> {
+        let account = self.get_or_insert_account_changeset(*module_id.address());
+        account.add_module_op(module_id.name().to_owned(), op)
     }
 
-    pub fn publish_or_overwrite_module(&mut self, module_id: ModuleId, blob: Vec<u8>) {
-        let (addr, name) = module_id.into();
-        let account_changeset = self.get_or_insert_account_changeset(addr);
-        account_changeset.publish_or_overwrite_module(name, blob)
-    }
-
-    pub fn publish_module(&mut self, module_id: ModuleId, blob: Vec<u8>) -> Result<()> {
-        let (addr, name) = module_id.into();
-        let account_changeset = self.get_or_insert_account_changeset(addr);
-        account_changeset.publish_module(name, blob)
-    }
-
-    pub fn unpublish_module(&mut self, module_id: ModuleId) -> Result<()> {
-        let (addr, name) = module_id.into();
-        let account_changeset = self.get_or_insert_account_changeset(addr);
-        account_changeset.unpublish_module(name)
-    }
-
-    pub fn publish_or_overwrite_resource(
+    pub fn add_resource_op(
         &mut self,
         addr: AccountAddress,
         struct_tag: StructTag,
-        blob: Vec<u8>,
-    ) {
-        self.get_or_insert_account_changeset(addr)
-            .publish_or_overwrite_resource(struct_tag, blob)
-    }
-
-    pub fn publish_resource(
-        &mut self,
-        addr: AccountAddress,
-        struct_tag: StructTag,
-        blob: Vec<u8>,
+        op: Op<Vec<u8>>,
     ) -> Result<()> {
-        self.get_or_insert_account_changeset(addr)
-            .publish_resource(struct_tag, blob)
-    }
-
-    pub fn unpublish_resource(
-        &mut self,
-        addr: AccountAddress,
-        struct_tag: StructTag,
-    ) -> Result<()> {
-        self.get_or_insert_account_changeset(addr)
-            .unpublish_resource(struct_tag)
+        let account = self.get_or_insert_account_changeset(addr);
+        account.add_resource_op(struct_tag, op)
     }
 
     pub fn squash(&mut self, other: Self) -> Result<()> {
@@ -250,7 +265,7 @@ impl ChangeSet {
         Ok(())
     }
 
-    pub fn into_modules(self) -> impl Iterator<Item = (ModuleId, Option<Vec<u8>>)> {
+    pub fn into_modules(self) -> impl Iterator<Item = (ModuleId, Op<Vec<u8>>)> {
         self.accounts.into_iter().flat_map(|(addr, account)| {
             account
                 .modules
@@ -259,21 +274,23 @@ impl ChangeSet {
         })
     }
 
-    pub fn modules(&self) -> impl Iterator<Item = (AccountAddress, &Identifier, Option<&[u8]>)> {
+    pub fn modules(&self) -> impl Iterator<Item = (AccountAddress, &Identifier, Op<&[u8]>)> {
         self.accounts.iter().flat_map(|(addr, account)| {
             let addr = *addr;
-            account.modules.iter().map(move |(module_name, blob_opt)| {
-                (addr, module_name, blob_opt.as_ref().map(|v| v.as_ref()))
-            })
+            account
+                .modules
+                .iter()
+                .map(move |(module_name, op)| (addr, module_name, op.as_ref().map(|v| v.as_ref())))
         })
     }
 
-    pub fn resources(&self) -> impl Iterator<Item = (AccountAddress, &StructTag, Option<&[u8]>)> {
+    pub fn resources(&self) -> impl Iterator<Item = (AccountAddress, &StructTag, Op<&[u8]>)> {
         self.accounts.iter().flat_map(|(addr, account)| {
             let addr = *addr;
-            account.resources.iter().map(move |(struct_tag, blob_opt)| {
-                (addr, struct_tag, blob_opt.as_ref().map(|v| v.as_ref()))
-            })
+            account
+                .resources
+                .iter()
+                .map(move |(struct_tag, op)| (addr, struct_tag, op.as_ref().map(|v| v.as_ref())))
         })
     }
 }

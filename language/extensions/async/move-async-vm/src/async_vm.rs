@@ -11,7 +11,7 @@ use std::{
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMError, VMResult};
 use move_core_types::{
     account_address::AccountAddress,
-    effects::{ChangeSet, Event},
+    effects::{ChangeSet, Event, Op},
     gas_schedule::GasAlgebra,
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
@@ -235,6 +235,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
                         actor_addr,
                         actor.state_tag.clone(),
                         return_values.remove(0).0,
+                        false,
                     )
                     .map_err(partial_vm_error_to_async)?;
                     let async_ext = native_extensions.remove::<AsyncExtension>();
@@ -327,6 +328,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
                             actor_addr,
                             actor.state_tag.clone(),
                             mutable_reference_outputs.remove(0).1,
+                            true,
                         )
                         .map_err(partial_vm_error_to_async)?;
                     }
@@ -375,9 +377,18 @@ fn publish_actor_state(
     actor_addr: AccountAddress,
     state_tag: StructTag,
     state: Vec<u8>,
+    is_modify: bool,
 ) -> PartialVMResult<()> {
     change_set
-        .publish_resource(actor_addr, state_tag, state)
+        .add_resource_op(
+            actor_addr,
+            state_tag,
+            if is_modify {
+                Op::Modify(state)
+            } else {
+                Op::New(state)
+            },
+        )
         .map_err(|err| partial_extension_error(format!("cannot publish actor state: {}", err)))
 }
 

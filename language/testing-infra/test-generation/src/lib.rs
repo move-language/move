@@ -28,7 +28,7 @@ use move_bytecode_verifier::verify_module;
 use move_compiler::{compiled_unit::AnnotatedCompiledUnit, Compiler};
 use move_core_types::{
     account_address::AccountAddress,
-    effects::ChangeSet,
+    effects::{ChangeSet, Op},
     language_storage::TypeTag,
     resolver::MoveResolver,
     value::MoveValue,
@@ -133,7 +133,9 @@ fn execute_function_in_module(
         let mut changeset = ChangeSet::new();
         let mut blob = vec![];
         module.serialize(&mut blob).unwrap();
-        changeset.publish_or_overwrite_module(module_id.clone(), blob);
+        changeset
+            .add_module_op(module_id.clone(), Op::New(blob))
+            .unwrap();
         let delta_storage = DeltaStorage::new(storage, &changeset);
         let mut sess = vm.new_session(&delta_storage);
 

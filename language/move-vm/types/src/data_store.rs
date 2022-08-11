@@ -34,7 +34,12 @@ pub trait DataStore {
     fn load_module(&self, module_id: &ModuleId) -> VMResult<Vec<u8>>;
 
     /// Publish a module.
-    fn publish_module(&mut self, module_id: &ModuleId, blob: Vec<u8>) -> VMResult<()>;
+    fn publish_module(
+        &mut self,
+        module_id: &ModuleId,
+        blob: Vec<u8>,
+        is_republishing: bool,
+    ) -> VMResult<()>;
 
     /// Check if this module exists.
     fn exists_module(&self, module_id: &ModuleId) -> VMResult<bool>;

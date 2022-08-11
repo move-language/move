@@ -13,7 +13,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use move_core_types::{
     account_address::AccountAddress,
-    effects::ChangeSet,
+    effects::{ChangeSet, Op},
     value::{MoveStruct, MoveValue},
 };
 use move_model::ast::{MemoryLabel, TempIndex};
@@ -1159,19 +1159,21 @@ impl GlobalState {
             for (key, val) in &account_state.storage {
                 match old_account_state.storage.get(key) {
                     None => change_set
-                        .publish_resource(
+                        .add_resource_op(
                             *addr,
                             key.to_move_struct_tag(),
-                            bcs_serialize_resource(key, val),
+                            Op::New(bcs_serialize_resource(key, val)),
                         )
                         .unwrap(),
                     Some(old_val) => {
                         if val != old_val {
-                            change_set.publish_or_overwrite_resource(
-                                *addr,
-                                key.to_move_struct_tag(),
-                                bcs_serialize_resource(key, val),
-                            );
+                            change_set
+                                .add_resource_op(
+                                    *addr,
+                                    key.to_move_struct_tag(),
+                                    Op::Modify(bcs_serialize_resource(key, val)),
+                                )
+                                .unwrap();
                         }
                     }
                 }
@@ -1184,7 +1186,7 @@ impl GlobalState {
             for old_key in old_account_state.storage.keys() {
                 if !account_state.storage.contains_key(old_key) {
                     change_set
-                        .unpublish_resource(*old_addr, old_key.to_move_struct_tag())
+                        .add_resource_op(*old_addr, old_key.to_move_struct_tag(), Op::Delete)
                         .unwrap();
                 }
             }

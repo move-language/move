@@ -18,7 +18,7 @@ use move_compiler::{
 };
 use move_core_types::{
     account_address::AccountAddress,
-    effects::ChangeSet,
+    effects::{ChangeSet, Op},
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag},
     resolver::{ModuleResolver, ResourceResolver},
@@ -183,25 +183,34 @@ impl Harness {
 
     fn commit_changeset(&self, changeset: ChangeSet) {
         for (addr, change) in changeset.into_inner() {
-            for (struct_tag, val) in change.into_inner().1 {
+            for (struct_tag, op) in change.into_inner().1 {
                 self.log(format!(
-                    "  commit 0x{}::{}::{}[0x{}] := {}",
+                    "  commit 0x{}::{}::{}[0x{}] := {:?}",
                     struct_tag.address.short_str_lossless(),
                     struct_tag.module,
                     struct_tag.module,
                     addr.short_str_lossless(),
-                    val.as_ref()
-                        .map(|b| format!("{:02X?}", b))
-                        .unwrap_or_else(|| "None".to_string())
+                    op.as_ref().map(|b| format!("{:02X?}", b))
                 ));
-                match val {
-                    Some(v) => {
+                match op {
+                    Op::New(v) => {
+                        assert!(self
+                            .resource_store
+                            .borrow_mut()
+                            .insert((addr, struct_tag), v)
+                            .is_none());
+                    }
+                    Op::Modify(v) => {
                         self.resource_store
                             .borrow_mut()
-                            .insert((addr, struct_tag), v);
+                            .insert((addr, struct_tag), v)
+                            .unwrap();
                     }
-                    None => {
-                        self.resource_store.borrow_mut().remove(&(addr, struct_tag));
+                    Op::Delete => {
+                        self.resource_store
+                            .borrow_mut()
+                            .remove(&(addr, struct_tag))
+                            .unwrap();
                     }
                 }
             }

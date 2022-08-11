@@ -80,7 +80,7 @@ impl FromStr for StructTag {
     }
 }
 
-/// Represents the intitial key into global storage where we first index by the address, and then
+/// Represents the initial key into global storage where we first index by the address, and then
 /// the struct tag
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
 pub struct ResourceKey {

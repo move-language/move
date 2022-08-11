@@ -7,7 +7,7 @@ use crate::loader::Loader;
 use move_binary_format::errors::*;
 use move_core_types::{
     account_address::AccountAddress,
-    effects::{AccountChangeSet, ChangeSet, Event},
+    effects::{AccountChangeSet, ChangeSet, Event, Op},
     identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
     resolver::MoveResolver,
@@ -17,13 +17,13 @@ use move_core_types::{
 use move_vm_types::{
     data_store::DataStore,
     loaded_data::runtime_types::Type,
-    values::{GlobalValue, GlobalValueEffect, Value},
+    values::{GlobalValue, Value},
 };
 use std::collections::btree_map::BTreeMap;
 
 pub struct AccountDataCache {
     data_map: BTreeMap<Type, (MoveTypeLayout, GlobalValue)>,
-    module_map: BTreeMap<Identifier, Vec<u8>>,
+    module_map: BTreeMap<Identifier, (Vec<u8>, bool)>,
 }
 
 impl AccountDataCache {
@@ -36,7 +36,7 @@ impl AccountDataCache {
 }
 
 /// Transaction data cache. Keep updates within a transaction so they can all be published at
-/// once when the transaction succeeeds.
+/// once when the transaction succeeds.
 ///
 /// It also provides an implementation for the opcodes that refer to storage and gives the
 /// proper guarantees of reference lifetime.
@@ -75,37 +75,53 @@ impl<'r, 'l, S: MoveResolver> TransactionDataCache<'r, 'l, S> {
         let mut change_set = ChangeSet::new();
         for (addr, account_data_cache) in self.account_map.into_iter() {
             let mut modules = BTreeMap::new();
-            for (module_name, module_blob) in account_data_cache.module_map {
-                modules.insert(module_name, Some(module_blob));
+            for (module_name, (module_blob, is_republishing)) in account_data_cache.module_map {
+                let op = if is_republishing {
+                    Op::Modify(module_blob)
+                } else {
+                    Op::New(module_blob)
+                };
+                modules.insert(module_name, op);
             }
 
             let mut resources = BTreeMap::new();
             for (ty, (layout, gv)) in account_data_cache.data_map {
-                match gv.into_effect()? {
-                    GlobalValueEffect::None => (),
-                    GlobalValueEffect::Deleted => {
-                        let struct_tag = match self.loader.type_to_type_tag(&ty)? {
-                            TypeTag::Struct(struct_tag) => struct_tag,
-                            _ => return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)),
-                        };
-                        resources.insert(struct_tag, None);
-                    }
-                    GlobalValueEffect::Changed(val) => {
-                        let struct_tag = match self.loader.type_to_type_tag(&ty)? {
-                            TypeTag::Struct(struct_tag) => struct_tag,
-                            _ => return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)),
-                        };
+                let op = match gv.into_effect() {
+                    Some(op) => op,
+                    None => continue,
+                };
+
+                let struct_tag = match self.loader.type_to_type_tag(&ty)? {
+                    TypeTag::Struct(struct_tag) => struct_tag,
+                    _ => return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)),
+                };
+
+                match op {
+                    Op::New(val) => {
                         let resource_blob = val
                             .simple_serialize(&layout)
                             .ok_or_else(|| PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR))?;
-                        resources.insert(struct_tag, Some(resource_blob));
+                        resources.insert(struct_tag, Op::New(resource_blob));
+                    }
+                    Op::Modify(val) => {
+                        let resource_blob = val
+                            .simple_serialize(&layout)
+                            .ok_or_else(|| PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR))?;
+                        resources.insert(struct_tag, Op::Modify(resource_blob));
+                    }
+                    Op::Delete => {
+                        resources.insert(struct_tag, Op::Delete);
                     }
                 }
             }
-            change_set.publish_or_overwrite_account_change_set(
-                addr,
-                AccountChangeSet::from_modules_resources(modules, resources),
-            );
+            if !modules.is_empty() || !resources.is_empty() {
+                change_set
+                    .add_account_changeset(
+                        addr,
+                        AccountChangeSet::from_modules_resources(modules, resources),
+                    )
+                    .expect("accounts should be unique");
+            }
         }
 
         let mut events = vec![];
@@ -207,7 +223,7 @@ impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
 
     fn load_module(&self, module_id: &ModuleId) -> VMResult<Vec<u8>> {
         if let Some(account_cache) = self.account_map.get(module_id.address()) {
-            if let Some(blob) = account_cache.module_map.get(module_id.name()) {
+            if let Some((blob, _is_republishing)) = account_cache.module_map.get(module_id.name()) {
                 return Ok(blob.clone());
             }
         }
@@ -227,7 +243,12 @@ impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
         }
     }
 
-    fn publish_module(&mut self, module_id: &ModuleId, blob: Vec<u8>) -> VMResult<()> {
+    fn publish_module(
+        &mut self,
+        module_id: &ModuleId,
+        blob: Vec<u8>,
+        is_republishing: bool,
+    ) -> VMResult<()> {
         let account_cache =
             Self::get_mut_or_insert_with(&mut self.account_map, module_id.address(), || {
                 (*module_id.address(), AccountDataCache::new())
@@ -235,7 +256,7 @@ impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
 
         account_cache
             .module_map
-            .insert(module_id.name().to_owned(), blob);
+            .insert(module_id.name().to_owned(), (blob, is_republishing));
 
         Ok(())
     }

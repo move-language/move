@@ -3,17 +3,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #[allow(unused)]
-use anyhow::{anyhow, format_err, Error, Result};
+use anyhow::{anyhow, bail, format_err, Error, Result};
 #[allow(unused)]
 use move_core_types::gas_schedule::{GasAlgebra, GasCarrier, InternalGasUnits};
 use move_core_types::{
     account_address::AccountAddress,
-    effects::{AccountChangeSet, ChangeSet},
+    effects::{AccountChangeSet, ChangeSet, Op},
     identifier::Identifier,
     language_storage::{ModuleId, StructTag},
     resolver::{ModuleResolver, MoveResolver, ResourceResolver},
 };
-use std::collections::{btree_map, BTreeMap};
+use std::{
+    collections::{btree_map, BTreeMap},
+    fmt::Debug,
+};
 
 #[cfg(feature = "table-extension")]
 use move_table_extension::{TableChangeSet, TableHandle, TableOperation, TableResolver};
@@ -63,8 +66,8 @@ impl TableResolver for BlankStorage {
     }
 }
 
-// A storage adapter created by stacking a change set on top of an existing storage backend.
-/// The new storage can be used for additional computations without modifying the base.
+/// A storage adapter created by stacking a change set on top of an existing storage backend.
+/// This can be used for additional computations without modifying the base.
 #[derive(Debug, Clone)]
 pub struct DeltaStorage<'a, 'b, S> {
     base: &'a S,
@@ -77,7 +80,7 @@ impl<'a, 'b, S: ModuleResolver> ModuleResolver for DeltaStorage<'a, 'b, S> {
     fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
         if let Some(account_storage) = self.delta.accounts().get(module_id.address()) {
             if let Some(blob_opt) = account_storage.modules().get(module_id.name()) {
-                return Ok(blob_opt.clone());
+                return Ok(blob_opt.clone().ok());
             }
         }
 
@@ -95,7 +98,7 @@ impl<'a, 'b, S: ResourceResolver> ResourceResolver for DeltaStorage<'a, 'b, S> {
     ) -> Result<Option<Vec<u8>>, S::Error> {
         if let Some(account_storage) = self.delta.accounts().get(address) {
             if let Some(blob_opt) = account_storage.resources().get(tag) {
-                return Ok(blob_opt.clone());
+                return Ok(blob_opt.clone().ok());
             }
         }
 
@@ -141,49 +144,60 @@ pub struct InMemoryStorage {
     tables: BTreeMap<TableHandle, BTreeMap<Vec<u8>, Vec<u8>>>,
 }
 
-fn apply_changes<K, V, F, E>(
-    tree: &mut BTreeMap<K, V>,
-    changes: impl IntoIterator<Item = (K, Option<V>)>,
-    make_err: F,
-) -> std::result::Result<(), E>
+fn apply_changes<K, V>(
+    map: &mut BTreeMap<K, V>,
+    changes: impl IntoIterator<Item = (K, Op<V>)>,
+) -> Result<()>
 where
-    K: Ord,
-    F: FnOnce(K) -> E,
+    K: Ord + Debug,
 {
-    for (k, v_opt) in changes.into_iter() {
-        match (tree.entry(k), v_opt) {
-            (btree_map::Entry::Vacant(entry), None) => return Err(make_err(entry.into_key())),
-            (btree_map::Entry::Vacant(entry), Some(v)) => {
-                entry.insert(v);
+    use btree_map::Entry::*;
+    use Op::*;
+
+    for (k, op) in changes.into_iter() {
+        match (map.entry(k), op) {
+            (Occupied(entry), New(_)) => {
+                bail!(
+                    "Failed to apply changes -- key {:?} already exists",
+                    entry.key()
+                )
             }
-            (btree_map::Entry::Occupied(entry), None) => {
+            (Occupied(entry), Delete) => {
                 entry.remove();
             }
-            (btree_map::Entry::Occupied(entry), Some(v)) => {
-                *entry.into_mut() = v;
+            (Occupied(entry), Modify(val)) => {
+                *entry.into_mut() = val;
             }
+            (Vacant(entry), New(val)) => {
+                entry.insert(val);
+            }
+            (Vacant(entry), Delete | Modify(_)) => bail!(
+                "Failed to apply changes -- key {:?} does not exist",
+                entry.key()
+            ),
         }
     }
     Ok(())
 }
 
+fn get_or_insert<K, V, F>(map: &mut BTreeMap<K, V>, key: K, make_val: F) -> &mut V
+where
+    K: Ord,
+    F: FnOnce() -> V,
+{
+    use btree_map::Entry::*;
+
+    match map.entry(key) {
+        Occupied(entry) => entry.into_mut(),
+        Vacant(entry) => entry.insert(make_val()),
+    }
+}
+
 impl InMemoryAccountStorage {
     fn apply(&mut self, account_changeset: AccountChangeSet) -> Result<()> {
         let (modules, resources) = account_changeset.into_inner();
-        apply_changes(&mut self.modules, modules, |module_name| {
-            format_err!(
-                "Failed to delete module {}: module does not exist.",
-                module_name
-            )
-        })?;
-
-        apply_changes(&mut self.resources, resources, |struct_tag| {
-            format_err!(
-                "Failed to delete resource {}: resource does not exist.",
-                struct_tag
-            )
-        })?;
-
+        apply_changes(&mut self.modules, modules)?;
+        apply_changes(&mut self.resources, resources)?;
         Ok(())
     }
 
@@ -215,7 +229,7 @@ impl InMemoryStorage {
         }
 
         #[cfg(feature = "table-extension")]
-        self.apply_table(table_changes);
+        self.apply_table(table_changes)?;
 
         Ok(())
     }
@@ -229,7 +243,7 @@ impl InMemoryStorage {
     }
 
     #[cfg(feature = "table-extension")]
-    fn apply_table(&mut self, changes: TableChangeSet) {
+    fn apply_table(&mut self, changes: TableChangeSet) -> Result<()> {
         let TableChangeSet {
             new_tables,
             removed_tables,
@@ -248,14 +262,9 @@ impl InMemoryStorage {
                 "inconsistent table change set: stale table handle"
             );
             let table = self.tables.get_mut(&h).unwrap();
-            for (key, val) in c.entries {
-                if let Some(v) = val {
-                    table.insert(key, v);
-                } else {
-                    table.remove(&key);
-                }
-            }
+            apply_changes(table, c.entries)?;
         }
+        Ok(())
     }
 
     pub fn new() -> Self {
@@ -267,14 +276,10 @@ impl InMemoryStorage {
     }
 
     pub fn publish_or_overwrite_module(&mut self, module_id: ModuleId, blob: Vec<u8>) {
-        let mut delta = ChangeSet::new();
-        delta.publish_module(module_id, blob).unwrap();
-        self.apply_extended(
-            delta,
-            #[cfg(feature = "table-extension")]
-            TableChangeSet::default(),
-        )
-        .unwrap();
+        let account = get_or_insert(&mut self.accounts, *module_id.address(), || {
+            InMemoryAccountStorage::new()
+        });
+        account.modules.insert(module_id.name().to_owned(), blob);
     }
 
     pub fn publish_or_overwrite_resource(
@@ -283,14 +288,8 @@ impl InMemoryStorage {
         struct_tag: StructTag,
         blob: Vec<u8>,
     ) {
-        let mut delta = ChangeSet::new();
-        delta.publish_resource(addr, struct_tag, blob).unwrap();
-        self.apply_extended(
-            delta,
-            #[cfg(feature = "table-extension")]
-            TableChangeSet::default(),
-        )
-        .unwrap();
+        let account = get_or_insert(&mut self.accounts, addr, InMemoryAccountStorage::new);
+        account.resources.insert(struct_tag, blob);
     }
 }
 

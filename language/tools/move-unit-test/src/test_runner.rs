@@ -17,7 +17,7 @@ use move_compiler::{
 };
 use move_core_types::{
     account_address::AccountAddress,
-    effects::ChangeSet,
+    effects::{ChangeSet, Op},
     gas_schedule::{GasAlgebra, GasUnits},
     identifier::IdentStr,
     value::serialize_values,
@@ -117,8 +117,8 @@ fn print_resources_and_extensions(
     for (account_addr, account_state) in cs.accounts() {
         writeln!(&mut buf, "0x{}:", account_addr.short_str_lossless())?;
 
-        for (tag, resource_opt) in account_state.resources() {
-            if let Some(resource) = resource_opt {
+        for (tag, resource_op) in account_state.resources() {
+            if let Op::New(resource) | Op::Modify(resource) = resource_op {
                 writeln!(
                     &mut buf,
                     "\t{}",

@@ -9,6 +9,7 @@ use move_binary_format::{
 };
 use move_core_types::{
     account_address::AccountAddress,
+    effects::Op,
     gas_schedule::{
         AbstractMemorySize, GasAlgebra, GasCarrier, CONST_SIZE, MIN_EXISTS_DATA_SIZE,
         REFERENCE_SIZE, STRUCT_SIZE,
@@ -30,7 +31,7 @@ use std::{
  * Internal Types
  *
  *   Internal representation of the Move value calculus. These types are abstractions
- *   over the concrete Move concepts and may carry additonal information that is not
+ *   over the concrete Move concepts and may carry additional information that is not
  *   defined by the language, but required by the implementation.
  *
  **************************************************************************************/
@@ -199,16 +200,6 @@ enum GlobalValueImpl {
 /// hold a resource.
 #[derive(Debug)]
 pub struct GlobalValue(GlobalValueImpl);
-
-/// Simple enum for the change state of a GlobalValue, used by `into_effect`.
-pub enum GlobalValueEffect<T> {
-    /// There was no value, or the value was not changed
-    None,
-    /// The value was removed
-    Deleted,
-    /// Updated with a new value
-    Changed(T),
-}
 
 /***************************************************************************************
  *
@@ -429,7 +420,7 @@ impl Value {
  *
  *   Equality tests of Move values. Errors are raised when types mismatch.
  *
- *   It is intented to NOT use or even implement the standard library traits Eq and
+ *   It is intended to NOT use or even implement the standard library traits Eq and
  *   Partial Eq due to:
  *     1. They do not allow errors to be returned.
  *     2. They can be invoked without the user being noticed thanks to operator
@@ -1634,7 +1625,7 @@ impl VectorRef {
         Ok(Value(self.0.borrow_elem(idx)?))
     }
 
-    /// Returns a Refcell reference to the underlying vector of a `&vector<u8>` value.
+    /// Returns a RefCell reference to the underlying vector of a `&vector<u8>` value.
     pub fn as_bytes_ref(&self) -> std::cell::Ref<'_, Vec<u8>> {
         let c = self.0.container();
         match c {
@@ -2030,20 +2021,20 @@ impl GlobalValueImpl {
         }
     }
 
-    fn into_effect(self) -> PartialVMResult<GlobalValueEffect<ValueImpl>> {
-        Ok(match self {
-            Self::None => GlobalValueEffect::None,
-            Self::Deleted => GlobalValueEffect::Deleted,
+    fn into_effect(self) -> Option<Op<ValueImpl>> {
+        match self {
+            Self::None => None,
+            Self::Deleted => Some(Op::Delete),
             Self::Fresh { fields } => {
-                GlobalValueEffect::Changed(ValueImpl::Container(Container::Struct(fields)))
+                Some(Op::New(ValueImpl::Container(Container::Struct(fields))))
             }
             Self::Cached { fields, status } => match &*status.borrow() {
                 GlobalDataStatus::Dirty => {
-                    GlobalValueEffect::Changed(ValueImpl::Container(Container::Struct(fields)))
+                    Some(Op::Modify(ValueImpl::Container(Container::Struct(fields))))
                 }
-                GlobalDataStatus::Clean => GlobalValueEffect::None,
+                GlobalDataStatus::Clean => None,
             },
-        })
+        }
     }
 
     fn is_mutated(&self) -> bool {
@@ -2087,12 +2078,8 @@ impl GlobalValue {
         self.0.exists()
     }
 
-    pub fn into_effect(self) -> PartialVMResult<GlobalValueEffect<Value>> {
-        Ok(match self.0.into_effect()? {
-            GlobalValueEffect::None => GlobalValueEffect::None,
-            GlobalValueEffect::Deleted => GlobalValueEffect::Deleted,
-            GlobalValueEffect::Changed(v) => GlobalValueEffect::Changed(Value(v)),
-        })
+    pub fn into_effect(self) -> Option<Op<Value>> {
+        self.0.into_effect().map(|op| op.map(Value))
     }
 
     pub fn is_mutated(&self) -> bool {
@@ -2631,7 +2618,7 @@ impl<'d, 'a> serde::de::Visitor<'d> for StructFieldVisitor<'a> {
 *
 * Constants
 *
-*   Implementation of deseserialization of constant data into a runtime value
+*   Implementation of deserialization of constant data into a runtime value
 *
 **************************************************************************************/
 

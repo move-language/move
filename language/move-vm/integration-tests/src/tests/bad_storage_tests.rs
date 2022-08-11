@@ -6,7 +6,7 @@ use crate::compiler::{as_module, as_script, compile_units};
 use move_binary_format::errors::{Location, PartialVMError, VMError};
 use move_core_types::{
     account_address::AccountAddress,
-    effects::ChangeSet,
+    effects::{ChangeSet, Op},
     identifier::Identifier,
     language_storage::{ModuleId, StructTag},
     resolver::{ModuleResolver, ResourceResolver},
@@ -598,8 +598,8 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
     m.serialize(&mut m_blob).unwrap();
     s.serialize(&mut s_blob).unwrap();
     let mut delta = ChangeSet::new();
-    delta.publish_module(m.self_id(), m_blob).unwrap();
-    delta.publish_module(s.self_id(), s_blob).unwrap();
+    delta.add_module_op(m.self_id(), Op::New(m_blob)).unwrap();
+    delta.add_module_op(s.self_id(), Op::New(s_blob)).unwrap();
 
     let m_id = m.self_id();
     let foo_name = Identifier::new("foo").unwrap();

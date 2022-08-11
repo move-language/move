@@ -3,7 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use move_binary_format::errors::{PartialVMError, VMResult};
-use move_core_types::{effects::ChangeSet, language_storage::ModuleId, resolver::MoveResolver};
+use move_core_types::{
+    effects::{AccountChangeSet, ChangeSet, Op},
+    resolver::MoveResolver,
+};
 
 /// The result returned by the stackless VM does not contain code offsets and indices. In order to
 /// do cross-vm comparison, we need to adapt the Move VM result by removing these fields.
@@ -38,32 +41,24 @@ fn adapt_move_vm_change_set_internal<S: MoveResolver>(
     let mut adapted = ChangeSet::new();
     for (addr, state) in change_set.into_inner() {
         let (modules, resources) = state.into_inner();
-        for (tag, val) in resources {
-            match val {
-                // deletion
-                None => adapted.unpublish_resource(addr, tag).unwrap(),
-                // addition / modification
-                Some(new_val) => match old_storage.get_resource(&addr, &tag).unwrap() {
-                    // addition
-                    None => adapted.publish_resource(addr, tag, new_val).unwrap(),
-                    // modification is only added to change_set if the values actually change
-                    Some(old_val) => {
-                        if new_val != old_val {
-                            adapted.publish_resource(addr, tag, new_val).unwrap();
-                        }
-                    }
+
+        let resources = resources
+            .into_iter()
+            .filter(|(tag, op)| match op {
+                Op::New(_) | Op::Delete => true,
+                Op::Modify(new_val) => match old_storage.get_resource(&addr, &tag).unwrap() {
+                    Some(old_val) => new_val != &old_val,
+                    None => true,
                 },
-            }
-        }
-        for (module_name, blob_opt) in modules {
-            let module_id = ModuleId::new(addr, module_name);
-            match blob_opt {
-                // deletion
-                None => adapted.unpublish_module(module_id).unwrap(),
-                // addition
-                Some(blob) => adapted.publish_module(module_id, blob).unwrap(),
-            }
-        }
+            })
+            .collect();
+
+        adapted
+            .add_account_changeset(
+                addr,
+                AccountChangeSet::from_modules_resources(modules, resources),
+            )
+            .unwrap();
     }
     adapted
 }

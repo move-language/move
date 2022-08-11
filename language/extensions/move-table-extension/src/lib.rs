@@ -10,7 +10,7 @@
 use better_any::{Tid, TidAble};
 use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_core_types::{
-    account_address::AccountAddress, language_storage::TypeTag, value::MoveTypeLayout,
+    account_address::AccountAddress, effects::Op, language_storage::TypeTag, value::MoveTypeLayout,
     vm_status::StatusCode,
 };
 use move_vm_runtime::{
@@ -21,7 +21,7 @@ use move_vm_types::{
     loaded_data::runtime_types::Type,
     natives::function::NativeResult,
     pop_arg,
-    values::{GlobalValue, GlobalValueEffect, Reference, StructRef, Value},
+    values::{GlobalValue, Reference, StructRef, Value},
 };
 use sha3::{Digest, Sha3_256};
 use smallvec::smallvec;
@@ -79,7 +79,7 @@ pub struct TableChangeSet {
 
 /// A change of a single table.
 pub struct TableChange {
-    pub entries: BTreeMap<Vec<u8>, Option<Vec<u8>>>,
+    pub entries: BTreeMap<Vec<u8>, Op<Vec<u8>>>,
 }
 
 /// A table resolver which needs to be provided by the environment. This allows to lookup
@@ -178,15 +178,23 @@ impl<'a> NativeTableContext<'a> {
             } = table;
             let mut entries = BTreeMap::new();
             for (key, gv) in content {
-                match gv.into_effect()? {
-                    GlobalValueEffect::Deleted => {
-                        entries.insert(key, None);
+                let op = match gv.into_effect() {
+                    Some(op) => op,
+                    None => continue,
+                };
+
+                match op {
+                    Op::New(val) => {
+                        let bytes = serialize(&value_layout, &val)?;
+                        entries.insert(key, Op::New(bytes));
                     }
-                    GlobalValueEffect::Changed(new_val) => {
-                        let new_bytes = serialize(&value_layout, &new_val)?;
-                        entries.insert(key, Some(new_bytes));
+                    Op::Modify(val) => {
+                        let bytes = serialize(&value_layout, &val)?;
+                        entries.insert(key, Op::Modify(bytes));
                     }
-                    _ => {}
+                    Op::Delete => {
+                        entries.insert(key, Op::Delete);
+                    }
                 }
             }
             if !entries.is_empty() {

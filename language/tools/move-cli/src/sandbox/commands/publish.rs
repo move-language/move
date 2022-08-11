@@ -141,11 +141,13 @@ pub fn publish(
             let (changeset, events) = session.finish().map_err(|e| e.into_vm_status())?;
             assert!(events.is_empty());
             if verbose {
-                explain_publish_changeset(&changeset, state);
+                explain_publish_changeset(&changeset);
             }
             let modules: Vec<_> = changeset
                 .into_modules()
-                .map(|(module_id, blob_opt)| (module_id, blob_opt.expect("must be non-deletion")))
+                .map(|(module_id, blob_opt)| {
+                    (module_id, blob_opt.ok().expect("must be non-deletion"))
+                })
                 .collect();
             state.save_modules(&modules)?;
         }

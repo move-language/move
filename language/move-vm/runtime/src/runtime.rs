@@ -190,12 +190,13 @@ impl VMRuntime {
 
         // All modules verified, publish them to data cache
         for (module, blob) in compiled_modules.into_iter().zip(modules.into_iter()) {
-            if data_store.exists_module(&module.self_id())? {
+            let is_republishing = data_store.exists_module(&module.self_id())?;
+            if is_republishing {
                 // This is an upgrade, so invalidate the loader cache, which still contains the
                 // old module.
                 self.loader.mark_as_invalid();
             }
-            data_store.publish_module(&module.self_id(), blob)?;
+            data_store.publish_module(&module.self_id(), blob, is_republishing)?;
         }
         Ok(())
     }

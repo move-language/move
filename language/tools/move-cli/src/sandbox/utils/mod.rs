@@ -21,7 +21,7 @@ use move_compiler::{
 };
 use move_core_types::{
     account_address::AccountAddress,
-    effects::{ChangeSet, Event},
+    effects::{ChangeSet, Event, Op},
     errmap::ErrorMapping,
     gas_schedule::{GasAlgebra, GasUnits},
     language_storage::{ModuleId, TypeTag},
@@ -68,29 +68,34 @@ pub(crate) fn module(unit: &CompiledUnit) -> Result<&CompiledModule> {
     }
 }
 
-pub(crate) fn explain_publish_changeset(changeset: &ChangeSet, state: &OnDiskStateView) {
+pub(crate) fn explain_publish_changeset(changeset: &ChangeSet) {
     // publish effects should contain no resources
     assert!(changeset.resources().next().is_none());
     // total bytes written across all accounts
     let mut total_bytes_written = 0;
-    for (addr, name, blob_opt) in changeset.modules() {
-        if let Some(module_bytes) = blob_opt {
-            let bytes_written = addr.len() + name.len() + module_bytes.len();
-            total_bytes_written += bytes_written;
-            let module_id = ModuleId::new(addr, name.clone());
-            if state.has_module(&module_id) {
-                println!(
-                    "Updating an existing module {} (wrote {:?} bytes)",
-                    module_id, bytes_written
-                );
-            } else {
+    for (addr, name, blob_op) in changeset.modules() {
+        match blob_op {
+            Op::New(module_bytes) => {
+                let bytes_written = addr.len() + name.len() + module_bytes.len();
+                total_bytes_written += bytes_written;
+                let module_id = ModuleId::new(addr, name.clone());
                 println!(
                     "Publishing a new module {} (wrote {:?} bytes)",
                     module_id, bytes_written
                 );
             }
-        } else {
-            panic!("Deleting a module is not supported")
+            Op::Modify(module_bytes) => {
+                let bytes_written = addr.len() + name.len() + module_bytes.len();
+                total_bytes_written += bytes_written;
+                let module_id = ModuleId::new(addr, name.clone());
+                println!(
+                    "Updating an existing module {} (wrote {:?} bytes)",
+                    module_id, bytes_written
+                );
+            }
+            Op::Delete => {
+                panic!("Deleting a module is not supported")
+            }
         }
     }
     println!(
@@ -180,42 +185,39 @@ pub(crate) fn explain_execution_effects(
             account.resources().len(),
             addr
         );
-        for (struct_tag, write_opt) in account.resources() {
+        for (struct_tag, write_op) in account.resources() {
             print!("    ");
             let mut bytes_to_write = struct_tag.access_vector().len();
-            match write_opt {
-                Some(blob) => {
+            match write_op {
+                Op::New(blob) => {
                     bytes_to_write += blob.len();
-                    if state
-                        .get_resource_bytes(*addr, struct_tag.clone())?
-                        .is_some()
-                    {
-                        println!(
-                            "Changed type {}: {:?} (wrote {:?} bytes)",
-                            struct_tag, blob, bytes_to_write
-                        );
-                        // Print resource diff
-                        let resource_data = state
-                            .get_resource_bytes(*addr, struct_tag.clone())?
-                            .unwrap();
-                        let resource_old = MoveValueAnnotator::new(state)
-                            .view_resource(struct_tag, &resource_data)?;
-                        let resource_new =
-                            MoveValueAnnotator::new(state).view_resource(struct_tag, blob)?;
-
-                        print_struct_diff_with_indent(&resource_old, &resource_new, 8)
-                    } else {
-                        println!(
-                            "Added type {}: {:?} (wrote {:?} bytes)",
-                            struct_tag, blob, bytes_to_write
-                        );
-                        // Print new resource
-                        let resource =
-                            MoveValueAnnotator::new(state).view_resource(struct_tag, blob)?;
-                        print_struct_with_indent(&resource, 6)
-                    }
+                    println!(
+                        "Added type {}: {:?} (wrote {:?} bytes)",
+                        struct_tag, blob, bytes_to_write
+                    );
+                    // Print new resource
+                    let resource =
+                        MoveValueAnnotator::new(state).view_resource(struct_tag, blob)?;
+                    print_struct_with_indent(&resource, 6)
                 }
-                None => {
+                Op::Modify(blob) => {
+                    bytes_to_write += blob.len();
+                    println!(
+                        "Changed type {}: {:?} (wrote {:?} bytes)",
+                        struct_tag, blob, bytes_to_write
+                    );
+                    // Print resource diff
+                    let resource_data = state
+                        .get_resource_bytes(*addr, struct_tag.clone())?
+                        .unwrap();
+                    let resource_old =
+                        MoveValueAnnotator::new(state).view_resource(struct_tag, &resource_data)?;
+                    let resource_new =
+                        MoveValueAnnotator::new(state).view_resource(struct_tag, blob)?;
+
+                    print_struct_diff_with_indent(&resource_old, &resource_new, 8)
+                }
+                Op::Delete => {
                     println!(
                         "Deleted type {} (wrote {:?} bytes)",
                         struct_tag, bytes_to_write
@@ -253,10 +255,12 @@ pub(crate) fn maybe_commit_effects(
     // shouldn't contain modules
     if commit {
         for (addr, account) in changeset.into_inner() {
-            for (struct_tag, blob_opt) in account.into_resources() {
-                match blob_opt {
-                    Some(blob) => state.save_resource(addr, struct_tag, &blob)?,
-                    None => state.delete_resource(addr, struct_tag)?,
+            for (struct_tag, blob_op) in account.into_resources() {
+                match blob_op {
+                    Op::New(blob) | Op::Modify(blob) => {
+                        state.save_resource(addr, struct_tag, &blob)?
+                    }
+                    Op::Delete => state.delete_resource(addr, struct_tag)?,
                 }
             }
         }

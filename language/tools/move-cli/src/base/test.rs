@@ -60,6 +60,11 @@ pub struct Test {
     /// Show the storage state at the end of execution of a failing test
     #[clap(name = "global_state_on_error", short = 'g', long = "state_on_error")]
     pub report_storage_on_error: bool,
+
+    /// Ignore compiler's warning, and continue run tests
+    #[clap(name = "ignore_compile_warnings", long = "ignore_compile_warnings")]
+    pub ignore_compile_warnings: bool,
+
     /// Use the stackless bytecode interpreter to run the tests and cross check its results with
     /// the execution result from Move VM.
     #[clap(long = "stackless")]
@@ -93,6 +98,7 @@ impl Test {
             num_threads,
             report_statistics,
             report_storage_on_error,
+            ignore_compile_warnings,
             check_stackless_vm,
             verbose_mode,
             compute_coverage,
@@ -108,7 +114,7 @@ impl Test {
             report_storage_on_error,
             check_stackless_vm,
             verbose: verbose_mode,
-
+            ignore_compile_warnings,
             #[cfg(feature = "evm-backend")]
             evm,
 
@@ -195,7 +201,13 @@ pub fn run_move_unit_tests<W: Write + Send>(
         let (mut compiler, cfgir) = compiler.into_ast();
         let compilation_env = compiler.compilation_env();
         let built_test_plan = construct_test_plan(compilation_env, Some(root_package), &cfgir);
-        if let Err(diags) = compilation_env.check_diags_at_or_above_severity(Severity::Warning) {
+        if let Err(diags) = compilation_env.check_diags_at_or_above_severity(
+            if unit_test_config.ignore_compile_warnings {
+                Severity::NonblockingError
+            } else {
+                Severity::Warning
+            },
+        ) {
             diagnostics::report_diagnostics(&files, diags);
         }
 

@@ -1,13 +1,15 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::utils::movey_credential::read_credential_file;
 use anyhow::{bail, Result};
 use clap::Parser;
-use move_command_line_common::{env::MOVE_HOME, movey_constants::MOVEY_URL};
+use move_command_line_common::{
+    env::MOVE_HOME,
+    movey_constants::{MOVEY_CREDENTIAL_PATH, MOVEY_URL},
+};
 use std::{fs, fs::File, io, path::PathBuf};
 use toml_edit::easy::{map::Map, Value};
-
-pub const MOVEY_CREDENTIAL_PATH: &str = "/movey_credential.toml";
 
 #[derive(Parser)]
 #[clap(name = "movey-login")]
@@ -47,20 +49,7 @@ impl MoveyLogin {
             create_credential_file(&credential_path)?;
         }
 
-        let old_contents: String;
-        match fs::read_to_string(&credential_path) {
-            Ok(contents) => {
-                old_contents = contents;
-            }
-            Err(error) => bail!("Error reading input: {}", error),
-        }
-        let mut toml: Value = old_contents.parse().map_err(|e| {
-            anyhow::Error::from(e).context(format!(
-                "could not parse input at {} as TOML",
-                &credential_path
-            ))
-        })?;
-
+        let mut toml: Value = read_credential_file(&credential_path)?;
         // only update token key, keep the rest of the file intact
         if let Some(registry) = toml.as_table_mut().unwrap().get_mut("registry") {
             if let Some(toml_token) = registry.as_table_mut().unwrap().get_mut("token") {

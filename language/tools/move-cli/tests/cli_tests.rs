@@ -3,8 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use httpmock::{prelude::*, Mock};
-use move_cli::{base::movey_login::MOVEY_CREDENTIAL_PATH, sandbox::commands::test};
-use move_command_line_common::{files, movey_constants::MOVEY_URL};
+use move_cli::sandbox::commands::test;
+use move_command_line_common::{
+    files,
+    movey_constants::{MOVEY_CREDENTIAL_PATH, MOVEY_URL},
+};
 use serde_json::json;
 #[cfg(unix)]
 use std::fs::File;

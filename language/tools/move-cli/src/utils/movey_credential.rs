@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Context, Result};
-use move_command_line_common::movey_constants::MOVEY_URL;
+use move_command_line_common::movey_constants::{MOVEY_CREDENTIAL_PATH, MOVEY_URL};
 use std::fs;
 use toml_edit::easy::Value;
-
-pub const MOVEY_CREDENTIAL_PATH: &str = "/movey_credential.toml";
 
 pub fn get_registry_api_token(move_home: &str) -> Result<String> {
     if let Ok(content) = get_api_token(&move_home) {
@@ -21,9 +19,7 @@ pub fn get_registry_api_token(move_home: &str) -> Result<String> {
 
 pub fn get_api_token(move_home: &str) -> Result<String> {
     let credential_path = format!("{}{}", move_home, MOVEY_CREDENTIAL_PATH);
-    let contents = fs::read_to_string(&credential_path)?;
-    let mut toml: Value = contents.parse()?;
-
+    let mut toml: Value = read_credential_file(&credential_path)?;
     let token = get_registry_field(&mut toml, "token")?;
     Ok(token.to_string().replace("\"", ""))
 }
@@ -53,6 +49,19 @@ fn get_registry_field<'a>(toml: &'a mut Value, field: &'a str) -> Result<&'a mut
         .get_mut(field)
         .context("Error parsing token")?;
     Ok(value)
+}
+
+pub fn read_credential_file(credential_path: &str) -> Result<Value> {
+    let content = match fs::read_to_string(&credential_path) {
+        Ok(content) => content,
+        Err(error) => bail!("Error reading input: {}", error),
+    };
+    content.parse().map_err(|e| {
+        anyhow::Error::from(e).context(format!(
+            "could not parse input at {} as TOML",
+            &credential_path
+        ))
+    })
 }
 
 #[cfg(test)]

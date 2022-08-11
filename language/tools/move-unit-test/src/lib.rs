@@ -79,6 +79,10 @@ pub struct UnitTestingConfig {
     )]
     pub report_stacktrace_on_abort: bool,
 
+    /// Ignore compiler's warning, and continue run tests
+    #[clap(name = "ignore_compile_warnings", long = "ignore_compile_warnings")]
+    pub ignore_compile_warnings: bool,
+
     /// Named address mapping
     #[clap(
         name = "NAMED_ADDRESSES",
@@ -131,6 +135,7 @@ impl UnitTestingConfig {
             report_statistics: false,
             report_storage_on_error: false,
             report_stacktrace_on_abort: false,
+            ignore_compile_warnings: false,
             source_files: vec![],
             dep_files: vec![],
             check_stackless_vm: false,
@@ -171,7 +176,13 @@ impl UnitTestingConfig {
         let compilation_env = compiler.compilation_env();
         let test_plan = unit_test::plan_builder::construct_test_plan(compilation_env, None, &cfgir);
 
-        if let Err(diags) = compilation_env.check_diags_at_or_above_severity(Severity::Warning) {
+        if let Err(diags) =
+            compilation_env.check_diags_at_or_above_severity(if self.ignore_compile_warnings {
+                Severity::NonblockingError
+            } else {
+                Severity::Warning
+            })
+        {
             diagnostics::report_diagnostics(&files, diags);
         }
 

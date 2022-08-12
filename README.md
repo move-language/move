@@ -24,7 +24,7 @@ cd ./language/documentation/tutorial/step_1/BasicCoin
 docker run -v `pwd`:/project move/cli build
 ```
 
-Follow the [language/documentation/tutorial](language/documentation/tutorial/README.md) to set up move for development.
+Follow the [language/documentation/tutorial](./language/documentation/tutorial/README.md) to set up move for development.
 
 ## Community
 

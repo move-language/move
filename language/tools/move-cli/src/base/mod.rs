@@ -8,6 +8,7 @@ pub mod docgen;
 pub mod errmap;
 pub mod info;
 pub mod movey_login;
+pub mod movey_upload;
 pub mod new;
 pub mod prove;
 pub mod test;

@@ -2,15 +2,23 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_cli::{base::movey_login::MOVEY_CREDENTIAL_PATH, sandbox::commands::test};
-use move_command_line_common::movey_constants::MOVEY_URL;
+use httpmock::{prelude::*, Mock};
+use move_cli::sandbox::commands::test;
+use move_command_line_common::{
+    files,
+    movey_constants::{MOVEY_CREDENTIAL_PATH, MOVEY_URL},
+};
+use serde_json::json;
 #[cfg(unix)]
 use std::fs::File;
-use std::{env, fs, io::Write};
-
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use std::{path::PathBuf, process::Stdio};
+use std::{
+    env, fs,
+    io::Write,
+    path::PathBuf,
+    process::{Command, Stdio},
+};
 use toml_edit::easy::Value;
 
 pub const CLI_METATEST_PATH: [&str; 3] = ["tests", "metatests", "args.txt"];
@@ -46,14 +54,14 @@ fn run_metatest() {
 fn cross_process_locking_git_deps() {
     let cli_exe = env!("CARGO_BIN_EXE_move");
     let handle = std::thread::spawn(move || {
-        std::process::Command::new(cli_exe)
+        Command::new(cli_exe)
             .current_dir("./tests/cross_process_tests/Package1")
             .args(["package", "build"])
             .output()
             .expect("Package1 failed");
     });
     let cli_exe = env!("CARGO_BIN_EXE_move").to_string();
-    std::process::Command::new(cli_exe)
+    Command::new(cli_exe)
         .current_dir("./tests/cross_process_tests/Package2")
         .args(["package", "build"])
         .output()
@@ -61,13 +69,171 @@ fn cross_process_locking_git_deps() {
     handle.join().unwrap();
 }
 
+const UPLOAD_PACKAGE_PATH: &str = "./tests/upload_tests";
+#[test]
+fn upload_package_to_movey_works() {
+    let package_path = format!("{}/valid_package1", UPLOAD_PACKAGE_PATH);
+    init_git(&package_path, true);
+    let server = MockServer::start();
+    let server_mock = mock_movey_upload_with_response_body_and_status_code(&server, 200, None);
+    init_stub_registry_file(&package_path, &server.base_url());
+    let relative_package_path = PathBuf::from(&package_path);
+    let absolute_package_path =
+        files::path_to_string(&relative_package_path.canonicalize().unwrap()).unwrap();
+
+    let cli_exe = env!("CARGO_BIN_EXE_move");
+    let output = Command::new(cli_exe)
+        .env("MOVE_HOME", &absolute_package_path)
+        .current_dir(&absolute_package_path)
+        .args(["movey-upload"])
+        .output()
+        .unwrap();
+
+    server_mock.assert();
+    assert!(output.status.success());
+    let output = String::from_utf8_lossy(output.stdout.as_slice()).to_string();
+    assert!(
+        output.contains("Your package has been successfully uploaded to Movey"),
+        "{}",
+        output
+    );
+
+    clean_up(&absolute_package_path);
+}
+
+#[test]
+fn upload_package_to_movey_prints_error_message_if_server_respond_4xx() {
+    let package_path = format!("{}/valid_package2", UPLOAD_PACKAGE_PATH);
+    init_git(&package_path, true);
+    let server = MockServer::start();
+    let server_mock = mock_movey_upload_with_response_body_and_status_code(
+        &server,
+        400,
+        Some("Invalid Api token"),
+    );
+    init_stub_registry_file(&package_path, &server.base_url());
+    let relative_package_path = PathBuf::from(&package_path);
+    let absolute_package_path =
+        files::path_to_string(&relative_package_path.canonicalize().unwrap()).unwrap();
+
+    let cli_exe = env!("CARGO_BIN_EXE_move");
+    let output = Command::new(cli_exe)
+        .env("MOVE_HOME", &absolute_package_path)
+        .current_dir(&absolute_package_path)
+        .args(["movey-upload"])
+        .output()
+        .unwrap();
+
+    server_mock.assert();
+    assert!(!output.status.success());
+    let output = String::from_utf8_lossy(output.stderr.as_slice()).to_string();
+    assert!(output.contains("Error: Invalid Api token"), "{}", output);
+
+    clean_up(&absolute_package_path);
+}
+
+#[test]
+fn upload_package_to_movey_prints_hardcoded_error_message_if_server_respond_5xx() {
+    let package_path = format!("{}/valid_package3", UPLOAD_PACKAGE_PATH);
+    init_git(&package_path, true);
+    let server = MockServer::start();
+    let server_mock = mock_movey_upload_with_response_body_and_status_code(
+        &server,
+        500,
+        Some("Invalid Api token"),
+    );
+    init_stub_registry_file(&package_path, &server.base_url());
+    let relative_package_path = PathBuf::from(&package_path);
+    let absolute_package_path =
+        files::path_to_string(&relative_package_path.canonicalize().unwrap()).unwrap();
+
+    let cli_exe = env!("CARGO_BIN_EXE_move");
+    let output = Command::new(cli_exe)
+        .env("MOVE_HOME", &absolute_package_path)
+        .current_dir(&absolute_package_path)
+        .args(["movey-upload"])
+        .output()
+        .unwrap();
+
+    server_mock.assert();
+    assert!(!output.status.success());
+    let output = String::from_utf8_lossy(output.stderr.as_slice()).to_string();
+    assert!(
+        output.contains("Error: An unexpected error occurred. Please try again later"),
+        "{}",
+        output
+    );
+
+    clean_up(&absolute_package_path);
+}
+
+#[test]
+fn upload_package_to_movey_with_no_remote_should_panic() {
+    let package_path = format!("{}/no_git_remote_package", UPLOAD_PACKAGE_PATH);
+    init_git(&package_path, false);
+
+    let cli_exe = env!("CARGO_BIN_EXE_move");
+    let output = Command::new(cli_exe)
+        .current_dir(&package_path)
+        .args(["movey-upload"])
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    let error = String::from_utf8_lossy(output.stderr.as_slice()).to_string();
+    assert!(error.contains("invalid git repository"));
+
+    clean_up(&package_path);
+}
+
+// is_valid == true: all git commands are run
+// is_valid == false: missing git remote add command
+fn init_git(package_path: &str, is_valid: bool) {
+    Command::new("git")
+        .current_dir(package_path)
+        .args(&["init"])
+        .output()
+        .unwrap();
+    Command::new("git")
+        .current_dir(package_path)
+        .args(&["add", "."])
+        .output()
+        .unwrap();
+    if is_valid {
+        Command::new("git")
+            .current_dir(package_path)
+            .args(&[
+                "remote",
+                "add",
+                "test-origin",
+                "git@github.com:move-language/move.git",
+            ])
+            .output()
+            .unwrap();
+        Command::new("git")
+            .current_dir(package_path)
+            .args(&["config", "user.email", "\"you@example.com\""])
+            .output()
+            .unwrap();
+        Command::new("git")
+            .current_dir(package_path)
+            .args(&["config", "user.name", "\"Your Name\""])
+            .output()
+            .unwrap();
+        Command::new("git")
+            .current_dir(package_path)
+            .args(&["commit", "--allow-empty", "-m", "initial commit"])
+            .output()
+            .unwrap();
+    }
+}
 #[test]
 fn save_credential_works() {
     let cli_exe = env!("CARGO_BIN_EXE_move");
     let (move_home, credential_path) = setup_move_home("/save_credential_works");
     assert!(fs::read_to_string(&credential_path).is_err());
 
-    match std::process::Command::new(cli_exe)
+    match Command::new(cli_exe)
         .env("MOVE_HOME", &move_home)
         .current_dir(".")
         .args(["movey-login"])
@@ -104,7 +270,7 @@ fn save_credential_works() {
     let token = registry.as_table_mut().unwrap().get_mut("token").unwrap();
     assert!(token.to_string().contains("test_token"));
 
-    clean_up(&move_home)
+    let _ = fs::remove_dir_all(move_home);
 }
 
 #[cfg(unix)]
@@ -157,7 +323,7 @@ fn save_credential_fails_if_undeletable_credential_file_exists() {
     file.set_permissions(perms).unwrap();
     let _ = fs::remove_file(&credential_path);
 
-    clean_up(&move_home)
+    let _ = fs::remove_dir_all(move_home);
 }
 
 fn setup_move_home(test_path: &str) -> (String, String) {
@@ -170,6 +336,42 @@ fn setup_move_home(test_path: &str) -> (String, String) {
     (move_home, credential_path)
 }
 
-fn clean_up(move_home: &str) {
-    let _ = fs::remove_dir_all(move_home);
+fn clean_up(package_path: &str) {
+    fs::remove_dir_all(format!("{}/.git", package_path)).unwrap();
+    let credential_path = format!("{}{}", package_path, MOVEY_CREDENTIAL_PATH);
+    let _ = fs::remove_file(&credential_path);
+}
+
+// create a dummy move_credential.toml file for testing
+fn init_stub_registry_file(package_path: &str, base_url: &str) {
+    let credential_path = format!("{}{}", package_path, MOVEY_CREDENTIAL_PATH);
+    let content = format!(
+        r#"
+        [registry]
+        token = "test-token"
+        url = "{}"
+        "#,
+        base_url
+    );
+    fs::write(credential_path, content).expect("Unable to write file");
+}
+
+// create a mock server to check if the request is sent or not, also returns a stub response for testing
+fn mock_movey_upload_with_response_body_and_status_code<'a>(
+    server: &'a MockServer,
+    status_code: u16,
+    response_body: Option<&str>,
+) -> Mock<'a> {
+    server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1/packages/upload")
+            .header("content-type", "application/json")
+            .json_body(json!({
+            "github_repo_url": "https://github.com/move-language/move",
+            "total_files": 2,
+            "token": "test-token",
+            "subdir": "\n"
+            }));
+        then.status(status_code).body(response_body.unwrap_or(""));
+    })
 }

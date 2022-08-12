@@ -21,7 +21,9 @@ tempfile = "3.2.0"
 walkdir = "2.3.1"
 codespan-reporting = "0.11.1"
 itertools = "0.10.0"
+serde_json = "1.0"
 toml_edit =  { version = "0.14.3", features = ["easy"] }
+reqwest = { version = "0.10", features = ["blocking", "json"] }
 
 bcs = "0.1.2"
 move-bytecode-verifier = { path = "../../move-bytecode-verifier" }
@@ -51,6 +53,7 @@ move-bytecode-viewer = { path = "../move-bytecode-viewer" }
 
 [dev-dependencies]
 datatest-stable = "0.1.1"
+httpmock = "0.6.6"
 
 [[bin]]
 name = "move"

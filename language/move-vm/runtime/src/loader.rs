@@ -24,6 +24,7 @@ use move_bytecode_verifier::{self, cyclic_dependencies, dependencies, VerifierCo
 use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
+    metadata::Metadata,
     value::{MoveStructLayout, MoveTypeLayout},
     vm_status::StatusCode,
 };
@@ -532,6 +533,16 @@ impl Loader {
     /// Mark this cache as invalidated.
     pub(crate) fn mark_as_invalid(&self) {
         *self.invalidated.write() = true;
+    }
+
+    /// Copies metadata out of a modules bytecode if available.
+    pub(crate) fn get_metadata(&self, module: ModuleId, key: &[u8]) -> Option<Metadata> {
+        let cache = self.module_cache.read();
+        cache
+            .modules
+            .get(&module)
+            .and_then(|module| module.module.metadata.iter().find(|md| md.key == key))
+            .cloned()
     }
 
     //

@@ -21,12 +21,12 @@ cargo install mdbook
 2. 下载
 
 ```shell
-git clone https://github.com/move-cc/move-book-zh.git
+git clone git@github.com:move-language/move.git
 ```
 
 3. 构建并预览
 
 ```shell
-cd move-book-zh
+cd language/documentation/book/translations/move-book-zh
 mdbook serve --open
 ```

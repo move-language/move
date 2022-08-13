@@ -2390,10 +2390,12 @@ pub fn on_signature_help_request(context: &Context, request: &Request, symbols: 
         find_closet_fn_in_text_info_vec(cursor_idx_in_parsed_line, &parsed_line)
             .unwrap_or_default();
 
+    let empty_function_ident = &FunctionIdentTypeMap::new();
+
     let function_ident = symbols
         .file_functions
         .get(&fpath)
-        .unwrap()
+        .unwrap_or(empty_function_ident)
         .get(&fn_text_info.text.to_string());
 
     // Add 2 to the function index because we want to start 1 position to the right of the left parenthesis

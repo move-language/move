@@ -10,4 +10,8 @@ module Symbols::Completions {
   fun divide(a: u64, b: u64): u64 {
     a / b
   }
+
+  fun composite(a: u64, b: u64): u64 {
+    add(a, subtract(b, divide(add(a, b), b)))
+  }
 }

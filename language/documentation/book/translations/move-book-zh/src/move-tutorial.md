@@ -119,6 +119,7 @@ cd <path_to_move>/language/documentation/tutorial
 ```
 
 <details>
+
 <summary>Visual Studio Code Move 支持 (Visual Studio Code Move Support)</summary>
 
 There is official Move support for Visual Studio Code. You need to install
@@ -220,6 +221,7 @@ move build
 ```
 
 <details>
+
 <summary>进阶概念及参考引用 (Advanced concepts and references)</summary>
 
 * You can create an empty Move package by calling:
@@ -322,6 +324,7 @@ coin in storage has the value that is expected with the `assert!` call. If the a
 这里声明了一个命名为 `test_mint_10` 的单元测试，它在 `account` 账户地址下铸造了一个包含 `value` 为 `10`的 `Coin`，然后通过 `assert!` 断言检查已经铸造成功并保存在(全局)存储中的 `Coin` 的值是否与期望值一致。如果断言 `assert` 执行失败，则单元测试失败。
 
 <details>
+
 <summary>进阶概念及参考练习 (Advanced concepts and exercises)</summary>
 
 * There are a number of test-related annotations that are worth exploring, they can be found
@@ -386,7 +389,7 @@ coin in storage has the value that is expected with the `assert!` call. If the a
 
 In this section, we are going to design a module implementing a basic coin and balance interface, where coins can be minted and transferred between balances held under different addresses.
 
-在本节中，我们将设计一个具有基本货币和余额(balance)接口功能的模块，通过他们来实现币的挖矿铸造，不同地址之下钱包的转账。
+在本节中，我们将设计一个具有基本代币和余额(balance)接口功能的模块，通过他们来实现币的挖矿铸造，不同地址之下钱包的转账。
 
 The signatures of the public Move function are the following:
 
@@ -477,7 +480,7 @@ The Ethereum blockchain state might look like this:
 ![](https://raw.githubusercontent.com/move-language/move/main/language/documentation/tutorial/diagrams/solidity_state.png)
 </details>
 
-## Step 4: 实现 `BasicCoin` 模块span id="Step4"><span>) (Implementing my `BasicCoin` module<
+## Step 4: 实现 `BasicCoin` 模块span id="Step4"><span> (Implementing my `BasicCoin` module)
 
 We have created a Move package for you in folder `step_4` called `BasicCoin`. The `sources` folder contains source code for all your Move modules in the package, including `BasicCoin.move`. In this section, we will take a closer look at the implementation of the methods inside [`BasicCoin.move`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_4/sources/BasicCoin.move).
 
@@ -493,7 +496,7 @@ Let's first try building the code using Move package by running the following co
 move build
 ```
 
-### 方法实现 (Implementation of methods)
+### 方法的实现 (Implementation of methods)
 
 Now let's take a closer look at the implementation of the methods inside [`BasicCoin.move`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_4/BasicCoin/sources/BasicCoin.move).
 
@@ -501,7 +504,7 @@ Now let's take a closer look at the implementation of the methods inside [`Basic
 
 <details>
 
-<summary>方法 <code>publish_balance</code> (Method <code>publish_balance</code>)</summary>
+<summary><code>publish_balance</code>方法 (Method <code>publish_balance</code>)</summary>
 
 This method publishes a `Balance` resource to a given address. Since this resource is needed to receive coins through minting or transferring, `publish_balance` method must be called by a user before they can receive money, including the module owner.
 
@@ -519,11 +522,12 @@ move_to(account, Balance { coin:  empty_coin });
 </details>
 <details>
 
-<summary>方法 <code>mint</code> (Method <code>mint</code>)</summary>）
+<summary><code>mint</code>方法 (Method <code>mint</code>)</summary>）
+
 Here we require that `mint` must be approved by the module owner. We enforce this using the assert statement:
 `mint` method mints coins to a given account. 
 
-`mint` 方法将货币铸造到指定的帐户。在此我们要求 `mint` 必须得到模块所有者的批准。我们使用 `assert` 语句强制执行此操作：
+`mint` 方法将代币铸造到指定的帐户。在此我们要求 `mint` 必须得到模块所有者的批准。我们使用 `assert` 语句强制执行此操作：
 
 ```
 assert!(signer::address_of(&module_owner) == MODULE_OWNER, errors::requires_address(ENOT_MODULE_OWNER));
@@ -536,7 +540,7 @@ Move 中的 `assert` 语句可以这样使用：`assert!(<predicate>, <abort_cod
 
 We then deposit a coin with value `amount` to the balance of `mint_addr`.
 
-然后将数量为 `amount` 的货币存入 `mint_addr` 的余额中。
+然后将数量为 `amount` 的代币存入 `mint_addr` 的余额中。
 
 ```
 deposit(mint_addr, Coin { value: amount });
@@ -544,7 +548,8 @@ deposit(mint_addr, Coin { value: amount });
 </details>
 
 <details>
-<summary>方法 <code>balance_of</code> (Method <code>balance_of</code>)</summary>
+
+<summary><code>balance_of</code>方法 (Method <code>balance_of</code>)</summary>
 
 We use `borrow_global`, one of the global storage operators, to read from the global storage.
 
@@ -558,11 +563,12 @@ borrow_global<Balance>(owner).coin.value
 </details>
 
 <details>
-<summary>方法 <code>transfer</code> (Method <code>transfer</code>)</summary>
+
+<summary><code>transfer</code>方法 (Method <code>transfer</code>)</summary>
 
 This function withdraws tokens from `from`'s balance and deposits the tokens into `to`s balance. We take a closer look at `withdraw` helper function:
 
-该函数从 `from` 的余额中提取货币并将代币存入 `to` 的余额中。我们仔细研究辅助函数 `withdraw`：
+该函数从 `from` 的余额中提取代币并将代币存入 `to` 的余额中。我们仔细研究帮助函数 `withdraw`：
 
 ```
 fun withdraw(addr: address, amount: u64) : Coin acquires Balance {
@@ -576,7 +582,7 @@ fun withdraw(addr: address, amount: u64) : Coin acquires Balance {
 
 At the beginning of the method, we assert that the withdrawing account has enough balance. We then use `borrow_global_mut` to get a mutable reference to the global storage, and `&mut` is used to create a [mutable reference](https://move-language.github.io/move/references.html) to a field of a struct. We then modify the balance through this mutable reference and return a new coin with the withdrawn amount.
 
-在方法开始，我们断言提款账户有足够的余额。然后我们使用 `borrow_global_mut` 来获得全局存储的可变引用，并用 `&mut` 创建结构体字段的[可变引用](./chapter_8_references.html)。然后我们通过这个可变引用修改余额并返回一个带有提取金额的新货币。
+在方法开始，我们断言提款账户有足够的余额。然后我们使用 `borrow_global_mut` 来获得全局存储的可变引用，并用 `&mut` 创建结构体字段的[可变引用](./chapter_8_references.html)。然后我们通过这个可变引用修改余额并返回一个带有提取金额的新代币。
 
 </details>
 
@@ -597,7 +603,15 @@ The solution to this exercise can be found in [`step_4_sol`](https://github.com/
 **额外练习** (**Bonus exercise**)
 
 - What would happen if we deposit too many tokens to a balance?
-- 如果我们在余额中存入太多代币会发生什么？
+- 如果我们在余额中存入太多
+- 
+- 
+- 
+- 
+- 
+- 
+- 
+- 会发生什么？
 
 
 ## Step 5: 在模块 `BasicCoin` 中添加和使用单元测试<span id="Step5"><span> (Adding and using unit tests with the `BasicCoin` module<span id="Step5"><span>)
@@ -698,6 +712,7 @@ We provide a little module called [`MyOddCoin`](https://github.com/move-language
 #### 进阶主题 (Advanced topics):
 
 <details>
+
 <summary><code>phantom</code> 类型参数 (<code>phantom</code> type parameters)</summary>
 
 In definitions of both `Coin` and `Balance`, we declare the type parameter `CoinType` to be phantom because `CoinType` is not used in the struct definition or is only used as a phantom type parameter.
@@ -857,6 +872,7 @@ The next step is to define functional properties, which are described in the two
 </details>
 
 <details>
+
 <summary> 存款方法 (Method deposit) </summary>
 
 The signature of the method `deposit` is given below:

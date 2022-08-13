@@ -2328,6 +2328,7 @@ fn collect_parameter_info_from_ident(ident: &IdentType) -> Vec<ParameterInformat
     }
 }
 
+/// Handle the signature help request from the client.
 pub fn on_signature_help_request(context: &Context, request: &Request, symbols: &Symbols) {
     let parameters = serde_json::from_value::<HoverParams>(request.params.clone())
         .expect("could not deserialize signature_help request");
@@ -2360,13 +2361,13 @@ pub fn on_signature_help_request(context: &Context, request: &Request, symbols: 
     if current_cursor_pos <= parsed_line.first().unwrap_or(empty_text_info).range.end
         || current_cursor_pos >= parsed_line.last().unwrap_or(empty_text_info).range.end
     {
-        let signature_help = SignatureHelp {
+        let empty_signature_help = SignatureHelp {
             signatures: vec![],
             active_signature: None,
             active_parameter: None,
         };
 
-        let response = lsp_server::Response::new_ok(request.id.clone(), signature_help);
+        let response = lsp_server::Response::new_ok(request.id.clone(), empty_signature_help);
         if let Err(err) = context
             .connection
             .sender
@@ -2395,10 +2396,13 @@ pub fn on_signature_help_request(context: &Context, request: &Request, symbols: 
         .unwrap()
         .get(&fn_text_info.text.to_string());
 
+    // Add 2 to the function index because we want to start 1 position to the right of the left parenthesis
+    // Add 1 to cursor_idx_in_parsed_line to include the character of the current cursor position
     let active_parameter =
         find_active_parameter(fn_idx + 2, cursor_idx_in_parsed_line + 1, &parsed_line);
 
     match function_ident {
+        // Send the signature help response back to the language client
         Some(ident) => {
             // Compute the label offsets of the parameters
             let signature_label = format!("{}", ident);

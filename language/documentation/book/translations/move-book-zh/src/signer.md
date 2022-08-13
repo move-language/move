@@ -5,12 +5,7 @@ behalf of a particular `address`.
 
 You can think of the native implementation as being:
 
-<<<<<<< HEAD:src/chapter_7_signer.md
-`signer`是Move内置的资源类型。`signer`是一种允许持有者代表特定`地址`(`address`)行事的能力([capability](https://en.wikipedia.org/wiki/Object-capability_model))
-=======
 `signer` 是Move内置的资源类型。`signer` 是一种允许持有者代表特定 `address` 行使权力的能力([capability](https://en.wikipedia.org/wiki/Object-capability_model))
->>>>>>> 78550503b139bf5e20f14bb5b505adb02cf7a677:src/signer.md
-
 你可以将原生实现(native implementation)视为：
 
 ```move

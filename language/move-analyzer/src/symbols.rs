@@ -81,7 +81,7 @@ use move_compiler::{
     naming::ast::{StructDefinition, StructFields, TParam, Type, TypeName_, Type_},
     parser::{
         ast::StructName,
-        lexer::{Lexer, Tok},
+        lexer::{Lexer, TextInfo},
     },
     shared::Identifier,
     typing::ast::{
@@ -2214,6 +2214,120 @@ pub fn on_hover_request(context: &Context, request: &Request, symbols: &Symbols)
     );
 }
 
+/**
+ * Returns a tuple where the first value is the index of the text info of the function name and the second value is the text info of the function
+ */
+fn find_closet_fn_in_text_info_vec<'a>(
+    start_idx: usize,
+    text_info_vec: &'a Vec<TextInfo>,
+) -> Option<(usize, TextInfo<'a>)> {
+    let mut parenthesis_delta = 0;
+
+    // Plus 1 to include the character at the starting index
+    for i in (0..start_idx + 1).rev() {
+        let text_info = text_info_vec.get(i).unwrap();
+
+        match text_info.text {
+            "(" => {
+                if parenthesis_delta == 0 {
+                    // The identifier to the left of the left parenthesis is the function.
+                    match text_info_vec.get(i - 1) {
+                        Some(text_info) => {
+                            return Some((i - 1, *text_info));
+                        }
+                        None => {
+                            return None;
+                        }
+                    }
+                } else {
+                    parenthesis_delta -= 1;
+                }
+            }
+            ")" => {
+                parenthesis_delta += 1;
+            }
+            _ => {}
+        }
+    }
+
+    None
+}
+
+/**
+ * Find the position of the active parameter given a vector of parsed tokens
+ */
+fn find_active_parameter<'a>(
+    // The starting index must be to 1 position to the right of a left parenthesis
+    start_idx: usize,
+    // end_idx >= start_idx
+    end_idx: usize,
+    text_info_vec: &'a Vec<TextInfo>,
+) -> u32 {
+    let mut parenthesis_delta = 0;
+    let mut active_parameter = 0;
+
+    for i in start_idx..end_idx {
+        let text_info = text_info_vec.get(i).unwrap();
+
+        match text_info.text {
+            "," => {
+                // When the parenthesis_delta equals to 0, it means we are in the correct function scope
+                if parenthesis_delta == 0 {
+                    active_parameter += 1;
+                }
+            }
+            "(" => {
+                parenthesis_delta += 1;
+            }
+            ")" => {
+                // This means we are at the end of the current function scope
+                if parenthesis_delta == 0 {
+                    break;
+                }
+
+                parenthesis_delta -= 1;
+            }
+            _ => {}
+        }
+    }
+
+    active_parameter
+}
+
+fn collect_parameter_info_from_ident(ident: &IdentType) -> Vec<ParameterInformation> {
+    match ident {
+        IdentType::FunctionType(_, _, _, args, _, _) => {
+            // Compute the label offsets of the parameters
+            let signature_label = format!("{}", ident);
+            let signature_split = signature_label.split("(").collect::<Vec<_>>();
+
+            // Add 1 to include the left open bracket "("
+            let start_offset = signature_split.get(0).unwrap().len() + 1;
+            let mut accum_args_len = 0;
+
+            args.iter()
+                .map(type_to_ide_string)
+                .map(|arg| {
+                    let start_idx = start_offset + accum_args_len;
+                    let end_idx = start_idx + arg.len();
+
+                    // Add 2 to account for ", " (a comma and a space between the arguments)
+                    accum_args_len += arg.len() + 2;
+
+                    ParameterInformation {
+                        label: lsp_types::ParameterLabel::LabelOffsets([
+                            start_idx as u32,
+                            end_idx as u32,
+                        ]),
+                        documentation: None,
+                    }
+                })
+                .collect()
+        }
+        _ => Vec::new(),
+    }
+}
+
 pub fn on_signature_help_request(context: &Context, request: &Request, symbols: &Symbols) {
     let parameters = serde_json::from_value::<HoverParams>(request.params.clone())
         .expect("could not deserialize signature_help request");
@@ -2236,46 +2350,13 @@ pub fn on_signature_help_request(context: &Context, request: &Request, symbols: 
 
     // Parse the current line with the lexer
     let mut lexer = Lexer::new(line_content, FileHash::new(line_content));
-
-    // Skip the first token because it's EOF
-    if lexer.advance().is_err() {
-        return;
-    }
-
-    #[derive(Debug, Default)]
-    struct TextRange {
-        start: usize,
-        end: usize,
-    }
-
-    #[derive(Debug, Default)]
-    struct TextInfo {
-        text: String,
-        range: TextRange,
-    }
-
-    let mut parsed_line = Vec::new();
-    while lexer.peek() != Tok::EOF {
-        let content = lexer.content();
-
-        parsed_line.push(TextInfo {
-            text: content.to_string(),
-            range: TextRange {
-                start: lexer.start_loc(),
-                end: lexer.start_loc() + content.len() - 1,
-            },
-        });
-
-        if lexer.advance().is_err() {
-            break;
-        }
-    }
+    let parsed_line = lexer.parse_text_info();
 
     let empty_text_info = &TextInfo {
         ..Default::default()
     };
 
-    // If the cursor is out of bounds, send an empty signature help response to remove the signature help popup if any
+    // If the cursor is out of bounds, send an empty signature help response to remove the signature help popup if there is one
     if current_cursor_pos <= parsed_line.first().unwrap_or(empty_text_info).range.end
         || current_cursor_pos >= parsed_line.last().unwrap_or(empty_text_info).range.end
     {
@@ -2304,128 +2385,45 @@ pub fn on_signature_help_request(context: &Context, request: &Request, symbols: 
         })
         .unwrap_or_default();
 
-    // Find the first valid left parenthesis starting from the cursor index
-    let mut parenthesis_delta = 0;
-    let mut fn_text_info = &TextInfo {
-        ..Default::default()
-    };
-    let mut fn_left_parenthesis_idx = 0;
-
-    // Plus 1 because we want to include the character the current cursor is on
-    for i in (0..cursor_idx_in_parsed_line + 1).rev() {
-        let text_info = parsed_line.get(i).unwrap();
-
-        match text_info.text.as_str() {
-            "(" => {
-                if parenthesis_delta == 0 {
-                    // The identifier to the left of the left parenthesis is the correct
-                    // function scope. Add a default text info value to return here for safety
-                    fn_left_parenthesis_idx = i;
-                    fn_text_info = parsed_line.get(i - 1).unwrap_or(empty_text_info);
-                    break;
-                } else {
-                    parenthesis_delta -= 1;
-                }
-            }
-            ")" => {
-                parenthesis_delta += 1;
-            }
-            _ => {}
-        }
-    }
+    let (fn_idx, fn_text_info) =
+        find_closet_fn_in_text_info_vec(cursor_idx_in_parsed_line, &parsed_line)
+            .unwrap_or_default();
 
     let function_ident = symbols
         .file_functions
         .get(&fpath)
         .unwrap()
-        .get(&fn_text_info.text);
+        .get(&fn_text_info.text.to_string());
 
-    // Reset the sentinel value for safety
-    parenthesis_delta = 0;
-    let mut active_parameter = 0;
-
-    // Starting from the position of the left parenthesis of the closet function, count the number
-    // of arguments by counting the number of valid commas ending in the index of the current cursor
-    for i in fn_left_parenthesis_idx + 1..cursor_idx_in_parsed_line + 1 {
-        let text_info = parsed_line.get(i).unwrap();
-
-        match text_info.text.as_str() {
-            "," => {
-                // When the parenthesis_delta equals to 0, it means we are in the correct function scope
-                if parenthesis_delta == 0 {
-                    active_parameter += 1;
-                }
-            }
-            "(" => {
-                parenthesis_delta += 1;
-            }
-            ")" => {
-                // This means we are at the end of the current function scope
-                if parenthesis_delta == 0 {
-                    break;
-                }
-
-                parenthesis_delta -= 1;
-            }
-            _ => {}
-        }
-    }
+    let active_parameter =
+        find_active_parameter(fn_idx + 2, cursor_idx_in_parsed_line + 1, &parsed_line);
 
     match function_ident {
         Some(ident) => {
-            match ident {
-                IdentType::FunctionType(_, _, _, args, _, _) => {
-                    // Compute the label offsets of the parameters
-                    let signature_label = format!("{}", ident);
-                    let signature_split = signature_label.split("(").collect::<Vec<_>>();
+            // Compute the label offsets of the parameters
+            let signature_label = format!("{}", ident);
+            let parameter_label_offsets = collect_parameter_info_from_ident(ident);
 
-                    // Add 1 to include the left open bracket "("
-                    let start_offset = signature_split.get(0).unwrap().len() + 1;
-                    let mut accum_args_len = 0;
+            let signature_help = SignatureHelp {
+                signatures: vec![SignatureInformation {
+                    label: signature_label,
+                    documentation: None,
+                    parameters: Some(parameter_label_offsets),
+                    active_parameter: Some(active_parameter),
+                }],
+                // We only have one signature so the active signature is always at index 0
+                active_signature: Some(0),
+                // Setting the active parameter here is more reliable than SignatureInformation.active_parameter
+                active_parameter: Some(active_parameter),
+            };
 
-                    let parameter_label_offsets = args
-                        .iter()
-                        .map(type_to_ide_string)
-                        .map(|arg| {
-                            let start_idx = start_offset + accum_args_len;
-                            let end_idx = start_idx + arg.len();
-
-                            // Add 2 to account for ", " (a comma and a space between the arguments)
-                            accum_args_len += arg.len() + 2;
-
-                            ParameterInformation {
-                                label: lsp_types::ParameterLabel::LabelOffsets([
-                                    start_idx as u32,
-                                    end_idx as u32,
-                                ]),
-                                documentation: None,
-                            }
-                        })
-                        .collect();
-
-                    let signature_help = SignatureHelp {
-                        signatures: vec![SignatureInformation {
-                            label: signature_label,
-                            documentation: None,
-                            parameters: Some(parameter_label_offsets),
-                            active_parameter: Some(active_parameter),
-                        }],
-                        // We only have one signature so the active signature is always at index 0
-                        active_signature: Some(0),
-                        // Setting the active parameter here is more reliable than SignatureInformation.active_parameter
-                        active_parameter: Some(active_parameter),
-                    };
-
-                    let response = lsp_server::Response::new_ok(request.id.clone(), signature_help);
-                    if let Err(err) = context
-                        .connection
-                        .sender
-                        .send(lsp_server::Message::Response(response))
-                    {
-                        eprintln!("could not send signature help response: {:?}", err);
-                    }
-                }
-                _ => {}
+            let response = lsp_server::Response::new_ok(request.id.clone(), signature_help);
+            if let Err(err) = context
+                .connection
+                .sender
+                .send(lsp_server::Message::Response(response))
+            {
+                eprintln!("could not send signature help response: {:?}", err);
             }
         }
         None => {}

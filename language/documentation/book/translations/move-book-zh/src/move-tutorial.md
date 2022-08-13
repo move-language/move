@@ -603,15 +603,7 @@ The solution to this exercise can be found in [`step_4_sol`](https://github.com/
 **额外练习** (**Bonus exercise**)
 
 - What would happen if we deposit too many tokens to a balance?
-- 如果我们在余额中存入太多
-- 
-- 
-- 
-- 
-- 
-- 
-- 
-- 会发生什么？
+- 如果我们在余额中存入太多会发生什么？
 
 
 ## Step 5: 在模块 `BasicCoin` 中添加和使用单元测试<span id="Step5"><span> (Adding and using unit tests with the `BasicCoin` module<span id="Step5"><span>)

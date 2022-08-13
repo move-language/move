@@ -8,8 +8,9 @@ use crossbeam::channel::{bounded, select};
 use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
     notification::Notification as _, request::Request as _, CompletionOptions, Diagnostic,
-    HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
-    TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
+    HoverProviderCapability, OneOf, SaveOptions, SignatureHelpOptions, TextDocumentSyncCapability,
+    TextDocumentSyncKind, TextDocumentSyncOptions, TypeDefinitionProviderCapability,
+    WorkDoneProgressOptions,
 };
 use std::{
     collections::BTreeMap,
@@ -107,6 +108,13 @@ fn main() {
         )),
         references_provider: Some(OneOf::Left(symbols::DEFS_AND_REFS_SUPPORT)),
         document_symbol_provider: Some(OneOf::Left(true)),
+        signature_help_provider: Some(SignatureHelpOptions {
+            trigger_characters: Some(vec!["(".to_string(), ",".to_string()]),
+            retrigger_characters: None,
+            work_done_progress_options: WorkDoneProgressOptions {
+                work_done_progress: None,
+            },
+        }),
         ..Default::default()
     })
     .expect("could not serialize server capabilities");
@@ -240,6 +248,9 @@ fn on_request(context: &Context, request: &Request) {
         }
         lsp_types::request::DocumentSymbolRequest::METHOD => {
             symbols::on_document_symbol_request(context, request, &context.symbols.lock().unwrap());
+        }
+        lsp_types::request::SignatureHelpRequest::METHOD => {
+            symbols::on_signature_help_request(context, request, &context.symbols.lock().unwrap());
         }
         _ => eprintln!("handle request '{}' from client", request.method),
     }

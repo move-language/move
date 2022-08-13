@@ -1,18 +1,18 @@
 # While and Loop
 
 Move offers two constructs for looping: `while` and `loop`.
-# While 和循环
-Move 提供了两种循环结构：while 和 loop。
 
-## `while` loops
+Move 提供了两种循环结构: `while` and `loop`.
+
+## `while` 循环
 
 The `while` construct repeats the body (an expression of type unit) until the condition (an expression of type `bool`) evaluates to `false`.
 
 Here is an example of simple `while` loop that computes the sum of the numbers from `1` to `n`:
-## while 循环
-while 构造重复主体（单元类型的表达式），直到条件（布尔类型的表达式）评估为假。
 
-下面是一个简单的 while 循环示例，它计算从 1 到 n 的数字之和：
+`while` 会重复执行结构(一个 `unit` 类型的表达式), 直到条件语句(`bool` 类型的表达式)运算结果为 `false`。
+
+下面是一个简单的 `while` 循环的例子，计算从 `1` 到 `n` 数字之和:
 
 ```move
 fun sum(n: u64): u64 {
@@ -28,7 +28,8 @@ fun sum(n: u64): u64 {
 ```
 
 Infinite loops are allowed:
-允许无限循环：
+
+无限循环是被允许的:
 
 ```move=
 fun foo() {
@@ -40,8 +41,7 @@ fun foo() {
 
 The `break` expression can be used to exit a loop before the condition evaluates to `false`. For example, this loop uses `break` to find the smallest factor of `n` that's greater than 1:
 
-### `break`
-break 表达式可用于在条件计算为假之前退出循环。例如，此循环使用 break 来查找 n 中大于 1 的最小因子：
+`break` 表达式可用于在条件计算结果为 `false` 之前退出循环。例如，这个循环使用 `break` 查找 `n` 大于1的最小因子:
 
 ```move
 fun smallest_factor(n: u64): u64 {
@@ -58,14 +58,13 @@ fun smallest_factor(n: u64): u64 {
 
 The `break` expression cannot be used outside of a loop.
 
-break 表达式不能在循环外使用。
+`break` 表达式不能在循环之外使用。
 
 ### `continue`
 
 The `continue` expression skips the rest of the loop and continues to the next iteration. This loop uses `continue` to compute the sum of `1, 2, ..., n`, except when the number is divisible by 10:
 
-### `continue`
-continue 表达式跳过循环的其余部分并继续下一次迭代。此循环使用 continue 来计算 1、2、...、n 的总和，除非该数字能被 10 整除：
+`continue` 表达式跳过当前循环的剩余部分, 并继续下一轮迭代。下面的例子, 使用 `continue` 去计算 `1, 2, ..., n` 的总和，过滤掉不能被10整除的数:
 
 ```move
 fun sum_intermediate(n: u64): u64 {
@@ -82,14 +81,14 @@ fun sum_intermediate(n: u64): u64 {
 ```
 
 The `continue` expression cannot be used outside of a loop.
-continue 表达式不能在循环外使用。
+
+`continue` 表达式不能在循环之外使用。
 
 ### The type of `break` and `continue`
 
 `break` and `continue`, much like `return` and `abort`, can have any type. The following examples illustrate where this flexible typing can be helpful:
 
-### 中断和继续的类型
-break 和 continue 就像 return 和 abort 一样，可以有任何类型。以下示例说明了这种灵活的类型在哪些方面会有所帮助：
+`break` and `continue`, 和 `return` and `abort`  很相像, 可以是任何类型。下面的例子说明了这种灵活的类型在那些方面有帮助:
 
 ```move
 fun pop_smallest_while_not_equal(
@@ -109,9 +108,7 @@ fun pop_smallest_while_not_equal(
 
     result
 }
-```
 
-```move
 fun pick(
     indexes: vector<u64>,
     v1: &vector<address>,
@@ -133,15 +130,15 @@ fun pick(
 }
 ```
 
-## The `loop` expression
+## `loop`表达式
 
 The `loop` expression repeats the loop body (an expression with type `()`) until it hits a `break`
 
 Without a `break`, the loop will continue forever
-## 循环表达式
-循环表达式重复循环体（类型为 () 的表达式），直到遇到中断
 
-没有中断，循环将永远继续
+`loop` 表达式重复循环体(类型为unit()的表达式) ，直到遇到 `break` 为止。
+
+(下面的代码中)没有 `break`, 循环将一直执行。
 
 ```move
 fun foo() {
@@ -152,7 +149,7 @@ fun foo() {
 
 Here is an example that uses `loop` to write the `sum` function:
 
-这是一个使用循环编写求和函数的示例：
+这是一个使用 `loop` 编写 `sum` 函数的示例(可与 `while` 循环比较):
 
 ```move
 fun sum(n: u64): u64 {
@@ -170,7 +167,7 @@ fun sum(n: u64): u64 {
 
 As you might expect, `continue` can also be used inside a `loop`. Here is `sum_intermediate` from above rewritten using `loop` instead of `while`
 
-如您所料， continue 也可以在循环内使用。这是上面使用循环而不是 while 重写的 sum_intermediate
+正如你所料, `continue` 也可以在 `loop` 中使用。这是上面的 `sum_intermediate` 使用 `loop` 代替 `while` 重写的:
 
 ```move
 fun sum_intermediate(n: u64): u64 {
@@ -187,11 +184,11 @@ fun sum_intermediate(n: u64): u64 {
 }
 ```
 
-## The type of `while` and `loop`
+## `while` and `loop` 的类型
 
 Move loops are typed expressions. A `while` expression always has type `()`.
-## while 和循环的类型
-移动循环是类型化的表达式。 while 表达式始终具有 () 类型。
+
+Move 循环是有类型化的表达式。 `while` 表达式始终具有 `()` 类型。
 
 ```move
 let () = while (i < 10) { i = i + 1 };
@@ -199,7 +196,8 @@ let () = while (i < 10) { i = i + 1 };
 
 If a `loop` contains a `break`, the expression has type unit `()`
 
-如果循环包含中断，则表达式的类型为 unit ()
+如果 `loop` 中包含 `break` , 这个表达式的类型则为 unit `()`
+
 
 ```move
 (loop { if (i < 10) i = i + 1 else break }: ());
@@ -208,10 +206,11 @@ let () = loop { if (i < 10) i = i + 1 else break };
 
 If `loop` does not have a `break`, `loop` can have any type much like `return`, `abort`, `break`, and `continue`.
 
-如果循环包含中断，则表达式的类型为 unit ()
+如果 `loop` 不包含 `break`, `loop` 可以是任何类型, 就像`return`, `abort`, `break`, 和 `continue`。
 
 ```move
 (loop (): u64);
 (loop (): address);
 (loop (): &vector<vector<u8>>);
 ```
+

@@ -55,9 +55,9 @@ module <address>::<identifier> {
 }
 ```
 
-where `<address>` is a valid [named or literal address](./chapter_5_address.md).
+where `<address>` is a valid [named or literal address](./address.md).
 
-其中 `<address>` 是一个有效的 [命名或字面量地址](./chapter_5_address.md).
+其中 `<address>` 是一个有效的 [命名或字面量地址](./address.md).
 
 例子:
 

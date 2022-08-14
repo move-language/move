@@ -1,4 +1,3 @@
-
 # 引言 (Introduction)
 
 Welcome to Move, a next generation language for secure, sandboxed, and formally verified programming. Its first use case is for the Diem blockchain, where Move provides the foundation for its implementation. Move allows developers to write programs that flexibly manage and transfer assets, while providing the security and protections against attacks on those assets. However, Move has been developed with use cases in mind outside a blockchain context as well.
@@ -45,4 +44,4 @@ Currently, Move is not targeting developers who wish to create custom modules an
 
 Begin with understanding [modules and scripts](https://move-language.github.io/move/modules-and-scripts.html) and then work through the [Move Tutorial](https://move-language.github.io/move/creating-coins.html).
 
-你可以从了解模块和脚本([modules and scripts](./chapter_1_modules-and-scripts.html))开始，然后跟随Move教程([Move Tutorial](https://move-language.github.io/move/creating-coins.html))进行练习。
+你可以从了解模块和脚本([modules and scripts](./modules-and-scripts.html))开始，然后跟随Move教程([Move Tutorial](https://move-language.github.io/move/creating-coins.html))进行练习。

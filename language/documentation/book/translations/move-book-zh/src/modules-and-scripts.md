@@ -13,6 +13,7 @@ Move有两种不同类型的程序: ***Modules***和 ***Scripts***。模块(Modu
 ### 脚本(Scripts)
 
 A script has the following structure:
+
 script具有以下结构:
 
 ```text
@@ -43,7 +44,7 @@ script {
 
 Scripts have very limited power—they cannot declare friends, struct types or access global storage. Their primary purpose is to invoke module functions.
 
-脚本(Scripts) 的功能非常有限—它们不能声明友元、结构类型或访问全局存储， 他们的主要作用主要是调用模块函数.
+脚本(Scripts) 的功能非常有限—它们不能声明友元、结构类型或访问全局存储，他们的主要作用主要是调用模块函数。
 
 ### 模块(Modules)
 
@@ -80,11 +81,11 @@ module 0x42::Test {
 
 The `module 0x42::Test` part specifies that the module `Test` will be published under the [account address](./chapter_5_address.md) `0x42` in [global storage](./global-storage-structure.md).
 
-`module 0x42::Test` 这部分指定模块 `Test` 会被发布到[全局存储](./global-storage-structure.md)中[账户地址](./address.md)为 `0x42` 之下.
+`module 0x42::Test` 这部分指定模块 `Test` 会被发布到[全局存储](./global-storage-structure.md)中[账户地址](./address.md)为 `0x42` 之下。
 
 Modules can also be declared using [named addresses](./address.md). For example:
 
-模块也可以用 [命名地址](./address.md) 来声明,例如:
+模块也可以用[命名地址](./address.md) 来声明，例如：
 
 ```move
 module test_addr::test {
@@ -114,7 +115,7 @@ script {
 
 and we compiled it with `my_addr` set to `0xC0FFEE`, then it would be equivalent to the following operationally:
 
-我们会将 `my_addr` 编译为`0xC0FFEE`，将和下面的代码是等价的:
+我们会将 `my_addr` 编译为`0xC0FFEE`，将和下面的代码是等价的：
 
 ```move=
 script {
@@ -126,11 +127,11 @@ script {
 
 However at the source level, these *are not equivalent*—the function `M::foo` *must* be accessed through the `MyAddr` named address, and not through the numerical value assigned to that address.
 
-但是在源码级别，这两个*并不等价* - 函数 `M::foo` 必须通过 `MyAddr`命名地址访问，而不是通过分配给该地址的数值访问。
+但是在源码级别，这两个*并不等价* —— 函数 `M::foo` 必须通过 `MyAddr`命名地址访问，而不是通过分配给该地址的数值访问。
 
 Module names can start with letters `a` to `z` or letters `A` to `Z`. After the first character, module names can contain underscores `_`, letters `a` to `z`, letters `A` to `Z`, or digits `0` to `9`.
 
-模块名称可以以字母 `a` 到 `z` 或字母 `A` 到 `Z`开头。在第一个字符之后，模块名可以包含下划线`_`、字母 `a` 到 `z` 、字母 `A` 到 `Z` 或数字 `0` 到 `9`。
+模块名称可以以字母 `a` 到 `z` 或字母 `A` 到 `Z`开头。在第一个字符之后，模块名可以包含下划线 `_`、字母 `a` 到 `z` 、字母 `A` 到 `Z` 或数字 `0` 到 `9`。
 
 ```move
 module my_module {}

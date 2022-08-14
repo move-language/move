@@ -1,23 +1,20 @@
-# Bool
+# 布尔类型 (Bool)
 
-`bool` is Move's primitive type for boolean `true` and `false` values.
-# 布尔
-bool 是 Move 的布尔真假值的原始类型。
+`bool`is Move's primitive type for boolean `true` and `false`values.
 
-## Literals
+`bool` 是 Move 布尔基本类型，有 `true` 和 `false` 两个值。
 
-Literals for `bool` are either `true` or `false`.
-## 字面量
-bool 的文字为真或假。
+## 字面量 (Literals)
 
-## Operations
+Literals for `bool` are either `true` or `false` .
 
-### Logical
+布尔类型字面值只能是 `true` 或者 `false`中的一个 。
 
-`bool` supports three logical operations:
-## 操作符
-### 逻辑的
-bool 支持三种逻辑运算：
+## 操作 (Operations)
+
+### 逻辑运算 (Logical)
+
+`bool`supports three logical operations:
 
 | Syntax                    | Description                  | Equivalent Expression                                               |
 | ------------------------- | ---------------------------- | ------------------------------------------------------------------- |
@@ -25,20 +22,28 @@ bool 支持三种逻辑运算：
 | <code>&vert;&vert;</code> | short-circuiting logical or  | <code>p &vert;&vert; q</code> is equivalent to `if (p) true else q` |
 | `!`                       | logical negation             | `!p` is equivalent to `if (p) false else true`                      |
 
-### Control Flow
 
-`bool` values are used in several of Move's control-flow constructs:
-### 控制流
+`bool` 支持三种逻辑运算：
+
+| 句法 | 描述                  | Equivalent Expression                           |
+| ------ | ---------------------------- | ----------------------------------------------- |
+| `&&`   | 短路逻辑与(short-circuiting logical and) | `p && q` 等价于 `if (p) q else false` |
+| <code>&vert;&vert;</code>   | 短路逻辑或(short-circuiting logical or)  | `p || q` 等价于 `if (p) true else q`  |
+| `!`    | 逻辑非(logical negation)            | `!p` 等价于 `if (p) false else true`  |
+
+
+### 控制流 (Control Flow)
+
+`bool`values are used in several of Move's control-flow constructs:
+
 布尔值用于 Move 的多个控制流结构中：
 
-- [`if (bool) { ... }`](./conditionals.md)
-- [`while (bool) { .. }`](./loops.md)
-- [`assert!(bool, u64)`](./abort-and-assert.md)
+- `[if (bool) { ... }](<./chapter_13_conditionals.html>)`
+- `[while (bool) { .. }](<./chapter_14_loops.html>)`
+- `[assert!(bool, u64)](<./chapte_12_abort-and-assert.html>)`
 
-## Ownership
+## 所有权 (Ownership)
 
-As with the other scalar values built-in to the language, boolean values are implicitly copyable,
-meaning they can be copied without an explicit instruction such as
-[`copy`](./variables.md#move-and-copy).
-## 所有权
-与语言内置的其他标量值一样，布尔值是隐式可复制的，这意味着它们可以在没有显式指令（如复制）的情况下复制。
+As with the other scalar values built-in to the language, boolean values are implicitly copyable, meaning they can be copied without an explicit instruction such as `[copy](<https://move-language.github.io/move/variables.html#move-and-copy>).`
+
+与语言内置的其他标量值一样，布尔值是隐式可复制的，这意味着它们可以在没有明确指令如[`copy`](./variables.md#move-and-copy)的情况下复制。

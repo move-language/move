@@ -36,60 +36,76 @@ impl GasParameters {
         Self {
             bcs: bcs::GasParameters {
                 to_bytes: bcs::ToBytesGasParameters {
-                    input_unit_cost: 0,
-                    output_unit_cost: 0,
-                    legacy_min_output_size: 0,
-                    failure_cost: 0,
+                    input_unit_cost: 0.into(),
+                    output_unit_cost: 0.into(),
+                    legacy_min_output_size: 0.into(),
+                    failure_cost: 0.into(),
                 },
             },
 
             hash: hash::GasParameters {
                 sha2_256: hash::Sha2_256GasParameters {
-                    base_cost: 0,
-                    unit_cost: 0,
-                    legacy_min_input_len: 0,
+                    base_cost: 0.into(),
+                    unit_cost: 0.into(),
+                    legacy_min_input_len: 0.into(),
                 },
                 sha3_256: hash::Sha3_256GasParameters {
-                    base_cost: 0,
-                    unit_cost: 0,
-                    legacy_min_input_len: 0,
+                    base_cost: 0.into(),
+                    unit_cost: 0.into(),
+                    legacy_min_input_len: 0.into(),
                 },
             },
             signer: signer::GasParameters {
-                borrow_address: signer::BorrowAddressGasParameters { base_cost: 0 },
+                borrow_address: signer::BorrowAddressGasParameters {
+                    base_cost: 0.into(),
+                },
             },
             string: string::GasParameters {
                 check_utf8: string::CheckUtf8GasParameters {
-                    base_cost: 0,
-                    unit_cost: 0,
+                    base_cost: 0.into(),
+                    unit_cost: 0.into(),
                 },
-                is_char_boundary: string::IsCharBoundaryGasParameters { base_cost: 0 },
+                is_char_boundary: string::IsCharBoundaryGasParameters {
+                    base_cost: 0.into(),
+                },
                 sub_string: string::SubStringGasParameters {
-                    base_cost: 0,
-                    unit_cost: 0,
+                    base_cost: 0.into(),
+                    unit_cost: 0.into(),
                 },
                 index_of: string::IndexOfGasParameters {
-                    base_cost: 0,
-                    unit_cost: 0,
+                    base_cost: 0.into(),
+                    unit_cost: 0.into(),
                 },
             },
             vector: vector::GasParameters {
-                empty: vector::EmptyGasParameters { base_cost: 0 },
-                length: vector::LengthGasParameters { base_cost: 0 },
-                push_back: vector::PushBackGasParameters {
-                    base_cost: 0,
-                    legacy_unit_cost: 0,
+                empty: vector::EmptyGasParameters {
+                    base_cost: 0.into(),
                 },
-                borrow: vector::BorrowGasParameters { base_cost: 0 },
-                pop_back: vector::PopBackGasParameters { base_cost: 0 },
-                destroy_empty: vector::DestroyEmptyGasParameters { base_cost: 0 },
-                swap: vector::SwapGasParameters { base_cost: 0 },
+                length: vector::LengthGasParameters {
+                    base_cost: 0.into(),
+                },
+                push_back: vector::PushBackGasParameters {
+                    base_cost: 0.into(),
+                    legacy_unit_cost: 0.into(),
+                },
+                borrow: vector::BorrowGasParameters {
+                    base_cost: 0.into(),
+                },
+                pop_back: vector::PopBackGasParameters {
+                    base_cost: 0.into(),
+                },
+                destroy_empty: vector::DestroyEmptyGasParameters {
+                    base_cost: 0.into(),
+                },
+                swap: vector::SwapGasParameters {
+                    base_cost: 0.into(),
+                },
             },
             #[cfg(feature = "testing")]
             unit_test: unit_test::GasParameters {
                 create_signers_for_testing: unit_test::CreateSignersForTestingGasParameters {
-                    base_cost: 0,
-                    unit_cost: 0,
+                    base_cost: 0.into(),
+                    unit_cost: 0.into(),
                 },
             },
         }
@@ -135,12 +151,18 @@ impl NurseryGasParameters {
     pub fn zeros() -> Self {
         Self {
             event: event::GasParameters {
-                write_to_event_store: event::WriteToEventStoreGasParameters { unit_cost: 0 },
+                write_to_event_store: event::WriteToEventStoreGasParameters {
+                    unit_cost: 0.into(),
+                },
             },
             #[cfg(feature = "testing")]
             debug: debug::GasParameters {
-                print: debug::PrintGasParameters { base_cost: 0 },
-                print_stack_trace: debug::PrintStackTraceGasParameters { base_cost: 0 },
+                print: debug::PrintGasParameters {
+                    base_cost: 0.into(),
+                },
+                print_stack_trace: debug::PrintStackTraceGasParameters {
+                    base_cost: 0.into(),
+                },
             },
         }
     }

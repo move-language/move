@@ -21,7 +21,7 @@ use crate::values::Value;
 use smallvec::{smallvec, SmallVec};
 
 pub use move_binary_format::errors::{PartialVMError, PartialVMResult};
-pub use move_core_types::vm_status::StatusCode;
+pub use move_core_types::{gas_algebra::InternalGas, vm_status::StatusCode};
 
 /// Result of a native function execution requires charges for execution cost.
 ///
@@ -34,13 +34,13 @@ pub use move_core_types::vm_status::StatusCode;
 /// must be expressed in a `NativeResult` with a cost and a VMStatus.
 pub struct NativeResult {
     /// Result of execution. This is either the return values or the error to report.
-    pub cost: u64,
+    pub cost: InternalGas,
     pub result: Result<SmallVec<[Value; 1]>, u64>,
 }
 
 impl NativeResult {
     /// Return values of a successful execution.
-    pub fn ok(cost: u64, values: SmallVec<[Value; 1]>) -> Self {
+    pub fn ok(cost: InternalGas, values: SmallVec<[Value; 1]>) -> Self {
         NativeResult {
             cost,
             result: Ok(values),
@@ -51,7 +51,7 @@ impl NativeResult {
     /// failure of the VM which would raise a `PartialVMError` error directly.
     /// The only thing the funciton can specify is its abort code, as if it had invoked the `Abort`
     /// bytecode instruction
-    pub fn err(cost: u64, abort_code: u64) -> Self {
+    pub fn err(cost: InternalGas, abort_code: u64) -> Self {
         NativeResult {
             cost,
             result: Err(abort_code),
@@ -60,7 +60,7 @@ impl NativeResult {
 
     /// Convert a PartialVMResult<()> into a PartialVMResult<NativeResult>
     pub fn map_partial_vm_result_empty(
-        cost: u64,
+        cost: InternalGas,
         res: PartialVMResult<()>,
     ) -> PartialVMResult<Self> {
         let result = match res {
@@ -81,7 +81,7 @@ impl NativeResult {
 
     /// Convert a PartialVMResult<Value> into a PartialVMResult<NativeResult>
     pub fn map_partial_vm_result_one(
-        cost: u64,
+        cost: InternalGas,
         res: PartialVMResult<Value>,
     ) -> PartialVMResult<Self> {
         let result = match res {

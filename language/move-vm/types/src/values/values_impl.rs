@@ -10,10 +10,7 @@ use move_binary_format::{
 use move_core_types::{
     account_address::AccountAddress,
     effects::Op,
-    gas_schedule::{
-        AbstractMemorySize, GasAlgebra, GasCarrier, CONST_SIZE, MIN_EXISTS_DATA_SIZE,
-        REFERENCE_SIZE, STRUCT_SIZE,
-    },
+    gas_algebra::AbstractMemorySize,
     value::{MoveStructLayout, MoveTypeLayout},
     vm_status::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode},
 };
@@ -22,7 +19,6 @@ use std::{
     fmt::{self, Debug, Display},
     iter,
     mem::size_of,
-    ops::Add,
     rc::Rc,
 };
 
@@ -1819,11 +1815,24 @@ impl Vector {
  * Gas
  *
  *   Abstract memory sizes of the VM values.
+ *   This should be deprecated soon.
  *
  **************************************************************************************/
 
+/// The size in bytes for a non-string or address constant on the stack
+const LEGACY_CONST_SIZE: AbstractMemorySize = AbstractMemorySize::new(16);
+
+/// The size in bytes for a reference on the stack
+const LEGACY_REFERENCE_SIZE: AbstractMemorySize = AbstractMemorySize::new(8);
+
+/// The size of a struct in bytes
+const LEGACY_STRUCT_SIZE: AbstractMemorySize = AbstractMemorySize::new(2);
+
+/// For exists checks on data that doesn't exists this is the multiplier that is used.
+const LEGACY_MIN_EXISTS_DATA_SIZE: AbstractMemorySize = AbstractMemorySize::new(100);
+
 impl Container {
-    fn size(&self) -> AbstractMemorySize<GasCarrier> {
+    fn size(&self) -> AbstractMemorySize {
         match self {
             Self::Locals(r) | Self::Vec(r) | Self::Struct(r) => Struct::size_impl(&*r.borrow()),
             Self::VecU8(r) => AbstractMemorySize::new((r.borrow().len() * size_of::<u8>()) as u64),
@@ -1844,23 +1853,23 @@ impl Container {
 }
 
 impl ContainerRef {
-    fn size(&self) -> AbstractMemorySize<GasCarrier> {
-        REFERENCE_SIZE
+    fn size(&self) -> AbstractMemorySize {
+        LEGACY_REFERENCE_SIZE
     }
 }
 
 impl IndexedRef {
-    fn size(&self) -> AbstractMemorySize<GasCarrier> {
-        REFERENCE_SIZE
+    fn size(&self) -> AbstractMemorySize {
+        LEGACY_REFERENCE_SIZE
     }
 }
 
 impl ValueImpl {
-    fn size(&self) -> AbstractMemorySize<GasCarrier> {
+    fn size(&self) -> AbstractMemorySize {
         use ValueImpl::*;
 
         match self {
-            Invalid | U8(_) | U64(_) | U128(_) | Bool(_) => CONST_SIZE,
+            Invalid | U8(_) | U64(_) | U128(_) | Bool(_) => LEGACY_CONST_SIZE,
             Address(_) => AbstractMemorySize::new(AccountAddress::LENGTH as u64),
             ContainerRef(r) => r.size(),
             IndexedRef(r) => r.size(),
@@ -1871,25 +1880,25 @@ impl ValueImpl {
 }
 
 impl Struct {
-    fn size_impl(fields: &[ValueImpl]) -> AbstractMemorySize<GasCarrier> {
+    fn size_impl(fields: &[ValueImpl]) -> AbstractMemorySize {
         fields
             .iter()
-            .fold(STRUCT_SIZE, |acc, v| acc.map2(v.size(), Add::add))
+            .fold(LEGACY_STRUCT_SIZE, |acc, v| acc + v.size())
     }
 
-    pub fn size(&self) -> AbstractMemorySize<GasCarrier> {
+    pub fn size(&self) -> AbstractMemorySize {
         Self::size_impl(&self.fields)
     }
 }
 
 impl Value {
-    pub fn size(&self) -> AbstractMemorySize<GasCarrier> {
+    pub fn size(&self) -> AbstractMemorySize {
         self.0.size()
     }
 }
 
 impl ReferenceImpl {
-    fn size(&self) -> AbstractMemorySize<GasCarrier> {
+    fn size(&self) -> AbstractMemorySize {
         match self {
             Self::ContainerRef(r) => r.size(),
             Self::IndexedRef(r) => r.size(),
@@ -1898,18 +1907,18 @@ impl ReferenceImpl {
 }
 
 impl Reference {
-    pub fn size(&self) -> AbstractMemorySize<GasCarrier> {
+    pub fn size(&self) -> AbstractMemorySize {
         self.0.size()
     }
 }
 
 impl GlobalValue {
-    pub fn size(&self) -> AbstractMemorySize<GasCarrier> {
+    pub fn size(&self) -> AbstractMemorySize {
         // REVIEW: this doesn't seem quite right. Consider changing it to
         // a constant positive size or better, something proportional to the size of the value.
         match &self.0 {
-            GlobalValueImpl::Fresh { .. } | GlobalValueImpl::Cached { .. } => REFERENCE_SIZE,
-            GlobalValueImpl::Deleted | GlobalValueImpl::None => MIN_EXISTS_DATA_SIZE,
+            GlobalValueImpl::Fresh { .. } | GlobalValueImpl::Cached { .. } => LEGACY_REFERENCE_SIZE,
+            GlobalValueImpl::Deleted | GlobalValueImpl::None => LEGACY_MIN_EXISTS_DATA_SIZE,
         }
     }
 }

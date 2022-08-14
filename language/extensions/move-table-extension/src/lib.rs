@@ -10,8 +10,8 @@
 use better_any::{Tid, TidAble};
 use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_core_types::{
-    account_address::AccountAddress, effects::Op, language_storage::TypeTag, value::MoveTypeLayout,
-    vm_status::StatusCode,
+    account_address::AccountAddress, effects::Op, gas_algebra::InternalGas,
+    language_storage::TypeTag, value::MoveTypeLayout, vm_status::StatusCode,
 };
 use move_vm_runtime::{
     native_functions,
@@ -91,7 +91,7 @@ pub trait TableResolver {
         key: &[u8],
     ) -> Result<Option<Vec<u8>>, anyhow::Error>;
 
-    fn operation_cost(&self, op: TableOperation, key_size: usize, val_size: usize) -> u64;
+    fn operation_cost(&self, op: TableOperation, key_size: usize, val_size: usize) -> InternalGas;
 }
 
 /// A table operation, for supporting cost calculation.
@@ -536,7 +536,7 @@ fn native_drop_unchecked_box(
     assert_eq!(ty_args.len(), 3);
     assert_eq!(args.len(), 1);
 
-    Ok(NativeResult::ok(0, smallvec![]))
+    Ok(NativeResult::ok(0.into(), smallvec![]))
 }
 
 // =========================================================================================

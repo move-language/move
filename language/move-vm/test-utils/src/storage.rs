@@ -2,13 +2,11 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[allow(unused)]
-use anyhow::{anyhow, bail, format_err, Error, Result};
-#[allow(unused)]
-use move_core_types::gas_schedule::{GasAlgebra, GasCarrier, InternalGasUnits};
+use anyhow::{bail, Error, Result};
 use move_core_types::{
     account_address::AccountAddress,
     effects::{AccountChangeSet, ChangeSet, Op},
+    gas_algebra::InternalGas,
     identifier::Identifier,
     language_storage::{ModuleId, StructTag},
     resolver::{ModuleResolver, MoveResolver, ResourceResolver},
@@ -61,8 +59,13 @@ impl TableResolver for BlankStorage {
         Ok(None)
     }
 
-    fn operation_cost(&self, _op: TableOperation, _key_size: usize, _val_size: usize) -> u64 {
-        1
+    fn operation_cost(
+        &self,
+        _op: TableOperation,
+        _key_size: usize,
+        _val_size: usize,
+    ) -> InternalGas {
+        1.into()
     }
 }
 
@@ -117,7 +120,7 @@ impl<'a, 'b, S: TableResolver> TableResolver for DeltaStorage<'a, 'b, S> {
         self.base.resolve_table_entry(handle, key)
     }
 
-    fn operation_cost(&self, op: TableOperation, key_size: usize, val_size: usize) -> u64 {
+    fn operation_cost(&self, op: TableOperation, key_size: usize, val_size: usize) -> InternalGas {
         // TODO: No support for table deltas
         self.base.operation_cost(op, key_size, val_size)
     }
@@ -329,7 +332,12 @@ impl TableResolver for InMemoryStorage {
         Ok(self.tables.get(handle).and_then(|t| t.get(key).cloned()))
     }
 
-    fn operation_cost(&self, _op: TableOperation, _key_size: usize, _val_size: usize) -> u64 {
-        1
+    fn operation_cost(
+        &self,
+        _op: TableOperation,
+        _key_size: usize,
+        _val_size: usize,
+    ) -> InternalGas {
+        1.into()
     }
 }

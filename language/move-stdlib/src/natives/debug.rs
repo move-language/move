@@ -4,6 +4,7 @@
 
 use crate::natives::helpers::make_module_natives;
 use move_binary_format::errors::PartialVMResult;
+use move_core_types::gas_algebra::InternalGas;
 use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
 #[allow(unused_imports)]
 use move_vm_types::values::{values_impl::debug::print_reference, Reference};
@@ -21,7 +22,7 @@ use std::{collections::VecDeque, sync::Arc};
  **************************************************************************************************/
 #[derive(Debug, Clone)]
 pub struct PrintGasParameters {
-    pub base_cost: u64,
+    pub base_cost: InternalGas,
 }
 
 #[inline]
@@ -63,7 +64,7 @@ pub fn make_native_print(gas_params: PrintGasParameters) -> NativeFunction {
  **************************************************************************************************/
 #[derive(Debug, Clone)]
 pub struct PrintStackTraceGasParameters {
-    pub base_cost: u64,
+    pub base_cost: InternalGas,
 }
 
 #[inline]

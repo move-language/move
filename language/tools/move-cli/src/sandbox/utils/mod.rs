@@ -23,7 +23,6 @@ use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet, Event, Op},
     errmap::ErrorMapping,
-    gas_schedule::{GasAlgebra, GasUnits},
     language_storage::{ModuleId, TypeTag},
     transaction_argument::TransactionArgument,
     vm_status::{AbortLocation, StatusCode, VMStatus},
@@ -31,6 +30,7 @@ use move_core_types::{
 use move_ir_types::location::Loc;
 use move_package::compilation::compiled_package::CompiledUnitWithSource;
 use move_resource_viewer::{AnnotatedMoveStruct, MoveValueAnnotator};
+use move_vm_test_utils::gas_schedule::Gas;
 use std::{
     collections::{BTreeMap, HashMap},
     fs,
@@ -47,13 +47,12 @@ pub use package_context::*;
 
 pub fn get_gas_status(cost_table: &CostTable, gas_budget: Option<u64>) -> Result<GasStatus> {
     let gas_status = if let Some(gas_budget) = gas_budget {
-        let max_gas_budget = u64::MAX
-            .checked_div(cost_table.gas_constants.gas_unit_scaling_factor)
-            .unwrap();
+        // TODO(Gas): This should not be hardcoded.
+        let max_gas_budget = u64::MAX.checked_div(1000).unwrap();
         if gas_budget >= max_gas_budget {
             bail!("Gas budget set too high; maximum is {}", max_gas_budget)
         }
-        GasStatus::new(cost_table, GasUnits::new(gas_budget))
+        GasStatus::new(cost_table, Gas::new(gas_budget))
     } else {
         // no budget specified. Disable gas metering
         GasStatus::new_unmetered()

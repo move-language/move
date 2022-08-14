@@ -4,14 +4,16 @@
 
 use crate::natives::helpers::make_module_natives;
 use move_binary_format::errors::PartialVMResult;
+use move_core_types::{
+    account_address::AccountAddress,
+    gas_algebra::{InternalGas, InternalGasPerArg, NumArgs},
+};
 use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
 use move_vm_types::{
     loaded_data::runtime_types::Type, natives::function::NativeResult, pop_arg, values::Value,
 };
 use smallvec::smallvec;
 use std::{collections::VecDeque, sync::Arc};
-
-use move_core_types::account_address::AccountAddress;
 
 /***************************************************************************************************
  * native fun create_signers_for_testing
@@ -28,8 +30,8 @@ fn to_le_bytes(i: u64) -> [u8; AccountAddress::LENGTH] {
 
 #[derive(Debug, Clone)]
 pub struct CreateSignersForTestingGasParameters {
-    pub base_cost: u64,
-    pub unit_cost: u64,
+    pub base_cost: InternalGas,
+    pub unit_cost: InternalGasPerArg,
 }
 
 fn native_create_signers_for_testing(
@@ -46,7 +48,7 @@ fn native_create_signers_for_testing(
         (0..num_signers).map(|i| Value::signer(AccountAddress::new(to_le_bytes(i)))),
     );
 
-    let cost = gas_params.base_cost + gas_params.unit_cost * num_signers;
+    let cost = gas_params.base_cost + gas_params.unit_cost * NumArgs::new(num_signers);
 
     Ok(NativeResult::ok(cost, smallvec![signers]))
 }

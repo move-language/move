@@ -5,7 +5,11 @@
 use crate::async_vm::Message;
 use better_any::{Tid, TidAble};
 use move_binary_format::errors::PartialVMResult;
-use move_core_types::{account_address::AccountAddress, identifier::Identifier};
+use move_core_types::{
+    account_address::AccountAddress,
+    gas_algebra::{InternalGas, InternalGasPerByte, NumBytes},
+    identifier::Identifier,
+};
 use move_vm_runtime::{
     native_functions,
     native_functions::{NativeContext, NativeFunction},
@@ -39,12 +43,16 @@ pub struct GasParameters {
 impl GasParameters {
     pub fn zeros() -> Self {
         Self {
-            self_: SelfGasParameters { base_cost: 0 },
-            send: SendGasParameters {
-                base_cost: 0,
-                unit_cost: 0,
+            self_: SelfGasParameters {
+                base_cost: 0.into(),
             },
-            virtual_time: VirtualTimeGasParameters { base_cost: 0 },
+            send: SendGasParameters {
+                base_cost: 0.into(),
+                unit_cost: 0.into(),
+            },
+            virtual_time: VirtualTimeGasParameters {
+                base_cost: 0.into(),
+            },
         }
     }
 }
@@ -107,7 +115,7 @@ pub fn actor_natives(
 
 #[derive(Clone, Debug)]
 pub struct SelfGasParameters {
-    base_cost: u64,
+    base_cost: InternalGas,
 }
 
 fn native_self(
@@ -129,8 +137,8 @@ fn make_native_self(gas_params: SelfGasParameters) -> NativeFunction {
 
 #[derive(Clone, Debug)]
 pub struct SendGasParameters {
-    base_cost: u64,
-    unit_cost: u64,
+    base_cost: InternalGas,
+    unit_cost: InternalGasPerByte,
 }
 
 fn native_send(
@@ -149,7 +157,7 @@ fn native_send(
     let target = pop_arg!(args, AccountAddress);
     ext.sent.push((target, message_hash, bcs_args));
 
-    let cost = gas_params.base_cost + gas_params.unit_cost * args.len() as u64;
+    let cost = gas_params.base_cost + gas_params.unit_cost * NumBytes::new(args.len() as u64);
 
     Ok(NativeResult::ok(cost, smallvec![]))
 }
@@ -160,7 +168,7 @@ fn make_native_send(gas_params: SendGasParameters) -> NativeFunction {
 
 #[derive(Clone, Debug)]
 pub struct VirtualTimeGasParameters {
-    base_cost: u64,
+    base_cost: InternalGas,
 }
 
 fn native_virtual_time(

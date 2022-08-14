@@ -6,6 +6,7 @@
 
 use crate::natives::helpers::make_module_natives;
 use move_binary_format::errors::PartialVMResult;
+use move_core_types::gas_algebra::{InternalGas, InternalGasPerByte, NumBytes};
 use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
 use move_vm_types::{
     loaded_data::runtime_types::Type,
@@ -31,8 +32,8 @@ use std::{collections::VecDeque, sync::Arc};
  **************************************************************************************************/
 #[derive(Debug, Clone)]
 pub struct CheckUtf8GasParameters {
-    pub base_cost: u64,
-    pub unit_cost: u64,
+    pub base_cost: InternalGas,
+    pub unit_cost: InternalGasPerByte,
 }
 
 fn native_check_utf8(
@@ -47,7 +48,8 @@ fn native_check_utf8(
     let ok = std::str::from_utf8(s_ref.as_slice()).is_ok();
     // TODO: extensible native cost tables
 
-    let cost = gas_params.base_cost + gas_params.unit_cost * s_ref.as_slice().len() as u64;
+    let cost =
+        gas_params.base_cost + gas_params.unit_cost * NumBytes::new(s_ref.as_slice().len() as u64);
 
     NativeResult::map_partial_vm_result_one(cost, Ok(Value::bool(ok)))
 }
@@ -68,7 +70,7 @@ pub fn make_native_check_utf8(gas_params: CheckUtf8GasParameters) -> NativeFunct
  **************************************************************************************************/
 #[derive(Debug, Clone)]
 pub struct IsCharBoundaryGasParameters {
-    pub base_cost: u64,
+    pub base_cost: InternalGas,
 }
 
 fn native_is_char_boundary(
@@ -104,8 +106,8 @@ pub fn make_native_is_char_boundary(gas_params: IsCharBoundaryGasParameters) -> 
  **************************************************************************************************/
 #[derive(Debug, Clone)]
 pub struct SubStringGasParameters {
-    pub base_cost: u64,
-    pub unit_cost: u64,
+    pub base_cost: InternalGas,
+    pub unit_cost: InternalGasPerByte,
 }
 
 fn native_sub_string(
@@ -131,7 +133,7 @@ fn native_sub_string(
     };
     let v = Value::vector_u8((&s_str[i..j]).as_bytes().iter().cloned());
 
-    let cost = gas_params.base_cost + gas_params.unit_cost * (j - i) as u64;
+    let cost = gas_params.base_cost + gas_params.unit_cost * NumBytes::new((j - i) as u64);
     NativeResult::map_partial_vm_result_one(cost, Ok(v))
 }
 
@@ -151,8 +153,8 @@ pub fn make_native_sub_string(gas_params: SubStringGasParameters) -> NativeFunct
  **************************************************************************************************/
 #[derive(Debug, Clone)]
 pub struct IndexOfGasParameters {
-    pub base_cost: u64,
-    pub unit_cost: u64,
+    pub base_cost: InternalGas,
+    pub unit_cost: InternalGasPerByte,
 }
 
 fn native_index_of(
@@ -172,13 +174,10 @@ fn native_index_of(
         Some(size) => size,
         None => s_str.len(),
     };
-    let cost = gas_params.base_cost
-        + gas_params.unit_cost
-            * if pos < s_str.len() {
-                pos + r_str.len()
-            } else {
-                pos
-            } as u64;
+    // TODO(Gas): What is the algorithm used for the search?
+    //            Ideally it should be something like KMP with O(n) time complexity...
+    let cost =
+        gas_params.base_cost + gas_params.unit_cost * NumBytes::new((pos + r_str.len()) as u64);
     NativeResult::map_partial_vm_result_one(cost, Ok(Value::u64(pos as u64)))
 }
 

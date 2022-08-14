@@ -15,7 +15,7 @@ use move_binary_format::{
 };
 use move_core_types::{
     account_address::AccountAddress,
-    gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
+    gas_algebra::AbstractMemorySize,
     vm_status::{StatusCode, StatusType},
 };
 use move_vm_types::{
@@ -163,7 +163,7 @@ impl Interpreter {
                     gas_meter
                         .charge_instr_with_size(
                             Opcodes::CALL,
-                            AbstractMemorySize::new(func.arg_count() as GasCarrier),
+                            AbstractMemorySize::new(func.arg_count() as u64),
                         )
                         .map_err(|e| set_err_info!(current_frame, e))?;
 
@@ -194,7 +194,7 @@ impl Interpreter {
                     gas_meter
                         .charge_instr_with_size(
                             Opcodes::CALL_GENERIC,
-                            AbstractMemorySize::new((arity + 1) as GasCarrier),
+                            AbstractMemorySize::new((arity + 1) as u64),
                         )
                         .map_err(|e| set_err_info!(current_frame, e))?;
                     let ty_args = resolver
@@ -204,7 +204,7 @@ impl Interpreter {
                     gas_meter
                         .charge_instr_with_size(
                             Opcodes::CALL_GENERIC,
-                            AbstractMemorySize::new(func.arg_count() as GasCarrier),
+                            AbstractMemorySize::new(func.arg_count() as u64),
                         )
                         .map_err(|e| set_err_info!(current_frame, e))?;
                     if func.is_native() {
@@ -366,7 +366,7 @@ impl Interpreter {
         data_store: &mut impl DataStore,
         addr: AccountAddress,
         ty: &Type,
-    ) -> PartialVMResult<AbstractMemorySize<GasCarrier>> {
+    ) -> PartialVMResult<AbstractMemorySize> {
         let g = Self::load_resource(data_store, addr, ty)?.borrow_global()?;
         let size = g.size();
         self.operand_stack.push(g)?;
@@ -379,7 +379,7 @@ impl Interpreter {
         data_store: &mut impl DataStore,
         addr: AccountAddress,
         ty: &Type,
-    ) -> PartialVMResult<AbstractMemorySize<GasCarrier>> {
+    ) -> PartialVMResult<AbstractMemorySize> {
         let gv = Self::load_resource(data_store, addr, ty)?;
         let mem_size = gv.size();
         let exists = gv.exists()?;
@@ -393,7 +393,7 @@ impl Interpreter {
         data_store: &mut impl DataStore,
         addr: AccountAddress,
         ty: &Type,
-    ) -> PartialVMResult<AbstractMemorySize<GasCarrier>> {
+    ) -> PartialVMResult<AbstractMemorySize> {
         let resource = Self::load_resource(data_store, addr, ty)?.move_from()?;
         let size = resource.size();
         self.operand_stack.push(resource)?;
@@ -407,7 +407,7 @@ impl Interpreter {
         addr: AccountAddress,
         ty: &Type,
         resource: Value,
-    ) -> PartialVMResult<AbstractMemorySize<GasCarrier>> {
+    ) -> PartialVMResult<AbstractMemorySize> {
         let size = resource.size();
         Self::load_resource(data_store, addr, ty)?.move_to(resource)?;
         Ok(size)
@@ -802,7 +802,7 @@ impl Frame {
                         let constant = resolver.constant_at(*idx);
                         gas_meter.charge_instr_with_size(
                             Opcodes::LD_CONST,
-                            AbstractMemorySize::new(constant.data.len() as GasCarrier),
+                            AbstractMemorySize::new(constant.data.len() as u64),
                         )?;
                         interpreter.operand_stack.push(
                             Value::deserialize_constant(constant).ok_or_else(|| {
@@ -882,10 +882,11 @@ impl Frame {
                     Bytecode::Pack(sd_idx) => {
                         let field_count = resolver.field_count(*sd_idx);
                         let args = interpreter.operand_stack.popn(field_count)?;
-                        let size = args.iter().fold(
-                            AbstractMemorySize::new(GasCarrier::from(field_count)),
-                            |acc, v| acc.add(v.size()),
-                        );
+                        let size = args
+                            .iter()
+                            .fold(AbstractMemorySize::new(u64::from(field_count)), |acc, v| {
+                                acc + v.size()
+                            });
                         gas_meter.charge_instr_with_size(Opcodes::PACK, size)?;
                         interpreter
                             .operand_stack
@@ -894,10 +895,11 @@ impl Frame {
                     Bytecode::PackGeneric(si_idx) => {
                         let field_count = resolver.field_instantiation_count(*si_idx);
                         let args = interpreter.operand_stack.popn(field_count)?;
-                        let size = args.iter().fold(
-                            AbstractMemorySize::new(GasCarrier::from(field_count)),
-                            |acc, v| acc.add(v.size()),
-                        );
+                        let size = args
+                            .iter()
+                            .fold(AbstractMemorySize::new(u64::from(field_count)), |acc, v| {
+                                acc + v.size()
+                            });
                         gas_meter.charge_instr_with_size(Opcodes::PACK_GENERIC, size)?;
                         interpreter
                             .operand_stack
@@ -908,7 +910,7 @@ impl Frame {
                         let struct_ = interpreter.operand_stack.pop_as::<Struct>()?;
                         gas_meter.charge_instr_with_size(
                             Opcodes::UNPACK,
-                            AbstractMemorySize::new(GasCarrier::from(field_count)),
+                            AbstractMemorySize::new(u64::from(field_count)),
                         )?;
                         // TODO: Whether or not we want this gas metering in the loop is
                         // questionable.  However, if we don't have it in the loop we could wind up
@@ -923,7 +925,7 @@ impl Frame {
                         let struct_ = interpreter.operand_stack.pop_as::<Struct>()?;
                         gas_meter.charge_instr_with_size(
                             Opcodes::UNPACK_GENERIC,
-                            AbstractMemorySize::new(GasCarrier::from(field_count)),
+                            AbstractMemorySize::new(u64::from(field_count)),
                         )?;
                         // TODO: Whether or not we want this gas metering in the loop is
                         // questionable.  However, if we don't have it in the loop we could wind up
@@ -1059,8 +1061,7 @@ impl Frame {
                     Bytecode::Eq => {
                         let lhs = interpreter.operand_stack.pop()?;
                         let rhs = interpreter.operand_stack.pop()?;
-                        gas_meter
-                            .charge_instr_with_size(Opcodes::EQ, lhs.size().add(rhs.size()))?;
+                        gas_meter.charge_instr_with_size(Opcodes::EQ, lhs.size() + rhs.size())?;
                         interpreter
                             .operand_stack
                             .push(Value::bool(lhs.equals(&rhs)?))?;
@@ -1068,8 +1069,7 @@ impl Frame {
                     Bytecode::Neq => {
                         let lhs = interpreter.operand_stack.pop()?;
                         let rhs = interpreter.operand_stack.pop()?;
-                        gas_meter
-                            .charge_instr_with_size(Opcodes::NEQ, lhs.size().add(rhs.size()))?;
+                        gas_meter.charge_instr_with_size(Opcodes::NEQ, lhs.size() + rhs.size())?;
                         interpreter
                             .operand_stack
                             .push(Value::bool(!lhs.equals(&rhs)?))?;

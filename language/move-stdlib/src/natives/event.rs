@@ -4,7 +4,7 @@
 
 use crate::natives::helpers::make_module_natives;
 use move_binary_format::errors::PartialVMResult;
-use move_core_types::gas_schedule::GasAlgebra;
+use move_core_types::gas_algebra::InternalGasPerAbstractMemoryUnit;
 use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
 use move_vm_types::{
     loaded_data::runtime_types::Type, natives::function::NativeResult, pop_arg, values::Value,
@@ -20,7 +20,7 @@ use std::{collections::VecDeque, sync::Arc};
  **************************************************************************************************/
 #[derive(Debug, Clone)]
 pub struct WriteToEventStoreGasParameters {
-    pub unit_cost: u64,
+    pub unit_cost: InternalGasPerAbstractMemoryUnit,
 }
 
 #[inline]
@@ -38,7 +38,7 @@ fn native_write_to_event_store(
     let seq_num = pop_arg!(arguments, u64);
     let guid = pop_arg!(arguments, Vec<u8>);
 
-    let cost = gas_params.unit_cost * u64::max(msg.size().get(), 1);
+    let cost = gas_params.unit_cost * std::cmp::max(msg.size(), 1.into());
 
     if !context.save_event(guid, seq_num, ty, msg)? {
         return Ok(NativeResult::err(cost, 0));

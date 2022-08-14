@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use move_binary_format::{errors::PartialVMResult, file_format_common::Opcodes};
-use move_core_types::gas_schedule::{AbstractMemorySize, GasCarrier};
+use move_core_types::gas_algebra::{AbstractMemorySize, InternalGas};
 
 pub trait GasMeter {
     /// Charge an instruction and fail if not enough gas units are left.
@@ -12,7 +12,7 @@ pub trait GasMeter {
     fn charge_instr_with_size(
         &mut self,
         opcode: Opcodes,
-        size: AbstractMemorySize<GasCarrier>,
+        size: AbstractMemorySize,
     ) -> PartialVMResult<()>;
 
     /// Charge a given amount in the unit of measurement native to the GasMeter implementation.
@@ -21,7 +21,7 @@ pub trait GasMeter {
     /// This is used for metering native functions currently.
     /// However, in the future, we may want to remove this and directly pass a reference to the GasMeter
     /// instance to the native functions to allow gas to be deducted during computation.
-    fn charge_in_native_unit(&mut self, amount: u64) -> PartialVMResult<()>;
+    fn charge_in_native_unit(&mut self, amount: InternalGas) -> PartialVMResult<()>;
 }
 
 /// A dummy gas meter that does not meter anything.
@@ -36,12 +36,12 @@ impl GasMeter for UnmeteredGasMeter {
     fn charge_instr_with_size(
         &mut self,
         _opcode: Opcodes,
-        _size: AbstractMemorySize<GasCarrier>,
+        _size: AbstractMemorySize,
     ) -> PartialVMResult<()> {
         Ok(())
     }
 
-    fn charge_in_native_unit(&mut self, _amount: u64) -> PartialVMResult<()> {
+    fn charge_in_native_unit(&mut self, _amount: InternalGas) -> PartialVMResult<()> {
         Ok(())
     }
 }

@@ -4,6 +4,7 @@
 
 use crate::natives::helpers::make_module_natives;
 use move_binary_format::errors::PartialVMResult;
+use move_core_types::gas_algebra::{InternalGas, InternalGasPerByte, NumBytes};
 use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
 use move_vm_types::{
     loaded_data::runtime_types::Type, natives::function::NativeResult, pop_arg, values::Value,
@@ -21,9 +22,9 @@ use std::{collections::VecDeque, sync::Arc};
  **************************************************************************************************/
 #[derive(Debug, Clone)]
 pub struct Sha2_256GasParameters {
-    pub base_cost: u64,
-    pub unit_cost: u64,
-    pub legacy_min_input_len: usize,
+    pub base_cost: InternalGas,
+    pub unit_cost: InternalGasPerByte,
+    pub legacy_min_input_len: NumBytes,
 }
 
 #[inline]
@@ -39,7 +40,11 @@ fn native_sha2_256(
     let hash_arg = pop_arg!(arguments, Vec<u8>);
 
     let cost = gas_params.base_cost
-        + gas_params.unit_cost * usize::max(hash_arg.len(), gas_params.legacy_min_input_len) as u64;
+        + gas_params.unit_cost
+            * std::cmp::max(
+                NumBytes::new(hash_arg.len() as u64),
+                gas_params.legacy_min_input_len,
+            );
 
     let hash_vec = Sha256::digest(hash_arg.as_slice()).to_vec();
     Ok(NativeResult::ok(
@@ -64,9 +69,9 @@ pub fn make_native_sha2_256(gas_params: Sha2_256GasParameters) -> NativeFunction
  **************************************************************************************************/
 #[derive(Debug, Clone)]
 pub struct Sha3_256GasParameters {
-    pub base_cost: u64,
-    pub unit_cost: u64,
-    pub legacy_min_input_len: usize,
+    pub base_cost: InternalGas,
+    pub unit_cost: InternalGasPerByte,
+    pub legacy_min_input_len: NumBytes,
 }
 
 #[inline]
@@ -82,7 +87,11 @@ fn native_sha3_256(
     let hash_arg = pop_arg!(arguments, Vec<u8>);
 
     let cost = gas_params.base_cost
-        + gas_params.unit_cost * usize::max(hash_arg.len(), gas_params.legacy_min_input_len) as u64;
+        + gas_params.unit_cost
+            * std::cmp::max(
+                NumBytes::new(hash_arg.len() as u64),
+                gas_params.legacy_min_input_len,
+            );
 
     let hash_vec = Sha3_256::digest(hash_arg.as_slice()).to_vec();
     Ok(NativeResult::ok(

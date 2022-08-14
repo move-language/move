@@ -8,7 +8,7 @@
 //! operations or other native operations; the cost of each native operation will be returned by the
 //! native function itself.
 use move_binary_format::{
-    errors::{Location, PartialVMError, PartialVMResult, VMResult},
+    errors::{PartialVMError, PartialVMResult},
     file_format::{
         Bytecode, ConstantPoolIndex, FieldHandleIndex, FieldInstantiationIndex,
         FunctionHandleIndex, FunctionInstantiationIndex, SignatureIndex,
@@ -17,88 +17,39 @@ use move_binary_format::{
     file_format_common::{instruction_key, Opcodes},
 };
 use move_core_types::{
-    gas_schedule::{
-        AbstractMemorySize, GasAlgebra, GasCarrier, GasPrice, GasUnits, InternalGasUnits,
+    gas_algebra::{
+        AbstractMemorySize, GasQuantity, InternalGas, InternalGasPerAbstractMemoryUnit,
+        InternalGasUnit, ToUnit, ToUnitFractional,
     },
     vm_status::StatusCode,
 };
 use move_vm_types::gas::GasMeter;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use std::{
+    ops::{Add, Mul},
+    u64,
+};
 
-#[derive(Clone, Debug, Serialize, PartialEq, Deserialize)]
-pub struct GasConstants {
-    /// The cost per-byte read from global storage.
-    pub global_memory_per_byte_cost: InternalGasUnits<GasCarrier>,
+pub enum GasUnit {}
 
-    /// The cost per-byte written to storage.
-    pub global_memory_per_byte_write_cost: InternalGasUnits<GasCarrier>,
+pub type Gas = GasQuantity<GasUnit>;
 
-    /// The flat minimum amount of gas required for any transaction.
-    /// Charged at the start of execution.
-    pub min_transaction_gas_units: InternalGasUnits<GasCarrier>,
-
-    /// Any transaction over this size will be charged an additional amount per byte.
-    pub large_transaction_cutoff: AbstractMemorySize<GasCarrier>,
-
-    /// The units of gas that to be charged per byte over the `large_transaction_cutoff` in addition to
-    /// `min_transaction_gas_units` for transactions whose size exceeds `large_transaction_cutoff`.
-    pub intrinsic_gas_per_byte: InternalGasUnits<GasCarrier>,
-
-    /// ~5 microseconds should equal one unit of computational gas. We bound the maximum
-    /// computational time of any given transaction at roughly 20 seconds. We want this number and
-    /// `MAX_PRICE_PER_GAS_UNIT` to always satisfy the inequality that
-    /// MAXIMUM_NUMBER_OF_GAS_UNITS * MAX_PRICE_PER_GAS_UNIT < min(u64::MAX, GasUnits<GasCarrier>::MAX)
-    /// NB: The bound is set quite high since custom scripts aren't allowed except from predefined
-    /// and vetted senders.
-    pub maximum_number_of_gas_units: GasUnits<GasCarrier>,
-
-    /// The minimum gas price that a transaction can be submitted with.
-    pub min_price_per_gas_unit: GasPrice<GasCarrier>,
-
-    /// The maximum gas unit price that a transaction can be submitted with.
-    pub max_price_per_gas_unit: GasPrice<GasCarrier>,
-
-    pub max_transaction_size_in_bytes: GasCarrier,
-
-    pub gas_unit_scaling_factor: GasCarrier,
-    pub default_account_size: AbstractMemorySize<GasCarrier>,
+impl ToUnit<InternalGasUnit> for GasUnit {
+    const MULTIPLIER: u64 = 1000;
 }
 
-impl GasConstants {
-    pub fn to_internal_units(&self, units: GasUnits<GasCarrier>) -> InternalGasUnits<GasCarrier> {
-        InternalGasUnits::new(units.get() * self.gas_unit_scaling_factor)
-    }
-
-    pub fn to_external_units(&self, units: InternalGasUnits<GasCarrier>) -> GasUnits<GasCarrier> {
-        GasUnits::new(units.get() / self.gas_unit_scaling_factor)
-    }
+impl ToUnitFractional<GasUnit> for InternalGasUnit {
+    const NOMINATOR: u64 = 1;
+    const DENOMINATOR: u64 = 1000;
 }
 
-impl Default for GasConstants {
-    fn default() -> Self {
-        Self {
-            global_memory_per_byte_cost: InternalGasUnits::new(4),
-            global_memory_per_byte_write_cost: InternalGasUnits::new(9),
-            min_transaction_gas_units: InternalGasUnits::new(600),
-            large_transaction_cutoff: AbstractMemorySize::new(600),
-            intrinsic_gas_per_byte: InternalGasUnits::new(8),
-            maximum_number_of_gas_units: GasUnits::new(4_000_000),
-            min_price_per_gas_unit: GasPrice::new(0),
-            max_price_per_gas_unit: GasPrice::new(10_000),
-            max_transaction_size_in_bytes: 4096,
-            gas_unit_scaling_factor: 1000,
-            default_account_size: AbstractMemorySize::new(800),
-        }
-    }
-}
 /// The cost tables, keyed by the serialized form of the bytecode instruction.  We use the
 /// serialized form as opposed to the instruction enum itself as the key since this will be the
 /// on-chain representation of bytecode instructions in the future.
 #[derive(Clone, Debug, Serialize, PartialEq, Deserialize)]
 pub struct CostTable {
     pub instruction_table: Vec<GasCost>,
-    pub gas_constants: GasConstants,
 }
 
 impl CostTable {
@@ -114,21 +65,21 @@ impl CostTable {
 /// - memory cost: how much memory is required for the instruction, and storage overhead
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct GasCost {
-    pub instruction_gas: InternalGasUnits<GasCarrier>,
-    pub memory_gas: InternalGasUnits<GasCarrier>,
+    pub instruction_gas: u64,
+    pub memory_gas: u64,
 }
 
 impl GasCost {
-    pub fn new(instr_gas: GasCarrier, mem_gas: GasCarrier) -> Self {
+    pub fn new(instruction_gas: u64, memory_gas: u64) -> Self {
         Self {
-            instruction_gas: InternalGasUnits::new(instr_gas),
-            memory_gas: InternalGasUnits::new(mem_gas),
+            instruction_gas,
+            memory_gas,
         }
     }
 
-    /// Convert a GasCost to a total gas charge in `InternalGasUnits`.
+    /// Convert a GasCost to a total gas charge in `InternalGas`.
     #[inline]
-    pub fn total(&self) -> InternalGasUnits<GasCarrier> {
+    pub fn total(&self) -> u64 {
         self.instruction_gas.add(self.memory_gas)
     }
 }
@@ -143,7 +94,7 @@ static ZERO_COST_SCHEDULE: Lazy<CostTable> = Lazy::new(zero_cost_schedule);
 /// Every client must use an instance of this type to interact with the Move VM.
 pub struct GasStatus<'a> {
     cost_table: &'a CostTable,
-    gas_left: InternalGasUnits<GasCarrier>,
+    gas_left: InternalGas,
     charge: bool,
 }
 
@@ -152,9 +103,9 @@ impl<'a> GasStatus<'a> {
     ///
     /// Charge for every operation and fail when there is no more gas to pay for operations.
     /// This is the instantiation that must be used when executing a user script.
-    pub fn new(cost_table: &'a CostTable, gas_left: GasUnits<GasCarrier>) -> Self {
+    pub fn new(cost_table: &'a CostTable, gas_left: Gas) -> Self {
         Self {
-            gas_left: cost_table.gas_constants.to_internal_units(gas_left),
+            gas_left: gas_left.to_unit(),
             cost_table,
             charge: true,
         }
@@ -166,7 +117,7 @@ impl<'a> GasStatus<'a> {
     /// code that does not have to charge the user.
     pub fn new_unmetered() -> Self {
         Self {
-            gas_left: InternalGasUnits::new(0),
+            gas_left: InternalGas::new(0),
             cost_table: &ZERO_COST_SCHEDULE,
             charge: false,
         }
@@ -178,39 +129,26 @@ impl<'a> GasStatus<'a> {
     }
 
     /// Return the gas left.
-    pub fn remaining_gas(&self) -> GasUnits<GasCarrier> {
-        self.cost_table
-            .gas_constants
-            .to_external_units(self.gas_left)
+    pub fn remaining_gas(&self) -> Gas {
+        self.gas_left.to_unit_round_down()
     }
 
     /// Charge a given amount of gas and fail if not enough gas units are left.
-    pub fn deduct_gas(&mut self, amount: InternalGasUnits<GasCarrier>) -> PartialVMResult<()> {
+    pub fn deduct_gas(&mut self, amount: InternalGas) -> PartialVMResult<()> {
         if !self.charge {
             return Ok(());
         }
-        if self
-            .gas_left
-            .app(&amount, |curr_gas, gas_amt| curr_gas >= gas_amt)
-        {
-            self.gas_left = self.gas_left.sub(amount);
-            Ok(())
-        } else {
-            // Zero out the internal gas state
-            self.gas_left = InternalGasUnits::new(0);
-            Err(PartialVMError::new(StatusCode::OUT_OF_GAS))
-        }
-    }
 
-    /// Charge gas related to the overall size of a transaction and fail if not enough
-    /// gas units are left.
-    pub fn charge_intrinsic_gas(
-        &mut self,
-        intrinsic_cost: AbstractMemorySize<GasCarrier>,
-    ) -> VMResult<()> {
-        let cost = calculate_intrinsic_gas(intrinsic_cost, &self.cost_table.gas_constants);
-        self.deduct_gas(cost)
-            .map_err(|e| e.finish(Location::Undefined))
+        match self.gas_left.checked_sub(amount) {
+            Some(gas_left) => {
+                self.gas_left = gas_left;
+                Ok(())
+            }
+            None => {
+                self.gas_left = InternalGas::new(0);
+                Err(PartialVMError::new(StatusCode::OUT_OF_GAS))
+            }
+        }
     }
 
     pub fn set_metering(&mut self, enabled: bool) {
@@ -223,26 +161,31 @@ impl<'a> GasMeter for GasStatus<'a> {
     fn charge_instr_with_size(
         &mut self,
         opcode: Opcodes,
-        size: AbstractMemorySize<GasCarrier>,
+        size: AbstractMemorySize,
     ) -> PartialVMResult<()> {
         // Make sure that the size is always non-zero
-        let size = size.map(|x| std::cmp::max(1, x));
-        debug_assert!(size.get() > 0);
+        let size = std::cmp::max(1.into(), size);
+        debug_assert!(size > 0.into());
         self.deduct_gas(
-            self.cost_table
-                .instruction_cost(opcode as u8)
-                .total()
-                .mul(size),
+            InternalGasPerAbstractMemoryUnit::new(
+                self.cost_table.instruction_cost(opcode as u8).total(),
+            )
+            .mul(size),
         )
     }
 
     /// Charge an instruction and fail if not enough gas units are left.
     fn charge_instr(&mut self, opcode: Opcodes) -> PartialVMResult<()> {
-        self.deduct_gas(self.cost_table.instruction_cost(opcode as u8).total())
+        self.deduct_gas(
+            self.cost_table
+                .instruction_cost(opcode as u8)
+                .total()
+                .into(),
+        )
     }
 
-    fn charge_in_native_unit(&mut self, amount: u64) -> PartialVMResult<()> {
-        self.deduct_gas(InternalGasUnits::new(amount))
+    fn charge_in_native_unit(&mut self, amount: InternalGas) -> PartialVMResult<()> {
+        self.deduct_gas(amount)
     }
 }
 
@@ -266,10 +209,7 @@ pub fn new_from_instructions(mut instrs: Vec<(Bytecode, GasCost)>) -> CostTable 
         .into_iter()
         .map(|(_, cost)| cost)
         .collect::<Vec<GasCost>>();
-    CostTable {
-        instruction_table,
-        gas_constants: GasConstants::default(),
-    }
+    CostTable { instruction_table }
 }
 
 pub fn zero_cost_instruction_table() -> Vec<(Bytecode, GasCost)> {
@@ -520,18 +460,3 @@ pub static INITIAL_COST_SCHEDULE: Lazy<CostTable> = Lazy::new(|| {
 
     new_from_instructions(instrs)
 });
-
-/// Calculate the intrinsic gas for the transaction based upon its size in bytes/words.
-pub fn calculate_intrinsic_gas(
-    transaction_size: AbstractMemorySize<GasCarrier>,
-    gas_constants: &GasConstants,
-) -> InternalGasUnits<GasCarrier> {
-    let min_transaction_fee = gas_constants.min_transaction_gas_units;
-
-    if transaction_size.get() > gas_constants.large_transaction_cutoff.get() {
-        let excess = transaction_size.sub(gas_constants.large_transaction_cutoff);
-        min_transaction_fee.add(gas_constants.intrinsic_gas_per_byte.mul(excess))
-    } else {
-        min_transaction_fee.unitary_cast()
-    }
-}

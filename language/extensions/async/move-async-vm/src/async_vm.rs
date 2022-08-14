@@ -12,7 +12,6 @@ use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMEr
 use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet, Event, Op},
-    gas_schedule::GasAlgebra,
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
     resolver::MoveResolver,
@@ -24,7 +23,7 @@ use move_vm_runtime::{
     native_functions::NativeFunction,
     session::{SerializedReturnValues, Session},
 };
-use move_vm_test_utils::gas_schedule::GasStatus;
+use move_vm_test_utils::gas_schedule::{Gas, GasStatus};
 use move_vm_types::values::{Reference, Value};
 
 use crate::{
@@ -146,7 +145,7 @@ pub struct AsyncSuccess<'r> {
     pub change_set: ChangeSet,
     pub events: Vec<Event>,
     pub messages: Vec<Message>,
-    pub gas_used: u64,
+    pub gas_used: Gas,
     pub ext: NativeContextExtensions<'r>,
 }
 
@@ -154,7 +153,7 @@ pub struct AsyncSuccess<'r> {
 #[derive(Debug, Clone)]
 pub struct AsyncError {
     pub error: VMError,
-    pub gas_used: u64,
+    pub gas_used: Gas,
 }
 
 /// Result type for operations of an AsyncSession.
@@ -201,7 +200,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
         }
 
         // Execute the initializer.
-        let gas_before = gas_status.remaining_gas().get();
+        let gas_before = gas_status.remaining_gas();
         let result = self
             .vm_session
             .execute_function_bypass_visibility(
@@ -212,7 +211,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
                 gas_status,
             )
             .and_then(|ret| Ok((ret, self.vm_session.finish_with_extensions()?)));
-        let gas_used = gas_status.remaining_gas().get() - gas_before;
+        let gas_used = gas_before.checked_sub(gas_status.remaining_gas()).unwrap();
 
         // Process the result, moving the return value of the initializer function into the
         // changeset.
@@ -298,13 +297,13 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
         );
 
         // Execute the handler.
-        let gas_before = gas_status.remaining_gas().get();
+        let gas_before = gas_status.remaining_gas();
         let result = self
             .vm_session
             .execute_function_bypass_visibility(module_id, handler_id, vec![], args, gas_status)
             .and_then(|ret| Ok((ret, self.vm_session.finish_with_extensions()?)));
 
-        let gas_used = gas_status.remaining_gas().get() - gas_before;
+        let gas_used = gas_before.checked_sub(gas_status.remaining_gas()).unwrap();
 
         // Process the result, moving the mutated value of the handlers first parameter
         // into the changeset.
@@ -403,12 +402,15 @@ pub(crate) fn extension_error(msg: impl ToString) -> VMError {
 fn async_extension_error(msg: impl ToString) -> AsyncError {
     AsyncError {
         error: extension_error(msg),
-        gas_used: 0,
+        gas_used: 0.into(),
     }
 }
 
 fn vm_error_to_async(error: VMError) -> AsyncError {
-    AsyncError { error, gas_used: 0 }
+    AsyncError {
+        error,
+        gas_used: 0.into(),
+    }
 }
 
 fn partial_vm_error_to_async(error: PartialVMError) -> AsyncError {

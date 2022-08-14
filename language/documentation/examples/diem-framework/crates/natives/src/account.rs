@@ -20,7 +20,10 @@ pub fn native_create_signer(
     debug_assert!(arguments.len() == 1);
 
     let address = pop_arg!(arguments, AccountAddress);
-    Ok(NativeResult::ok(25, smallvec![Value::signer(address)]))
+    Ok(NativeResult::ok(
+        25.into(),
+        smallvec![Value::signer(address)],
+    ))
 }
 
 /// NOTE: this function will be deprecated after the Diem v3 release, but must
@@ -33,5 +36,5 @@ pub fn native_destroy_signer(
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 1);
 
-    Ok(NativeResult::ok(213, smallvec![]))
+    Ok(NativeResult::ok(213.into(), smallvec![]))
 }

@@ -14,7 +14,7 @@ There are nine steps in total:
 - [Step 5: Adding and using unit tests with the `BasicCoin` module](#Step5)
 - [Step 6: Making my `BasicCoin` module generic](#Step6)
 - [Step 7: Use the Move prover](#Step7)
-- [Step 8: Writing formal specifications for the `BasicCoin` module](#Step8) 
+- [Step 8: Writing formal specifications for the `BasicCoin` module](#Step8)
 
 整个过程共包含9个步骤：
 
@@ -163,7 +163,7 @@ module 0xCAFE::BasicCoin {
 
 This is defining a Move
 [module](https://move-language.github.io/move/modules-and-scripts.html). Modules are the
-building block of Move code, and are defined with a specific address -- the address that the module can be published under. 
+building block of Move code, and are defined with a specific address -- the address that the module can be published under.
 In this case, the `BasicCoin` module can only be published under `0xCAFE`.
 
 这是一个 `Move` [module(模块)](./chpater_1_modules-and-scripts.html)的定义。
@@ -431,7 +431,7 @@ struct GlobalStorage {
 }
 ```
 
-The Move resource storage under each address is a map from types to values. (An observant reader might observe that this means each address can only have one value of each type.) This conveniently provides us a native mapping indexed by addresses. 
+The Move resource storage under each address is a map from types to values. (An observant reader might observe that this means each address can only have one value of each type.) This conveniently provides us a native mapping indexed by addresses.
 In our `BasicCoin` module, we define the following `Balance` resource representing the number of coins each address holds:
 
 每个地址下的 Move 资源存储是一个类型到数值的映射。(细心的读者也许已经注意到每个地址, 每个类型下只能对应一个具体值)。这方便地为我们提供了一个按地址索引的本地映射。
@@ -525,7 +525,7 @@ move_to(account, Balance { coin:  empty_coin });
 <summary><code>mint</code>方法 (Method <code>mint</code>)</summary>）
 
 Here we require that `mint` must be approved by the module owner. We enforce this using the assert statement:
-`mint` method mints coins to a given account. 
+`mint` method mints coins to a given account.
 
 `mint` 方法将代币铸造到指定的帐户。在此我们要求 `mint` 必须得到模块所有者的批准。我们使用 `assert` 语句强制执行此操作：
 
@@ -824,9 +824,9 @@ fun withdraw<CoinType>(addr: address, amount: u64) : Coin<CoinType> acquires Bal
 The method withdraws tokens with value `amount` from the address `addr` and returns a created Coin of value `amount`.  The method `withdraw` aborts when 1) `addr` does not have the resource `Balance<CoinType>` or 2) the number of tokens in `addr` is smaller than `amount`. We can define conditions like this:
 
 该方法从地址 `addr` 中提取数量为 `amount` 的代币，然后创建数量为 `amount` 的代币并将其返回。当出现如下情况会中止：
-  1) 地址 `addr` 没有资源 `Balance<CoinType>`，或 
+  1) 地址 `addr` 没有资源 `Balance<CoinType>`，或
   2) 地址 `addr` 中的代币数量小于 `amount` 时，`withdraw` 。
-   
+
 我们可以这样定义条件：
 
 ```
@@ -895,9 +895,9 @@ The method deposits the `check` into `addr`. The specification is defined below:
 `balance` represents the number of tokens in `addr` before execution and `check_value` represents the number of tokens to be deposited. The method would abort if 1) `addr` does not have the resource `Balance<CoinType>` or 2) the sum of `balance` and `check_value` is greater than the maxium value of the type `u64`. The functional property checks that the balance is correctly updated after the execution.
 
 `balance` 表示 `addr` 执行前的代币数量，`check_value` 表示要存入的代币数量。方法出现如下情况将会中止：
-    1) 地址 `addr` 没有 `Balance<CoinType>` 资源， 或 
+    1) 地址 `addr` 没有 `Balance<CoinType>` 资源， 或
     2) `balance` 与 `check_value` 之和大于 `u64` 的最大值。
-   
+
 该功能属性检查执行后余额是否正确更新。
 
 

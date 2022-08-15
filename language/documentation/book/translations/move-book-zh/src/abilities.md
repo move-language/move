@@ -16,7 +16,7 @@ The four abilities are:
     * Allows values of types with this ability to exist inside a struct in global storage.
 * [`key`](#key)
     * Allows the type to serve as a key for global storage operations.
-  
+
 这四种能力分别是：
 
 * [`copy`](#copy) 复制
@@ -70,7 +70,7 @@ If a value has `store`, all values contained inside of that value have `store`
 
 如果一个值具有 `store` 能力，那么这个值内部的所有值都有 `store` 能力。
 
-### `key` 
+### `key`
 
 The `key` ability allows the type to serve as a key for [global storage operations](./global-storage-operators.md). It gates all global storage operations, so in order for a type to be used with `move_to`, `borrow_global`, `move_from`, etc., the type must have the `key` ability. Note that the operations still must be used in the module where the `key` type is defined (in a sense, the operations are private to the defining module).
 
@@ -133,7 +133,7 @@ As such: when declaring a struct’s abilities, certain requirements are placed 
 * `store`, all fields must have `store`.
 * `key`, all fields must have `store`.
     * `key` is the only ability currently that doesn’t require itself.
-  
+
 因此：在声明结构体的能力时，对字段提出了某些要求。所有字段都必须满足这些约束。这些规则是必要的，以便结构体满足上述功能的可达性规则。如果一个结构被声明为具有某能力：
 
 * `copy`， 所有的字段必须具有 `copy` 能力。
@@ -210,7 +210,7 @@ Here are examples for this conditional system for each ability:
 
 以下是每个能力的条件系统的示例：
 
-### Example: conditional `copy` 
+### Example: conditional `copy`
 
 ```move
 struct NoAbilities {}
@@ -289,7 +289,7 @@ struct MyResource has key {
 }
 ```
 
-### Example: conditional `key` 
+### Example: conditional `key`
 
 ```move
 struct NoAbilities {}

@@ -1,7 +1,7 @@
 # Signer
 
 `signer` is a built-in Move resource type. A `signer` is a [capability](https://en.wikipedia.org/wiki/Object-capability_model) that allows the holder to act on
-behalf of a particular `address`. 
+behalf of a particular `address`.
 
 You can think of the native implementation as being:
 
@@ -32,7 +32,7 @@ However, `signer` values are special because they cannot be created via literals
 instructions--only by the Move VM. Before the VM runs a script with parameters of type `signer`, it
 will automatically create `signer` values and pass them into the script:
 
-但是，`signer` 值是特殊的，因为它们不能通过字面值(literals)或者指令创建--只能通过Move虚拟机(VM)。 
+但是，`signer` 值是特殊的，因为它们不能通过字面值(literals)或者指令创建--只能通过Move虚拟机(VM)。
 在虚拟机(VM)运行带有 `signer` 类型参数的脚本之前，它将自动创建 `signer` 值并将它们传递到脚本中：
 
 ```move=

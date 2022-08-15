@@ -532,7 +532,7 @@ A custom error category for extension points.
 ### 函数（Functions）
 
  Should be used in the case where invalid (global) state is encountered. Constructs an abort code with specified `reason` and category `INVALID_STATE`. Will abort if `reason` does not fit in 56 bits.
- 
+
 在遇到无效(全局)状态的情况下应使用。构造一个具有指定的`reason`和类别`INVALID_STATE`的终止代码。如果`reason`不适合56位，将会终止操作。
 
 ```move

@@ -110,9 +110,9 @@ i == s; // 错误!
 ## 限制 (Restrictions)
 
 Both `==` and `!=` consume the value when comparing them. As a result, the type system enforces that
-the type must have [`drop`](./abilities.md). Recall that without the [`drop` ability](./abilities.md), 
-ownership must be transferred by the end of the function, and such values can only be explicitly destroyed 
-within their declaring module. If these were used directly with either equality `==` or non-equality `!=`, 
+the type must have [`drop`](./abilities.md). Recall that without the [`drop` ability](./abilities.md),
+ownership must be transferred by the end of the function, and such values can only be explicitly destroyed
+within their declaring module. If these were used directly with either equality `==` or non-equality `!=`,
 the value would be destroyed which would break [`drop` ability](./abilities.md) safety guarantees!
 
 `==` 和 `!=` 会在比较不同变量的时候消耗 (consume)它们所包含的值，所以 Move 的类型系统会强制要求这些类型含有[`drop` 能力](./abilities.md)。回想一下，变量在没有[`drop` 能力](./abilities.md)时，所有权必须在函数结束前进行转移，而且这些值只能在其声明模块中被明确销毁(explicitly destroyed)。如果它们被直接使用于等式 `==` 或不等式 `!=` ，其值会被销毁并且这会打破[`drop` 能力](./abilities.md)的安全保证！

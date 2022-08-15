@@ -190,6 +190,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
             .vm_session
             .get_data_store()
             .load_resource(actor_addr, &state_type)
+            .map(|(gv, _)| gv)
             .map_err(partial_vm_error_to_async)?;
         if state.exists().map_err(partial_vm_error_to_async)? {
             return Err(async_extension_error(format!(
@@ -284,6 +285,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
             .vm_session
             .get_data_store()
             .load_resource(actor_addr, &state_type)
+            .map(|(gv, _)| gv)
             .map_err(partial_vm_error_to_async)?;
         let actor_state = actor_state_global
             .borrow_global()

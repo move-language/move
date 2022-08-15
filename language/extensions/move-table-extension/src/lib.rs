@@ -256,7 +256,8 @@ impl Table {
         self.content
             .entry(key_bytes)
             .or_insert_with(GlobalValue::none)
-            .move_to(val)?;
+            .move_to(val)
+            .map_err(|(err, _val)| err)?;
         Ok((key_size, val_size))
     }
 

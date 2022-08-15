@@ -1344,6 +1344,7 @@ impl<'a> Resolver<'a> {
         Ok(instantiation)
     }
 
+    #[allow(unused)]
     pub(crate) fn type_params_count(&self, idx: FunctionInstantiationIndex) -> usize {
         let func_inst = match &self.binary {
             BinaryType::Module(module) => module.function_instantiation_at(idx.0),

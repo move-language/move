@@ -1,4 +1,3 @@
-
 # 中止和断言 (Abort and Assert)
 
 [`return`](./functions.md) and `abort` are two control flow constructs that end execution, one for

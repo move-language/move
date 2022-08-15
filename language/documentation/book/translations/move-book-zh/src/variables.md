@@ -1,4 +1,3 @@
-
 # 局部变量和作用域(Local Variables and Scopes)
 
 Local variables in Move are lexically (statically) scoped. New variables are introduced with the
@@ -882,5 +881,3 @@ let addr2 = @0x42; // 复制
 let x_ref2 = x_ref; // 复制
 let coin_ref2 = coin_ref; // 复制
 ```
-
-

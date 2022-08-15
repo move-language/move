@@ -2,7 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::loaded_data::runtime_types::Type;
+use crate::{loaded_data::runtime_types::Type, views::ValueView};
 use move_binary_format::{
     errors::*,
     file_format::{Constant, SignatureToken},
@@ -1953,26 +1953,31 @@ impl Struct {
  **************************************************************************************/
 #[allow(clippy::unnecessary_wraps)]
 impl GlobalValueImpl {
-    fn cached(val: ValueImpl, status: GlobalDataStatus) -> PartialVMResult<Self> {
+    fn cached(
+        val: ValueImpl,
+        status: GlobalDataStatus,
+    ) -> Result<Self, (PartialVMError, ValueImpl)> {
         match val {
             ValueImpl::Container(Container::Struct(fields)) => {
                 let status = Rc::new(RefCell::new(status));
                 Ok(Self::Cached { fields, status })
             }
-            _ => Err(
+            val => Err((
                 PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                     .with_message("failed to publish cached: not a resource".to_string()),
-            ),
+                val,
+            )),
         }
     }
 
-    fn fresh(val: ValueImpl) -> PartialVMResult<Self> {
+    fn fresh(val: ValueImpl) -> Result<Self, (PartialVMError, ValueImpl)> {
         match val {
             ValueImpl::Container(Container::Struct(fields)) => Ok(Self::Fresh { fields }),
-            _ => Err(
+            val => Err((
                 PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                     .with_message("failed to publish fresh: not a resource".to_string()),
-            ),
+                val,
+            )),
         }
     }
 
@@ -1999,10 +2004,13 @@ impl GlobalValueImpl {
         Ok(ValueImpl::Container(Container::Struct(fields)))
     }
 
-    fn move_to(&mut self, val: ValueImpl) -> PartialVMResult<()> {
+    fn move_to(&mut self, val: ValueImpl) -> Result<(), (PartialVMError, ValueImpl)> {
         match self {
             Self::Fresh { .. } | Self::Cached { .. } => {
-                return Err(PartialVMError::new(StatusCode::RESOURCE_ALREADY_EXISTS))
+                return Err((
+                    PartialVMError::new(StatusCode::RESOURCE_ALREADY_EXISTS),
+                    val,
+                ))
             }
             Self::None => *self = Self::fresh(val)?,
             Self::Deleted => *self = Self::cached(val, GlobalDataStatus::Dirty)?,
@@ -2065,18 +2073,19 @@ impl GlobalValue {
     }
 
     pub fn cached(val: Value) -> PartialVMResult<Self> {
-        Ok(Self(GlobalValueImpl::cached(
-            val.0,
-            GlobalDataStatus::Clean,
-        )?))
+        Ok(Self(
+            GlobalValueImpl::cached(val.0, GlobalDataStatus::Clean).map_err(|(err, _val)| err)?,
+        ))
     }
 
     pub fn move_from(&mut self) -> PartialVMResult<Value> {
         Ok(Value(self.0.move_from()?))
     }
 
-    pub fn move_to(&mut self, val: Value) -> PartialVMResult<()> {
-        self.0.move_to(val.0)
+    pub fn move_to(&mut self, val: Value) -> Result<(), (PartialVMError, Value)> {
+        self.0
+            .move_to(val.0)
+            .map_err(|(err, val)| (err, Value(val)))
     }
 
     pub fn borrow_global(&self) -> PartialVMResult<Value> {
@@ -2654,6 +2663,56 @@ impl Value {
     pub fn deserialize_constant(constant: &Constant) -> Option<Value> {
         let layout = Self::constant_sig_token_to_layout(&constant.type_)?;
         Value::simple_deserialize(&constant.data, &layout)
+    }
+}
+
+/***************************************************************************************
+*
+* Views
+*
+**************************************************************************************/
+impl ValueView for ValueImpl {
+    fn legacy_abstract_memory_size(&self) -> AbstractMemorySize {
+        self.size()
+    }
+}
+
+impl ValueView for Value {
+    fn legacy_abstract_memory_size(&self) -> AbstractMemorySize {
+        self.0.legacy_abstract_memory_size()
+    }
+}
+
+impl Struct {
+    #[allow(clippy::needless_lifetimes)]
+    pub fn field_views<'a>(&'a self) -> impl ExactSizeIterator<Item = impl ValueView + 'a> {
+        self.fields.iter()
+    }
+}
+
+impl ValueView for Reference {
+    fn legacy_abstract_memory_size(&self) -> AbstractMemorySize {
+        self.size()
+    }
+}
+
+impl GlobalValue {
+    #[allow(clippy::needless_lifetimes)]
+    pub fn view<'a>(&'a self) -> Option<impl ValueView + 'a> {
+        use GlobalValueImpl as G;
+
+        struct Wrapper<'b>(&'b Rc<RefCell<Vec<ValueImpl>>>);
+
+        impl<'b> ValueView for Wrapper<'b> {
+            fn legacy_abstract_memory_size(&self) -> AbstractMemorySize {
+                Struct::size_impl(&*self.0.borrow())
+            }
+        }
+
+        match &self.0 {
+            G::None | G::Deleted => None,
+            G::Cached { fields, .. } | G::Fresh { fields } => Some(Wrapper(fields)),
+        }
     }
 }
 

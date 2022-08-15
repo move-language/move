@@ -8,7 +8,8 @@ use crate::{
 };
 use move_binary_format::errors::{PartialVMResult, VMResult};
 use move_core_types::{
-    account_address::AccountAddress, language_storage::ModuleId, value::MoveTypeLayout,
+    account_address::AccountAddress, gas_algebra::NumBytes, language_storage::ModuleId,
+    value::MoveTypeLayout,
 };
 
 /// Provide an implementation for bytecodes related to data with a given data store.
@@ -28,7 +29,7 @@ pub trait DataStore {
         &mut self,
         addr: AccountAddress,
         ty: &Type,
-    ) -> PartialVMResult<&mut GlobalValue>;
+    ) -> PartialVMResult<(&mut GlobalValue, Option<Option<NumBytes>>)>;
 
     /// Get the serialized format of a `CompiledModule` given a `ModuleId`.
     fn load_module(&self, module_id: &ModuleId) -> VMResult<Vec<u8>>;

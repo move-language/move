@@ -2,11 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{bail, Error, Result};
+use anyhow::{bail, Result};
 use move_core_types::{
     account_address::AccountAddress,
     effects::{AccountChangeSet, ChangeSet, Op},
-    gas_algebra::InternalGas,
     identifier::Identifier,
     language_storage::{ModuleId, StructTag},
     resolver::{ModuleResolver, MoveResolver, ResourceResolver},
@@ -17,7 +16,11 @@ use std::{
 };
 
 #[cfg(feature = "table-extension")]
-use move_table_extension::{TableChangeSet, TableHandle, TableOperation, TableResolver};
+use {
+    anyhow::Error,
+    move_core_types::gas_algebra::InternalGas,
+    move_table_extension::{TableChangeSet, TableHandle, TableOperation, TableResolver},
+};
 
 /// A dummy storage containing no modules or resources.
 #[derive(Debug, Clone)]

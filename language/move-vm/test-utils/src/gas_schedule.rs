@@ -19,11 +19,15 @@ use move_binary_format::{
 use move_core_types::{
     gas_algebra::{
         AbstractMemorySize, GasQuantity, InternalGas, InternalGasPerAbstractMemoryUnit,
-        InternalGasUnit, ToUnit, ToUnitFractional,
+        InternalGasUnit, NumArgs, NumBytes, ToUnit, ToUnitFractional,
     },
+    language_storage::ModuleId,
     vm_status::StatusCode,
 };
-use move_vm_types::gas::GasMeter;
+use move_vm_types::{
+    gas::{GasMeter, SimpleInstruction},
+    views::{TypeView, ValueView},
+};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -43,6 +47,18 @@ impl ToUnitFractional<GasUnit> for InternalGasUnit {
     const NOMINATOR: u64 = 1;
     const DENOMINATOR: u64 = 1000;
 }
+
+/// The size in bytes for a non-string or address constant on the stack
+pub const CONST_SIZE: AbstractMemorySize = AbstractMemorySize::new(16);
+
+/// The size in bytes for a reference on the stack
+pub const REFERENCE_SIZE: AbstractMemorySize = AbstractMemorySize::new(8);
+
+/// The size of a struct in bytes
+pub const STRUCT_SIZE: AbstractMemorySize = AbstractMemorySize::new(2);
+
+/// For exists checks on data that doesn't exists this is the multiplier that is used.
+pub const MIN_EXISTS_DATA_SIZE: AbstractMemorySize = AbstractMemorySize::new(100);
 
 /// The cost tables, keyed by the serialized form of the bytecode instruction.  We use the
 /// serialized form as opposed to the instruction enum itself as the key since this will be the
@@ -151,12 +167,15 @@ impl<'a> GasStatus<'a> {
         }
     }
 
-    pub fn set_metering(&mut self, enabled: bool) {
-        self.charge = enabled
+    fn charge_instr(&mut self, opcode: Opcodes) -> PartialVMResult<()> {
+        self.deduct_gas(
+            self.cost_table
+                .instruction_cost(opcode as u8)
+                .total()
+                .into(),
+        )
     }
-}
 
-impl<'a> GasMeter for GasStatus<'a> {
     /// Charge an instruction over data with a given size and fail if not enough gas units are left.
     fn charge_instr_with_size(
         &mut self,
@@ -174,18 +193,315 @@ impl<'a> GasMeter for GasStatus<'a> {
         )
     }
 
+    pub fn set_metering(&mut self, enabled: bool) {
+        self.charge = enabled
+    }
+}
+
+fn get_simple_instruction_opcode(instr: SimpleInstruction) -> Opcodes {
+    use Opcodes::*;
+    use SimpleInstruction::*;
+
+    match instr {
+        Nop => NOP,
+        Ret => RET,
+
+        BrTrue => BR_TRUE,
+        BrFalse => BR_FALSE,
+        Branch => BRANCH,
+
+        Pop => POP,
+        LdU8 => LD_U8,
+        LdU64 => LD_U64,
+        LdU128 => LD_U128,
+        LdTrue => LD_TRUE,
+        LdFalse => LD_FALSE,
+
+        FreezeRef => FREEZE_REF,
+        MutBorrowLoc => MUT_BORROW_LOC,
+        ImmBorrowLoc => IMM_BORROW_LOC,
+        ImmBorrowField => IMM_BORROW_FIELD,
+        MutBorrowField => MUT_BORROW_FIELD,
+        ImmBorrowFieldGeneric => IMM_BORROW_FIELD_GENERIC,
+        MutBorrowFieldGeneric => MUT_BORROW_FIELD_GENERIC,
+
+        CastU8 => CAST_U8,
+        CastU64 => CAST_U64,
+        CastU128 => CAST_U128,
+
+        Add => ADD,
+        Sub => SUB,
+        Mul => MUL,
+        Mod => MOD,
+        Div => DIV,
+
+        BitOr => BIT_OR,
+        BitAnd => BIT_AND,
+        Xor => XOR,
+        Shl => SHL,
+        Shr => SHR,
+
+        Or => OR,
+        And => AND,
+        Not => NOT,
+
+        Lt => LT,
+        Gt => GT,
+        Le => LE,
+        Ge => GE,
+
+        Abort => ABORT,
+    }
+}
+
+impl<'b> GasMeter for GasStatus<'b> {
     /// Charge an instruction and fail if not enough gas units are left.
-    fn charge_instr(&mut self, opcode: Opcodes) -> PartialVMResult<()> {
-        self.deduct_gas(
-            self.cost_table
-                .instruction_cost(opcode as u8)
-                .total()
-                .into(),
+    fn charge_simple_instr(&mut self, instr: SimpleInstruction) -> PartialVMResult<()> {
+        self.charge_instr(get_simple_instruction_opcode(instr))
+    }
+
+    fn charge_native_function(&mut self, amount: InternalGas) -> PartialVMResult<()> {
+        self.deduct_gas(amount)
+    }
+
+    fn charge_call(
+        &mut self,
+        _module_id: &ModuleId,
+        _func_name: &str,
+        args: impl ExactSizeIterator<Item = impl ValueView>,
+    ) -> PartialVMResult<()> {
+        self.charge_instr_with_size(Opcodes::CALL, (args.len() as u64 + 1).into())
+    }
+
+    fn charge_call_generic(
+        &mut self,
+        _module_id: &ModuleId,
+        _func_name: &str,
+        ty_args: impl ExactSizeIterator<Item = impl TypeView>,
+        args: impl ExactSizeIterator<Item = impl ValueView>,
+    ) -> PartialVMResult<()> {
+        self.charge_instr_with_size(
+            Opcodes::CALL_GENERIC,
+            ((ty_args.len() + args.len() + 1) as u64).into(),
         )
     }
 
-    fn charge_in_native_unit(&mut self, amount: InternalGas) -> PartialVMResult<()> {
-        self.deduct_gas(amount)
+    fn charge_ld_const(&mut self, size: NumBytes) -> PartialVMResult<()> {
+        self.charge_instr_with_size(Opcodes::LD_CONST, u64::from(size).into())
+    }
+
+    fn charge_copy_loc(&mut self, val: impl ValueView) -> PartialVMResult<()> {
+        self.charge_instr_with_size(Opcodes::COPY_LOC, val.legacy_abstract_memory_size())
+    }
+
+    fn charge_move_loc(&mut self, val: impl ValueView) -> PartialVMResult<()> {
+        self.charge_instr_with_size(Opcodes::MOVE_LOC, val.legacy_abstract_memory_size())
+    }
+
+    fn charge_store_loc(&mut self, val: impl ValueView) -> PartialVMResult<()> {
+        self.charge_instr_with_size(Opcodes::ST_LOC, val.legacy_abstract_memory_size())
+    }
+
+    fn charge_pack(
+        &mut self,
+        is_generic: bool,
+        args: impl ExactSizeIterator<Item = impl ValueView>,
+    ) -> PartialVMResult<()> {
+        let field_count = AbstractMemorySize::new(args.len() as u64);
+        self.charge_instr_with_size(
+            if is_generic {
+                Opcodes::PACK_GENERIC
+            } else {
+                Opcodes::PACK
+            },
+            args.fold(field_count, |acc, val| {
+                acc + val.legacy_abstract_memory_size()
+            }),
+        )
+    }
+
+    fn charge_unpack(
+        &mut self,
+        is_generic: bool,
+        args: impl ExactSizeIterator<Item = impl ValueView>,
+    ) -> PartialVMResult<()> {
+        let field_count = AbstractMemorySize::new(args.len() as u64);
+        self.charge_instr_with_size(
+            if is_generic {
+                Opcodes::UNPACK_GENERIC
+            } else {
+                Opcodes::UNPACK
+            },
+            args.fold(field_count, |acc, val| {
+                acc + val.legacy_abstract_memory_size()
+            }),
+        )
+    }
+
+    fn charge_read_ref(&mut self, ref_val: impl ValueView) -> PartialVMResult<()> {
+        self.charge_instr_with_size(Opcodes::READ_REF, ref_val.legacy_abstract_memory_size())
+    }
+
+    fn charge_write_ref(&mut self, val: impl ValueView) -> PartialVMResult<()> {
+        self.charge_instr_with_size(Opcodes::WRITE_REF, val.legacy_abstract_memory_size())
+    }
+
+    fn charge_eq(&mut self, lhs: impl ValueView, rhs: impl ValueView) -> PartialVMResult<()> {
+        self.charge_instr_with_size(
+            Opcodes::EQ,
+            lhs.legacy_abstract_memory_size() + rhs.legacy_abstract_memory_size(),
+        )
+    }
+
+    fn charge_neq(&mut self, lhs: impl ValueView, rhs: impl ValueView) -> PartialVMResult<()> {
+        self.charge_instr_with_size(
+            Opcodes::NEQ,
+            lhs.legacy_abstract_memory_size() + rhs.legacy_abstract_memory_size(),
+        )
+    }
+
+    fn charge_load_resource(&mut self, _loaded: Option<NumBytes>) -> PartialVMResult<()> {
+        Ok(())
+    }
+
+    fn charge_borrow_global(
+        &mut self,
+        is_mut: bool,
+        is_generic: bool,
+        _ty: impl TypeView,
+        is_success: bool,
+    ) -> PartialVMResult<()> {
+        use Opcodes::*;
+
+        if is_success {
+            let op = match (is_mut, is_generic) {
+                (false, false) => IMM_BORROW_GLOBAL,
+                (false, true) => IMM_BORROW_GLOBAL_GENERIC,
+                (true, false) => MUT_BORROW_GLOBAL,
+                (true, true) => MUT_BORROW_GLOBAL_GENERIC,
+            };
+
+            self.charge_instr_with_size(op, REFERENCE_SIZE)?;
+        }
+
+        Ok(())
+    }
+
+    fn charge_exists(
+        &mut self,
+        is_generic: bool,
+        _ty: impl TypeView,
+        // TODO(Gas): see if we can get rid of this param
+        exists: bool,
+    ) -> PartialVMResult<()> {
+        use Opcodes::*;
+
+        let op = if is_generic { EXISTS_GENERIC } else { EXISTS };
+        self.charge_instr_with_size(
+            op,
+            if exists {
+                REFERENCE_SIZE
+            } else {
+                MIN_EXISTS_DATA_SIZE
+            },
+        )
+    }
+
+    fn charge_move_from(
+        &mut self,
+        is_generic: bool,
+        _ty: impl TypeView,
+        val: Option<impl ValueView>,
+    ) -> PartialVMResult<()> {
+        use Opcodes::*;
+
+        if let Some(val) = val {
+            let op = if is_generic {
+                MOVE_FROM_GENERIC
+            } else {
+                MOVE_FROM
+            };
+
+            self.charge_instr_with_size(op, val.legacy_abstract_memory_size())?;
+        }
+
+        Ok(())
+    }
+
+    fn charge_move_to(
+        &mut self,
+        is_generic: bool,
+        _ty: impl TypeView,
+        val: impl ValueView,
+        is_success: bool,
+    ) -> PartialVMResult<()> {
+        use Opcodes::*;
+
+        let op = if is_generic { MOVE_TO_GENERIC } else { MOVE_TO };
+
+        if is_success {
+            self.charge_instr_with_size(op, val.legacy_abstract_memory_size())?;
+        }
+
+        Ok(())
+    }
+
+    fn charge_vec_pack<'a>(
+        &mut self,
+        _ty: impl TypeView + 'a,
+        args: impl ExactSizeIterator<Item = impl ValueView>,
+    ) -> PartialVMResult<()> {
+        self.charge_instr_with_size(Opcodes::VEC_PACK, (args.len() as u64).into())
+    }
+
+    fn charge_vec_len(&mut self, _ty: impl TypeView) -> PartialVMResult<()> {
+        self.charge_instr(Opcodes::VEC_LEN)
+    }
+
+    fn charge_vec_borrow(
+        &mut self,
+        is_mut: bool,
+        _ty: impl TypeView,
+        _is_success: bool,
+    ) -> PartialVMResult<()> {
+        use Opcodes::*;
+
+        self.charge_instr(if is_mut {
+            VEC_MUT_BORROW
+        } else {
+            VEC_IMM_BORROW
+        })
+    }
+
+    fn charge_vec_push_back(
+        &mut self,
+        _ty: impl TypeView,
+        val: impl ValueView,
+    ) -> PartialVMResult<()> {
+        self.charge_instr_with_size(Opcodes::VEC_PUSH_BACK, val.legacy_abstract_memory_size())
+    }
+
+    fn charge_vec_pop_back(
+        &mut self,
+        _ty: impl TypeView,
+        _val: Option<impl ValueView>,
+    ) -> PartialVMResult<()> {
+        self.charge_instr(Opcodes::VEC_POP_BACK)
+    }
+
+    fn charge_vec_unpack(
+        &mut self,
+        _ty: impl TypeView,
+        expect_num_elements: NumArgs,
+    ) -> PartialVMResult<()> {
+        self.charge_instr_with_size(
+            Opcodes::VEC_PUSH_BACK,
+            u64::from(expect_num_elements).into(),
+        )
+    }
+
+    fn charge_vec_swap(&mut self, _ty: impl TypeView) -> PartialVMResult<()> {
+        self.charge_instr(Opcodes::VEC_SWAP)
     }
 }
 

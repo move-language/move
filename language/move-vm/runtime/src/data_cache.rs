@@ -8,6 +8,7 @@ use move_binary_format::errors::*;
 use move_core_types::{
     account_address::AccountAddress,
     effects::{AccountChangeSet, ChangeSet, Event, Op},
+    gas_algebra::NumBytes,
     identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
     resolver::MoveResolver,
@@ -169,11 +170,12 @@ impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
         &mut self,
         addr: AccountAddress,
         ty: &Type,
-    ) -> PartialVMResult<&mut GlobalValue> {
+    ) -> PartialVMResult<(&mut GlobalValue, Option<Option<NumBytes>>)> {
         let account_cache = Self::get_mut_or_insert_with(&mut self.account_map, &addr, || {
             (addr, AccountDataCache::new())
         });
 
+        let mut load_res = None;
         if !account_cache.data_map.contains_key(ty) {
             let ty_tag = match self.loader.type_to_type_tag(ty)? {
                 TypeTag::Struct(s_tag) => s_tag,
@@ -183,10 +185,12 @@ impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
                     return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR))
                 }
             };
+            // TODO(Gas): Shall we charge for this?
             let ty_layout = self.loader.type_to_type_layout(ty)?;
 
             let gv = match self.remote.get_resource(&addr, &ty_tag) {
                 Ok(Some(blob)) => {
+                    load_res = Some(Some(NumBytes::new(blob.len() as u64)));
                     let val = match Value::simple_deserialize(&blob, &ty_layout) {
                         Some(val) => val,
                         None => {
@@ -201,7 +205,10 @@ impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
 
                     GlobalValue::cached(val)?
                 }
-                Ok(None) => GlobalValue::none(),
+                Ok(None) => {
+                    load_res = Some(None);
+                    GlobalValue::none()
+                }
                 Err(err) => {
                     let msg = format!("Unexpected storage error: {:?}", err);
                     return Err(
@@ -214,11 +221,14 @@ impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
             account_cache.data_map.insert(ty.clone(), (ty_layout, gv));
         }
 
-        Ok(account_cache
-            .data_map
-            .get_mut(ty)
-            .map(|(_ty_layout, gv)| gv)
-            .expect("global value must exist"))
+        Ok((
+            account_cache
+                .data_map
+                .get_mut(ty)
+                .map(|(_ty_layout, gv)| gv)
+                .expect("global value must exist"),
+            load_res,
+        ))
     }
 
     fn load_module(&self, module_id: &ModuleId) -> VMResult<Vec<u8>> {

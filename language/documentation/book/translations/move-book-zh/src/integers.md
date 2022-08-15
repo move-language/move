@@ -91,7 +91,7 @@ All arithmetic operations abort instead of behaving in a way that mathematical i
 | `%`    | 取余运算     | 除数为 `0`                       |
 | `/`    | 截断除法     | 除数为 `0`                       |
 
-### 位运算 (Bitwise) 
+### 位运算 (Bitwise)
 
 The integer types support the following bitwise operations that treat each number as a series of individual bits, either 0 or 1, instead of as numerical integer values.
 

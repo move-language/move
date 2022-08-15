@@ -1,10 +1,8 @@
-
-
 # Move 教程(Move Tutorial)
 
 Welcome to the Move Tutorial! In this tutorial, we are going to go through some steps of developing Move code including design, implementation, unit testing and formal verification of Move modules.
 
-欢迎来到 Move 语言教程，在本教程中，我们通过一些具体的步骤进行Move语言代码的开发，包括 Move 模块的设计、实现、单元测试和形式化验证。
+欢迎来到 Move 语言教程，在本教程中，我们通过一些具体的步骤进行 Move 语言代码的开发，包括 Move 模块的设计、实现、单元测试和形式化验证。
 
 There are nine steps in total:
 
@@ -124,7 +122,7 @@ cd <path_to_move>/language/documentation/tutorial
 
 There is official Move support for Visual Studio Code. You need to install
 the move analyzer first:
-    
+
 Visual Studio Code 有正式的 Move 语言支持, 您需要先安装 `move analyzer` :
 
 ```bash
@@ -133,7 +131,7 @@ cargo install --path language/move-analyzer
 
 Now you can install the VS extension by opening VS Code, searching for the "move-analyzer" in the Extension Pane, and installing it. More detailed instructions can be found
 in the extension's [README](https://github.com/move-language/move/tree/main/language/move-analyzer/editors/code).
-    
+
 现在您可以打开 VS Code 并安装 Move 扩展插件了，在扩展页面下找到 `move-analyzer` 并安装即可。关于扩展的详细信息可以查看扩展的[README](https://github.com/move-language/move/tree/main/language/move-analyzer/editors/code)。
 </details>
 
@@ -169,12 +167,12 @@ building block of Move code, and are defined with a specific address -- the addr
 In this case, the `BasicCoin` module can only be published under `0xCAFE`.
 
 这是一个 `Move` [module(模块)](./chpater_1_modules-and-scripts.html)的定义。
-模块是 Move 语言的代码块, 并且它使用指定的地址(address)进行定义 -- 模块只能在该地址下发布. 
+模块是 Move 语言的代码块, 并且它使用指定的地址(address)进行定义 -- 模块只能在该地址下发布。
 当前 `BasicCoin` 模块只能被发布在 `0xCAFE` 地址下。
 
 Let's now take a look at the next part of this file where we define a [struct](https://move-language.github.io/move/structs-and-resources.html) to represent a `Coin` with a given `value`:
 
-再看这个文件的下一部分，这里定义了一个具有字段 `value` 的[结构体](./chapter_16_structs-and-resources.html) `Coin` ;
+再看这个文件的下一部分，这里定义了一个具有字段 `value` 的[结构体](./chapter_16_structs-and-resources.html) `Coin`：
 
 ```
 module 0xCAFE::BasicCoin {
@@ -214,7 +212,7 @@ Let's make sure it builds! This can be done with the `build` command from within
 * 此函数需要一个[`signer`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/./chapter_7_signer.html)参数 -- 表示不可伪造的 token 受此特定地址的控制; 和一个需要铸造的数量参数 `value`。
 * 此函数使用给定的参数值铸造一个 `Coin`，然后通过 `move_to` 操作将其保存在(全局存储中)给定的 `account` 账户下。
 
-我们需要确保它真的执行，这可以通过在包文件夹([`step_1/BasicCoin`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_1/BasicCoin/))下的运行 `build` 命令来完成：。
+我们需要确保它真的执行，这可以通过在包文件夹([`step_1/BasicCoin`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_1/BasicCoin/))下的运行 `build` 命令来完成：
 
 ```bash
 move build
@@ -236,6 +234,7 @@ move build
     [addresses]
     SomeNamedAddress = "0xC0FFEE"
     ```
+
 * 你可以通过以下命令创建一个空的 Move 包(move package):
     ```bash
     move new <pkg_name>
@@ -248,6 +247,7 @@ move build
     ```
     [addresses]
     SomeNamedAddress = "0xC0FFEE"
+    ```
 
 * [Structures](https://move-language.github.io/move/structs-and-resources.html) in Move can be given different
   [abilities](https://move-language.github.io/move/abilities.html) that describe what can be done with that type. There are four different abilities:
@@ -287,7 +287,7 @@ Now that we've taken a look at our first Move module, we'll take a look at a tes
 
 You can run the tests with the `move test` command: (原文是 `package test`，应该有误)
 
-现在我们已经完成了我们的第一个 Move 模块，我们将切换到目录[`step_2/BasicCoin`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_2/BasicCoin)下并完成一个测试，确保铸币按我们预期的方式工作
+现在我们已经完成了我们的第一个 Move 模块，我们将切换到目录[`step_2/BasicCoin`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_2/BasicCoin)下并完成一个测试，确保铸币按我们预期的方式工作。
 如果你熟悉它们(Move 和 Rust)的话，Move 中的单元测试类似于 Rust 中的单元测试 —— 测试代码使用 `#[test]` 注解，并像编写普通的 Move 函数一样。
 
 可以通过 `move test` 命令来执行测试:
@@ -356,7 +356,7 @@ coin in storage has the value that is expected with the `assert!` call. If the a
 #### 练习 (Exercises)
 
 * Change the assertion to `11` so that the test fails. Find a flag that you can pass to the `move test` command that will show you the global state when the test fails. It should look something like this:
-  
+
 * 将断言值改为 `11` 将导致断言执行失败, 找一个可以传递给 `move test` 命令的标志，当测试失败时它会显示全局状态。看起来像这样：
   ```
     ┌── test_mint_10 ──────
@@ -380,7 +380,7 @@ coin in storage has the value that is expected with the `assert!` call. If the a
   ```
 
 * Find a flag that allows you to gather test coverage information, and then play around with using the `move coverage` command to look at coverage statistics and source coverage.
-  
+
 * 找一个允许您收集测试覆盖率信息的标志，然后使用 `move coverage` 命令查看覆盖率统计信息和源码覆盖率。
 
 </details>
@@ -393,7 +393,7 @@ In this section, we are going to design a module implementing a basic coin and b
 
 The signatures of the public Move function are the following:
 
-Move 语言的 `public function` 签名如下:
+Move 语言的 `public function` 签名如下：
 
 ```
 /// Publish an empty balance resource under `account`'s address. This function must be called before
@@ -422,7 +422,7 @@ Move 语言的模块没有自己的数据存储，相反的是 Move 语言提供
 
 The global storage looks roughly like this in Rust syntax:
 
-全局存储看起来有点像 Rust 的语法:
+在 Rust 语法中，全局存储看起来有点像这样：
 
 ```rust
 struct GlobalStorage {

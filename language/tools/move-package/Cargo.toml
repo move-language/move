@@ -43,6 +43,8 @@ termcolor = { version = "1.1.2", optional = true }
 hex = { version = "0.4.3", optional = true }
 reqwest = { version = "0.10", features = ["blocking", "json"] }
 
+whoami = { version = "1.2.1" }
+
 [dev-dependencies]
 datatest-stable = "0.1.1"
 

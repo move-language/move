@@ -5,11 +5,14 @@
 use named_lock::{NamedLock, NamedLockGuard};
 use once_cell::sync::Lazy;
 use std::sync::{Mutex, MutexGuard};
+use whoami::username;
 
 const PACKAGE_LOCK_NAME: &str = "move_pkg_lock";
 static PACKAGE_THREAD_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
-static PACKAGE_PROCESS_MUTEX: Lazy<NamedLock> =
-    Lazy::new(|| NamedLock::create(PACKAGE_LOCK_NAME).unwrap());
+static PACKAGE_PROCESS_MUTEX: Lazy<NamedLock> = Lazy::new(|| {
+    let user_lock_file = format!("{}_{}", PACKAGE_LOCK_NAME, username());
+    NamedLock::create(user_lock_file.as_str()).unwrap()
+});
 
 /// The package lock is a lock held across threads and processes. This lock is held to ensure that
 /// the Move package manager has a consistent (read: serial) view of the file system. Without this

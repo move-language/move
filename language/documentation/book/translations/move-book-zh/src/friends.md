@@ -91,7 +91,7 @@ Friend declarations are subject to the following rules:
   //                ^^^^^^^^^^^^^^^^^ 未绑定的模块 '0x42::nonexistent'
   }
   ```
- 
+
  - Friend modules must be within the same account address. (Note: this is not a technical requirement but rather a policy decision which *may* be relaxed later.)
 
  -	友元模块必须在同一个账号地址内。（注：这不是技术要求，而是以后可能放宽的决策。)
@@ -100,13 +100,13 @@ Friend declarations are subject to the following rules:
     address 0x42 {
     module m {}
     }
-  
+
     address 0x43 {
     module n { friend 0x42::m; // 错误! }
     //                ^^^^^^^ 不能声明当前地址外的模块作为友元
     }
     ```
-    
+
 -	友元关系不能创建循环模块依赖关系（Friends relationships cannot create cyclic module dependencies）
 
 Cycles are not allowed in the friend relationships, e.g., the relation `0x2::a` friends `0x2::b` friends `0x2::c` friends `0x2::a` is not allowed.

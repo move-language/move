@@ -78,7 +78,6 @@ while (cond) x = 0;
 x + x // ERROR!
 ```
 
-
 ### 有效的变量名 (Valid variable names)
 
 

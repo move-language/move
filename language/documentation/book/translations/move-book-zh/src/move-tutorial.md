@@ -209,7 +209,7 @@ Let's take a look at this function and what it's saying:
 Let's make sure it builds! This can be done with the `build` command from within the package folder ([`step_1/BasicCoin`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_1/BasicCoin/)):
 
 让我们来看看这个函数和它的含义:
-* 此函数需要一个[`signer`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/./chapter_7_signer.html)参数 -- 表示不可伪造的 token 受此特定地址的控制; 和一个需要铸造的数量参数 `value`。
+* 此函数需要一个[`signer`](https://move-language.github.io/move/signer.html)参数 -- 表示不可伪造的 token 受此特定地址的控制; 和一个需要铸造的数量参数 `value`。
 * 此函数使用给定的参数值铸造一个 `Coin`，然后通过 `move_to` 操作将其保存在(全局存储中)给定的 `account` 账户下。
 
 我们需要确保它真的执行，这可以通过在包文件夹([`step_1/BasicCoin`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_1/BasicCoin/))下的运行 `build` 命令来完成：
@@ -482,9 +482,9 @@ The Ethereum blockchain state might look like this:
 
 ## Step 4: 实现 `BasicCoin` 模块span id="Step4"><span> (Implementing my `BasicCoin` module)
 
-We have created a Move package for you in folder `step_4` called `BasicCoin`. The `sources` folder contains source code for all your Move modules in the package, including `BasicCoin.move`. In this section, we will take a closer look at the implementation of the methods inside [`BasicCoin.move`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_4/sources/BasicCoin.move).
+We have created a Move package for you in folder `step_4` called `BasicCoin`. The `sources` folder contains source code for all your Move modules in the package, including `BasicCoin.move`. In this section, we will take a closer look at the implementation of the methods inside [`BasicCoin.move`](https://github.com/move-language/move/blob/main/language/documentation/tutorial/step_4/BasicCoin/sources/BasicCoin.move).
 
-我们已经在 `step_4` 文件夹上创建了名叫 `BasicCoin` 的 Move 包。`sources` 文件夹包含所有的 Move 包(package)的模块源码，包括 `BasicCoin.move`。 在本节中，我们将仔细研究[`BasicCoin.move`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_4/sources/BasicCoin.move)内部方法的实现。
+我们已经在 `step_4` 文件夹上创建了名叫 `BasicCoin` 的 Move 包。`sources` 文件夹包含所有的 Move 包(package)的模块源码，包括 `BasicCoin.move`。 在本节中，我们将仔细研究[`BasicCoin.move`](https://github.com/move-language/move/blob/main/language/documentation/tutorial/step_4/BasicCoin/sources/BasicCoin.move)内部方法的实现。
 
 ### 编译代码 (Compiling our code)
 

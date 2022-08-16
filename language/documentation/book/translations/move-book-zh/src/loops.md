@@ -213,4 +213,3 @@ If `loop` does not have a `break`, `loop` can have any type much like `return`, 
 (loop (): address);
 (loop (): &vector<vector<u8>>);
 ```
-

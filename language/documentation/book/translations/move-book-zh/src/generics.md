@@ -217,7 +217,7 @@ This genericity applies even when the `Currency` type parameter does not appear 
 
 在此示例中， `struct Coin<Currency>` 是类型参数为 `Currency` 的泛型结构体，它指定 `Coin` 的类型参数是 `Currency`，这样就允许代码选择是使用任意类型 `Currency` 或者是指定的具体类型 `Currency` 。即使 `Currency` 类型参数没有出现在定义的任何字段中，这种泛型性也适用结构体 `Coin`。
 
-### Phantom Type Parameters 
+### Phantom Type Parameters
 
 In the example above, although `struct Coin` asks for the `store` ability, neither `Coin<Currency1>` nor `Coin<Currency2>` will have the `store` ability.
 This is because of the rules for [Conditional Abilities and Generic Types](./abilities.md#conditional-abilities-and-generic-types) and the fact that `Currency1` and `Currency2` don't have the `store` ability, despite the fact that they are not even used in the body of `struct Coin`. 
@@ -246,7 +246,7 @@ Phantom 类型参数解决了这个问题。未使用的类型参数可以标记
 
 In a struct definition a type parameter can be declared as phantom by adding the `phantom` keyword before its declaration.
 If a type parameter is declared as phantom we say it is a phantom type parameter.
-When defining a struct, Move's type checker ensures that every phantom type parameter is either not used inside the struct definition 
+When defining a struct, Move's type checker ensures that every phantom type parameter is either not used inside the struct definition
 or it is only used as an argument to a phantom type parameter.
 
 `phantom` 在结构定义中，可以通过在声明之前添加关键字来将类型参数声明为幻影。如果一个类型参数被声明为 phantom，我们就说它是 phantom 类型参数。
@@ -272,7 +272,7 @@ struct S1<phantom T1, T2> { f: u64 }
 struct S2<phantom T1, T2> { f: S1<T1, T2> }
                                   ^^
                                   Ok: T1 appears in phantom position
-```      
+```
 
 The following code shows examples of violations of the rule:
 
@@ -288,7 +288,7 @@ struct S2<T> { f: T }
 struct S3<phantom T> { f: S2<T> }
                              ^
                              Error: Not a phantom position
-```                               
+```
 
 #### 实例化 (Instantiation)
 

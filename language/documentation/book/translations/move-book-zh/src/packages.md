@@ -59,6 +59,7 @@ Move将使用存在于`doc_templates` 目录的任何模板构建文档。
 
 
 ### 包清单 Move.toml
+
 The Move package manifest is defined within the `Move.toml` file and has the
 following syntax. Optional fields are marked with `*`, `+` denotes
 one or more elements:
@@ -70,20 +71,20 @@ Move 包清单在`Move.toml`文件中定义，并具有以下语法。可选字�
     version = "<uint>.<uint>.<uint>" # e.g., "0.1.1"
     license* = <string>              # e.g., "MIT", "GPL", "Apache 2.0"
     authors* = [<string>]            # e.g., ["Joe Smith (joesmith@noemail.com)", "Jane Smith (janesmith@noemail.com)"]
-    
+
     [addresses]  # (Optional section) Declares named addresses in this package and instantiates named addresses in the package graph
     # One or more lines declaring named addresses in the following format
     <addr_name> = "_" | "<hex_address>" # e.g., std = "_" or my_addr = "0xC0FFEECAFE"
-    
+
     [dependencies] # (Optional section) Paths to dependencies and instantiations or renamings of named addresses from each dependency
     # One or more lines declaring dependencies in the following format
     <string> = { local = <string>, addr_subst* = { (<string> = (<string> | "<hex_address>"))+ } } # local dependencies
     <string> = { git = <URL ending in .git>, subdir=<path to dir containing Move.toml inside git repo>, rev=<git commit hash>, addr_subst* = { (<string> = (<string> | "<hex_address>"))+ } } # git dependencies
-    
+
     [dev-addresses] # (Optional section) Same as [addresses] section, but only included in "dev" and "test" modes
     # One or more lines declaring dev named addresses in the following format
     <addr_name> = "_" | "<hex_address>" # e.g., std = "_" or my_addr = "0xC0FFEECAFE"
-    
+
     [dev-dependencies] # (Optional section) Same as [dependencies] section, but only included in "dev" and "test" modes
     # One or more lines declaring dev dependencies in the following format
     <string> = { local = <string>, addr_subst* = { (<string> = (<string> | <address>))+ } }
@@ -108,21 +109,21 @@ address value `0x1`:
     name = "AName"
     version = "0.0.0"
     license = "Apache 2.0"
-    
+
     [addresses]
     address_to_be_filled_in = "_"
     specified_address = "0xB0B"
-    
+
     [dependencies]
     # Local dependency
     LocalDep = { local = "projects/move-awesomeness", addr_subst = { "std" = "0x1" } }
     # Git dependency
     MoveStdlib = { git = "https://github.com/diem/diem.git", subdir="language/move-stdlib", rev = "56ab033cc403b489e891424a629e76f643d4fb6b" }
-    
+
     [dev-addresses] # For use when developing this module
     address_to_be_filled_in = "0x101010101"
-  ```  
-  
+  ```
+
 Most of the sections in the package manifest are self explanatory, but named
 addresses can be a bit difficult to understand so it's worth examining them in
 a bit more detail.
@@ -199,7 +200,7 @@ information about named addresses can flow in the package graph:
   from the importation site to the declaration site.
 * The latter ("assigned named addresses") allows named address values to flow
   from the declaration site upwards in the package graph to usage sites.
-  
+
 使用这两种不同的声明方法，有关命名地址的信息可以通过两种方式在包图中流动：
 *  前者（“未分配的命名地址”）允许命名地址值从进口站点流向申报站点。
 *  后者（“分配的命名地址”）允许命名地址值从包图中的声明站点向上流动到使用站点。
@@ -209,7 +210,7 @@ package graph the rules around scoping and renaming become important to
 understand.
 
 通过这两种在整个包图中流动命名地址信息的方法，了解范围和重命名的规则变得很重要。
-   
+
 ## 命名地址的作用域和重命名（Scoping and Renaming of Named Addresses）
 
 A named address `N` in a package `P` is in scope if:
@@ -217,12 +218,12 @@ A named address `N` in a package `P` is in scope if:
 2. A package in one of `P`'s transitive dependencies declares the named address
   `N` and there is a dependency path in the package graph between between `P` and the
   declaring package of `N` with no renaming of `N`.
-  
+
 在包`P`中的命名地址`N`如果满足以下条件，则在作用域内：
 
  1. 它声明了一个命名地址`N`；或者
  2. `P`的传递依赖项之一中的包声明了命名地址`N`，并且封装图在`P`和没有重命名的声明包`N`之间有一个依赖路径。
- 
+
  Additionally, every named address in a package is exported. Because of this and
 the above scoping rules each package can be viewed as coming with a set of
 named addresses that will be brought into scope when the package is imported,

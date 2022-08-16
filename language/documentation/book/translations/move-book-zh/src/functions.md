@@ -4,7 +4,7 @@ Function syntax in Move is shared between module functions and script functions.
 
 Move中的函数语法在模块函数和脚本函数之间是一致的。模块内部的函数可重复使用，而脚本的函数只能被使用一次用来调用事务。
 
-## 声明 (Declaration)
+# 声明 (Declaration)
 
 Functions are declared with the `fun` keyword followed by the function name, type parameters, parameters, a return type, acquires annotations, and finally the function body.
 

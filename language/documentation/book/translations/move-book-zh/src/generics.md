@@ -220,7 +220,7 @@ This genericity applies even when the `Currency` type parameter does not appear 
 ### Phantom Type Parameters
 
 In the example above, although `struct Coin` asks for the `store` ability, neither `Coin<Currency1>` nor `Coin<Currency2>` will have the `store` ability.
-This is because of the rules for [Conditional Abilities and Generic Types](./abilities.md#conditional-abilities-and-generic-types) and the fact that `Currency1` and `Currency2` don't have the `store` ability, despite the fact that they are not even used in the body of `struct Coin`. 
+This is because of the rules for [Conditional Abilities and Generic Types](./abilities.md#conditional-abilities-and-generic-types) and the fact that `Currency1` and `Currency2` don't have the `store` ability, despite the fact that they are not even used in the body of `struct Coin`.
 This might cause some unpleasant consequences.
 For example, we are unable to put `Coin<Currency1>` into a wallet in the global storage.
 

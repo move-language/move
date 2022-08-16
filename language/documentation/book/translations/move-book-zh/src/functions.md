@@ -59,7 +59,7 @@ A `public` function can be called by *any* function defined in *any* module or s
 - other functions defined in the same module,
 - functions defined in another module, or
 - the function defined in a script.
-  
+
 `public` 函数可以被任何模块或脚本中定义的任何函数调用。如以下示例所示，可以通过以下方式调用 `public` 函数：
 
 - 在同一模块中定义的其他函数

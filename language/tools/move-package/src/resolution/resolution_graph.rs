@@ -401,7 +401,8 @@ impl ResolvingGraph {
                 );
             }
         }
-        Self::download_and_update_if_repo(dep_name_in_pkg, &dep)?;
+
+        Self::download_and_update_if_remote(dep_name_in_pkg, &dep)?;
         let (dep_package, dep_package_dir) =
             Self::parse_package_manifest(&dep, &dep_name_in_pkg, root_path)
                 .with_context(|| format!("While processing dependency '{}'", dep_name_in_pkg))?;
@@ -548,7 +549,8 @@ impl ResolvingGraph {
                     );
                 }
             }
-            Self::download_and_update_if_repo(*dep_name, dep)?;
+
+            Self::download_and_update_if_remote(*dep_name, dep)?;
             let (dep_manifest, _) =
                 Self::parse_package_manifest(dep, dep_name, root_path.to_path_buf())
                     .with_context(|| format!("While processing dependency '{}'", *dep_name))?;
@@ -558,7 +560,7 @@ impl ResolvingGraph {
         Ok(())
     }
 
-    fn download_and_update_if_repo(dep_name: PackageName, dep: &Dependency) -> Result<()> {
+    fn download_and_update_if_remote(dep_name: PackageName, dep: &Dependency) -> Result<()> {
         if let Some(git_info) = &dep.git_info {
             if !git_info.download_to.exists() {
                 Command::new("git")
@@ -598,6 +600,7 @@ impl ResolvingGraph {
         if skip_movey {
             return;
         }
+
         let git_url = git_info.git_url.as_str().to_string();
         let git_rev = git_info.git_rev.as_str().to_string();
         let subdir = git_info.subdir.to_string_lossy().to_string();
@@ -867,7 +870,8 @@ mod tests {
     ) -> (Mock, GitInfo) {
         let git_url = Symbol::from("test git url");
         let git_rev = Symbol::from("test git rev");
-        let subdir = PathBuf::from("test subdir");
+        let test_subdir = "test_subdir";
+        let subdir = PathBuf::from(test_subdir);
         let git_info = GitInfo {
             git_url,
             git_rev,
@@ -879,7 +883,7 @@ mod tests {
                 .path("/api/v1/packages/count")
                 .x_www_form_urlencoded_tuple("url", git_info.git_url.as_str())
                 .x_www_form_urlencoded_tuple("rev", git_info.git_rev.as_str())
-                .x_www_form_urlencoded_tuple("subdir", "test subdir");
+                .x_www_form_urlencoded_tuple("subdir", test_subdir);
             then.status(status_code);
         });
 

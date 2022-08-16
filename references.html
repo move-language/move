@@ -216,7 +216,7 @@ This rule prevents the destruction of resource values:</p>
 <h2 id="freeze-inference"><a class="header" href="#freeze-inference"><code>freeze</code> inference</a></h2>
 <p>A mutable reference can be used in a context where an immutable reference is expected:</p>
 <pre><code class="language-move">let x = 7;
-let y: &amp;mut u64 = &amp;mut x;
+let y: &amp;u64 = &amp;mut x;
 </code></pre>
 <p>This works because the under the hood, the compiler inserts <code>freeze</code> instructions where they are
 needed. Here are a few more examples of <code>freeze</code> inference in action:</p>

@@ -94,7 +94,7 @@ A mutable reference can be used in a context where an immutable reference is exp
 
 ```move
 let x = 7;
-let y: &mut u64 = &mut x;
+let y: &u64 = &mut x;
 ```
 
 This works because the under the hood, the compiler inserts `freeze` instructions where they are

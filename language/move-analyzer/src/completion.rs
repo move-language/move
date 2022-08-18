@@ -2,10 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    context::Context,
-    symbols::{FunctionIdentTypeMap, Symbols},
-};
+use crate::{context::Context, symbols::Symbols};
 use lsp_server::Request;
 use lsp_types::{CompletionItem, CompletionItemKind, CompletionParams, Position};
 use move_command_line_common::files::FileHash;
@@ -13,7 +10,8 @@ use move_compiler::parser::{
     keywords::{BUILTINS, CONTEXTUAL_KEYWORDS, KEYWORDS, PRIMITIVE_TYPES},
     lexer::{Lexer, Tok},
 };
-use std::collections::HashSet;
+use move_symbol_pool::Symbol;
+use std::{collections::HashSet, path::PathBuf};
 
 /// Constructs an `lsp_types::CompletionItem` with the given `label` and `kind`.
 fn completion_item(label: &str, kind: CompletionItemKind) -> CompletionItem {
@@ -71,10 +69,7 @@ fn builtins() -> Vec<CompletionItem> {
 /// server did not initialize with a response indicating it's capable of providing completions. In
 /// the future, the server should be modified to return semantically valid completion items, not
 /// simple textual suggestions.
-fn identifiers(
-    buffer: &str,
-    function_use_def: Option<&FunctionIdentTypeMap>,
-) -> Vec<CompletionItem> {
+fn identifiers(buffer: &str, symbols: &Symbols, path: &PathBuf) -> Vec<CompletionItem> {
     let mut lexer = Lexer::new(buffer, FileHash::new(buffer));
     if lexer.advance().is_err() {
         return vec![];
@@ -98,12 +93,17 @@ fn identifiers(
         }
     }
 
+    let mods_opt = symbols.file_mods().get(path);
+
     // The completion item kind "text" indicates that the item is based on simple textual matching,
     // not any deeper semantic analysis.
     ids.iter()
         .map(|label| {
-            if let Some(fun_data) = function_use_def {
-                if fun_data.clone().contains_key(&label.to_string()) {
+            if let Some(mods) = mods_opt {
+                if mods
+                    .iter()
+                    .any(|m| m.functions().contains_key(&Symbol::from(*label)))
+                {
                     completion_item(label, CompletionItemKind::Function)
                 } else {
                     completion_item(label, CompletionItemKind::Text)
@@ -186,7 +186,7 @@ pub fn on_completion_request(context: &Context, request: &Request, symbols: &Sym
     }
 
     if let Some(buffer) = &buffer {
-        let identifiers = identifiers(buffer, symbols.get_file_functions().get(&path));
+        let identifiers = identifiers(buffer, symbols, &path);
         items.extend_from_slice(&identifiers);
     }
 

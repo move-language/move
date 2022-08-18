@@ -9,9 +9,15 @@ module extensions::table {
     const ENOT_FOUND: u64 = 101;
     const ENOT_EMPTY: u64 = 102;
 
+    /// Table handle, represents 32 bytes hash
+    struct TableHandle has store {
+        low: u128,
+        high: u128,
+    }
+
     /// Type of tables
     struct Table<phantom K: copy + drop, phantom V> has store {
-        handle: u128,
+        handle: TableHandle,
         length: u64,
     }
 
@@ -98,7 +104,7 @@ module extensions::table {
 
     // Primitives which take as an additional type parameter `Box<V>`, so the implementation
     // can use this to determine serialization layout.
-    native fun new_table_handle<K, V>(): u128;
+    native fun new_table_handle<K, V>(): TableHandle;
     native fun add_box<K: copy + drop, V, B>(table: &mut Table<K, V>, key: K, val: Box<V>);
     native fun borrow_box<K: copy + drop, V, B>(table: &Table<K, V>, key: K): &Box<V>;
     native fun borrow_box_mut<K: copy + drop, V, B>(table: &mut Table<K, V>, key: K): &mut Box<V>;

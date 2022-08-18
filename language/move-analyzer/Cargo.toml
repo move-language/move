@@ -11,6 +11,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.52"
 codespan-reporting = "0.11.1"
+derivative = "2.2.0"
 dunce = "1.0.2"
 im = "15.1.0"
 lsp-server = "0.5.1"

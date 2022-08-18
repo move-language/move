@@ -5,7 +5,7 @@
 use crate::natives::helpers::make_module_natives;
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::{
-    gas_algebra::{InternalGas, InternalGasPerAbstractMemoryUnit, InternalGasPerByte, NumBytes},
+    gas_algebra::{InternalGas, InternalGasPerByte, NumBytes},
     vm_status::sub_status::NFE_BCS_SERIALIZATION_FAILURE,
 };
 use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
@@ -30,10 +30,9 @@ use std::{collections::VecDeque, sync::Arc};
  **************************************************************************************************/
 #[derive(Debug, Clone)]
 pub struct ToBytesGasParameters {
-    pub input_unit_cost: InternalGasPerAbstractMemoryUnit,
-    pub output_unit_cost: InternalGasPerByte,
+    pub per_byte_serialized: InternalGasPerByte,
     pub legacy_min_output_size: NumBytes,
-    pub failure_cost: InternalGas,
+    pub failure: InternalGas,
 }
 
 /// Rust implementation of Move's `native public fun to_bytes<T>(&T): vector<u8>`
@@ -54,29 +53,23 @@ fn native_to_bytes(
     let arg_type = ty_args.pop().unwrap();
 
     // get type layout
-    if gas_params.input_unit_cost != 0.into() {
-        cost += gas_params.input_unit_cost * arg_type.size()
-    }
     let layout = match context.type_to_type_layout(&arg_type)? {
         Some(layout) => layout,
         None => {
-            cost += gas_params.failure_cost;
+            cost += gas_params.failure;
             return Ok(NativeResult::err(cost, NFE_BCS_SERIALIZATION_FAILURE));
         }
     };
     // serialize value
     let val = ref_to_val.read_ref()?;
-    if gas_params.input_unit_cost != 0.into() {
-        cost += gas_params.input_unit_cost * val.size()
-    }
     let serialized_value = match val.simple_serialize(&layout) {
         Some(serialized_value) => serialized_value,
         None => {
-            cost += gas_params.failure_cost;
+            cost += gas_params.failure;
             return Ok(NativeResult::err(cost, NFE_BCS_SERIALIZATION_FAILURE));
         }
     };
-    cost += gas_params.output_unit_cost
+    cost += gas_params.per_byte_serialized
         * std::cmp::max(
             NumBytes::new(serialized_value.len() as u64),
             gas_params.legacy_min_output_size,

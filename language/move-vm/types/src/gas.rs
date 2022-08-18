@@ -102,7 +102,7 @@ pub trait GasMeter {
         args: impl ExactSizeIterator<Item = impl ValueView>,
     ) -> PartialVMResult<()>;
 
-    fn charge_read_ref(&mut self, ref_val: impl ValueView) -> PartialVMResult<()>;
+    fn charge_read_ref(&mut self, val: impl ValueView) -> PartialVMResult<()>;
 
     fn charge_write_ref(&mut self, val: impl ValueView) -> PartialVMResult<()>;
 

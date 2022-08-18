@@ -22,8 +22,8 @@ use std::{collections::VecDeque, sync::Arc};
  **************************************************************************************************/
 #[derive(Debug, Clone)]
 pub struct Sha2_256GasParameters {
-    pub base_cost: InternalGas,
-    pub unit_cost: InternalGasPerByte,
+    pub base: InternalGas,
+    pub per_byte: InternalGasPerByte,
     pub legacy_min_input_len: NumBytes,
 }
 
@@ -39,8 +39,8 @@ fn native_sha2_256(
 
     let hash_arg = pop_arg!(arguments, Vec<u8>);
 
-    let cost = gas_params.base_cost
-        + gas_params.unit_cost
+    let cost = gas_params.base
+        + gas_params.per_byte
             * std::cmp::max(
                 NumBytes::new(hash_arg.len() as u64),
                 gas_params.legacy_min_input_len,
@@ -69,8 +69,8 @@ pub fn make_native_sha2_256(gas_params: Sha2_256GasParameters) -> NativeFunction
  **************************************************************************************************/
 #[derive(Debug, Clone)]
 pub struct Sha3_256GasParameters {
-    pub base_cost: InternalGas,
-    pub unit_cost: InternalGasPerByte,
+    pub base: InternalGas,
+    pub per_byte: InternalGasPerByte,
     pub legacy_min_input_len: NumBytes,
 }
 
@@ -86,8 +86,8 @@ fn native_sha3_256(
 
     let hash_arg = pop_arg!(arguments, Vec<u8>);
 
-    let cost = gas_params.base_cost
-        + gas_params.unit_cost
+    let cost = gas_params.base
+        + gas_params.per_byte
             * std::cmp::max(
                 NumBytes::new(hash_arg.len() as u64),
                 gas_params.legacy_min_input_len,

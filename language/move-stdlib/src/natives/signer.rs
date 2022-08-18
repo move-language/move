@@ -23,7 +23,7 @@ use std::{collections::VecDeque, sync::Arc};
  **************************************************************************************************/
 #[derive(Debug, Clone)]
 pub struct BorrowAddressGasParameters {
-    pub base_cost: InternalGas,
+    pub base: InternalGas,
 }
 
 #[inline]
@@ -39,7 +39,7 @@ fn native_borrow_address(
     let signer_reference = pop_arg!(arguments, SignerRef);
 
     Ok(NativeResult::ok(
-        gas_params.base_cost,
+        gas_params.base,
         smallvec![signer_reference.borrow_signer()?],
     ))
 }

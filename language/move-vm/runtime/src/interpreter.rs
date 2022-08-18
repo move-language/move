@@ -1027,7 +1027,7 @@ impl Frame {
                     }
                     Bytecode::ReadRef => {
                         let reference = interpreter.operand_stack.pop_as::<Reference>()?;
-                        gas_meter.charge_read_ref(&reference)?;
+                        gas_meter.charge_read_ref(reference.value_view())?;
                         let value = reference.read_ref()?;
                         interpreter.operand_stack.push(value)?;
                     }

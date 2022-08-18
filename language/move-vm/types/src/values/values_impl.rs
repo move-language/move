@@ -2,7 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{loaded_data::runtime_types::Type, views::ValueView};
+use crate::{
+    loaded_data::runtime_types::Type,
+    views::{ValueView, ValueVisitor},
+};
 use move_binary_format::{
     errors::*,
     file_format::{Constant, SignatureToken},
@@ -18,7 +21,6 @@ use std::{
     cell::RefCell,
     fmt::{self, Debug, Display},
     iter,
-    mem::size_of,
     rc::Rc,
 };
 
@@ -106,25 +108,6 @@ enum ReferenceImpl {
     ContainerRef(ContainerRef),
 }
 
-// A reference to a signer. Clients can attempt a cast to this struct if they are
-// expecting a Signer on the stack or as an argument.
-#[derive(Debug)]
-pub struct SignerRef(ContainerRef);
-
-// A reference to a vector. This is an alias for a ContainerRef for now but we may change
-// it once Containers are restructured.
-// It's used from vector native functions to get a reference to a vector and operate on that.
-// There is an impl for VectorRef which implements the API private to this module.
-#[derive(Debug)]
-pub struct VectorRef(ContainerRef);
-
-// A vector. This is an alias for a Container for now but we may change
-// it once Containers are restructured.
-// It's used from vector native functions to get a vector and operate on that.
-// There is an impl for Vector which implements the API private to this module.
-#[derive(Debug)]
-pub struct Vector(Container);
-
 /***************************************************************************************
  *
  * Public Types
@@ -140,24 +123,10 @@ pub struct Vector(Container);
  *   internal invariants are violated.
  *
  **************************************************************************************/
-
-/// A reference to a Move struct that allows you to take a reference to one of its fields.
-#[derive(Debug)]
-pub struct StructRef(ContainerRef);
-
-/// A generic Move reference that offers two functionalities: read_ref & write_ref.
-#[derive(Debug)]
-pub struct Reference(ReferenceImpl);
-
 /// A Move value -- a wrapper around `ValueImpl` which can be created only through valid
 /// means.
 #[derive(Debug)]
 pub struct Value(ValueImpl);
-
-/// The locals for a function frame. It allows values to be read, written or taken
-/// reference from.
-#[derive(Debug)]
-pub struct Locals(Rc<RefCell<Vec<ValueImpl>>>);
 
 /// An integer value in Move.
 #[derive(Debug)]
@@ -172,6 +141,33 @@ pub enum IntegerValue {
 pub struct Struct {
     fields: Vec<ValueImpl>,
 }
+
+// A vector. This is an alias for a Container for now but we may change
+// it once Containers are restructured.
+// It's used from vector native functions to get a vector and operate on that.
+// There is an impl for Vector which implements the API private to this module.
+#[derive(Debug)]
+pub struct Vector(Container);
+
+/// A reference to a Move struct that allows you to take a reference to one of its fields.
+#[derive(Debug)]
+pub struct StructRef(ContainerRef);
+
+/// A generic Move reference that offers two functionalities: read_ref & write_ref.
+#[derive(Debug)]
+pub struct Reference(ReferenceImpl);
+
+// A reference to a signer. Clients can attempt a cast to this struct if they are
+// expecting a Signer on the stack or as an argument.
+#[derive(Debug)]
+pub struct SignerRef(ContainerRef);
+
+// A reference to a vector. This is an alias for a ContainerRef for now but we may change
+// it once Containers are restructured.
+// It's used from vector native functions to get a reference to a vector and operate on that.
+// There is an impl for VectorRef which implements the API private to this module.
+#[derive(Debug)]
+pub struct VectorRef(ContainerRef);
 
 /// A special "slot" in global storage that can hold a resource. It also keeps track of the status
 /// of the resource relative to the global state, which is necessary to compute the effects to emit
@@ -196,6 +192,11 @@ enum GlobalValueImpl {
 /// hold a resource.
 #[derive(Debug)]
 pub struct GlobalValue(GlobalValueImpl);
+
+/// The locals for a function frame. It allows values to be read, written or taken
+/// reference from.
+#[derive(Debug)]
+pub struct Locals(Rc<RefCell<Vec<ValueImpl>>>);
 
 /***************************************************************************************
  *
@@ -1812,114 +1813,116 @@ impl Vector {
 
 /***************************************************************************************
  *
- * Gas
+ * Abstract Memory Size
  *
- *   Abstract memory sizes of the VM values.
- *   This should be deprecated soon.
+ *   TODO(Gas): This is the oldest implementation of abstract memory size.
+ *              It is now kept only as a reference impl, which is used to ensure
+ *              the new implementation is fully backward compatible.
+ *              We should be able to get this removed after we use the new impl
+ *              for a while and gain enough confidence in that.
  *
  **************************************************************************************/
 
 /// The size in bytes for a non-string or address constant on the stack
-const LEGACY_CONST_SIZE: AbstractMemorySize = AbstractMemorySize::new(16);
+pub(crate) const LEGACY_CONST_SIZE: AbstractMemorySize = AbstractMemorySize::new(16);
 
 /// The size in bytes for a reference on the stack
-const LEGACY_REFERENCE_SIZE: AbstractMemorySize = AbstractMemorySize::new(8);
+pub(crate) const LEGACY_REFERENCE_SIZE: AbstractMemorySize = AbstractMemorySize::new(8);
 
 /// The size of a struct in bytes
-const LEGACY_STRUCT_SIZE: AbstractMemorySize = AbstractMemorySize::new(2);
-
-/// For exists checks on data that doesn't exists this is the multiplier that is used.
-const LEGACY_MIN_EXISTS_DATA_SIZE: AbstractMemorySize = AbstractMemorySize::new(100);
+pub(crate) const LEGACY_STRUCT_SIZE: AbstractMemorySize = AbstractMemorySize::new(2);
 
 impl Container {
-    fn size(&self) -> AbstractMemorySize {
+    #[cfg(test)]
+    fn legacy_size(&self) -> AbstractMemorySize {
         match self {
-            Self::Locals(r) | Self::Vec(r) | Self::Struct(r) => Struct::size_impl(&*r.borrow()),
-            Self::VecU8(r) => AbstractMemorySize::new((r.borrow().len() * size_of::<u8>()) as u64),
+            Self::Locals(r) | Self::Vec(r) | Self::Struct(r) => {
+                Struct::legacy_size_impl(&*r.borrow())
+            }
+            Self::VecU8(r) => {
+                AbstractMemorySize::new((r.borrow().len() * std::mem::size_of::<u8>()) as u64)
+            }
             Self::VecU64(r) => {
-                AbstractMemorySize::new((r.borrow().len() * size_of::<u64>()) as u64)
+                AbstractMemorySize::new((r.borrow().len() * std::mem::size_of::<u64>()) as u64)
             }
             Self::VecU128(r) => {
-                AbstractMemorySize::new((r.borrow().len() * size_of::<u128>()) as u64)
+                AbstractMemorySize::new((r.borrow().len() * std::mem::size_of::<u128>()) as u64)
             }
             Self::VecBool(r) => {
-                AbstractMemorySize::new((r.borrow().len() * size_of::<bool>()) as u64)
+                AbstractMemorySize::new((r.borrow().len() * std::mem::size_of::<bool>()) as u64)
             }
-            Self::VecAddress(r) => {
-                AbstractMemorySize::new((r.borrow().len() * size_of::<AccountAddress>()) as u64)
-            }
+            Self::VecAddress(r) => AbstractMemorySize::new(
+                (r.borrow().len() * std::mem::size_of::<AccountAddress>()) as u64,
+            ),
         }
     }
 }
 
 impl ContainerRef {
-    fn size(&self) -> AbstractMemorySize {
+    #[cfg(test)]
+    fn legacy_size(&self) -> AbstractMemorySize {
         LEGACY_REFERENCE_SIZE
     }
 }
 
 impl IndexedRef {
-    fn size(&self) -> AbstractMemorySize {
+    #[cfg(test)]
+    fn legacy_size(&self) -> AbstractMemorySize {
         LEGACY_REFERENCE_SIZE
     }
 }
 
 impl ValueImpl {
-    fn size(&self) -> AbstractMemorySize {
+    #[cfg(test)]
+    fn legacy_size(&self) -> AbstractMemorySize {
         use ValueImpl::*;
 
         match self {
             Invalid | U8(_) | U64(_) | U128(_) | Bool(_) => LEGACY_CONST_SIZE,
             Address(_) => AbstractMemorySize::new(AccountAddress::LENGTH as u64),
-            ContainerRef(r) => r.size(),
-            IndexedRef(r) => r.size(),
+            ContainerRef(r) => r.legacy_size(),
+            IndexedRef(r) => r.legacy_size(),
             // TODO: in case the borrow fails the VM will panic.
-            Container(c) => c.size(),
+            Container(c) => c.legacy_size(),
         }
     }
 }
 
 impl Struct {
-    fn size_impl(fields: &[ValueImpl]) -> AbstractMemorySize {
+    #[cfg(test)]
+    fn legacy_size_impl(fields: &[ValueImpl]) -> AbstractMemorySize {
         fields
             .iter()
-            .fold(LEGACY_STRUCT_SIZE, |acc, v| acc + v.size())
+            .fold(LEGACY_STRUCT_SIZE, |acc, v| acc + v.legacy_size())
     }
 
-    pub fn size(&self) -> AbstractMemorySize {
-        Self::size_impl(&self.fields)
+    #[cfg(test)]
+    pub(crate) fn legacy_size(&self) -> AbstractMemorySize {
+        Self::legacy_size_impl(&self.fields)
     }
 }
 
 impl Value {
-    pub fn size(&self) -> AbstractMemorySize {
-        self.0.size()
+    #[cfg(test)]
+    pub(crate) fn legacy_size(&self) -> AbstractMemorySize {
+        self.0.legacy_size()
     }
 }
 
 impl ReferenceImpl {
-    fn size(&self) -> AbstractMemorySize {
+    #[cfg(test)]
+    fn legacy_size(&self) -> AbstractMemorySize {
         match self {
-            Self::ContainerRef(r) => r.size(),
-            Self::IndexedRef(r) => r.size(),
+            Self::ContainerRef(r) => r.legacy_size(),
+            Self::IndexedRef(r) => r.legacy_size(),
         }
     }
 }
 
 impl Reference {
-    pub fn size(&self) -> AbstractMemorySize {
-        self.0.size()
-    }
-}
-
-impl GlobalValue {
-    pub fn size(&self) -> AbstractMemorySize {
-        // REVIEW: this doesn't seem quite right. Consider changing it to
-        // a constant positive size or better, something proportional to the size of the value.
-        match &self.0 {
-            GlobalValueImpl::Fresh { .. } | GlobalValueImpl::Cached { .. } => LEGACY_REFERENCE_SIZE,
-            GlobalValueImpl::Deleted | GlobalValueImpl::None => LEGACY_MIN_EXISTS_DATA_SIZE,
-        }
+    #[cfg(test)]
+    pub(crate) fn legacy_size(&self) -> AbstractMemorySize {
+        self.0.legacy_size()
     }
 }
 
@@ -2671,17 +2674,171 @@ impl Value {
 * Views
 *
 **************************************************************************************/
+impl Container {
+    fn visit_impl(&self, visitor: &mut impl ValueVisitor, depth: usize) {
+        use Container::*;
+
+        match self {
+            Locals(_) => unreachable!("Should not ba able to visit a Locals container directly"),
+            Vec(r) => {
+                let r = r.borrow();
+                if visitor.visit_vec(depth, r.len()) {
+                    for val in r.iter() {
+                        val.visit_impl(visitor, depth + 1);
+                    }
+                }
+            }
+            Struct(r) => {
+                let r = r.borrow();
+                if visitor.visit_struct(depth, r.len()) {
+                    for val in r.iter() {
+                        val.visit_impl(visitor, depth + 1);
+                    }
+                }
+            }
+            VecU8(r) => visitor.visit_vec_u8(depth, &*r.borrow()),
+            VecU64(r) => visitor.visit_vec_u64(depth, &*r.borrow()),
+            VecU128(r) => visitor.visit_vec_u128(depth, &*r.borrow()),
+            VecBool(r) => visitor.visit_vec_bool(depth, &*r.borrow()),
+            VecAddress(r) => visitor.visit_vec_address(depth, &*r.borrow()),
+        }
+    }
+
+    fn visit_indexed(&self, visitor: &mut impl ValueVisitor, depth: usize, idx: usize) {
+        use Container::*;
+
+        match self {
+            Locals(r) | Vec(r) | Struct(r) => r.borrow()[idx].visit_impl(visitor, depth + 1),
+            VecU8(vals) => visitor.visit_u8(depth + 1, vals.borrow()[idx]),
+            VecU64(vals) => visitor.visit_u64(depth + 1, vals.borrow()[idx]),
+            VecU128(vals) => visitor.visit_u128(depth + 1, vals.borrow()[idx]),
+            VecBool(vals) => visitor.visit_bool(depth + 1, vals.borrow()[idx]),
+            VecAddress(vals) => visitor.visit_address(depth + 1, vals.borrow()[idx]),
+        }
+    }
+}
+
+impl ContainerRef {
+    fn visit_impl(&self, visitor: &mut impl ValueVisitor, depth: usize) {
+        use ContainerRef::*;
+
+        let (container, is_global) = match self {
+            Local(container) => (container, false),
+            Global { container, .. } => (container, false),
+        };
+
+        if visitor.visit_ref(depth, is_global) {
+            container.visit_impl(visitor, depth + 1);
+        }
+    }
+}
+
+impl IndexedRef {
+    fn visit_impl(&self, visitor: &mut impl ValueVisitor, depth: usize) {
+        use ContainerRef::*;
+
+        let (container, is_global) = match &self.container_ref {
+            Local(container) => (container, false),
+            Global { container, .. } => (container, false),
+        };
+
+        if visitor.visit_ref(depth, is_global) {
+            container.visit_indexed(visitor, depth, self.idx)
+        }
+    }
+}
+
+impl ValueImpl {
+    fn visit_impl(&self, visitor: &mut impl ValueVisitor, depth: usize) {
+        use ValueImpl::*;
+
+        match self {
+            Invalid => unreachable!("Should not be able to visit an invalid value"),
+
+            U8(val) => visitor.visit_u8(depth, *val),
+            U64(val) => visitor.visit_u64(depth, *val),
+            U128(val) => visitor.visit_u128(depth, *val),
+            Bool(val) => visitor.visit_bool(depth, *val),
+            Address(val) => visitor.visit_address(depth, *val),
+
+            Container(c) => c.visit_impl(visitor, depth),
+
+            ContainerRef(r) => r.visit_impl(visitor, depth),
+            IndexedRef(r) => r.visit_impl(visitor, depth),
+        }
+    }
+}
+
 impl ValueView for ValueImpl {
-    fn legacy_abstract_memory_size(&self) -> AbstractMemorySize {
-        self.size()
+    fn visit(&self, visitor: &mut impl ValueVisitor) {
+        self.visit_impl(visitor, 0)
     }
 }
 
 impl ValueView for Value {
-    fn legacy_abstract_memory_size(&self) -> AbstractMemorySize {
-        self.0.legacy_abstract_memory_size()
+    fn visit(&self, visitor: &mut impl ValueVisitor) {
+        self.0.visit(visitor)
     }
 }
+
+impl ValueView for Struct {
+    fn visit(&self, visitor: &mut impl ValueVisitor) {
+        if visitor.visit_struct(0, self.fields.len()) {
+            for val in self.fields.iter() {
+                val.visit_impl(visitor, 1);
+            }
+        }
+    }
+}
+
+impl ValueView for Vector {
+    fn visit(&self, visitor: &mut impl ValueVisitor) {
+        self.0.visit_impl(visitor, 0)
+    }
+}
+
+impl ValueView for IntegerValue {
+    fn visit(&self, visitor: &mut impl ValueVisitor) {
+        use IntegerValue::*;
+
+        match self {
+            U8(val) => visitor.visit_u8(0, *val),
+            U64(val) => visitor.visit_u64(0, *val),
+            U128(val) => visitor.visit_u128(0, *val),
+        }
+    }
+}
+
+impl ValueView for Reference {
+    fn visit(&self, visitor: &mut impl ValueVisitor) {
+        use ReferenceImpl::*;
+
+        match &self.0 {
+            ContainerRef(r) => r.visit_impl(visitor, 0),
+            IndexedRef(r) => r.visit_impl(visitor, 0),
+        }
+    }
+}
+
+impl ValueView for VectorRef {
+    fn visit(&self, visitor: &mut impl ValueVisitor) {
+        self.0.visit_impl(visitor, 0)
+    }
+}
+
+impl ValueView for StructRef {
+    fn visit(&self, visitor: &mut impl ValueVisitor) {
+        self.0.visit_impl(visitor, 0)
+    }
+}
+
+impl ValueView for SignerRef {
+    fn visit(&self, visitor: &mut impl ValueVisitor) {
+        self.0.visit_impl(visitor, 0)
+    }
+}
+
+// Note: We may want to add more helpers to retrieve value views behind references here.
 
 impl Struct {
     #[allow(clippy::needless_lifetimes)]
@@ -2690,9 +2847,23 @@ impl Struct {
     }
 }
 
-impl ValueView for Reference {
-    fn legacy_abstract_memory_size(&self) -> AbstractMemorySize {
-        self.size()
+impl Reference {
+    #[allow(clippy::needless_lifetimes)]
+    pub fn value_view<'a>(&'a self) -> impl ValueView + 'a {
+        struct ValueBehindRef<'b>(&'b ReferenceImpl);
+
+        impl<'b> ValueView for ValueBehindRef<'b> {
+            fn visit(&self, visitor: &mut impl ValueVisitor) {
+                use ReferenceImpl::*;
+
+                match self.0 {
+                    ContainerRef(r) => r.container().visit_impl(visitor, 0),
+                    IndexedRef(r) => r.container_ref.container().visit_indexed(visitor, 0, r.idx),
+                }
+            }
+        }
+
+        ValueBehindRef(&self.0)
     }
 }
 
@@ -2704,8 +2875,13 @@ impl GlobalValue {
         struct Wrapper<'b>(&'b Rc<RefCell<Vec<ValueImpl>>>);
 
         impl<'b> ValueView for Wrapper<'b> {
-            fn legacy_abstract_memory_size(&self) -> AbstractMemorySize {
-                Struct::size_impl(&*self.0.borrow())
+            fn visit(&self, visitor: &mut impl ValueVisitor) {
+                let r = self.0.borrow();
+                if visitor.visit_struct(0, r.len()) {
+                    for val in r.iter() {
+                        val.visit_impl(visitor, 1);
+                    }
+                }
             }
         }
 

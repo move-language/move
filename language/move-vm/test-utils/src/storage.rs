@@ -18,8 +18,7 @@ use std::{
 #[cfg(feature = "table-extension")]
 use {
     anyhow::Error,
-    move_core_types::gas_algebra::InternalGas,
-    move_table_extension::{TableChangeSet, TableHandle, TableOperation, TableResolver},
+    move_table_extension::{TableChangeSet, TableHandle, TableResolver},
 };
 
 /// A dummy storage containing no modules or resources.
@@ -60,15 +59,6 @@ impl TableResolver for BlankStorage {
         _key: &[u8],
     ) -> Result<Option<Vec<u8>>, Error> {
         Ok(None)
-    }
-
-    fn operation_cost(
-        &self,
-        _op: TableOperation,
-        _key_size: usize,
-        _val_size: usize,
-    ) -> InternalGas {
-        1.into()
     }
 }
 
@@ -121,11 +111,6 @@ impl<'a, 'b, S: TableResolver> TableResolver for DeltaStorage<'a, 'b, S> {
     ) -> std::result::Result<Option<Vec<u8>>, Error> {
         // TODO: No support for table deltas
         self.base.resolve_table_entry(handle, key)
-    }
-
-    fn operation_cost(&self, op: TableOperation, key_size: usize, val_size: usize) -> InternalGas {
-        // TODO: No support for table deltas
-        self.base.operation_cost(op, key_size, val_size)
     }
 }
 
@@ -333,14 +318,5 @@ impl TableResolver for InMemoryStorage {
         key: &[u8],
     ) -> std::result::Result<Option<Vec<u8>>, Error> {
         Ok(self.tables.get(handle).and_then(|t| t.get(key).cloned()))
-    }
-
-    fn operation_cost(
-        &self,
-        _op: TableOperation,
-        _key_size: usize,
-        _val_size: usize,
-    ) -> InternalGas {
-        1.into()
     }
 }

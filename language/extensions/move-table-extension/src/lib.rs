@@ -21,14 +21,13 @@ use move_vm_types::{
     loaded_data::runtime_types::Type,
     natives::function::NativeResult,
     pop_arg,
-    values::{GlobalValue, Reference, Struct, StructRef, Value},
+    values::{GlobalValue, Reference, StructRef, Value},
 };
 use sha3::{Digest, Sha3_256};
 use smallvec::smallvec;
 use std::{
     cell::RefCell,
     collections::{btree_map::Entry, BTreeMap, BTreeSet, VecDeque},
-    convert::TryInto,
     fmt::Display,
     sync::Arc,
 };
@@ -40,14 +39,11 @@ use std::{
 /// hash over a transaction hash provided by the environment and a table creation counter
 /// local to the transaction.
 #[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
-pub struct TableHandle {
-    pub low: u128,
-    pub high: u128,
-}
+pub struct TableHandle(pub AccountAddress);
 
 impl Display for TableHandle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "T-{:X}{:X}", self.low, self.high)
+        writeln!(f, "T-{:X}", self.0)
     }
 }
 
@@ -149,10 +145,6 @@ struct Table {
 
 /// The field index of the `handle` field in the `Table` Move struct.
 const HANDLE_FIELD_INDEX: usize = 0;
-
-/// The field index of the `low`, `high` field in the `TableHandle` Move struct.
-const HANDLE_LOW_BITS_INDEX: usize = 0;
-const HANDLE_HIGH_BITS_INDEX: usize = 1;
 
 // =========================================================================================
 // Implementation of Native Table Context
@@ -394,26 +386,20 @@ fn native_new_table_handle(
     Digest::update(&mut digest, table_context.txn_hash.to_be_bytes());
     Digest::update(&mut digest, table_data.new_tables.len().to_be_bytes());
     let bytes = digest.finalize().to_vec();
-    let low = u128::from_le_bytes(bytes[0..16].try_into().unwrap());
-    let high = u128::from_le_bytes(bytes[16..32].try_into().unwrap());
+    let handle = AccountAddress::from_bytes(&bytes[0..AccountAddress::LENGTH])
+        .map_err(|_| partial_extension_error("Unable to create table handle"))?;
     let key_type = context.type_to_type_tag(&ty_args[0])?;
     let value_type = context.type_to_type_tag(&ty_args[1])?;
     assert!(table_data
         .new_tables
-        .insert(
-            TableHandle { low, high },
-            TableInfo::new(key_type, value_type)
-        )
+        .insert(TableHandle(handle), TableInfo::new(key_type, value_type))
         .is_none());
 
     Ok(NativeResult::ok(
         table_context
             .resolver
             .operation_cost(TableOperation::NewHandle, 0, 0),
-        smallvec![Value::struct_(Struct::pack(vec![
-            Value::u128(low),
-            Value::u128(high),
-        ]))],
+        smallvec![Value::address(handle)],
     ))
 }
 
@@ -558,20 +544,12 @@ fn native_drop_unchecked_box(
 // Helpers
 
 fn get_table_handle(table: &StructRef) -> PartialVMResult<TableHandle> {
-    let handle_ref = table
+    let handle = table
         .borrow_field(HANDLE_FIELD_INDEX)?
-        .value_as::<StructRef>()?;
-    let low = handle_ref
-        .borrow_field(HANDLE_LOW_BITS_INDEX)?
         .value_as::<Reference>()?
         .read_ref()?
-        .value_as::<u128>()?;
-    let high = handle_ref
-        .borrow_field(HANDLE_HIGH_BITS_INDEX)?
-        .value_as::<Reference>()?
-        .read_ref()?
-        .value_as::<u128>()?;
-    Ok(TableHandle { low, high })
+        .value_as::<AccountAddress>()?;
+    Ok(TableHandle(handle))
 }
 
 fn serialize(layout: &MoveTypeLayout, val: &Value) -> PartialVMResult<Vec<u8>> {

@@ -28,4 +28,3 @@ tempfile = "3.2.0"
 #file_diff = "1.0.0"
 move-cli = { path = "../../tools/move-cli" }
 move-package = { path = "../../tools/move-package" }
-serde = "1.0.143"

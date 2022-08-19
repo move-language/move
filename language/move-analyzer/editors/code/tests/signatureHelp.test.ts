@@ -103,8 +103,8 @@ Mocha.suite('textDocument/signatureHelp', () => {
 
     assert.strictEqual(atCommaSignatureHelp.activeParameter, 1);
     assert.ok(atCommaSignatureHelp.signatures[0]);
-    assert.strictEqual(atCommaSignatureHelp.signatures[0].label, 'fun Symbols::Completions::add(u64, u64): u64');
-    assert.deepStrictEqual(atCommaSignatureHelp.signatures[0].parameters, [{ label: [30, 33] }, { label: [35, 38] }]);
+    assert.strictEqual(atCommaSignatureHelp.signatures[0].label, 'fun Symbols::Completions::add(a: u64, b: u64): u64');
+    assert.deepStrictEqual(atCommaSignatureHelp.signatures[0].parameters, [{ label: [30, 36] }, { label: [38, 44] }]);
 
     const preCommaParams: lc.SignatureHelpParams = {
       textDocument: {
@@ -124,8 +124,8 @@ Mocha.suite('textDocument/signatureHelp', () => {
 
     assert.strictEqual(preCommaSignatureHelp.activeParameter, 0);
     assert.ok(preCommaSignatureHelp.signatures[0]);
-    assert.strictEqual(preCommaSignatureHelp.signatures[0].label, 'fun Symbols::Completions::add(u64, u64): u64');
-    assert.deepStrictEqual(preCommaSignatureHelp.signatures[0].parameters, [{ label: [30, 33] }, { label: [35, 38] }]);
+    assert.strictEqual(preCommaSignatureHelp.signatures[0].label, 'fun Symbols::Completions::add(a: u64, b: u64): u64');
+    assert.deepStrictEqual(preCommaSignatureHelp.signatures[0].parameters, [{ label: [30, 36] }, { label: [38, 44] }]);
   });
 
   Mocha.test('Nested functions', async () => {
@@ -163,8 +163,11 @@ Mocha.suite('textDocument/signatureHelp', () => {
 
     assert.strictEqual(oneLvlFnSignatureHelp.activeParameter, 0);
     assert.ok(oneLvlFnSignatureHelp.signatures[0]);
-    assert.strictEqual(oneLvlFnSignatureHelp.signatures[0].label, 'fun Symbols::Completions::subtract(u64, u64): u64');
-    assert.deepStrictEqual(oneLvlFnSignatureHelp.signatures[0].parameters, [{ label: [35, 38] }, { label: [40, 43] }]);
+    assert.strictEqual(
+      oneLvlFnSignatureHelp.signatures[0].label,
+      'fun Symbols::Completions::subtract(a: u64, b: u64): u64',
+    );
+    assert.deepStrictEqual(oneLvlFnSignatureHelp.signatures[0].parameters, [{ label: [35, 41] }, { label: [43, 49] }]);
 
     const twoLvlFnParams: lc.SignatureHelpParams = {
       textDocument: {
@@ -185,7 +188,10 @@ Mocha.suite('textDocument/signatureHelp', () => {
 
     assert.strictEqual(twoLvlFnSignatureHelp.activeParameter, 0);
     assert.ok(twoLvlFnSignatureHelp.signatures[0]);
-    assert.strictEqual(twoLvlFnSignatureHelp.signatures[0].label, 'fun Symbols::Completions::divide(u64, u64): u64');
-    assert.deepStrictEqual(twoLvlFnSignatureHelp.signatures[0].parameters, [{ label: [33, 36] }, { label: [38, 41] }]);
+    assert.strictEqual(
+      twoLvlFnSignatureHelp.signatures[0].label,
+      'fun Symbols::Completions::divide(a: u64, b: u64): u64',
+    );
+    assert.deepStrictEqual(twoLvlFnSignatureHelp.signatures[0].parameters, [{ label: [33, 39] }, { label: [41, 47] }]);
   });
 });

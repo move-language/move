@@ -589,10 +589,6 @@ impl FunctionIdentTypeMap {
         self.0.entry(key).or_insert_with(|| val);
     }
 
-    fn get(&self, key: &String) -> Option<&IdentType> {
-        self.0.get(key)
-    }
-
     pub fn contains_key(self, key: &String) -> bool {
         self.0.contains_key(key)
     }
@@ -2296,7 +2292,7 @@ fn find_active_parameter<'a>(
 
 fn collect_parameter_info_from_ident(ident: &IdentType) -> Vec<ParameterInformation> {
     match ident {
-        IdentType::FunctionType(_, _, _, args, _, _) => {
+        IdentType::FunctionType(_, _, _, arg_names, arg_types, _, _) => {
             // Compute the label offsets of the parameters
             let signature_label = format!("{}", ident);
             let signature_split = signature_label.split("(").collect::<Vec<_>>();
@@ -2305,8 +2301,10 @@ fn collect_parameter_info_from_ident(ident: &IdentType) -> Vec<ParameterInformat
             let start_offset = signature_split.get(0).unwrap().len() + 1;
             let mut accum_args_len = 0;
 
-            args.iter()
-                .map(type_to_ide_string)
+            arg_names
+                .iter()
+                .zip(arg_types.iter())
+                .map(|(n, t)| format!("{}: {}", n, type_to_ide_string(t)))
                 .map(|arg| {
                     let start_idx = start_offset + accum_args_len;
                     let end_idx = start_idx + arg.len();
@@ -2390,49 +2388,62 @@ pub fn on_signature_help_request(context: &Context, request: &Request, symbols: 
         find_closet_fn_in_text_info_vec(cursor_idx_in_parsed_line, &parsed_line)
             .unwrap_or_default();
 
-    let empty_function_ident = &FunctionIdentTypeMap::new();
+    let empty_module_defs = &BTreeSet::new();
 
-    let function_ident = symbols
-        .file_functions
+    let mod_defs = &symbols
+        .file_mods()
         .get(&fpath)
-        .unwrap_or(empty_function_ident)
-        .get(&fn_text_info.text.to_string());
+        .unwrap_or(empty_module_defs)
+        .iter()
+        .find(|m| m.functions().contains_key(&Symbol::from(fn_text_info.text)));
+
+    if mod_defs.is_none() {
+        return;
+    }
+
+    let mod_fun = mod_defs
+        .unwrap()
+        .functions()
+        .iter()
+        .find(|(function_name, _)| *function_name == &Symbol::from(fn_text_info.text));
+
+    if mod_fun.is_none() {
+        return;
+    }
+
+    // @todo handle the edge cases where the current function can belong to other modules
+    let function_ident = &mod_fun.unwrap().1.ident_type;
 
     // Add 2 to the function index because we want to start 1 position to the right of the left parenthesis
     // Add 1 to cursor_idx_in_parsed_line to include the character of the current cursor position
     let active_parameter =
         find_active_parameter(fn_idx + 2, cursor_idx_in_parsed_line + 1, &parsed_line);
 
-    match function_ident {
-        // Send the signature help response back to the language client
-        Some(ident) => {
-            // Compute the label offsets of the parameters
-            let signature_label = format!("{}", ident);
-            let parameter_label_offsets = collect_parameter_info_from_ident(ident);
+    // Send the signature help response back to the language client
+    // Compute the label offsets of the parameters
+    let signature_label = format!("{}", function_ident);
+    let parameter_label_offsets = collect_parameter_info_from_ident(&function_ident);
 
-            let signature_help = SignatureHelp {
-                signatures: vec![SignatureInformation {
-                    label: signature_label,
-                    documentation: None,
-                    parameters: Some(parameter_label_offsets),
-                    active_parameter: Some(active_parameter),
-                }],
-                // We only have one signature so the active signature is always at index 0
-                active_signature: Some(0),
-                // Setting the active parameter here is more reliable than SignatureInformation.active_parameter
-                active_parameter: Some(active_parameter),
-            };
+    let signature_help = SignatureHelp {
+        signatures: vec![SignatureInformation {
+            label: signature_label,
+            documentation: None,
+            parameters: Some(parameter_label_offsets),
+            active_parameter: Some(active_parameter),
+        }],
+        // We only have one signature so the active signature is always at index 0
+        active_signature: Some(0),
+        // Setting the active parameter here is more reliable than SignatureInformation.active_parameter
+        active_parameter: Some(active_parameter),
+    };
 
-            let response = lsp_server::Response::new_ok(request.id.clone(), signature_help);
-            if let Err(err) = context
-                .connection
-                .sender
-                .send(lsp_server::Message::Response(response))
-            {
-                eprintln!("could not send signature help response: {:?}", err);
-            }
-        }
-        None => {}
+    let response = lsp_server::Response::new_ok(request.id.clone(), signature_help);
+    if let Err(err) = context
+        .connection
+        .sender
+        .send(lsp_server::Message::Response(response))
+    {
+        eprintln!("could not send signature help response: {:?}", err);
     }
 }
 

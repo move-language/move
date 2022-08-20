@@ -2356,6 +2356,23 @@ fn collect_parameter_info_from_ident(ident: &IdentType) -> Vec<ParameterInformat
 }
 
 /// Handle the signature help request from the client.
+/// 
+/// The high-level overview of the function works as the following:
+/// 
+/// 1. Find the current line content and parse it using the lexer to get a list of valid tokens.
+/// 2. Check if the current cursor position is out of bounds, if so, make the signature help
+/// popup disappear by sending an empty signature help response.
+/// 3. Find the index of the current cursor position in the parsed line.
+/// 4. Find which function scope the current cursor belongs to on the current line.
+/// 5. Find the module definition in the current file that contains the function name.
+/// 6. Find the function ident and the active parameter given the current cursor position.
+/// 7. Construct the SignatureHelp result and send the response back to the vs-code client.
+/// 
+/// Note: the current implementation doesn't handle the case where there are more than one modules
+/// in one file that has the same function definition. To handle this case, we need to find out
+/// which module the function call belongs which may require to gather more information such as
+/// the end position of a module and some other info that tells us where the module is imported
+/// from if any during the symbolication process.
 pub fn on_signature_help_request(context: &Context, request: &Request, symbols: &Symbols) {
     let parameters = serde_json::from_value::<HoverParams>(request.params.clone())
         .expect("could not deserialize signature_help request");

@@ -122,7 +122,6 @@ impl<'env> FunctionContext<'env> {
             }
             BaseValue::Bool(_) => (),
             BaseValue::Int(_) => (),
-            _ => (),
         }
     }
 

@@ -2210,10 +2210,18 @@ pub fn on_hover_request(context: &Context, request: &Request, symbols: &Symbols)
     );
 }
 
-/**
- * Returns a tuple where the first value is the index of the text info of the function name and the second value is the text info of the function
- */
-fn find_closet_fn_in_text_info_vec<'a>(
+/// Returns (index of the function, text info of the function name)
+/// 
+/// The text info result includes the name and the range of the function in a given line.
+/// 
+/// A non-zero parenthesis_delta value means the current index is in a nested function scope.
+/// For example, consider `fun_1(a, fun_2(b, c, d), e)` and start_idx is at "e", which means
+/// we want to find out which function "e" belongs to. Since we are interating backwards from
+/// the starting index to 0, the first left parenthesis that we see belongs to fun_2, and "e"
+/// clearly does not belong to `fun_2` so we decrement the parenthesis_delta and continue with
+/// the iteration until we meet the second left parenthesis, the parenthesis_delta here is 0 so we
+/// say "e" belongs to the function `fun_1`.
+fn find_closest_fn_in_text_info_vec<'a>(
     start_idx: usize,
     text_info_vec: &'a Vec<TextInfo>,
 ) -> Option<(usize, TextInfo<'a>)> {
@@ -2227,14 +2235,11 @@ fn find_closet_fn_in_text_info_vec<'a>(
             "(" => {
                 if parenthesis_delta == 0 {
                     // The identifier to the left of the left parenthesis is the function.
-                    match text_info_vec.get(i - 1) {
-                        Some(text_info) => {
-                            return Some((i - 1, *text_info));
-                        }
-                        None => {
-                            return None;
-                        }
+                    if let Some(text_info) = text_info_vec.get(i - 1) {
+                        return Some((i - 1, *text_info));
                     }
+
+                    return None;
                 } else {
                     parenthesis_delta -= 1;
                 }
@@ -2249,9 +2254,20 @@ fn find_closet_fn_in_text_info_vec<'a>(
     None
 }
 
-/**
- * Find the position of the active parameter given a vector of parsed tokens
- */
+/// Find the position of the active parameter given a vector of parsed tokens
+/// 
+/// In most cases, the input text_info_vec looks like `["fun_1", "(", "a", ",", "b", ",", "c" ")"]`
+/// which represents `fun_1(a, b, c)`. In this example, we increment the index of the active
+/// parameter for every comma identifier that we see. Let's say the start_idx is at "a"
+/// and the end_idx is at "c", then we say the active paramete is 2 (0-based) because there
+/// are 2 commas between a and c.
+/// 
+/// However, there are special cases where we have nested function calls. An example of this is
+/// `fun_1(a, fun_2(b, c, d), e)`, and let's say our start_idx is at "a" and end_idx is at "e", we
+/// don't want to count the commas inside `fun_2` because it's in a different function scope. This
+/// is where parenthesis_delta comes in, we say the current index is in a different function scope
+/// if parenthesis_delta is a non-zero value so we don't increment the active_parameter count in
+/// that case.
 fn find_active_parameter<'a>(
     // The starting index must be to 1 position to the right of a left parenthesis
     start_idx: usize,
@@ -2290,6 +2306,19 @@ fn find_active_parameter<'a>(
     active_parameter
 }
 
+/// Returns a list of parameter info if ident is a FunctionType otherwise returns an empty list.
+/// 
+/// A parameter info contains the start and the end index of a parameter in the signature label.
+/// 
+/// For example, the string representation of `IdentType::FunctionType` is the signature label:
+/// 
+/// `fun mod_1::escrow::escrow<T>(sender: address, recipient: address, obj_in: T)`
+/// 
+/// This function has three parameters, `sender: address`, `recipient: address` and `obj_in: T`.
+/// To calculate the parameter info, we first find the start_offset which is 1 position to the left
+/// of the left parenthesis. Then we construct the label using arg_names and arg_types similar to
+/// the logic in `Impl Fmt::Disply for IdentType`, and the start and end index of each parameter are
+/// computed during each iteration of the string representation of each argument.
 fn collect_parameter_info_from_ident(ident: &IdentType) -> Vec<ParameterInformation> {
     match ident {
         IdentType::FunctionType(_, _, _, arg_names, arg_types, _, _) => {
@@ -2385,7 +2414,7 @@ pub fn on_signature_help_request(context: &Context, request: &Request, symbols: 
         .unwrap_or_default();
 
     let (fn_idx, fn_text_info) =
-        find_closet_fn_in_text_info_vec(cursor_idx_in_parsed_line, &parsed_line)
+        find_closest_fn_in_text_info_vec(cursor_idx_in_parsed_line, &parsed_line)
             .unwrap_or_default();
 
     let empty_module_defs = &BTreeSet::new();
@@ -2411,7 +2440,6 @@ pub fn on_signature_help_request(context: &Context, request: &Request, symbols: 
         return;
     }
 
-    // @todo handle the edge cases where the current function can belong to other modules
     let function_ident = &mod_fun.unwrap().1.ident_type;
 
     // Add 2 to the function index because we want to start 1 position to the right of the left parenthesis

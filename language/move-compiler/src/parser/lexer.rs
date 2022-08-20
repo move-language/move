@@ -82,15 +82,21 @@ pub enum Tok {
     AtSign,
 }
 
+/// The range of the text content position
 #[derive(Copy, Clone, Debug, Default)]
 pub struct TextRange {
+    /// The starting column position
     pub start: usize,
+    /// The ending column position
     pub end: usize,
 }
 
+/// Information about the text, e.g. its content, and range etc.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct TextInfo<'input> {
+    /// The text content
     pub text: &'input str,
+    /// The column range of the text content
     pub range: TextRange,
 }
 

@@ -2211,9 +2211,9 @@ pub fn on_hover_request(context: &Context, request: &Request, symbols: &Symbols)
 }
 
 /// Returns (index of the function, text info of the function name)
-/// 
+///
 /// The text info result includes the name and the range of the function in a given line.
-/// 
+///
 /// A non-zero parenthesis_delta value means the current index is in a nested function scope.
 /// For example, consider `fun_1(a, fun_2(b, c, d), e)` and start_idx is at "e", which means
 /// we want to find out which function "e" belongs to. Since we are interating backwards from
@@ -2223,7 +2223,7 @@ pub fn on_hover_request(context: &Context, request: &Request, symbols: &Symbols)
 /// say "e" belongs to the function `fun_1`.
 fn find_closest_fn_in_text_info_vec<'a>(
     start_idx: usize,
-    text_info_vec: &'a Vec<TextInfo>,
+    text_info_vec: &'a [TextInfo],
 ) -> Option<(usize, TextInfo<'a>)> {
     let mut parenthesis_delta = 0;
 
@@ -2255,25 +2255,25 @@ fn find_closest_fn_in_text_info_vec<'a>(
 }
 
 /// Find the position of the active parameter given a vector of parsed tokens
-/// 
+///
 /// In most cases, the input text_info_vec looks like `["fun_1", "(", "a", ",", "b", ",", "c" ")"]`
 /// which represents `fun_1(a, b, c)`. In this example, we increment the index of the active
 /// parameter for every comma identifier that we see. Let's say the start_idx is at "a"
 /// and the end_idx is at "c", then we say the active paramete is 2 (0-based) because there
 /// are 2 commas between a and c.
-/// 
+///
 /// However, there are special cases where we have nested function calls. An example of this is
 /// `fun_1(a, fun_2(b, c, d), e)`, and let's say our start_idx is at "a" and end_idx is at "e", we
 /// don't want to count the commas inside `fun_2` because it's in a different function scope. This
 /// is where parenthesis_delta comes in, we say the current index is in a different function scope
 /// if parenthesis_delta is a non-zero value so we don't increment the active_parameter count in
 /// that case.
-fn find_active_parameter<'a>(
+fn find_active_parameter(
     // The starting index must be to 1 position to the right of a left parenthesis
     start_idx: usize,
     // end_idx >= start_idx
     end_idx: usize,
-    text_info_vec: &'a Vec<TextInfo>,
+    text_info_vec: &[TextInfo],
 ) -> u32 {
     let mut parenthesis_delta = 0;
     let mut active_parameter = 0;
@@ -2307,13 +2307,13 @@ fn find_active_parameter<'a>(
 }
 
 /// Returns a list of parameter info if ident is a FunctionType otherwise returns an empty list.
-/// 
+///
 /// A parameter info contains the start and the end index of a parameter in the signature label.
-/// 
+///
 /// For example, the string representation of `IdentType::FunctionType` is the signature label:
-/// 
+///
 /// `fun mod_1::escrow::escrow<T>(sender: address, recipient: address, obj_in: T)`
-/// 
+///
 /// This function has three parameters, `sender: address`, `recipient: address` and `obj_in: T`.
 /// To calculate the parameter info, we first find the start_offset which is 1 position to the left
 /// of the left parenthesis. Then we construct the label using arg_names and arg_types similar to
@@ -2356,9 +2356,9 @@ fn collect_parameter_info_from_ident(ident: &IdentType) -> Vec<ParameterInformat
 }
 
 /// Handle the signature help request from the client.
-/// 
+///
 /// The high-level overview of the function works as the following:
-/// 
+///
 /// 1. Find the current line content and parse it using the lexer to get a list of valid tokens.
 /// 2. Check if the current cursor position is out of bounds, if so, make the signature help
 /// popup disappear by sending an empty signature help response.
@@ -2367,7 +2367,7 @@ fn collect_parameter_info_from_ident(ident: &IdentType) -> Vec<ParameterInformat
 /// 5. Find the module definition in the current file that contains the function name.
 /// 6. Find the function ident and the active parameter given the current cursor position.
 /// 7. Construct the SignatureHelp result and send the response back to the vs-code client.
-/// 
+///
 /// Note: the current implementation doesn't handle the case where there are more than one modules
 /// in one file that has the same function definition. To handle this case, we need to find out
 /// which module the function call belongs which may require to gather more information such as

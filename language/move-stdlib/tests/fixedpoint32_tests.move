@@ -133,6 +133,19 @@ module std::fixed_point32_tests {
     }
 
     #[test]
+    fun create_from_u64_create_correct_fixed_point_number() {
+        let one = fixed_point32::create_from_u64(1);
+        let val = fixed_point32::get_raw_value(one);
+        assert!(val == 4294967296, 0);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = 0x20005)]
+    fun create_from_u64_throw_error_when_number_too_large() {
+        fixed_point32::create_from_u64(4294967296); // (u64 >> 32) + 1
+    }
+
+    #[test]
     fun floor_can_return_the_correct_number_one() {
         let three_point_five = fixed_point32::create_from_rational(7, 2); // 3.5
         let val = fixed_point32::floor(three_point_five);
@@ -140,16 +153,30 @@ module std::fixed_point32_tests {
     }
 
     #[test]
-    fun ceil_can_return_the_correct_number_one() {
+    fun ceil_can_round_up_correctly() {
         let point_five = fixed_point32::create_from_rational(1, 2); // 0.5
         let val = fixed_point32::ceil(point_five);
         assert!(val == 1, 0);
     }
 
     #[test]
-    fun round_can_return_the_correct_number_one() {
+    fun ceil_will_not_change_if_number_already_integer() {
+        let one = fixed_point32::create_from_rational(1, 1); // 0.5
+        let val = fixed_point32::ceil(one);
+        assert!(val == 1, 0);
+    }
+
+    #[test]
+    fun round_can_round_up_correctly() {
         let point_five = fixed_point32::create_from_rational(1, 2); // 0.5
         let val = fixed_point32::round(point_five);
         assert!(val == 1, 0);
+    }
+
+    #[test]
+    fun round_can_round_down_correctly() {
+        let num = fixed_point32::create_from_rational(499, 1000); // 0.499
+        let val = fixed_point32::round(num);
+        assert!(val == 0, 0);
     }
 }

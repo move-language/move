@@ -111,18 +111,24 @@ module std::fixed_point32_tests {
     fun min_can_return_smaller_fixed_point_number() {
         let one = fixed_point32::create_from_rational(1, 1);
         let two = fixed_point32::create_from_rational(2, 1);
-        let smaller_number = fixed_point32::min(one, two);
-        let val = fixed_point32::get_raw_value(smaller_number);
-        assert!(val == 4294967296, 0);  // 0x1.00000000
+        let smaller_number1 = fixed_point32::min(one, two);
+        let val1 = fixed_point32::get_raw_value(smaller_number1);
+        assert!(val1 == 4294967296, 0);  // 0x1.00000000
+        let smaller_number2 = fixed_point32::min(two, one);
+        let val2 = fixed_point32::get_raw_value(smaller_number2);
+        assert!(val2 == 4294967296, 0);  // 0x1.00000000
     }
 
     #[test]
     fun max_can_return_larger_fixed_point_number() {
         let one = fixed_point32::create_from_rational(1, 1);
         let two = fixed_point32::create_from_rational(2, 1);
-        let larger_number = fixed_point32::max(one, two);
-        let val = fixed_point32::get_raw_value(larger_number);
-        assert!(val == 8589934592, 0);  // 0x2.00000000
+        let larger_number1 = fixed_point32::max(one, two);
+        let larger_number2 = fixed_point32::max(two, one);
+        let val1 = fixed_point32::get_raw_value(larger_number1);
+        assert!(val1 == 8589934592, 0);  // 0x2.00000000
+        let val2 = fixed_point32::get_raw_value(larger_number2);
+        assert!(val2 == 8589934592, 0);  // 0x2.00000000
     }
 
     #[test]

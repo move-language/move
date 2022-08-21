@@ -21,12 +21,45 @@ cargo install mdbook
 2. 下载
 
 ```shell
-git clone https://github.com/move-cc/move-book-zh.git
+git clone https://github.com/move-language/move.git
 ```
 
 3. 构建并预览
 
 ```shell
-cd move-book-zh
+cd language/documentation/book/translations/move-book-zh
 mdbook serve --open
 ```
+
+## Contributors ✨
+
+[各章节译者](Translators.md)
+
+Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tr>
+    <td align="center"><a href="https://github.com/Kusou1"><img src="https://avatars.githubusercontent.com/u/57334674?v=4?s=100" width="100px;" alt=""/><br /><sub><b>zhang</b></sub></a><br /><a href="https://github.com/move-dao/move-book-zh/commits?author=Kusou1" title="Code">💻</a> <a href="https://github.com/move-dao/move-book-zh/commits?author=Kusou1" title="Documentation">📖</a> <a href="#translation-Kusou1" title="Translation">🌍</a> <a href="#infra-Kusou1" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
+    <td align="center"><a href="https://github.com/ruy1su"><img src="https://avatars.githubusercontent.com/u/9391802?v=4?s=100" width="100px;" alt=""/><br /><sub><b>ruyisu</b></sub></a><br /><a href="https://github.com/move-dao/move-book-zh/commits?author=ruy1su" title="Code">💻</a> <a href="#translation-ruy1su" title="Translation">🌍</a> <a href="https://github.com/move-dao/move-book-zh/commits?author=ruy1su" title="Documentation">📖</a> <a href="https://github.com/move-dao/move-book-zh/pulls?q=is%3Apr+reviewed-by%3Aruy1su" title="Reviewed Pull Requests">🚇</a></td>
+    <td align="center"><a href="https://github.com/lshoo"><img src="https://avatars.githubusercontent.com/u/670440?v=4?s=100" width="100px;" alt=""/><br /><sub><b>lshoo</b></sub></a><br /><a href="https://github.com/move-dao/move-book-zh/commits?author=lshoo" title="Code">💻</a> <a href="#translation-lshoo" title="Translation">🌍</a> <a href="https://github.com/move-dao/move-book-zh/commits?author=lshoo" title="Documentation">📖</a> <a href="#ideas-lshoo" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/move-dao/move-book-zh/pulls?q=is%3Apr+reviewed-by%3Alshoo" title="Reviewed Pull Requests">👀</a></td>
+    <td align="center"><a href="https://github.com/Container-00"><img src="https://avatars.githubusercontent.com/u/61052480?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Container</b></sub></a><br /><a href="https://github.com/move-dao/move-book-zh/commits?author=Container-00" title="Code">💻</a> <a href="#translation-Container-00" title="Translation">🌍</a> <a href="https://github.com/move-dao/move-book-zh/commits?author=Container-00" title="Documentation">📖</a> <a href="https://github.com/move-dao/move-book-zh/pulls?q=is%3Apr+reviewed-by%3AContainer-00" title="Reviewed Pull Requests">👀</a></td>
+    <td align="center"><a href="https://github.com/nosalt99"><img src="https://avatars.githubusercontent.com/u/22558493?v=4?s=100" width="100px;" alt=""/><br /><sub><b>nosalt</b></sub></a><br /><a href="https://github.com/move-dao/move-book-zh/commits?author=nosalt99" title="Code">💻</a> <a href="#translation-nosalt99" title="Translation">🌍</a> <a href="https://github.com/move-dao/move-book-zh/commits?author=nosalt99" title="Documentation">📖</a> <a href="#infra-nosalt99" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a></td>
+    <td align="center"><a href="https://github.com/geometryolife"><img src="https://avatars.githubusercontent.com/u/54882546?v=4?s=100" width="100px;" alt=""/><br /><sub><b>geometryolife</b></sub></a><br /><a href="https://github.com/move-language/move/commits?author=geometryolife" title="Code">💻</a> <a href="#translation-geometryolife" title="Translation">🌍</a> <a href="#talk-geometryolife" title="Talks">📢</a></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="https://github.com/666thi"><img src="https://avatars.githubusercontent.com/u/109965699?v=4?s=100" width="100px;" alt=""/><br /><sub><b>666thi</b></sub></a><br /><a href="https://github.com/move-dao/move-book-zh/commits?author=666thi" title="Code">💻</a> <a href="#translation-666thi" title="Translation">🌍</a> <a href="#talk-666thi" title="Talks">📢</a></td>
+    <td align="center"><a href="https://github.com/MagicGordon"><img src="https://avatars.githubusercontent.com/u/19465870?v=4?s=100" width="100px;" alt=""/><br /><sub><b>MagicGordon</b></sub></a><br /><a href="https://github.com/move-dao/move-book-zh/commits?author=MagicGordon" title="Code">💻</a> <a href="#translation-MagicGordon" title="Translation">🌍</a> <a href="#talk-MagicGordon" title="Talks">📢</a></td>
+    <td align="center"><a href="https://github.com/xixifusi1984"><img src="https://avatars.githubusercontent.com/u/39210551?v=4?s=100" width="100px;" alt=""/><br /><sub><b>xixifusi1984</b></sub></a><br /><a href="https://github.com/move-dao/move-book-zh/commits?author=xixifusi1984" title="Code">💻</a> <a href="#translation-xixifusi1984" title="Translation">🌍</a> <a href="#talk-xixifusi1984" title="Talks">📢</a></td>
+    <td align="center"><a href="https://github.com/yvvw"><img src="https://avatars.githubusercontent.com/u/15168529?v=4?s=100" width="100px;" alt=""/><br /><sub><b>yvvw</b></sub></a><br /><a href="https://github.com/move-dao/move-book-zh/commits?author=yvvw" title="Code">💻</a> <a href="#translation-yvvw" title="Translation">🌍</a> <a href="#talk-yvvw" title="Talks">📢</a></td>
+    <td align="center"><a href="https://github.com/xiaochuan891102"><img src="https://avatars.githubusercontent.com/u/109952533?v=4?s=100" width="100px;" alt=""/><br /><sub><b>xiaochuan891102</b></sub></a><br /><a href="https://github.com/move-dao/move-book-zh/commits?author=xiaochuan891102" title="Code">💻</a> <a href="#translation-xiaochuan891102" title="Translation">🌍</a> <a href="#talk-xiaochuan891102" title="Talks">📢</a></td>
+    <td align="center"><a href="https://github.com/stephenLee"><img src="https://avatars.githubusercontent.com/u/1144508?v=4?s=100" width="100px;" alt=""/><br /><sub><b>stephenLee</b></sub></a><br /><a href="https://github.com/move-dao/move-book-zh/commits?author=stephenLee" title="Code">💻</a> <a href="#translation-stephenLee" title="Translation">🌍</a> <a href="#talk-stephenLee" title="Talks">📢</a></td>
+  </tr>
+</table>
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->

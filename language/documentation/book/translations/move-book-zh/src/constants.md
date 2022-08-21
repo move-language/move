@@ -1,27 +1,24 @@
-# Constants
+# 常量 (Constants)
 
 Constants are a way of giving a name to shared, static values inside of a `module` or `script`.
 
 The constant's must be known at compilation. The constant's value is stored in the compiled module
 or script. And each time the constant is used, a new copy of that value is made.
-# 常数
-常量是为模块或脚本内的共享静态值命名的一种方式。
 
-常量必须在编译时知道。常量的值存储在编译的模块或脚本中。每次使用该常量时，都会生成该值的新副本。
+常量是一种对 `module` 或 `script` 内的共享静态值进行命名的方法(类似变量，但值不变，译者注)。
 
-## Declaration
+常量必须在编译时知道。常量的值存储在编译模块或脚本中。每次使用该常量时，都会生成该值的新副本。
+
+## 声明 (Declaration)
 
 Constant declarations begin with the `const` keyword, followed by a name, a type, and a value. They
 can exist in either a script or module
-## 声明
 
-常量声明以 const 关键字开头，后跟名称、类型和值。它们可以存在于脚本或模块中
+常量声明以 `const` 关键字开头，后跟名称、类型和值。他们可以存在于脚本或模块中
 
 ```text
 const <name>: <type> = <expression>;
 ```
-
-For example
 
 例如
 
@@ -37,24 +34,24 @@ script {
 }
 
 address 0x42 {
-module example {
+    module example {
 
-    const MY_ADDRESS: address = @0x42;
+        const MY_ADDRESS: address = @0x42;
 
-    public fun permissioned(s: &signer) {
-        assert!(std::signer::address_of(s) == MY_ADDRESS, 0);
+        public fun permissioned(s: &signer) {
+            assert!(std::signer::address_of(s) == MY_ADDRESS, 0);
+        }
+
     }
-
-}
 }
 ```
 
-## Naming
+## 命名 (Naming)
 
 Constants must start with a capital letter `A` to `Z`. After the first letter, constant names can
 contain underscores `_`, letters `a` to `z`, letters `A` to `Z`, or digits `0` to `9`.
-## 命名
-常量必须以大写字母 A 到 Z 开头。在第一个字母之后，常量名称可以包含下划线 `_`、字母 a 到 z、字母 A 到 Z 或数字 0 到 9。
+
+常量必须以大写字母 `A` 到 `Z` 开头。在第一个字母之后，常量名可以包含下划线 `_`、字母 `a` 到 `z`、字母 `A` 到 `Z` 或数字 `0` 到 `9`。
 
 ```move
 const FLAG: bool = false;
@@ -66,34 +63,31 @@ Even though you can use letters `a` to `z` in a constant. The
 [general style guidelines](./coding-conventions.md) are to use just uppercase letters `A` to `Z`,
 with underscores `_` between each word.
 
-This naming restriction of starting with `A` to `Z` is in place to give room for future language
-features. It may or may not be removed later.
+虽然你可以在常量中使用字母 `a` 到 `z`。但[通用风格指南](./coding-conventions.md) 只使用大写字母 `A` 到 `Z`，每个单词之间有下划线`_`。
 
-即使您可以在常数中使用字母 a 到 z。一般的风格准则是只使用大写字母 A 到 Z，每个单词之间用下划线 `_`。
+This naming restriction of starting with `A` to `Z` is in place to give room for future language features. It may or may not be removed later.
 
-这种以 A 到 Z 开头的命名限制是为了给未来的语言特性留出空间。以后可能会或可能不会删除它。
+这种以 `A` 到 `Z` 开头的命名限制是为了给未来的语言特性留出空间。此限制未来可能会保留或删除。
 
-## Visibility
+## 可见性 (Visibility)
 
 `public` constants are not currently supported. `const` values can be used only in the declaring
 module.
-## 可见性
-当前不支持公共常量。 const 值只能在声明模块中使用。
 
-## Valid Expressions
+当前不支持 `public` 常量。 `const` 值只能在声明的模块中使用。
+
+## 有效表达式 (Valid Expressions)
 
 Currently, constants are limited to the primitive types `bool`, `u8`, `u64`, `u128`, `address`, and
-`vector<u8>`. Future support for other `vector` values (besides the "string"-style literals) will
-come later.
-## 有效表达式
-目前，常量仅限于基本类型 bool、u8、u64、u128、address 和向量 u8。未来对其他向量值的支持（除了“字符串”样式的文字）将在稍后提供。
+`vector<u8>`. Future support for other `vector` values (besides the "string"-style literals) will come later.
 
-### Values
+目前，常量仅限于原始类型 `bool`、`u8`、`u64`、`u128`、`address` 和`vector<u8>`。其他 `vector` 值(除了“string”风格的字面量)将在不远的将来获得支持。
+
+### 值 (Values)
 
 Commonly, `const`s are assigned a simple value, or literal, of their type. For example
-### 值
 
-通常，为 const 分配其类型的简单值或文字。例如
+通常，`const` (常量)会被分配一个对应类型的简单值或字面量。例如
 
 ```move
 const MY_BOOL: bool = false;
@@ -102,17 +96,18 @@ const BYTES: vector<u8> = b"hello world";
 const HEX_BYTES: vector<u8> = x"DEADBEEF";
 ```
 
-### Complex Expressions
+### 复杂表达式 (Complex Expressions)
+
 
 In addition to literals, constants can include more complex expressions, as long as the compiler is
 able to reduce the expression to a value at compile time.
 
 Currently, equality operations, all boolean operations, all bitwise operations, and all arithmetic
 operations can be used.
-### 复杂表达式
-除了文字之外，常量还可以包含更复杂的表达式，只要编译器能够在编译时将表达式简化为一个值即可。
 
-目前，可以使用相等运算、所有布尔运算、所有位运算和所有算术运算。
+除了字面量，常量还可以包含更复杂的表达式，只要编译器能够在编译时将表达式归纳(reduce)为一个值。
+
+目前，相等运算、所有布尔运算、所有按位运算和所有算术运算可以使用。
 
 ```move
 const RULE: bool = true && false;
@@ -127,7 +122,7 @@ const EQUAL: bool = 1 == 1;
 If the operation would result in a runtime exception, the compiler will give an error that it is
 unable to generate the constant's value
 
-如果操作会导致运行时异常，编译器将给出无法生成常量值的错误
+如果操作会导致运行时异常，编译器会给出无法生成常量值的错误。
 
 ```move
 const DIV_BY_ZERO: u64 = 1 / 0; // error!
@@ -137,4 +132,5 @@ const NEGATIVE_U64: u64 = 0 - 1; // error!
 
 Note that constants cannot currently refer to other constants. This feature, along with support for
 other expressions, will be added in the future.
-请注意，常量当前不能引用其他常量。将来会添加此功能以及对其他表达式的支持。
+
+请注意，常量当前不能引用其他常量。此功能会在将来和支持其他表达方式一起被补充。

@@ -115,4 +115,27 @@ module std::fixed_point32_tests {
         let val = fixed_point32::get_raw_value(smaller_number);
         assert!(val == 4294967296, 0);  // 0x1.00000000
     }
+
+    #[test]
+    fun max_can_return_larger_fixed_point_number() {
+        let one = fixed_point32::create_from_rational(1, 1);
+        let two = fixed_point32::create_from_rational(2, 1);
+        let larger_number = fixed_point32::max(one, two);
+        let val = fixed_point32::get_raw_value(larger_number);
+        assert!(val == 8589934592, 0);  // 0x2.00000000
+    }
+
+    #[test]
+    fun floor_can_return_the_correct_number_zero() {
+        let point_five = fixed_point32::create_from_rational(1, 2);
+        let val = fixed_point32::floor(point_five);
+        assert!(val == 0, 0);
+    }
+
+    #[test]
+    fun floor_can_return_the_correct_number_one() {
+        let three_point_five = fixed_point32::create_from_rational(7, 2); // 3.5
+        let val = fixed_point32::floor(three_point_five);
+        assert!(val == 3, 0);
+    }
 }

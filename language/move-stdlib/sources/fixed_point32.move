@@ -215,26 +215,21 @@ module std::fixed_point32 {
         FixedPoint32 {value: val << 32}
     }
 
-    public fun as_u64(number: FixedPoint32): u64 {
-        number.value >> 32
-    }
-    spec as_u64 {
-        pragma opaque;
-        aborts_if false;
-        ensures result == spec_as_u64(number);
-    }
-    spec fun spec_as_u64(val: FixedPoint32): u64 {
-        val.value >> 32
-    }
-
     public fun floor(num: FixedPoint32): u64 {
         num.value >> 32
     }
     spec floor {
         pragma opaque;
         aborts_if false;
-        let one = 1 << 32;
-        ensures ((num.value - one) >> 32) <= result && result <= (num.value >> 32);
+        ensures result == spec_floor(num);
+    }
+    spec fun spec_floor(val: FixedPoint32): u64 {
+        let fractional = val.value % (1 << 32);
+        if (fractional == 0) {
+            val.value >> 32
+        } else {
+            (val.value - fractional) >> 32
+        }
     }
 
     public fun ceil(num: FixedPoint32): u64 {
@@ -248,8 +243,41 @@ module std::fixed_point32 {
     spec ceil {
         pragma opaque;
         aborts_if false;
+        ensures result == spec_ceil(num);
+    }
+    spec fun spec_ceil(val: FixedPoint32): u64 {
+        let fractional = val.value % (1 << 32);
         let one = 1 << 32;
-        ensures (num.value >> 32) <= result && result <= ((num.value + one) >> 32);
+        if (fractional == 0) {
+            val.value >> 32
+        } else {
+            (val.value - fractional + one) >> 32
+        }
+    }
+
+    public fun round(num: FixedPoint32): u64 {
+        let floored_num = floor(num);
+        let bounary = (floored_num << 32) + ((1 << 32) / 2);
+        if (num.value < bounary) {
+            floored_num
+        } else {
+            ceil(num)
+        }
+    }
+    spec round {
+        pragma opaque;
+        aborts_if false;
+        ensures result == spec_round(num);
+    }
+    spec fun spec_round(val: FixedPoint32): u64 {
+        let fractional = val.value % (1 << 32);
+        let boundary = (1 << 32) / 2;
+        let one = 1 << 32;
+        if (fractional < boundary) {
+            (val.value - fractional) >> 32
+        } else {
+            (val.value - fractional + one) >> 32
+        }
     }
 
     // **************** SPECIFICATIONS ****************

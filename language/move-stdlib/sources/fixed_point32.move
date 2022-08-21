@@ -154,6 +154,67 @@ module std::fixed_point32 {
         num.value == 0
     }
 
+    /// Returns the smaller of the two FixedPoint32 numbers.
+    public fun min(num1: FixedPoint32, num2: FixedPoint32): FixedPoint32 {
+        if (num1.value < num2.value) {
+            num1
+        } else {
+            num2
+        }
+    }
+    spec min {
+        pragma opaque;
+        aborts_if false;
+        ensures result == spec_min(num1, num2);
+    }
+    spec fun spec_min(num1: FixedPoint32, num2: FixedPoint32): FixedPoint32 {
+        if (num1.value < num2.value) {
+            num1
+        } else {
+            num2
+        }
+    }
+
+    /// Returns the larger of the two FixedPoint32 numbers.
+    public fun max(num1: FixedPoint32, num2: FixedPoint32): FixedPoint32 {
+        if (num1.value > num2.value) {
+            num1
+        } else {
+            num2
+        }
+    }
+    spec max {
+        pragma opaque;
+        aborts_if false;
+        ensures result == spec_max(num1, num2);
+    }
+    spec fun spec_max(num1: FixedPoint32, num2: FixedPoint32): FixedPoint32 {
+        if (num1.value > num2.value) {
+            num1
+        } else {
+            num2
+        }
+    }
+
+    public fun from_u64(val: u64): FixedPoint32 {
+        let value = (val as u128) << 32;
+        assert!(value <= MAX_U64, ERATIO_OUT_OF_RANGE);
+        FixedPoint32{value: (value as u64)}
+    }
+    spec from_u64 {
+        pragma opaque;
+        include FromU64;
+        ensures result == spec_from_u64(val);
+    }
+    spec schema FromU64 {
+        val: num;
+        let scaled_value = val << 32;
+        aborts_if scaled_value > MAX_U64;
+    }
+    spec fun spec_from_u64(val: num): FixedPoint32 {
+        FixedPoint32 {value: val << 32}
+    }
+
     // **************** SPECIFICATIONS ****************
 
     spec module {} // switch documentation context to module level

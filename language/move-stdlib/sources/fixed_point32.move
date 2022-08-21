@@ -228,14 +228,28 @@ module std::fixed_point32 {
     }
 
     public fun floor(num: FixedPoint32): u64 {
-        let num_fractional = num.value % (1 << 32);
-        (num.value - num_fractional) >> 32
+        num.value >> 32
     }
     spec floor {
         pragma opaque;
         aborts_if false;
         let one = 1 << 32;
         ensures ((num.value - one) >> 32) <= result && result <= (num.value >> 32);
+    }
+
+    public fun ceil(num: FixedPoint32): u64 {
+        let floored_num = floor(num) << 32;
+        if (num.value == floored_num) {
+            return floored_num >> 32
+        };
+        let val = ((floored_num as u128) + (1 << 32));
+        (val >> 32 as u64)
+    }
+    spec ceil {
+        pragma opaque;
+        aborts_if false;
+        let one = 1 << 32;
+        ensures (num.value >> 32) <= result && result <= ((num.value + one) >> 32);
     }
 
     // **************** SPECIFICATIONS ****************

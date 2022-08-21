@@ -138,4 +138,11 @@ module std::fixed_point32_tests {
         let val = fixed_point32::floor(three_point_five);
         assert!(val == 3, 0);
     }
+
+    #[test]
+    fun ceil_can_return_the_correct_number_one() {
+        let point_five = fixed_point32::create_from_rational(1, 2); // 0.5
+        let val = fixed_point32::ceil(point_five);
+        assert!(val == 1, 0);
+    }
 }

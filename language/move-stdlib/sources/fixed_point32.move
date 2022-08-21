@@ -215,6 +215,18 @@ module std::fixed_point32 {
         FixedPoint32 {value: val << 32}
     }
 
+    public fun as_u64(number: FixedPoint32): u64 {
+        number.value >> 32
+    }
+    spec as_u64 {
+        pragma opaque;
+        aborts_if false;
+        ensures result == spec_as_u64(number);
+    }
+    spec fun spec_as_u64(val: FixedPoint32): u64 {
+        val.value >> 32
+    }
+
     // **************** SPECIFICATIONS ****************
 
     spec module {} // switch documentation context to module level

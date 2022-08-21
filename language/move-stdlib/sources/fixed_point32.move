@@ -196,6 +196,7 @@ module std::fixed_point32 {
         }
     }
 
+    /// Create a fixedpoint value from a u64 value.
     public fun create_from_u64(val: u64): FixedPoint32 {
         let value = (val as u128) << 32;
         assert!(value <= MAX_U64, ERATIO_OUT_OF_RANGE);
@@ -215,6 +216,7 @@ module std::fixed_point32 {
         FixedPoint32 {value: val << 32}
     }
 
+    /// Returns the largest integer less than or equal to a given number.
     public fun floor(num: FixedPoint32): u64 {
         num.value >> 32
     }
@@ -232,6 +234,7 @@ module std::fixed_point32 {
         }
     }
 
+    /// Rounds up the given FixedPoint32 to the next largest integer.
     public fun ceil(num: FixedPoint32): u64 {
         let floored_num = floor(num) << 32;
         if (num.value == floored_num) {
@@ -255,6 +258,7 @@ module std::fixed_point32 {
         }
     }
 
+    /// Returns the value of a FixedPoint32 to the nearest integer.
     public fun round(num: FixedPoint32): u64 {
         let floored_num = floor(num) << 32;
         let bounary = floored_num + ((1 << 32) / 2);

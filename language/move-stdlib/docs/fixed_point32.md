@@ -579,6 +579,7 @@ Returns the larger of the two FixedPoint32 numbers.
 
 ## Function `create_from_u64`
 
+Create a fixedpoint value from a u64 value.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_create_from_u64">create_from_u64</a>(val: u64): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">fixed_point32::FixedPoint32</a>
@@ -643,6 +644,7 @@ Returns the larger of the two FixedPoint32 numbers.
 
 ## Function `floor`
 
+Returns the largest integer less than or equal to a given number.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_floor">floor</a>(num: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">fixed_point32::FixedPoint32</a>): u64
@@ -697,6 +699,7 @@ Returns the larger of the two FixedPoint32 numbers.
 
 ## Function `ceil`
 
+Rounds up the given FixedPoint32 to the next largest integer.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_ceil">ceil</a>(num: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">fixed_point32::FixedPoint32</a>): u64
@@ -757,6 +760,7 @@ Returns the larger of the two FixedPoint32 numbers.
 
 ## Function `round`
 
+Returns the value of a FixedPoint32 to the nearest integer.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_round">round</a>(num: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">fixed_point32::FixedPoint32</a>): u64

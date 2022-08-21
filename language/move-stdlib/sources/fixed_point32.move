@@ -261,8 +261,8 @@ module std::fixed_point32 {
     /// Returns the value of a FixedPoint32 to the nearest integer.
     public fun round(num: FixedPoint32): u64 {
         let floored_num = floor(num) << 32;
-        let bounary = floored_num + ((1 << 32) / 2);
-        if (num.value < bounary) {
+        let boundary = floored_num + ((1 << 32) / 2);
+        if (num.value < boundary) {
             floored_num >> 32
         } else {
             ceil(num)

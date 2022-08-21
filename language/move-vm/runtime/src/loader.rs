@@ -507,14 +507,15 @@ impl Loader {
         if !visited.insert(id.clone()) {
             return;
         }
-        let entry = self.module_cache.read();
-        for dep in entry
+        let deps = self
+            .module_cache
+            .read()
             .modules
             .get(id)
             .unwrap()
             .module
-            .immediate_dependencies()
-        {
+            .immediate_dependencies();
+        for dep in deps {
             self.transitive_dep_closure(&dep, visited)
         }
     }

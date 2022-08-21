@@ -27,8 +27,6 @@ module std::fixed_point32 {
     const EDIVISION_BY_ZERO: u64 = 0x10004;
     /// The computed ratio when converting to a `FixedPoint32` would be unrepresentable
     const ERATIO_OUT_OF_RANGE: u64 = 0x20005;
-    /// The ceil function causes overflow.
-    const ECEIL_OVERFLOW: u64 = 0x20006;
 
     /// Multiply a u64 integer by a fixed-point number, truncating any
     /// fractional part of the product. This will abort if the product

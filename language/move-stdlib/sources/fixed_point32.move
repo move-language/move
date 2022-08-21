@@ -27,6 +27,8 @@ module std::fixed_point32 {
     const EDIVISION_BY_ZERO: u64 = 0x10004;
     /// The computed ratio when converting to a `FixedPoint32` would be unrepresentable
     const ERATIO_OUT_OF_RANGE: u64 = 0x20005;
+    /// The ceil function causes overflow.
+    const ECEIL_OVERFLOW: u64 = 0x20006;
 
     /// Multiply a u64 integer by a fixed-point number, truncating any
     /// fractional part of the product. This will abort if the product
@@ -225,6 +227,17 @@ module std::fixed_point32 {
     }
     spec fun spec_as_u64(val: FixedPoint32): u64 {
         val.value >> 32
+    }
+
+    public fun floor(num: FixedPoint32): u64 {
+        let num_fractional = num.value % (1 << 32);
+        (num.value - num_fractional) >> 32
+    }
+    spec floor {
+        pragma opaque;
+        aborts_if false;
+        let one = 1 << 32;
+        ensures ((num.value - one) >> 32) <= result && result <= (num.value >> 32);
     }
 
     // **************** SPECIFICATIONS ****************

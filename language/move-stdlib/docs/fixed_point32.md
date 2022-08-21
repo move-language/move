@@ -15,6 +15,12 @@ a 32-bit fractional part.
 -  [Function `create_from_raw_value`](#0x1_fixed_point32_create_from_raw_value)
 -  [Function `get_raw_value`](#0x1_fixed_point32_get_raw_value)
 -  [Function `is_zero`](#0x1_fixed_point32_is_zero)
+-  [Function `min`](#0x1_fixed_point32_min)
+-  [Function `max`](#0x1_fixed_point32_max)
+-  [Function `from_u64`](#0x1_fixed_point32_from_u64)
+-  [Function `floor`](#0x1_fixed_point32_floor)
+-  [Function `ceil`](#0x1_fixed_point32_ceil)
+-  [Function `round`](#0x1_fixed_point32_round)
 -  [Module Specification](#@Module_Specification_1)
 
 
@@ -446,6 +452,362 @@ Returns true if the ratio is zero.
 
 <pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_is_zero">is_zero</a>(num: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): bool {
     num.value == 0
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_fixed_point32_min"></a>
+
+## Function `min`
+
+Returns the smaller of the two FixedPoint32 numbers.
+
+
+<pre><code><b>public</b> <b>fun</b> <b>min</b>(num1: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">fixed_point32::FixedPoint32</a>, num2: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">fixed_point32::FixedPoint32</a>): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">fixed_point32::FixedPoint32</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <b>min</b>(num1: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>, num2: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {
+    <b>if</b> (num1.value &lt; num2.value) {
+        num1
+    } <b>else</b> {
+        num2
+    }
+}
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == <a href="fixed_point32.md#0x1_fixed_point32_spec_min">spec_min</a>(num1, num2);
+</code></pre>
+
+
+
+
+<a name="0x1_fixed_point32_spec_min"></a>
+
+
+<pre><code><b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_min">spec_min</a>(num1: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>, num2: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {
+   <b>if</b> (num1.value &lt; num2.value) {
+       num1
+   } <b>else</b> {
+       num2
+   }
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_fixed_point32_max"></a>
+
+## Function `max`
+
+Returns the larger of the two FixedPoint32 numbers.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_max">max</a>(num1: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">fixed_point32::FixedPoint32</a>, num2: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">fixed_point32::FixedPoint32</a>): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">fixed_point32::FixedPoint32</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_max">max</a>(num1: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>, num2: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {
+    <b>if</b> (num1.value &gt; num2.value) {
+        num1
+    } <b>else</b> {
+        num2
+    }
+}
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == <a href="fixed_point32.md#0x1_fixed_point32_spec_max">spec_max</a>(num1, num2);
+</code></pre>
+
+
+
+
+<a name="0x1_fixed_point32_spec_max"></a>
+
+
+<pre><code><b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_max">spec_max</a>(num1: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>, num2: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {
+   <b>if</b> (num1.value &gt; num2.value) {
+       num1
+   } <b>else</b> {
+       num2
+   }
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_fixed_point32_from_u64"></a>
+
+## Function `from_u64`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_from_u64">from_u64</a>(val: u64): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">fixed_point32::FixedPoint32</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_from_u64">from_u64</a>(val: u64): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {
+    <b>let</b> value = (val <b>as</b> u128) &lt;&lt; 32;
+    <b>assert</b>!(value &lt;= <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a>, <a href="fixed_point32.md#0x1_fixed_point32_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>);
+    <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>{value: (value <b>as</b> u64)}
+}
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<b>include</b> <a href="fixed_point32.md#0x1_fixed_point32_FromU64">FromU64</a>;
+<b>ensures</b> result == <a href="fixed_point32.md#0x1_fixed_point32_spec_from_u64">spec_from_u64</a>(val);
+</code></pre>
+
+
+
+
+<a name="0x1_fixed_point32_FromU64"></a>
+
+
+<pre><code><b>schema</b> <a href="fixed_point32.md#0x1_fixed_point32_FromU64">FromU64</a> {
+    val: num;
+    <b>let</b> scaled_value = val &lt;&lt; 32;
+    <b>aborts_if</b> scaled_value &gt; <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a>;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_fixed_point32_spec_from_u64"></a>
+
+
+<pre><code><b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_from_u64">spec_from_u64</a>(val: num): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {
+   <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {value: val &lt;&lt; 32}
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_fixed_point32_floor"></a>
+
+## Function `floor`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_floor">floor</a>(num: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">fixed_point32::FixedPoint32</a>): u64
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_floor">floor</a>(num: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): u64 {
+    num.value &gt;&gt; 32
+}
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == <a href="fixed_point32.md#0x1_fixed_point32_spec_floor">spec_floor</a>(num);
+</code></pre>
+
+
+
+
+<a name="0x1_fixed_point32_spec_floor"></a>
+
+
+<pre><code><b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_floor">spec_floor</a>(val: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): u64 {
+   <b>let</b> fractional = val.value % (1 &lt;&lt; 32);
+   <b>if</b> (fractional == 0) {
+       val.value &gt;&gt; 32
+   } <b>else</b> {
+       (val.value - fractional) &gt;&gt; 32
+   }
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_fixed_point32_ceil"></a>
+
+## Function `ceil`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_ceil">ceil</a>(num: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">fixed_point32::FixedPoint32</a>): u64
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_ceil">ceil</a>(num: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): u64 {
+    <b>let</b> floored_num = <a href="fixed_point32.md#0x1_fixed_point32_floor">floor</a>(num) &lt;&lt; 32;
+    <b>if</b> (num.value == floored_num) {
+        <b>return</b> floored_num &gt;&gt; 32
+    };
+    <b>let</b> val = ((floored_num <b>as</b> u128) + (1 &lt;&lt; 32));
+    (val &gt;&gt; 32 <b>as</b> u64)
+}
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == <a href="fixed_point32.md#0x1_fixed_point32_spec_ceil">spec_ceil</a>(num);
+</code></pre>
+
+
+
+
+<a name="0x1_fixed_point32_spec_ceil"></a>
+
+
+<pre><code><b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_ceil">spec_ceil</a>(val: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): u64 {
+   <b>let</b> fractional = val.value % (1 &lt;&lt; 32);
+   <b>let</b> one = 1 &lt;&lt; 32;
+   <b>if</b> (fractional == 0) {
+       val.value &gt;&gt; 32
+   } <b>else</b> {
+       (val.value - fractional + one) &gt;&gt; 32
+   }
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_fixed_point32_round"></a>
+
+## Function `round`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_round">round</a>(num: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">fixed_point32::FixedPoint32</a>): u64
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_round">round</a>(num: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): u64 {
+    <b>let</b> floored_num = <a href="fixed_point32.md#0x1_fixed_point32_floor">floor</a>(num) &lt;&lt; 32;
+    <b>let</b> bounary = floored_num + ((1 &lt;&lt; 32) / 2);
+    <b>if</b> (num.value &lt; bounary) {
+        floored_num &gt;&gt; 32
+    } <b>else</b> {
+        <a href="fixed_point32.md#0x1_fixed_point32_ceil">ceil</a>(num)
+    }
+}
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> opaque;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == <a href="fixed_point32.md#0x1_fixed_point32_spec_round">spec_round</a>(num);
+</code></pre>
+
+
+
+
+<a name="0x1_fixed_point32_spec_round"></a>
+
+
+<pre><code><b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_round">spec_round</a>(val: <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>): u64 {
+   <b>let</b> fractional = val.value % (1 &lt;&lt; 32);
+   <b>let</b> boundary = (1 &lt;&lt; 32) / 2;
+   <b>let</b> one = 1 &lt;&lt; 32;
+   <b>if</b> (fractional &lt; boundary) {
+       (val.value - fractional) &gt;&gt; 32
+   } <b>else</b> {
+       (val.value - fractional + one) &gt;&gt; 32
+   }
 }
 </code></pre>
 

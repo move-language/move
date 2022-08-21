@@ -196,22 +196,22 @@ module std::fixed_point32 {
         }
     }
 
-    public fun from_u64(val: u64): FixedPoint32 {
+    public fun create_from_u64(val: u64): FixedPoint32 {
         let value = (val as u128) << 32;
         assert!(value <= MAX_U64, ERATIO_OUT_OF_RANGE);
         FixedPoint32{value: (value as u64)}
     }
-    spec from_u64 {
+    spec create_from_u64 {
         pragma opaque;
-        include FromU64;
-        ensures result == spec_from_u64(val);
+        include CreateFromU64AbortsIf;
+        ensures result == spec_create_from_u64(val);
     }
-    spec schema FromU64 {
+    spec schema CreateFromU64AbortsIf {
         val: num;
         let scaled_value = val << 32;
         aborts_if scaled_value > MAX_U64;
     }
-    spec fun spec_from_u64(val: num): FixedPoint32 {
+    spec fun spec_create_from_u64(val: num): FixedPoint32 {
         FixedPoint32 {value: val << 32}
     }
 

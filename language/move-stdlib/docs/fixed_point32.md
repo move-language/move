@@ -17,7 +17,7 @@ a 32-bit fractional part.
 -  [Function `is_zero`](#0x1_fixed_point32_is_zero)
 -  [Function `min`](#0x1_fixed_point32_min)
 -  [Function `max`](#0x1_fixed_point32_max)
--  [Function `from_u64`](#0x1_fixed_point32_from_u64)
+-  [Function `create_from_u64`](#0x1_fixed_point32_create_from_u64)
 -  [Function `floor`](#0x1_fixed_point32_floor)
 -  [Function `ceil`](#0x1_fixed_point32_ceil)
 -  [Function `round`](#0x1_fixed_point32_round)
@@ -575,13 +575,13 @@ Returns the larger of the two FixedPoint32 numbers.
 
 </details>
 
-<a name="0x1_fixed_point32_from_u64"></a>
+<a name="0x1_fixed_point32_create_from_u64"></a>
 
-## Function `from_u64`
+## Function `create_from_u64`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_from_u64">from_u64</a>(val: u64): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">fixed_point32::FixedPoint32</a>
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_create_from_u64">create_from_u64</a>(val: u64): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">fixed_point32::FixedPoint32</a>
 </code></pre>
 
 
@@ -590,7 +590,7 @@ Returns the larger of the two FixedPoint32 numbers.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_from_u64">from_u64</a>(val: u64): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_create_from_u64">create_from_u64</a>(val: u64): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {
     <b>let</b> value = (val <b>as</b> u128) &lt;&lt; 32;
     <b>assert</b>!(value &lt;= <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a>, <a href="fixed_point32.md#0x1_fixed_point32_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>);
     <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a>{value: (value <b>as</b> u64)}
@@ -607,17 +607,17 @@ Returns the larger of the two FixedPoint32 numbers.
 
 
 <pre><code><b>pragma</b> opaque;
-<b>include</b> <a href="fixed_point32.md#0x1_fixed_point32_FromU64">FromU64</a>;
-<b>ensures</b> result == <a href="fixed_point32.md#0x1_fixed_point32_spec_from_u64">spec_from_u64</a>(val);
+<b>include</b> <a href="fixed_point32.md#0x1_fixed_point32_CreateFromU64AbortsIf">CreateFromU64AbortsIf</a>;
+<b>ensures</b> result == <a href="fixed_point32.md#0x1_fixed_point32_spec_create_from_u64">spec_create_from_u64</a>(val);
 </code></pre>
 
 
 
 
-<a name="0x1_fixed_point32_FromU64"></a>
+<a name="0x1_fixed_point32_CreateFromU64AbortsIf"></a>
 
 
-<pre><code><b>schema</b> <a href="fixed_point32.md#0x1_fixed_point32_FromU64">FromU64</a> {
+<pre><code><b>schema</b> <a href="fixed_point32.md#0x1_fixed_point32_CreateFromU64AbortsIf">CreateFromU64AbortsIf</a> {
     val: num;
     <b>let</b> scaled_value = val &lt;&lt; 32;
     <b>aborts_if</b> scaled_value &gt; <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a>;
@@ -627,10 +627,10 @@ Returns the larger of the two FixedPoint32 numbers.
 
 
 
-<a name="0x1_fixed_point32_spec_from_u64"></a>
+<a name="0x1_fixed_point32_spec_create_from_u64"></a>
 
 
-<pre><code><b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_from_u64">spec_from_u64</a>(val: num): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {
+<pre><code><b>fun</b> <a href="fixed_point32.md#0x1_fixed_point32_spec_create_from_u64">spec_create_from_u64</a>(val: num): <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {
    <a href="fixed_point32.md#0x1_fixed_point32_FixedPoint32">FixedPoint32</a> {value: val &lt;&lt; 32}
 }
 </code></pre>

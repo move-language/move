@@ -28,6 +28,7 @@ reqwest = { version = "0.11.1", features = ["blocking", "json"] }
 bcs = "0.1.2"
 move-bytecode-verifier = { path = "../../move-bytecode-verifier" }
 move-disassembler = { path = "../move-disassembler" }
+move-docgen = { path = "../../move-prover/move-docgen" }
 move-command-line-common = { path = "../../move-command-line-common" }
 move-bytecode-utils = { path = "../move-bytecode-utils" }
 move-coverage = { path = "../move-coverage" }

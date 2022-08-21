@@ -3013,6 +3013,7 @@ dependencies = [
  "move-core-types",
  "move-coverage",
  "move-disassembler",
+ "move-docgen",
  "move-errmapgen",
  "move-ir-types",
  "move-package",

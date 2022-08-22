@@ -1,3 +1,9 @@
+## 参与贡献的重要提示
+
+《Move Book 中文版》翻译工作还在持续进行中，如果你愿意贡献你的一份力量，欢迎提交 pr 或 issue。
+
+在贡献之前请阅读[官方的贡献指南](https://github.com/move-language/move/blob/main/CONTRIBUTING.md)和《Move Book 中文版》的贡献指南。
+
 # Move Book 中文版
 
 区块链技术的发展经历了两个阶段，比特币（BTC）开启了*区块链1.0时代*，以太坊（ETH）开启了*区块链2.0时代*。

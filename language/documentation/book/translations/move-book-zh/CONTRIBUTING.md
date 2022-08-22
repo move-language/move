@@ -8,6 +8,12 @@
 
 欢迎所有对 Move 感兴趣的朋友一起加入到《Move Book 中文版》的翻译工作中。
 
+## 提交 PR 的 Commits 格式
+
+```text
+[move-book-zh] 关于这个 PR 的描述信息
+```
+
 ## 文档规范
 
 请参考：[中文技术文档的写作规范](https://github.com/ruanyf/document-style-guide)

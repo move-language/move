@@ -88,7 +88,6 @@ CRATES="\
 if [ ! -z "$CHECKMORE" ]; then
   CRATES="$CRATES \
     $BASE/language/move-prover/move-abigen\
-    $BASE/language/move-prover/move-docgen\
     $BASE/language/move-prover/errmapgen\
     $BASE/language/move-prover/interpreter\
     $BASE/language/move-prover/interpreter-testsuite\

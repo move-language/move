@@ -91,7 +91,7 @@ the module](#References-to-Data-and-Code). If the two addresses do not match, an
 error with `StatusCode::MODULE_ADDRESS_DOES_NOT_MATCH_SENDER` is returned.
 
 * Check that the module is not already published: Code is immutable in
-Move. An attempt to overwrite an exiting module results in an error with
+Move. An attempt to overwrite an existing module results in an error with
 `StatusCode::DUPLICATE_MODULE_NAME`.
 
 * Verify loading: The VM performs [verification](#Verification) of the

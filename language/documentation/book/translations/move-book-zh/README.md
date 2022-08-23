@@ -2,6 +2,8 @@
 
 《Move Book 中文版》翻译工作还在持续进行中，如果你愿意贡献你的一份力量，欢迎提交 pr 或 issue。
 
+为了方便翻译工作的进行，在提交 pr 时请不要删除英文原文的内容！
+
 在贡献之前请阅读[官方的贡献指南](https://github.com/move-language/move/blob/main/CONTRIBUTING.md)和[《Move Book 中文版》的贡献指南](./CONTRIBUTING.md)。
 
 # Move Book 中文版

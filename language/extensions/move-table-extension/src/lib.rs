@@ -112,7 +112,7 @@ pub enum TableOperation {
 #[derive(Tid)]
 pub struct NativeTableContext<'a> {
     resolver: &'a dyn TableResolver,
-    txn_hash: u128,
+    txn_hash: [u8; 32],
     table_data: RefCell<TableData>,
 }
 
@@ -154,7 +154,7 @@ const HANDLE_FIELD_INDEX: usize = 0;
 impl<'a> NativeTableContext<'a> {
     /// Create a new instance of a native table context. This must be passed in via an
     /// extension into VM session functions.
-    pub fn new(txn_hash: u128, resolver: &'a dyn TableResolver) -> Self {
+    pub fn new(txn_hash: [u8; 32], resolver: &'a dyn TableResolver) -> Self {
         Self {
             resolver,
             txn_hash,
@@ -357,8 +357,9 @@ fn native_new_table_handle(
     // produced so far, sha256 this to produce a unique handle. Given the txn hash
     // is unique, this should create a unique and deterministic global id.
     let mut digest = Sha3_256::new();
-    Digest::update(&mut digest, table_context.txn_hash.to_be_bytes());
-    Digest::update(&mut digest, table_data.new_tables.len().to_be_bytes());
+    let table_len = table_data.new_tables.len() as u32; // cast usize to u32 to ensure same length
+    Digest::update(&mut digest, table_context.txn_hash);
+    Digest::update(&mut digest, table_len.to_be_bytes());
     let bytes = digest.finalize().to_vec();
     let handle = AccountAddress::from_bytes(&bytes[0..AccountAddress::LENGTH])
         .map_err(|_| partial_extension_error("Unable to create table handle"))?;

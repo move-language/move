@@ -61,7 +61,7 @@ pub(crate) fn print_change_sets<W: Write>(_w: &mut W, mut extensions: NativeCont
 
 #[cfg(feature = "table-extension")]
 fn create_table_extension(extensions: &mut NativeContextExtensions) {
-    extensions.add(NativeTableContext::new(0, &*DUMMY_RESOLVER));
+    extensions.add(NativeTableContext::new([0u8; 32], &*DUMMY_RESOLVER));
 }
 
 #[cfg(feature = "table-extension")]

@@ -1,4 +1,4 @@
-
+// separate_baseline: cvc5
 
 module 0x42::VerifyLoops {
 

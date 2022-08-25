@@ -3,12 +3,6 @@ address 0x1 {
 module ScriptProvider {
     use std::signer;
 
-    spec module {
-        // TODO: This file gets errors for reasons I do not understand.
-        // The errors are produced non-deterministically, therefore turned off.
-        pragma verify = false;
-    }
-
     struct Info<phantom T> has key {}
 
     public fun register<T: store>(account: &signer) {

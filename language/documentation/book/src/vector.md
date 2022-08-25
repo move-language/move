@@ -43,7 +43,7 @@ result. These values are so common that specific syntax is provided to make the 
 readable, as opposed to having to use `vector[]` where each individual `u8` value is specified in
 numeric form.
 
-There are currently two supported types of `vector<u8>` literals, byte strings and hex strings.
+There are currently two supported types of `vector<u8>` literals, *byte strings* and *hex strings*.
 
 #### Byte Strings
 
@@ -91,24 +91,24 @@ fun byte_and_hex_strings() {
 `vector` supports the following operations via the `std::vector` module in the Move standard
 library:
 
-| Function                                                   | Description                                                   | Aborts?                 |
-| ---------------------------------------------------------- | ------------------------------------------------------------- | ----------------------- |
-| `vector::empty<T>(): vector<T>`                            | Create an empty vector that can store values of type `T`      | Never                   |
-| `vector::singleton<T>(t: T): vector<T>`                    | Create a vector of size 1 containing `t`                      | Never                   |
-| `vector::push_back<T>(v: &mut vector<T>, t: T)`            | Add `t` to the end of `v`                                     | Never                   |
-| `vector::pop_back<T>(v: &mut vector<T>): T`                | Remove and return the last element in `v`                     | If `v` is empty         |
-| `vector::borrow<T>(v: &vector<T>, i: u64): &T`             | Return an immutable reference to the `T` at index `i`         | If `i` is not in bounds |
-| `vector::borrow_mut<T>(v: &mut vector<T>, i: u64): &mut T` | Return an mutable reference to the `T` at index `i`           | If `i` is not in bounds |
-| `vector::destroy_empty<T>(v: vector<T>)`                   | Delete `v`                                                    | If `v` is not empty     |
-| `vector::append<T>(v1: &mut vector<T>, v2: vector<T>)`     | Add the elements in `v2` to the end of `v1`                   | If `i` is not in bounds |
-| `vector::contains<T>(v: &vector<T>, e: &T): bool`          | Return true if `e` is in the vector `v`                       | Never                   |
-| `vector::swap<T>(v: &mut vector<T>, i: u64, j: u64)` | Swaps the elements at the `i`th and `j`th indices in the vector `v`.| If `i` or `j` is out of bounds |
-| `vector::reverse<T>(v: &mut vector<T>)`                    | Reverses the order of the elements in the vector `v` in place | Never                   |
-| `vector::index_of<T>(v: &vector<T>, e: &T): (bool, u64)` | Return `(true, i)` if `e` is in the vector `v` at index `i`. Otherwise, returns `(false, 0)`.| Never |
-| `vector::remove<T>(v: &mut vector<T>, i: u64): T` | Remove the `i`th element of the vector `v`, shifting all subsequent elements. This is O(n) and preserves ordering of elements in the vector. | If `i` is out of bounds. |
-| `vector::swap_remove<T>(v: &mut vector<T>, i: u64): T` | Swap the `i`th element of the vector `v` with the last element and then pop the vector, This is O(1), but does not preserve ordering of elements in the vector. | If `i` is out of bounds. |
+| Function                                                   | Description                                                                                                                                                     | Aborts?                        |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| `vector::empty<T>(): vector<T>`                            | Create an empty vector that can store values of type `T`                                                                                                        | Never                          |
+| `vector::singleton<T>(t: T): vector<T>`                    | Create a vector of size 1 containing `t`                                                                                                                        | Never                          |
+| `vector::push_back<T>(v: &mut vector<T>, t: T)`            | Add `t` to the end of `v`                                                                                                                                       | Never                          |
+| `vector::pop_back<T>(v: &mut vector<T>): T`                | Remove and return the last element in `v`                                                                                                                       | If `v` is empty                |
+| `vector::borrow<T>(v: &vector<T>, i: u64): &T`             | Return an immutable reference to the `T` at index `i`                                                                                                           | If `i` is not in bounds        |
+| `vector::borrow_mut<T>(v: &mut vector<T>, i: u64): &mut T` | Return a mutable reference to the `T` at index `i`                                                                                                              | If `i` is not in bounds        |
+| `vector::destroy_empty<T>(v: vector<T>)`                   | Delete `v`                                                                                                                                                      | If `v` is not empty            |
+| `vector::append<T>(v1: &mut vector<T>, v2: vector<T>)`     | Add the elements in `v2` to the end of `v1`                                                                                                                     | Never                          |
+| `vector::contains<T>(v: &vector<T>, e: &T): bool`          | Return true if `e` is in the vector `v`. Otherwise, return false                                                                                                | Never                          |
+| `vector::swap<T>(v: &mut vector<T>, i: u64, j: u64)`       | Swaps the elements at the `i`th and `j`th indices in the vector `v`                                                                                             | If `i` or `j` is out of bounds |
+| `vector::reverse<T>(v: &mut vector<T>)`                    | Reverses the order of the elements in the vector `v` in place                                                                                                   | Never                          |
+| `vector::index_of<T>(v: &vector<T>, e: &T): (bool, u64)`   | Return `(true, i)` if `e` is in the vector `v` at index `i`. Otherwise, returns `(false, 0)`                                                                    | Never                          |
+| `vector::remove<T>(v: &mut vector<T>, i: u64): T`          | Remove the `i`th element of the vector `v`, shifting all subsequent elements. This is O(n) and preserves ordering of elements in the vector                     | If `i` is out of bounds        |
+| `vector::swap_remove<T>(v: &mut vector<T>, i: u64): T`     | Swap the `i`th element of the vector `v` with the last element and then pop the vector, This is O(1), but does not preserve ordering of elements in the vector  | If `i` is out of bounds        |
 
-More operations may be added overtime
+More operations may be added over time.
 
 ## Example
 

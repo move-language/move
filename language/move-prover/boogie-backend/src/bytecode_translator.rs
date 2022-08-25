@@ -26,7 +26,7 @@ use move_stackless_bytecode::{
 
 use crate::{
     boogie_helpers::{
-        boogie_byte_blob, boogie_debug_track_abort, boogie_debug_track_local,
+        boogie_address_blob, boogie_byte_blob, boogie_debug_track_abort, boogie_debug_track_local,
         boogie_debug_track_return, boogie_equality_for_type, boogie_field_sel, boogie_field_update,
         boogie_function_name, boogie_make_vec_from_strings, boogie_modifies_memory_name,
         boogie_resource_memory_name, boogie_struct_name, boogie_temp, boogie_type,
@@ -849,6 +849,7 @@ impl<'env> FunctionTranslator<'env> {
                     Constant::U256(num) => num.to_string(),
                     Constant::Address(val) => val.to_string(),
                     Constant::ByteArray(val) => boogie_byte_blob(options, val),
+                    Constant::AddressArray(val) => boogie_address_blob(options, val),
                 };
                 let dest_str = str_local(*dest);
                 emitln!(writer, "{} := {};", dest_str, value);

@@ -246,6 +246,15 @@ impl<'env> Evaluator<'env> {
             Value::ByteArray(v) => {
                 BaseValue::mk_vector(v.iter().map(|e| BaseValue::mk_u8(*e)).collect())
             }
+            Value::AddressArray(v) => BaseValue::mk_vector(
+                v.iter()
+                    .map(|e| {
+                        BaseValue::mk_address(
+                            AccountAddress::from_hex_literal(&format!("{:#x}", e)).unwrap(),
+                        )
+                    })
+                    .collect(),
+            ),
         }
     }
 

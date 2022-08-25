@@ -446,6 +446,17 @@ impl<'env> FunctionContext<'env> {
                 let elems = v.iter().map(|e| TypedValue::mk_u8(*e)).collect();
                 TypedValue::mk_vector(BaseType::mk_u8(), elems)
             }
+            Constant::AddressArray(v) => {
+                let elems = v
+                    .iter()
+                    .map(|e| {
+                        TypedValue::mk_address(
+                            AccountAddress::from_hex_literal(&format!("{:#x}", *e)).unwrap(),
+                        )
+                    })
+                    .collect();
+                TypedValue::mk_vector(BaseType::mk_address(), elems)
+            }
         };
         local_state.put_value_override(dst, val);
     }

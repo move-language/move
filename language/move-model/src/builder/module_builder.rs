@@ -358,8 +358,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 .unwrap();
         let mut et = ExpTranslator::new(self);
         let loc = et.to_loc(&def.loc);
-        let value = et.translate_from_move_value(&loc, &move_value);
         let ty = et.translate_type(&def.signature);
+        let value = et.translate_from_move_value(&loc, &ty, &move_value);
         et.parent
             .parent
             .define_const(qsym, ConstEntry { loc, ty, value });

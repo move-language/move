@@ -49,6 +49,10 @@ impl SpecPrinter<'_> {
                     v.iter().map(|e| format!("{:02x}", e)).join(""),
                 )),
             },
+            Value::AddressArray(v) => Self::doc(format!(
+                "x\"{}\"",
+                v.iter().map(|e| format!("@{:#x}", e)).join(""),
+            )),
         }
     }
 

@@ -1,12 +1,38 @@
 Move prover returns: exiting with verification errors
-error: post-condition does not hold
-   ┌─ tests/sources/functional/consts.move:29:9
+error: unknown assertion failed
+   ┌─ tests/sources/functional/consts.move:43:13
    │
-29 │         ensures !result.b;
+43 │             assert BYTE_ARRAY[0] == 22;
+   │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │
+   =     at tests/sources/functional/consts.move:43: array_1_incorrect
+
+error: unknown assertion failed
+   ┌─ tests/sources/functional/consts.move:49:13
+   │
+49 │             assert ADDRESS_ARRAY[0] == @0x222;
+   │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │
+   =     at tests/sources/functional/consts.move:49: array_2_incorrect
+
+error: unknown assertion failed
+   ┌─ tests/sources/functional/consts.move:63:13
+   │
+63 │             assert v1[0] == @0x111 && v1[1] == @0x222 && v1[2] == @0x333;
+   │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │
+   =     at tests/sources/functional/consts.move:61: array_in_fun_incorrect
+   =         v1 = <redacted>
+   =     at tests/sources/functional/consts.move:63: array_in_fun_incorrect
+
+error: post-condition does not hold
+   ┌─ tests/sources/functional/consts.move:31:9
+   │
+31 │         ensures !result.b;
    │         ^^^^^^^^^^^^^^^^^^
    │
-   =     at tests/sources/functional/consts.move:24: init_incorrect
+   =     at tests/sources/functional/consts.move:26: init_incorrect
    =         result = <redacted>
-   =     at tests/sources/functional/consts.move:25: init_incorrect
-   =     at tests/sources/functional/consts.move:28: init_incorrect (spec)
-   =     at tests/sources/functional/consts.move:29: init_incorrect (spec)
+   =     at tests/sources/functional/consts.move:27: init_incorrect
+   =     at tests/sources/functional/consts.move:30: init_incorrect (spec)
+   =     at tests/sources/functional/consts.move:31: init_incorrect (spec)

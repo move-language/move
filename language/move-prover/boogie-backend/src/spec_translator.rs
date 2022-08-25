@@ -24,10 +24,10 @@ use move_model::{
 
 use crate::{
     boogie_helpers::{
-        boogie_byte_blob, boogie_choice_fun_name, boogie_declare_global, boogie_field_sel,
-        boogie_inst_suffix, boogie_modifies_memory_name, boogie_resource_memory_name,
-        boogie_spec_fun_name, boogie_spec_var_name, boogie_struct_name, boogie_type,
-        boogie_type_suffix, boogie_well_formed_expr,
+        boogie_address_blob, boogie_byte_blob, boogie_choice_fun_name, boogie_declare_global,
+        boogie_field_sel, boogie_inst_suffix, boogie_modifies_memory_name,
+        boogie_resource_memory_name, boogie_spec_fun_name, boogie_spec_var_name,
+        boogie_struct_name, boogie_type, boogie_type_suffix, boogie_well_formed_expr,
     },
     options::BoogieOptions,
 };
@@ -637,6 +637,7 @@ impl<'env> SpecTranslator<'env> {
             Value::Number(val) => emit!(self.writer, "{}", val),
             Value::Bool(val) => emit!(self.writer, "{}", val),
             Value::ByteArray(val) => emit!(self.writer, &boogie_byte_blob(self.options, val)),
+            Value::AddressArray(val) => emit!(self.writer, &boogie_address_blob(self.options, val)),
         }
     }
 

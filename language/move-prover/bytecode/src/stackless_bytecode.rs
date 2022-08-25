@@ -93,6 +93,7 @@ pub enum Constant {
     U256(U256),
     Address(BigUint),
     ByteArray(Vec<u8>),
+    AddressArray(Vec<BigUint>),
 }
 
 /// An operation -- target of a call. This contains user functions, builtin functions, and
@@ -1122,6 +1123,13 @@ impl fmt::Display for Constant {
             U256(x) => write!(f, "{}", x)?,
             Address(x) => write!(f, "0x{}", x.to_str_radix(16))?,
             ByteArray(x) => write!(f, "{:?}", x)?,
+            AddressArray(x) => write!(
+                f,
+                "{:?}",
+                x.iter()
+                    .map(|v| format!("0x{}", v.to_str_radix(16)))
+                    .collect_vec()
+            )?,
         }
         Ok(())
     }

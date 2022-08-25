@@ -957,6 +957,7 @@ pub enum Value {
     Number(BigInt),
     Bool(bool),
     ByteArray(Vec<u8>),
+    AddressArray(Vec<BigUint>),
 }
 
 impl fmt::Display for Value {
@@ -967,6 +968,7 @@ impl fmt::Display for Value {
             Value::Bool(b) => write!(f, "{}", b),
             // TODO(tzakian): Figure out a better story for byte array displays
             Value::ByteArray(bytes) => write!(f, "{:?}", bytes),
+            Value::AddressArray(array) => write!(f, "{:?}", array),
         }
     }
 }

@@ -27,6 +27,7 @@ use move_model::{
     model::{FunId, FunctionEnv, Loc, ModuleId, StructId},
     ty::{PrimitiveType, Type},
 };
+use num::BigUint;
 use std::{
     collections::{BTreeMap, BTreeSet},
     convert::TryInto,
@@ -1266,16 +1267,29 @@ impl<'a> StacklessBytecodeGenerator<'a> {
 
     fn translate_value(ty: &Type, value: &MoveValue) -> Constant {
         match (ty, &value) {
-            (Type::Vector(inner), MoveValue::Vector(vs)) => {
-                let b = vs
-                    .iter()
-                    .map(|v| match Self::translate_value(inner, v) {
-                        Constant::U8(u) => u,
-                        _ => unimplemented!("Not yet supported constant vector type: {:?}", ty),
-                    })
-                    .collect::<Vec<u8>>();
-                Constant::ByteArray(b)
-            }
+            (Type::Vector(inner), MoveValue::Vector(vs)) => match **inner {
+                Type::Primitive(PrimitiveType::U8) => {
+                    let b = vs
+                        .iter()
+                        .map(|v| match Self::translate_value(inner, v) {
+                            Constant::U8(u) => u,
+                            _ => panic!("Expected u8, but found: {:?}", inner),
+                        })
+                        .collect::<Vec<u8>>();
+                    Constant::ByteArray(b)
+                }
+                Type::Primitive(PrimitiveType::Address) => {
+                    let b = vs
+                        .iter()
+                        .map(|v| match Self::translate_value(inner, v) {
+                            Constant::Address(a) => a,
+                            _ => panic!("Expected address, but found: {:?}", inner),
+                        })
+                        .collect::<Vec<BigUint>>();
+                    Constant::AddressArray(b)
+                }
+                _ => unimplemented!("Not yet supported constant vector type: {:?}", ty),
+            },
             (Type::Primitive(PrimitiveType::Bool), MoveValue::Bool(b)) => Constant::Bool(*b),
             (Type::Primitive(PrimitiveType::U8), MoveValue::U8(b)) => Constant::U8(*b),
             (Type::Primitive(PrimitiveType::U64), MoveValue::U64(b)) => Constant::U64(*b),

@@ -17,6 +17,7 @@ use move_model::{
     well_known::TABLE_TABLE,
 };
 use move_stackless_bytecode::function_target::FunctionTarget;
+use num::BigUint;
 
 pub const MAX_MAKE_VEC_ARGS: usize = 4;
 
@@ -304,6 +305,15 @@ pub fn boogie_byte_blob(_options: &BoogieOptions, val: &[u8]) -> String {
     let args = val.iter().map(|v| format!("{}", *v)).collect_vec();
     if args.is_empty() {
         "$EmptyVec'u8'()".to_string()
+    } else {
+        boogie_make_vec_from_strings(&args)
+    }
+}
+
+pub fn boogie_address_blob(_options: &BoogieOptions, val: &[BigUint]) -> String {
+    let args = val.iter().map(|v| format!("{}", *v)).collect_vec();
+    if args.is_empty() {
+        "$EmptyVec'address'()".to_string()
     } else {
         boogie_make_vec_from_strings(&args)
     }

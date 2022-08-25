@@ -35,9 +35,8 @@ fn native_print(
     debug_assert!(ty_args.len() == 1);
     debug_assert!(args.len() == 1);
 
-    // No-op if the feature flag is not present.
-    #[cfg(feature = "testing")]
-    {
+    // No-op if the feature flag is not present. or if in Rust release build
+    if cfg!(feature = "testing") || cfg!(debug_assert) {
         let _ty = ty_args.pop().unwrap();
         let r = pop_arg!(args, Reference);
 
@@ -77,8 +76,7 @@ fn native_print_stack_trace(
     debug_assert!(ty_args.is_empty());
     debug_assert!(args.is_empty());
 
-    #[cfg(feature = "testing")]
-    {
+    if cfg!(feature = "testing") || cfg!(debug_assert) {
         let mut s = String::new();
         context.print_stack_trace(&mut s)?;
         println!("{}", s);

@@ -101,6 +101,7 @@ module std::vector {
     }
 
     /// Return true if `e` is in the vector `v`.
+    /// Otherwise, returns false.
     public fun contains<Element>(v: &vector<Element>, e: &Element): bool {
         let i = 0;
         let len = length(v);
@@ -145,7 +146,7 @@ module std::vector {
         pragma intrinsic = true;
     }
 
-    /// Swap the `i`th element of the vector `v` with the last element and then pop the vector.
+    /// Swap the `i`th element of the vector `v` with the last element and then pop the element.
     /// This is O(1), but does not preserve ordering of elements in the vector.
     /// Aborts if `i` is out of bounds.
     public fun swap_remove<Element>(v: &mut vector<Element>, i: u64): Element {

@@ -118,6 +118,8 @@ pub struct BoogieOptions {
     pub z3_trace_file: Option<String>,
     /// Options to define user-custom native funs.
     pub custom_natives: Option<CustomNativeOptions>,
+    /// Number of iterations to unroll loops.
+    pub loop_unroll: Option<u64>,
 }
 
 impl Default for BoogieOptions {
@@ -153,6 +155,7 @@ impl Default for BoogieOptions {
             vector_theory: VectorTheory::BoogieArray,
             z3_trace_file: None,
             custom_natives: None,
+            loop_unroll: None,
         }
     }
 }
@@ -206,6 +209,9 @@ impl BoogieOptions {
                 self.lazy_threshold
             )]);
         }
+        if let Some(iters) = self.loop_unroll {
+            add(&[&format!("-loopUnroll:{}", iters)]);
+        }
         add(&[&format!(
             "-vcsCores:{}",
             if self.stable_test_output {
@@ -236,6 +242,7 @@ impl BoogieOptions {
             add(&[f.as_str()]);
         }
         add(&[boogie_file]);
+        println!("COMMAND: {:?}", &result);
         Ok(result)
     }
 

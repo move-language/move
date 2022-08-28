@@ -5,7 +5,6 @@
 use log::LevelFilter;
 use move_command_line_common::files::{extension_equals, find_filenames, MOVE_EXTENSION};
 use move_compiler::shared::NumericalAddress;
-use move_core_types::account_address::AccountAddress;
 use std::{collections::BTreeMap, path::PathBuf};
 
 #[cfg(test)]

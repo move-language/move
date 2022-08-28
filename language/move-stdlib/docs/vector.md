@@ -411,6 +411,7 @@ Return <code><b>true</b></code> if the vector <code>v</code> has no elements and
 ## Function `contains`
 
 Return true if <code>e</code> is in the vector <code>v</code>.
+Otherwise, returns false.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="vector.md#0x1_vector_contains">contains</a>&lt;Element&gt;(v: &<a href="vector.md#0x1_vector">vector</a>&lt;Element&gt;, e: &Element): bool
@@ -542,7 +543,7 @@ Aborts if <code>i</code> is out of bounds.
 
 ## Function `swap_remove`
 
-Swap the <code>i</code>th element of the vector <code>v</code> with the last element and then pop the vector.
+Swap the <code>i</code>th element of the vector <code>v</code> with the last element and then pop the element.
 This is O(1), but does not preserve ordering of elements in the vector.
 Aborts if <code>i</code> is out of bounds.
 

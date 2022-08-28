@@ -55,7 +55,7 @@ Error: Script execution failed with VMError: {
 }
 
 task 6 'publish'. lines 48-56:
-Error: Unable to publish module '00000000000000000000000000000042::M'. Got VMError: {
+Error: Unable to publish module '0x42::M'. Got VMError: {
     major_status: INTEGER_OP_TYPE_MISMATCH_ERROR,
     sub_status: None,
     location: 0x42::M,
@@ -64,7 +64,7 @@ Error: Unable to publish module '00000000000000000000000000000042::M'. Got VMErr
 }
 
 task 7 'publish'. lines 58-66:
-Error: Unable to publish module '00000000000000000000000000000042::M'. Got VMError: {
+Error: Unable to publish module '0x42::M'. Got VMError: {
     major_status: INTEGER_OP_TYPE_MISMATCH_ERROR,
     sub_status: None,
     location: 0x42::M,
@@ -73,7 +73,7 @@ Error: Unable to publish module '00000000000000000000000000000042::M'. Got VMErr
 }
 
 task 8 'publish'. lines 68-76:
-Error: Unable to publish module '00000000000000000000000000000042::M'. Got VMError: {
+Error: Unable to publish module '0x42::M'. Got VMError: {
     major_status: INTEGER_OP_TYPE_MISMATCH_ERROR,
     sub_status: None,
     location: 0x42::M,

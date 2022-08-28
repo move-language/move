@@ -169,11 +169,23 @@ impl ModuleId {
 
 impl Display for ModuleId {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "{}::{}", self.address, self.name)
+        self.short_str_lossless().fmt(f)
     }
 }
 
 impl ModuleId {
+    /// Returns a human-readable representation of the module id; that is,
+    /// with a shortened address.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let my_module_id = ModuleId {
+    ///   address: AccountAddress::ONE,
+    ///   name: ident_str!("abc").into(),
+    /// };
+    /// assert_eq!(my_module_id.short_str_lossless(), "0x1::abc");
+    /// ```
     pub fn short_str_lossless(&self) -> String {
         format!("0x{}::{}", self.address.short_str_lossless(), self.name)
     }
@@ -249,6 +261,16 @@ mod tests {
         assert_eq!(des, my_module_id);
 
         assert_eq!(my_module_id, des);
+    }
+
+    #[test]
+    fn test_module_id_display() {
+        let my_module_id = ModuleId {
+            address: AccountAddress::ONE,
+            name: ident_str!("abc").into(),
+        };
+
+        assert_eq!(format!("{}", my_module_id), "0x1::abc");
     }
 
     #[test]

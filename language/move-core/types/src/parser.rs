@@ -4,6 +4,7 @@
 
 use crate::{
     account_address::AccountAddress,
+    ident_str,
     identifier::{self, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
     transaction_argument::TransactionArgument,
@@ -257,16 +258,18 @@ impl<I: Iterator<Item = Token>> Parser<I> {
     fn parse_module_id(&mut self) -> Result<ModuleId> {
         Ok(match self.next()? {
             Token::Address(addr) => {
+                let address = AccountAddress::from_hex_literal(&addr)?;
                 self.consume(Token::ColonColon)?;
-                match self.next()? {
-                    Token::Name(module) => ModuleId::new(
-                        AccountAddress::from_hex_literal(&addr)?,
-                        Identifier::new(module)?,
-                    ),
+                let identifier = match self.next()? {
+                    Token::VectorType if address.to_hex_literal() == "0x1" => {
+                        ident_str!("vector").to_owned()
+                    }
+                    Token::Name(module) => Identifier::new(module)?,
                     t => bail!("expected name, got {:?}", t),
-                }
+                };
+                ModuleId::new(address, identifier)
             }
-            tok => bail!("unexpected token {:?}, expected type tag", tok),
+            tok => bail!("unexpected token {:?}, expected module id", tok),
         })
     }
 
@@ -400,7 +403,7 @@ pub fn parse_struct_tag(s: &str) -> Result<StructTag> {
 mod tests {
     use crate::{
         account_address::AccountAddress,
-        parser::{parse_struct_tag, parse_transaction_argument, parse_type_tag},
+        parser::{parse_module_id, parse_struct_tag, parse_transaction_argument, parse_type_tag},
         transaction_argument::TransactionArgument,
     };
 
@@ -500,6 +503,26 @@ mod tests {
             "0x1::M::S<vector<u8>>",
         ] {
             assert!(parse_type_tag(s).is_ok(), "Failed to parse tag {}", s);
+        }
+    }
+
+    #[test]
+    fn test_parse_valid_module_id() {
+        let valid = vec![
+            "0x1::Diem",
+            "0x1::vector",
+            "0x2::vector",
+            "0xabcdef::ThisIsaverylongmodulename",
+        ];
+        for text in valid {
+            let st = parse_module_id(text).expect("valid ModuleId");
+            assert_eq!(
+                st.to_string().replace(' ', ""),
+                text.replace(' ', ""),
+                "text: {:?}, ModuleId: {:?}",
+                text,
+                st
+            );
         }
     }
 

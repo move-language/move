@@ -114,12 +114,30 @@ pub struct ModuleId {
     name: Identifier,
 }
 
+// In order to preserve the Serde data model and help analysis tools,
+// make sure to wrap our value in a container with the same name
+// as the original type.
+#[derive(::serde::Serialize, ::serde::Deserialize)]
+#[serde(rename = "ModuleId")]
+struct ModuleIdBin {
+    address: AccountAddress,
+    name: Identifier,
+}
+
 impl Serialize for ModuleId {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        serializer.serialize_str(&self.short_str_lossless())
+        if serializer.is_human_readable() {
+            serializer.serialize_str(&self.short_str_lossless())
+        } else {
+            let value = ModuleIdBin {
+                address: self.address,
+                name: self.name.clone(),
+            };
+            value.serialize(serializer)
+        }
     }
 }
 
@@ -128,8 +146,13 @@ impl<'de> Deserialize<'de> for ModuleId {
     where
         D: serde::Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?;
-        ModuleId::from_str(&s).map_err(serde::de::Error::custom)
+        if deserializer.is_human_readable() {
+            let s = String::deserialize(deserializer)?;
+            ModuleId::from_str(&s).map_err(serde::de::Error::custom)
+        } else {
+            let value = ModuleIdBin::deserialize(deserializer)?;
+            Ok(ModuleId::new(value.address, value.name))
+        }
     }
 }
 

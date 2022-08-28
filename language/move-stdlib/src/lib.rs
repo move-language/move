@@ -5,6 +5,7 @@
 use log::LevelFilter;
 use move_command_line_common::files::{extension_equals, find_filenames, MOVE_EXTENSION};
 use move_compiler::shared::NumericalAddress;
+use move_core_types::account_address::AccountAddress;
 use std::{collections::BTreeMap, path::PathBuf};
 
 #[cfg(test)]
@@ -51,7 +52,12 @@ pub fn move_nursery_docs_full_path() -> String {
 }
 
 pub fn move_stdlib_errmap_full_path() -> String {
-    format!("{}/{}", env!("CARGO_MANIFEST_DIR"), ERRMAP_FILE)
+    let prefix = if AccountAddress::LENGTH == 16 {
+        "".to_string()
+    } else {
+        format!("address{}-", AccountAddress::LENGTH)
+    };
+    format!("{}/{}{}", env!("CARGO_MANIFEST_DIR"), &prefix, ERRMAP_FILE)
 }
 
 pub fn move_stdlib_files() -> Vec<String> {
@@ -154,7 +160,13 @@ pub fn build_error_code_map(output_path: &str) {
     move_prover::run_move_prover_errors_to_stderr(options).unwrap();
 }
 
-const ERROR_DESCRIPTIONS: &[u8] = include_bytes!("../error_description.errmap");
+const ERROR_DESCRIPTIONS: &[u8] = if cfg!(feature = "address20") {
+    include_bytes!("../address20-error_description.errmap")
+} else if cfg!(feature = "address32") {
+    include_bytes!("../address32-error_description.errmap")
+} else {
+    include_bytes!("../error_description.errmap")
+};
 
 pub fn error_descriptions() -> &'static [u8] {
     ERROR_DESCRIPTIONS

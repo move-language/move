@@ -5,7 +5,7 @@
 use crate::{
     account_address::AccountAddress,
     identifier::{self, Identifier},
-    language_storage::{StructTag, TypeTag},
+    language_storage::{ModuleId, StructTag, TypeTag},
     transaction_argument::TransactionArgument,
 };
 use anyhow::{bail, format_err, Result};
@@ -254,6 +254,22 @@ impl<I: Iterator<Item = Token>> Parser<I> {
         })
     }
 
+    fn parse_module_id(&mut self) -> Result<ModuleId> {
+        Ok(match self.next()? {
+            Token::Address(addr) => {
+                self.consume(Token::ColonColon)?;
+                match self.next()? {
+                    Token::Name(module) => ModuleId::new(
+                        AccountAddress::from_hex_literal(&addr)?,
+                        Identifier::new(module)?,
+                    ),
+                    t => bail!("expected name, got {:?}", t),
+                }
+            }
+            tok => bail!("unexpected token {:?}, expected type tag", tok),
+        })
+    }
+
     fn parse_type_tag(&mut self) -> Result<TypeTag> {
         Ok(match self.next()? {
             Token::U8Type => TypeTag::U8,
@@ -363,6 +379,11 @@ pub fn parse_transaction_arguments(s: &str) -> Result<Vec<TransactionArgument>> 
 
 pub fn parse_transaction_argument(s: &str) -> Result<TransactionArgument> {
     parse(s, |parser| parser.parse_transaction_argument())
+}
+
+pub fn parse_module_id(s: &str) -> Result<ModuleId> {
+    parse(s, |parser| parser.parse_module_id())
+        .map_err(|e| format_err!("invalid module id: {}, {}", s, e))
 }
 
 pub fn parse_struct_tag(s: &str) -> Result<StructTag> {

@@ -5,7 +5,7 @@
 use crate::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
-    parser::{parse_struct_tag, parse_type_tag},
+    parser::{parse_module_id, parse_struct_tag, parse_type_tag},
 };
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
@@ -137,8 +137,7 @@ impl FromStr for ModuleId {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let tt: StructTag = parse_struct_tag(&format!("{}::Dummy", s))?;
-        Ok(tt.module_id())
+        parse_module_id(s)
     }
 }
 

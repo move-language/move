@@ -9,7 +9,7 @@ use crate::{
 };
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 use std::{
     fmt::{Display, Formatter},
     str::FromStr,
@@ -106,12 +106,40 @@ impl ResourceKey {
 
 /// Represents the initial key into global storage where we first index by the address, and then
 /// the struct tag
-#[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
 pub struct ModuleId {
     address: AccountAddress,
     name: Identifier,
+}
+
+impl Serialize for ModuleId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.short_str_lossless())
+    }
+}
+
+impl<'de> Deserialize<'de> for ModuleId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        ModuleId::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+impl FromStr for ModuleId {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let tt: StructTag = parse_struct_tag(&format!("{}::Dummy", s))?;
+        Ok(tt.module_id())
+    }
 }
 
 impl From<ModuleId> for (AccountAddress, Identifier) {
@@ -202,10 +230,27 @@ impl From<StructTag> for TypeTag {
 
 #[cfg(test)]
 mod tests {
-    use super::TypeTag;
+    use super::{ModuleId, TypeTag};
     use crate::{
-        account_address::AccountAddress, identifier::Identifier, language_storage::StructTag,
+        account_address::AccountAddress, ident_str, identifier::Identifier,
+        language_storage::StructTag,
     };
+
+    #[test]
+    fn test_module_id_serde() {
+        let my_module_id = ModuleId {
+            address: AccountAddress::ONE,
+            name: ident_str!("abc").into(),
+        };
+
+        let ser = serde_json::to_string(&my_module_id).unwrap();
+        assert_eq!(ser, "\"0x1::abc\"");
+
+        let des: ModuleId = serde_json::from_str(&ser).unwrap();
+        assert_eq!(des, my_module_id);
+
+        assert_eq!(my_module_id, des);
+    }
 
     #[test]
     fn test_type_tag_serde() {

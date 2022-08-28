@@ -242,7 +242,6 @@ impl BoogieOptions {
             add(&[f.as_str()]);
         }
         add(&[boogie_file]);
-        println!("COMMAND: {:?}", &result);
         Ok(result)
     }
 

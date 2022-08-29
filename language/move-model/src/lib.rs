@@ -4,16 +4,17 @@
 
 #![forbid(unsafe_code)]
 
+use std::{
+    collections::{BTreeMap, BTreeSet, HashMap},
+    rc::Rc,
+};
+
 use codespan::ByteIndex;
 use codespan_reporting::diagnostic::{Diagnostic, Label, LabelStyle};
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::warn;
-use move_symbol_pool::Symbol as MoveSymbol;
-use std::{
-    collections::{BTreeMap, BTreeSet, HashMap},
-    rc::Rc,
-};
+use num::{BigUint, Num};
 
 use builder::module_builder::ModuleBuilder;
 use move_binary_format::{
@@ -37,7 +38,7 @@ use move_compiler::{
 };
 use move_core_types::{account_address::AccountAddress, identifier::Identifier};
 use move_ir_types::location::sp;
-use num::{BigUint, Num};
+use move_symbol_pool::Symbol as MoveSymbol;
 
 use crate::{
     ast::{ModuleName, Spec},
@@ -92,7 +93,7 @@ pub fn run_model_builder_with_options<
         move_sources,
         deps,
         options,
-        Flags::empty(),
+        Flags::verification(),
     )
 }
 

@@ -270,6 +270,13 @@ pub struct Flags {
     )]
     test: bool,
 
+    /// Compile in verification mode
+    #[clap(
+    short = cli::VERIFY_SHORT,
+    long = cli::VERIFY,
+    )]
+    verify: bool,
+
     /// Compilation flavor.
     #[clap(
         long = cli::FLAVOR,
@@ -301,6 +308,7 @@ impl Flags {
     pub fn empty() -> Self {
         Self {
             test: false,
+            verify: false,
             shadow: false,
             flavor: "".to_string(),
             bytecode_version: None,
@@ -311,6 +319,18 @@ impl Flags {
     pub fn testing() -> Self {
         Self {
             test: true,
+            verify: false,
+            shadow: false,
+            flavor: "".to_string(),
+            bytecode_version: None,
+            keep_testing_functions: false,
+        }
+    }
+
+    pub fn verification() -> Self {
+        Self {
+            test: false,
+            verify: true,
             shadow: false,
             flavor: "".to_string(),
             bytecode_version: None,
@@ -351,6 +371,10 @@ impl Flags {
         self.test || self.keep_testing_functions
     }
 
+    pub fn is_verification(&self) -> bool {
+        self.verify
+    }
+
     pub fn sources_shadow_deps(&self) -> bool {
         self.shadow
     }
@@ -388,6 +412,7 @@ pub mod known_attributes {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     pub enum KnownAttribute {
         Testing(TestingAttribute),
+        Verification(VerificationAttribute),
         Native(NativeAttribute),
     }
 
@@ -399,6 +424,12 @@ pub mod known_attributes {
         Test,
         // This test is expected to fail
         ExpectedFailure,
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+    pub enum VerificationAttribute {
+        // The associated AST node will be included in the compilation in prove mode
+        VerifyOnly,
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -431,6 +462,9 @@ pub mod known_attributes {
                 TestingAttribute::EXPECTED_FAILURE => {
                     Self::Testing(TestingAttribute::ExpectedFailure)
                 }
+                VerificationAttribute::VERIFY_ONLY => {
+                    Self::Verification(VerificationAttribute::VerifyOnly)
+                }
                 NativeAttribute::BYTECODE_INSTRUCTION => {
                     Self::Native(NativeAttribute::BytecodeInstruction)
                 }
@@ -441,6 +475,7 @@ pub mod known_attributes {
         pub const fn name(&self) -> &str {
             match self {
                 Self::Testing(a) => a.name(),
+                Self::Verification(a) => a.name(),
                 Self::Native(a) => a.name(),
             }
         }
@@ -448,6 +483,7 @@ pub mod known_attributes {
         pub fn expected_positions(&self) -> &'static BTreeSet<AttributePosition> {
             match self {
                 Self::Testing(a) => a.expected_positions(),
+                Self::Verification(a) => a.expected_positions(),
                 Self::Native(a) => a.expected_positions(),
             }
         }
@@ -488,6 +524,34 @@ pub mod known_attributes {
                 TestingAttribute::TestOnly => &*TEST_ONLY_POSITIONS,
                 TestingAttribute::Test => &*TEST_POSITIONS,
                 TestingAttribute::ExpectedFailure => &*EXPECTED_FAILURE_POSITIONS,
+            }
+        }
+    }
+
+    impl VerificationAttribute {
+        pub const VERIFY_ONLY: &'static str = "verify_only";
+
+        pub const fn name(&self) -> &str {
+            match self {
+                Self::VerifyOnly => Self::VERIFY_ONLY,
+            }
+        }
+
+        pub fn expected_positions(&self) -> &'static BTreeSet<AttributePosition> {
+            static VERIFY_ONLY_POSITIONS: Lazy<BTreeSet<AttributePosition>> = Lazy::new(|| {
+                IntoIterator::into_iter([
+                    AttributePosition::AddressBlock,
+                    AttributePosition::Module,
+                    AttributePosition::Use,
+                    AttributePosition::Friend,
+                    AttributePosition::Constant,
+                    AttributePosition::Struct,
+                    AttributePosition::Function,
+                ])
+                .collect()
+            });
+            match self {
+                Self::VerifyOnly => &*VERIFY_ONLY_POSITIONS,
             }
         }
     }

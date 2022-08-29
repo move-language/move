@@ -2,6 +2,8 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{collections::BTreeMap, fs, path::Path};
+
 use move_command_line_common::{
     env::read_bool_env_var,
     testing::{add_update_baseline_fix, format_diff, read_env_update_baseline, EXP_EXT, OUT_EXT},
@@ -12,12 +14,12 @@ use move_compiler::{
     shared::{Flags, NumericalAddress},
     unit_test, CommentMap, Compiler, SteppedCompiler, PASS_CFGIR, PASS_PARSER,
 };
-use std::{collections::BTreeMap, fs, path::Path};
 
 /// Shared flag to keep any temporary results of the test
 const KEEP_TMP: &str = "KEEP";
 
 const TEST_EXT: &str = "unit_test";
+const VERIFICATION_EXT: &str = "verification";
 
 /// Root of tests which require to set flavor flags.
 const FLAVOR_PATH: &str = "flavors/";
@@ -56,6 +58,27 @@ fn move_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
             Path::new(&test_exp_path),
             Path::new(&test_out_path),
             Flags::testing(),
+        )?;
+    }
+
+    // A verification case is marked that it should also be compiled in verification mode by having
+    // a `path.verification` file.
+    if path.with_extension(VERIFICATION_EXT).exists() {
+        let verification_exp_path = format!(
+            "{}.verification.{}",
+            path.with_extension("").to_string_lossy(),
+            EXP_EXT
+        );
+        let verification_out_path = format!(
+            "{}.verification.{}",
+            path.with_extension("").to_string_lossy(),
+            OUT_EXT
+        );
+        run_test(
+            path,
+            Path::new(&verification_exp_path),
+            Path::new(&verification_out_path),
+            Flags::verification(),
         )?;
     }
 

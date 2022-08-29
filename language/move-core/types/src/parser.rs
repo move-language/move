@@ -261,9 +261,7 @@ impl<I: Iterator<Item = Token>> Parser<I> {
                 let address = AccountAddress::from_hex_literal(&addr)?;
                 self.consume(Token::ColonColon)?;
                 let identifier = match self.next()? {
-                    Token::VectorType if address.to_hex_literal() == "0x1" => {
-                        ident_str!("vector").to_owned()
-                    }
+                    Token::VectorType => ident_str!("vector").to_owned(),
                     Token::Name(module) => Identifier::new(module)?,
                     t => bail!("expected name, got {:?}", t),
                 };

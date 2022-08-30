@@ -2,13 +2,17 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use move_ir_types::location::{sp, Loc};
+
 use crate::{
     diag,
     diagnostics::Diagnostics,
-    parser::ast as P,
+    parser::{
+        ast as P,
+        filter::{filter_program, FilterContext},
+    },
     shared::{known_attributes, CompilationEnv},
 };
-use move_ir_types::location::{sp, Loc};
 
 struct Context<'env> {
     env: &'env mut CompilationEnv,
@@ -18,6 +22,75 @@ impl<'env> Context<'env> {
     fn new(compilation_env: &'env mut CompilationEnv) -> Self {
         Self {
             env: compilation_env,
+        }
+    }
+}
+
+impl FilterContext for Context<'_> {
+    fn should_remove_by_attributes(
+        &mut self,
+        attrs: &[P::Attributes],
+        is_source_def: bool,
+    ) -> bool {
+        should_remove_node(self.env, attrs, is_source_def)
+    }
+
+    fn filter_map_module(
+        &mut self,
+        mut module_def: P::ModuleDefinition,
+        is_source_def: bool,
+    ) -> Option<P::ModuleDefinition> {
+        if self.should_remove_by_attributes(&module_def.attributes, is_source_def) {
+            return None;
+        }
+
+        // instrument the test poison
+        if !self.env.flags().is_testing() {
+            return Some(module_def);
+        }
+
+        let poison_function = create_test_poison(module_def.loc);
+        module_def.members.push(poison_function);
+        Some(module_def)
+    }
+
+    fn filter_map_script(
+        &mut self,
+        script_def: P::Script,
+        _is_source_def: bool,
+    ) -> Option<P::Script> {
+        // extra sanity check on scripts
+        let P::Script {
+            attributes,
+            uses,
+            constants,
+            function,
+            specs,
+            loc: _,
+        } = &script_def;
+
+        let script_attributes = attributes
+            .iter()
+            .chain(uses.iter().flat_map(|use_decl| &use_decl.attributes))
+            .chain(constants.iter().flat_map(|constant| &constant.attributes))
+            .chain(function.attributes.iter())
+            .chain(specs.iter().flat_map(|spec| &spec.value.attributes));
+
+        let diags: Diagnostics = script_attributes
+            .flat_map(|attr| {
+                test_attributes(attr).into_iter().map(|(loc, _)| {
+                    let msg = "Testing attributes are not allowed in scripts.";
+                    diag!(Attributes::InvalidTest, (loc, msg))
+                })
+            })
+            .collect();
+
+        // filter the script based on whether there are error messages
+        if diags.is_empty() {
+            Some(script_def)
+        } else {
+            self.env.add_diags(diags);
+            None
         }
     }
 }
@@ -33,60 +106,16 @@ const STDLIB_ADDRESS_NAME: &str = "std";
 // in `compilation_env` is not set. If the test flag is set, no filtering is performed, and instead
 // a test plan is created for use by the testing framework.
 pub fn program(compilation_env: &mut CompilationEnv, prog: P::Program) -> P::Program {
-    let mut context = Context::new(compilation_env);
-
-    if !check_has_unit_test_module(&mut context, &prog) {
+    if !check_has_unit_test_module(compilation_env, &prog) {
         return prog;
     }
 
-    let P::Program {
-        named_address_maps,
-        source_definitions,
-        lib_definitions,
-    } = prog;
-
-    let lib_definitions: Vec<_> = lib_definitions
-        .into_iter()
-        .filter_map(
-            |P::PackageDefinition {
-                 package,
-                 named_address_map,
-                 def,
-             }| {
-                Some(P::PackageDefinition {
-                    package,
-                    named_address_map,
-                    def: filter_tests_from_definition(&mut context, def, false)?,
-                })
-            },
-        )
-        .collect();
-
-    let source_definitions: Vec<_> = source_definitions
-        .into_iter()
-        .filter_map(
-            |P::PackageDefinition {
-                 package,
-                 named_address_map,
-                 def,
-             }| {
-                Some(P::PackageDefinition {
-                    package,
-                    named_address_map,
-                    def: filter_tests_from_definition(&mut context, def, true)?,
-                })
-            },
-        )
-        .collect();
-
-    P::Program {
-        named_address_maps,
-        source_definitions,
-        lib_definitions,
-    }
+    // filter and instrument the parsed AST
+    let mut context = Context::new(compilation_env);
+    filter_program(&mut context, prog)
 }
 
-fn check_has_unit_test_module(context: &mut Context, prog: &P::Program) -> bool {
+fn check_has_unit_test_module(compilation_env: &mut CompilationEnv, prog: &P::Program) -> bool {
     let has_unit_test_module = prog
         .lib_definitions
         .iter()
@@ -106,7 +135,7 @@ fn check_has_unit_test_module(context: &mut Context, prog: &P::Program) -> bool 
             _ => false,
         });
 
-    if !has_unit_test_module && context.env.flags().is_testing() {
+    if !has_unit_test_module && compilation_env.flags().is_testing() {
         if let Some(P::PackageDefinition { def, .. }) = prog
             .source_definitions
             .iter()
@@ -118,7 +147,7 @@ fn check_has_unit_test_module(context: &mut Context, prog: &P::Program) -> bool 
                 P::Definition::Address(P::AddressDefinition { loc, .. })
                 | P::Definition::Script(P::Script { loc, .. }) => *loc,
             };
-            context.env.add_diag(diag!(
+            compilation_env.add_diag(diag!(
                 Attributes::InvalidTest,
                 (
                     loc,
@@ -133,122 +162,12 @@ fn check_has_unit_test_module(context: &mut Context, prog: &P::Program) -> bool 
     true
 }
 
-fn filter_tests_from_definition(
-    context: &mut Context,
-    def: P::Definition,
-    is_source_def: bool,
-) -> Option<P::Definition> {
-    match def {
-        P::Definition::Module(m) => {
-            filter_tests_from_module(context, m, is_source_def).map(P::Definition::Module)
-        }
-        P::Definition::Address(a) => {
-            let P::AddressDefinition {
-                addr,
-                attributes,
-                loc,
-                modules,
-            } = a;
-            if !should_remove_node(context.env, &attributes, is_source_def) {
-                let modules = modules
-                    .into_iter()
-                    .filter_map(|m| filter_tests_from_module(context, m, is_source_def))
-                    .collect();
-                Some(P::Definition::Address(P::AddressDefinition {
-                    attributes,
-                    loc,
-                    addr,
-                    modules,
-                }))
-            } else {
-                None
-            }
-        }
-        P::Definition::Script(P::Script {
-            attributes,
-            uses,
-            constants,
-            function,
-            specs,
-            loc,
-        }) => {
-            let script_attributes = attributes
-                .iter()
-                .chain(uses.iter().flat_map(|use_decl| &use_decl.attributes))
-                .chain(function.attributes.iter())
-                .chain(specs.iter().flat_map(|spec| &spec.value.attributes));
-
-            let diags: Diagnostics = script_attributes
-                .flat_map(|attr| {
-                    test_attributes(attr).into_iter().map(|(loc, _)| {
-                        let msg = "Testing attributes are not allowed in scripts.";
-                        diag!(Attributes::InvalidTest, (loc, msg))
-                    })
-                })
-                .collect();
-
-            if diags.is_empty() {
-                Some(P::Definition::Script(P::Script {
-                    attributes,
-                    loc,
-                    uses,
-                    constants,
-                    function,
-                    specs,
-                }))
-            } else {
-                context.env.add_diags(diags);
-                None
-            }
-        }
-    }
-}
-
-fn filter_tests_from_module(
-    context: &mut Context,
-    module_def: P::ModuleDefinition,
-    is_source_def: bool,
-) -> Option<P::ModuleDefinition> {
-    if should_remove_node(context.env, &module_def.attributes, is_source_def) {
-        return None;
-    }
-
-    let P::ModuleDefinition {
-        attributes,
-        loc,
-        address,
-        name,
-        is_spec_module,
-        members,
-    } = module_def;
-
-    let mut new_members: Vec<_> = members
-        .into_iter()
-        .filter_map(|member| filter_tests_from_module_member(context, member, is_source_def))
-        .collect();
-
-    insert_test_poison(context, loc, &mut new_members);
-
-    Some(P::ModuleDefinition {
-        attributes,
-        loc,
-        address,
-        name,
-        is_spec_module,
-        members: new_members,
-    })
-}
-
-/// If a module is being compiled in test mode, this inserts a function that calls a native
+/// If a module is being compiled in test mode, create a dummy function that calls a native
 /// function `0x1::UnitTest::create_signers_for_testing` that only exists if the VM is being run
 /// with the "unit_test" feature flag set. This will then cause the module to fail to link if
 /// an attempt is made to publish a module that has been compiled in test mode on a VM that is not
 /// running in test mode.
-fn insert_test_poison(context: &mut Context, mloc: Loc, members: &mut Vec<P::ModuleMember>) {
-    if !context.env.flags().is_testing() {
-        return;
-    }
-
+fn create_test_poison(mloc: Loc) -> P::ModuleMember {
     let signature = P::FunctionSignature {
         type_parameters: vec![],
         parameters: vec![],
@@ -275,7 +194,7 @@ fn insert_test_poison(context: &mut Context, mloc: Loc, members: &mut Vec<P::Mod
     );
 
     // fun unit_test_poison() { 0x1::UnitTest::create_signers_for_testing(0); () }
-    let function = P::Function {
+    P::ModuleMember::Function(P::Function {
         attributes: vec![],
         loc: mloc,
         visibility: P::Visibility::Internal,
@@ -295,31 +214,7 @@ fn insert_test_poison(context: &mut Context, mloc: Loc, members: &mut Vec<P::Mod
                 Box::new(Some(sp(mloc, P::Exp_::Unit))),
             )),
         ),
-    };
-
-    members.push(P::ModuleMember::Function(function));
-}
-
-fn filter_tests_from_module_member(
-    context: &mut Context,
-    module_member: P::ModuleMember,
-    is_source_def: bool,
-) -> Option<P::ModuleMember> {
-    use P::ModuleMember as PM;
-    let attrs = match &module_member {
-        PM::Function(func) => &func.attributes,
-        PM::Struct(strct) => &strct.attributes,
-        PM::Spec(sp!(_, spec)) => &spec.attributes,
-        PM::Use(use_decl) => &use_decl.attributes,
-        PM::Friend(friend_decl) => &friend_decl.attributes,
-        PM::Constant(constant) => &constant.attributes,
-    };
-
-    if should_remove_node(context.env, attrs, is_source_def) {
-        None
-    } else {
-        Some(module_member)
-    }
+    })
 }
 
 // A module member should be removed if:
@@ -346,7 +241,7 @@ fn test_attributes(attrs: &P::Attributes) -> Vec<(Loc, known_attributes::Testing
         .filter_map(
             |attr| match KnownAttribute::resolve(&attr.value.attribute_name().value)? {
                 KnownAttribute::Testing(test_attr) => Some((attr.loc, test_attr)),
-                KnownAttribute::Native(_) => None,
+                KnownAttribute::Verification(_) | KnownAttribute::Native(_) => None,
             },
         )
         .collect()

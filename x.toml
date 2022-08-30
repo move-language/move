@@ -45,7 +45,6 @@ allowed = [
     "clippy::derivable-impls",
     "clippy::unwrap_or_else_default",
     "clippy::needless_borrow",
-    "clippy::needless_late_init",
 ]
 warn = [
     "clippy::wildcard_dependencies",

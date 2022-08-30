@@ -301,12 +301,7 @@ impl ResolvingGraph {
         is_root_package: bool,
     ) -> Result<()> {
         let package_name = &package.package.name;
-        for (name, addr_opt) in package
-            .addresses
-            .clone()
-            .unwrap_or_else(BTreeMap::new)
-            .into_iter()
-        {
+        for (name, addr_opt) in package.addresses.clone().unwrap_or_default().into_iter() {
             match resolution_table.get(&name) {
                 Some(other) => {
                     other.unify(addr_opt).with_context(|| {
@@ -338,7 +333,7 @@ impl ResolvingGraph {
             for (name, addr) in package
                 .dev_address_assignments
                 .clone()
-                .unwrap_or_else(BTreeMap::new)
+                .unwrap_or_default()
                 .into_iter()
             {
                 match resolution_table.get(&name) {

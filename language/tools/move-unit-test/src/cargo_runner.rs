@@ -26,7 +26,7 @@ pub fn run_tests_with_config_and_filter(
     let sources = get_files(root_path, source_pattern);
     let deps = dep_root
         .map(|root| get_files(root, r".*\.move$"))
-        .unwrap_or_else(Vec::new);
+        .unwrap_or_default();
 
     config.source_files = sources;
     config.dep_files = deps;

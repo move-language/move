@@ -1565,8 +1565,7 @@ impl GlobalEnv {
 
     /// Gets the type parameter instantiation associated with the given node.
     pub fn get_node_instantiation(&self, node_id: NodeId) -> Vec<Type> {
-        self.get_node_instantiation_opt(node_id)
-            .unwrap_or_else(Vec::new)
+        self.get_node_instantiation_opt(node_id).unwrap_or_default()
     }
 
     /// Gets the type parameter instantiation associated with the given node, if it is available.

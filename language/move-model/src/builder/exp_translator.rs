@@ -684,7 +684,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         tys_opt
             .as_deref()
             .map(|tys| self.translate_types(tys))
-            .unwrap_or_else(Vec::new)
+            .unwrap_or_default()
     }
 }
 

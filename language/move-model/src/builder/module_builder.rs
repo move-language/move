@@ -2381,7 +2381,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     })
                     .collect()
             })
-            .unwrap_or_else(BTreeMap::new);
+            .unwrap_or_default();
 
         // Go over all variables in the schema which are not in the argument map and either match
         // them against existing one or declare new, if allowed.

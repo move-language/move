@@ -20,21 +20,12 @@ pub struct ErrorDescription {
     pub code_description: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ErrorMapping {
     /// The set of error categories and their descriptions
     pub error_categories: BTreeMap<u64, ErrorDescription>,
     /// The set of modules, and the module-specific errors
     pub module_error_maps: BTreeMap<ModuleId, BTreeMap<u64, ErrorDescription>>,
-}
-
-impl Default for ErrorMapping {
-    fn default() -> Self {
-        Self {
-            error_categories: BTreeMap::new(),
-            module_error_maps: BTreeMap::new(),
-        }
-    }
 }
 
 impl ErrorMapping {

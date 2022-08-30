@@ -155,7 +155,7 @@ fn parse_name_begin_ty(tokens: &mut Lexer) -> Result<Symbol, ParseError<Loc, any
         });
     }
     let s = tokens.content();
-    // The token includes a '<' at the end, so chop that off to get the name.
+    // The token includes a "<" at the end, so chop that off to get the name.
     let name = &s[..s.len() - 1];
     tokens.advance()?;
     Ok(Symbol::from(name))

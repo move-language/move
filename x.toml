@@ -41,8 +41,6 @@ allowed = [
     "clippy::needless-collect",
     "clippy::enum-variant-names",
     "clippy::self-named-constructors",
-    # TODO: those below should probably be fixed and removed
-    "clippy::derivable-impls",
 ]
 warn = [
     "clippy::wildcard_dependencies",

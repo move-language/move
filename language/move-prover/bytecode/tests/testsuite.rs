@@ -274,7 +274,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         if env.has_errors() || env.has_warnings() {
             env.report_diag(&mut error_writer, Severity::Warning);
             text += "============ Diagnostics ================\n";
-            text += &String::from_utf8_lossy(&error_writer.into_inner()).to_string();
+            text += &String::from_utf8_lossy(&error_writer.into_inner());
         }
         text
     };

@@ -326,7 +326,7 @@ impl<'env> FunctionTarget<'env> {
         self.data
             .modify_targets
             .iter()
-            .map(|(qid, exps)| {
+            .flat_map(|(qid, exps)| {
                 exps.iter().map(move |e| {
                     let env = self.global_env();
                     let rty = &env.get_node_instantiation(e.node_id())[0];
@@ -334,7 +334,6 @@ impl<'env> FunctionTarget<'env> {
                     qid.instantiate(inst.to_owned())
                 })
             })
-            .flatten()
             .collect()
     }
 
@@ -377,7 +376,7 @@ impl<'env> FunctionTarget<'env> {
             .borrow()
             .iter()
             .filter_map(|fmt_fun| fmt_fun(self, offset as CodeOffset))
-            .map(|s| format!("     # {}", s.replace("\n", "\n     # ").trim()))
+            .map(|s| format!("     # {}", s.replace('\n', "\n     # ").trim()))
             .join("\n");
         if !annotations.is_empty() {
             texts.push(annotations);

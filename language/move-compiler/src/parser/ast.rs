@@ -201,7 +201,7 @@ new_name!(StructName);
 
 pub type ResourceLoc = Option<Loc>;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct StructTypeParameter {
     pub is_phantom: bool,
     pub name: Name,
@@ -240,7 +240,7 @@ pub struct FunctionSignature {
     pub return_type: Type,
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Visibility {
     Public(Loc),
     Script(Loc),
@@ -312,13 +312,13 @@ pub enum SpecBlockTarget_ {
 
 pub type SpecBlockTarget = Spanned<SpecBlockTarget_>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PragmaProperty_ {
     pub name: Name,
     pub value: Option<PragmaValue>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PragmaValue {
     Literal(Value),
     Ident(NameAccessChain),
@@ -326,7 +326,7 @@ pub enum PragmaValue {
 
 pub type PragmaProperty = Spanned<PragmaProperty_>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpecApplyPattern_ {
     pub visibility: Option<Visibility>,
     pub name_pattern: Vec<SpecApplyFragment>,
@@ -335,7 +335,7 @@ pub struct SpecApplyPattern_ {
 
 pub type SpecApplyPattern = Spanned<SpecApplyPattern_>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SpecApplyFragment_ {
     Wildcard,
     NamePart(Name),
@@ -391,7 +391,7 @@ pub enum SpecBlockMember_ {
 pub type SpecBlockMember = Spanned<SpecBlockMember_>;
 
 // Specification condition kind.
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub enum SpecConditionKind_ {
     Assert,
     Assume,
@@ -489,14 +489,14 @@ pub enum Value_ {
 }
 pub type Value = Spanned<Value_>;
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum UnaryOp_ {
     // !
     Not,
 }
 pub type UnaryOp = Spanned<UnaryOp_>;
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum BinOp_ {
     // Int ops
     // +
@@ -548,7 +548,7 @@ pub enum BinOp_ {
 }
 pub type BinOp = Spanned<BinOp_>;
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum QuantKind_ {
     Forall,
     Exists,

@@ -340,7 +340,7 @@ impl<'env> Context<'env> {
     pub fn get_break_type(&self) -> Option<&Type> {
         match &self.loop_info.0 {
             LoopInfo_::NotInLoop | LoopInfo_::BreakTypeUnknown => None,
-            LoopInfo_::BreakType(t) => Some(&*t),
+            LoopInfo_::BreakType(t) => Some(t),
         }
     }
 

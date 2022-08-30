@@ -1009,8 +1009,7 @@ impl<'env> SpecTranslator<'env> {
                     emit!(self.writer, "(var {} := {};\n", var_name, quant_var);
                 }
                 Type::ResourceDomain(mid, sid, inst_opt) => {
-                    let memory =
-                        &mid.qualified_inst(*sid, inst_opt.to_owned().unwrap_or_else(Vec::new));
+                    let memory = &mid.qualified_inst(*sid, inst_opt.to_owned().unwrap_or_default());
                     let addr_var = resource_vars.get(&var.name).unwrap();
                     let resource_name = boogie_resource_memory_name(self.env, memory, &None);
                     emit!(
@@ -1115,8 +1114,7 @@ impl<'env> SpecTranslator<'env> {
                 let quant_ty = self.get_node_type(range.node_id());
                 if let Type::ResourceDomain(mid, sid, inst_opt) = quant_ty.skip_reference() {
                     let addr_var = resource_vars.get(&var.name).unwrap();
-                    let memory =
-                        &mid.qualified_inst(*sid, inst_opt.to_owned().unwrap_or_else(Vec::new));
+                    let memory = &mid.qualified_inst(*sid, inst_opt.to_owned().unwrap_or_default());
                     let resource_name = boogie_resource_memory_name(self.env, memory, &None);
                     let resource_value = format!("$ResourceValue({}, {})", resource_name, addr_var);
                     emit!(self.writer, "{{{}}}", resource_value);

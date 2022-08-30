@@ -394,8 +394,7 @@ impl<T: FootprintDomain> AccessPathTrie<T> {
     /// Retrieve the data associated with `local_index` in the trie. Returns `None` if there is no associated data
     pub fn get_local(&self, local_index: TempIndex, fun_env: &FunctionEnv) -> Option<&T> {
         self.get_local_node(local_index, fun_env)
-            .map(|n| n.data.as_ref())
-            .flatten()
+            .and_then(|n| n.data.as_ref())
     }
 
     /// Retrieve the node associated with `local_index` in the trie. Returns `None` if there is no associated node

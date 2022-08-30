@@ -124,7 +124,7 @@ pub struct ModuleDependency {
 //**************************************************************************************************
 
 /// A dependency/import declaration
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ImportDefinition {
     /// the dependency
     /// `addr.m`
@@ -266,7 +266,7 @@ pub struct StructDefinition_ {
 pub type StructDefinition = Spanned<StructDefinition_>;
 
 /// An explicit struct dependency
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StructDependency {
     /// The declared abilities for the struct
     pub abilities: BTreeSet<Ability>,
@@ -333,7 +333,7 @@ pub struct FunctionDependency {
 }
 
 /// Public or internal modifier for a procedure
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum FunctionVisibility {
     /// The procedure can be invoked anywhere
     /// `public`
@@ -506,7 +506,7 @@ pub type Block = Spanned<Block_>;
 
 /// Bottom of the value hierarchy. These values can be trivially copyable and stored in statedb as a
 /// single entry.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum CopyableVal_ {
     /// An address in the global storage
     Address(AccountAddress),
@@ -529,14 +529,14 @@ pub type CopyableVal = Spanned<CopyableVal_>;
 pub type ExpFields = Fields<Exp>;
 
 /// Enum for unary operators
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UnaryOp {
     /// Boolean negation
     Not,
 }
 
 /// Enum for binary operators
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BinOp {
     // u64 ops
     /// `+`

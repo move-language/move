@@ -606,7 +606,7 @@ impl IndexedRef {
     fn read_ref(self) -> PartialVMResult<Value> {
         use Container::*;
 
-        let res = match &*self.container_ref.container() {
+        let res = match self.container_ref.container() {
             Locals(r) | Vec(r) | Struct(r) => r.borrow()[self.idx].copy_value()?,
             VecU8(r) => ValueImpl::U8(r.borrow()[self.idx]),
             VecU64(r) => ValueImpl::U64(r.borrow()[self.idx]),

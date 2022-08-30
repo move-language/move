@@ -113,9 +113,9 @@ fn setup_vm(modules: &[ModuleCode]) -> (MoveVM, InMemoryStorage) {
     (MoveVM::new(vec![]).unwrap(), storage)
 }
 
-fn compile_modules(mut storage: &mut InMemoryStorage, modules: &[ModuleCode]) {
+fn compile_modules(storage: &mut InMemoryStorage, modules: &[ModuleCode]) {
     modules.iter().for_each(|(id, code)| {
-        compile_module(&mut storage, id, code);
+        compile_module(storage, id, code);
     });
 }
 

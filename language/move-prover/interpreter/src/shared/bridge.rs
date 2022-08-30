@@ -46,7 +46,7 @@ fn adapt_move_vm_change_set_internal<S: MoveResolver>(
             .into_iter()
             .filter(|(tag, op)| match op {
                 Op::New(_) | Op::Delete => true,
-                Op::Modify(new_val) => match old_storage.get_resource(&addr, &tag).unwrap() {
+                Op::Modify(new_val) => match old_storage.get_resource(&addr, tag).unwrap() {
                     Some(old_val) => new_val != &old_val,
                     None => true,
                 },

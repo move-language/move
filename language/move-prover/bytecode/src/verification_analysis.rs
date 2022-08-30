@@ -116,8 +116,7 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessor {
         let inv_analysis = env.get_extension::<InvariantAnalysisData>().unwrap();
         let target_invs: BTreeSet<_> = target_modules
             .iter()
-            .map(|menv| env.get_global_invariants_by_module(menv.get_id()))
-            .flatten()
+            .flat_map(|menv| env.get_global_invariants_by_module(menv.get_id()))
             .collect();
         let inv_relevance = inv_analysis
             .fun_to_inv_map
@@ -166,8 +165,7 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessor {
         let target_invs: BTreeSet<_> = env
             .get_target_modules()
             .iter()
-            .map(|menv| env.get_global_invariants_by_module(menv.get_id()))
-            .flatten()
+            .flat_map(|menv| env.get_global_invariants_by_module(menv.get_id()))
             .collect();
 
         let fmt_inv_ids = |ids: &BTreeSet<GlobalId>| -> String {
@@ -319,8 +317,7 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessor {
         // check for unused invariants defined in the target module
         let all_checked_invariants: BTreeSet<_> = fun_to_inv_map
             .values()
-            .map(|rel| rel.direct_modified.iter())
-            .flatten()
+            .flat_map(|rel| rel.direct_modified.iter())
             .cloned()
             .collect();
         for module_env in env.get_modules() {

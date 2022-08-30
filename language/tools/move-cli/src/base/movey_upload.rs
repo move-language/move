@@ -53,7 +53,7 @@ impl MoveyUpload {
         }
 
         let lines = String::from_utf8_lossy(output.stdout.as_slice());
-        let lines = lines.split("\n");
+        let lines = lines.split('\n');
         for line in lines {
             if line.contains("github.com") {
                 let tokens: Vec<&str> = line.split(&['\t', ' '][..]).collect();
@@ -62,7 +62,7 @@ impl MoveyUpload {
                 }
                 // convert ssh url to https
                 let https_url = if tokens[1].starts_with("git@github.com") {
-                    tokens[1].replace(":", "/").replace("git@", "https://")
+                    tokens[1].replace(':', "/").replace("git@", "https://")
                 } else {
                     String::from(tokens[1])
                 };
@@ -90,7 +90,7 @@ impl MoveyUpload {
             .output()
             .unwrap();
         let tracked_files = String::from_utf8_lossy(output.stdout.as_slice());
-        let tracked_files: Vec<&str> = tracked_files.split("\n").collect();
+        let tracked_files: Vec<&str> = tracked_files.split('\n').collect();
         let mut total_files = tracked_files.len();
         for file_path in tracked_files {
             if file_path.is_empty() {

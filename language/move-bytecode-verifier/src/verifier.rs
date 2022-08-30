@@ -16,17 +16,9 @@ use move_binary_format::{
     file_format::{CompiledModule, CompiledScript},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct VerifierConfig {
     pub max_loop_depth: Option<usize>,
-}
-
-impl Default for VerifierConfig {
-    fn default() -> Self {
-        Self {
-            max_loop_depth: None,
-        }
-    }
 }
 
 /// Helper for a "canonical" verification of a module.

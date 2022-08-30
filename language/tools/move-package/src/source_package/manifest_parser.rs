@@ -80,13 +80,13 @@ pub fn parse_source_manifest(tval: TV) -> Result<PM::SourceManifest> {
                 .map(parse_dependencies)
                 .transpose()
                 .context("Error parsing '[dependencies]' section of manifest")?
-                .unwrap_or_else(BTreeMap::new);
+                .unwrap_or_default();
             let dev_dependencies = table
                 .remove(DEV_DEPENDENCY_NAME)
                 .map(parse_dependencies)
                 .transpose()
                 .context("Error parsing '[dev-dependencies]' section of manifest")?
-                .unwrap_or_else(BTreeMap::new);
+                .unwrap_or_default();
             Ok(PM::SourceManifest {
                 package,
                 addresses,

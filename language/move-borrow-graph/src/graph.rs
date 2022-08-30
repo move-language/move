@@ -12,7 +12,7 @@ use std::collections::{BTreeMap, BTreeSet};
 // Definitions
 //**************************************************************************************************
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct BorrowGraph<Loc: Copy, Lbl: Clone + Ord>(BTreeMap<RefID, Ref<Loc, Lbl>>);
 
 //**************************************************************************************************

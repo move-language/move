@@ -63,7 +63,7 @@ pub const MIN_EXISTS_DATA_SIZE: AbstractMemorySize = AbstractMemorySize::new(100
 /// The cost tables, keyed by the serialized form of the bytecode instruction.  We use the
 /// serialized form as opposed to the instruction enum itself as the key since this will be the
 /// on-chain representation of bytecode instructions in the future.
-#[derive(Clone, Debug, Serialize, PartialEq, Deserialize)]
+#[derive(Clone, Debug, Serialize, PartialEq, Eq, Deserialize)]
 pub struct CostTable {
     pub instruction_table: Vec<GasCost>,
 }
@@ -79,7 +79,7 @@ impl CostTable {
 /// The  `GasCost` tracks:
 /// - instruction cost: how much time/computational power is needed to perform the instruction
 /// - memory cost: how much memory is required for the instruction, and storage overhead
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct GasCost {
     pub instruction_gas: u64,
     pub memory_gas: u64,
@@ -655,7 +655,7 @@ pub fn zero_cost_schedule() -> CostTable {
 
 pub fn bytecode_instruction_costs() -> Vec<(Bytecode, GasCost)> {
     use Bytecode::*;
-    return vec![
+    vec![
         (MoveTo(StructDefinitionIndex::new(0)), GasCost::new(13, 1)),
         (
             MoveToGeneric(StructDefInstantiationIndex::new(0)),
@@ -766,7 +766,7 @@ pub fn bytecode_instruction_costs() -> Vec<(Bytecode, GasCost)> {
         (VecPopBack(SignatureIndex::new(0)), GasCost::new(227, 1)),
         (VecUnpack(SignatureIndex::new(0), 0), GasCost::new(572, 1)),
         (VecSwap(SignatureIndex::new(0)), GasCost::new(1436, 1)),
-    ];
+    ]
 }
 
 pub static INITIAL_COST_SCHEDULE: Lazy<CostTable> = Lazy::new(|| {

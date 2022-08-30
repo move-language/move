@@ -329,7 +329,7 @@ fn save_credential_fails_if_undeletable_credential_file_exists() {
 fn setup_move_home(test_path: &str) -> (String, String) {
     let cwd = env::current_dir().unwrap();
     let mut move_home: String = String::from(cwd.to_string_lossy());
-    move_home.push_str(&test_path);
+    move_home.push_str(test_path);
     let _ = fs::remove_dir_all(&move_home);
     fs::create_dir_all(&move_home).unwrap();
     let credential_path = move_home.clone() + MOVEY_CREDENTIAL_PATH;
@@ -370,7 +370,7 @@ fn mock_movey_upload_with_response_body_and_status_code<'a>(
             "github_repo_url": "https://github.com/move-language/move",
             "total_files": 2,
             "token": "test-token",
-            "subdir": "\n"
+            "subdir": '\n'
             }));
         then.status(status_code).body(response_body.unwrap_or(""));
     })

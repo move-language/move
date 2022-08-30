@@ -539,7 +539,7 @@ impl SpecPrinter<'_> {
     {
         Self::concat([
             base,
-            Self::wrap("<", Self::sep_comma_space(items.into_iter().map(func)), ">"),
+            Self::wrap('<', Self::sep_comma_space(items.into_iter().map(func)), ">"),
         ])
     }
 

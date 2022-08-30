@@ -163,8 +163,7 @@ impl ExpInliner<'_> {
                     if has_choice {
                         Err(e)
                     } else {
-                        let mut callee_local_vars =
-                            local_var_repl.cloned().unwrap_or_else(BTreeMap::new);
+                        let mut callee_local_vars = local_var_repl.cloned().unwrap_or_default();
                         for (arg_exp, (sym, _)) in args
                             .iter()
                             .map(|e| self.inline_exp(e, temp_var_repl, local_var_repl))
@@ -185,8 +184,7 @@ impl ExpInliner<'_> {
             ExpData::Invoke(_, lambda, args) => match lambda.as_ref() {
                 ExpData::Lambda(_, locals, body) => {
                     debug_assert_eq!(args.len(), locals.len());
-                    let mut lambda_local_vars =
-                        local_var_repl.cloned().unwrap_or_else(BTreeMap::new);
+                    let mut lambda_local_vars = local_var_repl.cloned().unwrap_or_default();
                     for (arg_exp, decl) in args
                         .iter()
                         .map(|e| self.inline_exp(e, temp_var_repl, local_var_repl))
@@ -199,7 +197,7 @@ impl ExpInliner<'_> {
                 _ => Err(e),
             },
             ExpData::Lambda(node_id, locals, body) => {
-                let mut lambda_local_vars = local_var_repl.cloned().unwrap_or_else(BTreeMap::new);
+                let mut lambda_local_vars = local_var_repl.cloned().unwrap_or_default();
                 for decl in locals {
                     lambda_local_vars
                         .insert(decl.name, ExpData::LocalVar(decl.id, decl.name).into_exp());
@@ -210,7 +208,7 @@ impl ExpInliner<'_> {
             }
             ExpData::Quant(node_id, kind, ranges, triggers, constraint, body) => {
                 let mut new_ranges = vec![];
-                let mut quant_local_vars = local_var_repl.cloned().unwrap_or_else(BTreeMap::new);
+                let mut quant_local_vars = local_var_repl.cloned().unwrap_or_default();
                 for (decl, range) in ranges {
                     debug_assert!(decl.binding.is_none());
                     new_ranges.push((
@@ -245,7 +243,7 @@ impl ExpInliner<'_> {
                 .into_exp())
             }
             ExpData::Block(_, var_decls, body) => {
-                let mut block_local_vars = local_var_repl.cloned().unwrap_or_else(BTreeMap::new);
+                let mut block_local_vars = local_var_repl.cloned().unwrap_or_default();
                 for var_decl in var_decls {
                     let var_exp = self.inline_exp(
                         var_decl.binding.as_ref().unwrap(),

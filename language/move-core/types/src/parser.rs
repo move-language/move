@@ -509,8 +509,8 @@ mod tests {
         for text in valid {
             let st = parse_struct_tag(text).expect("valid StructTag");
             assert_eq!(
-                st.to_string().replace(" ", ""),
-                text.replace(" ", ""),
+                st.to_string().replace(' ', ""),
+                text.replace(' ', ""),
                 "text: {:?}, StructTag: {:?}",
                 text,
                 st

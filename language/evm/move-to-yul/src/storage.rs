@@ -379,7 +379,8 @@ impl Generator {
         );
 
         // Skip the existence flag and create a pointer.
-        let make_ptr = self.call_builtin_str(
+
+        self.call_builtin_str(
             ctx,
             YulFunction::MakePtr,
             vec![
@@ -387,8 +388,7 @@ impl Generator {
                 format!("add({}, ${{RESOURCE_EXISTS_FLAG_SIZE}})", base_offset),
             ]
             .into_iter(),
-        );
-        make_ptr
+        )
     }
 
     /// Returns an expression for checking whether a resource exists.

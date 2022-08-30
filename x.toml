@@ -44,7 +44,6 @@ allowed = [
     # TODO: those below should probably be fixed and removed
     "clippy::derivable-impls",
     "clippy::unwrap_or_else_default",
-    "clippy::needless_borrow",
 ]
 warn = [
     "clippy::wildcard_dependencies",

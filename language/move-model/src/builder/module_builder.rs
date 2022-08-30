@@ -903,7 +903,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     /// Move functions.
     fn propagate_function_impurity(
         &mut self,
-        mut visited: &mut BTreeMap<SpecFunId, bool>,
+        visited: &mut BTreeMap<SpecFunId, bool>,
         spec_fun_id: SpecFunId,
     ) -> bool {
         if let Some(is_pure) = visited.get(&spec_fun_id) {
@@ -940,7 +940,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     // This is calling a function from the module we are currently translating.
                     // Need to recursively ensure we have propagated impurity because of
                     // arbitrary call graphs, including cyclic.
-                    if !self.propagate_function_impurity(&mut visited, *fid) {
+                    if !self.propagate_function_impurity(visited, *fid) {
                         is_pure = false;
                     }
                 }
@@ -1206,14 +1206,12 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         use SpecBlockContext::*;
         match context {
             Function(name) => update(
-                &mut self
-                    .fun_specs
+                self.fun_specs
                     .entry(name.symbol)
                     .or_insert_with(Spec::default),
             ),
             FunctionCode(name, spec_info) => update(
-                &mut self
-                    .fun_specs
+                self.fun_specs
                     .entry(name.symbol)
                     .or_insert_with(Spec::default)
                     .on_impl
@@ -1229,8 +1227,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     .spec,
             ),
             Struct(name) => update(
-                &mut self
-                    .struct_specs
+                self.struct_specs
                     .entry(name.symbol)
                     .or_insert_with(Spec::default),
             ),

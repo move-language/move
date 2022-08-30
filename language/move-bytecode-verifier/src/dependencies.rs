@@ -551,7 +551,7 @@ fn verify_script_visibility_usage(
             }
             _ => continue,
         };
-        match (current_is_entry, script_functions.contains(&fhandle_idx)) {
+        match (current_is_entry, script_functions.contains(fhandle_idx)) {
             (true, true) => (),
             (_, true) => {
                 return Err(PartialVMError::new(

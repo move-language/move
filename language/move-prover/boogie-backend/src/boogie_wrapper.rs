@@ -1479,7 +1479,7 @@ impl ModelValue {
             }
             vec![PrettyDoc::text(rep)]
         } else {
-            let struct_name = &boogie_struct_name(&struct_env, inst);
+            let struct_name = &boogie_struct_name(struct_env, inst);
             let values = self
                 .extract_list(struct_name)
                 // It appears sometimes keys are represented witout, sometimes with enclosing

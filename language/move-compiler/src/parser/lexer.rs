@@ -666,7 +666,7 @@ mod tests {
         assert_eq!(trim_start_whitespace("\t\rxxx"), "\rxxx");
         assert_eq!(trim_start_whitespace("\r\n\rxxx"), "\rxxx");
 
-        assert_eq!(trim_start_whitespace("\n"), "");
+        assert_eq!(trim_start_whitespace('\n'), "");
         assert_eq!(trim_start_whitespace("\r\n"), "");
         assert_eq!(trim_start_whitespace("\t"), "");
         assert_eq!(trim_start_whitespace(" "), "");

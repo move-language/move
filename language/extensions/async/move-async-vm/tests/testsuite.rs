@@ -412,6 +412,6 @@ impl<'a> ResourceResolver for HarnessProxy<'a> {
 impl Harness {
     fn log(&self, s: impl ToString) {
         let s = s.to_string();
-        self.baseline.borrow_mut().push_str(&(s + "\n"))
+        self.baseline.borrow_mut().push_str(&(s + '\n'))
     }
 }

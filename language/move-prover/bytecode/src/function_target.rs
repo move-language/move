@@ -376,7 +376,7 @@ impl<'env> FunctionTarget<'env> {
             .borrow()
             .iter()
             .filter_map(|fmt_fun| fmt_fun(self, offset as CodeOffset))
-            .map(|s| format!("     # {}", s.replace("\n", "\n     # ").trim()))
+            .map(|s| format!("     # {}", s.replace('\n', "\n     # ").trim()))
             .join("\n");
         if !annotations.is_empty() {
             texts.push(annotations);

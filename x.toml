@@ -43,7 +43,6 @@ allowed = [
     "clippy::self-named-constructors",
     # TODO: those below should probably be fixed and removed
     "clippy::derivable-impls",
-    "clippy::single-char-pattern",
     "clippy::unwrap_or_else_default",
     "clippy::needless_borrow",
     "clippy::needless_late_init",

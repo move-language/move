@@ -470,7 +470,7 @@ module ExperimentalFramework::Vote {
 
     /// Assuming ballot exists, check if it's expired. Returns an arbitrary result if the
     /// ballot does not exist.
-    /// NOTE: Maybe this should be "<=" not "<"
+    /// NOTE: Maybe this should be "<=" not '<'
     spec fun is_expired_if_exists<Proposal>(ballot_address: address, ballot_id: BallotID): bool {
         get_ballot<Proposal>(ballot_address, ballot_id).expiration_timestamp_secs
             <= DiemTimestamp::spec_now_seconds()

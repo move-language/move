@@ -370,7 +370,7 @@ fn mock_movey_upload_with_response_body_and_status_code<'a>(
             "github_repo_url": "https://github.com/move-language/move",
             "total_files": 2,
             "token": "test-token",
-            "subdir": "\n"
+            "subdir": '\n'
             }));
         then.status(status_code).body(response_body.unwrap_or(""));
     })

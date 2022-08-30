@@ -8,8 +8,8 @@ license = "Apache-2.0"
 
 [dependencies]
 # diem dependencies
-move-compiler = { path = "../../move-compiler" }
-move-model = { path = "../../move-model" }
+move-compiler = { path = "../move-compiler" }
+move-model = { path = "../move-model" }
 
 # external dependencies
 codespan = "0.11.1"
@@ -23,10 +23,10 @@ serde = { version = "1.0.124", features = ["derive"] }
 once_cell = "1.7.2"
 
 [dev-dependencies]
-move-prover = { path = ".." }
+move-prover = { path = "../move-prover" }
 datatest-stable = "0.1.1"
 tempfile = "3.2.0"
-move-prover-test-utils = { path = "../test-utils" }
+move-prover-test-utils = { path = "../move-prover/test-utils" }
 
 [[test]]
 name = "testsuite"

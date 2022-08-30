@@ -30,7 +30,7 @@ move-binary-format = { path = "../../move-binary-format" }
 move-compiler = { path = "../../move-compiler" }
 move-bytecode-source-map = { path = "../../move-ir-compiler/move-bytecode-source-map" }
 move-abigen = { path = "../../move-prover/move-abigen" }
-move-docgen = { path = "../../move-prover/move-docgen" }
+move-docgen = { path = "../../move-docgen" }
 move-core-types = { path = "../../move-core/types" }
 move-symbol-pool = { path = "../../move-symbol-pool" }
 move-command-line-common = { path = "../../move-command-line-common" }

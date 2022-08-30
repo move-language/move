@@ -175,19 +175,16 @@ impl<'a> Instrumenter<'a> {
                 // invariants. Instead we choose just one as a representative.
                 // TODO(refactoring): we should use the spec block position instead.
                 let mut loc = self.builder.global_env().unknown_loc();
-                let quant = self.builder.mk_vector_quant_opt(
-                    QuantKind::Forall,
-                    value,
-                    &*ety,
-                    &mut |elem| {
-                        let invs = self.translate_invariant(deep, elem);
-                        if !invs.is_empty() {
-                            loc = invs[0].0.clone();
-                        }
-                        self.builder
-                            .mk_join_bool(ast::Operation::And, invs.into_iter().map(|(_, e)| e))
-                    },
-                );
+                let quant =
+                    self.builder
+                        .mk_vector_quant_opt(QuantKind::Forall, value, ety, &mut |elem| {
+                            let invs = self.translate_invariant(deep, elem);
+                            if !invs.is_empty() {
+                                loc = invs[0].0.clone();
+                            }
+                            self.builder
+                                .mk_join_bool(ast::Operation::And, invs.into_iter().map(|(_, e)| e))
+                        });
                 if let Some(e) = quant {
                     vec![(loc, e)]
                 } else {

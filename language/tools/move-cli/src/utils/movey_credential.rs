@@ -7,7 +7,7 @@ use std::fs;
 use toml_edit::easy::Value;
 
 pub fn get_registry_api_token(move_home: &str) -> Result<String> {
-    if let Ok(content) = get_api_token(&move_home) {
+    if let Ok(content) = get_api_token(move_home) {
         Ok(content)
     } else {
         bail!(
@@ -21,7 +21,7 @@ pub fn get_api_token(move_home: &str) -> Result<String> {
     let credential_path = format!("{}{}", move_home, MOVEY_CREDENTIAL_PATH);
     let mut toml: Value = read_credential_file(&credential_path)?;
     let token = get_registry_field(&mut toml, "token")?;
-    Ok(token.to_string().replace("\"", ""))
+    Ok(token.to_string().replace('\"', ""))
 }
 
 pub fn get_movey_url(move_home: &str) -> Result<String> {
@@ -31,7 +31,7 @@ pub fn get_movey_url(move_home: &str) -> Result<String> {
 
     let movey_url = get_registry_field(&mut toml, "url");
     if let Ok(url) = movey_url {
-        Ok(url.to_string().replace("\"", ""))
+        Ok(url.to_string().replace('\"', ""))
     } else {
         Ok(MOVEY_URL.to_string())
     }
@@ -72,7 +72,7 @@ mod tests {
     fn setup_move_home(test_path: &str) -> (String, String) {
         let cwd = env::current_dir().unwrap();
         let mut move_home: String = String::from(cwd.to_string_lossy());
-        move_home.push_str(&test_path);
+        move_home.push_str(test_path);
         let credential_path = move_home.clone() + MOVEY_CREDENTIAL_PATH;
 
         (move_home, credential_path)

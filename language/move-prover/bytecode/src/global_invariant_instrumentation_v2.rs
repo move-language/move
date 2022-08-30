@@ -704,11 +704,10 @@ impl<'a> Instrumenter<'a> {
         invs: &BTreeSet<GlobalId>,
     ) -> Vec<(GlobalId, Vec<Type>)> {
         invs.iter()
-            .map(|id| {
+            .flat_map(|id| {
                 let inv = self.builder.global_env().get_global_invariant(*id).unwrap();
                 self.compute_invariant_instances(inv).into_iter()
             })
-            .flatten()
             .collect()
     }
 

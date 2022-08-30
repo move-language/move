@@ -159,8 +159,7 @@ impl FunctionTargetsHolder {
     ) -> impl Iterator<Item = (QualifiedId<FunId>, FunctionVariant)> + '_ {
         self.targets
             .iter()
-            .map(|(id, vs)| vs.keys().map(move |v| (*id, v.clone())))
-            .flatten()
+            .flat_map(|(id, vs)| vs.keys().map(move |v| (*id, v.clone())))
     }
 
     /// Adds a new function target. The target will be initialized from the Move byte code.

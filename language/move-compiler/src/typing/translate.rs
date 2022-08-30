@@ -740,7 +740,8 @@ fn typing_error<T: ToString, F: FnOnce() -> T>(
     use super::core::TypingError::*;
     let msg = mk_msg().to_string();
     let subst = &context.subst;
-    let diag = match e {
+
+    match e {
         SubtypeError(t1, t2) => {
             let loc1 = core::best_loc(subst, &t1);
             let loc2 = core::best_loc(subst, &t2);
@@ -809,8 +810,7 @@ fn typing_error<T: ToString, F: FnOnce() -> T>(
             (loc, msg),
             (rloc, "Unable to infer the type. Recursive type found."),
         ),
-    };
-    diag
+    }
 }
 
 fn subtype_no_report(

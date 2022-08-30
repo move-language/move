@@ -518,14 +518,14 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         use HA::SingleType_::*;
         match &ty.value {
             Ref(is_mut, ty) => {
-                let ty = self.translate_hlir_base_type(&*ty);
+                let ty = self.translate_hlir_base_type(ty);
                 if ty == Type::Error {
                     Type::Error
                 } else {
                     Type::Reference(*is_mut, Box::new(ty))
                 }
             }
-            Base(ty) => self.translate_hlir_base_type(&*ty),
+            Base(ty) => self.translate_hlir_base_type(ty),
         }
     }
 
@@ -663,10 +663,10 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     rty
                 }
             }
-            Ref(is_mut, ty) => Type::Reference(*is_mut, Box::new(self.translate_type(&*ty))),
+            Ref(is_mut, ty) => Type::Reference(*is_mut, Box::new(self.translate_type(ty))),
             Fun(args, result) => Type::Fun(
                 self.translate_types(args),
-                Box::new(self.translate_type(&*result)),
+                Box::new(self.translate_type(result)),
             ),
             Unit => Type::Tuple(vec![]),
             Multiple(vst) => Type::Tuple(self.translate_types(vst)),
@@ -732,9 +732,9 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 self.translate_pack(&loc, maccess, generics, fields, expected_type)
             }
             EA::Exp_::IfElse(cond, then, else_) => {
-                let then = self.translate_exp(&*then, expected_type);
-                let else_ = self.translate_exp(&*else_, expected_type);
-                let cond = self.translate_exp(&*cond, &Type::new_prim(PrimitiveType::Bool));
+                let then = self.translate_exp(then, expected_type);
+                let else_ = self.translate_exp(else_, expected_type);
+                let cond = self.translate_exp(cond, &Type::new_prim(PrimitiveType::Bool));
                 let id = self.new_node_id_with_type_loc(expected_type, &loc);
                 ExpData::IfElse(id, cond.into(), then.into_exp(), else_.into_exp())
             }

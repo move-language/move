@@ -117,8 +117,7 @@ impl TranslatedSpec {
                 .chain(
                     self.aborts_with
                         .iter()
-                        .map(|(_, codes)| codes.iter())
-                        .flatten()
+                        .flat_map(|(_, codes)| codes.iter())
                         .map(|c| eq_code(c)),
                 ),
         )

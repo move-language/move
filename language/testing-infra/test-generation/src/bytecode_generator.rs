@@ -116,7 +116,7 @@ enum StackEffect {
 }
 
 /// Context containing information about a function
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct FunctionGenerationContext {
     pub function_handle_index: FunctionHandleIndex,
     pub starting_call_height: usize,

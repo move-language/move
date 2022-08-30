@@ -200,7 +200,7 @@ impl Type {
     /// Skip reference type.
     pub fn skip_reference(&self) -> &Type {
         if let Type::Reference(_, bt) = self {
-            &*bt
+            bt
         } else {
             self
         }
@@ -636,7 +636,7 @@ impl Substitution {
             (Type::Fun(ts1, r1), Type::Fun(ts2, r2)) => {
                 return Ok(Type::Fun(
                     self.unify_vec(sub_variance, ts1, ts2, "functions")?,
-                    Box::new(self.unify(sub_variance, &*r1, &*r2)?),
+                    Box::new(self.unify(sub_variance, r1, r2)?),
                 ));
             }
             (Type::Struct(m1, s1, ts1), Type::Struct(m2, s2, ts2)) => {
@@ -649,17 +649,13 @@ impl Substitution {
                 }
             }
             (Type::Vector(e1), Type::Vector(e2)) => {
-                return Ok(Type::Vector(Box::new(self.unify(
-                    sub_variance,
-                    &*e1,
-                    &*e2,
-                )?)));
+                return Ok(Type::Vector(Box::new(self.unify(sub_variance, e1, e2)?)));
             }
             (Type::TypeDomain(e1), Type::TypeDomain(e2)) => {
                 return Ok(Type::TypeDomain(Box::new(self.unify(
                     sub_variance,
-                    &*e1,
-                    &*e2,
+                    e1,
+                    e2,
                 )?)));
             }
             _ => {}

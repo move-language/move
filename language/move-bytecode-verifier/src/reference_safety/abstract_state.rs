@@ -69,7 +69,7 @@ impl std::fmt::Display for Label {
 }
 
 /// AbstractState is the analysis state over which abstract interpretation is performed.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct AbstractState {
     current_function: Option<FunctionDefinitionIndex>,
     locals: BTreeMap<LocalIndex, AbstractValue>,

@@ -125,7 +125,7 @@ pub struct ModuleCall {
     pub acquires: BTreeMap<StructName, Loc>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum BuiltinFunction_ {
     MoveTo(Type),

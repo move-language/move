@@ -64,14 +64,14 @@ impl<'a> Compiler<'a> {
     fn compile_script(self, code: &str) -> Result<(CompiledScript, SourceMap)> {
         let parsed_script = parse_script(code)?;
         let (compiled_script, source_map) =
-            compile_script(parsed_script, self.deps.iter().map(|d| &**d))?;
+            compile_script(parsed_script, self.deps.iter().copied())?;
         Ok((compiled_script, source_map))
     }
 
     fn compile_mod(self, code: &str) -> Result<(CompiledModule, SourceMap)> {
         let parsed_module = parse_module(code)?;
         let (compiled_module, source_map) =
-            compile_module(parsed_module, self.deps.iter().map(|d| &**d))?;
+            compile_module(parsed_module, self.deps.iter().copied())?;
         Ok((compiled_module, source_map))
     }
 }

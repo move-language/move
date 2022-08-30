@@ -101,7 +101,7 @@ fn run_test_impl(path: &Path) -> anyhow::Result<()> {
         let base_output = String::from_utf8(buffer)?;
         let cleaned_output = regex.replacen(&base_output, 0, r"$1$2");
         if update_baseline {
-            fs::write(&exp_path, &*cleaned_output)?
+            fs::write(&exp_path, cleaned_output)?
         }
 
         let exp_exists = exp_path.is_file();

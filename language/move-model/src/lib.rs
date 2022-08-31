@@ -11,6 +11,7 @@ use std::{
 
 use codespan::ByteIndex;
 use codespan_reporting::diagnostic::{Diagnostic, Label, LabelStyle};
+use itertools::Itertools;
 #[allow(unused_imports)]
 use log::warn;
 use num::{BigUint, Num};
@@ -155,6 +156,21 @@ pub fn run_model_builder_with_options_and_compilation_flags<
             .map(|(symbol, addr)| (env.symbol_pool().make(symbol.as_str()), *addr))
             .collect();
         env.add_source(fhash, Rc::new(aliases), fname.as_str(), fsrc, is_dep);
+    }
+
+    // If a move file does not contain any definition, it will not appear in `parsed_prog`. Add them explicitly.
+    for fhash in files.keys().sorted() {
+        if env.get_file_id(*fhash).is_none() {
+            let (fname, fsrc) = files.get(fhash).unwrap();
+            let is_dep = dep_files.contains(fhash);
+            env.add_source(
+                *fhash,
+                Rc::new(BTreeMap::new()),
+                fname.as_str(),
+                fsrc,
+                is_dep,
+            );
+        }
     }
 
     // Add any documentation comments found by the Move compiler to the env.

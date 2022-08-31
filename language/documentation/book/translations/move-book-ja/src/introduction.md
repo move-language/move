@@ -8,13 +8,19 @@ Move takes its cue from [Rust](https://www.rust-lang.org/) by using resource typ
 
 Moveは[Rust](https://www.rust-lang.org/)からヒントを得て、通貨などのデジタル資産を明示的に表現するためのmove（ゆえに、この名前）セマンティクスを持つリソースタイプを利用しています。
 
-## Who is Move for?
+## Moveは誰のためのもの? (Who is Move for?)
 
 Move was designed and created as a secure, verified, yet flexible programming language. The first use of Move is for the implementation of the Diem blockchain. That said, the language is still evolving. Move has the potential to be a language for other blockchains, and even non-blockchain use cases as well.
 
+Moveは安全かつ検証済みで、かつ柔軟なプログラミング言語として設計され、作成されました。その最初の用途はDiemブロックチェーンの実装です。とはいえ、この言語はいまだ進化を続けています。Moveは他のブロックチェーン、さらにブロックチェーン以外のユースケースにも対応する言語になる可能性を持っています。
+
 Given custom Move modules will not be supported at the [launch](https://diem.com/white-paper/#whats-next) of the Diem Payment Network (DPN), we are targeting an early Move Developer persona.
 
+Diem Payment Network(DPN)の[ローンチ](https://diem.com/white-paper/#whats-next)ではカスタムMove Moduleはサポートされないため、初期のMove開発者というペルソナをターゲットとしています。
+
 The early Move Developer is one with some programming experience, who wants to begin understanding the core programming language and see examples of its usage.
+
+初期のMove開発者とは、プログラミングの経験がありコアとなるプログラミング言語を理解し始めそしてそれの利用例を見てみたいと思っている人々です。
 
 ### Hobbyists
 

@@ -1030,7 +1030,7 @@ impl AstDebug for Exp_ {
                 e.ast_debug(w);
             }
             E::DerefBorrow(ed) => {
-                w.write("()");
+                w.write("(&*)");
                 ed.ast_debug(w)
             }
             E::Cast(e, ty) => {

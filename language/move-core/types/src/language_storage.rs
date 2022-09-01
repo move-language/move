@@ -142,11 +142,24 @@ impl ModuleId {
 
 impl Display for ModuleId {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "{}::{}", self.address, self.name)
+        self.short_str_lossless().fmt(f)
     }
 }
 
 impl ModuleId {
+    /// Returns a human-readable representation of the module id; that is,
+    /// with a shortened address.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use move_core_types::{ident_str, language_storage::ModuleId, account_address::AccountAddress};
+    /// let my_module_id = ModuleId::new(
+    ///   AccountAddress::from_hex_literal("0xAbCd123").unwrap(),
+    ///   ident_str!("abc").into(),
+    /// );
+    /// assert_eq!(my_module_id.short_str_lossless(), "0xabcd123::abc");
+    /// ```
     pub fn short_str_lossless(&self) -> String {
         format!("0x{}::{}", self.address.short_str_lossless(), self.name)
     }

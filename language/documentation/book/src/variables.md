@@ -99,7 +99,7 @@ let x: T = e; // "Variable x of type T is initialized to expression e"
 
 Some examples of explicit type annotations:
 
-```move=
+```move
 address 0x42 {
 module example {
 

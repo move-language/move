@@ -1,18 +1,18 @@
-# 局部变量和作用域(Local Variables and Scopes)
+# 局部变量和作用域（Local Variables and Scopes）
 
 Local variables in Move are lexically (statically) scoped. New variables are introduced with the
 keyword `let`, which will shadow any previous local with the same name. Locals are mutable and can
 be updated both directly and via a mutable reference.
 
-在Move语言中，局部变量的解析依赖于词法作用域(lexically scoped)或静态作用域(statically scoped)。新变量是通过关键字 `let` 引入的，它将遮蔽任何之前的局部同名变量。局部变量是可变的，可以直接更新，也可以通过可变引用更新。
+在 Move 语言中，局部变量的解析依赖于词法作用域（lexically scoped）或静态作用域（statically scoped）。使用关键字 `let` 引入新的变量，它将隐藏任何以前的同名局部变量。局部变量是可变的（Rust 中的变量默认不可变，译者注），可以直接更新，也可以通过可变引用更新。
 
-## 声明局部变量 (Declaring Local Variables)
+## 声明局部变量（Declaring Local Variables）
 
-### `let` bindings (`let` 绑定)
+### `let` 绑定（`let` bindings）
 
 Move programs use `let` to bind variable names to values:
 
-Move语言程序使用 `let` 来给变量名赋值：
+Move 程序使用 `let` 给变量名绑定一个值：
 
 ```move
 let x = 1;
@@ -21,7 +21,7 @@ let y = x + x:
 
 `let` can also be used without binding a value to the local.
 
-`let` 使用时也可以不绑定任何数值。
+`let` 使用时也可以不绑定任何数值给局部变量。
 
 ```move
 let x;
@@ -29,7 +29,7 @@ let x;
 
 The local can then be assigned a value later.
 
-这些局部变量可以被稍后赋值。
+然后可以稍后为局部变量赋一个值。
 
 ```move
 let x;
@@ -42,7 +42,7 @@ if (cond) {
 
 This can be very helpful when trying to extract a value from a loop when a default value cannot be provided.
 
-当无法提供默认值时，且尝试从循环中提取值时非常有用。
+当无法提供默认值时，这在尝试从循环中提取值时非常有用。
 
 ```move
 let x;
@@ -55,11 +55,11 @@ loop {
 }
 ```
 
-### 变量必须在使用前赋值 (Variables must be assigned before use)
+### 变量必须在使用前赋值（Variables must be assigned before use）
 
 Move's type system prevents a local variable from being used before it has been assigned.
 
-Move的类型系统防止在赋值前使用局部变量。
+Move 的类型系统防止在赋值之前使用局部变量。
 
 ```move
 let x;
@@ -78,17 +78,16 @@ while (cond) x = 0;
 x + x // ERROR!
 ```
 
-### 有效的变量名 (Valid variable names)
-
+### 有效的变量名（Valid variable names）
 
 Variable names can contain underscores `_`, letters `a` to `z`, letters `A` to `Z`, and digits `0`
 to `9`. Variable names must start with either an underscore `_` or a letter `a` through `z`. They
 _cannot_ start with uppercase letters.
 
-变量名可以包含下划线 `_`，小写字母 `a` 到 `z` ，大写字母 `A` 到 `Z`， 和数字 `0` 到 `9` 。变量名必须以下划线`_`或者以小写字母`a`到`z`开头。它们 _不可以_ 用大写字母开头。
+变量名可以包含下划线 `_`、小写字母 `a` 到 `z`、大写字母 `A` 到 `Z`、和数字 `0` 到 `9`。变量名必须以下划线 `_` 或者以小写字母`a`到`z`开头。它们*不能*以大写字母开头。
 
 ```move
-// 正确写法
+// 全部有效
 let x = e;
 let _x = e;
 let _A = e;
@@ -96,62 +95,63 @@ let x0 = e;
 let xA = e;
 let foobar_123 = e;
 
-// 非正确写法
+// 全部无效
 let X = e; // ERROR!
 let Foo = e; // ERROR!
 ```
 
-### 类型标注 (Type annotations)
+### 类型标注（Type annotations）
 
 The type of a local variable can almost always be inferred by Move's type system. However, Move
 allows explicit type annotations that can be useful for readability, clarity, or debuggability. The
 syntax for adding a type annotation is:
 
-局部变量的类型几乎总是可以通过 Move 的类型系统推断出来。 但是，Move 允许显式标注类型，这对可读性、清晰性或可调试性很有用。 添加类型标注的语法如下：
+局部变量的类型几乎总是可以通过 Move 的类型系统推断出来。但是，Move 允许显式类型标注，这对可读性、清晰性或可调试性很有用。添加类型标注的语法如下：
 
 ```move
-let x: T = e; // "变量 x 的类型 T 被定义为表达式 e"
+let x: T = e; // “T 类型的变量 x 被初始化为表达式 e”
 ```
 
 Some examples of explicit type annotations:
-一些显式标注类型的例子：
 
-```move=
+一些显式类型标注的示例：
+
+```move
 address 0x42 {
-    module example {
+module example {
 
-        struct S { f: u64, g: u64 }
+    struct S { f: u64, g: u64 }
 
-        fun annotated() {
-            let u: u8 = 0;
-            let b: vector<u8> = b"hello";
-            let a: address = @0x0;
-            let (x, y): (&u64, &mut u64) = (&0, &mut 1);
-            let S { f, g: f2 }: S = S { f: 0, g: 1 };
-        }
+    fun annotated() {
+        let u: u8 = 0;
+        let b: vector<u8> = b"hello";
+        let a: address = @0x0;
+        let (x, y): (&u64, &mut u64) = (&0, &mut 1);
+        let S { f, g: f2 }: S = S { f: 0, g: 1 };
     }
+}
 }
 ```
 
 Note that the type annotations must always be to the right of the pattern:
 
-值得注意的是，类型标注必须总是位于变量右边的模式：
+请注意，类型标注必须始终位于变量模式的右侧：
 
 ```move
-let (x: &u64, y: &mut u64) = (&0, &mut 1); // 错误! 正确写法是 let (x, y): ... =
+let (x: &u64, y: &mut u64) = (&0, &mut 1); // 错误！正确写法是 let (x, y): ... =
 ```
 
-### 何时需要(类型)标注 (When annotations are necessary)
+### 何时需要类型标注（When annotations are necessary）
 
 In some cases, a local type annotation is required if the type system cannot infer the type. This
 commonly occurs when the type argument for a generic type cannot be inferred. For example:
 
-在某些情况下，如果类型系统无法推断类型，则需要局部类型标注。这常常发生于无法推断某个泛型(generic type)的类型参数时。比如：
+在某些情况下，如果类型系统无法推断类型，则需要局部类型标注。这通常发生在无法推断某个泛型（generic type）的类型参数时，比如：
 
 ```move
-let _v1 = vector::empty(); // 错误!
-//        ^^^^^^^^^^^^^^^ 无法推断它的类型。 请加上注解
-let v2: vector<u64> = vector::empty(); // 正确
+let _v1 = vector::empty(); // 错误！
+//        ^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation （无法推断此类型。尝试添加标注）
+let v2: vector<u64> = vector::empty(); // 没有错误
 ```
 
 In a rarer case, the type system might not be able to infer a type for divergent code (where all the
@@ -160,7 +160,7 @@ and can have any type. A [`loop`](./loops.md) has type `()` if it has a `break`,
 break out of the `loop`, it could have any type. If these types cannot be inferred, a type
 annotation is required. For example, this code:
 
-在极少数情况下，Move的类型系统并不能推断出一段发散式代码(divergent code)的类型(后面所有代码无法访问)。在Move语言中，`return` 和 [`abort`](./abort-and-assert.md)都属于表达式，它们可以返回任何类型。如果一段 [`loop`](./loops.md) 有 `break` 语句，那么它的返回类型是`()`, 然而如果它不包含`break`语句，它的返回类型可以是任何类型。如果这些类型无法推断，类型标注是必须的。比如：
+在极少数情况下，Move 的类型系统可能无法推断出一段发散式代码（divergent code）的类型（后面所有代码无法访问）。在 Move 语言中，`return` 和 [`abort`](./abort-and-assert.md) 都属于表达式，它们可以返回任何类型。如果一段 [`loop`](./loops.md) 有 `break`，那么它的返回类型是 `()`，但是如果它不包含 `break`，它的返回类型可以是任何类型。如果无法推断出这些类型，那么类型标注是必须的。例如，这段代码：
 
 ```move
 let a: u8 = return ();
@@ -178,15 +178,14 @@ let z = loop (); // ERROR!
 Adding type annotations to this code will expose other errors about dead code or unused local
 variables, but the example is still helpful for understanding this problem.
 
-在这段代码中添加类型标注会暴露其他关于死代码或未使用的局部变量的错误，无论如何这示例仍然有助于理解这个问题。
+在这段代码中添加类型标注会暴露其他关于死代码或未使用的局部变量的错误，但该示例仍然有助于理解这个问题。
 
-
-### 元组式的多个(变量)声明 (Multiple declarations with tuples)
+### 元组式的多个变量声明（Multiple declarations with tuples）
 
 `let` can introduce more than one local at a time using tuples. The locals declared inside the
 parenthesis are initialized to the corresponding values from the tuple.
 
-`let` 可以使用元组一次引入多个局部变量。在括号里面声明的局部变量会被初始化为元组中的对应值。
+`let` 可以使用元组一次引入多个局部变量。在括号内声明的局部变量会被初始化为元组中的对应值。
 
 ```move
 let () = ();
@@ -200,16 +199,16 @@ The type of the expression must match the arity of the tuple pattern exactly.
 表达式的类型必须与元组模式的数量完全匹配。
 
 ```move
-let (x, y) = (0, 1, 2); // 错误!
-let (x, y, z, q) = (0, 1, 2); // 错误!
+let (x, y) = (0, 1, 2); // 错误！
+let (x, y, z, q) = (0, 1, 2); // 错误！
 ```
 
 You cannot declare more than one local with the same name in a single `let`.
 
-您不能在单个 `let` 中声明多个具有相同名称的局部变量。
+你不能在单个 `let` 中声明多个具有相同名称的局部变量。
 
 ```move
-let (x, x) = 0; // 错误!
+let (x, x) = 0; // 错误！
 ```
 
 ### 结构体式的多个(变量)声明(Multiple declarations with structs)

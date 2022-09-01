@@ -242,9 +242,11 @@ impl Token for ValueToken {
                 }
                 (ValueToken::HexString, len)
             }
-            c if c.is_ascii_digit() => {
+            c if c.is_ascii_digit() || c == '_' => {
                 // c + remaining
-                let len = 1 + chars.take_while(char::is_ascii_digit).count();
+                let len = 1 + chars
+                    .take_while(|c| char::is_ascii_digit(c) || *c == '_')
+                    .count();
                 number_maybe_with_suffix(s, len)
             }
             c if c.is_ascii_whitespace() => {

@@ -130,7 +130,7 @@ impl Serialize for ModuleId {
         S: Serializer,
     {
         if serializer.is_human_readable() {
-            serializer.serialize_str(&self.short_str_lossless())
+            serializer.serialize_str(&self.long_str())
         } else {
             let value = ModuleIdBin {
                 address: self.address,
@@ -203,14 +203,32 @@ impl ModuleId {
     /// # Example
     ///
     /// ```
-    /// let my_module_id = ModuleId {
-    ///   address: AccountAddress::ONE,
-    ///   name: ident_str!("abc").into(),
-    /// };
-    /// assert_eq!(my_module_id.short_str_lossless(), "0x1::abc");
+    /// # use move_core_types::{ident_str, language_storage::ModuleId, account_address::AccountAddress};
+    /// let my_module_id = ModuleId::new(
+    ///   AccountAddress::from_hex_literal("0xAbCd123").unwrap(),
+    ///   ident_str!("abc").into(),
+    /// );
+    /// assert_eq!(my_module_id.short_str_lossless(), "0xabcd123::abc");
     /// ```
     pub fn short_str_lossless(&self) -> String {
         format!("0x{}::{}", self.address.short_str_lossless(), self.name)
+    }
+
+    /// Returns a human-readable representation of the module id; that is,
+    /// with a shortened address.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use move_core_types::{ident_str, language_storage::ModuleId, account_address::AccountAddress};
+    /// let my_module_id = ModuleId::new(
+    ///   AccountAddress::from_hex_literal("0xAbCd123").unwrap(),
+    ///   ident_str!("abc").into(),
+    /// );
+    /// assert_eq!(my_module_id.long_str(), "0x0000000000000000000000000abcd123::abc");
+    /// ```
+    pub fn long_str(&self) -> String {
+        format!("0x{}::{}", self.address.to_hex(), self.name)
     }
 }
 
@@ -278,7 +296,7 @@ mod tests {
         };
 
         let ser = serde_json::to_string(&my_module_id).unwrap();
-        assert_eq!(ser, "\"0x1::abc\"");
+        assert_eq!(ser, "\"0x00000000000000000000000000000001::abc\"");
 
         let des: ModuleId = serde_json::from_str(&ser).unwrap();
         assert_eq!(des, my_module_id);

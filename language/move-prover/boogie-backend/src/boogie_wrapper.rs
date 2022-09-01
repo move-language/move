@@ -529,9 +529,18 @@ impl<'env> BoogieWrapper<'env> {
 
             let args = cap.name("args").unwrap().as_str();
             let loc = self.report_error(self.extract_loc(args), self.env.unknown_loc());
-            let execution_trace = self.extract_augmented_trace(out, &mut at);
+            let plain_trace = self.extract_execution_trace(out, &mut at);
+            let mut execution_trace = self.extract_augmented_trace(out, &mut at);
             let mut model = Model::new(self);
-            self.extract_model(&mut model, out, &mut at);
+            if execution_trace.is_empty() {
+                execution_trace.push(TraceEntry::InfoLine(format!(
+                    "Boogie does not return any augmented executed trace. \
+                    See the plain trace below:\n{}",
+                    plain_trace.join("\n")
+                )))
+            } else {
+                self.extract_model(&mut model, out, &mut at);
+            }
 
             if msg != "expected to fail" {
                 // Only add this if it is not a negative test. We still needed to parse it.
@@ -584,6 +593,27 @@ impl<'env> BoogieWrapper<'env> {
                 }
             }
         }
+    }
+
+    /// Extracts the plain execution trace.
+    fn extract_execution_trace(&self, out: &str, at: &mut usize) -> Vec<String> {
+        static TRACE_START: Lazy<Regex> =
+            Lazy::new(|| Regex::new(r"(?m)^Execution trace:\s*$").unwrap());
+        static TRACE_ENTRY: Lazy<Regex> = Lazy::new(|| {
+            Regex::new(r"^\s+(?P<name>[^(]+)\((?P<args>[^)]*)\): (?P<value>.*)\n").unwrap()
+        });
+        let mut result = vec![];
+        if let Some(m) = TRACE_START.find(&out[*at..]) {
+            *at = usize::saturating_add(*at, m.end());
+            while let Some(cap) = TRACE_ENTRY.captures(&out[*at..]) {
+                *at = usize::saturating_add(*at, cap.get(0).unwrap().end());
+                let name = cap.name("name").unwrap().as_str();
+                let args = cap.name("args").unwrap().as_str();
+                let value = cap.name("value").unwrap().as_str();
+                result.push(format!("{}({}): {}", name, args, value))
+            }
+        }
+        result
     }
 
     /// Extracts augmented execution trace.

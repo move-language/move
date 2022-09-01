@@ -881,7 +881,6 @@ fn parse_sequence(context: &mut Context) -> Result<Sequence, Diagnostic> {
 //          | <Value>
 //          | "(" Comma<Exp> ")"
 //          | "(" <Exp> ":" <Type> ")"
-//          | "(" <Exp> "as" <Type> ")"
 //          | "{" <Sequence>
 //          | "if" "(" <Exp> ")" <Exp> "else" "{" <Exp> "}"
 //          | "if" "(" <Exp> ")" "{" <Exp> "}"

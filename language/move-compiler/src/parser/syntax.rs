@@ -1225,7 +1225,7 @@ fn at_end_of_exp(context: &mut Context) -> bool {
         // These are the tokens that can occur after an Exp. If the grammar
         // changes, we need to make sure that these are kept up to date and that
         // none of these tokens can occur at the beginning of an Exp.
-        Tok::Else | Tok::RBrace | Tok::RParen | Tok::Comma | Tok::Colon | Tok::Semicolon | Tok::As
+        Tok::Else | Tok::RBrace | Tok::RParen | Tok::Comma | Tok::Colon | Tok::Semicolon
     )
 }
 

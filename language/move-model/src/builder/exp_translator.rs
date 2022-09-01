@@ -14,7 +14,7 @@ use move_compiler::{
     expansion::ast as EA, hlir::ast as HA, naming::ast as NA, parser::ast as PA, shared::Name,
 };
 use move_core_types::value::MoveValue;
-use move_ir_types::location::Spanned;
+use move_ir_types::{location::Spanned, sp};
 
 use crate::{
     ast::{Exp, ExpData, LocalVarDecl, ModuleName, Operation, QualifiedSymbol, QuantKind, Value},
@@ -717,6 +717,22 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 if let Some((v, ty)) = self.translate_value(v) {
                     make_value(self, v, ty)
                 } else {
+                    self.new_error_exp()
+                }
+            }
+            EA::Exp_::Cast(exp, t) => {
+                let exp = self.translate_exp(exp, &Type::Primitive(PrimitiveType::Num));
+                if let EA::Type_::Apply(sp!(_, EA::ModuleAccess_::Name(sp!(_, n))), _) = t.value {
+                    match n.as_str() {
+                        "u8" | "u64" | "u128" => (),
+                        invalid => {
+                            self.error(&loc, &format!("invalid cast: {}", invalid));
+                            return self.new_error_exp();
+                        }
+                    };
+                    exp
+                } else {
+                    self.error(&loc, "cast not supported in specifications");
                     self.new_error_exp()
                 }
             }

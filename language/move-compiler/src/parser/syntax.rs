@@ -984,10 +984,6 @@ fn parse_term(context: &mut Context) -> Result<Exp, Diagnostic> {
                     let ty = parse_type(context)?;
                     consume_token(context.tokens, Tok::RParen)?;
                     Exp_::Annotate(Box::new(e), ty)
-                } else if match_token(context.tokens, Tok::As)? {
-                    let ty = parse_type(context)?;
-                    consume_token(context.tokens, Tok::RParen)?;
-                    Exp_::Cast(Box::new(e), ty)
                 } else {
                     if context.tokens.peek() != Tok::RParen {
                         consume_token(context.tokens, Tok::Comma)?;
@@ -1229,7 +1225,7 @@ fn at_end_of_exp(context: &mut Context) -> bool {
         // These are the tokens that can occur after an Exp. If the grammar
         // changes, we need to make sure that these are kept up to date and that
         // none of these tokens can occur at the beginning of an Exp.
-        Tok::Else | Tok::RBrace | Tok::RParen | Tok::Comma | Tok::Colon | Tok::Semicolon
+        Tok::Else | Tok::RBrace | Tok::RParen | Tok::Comma | Tok::Colon | Tok::Semicolon | Tok::As
     )
 }
 
@@ -1262,13 +1258,35 @@ fn at_start_of_exp(context: &mut Context) -> bool {
     )
 }
 
+/// Parse an expression:
+///      Exp =
+///            <ExpWithoutCast> "as" <Type>
+///          | <ExpWithoutCast>
+fn parse_exp(context: &mut Context) -> Result<Exp, Diagnostic> {
+    let start_loc = context.tokens.start_loc();
+    let exp = parse_exp_without_cast(context)?;
+    if match_token(context.tokens, Tok::As)? {
+        let ty = parse_type(context)?;
+        let end_loc = context.tokens.previous_end_loc();
+        let new_exp = Exp_::Cast(Box::new(exp), ty);
+        Ok(spanned(
+            context.tokens.file_hash(),
+            start_loc,
+            end_loc,
+            new_exp,
+        ))
+    } else {
+        Ok(exp)
+    }
+}
+
 // Parse an expression:
 //      Exp =
 //            <LambdaBindList> <Exp>        spec only
 //          | <Quantifier>                  spec only
 //          | <BinOpExp>
 //          | <UnaryExp> "=" <Exp>
-fn parse_exp(context: &mut Context) -> Result<Exp, Diagnostic> {
+fn parse_exp_without_cast(context: &mut Context) -> Result<Exp, Diagnostic> {
     let start_loc = context.tokens.start_loc();
     let exp = match context.tokens.peek() {
         Tok::Pipe => {

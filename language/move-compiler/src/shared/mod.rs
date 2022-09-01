@@ -331,7 +331,7 @@ impl Flags {
         Self {
             test: false,
             verify: true,
-            shadow: false,
+            shadow: true, // allows overlapping between sources and deps
             flavor: "".to_string(),
             bytecode_version: None,
             keep_testing_functions: false,

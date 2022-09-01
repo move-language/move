@@ -62,7 +62,7 @@ fn next_number(initial: char, mut it: impl Iterator<Item = char>) -> Result<(Tok
     num.push(initial);
     loop {
         match it.next() {
-            Some(c) if c.is_ascii_digit() => num.push(c),
+            Some(c) if c.is_ascii_digit() || c == '_' => num.push(c),
             Some(c) if c.is_alphanumeric() => {
                 let mut suffix = String::new();
                 suffix.push(c);
@@ -306,9 +306,9 @@ impl<I: Iterator<Item = Token>> Parser<I> {
 
     fn parse_transaction_argument(&mut self) -> Result<TransactionArgument> {
         Ok(match self.next()? {
-            Token::U8(s) => TransactionArgument::U8(s.parse()?),
-            Token::U64(s) => TransactionArgument::U64(s.parse()?),
-            Token::U128(s) => TransactionArgument::U128(s.parse()?),
+            Token::U8(s) => TransactionArgument::U8(s.replace('_', "").parse()?),
+            Token::U64(s) => TransactionArgument::U64(s.replace('_', "").parse()?),
+            Token::U128(s) => TransactionArgument::U128(s.replace('_', "").parse()?),
             Token::True => TransactionArgument::Bool(true),
             Token::False => TransactionArgument::Bool(false),
             Token::Address(addr) => {
@@ -395,6 +395,9 @@ mod tests {
             ("0", T::U64(0)),
             ("0123", T::U64(123)),
             ("0u64", T::U64(0)),
+            ("1_0u8", T::U8(1_0)),
+            // ("1_000", T::U64(1_000)),
+            // ("1_000_000u128", T::U128(1_000_000)),
             ("18446744073709551615", T::U64(18446744073709551615)),
             ("18446744073709551615u64", T::U64(18446744073709551615)),
             ("0u128", T::U128(0)),

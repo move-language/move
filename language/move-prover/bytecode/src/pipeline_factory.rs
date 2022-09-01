@@ -40,7 +40,13 @@ pub fn default_pipeline_with_options(options: &ProverOptions) -> FunctionTargetP
         CleanAndOptimizeProcessor::new(),
         UsageProcessor::new(),
         VerificationAnalysisProcessor::new(),
-        LoopAnalysisProcessor::new(),
+    ];
+
+    if !options.skip_loop_analysis {
+        processors.push(LoopAnalysisProcessor::new());
+    }
+
+    processors.append(&mut vec![
         // spec instrumentation
         SpecInstrumentationProcessor::new(),
         GlobalInvariantAnalysisProcessor::new(),
@@ -49,7 +55,7 @@ pub fn default_pipeline_with_options(options: &ProverOptions) -> FunctionTargetP
         DataInvariantInstrumentationProcessor::new(),
         // monomorphization
         MonoAnalysisProcessor::new(),
-    ];
+    ]);
 
     if options.mutation {
         // pass which may do nothing

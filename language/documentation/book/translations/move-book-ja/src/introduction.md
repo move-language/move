@@ -22,9 +22,11 @@ The early Move Developer is one with some programming experience, who wants to b
 
 初期のMove開発者とは、プログラミングの経験がありコアとなるプログラミング言語を理解し始めそしてそれの利用例を見てみたいと思っている人々です。
 
-### Hobbyists
+### 趣味人 (Hobbyists)
 
 Understanding that the capability to create custom modules on the Diem Payment Network will not be available at launch, the hobbyist Move Developer is interested in learning the intricacies of the language. She will understand the basic syntax, the standard libraries available, and write example code that can be executed using the Move CLI. The Move Developer may even want to dig into understanding how the Move Virtual Machine executes the code she writes.
+
+Diem Payment Networkのカスタムモジュールを作成する機能は立ち上げ時には利用できないことを理解した上で、趣味のMoveデベロッパーはこの言語の複雑さを学ぶことに興味を持っています。基本的な文法、利用可能な標準ライブラリ、そしてMove CLIで実行可能なサンプルコードを理解しようとするでしょう。さらに、書いたコードがどのようにMove Virtual Machineで実行されるのかを理解したいと思うかもしれない。
 
 ### Core Contributor
 

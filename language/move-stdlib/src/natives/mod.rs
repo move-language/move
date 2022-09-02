@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod bcs;
+pub mod debug;
 pub mod event;
 pub mod hash;
 pub mod signer;
@@ -10,9 +11,6 @@ pub mod string;
 #[cfg(feature = "testing")]
 pub mod unit_test;
 pub mod vector;
-
-#[cfg(feature = "testing")]
-pub mod debug;
 
 mod helpers;
 
@@ -126,8 +124,6 @@ pub fn all_natives(
 #[derive(Debug, Clone)]
 pub struct NurseryGasParameters {
     event: event::GasParameters,
-
-    #[cfg(feature = "testing")]
     debug: debug::GasParameters,
 }
 
@@ -139,7 +135,6 @@ impl NurseryGasParameters {
                     unit_cost: 0.into(),
                 },
             },
-            #[cfg(feature = "testing")]
             debug: debug::GasParameters {
                 print: debug::PrintGasParameters {
                     base_cost: 0.into(),
@@ -167,10 +162,7 @@ pub fn nursery_natives(
     }
 
     add_natives!("event", event::make_all(gas_params.event));
-    #[cfg(feature = "testing")]
-    {
-        add_natives!("debug", debug::make_all(gas_params.debug));
-    }
+    add_natives!("debug", debug::make_all(gas_params.debug));
 
     make_table_from_iter(move_std_addr, natives)
 }

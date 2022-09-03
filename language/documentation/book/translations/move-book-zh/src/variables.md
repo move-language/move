@@ -211,13 +211,13 @@ You cannot declare more than one local with the same name in a single `let`.
 let (x, x) = 0; // 错误！
 ```
 
-### 结构体式的多个(变量)声明(Multiple declarations with structs)
+### 结构体式的多个变量声明（Multiple declarations with structs）
 
 `let` can also introduce more than one local at a time when destructuring (or matching against) a
 struct. In this form, the `let` creates a set of local variables that are initialized to the values
 of the fields from a struct. The syntax looks like this:
 
-`let` 也可以在解构(或匹配)结构时一次引入多个局部变量。在这种形式中，`let` 创建了一组局部变量，这些变量被初始化为结构中的字段的值。语法如下所示：
+`let` 还可以在解构（或匹配）结构体时一次引入多个局部变量。在这种形式中，`let` 创建了一组局部变量，这些变量被初始化为结构体中字段的值。语法如下所示：
 
 ```move
 struct T { f1: u64, f2: u64 }
@@ -257,7 +257,7 @@ address 0x42 {
 Fields of structs can serve double duty, identifying the field to bind _and_ the name of the
 variable. This is sometimes referred to as punning.
 
-结构体的字段可以起到双重作用：识别要绑定的字段 _和_ 命名变量。这有时被称为双关语。
+结构体的字段可以起到双重作用：识别要绑定的字段_和_命名变量。这有时被称为双关语。
 
 ```move
 let X { f } = e;
@@ -276,15 +276,15 @@ As shown with tuples, you cannot declare more than one local with the same name 
 如元组所示，您不能在单个 `let` 中声明多个具有相同名称的局部变量。
 
 ```move
-let Y { x1: x, x2: x } = e; // 错误!(两个x同名了，注者注)
+let Y { x1: x, x2: x } = e; // 错误！（两个 x 同名了）
 ```
 
-### 针对引用进行解构(Destructuring against references)
+### 针对引用进行解构（Destructuring against references）
 
 In the examples above for structs, the bound value in the let was moved, destroying the struct value
 and binding its fields.
 
-在上面的结构体示例中，`let` 中绑定的值被移动了，这销毁了结构体的值并同时绑定了它的字段(到变量)。
+在上面的结构体示例中，`let` 中绑定的值被移动了，这销毁了结构体的值并同时绑定了它的字段（到变量）。
 
 ```move
 struct T { f1: u64, f2: u64 }
@@ -301,9 +301,9 @@ In this scenario the struct value `T { f1: 1, f2: 2 }` no longer exists after th
 If you wish instead to not move and destroy the struct value, you can borrow each of its fields. For
 example:
 
-在这种场景下结构体的值 `T { f1: 1, f2: 2 }` 会在 `let` 后消失.
+在这种场景下结构体的值 `T { f1: 1, f2: 2 }` 会在 `let` 后消失。
 
-如果您希望不移动和销毁结构体的值，则可以借用其中的每个字段。比如说：
+如果您希望不移动和销毁结构体的值，则可以借用其中的每个字段。例如：
 
 ```move
 let t = T { f1: 1, f2: 2 };
@@ -314,7 +314,7 @@ let T { f1: local1, f2: local2 } = &t;
 
 And similarly with mutable references:
 
-与可变引用类似：
+可变引用也类似：
 
 ```move
 let t = T { f1: 1, f2: 2 };
@@ -352,7 +352,7 @@ address 0x42 {
 }
 ```
 
-### 忽略值(Ignoring Values)
+### 忽略值（Ignoring Values）
 
 In `let` bindings, it is often helpful to ignore some values. Local variables that start with `_`
 will be ignored and not introduce a new variable
@@ -373,19 +373,19 @@ assert!(x1 + z1 == x2 + z2)
 
 This can be necessary at times as the compiler will error on unused local variables。
 
-这有时是必要的，因为编译器会在检测到未使用的局部变量时报错。
+这有时是必要的，因为编译器会在未使用的局部变量上报错。
 
 ```move
-let (x1, y, z1) = three(); // 错误!
+let (x1, y, z1) = three(); // 错误！
 //       ^ 未被使用的局部变量 'y'
 ```
 
-### 通用的 `let` 语法 (General `let` grammar)
+### 通用的 `let` 语法（General `let` grammar）
 
 All of the different structures in `let` can be combined! With that we arrive at this general
 grammar for `let` statements:
 
-`let` 中的所有不同结构都可以组合！有了这个，我们撰写了`let`语句的通用语法：
+`let` 中所有不同的结构体都可以组合！这样，我们就得出了 `let` 语句的通用语法：
 
 > _let-binding_ → **let** _pattern-or-list_ _type-annotation_<sub>_opt_</sub>
 > _initializer_<sub>_opt_</sub> > _pattern-or-list_ → _pattern_ | **(** _pattern-list_ **)** >
@@ -396,7 +396,7 @@ The general term for the item that introduces the bindings is a _pattern_. The p
 both destructure data (possibly recursively) and introduce the bindings. The pattern grammar is as
 follows:
 
-引入绑定(binding)的项(item)的通用术语是 _模式_。这种模式(pattern)用于解构数据(可能递归)并引入绑定。模式语法如下：
+引入绑定的项的通用术语是 *模式（pattern）*。该模式用于解构数据（可能是递归的）并引入绑定。模式语法如下：
 
 > _pattern_ → _local-variable_ | _struct-type_ **{** _field-binding-list_ **}** >
 > _field-binding-list_ → _field-binding_ **,**<sub>_opt_</sub> | _field-binding_ **,**
@@ -408,40 +408,40 @@ A few concrete examples with this grammar applied:
 
 ```move
     let (x, y): (u64, u64) = (0, 1);
-//       ^                           局部变量
-//       ^                           模式
-//          ^                        局部变量
-//          ^                        模式
-//          ^                        模式列表
-//       ^^^^                        模式列表
-//      ^^^^^^                       模式或列表
-//            ^^^^^^^^^^^^           类型注解
-//                         ^^^^^^^^  初始化的值
-//  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ let-绑定
+//       ^                           local-variable（局部变量）
+//       ^                           pattern（模式）
+//          ^                        local-variable（局部变量）
+//          ^                        pattern（模式）
+//          ^                        pattern-list（模式列表）
+//       ^^^^                        pattern-list（模式列表）
+//      ^^^^^^                       pattern-or-list（模式或列表）
+//            ^^^^^^^^^^^^           type-annotation（类型标注）
+//                         ^^^^^^^^  initializer（初始化器）
+//  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ let-binding（let 绑定）
 
     let Foo { f, g: x } = Foo { f: 0, g: 1 };
-//      ^^^                                    结构类型
-//            ^                                字段
-//            ^                                字段绑定
-//               ^                             字段
-//                  ^                          局部变量
-//                  ^                          模式
-//               ^^^^                          字段绑定
-//            ^^^^^^^                          字段绑定列表
-//      ^^^^^^^^^^^^^^^                        模式
-//      ^^^^^^^^^^^^^^^                        模式或列表
-//                      ^^^^^^^^^^^^^^^^^^^^   初始化的值
-//  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ let-绑定
+//      ^^^                                    struct-type（结构类型）
+//            ^                                field（字段）
+//            ^                                field-binding（字段绑定）
+//               ^                             field（字段）
+//                  ^                          local-variable（局部变量）
+//                  ^                          pattern（模式）
+//               ^^^^                          field-binding（字段绑定）
+//            ^^^^^^^                          field-binding-list（字段绑定列表）
+//      ^^^^^^^^^^^^^^^                        pattern（模式）
+//      ^^^^^^^^^^^^^^^                        pattern-or-list（模式或列表）
+//                      ^^^^^^^^^^^^^^^^^^^^   initializer（初始化器）
+//  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ let-binding（let 绑定）
 ```
 
-## 变更(mutations)
+## 变更（mutations）
 
-### 赋值(Assignments)
+### 赋值（Assignments）
 
 After the local is introduced (either by `let` or as a function parameter), the local can be
 modified via an assignment:
 
-在引入一个局部变量后(使用`let`或是用作一个函数参数(function parameter))，局部(变量)可以通过赋值进行修改：
+在引入局部变量后（通过 `let` 或作为函数参数），可以通过赋值来修改局部变量：
 
 ```move
 x = e
@@ -450,7 +450,7 @@ x = e
 Unlike `let` bindings, assignments are expressions. In some languages, assignments return the value
 that was assigned, but in Move, the type of any assignment is always `()`.
 
-不同于 `let` 的绑定，赋值属于表达式。在一些编程语言中，赋值表达式会返回被赋予的值，但是在move语言中，任何赋值返回的类型永远都是`()`。
+与 `let` 绑定不同，赋值是表达式。在某些语言中，赋值会返回被赋予的值，但在 Move 语言中，任何赋值的返回类型始终是 `()`。
 
 ```move
 (x = e: ())
@@ -459,7 +459,7 @@ that was assigned, but in Move, the type of any assignment is always `()`.
 Practically, assignments being expressions means that they can be used without adding a new
 expression block with braces (`{`...`}`).
 
-实际应用中，赋值属于表达式意味着使用它们时不用添加额外表达块(expression block)的括号。(`{`...`}`)
+实际上，赋值作为表达式意味着它们可以在不添加带有大括号（`{`...`}`）的新表达式块（expression block）的情况下使用。
 
 ```move
 let x = 0;
@@ -468,40 +468,40 @@ if (cond) x = 1 else x = 2;
 
 The assignment uses the same pattern syntax scheme as `let` bindings:
 
-赋值使用与 `let` 绑定相同的模式语法方案：：
+赋值使用与 `let` 绑定相同的模式语法方案：
 
-```move=
+```move
 address 0x42 {
-    module example {
-        struct X { f: u64 }
+module example {
+    struct X { f: u64 }
 
-        fun new_x(): X {
-            X { f: 1 }
-        }
-
-        // 以下的例子会因为未使用的变量和赋值报错。
-        fun example() {
-        let (x, _, z) = (0, 1, 3);
-        let (x, y, f, g);
-
-        (X { f }, X { f: x }) = (new_x(), new_x());
-        assert!(f + x == 2, 42);
-
-        (x, y, z, f, _, g) = (0, 0, 0, 0, 0, 0);
-        }
+    fun new_x(): X {
+        X { f: 1 }
     }
+
+    // 这个例子会因为存在未使用的变量和赋值而报错。
+    fun example() {
+       let (x, _, z) = (0, 1, 3);
+       let (x, y, f, g);
+
+       (X { f }, X { f: x }) = (new_x(), new_x());
+       assert!(f + x == 2, 42);
+
+       (x, y, z, f, _, g) = (0, 0, 0, 0, 0, 0);
+    }
+}
 }
 ```
 
 Note that a local variable can only have one type, so the type of the local cannot change between
 assignments.
 
-值得注意的是一个局部变量只能有一种类型，所以局部变量不能在赋值之间(多次赋值)改变类型。
+注意，一个局部变量只能有一种类型，所以局部变量的类型不能在赋值之间（多次赋值）改变。
 
 ```move
 let x;
 x = 0;
-x = false; // 错误!
+x = false; // 错误！
 ```
 
 ### 通过引用进行变更 (Mutating through a reference)

@@ -401,7 +401,7 @@ if (cond) x = 1 else x = 2;
 
 The assignment uses the same pattern syntax scheme as `let` bindings:
 
-```move=
+```move
 address 0x42 {
 module example {
     struct X { f: u64 }

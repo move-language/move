@@ -22,7 +22,7 @@ B0:
 
 task 1 'print-bytecode'. lines 12-23:
 // Move bytecode v5
-module 3d.Foobar {
+module 0x3d.Foobar {
 struct FooCoin {
 	value: u64
 }
@@ -40,7 +40,7 @@ B0:
 
 task 2 'print-bytecode'. lines 25-36:
 // Move bytecode v5
-module 4d.Foobar {
+module 0x4d.Foobar {
 struct FooCoin<Ty0> {
 	value: u64
 }

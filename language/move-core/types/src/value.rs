@@ -552,8 +552,8 @@ impl fmt::Display for MoveValue {
             MoveValue::U128(u) => write!(f, "{}u128", u),
             MoveValue::Bool(false) => write!(f, "false"),
             MoveValue::Bool(true) => write!(f, "true"),
-            MoveValue::Address(a) => write!(f, "{}", a.to_hex_literal()),
-            MoveValue::Signer(a) => write!(f, "signer({})", a.to_hex_literal()),
+            MoveValue::Address(a) => write!(f, "{}", a),
+            MoveValue::Signer(a) => write!(f, "signer({})", a),
             MoveValue::Vector(v) => fmt_list(f, "vector[", v, "]"),
             MoveValue::Struct(s) => fmt::Display::fmt(s, f),
         }

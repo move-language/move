@@ -9,7 +9,7 @@ use crate::{
     transaction_argument::TransactionArgument,
 };
 use anyhow::{bail, format_err, Result};
-use std::iter::Peekable;
+use std::{iter::Peekable, str::FromStr};
 
 #[derive(Eq, PartialEq, Debug)]
 enum Token {
@@ -288,7 +288,7 @@ impl<I: Iterator<Item = Token>> Parser<I> {
                                     vec![]
                                 };
                                 TypeTag::Struct(StructTag {
-                                    address: AccountAddress::from_hex_literal(&addr)?,
+                                    address: AccountAddress::from_str(&addr)?,
                                     module: Identifier::new(module)?,
                                     name: Identifier::new(name)?,
                                     type_params: ty_args,
@@ -311,9 +311,7 @@ impl<I: Iterator<Item = Token>> Parser<I> {
             Token::U128(s) => TransactionArgument::U128(s.replace('_', "").parse()?),
             Token::True => TransactionArgument::Bool(true),
             Token::False => TransactionArgument::Bool(false),
-            Token::Address(addr) => {
-                TransactionArgument::Address(AccountAddress::from_hex_literal(&addr)?)
-            }
+            Token::Address(addr) => TransactionArgument::Address(AccountAddress::from_str(&addr)?),
             Token::Bytes(s) => TransactionArgument::U8Vector(hex::decode(s)?),
             tok => bail!("unexpected token {:?}, expected transaction argument", tok),
         })
@@ -382,6 +380,7 @@ mod tests {
         parser::{parse_struct_tag, parse_transaction_argument, parse_type_tag},
         transaction_argument::TransactionArgument,
     };
+    use std::str::FromStr;
 
     #[allow(clippy::unreadable_literal)]
     #[test]
@@ -411,17 +410,14 @@ mod tests {
             ),
             ("true", T::Bool(true)),
             ("false", T::Bool(false)),
-            (
-                "0x0",
-                T::Address(AccountAddress::from_hex_literal("0x0").unwrap()),
-            ),
+            ("0x0", T::Address(AccountAddress::ZERO)),
             (
                 "0x54afa3526",
-                T::Address(AccountAddress::from_hex_literal("0x54afa3526").unwrap()),
+                T::Address(AccountAddress::from_str("0x54afa3526").unwrap()),
             ),
             (
                 "0X54afa3526",
-                T::Address(AccountAddress::from_hex_literal("0x54afa3526").unwrap()),
+                T::Address(AccountAddress::from_str("0x54afa3526").unwrap()),
             ),
             ("x\"7fff\"", T::U8Vector(vec![0x7f, 0xff])),
             ("x\"\"", T::U8Vector(vec![])),

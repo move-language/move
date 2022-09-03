@@ -14,6 +14,7 @@ use move_model::{
         Exp, ExpData, LocalVarDecl, MemoryLabel, Operation, QuantKind, SpecFunDecl, TempIndex,
         Value,
     },
+    big_uint_to_addr,
     model::{FieldId, ModuleEnv, ModuleId, NodeId, SpecFunId, StructId},
     ty as MTy,
 };
@@ -238,9 +239,7 @@ impl<'env> Evaluator<'env> {
 
     fn evaluate_constant(&self, val: &Value) -> BaseValue {
         match val {
-            Value::Address(v) => BaseValue::mk_address(
-                AccountAddress::from_hex_literal(&format!("{:#x}", v)).unwrap(),
-            ),
+            Value::Address(v) => BaseValue::mk_address(big_uint_to_addr(v)),
             Value::Number(v) => BaseValue::mk_num(v.clone()),
             Value::Bool(v) => BaseValue::mk_bool(*v),
             Value::ByteArray(v) => {
@@ -248,11 +247,7 @@ impl<'env> Evaluator<'env> {
             }
             Value::AddressArray(v) => BaseValue::mk_vector(
                 v.iter()
-                    .map(|e| {
-                        BaseValue::mk_address(
-                            AccountAddress::from_hex_literal(&format!("{:#x}", e)).unwrap(),
-                        )
-                    })
+                    .map(|e| BaseValue::mk_address(big_uint_to_addr(e)))
                     .collect(),
             ),
         }

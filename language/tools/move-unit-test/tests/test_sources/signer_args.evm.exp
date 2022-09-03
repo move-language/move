@@ -1,14 +1,14 @@
 Running Move unit tests
-[ FAIL    ] 0x1::M::multi_signer_fail
-[ PASS    ] 0x1::M::multi_signer_pass
-[ PASS    ] 0x1::M::multi_signer_pass_expected_failure
-[ FAIL    ] 0x1::M::single_signer_fail
-[ PASS    ] 0x1::M::single_signer_pass
-[ PASS    ] 0x1::M::test_correct_signer_arg_addrs
+[ FAIL    ] 0x00000000000000000000000000000001::M::multi_signer_fail
+[ PASS    ] 0x00000000000000000000000000000001::M::multi_signer_pass
+[ PASS    ] 0x00000000000000000000000000000001::M::multi_signer_pass_expected_failure
+[ FAIL    ] 0x00000000000000000000000000000001::M::single_signer_fail
+[ PASS    ] 0x00000000000000000000000000000001::M::single_signer_pass
+[ PASS    ] 0x00000000000000000000000000000001::M::test_correct_signer_arg_addrs
 
 Test failures:
 
-Failures in 0x1::M:
+Failures in 0x00000000000000000000000000000001::M:
 
 ┌── multi_signer_fail ──────
 │ Test did not abort as expected

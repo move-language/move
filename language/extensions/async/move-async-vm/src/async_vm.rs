@@ -195,8 +195,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
         if state.exists().map_err(partial_vm_error_to_async)? {
             return Err(async_extension_error(format!(
                 "actor `{}` already exists at `{}`",
-                module_id.short_str_lossless(),
-                actor_addr.short_str_lossless()
+                module_id, actor_addr
             )));
         }
 
@@ -267,12 +266,11 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
             self.vm.message_table.get(&message_hash).ok_or_else(|| {
                 async_extension_error(format!("unknown message hash `{}`", message_hash))
             })?;
-        let actor = self.vm.actor_metadata.get(module_id).ok_or_else(|| {
-            async_extension_error(format!(
-                "actor `{}` unknown",
-                module_id.short_str_lossless()
-            ))
-        })?;
+        let actor = self
+            .vm
+            .actor_metadata
+            .get(module_id)
+            .ok_or_else(|| async_extension_error(format!("actor `{}` unknown", module_id)))?;
 
         // Load the resource representing the actor state and add to arguments.
         let state_type_tag = TypeTag::Struct(actor.state_tag.clone());

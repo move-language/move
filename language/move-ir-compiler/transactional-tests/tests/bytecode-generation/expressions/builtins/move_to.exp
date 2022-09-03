@@ -2,7 +2,7 @@ processed 4 tasks
 
 task 0 'print-bytecode'. lines 1-16:
 // Move bytecode v5
-module 2d6.M {
+module 0x2d6.M {
 struct T has key {
 	b: bool
 }

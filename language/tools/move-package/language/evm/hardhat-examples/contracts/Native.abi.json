@@ -1,0 +1,26 @@
+[
+{
+  "name": "getContractAddr",
+  "type": "function",
+  "inputs": [],
+  "outputs": [
+    {
+      "type": "address",
+      "name": ""
+    }
+  ],
+  "stateMutability": "view"
+},
+{
+  "name": "getSenderAddr",
+  "type": "function",
+  "inputs": [],
+  "outputs": [
+    {
+      "type": "address",
+      "name": ""
+    }
+  ],
+  "stateMutability": "view"
+}
+]

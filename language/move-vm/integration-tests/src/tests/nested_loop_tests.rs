@@ -28,7 +28,7 @@ fn test_publish_module_with_nested_loops() {
             }
         }
     "#;
-    let code = code.replace("{{ADDR}}", &format!("0x{}", TEST_ADDR));
+    let code = code.replace("{{ADDR}}", &format!("{}", TEST_ADDR));
     let mut units = compile_units(&code).unwrap();
 
     let m = as_module(units.pop().unwrap());
@@ -40,7 +40,7 @@ fn test_publish_module_with_nested_loops() {
         let storage = InMemoryStorage::new();
         let vm = MoveVM::new_with_verifier_config(
             move_stdlib::natives::all_natives(
-                AccountAddress::from_hex_literal("0x1").unwrap(),
+                AccountAddress::ONE,
                 move_stdlib::natives::GasParameters::zeros(),
             ),
             VerifierConfig {
@@ -59,7 +59,7 @@ fn test_publish_module_with_nested_loops() {
         let storage = InMemoryStorage::new();
         let vm = MoveVM::new_with_verifier_config(
             move_stdlib::natives::all_natives(
-                AccountAddress::from_hex_literal("0x1").unwrap(),
+                AccountAddress::ONE,
                 move_stdlib::natives::GasParameters::zeros(),
             ),
             VerifierConfig {
@@ -92,7 +92,7 @@ fn test_run_script_with_nested_loops() {
             }
         }
     "#;
-    let code = code.replace("{{ADDR}}", &format!("0x{}", TEST_ADDR));
+    let code = code.replace("{{ADDR}}", &format!("{}", TEST_ADDR));
     let mut units = compile_units(&code).unwrap();
 
     let s = as_script(units.pop().unwrap());
@@ -104,7 +104,7 @@ fn test_run_script_with_nested_loops() {
         let storage = InMemoryStorage::new();
         let vm = MoveVM::new_with_verifier_config(
             move_stdlib::natives::all_natives(
-                AccountAddress::from_hex_literal("0x1").unwrap(),
+                AccountAddress::ONE,
                 move_stdlib::natives::GasParameters::zeros(),
             ),
             VerifierConfig {
@@ -124,7 +124,7 @@ fn test_run_script_with_nested_loops() {
         let storage = InMemoryStorage::new();
         let vm = MoveVM::new_with_verifier_config(
             move_stdlib::natives::all_natives(
-                AccountAddress::from_hex_literal("0x1").unwrap(),
+                AccountAddress::ONE,
                 move_stdlib::natives::GasParameters::zeros(),
             ),
             VerifierConfig {

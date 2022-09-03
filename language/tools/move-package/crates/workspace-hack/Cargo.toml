@@ -1,0 +1,71 @@
+[package]
+name = "workspace-hack"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem workspace hack"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+### BEGIN HAKARI SECTION
+[dependencies]
+arrayvec = { version = "0.5.2", features = ["array-sizes-33-128", "std"] }
+block-buffer = { version = "0.9.0", default-features = false, features = ["block-padding"] }
+bstr = { version = "0.2.15", features = ["lazy_static", "regex-automata", "serde", "serde1", "serde1-nostd", "std", "unicode"] }
+byteorder = { version = "1.4.3", features = ["std"] }
+bytes = { version = "1.0.1", features = ["std"] }
+clap-f595c2ba2a3f28df = { package = "clap", version = "2.33.3", features = ["ansi_term", "atty", "color", "strsim", "suggestions", "vec_map"] }
+clap-7b89eefb6aaa9bf3 = { package = "clap", version = "3.1.8", features = ["atty", "clap_derive", "color", "derive", "env", "lazy_static", "std", "strsim", "suggestions", "termcolor"] }
+codespan-reporting = { version = "0.11.1", default-features = false, features = ["serde", "serialization"] }
+crossbeam-utils = { version = "0.8.3", features = ["lazy_static", "std"] }
+crunchy = { version = "0.2.2", features = ["limit_128", "limit_256", "std"] }
+evm = { version = "0.33.1", features = ["codec", "environmental", "scale-info", "serde", "std", "tracing"] }
+evm-gasometer = { version = "0.33.0", default-features = false, features = ["environmental", "std", "tracing"] }
+evm-runtime = { version = "0.33.0", features = ["environmental", "std", "tracing"] }
+getrandom = { version = "0.2.2", default-features = false, features = ["std"] }
+hex = { version = "0.4.3", features = ["alloc", "std"] }
+indexmap = { version = "1.7.0", default-features = false, features = ["std"] }
+log = { version = "0.4.14", default-features = false, features = ["serde", "std"] }
+memchr = { version = "2.4.0", features = ["std", "use_std"] }
+num-traits = { version = "0.2.14", features = ["i128", "std"] }
+plotters = { version = "0.3.0", default-features = false, features = ["area_series", "evcxr", "histogram", "line_series", "plotters-svg", "svg_backend"] }
+primitive-types = { version = "0.10.1", features = ["byteorder", "codec", "impl-codec", "impl-rlp", "rlp", "rustc-hex", "scale-info", "scale-info-crate", "std"] }
+rand_core = { version = "0.5.1", default-features = false, features = ["alloc", "getrandom", "std"] }
+regex = { version = "1.5.5", features = ["aho-corasick", "memchr", "perf", "perf-cache", "perf-dfa", "perf-inline", "perf-literal", "std", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
+regex-automata = { version = "0.1.9", features = ["regex-syntax", "std"] }
+regex-syntax = { version = "0.6.25", features = ["unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
+serde = { version = "1.0.130", features = ["derive", "rc", "serde_derive", "std"] }
+sha3 = { version = "0.9.1", features = ["std"] }
+tiny-keccak = { version = "2.0.2", features = ["keccak", "sha3"] }
+tracing-core = { version = "0.1.21", features = ["lazy_static", "std"] }
+
+[build-dependencies]
+crunchy = { version = "0.2.2", features = ["limit_128", "limit_256", "std"] }
+getrandom = { version = "0.2.2", default-features = false, features = ["std"] }
+memchr = { version = "2.4.0", features = ["std", "use_std"] }
+proc-macro2 = { version = "0.4.30", features = ["proc-macro"] }
+quote = { version = "0.6.13", features = ["proc-macro"] }
+regex = { version = "1.5.5", features = ["aho-corasick", "memchr", "perf", "perf-cache", "perf-dfa", "perf-inline", "perf-literal", "std", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
+regex-syntax = { version = "0.6.25", features = ["unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
+serde = { version = "1.0.130", features = ["derive", "rc", "serde_derive", "std"] }
+syn-3575ec1268b04181 = { package = "syn", version = "0.15.44", features = ["clone-impls", "derive", "extra-traits", "full", "parsing", "printing", "proc-macro", "quote", "visit"] }
+syn-dff4ba8e3ae991db = { package = "syn", version = "1.0.74", features = ["clone-impls", "derive", "extra-traits", "fold", "full", "parsing", "printing", "proc-macro", "quote", "visit", "visit-mut"] }
+tiny-keccak = { version = "2.0.2", features = ["keccak", "sha3"] }
+
+[target.x86_64-unknown-linux-gnu.dependencies]
+libc = { version = "0.2.112", features = ["std"] }
+mio = { version = "0.7.13", features = ["net", "os-ext", "os-poll", "os-util", "tcp", "udp", "uds"] }
+
+[target.x86_64-unknown-linux-gnu.build-dependencies]
+libc = { version = "0.2.112", features = ["std"] }
+
+[target.x86_64-apple-darwin.dependencies]
+libc = { version = "0.2.112", features = ["std"] }
+mio = { version = "0.7.13", features = ["net", "os-ext", "os-poll", "os-util", "tcp", "udp", "uds"] }
+
+[target.x86_64-apple-darwin.build-dependencies]
+libc = { version = "0.2.112", features = ["std"] }
+
+### END HAKARI SECTION

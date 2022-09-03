@@ -5,11 +5,12 @@
 use crate::{package_hooks, source_package::parsed_manifest as PM, Architecture};
 use anyhow::{bail, format_err, Context, Result};
 use move_command_line_common::env::MOVE_HOME;
-use move_core_types::account_address::{AccountAddress, AccountAddressParseError};
+use move_core_types::account_address::AccountAddress;
 use move_symbol_pool::symbol::Symbol;
 use std::{
     collections::{BTreeMap, BTreeSet},
     path::{Path, PathBuf},
+    str::FromStr,
 };
 use toml::Value as TV;
 
@@ -230,7 +231,7 @@ pub fn parse_addresses(tval: TV) -> Result<PM::AddressDeclarations> {
                         } else if addresses
                             .insert(
                                 ident,
-                                Some(parse_address_literal(entry_str).context(format!(
+                                Some(AccountAddress::from_str(entry_str).context(format!(
                                     "Invalid address '{}' encountered.",
                                     entry_str
                                 ))?),
@@ -271,7 +272,7 @@ pub fn parse_dev_addresses(tval: TV) -> Result<PM::DevAddressDeclarations> {
                         } else if addresses
                             .insert(
                                 ident,
-                                parse_address_literal(entry_str).context(format!(
+                                AccountAddress::from_str(entry_str).context(format!(
                                     "Invalid address '{}' encountered.",
                                     entry_str
                                 ))?,
@@ -296,14 +297,6 @@ pub fn parse_dev_addresses(tval: TV) -> Result<PM::DevAddressDeclarations> {
             x.type_str()
         ),
     }
-}
-
-// Safely parses address for both the 0x and non prefixed hex format.
-fn parse_address_literal(address_str: &str) -> Result<AccountAddress, AccountAddressParseError> {
-    if !address_str.starts_with("0x") {
-        return AccountAddress::from_hex(address_str);
-    }
-    AccountAddress::from_hex_literal(address_str)
 }
 
 fn parse_dependency(dep_name: &str, tval: TV) -> Result<PM::Dependency> {
@@ -465,7 +458,7 @@ fn parse_substitution(tval: TV) -> Result<PM::Substitution> {
                 let addr_ident = PM::NamedAddress::from(addr_name.as_str());
                 match tval {
                     TV::String(addr_or_name) => {
-                        if let Ok(addr) = AccountAddress::from_hex_literal(&addr_or_name) {
+                        if let Ok(addr) = AccountAddress::from_str(&addr_or_name) {
                             subst.insert(addr_ident, PM::SubstOrRename::Assign(addr));
                         } else {
                             let rename_from = PM::NamedAddress::from(addr_or_name.as_str());

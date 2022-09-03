@@ -4,7 +4,7 @@
 use anyhow::{bail, Result};
 use clap::Parser;
 use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
-use std::fmt::Write;
+use std::{fmt::Write, str::FromStr};
 
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 use move_core_types::{
@@ -49,7 +49,6 @@ pub struct InterpreterOptions {
     /// Possibly-empty list of signers for the execution
     #[clap(
         long = "signers",
-        parse(try_from_str = AccountAddress::from_hex_literal),
         takes_value(true),
         multiple_values(true),
         multiple_occurrences(true)
@@ -89,7 +88,7 @@ fn parse_entrypoint(input: &str) -> Result<(ModuleId, Identifier)> {
         bail!("Invalid entrypoint: {}", input);
     }
     let module_id = ModuleId::new(
-        AccountAddress::from_hex_literal(tokens[0])?,
+        AccountAddress::from_str(tokens[0])?,
         Identifier::new(tokens[1])?,
     );
     let func_name = Identifier::new(tokens[2])?;

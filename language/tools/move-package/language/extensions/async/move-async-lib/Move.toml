@@ -1,0 +1,14 @@
+[package]
+name = "MoveAsyncLib"
+version = "0.0.0"
+
+[addresses]
+Std = "_"
+Async = "_"
+
+[dev-addresses]
+Std = "0x1"
+Async = "0x1"
+
+[dependencies]
+MoveStdlib = { local = "../../../move-stdlib" }

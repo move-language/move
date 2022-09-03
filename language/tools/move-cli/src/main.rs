@@ -9,7 +9,7 @@ use move_stdlib::natives::{all_natives, nursery_natives, GasParameters, NurseryG
 fn main() -> Result<()> {
     let error_descriptions: ErrorMapping = bcs::from_bytes(move_stdlib::error_descriptions())?;
     let cost_table = &move_vm_test_utils::gas_schedule::INITIAL_COST_SCHEDULE;
-    let addr = AccountAddress::from_hex_literal("0x1").unwrap();
+    let addr = AccountAddress::ONE;
     let natives = all_natives(addr, GasParameters::zeros())
         .into_iter()
         .chain(nursery_natives(addr, NurseryGasParameters::zeros()))

@@ -14,7 +14,7 @@ use move_core_types::{
 
 use crate::experimental::cli::ConcretizeMode;
 use anyhow::{anyhow, Result};
-use std::{fs, path::Path};
+use std::{fs, path::Path, str::FromStr};
 
 pub fn analyze_read_write_set(
     state: &OnDiskStateView,
@@ -45,7 +45,7 @@ pub fn analyze_read_write_set(
 
     let signer_addresses = signers
         .iter()
-        .map(|s| AccountAddress::from_hex_literal(s))
+        .map(|s| AccountAddress::from_str(s))
         .collect::<Result<Vec<AccountAddress>, _>>()?;
     // TODO: parse Value's directly instead of going through the indirection of TransactionArgument?
     let script_args: Vec<Vec<u8>> = convert_txn_args(txn_args);

@@ -14,13 +14,10 @@ use tempfile::tempdir;
 fn run_tests_for_pkg(path_to_pkg: impl Into<String>, include_nursery_natives: bool) {
     let pkg_path = path_in_crate(path_to_pkg);
 
-    let mut natives = all_natives(
-        AccountAddress::from_hex_literal("0x1").unwrap(),
-        GasParameters::zeros(),
-    );
+    let mut natives = all_natives(AccountAddress::ONE, GasParameters::zeros());
     if include_nursery_natives {
         natives.extend(nursery_natives(
-            AccountAddress::from_hex_literal("0x1").unwrap(),
+            AccountAddress::ONE,
             NurseryGasParameters::zeros(),
         ))
     }

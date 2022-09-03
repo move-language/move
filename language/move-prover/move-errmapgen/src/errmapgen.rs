@@ -12,6 +12,7 @@ use move_core_types::{
 };
 use move_model::{
     ast::Value,
+    big_uint_to_addr,
     model::{GlobalEnv, ModuleEnv, NamedConstantEnv},
     symbol::Symbol,
 };
@@ -33,7 +34,7 @@ impl Default for ErrmapOptions {
         Self {
             error_prefix: "E".to_string(),
             error_category_module: ModuleId::new(
-                AccountAddress::from_hex_literal("0x1").unwrap(),
+                AccountAddress::ONE,
                 Identifier::new("errors").unwrap(),
             ),
             output_file: MOVE_ERROR_DESC_EXTENSION.to_string(),
@@ -131,7 +132,7 @@ impl<'env> ErrmapGen<'env> {
 
     fn get_module_id_for_name(&self, module: &ModuleEnv<'_>) -> ModuleId {
         let name = module.get_name();
-        let addr = AccountAddress::from_hex_literal(&format!("0x{:x}", name.addr())).unwrap();
+        let addr = big_uint_to_addr(name.addr());
         let name = Identifier::new(self.name_string(name.name()).to_string()).unwrap();
         ModuleId::new(addr, name)
     }

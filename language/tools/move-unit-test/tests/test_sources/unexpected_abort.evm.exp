@@ -1,13 +1,13 @@
 Running Move unit tests
-[ PASS    ] 0x1::M::correct_abort_code
-[ PASS    ] 0x1::M::just_test_failure
-[ FAIL    ] 0x1::M::unexpected_abort
-[ FAIL    ] 0x1::M::unexpected_abort_in_other_function
-[ FAIL    ] 0x1::M::wrong_abort_code
+[ PASS    ] 0x00000000000000000000000000000001::M::correct_abort_code
+[ PASS    ] 0x00000000000000000000000000000001::M::just_test_failure
+[ FAIL    ] 0x00000000000000000000000000000001::M::unexpected_abort
+[ FAIL    ] 0x00000000000000000000000000000001::M::unexpected_abort_in_other_function
+[ FAIL    ] 0x00000000000000000000000000000001::M::wrong_abort_code
 
 Test failures:
 
-Failures in 0x1::M:
+Failures in 0x00000000000000000000000000000001::M:
 
 ┌── unexpected_abort ──────
 │ Test was not expected to abort but it aborted with 0 here

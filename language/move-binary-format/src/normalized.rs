@@ -365,13 +365,7 @@ impl std::fmt::Display for Type {
                 name,
                 type_arguments,
             } => {
-                write!(
-                    f,
-                    "0x{}::{}::{}",
-                    address.short_str_lossless(),
-                    module,
-                    name
-                )?;
+                write!(f, "{}::{}::{}", address, module, name)?;
                 if let Some(first_ty) = type_arguments.first() {
                     write!(f, "<")?;
                     write!(f, "{}", first_ty)?;

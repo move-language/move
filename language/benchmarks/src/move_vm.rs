@@ -26,7 +26,7 @@ static MOVE_BENCH_SRC_PATH: Lazy<PathBuf> = Lazy::new(|| {
 pub fn bench<M: Measurement + 'static>(c: &mut Criterion<M>, fun: &str) {
     let modules = compile_modules();
     let move_vm = MoveVM::new(move_stdlib::natives::all_natives(
-        AccountAddress::from_hex_literal("0x1").unwrap(),
+        AccountAddress::ONE,
         move_stdlib::natives::GasParameters::zeros(),
     ))
     .unwrap();

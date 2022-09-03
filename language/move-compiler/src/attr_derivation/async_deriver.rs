@@ -306,12 +306,11 @@ fn message_hash(
                     Derivation::DeriveFailed,
                     (loc, format!("cannot resolve address alias `{}`", name))
                 ));
-                AccountAddress::from_hex_literal("0x0").unwrap()
+                AccountAddress::ZERO
             }
         }
     };
-    let addr_str = format!("0x{:X}", account_addr);
-    let hash_str = format!("{}::{}::{}", addr_str, mod_def.name, fun_def.name);
+    let hash_str = format!("{}::{}::{}", account_addr, mod_def.name, fun_def.name);
     let hash_bytes: [u8; 8] = Sha3_256::digest(hash_str.as_bytes())[0..8]
         .try_into()
         .expect("valid u64");

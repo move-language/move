@@ -1,0 +1,21 @@
+[
+{
+  "name": "revertIf0",
+  "type": "function",
+  "inputs": [
+    {
+      "type": "uint64",
+      "name": "x"
+    }
+  ],
+  "outputs": [],
+  "stateMutability": "pure"
+},
+{
+  "name": "revertWithMessage",
+  "type": "function",
+  "inputs": [],
+  "outputs": [],
+  "stateMutability": "pure"
+}
+]

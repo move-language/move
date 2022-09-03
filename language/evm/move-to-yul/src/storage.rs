@@ -279,7 +279,7 @@ impl Generator {
             self.call_builtin_str(
                 ctx,
                 YulFunction::NewLinkedStorageBase,
-                std::iter::once(format!("0x{:x}", hash))
+                std::iter::once(format!("{:#x}", hash))
             )
         );
 

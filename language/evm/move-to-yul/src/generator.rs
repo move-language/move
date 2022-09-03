@@ -339,7 +339,7 @@ impl Generator {
                 emit!(ctx.writer, "let $arg{} := ", idx);
                 match arg {
                     MoveValue::Address(addr) => {
-                        emitln!(ctx.writer, "{}", addr.to_hex_literal());
+                        emitln!(ctx.writer, "{:#x}", addr);
                     }
                     _ => unreachable!(
                         "only address literals are allowed as test arguments currently"
@@ -719,7 +719,7 @@ impl Generator {
         self.call_builtin_str(
             ctx,
             YulFunction::MakeTypeStorageBase,
-            vec![category.to_string(), format!("0x{:x}", hash), instance].into_iter(),
+            vec![category.to_string(), format!("{:#x}", hash), instance].into_iter(),
         )
     }
 

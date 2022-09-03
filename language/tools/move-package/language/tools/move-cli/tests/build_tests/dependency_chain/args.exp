@@ -1,0 +1,4 @@
+Command `package build -v`:
+BUILDING Bar
+BUILDING Foo
+BUILDING A

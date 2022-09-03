@@ -398,7 +398,7 @@ impl<'env> BoogieWrapper<'env> {
                     if c == -1 {
                         " with execution failure".to_string()
                     } else {
-                        format!(" with code 0x{:X}", c)
+                        format!(" with code {:#X}", c)
                     }
                 } else {
                     "".to_string()
@@ -1404,15 +1404,12 @@ impl ModelValue {
             )),
             Type::Primitive(PrimitiveType::Address) => {
                 let addr = BigInt::parse_bytes(&self.extract_literal()?.clone().into_bytes(), 10)?;
-                Some(PrettyDoc::text(format!("0x{}", &addr.to_str_radix(16))))
+                Some(PrettyDoc::text(format!("{:#x}", &addr)))
             }
             Type::Primitive(PrimitiveType::Signer) => {
                 let l = self.extract_list("$signer")?;
                 let addr = BigInt::parse_bytes(&l[0].extract_literal()?.clone().into_bytes(), 10)?;
-                Some(PrettyDoc::text(format!(
-                    "signer{{0x{}}}",
-                    &addr.to_str_radix(16)
-                )))
+                Some(PrettyDoc::text(format!("signer{{{:#x}}}", &addr)))
             }
             Type::Vector(param) => self.pretty_vector(wrapper, model, param),
             Type::Struct(module_id, struct_id, params) => {

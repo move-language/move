@@ -1,0 +1,324 @@
+name: ci-test
+
+on:
+  push:
+    branches: [auto, canary, gha-test-*]
+  pull_request:
+    branches: [main, release-*, gha-test-*]
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  max_threads: 16
+  pre_command: cd /opt/git/diem/
+
+jobs:
+  prepare:
+    runs-on: ubuntu-20.04
+    outputs:
+      changes-target-branch: ${{ steps.changes.outputs.changes-target-branch }}
+      changes-base-git-rev: ${{ steps.changes.outputs.changes-base-git-rev }}
+      changes-base-githash: ${{ steps.changes.outputs.changes-base-githash }}
+      changes-pull-request-number: ${{ steps.changes.outputs.changes-pull-request-number }}
+      any-changes-founds: ${{ steps.any-changes-found.outputs.changes-found }}
+      test-rust: ${{ steps.rust-changes.outputs.changes-found }}
+      test-dev-setup: ${{ steps.dev-setup-sh-changes.outputs.changes-found }}
+      test-non-rust-lint: ${{ steps.non-rust-lint-changes.outputs.changes-found }}
+    steps:
+      - uses: actions/checkout@v2.4.0
+        with:
+          # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
+          # On `push` this value will be empty and will "do-the-right-thing"
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0 #get all the history!!!
+      - name: Git Hooks and Checks
+        run: ./scripts/git-checks.sh
+      - id: changes
+        name: determine changes
+        uses: diem/actions/changes@faadd16607b77dfa2231a8f366883e01717b3225
+        with:
+          workflow-file: ci-test.yml
+          github-token: ${{secrets.GITHUB_TOKEN}}
+      - id: any-changes-found
+        name: determine if there are any files listed in the CHANGES_CHANGED_FILE_OUTPUTFILE.
+        run: |
+          res=true
+          if [[ ! -f "$CHANGES_CHANGED_FILE_OUTPUTFILE" ]] || [[ "$(cat "$CHANGES_CHANGED_FILE_OUTPUTFILE" | wc -l)" == 0 ]]; then
+            res=false;
+          fi
+          echo "::set-output name=changes-found::$(echo $res)";
+      - id: rust-changes
+        name: find rust/cargo changes.
+        uses: diem/actions/matches@faadd16607b77dfa2231a8f366883e01717b3225
+        with:
+          pattern: '^documentation\|^docker\|^scripts\|^developers.diem.com'
+          invert: "true"
+      - id: non-rust-lint-changes
+        name: find shell/dockerfile changes
+        uses: diem/actions/matches@faadd16607b77dfa2231a8f366883e01717b3225
+        with:
+          pattern: 'Dockerfile$\|.*.sh$\|^developers.diem.com\|^shuffle'
+      - id: dev-setup-sh-changes
+        name: find dev-setup.sh/base docker image changes
+        uses: diem/actions/matches@faadd16607b77dfa2231a8f366883e01717b3225
+        with:
+          pattern: 'docker/ci\|scripts/dev_setup.sh'
+
+  dev-setup-sh-test:
+    runs-on: ubuntu-20.04-xl
+    timeout-minutes: 30
+    needs: prepare
+    if: ${{ needs.prepare.outputs.test-dev-setup == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        target_os: [github]
+    steps:
+      - uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: build image with dev-setup.sh
+        run: docker build -f docker/ci/${{ matrix.target_os }}/Dockerfile -t diem/build_environment:test .
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+
+  lint:
+    runs-on: ubuntu-20.04-xl
+    timeout-minutes: 30
+    needs: prepare
+    if: ${{ needs.prepare.outputs.any-changes-founds == 'true' }}
+    container:
+      image: ghcr.io/diem/diem_build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+      volumes:
+        - "${{github.workspace}}:/opt/git/diem"
+    steps:
+      - uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: ./.github/actions/build-setup
+      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+        with:
+          key: ${{ needs.prepare.outputs.changes-target-branch }}
+      - name: cargo lint
+        run: $pre_command && cargo x lint
+      - name: cargo clippy
+        run: $pre_command && cargo xclippy --workspace --all-targets
+      - name: cargo fmt
+        run: $pre_command && cargo xfmt --check
+      - uses: ./.github/actions/build-teardown
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+
+  unit-test:
+    runs-on: ubuntu-20.04-xl
+    timeout-minutes: 60
+    needs: prepare
+    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    container:
+      image: ghcr.io/diem/diem_build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+      volumes:
+        - "${{github.workspace}}:/opt/git/diem"
+    steps:
+      - uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0 #get all the history!!!
+      - uses: ./.github/actions/build-setup
+      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+        with:
+          key: ${{ needs.prepare.outputs.changes-target-branch }}
+      - name: run unit tests
+        run: |
+          $pre_command && cargo nextest --nextest-profile ci --jobs ${max_threads} --test-threads ${max_threads} --changed-since "origin/$TARGET_BRANCH"
+        env:
+          TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
+      - name: run doctests
+        run: |
+          $pre_command && cargo xtest --doc --jobs ${max_threads} --changed-since "origin/$TARGET_BRANCH"
+        env:
+          TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
+      - name: organize unit test results
+        if: always()
+        run: |
+          $pre_command && mkdir -p target/junit-reports && mv target/nextest/ci/junit.xml target/junit-reports/unit-test.xml
+      - name: upload unit test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: unit-test-results
+          path: target/junit-reports/unit-test.xml
+      - uses: ./.github/actions/build-teardown
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+
+  hardhat-tests:
+    runs-on: ubuntu-20.04-xl
+    timeout-minutes: 20
+    needs: prepare
+    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    container:
+      image: ghcr.io/diem/diem_build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+      volumes:
+        - "${{github.workspace}}:/opt/git/diem"
+    steps:
+      - uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: ./.github/actions/build-setup
+      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - name: setup hardhat
+        working-directory: language/evm/hardhat-examples
+        run: "./setup.sh"
+      - name: compile and install move-to-yul
+        working-directory: language/evm/move-to-yul
+        run: "cargo install --path ."
+      - name: run hardhat tests (Move contracts)
+        working-directory: language/evm/hardhat-examples
+        run: "./compile_all_and_run_tests.sh"
+      # TODO: reenable this once we figure a way to keep package-lock.json stable.
+      # - uses: ./.github/actions/build-teardown
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+
+  # Compile (but don't run) the benchmarks, to insulate against bit rot
+  build-benchmarks:
+    runs-on: ubuntu-20.04-xl
+    timeout-minutes: 30
+    needs: prepare
+    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    container:
+      image: ghcr.io/diem/diem_build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+      volumes:
+        - "${{github.workspace}}:/opt/git/diem"
+    steps:
+      - uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: ./.github/actions/build-setup
+      - uses: actions/cache@v2.1.6
+        with:
+          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: "crates-${{ runner.os }}"
+      - name: build benchmarks
+        run: cargo x bench --no-run
+      - uses: ./.github/actions/build-teardown
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+
+  perf-benchmarks:
+    name: run-perf-benchmarks
+    runs-on: ubuntu-20.04-xl
+    timeout-minutes: 30
+    needs:
+      - prepare
+      - build-benchmarks
+    env:
+      CRITERION_HOME: /tmp/benches
+    steps:
+      - uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/cache@v2.1.6
+        with:
+          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: "crates-${{ runner.os }}"
+      - name: Download the previous baseline
+        continue-on-error: true
+        uses: actions/download-artifact@v2
+        with:
+          name: bench-baseline
+      - name: Run performance benchamrks
+        run: |
+          # Replace this with a cargo x bench
+          cargo bench --package language-benchmarks
+      - name: Archive criterion results
+        uses: actions/upload-artifact@v2
+        with:
+          name: bench-baseline
+          retention-days: 5
+          path: |
+            /tmp/benches
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+
+  build-move-analyzer-vscode-extension:
+    name: Build VS Code extension for move-analyzer
+    runs-on: ubuntu-20.04
+    needs:
+      - prepare
+    steps:
+      - uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Use Node.js 14
+        uses: actions/setup-node@v2.4.0
+        with:
+          node-version: '14'
+      - name: Install NPM dependencies
+        working-directory: language/move-analyzer/editors/code
+        run: npm install
+      - name: Build the extension
+        working-directory: language/move-analyzer/editors/code
+        run: npm run pretest
+      - name: Test the extension
+        # VS Code tests require display output. This action simulates such a
+        # display, using Xvfb. (It's roughly equivalent to prefixing the 'run'
+        # commands below with `xvfb-run <command>`.) Without a simulated display
+        # such as this one, the tests would fail with the error message:
+        # "Unable to open X display."
+        uses: GabrielBB/xvfb-action@v1.5
+        with:
+          working-directory: language/move-analyzer/editors/code
+          run: npm run test
+      - name: Package the extension
+        working-directory: language/move-analyzer/editors/code
+        run: npm run package
+      - name: Upload VS Code extension
+        uses: actions/upload-artifact@v2
+        with:
+          name: move-analyzer-vscode-extension
+          path: language/move-analyzer/editors/code/move-analyzer.vsix
+      - name: Early terminate workflow
+        if: ${{ failure() }}
+        uses: ./.github/actions/early-terminator
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+  check-for-broken-links:
+    name: Check for broken links in files
+    runs-on: ubuntu-20.04
+    needs:
+      - prepare
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Ruby 2.6
+        uses: actions/setup-ruby@v1
+        with:
+          ruby-version: 2.6.x
+      - name: Run Checks
+        run: |
+          gem install awesome_bot
+          # Don't look in git or target dirs. Don't check png, bib, tex, or shell files
+          # We allow links to be redirects, allow duplicates, and we also allow Too Many Requests (429) errors
+          find . -not \( -path "./.git*" -prune \) -not \( -path "./target" -prune \) -type f -not -name "*.png" -not -name "*.sh" -not -name "*.bib" -not -name "*.tex" -not -name "hardhat.config.js" | while read arg; do awesome_bot --allow-redirect --allow-dupe --allow 429 --skip-save-results $arg; done

@@ -2,7 +2,7 @@ processed 1 task
 
 task 0 'print-bytecode'. lines 1-13:
 // Move bytecode v5
-module e.Expressions {
+module 0xe.Expressions {
 
 
 binary_add() {

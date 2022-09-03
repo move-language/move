@@ -248,7 +248,7 @@ fn pretty_print_value(
         AnnotatedMoveValue::U8(v) => write!(f, "{}u8", v),
         AnnotatedMoveValue::U64(v) => write!(f, "{}", v),
         AnnotatedMoveValue::U128(v) => write!(f, "{}u128", v),
-        AnnotatedMoveValue::Address(a) => write!(f, "{}", a.short_str_lossless()),
+        AnnotatedMoveValue::Address(a) => write!(f, "{}", a),
         AnnotatedMoveValue::Vector(_, v) => {
             writeln!(f, "[")?;
             for value in v.iter() {
@@ -320,7 +320,7 @@ impl serde::Serialize for AnnotatedMoveValue {
                 }
             }
             Bool(b) => serializer.serialize_bool(*b),
-            Address(a) => a.short_str_lossless().serialize(serializer),
+            Address(a) => a.to_string().serialize(serializer),
             Vector(t, vals) => {
                 assert_ne!(t, &TypeTag::U8);
                 let mut vec = serializer.serialize_seq(Some(vals.len()))?;

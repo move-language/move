@@ -1,0 +1,2 @@
+sandbox publish
+sandbox run scripts/print_values.move --dry-run

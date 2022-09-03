@@ -1579,7 +1579,7 @@ impl fmt::Display for CopyableVal_ {
             CopyableVal_::U128(v) => write!(f, "{}u128", v),
             CopyableVal_::Bool(v) => write!(f, "{}", v),
             CopyableVal_::ByteArray(v) => write!(f, "0b{}", hex::encode(v)),
-            CopyableVal_::Address(v) => write!(f, "0x{}", hex::encode(v)),
+            CopyableVal_::Address(v) => write!(f, "{:#x}", v),
         }
     }
 }
@@ -1768,7 +1768,7 @@ fn format_move_value(v: &MoveValue) -> String {
         MoveValue::U128(u) => format!("{}u128", u),
         MoveValue::Bool(true) => "true".to_owned(),
         MoveValue::Bool(false) => "false".to_owned(),
-        MoveValue::Address(a) => format!("0x{}", a.short_str_lossless()),
+        MoveValue::Address(a) => format!("{}", a),
         MoveValue::Vector(v) => {
             let items = v
                 .iter()

@@ -1,9 +1,9 @@
 Running Move unit tests
-[ FAIL    ] 0x1::MissingData::missing_data
+[ FAIL    ] 0x00000000000000000000000000000001::MissingData::missing_data
 
 Test failures:
 
-Failures in 0x1::MissingData:
+Failures in 0x00000000000000000000000000000001::MissingData:
 
 ┌── missing_data ──────
 │ ITE: An unknown error was reported. Location: 

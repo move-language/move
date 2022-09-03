@@ -1,9 +1,9 @@
 CompiledPackageInfo {
     package_name: "test",
     address_alias_instantiation: {
-        "A": 00000000000000000000000000000001,
-        "C": 00000000000000000000000000000003,
-        "DA": 00000000000000000000000000000002,
+        "A": 0x1,
+        "C": 0x3,
+        "DA": 0x2,
     },
     source_digest: Some(
         "ELIDED_FOR_TEST",

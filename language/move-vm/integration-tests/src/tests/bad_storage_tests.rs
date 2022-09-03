@@ -65,7 +65,7 @@ fn test_malformed_resource() {
             }
         }
     "#;
-    let code = code.replace("{{ADDR}}", &format!("0x{}", TEST_ADDR));
+    let code = code.replace("{{ADDR}}", &format!("{}", TEST_ADDR));
     let mut units = compile_units(&code).unwrap();
 
     let s2 = as_script(units.pop().unwrap());
@@ -85,7 +85,7 @@ fn test_malformed_resource() {
     storage.publish_or_overwrite_module(m.self_id(), blob);
 
     let vm = MoveVM::new(move_stdlib::natives::all_natives(
-        AccountAddress::from_hex_literal("0x1").unwrap(),
+        AccountAddress::ONE,
         move_stdlib::natives::GasParameters::zeros(),
     ))
     .unwrap();
@@ -160,7 +160,7 @@ fn test_malformed_module() {
         }
     "#;
 
-    let code = code.replace("{{ADDR}}", &format!("0x{}", TEST_ADDR));
+    let code = code.replace("{{ADDR}}", &format!("{}", TEST_ADDR));
     let mut units = compile_units(&code).unwrap();
 
     let m = as_module(units.pop().unwrap());
@@ -224,7 +224,7 @@ fn test_unverifiable_module() {
         }
     "#;
 
-    let code = code.replace("{{ADDR}}", &format!("0x{}", TEST_ADDR));
+    let code = code.replace("{{ADDR}}", &format!("{}", TEST_ADDR));
     let mut units = compile_units(&code).unwrap();
     let m = as_module(units.pop().unwrap());
 
@@ -294,7 +294,7 @@ fn test_missing_module_dependency() {
             public fun bar() { M::foo(); }
         }
     "#;
-    let code = code.replace("{{ADDR}}", &format!("0x{}", TEST_ADDR));
+    let code = code.replace("{{ADDR}}", &format!("{}", TEST_ADDR));
     let mut units = compile_units(&code).unwrap();
     let n = as_module(units.pop().unwrap());
     let m = as_module(units.pop().unwrap());
@@ -364,7 +364,7 @@ fn test_malformed_module_denpency() {
             public fun bar() { M::foo(); }
         }
     "#;
-    let code = code.replace("{{ADDR}}", &format!("0x{}", TEST_ADDR));
+    let code = code.replace("{{ADDR}}", &format!("{}", TEST_ADDR));
     let mut units = compile_units(&code).unwrap();
     let n = as_module(units.pop().unwrap());
     let m = as_module(units.pop().unwrap());
@@ -440,7 +440,7 @@ fn test_unverifiable_module_dependency() {
             public fun bar() { M::foo(); }
         }
     "#;
-    let code = code.replace("{{ADDR}}", &format!("0x{}", TEST_ADDR));
+    let code = code.replace("{{ADDR}}", &format!("{}", TEST_ADDR));
     let mut units = compile_units(&code).unwrap();
     let n = as_module(units.pop().unwrap());
     let m = as_module(units.pop().unwrap());
@@ -588,7 +588,7 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
             }
         }
     "#;
-    let code = code.replace("{{ADDR}}", &format!("0x{}", TEST_ADDR));
+    let code = code.replace("{{ADDR}}", &format!("{}", TEST_ADDR));
 
     let mut units = compile_units(&code).unwrap();
     let m = as_module(units.pop().unwrap());
@@ -612,7 +612,7 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
         let storage = DeltaStorage::new(&storage, &delta);
 
         let vm = MoveVM::new(move_stdlib::natives::all_natives(
-            AccountAddress::from_hex_literal("0x1").unwrap(),
+            AccountAddress::ONE,
             move_stdlib::natives::GasParameters::zeros(),
         ))
         .unwrap();

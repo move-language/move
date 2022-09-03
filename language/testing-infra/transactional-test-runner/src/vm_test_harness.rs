@@ -292,7 +292,7 @@ pub fn format_vm_error(e: &VMError) -> String {
     let location_string = match e.location() {
         Location::Undefined => "undefined".to_owned(),
         Location::Script => "script".to_owned(),
-        Location::Module(id) => format!("0x{}::{}", id.address().short_str_lossless(), id.name()),
+        Location::Module(id) => format!("{}::{}", id.address(), id.name()),
     };
     format!(
         "{{

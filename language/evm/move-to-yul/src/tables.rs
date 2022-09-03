@@ -218,7 +218,7 @@ fn define_insert_fun(gen: &mut FunctionGenerator, ctx: &Context, fun_id: &Qualif
             gen.parent.call_builtin_str(
                 ctx,
                 YulFunction::NewLinkedStorageBase,
-                std::iter::once(format!("0x{:x}", hash))
+                std::iter::once(format!("{:#x}", hash))
             )
         );
         gen.parent.call_builtin(

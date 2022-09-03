@@ -1159,7 +1159,7 @@ impl<'a> Disassembler<'a> {
 
     pub fn disassemble(&self) -> Result<String> {
         let name_opt = self.source_mapper.source_map.module_name_opt.as_ref();
-        let name = name_opt.map(|(addr, n)| format!("{}.{}", addr.short_str_lossless(), n));
+        let name = name_opt.map(|(addr, n)| format!("{}.{}", addr, n));
         let version = format!("{}", self.source_mapper.bytecode.version());
         let header = match name {
             Some(s) => format!("module {}", s),

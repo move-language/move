@@ -4,29 +4,29 @@ publishing Basic
 actor 0x4 created from 0x3::Basic
   SUCCESS
   commit 0x3::Basic::Basic[0x4] := New("[00, 00, 00, 00, 00, 00, 00, 00]")
-actor 0x4 handling 0x3::Basic::start (hash=0xA9C2CD33311F2015)
+actor 0x4 handling 0x3::Basic::start (hash=0xFB30A6826CFEED93)
   SUCCESS
-  sent 0x4 <- 0x45F84510862E6905 argc=1
-actor 0x4 handling 0x3::Basic::count_down (hash=0x45F84510862E6905)
+  sent 0x4 <- 0xCF646DD0C5E75ACD argc=1
+actor 0x4 handling 0x3::Basic::count_down (hash=0xCF646DD0C5E75ACD)
   SUCCESS
-  sent 0x4 <- 0x45F84510862E6905 argc=1
+  sent 0x4 <- 0xCF646DD0C5E75ACD argc=1
   commit 0x3::Basic::Basic[0x4] := Modify("[01, 00, 00, 00, 00, 00, 00, 00]")
-actor 0x4 handling 0x3::Basic::count_down (hash=0x45F84510862E6905)
+actor 0x4 handling 0x3::Basic::count_down (hash=0xCF646DD0C5E75ACD)
   SUCCESS
-  sent 0x4 <- 0x45F84510862E6905 argc=1
+  sent 0x4 <- 0xCF646DD0C5E75ACD argc=1
   commit 0x3::Basic::Basic[0x4] := Modify("[02, 00, 00, 00, 00, 00, 00, 00]")
-actor 0x4 handling 0x3::Basic::count_down (hash=0x45F84510862E6905)
+actor 0x4 handling 0x3::Basic::count_down (hash=0xCF646DD0C5E75ACD)
   SUCCESS
-  sent 0x4 <- 0x45F84510862E6905 argc=1
+  sent 0x4 <- 0xCF646DD0C5E75ACD argc=1
   commit 0x3::Basic::Basic[0x4] := Modify("[03, 00, 00, 00, 00, 00, 00, 00]")
-actor 0x4 handling 0x3::Basic::count_down (hash=0x45F84510862E6905)
+actor 0x4 handling 0x3::Basic::count_down (hash=0xCF646DD0C5E75ACD)
   SUCCESS
-  sent 0x4 <- 0x45F84510862E6905 argc=1
+  sent 0x4 <- 0xCF646DD0C5E75ACD argc=1
   commit 0x3::Basic::Basic[0x4] := Modify("[04, 00, 00, 00, 00, 00, 00, 00]")
-actor 0x4 handling 0x3::Basic::count_down (hash=0x45F84510862E6905)
+actor 0x4 handling 0x3::Basic::count_down (hash=0xCF646DD0C5E75ACD)
   SUCCESS
-  sent 0x4 <- 0x45F84510862E6905 argc=1
+  sent 0x4 <- 0xCF646DD0C5E75ACD argc=1
   commit 0x3::Basic::Basic[0x4] := Modify("[05, 00, 00, 00, 00, 00, 00, 00]")
-actor 0x4 handling 0x3::Basic::count_down (hash=0x45F84510862E6905)
+actor 0x4 handling 0x3::Basic::count_down (hash=0xCF646DD0C5E75ACD)
   SUCCESS
   commit 0x3::Basic::Basic[0x4] := Modify("[05, 00, 00, 00, 00, 00, 00, 00]")

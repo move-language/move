@@ -45,7 +45,7 @@ impl AccountAddress {
         Self(buf)
     }
 
-    pub fn short_str_lossless(&self) -> String {
+    fn short_str_lossless(&self) -> String {
         let hex_str = hex::encode(&self.0).trim_start_matches('0').to_string();
         if hex_str.is_empty() {
             "0".to_string()
@@ -119,13 +119,27 @@ impl std::ops::Deref for AccountAddress {
 
 impl fmt::Display for AccountAddress {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{:x}", self)
+        #[cfg(not(long_address))]
+        {
+            // Output as 0x1
+            write!(f, "{}", self.to_hex_literal())
+        }
+        #[cfg(long_address)]
+        {
+            // Output as 0x0000000001
+            write!(f, "{:#x}", self)
+        }
+        #[cfg(legacy_address)]
+        {
+            // Output as 0000000001
+            write!(f, "{}", self.to_hex())
+        }
     }
 }
 
 impl fmt::Debug for AccountAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:x}", self)
+        write!(f, "{}", self)
     }
 }
 
@@ -260,7 +274,7 @@ impl Serialize for AccountAddress {
         S: Serializer,
     {
         if serializer.is_human_readable() {
-            self.to_hex().serialize(serializer)
+            self.to_string().serialize(serializer)
         } else {
             // See comment in deserialize.
             serializer.serialize_newtype_struct("AccountAddress", &self.0)
@@ -295,13 +309,14 @@ mod tests {
 
     #[test]
     fn test_display_impls() {
-        let hex = "ca843279e3427144cead5e4d5999a3d0";
-        let upper_hex = "CA843279E3427144CEAD5E4D5999A3D0";
+        let hex = "0a843279e3427144cead5e4d5999a3d0";
+        let upper_hex = "0A843279E3427144CEAD5E4D5999A3D0";
+        let shortened_output = "0xa843279e3427144cead5e4d5999a3d0";
 
         let address = AccountAddress::from_hex(hex).unwrap();
 
-        assert_eq!(format!("{}", address), hex);
-        assert_eq!(format!("{:?}", address), hex);
+        assert_eq!(format!("{}", address), shortened_output);
+        assert_eq!(format!("{:?}", address), shortened_output);
         assert_eq!(format!("{:X}", address), upper_hex);
         assert_eq!(format!("{:x}", address), hex);
 
@@ -386,7 +401,7 @@ mod tests {
     #[test]
     fn test_serde_json() {
         let hex = "ca843279e3427144cead5e4d5999a3d0";
-        let json_hex = "\"ca843279e3427144cead5e4d5999a3d0\"";
+        let json_hex = "\"0xca843279e3427144cead5e4d5999a3d0\"";
 
         let address = AccountAddress::from_hex(hex).unwrap();
 
@@ -395,6 +410,17 @@ mod tests {
 
         assert_eq!(json, json_hex);
         assert_eq!(address, json_address);
+    }
+
+    #[test]
+    fn test_bcs() {
+        let hex = "ca843279e3427144cead5e4d5999a3d0";
+        let address = AccountAddress::from_hex(hex).unwrap();
+        let bytes = bcs::to_bytes(&address).unwrap();
+        assert_eq!(hex, hex::encode(&bytes));
+
+        let decoded: AccountAddress = bcs::from_bytes(&bytes).unwrap();
+        assert_eq!(address, decoded);
     }
 
     #[test]

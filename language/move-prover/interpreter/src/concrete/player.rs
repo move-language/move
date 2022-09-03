@@ -20,6 +20,7 @@ use move_core_types::{
 };
 use move_model::{
     ast::{Exp, MemoryLabel, TempIndex},
+    big_uint_to_addr,
     model::{FunId, FunctionEnv, ModuleId, StructId},
     ty as MT,
 };
@@ -440,9 +441,7 @@ impl<'env> FunctionContext<'env> {
             Constant::U64(v) => TypedValue::mk_u64(*v),
             Constant::U128(v) => TypedValue::mk_u128(*v),
             Constant::U256(_) => unimplemented!(),
-            Constant::Address(v) => TypedValue::mk_address(
-                AccountAddress::from_hex_literal(&format!("{:#x}", v)).unwrap(),
-            ),
+            Constant::Address(v) => TypedValue::mk_address(big_uint_to_addr(v)),
             Constant::ByteArray(v) => {
                 let elems = v.iter().map(|e| TypedValue::mk_u8(*e)).collect();
                 TypedValue::mk_vector(BaseType::mk_u8(), elems)
@@ -450,11 +449,7 @@ impl<'env> FunctionContext<'env> {
             Constant::AddressArray(v) => {
                 let elems = v
                     .iter()
-                    .map(|e| {
-                        TypedValue::mk_address(
-                            AccountAddress::from_hex_literal(&format!("{:#x}", *e)).unwrap(),
-                        )
-                    })
+                    .map(|e| TypedValue::mk_address(big_uint_to_addr(e)))
                     .collect();
                 TypedValue::mk_vector(BaseType::mk_address(), elems)
             }

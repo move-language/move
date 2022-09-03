@@ -1118,7 +1118,7 @@ pub struct ModuleNameDisplay<'a> {
 impl<'a> fmt::Display for ModuleNameDisplay<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         if self.with_address && !self.name.is_script() {
-            write!(f, "0x{}::", self.name.0.to_str_radix(16))?;
+            write!(f, "{:#x}::", self.name.0)?;
         }
         write!(f, "{}", self.name.1.display(self.pool))?;
         Ok(())

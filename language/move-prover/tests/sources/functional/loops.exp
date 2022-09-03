@@ -101,10 +101,9 @@ error: induction case of the loop invariant does not hold
     =         y = <redacted>
     =     loop invariant holds at current state
     =     at tests/sources/functional/loops.move:191: loop_with_two_back_edges_incorrect
-    =     at tests/sources/functional/loops.move:195: loop_with_two_back_edges_incorrect
-    =     at tests/sources/functional/loops.move:196: loop_with_two_back_edges_incorrect
-    =         x = <redacted>
-    =     at tests/sources/functional/loops.move:197: loop_with_two_back_edges_incorrect
+    =     at tests/sources/functional/loops.move:192: loop_with_two_back_edges_incorrect
+    =         y = <redacted>
+    =     at tests/sources/functional/loops.move:193: loop_with_two_back_edges_incorrect
     =     at tests/sources/functional/loops.move:189: loop_with_two_back_edges_incorrect
 
 error: base case of the loop invariant does not hold

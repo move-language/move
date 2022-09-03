@@ -377,6 +377,7 @@ mod tests {
         values::ParsedValue,
     };
     use move_core_types::account_address::AccountAddress;
+    use std::str::FromStr;
 
     #[allow(clippy::unreadable_literal)]
     #[test]
@@ -409,25 +410,21 @@ mod tests {
             (
                 "@0x0",
                 V::Address(ParsedAddress::Numerical(NumericalAddress::new(
-                    AccountAddress::from_hex_literal("0x0")
-                        .unwrap()
-                        .into_bytes(),
+                    AccountAddress::ZERO.into_bytes(),
                     crate::parser::NumberFormat::Hex,
                 ))),
             ),
             (
                 "@0",
                 V::Address(ParsedAddress::Numerical(NumericalAddress::new(
-                    AccountAddress::from_hex_literal("0x0")
-                        .unwrap()
-                        .into_bytes(),
+                    AccountAddress::ZERO.into_bytes(),
                     crate::parser::NumberFormat::Hex,
                 ))),
             ),
             (
                 "@0x54afa3526",
                 V::Address(ParsedAddress::Numerical(NumericalAddress::new(
-                    AccountAddress::from_hex_literal("0x54afa3526")
+                    AccountAddress::from_str("0x54afa3526")
                         .unwrap()
                         .into_bytes(),
                     crate::parser::NumberFormat::Hex,

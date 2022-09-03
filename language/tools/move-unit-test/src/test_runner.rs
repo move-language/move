@@ -115,7 +115,7 @@ fn print_resources_and_extensions(
     let mut buf = String::new();
     let annotator = MoveValueAnnotator::new(storage);
     for (account_addr, account_state) in cs.accounts() {
-        writeln!(&mut buf, "0x{}:", account_addr.short_str_lossless())?;
+        writeln!(&mut buf, "{}:", account_addr)?;
 
         for (tag, resource_op) in account_state.resources() {
             if let Op::New(resource) | Op::Modify(resource) = resource_op {
@@ -157,7 +157,7 @@ impl TestRunner {
         let starting_storage_state = setup_test_storage(modules)?;
         let native_function_table = native_function_table.unwrap_or_else(|| {
             move_stdlib::natives::all_natives(
-                AccountAddress::from_hex_literal("0x1").unwrap(),
+                AccountAddress::ONE,
                 move_stdlib::natives::GasParameters::zeros(),
             )
         });

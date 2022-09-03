@@ -188,7 +188,7 @@ fn parse_account_address(
             message: "expected Tok::AccountAddressValue".to_string(),
         });
     }
-    let addr = AccountAddress::from_hex_literal(tokens.content())
+    let addr = AccountAddress::from_str(tokens.content())
         .with_context(|| {
             format!(
                 "The address {:?} is of invalid length. Addresses are at most 32-bytes long",

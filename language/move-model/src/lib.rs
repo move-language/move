@@ -7,6 +7,7 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
     rc::Rc,
+    str::FromStr,
 };
 
 use codespan::ByteIndex;
@@ -615,14 +616,14 @@ fn run_spec_simplifier(env: &mut GlobalEnv) {
 
 /// Converts an address identifier to a number representing the address.
 pub fn addr_to_big_uint(addr: &AccountAddress) -> BigUint {
-    BigUint::from_str_radix(&addr.to_string(), 16).unwrap()
+    BigUint::from_str_radix(&addr.to_hex(), 16).unwrap()
 }
 
 /// Converts a biguint into an account address
 pub fn big_uint_to_addr(i: &BigUint) -> AccountAddress {
     // TODO: do this in more efficient way (e.g., i.to_le_bytes() and pad out the resulting Vec<u8>
     // to ADDRESS_LENGTH
-    AccountAddress::from_hex_literal(&format!("{:#x}", i)).unwrap()
+    AccountAddress::from_str(&format!("{:#x}", i)).unwrap()
 }
 
 pub fn parse_addresses_from_options(

@@ -35,7 +35,7 @@ pub struct StructIdent {
 
 impl fmt::Display for ModuleIdent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "0x{}::{}", self.address.short_str_lossless(), self.name)
+        write!(f, "{}::{}", self.address, self.name)
     }
 }
 

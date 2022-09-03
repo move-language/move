@@ -17,10 +17,7 @@ fn test_additonal_addresses() {
     let pm = MP::parse_move_manifest_from_file(path).unwrap();
 
     let mut additional_named_addresses = BTreeMap::new();
-    additional_named_addresses.insert(
-        "A".to_string(),
-        AccountAddress::from_hex_literal("0x1").unwrap(),
-    );
+    additional_named_addresses.insert("A".to_string(), AccountAddress::ONE);
 
     assert!(RG::ResolutionGraph::new(
         pm.clone(),
@@ -54,10 +51,7 @@ fn test_additonal_addresses_already_assigned_same_value() {
     let pm = MP::parse_move_manifest_from_file(path).unwrap();
 
     let mut additional_named_addresses = BTreeMap::new();
-    additional_named_addresses.insert(
-        "A".to_string(),
-        AccountAddress::from_hex_literal("0x0").unwrap(),
-    );
+    additional_named_addresses.insert("A".to_string(), AccountAddress::ZERO);
 
     assert!(RG::ResolutionGraph::new(
         pm,
@@ -79,10 +73,7 @@ fn test_additonal_addresses_already_assigned_different_value() {
     let pm = MP::parse_move_manifest_from_file(path).unwrap();
 
     let mut additional_named_addresses = BTreeMap::new();
-    additional_named_addresses.insert(
-        "A".to_string(),
-        AccountAddress::from_hex_literal("0x1").unwrap(),
-    );
+    additional_named_addresses.insert("A".to_string(), AccountAddress::ONE);
 
     assert!(RG::ResolutionGraph::new(
         pm,

@@ -48,7 +48,7 @@ struct Harness {
 }
 
 fn test_account() -> AccountAddress {
-    AccountAddress::from_hex_literal(TEST_ADDR).expect("valid test address")
+    AccountAddress::from_str(TEST_ADDR).expect("valid test address")
 }
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
@@ -93,11 +93,7 @@ impl Harness {
         // Initialize actors
         let mut mailbox: VecDeque<Message> = Default::default();
         for (actor, addr) in self.actor_instances.clone() {
-            self.log(format!(
-                "actor 0x{} created from {}",
-                addr.short_str_lossless(),
-                actor.short_str_lossless()
-            ));
+            self.log(format!("actor {} created from {}", addr, actor));
             {
                 let mut proxy = HarnessProxy { harness: self };
                 let session = self.vm.new_session(addr, 0, &mut proxy);
@@ -116,17 +112,13 @@ impl Harness {
             // Baseline logging
             if let Some((module_id, fun_id)) = self.vm.resolve_message_hash(message_hash).cloned() {
                 self.log(format!(
-                    "actor 0x{} handling {}::{} (hash=0x{:X})",
-                    actor.short_str_lossless(),
-                    module_id.short_str_lossless(),
-                    fun_id,
-                    message_hash
+                    "actor {} handling {}::{} (hash={:#X})",
+                    actor, module_id, fun_id, message_hash
                 ));
             } else {
                 self.log(format!(
-                    "actor 0x{} handling ???? (hash={})",
-                    actor.short_str_lossless(),
-                    message_hash
+                    "actor {} handling ???? (hash={:#X})",
+                    actor, message_hash
                 ))
             }
             // Handling
@@ -167,12 +159,7 @@ impl Harness {
             Ok(success) => {
                 self.log("  SUCCESS");
                 for m in &success.messages {
-                    self.log(format!(
-                        "  sent 0x{} <- 0x{:X} argc={}",
-                        m.0.short_str_lossless(),
-                        m.1,
-                        m.2.len()
-                    ))
+                    self.log(format!("  sent {} <- {:#X} argc={}", m.0, m.1, m.2.len()))
                 }
                 mailbox.extend(success.messages);
                 self.commit_changeset(success.change_set)
@@ -185,11 +172,11 @@ impl Harness {
         for (addr, change) in changeset.into_inner() {
             for (struct_tag, op) in change.into_inner().1 {
                 self.log(format!(
-                    "  commit 0x{}::{}::{}[0x{}] := {:?}",
-                    struct_tag.address.short_str_lossless(),
+                    "  commit {}::{}::{}[{}] := {:?}",
+                    struct_tag.address,
                     struct_tag.module,
                     struct_tag.module,
-                    addr.short_str_lossless(),
+                    addr,
                     op.as_ref().map(|b| format!("{:02X?}", b))
                 ));
                 match op {
@@ -269,7 +256,7 @@ impl Harness {
             if parts.len() < 4 {
                 bail!("malformed actor decl `{}`", actor)
             }
-            let address = AccountAddress::from_hex_literal(parts[0])?;
+            let address = AccountAddress::from_str(parts[0])?;
             let module = Identifier::from_str(parts[1])?;
             let struct_ = Identifier::from_str(parts[2])?;
             let initializer = Identifier::from_str(parts[3])?;
@@ -304,9 +291,9 @@ impl Harness {
             if parts.len() != 3 {
                 bail!("malformed instance decl `{}`", inst)
             }
-            let address = AccountAddress::from_hex_literal(parts[0])?;
+            let address = AccountAddress::from_str(parts[0])?;
             let module = Identifier::from_str(parts[1])?;
-            let inst_address = AccountAddress::from_hex_literal(parts[2])?;
+            let inst_address = AccountAddress::from_str(parts[2])?;
             result.push((ModuleId::new(address, module), inst_address))
         }
         Ok(result)

@@ -289,7 +289,7 @@ impl ReadWriteSet {
 impl fmt::Display for Root {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self.root {
-            RootAddress::Const(addr) => write!(f, "0x{}", addr.short_str_lossless())?,
+            RootAddress::Const(addr) => write!(f, "{}", addr)?,
             RootAddress::Formal(i) => write!(f, "Formal({})", i)?,
         };
         write!(f, "/{}", self.type_)

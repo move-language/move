@@ -692,7 +692,7 @@ impl GlobalEnv {
                 self.error(
                     &self.unknown_loc,
                     &format!(
-                        "Ambiguous definition of standard address alias `{}` (`0x{} != 0x{}`).\
+                        "Ambiguous definition of standard address alias `{}` (`{:#x} != {:#x}`).\
                                  This alias currently must be unique across all packages.",
                         name,
                         addr,

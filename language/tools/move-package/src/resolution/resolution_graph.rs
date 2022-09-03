@@ -348,10 +348,10 @@ impl ResolvingGraph {
                     }
                     None => {
                         bail!(
-                            "Found unbound dev address assignment '{} = 0x{}' in root package '{}'. \
+                            "Found unbound dev address assignment '{} = {}' in root package '{}'. \
                              Dev addresses cannot introduce new named addresses",
                             name,
-                            addr.short_str_lossless(),
+                            addr,
                             package_name
                         );
                     }
@@ -359,13 +359,13 @@ impl ResolvingGraph {
 
                 if let Some(conflicts) = addr_to_name_mapping.insert(addr, vec![name]) {
                     bail!(
-                        "Found non-unique dev address assignment '{name} = 0x{addr}' in root \
+                        "Found non-unique dev address assignment '{name} = {addr}' in root \
                         package '{pkg}'. Dev address assignments must not conflict with any other \
                         assignments in order to ensure that the package will compile with any \
                         possible address assignment. \
-                        Assignment conflicts with previous assignments: {conflicts} = 0x{addr}",
+                        Assignment conflicts with previous assignments: {conflicts} = {addr}",
                         name = name,
-                        addr = addr.short_str_lossless(),
+                        addr = addr,
                         pkg = package_name,
                         conflicts = conflicts
                             .into_iter()
@@ -706,11 +706,11 @@ impl ResolvingPackage {
                         dep_name,
                         match other.value.take() {
                             None => "unassigned".to_string(),
-                            Some(addr) => format!("0x{}", addr.short_str_lossless()),
+                            Some(addr) => format!("{}", addr),
                         },
                         match addr_value.value.take() {
                             None => "unassigned".to_string(),
-                            Some(addr) => format!("0x{}", addr.short_str_lossless()),
+                            Some(addr) => format!("{}", addr),
                         }
                     );
                 }
@@ -765,8 +765,8 @@ impl ResolvingNamedAddress {
             None => Ok(()),
             Some(addr_val) => match &mut *self.value.borrow_mut() {
                 Some(current_value) if current_value != &addr_val =>
-                    bail!("Attempted to assign a different value '0x{}' to an a already-assigned named address '0x{}'",
-                        addr_val.short_str_lossless(), current_value.short_str_lossless()
+                    bail!("Attempted to assign a different value '{}' to an a already-assigned named address '{}'",
+                        addr_val, current_value
                     ),
                 Some(_) => Ok(()),
                 x @ None => {
@@ -787,7 +787,7 @@ impl ResolvedGraph {
         let pkg = self.package_table.get(current_node).unwrap();
 
         for (name, addr) in &pkg.resolution_table {
-            tree.add_empty_child(format!("{}:0x{}", name, addr.short_str_lossless()));
+            tree.add_empty_child(format!("{}:{}", name, addr));
         }
 
         for node in self.graph.neighbors_directed(*current_node, Outgoing) {

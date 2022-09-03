@@ -16,7 +16,7 @@ Command `coverage summary --summarize-functions`:
 +-------------------------+
 | Move Coverage Summary   |
 +-------------------------+
-Module 00000000000000000000000000000001::AModule
+Module 0x1::AModule
 	fun double_except_three
 		total: 10
 		covered: 10
@@ -49,7 +49,7 @@ module std::AModule {
 }
 Command `coverage bytecode --module AModule`:
 // Move bytecode v5
-module 1.AModule {
+module 0x1.AModule {
 
 
 public double_except_three(x: u64): u64 {
@@ -70,7 +70,7 @@ B2:
 }
 Command `disassemble --package MoveStdlib --name signer`:
 // Move bytecode v5
-module 1.signer {
+module 0x1.signer {
 
 
 public address_of(s: &signer): address {

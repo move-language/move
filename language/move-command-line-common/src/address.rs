@@ -93,7 +93,7 @@ impl fmt::Display for NumericalAddress {
                 let n = BigUint::from_bytes_be(self.bytes.as_ref());
                 write!(f, "{}", n)
             }
-            NumberFormat::Hex => write!(f, "{:#X}", self),
+            NumberFormat::Hex => write!(f, "{}", self.bytes),
         }
     }
 }
@@ -106,16 +106,20 @@ impl fmt::Debug for NumericalAddress {
 
 impl fmt::UpperHex for NumericalAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let encoded = hex::encode_upper(self.as_ref());
-        let dropped = encoded
-            .chars()
-            .skip_while(|c| c == &'0')
-            .collect::<String>();
-        let prefix = if f.alternate() { "0x" } else { "" };
-        if dropped.is_empty() {
-            write!(f, "{}0", prefix)
+        if f.alternate() {
+            write!(f, "{:#X}", self.bytes)
         } else {
-            write!(f, "{}{}", prefix, dropped)
+            write!(f, "{:X}", self.bytes)
+        }
+    }
+}
+
+impl fmt::LowerHex for NumericalAddress {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if f.alternate() {
+            write!(f, "{:#x}", self.bytes)
+        } else {
+            write!(f, "{:x}", self.bytes)
         }
     }
 }

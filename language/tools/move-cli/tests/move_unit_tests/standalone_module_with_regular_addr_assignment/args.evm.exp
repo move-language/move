@@ -2,6 +2,6 @@ Command `test --evm`:
 INCLUDING DEPENDENCY MoveStdlib
 BUILDING StandaloneModule
 Running Move unit tests
-[ PASS    ] 0x2::M::explicit_abort_expect_failure
-[ PASS    ] 0x2::M::nop
+[ PASS    ] 0x00000000000000000000000000000002::M::explicit_abort_expect_failure
+[ PASS    ] 0x00000000000000000000000000000002::M::nop
 Test result: OK. Total tests: 2; passed: 2; failed: 0

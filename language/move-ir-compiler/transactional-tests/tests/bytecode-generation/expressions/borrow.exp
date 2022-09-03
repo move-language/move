@@ -41,7 +41,7 @@ B0:
 
 task 2 'print-bytecode'. lines 26-59:
 // Move bytecode v5
-module 1d4.M {
+module 0x1d4.M {
 struct T {
 	u: u64
 }
@@ -77,7 +77,7 @@ B0:
 
 task 3 'print-bytecode'. lines 61-80:
 // Move bytecode v5
-module 2d4.M {
+module 0x2d4.M {
 struct T<Ty0> {
 	u: Ty0
 }

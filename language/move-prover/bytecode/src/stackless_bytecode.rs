@@ -1121,14 +1121,12 @@ impl fmt::Display for Constant {
             U64(x) => write!(f, "{}", x)?,
             U128(x) => write!(f, "{}", x)?,
             U256(x) => write!(f, "{}", x)?,
-            Address(x) => write!(f, "0x{}", x.to_str_radix(16))?,
+            Address(x) => write!(f, "{:#x}", x)?,
             ByteArray(x) => write!(f, "{:?}", x)?,
             AddressArray(x) => write!(
                 f,
                 "{:?}",
-                x.iter()
-                    .map(|v| format!("0x{}", v.to_str_radix(16)))
-                    .collect_vec()
+                x.iter().map(|v| format!("{:#x}", v)).collect_vec()
             )?,
         }
         Ok(())

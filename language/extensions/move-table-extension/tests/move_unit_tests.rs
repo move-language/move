@@ -6,17 +6,17 @@ use move_cli::base::test::{run_move_unit_tests, UnitTestResult};
 use move_core_types::account_address::AccountAddress;
 use move_table_extension::{table_natives, GasParameters};
 use move_unit_test::UnitTestingConfig;
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 use tempfile::tempdir;
 
 fn run_tests_for_pkg(path_to_pkg: impl Into<String>) {
     let pkg_path = path_in_crate(path_to_pkg);
     let mut natives = move_stdlib::natives::all_natives(
-        AccountAddress::from_hex_literal("0x1").unwrap(),
+        AccountAddress::ONE,
         move_stdlib::natives::GasParameters::zeros(),
     );
     natives.append(&mut table_natives(
-        AccountAddress::from_hex_literal("0x2").unwrap(),
+        AccountAddress::from_str("0x2").unwrap(),
         GasParameters::zeros(),
     ));
     let res = run_move_unit_tests(

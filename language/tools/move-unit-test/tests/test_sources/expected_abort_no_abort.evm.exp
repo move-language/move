@@ -1,10 +1,10 @@
 Running Move unit tests
-[ FAIL    ] 0x1::M::fail
-[ FAIL    ] 0x1::M::fail_with_code
+[ FAIL    ] 0x00000000000000000000000000000001::M::fail
+[ FAIL    ] 0x00000000000000000000000000000001::M::fail_with_code
 
 Test failures:
 
-Failures in 0x1::M:
+Failures in 0x00000000000000000000000000000001::M:
 
 ┌── fail ──────
 │ Test did not abort as expected

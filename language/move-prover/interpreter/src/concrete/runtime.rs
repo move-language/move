@@ -183,9 +183,7 @@ pub fn convert_move_struct_tag(
     let struct_id = env.find_struct_by_tag(struct_tag).ok_or_else(|| {
         PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(format!(
             "Cannot find struct `{}::{}::{}`",
-            struct_tag.address.short_str_lossless(),
-            struct_tag.module,
-            struct_tag.name,
+            struct_tag.address, struct_tag.module, struct_tag.name,
         ))
     })?;
     let struct_env = env.get_struct(struct_id);
@@ -304,9 +302,7 @@ fn get_abilities(env: &GlobalEnv, ty: &TypeTag) -> PartialVMResult<AbilitySet> {
             let struct_id = env.find_struct_by_tag(struct_tag).ok_or_else(|| {
                 PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(format!(
                     "Cannot find struct `{}::{}::{}`",
-                    struct_tag.address.short_str_lossless(),
-                    struct_tag.module,
-                    struct_tag.name,
+                    struct_tag.address, struct_tag.module, struct_tag.name,
                 ))
             })?;
             let struct_env = env.get_struct(struct_id);

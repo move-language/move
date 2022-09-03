@@ -161,12 +161,12 @@
     fun &lt;identifier&gt;&lt;[type parameters: constraint]*&gt;([identifier: type]*) &lt;function_body&gt;
 }
 </code></pre>
-<p>A <code>script</code> block must start with all of its <a href="./uses.html">use</a> declarations, followed by any <a href="./constants.html">constants</a> and (finally) the main
+<p>A <code>script</code> block must start with all of its <a href="./uses.html"><code>use</code></a> declarations, followed by any <a href="./constants.html">constants</a> and (finally) the main
 <a href="./functions.html">function</a> declaration.
 The main function can have any name (i.e., it need not be called <code>main</code>), is the only function in a script block, can have any number of
 arguments, and must not return a value. Here is an example with each of these components:</p>
 <pre><code class="language-move">script {
-    // Import the Debug module published at the named account address std.
+    // Import the debug module published at the named account address std.
     use std::debug;
 
     const ONE: u64 = 1;
@@ -179,18 +179,18 @@ arguments, and must not return a value. Here is an example with each of these co
 </code></pre>
 <p>Scripts have very limited power—they cannot declare friends, struct types or access global storage. Their primary purpose is to invoke module functions.</p>
 <h3 id="modules"><a class="header" href="#modules">Modules</a></h3>
-<p>A Module has the following syntax:</p>
+<p>A module has the following syntax:</p>
 <pre><code class="language-text">module &lt;address&gt;::&lt;identifier&gt; {
     (&lt;use&gt; | &lt;friend&gt; | &lt;type&gt; | &lt;function&gt; | &lt;constant&gt;)*
 }
 </code></pre>
 <p>where <code>&lt;address&gt;</code> is a valid <a href="./address.html">named or literal address</a>.</p>
 <p>For example:</p>
-<pre><code class="language-move">module 0x42::Test {
+<pre><code class="language-move">module 0x42::test {
     struct Example has copy, drop { i: u64 }
 
     use std::debug;
-    friend 0x42::AnotherTest;
+    friend 0x42::another_test;
 
     const ONE: u64 = 1;
 
@@ -201,16 +201,16 @@ arguments, and must not return a value. Here is an example with each of these co
     }
 }
 </code></pre>
-<p>The <code>module 0x42::Test</code> part specifies that the module <code>Test</code> will be published under the <a href="./address.html">account address</a> <code>0x42</code> in <a href="./global-storage-structure.html">global storage</a>.</p>
+<p>The <code>module 0x42::test</code> part specifies that the module <code>test</code> will be published under the <a href="./address.html">account address</a> <code>0x42</code> in <a href="./global-storage-structure.html">global storage</a>.</p>
 <p>Modules can also be declared using <a href="./address.html">named addresses</a>. For example:</p>
 <pre><code class="language-move">module test_addr::test {
-    struct Example has copy, drop { a: address}
+    struct Example has copy, drop { a: address }
 
     use std::debug;
     friend test_addr::another_test;
 
     public fun print() {
-        let example = Example { a: @test_addr};
+        let example = Example { a: @test_addr };
         debug::print(&amp;example)
     }
 }
@@ -218,7 +218,7 @@ arguments, and must not return a value. Here is an example with each of these co
 <p>Because named addresses only exist at the source language level and during compilation,
 named addresses will be fully substituted for their value at the bytecode
 level. For example if we had the following code:</p>
-<pre><code class="language-move=">script {
+<pre><code class="language-move">script {
     fun example() {
         my_addr::m::foo(@my_addr);
     }
@@ -226,25 +226,25 @@ level. For example if we had the following code:</p>
 </code></pre>
 <p>and we compiled it with <code>my_addr</code> set to <code>0xC0FFEE</code>, then it would be equivalent
 to the following operationally:</p>
-<pre><code class="language-move=">script {
+<pre><code class="language-move">script {
     fun example() {
         0xC0FFEE::m::foo(@0xC0FFEE);
     }
 }
 </code></pre>
 <p>However at the source level, these <em>are not equivalent</em>—the function
-<code>M::foo</code> <em>must</em> be accessed through the <code>MyAddr</code> named address, and not through
+<code>m::foo</code> <em>must</em> be accessed through the <code>my_addr</code> named address, and not through
 the numerical value assigned to that address.</p>
 <p>Module names can start with letters <code>a</code> to <code>z</code> or letters <code>A</code> to <code>Z</code>. After the first character, module names can contain underscores <code>_</code>, letters <code>a</code> to <code>z</code>, letters <code>A</code> to <code>Z</code>, or digits <code>0</code> to <code>9</code>.</p>
 <pre><code class="language-move">module my_module {}
 module foo_bar_42 {}
 </code></pre>
-<p>Typically, module names start with an uppercase letter. A module named <code>my_module</code> should be stored in a source file named <code>my_module.move</code>.</p>
+<p>Typically, module names start with an lowercase letter. A module named <code>my_module</code> should be stored in a source file named <code>my_module.move</code>.</p>
 <p>All elements inside a <code>module</code> block can appear in any order.
 Fundamentally, a module is a collection of <a href="./structs-and-resources.html"><code>types</code></a> and <a href="./functions.html"><code>functions</code></a>.
-<a href="./uses.html">Uses</a> import types from other modules.
-<a href="./friends.html">Friends</a> specify a list of trusted modules.
-<a href="./constants.html">Constants</a> define private constants that can be used in the functions of a module.</p>
+The <a href="./uses.html"><code>use</code></a> keyword is used to import types from other modules.
+The <a href="./friends.html"><code>friend</code></a> keyword specifies a list of trusted modules.
+The <a href="./constants.html"><code>const</code></a> keyword defines private constants that can be used in the functions of a module.</p>
 
                     </main>
 

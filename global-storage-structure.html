@@ -151,7 +151,7 @@
                     <main>
                         <h1 id="global-storage---structure"><a class="header" href="#global-storage---structure">Global Storage - Structure</a></h1>
 <p>The purpose of Move programs is to <a href="./global-storage-operators.html">read from and write to</a> tree-shaped persistent global storage. Programs cannot access the filesystem, network, or any other data outside of this tree.</p>
-<p>In pseudocode, the global storage looks something like</p>
+<p>In pseudocode, the global storage looks something like:</p>
 <pre><code class="language-move">struct GlobalStorage {
   resources: Map&lt;(address, ResourceType), ResourceValue&gt;
   modules: Map&lt;(address, ModuleName), ModuleBytecode&gt;

@@ -1,0 +1,54 @@
+error[E02001]: duplicate declaration, item, or annotation
+  ┌─ tests/move_check/expansion/spec_struct_member_conflicts.move:7:12
+  │
+5 │         struct Foo;
+  │                --- Alias previously defined here
+6 │     }
+7 │     struct Foo {}
+  │            ^^^ Duplicate module member or alias 'Foo'. Top level names in a namespace must be unique
+
+error[E02001]: duplicate declaration, item, or annotation
+   ┌─ tests/move_check/expansion/spec_struct_member_conflicts.move:14:9
+   │
+12 │         struct Foo;
+   │                --- Alias previously defined here
+13 │     }
+14 │     fun Foo() {}
+   │         ^^^ Duplicate module member or alias 'Foo'. Top level names in a namespace must be unique
+
+error[E02001]: duplicate declaration, item, or annotation
+   ┌─ tests/move_check/expansion/spec_struct_member_conflicts.move:21:17
+   │
+19 │         struct Foo;
+   │                --- Alias previously defined here
+20 │     }
+21 │     spec schema Foo<T> {
+   │                 ^^^ Duplicate module member or alias 'Foo'. Top level names in a namespace must be unique
+
+error[E02001]: duplicate declaration, item, or annotation
+   ┌─ tests/move_check/expansion/spec_struct_member_conflicts.move:31:13
+   │
+28 │         struct Foo;
+   │                --- Alias previously defined here
+   ·
+31 │         fun Foo(): () {}
+   │             ^^^ Duplicate module member or alias 'Foo'. Top level names in a namespace must be unique
+
+error[E02001]: duplicate declaration, item, or annotation
+   ┌─ tests/move_check/expansion/spec_struct_member_conflicts.move:40:16
+   │
+37 │         struct Foo;
+   │                --- Alias previously defined here
+   ·
+40 │         struct Foo;
+   │                ^^^ Duplicate module member or alias 'Foo'. Top level names in a namespace must be unique
+
+error[E02001]: duplicate declaration, item, or annotation
+   ┌─ tests/move_check/expansion/spec_struct_member_conflicts.move:48:14
+   │
+46 │         struct Foo;
+   │                --- Alias previously defined here
+47 │     }
+48 │     spec fun Foo(): () {}
+   │              ^^^ Duplicate module member or alias 'Foo'. Top level names in a namespace must be unique
+

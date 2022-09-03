@@ -12,6 +12,12 @@ module 0x8675309::M {
         global expected_coin_sum: u64;
         global other: bool;
 
+        struct IntrinsicTypeSimple;
+        struct IntrinsicTypeWithTypeParams<K: copy + store, V>;
+        struct IntrinsicTypeWithAbilityes has key, store;
+        struct IntrinsicTypeWithModel :: [u8, u64];
+        struct IntrinsicTypeFullSuite<K: store + drop, V: copy + drop> has drop :: [vector<K>];
+
         native fun all<T>(x: SomeCollection<T>, predicate: |T|bool): bool;
 
         fun spec_fun_using_spec_constructs(x: u64, y: u64) : u64 {

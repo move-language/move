@@ -4,9 +4,11 @@
 
 use std::{
     collections::{BTreeMap, BTreeSet},
+    default::Default,
     fmt,
 };
 
+use codespan_reporting::diagnostic::Severity;
 use itertools::Itertools;
 use regex::Regex;
 
@@ -52,8 +54,6 @@ use crate::{
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type, BOOL_TYPE},
 };
-use codespan_reporting::diagnostic::Severity;
-use std::default::Default;
 
 #[derive(Debug)]
 pub(crate) struct ModuleBuilder<'env, 'translator> {
@@ -473,6 +473,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         use EA::SpecBlockMember_::*;
         let loc = self.parent.env.to_loc(&member.loc);
         match &member.value {
+            Struct { .. } => {
+                // TODO(mengxu): support spec intrinsic types
+            }
             Function {
                 uninterpreted,
                 name,
@@ -1038,6 +1041,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     });
                     self.def_ana_condition(loc, context, kind, properties, exp, additional_exps)
                 }
+            }
+            Struct { .. } => {
+                // TODO(mengxu): support intrinsic types
             }
             Function {
                 signature, body, ..

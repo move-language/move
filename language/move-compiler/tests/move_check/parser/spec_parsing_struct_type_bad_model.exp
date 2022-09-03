@@ -1,0 +1,9 @@
+error[E01002]: unexpected token
+  ┌─ tests/move_check/parser/spec_parsing_struct_type_bad_model.move:3:28
+  │
+3 │         struct BadModel :: ;
+  │                            ^
+  │                            │
+  │                            Unexpected ';'
+  │                            Expected '['
+

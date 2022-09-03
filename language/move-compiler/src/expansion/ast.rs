@@ -2,6 +2,15 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    fmt,
+    hash::Hash,
+};
+
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+
 use crate::{
     parser::ast::{
         self as P, Ability, Ability_, BinOp, ConstantName, Field, FunctionName, ModuleName,
@@ -11,13 +20,6 @@ use crate::{
         ast_debug::*, known_attributes::KnownAttribute, unique_map::UniqueMap,
         unique_set::UniqueSet, *,
     },
-};
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-use std::{
-    collections::{BTreeMap, BTreeSet, VecDeque},
-    fmt,
-    hash::Hash,
 };
 
 //**************************************************************************************************
@@ -248,6 +250,12 @@ pub enum SpecBlockMember_ {
         properties: Vec<PragmaProperty>,
         exp: Exp,
         additional_exps: Vec<Exp>,
+    },
+    Struct {
+        name: StructName,
+        type_parameters: Vec<(Name, AbilitySet)>,
+        abilities: AbilitySet,
+        modeled_types: Vec<Type>,
     },
     Function {
         uninterpreted: bool,
@@ -988,7 +996,7 @@ impl AstDebug for ModuleDefinition {
 pub fn ability_modifiers_ast_debug(w: &mut AstWriter, abilities: &AbilitySet) {
     if !abilities.is_empty() {
         w.write(" has ");
-        w.list(abilities, " ", |w, ab| {
+        w.list(abilities, ", ", |w, ab| {
             ab.ast_debug(w);
             false
         });
@@ -1114,6 +1122,25 @@ impl AstDebug for SpecBlockMember_ {
                     e.ast_debug(w);
                     true
                 });
+            }
+            SpecBlockMember_::Struct {
+                name,
+                type_parameters,
+                abilities,
+                modeled_types,
+            } => {
+                w.write("struct ");
+                w.write(&format!("{}", name));
+                type_parameters.ast_debug(w);
+                ability_modifiers_ast_debug(w, abilities);
+                if !modeled_types.is_empty() {
+                    w.write(":: [");
+                    w.comma(modeled_types, |w, t| {
+                        t.ast_debug(w);
+                    });
+                    w.write("]");
+                }
+                w.write(";");
             }
             SpecBlockMember_::Function {
                 uninterpreted,

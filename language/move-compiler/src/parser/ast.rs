@@ -2,14 +2,16 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{fmt, hash::Hash};
+
+use move_command_line_common::files::FileHash;
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+
 use crate::shared::{
     ast_debug::*, Identifier, Name, NamedAddressMap, NamedAddressMapIndex, NamedAddressMaps,
     NumericalAddress, TName,
 };
-use move_command_line_common::files::FileHash;
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-use std::{fmt, hash::Hash};
 
 macro_rules! new_name {
     ($n:ident) => {
@@ -351,6 +353,12 @@ pub enum SpecBlockMember_ {
         properties: Vec<PragmaProperty>,
         exp: Exp,
         additional_exps: Vec<Exp>,
+    },
+    Struct {
+        name: StructName,
+        type_parameters: Vec<(Name, Vec<Ability>)>,
+        abilities: Vec<Ability>,
+        modeled_types: Vec<Type>,
     },
     Function {
         uninterpreted: bool,
@@ -1330,6 +1338,25 @@ impl AstDebug for SpecBlockMember_ {
                     true
                 });
             }
+            SpecBlockMember_::Struct {
+                name,
+                type_parameters,
+                abilities,
+                modeled_types,
+            } => {
+                w.write("struct ");
+                w.write(&format!("{}", name));
+                type_parameters.ast_debug(w);
+                ability_modifiers_ast_debug(w, abilities);
+                if !modeled_types.is_empty() {
+                    w.write(":: [");
+                    w.comma(modeled_types, |w, t| {
+                        t.ast_debug(w);
+                    });
+                    w.write("]");
+                }
+                w.write(";");
+            }
             SpecBlockMember_::Function {
                 uninterpreted,
                 signature,
@@ -1572,6 +1599,16 @@ impl AstDebug for StructTypeParameter {
         }
         w.write(&name.value);
         ability_constraints_ast_debug(w, constraints);
+    }
+}
+
+fn ability_modifiers_ast_debug(w: &mut AstWriter, abilities: &[Ability]) {
+    if !abilities.is_empty() {
+        w.write(" has ");
+        w.list(abilities, ", ", |w, ab| {
+            ab.ast_debug(w);
+            false
+        })
     }
 }
 

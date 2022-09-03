@@ -2,15 +2,18 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::{BTreeMap, BTreeSet};
+
+use petgraph::{algo::toposort as petgraph_toposort, graphmap::DiGraphMap};
+
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+
 use crate::{
     diagnostics::{codes::*, Diagnostic},
     expansion::ast::{self as E, Address, ModuleIdent},
     shared::{unique_map::UniqueMap, *},
 };
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-use petgraph::{algo::toposort as petgraph_toposort, graphmap::DiGraphMap};
-use std::collections::{BTreeMap, BTreeSet};
 
 //**************************************************************************************************
 // Entry
@@ -536,6 +539,7 @@ fn spec_block_member(context: &mut Context, sp!(_, sbm_): &E::SpecBlockMember) {
             exp(context, e);
             es.iter().for_each(|e| exp(context, e))
         }
+        M::Struct { modeled_types, .. } => types(context, modeled_types),
         M::Function { body, .. } => {
             if let E::FunctionBody_::Defined(seq) = &body.value {
                 sequence(context, seq)

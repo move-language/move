@@ -2,6 +2,14 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    iter::IntoIterator,
+};
+
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+
 use crate::{
     diag,
     diagnostics::Diagnostic,
@@ -15,12 +23,6 @@ use crate::{
     },
     shared::{known_attributes::AttributePosition, unique_map::UniqueMap, *},
     FullyCompiledProgram,
-};
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-use std::{
-    collections::{BTreeMap, BTreeSet, VecDeque},
-    iter::IntoIterator,
 };
 
 use super::aliases::{AliasMapBuilder, OldAliasMap};
@@ -752,8 +754,14 @@ fn module_members(
                 }
                 SBT::Module => {
                     for sp!(_, smember_) in members {
-                        if let SBM::Function { name, .. } = smember_ {
-                            cur_members.insert(name.0, ModuleMemberKind::Function);
+                        match smember_ {
+                            SBM::Struct { name, .. } => {
+                                cur_members.insert(name.0, ModuleMemberKind::Struct);
+                            }
+                            SBM::Function { name, .. } => {
+                                cur_members.insert(name.0, ModuleMemberKind::Function);
+                            }
+                            _ => {}
                         }
                     }
                 }
@@ -829,9 +837,20 @@ fn aliases_from_member(
                 }
                 SBT::Module => {
                     for sp!(_, smember_) in members {
-                        if let SBM::Function { name, .. } = smember_ {
-                            let n = name.0;
-                            check_name_and_add_implicit_alias!(ModuleMemberKind::Function, n);
+                        match smember_ {
+                            SBM::Struct { name, .. } => {
+                                check_name_and_add_implicit_alias!(
+                                    ModuleMemberKind::Struct,
+                                    name.0
+                                );
+                            }
+                            SBM::Function { name, .. } => {
+                                check_name_and_add_implicit_alias!(
+                                    ModuleMemberKind::Function,
+                                    name.0
+                                );
+                            }
+                            _ => {}
                         }
                     }
                 }
@@ -1367,6 +1386,26 @@ fn spec_member(context: &mut Context, sp!(loc, pm): P::SpecBlockMember) -> E::Sp
                 properties,
                 exp,
                 additional_exps,
+            }
+        }
+        PM::Struct {
+            name,
+            type_parameters: pty_params,
+            abilities: pabilities,
+            modeled_types: pmodeled_tys,
+        } => {
+            let ety_params = type_parameters(context, pty_params);
+            let old_aliases = context
+                .aliases
+                .shadow_for_type_parameters(ety_params.iter().map(|(name, _)| name));
+            let eabilities = ability_set(context, "modifier", pabilities);
+            let emodeled_tys = types(context, pmodeled_tys);
+            context.set_to_outer_scope(old_aliases);
+            EM::Struct {
+                name,
+                type_parameters: ety_params,
+                abilities: eabilities,
+                modeled_types: emodeled_tys,
             }
         }
         PM::Function {
@@ -2270,7 +2309,8 @@ fn unbound_names_spec_block_member(unbound: &mut BTreeSet<Name>, sp!(_, m_): &E:
         }
         // No unbound names
         // And will error in the Move prover
-        M::Function { .. }
+        M::Struct { .. }
+        | M::Function { .. }
         | M::Variable { .. }
         | M::Update { .. }
         | M::Let { .. }

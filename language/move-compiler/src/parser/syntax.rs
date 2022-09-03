@@ -1990,7 +1990,7 @@ fn parse_parameter(context: &mut Context) -> Result<(Var, Type), Diagnostic> {
 
 // Parse a struct definition:
 //      StructDecl =
-//          "struct" <StructDefName> ("has" <Ability> (, <Ability>)+)?
+//          "struct" <StructDefName> <OptionalAbilityModifiers>
 //          ("{" Comma<FieldAnnot> "}" | ";")
 //      StructDefName =
 //          <Identifier> <OptionalTypeParameters>
@@ -2030,34 +2030,7 @@ fn parse_struct_decl(
     // <StructDefName>
     let name = StructName(parse_identifier(context)?);
     let type_parameters = parse_struct_type_parameters(context)?;
-
-    let abilities = if context.tokens.peek() == Tok::Identifier && context.tokens.content() == "has"
-    {
-        context.tokens.advance()?;
-        parse_list(
-            context,
-            |context| match context.tokens.peek() {
-                Tok::Comma => {
-                    context.tokens.advance()?;
-                    Ok(true)
-                }
-                Tok::LBrace | Tok::Semicolon => Ok(false),
-                _ => Err(unexpected_token_error(
-                    context.tokens,
-                    &format!(
-                        "one of: '{}', '{}', or '{}'",
-                        Tok::Comma,
-                        Tok::LBrace,
-                        Tok::Semicolon
-                    ),
-                )),
-            },
-            parse_ability,
-        )?
-    } else {
-        vec![]
-    };
-
+    let abilities = parse_ability_modifiers(context)?;
     let fields = match native {
         Some(loc) => {
             consume_token(context.tokens, Tok::Semicolon)?;
@@ -2088,6 +2061,29 @@ fn parse_struct_decl(
         type_parameters,
         fields,
     })
+}
+
+// Parse an optional list of ability modifiers
+//      OptionalAbilityModifiers = ("has" <Ability> (, <Ability>)+)?
+fn parse_ability_modifiers(context: &mut Context) -> Result<Vec<Ability>, Diagnostic> {
+    let abilities = if context.tokens.peek() == Tok::Identifier && context.tokens.content() == "has"
+    {
+        context.tokens.advance()?;
+        parse_list(
+            context,
+            |context| match context.tokens.peek() {
+                Tok::Comma => {
+                    context.tokens.advance()?;
+                    Ok(true)
+                }
+                _ => Ok(false),
+            },
+            parse_ability,
+        )?
+    } else {
+        vec![]
+    };
+    Ok(abilities)
 }
 
 // Parse a field annotated with a type:
@@ -2631,12 +2627,13 @@ fn parse_spec_target_signature_opt(
 // Parse a spec block member:
 //    SpecBlockMember = <DocComments> ( <Invariant> | <Condition> | <SpecFunction> | <SpecVariable>
 //                                   | <SpecInclude> | <SpecApply> | <SpecPragma> | <SpecLet>
-//                                   | <SpecUpdate> | <SpecAxiom> )
+//                                   | <SpecUpdate> | <SpecAxiom> | <SpecStruct> )
 fn parse_spec_block_member(context: &mut Context) -> Result<SpecBlockMember, Diagnostic> {
     context.tokens.match_doc_comments();
     match context.tokens.peek() {
         Tok::Invariant => parse_invariant(context),
         Tok::Let => parse_spec_let(context),
+        Tok::Struct => parse_spec_struct(context),
         Tok::Fun | Tok::Native => parse_spec_function(context),
         Tok::Identifier => match context.tokens.content() {
             "assert" | "assume" | "decreases" | "aborts_if" | "aborts_with" | "succeeds_if"
@@ -2878,6 +2875,41 @@ fn parse_spec_function(context: &mut Context) -> Result<SpecBlockMember, Diagnos
             uninterpreted,
             name,
             body,
+        },
+    ))
+}
+
+// Parse a specification struct.
+//     SpecStruct = "struct" <SpecStructIdentifier>
+//                  <OptionalTypeParameters> <OptionalAbilityModifiers>
+//                  ( "::" "[" Comma<Type> "]" ) ";"
+fn parse_spec_struct(context: &mut Context) -> Result<SpecBlockMember, Diagnostic> {
+    let start_loc = context.tokens.start_loc();
+    consume_token(context.tokens, Tok::Struct)?;
+    let name = StructName(parse_identifier(context)?);
+    let type_parameters = parse_optional_type_parameters(context)?;
+    let abilities = parse_ability_modifiers(context)?;
+    let modeled_types = match consume_optional_token_with_loc(context.tokens, Tok::ColonColon)? {
+        None => vec![],
+        Some(_) => parse_comma_list(
+            context,
+            Tok::LBracket,
+            Tok::RBracket,
+            parse_type,
+            "a model for a spec struct",
+        )?,
+    };
+    consume_token(context.tokens, Tok::Semicolon)?;
+
+    Ok(spanned(
+        context.tokens.file_hash(),
+        start_loc,
+        context.tokens.previous_end_loc(),
+        SpecBlockMember_::Struct {
+            name,
+            type_parameters,
+            abilities,
+            modeled_types,
         },
     ))
 }

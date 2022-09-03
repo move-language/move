@@ -167,7 +167,7 @@ let a2 = @0x2;
 <p>However, <code>signer</code> values are special because they cannot be created via literals or
 instructions--only by the Move VM. Before the VM runs a script with parameters of type <code>signer</code>, it
 will automatically create <code>signer</code> values and pass them into the script:</p>
-<pre><code class="language-move=">script {
+<pre><code class="language-move">script {
     use std::signer;
     fun main(s: signer) {
         assert!(signer::address_of(&amp;s) == @0x42, 0);
@@ -175,9 +175,9 @@ will automatically create <code>signer</code> values and pass them into the scri
 }
 </code></pre>
 <p>This script will abort with code <code>0</code> if the script is sent from any address other than <code>0x42</code>.</p>
-<p>A transaction script can have an arbitrary number of <code>signer</code>s as long as the signers are a prefix
-to any other arguments. In other words, all of the signer arguments must come first:</p>
-<pre><code class="language-move=">script {
+<p>A transaction script can have an arbitrary number of <code>signer</code>s as long as the <code>signer</code>s are a prefix
+to any other arguments. In other words, all of the <code>signer</code> arguments must come first:</p>
+<pre><code class="language-move">script {
     use std::signer;
     fun main(s1: signer, s2: signer, x: u64, y: u8) {
         // ...
@@ -191,7 +191,7 @@ swap between <code>s1</code> and <code>s2</code>.</p>
 <p>The <code>std::signer</code> standard library module provides two utility functions over <code>signer</code> values:</p>
 <table><thead><tr><th>Function</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>signer::address_of(&amp;signer): address</code></td><td>Return the <code>address</code> wrapped by this <code>&amp;signer</code>.</td></tr>
-<tr><td><code>signer::borrow_address(&amp;signer): &amp;address</code></td><td>Return a reference to the <code>address</code> wrapped by this <code>&amp;signer</code></td></tr>
+<tr><td><code>signer::borrow_address(&amp;signer): &amp;address</code></td><td>Return a reference to the <code>address</code> wrapped by this <code>&amp;signer</code>.</td></tr>
 </tbody></table>
 <p>In addition, the <code>move_to&lt;T&gt;(&amp;signer, T)</code> <a href="./global-storage-operators.html">global storage operator</a>
 requires a <code>&amp;signer</code> argument to publish a resource <code>T</code> under <code>signer.address</code>'s account. This

@@ -467,7 +467,7 @@ vector&lt;T&gt;[e1, ..., en]: vector&lt;T&gt;
 result. These values are so common that specific syntax is provided to make the values more
 readable, as opposed to having to use <code>vector[]</code> where each individual <code>u8</code> value is specified in
 numeric form.</p>
-<p>There are currently two supported types of <code>vector&lt;u8&gt;</code> literals, byte strings and hex strings.</p>
+<p>There are currently two supported types of <code>vector&lt;u8&gt;</code> literals, <em>byte strings</em> and <em>hex strings</em>.</p>
 <h4 id="byte-strings"><a class="header" href="#byte-strings">Byte Strings</a></h4>
 <p>Byte strings are quoted string literals prefixed by a <code>b</code>, e.g. <code>b&quot;Hello!\n&quot;</code>.</p>
 <p>These are ASCII encoded strings that allow for escape sequences. Currently, the supported escape
@@ -508,17 +508,17 @@ library:</p>
 <tr><td><code>vector::push_back&lt;T&gt;(v: &amp;mut vector&lt;T&gt;, t: T)</code></td><td>Add <code>t</code> to the end of <code>v</code></td><td>Never</td></tr>
 <tr><td><code>vector::pop_back&lt;T&gt;(v: &amp;mut vector&lt;T&gt;): T</code></td><td>Remove and return the last element in <code>v</code></td><td>If <code>v</code> is empty</td></tr>
 <tr><td><code>vector::borrow&lt;T&gt;(v: &amp;vector&lt;T&gt;, i: u64): &amp;T</code></td><td>Return an immutable reference to the <code>T</code> at index <code>i</code></td><td>If <code>i</code> is not in bounds</td></tr>
-<tr><td><code>vector::borrow_mut&lt;T&gt;(v: &amp;mut vector&lt;T&gt;, i: u64): &amp;mut T</code></td><td>Return an mutable reference to the <code>T</code> at index <code>i</code></td><td>If <code>i</code> is not in bounds</td></tr>
+<tr><td><code>vector::borrow_mut&lt;T&gt;(v: &amp;mut vector&lt;T&gt;, i: u64): &amp;mut T</code></td><td>Return a mutable reference to the <code>T</code> at index <code>i</code></td><td>If <code>i</code> is not in bounds</td></tr>
 <tr><td><code>vector::destroy_empty&lt;T&gt;(v: vector&lt;T&gt;)</code></td><td>Delete <code>v</code></td><td>If <code>v</code> is not empty</td></tr>
-<tr><td><code>vector::append&lt;T&gt;(v1: &amp;mut vector&lt;T&gt;, v2: vector&lt;T&gt;)</code></td><td>Add the elements in <code>v2</code> to the end of <code>v1</code></td><td>If <code>i</code> is not in bounds</td></tr>
-<tr><td><code>vector::contains&lt;T&gt;(v: &amp;vector&lt;T&gt;, e: &amp;T): bool</code></td><td>Return true if <code>e</code> is in the vector <code>v</code></td><td>Never</td></tr>
-<tr><td><code>vector::swap&lt;T&gt;(v: &amp;mut vector&lt;T&gt;, i: u64, j: u64)</code></td><td>Swaps the elements at the <code>i</code>th and <code>j</code>th indices in the vector <code>v</code>.</td><td>If <code>i</code> or <code>j</code> is out of bounds</td></tr>
+<tr><td><code>vector::append&lt;T&gt;(v1: &amp;mut vector&lt;T&gt;, v2: vector&lt;T&gt;)</code></td><td>Add the elements in <code>v2</code> to the end of <code>v1</code></td><td>Never</td></tr>
+<tr><td><code>vector::contains&lt;T&gt;(v: &amp;vector&lt;T&gt;, e: &amp;T): bool</code></td><td>Return true if <code>e</code> is in the vector <code>v</code>. Otherwise, returns false</td><td>Never</td></tr>
+<tr><td><code>vector::swap&lt;T&gt;(v: &amp;mut vector&lt;T&gt;, i: u64, j: u64)</code></td><td>Swaps the elements at the <code>i</code>th and <code>j</code>th indices in the vector <code>v</code></td><td>If <code>i</code> or <code>j</code> is out of bounds</td></tr>
 <tr><td><code>vector::reverse&lt;T&gt;(v: &amp;mut vector&lt;T&gt;)</code></td><td>Reverses the order of the elements in the vector <code>v</code> in place</td><td>Never</td></tr>
-<tr><td><code>vector::index_of&lt;T&gt;(v: &amp;vector&lt;T&gt;, e: &amp;T): (bool, u64)</code></td><td>Return <code>(true, i)</code> if <code>e</code> is in the vector <code>v</code> at index <code>i</code>. Otherwise, returns <code>(false, 0)</code>.</td><td>Never</td></tr>
-<tr><td><code>vector::remove&lt;T&gt;(v: &amp;mut vector&lt;T&gt;, i: u64): T</code></td><td>Remove the <code>i</code>th element of the vector <code>v</code>, shifting all subsequent elements. This is O(n) and preserves ordering of elements in the vector.</td><td>If <code>i</code> is out of bounds.</td></tr>
-<tr><td><code>vector::swap_remove&lt;T&gt;(v: &amp;mut vector&lt;T&gt;, i: u64): T</code></td><td>Swap the <code>i</code>th element of the vector <code>v</code> with the last element and then pop the vector, This is O(1), but does not preserve ordering of elements in the vector.</td><td>If <code>i</code> is out of bounds.</td></tr>
+<tr><td><code>vector::index_of&lt;T&gt;(v: &amp;vector&lt;T&gt;, e: &amp;T): (bool, u64)</code></td><td>Return <code>(true, i)</code> if <code>e</code> is in the vector <code>v</code> at index <code>i</code>. Otherwise, returns <code>(false, 0)</code></td><td>Never</td></tr>
+<tr><td><code>vector::remove&lt;T&gt;(v: &amp;mut vector&lt;T&gt;, i: u64): T</code></td><td>Remove the <code>i</code>th element of the vector <code>v</code>, shifting all subsequent elements. This is O(n) and preserves ordering of elements in the vector</td><td>If <code>i</code> is out of bounds</td></tr>
+<tr><td><code>vector::swap_remove&lt;T&gt;(v: &amp;mut vector&lt;T&gt;, i: u64): T</code></td><td>Swap the <code>i</code>th element of the vector <code>v</code> with the last element and then pop the element, This is O(1), but does not preserve ordering of elements in the vector</td><td>If <code>i</code> is out of bounds</td></tr>
 </tbody></table>
-<p>More operations may be added overtime</p>
+<p>More operations may be added over time.</p>
 <h2 id="example"><a class="header" href="#example">Example</a></h2>
 <pre><code class="language-move">use std::vector;
 

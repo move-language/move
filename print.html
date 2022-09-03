@@ -4826,14 +4826,14 @@ The reason should be a unique number relative to the module which raised the err
 <p>This section lays out some basic coding conventions for Move that the Move team has found helpful. These are only recommendations, and you should feel free to use other formatting guidelines and conventions if you have a preference for them.</p>
 <h2 id="naming-2"><a class="header" href="#naming-2">Naming</a></h2>
 <ul>
-<li><strong>Module names</strong>: should be lower snake case, e.g., <code>fixed_point32</code>, <code>vector</code></li>
-<li><strong>Type names</strong>: should be camel case if they are not a native type, e.g., <code>Coin</code>, <code>RoleId</code></li>
-<li><strong>Function names</strong>: should be lower snake case, e.g., <code>destroy_empty</code></li>
-<li><strong>Constant names</strong>: should be upper snake case, e.g., <code>REQUIRES_CAPABILITY</code></li>
+<li><strong>Module names</strong>: should be lower snake case, e.g., <code>fixed_point32</code>, <code>vector</code>.</li>
+<li><strong>Type names</strong>: should be camel case if they are not a native type, e.g., <code>Coin</code>, <code>RoleId</code>.</li>
+<li><strong>Function names</strong>: should be lower snake case, e.g., <code>destroy_empty</code>.</li>
+<li><strong>Constant names</strong>: should be upper snake case, e.g., <code>REQUIRES_CAPABILITY</code>.</li>
 <li>Generic types should be descriptive, or anti-descriptive where appropriate, e.g., <code>T</code> or <code>Element</code> for the Vector generic type parameter. Most of the time the &quot;main&quot; type in a module should be the same name as the module e.g., <code>option::Option</code>, <code>fixed_point32::FixedPoint32</code>.</li>
-<li><strong>Module file names</strong>: should be the same as the module name e.g., <code>Option.move</code></li>
+<li><strong>Module file names</strong>: should be the same as the module name e.g., <code>Option.move</code>.</li>
 <li><strong>Script file names</strong>: should be lower snake case and should match the name of the “main” function in the script.</li>
-<li><strong>Mixed file names</strong>: If the file contains multiple modules and/or scripts, the file name should be lower_snake_case, where the name does not match any particular module/script inside.</li>
+<li><strong>Mixed file names</strong>: If the file contains multiple modules and/or scripts, the file name should be lower snake case, where the name does not match any particular module/script inside.</li>
 </ul>
 <h2 id="imports"><a class="header" href="#imports">Imports</a></h2>
 <ul>
@@ -4841,8 +4841,8 @@ The reason should be a unique number relative to the module which raised the err
 <li>Functions should be imported and used fully qualified from the module in which they are declared, and not imported at the top level.</li>
 <li>Types should be imported at the top-level. Where there are name clashes, <code>as</code> should be used to rename the type locally as appropriate.</li>
 </ul>
-<p>For example, if there is a module</p>
-<pre><code class="language-move=">module 0x1::foo {
+<p>For example, if there is a module:</p>
+<pre><code class="language-move">module 0x1::foo {
     struct Foo { }
     const CONST_FOO: u64 = 0;
     public fun do_foo(): Foo { Foo{} }
@@ -4850,7 +4850,7 @@ The reason should be a unique number relative to the module which raised the err
 }
 </code></pre>
 <p>this would be imported and used as:</p>
-<pre><code class="language-move=">module 0x1::bar {
+<pre><code class="language-move">module 0x1::bar {
     use 0x1::foo::{Self, Foo};
 
     public fun do_bar(x: u64): Foo {
@@ -4864,7 +4864,7 @@ The reason should be a unique number relative to the module which raised the err
 }
 </code></pre>
 <p>And, if there is a local name-clash when importing two modules:</p>
-<pre><code class="language-move=">module other_foo {
+<pre><code class="language-move">module other_foo {
     struct Foo {}
     ...
 }
@@ -4872,20 +4872,20 @@ The reason should be a unique number relative to the module which raised the err
 module 0x1::importer {
     use 0x1::other_foo::Foo as OtherFoo;
     use 0x1::foo::Foo;
-....
+    ...
 }
 </code></pre>
 <h2 id="comments"><a class="header" href="#comments">Comments</a></h2>
 <ul>
-<li>Each module, struct, and public function declaration should be commented</li>
-<li>Move has doc comments <code>///</code>, regular single-line comments <code>//</code>, block comments <code>/* */</code>, and block doc comments <code>/** */</code></li>
+<li>Each module, struct, and public function declaration should be commented.</li>
+<li>Move has doc comments <code>///</code>, regular single-line comments <code>//</code>, block comments <code>/* */</code>, and block doc comments <code>/** */</code>.</li>
 </ul>
 <h2 id="formatting"><a class="header" href="#formatting">Formatting</a></h2>
 <p>The Move team plans to write an autoformatter to enforce formatting conventions. However, in the meantime:</p>
 <ul>
-<li>Four space indentation should be used except for <code>script</code> and <code>address</code> blocks whose contents should not be indented</li>
-<li>Lines should be broken if they are longer than 100 characters</li>
-<li>Structs and constants should be declared before all functions in a module</li>
+<li>Four space indentation should be used except for <code>script</code> and <code>address</code> blocks whose contents should not be indented.</li>
+<li>Lines should be broken if they are longer than 100 characters.</li>
+<li>Structs and constants should be declared before all functions in a module.</li>
 </ul>
 
                     </main>

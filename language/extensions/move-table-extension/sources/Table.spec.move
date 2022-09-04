@@ -1,10 +1,14 @@
 /// Specifications of the `Table` module.
 spec extensions::table {
 
+    spec module {
+        struct Map<K: copy + drop, V> has store;
+    }
+
     // Make most of the public API intrinsic. Those functions have custom specifications in the prover.
 
     spec Table {
-        pragma intrinsic;
+        pragma intrinsic = Map;
     }
 
     spec new {

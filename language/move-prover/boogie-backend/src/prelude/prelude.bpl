@@ -690,10 +690,6 @@ procedure {:inline 1} $1_Signature_ed25519_verify(
 {%- if emit_generic_event %}
 {% set_global emit_generic_event = false %}
 
-// Generic code for dealing with mutations (havoc) still requires type and memory declarations.
-type $1_event_EventHandleGenerator;
-var $1_event_EventHandleGenerator_$memory: $Memory $1_event_EventHandleGenerator;
-
 // Abstract type of event handles.
 type $1_event_EventHandle;
 

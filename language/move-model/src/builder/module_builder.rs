@@ -14,7 +14,7 @@ use regex::Regex;
 
 use move_binary_format::{
     access::ModuleAccess,
-    file_format::{AbilitySet, Constant, FunctionDefinitionIndex, StructDefinitionIndex},
+    file_format::{Ability, AbilitySet, Constant, FunctionDefinitionIndex, StructDefinitionIndex},
     views::{FunctionHandleView, StructHandleView},
     CompiledModule,
 };
@@ -22,7 +22,7 @@ use move_bytecode_source_map::source_map::SourceMap;
 use move_compiler::{
     compiled_unit::{FunctionInfo, SpecInfo},
     expansion::ast as EA,
-    parser::ast as PA,
+    parser::{ast as PA, ast::Ability_},
     shared::{unique_map::UniqueMap, Name},
 };
 use move_ir_types::{ast::ConstantName, location::Spanned};
@@ -35,20 +35,21 @@ use crate::{
     },
     builder::{
         exp_translator::ExpTranslator,
-        model_builder::{ConstEntry, LocalVarEntry, ModelBuilder, SpecFunEntry},
+        model_builder::{ConstEntry, LocalVarEntry, ModelBuilder, SpecFunEntry, SpecStructEntry},
     },
     exp_rewriter::{ExpRewriter, ExpRewriterFunctions, RewriteTarget},
     model::{
-        AbilityConstraint, FieldId, FunId, FunctionData, FunctionVisibility, Loc, ModuleId,
-        MoveIrLoc, NamedConstantData, NamedConstantId, NodeId, QualifiedId, QualifiedInstId,
-        SchemaId, SpecFunId, SpecVarId, StructData, StructId, TypeParameter,
+        AbilityConstraint, FieldId, FunId, FunctionData, FunctionVisibility, IntrinsicTypeId, Loc,
+        ModuleId, MoveIrLoc, NamedConstantData, NamedConstantId, NodeId, QualifiedId,
+        QualifiedInstId, SchemaId, SpecFunId, SpecVarId, StructData, StructId, TypeParameter,
         SCRIPT_BYTECODE_FUN_NAME,
     },
     options::ModelBuilderOptions,
+    pragma_intrinsic::handle_intrinsic_declaration,
     pragmas::{
         is_pragma_valid_for_block, is_property_valid_for_condition, CONDITION_ABSTRACT_PROP,
         CONDITION_CONCRETE_PROP, CONDITION_DEACTIVATED_PROP, CONDITION_INJECTED_PROP,
-        OPAQUE_PRAGMA, VERIFY_PRAGMA,
+        INTRINSIC_PRAGMA, OPAQUE_PRAGMA, VERIFY_PRAGMA,
     },
     project_1st,
     symbol::{Symbol, SymbolPool},
@@ -473,9 +474,12 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         use EA::SpecBlockMember_::*;
         let loc = self.parent.env.to_loc(&member.loc);
         match &member.value {
-            Struct { .. } => {
-                // TODO(mengxu): support spec intrinsic types
-            }
+            Struct {
+                name,
+                type_parameters,
+                abilities,
+                modeled_types,
+            } => self.decl_ana_spec_struct(&loc, name, type_parameters, abilities, modeled_types),
             Function {
                 uninterpreted,
                 name,
@@ -496,6 +500,90 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             ),
             _ => {}
         }
+    }
+
+    fn decl_ana_spec_struct(
+        &mut self,
+        loc: &Loc,
+        name: &PA::StructName,
+        type_parameters: &[(Name, EA::AbilitySet)],
+        abilities: &EA::AbilitySet,
+        modeled_types: &[EA::Type],
+    ) {
+        // an intrinsic type can only model a subset of types
+        fn can_be_modeled(ty: &Type) -> bool {
+            match ty {
+                Type::Primitive(PrimitiveType::Bool)
+                | Type::Primitive(PrimitiveType::U8)
+                | Type::Primitive(PrimitiveType::U64)
+                | Type::Primitive(PrimitiveType::U128)
+                | Type::Primitive(PrimitiveType::Num)
+                | Type::Primitive(PrimitiveType::Address)
+                | Type::Primitive(PrimitiveType::Signer) => true,
+                Type::TypeParameter(_) => true,
+                Type::Tuple(tys) => tys.iter().all(can_be_modeled),
+                Type::Vector(elem) => can_be_modeled(elem),
+                // the rest cannot be modeled
+                Type::Primitive(PrimitiveType::Range)
+                | Type::Primitive(PrimitiveType::EventStore)
+                | Type::Struct(..)
+                | Type::Reference(..)
+                | Type::Fun(..)
+                | Type::TypeDomain(..)
+                | Type::ResourceDomain(..)
+                | Type::Var(..) => false,
+                // an error means some error message has already been registered
+                Type::Error => true,
+            }
+        }
+
+        let qsym = self.qualified_by_module_from_name(&name.0);
+        let struct_id = IntrinsicTypeId::new(qsym.symbol);
+
+        // first add type parameters into the context
+        let mut et = ExpTranslator::new(self);
+        let type_params = et
+            .analyze_and_add_type_params(type_parameters.iter().map(|(param_name, _)| param_name))
+            .into_iter()
+            .map(|(symbol, _)| symbol)
+            .zip(
+                type_parameters
+                    .iter()
+                    .map(|(_, abs)| AbilityConstraint(translate_ability_set(abs))),
+            )
+            .collect();
+
+        // analyze the modeled types
+        let translated_types: Vec<_> = modeled_types
+            .iter()
+            .map(|t| (t.loc, et.translate_type(t)))
+            .collect();
+        let modeling = translated_types
+            .into_iter()
+            .map(|(loc, t)| {
+                if can_be_modeled(&t) {
+                    t
+                } else {
+                    self.parent.error(
+                        &self.parent.to_loc(&loc),
+                        "This type cannot be modeled as an intrinsic type",
+                    );
+                    Type::Error
+                }
+            })
+            .collect();
+
+        self.parent.define_spec_struct(
+            qsym,
+            SpecStructEntry {
+                loc: loc.clone(),
+                module_id: self.module_id,
+                struct_id,
+                type_params,
+                abilities: translate_ability_set(abilities),
+                modeled_types: modeling,
+            },
+        );
     }
 
     fn decl_ana_spec_fun(
@@ -1042,9 +1130,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     self.def_ana_condition(loc, context, kind, properties, exp, additional_exps)
                 }
             }
-            Struct { .. } => {
-                // TODO(mengxu): support intrinsic types
-            }
+            Struct { .. } => { /* nothing to do */ }
             Function {
                 signature, body, ..
             } => self.def_ana_spec_fun(signature, body),
@@ -1142,8 +1228,23 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 None
             }
         });
+
+        // extra processing on concrete pragma declarations
+        let adapted_properties: BTreeMap<_, _> = properties
+            .into_iter()
+            .filter_map(|(prop_name, prop_value)| {
+                let adapted_prop_value = match self.symbol_pool().string(prop_name).as_str() {
+                    INTRINSIC_PRAGMA => {
+                        handle_intrinsic_declaration(self.parent, loc, context, prop_value)
+                    }
+                    _ => Some(prop_value),
+                };
+                adapted_prop_value.map(|v| (prop_name, v))
+            })
+            .collect();
+
         self.update_spec(context, move |spec| {
-            spec.properties.extend(properties);
+            spec.properties.extend(adapted_properties);
         });
     }
 
@@ -3177,6 +3278,22 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             std::mem::take(&mut self.spec_block_infos),
         );
     }
+}
+
+/// # Utility functions
+
+pub(crate) fn translate_ability_set(abs: &EA::AbilitySet) -> AbilitySet {
+    let mut res = AbilitySet::EMPTY;
+    for ab in abs.iter() {
+        let bit = match ab.value {
+            Ability_::Key => Ability::Key,
+            Ability_::Copy => Ability::Copy,
+            Ability_::Drop => Ability::Drop,
+            Ability_::Store => Ability::Store,
+        };
+        res = res | bit;
+    }
+    res
 }
 
 /// Extract all accesses of a schema from a schema expression.

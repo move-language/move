@@ -55,6 +55,7 @@ pub mod exp_generator;
 pub mod exp_rewriter;
 pub mod model;
 pub mod options;
+pub mod pragma_intrinsic;
 pub mod pragmas;
 pub mod simplifier;
 pub mod spec_translator;

@@ -9,6 +9,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use codespan_reporting::diagnostic::Severity;
 #[allow(unused_imports)]
 use log::{debug, info, warn};
 use num::BigUint;
@@ -19,14 +20,13 @@ use crate::{
     ast::{Attribute, ModuleName, Operation, QualifiedSymbol, Spec, Value},
     builder::spec_builtins,
     model::{
-        FunId, FunctionVisibility, GlobalEnv, Loc, ModuleId, QualifiedId, SpecFunId, SpecVarId,
-        StructId,
+        AbilityConstraint, AbilitySet, FunId, FunctionVisibility, GlobalEnv, IntrinsicTypeId, Loc,
+        ModuleId, QualifiedId, SpecFunId, SpecVarId, StructId,
     },
     project_2nd,
     symbol::Symbol,
     ty::Type,
 };
-use codespan_reporting::diagnostic::Severity;
 
 /// A builder is used to enter a sequence of modules in acyclic dependency order into the model. The
 /// builder maintains the incremental state of this process, such that the various tables
@@ -36,7 +36,9 @@ use codespan_reporting::diagnostic::Severity;
 pub(crate) struct ModelBuilder<'env> {
     /// The global environment we are building.
     pub env: &'env mut GlobalEnv,
-    /// A symbol table for specification functions. Because of overloading, and entry can
+    /// A symbol table for specification structs, a.k.a, intrinsic types
+    pub spec_struct_table: BTreeMap<QualifiedSymbol, SpecStructEntry>,
+    /// A symbol table for specification functions. Because of overloading, an entry can
     /// contain multiple functions.
     pub spec_fun_table: BTreeMap<QualifiedSymbol, Vec<SpecFunEntry>>,
     /// A symbol table for specification variables.
@@ -46,7 +48,7 @@ pub(crate) struct ModelBuilder<'env> {
     /// A symbol table storing unused schemas, used later to generate warnings. All schemas
     /// are initially in the table and are removed when they are used in expressions.
     pub unused_schema_set: BTreeSet<QualifiedSymbol>,
-    // A symbol table for structs.
+    /// A symbol table for structs.
     pub struct_table: BTreeMap<QualifiedSymbol, StructEntry>,
     /// A reverse mapping from ModuleId/StructId pairs to QualifiedSymbol. This
     /// is used for visualization of types in error messages.
@@ -57,6 +59,20 @@ pub(crate) struct ModelBuilder<'env> {
     pub const_table: BTreeMap<QualifiedSymbol, ConstEntry>,
     /// A call graph mapping callers to callees that are Move functions.
     pub move_fun_call_graph: BTreeMap<QualifiedId<SpecFunId>, BTreeSet<QualifiedId<SpecFunId>>>,
+}
+
+/// A declaration of an intrinsic type.
+#[derive(Debug, Clone)]
+pub(crate) struct SpecStructEntry {
+    pub loc: Loc,
+    #[allow(dead_code)]
+    pub module_id: ModuleId,
+    #[allow(dead_code)]
+    pub struct_id: IntrinsicTypeId,
+    pub type_params: Vec<(Symbol, AbilityConstraint)>,
+    pub abilities: AbilitySet,
+    #[allow(dead_code)]
+    pub modeled_types: Vec<Type>,
 }
 
 /// A declaration of a specification function or operator in the builders state.
@@ -140,6 +156,7 @@ impl<'env> ModelBuilder<'env> {
     pub fn new(env: &'env mut GlobalEnv) -> Self {
         let mut translator = ModelBuilder {
             env,
+            spec_struct_table: BTreeMap::new(),
             spec_fun_table: BTreeMap::new(),
             spec_var_table: BTreeMap::new(),
             spec_schema_table: BTreeMap::new(),
@@ -167,6 +184,16 @@ impl<'env> ModelBuilder<'env> {
     /// Reports a type checking error with notes.
     pub fn error_with_notes(&self, at: &Loc, msg: &str, notes: Vec<String>) {
         self.env.error_with_notes(at, msg, notes)
+    }
+
+    /// Defines a spec struct, adding it to the intrinsic type table.
+    pub fn define_spec_struct(&mut self, name: QualifiedSymbol, entry: SpecStructEntry) {
+        if let Some(old) = self.spec_struct_table.get(&name) {
+            let ident = name.display(self.env.symbol_pool());
+            self.error(&entry.loc, &format!("duplicate declaration of `{}`", ident));
+            self.error(&old.loc, &format!("previous declaration of `{}`", ident));
+        }
+        self.spec_struct_table.insert(name, entry);
     }
 
     /// Defines a spec function, adding it to the spec fun table.

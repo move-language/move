@@ -32,15 +32,15 @@ use codespan_reporting::{
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{info, warn};
-use move_command_line_common::files::FileHash;
 use num::{BigUint, One, ToPrimitive};
 use serde::{Deserialize, Serialize};
 
+pub use move_binary_format::file_format::{AbilitySet, Visibility as FunctionVisibility};
 use move_binary_format::{
     access::ModuleAccess,
     binary_views::BinaryIndexedView,
     file_format::{
-        AddressIdentifierIndex, Bytecode, Constant as VMConstant, ConstantPoolIndex,
+        AddressIdentifierIndex, Bytecode, CodeOffset, Constant as VMConstant, ConstantPoolIndex,
         FunctionDefinitionIndex, FunctionHandleIndex, SignatureIndex, SignatureToken,
         StructDefinitionIndex, StructFieldInformation, StructHandleIndex, Visibility,
     },
@@ -52,6 +52,7 @@ use move_binary_format::{
     CompiledModule,
 };
 use move_bytecode_source_map::{mapping::SourceMapping, source_map::SourceMap};
+use move_command_line_common::{address::NumericalAddress, files::FileHash};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
@@ -62,8 +63,8 @@ use move_disassembler::disassembler::{Disassembler, DisassemblerOptions};
 
 use crate::{
     ast::{
-        ConditionKind, Exp, ExpData, GlobalInvariant, ModuleName, PropertyBag, PropertyValue, Spec,
-        SpecBlockInfo, SpecFunDecl, SpecVarDecl, Value,
+        Attribute, ConditionKind, Exp, ExpData, GlobalInvariant, ModuleName, PropertyBag,
+        PropertyValue, Spec, SpecBlockInfo, SpecFunDecl, SpecVarDecl, Value,
     },
     pragmas::{
         DELEGATE_INVARIANTS_TO_CALLER_PRAGMA, DISABLE_INVARIANTS_IN_BODY_PRAGMA, FRIEND_PRAGMA,
@@ -72,12 +73,6 @@ use crate::{
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type, TypeDisplayContext, TypeUnificationAdapter, Variance},
 };
-
-// import and re-expose symbols
-use crate::ast::Attribute;
-use move_binary_format::file_format::CodeOffset;
-pub use move_binary_format::file_format::{AbilitySet, Visibility as FunctionVisibility};
-use move_command_line_common::address::NumericalAddress;
 
 // =================================================================================================
 /// # Constants
@@ -204,6 +199,14 @@ pub struct FieldId(Symbol);
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct FunId(Symbol);
 
+/// Identifier for an intrinsic type, relative to module.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+pub struct IntrinsicTypeId(Symbol);
+
+/// Identifier for an intrinsic function, relative to module.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+pub struct IntrinsicFunId(Symbol);
+
 /// Identifier for a schema.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct SchemaId(Symbol);
@@ -281,6 +284,26 @@ impl StructId {
 }
 
 impl FieldId {
+    pub fn new(sym: Symbol) -> Self {
+        Self(sym)
+    }
+
+    pub fn symbol(self) -> Symbol {
+        self.0
+    }
+}
+
+impl IntrinsicTypeId {
+    pub fn new(sym: Symbol) -> Self {
+        Self(sym)
+    }
+
+    pub fn symbol(self) -> Symbol {
+        self.0
+    }
+}
+
+impl IntrinsicFunId {
     pub fn new(sym: Symbol) -> Self {
         Self(sym)
     }

@@ -74,9 +74,8 @@ module std::event {
     spec module {} // switch documentation context to module
 
     spec module {
-        /// Functions of the event module are mocked out using the intrinsic
-        /// pragma. They are implemented in the prover's prelude.
-        pragma intrinsic = true;
+        /// Event handle is an intrinsic type
+        struct Handle<T: drop + store> has store;
 
         /// Determines equality between the guids of two event handles. Since fields of intrinsic
         /// structs cannot be accessed, this function is provided.
@@ -85,5 +84,25 @@ module std::event {
             // representation does not have the `counter` field.
             h1 == h2
         }
+    }
+
+    spec EventHandle {
+        pragma intrinsic = Handle;
+    }
+
+    spec new_event_handle {
+        pragma intrinsic;
+    }
+
+    spec emit_event {
+        pragma intrinsic;
+    }
+
+    spec guid {
+        pragma intrinsic;
+    }
+
+    spec destroy_handle {
+        pragma intrinsic;
     }
 }

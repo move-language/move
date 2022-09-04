@@ -726,13 +726,19 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     match n.as_str() {
                         "u8" | "u64" | "u128" => (),
                         invalid => {
-                            self.error(&loc, &format!("invalid cast: {}", invalid));
+                            self.error(
+                                &loc,
+                                &format!(
+                                    "type not supported for casting in specifications: {}",
+                                    invalid
+                                ),
+                            );
                             return self.new_error_exp();
                         }
                     };
                     exp
                 } else {
-                    self.error(&loc, "cast not supported in specifications");
+                    self.error(&loc, "type not supported for casting in specifications");
                     self.new_error_exp()
                 }
             }

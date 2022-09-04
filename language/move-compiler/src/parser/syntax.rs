@@ -2349,8 +2349,19 @@ fn parse_module(
                     )?)
                 }
                 Tok::Spec => {
-                    match context.tokens.lookahead() {
-                        Ok(Tok::Fun) | Ok(Tok::Native) => {
+                    match context.tokens.lookahead()? {
+                        Tok::Struct => {
+                            context.tokens.match_doc_comments();
+                            let start_loc = context.tokens.start_loc();
+                            context.tokens.advance()?;
+                            ModuleMember::Spec(singleton_module_spec_block(
+                                context,
+                                start_loc,
+                                attributes,
+                                parse_spec_struct,
+                            )?)
+                        }
+                        Tok::Fun | Tok::Native => {
                             context.tokens.match_doc_comments();
                             let start_loc = context.tokens.start_loc();
                             context.tokens.advance()?;

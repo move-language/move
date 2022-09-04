@@ -729,7 +729,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                             self.error(
                                 &loc,
                                 &format!(
-                                    "type not supported for casting in specifications: {}",
+                                    "type `{}` is not supported for casting in specifications",
                                     invalid
                                 ),
                             );

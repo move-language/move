@@ -138,7 +138,7 @@ impl Test {
 }
 
 /// Encapsulates the possible returned states when running unit tests on a move package.
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum UnitTestResult {
     Success,
     Failure,

@@ -64,7 +64,7 @@ pub struct ModuleDefinition {
 // Constants
 //**************************************************************************************************
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Constant {
     pub attributes: Attributes,
     pub loc: Loc,

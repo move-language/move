@@ -2068,7 +2068,7 @@ impl Function {
     }
 
     pub(crate) fn get_native(&self) -> PartialVMResult<&UnboxedNativeFunction> {
-        self.native.as_deref().map(|f| &*f).ok_or_else(|| {
+        self.native.as_deref().ok_or_else(|| {
             PartialVMError::new(StatusCode::UNREACHABLE)
                 .with_message("Missing Native Function".to_string())
         })

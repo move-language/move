@@ -253,10 +253,10 @@ impl<'env> Instrumenter<'env> {
         let env = self.builder.global_env();
         let options = ProverOptions::get(env);
 
-        let inst_invs = invs_with_insts
-            .iter()
-            .map(|(inv_id, inv_insts)| inv_insts.iter().map(move |inst| (*inv_id, inst.clone())))
-            .flatten();
+        let inst_invs = invs_with_insts.iter().flat_map(|(inv_id, inv_insts)| {
+            inv_insts.iter().map(move |inst| (*inv_id, inst.clone()))
+        });
+
         SpecTranslator::translate_invariants_by_id(
             options.auto_trace_level.invariants(),
             &mut self.builder,

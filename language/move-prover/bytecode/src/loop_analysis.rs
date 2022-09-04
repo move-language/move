@@ -48,8 +48,7 @@ impl LoopAnnotation {
     fn back_edges_locations(&self) -> BTreeSet<CodeOffset> {
         self.fat_loops
             .values()
-            .map(|l| l.back_edges.iter())
-            .flatten()
+            .flat_map(|l| l.back_edges.iter())
             .copied()
             .collect()
     }
@@ -57,8 +56,7 @@ impl LoopAnnotation {
     fn invariants_locations(&self) -> BTreeSet<CodeOffset> {
         self.fat_loops
             .values()
-            .map(|l| l.invariants.keys())
-            .flatten()
+            .flat_map(|l| l.invariants.keys())
             .copied()
             .collect()
     }
@@ -385,8 +383,7 @@ impl LoopAnalysisProcessor {
         let mut mut_targets = BTreeMap::new();
         let fat_loop_body: BTreeSet<_> = sub_loops
             .iter()
-            .map(|l| l.loop_body.iter())
-            .flatten()
+            .flat_map(|l| l.loop_body.iter())
             .copied()
             .collect();
         for block_id in fat_loop_body {
@@ -451,13 +448,12 @@ impl LoopAnalysisProcessor {
         let nodes = cfg.blocks();
         let edges: Vec<(BlockId, BlockId)> = nodes
             .iter()
-            .map(|x| {
+            .flat_map(|x| {
                 cfg.successors(*x)
                     .iter()
                     .map(|y| (*x, *y))
                     .collect::<Vec<(BlockId, BlockId)>>()
             })
-            .flatten()
             .collect();
         let graph = Graph::new(entry, nodes, edges);
         let natural_loops = graph.compute_reducible().expect(
@@ -505,8 +501,7 @@ impl LoopAnalysisProcessor {
         // check for redundant loop invariant declarations in the spec
         let all_invariants: BTreeSet<_> = fat_loops
             .values()
-            .map(|l| l.invariants.values().map(|(attr_id, _)| *attr_id))
-            .flatten()
+            .flat_map(|l| l.invariants.values().map(|(attr_id, _)| *attr_id))
             .collect();
 
         let env = func_target.global_env();

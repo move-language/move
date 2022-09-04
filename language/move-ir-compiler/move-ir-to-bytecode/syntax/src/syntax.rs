@@ -1306,12 +1306,12 @@ fn parse_type_parameter(
 }
 
 // TypeActuals: Vec<Type> = {
-//     <tys: ("<" <Comma<Type>> ">")?> => { ... }
+//     <tys: ('<' <Comma<Type>> ">")?> => { ... }
 // }
 
 fn parse_type_actuals(tokens: &mut Lexer) -> Result<Vec<Type>, ParseError<Loc, anyhow::Error>> {
     let tys = if tokens.peek() == Tok::Less {
-        tokens.advance()?; // consume the "<"
+        tokens.advance()?; // consume the '<'
         let list = parse_comma_list(tokens, &[Tok::Greater], parse_type, true)?;
         consume_token(tokens, Tok::Greater)?;
         list
@@ -1351,7 +1351,7 @@ where
 }
 
 // NameAndTypeActuals: (String, Vec<Type>) = {
-//     <n: NameBeginTy> "<" <tys: Comma<Type>> ">" => (n, tys),
+//     <n: NameBeginTy> '<' <tys: Comma<Type>> ">" => (n, tys),
 //     <n: Name> => (n, vec![]),
 // }
 

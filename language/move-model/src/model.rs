@@ -407,7 +407,7 @@ impl QualifiedInstId<StructId> {
 /// # Verification Scope
 
 /// Defines what functions to verify.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VerificationScope {
     /// Verify only public functions.
     Public,
@@ -1293,8 +1293,7 @@ impl GlobalEnv {
         name: &IdentStr,
     ) -> Option<FunctionEnv<'_>> {
         self.find_module_by_language_storage_id(id)
-            .map(|menv| menv.find_function(menv.symbol_pool().make(name.as_str())))
-            .flatten()
+            .and_then(|menv| menv.find_function(menv.symbol_pool().make(name.as_str())))
     }
 
     /// Gets a StructEnv in this module by its `StructTag`
@@ -1303,11 +1302,10 @@ impl GlobalEnv {
         tag: &language_storage::StructTag,
     ) -> Option<QualifiedId<StructId>> {
         self.find_module(&self.to_module_name(&tag.module_id()))
-            .map(|menv| {
+            .and_then(|menv| {
                 menv.find_struct_by_identifier(tag.name.clone())
                     .map(|sid| menv.get_id().qualified(sid))
             })
-            .flatten()
     }
 
     /// Return the module enclosing this location.
@@ -1567,8 +1565,7 @@ impl GlobalEnv {
 
     /// Gets the type parameter instantiation associated with the given node.
     pub fn get_node_instantiation(&self, node_id: NodeId) -> Vec<Type> {
-        self.get_node_instantiation_opt(node_id)
-            .unwrap_or_else(Vec::new)
+        self.get_node_instantiation_opt(node_id).unwrap_or_default()
     }
 
     /// Gets the type parameter instantiation associated with the given node, if it is available.
@@ -1638,13 +1635,12 @@ impl GlobalEnv {
             .module_data
             .iter_mut()
             .filter(|m| m.id == fid.module_id)
-            .map(|m| {
+            .flat_map(|m| {
                 m.function_data
                     .iter_mut()
                     .filter(|(k, _)| **k == fid.id)
                     .map(|(_, v)| v)
             })
-            .flatten()
             .exactly_one()
             .unwrap_or_else(|_| {
                 panic!("Expect one and only one function for {:?}", fid);
@@ -1663,13 +1659,12 @@ impl GlobalEnv {
             .module_data
             .iter_mut()
             .filter(|m| m.id == fid.module_id)
-            .map(|m| {
+            .flat_map(|m| {
                 m.function_data
                     .iter_mut()
                     .filter(|(k, _)| **k == fid.id)
                     .map(|(_, v)| v)
             })
-            .flatten()
             .exactly_one()
             .unwrap_or_else(|_| {
                 panic!("Expect one and only one function for {:?}", fid);
@@ -2192,13 +2187,13 @@ impl<'env> ModuleEnv<'env> {
             SignatureToken::Address => Type::Primitive(PrimitiveType::Address),
             SignatureToken::Signer => Type::Primitive(PrimitiveType::Signer),
             SignatureToken::Reference(t) => {
-                Type::Reference(false, Box::new(self.globalize_signature(&*t)))
+                Type::Reference(false, Box::new(self.globalize_signature(t)))
             }
             SignatureToken::MutableReference(t) => {
-                Type::Reference(true, Box::new(self.globalize_signature(&*t)))
+                Type::Reference(true, Box::new(self.globalize_signature(t)))
             }
             SignatureToken::TypeParameter(index) => Type::TypeParameter(*index),
-            SignatureToken::Vector(bt) => Type::Vector(Box::new(self.globalize_signature(&*bt))),
+            SignatureToken::Vector(bt) => Type::Vector(Box::new(self.globalize_signature(bt))),
             SignatureToken::Struct(handle_idx) => {
                 let struct_view = StructHandleView::new(
                     &self.data.module,

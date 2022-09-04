@@ -19,14 +19,14 @@ use std::{
 
 /// The BorrowState denotes whether a local is `Available` or
 /// has been moved and is `Unavailable`.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BorrowState {
     Available,
     Unavailable,
 }
 
 /// This models a value on the stack or in the locals
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AbstractValue {
     /// Represents the type of the value
     pub token: SignatureToken,
@@ -36,7 +36,7 @@ pub struct AbstractValue {
 }
 
 /// This models the mutability of a reference
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Mutability {
     /// Represents a mutable reference
     Mutable,
@@ -118,7 +118,7 @@ impl AbstractValue {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CallGraph {
     calls: HashMap<FunctionHandleIndex, HashSet<FunctionHandleIndex>>,
     max_function_handle_index: usize,

@@ -41,7 +41,7 @@ pub enum Value {
 }
 pub type Values = Vec<Value>;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BorrowState {
     locals: UniqueMap<Var, Value>,
     acquired_resources: BTreeMap<StructName, Loc>,

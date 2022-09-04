@@ -127,12 +127,11 @@ pub fn add_prelude(
             .native_inst
             .iter()
             .filter(|(id, _)| env.get_module(**id).get_full_name_str() == module)
-            .map(|(_, insts)| {
+            .flat_map(|(_, insts)| {
                 insts
                     .iter()
                     .map(|inst| TypeInfo::new(env, options, &inst[0]))
             })
-            .flatten()
             .collect::<BTreeSet<_>>()
             .into_iter()
             .collect_vec()

@@ -68,7 +68,7 @@ pub struct ModuleDefinition {
 // Structs
 //**************************************************************************************************
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct StructDefinition {
     pub attributes: Attributes,
     pub abilities: AbilitySet,
@@ -76,13 +76,13 @@ pub struct StructDefinition {
     pub fields: StructFields,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct StructTypeParameter {
     pub param: TParam,
     pub is_phantom: bool,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum StructFields {
     Defined(Fields<Type>),
     Native(Loc),
@@ -92,7 +92,7 @@ pub enum StructFields {
 // Functions
 //**************************************************************************************************
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct FunctionSignature {
     pub type_parameters: Vec<TParam>,
     pub parameters: Vec<(Var, Type)>,
@@ -209,7 +209,7 @@ pub enum ExpDotted_ {
 }
 pub type ExpDotted = Spanned<ExpDotted_>;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum BuiltinFunction_ {
     MoveTo(Option<Type>),

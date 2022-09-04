@@ -903,7 +903,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     /// Move functions.
     fn propagate_function_impurity(
         &mut self,
-        mut visited: &mut BTreeMap<SpecFunId, bool>,
+        visited: &mut BTreeMap<SpecFunId, bool>,
         spec_fun_id: SpecFunId,
     ) -> bool {
         if let Some(is_pure) = visited.get(&spec_fun_id) {
@@ -940,7 +940,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     // This is calling a function from the module we are currently translating.
                     // Need to recursively ensure we have propagated impurity because of
                     // arbitrary call graphs, including cyclic.
-                    if !self.propagate_function_impurity(&mut visited, *fid) {
+                    if !self.propagate_function_impurity(visited, *fid) {
                         is_pure = false;
                     }
                 }
@@ -1206,14 +1206,12 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         use SpecBlockContext::*;
         match context {
             Function(name) => update(
-                &mut self
-                    .fun_specs
+                self.fun_specs
                     .entry(name.symbol)
                     .or_insert_with(Spec::default),
             ),
             FunctionCode(name, spec_info) => update(
-                &mut self
-                    .fun_specs
+                self.fun_specs
                     .entry(name.symbol)
                     .or_insert_with(Spec::default)
                     .on_impl
@@ -1229,8 +1227,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     .spec,
             ),
             Struct(name) => update(
-                &mut self
-                    .struct_specs
+                self.struct_specs
                     .entry(name.symbol)
                     .or_insert_with(Spec::default),
             ),
@@ -1965,14 +1962,13 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         visiting.push(name.clone());
 
         // First recursively visit all schema includes and ensure they are analyzed.
-        for included_name in self
-            .iter_schema_includes(&block.value.members)
-            .map(|(_, _, exp)| {
-                let mut res = vec![];
-                extract_schema_access(exp, &mut res);
-                res
-            })
-            .flatten()
+        for included_name in
+            self.iter_schema_includes(&block.value.members)
+                .flat_map(|(_, _, exp)| {
+                    let mut res = vec![];
+                    extract_schema_access(exp, &mut res);
+                    res
+                })
         {
             let included_loc = self.parent.env.to_loc(&included_name.loc);
             let included_name = self.module_access_to_qualified(included_name);
@@ -2385,7 +2381,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     })
                     .collect()
             })
-            .unwrap_or_else(BTreeMap::new);
+            .unwrap_or_default();
 
         // Go over all variables in the schema which are not in the argument map and either match
         // them against existing one or declare new, if allowed.

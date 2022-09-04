@@ -260,7 +260,7 @@ assertion fails the unit test will fail.
 
   ```toml
   [dependencies]
-  MoveStdlib = { local = "../../../../move-stdlib/", addr_subst = { "Std" = "0x1" } }
+  MoveStdlib = { local = "../../../../move-stdlib/", addr_subst = { "std" = "0x1" } }
   ```
 
   Note that you may need to alter the path to point to the `move-stdlib` directory under

@@ -4,16 +4,17 @@
 
 #![forbid(unsafe_code)]
 
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    rc::Rc,
+};
+
 use codespan::ByteIndex;
 use codespan_reporting::diagnostic::{Diagnostic, Label, LabelStyle};
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::warn;
-use move_symbol_pool::Symbol as MoveSymbol;
-use std::{
-    collections::{BTreeMap, BTreeSet, HashMap},
-    rc::Rc,
-};
+use num::{BigUint, Num};
 
 use builder::module_builder::ModuleBuilder;
 use move_binary_format::{
@@ -37,7 +38,7 @@ use move_compiler::{
 };
 use move_core_types::{account_address::AccountAddress, identifier::Identifier};
 use move_ir_types::location::sp;
-use num::{BigUint, Num};
+use move_symbol_pool::Symbol as MoveSymbol;
 
 use crate::{
     ast::{ModuleName, Spec},
@@ -45,7 +46,6 @@ use crate::{
     model::{FunId, FunctionData, GlobalEnv, Loc, ModuleData, ModuleId, StructId},
     options::ModelBuilderOptions,
     simplifier::{SpecRewriter, SpecRewriterPipeline},
-    symbol::{Symbol, SymbolPool},
 };
 
 pub mod ast;
@@ -92,7 +92,7 @@ pub fn run_model_builder_with_options<
         move_sources,
         deps,
         options,
-        Flags::empty(),
+        Flags::verification(),
     )
 }
 
@@ -109,10 +109,6 @@ pub fn run_model_builder_with_options_and_compilation_flags<
 ) -> anyhow::Result<GlobalEnv> {
     let mut env = GlobalEnv::new();
     env.set_extension(options);
-
-    // Compute this now because the compiler consumes move sources and deps. We need it later
-    // to attach an alias definition to a module.
-    let address_aliases = create_file_to_address_aliases(env.symbol_pool(), &move_sources, &deps);
 
     // Step 1: parse the program to get comments and a separation of targets and dependencies.
     let (files, comments_and_compiler_res) = Compiler::from_package_paths(move_sources, deps)
@@ -137,25 +133,44 @@ pub fn run_model_builder_with_options_and_compilation_flags<
         Ok(res) => res,
     };
     let (compiler, parsed_prog) = compiler.into_ast();
+
     // Add source files for targets and dependencies
     let dep_files: BTreeSet<_> = parsed_prog
         .lib_definitions
         .iter()
         .map(|p| p.def.file_hash())
         .collect();
+
+    for member in parsed_prog
+        .source_definitions
+        .iter()
+        .chain(parsed_prog.lib_definitions.iter())
+    {
+        let fhash = member.def.file_hash();
+        let (fname, fsrc) = files.get(&fhash).unwrap();
+        let is_dep = dep_files.contains(&fhash);
+        let aliases = parsed_prog
+            .named_address_maps
+            .get(member.named_address_map)
+            .iter()
+            .map(|(symbol, addr)| (env.symbol_pool().make(symbol.as_str()), *addr))
+            .collect();
+        env.add_source(fhash, Rc::new(aliases), fname.as_str(), fsrc, is_dep);
+    }
+
+    // If a move file does not contain any definition, it will not appear in `parsed_prog`. Add them explicitly.
     for fhash in files.keys().sorted() {
-        let (fname, fsrc) = files.get(fhash).unwrap();
-        let aliases = address_aliases
-            .get(fname)
-            .cloned()
-            .unwrap_or_else(|| Rc::new(BTreeMap::new()));
-        env.add_source(
-            *fhash,
-            aliases,
-            fname.as_str(),
-            fsrc,
-            dep_files.contains(fhash),
-        );
+        if env.get_file_id(*fhash).is_none() {
+            let (fname, fsrc) = files.get(fhash).unwrap();
+            let is_dep = dep_files.contains(fhash);
+            env.add_source(
+                *fhash,
+                Rc::new(BTreeMap::new()),
+                fname.as_str(),
+                fsrc,
+                is_dep,
+            );
+        }
     }
 
     // Add any documentation comments found by the Move compiler to the env.
@@ -191,6 +206,7 @@ pub fn run_model_builder_with_options_and_compilation_flags<
         }
         Ok(compiler) => compiler.into_ast(),
     };
+
     // Extract the module/script closure
     let mut visited_modules = BTreeSet::new();
     for (_, mident, mdef) in &expansion_ast.modules {
@@ -223,6 +239,7 @@ pub fn run_model_builder_with_options_and_compilation_flags<
         });
         E::Program { modules, scripts }
     };
+
     // Run the compiler fully to the compiled units
     let units = match compiler
         .at_expansion(expansion_ast.clone())
@@ -243,6 +260,7 @@ pub fn run_model_builder_with_options_and_compilation_flags<
             units
         }
     };
+
     // Check for bytecode verifier errors (there should not be any)
     let diags = compiled_unit::verify_units(&units);
     if !diags.is_empty() {
@@ -254,29 +272,6 @@ pub fn run_model_builder_with_options_and_compilation_flags<
     // plus expanded AST. This will populate the environment including any errors.
     run_spec_checker(&mut env, units, expansion_ast);
     Ok(env)
-}
-
-fn create_file_to_address_aliases<
-    Paths: Into<MoveSymbol> + Clone,
-    NamedAddress: Into<MoveSymbol> + Clone,
->(
-    pool: &SymbolPool,
-    move_sources: &[PackagePaths<Paths, NamedAddress>],
-    deps: &[PackagePaths<Paths, NamedAddress>],
-) -> HashMap<MoveSymbol, Rc<BTreeMap<Symbol, NumericalAddress>>> {
-    let mut res = HashMap::<MoveSymbol, _>::new();
-    for pkg in move_sources.iter().chain(deps.iter()) {
-        let aliases = Rc::new(
-            pkg.named_address_map
-                .iter()
-                .map(|(k, v)| (pool.make(k.clone().into().as_ref()), *v))
-                .collect::<BTreeMap<_, _>>(),
-        );
-        for path in &pkg.paths {
-            res.insert(path.clone().into(), aliases.clone());
-        }
-    }
-    res
 }
 
 fn collect_related_modules_recursive<'a>(

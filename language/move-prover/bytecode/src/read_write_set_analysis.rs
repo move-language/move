@@ -38,7 +38,7 @@ use std::{fmt, fmt::Formatter};
 
 /// A record of the glocals and locals accessed by the current procedure + the address values stored
 /// by locals or globals
-#[derive(Debug, Clone, Eq, PartialOrd, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialOrd, PartialEq, Default)]
 pub struct ReadWriteSetState {
     /// memory accessed so far
     accesses: AccessPathTrie<Access>,
@@ -819,15 +819,6 @@ impl<'a> fmt::Display for ReadWriteSetStateDisplay<'a> {
             writeln!(f, "{}: {}", path.display(self.env), v.display(self.env)).unwrap();
         });
         Ok(())
-    }
-}
-
-impl Default for ReadWriteSetState {
-    fn default() -> Self {
-        Self {
-            accesses: AccessPathTrie::default(),
-            locals: AccessPathTrie::default(),
-        }
     }
 }
 

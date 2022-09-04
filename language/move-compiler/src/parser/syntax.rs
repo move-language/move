@@ -877,7 +877,7 @@ fn parse_sequence(context: &mut Context) -> Result<Sequence, Diagnostic> {
 //      Term =
 //          "break"
 //          | "continue"
-//          | "vector" ("<" Comma<Type> ">")? "[" Comma<Exp> "]"
+//          | "vector" ('<' Comma<Type> ">")? "[" Comma<Exp> "]"
 //          | <Value>
 //          | "(" Comma<Exp> ")"
 //          | "(" <Exp> ":" <Type> ")"
@@ -1158,9 +1158,9 @@ fn parse_name_exp(context: &mut Context) -> Result<Exp_, Diagnostic> {
         panic!("parse_name_exp with something other than a ModuleAccess")
     })?;
 
-    // There's an ambiguity if the name is followed by a "<". If there is no whitespace
+    // There's an ambiguity if the name is followed by a '<'. If there is no whitespace
     // after the name, treat it as the start of a list of type arguments. Otherwise
-    // assume that the "<" is a boolean operator.
+    // assume that the '<' is a boolean operator.
     let mut tys = None;
     let start_loc = context.tokens.start_loc();
     if context.tokens.peek() == Tok::Exclaim {
@@ -1334,7 +1334,7 @@ fn get_precedence(token: Tok) -> u32 {
 //          "==>"                                       spec only
 //          | "||"
 //          | "&&"
-//          | "==" | "!=" | "<" | ">" | "<=" | ">="
+//          | "==" | "!=" | '<' | ">" | "<=" | ">="
 //          | ".."                                      spec only
 //          | "|"
 //          | "^"
@@ -1666,7 +1666,7 @@ fn make_builtin_call(loc: Loc, name: Symbol, type_args: Option<Vec<Type>>, args:
 
 // Parse a Type:
 //      Type =
-//          <NameAccessChain> ("<" Comma<Type> ">")?
+//          <NameAccessChain> ('<' Comma<Type> ">")?
 //          | "&" <Type>
 //          | "&mut" <Type>
 //          | "|" Comma<Type> "|" Type   (spec only)
@@ -1717,7 +1717,7 @@ fn parse_type(context: &mut Context) -> Result<Type, Diagnostic> {
 }
 
 // Parse an optional list of type arguments.
-//    OptionalTypeArgs = "<" Comma<Type> ">" | <empty>
+//    OptionalTypeArgs = '<' Comma<Type> ">" | <empty>
 fn parse_optional_type_args(context: &mut Context) -> Result<Option<Vec<Type>>, Diagnostic> {
     if context.tokens.peek() == Tok::Less {
         Ok(Some(parse_comma_list(
@@ -1821,7 +1821,7 @@ fn parse_type_parameter_with_phantom_decl(
 }
 
 // Parse optional type parameter list.
-//    OptionalTypeParameters = "<" Comma<TypeParameter> ">" | <empty>
+//    OptionalTypeParameters = '<' Comma<TypeParameter> ">" | <empty>
 fn parse_optional_type_parameters(
     context: &mut Context,
 ) -> Result<Vec<(Name, Vec<Ability>)>, Diagnostic> {
@@ -1839,7 +1839,7 @@ fn parse_optional_type_parameters(
 }
 
 // Parse optional struct type parameters:
-//    StructTypeParameter = "<" Comma<TypeParameterWithPhantomDecl> ">" | <empty>
+//    StructTypeParameter = '<' Comma<TypeParameterWithPhantomDecl> ">" | <empty>
 fn parse_struct_type_parameters(
     context: &mut Context,
 ) -> Result<Vec<StructTypeParameter>, Diagnostic> {

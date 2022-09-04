@@ -79,7 +79,7 @@ pub enum Attribute {
 // =================================================================================================
 /// # Conditions
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ConditionKind {
     LetPost(Symbol),
     LetPre(Symbol),

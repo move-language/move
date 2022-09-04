@@ -75,7 +75,7 @@ pub fn attr_params(attr: &Attribute) -> Vec<&Attribute> {
 pub fn attr_value(attr: &Attribute) -> Option<(&Name, Option<&AttributeValue>)> {
     match &attr.value {
         Attribute_::Name(n) => Some((n, None)),
-        Attribute_::Assigned(n, v) => Some((n, Some(&*v))),
+        Attribute_::Assigned(n, v) => Some((n, Some(v))),
         _ => None,
     }
 }

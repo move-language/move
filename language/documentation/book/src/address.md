@@ -16,7 +16,7 @@ literals.
 
 To distinguish when an address is being used in an expression context or not, the
 syntax when using an address differs depending on the context where it's used:
-* When an address is used as an expression the address must be prefixed by the `@` character, i.e., `@`[`<numerical_value>`](./integers.md) or `@<named_address_identifier>`.
+* When an address is used as an expression the address must be prefixed by the `@` character, i.e., [`@<numerical_value>`](./integers.md) or `@<named_address_identifier>`.
 * Outside of expression contexts, the address may be written without the leading `@` character, i.e., [`<numerical_value>`](./integers.md) or `<named_address_identifier>`.
 
 In general, you can think of `@` as an operator that takes an address from being a namespace item to being an expression item.

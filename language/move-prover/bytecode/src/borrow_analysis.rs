@@ -270,8 +270,7 @@ impl BorrowInfo {
                     path.reverse();
                     let flattened = path
                         .iter()
-                        .map(|e| e.flatten().into_iter())
-                        .flatten()
+                        .flat_map(|e| e.flatten().into_iter())
                         .cloned()
                         .collect();
                     BorrowEdge::Hyper(flattened)

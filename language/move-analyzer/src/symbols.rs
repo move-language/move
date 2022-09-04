@@ -265,7 +265,7 @@ impl fmt::Display for IdentType {
             }
             Self::FunctionType(mod_ident, name, type_args, arg_names, arg_types, ret, acquires) => {
                 let type_args_str = if !type_args.is_empty() {
-                    let mut s = "<".to_string();
+                    let mut s = '<'.to_string();
                     s.push_str(&type_list_to_ide_string(type_args));
                     s.push('>');
                     s

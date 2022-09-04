@@ -157,7 +157,7 @@ fn test_runner_for_feature(path: &Path, feature: &Feature) -> datatest_stable::R
         Err(err) => format!("Move prover returns: {}\n", err),
     };
     if baseline_valid {
-        diags += &String::from_utf8_lossy(&error_writer.into_inner()).to_string();
+        diags += &String::from_utf8_lossy(&error_writer.into_inner());
         if let Some(ref path) = baseline_path {
             verify_or_update_baseline(path.as_path(), &diags)?
         } else if !diags.is_empty() {

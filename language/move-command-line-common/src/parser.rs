@@ -211,7 +211,7 @@ impl<'a, I: Iterator<Item = (ValueToken, &'a str)>> Parser<'a, ValueToken, I> {
                 let contents = contents
                     .strip_prefix("b\"")
                     .unwrap()
-                    .strip_suffix("\"")
+                    .strip_suffix('\"')
                     .unwrap();
                 ParsedValue::Vector(
                     contents
@@ -226,7 +226,7 @@ impl<'a, I: Iterator<Item = (ValueToken, &'a str)>> Parser<'a, ValueToken, I> {
                 let contents = contents
                     .strip_prefix("x\"")
                     .unwrap()
-                    .strip_suffix("\"")
+                    .strip_suffix('\"')
                     .unwrap()
                     .to_ascii_lowercase();
                 ParsedValue::Vector(

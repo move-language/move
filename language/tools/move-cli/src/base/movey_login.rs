@@ -108,7 +108,7 @@ mod tests {
         let cwd = env::current_dir().unwrap();
         let mut move_home: String = String::from(cwd.to_string_lossy());
         if !test_path.is_empty() {
-            move_home.push_str(&test_path);
+            move_home.push_str(test_path);
         } else {
             move_home.push_str("/test");
         }

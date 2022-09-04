@@ -1,0 +1,47 @@
+error: undeclared `0x42::M::NoSuchTypeParam`
+  ┌─ tests/sources/intrinsic_decls_err.move:4:33
+  │
+4 │         struct V1<E> :: [vector<NoSuchTypeParam>];
+  │                                 ^^^^^^^^^^^^^^^
+
+error: This type cannot be modeled as an intrinsic type
+  ┌─ tests/sources/intrinsic_decls_err.move:5:26
+  │
+5 │         struct V2<E> :: [&E];
+  │                          ^^
+
+error: This type cannot be modeled as an intrinsic type
+  ┌─ tests/sources/intrinsic_decls_err.move:6:23
+  │
+6 │         struct V3 :: [Foo];
+  │                       ^^^
+
+error: This type cannot be modeled as an intrinsic type
+  ┌─ tests/sources/intrinsic_decls_err.move:7:23
+  │
+7 │         struct V4 :: [|u64| address];
+  │                       ^^^^^^^^^^^^^
+
+error: undeclared `0x42::M::T0`
+  ┌─ tests/sources/intrinsic_decls_err.move:9:35
+  │
+9 │         native fun f1<T1, T2>(a: &T0): T1;
+  │                                   ^^
+
+error: undeclared `0x42::M::T0`
+   ┌─ tests/sources/intrinsic_decls_err.move:10:40
+   │
+10 │         native fun f2<T1, T2>(a: &T1): T0;
+   │                                        ^^
+
+error: undeclared `0x42::M::E`
+   ┌─ tests/sources/intrinsic_decls_err.move:13:36
+   │
+13 │         native fun f3(a: num): Vec<E>;
+   │                                    ^
+
+error: type argument count mismatch
+   ┌─ tests/sources/intrinsic_decls_err.move:14:35
+   │
+14 │         native fun f4<E>(a: num): Vec<E, E>;
+   │                                   ^^^

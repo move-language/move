@@ -39,9 +39,9 @@ use crate::{
     },
     exp_rewriter::{ExpRewriter, ExpRewriterFunctions, RewriteTarget},
     model::{
-        AbilityConstraint, FieldId, FunId, FunctionData, FunctionVisibility, IntrinsicTypeId, Loc,
-        ModuleId, MoveIrLoc, NamedConstantData, NamedConstantId, NodeId, QualifiedId,
-        QualifiedInstId, SchemaId, SpecFunId, SpecVarId, StructData, StructId, TypeParameter,
+        AbilityConstraint, FieldId, FunId, FunctionData, FunctionVisibility, Loc, ModuleId,
+        MoveIrLoc, NamedConstantData, NamedConstantId, NodeId, QualifiedId, QualifiedInstId,
+        SchemaId, SpecFunId, SpecVarId, StructData, StructId, TypeParameter,
         SCRIPT_BYTECODE_FUN_NAME,
     },
     options::ModelBuilderOptions,
@@ -538,7 +538,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         }
 
         let qsym = self.qualified_by_module_from_name(&name.0);
-        let struct_id = IntrinsicTypeId::new(qsym.symbol);
+        let struct_id = StructId::new(qsym.symbol);
 
         // first add type parameters into the context
         let mut et = ExpTranslator::new(self);
@@ -1234,9 +1234,13 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             .into_iter()
             .filter_map(|(prop_name, prop_value)| {
                 let adapted_prop_value = match self.symbol_pool().string(prop_name).as_str() {
-                    INTRINSIC_PRAGMA => {
-                        handle_intrinsic_declaration(self.parent, loc, context, prop_value)
-                    }
+                    INTRINSIC_PRAGMA => handle_intrinsic_declaration(
+                        self.parent,
+                        &self.module_name,
+                        loc,
+                        context,
+                        prop_value,
+                    ),
                     _ => Some(prop_value),
                 };
                 adapted_prop_value.map(|v| (prop_name, v))

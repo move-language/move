@@ -323,7 +323,7 @@ Reverses the order of the elements in the vector <code>v</code> in place.
 
 
 
-<pre><code><b>pragma</b> intrinsic = <b>true</b>;
+<pre><code><b>pragma</b> intrinsic = intrinsic_reverse;
 </code></pre>
 
 
@@ -362,7 +362,7 @@ Pushes all of the elements of the <code>other</code> vector into the <code>lhs</
 
 
 
-<pre><code><b>pragma</b> intrinsic = <b>true</b>;
+<pre><code><b>pragma</b> intrinsic = intrinsic_append;
 </code></pre>
 
 
@@ -399,7 +399,7 @@ Return <code><b>true</b></code> if the vector <code>v</code> has no elements and
 
 
 
-<pre><code><b>pragma</b> intrinsic = <b>true</b>;
+<pre><code><b>pragma</b> intrinsic = intrinsic_is_empty;
 </code></pre>
 
 
@@ -443,7 +443,7 @@ Otherwise, returns false.
 
 
 
-<pre><code><b>pragma</b> intrinsic = <b>true</b>;
+<pre><code><b>pragma</b> intrinsic = intrinsic_contains;
 </code></pre>
 
 
@@ -487,7 +487,7 @@ Otherwise, returns <code>(<b>false</b>, 0)</code>.
 
 
 
-<pre><code><b>pragma</b> intrinsic = <b>true</b>;
+<pre><code><b>pragma</b> intrinsic = intrinsic_index_of;
 </code></pre>
 
 
@@ -532,7 +532,7 @@ Aborts if <code>i</code> is out of bounds.
 
 
 
-<pre><code><b>pragma</b> intrinsic = <b>true</b>;
+<pre><code><b>pragma</b> intrinsic = intrinsic_remove;
 </code></pre>
 
 
@@ -574,7 +574,7 @@ Aborts if <code>i</code> is out of bounds.
 
 
 
-<pre><code><b>pragma</b> intrinsic = <b>true</b>;
+<pre><code><b>pragma</b> intrinsic = intrinsic_swap_remove;
 </code></pre>
 
 
@@ -644,6 +644,28 @@ Check that <code>v1</code> is equal to the result of removing the element at ind
     v1[0..i] == v2[0..i] &&
     v1[i..len(v1)] == v2[i + 1..len(v2)]
 }
+</code></pre>
+
+
+
+
+<pre><code><b>struct</b> IntrinsicVector&lt;Element&gt; <b>has</b> <b>copy</b>, drop, store :: [ <a href="vector.md#0x1_vector">vector</a>&lt;Element&gt; ];
+<a name="0x1_vector_intrinsic_new"></a>
+<b>native</b> <b>fun</b> <a href="vector.md#0x1_vector_intrinsic_new">intrinsic_new</a>&lt;Element&gt;(): IntrinsicVector&lt;Element&gt;;
+<a name="0x1_vector_intrinsic_reverse"></a>
+<b>native</b> <b>fun</b> <a href="vector.md#0x1_vector_intrinsic_reverse">intrinsic_reverse</a>&lt;Element&gt;(v: &<b>mut</b> IntrinsicVector&lt;Element&gt;);
+<a name="0x1_vector_intrinsic_append"></a>
+<b>native</b> <b>fun</b> <a href="vector.md#0x1_vector_intrinsic_append">intrinsic_append</a>&lt;Element&gt;(lhs: &<b>mut</b> IntrinsicVector&lt;Element&gt;, rhs: IntrinsicVector&lt;Element&gt;);
+<a name="0x1_vector_intrinsic_is_empty"></a>
+<b>native</b> <b>fun</b> <a href="vector.md#0x1_vector_intrinsic_is_empty">intrinsic_is_empty</a>&lt;Element&gt;(v: &IntrinsicVector&lt;Element&gt;): bool;
+<a name="0x1_vector_intrinsic_contains"></a>
+<b>native</b> <b>fun</b> <a href="vector.md#0x1_vector_intrinsic_contains">intrinsic_contains</a>&lt;Element&gt;(v: &IntrinsicVector&lt;Element&gt;, e: &Element): bool;
+<a name="0x1_vector_intrinsic_index_of"></a>
+<b>native</b> <b>fun</b> <a href="vector.md#0x1_vector_intrinsic_index_of">intrinsic_index_of</a>&lt;Element&gt;(v: &IntrinsicVector&lt;Element&gt;, e: &Element): (bool, num);
+<a name="0x1_vector_intrinsic_remove"></a>
+<b>native</b> <b>fun</b> <a href="vector.md#0x1_vector_intrinsic_remove">intrinsic_remove</a>&lt;Element&gt;(v: &<b>mut</b> IntrinsicVector&lt;Element&gt;, i: num): Element;
+<a name="0x1_vector_intrinsic_swap_remove"></a>
+<b>native</b> <b>fun</b> <a href="vector.md#0x1_vector_intrinsic_swap_remove">intrinsic_swap_remove</a>&lt;Element&gt;(v: &<b>mut</b> IntrinsicVector&lt;Element&gt;, i: num): Element;
 </code></pre>
 
 

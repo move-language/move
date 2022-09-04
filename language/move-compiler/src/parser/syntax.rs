@@ -2831,8 +2831,8 @@ fn parse_invariant(context: &mut Context) -> Result<SpecBlockMember, Diagnostic>
 }
 
 // Parse a specification function.
-//     SpecFunction = "define" <SpecFunctionSignature> ( "{" <Sequence> "}" | ";" )
-//                  | "native" "define" <SpecFunctionSignature> ";"
+//     SpecFunction = <SpecFunctionSignature> ( "{" <Sequence> "}" | ";" )
+//                  | ( "native" )? <SpecFunctionSignature> ";"
 //     SpecFunctionSignature =
 //         <Identifier> <OptionalTypeParameters> "(" Comma<Parameter> ")" ":" <Type>
 fn parse_spec_function(context: &mut Context) -> Result<SpecBlockMember, Diagnostic> {
@@ -2850,19 +2850,35 @@ fn parse_spec_function(context: &mut Context) -> Result<SpecBlockMember, Diagnos
         "a function parameter",
     )?;
 
-    // ":" <Type>)
-    consume_token(context.tokens, Tok::Colon)?;
-    let return_type = parse_type(context)?;
+    // (":" <Type>)?
+    let return_type = match consume_optional_token_with_loc(context.tokens, Tok::Colon)? {
+        None => sp(name.loc(), Type_::Unit),
+        Some(_) => parse_type(context)?,
+    };
 
     let body_start_loc = context.tokens.start_loc();
     let no_body = context.tokens.peek() != Tok::LBrace;
-    let (uninterpreted, body_) = if native_opt.is_some() || no_body {
-        consume_token(context.tokens, Tok::Semicolon)?;
-        (native_opt.is_none(), FunctionBody_::Native)
-    } else {
-        consume_token(context.tokens, Tok::LBrace)?;
-        let seq = parse_sequence(context)?;
-        (false, FunctionBody_::Defined(seq))
+    let (uninterpreted, body_) = match (native_opt, no_body) {
+        (None, true) => {
+            // fun foo(); --> uninterpreted spec function
+            consume_token(context.tokens, Tok::Semicolon)?;
+            (true, FunctionBody_::Native)
+        }
+        (None, false) => {
+            // fun foo() { .. } --> defined spec function
+            consume_token(context.tokens, Tok::LBrace)?;
+            let seq = parse_sequence(context)?;
+            (false, FunctionBody_::Defined(seq))
+        }
+        (Some(_), true) => {
+            // native fun foo(); --> native spec function
+            consume_token(context.tokens, Tok::Semicolon)?;
+            (false, FunctionBody_::Native)
+        }
+        (Some(_), false) => {
+            // native fun foo() { .. } --> error
+            return Err(unexpected_token_error(context.tokens, "';'"));
+        }
     };
     let body = spanned(
         context.tokens.file_hash(),

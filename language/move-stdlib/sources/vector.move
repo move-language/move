@@ -77,9 +77,8 @@ module std::vector {
         }
     }
     spec reverse {
-        pragma intrinsic = true;
+        pragma intrinsic = intrinsic_reverse;
     }
-
 
     /// Pushes all of the elements of the `other` vector into the `lhs` vector.
     public fun append<Element>(lhs: &mut vector<Element>, other: vector<Element>) {
@@ -88,16 +87,15 @@ module std::vector {
         destroy_empty(other);
     }
     spec append {
-        pragma intrinsic = true;
+        pragma intrinsic = intrinsic_append;
     }
-    spec is_empty {
-        pragma intrinsic = true;
-    }
-
 
     /// Return `true` if the vector `v` has no elements and `false` otherwise.
     public fun is_empty<Element>(v: &vector<Element>): bool {
         length(v) == 0
+    }
+    spec is_empty {
+        pragma intrinsic = intrinsic_is_empty;
     }
 
     /// Return true if `e` is in the vector `v`.
@@ -112,7 +110,7 @@ module std::vector {
         false
     }
     spec contains {
-        pragma intrinsic = true;
+        pragma intrinsic = intrinsic_contains;
     }
 
     /// Return `(true, i)` if `e` is in the vector `v` at index `i`.
@@ -127,7 +125,7 @@ module std::vector {
         (false, 0)
     }
     spec index_of {
-        pragma intrinsic = true;
+        pragma intrinsic = intrinsic_index_of;
     }
 
     /// Remove the `i`th element of the vector `v`, shifting all subsequent elements.
@@ -143,7 +141,7 @@ module std::vector {
         pop_back(v)
     }
     spec remove {
-        pragma intrinsic = true;
+        pragma intrinsic = intrinsic_remove;
     }
 
     /// Swap the `i`th element of the vector `v` with the last element and then pop the element.
@@ -156,7 +154,7 @@ module std::vector {
         pop_back(v)
     }
     spec swap_remove {
-        pragma intrinsic = true;
+        pragma intrinsic = intrinsic_swap_remove;
     }
 
     // =================================================================
@@ -195,4 +193,16 @@ module std::vector {
         }
     }
 
+    spec module {
+        struct IntrinsicVector<Element> has copy, drop, store :: [ vector<Element> ];
+
+        native fun intrinsic_new<Element>(): IntrinsicVector<Element>;
+        native fun intrinsic_reverse<Element>(v: &mut IntrinsicVector<Element>);
+        native fun intrinsic_append<Element>(lhs: &mut IntrinsicVector<Element>, rhs: IntrinsicVector<Element>);
+        native fun intrinsic_is_empty<Element>(v: &IntrinsicVector<Element>): bool;
+        native fun intrinsic_contains<Element>(v: &IntrinsicVector<Element>, e: &Element): bool;
+        native fun intrinsic_index_of<Element>(v: &IntrinsicVector<Element>, e: &Element): (bool, num);
+        native fun intrinsic_remove<Element>(v: &mut IntrinsicVector<Element>, i: num): Element;
+        native fun intrinsic_swap_remove<Element>(v: &mut IntrinsicVector<Element>, i: num): Element;
+    }
 }

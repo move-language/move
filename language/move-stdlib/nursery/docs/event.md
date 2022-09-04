@@ -96,6 +96,18 @@ A handle for an event such that:
 
 </details>
 
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = IntrinsicEventHandle;
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_event_EventHandleGenerator"></a>
 
 ## Resource `EventHandleGenerator`
@@ -160,6 +172,18 @@ Use EventHandleGenerator to generate a unique event handle for <code>sig</code>
 
 </details>
 
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = intrinsic_new_event_handle;
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_event_emit_event"></a>
 
 ## Function `emit_event`
@@ -186,6 +210,18 @@ Emit an event with payload <code>msg</code> by using <code>handle_ref</code>'s k
 
 </details>
 
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = intrinsic_emit_event;
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_event_guid"></a>
 
 ## Function `guid`
@@ -205,6 +241,18 @@ Return the GUIID associated with this EventHandle
 <pre><code><b>public</b> <b>fun</b> <a href="guid.md#0x1_guid">guid</a>&lt;T: drop + store&gt;(handle_ref: &<a href="event.md#0x1_event_EventHandle">EventHandle</a>&lt;T&gt;): &GUID {
     &handle_ref.<a href="guid.md#0x1_guid">guid</a>.<a href="guid.md#0x1_guid">guid</a>
 }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = intrinsic_guid;
 </code></pre>
 
 
@@ -259,18 +307,22 @@ Destroy a unique handle.
 
 </details>
 
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = intrinsic_destroy_handle;
+</code></pre>
+
+
+
+</details>
+
 <a name="@Module_Specification_0"></a>
 
 ## Module Specification
 
-
-
-Functions of the event module are mocked out using the intrinsic
-pragma. They are implemented in the prover's prelude.
-
-
-<pre><code><b>pragma</b> intrinsic = <b>true</b>;
-</code></pre>
 
 
 Determines equality between the guids of two event handles. Since fields of intrinsic
@@ -285,4 +337,18 @@ structs cannot be accessed, this function is provided.
     // representation does not have the `counter` field.
     h1 == h2
 }
+</code></pre>
+
+
+
+
+<pre><code><b>struct</b> IntrinsicEventHandle&lt;T: drop + store&gt; <b>has</b> store;
+<a name="0x1_event_intrinsic_new_event_handle"></a>
+<b>native</b> <b>fun</b> <a href="event.md#0x1_event_intrinsic_new_event_handle">intrinsic_new_event_handle</a>&lt;T: drop + store&gt;(account: &<a href="">signer</a>): IntrinsicEventHandle&lt;T&gt;;
+<a name="0x1_event_intrinsic_emit_event"></a>
+<b>native</b> <b>fun</b> <a href="event.md#0x1_event_intrinsic_emit_event">intrinsic_emit_event</a>&lt;T: drop + store&gt;(handle_ref: &<b>mut</b> IntrinsicEventHandle&lt;T&gt;, msg: T);
+<a name="0x1_event_intrinsic_guid"></a>
+<b>native</b> <b>fun</b> <a href="event.md#0x1_event_intrinsic_guid">intrinsic_guid</a>&lt;T: drop + store&gt;(handle_ref: &IntrinsicEventHandle&lt;T&gt;): &GUID;
+<a name="0x1_event_intrinsic_destroy_handle"></a>
+<b>native</b> <b>fun</b> <a href="event.md#0x1_event_intrinsic_destroy_handle">intrinsic_destroy_handle</a>&lt;T: drop + store&gt;(handle_ref: IntrinsicEventHandle&lt;T&gt;);
 </code></pre>

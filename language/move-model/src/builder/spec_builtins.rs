@@ -4,13 +4,15 @@
 
 //! Defines builtin functions for specifications, adding them to the build
 
+use num::BigInt;
+
+use move_compiler::parser::ast as PA;
+
 use crate::{
     ast::{Operation, TraceKind, Value},
     builder::model_builder::{ConstEntry, ModelBuilder, SpecFunEntry},
     ty::{PrimitiveType, Type},
 };
-use move_compiler::parser::ast::{self as PA};
-use num::BigInt;
 
 /// Declares builtins in the build. This adds functions and operators
 /// to the build which will be treated the same as user defined specification functions.
@@ -274,9 +276,9 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
                 result_type: param_t.clone(),
             },
         );
-        // TODO(emmazzz): declaring these as builtins will allow users to
-        // use borrow_global and borrow_global_mut in specs. Later we should
-        // map them to `global` instead.
+        // Despite the fact that we have `global` in spec language, declaring these as builtins will
+        // allow `borrow_global` and `borrow_global_mut` to be considered as "pure" operations and
+        // the enclosing Move function as pure functions (modulo other impure operations).
         trans.define_spec_fun(
             trans.builtin_qualified_symbol("borrow_global"),
             SpecFunEntry {

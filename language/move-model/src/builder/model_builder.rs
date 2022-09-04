@@ -20,8 +20,8 @@ use crate::{
     ast::{Attribute, ModuleName, Operation, QualifiedSymbol, Spec, Value},
     builder::spec_builtins,
     model::{
-        AbilityConstraint, AbilitySet, FunId, FunctionVisibility, GlobalEnv, IntrinsicTypeId, Loc,
-        ModuleId, QualifiedId, SpecFunId, SpecVarId, StructId,
+        AbilityConstraint, AbilitySet, FunId, FunctionVisibility, GlobalEnv, Loc, ModuleId,
+        QualifiedId, SpecFunId, SpecVarId, StructId,
     },
     project_2nd,
     symbol::Symbol,
@@ -50,13 +50,17 @@ pub(crate) struct ModelBuilder<'env> {
     pub unused_schema_set: BTreeSet<QualifiedSymbol>,
     /// A symbol table for structs.
     pub struct_table: BTreeMap<QualifiedSymbol, StructEntry>,
-    /// A reverse mapping from ModuleId/StructId pairs to QualifiedSymbol. This
-    /// is used for visualization of types in error messages.
+    /// A reverse mapping from ModuleId/StructId pairs to QualifiedSymbol, including spec structs.
+    /// This is used for visualization of types in error messages.
     pub reverse_struct_table: BTreeMap<(ModuleId, StructId), QualifiedSymbol>,
     /// A symbol table for functions.
     pub fun_table: BTreeMap<QualifiedSymbol, FunEntry>,
     /// A symbol table for constants.
     pub const_table: BTreeMap<QualifiedSymbol, ConstEntry>,
+    /// A mapping from intrinsic type to the Move types it can concretize to
+    pub intrinsic_types: BTreeMap<QualifiedId<StructId>, BTreeSet<QualifiedId<StructId>>>,
+    /// A mapping from intrinsic functions to the Move functions it can concretize to
+    pub intrinsic_funs: BTreeMap<QualifiedId<SpecFunId>, BTreeSet<QualifiedId<FunId>>>,
     /// A call graph mapping callers to callees that are Move functions.
     pub move_fun_call_graph: BTreeMap<QualifiedId<SpecFunId>, BTreeSet<QualifiedId<SpecFunId>>>,
 }
@@ -65,13 +69,10 @@ pub(crate) struct ModelBuilder<'env> {
 #[derive(Debug, Clone)]
 pub(crate) struct SpecStructEntry {
     pub loc: Loc,
-    #[allow(dead_code)]
     pub module_id: ModuleId,
-    #[allow(dead_code)]
-    pub struct_id: IntrinsicTypeId,
+    pub struct_id: StructId,
     pub type_params: Vec<(Symbol, AbilityConstraint)>,
     pub abilities: AbilitySet,
-    #[allow(dead_code)]
     pub modeled_types: Vec<Type>,
 }
 
@@ -121,7 +122,6 @@ pub(crate) struct StructEntry {
     pub loc: Loc,
     pub module_id: ModuleId,
     pub struct_id: StructId,
-    #[allow(dead_code)]
     pub is_resource: bool,
     pub type_params: Vec<(Symbol, Type)>,
     pub fields: Option<BTreeMap<Symbol, (usize, Type)>>,
@@ -165,6 +165,8 @@ impl<'env> ModelBuilder<'env> {
             reverse_struct_table: BTreeMap::new(),
             fun_table: BTreeMap::new(),
             const_table: BTreeMap::new(),
+            intrinsic_types: BTreeMap::new(),
+            intrinsic_funs: BTreeMap::new(),
             move_fun_call_graph: BTreeMap::new(),
         };
         spec_builtins::declare_spec_builtins(&mut translator);
@@ -192,8 +194,13 @@ impl<'env> ModelBuilder<'env> {
             let ident = name.display(self.env.symbol_pool());
             self.error(&entry.loc, &format!("duplicate declaration of `{}`", ident));
             self.error(&old.loc, &format!("previous declaration of `{}`", ident));
+        } else {
+            let module_id = entry.module_id;
+            let struct_id = entry.struct_id;
+            self.reverse_struct_table
+                .insert((module_id, struct_id), name.clone());
+            self.spec_struct_table.insert(name, entry);
         }
-        self.spec_struct_table.insert(name, entry);
     }
 
     /// Defines a spec function, adding it to the spec fun table.
@@ -339,8 +346,20 @@ impl<'env> ModelBuilder<'env> {
     pub fn lookup_type(&self, loc: &Loc, name: &QualifiedSymbol) -> Type {
         self.struct_table
             .get(name)
-            .cloned()
             .map(|e| Type::Struct(e.module_id, e.struct_id, project_2nd(&e.type_params)))
+            .or_else(|| {
+                self.spec_struct_table.get(name).map(|e| {
+                    Type::Struct(
+                        e.module_id,
+                        e.struct_id,
+                        e.type_params
+                            .iter()
+                            .enumerate()
+                            .map(|(i, _)| Type::TypeParameter(i as u16))
+                            .collect(),
+                    )
+                })
+            })
             .unwrap_or_else(|| {
                 self.error(
                     loc,

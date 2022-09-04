@@ -1,0 +1,71 @@
+error: undeclared `0x1::intrinsics::Num`
+  ┌─ tests/sources/pragma_intrinsic_err.move:9:55
+  │
+9 │         native fun vec_transfer<E>(v: &mut Vec<E>, n: Num): Vec<E>;
+  │                                                       ^^^
+
+error: invalid intrinsic declaration
+   ┌─ tests/sources/pragma_intrinsic_err.move:17:9
+   │
+17 │         pragma intrinsic = true;
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: no such intrinsic type: intrinsics::S
+   ┌─ tests/sources/pragma_intrinsic_err.move:23:9
+   │
+23 │         pragma intrinsic = 0x1::intrinsics::S;
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: number of type parameters mismatch
+   ┌─ tests/sources/pragma_intrinsic_err.move:30:9
+   │
+30 │         pragma intrinsic = Vec;
+   │         ^^^^^^^^^^^^^^^^^^^^^^^
+   │
+   = the intrinsic type has 1 type parameters
+   = the struct declaration has 2 type parameters
+
+error: number of type parameters mismatch
+   ┌─ tests/sources/pragma_intrinsic_err.move:37:9
+   │
+37 │         pragma intrinsic = intrinsics::Map;
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │
+   = the intrinsic type has 2 type parameters
+   = the struct declaration has 1 type parameters
+
+error: ability modifiers mismatch
+   ┌─ tests/sources/pragma_intrinsic_err.move:43:9
+   │
+43 │         pragma intrinsic = 0x1::intrinsics::Event;
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: no matching intrinsic function found for `intrinsics::vec_transfer`
+   ┌─ tests/sources/pragma_intrinsic_err.move:55:9
+   │
+55 │         pragma intrinsic = 0x1::intrinsics::vec_transfer;
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: no matching intrinsic function found for `intrinsics::vec_transfer`
+   ┌─ tests/sources/pragma_intrinsic_err.move:61:9
+   │
+61 │         pragma intrinsic = 0x1::intrinsics::vec_transfer;
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: no matching intrinsic function found for `intrinsics::vec_transfer`
+   ┌─ tests/sources/pragma_intrinsic_err.move:67:9
+   │
+67 │         pragma intrinsic = 0x1::intrinsics::vec_transfer;
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: no matching intrinsic function found for `intrinsics::vec_transfer`
+   ┌─ tests/sources/pragma_intrinsic_err.move:73:9
+   │
+73 │         pragma intrinsic = 0x1::intrinsics::vec_transfer;
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: no matching intrinsic function found for `intrinsics::vec_transfer`
+   ┌─ tests/sources/pragma_intrinsic_err.move:79:9
+   │
+79 │         pragma intrinsic = 0x1::intrinsics::vec_transfer;
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

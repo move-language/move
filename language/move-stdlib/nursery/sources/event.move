@@ -74,9 +74,6 @@ module std::event {
     spec module {} // switch documentation context to module
 
     spec module {
-        /// Event handle is an intrinsic type
-        struct Handle<T: drop + store> has store;
-
         /// Determines equality between the guids of two event handles. Since fields of intrinsic
         /// structs cannot be accessed, this function is provided.
         fun spec_guid_eq<T>(h1: EventHandle<T>, h2: EventHandle<T>): bool {
@@ -86,23 +83,33 @@ module std::event {
         }
     }
 
+    // intrinsic declarations
+    spec module {
+        struct IntrinsicEventHandle<T: drop + store> has store;
+
+        native fun intrinsic_new_event_handle<T: drop + store>(account: &signer): IntrinsicEventHandle<T>;
+        native fun intrinsic_emit_event<T: drop + store>(handle_ref: &mut IntrinsicEventHandle<T>, msg: T);
+        native fun intrinsic_guid<T: drop + store>(handle_ref: &IntrinsicEventHandle<T>): &GUID;
+        native fun intrinsic_destroy_handle<T: drop + store>(handle_ref: IntrinsicEventHandle<T>);
+    }
+
     spec EventHandle {
-        pragma intrinsic = Handle;
+        pragma intrinsic = IntrinsicEventHandle;
     }
 
     spec new_event_handle {
-        pragma intrinsic;
+        pragma intrinsic = intrinsic_new_event_handle;
     }
 
     spec emit_event {
-        pragma intrinsic;
+        pragma intrinsic = intrinsic_emit_event;
     }
 
     spec guid {
-        pragma intrinsic;
+        pragma intrinsic = intrinsic_guid;
     }
 
     spec destroy_handle {
-        pragma intrinsic;
+        pragma intrinsic = intrinsic_destroy_handle;
     }
 }

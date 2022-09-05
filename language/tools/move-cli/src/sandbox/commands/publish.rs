@@ -10,11 +10,11 @@ use crate::{
     NativeFunctionRecord,
 };
 use anyhow::{bail, Result};
+use move_binary_format::errors::Location;
 use move_command_line_common::env::get_bytecode_version_from_env;
 use move_package::compilation::compiled_package::CompiledPackage;
 use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::gas_schedule::CostTable;
-use move_binary_format::errors::Location;
 use std::collections::BTreeMap;
 
 pub fn publish(
@@ -119,7 +119,10 @@ pub fn publish(
                         println!("Invalid multi-module publishing: {}", err);
                         if let Location::Module(module_id) = err.location() {
                             // find the module where error occures and explain
-                            if let Some(unit) = modules_to_publish.into_iter().find(|&x| x.unit.name().as_str() == module_id.name().as_str()) {
+                            if let Some(unit) = modules_to_publish
+                                .into_iter()
+                                .find(|&x| x.unit.name().as_str() == module_id.name().as_str())
+                            {
                                 explain_publish_error(err, state, unit)?
                             }
                         }

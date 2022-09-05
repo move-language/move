@@ -1843,7 +1843,7 @@ impl Script {
         let type_parameters = script.type_parameters.clone();
         // TODO: main does not have a name. Revisit.
         let name = Identifier::new("main").unwrap();
-        let native = None; // Script entries cannot be native
+        let (native, def_is_native) = (None, false); // Script entries cannot be native
         let main: Arc<Function> = Arc::new(Function {
             file_format_version: script.version(),
             index: FunctionDefinitionIndex(0),
@@ -1853,6 +1853,7 @@ impl Script {
             locals,
             type_parameters,
             native,
+            def_is_native,
             scope,
             name,
         });
@@ -1944,6 +1945,7 @@ pub(crate) struct Function {
     locals: Signature,
     type_parameters: Vec<AbilitySet>,
     native: Option<NativeFunction>,
+    def_is_native: bool,
     scope: Scope,
     name: Identifier,
 }
@@ -1958,14 +1960,17 @@ impl Function {
         let handle = module.function_handle_at(def.function);
         let name = module.identifier_at(handle.name).to_owned();
         let module_id = module.self_id();
-        let native = if def.is_native() {
-            natives.resolve(
-                module_id.address(),
-                module_id.name().as_str(),
-                name.as_str(),
+        let (native, def_is_native) = if def.is_native() {
+            (
+                natives.resolve(
+                    module_id.address(),
+                    module_id.name().as_str(),
+                    name.as_str(),
+                ),
+                true,
             )
         } else {
-            None
+            (None, false)
         };
         let scope = Scope::Module(module_id);
         let parameters = module.signature_at(handle.parameters).clone();
@@ -1995,6 +2000,7 @@ impl Function {
             locals,
             type_parameters,
             native,
+            def_is_native,
             scope,
             name,
         }
@@ -2067,7 +2073,7 @@ impl Function {
     }
 
     pub(crate) fn is_native(&self) -> bool {
-        self.native.is_some()
+        self.def_is_native
     }
 
     pub(crate) fn get_native(&self) -> PartialVMResult<&UnboxedNativeFunction> {

@@ -124,6 +124,8 @@ pub fn publish(
                                 .find(|&x| x.unit.name().as_str() == module_id.name().as_str())
                             {
                                 explain_publish_error(err, state, unit)?
+                            } else {
+                                println!("Unable to locate the module in the multi-module publishing error");
                             }
                         }
                         has_error = true;

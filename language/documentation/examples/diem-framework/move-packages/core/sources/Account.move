@@ -228,4 +228,13 @@ module CoreFramework::Account {
         epilogue(account, witness);
         if (should_trigger_reconfiguration) DiemConfig::reconfigure();
     }
+
+    /// # intrinsics
+
+    spec module {
+        native fun intrinsic_create_signer(addr: address): signer;
+    }
+    spec create_signer {
+        pragma intrinsic = intrinsic_create_signer;
+    }
 }

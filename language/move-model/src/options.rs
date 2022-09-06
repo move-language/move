@@ -18,6 +18,9 @@ pub struct ModelBuilderOptions {
     /// as long as the function spec has no property marked as `[concrete]` or `[abstract]`.
     pub ignore_pragma_opaque_when_possible: bool,
 
+    /// Check whether the declaration of intrinsics are complete w.r.t native Move functions.
+    pub check_intrinsic_decl_completeness: bool,
+
     /// List of simplification passes and the order each pass to be executed
     pub simplification_pipeline: Vec<SimplificationPass>,
 }

@@ -21,4 +21,17 @@ module DiemFramework::Signature {
         public_key: vector<u8>,
         message: vector<u8>
     ): bool;
+
+    spec module {
+        native fun intrinsic_validate_pubkey(public_key: vector<u8>): bool;
+        native fun intrinsic_verify(signature: vector<u8>, public_key: vector<u8>, message: vector<u8>): bool;
+    }
+
+    spec ed25519_validate_pubkey {
+        pragma intrinsic = intrinsic_validate_pubkey;
+    }
+
+    spec ed25519_verify {
+        pragma intrinsic = intrinsic_verify;
+    }
 }

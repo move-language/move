@@ -592,6 +592,10 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<AnnotatedCompiledUnit>, mut 
     // After all specs have been processed, warn about any unused schemas.
     builder.warn_unused_schemas();
 
+    // Populate model-level information to the `env` after all module-level information is ready.
+    // This function also performs checks with everything in the env.
+    builder.populate_env();
+
     // Apply simplification passes
     run_spec_simplifier(env);
 }

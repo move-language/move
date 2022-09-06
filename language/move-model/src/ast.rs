@@ -45,6 +45,14 @@ pub struct SpecVarDecl {
 }
 
 #[derive(Clone, Debug)]
+pub struct SpecStructDecl {
+    pub loc: Loc,
+    pub name: Symbol,
+    pub type_params: Vec<(Symbol, Type)>,
+    pub modeled_types: Vec<Type>,
+}
+
+#[derive(Clone, Debug)]
 pub struct SpecFunDecl {
     pub loc: Loc,
     pub name: Symbol,

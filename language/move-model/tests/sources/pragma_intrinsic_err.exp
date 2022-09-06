@@ -69,3 +69,41 @@ error: no matching intrinsic function found for `intrinsics::vec_transfer`
    │
 79 │         pragma intrinsic = 0x1::intrinsics::vec_transfer;
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: Intrinsic declaration must refers to an intrinsic function
+   ┌─ tests/sources/pragma_intrinsic_err.move:82:5
+   │
+82 │     native fun my_vec_transfer6<E>(v: &MyVecOk<E>): &mut vector<E>;
+   │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   ·
+85 │         fun vec_transfer_uninterp<E>(v: &MyVecOk<E>): &mut vector<E>;
+   │         ------------------------------------------------------------- This is not an intrinsic function
+
+error: Intrinsic declaration must refers to an intrinsic function
+   ┌─ tests/sources/pragma_intrinsic_err.move:92:5
+   │
+92 │       native fun my_vec_transfer7<E>(v: &MyVecOk<E>): u64;
+   │       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   ·
+95 │ ╭         fun vec_transfer_defined<E>(v: &MyVecOk<E>): u64 {
+96 │ │             0
+97 │ │         }
+   │ ╰─────────' This is not an intrinsic function
+
+error: This native Move function can be externally reached but does not have an intrinsic counterpart
+    ┌─ tests/sources/pragma_intrinsic_err.move:108:5
+    │
+108 │     native fun no_intrinsic_internal();
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: This native Move function can be externally reached but does not have an intrinsic counterpart
+    ┌─ tests/sources/pragma_intrinsic_err.move:114:5
+    │
+114 │     native fun no_intrinsic_internal_recursive();
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: This native Move function has unknown callers but does not have an intrinsic counterpart
+    ┌─ tests/sources/pragma_intrinsic_err.move:105:5
+    │
+105 │     native public fun no_intrinsic_public();
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

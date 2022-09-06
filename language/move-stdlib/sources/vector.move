@@ -16,39 +16,63 @@ module std::vector {
     #[bytecode_instruction]
     /// Create an empty vector.
     native public fun empty<Element>(): vector<Element>;
+    spec empty {
+        pragma intrinsic = intrinsic_new;
+    }
 
     #[bytecode_instruction]
     /// Return the length of the vector.
     native public fun length<Element>(v: &vector<Element>): u64;
+    spec length {
+        pragma intrinsic = intrinsic_len;
+    }
 
     #[bytecode_instruction]
     /// Acquire an immutable reference to the `i`th element of the vector `v`.
     /// Aborts if `i` is out of bounds.
     native public fun borrow<Element>(v: &vector<Element>, i: u64): &Element;
+    spec borrow {
+        pragma intrinsic = intrinsic_borrow;
+    }
 
     #[bytecode_instruction]
     /// Add element `e` to the end of the vector `v`.
     native public fun push_back<Element>(v: &mut vector<Element>, e: Element);
+    spec push_back {
+        pragma intrinsic = intrinsic_push_back;
+    }
 
     #[bytecode_instruction]
     /// Return a mutable reference to the `i`th element in the vector `v`.
     /// Aborts if `i` is out of bounds.
     native public fun borrow_mut<Element>(v: &mut vector<Element>, i: u64): &mut Element;
+    spec borrow_mut {
+        pragma intrinsic = intrinsic_borrow_mut;
+    }
 
     #[bytecode_instruction]
     /// Pop an element from the end of vector `v`.
     /// Aborts if `v` is empty.
     native public fun pop_back<Element>(v: &mut vector<Element>): Element;
+    spec pop_back {
+        pragma intrinsic = intrinsic_pop_back;
+    }
 
     #[bytecode_instruction]
     /// Destroy the vector `v`.
     /// Aborts if `v` is not empty.
     native public fun destroy_empty<Element>(v: vector<Element>);
+    spec destroy_empty {
+        pragma intrinsic = intrinsic_destroy_empty;
+    }
 
     #[bytecode_instruction]
     /// Swaps the elements at the `i`th and `j`th indices in the vector `v`.
     /// Aborts if `i` or `j` is out of bounds.
     native public fun swap<Element>(v: &mut vector<Element>, i: u64, j: u64);
+    spec swap {
+        pragma intrinsic = intrinsic_swap;
+    }
 
     /// Return an vector of size one containing element `e`.
     public fun singleton<Element>(e: Element): vector<Element> {
@@ -197,6 +221,14 @@ module std::vector {
         struct IntrinsicVector<Element> has copy, drop, store :: [ vector<Element> ];
 
         native fun intrinsic_new<Element>(): IntrinsicVector<Element>;
+        native fun intrinsic_len<Element>(v: &IntrinsicVector<Element>): num;
+        native fun intrinsic_borrow<Element>(v: &IntrinsicVector<Element>, i: num): &Element;
+        native fun intrinsic_borrow_mut<Element>(v: &mut IntrinsicVector<Element>, i: num): &mut Element;
+        native fun intrinsic_push_back<Element>(v: &mut IntrinsicVector<Element>, e: Element);
+        native fun intrinsic_pop_back<Element>(v: &mut IntrinsicVector<Element>): Element;
+        native fun intrinsic_swap<Element>(v: &mut IntrinsicVector<Element>, i: num, j: num);
+        native fun intrinsic_destroy_empty<Element>(v: IntrinsicVector<Element>);
+
         native fun intrinsic_reverse<Element>(v: &mut IntrinsicVector<Element>);
         native fun intrinsic_append<Element>(lhs: &mut IntrinsicVector<Element>, rhs: IntrinsicVector<Element>);
         native fun intrinsic_is_empty<Element>(v: &IntrinsicVector<Element>): bool;

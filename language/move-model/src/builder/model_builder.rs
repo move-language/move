@@ -21,11 +21,12 @@ use crate::{
     builder::spec_builtins,
     model::{
         AbilityConstraint, AbilitySet, FunId, FunctionVisibility, GlobalEnv, Loc, ModuleId,
-        QualifiedId, SpecFunId, SpecVarId, StructId,
+        QualifiedId, SpecFunId, SpecStructId, SpecVarId, StructId,
     },
     project_2nd,
     symbol::Symbol,
     ty::Type,
+    ModelBuilderOptions,
 };
 
 /// A builder is used to enter a sequence of modules in acyclic dependency order into the model. The
@@ -58,7 +59,7 @@ pub(crate) struct ModelBuilder<'env> {
     /// A symbol table for constants.
     pub const_table: BTreeMap<QualifiedSymbol, ConstEntry>,
     /// A mapping from intrinsic type to the Move types it can concretize to
-    pub intrinsic_types: BTreeMap<QualifiedId<StructId>, BTreeSet<QualifiedId<StructId>>>,
+    pub intrinsic_types: BTreeMap<QualifiedId<SpecStructId>, BTreeSet<QualifiedId<StructId>>>,
     /// A mapping from intrinsic functions to the Move functions it can concretize to
     pub intrinsic_funs: BTreeMap<QualifiedId<SpecFunId>, BTreeSet<QualifiedId<FunId>>>,
     /// A call graph mapping callers to callees that are Move functions.
@@ -69,8 +70,9 @@ pub(crate) struct ModelBuilder<'env> {
 #[derive(Debug, Clone)]
 pub(crate) struct SpecStructEntry {
     pub loc: Loc,
+    pub name: Symbol,
     pub module_id: ModuleId,
-    pub struct_id: StructId,
+    pub struct_id: SpecStructId,
     pub type_params: Vec<(Symbol, AbilityConstraint)>,
     pub abilities: AbilitySet,
     pub modeled_types: Vec<Type>,
@@ -196,7 +198,7 @@ impl<'env> ModelBuilder<'env> {
             self.error(&old.loc, &format!("previous declaration of `{}`", ident));
         } else {
             let module_id = entry.module_id;
-            let struct_id = entry.struct_id;
+            let struct_id = StructId::new(name.symbol);
             self.reverse_struct_table
                 .insert((module_id, struct_id), name.clone());
             self.spec_struct_table.insert(name, entry);
@@ -351,7 +353,7 @@ impl<'env> ModelBuilder<'env> {
                 self.spec_struct_table.get(name).map(|e| {
                     Type::Struct(
                         e.module_id,
-                        e.struct_id,
+                        StructId::new(e.name),
                         e.type_params
                             .iter()
                             .enumerate()
@@ -456,6 +458,30 @@ impl<'env> ModelBuilder<'env> {
                     self.propagate_move_fun_usage(*n);
                 }
             });
+        }
+    }
+
+    /// Populate model-level information to env (after all module-level information is ready).
+    pub fn populate_env(&mut self) {
+        // populate existing intrinsic info
+        for (intrinsic_id, mappings) in &self.intrinsic_types {
+            for item in mappings {
+                self.env.register_intrinsic_type(*item, *intrinsic_id);
+            }
+        }
+        for (intrinsic_id, mappings) in &self.intrinsic_funs {
+            for item in mappings {
+                self.env.register_intrinsic_fun(*item, *intrinsic_id);
+            }
+        }
+
+        // check for potential missing declarations of intrinsics
+        let options = self
+            .env
+            .get_extension::<ModelBuilderOptions>()
+            .unwrap_or_default();
+        if options.check_intrinsic_decl_completeness {
+            self.env.check_intrinsic_decl_completeness();
         }
     }
 }

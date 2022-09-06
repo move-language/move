@@ -22,6 +22,7 @@ The <code><a href="string.md#0x1_string">string</a></code> module defines the <c
 -  [Function `internal_is_char_boundary`](#0x1_string_internal_is_char_boundary)
 -  [Function `internal_sub_string`](#0x1_string_internal_sub_string)
 -  [Function `internal_index_of`](#0x1_string_internal_index_of)
+-  [Module Specification](#@Module_Specification_1)
 
 
 <pre><code><b>use</b> <a href="option.md#0x1_option">0x1::option</a>;
@@ -376,6 +377,18 @@ Computes the index of the first occurrence of a string. Returns <code><a href="s
 
 </details>
 
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = intrinsic_check_utf8;
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_string_internal_is_char_boundary"></a>
 
 ## Function `internal_is_char_boundary`
@@ -392,6 +405,18 @@ Computes the index of the first occurrence of a string. Returns <code><a href="s
 
 
 <pre><code><b>native</b> <b>fun</b> <a href="string.md#0x1_string_internal_is_char_boundary">internal_is_char_boundary</a>(v: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;, i: u64): bool;
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = intrinsic_is_char_boundary;
 </code></pre>
 
 
@@ -420,6 +445,18 @@ Computes the index of the first occurrence of a string. Returns <code><a href="s
 
 </details>
 
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = intrinsic_sub_string;
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_string_internal_index_of"></a>
 
 ## Function `internal_index_of`
@@ -441,6 +478,36 @@ Computes the index of the first occurrence of a string. Returns <code><a href="s
 
 
 </details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = intrinsic_index_of;
+</code></pre>
+
+
+
+</details>
+
+<a name="@Module_Specification_1"></a>
+
+## Module Specification
+
+
+
+<a name="0x1_string_intrinsic_check_utf8"></a>
+
+
+<pre><code><b>native</b> <b>fun</b> <a href="string.md#0x1_string_intrinsic_check_utf8">intrinsic_check_utf8</a>(v: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;): bool;
+<a name="0x1_string_intrinsic_is_char_boundary"></a>
+<b>native</b> <b>fun</b> <a href="string.md#0x1_string_intrinsic_is_char_boundary">intrinsic_is_char_boundary</a>(v: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;, i: u64): bool;
+<a name="0x1_string_intrinsic_sub_string"></a>
+<b>native</b> <b>fun</b> <a href="string.md#0x1_string_intrinsic_sub_string">intrinsic_sub_string</a>(v: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;, i: u64, j: u64): <a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;;
+<a name="0x1_string_intrinsic_index_of"></a>
+<b>native</b> <b>fun</b> <a href="string.md#0x1_string_intrinsic_index_of">intrinsic_index_of</a>(v: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;, r: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;): u64;
+</code></pre>
 
 
 [//]: # ("File containing references which can be used from documentation")

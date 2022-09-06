@@ -18,4 +18,11 @@ module std::signer {
 
     /// Return true only if `a` is a transaction signer address. This is a spec function only available in spec.
     spec native fun is_txn_signer_addr(a: address): bool;
+
+    /// The intrinsic version of borrow_address
+    spec native fun intrinsic_borrow_address(s: &signer): &address;
+
+    spec borrow_address {
+        pragma intrinsic = intrinsic_borrow_address;
+    }
 }

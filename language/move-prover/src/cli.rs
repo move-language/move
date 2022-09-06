@@ -14,16 +14,16 @@ use std::{
 
 use anyhow::anyhow;
 use clap::{Arg, Command};
+use codespan_reporting::diagnostic::Severity;
 use log::LevelFilter;
-use move_compiler::shared::NumericalAddress;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use simplelog::{
     CombinedLogger, Config, ConfigBuilder, LevelPadding, SimpleLogger, TermLogger, TerminalMode,
 };
 
-use codespan_reporting::diagnostic::Severity;
 use move_abigen::AbigenOptions;
+use move_compiler::shared::NumericalAddress;
 use move_docgen::DocgenOptions;
 use move_errmapgen::ErrmapOptions;
 use move_model::{
@@ -272,6 +272,12 @@ impl Options {
                     .long("ignore-pragma-opaque-internal-only")
                     .help("Ignore the \"opaque\" pragma on specs of \
                     internal functions when possible"),
+            )
+            .arg(
+                Arg::new("check-intrinsic-decl-complete")
+                    .long("check-intrinsic-decl-complete")
+                    .help("Check whether the declaration of intrinsics are \
+                    complete w.r.t native Move functions."),
             )
             .arg(
                 Arg::new("simplification-pipeline")
@@ -656,6 +662,9 @@ impl Options {
         }
         if matches.is_present("ignore-pragma-opaque-internal-only") {
             options.model_builder.ignore_pragma_opaque_internal_only = true;
+        }
+        if matches.is_present("check-intrinsic-decl-complete") {
+            options.model_builder.check_intrinsic_decl_completeness = true;
         }
         if matches.occurrences_of("simplification-pipeline") > 0 {
             for name in get_vec("simplification-pipeline") {

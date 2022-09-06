@@ -2334,6 +2334,15 @@ module DiemFramework::DiemAccount {
     // ****************** Module Specifications *******************
     spec module {} // switch documentation context back to module level
 
+    /// # Intrinsics
+
+    spec module {
+        native fun intrinsic_create_signer(addr: address): signer;
+    }
+    spec create_signer {
+        pragma intrinsic = intrinsic_create_signer;
+    }
+
     /// # Access Control
 
     /// ## Key Rotation Capability
@@ -2552,7 +2561,7 @@ module DiemFramework::DiemAccount {
             option::borrow(spec_get_key_rotation_cap_field(addr))
         }
 
-        // Returns if the account holds KeyRotationCapability.
+        /// Returns if the account holds KeyRotationCapability.
         fun spec_has_key_rotation_cap(addr: address): bool {
             option::is_some(spec_get_key_rotation_cap_field(addr))
         }

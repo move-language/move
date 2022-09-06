@@ -31,7 +31,7 @@ use crate::{
     ast::{
         Attribute, AttributeValue, Condition, ConditionKind, Exp, ExpData, GlobalInvariant,
         ModuleName, Operation, PropertyBag, PropertyValue, QualifiedSymbol, Spec, SpecBlockInfo,
-        SpecBlockTarget, SpecFunDecl, SpecVarDecl, Value,
+        SpecBlockTarget, SpecFunDecl, SpecStructDecl, SpecVarDecl, Value,
     },
     builder::{
         exp_translator::ExpTranslator,
@@ -41,7 +41,7 @@ use crate::{
     model::{
         AbilityConstraint, FieldId, FunId, FunctionData, FunctionVisibility, Loc, ModuleId,
         MoveIrLoc, NamedConstantData, NamedConstantId, NodeId, QualifiedId, QualifiedInstId,
-        SchemaId, SpecFunId, SpecVarId, StructData, StructId, TypeParameter,
+        SchemaId, SpecFunId, SpecStructId, SpecVarId, StructData, StructId, TypeParameter,
         SCRIPT_BYTECODE_FUN_NAME,
     },
     options::ModelBuilderOptions,
@@ -63,10 +63,11 @@ pub(crate) struct ModuleBuilder<'env, 'translator> {
     pub module_id: ModuleId,
     /// Name of the currently build module.
     pub module_name: ModuleName,
+    /// Translated specification structs.
+    pub spec_structs: Vec<SpecStructDecl>,
     /// Translated specification functions.
     pub spec_funs: Vec<SpecFunDecl>,
-    /// During the definition analysis, the index into `spec_funs` we are currently
-    /// handling
+    /// During the definition analysis, the index into `spec_funs` we are currently handling
     pub spec_fun_index: usize,
     /// Translated specification variables.
     pub spec_vars: Vec<SpecVarDecl>,
@@ -120,6 +121,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             parent,
             module_id,
             module_name,
+            spec_structs: vec![],
             spec_funs: vec![],
             spec_fun_index: 0,
             spec_vars: vec![],
@@ -484,8 +486,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 uninterpreted,
                 name,
                 signature,
-                ..
-            } => self.decl_ana_spec_fun(&loc, *uninterpreted, name, signature),
+                body,
+            } => self.decl_ana_spec_fun(&loc, *uninterpreted, name, signature, body),
             Variable {
                 is_global: true,
                 name,
@@ -538,11 +540,11 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         }
 
         let qsym = self.qualified_by_module_from_name(&name.0);
-        let struct_id = StructId::new(qsym.symbol);
+        let name_symbol = qsym.symbol;
 
         // first add type parameters into the context
         let mut et = ExpTranslator::new(self);
-        let type_params = et
+        let type_params: Vec<_> = et
             .analyze_and_add_type_params(type_parameters.iter().map(|(param_name, _)| param_name))
             .into_iter()
             .map(|(symbol, _)| symbol)
@@ -552,13 +554,18 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     .map(|(_, abs)| AbilityConstraint(translate_ability_set(abs))),
             )
             .collect();
+        let type_params_for_spec_decl: Vec<_> = type_params
+            .iter()
+            .enumerate()
+            .map(|(i, (symbol, _))| (*symbol, Type::TypeParameter(i as u16)))
+            .collect();
 
         // analyze the modeled types
         let translated_types: Vec<_> = modeled_types
             .iter()
             .map(|t| (t.loc, et.translate_type(t)))
             .collect();
-        let modeling = translated_types
+        let modeling: Vec<_> = translated_types
             .into_iter()
             .map(|(loc, t)| {
                 if can_be_modeled(&t) {
@@ -577,13 +584,21 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             qsym,
             SpecStructEntry {
                 loc: loc.clone(),
+                name: name_symbol,
                 module_id: self.module_id,
-                struct_id,
+                struct_id: SpecStructId::new(self.spec_structs.len()),
                 type_params,
                 abilities: translate_ability_set(abilities),
-                modeled_types: modeling,
+                modeled_types: modeling.clone(),
             },
         );
+        let struct_decl = SpecStructDecl {
+            loc: loc.clone(),
+            name: name_symbol,
+            type_params: type_params_for_spec_decl,
+            modeled_types: modeling,
+        };
+        self.spec_structs.push(struct_decl);
     }
 
     fn decl_ana_spec_fun(
@@ -592,6 +607,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         uninterpreted: bool,
         name: &PA::FunctionName,
         signature: &EA::FunctionSignature,
+        body: &EA::FunctionBody,
     ) {
         let name = self.symbol_pool().make(&name.0.value);
         let (type_params, params, result_type) = self.decl_ana_signature(signature, false);
@@ -621,7 +637,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             used_memory: BTreeSet::new(),
             uninterpreted,
             is_move_fun: false,
-            is_native: false,
+            is_native: matches!(body.value, EA::FunctionBody_::Native),
             body: None,
             callees: Default::default(),
             is_recursive: Default::default(),
@@ -3277,6 +3293,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             struct_data,
             function_data,
             std::mem::take(&mut self.spec_vars),
+            std::mem::take(&mut self.spec_structs),
             std::mem::take(&mut self.spec_funs),
             std::mem::take(&mut self.module_spec),
             std::mem::take(&mut self.spec_block_infos),

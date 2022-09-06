@@ -8,10 +8,10 @@ use crate::{
         model_builder::{FunEntry, SpecFunEntry, StructEntry},
         module_builder::SpecBlockContext,
     },
-    model::{QualifiedId, SpecFunId},
+    model::{QualifiedId, SpecFunId, SpecStructId},
     pragmas::INTRINSIC_PRAGMA,
     ty::{PrimitiveType, Type},
-    Loc, ModelBuilder, StructId,
+    Loc, ModelBuilder,
 };
 
 pub(crate) fn handle_intrinsic_declaration(
@@ -78,7 +78,7 @@ fn check_intrinsic_declaration_in_struct(
     loc: &Loc,
     target: &StructEntry,
     symbol: QualifiedSymbol,
-) -> Option<QualifiedId<StructId>> {
+) -> Option<QualifiedId<SpecStructId>> {
     // obtain the intrinsic type
     let intrinsic = match builder.spec_struct_table.get(&symbol) {
         None => {
@@ -223,7 +223,7 @@ fn is_more_abstract(builder: &ModelBuilder, lhs: &Type, rhs: &Type) -> bool {
             .get(&(*lhs_mid, *lhs_sid))
             .and_then(|qsym| builder.spec_struct_table.get(qsym))
         {
-            let lhs_qid = lhs_mid.qualified(*lhs_sid);
+            let lhs_qid = entry.module_id.qualified(entry.struct_id);
 
             // check concretization through explicit intrinsic marks
             if let Type::Struct(rhs_mid, rhs_sid, rhs_ty_args) = rhs {

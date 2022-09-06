@@ -64,7 +64,7 @@ use move_disassembler::disassembler::{Disassembler, DisassemblerOptions};
 use crate::{
     ast::{
         Attribute, ConditionKind, Exp, ExpData, GlobalInvariant, ModuleName, PropertyBag,
-        PropertyValue, Spec, SpecBlockInfo, SpecFunDecl, SpecVarDecl, Value,
+        PropertyValue, Spec, SpecBlockInfo, SpecFunDecl, SpecStructDecl, SpecVarDecl, Value,
     },
     pragmas::{
         DELEGATE_INVARIANTS_TO_CALLER_PRAGMA, DISABLE_INVARIANTS_IN_BODY_PRAGMA, FRIEND_PRAGMA,
@@ -199,17 +199,13 @@ pub struct FieldId(Symbol);
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct FunId(Symbol);
 
-/// Identifier for an intrinsic type, relative to module.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-pub struct IntrinsicTypeId(Symbol);
-
-/// Identifier for an intrinsic function, relative to module.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-pub struct IntrinsicFunId(Symbol);
-
 /// Identifier for a schema.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct SchemaId(Symbol);
+
+/// Identifier for a specification struct, relative to module.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+pub struct SpecStructId(RawIndex);
 
 /// Identifier for a specification function, relative to module.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
@@ -293,23 +289,13 @@ impl FieldId {
     }
 }
 
-impl IntrinsicTypeId {
-    pub fn new(sym: Symbol) -> Self {
-        Self(sym)
+impl SpecStructId {
+    pub fn new(idx: usize) -> Self {
+        Self(idx as RawIndex)
     }
 
-    pub fn symbol(self) -> Symbol {
-        self.0
-    }
-}
-
-impl IntrinsicFunId {
-    pub fn new(sym: Symbol) -> Self {
-        Self(sym)
-    }
-
-    pub fn symbol(self) -> Symbol {
-        self.0
+    pub fn as_usize(self) -> usize {
+        self.0 as usize
     }
 }
 
@@ -507,6 +493,10 @@ pub struct GlobalEnv {
     diags: RefCell<Vec<(Diagnostic<FileId>, bool)>>,
     /// Pool of symbols -- internalized strings.
     symbol_pool: SymbolPool,
+    /// A mapping from a Move type to an intrinsic type (which it can be abstract to)
+    intrinsic_types: BTreeMap<QualifiedId<StructId>, QualifiedId<SpecStructId>>,
+    /// A mapping from a Move function to an intrinsic functions (which it can be abstract to)
+    intrinsic_funs: BTreeMap<QualifiedId<FunId>, QualifiedId<SpecFunId>>,
     /// A counter for allocating node ids.
     next_free_node_id: RefCell<usize>,
     /// A map from node id to associated information of the expression.
@@ -571,6 +561,8 @@ impl GlobalEnv {
             file_id_is_dep: BTreeSet::new(),
             diags: RefCell::new(vec![]),
             symbol_pool: SymbolPool::new(),
+            intrinsic_types: BTreeMap::new(),
+            intrinsic_funs: BTreeMap::new(),
             next_free_node_id: Default::default(),
             exp_info: Default::default(),
             module_data: vec![],
@@ -1085,6 +1077,7 @@ impl GlobalEnv {
         mut struct_data: BTreeMap<StructId, StructData>,
         function_data: BTreeMap<FunId, FunctionData>,
         spec_vars: Vec<SpecVarDecl>,
+        spec_structs: Vec<SpecStructDecl>,
         spec_funs: Vec<SpecFunDecl>,
         module_spec: Spec,
         spec_block_infos: Vec<SpecBlockInfo>,
@@ -1128,7 +1121,12 @@ impl GlobalEnv {
             );
             struct_data.insert(StructId::new(data.name), data);
         }
-        let spec_funs: BTreeMap<SpecFunId, SpecFunDecl> = spec_funs
+        let spec_structs = spec_structs
+            .into_iter()
+            .enumerate()
+            .map(|(i, v)| (SpecStructId::new(i), v))
+            .collect();
+        let spec_funs = spec_funs
             .into_iter()
             .enumerate()
             .map(|(i, v)| (SpecFunId::new(i), v))
@@ -1144,6 +1142,7 @@ impl GlobalEnv {
             function_data,
             function_idx_to_id,
             spec_vars,
+            spec_structs,
             spec_funs,
             module_spec,
             source_map,
@@ -1153,6 +1152,178 @@ impl GlobalEnv {
             used_modules: Default::default(),
             friend_modules: Default::default(),
         });
+    }
+
+    /// Mark a Move type as an intrinsic type.
+    /// Report an error if there is a duplication
+    pub fn register_intrinsic_type(
+        &mut self,
+        struct_id: QualifiedId<StructId>,
+        intrinsic_id: QualifiedId<SpecStructId>,
+    ) {
+        if let Some(existing) = self.intrinsic_types.get(&struct_id) {
+            let loc = self.get_struct(struct_id).get_loc();
+            let old_module = self.get_module(existing.module_id);
+            let old_entry = format!(
+                "{}::{}",
+                old_module.get_full_name_str(),
+                self.symbol_pool
+                    .string(old_module.get_spec_struct(existing.id).name)
+            );
+            let new_module = self.get_module(intrinsic_id.module_id);
+            let new_entry = format!(
+                "{}::{}",
+                new_module.get_full_name_str(),
+                self.symbol_pool
+                    .string(new_module.get_spec_struct(intrinsic_id.id).name)
+            );
+
+            self.diag_with_notes(
+                Severity::Error,
+                &loc,
+                "Duplicated registration of intrinsic types",
+                vec![
+                    format!("Previously marked as intrinsic of `{}`", old_entry),
+                    format!("Newly marked as intrinsic of `{}`", new_entry),
+                ],
+            );
+        };
+
+        // assert that the intrinsic type exists
+        let _ = self
+            .get_module(intrinsic_id.module_id)
+            .get_spec_struct(intrinsic_id.id);
+        self.intrinsic_types.insert(struct_id, intrinsic_id);
+    }
+
+    /// Mark a Move function as an intrinsic function.
+    /// Report an error if there is a duplication
+    pub fn register_intrinsic_fun(
+        &mut self,
+        fun_id: QualifiedId<FunId>,
+        intrinsic_id: QualifiedId<SpecFunId>,
+    ) {
+        if let Some(existing) = self.intrinsic_funs.get(&fun_id) {
+            let loc = self.get_function(fun_id).get_loc();
+            let old_module = self.get_module(existing.module_id);
+            let old_entry = format!(
+                "{}::{}",
+                old_module.get_full_name_str(),
+                self.symbol_pool
+                    .string(old_module.get_spec_fun(existing.id).name)
+            );
+            let new_module = self.get_module(intrinsic_id.module_id);
+            let new_entry = format!(
+                "{}::{}",
+                new_module.get_full_name_str(),
+                self.symbol_pool
+                    .string(new_module.get_spec_fun(intrinsic_id.id).name)
+            );
+
+            self.diag_with_notes(
+                Severity::Error,
+                &loc,
+                "Duplicated registration of intrinsic functions",
+                vec![
+                    format!("Previously marked as intrinsic of `{}`", old_entry),
+                    format!("Newly marked as intrinsic of `{}`", new_entry),
+                ],
+            );
+        };
+
+        // also check that the intrinsic function is indeed "intrinsic"
+        let menv = self.get_module(intrinsic_id.module_id);
+        let decl = menv.get_spec_fun(intrinsic_id.id);
+        if !decl.is_native || decl.uninterpreted {
+            let loc = self.get_function(fun_id).get_loc();
+            self.diag_with_labels(
+                Severity::Error,
+                &loc,
+                "Intrinsic declaration must refers to an intrinsic function",
+                vec![(decl.loc.clone(), "This is not an intrinsic function".into())],
+            );
+        } else {
+            self.intrinsic_funs.insert(fun_id, intrinsic_id);
+        }
+    }
+
+    /// Check completeness of intrinsic declarations. Ensure that all `native` Move functions can be
+    /// properly handled. This includes:
+    /// - if a native Move function is externally callable, it must be intrinsic
+    /// - if a native Move function is not externally callable, it should either be intrinsic, OR
+    ///   have all its callers marked as intrinsic.
+    pub fn check_intrinsic_decl_completeness(&self) {
+        fn is_intrinsic_or_all_ancestors_intrinsic(
+            env: &GlobalEnv,
+            fun_id: QualifiedId<FunId>,
+            visited: &mut BTreeSet<QualifiedId<FunId>>,
+        ) -> bool {
+            if env.intrinsic_funs.contains_key(&fun_id) {
+                return true;
+            }
+
+            let fun_env = env.get_function(fun_id);
+            if fun_env.has_unknown_callers() {
+                return false;
+            }
+
+            visited.insert(fun_id);
+            for caller in fun_env.get_calling_functions() {
+                if visited.contains(&caller) {
+                    continue;
+                }
+                if !is_intrinsic_or_all_ancestors_intrinsic(env, caller, visited) {
+                    return false;
+                }
+            }
+            visited.remove(&fun_id);
+
+            // all callers
+            true
+        }
+
+        for module_env in self.get_modules() {
+            for fun_env in module_env.get_functions() {
+                if !fun_env.is_native() {
+                    continue;
+                }
+
+                if self
+                    .intrinsic_funs
+                    .contains_key(&fun_env.get_qualified_id())
+                {
+                    continue;
+                }
+
+                if fun_env.has_unknown_callers() {
+                    // if a native Move function is externally callable, it must be intrinsic
+                    self.diag(
+                        Severity::Error,
+                        &fun_env.get_loc(),
+                        "This native Move function has unknown callers but \
+                        does not have an intrinsic counterpart",
+                    );
+                } else {
+                    // if a native Move function is not externally callable, it should
+                    // - either be intrinsic (checked already), OR
+                    // - have all its callers marked as intrinsic.
+                    for caller in fun_env.get_calling_functions() {
+                        if !is_intrinsic_or_all_ancestors_intrinsic(
+                            self,
+                            caller,
+                            &mut BTreeSet::new(),
+                        ) {
+                            self.diag(
+                                Severity::Error,
+                                &fun_env.get_loc(),
+                                "This native Move function can be externally reached but \
+                                does not have an intrinsic counterpart",
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// Creates data for a named constant.
@@ -1756,6 +1927,9 @@ pub struct ModuleData {
     /// Specification variables, in SpecVarId order.
     pub spec_vars: BTreeMap<SpecVarId, SpecVarDecl>,
 
+    /// Specification structs, in SpecStructId order.
+    pub spec_structs: BTreeMap<SpecStructId, SpecStructDecl>,
+
     /// Specification functions, in SpecFunId order.
     pub spec_funs: BTreeMap<SpecFunId, SpecFunDecl>,
 
@@ -1791,6 +1965,7 @@ impl ModuleData {
             function_idx_to_id: BTreeMap::new(),
             // below this line is source/prover specific
             spec_vars: BTreeMap::new(),
+            spec_structs: BTreeMap::new(),
             spec_funs: BTreeMap::new(),
             module_spec: Spec::default(),
             source_map: SourceMap::new(MoveIrLoc::new(FileHash::empty(), 0, 0), None),
@@ -2309,6 +2484,21 @@ impl<'env> ModuleEnv<'env> {
             .iter()
             .find(|(_, svar)| svar.name == name)
             .map(|(_, svar)| svar)
+    }
+
+    /// Returns specification structs of this module.
+    pub fn get_spec_structs(
+        &'env self,
+    ) -> impl Iterator<Item = (&'env SpecStructId, &'env SpecStructDecl)> {
+        self.data.spec_structs.iter()
+    }
+
+    /// Gets spec struct by id.
+    pub fn get_spec_struct(&self, id: SpecStructId) -> &SpecStructDecl {
+        self.data
+            .spec_structs
+            .get(&id)
+            .expect("spec struct id defined")
     }
 
     /// Returns specification functions of this module.

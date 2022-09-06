@@ -31,7 +31,7 @@ module 0x42::M {
     }
 
     struct MyMap<phantom X> {}
-    spec MyMap  {
+    spec MyMap {
         use 0x1::intrinsics;
         // rejected due to mismatched type parameter number
         pragma intrinsic = intrinsics::Map;
@@ -77,5 +77,49 @@ module 0x42::M {
     spec my_vec_transfer5 {
         // rejected due to mismatched return type
         pragma intrinsic = 0x1::intrinsics::vec_transfer;
+    }
+
+    native fun my_vec_transfer6<E>(v: &MyVecOk<E>): &mut vector<E>;
+    spec module {
+        // uninterpreted spec fun
+        fun vec_transfer_uninterp<E>(v: &MyVecOk<E>): &mut vector<E>;
+    }
+    spec my_vec_transfer6 {
+        // rejected as vec_transfer_uninterp is not an intrinsic function
+        pragma intrinsic = vec_transfer_uninterp;
+    }
+
+    native fun my_vec_transfer7<E>(v: &MyVecOk<E>): u64;
+    spec module {
+        // defined spec fun
+        fun vec_transfer_defined<E>(v: &MyVecOk<E>): u64 {
+            0
+        }
+    }
+    spec my_vec_transfer7 {
+        // rejected as vec_transfer_defined is not an intrinsic function
+        pragma intrinsic = vec_transfer_defined;
+    }
+
+    // error as this function needs to have an intrinsic counterpart
+    native public fun no_intrinsic_public();
+
+    // error as this function can be called by a public non-intrinsic function
+    native fun no_intrinsic_internal();
+    public fun call_no_intrinsic_internal() {
+        no_intrinsic_internal();
+    }
+
+    // error as this function can be called by a public non-intrinsic function
+    native fun no_intrinsic_internal_recursive();
+    fun call_no_intrinsic_internal_recursive(v: u64) {
+        if (v == 0) {
+            no_intrinsic_internal_recursive();
+        } else {
+            call_no_intrinsic_internal_recursive(v - 1);
+        }
+    }
+    public fun external_caller() {
+        call_no_intrinsic_internal_recursive(100);
     }
 }

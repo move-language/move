@@ -5,6 +5,9 @@
 module std::bcs {
     /// Return the binary representation of `v` in BCS (Binary Canonical Serialization) format
     native public fun to_bytes<MoveValue>(v: &MoveValue): vector<u8>;
+    spec to_bytes {
+        pragma intrinsic = serialize;
+    }
 
     // ==============================
     // Module Specification

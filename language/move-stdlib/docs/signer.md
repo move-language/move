@@ -36,6 +36,18 @@
 
 </details>
 
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = intrinsic_borrow_address;
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_signer_address_of"></a>
 
 ## Function `address_of`
@@ -81,6 +93,16 @@ Return true only if <code>a</code> is a transaction signer address. This is a sp
 
 
 <pre><code><b>native</b> <b>fun</b> <a href="signer.md#0x1_signer_is_txn_signer_addr">is_txn_signer_addr</a>(a: <b>address</b>): bool;
+</code></pre>
+
+
+The intrinsic version of borrow_address
+
+
+<a name="0x1_signer_intrinsic_borrow_address"></a>
+
+
+<pre><code><b>native</b> <b>fun</b> <a href="signer.md#0x1_signer_intrinsic_borrow_address">intrinsic_borrow_address</a>(s: &<a href="signer.md#0x1_signer">signer</a>): &<b>address</b>;
 </code></pre>
 
 

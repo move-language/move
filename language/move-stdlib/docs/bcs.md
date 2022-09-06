@@ -40,6 +40,18 @@ Return the binary representation of <code>v</code> in BCS (Binary Canonical Seri
 
 </details>
 
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = serialize;
+</code></pre>
+
+
+
+</details>
+
 <a name="@Module_Specification_0"></a>
 
 ## Module Specification

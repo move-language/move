@@ -91,4 +91,27 @@ module std::string {
     native fun internal_is_char_boundary(v: &vector<u8>, i: u64): bool;
     native fun internal_sub_string(v: &vector<u8>, i: u64, j: u64): vector<u8>;
     native fun internal_index_of(v: &vector<u8>, r: &vector<u8>): u64;
+
+    spec module {
+        native fun intrinsic_check_utf8(v: &vector<u8>): bool;
+        native fun intrinsic_is_char_boundary(v: &vector<u8>, i: u64): bool;
+        native fun intrinsic_sub_string(v: &vector<u8>, i: u64, j: u64): vector<u8>;
+        native fun intrinsic_index_of(v: &vector<u8>, r: &vector<u8>): u64;
+    }
+
+    spec internal_check_utf8 {
+        pragma intrinsic = intrinsic_check_utf8;
+    }
+
+    spec internal_is_char_boundary {
+        pragma intrinsic = intrinsic_is_char_boundary;
+    }
+
+    spec internal_sub_string {
+        pragma intrinsic = intrinsic_sub_string;
+    }
+
+    spec internal_index_of {
+        pragma intrinsic = intrinsic_index_of;
+    }
 }

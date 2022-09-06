@@ -11,6 +11,7 @@ as in the Move prover's prelude.
 
 -  [Function `sha2_256`](#0x1_hash_sha2_256)
 -  [Function `sha3_256`](#0x1_hash_sha3_256)
+-  [Module Specification](#@Module_Specification_0)
 
 
 <pre><code></code></pre>
@@ -39,6 +40,18 @@ as in the Move prover's prelude.
 
 </details>
 
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = intrinsic_sha2_256;
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_hash_sha3_256"></a>
 
 ## Function `sha3_256`
@@ -60,6 +73,32 @@ as in the Move prover's prelude.
 
 
 </details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = intrinsic_sha3_256;
+</code></pre>
+
+
+
+</details>
+
+<a name="@Module_Specification_0"></a>
+
+## Module Specification
+
+
+
+<a name="0x1_hash_intrinsic_sha2_256"></a>
+
+
+<pre><code><b>native</b> <b>fun</b> <a href="hash.md#0x1_hash_intrinsic_sha2_256">intrinsic_sha2_256</a>(data: <a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;): <a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;;
+<a name="0x1_hash_intrinsic_sha3_256"></a>
+<b>native</b> <b>fun</b> <a href="hash.md#0x1_hash_intrinsic_sha3_256">intrinsic_sha3_256</a>(data: <a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;): <a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;;
+</code></pre>
 
 
 [//]: # ("File containing references which can be used from documentation")

@@ -78,6 +78,18 @@ Create an empty vector.
 
 </details>
 
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = intrinsic_new;
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_vector_length"></a>
 
 ## Function `length`
@@ -95,6 +107,18 @@ Return the length of the vector.
 
 
 <pre><code><b>native</b> <b>public</b> <b>fun</b> <a href="vector.md#0x1_vector_length">length</a>&lt;Element&gt;(v: &<a href="vector.md#0x1_vector">vector</a>&lt;Element&gt;): u64;
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = intrinsic_len;
 </code></pre>
 
 
@@ -125,6 +149,18 @@ Aborts if <code>i</code> is out of bounds.
 
 </details>
 
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = intrinsic_borrow;
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_vector_push_back"></a>
 
 ## Function `push_back`
@@ -142,6 +178,18 @@ Add element <code>e</code> to the end of the vector <code>v</code>.
 
 
 <pre><code><b>native</b> <b>public</b> <b>fun</b> <a href="vector.md#0x1_vector_push_back">push_back</a>&lt;Element&gt;(v: &<b>mut</b> <a href="vector.md#0x1_vector">vector</a>&lt;Element&gt;, e: Element);
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = intrinsic_push_back;
 </code></pre>
 
 
@@ -172,6 +220,18 @@ Aborts if <code>i</code> is out of bounds.
 
 </details>
 
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = intrinsic_borrow_mut;
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_vector_pop_back"></a>
 
 ## Function `pop_back`
@@ -190,6 +250,18 @@ Aborts if <code>v</code> is empty.
 
 
 <pre><code><b>native</b> <b>public</b> <b>fun</b> <a href="vector.md#0x1_vector_pop_back">pop_back</a>&lt;Element&gt;(v: &<b>mut</b> <a href="vector.md#0x1_vector">vector</a>&lt;Element&gt;): Element;
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = intrinsic_pop_back;
 </code></pre>
 
 
@@ -220,6 +292,18 @@ Aborts if <code>v</code> is not empty.
 
 </details>
 
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = intrinsic_destroy_empty;
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_vector_swap"></a>
 
 ## Function `swap`
@@ -238,6 +322,18 @@ Aborts if <code>i</code> or <code>j</code> is out of bounds.
 
 
 <pre><code><b>native</b> <b>public</b> <b>fun</b> <a href="vector.md#0x1_vector_swap">swap</a>&lt;Element&gt;(v: &<b>mut</b> <a href="vector.md#0x1_vector">vector</a>&lt;Element&gt;, i: u64, j: u64);
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = intrinsic_swap;
 </code></pre>
 
 
@@ -652,6 +748,20 @@ Check that <code>v1</code> is equal to the result of removing the element at ind
 <pre><code><b>struct</b> IntrinsicVector&lt;Element&gt; <b>has</b> <b>copy</b>, drop, store :: [ <a href="vector.md#0x1_vector">vector</a>&lt;Element&gt; ];
 <a name="0x1_vector_intrinsic_new"></a>
 <b>native</b> <b>fun</b> <a href="vector.md#0x1_vector_intrinsic_new">intrinsic_new</a>&lt;Element&gt;(): IntrinsicVector&lt;Element&gt;;
+<a name="0x1_vector_intrinsic_len"></a>
+<b>native</b> <b>fun</b> <a href="vector.md#0x1_vector_intrinsic_len">intrinsic_len</a>&lt;Element&gt;(v: &IntrinsicVector&lt;Element&gt;): num;
+<a name="0x1_vector_intrinsic_borrow"></a>
+<b>native</b> <b>fun</b> <a href="vector.md#0x1_vector_intrinsic_borrow">intrinsic_borrow</a>&lt;Element&gt;(v: &IntrinsicVector&lt;Element&gt;, i: num): &Element;
+<a name="0x1_vector_intrinsic_borrow_mut"></a>
+<b>native</b> <b>fun</b> <a href="vector.md#0x1_vector_intrinsic_borrow_mut">intrinsic_borrow_mut</a>&lt;Element&gt;(v: &<b>mut</b> IntrinsicVector&lt;Element&gt;, i: num): &<b>mut</b> Element;
+<a name="0x1_vector_intrinsic_push_back"></a>
+<b>native</b> <b>fun</b> <a href="vector.md#0x1_vector_intrinsic_push_back">intrinsic_push_back</a>&lt;Element&gt;(v: &<b>mut</b> IntrinsicVector&lt;Element&gt;, e: Element);
+<a name="0x1_vector_intrinsic_pop_back"></a>
+<b>native</b> <b>fun</b> <a href="vector.md#0x1_vector_intrinsic_pop_back">intrinsic_pop_back</a>&lt;Element&gt;(v: &<b>mut</b> IntrinsicVector&lt;Element&gt;): Element;
+<a name="0x1_vector_intrinsic_swap"></a>
+<b>native</b> <b>fun</b> <a href="vector.md#0x1_vector_intrinsic_swap">intrinsic_swap</a>&lt;Element&gt;(v: &<b>mut</b> IntrinsicVector&lt;Element&gt;, i: num, j: num);
+<a name="0x1_vector_intrinsic_destroy_empty"></a>
+<b>native</b> <b>fun</b> <a href="vector.md#0x1_vector_intrinsic_destroy_empty">intrinsic_destroy_empty</a>&lt;Element&gt;(v: IntrinsicVector&lt;Element&gt;);
 <a name="0x1_vector_intrinsic_reverse"></a>
 <b>native</b> <b>fun</b> <a href="vector.md#0x1_vector_intrinsic_reverse">intrinsic_reverse</a>&lt;Element&gt;(v: &<b>mut</b> IntrinsicVector&lt;Element&gt;);
 <a name="0x1_vector_intrinsic_append"></a>

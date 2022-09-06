@@ -2,16 +2,20 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::path::Path;
+
 use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
+
 use move_binary_format::{
     access::ModuleAccess,
     file_format::{FunctionDefinitionIndex, StructDefinitionIndex},
 };
 use move_command_line_common::testing::EXP_EXT;
 use move_compiler::shared::PackagePaths;
-use move_model::{run_bytecode_model_builder, run_model_builder};
+use move_model::{
+    options::ModelBuilderOptions, run_bytecode_model_builder, run_model_builder_with_options,
+};
 use move_prover_test_utils::baseline_test::verify_or_update_baseline;
-use std::path::Path;
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let targets = vec![PackagePaths {
@@ -19,7 +23,11 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         paths: vec![path.to_str().unwrap().to_string()],
         named_address_map: std::collections::BTreeMap::<String, _>::new(),
     }];
-    let env = run_model_builder(targets, vec![])?;
+    let options = ModelBuilderOptions {
+        check_intrinsic_decl_completeness: true,
+        ..Default::default()
+    };
+    let env = run_model_builder_with_options(targets, vec![], options)?;
     let diags = if env.diag_count(Severity::Warning) > 0 {
         let mut writer = Buffer::no_color();
         env.report_diag(&mut writer, Severity::Warning);

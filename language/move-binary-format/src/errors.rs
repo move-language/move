@@ -376,7 +376,7 @@ impl fmt::Display for PartialVMError {
         let mut status = format!("PartialVMError with status {:#?}", self.major_status);
 
         if let Some(sub_status) = self.sub_status {
-            status = format!("{} with sub status {}", status, sub_status);
+            status = format!("{} with sub status {:#x}", status, sub_status);
         }
 
         if let Some(msg) = &self.message {
@@ -402,7 +402,7 @@ impl fmt::Display for VMError {
         let mut status = format!("VMError with status {:#?}", self.major_status);
 
         if let Some(sub_status) = self.sub_status {
-            status = format!("{} with sub status {}", status, sub_status);
+            status = format!("{} with sub status {:#x}", status, sub_status);
         }
 
         status = format!("{} at location {}", status, self.location);

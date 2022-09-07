@@ -220,7 +220,7 @@ impl fmt::Display for VMStatus {
         let mut status = format!("status {:#?} of type {}", self.status_code(), status_type);
 
         if let VMStatus::MoveAbort(_, code) = self {
-            status = format!("{} with sub status {}", status, code);
+            status = format!("{} with sub status {:#x}", status, code);
         }
 
         write!(f, "{}", status)

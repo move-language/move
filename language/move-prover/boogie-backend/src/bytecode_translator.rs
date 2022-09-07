@@ -6,22 +6,27 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use codespan::LineIndex;
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info, log, warn, Level};
 
 use move_model::{
+    ast::{TempIndex, TraceKind},
     code_writer::CodeWriter,
     emit, emitln,
-    model::{GlobalEnv, QualifiedInstId, StructEnv, StructId},
+    model::{GlobalEnv, Loc, NodeId, QualifiedInstId, StructEnv, StructId},
     pragmas::{ADDITION_OVERFLOW_UNCHECKED_PRAGMA, SEED_PRAGMA, TIMEOUT_PRAGMA},
-    ty::{PrimitiveType, Type},
+    ty::{PrimitiveType, Type, TypeDisplayContext, BOOL_TYPE},
+    well_known::TYPE_NAME_MOVE,
 };
 use move_stackless_bytecode::{
     function_target::FunctionTarget,
-    function_target_pipeline::{FunctionTargetsHolder, VerificationFlavor},
+    function_target_pipeline::{FunctionTargetsHolder, FunctionVariant, VerificationFlavor},
     mono_analysis,
-    stackless_bytecode::{BorrowEdge, BorrowNode, Bytecode, Constant, HavocKind, Operation},
+    stackless_bytecode::{
+        AbortAction, BorrowEdge, BorrowNode, Bytecode, Constant, HavocKind, Operation, PropKind,
+    },
 };
 
 use crate::{
@@ -29,22 +34,12 @@ use crate::{
         boogie_address_blob, boogie_byte_blob, boogie_debug_track_abort, boogie_debug_track_local,
         boogie_debug_track_return, boogie_equality_for_type, boogie_field_sel, boogie_field_update,
         boogie_function_name, boogie_make_vec_from_strings, boogie_modifies_memory_name,
-        boogie_resource_memory_name, boogie_struct_name, boogie_temp, boogie_type,
-        boogie_type_param, boogie_type_suffix, boogie_type_suffix_for_struct,
+        boogie_reflection_type_name, boogie_resource_memory_name, boogie_struct_name, boogie_temp,
+        boogie_type, boogie_type_param, boogie_type_suffix, boogie_type_suffix_for_struct,
         boogie_well_formed_check, boogie_well_formed_expr,
     },
     options::BoogieOptions,
     spec_translator::SpecTranslator,
-};
-use codespan::LineIndex;
-use move_model::{
-    ast::{TempIndex, TraceKind},
-    model::{Loc, NodeId},
-    ty::{TypeDisplayContext, BOOL_TYPE},
-};
-use move_stackless_bytecode::{
-    function_target_pipeline::FunctionVariant,
-    stackless_bytecode::{AbortAction, PropKind},
 };
 
 pub struct BoogieTranslator<'env> {
@@ -114,6 +109,9 @@ impl<'env> BoogieTranslator<'env> {
                 suffix,
                 param_type,
             );
+
+            // declare free variables to represent the type info for this type
+            emitln!(writer, "var {}_name: Vec int;", param_type);
         }
         emitln!(writer);
 
@@ -951,7 +949,8 @@ impl<'env> FunctionTranslator<'env> {
                     }
                     Function(mid, fid, inst) => {
                         let inst = &self.inst_slice(inst);
-                        let callee_env = env.get_module(*mid).into_function(*fid);
+                        let module_env = env.get_module(*mid);
+                        let callee_env = module_env.get_function(*fid);
 
                         let args_str = srcs.iter().cloned().map(str_local).join(", ");
                         let dest_str = dests
@@ -968,6 +967,35 @@ impl<'env> FunctionTranslator<'env> {
                             )
                             .join(",");
 
+                        // special casing for type reflection
+                        // TODO(mengxu): change it to a better address name instead of extlib
+                        if env.get_extlib_address() == *module_env.get_name().addr() {
+                            let qualified_name = format!(
+                                "{}::{}",
+                                module_env.get_name().name().display(env.symbol_pool()),
+                                callee_env.get_name().display(env.symbol_pool()),
+                            );
+                            if qualified_name == TYPE_NAME_MOVE {
+                                assert_eq!(inst.len(), 1);
+                                if dest_str.is_empty() {
+                                    emitln!(
+                                        writer,
+                                        "{}",
+                                        boogie_reflection_type_name(env, &inst[0])
+                                    );
+                                } else {
+                                    emitln!(
+                                        writer,
+                                        "{} := {};",
+                                        dest_str,
+                                        boogie_reflection_type_name(env, &inst[0])
+                                    );
+                                }
+                                return;
+                            }
+                        }
+
+                        // regular path
                         if dest_str.is_empty() {
                             emitln!(
                                 writer,

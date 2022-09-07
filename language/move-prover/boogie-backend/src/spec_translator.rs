@@ -5,6 +5,7 @@
 //! This module translates specification conditions to Boogie code.
 
 use std::{
+    cell::RefCell,
     collections::{BTreeSet, HashMap},
     rc::Rc,
 };
@@ -14,29 +15,32 @@ use itertools::Itertools;
 use log::{debug, info, warn};
 
 use move_model::{
-    ast::{ExpData, LocalVarDecl, Operation, Value},
+    ast::{
+        Exp, ExpData, LocalVarDecl, MemoryLabel, Operation, QuantKind, SpecFunDecl, SpecVarDecl,
+        TempIndex, Value,
+    },
     code_writer::CodeWriter,
     emit, emitln,
-    model::{FieldId, GlobalEnv, Loc, ModuleEnv, ModuleId, NodeId, SpecFunId, StructId},
+    model::{
+        FieldId, GlobalEnv, Loc, ModuleEnv, ModuleId, NodeId, QualifiedInstId, SpecFunId,
+        SpecVarId, StructId,
+    },
     symbol::Symbol,
     ty::{PrimitiveType, Type},
+    well_known::TYPE_NAME_SPEC,
 };
+use move_stackless_bytecode::mono_analysis::MonoInfo;
 
 use crate::{
     boogie_helpers::{
         boogie_address_blob, boogie_byte_blob, boogie_choice_fun_name, boogie_declare_global,
         boogie_field_sel, boogie_inst_suffix, boogie_modifies_memory_name,
-        boogie_resource_memory_name, boogie_spec_fun_name, boogie_spec_var_name,
-        boogie_struct_name, boogie_type, boogie_type_suffix, boogie_well_formed_expr,
+        boogie_reflection_type_name, boogie_resource_memory_name, boogie_spec_fun_name,
+        boogie_spec_var_name, boogie_struct_name, boogie_type, boogie_type_suffix,
+        boogie_well_formed_expr,
     },
     options::BoogieOptions,
 };
-use move_model::{
-    ast::{Exp, MemoryLabel, QuantKind, SpecFunDecl, SpecVarDecl, TempIndex},
-    model::{QualifiedInstId, SpecVarId},
-};
-use move_stackless_bytecode::mono_analysis::MonoInfo;
-use std::cell::RefCell;
 
 #[derive(Clone)]
 pub struct SpecTranslator<'env> {
@@ -846,6 +850,27 @@ impl<'env> SpecTranslator<'env> {
         let inst = &self.get_node_instantiation(node_id);
         let module_env = &self.env.get_module(module_id);
         let fun_decl = module_env.get_spec_fun(fun_id);
+
+        // special casing for type reflection
+        // TODO(mengxu): change it to a better address name instead of extlib
+        if self.env.get_extlib_address() == *module_env.get_name().addr() {
+            let qualified_name = format!(
+                "{}::{}",
+                module_env.get_name().name().display(self.env.symbol_pool()),
+                fun_decl.name.display(self.env.symbol_pool()),
+            );
+            if qualified_name == TYPE_NAME_SPEC {
+                assert_eq!(inst.len(), 1);
+                emit!(
+                    self.writer,
+                    "{}",
+                    boogie_reflection_type_name(self.env, &inst[0])
+                );
+                return;
+            }
+        }
+
+        // regular path
         let name = boogie_spec_fun_name(module_env, fun_id, inst);
         emit!(self.writer, "{}(", name);
         let mut first = true;

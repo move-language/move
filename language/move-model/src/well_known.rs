@@ -14,3 +14,5 @@ pub const TABLE_TABLE: &str = "table::Table";
 
 pub const TYPE_NAME_MOVE: &str = "type_info::type_name";
 pub const TYPE_NAME_SPEC: &str = "type_info::$type_name";
+pub const TYPE_INFO_MOVE: &str = "type_info::type_of";
+pub const TYPE_INFO_SPEC: &str = "type_info::$type_of";

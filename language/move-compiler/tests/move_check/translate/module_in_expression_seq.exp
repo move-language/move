@@ -1,0 +1,6 @@
+error[E02004]: invalid 'module' declaration
+  ┌─ tests/move_check/translate/module_in_expression_seq.move:3:9
+  │
+3 │         module F { }
+  │         ^^^^^^^^^^^^ 'module' is not allowed in expression sequence
+

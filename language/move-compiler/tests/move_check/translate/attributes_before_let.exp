@@ -1,0 +1,6 @@
+error[E02015]: invalid attribute
+  ┌─ tests/move_check/translate/attributes_before_let.move:3:9
+  │
+3 │         #[attr]
+  │         ^^^^^^^ attribute before let is not valid
+

@@ -1,0 +1,6 @@
+error[E02005]: invalid 'script' declaration
+  ┌─ tests/move_check/translate/script_in_expression_seq.move:3:9
+  │
+3 │         script {}
+  │         ^^^^^^^^^ 'script' is not allowed in expression sequence
+

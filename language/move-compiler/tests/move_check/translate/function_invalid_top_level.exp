@@ -1,0 +1,6 @@
+error[E02007]: invalid 'fun' declaration
+  ┌─ tests/move_check/translate/function_invalid_top_level.move:1:1
+  │
+1 │ fun a(){}
+  │ ^^^^^^^^^ Invalid code unit. Expected 'address', 'module', or 'script'. Got 'fun'
+

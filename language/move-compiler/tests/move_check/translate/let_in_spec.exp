@@ -1,0 +1,6 @@
+error[E02018]: invalid let expresstion
+  ┌─ tests/move_check/translate/let_in_spec.move:8:9
+  │
+8 │         let a: u32;
+  │         ^^^^^^^^^^^ 'let <Var>(:<Type>);' is not allowed in spec members
+

@@ -1,0 +1,8 @@
+error[E02008]: invalid 'struct' declaration
+  ┌─ tests/move_check/translate/struct_invalid_top_level.move:1:1
+  │  
+1 │ ╭ struct A{
+2 │ │     a: u16
+3 │ │ }
+  │ ╰─^ Invalid code unit. Expected 'address', 'module', or 'script'. Got 'struct'
+

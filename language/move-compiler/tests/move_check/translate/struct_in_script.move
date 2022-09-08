@@ -1,0 +1,3 @@
+script {
+    struct S{}
+}

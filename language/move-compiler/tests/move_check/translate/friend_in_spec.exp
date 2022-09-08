@@ -1,0 +1,6 @@
+error[E02011]: invalid 'friend' declaration
+  ┌─ tests/move_check/translate/friend_in_spec.move:4:9
+  │
+4 │         friend 0x02::A;
+  │         ^^^^^^^^^^^^^^^ 'friend' is not allowed in spec members
+

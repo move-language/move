@@ -1,0 +1,6 @@
+error[E02008]: invalid 'struct' declaration
+  ┌─ tests/move_check/translate/struct_in_script.move:2:5
+  │
+2 │     struct S{}
+  │     ^^^^^^^^^^ 'struct' is not allowed in script
+

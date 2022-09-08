@@ -1,0 +1,6 @@
+error[E02011]: invalid 'friend' declaration
+  ┌─ tests/move_check/translate/friend_in_script.move:2:5
+  │
+2 │     friend 0x2::M;
+  │     ^^^^^^^^^^^^^^ 'friend' is not allowed in script
+

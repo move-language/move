@@ -1,0 +1,6 @@
+error[E02017]: invalid spec statement declaration
+  ┌─ tests/move_check/translate/spec_member_invalid_top_level.move:1:1
+  │
+1 │ axiom spec_fun_non_zero() > 0;
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid code unit. Expected 'address', 'module', or 'script'. Got spec member.
+

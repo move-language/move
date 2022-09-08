@@ -1,0 +1,6 @@
+error[E02011]: invalid 'friend' declaration
+  ┌─ tests/move_check/translate/friend_invalid_top_level.move:1:1
+  │
+1 │ friend 0x2::mod;
+  │ ^^^^^^^^^^^^^^^^ Invalid code unit. Expected 'address', 'module', or 'script'. Got 'friend'
+

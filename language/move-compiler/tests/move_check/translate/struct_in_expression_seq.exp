@@ -1,0 +1,6 @@
+error[E02008]: invalid 'struct' declaration
+  ┌─ tests/move_check/translate/struct_in_expression_seq.move:3:9
+  │
+3 │         struct A {}
+  │         ^^^^^^^^^^^ 'struct' is not allowed in expression sequence
+

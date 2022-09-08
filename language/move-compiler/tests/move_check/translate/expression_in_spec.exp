@@ -1,0 +1,8 @@
+error[E02016]: invalid expresstion declaration
+  ┌─ tests/move_check/translate/expression_in_spec.move:4:9
+  │  
+4 │ ╭         if (2 > 1){
+5 │ │             1+1
+6 │ │         }
+  │ ╰─────────^ expression is not allowed in spec block
+

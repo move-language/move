@@ -1,0 +1,6 @@
+error[E02011]: invalid 'friend' declaration
+  ┌─ tests/move_check/translate/friend_in_expression_seq.move:3:9
+  │
+3 │         friend 0x2::G;
+  │         ^^^^^^^^^^^^^^ 'friend' is not allowed in expression sequence
+

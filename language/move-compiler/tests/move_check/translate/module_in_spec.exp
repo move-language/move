@@ -1,0 +1,6 @@
+error[E02004]: invalid 'module' declaration
+  ┌─ tests/move_check/translate/module_in_spec.move:4:9
+  │
+4 │         module A{}
+  │         ^^^^^^^^^^ 'module' is not allowed in spec members
+

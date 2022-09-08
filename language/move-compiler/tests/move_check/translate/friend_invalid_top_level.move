@@ -1,0 +1,1 @@
+friend 0x2::mod;

@@ -1,0 +1,6 @@
+error[E02018]: invalid let expresstion
+  ┌─ tests/move_check/translate/let_in_module.move:2:5
+  │
+2 │     let a:u32 = 1;
+  │     ^^^^^^^^^^^^^^ 'let' is not allowed in module
+

@@ -1,0 +1,8 @@
+error[E02005]: invalid 'script' declaration
+  ┌─ tests/move_check/translate/script_in_module.move:2:5
+  │  
+2 │ ╭     script {
+3 │ │         fun main(){}
+4 │ │     }
+  │ ╰─────^ 'script' is not allowed in module
+

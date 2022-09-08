@@ -1,0 +1,6 @@
+error[E02004]: invalid 'module' declaration
+  ┌─ tests/move_check/translate/module_in_script.move:2:5
+  │
+2 │     module M{}
+  │     ^^^^^^^^^^ 'module' is not allowed in script
+

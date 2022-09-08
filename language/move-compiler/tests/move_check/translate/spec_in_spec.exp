@@ -1,0 +1,8 @@
+error[E02009]: invalid 'spec' declaration
+  ┌─ tests/move_check/translate/spec_in_spec.move:4:9
+  │  
+4 │ ╭         spec module {
+5 │ │             a : u32;
+6 │ │         }
+  │ ╰─────────^ 'spec' is not allowed in spec members
+

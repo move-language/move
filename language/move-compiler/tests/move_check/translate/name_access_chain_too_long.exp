@@ -1,0 +1,6 @@
+error[E02003]: invalid 'address' declaration
+  ┌─ tests/move_check/translate/name_access_chain_too_long.move:2:12
+  │
+2 │     friend 0x42::A::a::aa;
+  │            ^^^^^^^^^^^^^^ The amount of names of access chain could not exceed 3.
+

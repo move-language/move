@@ -1,0 +1,6 @@
+error[E02005]: invalid 'script' declaration
+  ┌─ tests/move_check/translate/script_in_script.move:2:5
+  │
+2 │     script {}
+  │     ^^^^^^^^^ 'script' is not allowed in script
+

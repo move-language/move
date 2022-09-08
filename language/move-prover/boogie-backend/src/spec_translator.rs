@@ -27,7 +27,7 @@ use move_model::{
     },
     symbol::Symbol,
     ty::{PrimitiveType, Type},
-    well_known::TYPE_NAME_SPEC,
+    well_known::{TYPE_INFO_SPEC, TYPE_NAME_SPEC},
 };
 use move_stackless_bytecode::mono_analysis::MonoInfo;
 
@@ -35,9 +35,9 @@ use crate::{
     boogie_helpers::{
         boogie_address_blob, boogie_byte_blob, boogie_choice_fun_name, boogie_declare_global,
         boogie_field_sel, boogie_inst_suffix, boogie_modifies_memory_name,
-        boogie_reflection_type_name, boogie_resource_memory_name, boogie_spec_fun_name,
-        boogie_spec_var_name, boogie_struct_name, boogie_type, boogie_type_suffix,
-        boogie_well_formed_expr,
+        boogie_reflection_type_info, boogie_reflection_type_name, boogie_resource_memory_name,
+        boogie_spec_fun_name, boogie_spec_var_name, boogie_struct_name, boogie_type,
+        boogie_type_suffix, boogie_well_formed_expr,
     },
     options::BoogieOptions,
 };
@@ -852,6 +852,8 @@ impl<'env> SpecTranslator<'env> {
         let fun_decl = module_env.get_spec_fun(fun_id);
 
         // special casing for type reflection
+        let mut processed = false;
+
         // TODO(mengxu): change it to a better address name instead of extlib
         if self.env.get_extlib_address() == *module_env.get_name().addr() {
             let qualified_name = format!(
@@ -866,35 +868,45 @@ impl<'env> SpecTranslator<'env> {
                     "{}",
                     boogie_reflection_type_name(self.env, &inst[0])
                 );
-                return;
+                processed = true;
+            } else if qualified_name == TYPE_INFO_SPEC {
+                assert_eq!(inst.len(), 1);
+                // TODO(mengxu): by ignoring the first return value of this function, we are
+                // essentially ignoring the condition where this `type_info` call may abort, e.g.,
+                // invoking `type_info` on a primitive type like: `type_info<bool>`.
+                let (_, info) = boogie_reflection_type_info(self.env, &inst[0]);
+                emit!(self.writer, "{}", info);
+                processed = true;
             }
         }
 
         // regular path
-        let name = boogie_spec_fun_name(module_env, fun_id, inst);
-        emit!(self.writer, "{}(", name);
-        let mut first = true;
-        let mut maybe_comma = || {
-            if first {
-                first = false;
-            } else {
-                emit!(self.writer, ", ");
+        if !processed {
+            let name = boogie_spec_fun_name(module_env, fun_id, inst);
+            emit!(self.writer, "{}(", name);
+            let mut first = true;
+            let mut maybe_comma = || {
+                if first {
+                    first = false;
+                } else {
+                    emit!(self.writer, ", ");
+                }
+            };
+            let label_at = |i| memory_labels.as_ref().map(|labels| labels[i]);
+            let mut i = 0;
+            for memory in &fun_decl.used_memory {
+                let memory = &memory.to_owned().instantiate(inst);
+                maybe_comma();
+                let memory = boogie_resource_memory_name(self.env, memory, &label_at(i));
+                emit!(self.writer, &memory);
+                i = usize::saturating_add(i, 1);
             }
-        };
-        let label_at = |i| memory_labels.as_ref().map(|labels| labels[i]);
-        let mut i = 0;
-        for memory in &fun_decl.used_memory {
-            let memory = &memory.to_owned().instantiate(inst);
-            maybe_comma();
-            let memory = boogie_resource_memory_name(self.env, memory, &label_at(i));
-            emit!(self.writer, &memory);
-            i = usize::saturating_add(i, 1);
+            for exp in args {
+                maybe_comma();
+                self.translate_exp(exp);
+            }
+            emit!(self.writer, ")");
         }
-        for exp in args {
-            maybe_comma();
-            self.translate_exp(exp);
-        }
-        emit!(self.writer, ")");
     }
 
     fn translate_select(

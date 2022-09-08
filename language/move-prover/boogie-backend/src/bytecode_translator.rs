@@ -18,7 +18,7 @@ use move_model::{
     model::{GlobalEnv, Loc, NodeId, QualifiedInstId, StructEnv, StructId},
     pragmas::{ADDITION_OVERFLOW_UNCHECKED_PRAGMA, SEED_PRAGMA, TIMEOUT_PRAGMA},
     ty::{PrimitiveType, Type, TypeDisplayContext, BOOL_TYPE},
-    well_known::TYPE_NAME_MOVE,
+    well_known::{TYPE_INFO_MOVE, TYPE_NAME_MOVE},
 };
 use move_stackless_bytecode::{
     function_target::FunctionTarget,
@@ -34,9 +34,9 @@ use crate::{
         boogie_address_blob, boogie_byte_blob, boogie_debug_track_abort, boogie_debug_track_local,
         boogie_debug_track_return, boogie_equality_for_type, boogie_field_sel, boogie_field_update,
         boogie_function_name, boogie_make_vec_from_strings, boogie_modifies_memory_name,
-        boogie_reflection_type_name, boogie_resource_memory_name, boogie_struct_name, boogie_temp,
-        boogie_type, boogie_type_param, boogie_type_suffix, boogie_type_suffix_for_struct,
-        boogie_well_formed_check, boogie_well_formed_expr,
+        boogie_reflection_type_info, boogie_reflection_type_name, boogie_resource_memory_name,
+        boogie_struct_name, boogie_temp, boogie_type, boogie_type_param, boogie_type_suffix,
+        boogie_type_suffix_for_struct, boogie_well_formed_check, boogie_well_formed_expr,
     },
     options::BoogieOptions,
     spec_translator::SpecTranslator,
@@ -112,6 +112,10 @@ impl<'env> BoogieTranslator<'env> {
 
             // declare free variables to represent the type info for this type
             emitln!(writer, "var {}_name: Vec int;", param_type);
+            emitln!(writer, "var {}_is_struct: bool;", param_type);
+            emitln!(writer, "var {}_account_address: int;", param_type);
+            emitln!(writer, "var {}_module_name: Vec int;", param_type);
+            emitln!(writer, "var {}_struct_name: Vec int;", param_type);
         }
         emitln!(writer);
 
@@ -968,6 +972,8 @@ impl<'env> FunctionTranslator<'env> {
                             .join(",");
 
                         // special casing for type reflection
+                        let mut processed = false;
+
                         // TODO(mengxu): change it to a better address name instead of extlib
                         if env.get_extlib_address() == *module_env.get_name().addr() {
                             let qualified_name = format!(
@@ -991,27 +997,44 @@ impl<'env> FunctionTranslator<'env> {
                                         boogie_reflection_type_name(env, &inst[0])
                                     );
                                 }
-                                return;
+                                processed = true;
+                            } else if qualified_name == TYPE_INFO_MOVE {
+                                assert_eq!(inst.len(), 1);
+                                let (flag, info) = boogie_reflection_type_info(env, &inst[0]);
+                                emitln!(writer, "if (!{}) {{", flag);
+                                writer.with_indent(|| emitln!(writer, "call $ExecFailureAbort();"));
+                                emitln!(writer, "}");
+                                if !dest_str.is_empty() {
+                                    emitln!(writer, "else {");
+                                    writer.with_indent(|| {
+                                        emitln!(writer, "{} := {};", dest_str, info)
+                                    });
+                                    emitln!(writer, "}");
+                                }
+                                processed = true;
                             }
                         }
 
                         // regular path
-                        if dest_str.is_empty() {
-                            emitln!(
-                                writer,
-                                "call {}({});",
-                                boogie_function_name(&callee_env, inst),
-                                args_str
-                            );
-                        } else {
-                            emitln!(
-                                writer,
-                                "call {} := {}({});",
-                                dest_str,
-                                boogie_function_name(&callee_env, inst),
-                                args_str
-                            );
+                        if !processed {
+                            if dest_str.is_empty() {
+                                emitln!(
+                                    writer,
+                                    "call {}({});",
+                                    boogie_function_name(&callee_env, inst),
+                                    args_str
+                                );
+                            } else {
+                                emitln!(
+                                    writer,
+                                    "call {} := {}({});",
+                                    dest_str,
+                                    boogie_function_name(&callee_env, inst),
+                                    args_str
+                                );
+                            }
                         }
+
                         // Clear the last track location after function call, as the call inserted
                         // location tracks before it returns.
                         *last_tracked_loc = None;

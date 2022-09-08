@@ -420,7 +420,7 @@ impl TypeIdentToken {
         tokens
     }
 
-    pub fn convert_to_boogie(std_address: BigUint, tokens: Vec<TypeIdentToken>) -> String {
+    pub fn convert_to_bytes(tokens: Vec<TypeIdentToken>) -> String {
         fn get_char_array(tokens: &[TypeIdentToken], start: usize, end: usize) -> String {
             let elements = (start..end)
                 .map(|k| {
@@ -476,9 +476,15 @@ impl TypeIdentToken {
             let next = segments.pop().unwrap();
             cursor = format!("ConcatVec({}, {})", cursor, next);
         }
+        cursor
+    }
 
-        // wrap everything into a string
-        format!("${}_string_String({})", std_address, cursor)
+    pub fn convert_to_string(std_address: BigUint, tokens: Vec<TypeIdentToken>) -> String {
+        format!(
+            "${}_string_String({})",
+            std_address,
+            Self::convert_to_bytes(tokens)
+        )
     }
 }
 
@@ -546,5 +552,105 @@ fn type_name_to_ident_tokens(env: &GlobalEnv, ty: &Type) -> Vec<TypeIdentToken> 
 /// Convert a type name into a format that can be recognized by Boogie
 pub fn boogie_reflection_type_name(env: &GlobalEnv, ty: &Type) -> String {
     let tokens = type_name_to_ident_tokens(env, ty);
-    TypeIdentToken::convert_to_boogie(env.get_stdlib_address(), tokens)
+    TypeIdentToken::convert_to_string(env.get_stdlib_address(), tokens)
+}
+
+enum TypeInfoPack {
+    Struct(BigUint, String, String),
+    Symbolic(TypeParameterIndex),
+}
+
+fn type_name_to_info_pack(env: &GlobalEnv, ty: &Type) -> Option<TypeInfoPack> {
+    match ty {
+        Type::Struct(mid, sid, _) => {
+            let module_env = env.get_module(*mid);
+            let struct_env = module_env.get_struct(*sid);
+            let module_name = module_env.get_name();
+            Some(TypeInfoPack::Struct(
+                module_name.addr().clone(),
+                module_name
+                    .name()
+                    .display(module_env.symbol_pool())
+                    .to_string(),
+                struct_env
+                    .get_name()
+                    .display(module_env.symbol_pool())
+                    .to_string(),
+            ))
+        }
+        Type::TypeParameter(idx) => Some(TypeInfoPack::Symbolic(*idx)),
+        // move types that will cause an error
+        Type::Primitive(PrimitiveType::Bool)
+        | Type::Primitive(PrimitiveType::U8)
+        | Type::Primitive(PrimitiveType::U64)
+        | Type::Primitive(PrimitiveType::U128)
+        | Type::Primitive(PrimitiveType::Address)
+        | Type::Primitive(PrimitiveType::Signer)
+        | Type::Vector(_) => None,
+        // move types that are not allowed
+        Type::Reference(..) | Type::Tuple(..) => {
+            unreachable!("Prohibited move type in type_name call");
+        }
+        // spec only types
+        Type::Primitive(PrimitiveType::Num)
+        | Type::Primitive(PrimitiveType::Range)
+        | Type::Primitive(PrimitiveType::EventStore)
+        | Type::Fun(..)
+        | Type::TypeDomain(..)
+        | Type::ResourceDomain(..) => {
+            unreachable!("Unexpected spec-only type in type_name call");
+        }
+        // temporary types
+        Type::Error | Type::Var(..) => {
+            unreachable!("Unexpected temporary type in type_name call");
+        }
+    }
+}
+
+/// Convert a type info into a format that can be recognized by Boogie
+pub fn boogie_reflection_type_info(env: &GlobalEnv, ty: &Type) -> (String, String) {
+    fn get_symbol_is_struct(idx: TypeParameterIndex) -> String {
+        format!("#{}_is_struct", idx)
+    }
+    fn get_symbol_account_address(idx: TypeParameterIndex) -> String {
+        format!("#{}_account_address", idx)
+    }
+    fn get_symbol_module_name(idx: TypeParameterIndex) -> String {
+        format!("#{}_module_name", idx)
+    }
+    fn get_symbol_struct_name(idx: TypeParameterIndex) -> String {
+        format!("#{}_struct_name", idx)
+    }
+
+    let extlib_address = env.get_extlib_address();
+    match type_name_to_info_pack(env, ty) {
+        None => (
+            "false".to_string(),
+            format!(
+                "${}_type_info_TypeInfo(0, EmptyVec(), EmptyVec())",
+                extlib_address
+            ),
+        ),
+        Some(TypeInfoPack::Struct(addr, module_name, struct_name)) => {
+            let module_repr = TypeIdentToken::convert_to_bytes(TypeIdentToken::make(&module_name));
+            let struct_repr = TypeIdentToken::convert_to_bytes(TypeIdentToken::make(&struct_name));
+            (
+                "true".to_string(),
+                format!(
+                    "${}_type_info_TypeInfo({}, {}, {})",
+                    extlib_address, addr, module_repr, struct_repr
+                ),
+            )
+        }
+        Some(TypeInfoPack::Symbolic(idx)) => (
+            get_symbol_is_struct(idx),
+            format!(
+                "${}_type_info_TypeInfo({}, {}, {})",
+                extlib_address,
+                get_symbol_account_address(idx),
+                get_symbol_module_name(idx),
+                get_symbol_struct_name(idx)
+            ),
+        ),
+    }
 }

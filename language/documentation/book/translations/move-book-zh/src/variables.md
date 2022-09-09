@@ -557,7 +557,7 @@ assert!(*vector::borrow(&v, 0) == 100, 42)
 
 For more details, see [Move references](./references.md).
 
-关于更多细节可以参考 [Move references](./references.md).
+关于更多细节可以参考 [Move 引用](./references.md).
 
 ## 作用域 (Scopes)
 

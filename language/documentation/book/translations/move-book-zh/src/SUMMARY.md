@@ -12,7 +12,7 @@
 - [整数 (Integers)](integers.md)
 - [布尔类型 (Bool) ](bool.md)
 - [地址 (Address)](address.md)
-- [数组 (Vector)](vector.md)
+- [向量 (Vector)](vector.md)
 - [签名 (Signer)](signer.md)
 - [引用 (References)](references.md)
 - [元组和 Unit (Tuples and Unit)](tuples.md)

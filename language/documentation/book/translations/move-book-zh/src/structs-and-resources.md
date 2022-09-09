@@ -461,7 +461,7 @@ Only structs with the `key` ability can be saved directly in
 structs must have the `store` abilities. See the [ability](./abilities] and
 [global storage](./global-storage-operators.md) chapters for more detail.
 
-只有具有 `key` 能力的结构体才可以直接保存在[全局存储](./global-storage-operators.md)。存储在这些 `key` 中的所有结构体的值必须具有 `store` 能力。请参阅 [能力(abilities)](./chapter_19_abilities] 和[全局存储](./global-storage-operators.md) 章节了解更多详细信息
+只有具有 `key` 能力的结构体才可以直接保存在[全局存储](./global-storage-operators.md)。存储在这些 `key` 中的所有结构体的值必须具有 `store` 能力。请参阅 [能力(abilities)](./abilities] 和[全局存储](./global-storage-operators.md) 章节了解更多详细信息
 
 ## Examples
 

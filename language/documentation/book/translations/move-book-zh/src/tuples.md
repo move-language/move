@@ -23,7 +23,7 @@ the multiple return values. However in Move, you cannot put references inside of
 multiple return values are all pushed on the stack at the bytecode level. At the source level, these
 multiple return values are represented using tuples.
 
-考虑到这些限制，在语言中使用元组可能会感觉很奇怪。但在其他语言中，元组最常见的用例之一是允许函数返回多个值。一些语言通过强制用户编写包含多个返回值的结构来解决这个问题。然而，在Move中，不能将引用放在[结构体](./chapter_16_structs-and-resources.html)内部。这需要Move支持多个返回值。这些多个返回值都在字节码级别压入到堆栈中。在源代码级别，这些多个返回值使用元组表示。
+考虑到这些限制，在语言中使用元组可能会感觉很奇怪。但在其他语言中，元组最常见的用例之一是允许函数返回多个值。一些语言通过强制用户编写包含多个返回值的结构来解决这个问题。然而，在Move中，不能将引用放在[结构体](./structs-and-resources.html)内部。这需要Move支持多个返回值。这些多个返回值都在字节码级别压入到堆栈中。在源代码级别，这些多个返回值使用元组表示。
 
 ## 字面量 (Literals)
 

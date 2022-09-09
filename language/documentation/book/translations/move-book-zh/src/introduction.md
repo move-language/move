@@ -44,4 +44,4 @@ Currently, Move is not targeting developers who wish to create custom modules an
 
 Begin with understanding [modules and scripts](https://move-language.github.io/move/modules-and-scripts.html) and then work through the [Move Tutorial](https://move-language.github.io/move/creating-coins.html).
 
-你可以从了解模块和脚本([modules and scripts](./modules-and-scripts.html))开始，然后跟随Move教程([Move Tutorial](https://move-language.github.io/move/creating-coins.html))进行练习。
+你可以从了解模块和脚本([modules and scripts](./modules-and-scripts.html))开始，然后跟随Move教程([Move Tutorial](./move-tutorial.html))进行练习。

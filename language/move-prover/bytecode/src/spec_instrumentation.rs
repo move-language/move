@@ -622,9 +622,9 @@ impl<'a> Instrumenter<'a> {
                 self.builder.emit_with(|id| {
                     Call(
                         id,
-                        vec![],
-                        Operation::Havoc(HavocKind::MutationValue),
                         vec![*src],
+                        Operation::Havoc(HavocKind::MutationValue),
+                        vec![],
                         None,
                     )
                 });

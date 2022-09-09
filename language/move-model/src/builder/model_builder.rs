@@ -9,6 +9,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use codespan_reporting::diagnostic::Severity;
 #[allow(unused_imports)]
 use log::{debug, info, warn};
 use num::BigUint;
@@ -18,6 +19,7 @@ use move_compiler::{expansion::ast as EA, parser::ast as PA, shared::NumericalAd
 use crate::{
     ast::{Attribute, ModuleName, Operation, QualifiedSymbol, Spec, Value},
     builder::spec_builtins,
+    intrinsics::IntrinsicDecl,
     model::{
         FunId, FunctionVisibility, GlobalEnv, Loc, ModuleId, QualifiedId, SpecFunId, SpecVarId,
         StructId,
@@ -26,7 +28,6 @@ use crate::{
     symbol::Symbol,
     ty::Type,
 };
-use codespan_reporting::diagnostic::Severity;
 
 /// A builder is used to enter a sequence of modules in acyclic dependency order into the model. The
 /// builder maintains the incremental state of this process, such that the various tables
@@ -46,7 +47,7 @@ pub(crate) struct ModelBuilder<'env> {
     /// A symbol table storing unused schemas, used later to generate warnings. All schemas
     /// are initially in the table and are removed when they are used in expressions.
     pub unused_schema_set: BTreeSet<QualifiedSymbol>,
-    // A symbol table for structs.
+    /// A symbol table for structs.
     pub struct_table: BTreeMap<QualifiedSymbol, StructEntry>,
     /// A reverse mapping from ModuleId/StructId pairs to QualifiedSymbol. This
     /// is used for visualization of types in error messages.
@@ -57,6 +58,8 @@ pub(crate) struct ModelBuilder<'env> {
     pub const_table: BTreeMap<QualifiedSymbol, ConstEntry>,
     /// A call graph mapping callers to callees that are Move functions.
     pub move_fun_call_graph: BTreeMap<QualifiedId<SpecFunId>, BTreeSet<QualifiedId<SpecFunId>>>,
+    /// A list of intrinsic declarations
+    pub intrinsics: Vec<IntrinsicDecl>,
 }
 
 /// A declaration of a specification function or operator in the builders state.
@@ -117,7 +120,6 @@ pub(crate) struct StructEntry {
 pub(crate) struct FunEntry {
     pub loc: Loc,
     pub module_id: ModuleId,
-    #[allow(dead_code)]
     pub fun_id: FunId,
     pub visibility: FunctionVisibility,
     pub is_entry: bool,
@@ -149,6 +151,7 @@ impl<'env> ModelBuilder<'env> {
             fun_table: BTreeMap::new(),
             const_table: BTreeMap::new(),
             move_fun_call_graph: BTreeMap::new(),
+            intrinsics: Default::default(),
         };
         spec_builtins::declare_spec_builtins(&mut translator);
         translator
@@ -410,6 +413,14 @@ impl<'env> ModelBuilder<'env> {
                     self.propagate_move_fun_usage(*n);
                 }
             });
+        }
+    }
+
+    /// Pass model-level information to the global env
+    pub fn populate_env(&mut self) {
+        // register all intrinsic declarations
+        for decl in &self.intrinsics {
+            self.env.intrinsics.add_decl(decl);
         }
     }
 }

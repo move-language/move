@@ -32,15 +32,15 @@ use codespan_reporting::{
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{info, warn};
-use move_command_line_common::files::FileHash;
 use num::{BigUint, One, ToPrimitive};
 use serde::{Deserialize, Serialize};
 
+pub use move_binary_format::file_format::{AbilitySet, Visibility as FunctionVisibility};
 use move_binary_format::{
     access::ModuleAccess,
     binary_views::BinaryIndexedView,
     file_format::{
-        AddressIdentifierIndex, Bytecode, Constant as VMConstant, ConstantPoolIndex,
+        AddressIdentifierIndex, Bytecode, CodeOffset, Constant as VMConstant, ConstantPoolIndex,
         FunctionDefinitionIndex, FunctionHandleIndex, SignatureIndex, SignatureToken,
         StructDefinitionIndex, StructFieldInformation, StructHandleIndex, Visibility,
     },
@@ -52,6 +52,7 @@ use move_binary_format::{
     CompiledModule,
 };
 use move_bytecode_source_map::{mapping::SourceMapping, source_map::SourceMap};
+use move_command_line_common::{address::NumericalAddress, files::FileHash};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
@@ -62,9 +63,10 @@ use move_disassembler::disassembler::{Disassembler, DisassemblerOptions};
 
 use crate::{
     ast::{
-        ConditionKind, Exp, ExpData, GlobalInvariant, ModuleName, PropertyBag, PropertyValue, Spec,
-        SpecBlockInfo, SpecFunDecl, SpecVarDecl, Value,
+        Attribute, ConditionKind, Exp, ExpData, GlobalInvariant, ModuleName, PropertyBag,
+        PropertyValue, Spec, SpecBlockInfo, SpecFunDecl, SpecVarDecl, Value,
     },
+    intrinsics::IntrinsicsAnnotation,
     pragmas::{
         DELEGATE_INVARIANTS_TO_CALLER_PRAGMA, DISABLE_INVARIANTS_IN_BODY_PRAGMA, FRIEND_PRAGMA,
         INTRINSIC_PRAGMA, OPAQUE_PRAGMA, VERIFY_PRAGMA,
@@ -72,12 +74,6 @@ use crate::{
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type, TypeDisplayContext, TypeUnificationAdapter, Variance},
 };
-
-// import and re-expose symbols
-use crate::ast::Attribute;
-use move_binary_format::file_format::CodeOffset;
-pub use move_binary_format::file_format::{AbilitySet, Visibility as FunctionVisibility};
-use move_command_line_common::address::NumericalAddress;
 
 // =================================================================================================
 /// # Constants
@@ -225,6 +221,10 @@ pub struct NodeId(usize);
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct GlobalId(usize);
 
+/// Identifier for an intrinsic declaration, relative globally in `GlobalEnv`.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+pub struct IntrinsicId(usize);
+
 /// Some identifier qualified by a module.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct QualifiedId<Id> {
@@ -330,16 +330,6 @@ impl ModuleId {
     }
 }
 
-impl GlobalId {
-    pub fn new(idx: usize) -> Self {
-        Self(idx)
-    }
-
-    pub fn as_usize(self) -> usize {
-        self.0
-    }
-}
-
 impl ModuleId {
     pub fn qualified<Id>(self, id: Id) -> QualifiedId<Id> {
         QualifiedId {
@@ -354,6 +344,26 @@ impl ModuleId {
             inst,
             id,
         }
+    }
+}
+
+impl GlobalId {
+    pub fn new(idx: usize) -> Self {
+        Self(idx)
+    }
+
+    pub fn as_usize(self) -> usize {
+        self.0
+    }
+}
+
+impl IntrinsicId {
+    pub fn new(idx: usize) -> Self {
+        Self(idx)
+    }
+
+    pub fn as_usize(self) -> usize {
+        self.0
     }
 }
 
@@ -500,6 +510,8 @@ pub struct GlobalEnv {
     /// are represented without type instantiation because we assume the backend can handle
     /// generics in the expression language.
     pub used_spec_funs: BTreeSet<QualifiedId<SpecFunId>>,
+    /// An annotation of all intrinsic declarations
+    pub intrinsics: IntrinsicsAnnotation,
     /// A type-indexed container for storing extension data in the environment.
     extensions: RefCell<BTreeMap<TypeId, Box<dyn Any>>>,
     /// The address of the standard and extension libaries.
@@ -555,6 +567,7 @@ impl GlobalEnv {
             global_invariants: Default::default(),
             global_invariants_for_memory: Default::default(),
             used_spec_funs: BTreeSet::new(),
+            intrinsics: Default::default(),
             extensions: Default::default(),
             stdlib_address: None,
             extlib_address: None,
@@ -2510,7 +2523,7 @@ impl<'env> StructEnv<'env> {
     /// Returns true if this is the well-known native or intrinsic struct of the given name.
     pub fn is_well_known(&self, name: &str) -> bool {
         let env = self.module_env.env;
-        if !self.is_native() && !self.is_intrinsic() {
+        if !self.is_native_or_intrinsic() {
             return false;
         }
         let addr = self.module_env.get_name().addr();
@@ -2717,7 +2730,7 @@ impl<'env> StructEnv<'env> {
 
     /// Returns true if this struct is native or marked as intrinsic.
     pub fn is_native_or_intrinsic(&self) -> bool {
-        self.is_native() || self.is_pragma_true(INTRINSIC_PRAGMA, || false)
+        self.is_native() || self.is_intrinsic()
     }
 }
 

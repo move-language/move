@@ -4,7 +4,15 @@
 
 //! Provides pragmas and properties of the specification language.
 
-use crate::{ast::ConditionKind, builder::module_builder::SpecBlockContext};
+use std::collections::BTreeMap;
+
+use once_cell::sync::Lazy;
+
+use crate::{
+    ast::{ConditionKind, PropertyBag, PropertyValue},
+    builder::module_builder::SpecBlockContext,
+    symbol::SymbolPool,
+};
 
 /// Pragma indicating whether verification should be performed for a function.
 pub const VERIFY_PRAGMA: &str = "verify";
@@ -70,8 +78,92 @@ pub const DISABLE_INVARIANTS_IN_BODY_PRAGMA: &str = "disable_invariants_in_body"
 /// to this function
 pub const DELEGATE_INVARIANTS_TO_CALLER_PRAGMA: &str = "delegate_invariants_to_caller";
 
+/// # Pragmas for intrinsic table declaration
+
+/// The intrinsic type for `Map<K, V>`
+pub const INTRINSIC_TYPE_MAP: &str = "map";
+
+/// Create a new table with an empty content
+/// `[move] fun map_new<K, V>(): Map<K, V>`
+pub const INTRINSIC_FUN_MAP_NEW: &str = "map_new";
+
+/// Get the value associated with key `k`.
+/// The behavior is undefined if `k` does not exist in the map
+/// `[spec] fun map_get<K, V>(m: Map<K, V>, k: K): V`
+pub const INTRINSIC_FUN_MAP_SPEC_GET: &str = "map_spec_get";
+
+/// Set the value to `v` with the key associated with `k`
+/// `[spec] fun map_set<K, V>(m: Map<K, V>, k: K, v: V): Map<K, V>`
+pub const INTRINSIC_FUN_MAP_SPEC_SET: &str = "map_spec_set";
+
+/// Remove the map entry associated with key `k`
+/// The behavior is undefined if `k` does not exist in the map
+/// `[spec] fun map_del<K, V>(m: Map<K, V>, k: K): Map<K, V>`
+pub const INTRINSIC_FUN_MAP_SPEC_DEL: &str = "map_spec_del";
+
+/// Get the number of entries in the map (the spec version)
+/// `[spec] fun map_len<K, V>(m: Map<K, V>): num`
+pub const INTRINSIC_FUN_MAP_SPEC_LEN: &str = "map_spec_len";
+
+/// Get the number of entries in the map
+/// `[move] fun map_len<K, V>(m: &Map<K, V>): u64`
+pub const INTRINSIC_FUN_MAP_LEN: &str = "map_len";
+
+/// Check if the map has an entry associated with key `k` (the spec version)
+/// `[spec] fun map_has_key<K, V>(m: Map<K, V>, k: K): bool`
+pub const INTRINSIC_FUN_MAP_SPEC_HAS_KEY: &str = "map_spec_has_key";
+
+/// Check if the map has an entry associated with key `k`
+/// `[move] fun map_has_key<K, V>(m: &Map<K, V>, k: K): bool`
+pub const INTRINSIC_FUN_MAP_HAS_KEY: &str = "map_has_key";
+
+/// Destroys the map, aborts if the length is not zero.
+/// `[move] fun map_destroy_empty<K, V>(m: Map<K, V>)`
+pub const INTRINSIC_FUN_MAP_DESTROY_EMPTY: &str = "map_destroy_empty";
+
+/// Add a new entry to the map, aborts if the key already exists
+/// `[move] fun map_add_no_override<K, V>(m: &mut Map<K, V>, k: K, v: V)`
+pub const INTRINSIC_FUN_MAP_ADD_NO_OVERRIDE: &str = "map_add_no_override";
+
+/// Remove an entry from the map, aborts if the key already exists
+/// `[move] fun map_del_must_exist<K, V>(m: &mut Map<K, V>, k: K): V`
+pub const INTRINSIC_FUN_MAP_DEL_MUST_EXIST: &str = "map_del_must_exist";
+
+/// Immutable borrow of a value from the map, aborts if the key does not exist
+/// `[move] fun map_borrow<K, V>(m: &Map<K, V>, k: K): &V`
+pub const INTRINSIC_FUN_MAP_BORROW: &str = "map_borrow";
+
+/// Mutable borrow of a value from the map, aborts if the key does not exist
+/// `[move] fun map_borrow_mut<K, V>(m: &mut Map<K, V>, k: K): &mut V`
+pub const INTRINSIC_FUN_MAP_BORROW_MUT: &str = "map_borrow_mut";
+
+/// All intrinsic functions associated with the map type
+pub static INTRINSIC_TYPE_MAP_ASSOC_FUNCTIONS: Lazy<BTreeMap<&'static str, bool>> =
+    Lazy::new(|| {
+        BTreeMap::from([
+            (INTRINSIC_FUN_MAP_NEW, true),
+            (INTRINSIC_FUN_MAP_SPEC_GET, false),
+            (INTRINSIC_FUN_MAP_SPEC_SET, false),
+            (INTRINSIC_FUN_MAP_SPEC_DEL, false),
+            (INTRINSIC_FUN_MAP_SPEC_LEN, false),
+            (INTRINSIC_FUN_MAP_SPEC_HAS_KEY, false),
+            (INTRINSIC_FUN_MAP_LEN, true),
+            (INTRINSIC_FUN_MAP_HAS_KEY, true),
+            (INTRINSIC_FUN_MAP_DESTROY_EMPTY, true),
+            (INTRINSIC_FUN_MAP_ADD_NO_OVERRIDE, true),
+            (INTRINSIC_FUN_MAP_DEL_MUST_EXIST, true),
+            (INTRINSIC_FUN_MAP_BORROW, true),
+            (INTRINSIC_FUN_MAP_BORROW_MUT, true),
+        ])
+    });
+
 /// Checks whether a pragma is valid in a specific spec block.
-pub fn is_pragma_valid_for_block(target: &SpecBlockContext<'_>, pragma: &str) -> bool {
+pub fn is_pragma_valid_for_block(
+    symbols: &SymbolPool,
+    bag: &PropertyBag,
+    target: &SpecBlockContext<'_>,
+    pragma: &str,
+) -> bool {
     use crate::builder::module_builder::SpecBlockContext::*;
     match target {
         Module => matches!(
@@ -104,7 +196,18 @@ pub fn is_pragma_valid_for_block(target: &SpecBlockContext<'_>, pragma: &str) ->
                 | DISABLE_INVARIANTS_IN_BODY_PRAGMA
                 | DELEGATE_INVARIANTS_TO_CALLER_PRAGMA
         ),
-        Struct(..) => matches!(pragma, INTRINSIC_PRAGMA),
+        Struct(..) => match pragma {
+            INTRINSIC_PRAGMA => true,
+            _ if INTRINSIC_TYPE_MAP_ASSOC_FUNCTIONS.contains_key(pragma) => bag
+                .get(&symbols.make(INTRINSIC_PRAGMA))
+                .map(|v| match v {
+                    PropertyValue::Symbol(s) => symbols.string(*s).as_str() == INTRINSIC_TYPE_MAP,
+                    _ => false,
+                })
+                .unwrap_or(false),
+            // all other cases
+            _ => false,
+        },
         _ => false,
     }
 }

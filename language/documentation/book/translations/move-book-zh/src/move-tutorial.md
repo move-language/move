@@ -448,7 +448,7 @@ Roughly the Move blockchain state should look like this:
 
 区块链状态(`Move blockchain state`)看起来大致如下：
 
-![](diagrams/move_state.png)
+![](https://raw.githubusercontent.com/move-language/move/main/language/documentation/tutorial/diagrams/move_state.png)
 
 #### 进阶主题 (Advanced topics) ：
 

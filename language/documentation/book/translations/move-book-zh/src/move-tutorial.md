@@ -463,7 +463,7 @@ public(script) fun transfer(from: signer, to: address, amount: u64) acquires Bal
 ```
 Read more on Move function visibilities [here](https://move-language.github.io/move/functions.html#visibility).
 
-关于函数可见性的更多信息，请参阅[Move function visibilities](./15_functions.html#visibility)。
+关于函数可见性的更多信息，请参阅[Move function visibilities](./functions.html#visibility)。
 
 </details>
 <details>

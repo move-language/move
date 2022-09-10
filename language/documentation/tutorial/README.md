@@ -120,7 +120,7 @@ module 0xCAFE::BasicCoin {
 
 This is defining a Move
 [module](https://move-language.github.io/move/modules-and-scripts.html). Modules are the
-building block of Move code, and are defined with a specific address -- the
+building blocks of Move code, and are defined with a specific address -- the
 address that the module can be published under. In this case, the `BasicCoin`
 module can only be published under `0xCAFE`.
 

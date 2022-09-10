@@ -275,24 +275,18 @@ assertion fails the unit test will fail.
   pass to the `move test` command that will show you the global state when
   the test fails. It should look something like this:
   ```
-    ┌── test_mint_10 ──────
-    │ error[E11001]: test failure
-    │    ┌─ ./sources/FirstModule.move:24:9
-    │    │
-    │ 18 │     fun test_mint_10(account: signer) acquires Coin {
-    │    │         ------------ In this function in 0xcafe::BasicCoin
-    │    ·
-    │ 24 │         assert!(borrow_global<Coin>(addr).value == 11, 0);
-    │    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Test was not expected to abort but it aborted with 0 here
-    │
-    │
-    │ ────── Storage state at point of failure ──────
-    │ 0xc0ffee:
-    │       => key 0xcafe::BasicCoin::Coin {
-    │           value: 10
-    │       }
-    │
-    └──────────────────
+  ┌── test_mint_10 ──────
+  │ error[E11001]: test failure
+  │    ┌─ ./sources/FirstModule.move:24:9
+  │    │
+  │ 18 │     fun test_mint_10(account: signer) acquires Coin {
+  │    │         ------------ In this function in 0xcafe::BasicCoin
+  │    ·
+  │ 24 │         assert!(borrow_global<Coin>(addr).value == 11, 0);
+  │    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Test was not expected to abort but it aborted with 0 here
+  │
+  │
+  └──────────────────
   ```
 * Find a flag that allows you to gather test coverage information, and
   then play around with using the `move coverage` command to look at

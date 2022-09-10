@@ -62,8 +62,10 @@ You should see something like this along with a list and description of a
 number of commands:
 
 ```
-move-package
-Execute a package command. Executed in the current directory or the closest containing Move package
+move-cli 0.1.0
+Diem Association <opensource@diem.com>
+MoveCLI is the CLI that will be executed by the `move-cli` command The `cmd` argument is added here
+rather than in `Move` to make it easier for other crates to extend `move-cli`
 
 USAGE:
     move [OPTIONS] <SUBCOMMAND>

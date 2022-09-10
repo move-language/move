@@ -1218,29 +1218,29 @@ impl<'env> FunctionTranslator<'env> {
                         emitln!(writer, "}");
                     }
                     Havoc(HavocKind::Value) | Havoc(HavocKind::MutationAll) => {
-                        let src_str = str_local(srcs[0]);
-                        emitln!(writer, "havoc {};", src_str);
+                        let var_str = str_local(dests[0]);
+                        emitln!(writer, "havoc {};", var_str);
                         // Insert a WellFormed check
-                        let ty = &self.get_local_type(srcs[0]);
-                        let check = boogie_well_formed_check(env, &src_str, ty);
+                        let ty = &self.get_local_type(dests[0]);
+                        let check = boogie_well_formed_check(env, &var_str, ty);
                         if !check.is_empty() {
                             emitln!(writer, &check);
                         }
                     }
                     Havoc(HavocKind::MutationValue) => {
-                        let ty = &self.get_local_type(srcs[0]);
-                        let src_str = str_local(srcs[0]);
+                        let ty = &self.get_local_type(dests[0]);
+                        let var_str = str_local(dests[0]);
                         let temp_str = boogie_temp(env, ty.skip_reference(), 0);
                         emitln!(writer, "havoc {};", temp_str);
                         emitln!(
                             writer,
                             "{} := $UpdateMutation({}, {});",
-                            src_str,
-                            src_str,
+                            var_str,
+                            var_str,
                             temp_str
                         );
                         // Insert a WellFormed check
-                        let check = boogie_well_formed_check(env, &src_str, ty);
+                        let check = boogie_well_formed_check(env, &var_str, ty);
                         if !check.is_empty() {
                             emitln!(writer, &check);
                         }
@@ -1850,11 +1850,11 @@ impl<'env> FunctionTranslator<'env> {
         };
         for bc in &fun_target.data.code {
             match bc {
-                Call(_, _, oper, srcs, ..) => match oper {
+                Call(_, dests, oper, srcs, ..) => match oper {
                     TraceExp(_, id) => need(&self.inst(&env.get_node_type(*id)), 1),
                     TraceReturn(idx) => need(&self.inst(fun_target.get_return_type(*idx)), 1),
                     TraceLocal(_) => need(&self.get_local_type(srcs[0]), 1),
-                    Havoc(HavocKind::MutationValue) => need(&self.get_local_type(srcs[0]), 1),
+                    Havoc(HavocKind::MutationValue) => need(&self.get_local_type(dests[0]), 1),
                     _ => {}
                 },
                 Prop(_, PropKind::Modifies, exp) => {

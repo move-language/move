@@ -4,7 +4,8 @@ spec extensions::table {
     // Make most of the public API intrinsic. Those functions have custom specifications in the prover.
 
     spec Table {
-        pragma intrinsic;
+        pragma intrinsic = map,
+            map_borrow_mut = borrow_mut;
     }
 
     spec new {

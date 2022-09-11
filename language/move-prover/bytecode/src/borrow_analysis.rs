@@ -4,6 +4,19 @@
 
 //! Data flow analysis computing borrow information for preparation of memory_instrumentation.
 
+use std::{borrow::BorrowMut, collections::BTreeMap, fmt};
+
+use itertools::Itertools;
+
+use move_binary_format::file_format::CodeOffset;
+use move_model::{
+    ast::TempIndex,
+    model::{FunctionEnv, GlobalEnv, QualifiedInstId},
+    pragmas::INTRINSIC_FUN_MAP_BORROW_MUT,
+    ty::Type,
+    well_known::VECTOR_BORROW_MUT,
+};
+
 use crate::{
     dataflow_analysis::{DataflowAnalysis, TransferFunctions},
     dataflow_domains::{AbstractDomain, JoinResult, MapDomain, SetDomain},
@@ -13,15 +26,6 @@ use crate::{
     stackless_bytecode::{AssignKind, BorrowEdge, BorrowNode, Bytecode, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
-use itertools::Itertools;
-use move_binary_format::file_format::CodeOffset;
-use move_model::{
-    ast::TempIndex,
-    model::{FunctionEnv, GlobalEnv, QualifiedInstId},
-    ty::Type,
-    well_known::{TABLE_BORROW_MUT, VECTOR_BORROW_MUT},
-};
-use std::{borrow::BorrowMut, collections::BTreeMap, fmt};
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, Default)]
 pub struct BorrowInfo {
@@ -416,7 +420,9 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
 }
 
 fn native_annotation(fun_env: &FunctionEnv) -> BorrowAnnotation {
-    if fun_env.is_well_known(VECTOR_BORROW_MUT) || fun_env.is_well_known(TABLE_BORROW_MUT) {
+    if fun_env.is_well_known(VECTOR_BORROW_MUT)
+        || fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT)
+    {
         // Create an edge from the first parameter to the return value.
         let mut an = BorrowAnnotation::default();
         let param_node = BorrowNode::Reference(0);

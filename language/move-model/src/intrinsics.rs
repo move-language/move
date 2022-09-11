@@ -9,7 +9,7 @@ use crate::{
     builder::module_builder::SpecBlockContext,
     model::{IntrinsicId, QualifiedId, SpecFunId},
     pragmas::{INTRINSIC_PRAGMA, INTRINSIC_TYPE_MAP, INTRINSIC_TYPE_MAP_ASSOC_FUNCTIONS},
-    symbol::Symbol,
+    symbol::{Symbol, SymbolPool},
     FunId, Loc, ModuleBuilder, StructId,
 };
 
@@ -17,7 +17,6 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct IntrinsicDecl {
     move_type: QualifiedId<StructId>,
-    #[allow(dead_code)]
     intrinsic_type: Symbol,
     intrinsic_to_move_fun: BTreeMap<Symbol, QualifiedId<FunId>>,
     move_fun_to_intrinsic: BTreeMap<QualifiedId<FunId>, Symbol>,
@@ -243,5 +242,57 @@ impl IntrinsicsAnnotation {
             self.intrinsic_spec_funs.insert(*spec_fid, id);
         }
         self.decls.insert(id, decl.clone());
+    }
+
+    /// Test whether a struct is an intrinsic of a specific name
+    pub fn is_intrinsic_of_for_struct(
+        &self,
+        symbol_pool: &SymbolPool,
+        qid: &QualifiedId<StructId>,
+        intrinsic_name: &str,
+    ) -> bool {
+        self.intrinsic_structs.get(qid).map_or(false, |id| {
+            let decl = self.decls.get(id).expect("intrinsic decl");
+            let sym = symbol_pool.make(intrinsic_name);
+            decl.intrinsic_type == sym
+        })
+    }
+
+    /// Test whether a move function is an intrinsic of a specific name
+    pub fn is_intrinsic_of_for_move_fun(
+        &self,
+        symbol_pool: &SymbolPool,
+        qid: &QualifiedId<FunId>,
+        intrinsic_name: &str,
+    ) -> bool {
+        self.intrinsic_move_funs
+            .get(qid)
+            .and_then(|id| {
+                self.decls
+                    .get(id)
+                    .expect("intrinsic decl")
+                    .move_fun_to_intrinsic
+                    .get(qid)
+            })
+            .map_or(false, |sym| sym == &symbol_pool.make(intrinsic_name))
+    }
+
+    /// Test whether a spec function is an intrinsic of a specific name
+    pub fn is_intrinsic_of_for_spec_fun(
+        &self,
+        symbol_pool: &SymbolPool,
+        qid: &QualifiedId<SpecFunId>,
+        intrinsic_name: &str,
+    ) -> bool {
+        self.intrinsic_spec_funs
+            .get(qid)
+            .and_then(|id| {
+                self.decls
+                    .get(id)
+                    .expect("intrinsic decl")
+                    .spec_fun_to_intrinsic
+                    .get(qid)
+            })
+            .map_or(false, |sym| sym == &symbol_pool.make(intrinsic_name))
     }
 }

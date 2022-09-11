@@ -2520,22 +2520,13 @@ impl<'env> StructEnv<'env> {
         self.is_pragma_true(INTRINSIC_PRAGMA, || false)
     }
 
-    /// Returns true if this is the well-known native or intrinsic struct of the given name.
-    pub fn is_well_known(&self, name: &str) -> bool {
-        let env = self.module_env.env;
-        if !self.is_native_or_intrinsic() {
-            return false;
-        }
-        let addr = self.module_env.get_name().addr();
-        (addr == &env.get_stdlib_address() || addr == &env.get_extlib_address())
-            && self.get_full_name_str() == name
-    }
-
-    /// Determines whether this struct is the well-known vector type.
-    pub fn is_vector(&self) -> bool {
-        let name = self.symbol_pool().string(self.module_env.get_name().name());
-        let addr = self.module_env.get_name().addr();
-        name.as_ref() == "vector" && addr == &BigUint::from(0_u64)
+    /// Returns true if this is an intrinsic struct of a given name
+    pub fn is_intrinsic_of(&self, name: &str) -> bool {
+        self.module_env.env.intrinsics.is_intrinsic_of_for_struct(
+            self.symbol_pool(),
+            &self.get_qualified_id(),
+            name,
+        )
     }
 
     /// Returns true if this struct is ghost memory for a specification variable.
@@ -3184,6 +3175,15 @@ impl<'env> FunctionEnv<'env> {
     /// Returns true if function is either native or intrinsic.
     pub fn is_native_or_intrinsic(&self) -> bool {
         self.is_native() || self.is_intrinsic()
+    }
+
+    /// Returns true if this is an intrinsic struct of a given name
+    pub fn is_intrinsic_of(&self, name: &str) -> bool {
+        self.module_env.env.intrinsics.is_intrinsic_of_for_move_fun(
+            self.symbol_pool(),
+            &self.get_qualified_id(),
+            name,
+        )
     }
 
     /// Returns true if this is the well-known native or intrinsic function of the given name.

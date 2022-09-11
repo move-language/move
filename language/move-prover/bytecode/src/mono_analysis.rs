@@ -20,8 +20,9 @@ use move_model::{
         FunId, FunctionEnv, GlobalEnv, ModuleId, QualifiedId, QualifiedInstId, SpecFunId,
         SpecVarId, StructEnv, StructId,
     },
+    pragmas::INTRINSIC_TYPE_MAP,
     ty::{Type, TypeDisplayContext, TypeInstantiationDerivation, TypeUnificationAdapter, Variance},
-    well_known::{TABLE_TABLE, TYPE_INFO_MOVE, TYPE_INFO_SPEC, TYPE_NAME_MOVE, TYPE_NAME_SPEC},
+    well_known::{TYPE_INFO_MOVE, TYPE_INFO_SPEC, TYPE_NAME_MOVE, TYPE_NAME_SPEC},
 };
 
 use crate::{
@@ -476,7 +477,7 @@ impl<'a> Analyzer<'a> {
     }
 
     fn add_struct(&mut self, struct_: StructEnv<'_>, targs: &[Type]) {
-        if struct_.is_well_known(TABLE_TABLE) {
+        if struct_.is_intrinsic_of(INTRINSIC_TYPE_MAP) {
             self.info
                 .table_inst
                 .insert((targs[0].clone(), targs[1].clone()));

@@ -409,10 +409,12 @@ assert!(signer::address_of(&module_owner) == MODULE_OWNER, errors::requires_addr
 ```
 Assert statements in Move can be used in this way: `assert!(<predicate>, <abort_code>);`. This means that if the `<predicate>`
 is false, then abort the transaction with `<abort_code>`. Here `MODULE_OWNER` and `ENOT_MODULE_OWNER` are both constants
-defined at the beginning of the module. And `errors` module defines common error categories we can use.
+defined at the beginning of the module. The standard library's [`error` module] also defines common error categories we can use.
 It is important to note that Move is transactional in its execution -- so
 if an [abort](https://move-language.github.io/move/abort-and-assert.html) is raised no unwinding of state
 needs to be performed, as no changes from that transaction will be persisted to the blockchain.
+
+[`error` module]: https://github.com/move-language/move/blob/main/language/move-stdlib/docs/error.md
 
 We then deposit a coin with value `amount` to the balance of `mint_addr`.
 ```

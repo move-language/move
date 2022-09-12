@@ -105,9 +105,17 @@ pub const INTRINSIC_FUN_MAP_SPEC_DEL: &str = "map_spec_del";
 /// `[spec] fun map_len<K, V>(m: Map<K, V>): num`
 pub const INTRINSIC_FUN_MAP_SPEC_LEN: &str = "map_spec_len";
 
+/// Check whether the map is empty (the spec version)
+/// `[move] fun map_is_empty<K, V>(m: Map<K, V>): bool`
+pub const INTRINSIC_FUN_MAP_SPEC_IS_EMPTY: &str = "map_spec_is_empty";
+
 /// Get the number of entries in the map
 /// `[move] fun map_len<K, V>(m: &Map<K, V>): u64`
 pub const INTRINSIC_FUN_MAP_LEN: &str = "map_len";
+
+/// Check whether the map is empty
+/// `[move] fun map_is_empty<K, V>(m: &Map<K, V>): bool`
+pub const INTRINSIC_FUN_MAP_IS_EMPTY: &str = "map_is_empty";
 
 /// Check if the map has an entry associated with key `k` (the spec version)
 /// `[spec] fun map_has_key<K, V>(m: Map<K, V>, k: K): bool`
@@ -146,8 +154,10 @@ pub static INTRINSIC_TYPE_MAP_ASSOC_FUNCTIONS: Lazy<BTreeMap<&'static str, bool>
             (INTRINSIC_FUN_MAP_SPEC_SET, false),
             (INTRINSIC_FUN_MAP_SPEC_DEL, false),
             (INTRINSIC_FUN_MAP_SPEC_LEN, false),
+            (INTRINSIC_FUN_MAP_SPEC_IS_EMPTY, false),
             (INTRINSIC_FUN_MAP_SPEC_HAS_KEY, false),
             (INTRINSIC_FUN_MAP_LEN, true),
+            (INTRINSIC_FUN_MAP_IS_EMPTY, true),
             (INTRINSIC_FUN_MAP_HAS_KEY, true),
             (INTRINSIC_FUN_MAP_DESTROY_EMPTY, true),
             (INTRINSIC_FUN_MAP_ADD_NO_OVERRIDE, true),

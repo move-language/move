@@ -4,13 +4,15 @@
 
 use std::{collections::BTreeMap, ops::Deref};
 
+use num::BigUint;
+
 use crate::{
     ast::{Operation, PropertyBag, PropertyValue, QualifiedSymbol},
     builder::module_builder::SpecBlockContext,
     model::{IntrinsicId, QualifiedId, SpecFunId},
     pragmas::{INTRINSIC_PRAGMA, INTRINSIC_TYPE_MAP, INTRINSIC_TYPE_MAP_ASSOC_FUNCTIONS},
     symbol::{Symbol, SymbolPool},
-    FunId, Loc, ModuleBuilder, StructId,
+    FunId, GlobalEnv, Loc, ModuleBuilder, StructId,
 };
 
 /// An information pack that holds the intrinsic declaration
@@ -22,6 +24,36 @@ pub struct IntrinsicDecl {
     move_fun_to_intrinsic: BTreeMap<QualifiedId<FunId>, Symbol>,
     intrinsic_to_spec_fun: BTreeMap<Symbol, QualifiedId<SpecFunId>>,
     spec_fun_to_intrinsic: BTreeMap<QualifiedId<SpecFunId>, Symbol>,
+}
+
+impl IntrinsicDecl {
+    pub fn get_fun_triple(&self, env: &GlobalEnv, name: &str) -> Option<(BigUint, String, String)> {
+        let symbol_pool = env.symbol_pool();
+        let sym = symbol_pool.make(name);
+        self.intrinsic_to_move_fun
+            .get(&sym)
+            .map(|qid| {
+                let fun_env = env.get_function(*qid);
+                let mod_name = fun_env.module_env.get_name();
+                (
+                    mod_name.addr().clone(),
+                    symbol_pool.string(mod_name.name()).to_string(),
+                    symbol_pool.string(fun_env.get_name()).to_string(),
+                )
+            })
+            .or_else(|| {
+                self.intrinsic_to_spec_fun.get(&sym).map(|qid| {
+                    let mod_env = env.get_module(qid.module_id);
+                    let mod_name = mod_env.get_name();
+                    let fun_decl = mod_env.get_spec_fun(qid.id);
+                    (
+                        mod_name.addr().clone(),
+                        symbol_pool.string(mod_name.name()).to_string(),
+                        symbol_pool.string(fun_decl.name).to_string(),
+                    )
+                })
+            })
+    }
 }
 
 pub(crate) fn process_intrinsic_declaration(
@@ -242,6 +274,13 @@ impl IntrinsicsAnnotation {
             self.intrinsic_spec_funs.insert(*spec_fid, id);
         }
         self.decls.insert(id, decl.clone());
+    }
+
+    /// Get the intrinsic decl for struct
+    pub fn get_decl_for_struct(&self, qid: &QualifiedId<StructId>) -> Option<&IntrinsicDecl> {
+        self.intrinsic_structs
+            .get(qid)
+            .map(|id| self.decls.get(id).unwrap())
     }
 
     /// Test whether a struct is an intrinsic of a specific name

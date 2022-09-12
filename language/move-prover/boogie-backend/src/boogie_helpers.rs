@@ -242,9 +242,13 @@ pub fn boogie_type_suffix(env: &GlobalEnv, ty: &Type) -> String {
 }
 
 pub fn boogie_type_suffix_for_struct(struct_env: &StructEnv<'_>, inst: &[Type]) -> String {
-    let env = struct_env.module_env.env;
     if struct_env.is_intrinsic_of(INTRINSIC_TYPE_MAP) {
-        format!("table{}", boogie_inst_suffix(env, inst))
+        format!(
+            "${}_{}{}",
+            boogie_module_name(&struct_env.module_env),
+            struct_env.get_name().display(struct_env.symbol_pool()),
+            boogie_inst_suffix(struct_env.module_env.env, inst)
+        )
     } else {
         boogie_struct_name(struct_env, inst)
     }

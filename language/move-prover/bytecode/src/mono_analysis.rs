@@ -41,7 +41,7 @@ pub struct MonoInfo {
     pub spec_vars: BTreeMap<QualifiedId<SpecVarId>, BTreeSet<Vec<Type>>>,
     pub type_params: BTreeSet<u16>,
     pub vec_inst: BTreeSet<Type>,
-    pub table_inst: BTreeSet<(Type, Type)>,
+    pub table_inst: BTreeMap<QualifiedId<StructId>, BTreeSet<(Type, Type)>>,
     pub native_inst: BTreeMap<ModuleId, BTreeSet<Vec<Type>>>,
     pub axioms: Vec<Condition>,
 }
@@ -480,6 +480,8 @@ impl<'a> Analyzer<'a> {
         if struct_.is_intrinsic_of(INTRINSIC_TYPE_MAP) {
             self.info
                 .table_inst
+                .entry(struct_.get_qualified_id())
+                .or_default()
                 .insert((targs[0].clone(), targs[1].clone()));
         } else if struct_.is_native_or_intrinsic() && !targs.is_empty() {
             self.info

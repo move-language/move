@@ -392,14 +392,16 @@ impl ResolvingGraph {
         dep: Dependency,
         root_path: PathBuf,
     ) -> Result<(Renaming, ResolvingTable)> {
-        if let Some(git_info) = &dep.git_info {
-            if !git_info.download_to.exists() {
-                Self::increase_movey_download_count(
-                    movey_constants::MOVEY_URL.to_string(),
-                    git_info,
-                    self.build_options.skip_movey,
-                );
-            }
+        let already_downloaded = dep
+            .git_info
+            .as_ref()
+            .map(|gi| gi.download_to.exists())
+            .unwrap_or(true);
+        if !already_downloaded && !self.build_options.skip_movey {
+            Self::increase_movey_download_count(
+                movey_constants::MOVEY_URL.to_string(),
+                dep.git_info.as_ref().unwrap(),
+            );
         }
 
         Self::download_and_update_if_remote(dep_name_in_pkg, &dep)?;
@@ -540,14 +542,16 @@ impl ResolvingGraph {
         };
 
         for (dep_name, dep) in manifest.dependencies.iter().chain(additional_deps.iter()) {
-            if let Some(git_info) = &dep.git_info {
-                if !git_info.download_to.exists() {
-                    Self::increase_movey_download_count(
-                        movey_constants::MOVEY_URL.to_string(),
-                        git_info,
-                        build_options.skip_movey,
-                    );
-                }
+            let already_downloaded = dep
+                .git_info
+                .as_ref()
+                .map(|gi| gi.download_to.exists())
+                .unwrap_or(true);
+            if !already_downloaded && !build_options.skip_movey {
+                Self::increase_movey_download_count(
+                    movey_constants::MOVEY_URL.to_string(),
+                    dep.git_info.as_ref().unwrap(),
+                );
             }
 
             Self::download_and_update_if_remote(*dep_name, dep)?;
@@ -596,11 +600,7 @@ impl ResolvingGraph {
         Ok(())
     }
 
-    fn increase_movey_download_count(movey_url: String, git_info: &GitInfo, skip_movey: bool) {
-        if skip_movey {
-            return;
-        }
-
+    fn increase_movey_download_count(movey_url: String, git_info: &GitInfo) {
         let git_url = git_info.git_url.as_str().to_string();
         let git_rev = git_info.git_rev.as_str().to_string();
         let subdir = git_info.subdir.to_string_lossy().to_string();
@@ -861,6 +861,7 @@ mod tests {
         resolution::resolution_graph::ResolvingGraph, source_package::parsed_manifest::GitInfo,
     };
     use httpmock::{prelude::*, Mock};
+    use move_command_line_common::movey_constants::THREAD_WAIT_INTERVAL;
     use move_symbol_pool::Symbol;
     use std::{path::PathBuf, thread, time};
 
@@ -892,7 +893,8 @@ mod tests {
 
     fn test_thread_wait(wait_time: Option<u64>) {
         // make sure the spawn thread has enough time to run
-        let thread_sleep_time = time::Duration::from_millis(wait_time.unwrap_or(20));
+        let thread_sleep_time =
+            time::Duration::from_millis(wait_time.unwrap_or(THREAD_WAIT_INTERVAL));
         thread::sleep(thread_sleep_time);
     }
 
@@ -901,19 +903,9 @@ mod tests {
         let server = MockServer::start();
         let (server_mock, git_info) =
             mock_movey_count_request_with_response_status_code(&server, 200);
-        ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, false);
+        ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info);
         test_thread_wait(None);
         server_mock.assert_hits(1);
-    }
-
-    #[test]
-    fn increase_movey_download_count_not_calls_movey_api_if_skip_movey_flag_is_true() {
-        let server = MockServer::start();
-        let (server_mock, git_info) =
-            mock_movey_count_request_with_response_status_code(&server, 200);
-        ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, true);
-        test_thread_wait(None);
-        server_mock.assert_hits(0);
     }
 
     #[test]
@@ -921,7 +913,7 @@ mod tests {
         let server = MockServer::start();
         let (server_mock, git_info) =
             mock_movey_count_request_with_response_status_code(&server, 400);
-        ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, false);
+        ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info);
         test_thread_wait(None);
         server_mock.assert_hits(1);
     }
@@ -931,7 +923,7 @@ mod tests {
         let server = MockServer::start();
         let (server_mock, git_info) =
             mock_movey_count_request_with_response_status_code(&server, 500);
-        ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info, false);
+        ResolvingGraph::increase_movey_download_count(server.base_url(), &git_info);
         test_thread_wait(None);
         server_mock.assert_hits(1);
     }

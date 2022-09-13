@@ -24,10 +24,10 @@ module NamedAddr::BasicCoin {
     }
 
     spec publish_balance {
-        include Schema_publish<CoinType> {addr: signer::address_of(account), amount: 0};
+        include PublishSchema<CoinType> {addr: signer::address_of(account), amount: 0};
     }
 
-    spec schema Schema_publish<CoinType> {
+    spec schema PublishSchema<CoinType> {
         addr: address;
         amount: u64;
 
@@ -113,14 +113,7 @@ module NamedAddr::BasicCoin {
     }
 
     spec deposit {
-        let balance = global<Balance<CoinType>>(addr).coin.value;
-        let check_value = check.value;
-
-        aborts_if !exists<Balance<CoinType>>(addr);
-        aborts_if balance + check_value > MAX_U64;
-
-        let post balance_post = global<Balance<CoinType>>(addr).coin.value;
-        ensures balance_post == balance + check_value;
+        include DepositSchema<CoinType> {addr, amount: check.value};
     }
 
     spec schema DepositSchema<CoinType> {

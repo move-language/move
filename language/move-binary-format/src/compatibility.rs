@@ -31,7 +31,11 @@ impl Compatibility {
     }
 
     /// Return compatibility assessment for `new_module` relative to old module `old_module`.
-    pub fn check(old_module: &Module, new_module: &Module) -> Compatibility {
+    pub fn check(
+        treat_friend_as_private: bool,
+        old_module: &Module,
+        new_module: &Module,
+    ) -> Compatibility {
         let mut struct_and_function_linking = true;
         let mut struct_layout = true;
 
@@ -102,6 +106,9 @@ impl Compatibility {
         // friend list. But for simplicity, we decided to go to the more restrictive form now and
         // we may revisit this in the future.
         for (name, old_func) in &old_module.exposed_functions {
+            if treat_friend_as_private && matches!(old_func.visibility, Visibility::Friend) {
+                continue;
+            }
             let new_func = match new_module.exposed_functions.get(name) {
                 Some(new_func) => new_func,
                 None => {
@@ -144,18 +151,17 @@ impl Compatibility {
             }
         }
 
-        // check friend declarations compatibility
-        //
-        // - additions to the list are allowed
-        // - removals are not allowed
-        //
-        // NOTE: we may also relax this checking a bit in the future: we may allow the removal of
-        // a module removed from the friend list if the module does not call any friend function
-        // in this module.
-        let old_friend_module_ids: BTreeSet<_> = old_module.friends.iter().cloned().collect();
-        let new_friend_module_ids: BTreeSet<_> = new_module.friends.iter().cloned().collect();
-        if !old_friend_module_ids.is_subset(&new_friend_module_ids) {
-            struct_and_function_linking = false;
+        if !treat_friend_as_private {
+            // check friend declarations compatibility
+            //
+            // - additions to the list are allowed
+            // - removals are not allowed
+            //
+            let old_friend_module_ids: BTreeSet<_> = old_module.friends.iter().cloned().collect();
+            let new_friend_module_ids: BTreeSet<_> = new_module.friends.iter().cloned().collect();
+            if !old_friend_module_ids.is_subset(&new_friend_module_ids) {
+                struct_and_function_linking = false;
+            }
         }
 
         Compatibility {

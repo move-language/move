@@ -82,7 +82,7 @@ const COMPATIBLE: Compatibility = Compatibility {
 fn deprecated_unchanged_script_visibility() {
     let script_module = mk_module(Visibility::DEPRECATED_SCRIPT);
     assert_eq!(
-        Compatibility::check(&script_module, &script_module,),
+        Compatibility::check(false, &script_module, &script_module,),
         COMPATIBLE
     );
 }
@@ -93,19 +93,19 @@ fn deprecated_remove_script_visibility() {
     // script -> private, not allowed
     let private_module = mk_module(Visibility::Private as u8);
     assert_eq!(
-        Compatibility::check(&script_module, &private_module),
+        Compatibility::check(false, &script_module, &private_module),
         NON_COMPATIBLE
     );
     // script -> public, not allowed
     let public_module = mk_module(Visibility::Public as u8);
     assert_eq!(
-        Compatibility::check(&script_module, &public_module),
+        Compatibility::check(false, &script_module, &public_module),
         NON_COMPATIBLE
     );
     // script -> friend, not allowed
     let friend_module = mk_module(Visibility::Friend as u8);
     assert_eq!(
-        Compatibility::check(&script_module, &friend_module),
+        Compatibility::check(false, &script_module, &friend_module),
         NON_COMPATIBLE
     );
 }
@@ -116,19 +116,19 @@ fn deprecated_add_script_visibility() {
     // private -> script, allowed
     let private_module = mk_module(Visibility::Private as u8);
     assert_eq!(
-        Compatibility::check(&private_module, &script_module,),
+        Compatibility::check(false, &private_module, &script_module,),
         COMPATIBLE
     );
     // public -> script, not allowed
     let public_module = mk_module(Visibility::Public as u8);
     assert_eq!(
-        Compatibility::check(&public_module, &script_module),
+        Compatibility::check(false, &public_module, &script_module),
         NON_COMPATIBLE
     );
     // friend -> script, not allowed
     let friend_module = mk_module(Visibility::Friend as u8);
     assert_eq!(
-        Compatibility::check(&friend_module, &script_module),
+        Compatibility::check(false, &friend_module, &script_module),
         NON_COMPATIBLE
     );
 }

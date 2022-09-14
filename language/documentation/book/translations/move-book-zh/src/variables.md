@@ -257,7 +257,7 @@ address 0x42 {
 Fields of structs can serve double duty, identifying the field to bind _and_ the name of the
 variable. This is sometimes referred to as punning.
 
-结构体的字段可以起到双重作用：识别要绑定的字段_和_命名变量。这有时被称为双关语。
+结构体的字段可以起到双重作用：识别要绑定的字段*和*命名变量。这有时被称为双关语。
 
 ```move
 let X { f } = e;
@@ -368,7 +368,7 @@ fun three(): (u64, u64, u64) {
 ```move
 let (x1, _, z1) = three();
 let (x2, _y, z2) = three();
-assert!(x1 + z1 == x2 + z2)
+assert!(x1 + z1 == x2 + z2, 42);
 ```
 
 This can be necessary at times as the compiler will error on unused local variables。
@@ -504,7 +504,7 @@ x = 0;
 x = false; // 错误！
 ```
 
-### 通过引用进行变更 (Mutating through a reference)
+### 通过引用进行变更（Mutating through a reference）
 
 In addition to directly modifying a local with assignment, a local can be modified via a mutable
 reference `&mut`.

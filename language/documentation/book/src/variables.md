@@ -315,7 +315,7 @@ fun three(): (u64, u64, u64) {
 ```move
 let (x1, _, z1) = three();
 let (x2, _y, z2) = three();
-assert!(x1 + z1 == x2 + z2)
+assert!(x1 + z1 == x2 + z2, 42);
 ```
 
 This can be necessary at times as the compiler will error on unused local variables

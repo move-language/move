@@ -442,8 +442,7 @@ reference `&mut`.
 let x = 0;
 let r = &mut x;
 *r = 1;
-assert!(x == 1, 42)
-}
+assert!(x == 1, 42);
 ```
 
 This is particularly useful if either:
@@ -469,7 +468,7 @@ This sort of modification is how you modify structs and vectors!
 ```move
 let v = vector::empty();
 vector::push_back(&mut v, 100);
-assert!(*vector::borrow(&v, 0) == 100, 42)
+assert!(*vector::borrow(&v, 0) == 100, 42);
 ```
 
 For more details, see [Move references](./references.md).

@@ -434,7 +434,7 @@ A few concrete examples with this grammar applied:
 //  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ let-binding（let 绑定）
 ```
 
-## 变更（mutations）
+## 变更（Mutations）
 
 ### 赋值（Assignments）
 
@@ -515,17 +515,16 @@ reference `&mut`.
 let x = 0;
 let r = &mut x;
 *r = 1;
-assert!(x == 1, 42)
-}
+assert!(x == 1, 42);
 ```
 
 This is particularly useful if either:
 
 (1) You want to modify different variables depending on some condition.
 
-这在以下情况下特别有用:
+这在以下情况下特别有用：
 
-(1) 您想根据某些条件修改不同的变量。
+(1) 你想根据某些条件修改不同的变量。
 
 ```move
 let x = 0;
@@ -536,7 +535,7 @@ let r = if (cond) &mut x else &mut y;
 
 (2) You want another function to modify your local value.
 
-(2) 您想要另一个函数来修改您的局部(变量)值。
+(2) 你想要另一个函数来修改你的局部变量值。
 
 ```move
 let x = 0;
@@ -545,27 +544,26 @@ modify_ref(&mut x);
 
 This sort of modification is how you modify structs and vectors!
 
-这种修改就是你更改结构体和数组的方式！
+这种修改方法就是你修改结构体和向量的方式！
 
 ```move
 let v = vector::empty();
 vector::push_back(&mut v, 100);
-assert!(*vector::borrow(&v, 0) == 100, 42)
+assert!(*vector::borrow(&v, 0) == 100, 42);
 ```
-
 
 For more details, see [Move references](./references.md).
 
-关于更多细节可以参考 [Move references](./references.md).
+有关更多详细信息，请参阅 [Move 引用](./references.md)。
 
-## 作用域 (Scopes)
+## 作用域（Scopes）
 
 Any local declared with `let` is available for any subsequent expression, _within that scope_.
 Scopes are declared with expression blocks, `{`...`}`.
 
 Locals cannot be used outside of the declared scope.
 
-使用 `let` 声明的任何局部变量都可用于任何后续表达式，_在该范围内_。作用域用表达式块(expression blocks)声明，`{`...`}`。
+使用 `let` 声明的任何局部变量都可用于*该作用域内*的任何后续表达式。作用域用表达式块（expression blocks）声明，`{`...`}`。
 
 局部变量不能在声明的作用域之外使用。
 
@@ -574,18 +572,19 @@ let x = 0;
 {
     let y = 1;
 };
-x + y // 错误!
-//  ^ 未绑定的局部变量“y”
+x + y // 错误！
+//  ^ unbound local 'y'（未绑定的局部变量“y”）
 ```
+
 But, locals from an outer scope _can_ be used in a nested scope.
 
-但是，来自作用域外部的部变量 _可以_ 在嵌套作用域中使用。
+但是，来自外部作用域的本地变量*可以*在嵌套作用域中使用。
 
 ```move
 {
     let x = 0;
     {
-        let y = x + 1; // 合规范的
+        let y = x + 1; // 有效的
     }
 }
 ```
@@ -593,8 +592,7 @@ But, locals from an outer scope _can_ be used in a nested scope.
 Locals can be mutated in any scope where they are accessible. That mutation survives with the local,
 regardless of the scope that performed the mutation.
 
-局部变量可以在允许访问的任何作用域内进行变更(mutation)。与进行变更的作用域无关，这种变更会跟随局部变量的生命周期。
-
+局部变量可以在允许访问的任何作用域内进行变更。无论执行变更的作用域如何，这种变更会跟随局部变量的生命周期。
 
 ```move
 let x = 0;

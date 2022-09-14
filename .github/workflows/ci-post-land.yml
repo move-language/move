@@ -4,7 +4,7 @@ name: ci-post-land
 
 on:
   push:
-    branches: [main, gha-test-*]
+    branches: [main, aptos*, gha-test-*]
 
 jobs:
   generate-documentation:

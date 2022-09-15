@@ -605,12 +605,12 @@ assert!(x == 1, 42);
 assert!(x == 2, 42);
 ```
 
-### 表达式块(Expression Blocks)
+### 表达式块（Expression Blocks）
 
 An expression block is a series of statements separated by semicolons (`;`). The resulting value of
 an expression block is the value of the last expression in the block.
 
-表达式块是由分号 (`;`) 分隔的一系列语句。结果值为表达式块是块中最后一个表达式的值。
+表达式块是由分号（`;`）分隔的一系列语句。表达式块的结果值是块中最后一个表达式的值。
 
 ```move
 { let x = 1; let y = 1; x + y }
@@ -623,7 +623,7 @@ are expressions of type `()`.
 
 在此示例中, 此区块的结果是 `x + y`.
 
-语句可以是 `let` 声明或表达式。请记住赋值(`x = e`)是 `()` 类型的表达式。
+语句可以是 `let` 声明或表达式。请记住，赋值（`x = e`）是 `()` 类型的表达式。
 
 ```move
 { let x; let y = 1; x = 1; x + y }
@@ -632,7 +632,7 @@ are expressions of type `()`.
 Function calls are another common expression of type `()`. Function calls that modify data are
 commonly used as statements.
 
-函数调用是 `()` 类型的另一种常见表达方式。修改数据的函数调用通常被用作语句表达(`statements`)。
+函数调用是 `()` 类型的另一种常见表达方式。修改数据的函数调用通常被用作语句。
 
 ```move
 { let v = vector::empty(); vector::push_back(&mut v, 1); v }
@@ -640,7 +640,7 @@ commonly used as statements.
 
 This is not just limited to `()` types---any expression can be used as a statement in a sequence!
 
-这不仅限于 `()` 类型——任何表达式都可以用作序列中的语句！
+这不仅限于 `()` 类型 —— 任何表达式都可以用作序列中的语句！
 
 ```move
 {
@@ -656,13 +656,13 @@ you will get an error. This is because Move's type system guarantees that any va
 has the `drop` [ability](./abilities.md). (Ownership must be transferred or the value must be
 explicitly destroyed within its declaring module.)
 
-但是！如果表达式包含一个没有 `drop` [能力](./abilities.md) 的值的资源，程序会返回错误。这是因为 Move 的类型系统保证任何被丢弃的值有 `drop` [能力](./abilities.md)。 (所有权必须被转让或一个值必须在其声明模块中被显式销毁。)
+但是！如果表达式包含资源（没有 `drop` [能力](./abilities.md)的值），你将收到错误消息。这是因为 Move 的类型系统保证任何被删除的值都具有 `drop` [能力](./abilities.md)。（必须转移所有权，或者必须在其声明模块中显式销毁该值。）
 
 ```move
 {
     let x = 0;
-    Coin { value: x }; // ERROR!
-//  ^^^^^^^^^^^^^^^^^ 没有 `drop` 能力的未使用值
+    Coin { value: x }; // 错误！
+//  ^^^^^^^^^^^^^^^^^ unused value without the `drop` ability（未使用没有 `drop` 能力的值）
     x
 }
 ```
@@ -671,16 +671,16 @@ If a final expression is not present in a block---that is, if there is a trailin
 there is an implicit unit `()` value. Similarly, if the expression block is empty, there is an
 implicit unit `()` value.
 
-如果块中不存在最终表达式---也就是说，如果有一个尾随分号`;`，有一个隐含的 unit `()` 值。同样，如果表达式块为空，则存在隐式 unit `()` 值。
+如果块中不存在最终表达式 —— 也就是说，如果有一个尾随分号 `;`，则有一个隐含的 `()` 单元值。同样，如果表达式块为空，则存在隐含的 `()` 单元值。
 
 ```move
-// 两者是相同的
+// 两者是等价的
 { x = x + 1; 1 / x; }
 { x = x + 1; 1 / x; () }
 ```
 
 ```move
-// 两者是相同的
+// 两者是等价的
 { }
 { () }
 ```
@@ -689,7 +689,7 @@ An expression block is itself an expression and can be used anyplace an expressi
 The body of a function is also an expression block, but the function body cannot be replaced by
 another expression.)
 
-表达式块本身就是一个表达式，可以在任何使用表达式的地方使用。 (注意：函数体也是表达式块，但函数体不能被另一个表达式替换。)
+表达式块本身就是一个表达式，可以在任何使用表达式的地方使用。（注意：函数体也是一个表达式块，但函数体不能被另一个表达式替换。）
 
 ```move
 let my_vector: vector<vector<u8>> = {
@@ -702,20 +702,20 @@ let my_vector: vector<vector<u8>> = {
 
 (The type annotation is not needed in this example and only added for clarity.)
 
-(此示例中不需要类型标注，只是为了清晰而添加。)
+（此示例中不需要类型标注，只是为了清楚起见而添加。）
 
-### 遮蔽(shadowing)
+### 遮蔽（Shadowing）
 
 If a `let` introduces a local variable with a name already in scope, that previous variable can no
 longer be accessed for the rest of this scope. This is called _shadowing_.
 
-如果一个 `let` 引入了一个已经在作用域内的同名局部变量，那么之前的变量不能继续在此作用域的其余部分访问。这称为 _遮蔽_ ( _shadowing_ )。
+如果一个 `let` 引入了一个名称已经在作用域中的局部变量，则该作用域的剩余部分将无法再访问先前的变量。这称为*遮蔽（shadowing）*。
 
 ```move
 let x = 0;
 assert!(x == 0, 42);
 
-let x = 1; // x被遮蔽了
+let x = 1; // x 被遮蔽了
 assert!(x == 1, 42);
 ```
 
@@ -727,7 +727,7 @@ When a local is shadowed, it does not need to retain the same type as before.
 let x = 0;
 assert!(x == 0, 42);
 
-let x = b"hello"; // x被遮蔽了
+let x = b"hello"; // x 被遮蔽了
 assert!(x == b"hello", 42);
 ```
 
@@ -736,7 +736,7 @@ accessible. This is important to keep in mind with values of types without the
 [`drop` ability](./abilities.md), as ownership of the value must be transferred by the end of the
 function.
 
-一个局部变量被遮蔽后，存储在局部变量的值仍然存在，但将变得不再可访问。对于没有[`drop` 能力](./abilities.md)的类型的值，请记住这一点很重要，因为值的所有权必须在函数结束时转移。
+在局部变量被遮蔽后，存储在局部变量的值仍然存在，但是将不再可访问。对于没有 [`drop` 能力](./abilities.md)的类型的值，请记住这一点很重要，因为值的所有权必须在函数结束时转移。
 
 ```move
 address 0x42 {
@@ -744,12 +744,12 @@ address 0x42 {
         struct Coin has store { value: u64 }
 
         fun unused_resource(): Coin {
-            let x = Coin { value: 0 }; // 错误!
-//              ^ 这个局部变量仍然包含一个没有 `drop` 能力的值
+            let x = Coin { value: 0 }; // ERROR!
+//              ^ This local still contains a value without the `drop` ability（这个局部变量仍然包含一个没有 `drop` 能力的值）
             x.value = 1;
             let x = Coin { value: 10 };
             x
-//          ^ 不合规范的返回
+//          ^ Invalid return（无效的返回）
         }
     }
 }
@@ -758,7 +758,7 @@ address 0x42 {
 When a local is shadowed inside a scope, the shadowing only remains for that scope. The shadowing is
 gone once that scope ends.
 
-当局部变量在作用域内被遮蔽时，该遮蔽作用仅保留在该作用域内。一旦该作用域结束，遮蔽就会自动消失。
+当局部变量在作用域内被遮蔽时，该遮蔽作用仅保留在该作用域内。一旦该作用域结束，遮蔽作用就消失了。
 
 ```move
 let x = 0;
@@ -771,7 +771,7 @@ assert!(x == 0, 42);
 
 Remember, locals can change type when they are shadowed.
 
-注意，局部变量在被遮蔽时可以更改类型。
+请记住，局部变量在被遮蔽时可以更改类型。
 
 ```move
 let x = 0;
@@ -782,7 +782,7 @@ let x = 0;
 assert!(x == 0, 42);
 ```
 
-## 移动和复制(Move and Copy)
+## 移动和复制（Move and Copy）
 
 All local variables in Move can be used in two ways, either by `move` or `copy`. If one or the other
 is not specified, the Move compiler is able to infer whether a `copy` or a `move` should be used.
@@ -793,9 +793,9 @@ compiler. A local variable cannot be used without the use of `move` or `copy`.
 new copy of the value inside of the variable to use in that expression. With `copy`, the local
 variable can be used more than once.
 
-Move 中的所有局部变量都可以通过两种方式使用：通过 `move` 或 `copy`。如果其中一个未被指定时，Move 编译器能够推断应该使用 `copy` 或 `move`。这意味着在上述所有示例中，`move` 或 `copy` 将被编译器插入。不使用 `move` 或 `copy` 就不能使用局部变量。
+Move 中的所有局部变量都可以通过两种方式使用，通过 `move` 或 `copy`。如果未指定其中之一，则 Move 编译器能够推断应该使用 `copy` 还是 `move`。这意味着在上述所有示例中，编译器将插入 `move` 或 `copy`。如果不使用 `move` 或 `copy`，就不能使用局部变量。
 
-`copy` 对来自其他编程语言(的开发者)来说可能会觉得最熟悉，因为它创建了一个要在该表达式中使用的变量内部值的新副本。使用 `copy`，本地变量可以多次使用。
+`copy` 对来自其他编程语言的开发者来说可能会觉得最熟悉，因为它会在变量内部创建一个新的副本值以在该表达式中使用。使用 `copy`，局部变量可以被多次使用。
 
 ```move
 let x = 0;
@@ -808,32 +808,32 @@ Any value with the `copy` [ability](./abilities.md) can be copied in this way.
 `move` takes the value out of the local variable _without_ copying the data. After a `move` occurs,
 the local variable is unavailable.
 
-任何带有 `copy` [能力](./abilities.md) 的值都可以通过这种方式复制。
+任何具有 `copy` [能力](./abilities.md)的值都可以通过这种方式复制。
 
-`move` 从局部变量中取走值 _而不是_ 复制数据。发生`移动`后，局部变量会不可用。
+`move` 从局部变量中取出值*而不是*复制数据。`移动（move）`发生后，局部变量将不可用。
 
 ```move
 let x = 1;
 let y = move x + 1;
-//      ------ 局部变量被移动到这里了
-let z = move x + 2; // 错误!
-//      ^^^^^^ 不合规范的'x'使用方式
+//      ------ Local was moved here（局部变量被移动到这里了）
+let z = move x + 2; // 错误！
+//      ^^^^^^ Invalid usage of local 'x'（局部变量“x”的无效使用方式）
 y + z
 ```
 
-### 安全性(Safety)
+### 安全性（Safety）
 
 Move's type system will prevent a value from being used after it is moved. This is the same safety
 check described in [`let` declaration](#let-bindings) that prevents local variables from being used
 before it is assigned a value.
 
-Move 的类型系统会防止一个值在移动后被使用。这和 [`let` 声明](#let-bindings) 中描述的防止在局部变量在赋值之前被使用是一样的安全检查。
+Move 的类型系统会阻止一个值在移动后被使用。这与 [`let` 声明](#let-绑定let-bindings)中描述的防止在局部变量被赋值之前使用的安全检查相同。
 
 <!-- For more information, see TODO future section on ownership and move semantics. -->
 
 <!-- 如了解更多信息, 参阅未来所有权和移动语义的部分 (TODO )。 -->
 
-### 推断(Inference)
+### 推断（Inference）
 
 As mentioned above, the Move compiler will infer a `copy` or `move` if one is not indicated. The
 algorithm for doing so is quite simple:
@@ -845,14 +845,14 @@ algorithm for doing so is quite simple:
   - This means that even though other values might be have the `copy` [ability](./abilities.md), it must be done _explicitly_ by the programmer.
   - This is to prevent accidental copies of large data structures.
 
-如上所述，如果未指明，Move 编译器将推断出“复制”或“移动”。它的算法非常简单：
+如上所述，如果未指明，Move 编译器将推断出 `copy` 还是 `move`。这样做的算法非常简单：
 
-- 任何带有 `copy` [能力](./abilities.md) 的标量值都被赋予了 `copy`。
-- 任何引用(可变 `&mut`和不可变 `&`)都被赋予一个`copy`。
-  - 除非在预估借用检查器出错的特殊情况下，会进行 `move` 操作.
-- 任何其他值都被赋予 `Move`。
-  - 这意味着即使其他值可能具有 `copy` [能力](./abilities.md)，它必须由程序员 _显式_ 声明。
-  - 这是为了防止意外复制很大的数据结构。
+- 任何带有 `copy` [能力](./abilities.md)的标量值都被赋予了 `copy`。
+- 任何引用（可变的 `&mut` 和不可变的 `&`）都被赋予 `copy`。
+  - 除非在可预测的借用检查器错误的特殊情况下，会进行 `move` 操作。
+- 任何其他值都被赋予 `move`。
+  - 这意味着即使其他值可能具有 `copy` [能力](./abilities.md)，它也必须由程序员*显式*声明。
+  - 这是为了防止意外地复制很大的数据结构。
 
 例如：
 

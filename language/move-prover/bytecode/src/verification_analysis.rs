@@ -7,12 +7,13 @@
 //! each function as well as collect information on how these invariants should be handled (i.e.,
 //! checked after bytecode, checked at function exit, or deferred to caller).
 
-use crate::{
-    function_target::{FunctionData, FunctionTarget},
-    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
-    options::ProverOptions,
-    usage_analysis,
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt::{self, Formatter},
 };
+
+use codespan_reporting::diagnostic::Severity;
+use itertools::Itertools;
 
 use move_model::{
     ast::GlobalInvariant,
@@ -24,11 +25,11 @@ use move_model::{
     ty::{TypeUnificationAdapter, Variance},
 };
 
-use codespan_reporting::diagnostic::Severity;
-use itertools::Itertools;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fmt::{self, Formatter},
+use crate::{
+    function_target::{FunctionData, FunctionTarget},
+    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
+    options::ProverOptions,
+    usage_analysis,
 };
 
 /// The annotation for information about verification.
@@ -386,13 +387,22 @@ impl VerificationAnalysisProcessor {
 
         // at this time, we only have the `baseline` variant in the targets
         let variant = FunctionVariant::Baseline;
-        let data = targets
-            .get_data_mut(&fun_env.get_qualified_id(), &variant)
-            .expect("function data defined");
-        let info = data.annotations.get_or_default_mut::<VerificationInfo>();
-        if !info.inlined {
-            info.inlined = true;
-            Self::mark_callees_inlined(fun_env, targets);
+        if let Some(data) = targets.get_data_mut(&fun_env.get_qualified_id(), &variant) {
+            let info = data.annotations.get_or_default_mut::<VerificationInfo>();
+            if !info.inlined {
+                info.inlined = true;
+                Self::mark_callees_inlined(fun_env, targets);
+            }
+        } else {
+            fun_env.module_env.env.error(
+                &fun_env.get_loc(),
+                &format!(
+                    "function `{}` is a recursive function \
+                       (or part of a mutually recursive function group) \
+                       and should be marked as opaque",
+                    fun_env.get_full_name_str()
+                ),
+            );
         }
     }
 

@@ -1,9 +1,1 @@
 processed 2 tasks
-
-task 0 'run'. lines 1-6:
-ChangeSet: ChangeSet { accounts: {} }
-
-
-task 1 'run'. lines 8-13:
-ChangeSet: ChangeSet { accounts: {} }
-

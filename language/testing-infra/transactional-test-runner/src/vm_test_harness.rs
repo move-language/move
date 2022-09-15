@@ -37,13 +37,19 @@ use move_vm_runtime::{
 };
 use move_vm_test_utils::{gas_schedule::GasStatus, InMemoryStorage};
 use once_cell::sync::Lazy;
+use std::marker::PhantomData;
 
 const STD_ADDR: AccountAddress = AccountAddress::ONE;
 
-struct SimpleVMTestAdapter<'a> {
+trait RecordWriteSet {
+    fn record_writeset() -> bool;
+}
+
+struct SimpleVMTestAdapter<'a, T> {
     compiled_state: CompiledState<'a>,
     storage: InMemoryStorage,
     default_syntax: SyntaxChoice,
+    record_writeset_marker: PhantomData<T>,
 }
 
 pub fn view_resource_in_move_storage(
@@ -68,7 +74,7 @@ pub fn view_resource_in_move_storage(
     }
 }
 
-impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
+impl<'a, T: RecordWriteSet> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a, T> {
     type ExtraInitArgs = EmptyCommand;
     type ExtraPublishArgs = EmptyCommand;
     type ExtraValueArgs = ();
@@ -109,6 +115,7 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
             compiled_state: CompiledState::new(named_address_mapping, pre_compiled_deps, None),
             default_syntax,
             storage: InMemoryStorage::new(),
+            record_writeset_marker: PhantomData,
         };
 
         adapter
@@ -208,7 +215,7 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
             })?;
 
         Ok((
-            Some(format!("ChangeSet: {:?}\n", change_set)),
+            T::record_writeset().then(|| format!("ChangeSet: {:?}\n", change_set)),
             serialized_return_values,
         ))
     }
@@ -252,7 +259,7 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
             })?;
 
         Ok((
-            Some(format!("ChangeSet: {:?}\n", change_set)),
+            T::record_writeset().then(|| format!("ChangeSet: {:?}\n", change_set)),
             serialized_return_values,
         ))
     }
@@ -295,7 +302,7 @@ pub fn format_vm_error(e: &VMError) -> String {
     )
 }
 
-impl<'a> SimpleVMTestAdapter<'a> {
+impl<'a, T> SimpleVMTestAdapter<'a, T> {
     fn perform_session_action<Ret>(
         &mut self,
         gas_budget: Option<u64>,
@@ -378,6 +385,29 @@ static MOVE_STDLIB_COMPILED: Lazy<Vec<CompiledModule>> = Lazy::new(|| {
     }
 });
 
+struct RecordWriteSetMarker;
+
+impl RecordWriteSet for RecordWriteSetMarker {
+    fn record_writeset() -> bool {
+        true
+    }
+}
+
+struct SkipWriteSetMarker;
+
+impl RecordWriteSet for SkipWriteSetMarker {
+    fn record_writeset() -> bool {
+        false
+    }
+}
+
 pub fn run_test(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    run_test_impl::<SimpleVMTestAdapter>(path, Some(&*PRECOMPILED_MOVE_STDLIB))
+    run_test_impl::<SimpleVMTestAdapter<SkipWriteSetMarker>>(path, Some(&*PRECOMPILED_MOVE_STDLIB))
+}
+
+pub fn run_test_with_writesets(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    run_test_impl::<SimpleVMTestAdapter<RecordWriteSetMarker>>(
+        path,
+        Some(&*PRECOMPILED_MOVE_STDLIB),
+    )
 }

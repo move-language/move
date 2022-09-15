@@ -1,9 +1,5 @@
 processed 3 tasks
 
-task 0 'run'. lines 1-7:
-ChangeSet: ChangeSet { accounts: {} }
-
-
 task 1 'run'. lines 9-15:
 Error: Script execution failed with VMError: {
     major_status: ARITHMETIC_ERROR,

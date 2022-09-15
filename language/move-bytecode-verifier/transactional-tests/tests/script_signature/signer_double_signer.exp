@@ -17,7 +17,3 @@ Error: Script execution failed with VMError: {
     indices: [],
     offsets: [],
 }
-
-task 2 'run'. lines 15-20:
-ChangeSet: ChangeSet { accounts: {} }
-

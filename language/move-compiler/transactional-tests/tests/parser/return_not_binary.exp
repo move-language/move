@@ -1,9 +1,7 @@
 processed 3 tasks
 
 task 1 'run'. lines 18-18:
-ChangeSet: ChangeSet { accounts: {} }
 return values: 0
 
 task 2 'run'. lines 20-20:
-ChangeSet: ChangeSet { accounts: {} }
 return values: 0

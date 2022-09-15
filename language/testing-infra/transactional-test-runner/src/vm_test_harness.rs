@@ -22,6 +22,7 @@ use move_compiler::{
 };
 use move_core_types::{
     account_address::AccountAddress,
+    effects::ChangeSet,
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
     resolver::MoveResolver,
@@ -125,6 +126,7 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
                 Ok(())
             })
             .unwrap();
+
         let mut addr_to_name_mapping = BTreeMap::new();
         for (name, addr) in move_stdlib_named_addresses() {
             let prev = addr_to_name_mapping.insert(addr, Symbol::from(name));
@@ -157,7 +159,8 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
         match self.perform_session_action(gas_budget, |session, gas_status| {
             session.publish_module(module_bytes, sender, gas_status)
         }) {
-            Ok(()) => Ok((None, module)),
+            // TODO: Do we want to include module bytes into the output file?
+            Ok((_, ())) => Ok((None, module)),
             Err(e) => Err(anyhow!(
                 "Unable to publish module '{}'. Got VMError: {}",
                 module.self_id(),
@@ -193,7 +196,7 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
             .map(|a| MoveValue::Signer(*a).simple_serialize().unwrap())
             .chain(args)
             .collect();
-        let serialized_return_values = self
+        let (change_set, serialized_return_values) = self
             .perform_session_action(gas_budget, |session, gas_status| {
                 session.execute_script(script_bytes, type_args, args, gas_status)
             })
@@ -203,7 +206,11 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
                     format_vm_error(&e)
                 )
             })?;
-        Ok((None, serialized_return_values))
+
+        Ok((
+            Some(format!("ChangeSet: {:?}\n", change_set)),
+            serialized_return_values,
+        ))
     }
 
     fn call_function(
@@ -231,7 +238,7 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
             .map(|a| MoveValue::Signer(*a).simple_serialize().unwrap())
             .chain(args)
             .collect();
-        let serialized_return_values = self
+        let (change_set, serialized_return_values) = self
             .perform_session_action(gas_budget, |session, gas_status| {
                 session.execute_function_bypass_visibility(
                     module, function, type_args, args, gas_status,
@@ -243,7 +250,11 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
                     format_vm_error(&e)
                 )
             })?;
-        Ok((None, serialized_return_values))
+
+        Ok((
+            Some(format!("ChangeSet: {:?}\n", change_set)),
+            serialized_return_values,
+        ))
     }
 
     fn view_data(
@@ -289,7 +300,7 @@ impl<'a> SimpleVMTestAdapter<'a> {
         &mut self,
         gas_budget: Option<u64>,
         f: impl FnOnce(&mut Session<InMemoryStorage>, &mut GasStatus) -> VMResult<Ret>,
-    ) -> VMResult<Ret> {
+    ) -> VMResult<(ChangeSet, Ret)> {
         // start session
         let vm = MoveVM::new(move_stdlib::natives::all_natives(
             STD_ADDR,
@@ -313,8 +324,8 @@ impl<'a> SimpleVMTestAdapter<'a> {
         // save changeset
         // TODO support events
         let (changeset, _events) = session.finish()?;
-        self.storage.apply(changeset).unwrap();
-        Ok(res)
+        self.storage.apply(changeset.clone()).unwrap();
+        Ok((changeset, res))
     }
 }
 

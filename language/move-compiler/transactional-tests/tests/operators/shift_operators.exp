@@ -53,3 +53,27 @@ Error: Script execution failed with VMError: {
     indices: [],
     offsets: [(FunctionDefinitionIndex(0), 2)],
 }
+
+task 6 'run'. lines 53-67:
+ChangeSet: ChangeSet { accounts: {} }
+
+
+task 7 'run'. lines 68-83:
+ChangeSet: ChangeSet { accounts: {} }
+
+
+task 8 'run'. lines 84-99:
+ChangeSet: ChangeSet { accounts: {} }
+
+
+task 9 'run'. lines 100-111:
+ChangeSet: ChangeSet { accounts: {} }
+
+
+task 10 'run'. lines 112-123:
+ChangeSet: ChangeSet { accounts: {} }
+
+
+task 11 'run'. lines 124-140:
+ChangeSet: ChangeSet { accounts: {} }
+

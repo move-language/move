@@ -1,13 +1,17 @@
 processed 5 tasks
 
 task 1 'run'. lines 19-24:
+ChangeSet: ChangeSet { accounts: {} }
 mutable inputs after call: local#2: { 0 }
 
 task 2 'run'. lines 26-30:
+ChangeSet: ChangeSet { accounts: {} }
 mutable inputs after call: local#2: { 0 }
 
 task 3 'run'. lines 32-32:
+ChangeSet: ChangeSet { accounts: {} }
 mutable inputs after call: local#2: { 0 }
 
 task 4 'run'. lines 34-34:
+ChangeSet: ChangeSet { accounts: {} }
 mutable inputs after call: local#2: { 0 }

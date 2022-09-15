@@ -1,1 +1,25 @@
 processed 6 tasks
+
+task 0 'run'. lines 1-10:
+ChangeSet: ChangeSet { accounts: {} }
+
+
+task 1 'run'. lines 12-20:
+ChangeSet: ChangeSet { accounts: {} }
+
+
+task 2 'run'. lines 22-31:
+ChangeSet: ChangeSet { accounts: {} }
+
+
+task 3 'run'. lines 33-41:
+ChangeSet: ChangeSet { accounts: {} }
+
+
+task 4 'run'. lines 43-52:
+ChangeSet: ChangeSet { accounts: {} }
+
+
+task 5 'run'. lines 54-62:
+ChangeSet: ChangeSet { accounts: {} }
+

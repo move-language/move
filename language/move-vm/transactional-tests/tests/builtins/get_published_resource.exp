@@ -1,1 +1,5 @@
 processed 2 tasks
+
+task 1 'run'. lines 54-60:
+ChangeSet: ChangeSet { accounts: {00000000000000000000000000000001: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("Token"), name: Identifier("T"), type_params: [] }: New([0, 0, 0, 0, 0, 0, 0, 0])} }} }
+

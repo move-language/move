@@ -1,1 +1,33 @@
 processed 9 tasks
+
+task 1 'run'. lines 158-170:
+ChangeSet: ChangeSet { accounts: {00000000000000000000000000000001: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Some"), type_params: [Struct(StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Value"), type_params: [] })] }: New([100, 0, 0, 0, 0, 0, 0, 0])} }} }
+
+
+task 2 'run'. lines 172-187:
+ChangeSet: ChangeSet { accounts: {00000000000000000000000000000001: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Some"), type_params: [Bool] }: New([1]), StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Some"), type_params: [U64] }: New([100, 0, 0, 0, 0, 0, 0, 0])} }} }
+
+
+task 3 'run'. lines 189-220:
+ChangeSet: ChangeSet { accounts: {00000000000000000000000000000001: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Some"), type_params: [Address] }: New([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Some"), type_params: [Struct(StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Container"), type_params: [U64] })] }: New([7, 0, 0, 0, 0, 0, 0, 0]), StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Some"), type_params: [Struct(StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Container"), type_params: [Struct(StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Value"), type_params: [] })] })] }: New([5, 0, 0, 0, 0, 0, 0, 0])} }} }
+
+
+task 4 'run'. lines 222-244:
+ChangeSet: ChangeSet { accounts: {} }
+
+
+task 5 'run'. lines 246-264:
+ChangeSet: ChangeSet { accounts: {00000000000000000000000000000001: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Some"), type_params: [Bool] }: Modify([0]), StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Some"), type_params: [U64] }: Modify([1, 0, 0, 0, 0, 0, 0, 0]), StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Some"), type_params: [Address] }: Modify([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]), StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Some"), type_params: [Struct(StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Container"), type_params: [U64] })] }: Modify([20, 0, 0, 0, 0, 0, 0, 0])} }} }
+
+
+task 6 'run'. lines 266-278:
+ChangeSet: ChangeSet { accounts: {00000000000000000000000000000001: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Some"), type_params: [Struct(StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Value"), type_params: [] })] }: Delete} }} }
+
+
+task 7 'run'. lines 280-303:
+ChangeSet: ChangeSet { accounts: {00000000000000000000000000000001: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Some"), type_params: [Bool] }: Delete, StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Some"), type_params: [U64] }: Delete, StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Some"), type_params: [Address] }: Delete, StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Some"), type_params: [Struct(StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Container"), type_params: [U64] })] }: Delete} }} }
+
+
+task 8 'run'. lines 306-327:
+ChangeSet: ChangeSet { accounts: {00000000000000000000000000000001: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Some"), type_params: [Struct(StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Container"), type_params: [Struct(StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("Value"), type_params: [] })] })] }: Delete} }} }
+

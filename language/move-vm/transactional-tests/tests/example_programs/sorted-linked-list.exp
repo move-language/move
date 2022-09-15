@@ -1,5 +1,9 @@
 processed 26 tasks
 
+task 1 'run'. lines 237-244:
+ChangeSet: ChangeSet { accounts: {0000000000000000000000000000000a: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: New([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0])} }} }
+
+
 task 2 'run'. lines 246-254:
 Error: Script execution failed with VMError: {
     major_status: ABORTED,
@@ -8,6 +12,10 @@ Error: Script execution failed with VMError: {
     indices: [],
     offsets: [(FunctionDefinitionIndex(3), 9)],
 }
+
+task 3 'run'. lines 256-263:
+ChangeSet: ChangeSet { accounts: {0000000000000000000000000000000a: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: Modify([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0])} }, 0000000000000000000000000000000b: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: New([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 10, 0, 0, 0, 0, 0, 0, 0])} }} }
+
 
 task 4 'run'. lines 265-273:
 Error: Script execution failed with VMError: {
@@ -27,6 +35,10 @@ Error: Script execution failed with VMError: {
     offsets: [(FunctionDefinitionIndex(4), 61)],
 }
 
+task 6 'run'. lines 285-292:
+ChangeSet: ChangeSet { accounts: {0000000000000000000000000000000a: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: Modify([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0])} }, 0000000000000000000000000000000b: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: Modify([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 10, 0, 0, 0, 0, 0, 0, 0])} }, 0000000000000000000000000000000c: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: New([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 5, 0, 0, 0, 0, 0, 0, 0])} }} }
+
+
 task 7 'run'. lines 294-302:
 Error: Script execution failed with VMError: {
     major_status: ABORTED,
@@ -35,6 +47,10 @@ Error: Script execution failed with VMError: {
     indices: [],
     offsets: [(FunctionDefinitionIndex(4), 52)],
 }
+
+task 8 'run'. lines 304-311:
+ChangeSet: ChangeSet { accounts: {0000000000000000000000000000000a: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: Modify([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0])} }, 0000000000000000000000000000000b: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: Modify([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 10, 0, 0, 0, 0, 0, 0, 0])} }, 0000000000000000000000000000000d: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: New([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 15, 0, 0, 0, 0, 0, 0, 0])} }} }
+
 
 task 9 'run'. lines 313-321:
 Error: Script execution failed with VMError: {
@@ -63,6 +79,14 @@ Error: Script execution failed with VMError: {
     offsets: [(FunctionDefinitionIndex(4), 9)],
 }
 
+task 12 'run'. lines 343-350:
+ChangeSet: ChangeSet { accounts: {0000000000000000000000000000000b: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: Modify([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 10, 0, 0, 0, 0, 0, 0, 0])} }, 0000000000000000000000000000000c: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: Modify([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 5, 0, 0, 0, 0, 0, 0, 0])} }, 0000000000000000000000000000000e: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: New([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 7, 0, 0, 0, 0, 0, 0, 0])} }} }
+
+
+task 13 'run'. lines 352-359:
+ChangeSet: ChangeSet { accounts: {0000000000000000000000000000000a: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: Modify([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0])} }, 0000000000000000000000000000000c: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: Delete} }, 0000000000000000000000000000000e: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: Modify([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 7, 0, 0, 0, 0, 0, 0, 0])} }} }
+
+
 task 14 'run'. lines 361-369:
 Error: Script execution failed with VMError: {
     major_status: ABORTED,
@@ -71,6 +95,14 @@ Error: Script execution failed with VMError: {
     indices: [],
     offsets: [(FunctionDefinitionIndex(6), 8)],
 }
+
+task 15 'run'. lines 371-378:
+ChangeSet: ChangeSet { accounts: {0000000000000000000000000000000b: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: Modify([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 10, 0, 0, 0, 0, 0, 0, 0])} }, 0000000000000000000000000000000c: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: New([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 9, 0, 0, 0, 0, 0, 0, 0])} }, 0000000000000000000000000000000e: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: Modify([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 7, 0, 0, 0, 0, 0, 0, 0])} }} }
+
+
+task 16 'run'. lines 380-387:
+ChangeSet: ChangeSet { accounts: {0000000000000000000000000000000b: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: Delete} }, 0000000000000000000000000000000c: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: Modify([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 9, 0, 0, 0, 0, 0, 0, 0])} }, 0000000000000000000000000000000d: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: Modify([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 15, 0, 0, 0, 0, 0, 0, 0])} }} }
+
 
 task 17 'run'. lines 389-397:
 Error: Script execution failed with VMError: {
@@ -134,3 +166,11 @@ Error: Script execution failed with VMError: {
     indices: [],
     offsets: [(FunctionDefinitionIndex(6), 15)],
 }
+
+task 24 'run'. lines 465-475:
+ChangeSet: ChangeSet { accounts: {0000000000000000000000000000000a: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: Delete} }, 0000000000000000000000000000000c: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: Delete} }, 0000000000000000000000000000000d: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: Delete} }, 0000000000000000000000000000000e: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: Delete} }} }
+
+
+task 25 'run'. lines 477-484:
+ChangeSet: ChangeSet { accounts: {0000000000000000000000000000000b: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("SortedLinkedList"), name: Identifier("Node"), type_params: [] }: New([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0])} }} }
+

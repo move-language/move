@@ -1,1 +1,13 @@
 processed 6 tasks
+
+task 3 'run'. lines 106-122:
+ChangeSet: ChangeSet { accounts: {00000000000000000000000000000001: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("CoinWrapper"), type_params: [] }: New([0, 0, 0, 0, 0, 0, 0, 0]), StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("InnerWrapper"), type_params: [] }: New([3, 186, 193, 172])} }} }
+
+
+task 4 'run'. lines 124-137:
+ChangeSet: ChangeSet { accounts: {} }
+
+
+task 5 'run'. lines 139-150:
+ChangeSet: ChangeSet { accounts: {00000000000000000000000000000001: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("CoinWrapper"), type_params: [] }: Delete} }} }
+

@@ -1,5 +1,9 @@
 processed 3 tasks
 
+task 1 'run'. lines 72-79:
+ChangeSet: ChangeSet { accounts: {} }
+
+
 task 2 'run'. lines 81-89:
 Error: Script execution failed with VMError: {
     major_status: VM_MAX_TYPE_DEPTH_REACHED,

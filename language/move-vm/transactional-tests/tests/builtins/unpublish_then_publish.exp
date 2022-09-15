@@ -1,9 +1,17 @@
 processed 5 tasks
 
+task 1 'run'. lines 22-29:
+ChangeSet: ChangeSet { accounts: {00000000000000000000000000000001: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("R"), type_params: [] }: New([0])} }} }
+
+
 task 2 'view'. lines 31-31:
 key 0x1::M::R {
     x: false
 }
+
+task 3 'run'. lines 33-40:
+ChangeSet: ChangeSet { accounts: {00000000000000000000000000000001: AccountChangeSet { modules: {}, resources: {StructTag { address: 00000000000000000000000000000001, module: Identifier("M"), name: Identifier("R"), type_params: [] }: Modify([0])} }} }
+
 
 task 4 'view'. lines 42-42:
 key 0x1::M::R {

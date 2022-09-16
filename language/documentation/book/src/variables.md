@@ -565,7 +565,7 @@ explicitly destroyed within its declaring module.)
 ```
 
 If a final expression is not present in a block---that is, if there is a trailing semicolon `;`,
-there is an implicit unit `()` value. Similarly, if the expression block is empty, there is an
+there is an implicit [unit `()` value](https://en.wikipedia.org/wiki/Unit_type). Similarly, if the expression block is empty, there is an
 implicit unit `()` value.
 
 ```move

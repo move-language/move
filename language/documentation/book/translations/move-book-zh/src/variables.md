@@ -671,7 +671,7 @@ If a final expression is not present in a block---that is, if there is a trailin
 there is an implicit unit `()` value. Similarly, if the expression block is empty, there is an
 implicit unit `()` value.
 
-如果块中不存在最终表达式 —— 也就是说，如果有一个尾随分号 `;`，则有一个隐含的 `()` 单元值。同样，如果表达式块为空，则存在隐含的 `()` 单元值。
+如果块中不存在最终表达式 —— 也就是说，如果有一个尾随分号 `;`，则含有一个隐式的[单值（unit）`()`](https://zh.wikipedia.org/wiki/%E5%8D%95%E5%80%BC%E7%B1%BB%E5%9E%8B)。同样，如果表达式块为空，那么也存在隐式的单值 `()`。
 
 ```move
 // 两者是等价的

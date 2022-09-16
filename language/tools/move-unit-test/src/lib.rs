@@ -110,6 +110,10 @@ pub struct UnitTestingConfig {
     #[clap(short = 'v', long = "verbose")]
     pub verbose: bool,
 
+    /// Whether the test output need to be printed out.
+    #[clap(short = 'v', long = "verbose")]
+    pub report_writeset: bool,
+
     /// Use the EVM-based execution backend.
     /// Does not work with --stackless.
     #[cfg(feature = "evm-backend")]
@@ -142,6 +146,7 @@ impl UnitTestingConfig {
             verbose: false,
             list: false,
             named_address_values: vec![],
+            report_writeset: false,
 
             #[cfg(feature = "evm-backend")]
             evm: false,
@@ -244,6 +249,7 @@ impl UnitTestingConfig {
             test_plan,
             native_function_table,
             verify_and_create_named_address_mapping(self.named_address_values.clone()).unwrap(),
+            self.report_writeset,
             #[cfg(feature = "evm-backend")]
             self.evm,
         )
@@ -258,9 +264,13 @@ impl UnitTestingConfig {
             test_results.report_statistics(&shared_writer)?;
         }
 
-        let all_tests_passed = test_results.summarize(&shared_writer)?;
+        if self.report_writeset {
+            test_results.report_goldens(&shared_writer)?;
+        }
+
+        let ok = test_results.summarize(&shared_writer)?;
 
         let writer = shared_writer.into_inner().unwrap();
-        Ok((writer, all_tests_passed))
+        Ok((writer, ok))
     }
 }

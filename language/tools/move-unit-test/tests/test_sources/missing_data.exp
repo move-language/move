@@ -1,5 +1,7 @@
 Running Move unit tests
 [ FAIL    ] 0x1::MissingData::missing_data
+0x1::MissingData::missing_data
+Output: Ok(ChangeSet { accounts: {} })
 
 Test failures:
 

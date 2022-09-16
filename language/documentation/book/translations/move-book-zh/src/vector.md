@@ -1,4 +1,4 @@
-# 向量（Vector）
+# 向量
 
 `vector<T>` is the only primitive collection type provided by Move. A `vector<T>` is a homogenous
 collection of `T`'s that can grow or shrink by pushing/popping values off the "end".
@@ -11,9 +11,9 @@ A `vector<T>` can be instantiated with any type `T`. For example, `vector<u64>`,
 
 `vector<T>` 可以用任何类型 `T` 实例化。例如，`vector<u64>`、`vector<address>`、`vector<0x42::MyModuel::MyResource>` 和 `vector<vector<u8>>` 都是有效的向量类型。
 
-## 字面量（Literals）
+## 字面量
 
-### 通用 `vector` 字面量（General `vector` Literals）
+### 通用 `vector` 字面量
 
 Vectors of any type can be created with `vector` literals.
 
@@ -35,7 +35,7 @@ vector<T>[]: vector<T>
 vector<T>[e1, ..., en]: vector<T>
 ```
 
-#### 向量字面量示例（Example Vector Literals）
+#### 向量字面量示例
 
 ```move
 (vector[]: vector<bool>);
@@ -44,7 +44,7 @@ vector<T>[e1, ..., en]: vector<T>
 (vector<address>[@0x42, @0x100]: vector<address>);
 ```
 
-### `vector<u8>` 字面量（`vector<u8>` literals）
+### `vector<u8>` 字面量
 
 A common use-case for vectors in Move is to represent "byte arrays", which are represented with
 `vector<u8>`. These values are often used for cryptographic purposes, such as a public key or a hash
@@ -58,7 +58,7 @@ Move 中向量的一个常见用例是表示“字节数组”，用 `vector<u8>
 
 目前支持两种类型的 `vector<u8>` 字面量，*字节字符串*和*十六进制字符串*。
 
-#### 字节字符串（Byte Strings）
+#### 字节字符串
 
 Byte strings are quoted string literals prefixed by a `b`, e.g. `b"Hello!\n"`.
 
@@ -79,7 +79,7 @@ sequences are
 | `\"`     | 引号                                        |
 | `\xHH`   | 十六进制进制转义，插入十六进制字节序列 `HH` |
 
-#### 十六进制字符串（Hex Strings）
+#### 十六进制字符串
 
 Hex strings are quoted string literals prefixed by a `x`, e.g. `x"48656C6C6F210A"`
 
@@ -90,7 +90,7 @@ pair corresponds to a single entry in the resulting `vector<u8>`
 
 每个字节对，范围从 `00` 到 `FF` 都被解析为十六进制编码的 `u8` 值。所以每个字节对对应于结果 `vector<u8>` 的单个条目。
 
-#### 字符串字面量示例（Example String Literals）
+#### 字符串字面量示例
 
 ```move
 script {
@@ -107,7 +107,7 @@ script {
 }
 ```
 
-## 操作 (Operations)
+## 操作
 
 `vector` supports the following operations via the `std::vector` module in the Move standard
 library:
@@ -135,7 +135,7 @@ More operations may be added over time.
 
 随着时间的推移可能会增加更多操作。
 
-## 示例（Example）
+## 示例
 
 ```move
 use std::vector;
@@ -150,7 +150,7 @@ assert!(vector::pop_back(&mut v) == 6, 42);
 assert!(vector::pop_back(&mut v) == 5, 42);
 ```
 
-## 销毁和复制 `vector`（Destroying and copying `vector`s）
+## 销毁和复制 `vector`
 
 Some behaviors of `vector<T>` depend on the abilities of the element type, `T`. For example, vectors
 containing elements that do not have `drop` cannot be implicitly discarded like `v` in the example
@@ -197,6 +197,6 @@ For more details see the sections on [type abilities](./abilities.md) and [gener
 
 有关更多详细信息，请参阅[类型能力](./abilities.md)和[泛型](./generics.md)部分。
 
-## 所有权（Ownership）
+## 所有权
 
 [如上所述](#销毁和复制-vectordestroying-and-copying-vector)，`vector` 值只有在元素值可以复制的时候才能复制。在这种情况下，复制必须通过显式 [`copy`](./variables.md#移动和复制move-and-copy) 或者[解引用 `*`](./references.md#引用运算符reference-operators)。

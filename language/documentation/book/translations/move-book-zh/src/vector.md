@@ -1,11 +1,5 @@
 # 向量
 
-`vector<T>` is the only primitive collection type provided by Move. A `vector<T>` is a homogenous
-collection of `T`'s that can grow or shrink by pushing/popping values off the "end".
-
-A `vector<T>` can be instantiated with any type `T`. For example, `vector<u64>`, `vector<address>`,
-`vector<0x42::MyModule::MyResource>`, and `vector<vector<u8>>` are all valid vector types.
-
 `vector<T>` 是 Move 提供的唯一原始集合类型。`vector<T>` 是类型为 `T` 的同构集合，可以通过从"末端"推入/弹出（出栈/入栈，译者注）值来增长或缩小。
 *（与 Rust 一样，向量（vector）是一种可以存放任何类型的可变大小的容器，也可称为[动态数组](https://en.wikipedia.org/wiki/Dynamic_array)，与 Python 中的[列表（list）](https://computersciencewiki.org/index.php/Lists)不同，译者注）*
 
@@ -15,18 +9,12 @@ A `vector<T>` can be instantiated with any type `T`. For example, `vector<u64>`,
 
 ### 通用 `vector` 字面量
 
-Vectors of any type can be created with `vector` literals.
-
 任何类型的向量都可以通过 `vector` 字面量创建。
 
 | 语法                  | 类型                                                                          | 描述                              |
 |-----------------------|-------------------------------------------------------------------------------|-----------------------------------|
 | `vector[]`            | `vector[]: vector<T>` 其中 `T` 是任何单一的非引用类型                         | 一个空向量                        |
 | `vector[e1, ..., en]` | `vector[e1, ..., en]: vector<T>` where `e_i: T` 满足 `0 < i <= n` and `n > 0` | 带有 `n` 个元素（长度为 n）的向量 |
-
-In these cases, the type of the `vector` is inferred, either from the element type or from the
-vector's usage. If the type cannot be inferred, or simply for added clarity, the type can be
-specified explicitly:
 
 在这些情况下，`vector` 的类型是从元素类型或从向量的使用上推断出来的。如果无法推断类型或者只是为了更清楚地表示，则可以显式指定类型：
 
@@ -46,24 +34,11 @@ vector<T>[e1, ..., en]: vector<T>
 
 ### `vector<u8>` 字面量
 
-A common use-case for vectors in Move is to represent "byte arrays", which are represented with
-`vector<u8>`. These values are often used for cryptographic purposes, such as a public key or a hash
-result. These values are so common that specific syntax is provided to make the values more
-readable, as opposed to having to use `vector[]` where each individual `u8` value is specified in
-numeric form.
-
-There are currently two supported types of `vector<u8>` literals, *byte strings* and *hex strings*.
-
 Move 中向量的一个常见用例是表示“字节数组”，用 `vector<u8>` 表示。这些值通常用于加密目的，例如公钥或哈希结果。这些值非常常见，以至于提供了特定的语法以使值更具可读性，而不是必须使用 `vector[]`，其中每个单独的 `u8` 值都以数字形式指定。
 
 目前支持两种类型的 `vector<u8>` 字面量，*字节字符串*和*十六进制字符串*。
 
 #### 字节字符串
-
-Byte strings are quoted string literals prefixed by a `b`, e.g. `b"Hello!\n"`.
-
-These are ASCII encoded strings that allow for escape sequences. Currently, the supported escape
-sequences are
 
 字节字符串是带引号的字符串字面量，以 `b` 为前缀，例如，`b"Hello!\n"`。
 
@@ -80,11 +55,6 @@ sequences are
 | `\xHH`   | 十六进制进制转义，插入十六进制字节序列 `HH` |
 
 #### 十六进制字符串
-
-Hex strings are quoted string literals prefixed by a `x`, e.g. `x"48656C6C6F210A"`
-
-Each byte pair, ranging from `00` to `FF`, is interpreted as hex encoded `u8` value. So each byte
-pair corresponds to a single entry in the resulting `vector<u8>`
 
 十六进制字符串是以 `x` 为前缀的带引号的字符串字面量，例如，`x"48656C6C6F210A"`。
 
@@ -109,9 +79,6 @@ script {
 
 ## 操作
 
-`vector` supports the following operations via the `std::vector` module in the Move standard
-library:
-
 `vector` 通过 Move 标准库里的 `std::vector` 模块支持以下操作：
 
 | 函数                                                       | 描述                                                                                                         | 中止条件             |
@@ -130,8 +97,6 @@ library:
 | `vector::index_of<T>(v: &vector<T>, e: &T): (bool, u64)`   | 如果 `e` 在索引 `i` 处的向量中，则返回 `(true, i)`。否则返回`(false, 0)`                                     | 永不中止             |
 | `vector::remove<T>(v: &mut vector<T>, i: u64): T`          | 移除向量 `v` 中的第 `i` 个元素，移动所有后续元素。这里的时间复杂度是 O(n)，并且保留了向量中元素的顺序        | 如果 `i` 越界        |
 | `vector::swap_remove<T>(v: &mut vector<T>, i: u64): T`     | 将向量中的第 `i` 个元素与最后一个元素交换，然后弹出该元素。这里的时间复杂度是 O(1)，但是不保留向量中的元素顺序 | 如果 `i` 越界        |
-
-More operations may be added over time.
 
 随着时间的推移可能会增加更多操作。
 
@@ -152,12 +117,6 @@ assert!(vector::pop_back(&mut v) == 5, 42);
 
 ## 销毁和复制 `vector`
 
-Some behaviors of `vector<T>` depend on the abilities of the element type, `T`. For example, vectors
-containing elements that do not have `drop` cannot be implicitly discarded like `v` in the example
-above--they must be explicitly destroyed with `vector::destroy_empty`.
-
-Note that `vector::destroy_empty` will abort at runtime unless `vec` contains zero elements:
-
 `vector<T>` 的某些行为取决于元素类型 `T` 的能力（ability），例如：如果向量中包含不具有 `drop` 能力的元素，那么不能像上面例子中的 `v` 一样隐式丢弃 —— 它们必须用 `vector::destroy_empty` 显式销毁。
 
 请注意，除非向量 `vec` 包含零个元素，否则 `vector::destroy_empty` 将在运行时中止：
@@ -177,21 +136,12 @@ fun destroy_droppable_vector<T: drop>(vec: vector<T>) {
 }
 ```
 
-Similarly, vectors cannot be copied unless the element type has `copy`. In other words, a
-`vector<T>` has `copy` if and only if `T` has `copy`. However, even copyable vectors are never
-implicitly copied:
-
 同样，除非元素类型具有 `copy` 能力，否则无法复制向量。换句话说，当且仅当 `T` 具有 `copy` 能力时，`vector<T>` 才具有 `copy` 能力。然而，即使是可复制的向量也永远不会被隐式复制：
 
 ```move
 let x = vector::singleton<u64>(10);
 let y = copy x; // 没有 copy 将导致编译器错误！
 ```
-
-Copies of large vectors can be expensive, so the compiler requires explicit `copy`'s to make it
-easier to see where they are happening.
-
-For more details see the sections on [type abilities](./abilities.md) and [generics](./generics.md).
 
 大向量的复制可能很昂贵，因此编译器需要显式 `copy` 以便更容易查看它们发生的位置。
 

@@ -50,7 +50,7 @@ There are currently two supported types of `vector<u8>` literals, *byte strings*
 Byte strings are quoted string literals prefixed by a `b`, e.g. `b"Hello!\n"`.
 
 These are ASCII encoded strings that allow for escape sequences. Currently, the supported escape
-sequences are
+sequences are:
 
 | Escape Sequence | Description                                    |
 | --------------- | ---------------------------------------------- |
@@ -64,10 +64,10 @@ sequences are
 
 #### Hex Strings
 
-Hex strings are quoted string literals prefixed by a `x`, e.g. `x"48656C6C6F210A"`
+Hex strings are quoted string literals prefixed by a `x`, e.g. `x"48656C6C6F210A"`.
 
 Each byte pair, ranging from `00` to `FF`, is interpreted as hex encoded `u8` value. So each byte
-pair corresponds to a single entry in the resulting `vector<u8>`
+pair corresponds to a single entry in the resulting `vector<u8>`.
 
 #### Example String Literals
 

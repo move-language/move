@@ -135,7 +135,7 @@ More operations may be added over time.
 
 随着时间的推移可能会增加更多操作。
 
-## 示例
+## 示例（Example）
 
 ```move
 use std::vector;
@@ -150,7 +150,7 @@ assert!(vector::pop_back(&mut v) == 6, 42);
 assert!(vector::pop_back(&mut v) == 5, 42);
 ```
 
-## 销毁和复制 `vector`（Destroying and copying `vector`）
+## 销毁和复制 `vector`（Destroying and copying `vector`s）
 
 Some behaviors of `vector<T>` depend on the abilities of the element type, `T`. For example, vectors
 containing elements that do not have `drop` cannot be implicitly discarded like `v` in the example
@@ -182,8 +182,6 @@ Similarly, vectors cannot be copied unless the element type has `copy`. In other
 implicitly copied:
 
 同样，除非元素类型具有 `copy` 能力，否则无法复制向量。换句话说，当且仅当 `T` 具有 `copy` 能力时，`vector<T>` 才具有 `copy` 能力。然而，即使是可复制的向量也永远不会被隐式复制：
-
-换句话说，`vector<T>` 有 `copy` 能力当且仅当 `T` 有 `copy` 能力。然而，即使是可复制的向量也永远不会被隐式复制：
 
 ```move
 let x = vector::singleton<u64>(10);

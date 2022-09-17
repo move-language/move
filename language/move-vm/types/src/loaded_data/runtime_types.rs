@@ -10,6 +10,10 @@ use move_core_types::{
     gas_algebra::AbstractMemorySize, identifier::Identifier, language_storage::ModuleId,
     vm_status::StatusCode,
 };
+use std::{
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
+};
 
 pub const TYPE_DEPTH_MAX: usize = 256;
 
@@ -122,5 +126,15 @@ impl Type {
                 .iter()
                 .fold(Self::LEGACY_BASE_MEMORY_SIZE, |acc, ty| acc + ty.size()),
         }
+    }
+
+    /// Get a u64 hash for the type.
+    ///
+    /// This is just used for generating unique identifier for types at runtime checks.
+    /// We may want to revisit if hash collision is really a concern here.
+    pub fn get_hash(&self) -> u64 {
+        let mut s = DefaultHasher::new();
+        self.hash(&mut s);
+        s.finish()
     }
 }

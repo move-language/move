@@ -4,6 +4,7 @@
 
 use crate::{
     logging::expect_no_verification_errors,
+    move_vm::RuntimeConfig,
     native_functions::{NativeFunction, NativeFunctions, UnboxedNativeFunction},
     session::LoadedFunctionInstantiation,
 };
@@ -16,7 +17,7 @@ use move_binary_format::{
         FieldHandleIndex, FieldInstantiationIndex, FunctionDefinition, FunctionDefinitionIndex,
         FunctionHandleIndex, FunctionInstantiationIndex, Signature, SignatureIndex, SignatureToken,
         StructDefInstantiationIndex, StructDefinition, StructDefinitionIndex,
-        StructFieldInformation, TableIndex,
+        StructFieldInformation, StructHandleIndex, TableIndex, Visibility,
     },
     IndexKind,
 };
@@ -476,10 +477,16 @@ pub(crate) struct Loader {
     module_cache_hits: RwLock<BTreeSet<ModuleId>>,
 
     verifier_config: VerifierConfig,
+
+    runtime_config: RuntimeConfig,
 }
 
 impl Loader {
-    pub(crate) fn new(natives: NativeFunctions, verifier_config: VerifierConfig) -> Self {
+    pub(crate) fn new(
+        natives: NativeFunctions,
+        verifier_config: VerifierConfig,
+        runtime_config: RuntimeConfig,
+    ) -> Self {
         Self {
             scripts: RwLock::new(ScriptCache::new()),
             module_cache: RwLock::new(ModuleCache::new()),
@@ -488,6 +495,7 @@ impl Loader {
             invalidated: RwLock::new(false),
             module_cache_hits: RwLock::new(BTreeSet::new()),
             verifier_config,
+            runtime_config,
         }
     }
 
@@ -1369,6 +1377,23 @@ impl<'a> Resolver<'a> {
         Type::Struct(struct_def)
     }
 
+    pub(crate) fn get_struct_ability(&self, idx: StructDefinitionIndex) -> AbilitySet {
+        match &self.binary {
+            BinaryType::Module(module) => module.ability_for_struct_def(idx),
+            BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
+        }
+    }
+
+    pub(crate) fn get_generic_struct_ability(
+        &self,
+        idx: StructDefInstantiationIndex,
+    ) -> AbilitySet {
+        match &self.binary {
+            BinaryType::Module(module) => module.struct_instantiation_at(idx.0).abilities,
+            BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
+        }
+    }
+
     pub(crate) fn instantiate_generic_type(
         &self,
         idx: StructDefInstantiationIndex,
@@ -1386,6 +1411,39 @@ impl<'a> Resolver<'a> {
                 .map(|ty| ty.subst(ty_args))
                 .collect::<PartialVMResult<_>>()?,
         ))
+    }
+
+    pub(crate) fn resolve_signature_token(&self, tok: &SignatureToken) -> PartialVMResult<Type> {
+        Ok(match tok {
+            SignatureToken::Address => Type::Address,
+            SignatureToken::Bool => Type::Bool,
+            SignatureToken::Signer => Type::Signer,
+            SignatureToken::U8 => Type::U8,
+            SignatureToken::U64 => Type::U64,
+            SignatureToken::U128 => Type::U128,
+            SignatureToken::Reference(r) => {
+                Type::Reference(Box::new(self.resolve_signature_token(r)?))
+            }
+            SignatureToken::MutableReference(r) => {
+                Type::MutableReference(Box::new(self.resolve_signature_token(r)?))
+            }
+            SignatureToken::Struct(idx) => Type::Struct(self.get_struct_handle_idx(*idx)),
+            SignatureToken::Vector(ty) => Type::Vector(Box::new(self.resolve_signature_token(ty)?)),
+            SignatureToken::StructInstantiation(idx, tys) => Type::StructInstantiation(
+                self.get_struct_handle_idx(*idx),
+                tys.iter()
+                    .map(|tok| self.resolve_signature_token(tok))
+                    .collect::<PartialVMResult<Vec<_>>>()?,
+            ),
+            SignatureToken::TypeParameter(idx) => Type::TyParam(*idx as usize),
+        })
+    }
+
+    fn get_struct_handle_idx(&self, idx: StructHandleIndex) -> CachedStructIndex {
+        match &self.binary {
+            BinaryType::Module(module) => module.struct_handle_at(idx),
+            BinaryType::Script(script) => script.struct_handle_at(idx),
+        }
     }
 
     fn single_type_at(&self, idx: SignatureIndex) -> &Type {
@@ -1549,7 +1607,11 @@ impl Module {
             for struct_def in module.struct_defs() {
                 let idx = struct_refs[struct_def.struct_handle.0 as usize];
                 let field_count = cache.structs[idx.0].fields.len() as u16;
-                structs.push(StructDef { field_count, idx });
+                structs.push(StructDef {
+                    field_count,
+                    idx,
+                    abilities: module.struct_handle_at(struct_def.struct_handle).abilities,
+                });
                 let name =
                     module.identifier_at(module.struct_handle_at(struct_def.struct_handle).name);
                 struct_map.insert(name.to_owned(), idx);
@@ -1567,6 +1629,7 @@ impl Module {
                     field_count,
                     def: struct_def.idx,
                     instantiation,
+                    abilities: struct_def.abilities,
                 });
             }
 
@@ -1688,6 +1751,10 @@ impl Module {
         self.structs[idx.0 as usize].idx
     }
 
+    fn struct_handle_at(&self, idx: StructHandleIndex) -> CachedStructIndex {
+        self.struct_refs[idx.0 as usize]
+    }
+
     fn struct_instantiation_at(&self, idx: u16) -> &StructInstantiation {
         &self.struct_instantiations[idx as usize]
     }
@@ -1726,6 +1793,10 @@ impl Module {
 
     fn single_type_at(&self, idx: SignatureIndex) -> &Type {
         self.single_signature_token_map.get(&idx).unwrap()
+    }
+
+    fn ability_for_struct_def(&self, idx: StructDefinitionIndex) -> AbilitySet {
+        self.structs[idx.0 as usize].abilities
     }
 }
 
@@ -1854,6 +1925,7 @@ impl Script {
             type_parameters,
             native,
             def_is_native,
+            def_is_friend_or_private: false,
             scope,
             name,
         });
@@ -1916,6 +1988,10 @@ impl Script {
         self.function_refs[idx as usize]
     }
 
+    fn struct_handle_at(&self, idx: StructHandleIndex) -> CachedStructIndex {
+        self.struct_refs[idx.0 as usize]
+    }
+
     fn function_instantiation_at(&self, idx: u16) -> &FunctionInstantiation {
         &self.function_instantiations[idx as usize]
     }
@@ -1946,6 +2022,7 @@ pub(crate) struct Function {
     type_parameters: Vec<AbilitySet>,
     native: Option<NativeFunction>,
     def_is_native: bool,
+    def_is_friend_or_private: bool,
     scope: Scope,
     name: Identifier,
 }
@@ -1960,6 +2037,12 @@ impl Function {
         let handle = module.function_handle_at(def.function);
         let name = module.identifier_at(handle.name).to_owned();
         let module_id = module.self_id();
+
+        let def_is_friend_or_private = match def.visibility {
+            Visibility::Friend | Visibility::Private => true,
+            Visibility::Public => false,
+        };
+
         let (native, def_is_native) = if def.is_native() {
             (
                 natives.resolve(
@@ -2001,6 +2084,7 @@ impl Function {
             type_parameters,
             native,
             def_is_native,
+            def_is_friend_or_private,
             scope,
             name,
         }
@@ -2039,6 +2123,14 @@ impl Function {
         self.locals.len()
     }
 
+    pub(crate) fn local_types(&self) -> &[SignatureToken] {
+        &self.locals.0
+    }
+
+    pub(crate) fn return_types(&self) -> &[SignatureToken] {
+        &self.return_.0
+    }
+
     pub(crate) fn arg_count(&self) -> usize {
         self.parameters.len()
     }
@@ -2074,6 +2166,10 @@ impl Function {
 
     pub(crate) fn is_native(&self) -> bool {
         self.def_is_native
+    }
+
+    pub(crate) fn is_friend_or_private(&self) -> bool {
+        self.def_is_friend_or_private
     }
 
     pub(crate) fn get_native(&self) -> PartialVMResult<&UnboxedNativeFunction> {
@@ -2116,6 +2212,8 @@ struct StructDef {
     field_count: u16,
     // `ModuelCache::structs` global table index
     idx: CachedStructIndex,
+    // ability set of the struct.
+    abilities: AbilitySet,
 }
 
 #[derive(Debug)]
@@ -2125,6 +2223,9 @@ struct StructInstantiation {
     // `ModuelCache::structs` global table index. It is the generic type.
     def: CachedStructIndex,
     instantiation: Vec<Type>,
+
+    // ability set of the struct.
+    abilities: AbilitySet,
 }
 
 // A field handle. The offset is the only used information when operating on a field
@@ -2260,7 +2361,20 @@ impl Loader {
             .iter()
             .map(|ty| self.type_to_type_layout_impl(ty, depth + 1))
             .collect::<PartialVMResult<Vec<_>>>()?;
-        let struct_layout = MoveStructLayout::new(field_layouts);
+
+        let struct_layout = if self.runtime_config.paranoid_type_checks {
+            MoveStructLayout::CheckedRuntime {
+                fields: field_layouts,
+                tag: if ty_args.is_empty() {
+                    Type::Struct(gidx)
+                } else {
+                    Type::StructInstantiation(gidx, ty_args.to_vec())
+                }
+                .get_hash(),
+            }
+        } else {
+            MoveStructLayout::Runtime(field_layouts)
+        };
 
         self.type_cache
             .write()
@@ -2308,6 +2422,10 @@ impl Loader {
     }
     pub(crate) fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout> {
         self.type_to_type_layout_impl(ty, 1)
+    }
+
+    pub(crate) fn runtime_config(&self) -> RuntimeConfig {
+        self.runtime_config
     }
 }
 

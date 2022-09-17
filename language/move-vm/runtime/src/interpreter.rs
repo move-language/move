@@ -4,13 +4,14 @@
 
 use crate::{
     loader::{Function, Loader, Resolver},
+    move_vm::RuntimeConfig,
     native_functions::NativeContext,
     trace,
 };
 use fail::fail_point;
 use move_binary_format::{
     errors::*,
-    file_format::{Bytecode, FunctionHandleIndex, FunctionInstantiationIndex},
+    file_format::{Ability, AbilitySet, Bytecode, FunctionHandleIndex, FunctionInstantiationIndex},
 };
 use move_core_types::{
     account_address::AccountAddress,
@@ -67,6 +68,8 @@ pub(crate) struct Interpreter {
     operand_stack: Stack,
     /// The stack of active functions.
     call_stack: CallStack,
+    /// Whether to perform safety checks at runtime.
+    runtime_config: RuntimeConfig,
 }
 
 struct TypeWithLoader<'a, 'b> {
@@ -95,6 +98,7 @@ impl Interpreter {
         Interpreter {
             operand_stack: Stack::new(),
             call_stack: CallStack::new(),
+            runtime_config: loader.runtime_config(),
         }
         .execute_main(
             loader, data_store, gas_meter, extensions, function, ty_args, args,
@@ -124,7 +128,7 @@ impl Interpreter {
                 .map_err(|e| self.set_location(e))?;
         }
 
-        let mut current_frame = Frame::new(function, ty_args, locals);
+        let mut current_frame = Frame::new(function, ty_args, locals, self.runtime_config);
         loop {
             let resolver = current_frame.resolver(loader);
             let exit_code =
@@ -175,7 +179,18 @@ impl Interpreter {
                         )
                         .map_err(|e| set_err_info!(current_frame, e))?;
 
+                    if self.runtime_config.paranoid_type_checks {
+                        self.check_friend_or_private_call(&current_frame.function, &func)?;
+                        self.check_function_call_type_safety(
+                            &[],
+                            func.clone(),
+                            &func.get_resolver(loader),
+                        )
+                        .map_err(|err| self.set_location(err))?;
+                    }
+
                     if func.is_native() {
+                        let resolver = func.get_resolver(loader);
                         self.call_native(
                             &resolver,
                             data_store,
@@ -225,7 +240,18 @@ impl Interpreter {
                         )
                         .map_err(|e| set_err_info!(current_frame, e))?;
 
+                    if self.runtime_config.paranoid_type_checks {
+                        self.check_friend_or_private_call(&current_frame.function, &func)?;
+                        self.check_function_call_type_safety(
+                            &ty_args,
+                            func.clone(),
+                            &func.get_resolver(loader),
+                        )
+                        .map_err(|err| self.set_location(err))?;
+                    }
+
                     if func.is_native() {
+                        let resolver = func.get_resolver(loader);
                         self.call_native(
                             &resolver, data_store, gas_meter, extensions, func, ty_args,
                         )?;
@@ -246,6 +272,55 @@ impl Interpreter {
         }
     }
 
+    /// Make sure only private/friend function can only be invoked by modules under the same address.
+    fn check_friend_or_private_call(
+        &self,
+        caller: &Arc<Function>,
+        callee: &Arc<Function>,
+    ) -> VMResult<()> {
+        if callee.is_friend_or_private() {
+            match (caller.module_id(), callee.module_id()) {
+                (Some(caller_id), Some(callee_id)) => {
+                    if caller_id.address() == callee_id.address() {
+                        Ok(())
+                    } else {
+                        Err(self.set_location(PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                            .with_message(
+                                format!("Private/Friend function invokation error, caller: {:?}::{:?}, callee: {:?}::{:?}", caller_id, caller.name(), callee_id, callee.name()),
+                            )))
+                    }
+                }
+                _ => Err(self.set_location(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message(format!(
+                            "Private/Friend function invokation error caller: {:?}, callee {:?}",
+                            caller.name(),
+                            callee.name()
+                        )),
+                )),
+            }
+        } else {
+            Ok(())
+        }
+    }
+
+    fn check_function_call_type_safety(
+        &self,
+        ty_args: &[Type],
+        func: Arc<Function>,
+        resolver: &Resolver,
+    ) -> PartialVMResult<()> {
+        let arg_count = func.arg_count();
+        for (i, v) in self.operand_stack.last_n(arg_count)?.enumerate() {
+            let expected_ty = resolver
+                .resolve_signature_token(&func.parameters().0[i])
+                .and_then(|ty| ty.subst(&ty_args))?;
+
+            v.check_type(&expected_ty)?;
+        }
+        Ok(())
+    }
+
     /// Returns a `Frame` if the call is to a Move function. Calls to native functions are
     /// "inlined" and this returns `None`.
     ///
@@ -255,14 +330,12 @@ impl Interpreter {
         let mut locals = Locals::new(func.local_count());
         let arg_count = func.arg_count();
         for i in 0..arg_count {
+            let v = self.operand_stack.pop().map_err(|e| self.set_location(e))?;
             locals
-                .store_loc(
-                    arg_count - i - 1,
-                    self.operand_stack.pop().map_err(|e| self.set_location(e))?,
-                )
+                .store_loc(arg_count - i - 1, v)
                 .map_err(|e| self.set_location(e))?;
         }
-        Ok(Frame::new(func, ty_args, locals))
+        Ok(Frame::new(func, ty_args, locals, self.runtime_config))
     }
 
     /// Call a native functions.
@@ -322,7 +395,7 @@ impl Interpreter {
             args.iter(),
         )?;
 
-        let result = native_function(&mut native_context, ty_args, args)?;
+        let result = native_function(&mut native_context, ty_args.clone(), args)?;
 
         // Note(Gas): The order by which gas is charged / error gets returned MUST NOT be modified
         //            here or otherwise it becomes an incompatible change!!!
@@ -353,8 +426,46 @@ impl Interpreter {
         // Put return values on the top of the operand stack, where the caller will find them.
         // This is one of only two times the operand stack is shared across call stack frames; the other is in handling
         // the Return instruction for normal calls
-        for value in return_values {
-            self.operand_stack.push(value)?;
+
+        if self.runtime_config.paranoid_type_checks {
+            if return_values.len() != function.return_types().len() {
+                return Err(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message(
+                            "Unexpected native function not located in a module".to_owned(),
+                        ),
+                );
+            }
+            for (value, sig) in return_values.into_iter().zip(function.return_types()) {
+                let ty = resolver.resolve_signature_token(sig)?.subst(&ty_args)?;
+
+                match ty {
+                    Type::Struct(_)
+                    | Type::StructInstantiation(_, _)
+                    | Type::Signer
+                    | Type::Vector(_) => {
+                        let layout = resolver.type_to_type_layout(&ty)?;
+                        value.add_runtime_type(&layout)?;
+                    }
+                    Type::Address
+                    | Type::Bool
+                    | Type::U8
+                    | Type::U16
+                    | Type::U32
+                    | Type::U64
+                    | Type::U128
+                    | Type::U256
+                    | Type::MutableReference(_)
+                    | Type::Reference(_)
+                    | Type::TyParam(_) => (),
+                }
+
+                self.operand_stack.push(value)?;
+            }
+        } else {
+            for value in return_values {
+                self.operand_stack.push(value)?;
+            }
         }
         Ok(())
     }
@@ -826,6 +937,7 @@ struct Frame {
     locals: Locals,
     function: Arc<Function>,
     ty_args: Vec<Type>,
+    runtime_config: RuntimeConfig,
 }
 
 /// An `ExitCode` from `execute_code_unit`.
@@ -840,12 +952,18 @@ impl Frame {
     /// Create a new `Frame` given a `Function` and the function `Locals`.
     ///
     /// The locals must be loaded before calling this.
-    fn new(function: Arc<Function>, ty_args: Vec<Type>, locals: Locals) -> Self {
+    fn new(
+        function: Arc<Function>,
+        ty_args: Vec<Type>,
+        locals: Locals,
+        runtime_config: RuntimeConfig,
+    ) -> Self {
         Frame {
             pc: 0,
             locals,
             function,
             ty_args,
+            runtime_config,
         }
     }
 
@@ -905,10 +1023,16 @@ impl Frame {
                 match instruction {
                     Bytecode::Pop => {
                         let popped_val = interpreter.operand_stack.pop()?;
+                        if self.runtime_config.paranoid_type_checks {
+                            popped_val.can_drop()?;
+                        }
                         gas_meter.charge_pop(popped_val)?;
                     }
                     Bytecode::Ret => {
                         gas_meter.charge_simple_instr(S::Ret)?;
+                        if self.runtime_config.paranoid_type_checks {
+                            self.locals.check_valid_drop()?;
+                        }
                         return Ok(ExitCode::Return);
                     }
                     Bytecode::BrTrue(offset) => {
@@ -981,6 +1105,9 @@ impl Frame {
                     Bytecode::CopyLoc(idx) => {
                         // TODO(Gas): We should charge gas before copying the value.
                         let local = self.locals.copy_loc(*idx as usize)?;
+                        if self.runtime_config.paranoid_type_checks {
+                            local.has_ability(Ability::Copy)?;
+                        }
                         gas_meter.charge_copy_loc(&local)?;
                         interpreter.operand_stack.push(local)?;
                     }
@@ -992,6 +1119,9 @@ impl Frame {
                     }
                     Bytecode::StLoc(idx) => {
                         let value_to_store = interpreter.operand_stack.pop()?;
+                        if self.runtime_config.paranoid_type_checks {
+                            self.locals.check_drop_loc(*idx as usize)?;
+                        }
                         gas_meter.charge_store_loc(&value_to_store)?;
                         self.locals.store_loc(*idx as usize, value_to_store)?;
                     }
@@ -1019,6 +1149,12 @@ impl Frame {
                         gas_meter.charge_simple_instr(instr)?;
 
                         let reference = interpreter.operand_stack.pop_as::<StructRef>()?;
+
+                        if self.runtime_config.paranoid_type_checks {
+                            reference
+                                .check_inner_type(&resolver.field_handle_to_struct(*fh_idx))?;
+                        }
+
                         let offset = resolver.field_offset(*fh_idx);
                         let field_ref = reference.borrow_field(offset)?;
                         interpreter.operand_stack.push(field_ref)?;
@@ -1032,6 +1168,13 @@ impl Frame {
                         gas_meter.charge_simple_instr(instr)?;
 
                         let reference = interpreter.operand_stack.pop_as::<StructRef>()?;
+
+                        if self.runtime_config.paranoid_type_checks {
+                            reference.check_inner_type(
+                                &resolver.field_instantiation_to_struct(*fi_idx, self.ty_args())?,
+                            )?;
+                        }
+
                         let offset = resolver.field_instantiation_offset(*fi_idx);
                         let field_ref = reference.borrow_field(offset)?;
                         interpreter.operand_stack.push(field_ref)?;
@@ -1043,9 +1186,41 @@ impl Frame {
                             interpreter.operand_stack.last_n(field_count as usize)?,
                         )?;
                         let args = interpreter.operand_stack.popn(field_count)?;
-                        interpreter
-                            .operand_stack
-                            .push(Value::struct_(Struct::pack(args)))?;
+
+                        let value = if self.runtime_config.paranoid_type_checks {
+                            let value_ty = resolver.get_struct_type(*sd_idx);
+                            let arg_types = resolver.get_struct_fields(*sd_idx)?;
+                            let ability = resolver.abilities(&value_ty)?;
+
+                            if arg_types.fields.len() != args.len() {
+                                return Err(PartialVMError::new(
+                                    StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+                                )
+                                .with_message("pack args length mismatch".to_string()));
+                            }
+
+                            let inner_abilities = if ability.has_key() {
+                                ability
+                                    .remove(Ability::Key)
+                                    .union(AbilitySet::singleton(Ability::Store))
+                            } else {
+                                ability
+                            };
+
+                            for (arg_ty, arg) in arg_types.fields.iter().zip(args.iter()) {
+                                arg.check_type(arg_ty)?;
+                                arg.has_ability_set(inner_abilities)?;
+                            }
+
+                            Value::struct_(Struct::pack_with_tag(
+                                args,
+                                value_ty.get_hash(),
+                                ability,
+                            ))
+                        } else {
+                            Value::struct_(Struct::pack(args))
+                        };
+                        interpreter.operand_stack.push(value)?;
                     }
                     Bytecode::PackGeneric(si_idx) => {
                         let field_count = resolver.field_instantiation_count(*si_idx);
@@ -1054,12 +1229,52 @@ impl Frame {
                             interpreter.operand_stack.last_n(field_count as usize)?,
                         )?;
                         let args = interpreter.operand_stack.popn(field_count)?;
-                        interpreter
-                            .operand_stack
-                            .push(Value::struct_(Struct::pack(args)))?;
+
+                        let value = if self.runtime_config.paranoid_type_checks {
+                            let ty = resolver.instantiate_generic_type(*si_idx, self.ty_args())?;
+
+                            let arg_types =
+                                resolver.instantiate_generic_fields(*si_idx, self.ty_args())?;
+
+                            if arg_types.len() != args.len() {
+                                return Err(PartialVMError::new(
+                                    StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+                                )
+                                .with_message("pack args length mismatch".to_string()));
+                            }
+
+                            for (arg_ty, arg) in arg_types.iter().zip(args.iter()) {
+                                arg.check_type(arg_ty)?;
+                            }
+
+                            Value::struct_(Struct::pack_with_tag(
+                                args,
+                                ty.get_hash(),
+                                resolver.abilities(&ty)?,
+                            ))
+                        } else {
+                            Value::struct_(Struct::pack(args))
+                        };
+
+                        interpreter.operand_stack.push(value)?;
                     }
-                    Bytecode::Unpack(_sd_idx) => {
+                    Bytecode::Unpack(sd_idx) => {
                         let struct_ = interpreter.operand_stack.pop_as::<Struct>()?;
+
+                        if self.runtime_config.paranoid_type_checks {
+                            let ty = resolver.get_struct_type(*sd_idx);
+                            if let Some(ty1) = struct_.tag() {
+                                if ty1 != ty.get_hash() {
+                                    return Err(PartialVMError::new(
+                                        StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+                                    )
+                                    .with_message(format!(
+                                        "unexpected type mismatch, got {:?} expected {:?}",
+                                        struct_, ty
+                                    )));
+                                }
+                            }
+                        }
 
                         gas_meter.charge_unpack(false, struct_.field_views())?;
 
@@ -1067,8 +1282,24 @@ impl Frame {
                             interpreter.operand_stack.push(value)?;
                         }
                     }
-                    Bytecode::UnpackGeneric(_si_idx) => {
+                    Bytecode::UnpackGeneric(si_idx) => {
                         let struct_ = interpreter.operand_stack.pop_as::<Struct>()?;
+
+                        if self.runtime_config.paranoid_type_checks {
+                            let ty = resolver.instantiate_generic_type(*si_idx, self.ty_args())?;
+
+                            if let Some(ty1) = struct_.tag() {
+                                if ty1 != ty.get_hash() {
+                                    return Err(PartialVMError::new(
+                                        StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+                                    )
+                                    .with_message(format!(
+                                        "unexpected type mismatch, got {:?} expected {:?}",
+                                        struct_, ty
+                                    )));
+                                }
+                            }
+                        }
 
                         gas_meter.charge_unpack(true, struct_.field_views())?;
 
@@ -1083,11 +1314,19 @@ impl Frame {
                         let reference = interpreter.operand_stack.pop_as::<Reference>()?;
                         gas_meter.charge_read_ref(reference.value_view())?;
                         let value = reference.read_ref()?;
+
+                        if self.runtime_config.paranoid_type_checks {
+                            value.has_ability(Ability::Copy)?;
+                        }
+
                         interpreter.operand_stack.push(value)?;
                     }
                     Bytecode::WriteRef => {
                         let reference = interpreter.operand_stack.pop_as::<Reference>()?;
                         let value = interpreter.operand_stack.pop()?;
+                        if self.runtime_config.paranoid_type_checks {
+                            reference.check_write_ref(&value)?;
+                        }
                         gas_meter.charge_write_ref(&value, reference.value_view())?;
                         reference.write_ref(value)?;
                     }
@@ -1226,6 +1465,12 @@ impl Frame {
                         let lhs = interpreter.operand_stack.pop()?;
                         let rhs = interpreter.operand_stack.pop()?;
                         gas_meter.charge_eq(&lhs, &rhs)?;
+
+                        if self.runtime_config.paranoid_type_checks {
+                            lhs.can_drop()?;
+                            rhs.can_drop()?;
+                        }
+
                         interpreter
                             .operand_stack
                             .push(Value::bool(lhs.equals(&rhs)?))?;
@@ -1234,6 +1479,12 @@ impl Frame {
                         let lhs = interpreter.operand_stack.pop()?;
                         let rhs = interpreter.operand_stack.pop()?;
                         gas_meter.charge_neq(&lhs, &rhs)?;
+
+                        if self.runtime_config.paranoid_type_checks {
+                            lhs.can_drop()?;
+                            rhs.can_drop()?;
+                        }
+
                         interpreter
                             .operand_stack
                             .push(Value::bool(!lhs.equals(&rhs)?))?;
@@ -1318,6 +1569,11 @@ impl Frame {
                     Bytecode::MoveTo(sd_idx) => {
                         let resource = interpreter.operand_stack.pop()?;
                         let signer_reference = interpreter.operand_stack.pop_as::<StructRef>()?;
+
+                        if self.runtime_config.paranoid_type_checks {
+                            signer_reference.check_inner_type(&Type::Signer)?;
+                        }
+
                         let addr = signer_reference
                             .borrow_field(0)?
                             .value_as::<Reference>()?
@@ -1338,6 +1594,11 @@ impl Frame {
                     Bytecode::MoveToGeneric(si_idx) => {
                         let resource = interpreter.operand_stack.pop()?;
                         let signer_reference = interpreter.operand_stack.pop_as::<StructRef>()?;
+
+                        if self.runtime_config.paranoid_type_checks {
+                            signer_reference.check_inner_type(&Type::Signer)?;
+                        }
+
                         let addr = signer_reference
                             .borrow_field(0)?
                             .value_as::<Reference>()?
@@ -1374,6 +1635,11 @@ impl Frame {
                             interpreter.operand_stack.last_n(*num as usize)?,
                         )?;
                         let elements = interpreter.operand_stack.popn(*num as u16)?;
+                        if self.runtime_config.paranoid_type_checks {
+                            for element in elements.iter() {
+                                element.check_type(&ty)?;
+                            }
+                        }
                         let value = Vector::pack(&ty, elements)?;
                         interpreter.operand_stack.push(value)?;
                     }
@@ -1405,8 +1671,13 @@ impl Frame {
                     }
                     Bytecode::VecPushBack(si) => {
                         let elem = interpreter.operand_stack.pop()?;
-                        let vec_ref = interpreter.operand_stack.pop_as::<VectorRef>()?;
                         let ty = &resolver.instantiate_single_type(*si, self.ty_args())?;
+
+                        let vec_ref = interpreter.operand_stack.pop_as::<VectorRef>()?;
+
+                        if self.runtime_config.paranoid_type_checks {
+                            vec_ref.can_push(&elem)?;
+                        }
                         gas_meter.charge_vec_push_back(make_ty!(ty), &elem)?;
                         vec_ref.push_back(elem, ty)?;
                     }

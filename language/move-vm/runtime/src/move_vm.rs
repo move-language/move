@@ -18,6 +18,11 @@ use move_core_types::{
     metadata::Metadata, resolver::MoveResolver,
 };
 
+#[derive(Debug, Clone, Default, Copy)]
+pub struct RuntimeConfig {
+    pub paranoid_type_checks: bool,
+}
+
 pub struct MoveVM {
     runtime: VMRuntime,
 }
@@ -26,19 +31,26 @@ impl MoveVM {
     pub fn new(
         natives: impl IntoIterator<Item = (AccountAddress, Identifier, Identifier, NativeFunction)>,
     ) -> VMResult<Self> {
-        Self::new_with_verifier_config(natives, VerifierConfig::default())
+        Self::new_with_configs(natives, VerifierConfig::default(), RuntimeConfig::default())
     }
 
     pub fn new_with_verifier_config(
         natives: impl IntoIterator<Item = (AccountAddress, Identifier, Identifier, NativeFunction)>,
         verifier_config: VerifierConfig,
     ) -> VMResult<Self> {
+        Self::new_with_configs(natives, verifier_config, RuntimeConfig::default())
+    }
+
+    pub fn new_with_configs(
+        natives: impl IntoIterator<Item = (AccountAddress, Identifier, Identifier, NativeFunction)>,
+        verifier_config: VerifierConfig,
+        runtime_config: RuntimeConfig,
+    ) -> VMResult<Self> {
         Ok(Self {
-            runtime: VMRuntime::new(natives, verifier_config)
+            runtime: VMRuntime::new(natives, verifier_config, runtime_config)
                 .map_err(|err| err.finish(Location::Undefined))?,
         })
     }
-
     /// Create a new Session backed by the given storage.
     ///
     /// Right now it is the caller's responsibility to ensure cache coherence of the Move VM Loader

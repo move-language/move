@@ -6,6 +6,7 @@ use crate::{
     data_cache::TransactionDataCache,
     interpreter::Interpreter,
     loader::{Function, Loader},
+    move_vm::RuntimeConfig,
     native_extensions::NativeContextExtensions,
     native_functions::{NativeFunction, NativeFunctions},
     session::{LoadedFunctionInstantiation, SerializedReturnValues, Session},
@@ -44,9 +45,14 @@ impl VMRuntime {
     pub(crate) fn new(
         natives: impl IntoIterator<Item = (AccountAddress, Identifier, Identifier, NativeFunction)>,
         verifier_config: VerifierConfig,
+        runtime_config: RuntimeConfig,
     ) -> PartialVMResult<Self> {
         Ok(VMRuntime {
-            loader: Loader::new(NativeFunctions::new(natives)?, verifier_config),
+            loader: Loader::new(
+                NativeFunctions::new(natives)?,
+                verifier_config,
+                runtime_config,
+            ),
         })
     }
 

@@ -130,6 +130,7 @@ members = [
     "move-compiler-transactional-tests",
     "move-explain",
     "move-ir-compiler-transactional-tests",
+    "move-vm-paranoid-tests",
     "move-prover-test-utils",
     "move-transactional-test-runner",
     "move-vm-integration-tests",

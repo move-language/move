@@ -74,6 +74,12 @@ impl MoveFieldLayout {
 pub enum MoveStructLayout {
     /// The representation used by the MoveVM
     Runtime(Vec<MoveTypeLayout>),
+    /// The representation used by the MoveVM with extra unique identifier for distinct type.
+    CheckedRuntime {
+        fields: Vec<MoveTypeLayout>,
+        tag: u64,
+        ability: u8,
+    },
     /// A decorated representation with human-readable field names that can be used by clients
     WithFields(Vec<MoveFieldLayout>),
     /// An even more decorated representation with both types and human-readable field names
@@ -258,6 +264,11 @@ impl MoveStructLayout {
     pub fn fields(&self) -> &[MoveTypeLayout] {
         match self {
             Self::Runtime(vals) => vals,
+            Self::CheckedRuntime {
+                fields,
+                tag: _,
+                ability: _,
+            } => fields,
             Self::WithFields(_) | Self::WithTypes { .. } => {
                 // It's not possible to implement this without changing the return type, and some
                 // performance-critical VM serialization code uses the Runtime case of this.
@@ -270,9 +281,36 @@ impl MoveStructLayout {
     pub fn into_fields(self) -> Vec<MoveTypeLayout> {
         match self {
             Self::Runtime(vals) => vals,
+            Self::CheckedRuntime {
+                fields,
+                tag: _,
+                ability: _,
+            } => fields,
             Self::WithFields(fields) | Self::WithTypes { fields, .. } => {
                 fields.into_iter().map(|f| f.layout).collect()
             }
+        }
+    }
+
+    pub fn tag(&self) -> Option<u64> {
+        match self {
+            Self::CheckedRuntime {
+                fields: _,
+                tag,
+                ability: _,
+            } => Some(*tag),
+            Self::Runtime(_) | Self::WithFields(_) | Self::WithTypes { .. } => None,
+        }
+    }
+
+    pub fn ability(&self) -> Option<u8> {
+        match self {
+            Self::CheckedRuntime {
+                fields: _,
+                tag: _,
+                ability,
+            } => Some(*ability),
+            Self::Runtime(_) | Self::WithFields(_) | Self::WithTypes { .. } => None,
         }
     }
 }
@@ -393,7 +431,12 @@ impl<'d> serde::de::DeserializeSeed<'d> for &MoveStructLayout {
         deserializer: D,
     ) -> Result<Self::Value, D::Error> {
         match self {
-            MoveStructLayout::Runtime(layout) => {
+            MoveStructLayout::Runtime(layout)
+            | MoveStructLayout::CheckedRuntime {
+                fields: layout,
+                tag: _,
+                ability: _,
+            } => {
                 let fields =
                     deserializer.deserialize_tuple(layout.len(), StructFieldVisitor(layout))?;
                 Ok(MoveStruct::Runtime(fields))
@@ -510,7 +553,12 @@ impl fmt::Display for MoveStructLayout {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         write!(f, "{{ ")?;
         match self {
-            Self::Runtime(layouts) => {
+            Self::Runtime(layouts)
+            | Self::CheckedRuntime {
+                fields: layouts,
+                tag: _,
+                ability: _,
+            } => {
                 for (i, l) in layouts.iter().enumerate() {
                     write!(f, "{}: {}, ", i, l)?
                 }
@@ -561,7 +609,13 @@ impl TryInto<StructTag> for &MoveStructLayout {
     fn try_into(self) -> Result<StructTag, Self::Error> {
         use MoveStructLayout::*;
         match self {
-            Runtime(..) | WithFields(..) => bail!(
+            Runtime(..)
+            | CheckedRuntime {
+                fields: _,
+                tag: _,
+                ability: _,
+            }
+            | WithFields(..) => bail!(
                 "Invalid MoveTypeLayout -> StructTag conversion--needed MoveLayoutType::WithTypes"
             ),
             WithTypes { type_, .. } => Ok(type_.clone()),

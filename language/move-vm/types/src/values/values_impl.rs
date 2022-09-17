@@ -1031,6 +1031,19 @@ impl Locals {
                 _ => Some((idx, Value(val))),
             }))
     }
+
+    pub fn is_invalid(&self, idx: usize) -> PartialVMResult<bool> {
+        let v = self.0.borrow();
+        match v.get(idx) {
+            Some(ValueImpl::Invalid) => Ok(true),
+            Some(_) => Ok(false),
+            None => Err(
+                PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(
+                    format!("local index out of bounds: got {}, len: {}", idx, v.len()),
+                ),
+            ),
+        }
+    }
 }
 
 /***************************************************************************************

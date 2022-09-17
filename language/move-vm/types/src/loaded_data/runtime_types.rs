@@ -4,7 +4,7 @@
 
 use move_binary_format::{
     errors::{PartialVMError, PartialVMResult},
-    file_format::{AbilitySet, StructDefinitionIndex, StructTypeParameter},
+    file_format::{AbilitySet, SignatureToken, StructDefinitionIndex, StructTypeParameter},
 };
 use move_core_types::{
     gas_algebra::AbstractMemorySize, identifier::Identifier, language_storage::ModuleId,
@@ -130,6 +130,89 @@ impl Type {
             StructInstantiation(_, tys) => tys
                 .iter()
                 .fold(Self::LEGACY_BASE_MEMORY_SIZE, |acc, ty| acc + ty.size()),
+        }
+    }
+
+    pub fn from_const_signature(constant_signature: &SignatureToken) -> PartialVMResult<Self> {
+        use SignatureToken as S;
+        use Type as L;
+
+        Ok(match constant_signature {
+            S::Bool => L::Bool,
+            S::U8 => L::U8,
+            S::U16 => L::U16,
+            S::U32 => L::U32,
+            S::U64 => L::U64,
+            S::U128 => L::U128,
+            S::U256 => L::U256,
+            S::Address => L::Address,
+            S::Vector(inner) => L::Vector(Box::new(Self::from_const_signature(inner)?)),
+            // Not yet supported
+            S::Struct(_) | S::StructInstantiation(_, _) => {
+                return Err(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message("Unable to load const type signature".to_string()),
+                )
+            }
+            // Not allowed/Not meaningful
+            S::TypeParameter(_) | S::Reference(_) | S::MutableReference(_) | S::Signer => {
+                return Err(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message("Unable to load const type signature".to_string()),
+                )
+            }
+        })
+    }
+
+    pub fn check_vec_ref(&self, inner_ty: &Type, is_mut: bool) -> PartialVMResult<Type> {
+        match self {
+            Type::MutableReference(inner) => match &**inner {
+                Type::Vector(inner) => {
+                    inner.check_eq(&inner_ty)?;
+                    Ok(inner.as_ref().clone())
+                }
+                _ => Err(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message("VecMutBorrow expects a vector reference".to_string()),
+                ),
+            },
+            Type::Reference(inner) if !is_mut => match &**inner {
+                Type::Vector(inner) => {
+                    inner.check_eq(&inner_ty)?;
+                    Ok(inner.as_ref().clone())
+                }
+                _ => Err(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message("VecMutBorrow expects a vector reference".to_string()),
+                ),
+            },
+            _ => Err(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("VecMutBorrow expects a vector reference".to_string()),
+            ),
+        }
+    }
+
+    pub fn check_eq(&self, other: &Self) -> PartialVMResult<()> {
+        if self != other {
+            return Err(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
+                    format!("Type mismatch: expected {:?}, got {:?}", self, other),
+                ),
+            );
+        }
+        Ok(())
+    }
+
+    pub fn check_ref_eq(&self, expected_inner: &Self) -> PartialVMResult<()> {
+        match self {
+            Type::MutableReference(inner) | Type::Reference(inner) => {
+                inner.check_eq(expected_inner)
+            }
+            _ => Err(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("VecMutBorrow expects a vector reference".to_string()),
+            ),
         }
     }
 }

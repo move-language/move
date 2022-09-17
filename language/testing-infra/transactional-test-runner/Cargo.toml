@@ -20,6 +20,7 @@ tempfile = "3.2.0"
 
 
 move-stackless-bytecode-interpreter = { path = "../../move-prover/interpreter" }
+move-bytecode-verifier = { path = "../../move-bytecode-verifier" }
 move-bytecode-source-map = { path = "../../move-ir-compiler/move-bytecode-source-map" }
 move-disassembler = { path = "../../tools/move-disassembler" }
 move-binary-format = { path = "../../move-binary-format" }
@@ -44,3 +45,6 @@ difference = "2.0.0"
 [[test]]
 name = "tests"
 harness = false
+
+[features]
+failpoints = ['move-vm-runtime/failpoints']

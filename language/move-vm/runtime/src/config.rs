@@ -8,6 +8,7 @@ use move_bytecode_verifier::VerifierConfig;
 pub struct VMConfig {
     pub verifier: VerifierConfig,
     pub max_binary_format_version: u32,
+    pub paranoid_type_checks: bool,
 }
 
 impl Default for VMConfig {
@@ -15,6 +16,7 @@ impl Default for VMConfig {
         Self {
             verifier: VerifierConfig::default(),
             max_binary_format_version: VERSION_MAX,
+            paranoid_type_checks: false,
         }
     }
 }

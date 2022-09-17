@@ -149,4 +149,4 @@ let y = copy x; // 没有 copy 将导致编译器错误！
 
 ## 所有权
 
-[如上所述](#销毁和复制-vectordestroying-and-copying-vector)，`vector` 值只有在元素值可以复制的时候才能复制。在这种情况下，复制必须通过显式 [`copy`](./variables.md#移动和复制move-and-copy) 或者[解引用 `*`](./references.md#引用运算符reference-operators)。
+[如上所述](#销毁和复制-vector)，`vector` 值只有在元素值可以复制的时候才能复制。在这种情况下，复制必须通过显式 [`copy`](./variables.md#移动和复制) 或者[解引用 `*`](./references.md#通过引用读取和写入)。

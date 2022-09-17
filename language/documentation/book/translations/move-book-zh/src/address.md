@@ -55,4 +55,4 @@ module std::other_module {  // 可以使用命名地址作为命名空间项来�
 
 ## 所有权
 
-与 Move 语言内置的其他标量值一样，`address` 值是隐式可复制的，这意味着它们可以在没有显式指令（例如 [`copy`](./variables.md#移动和复制move-and-copy)）的情况下复制。
+与 Move 语言内置的其他标量值一样，`address` 值是隐式可复制的，这意味着它们可以在没有显式指令（例如 [`copy`](./variables.md#移动和复制)）的情况下复制。

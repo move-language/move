@@ -217,7 +217,7 @@ to [`step_2/BasicCoin`](./step_2/BasicCoin).  Unit tests in Move are similar to
 unit tests in Rust if you're familiar with them -- tests are annotated with
 `#[test]` and written like normal Move functions.
 
-You can run the tests with the `package test` command:
+You can run the tests with the `move test` command:
 
 ```bash
 move test

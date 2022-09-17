@@ -57,4 +57,4 @@ script {
 
 ## 所有权
 
-与简单的标量值不同，`signer` 值是不可复制的，这意味着他们不能被复制（通过任何操作，无论是通过显式 [`copy`](./variables.md#移动和复制move-and-copy)指令还是通过[解引用（dereference）`*`](./references.md#reference-operators)）。
+与简单的标量值不同，`signer` 值是不可复制的，这意味着他们不能被复制（通过任何操作，无论是通过显式 [`copy`](./variables.md#移动和复制)指令还是通过[解引用（dereference）`*`](./references.md#通过引用读取和写入)）。

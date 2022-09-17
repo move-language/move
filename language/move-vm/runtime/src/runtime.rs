@@ -422,13 +422,14 @@ impl VMRuntime {
             },
         ) = self
             .loader
-            .load_function(module, function_name, &ty_args, data_store)?;
+            .load_function(module, function_name, &ty_args, data_store)
+            .unwrap();
 
         script_signature::verify_module_function_signature_by_name(
             module.module(),
             function_name,
             additional_signature_checks,
-        )?;
+        ).unwrap();
 
         // execute the function
         self.execute_function_impl(

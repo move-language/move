@@ -153,6 +153,15 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         }
     }
 
+    /// Shortcut for reporting an error.
+    pub fn error_with_notes(&self, loc: &Loc, msg: &str, notes: Vec<String>) {
+        if self.translating_fun_as_spec_fun {
+            *self.errors_generated.borrow_mut() = true;
+        } else {
+            self.parent.parent.error_with_notes(loc, msg, notes);
+        }
+    }
+
     /// Creates a fresh type variable.
     fn fresh_type_var(&mut self) -> Type {
         let var = Type::Var(self.type_var_counter);
@@ -1443,7 +1452,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                             )
                         })
                         .collect_vec();
-                    self.parent.parent.env.error_with_notes(
+                    self.error_with_notes(
                         loc,
                         &format!("no matching declaration of `{}`", display),
                         notes,

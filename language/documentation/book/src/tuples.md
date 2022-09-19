@@ -1,13 +1,13 @@
 # Tuples and Unit
 
 Move does not fully support tuples as one might expect coming from another language with them as a
-first-class value. However, in order to support multiple return values, Move has tuple-like
+[first-class value](https://en.wikipedia.org/wiki/First-class_citizen). However, in order to support multiple return values, Move has tuple-like
 expressions. These expressions do not result in a concrete value at runtime (there are no tuples in
 the bytecode), and as a result they are very limited: they can only appear in expressions (usually
 in the return position for a function); they cannot be bound to local variables; they cannot be
 stored in structs; and tuple types cannot be used to instantiate generics.
 
-Similarly, unit `()` is a type created by the Move source language in order to be expression based.
+Similarly, [unit `()`](https://en.wikipedia.org/wiki/Unit_type) is a type created by the Move source language in order to be expression based.
 The unit value `()` does not result in any runtime value. We can consider unit`()` to be an empty
 tuple, and any restrictions that apply to tuples also apply to unit.
 
@@ -21,14 +21,14 @@ multiple return values are represented using tuples.
 
 ## Literals
 
-Tuples are created by a comma separated list of expressions inside of parentheses
+Tuples are created by a comma separated list of expressions inside of parentheses.
 
 | Syntax          | Type                                                                         | Description                                                  |
 | --------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | `()`            | `(): ()`                                                                     | Unit, the empty tuple, or the tuple of arity 0               |
 | `(e1, ..., en)` | `(e1, ..., en): (T1, ..., Tn)` where `e_i: Ti` s.t. `0 < i <= n` and `n > 0` | A `n`-tuple, a tuple of arity `n`, a tuple with `n` elements |
 
-Note that `(e)` does not have type `(e): (t)`, in other words there is no tuple with one element. If
+Note that `(e)` does not have type `(e): (t)`, in other words, not a tuple with one element. If
 there is only a single element inside of the parentheses, the parentheses are only used for
 disambiguation and do not carry any other special meaning.
 
@@ -37,7 +37,7 @@ Sometimes, tuples with two elements are called "pairs" and tuples with three ele
 
 ### Examples
 
-```move=
+```move
 address 0x42 {
 module example {
     // all 3 of these functions are equivalent
@@ -72,7 +72,7 @@ For tuples of any size, they can be destructured in either a `let` binding or in
 
 For example:
 
-```move=
+```move
 address 0x42 {
 module example {
     // all 3 of these functions are equivalent
@@ -107,23 +107,25 @@ For more details, see [Move Variables](./variables.md).
 
 ## Subtyping
 
-Along with references, tuples are the only types that have subtyping in Move. Tuples do have
+Along with references, tuples are the only types that have [subtyping](https://en.wikipedia.org/wiki/Subtyping) in Move. Tuples do have
 subtyping only in the sense that subtype with references (in a covariant way).
 
-For example
+For example:
 
-```move=
+```move
 let x: &u64 = &0;
 let y: &mut u64 = &mut 1;
 
 // (&u64, &mut u64) is a subtype of (&u64, &u64)
-//   since &mut u64 is a subtype of &u64
+// since &mut u64 is a subtype of &u64
 let (a, b): (&u64, &u64) = (x, y);
+
 // (&mut u64, &mut u64) is a subtype of (&u64, &u64)
-//   since &mut u64 is a subtype of &u64
+// since &mut u64 is a subtype of &u64
 let (c, d): (&u64, &u64) = (y, y);
+
 // error! (&u64, &mut u64) is NOT a subtype of (&mut u64, &mut u64)
-//   since &u64 is NOT a subtype of &mut u64
+// since &u64 is NOT a subtype of &mut u64
 let (e, f): (&mut u64, &mut u64) = (x, y);
 ```
 

@@ -166,4 +166,4 @@ For more details see the sections on [type abilities](./abilities.md) and [gener
 
 As mentioned [above](#destroying-and-copying-vectors), `vector` values can be copied only if the
 elements can be copied. In that case, the copy must be explicit via a
-[`copy`](./variables.md#move-and-copy) or a [dereference `*`](./references.md#reference-operators).
+[`copy`](./variables.md#move-and-copy) or a [dereference `*`](./references.md#reading-and-writing-through-references).

@@ -16,7 +16,7 @@ use move_binary_format::{
         FieldHandleIndex, FieldInstantiationIndex, FunctionDefinition, FunctionDefinitionIndex,
         FunctionHandleIndex, FunctionInstantiationIndex, Signature, SignatureIndex, SignatureToken,
         StructDefInstantiationIndex, StructDefinition, StructDefinitionIndex,
-        StructFieldInformation, TableIndex,
+        StructFieldInformation, StructHandleIndex, TableIndex,
     },
     IndexKind,
 };
@@ -1388,6 +1388,41 @@ impl<'a> Resolver<'a> {
         ))
     }
 
+    pub(crate) fn resolve_signature_token(&self, tok: &SignatureToken) -> PartialVMResult<Type> {
+        Ok(match tok {
+            SignatureToken::Address => Type::Address,
+            SignatureToken::Bool => Type::Bool,
+            SignatureToken::Signer => Type::Signer,
+            SignatureToken::U8 => Type::U8,
+            SignatureToken::U64 => Type::U64,
+            SignatureToken::U128 => Type::U128,
+            SignatureToken::Reference(r) => {
+                Type::Reference(Box::new(self.resolve_signature_token(&*r)?))
+            }
+            SignatureToken::MutableReference(r) => {
+                Type::MutableReference(Box::new(self.resolve_signature_token(&*r)?))
+            }
+            SignatureToken::Struct(idx) => Type::Struct(self.get_struct_handle_idx(*idx)),
+            SignatureToken::Vector(ty) => {
+                Type::Vector(Box::new(self.resolve_signature_token(&*ty)?))
+            }
+            SignatureToken::StructInstantiation(idx, tys) => Type::StructInstantiation(
+                self.get_struct_handle_idx(*idx),
+                tys.iter()
+                    .map(|tok| self.resolve_signature_token(tok))
+                    .collect::<PartialVMResult<Vec<_>>>()?,
+            ),
+            SignatureToken::TypeParameter(idx) => Type::TyParam(*idx as usize),
+        })
+    }
+
+    fn get_struct_handle_idx(&self, idx: StructHandleIndex) -> CachedStructIndex {
+        match &self.binary {
+            BinaryType::Module(module) => module.struct_handle_at(idx),
+            BinaryType::Script(script) => script.struct_handle_at(idx),
+        }
+    }
+
     fn single_type_at(&self, idx: SignatureIndex) -> &Type {
         match &self.binary {
             BinaryType::Module(module) => module.single_type_at(idx),
@@ -1688,6 +1723,10 @@ impl Module {
         self.structs[idx.0 as usize].idx
     }
 
+    fn struct_handle_at(&self, idx: StructHandleIndex) -> CachedStructIndex {
+        self.struct_refs[idx.0 as usize]
+    }
+
     fn struct_instantiation_at(&self, idx: u16) -> &StructInstantiation {
         &self.struct_instantiations[idx as usize]
     }
@@ -1916,6 +1955,10 @@ impl Script {
         self.function_refs[idx as usize]
     }
 
+    fn struct_handle_at(&self, idx: StructHandleIndex) -> CachedStructIndex {
+        self.struct_refs[idx.0 as usize]
+    }
+
     fn function_instantiation_at(&self, idx: u16) -> &FunctionInstantiation {
         &self.function_instantiations[idx as usize]
     }
@@ -2037,6 +2080,10 @@ impl Function {
 
     pub(crate) fn local_count(&self) -> usize {
         self.locals.len()
+    }
+
+    pub(crate) fn local_types(&self) -> &[SignatureToken] {
+        &self.locals.0
     }
 
     pub(crate) fn arg_count(&self) -> usize {
@@ -2260,7 +2307,16 @@ impl Loader {
             .iter()
             .map(|ty| self.type_to_type_layout_impl(ty, depth + 1))
             .collect::<PartialVMResult<Vec<_>>>()?;
-        let struct_layout = MoveStructLayout::new(field_layouts);
+
+        let struct_layout = MoveStructLayout::CheckedRuntime {
+            fields: field_layouts,
+            tag: if ty_args.len() == 0 {
+                Type::Struct(gidx)
+            } else {
+                Type::StructInstantiation(gidx, ty_args.to_vec())
+            }
+            .get_hash(),
+        };
 
         self.type_cache
             .write()

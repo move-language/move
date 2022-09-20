@@ -422,17 +422,17 @@ impl VMRuntime {
             },
         ) = self
             .loader
-            .load_function(module, function_name, &ty_args, data_store)
-            .unwrap();
+            .load_function(module, function_name, &ty_args, data_store)?;
 
         script_signature::verify_module_function_signature_by_name(
             module.module(),
             function_name,
             additional_signature_checks,
-        ).unwrap();
+        )
+        .unwrap();
 
         // execute the function
-        self.execute_function_impl(
+        Ok(self.execute_function_impl(
             func,
             type_arguments,
             parameters,
@@ -441,7 +441,7 @@ impl VMRuntime {
             data_store,
             gas_meter,
             extensions,
-        )
+        )?)
     }
 
     // See Session::execute_script for what contracts to follow.

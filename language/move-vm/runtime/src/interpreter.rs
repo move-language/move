@@ -201,7 +201,7 @@ impl Interpreter {
                         continue;
                     }
                     let frame = self
-                        .make_call_frame(func, vec![])
+                        .make_call_frame(func, vec![], loader)
                         .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
                     self.call_stack.push(current_frame).map_err(|frame| {
                         let err = PartialVMError::new(StatusCode::CALL_STACK_OVERFLOW);
@@ -244,7 +244,7 @@ impl Interpreter {
                         continue;
                     }
                     let frame = self
-                        .make_call_frame(func, ty_args)
+                        .make_call_frame(func, ty_args, loader)
                         .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
                     self.call_stack.push(current_frame).map_err(|frame| {
                         let err = PartialVMError::new(StatusCode::CALL_STACK_OVERFLOW);
@@ -262,15 +262,38 @@ impl Interpreter {
     ///
     /// Native functions do not push a frame at the moment and as such errors from a native
     /// function are incorrectly attributed to the caller.
-    fn make_call_frame(&mut self, func: Arc<Function>, ty_args: Vec<Type>) -> VMResult<Frame> {
+    fn make_call_frame<'a>(
+        &mut self,
+        func: Arc<Function>,
+        ty_args: Vec<Type>,
+        loader: &'a Loader,
+    ) -> VMResult<Frame> {
+        let resolver = func.get_resolver(loader);
         let mut locals = Locals::new(func.local_count());
         let arg_count = func.arg_count();
         for i in 0..arg_count {
+            let v = self.operand_stack.pop().map_err(|e| self.set_location(e))?;
+            let expected_ty = resolver
+                .resolve_signature_token(&func.local_types()[arg_count - i - 1])
+                .and_then(|ty| ty.subst(&ty_args))
+                .map_err(|e| match func.module_id() {
+                    Some(id) => e
+                        .at_code_offset(func.index(), 0)
+                        .finish(Location::Module(id.clone())),
+                    None => {
+                        let err =
+                            PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                                .with_message(
+                                    "Unexpected native function not located in a module".to_owned(),
+                                );
+                        self.set_location(err)
+                    }
+                })?;
+
+            v.check_type(&expected_ty)
+                .map_err(|e| self.set_location(e))?;
             locals
-                .store_loc(
-                    arg_count - i - 1,
-                    self.operand_stack.pop().map_err(|e| self.set_location(e))?,
-                )
+                .store_loc(arg_count - i - 1, v)
                 .map_err(|e| self.set_location(e))?;
         }
         Ok(Frame::new(func, ty_args, locals))
@@ -989,9 +1012,11 @@ impl Frame {
                             interpreter.operand_stack.last_n(field_count as usize)?,
                         )?;
                         let args = interpreter.operand_stack.popn(field_count)?;
-                        interpreter
-                            .operand_stack
-                            .push(Value::struct_(Struct::pack(args)))?;
+                        let value = Value::struct_(Struct::pack_with_tag(
+                            args,
+                            resolver.get_struct_type(*sd_idx).get_hash(),
+                        ));
+                        interpreter.operand_stack.push(value)?;
                     }
                     Bytecode::PackGeneric(si_idx) => {
                         let field_count = resolver.field_instantiation_count(*si_idx);
@@ -1000,12 +1025,26 @@ impl Frame {
                             interpreter.operand_stack.last_n(field_count as usize)?,
                         )?;
                         let args = interpreter.operand_stack.popn(field_count)?;
-                        interpreter
-                            .operand_stack
-                            .push(Value::struct_(Struct::pack(args)))?;
+                        let value = Value::struct_(Struct::pack_with_tag(
+                            args,
+                            resolver
+                                .instantiate_generic_type(*si_idx, self.ty_args())?
+                                .get_hash(),
+                        ));
+
+                        interpreter.operand_stack.push(value)?;
                     }
-                    Bytecode::Unpack(_sd_idx) => {
+                    Bytecode::Unpack(sd_idx) => {
                         let struct_ = interpreter.operand_stack.pop_as::<Struct>()?;
+                        let ty = resolver.get_struct_type(*sd_idx);
+                        if let Some(ty1) = struct_.tag() {
+                            if ty1 != ty.get_hash() {
+                                return Err(PartialVMError::new(
+                                    StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+                                )
+                                .with_message(format!("unexpected type mismatch")));
+                            }
+                        }
 
                         gas_meter.charge_unpack(false, struct_.field_views())?;
 
@@ -1013,8 +1052,17 @@ impl Frame {
                             interpreter.operand_stack.push(value)?;
                         }
                     }
-                    Bytecode::UnpackGeneric(_si_idx) => {
+                    Bytecode::UnpackGeneric(si_idx) => {
                         let struct_ = interpreter.operand_stack.pop_as::<Struct>()?;
+                        let ty = resolver.instantiate_generic_type(*si_idx, self.ty_args())?;
+                        if let Some(ty1) = struct_.tag() {
+                            if ty1 != ty.get_hash() {
+                                return Err(PartialVMError::new(
+                                    StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+                                )
+                                .with_message(format!("unexpected type mismatch")));
+                            }
+                        }
 
                         gas_meter.charge_unpack(true, struct_.field_views())?;
 

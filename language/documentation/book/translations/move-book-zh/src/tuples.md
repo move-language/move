@@ -27,13 +27,13 @@ module example {
     // 这三个函数都是等价的
 
     // 当没有提供返回类型时，假定为 `()`
-    fun returs_unit_1() { }
+    fun returns_unit_1() { }
 
     // 空表达式块中存在隐式 () 值
-    fun returs_unit_2(): () { }
+    fun returns_unit_2(): () { }
 
-    // `returs_unit_1` 和 `returs_unit_2` 的显式版本
-    fun returs_unit_3(): () { () }
+    // `returns_unit_1` 和 `returns_unit_2` 的显式版本
+    fun returns_unit_3(): () { () }
 
 
     fun returns_3_values(): (u64, bool, address) {

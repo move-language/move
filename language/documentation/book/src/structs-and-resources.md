@@ -32,7 +32,7 @@ module m {
 
 Structs cannot be recursive, so the following definition is invalid:
 
-```move=
+```move
 struct Foo { x: Foo }
 //              ^ error! Foo cannot contain Foo
 ```
@@ -42,7 +42,7 @@ to be used with certain operations (that copy it, drop it, store it in global st
 a storage schema), structs can be granted [abilities](./abilities.md) by annotating them with
 `has <ability>`:
 
-```move=
+```move
 address 0x2 {
 module m {
     struct Foo has copy, drop { x: u64, y: bool }
@@ -54,7 +54,7 @@ For more details, see the [annotating structs](./abilities.md#annotating-structs
 
 ### Naming
 
-Structs must start with a capital letter `A` to `Z`. After the first letter, constant names can
+Structs must start with a capital letter `A` to `Z`. After the first letter, struct names can
 contain underscores `_`, letters `a` to `z`, letters `A` to `Z`, or digits `0` to `9`.
 
 ```move
@@ -73,7 +73,7 @@ features. It may or may not be removed later.
 Values of a struct type can be created (or "packed") by indicating the struct name, followed by
 value for each field:
 
-```move=
+```move
 address 0x2 {
 module m {
     struct Foo has drop { x: u64, y: bool }
@@ -102,7 +102,7 @@ This is called sometimes called "field name punning".
 
 Struct values can be destroyed by binding or assigning them patterns.
 
-```move=
+```move
 address 0x2 {
 module m {
     struct Foo { x: u64, y: bool }
@@ -122,6 +122,7 @@ module m {
     fun example_destroy_foo_wildcard() {
         let foo = Foo { x: 3, y: false };
         let Foo { x, y: _ } = foo;
+
         // only one new binding since y was bound to a wildcard
         //   x: u64 = 3
     }
@@ -130,6 +131,7 @@ module m {
         let x: u64;
         let y: bool;
         Foo { x, y } = Foo { x: 3, y: false };
+
         // mutating existing variables x & y
         //   x = 3, y = false
     }
@@ -137,6 +139,7 @@ module m {
     fun example_foo_ref() {
         let foo = Foo { x: 3, y: false };
         let Foo { x, y } = &foo;
+
         // two new bindings
         //   x: &u64
         //   y: &bool
@@ -145,6 +148,7 @@ module m {
     fun example_foo_ref_mut() {
         let foo = Foo { x: 3, y: false };
         let Foo { x, y } = &mut foo;
+
         // two new bindings
         //   x: &mut u64
         //   y: &mut bool
@@ -154,9 +158,10 @@ module m {
         let bar = Bar { foo: Foo { x: 3, y: false } };
         let Bar { foo: Foo { x, y } } = bar;
         //             ^ nested pattern
+
         // two new bindings
         //   x: u64 = 3
-        //   foo_y: bool = false
+        //   y: bool = false
     }
 
     fun example_destroy_baz() {

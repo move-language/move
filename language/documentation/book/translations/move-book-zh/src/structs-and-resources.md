@@ -1,16 +1,16 @@
-# 结构体和资源 (Structs and Resources)
+# 结构体和资源
 
 A _struct_ is a user-defined data structure containing typed fields. Structs can store any
 non-reference type, including other structs.
 
-结构体是包含类型字段的用户自定义数据结构。结构体可以存储任何非引用类型，包括其他结构体。
+***结构体***（struct）是包含类型字段的自定义数据结构。结构体可以存储任何非引用类型，包括其他结构。
 
 We often refer to struct values as _resources_ if they cannot be copied and cannot be dropped. In
 this case, resource values must have ownership transferred by the end of the function. This property
 makes resources particularly well served for defining global storage schemas or for representing
 important values (such as a token).
 
-如果结构体不能复制也不能删除，我们经常将它们称为资源。在这种情况下，资源必须在函数结束时转让所有权。这个属性使资源特别适合定义全局存储模式或表示重要值(如token)。
+如果结构值无法复制且无法删除，我们通常将其称为***资源***（resource）。在这种情况下，资源值必须在函数结束时转移所有权。这个属性使资源特别适合定义全局存储模式或表示重要的值（如 token）。
 
 By default, structs are linear and ephemeral. By this we mean that they: cannot be copied, cannot be
 dropped, and cannot be stored in global storage. This means that all values have to have ownership
@@ -19,9 +19,9 @@ transferred (linear) and the values must be dealt with by the end of the program
 values to be copied or dropped and also to be stored in global storage or to define global storage
 schemas.
 
-默认情况下，结构体是线性和短暂的。它们不能复制，不能丢弃，不能存储在全局存储中。这意味着所有值都必须拥有被转移(线性类型)的所有权，并且值必须在程序执行结束时处理(短暂的)。我们可以通过赋予结构体[能力](./abilities.md)来简化这种行为，允许值被复制或删除，以及存储在全局存储中或定义全局存储的模式。
+默认情况下，结构体是线性的和临时的。我们的意思是它们：不能被复制，不能被删除，不能被存储在全局存储中。这意味着所有值都必须转移所有权（线性），并且必须在程序执行结束时处理这些值（临时）。我们可以通过赋予结构体允许复制或删除值以及将值存储在全局存储中或定义全局存储模式的[能力](./abilities.md)来放松这种行为（减轻限制）。
 
-## 定义结构体 (Defining Structs)
+## 定义结构体
 
 Structs must be defined inside a module:
 
@@ -33,18 +33,18 @@ module m {
     struct Foo { x: u64, y: bool }
     struct Bar {}
     struct Baz { foo: Foo, }
-    //                   ^ note: it is fine to have a trailing comma
+    //                   ^ 注意：尾随逗号是可以的
 }
 }
 ```
 
 Structs cannot be recursive, so the following definition is invalid:
 
-结构体不能递归，因此以下定义无效：
+结构体不能递归（定义），所以下面的定义是无效的：
 
-```move=
+```move
 struct Foo { x: Foo }
-//              ^ error! Foo cannot contain Foo
+//              ^ 错误！ Foo 不能包含 Foo
 ```
 
 As mentioned above: by default, a struct declaration is linear and ephemeral. So to allow the value
@@ -52,26 +52,26 @@ to be used with certain operations (that copy it, drop it, store it in global st
 a storage schema), structs can be granted [abilities](./abilities.md) by annotating them with
 `has <ability>`:
 
-如上所述：默认情况下，结构体声明是线性和短暂的。因此，为了允许值用于某些操作(复制、删除、存储在全局存储中或用作存储模式)，结构体可以通过 `has <ability>` 标注来授予它们[能力](./abilities.md)。
+如上所述：默认情况下，结构体声明是线性且临时的。因此，为了允许将值用于某些操作（复制、删除、将其存储在全局存储中或将其用作存储模式），可以通过使用 `has <ability>` 标注它们来授予结构体[能力](./abilities.md)：
 
-```move=
+```move
 address 0x2 {
-    module m {
-        struct Foo has copy, drop { x: u64, y: bool }
-    }
+module m {
+    struct Foo has copy, drop { x: u64, y: bool }
+}
 }
 ```
 
 For more details, see the [annotating structs](./abilities.md#annotating-structs) section.
 
-有关更多详细信息，请参阅 [注释结构体](./abilities.md#annotating-structs) 部分。
+有关更多详细信息，请参阅[标注结构体](./abilities.md#标注结构体)部分。
 
-### 命名 (Naming)
+### 命名
 
 Structs must start with a capital letter `A` to `Z`. After the first letter, constant names can
 contain underscores `_`, letters `a` to `z`, letters `A` to `Z`, or digits `0` to `9`.
 
-结构体必须以大写字母 `A` 到 `Z` 开头。在第一个字母之后，常量名称可以包含下划线 `_`、字母 `a` 到 `z`、字母 `A` 到 `Z` 或数字 `0`到 `9`。
+结构体必须以大写字母 `A` 到 `Z` 开头。在第一个字母之后，结构体名称可以包含下划线 `_`、字母 `a` 到 `z`、字母 `A` 到 `Z` 或数字 `0` 到 `9`。
 
 ```move
 struct Foo {}
@@ -82,114 +82,119 @@ struct B_a_z_4_2 {}
 This naming restriction of starting with `A` to `Z` is in place to give room for future language
 features. It may or may not be removed later.
 
-这种从 `A` 到 `Z` 开头的命名限制已经生效，这是为未来的move语言特性留出空间。此限制未来可能会保留或删除。
+这种以 `A` 到 `Z` 开头的命名限制是为了给未来的语言特性留出空间。以后可能会也可能不会删除这个限制。
 
-## 使用结构体 (Using Structs)
+## 使用结构体
 
-### 创建结构体 (Creating Structs)
+### 创建结构体
 
 Values of a struct type can be created (or "packed") by indicating the struct name, followed by
 value for each field:
 
-可以通过指示结构体名称来创建(或“打包”)结构体类型的值。
+可以通过写明结构体名称来创建（或“打包”）结构体类型的值，然后是每个字段的值：
 
-```move=
+```move
 address 0x2 {
-    module m {
-        struct Foo has drop { x: u64, y: bool }
-        struct Baz has drop { foo: Foo }
+module m {
+    struct Foo has drop { x: u64, y: bool }
+    struct Baz has drop { foo: Foo }
 
-        fun example() {
-            let foo = Foo { x: 0, y: false };
-            let baz = Baz { foo: foo };
-        }
+    fun example() {
+        let foo = Foo { x: 0, y: false };
+        let baz = Baz { foo: foo };
     }
+}
 }
 ```
 
 If you initialize a struct field with a local variable whose name is the same as the field, you can
 use the following shorthand:
 
-如果你使用名称与字段相同的本地变量初始化结构字段，你可以使用以下简写：
+如果使用与字段名相同的局部变量初始化结构体字段，则可以使用以下简写：
 
 ```move
 let baz = Baz { foo: foo };
-// is equivalent to
+// 相当于
 let baz = Baz { foo };
 ```
 
 This is called sometimes called "field name punning".
 
-这有时被称为“字段名双关语”。
+这有时称为“字段名双关语”。
 
-### 通过模式匹配销毁结构体 (Destroying Structs via Pattern Matching)
+### 通过模式匹配销毁结构体
 
 Struct values can be destroyed by binding or assigning them patterns.
 
-结构值可以通过绑定或分配模式来销毁。
+结构值可以通过绑定或赋值模式来销毁。
 
-```move=
+```move
 address 0x2 {
-    module m {
-        struct Foo { x: u64, y: bool }
-        struct Bar { foo: Foo }
-        struct Baz {}
+module m {
+    struct Foo { x: u64, y: bool }
+    struct Bar { foo: Foo }
+    struct Baz {}
 
-        fun example_destroy_foo() {
-            let foo = Foo { x: 3, y: false };
-            let Foo { x, y: foo_y } = foo;
-            //        ^ shorthand for `x: x`
+    fun example_destroy_foo() {
+        let foo = Foo { x: 3, y: false };
+        let Foo { x, y: foo_y } = foo;
+        //        ^ `x: x` 的简写
 
-            // two new bindings
-            //   x: u64 = 3
-            //   foo_y: bool = false
-        }
-
-        fun example_destroy_foo_wildcard() {
-            let foo = Foo { x: 3, y: false };
-            let Foo { x, y: _ } = foo;
-            // only one new binding since y was bound to a wildcard
-            //   x: u64 = 3
-        }
-
-        fun example_destroy_foo_assignment() {
-            let x: u64;
-            let y: bool;
-            Foo { x, y } = Foo { x: 3, y: false };
-            // mutating existing variables x & y
-            //   x = 3, y = false
-        }
-
-        fun example_foo_ref() {
-            let foo = Foo { x: 3, y: false };
-            let Foo { x, y } = &foo;
-            // two new bindings
-            //   x: &u64
-            //   y: &bool
-        }
-
-        fun example_foo_ref_mut() {
-            let foo = Foo { x: 3, y: false };
-            let Foo { x, y } = &mut foo;
-            // two new bindings
-            //   x: &mut u64
-            //   y: &mut bool
-        }
-
-        fun example_destroy_bar() {
-            let bar = Bar { foo: Foo { x: 3, y: false } };
-            let Bar { foo: Foo { x, y } } = bar;
-            //             ^ nested pattern
-            // two new bindings
-            //   x: u64 = 3
-            //   foo_y: bool = false
-        }
-
-        fun example_destroy_baz() {
-            let baz = Baz {};
-            let Baz {} = baz;
-        }
+        // 两个新绑定
+        //   x: u64 = 3
+        //   foo_y: bool = false
     }
+
+    fun example_destroy_foo_wildcard() {
+        let foo = Foo { x: 3, y: false };
+        let Foo { x, y: _ } = foo;
+
+        // 由于 y 绑定到通配符，因此只有一个新绑定
+        //   x: u64 = 3
+    }
+
+    fun example_destroy_foo_assignment() {
+        let x: u64;
+        let y: bool;
+        Foo { x, y } = Foo { x: 3, y: false };
+
+        // 改变现有变量 x 和 y
+        //   x = 3, y = false
+    }
+
+    fun example_foo_ref() {
+        let foo = Foo { x: 3, y: false };
+        let Foo { x, y } = &foo;
+
+        // 两个新绑定
+        //   x: &u64
+        //   y: &bool
+    }
+
+    fun example_foo_ref_mut() {
+        let foo = Foo { x: 3, y: false };
+        let Foo { x, y } = &mut foo;
+
+        // 两个新绑定
+        //   x: &mut u64
+        //   y: &mut bool
+    }
+
+    fun example_destroy_bar() {
+        let bar = Bar { foo: Foo { x: 3, y: false } };
+        let Bar { foo: Foo { x, y } } = bar;
+        //             ^ 嵌套模式
+
+        // 两个新绑定
+        //   x: u64 = 3
+        //   y: bool = false
+    }
+
+    fun example_destroy_baz() {
+        let baz = Baz {};
+        let Baz {} = baz;
+    }
+}
 }
 ```
 
@@ -318,7 +323,7 @@ Most struct operations on a struct type `T` can only be performed inside the mod
 - The fields of a struct are only accessible inside the module that defines the struct.
 
 Following these rules, if you want to modify your struct outside the module, you will need to
-provide publis APIs for them. The end of the chapter contains some examples of this.
+provide public APIs for them. The end of the chapter contains some examples of this.
 
 However, struct _types_ are always visible to another module or script:
 

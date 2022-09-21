@@ -129,6 +129,8 @@ impl Type {
     pub fn get_hash(&self) -> u64 {
         let mut s = DefaultHasher::new();
         self.hash(&mut s);
-        s.finish()
+        let res = s.finish();
+        println!("Type: {:?} hash: {:?}", self, res);
+        res
     }
 }

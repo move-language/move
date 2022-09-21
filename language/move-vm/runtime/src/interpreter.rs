@@ -271,6 +271,7 @@ impl Interpreter {
         let resolver = func.get_resolver(loader);
         let mut locals = Locals::new(func.local_count());
         let arg_count = func.arg_count();
+        println!("Call Frame Check: {:?} {:?}", func.module_id(), func.name());
         for i in 0..arg_count {
             let v = self.operand_stack.pop().map_err(|e| self.set_location(e))?;
             let expected_ty = resolver

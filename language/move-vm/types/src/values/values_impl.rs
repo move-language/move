@@ -1846,6 +1846,7 @@ impl Value {
 
 impl ValueImpl {
     fn check_type(&self, ty: &Type) -> PartialVMResult<()> {
+        println!("Checking: {:?} {:?}", self, ty);
         match (self, ty) {
             (ValueImpl::U8(_), Type::U8)
             | (ValueImpl::U128(_), Type::U128)
@@ -1895,6 +1896,7 @@ impl Container {
                 if *ty1 == expected_ty.get_hash() {
                     Ok(())
                 } else {
+                    panic!("Failed checking: {:?} {:?}", self, ty);
                     Err(
                         PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                             .with_message(format!(
@@ -2577,6 +2579,7 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, MoveTypeLayout, ValueIm
                 ValueImpl::Container(Container::Struct(r, tag)),
             ) => {
                 if tag != &struct_layout.tag() {
+                    panic!("Can't serialize: {:?}, {:?}", self.layout, self.val);
                     return Err(invariant_violation::<S>(format!(
                         "cannot serialize value {:?} as {:?}",
                         self.val, self.layout

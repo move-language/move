@@ -198,28 +198,28 @@ module m {
 }
 ```
 
-### 借用结构体和字段 (Borrowing Structs and Fields)
+### 借用结构体和字段
 
 The `&` and `&mut` operator can be used to create references to structs or fields. These examples
 include some optional type annotations (e.g., `: &Foo`) to demonstrate the type of operations.
 
-`&` 和 `&mut` 运算符可用于创建对结构或字段的引用。这些例子包括一些可选的类型标注(例如：`: &Foo`)来演示操作的类型。
+`&` 和 `&mut` 运算符可用于创建对结构体或字段的引用。这些例子包括一些可选的类型标注（例如，`: &Foo`）来演示操作的类型。
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let foo_ref: &Foo = &foo;
-let y: bool = foo_ref.y;          // 通过引用读取结构体的字段
+let y: bool = foo_ref.y;          // 通过对结构体的引用读取字段
 let x_ref: &u64 = &foo.x;
 
 let x_ref_mut: &mut u64 = &mut foo.x;
-*x_ref_mut = 42;            // 通过可引用修改字段
+*x_ref_mut = 42;            // 通过可变引用修改字段
 ```
 
 It is possible to borrow inner fields of nested structs.
 
-可以借用嵌套数据结构的内部字段
+可以借用嵌套结构体的内部字段：
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let bar = Bar { foo };
 
@@ -228,22 +228,22 @@ let x_ref = &bar.foo.x;
 
 You can also borrow a field via a reference to a struct.
 
-你还可以通过结构体引用来借用字段。
+你还可以通过对结构体的引用来借用字段：
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let foo_ref = &foo;
 let x_ref = &foo_ref.x;
-// this has the same effect as let x_ref = &foo.x
+// 这与 let x_ref = &foo.x 的效果相同
 ```
 
-### 读写字段 (Reading and Writing Fields)
+### 读写字段
 
 If you need to read and copy a field's value, you can then dereference the borrowed field
 
-如果你需要读取和复制字段的值，则可以解引用借用的字段
+如果你需要读取和复制字段的值，则可以解引用借用的字段：
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let bar = Bar { foo: copy foo };
 let x: u64 = *&foo.x;
@@ -254,9 +254,9 @@ let foo2: Foo = *&bar.foo;
 If the field is implicitly copyable, the dot operator can be used to read fields of a struct without
 any borrowing. (Only scalar values with the `copy` ability are implicitly copyable.)
 
-如果该字段可以隐式复制，则可以使用点运算符读取结构的字段，而无需任何借用(只有具有 `copy` 能力的标量值才能隐式复制)。
+如果该字段是隐式可复制的，则点运算符可用于读取结构体的字段而无需任何借用。（只有具有 `copy` 能力的标量值是隐式可复制的。）
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let x = foo.x;  // x == 3
 let y = foo.y;  // y == true
@@ -264,9 +264,9 @@ let y = foo.y;  // y == true
 
 Dot operators can be chained to access nested fields.
 
-点运算符可以链式访问嵌套字段。
+点运算符可以链式访问嵌套字段：
 
-```move=
+```move
 let baz = Baz { foo: Foo { x: 3, y: true } };
 let x = baz.foo.x; // x = 3;
 ```
@@ -274,13 +274,13 @@ let x = baz.foo.x; // x = 3;
 However, this is not permitted for fields that contain non-primitive types, such a vector or another
 struct
 
-但是，对于包含非原始类型(例如向量或其他结构体类型)的字段，这是不允许的
+但是，对于包含非原始类型（例如向量或其他结构体）的字段，这是不允许的：
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let bar = Bar { foo };
 let foo2: Foo = *&bar.foo;
-let foo3: Foo = bar.foo; // error! add an explicit copy with *&
+let foo3: Foo = bar.foo; // 错误！必须使用 *& 添加显式复制
 ```
 
 The reason behind this design decision is that copying a vector or another struct might be an
@@ -290,11 +290,11 @@ with the explicit syntax `*&`
 In addition reading from fields, the dot syntax can be used to modify fields, regardless of the
 field being a primitive type or some other struct
 
-这个设计决定背后的原因是复制一个向量或另一个结构可能是一个昂贵的操作。对于程序员来说使用显式语法 `*&` 注意到这个复制很重要，同时引起其他人重视。
+这个设计决策背后的原因是复制一个向量或另一个结构体可能是一项昂贵的操作。对于程序员来说，了解这个复制（操作）并使用显式语法 `*&` 让其他人意识到是很重要的。
 
-除了从字段中读取之外，点语法还可用于修改字段，不管字段是原始类型还是其他结构体
+除了从字段中读取之外，点语法还可用于修改字段，无论该字段是原始类型还是其他结构体。
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 foo.x = 42;     // foo = Foo { x: 42, y: true }
 foo.y = !foo.y; // foo = Foo { x: 42, y: false }
@@ -305,9 +305,9 @@ bar.foo = Foo { x: 62, y: true }; // bar = Bar { foo: Foo { x: 62, y: true } }
 
 The dot syntax also works via a reference to a struct
 
-点语法对结构的引用也有适用
+点语法也适用于对结构体的引用：
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let foo_ref = &mut foo;
 foo_ref.x = foo_ref.x + 1;

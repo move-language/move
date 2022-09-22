@@ -177,7 +177,7 @@ module m {
 The `&` and `&mut` operator can be used to create references to structs or fields. These examples
 include some optional type annotations (e.g., `: &Foo`) to demonstrate the type of operations.
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let foo_ref: &Foo = &foo;
 let y: bool = foo_ref.y;          // reading a field via a reference to the struct
@@ -187,18 +187,18 @@ let x_ref_mut: &mut u64 = &mut foo.x;
 *x_ref_mut = 42;            // modifying a field via a mutable reference
 ```
 
-It is possible to borrow inner fields of nested structs.
+It is possible to borrow inner fields of nested structs:
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let bar = Bar { foo };
 
 let x_ref = &bar.foo.x;
 ```
 
-You can also borrow a field via a reference to a struct.
+You can also borrow a field via a reference to a struct:
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let foo_ref = &foo;
 let x_ref = &foo_ref.x;
@@ -207,9 +207,9 @@ let x_ref = &foo_ref.x;
 
 ### Reading and Writing Fields
 
-If you need to read and copy a field's value, you can then dereference the borrowed field
+If you need to read and copy a field's value, you can then dereference the borrowed field:
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let bar = Bar { foo: copy foo };
 let x: u64 = *&foo.x;
@@ -220,37 +220,37 @@ let foo2: Foo = *&bar.foo;
 If the field is implicitly copyable, the dot operator can be used to read fields of a struct without
 any borrowing. (Only scalar values with the `copy` ability are implicitly copyable.)
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let x = foo.x;  // x == 3
 let y = foo.y;  // y == true
 ```
 
-Dot operators can be chained to access nested fields.
+Dot operators can be chained to access nested fields:
 
-```move=
+```move
 let baz = Baz { foo: Foo { x: 3, y: true } };
 let x = baz.foo.x; // x = 3;
 ```
 
 However, this is not permitted for fields that contain non-primitive types, such a vector or another
-struct
+struct:
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let bar = Bar { foo };
 let foo2: Foo = *&bar.foo;
-let foo3: Foo = bar.foo; // error! add an explicit copy with *&
+let foo3: Foo = bar.foo; // error! must add an explicit copy with *&
 ```
 
 The reason behind this design decision is that copying a vector or another struct might be an
 expensive operation. It is important for a programmer to be aware of this copy and make others aware
-with the explicit syntax `*&`
+with the explicit syntax `*&`.
 
 In addition reading from fields, the dot syntax can be used to modify fields, regardless of the
-field being a primitive type or some other struct
+field being a primitive type or some other struct.
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 foo.x = 42;     // foo = Foo { x: 42, y: true }
 foo.y = !foo.y; // foo = Foo { x: 42, y: false }
@@ -259,9 +259,9 @@ bar.foo.x = 52;                   // bar = Bar { foo: Foo { x: 52, y: false } }
 bar.foo = Foo { x: 62, y: true }; // bar = Bar { foo: Foo { x: 62, y: true } }
 ```
 
-The dot syntax also works via a reference to a struct
+The dot syntax also works via a reference to a struct:
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let foo_ref = &mut foo;
 foo_ref.x = foo_ref.x + 1;

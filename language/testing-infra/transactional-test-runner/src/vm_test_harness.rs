@@ -9,7 +9,9 @@ use crate::{
     tasks::{EmptyCommand, InitCommand, SyntaxChoice, TaskInput},
 };
 use anyhow::{anyhow, Result};
+use clap::Parser;
 use move_binary_format::{
+    compatibility::CompatibilityConfig,
     errors::{Location, VMError, VMResult},
     file_format::CompiledScript,
     CompiledModule,
@@ -67,9 +69,19 @@ pub fn view_resource_in_move_storage(
     }
 }
 
+#[derive(Debug, Parser)]
+pub struct AdapterPublishArgs {
+    #[clap(long)]
+    /// is skip the struct_and_function_linking compatibility check
+    pub skip_check_struct_and_function_linking: bool,
+    #[clap(long)]
+    /// is skip the struct_layout compatibility check
+    pub skip_check_struct_layout: bool,
+}
+
 impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
     type ExtraInitArgs = EmptyCommand;
-    type ExtraPublishArgs = EmptyCommand;
+    type ExtraPublishArgs = AdapterPublishArgs;
     type ExtraValueArgs = ();
     type ExtraRunArgs = EmptyCommand;
     type Subcommand = EmptyCommand;
@@ -147,7 +159,7 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
         module: CompiledModule,
         _named_addr_opt: Option<Identifier>,
         gas_budget: Option<u64>,
-        _extra_args: Self::ExtraPublishArgs,
+        extra_args: Self::ExtraPublishArgs,
     ) -> Result<(Option<String>, CompiledModule)> {
         let mut module_bytes = vec![];
         module.serialize(&mut module_bytes)?;
@@ -155,7 +167,18 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
         let id = module.self_id();
         let sender = *id.address();
         match self.perform_session_action(gas_budget, |session, gas_status| {
-            session.publish_module(module_bytes, sender, gas_status)
+            let compat_config = CompatibilityConfig {
+                check_struct_and_function_linking: !extra_args
+                    .skip_check_struct_and_function_linking,
+                check_struct_layout: !extra_args.skip_check_struct_layout,
+            };
+
+            session.publish_module_bundle_with_compat_config(
+                vec![module_bytes],
+                sender,
+                gas_status,
+                compat_config,
+            )
         }) {
             Ok(()) => Ok((None, module)),
             Err(e) => Err(anyhow!(

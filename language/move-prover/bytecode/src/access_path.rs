@@ -208,7 +208,7 @@ impl AbsAddr {
         true
     }
 
-    /// Substitute all occurences of Footprint(ap) in `self` by resolving the accesss path
+    /// Substitute all occurrences of Footprint(ap) in `self` by resolving the access path
     /// `ap` in `sub_map`
     pub fn substitute_footprint(
         &mut self,
@@ -351,7 +351,7 @@ impl GlobalKey {
         self.addr.is_statically_known() && self.ty.is_closed()
     }
 
-    /// Substitute all occurences of Footprint(ap) in `self.addr` by resolving the accesss path
+    /// Substitute all occurrences of Footprint(ap) in `self.addr` by resolving the access path
     /// `ap` in `sub_map`.
     pub fn substitute_footprint(
         &mut self,

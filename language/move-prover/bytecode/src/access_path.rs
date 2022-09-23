@@ -472,7 +472,7 @@ impl Offset {
                     .get_type();
                 field_type.instantiate(types)
             }
-            (Type::Vector(t), Offset::VectorIndex) => (*t.clone()),
+            (Type::Vector(t), Offset::VectorIndex) => *t.clone(),
             (Type::Primitive(PrimitiveType::Address), Offset::Global(s)) => s.get_type(),
             (Type::Primitive(PrimitiveType::Signer), Offset::Global(s)) => {
                 // we conflate address and signer, so this can happen

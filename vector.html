@@ -183,7 +183,7 @@ numeric form.</p>
 <h4 id="byte-strings"><a class="header" href="#byte-strings">Byte Strings</a></h4>
 <p>Byte strings are quoted string literals prefixed by a <code>b</code>, e.g. <code>b&quot;Hello!\n&quot;</code>.</p>
 <p>These are ASCII encoded strings that allow for escape sequences. Currently, the supported escape
-sequences are</p>
+sequences are:</p>
 <table><thead><tr><th>Escape Sequence</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>\n</code></td><td>New line (or Line feed)</td></tr>
 <tr><td><code>\r</code></td><td>Carriage return</td></tr>
@@ -194,9 +194,9 @@ sequences are</p>
 <tr><td><code>\xHH</code></td><td>Hex escape, inserts the hex byte sequence <code>HH</code></td></tr>
 </tbody></table>
 <h4 id="hex-strings"><a class="header" href="#hex-strings">Hex Strings</a></h4>
-<p>Hex strings are quoted string literals prefixed by a <code>x</code>, e.g. <code>x&quot;48656C6C6F210A&quot;</code></p>
+<p>Hex strings are quoted string literals prefixed by a <code>x</code>, e.g. <code>x&quot;48656C6C6F210A&quot;</code>.</p>
 <p>Each byte pair, ranging from <code>00</code> to <code>FF</code>, is interpreted as hex encoded <code>u8</code> value. So each byte
-pair corresponds to a single entry in the resulting <code>vector&lt;u8&gt;</code></p>
+pair corresponds to a single entry in the resulting <code>vector&lt;u8&gt;</code>.</p>
 <h4 id="example-string-literals"><a class="header" href="#example-string-literals">Example String Literals</a></h4>
 <pre><code class="language-move">script {
 fun byte_and_hex_strings() {
@@ -270,7 +270,7 @@ easier to see where they are happening.</p>
 <h2 id="ownership"><a class="header" href="#ownership">Ownership</a></h2>
 <p>As mentioned <a href="#destroying-and-copying-vectors">above</a>, <code>vector</code> values can be copied only if the
 elements can be copied. In that case, the copy must be explicit via a
-<a href="./variables.html#move-and-copy"><code>copy</code></a> or a <a href="./references.html#reference-operators">dereference <code>*</code></a>.</p>
+<a href="./variables.html#move-and-copy"><code>copy</code></a> or a <a href="./references.html#reading-and-writing-through-references">dereference <code>*</code></a>.</p>
 
                     </main>
 

@@ -2,6 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::file_format_common::VEC_PACK_UNPACK_MAX;
 use crate::{
     file_format::{
         AbilitySet, Bytecode, CodeOffset, CodeUnit, ConstantPoolIndex, FieldHandle,
@@ -544,13 +545,13 @@ impl BytecodeGen {
             any::<PropIndex>().prop_map(StLoc),
             any::<PropIndex>().prop_map(MutBorrowLoc),
             any::<PropIndex>().prop_map(ImmBorrowLoc),
-            (any::<PropIndex>(), any::<u64>()).prop_map(VecPack),
+            (any::<PropIndex>(), 0..100u64).prop_map(VecPack),
             any::<PropIndex>().prop_map(VecLen),
             any::<PropIndex>().prop_map(VecImmBorrow),
             any::<PropIndex>().prop_map(VecMutBorrow),
             any::<PropIndex>().prop_map(VecPushBack),
             any::<PropIndex>().prop_map(VecPopBack),
-            (any::<PropIndex>(), any::<u64>()).prop_map(VecUnpack),
+            (any::<PropIndex>(), 0..100u64).prop_map(VecUnpack),
             any::<PropIndex>().prop_map(VecSwap),
         ]
     }
@@ -791,6 +792,9 @@ impl BytecodeGen {
                 if !BytecodeGen::is_valid_vector_element_sig(sig) {
                     return None;
                 }
+                if num > VEC_PACK_UNPACK_MAX {
+                    return None;
+                }
                 Bytecode::VecPack(SignatureIndex(sig_idx as TableIndex), num)
             }
             BytecodeGen::VecLen(idx) => {
@@ -861,6 +865,9 @@ impl BytecodeGen {
                 let sig_idx = idx.index(sigs_len);
                 let sig = &state.signatures.signatures[sig_idx];
                 if !BytecodeGen::is_valid_vector_element_sig(sig) {
+                    return None;
+                }
+                if num > VEC_PACK_UNPACK_MAX {
                     return None;
                 }
                 Bytecode::VecUnpack(SignatureIndex(sig_idx as TableIndex), num)

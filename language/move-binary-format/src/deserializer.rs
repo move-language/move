@@ -65,6 +65,15 @@ fn read_u64_internal(cursor: &mut VersionedCursor) -> BinaryLoaderResult<u64> {
     Ok(u64::from_le_bytes(u64_bytes))
 }
 
+fn read_u64_internal_bounded(cursor: &mut VersionedCursor, max: u64) -> BinaryLoaderResult<u64> {
+    let val = read_u64_internal(cursor)?;
+    if val > max {
+        return Err(PartialVMError::new(StatusCode::MALFORMED)
+            .with_message("u64 greater than max requested".to_string()));
+    }
+    Ok(val)
+}
+
 fn read_u128_internal(cursor: &mut VersionedCursor) -> BinaryLoaderResult<u128> {
     let mut u128_bytes = [0; 16];
     cursor
@@ -1471,17 +1480,19 @@ fn load_code(cursor: &mut VersionedCursor, code: &mut Vec<Bytecode>) -> BinaryLo
                 Bytecode::MoveToGeneric(load_struct_def_inst_index(cursor)?)
             }
             Opcodes::FREEZE_REF => Bytecode::FreezeRef,
-            Opcodes::VEC_PACK => {
-                Bytecode::VecPack(load_signature_index(cursor)?, read_u64_internal(cursor)?)
-            }
+            Opcodes::VEC_PACK => Bytecode::VecPack(
+                load_signature_index(cursor)?,
+                read_u64_internal_bounded(cursor, VEC_PACK_UNPACK_MAX)?,
+            ),
             Opcodes::VEC_LEN => Bytecode::VecLen(load_signature_index(cursor)?),
             Opcodes::VEC_IMM_BORROW => Bytecode::VecImmBorrow(load_signature_index(cursor)?),
             Opcodes::VEC_MUT_BORROW => Bytecode::VecMutBorrow(load_signature_index(cursor)?),
             Opcodes::VEC_PUSH_BACK => Bytecode::VecPushBack(load_signature_index(cursor)?),
             Opcodes::VEC_POP_BACK => Bytecode::VecPopBack(load_signature_index(cursor)?),
-            Opcodes::VEC_UNPACK => {
-                Bytecode::VecUnpack(load_signature_index(cursor)?, read_u64_internal(cursor)?)
-            }
+            Opcodes::VEC_UNPACK => Bytecode::VecUnpack(
+                load_signature_index(cursor)?,
+                read_u64_internal_bounded(cursor, VEC_PACK_UNPACK_MAX)?,
+            ),
             Opcodes::VEC_SWAP => Bytecode::VecSwap(load_signature_index(cursor)?),
         };
         code.push(bytecode);

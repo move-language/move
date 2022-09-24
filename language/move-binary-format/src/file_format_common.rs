@@ -77,6 +77,8 @@ pub const TYPE_PARAMETER_INDEX_MAX: u64 = 65536;
 
 pub const SIGNATURE_TOKEN_DEPTH_MAX: usize = 256;
 
+pub const VEC_PACK_UNPACK_MAX: u64 = 653356;
+
 /// Constants for table types in the binary.
 ///
 /// The binary contains a subset of those tables. A table specification is a tuple (table type,

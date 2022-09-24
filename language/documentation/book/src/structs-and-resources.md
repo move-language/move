@@ -281,7 +281,7 @@ provide public APIs for them. The end of the chapter contains some examples of t
 
 However, struct _types_ are always visible to another module or script:
 
-```move=
+```move
 // m.move
 address 0x2 {
 module m {
@@ -294,7 +294,7 @@ module m {
 }
 ```
 
-```move=
+```move
 // n.move
 address 0x2 {
 module n {
@@ -325,7 +325,7 @@ ephemeral. This means they cannot be copied or dropped. This property can be ver
 modeling real world resources like money, as you do not want money to be duplicated or get lost in
 circulation.
 
-```move=
+```move
 address 0x2 {
 module m {
     struct Foo { x: u64 }
@@ -352,10 +352,10 @@ module m {
 }
 ```
 
-To fix the second example (`fun dropping_resource`), you would need to manually "unpack" the
+To fix the second example (`fun destroying_resource1`), you would need to manually "unpack" the
 resource:
 
-```move=
+```move
 address 0x2 {
 module m {
     struct Foo { x: u64 }
@@ -375,7 +375,7 @@ If on the other hand, your struct does not represent something valuable, you can
 `copy` and `drop` to get a struct value that might feel more familiar from other programming
 languages:
 
-```move=
+```move
 address 0x2 {
 module m {
     struct Foo has copy, drop { x: u64 }

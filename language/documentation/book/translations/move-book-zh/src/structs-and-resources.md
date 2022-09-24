@@ -313,7 +313,7 @@ let foo_ref = &mut foo;
 foo_ref.x = foo_ref.x + 1;
 ```
 
-## 特权结构体操作 (Privileged Struct Operations)
+## 私有结构体操作
 
 Most struct operations on a struct type `T` can only be performed inside the module that declares
 `T`:
@@ -327,104 +327,102 @@ provide public APIs for them. The end of the chapter contains some examples of t
 
 However, struct _types_ are always visible to another module or script:
 
-结构体类型 `T` 上的大多数结构操作只能在其声明的本模块内操作
+大多数对结构体类型 `T` 的结构体操作只能在声明 `T` 的模块内执行：
 
-- 结构类型只能在定义的模块内创建(“打包”)、销毁(“解包”)结构体。
-- 结构的字段只能在定义结构的模块内访问。
+- 结构体类型只能在定义结构体的模块内创建（“打包”）、销毁（“解包”）。
+- 结构体的字段只能在定义结构体的模块内部访问。
 
-按照这些规则，如果你想在模块外修改你的结构，你需要为他们提供公共 API。本章的最后包含了这方面的一些例子。
+按照这些规则，如果你想在模块之外修改你的结构体，你需要为他们提供公共 API。本章的最后包含了这方面的一些例子。
 
-但是， 结构体类型始终对其他模块或脚本可见：
+但是，结构体类型始终对其他模块或脚本可见：
 
-```move=
+```move
 // m.move
 address 0x2 {
-    module m {
-        struct Foo has drop { x: u64 }
+module m {
+    struct Foo has drop { x: u64 }
 
-        public fun new_foo(): Foo {
-            Foo { x: 42 }
-        }
+    public fun new_foo(): Foo {
+        Foo { x: 42 }
     }
+}
 }
 ```
 
-```move=
+```move
 // n.move
 address 0x2 {
-    module n {
-        use 0x2::m;
+module n {
+    use 0x2::m;
 
-        struct Wrapper has drop {
-            foo: m::Foo
-        }
-
-        fun f1(foo: m::Foo) {
-            let x = foo.x;
-            //      ^ error! cannot access fields of `foo` here
-        }
-
-        fun f2() {
-            let foo_wrapper = Wrapper { foo: m::new_foo() };
-        }
+    struct Wrapper has drop {
+        foo: m::Foo
     }
+
+    fun f1(foo: m::Foo) {
+        let x = foo.x;
+        //      ^ 错误！此处无法访问 `foo` 的字段
+    }
+
+    fun f2() {
+        let foo_wrapper = Wrapper { foo: m::new_foo() };
+    }
+}
 }
 ```
 
 Note that structs do not have visibility modifiers (e.g., `public` or `private`).
 
-请注意，结构没有可见性修饰符(例如，`public` 或 `private`)。
+请注意，结构体没有可见性修饰符（例如，`public` 或 `private`）。
 
-## 所有权 (Ownership)
+## 所有权
 
 As mentioned above in [Defining Structs](#defining-structs), structs are by default linear and
 ephemeral. This means they cannot be copied or dropped. This property can be very useful when
 modeling real world resources like money, as you do not want money to be duplicated or get lost in
 circulation.
+正如上面[定义结构体](#定义结构体)中提到的，结构体默认是线性的和临时的。这意味着它们不能被复制或删除。在模拟货币等现实世界资源时，此属性非常有用，因为你不希望货币被复制或在流通中丢失。
 
-正如上面 [Defining Structs](#defining-structs) 中提到的，结构体默认是线性的，并且短暂的。这意味着它们不能被复制或删除。此属性对于现实世界中的资源(例如货币(money))的建模非常有用，因为你不希望货币被复制或流通时丢失。
-
-```move=
+```move
 address 0x2 {
-    module m {
-        struct Foo { x: u64 }
+module m {
+    struct Foo { x: u64 }
 
-        public fun copying_resource() {
-            let foo = Foo { x: 100 };
-            let foo_copy = copy foo; // error! 'copy'-ing requires the 'copy' ability
-            let foo_ref = &foo;
-            let another_copy = *foo_ref // error! dereference requires the 'copy' ability
-        }
-
-        public fun destroying_resource1() {
-            let foo = Foo { x: 100 };
-
-            // error! when the function returns, foo still contains a value.
-            // This destruction requires the 'drop' ability
-        }
-
-        public fun destroying_resource2(f: &mut Foo) {
-            *f = Foo { x: 100 } // error!
-                                // destroying the old value via a write requires the 'drop' ability
-        }
+    public fun copying_resource() {
+        let foo = Foo { x: 100 };
+        let foo_copy = copy foo; // 错误！“复制”需要“复制”能力
+        let foo_ref = &foo;
+        let another_copy = *foo_ref // 错误！解引用需要“复制”能力
     }
+
+    public fun destroying_resource1() {
+        let foo = Foo { x: 100 };
+
+        // 错误！当函数返回时，foo 仍然包含一个值。
+        // 这种销毁需要“drop”能力
+    }
+
+    public fun destroying_resource2(f: &mut Foo) {
+        *f = Foo { x: 100 } // 错误！通过写入销毁旧值需要“drop”能力
+    }
+}
 }
 ```
 
 To fix the second example (`fun dropping_resource`), you would need to manually "unpack" the resource:
 
-要修复第二个示例(`fun dropping_resource`)，您需要手动“解包”资源：
+要修复第二个示例（`fun destroying_resource1`），你需要手动“解包”资源：
 
-```move=
+```move
 address 0x2 {
-    module m {
-        struct Foo { x: u64 }
+module m {
+    struct Foo { x: u64 }
 
-        public fun destroying_resource1_fixed() {
-            let foo = Foo { x: 100 };
-            let Foo { x: _ } = foo;
-        }
+    public fun destroying_resource1_fixed() {
+        let foo = Foo { x: 100 };
+        let Foo { x: _ } = foo;
     }
+}
 }
 ```
 
@@ -435,27 +433,27 @@ If on the other hand, your struct does not represent something valuable, you can
 `copy` and `drop` to get a struct value that might feel more familiar from other programming
 languages:
 
-回想一下，您只能在定义资源的模块中解构资源。这可以用来在系统中强制执行某些不变量，例如货币守恒。
+回想一下，你只能在定义资源的模块中解构资源。这可以用来在系统中强制执行某些不变量，例如货币守恒。
 
-另一方面，如果您的结构不代表有价值的东西，您可以添加功能 `copy` 和 `drop` 来获得一个结构体，这感觉可能会与其他编程语言更相似.
+另一方面，如果你的结构体不代表有价值的东西，你可以添加 `copy` 和 `drop` 能力来获取一个结构值，这感觉可能会与其他编程语言更相似。
 
-```move=
+```move
 address 0x2 {
-    module m {
-        struct Foo has copy, drop { x: u64 }
+module m {
+    struct Foo has copy, drop { x: u64 }
 
-        public fun run() {
-            let foo = Foo { x: 100 };
-            let foo_copy = copy foo;
-            // ^ this code copies foo, whereas `let x = foo` or
-            // `let x = move foo` both move foo
+    public fun run() {
+        let foo = Foo { x: 100 };
+        let foo_copy = copy foo;
+        // ^ 此代码复制 foo，而 `let x = foo` 或
+        // `let x = move foo` 都移动 foo
 
-            let x = foo.x;            // x = 100
-            let x_copy = foo_copy.x;  // x = 100
+        let x = foo.x;            // x = 100
+        let x_copy = foo_copy.x;  // x = 100
 
-            // both foo and foo_copy are implicitly discarded when the function returns
-        }
+        // 函数返回时 foo 和 foo_copy 都被隐式丢弃
     }
+}
 }
 ```
 

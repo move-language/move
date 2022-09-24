@@ -70,4 +70,4 @@ ensures that only an authenticated user can elect to publish a resource under th
 
 Unlike simple scalar values, `signer` values are not copyable, meaning they cannot be copied (from
 any operation whether it be through an explicit [`copy`](./variables.md#move-and-copy) instruction
-or through a [dereference `*`](./references.md#reference-operators)).
+or through a [dereference `*`](./references.md#reading-and-writing-through-references).

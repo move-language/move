@@ -151,12 +151,12 @@
                     <main>
                         <h1 id="tuples-and-unit"><a class="header" href="#tuples-and-unit">Tuples and Unit</a></h1>
 <p>Move does not fully support tuples as one might expect coming from another language with them as a
-first-class value. However, in order to support multiple return values, Move has tuple-like
+<a href="https://en.wikipedia.org/wiki/First-class_citizen">first-class value</a>. However, in order to support multiple return values, Move has tuple-like
 expressions. These expressions do not result in a concrete value at runtime (there are no tuples in
 the bytecode), and as a result they are very limited: they can only appear in expressions (usually
 in the return position for a function); they cannot be bound to local variables; they cannot be
 stored in structs; and tuple types cannot be used to instantiate generics.</p>
-<p>Similarly, unit <code>()</code> is a type created by the Move source language in order to be expression based.
+<p>Similarly, <a href="https://en.wikipedia.org/wiki/Unit_type">unit <code>()</code></a> is a type created by the Move source language in order to be expression based.
 The unit value <code>()</code> does not result in any runtime value. We can consider unit<code>()</code> to be an empty
 tuple, and any restrictions that apply to tuples also apply to unit.</p>
 <p>It might feel weird to have tuples in the language at all given these restrictions. But one of the
@@ -167,7 +167,7 @@ the multiple return values. However in Move, you cannot put references inside of
 multiple return values are all pushed on the stack at the bytecode level. At the source level, these
 multiple return values are represented using tuples.</p>
 <h2 id="literals"><a class="header" href="#literals">Literals</a></h2>
-<p>Tuples are created by a comma separated list of expressions inside of parentheses</p>
+<p>Tuples are created by a comma separated list of expressions inside of parentheses.</p>
 <table><thead><tr><th>Syntax</th><th>Type</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>()</code></td><td><code>(): ()</code></td><td>Unit, the empty tuple, or the tuple of arity 0</td></tr>
 <tr><td><code>(e1, ..., en)</code></td><td><code>(e1, ..., en): (T1, ..., Tn)</code> where <code>e_i: Ti</code> s.t. <code>0 &lt; i &lt;= n</code> and <code>n &gt; 0</code></td><td>A <code>n</code>-tuple, a tuple of arity <code>n</code>, a tuple with <code>n</code> elements</td></tr>
@@ -178,18 +178,18 @@ disambiguation and do not carry any other special meaning.</p>
 <p>Sometimes, tuples with two elements are called &quot;pairs&quot; and tuples with three elements are called
 &quot;triples.&quot;</p>
 <h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
-<pre><code class="language-move=">address 0x42 {
+<pre><code class="language-move">address 0x42 {
 module example {
     // all 3 of these functions are equivalent
 
     // when no return type is provided, it is assumed to be `()`
-    fun returs_unit_1() { }
+    fun returns_unit_1() { }
 
     // there is an implicit () value in empty expression blocks
-    fun returs_unit_2(): () { }
+    fun returns_unit_2(): () { }
 
-    // explicit version of `returs_unit_1` and `returs_unit_2`
-    fun returs_unit_3(): () { () }
+    // explicit version of `returns_unit_1` and `returns_unit_2`
+    fun returns_unit_3(): () { () }
 
 
     fun returns_3_values(): (u64, bool, address) {
@@ -206,7 +206,7 @@ module example {
 <h3 id="destructuring"><a class="header" href="#destructuring">Destructuring</a></h3>
 <p>For tuples of any size, they can be destructured in either a <code>let</code> binding or in an assignment.</p>
 <p>For example:</p>
-<pre><code class="language-move=">address 0x42 {
+<pre><code class="language-move">address 0x42 {
 module example {
     // all 3 of these functions are equivalent
     fun returns_unit() {}
@@ -237,20 +237,22 @@ module example {
 </code></pre>
 <p>For more details, see <a href="./variables.html">Move Variables</a>.</p>
 <h2 id="subtyping"><a class="header" href="#subtyping">Subtyping</a></h2>
-<p>Along with references, tuples are the only types that have subtyping in Move. Tuples do have
+<p>Along with references, tuples are the only types that have <a href="https://en.wikipedia.org/wiki/Subtyping">subtyping</a> in Move. Tuples do have
 subtyping only in the sense that subtype with references (in a covariant way).</p>
-<p>For example</p>
-<pre><code class="language-move=">let x: &amp;u64 = &amp;0;
+<p>For example:</p>
+<pre><code class="language-move">let x: &amp;u64 = &amp;0;
 let y: &amp;mut u64 = &amp;mut 1;
 
 // (&amp;u64, &amp;mut u64) is a subtype of (&amp;u64, &amp;u64)
-//   since &amp;mut u64 is a subtype of &amp;u64
+// since &amp;mut u64 is a subtype of &amp;u64
 let (a, b): (&amp;u64, &amp;u64) = (x, y);
+
 // (&amp;mut u64, &amp;mut u64) is a subtype of (&amp;u64, &amp;u64)
-//   since &amp;mut u64 is a subtype of &amp;u64
+// since &amp;mut u64 is a subtype of &amp;u64
 let (c, d): (&amp;u64, &amp;u64) = (y, y);
+
 // error! (&amp;u64, &amp;mut u64) is NOT a subtype of (&amp;mut u64, &amp;mut u64)
-//   since &amp;u64 is NOT a subtype of &amp;mut u64
+// since &amp;u64 is NOT a subtype of &amp;mut u64
 let (e, f): (&amp;mut u64, &amp;mut u64) = (x, y);
 </code></pre>
 <h2 id="ownership"><a class="header" href="#ownership">Ownership</a></h2>

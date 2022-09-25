@@ -391,7 +391,7 @@ impl ResolvingGraph {
         Self::download_and_update_if_remote(
             dep_name_in_pkg,
             &dep,
-            self.build_options.skip_fetch_latest_git_deps,
+            self.build_options.fetch_latest_git_deps,
         )?;
         let (dep_package, dep_package_dir) =
             Self::parse_package_manifest(&dep, &dep_name_in_pkg, root_path)
@@ -533,7 +533,7 @@ impl ResolvingGraph {
             Self::download_and_update_if_remote(
                 *dep_name,
                 dep,
-                build_options.skip_fetch_latest_git_deps,
+                build_options.fetch_latest_git_deps,
             )?;
 
             let (dep_manifest, _) =
@@ -548,7 +548,7 @@ impl ResolvingGraph {
     fn download_and_update_if_remote(
         dep_name: PackageName,
         dep: &Dependency,
-        skip_fetch_latest_git_deps: bool,
+        fetch_latest_git_deps: bool,
     ) -> Result<()> {
         if let Some(git_info) = &dep.git_info {
             if !git_info.download_to.exists() {
@@ -578,7 +578,7 @@ impl ResolvingGraph {
                             dep_name
                         )
                     })?;
-            } else if !skip_fetch_latest_git_deps {
+            } else if fetch_latest_git_deps {
                 // Check first that it isn't a git rev (if it doesn't work, just continue with the fetch)
                 if let Ok(rev) = Command::new("git")
                     .args([

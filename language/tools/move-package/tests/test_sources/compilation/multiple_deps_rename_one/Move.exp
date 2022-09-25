@@ -20,5 +20,6 @@ CompiledPackageInfo {
         additional_named_addresses: {},
         architecture: None,
         fetch_deps_only: false,
+        fetch_latest_git_deps: false,
     },
 }

@@ -457,147 +457,135 @@ module m {
 }
 ```
 
-## 在全局存储中存储资源 (Storing Resources in Global Storage)
+## 在全局存储中存储资源
 
 Only structs with the `key` ability can be saved directly in
 [persistent global storage](./global-storage-operators.md). All values stored within those `key`
 structs must have the `store` abilities. See the [ability](./abilities] and
 [global storage](./global-storage-operators.md) chapters for more detail.
 
-只有具有 `key` 能力的结构体才可以直接保存在[全局存储](./global-storage-operators.md)。存储在这些 `key` 中的所有结构体的值必须具有 `store` 能力。请参阅 [能力(abilities)](./chapter_19_abilities] 和[全局存储](./global-storage-operators.md) 章节了解更多详细信息
+只有具有 `key` 能力的结构体才能直接保存在[持久性全局存储](./global-storage-operators.md)中。存储在这些 `key` 结构体中的所有值都必须具有 `store` 能力。有关更多详细信息，请参阅[能力](./abilities.md)和[全局存储](./global-storage-operators.md)章节。
 
-## Examples
+## 示例
 
 Here are two short examples of how you might use structs to represent valuable data (in the case of
 `Coin`) or more classical data (in the case of `Point` and `Circle`)
 
-以下是两个简短的示例，说明如何使用结构体来表示有价值的数据(例如 `Coin(代币)`)或更经典的数据(例如：`Point` 和 `Circle`)：
+这里有两个简短的示例，说明如何使用结构体来表示有价值的数据（在 `Coin` 的情况下）或更经典的数据（在 `Point` 和 `Circle` 的情况下）。
 
-### Example 1: Coin
-
-### Example 1: 代币上
+### 示例 1：Coin
 
 <!-- TODO link to access control for mint -->
 
-```move=
+```move
 address 0x2 {
-    module m {
-        // We do not want the Coin to be copied because that would be duplicating this "money",
-        // so we do not give the struct the 'copy' ability.
-        // Similarly, we do not want programmers to destroy coins, so we do not give the struct the
-        // 'drop' ability.
-        // However, we *want* users of the modules to be able to store this coin in persistent global
-        // storage, so we grant the struct the 'store' ability. This struct will only be inside of
-        // other resources inside of global storage, so we do not give the struct the 'key' ability.
-
-        // 我们不希望代币被复制，因为这会复制这笔“钱”，
-        // 因此，我们不赋予结构体 `copy` 能力。
-        // 同样，我们不希望程序员销毁硬币，所以我们不给结构体 `drop` 能力，
-        // 然而，我们*希望*模块的用户能够将此代币存储在持久的全局存储中，所以我们授予结构体 `store` 能力。
-        // 此结构体仅位于全局存储内的其他资源中，因此我们不会赋予该结构体 `key` 能力。
-        struct Coin has store {
-            value: u64,
-        }
-
-        public fun mint(value: u64): Coin {
-            // You would want to gate this function with some form of access control to prevent anyone using this module from minting an infinite amount of coins
-            // 你可能希望通过某种形式的访问控制来关闭此功能，以防止使用此模块的任何人铸造无限数量的货币
-            Coin { value }
-        }
-
-        public fun withdraw(coin: &mut Coin, amount: u64): Coin {
-            assert!(coin.balance >= amount, 1000);
-            coin.value = coin.value - amount;
-            Coin { value: amount }
-        }
-
-        public fun deposit(coin: &mut Coin, other: Coin) {
-            let Coin { value } = other;
-            coin.value = coin.value + value;
-        }
-
-        public fun split(coin: Coin, amount: u64): (Coin, Coin) {
-            let other = withdraw(&mut coin, amount);
-            (coin, other)
-        }
-
-        public fun merge(coin1: Coin, coin2: Coin): Coin {
-            deposit(&mut coin1, coin2);
-            coin1
-        }
-
-        public fun destroy_zero(coin: Coin) {
-            let Coin { value } = coin;
-            assert!(value == 0, 1001);
-        }
+module m {
+    // 我们不希望钱币（Coin）被复制，因为那会复制这个“钱”，
+    // 所以我们不会给结构体“copy”能力。
+    // 同样，我们不希望程序员破坏钱币，所以我们不会给结构体“drop”能力。
+    // 但是，我们*希望*模块的用户能够将这个钱币存储在持久的全局存储中，
+    // 所以我们授予结构体“store”能力。
+    // 这个结构体只会在全局存储内的其他资源中，因此我们不会赋予该结构体“key”能力。
+    struct Coin has store {
+        value: u64,
     }
+
+    public fun mint(value: u64): Coin {
+        // 你可能希望通过某种形式的访问控制来关闭此（铸币）功能，以防止使用此模块的任何人铸造无限数量的钱币。
+        Coin { value }
+    }
+
+    public fun withdraw(coin: &mut Coin, amount: u64): Coin {
+        assert!(coin.balance >= amount, 1000);
+        coin.value = coin.value - amount;
+        Coin { value: amount }
+    }
+
+    public fun deposit(coin: &mut Coin, other: Coin) {
+        let Coin { value } = other;
+        coin.value = coin.value + value;
+    }
+
+    public fun split(coin: Coin, amount: u64): (Coin, Coin) {
+        let other = withdraw(&mut coin, amount);
+        (coin, other)
+    }
+
+    public fun merge(coin1: Coin, coin2: Coin): Coin {
+        deposit(&mut coin1, coin2);
+        coin1
+    }
+
+    public fun destroy_zero(coin: Coin) {
+        let Coin { value } = coin;
+        assert!(value == 0, 1001);
+    }
+}
 }
 ```
 
-### Example 2: Geometry
+### 示例 2：Geometry
 
-### Example 2: 几何上
-
-```move=
+```move
 address 0x2 {
-    module point {
-        struct Point has copy, drop, store {
-            x: u64,
-            y: u64,
-        }
+module point {
+    struct Point has copy, drop, store {
+        x: u64,
+        y: u64,
+    }
 
-        public fun new(x: u64, y: u64): Point {
-            Point {
-                x, y
-            }
-        }
-
-        public fun x(p: &Point): u64 {
-            p.x
-        }
-
-        public fun y(p: &Point): u64 {
-            p.y
-        }
-
-        fun abs_sub(a: u64, b: u64): u64 {
-            if (a < b) {
-                b - a
-            }
-            else {
-                a - b
-            }
-        }
-
-        public fun dist_squared(p1: &Point, p2: &Point): u64 {
-            let dx = abs_sub(p1.x, p2.x);
-            let dy = abs_sub(p1.y, p2.y);
-            dx*dx + dy*dy
+    public fun new(x: u64, y: u64): Point {
+        Point {
+            x, y
         }
     }
+
+    public fun x(p: &Point): u64 {
+        p.x
+    }
+
+    public fun y(p: &Point): u64 {
+        p.y
+    }
+
+    fun abs_sub(a: u64, b: u64): u64 {
+        if (a < b) {
+            b - a
+        }
+        else {
+            a - b
+        }
+    }
+
+    public fun dist_squared(p1: &Point, p2: &Point): u64 {
+        let dx = abs_sub(p1.x, p2.x);
+        let dy = abs_sub(p1.y, p2.y);
+        dx*dx + dy*dy
+    }
+}
 }
 ```
 
-```move=
+```move
 address 0x2 {
-    module circle {
-        use 0x2::Point::{Self, Point};
+module circle {
+    use 0x2::point::{Self, Point};
 
-        struct Circle has copy, drop, store {
-            center: Point,
-            radius: u64,
-        }
-
-        public fun new(center: Point, radius: u64): Circle {
-            Circle { center, radius }
-        }
-
-        public fun overlaps(c1: &Circle, c2: &Circle): bool {
-            let d = Point::dist_squared(&c1.center, &c2.center);
-            let r1 = c1.radius;
-            let r2 = c2.radius;
-            d*d <= r1*r1 + 2*r1*r2 + r2*r2
-        }
+    struct Circle has copy, drop, store {
+        center: Point,
+        radius: u64,
     }
+
+    public fun new(center: Point, radius: u64): Circle {
+        Circle { center, radius }
+    }
+
+    public fun overlaps(c1: &Circle, c2: &Circle): bool {
+        let d = point::dist_squared(&c1.center, &c2.center);
+        let r1 = c1.radius;
+        let r2 = c2.radius;
+        d*d <= r1*r1 + 2*r1*r2 + r2*r2
+    }
+}
 }
 ```

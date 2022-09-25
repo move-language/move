@@ -405,13 +405,13 @@ structs must have the `store` ability. See the [ability](./abilities) and
 ## Examples
 
 Here are two short examples of how you might use structs to represent valuable data (in the case of
-`Coin`) or more classical data (in the case of `Point` and `Circle`)
+`Coin`) or more classical data (in the case of `Point` and `Circle`).
 
 ### Example 1: Coin
 
 <!-- TODO link to access control for mint -->
 
-```move=
+```move
 address 0x2 {
 module m {
     // We do not want the Coin to be copied because that would be duplicating this "money",
@@ -427,7 +427,7 @@ module m {
 
     public fun mint(value: u64): Coin {
         // You would want to gate this function with some form of access control to prevent
-        // anyone using this module from minting an infinite amount of coins
+        // anyone using this module from minting an infinite amount of coins.
         Coin { value }
     }
 
@@ -462,7 +462,7 @@ module m {
 
 ### Example 2: Geometry
 
-```move=
+```move
 address 0x2 {
 module point {
     struct Point has copy, drop, store {
@@ -502,10 +502,10 @@ module point {
 }
 ```
 
-```move=
+```move
 address 0x2 {
 module circle {
-    use 0x2::Point::{Self, Point};
+    use 0x2::point::{Self, Point};
 
     struct Circle has copy, drop, store {
         center: Point,
@@ -517,7 +517,7 @@ module circle {
     }
 
     public fun overlaps(c1: &Circle, c2: &Circle): bool {
-        let d = Point::dist_squared(&c1.center, &c2.center);
+        let d = point::dist_squared(&c1.center, &c2.center);
         let r1 = c1.radius;
         let r2 = c2.radius;
         d*d <= r1*r1 + 2*r1*r2 + r2*r2

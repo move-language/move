@@ -22,6 +22,7 @@ pub mod normalized;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod proptest_types;
 pub mod serializer;
+pub mod text_format;
 pub mod views;
 
 #[cfg(test)]

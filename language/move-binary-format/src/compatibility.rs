@@ -19,7 +19,8 @@ use std::collections::BTreeSet;
 pub struct Compatibility {
     /// If false, dependent modules that reference functions or structs in this module may not link
     pub struct_and_function_linking: bool,
-    /// If false, attempting to read structs previously published by this module will fail at runtime
+    /// If false, attempting to read structs previously published by this module will fail at
+    /// runtime, or worse, may allow to re-interpret representations maliciously.
     pub struct_layout: bool,
 }
 
@@ -50,18 +51,11 @@ impl Compatibility {
                 Some(new_struct) => new_struct,
                 None => {
                     // Struct not present in new . Existing modules that depend on this struct will fail to link with the new version of the module.
+                    // Also, struct layout cannot be guaranteed transitively, because after
+                    // removing the struct, it could be re-added later with a different layout.
                     struct_and_function_linking = false;
-                    // Note: we intentionally do *not* label this a layout compatibility violation.
-                    // Existing modules can still successfully read previously published values of
-                    // this struct `Parent::T`. That is, code like the function `foo` in
-                    // ```
-                    // struct S { t: Parent::T }
-                    // public fun foo(a: addr): S { move_from<S>(addr) }
-                    // ```
-                    // in module `Child` will continue to run without error. But values of type
-                    // `Parent::T` in `Child` are now "orphaned" in the sense that `Parent` no
-                    // longer exposes any API for reading/writing them.
-                    continue;
+                    struct_layout = false;
+                    break;
                 }
             };
 

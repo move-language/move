@@ -24,6 +24,43 @@ pub struct Compatibility {
     pub struct_layout: bool,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct CompatibilityConfig {
+    pub check_struct_and_function_linking: bool,
+    pub check_struct_layout: bool,
+    //TODO maybe we can move the treat_friend_as_private flag from VerifierConfig to here.
+}
+
+impl Default for CompatibilityConfig {
+    fn default() -> Self {
+        Self {
+            check_struct_and_function_linking: true,
+            check_struct_layout: true,
+        }
+    }
+}
+
+impl CompatibilityConfig {
+    pub fn full_check() -> Self {
+        Self::default()
+    }
+
+    pub fn no_check() -> Self {
+        Self {
+            check_struct_and_function_linking: false,
+            check_struct_layout: false,
+        }
+    }
+
+    pub fn need_full_check(&self) -> bool {
+        self.check_struct_and_function_linking && self.check_struct_layout
+    }
+
+    pub fn need_check_compat(&self) -> bool {
+        self.check_struct_and_function_linking || self.check_struct_layout
+    }
+}
+
 impl Compatibility {
     /// Return true if the two module s compared in the compatiblity check are both linking and
     /// layout compatible.

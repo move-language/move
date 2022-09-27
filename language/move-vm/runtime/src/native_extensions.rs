@@ -3,7 +3,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use better_any::{Tid, TidAble, TidExt};
+#[cfg(not(feature = "nostd"))]
 use std::{any::TypeId, collections::HashMap};
+#[cfg(feature = "nostd")]
+use core::any::TypeId;
+#[cfg(feature = "nostd")]
+use hashbrown::HashMap;
+#[cfg(feature = "nostd")]
+use alloc::boxed::Box;
 
 /// A data type to represent a heterogeneous collection of extensions which are available to
 /// native functions. A value to this is passed into the session function execution.

@@ -34,12 +34,32 @@ use move_vm_types::{
 };
 use parking_lot::RwLock;
 use sha3::{Digest, Sha3_256};
+#[cfg(not(feature = "nostd"))]
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     fmt::Debug,
     hash::Hash,
     sync::Arc,
 };
+#[cfg(feature = "nostd")]
+use core::{
+    fmt::Debug,
+    hash::Hash,
+};
+#[cfg(feature = "nostd")]
+use alloc :: {
+    collections::{BTreeMap, BTreeSet},
+    sync::Arc,
+    vec,
+    vec::Vec,
+    boxed::Box,
+    format,
+    string::String,
+    borrow::ToOwned,
+    string::ToString,
+};
+#[cfg(feature = "nostd")]
+use hashbrown::HashMap;
 use tracing::error;
 
 type ScriptHash = [u8; 32];

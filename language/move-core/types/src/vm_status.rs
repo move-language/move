@@ -48,8 +48,14 @@ pub static EXECUTION_STATUS_MAX_CODE: u64 = 4999;
 /// - `Error` indicating an error from the VM itself
 /// - `MoveAbort` indicating an `abort` ocurred inside of a Move program
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-#[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
+#[cfg_attr(
+    all(any(test, feature = "fuzzing"), not(feature = "nostd")),
+    derive(Arbitrary)
+)]
+#[cfg_attr(
+    all(any(test, feature = "fuzzing"), not(feature = "nostd")),
+    proptest(no_params)
+)]
 pub enum VMStatus {
     /// The VM status corresponding to an EXECUTED status code
     Executed,
@@ -73,8 +79,14 @@ pub enum VMStatus {
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-#[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
+#[cfg_attr(
+    all(any(test, feature = "fuzzing"), not(feature = "nostd")),
+    derive(Arbitrary)
+)]
+#[cfg_attr(
+    all(any(test, feature = "fuzzing"), not(feature = "nostd")),
+    proptest(no_params)
+)]
 pub enum KeptVMStatus {
     Executed,
     OutOfGas,
@@ -98,8 +110,14 @@ pub type DiscardedVMStatus = StatusCode;
 /// An `AbortLocation` specifies where a Move program `abort` occurred, either in a function in
 /// a module, or in a script
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-#[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
+#[cfg_attr(
+    all(any(test, feature = "fuzzing"), not(feature = "nostd")),
+    derive(Arbitrary)
+)]
+#[cfg_attr(
+    all(any(test, feature = "fuzzing"), not(feature = "nostd")),
+    proptest(no_params)
+)]
 pub enum AbortLocation {
     /// Indicates `abort` occurred in the specified module
     Module(ModuleId),

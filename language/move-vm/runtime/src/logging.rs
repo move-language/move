@@ -5,6 +5,8 @@
 use move_binary_format::errors::{PartialVMError, VMError};
 use move_core_types::vm_status::{StatusCode, StatusType};
 use tracing::error;
+#[cfg(feature = "nostd")]
+use alloc::format;
 //
 // Utility functions
 //

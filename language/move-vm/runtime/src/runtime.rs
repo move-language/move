@@ -32,7 +32,14 @@ use move_vm_types::{
     loaded_data::runtime_types::Type,
     values::{Locals, Reference, VMValueCast, Value},
 };
-use std::{borrow::Borrow, collections::BTreeSet, sync::Arc};
+
+#[cfg(not(feature = "nostd"))]
+use std::{borrow::Borrow, collections::BTreeSet, sync::Arc, mem};
+#[cfg(feature = "nostd")]
+use core::mem;
+#[cfg(feature = "nostd")]
+use alloc::{borrow::Borrow, collections::BTreeSet, sync::Arc,vec::Vec,string::ToString,format};
+
 use tracing::warn;
 
 /// An instantiation of the MoveVM.
@@ -382,7 +389,7 @@ impl VMRuntime {
             .map_err(|e| e.finish(Location::Undefined))?;
 
         // locals should not be dropped until all return values are serialized
-        std::mem::drop(dummy_locals);
+        mem::drop(dummy_locals);
 
         Ok(SerializedReturnValues {
             mutable_reference_outputs: serialized_mut_ref_outputs,

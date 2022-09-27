@@ -2043,6 +2043,10 @@ impl Function {
         self.parameters.len()
     }
 
+    pub(crate) fn return_type_count(&self) -> usize {
+        self.return_.len()
+    }
+
     pub(crate) fn name(&self) -> &str {
         self.name.as_str()
     }

@@ -19,7 +19,6 @@ use move_binary_format::{
 #[derive(Debug, Clone, Default)]
 pub struct VerifierConfig {
     pub max_loop_depth: Option<usize>,
-    pub treat_friend_as_private: bool,
 }
 
 /// Helper for a "canonical" verification of a module.

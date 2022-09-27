@@ -45,7 +45,6 @@ fn test_publish_module_with_nested_loops() {
             ),
             VerifierConfig {
                 max_loop_depth: Some(2),
-                ..VerifierConfig::default()
             },
         )
         .unwrap();
@@ -65,7 +64,6 @@ fn test_publish_module_with_nested_loops() {
             ),
             VerifierConfig {
                 max_loop_depth: Some(1),
-                ..VerifierConfig::default()
             },
         )
         .unwrap();
@@ -111,7 +109,6 @@ fn test_run_script_with_nested_loops() {
             ),
             VerifierConfig {
                 max_loop_depth: Some(2),
-                ..VerifierConfig::default()
             },
         )
         .unwrap();
@@ -132,7 +129,6 @@ fn test_run_script_with_nested_loops() {
             ),
             VerifierConfig {
                 max_loop_depth: Some(1),
-                ..VerifierConfig::default()
             },
         )
         .unwrap();

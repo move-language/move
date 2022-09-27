@@ -26,9 +26,13 @@ pub struct Compatibility {
 
 #[derive(Debug, Clone, Copy)]
 pub struct CompatibilityConfig {
+    /// if false, do not ensure the dependent modules that reference functions or structs in this module can link
     pub check_struct_and_function_linking: bool,
+    /// if false, do not ensure the struct layout capability
     pub check_struct_layout: bool,
-    //TODO maybe we can move the treat_friend_as_private flag from VerifierConfig to here.
+    /// if false, treat `friend` as `private` when `check_struct_and_function_linking`.
+    /// `check_friend_linking` only makes sense if `check_struct_and_function_linking` is true.
+    pub check_friend_linking: bool,
 }
 
 impl Default for CompatibilityConfig {
@@ -36,6 +40,7 @@ impl Default for CompatibilityConfig {
         Self {
             check_struct_and_function_linking: true,
             check_struct_layout: true,
+            check_friend_linking: true,
         }
     }
 }
@@ -49,14 +54,12 @@ impl CompatibilityConfig {
         Self {
             check_struct_and_function_linking: false,
             check_struct_layout: false,
+            check_friend_linking: false,
         }
     }
 
-    pub fn need_full_check(&self) -> bool {
-        self.check_struct_and_function_linking && self.check_struct_layout
-    }
-
     pub fn need_check_compat(&self) -> bool {
+        // `check_friend_linking` is part of check_struct_and_function_linking, so ignore it at here.
         self.check_struct_and_function_linking || self.check_struct_layout
     }
 }
@@ -70,7 +73,7 @@ impl Compatibility {
 
     /// Return compatibility assessment for `new_module` relative to old module `old_module`.
     pub fn check(
-        treat_friend_as_private: bool,
+        check_friend_linking: bool,
         old_module: &Module,
         new_module: &Module,
     ) -> Compatibility {
@@ -130,7 +133,7 @@ impl Compatibility {
         // friend list. But for simplicity, we decided to go to the more restrictive form now and
         // we may revisit this in the future.
         for (name, old_func) in &old_module.exposed_functions {
-            if treat_friend_as_private && matches!(old_func.visibility, Visibility::Friend) {
+            if !check_friend_linking && matches!(old_func.visibility, Visibility::Friend) {
                 continue;
             }
             let new_func = match new_module.exposed_functions.get(name) {
@@ -175,7 +178,7 @@ impl Compatibility {
             }
         }
 
-        if !treat_friend_as_private {
+        if check_friend_linking {
             // check friend declarations compatibility
             //
             // - additions to the list are allowed

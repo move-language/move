@@ -11,6 +11,8 @@
 //! - No missing resources (any resource acquired must be present)
 //! - No additional resources (no extraneous resources not actually acquired)
 
+use std::collections::{BTreeSet, HashMap};
+
 use move_binary_format::{
     access::ModuleAccess,
     errors::{PartialVMError, PartialVMResult},
@@ -20,7 +22,6 @@ use move_binary_format::{
     },
 };
 use move_core_types::vm_status::StatusCode;
-use std::collections::{BTreeSet, HashMap};
 
 pub(crate) struct AcquiresVerifier<'a> {
     module: &'a CompiledModule,
@@ -101,7 +102,70 @@ impl<'a> AcquiresVerifier<'a> {
                 let si = self.module.struct_instantiation_at(*idx);
                 self.struct_acquire(si.def, offset)
             }
-            _ => Ok(()),
+
+            Bytecode::Pop
+            | Bytecode::BrTrue(_)
+            | Bytecode::BrFalse(_)
+            | Bytecode::Abort
+            | Bytecode::Branch(_)
+            | Bytecode::Nop
+            | Bytecode::Ret
+            | Bytecode::StLoc(_)
+            | Bytecode::MoveLoc(_)
+            | Bytecode::CopyLoc(_)
+            | Bytecode::ImmBorrowLoc(_)
+            | Bytecode::MutBorrowLoc(_)
+            | Bytecode::FreezeRef
+            | Bytecode::MutBorrowField(_)
+            | Bytecode::MutBorrowFieldGeneric(_)
+            | Bytecode::ImmBorrowField(_)
+            | Bytecode::ImmBorrowFieldGeneric(_)
+            | Bytecode::LdU8(_)
+            | Bytecode::LdU64(_)
+            | Bytecode::LdU128(_)
+            | Bytecode::LdConst(_)
+            | Bytecode::LdTrue
+            | Bytecode::LdFalse
+            | Bytecode::Pack(_)
+            | Bytecode::PackGeneric(_)
+            | Bytecode::Unpack(_)
+            | Bytecode::UnpackGeneric(_)
+            | Bytecode::ReadRef
+            | Bytecode::WriteRef
+            | Bytecode::CastU8
+            | Bytecode::CastU64
+            | Bytecode::CastU128
+            | Bytecode::Add
+            | Bytecode::Sub
+            | Bytecode::Mul
+            | Bytecode::Mod
+            | Bytecode::Div
+            | Bytecode::BitOr
+            | Bytecode::BitAnd
+            | Bytecode::Xor
+            | Bytecode::Shl
+            | Bytecode::Shr
+            | Bytecode::Or
+            | Bytecode::And
+            | Bytecode::Not
+            | Bytecode::Eq
+            | Bytecode::Neq
+            | Bytecode::Lt
+            | Bytecode::Gt
+            | Bytecode::Le
+            | Bytecode::Ge
+            | Bytecode::Exists(_)
+            | Bytecode::ExistsGeneric(_)
+            | Bytecode::MoveTo(_)
+            | Bytecode::MoveToGeneric(_)
+            | Bytecode::VecPack(..)
+            | Bytecode::VecLen(_)
+            | Bytecode::VecImmBorrow(_)
+            | Bytecode::VecMutBorrow(_)
+            | Bytecode::VecPushBack(_)
+            | Bytecode::VecPopBack(_)
+            | Bytecode::VecUnpack(..)
+            | Bytecode::VecSwap(_) => Ok(()),
         }
     }
 

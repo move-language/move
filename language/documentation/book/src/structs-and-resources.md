@@ -272,7 +272,7 @@ Most struct operations on a struct type `T` can only be performed inside the mod
 - The fields of a struct are only accessible inside the module that defines the struct.
 
 Following these rules, if you want to modify your struct outside the module, you will need to
-provide publis APIs for them. The end of the chapter contains some examples of this.
+provide public APIs for them. The end of the chapter contains some examples of this.
 
 However, struct _types_ are always visible to another module or script:
 

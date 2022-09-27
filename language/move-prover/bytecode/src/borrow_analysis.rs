@@ -583,34 +583,43 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                             .func_target
                             .global_env()
                             .get_function_qid(mid.qualified(*fid));
-                        let callee_target = &self
+
+                        if self
                             .targets
-                            .get_target(callee_env, &FunctionVariant::Baseline);
-                        let native_an;
-                        let callee_an_opt = if callee_env.is_native_or_intrinsic() {
-                            native_an = native_annotation(callee_env);
-                            Some(&native_an)
-                        } else {
-                            callee_target.get_annotations().get::<BorrowAnnotation>()
-                        };
-                        if let Some(callee_an) = callee_an_opt {
+                            .has_target(callee_env, &FunctionVariant::Baseline)
+                        {
+                            // non-recursive case
+                            let callee_target = self
+                                .targets
+                                .get_target(callee_env, &FunctionVariant::Baseline);
+
+                            let callee_annotation = if callee_env.is_native_or_intrinsic() {
+                                native_annotation(callee_env)
+                            } else {
+                                self.targets
+                                    .get_target(callee_env, &FunctionVariant::Baseline)
+                                    .get_annotations()
+                                    .get::<BorrowAnnotation>()
+                                    .expect("callee borrow annotation")
+                                    .clone()
+                            };
+
                             state.instantiate(
-                                callee_target,
+                                &callee_target,
                                 targs,
-                                &callee_an.summary,
+                                &callee_annotation.summary,
                                 srcs,
                                 dests,
                             );
                         } else {
-                            // This can happen for recursive functions. Check whether the function
-                            // has &mut returns, and report an error that we can't deal with it if
-                            // so.
-                            let has_muts = (0..callee_target.get_return_count()).any(|idx| {
-                                callee_target.get_return_type(idx).is_mutable_reference()
-                            });
+                            // This can happen for recursive functions.
+                            // Check whether the function has &mut returns.
+                            // If so, report an error that we can't deal with it.
+                            let has_muts = (0..callee_env.get_return_count())
+                                .any(|idx| callee_env.get_return_type(idx).is_mutable_reference());
                             if has_muts {
-                                callee_target.global_env().error(&self.func_target.get_bytecode_loc(*id),
-                                    "restriction: recursive functions which return `&mut` values not supported");
+                                callee_env.module_env.env.error(&self.func_target.get_bytecode_loc(*id),
+                                                                "restriction: recursive functions which return `&mut` values not supported");
                             }
                         }
                     }

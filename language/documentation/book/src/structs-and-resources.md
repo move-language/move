@@ -32,7 +32,7 @@ module m {
 
 Structs cannot be recursive, so the following definition is invalid:
 
-```move=
+```move
 struct Foo { x: Foo }
 //              ^ error! Foo cannot contain Foo
 ```
@@ -42,7 +42,7 @@ to be used with certain operations (that copy it, drop it, store it in global st
 a storage schema), structs can be granted [abilities](./abilities.md) by annotating them with
 `has <ability>`:
 
-```move=
+```move
 address 0x2 {
 module m {
     struct Foo has copy, drop { x: u64, y: bool }
@@ -54,7 +54,7 @@ For more details, see the [annotating structs](./abilities.md#annotating-structs
 
 ### Naming
 
-Structs must start with a capital letter `A` to `Z`. After the first letter, constant names can
+Structs must start with a capital letter `A` to `Z`. After the first letter, struct names can
 contain underscores `_`, letters `a` to `z`, letters `A` to `Z`, or digits `0` to `9`.
 
 ```move
@@ -73,7 +73,7 @@ features. It may or may not be removed later.
 Values of a struct type can be created (or "packed") by indicating the struct name, followed by
 value for each field:
 
-```move=
+```move
 address 0x2 {
 module m {
     struct Foo has drop { x: u64, y: bool }
@@ -102,7 +102,7 @@ This is called sometimes called "field name punning".
 
 Struct values can be destroyed by binding or assigning them patterns.
 
-```move=
+```move
 address 0x2 {
 module m {
     struct Foo { x: u64, y: bool }
@@ -122,6 +122,7 @@ module m {
     fun example_destroy_foo_wildcard() {
         let foo = Foo { x: 3, y: false };
         let Foo { x, y: _ } = foo;
+
         // only one new binding since y was bound to a wildcard
         //   x: u64 = 3
     }
@@ -130,6 +131,7 @@ module m {
         let x: u64;
         let y: bool;
         Foo { x, y } = Foo { x: 3, y: false };
+
         // mutating existing variables x & y
         //   x = 3, y = false
     }
@@ -137,6 +139,7 @@ module m {
     fun example_foo_ref() {
         let foo = Foo { x: 3, y: false };
         let Foo { x, y } = &foo;
+
         // two new bindings
         //   x: &u64
         //   y: &bool
@@ -145,6 +148,7 @@ module m {
     fun example_foo_ref_mut() {
         let foo = Foo { x: 3, y: false };
         let Foo { x, y } = &mut foo;
+
         // two new bindings
         //   x: &mut u64
         //   y: &mut bool
@@ -154,9 +158,10 @@ module m {
         let bar = Bar { foo: Foo { x: 3, y: false } };
         let Bar { foo: Foo { x, y } } = bar;
         //             ^ nested pattern
+
         // two new bindings
         //   x: u64 = 3
-        //   foo_y: bool = false
+        //   y: bool = false
     }
 
     fun example_destroy_baz() {
@@ -172,7 +177,7 @@ module m {
 The `&` and `&mut` operator can be used to create references to structs or fields. These examples
 include some optional type annotations (e.g., `: &Foo`) to demonstrate the type of operations.
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let foo_ref: &Foo = &foo;
 let y: bool = foo_ref.y;          // reading a field via a reference to the struct
@@ -182,18 +187,18 @@ let x_ref_mut: &mut u64 = &mut foo.x;
 *x_ref_mut = 42;            // modifying a field via a mutable reference
 ```
 
-It is possible to borrow inner fields of nested structs.
+It is possible to borrow inner fields of nested structs:
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let bar = Bar { foo };
 
 let x_ref = &bar.foo.x;
 ```
 
-You can also borrow a field via a reference to a struct.
+You can also borrow a field via a reference to a struct:
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let foo_ref = &foo;
 let x_ref = &foo_ref.x;
@@ -202,9 +207,9 @@ let x_ref = &foo_ref.x;
 
 ### Reading and Writing Fields
 
-If you need to read and copy a field's value, you can then dereference the borrowed field
+If you need to read and copy a field's value, you can then dereference the borrowed field:
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let bar = Bar { foo: copy foo };
 let x: u64 = *&foo.x;
@@ -215,37 +220,37 @@ let foo2: Foo = *&bar.foo;
 If the field is implicitly copyable, the dot operator can be used to read fields of a struct without
 any borrowing. (Only scalar values with the `copy` ability are implicitly copyable.)
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let x = foo.x;  // x == 3
 let y = foo.y;  // y == true
 ```
 
-Dot operators can be chained to access nested fields.
+Dot operators can be chained to access nested fields:
 
-```move=
+```move
 let baz = Baz { foo: Foo { x: 3, y: true } };
 let x = baz.foo.x; // x = 3;
 ```
 
 However, this is not permitted for fields that contain non-primitive types, such a vector or another
-struct
+struct:
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let bar = Bar { foo };
 let foo2: Foo = *&bar.foo;
-let foo3: Foo = bar.foo; // error! add an explicit copy with *&
+let foo3: Foo = bar.foo; // error! must add an explicit copy with *&
 ```
 
 The reason behind this design decision is that copying a vector or another struct might be an
 expensive operation. It is important for a programmer to be aware of this copy and make others aware
-with the explicit syntax `*&`
+with the explicit syntax `*&`.
 
 In addition reading from fields, the dot syntax can be used to modify fields, regardless of the
-field being a primitive type or some other struct
+field being a primitive type or some other struct.
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 foo.x = 42;     // foo = Foo { x: 42, y: true }
 foo.y = !foo.y; // foo = Foo { x: 42, y: false }
@@ -254,9 +259,9 @@ bar.foo.x = 52;                   // bar = Bar { foo: Foo { x: 52, y: false } }
 bar.foo = Foo { x: 62, y: true }; // bar = Bar { foo: Foo { x: 62, y: true } }
 ```
 
-The dot syntax also works via a reference to a struct
+The dot syntax also works via a reference to a struct:
 
-```move=
+```move
 let foo = Foo { x: 3, y: true };
 let foo_ref = &mut foo;
 foo_ref.x = foo_ref.x + 1;
@@ -276,7 +281,7 @@ provide public APIs for them. The end of the chapter contains some examples of t
 
 However, struct _types_ are always visible to another module or script:
 
-```move=
+```move
 // m.move
 address 0x2 {
 module m {
@@ -289,7 +294,7 @@ module m {
 }
 ```
 
-```move=
+```move
 // n.move
 address 0x2 {
 module n {
@@ -320,7 +325,7 @@ ephemeral. This means they cannot be copied or dropped. This property can be ver
 modeling real world resources like money, as you do not want money to be duplicated or get lost in
 circulation.
 
-```move=
+```move
 address 0x2 {
 module m {
     struct Foo { x: u64 }
@@ -347,10 +352,10 @@ module m {
 }
 ```
 
-To fix the second example (`fun dropping_resource`), you would need to manually "unpack" the
+To fix the second example (`fun destroying_resource1`), you would need to manually "unpack" the
 resource:
 
-```move=
+```move
 address 0x2 {
 module m {
     struct Foo { x: u64 }
@@ -370,7 +375,7 @@ If on the other hand, your struct does not represent something valuable, you can
 `copy` and `drop` to get a struct value that might feel more familiar from other programming
 languages:
 
-```move=
+```move
 address 0x2 {
 module m {
     struct Foo has copy, drop { x: u64 }
@@ -400,13 +405,13 @@ structs must have the `store` ability. See the [ability](./abilities) and
 ## Examples
 
 Here are two short examples of how you might use structs to represent valuable data (in the case of
-`Coin`) or more classical data (in the case of `Point` and `Circle`)
+`Coin`) or more classical data (in the case of `Point` and `Circle`).
 
 ### Example 1: Coin
 
 <!-- TODO link to access control for mint -->
 
-```move=
+```move
 address 0x2 {
 module m {
     // We do not want the Coin to be copied because that would be duplicating this "money",
@@ -422,7 +427,7 @@ module m {
 
     public fun mint(value: u64): Coin {
         // You would want to gate this function with some form of access control to prevent
-        // anyone using this module from minting an infinite amount of coins
+        // anyone using this module from minting an infinite amount of coins.
         Coin { value }
     }
 
@@ -457,7 +462,7 @@ module m {
 
 ### Example 2: Geometry
 
-```move=
+```move
 address 0x2 {
 module point {
     struct Point has copy, drop, store {
@@ -497,10 +502,10 @@ module point {
 }
 ```
 
-```move=
+```move
 address 0x2 {
 module circle {
-    use 0x2::Point::{Self, Point};
+    use 0x2::point::{Self, Point};
 
     struct Circle has copy, drop, store {
         center: Point,
@@ -512,7 +517,7 @@ module circle {
     }
 
     public fun overlaps(c1: &Circle, c2: &Circle): bool {
-        let d = Point::dist_squared(&c1.center, &c2.center);
+        let d = point::dist_squared(&c1.center, &c2.center);
         let r1 = c1.radius;
         let r2 = c2.radius;
         d*d <= r1*r1 + 2*r1*r2 + r2*r2

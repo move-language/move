@@ -132,8 +132,8 @@ pub struct BuildConfig {
     pub fetch_deps_only: bool,
 
     /// Skip fetching latest git dependencies
-    #[clap(long = "fetch-latest-git-deps", global = true)]
-    pub fetch_latest_git_deps: bool,
+    #[clap(long = "skip-fetch-latest-git-deps", global = true)]
+    pub skip_fetch_latest_git_deps: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd)]

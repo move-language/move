@@ -26,7 +26,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Stdio},
     rc::Rc,
 };
 
@@ -391,7 +391,7 @@ impl ResolvingGraph {
         Self::download_and_update_if_remote(
             dep_name_in_pkg,
             &dep,
-            self.build_options.fetch_latest_git_deps,
+            self.build_options.skip_fetch_latest_git_deps,
         )?;
         let (dep_package, dep_package_dir) =
             Self::parse_package_manifest(&dep, &dep_name_in_pkg, root_path)
@@ -533,7 +533,7 @@ impl ResolvingGraph {
             Self::download_and_update_if_remote(
                 *dep_name,
                 dep,
-                build_options.fetch_latest_git_deps,
+                build_options.skip_fetch_latest_git_deps,
             )?;
 
             let (dep_manifest, _) =
@@ -548,7 +548,7 @@ impl ResolvingGraph {
     fn download_and_update_if_remote(
         dep_name: PackageName,
         dep: &Dependency,
-        fetch_latest_git_deps: bool,
+        skip_fetch_latest_git_deps: bool,
     ) -> Result<()> {
         if let Some(git_info) = &dep.git_info {
             if !git_info.download_to.exists() {
@@ -578,21 +578,20 @@ impl ResolvingGraph {
                             dep_name
                         )
                     })?;
-            } else if fetch_latest_git_deps {
+            } else if !skip_fetch_latest_git_deps {
+                let git_path = &git_info.download_to.display().to_string();
+
                 // Check first that it isn't a git rev (if it doesn't work, just continue with the fetch)
                 if let Ok(rev) = Command::new("git")
-                    .args([
-                        "--git-dir",
-                        &git_info.download_to.join(".git").display().to_string(),
-                        "rev-parse",
-                        "--verify",
-                        &git_info.git_rev,
-                    ])
+                    .args(["-C", git_path, "rev-parse", "--verify", &git_info.git_rev])
                     .output()
                 {
                     if let Ok(parsable_version) = String::from_utf8(rev.stdout) {
                         // If it's exactly the same, then it's a git rev
-                        if parsable_version.trim() == git_info.git_rev.as_str() {
+                        if parsable_version
+                            .trim()
+                            .starts_with(git_info.git_rev.as_str())
+                        {
                             return Ok(());
                         }
                     }
@@ -601,29 +600,41 @@ impl ResolvingGraph {
                 // If the current folder exists, do a fetch and reset to ensure that the branch
                 // is up to date
                 // NOTE: this means that you must run the package system with a working network connection
-                Command::new("git")
+                let status = Command::new("git")
                     .args([
-                        "--git-dir",
-                        &git_info.download_to.join(".git").display().to_string(),
+                        "-C",
+                        git_path,
                         "fetch",
                         "origin",
                     ])
-                    .output()
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status()
                     .map_err(|_| {
                         anyhow::anyhow!(
                             "Failed to fetch latest Git state for package '{}', to skip set --skip-fetch-latest-git-deps",
                             dep_name
                         )
                     })?;
-                Command::new("git")
+
+                if !status.success() {
+                    return Err(anyhow::anyhow!(
+                            "Failed to fetch to latest Git state for package '{}', to skip set --skip-fetch-latest-git-deps | Exit status: {}",
+                            dep_name,
+                        status
+                        ));
+                }
+                let status = Command::new("git")
                     .args([
-                        "--git-dir",
-                        &git_info.download_to.join(".git").display().to_string(),
+                        "-C",
+                        git_path,
                         "reset",
-                        "origin",
                         "--hard",
+                        &format!("origin/{}", git_info.git_rev)
                     ])
-                    .output()
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status()
                     .map_err(|_| {
                         anyhow::anyhow!(
                             "Failed to reset to latest Git state '{}' for package '{}', to skip set --skip-fetch-latest-git-deps",
@@ -631,6 +642,14 @@ impl ResolvingGraph {
                             dep_name
                         )
                     })?;
+                if !status.success() {
+                    return Err(anyhow::anyhow!(
+                            "Failed to reset to latest Git state '{}' for package '{}', to skip set --skip-fetch-latest-git-deps | Exit status: {}",
+                            &git_info.git_rev,
+                            dep_name,
+                        status
+                        ));
+                }
             }
         }
         if let Some(node_info) = &dep.node_info {

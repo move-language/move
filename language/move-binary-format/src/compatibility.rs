@@ -108,16 +108,9 @@ impl Compatibility {
                 // Fields changed. Code in this module will fail at runtime if it tries to
                 // read a previously published struct value
                 // TODO: this is a stricter definition than required. We could in principle
-                // choose to label the following as compatible
-                // (1) changing the name (but not position or type) of a field. The VM does
-                //     not care about the name of a field (it's purely informational), but
-                //     clients presumably do.
-                // (2) changing the type of a field to a different, but layout and kind
-                //     compatible type. E.g. `struct S { b: bool }` to `struct S { b: B }`
-                // where
-                //     B is struct B { some_name: bool }. TODO: does this affect clients? I
-                //     think not--the serialization of the same data with these two types
-                //     will be the same.
+                // choose that changing the name (but not position or type) of a field is
+                // compatible. The VM does not care about the name of a field
+                // (it's purely informational), but clients presumably do.
                 struct_layout = false
             }
         }

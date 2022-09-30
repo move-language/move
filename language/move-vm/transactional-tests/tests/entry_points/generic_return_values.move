@@ -2,7 +2,7 @@
 
 module 0x42::Test {
 
-    struct Cup<T> { value: T }
+    struct Cup<T> has drop { value: T }
 
     public fun t1<T>(x: T): T {
         x

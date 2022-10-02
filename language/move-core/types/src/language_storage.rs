@@ -372,11 +372,11 @@ mod tests {
     }
 
     fn make_type_tag_struct(type_param: TypeTag) -> TypeTag {
-        TypeTag::Struct(StructTag {
+        TypeTag::Struct(Box::new(StructTag {
             address: AccountAddress::ONE,
             module: Identifier::new("a").unwrap(),
             name: Identifier::new("a").unwrap(),
             type_params: vec![type_param],
-        })
+        }))
     }
 }

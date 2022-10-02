@@ -208,7 +208,7 @@ impl Type {
                     module,
                     name,
                     type_arguments,
-                } => TypeTag::Struct(StructTag {
+                } => TypeTag::Struct(Box::new(StructTag {
                     address,
                     module,
                     name,
@@ -220,7 +220,7 @@ impl Type {
                             )
                         })
                         .collect(),
-                }),
+                })),
                 TypeParameter(_) => unreachable!(),
             }
         } else {
@@ -230,7 +230,7 @@ impl Type {
 
     pub fn into_struct_tag(self) -> Option<StructTag> {
         match self.into_type_tag()? {
-            TypeTag::Struct(s) => Some(s),
+            TypeTag::Struct(s) => Some(*s),
             _ => None,
         }
     }

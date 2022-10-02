@@ -2324,9 +2324,11 @@ impl Loader {
             Type::Address => TypeTag::Address,
             Type::Signer => TypeTag::Signer,
             Type::Vector(ty) => TypeTag::Vector(Box::new(self.type_to_type_tag(ty)?)),
-            Type::Struct(gidx) => TypeTag::Struct(self.struct_gidx_to_type_tag(*gidx, &[])?),
+            Type::Struct(gidx) => {
+                TypeTag::Struct(Box::new(self.struct_gidx_to_type_tag(*gidx, &[])?))
+            }
             Type::StructInstantiation(gidx, ty_args) => {
-                TypeTag::Struct(self.struct_gidx_to_type_tag(*gidx, ty_args)?)
+                TypeTag::Struct(Box::new(self.struct_gidx_to_type_tag(*gidx, ty_args)?))
             }
             Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
                 return Err(

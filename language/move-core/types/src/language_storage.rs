@@ -41,7 +41,7 @@ pub enum TypeTag {
     #[serde(rename = "vector", alias = "Vector")]
     Vector(Box<TypeTag>),
     #[serde(rename = "struct", alias = "Struct")]
-    Struct(StructTag),
+    Struct(Box<StructTag>),
 }
 
 #[derive(Serialize)]
@@ -61,7 +61,7 @@ enum SafeTypeTag<'a> {
     #[serde(rename = "vector", alias = "Vector")]
     Vector(Box<SafeTypeTag<'a>>),
     #[serde(rename = "struct", alias = "Struct")]
-    Struct(SafeStructTag<'a>),
+    Struct(Box<SafeStructTag<'a>>),
 }
 
 impl<'a> From<&'a TypeTag> for SafeTypeTag<'a> {
@@ -74,7 +74,7 @@ impl<'a> From<&'a TypeTag> for SafeTypeTag<'a> {
             TypeTag::Address => SafeTypeTag::Address,
             TypeTag::Signer => SafeTypeTag::Signer,
             TypeTag::Vector(value) => SafeTypeTag::Vector(Box::new((&**value).into())),
-            TypeTag::Struct(value) => SafeTypeTag::Struct(value.into()),
+            TypeTag::Struct(value) => SafeTypeTag::Struct(Box::new((&**value).into())),
         }
     }
 }
@@ -299,7 +299,7 @@ impl Display for ResourceKey {
 
 impl From<StructTag> for TypeTag {
     fn from(t: StructTag) -> TypeTag {
-        TypeTag::Struct(t)
+        TypeTag::Struct(Box::new(t))
     }
 }
 
@@ -309,18 +309,20 @@ mod tests {
     use crate::{
         account_address::AccountAddress, identifier::Identifier, language_storage::StructTag,
     };
+    use std::mem;
 
     #[test]
     fn test_type_tag_serde() {
-        let a = TypeTag::Struct(StructTag {
+        let a = TypeTag::Struct(Box::new(StructTag {
             address: AccountAddress::ONE,
             module: Identifier::new("abc").unwrap(),
             name: Identifier::new("abc").unwrap(),
             type_params: vec![TypeTag::U8],
-        });
+        }));
         let b = serde_json::to_string(&a).unwrap();
         let c: TypeTag = serde_json::from_str(&b).unwrap();
-        assert!(a.eq(&c), "Typetag serde error")
+        assert!(a.eq(&c), "Typetag serde error");
+        assert_eq!(mem::size_of::<TypeTag>(), 16);
     }
 
     #[test]
@@ -358,11 +360,11 @@ mod tests {
     }
 
     fn make_type_tag_struct(type_param: TypeTag) -> TypeTag {
-        TypeTag::Struct(StructTag {
+        TypeTag::Struct(Box::new(StructTag {
             address: AccountAddress::ONE,
             module: Identifier::new("a").unwrap(),
             name: Identifier::new("a").unwrap(),
             type_params: vec![type_param],
-        })
+        }))
     }
 }

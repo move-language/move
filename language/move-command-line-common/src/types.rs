@@ -147,7 +147,7 @@ impl ParsedType {
             ParsedType::Address => TypeTag::Address,
             ParsedType::Signer => TypeTag::Signer,
             ParsedType::Vector(inner) => TypeTag::Vector(Box::new(inner.into_type_tag(mapping)?)),
-            ParsedType::Struct(s) => TypeTag::Struct(s.into_struct_tag(mapping)?),
+            ParsedType::Struct(s) => TypeTag::Struct(Box::new(s.into_struct_tag(mapping)?)),
         })
     }
 }

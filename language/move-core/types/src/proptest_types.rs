@@ -35,12 +35,12 @@ impl Arbitrary for TypeTag {
                     vec(inner, 0..4),
                 )
                     .prop_map(|(address, module, name, type_params)| {
-                        Struct(StructTag {
+                        Struct(Box::new(StructTag {
                             address,
                             module,
                             name,
                             type_params,
-                        })
+                        }))
                     })
             },
         )

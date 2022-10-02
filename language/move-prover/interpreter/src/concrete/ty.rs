@@ -428,7 +428,7 @@ impl BaseType {
             BaseType::Primitive(PrimitiveType::Address) => TypeTag::Address,
             BaseType::Primitive(PrimitiveType::Signer) => TypeTag::Signer,
             BaseType::Vector(elem) => TypeTag::Vector(Box::new(elem.to_move_type_tag())),
-            BaseType::Struct(inst) => TypeTag::Struct(inst.to_move_struct_tag()),
+            BaseType::Struct(inst) => TypeTag::Struct(Box::new(inst.to_move_struct_tag())),
         }
     }
 

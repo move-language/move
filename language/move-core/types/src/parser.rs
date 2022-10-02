@@ -303,12 +303,12 @@ impl<I: Iterator<Item = Token>> Parser<I> {
                                 } else {
                                     vec![]
                                 };
-                                TypeTag::Struct(StructTag {
+                                TypeTag::Struct(Box::new(StructTag {
                                     address: AccountAddress::from_hex_literal(&addr)?,
                                     module: Identifier::new(module)?,
                                     name: Identifier::new(name)?,
                                     type_params: ty_args,
-                                })
+                                }))
                             }
                             t => bail!("expected name, got {:?}", t),
                         }
@@ -388,7 +388,7 @@ pub fn parse_struct_tag(s: &str) -> Result<StructTag> {
     let type_tag = parse(s, |parser| parser.parse_type_tag())
         .map_err(|e| format_err!("invalid struct tag: {}, {}", s, e))?;
     if let TypeTag::Struct(struct_tag) = type_tag {
-        Ok(struct_tag)
+        Ok(*struct_tag)
     } else {
         bail!("invalid struct tag: {}", s)
     }

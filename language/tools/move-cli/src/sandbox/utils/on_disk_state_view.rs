@@ -452,7 +452,7 @@ struct Generics(Vec<TypeTag>);
 impl ToString for TypeID {
     fn to_string(&self) -> String {
         match &self.0 {
-            TypeTag::Struct(s) => StructID(s.clone()).to_string(),
+            TypeTag::Struct(s) => StructID(*s.clone()).to_string(),
             TypeTag::Vector(t) => format!("vector<{}>", TypeID(*t.clone()).to_string()),
             t => t.to_string(),
         }

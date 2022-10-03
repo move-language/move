@@ -160,6 +160,7 @@ impl Interpreter {
                             self.operand_stack
                                 .last_n(func.arg_count())
                                 .map_err(|e| set_err_info!(current_frame, e))?,
+                            (func.local_count() as u64).into(),
                         )
                         .map_err(|e| set_err_info!(current_frame, e))?;
 
@@ -209,6 +210,7 @@ impl Interpreter {
                             self.operand_stack
                                 .last_n(func.arg_count())
                                 .map_err(|e| set_err_info!(current_frame, e))?,
+                            (func.local_count() as u64).into(),
                         )
                         .map_err(|e| set_err_info!(current_frame, e))?;
 
@@ -302,11 +304,23 @@ impl Interpreter {
         let native_function = function.get_native()?;
 
         let result = native_function(&mut native_context, ty_args, args)?;
-        gas_meter.charge_native_function(result.cost)?;
 
-        let return_values = result
-            .result
-            .map_err(|code| PartialVMError::new(StatusCode::ABORTED).with_sub_status(code))?;
+        // Note(Gas): The order by which gas is charged / error gets returned MUST NOT be modified
+        //            here or otherwise it becomes an incompatible change!!!
+        let return_values = match result.result {
+            Ok(vals) => {
+                gas_meter.charge_native_function(result.cost, Some(vals.iter()))?;
+                vals
+            }
+            Err(code) => {
+                gas_meter.charge_native_function(
+                    result.cost,
+                    Option::<std::iter::Empty<&Value>>::None,
+                )?;
+                return Err(PartialVMError::new(StatusCode::ABORTED).with_sub_status(code));
+            }
+        };
+
         // Paranoid check to protect us against incorrect native function implementations. A native function that
         // returns a different number of values than its declared types will trigger this check
         if return_values.len() != return_type_count {

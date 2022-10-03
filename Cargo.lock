@@ -3364,6 +3364,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-mv-llvm-compiler"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap 3.1.8",
+ "colored",
+ "move-binary-format",
+ "move-bytecode-source-map",
+ "move-bytecode-verifier",
+ "move-command-line-common",
+ "move-compiler",
+ "move-core-types",
+ "move-coverage",
+ "move-disassembler",
+ "move-ir-types",
+]
+
+[[package]]
 name = "move-package"
 version = "0.1.0"
 dependencies = [

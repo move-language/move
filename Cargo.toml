@@ -66,6 +66,7 @@ members = [
     "language/tools/move-coverage",
     "language/tools/move-disassembler",
     "language/tools/move-explain",
+    "language/tools/move-mv-llvm-compiler",
     "language/tools/move-package",
     "language/tools/move-resource-viewer",
     "language/tools/move-unit-test",

@@ -260,7 +260,11 @@ impl<'b> GasMeter for GasStatus<'b> {
         self.charge_instr(get_simple_instruction_opcode(instr))
     }
 
-    fn charge_native_function(&mut self, amount: InternalGas) -> PartialVMResult<()> {
+    fn charge_native_function(
+        &mut self,
+        amount: InternalGas,
+        _ret_vals: Option<impl ExactSizeIterator<Item = impl ValueView>>,
+    ) -> PartialVMResult<()> {
         self.deduct_gas(amount)
     }
 
@@ -269,6 +273,7 @@ impl<'b> GasMeter for GasStatus<'b> {
         _module_id: &ModuleId,
         _func_name: &str,
         args: impl ExactSizeIterator<Item = impl ValueView>,
+        _num_locals: NumArgs,
     ) -> PartialVMResult<()> {
         self.charge_instr_with_size(Opcodes::CALL, (args.len() as u64 + 1).into())
     }
@@ -279,6 +284,7 @@ impl<'b> GasMeter for GasStatus<'b> {
         _func_name: &str,
         ty_args: impl ExactSizeIterator<Item = impl TypeView>,
         args: impl ExactSizeIterator<Item = impl ValueView>,
+        _num_locals: NumArgs,
     ) -> PartialVMResult<()> {
         self.charge_instr_with_size(
             Opcodes::CALL_GENERIC,

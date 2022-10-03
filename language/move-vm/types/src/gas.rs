@@ -79,6 +79,7 @@ pub trait GasMeter {
         module_id: &ModuleId,
         func_name: &str,
         args: impl ExactSizeIterator<Item = impl ValueView>,
+        num_locals: NumArgs,
     ) -> PartialVMResult<()>;
 
     fn charge_call_generic(
@@ -87,6 +88,7 @@ pub trait GasMeter {
         func_name: &str,
         ty_args: impl ExactSizeIterator<Item = impl TypeView>,
         args: impl ExactSizeIterator<Item = impl ValueView>,
+        num_locals: NumArgs,
     ) -> PartialVMResult<()>;
 
     fn charge_ld_const(&mut self, size: NumBytes) -> PartialVMResult<()>;
@@ -200,7 +202,11 @@ pub trait GasMeter {
     ///
     /// In the future, we may want to remove this and directly pass a reference to the GasMeter
     /// instance to the native functions to allow gas to be deducted during computation.
-    fn charge_native_function(&mut self, amount: InternalGas) -> PartialVMResult<()>;
+    fn charge_native_function(
+        &mut self,
+        amount: InternalGas,
+        ret_vals: Option<impl ExactSizeIterator<Item = impl ValueView>>,
+    ) -> PartialVMResult<()>;
 }
 
 /// A dummy gas meter that does not meter anything.
@@ -217,6 +223,7 @@ impl GasMeter for UnmeteredGasMeter {
         _module_id: &ModuleId,
         _func_name: &str,
         _args: impl IntoIterator<Item = impl ValueView>,
+        _num_locals: NumArgs,
     ) -> PartialVMResult<()> {
         Ok(())
     }
@@ -227,6 +234,7 @@ impl GasMeter for UnmeteredGasMeter {
         _func_name: &str,
         _ty_args: impl ExactSizeIterator<Item = impl TypeView>,
         _args: impl ExactSizeIterator<Item = impl ValueView>,
+        _num_locals: NumArgs,
     ) -> PartialVMResult<()> {
         Ok(())
     }
@@ -370,7 +378,11 @@ impl GasMeter for UnmeteredGasMeter {
         Ok(())
     }
 
-    fn charge_native_function(&mut self, _amount: InternalGas) -> PartialVMResult<()> {
+    fn charge_native_function(
+        &mut self,
+        _amount: InternalGas,
+        _ret_vals: Option<impl ExactSizeIterator<Item = impl ValueView>>,
+    ) -> PartialVMResult<()> {
         Ok(())
     }
 }

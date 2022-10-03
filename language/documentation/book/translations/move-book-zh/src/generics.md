@@ -1,43 +1,29 @@
-# 泛型 (generics)
+# 泛型
 
-Generics can be used to define functions and structs over different input data types. This language feature is sometimes referred to as *parametric polymorphism*. In Move, we will often use the term generics interchangeably with type parameters and type arguments.
+泛型可用于定义具有不同输入数据类型的函数和结构体。这种语言特性有时被称为*参数多态*。在 Move 中，我们经常将术语泛型与类型形参（type parameter）和类型实参（type argument）互换使用。*（有些书籍的中文翻译通常将 type parameter 和 type argument 不加以区别地翻译为“类型参数”，译者注）*
 
-泛型可用于定义具有不同输入数据类型的函数和结构体。这种语言特性被称为参数多态。在 Move语言中，我们经常将交替使用术语泛型与类型参数和类型参数。
+泛型通常用于库（library）代码中，例如向量中，以声明适用于任何可能的实例化（满足指定约束）的代码。在其他框架中，泛型代码有时可用多种不同的方式与全局存储进行交互，这些方式有着相同的实现。
 
-Generics are commonly used in library code, such as in vector, to declare code that works over any possible instantiation (that satisfies the specified constraints). In other frameworks, generic code can sometimes be used to interact with global storage many different ways that all still share the same implementation.
+## 声明类型参数
 
-泛型通常用于库代码中，例如 `vector`，以声明适用于任何可实例化(满足指定约束)的代码。在其他框架中，泛型代码有时可用多种不同的方式与全局存储交互，这些方式有着相同的实现。
+函数和结构体都可以在其签名中采用类型参数列表，由一对尖括号括起来 `<...>`。
 
+### 泛型函数
 
-## 声明类型参数 (Declaring Type Parameters)
-
-Both functions and structs can take a list of type parameters in their signatures, enclosed by a pair of angle brackets `<...>` .
-
-函数和结构体都可以在其签名中采用类型参数列表，由一对尖括号括起来 `<...>` 。
-
-### 泛型函数 (Generic Functions)
-
-
-Type parameters for functions are placed after the function name and before the (value) parameter list. The following code defines a generic identity function that takes a value of any type and returns that value unchanged.
-
-函数的类型参数放在函数名称之后和(值)参数列表之前。以下代码定义了一个名为id的泛型函数，该函数接受任何类型的值并返回原值。
+函数的类型参数放在函数名称之后和（值）参数列表之前。以下代码定义了一个泛型标识函数，该函数接受任何类型的值并返回原值。
 
 ```move
 fun id<T>(x: T): T {
-    // this type annotation is unnecessary but valid
+    // 此类型标注是不必要但有效的
     (x: T)
 }
 ```
 
-Once defined, the type parameter `T` can be used in parameter types, return types, and inside the function body.
-
 一旦定义，类型参数 `T` 就可以在参数类型、返回类型和函数体内使用。
 
-### 泛型结构体 (Generic Structs)
+### 泛型结构体
 
-Type parameters for structs are placed after the struct name, and can be used to name the types of the fields.
-
-结构体的类型参数放在结构名称之后，并可用于命名字段的类型。
+结构体的类型参数放在结构名称之后，可用于命名字段的类型。
 
 ```move
 struct Foo<T> has copy, drop { x: T }
@@ -50,15 +36,15 @@ struct Bar<T1, T2> has copy, drop {
 
 [Note that type parameters do not have to be used](#unused-type-parameters)
 
-请注意，[未使用的类型参数](#unused-type-parameters)
+请注意，[未使用的类型参数](#未使用的类型参数)。
 
-## 类型参数 (Type Arguments)
+## 类型实参
 
-### 调用泛型函数 (Calling Generic Functions)
+### 调用泛型函数
 
 When calling a generic function, one can specify the type arguments for the function's type parameters in a list enclosed by a pair of angle brackets.
 
-调用泛型函数时，可以在由一对尖括号括起来的列表中指定函数类型参数。
+调用泛型函数时，可以在由一对尖括号括起来的列表中为函数的类型形参指定类型实参。
 
 ```move
 fun foo() {

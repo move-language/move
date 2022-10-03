@@ -42,7 +42,7 @@ struct Bar<T1, T2> has copy, drop {
 
 When calling a generic function, one can specify the type arguments for the function's type parameters in a list enclosed by a pair of angle brackets.
 
-```move=
+```move
 fun foo() {
     let x = id<bool>(true);
 }
@@ -54,7 +54,7 @@ If you do not specify the type arguments, Move's [type inference](#type-inferenc
 
 Similarly, one can attach a list of type arguments for the struct's type parameters when constructing or destructing values of generic types.
 
-```move=
+```move
 fun foo() {
     let foo = Foo<bool> { x: true };
     let Foo<bool> { x } = foo;

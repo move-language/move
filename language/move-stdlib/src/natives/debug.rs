@@ -25,6 +25,7 @@ pub struct PrintGasParameters {
     pub base_cost: InternalGas,
 }
 
+#[allow(unused_mut)]
 #[inline]
 fn native_print(
     gas_params: &PrintGasParameters,
@@ -67,6 +68,7 @@ pub struct PrintStackTraceGasParameters {
     pub base_cost: InternalGas,
 }
 
+#[allow(unused_variables)]
 #[inline]
 fn native_print_stack_trace(
     gas_params: &PrintStackTraceGasParameters,

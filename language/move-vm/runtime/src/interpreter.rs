@@ -181,6 +181,17 @@ impl Interpreter {
                 .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
             match exit_code {
                 ExitCode::Return => {
+                    // TODO: Check if the error location is set correctly.
+                    gas_meter
+                        .charge_drop_frame(
+                            current_frame
+                                .locals
+                                .into_values()
+                                .map_err(|e| self.set_location(e))?
+                                .map(|(_idx, val)| val),
+                        )
+                        .map_err(|e| self.set_location(e))?;
+
                     if let Some(frame) = self.call_stack.pop() {
                         current_frame = frame;
                         current_frame.pc += 1; // advance past the Call instruction in the caller
@@ -424,6 +435,14 @@ impl Interpreter {
         let mut native_context = NativeContext::new(self, data_store, resolver, extensions);
         let native_function = function.get_native()?;
 
+        gas_meter.charge_native_function_before_execution(
+            ty_args.iter().map(|ty| TypeWithLoader {
+                ty,
+                loader: resolver.loader(),
+            }),
+            args.iter(),
+        )?;
+
         let result = native_function(&mut native_context, ty_args.clone(), args)?;
 
         // Note(Gas): The order by which gas is charged / error gets returned MUST NOT be modified
@@ -508,7 +527,20 @@ impl Interpreter {
         match data_store.load_resource(addr, ty) {
             Ok((gv, load_res)) => {
                 if let Some(loaded) = load_res {
-                    gas_meter.charge_load_resource(loaded)?;
+                    let opt = match loaded {
+                        Some(num_bytes) => {
+                            let view = gv.view().ok_or_else(|| {
+                                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                                    .with_message(
+                                        "Failed to create view for global value".to_owned(),
+                                    )
+                            })?;
+
+                            Some((num_bytes, view))
+                        }
+                        None => None,
+                    };
+                    gas_meter.charge_load_resource(opt)?;
                 }
                 Ok(gv)
             }
@@ -1007,8 +1039,8 @@ impl Frame {
 
                 match instruction {
                     Bytecode::Pop => {
-                        gas_meter.charge_simple_instr(S::Pop)?;
-                        interpreter.operand_stack.pop()?;
+                        let popped_val = interpreter.operand_stack.pop()?;
+                        gas_meter.charge_pop(popped_val)?;
                     }
                     Bytecode::Ret => {
                         gas_meter.charge_simple_instr(S::Ret)?;
@@ -1048,15 +1080,18 @@ impl Frame {
                     Bytecode::LdConst(idx) => {
                         let constant = resolver.constant_at(*idx);
                         gas_meter.charge_ld_const(NumBytes::new(constant.data.len() as u64))?;
-                        interpreter.operand_stack.push(
-                            Value::deserialize_constant(constant).ok_or_else(|| {
-                                PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
-                                    .with_message(
+
+                        let val = Value::deserialize_constant(constant).ok_or_else(|| {
+                            PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
+                                .with_message(
                                     "Verifier failed to verify the deserialization of constants"
                                         .to_owned(),
                                 )
-                            })?,
-                        )?
+                        })?;
+
+                        gas_meter.charge_ld_const_after_deserialization(&val)?;
+
+                        interpreter.operand_stack.push(val)?
                     }
                     Bytecode::LdTrue => {
                         gas_meter.charge_simple_instr(S::LdTrue)?;
@@ -1270,7 +1305,7 @@ impl Frame {
                     Bytecode::WriteRef => {
                         let reference = interpreter.operand_stack.pop_as::<Reference>()?;
                         let value = interpreter.operand_stack.pop()?;
-                        gas_meter.charge_write_ref(&value)?;
+                        gas_meter.charge_write_ref(&value, reference.value_view())?;
                         reference.write_ref(value)?;
                     }
                     Bytecode::CastU8 => {
@@ -1591,7 +1626,11 @@ impl Frame {
                     Bytecode::VecUnpack(si, num) => {
                         let vec_val = interpreter.operand_stack.pop_as::<Vector>()?;
                         let ty = &resolver.instantiate_single_type(*si, self.ty_args())?;
-                        gas_meter.charge_vec_unpack(make_ty!(ty), NumArgs::new(*num))?;
+                        gas_meter.charge_vec_unpack(
+                            make_ty!(ty),
+                            NumArgs::new(*num),
+                            vec_val.elem_views(),
+                        )?;
                         let elements = vec_val.unpack(ty, *num)?;
                         for value in elements {
                             interpreter.operand_stack.push(value)?;

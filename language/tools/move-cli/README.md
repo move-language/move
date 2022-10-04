@@ -137,7 +137,7 @@ Now let's try running the script -- the very first time may take some time since
 
 ```shell
 $ move sandbox run sources/debug_script.move --signers 0xf
-[debug] (&) { 0000000000000000000000000000000F }
+[debug] (&) { 0000000000000000000000000000000f }
 ```
 
 The `--signers 0xf` argument indicates which account address(es) have signed
@@ -316,7 +316,7 @@ changes first. We can do this by passing the `--dry-run` flag:
 $ move sandbox run sources/test_script.move --signers 0xf -v --dry-run
 Compiling transaction script...
 Changed resource(s) under 1 address(es):
-  Changed 1 resource(s) under address 0000000000000000000000000000000F:
+  Changed 1 resource(s) under address 0000000000000000000000000000000f:
     Added type 0x2::Test::Resource: [10, 0, 0, 0, 0, 0, 0, 0] (wrote 40 bytes)
 Wrote 40 bytes of resource ID's and data
       key 0x2::Test::Resource {
@@ -332,7 +332,7 @@ changes by removing the `--dry-run` flag:
 $ move sandbox run sources/test_script.move --signers 0xf -v
 Compiling transaction script...
 Changed resource(s) under 1 address(es):
-  Changed 1 resource(s) under address 0000000000000000000000000000000F:
+  Changed 1 resource(s) under address 0000000000000000000000000000000f:
     Added type 0x2::Test::Resource: [10, 0, 0, 0, 0, 0, 0, 0] (wrote 40 bytes)
 Wrote 40 bytes of resource ID's and data
       key 0x2::Test::Resource {
@@ -346,7 +346,7 @@ We can inspect the newly published resource using `move sandbox view` since
 the change has been committed:
 
 ```shell
-$ move sandbox view storage/0x0000000000000000000000000000000F/resources/0x00000000000000000000000000000002::Test::Resource.bcs
+$ move sandbox view storage/0x0000000000000000000000000000000f/resources/0x00000000000000000000000000000002::Test::Resource.bcs
 key 0x2::Test::Resource {
     i: 10
 }
@@ -360,12 +360,12 @@ can be done using the `move sandbox clean` command which will remove the
 `storage` and `build` directories:
 
 ```shell
-$ move sandbox view storage/0x0000000000000000000000000000000F/resources/0x00000000000000000000000000000002::Test::Resource.bcs
+$ move sandbox view storage/0x0000000000000000000000000000000f/resources/0x00000000000000000000000000000002::Test::Resource.bcs
 resource 0x2::Test::Resource {
         i: 10
 }
 $ move sandbox clean
-$ move sandbox view storage/0x0000000000000000000000000000000F/resources/0x00000000000000000000000000000002::Test::Resource.bcs
+$ move sandbox view storage/0x0000000000000000000000000000000f/resources/0x00000000000000000000000000000002::Test::Resource.bcs
 Error: `move sandbox view <file>` must point to a valid file under storage
 ```
 
@@ -412,7 +412,7 @@ build
 sandbox publish
 sandbox view storage/0x00000000000000000000000000000002/modules/Test.mv
 sandbox run sources/test_script.move --signers 0xf -v
-sandbox view storage/0x0000000000000000000000000000000F/resources/0x00000000000000000000000000000002::Test::Resource.bcs
+sandbox view storage/0x0000000000000000000000000000000f/resources/0x00000000000000000000000000000002::Test::Resource.bcs
 ```
 
 We can then use the `move sandbox test` command and point it at the `readme` directory to run each of these
@@ -441,7 +441,7 @@ in the `args.txt` file:
 ```shell
 $ cat readme/args.exp
 Command `sandbox run sources/debug_script.move --signers 0xf`:
-[debug] (&) { 0000000000000000000000000000000F }
+[debug] (&) { 0000000000000000000000000000000f }
 Command `sandbox run sources/debug_script.move --signers 0xf --mode bare`:
 ...
 ```

@@ -18,7 +18,7 @@ set -eo pipefail
 Z3_VERSION=4.11.0
 CVC5_VERSION=0.0.3
 DOTNET_VERSION=6.0
-BOOGIE_VERSION=2.15.7
+BOOGIE_VERSION=2.15.8
 SOLC_VERSION="v0.8.11+commit.d7f03943"
 
 SCRIPT_PATH="$(cd "$(dirname "$0")" >/dev/null 2>&1 && pwd)"

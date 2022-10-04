@@ -1021,6 +1021,16 @@ impl Locals {
         self.swap_loc(idx, x)?;
         Ok(())
     }
+
+    pub fn into_values(self) -> PartialVMResult<impl Iterator<Item = (usize, Value)>> {
+        Ok(take_unique_ownership(self.0)?
+            .into_iter()
+            .enumerate()
+            .flat_map(|(idx, val)| match &val {
+                ValueImpl::Invalid => None,
+                _ => Some((idx, Value(val))),
+            }))
+    }
 }
 
 /***************************************************************************************
@@ -3317,6 +3327,29 @@ impl Struct {
     #[allow(clippy::needless_lifetimes)]
     pub fn field_views<'a>(&'a self) -> impl ExactSizeIterator<Item = impl ValueView + 'a> {
         self.fields.iter()
+    }
+}
+
+impl Vector {
+    #[allow(clippy::needless_lifetimes)]
+    pub fn elem_views<'a>(&'a self) -> impl ExactSizeIterator<Item = impl ValueView + 'a> {
+        struct ElemView<'b> {
+            container: &'b Container,
+            idx: usize,
+        }
+
+        impl<'b> ValueView for ElemView<'b> {
+            fn visit(&self, visitor: &mut impl ValueVisitor) {
+                self.container.visit_indexed(visitor, 0, self.idx)
+            }
+        }
+
+        let len = self.0.len();
+
+        (0..len).map(|idx| ElemView {
+            container: &self.0,
+            idx,
+        })
     }
 }
 

@@ -1,4 +1,4 @@
-// separate_baseline: cvc5
+
 
 module 0x42::VerifyLoops {
 
@@ -182,11 +182,11 @@ module 0x42::VerifyLoops {
 
     public fun loop_with_two_back_edges_incorrect(x: u64, y: u64) {
         spec {
-            assume x != y;
+            assume x < y;
         };
         loop {
             spec {
-                invariant x != y;
+                invariant x < y;
             };
             if (x > y) {
                 y = y + 1;

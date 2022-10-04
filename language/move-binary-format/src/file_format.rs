@@ -1672,6 +1672,12 @@ impl Bytecode {
             pc < u16::MAX && (pc as usize) < code.len(),
             "Program counter out of bounds"
         );
+
+        // Return early to prevent overflow if pc is hiting the end of max number of instructions allowed (u16::MAX).
+        if pc > u16::max_value() - 2 {
+            return vec![];
+        }
+
         let bytecode = &code[pc as usize];
         let mut v = vec![];
 

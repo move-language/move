@@ -34,7 +34,7 @@ struct Bar<T1, T2> has copy, drop {
 }
 ```
 
-[Note that type parameters do not have to be used](#unused-type-parameters)
+Note that [type parameters do not have to be used](#unused-type-parameters)
 
 ## Type Arguments
 
@@ -65,17 +65,17 @@ If you do not specify the type arguments, Move's [type inference](#type-inferenc
 
 ### Type Argument Mismatch
 
-If you specify the type arguments and they conflict with the actual values supplied, an error will be given
+If you specify the type arguments and they conflict with the actual values supplied, an error will be given:
 
-```move=
+```move
 fun foo() {
     let x = id<u64>(true); // error! true is not a u64
 }
 ```
 
-and similarly
+and similarly:
 
-```move=
+```move
 fun foo() {
     let foo = Foo<bool> { x: 0 }; // error! 0 is not a bool
     let Foo<address> { x } = foo; // error! bool is incompatible with address
@@ -84,9 +84,9 @@ fun foo() {
 
 ## Type Inference
 
-In most cases, the Move compiler will be able to infer the type arguments so you don't have to write them down explicitly. Here's what the examples above would look like if we omit the type arguments.
+In most cases, the Move compiler will be able to infer the type arguments so you don't have to write them down explicitly. Here's what the examples above would look like if we omit the type arguments:
 
-```move=
+```move
 fun foo() {
     let x = id(true);
     //        ^ <bool> is inferred
@@ -101,7 +101,7 @@ fun foo() {
 
 Note: when the compiler is unable to infer the types, you'll need annotate them manually. A common scenario is to call a function with type parameters appearing only at return positions.
 
-```move=
+```move
 address 0x2 {
 module m {
     using std::vector;
@@ -117,9 +117,9 @@ module m {
 }
 ```
 
-However, the compiler will be able to infer the type if that return value is used later in that function
+However, the compiler will be able to infer the type if that return value is used later in that function:
 
-```move=
+```move
 address 0x2 {
 module m {
     using std::vector;
@@ -141,7 +141,7 @@ does not appear in any field defined in the struct,
 but is checked statically at compile time.
 Move allows unused type parameters so the following struct definition is valid:
 
-```move=
+```move
 struct Foo<T> {
     foo: u64
 }
@@ -149,7 +149,7 @@ struct Foo<T> {
 
 This can be convenient when modeling certain concepts. Here is an example:
 
-```move=
+```move
 address 0x2 {
 module m {
     // Currency Specifiers

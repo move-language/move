@@ -2,7 +2,7 @@
 
 泛型可用于定义具有不同输入数据类型的函数和结构体。这种语言特性有时被称为*参数多态*。在 Move 中，我们经常将术语泛型与类型形参（type parameter）和类型实参（type argument）互换使用。*（有些书籍的中文翻译通常将 type parameter 和 type argument 不加以区别地翻译为“类型参数”，译者注）*
 
-泛型通常用于库（library）代码中，例如向量中，以声明适用于任何可能的实例化（满足指定约束）的代码。在其他框架中，泛型代码有时可用多种不同的方式与全局存储进行交互，这些方式有着相同的实现。
+泛型通常用于库（library）代码中，例如向量中，声明适用于任何可能的实例化（满足指定约束）的代码。在其他框架中，泛型代码有时可用多种不同的方式与全局存储进行交互，这些方式有着相同的实现。
 
 ## 声明类型参数
 
@@ -54,13 +54,13 @@ fun foo() {
 
 If you do not specify the type arguments, Move's [type inference](#type-inference) will supply them for you.
 
-如果您不指定类型参数，Move语言的[类型推断](#type-inference)功能将为您匹配正确的类型
+如果你不指定类型实参，Move 的[类型推断](#类型推断)（功能）将为你提供它们。
 
-### 使用泛型结构 (Using Generic Structs)
+### 使用泛型结构体
 
 Similarly, one can attach a list of type arguments for the struct's type parameters when constructing or destructing values of generic types.
 
-类似地，在构造或销毁泛型类型的值时，可以为结构体的类型参数附加一个参数列表。
+类似地，在构造或销毁泛型类型的值时，可以为结构体的类型参数附加一个类型实参列表。
 
 ```move
 fun foo() {
@@ -71,93 +71,93 @@ fun foo() {
 
 If you do not specify the type arguments, Move's [type inference](#type-inference) will supply them for you.
 
-如果您不指定类型参数，Move 语言的[类型推断](#type-inference)功能将为您自动补充(supply)。
+如果你不指定类型实参，Move 的[类型推断](#类型推断)（功能）将为你提供它们。
 
-### 类型参数不匹配 (Type Argument Mismatch)
+### 类型实参不匹配
 
 If you specify the type arguments and they conflict with the actual values supplied, an error will be given
 
-如果您指定类型参数与实际提供的值不匹配，则会报错
+如果你指定类型实参并且它们与提供的实际值冲突，则会报错：
 
 ```move
 fun foo() {
-    let x = id<u64>(true); // error! true is not a u64
+    let x = id<u64>(true); // 错误！true 不是 u64
 }
 ```
 
-同样地
+同样地：
 
 ```move
 fun foo() {
-    let foo = Foo<bool> { x: 0 }; // error! 0 is not a bool
-    let Foo<address> { x } = foo; // error! bool is incompatible with address
+    let foo = Foo<bool> { x: 0 }; // 错误！0 不是布尔值
+    let Foo<address> { x } = foo; // 错误！bool 与 address 不兼容
 }
 ```
 
-## Type Inference (类型推断)
+## 类型推断
 
 In most cases, the Move compiler will be able to infer the type arguments so you don't have to write them down explicitly. Here's what the examples above would look like if we omit the type arguments.
 
-在大多数情况下，Move 编译器能够推断类型参数，因此您不必显式地写下它们。这是上面例子中省略类型参数写法的示例。
+在大多数情况下，Move 编译器能够推断类型实参，因此你不必显式地写下它们。如果我们省略类型实参，这就是上面的示例的样子：
 
 ```move
 fun foo() {
     let x = id(true);
-    //        ^ <bool> is inferred
+    //        ^ 被推断为 <bool>
 
     let foo = Foo { x: true };
-    //           ^ <bool> is inferred
+    //           ^ 被推断为 <bool>
 
     let Foo { x } = foo;
-    //     ^ <bool> is inferred
+    //     ^ 被推断为 <bool>
 }
 ```
 
 Note: when the compiler is unable to infer the types, you'll need annotate them manually. A common scenario is to call a function with type parameters appearing only at return positions.
 
-注意：当编译器无法推断类型时，您需要手动标注它们(类型参数)。一个常见的场景是调用一个类型参数只出现在返回位置的函数。
+注意：当编译器无法推断类型时，你需要手动标注它们。一个常见的场景是调用一个类型参数只出现在返回位置的函数。
 
 ```move
 address 0x2 {
-    module m {
-        using std::vector;
+module m {
+    using std::vector;
 
-        fun foo() {
-            // let v = vector::new();
-            //                    ^ The compiler cannot figure out the element type.
+    fun foo() {
+        // let v = vector::new();
+        //                    ^ 编译器无法确定元素类型。
 
-            let v = vector::new<u64>();
-            //                 ^~~~~ Must annotate manually.
-        }
+        let v = vector::new<u64>();
+        //                 ^~~~~ 必须手动标注。
     }
+}
 }
 ```
 
 However, the compiler will be able to infer the type if that return value is used later in that function
 
-但是，如果稍后在该函数中使用该返回值，编译器将能够推断其类型。
+但是，如果稍后在该函数中使用该返回值，编译器将能够推断其类型：
 
 ```move
 address 0x2 {
-    module m {
-        using std::vector;
+module m {
+    using std::vector;
 
-        fun foo() {
-            let v = vector::new();
-            //                 ^ <u64> is inferred
-            vector::push_back(&mut v, 42);
-        }
+    fun foo() {
+        let v = vector::new();
+        //                 ^ 被推断为 <u64>
+        vector::push_back(&mut v, 42);
     }
+}
 }
 ```
 
-## Unused Type Parameters (未使用的类型参数)
+## 未使用的类型参数
 
 For a struct definition, an unused type parameter is one that
 does not appear in any field defined in the struct, but is checked statically at compile time.
 Move allows unused type parameters so the following struct definition is valid:
 
-对于结构体定义，未使用的类型参数是没有出现在结构体中定义的任何字段中，但在编译时会静态检查的类型参数。Move语言允许未使用的类型参数，因此以下结构定义是有效的：
+对于结构体定义，未使用的类型参数是没有出现在结构体中定义的任何字段中，但在编译时静态检查的类型参数。Move 允许未使用的类型参数，因此以下结构体定义有效：
 
 ```move
 struct Foo<T> {
@@ -171,28 +171,27 @@ This can be convenient when modeling certain concepts. Here is an example:
 
 ```move
 address 0x2 {
-    module m {
-        // Currency Specifiers
-        struct Currency1 {}
-        struct Currency2 {}
+module m {
+    // 货币说明符
+    struct Currency1 {}
+    struct Currency2 {}
 
-        // A generic coin type that can be instantiated using a currency
-        // specifier type.
-        //   e.g. Coin<Currency1>, Coin<Currency2> etc.
-        struct Coin<Currency> has store {
-            value: u64
-        }
-
-        // Write code generically about all currencies
-        public fun mint_generic<Currency>(value: u64): Coin<Currency> {
-            Coin { value }
-        }
-
-        // Write code concretely about one currency
-        public fun mint_concrete(value: u64): Coin<Currency1> {
-            Coin { value }
-        }
+    // 可以使用货币说明符类型实例化的泛型钱币类型。
+    // 例如 Coin<Currency1>, Coin<Currency2> 等。
+    struct Coin<Currency> has store {
+        value: u64
     }
+
+    // 泛型地编写有关所有货币的代码
+    public fun mint_generic<Currency>(value: u64): Coin<Currency> {
+        Coin { value }
+    }
+
+    // 具体编写关于一种货币的代码
+    public fun mint_concrete(value: u64): Coin<Currency1> {
+        Coin { value }
+    }
+}
 }
 ```
 
@@ -201,9 +200,9 @@ which specifies the currency of the coin and allows code to be written either ge
 concretely on a specific currency.
 This genericity applies even when the `Currency` type parameter does not appear in any of the fields defined in `Coin`.
 
-在此示例中， `struct Coin<Currency>` 是类型参数为 `Currency` 的泛型结构体，它指定 `Coin` 的类型参数是 `Currency`，这样就允许代码选择是使用任意类型 `Currency` 或者是指定的具体类型 `Currency` 。即使 `Currency` 类型参数没有出现在定义的任何字段中，这种泛型性也适用结构体 `Coin`。
+在此示例中，`struct Coin<Currency>` 是类型参数为 `Currency` 的泛型结构体，该参数指定钱币的货币（类型），并允许将代码泛型地写入任何货币或具体地写入特定货币。即使 `Currency` 类型参数未出现在 `Coin` 中定义的任何字段中，这种通用性也适用。
 
-### Phantom Type Parameters
+### 虚类型参数
 
 In the example above, although `struct Coin` asks for the `store` ability, neither `Coin<Currency1>` nor `Coin<Currency2>` will have the `store` ability.
 This is because of the rules for [Conditional Abilities and Generic Types](./abilities.md#conditional-abilities-and-generic-types) and the fact that `Currency1` and `Currency2` don't have the `store` ability, despite the fact that they are not even used in the body of `struct Coin`.

@@ -3,6 +3,10 @@ Takes move bytecode in text or binary format
 
 See: `move-mv-llvm-compiler --help` for cli.
 
+```sh
+./target/debug/move-mv-llvm-compiler -b function.mv -o a
+```
+
 Compile move-bytecode to llvm bitcode
 
 ## Overview
@@ -10,7 +14,8 @@ The llvm-compiler uses [Inkwell](https://github.com/TheDan64/inkwell) (Safe Rust
 
 ### TODO
 
-- Add runtime calls to builtins (https://arxiv.org/pdf/2004.05106.pdf#page=7)
+- Add runtime calls to builtins (https://arxiv.org/pdf/2004.05106.pdf#page=7) if there is no direct mapping to SBF. To start with, we can have each of these as part of runtime library and make optimizations as needed.
+
 ```
 local variable instructions: MvLoc ⟨x⟩ | CpLoc ⟨c⟩ | StLoc ⟨x⟩ | BorrowLoc ⟨x⟩
 reference instructions: ReadRef | WriteRef | FreezeRef

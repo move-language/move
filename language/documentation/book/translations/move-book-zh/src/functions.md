@@ -404,7 +404,7 @@ script {
 
 As mentioned in the [tuples section](./tuples.md), these tuple "values" are virtual and do not exist at runtime. So for a function that returns unit `()`, it will not be returning any value at all during execution.
 
-如 [元组部分](./chapter_9_tuples.md) 中所述，这些元组“值”是模拟(virtual)的，且在运行时不存在。所以对于返回 unit `()`的函数，它在执行期间根本不会返回任何值。
+如 [元组部分](./tuples.md) 中所述，这些元组“值”是模拟(virtual)的，且在运行时不存在。所以对于返回 unit `()`的函数，它在执行期间根本不会返回任何值。
 
 ### Function body (函数体)
 

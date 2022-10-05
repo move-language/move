@@ -130,6 +130,10 @@ pub struct BuildConfig {
     /// Only fetch dependency repos to MOVE_HOME
     #[clap(long = "fetch-deps-only", global = true)]
     pub fetch_deps_only: bool,
+
+    /// Skip fetching latest git dependencies
+    #[clap(long = "skip-fetch-latest-git-deps", global = true)]
+    pub skip_fetch_latest_git_deps: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd)]

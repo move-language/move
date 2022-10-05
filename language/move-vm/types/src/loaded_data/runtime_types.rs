@@ -16,6 +16,7 @@ pub const TYPE_DEPTH_MAX: usize = 256;
 #[derive(Debug, Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct StructType {
     pub fields: Vec<Type>,
+    pub field_names: Vec<Identifier>,
     pub abilities: AbilitySet,
     pub type_parameters: Vec<StructTypeParameter>,
     pub name: Identifier,

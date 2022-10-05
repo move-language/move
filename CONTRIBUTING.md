@@ -135,3 +135,26 @@ able to be built and passes all checks performed by CI.
 Move uses [GitHub issues](https://github.com/move-language/move/issues) to track
 bugs. Please include necessary information and instructions to reproduce your
 issue.
+
+## Major feature requests
+
+Please begin by checking the following locations for duplicate requests:
+* [Approved feature proposals awaiting implementation](https://github.com/move-language/move/issues?q=is%3Aissue+is%3Aopen+label%3A%22accepted+feature+awaiting+implementation%22)
+* [Feature proposals under discussion](https://github.com/move-language/move/issues?q=is%3Aissue+is%3Aopen+label%3A%22proposed+feature+in+discussion%22)
+* [Language feature request graveyard](GRAVEYARD.md)
+
+If your feature is not in any of these locations, please add a new feature request using the following format:
+
+```
+Sponsor: your_github_id
+
+## Status: initial proposal
+
+## Rationale
+A detailed description of the problem the proposed feature seeks to solve. This should explain why the problem is important for smart contract programmers and why it is impossible (or unacceptably unpleasant) to solve with the existing language constructs. Examples are strongly recommended.
+
+## Design
+Explain the key decisions to be made in designing the feature. This can be organized as fully fleshed out design, a list of design options with pros and cons, or a list of questions to be answered. A proposed feature should have a very strong/clear rationale, but it is ok if many key design questions are open--the Move community and core contributors can help with this.
+```
+
+A Move core contributor will either add a `proposed_feature_to_be_discussed` tag and queue the feature for discussion at a future Move community meeting (and change the "Status" to reflect the meeting date), or will request changes that must be made to the issue before it is ready for discussion.

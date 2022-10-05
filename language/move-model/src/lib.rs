@@ -53,6 +53,7 @@ mod builder;
 pub mod code_writer;
 pub mod exp_generator;
 pub mod exp_rewriter;
+pub mod intrinsics;
 pub mod model;
 pub mod options;
 pub mod pragmas;
@@ -588,6 +589,10 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<AnnotatedCompiledUnit>, mut 
             function_infos,
         );
     }
+
+    // Populate GlobalEnv with model-level information
+    builder.populate_env();
+
     // After all specs have been processed, warn about any unused schemas.
     builder.warn_unused_schemas();
 

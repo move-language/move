@@ -152,16 +152,6 @@ impl<'env> FunctionTarget<'env> {
         self.data.vc_infos.get(&attr_id)
     }
 
-    /// Returns true if this function is native.
-    pub fn is_native(&self) -> bool {
-        self.func_env.is_native()
-    }
-
-    /// Returns true if this function is marked as intrinsic
-    pub fn is_intrinsic(&self) -> bool {
-        self.func_env.is_intrinsic()
-    }
-
     /// Returns true if this function is opaque.
     pub fn is_opaque(&self) -> bool {
         self.func_env.is_opaque()

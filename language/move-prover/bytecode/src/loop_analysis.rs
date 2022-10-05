@@ -2,6 +2,15 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::{BTreeMap, BTreeSet};
+
+use move_binary_format::file_format::CodeOffset;
+use move_model::{
+    ast::{self, TempIndex},
+    exp_generator::ExpGenerator,
+    model::FunctionEnv,
+};
+
 use crate::{
     function_data_builder::{FunctionDataBuilder, FunctionDataBuilderOptions},
     function_target::{FunctionData, FunctionTarget},
@@ -11,13 +20,6 @@ use crate::{
     stackless_bytecode::{AttrId, Bytecode, HavocKind, Label, Operation, PropKind},
     stackless_control_flow_graph::{BlockContent, BlockId, StacklessControlFlowGraph},
 };
-use move_binary_format::file_format::CodeOffset;
-use move_model::{
-    ast::{self, TempIndex},
-    exp_generator::ExpGenerator,
-    model::FunctionEnv,
-};
-use std::collections::{BTreeMap, BTreeSet};
 
 const LOOP_INVARIANT_BASE_FAILED: &str = "base case of the loop invariant does not hold";
 const LOOP_INVARIANT_INDUCTION_FAILED: &str = "induction case of the loop invariant does not hold";
@@ -146,9 +148,9 @@ impl LoopAnalysisProcessor {
                             builder.emit_with(|attr_id| {
                                 Bytecode::Call(
                                     attr_id,
-                                    vec![],
-                                    Operation::Havoc(HavocKind::Value),
                                     vec![*idx],
+                                    Operation::Havoc(HavocKind::Value),
+                                    vec![],
                                     None,
                                 )
                             });
@@ -162,9 +164,9 @@ impl LoopAnalysisProcessor {
                             builder.emit_with(|attr_id| {
                                 Bytecode::Call(
                                     attr_id,
-                                    vec![],
-                                    Operation::Havoc(havoc_kind),
                                     vec![*idx],
+                                    Operation::Havoc(havoc_kind),
+                                    vec![],
                                     None,
                                 )
                             });

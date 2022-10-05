@@ -4,9 +4,11 @@
 
 use std::{
     collections::{BTreeMap, BTreeSet},
+    default::Default,
     fmt,
 };
 
+use codespan_reporting::diagnostic::Severity;
 use itertools::Itertools;
 use regex::Regex;
 
@@ -36,6 +38,7 @@ use crate::{
         model_builder::{ConstEntry, LocalVarEntry, ModelBuilder, SpecFunEntry},
     },
     exp_rewriter::{ExpRewriter, ExpRewriterFunctions, RewriteTarget},
+    intrinsics::process_intrinsic_declaration,
     model::{
         AbilityConstraint, FieldId, FunId, FunctionData, FunctionVisibility, Loc, ModuleId,
         MoveIrLoc, NamedConstantData, NamedConstantId, NodeId, QualifiedId, QualifiedInstId,
@@ -52,8 +55,6 @@ use crate::{
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type, BOOL_TYPE},
 };
-use codespan_reporting::diagnostic::Severity;
-use std::default::Default;
 
 #[derive(Debug)]
 pub(crate) struct ModuleBuilder<'env, 'translator> {
@@ -165,7 +166,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 
 impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     /// Shortcut for accessing the symbol pool.
-    fn symbol_pool(&self) -> &SymbolPool {
+    pub fn symbol_pool(&self) -> &SymbolPool {
         self.parent.env.symbol_pool()
     }
 
@@ -742,13 +743,14 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                                 &fun_spec_info[spec_id],
                             );
                             if let Some(kind) = self.convert_condition_kind(kind, &context) {
-                                let properties = self.translate_properties(properties, &|prop| {
-                                    if !is_property_valid_for_condition(&kind, prop) {
-                                        Some(loc.clone())
-                                    } else {
-                                        None
-                                    }
-                                });
+                                let properties =
+                                    self.translate_properties(properties, &|_, _, prop| {
+                                        if !is_property_valid_for_condition(&kind, prop) {
+                                            Some(loc.clone())
+                                        } else {
+                                            None
+                                        }
+                                    });
                                 self.def_ana_condition(
                                     loc,
                                     &context,
@@ -1029,7 +1031,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 additional_exps,
             } => {
                 if let Some(kind) = self.convert_condition_kind(kind, context) {
-                    let properties = self.translate_properties(properties, &|prop| {
+                    let properties = self.translate_properties(properties, &|_, _, prop| {
                         if !is_property_valid_for_condition(&kind, prop) {
                             Some(loc.clone())
                         } else {
@@ -1048,7 +1050,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 def,
             } => self.def_ana_let(context, loc, *post_state, name, def),
             Include { properties, exp } => {
-                let properties = self.translate_properties(properties, &|_| None);
+                let properties = self.translate_properties(properties, &|_, _, _| None);
                 self.def_ana_schema_inclusion_outside_schema(loc, context, None, properties, exp)
             }
             Apply {
@@ -1129,13 +1131,17 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         context: &SpecBlockContext,
         properties: &[EA::PragmaProperty],
     ) {
-        let properties = self.translate_properties(properties, &|prop| {
-            if !is_pragma_valid_for_block(context, prop) {
+        let mut properties = self.translate_properties(properties, &|symbols, bag, prop| {
+            if !is_pragma_valid_for_block(symbols, bag, context, prop) {
                 Some(loc.clone())
             } else {
                 None
             }
         });
+
+        // extra processing on concrete pragma declarations
+        process_intrinsic_declaration(self, loc, context, &mut properties);
+
         self.update_spec(context, move |spec| {
             spec.properties.extend(properties);
         });
@@ -1150,42 +1156,61 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     ) -> PropertyBag
     where
         // Returns the location if not valid
-        F: Fn(&str) -> Option<Loc>,
+        F: Fn(&SymbolPool, &PropertyBag, &str) -> Option<Loc>,
     {
-        // For now we pass properties just on. We may want to check against a set of known
-        // property names and types in the future.
         let mut props = PropertyBag::default();
         for prop in properties {
-            let prop_str = prop.value.name.value.as_str();
-            if let Some(loc) = check_prop(prop_str) {
-                self.parent.error(
-                    &loc,
-                    &format!("property `{}` is not valid in this context", prop_str),
-                );
-            }
-            let prop_name = self.symbol_pool().make(&prop.value.name.value);
-            let value = if let Some(pv) = &prop.value.value {
-                match pv {
-                    EA::PragmaValue::Literal(ev) => {
-                        let mut et = ExpTranslator::new(self);
-                        if let Some((v, _)) = et.translate_value(ev) {
-                            PropertyValue::Value(v)
-                        } else {
-                            // Error reported
-                            continue;
-                        }
-                    }
-                    EA::PragmaValue::Ident(ema) => match self.module_access_to_parts(ema) {
-                        (None, sym) => PropertyValue::Symbol(sym),
-                        _ => PropertyValue::QualifiedSymbol(self.module_access_to_qualified(ema)),
-                    },
-                }
-            } else {
-                PropertyValue::Value(Value::Bool(true))
-            };
-            props.insert(prop_name, value);
+            self.process_one_property(&mut props, prop, check_prop);
         }
         props
+    }
+
+    fn process_one_property<F>(
+        &mut self,
+        bag: &mut PropertyBag,
+        prop: &EA::PragmaProperty,
+        check_prop: &F,
+    ) where
+        // Returns the location if not valid
+        F: Fn(&SymbolPool, &PropertyBag, &str) -> Option<Loc>,
+    {
+        let prop_str = prop.value.name.value.as_str();
+        if let Some(loc) = check_prop(self.symbol_pool(), bag, prop_str) {
+            self.parent.error(
+                &loc,
+                &format!("property `{}` is not valid in this context", prop_str),
+            );
+            return;
+        }
+
+        let name = self.symbol_pool().make(&prop.value.name.value);
+        let value = match &prop.value.value {
+            None => PropertyValue::Value(Value::Bool(true)),
+            Some(EA::PragmaValue::Literal(ev)) => {
+                let mut et = ExpTranslator::new(self);
+                match et.translate_value(ev) {
+                    None => {
+                        // Error reported
+                        return;
+                    }
+                    Some((v, _)) => PropertyValue::Value(v),
+                }
+            }
+            Some(EA::PragmaValue::Ident(ema)) => match self.module_access_to_parts(ema) {
+                (None, sym) => PropertyValue::Symbol(sym),
+                _ => PropertyValue::QualifiedSymbol(self.module_access_to_qualified(ema)),
+            },
+        };
+
+        if bag.insert(name, value).is_some() {
+            self.parent.error(
+                &self.parent.to_loc(&prop.loc),
+                &format!(
+                    "property `{}` specified more than once in the same pragma declaration",
+                    prop_str
+                ),
+            );
+        }
     }
 
     fn add_bool_property(&self, mut properties: PropertyBag, name: &str, val: bool) -> PropertyBag {
@@ -2065,7 +2090,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         // Process all schema includes. We need to do this before we type check expressions to have
         // all variables from includes in the environment.
         for (_, included_props, included_exp) in self.iter_schema_includes(&block.value.members) {
-            let included_props = self.translate_properties(included_props, &|_| None);
+            let included_props = self.translate_properties(included_props, &|_, _, _| None);
             self.def_ana_schema_exp(
                 &type_params,
                 &mut all_vars,
@@ -2103,7 +2128,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 } => {
                     let context = SpecBlockContext::Schema(name.clone());
                     if let Some(kind) = self.convert_condition_kind(kind, &context) {
-                        let properties = self.translate_properties(properties, &|prop| {
+                        let properties = self.translate_properties(properties, &|_, _, prop| {
                             if !is_property_valid_for_condition(&kind, prop) {
                                 Some(member_loc.clone())
                             } else {

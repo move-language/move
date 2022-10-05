@@ -4,8 +4,9 @@
 
 //! This file implements the statement interpretation part of the stackless bytecode interpreter.
 
-use num::{BigInt, ToPrimitive, Zero};
 use std::{collections::BTreeMap, rc::Rc};
+
+use num::{BigInt, ToPrimitive, Zero};
 
 use bytecode_interpreter_crypto::{
     ed25519_deserialize_public_key, ed25519_deserialize_signature, ed25519_verify_signature,
@@ -507,8 +508,8 @@ impl<'env> FunctionContext<'env> {
             }
             Operation::Havoc(kind) => {
                 if cfg!(debug_assertions) {
-                    assert_eq!(srcs.len(), 1);
-                    let target_ty = local_state.get_type(*srcs.first().unwrap());
+                    assert_eq!(dsts.len(), 1);
+                    let target_ty = local_state.get_type(*dsts.first().unwrap());
                     match kind {
                         HavocKind::Value => {
                             assert!(target_ty.is_base());

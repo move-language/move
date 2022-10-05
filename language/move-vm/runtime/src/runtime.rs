@@ -12,7 +12,7 @@ use crate::{
 };
 use move_binary_format::{
     access::ModuleAccess,
-    compatibility::Compatibility,
+    compatibility::{Compatibility, CompatibilityConfig},
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::LocalIndex,
     normalized, CompiledModule, IndexKind,
@@ -38,6 +38,7 @@ use tracing::warn;
 /// An instantiation of the MoveVM.
 pub(crate) struct VMRuntime {
     loader: Loader,
+    verifier_config: VerifierConfig,
 }
 
 impl VMRuntime {
@@ -46,7 +47,8 @@ impl VMRuntime {
         verifier_config: VerifierConfig,
     ) -> PartialVMResult<Self> {
         Ok(VMRuntime {
-            loader: Loader::new(NativeFunctions::new(natives)?, verifier_config),
+            loader: Loader::new(NativeFunctions::new(natives)?, verifier_config.clone()),
+            verifier_config,
         })
     }
 
@@ -72,7 +74,7 @@ impl VMRuntime {
         sender: AccountAddress,
         data_store: &mut impl DataStore,
         _gas_meter: &mut impl GasMeter,
-        compat_check: bool,
+        compat_config: CompatibilityConfig,
     ) -> VMResult<()> {
         // deserialize the modules. Perform bounds check. After this indexes can be
         // used with the `[]` operator
@@ -112,13 +114,27 @@ impl VMRuntime {
         // changing the bytecode format to include an `is_upgradable` flag in the CompiledModule.
         for module in &compiled_modules {
             let module_id = module.self_id();
-            if data_store.exists_module(&module_id)? && compat_check {
+
+            if data_store.exists_module(&module_id)? && compat_config.need_check_compat() {
                 let old_module_ref = self.loader.load_module(&module_id, data_store)?;
                 let old_module = old_module_ref.module();
                 let old_m = normalized::Module::new(old_module);
                 let new_m = normalized::Module::new(module);
-                let compat = Compatibility::check(&old_m, &new_m);
-                if !compat.is_fully_compatible() {
+                let compat = Compatibility::check(
+                    self.verifier_config.treat_friend_as_private,
+                    &old_m,
+                    &new_m,
+                );
+
+                if compat_config.check_struct_and_function_linking
+                    && !compat.struct_and_function_linking
+                {
+                    return Err(PartialVMError::new(
+                        StatusCode::BACKWARD_INCOMPATIBLE_MODULE_UPDATE,
+                    )
+                    .finish(Location::Undefined));
+                }
+                if compat_config.check_struct_layout && !compat.struct_layout {
                     return Err(PartialVMError::new(
                         StatusCode::BACKWARD_INCOMPATIBLE_MODULE_UPDATE,
                     )

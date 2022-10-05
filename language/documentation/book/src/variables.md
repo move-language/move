@@ -99,7 +99,7 @@ let x: T = e; // "Variable x of type T is initialized to expression e"
 
 Some examples of explicit type annotations:
 
-```move=
+```move
 address 0x42 {
 module example {
 
@@ -315,7 +315,7 @@ fun three(): (u64, u64, u64) {
 ```move
 let (x1, _, z1) = three();
 let (x2, _y, z2) = three();
-assert!(x1 + z1 == x2 + z2)
+assert!(x1 + z1 == x2 + z2, 42);
 ```
 
 This can be necessary at times as the compiler will error on unused local variables
@@ -401,7 +401,7 @@ if (cond) x = 1 else x = 2;
 
 The assignment uses the same pattern syntax scheme as `let` bindings:
 
-```move=
+```move
 address 0x42 {
 module example {
     struct X { f: u64 }
@@ -442,8 +442,7 @@ reference `&mut`.
 let x = 0;
 let r = &mut x;
 *r = 1;
-assert!(x == 1, 42)
-}
+assert!(x == 1, 42);
 ```
 
 This is particularly useful if either:
@@ -469,7 +468,7 @@ This sort of modification is how you modify structs and vectors!
 ```move
 let v = vector::empty();
 vector::push_back(&mut v, 100);
-assert!(*vector::borrow(&v, 0) == 100, 42)
+assert!(*vector::borrow(&v, 0) == 100, 42);
 ```
 
 For more details, see [Move references](./references.md).
@@ -566,7 +565,7 @@ explicitly destroyed within its declaring module.)
 ```
 
 If a final expression is not present in a block---that is, if there is a trailing semicolon `;`,
-there is an implicit unit `()` value. Similarly, if the expression block is empty, there is an
+there is an implicit [unit `()` value](https://en.wikipedia.org/wiki/Unit_type). Similarly, if the expression block is empty, there is an
 implicit unit `()` value.
 
 ```move

@@ -4,7 +4,7 @@
 
 //! This module defines the transfer functions for verifying consistency of each bytecode
 //! instruction, in particular, for the bytecode instructions that come in both generic and
-//! non-generic flavors.
+//! non-generic flavors. It also checks constraints on instructions like VecPack/VecUnpack.
 
 use move_binary_format::{
     access::ModuleAccess,
@@ -132,6 +132,13 @@ impl<'a> InstructionConsistency<'a> {
                     let struct_inst = self.resolver.struct_instantiation_at(*idx)?;
                     self.check_type_op(offset, struct_inst.def, /* generic */ true)?;
                 }
+                VecPack(_, num) | VecUnpack(_, num) => {
+                    if *num > u16::MAX as u64 {
+                        return Err(PartialVMError::new(StatusCode::CONSTRAINT_NOT_SATISFIED)
+                            .at_code_offset(self.current_function(), offset as CodeOffset)
+                            .with_message("VecPack/VecUnpack argument out of range".to_string()));
+                    }
+                }
 
                 // List out the other options explicitly so there's a compile error if a new
                 // bytecode gets added.
@@ -139,9 +146,8 @@ impl<'a> InstructionConsistency<'a> {
                 | LdU128(_) | LdConst(_) | CastU8 | CastU64 | CastU128 | LdTrue | LdFalse
                 | ReadRef | WriteRef | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor | Shl
                 | Shr | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge | CopyLoc(_) | MoveLoc(_)
-                | StLoc(_) | MutBorrowLoc(_) | ImmBorrowLoc(_) | VecPack(..) | VecLen(_)
-                | VecImmBorrow(_) | VecMutBorrow(_) | VecPushBack(_) | VecPopBack(_)
-                | VecUnpack(..) | VecSwap(_) | Abort | Nop => (),
+                | StLoc(_) | MutBorrowLoc(_) | ImmBorrowLoc(_) | VecLen(_) | VecImmBorrow(_)
+                | VecMutBorrow(_) | VecPushBack(_) | VecPopBack(_) | VecSwap(_) | Abort | Nop => (),
             }
         }
         Ok(())

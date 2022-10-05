@@ -2,7 +2,7 @@
 
 The purpose of Move programs is to [read from and write to](./global-storage-operators.md) tree-shaped persistent global storage. Programs cannot access the filesystem, network, or any other data outside of this tree.
 
-In pseudocode, the global storage looks something like
+In pseudocode, the global storage looks something like:
 
 ```move
 struct GlobalStorage {

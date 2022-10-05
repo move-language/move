@@ -222,56 +222,60 @@ axiom (
 {% endmacro table_key_encoding %}
 
 
-{% macro table_module(instance) %}
+{% macro table_module(impl, instance) %}
 {%- set K = instance.0.name -%}
 {%- set V = instance.1.name -%}
+{%- set Type = impl.struct_name -%}
 {%- set Self = "Table int (" ~ V ~ ")" -%}
 {%- set S = "'" ~ instance.0.suffix ~ "_" ~ instance.1.suffix ~ "'" -%}
 {%- set SV = "'" ~ instance.1.suffix ~ "'" -%}
 {%- set ENC = "$EncodeKey'" ~ instance.0.suffix ~ "'" -%}
 
-
-function $IsEqual'table{{S}}'(t1: {{Self}}, t2: {{Self}}): bool {
+function $IsEqual'{{Type}}{{S}}'(t1: {{Self}}, t2: {{Self}}): bool {
     // TODO: do we need to encode table identity?
     t1 == t2
 }
 
 // Not inlined.
-function $IsValid'table{{S}}'(t: {{Self}}): bool {
+function $IsValid'{{Type}}{{S}}'(t: {{Self}}): bool {
     $IsValid'u64'(LenTable(t)) &&
     (forall i: int:: ContainsTable(t, i) ==> $IsValid{{SV}}(GetTable(t, i)))
 }
 
-procedure {:inline 2} {{Ext}}_table_new{{S}}() returns (v: {{Self}}) {
+{%- if impl.fun_new != "" %}
+procedure {:inline 2} {{impl.fun_new}}{{S}}() returns (v: {{Self}}) {
     v := EmptyTable();
 }
+{%- endif %}
 
-procedure {:inline 2} {{Ext}}_table_destroy{{S}}(t: {{Self}}) {
-    // no-op
-}
-
-procedure {:inline 2} {{Ext}}_table_destroy_empty{{S}}(t: {{Self}}) {
+{%- if impl.fun_destroy_empty != "" %}
+procedure {:inline 2} {{impl.fun_destroy_empty}}{{S}}(t: {{Self}}) {
     if (LenTable(t) != 0) {
         call $Abort($StdError(1/*INVALID_STATE*/, 102/*ENOT_EMPTY*/));
     }
 }
+{%- endif %}
 
-procedure {:inline 2} {{Ext}}_table_drop_unchecked{{S}}(t: {{Self}}) {
-}
-
-procedure {:inline 2} {{Ext}}_table_length{{S}}(t: ({{Self}})) returns (l: int) {
+{%- if impl.fun_len != "" %}
+procedure {:inline 2} {{impl.fun_len}}{{S}}(t: ({{Self}})) returns (l: int) {
     l := LenTable(t);
 }
+{%- endif %}
 
-procedure {:inline 2} {{Ext}}_table_empty{{S}}(t: ({{Self}})) returns (r: bool) {
+{%- if impl.fun_is_empty != "" %}
+procedure {:inline 2} {{impl.fun_is_empty}}{{S}}(t: ({{Self}})) returns (r: bool) {
     r := LenTable(t) == 0;
 }
+{%- endif %}
 
-procedure {:inline 2} {{Ext}}_table_contains{{S}}(t: ({{Self}}), k: {{K}}) returns (r: bool) {
+{%- if impl.fun_has_key != "" %}
+procedure {:inline 2} {{impl.fun_has_key}}{{S}}(t: ({{Self}}), k: {{K}}) returns (r: bool) {
     r := ContainsTable(t, {{ENC}}(k));
 }
+{%- endif %}
 
-procedure {:inline 2} {{Ext}}_table_add{{S}}(m: $Mutation ({{Self}}), k: {{K}}, v: {{V}}) returns (m': $Mutation({{Self}})) {
+{%- if impl.fun_add_no_override != "" %}
+procedure {:inline 2} {{impl.fun_add_no_override}}{{S}}(m: $Mutation ({{Self}}), k: {{K}}, v: {{V}}) returns (m': $Mutation({{Self}})) {
     var enc_k: int;
     var t: {{Self}};
     enc_k := {{ENC}}(k);
@@ -282,8 +286,10 @@ procedure {:inline 2} {{Ext}}_table_add{{S}}(m: $Mutation ({{Self}}), k: {{K}}, 
         m' := $UpdateMutation(m, AddTable(t, enc_k, v));
     }
 }
+{%- endif %}
 
-procedure {:inline 2} {{Ext}}_table_remove{{S}}(m: $Mutation ({{Self}}), k: {{K}})
+{%- if impl.fun_del_must_exist != "" %}
+procedure {:inline 2} {{impl.fun_del_must_exist}}{{S}}(m: $Mutation ({{Self}}), k: {{K}})
 returns (v: {{V}}, m': $Mutation({{Self}})) {
     var enc_k: int;
     var t: {{Self}};
@@ -296,8 +302,10 @@ returns (v: {{V}}, m': $Mutation({{Self}})) {
         m' := $UpdateMutation(m, RemoveTable(t, enc_k));
     }
 }
+{%- endif %}
 
-procedure {:inline 2} {{Ext}}_table_borrow{{S}}(t: {{Self}}, k: {{K}}) returns (v: {{V}}) {
+{%- if impl.fun_borrow != "" %}
+procedure {:inline 2} {{impl.fun_borrow}}{{S}}(t: {{Self}}, k: {{K}}) returns (v: {{V}}) {
     var enc_k: int;
     enc_k := {{ENC}}(k);
     if (!ContainsTable(t, enc_k)) {
@@ -306,8 +314,10 @@ procedure {:inline 2} {{Ext}}_table_borrow{{S}}(t: {{Self}}, k: {{K}}) returns (
         v := GetTable(t, {{ENC}}(k));
     }
 }
+{%- endif %}
 
-procedure {:inline 2} {{Ext}}_table_borrow_mut{{S}}(m: $Mutation ({{Self}}), k: {{K}})
+{%- if impl.fun_borrow_mut != "" %}
+procedure {:inline 2} {{impl.fun_borrow_mut}}{{S}}(m: $Mutation ({{Self}}), k: {{K}})
 returns (dst: $Mutation ({{V}}), m': $Mutation ({{Self}})) {
     var enc_k: int;
     var t: {{Self}};
@@ -320,31 +330,43 @@ returns (dst: $Mutation ({{V}}), m': $Mutation ({{Self}})) {
         m' := m;
     }
 }
+{%- endif %}
 
-function {:inline} {{Ext}}_table_spec_table{{S}}(): {{Self}} {
-    EmptyTable()
-}
-
-function {:inline} {{Ext}}_table_spec_len{{S}}(t: {{Self}}): int {
+{%- if impl.fun_spec_len != "" %}
+function {:inline} {{impl.fun_spec_len}}{{S}}(t: ({{Self}})): int {
     LenTable(t)
 }
+{%- endif %}
 
-function {:inline} {{Ext}}_table_spec_contains{{S}}(t: {{Self}}, k: {{K}}): bool {
+{%- if impl.fun_spec_is_empty != "" %}
+function {:inline} {{impl.fun_spec_is_empty}}{{S}}(t: ({{Self}})): bool {
+    LenTable(t) == 0
+}
+{%- endif %}
+
+{%- if impl.fun_spec_has_key != "" %}
+function {:inline} {{impl.fun_spec_has_key}}{{S}}(t: ({{Self}}), k: {{K}}): bool {
     ContainsTable(t, {{ENC}}(k))
 }
+{%- endif %}
 
-
-function {:inline} {{Ext}}_table_spec_add{{S}}(t: {{Self}}, k: {{K}}, v: {{V}}): {{Self}} {
+{%- if impl.fun_spec_set != "" %}
+function {:inline} {{impl.fun_spec_set}}{{S}}(t: {{Self}}, k: {{K}}, v: {{V}}): {{Self}} {
     AddTable(t, {{ENC}}(k), v)
 }
+{%- endif %}
 
-function {:inline} {{Ext}}_table_spec_remove{{S}}(t: {{Self}}, k: {{K}}): {{Self}} {
+{%- if impl.fun_spec_del != "" %}
+function {:inline} {{impl.fun_spec_del}}{{S}}(t: {{Self}}, k: {{K}}): {{Self}} {
     RemoveTable(t, {{ENC}}(k))
 }
+{%- endif %}
 
-function {:inline} {{Ext}}_table_spec_get{{S}}(t: {{Self}}, k: {{K}}): {{V}} {
+{%- if impl.fun_spec_get != "" %}
+function {:inline} {{impl.fun_spec_get}}{{S}}(t: {{Self}}, k: {{K}}): {{V}} {
     GetTable(t, {{ENC}}(k))
 }
+{%- endif %}
 
 
 {% endmacro table_module %}

@@ -4,20 +4,23 @@
 
 //! Helpers for emitting Boogie code.
 
-use crate::options::BoogieOptions;
 use itertools::Itertools;
+use num::BigUint;
+
+use move_binary_format::file_format::TypeParameterIndex;
 use move_model::{
     ast::{MemoryLabel, TempIndex},
     model::{
         FieldEnv, FunctionEnv, GlobalEnv, ModuleEnv, QualifiedInstId, SpecFunId, StructEnv,
         StructId, SCRIPT_MODULE_NAME,
     },
+    pragmas::INTRINSIC_TYPE_MAP,
     symbol::Symbol,
     ty::{PrimitiveType, Type},
-    well_known::TABLE_TABLE,
 };
 use move_stackless_bytecode::function_target::FunctionTarget;
-use num::BigUint;
+
+use crate::options::BoogieOptions;
 
 pub const MAX_MAKE_VEC_ARGS: usize = 4;
 
@@ -36,7 +39,7 @@ pub fn boogie_module_name(env: &ModuleEnv<'_>) -> String {
 
 /// Return boogie name of given structure.
 pub fn boogie_struct_name(struct_env: &StructEnv<'_>, inst: &[Type]) -> String {
-    if struct_env.is_well_known(TABLE_TABLE) {
+    if struct_env.is_intrinsic_of(INTRINSIC_TYPE_MAP) {
         // Map to the theory type representation, which is `Table int V`. The key
         // is encoded as an integer to avoid extensionality problems, and to support
         // $Mutation paths, which are sequences of ints.
@@ -239,9 +242,13 @@ pub fn boogie_type_suffix(env: &GlobalEnv, ty: &Type) -> String {
 }
 
 pub fn boogie_type_suffix_for_struct(struct_env: &StructEnv<'_>, inst: &[Type]) -> String {
-    let env = struct_env.module_env.env;
-    if struct_env.is_well_known(TABLE_TABLE) {
-        format!("table{}", boogie_inst_suffix(env, inst))
+    if struct_env.is_intrinsic_of(INTRINSIC_TYPE_MAP) {
+        format!(
+            "${}_{}{}",
+            boogie_module_name(&struct_env.module_env),
+            struct_env.get_name().display(struct_env.symbol_pool()),
+            boogie_inst_suffix(struct_env.module_env.env, inst)
+        )
     } else {
         boogie_struct_name(struct_env, inst)
     }
@@ -388,4 +395,266 @@ pub fn boogie_debug_track_return(
     ty: &Type,
 ) -> String {
     boogie_debug_track(fun_target, "$track_return", ret_idx, idx, ty)
+}
+
+enum TypeIdentToken {
+    Char(u8),
+    Symbolic(TypeParameterIndex),
+}
+
+impl TypeIdentToken {
+    pub fn make(name: &str) -> Vec<TypeIdentToken> {
+        name.as_bytes()
+            .iter()
+            .map(|c| TypeIdentToken::Char(*c))
+            .collect()
+    }
+
+    pub fn join(sep: &str, mut pieces: Vec<Vec<TypeIdentToken>>) -> Vec<TypeIdentToken> {
+        if pieces.is_empty() {
+            return vec![];
+        }
+
+        pieces.reverse();
+        let mut tokens = pieces.pop().unwrap();
+        while !pieces.is_empty() {
+            tokens.extend(Self::make(sep));
+            tokens.extend(pieces.pop().unwrap());
+        }
+        tokens
+    }
+
+    pub fn convert_to_bytes(tokens: Vec<TypeIdentToken>) -> String {
+        fn get_char_array(tokens: &[TypeIdentToken], start: usize, end: usize) -> String {
+            let elements = (start..end)
+                .map(|k| {
+                    format!(
+                        "[{} := {}]",
+                        k - start,
+                        match &tokens[k] {
+                            TypeIdentToken::Char(c) => *c,
+                            TypeIdentToken::Symbolic(_) => unreachable!(),
+                        }
+                    )
+                })
+                .join("");
+            format!("Vec(DefaultVecMap(){}, {})", elements, end - start)
+        }
+
+        fn get_symbol_name(idx: TypeParameterIndex) -> String {
+            format!("#{}_name", idx)
+        }
+
+        // construct all the segments
+        let mut segments = vec![];
+
+        let mut char_seq_start = None;
+        for (i, token) in tokens.iter().enumerate() {
+            match token {
+                TypeIdentToken::Char(_) => {
+                    if char_seq_start.is_none() {
+                        char_seq_start = Some(i);
+                    }
+                }
+                TypeIdentToken::Symbolic(idx) => {
+                    if let Some(start) = &char_seq_start {
+                        segments.push(get_char_array(&tokens, *start, i));
+                    };
+                    char_seq_start = None;
+                    segments.push(get_symbol_name(*idx));
+                }
+            }
+        }
+        if let Some(start) = char_seq_start {
+            segments.push(get_char_array(&tokens, start, tokens.len()));
+        }
+
+        // concat the segments
+        if segments.is_empty() {
+            return String::new();
+        }
+
+        segments.reverse();
+        let mut cursor = segments.pop().unwrap();
+        while !segments.is_empty() {
+            let next = segments.pop().unwrap();
+            cursor = format!("ConcatVec({}, {})", cursor, next);
+        }
+        cursor
+    }
+
+    pub fn convert_to_string(std_address: BigUint, tokens: Vec<TypeIdentToken>) -> String {
+        format!(
+            "${}_string_String({})",
+            std_address,
+            Self::convert_to_bytes(tokens)
+        )
+    }
+}
+
+fn type_name_to_ident_tokens(env: &GlobalEnv, ty: &Type) -> Vec<TypeIdentToken> {
+    match ty {
+        Type::Primitive(PrimitiveType::Bool) => TypeIdentToken::make("bool"),
+        Type::Primitive(PrimitiveType::U8) => TypeIdentToken::make("u8"),
+        Type::Primitive(PrimitiveType::U64) => TypeIdentToken::make("u64"),
+        Type::Primitive(PrimitiveType::U128) => TypeIdentToken::make("u128"),
+        Type::Primitive(PrimitiveType::Address) => TypeIdentToken::make("address"),
+        Type::Primitive(PrimitiveType::Signer) => TypeIdentToken::make("signer"),
+        Type::Vector(element) => {
+            let mut tokens = TypeIdentToken::make("vector<");
+            tokens.extend(type_name_to_ident_tokens(env, element));
+            tokens.extend(TypeIdentToken::make(">"));
+            tokens
+        }
+        Type::Struct(mid, sid, ty_args) => {
+            let module_env = env.get_module(*mid);
+            let struct_env = module_env.get_struct(*sid);
+            let type_name = format!(
+                "0x{}::{}::{}",
+                module_env.get_name().addr().to_str_radix(16),
+                module_env
+                    .get_name()
+                    .name()
+                    .display(module_env.symbol_pool()),
+                struct_env.get_name().display(module_env.symbol_pool())
+            );
+            let mut tokens = TypeIdentToken::make(&type_name);
+            if !ty_args.is_empty() {
+                tokens.extend(TypeIdentToken::make("<"));
+                let ty_args_tokens = ty_args
+                    .iter()
+                    .map(|t| type_name_to_ident_tokens(env, t))
+                    .collect();
+                tokens.extend(TypeIdentToken::join(", ", ty_args_tokens));
+                tokens.extend(TypeIdentToken::make(">"));
+            }
+            tokens
+        }
+        Type::TypeParameter(idx) => {
+            vec![TypeIdentToken::Symbolic(*idx)]
+        }
+        // move types that are not allowed
+        Type::Reference(..) | Type::Tuple(..) => {
+            unreachable!("Prohibited move type in type_name call");
+        }
+        // spec only types
+        Type::Primitive(PrimitiveType::Num)
+        | Type::Primitive(PrimitiveType::Range)
+        | Type::Primitive(PrimitiveType::EventStore)
+        | Type::Fun(..)
+        | Type::TypeDomain(..)
+        | Type::ResourceDomain(..) => {
+            unreachable!("Unexpected spec-only type in type_name call");
+        }
+        // temporary types
+        Type::Error | Type::Var(..) => {
+            unreachable!("Unexpected temporary type in type_name call");
+        }
+    }
+}
+
+/// Convert a type name into a format that can be recognized by Boogie
+pub fn boogie_reflection_type_name(env: &GlobalEnv, ty: &Type) -> String {
+    let tokens = type_name_to_ident_tokens(env, ty);
+    TypeIdentToken::convert_to_string(env.get_stdlib_address(), tokens)
+}
+
+enum TypeInfoPack {
+    Struct(BigUint, String, String),
+    Symbolic(TypeParameterIndex),
+}
+
+fn type_name_to_info_pack(env: &GlobalEnv, ty: &Type) -> Option<TypeInfoPack> {
+    match ty {
+        Type::Struct(mid, sid, _) => {
+            let module_env = env.get_module(*mid);
+            let struct_env = module_env.get_struct(*sid);
+            let module_name = module_env.get_name();
+            Some(TypeInfoPack::Struct(
+                module_name.addr().clone(),
+                module_name
+                    .name()
+                    .display(module_env.symbol_pool())
+                    .to_string(),
+                struct_env
+                    .get_name()
+                    .display(module_env.symbol_pool())
+                    .to_string(),
+            ))
+        }
+        Type::TypeParameter(idx) => Some(TypeInfoPack::Symbolic(*idx)),
+        // move types that will cause an error
+        Type::Primitive(PrimitiveType::Bool)
+        | Type::Primitive(PrimitiveType::U8)
+        | Type::Primitive(PrimitiveType::U64)
+        | Type::Primitive(PrimitiveType::U128)
+        | Type::Primitive(PrimitiveType::Address)
+        | Type::Primitive(PrimitiveType::Signer)
+        | Type::Vector(_) => None,
+        // move types that are not allowed
+        Type::Reference(..) | Type::Tuple(..) => {
+            unreachable!("Prohibited move type in type_name call");
+        }
+        // spec only types
+        Type::Primitive(PrimitiveType::Num)
+        | Type::Primitive(PrimitiveType::Range)
+        | Type::Primitive(PrimitiveType::EventStore)
+        | Type::Fun(..)
+        | Type::TypeDomain(..)
+        | Type::ResourceDomain(..) => {
+            unreachable!("Unexpected spec-only type in type_name call");
+        }
+        // temporary types
+        Type::Error | Type::Var(..) => {
+            unreachable!("Unexpected temporary type in type_name call");
+        }
+    }
+}
+
+/// Convert a type info into a format that can be recognized by Boogie
+pub fn boogie_reflection_type_info(env: &GlobalEnv, ty: &Type) -> (String, String) {
+    fn get_symbol_is_struct(idx: TypeParameterIndex) -> String {
+        format!("#{}_is_struct", idx)
+    }
+    fn get_symbol_account_address(idx: TypeParameterIndex) -> String {
+        format!("#{}_account_address", idx)
+    }
+    fn get_symbol_module_name(idx: TypeParameterIndex) -> String {
+        format!("#{}_module_name", idx)
+    }
+    fn get_symbol_struct_name(idx: TypeParameterIndex) -> String {
+        format!("#{}_struct_name", idx)
+    }
+
+    let extlib_address = env.get_extlib_address();
+    match type_name_to_info_pack(env, ty) {
+        None => (
+            "false".to_string(),
+            format!(
+                "${}_type_info_TypeInfo(0, EmptyVec(), EmptyVec())",
+                extlib_address
+            ),
+        ),
+        Some(TypeInfoPack::Struct(addr, module_name, struct_name)) => {
+            let module_repr = TypeIdentToken::convert_to_bytes(TypeIdentToken::make(&module_name));
+            let struct_repr = TypeIdentToken::convert_to_bytes(TypeIdentToken::make(&struct_name));
+            (
+                "true".to_string(),
+                format!(
+                    "${}_type_info_TypeInfo({}, {}, {})",
+                    extlib_address, addr, module_repr, struct_repr
+                ),
+            )
+        }
+        Some(TypeInfoPack::Symbolic(idx)) => (
+            get_symbol_is_struct(idx),
+            format!(
+                "${}_type_info_TypeInfo({}, {}, {})",
+                extlib_address,
+                get_symbol_account_address(idx),
+                get_symbol_module_name(idx),
+                get_symbol_struct_name(idx)
+            ),
+        ),
+    }
 }

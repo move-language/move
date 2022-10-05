@@ -430,13 +430,38 @@ impl CompiledPackage {
 
         self.deps_compiled_units
             .iter()
-            .filter(|(dep_package, _)| dep_package.as_str() == package_name)
+            .filter(|(dep_package, unit)|
+                dep_package.as_str() == package_name && matches!(unit.unit, CompiledUnit::Module(_)))
             .map(|(_, unit)| unit)
             .find(|unit| unit.unit.name().as_str() == module_name)
             .ok_or_else(|| {
                 anyhow::format_err!(
                     "Unable to find module with name '{}' in package {}",
                     module_name,
+                    self.compiled_package_info.package_name
+                )
+            })
+    }
+
+    pub fn get_script_by_name(
+        &self,
+        package_name: &str,
+        script_name: &str,
+    ) -> Result<&CompiledUnitWithSource> {
+        if self.compiled_package_info.package_name.as_str() == package_name {
+            return self.get_script_by_name_from_root(script_name);
+        }
+
+        self.deps_compiled_units
+            .iter()
+            .filter(|(dep_package, unit)|
+                dep_package.as_str() == package_name && matches!(unit.unit, CompiledUnit::Script(_)))
+            .map(|(_, unit)| unit)
+            .find(|unit| unit.unit.name().as_str() == script_name)
+            .ok_or_else(|| {
+                anyhow::format_err!(
+                    "Unable to find script with name '{}' in package {}",
+                    script_name,
                     self.compiled_package_info.package_name
                 )
             })
@@ -452,6 +477,21 @@ impl CompiledPackage {
                 anyhow::format_err!(
                     "Unable to find module with name '{}' in package {}",
                     module_name,
+                    self.compiled_package_info.package_name
+                )
+            })
+    }
+
+    pub fn get_script_by_name_from_root(
+        &self,
+        script_name: &str,
+    ) -> Result<&CompiledUnitWithSource> {
+        self.scripts()
+            .find(|unit| unit.unit.name().as_str() == script_name)
+            .ok_or_else(|| {
+                anyhow::format_err!(
+                    "Unable to find script with name '{}' in package {}",
+                    script_name,
                     self.compiled_package_info.package_name
                 )
             })

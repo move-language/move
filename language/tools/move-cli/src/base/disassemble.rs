@@ -38,6 +38,7 @@ impl Disassemble {
             .unwrap_or(package.compiled_package_info.package_name.as_str());
         match package
             .get_module_by_name(needle_package, &module_or_script_name)
+            .or_else(|_| package.get_script_by_name(needle_package, &module_or_script_name))
             .ok()
         {
             None => anyhow::bail!(

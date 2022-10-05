@@ -1780,5 +1780,8 @@ fn format_move_value(v: &MoveValue) -> String {
         MoveValue::Struct(_) | MoveValue::Signer(_) => {
             panic!("Should be inexpressible as a constant")
         }
+        MoveValue::U16(u) => format!("{}u16", u),
+        MoveValue::U32(u) => format!("{}u32", u),
+        MoveValue::U256(u) => format!("{}u256", u),
     }
 }

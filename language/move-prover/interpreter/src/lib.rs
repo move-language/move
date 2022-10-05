@@ -124,6 +124,9 @@ pub fn interpret_with_options(
             TransactionArgument::U8Vector(v) => {
                 MoveValue::Vector(v.into_iter().map(MoveValue::U8).collect())
             }
+            TransactionArgument::U16(v) => MoveValue::U16(v),
+            TransactionArgument::U32(v) => MoveValue::U32(v),
+            TransactionArgument::U256(v) => MoveValue::U256(v),
         }))
         .collect();
 

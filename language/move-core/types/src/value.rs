@@ -6,6 +6,7 @@ use crate::{
     account_address::AccountAddress,
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
+    u256::u256,
 };
 use anyhow::{bail, Result as AResult};
 use serde::{
@@ -43,8 +44,11 @@ pub enum MoveStruct {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum MoveValue {
     U8(u8),
+    U16(u16),
+    U32(u32),
     U64(u64),
     U128(u128),
+    U256(u256),
     Bool(bool),
     Address(AccountAddress),
     Vector(Vec<MoveValue>),
@@ -408,8 +412,11 @@ impl serde::Serialize for MoveValue {
             MoveValue::Struct(s) => s.serialize(serializer),
             MoveValue::Bool(b) => serializer.serialize_bool(*b),
             MoveValue::U8(i) => serializer.serialize_u8(*i),
+            MoveValue::U16(i) => serializer.serialize_u16(*i),
+            MoveValue::U32(i) => serializer.serialize_u32(*i),
             MoveValue::U64(i) => serializer.serialize_u64(*i),
             MoveValue::U128(i) => serializer.serialize_u128(*i),
+            MoveValue::U256(i) => i.serialize(serializer),
             MoveValue::Address(a) => a.serialize(serializer),
             MoveValue::Signer(a) => a.serialize(serializer),
             MoveValue::Vector(v) => {
@@ -548,8 +555,11 @@ impl fmt::Display for MoveValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             MoveValue::U8(u) => write!(f, "{}u8", u),
+            MoveValue::U16(u) => write!(f, "{}u16", u),
+            MoveValue::U32(u) => write!(f, "{}u32", u),
             MoveValue::U64(u) => write!(f, "{}u64", u),
             MoveValue::U128(u) => write!(f, "{}u128", u),
+            MoveValue::U256(u) => write!(f, "{}u256", u),
             MoveValue::Bool(false) => write!(f, "false"),
             MoveValue::Bool(true) => write!(f, "true"),
             MoveValue::Address(a) => write!(f, "{}", a.to_hex_literal()),

@@ -89,10 +89,12 @@ pub fn resolve_builtin(
     let sp!(_, ModuleIdent_ { address, module }) = module;
     // Only resolve if either (a) the address is named "std" or (b) its value is 0x1
     match address {
-        Address::Numerical(Some(sp!(_, n)), sp!(_, a))
-            if n.as_str() == "std" || a.into_inner() == AccountAddress::ONE => {}
-        Address::NamedUnassigned(sp!(_, n)) if n.as_str() == "std" => {}
-        _ => return None,
+        Address::Numerical(Some(sp!(_, n)), _) | Address::NamedUnassigned(sp!(_, n))
+            if n.as_str() == "std" => {}
+        Address::Numerical(_, sp!(_, a)) if a.into_inner() == AccountAddress::ONE => {}
+        _ => {
+            return None;
+        }
     };
     Some(match (module.value().as_str(), function.value().as_str()) {
         ("vector", "empty") => |tys| IR::Bytecode_::VecPack(expect_one_ty_arg(tys), 0),

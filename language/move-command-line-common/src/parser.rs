@@ -326,19 +326,28 @@ pub(crate) fn determine_num_text_and_base(s: &str) -> (&str, NumberFormat) {
 // Parse a u8 from a decimal or hex encoding
 pub fn parse_u8(s: &str) -> Result<(u8, NumberFormat), ParseIntError> {
     let (txt, base) = determine_num_text_and_base(s);
-    Ok((u8::from_str_radix(txt, base as u32)?, base))
+    Ok((
+        u8::from_str_radix(&txt.replace('_', ""), base as u32)?,
+        base,
+    ))
 }
 
 // Parse a u64 from a decimal or hex encoding
 pub fn parse_u64(s: &str) -> Result<(u64, NumberFormat), ParseIntError> {
     let (txt, base) = determine_num_text_and_base(s);
-    Ok((u64::from_str_radix(txt, base as u32)?, base))
+    Ok((
+        u64::from_str_radix(&txt.replace('_', ""), base as u32)?,
+        base,
+    ))
 }
 
 // Parse a u128 from a decimal or hex encoding
 pub fn parse_u128(s: &str) -> Result<(u128, NumberFormat), ParseIntError> {
     let (txt, base) = determine_num_text_and_base(s);
-    Ok((u128::from_str_radix(txt, base as u32)?, base))
+    Ok((
+        u128::from_str_radix(&txt.replace('_', ""), base as u32)?,
+        base,
+    ))
 }
 
 // Parse an address from a decimal or hex encoding
@@ -385,6 +394,12 @@ mod tests {
             ("18446744073709551615", V::InferredNum(18446744073709551615)),
             ("18446744073709551615u64", V::U64(18446744073709551615)),
             ("0u128", V::U128(0)),
+            ("1_0u8", V::U8(1_0)),
+            ("10_u8", V::U8(10)),
+            ("1_000u64", V::U64(1_000)),
+            ("1_000", V::InferredNum(1_000)),
+            ("1_0_0_0u64", V::U64(1_000)),
+            ("1_000_000u128", V::U128(1_000_000)),
             (
                 "340282366920938463463374607431768211455u128",
                 V::U128(340282366920938463463374607431768211455),
@@ -438,13 +453,23 @@ mod tests {
 
     #[test]
     fn tests_parse_value_negative() {
-        for s in &[
+        /// Test cases for the parser that should always fail.
+        const PARSE_VALUE_NEGATIVE_TEST_CASES: &[&str] = &[
             "-3",
             "0u42",
             "0u645",
             "0u64x",
             "0u6 4",
             "0u",
+            "_10",
+            "_10_u8",
+            "_10__u8",
+            "10_u8__",
+            "_",
+            "__",
+            "__4",
+            "_u8",
+            "5_bool",
             "256u8",
             "18446744073709551616u64",
             "340282366920938463463374607431768211456u128",
@@ -452,8 +477,6 @@ mod tests {
             "0x00g0",
             "0x",
             "0x_",
-            "0XFF",
-            "0X0",
             "",
             "@@",
             "()",
@@ -467,7 +490,11 @@ mod tests {
             "3false",
             "3 false",
             "",
-        ] {
+            "0XFF",
+            "0X0",
+        ];
+
+        for s in PARSE_VALUE_NEGATIVE_TEST_CASES {
             assert!(
                 ParsedValue::<()>::parse(s).is_err(),
                 "Unexpectedly succeeded in parsing: {}",

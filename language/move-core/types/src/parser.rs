@@ -375,50 +375,8 @@ pub fn parse_struct_tag(s: &str) -> Result<StructTag> {
     }
 }
 
-/// Test cases for the parser that should always fail.
-/// Note: we don't have `cfg(test)` here because code gated by `cfg(test)` is
-/// not gated outside of its declaring crate: <https://github.com/rust-lang/cargo/issues/8379>
-pub const PARSE_VALUE_NEGATIVE_TEST_CASES: &[&str] = &[
-    "-3",
-    "0u42",
-    "0u645",
-    "0u64x",
-    "0u6 4",
-    "0u",
-    "_10",
-    "_10_u8",
-    "_10__u8",
-    "10_u8__",
-    "_",
-    "__",
-    "__4",
-    "_u8",
-    "5_bool",
-    "256u8",
-    "18446744073709551616u64",
-    "340282366920938463463374607431768211456u128",
-    "0xg",
-    "0x00g0",
-    "0x",
-    "0x_",
-    "",
-    "@@",
-    "()",
-    "x\"ffff",
-    "x\"a \"",
-    "x\" \"",
-    "x\"0g\"",
-    "x\"0\"",
-    "garbage",
-    "true3",
-    "3false",
-    "3 false",
-    "",
-];
-
 #[cfg(test)]
 mod tests {
-    use super::PARSE_VALUE_NEGATIVE_TEST_CASES;
     use crate::{
         account_address::AccountAddress,
         parser::{parse_struct_tag, parse_transaction_argument, parse_type_tag},
@@ -476,6 +434,47 @@ mod tests {
 
     #[test]
     fn tests_parse_transaction_argument_negative() {
+        /// Test cases for the parser that should always fail.
+        /// Note: we don't have `cfg(test)` here because code gated by `cfg(test)` is
+        /// not gated outside of its declaring crate: <https://github.com/rust-lang/cargo/issues/8379>
+        const PARSE_VALUE_NEGATIVE_TEST_CASES: &[&str] = &[
+            "-3",
+            "0u42",
+            "0u645",
+            "0u64x",
+            "0u6 4",
+            "0u",
+            "_10",
+            "_10_u8",
+            "_10__u8",
+            "10_u8__",
+            "_",
+            "__",
+            "__4",
+            "_u8",
+            "5_bool",
+            "256u8",
+            "18446744073709551616u64",
+            "340282366920938463463374607431768211456u128",
+            "0xg",
+            "0x00g0",
+            "0x",
+            "0x_",
+            "",
+            "@@",
+            "()",
+            "x\"ffff",
+            "x\"a \"",
+            "x\" \"",
+            "x\"0g\"",
+            "x\"0\"",
+            "garbage",
+            "true3",
+            "3false",
+            "3 false",
+            "",
+        ];
+
         for s in PARSE_VALUE_NEGATIVE_TEST_CASES {
             assert!(
                 parse_transaction_argument(s).is_err(),

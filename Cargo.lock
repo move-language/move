@@ -1703,7 +1703,7 @@ dependencies = [
  "evm-runtime",
  "hex",
  "move-command-line-common",
- "primitive-types 0.10.1",
+ "primitive-types 0.12.0",
  "sha3 0.9.1",
  "tempfile",
 ]
@@ -3584,7 +3584,7 @@ dependencies = [
  "num 0.4.0",
  "once_cell",
  "pretty",
- "primitive-types 0.10.1",
+ "primitive-types 0.12.0",
  "rand 0.8.4",
  "regex",
  "serde 1.0.143",
@@ -3659,7 +3659,7 @@ dependencies = [
  "move-vm-test-utils",
  "move-vm-types",
  "once_cell",
- "primitive-types 0.10.1",
+ "primitive-types 0.12.0",
  "rayon",
  "regex",
 ]

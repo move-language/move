@@ -454,8 +454,6 @@ mod tests {
     #[test]
     fn tests_parse_value_negative() {
         /// Test cases for the parser that should always fail.
-        /// Note: we don't have `cfg(test)` here because code gated by `cfg(test)` is
-        /// not gated outside of its declaring crate: <https://github.com/rust-lang/cargo/issues/8379>
         const PARSE_VALUE_NEGATIVE_TEST_CASES: &[&str] = &[
             "-3",
             "0u42",

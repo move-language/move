@@ -490,9 +490,11 @@ mod tests {
             "3false",
             "3 false",
             "",
+            "0XFF",
+            "0X0",
         ];
 
-        for s in [PARSE_VALUE_NEGATIVE_TEST_CASES, &["0XFF", "0X0"]].concat() {
+        for s in PARSE_VALUE_NEGATIVE_TEST_CASES {
             assert!(
                 ParsedValue::<()>::parse(s).is_err(),
                 "Unexpectedly succeeded in parsing: {}",

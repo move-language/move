@@ -782,6 +782,9 @@ impl BytecodeGen {
                 Bytecode::ImmBorrowLoc(idx.index(locals_signature.len()) as LocalIndex)
             }
             BytecodeGen::VecPack((idx, num)) => {
+                if num > u16::MAX as u64 {
+                    return None;
+                }
                 let sigs_len = state.signatures.signatures.len();
                 if sigs_len == 0 {
                     return None;
@@ -854,6 +857,9 @@ impl BytecodeGen {
                 Bytecode::VecPopBack(SignatureIndex(sig_idx as TableIndex))
             }
             BytecodeGen::VecUnpack((idx, num)) => {
+                if num > u16::MAX as u64 {
+                    return None;
+                }
                 let sigs_len = state.signatures.signatures.len();
                 if sigs_len == 0 {
                     return None;

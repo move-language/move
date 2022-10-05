@@ -63,6 +63,7 @@ pub struct SharedTestingConfig {
     named_address_values: BTreeMap<String, NumericalAddress>,
     check_stackless_vm: bool,
     verbose: bool,
+    record_writeset: bool,
 
     #[cfg(feature = "evm-backend")]
     evm: bool,
@@ -144,6 +145,7 @@ impl TestRunner {
         // we don't have to make assumptions about their gas parameters.
         native_function_table: Option<NativeFunctionTable>,
         named_address_values: BTreeMap<String, NumericalAddress>,
+        record_writeset: bool,
         #[cfg(feature = "evm-backend")] evm: bool,
     ) -> Result<Self> {
         let source_files = tests
@@ -176,6 +178,7 @@ impl TestRunner {
                 check_stackless_vm,
                 verbose,
                 named_address_values,
+                record_writeset,
                 #[cfg(feature = "evm-backend")]
                 evm,
             },
@@ -406,6 +409,15 @@ impl SharedTestingConfig {
         for (function_name, test_info) in &test_plan.tests {
             let (cs_result, ext_result, exec_result, test_run_info) =
                 self.execute_via_move_vm(test_plan, function_name, test_info);
+
+            if self.record_writeset {
+                stats.test_output(
+                    function_name.to_string(),
+                    test_plan,
+                    format!("{:?}", cs_result),
+                );
+            }
+
             if self.check_stackless_vm {
                 let (stackless_vm_change_set, stackless_vm_result, _, prop_check_result) = self
                     .execute_via_stackless_vm(

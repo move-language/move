@@ -26,7 +26,7 @@ However, `signer` values are special because they cannot be created via literals
 instructions--only by the Move VM. Before the VM runs a script with parameters of type `signer`, it
 will automatically create `signer` values and pass them into the script:
 
-```move=
+```move
 script {
     use std::signer;
     fun main(s: signer) {
@@ -37,10 +37,10 @@ script {
 
 This script will abort with code `0` if the script is sent from any address other than `0x42`.
 
-A transaction script can have an arbitrary number of `signer`s as long as the signers are a prefix
-to any other arguments. In other words, all of the signer arguments must come first:
+A transaction script can have an arbitrary number of `signer`s as long as the `signer`s are a prefix
+to any other arguments. In other words, all of the `signer` arguments must come first:
 
-```move=
+```move
 script {
     use std::signer;
     fun main(s1: signer, s2: signer, x: u64, y: u8) {
@@ -57,10 +57,10 @@ swap between `s1` and `s2`.
 
 The `std::signer` standard library module provides two utility functions over `signer` values:
 
-| Function                                    | Description                                                   |
-| ------------------------------------------- | ------------------------------------------------------------- |
-| `signer::address_of(&signer): address`      | Return the `address` wrapped by this `&signer`.               |
-| `signer::borrow_address(&signer): &address` | Return a reference to the `address` wrapped by this `&signer` |
+| Function                                    | Description                                                    |
+| ------------------------------------------- | -------------------------------------------------------------  |
+| `signer::address_of(&signer): address`      | Return the `address` wrapped by this `&signer`.                |
+| `signer::borrow_address(&signer): &address` | Return a reference to the `address` wrapped by this `&signer`. |
 
 In addition, the `move_to<T>(&signer, T)` [global storage operator](./global-storage-operators.md)
 requires a `&signer` argument to publish a resource `T` under `signer.address`'s account. This
@@ -70,4 +70,4 @@ ensures that only an authenticated user can elect to publish a resource under th
 
 Unlike simple scalar values, `signer` values are not copyable, meaning they cannot be copied (from
 any operation whether it be through an explicit [`copy`](./variables.md#move-and-copy) instruction
-or through a [dereference `*`](./references.md#reference-operators)).
+or through a [dereference `*`](./references.md#reading-and-writing-through-references).

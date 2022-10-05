@@ -235,7 +235,7 @@ impl<'env> FunctionDataBuilder<'env> {
         let temp = self.new_temp(ty);
         let temp_exp = self.mk_temporary(temp);
         self.emit_with(|id| {
-            Bytecode::Call(id, vec![], Operation::Havoc(havoc_kind), vec![temp], None)
+            Bytecode::Call(id, vec![temp], Operation::Havoc(havoc_kind), vec![], None)
         });
         (temp, temp_exp)
     }

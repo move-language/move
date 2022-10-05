@@ -58,7 +58,7 @@ module NamedAddr::BasicCoin {
     }
 
     /// Deposit `amount` number of tokens to the balance under `addr`.
-    fun deposit(addr: address, check: Coin) acquires Balance{
+    fun deposit(addr: address, check: Coin) acquires Balance {
         let balance = balance_of(addr);
         let balance_ref = &mut borrow_global_mut<Balance>(addr).coin.value;
         let Coin { value } = check;

@@ -20,8 +20,9 @@ use move_model::{
         FunId, FunctionEnv, GlobalEnv, ModuleId, QualifiedId, QualifiedInstId, SpecFunId,
         SpecVarId, StructEnv, StructId,
     },
+    pragmas::INTRINSIC_TYPE_MAP,
     ty::{Type, TypeDisplayContext, TypeInstantiationDerivation, TypeUnificationAdapter, Variance},
-    well_known::TABLE_TABLE,
+    well_known::{TYPE_INFO_MOVE, TYPE_INFO_SPEC, TYPE_NAME_MOVE, TYPE_NAME_SPEC},
 };
 
 use crate::{
@@ -40,7 +41,7 @@ pub struct MonoInfo {
     pub spec_vars: BTreeMap<QualifiedId<SpecVarId>, BTreeSet<Vec<Type>>>,
     pub type_params: BTreeSet<u16>,
     pub vec_inst: BTreeSet<Type>,
-    pub table_inst: BTreeSet<(Type, Type)>,
+    pub table_inst: BTreeMap<QualifiedId<StructId>, BTreeSet<(Type, Type)>>,
     pub native_inst: BTreeMap<ModuleId, BTreeSet<Vec<Type>>>,
     pub axioms: Vec<Condition>,
 }
@@ -328,18 +329,32 @@ impl<'a> Analyzer<'a> {
         // elsewhere.
         match bc {
             Call(_, _, Function(mid, fid, targs), ..) => {
-                let callee = &self.env.get_module(*mid).into_function(*fid);
+                let module_env = &self.env.get_module(*mid);
+                let callee_env = module_env.get_function(*fid);
                 let actuals = self.instantiate_vec(targs);
-                if callee.is_native_or_intrinsic() && !actuals.is_empty() {
+
+                // the type reflection functions are specially handled here
+                if self.env.get_extlib_address() == *module_env.get_name().addr() {
+                    let qualified_name = format!(
+                        "{}::{}",
+                        module_env.get_name().name().display(self.env.symbol_pool()),
+                        callee_env.get_name().display(self.env.symbol_pool()),
+                    );
+                    if qualified_name == TYPE_NAME_MOVE || qualified_name == TYPE_INFO_MOVE {
+                        self.add_type(&actuals[0]);
+                    }
+                }
+
+                if callee_env.is_native_or_intrinsic() && !actuals.is_empty() {
                     // Mark the associated module to be instantiated with the given actuals.
                     // This will instantiate all functions in the module with matching number
                     // of type parameters.
                     self.info
                         .native_inst
-                        .entry(callee.module_env.get_id())
+                        .entry(callee_env.module_env.get_id())
                         .or_default()
                         .insert(actuals);
-                } else if !callee.is_opaque() {
+                } else if !callee_env.is_opaque() {
                     // This call needs to be inlined, with targs instantiated by self.inst_opt.
                     // Schedule for later processing if this instance has not been processed yet.
                     let entry = (mid.qualified(*fid), FunctionVariant::Baseline, actuals);
@@ -398,9 +413,21 @@ impl<'a> Analyzer<'a> {
             }
             if let ExpData::Call(node_id, ast::Operation::Function(mid, fid, _), _) = e {
                 let actuals = self.instantiate_vec(&self.env.get_node_instantiation(*node_id));
-                // Only if this call has not been processed yet, queue it for future processing.
                 let module = self.env.get_module(*mid);
                 let spec_fun = module.get_spec_fun(*fid);
+
+                // the type reflection functions are specially handled here
+                if self.env.get_extlib_address() == *module.get_name().addr() {
+                    let qualified_name = format!(
+                        "{}::{}",
+                        module.get_name().name().display(self.env.symbol_pool()),
+                        spec_fun.name.display(self.env.symbol_pool()),
+                    );
+                    if qualified_name == TYPE_NAME_SPEC || qualified_name == TYPE_INFO_SPEC {
+                        self.add_type(&actuals[0]);
+                    }
+                }
+
                 if spec_fun.is_native && !actuals.is_empty() {
                     // Add module to native modules
                     self.info
@@ -410,6 +437,7 @@ impl<'a> Analyzer<'a> {
                         .insert(actuals);
                 } else {
                     let entry = (mid.qualified(*fid), actuals);
+                    // Only if this call has not been processed yet, queue it for future processing.
                     if !self.done_spec_funs.contains(&entry) {
                         self.todo_spec_funs.push(entry);
                     }
@@ -449,9 +477,11 @@ impl<'a> Analyzer<'a> {
     }
 
     fn add_struct(&mut self, struct_: StructEnv<'_>, targs: &[Type]) {
-        if struct_.is_well_known(TABLE_TABLE) {
+        if struct_.is_intrinsic_of(INTRINSIC_TYPE_MAP) {
             self.info
                 .table_inst
+                .entry(struct_.get_qualified_id())
+                .or_default()
                 .insert((targs[0].clone(), targs[1].clone()));
         } else if struct_.is_native_or_intrinsic() && !targs.is_empty() {
             self.info

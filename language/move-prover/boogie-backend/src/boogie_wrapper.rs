@@ -26,8 +26,8 @@ use move_model::{
     ast::TempIndex,
     code_writer::CodeWriter,
     model::{FunId, GlobalEnv, Loc, ModuleId, NodeId, QualifiedId, StructEnv},
+    pragmas::INTRINSIC_TYPE_MAP,
     ty::{PrimitiveType, Type},
-    well_known::TABLE_TABLE,
 };
 use move_stackless_bytecode::function_target_pipeline::{FunctionTargetsHolder, FunctionVariant};
 
@@ -1417,7 +1417,7 @@ impl ModelValue {
             Type::Vector(param) => self.pretty_vector(wrapper, model, param),
             Type::Struct(module_id, struct_id, params) => {
                 let struct_env = wrapper.env.get_struct_qid(module_id.qualified(*struct_id));
-                if struct_env.is_well_known(TABLE_TABLE) {
+                if struct_env.is_intrinsic_of(INTRINSIC_TYPE_MAP) {
                     self.pretty_table(wrapper, model, &params[0], &params[1])
                 } else {
                     self.pretty_struct(wrapper, model, &struct_env, params)

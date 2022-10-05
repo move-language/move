@@ -47,7 +47,7 @@ fun Generics::remove_u64($t0|a: address): Generics::R<u64> {
      # VC: caller does not have permission to modify `Generics::R<u64>` at given address at tests/spec_instrumentation/generics.move:24:9+14
   1: assert CanModify<Generics::R<u64>>($t0)
   2: $t1 := opaque begin: Generics::remove<u64>($t0)
-  3: havoc[val]($t2)
+  3: $t2 := havoc[val]()
   4: if ($t2) goto 5 else goto 8
   5: label L4
   6: trace_abort($t3)

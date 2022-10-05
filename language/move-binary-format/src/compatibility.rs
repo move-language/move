@@ -19,8 +19,46 @@ use std::collections::BTreeSet;
 pub struct Compatibility {
     /// If false, dependent modules that reference functions or structs in this module may not link
     pub struct_and_function_linking: bool,
-    /// If false, attempting to read structs previously published by this module will fail at runtime
+    /// If false, attempting to read structs previously published by this module will fail at
+    /// runtime, or worse, may allow to re-interpret representations maliciously.
     pub struct_layout: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct CompatibilityConfig {
+    pub check_struct_and_function_linking: bool,
+    pub check_struct_layout: bool,
+    //TODO maybe we can move the treat_friend_as_private flag from VerifierConfig to here.
+}
+
+impl Default for CompatibilityConfig {
+    fn default() -> Self {
+        Self {
+            check_struct_and_function_linking: true,
+            check_struct_layout: true,
+        }
+    }
+}
+
+impl CompatibilityConfig {
+    pub fn full_check() -> Self {
+        Self::default()
+    }
+
+    pub fn no_check() -> Self {
+        Self {
+            check_struct_and_function_linking: false,
+            check_struct_layout: false,
+        }
+    }
+
+    pub fn need_full_check(&self) -> bool {
+        self.check_struct_and_function_linking && self.check_struct_layout
+    }
+
+    pub fn need_check_compat(&self) -> bool {
+        self.check_struct_and_function_linking || self.check_struct_layout
+    }
 }
 
 impl Compatibility {
@@ -31,7 +69,11 @@ impl Compatibility {
     }
 
     /// Return compatibility assessment for `new_module` relative to old module `old_module`.
-    pub fn check(old_module: &Module, new_module: &Module) -> Compatibility {
+    pub fn check(
+        treat_friend_as_private: bool,
+        old_module: &Module,
+        new_module: &Module,
+    ) -> Compatibility {
         let mut struct_and_function_linking = true;
         let mut struct_layout = true;
 
@@ -46,18 +88,11 @@ impl Compatibility {
                 Some(new_struct) => new_struct,
                 None => {
                     // Struct not present in new . Existing modules that depend on this struct will fail to link with the new version of the module.
+                    // Also, struct layout cannot be guaranteed transitively, because after
+                    // removing the struct, it could be re-added later with a different layout.
                     struct_and_function_linking = false;
-                    // Note: we intentionally do *not* label this a layout compatibility violation.
-                    // Existing modules can still successfully read previously published values of
-                    // this struct `Parent::T`. That is, code like the function `foo` in
-                    // ```
-                    // struct S { t: Parent::T }
-                    // public fun foo(a: addr): S { move_from<S>(addr) }
-                    // ```
-                    // in module `Child` will continue to run without error. But values of type
-                    // `Parent::T` in `Child` are now "orphaned" in the sense that `Parent` no
-                    // longer exposes any API for reading/writing them.
-                    continue;
+                    struct_layout = false;
+                    break;
                 }
             };
 
@@ -73,16 +108,9 @@ impl Compatibility {
                 // Fields changed. Code in this module will fail at runtime if it tries to
                 // read a previously published struct value
                 // TODO: this is a stricter definition than required. We could in principle
-                // choose to label the following as compatible
-                // (1) changing the name (but not position or type) of a field. The VM does
-                //     not care about the name of a field (it's purely informational), but
-                //     clients presumably do.
-                // (2) changing the type of a field to a different, but layout and kind
-                //     compatible type. E.g. `struct S { b: bool }` to `struct S { b: B }`
-                // where
-                //     B is struct B { some_name: bool }. TODO: does this affect clients? I
-                //     think not--the serialization of the same data with these two types
-                //     will be the same.
+                // choose that changing the name (but not position or type) of a field is
+                // compatible. The VM does not care about the name of a field
+                // (it's purely informational), but clients presumably do.
                 struct_layout = false
             }
         }
@@ -102,6 +130,9 @@ impl Compatibility {
         // friend list. But for simplicity, we decided to go to the more restrictive form now and
         // we may revisit this in the future.
         for (name, old_func) in &old_module.exposed_functions {
+            if treat_friend_as_private && matches!(old_func.visibility, Visibility::Friend) {
+                continue;
+            }
             let new_func = match new_module.exposed_functions.get(name) {
                 Some(new_func) => new_func,
                 None => {
@@ -144,18 +175,17 @@ impl Compatibility {
             }
         }
 
-        // check friend declarations compatibility
-        //
-        // - additions to the list are allowed
-        // - removals are not allowed
-        //
-        // NOTE: we may also relax this checking a bit in the future: we may allow the removal of
-        // a module removed from the friend list if the module does not call any friend function
-        // in this module.
-        let old_friend_module_ids: BTreeSet<_> = old_module.friends.iter().cloned().collect();
-        let new_friend_module_ids: BTreeSet<_> = new_module.friends.iter().cloned().collect();
-        if !old_friend_module_ids.is_subset(&new_friend_module_ids) {
-            struct_and_function_linking = false;
+        if !treat_friend_as_private {
+            // check friend declarations compatibility
+            //
+            // - additions to the list are allowed
+            // - removals are not allowed
+            //
+            let old_friend_module_ids: BTreeSet<_> = old_module.friends.iter().cloned().collect();
+            let new_friend_module_ids: BTreeSet<_> = new_module.friends.iter().cloned().collect();
+            if !old_friend_module_ids.is_subset(&new_friend_module_ids) {
+                struct_and_function_linking = false;
+            }
         }
 
         Compatibility {

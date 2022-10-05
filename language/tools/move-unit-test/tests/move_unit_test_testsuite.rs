@@ -88,6 +88,7 @@ fn run_test_impl(path: &Path) -> anyhow::Result<()> {
         named_address_values: move_stdlib::move_stdlib_named_addresses()
             .into_iter()
             .collect(),
+        report_writeset: true,
 
         ..UnitTestingConfig::default_with_bound(None)
     };

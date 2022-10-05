@@ -1,4 +1,2 @@
 Running Move unit tests
-[ PASS    ] 0x2::A::loop_ind_ref
-[ PASS    ] 0x2::A::loop_ind_var
-Test result: OK. Total tests: 2; passed: 2; failed: 0
+Test result: OK. Total tests: 0; passed: 0; failed: 0

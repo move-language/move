@@ -508,18 +508,19 @@ function {:inline} $SliceVecByRange<T>(v: Vec T, r: $Range): Vec T {
 {%- for instance in table_key_instances %}
 
 // ----------------------------------------------------------------------------------
-// Native Table key encoding for type `({{instance.suffix}}`
+// Native Table key encoding for type `{{instance.suffix}}`
 
 {{ native::table_key_encoding(instance=instance) -}}
 {%- endfor %}
 
-{%- for instance in table_instances %}
+{%- for impl in table_instances %}
+{%- for instance in impl.insts %}
 
 // ----------------------------------------------------------------------------------
 // Native Table implementation for type `({{instance.0.suffix}},{{instance.1.suffix}})`
 
-
-{{ native::table_module(instance=instance) -}}
+{{ native::table_module(impl=impl, instance=instance) -}}
+{%- endfor %}
 {%- endfor %}
 
 // ==================================================================================

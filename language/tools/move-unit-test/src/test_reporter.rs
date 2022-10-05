@@ -12,7 +12,7 @@ use move_binary_format::{
 use move_command_line_common::files::FileHash;
 use move_compiler::{
     diagnostics::{self, Diagnostic},
-    unit_test::{ModuleTestPlan, TestPlan},
+    unit_test::{ModuleTestPlan, TestName, TestPlan},
 };
 use move_core_types::{effects::ChangeSet, language_storage::ModuleId};
 use move_ir_types::location::Loc;
@@ -70,6 +70,7 @@ pub struct TestRunInfo {
 pub struct TestStatistics {
     passed: BTreeMap<ModuleId, BTreeSet<TestRunInfo>>,
     failed: BTreeMap<ModuleId, BTreeSet<TestFailure>>,
+    output: BTreeMap<ModuleId, BTreeMap<TestName, String>>,
 }
 
 #[derive(Debug, Clone)]
@@ -369,6 +370,7 @@ impl TestStatistics {
         Self {
             passed: BTreeMap::new(),
             failed: BTreeMap::new(),
+            output: BTreeMap::new(),
         }
     }
 
@@ -386,6 +388,13 @@ impl TestStatistics {
             .insert(test_info);
     }
 
+    pub fn test_output(&mut self, test_name: TestName, test_plan: &ModuleTestPlan, output: String) {
+        self.output
+            .entry(test_plan.module_id.clone())
+            .or_insert_with(BTreeMap::new)
+            .insert(test_name, output);
+    }
+
     pub fn combine(mut self, other: Self) -> Self {
         for (module_id, test_result) in other.passed {
             let entry = self.passed.entry(module_id).or_default();
@@ -394,6 +403,10 @@ impl TestStatistics {
         for (module_id, test_result) in other.failed {
             let entry = self.failed.entry(module_id).or_default();
             entry.extend(test_result.into_iter());
+        }
+        for (module_id, test_output) in other.output {
+            let entry = self.output.entry(module_id).or_default();
+            entry.extend(test_output.into_iter());
         }
         self
     }
@@ -405,6 +418,21 @@ impl TestResults {
             final_statistics,
             test_plan,
         }
+    }
+
+    pub fn report_goldens<W: Write>(&self, writer: &Mutex<W>) -> Result<()> {
+        for (module_name, test_outputs) in self.final_statistics.output.iter() {
+            for (test_name, write_set) in test_outputs.iter() {
+                writeln!(
+                    writer.lock().unwrap(),
+                    "{}::{}",
+                    format_module_id(module_name),
+                    test_name
+                )?;
+                writeln!(writer.lock().unwrap(), "Output: {}", write_set)?;
+            }
+        }
+        Ok(())
     }
 
     pub fn report_statistics<W: Write>(&self, writer: &Mutex<W>) -> Result<()> {

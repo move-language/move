@@ -2,17 +2,20 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use core::fmt;
+use std::{collections::BTreeMap, fmt::Formatter, fs};
+
+use itertools::Itertools;
+use log::{debug, info};
+
+use move_model::model::{FunId, FunctionEnv, GlobalEnv, QualifiedId};
+
 use crate::{
     function_target::{FunctionData, FunctionTarget},
     print_targets_for_test,
     stackless_bytecode_generator::StacklessBytecodeGenerator,
     stackless_control_flow_graph::generate_cfg_in_dot_format,
 };
-use core::fmt;
-use itertools::Itertools;
-use log::{debug, info};
-use move_model::model::{FunId, FunctionEnv, GlobalEnv, QualifiedId};
-use std::{collections::BTreeMap, fmt::Formatter, fs};
 
 /// A data structure which holds data for multiple function targets, and allows to
 /// manipulate them as part of a transformation pipeline.
@@ -305,49 +308,29 @@ impl FunctionTargetPipeline {
                 fun_env.get_called_functions().into_iter().collect_vec(),
             ));
         }
-        let mut to_remove = vec![];
-        let mut topological_order = vec![];
+
         // analyze bottom-up from the leaves of the call graph
-        loop {
-            let last = worklist.last();
-            if last.is_none() {
-                break;
-            }
-            // front of the worklist has a nonempty list of callees to analyze. walk through the
-            // worklist and remove the analyzed callees from `to_remove` from each entry in the
-            // worklist.
-            if !last.unwrap().1.is_empty() {
-                for (_f, f_callees) in &mut worklist {
-                    for f in &to_remove {
-                        f_callees.retain(|e| e != f);
-                    }
-                }
-                // Put functions with 0 calls first in line, at the end of the vector
-                worklist
-                    .sort_by(|(_, callees1), (_, callees2)| callees2.len().cmp(&callees1.len()));
-            }
-            let (call_id, callees) = worklist.pop().unwrap();
+        let mut dep_ordered = vec![];
+        while !worklist.is_empty() {
+            // Put functions with 0 calls first in line, at the end of the vector
+            worklist.sort_by(|(_, callees1), (_, callees2)| callees2.len().cmp(&callees1.len()));
+            let (call_id, _) = worklist.pop().unwrap();
+
             // At this point, one of two things is true:
             // 1. callees is empty (common case)
-            // 2. callees is nonempty and mid is part of a recursive or mutually recursive
-            //    intra-module call cycle (possible in theory, but doesn't happen in the current
-            //    implementation of the Diem framework).
-            to_remove.push(call_id);
-            let func_env = env.get_function(call_id);
-            if !callees.is_empty() {
-                // The right long-term thing to do here is to allow analysis in case (2) and ask the
-                // analysis processors to deal gracefully with the absence of summaries. But for
-                // now, we intentionally fail because recursion is not expected in Diem Framework
-                // code
-                unimplemented!(
-                    "Recursion or mutual recursion detected in {:?}. \
-                     Make sure that all analyses in processors are prepared to handle recursion",
-                    func_env.get_identifier()
-                );
+            // 2. callees is nonempty and call_id is part of a recursive or mutually recursive function group
+
+            for (_, callees) in worklist.iter_mut() {
+                callees.retain(|e| e != &call_id);
             }
-            topological_order.push(func_env);
+            dep_ordered.push(call_id);
         }
-        topological_order
+
+        // map the call_id into function env
+        dep_ordered
+            .into_iter()
+            .map(|qid| env.get_function(qid))
+            .collect()
     }
 
     /// Runs the pipeline on all functions in the targets holder. Processors are run on each

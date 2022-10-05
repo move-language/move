@@ -988,6 +988,10 @@ fn load_signature_token(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Sign
                 S::STRUCT_INST => {
                     let sh_idx = load_struct_handle_index(cursor)?;
                     let arity = load_type_parameter_count(cursor)?;
+                    if arity == 0 {
+                        return Err(PartialVMError::new(StatusCode::MALFORMED)
+                            .with_message("Struct inst with arity 0".to_string()));
+                    }
                     T::StructInst {
                         sh_idx,
                         arity,

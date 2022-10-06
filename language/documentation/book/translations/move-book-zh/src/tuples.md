@@ -91,7 +91,7 @@ module example {
 
 ## 子类型
 
-除了引用，元组是唯一在 Move 中具有[子类型](https://zh.wikipedia.org/wiki/%E5%AD%90%E7%B1%BB%E5%9E%8B)的类型。元组只有在具有引用的子类型（以协变方式）的意义上才具有子类型。
+除了引用，元组是唯一在 Move 中具有[子类型（subtyping）](https://zh.wikipedia.org/wiki/%E5%AD%90%E7%B1%BB%E5%9E%8B)的类型。元组只有在具有引用的子类型（以协变方式）的意义上才具有子类型。
 
 例如:
 

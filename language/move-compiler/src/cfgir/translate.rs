@@ -436,7 +436,7 @@ fn function_body(
                 &infinite_loop_starts,
             );
             // do not optimize if there are errors, warnings are okay
-            if context
+            if !context
                 .env
                 .has_diags_at_or_above_severity(Severity::NonblockingError)
             {

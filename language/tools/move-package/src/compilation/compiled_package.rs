@@ -430,8 +430,9 @@ impl CompiledPackage {
 
         self.deps_compiled_units
             .iter()
-            .filter(|(dep_package, unit)|
-                dep_package.as_str() == package_name && matches!(unit.unit, CompiledUnit::Module(_)))
+            .filter(|(dep_package, unit)| {
+                dep_package.as_str() == package_name && matches!(unit.unit, CompiledUnit::Module(_))
+            })
             .map(|(_, unit)| unit)
             .find(|unit| unit.unit.name().as_str() == module_name)
             .ok_or_else(|| {
@@ -454,8 +455,9 @@ impl CompiledPackage {
 
         self.deps_compiled_units
             .iter()
-            .filter(|(dep_package, unit)|
-                dep_package.as_str() == package_name && matches!(unit.unit, CompiledUnit::Script(_)))
+            .filter(|(dep_package, unit)| {
+                dep_package.as_str() == package_name && matches!(unit.unit, CompiledUnit::Script(_))
+            })
             .map(|(_, unit)| unit)
             .find(|unit| unit.unit.name().as_str() == script_name)
             .ok_or_else(|| {

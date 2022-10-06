@@ -447,14 +447,14 @@ pub fn construct_pre_compiled_lib<Paths: Into<Symbol>, NamedAddress: Into<Symbol
             parser = Some(prog.clone())
         }
         PassResult::Expansion(eprog) => {
-            if env.has_diags() {
+            if env.has_diags_at_or_above_severity(Severity::BlockingError) {
                 return;
             }
             assert!(expansion.is_none());
             expansion = Some(eprog.clone())
         }
         PassResult::Naming(nprog) => {
-            if env.has_diags() {
+            if env.has_diags_at_or_above_severity(Severity::BlockingError) {
                 return;
             }
             assert!(naming.is_none());
@@ -465,7 +465,7 @@ pub fn construct_pre_compiled_lib<Paths: Into<Symbol>, NamedAddress: Into<Symbol
             typing = Some(tprog.clone())
         }
         PassResult::HLIR(hprog) => {
-            if env.has_diags() {
+            if env.has_diags_at_or_above_severity(Severity::NonblockingError) {
                 return;
             }
             assert!(hlir.is_none());

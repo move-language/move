@@ -9,6 +9,7 @@ use crate::{
         cfg::BlockCFG,
     },
     diag,
+    diagnostics::codes::Severity,
     expansion::ast::{AbilitySet, ModuleIdent},
     hlir::ast::{self as H, Label, Value, Value_},
     parser::ast::{ConstantName, FunctionName, StructName, Var},
@@ -434,7 +435,11 @@ fn function_body(
                 &mut cfg,
                 &infinite_loop_starts,
             );
-            if !context.env.has_diags() {
+            // do not optimize if there are errors, warnings are okay
+            if context
+                .env
+                .has_diags_at_or_above_severity(Severity::NonblockingError)
+            {
                 cfgir::optimize(signature, &locals, &mut cfg);
             }
 

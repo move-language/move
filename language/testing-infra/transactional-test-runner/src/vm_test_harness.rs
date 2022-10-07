@@ -77,6 +77,9 @@ pub struct AdapterPublishArgs {
     #[clap(long)]
     /// is skip the struct_layout compatibility check
     pub skip_check_struct_layout: bool,
+    #[clap(long)]
+    /// is skip the check friend link, if true, treat `friend` as `private`
+    pub skip_check_friend_linking: bool,
 }
 
 impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
@@ -171,6 +174,7 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
                 check_struct_and_function_linking: !extra_args
                     .skip_check_struct_and_function_linking,
                 check_struct_layout: !extra_args.skip_check_struct_layout,
+                check_friend_linking: !extra_args.skip_check_friend_linking,
             };
 
             session.publish_module_bundle_with_compat_config(

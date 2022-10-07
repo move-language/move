@@ -38,7 +38,6 @@ use tracing::warn;
 /// An instantiation of the MoveVM.
 pub(crate) struct VMRuntime {
     loader: Loader,
-    verifier_config: VerifierConfig,
 }
 
 impl VMRuntime {
@@ -47,8 +46,7 @@ impl VMRuntime {
         verifier_config: VerifierConfig,
     ) -> PartialVMResult<Self> {
         Ok(VMRuntime {
-            loader: Loader::new(NativeFunctions::new(natives)?, verifier_config.clone()),
-            verifier_config,
+            loader: Loader::new(NativeFunctions::new(natives)?, verifier_config),
         })
     }
 
@@ -120,11 +118,8 @@ impl VMRuntime {
                 let old_module = old_module_ref.module();
                 let old_m = normalized::Module::new(old_module);
                 let new_m = normalized::Module::new(module);
-                let compat = Compatibility::check(
-                    self.verifier_config.treat_friend_as_private,
-                    &old_m,
-                    &new_m,
-                );
+                let compat =
+                    Compatibility::check(compat_config.check_friend_linking, &old_m, &new_m);
 
                 if compat_config.check_struct_and_function_linking
                     && !compat.struct_and_function_linking

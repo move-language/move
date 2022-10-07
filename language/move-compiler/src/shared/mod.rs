@@ -193,8 +193,13 @@ impl CompilationEnv {
         self.diags.extend(diags)
     }
 
-    pub fn has_diags(&self) -> bool {
+    pub fn has_warnings_or_errors(&self) -> bool {
         !self.diags.is_empty()
+    }
+
+    pub fn has_errors(&self) -> bool {
+        // Non-blocking Error is the min level considered an error
+        self.has_diags_at_or_above_severity(Severity::NonblockingError)
     }
 
     pub fn count_diags(&self) -> usize {

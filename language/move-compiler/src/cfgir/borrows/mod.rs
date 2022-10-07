@@ -87,7 +87,7 @@ pub fn verify(
     cfg: &super::cfg::BlockCFG,
 ) -> BTreeMap<Label, BorrowState> {
     // check for existing errors
-    let has_errors = compilation_env.has_diags_at_or_above_severity(Severity::NonblockingError);
+    let has_errors = compilation_env.has_errors();
     let mut initial_state = BorrowState::initial(locals, acquires.clone(), has_errors);
     initial_state.bind_arguments(&signature.parameters);
     let mut safety = BorrowSafety::new(locals);

@@ -511,7 +511,7 @@ mod tests {
         }
 
         let s =
-            "vector<vector<vector<vector<vector<vector<vector<vector<vector<vector<u64>>>>>>>>>>";
+            "vector<vector<vector<vector<vector<vector<vector<vector<vector<vector<vector<vector<vector<vector<u64>>>>>>>>>>>>>>";
         assert!(
             parse_type_tag(s).is_err(),
             "Should have failed to parse type tag {}",
@@ -542,7 +542,7 @@ mod tests {
             "0x1::Diem::Diem<u8 , bool  ,    vector<u8>,address,signer>",
             "0x1::Diem::Diem<vector<0x1::Diem::Struct<0x1::XUS::XUS>>>",
             "0x1::Diem::Diem<0x1::Diem::Struct<vector<0x1::XUS::XUS>, 0x1::Diem::Diem<vector<0x1::Diem::Struct<0x1::XUS::XUS>>>>>",
-            "0x1::Diem::Diem<vector<0x1::XDX::XDX<vector<vector<vector<0x1::XDX::XDX<vector<u64>>>>>>>>",
+            "0x1::Diem::Diem<vector<vector<vector<vector<vector<0x1::XDX::XDX<vector<vector<vector<0x1::XDX::XDX<vector<u64>>>>>>>>>>>>",
         ];
         for text in valid {
             let st = parse_struct_tag(text).expect("valid StructTag");
@@ -555,7 +555,7 @@ mod tests {
             );
         }
 
-        let s = "0x1::Diem::Diem<vector<0x1::XDX::XDX<vector<vector<vector<0x1::XDX::XDX<vector<vector<u64>>>>>>>>>";
+        let s = "vector<vector<vector<vector<0x1::Diem::Diem<vector<0x1::XDX::XDX<vector<vector<vector<0x1::XDX::XDX<vector<vector<u64>>>>>>>>>>>>>";
         assert!(
             parse_struct_tag(s).is_err(),
             "Should have failed to parse type tag {}",

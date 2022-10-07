@@ -11,7 +11,7 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cell::RefCell;
 
-pub(crate) const MAX_TYPE_TAG_NESTING: u8 = 9;
+pub(crate) const MAX_TYPE_TAG_NESTING: u8 = 13;
 
 thread_local! {
     static TYPE_TAG_DEPTH: RefCell<u8> = RefCell::new(0);

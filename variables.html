@@ -217,7 +217,7 @@ syntax for adding a type annotation is:</p>
 <pre><code class="language-move">let x: T = e; // &quot;Variable x of type T is initialized to expression e&quot;
 </code></pre>
 <p>Some examples of explicit type annotations:</p>
-<pre><code class="language-move=">address 0x42 {
+<pre><code class="language-move">address 0x42 {
 module example {
 
     struct S { f: u64, g: u64 }
@@ -371,7 +371,7 @@ will be ignored and not introduce a new variable</p>
 </code></pre>
 <pre><code class="language-move">let (x1, _, z1) = three();
 let (x2, _y, z2) = three();
-assert!(x1 + z1 == x2 + z2)
+assert!(x1 + z1 == x2 + z2, 42);
 </code></pre>
 <p>This can be necessary at times as the compiler will error on unused local variables</p>
 <pre><code class="language-move">let (x1, y, z1) = three(); // ERROR!
@@ -437,7 +437,7 @@ expression block with braces (<code>{</code>...<code>}</code>).</p>
 if (cond) x = 1 else x = 2;
 </code></pre>
 <p>The assignment uses the same pattern syntax scheme as <code>let</code> bindings:</p>
-<pre><code class="language-move=">address 0x42 {
+<pre><code class="language-move">address 0x42 {
 module example {
     struct X { f: u64 }
 
@@ -470,8 +470,7 @@ reference <code>&amp;mut</code>.</p>
 <pre><code class="language-move">let x = 0;
 let r = &amp;mut x;
 *r = 1;
-assert!(x == 1, 42)
-}
+assert!(x == 1, 42);
 </code></pre>
 <p>This is particularly useful if either:</p>
 <p>(1) You want to modify different variables depending on some condition.</p>
@@ -487,7 +486,7 @@ modify_ref(&amp;mut x);
 <p>This sort of modification is how you modify structs and vectors!</p>
 <pre><code class="language-move">let v = vector::empty();
 vector::push_back(&amp;mut v, 100);
-assert!(*vector::borrow(&amp;v, 0) == 100, 42)
+assert!(*vector::borrow(&amp;v, 0) == 100, 42);
 </code></pre>
 <p>For more details, see <a href="./references.html">Move references</a>.</p>
 <h2 id="scopes"><a class="header" href="#scopes">Scopes</a></h2>
@@ -554,7 +553,7 @@ explicitly destroyed within its declaring module.)</p>
 }
 </code></pre>
 <p>If a final expression is not present in a block---that is, if there is a trailing semicolon <code>;</code>,
-there is an implicit unit <code>()</code> value. Similarly, if the expression block is empty, there is an
+there is an implicit <a href="https://en.wikipedia.org/wiki/Unit_type">unit <code>()</code> value</a>. Similarly, if the expression block is empty, there is an
 implicit unit <code>()</code> value.</p>
 <pre><code class="language-move">// Both are equivalent
 { x = x + 1; 1 / x; }

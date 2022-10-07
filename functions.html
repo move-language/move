@@ -409,16 +409,16 @@ module example {
 <pre><code class="language-move">fun zero(): u64 { 0 }
 </code></pre>
 <p>Here <code>: u64</code> indicates that the function's return type is <code>u64</code>.</p>
-<p>Using tuples, a function can return multiple values</p>
+<p>Using tuples, a function can return multiple values:</p>
 <pre><code class="language-move">fun one_two_three(): (u64, u64, u64) { (0, 1, 2) }
 </code></pre>
-<p>If no return type is specified, the function has an implicit return type of unit <code>()</code>. These functions are equivalent</p>
+<p>If no return type is specified, the function has an implicit return type of unit <code>()</code>. These functions are equivalent:</p>
 <pre><code class="language-move">fun just_unit(): () { () }
 fun just_unit() { () }
 fun just_unit() { }
 </code></pre>
-<p><code>script</code> functions must have a return type of unit <code>()</code></p>
-<pre><code class="language-move=">script {
+<p><code>script</code> functions must have a return type of unit <code>()</code>:</p>
+<pre><code class="language-move">script {
     fun do_nothing() {
     }
 }

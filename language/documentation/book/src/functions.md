@@ -322,13 +322,13 @@ fun zero(): u64 { 0 }
 
 Here `: u64` indicates that the function's return type is `u64`.
 
-Using tuples, a function can return multiple values
+Using tuples, a function can return multiple values:
 
 ```move
 fun one_two_three(): (u64, u64, u64) { (0, 1, 2) }
 ```
 
-If no return type is specified, the function has an implicit return type of unit `()`. These functions are equivalent
+If no return type is specified, the function has an implicit return type of unit `()`. These functions are equivalent:
 
 ```move
 fun just_unit(): () { () }
@@ -336,9 +336,9 @@ fun just_unit() { () }
 fun just_unit() { }
 ```
 
-`script` functions must have a return type of unit `()`
+`script` functions must have a return type of unit `()`:
 
-```move=
+```move
 script {
     fun do_nothing() {
     }

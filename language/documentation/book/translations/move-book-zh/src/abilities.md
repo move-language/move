@@ -38,7 +38,7 @@ The `copy` ability allows values of types with that ability to be copied. It gat
 
 If a value has `copy`, all values contained inside of that value have `copy`.
 
-`copy` 能力允许具有此能力的类型的值被复制。 它限制了从本地变量通过 [`copy`](./variables.md#.move-and-copy)能力复制值以及通过 [`dereference *e`](./chapter_8_references.html#reading-and-writing-through-references)复制值这两种情况之外的复制操作。
+`copy` 能力允许具有此能力的类型的值被复制。 它限制了从本地变量通过 [`copy`](./variables.md#.move-and-copy)能力复制值以及通过 [`dereference *e`](./references.html#reading-and-writing-through-references)复制值这两种情况之外的复制操作。
 
 如果一个值具有 `copy` 能力，那么这个值内部的所有值都有 `copy` 能力。
 
@@ -55,7 +55,7 @@ If a value has `drop`, all values contained inside of that value have `drop`.
 `drop` 能力允许类型的值被丢弃。丢弃的意思程序执行后值会被有效的销毁而不必被转移。因此，这个能力限制在多个位置忽略使用值的可能性，包括：
 * 未被使用的局部变量或者参数
 * 未被使用的 [`sequence` via `;`](./variables.md#expression-blocks)中的值
-* 覆盖[赋值(assignments)](./chapter_10_variables.html#assignments)变量中的值
+* 覆盖[赋值(assignments)](./variables.html#assignments)变量中的值
 * [写入(writing) `*e1 = e2`](https://move-language.github.io/move/references.html#reading-and-writing-through-references) 时通过引用覆盖的值。
 
 如果一个值具有 `drop` 能力，那么这个值内部的所有值都有 `drop` 能力。

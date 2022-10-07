@@ -38,9 +38,9 @@ Literals for `bool` are either `true` or `false` .
 
 布尔值用于 Move 的多个控制流结构中：
 
-- `[if (bool) { ... }](<./chapter_13_conditionals.html>)`
-- `[while (bool) { .. }](<./chapter_14_loops.html>)`
-- `[assert!(bool, u64)](<./chapte_12_abort-and-assert.html>)`
+- [`if (bool) { ... }`](./conditionals.html)
+- [`while (bool) { .. }`](/loops.html)
+- [`assert!(bool, u64)`](./abort-and-assert.html)
 
 ## 所有权 (Ownership)
 

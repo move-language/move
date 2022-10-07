@@ -250,7 +250,7 @@ impl<'env> Context<'env> {
         match ma_ {
             EA::Name(n) => match self.resolve_unscoped_type(&n) {
                 None => {
-                    assert!(self.env.has_diags());
+                    assert!(self.env.has_errors());
                     None
                 }
                 Some(rt) => {
@@ -264,7 +264,7 @@ impl<'env> Context<'env> {
             },
             EA::ModuleAccess(m, n) => match self.resolve_module_type(nloc, &m, &n) {
                 None => {
-                    assert!(self.env.has_diags());
+                    assert!(self.env.has_errors());
                     None
                 }
                 Some((_, _, _, arity)) => {
@@ -297,7 +297,7 @@ impl<'env> Context<'env> {
             },
             EA::ModuleAccess(m, n) => match self.resolve_module_constant(loc, &m, n) {
                 None => {
-                    assert!(self.env.has_diags());
+                    assert!(self.env.has_errors());
                     None
                 }
                 Some(cname) => Some((Some(m), cname)),

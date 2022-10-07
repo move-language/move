@@ -140,7 +140,7 @@ impl<'env> Context<'env> {
         let fields = self.structs.get(struct_name);
         // if fields are none, the struct must be defined in another module,
         // in that case, there should be errors
-        assert!(fields.is_some() || self.env.has_diags());
+        assert!(fields.is_some() || self.env.has_errors());
         fields
     }
 

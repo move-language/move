@@ -1187,7 +1187,7 @@ fn visibility(context: &mut Context, pvisibility: P::Visibility) -> E::Visibilit
     match pvisibility {
         P::Visibility::Public(loc) => E::Visibility::Public(loc),
         P::Visibility::Script(loc) => {
-            assert!(context.env.has_errors());
+            assert!(!context.env.has_errors());
             E::Visibility::Public(loc)
         }
         P::Visibility::Friend(loc) => E::Visibility::Friend(loc),

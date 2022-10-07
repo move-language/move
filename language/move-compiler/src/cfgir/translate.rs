@@ -9,7 +9,6 @@ use crate::{
         cfg::BlockCFG,
     },
     diag,
-    diagnostics::codes::Severity,
     expansion::ast::{AbilitySet, ModuleIdent},
     hlir::ast::{self as H, Label, Value, Value_},
     parser::ast::{ConstantName, FunctionName, StructName, Var},

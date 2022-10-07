@@ -6,7 +6,7 @@ mod state;
 
 use super::absint::*;
 use crate::{
-    diagnostics::{codes::Severity, Diagnostics},
+    diagnostics::Diagnostics,
     hlir::ast::*,
     parser::ast::{BinOp_, StructName, Var},
     shared::{unique_map::UniqueMap, CompilationEnv},

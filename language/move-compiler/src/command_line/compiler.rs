@@ -441,7 +441,7 @@ pub fn construct_pre_compiled_lib<Paths: Into<Symbol>, NamedAddress: Into<Symbol
     let mut cfgir = None;
     let mut compiled = None;
 
-    let save_result = |cur: &PassResult, env: &CompilationEnv| match cur {
+    let save_result = |cur: &PassResult, _env: &CompilationEnv| match cur {
         PassResult::Parser(prog) => {
             assert!(parser.is_none());
             parser = Some(prog.clone())

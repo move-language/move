@@ -992,7 +992,7 @@ fn struct_def(
 ) {
     let (sname, sdef) = struct_def_(context, pstruct);
     if let Err(_old_loc) = structs.add(sname, sdef) {
-        assert!(context.env.has_diags())
+        assert!(context.env.has_errors())
     }
 }
 
@@ -1080,7 +1080,7 @@ fn friend(
                 ));
             }
         },
-        None => assert!(context.env.has_diags()),
+        None => assert!(context.env.has_errors()),
     };
 }
 
@@ -1107,7 +1107,7 @@ fn constant(
 ) {
     let (name, constant) = constant_(context, pconstant);
     if let Err(_old_loc) = constants.add(name, constant) {
-        assert!(context.env.has_diags())
+        assert!(context.env.has_errors())
     }
 }
 
@@ -1144,7 +1144,7 @@ fn function(
 ) {
     let (fname, fdef) = function_(context, pfunction);
     if let Err(_old_loc) = functions.add(fname, fdef) {
-        assert!(context.env.has_diags())
+        assert!(context.env.has_errors())
     }
 }
 
@@ -1187,7 +1187,7 @@ fn visibility(context: &mut Context, pvisibility: P::Visibility) -> E::Visibilit
     match pvisibility {
         P::Visibility::Public(loc) => E::Visibility::Public(loc),
         P::Visibility::Script(loc) => {
-            debug_assert!(context.env.has_diags());
+            assert!(!context.env.has_errors());
             E::Visibility::Public(loc)
         }
         P::Visibility::Friend(loc) => E::Visibility::Friend(loc),
@@ -1534,7 +1534,7 @@ fn type_(context: &mut Context, sp!(loc, pt_): P::Type) -> E::Type {
             let tyargs = types(context, ptyargs);
             match name_access_chain(context, Access::Type, *pn) {
                 None => {
-                    assert!(context.env.has_diags());
+                    assert!(context.env.has_errors());
                     ET::UnresolvedError
                 }
                 Some(n) => ET::Apply(n, tyargs),
@@ -1720,7 +1720,7 @@ fn sequence_item(context: &mut Context, sp!(loc, pitem_): P::SequenceItem) -> E:
             let ty_opt = pty_opt.map(|t| type_(context, t));
             match b_opt {
                 None => {
-                    assert!(context.env.has_diags());
+                    assert!(context.env.has_errors());
                     ES::Seq(sp(loc, E::Exp_::UnresolvedError))
                 }
                 Some(b) => ES::Declare(b, ty_opt),
@@ -1736,7 +1736,7 @@ fn sequence_item(context: &mut Context, sp!(loc, pitem_): P::SequenceItem) -> E:
             };
             match b_opt {
                 None => {
-                    assert!(context.env.has_diags());
+                    assert!(context.env.has_errors());
                     ES::Seq(sp(loc, E::Exp_::UnresolvedError))
                 }
                 Some(b) => ES::Bind(b, e),
@@ -1762,7 +1762,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         PE::Value(pv) => match value(context, pv) {
             Some(v) => EE::Value(v),
             None => {
-                assert!(context.env.has_diags());
+                assert!(context.env.has_errors());
                 EE::UnresolvedError
             }
         },
@@ -1785,7 +1785,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
             match en_opt {
                 Some(en) => EE::Name(en, tys_opt),
                 None => {
-                    assert!(context.env.has_diags());
+                    assert!(context.env.has_errors());
                     EE::UnresolvedError
                 }
             }
@@ -1797,7 +1797,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
             match en_opt {
                 Some(en) => EE::Call(en, is_macro, tys_opt, ers),
                 None => {
-                    assert!(context.env.has_diags());
+                    assert!(context.env.has_errors());
                     EE::UnresolvedError
                 }
             }
@@ -1813,7 +1813,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
             match en_opt {
                 Some(en) => EE::Pack(en, tys_opt, efields),
                 None => {
-                    assert!(context.env.has_diags());
+                    assert!(context.env.has_errors());
                     EE::UnresolvedError
                 }
             }
@@ -1848,7 +1848,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
                 match bs_opt {
                     Some(bs) => EE::Lambda(bs, Box::new(e)),
                     None => {
-                        assert!(context.env.has_diags());
+                        assert!(context.env.has_errors());
                         EE::UnresolvedError
                     }
                 }
@@ -1872,7 +1872,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
                 match rs_opt {
                     Some(rs) => EE::Quant(k, rs, rtrs, rc, Box::new(re)),
                     None => {
-                        assert!(context.env.has_diags());
+                        assert!(context.env.has_errors());
                         EE::UnresolvedError
                     }
                 }
@@ -1888,7 +1888,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
             let er = exp(context, *rhs);
             match l_opt {
                 None => {
-                    assert!(context.env.has_diags());
+                    assert!(context.env.has_errors());
                     EE::UnresolvedError
                 }
                 Some(LValue::Assigns(al)) => EE::Assign(al, er),
@@ -1926,7 +1926,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         pdotted_ @ PE::Dot(_, _) => match exp_dotted(context, sp(loc, pdotted_)) {
             Some(edotted) => EE::ExpDotted(Box::new(edotted)),
             None => {
-                assert!(context.env.has_diags());
+                assert!(context.env.has_errors());
                 EE::UnresolvedError
             }
         },

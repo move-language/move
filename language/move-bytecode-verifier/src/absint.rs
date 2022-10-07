@@ -104,8 +104,9 @@ pub trait AbstractInterpreter: TransferFunctions {
             let post_state = match self.execute_block(block_id, pre_state, function_view) {
                 Err(e) => {
                     block_invariant.post = BlockPostcondition::Error(e);
-                    next_block = function_view.cfg().next_block(block_id);
-                    continue;
+                    // Stop analyzing after the first error occurred, to avoid the risk of
+                    // crashes as followup errors.
+                    break;
                 }
                 Ok(s) => {
                     block_invariant.post = BlockPostcondition::Success;

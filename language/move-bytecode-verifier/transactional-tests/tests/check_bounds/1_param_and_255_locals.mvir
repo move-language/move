@@ -260,3 +260,5 @@ module 0x1.M {
         return;
     }
 }
+
+// check: TOO_MANY_LOCALS

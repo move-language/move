@@ -262,4 +262,4 @@ module 0x1.M {
         return;
     }
 }
-// check: "Keep(EXECUTED)"
+// check: TOO_MANY_LOCALS

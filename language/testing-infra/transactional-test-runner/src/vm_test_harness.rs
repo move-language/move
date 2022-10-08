@@ -170,12 +170,12 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
         let id = module.self_id();
         let sender = *id.address();
         match self.perform_session_action(gas_budget, |session, gas_status| {
-            let compat_config = CompatibilityConfig {
-                check_struct_and_function_linking: !extra_args
-                    .skip_check_struct_and_function_linking,
-                check_struct_layout: !extra_args.skip_check_struct_layout,
-                check_friend_linking: !extra_args.skip_check_friend_linking,
-            };
+            let compat_config = CompatibilityConfig::new(
+                !extra_args.skip_check_struct_and_function_linking,
+                !extra_args.skip_check_struct_layout,
+                !extra_args.skip_check_struct_and_function_linking
+                    && !extra_args.skip_check_friend_linking,
+            );
 
             session.publish_module_bundle_with_compat_config(
                 vec![module_bytes],

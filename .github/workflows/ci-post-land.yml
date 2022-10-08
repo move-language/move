@@ -8,12 +8,14 @@ on:
 
 jobs:
   generate-documentation:
-    name: Generate the Move Book using mdBook
+    name: Generate the Move Book using mdBook and deploy it to gh-page(deploy-gh-page)
     runs-on: ubuntu-20.04
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+        with:
+          ref: main
 
       - name: Setup mdBook
         uses: peaceiris/actions-mdbook@v1
@@ -21,10 +23,13 @@ jobs:
           mdbook-version: '0.4.10'
           # mdbook-version: 'latest'
 
+      - name: install mdbook-i18n
+        run: "cargo install mdbook-i18n"
+
       - run: mdbook build language/documentation/book
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./language/documentation/book/book
+          publish_dir: ./language/documentation/book/book/i18n

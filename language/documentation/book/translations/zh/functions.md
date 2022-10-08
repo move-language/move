@@ -91,13 +91,13 @@ script {
 
 The `public(friend)` visibility modifier is a more restricted form of the `public` modifier to give more control about where a function can be used. A `public(friend)` function can be called by:
 - other functions defined in the same module, or
-- functions defined in modules which are explicitly specified in the **friend list** (see [Friends](./friends.md) on how to specify the friend list).
+- functions defined in modules which are explicitly specified in the **friend list** (see [Friends](friends.md) on how to specify the friend list).
 
 Note that since we cannot declare a script to be a friend of a module, the functions defined in scripts can never call a `public(friend)` function.
 
 `public(friend)` 可见性修饰符是一种比 `public` 修饰符限制更严格的形式，可以更好地控制函数的使用位置。 `public(friend)` 函数可以通过以下方式调用：
 
-- 在同一模块中定义的其他函数，或者在 **friend list** 中明确指定的模块中定义的函数(请参阅 [Friends](./friends.md) 了解如何指定友元(friends)列表)。
+- 在同一模块中定义的其他函数，或者在 **friend list** 中明确指定的模块中定义的函数(请参阅 [Friends](friends.md) 了解如何指定友元(friends)列表)。
 
 请注意，由于我们不能将脚本声明为模块的友元关系，因此脚本中定义的函数永远不能调用 `public(friend)` 函数。
 
@@ -230,9 +230,9 @@ fun id<T>(x: T): T { x }
 fun example<T1: copy, T2>(x: T1, y: T2): (T1, T1, T2) { (copy x, x, y) }
 ```
 
-For more details, see [Move generics](./generics.md).
+For more details, see [Move generics](generics.md).
 
-有关更多详细信息，请参阅 [移动泛型](./generics.md)。
+有关更多详细信息，请参阅 [移动泛型](generics.md)。
 
 ### 参数 (Parameters)
 
@@ -402,7 +402,7 @@ script {
 }
 ```
 
-As mentioned in the [tuples section](./tuples.md), these tuple "values" are virtual and do not exist at runtime. So for a function that returns unit `()`, it will not be returning any value at all during execution.
+As mentioned in the [tuples section](tuples.md), these tuple "values" are virtual and do not exist at runtime. So for a function that returns unit `()`, it will not be returning any value at all during execution.
 
 如 [元组部分](./chapter_9_tuples.md) 中所述，这些元组“值”是模拟(virtual)的，且在运行时不存在。所以对于返回 unit `()`的函数，它在执行期间根本不会返回任何值。
 
@@ -424,9 +424,9 @@ See [the section below for more information on returns](#returning-values)
 
 请参阅[有关返回值的更多信息](#returning-values)
 
-For more information on expression blocks, see [Move variables](./variables.md).
+For more information on expression blocks, see [Move variables](variables.md).
 
-有关表达式块的更多信息，请参阅 [Move variables](./variables.md)。
+有关表达式块的更多信息，请参阅 [Move variables](variables.md)。
 
 ### Native Functions
 
@@ -518,9 +518,9 @@ script {
 }
 ```
 
-For more details, see [Move generics](./generics.md).
+For more details, see [Move generics](generics.md).
 
-有关更多详细信息，请参阅 [Move generics](./generics.md)。
+有关更多详细信息，请参阅 [Move generics](generics.md)。
 
 
 ## Returning values (返回值)
@@ -535,9 +535,9 @@ fun add(x: u64, y: u64): u64 {
 }
 ```
 
-[As mentioned above](#function-body), the function's body is an [expression block](./variables.md). The expression block can sequence various statements, and the final expression in the block will be be the value of that block
+[As mentioned above](#function-body), the function's body is an [expression block](variables.md). The expression block can sequence various statements, and the final expression in the block will be be the value of that block
 
-[如上所述](#function-body)，函数体是一个[表达式块](./variables.md)。表达式块中可以有各种各种语句，块中最后一个表达式将是该表达式块的值。
+[如上所述](#function-body)，函数体是一个[表达式块](variables.md)。表达式块中可以有各种各种语句，块中最后一个表达式将是该表达式块的值。
 
 ```move=
 fun double_and_add(x: u64, y: u64): u64 {

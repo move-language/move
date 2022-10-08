@@ -1,6 +1,6 @@
 # 模块和脚本
 
-Move 有两种不同类型的程序：***模块（Module）***和***脚本（Script）***。模块是定义结构类型以及对这些类型进行操作的函数的库。*结构类型*定义了 Move 的[全局存储](./global-storage-structure.md)的模式，*模块函数*定义了更新存储的规则。模块本身也存储在全局存储中。脚本是[可执行文件](https://en.wikipedia.org/wiki/Executable)的入口点，类似于传统语言中的主函数 `main`。脚本通常调用已发布模块的函数来更新全局存储。脚本是临时代码片段，不会发布在全局存储中。
+Move 有两种不同类型的程序：***模块（Module）***和***脚本（Script）***。模块是定义结构类型以及对这些类型进行操作的函数的库。*结构类型*定义了 Move 的[全局存储](global-storage-structure.md)的模式，*模块函数*定义了更新存储的规则。模块本身也存储在全局存储中。脚本是[可执行文件](https://en.wikipedia.org/wiki/Executable)的入口点，类似于传统语言中的主函数 `main`。脚本通常调用已发布模块的函数来更新全局存储。脚本是临时代码片段，不会发布在全局存储中。
 
 一个 Move 源文件（或**编译单元**）可能包含多个模块和脚本。然而，发布模块或执行脚本都是独立的虚拟机（VM）操作。
 
@@ -18,7 +18,7 @@ script {
 }
 ```
 
-一个 `script` 块必须以它的所有 [`use`](./uses.md) 声明开头，然后是[常量（constant）](./constants.md)声明，最后是主[函数](./functions.md)声明。主函数的名称可以是任意的（也就是说，它不一定命名为 `main`），它是脚本块中唯一的函数，可以有任意数量的参数，并且不能有返回值。下面是每个组件的示例：
+一个 `script` 块必须以它的所有 [`use`](uses.md) 声明开头，然后是[常量（constant）](constants.md)声明，最后是主[函数](functions.md)声明。主函数的名称可以是任意的（也就是说，它不一定命名为 `main`），它是脚本块中唯一的函数，可以有任意数量的参数，并且不能有返回值。下面是每个组件的示例：
 
 ```move
 script {
@@ -46,7 +46,7 @@ module <address>::<identifier> {
 }
 ```
 
-其中 `<address>` 是一个有效的[命名或字面量地址](./address.md)。
+其中 `<address>` 是一个有效的[命名或字面量地址](address.md)。
 
 例子：
 
@@ -67,9 +67,9 @@ module 0x42::test {
 }
 ```
 
-`module 0x42::test` 这部分指定模块 `test` 将在[全局存储](./global-storage-structure.md)的[账户地址](./address.md) `0x42` 下发布。
+`module 0x42::test` 这部分指定模块 `test` 将在[全局存储](global-storage-structure.md)的[账户地址](address.md) `0x42` 下发布。
 
-模块也可以使用[命名地址](./address.md)来声明，例如：
+模块也可以使用[命名地址](address.md)来声明，例如：
 
 ```move
 module test_addr::test {
@@ -116,4 +116,4 @@ module foo_bar_42 {}
 
 通常，模块名称以小写字母开头。名为 `my_module` 的模块应该存储在名为 `my_module.move` 的源文件中。
 
-`module` 块内的所有元素都可以按任意顺序出现。从根本上说，模块是[`类型（type）`](./structs-and-resources.md)和[`函数（function）`](./functions.md)的集合。[`use`](./uses.md) 关键字用来从其他模块导入类型。[`friend`](./friends.md) 关键字指定一个可信的模块列表。[`const`](./constants.md) 关键字定义了可以在模块函数中使用的私有常量。
+`module` 块内的所有元素都可以按任意顺序出现。从根本上说，模块是[`类型（type）`](structs-and-resources.md)和[`函数（function）`](functions.md)的集合。[`use`](uses.md) 关键字用来从其他模块导入类型。[`friend`](friends.md) 关键字指定一个可信的模块列表。[`const`](constants.md) 关键字定义了可以在模块函数中使用的私有常量。

@@ -212,4 +212,4 @@ For example:
 
 As with the other scalar values built-in to the language, integer values are implicitly copyable, meaning they can be copied without an explicit instruction such as `[copy](<https://move-language.github.io/move/variables.html#move-and-copy>).`
 
-与语言内置的其他标量值一样，整数值是隐式可复制的，这意味着它们可以在没有明确指令如[`copy`](./variables.md#move-and-copy)的情况下复制。
+与语言内置的其他标量值一样，整数值是隐式可复制的，这意味着它们可以在没有明确指令如[`copy`](variables.md#move-and-copy)的情况下复制。

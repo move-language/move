@@ -16,20 +16,20 @@ Move标准库公开了实现以下功能的接口:
 
 
 The `vector` module defines a number of operations over the primitive
-[`vector`](./vector.md) type. The module is published under the
+[`vector`](vector.md) type. The module is published under the
 named address `Std` and consists of a number of native functions, as
 well as functions defined in Move. The API for this module is as follows.
 
-`向量`模块在原生类型[`向量`](./vector.md)上定义了许多操作。该模块以命名地址`Std`发布，并由许多原生函数以及在Move中定义的函数组成。此模块的API如下所示:
+`向量`模块在原生类型[`向量`](vector.md)上定义了许多操作。该模块以命名地址`Std`发布，并由许多原生函数以及在Move中定义的函数组成。此模块的API如下所示:
 
 ### 函数（Functions）
 
 ---------------------------------------------------------------------------
 
-Create an empty [`vector`](./vector.md).
+Create an empty [`vector`](vector.md).
 The `Element` type can be both a `resource` or `copyable` type.
 
-创建一个空的[`向量`](./vector.md)。
+创建一个空的[`向量`](vector.md)。
 `Element`类型可以是`资源`或`可复制`类型。
 
 ```move
@@ -51,10 +51,10 @@ Create a vector of length `1` containing the passed in `element`.
 Destroy (deallocate) the vector `v`. Will abort if `v` is non-empty.
 *Note*: The emptiness restriction is due to the fact that `Element` can be a
 resource type, and destruction of a non-empty vector would violate
-[resource conservation](./structs-and-resources.md).
+[resource conservation](structs-and-resources.md).
 
 销毁(释放)向量`v`。如果`v`非空操作将终止。
-*注意*:空的限制是由于`Element`可以是资源类型，而销毁非空的向量会违反[资源保护机制](./structs-and-resources.md)。
+*注意*:空的限制是由于`Element`可以是资源类型，而销毁非空的向量会违反[资源保护机制](structs-and-resources.md)。
 
 ```move
     native public fun destroy_empty<Element>(v: vector<Element>);
@@ -62,10 +62,10 @@ resource type, and destruction of a non-empty vector would violate
 
 ---------------------------------------------------------------------------
 
-Acquire an [immutable reference](./references.md) to the `i`th element of the vector `v`.  Will abort if
+Acquire an [immutable reference](references.md) to the `i`th element of the vector `v`.  Will abort if
 the index `i` is out of bounds for the vector `v`.
 
-获取向量`v`的第`i`个元素的[不可变引用](./references.md)。如果索引`i`超出了向量`v`的范围，操作将会终止。
+获取向量`v`的第`i`个元素的[不可变引用](references.md)。如果索引`i`超出了向量`v`的范围，操作将会终止。
 
 ```move
     native public fun borrow<Element>(v: &vector<Element>, i: u64): &Element;
@@ -73,11 +73,11 @@ the index `i` is out of bounds for the vector `v`.
 
 ---------------------------------------------------------------------------
 
-Acquire a [mutable reference](./references.md)
+Acquire a [mutable reference](references.md)
 to the `i`th element of the vector `v`.  Will abort if
 the index `i` is out of bounds for the vector `v`.
 
-获取向量`v`的第`i`个元素的[可变引用](./references.md)。如果索引`i`超出了向量`v`的范围，操作将会终止。
+获取向量`v`的第`i`个元素的[可变引用](references.md)。如果索引`i`超出了向量`v`的范围，操作将会终止。
 
 ```move
     native public fun borrow_mut<Element>(v: &mut vector<Element>, i: u64): &mut Element;

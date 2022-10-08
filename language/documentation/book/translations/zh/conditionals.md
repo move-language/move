@@ -57,9 +57,9 @@ if (condition) true_branch // implied default: else ()
 if (condition) true_branch else ()
 ```
 
-Commonly, [`if` expressions](./conditionals.md) are used in conjunction with expression blocks.
+Commonly, [`if` expressions](conditionals.md) are used in conjunction with expression blocks.
 
-一般来说, [`if` 表达式](./conditionals.md)与多个表达式块结合使用.
+一般来说, [`if` 表达式](conditionals.md)与多个表达式块结合使用.
 
 ```move
 let maximum = if (x > y) x else y;

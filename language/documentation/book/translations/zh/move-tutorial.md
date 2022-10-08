@@ -713,7 +713,7 @@ In definitions of both `Coin` and `Balance`, we declare the type parameter `Coin
 
 Read more about phantom type parameters <a href="https://move-language.github.io/move/generics.html#phantom-type-parameters">here</a>.
 
-阅读更多有关 [phantom 类型参数](./generics.md#phantom-type-parameters) 信息.
+阅读更多有关 [phantom 类型参数](generics.mdhantom-type-parameters) 信息.
 
 </details>
 

@@ -5,7 +5,7 @@
 //! A crate which extends Move by tables.
 //!
 //! See [`Table.move`](../sources/Table.move) for language use.
-//! See [`README.md`](../README.md) for integration into an adapter.
+//! See [`contribute.md`](../contribute.md) for integration into an adapter.
 
 use better_any::{Tid, TidAble};
 use move_binary_format::errors::{PartialVMError, PartialVMResult};

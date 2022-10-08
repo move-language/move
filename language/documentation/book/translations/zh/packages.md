@@ -3,7 +3,7 @@
 Packages allow Move programmers to more easily re-use code and share it
 across projects. The Move package system allows programmers to easily:
 * Define a package containing Move code;
-* Parameterize a package by [named addresses](./address.md);
+* Parameterize a package by [named addresses](address.md);
 * Import and use packages in other Move code and instantiate named addresses;
 * Build packages and generate associated compilation artifacts from packages; and
 * Work with a common interface around compiled Move artifacts.
@@ -132,7 +132,7 @@ a bit more detail.
 
 ## 编译期间的命名地址（Named Addresses During Compilation）
 
-Recall that Move has [named addresses](./address.md) and that
+Recall that Move has [named addresses](address.md) and that
 named addresses cannot be declared in Move. Because of this, until now
 named addresses and their values needed to be passed to the compiler on the
 command line. With the Move package system this is no longer needed, and

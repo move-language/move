@@ -12,6 +12,13 @@ use std::{convert::TryFrom, fmt, str::FromStr};
 #[cfg_attr(any(test, feature = "fuzzing"), derive(proptest_derive::Arbitrary))]
 pub struct AccountAddress([u8; AccountAddress::LENGTH]);
 
+#[cfg(kani)]
+impl kani::Arbitrary for AccountAddress {
+    fn any() -> Self {
+        AccountAddress::new(kani::any())
+    }
+}
+
 impl AccountAddress {
     pub const fn new(address: [u8; Self::LENGTH]) -> Self {
         Self(address)

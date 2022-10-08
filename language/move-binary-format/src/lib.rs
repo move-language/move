@@ -23,6 +23,7 @@ pub mod normalized;
 pub mod proptest_types;
 pub mod serializer;
 pub mod views;
+pub mod kani;
 
 #[cfg(test)]
 mod unit_tests;

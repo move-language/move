@@ -92,6 +92,21 @@ pub(crate) static ALLOWED_NO_SELF_IDENTIFIERS: &str =
 pub struct Identifier(Box<str>);
 // An identifier cannot be mutated so use Box<str> instead of String -- it is 1 word smaller.
 
+#[cfg(kani)]
+impl kani::Arbitrary for Identifier {
+    fn any() -> Self {
+        let names = vec!["zf_hello_world", "awldFnU18mlDKQfh6qNfBGx8X",
+                         "aT7ZphKTrKcYCwCebJySrmrKlckmnL5", "arYpsFa2fvrpPJ"];
+        let v = kani::any::<usize>();
+        let str = if v < names.len() - 1 {
+            names[v]
+        } else {
+            names[names.len() - 1]
+        };
+        Identifier::from_str(&str).unwrap()
+    }
+}
+
 impl Identifier {
     /// Creates a new `Identifier` instance.
     pub fn new(s: impl Into<Box<str>>) -> Result<Self> {

@@ -327,6 +327,8 @@ pub mod known_locations {
     };
     use once_cell::sync::Lazy;
 
+    /*
+    // Kani cannot handle the code below
     /// The Identifier for the Account module.
     pub const CORE_ACCOUNT_MODULE_IDENTIFIER: &IdentStr = ident_str!("Account");
     /// The ModuleId for the Account module.
@@ -368,6 +370,7 @@ pub mod known_locations {
     pub fn designated_dealer_module_abort() -> AbortLocation {
         AbortLocation::Module(DESIGNATED_DEALER_MODULE.clone())
     }
+    */
 }
 
 macro_rules! derive_status_try_from_repr {

@@ -2561,6 +2561,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "kani"
+version = "0.1.0"
+dependencies = [
+ "move-binary-format",
+ "move-bytecode-verifier",
+]
+
+[[package]]
 name = "keccak"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

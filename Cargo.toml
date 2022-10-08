@@ -24,6 +24,7 @@ members = [
     "language/move-bytecode-verifier/bytecode-verifier-tests",
     "language/move-bytecode-verifier/invalid-mutations",
     "language/move-bytecode-verifier/transactional-tests",
+    "language/move-bytecode-verifier/kani",
     "language/move-command-line-common",
     "language/move-compiler",
     "language/move-compiler/transactional-tests",

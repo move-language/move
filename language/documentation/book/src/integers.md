@@ -10,7 +10,9 @@ Move supports three unsigned integer types: `u8`, `u64`, and `u128`. Values of t
 
 ## Literals
 
-Literal values for these types are specified either as a sequence of digits (e.g.,`112`) or as hex literals, e.g., `0xFF`. The type of the literal can optionally be added as a suffix, e.g., `112u8`. If the type is not specified, the compiler will try to infer the type from the context where the literal is used. If the type cannot be inferred, it is assumed to be `u64`.
+Literal values for these types are specified either as a sequence of decimal digits with/without underscore separators for grouping (e.g.,`112`, `234_567`, `97_`) or as hex literals, e.g., `0xFF`. The type of the literal can optionally be added as a suffix, e.g., `112u8`, `92_67_u64`. If the type is not specified, the compiler will try to infer the type from the context where the literal is used. If the type cannot be inferred, it is assumed to be `u64`.
+
+Like in Rust, decimal digits can be separated by underscores for grouping and readability. (e.g.,`3_4_5`, `2_4_567u64`, `97_`). However unlike Rust, Move does not currently allow underscore separations in hexadecimal numbers.
 
 If a literal is too large for its specified (or inferred) size range, an error is reported.
 
@@ -21,23 +23,29 @@ If a literal is too large for its specified (or inferred) size range, an error i
 let explicit_u8 = 1u8;
 let explicit_u64 = 2u64;
 let explicit_u128 = 3u128;
+let explicit_u8_underscored = 1_2_3u8;
+let explicit_u64_underscored = 24_5_u64;
+let explicit_u128_underscored = 3000_0__000_1u128;
 
 // literals with simple inference
 let simple_u8: u8 = 1;
 let simple_u64: u64 = 2;
 let simple_u128: u128 = 3;
+let simple_u8_underscored: u8 = 1_1_;
+let simple_u64_underscored: u64 = 2_3654;
+let simple_u128_underscored: u128 = 3_4_6_7_8__9;
 
 // literals with more complex inference
 let complex_u8 = 1; // inferred: u8
 // right hand argument to shift must be u8
 let _unused = 10 << complex_u8;
 
-let x: u8 = 0;
-let complex_u8 = 2; // inferred: u8
+let x: u8 = 38;
+let complex_u8 = 2_5; // inferred: u8
 // arguments to `+` must have the same type
 let _unused = x + complex_u8;
 
-let complex_u128 = 3; // inferred: u128
+let complex_u128 = 1_3_3; // inferred: u128
 // inferred from function argument type
 function_that_takes_u128(complex_u128);
 
@@ -62,7 +70,6 @@ All arithmetic operations abort instead of behaving in a way that mathematical i
 | `*` | multiplication | Result is too large for the integer type
 | `%` | modular division | The divisor is `0`
 | `/` | truncating division | The divisor is `0`
-
 
 ### Bitwise
 

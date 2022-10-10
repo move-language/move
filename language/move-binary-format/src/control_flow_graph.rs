@@ -4,6 +4,7 @@
 
 //! This module defines the control-flow graph uses for bytecode verification.
 use crate::file_format::{Bytecode, CodeOffset};
+use std::collections::btree_map::Entry;
 use std::collections::{BTreeMap, BTreeSet};
 
 // BTree/Hash agnostic type wrappers
@@ -77,12 +78,7 @@ impl BasicBlock {
 const ENTRY_BLOCK_ID: BlockId = 0;
 
 impl VMControlFlowGraph {
-    // Requires checks from the control flow verifier (control_flow.rs)
     pub fn new(code: &[Bytecode]) -> Self {
-        fn is_back_edge(cur_block: BlockId, target_block: BlockId) -> bool {
-            target_block <= cur_block
-        }
-
         let code_len = code.len() as CodeOffset;
         // First go through and collect block ids, i.e., offsets that begin basic blocks.
         // Need to do this first in order to handle backwards edges.
@@ -112,56 +108,63 @@ impl VMControlFlowGraph {
         let blocks = blocks;
         assert_eq!(entry, code_len);
 
-        // Determine traversal order
-        // build a DAG subgraph (remove the loop back edges)
-        let dag: Map<BlockId, Set<BlockId>> = blocks
-            .iter()
-            .map(|(id, block)| {
-                let id = *id;
-                let non_loop_continue_successors = block
-                    .successors
-                    .iter()
-                    // remove the loop back edges
-                    // this simple check for back edges relies on guarantees from the control flow
-                    // verifier (control_flow.rs)
-                    .filter(|successor| !is_back_edge(id, **successor))
-                    .copied()
-                    .collect();
-                (id, non_loop_continue_successors)
-            })
-            .collect();
-        // assert it is a dag
-        debug_assert!(dag.iter().all(|(id, successors)| successors
-            .iter()
-            .all(|successor| !is_back_edge(*id, *successor))));
+        #[derive(Copy, Clone)]
+        enum Exploration {
+            InProgress,
+            Done,
+        }
 
-        // build the post-order traversal
+        let mut loop_heads: Map<BlockId, Set<BlockId>> = Map::new();
+        let mut exploration: Map<BlockId, Exploration> = Map::new();
+        let mut stack = vec![ENTRY_BLOCK_ID];
         let mut post_order = Vec::with_capacity(blocks.len());
-        let mut finished = Set::new();
-        let mut stack = vec![(ENTRY_BLOCK_ID, /* is_first_visit */ true)];
-        while let Some((cur, is_first_visit)) = stack.pop() {
-            if is_first_visit {
-                stack.push((cur, false));
-                stack.extend(
-                    dag[&cur]
-                        .iter()
-                        .filter(|successor| !finished.contains(*successor))
-                        .map(|successor| (*successor, /* is_first_visit */ true)),
-                );
-            } else {
-                debug_assert!(dag[&cur]
-                    .iter()
-                    .all(|successor| finished.contains(successor)));
-                if finished.insert(cur) {
-                    post_order.push(cur)
+
+        while let Some(block) = stack.pop() {
+            match exploration.entry(block) {
+                Entry::Vacant(entry) => {
+                    entry.insert(Exploration::InProgress);
+
+                    // Push the block back on the stack to finish processing it once the sub-graph
+                    // reachable from it has been traversed.
+                    stack.push(block);
+
+                    for succ in &blocks[&block].successors {
+                        match exploration.get(succ) {
+                            // Frontier detected
+                            None => stack.push(*succ),
+
+                            // Back edge detected
+                            Some(Exploration::InProgress) => {
+                                loop_heads.entry(*succ).or_default().insert(block);
+                            }
+
+                            // Cross-edge detected
+                            Some(Exploration::Done) => { /* skip */ }
+                        };
+                    }
                 }
+
+                Entry::Occupied(mut entry) => match entry.get() {
+                    // Already traversed the sub-graph reachable from this block, so skip it.
+                    Exploration::Done => continue,
+
+                    // Finish up the traversal by adding this block to the reverse traversal after
+                    // its sub-graph (modulo cycles).
+                    Exploration::InProgress => {
+                        post_order.push(block);
+                        entry.insert(Exploration::Done);
+                    }
+                },
             }
         }
-        // traversal order is the reverse post-order
+
         let traversal_order = {
+            // This reverse post order is akin to a topological sort (ignoring cycles) and is
+            // different from a pre-order in the presence of diamond patterns in the graph.
             post_order.reverse();
             post_order
         };
+
         // build a mapping from a block id to the next block id in the traversal order
         let traversal_successors = traversal_order
             .windows(2)
@@ -170,18 +173,6 @@ impl VMControlFlowGraph {
                 (window[0], window[1])
             })
             .collect();
-
-        // Gather loop head information
-        let mut loop_heads: Map<BlockId, Set<BlockId>> = Map::new();
-        for (id, block) in &blocks {
-            for successor in &block.successors {
-                // this simple check for back edges relies on guarantees from the control flow
-                // verifier (control_flow.rs)
-                if is_back_edge(*id, *successor) {
-                    loop_heads.entry(*successor).or_default().insert(*id);
-                }
-            }
-        }
 
         VMControlFlowGraph {
             blocks,

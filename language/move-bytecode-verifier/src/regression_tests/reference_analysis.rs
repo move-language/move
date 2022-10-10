@@ -3,11 +3,11 @@
 
 use move_binary_format::{
     file_format::{
-        empty_module, AbilitySet, AddressIdentifierIndex, Bytecode, CodeUnit, Constant,
+        empty_module, AbilitySet, AddressIdentifierIndex, Bytecode::*, CodeUnit, Constant,
         FieldDefinition, FunctionDefinition, FunctionHandle, FunctionHandleIndex, IdentifierIndex,
-        ModuleHandle, ModuleHandleIndex, Signature, SignatureIndex, SignatureToken,
+        ModuleHandle, ModuleHandleIndex, Signature, SignatureIndex, SignatureToken::*,
         StructDefinition, StructDefinitionIndex, StructFieldInformation, StructHandle,
-        StructHandleIndex, TypeSignature, Visibility,
+        StructHandleIndex, TypeSignature, Visibility, Visibility::*,
     },
     CompiledModule,
 };
@@ -17,10 +17,7 @@ use move_core_types::{
 use std::str::FromStr;
 
 #[test]
-fn reference_analysis_crash() {
-    use Bytecode::{BrTrue, LdFalse, MoveLoc, MutBorrowGlobal, Pop, Ret};
-    use SignatureToken::{Address, Bool, U128, U64};
-
+fn unbalanced_stack_crash() {
     let mut module = empty_module();
     module.version = 5;
 
@@ -110,10 +107,63 @@ fn reference_analysis_crash() {
 }
 
 #[test]
-fn new_test() {
-    use Bytecode::{Branch, MoveLoc, StLoc};
-    use SignatureToken::{Reference, U64};
+fn too_many_locals() {
+    // Create a signature of 128 elements. This will be used both for locals and parameters,
+    // thus the overall size will be 256. If this is not intercepted in bounds checks,
+    // as a result the following iterator in abstract state
+    // would be empty, breaking reference analysis: `0..self.num_locals as LocalIndex`
+    // (since LocalIndex is u8).
+    let sign_128 = (0..128)
+        .map(|_| Reference(Box::new(U64)))
+        .collect::<Vec<_>>();
+    let module = CompiledModule {
+        version: 5,
+        self_module_handle_idx: ModuleHandleIndex(0),
+        module_handles: vec![ModuleHandle {
+            address: AddressIdentifierIndex(0),
+            name: IdentifierIndex(0),
+        }],
+        struct_handles: vec![],
+        function_handles: vec![FunctionHandle {
+            module: ModuleHandleIndex(0),
+            name: IdentifierIndex(0),
+            parameters: SignatureIndex(0),
+            return_: SignatureIndex(0),
+            type_parameters: vec![AbilitySet::ALL],
+        }],
+        field_handles: vec![],
+        friend_decls: vec![],
+        struct_def_instantiations: vec![],
+        function_instantiations: vec![],
+        field_instantiations: vec![],
+        signatures: vec![Signature(sign_128)],
+        identifiers: vec![Identifier::new("x").unwrap()],
+        address_identifiers: vec![AccountAddress::ONE],
+        constant_pool: vec![],
+        metadata: vec![],
+        struct_defs: vec![],
+        function_defs: vec![FunctionDefinition {
+            function: FunctionHandleIndex(0),
+            visibility: Public,
+            is_entry: true,
+            acquires_global_resources: vec![],
+            code: Some(CodeUnit {
+                locals: SignatureIndex(0),
+                code: vec![CopyLoc(2), StLoc(33), Branch(0)],
+            }),
+        }],
+    };
 
+    let res = crate::verify_module(&module);
+
+    match res {
+        Ok(_) => {}
+        Err(e) => assert_eq!(e.major_status(), StatusCode::TOO_MANY_LOCALS),
+    }
+}
+
+#[test]
+fn borrow_graph() {
     let module = CompiledModule {
         version: 5,
         self_module_handle_idx: ModuleHandleIndex(0),

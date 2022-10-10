@@ -34,11 +34,11 @@ The four abilities are:
 
 ### `copy`
 
-The `copy` ability allows values of types with that ability to be copied. It gates the ability to copy values out of local variables with the [`copy`](./variables.md#move-and-copy) operator and to copy values via references with [dereference `*e`](./references.md#reading-and-writing-through-references).
+The `copy` ability allows values of types with that ability to be copied. It gates the ability to copy values out of local variables with the [`copy`](./variables.md#move-and-copy) operator and to copy values via references with [dereference `*e`](./references.md#通过引用读取和写入).
 
 If a value has `copy`, all values contained inside of that value have `copy`.
 
-`copy` 能力允许具有此能力的类型的值被复制。 它限制了从本地变量通过 [`copy`](./variables.md#.move-and-copy)能力复制值以及通过 [`dereference *e`](./references.html#reading-and-writing-through-references)复制值这两种情况之外的复制操作。
+`copy` 能力允许具有此能力的类型的值被复制。 它限制了从本地变量通过 [`copy`](./variables.md#.move-and-copy)能力复制值以及通过 [`dereference *e`](./references.md#通过引用读取和写入)复制值这两种情况之外的复制操作。
 
 如果一个值具有 `copy` 能力，那么这个值内部的所有值都有 `copy` 能力。
 

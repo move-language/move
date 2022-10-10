@@ -191,4 +191,3 @@ vector<T>[e1, ..., en]: vector<T>
 | 27 | Coding Conventions         | @MagicGordon                                   | [@ruyisu](https://github.com/ruy1su)、[@Joe Chen](https://github.com/geometryolife) |
 
 </details>
-

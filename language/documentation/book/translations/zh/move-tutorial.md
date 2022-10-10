@@ -172,7 +172,7 @@ In this case, the `BasicCoin` module can only be published under `0xCAFE`.
 
 Let's now take a look at the next part of this file where we define a [struct](https://move-language.github.io/move/structs-and-resources.html) to represent a `Coin` with a given `value`:
 
-再看这个文件的下一部分，这里定义了一个具有字段 `value` 的[结构体](./chapter_16_structs-and-resources.html) `Coin`：
+再看这个文件的下一部分，这里定义了一个具有字段 `value` 的[结构体](./structs-and-resources.html) `Coin`：
 
 ```
 module 0xCAFE::BasicCoin {
@@ -209,7 +209,7 @@ Let's take a look at this function and what it's saying:
 Let's make sure it builds! This can be done with the `build` command from within the package folder ([`step_1/BasicCoin`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_1/BasicCoin/)):
 
 让我们来看看这个函数和它的含义:
-* 此函数需要一个[`signer`](https://move-language.github.io/move/signer.html)参数 -- 表示不可伪造的 token 受此特定地址的控制; 和一个需要铸造的数量参数 `value`。
+* 此函数需要一个[`signer`](./signer.html)参数 -- 表示不可伪造的 token 受此特定地址的控制; 和一个需要铸造的数量参数 `value`。
 * 此函数使用给定的参数值铸造一个 `Coin`，然后通过 `move_to` 操作将其保存在(全局存储中)给定的 `account` 账户下。
 
 我们需要确保它真的执行，这可以通过在包文件夹([`step_1/BasicCoin`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_1/BasicCoin/))下的运行 `build` 命令来完成：
@@ -463,7 +463,7 @@ public(script) fun transfer(from: signer, to: address, amount: u64) acquires Bal
 ```
 Read more on Move function visibilities [here](https://move-language.github.io/move/functions.html#visibility).
 
-关于函数可见性的更多信息，请参阅[Move function visibilities](./chapter_15_functions.html#visibility)。
+关于函数可见性的更多信息，请参阅[Move function visibilities](./functions.html#visibility)。
 
 </details>
 <details>
@@ -582,7 +582,7 @@ fun withdraw(addr: address, amount: u64) : Coin acquires Balance {
 
 At the beginning of the method, we assert that the withdrawing account has enough balance. We then use `borrow_global_mut` to get a mutable reference to the global storage, and `&mut` is used to create a [mutable reference](https://move-language.github.io/move/references.html) to a field of a struct. We then modify the balance through this mutable reference and return a new coin with the withdrawn amount.
 
-在方法开始，我们断言提款账户有足够的余额。然后我们使用 `borrow_global_mut` 来获得全局存储的可变引用，并用 `&mut` 创建结构体字段的[可变引用](./chapter_8_references.html)。然后我们通过这个可变引用修改余额并返回一个带有提取金额的新代币。
+在方法开始，我们断言提款账户有足够的余额。然后我们使用 `borrow_global_mut` 来获得全局存储的可变引用，并用 `&mut` 创建结构体字段的[可变引用](./references.html)。然后我们通过这个可变引用修改余额并返回一个带有提取金额的新代币。
 
 </details>
 

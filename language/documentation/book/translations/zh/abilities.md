@@ -34,11 +34,11 @@ The four abilities are:
 
 ### `copy`
 
-The `copy` ability allows values of types with that ability to be copied. It gates the ability to copy values out of local variables with the [`copy`](variables.md#move-and-copy) operator and to copy values via references with [dereference `*e`](references.md#reading-and-writing-through-references).
+The `copy` ability allows values of types with that ability to be copied. It gates the ability to copy values out of local variables with the [`copy`](./variables.md#move-and-copy) operator and to copy values via references with [dereference `*e`](./references.md#reading-and-writing-through-references).
 
 If a value has `copy`, all values contained inside of that value have `copy`.
 
-`copy` 能力允许具有此能力的类型的值被复制。 它限制了从本地变量通过 [`copy`](variables.md#.move-and-copy)能力复制值以及通过 [`dereference *e`](./chapter_8_references.html#reading-and-writing-through-references)复制值这两种情况之外的复制操作。
+`copy` 能力允许具有此能力的类型的值被复制。 它限制了从本地变量通过 [`copy`](./variables.md#.move-and-copy)能力复制值以及通过 [`dereference *e`](./references.html#reading-and-writing-through-references)复制值这两种情况之外的复制操作。
 
 如果一个值具有 `copy` 能力，那么这个值内部的所有值都有 `copy` 能力。
 
@@ -46,16 +46,16 @@ If a value has `copy`, all values contained inside of that value have `copy`.
 
 The `drop` ability allows values of types with that ability to be dropped. By dropped, we mean that value is not transferred and is effectively destroyed as the Move program executes. As such, this ability gates the ability to ignore values in a multitude of locations, including:
 * not using the value in a local variable or parameter
-* not using the value in a [sequence via `;`](variables.md#expression-blocks)
-* overwriting values in variables in [assignments](variables.md#assignments)
-* overwriting values via references when [writing `*e1 = e2`](references.md#reading-and-writing-through-references).
+* not using the value in a [sequence via `;`](./variables.md#expression-blocks)
+* overwriting values in variables in [assignments](./variables.md#assignments)
+* overwriting values via references when [writing `*e1 = e2`](./references.md#reading-and-writing-through-references).
 
 If a value has `drop`, all values contained inside of that value have `drop`.
 
 `drop` 能力允许类型的值被丢弃。丢弃的意思程序执行后值会被有效的销毁而不必被转移。因此，这个能力限制在多个位置忽略使用值的可能性，包括：
 * 未被使用的局部变量或者参数
-* 未被使用的 [`sequence` via `;`](variables.md#expression-blocks)中的值
-* 覆盖[赋值(assignments)](./chapter_10_variables.html#assignments)变量中的值
+* 未被使用的 [`sequence` via `;`](./variables.md#expression-blocks)中的值
+* 覆盖[赋值(assignments)](./variables.html#assignments)变量中的值
 * [写入(writing) `*e1 = e2`](https://move-language.github.io/move/references.html#reading-and-writing-through-references) 时通过引用覆盖的值。
 
 如果一个值具有 `drop` 能力，那么这个值内部的所有值都有 `drop` 能力。
@@ -72,7 +72,7 @@ If a value has `store`, all values contained inside of that value have `store`
 
 ### `key`
 
-The `key` ability allows the type to serve as a key for [global storage operations](global-storage-operators.md). It gates all global storage operations, so in order for a type to be used with `move_to`, `borrow_global`, `move_from`, etc., the type must have the `key` ability. Note that the operations still must be used in the module where the `key` type is defined (in a sense, the operations are private to the defining module).
+The `key` ability allows the type to serve as a key for [global storage operations](./global-storage-operators.md). It gates all global storage operations, so in order for a type to be used with `move_to`, `borrow_global`, `move_from`, etc., the type must have the `key` ability. Note that the operations still must be used in the module where the `key` type is defined (in a sense, the operations are private to the defining module).
 
 If a value has `key`, all values contained inside of that value have `store`. This is the only ability with this sort of asymmetry.
 
@@ -94,7 +94,7 @@ Most primitive, builtin types have `copy`, `drop`, and `store` with the exceptio
     * This refers to copying and dropping the reference itself, not what they refer to.
     * References cannot appear in global storage, hence they do not have `store`.
 
-None of the primitive types have `key`, meaning none of them can be used directly with the [global storage operations](global-storage-operators.md).
+None of the primitive types have `key`, meaning none of them can be used directly with the [global storage operations](./global-storage-operators.md).
 
 几乎所有内置的基本类型具都有 `copy`，`drop`，以及 `store` 能力，`singer` 除外，它只有 `drop` 能力(原文是 `store` 有误，译者注)
 

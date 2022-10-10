@@ -363,7 +363,7 @@ address 0x42 {
 
 After the parameters, a function specifies its return type.
 
-函数在参数之后指定返回类型。
+在参数之后，函数指定其返回类型。
 
 ```move
 fun zero(): u64 { 0 }
@@ -383,7 +383,7 @@ fun one_two_three(): (u64, u64, u64) { (0, 1, 2) }
 
 If no return type is specified, the function has an implicit return type of unit `()`. These functions are equivalent
 
-如果函数未指定返回类型，则该函数隐式返回unit `()` 类型  。以下这些函数是等价的
+如果未指定返回类型，则该函数具有隐式返回类型单值 `()`。这些函数是等价的：
 
 ```move
 fun just_unit(): () { () }
@@ -393,9 +393,9 @@ fun just_unit() { }
 
 `script` functions must have a return type of unit `()`
 
-`script` 函数的返回类型必须为 unit `()` (不能是任何其他类型, 例如 `bool`, `u64` 等，注者注)。
+`script` 函数的返回类型必须为单值 `()`（不能是任何其他类型，例如 `bool`、`u64` 等，注者注）：
 
-```move=
+```move
 script {
     fun do_nothing() {
     }
@@ -404,7 +404,7 @@ script {
 
 As mentioned in the [tuples section](tuples.md), these tuple "values" are virtual and do not exist at runtime. So for a function that returns unit `()`, it will not be returning any value at all during execution.
 
-如 [元组部分](./chapter_9_tuples.md) 中所述，这些元组“值”是模拟(virtual)的，且在运行时不存在。所以对于返回 unit `()`的函数，它在执行期间根本不会返回任何值。
+如[元组部分](./tuples.md)所述，这些元组“值”是虚拟的（virtual），且在运行时不存在。因此，对于返回单值 `()` 的函数，它在执行期间根本不会返回任何值。
 
 ### Function body (函数体)
 

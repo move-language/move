@@ -52,4 +52,4 @@ actor 0x4 handling 0x3::AccountStateMachine::verify (hash=0x3450A8717C6383FF)
 actor 0x5 handling 0x3::AccountStateMachine::verify (hash=0x3450A8717C6383FF)
   SUCCESS
 actor 0x5 handling 0x3::AccountStateMachine::verify (hash=0x3450A8717C6383FF)
-  FAIL  VMError with status ABORTED with sub status 2 at location Module ModuleId { address: 00000000000000000000000000000003, name: Identifier("AccountStateMachine") } and message 0x00000000000000000000000000000003::AccountStateMachine::verify at offset 9 at code offset 9 in function definition 16
+  FAIL  VMError with status ABORTED with sub status 2 at location Module ModuleId { address: 00000000000000000000000000000003, name: Identifier("AccountStateMachine") } and message 0x00000000000000000000000000000003::AccountStateMachine::verify at offset 7 at code offset 7 in function definition 16

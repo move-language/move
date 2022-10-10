@@ -434,7 +434,8 @@ fn function_body(
                 &mut cfg,
                 &infinite_loop_starts,
             );
-            if !context.env.has_diags() {
+            // do not optimize if there are errors, warnings are okay
+            if !context.env.has_errors() {
                 cfgir::optimize(signature, &locals, &mut cfg);
             }
 

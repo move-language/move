@@ -219,26 +219,6 @@ Set the bit at <code>bit_index</code> in the <code>bitvector</code> regardless o
 
 
 
-
-<pre><code><b>include</b> <a href="bit_vector.md#0x1_bit_vector_UnsetAbortsIf">UnsetAbortsIf</a>;
-<b>ensures</b> bitvector.bit_field[bit_index];
-</code></pre>
-
-
-
-
-<a name="0x1_bit_vector_UnsetAbortsIf"></a>
-
-
-<pre><code><b>schema</b> <a href="bit_vector.md#0x1_bit_vector_UnsetAbortsIf">UnsetAbortsIf</a> {
-    bitvector: <a href="bit_vector.md#0x1_bit_vector_BitVector">BitVector</a>;
-    bit_index: u64;
-    <b>aborts_if</b> bit_index &gt;= <a href="bit_vector.md#0x1_bit_vector_length">length</a>(bitvector) <b>with</b> <a href="bit_vector.md#0x1_bit_vector_EINDEX">EINDEX</a>;
-}
-</code></pre>
-
-
-
 </details>
 
 <a name="0x1_bit_vector_unset"></a>
@@ -261,6 +241,32 @@ Unset the bit at <code>bit_index</code> in the <code>bitvector</code> regardless
     <b>assert</b>!(bit_index &lt; <a href="vector.md#0x1_vector_length">vector::length</a>(&bitvector.bit_field), <a href="bit_vector.md#0x1_bit_vector_EINDEX">EINDEX</a>);
     <b>let</b> x = <a href="vector.md#0x1_vector_borrow_mut">vector::borrow_mut</a>(&<b>mut</b> bitvector.bit_field, bit_index);
     *x = <b>false</b>;
+}
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>include</b> <a href="bit_vector.md#0x1_bit_vector_UnsetAbortsIf">UnsetAbortsIf</a>;
+<b>ensures</b> !bitvector.bit_field[bit_index];
+</code></pre>
+
+
+
+
+<a name="0x1_bit_vector_UnsetAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="bit_vector.md#0x1_bit_vector_UnsetAbortsIf">UnsetAbortsIf</a> {
+    bitvector: <a href="bit_vector.md#0x1_bit_vector_BitVector">BitVector</a>;
+    bit_index: u64;
+    <b>aborts_if</b> bit_index &gt;= <a href="bit_vector.md#0x1_bit_vector_length">length</a>(bitvector) <b>with</b> <a href="bit_vector.md#0x1_bit_vector_EINDEX">EINDEX</a>;
 }
 </code></pre>
 

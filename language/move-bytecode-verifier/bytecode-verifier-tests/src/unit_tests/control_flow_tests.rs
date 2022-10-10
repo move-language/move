@@ -98,7 +98,6 @@ fn nested_loops_max_depth() {
     let result = verify_module(
         &VerifierConfig {
             max_loop_depth: Some(2),
-            ..VerifierConfig::default()
         },
         &module,
     );
@@ -119,7 +118,6 @@ fn nested_loops_exceed_max_depth() {
     let result = verify_module(
         &VerifierConfig {
             max_loop_depth: Some(2),
-            ..VerifierConfig::default()
         },
         &module,
     );

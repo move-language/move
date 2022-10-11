@@ -58,3 +58,16 @@ fn valid_fallthrough_abort() {
     let result = CodeUnitVerifier::verify_module(&Default::default(), &module);
     assert!(result.is_ok());
 }
+
+#[test]
+fn test_max_number_of_bytecode() {
+    let mut nops = vec![];
+    for _ in 0..u16::MAX - 1 {
+        nops.push(Bytecode::Nop);
+    }
+    nops.push(Bytecode::Ret);
+    let module = dummy_procedure_module(nops);
+
+    let result = CodeUnitVerifier::verify_module(&Default::default(), &module);
+    assert!(result.is_ok());
+}

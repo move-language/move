@@ -2,7 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::file_format_common::*;
+use crate::{file_format::Bytecode, file_format_common::*};
 use proptest::prelude::*;
 
 #[test]
@@ -12,6 +12,18 @@ fn binary_len() {
         binary_data.push(1).unwrap();
     }
     assert_eq!(binary_data.len(), 100);
+}
+
+#[test]
+fn test_max_number_of_bytecode() {
+    let mut nops = vec![];
+    for _ in 0..u16::MAX - 1 {
+        nops.push(Bytecode::Nop);
+    }
+    nops.push(Bytecode::Ret);
+
+    let result = Bytecode::get_successors(u16::MAX - 1, &nops);
+    assert!(result.is_empty());
 }
 
 proptest! {

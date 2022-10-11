@@ -153,25 +153,20 @@ object "test_A2_M_test_decode_two_bytes1" {
                     $t26 := 1
                     // $t27 := ==($t25, $t26)
                     $t27 := $Eq($t25, $t26)
-                    // if ($t27) goto L8 else goto L10
+                    // if ($t27) goto L8 else goto L9
                     switch $t27
-                    case 0  { $block := 10 }
-                    default { $block := 9 }
+                    case 0  { $block := 9 }
+                    default { $block := 10 }
                 }
                 case 9 {
-                    // label L8
-                    // goto L11
-                    $block := 11
-                }
-                case 10 {
-                    // label L10
+                    // label L9
                     // $t28 := 101
                     $t28 := 101
                     // abort($t28)
                     $Abort($t28)
                 }
-                case 11 {
-                    // label L11
+                case 10 {
+                    // label L8
                     // $t29 := borrow_local($t4)
                     $t29 := $MakePtr(false, add($locals, 64))
                     // $t30 := vector::length<u8>($t29)
@@ -180,25 +175,20 @@ object "test_A2_M_test_decode_two_bytes1" {
                     $t31 := 1
                     // $t32 := ==($t30, $t31)
                     $t32 := $Eq($t30, $t31)
-                    // if ($t32) goto L12 else goto L14
+                    // if ($t32) goto L10 else goto L11
                     switch $t32
-                    case 0  { $block := 13 }
+                    case 0  { $block := 11 }
                     default { $block := 12 }
                 }
-                case 12 {
-                    // label L12
-                    // goto L15
-                    $block := 14
-                }
-                case 13 {
-                    // label L14
+                case 11 {
+                    // label L11
                     // $t33 := 102
                     $t33 := 102
                     // abort($t33)
                     $Abort($t33)
                 }
-                case 14 {
-                    // label L15
+                case 12 {
+                    // label L10
                     // $t34 := borrow_local($t3)
                     $t34 := $MakePtr(false, add($locals, 32))
                     // $t35 := 0
@@ -211,25 +201,20 @@ object "test_A2_M_test_decode_two_bytes1" {
                     $t38 := 42
                     // $t39 := ==($t37, $t38)
                     $t39 := $Eq($t37, $t38)
-                    // if ($t39) goto L16 else goto L18
+                    // if ($t39) goto L12 else goto L13
                     switch $t39
-                    case 0  { $block := 16 }
-                    default { $block := 15 }
+                    case 0  { $block := 13 }
+                    default { $block := 14 }
                 }
-                case 15 {
-                    // label L16
-                    // goto L19
-                    $block := 17
-                }
-                case 16 {
-                    // label L18
+                case 13 {
+                    // label L13
                     // $t40 := 103
                     $t40 := 103
                     // abort($t40)
                     $Abort($t40)
                 }
-                case 17 {
-                    // label L19
+                case 14 {
+                    // label L12
                     // $t41 := borrow_local($t4)
                     $t41 := $MakePtr(false, add($locals, 64))
                     // $t42 := 0
@@ -242,25 +227,20 @@ object "test_A2_M_test_decode_two_bytes1" {
                     $t45 := 43
                     // $t46 := ==($t44, $t45)
                     $t46 := $Eq($t44, $t45)
-                    // if ($t46) goto L20 else goto L22
+                    // if ($t46) goto L14 else goto L15
                     switch $t46
-                    case 0  { $block := 19 }
-                    default { $block := 18 }
+                    case 0  { $block := 15 }
+                    default { $block := 16 }
                 }
-                case 18 {
-                    // label L20
-                    // goto L23
-                    $block := 20
-                }
-                case 19 {
-                    // label L22
+                case 15 {
+                    // label L15
                     // $t47 := 104
                     $t47 := 104
                     // abort($t47)
                     $Abort($t47)
                 }
-                case 20 {
-                    // label L23
+                case 16 {
+                    // label L14
                     // return ()
                     $Free($locals, 96)
                     leave
@@ -604,7 +584,7 @@ object "test_A2_M_test_decode_two_bytes1" {
         }
     }
 }
-===> Test result of M::test_decode_two_bytes1: Succeed(Stopped) (used_gas=66864): []
+===> Test result of M::test_decode_two_bytes1: Succeed(Stopped) (used_gas=65452): []
 
 // test of M::test_decode_two_u8
 /* =======================================
@@ -716,48 +696,38 @@ object "test_A2_M_test_decode_two_u8" {
                     $t24 := 42
                     // $t25 := ==($t22, $t24)
                     $t25 := $Eq($t22, $t24)
-                    // if ($t25) goto L8 else goto L10
+                    // if ($t25) goto L8 else goto L9
                     switch $t25
-                    case 0  { $block := 10 }
-                    default { $block := 9 }
+                    case 0  { $block := 9 }
+                    default { $block := 10 }
                 }
                 case 9 {
-                    // label L8
-                    // goto L11
-                    $block := 11
-                }
-                case 10 {
-                    // label L10
+                    // label L9
                     // $t26 := 101
                     $t26 := 101
                     // abort($t26)
                     $Abort($t26)
                 }
-                case 11 {
-                    // label L11
+                case 10 {
+                    // label L8
                     // $t27 := 43
                     $t27 := 43
                     // $t28 := ==($t23, $t27)
                     $t28 := $Eq($t23, $t27)
-                    // if ($t28) goto L12 else goto L14
+                    // if ($t28) goto L10 else goto L11
                     switch $t28
-                    case 0  { $block := 13 }
+                    case 0  { $block := 11 }
                     default { $block := 12 }
                 }
-                case 12 {
-                    // label L12
-                    // goto L15
-                    $block := 14
-                }
-                case 13 {
-                    // label L14
+                case 11 {
+                    // label L11
                     // $t29 := 102
                     $t29 := 102
                     // abort($t29)
                     $Abort($t29)
                 }
-                case 14 {
-                    // label L15
+                case 12 {
+                    // label L10
                     // return ()
                     $Free($locals, 32)
                     leave
@@ -1041,7 +1011,7 @@ object "test_A2_M_test_decode_two_u8" {
         }
     }
 }
-===> Test result of M::test_decode_two_u8: Succeed(Stopped) (used_gas=64646): []
+===> Test result of M::test_decode_two_u8: Succeed(Stopped) (used_gas=64116): []
 
 // test of M::test_encode_packed_string
 /* =======================================
@@ -1060,16 +1030,37 @@ object "test_A2_M_test_encode_packed_string" {
             for {} true {} {
                 switch $block
                 case 2 {
-                    // label L0
-                    // goto L3
-                    $block := 5
-                }
-                case 3 {
-                    // label L2
+                    // label L1
                     // $t5 := 100
                     $t5 := 100
                     // abort($t5)
                     $Abort($t5)
+                }
+                case 3 {
+                    // label L0
+                    // $t6 := [49]
+                    $t6 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(1)))
+                    $MemoryStoreU64($t6, 1)
+                    $MemoryStoreU64(add($t6, 8), $ClosestGreaterPowerOfTwo(1))
+                    copy_literal_string_to_memory_2868747976(add($t6, 32))
+                    // $t7 := [50]
+                    $t7 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(1)))
+                    $MemoryStoreU64($t7, 1)
+                    $MemoryStoreU64(add($t7, 8), $ClosestGreaterPowerOfTwo(1))
+                    copy_literal_string_to_memory_4015750317(add($t7, 32))
+                    // $t8 := M::encode_packed_string($t6, $t7)
+                    $t8 := A2_M_encode_packed_string($t6, $t7)
+                    // $t9 := [49, 50]
+                    $t9 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(2)))
+                    $MemoryStoreU64($t9, 2)
+                    $MemoryStoreU64(add($t9, 8), $ClosestGreaterPowerOfTwo(2))
+                    copy_literal_string_to_memory_141265791(add($t9, 32))
+                    // $t10 := ==($t8, $t9)
+                    $t10 := $Eq_$vec$u8$$($t8, $t9)
+                    // if ($t10) goto L2 else goto L3
+                    switch $t10
+                    case 0  { $block := 5 }
+                    default { $block := 6 }
                 }
                 case 4 {
                     // $t0 := []
@@ -1091,51 +1082,20 @@ object "test_A2_M_test_encode_packed_string" {
                     copy_literal_string_to_memory_21418693(add($t3, 32))
                     // $t4 := ==($t2, $t3)
                     $t4 := $Eq_$vec$u8$$($t2, $t3)
-                    // if ($t4) goto L0 else goto L2
+                    // if ($t4) goto L0 else goto L1
                     switch $t4
-                    case 0  { $block := 3 }
-                    default { $block := 2 }
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
                 }
                 case 5 {
                     // label L3
-                    // $t6 := [49]
-                    $t6 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(1)))
-                    $MemoryStoreU64($t6, 1)
-                    $MemoryStoreU64(add($t6, 8), $ClosestGreaterPowerOfTwo(1))
-                    copy_literal_string_to_memory_2868747976(add($t6, 32))
-                    // $t7 := [50]
-                    $t7 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(1)))
-                    $MemoryStoreU64($t7, 1)
-                    $MemoryStoreU64(add($t7, 8), $ClosestGreaterPowerOfTwo(1))
-                    copy_literal_string_to_memory_4015750317(add($t7, 32))
-                    // $t8 := M::encode_packed_string($t6, $t7)
-                    $t8 := A2_M_encode_packed_string($t6, $t7)
-                    // $t9 := [49, 50]
-                    $t9 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(2)))
-                    $MemoryStoreU64($t9, 2)
-                    $MemoryStoreU64(add($t9, 8), $ClosestGreaterPowerOfTwo(2))
-                    copy_literal_string_to_memory_141265791(add($t9, 32))
-                    // $t10 := ==($t8, $t9)
-                    $t10 := $Eq_$vec$u8$$($t8, $t9)
-                    // if ($t10) goto L4 else goto L6
-                    switch $t10
-                    case 0  { $block := 7 }
-                    default { $block := 6 }
-                }
-                case 6 {
-                    // label L4
-                    // goto L7
-                    $block := 8
-                }
-                case 7 {
-                    // label L6
                     // $t11 := 101
                     $t11 := 101
                     // abort($t11)
                     $Abort($t11)
                 }
-                case 8 {
-                    // label L7
+                case 6 {
+                    // label L2
                     // $t12 := []
                     $t12 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(0)))
                     $MemoryStoreU64($t12, 0)
@@ -1155,25 +1115,20 @@ object "test_A2_M_test_encode_packed_string" {
                     copy_literal_string_to_memory_2053440334(add($t15, 32))
                     // $t16 := ==($t14, $t15)
                     $t16 := $Eq_$vec$u8$$($t14, $t15)
-                    // if ($t16) goto L8 else goto L10
+                    // if ($t16) goto L4 else goto L5
                     switch $t16
-                    case 0  { $block := 10 }
-                    default { $block := 9 }
+                    case 0  { $block := 7 }
+                    default { $block := 8 }
                 }
-                case 9 {
-                    // label L8
-                    // goto L11
-                    $block := 11
-                }
-                case 10 {
-                    // label L10
+                case 7 {
+                    // label L5
                     // $t17 := 102
                     $t17 := 102
                     // abort($t17)
                     $Abort($t17)
                 }
-                case 11 {
-                    // label L11
+                case 8 {
+                    // label L4
                     // $t18 := [97]
                     $t18 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(1)))
                     $MemoryStoreU64($t18, 1)
@@ -1200,25 +1155,20 @@ object "test_A2_M_test_encode_packed_string" {
                     copy_literal_string_to_memory_3871831907(add($t23, 32))
                     // $t24 := ==($t22, $t23)
                     $t24 := $Eq_$vec$u8$$($t22, $t23)
-                    // if ($t24) goto L12 else goto L14
+                    // if ($t24) goto L6 else goto L7
                     switch $t24
-                    case 0  { $block := 13 }
-                    default { $block := 12 }
+                    case 0  { $block := 9 }
+                    default { $block := 10 }
                 }
-                case 12 {
-                    // label L12
-                    // goto L15
-                    $block := 14
-                }
-                case 13 {
-                    // label L14
+                case 9 {
+                    // label L7
                     // $t25 := 103
                     $t25 := 103
                     // abort($t25)
                     $Abort($t25)
                 }
-                case 14 {
-                    // label L15
+                case 10 {
+                    // label L6
                     // $t26 := [116, 101, 115, 116]
                     $t26 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(4)))
                     $MemoryStoreU64($t26, 4)
@@ -1238,25 +1188,20 @@ object "test_A2_M_test_encode_packed_string" {
                     copy_literal_string_to_memory_1610556060(add($t29, 32))
                     // $t30 := ==($t28, $t29)
                     $t30 := $Eq_$vec$u8$$($t28, $t29)
-                    // if ($t30) goto L16 else goto L18
+                    // if ($t30) goto L8 else goto L9
                     switch $t30
-                    case 0  { $block := 16 }
-                    default { $block := 15 }
+                    case 0  { $block := 11 }
+                    default { $block := 12 }
                 }
-                case 15 {
-                    // label L16
-                    // goto L19
-                    $block := 17
-                }
-                case 16 {
-                    // label L18
+                case 11 {
+                    // label L9
                     // $t31 := 104
                     $t31 := 104
                     // abort($t31)
                     $Abort($t31)
                 }
-                case 17 {
-                    // label L19
+                case 12 {
+                    // label L8
                     // return ()
                     leave
                 }
@@ -1443,7 +1388,7 @@ object "test_A2_M_test_encode_packed_string" {
         }
     }
 }
-===> Test result of M::test_encode_packed_string: Succeed(Stopped) (used_gas=10647): []
+===> Test result of M::test_encode_packed_string: Succeed(Stopped) (used_gas=9310): []
 
 // test of M::test_encode_packed_uint16
 /* =======================================
@@ -1463,16 +1408,17 @@ object "test_A2_M_test_encode_packed_uint16" {
             for {} true {} {
                 switch $block
                 case 2 {
-                    // label L0
-                    // goto L3
-                    $block := 5
-                }
-                case 3 {
-                    // label L2
+                    // label L1
                     // $t9 := 101
                     $t9 := 101
                     // abort($t9)
                     $Abort($t9)
+                }
+                case 3 {
+                    // label L0
+                    // return ()
+                    $Free($locals, 32)
+                    leave
                 }
                 case 4 {
                     // $t3 := 41
@@ -1489,16 +1435,10 @@ object "test_A2_M_test_encode_packed_uint16" {
                     $t7 := 4
                     // $t8 := ==($t6, $t7)
                     $t8 := $Eq($t6, $t7)
-                    // if ($t8) goto L0 else goto L2
+                    // if ($t8) goto L0 else goto L1
                     switch $t8
-                    case 0  { $block := 3 }
-                    default { $block := 2 }
-                }
-                case 5 {
-                    // label L3
-                    // return ()
-                    $Free($locals, 32)
-                    leave
+                    case 0  { $block := 2 }
+                    default { $block := 3 }
                 }
             }
         }
@@ -1668,7 +1608,7 @@ object "test_A2_M_test_encode_packed_uint16" {
         }
     }
 }
-===> Test result of M::test_encode_packed_uint16: Succeed(Stopped) (used_gas=776): []
+===> Test result of M::test_encode_packed_uint16: Succeed(Stopped) (used_gas=693): []
 
 // test of M::test_marshalling_two_bytes1
 /* =======================================
@@ -1782,25 +1722,20 @@ object "test_A2_M_test_marshalling_two_bytes1" {
                     $t26 := mload($locals)
                     // $t27 := ==($t26, $t25)
                     $t27 := $Eq_$vec$u8$$($t26, $t25)
-                    // if ($t27) goto L8 else goto L10
+                    // if ($t27) goto L8 else goto L9
                     switch $t27
-                    case 0  { $block := 10 }
-                    default { $block := 9 }
+                    case 0  { $block := 9 }
+                    default { $block := 10 }
                 }
                 case 9 {
-                    // label L8
-                    // goto L11
-                    $block := 11
-                }
-                case 10 {
-                    // label L10
+                    // label L9
                     // $t28 := 101
                     $t28 := 101
                     // abort($t28)
                     $Abort($t28)
                 }
-                case 11 {
-                    // label L11
+                case 10 {
+                    // label L8
                     // return ()
                     $Free($locals, 32)
                     leave
@@ -2161,7 +2096,7 @@ object "test_A2_M_test_marshalling_two_bytes1" {
         }
     }
 }
-===> Test result of M::test_marshalling_two_bytes1: Succeed(Stopped) (used_gas=66247): []
+===> Test result of M::test_marshalling_two_bytes1: Succeed(Stopped) (used_gas=66026): []
 
 // test of M::test_marshalling_two_u8
 /* =======================================
@@ -2273,73 +2208,58 @@ object "test_A2_M_test_marshalling_two_u8" {
                     $t25 := 42
                     // $t26 := ==($t23, $t25)
                     $t26 := $Eq($t23, $t25)
-                    // if ($t26) goto L8 else goto L10
+                    // if ($t26) goto L8 else goto L9
                     switch $t26
-                    case 0  { $block := 10 }
-                    default { $block := 9 }
+                    case 0  { $block := 9 }
+                    default { $block := 10 }
                 }
                 case 9 {
-                    // label L8
-                    // goto L11
-                    $block := 11
-                }
-                case 10 {
-                    // label L10
+                    // label L9
                     // $t27 := 101
                     $t27 := 101
                     // abort($t27)
                     $Abort($t27)
                 }
-                case 11 {
-                    // label L11
+                case 10 {
+                    // label L8
                     // $t28 := 43
                     $t28 := 43
                     // $t29 := ==($t24, $t28)
                     $t29 := $Eq($t24, $t28)
-                    // if ($t29) goto L12 else goto L14
+                    // if ($t29) goto L10 else goto L11
                     switch $t29
-                    case 0  { $block := 13 }
+                    case 0  { $block := 11 }
                     default { $block := 12 }
                 }
-                case 12 {
-                    // label L12
-                    // goto L15
-                    $block := 14
-                }
-                case 13 {
-                    // label L14
+                case 11 {
+                    // label L11
                     // $t30 := 102
                     $t30 := 102
                     // abort($t30)
                     $Abort($t30)
                 }
-                case 14 {
-                    // label L15
+                case 12 {
+                    // label L10
                     // $t31 := M::encode_two_u8($t23, $t24)
                     $t31 := A2_M_encode_two_u8($t23, $t24)
                     // $t32 := move($t2)
                     $t32 := mload($locals)
                     // $t33 := ==($t32, $t31)
                     $t33 := $Eq_$vec$u8$$($t32, $t31)
-                    // if ($t33) goto L16 else goto L18
+                    // if ($t33) goto L12 else goto L13
                     switch $t33
-                    case 0  { $block := 16 }
-                    default { $block := 15 }
+                    case 0  { $block := 13 }
+                    default { $block := 14 }
                 }
-                case 15 {
-                    // label L16
-                    // goto L19
-                    $block := 17
-                }
-                case 16 {
-                    // label L18
+                case 13 {
+                    // label L13
                     // $t34 := 103
                     $t34 := 103
                     // abort($t34)
                     $Abort($t34)
                 }
-                case 17 {
-                    // label L19
+                case 14 {
+                    // label L12
                     // return ()
                     $Free($locals, 32)
                     leave
@@ -2681,7 +2601,7 @@ object "test_A2_M_test_marshalling_two_u8" {
         }
     }
 }
-===> Test result of M::test_marshalling_two_u8: Succeed(Stopped) (used_gas=66157): []
+===> Test result of M::test_marshalling_two_u8: Succeed(Stopped) (used_gas=65230): []
 
 
 

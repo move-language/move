@@ -5,6 +5,7 @@
 //! as 'native`, but do not appear in the compiled module. For developer sanity, they must be marked
 //! with the `FAKE_NATIVE_ATTR`
 
+use move_core_types::account_address::AccountAddress;
 use std::convert::TryInto;
 
 use crate::{
@@ -86,37 +87,26 @@ pub fn resolve_builtin(
     function: &FunctionName,
 ) -> Option<fn(Vec<IR::Type>) -> IR::Bytecode_> {
     let sp!(_, ModuleIdent_ { address, module }) = module;
-    let addr_name = match address {
-        Address::Numerical(Some(sp!(_, n_)), _) | Address::NamedUnassigned(sp!(_, n_)) => n_,
-        _ => return None,
+    // Only resolve if either (a) the address is named "std" or (b) its value is 0x1
+    match address {
+        Address::Numerical(Some(sp!(_, n)), _) | Address::NamedUnassigned(sp!(_, n))
+            if n.as_str() == "std" => {}
+        Address::Numerical(_, sp!(_, a)) if a.into_inner() == AccountAddress::ONE => {}
+        _ => {
+            return None;
+        }
     };
-    Some(
-        match (
-            addr_name.as_str(),
-            module.value().as_str(),
-            function.value().as_str(),
-        ) {
-            ("std", "vector", "empty") => |tys| IR::Bytecode_::VecPack(expect_one_ty_arg(tys), 0),
-            ("std", "vector", "length") => |tys| IR::Bytecode_::VecLen(expect_one_ty_arg(tys)),
-            ("std", "vector", "borrow") => {
-                |tys| IR::Bytecode_::VecImmBorrow(expect_one_ty_arg(tys))
-            }
-            ("std", "vector", "push_back") => {
-                |tys| IR::Bytecode_::VecPushBack(expect_one_ty_arg(tys))
-            }
-            ("std", "vector", "borrow_mut") => {
-                |tys| IR::Bytecode_::VecMutBorrow(expect_one_ty_arg(tys))
-            }
-            ("std", "vector", "pop_back") => {
-                |tys| IR::Bytecode_::VecPopBack(expect_one_ty_arg(tys))
-            }
-            ("std", "vector", "destroy_empty") => {
-                |tys| IR::Bytecode_::VecUnpack(expect_one_ty_arg(tys), 0)
-            }
-            ("std", "vector", "swap") => |tys| IR::Bytecode_::VecSwap(expect_one_ty_arg(tys)),
-            _ => return None,
-        },
-    )
+    Some(match (module.value().as_str(), function.value().as_str()) {
+        ("vector", "empty") => |tys| IR::Bytecode_::VecPack(expect_one_ty_arg(tys), 0),
+        ("vector", "length") => |tys| IR::Bytecode_::VecLen(expect_one_ty_arg(tys)),
+        ("vector", "borrow") => |tys| IR::Bytecode_::VecImmBorrow(expect_one_ty_arg(tys)),
+        ("vector", "push_back") => |tys| IR::Bytecode_::VecPushBack(expect_one_ty_arg(tys)),
+        ("vector", "borrow_mut") => |tys| IR::Bytecode_::VecMutBorrow(expect_one_ty_arg(tys)),
+        ("vector", "pop_back") => |tys| IR::Bytecode_::VecPopBack(expect_one_ty_arg(tys)),
+        ("vector", "destroy_empty") => |tys| IR::Bytecode_::VecUnpack(expect_one_ty_arg(tys), 0),
+        ("vector", "swap") => |tys| IR::Bytecode_::VecSwap(expect_one_ty_arg(tys)),
+        _ => return None,
+    })
 }
 
 fn expect_one_ty_arg(ty_args: Vec<IR::Type>) -> IR::Type {

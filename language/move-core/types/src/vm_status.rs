@@ -668,6 +668,7 @@ pub enum StatusCode {
     VM_EXTENSION_ERROR = 4026,
     STORAGE_WRITE_LIMIT_REACHED = 4027,
     MEMORY_LIMIT_EXCEEDED = 4028,
+    VM_MAX_TYPE_NODES_REACHED = 4029,
 
     // A reserved status to represent an unknown vm status.
     // this is std::u64::MAX, but we can't pattern match on that, so put the hardcoded value in

@@ -1413,7 +1413,7 @@ impl<'a> Resolver<'a> {
         for ty in ty_args.iter().chain(struct_inst.instantiation.iter()) {
             sum_nodes = sum_nodes.saturating_add(self.loader.count_type_nodes(ty));
             if sum_nodes > MAX_TYPE_NODES {
-                return Err(PartialVMError::new(StatusCode::VM_MAX_TYPE_DEPTH_REACHED));
+                return Err(PartialVMError::new(StatusCode::VM_MAX_TYPE_NODES_REACHED));
             }
         }
 
@@ -2355,12 +2355,24 @@ impl Loader {
     }
 
     fn count_type_nodes(&self, ty: &Type) -> usize {
-        match ty {
-            Type::Vector(ty) => self.count_type_nodes(&ty).saturating_add(1),
-            Type::StructInstantiation(_, ty_args) => ty_args.iter().fold(1, |x, y| x.saturating_add(self.count_type_nodes(y))),
-            Type::Reference(t) | Type::MutableReference(t) => self.count_type_nodes(t).saturating_add(1),
-            _ => 1
+        let mut todo = vec![ty];
+        let mut result = 0;
+        while let Some(ty) = todo.pop() {
+            match ty {
+                Type::Vector(ty) | Type::Reference(ty) | Type::MutableReference(ty) => {
+                    result += 1;
+                    todo.push(ty);
+                }
+                Type::StructInstantiation(_, ty_args) => {
+                    result += 1;
+                    todo.extend(ty_args.iter())
+                }
+                _ => {
+                    result += 1;
+                }
+            }
         }
+        result
     }
 
     fn struct_gidx_to_type_layout(

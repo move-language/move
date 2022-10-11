@@ -5,6 +5,7 @@
 use move_binary_format::{
     binary_views::FunctionView,
     control_flow_graph::{BlockId, ControlFlowGraph},
+    errors::PartialVMResult,
     file_format::{Bytecode, CodeOffset},
 };
 use std::collections::BTreeMap;
@@ -21,36 +22,21 @@ pub enum JoinResult {
     Unchanged,
 }
 
-#[derive(Clone)]
-pub enum BlockPostcondition<AnalysisError> {
-    /// Block not yet analyzed
-    Unprocessed,
-    /// Analyzing block was successful
-    /// TODO might carry post state at some point
-    Success,
-    /// Analyzing block resulted in an error
-    Error(AnalysisError),
-}
-
 #[allow(dead_code)]
 #[derive(Clone)]
-pub struct BlockInvariant<State, AnalysisError> {
+pub struct BlockInvariant<State> {
     /// Precondition of the block
-    pub pre: State,
-    /// Postcondition of the block
-    pub post: BlockPostcondition<AnalysisError>,
+    pre: State,
 }
 
 /// A map from block id's to the pre/post of each block after a fixed point is reached.
 #[allow(dead_code)]
-pub type InvariantMap<State, AnalysisError> =
-    BTreeMap<BlockId, BlockInvariant<State, AnalysisError>>;
+pub type InvariantMap<State> = BTreeMap<BlockId, BlockInvariant<State>>;
 
 /// Take a pre-state + instruction and mutate it to produce a post-state
 /// Auxiliary data can be stored in self.
 pub trait TransferFunctions {
     type State: AbstractDomain;
-    type AnalysisError;
 
     /// Execute local@instr found at index local@index in the current basic block from pre-state
     /// local@pre.
@@ -68,7 +54,7 @@ pub trait TransferFunctions {
         instr: &Bytecode,
         index: CodeOffset,
         last_index: CodeOffset,
-    ) -> Result<(), Self::AnalysisError>;
+    ) -> PartialVMResult<()>;
 }
 
 pub trait AbstractInterpreter: TransferFunctions {
@@ -77,17 +63,11 @@ pub trait AbstractInterpreter: TransferFunctions {
         &mut self,
         initial_state: Self::State,
         function_view: &FunctionView,
-    ) -> InvariantMap<Self::State, Self::AnalysisError> {
-        let mut inv_map: InvariantMap<Self::State, Self::AnalysisError> = InvariantMap::new();
+    ) -> PartialVMResult<()> {
+        let mut inv_map = InvariantMap::new();
         let entry_block_id = function_view.cfg().entry_block_id();
         let mut next_block = Some(entry_block_id);
-        inv_map.insert(
-            entry_block_id,
-            BlockInvariant {
-                pre: initial_state,
-                post: BlockPostcondition::Unprocessed,
-            },
-        );
+        inv_map.insert(entry_block_id, BlockInvariant { pre: initial_state });
 
         while let Some(block_id) = next_block {
             let block_invariant = match inv_map.get_mut(&block_id) {
@@ -101,18 +81,9 @@ pub trait AbstractInterpreter: TransferFunctions {
             };
 
             let pre_state = &block_invariant.pre;
-            let post_state = match self.execute_block(block_id, pre_state, function_view) {
-                Err(e) => {
-                    block_invariant.post = BlockPostcondition::Error(e);
-                    // Stop analyzing after the first error occurred, to avoid the risk of
-                    // crashes as followup errors.
-                    break;
-                }
-                Ok(s) => {
-                    block_invariant.post = BlockPostcondition::Success;
-                    s
-                }
-            };
+            // Note: this will stop analysis after the first error occurs, to avoid the risk of
+            // subsequent crashes
+            let post_state = self.execute_block(block_id, pre_state, function_view)?;
 
             let mut next_block_candidate = function_view.cfg().next_block(block_id);
             // propagate postcondition of this block to successor blocks
@@ -137,8 +108,6 @@ pub trait AbstractInterpreter: TransferFunctions {
                                 {
                                     next_block_candidate = Some(*successor_block_id);
                                 }
-                                // Pre has changed, the post condition is now unknown for the block
-                                next_block_invariant.post = BlockPostcondition::Unprocessed
                             }
                         }
                     }
@@ -149,7 +118,6 @@ pub trait AbstractInterpreter: TransferFunctions {
                             *successor_block_id,
                             BlockInvariant {
                                 pre: post_state.clone(),
-                                post: BlockPostcondition::Success,
                             },
                         );
                     }
@@ -157,7 +125,7 @@ pub trait AbstractInterpreter: TransferFunctions {
             }
             next_block = next_block_candidate;
         }
-        inv_map
+        Ok(())
     }
 
     fn execute_block(
@@ -165,7 +133,7 @@ pub trait AbstractInterpreter: TransferFunctions {
         block_id: BlockId,
         pre_state: &Self::State,
         function_view: &FunctionView,
-    ) -> Result<Self::State, Self::AnalysisError> {
+    ) -> PartialVMResult<Self::State> {
         let mut state_acc = pre_state.clone();
         let block_end = function_view.cfg().block_end(block_id);
         for offset in function_view.cfg().instr_indexes(block_id) {

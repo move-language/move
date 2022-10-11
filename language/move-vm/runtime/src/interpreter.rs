@@ -346,8 +346,11 @@ impl Interpreter {
         self.binop(|lhs, rhs| {
             Ok(match f(lhs, rhs)? {
                 IntegerValue::U8(x) => Value::u8(x),
+                IntegerValue::U16(x) => Value::u16(x),
+                IntegerValue::U32(x) => Value::u32(x),
                 IntegerValue::U64(x) => Value::u64(x),
                 IntegerValue::U128(x) => Value::u128(x),
+                IntegerValue::U256(x) => Value::u256(x),
             })
         })
     }

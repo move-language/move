@@ -1403,6 +1403,20 @@ impl<'a> Resolver<'a> {
             BinaryType::Module(module) => module.struct_instantiation_at(idx.0),
             BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
         };
+
+        // Before instantiating the type, count the # of nodes of all type arguments plus
+        // existing type instantiation.
+        // If that number is larger than MAX_TYPE_NODES, refuse to construct this type.
+        // This prevents constructing larger and lager types via struct instantiation.
+        // TODO: this should be revisited for performance and unification with MAX_VALUE_DEPTH
+        let mut sum_nodes: usize = 1;
+        for ty in ty_args.iter().chain(struct_inst.instantiation.iter()) {
+            sum_nodes = sum_nodes.saturating_add(self.loader.count_type_nodes(ty));
+            if sum_nodes > MAX_TYPE_NODES {
+                return Err(PartialVMError::new(StatusCode::VM_MAX_TYPE_DEPTH_REACHED));
+            }
+        }
+
         Ok(Type::StructInstantiation(
             struct_inst.def,
             struct_inst
@@ -2276,6 +2290,7 @@ impl TypeCache {
 }
 
 const VALUE_DEPTH_MAX: usize = 128;
+const MAX_TYPE_NODES: usize = 128;
 
 impl Loader {
     fn struct_gidx_to_type_tag(
@@ -2337,6 +2352,15 @@ impl Loader {
                 )
             }
         })
+    }
+
+    fn count_type_nodes(&self, ty: &Type) -> usize {
+        match ty {
+            Type::Vector(ty) => self.count_type_nodes(&ty).saturating_add(1),
+            Type::StructInstantiation(_, ty_args) => ty_args.iter().fold(1, |x, y| x.saturating_add(self.count_type_nodes(y))),
+            Type::Reference(t) | Type::MutableReference(t) => self.count_type_nodes(t).saturating_add(1),
+            _ => 1
+        }
     }
 
     fn struct_gidx_to_type_layout(

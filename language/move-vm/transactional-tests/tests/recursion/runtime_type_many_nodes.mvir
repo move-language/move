@@ -1,0 +1,53 @@
+//# publish
+module 0x42.M {
+    struct Foo<phantom T, phantom R, phantom S> has key, store, drop { x: bool }
+    public f<X>() acquires Foo {
+      label b0:
+        Self.g<X, X, X>();
+        return;
+    }
+    public g<X, Y, Z>() acquires Foo {
+      label b0:
+      _ = move_from<Foo<X, Y, Z>>(0x1);
+      return;
+    }
+}
+// check: "Keep(EXECUTED)"
+
+//# run
+import 0x42.M;
+
+main() {
+label b0:
+    M.f<
+    M.Foo<
+    M.Foo<
+    M.Foo<
+    M.Foo<
+    M.Foo<
+    M.Foo<
+    M.Foo<
+    M.Foo<
+    M.Foo<
+    M.Foo<
+    M.Foo<
+    M.Foo<
+    M.Foo<
+    M.Foo<
+    M.Foo<u64, u64, u64>,
+    u64, u64>,
+    u64, u64>,
+    u64, u64>,
+    u64, u64>,
+    u64, u64>,
+    u64, u64>,
+    u64, u64>,
+    u64, u64>,
+    u64, u64>,
+    u64, u64>,
+    u64, u64>,
+    u64, u64>,
+    u64, u64>,
+    u64, u64>>();
+    return;
+}

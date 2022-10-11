@@ -8,7 +8,7 @@ use primitive_types::U256;
 use serde::{Deserialize, Serialize};
 
 #[allow(non_camel_case_types)]
-#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq, Hash, Copy)]
 pub struct u256(U256);
 
 impl fmt::Display for u256 {

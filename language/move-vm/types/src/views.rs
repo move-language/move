@@ -3,6 +3,7 @@
 
 use move_core_types::{
     account_address::AccountAddress, gas_algebra::AbstractMemorySize, language_storage::TypeTag,
+    u256::u256,
 };
 use std::mem::size_of;
 
@@ -39,11 +40,23 @@ pub trait ValueView {
                 self.0 += LEGACY_CONST_SIZE;
             }
 
+            fn visit_u16(&mut self, _depth: usize, _val: u16) {
+                self.0 += LEGACY_CONST_SIZE;
+            }
+
+            fn visit_u32(&mut self, _depth: usize, _val: u32) {
+                self.0 += LEGACY_CONST_SIZE;
+            }
+
             fn visit_u64(&mut self, _depth: usize, _val: u64) {
                 self.0 += LEGACY_CONST_SIZE;
             }
 
             fn visit_u128(&mut self, _depth: usize, _val: u128) {
+                self.0 += LEGACY_CONST_SIZE;
+            }
+
+            fn visit_u256(&mut self, _depth: usize, _val: u256) {
                 self.0 += LEGACY_CONST_SIZE;
             }
 
@@ -101,8 +114,11 @@ pub trait ValueView {
 /// Trait that defines a visitor that could be used to traverse a value recursively.
 pub trait ValueVisitor {
     fn visit_u8(&mut self, depth: usize, val: u8);
+    fn visit_u16(&mut self, depth: usize, val: u16);
+    fn visit_u32(&mut self, depth: usize, val: u32);
     fn visit_u64(&mut self, depth: usize, val: u64);
     fn visit_u128(&mut self, depth: usize, val: u128);
+    fn visit_u256(&mut self, depth: usize, val: u256);
     fn visit_bool(&mut self, depth: usize, val: bool);
     fn visit_address(&mut self, depth: usize, val: AccountAddress);
 

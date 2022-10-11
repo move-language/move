@@ -1,0 +1,2 @@
+-p p1 sandbox publish
+-p p2 sandbox publish

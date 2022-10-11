@@ -1,0 +1,4 @@
+Command `-p p1 sandbox publish`:
+Command `-p p2 sandbox publish`:
+Breaking change detected--publishing aborted. Re-run with --ignore-breaking-changes to publish anyway.
+Native struct is deprecated and should not be used

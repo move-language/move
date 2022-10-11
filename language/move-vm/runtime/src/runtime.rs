@@ -15,7 +15,7 @@ use move_binary_format::{
     access::ModuleAccess,
     compatibility::{Compatibility, CompatibilityConfig},
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
-    file_format::LocalIndex,
+    file_format::{LocalIndex, StructFieldInformation},
     normalized, CompiledModule, IndexKind,
 };
 use move_bytecode_verifier::{script_signature, VerifierConfig};
@@ -122,6 +122,18 @@ impl VMRuntime {
             let module_id = module.self_id();
 
             if data_store.exists_module(&module_id)? && compat_config.need_check_compat() {
+                // NOTE: compatibility check relies on normalized module and normalize module
+                // expects no native structs. Do an early check to filter out native structs here
+                // TODO: fix check and error code if we leave something around for native structs.
+                for struct_def in module.struct_defs() {
+                    if matches!(struct_def.field_information, StructFieldInformation::Native) {
+                        return Err(PartialVMError::new(
+                            StatusCode::BACKWARD_INCOMPATIBLE_MODULE_UPDATE,
+                        )
+                        .finish(Location::Undefined));
+                    }
+                }
+
                 let old_module_ref = self.loader.load_module(&module_id, data_store)?;
                 let old_module = old_module_ref.module();
                 let old_m = normalized::Module::new(old_module);

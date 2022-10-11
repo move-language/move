@@ -10,7 +10,9 @@ use move_binary_format::{
     access::ModuleAccess,
     compatibility::Compatibility,
     errors::VMError,
-    file_format::{AbilitySet, CompiledModule, FunctionDefinitionIndex, SignatureToken},
+    file_format::{
+        AbilitySet, CompiledModule, FunctionDefinitionIndex, SignatureToken, StructFieldInformation,
+    },
     normalized, IndexKind,
 };
 use move_bytecode_utils::Modules;
@@ -343,6 +345,16 @@ pub(crate) fn explain_publish_error(
         }
         VMStatus::Error(BACKWARD_INCOMPATIBLE_MODULE_UPDATE) => {
             println!("Breaking change detected--publishing aborted. Re-run with --ignore-breaking-changes to publish anyway.");
+
+            // NOTE: compatibility check relies on normalized module and normalize module
+            // expects no native structs. Do an early check to filter out native structs here
+            // TODO: this is a duplication of the Move VM logic
+            for struct_def in module.struct_defs() {
+                if matches!(struct_def.field_information, StructFieldInformation::Native) {
+                    println!("Native struct is deprecated and should not be used");
+                    return Ok(());
+                }
+            }
 
             let old_module = state.get_module_by_id(&module_id)?.unwrap();
             let old_api = normalized::Module::new(&old_module);

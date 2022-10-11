@@ -14,6 +14,7 @@ use move_core_types::{
     account_address::AccountAddress,
     effects::Op,
     gas_algebra::AbstractMemorySize,
+    u256::u256,
     value::{MoveStructLayout, MoveTypeLayout},
     vm_status::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode},
 };
@@ -40,8 +41,11 @@ enum ValueImpl {
     Invalid,
 
     U8(u8),
+    U16(u16),
+    U32(u32),
     U64(u64),
     U128(u128),
+    U256(u256),
     Bool(bool),
     Address(AccountAddress),
 
@@ -336,6 +340,9 @@ impl ValueImpl {
             // When cloning a container, we need to make sure we make a deep
             // copy of the data instead of a shallow copy of the Rc.
             Container(c) => Container(c.copy_value()?),
+            U16(x) => U16(*x),
+            U32(x) => U32(*x),
+            U256(x) => U256(*x),
         })
     }
 }
@@ -851,8 +858,11 @@ impl Locals {
             )))),
 
             ValueImpl::U8(_)
+            | ValueImpl::U16(_)
+            | ValueImpl::U32(_)
             | ValueImpl::U64(_)
             | ValueImpl::U128(_)
+            | ValueImpl::U256(_)
             | ValueImpl::Bool(_)
             | ValueImpl::Address(_) => Ok(Value(ValueImpl::IndexedRef(IndexedRef {
                 container_ref: ContainerRef::Local(Container::Locals(Rc::clone(&self.0))),
@@ -1878,7 +1888,9 @@ impl ValueImpl {
         use ValueImpl::*;
 
         match self {
-            Invalid | U8(_) | U64(_) | U128(_) | Bool(_) => LEGACY_CONST_SIZE,
+            Invalid | U8(_) | U16(_) | U32(_) | U64(_) | U128(_) | U256(_) | Bool(_) => {
+                LEGACY_CONST_SIZE
+            }
             Address(_) => AbstractMemorySize::new(AccountAddress::LENGTH as u64),
             ContainerRef(r) => r.legacy_size(),
             IndexedRef(r) => r.legacy_size(),
@@ -2123,8 +2135,11 @@ impl Display for ValueImpl {
             Self::Invalid => write!(f, "Invalid"),
 
             Self::U8(x) => write!(f, "U8({})", x),
+            Self::U16(x) => write!(f, "U16({})", x),
+            Self::U32(x) => write!(f, "U32({})", x),
             Self::U64(x) => write!(f, "U64({})", x),
             Self::U128(x) => write!(f, "U128({})", x),
+            Self::U256(x) => write!(f, "U256({})", x),
             Self::Bool(x) => write!(f, "{}", x),
             Self::Address(addr) => write!(f, "Address({})", addr.short_str_lossless()),
 
@@ -2223,11 +2238,23 @@ pub mod debug {
         debug_write!(buf, "{}", x)
     }
 
+    fn print_u16<B: Write>(buf: &mut B, x: &u16) -> PartialVMResult<()> {
+        debug_write!(buf, "{}", x)
+    }
+
+    fn print_u32<B: Write>(buf: &mut B, x: &u32) -> PartialVMResult<()> {
+        debug_write!(buf, "{}", x)
+    }
+
     fn print_u64<B: Write>(buf: &mut B, x: &u64) -> PartialVMResult<()> {
         debug_write!(buf, "{}", x)
     }
 
     fn print_u128<B: Write>(buf: &mut B, x: &u128) -> PartialVMResult<()> {
+        debug_write!(buf, "{}", x)
+    }
+
+    fn print_u256<B: Write>(buf: &mut B, x: &u256) -> PartialVMResult<()> {
         debug_write!(buf, "{}", x)
     }
 
@@ -2244,8 +2271,11 @@ pub mod debug {
             ValueImpl::Invalid => print_invalid(buf),
 
             ValueImpl::U8(x) => print_u8(buf, x),
+            ValueImpl::U16(x) => print_u16(buf, x),
+            ValueImpl::U32(x) => print_u32(buf, x),
             ValueImpl::U64(x) => print_u64(buf, x),
             ValueImpl::U128(x) => print_u128(buf, x),
+            ValueImpl::U256(x) => print_u256(buf, x),
             ValueImpl::Bool(x) => print_bool(buf, x),
             ValueImpl::Address(x) => print_address(buf, x),
 
@@ -2756,8 +2786,11 @@ impl ValueImpl {
             Invalid => unreachable!("Should not be able to visit an invalid value"),
 
             U8(val) => visitor.visit_u8(depth, *val),
+            U16(val) => visitor.visit_u16(depth, *val),
+            U32(val) => visitor.visit_u32(depth, *val),
             U64(val) => visitor.visit_u64(depth, *val),
             U128(val) => visitor.visit_u128(depth, *val),
+            U256(val) => visitor.visit_u256(depth, *val),
             Bool(val) => visitor.visit_bool(depth, *val),
             Address(val) => visitor.visit_address(depth, *val),
 

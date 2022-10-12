@@ -62,6 +62,7 @@ impl<'a> CodeUnitVerifier<'a> {
         script: &'a CompiledScript,
     ) -> PartialVMResult<()> {
         // create `FunctionView` and `BinaryIndexedView`
+        control_flow::verify_fallthrough(None, &script.code)?;
         control_flow::verify(verifier_config, None, &script.code)?;
         let function_view = FunctionView::script(script);
         let resolver = BinaryIndexedView::Script(script);
@@ -87,6 +88,7 @@ impl<'a> CodeUnitVerifier<'a> {
         };
         // create `FunctionView` and `BinaryIndexedView`
         let function_handle = module.function_handle_at(function_definition.function);
+        control_flow::verify_fallthrough(Some(index), code)?;
         control_flow::verify(verifier_config, Some(index), code)?;
         let function_view = FunctionView::function(module, index, code, function_handle);
 

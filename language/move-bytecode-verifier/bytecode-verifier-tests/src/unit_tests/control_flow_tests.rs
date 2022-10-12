@@ -18,14 +18,14 @@ fn verify_module(verifier_config: &VerifierConfig, module: &CompiledModule) -> P
         .enumerate()
         .filter(|(_, def)| !def.is_native())
     {
-        control_flow::verify(
-            verifier_config,
-            Some(FunctionDefinitionIndex(idx as TableIndex)),
-            function_definition
-                .code
-                .as_ref()
-                .expect("unexpected native function"),
-        )?
+        let current_function = Some(FunctionDefinitionIndex(idx as TableIndex));
+        let code = function_definition
+            .code
+            .as_ref()
+            .expect("unexpected native function");
+
+        control_flow::verify_fallthrough(current_function, code)?;
+        control_flow::verify(verifier_config, current_function, code)?;
     }
     Ok(())
 }

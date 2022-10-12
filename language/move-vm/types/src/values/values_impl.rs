@@ -2068,6 +2068,67 @@ impl GlobalValueImpl {
             },
         }
     }
+
+    fn deep_check_is_borrowed(&self) -> PartialVMResult<bool> {
+        fn is_borrowed_rec(v: &ValueImpl) -> PartialVMResult<bool> {
+            match v {
+                ValueImpl::Invalid
+                | ValueImpl::U8(_)
+                | ValueImpl::U64(_)
+                | ValueImpl::U128(_)
+                | ValueImpl::Bool(_)
+                | ValueImpl::Address(_) => Ok(false),
+                ValueImpl::Container(c) => {
+                    if c.rc_count() > 1 {
+                        return Ok(true);
+                    }
+                    match c {
+                        // rc count already checked, so can borrow
+                        Container::Vec(values) | Container::Struct(values) => {
+                            for value in values.borrow().iter() {
+                                if is_borrowed_rec(&value)? {
+                                    return Ok(true);
+                                }
+                            }
+                            Ok(false)
+                        }
+                        // rc count already checked
+                        Container::VecU8(_)
+                        | Container::VecU64(_)
+                        | Container::VecU128(_)
+                        | Container::VecBool(_)
+                        | Container::VecAddress(_) => return Ok(false),
+                        Container::Locals(_) => {
+                            return Err(PartialVMError::new(
+                                StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+                            )
+                            .with_message("Unexpected locals inside of a value".to_string()))
+                        }
+                    }
+                }
+                ValueImpl::ContainerRef(_) | ValueImpl::IndexedRef(_) => {
+                    return Err(
+                        PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                            .with_message("Unexpected reference inside of a value".to_string()),
+                    )
+                }
+            }
+        }
+        let fields = match self {
+            Self::Fresh { fields } | Self::Cached { fields, .. } => fields,
+            Self::None | Self::Deleted => return Ok(false),
+        };
+        if Rc::strong_count(fields) > 1 {
+            return Ok(true);
+        }
+        // rc count already checked, so can borrow
+        for value in fields.borrow().iter() {
+            if is_borrowed_rec(&value)? {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
 }
 
 impl GlobalValue {
@@ -2105,6 +2166,11 @@ impl GlobalValue {
 
     pub fn is_mutated(&self) -> bool {
         self.0.is_mutated()
+    }
+
+    /// Returns true iff there is an outstanding reference pointing to this GlobalValue
+    pub fn deep_check_is_borrowed(&self) -> PartialVMResult<bool> {
+        self.0.deep_check_is_borrowed()
     }
 }
 

@@ -923,10 +923,7 @@ impl<'env> FunctionContext<'env> {
             | Operation::TraceReturn(..)
             | Operation::TraceAbort
             | Operation::TraceExp(..)
-            | Operation::TraceGlobalMem(..)
-            // Okay to enable this?
-            //| Operation::CastU256 
-            => {
+            | Operation::TraceGlobalMem(..) => {
                 unreachable!();
             }
         };

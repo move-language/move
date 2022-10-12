@@ -39,6 +39,7 @@ use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
     metadata::Metadata,
+    u256::u256,
     vm_status::StatusCode,
 };
 #[cfg(any(test, feature = "fuzzing"))]

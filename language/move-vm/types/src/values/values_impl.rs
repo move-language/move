@@ -70,8 +70,11 @@ enum Container {
     Vec(Rc<RefCell<Vec<ValueImpl>>>),
     Struct(Rc<RefCell<Vec<ValueImpl>>>),
     VecU8(Rc<RefCell<Vec<u8>>>),
+    VecU16(Rc<RefCell<Vec<u16>>>),
+    VecU32(Rc<RefCell<Vec<u32>>>),
     VecU64(Rc<RefCell<Vec<u64>>>),
     VecU128(Rc<RefCell<Vec<u128>>>),
+    VecU256(Rc<RefCell<Vec<u256>>>),
     VecBool(Rc<RefCell<Vec<bool>>>),
     VecAddress(Rc<RefCell<Vec<AccountAddress>>>),
 }
@@ -218,8 +221,11 @@ impl Container {
         match self {
             Self::Locals(r) | Self::Struct(r) | Self::Vec(r) => r.borrow().len(),
             Self::VecU8(r) => r.borrow().len(),
+            Self::VecU16(r) => r.borrow().len(),
+            Self::VecU32(r) => r.borrow().len(),
             Self::VecU64(r) => r.borrow().len(),
             Self::VecU128(r) => r.borrow().len(),
+            Self::VecU256(r) => r.borrow().len(),
             Self::VecBool(r) => r.borrow().len(),
             Self::VecAddress(r) => r.borrow().len(),
         }
@@ -229,8 +235,11 @@ impl Container {
         match self {
             Self::Locals(r) | Self::Struct(r) | Self::Vec(r) => Rc::strong_count(r),
             Self::VecU8(r) => Rc::strong_count(r),
+            Self::VecU16(r) => Rc::strong_count(r),
+            Self::VecU32(r) => Rc::strong_count(r),
             Self::VecU64(r) => Rc::strong_count(r),
             Self::VecU128(r) => Rc::strong_count(r),
+            Self::VecU256(r) => Rc::strong_count(r),
             Self::VecBool(r) => Rc::strong_count(r),
             Self::VecAddress(r) => Rc::strong_count(r),
         }
@@ -301,8 +310,11 @@ macro_rules! impl_vm_value_ref {
 }
 
 impl_vm_value_ref!(u8, U8);
+impl_vm_value_ref!(u16, U16);
+impl_vm_value_ref!(u32, U32);
 impl_vm_value_ref!(u64, U64);
 impl_vm_value_ref!(u128, U128);
+impl_vm_value_ref!(u256, U256);
 impl_vm_value_ref!(bool, Bool);
 impl_vm_value_ref!(AccountAddress, Address);
 
@@ -332,8 +344,11 @@ impl ValueImpl {
             Invalid => Invalid,
 
             U8(x) => U8(*x),
+            U16(x) => U16(*x),
+            U32(x) => U32(*x),
             U64(x) => U64(*x),
             U128(x) => U128(*x),
+            U256(x) => U256(*x),
             Bool(x) => Bool(*x),
             Address(x) => Address(*x),
 
@@ -343,9 +358,6 @@ impl ValueImpl {
             // When cloning a container, we need to make sure we make a deep
             // copy of the data instead of a shallow copy of the Rc.
             Container(c) => Container(c.copy_value()?),
-            U16(x) => U16(*x),
-            U32(x) => U32(*x),
-            U256(x) => U256(*x),
         })
     }
 }
@@ -366,8 +378,11 @@ impl Container {
             Self::Struct(r) => Self::Struct(copy_rc_ref_vec_val(r)?),
 
             Self::VecU8(r) => Self::VecU8(Rc::new(RefCell::new(r.borrow().clone()))),
+            Self::VecU16(r) => Self::VecU16(Rc::new(RefCell::new(r.borrow().clone()))),
+            Self::VecU32(r) => Self::VecU32(Rc::new(RefCell::new(r.borrow().clone()))),
             Self::VecU64(r) => Self::VecU64(Rc::new(RefCell::new(r.borrow().clone()))),
             Self::VecU128(r) => Self::VecU128(Rc::new(RefCell::new(r.borrow().clone()))),
+            Self::VecU256(r) => Self::VecU256(Rc::new(RefCell::new(r.borrow().clone()))),
             Self::VecBool(r) => Self::VecBool(Rc::new(RefCell::new(r.borrow().clone()))),
             Self::VecAddress(r) => Self::VecAddress(Rc::new(RefCell::new(r.borrow().clone()))),
 
@@ -385,8 +400,11 @@ impl Container {
             Self::Vec(r) => Self::Vec(Rc::clone(r)),
             Self::Struct(r) => Self::Struct(Rc::clone(r)),
             Self::VecU8(r) => Self::VecU8(Rc::clone(r)),
+            Self::VecU16(r) => Self::VecU16(Rc::clone(r)),
+            Self::VecU32(r) => Self::VecU32(Rc::clone(r)),
             Self::VecU64(r) => Self::VecU64(Rc::clone(r)),
             Self::VecU128(r) => Self::VecU128(Rc::clone(r)),
+            Self::VecU256(r) => Self::VecU256(Rc::clone(r)),
             Self::VecBool(r) => Self::VecBool(Rc::clone(r)),
             Self::VecAddress(r) => Self::VecAddress(Rc::clone(r)),
             Self::Locals(r) => Self::Locals(Rc::clone(r)),
@@ -444,8 +462,11 @@ impl ValueImpl {
 
         let res = match (self, other) {
             (U8(l), U8(r)) => l == r,
+            (U16(l), U16(r)) => l == r,
+            (U32(l), U32(r)) => l == r,
             (U64(l), U64(r)) => l == r,
             (U128(l), U128(r)) => l == r,
+            (U256(l), U256(r)) => l == r,
             (Bool(l), Bool(r)) => l == r,
             (Address(l), Address(r)) => l == r,
 
@@ -484,8 +505,11 @@ impl Container {
                 true
             }
             (VecU8(l), VecU8(r)) => l.borrow().eq(&*r.borrow()),
+            (VecU16(l), VecU16(r)) => l.borrow().eq(&*r.borrow()),
+            (VecU32(l), VecU32(r)) => l.borrow().eq(&*r.borrow()),
             (VecU64(l), VecU64(r)) => l.borrow().eq(&*r.borrow()),
             (VecU128(l), VecU128(r)) => l.borrow().eq(&*r.borrow()),
+            (VecU256(l), VecU256(r)) => l.borrow().eq(&*r.borrow()),
             (VecBool(l), VecBool(r)) => l.borrow().eq(&*r.borrow()),
             (VecAddress(l), VecAddress(r)) => l.borrow().eq(&*r.borrow()),
 
@@ -493,8 +517,11 @@ impl Container {
             | (Vec(_), _)
             | (Struct(_), _)
             | (VecU8(_), _)
+            | (VecU16(_), _)
+            | (VecU32(_), _)
             | (VecU64(_), _)
             | (VecU128(_), _)
+            | (VecU256(_), _)
             | (VecBool(_), _)
             | (VecAddress(_), _) => {
                 return Err(
@@ -536,8 +563,11 @@ impl IndexedRef {
             | (Locals(r1), Locals(r2)) => r1.borrow()[self.idx].equals(&r2.borrow()[other.idx])?,
 
             (VecU8(r1), VecU8(r2)) => r1.borrow()[self.idx] == r2.borrow()[other.idx],
+            (VecU16(r1), VecU16(r2)) => r1.borrow()[self.idx] == r2.borrow()[other.idx],
+            (VecU32(r1), VecU32(r2)) => r1.borrow()[self.idx] == r2.borrow()[other.idx],
             (VecU64(r1), VecU64(r2)) => r1.borrow()[self.idx] == r2.borrow()[other.idx],
             (VecU128(r1), VecU128(r2)) => r1.borrow()[self.idx] == r2.borrow()[other.idx],
+            (VecU256(r1), VecU256(r2)) => r1.borrow()[self.idx] == r2.borrow()[other.idx],
             (VecBool(r1), VecBool(r2)) => r1.borrow()[self.idx] == r2.borrow()[other.idx],
             (VecAddress(r1), VecAddress(r2)) => r1.borrow()[self.idx] == r2.borrow()[other.idx],
 
@@ -547,6 +577,20 @@ impl IndexedRef {
             }
             (VecU8(r1), Locals(r2)) | (VecU8(r1), Struct(r2)) => {
                 r1.borrow()[self.idx] == *r2.borrow()[other.idx].as_value_ref::<u8>()?
+            }
+
+            (Locals(r1), VecU16(r2)) | (Struct(r1), VecU16(r2)) => {
+                *r1.borrow()[self.idx].as_value_ref::<u16>()? == r2.borrow()[other.idx]
+            }
+            (VecU16(r1), Locals(r2)) | (VecU16(r1), Struct(r2)) => {
+                r1.borrow()[self.idx] == *r2.borrow()[other.idx].as_value_ref::<u16>()?
+            }
+
+            (Locals(r1), VecU32(r2)) | (Struct(r1), VecU32(r2)) => {
+                *r1.borrow()[self.idx].as_value_ref::<u32>()? == r2.borrow()[other.idx]
+            }
+            (VecU32(r1), Locals(r2)) | (VecU32(r1), Struct(r2)) => {
+                r1.borrow()[self.idx] == *r2.borrow()[other.idx].as_value_ref::<u32>()?
             }
 
             (Locals(r1), VecU64(r2)) | (Struct(r1), VecU64(r2)) => {
@@ -561,6 +605,13 @@ impl IndexedRef {
             }
             (VecU128(r1), Locals(r2)) | (VecU128(r1), Struct(r2)) => {
                 r1.borrow()[self.idx] == *r2.borrow()[other.idx].as_value_ref::<u128>()?
+            }
+
+            (Locals(r1), VecU256(r2)) | (Struct(r1), VecU256(r2)) => {
+                *r1.borrow()[self.idx].as_value_ref::<u256>()? == r2.borrow()[other.idx]
+            }
+            (VecU256(r1), Locals(r2)) | (VecU256(r1), Struct(r2)) => {
+                r1.borrow()[self.idx] == *r2.borrow()[other.idx].as_value_ref::<u256>()?
             }
 
             (Locals(r1), VecBool(r2)) | (Struct(r1), VecBool(r2)) => {
@@ -580,8 +631,11 @@ impl IndexedRef {
             // All other combinations are illegal.
             (Vec(_), _)
             | (VecU8(_), _)
+            | (VecU16(_), _)
+            | (VecU32(_), _)
             | (VecU64(_), _)
             | (VecU128(_), _)
+            | (VecU256(_), _)
             | (VecBool(_), _)
             | (VecAddress(_), _) => {
                 return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
@@ -619,8 +673,11 @@ impl IndexedRef {
         let res = match self.container_ref.container() {
             Locals(r) | Vec(r) | Struct(r) => r.borrow()[self.idx].copy_value()?,
             VecU8(r) => ValueImpl::U8(r.borrow()[self.idx]),
+            VecU16(r) => ValueImpl::U16(r.borrow()[self.idx]),
+            VecU32(r) => ValueImpl::U32(r.borrow()[self.idx]),
             VecU64(r) => ValueImpl::U64(r.borrow()[self.idx]),
             VecU128(r) => ValueImpl::U128(r.borrow()[self.idx]),
+            VecU256(r) => ValueImpl::U256(r.borrow()[self.idx]),
             VecBool(r) => ValueImpl::Bool(r.borrow()[self.idx]),
             VecAddress(r) => ValueImpl::Address(r.borrow()[self.idx]),
         };
@@ -683,8 +740,11 @@ impl ContainerRef {
                     Container::Struct(r) => assign!(r, Struct),
                     Container::Vec(r) => assign!(r, Vec),
                     Container::VecU8(r) => assign!(r, VecU8),
+                    Container::VecU16(r) => assign!(r, VecU16),
+                    Container::VecU32(r) => assign!(r, VecU32),
                     Container::VecU64(r) => assign!(r, VecU64),
                     Container::VecU128(r) => assign!(r, VecU128),
+                    Container::VecU256(r) => assign!(r, VecU256),
                     Container::VecBool(r) => assign!(r, VecBool),
                     Container::VecAddress(r) => assign!(r, VecAddress),
                     Container::Locals(_) => {
@@ -734,14 +794,20 @@ impl IndexedRef {
                 v[self.idx] = x.0;
             }
             (Container::VecU8(r), ValueImpl::U8(x)) => r.borrow_mut()[self.idx] = *x,
+            (Container::VecU16(r), ValueImpl::U16(x)) => r.borrow_mut()[self.idx] = *x,
+            (Container::VecU32(r), ValueImpl::U32(x)) => r.borrow_mut()[self.idx] = *x,
             (Container::VecU64(r), ValueImpl::U64(x)) => r.borrow_mut()[self.idx] = *x,
             (Container::VecU128(r), ValueImpl::U128(x)) => r.borrow_mut()[self.idx] = *x,
+            (Container::VecU256(r), ValueImpl::U256(x)) => r.borrow_mut()[self.idx] = *x,
             (Container::VecBool(r), ValueImpl::Bool(x)) => r.borrow_mut()[self.idx] = *x,
             (Container::VecAddress(r), ValueImpl::Address(x)) => r.borrow_mut()[self.idx] = *x,
 
             (Container::VecU8(_), _)
+            | (Container::VecU16(_), _)
+            | (Container::VecU32(_), _)
             | (Container::VecU64(_), _)
             | (Container::VecU128(_), _)
+            | (Container::VecU256(_), _)
             | (Container::VecBool(_), _)
             | (Container::VecAddress(_), _) => {
                 return Err(
@@ -818,8 +884,11 @@ impl ContainerRef {
             }
 
             Container::VecU8(_)
+            | Container::VecU16(_)
+            | Container::VecU32(_)
             | Container::VecU64(_)
             | Container::VecU128(_)
+            | Container::VecU256(_)
             | Container::VecAddress(_)
             | Container::VecBool(_) => ValueImpl::IndexedRef(IndexedRef {
                 idx,
@@ -1842,8 +1911,11 @@ impl VectorRef {
 
         let len = match c {
             Container::VecU8(r) => r.borrow().len(),
+            Container::VecU16(r) => r.borrow().len(),
+            Container::VecU32(r) => r.borrow().len(),
             Container::VecU64(r) => r.borrow().len(),
             Container::VecU128(r) => r.borrow().len(),
+            Container::VecU256(r) => r.borrow().len(),
             Container::VecBool(r) => r.borrow().len(),
             Container::VecAddress(r) => r.borrow().len(),
             Container::Vec(r) => r.borrow().len(),
@@ -1858,8 +1930,11 @@ impl VectorRef {
 
         match c {
             Container::VecU8(r) => r.borrow_mut().push(e.value_as()?),
+            Container::VecU16(r) => r.borrow_mut().push(e.value_as()?),
+            Container::VecU32(r) => r.borrow_mut().push(e.value_as()?),
             Container::VecU64(r) => r.borrow_mut().push(e.value_as()?),
             Container::VecU128(r) => r.borrow_mut().push(e.value_as()?),
+            Container::VecU256(r) => r.borrow_mut().push(e.value_as()?),
             Container::VecBool(r) => r.borrow_mut().push(e.value_as()?),
             Container::VecAddress(r) => r.borrow_mut().push(e.value_as()?),
             Container::Vec(r) => r.borrow_mut().push(e.0),
@@ -1905,12 +1980,24 @@ impl VectorRef {
                 Some(x) => Value::u8(x),
                 None => err_pop_empty_vec!(),
             },
+            Container::VecU16(r) => match r.borrow_mut().pop() {
+                Some(x) => Value::u16(x),
+                None => err_pop_empty_vec!(),
+            },
+            Container::VecU32(r) => match r.borrow_mut().pop() {
+                Some(x) => Value::u32(x),
+                None => err_pop_empty_vec!(),
+            },
             Container::VecU64(r) => match r.borrow_mut().pop() {
                 Some(x) => Value::u64(x),
                 None => err_pop_empty_vec!(),
             },
             Container::VecU128(r) => match r.borrow_mut().pop() {
                 Some(x) => Value::u128(x),
+                None => err_pop_empty_vec!(),
+            },
+            Container::VecU256(r) => match r.borrow_mut().pop() {
+                Some(x) => Value::u256(x),
                 None => err_pop_empty_vec!(),
             },
             Container::VecBool(r) => match r.borrow_mut().pop() {
@@ -1949,8 +2036,11 @@ impl VectorRef {
 
         match c {
             Container::VecU8(r) => swap!(r),
+            Container::VecU16(r) => swap!(r),
+            Container::VecU32(r) => swap!(r),
             Container::VecU64(r) => swap!(r),
             Container::VecU128(r) => swap!(r),
+            Container::VecU256(r) => swap!(r),
             Container::VecBool(r) => swap!(r),
             Container::VecAddress(r) => swap!(r),
             Container::Vec(r) => swap!(r),
@@ -2024,6 +2114,14 @@ impl Vector {
                 .into_iter()
                 .map(Value::u8)
                 .collect(),
+            Container::VecU16(r) => take_unique_ownership(r)?
+                .into_iter()
+                .map(Value::u16)
+                .collect(),
+            Container::VecU32(r) => take_unique_ownership(r)?
+                .into_iter()
+                .map(Value::u32)
+                .collect(),
             Container::VecU64(r) => take_unique_ownership(r)?
                 .into_iter()
                 .map(Value::u64)
@@ -2031,6 +2129,10 @@ impl Vector {
             Container::VecU128(r) => take_unique_ownership(r)?
                 .into_iter()
                 .map(Value::u128)
+                .collect(),
+            Container::VecU256(r) => take_unique_ownership(r)?
+                .into_iter()
+                .map(Value::u256)
                 .collect(),
             Container::VecBool(r) => take_unique_ownership(r)?
                 .into_iter()
@@ -2100,11 +2202,20 @@ impl Container {
             Self::VecU8(r) => {
                 AbstractMemorySize::new((r.borrow().len() * std::mem::size_of::<u8>()) as u64)
             }
+            Self::VecU16(r) => {
+                AbstractMemorySize::new((r.borrow().len() * std::mem::size_of::<u16>()) as u64)
+            }
+            Self::VecU32(r) => {
+                AbstractMemorySize::new((r.borrow().len() * std::mem::size_of::<u32>()) as u64)
+            }
             Self::VecU64(r) => {
                 AbstractMemorySize::new((r.borrow().len() * std::mem::size_of::<u64>()) as u64)
             }
             Self::VecU128(r) => {
                 AbstractMemorySize::new((r.borrow().len() * std::mem::size_of::<u128>()) as u64)
+            }
+            Self::VecU256(r) => {
+                AbstractMemorySize::new((r.borrow().len() * std::mem::size_of::<u256>()) as u64)
             }
             Self::VecBool(r) => {
                 AbstractMemorySize::new((r.borrow().len() * std::mem::size_of::<bool>()) as u64)
@@ -2443,8 +2554,11 @@ impl Display for Container {
                 display_list_of_items(r.borrow().iter(), f)
             }
             Self::VecU8(r) => display_list_of_items(r.borrow().iter(), f),
+            Self::VecU16(r) => display_list_of_items(r.borrow().iter(), f),
+            Self::VecU32(r) => display_list_of_items(r.borrow().iter(), f),
             Self::VecU64(r) => display_list_of_items(r.borrow().iter(), f),
             Self::VecU128(r) => display_list_of_items(r.borrow().iter(), f),
+            Self::VecU256(r) => display_list_of_items(r.borrow().iter(), f),
             Self::VecBool(r) => display_list_of_items(r.borrow().iter(), f),
             Self::VecAddress(r) => display_list_of_items(r.borrow().iter(), f),
         }
@@ -2569,8 +2683,11 @@ pub mod debug {
             }
 
             Container::VecU8(r) => print_list(buf, "[", r.borrow().iter(), print_u8, "]"),
+            Container::VecU16(r) => print_list(buf, "[", r.borrow().iter(), print_u16, "]"),
+            Container::VecU32(r) => print_list(buf, "[", r.borrow().iter(), print_u32, "]"),
             Container::VecU64(r) => print_list(buf, "[", r.borrow().iter(), print_u64, "]"),
             Container::VecU128(r) => print_list(buf, "[", r.borrow().iter(), print_u128, "]"),
+            Container::VecU256(r) => print_list(buf, "[", r.borrow().iter(), print_u256, "]"),
             Container::VecBool(r) => print_list(buf, "[", r.borrow().iter(), print_bool, "]"),
             Container::VecAddress(r) => print_list(buf, "[", r.borrow().iter(), print_address, "]"),
 
@@ -2608,8 +2725,11 @@ pub mod debug {
             }
 
             Container::VecU8(r) => print_slice_elem(buf, &*r.borrow(), idx, print_u8),
+            Container::VecU16(r) => print_slice_elem(buf, &*r.borrow(), idx, print_u16),
+            Container::VecU32(r) => print_slice_elem(buf, &*r.borrow(), idx, print_u32),
             Container::VecU64(r) => print_slice_elem(buf, &*r.borrow(), idx, print_u64),
             Container::VecU128(r) => print_slice_elem(buf, &*r.borrow(), idx, print_u128),
+            Container::VecU256(r) => print_slice_elem(buf, &*r.borrow(), idx, print_u256),
             Container::VecBool(r) => print_slice_elem(buf, &*r.borrow(), idx, print_bool),
             Container::VecAddress(r) => print_slice_elem(buf, &*r.borrow(), idx, print_address),
         }
@@ -2975,8 +3095,11 @@ impl Container {
                 }
             }
             VecU8(r) => visitor.visit_vec_u8(depth, &*r.borrow()),
+            VecU16(r) => visitor.visit_vec_u16(depth, &*r.borrow()),
+            VecU32(r) => visitor.visit_vec_u32(depth, &*r.borrow()),
             VecU64(r) => visitor.visit_vec_u64(depth, &*r.borrow()),
             VecU128(r) => visitor.visit_vec_u128(depth, &*r.borrow()),
+            VecU256(r) => visitor.visit_vec_u256(depth, &*r.borrow()),
             VecBool(r) => visitor.visit_vec_bool(depth, &*r.borrow()),
             VecAddress(r) => visitor.visit_vec_address(depth, &*r.borrow()),
         }
@@ -2988,8 +3111,11 @@ impl Container {
         match self {
             Locals(r) | Vec(r) | Struct(r) => r.borrow()[idx].visit_impl(visitor, depth + 1),
             VecU8(vals) => visitor.visit_u8(depth + 1, vals.borrow()[idx]),
+            VecU16(vals) => visitor.visit_u16(depth + 1, vals.borrow()[idx]),
+            VecU32(vals) => visitor.visit_u32(depth + 1, vals.borrow()[idx]),
             VecU64(vals) => visitor.visit_u64(depth + 1, vals.borrow()[idx]),
             VecU128(vals) => visitor.visit_u128(depth + 1, vals.borrow()[idx]),
+            VecU256(vals) => visitor.visit_u256(depth + 1, vals.borrow()[idx]),
             VecBool(vals) => visitor.visit_bool(depth + 1, vals.borrow()[idx]),
             VecAddress(vals) => visitor.visit_address(depth + 1, vals.borrow()[idx]),
         }

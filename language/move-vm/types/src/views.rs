@@ -134,6 +134,20 @@ pub trait ValueVisitor {
         }
     }
 
+    fn visit_vec_u16(&mut self, depth: usize, vals: &[u16]) {
+        self.visit_vec(depth, vals.len());
+        for val in vals {
+            self.visit_u16(depth + 1, *val);
+        }
+    }
+
+    fn visit_vec_u32(&mut self, depth: usize, vals: &[u32]) {
+        self.visit_vec(depth, vals.len());
+        for val in vals {
+            self.visit_u32(depth + 1, *val);
+        }
+    }
+
     fn visit_vec_u64(&mut self, depth: usize, vals: &[u64]) {
         self.visit_vec(depth, vals.len());
         for val in vals {
@@ -145,6 +159,13 @@ pub trait ValueVisitor {
         self.visit_vec(depth, vals.len());
         for val in vals {
             self.visit_u128(depth + 1, *val);
+        }
+    }
+
+    fn visit_vec_u256(&mut self, depth: usize, vals: &[u256]) {
+        self.visit_vec(depth, vals.len());
+        for val in vals {
+            self.visit_u256(depth + 1, *val);
         }
     }
 

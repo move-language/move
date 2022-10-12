@@ -214,9 +214,9 @@ In this way,
 arguments to phantom type parameters are not considered when deriving the abilities for generic types,
 thus avoiding the need for spurious ability annotations.
 For this relaxed rule to be sound,
-Move's type system guarantees that a parameter declared as phantom is either
+Move's type system guarantees that a parameter declared as `phantom` is either
 not used at all in the struct definition, or
-it is only used as an argument to type parameters also declared as phantom.
+it is only used as an argument to type parameters also declared as `phantom`.
 
 #### Declaration
 

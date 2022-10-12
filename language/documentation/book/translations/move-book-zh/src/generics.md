@@ -6,7 +6,7 @@
 
 ## 声明类型参数
 
-函数和结构体都可以在其签名中采用类型参数列表，由一对尖括号括起来 `<...>`。
+函数和结构体都可以在其签名中带上类型参数列表，由一对尖括号括起来 `<...>`。
 
 ### 泛型函数
 
@@ -209,22 +209,21 @@ This is because of the rules for [Conditional Abilities and Generic Types](./abi
 This might cause some unpleasant consequences.
 For example, we are unable to put `Coin<Currency1>` into a wallet in the global storage.
 
-在上面的例子中，虽然 `struct Coin` 要求有 `store` 能力，但 `Coin<Currency1>` 和 `Coin<Currency2>` 都没有 `store` 能力。这是因为 [条件能力与泛型类型](./chatper_19_abilities.md#conditional-abilities-and-generic-types)的规则, 而实际上 `Currency1`和 `Currency2` 本身都没有 `store` 能力，尽管它们甚至没有在`struct Coin` 的主体中使用. 这可能会导致一些不好的后果。例如，我们无法将 `Coin<Currency1>` 放入全局存储的一个钱包中。
+在上面的例子中，虽然 `struct Coin` 要求有 `store` 能力，但 `Coin<Currency1>` 和 `Coin<Currency2>` 都没有 `store` 能力。这是因为[条件能力与泛型类型](./abilities.md#条件能力与泛型类型)的规则以及 `Currency1` 和 `Currency2` 没有 `store` 能力的事实，尽管它们甚至没有在`struct Coin` 的结构体中使用。这可能会导致一些不合意的后果。例如，我们无法将 `Coin<Currency1>` 放入全局存储中的钱包。
 
 One possible solution would be to add spurious ability annotations to `Currency1` and `Currency2` (i.e., `struct Currency1 has store {}`).
 But, this might lead to bugs or security vulnerabilities because it weakens the types with unnecessary ability declarations.
 For example, we would never expect a resource in the global storage to have a field in type `Currency1`, but this would be possible with the spurious `store` ability.
 Moreover, the spurious annotations would be infectious, requiring many functions generic on the unused type parameter to also include the necessary constraints.
 
-一种可能的解决方案是向 `Currency1` 和 `Currency2` 添加虚假能力标注(例如：`struct Currency1 has store {}`) 。但是，这可能会导致 bugs 或安全漏洞，因为它削弱了类型安全，声明了不必要的能力。例如，我们永远不会期望全局存储中的资源具有 `Currency1` 类型的字段，但这对于虚假 `store` 能力是可能发生的。
-此外，虚假标注具有传染性，需要在许多未使用类型参数的泛型函数上也引入必要的约束。
+一种可能的解决方案是向 `Currency1` 和 `Currency2` 添加伪能力（spurious ability）标注（例如：`struct Currency1 has store {}`）。但是，这可能会导致错误（bug）或安全漏洞，因为它削弱了类型，引入了不必要的能力声明。例如，我们永远不会期望全局存储中的资源具有 `Currency1` 类型的字段，但是这可以通过伪 `store` 能力实现。此外，伪标注具有传染性，需要在许多未使用类型参数的泛型函数上也包含必要的约束。
 
 Phantom type parameters solve this problem. Unused type parameters can be marked as *phantom* type parameters,
 which do not participate in the ability derivation for structs.
 In this way, arguments to phantom type parameters are not considered when deriving the abilities for generic types, thus avoiding the need for spurious ability annotations.
 For this relaxed rule to be sound, Move's type system guarantees that a parameter declared as phantom is either not used at all in the struct definition, or it is only used as an argument to type parameters also declared as phantom.
 
-Phantom 类型参数解决了这个问题。未使用的类型参数可以标记为 *phantom* 类型参数，不参与结构体的能力推导。这样，在派生泛型类型的能力时，不考虑 phantom type 的参数，从而避免了对虚假能力标注的需要。为了使这个宽松的规则合理，Move 的类型系统保证声明为 `phantom` 的参数要么不在结构定义中使用，要么仅用作声明为 `phantom` 的类型参数的参数。
+虚类型（phantom type）参数解决了这个问题。未使用的类型参数可以标记为 *phantom* 类型参数，不参与结构体的能力推导。这样，在派生泛型类型的能力时，不考虑虚类型参数的实参，从而避免了对伪能力标注的需要。为了使这个宽松的规则合理，Move 的类型系统保证声明为 `phantom` 的参数要么在结构体定义根本不使用，要么仅用作声明为 `phantom` 的类型参数的实参。
 
 #### 声明 (Declaration)
 

@@ -6,4 +6,5 @@ mod binary_tests;
 mod compatibility_tests;
 mod deserializer_tests;
 mod number_tests;
+#[cfg(not(feature = "nostd"))]
 mod signature_token_tests;

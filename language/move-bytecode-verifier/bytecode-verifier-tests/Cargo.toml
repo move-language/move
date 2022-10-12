@@ -20,3 +20,4 @@ move-binary-format = { path = "../../move-binary-format", features = ["fuzzing"]
 
 [features]
 fuzzing = ["move-binary-format/fuzzing"]
+nostd = ["move-binary-format/nostd"]

@@ -7,6 +7,9 @@ use crate::{
     file_format_common::VERSION_5,
     normalized::Module,
 };
+#[cfg(feature = "nostd")]
+use alloc::collections::BTreeSet;
+#[cfg(not(feature = "nostd"))]
 use std::collections::BTreeSet;
 
 /// The result of a linking and layout compatibility check. Here is what the different combinations

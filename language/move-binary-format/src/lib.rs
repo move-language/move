@@ -2,9 +2,17 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![feature(error_in_core)]
 #![forbid(unsafe_code)]
+#![cfg_attr(any(feature = "nostd"), no_std)]
 
+#[cfg(feature = "nostd")]
+use core::fmt;
+#[cfg(not(feature = "nostd"))]
 use std::fmt;
+
+#[cfg(feature = "nostd")]
+extern crate alloc;
 
 pub mod access;
 pub mod binary_views;
@@ -19,6 +27,7 @@ pub mod file_format;
 pub mod file_format_common;
 pub mod internals;
 pub mod normalized;
+#[cfg(not(feature = "nostd"))]
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod proptest_types;
 pub mod serializer;

@@ -4,6 +4,14 @@
 
 //! This module defines the control-flow graph uses for bytecode verification.
 use crate::file_format::{Bytecode, CodeOffset};
+#[cfg(feature = "nostd")]
+use alloc::{
+    boxed::Box,
+    collections::{BTreeMap, BTreeSet},
+    vec,
+    vec::Vec,
+};
+#[cfg(not(feature = "nostd"))]
 use std::collections::{BTreeMap, BTreeSet};
 
 // BTree/Hash agnostic type wrappers
@@ -64,13 +72,16 @@ pub struct VMControlFlowGraph {
 
 impl BasicBlock {
     pub fn display(&self, entry: BlockId) {
-        println!("+=======================+");
-        println!("| Enter:  {}            |", entry);
-        println!("+-----------------------+");
-        println!("==> Children: {:?}", self.successors);
-        println!("+-----------------------+");
-        println!("| Exit:   {}            |", self.exit);
-        println!("+=======================+");
+        #[cfg(not(feature = "nostd"))]
+        {
+            println!("+=======================+");
+            println!("| Enter:  {}            |", entry);
+            println!("+-----------------------+");
+            println!("==> Children: {:?}", self.successors);
+            println!("+-----------------------+");
+            println!("| Exit:   {}            |", self.exit);
+            println!("+=======================+");
+        }
     }
 }
 
@@ -191,10 +202,13 @@ impl VMControlFlowGraph {
     }
 
     pub fn display(&self) {
-        for (entry, block) in &self.blocks {
-            block.display(*entry);
+        #[cfg(not(feature = "nostd"))]
+        {
+            for (entry, block) in &self.blocks {
+                block.display(*entry);
+            }
+            println!("Traversal: {:#?}", self.traversal_successors);
         }
-        println!("Traversal: {:#?}", self.traversal_successors);
     }
 
     fn is_end_of_block(pc: CodeOffset, code: &[Bytecode], block_ids: &Set<BlockId>) -> bool {

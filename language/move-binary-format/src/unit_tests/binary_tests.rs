@@ -3,8 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{file_format::Bytecode, file_format_common::*};
+#[cfg(feature = "nostd")]
+use alloc::vec::Vec;
 use proptest::prelude::*;
-
 #[test]
 fn binary_len() {
     let mut binary_data = BinaryData::new();

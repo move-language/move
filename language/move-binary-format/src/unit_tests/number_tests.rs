@@ -3,7 +3,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::file_format_common::*;
+#[cfg(feature = "nostd")]
+use alloc::format;
+#[cfg(feature = "nostd")]
+use core2::io::{Cursor, Read};
 use proptest::prelude::*;
+#[cfg(not(feature = "nostd"))]
 use std::io::{Cursor, Read};
 
 // verify all bytes in the vector have the high bit set except the last one

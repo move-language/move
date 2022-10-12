@@ -12,7 +12,14 @@
 //! http://dwarfstd.org/Dwarf3Std.php or https://en.wikipedia.org/wiki/LEB128.
 //! It's used to compress mostly indexes into the main binary tables.
 use crate::file_format::Bytecode;
+#[cfg(feature = "nostd")]
+use alloc::{borrow::ToOwned, format, string::ToString, vec, vec::Vec};
 use anyhow::{bail, Result};
+#[cfg(feature = "nostd")]
+use core::mem::size_of;
+#[cfg(feature = "nostd")]
+use core2::io::{Cursor, Read};
+#[cfg(not(feature = "nostd"))]
 use std::{
     io::{Cursor, Read},
     mem::size_of,
@@ -393,7 +400,10 @@ pub const VERSION_MIN: u32 = VERSION_5;
 
 pub(crate) mod versioned_data {
     use crate::{errors::*, file_format_common::*};
+    #[cfg(feature = "nostd")]
+    use core2::io::{Cursor, Read};
     use move_core_types::vm_status::StatusCode;
+    #[cfg(not(feature = "nostd"))]
     use std::io::{Cursor, Read};
     pub struct VersionedBinary<'a> {
         version: u32,
@@ -514,8 +524,15 @@ pub(crate) mod versioned_data {
         }
     }
 
+    #[cfg(not(feature = "nostd"))]
     impl<'a> Read for VersionedCursor<'a> {
         fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            self.cursor.read(buf)
+        }
+    }
+    #[cfg(feature = "nostd")]
+    impl<'a> Read for VersionedCursor<'a> {
+        fn read(&mut self, buf: &mut [u8]) -> core2::io::Result<usize> {
             self.cursor.read(buf)
         }
     }

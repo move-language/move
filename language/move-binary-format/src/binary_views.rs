@@ -24,6 +24,9 @@ use move_core_types::{
     vm_status::StatusCode,
 };
 
+#[cfg(feature = "nostd")]
+use alloc::{borrow::ToOwned, vec, vec::Vec};
+
 // A `BinaryIndexedView` provides table indexed access for both `CompiledModule` and
 // `CompiledScript`.
 // Operations that are not allowed for `CompiledScript` return an error.

@@ -12,13 +12,15 @@
 //!   immediately -- the views are a convenience to make that simpler. They've been written as lazy
 //!   iterators to aid understanding of the file format and to make it easy to generate views.
 
-use std::iter::DoubleEndedIterator;
-
 use crate::{access::ModuleAccess, file_format::*, SignatureTokenKind};
-use std::collections::BTreeSet;
 
+#[cfg(feature = "nostd")]
+use alloc::{collections::BTreeMap, collections::BTreeSet, vec::Vec};
+#[cfg(feature = "nostd")]
+use core::iter::DoubleEndedIterator;
 use move_core_types::{identifier::IdentStr, language_storage::ModuleId};
-use std::collections::BTreeMap;
+#[cfg(not(feature = "nostd"))]
+use std::{collections::BTreeMap, collections::BTreeSet, iter::DoubleEndedIterator};
 
 /// Represents a lazily evaluated abstraction over a module.
 ///

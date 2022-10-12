@@ -11,6 +11,9 @@ use move_core_types::{
     language_storage::ModuleId,
 };
 
+#[cfg(feature = "nostd")]
+use alloc::{borrow::ToOwned, vec::Vec};
+
 /// Represents accessors for a compiled module.
 ///
 /// This is a trait to allow working across different wrappers for `CompiledModule`.

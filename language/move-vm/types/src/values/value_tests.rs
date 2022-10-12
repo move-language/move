@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{loaded_data::runtime_types::Type, values::*, views::*};
+#[cfg(feature = "nostd")]
+use alloc::{vec, vec::Vec};
 use move_binary_format::errors::*;
 use move_core_types::account_address::AccountAddress;
 

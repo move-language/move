@@ -6,12 +6,13 @@ use crate::{
     loaded_data::runtime_types::Type,
     values::{GlobalValue, Value},
 };
+#[cfg(feature = "nostd")]
+use alloc::vec::Vec;
 use move_binary_format::errors::{PartialVMResult, VMResult};
 use move_core_types::{
     account_address::AccountAddress, gas_algebra::NumBytes, language_storage::ModuleId,
     value::MoveTypeLayout,
 };
-
 /// Provide an implementation for bytecodes related to data with a given data store.
 ///
 /// The `DataStore` is a generic concept that includes both data and events.

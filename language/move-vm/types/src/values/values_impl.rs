@@ -2,9 +2,16 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    loaded_data::runtime_types::Type,
-    views::{ValueView, ValueVisitor},
+use crate::{loaded_data::runtime_types::Type, views::{ValueView, ValueVisitor}};
+#[cfg(feature = "nostd")]
+use core::{
+    cell,
+    cell::RefCell,
+    cmp::max,
+    fmt::{self, Debug, Display},
+    iter, mem,
+    mem::size_of,
+    ops::Add,
 };
 use move_binary_format::{
     errors::*,
@@ -17,11 +24,26 @@ use move_core_types::{
     value::{MoveStructLayout, MoveTypeLayout},
     vm_status::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode},
 };
+#[cfg(not(feature = "nostd"))]
 use std::{
+    cell,
     cell::RefCell,
+    cmp::max,
     fmt::{self, Debug, Display},
-    iter,
+    iter, mem,
+    mem::size_of,
+    ops::Add,
     rc::Rc,
+};
+
+#[cfg(feature = "nostd")]
+use alloc::{
+    boxed::Box,
+    format,
+    rc::Rc,
+    string::{String, ToString},
+    vec,
+    vec::Vec,
 };
 
 /***************************************************************************************
@@ -915,7 +937,7 @@ impl Locals {
                         .with_message("moving container with dangling references".to_string()));
                     }
                 }
-                Ok(Value(std::mem::replace(v, x.0)))
+                Ok(Value(mem::replace(v, x.0)))
             }
             None => Err(
                 PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(
@@ -1481,7 +1503,7 @@ impl IntegerValue {
         match self {
             U8(x) => Ok(x),
             U64(x) => {
-                if x > (std::u8::MAX as u64) {
+                if x > (u8::MAX as u64) {
                     Err(PartialVMError::new(StatusCode::ARITHMETIC_ERROR)
                         .with_message(format!("Cannot cast u64({}) to u8", x)))
                 } else {
@@ -1489,7 +1511,7 @@ impl IntegerValue {
                 }
             }
             U128(x) => {
-                if x > (std::u8::MAX as u128) {
+                if x > (u8::MAX as u128) {
                     Err(PartialVMError::new(StatusCode::ARITHMETIC_ERROR)
                         .with_message(format!("Cannot cast u128({}) to u8", x)))
                 } else {
@@ -1506,7 +1528,7 @@ impl IntegerValue {
             U8(x) => Ok(x as u64),
             U64(x) => Ok(x),
             U128(x) => {
-                if x > (std::u64::MAX as u128) {
+                if x > (u64::MAX as u128) {
                     Err(PartialVMError::new(StatusCode::ARITHMETIC_ERROR)
                         .with_message(format!("Cannot cast u128({}) to u64", x)))
                 } else {
@@ -1622,8 +1644,8 @@ impl VectorRef {
         Ok(Value(self.0.borrow_elem(idx)?))
     }
 
-    /// Returns a RefCell reference to the underlying vector of a `&vector<u8>` value.
-    pub fn as_bytes_ref(&self) -> std::cell::Ref<'_, Vec<u8>> {
+    /// Returns a Refcell reference to the underlying vector of a `&vector<u8>` value.
+    pub fn as_bytes_ref(&self) -> cell::Ref<'_, Vec<u8>> {
         let c = self.0.container();
         match c {
             Container::VecU8(r) => r.borrow(),
@@ -1989,11 +2011,11 @@ impl GlobalValueImpl {
             Self::None | Self::Deleted => {
                 return Err(PartialVMError::new(StatusCode::MISSING_DATA))
             }
-            Self::Fresh { .. } => match std::mem::replace(self, Self::None) {
+            Self::Fresh { .. } => match mem::replace(self, Self::None) {
                 Self::Fresh { fields } => fields,
                 _ => unreachable!(),
             },
-            Self::Cached { .. } => match std::mem::replace(self, Self::Deleted) {
+            Self::Cached { .. } => match mem::replace(self, Self::Deleted) {
                 Self::Cached { fields, .. } => fields,
                 _ => unreachable!(),
             },
@@ -2213,8 +2235,12 @@ impl Display for Locals {
 #[allow(dead_code)]
 pub mod debug {
     use super::*;
+    #[cfg(feature = "nostd")]
+    use alloc::string::ToString;
+    #[cfg(feature = "nostd")]
+    use core::fmt::Write;
+    #[cfg(not(feature = "nostd"))]
     use std::fmt::Write;
-
     fn print_invalid<B: Write>(buf: &mut B) -> PartialVMResult<()> {
         debug_write!(buf, "-")
     }

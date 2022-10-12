@@ -26,3 +26,4 @@ proptest = "1.0.0"
 [features]
 default = []
 fuzzing = ["proptest", "move-binary-format/fuzzing"]
+nostd = ["move-core-types/nostd", "move-binary-format/nostd"]

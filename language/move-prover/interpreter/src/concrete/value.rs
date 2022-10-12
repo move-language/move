@@ -47,6 +47,12 @@ impl BaseValue {
     pub fn mk_u8(v: u8) -> Self {
         Self::Int(BigInt::from(v))
     }
+    pub fn mk_u16(v: u16) -> Self {
+        Self::Int(BigInt::from(v))
+    }
+    pub fn mk_u32(v: u32) -> Self {
+        Self::Int(BigInt::from(v))
+    }
     pub fn mk_u64(v: u64) -> Self {
         Self::Int(BigInt::from(v))
     }
@@ -219,6 +225,23 @@ impl TypedValue {
             ptr: Pointer::None,
         }
     }
+
+    pub fn mk_u16(v: u16) -> Self {
+        Self {
+            ty: Type::mk_u16(),
+            val: BaseValue::mk_u16(v),
+            ptr: Pointer::None,
+        }
+    }
+
+    pub fn mk_u32(v: u32) -> Self {
+        Self {
+            ty: Type::mk_u32(),
+            val: BaseValue::mk_u32(v),
+            ptr: Pointer::None,
+        }
+    }
+
     pub fn mk_u64(v: u64) -> Self {
         Self {
             ty: Type::mk_u64(),
@@ -437,6 +460,18 @@ impl TypedValue {
         }
         (self.val.into_u8(), self.ty.into_ref_type().0, self.ptr)
     }
+    pub fn into_ref_u16(self) -> (u16, bool, Pointer) {
+        if cfg!(debug_assertions) {
+            assert!(self.ty.is_ref_u16(None));
+        }
+        (self.val.into_u16(), self.ty.into_ref_type().0, self.ptr)
+    }
+    pub fn into_ref_u32(self) -> (u32, bool, Pointer) {
+        if cfg!(debug_assertions) {
+            assert!(self.ty.is_ref_u32(None));
+        }
+        (self.val.into_u32(), self.ty.into_ref_type().0, self.ptr)
+    }
     pub fn into_ref_u64(self) -> (u64, bool, Pointer) {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_ref_u64(None));
@@ -448,6 +483,12 @@ impl TypedValue {
             assert!(self.ty.is_ref_u128(None));
         }
         (self.val.into_u128(), self.ty.into_ref_type().0, self.ptr)
+    }
+    pub fn into_ref_u256(self) -> (u256, bool, Pointer) {
+        if cfg!(debug_assertions) {
+            assert!(self.ty.is_ref_u256(None));
+        }
+        (self.val.into_u256(), self.ty.into_ref_type().0, self.ptr)
     }
     pub fn into_ref_num(self) -> (BigInt, bool, Pointer) {
         if cfg!(debug_assertions) {

@@ -1,7 +1,12 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use ethnum::U256 as EthnumU256;
 use num::BigInt;
+use proptest::{
+    prelude::Arbitrary,
+    strategy::{BoxedStrategy, Strategy},
+};
 use std::{
     fmt,
     ops::{BitAnd, BitOr, BitXor, Shl, Shr},
@@ -70,6 +75,19 @@ impl BitXor<u256> for u256 {
 }
 
 impl u256 {
+    pub fn zero() -> Self {
+        Self(U256::zero())
+    }
+
+    pub fn from_le_bytes(slice: &[u8]) -> Self {
+        Self(U256::from_little_endian(slice))
+    }
+    pub fn to_le_bytes(self) -> [u8; 32] {
+        let mut bytes = [0u8; 32];
+        self.0.to_little_endian(&mut bytes);
+        bytes
+    }
+
     // Unchecked downcasting
     pub fn unchecked_as_u8(&self) -> u8 {
         self.0.as_u128() as u8
@@ -142,5 +160,23 @@ impl From<u128> for u256 {
 impl From<BigInt> for u256 {
     fn from(n: BigInt) -> Self {
         u256(U256::from_little_endian(&n.to_bytes_le().1))
+    }
+}
+
+impl From<u256> for EthnumU256 {
+    fn from(n: u256) -> EthnumU256 {
+        unimplemented!("Conversion not supported yet")
+    }
+}
+
+#[cfg(any(test, feature = "fuzzing"))]
+impl Arbitrary for u256 {
+    type Strategy = BoxedStrategy<Self>;
+    type Parameters = ();
+    fn arbitrary_with(_params: Self::Parameters) -> Self::Strategy {
+        // TODO: improve this as is it not exhaustive
+        proptest::bits::u8::between(0, u8::MAX as usize)
+            .prop_map(|u| u256(U256::from_little_endian(&[u, 32])))
+            .boxed()
     }
 }

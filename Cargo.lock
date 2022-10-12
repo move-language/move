@@ -3080,6 +3080,7 @@ version = "0.0.4"
 dependencies = [
  "anyhow",
  "bcs",
+ "ethnum",
  "hex",
  "num 0.4.0",
  "once_cell",

@@ -437,6 +437,8 @@ impl<'env> FunctionContext<'env> {
         let val = match constant {
             Constant::Bool(v) => TypedValue::mk_bool(*v),
             Constant::U8(v) => TypedValue::mk_u8(*v),
+            Constant::U16(v) => TypedValue::mk_u16(*v),
+            Constant::U32(v) => TypedValue::mk_u32(*v),
             Constant::U64(v) => TypedValue::mk_u64(*v),
             Constant::U128(v) => TypedValue::mk_u128(*v),
             Constant::U256(_) => unimplemented!(),
@@ -815,15 +817,23 @@ impl<'env> FunctionContext<'env> {
                 Ok(vec![object])
             }
             // cast
-            Operation::CastU8 | Operation::CastU64 | Operation::CastU128 => {
+            Operation::CastU8
+            | Operation::CastU16
+            | Operation::CastU32
+            | Operation::CastU64
+            | Operation::CastU128
+            | Operation::CastU256 => {
                 if cfg!(debug_assertions) {
                     assert_eq!(typed_args.len(), 1);
                 }
                 let val = typed_args.remove(0);
                 match op {
                     Operation::CastU8 => self.handle_cast_u8(val),
+                    Operation::CastU16 => self.handle_cast_u16(val),
+                    Operation::CastU32 => self.handle_cast_u32(val),
                     Operation::CastU64 => self.handle_cast_u64(val),
                     Operation::CastU128 => self.handle_cast_u128(val),
+                    Operation::CastU256 => self.handle_cast_u256(val),
                     _ => unreachable!(),
                 }
                 .map(|casted| vec![casted])
@@ -1563,6 +1573,18 @@ impl<'env> FunctionContext<'env> {
         let (ty, val, _) = val.decompose();
         let v = if ty.is_u8() {
             val.into_u8()
+        } else if ty.is_u16() {
+            let v = val.into_u16();
+            if v > (u8::MAX as u16) {
+                return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+            }
+            v as u8
+        } else if ty.is_u32() {
+            let v = val.into_u32();
+            if v > (u8::MAX as u32) {
+                return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+            }
+            v as u8
         } else if ty.is_u64() {
             let v = val.into_u64();
             if v > (u8::MAX as u64) {
@@ -1587,10 +1609,82 @@ impl<'env> FunctionContext<'env> {
         Ok(TypedValue::mk_u8(v))
     }
 
+    fn handle_cast_u16(&self, val: TypedValue) -> Result<TypedValue, AbortInfo> {
+        let (ty, val, _) = val.decompose();
+        let v = if ty.is_u8() {
+            val.into_u8() as u16
+        } else if ty.is_u16() {
+            val.into_u16()
+        } else if ty.is_u32() {
+            let v = val.into_u32();
+            if v > (u16::MAX as u32) {
+                return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+            }
+            v as u16
+        } else if ty.is_u64() {
+            let v = val.into_u64();
+            if v > (u16::MAX as u64) {
+                return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+            }
+            v as u16
+        } else if ty.is_u128() {
+            let v = val.into_u128();
+            if v > (u16::MAX as u128) {
+                return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+            }
+            v as u16
+        } else {
+            let n = val.into_num();
+            match n.to_u16() {
+                None => {
+                    return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+                }
+                Some(v) => v,
+            }
+        };
+        Ok(TypedValue::mk_u16(v))
+    }
+
+    fn handle_cast_u32(&self, val: TypedValue) -> Result<TypedValue, AbortInfo> {
+        let (ty, val, _) = val.decompose();
+        let v = if ty.is_u8() {
+            val.into_u8() as u32
+        } else if ty.is_u16() {
+            val.into_u16() as u32
+        } else if ty.is_u32() {
+            val.into_u32()
+        } else if ty.is_u64() {
+            let v = val.into_u64();
+            if v > (u32::MAX as u64) {
+                return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+            }
+            v as u32
+        } else if ty.is_u128() {
+            let v = val.into_u128();
+            if v > (u32::MAX as u128) {
+                return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+            }
+            v as u32
+        } else {
+            let n = val.into_num();
+            match n.to_u32() {
+                None => {
+                    return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+                }
+                Some(v) => v,
+            }
+        };
+        Ok(TypedValue::mk_u32(v))
+    }
+
     fn handle_cast_u64(&self, val: TypedValue) -> Result<TypedValue, AbortInfo> {
         let (ty, val, _) = val.decompose();
         let v = if ty.is_u8() {
             val.into_u8() as u64
+        } else if ty.is_u16() {
+            val.into_u16() as u64
+        } else if ty.is_u32() {
+            val.into_u32() as u64
         } else if ty.is_u64() {
             val.into_u64()
         } else if ty.is_u128() {
@@ -1615,6 +1709,34 @@ impl<'env> FunctionContext<'env> {
         let (ty, val, _) = val.decompose();
         let v = if ty.is_u8() {
             val.into_u8() as u128
+        } else if ty.is_u16() {
+            val.into_u16() as u128
+        } else if ty.is_u32() {
+            val.into_u32() as u128
+        } else if ty.is_u64() {
+            val.into_u64() as u128
+        } else if ty.is_u128() {
+            val.into_u128()
+        } else {
+            let n = val.into_num();
+            match n.to_u128() {
+                None => {
+                    return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+                }
+                Some(v) => v,
+            }
+        };
+        Ok(TypedValue::mk_u128(v))
+    }
+
+    fn handle_cast_u256(&self, val: TypedValue) -> Result<TypedValue, AbortInfo> {
+        let (ty, val, _) = val.decompose();
+        let v = if ty.is_u8() {
+            val.into_u8() as u128
+        } else if ty.is_u16() {
+            val.into_u16() as u128
+        } else if ty.is_u32() {
+            val.into_u32() as u128
         } else if ty.is_u64() {
             val.into_u64() as u128
         } else if ty.is_u128() {

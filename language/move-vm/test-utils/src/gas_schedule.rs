@@ -22,6 +22,7 @@ use move_core_types::{
         InternalGasUnit, NumArgs, NumBytes, ToUnit, ToUnitFractional,
     },
     language_storage::ModuleId,
+    u256::u256,
     vm_status::StatusCode,
 };
 use move_vm_types::{
@@ -251,6 +252,12 @@ fn get_simple_instruction_opcode(instr: SimpleInstruction) -> Opcodes {
         Ge => GE,
 
         Abort => ABORT,
+        LdU16 => LD_U16,
+        LdU32 => LD_U32,
+        LdU256 => LD_U256,
+        CastU16 => CAST_U16,
+        CastU32 => CAST_U32,
+        CastU256 => CAST_U256,
     }
 }
 
@@ -639,6 +646,12 @@ pub fn zero_cost_instruction_table() -> Vec<(Bytecode, GasCost)> {
         (VecPopBack(SignatureIndex::new(0)), GasCost::new(0, 0)),
         (VecUnpack(SignatureIndex::new(0), 0), GasCost::new(0, 0)),
         (VecSwap(SignatureIndex::new(0)), GasCost::new(0, 0)),
+        (LdU16(0), GasCost::new(0, 0)),
+        (LdU32(0), GasCost::new(0, 0)),
+        (LdU256(u256::zero()), GasCost::new(0, 0)),
+        (CastU16, GasCost::new(0, 0)),
+        (CastU32, GasCost::new(0, 0)),
+        (CastU256, GasCost::new(0, 0)),
     ]
 }
 
@@ -766,6 +779,12 @@ pub fn bytecode_instruction_costs() -> Vec<(Bytecode, GasCost)> {
         (VecPopBack(SignatureIndex::new(0)), GasCost::new(227, 1)),
         (VecUnpack(SignatureIndex::new(0), 0), GasCost::new(572, 1)),
         (VecSwap(SignatureIndex::new(0)), GasCost::new(1436, 1)),
+        (LdU16(0), GasCost::new(1, 1)),
+        (LdU32(0), GasCost::new(1, 1)),
+        (LdU256(u256::zero()), GasCost::new(1, 1)),
+        (CastU16, GasCost::new(2, 1)),
+        (CastU32, GasCost::new(2, 1)),
+        (CastU256, GasCost::new(2, 1)),
     ]
 }
 

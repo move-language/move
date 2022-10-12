@@ -39,6 +39,7 @@ use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
     metadata::Metadata,
+    u256::u256,
     vm_status::StatusCode,
 };
 #[cfg(any(test, feature = "fuzzing"))]
@@ -1163,6 +1164,18 @@ pub enum Bytecode {
     ///
     /// ```... -> ..., u8_value```
     LdU8(u8),
+    /// Push a U16 constant onto the stack.
+    ///
+    /// Stack transition:
+    ///
+    /// ```... -> ..., u16_value```
+    LdU16(u16),
+    /// Push a U32 constant onto the stack.
+    ///
+    /// Stack transition:
+    ///
+    /// ```... -> ..., u32_value```
+    LdU32(u32),
     /// Push a U64 constant onto the stack.
     ///
     /// Stack transition:
@@ -1175,12 +1188,30 @@ pub enum Bytecode {
     ///
     /// ```... -> ..., u128_value```
     LdU128(u128),
+    /// Push a U256 constant onto the stack.
+    ///
+    /// Stack transition:
+    ///
+    /// ```... -> ..., u256_value```
+    LdU256(u256),
     /// Convert the value at the top of the stack into u8.
     ///
     /// Stack transition:
     ///
     /// ```..., integer_value -> ..., u8_value```
     CastU8,
+    /// Convert the value at the top of the stack into u16.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., integer_value -> ..., u16_value```
+    CastU16,
+    /// Convert the value at the top of the stack into u32.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., integer_value -> ..., u32_value```
+    CastU32,
     /// Convert the value at the top of the stack into u64.
     ///
     /// Stack transition:
@@ -1193,6 +1224,12 @@ pub enum Bytecode {
     ///
     /// ```..., integer_value -> ..., u128_value```
     CastU128,
+    /// Convert the value at the top of the stack into u256.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., integer_value -> ..., u256_value```
+    CastU256,
     /// Push a `Constant` onto the stack. The value is loaded and deserialized (according to its
     /// type) from the the `ConstantPool` via `ConstantPoolIndex`
     ///
@@ -1585,11 +1622,17 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::BrFalse(a) => write!(f, "BrFalse({})", a),
             Bytecode::Branch(a) => write!(f, "Branch({})", a),
             Bytecode::LdU8(a) => write!(f, "LdU8({})", a),
+            Bytecode::LdU16(a) => write!(f, "LdU16({})", a),
+            Bytecode::LdU32(a) => write!(f, "LdU32({})", a),
             Bytecode::LdU64(a) => write!(f, "LdU64({})", a),
             Bytecode::LdU128(a) => write!(f, "LdU128({})", a),
+            Bytecode::LdU256(a) => write!(f, "LdU256({})", a),
             Bytecode::CastU8 => write!(f, "CastU8"),
+            Bytecode::CastU16 => write!(f, "CastU16"),
+            Bytecode::CastU32 => write!(f, "CastU32"),
             Bytecode::CastU64 => write!(f, "CastU64"),
             Bytecode::CastU128 => write!(f, "CastU128"),
+            Bytecode::CastU256 => write!(f, "CastU256"),
             Bytecode::LdConst(a) => write!(f, "LdConst({})", a),
             Bytecode::LdTrue => write!(f, "LdTrue"),
             Bytecode::LdFalse => write!(f, "LdFalse"),

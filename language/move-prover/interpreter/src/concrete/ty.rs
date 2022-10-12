@@ -290,12 +290,24 @@ impl BaseType {
         matches!(self, BaseType::Primitive(PrimitiveType::Int(IntType::U8)))
     }
 
+    pub fn is_u16(&self) -> bool {
+        matches!(self, BaseType::Primitive(PrimitiveType::Int(IntType::U16)))
+    }
+
+    pub fn is_u32(&self) -> bool {
+        matches!(self, BaseType::Primitive(PrimitiveType::Int(IntType::U32)))
+    }
+
     pub fn is_u64(&self) -> bool {
         matches!(self, BaseType::Primitive(PrimitiveType::Int(IntType::U64)))
     }
 
     pub fn is_u128(&self) -> bool {
         matches!(self, BaseType::Primitive(PrimitiveType::Int(IntType::U128)))
+    }
+
+    pub fn is_u256(&self) -> bool {
+        matches!(self, BaseType::Primitive(PrimitiveType::Int(IntType::U256)))
     }
 
     pub fn is_num(&self) -> bool {
@@ -561,8 +573,11 @@ impl Type {
 
     gen!(mk_bool, mk_ref_bool, is_bool, is_ref_bool);
     gen!(mk_u8, mk_ref_u8, is_u8, is_ref_u8);
+    gen!(mk_u16, mk_ref_u16, is_u16, is_ref_u16);
+    gen!(mk_u32, mk_ref_u32, is_u32, is_ref_u32);
     gen!(mk_u64, mk_ref_u64, is_u64, is_ref_u64);
     gen!(mk_u128, mk_ref_u128, is_u128, is_ref_u128);
+    gen!(mk_u256, mk_ref_u256, is_u256, is_ref_u256);
     gen!(mk_num, mk_ref_num, is_num, is_ref_num);
     gen!(mk_address, mk_ref_address, is_address, is_ref_address);
     gen!(mk_signer, mk_ref_signer, is_signer, is_ref_signer);

@@ -382,12 +382,39 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.temp_count += 1;
             }
 
+            MoveBytecode::LdU16(number) => {
+                let temp_index = self.temp_count;
+                self.temp_stack.push(temp_index);
+                self.local_types.push(Type::Primitive(PrimitiveType::U16));
+                self.code
+                    .push(Bytecode::Load(attr_id, temp_index, Constant::U16(*number)));
+                self.temp_count += 1;
+            }
+
+            MoveBytecode::LdU32(number) => {
+                let temp_index = self.temp_count;
+                self.temp_stack.push(temp_index);
+                self.local_types.push(Type::Primitive(PrimitiveType::U32));
+                self.code
+                    .push(Bytecode::Load(attr_id, temp_index, Constant::U32(*number)));
+                self.temp_count += 1;
+            }
+
             MoveBytecode::LdU64(number) => {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(Type::Primitive(PrimitiveType::U64));
                 self.code
                     .push(Bytecode::Load(attr_id, temp_index, Constant::U64(*number)));
+                self.temp_count += 1;
+            }
+
+            MoveBytecode::LdU256(number) => {
+                let temp_index = self.temp_count;
+                self.temp_stack.push(temp_index);
+                self.local_types.push(Type::Primitive(PrimitiveType::U256));
+                self.code
+                    .push(Bytecode::Load(attr_id, temp_index, Constant::from(*number)));
                 self.temp_count += 1;
             }
 
@@ -410,6 +437,26 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.temp_count += 1;
             }
 
+            MoveBytecode::CastU16 => {
+                let operand_index = self.temp_stack.pop().unwrap();
+                let temp_index = self.temp_count;
+                self.temp_stack.push(temp_index);
+                self.local_types.push(Type::Primitive(PrimitiveType::U16));
+                self.code
+                    .push(mk_unary(Operation::CastU16, temp_index, operand_index));
+                self.temp_count += 1;
+            }
+
+            MoveBytecode::CastU32 => {
+                let operand_index = self.temp_stack.pop().unwrap();
+                let temp_index = self.temp_count;
+                self.temp_stack.push(temp_index);
+                self.local_types.push(Type::Primitive(PrimitiveType::U32));
+                self.code
+                    .push(mk_unary(Operation::CastU32, temp_index, operand_index));
+                self.temp_count += 1;
+            }
+
             MoveBytecode::CastU64 => {
                 let operand_index = self.temp_stack.pop().unwrap();
                 let temp_index = self.temp_count;
@@ -427,6 +474,16 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.local_types.push(Type::Primitive(PrimitiveType::U128));
                 self.code
                     .push(mk_unary(Operation::CastU128, temp_index, operand_index));
+                self.temp_count += 1;
+            }
+
+            MoveBytecode::CastU256 => {
+                let operand_index = self.temp_stack.pop().unwrap();
+                let temp_index = self.temp_count;
+                self.temp_stack.push(temp_index);
+                self.local_types.push(Type::Primitive(PrimitiveType::U256));
+                self.code
+                    .push(mk_unary(Operation::CastU256, temp_index, operand_index));
                 self.temp_count += 1;
             }
 

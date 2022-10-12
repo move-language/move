@@ -20,8 +20,11 @@ pub enum SimpleInstruction {
 
     Pop,
     LdU8,
+    LdU16,
+    LdU32,
     LdU64,
     LdU128,
+    LdU256,
     LdTrue,
     LdFalse,
 
@@ -34,8 +37,11 @@ pub enum SimpleInstruction {
     MutBorrowFieldGeneric,
 
     CastU8,
+    CastU16,
+    CastU32,
     CastU64,
     CastU128,
+    CastU256,
 
     Add,
     Sub,

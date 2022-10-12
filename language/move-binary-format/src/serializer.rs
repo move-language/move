@@ -924,6 +924,21 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
             binary.push(Opcodes::VEC_SWAP as u8)?;
             serialize_signature_index(binary, sig_idx)
         }
+        Bytecode::LdU16(value) => {
+            binary.push(Opcodes::LD_U16 as u8)?;
+            write_u16(binary, *value)
+        }
+        Bytecode::LdU32(value) => {
+            binary.push(Opcodes::LD_U32 as u8)?;
+            write_u32(binary, *value)
+        }
+        Bytecode::LdU256(value) => {
+            binary.push(Opcodes::LD_U256 as u8)?;
+            write_u256(binary, *value)
+        }
+        Bytecode::CastU16 => binary.push(Opcodes::CAST_U16 as u8),
+        Bytecode::CastU32 => binary.push(Opcodes::CAST_U32 as u8),
+        Bytecode::CastU256 => binary.push(Opcodes::CAST_U256 as u8),
     };
     res?;
     Ok(())

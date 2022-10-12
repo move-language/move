@@ -4,7 +4,7 @@
 
 use crate::{check_bounds::BoundsChecker, errors::*, file_format::*, file_format_common::*};
 use move_core_types::{
-    account_address::AccountAddress, identifier::Identifier, metadata::Metadata,
+    account_address::AccountAddress, identifier::Identifier, metadata::Metadata, u256::u256,
     vm_status::StatusCode,
 };
 use std::{collections::HashSet, convert::TryInto, io::Read};
@@ -57,6 +57,22 @@ impl Table {
     }
 }
 
+fn read_u16_internal(cursor: &mut VersionedCursor) -> BinaryLoaderResult<u16> {
+    let mut u16_bytes = [0; 2];
+    cursor
+        .read_exact(&mut u16_bytes)
+        .map_err(|_| PartialVMError::new(StatusCode::BAD_U16))?;
+    Ok(u16::from_le_bytes(u16_bytes))
+}
+
+fn read_u32_internal(cursor: &mut VersionedCursor) -> BinaryLoaderResult<u32> {
+    let mut u32_bytes = [0; 4];
+    cursor
+        .read_exact(&mut u32_bytes)
+        .map_err(|_| PartialVMError::new(StatusCode::BAD_U32))?;
+    Ok(u32::from_le_bytes(u32_bytes))
+}
+
 fn read_u64_internal(cursor: &mut VersionedCursor) -> BinaryLoaderResult<u64> {
     let mut u64_bytes = [0; 8];
     cursor
@@ -71,6 +87,14 @@ fn read_u128_internal(cursor: &mut VersionedCursor) -> BinaryLoaderResult<u128> 
         .read_exact(&mut u128_bytes)
         .map_err(|_| PartialVMError::new(StatusCode::BAD_U128))?;
     Ok(u128::from_le_bytes(u128_bytes))
+}
+
+fn read_u256_internal(cursor: &mut VersionedCursor) -> BinaryLoaderResult<u256> {
+    let mut u256_bytes = [0; 32];
+    cursor
+        .read_exact(&mut u256_bytes)
+        .map_err(|_| PartialVMError::new(StatusCode::BAD_U256))?;
+    Ok(u256::from_le_bytes(&u256_bytes))
 }
 
 //
@@ -1486,6 +1510,21 @@ fn load_code(cursor: &mut VersionedCursor, code: &mut Vec<Bytecode>) -> BinaryLo
                 Bytecode::VecUnpack(load_signature_index(cursor)?, read_u64_internal(cursor)?)
             }
             Opcodes::VEC_SWAP => Bytecode::VecSwap(load_signature_index(cursor)?),
+            Opcodes::LD_U16 => {
+                let value = read_u16_internal(cursor)?;
+                Bytecode::LdU16(value)
+            }
+            Opcodes::LD_U32 => {
+                let value = read_u32_internal(cursor)?;
+                Bytecode::LdU32(value)
+            }
+            Opcodes::LD_U256 => {
+                let value = read_u256_internal(cursor)?;
+                Bytecode::LdU256(value)
+            }
+            Opcodes::CAST_U16 => Bytecode::CastU16,
+            Opcodes::CAST_U32 => Bytecode::CastU32,
+            Opcodes::CAST_U256 => Bytecode::CastU256,
         };
         code.push(bytecode);
     }

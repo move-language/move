@@ -6,6 +6,7 @@ use crate::function_target::FunctionTarget;
 use ethnum::U256;
 use itertools::Itertools;
 use move_binary_format::file_format::CodeOffset;
+use move_core_types::u256::u256;
 use move_model::{
     ast::{Exp, ExpData, MemoryLabel, TempIndex, TraceKind},
     exp_rewriter::{ExpRewriter, ExpRewriterFunctions, RewriteTarget},
@@ -88,12 +89,20 @@ pub enum HavocKind {
 pub enum Constant {
     Bool(bool),
     U8(u8),
+    U16(u16),
+    U32(u32),
     U64(u64),
     U128(u128),
     U256(U256),
     Address(BigUint),
     ByteArray(Vec<u8>),
     AddressArray(Vec<BigUint>),
+}
+
+impl From<u256> for Constant {
+    fn from(n: u256) -> Constant {
+        Constant::U256(U256::from(n))
+    }
 }
 
 /// An operation -- target of a call. This contains user functions, builtin functions, and
@@ -147,6 +156,8 @@ pub enum Operation {
 
     // Unary
     CastU8,
+    CastU16,
+    CastU32,
     CastU64,
     CastU128,
     Not,
@@ -215,6 +226,8 @@ impl Operation {
             Operation::UnpackRefDeep => false,
             Operation::PackRefDeep => false,
             Operation::CastU8 => true,
+            Operation::CastU16 => true,
+            Operation::CastU32 => true,
             Operation::CastU64 => true,
             Operation::CastU128 => true,
             Operation::CastU256 => true,
@@ -1030,6 +1043,8 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
             }
             // Unary
             CastU8 => write!(f, "(u8)")?,
+            CastU16 => write!(f, "(u16)")?,
+            CastU32 => write!(f, "(u32)")?,
             CastU64 => write!(f, "(u64)")?,
             CastU128 => write!(f, "(u128)")?,
             CastU256 => write!(f, "(u256)")?,
@@ -1130,6 +1145,8 @@ impl fmt::Display for Constant {
                     .map(|v| format!("0x{}", v.to_str_radix(16)))
                     .collect_vec()
             )?,
+            U16(x) => write!(f, "{}", x)?,
+            U32(x) => write!(f, "{}", x)?,
         }
         Ok(())
     }

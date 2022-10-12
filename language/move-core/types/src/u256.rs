@@ -3,10 +3,8 @@
 
 use ethnum::U256 as EthnumU256;
 use num::BigInt;
-use proptest::{
-    prelude::Arbitrary,
-    strategy::{BoxedStrategy, Strategy},
-};
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest::{prelude::*, strategy::BoxedStrategy};
 use std::{
     fmt,
     ops::{BitAnd, BitOr, BitXor, Shl, Shr},
@@ -164,11 +162,10 @@ impl From<BigInt> for u256 {
 }
 
 impl From<u256> for EthnumU256 {
-    fn from(n: u256) -> EthnumU256 {
+    fn from(_n: u256) -> EthnumU256 {
         unimplemented!("Conversion not supported yet")
     }
 }
-
 #[cfg(any(test, feature = "fuzzing"))]
 impl Arbitrary for u256 {
     type Strategy = BoxedStrategy<Self>;

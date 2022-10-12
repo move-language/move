@@ -121,6 +121,10 @@ pub enum SerializedType {
     VECTOR                  = 0xA,
     STRUCT_INST             = 0xB,
     SIGNER                  = 0xC,
+
+    U16                     = 0xD,
+    U32                     = 0xE,
+    U256                    = 0xF,
 }
 
 #[rustfmt::skip]

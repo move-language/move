@@ -88,10 +88,16 @@ pub enum MoveTypeLayout {
     Bool,
     #[serde(rename(serialize = "u8", deserialize = "u8"))]
     U8,
+    #[serde(rename(serialize = "u16", deserialize = "u16"))]
+    U16,
+    #[serde(rename(serialize = "u32", deserialize = "u32"))]
+    U32,
     #[serde(rename(serialize = "u64", deserialize = "u64"))]
     U64,
     #[serde(rename(serialize = "u128", deserialize = "u128"))]
     U128,
+    #[serde(rename(serialize = "u256", deserialize = "u256"))]
+    U256,
     #[serde(rename(serialize = "address", deserialize = "address"))]
     Address,
     #[serde(rename(serialize = "vector", deserialize = "vector"))]
@@ -277,8 +283,11 @@ impl<'d> serde::de::DeserializeSeed<'d> for &MoveTypeLayout {
         match self {
             MoveTypeLayout::Bool => bool::deserialize(deserializer).map(MoveValue::Bool),
             MoveTypeLayout::U8 => u8::deserialize(deserializer).map(MoveValue::U8),
+            MoveTypeLayout::U16 => u16::deserialize(deserializer).map(MoveValue::U16),
+            MoveTypeLayout::U32 => u32::deserialize(deserializer).map(MoveValue::U32),
             MoveTypeLayout::U64 => u64::deserialize(deserializer).map(MoveValue::U64),
             MoveTypeLayout::U128 => u128::deserialize(deserializer).map(MoveValue::U128),
+            MoveTypeLayout::U256 => u256::deserialize(deserializer).map(MoveValue::U256),
             MoveTypeLayout::Address => {
                 AccountAddress::deserialize(deserializer).map(MoveValue::Address)
             }
@@ -481,8 +490,11 @@ impl fmt::Display for MoveTypeLayout {
         match self {
             Bool => write!(f, "bool"),
             U8 => write!(f, "u8"),
+            U16 => write!(f, "u16"),
+            U32 => write!(f, "u32"),
             U64 => write!(f, "u64"),
             U128 => write!(f, "u128"),
+            U256 => write!(f, "u256"),
             Address => write!(f, "address"),
             Vector(typ) => write!(f, "vector<{}>", typ),
             Struct(s) => write!(f, "{}", s),
@@ -525,8 +537,11 @@ impl TryInto<TypeTag> for &MoveTypeLayout {
             MoveTypeLayout::Address => TypeTag::Address,
             MoveTypeLayout::Bool => TypeTag::Bool,
             MoveTypeLayout::U8 => TypeTag::U8,
+            MoveTypeLayout::U16 => TypeTag::U16,
+            MoveTypeLayout::U32 => TypeTag::U32,
             MoveTypeLayout::U64 => TypeTag::U64,
             MoveTypeLayout::U128 => TypeTag::U128,
+            MoveTypeLayout::U256 => TypeTag::U256,
             MoveTypeLayout::Signer => TypeTag::Signer,
             MoveTypeLayout::Vector(v) => {
                 let inner_type = &**v;

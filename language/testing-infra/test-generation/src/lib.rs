@@ -382,8 +382,11 @@ pub(crate) fn substitute(token: &SignatureToken, tys: &[SignatureToken]) -> Sign
     match token {
         Bool => Bool,
         U8 => U8,
+        U16 => U16,
+        U32 => U32,
         U64 => U64,
         U128 => U128,
+        U256 => U256,
         Address => Address,
         Signer => Signer,
         Vector(ty) => Vector(Box::new(substitute(ty, tys))),
@@ -411,7 +414,7 @@ pub fn abilities(
     use SignatureToken::*;
 
     match ty {
-        Bool | U8 | U64 | U128 | Address => AbilitySet::PRIMITIVES,
+        Bool | U8 | U16 | U32 | U64 | U128 | U256 | Address => AbilitySet::PRIMITIVES,
 
         Reference(_) | MutableReference(_) => AbilitySet::REFERENCES,
         Signer => AbilitySet::SIGNER,

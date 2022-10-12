@@ -3081,6 +3081,7 @@ dependencies = [
  "anyhow",
  "bcs",
  "hex",
+ "num 0.4.0",
  "once_cell",
  "primitive-types 0.10.1",
  "proptest",

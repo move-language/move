@@ -60,8 +60,11 @@ impl SpecPrinter<'_> {
         match ty {
             Type::Primitive(PrimitiveType::Bool) => Self::doc("bool"),
             Type::Primitive(PrimitiveType::U8) => Self::doc("u8"),
+            Type::Primitive(PrimitiveType::U16) => Self::doc("u16"),
+            Type::Primitive(PrimitiveType::U32) => Self::doc("u32"),
             Type::Primitive(PrimitiveType::U64) => Self::doc("u64"),
             Type::Primitive(PrimitiveType::U128) => Self::doc("u128"),
+            Type::Primitive(PrimitiveType::U256) => Self::doc("u256"),
             Type::Primitive(PrimitiveType::Address) => Self::doc("address"),
             Type::Primitive(PrimitiveType::Signer) => Self::doc("signer"),
             Type::Primitive(PrimitiveType::Num) => Self::doc("num"),

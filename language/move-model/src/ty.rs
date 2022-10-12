@@ -50,8 +50,11 @@ pub const NUM_TYPE: Type = Type::Primitive(PrimitiveType::Num);
 pub enum PrimitiveType {
     Bool,
     U8,
+    U16,
+    U32,
     U64,
     U128,
+    U256,
     Address,
     Signer,
     // Types only appearing in specifications
@@ -78,7 +81,7 @@ impl PrimitiveType {
     pub fn is_spec(&self) -> bool {
         use PrimitiveType::*;
         match self {
-            Bool | U8 | U64 | U128 | Address | Signer => false,
+            Bool | U8 | U16 | U32 | U64 | U128 | U256 | Address | Signer => false,
             Num | Range | EventStore => true,
         }
     }
@@ -89,8 +92,11 @@ impl PrimitiveType {
         Some(match self {
             Bool => MType::Bool,
             U8 => MType::U8,
+            U16 => MType::U16,
+            U32 => MType::U32,
             U64 => MType::U64,
             U128 => MType::U128,
+            U256 => MType::U256,
             Address => MType::Address,
             Signer => MType::Signer,
             Num | Range | EventStore => return None,
@@ -170,8 +176,11 @@ impl Type {
     pub fn is_number(&self) -> bool {
         if let Type::Primitive(p) = self {
             if let PrimitiveType::U8
+            | PrimitiveType::U16
+            | PrimitiveType::U32
             | PrimitiveType::U64
             | PrimitiveType::U128
+            | PrimitiveType::U256
             | PrimitiveType::Num = p
             {
                 return true;
@@ -428,8 +437,11 @@ impl Type {
         match t {
             TypeTag::Bool => Primitive(PrimitiveType::Bool),
             TypeTag::U8 => Primitive(PrimitiveType::U8),
+            TypeTag::U16 => Primitive(PrimitiveType::U8),
+            TypeTag::U32 => Primitive(PrimitiveType::U8),
             TypeTag::U64 => Primitive(PrimitiveType::U64),
             TypeTag::U128 => Primitive(PrimitiveType::U128),
+            TypeTag::U256 => Primitive(PrimitiveType::U8),
             TypeTag::Address => Primitive(PrimitiveType::Address),
             TypeTag::Signer => Primitive(PrimitiveType::Signer),
             TypeTag::Struct(s) => {
@@ -1263,8 +1275,11 @@ impl fmt::Display for PrimitiveType {
         match self {
             Bool => f.write_str("bool"),
             U8 => f.write_str("u8"),
+            U16 => f.write_str("u16"),
+            U32 => f.write_str("u32"),
             U64 => f.write_str("u64"),
             U128 => f.write_str("u128"),
+            U256 => f.write_str("u256"),
             Address => f.write_str("address"),
             Signer => f.write_str("signer"),
             Range => f.write_str("range"),

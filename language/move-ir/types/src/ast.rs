@@ -181,10 +181,16 @@ pub enum Type {
     Signer,
     /// `u8`
     U8,
+    /// `u16`
+    U16,
+    /// `u32`
+    U32,
     /// `u64`
     U64,
     /// `u128`
     U128,
+    /// `u256`
+    U256,
     /// `bool`
     Bool,
     /// `vector`
@@ -1442,8 +1448,11 @@ impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Type::U8 => write!(f, "u8"),
+            Type::U16 => write!(f, "u16"),
+            Type::U32 => write!(f, "u32"),
             Type::U64 => write!(f, "u64"),
             Type::U128 => write!(f, "u128"),
+            Type::U256 => write!(f, "u256"),
             Type::Bool => write!(f, "bool"),
             Type::Address => write!(f, "address"),
             Type::Signer => write!(f, "signer"),

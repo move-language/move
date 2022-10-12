@@ -974,8 +974,11 @@ fn load_signature_token(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Sign
             Ok(match S::from_u8(byte)? {
                 S::BOOL => T::Saturated(SignatureToken::Bool),
                 S::U8 => T::Saturated(SignatureToken::U8),
+                S::U16 => T::Saturated(SignatureToken::U16),
+                S::U32 => T::Saturated(SignatureToken::U32),
                 S::U64 => T::Saturated(SignatureToken::U64),
                 S::U128 => T::Saturated(SignatureToken::U128),
+                S::U256 => T::Saturated(SignatureToken::U256),
                 S::ADDRESS => T::Saturated(SignatureToken::Address),
                 S::SIGNER => T::Saturated(SignatureToken::Signer),
                 S::VECTOR => T::Vector,

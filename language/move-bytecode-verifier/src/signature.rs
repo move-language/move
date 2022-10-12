@@ -251,8 +251,11 @@ impl<'a> SignatureChecker<'a> {
             | SignatureToken::MutableReference(_)
             | SignatureToken::Bool
             | SignatureToken::U8
+            | SignatureToken::U16
+            | SignatureToken::U32
             | SignatureToken::U64
             | SignatureToken::U128
+            | SignatureToken::U256
             | SignatureToken::Address
             | SignatureToken::Signer => {}
         }
@@ -287,7 +290,8 @@ impl<'a> SignatureChecker<'a> {
     fn check_signature_token(&self, ty: &SignatureToken) -> PartialVMResult<()> {
         use SignatureToken::*;
         match ty {
-            U8 | U64 | U128 | Bool | Address | Signer | Struct(_) | TypeParameter(_) => Ok(()),
+            U8 | U16 | U32 | U64 | U128 | U256 | Bool | Address | Signer | Struct(_)
+            | TypeParameter(_) => Ok(()),
             Reference(_) | MutableReference(_) => {
                 // TODO: Prop tests expect us to NOT check the inner types.
                 // Revisit this once we rework prop tests.

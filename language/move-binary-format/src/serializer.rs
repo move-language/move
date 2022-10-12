@@ -641,8 +641,11 @@ fn serialize_signature_token_single_node_impl(
     match token {
         SignatureToken::Bool => binary.push(SerializedType::BOOL as u8)?,
         SignatureToken::U8 => binary.push(SerializedType::U8 as u8)?,
+        SignatureToken::U16 => binary.push(SerializedType::U16 as u8)?,
+        SignatureToken::U32 => binary.push(SerializedType::U32 as u8)?,
         SignatureToken::U64 => binary.push(SerializedType::U64 as u8)?,
         SignatureToken::U128 => binary.push(SerializedType::U128 as u8)?,
+        SignatureToken::U256 => binary.push(SerializedType::U256 as u8)?,
         SignatureToken::Address => binary.push(SerializedType::ADDRESS as u8)?,
         SignatureToken::Signer => binary.push(SerializedType::SIGNER as u8)?,
         SignatureToken::Vector(_) => {

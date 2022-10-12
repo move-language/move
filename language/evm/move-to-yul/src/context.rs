@@ -765,8 +765,11 @@ impl<'a> Context<'a> {
         match ty {
             Primitive(p) => match p {
                 Bool | U8 => 1,
+                U16 => 2,
+                U32 => 4,
                 U64 => 8,
                 U128 => 16,
+                U256 => 32,
                 // TODO: optimize for 20 bytes? Then we need primitives like LoadU160 etc.
                 Address | Signer => 32,
                 Num | Range | EventStore => {

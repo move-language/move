@@ -496,8 +496,11 @@ fn type_name_to_ident_tokens(env: &GlobalEnv, ty: &Type) -> Vec<TypeIdentToken> 
     match ty {
         Type::Primitive(PrimitiveType::Bool) => TypeIdentToken::make("bool"),
         Type::Primitive(PrimitiveType::U8) => TypeIdentToken::make("u8"),
+        Type::Primitive(PrimitiveType::U16) => TypeIdentToken::make("u16"),
+        Type::Primitive(PrimitiveType::U32) => TypeIdentToken::make("u32"),
         Type::Primitive(PrimitiveType::U64) => TypeIdentToken::make("u64"),
         Type::Primitive(PrimitiveType::U128) => TypeIdentToken::make("u128"),
+        Type::Primitive(PrimitiveType::U256) => TypeIdentToken::make("u256"),
         Type::Primitive(PrimitiveType::Address) => TypeIdentToken::make("address"),
         Type::Primitive(PrimitiveType::Signer) => TypeIdentToken::make("signer"),
         Type::Vector(element) => {
@@ -586,8 +589,11 @@ fn type_name_to_info_pack(env: &GlobalEnv, ty: &Type) -> Option<TypeInfoPack> {
         // move types that will cause an error
         Type::Primitive(PrimitiveType::Bool)
         | Type::Primitive(PrimitiveType::U8)
+        | Type::Primitive(PrimitiveType::U16)
+        | Type::Primitive(PrimitiveType::U32)
         | Type::Primitive(PrimitiveType::U64)
         | Type::Primitive(PrimitiveType::U128)
+        | Type::Primitive(PrimitiveType::U256)
         | Type::Primitive(PrimitiveType::Address)
         | Type::Primitive(PrimitiveType::Signer)
         | Type::Vector(_) => None,

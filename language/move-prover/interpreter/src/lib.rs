@@ -375,8 +375,11 @@ fn convert_typed_value_to_move_value(ty: &BaseType, val: BaseValue) -> MoveValue
     match ty {
         BaseType::Primitive(PrimitiveType::Bool) => MoveValue::Bool(val.into_bool()),
         BaseType::Primitive(PrimitiveType::Int(IntType::U8)) => MoveValue::U8(val.into_u8()),
+        BaseType::Primitive(PrimitiveType::Int(IntType::U16)) => MoveValue::U16(val.into_u16()),
+        BaseType::Primitive(PrimitiveType::Int(IntType::U32)) => MoveValue::U32(val.into_u32()),
         BaseType::Primitive(PrimitiveType::Int(IntType::U64)) => MoveValue::U64(val.into_u64()),
         BaseType::Primitive(PrimitiveType::Int(IntType::U128)) => MoveValue::U128(val.into_u128()),
+        BaseType::Primitive(PrimitiveType::Int(IntType::U256)) => MoveValue::U256(val.into_u256()),
         BaseType::Primitive(PrimitiveType::Int(IntType::Num)) => unreachable!(),
         BaseType::Primitive(PrimitiveType::Address) => MoveValue::Address(val.into_address()),
         BaseType::Primitive(PrimitiveType::Signer) => MoveValue::Signer(val.into_signer()),

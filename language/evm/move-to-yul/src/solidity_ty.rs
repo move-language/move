@@ -333,8 +333,11 @@ impl SolidityType {
             Primitive(p) => match p {
                 Bool => SolidityType::Primitive(SolidityPrimitiveType::Bool),
                 U8 => SolidityType::Primitive(SolidityPrimitiveType::Uint(8)),
+                U16 => SolidityType::Primitive(SolidityPrimitiveType::Uint(16)),
+                U32 => SolidityType::Primitive(SolidityPrimitiveType::Uint(32)),
                 U64 => SolidityType::Primitive(SolidityPrimitiveType::Uint(64)),
                 U128 => SolidityType::Primitive(SolidityPrimitiveType::Uint(128)),
+                U256 => SolidityType::Primitive(SolidityPrimitiveType::Uint(256)),
                 Address => SolidityType::Primitive(SolidityPrimitiveType::Address(false)),
                 Signer => SolidityType::Primitive(SolidityPrimitiveType::Address(false)),
                 Num | Range | EventStore => {

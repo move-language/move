@@ -28,10 +28,16 @@ pub enum TypeTag {
     Bool,
     #[serde(rename = "u8", alias = "U8")]
     U8,
+    #[serde(rename = "u16", alias = "U16")]
+    U16,
+    #[serde(rename = "u32", alias = "u32")]
+    U32,
     #[serde(rename = "u64", alias = "U64")]
     U64,
     #[serde(rename = "u128", alias = "U128")]
     U128,
+    #[serde(rename = "u256", alias = "U256")]
+    U256,
     #[serde(rename = "address", alias = "Address")]
     Address,
     #[serde(rename = "signer", alias = "Signer")]
@@ -179,8 +185,11 @@ impl Display for TypeTag {
             TypeTag::Struct(s) => write!(f, "{}", s),
             TypeTag::Vector(ty) => write!(f, "vector<{}>", ty),
             TypeTag::U8 => write!(f, "u8"),
+            TypeTag::U16 => write!(f, "u16"),
+            TypeTag::U32 => write!(f, "u32"),
             TypeTag::U64 => write!(f, "u64"),
             TypeTag::U128 => write!(f, "u128"),
+            TypeTag::U256 => write!(f, "u256"),
             TypeTag::Address => write!(f, "address"),
             TypeTag::Signer => write!(f, "signer"),
             TypeTag::Bool => write!(f, "bool"),

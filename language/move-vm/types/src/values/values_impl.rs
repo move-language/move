@@ -1088,6 +1088,18 @@ impl Value {
         ))))
     }
 
+    pub fn vector_u16(it: impl IntoIterator<Item = u16>) -> Self {
+        Self(ValueImpl::Container(Container::VecU16(Rc::new(
+            RefCell::new(it.into_iter().collect()),
+        ))))
+    }
+
+    pub fn vector_u32(it: impl IntoIterator<Item = u32>) -> Self {
+        Self(ValueImpl::Container(Container::VecU32(Rc::new(
+            RefCell::new(it.into_iter().collect()),
+        ))))
+    }
+
     pub fn vector_u64(it: impl IntoIterator<Item = u64>) -> Self {
         Self(ValueImpl::Container(Container::VecU64(Rc::new(
             RefCell::new(it.into_iter().collect()),
@@ -1096,6 +1108,12 @@ impl Value {
 
     pub fn vector_u128(it: impl IntoIterator<Item = u128>) -> Self {
         Self(ValueImpl::Container(Container::VecU128(Rc::new(
+            RefCell::new(it.into_iter().collect()),
+        ))))
+    }
+
+    pub fn vector_u256(it: impl IntoIterator<Item = u256>) -> Self {
+        Self(ValueImpl::Container(Container::VecU256(Rc::new(
             RefCell::new(it.into_iter().collect()),
         ))))
     }
@@ -1870,7 +1888,10 @@ fn check_elem_layout(ty: &Type, v: &Container) -> PartialVMResult<()> {
     match (ty, v) {
         (Type::U8, Container::VecU8(_))
         | (Type::U64, Container::VecU64(_))
+        | (Type::U16, Container::VecU16(_))
+        | (Type::U32, Container::VecU32(_))
         | (Type::U128, Container::VecU128(_))
+        | (Type::U256, Container::VecU256(_))
         | (Type::Bool, Container::VecBool(_))
         | (Type::Address, Container::VecAddress(_))
         | (Type::Signer, Container::Struct(_)) => Ok(()),
@@ -1888,7 +1909,10 @@ fn check_elem_layout(ty: &Type, v: &Container) -> PartialVMResult<()> {
 
         (Type::U8, _)
         | (Type::U64, _)
+        | (Type::U16, _)
+        | (Type::U32, _)
         | (Type::U128, _)
+        | (Type::U256, _)
         | (Type::Bool, _)
         | (Type::Address, _)
         | (Type::Signer, _)
@@ -2061,6 +2085,18 @@ impl Vector {
                     .map(|v| v.value_as())
                     .collect::<PartialVMResult<Vec<_>>>()?,
             ),
+            Type::U16 => Value::vector_u16(
+                elements
+                    .into_iter()
+                    .map(|v| v.value_as())
+                    .collect::<PartialVMResult<Vec<_>>>()?,
+            ),
+            Type::U32 => Value::vector_u32(
+                elements
+                    .into_iter()
+                    .map(|v| v.value_as())
+                    .collect::<PartialVMResult<Vec<_>>>()?,
+            ),
             Type::U64 => Value::vector_u64(
                 elements
                     .into_iter()
@@ -2068,6 +2104,12 @@ impl Vector {
                     .collect::<PartialVMResult<Vec<_>>>()?,
             ),
             Type::U128 => Value::vector_u128(
+                elements
+                    .into_iter()
+                    .map(|v| v.value_as())
+                    .collect::<PartialVMResult<Vec<_>>>()?,
+            ),
+            Type::U256 => Value::vector_u256(
                 elements
                     .into_iter()
                     .map(|v| v.value_as())
@@ -2930,8 +2972,11 @@ impl<'d> serde::de::DeserializeSeed<'d> for SeedWrapper<&MoveTypeLayout> {
         match self.layout {
             L::Bool => bool::deserialize(deserializer).map(Value::bool),
             L::U8 => u8::deserialize(deserializer).map(Value::u8),
+            L::U16 => u16::deserialize(deserializer).map(Value::u16),
+            L::U32 => u32::deserialize(deserializer).map(Value::u32),
             L::U64 => u64::deserialize(deserializer).map(Value::u64),
             L::U128 => u128::deserialize(deserializer).map(Value::u128),
+            L::U256 => u256::deserialize(deserializer).map(Value::u256),
             L::Address => AccountAddress::deserialize(deserializer).map(Value::address),
             L::Signer => AccountAddress::deserialize(deserializer).map(Value::signer),
 
@@ -2947,11 +2992,20 @@ impl<'d> serde::de::DeserializeSeed<'d> for SeedWrapper<&MoveTypeLayout> {
                     L::U8 => {
                         Container::VecU8(Rc::new(RefCell::new(Vec::deserialize(deserializer)?)))
                     }
+                    L::U16 => {
+                        Container::VecU16(Rc::new(RefCell::new(Vec::deserialize(deserializer)?)))
+                    }
+                    L::U32 => {
+                        Container::VecU32(Rc::new(RefCell::new(Vec::deserialize(deserializer)?)))
+                    }
                     L::U64 => {
                         Container::VecU64(Rc::new(RefCell::new(Vec::deserialize(deserializer)?)))
                     }
                     L::U128 => {
                         Container::VecU128(Rc::new(RefCell::new(Vec::deserialize(deserializer)?)))
+                    }
+                    L::U256 => {
+                        Container::VecU256(Rc::new(RefCell::new(Vec::deserialize(deserializer)?)))
                     }
                     L::Bool => {
                         Container::VecBool(Rc::new(RefCell::new(Vec::deserialize(deserializer)?)))
@@ -3049,8 +3103,11 @@ impl Value {
         Some(match constant_signature {
             S::Bool => L::Bool,
             S::U8 => L::U8,
+            S::U16 => L::U16,
+            S::U32 => L::U32,
             S::U64 => L::U64,
             S::U128 => L::U128,
+            S::U256 => L::U256,
             S::Address => L::Address,
             S::Signer => return None,
             S::Vector(inner) => L::Vector(Box::new(Self::constant_sig_token_to_layout(inner)?)),

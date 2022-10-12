@@ -1,6 +1,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use num::BigInt;
 use std::{
     fmt,
     ops::{BitAnd, BitOr, BitXor, Shl, Shr},
@@ -135,5 +136,11 @@ impl From<u64> for u256 {
 impl From<u128> for u256 {
     fn from(n: u128) -> Self {
         u256(U256::from(n))
+    }
+}
+
+impl From<BigInt> for u256 {
+    fn from(n: BigInt) -> Self {
+        u256(U256::from_little_endian(&n.to_bytes_le().1))
     }
 }

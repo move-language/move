@@ -14,6 +14,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet, Op},
+    u256::u256,
     value::{MoveStruct, MoveValue},
 };
 use move_model::ast::{MemoryLabel, TempIndex};
@@ -80,6 +81,18 @@ impl BaseValue {
             _ => unreachable!(),
         }
     }
+    pub fn into_u16(self) -> u16 {
+        match self {
+            Self::Int(v) => v.to_u16().unwrap(),
+            _ => unreachable!(),
+        }
+    }
+    pub fn into_u32(self) -> u32 {
+        match self {
+            Self::Int(v) => v.to_u32().unwrap(),
+            _ => unreachable!(),
+        }
+    }
     pub fn into_u64(self) -> u64 {
         match self {
             Self::Int(v) => v.to_u64().unwrap(),
@@ -89,6 +102,12 @@ impl BaseValue {
     pub fn into_u128(self) -> u128 {
         match self {
             Self::Int(v) => v.to_u128().unwrap(),
+            _ => unreachable!(),
+        }
+    }
+    pub fn into_u256(self) -> u256 {
+        match self {
+            Self::Int(v) => u256::from(v),
             _ => unreachable!(),
         }
     }

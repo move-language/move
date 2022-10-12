@@ -2,14 +2,27 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![cfg_attr(any(feature = "nostd"), no_std)]
+
 use log::LevelFilter;
+use move_command_line_common::address::NumericalAddress;
+#[cfg(not(feature = "nostd"))]
 use move_command_line_common::files::{extension_equals, find_filenames, MOVE_EXTENSION};
-use move_compiler::shared::NumericalAddress;
 use move_core_types::account_address::AccountAddress;
+
+#[cfg(feature = "nostd")]
+extern crate alloc;
+
+#[cfg(not(feature = "nostd"))]
 use std::{collections::BTreeMap, path::PathBuf};
+
+#[cfg(feature = "nostd")]
+use alloc::{collections::BTreeMap, string::String, string::ToString};
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(not(feature = "nostd"))]
 pub mod utils;
 
 pub mod natives;
@@ -23,6 +36,7 @@ const ERRMAP_FILE: &str = "error_description.errmap";
 const REFERENCES_TEMPLATE: &str = "doc_templates/references.md";
 const OVERVIEW_TEMPLATE: &str = "doc_templates/overview.md";
 
+#[cfg(not(feature = "nostd"))]
 pub fn unit_testing_files() -> Vec<String> {
     vec![path_in_crate("sources/UnitTest.move")]
         .into_iter()
@@ -30,6 +44,7 @@ pub fn unit_testing_files() -> Vec<String> {
         .collect()
 }
 
+#[cfg(not(feature = "nostd"))]
 pub fn path_in_crate<S>(relative: S) -> PathBuf
 where
     S: Into<String>,
@@ -39,18 +54,22 @@ where
     path
 }
 
+#[cfg(not(feature = "nostd"))]
 pub fn move_stdlib_modules_full_path() -> String {
     format!("{}/{}", env!("CARGO_MANIFEST_DIR"), MODULES_DIR)
 }
 
+#[cfg(not(feature = "nostd"))]
 pub fn move_stdlib_docs_full_path() -> String {
     format!("{}/{}", env!("CARGO_MANIFEST_DIR"), DOCS_DIR)
 }
 
+#[cfg(not(feature = "nostd"))]
 pub fn move_nursery_docs_full_path() -> String {
     format!("{}/{}", env!("CARGO_MANIFEST_DIR"), NURSERY_DOCS_DIR)
 }
 
+#[cfg(not(feature = "nostd"))]
 pub fn move_stdlib_errmap_full_path() -> String {
     let prefix = if AccountAddress::LENGTH == 16 {
         "".to_string()
@@ -60,11 +79,13 @@ pub fn move_stdlib_errmap_full_path() -> String {
     format!("{}/{}{}", env!("CARGO_MANIFEST_DIR"), &prefix, ERRMAP_FILE)
 }
 
+#[cfg(not(feature = "nostd"))]
 pub fn move_stdlib_files() -> Vec<String> {
     let path = path_in_crate(MODULES_DIR);
     find_filenames(&[path], |p| extension_equals(p, MOVE_EXTENSION)).unwrap()
 }
 
+#[cfg(not(feature = "nostd"))]
 pub fn move_nursery_files() -> Vec<String> {
     let path = path_in_crate(NURSERY_DIR);
     find_filenames(&[path], |p| extension_equals(p, MOVE_EXTENSION)).unwrap()
@@ -78,6 +99,7 @@ pub fn move_stdlib_named_addresses() -> BTreeMap<String, NumericalAddress> {
         .collect()
 }
 
+#[cfg(not(feature = "nostd"))]
 pub fn build_doc(
     output_path: &str,
     doc_path: &str,
@@ -109,6 +131,7 @@ pub fn build_doc(
     move_prover::run_move_prover_errors_to_stderr(options).unwrap();
 }
 
+#[cfg(not(feature = "nostd"))]
 pub fn build_stdlib_doc(output_path: &str) {
     build_doc(
         output_path,
@@ -128,6 +151,7 @@ pub fn build_stdlib_doc(output_path: &str) {
     )
 }
 
+#[cfg(not(feature = "nostd"))]
 pub fn build_nursery_doc(output_path: &str) {
     build_doc(
         output_path,
@@ -141,6 +165,7 @@ pub fn build_nursery_doc(output_path: &str) {
     )
 }
 
+#[cfg(not(feature = "nostd"))]
 pub fn build_error_code_map(output_path: &str) {
     let options = move_prover::cli::Options {
         move_sources: crate::move_stdlib_files(),

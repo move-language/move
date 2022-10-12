@@ -16,7 +16,11 @@ use move_vm_types::{
     values::{Value, Vector, VectorRef},
     views::ValueView,
 };
+#[cfg(not(feature = "nostd"))]
 use std::{collections::VecDeque, sync::Arc};
+
+#[cfg(feature = "nostd")]
+use alloc::{collections::VecDeque, vec::Vec, sync::Arc};
 
 /***************************************************************************************************
  * native fun empty

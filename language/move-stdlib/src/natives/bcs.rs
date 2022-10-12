@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::natives::helpers::make_module_natives;
+#[cfg(feature = "nostd")]
+use alloc::{collections::VecDeque, vec::Vec};
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::{
     gas_algebra::{InternalGas, InternalGasPerByte, NumBytes},
@@ -16,6 +18,7 @@ use move_vm_types::{
     values::{values_impl::Reference, Value},
 };
 use smallvec::smallvec;
+#[cfg(not(feature = "nostd"))]
 use std::{collections::VecDeque, sync::Arc};
 /***************************************************************************************************
  * native fun to_bytes

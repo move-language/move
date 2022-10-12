@@ -441,22 +441,16 @@ pub fn construct_pre_compiled_lib<Paths: Into<Symbol>, NamedAddress: Into<Symbol
     let mut cfgir = None;
     let mut compiled = None;
 
-    let save_result = |cur: &PassResult, env: &CompilationEnv| match cur {
+    let save_result = |cur: &PassResult, _env: &CompilationEnv| match cur {
         PassResult::Parser(prog) => {
             assert!(parser.is_none());
             parser = Some(prog.clone())
         }
         PassResult::Expansion(eprog) => {
-            if env.has_diags() {
-                return;
-            }
             assert!(expansion.is_none());
             expansion = Some(eprog.clone())
         }
         PassResult::Naming(nprog) => {
-            if env.has_diags() {
-                return;
-            }
             assert!(naming.is_none());
             naming = Some(nprog.clone())
         }
@@ -465,9 +459,6 @@ pub fn construct_pre_compiled_lib<Paths: Into<Symbol>, NamedAddress: Into<Symbol
             typing = Some(tprog.clone())
         }
         PassResult::HLIR(hprog) => {
-            if env.has_diags() {
-                return;
-            }
             assert!(hlir.is_none());
             hlir = Some(hprog.clone());
         }

@@ -140,7 +140,7 @@ impl<'env> Context<'env> {
         let fields = self.structs.get(struct_name);
         // if fields are none, the struct must be defined in another module,
         // in that case, there should be errors
-        assert!(fields.is_some() || self.env.has_diags());
+        assert!(fields.is_some() || self.env.has_errors());
         fields
     }
 
@@ -1241,7 +1241,7 @@ fn exp_impl(
                 for (decl_idx, f, _exp_idx, bt, tf) in texp_fields {
                     // Might have too many arguments, there will be an error from typing
                     if decl_idx > fields.len() {
-                        debug_assert!(context.env.has_diags());
+                        debug_assert!(context.env.has_errors());
                         break;
                     }
                     let bt = base_type(context, bt);
@@ -1256,7 +1256,7 @@ fn exp_impl(
                     .into_iter()
                     .filter_map(|o| {
                         // if o is None, context should have errors
-                        debug_assert!(o.is_some() || context.env.has_diags());
+                        debug_assert!(o.is_some() || context.env.has_errors());
                         o
                     })
                     .collect()
@@ -1338,7 +1338,7 @@ fn exp_impl(
             HE::Spec(u, used_locals)
         }
         TE::UnresolvedError => {
-            assert!(context.env.has_diags());
+            assert!(context.env.has_errors());
             HE::UnresolvedError
         }
 
@@ -1578,7 +1578,7 @@ fn needs_freeze(context: &Context, sp!(_, actual): &H::Type, sp!(_, expected): &
             }
         }
         (_actual, _expected) => {
-            assert!(context.env.has_diags());
+            assert!(context.env.has_errors());
             Freeze::NotNeeded
         }
     }

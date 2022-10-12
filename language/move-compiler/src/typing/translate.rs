@@ -1489,7 +1489,7 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             (sp(eloc, Type_::Unit), TE::Spec(u, used_local_types))
         }
         NE::UnresolvedError => {
-            assert!(context.env.has_diags());
+            assert!(context.env.has_errors());
             (context.error_type(eloc), TE::UnresolvedError)
         }
 

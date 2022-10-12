@@ -3,10 +3,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{anyhow, bail, *};
+#[cfg(feature = "nostd")]
+use core::convert::TryInto;
+#[cfg(feature = "nostd")]
+use core::fmt;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
-use std::{collections::BTreeMap, convert::TryInto, path::Path};
-
+#[cfg(not(feature = "nostd"))]
+use std::{collections::BTreeMap, convert::TryInto, fmt, path::Path};
 /// Result of sha256 hash of a file's contents.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct FileHash(pub [u8; 32]);
@@ -25,14 +29,14 @@ impl FileHash {
     }
 }
 
-impl std::fmt::Display for FileHash {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for FileHash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         hex::encode(self.0).fmt(f)
     }
 }
 
-impl std::fmt::Debug for FileHash {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for FileHash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         hex::encode(self.0).fmt(f)
     }
 }
@@ -53,6 +57,7 @@ pub const MOVE_COVERAGE_MAP_EXTENSION: &str = "mvcov";
 /// - For each directory in `paths`, it will return all files that satisfy the predicate
 /// - Any file explicitly passed in `paths`, it will include that file in the result, regardless
 ///   of the file extension
+#[cfg(not(feature = "nostd"))]
 pub fn find_filenames<Predicate: FnMut(&Path) -> bool>(
     paths: &[impl AsRef<Path>],
     mut is_file_desired: Predicate,
@@ -91,6 +96,7 @@ pub fn find_filenames<Predicate: FnMut(&Path) -> bool>(
 ///   recursively in that directory
 /// - If `keep_specified_files` any file explicitly passed in `paths`, will be added to the result
 ///   Otherwise, they will be discarded
+#[cfg(not(feature = "nostd"))]
 pub fn find_move_filenames(
     paths: &[impl AsRef<Path>],
     keep_specified_files: bool,
@@ -111,6 +117,7 @@ pub fn find_move_filenames(
     }
 }
 
+#[cfg(not(feature = "nostd"))]
 pub fn path_to_string(path: &Path) -> anyhow::Result<String> {
     match path.to_str() {
         Some(p) => Ok(p.to_string()),
@@ -118,6 +125,7 @@ pub fn path_to_string(path: &Path) -> anyhow::Result<String> {
     }
 }
 
+#[cfg(not(feature = "nostd"))]
 pub fn extension_equals(path: &Path, target_ext: &str) -> bool {
     match path.extension().and_then(|s| s.to_str()) {
         Some(extension) => extension == target_ext,
@@ -125,6 +133,7 @@ pub fn extension_equals(path: &Path, target_ext: &str) -> bool {
     }
 }
 
+#[cfg(not(feature = "nostd"))]
 pub fn verify_and_create_named_address_mapping<T: Copy + std::fmt::Display + Eq>(
     named_addresses: Vec<(String, T)>,
 ) -> anyhow::Result<BTreeMap<String, T>> {

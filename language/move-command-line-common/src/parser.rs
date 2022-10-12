@@ -1,10 +1,15 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#[cfg(feature = "nostd")]
+use alloc::{borrow::ToOwned, boxed::Box, collections::BTreeMap, vec, vec::Vec};
 use anyhow::{anyhow, bail, Result};
+#[cfg(feature = "nostd")]
+use core::{fmt::Display, iter::Peekable, num::ParseIntError};
 use move_core_types::account_address::AccountAddress;
 use num_bigint::BigUint;
-use std::{collections::BTreeMap, fmt::Display, iter::Peekable, num::ParseIntError};
+#[cfg(not(feature = "nostd"))]
+use std::{collections::BTreeMap, fmt::Display, iter::Peekable, num::ParseIntError, vec};
 
 use crate::{
     address::{NumericalAddress, ParsedAddress},
@@ -60,7 +65,7 @@ impl<Extra: ParsableValue> ParsedValue<Extra> {
 
 fn parse<'a, Tok: Token, R>(
     s: &'a str,
-    f: impl FnOnce(&mut Parser<'a, Tok, std::vec::IntoIter<(Tok, &'a str)>>) -> Result<R>,
+    f: impl FnOnce(&mut Parser<'a, Tok, vec::IntoIter<(Tok, &'a str)>>) -> Result<R>,
 ) -> Result<R> {
     let tokens: Vec<_> = Tok::tokenize(s)?
         .into_iter()
@@ -376,6 +381,8 @@ mod tests {
         types::{ParsedStructType, ParsedType},
         values::ParsedValue,
     };
+    #[cfg(feature = "nostd")]
+    use alloc::vec;
     use move_core_types::account_address::AccountAddress;
 
     #[allow(clippy::unreadable_literal)]

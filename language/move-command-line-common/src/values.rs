@@ -5,12 +5,17 @@ use crate::{
     address::ParsedAddress,
     parser::{Parser, Token},
 };
+#[cfg(feature = "nostd")]
+use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use anyhow::bail;
+#[cfg(feature = "nostd")]
+use core::fmt::{self, Display};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{self, Identifier},
     value::{MoveStruct, MoveValue},
 };
+#[cfg(not(feature = "nostd"))]
 use std::{
     collections::BTreeMap,
     fmt::{self, Display},

@@ -12,120 +12,73 @@ use crate::{
 };
 use move_core_types::vm_status::StatusCode;
 
-/// The result of a linking and layout compatibility check. Here is what the different combinations
+/// The result of a linking and layout compatibility check. Here is what the different combinations. NOTE that if `check_struct_layout` is false, type safety over a series of upgrades cannot be guaranteed.
 /// mean:
-/// `{ struct_and_function_linking: true, struct_layout: true, friend_linking: true }`: fully backward compatible
-/// `{ struct_and_function_linking: true, struct_layout: true, friend_linking: false }`: Backward compatible, exclude the friend module declare and friend functions
-/// `{ struct_and_function_linking: false, struct_layout: true, friend_linking: false }`: Dependent modules that reference functions or types in this module may not link. However, fixing, recompiling, and redeploying all dependent modules will work--no data migration needed.
-/// `{ struct_and_function_linking: true, struct_layout: false, friend_linking: true }`: Attempting to read structs published by this module will now fail at runtime. However, dependent modules will continue to link. Requires data migration, but no changes to dependent modules.
-/// `{ struct_and_function_linking: false, struct_layout: false, friend_linking: false }`: Everything is broken. Need both a data migration and changes to dependent modules.
+/// `{ check_struct_and_pub_function_linking: true, check_struct_layout: true, check_friend_linking: true }`: fully backward compatible
+/// `{ check_struct_and_pub_function_linking: true, check_struct_layout: true, check_friend_linking: false }`: Backward compatible, exclude the friend module declare and friend functions
+/// `{ check_struct_and_pub_function_linking: false, check_struct_layout: true, check_friend_linking: false }`: Dependent modules that reference functions or types in this module may not link. However, fixing, recompiling, and redeploying all dependent modules will work--no data migration needed.
+/// `{ check_struct_and_pub_function_linking: true, check_struct_layout: false, check_friend_linking: true }`: Attempting to read structs published by this module will now fail at runtime. However, dependent modules will continue to link. Requires data migration, but no changes to dependent modules.
+/// `{ check_struct_and_pub_function_linking: false, check_struct_layout: false, check_friend_linking: false }`: Everything is broken. Need both a data migration and changes to dependent modules.
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct Compatibility {
-    /// If false, dependent modules that reference functions or structs in this module may not link (exclude the friend functions)
-    pub struct_and_function_linking: bool,
-    /// If false, attempting to read structs previously published by this module will fail at
-    /// runtime, or worse, may allow to re-interpret representations maliciously.
-    pub struct_layout: bool,
-    /// If false, dependent modules that reference friend functions in this module may not link
-    pub friend_linking: bool,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct CompatibilityConfig {
-    /// if false, do not ensure the dependent modules that reference functions or structs in this module can link
-    pub check_struct_and_function_linking: bool,
+    /// if false, do not ensure the dependent modules that reference public functions or structs in this module can link
+    check_struct_and_pub_function_linking: bool,
     /// if false, do not ensure the struct layout capability
-    pub check_struct_layout: bool,
+    check_struct_layout: bool,
     /// if false, treat `friend` as `private` when `check_struct_and_function_linking`.
-    /// `check_friend_linking` only makes sense if `check_struct_and_function_linking` is true.
-    pub check_friend_linking: bool,
+    check_friend_linking: bool,
 }
 
-impl Default for CompatibilityConfig {
+impl Default for Compatibility {
     fn default() -> Self {
         Self {
-            check_struct_and_function_linking: true,
+            check_struct_and_pub_function_linking: true,
             check_struct_layout: true,
             check_friend_linking: true,
         }
     }
 }
 
-impl CompatibilityConfig {
+impl Compatibility {
     pub fn full_check() -> Self {
         Self::default()
     }
 
     pub fn no_check() -> Self {
         Self {
-            check_struct_and_function_linking: false,
+            check_struct_and_pub_function_linking: false,
             check_struct_layout: false,
             check_friend_linking: false,
         }
     }
 
     pub fn new(
-        check_struct_and_function_linking: bool,
+        check_struct_and_pub_function_linking: bool,
         check_struct_layout: bool,
         check_friend_linking: bool,
     ) -> Self {
-        if check_friend_linking {
-            assert!(
-                check_struct_and_function_linking,
-                "check_friend_linking requires check_struct_and_function_linking"
-            );
-        }
         Self {
-            check_struct_and_function_linking,
+            check_struct_and_pub_function_linking,
             check_struct_layout,
             check_friend_linking,
         }
     }
 
     pub fn need_check_compat(&self) -> bool {
-        // `check_friend_linking` is part of check_struct_and_function_linking, so ignore it at here.
-        self.check_struct_and_function_linking || self.check_struct_layout
+        self.check_struct_and_pub_function_linking
+            || self.check_friend_linking
+            || self.check_struct_layout
     }
 
-    /// Return compatibility assessment for `new_module` relative to old module `old_module`.
+    /// Check compatibility for `new_module` relative to old module `old_module`.
     pub fn check(&self, old_module: &Module, new_module: &Module) -> PartialVMResult<()> {
-        let compat = Compatibility::check(old_module, new_module);
-
-        if self.check_struct_and_function_linking && !compat.struct_and_function_linking {
-            return Err(PartialVMError::new(
-                StatusCode::BACKWARD_INCOMPATIBLE_MODULE_UPDATE,
-            ));
-        }
-        if self.check_struct_layout && !compat.struct_layout {
-            return Err(PartialVMError::new(
-                StatusCode::BACKWARD_INCOMPATIBLE_MODULE_UPDATE,
-            ));
-        }
-        if self.check_friend_linking && !compat.friend_linking {
-            return Err(PartialVMError::new(
-                StatusCode::BACKWARD_INCOMPATIBLE_MODULE_UPDATE,
-            ));
-        }
-        Ok(())
-    }
-}
-
-impl Compatibility {
-    /// Return true if the two module s compared in the compatiblity check are both linking and
-    /// layout compatible.
-    pub fn is_fully_compatible(&self) -> bool {
-        self.struct_and_function_linking && self.struct_layout && self.friend_linking
-    }
-
-    /// Return compatibility assessment for `new_module` relative to old module `old_module`.
-    pub fn check(old_module: &Module, new_module: &Module) -> Compatibility {
-        let mut struct_and_function_linking = true;
+        let mut struct_and_pub_function_linking = true;
         let mut struct_layout = true;
         let mut friend_linking = true;
 
         // module's name and address are unchanged
         if old_module.address != new_module.address || old_module.name != new_module.name {
-            struct_and_function_linking = false;
+            struct_and_pub_function_linking = false;
         }
 
         // old module's structs are a subset of the new module's structs
@@ -136,7 +89,7 @@ impl Compatibility {
                     // Struct not present in new . Existing modules that depend on this struct will fail to link with the new version of the module.
                     // Also, struct layout cannot be guaranteed transitively, because after
                     // removing the struct, it could be re-added later with a different layout.
-                    struct_and_function_linking = false;
+                    struct_and_pub_function_linking = false;
                     struct_layout = false;
                     break;
                 }
@@ -148,7 +101,7 @@ impl Compatibility {
                     &new_struct.type_parameters,
                 )
             {
-                struct_and_function_linking = false;
+                struct_and_pub_function_linking = false;
             }
             if new_struct.fields != old_struct.fields {
                 // Fields changed. Code in this module will fail at runtime if it tries to
@@ -182,7 +135,7 @@ impl Compatibility {
                     if matches!(old_func.visibility, Visibility::Friend) {
                         friend_linking = false;
                     } else {
-                        struct_and_function_linking = false;
+                        struct_and_pub_function_linking = false;
                     }
                     continue;
                 }
@@ -221,7 +174,7 @@ impl Compatibility {
                 if matches!(old_func.visibility, Visibility::Friend) {
                     friend_linking = false;
                 } else {
-                    struct_and_function_linking = false;
+                    struct_and_pub_function_linking = false;
                 }
             }
         }
@@ -237,16 +190,23 @@ impl Compatibility {
             friend_linking = false;
         }
 
-        //if struct_and_function_linking = false, friend_linking makes no sense.
-        if !struct_and_function_linking {
-            friend_linking = false;
+        if self.check_struct_and_pub_function_linking && !struct_and_pub_function_linking {
+            return Err(PartialVMError::new(
+                StatusCode::BACKWARD_INCOMPATIBLE_MODULE_UPDATE,
+            ));
+        }
+        if self.check_struct_layout && !struct_layout {
+            return Err(PartialVMError::new(
+                StatusCode::BACKWARD_INCOMPATIBLE_MODULE_UPDATE,
+            ));
+        }
+        if self.check_friend_linking && !friend_linking {
+            return Err(PartialVMError::new(
+                StatusCode::BACKWARD_INCOMPATIBLE_MODULE_UPDATE,
+            ));
         }
 
-        Compatibility {
-            struct_and_function_linking,
-            struct_layout,
-            friend_linking,
-        }
+        Ok(())
     }
 }
 

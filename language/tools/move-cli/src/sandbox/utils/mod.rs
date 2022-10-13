@@ -347,15 +347,18 @@ pub(crate) fn explain_publish_error(
             let old_module = state.get_module_by_id(&module_id)?.unwrap();
             let old_api = normalized::Module::new(&old_module);
             let new_api = normalized::Module::new(module);
-            let compat = Compatibility::check(&old_api, &new_api);
-            // the only way we get this error code is compatibility checking failed, so assert here
-            assert!(!compat.is_fully_compatible());
 
-            if !compat.struct_layout {
+            if Compatibility::new(false, true, false)
+                .check(&old_api, &new_api)
+                .is_err()
+            {
                 // TODO: we could choose to make this more precise by walking the global state and looking for published
                 // structs of this type. but probably a bad idea
                 println!("Layout API for structs of module {} has changed. Need to do a data migration of published structs", module_id)
-            } else if !compat.struct_and_function_linking {
+            } else if Compatibility::new(true, false, false)
+                .check(&old_api, &new_api)
+                .is_err()
+            {
                 // TODO: this will report false positives if we *are* simultaneously redeploying all dependent modules.
                 // but this is not easy to check without walking the global state and looking for everything
                 println!("Linking API for structs/functions of module {} has changed. Need to redeploy all dependent modules.", module_id)

@@ -15,7 +15,7 @@ module 0x42.A {
 
 //# run 0x42::A::make_save_k --signers 0x42
 
-//# publish --skip-check-struct-and-function-linking
+//# publish --skip-check-struct-and-pub-function-linking
 module 0x42.A {
   struct A has store,drop {
         f: u64,

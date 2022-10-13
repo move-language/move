@@ -196,8 +196,8 @@ impl From<U256Inner> for EthnumU256 {
         // TODO (ade): use better solution for conversion
         // Currently using str because EthnumU256 can be little or big endian
         let num_str = format!("{:X}", n.0);
-        // TODO (ade): remove unwrap()
-        EthnumU256::from_str_hex(&num_str).unwrap()
+        // TODO (ade): remove expect()
+        EthnumU256::from_str_hex(&num_str).expect("Cannot convert to U256")
     }
 }
 

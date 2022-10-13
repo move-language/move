@@ -337,7 +337,7 @@ object "test_A2_Tables_test_borrow_fail" {
         }
     }
 }
-===> Test result of Tables::test_borrow_fail: Revert(Reverted) (used_gas=25325): [255, 255, 255, 255, 255, 255, 255, 255]
+===> Test result of Tables::test_borrow_fail: Revert(Reverted) (used_gas=25308): [255, 255, 255, 255, 255, 255, 255, 255]
 
 // test of Tables::test_insert_fail
 /* =======================================
@@ -670,7 +670,7 @@ object "test_A2_Tables_test_insert_fail" {
         }
     }
 }
-===> Test result of Tables::test_insert_fail: Revert(Reverted) (used_gas=90854): [255, 255, 255, 255, 255, 255, 255, 255]
+===> Test result of Tables::test_insert_fail: Revert(Reverted) (used_gas=90863): [255, 255, 255, 255, 255, 255, 255, 255]
 
 // test of Tables::test_primitive
 /* =======================================
@@ -1376,7 +1376,7 @@ object "test_A2_Tables_test_primitive" {
         }
     }
 }
-===> Test result of Tables::test_primitive: Succeed(Stopped) (used_gas=190947): []
+===> Test result of Tables::test_primitive: Succeed(Stopped) (used_gas=190909): []
 
 // test of Tables::test_remove_fail
 /* =======================================
@@ -1637,7 +1637,7 @@ object "test_A2_Tables_test_remove_fail" {
         }
     }
 }
-===> Test result of Tables::test_remove_fail: Revert(Reverted) (used_gas=24809): [255, 255, 255, 255, 255, 255, 255, 255]
+===> Test result of Tables::test_remove_fail: Revert(Reverted) (used_gas=24810): [255, 255, 255, 255, 255, 255, 255, 255]
 
 // test of Tables::test_struct
 /* =======================================
@@ -2209,7 +2209,7 @@ object "test_A2_Tables_test_struct" {
         }
     }
 }
-===> Test result of Tables::test_struct: Succeed(Stopped) (used_gas=151439): []
+===> Test result of Tables::test_struct: Succeed(Stopped) (used_gas=151315): []
 
 // test of Tables::test_table_of_tables
 /* =======================================
@@ -2860,7 +2860,7 @@ object "test_A2_Tables_test_table_of_tables" {
         }
     }
 }
-===> Test result of Tables::test_table_of_tables: Succeed(Stopped) (used_gas=289488): []
+===> Test result of Tables::test_table_of_tables: Succeed(Stopped) (used_gas=289398): []
 
 // test of Tables::test_u256
 /* =======================================
@@ -3228,7 +3228,7 @@ object "test_A2_Tables_test_u256" {
         }
     }
 }
-===> Test result of Tables::test_u256: Succeed(Stopped) (used_gas=137324): []
+===> Test result of Tables::test_u256: Succeed(Stopped) (used_gas=137290): []
 
 // test of Tables::test_vector
 /* =======================================
@@ -4004,4 +4004,4 @@ object "test_A2_Tables_test_vector" {
         }
     }
 }
-===> Test result of Tables::test_vector: Succeed(Stopped) (used_gas=177564): []
+===> Test result of Tables::test_vector: Succeed(Stopped) (used_gas=177352): []

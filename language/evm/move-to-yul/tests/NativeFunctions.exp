@@ -292,7 +292,7 @@ object "test_A2_NativeFunctions_test_abort" {
         }
     }
 }
-===> Test result of NativeFunctions::test_abort: Revert(Reverted) (used_gas=696): [8, 195, 121, 160, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 101, 114, 114, 111, 114, 32, 109, 101, 115, 115, 97, 103, 101, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+===> Test result of NativeFunctions::test_abort: Revert(Reverted) (used_gas=661): [8, 195, 121, 160, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 101, 114, 114, 111, 114, 32, 109, 101, 115, 115, 97, 103, 101, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 // test of NativeFunctions::test_concat
 /* =======================================
@@ -667,7 +667,7 @@ object "test_A2_NativeFunctions_test_concat" {
         }
     }
 }
-===> Test result of NativeFunctions::test_concat: Succeed(Stopped) (used_gas=9535): []
+===> Test result of NativeFunctions::test_concat: Succeed(Stopped) (used_gas=8420): []
 
 // test of NativeFunctions::test_signer_address_of
 /* =======================================
@@ -832,7 +832,7 @@ object "test_A2_NativeFunctions_test_signer_address_of" {
         }
     }
 }
-===> Test result of NativeFunctions::test_signer_address_of: Succeed(Stopped) (used_gas=345): []
+===> Test result of NativeFunctions::test_signer_address_of: Succeed(Stopped) (used_gas=341): []
 
 // test of NativeFunctions::test_to_string
 /* =======================================
@@ -1231,4 +1231,4 @@ object "test_A2_NativeFunctions_test_to_string" {
         }
     }
 }
-===> Test result of NativeFunctions::test_to_string: Succeed(Stopped) (used_gas=11916): []
+===> Test result of NativeFunctions::test_to_string: Succeed(Stopped) (used_gas=11134): []

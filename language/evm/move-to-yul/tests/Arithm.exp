@@ -471,7 +471,7 @@ object "test_A2_M_test_add_two_number" {
         }
     }
 }
-===> Test result of M::test_add_two_number: Succeed(Stopped) (used_gas=355): []
+===> Test result of M::test_add_two_number: Succeed(Stopped) (used_gas=351): []
 
 // test of M::test_add_two_number_overflow
 /* =======================================
@@ -615,7 +615,7 @@ object "test_A2_M_test_add_two_number_wrong_assert" {
         }
     }
 }
-===> Test result of M::test_add_two_number_wrong_assert: Revert(Reverted) (used_gas=356): [0, 0, 0, 0, 0, 0, 0, 101]
+===> Test result of M::test_add_two_number_wrong_assert: Revert(Reverted) (used_gas=344): [0, 0, 0, 0, 0, 0, 0, 101]
 
 // test of M::test_arithmetic_ops_aborts
 /* =======================================
@@ -729,7 +729,7 @@ object "test_A2_M_test_arithmetic_ops_aborts" {
         }
     }
 }
-===> Test result of M::test_arithmetic_ops_aborts: Revert(Reverted) (used_gas=404): [0, 0, 0, 0, 0, 0, 0, 100]
+===> Test result of M::test_arithmetic_ops_aborts: Revert(Reverted) (used_gas=389): [0, 0, 0, 0, 0, 0, 0, 100]
 
 // test of M::test_bool_ops
 /* =======================================
@@ -905,7 +905,7 @@ object "test_A2_M_test_bool_ops" {
         }
     }
 }
-===> Test result of M::test_bool_ops: Succeed(Stopped) (used_gas=1228): []
+===> Test result of M::test_bool_ops: Succeed(Stopped) (used_gas=1220): []
 
 // test of M::test_bool_ops_aborts
 /* =======================================
@@ -1035,7 +1035,7 @@ object "test_A2_M_test_bool_ops_aborts" {
         }
     }
 }
-===> Test result of M::test_bool_ops_aborts: Revert(Reverted) (used_gas=1081): [0, 0, 0, 0, 0, 0, 0, 104]
+===> Test result of M::test_bool_ops_aborts: Revert(Reverted) (used_gas=1062): [0, 0, 0, 0, 0, 0, 0, 104]
 
 // test of M::test_div
 /* =======================================
@@ -1133,7 +1133,7 @@ object "test_A2_M_test_div" {
         }
     }
 }
-===> Test result of M::test_div: Succeed(Stopped) (used_gas=355): []
+===> Test result of M::test_div: Succeed(Stopped) (used_gas=351): []
 
 // test of M::test_div_by_zero
 /* =======================================
@@ -1285,7 +1285,7 @@ object "test_A2_M_test_div_wrong_assert" {
         }
     }
 }
-===> Test result of M::test_div_wrong_assert: Revert(Reverted) (used_gas=348): [0, 0, 0, 0, 0, 0, 0, 101]
+===> Test result of M::test_div_wrong_assert: Revert(Reverted) (used_gas=334): [0, 0, 0, 0, 0, 0, 0, 101]
 
 // test of M::test_multiple_ops
 /* =======================================
@@ -1366,7 +1366,7 @@ object "test_A2_M_test_multiple_ops" {
         }
     }
 }
-===> Test result of M::test_multiple_ops: Succeed(Stopped) (used_gas=176): []
+===> Test result of M::test_multiple_ops: Succeed(Stopped) (used_gas=175): []
 
 // test of M::test_multiple_overflow
 /* =======================================

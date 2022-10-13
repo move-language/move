@@ -147,14 +147,7 @@ pub fn has_attr(env: &GlobalEnv, attrs: &[Attribute], name: &str, simple_flag: b
             true
         }
     };
-    attrs.iter().any(|a| match a {
-        Attribute::Apply(_, s, args)
-            if is_empty(args) && env.symbol_pool().string(*s).as_str() == name =>
-        {
-            true
-        }
-        _ => false,
-    })
+    attrs.iter().any(|a| matches!(a, Attribute::Apply(_, s, args) if is_empty(args) && env.symbol_pool().string(*s).as_str() == name))
 }
 
 /// Check whether the module has a `#[evm_contract]` attribute.

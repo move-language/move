@@ -114,7 +114,7 @@ pub fn solc_yul(source: &str, return_optimized_yul: bool) -> Result<(Vec<u8>, Op
     }
     let yul = if return_optimized_yul {
         Some(
-            (&out_str[(start_of_yul.unwrap() + OPTIMIZED_YUL_MARKER.len())..start_of_hex.unwrap()])
+            out_str[(start_of_yul.unwrap() + OPTIMIZED_YUL_MARKER.len())..start_of_hex.unwrap()]
                 .trim()
                 .to_string(),
         )

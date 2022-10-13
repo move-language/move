@@ -13,7 +13,7 @@
 //! It's used to compress mostly indexes into the main binary tables.
 use crate::file_format::Bytecode;
 use anyhow::{bail, Result};
-use move_core_types::u256::u256;
+use move_core_types::u256::U256Inner;
 use std::{
     io::{Cursor, Read},
     mem::size_of,
@@ -333,7 +333,7 @@ pub(crate) fn write_u128(binary: &mut BinaryData, value: u128) -> Result<()> {
 }
 
 /// Write a `u256` in Little Endian format.
-pub(crate) fn write_u256(binary: &mut BinaryData, value: u256) -> Result<()> {
+pub(crate) fn write_u256(binary: &mut BinaryData, value: U256Inner) -> Result<()> {
     binary.extend(&value.to_le_bytes())
 }
 

@@ -10,8 +10,8 @@ use crate::{
     parser::ast::Ability_,
     typing::ast as T,
 };
+use move_core_types::u256::U256Inner;
 use move_ir_types::location::*;
-use std::convert::TryInto;
 
 //**************************************************************************************************
 // Functions
@@ -157,13 +157,19 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
                 _ => panic!("ICE inferred num failed {:?}", &e.ty.value),
             };
             let v = *v;
-            let u8_max = std::u8::MAX as u128;
-            let u64_max = std::u64::MAX as u128;
-            let u128_max = std::u128::MAX;
+            let u8_max = U256Inner::from(std::u8::MAX);
+            let u16_max = U256Inner::from(std::u16::MAX);
+            let u32_max = U256Inner::from(std::u32::MAX);
+            let u64_max = U256Inner::from(std::u64::MAX);
+            let u128_max = U256Inner::from(std::u128::MAX);
+            let u256_max = U256Inner::max();
             let max = match bt {
                 BT::U8 => u8_max,
+                BT::U16 => u16_max,
+                BT::U32 => u32_max,
                 BT::U64 => u64_max,
                 BT::U128 => u128_max,
+                BT::U256 => u256_max,
                 _ => unreachable!(),
             };
             let new_exp = if v > max {
@@ -171,6 +177,7 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
                     "Expected a literal of type '{}', but the value is too large.",
                     bt
                 );
+                // TODO (ade): improve this logic for u256
                 let fix_bt = if v > u64_max {
                     BT::U128
                 } else {
@@ -191,9 +198,12 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
                 E::UnresolvedError
             } else {
                 let value_ = match bt {
-                    BT::U8 => Value_::U8(v.try_into().unwrap()),
-                    BT::U64 => Value_::U64(v.try_into().unwrap()),
-                    BT::U128 => Value_::U128(v),
+                    BT::U8 => Value_::U8(v.into()),
+                    BT::U16 => Value_::U16(v.into()),
+                    BT::U32 => Value_::U32(v.into()),
+                    BT::U64 => Value_::U64(v.into()),
+                    BT::U128 => Value_::U128(v.into()),
+                    BT::U256 => Value_::U256(v),
                     _ => unreachable!(),
                 };
                 E::Value(sp(*vloc, value_))

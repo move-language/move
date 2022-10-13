@@ -8,7 +8,7 @@ use std::{
 };
 
 use itertools::Itertools;
-use num::{BigInt, BigUint, FromPrimitive, Zero};
+use num::{bigint::Sign, BigInt, BigUint, FromPrimitive, Zero};
 
 use move_compiler::{
     expansion::ast as EA, hlir::ast as HA, naming::ast as NA, parser::ast as PA, shared::Name,
@@ -556,8 +556,11 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                         Address => Type::new_prim(PrimitiveType::Address),
                         Signer => Type::new_prim(PrimitiveType::Signer),
                         U8 => Type::new_prim(PrimitiveType::U8),
+                        U16 => Type::new_prim(PrimitiveType::U16),
+                        U32 => Type::new_prim(PrimitiveType::U32),
                         U64 => Type::new_prim(PrimitiveType::U64),
                         U128 => Type::new_prim(PrimitiveType::U128),
+                        U256 => Type::new_prim(PrimitiveType::U256),
                         Vector => Type::Vector(Box::new(self.translate_hlir_base_type(&args[0]))),
                         Bool => Type::new_prim(PrimitiveType::Bool),
                     },
@@ -840,13 +843,25 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 Value::Number(BigInt::from_u8(*x).unwrap()),
                 Type::new_prim(PrimitiveType::U8),
             )),
+            EA::Value_::U16(x) => Some((
+                Value::Number(BigInt::from_u16(*x).unwrap()),
+                Type::new_prim(PrimitiveType::U16),
+            )),
+            EA::Value_::U32(x) => Some((
+                Value::Number(BigInt::from_u32(*x).unwrap()),
+                Type::new_prim(PrimitiveType::U32),
+            )),
             EA::Value_::U64(x) => Some((
                 Value::Number(BigInt::from_u64(*x).unwrap()),
                 Type::new_prim(PrimitiveType::U64),
             )),
-            EA::Value_::InferredNum(x) | EA::Value_::U128(x) => Some((
+            EA::Value_::U128(x) => Some((
                 Value::Number(BigInt::from_u128(*x).unwrap()),
                 Type::new_prim(PrimitiveType::U128),
+            )),
+            EA::Value_::InferredNum(x) | EA::Value_::U256(x) => Some((
+                Value::Number(BigInt::from(x)),
+                Type::new_prim(PrimitiveType::U256),
             )),
             EA::Value_::Bool(x) => Some((Value::Bool(*x), Type::new_prim(PrimitiveType::Bool))),
             EA::Value_::Bytearray(x) => {

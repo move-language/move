@@ -14,7 +14,7 @@ use move_core_types::{
     account_address::AccountAddress,
     effects::Op,
     gas_algebra::AbstractMemorySize,
-    u256::u256,
+    u256::U256Inner,
     value::{MoveStructLayout, MoveTypeLayout},
     vm_status::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode},
 };
@@ -45,7 +45,7 @@ enum ValueImpl {
     U32(u32),
     U64(u64),
     U128(u128),
-    U256(u256),
+    U256(U256Inner),
     Bool(bool),
     Address(AccountAddress),
 
@@ -74,7 +74,7 @@ enum Container {
     VecU32(Rc<RefCell<Vec<u32>>>),
     VecU64(Rc<RefCell<Vec<u64>>>),
     VecU128(Rc<RefCell<Vec<u128>>>),
-    VecU256(Rc<RefCell<Vec<u256>>>),
+    VecU256(Rc<RefCell<Vec<U256Inner>>>),
     VecBool(Rc<RefCell<Vec<bool>>>),
     VecAddress(Rc<RefCell<Vec<AccountAddress>>>),
 }
@@ -142,7 +142,7 @@ pub enum IntegerValue {
     U16(u16),
     U32(u32),
     U64(u64),
-    U256(u256),
+    U256(U256Inner),
     U128(u128),
 }
 
@@ -314,7 +314,7 @@ impl_vm_value_ref!(u16, U16);
 impl_vm_value_ref!(u32, U32);
 impl_vm_value_ref!(u64, U64);
 impl_vm_value_ref!(u128, U128);
-impl_vm_value_ref!(u256, U256);
+impl_vm_value_ref!(U256Inner, U256);
 impl_vm_value_ref!(bool, Bool);
 impl_vm_value_ref!(AccountAddress, Address);
 
@@ -608,10 +608,10 @@ impl IndexedRef {
             }
 
             (Locals(r1), VecU256(r2)) | (Struct(r1), VecU256(r2)) => {
-                *r1.borrow()[self.idx].as_value_ref::<u256>()? == r2.borrow()[other.idx]
+                *r1.borrow()[self.idx].as_value_ref::<U256Inner>()? == r2.borrow()[other.idx]
             }
             (VecU256(r1), Locals(r2)) | (VecU256(r1), Struct(r2)) => {
-                r1.borrow()[self.idx] == *r2.borrow()[other.idx].as_value_ref::<u256>()?
+                r1.borrow()[self.idx] == *r2.borrow()[other.idx].as_value_ref::<U256Inner>()?
             }
 
             (Locals(r1), VecBool(r2)) | (Struct(r1), VecBool(r2)) => {
@@ -1051,7 +1051,7 @@ impl Value {
         Self(ValueImpl::U128(x))
     }
 
-    pub fn u256(x: u256) -> Self {
+    pub fn u256(x: U256Inner) -> Self {
         Self(ValueImpl::U256(x))
     }
 
@@ -1112,7 +1112,7 @@ impl Value {
         ))))
     }
 
-    pub fn vector_u256(it: impl IntoIterator<Item = u256>) -> Self {
+    pub fn vector_u256(it: impl IntoIterator<Item = U256Inner>) -> Self {
         Self(ValueImpl::Container(Container::VecU256(Rc::new(
             RefCell::new(it.into_iter().collect()),
         ))))
@@ -1174,7 +1174,7 @@ impl_vm_value_cast!(u16, U16);
 impl_vm_value_cast!(u32, U32);
 impl_vm_value_cast!(u64, U64);
 impl_vm_value_cast!(u128, U128);
-impl_vm_value_cast!(u256, U256);
+impl_vm_value_cast!(U256Inner, U256);
 impl_vm_value_cast!(bool, Bool);
 impl_vm_value_cast!(AccountAddress, Address);
 impl_vm_value_cast!(ContainerRef, ContainerRef);
@@ -1357,8 +1357,8 @@ impl VMValueCast<u128> for IntegerValue {
     }
 }
 
-impl VMValueCast<u256> for IntegerValue {
-    fn cast(self) -> PartialVMResult<u256> {
+impl VMValueCast<U256Inner> for IntegerValue {
+    fn cast(self) -> PartialVMResult<U256Inner> {
         match self {
             Self::U256(x) => Ok(x),
             v => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
@@ -1392,7 +1392,7 @@ impl IntegerValue {
             (U32(l), U32(r)) => u32::checked_add(l, r).map(IntegerValue::U32),
             (U64(l), U64(r)) => u64::checked_add(l, r).map(IntegerValue::U64),
             (U128(l), U128(r)) => u128::checked_add(l, r).map(IntegerValue::U128),
-            (U256(l), U256(r)) => u256::checked_add(l, r).map(IntegerValue::U256),
+            (U256(l), U256(r)) => U256Inner::checked_add(l, r).map(IntegerValue::U256),
             (l, r) => {
                 let msg = format!("Cannot add {:?} and {:?}", l, r);
                 return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
@@ -1409,7 +1409,7 @@ impl IntegerValue {
             (U32(l), U32(r)) => u32::checked_sub(l, r).map(IntegerValue::U32),
             (U64(l), U64(r)) => u64::checked_sub(l, r).map(IntegerValue::U64),
             (U128(l), U128(r)) => u128::checked_sub(l, r).map(IntegerValue::U128),
-            (U256(l), U256(r)) => u256::checked_sub(l, r).map(IntegerValue::U256),
+            (U256(l), U256(r)) => U256Inner::checked_sub(l, r).map(IntegerValue::U256),
             (l, r) => {
                 let msg = format!("Cannot sub {:?} from {:?}", r, l);
                 return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
@@ -1426,7 +1426,7 @@ impl IntegerValue {
             (U32(l), U32(r)) => u32::checked_mul(l, r).map(IntegerValue::U32),
             (U64(l), U64(r)) => u64::checked_mul(l, r).map(IntegerValue::U64),
             (U128(l), U128(r)) => u128::checked_mul(l, r).map(IntegerValue::U128),
-            (U256(l), U256(r)) => u256::checked_mul(l, r).map(IntegerValue::U256),
+            (U256(l), U256(r)) => U256Inner::checked_mul(l, r).map(IntegerValue::U256),
             (l, r) => {
                 let msg = format!("Cannot mul {:?} and {:?}", l, r);
                 return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
@@ -1443,7 +1443,7 @@ impl IntegerValue {
             (U32(l), U32(r)) => u32::checked_div(l, r).map(IntegerValue::U32),
             (U64(l), U64(r)) => u64::checked_div(l, r).map(IntegerValue::U64),
             (U128(l), U128(r)) => u128::checked_div(l, r).map(IntegerValue::U128),
-            (U256(l), U256(r)) => u256::checked_div(l, r).map(IntegerValue::U256),
+            (U256(l), U256(r)) => U256Inner::checked_div(l, r).map(IntegerValue::U256),
             (l, r) => {
                 let msg = format!("Cannot div {:?} by {:?}", l, r);
                 return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
@@ -1460,7 +1460,7 @@ impl IntegerValue {
             (U32(l), U32(r)) => u32::checked_rem(l, r).map(IntegerValue::U32),
             (U64(l), U64(r)) => u64::checked_rem(l, r).map(IntegerValue::U64),
             (U128(l), U128(r)) => u128::checked_rem(l, r).map(IntegerValue::U128),
-            (U256(l), U256(r)) => u256::checked_rem(l, r).map(IntegerValue::U256),
+            (U256(l), U256(r)) => U256Inner::checked_rem(l, r).map(IntegerValue::U256),
             (l, r) => {
                 let msg = format!("Cannot rem {:?} by {:?}", l, r);
                 return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
@@ -1726,7 +1726,7 @@ impl IntegerValue {
                 }
             }
             U256(x) => {
-                if x > (u256::from(std::u8::MAX)) {
+                if x > (U256Inner::from(std::u8::MAX)) {
                     Err(PartialVMError::new(StatusCode::ARITHMETIC_ERROR)
                         .with_message(format!("Cannot cast u256({}) to u8", x)))
                 } else {
@@ -1767,7 +1767,7 @@ impl IntegerValue {
                 }
             }
             U256(x) => {
-                if x > (u256::from(std::u16::MAX)) {
+                if x > (U256Inner::from(std::u16::MAX)) {
                     Err(PartialVMError::new(StatusCode::ARITHMETIC_ERROR)
                         .with_message(format!("Cannot cast u256({}) to u16", x)))
                 } else {
@@ -1801,7 +1801,7 @@ impl IntegerValue {
                 }
             }
             U256(x) => {
-                if x > (u256::from(std::u32::MAX)) {
+                if x > (U256Inner::from(std::u32::MAX)) {
                     Err(PartialVMError::new(StatusCode::ARITHMETIC_ERROR)
                         .with_message(format!("Cannot cast u128({}) to u32", x)))
                 } else {
@@ -1828,7 +1828,7 @@ impl IntegerValue {
                 }
             }
             U256(x) => {
-                if x > (u256::from(std::u64::MAX)) {
+                if x > (U256Inner::from(std::u64::MAX)) {
                     Err(PartialVMError::new(StatusCode::ARITHMETIC_ERROR)
                         .with_message(format!("Cannot cast u256({}) to u64", x)))
                 } else {
@@ -1848,7 +1848,7 @@ impl IntegerValue {
             U64(x) => Ok(x as u128),
             U128(x) => Ok(x),
             U256(x) => {
-                if x > (u256::from(std::u128::MAX)) {
+                if x > (U256Inner::from(std::u128::MAX)) {
                     Err(PartialVMError::new(StatusCode::ARITHMETIC_ERROR)
                         .with_message(format!("Cannot cast u256({}) to u128", x)))
                 } else {
@@ -1858,15 +1858,15 @@ impl IntegerValue {
         }
     }
 
-    pub fn cast_u256(self) -> PartialVMResult<u256> {
+    pub fn cast_u256(self) -> PartialVMResult<U256Inner> {
         use IntegerValue::*;
 
         Ok(match self {
-            U8(x) => u256::from(x),
-            U16(x) => u256::from(x),
-            U32(x) => u256::from(x),
-            U64(x) => u256::from(x),
-            U128(x) => u256::from(x),
+            U8(x) => U256Inner::from(x),
+            U16(x) => U256Inner::from(x),
+            U32(x) => U256Inner::from(x),
+            U64(x) => U256Inner::from(x),
+            U128(x) => U256Inner::from(x),
             U256(x) => x,
         })
     }
@@ -2256,9 +2256,9 @@ impl Container {
             Self::VecU128(r) => {
                 AbstractMemorySize::new((r.borrow().len() * std::mem::size_of::<u128>()) as u64)
             }
-            Self::VecU256(r) => {
-                AbstractMemorySize::new((r.borrow().len() * std::mem::size_of::<u256>()) as u64)
-            }
+            Self::VecU256(r) => AbstractMemorySize::new(
+                (r.borrow().len() * std::mem::size_of::<U256Inner>()) as u64,
+            ),
             Self::VecBool(r) => {
                 AbstractMemorySize::new((r.borrow().len() * std::mem::size_of::<bool>()) as u64)
             }
@@ -2658,7 +2658,7 @@ pub mod debug {
         debug_write!(buf, "{}", x)
     }
 
-    fn print_u256<B: Write>(buf: &mut B, x: &u256) -> PartialVMResult<()> {
+    fn print_u256<B: Write>(buf: &mut B, x: &U256Inner) -> PartialVMResult<()> {
         debug_write!(buf, "{}", x)
     }
 
@@ -2976,7 +2976,7 @@ impl<'d> serde::de::DeserializeSeed<'d> for SeedWrapper<&MoveTypeLayout> {
             L::U32 => u32::deserialize(deserializer).map(Value::u32),
             L::U64 => u64::deserialize(deserializer).map(Value::u64),
             L::U128 => u128::deserialize(deserializer).map(Value::u128),
-            L::U256 => u256::deserialize(deserializer).map(Value::u256),
+            L::U256 => U256Inner::deserialize(deserializer).map(Value::u256),
             L::Address => AccountAddress::deserialize(deserializer).map(Value::address),
             L::Signer => AccountAddress::deserialize(deserializer).map(Value::signer),
 

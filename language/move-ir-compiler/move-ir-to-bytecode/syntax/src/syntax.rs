@@ -441,8 +441,11 @@ fn parse_qualified_function_name(
         | Tok::VecSwap
         | Tok::Freeze
         | Tok::ToU8
+        | Tok::ToU16
+        | Tok::ToU32
         | Tok::ToU64
-        | Tok::ToU128 => {
+        | Tok::ToU128
+        | Tok::ToU256 => {
             let f = parse_builtin(tokens)?;
             FunctionCall_::Builtin(f)
         }
@@ -585,8 +588,11 @@ fn parse_call_or_term_(tokens: &mut Lexer) -> Result<Exp_, ParseError<Loc, anyho
         | Tok::Freeze
         | Tok::DotNameValue
         | Tok::ToU8
+        | Tok::ToU16
+        | Tok::ToU32
         | Tok::ToU64
-        | Tok::ToU128 => {
+        | Tok::ToU128
+        | Tok::ToU256 => {
             let f = parse_qualified_function_name(tokens)?;
             let exp = parse_call_or_term(tokens)?;
             Ok(Exp_::FunctionCall(f, Box::new(exp)))
@@ -666,8 +672,11 @@ fn parse_term_(tokens: &mut Lexer) -> Result<Exp_, ParseError<Loc, anyhow::Error
         | Tok::True
         | Tok::False
         | Tok::U8Value
+        | Tok::U16Value
+        | Tok::U32Value
         | Tok::U64Value
         | Tok::U128Value
+        | Tok::U256Value
         | Tok::ByteArrayValue => Ok(Exp_::Value(parse_copyable_val(tokens)?)),
         Tok::NameValue | Tok::NameBeginTyValue => {
             let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
@@ -822,6 +831,14 @@ fn parse_builtin(tokens: &mut Lexer) -> Result<Builtin, ParseError<Loc, anyhow::
             tokens.advance()?;
             Ok(Builtin::ToU8)
         }
+        Tok::ToU16 => {
+            tokens.advance()?;
+            Ok(Builtin::ToU16)
+        }
+        Tok::ToU32 => {
+            tokens.advance()?;
+            Ok(Builtin::ToU32)
+        }
         Tok::ToU64 => {
             tokens.advance()?;
             Ok(Builtin::ToU64)
@@ -829,6 +846,10 @@ fn parse_builtin(tokens: &mut Lexer) -> Result<Builtin, ParseError<Loc, anyhow::
         Tok::ToU128 => {
             tokens.advance()?;
             Ok(Builtin::ToU128)
+        }
+        Tok::ToU256 => {
+            tokens.advance()?;
+            Ok(Builtin::ToU256)
         }
         t => Err(ParseError::InvalidToken {
             location: current_token_loc(tokens),
@@ -1026,8 +1047,11 @@ fn parse_statement_(tokens: &mut Lexer) -> Result<Statement_, ParseError<Loc, an
         | Tok::Freeze
         | Tok::DotNameValue
         | Tok::ToU8
+        | Tok::ToU16
+        | Tok::ToU32
         | Tok::ToU64
-        | Tok::ToU128 => Ok(Statement_::Exp(Box::new(parse_call(tokens)?))),
+        | Tok::ToU128
+        | Tok::ToU256 => Ok(Statement_::Exp(Box::new(parse_call(tokens)?))),
         Tok::LParen => {
             tokens.advance()?;
             let start = tokens.start_loc();
@@ -1195,6 +1219,14 @@ fn parse_type(tokens: &mut Lexer) -> Result<Type, ParseError<Loc, anyhow::Error>
             tokens.advance()?;
             Type::U8
         }
+        Tok::NameValue if matches!(tokens.content(), "u16") => {
+            tokens.advance()?;
+            Type::U16
+        }
+        Tok::NameValue if matches!(tokens.content(), "u32") => {
+            tokens.advance()?;
+            Type::U32
+        }
         Tok::NameValue if matches!(tokens.content(), "u64") => {
             tokens.advance()?;
             Type::U64
@@ -1202,6 +1234,10 @@ fn parse_type(tokens: &mut Lexer) -> Result<Type, ParseError<Loc, anyhow::Error>
         Tok::NameValue if matches!(tokens.content(), "u128") => {
             tokens.advance()?;
             Type::U128
+        }
+        Tok::NameValue if matches!(tokens.content(), "u256") => {
+            tokens.advance()?;
+            Type::U256
         }
         Tok::NameValue if matches!(tokens.content(), "bool") => {
             tokens.advance()?;
@@ -1513,8 +1549,11 @@ fn parse_unary_spec_exp(tokens: &mut Lexer) -> Result<SpecExp, ParseError<Loc, a
         | Tok::True
         | Tok::False
         | Tok::U8Value
+        | Tok::U16Value
+        | Tok::U32Value
         | Tok::U64Value
         | Tok::U128Value
+        | Tok::U256Value
         | Tok::ByteArrayValue => SpecExp::Constant(parse_copyable_val(tokens)?.value),
         Tok::GlobalExists => {
             consume_token(tokens, Tok::GlobalExists)?;

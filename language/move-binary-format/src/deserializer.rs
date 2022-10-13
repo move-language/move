@@ -4,7 +4,7 @@
 
 use crate::{check_bounds::BoundsChecker, errors::*, file_format::*, file_format_common::*};
 use move_core_types::{
-    account_address::AccountAddress, identifier::Identifier, metadata::Metadata, u256::u256,
+    account_address::AccountAddress, identifier::Identifier, metadata::Metadata, u256::U256Inner,
     vm_status::StatusCode,
 };
 use std::{collections::HashSet, convert::TryInto, io::Read};
@@ -89,12 +89,12 @@ fn read_u128_internal(cursor: &mut VersionedCursor) -> BinaryLoaderResult<u128> 
     Ok(u128::from_le_bytes(u128_bytes))
 }
 
-fn read_u256_internal(cursor: &mut VersionedCursor) -> BinaryLoaderResult<u256> {
+fn read_u256_internal(cursor: &mut VersionedCursor) -> BinaryLoaderResult<U256Inner> {
     let mut u256_bytes = [0; 32];
     cursor
         .read_exact(&mut u256_bytes)
         .map_err(|_| PartialVMError::new(StatusCode::BAD_U256))?;
-    Ok(u256::from_le_bytes(&u256_bytes))
+    Ok(U256Inner::from_le_bytes(&u256_bytes))
 }
 
 //
@@ -1569,6 +1569,9 @@ impl SerializedType {
             0xA => Ok(SerializedType::VECTOR),
             0xB => Ok(SerializedType::STRUCT_INST),
             0xC => Ok(SerializedType::SIGNER),
+            0xD => Ok(SerializedType::U16),
+            0xE => Ok(SerializedType::U32),
+            0xF => Ok(SerializedType::U256),
             _ => Err(PartialVMError::new(StatusCode::UNKNOWN_SERIALIZED_TYPE)),
         }
     }
@@ -1696,6 +1699,12 @@ impl Opcodes {
             0x45 => Ok(Opcodes::VEC_POP_BACK),
             0x46 => Ok(Opcodes::VEC_UNPACK),
             0x47 => Ok(Opcodes::VEC_SWAP),
+            0x48 => Ok(Opcodes::LD_U16),
+            0x49 => Ok(Opcodes::LD_U32),
+            0x4A => Ok(Opcodes::LD_U256),
+            0x4B => Ok(Opcodes::CAST_U16),
+            0x4C => Ok(Opcodes::CAST_U32),
+            0x4D => Ok(Opcodes::CAST_U256),
             _ => Err(PartialVMError::new(StatusCode::UNKNOWN_OPCODE)),
         }
     }

@@ -12,6 +12,7 @@ use crate::{
         unique_set::UniqueSet, *,
     },
 };
+use move_core_types::u256::U256Inner;
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
 use std::{
@@ -374,13 +375,19 @@ pub enum Value_ {
     // 0x<hex representation up to 64 digits with padding 0s>
     Address(Address),
     // <num>
-    InferredNum(u128),
+    InferredNum(U256Inner),
     // <num>u8
     U8(u8),
+    // <num>u16
+    U16(u16),
+    // <num>u32
+    U32(u32),
     // <num>u64
     U64(u64),
     // <num>u128
     U128(u128),
+    // <num>u256
+    U256(U256Inner),
     // true
     // false
     Bool(bool),
@@ -1435,8 +1442,11 @@ impl AstDebug for Value_ {
             V::Address(addr) => w.write(&format!("@{}", addr)),
             V::InferredNum(u) => w.write(&format!("{}", u)),
             V::U8(u) => w.write(&format!("{}u8", u)),
+            V::U16(u) => w.write(&format!("{}u16", u)),
+            V::U32(u) => w.write(&format!("{}u32", u)),
             V::U64(u) => w.write(&format!("{}u64", u)),
             V::U128(u) => w.write(&format!("{}u128", u)),
+            V::U256(u) => w.write(&format!("{}u256", u)),
             V::Bool(b) => w.write(&format!("{}", b)),
             V::Bytearray(v) => w.write(&format!("{:?}", v)),
         }

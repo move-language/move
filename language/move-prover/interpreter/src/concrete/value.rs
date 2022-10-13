@@ -14,7 +14,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet, Op},
-    u256::u256,
+    u256::U256Inner,
     value::{MoveStruct, MoveValue},
 };
 use move_model::ast::{MemoryLabel, TempIndex};
@@ -58,6 +58,9 @@ impl BaseValue {
     }
     pub fn mk_u128(v: u128) -> Self {
         Self::Int(BigInt::from(v))
+    }
+    pub fn mk_u256(v: U256Inner) -> Self {
+        Self::Int(BigInt::from(&v))
     }
     pub fn mk_num(v: BigInt) -> Self {
         Self::Int(v)
@@ -111,9 +114,9 @@ impl BaseValue {
             _ => unreachable!(),
         }
     }
-    pub fn into_u256(self) -> u256 {
+    pub fn into_u256(self) -> U256Inner {
         match self {
-            Self::Int(v) => u256::from(v),
+            Self::Int(v) => U256Inner::from(v),
             _ => unreachable!(),
         }
     }
@@ -331,6 +334,13 @@ impl TypedValue {
             ptr,
         }
     }
+    pub fn mk_ref_u256(v: U256Inner, is_mut: bool, ptr: Pointer) -> Self {
+        Self {
+            ty: Type::mk_ref_u256(is_mut),
+            val: BaseValue::mk_u256(v),
+            ptr,
+        }
+    }
     pub fn mk_ref_num(v: BigInt, is_mut: bool, ptr: Pointer) -> Self {
         Self {
             ty: Type::mk_ref_num(is_mut),
@@ -484,7 +494,7 @@ impl TypedValue {
         }
         (self.val.into_u128(), self.ty.into_ref_type().0, self.ptr)
     }
-    pub fn into_ref_u256(self) -> (u256, bool, Pointer) {
+    pub fn into_ref_u256(self) -> (U256Inner, bool, Pointer) {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_ref_u256(None));
         }

@@ -11,8 +11,11 @@ pub enum Tok {
     EOF,
     AccountAddressValue,
     U8Value,
+    U16Value,
+    U32Value,
     U64Value,
     U128Value,
+    U256Value,
     NameValue,
     NameBeginTyValue,
     DotNameValue,
@@ -64,8 +67,11 @@ pub enum Tok {
     /// Like exists, but for spec language
     GlobalExists,
     ToU8,
+    ToU16,
+    ToU32,
     ToU64,
     ToU128,
+    ToU256,
     Import,
     /// For spec language
     Invariant,
@@ -413,10 +419,16 @@ fn get_decimal_number(text: &str) -> (Tok, usize) {
     let rest = &text[len..];
     if rest.starts_with("u8") {
         (Tok::U8Value, len + 2)
+    } else if rest.starts_with("u16") {
+        (Tok::U16Value, len + 3)
+    } else if rest.starts_with("u32") {
+        (Tok::U32Value, len + 3)
     } else if rest.starts_with("u64") {
         (Tok::U64Value, len + 3)
     } else if rest.starts_with("u128") {
         (Tok::U128Value, len + 4)
+    } else if rest.starts_with("u256") {
+        (Tok::U256Value, len + 4)
     } else {
         (Tok::U64Value, len)
     }
@@ -455,8 +467,11 @@ fn get_name_token(name: &str) -> Tok {
         "global" => Tok::Global,              // spec language
         "global_exists" => Tok::GlobalExists, // spec language
         "to_u8" => Tok::ToU8,
+        "to_u16" => Tok::ToU16,
+        "to_u32" => Tok::ToU32,
         "to_u64" => Tok::ToU64,
         "to_u128" => Tok::ToU128,
+        "to_u256" => Tok::ToU256,
         "import" => Tok::Import,
         "jump" => Tok::Jump,
         "jump_if" => Tok::JumpIf,

@@ -264,10 +264,17 @@ impl BoogieOptions {
     /// Checks whether the expected tool versions are installed in the environment.
     pub fn check_tool_versions(&self) -> anyhow::Result<()> {
         if !self.boogie_exe.is_empty() {
+            // On Mac, version arg is `/version`, not `-version`
+            let version_arg = if cfg!(target_os = "macos") {
+                &["/version"]
+            } else {
+                &["-version"]
+            };
+
             let version = Self::get_version(
                 "boogie",
                 &self.boogie_exe,
-                &["-version"],
+                version_arg,
                 r"version ([0-9.]*)",
             )?;
             Self::check_version_is_greater("boogie", &version, MIN_BOOGIE_VERSION)?;

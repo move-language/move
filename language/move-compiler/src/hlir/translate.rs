@@ -1530,8 +1530,11 @@ fn value(_context: &mut Context, sp!(loc, ev_): E::Value) -> H::Value {
         EV::InferredNum(_) => panic!("ICE should have been expanded"),
         EV::Address(a) => HV::Address(a.into_addr_bytes()),
         EV::U8(u) => HV::U8(u),
+        EV::U16(u) => HV::U16(u),
+        EV::U32(u) => HV::U32(u),
         EV::U64(u) => HV::U64(u),
         EV::U128(u) => HV::U128(u),
+        EV::U256(u) => HV::U256(u),
         EV::Bool(u) => HV::Bool(u),
         EV::Bytearray(bytes) => HV::Vector(
             Box::new(H::BaseType_::u8(loc)),

@@ -18,8 +18,11 @@ impl Arbitrary for TypeTag {
         let leaf = prop_oneof![
             Just(Bool),
             Just(U8),
+            Just(U16),
+            Just(U32),
             Just(U64),
             Just(U128),
+            Just(U256),
             Just(Address),
             Just(Vector(Box::new(Bool))),
         ];

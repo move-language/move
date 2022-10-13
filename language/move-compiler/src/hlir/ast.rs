@@ -13,6 +13,7 @@ use crate::{
     },
     shared::{ast_debug::*, unique_map::UniqueMap, NumericalAddress},
 };
+use move_core_types::u256::U256Inner;
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -269,10 +270,16 @@ pub enum Value_ {
     Address(NumericalAddress),
     // <num>u8
     U8(u8),
+    // <num>u16
+    U16(u16),
+    // <num>u32
+    U32(u32),
     // <num>u64
     U64(u64),
     // <num>u128
     U128(u128),
+    // <num>u256
+    U256(U256Inner),
     // true
     // false
     Bool(bool),
@@ -431,7 +438,7 @@ impl BaseType_ {
         use BuiltinTypeName_::*;
 
         let kind = match b_ {
-            U8 | U64 | U128 | Bool | Address => AbilitySet::primitives(loc),
+            U8 | U16 | U32 | U64 | U128 | U256 | Bool | Address => AbilitySet::primitives(loc),
             Signer => AbilitySet::signer(loc),
             Vector => {
                 let declared_abilities = AbilitySet::collection(loc);
@@ -472,12 +479,24 @@ impl BaseType_ {
         Self::builtin(loc, BuiltinTypeName_::U8, vec![])
     }
 
+    pub fn u16(loc: Loc) -> BaseType {
+        Self::builtin(loc, BuiltinTypeName_::U16, vec![])
+    }
+
+    pub fn u32(loc: Loc) -> BaseType {
+        Self::builtin(loc, BuiltinTypeName_::U32, vec![])
+    }
+
     pub fn u64(loc: Loc) -> BaseType {
         Self::builtin(loc, BuiltinTypeName_::U64, vec![])
     }
 
     pub fn u128(loc: Loc) -> BaseType {
         Self::builtin(loc, BuiltinTypeName_::U128, vec![])
+    }
+
+    pub fn u256(loc: Loc) -> BaseType {
+        Self::builtin(loc, BuiltinTypeName_::U256, vec![])
     }
 }
 
@@ -498,12 +517,24 @@ impl SingleType_ {
         Self::base(BaseType_::u8(loc))
     }
 
+    pub fn u16(loc: Loc) -> SingleType {
+        Self::base(BaseType_::u16(loc))
+    }
+
+    pub fn u32(loc: Loc) -> SingleType {
+        Self::base(BaseType_::u32(loc))
+    }
+
     pub fn u64(loc: Loc) -> SingleType {
         Self::base(BaseType_::u64(loc))
     }
 
     pub fn u128(loc: Loc) -> SingleType {
         Self::base(BaseType_::u128(loc))
+    }
+
+    pub fn u256(loc: Loc) -> SingleType {
+        Self::base(BaseType_::u256(loc))
     }
 
     pub fn abilities(&self, loc: Loc) -> AbilitySet {
@@ -535,12 +566,24 @@ impl Type_ {
         Self::single(SingleType_::u8(loc))
     }
 
+    pub fn u16(loc: Loc) -> Type {
+        Self::single(SingleType_::u16(loc))
+    }
+
+    pub fn u32(loc: Loc) -> Type {
+        Self::single(SingleType_::u32(loc))
+    }
+
     pub fn u64(loc: Loc) -> Type {
         Self::single(SingleType_::u64(loc))
     }
 
     pub fn u128(loc: Loc) -> Type {
         Self::single(SingleType_::u128(loc))
+    }
+
+    pub fn u256(loc: Loc) -> Type {
+        Self::single(SingleType_::u256(loc))
     }
 
     pub fn type_at_index(&self, idx: usize) -> &SingleType {
@@ -990,8 +1033,11 @@ impl AstDebug for Value_ {
         match self {
             V::Address(addr) => w.write(&format!("@{}", addr)),
             V::U8(u) => w.write(&format!("{}u8", u)),
+            V::U16(u) => w.write(&format!("{}u16", u)),
+            V::U32(u) => w.write(&format!("{}u32", u)),
             V::U64(u) => w.write(&format!("{}u64", u)),
             V::U128(u) => w.write(&format!("{}u128", u)),
+            V::U256(u) => w.write(&format!("{}u256", u)),
             V::Bool(b) => w.write(&format!("{}", b)),
             V::Vector(ty, elems) => {
                 w.write("vector#value");

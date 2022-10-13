@@ -3,7 +3,7 @@
 
 use move_core_types::{
     account_address::AccountAddress, gas_algebra::AbstractMemorySize, language_storage::TypeTag,
-    u256::u256,
+    u256::U256Inner,
 };
 use std::mem::size_of;
 
@@ -56,7 +56,7 @@ pub trait ValueView {
                 self.0 += LEGACY_CONST_SIZE;
             }
 
-            fn visit_u256(&mut self, _depth: usize, _val: u256) {
+            fn visit_u256(&mut self, _depth: usize, _val: U256Inner) {
                 self.0 += LEGACY_CONST_SIZE;
             }
 
@@ -118,7 +118,7 @@ pub trait ValueVisitor {
     fn visit_u32(&mut self, depth: usize, val: u32);
     fn visit_u64(&mut self, depth: usize, val: u64);
     fn visit_u128(&mut self, depth: usize, val: u128);
-    fn visit_u256(&mut self, depth: usize, val: u256);
+    fn visit_u256(&mut self, depth: usize, val: U256Inner);
     fn visit_bool(&mut self, depth: usize, val: bool);
     fn visit_address(&mut self, depth: usize, val: AccountAddress);
 
@@ -162,7 +162,7 @@ pub trait ValueVisitor {
         }
     }
 
-    fn visit_vec_u256(&mut self, depth: usize, vals: &[u256]) {
+    fn visit_vec_u256(&mut self, depth: usize, vals: &[U256Inner]) {
         self.visit_vec(depth, vals.len());
         for val in vals {
             self.visit_u256(depth + 1, *val);

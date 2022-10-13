@@ -466,8 +466,6 @@ impl<'a> FunctionGenerator<'a> {
 
                     // Arithmetics
                     CastU8 => builtin(YulFunction::CastU8, dest, srcs),
-                    CastU16 => builtin(YulFunction::CastU16, dest, srcs),
-                    CastU32 => builtin(YulFunction::CastU32, dest, srcs),
                     CastU64 => builtin(YulFunction::CastU64, dest, srcs),
                     CastU128 => builtin(YulFunction::CastU128, dest, srcs),
                     CastU256 => builtin(YulFunction::CastU256, dest, srcs),
@@ -567,7 +565,9 @@ impl<'a> FunctionGenerator<'a> {
                     | Uninit
                     | Havoc(_)
                     | Stop
-                    | TraceGlobalMem(_) => {}
+                    | TraceGlobalMem(_)
+                    | CastU16
+                    | CastU32 => {}
                 }
             }
 
@@ -617,12 +617,7 @@ impl<'a> FunctionGenerator<'a> {
             }
             Constant::ByteArray(_) => "".to_string(),
             Constant::AddressArray(_) => "".to_string(),
-            Constant::U16(v) => {
-                format!("{}", v)
-            }
-            Constant::U32(v) => {
-                format!("{}", v)
-            }
+            Constant::U16(_) | Constant::U32(_) => panic!("unexpected field type"),
         };
         if !val_str.is_empty() {
             emitln!(ctx.writer, "{} := {}", dest, val_str);

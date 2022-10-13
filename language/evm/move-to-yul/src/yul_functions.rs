@@ -769,14 +769,6 @@ CastU8: "(x) -> r {
     if gt(x, ${MAX_U8}) { $AbortBuiltin() }
     r := x
 }" dep AbortBuiltin,
-CastU16: "(x) -> r {
-  if gt(x, ${MAX_U16}) { $AbortBuiltin() }
-  r := x
-}" dep AbortBuiltin,
-CastU32: "(x) -> r {
-  if gt(x, ${MAX_U32}) { $AbortBuiltin() }
-  r := x
-}" dep AbortBuiltin,
 CastU64: "(x) -> r {
     if gt(x, ${MAX_U64}) { $AbortBuiltin() }
     r := x

@@ -13,7 +13,7 @@ use move_bytecode_source_map::{mapping::SourceMapping, utils::source_map_from_fi
 use move_command_line_common::files::{
     MOVE_COMPILED_EXTENSION, MOVE_EXTENSION, SOURCE_MAP_EXTENSION,
 };
-use move_disassembler::disassembler::{Disassembler, DisassemblerOptions};
+use move_mv_llvm_compiler::disassembler::{Disassembler, DisassemblerOptions};
 use move_ir_types::location::Spanned;
 use std::{fs, path::Path};
 

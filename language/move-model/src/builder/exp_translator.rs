@@ -624,9 +624,14 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                             return check_zero_args(self, Type::new_prim(PrimitiveType::Bool));
                         }
                         "u8" => return check_zero_args(self, Type::new_prim(PrimitiveType::U8)),
+                        "u16" => return check_zero_args(self, Type::new_prim(PrimitiveType::U16)),
+                        "u32" => return check_zero_args(self, Type::new_prim(PrimitiveType::U32)),
                         "u64" => return check_zero_args(self, Type::new_prim(PrimitiveType::U64)),
                         "u128" => {
                             return check_zero_args(self, Type::new_prim(PrimitiveType::U128));
+                        }
+                        "u256" => {
+                            return check_zero_args(self, Type::new_prim(PrimitiveType::U256))
                         }
                         "num" => return check_zero_args(self, Type::new_prim(PrimitiveType::Num)),
                         "range" => {
@@ -1932,8 +1937,11 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     pub fn translate_from_move_value(&self, loc: &Loc, ty: &Type, value: &MoveValue) -> Value {
         match (ty, value) {
             (_, MoveValue::U8(n)) => Value::Number(BigInt::from_u8(*n).unwrap()),
+            (_, MoveValue::U16(n)) => Value::Number(BigInt::from_u16(*n).unwrap()),
+            (_, MoveValue::U32(n)) => Value::Number(BigInt::from_u32(*n).unwrap()),
             (_, MoveValue::U64(n)) => Value::Number(BigInt::from_u64(*n).unwrap()),
             (_, MoveValue::U128(n)) => Value::Number(BigInt::from_u128(*n).unwrap()),
+            (_, MoveValue::U256(n)) => Value::Number(BigInt::from(n)),
             (_, MoveValue::Bool(b)) => Value::Bool(*b),
             (_, MoveValue::Address(a)) => Value::Address(crate::addr_to_big_uint(a)),
             (_, MoveValue::Signer(a)) => Value::Address(crate::addr_to_big_uint(a)),

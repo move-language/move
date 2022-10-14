@@ -23,6 +23,7 @@ pub enum ValueToken {
     True,
     False,
     ByteString,
+    Utf8String,
     HexString,
     Ident,
     AtSign,
@@ -120,6 +121,7 @@ impl Display for ValueToken {
             ValueToken::True => "true",
             ValueToken::False => "false",
             ValueToken::ByteString => "[byte string]",
+            ValueToken::Utf8String => "[utf8 string]",
             ValueToken::HexString => "[hex string]",
             ValueToken::Whitespace => "[whitespace]",
             ValueToken::Ident => "[identifier]",
@@ -233,13 +235,13 @@ impl Token for ValueToken {
                         None => bail!("Unexpected end of string before end quote: {}", s),
                     }
                 }
-                if s[..len].chars().any(|c| c == '\\') {
+                if s[2..len - 1].chars().any(|c| c == '\\') {
                     bail!(
                         "Escape characters not yet supported in utf8 string: {}",
-                        &s[..len]
+                        &s[2..len - 1]
                     )
                 }
-                (ValueToken::ByteString, len)
+                (ValueToken::Utf8String, len)
             }
             'x' if matches!(chars.peek(), Some('"')) => {
                 chars.next().unwrap();

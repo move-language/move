@@ -26,12 +26,27 @@ fn valid_primitives() {
             data: vec![0],
         },
         Constant {
+            type_: SignatureToken::U16,
+            data: vec![0, 0],
+        },
+        Constant {
+            type_: SignatureToken::U32,
+            data: vec![0, 0, 0, 0],
+        },
+        Constant {
             type_: SignatureToken::U64,
             data: vec![0, 0, 0, 0, 0, 0, 0, 0],
         },
         Constant {
             type_: SignatureToken::U128,
             data: vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        },
+        Constant {
+            type_: SignatureToken::U256,
+            data: vec![
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0,
+            ],
         },
         Constant {
             type_: SignatureToken::Address,
@@ -44,8 +59,11 @@ fn valid_primitives() {
 #[test]
 fn invalid_primitives() {
     malformed(SignatureToken::U8, vec![0, 0]);
+    malformed(SignatureToken::U16, vec![0, 0, 0, 0]);
+    malformed(SignatureToken::U32, vec![0, 0, 0]);
     malformed(SignatureToken::U64, vec![0]);
     malformed(SignatureToken::U128, vec![0]);
+    malformed(SignatureToken::U256, vec![0, 0]);
     let data = vec![
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0,
@@ -104,12 +122,27 @@ fn valid_vectors() {
             data: large_vec(vec![0]),
         },
         Constant {
+            type_: tvec(SignatureToken::U16),
+            data: large_vec(vec![0, 0]),
+        },
+        Constant {
+            type_: tvec(SignatureToken::U32),
+            data: large_vec(vec![0, 0, 0, 0]),
+        },
+        Constant {
             type_: tvec(SignatureToken::U64),
             data: large_vec(vec![0, 0, 0, 0, 0, 0, 0, 0]),
         },
         Constant {
             type_: tvec(SignatureToken::U128),
             data: large_vec(vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+        },
+        Constant {
+            type_: tvec(SignatureToken::U256),
+            data: large_vec(vec![
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0,
+            ]),
         },
         Constant {
             type_: tvec(SignatureToken::Address),
@@ -125,6 +158,14 @@ fn valid_vectors() {
             data: double_vec(large_vec(vec![0])),
         },
         Constant {
+            type_: tvec(tvec(SignatureToken::U16)),
+            data: double_vec(large_vec(vec![0, 0])),
+        },
+        Constant {
+            type_: tvec(tvec(SignatureToken::U32)),
+            data: double_vec(large_vec(vec![0, 0, 0, 0])),
+        },
+        Constant {
             type_: tvec(tvec(SignatureToken::U64)),
             data: double_vec(large_vec(vec![0, 0, 0, 0, 0, 0, 0, 0])),
         },
@@ -132,6 +173,13 @@ fn valid_vectors() {
             type_: tvec(tvec(SignatureToken::U128)),
             data: double_vec(large_vec(vec![
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ])),
+        },
+        Constant {
+            type_: tvec(tvec(SignatureToken::U256)),
+            data: double_vec(large_vec(vec![
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0,
             ])),
         },
         Constant {
@@ -158,6 +206,8 @@ fn invalid_vectors() {
         items
     };
     // wrong inner
+    malformed(tvec(SignatureToken::U16), vec![1, 0]);
+    malformed(tvec(SignatureToken::U32), vec![1, 0]);
     malformed(tvec(SignatureToken::U64), vec![1, 0]);
     malformed(
         tvec(SignatureToken::Address),

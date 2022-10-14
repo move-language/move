@@ -487,8 +487,11 @@ module std::vector_tests {
     #[test]
     fun test_natives_with_different_instantiations() {
         test_natives_with_type<u8>(1u8, 2u8);
+        test_natives_with_type<u16>(45356u16, 25345u16);
+        test_natives_with_type<u32>(45356u32, 28768867u32);
         test_natives_with_type<u64>(1u64, 2u64);
         test_natives_with_type<u128>(1u128, 2u128);
+        test_natives_with_type<u256>(45356u256, 253458768867u256);
         test_natives_with_type<bool>(true, false);
         test_natives_with_type<address>(@0x1, @0x2);
 

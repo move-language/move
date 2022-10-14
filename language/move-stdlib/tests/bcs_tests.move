@@ -30,6 +30,18 @@ module std::bcs_tests {
     }
 
     #[test]
+    fun bcs_u16() {
+        let expected_output = x"0100";
+        assert!(bcs::to_bytes(&1u16) == expected_output, 0);
+    }
+
+    #[test]
+    fun bcs_u32() {
+        let expected_output = x"01000000";
+        assert!(bcs::to_bytes(&1u32) == expected_output, 0);
+    }
+
+    #[test]
     fun bcs_u64() {
         let expected_output = x"0100000000000000";
         assert!(bcs::to_bytes(&1) == expected_output, 0);
@@ -39,6 +51,12 @@ module std::bcs_tests {
     fun bcs_u128() {
         let expected_output = x"01000000000000000000000000000000";
         assert!(bcs::to_bytes(&1u128) == expected_output, 0);
+    }
+
+    #[test]
+    fun bcs_u256() {
+        let expected_output = x"0100000000000000000000000000000000000000000000000000000000000000";
+        assert!(bcs::to_bytes(&1u256) == expected_output, 0);
     }
 
     #[test]

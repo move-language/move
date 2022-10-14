@@ -1088,9 +1088,14 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
             exp(context, code, el);
             let instr = match bt_ {
                 BT::U8 => B::CastU8,
+                BT::U16 => B::CastU16,
+                BT::U32 => B::CastU32,
                 BT::U64 => B::CastU64,
                 BT::U128 => B::CastU128,
-                _ => panic!("ICE type checking failed. unexpected cast"),
+                BT::U256 => B::CastU256,
+                BT::Address | BT::Signer | BT::Vector | BT::Bool => {
+                    panic!("ICE type checking failed. unexpected cast")
+                }
             };
             code.push(sp(loc, instr));
         }

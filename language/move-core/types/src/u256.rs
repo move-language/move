@@ -11,14 +11,15 @@ use std::{
 };
 use uint::FromStrRadixErr;
 
+const U256_NUM_BYTES: usize = 32;
 pub type U256FromStrError = FromStrRadixErr;
 
 // This U256 impl was chosen for now but we are open to changing it as needed
 use primitive_types::U256 as PrimitiveU256;
-use serde::{Deserialize, Serialize};
+use serde::{ser::SerializeTuple, Deserialize, Deserializer, Serialize, Serializer};
 
 #[allow(non_camel_case_types)]
-#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq, Hash, Copy, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy, PartialOrd, Ord)]
 pub struct U256Inner(PrimitiveU256);
 
 impl fmt::Display for U256Inner {
@@ -32,6 +33,31 @@ impl std::str::FromStr for U256Inner {
 
     fn from_str(s: &str) -> anyhow::Result<Self> {
         PrimitiveU256::from_str(s).map(Self).map_err(|e| e.into())
+    }
+}
+
+impl<'de> Deserialize<'de> for U256Inner {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(U256Inner::from_le_bytes(
+            &(<[u8; U256_NUM_BYTES]>::deserialize(deserializer)?),
+        ))
+    }
+}
+
+impl Serialize for U256Inner {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let b: [u8; U256_NUM_BYTES] = self.to_le_bytes();
+        let mut seq = serializer.serialize_tuple(U256_NUM_BYTES)?;
+        for x in b {
+            seq.serialize_element(&x)?;
+        }
+        seq.end()
     }
 }
 
@@ -100,8 +126,8 @@ impl U256Inner {
         Self(PrimitiveU256::from_little_endian(slice))
     }
 
-    pub fn to_le_bytes(self) -> [u8; 32] {
-        let mut bytes = [0u8; 32];
+    pub fn to_le_bytes(self) -> [u8; U256_NUM_BYTES] {
+        let mut bytes = [0u8; U256_NUM_BYTES];
         self.0.to_little_endian(&mut bytes);
         bytes
     }
@@ -238,7 +264,7 @@ impl Arbitrary for U256Inner {
     fn arbitrary_with(_params: Self::Parameters) -> Self::Strategy {
         // TODO (ade): improve this as is it not exhaustive
         proptest::bits::u8::masked(0xFF)
-            .prop_map(|u| U256Inner(PrimitiveU256::from_little_endian(&[u, 32])))
+            .prop_map(|u| U256Inner(PrimitiveU256::from_little_endian(&[u; U256_NUM_BYTES])))
             .boxed()
     }
 }

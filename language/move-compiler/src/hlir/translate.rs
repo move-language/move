@@ -1316,8 +1316,11 @@ fn exp_impl(
             let e = exp(context, result, None, *te);
             let bt = match rhs_ty.value.builtin_name() {
                 Some(bt @ sp!(_, BT::U8))
+                | Some(bt @ sp!(_, BT::U16))
+                | Some(bt @ sp!(_, BT::U32))
                 | Some(bt @ sp!(_, BT::U64))
-                | Some(bt @ sp!(_, BT::U128)) => bt.clone(),
+                | Some(bt @ sp!(_, BT::U128))
+                | Some(bt @ sp!(_, BT::U256)) => bt.clone(),
                 _ => panic!("ICE typing failed for cast"),
             };
             HE::Cast(e, bt)

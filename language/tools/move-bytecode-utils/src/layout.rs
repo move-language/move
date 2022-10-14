@@ -25,6 +25,9 @@ const ADDRESS: &str = "AccountAddress";
 /// Name of the Move `signer` type in the serde registry
 const SIGNER: &str = "Signer";
 
+/// Name of the Move `u256` type in the serde registry
+const U256_SERDE_NAME: &str = "u256";
+
 /// Type for building a registry of serde-reflection friendly struct layouts for Move types.
 /// The layouts created by this type are intended to be passed to the serde-generate tool to create
 /// struct bindings for Move types in source languages that use Move-based services.
@@ -119,9 +122,7 @@ impl<T: GetModule> SerdeLayoutBuilder<T> {
             U32 => Format::U32,
             U64 => Format::U64,
             U128 => Format::U128,
-
-            // TODO (ade): What do we do about this since U256 not in serde-reflect
-            U256 => unreachable!(),
+            U256 => Format::TypeName(U256_SERDE_NAME.to_string()),
             Address => Format::TypeName(ADDRESS.to_string()),
             Signer => Format::TypeName(SIGNER.to_string()),
             Struct {
@@ -215,8 +216,6 @@ impl<T: GetModule> SerdeLayoutBuilder<T> {
             Format::U32 => "u32".to_string(),
             Format::U64 => "u64".to_string(),
             Format::U128 => "u128".to_string(),
-            // TODO (ade): What do we do about this since U256 not in serde-reflect
-            // Format::U256 => "u256".to_string(),
             Format::Bytes => "vector<u8>".to_string(),
             Format::Seq(inner) => format!("vector<{}>", Self::print_format_type(inner)),
             v => unimplemented!("Printing format value {:?}", v),

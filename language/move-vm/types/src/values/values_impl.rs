@@ -2867,8 +2867,11 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, MoveTypeLayout, ValueIm
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match (self.layout, self.val) {
             (MoveTypeLayout::U8, ValueImpl::U8(x)) => serializer.serialize_u8(*x),
+            (MoveTypeLayout::U16, ValueImpl::U16(x)) => serializer.serialize_u16(*x),
+            (MoveTypeLayout::U32, ValueImpl::U32(x)) => serializer.serialize_u32(*x),
             (MoveTypeLayout::U64, ValueImpl::U64(x)) => serializer.serialize_u64(*x),
             (MoveTypeLayout::U128, ValueImpl::U128(x)) => serializer.serialize_u128(*x),
+            (MoveTypeLayout::U256, ValueImpl::U256(x)) => x.serialize(serializer),
             (MoveTypeLayout::Bool, ValueImpl::Bool(x)) => serializer.serialize_bool(*x),
             (MoveTypeLayout::Address, ValueImpl::Address(x)) => x.serialize(serializer),
 
@@ -3377,8 +3380,11 @@ pub mod prop {
 
         match layout {
             L::U8 => any::<u8>().prop_map(Value::u8).boxed(),
+            L::U16 => any::<u16>().prop_map(Value::u16).boxed(),
+            L::U32 => any::<u32>().prop_map(Value::u32).boxed(),
             L::U64 => any::<u64>().prop_map(Value::u64).boxed(),
             L::U128 => any::<u128>().prop_map(Value::u128).boxed(),
+            L::U256 => any::<u256>().prop_map(Value::u256).boxed(),
             L::Bool => any::<bool>().prop_map(Value::bool).boxed(),
             L::Address => any::<AccountAddress>().prop_map(Value::address).boxed(),
             L::Signer => any::<AccountAddress>().prop_map(Value::signer).boxed(),
@@ -3387,6 +3393,20 @@ pub mod prop {
                 L::U8 => vec(any::<u8>(), 0..10)
                     .prop_map(|vals| {
                         Value(ValueImpl::Container(Container::VecU8(Rc::new(
+                            RefCell::new(vals),
+                        ))))
+                    })
+                    .boxed(),
+                L::U16 => vec(any::<u16>(), 0..10)
+                    .prop_map(|vals| {
+                        Value(ValueImpl::Container(Container::VecU16(Rc::new(
+                            RefCell::new(vals),
+                        ))))
+                    })
+                    .boxed(),
+                L::U32 => vec(any::<u32>(), 0..10)
+                    .prop_map(|vals| {
+                        Value(ValueImpl::Container(Container::VecU32(Rc::new(
                             RefCell::new(vals),
                         ))))
                     })
@@ -3401,6 +3421,13 @@ pub mod prop {
                 L::U128 => vec(any::<u128>(), 0..10)
                     .prop_map(|vals| {
                         Value(ValueImpl::Container(Container::VecU128(Rc::new(
+                            RefCell::new(vals),
+                        ))))
+                    })
+                    .boxed(),
+                L::U256 => vec(any::<U256Inner>(), 0..10)
+                    .prop_map(|vals| {
+                        Value(ValueImpl::Container(Container::VecU256(Rc::new(
                             RefCell::new(vals),
                         ))))
                     })
@@ -3443,8 +3470,11 @@ pub mod prop {
 
         let leaf = prop_oneof![
             1 => Just(L::U8),
+            1 => Just(L::U16),
+            1 => Just(L::U32),
             1 => Just(L::U64),
             1 => Just(L::U128),
+            1 => Just(L::U256),
             1 => Just(L::Bool),
             1 => Just(L::Address),
             1 => Just(L::Signer),
@@ -3472,8 +3502,11 @@ pub mod prop {
 
             match (layout, &self) {
                 (L::U8, ValueImpl::U8(x)) => MoveValue::U8(*x),
+                (L::U16, ValueImpl::U16(x)) => MoveValue::U16(*x),
+                (L::U32, ValueImpl::U32(x)) => MoveValue::U32(*x),
                 (L::U64, ValueImpl::U64(x)) => MoveValue::U64(*x),
                 (L::U128, ValueImpl::U128(x)) => MoveValue::U128(*x),
+                (L::U256, ValueImpl::U256(x)) => MoveValue::U256(*x),
                 (L::Bool, ValueImpl::Bool(x)) => MoveValue::Bool(*x),
                 (L::Address, ValueImpl::Address(x)) => MoveValue::Address(*x),
 
@@ -3487,9 +3520,14 @@ pub mod prop {
 
                 (L::Vector(inner_layout), ValueImpl::Container(c)) => MoveValue::Vector(match c {
                     Container::VecU8(r) => r.borrow().iter().map(|u| MoveValue::U8(*u)).collect(),
+                    Container::VecU16(r) => r.borrow().iter().map(|u| MoveValue::U16(*u)).collect(),
+                    Container::VecU32(r) => r.borrow().iter().map(|u| MoveValue::U32(*u)).collect(),
                     Container::VecU64(r) => r.borrow().iter().map(|u| MoveValue::U64(*u)).collect(),
                     Container::VecU128(r) => {
                         r.borrow().iter().map(|u| MoveValue::U128(*u)).collect()
+                    }
+                    Container::VecU256(r) => {
+                        r.borrow().iter().map(|u| MoveValue::U256(*u)).collect()
                     }
                     Container::VecBool(r) => {
                         r.borrow().iter().map(|u| MoveValue::Bool(*u)).collect()

@@ -315,8 +315,11 @@ static BUILTIN_TYPE_ALL_NAMES: Lazy<BTreeSet<Symbol>> = Lazy::new(|| {
 static BUILTIN_TYPE_NUMERIC: Lazy<BTreeSet<BuiltinTypeName_>> = Lazy::new(|| {
     [
         BuiltinTypeName_::U8,
+        BuiltinTypeName_::U16,
+        BuiltinTypeName_::U32,
         BuiltinTypeName_::U64,
         BuiltinTypeName_::U128,
+        BuiltinTypeName_::U256,
     ]
     .iter()
     .cloned()

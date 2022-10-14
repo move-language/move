@@ -145,25 +145,25 @@ impl Token for ValueToken {
         matches!(self, Self::Whitespace)
     }
 
-    fn next_token(s: &str) -> anyhow::Result<Option<(Self, usize, usize)>> {
-        fn number_maybe_with_suffix(text: &str, num_text_len: usize) -> (ValueToken, usize, usize) {
+    fn next_token(s: &str) -> anyhow::Result<Option<(Self, usize)>> {
+        fn number_maybe_with_suffix(text: &str, num_text_len: usize) -> (ValueToken, usize) {
             let rest = &text[num_text_len..];
             if rest.starts_with("u8") {
-                (ValueToken::NumberTyped, 0, num_text_len + 2)
+                (ValueToken::NumberTyped, num_text_len + 2)
             } else if rest.starts_with("u64") {
-                (ValueToken::NumberTyped, 0, num_text_len + 3)
+                (ValueToken::NumberTyped, num_text_len + 3)
             } else if rest.starts_with("u128") {
-                (ValueToken::NumberTyped, 0, num_text_len + 4)
+                (ValueToken::NumberTyped, num_text_len + 4)
             } else {
                 // No typed suffix
-                (ValueToken::Number, 0, num_text_len)
+                (ValueToken::Number, num_text_len)
             }
         }
         if s.starts_with("true") {
-            return Ok(Some((Self::True, 0, 4)));
+            return Ok(Some((Self::True, 4)));
         }
         if s.starts_with("false") {
-            return Ok(Some((Self::False, 0, 5)));
+            return Ok(Some((Self::False, 5)));
         }
 
         let mut chars = s.chars().peekable();
@@ -172,16 +172,16 @@ impl Token for ValueToken {
             Some(c) => c,
         };
         Ok(Some(match c {
-            '@' => (Self::AtSign, 0, 1),
-            '{' => (Self::LBrace, 0, 1),
-            '}' => (Self::RBrace, 0, 1),
-            '[' => (Self::LBracket, 0, 1),
-            ']' => (Self::RBracket, 0, 1),
-            '(' => (Self::LParen, 0, 1),
-            ')' => (Self::RParen, 0, 1),
-            ',' => (Self::Comma, 0, 1),
-            ':' if matches!(chars.peek(), Some(':')) => (Self::ColonColon, 0, 2),
-            ':' => (Self::Colon, 0, 1),
+            '@' => (Self::AtSign, 1),
+            '{' => (Self::LBrace, 1),
+            '}' => (Self::RBrace, 1),
+            '[' => (Self::LBracket, 1),
+            ']' => (Self::RBracket, 1),
+            '(' => (Self::LParen, 1),
+            ')' => (Self::RParen, 1),
+            ',' => (Self::Comma, 1),
+            ':' if matches!(chars.peek(), Some(':')) => (Self::ColonColon, 2),
+            ':' => (Self::Colon, 1),
             '0' if matches!(chars.peek(), Some('x')) => {
                 chars.next().unwrap();
                 match chars.next() {
@@ -209,20 +209,18 @@ impl Token for ValueToken {
                         None => bail!("Unexpected end of string before end quote: {}", s),
                     }
                 }
-                if s[2..len - 1].chars().any(|c| c == '\\') {
+                if s[..len].chars().any(|c| c == '\\') {
                     bail!(
                         "Escape characters not yet supported in byte string: {}",
-                        &s[2..len - 1]
+                        &s[..len]
                     )
                 }
-                (ValueToken::ByteString, 2, len - 1)
+                (ValueToken::ByteString, len)
             }
             's' if matches!(chars.peek(), Some('"')) => {
                 chars.next().unwrap();
                 // s"
-                let mut len = 2;
                 loop {
-                    len += 1;
                     // there is no need to check if a given char is valid UTF8 as it is already
                     // guaranteed; from the Rust docs
                     // (https://doc.rust-lang.org/std/primitive.char.html): "char values are USVs
@@ -231,21 +229,21 @@ impl Token for ValueToken {
                     // valid UTF8, those stored in &str are
                     match chars.next() {
                         Some('"') => break,
-                        Some(c) => {
-                            eprintln!("CHAR: {}", c);
-                            ()
-                        }
+                        Some(_) => (),
                         None => bail!("Unexpected end of string before end quote: {}", s),
                     }
                 }
-                if s[2..len - 1].chars().any(|c| c == '\\') {
+                // if we got here then it's guaranteed that s is a double-quoted UTF8 string, but we
+                // need the length in bytes rather than chars (as s is sliced in parser and slicing
+                // str uses byte indexes)
+                let len = s.len() - 3; // 3 for two double-quotes and the 's' prexif
+                if s[..len].chars().any(|c| c == '\\') {
                     bail!(
                         "Escape characters not yet supported in utf8 string: {}",
-                        &s[2..len - 1]
+                        &s[..len]
                     )
                 }
-                eprintln!("LEN: {}", len);
-                (ValueToken::Utf8String, 2, len - 1)
+                (ValueToken::Utf8String, len)
             }
             'x' if matches!(chars.peek(), Some('"')) => {
                 chars.next().unwrap();
@@ -272,7 +270,7 @@ impl Token for ValueToken {
                         &s[..len]
                     )
                 }
-                (ValueToken::HexString, 2, len - 1)
+                (ValueToken::HexString, len)
             }
             c if c.is_ascii_digit() => {
                 // c + remaining
@@ -284,7 +282,7 @@ impl Token for ValueToken {
             c if c.is_ascii_whitespace() => {
                 // c + remaining
                 let len = 1 + chars.take_while(char::is_ascii_whitespace).count();
-                (Self::Whitespace, 0, len)
+                (Self::Whitespace, len)
             }
             c if c.is_ascii_alphabetic() => {
                 // c + remaining
@@ -292,7 +290,7 @@ impl Token for ValueToken {
                 let len = 1 + chars
                     .take_while(|c| identifier::is_valid_identifier_char(*c))
                     .count();
-                (Self::Ident, 0, len)
+                (Self::Ident, len)
             }
             _ => bail!("unrecognized token: {}", s),
         }))

@@ -63,7 +63,7 @@ impl Token for TypeToken {
         matches!(self, Self::Whitespace)
     }
 
-    fn next_token(s: &str) -> anyhow::Result<Option<(Self, usize, usize)>> {
+    fn next_token(s: &str) -> anyhow::Result<Option<(Self, usize)>> {
         let mut chars = s.chars().peekable();
 
         let c = match chars.next() {
@@ -71,11 +71,11 @@ impl Token for TypeToken {
             Some(c) => c,
         };
         Ok(Some(match c {
-            '<' => (Self::Lt, 0, 1),
-            '>' => (Self::Gt, 0, 1),
-            ',' => (Self::Comma, 0, 1),
+            '<' => (Self::Lt, 1),
+            '>' => (Self::Gt, 1),
+            ',' => (Self::Comma, 1),
             ':' => match chars.next() {
-                Some(':') => (Self::ColonColon, 0, 2),
+                Some(':') => (Self::ColonColon, 2),
                 _ => bail!("unrecognized token: {}", s),
             },
             '0' if matches!(chars.peek(), Some('x') | Some('X')) => {
@@ -84,7 +84,7 @@ impl Token for TypeToken {
                     Some(c) if c.is_ascii_hexdigit() => {
                         // 0x + c + remaining
                         let len = 3 + chars.take_while(char::is_ascii_hexdigit).count();
-                        (Self::AddressIdent, 0, len)
+                        (Self::AddressIdent, len)
                     }
                     _ => bail!("unrecognized token: {}", s),
                 }
@@ -92,19 +92,19 @@ impl Token for TypeToken {
             c if c.is_ascii_digit() => {
                 // c + remaining
                 let len = 1 + chars.take_while(char::is_ascii_digit).count();
-                (Self::AddressIdent, 0, len)
+                (Self::AddressIdent, len)
             }
             c if c.is_ascii_whitespace() => {
                 // c + remaining
                 let len = 1 + chars.take_while(char::is_ascii_whitespace).count();
-                (Self::Whitespace, 0, len)
+                (Self::Whitespace, len)
             }
             c if c.is_ascii_alphabetic() => {
                 // c + remaining
                 let len = 1 + chars
                     .take_while(|c| identifier::is_valid_identifier_char(*c))
                     .count();
-                (Self::Ident, 0, len)
+                (Self::Ident, len)
             }
             _ => bail!("unrecognized token: {}", s),
         }))

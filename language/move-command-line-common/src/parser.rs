@@ -14,12 +14,12 @@ use crate::{
 
 pub trait Token: Display + Copy + Eq {
     fn is_whitespace(&self) -> bool;
-    fn next_token(s: &str) -> Result<Option<(Self, usize, usize)>>;
+    fn next_token(s: &str) -> Result<Option<(Self, usize)>>;
     fn tokenize(mut s: &str) -> Result<Vec<(Self, &str)>> {
         let mut v = vec![];
-        while let Some((tok, b, e)) = Self::next_token(s)? {
-            v.push((tok, &s[b..e]));
-            s = &s[e..];
+        while let Some((tok, n)) = Self::next_token(s)? {
+            v.push((tok, &s[..n]));
+            s = &s[n..];
         }
         Ok(v)
     }
@@ -207,24 +207,43 @@ impl<'a, I: Iterator<Item = (ValueToken, &'a str)>> Parser<'a, ValueToken, I> {
             ValueToken::True => ParsedValue::Bool(true),
             ValueToken::False => ParsedValue::Bool(false),
 
-            ValueToken::ByteString => ParsedValue::Vector(
-                contents
-                    .as_bytes()
-                    .iter()
-                    .copied()
-                    .map(ParsedValue::U8)
-                    .collect(),
-            ),
-            ValueToken::Utf8String => ParsedValue::Vector(
-                contents
-                    .as_bytes()
-                    .iter()
-                    .copied()
-                    .map(ParsedValue::U8)
-                    .collect(),
-            ),
+            ValueToken::ByteString => {
+                let contents = contents
+                    .strip_prefix("b\"")
+                    .unwrap()
+                    .strip_suffix('\"')
+                    .unwrap();
+                ParsedValue::Vector(
+                    contents
+                        .as_bytes()
+                        .iter()
+                        .copied()
+                        .map(ParsedValue::U8)
+                        .collect(),
+                )
+            }
+            ValueToken::Utf8String => {
+                let contents = contents
+                    .strip_prefix("s\"")
+                    .unwrap()
+                    .strip_suffix('\"')
+                    .unwrap();
+                ParsedValue::Vector(
+                    contents
+                        .as_bytes()
+                        .iter()
+                        .copied()
+                        .map(ParsedValue::U8)
+                        .collect(),
+                )
+            }
             ValueToken::HexString => {
-                let contents = contents.to_ascii_lowercase();
+                let contents = contents
+                    .strip_prefix("x\"")
+                    .unwrap()
+                    .strip_suffix('\"')
+                    .unwrap()
+                    .to_ascii_lowercase();
                 ParsedValue::Vector(
                     hex::decode(contents)
                         .unwrap()

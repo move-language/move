@@ -7,11 +7,12 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-# diem dependencies
+# Move dependencies
 move-command-line-common = { path = "../../move-command-line-common" }
 move-model = { path = "../../move-model" }
 move-core-types = { path = "../../move-core/types" }
-bcs = "0.1.2"
+
+bcs.workspace = true
 
 # external dependencies
 log = "0.4.14"

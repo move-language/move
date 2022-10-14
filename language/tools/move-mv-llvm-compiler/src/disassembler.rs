@@ -1166,6 +1166,8 @@ impl<'a> Disassembler<'a> {
             None => "script".to_owned(),
         };
 
+        println!("Disassembling: {}", header);
+
         let struct_defs: Vec<String> = (0..self
             .source_mapper
             .bytecode

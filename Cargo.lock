@@ -3377,7 +3377,6 @@ dependencies = [
  "move-compiler",
  "move-core-types",
  "move-coverage",
- "move-disassembler",
  "move-ir-types",
 ]
 

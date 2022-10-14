@@ -221,9 +221,9 @@ impl From<&U256Inner> for EthnumU256 {
     fn from(n: &U256Inner) -> EthnumU256 {
         // TODO (ade): use better solution for conversion
         // Currently using str because EthnumU256 can be little or big endian
-        let num_str = format!("0x{:X}", n.0);
+        let num_str = format!("{:X}", n.0);
         // TODO (ade): remove expect()
-        EthnumU256::from_str_hex(&num_str).expect("Cannot convert to U256")
+        EthnumU256::from_str_radix(&num_str, 16).expect("Cannot convert to U256")
     }
 }
 

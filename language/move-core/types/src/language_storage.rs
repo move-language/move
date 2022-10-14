@@ -64,8 +64,11 @@ impl TypeTag {
         match self {
             Bool => "bool".to_owned(),
             U8 => "u8".to_owned(),
+            U16 => "u16".to_owned(),
+            U32 => "u32".to_owned(),
             U64 => "u64".to_owned(),
             U128 => "u128".to_owned(),
+            U256 => "u256".to_owned(),
             Address => "address".to_owned(),
             Signer => "signer".to_owned(),
             Vector(t) => format!("vector<{}>", t.to_canonical_string()),

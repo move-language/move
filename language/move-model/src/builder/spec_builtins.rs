@@ -139,6 +139,30 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
             },
         );
 
+        // Constants (max_u16(), etc.)
+        trans.define_spec_fun(
+            trans.builtin_qualified_symbol("max_u16"),
+            SpecFunEntry {
+                loc: loc.clone(),
+                oper: Operation::MaxU16,
+                type_params: vec![],
+                arg_types: vec![],
+                result_type: num_t.clone(),
+            },
+        );
+
+        // Constants (max_u32(), etc.)
+        trans.define_spec_fun(
+            trans.builtin_qualified_symbol("max_u32"),
+            SpecFunEntry {
+                loc: loc.clone(),
+                oper: Operation::MaxU32,
+                type_params: vec![],
+                arg_types: vec![],
+                result_type: num_t.clone(),
+            },
+        );
+
         trans.define_spec_fun(
             trans.builtin_qualified_symbol("max_u64"),
             SpecFunEntry {
@@ -155,6 +179,18 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
             SpecFunEntry {
                 loc: loc.clone(),
                 oper: Operation::MaxU128,
+                type_params: vec![],
+                arg_types: vec![],
+                result_type: num_t.clone(),
+            },
+        );
+
+        // Constants (max_u256(), etc.)
+        trans.define_spec_fun(
+            trans.builtin_qualified_symbol("max_u256"),
+            SpecFunEntry {
+                loc: loc.clone(),
+                oper: Operation::MaxU256,
                 type_params: vec![],
                 arg_types: vec![],
                 result_type: num_t.clone(),

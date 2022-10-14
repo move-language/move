@@ -99,8 +99,8 @@ pub enum Constant {
     AddressArray(Vec<BigUint>),
 }
 
-impl From<U256Inner> for Constant {
-    fn from(n: U256Inner) -> Constant {
+impl From<&U256Inner> for Constant {
+    fn from(n: &U256Inner) -> Constant {
         Constant::U256(U256::from(n))
     }
 }

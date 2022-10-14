@@ -414,7 +414,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.temp_stack.push(temp_index);
                 self.local_types.push(Type::Primitive(PrimitiveType::U256));
                 self.code
-                    .push(Bytecode::Load(attr_id, temp_index, Constant::from(*number)));
+                    .push(Bytecode::Load(attr_id, temp_index, Constant::from(number)));
                 self.temp_count += 1;
             }
 
@@ -1349,8 +1349,11 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             },
             (Type::Primitive(PrimitiveType::Bool), MoveValue::Bool(b)) => Constant::Bool(*b),
             (Type::Primitive(PrimitiveType::U8), MoveValue::U8(b)) => Constant::U8(*b),
+            (Type::Primitive(PrimitiveType::U16), MoveValue::U16(b)) => Constant::U16(*b),
+            (Type::Primitive(PrimitiveType::U32), MoveValue::U32(b)) => Constant::U32(*b),
             (Type::Primitive(PrimitiveType::U64), MoveValue::U64(b)) => Constant::U64(*b),
             (Type::Primitive(PrimitiveType::U128), MoveValue::U128(b)) => Constant::U128(*b),
+            (Type::Primitive(PrimitiveType::U256), MoveValue::U256(b)) => Constant::U256(b.into()),
             (Type::Primitive(PrimitiveType::Address), MoveValue::Address(a)) => {
                 Constant::Address(move_model::addr_to_big_uint(a))
             }

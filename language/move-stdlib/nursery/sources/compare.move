@@ -22,7 +22,7 @@ module std::compare {
     ///   `compare::cmp<T>(t1, t2) != EQUAL` iff `t1 != t2`, where `==` and `!=` denote the Move
     ///    bytecode operations for polymorphic equality.
     /// - for all primitive types `T` with `<` and `>` comparison operators exposed in Move bytecode
-    ///   (`u8`, `u64`, `u128`), we have
+    ///   (`u8`, `u16`, `u32`, `u64`, `u128`, `u256`), we have
     ///   `compare_bcs_bytes(bcs(t1), bcs(t2)) == LESS_THAN` iff `t1 < t2` and (similarly)
     ///   `compare_bcs_bytes(bcs(t1), bcs(t2)) == LESS_THAN` iff `t1 > t2`.
     ///

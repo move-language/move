@@ -900,8 +900,11 @@ pub enum Operation {
     InRangeVec,
     RangeVec,
     MaxU8,
+    MaxU16,
+    MaxU32,
     MaxU64,
     MaxU128,
+    MaxU256,
 
     // Functions which support the transformation and translation process.
     AbortFlag,

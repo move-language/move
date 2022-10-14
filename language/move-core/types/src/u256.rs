@@ -217,8 +217,8 @@ impl From<&U256Inner> for BigInt {
     }
 }
 
-impl From<U256Inner> for EthnumU256 {
-    fn from(n: U256Inner) -> EthnumU256 {
+impl From<&U256Inner> for EthnumU256 {
+    fn from(n: &U256Inner) -> EthnumU256 {
         // TODO (ade): use better solution for conversion
         // Currently using str because EthnumU256 can be little or big endian
         let num_str = format!("0x{:X}", n.0);

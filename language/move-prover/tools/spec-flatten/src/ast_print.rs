@@ -330,8 +330,11 @@ impl SpecPrinter<'_> {
                     TypeDomain => self.print_type(&self.env.get_node_type(*node_id), ty_params),
                     ResourceDomain => self.print_type(&self.env.get_node_type(*node_id), ty_params),
                     MaxU8 => Self::doc("MAX_U8"),
+                    MaxU16 => Self::doc("MAX_U16"),
+                    MaxU32 => Self::doc("MAX_U32"),
                     MaxU64 => Self::doc("MAX_U64"),
                     MaxU128 => Self::doc("MAX_U128"),
+                    MaxU256 => Self::doc("MAX_U256"),
                     // unable to be specified by users
                     CanModify | AbortFlag | AbortCode | WellFormed | BoxValue | UnboxValue
                     | EmptyEventStore | ExtendEventStore | EventStoreIncludes

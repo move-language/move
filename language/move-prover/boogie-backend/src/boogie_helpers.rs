@@ -188,10 +188,10 @@ pub fn boogie_type(env: &GlobalEnv, ty: &Type) -> String {
     use Type::*;
     match ty {
         Primitive(p) => match p {
-            U8 | U64 | U128 | Num | Address => "int".to_string(),
+            U8 | U16 | U32 | U64 | U128 | U256 | Num | Address => "int".to_string(),
             Signer => "$signer".to_string(),
             Bool => "bool".to_string(),
-            _ => panic!("unexpected type"),
+            Range | EventStore => panic!("unexpected type"),
         },
         Vector(et) => format!("Vec ({})", boogie_type(env, et)),
         Struct(mid, sid, inst) => boogie_struct_name(&env.get_module(*mid).into_struct(*sid), inst),
@@ -222,14 +222,17 @@ pub fn boogie_type_suffix(env: &GlobalEnv, ty: &Type) -> String {
     match ty {
         Primitive(p) => match p {
             U8 => "u8".to_string(),
+            U16 => "u16".to_string(),
+            U32 => "u32".to_string(),
             U64 => "u64".to_string(),
             U128 => "u128".to_string(),
+            U256 => "u256".to_string(),
             Num => "num".to_string(),
             Address => "address".to_string(),
             Signer => "signer".to_string(),
             Bool => "bool".to_string(),
             Range => "range".to_string(),
-            _ => format!("<<unsupported {:?}>>", ty),
+            EventStore => format!("<<unsupported {:?}>>", ty),
         },
         Vector(et) => format!("vec{}", boogie_inst_suffix(env, &[et.as_ref().to_owned()])),
         Struct(mid, sid, inst) => {

@@ -5,7 +5,7 @@ error[E04003]: built-in operation not supported
   │          ^^^^^^^^^^^^^
   │          │
   │          Invalid argument to 'as'
-  │          Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
+  │          Found: '0x8675309::M::S'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04003]: built-in operation not supported
   ┌─ tests/move_check/translated_ir_tests/move/operators/casting_operators_types_mismatch.move:5:10
@@ -14,7 +14,7 @@ error[E04003]: built-in operation not supported
   │          ^^^^^^^^^^^^^
   │          │
   │          Invalid argument to 'as'
-  │          Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
+  │          Found: '0x8675309::M::S'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04003]: built-in operation not supported
   ┌─ tests/move_check/translated_ir_tests/move/operators/casting_operators_types_mismatch.move:6:10
@@ -23,7 +23,7 @@ error[E04003]: built-in operation not supported
   │          ^^^^^^^^^^^^^
   │          │
   │          Invalid argument to 'as'
-  │          Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
+  │          Found: '0x8675309::M::S'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04003]: built-in operation not supported
   ┌─ tests/move_check/translated_ir_tests/move/operators/casting_operators_types_mismatch.move:7:10
@@ -32,7 +32,7 @@ error[E04003]: built-in operation not supported
   │          ^^^^
   │          │
   │          Invalid argument to 'as'
-  │          Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+  │          Found: 'bool'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04003]: built-in operation not supported
   ┌─ tests/move_check/translated_ir_tests/move/operators/casting_operators_types_mismatch.move:8:10
@@ -41,7 +41,7 @@ error[E04003]: built-in operation not supported
   │          ^^^^
   │          │
   │          Invalid argument to 'as'
-  │          Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+  │          Found: 'bool'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04003]: built-in operation not supported
   ┌─ tests/move_check/translated_ir_tests/move/operators/casting_operators_types_mismatch.move:9:10
@@ -50,7 +50,7 @@ error[E04003]: built-in operation not supported
   │          ^^^^
   │          │
   │          Invalid argument to 'as'
-  │          Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+  │          Found: 'bool'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/translated_ir_tests/move/operators/casting_operators_types_mismatch.move:10:10
@@ -59,7 +59,7 @@ error[E04003]: built-in operation not supported
    │          ^^^^
    │          │
    │          Invalid argument to 'as'
-   │          Found: 'address'. But expected: 'u8', 'u64', 'u128'
+   │          Found: 'address'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/translated_ir_tests/move/operators/casting_operators_types_mismatch.move:11:10
@@ -68,5 +68,5 @@ error[E04003]: built-in operation not supported
    │          ^^^^
    │          │
    │          Invalid argument to 'as'
-   │          Found: 'address'. But expected: 'u8', 'u64', 'u128'
+   │          Found: 'address'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 

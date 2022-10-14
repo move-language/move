@@ -5,7 +5,7 @@ error[E04012]: invalid type for constant
   │               ^^^^
   │               │
   │               Unpermitted constant type
-  │               Found: '&u64'. But expected one of: 'u8', 'u64', 'u128', 'bool', 'address', 'vector<_>'
+  │               Found: '&u64'. But expected one of: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256', 'bool', 'address', 'vector<_>'
 
 error[E04013]: invalid statement or expression in constant
   ┌─ tests/move_check/typing/constant_non_base_type.move:3:22
@@ -20,7 +20,7 @@ error[E04012]: invalid type for constant
   │               ^^^^^^^^
   │               │
   │               Unpermitted constant type
-  │               Found: '&mut u64'. But expected one of: 'u8', 'u64', 'u128', 'bool', 'address', 'vector<_>'
+  │               Found: '&mut u64'. But expected one of: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256', 'bool', 'address', 'vector<_>'
 
 error[E04006]: invalid subtype
   ┌─ tests/move_check/typing/constant_non_base_type.move:4:15
@@ -44,7 +44,7 @@ error[E04012]: invalid type for constant
   │               ^^
   │               │
   │               Unpermitted constant type
-  │               Found: '()'. But expected one of: 'u8', 'u64', 'u128', 'bool', 'address', 'vector<_>'
+  │               Found: '()'. But expected one of: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256', 'bool', 'address', 'vector<_>'
 
 error[E04012]: invalid type for constant
   ┌─ tests/move_check/typing/constant_non_base_type.move:6:15
@@ -53,5 +53,5 @@ error[E04012]: invalid type for constant
   │               ^^^^^^^^^^^^^^^
   │               │
   │               Unpermitted constant type
-  │               Found: '(_, _)'. But expected one of: 'u8', 'u64', 'u128', 'bool', 'address', 'vector<_>'
+  │               Found: '(_, _)'. But expected one of: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256', 'bool', 'address', 'vector<_>'
 

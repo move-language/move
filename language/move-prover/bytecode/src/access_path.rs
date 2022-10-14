@@ -208,7 +208,7 @@ impl AbsAddr {
         true
     }
 
-    /// Substitute all occurences of Footprint(ap) in `self` by resolving the accesss path
+    /// Substitute all occurrences of Footprint(ap) in `self` by resolving the access path
     /// `ap` in `sub_map`
     pub fn substitute_footprint(
         &mut self,
@@ -351,7 +351,7 @@ impl GlobalKey {
         self.addr.is_statically_known() && self.ty.is_closed()
     }
 
-    /// Substitute all occurences of Footprint(ap) in `self.addr` by resolving the accesss path
+    /// Substitute all occurrences of Footprint(ap) in `self.addr` by resolving the access path
     /// `ap` in `sub_map`.
     pub fn substitute_footprint(
         &mut self,
@@ -472,7 +472,7 @@ impl Offset {
                     .get_type();
                 field_type.instantiate(types)
             }
-            (Type::Vector(t), Offset::VectorIndex) => (*t.clone()),
+            (Type::Vector(t), Offset::VectorIndex) => *t.clone(),
             (Type::Primitive(PrimitiveType::Address), Offset::Global(s)) => s.get_type(),
             (Type::Primitive(PrimitiveType::Signer), Offset::Global(s)) => {
                 // we conflate address and signer, so this can happen

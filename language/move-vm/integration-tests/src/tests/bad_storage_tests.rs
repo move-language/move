@@ -351,7 +351,7 @@ fn test_missing_module_dependency() {
 }
 
 #[test]
-fn test_malformed_module_denpency() {
+fn test_malformed_module_dependency() {
     // Compile two modules M, N where N depends on M.
     let code = r#"
         module {{ADDR}}::M {

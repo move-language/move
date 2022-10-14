@@ -14,7 +14,8 @@ move-symbol-pool = { path = "../../move-symbol-pool" }
 move-binary-format = { path = "../../move-binary-format" }
 move-command-line-common = { path = "../../move-command-line-common" }
 
-bcs = "0.1.2"
+bcs.workspace = true
+
 serde = { version = "1.0.124", default-features = false }
 
 [features]

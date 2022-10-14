@@ -14,7 +14,6 @@ better_any = "0.1.1"
 walkdir = "2.3.1"
 itertools = "0.10.0"
 smallvec = "1.6.1"
-bcs = "0.1.2"
 sha3 = "0.9.1"
 move-command-line-common = { path = "../../../move-command-line-common" }
 move-core-types = { path = "../../../move-core/types" }
@@ -23,6 +22,8 @@ move-vm-types = { path = "../../../move-vm/types" }
 move-vm-runtime = { path = "../../../move-vm/runtime", features = ["debugging"] }
 move-vm-test-utils = { path = "../../../move-vm/test-utils" }
 move-binary-format = { path = "../../../move-binary-format" }
+
+bcs.workspace = true
 
 [dev-dependencies]
 datatest-stable = "0.1.1"

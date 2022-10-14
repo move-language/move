@@ -63,8 +63,8 @@ impl<'a> CodeUnitVerifier<'a> {
     ) -> PartialVMResult<()> {
         // create `FunctionView` and `BinaryIndexedView`
         control_flow::verify_fallthrough(None, &script.code)?;
-        control_flow::verify(verifier_config, None, &script.code)?;
         let function_view = FunctionView::script(script);
+        control_flow::verify_reducibility(verifier_config, &function_view)?;
         let resolver = BinaryIndexedView::Script(script);
         //verify
         let code_unit_verifier = CodeUnitVerifier {
@@ -89,7 +89,6 @@ impl<'a> CodeUnitVerifier<'a> {
         // create `FunctionView` and `BinaryIndexedView`
         let function_handle = module.function_handle_at(function_definition.function);
         control_flow::verify_fallthrough(Some(index), code)?;
-        control_flow::verify(verifier_config, Some(index), code)?;
         let function_view = FunctionView::function(module, index, code, function_handle);
 
         if let Some(limit) = verifier_config.max_basic_blocks {
@@ -100,6 +99,7 @@ impl<'a> CodeUnitVerifier<'a> {
             }
         }
 
+        control_flow::verify_reducibility(verifier_config, &function_view)?;
         let resolver = BinaryIndexedView::Module(module);
         let mut name_def_map = HashMap::new();
         for (idx, func_def) in module.function_defs().iter().enumerate() {

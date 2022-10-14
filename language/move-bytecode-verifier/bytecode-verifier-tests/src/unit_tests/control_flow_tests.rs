@@ -5,6 +5,7 @@
 use crate::support::dummy_procedure_module;
 use move_binary_format::{
     access::ModuleAccess,
+    binary_views::FunctionView,
     errors::PartialVMResult,
     file_format::{Bytecode, CompiledModule, FunctionDefinitionIndex, TableIndex},
 };
@@ -18,14 +19,18 @@ fn verify_module(verifier_config: &VerifierConfig, module: &CompiledModule) -> P
         .enumerate()
         .filter(|(_, def)| !def.is_native())
     {
+        let function_handle = module.function_handle_at(function_definition.function);
         let current_function = Some(FunctionDefinitionIndex(idx as TableIndex));
         let code = function_definition
             .code
             .as_ref()
             .expect("unexpected native function");
 
+        let function_view =
+            FunctionView::function(&module, current_function.unwrap(), &code, function_handle);
+
         control_flow::verify_fallthrough(current_function, code)?;
-        control_flow::verify(verifier_config, current_function, code)?;
+        control_flow::verify_reducibility(verifier_config, &function_view)?;
     }
     Ok(())
 }
@@ -127,4 +132,48 @@ fn nested_loops_exceed_max_depth() {
         result.unwrap_err().major_status(),
         StatusCode::LOOP_MAX_DEPTH_REACHED
     );
+}
+
+#[test]
+fn non_loop_backward_jump() {
+    let module = dummy_procedure_module(vec![
+        Bytecode::Branch(2),
+        Bytecode::Ret,
+        Bytecode::Branch(1),
+    ]);
+    let result = verify_module(&Default::default(), &module);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn irreducible_control_flow_graph() {
+    let module = dummy_procedure_module(vec![
+        Bytecode::LdTrue,
+        Bytecode::BrTrue(3),
+        Bytecode::Nop,
+        Bytecode::LdFalse,
+        Bytecode::BrFalse(2),
+        Bytecode::Ret,
+    ]);
+    let result = verify_module(&Default::default(), &module);
+    assert_eq!(
+        result.unwrap_err().major_status(),
+        StatusCode::INVALID_LOOP_SPLIT,
+    );
+}
+
+#[test]
+fn nested_loop_break() {
+    let module = dummy_procedure_module(vec![
+        Bytecode::LdFalse,
+        Bytecode::LdFalse,
+        Bytecode::LdFalse,
+        Bytecode::Branch(7),
+        Bytecode::BrFalse(2),
+        Bytecode::BrFalse(1),
+        Bytecode::BrFalse(0),
+        Bytecode::Ret,
+    ]);
+    let result = verify_module(&Default::default(), &module);
+    assert!(result.is_ok());
 }

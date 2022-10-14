@@ -231,7 +231,10 @@ impl Token for ValueToken {
                     // valid UTF8, those stored in &str are
                     match chars.next() {
                         Some('"') => break,
-                        Some(_) => (),
+                        Some(c) => {
+                            eprintln!("CHAR: {}", c);
+                            ()
+                        }
                         None => bail!("Unexpected end of string before end quote: {}", s),
                     }
                 }
@@ -241,6 +244,7 @@ impl Token for ValueToken {
                         &s[2..len - 1]
                     )
                 }
+                eprintln!("LEN: {}", len);
                 (ValueToken::Utf8String, 2, len - 1)
             }
             'x' if matches!(chars.peek(), Some('"')) => {

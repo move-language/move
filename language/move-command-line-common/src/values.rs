@@ -236,7 +236,7 @@ impl Token for ValueToken {
                 // if we got here then it's guaranteed that s is a double-quoted UTF8 string, but we
                 // need the length in bytes rather than chars (as s is sliced in parser and slicing
                 // str uses byte indexes)
-                let len = s.len() - 3; // 3 for two double-quotes and the 's' prexif
+                let len = s.len();
                 if s[..len].chars().any(|c| c == '\\') {
                     bail!(
                         "Escape characters not yet supported in utf8 string: {}",

@@ -130,7 +130,7 @@ fn native_sub_string(
         // This is safe because we guarantee the bytes to be utf8.
         std::str::from_utf8_unchecked(s_ref.as_slice())
     };
-    let v = Value::vector_u8((&s_str[i..j]).as_bytes().iter().cloned());
+    let v = Value::vector_u8(s_str[i..j].as_bytes().iter().cloned());
 
     let cost = gas_params.base + gas_params.per_byte * NumBytes::new((j - i) as u64);
     NativeResult::map_partial_vm_result_one(cost, Ok(v))

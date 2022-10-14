@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use move_binary_format::{control_flow_graph::VMControlFlowGraph, file_format::Bytecode};
-use move_bytecode_verifier::loop_summary::LoopSummary;
+use move_bytecode_verifier::loop_summary::{LoopPartition, LoopSummary};
 
 macro_rules! assert_node {
     ( $summary:ident, $node:expr ; $block:expr, $preds:expr, $descs:expr, $backs:expr ) => {
@@ -341,7 +341,7 @@ fn loops_in_branches_summary() {
 
 #[test]
 fn loop_collapsing() {
-    let mut summary = {
+    let summary = {
         use Bytecode::*;
         LoopSummary::new(&VMControlFlowGraph::new(&[
             /* B0, L0 */ LdTrue,
@@ -352,21 +352,22 @@ fn loop_collapsing() {
         ]))
     };
 
+    let mut partition = LoopPartition::new(&summary);
     let n: Vec<_> = summary.preorder().collect();
 
     for id in &n {
-        assert_eq!(*id, summary.containing_loop(*id), "Self-parent {:?}", id);
+        assert_eq!(*id, partition.containing_loop(*id), "Self-parent {:?}", id);
     }
 
-    assert_eq!(summary.collapse_loop(n[0], &[n[2]].into()), 1);
-    assert_eq!(summary.containing_loop(n[0]), n[0]);
-    assert_eq!(summary.containing_loop(n[1]), n[1]);
-    assert_eq!(summary.containing_loop(n[2]), n[0]);
+    assert_eq!(partition.collapse_loop(n[0], &[n[2]].into()), 1);
+    assert_eq!(partition.containing_loop(n[0]), n[0]);
+    assert_eq!(partition.containing_loop(n[1]), n[1]);
+    assert_eq!(partition.containing_loop(n[2]), n[0]);
 }
 
 #[test]
 fn nested_loop_collapsing() {
-    let mut summary = {
+    let summary = {
         use Bytecode::*;
         LoopSummary::new(&VMControlFlowGraph::new(&[
             /* B0, L0 */ Nop,
@@ -380,10 +381,11 @@ fn nested_loop_collapsing() {
         ]))
     };
 
+    let mut partition = LoopPartition::new(&summary);
     let n: Vec<_> = summary.preorder().collect();
 
     // Self-loop is a special case -- its depth should still be bumped.
-    assert_eq!(summary.collapse_loop(n[1], &[].into()), 1);
-    assert_eq!(summary.collapse_loop(n[0], &[n[1], n[2]].into()), 2);
-    assert_eq!(summary.collapse_loop(n[0], &[n[0], n[3]].into()), 3);
+    assert_eq!(partition.collapse_loop(n[1], &[].into()), 1);
+    assert_eq!(partition.collapse_loop(n[0], &[n[1], n[2]].into()), 2);
+    assert_eq!(partition.collapse_loop(n[0], &[n[0], n[3]].into()), 3);
 }

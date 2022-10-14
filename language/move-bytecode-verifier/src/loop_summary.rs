@@ -16,11 +16,9 @@ pub struct NodeId(u16);
 ///   - back edges (going backward from descendant to ancestor in the spanning tree)
 ///   - ... everything else.
 /// - Calculate which node is descendant of which in the DFST
-/// - Enable collapsing nodes that form loops down into a single representative node which remembers
-///   its loop nesting depth (how many levels of nesting are contained within it).
 /// - Mapping nodes in the summary back to the blocks they originate from in the CFG.
 ///
-/// This functionality is used to implement Tarjan's Loop Reducibility algorithm (Tarjan 1974).
+/// This is used to implement Tarjan's Loop Reducibility algorithm (Tarjan 1974).
 pub struct LoopSummary {
     /// Original block corresponding to this loop, useful for recovering code offsets, e.g. for
     /// error messages.
@@ -33,9 +31,14 @@ pub struct LoopSummary {
     /// the DFS tree, and `pred_edges` which are all the rest.
     backs: Vec<Vec<NodeId>>,
     preds: Vec<Vec<NodeId>>,
+}
 
-    /// A disjoint-set data structure used when collapsing loops down to single nodes in the summary
-    /// graph.
+/// A disjoint-set data structure used when collapsing loops down to single nodes in the summary
+/// graph while remembering its loop nesting depth (how many levels of nesting are contained within
+/// it)
+pub struct LoopPartition {
+    /// The parent relationship in the disjoint-set.  The transitive closure of this type maps a
+    /// node to its representative.
     parents: Vec<NodeId>,
 
     /// The nesting depth of (collapsed) loops in the summary graph.  Initially all loops are
@@ -144,8 +147,6 @@ impl LoopSummary {
             descs,
             backs,
             preds,
-            parents: (0..num_blocks).map(|id| NodeId(id as u16)).collect(),
-            depths: vec![0; num_blocks],
         }
     }
 
@@ -155,6 +156,38 @@ impl LoopSummary {
         // All the descendants of `ancestor` in the DFST will have the IDs immediately following
         // it.
         ancestor <= descendant && descendant <= ancestor + self.descs[ancestor as usize]
+    }
+
+    /// Returns an iterator over `NodeId`s in this `LoopSummary` in pre-order according to its
+    /// depth-first spanning tree.
+    pub fn preorder(&self) -> impl DoubleEndedIterator<Item = NodeId> {
+        // `LoopSummary::new` assigns `NodeId`s to blocks in preorder, so just return the natural
+        // order.
+        (0..self.blocks.len()).map(|id| NodeId(id as u16))
+    }
+
+    /// Per-node accessors
+    pub fn block(&self, l: NodeId) -> BlockId {
+        self.blocks[usize::from(l)]
+    }
+
+    pub fn back_edges(&self, l: NodeId) -> &Vec<NodeId> {
+        &self.backs[usize::from(l)]
+    }
+
+    pub fn pred_edges(&self, l: NodeId) -> &Vec<NodeId> {
+        &self.preds[usize::from(l)]
+    }
+
+}
+
+impl LoopPartition {
+    pub fn new(summary: &LoopSummary) -> Self {
+        let num_blocks = summary.blocks.len();
+        LoopPartition {
+            parents: (0..num_blocks).map(|id| NodeId(id as u16)).collect(),
+            depths: vec![0; num_blocks],
+        }
     }
 
     /// Find the head of the collapsed node containing loop `id`, use path-compression to speed up
@@ -210,27 +243,7 @@ impl LoopSummary {
         depth
     }
 
-    /// Returns an iterator over `NodeId`s in this `LoopSummary` in pre-order according to its
-    /// depth-first spanning tree.
-    pub fn preorder(&self) -> impl DoubleEndedIterator<Item = NodeId> {
-        // `LoopSummary::new` assigns `NodeId`s to blocks in preorder, so just return the natural
-        // order.
-        (0..self.blocks.len()).map(|id| NodeId(id as u16))
-    }
-
-    /// Per-loop accessors
-    pub fn block(&self, l: NodeId) -> BlockId {
-        self.blocks[usize::from(l)]
-    }
-
-    pub fn back_edges(&self, l: NodeId) -> &Vec<NodeId> {
-        &self.backs[usize::from(l)]
-    }
-
-    pub fn pred_edges(&self, l: NodeId) -> &Vec<NodeId> {
-        &self.preds[usize::from(l)]
-    }
-
+    /// Per-node accessors
     fn parent(&self, l: NodeId) -> NodeId {
         self.parents[usize::from(l)]
     }

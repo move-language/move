@@ -145,25 +145,25 @@ impl Token for ValueToken {
         matches!(self, Self::Whitespace)
     }
 
-    fn next_token(s: &str) -> anyhow::Result<Option<(Self, usize)>> {
-        fn number_maybe_with_suffix(text: &str, num_text_len: usize) -> (ValueToken, usize) {
+    fn next_token(s: &str) -> anyhow::Result<Option<(Self, usize, usize)>> {
+        fn number_maybe_with_suffix(text: &str, num_text_len: usize) -> (ValueToken, usize, usize) {
             let rest = &text[num_text_len..];
             if rest.starts_with("u8") {
-                (ValueToken::NumberTyped, num_text_len + 2)
+                (ValueToken::NumberTyped, 0, num_text_len + 2)
             } else if rest.starts_with("u64") {
-                (ValueToken::NumberTyped, num_text_len + 3)
+                (ValueToken::NumberTyped, 0, num_text_len + 3)
             } else if rest.starts_with("u128") {
-                (ValueToken::NumberTyped, num_text_len + 4)
+                (ValueToken::NumberTyped, 0, num_text_len + 4)
             } else {
                 // No typed suffix
-                (ValueToken::Number, num_text_len)
+                (ValueToken::Number, 0, num_text_len)
             }
         }
         if s.starts_with("true") {
-            return Ok(Some((Self::True, 4)));
+            return Ok(Some((Self::True, 0, 4)));
         }
         if s.starts_with("false") {
-            return Ok(Some((Self::False, 5)));
+            return Ok(Some((Self::False, 0, 5)));
         }
 
         let mut chars = s.chars().peekable();
@@ -172,16 +172,16 @@ impl Token for ValueToken {
             Some(c) => c,
         };
         Ok(Some(match c {
-            '@' => (Self::AtSign, 1),
-            '{' => (Self::LBrace, 1),
-            '}' => (Self::RBrace, 1),
-            '[' => (Self::LBracket, 1),
-            ']' => (Self::RBracket, 1),
-            '(' => (Self::LParen, 1),
-            ')' => (Self::RParen, 1),
-            ',' => (Self::Comma, 1),
-            ':' if matches!(chars.peek(), Some(':')) => (Self::ColonColon, 2),
-            ':' => (Self::Colon, 1),
+            '@' => (Self::AtSign, 0, 1),
+            '{' => (Self::LBrace, 0, 1),
+            '}' => (Self::RBrace, 0, 1),
+            '[' => (Self::LBracket, 0, 1),
+            ']' => (Self::RBracket, 0, 1),
+            '(' => (Self::LParen, 0, 1),
+            ')' => (Self::RParen, 0, 1),
+            ',' => (Self::Comma, 0, 1),
+            ':' if matches!(chars.peek(), Some(':')) => (Self::ColonColon, 0, 2),
+            ':' => (Self::Colon, 0, 1),
             '0' if matches!(chars.peek(), Some('x')) => {
                 chars.next().unwrap();
                 match chars.next() {
@@ -209,13 +209,13 @@ impl Token for ValueToken {
                         None => bail!("Unexpected end of string before end quote: {}", s),
                     }
                 }
-                if s[..len].chars().any(|c| c == '\\') {
+                if s[2..len - 1].chars().any(|c| c == '\\') {
                     bail!(
                         "Escape characters not yet supported in byte string: {}",
-                        &s[..len]
+                        &s[2..len - 1]
                     )
                 }
-                (ValueToken::ByteString, len)
+                (ValueToken::ByteString, 2, len - 1)
             }
             's' if matches!(chars.peek(), Some('"')) => {
                 chars.next().unwrap();
@@ -231,7 +231,7 @@ impl Token for ValueToken {
                     // valid UTF8, those stored in &str are
                     match chars.next() {
                         Some('"') => break,
-                        Some(c) => (),
+                        Some(_) => (),
                         None => bail!("Unexpected end of string before end quote: {}", s),
                     }
                 }
@@ -241,7 +241,7 @@ impl Token for ValueToken {
                         &s[2..len - 1]
                     )
                 }
-                (ValueToken::Utf8String, len)
+                (ValueToken::Utf8String, 2, len - 1)
             }
             'x' if matches!(chars.peek(), Some('"')) => {
                 chars.next().unwrap();
@@ -268,7 +268,7 @@ impl Token for ValueToken {
                         &s[..len]
                     )
                 }
-                (ValueToken::HexString, len)
+                (ValueToken::HexString, 2, len - 1)
             }
             c if c.is_ascii_digit() => {
                 // c + remaining
@@ -280,7 +280,7 @@ impl Token for ValueToken {
             c if c.is_ascii_whitespace() => {
                 // c + remaining
                 let len = 1 + chars.take_while(char::is_ascii_whitespace).count();
-                (Self::Whitespace, len)
+                (Self::Whitespace, 0, len)
             }
             c if c.is_ascii_alphabetic() => {
                 // c + remaining
@@ -288,7 +288,7 @@ impl Token for ValueToken {
                 let len = 1 + chars
                     .take_while(|c| identifier::is_valid_identifier_char(*c))
                     .count();
-                (Self::Ident, len)
+                (Self::Ident, 0, len)
             }
             _ => bail!("unrecognized token: {}", s),
         }))

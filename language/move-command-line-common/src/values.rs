@@ -230,9 +230,8 @@ impl Token for ValueToken {
                 };
                 // the length of the token (which we need in bytes rather than chars as s is sliced
                 // in parser and slicing str uses byte indexes) is the same as position of the
-                // ending double quote plus 1
-                let len = end_quote_byte_offset + 1;
-                println!("TOKEN: {} LEN {}", s[..len].to_string(), len);
+                // ending double quote minus 1
+                let len = end_quote_byte_offset - 1;
                 if s[..len].chars().any(|c| c == '\\') {
                     bail!(
                         "Escape characters not yet supported in utf8 string: {}",

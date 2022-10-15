@@ -163,4 +163,51 @@ mod tests {
             Err(e) => assert_eq!(e.major_status(), StatusCode::TOO_MANY_LOCALS),
         }
     }
+
+    #[test]
+    fn new_test() {
+        let module = CompiledModule {
+            version: 5,
+            self_module_handle_idx: ModuleHandleIndex(0),
+            module_handles: vec![ModuleHandle {
+                address: AddressIdentifierIndex(0),
+                name: IdentifierIndex(0),
+            }],
+            struct_handles: vec![],
+            function_handles: vec![FunctionHandle {
+                module: ModuleHandleIndex(0),
+                name: IdentifierIndex(0),
+                parameters: SignatureIndex(0),
+                return_: SignatureIndex(0),
+                type_parameters: vec![],
+            }],
+            field_handles: vec![],
+            friend_decls: vec![],
+            struct_def_instantiations: vec![],
+            function_instantiations: vec![],
+            field_instantiations: vec![],
+            signatures: vec![Signature(vec![
+                Reference(Box::new(U64)),
+                Reference(Box::new(U64)),
+            ])],
+            identifiers: vec![Identifier::new("a").unwrap()],
+            address_identifiers: vec![AccountAddress::ONE],
+            constant_pool: vec![],
+            metadata: vec![],
+            struct_defs: vec![],
+            function_defs: vec![FunctionDefinition {
+                function: FunctionHandleIndex(0),
+                visibility: Public,
+                is_entry: false,
+                acquires_global_resources: vec![],
+                code: Some(CodeUnit {
+                    locals: SignatureIndex(0),
+                    code: vec![MoveLoc(0), MoveLoc(1), StLoc(0), StLoc(1), Branch(0)],
+                }),
+            }],
+        };
+
+        let res = crate::verify_module(&module);
+        assert!(res.is_ok());
+    }
 }

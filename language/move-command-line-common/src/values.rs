@@ -218,25 +218,20 @@ impl Token for ValueToken {
                 (ValueToken::ByteString, len)
             }
             's' if matches!(chars.peek(), Some('"')) => {
-                chars.next().unwrap();
-                // s"
-                loop {
-                    // there is no need to check if a given char is valid UTF8 as it is already
-                    // guaranteed; from the Rust docs
-                    // (https://doc.rust-lang.org/std/primitive.char.html): "char values are USVs
-                    // and str values are valid UTF-8, it is safe to store any char in a str or read
-                    // any character from a str as a char"; this means that while not every char is
-                    // valid UTF8, those stored in &str are
-                    match chars.next() {
-                        Some('"') => break,
-                        Some(_) => (),
-                        None => bail!("Unexpected end of string before end quote: {}", s),
-                    }
-                }
-                // if we got here then it's guaranteed that s is a double-quoted UTF8 string, but we
-                // need the length in bytes rather than chars (as s is sliced in parser and slicing
-                // str uses byte indexes)
-                let len = s.len();
+                // there is no need to check if a given char is valid UTF8 as it is already
+                // guaranteed; from the Rust docs
+                // (https://doc.rust-lang.org/std/primitive.char.html): "char values are USVs and
+                // str values are valid UTF-8, it is safe to store any char in a str or read any
+                // character from a str as a char"; this means that while not every char is valid
+                // UTF8, those stored in &str are
+                let end_quote_byte_offset = match s[2..].find('"') {
+                    Some(o) => o,
+                    None => bail!("Unexpected end of string before end quote: {}", s),
+                };
+                // the length of the token (which we need in bytes rather than chars as s is sliced
+                // in parser and slicing str uses byte indexes) is the same as position of the
+                // ending double quote
+                let len = end_quote_byte_offset;
                 if s[..len].chars().any(|c| c == '\\') {
                     bail!(
                         "Escape characters not yet supported in utf8 string: {}",

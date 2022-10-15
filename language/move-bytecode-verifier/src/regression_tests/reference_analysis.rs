@@ -1,21 +1,25 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[test]
-fn reference_analysis_crash() {
-    use move_binary_format::file_format::{
-        empty_module, AbilitySet,
-        Bytecode::{BrTrue, LdFalse, MoveLoc, MutBorrowGlobal, Pop, Ret},
-        CodeUnit, Constant, FieldDefinition, FunctionDefinition, FunctionHandle,
-        FunctionHandleIndex, IdentifierIndex, ModuleHandleIndex, Signature, SignatureIndex,
-        SignatureToken::{Address, Bool, U128, U64},
+use move_binary_format::{
+    file_format::{
+        empty_module, AbilitySet, AddressIdentifierIndex, Bytecode, CodeUnit, Constant,
+        FieldDefinition, FunctionDefinition, FunctionHandle, FunctionHandleIndex, IdentifierIndex,
+        ModuleHandle, ModuleHandleIndex, Signature, SignatureIndex, SignatureToken,
         StructDefinition, StructDefinitionIndex, StructFieldInformation, StructHandle,
         StructHandleIndex, TypeSignature, Visibility,
-    };
-    use move_core_types::{
-        account_address::AccountAddress, identifier::Identifier, vm_status::StatusCode,
-    };
-    use std::str::FromStr;
+    },
+    CompiledModule,
+};
+use move_core_types::{
+    account_address::AccountAddress, identifier::Identifier, vm_status::StatusCode,
+};
+use std::str::FromStr;
+
+#[test]
+fn reference_analysis_crash() {
+    use Bytecode::{BrTrue, LdFalse, MoveLoc, MutBorrowGlobal, Pop, Ret};
+    use SignatureToken::{Address, Bool, U128, U64};
 
     let mut module = empty_module();
     module.version = 5;
@@ -103,4 +107,54 @@ fn reference_analysis_crash() {
         Ok(_) => {}
         Err(e) => assert_eq!(e.major_status(), StatusCode::GLOBAL_REFERENCE_ERROR),
     }
+}
+
+#[test]
+fn new_test() {
+    use Bytecode::{Branch, MoveLoc, StLoc};
+    use SignatureToken::{Reference, U64};
+
+    let module = CompiledModule {
+        version: 5,
+        self_module_handle_idx: ModuleHandleIndex(0),
+        module_handles: vec![ModuleHandle {
+            address: AddressIdentifierIndex(0),
+            name: IdentifierIndex(0),
+        }],
+        struct_handles: vec![],
+        function_handles: vec![FunctionHandle {
+            module: ModuleHandleIndex(0),
+            name: IdentifierIndex(0),
+            parameters: SignatureIndex(0),
+            return_: SignatureIndex(0),
+            type_parameters: vec![],
+        }],
+        field_handles: vec![],
+        friend_decls: vec![],
+        struct_def_instantiations: vec![],
+        function_instantiations: vec![],
+        field_instantiations: vec![],
+        signatures: vec![Signature(vec![
+            Reference(Box::new(U64)),
+            Reference(Box::new(U64)),
+        ])],
+        identifiers: vec![Identifier::new("a").unwrap()],
+        address_identifiers: vec![AccountAddress::ONE],
+        constant_pool: vec![],
+        metadata: vec![],
+        struct_defs: vec![],
+        function_defs: vec![FunctionDefinition {
+            function: FunctionHandleIndex(0),
+            visibility: Visibility::Public,
+            is_entry: false,
+            acquires_global_resources: vec![],
+            code: Some(CodeUnit {
+                locals: SignatureIndex(0),
+                code: vec![MoveLoc(0), MoveLoc(1), StLoc(0), StLoc(1), Branch(0)],
+            }),
+        }],
+    };
+
+    let res = crate::verify_module(&module);
+    assert!(res.is_ok());
 }

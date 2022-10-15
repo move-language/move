@@ -232,6 +232,7 @@ impl Token for ValueToken {
                 // in parser and slicing str uses byte indexes) is the same as position of the
                 // ending double quote plus 1
                 let len = end_quote_byte_offset + 1;
+                println!("TOKEN: {} LEN {}", s[..len], len);
                 if s[..len].chars().any(|c| c == '\\') {
                     bail!(
                         "Escape characters not yet supported in utf8 string: {}",

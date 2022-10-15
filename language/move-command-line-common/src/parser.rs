@@ -223,6 +223,7 @@ impl<'a, I: Iterator<Item = (ValueToken, &'a str)>> Parser<'a, ValueToken, I> {
                 )
             }
             ValueToken::Utf8String => {
+                println!("CONTENT: {}", contents);
                 let contents = contents
                     .strip_prefix("s\"")
                     .unwrap()

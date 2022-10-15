@@ -232,10 +232,10 @@ impl Token for ValueToken {
                 // in parser and slicing str uses byte indexes) is the same as position of the
                 // ending double quote (in the whole string) plus 1
                 let len = s[2..].len() + end_quote_byte_offset + 1;
-                if s[..len].chars().any(|c| c == '\\') {
+                if s[2..len - 1].chars().any(|c| c == '\\') {
                     bail!(
                         "Escape characters not yet supported in utf8 string: {}",
-                        &s[..len]
+                        &s[2..len - 1]
                     )
                 }
                 (ValueToken::Utf8String, len)

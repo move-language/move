@@ -24,6 +24,10 @@ use move_core_types::identifier::IdentStr;
 use move_coverage::coverage_map::{ExecCoverageMap, FunctionCoverage};
 use move_ir_types::location::Loc;
 
+use inkwell::targets::{TargetTriple, TargetMachine};
+use inkwell::targets::{CodeModel, RelocMode};
+use std::{fs::File};
+
 /// Holds the various options that we support while disassembling code.
 #[derive(Debug, Default, Parser)]
 pub struct DisassemblerOptions {
@@ -1157,17 +1161,64 @@ impl<'a> Disassembler<'a> {
         ))
     }
 
+
+    /// LLVM Target triple
+    fn llvm_target_triple(&self) -> TargetTriple {
+        TargetTriple::create("bpfel-unknown-unknown")
+    }
+
+    fn llvm_target_name(&self) -> &'static str {
+        "bpfel"
+    }
+
+    fn llvm_features(&self) -> &'static str {
+        ""
+    }
+
+    pub fn get_target_machine(&self) -> Option<TargetMachine> {
+        use inkwell::{OptimizationLevel, targets::Target, targets::InitializationConfig};
+        Target::initialize_bpf(&InitializationConfig::default());
+
+        let opt = OptimizationLevel::None; // Add optimization based on command line flag.
+        let reloc = RelocMode::Default;
+        let model = CodeModel::Default;
+        let target = Target::from_name(self.llvm_target_name()).unwrap();
+
+        return target.create_target_machine(
+            &self.llvm_target_triple(),
+            "v2",
+            self.llvm_features(),
+            opt,
+            reloc,
+            model
+        );
+    }
+
     pub fn disassemble(&self) -> Result<String> {
         let name_opt = self.source_mapper.source_map.module_name_opt.as_ref();
         let name = name_opt.map(|(addr, n)| format!("{}.{}", addr.short_str_lossless(), n));
         let version = format!("{}", self.source_mapper.bytecode.version());
+        let llvm_module_name : String;
         let header = match name {
-            Some(s) => format!("module {}", s),
-            None => "script".to_owned(),
+            Some(s) => {
+                llvm_module_name = String::clone(&s) + ".bc";
+                format!("module {}", s)
+            },
+            None => {
+                llvm_module_name = "script.bc".to_string();
+                "script".to_owned()
+            }
         };
+        use inkwell::context::Context;
+        let llvm_context = Context::create();
 
-        println!("Disassembling: {}", header);
+        let llvm_module = llvm_context.create_module(&header);
+        llvm_module.print_to_stderr();
+        let _target_machine = self.get_target_machine().unwrap();
+        println!("Disassembling: {}, with target: {}", header, self.llvm_target_triple());
 
+        let bc_file = File::create(&llvm_module_name).unwrap();
+        llvm_module.write_bitcode_to_file(&bc_file, true, true);
         let struct_defs: Vec<String> = (0..self
             .source_mapper
             .bytecode
@@ -1175,6 +1226,8 @@ impl<'a> Disassembler<'a> {
             .map_or(0, |d| d.len()))
             .map(|i| self.disassemble_struct_def(StructDefinitionIndex(i as TableIndex)))
             .collect::<Result<Vec<String>>>()?;
+
+        println!("Struct defs: {:?}", struct_defs);
 
         let function_defs: Vec<String> = match self.source_mapper.bytecode {
             BinaryIndexedView::Script(script) => {
@@ -1212,6 +1265,7 @@ impl<'a> Disassembler<'a> {
                 })
                 .collect::<Result<Vec<String>>>()?,
         };
+        println!("Function defs: {:?}", function_defs);
 
         Ok(format!(
             "// Move bytecode v{version}\n{header} {{\n{struct_defs}\n\n{function_defs}\n}}",

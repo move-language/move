@@ -21,6 +21,8 @@ move-coverage = { path = "../move-coverage" }
 move-compiler = { path = "../../move-compiler" }
 
 clap = { version = "3.1.8", features = ["derive"] }
+inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "master", features = ["llvm14-0"] }
+semver = "1.0.13"
 
 [features]
 default = []

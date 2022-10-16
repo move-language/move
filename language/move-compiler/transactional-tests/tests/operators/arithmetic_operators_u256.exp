@@ -1,60 +1,6 @@
-processed 16 tasks
+processed 17 tasks
 
-task 0 'run'. lines 1-8:
-Error: Script execution failed with VMError: {
-    major_status: ARITHMETIC_ERROR,
-    sub_status: None,
-    location: script,
-    indices: [],
-    offsets: [(FunctionDefinitionIndex(0), 2)],
-}
-
-task 1 'run'. lines 10-16:
-Error: Script execution failed with VMError: {
-    major_status: ARITHMETIC_ERROR,
-    sub_status: None,
-    location: script,
-    indices: [],
-    offsets: [(FunctionDefinitionIndex(0), 2)],
-}
-
-task 2 'run'. lines 18-24:
-Error: Script execution failed with VMError: {
-    major_status: ARITHMETIC_ERROR,
-    sub_status: None,
-    location: script,
-    indices: [],
-    offsets: [(FunctionDefinitionIndex(0), 2)],
-}
-
-task 3 'run'. lines 26-32:
-Error: Script execution failed with VMError: {
-    major_status: ARITHMETIC_ERROR,
-    sub_status: None,
-    location: script,
-    indices: [],
-    offsets: [(FunctionDefinitionIndex(0), 2)],
-}
-
-task 4 'run'. lines 34-40:
-Error: Script execution failed with VMError: {
-    major_status: ARITHMETIC_ERROR,
-    sub_status: None,
-    location: script,
-    indices: [],
-    offsets: [(FunctionDefinitionIndex(0), 2)],
-}
-
-task 5 'run'. lines 42-48:
-Error: Script execution failed with VMError: {
-    major_status: ARITHMETIC_ERROR,
-    sub_status: None,
-    location: script,
-    indices: [],
-    offsets: [(FunctionDefinitionIndex(0), 2)],
-}
-
-task 6 'run'. lines 50-56:
+task 1 'run'. lines 17-23:
 Error: Script execution failed with VMError: {
     major_status: INTERNAL_TYPE_ERROR,
     sub_status: None,
@@ -63,7 +9,16 @@ Error: Script execution failed with VMError: {
     offsets: [(FunctionDefinitionIndex(0), 2)],
 }
 
-task 7 'run'. lines 58-64:
+task 2 'run'. lines 25-31:
+Error: error[E01006]: invalid number literal
+   ┌─ /var/folders/3m/hnrdf4892mj0df4tqf55pm_m0000gn/T/.tmp6wurVm:29:5
+   │
+29 │     115792089237316195423570985008687907853269984665640564139457584007913129639935u256 + 11579208927316195423570985008687907853269984665640564039457584007913129639935u256;
+   │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid number literal. The given literal is too large to fit into 'u256'
+
+
+
+task 4 'run'. lines 48-54:
 Error: Script execution failed with VMError: {
     major_status: INTERNAL_TYPE_ERROR,
     sub_status: None,
@@ -72,7 +27,7 @@ Error: Script execution failed with VMError: {
     offsets: [(FunctionDefinitionIndex(0), 2)],
 }
 
-task 8 'run'. lines 66-72:
+task 5 'run'. lines 56-62:
 Error: Script execution failed with VMError: {
     major_status: INTERNAL_TYPE_ERROR,
     sub_status: None,
@@ -81,7 +36,61 @@ Error: Script execution failed with VMError: {
     offsets: [(FunctionDefinitionIndex(0), 2)],
 }
 
-task 9 'run'. lines 74-83:
+task 7 'run'. lines 79-85:
+Error: Script execution failed with VMError: {
+    major_status: INTERNAL_TYPE_ERROR,
+    sub_status: None,
+    location: script,
+    indices: [],
+    offsets: [(FunctionDefinitionIndex(0), 2)],
+}
+
+task 10 'run'. lines 112-119:
+Error: Script execution failed with VMError: {
+    major_status: INTERNAL_TYPE_ERROR,
+    sub_status: None,
+    location: script,
+    indices: [],
+    offsets: [(FunctionDefinitionIndex(0), 2)],
+}
+
+task 11 'run'. lines 121-126:
+Error: Script execution failed with VMError: {
+    major_status: INTERNAL_TYPE_ERROR,
+    sub_status: None,
+    location: script,
+    indices: [],
+    offsets: [(FunctionDefinitionIndex(0), 2)],
+}
+
+task 12 'run'. lines 128-134:
+Error: Script execution failed with VMError: {
+    major_status: INTERNAL_TYPE_ERROR,
+    sub_status: None,
+    location: script,
+    indices: [],
+    offsets: [(FunctionDefinitionIndex(0), 2)],
+}
+
+task 14 'run'. lines 152-158:
+Error: Script execution failed with VMError: {
+    major_status: INTERNAL_TYPE_ERROR,
+    sub_status: None,
+    location: script,
+    indices: [],
+    offsets: [(FunctionDefinitionIndex(0), 2)],
+}
+
+task 15 'run'. lines 160-166:
+Error: Script execution failed with VMError: {
+    major_status: INTERNAL_TYPE_ERROR,
+    sub_status: None,
+    location: script,
+    indices: [],
+    offsets: [(FunctionDefinitionIndex(0), 2)],
+}
+
+task 16 'run'. lines 168-174:
 Error: Script execution failed with VMError: {
     major_status: INTERNAL_TYPE_ERROR,
     sub_status: None,

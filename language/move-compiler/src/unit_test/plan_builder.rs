@@ -280,7 +280,7 @@ fn parse_failure_attribute(
                         sp!(_, EAV::Value(sp!(_, EV::InferredNum(u))))
                             if *u <= std::u64::MAX.into() =>
                         {
-                            Some(ExpectedFailure::ExpectedWithCode(u64::from(*u)))
+                            Some(ExpectedFailure::ExpectedWithCode(u.down_cast_lossy()))
                         }
                         sp!(_, EAV::Value(sp!(_, EV::U64(u)))) => {
                             Some(ExpectedFailure::ExpectedWithCode(*u))

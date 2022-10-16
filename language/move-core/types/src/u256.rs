@@ -1,17 +1,21 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::anyhow;
 use ethnum::U256 as EthnumU256;
 use num::{bigint::Sign, BigInt};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::{prelude::*, strategy::BoxedStrategy};
 use std::{
     fmt,
+    mem::size_of,
     ops::{BitAnd, BitOr, BitXor, Shl, Shr},
 };
 use uint::FromStrRadixErr;
 
-const U256_NUM_BYTES: usize = 32;
+const NUM_BITS_PER_BYTE: usize = 8;
+const U256_NUM_BITS: usize = 256;
+const U256_NUM_BYTES: usize = U256_NUM_BITS / NUM_BITS_PER_BYTE;
 pub type U256FromStrError = FromStrRadixErr;
 
 // This U256 impl was chosen for now but we are open to changing it as needed
@@ -114,6 +118,10 @@ impl U256Inner {
         Self(PrimitiveU256::zero())
     }
 
+    pub const fn one() -> Self {
+        Self(PrimitiveU256::one())
+    }
+
     pub const fn max() -> Self {
         Self(PrimitiveU256::max_value())
     }
@@ -134,44 +142,83 @@ impl U256Inner {
 
     // Unchecked downcasting
     pub fn unchecked_as_u8(&self) -> u8 {
-        self.0.as_u128() as u8
+        self.0.low_u128() as u8
     }
 
     pub fn unchecked_as_u16(&self) -> u16 {
-        self.0.as_u128() as u16
+        self.0.low_u128() as u16
     }
 
     pub fn unchecked_as_u32(&self) -> u32 {
-        self.0.as_u128() as u32
+        self.0.low_u128() as u32
     }
 
     pub fn unchecked_as_u64(&self) -> u64 {
-        self.0.as_u128() as u64
+        self.0.low_u128() as u64
     }
 
     pub fn unchecked_as_u128(&self) -> u128 {
-        self.0.as_u128() as u128
+        self.0.low_u128() as u128
     }
 
     // Check arithmetic
+    /// Checked integer addition. Computes self + rhs, returning None if overflow occurred.
     pub fn checked_add(self, rhs: Self) -> Option<Self> {
         self.0.checked_add(rhs.0).map(Self)
     }
 
+    /// Checked integer subtraction. Computes self - rhs, returning None if overflow occurred.
     pub fn checked_sub(self, rhs: Self) -> Option<Self> {
         self.0.checked_sub(rhs.0).map(Self)
     }
 
+    /// Checked integer multiplication. Computes self * rhs, returning None if overflow occurred.
     pub fn checked_mul(self, rhs: Self) -> Option<Self> {
         self.0.checked_mul(rhs.0).map(Self)
     }
 
+    /// Checked integer division. Computes self / rhs, returning None if rhs == 0.
     pub fn checked_div(self, rhs: Self) -> Option<Self> {
         self.0.checked_div(rhs.0).map(Self)
     }
 
+    /// Checked integer remainder. Computes self % rhs, returning None if rhs == 0.
     pub fn checked_rem(self, rhs: Self) -> Option<Self> {
         self.0.checked_rem(rhs.0).map(Self)
+    }
+
+    /// Checked integer remainder. Computes self % rhs, returning None if rhs == 0.
+    pub fn checked_shl(self, rhs: u32) -> Option<Self> {
+        if rhs >= U256_NUM_BITS as u32 {
+            return None;
+        }
+        Some(Self(self.0.shl(rhs)))
+    }
+
+    /// Checked shift right. Computes self >> rhs, returning None if rhs is larger than or equal to the number of bits in self.
+    pub fn checked_shr(self, rhs: u32) -> Option<Self> {
+        if rhs >= U256_NUM_BITS as u32 {
+            return None;
+        }
+        Some(Self(self.0.shr(rhs)))
+    }
+
+    /// Downcast to a an unsigned value of type T
+    /// T must be at most u128
+    pub fn down_cast_lossy<T: std::convert::TryFrom<u128>>(self) -> T {
+        // Size of this type
+        let type_size = size_of::<T>();
+        // Maximum value for this type
+        let max_val: u128 = if type_size < 16 {
+            (1u128 << (NUM_BITS_PER_BYTE * type_size)) - 1u128
+        } else {
+            u128::MAX
+        };
+        // This should never fail
+        match T::try_from(self.0.low_u128() & max_val) {
+            Ok(w) => w,
+            Err(_) => panic!("Fatal! Downcast failed"),
+        }
     }
 }
 
@@ -227,33 +274,66 @@ impl From<&U256Inner> for EthnumU256 {
     }
 }
 
-impl From<U256Inner> for u8 {
-    fn from(n: U256Inner) -> Self {
-        n.0.as_u64() as u8
+impl TryFrom<U256Inner> for u8 {
+    type Error = anyhow::Error;
+    fn try_from(n: U256Inner) -> Result<Self, Self::Error> {
+        let n = n.0.low_u64();
+        if n > u8::MAX as u64 {
+            Err(anyhow!("Cast failed. {n} too large for u8."))
+        } else {
+            Ok(n as u8)
+        }
     }
 }
 
-impl From<U256Inner> for u16 {
-    fn from(n: U256Inner) -> Self {
-        n.0.as_u64() as u16
+impl TryFrom<U256Inner> for u16 {
+    type Error = anyhow::Error;
+
+    fn try_from(n: U256Inner) -> Result<Self, Self::Error> {
+        let n = n.0.low_u64();
+        if n > u16::MAX as u64 {
+            Err(anyhow!("Cast failed. {n} too large for u16."))
+        } else {
+            Ok(n as u16)
+        }
     }
 }
 
-impl From<U256Inner> for u32 {
-    fn from(n: U256Inner) -> Self {
-        n.0.as_u64() as u32
+impl TryFrom<U256Inner> for u32 {
+    type Error = anyhow::Error;
+
+    fn try_from(n: U256Inner) -> Result<Self, Self::Error> {
+        let n = n.0.low_u64();
+        if n > u32::MAX as u64 {
+            Err(anyhow!("Cast failed. {n} too large for u32."))
+        } else {
+            Ok(n as u32)
+        }
     }
 }
 
-impl From<U256Inner> for u64 {
-    fn from(n: U256Inner) -> Self {
-        n.0.as_u64()
+impl TryFrom<U256Inner> for u64 {
+    type Error = anyhow::Error;
+
+    fn try_from(n: U256Inner) -> Result<Self, Self::Error> {
+        let n = n.0.low_u128();
+        if n > u64::MAX as u128 {
+            Err(anyhow!("Cast failed. {n} too large for u64."))
+        } else {
+            Ok(n as u64)
+        }
     }
 }
 
-impl From<U256Inner> for u128 {
-    fn from(n: U256Inner) -> Self {
-        n.0.as_u128()
+impl TryFrom<U256Inner> for u128 {
+    type Error = anyhow::Error;
+
+    fn try_from(n: U256Inner) -> Result<Self, Self::Error> {
+        if n > U256Inner::from(u128::MAX) {
+            Err(anyhow!("Cast failed. {n} too large for u128."))
+        } else {
+            Ok(n.0.low_u128())
+        }
     }
 }
 

@@ -286,7 +286,7 @@ impl<Extra: ParsableValue> ParsedValue<Extra> {
             ParsedValue::U32(u) => Extra::move_value_into_concrete(MoveValue::U32(u)),
             ParsedValue::U64(u) => Extra::move_value_into_concrete(MoveValue::U64(u)),
             ParsedValue::InferredNum(u) if u <= (u64::MAX.into()) => {
-                Extra::move_value_into_concrete(MoveValue::U64(u.into()))
+                Extra::move_value_into_concrete(MoveValue::U64(u.try_into()?))
             }
             ParsedValue::U128(u) => Extra::move_value_into_concrete(MoveValue::U128(u)),
             ParsedValue::InferredNum(u) | ParsedValue::U256(u) => {

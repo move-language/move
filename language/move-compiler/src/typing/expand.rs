@@ -178,11 +178,18 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
                     bt
                 );
                 // TODO (ade): improve this logic for u256
-                let fix_bt = if v > u64_max {
+                let fix_bt = if v > u128_max {
+                    BT::U256
+                } else if v > u64_max {
                     BT::U128
-                } else {
-                    assert!(v > u8_max);
+                } else if v > u32_max {
                     BT::U64
+                } else if v > u16_max {
+                    BT::U32
+                } else if v > u8_max {
+                    BT::U16
+                } else {
+                    BT::U8
                 };
                 let fix = format!(
                     "Annotating the literal might help inference: '{value}{type}'",
@@ -198,11 +205,11 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
                 E::UnresolvedError
             } else {
                 let value_ = match bt {
-                    BT::U8 => Value_::U8(v.into()),
-                    BT::U16 => Value_::U16(v.into()),
-                    BT::U32 => Value_::U32(v.into()),
-                    BT::U64 => Value_::U64(v.into()),
-                    BT::U128 => Value_::U128(v.into()),
+                    BT::U8 => Value_::U8(v.down_cast_lossy()),
+                    BT::U16 => Value_::U16(v.down_cast_lossy()),
+                    BT::U32 => Value_::U32(v.down_cast_lossy()),
+                    BT::U64 => Value_::U64(v.down_cast_lossy()),
+                    BT::U128 => Value_::U128(v.down_cast_lossy()),
                     BT::U256 => Value_::U256(v),
                     _ => unreachable!(),
                 };

@@ -1162,24 +1162,23 @@ impl<'a> Disassembler<'a> {
     }
 
 
-    /// LLVM Target triple
     fn llvm_target_triple(&self) -> TargetTriple {
         TargetTriple::create("bpfel-unknown-unknown")
     }
 
     fn llvm_target_name(&self) -> &'static str {
-        "bpfel"
+        "bpfel" // bpf little endian.
     }
 
     fn llvm_features(&self) -> &'static str {
-        ""
+        "" // no additional target specific features.
     }
 
     pub fn get_target_machine(&self) -> Option<TargetMachine> {
         use inkwell::{OptimizationLevel, targets::Target, targets::InitializationConfig};
         Target::initialize_bpf(&InitializationConfig::default());
 
-        let opt = OptimizationLevel::None; // Add optimization based on command line flag.
+        let opt = OptimizationLevel::None; // TODO: Add optimization based on command line flag.
         let reloc = RelocMode::Default;
         let model = CodeModel::Default;
         let target = Target::from_name(self.llvm_target_name()).unwrap();

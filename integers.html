@@ -158,12 +158,14 @@
 </tbody></table>
 <h2 id="literals"><a class="header" href="#literals">Literals</a></h2>
 <p>Literal values for these types are specified either as a sequence of digits (e.g.,<code>112</code>) or as hex literals, e.g., <code>0xFF</code>. The type of the literal can optionally be added as a suffix, e.g., <code>112u8</code>. If the type is not specified, the compiler will try to infer the type from the context where the literal is used. If the type cannot be inferred, it is assumed to be <code>u64</code>.</p>
+<p>Decimal literals can be separated by underscores for grouping and readability. (e.g.,<code>1_234_5678</code>, <code>1_000u128</code>). However, hexadecimal literals cannot.</p>
 <p>If a literal is too large for its specified (or inferred) size range, an error is reported.</p>
 <h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
 <pre><code class="language-move">// literals with explicit annotations;
 let explicit_u8 = 1u8;
 let explicit_u64 = 2u64;
 let explicit_u128 = 3u128;
+let explicit_u64_underscored = 154_322_973u64;
 
 // literals with simple inference
 let simple_u8: u8 = 1;
@@ -175,12 +177,12 @@ let complex_u8 = 1; // inferred: u8
 // right hand argument to shift must be u8
 let _unused = 10 &lt;&lt; complex_u8;
 
-let x: u8 = 0;
+let x: u8 = 38;
 let complex_u8 = 2; // inferred: u8
 // arguments to `+` must have the same type
 let _unused = x + complex_u8;
 
-let complex_u128 = 3; // inferred: u128
+let complex_u128 = 133_876; // inferred: u128
 // inferred from function argument type
 function_that_takes_u128(complex_u128);
 

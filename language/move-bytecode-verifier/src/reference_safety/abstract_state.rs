@@ -82,7 +82,6 @@ impl AbstractState {
     /// create a new abstract state
     pub fn new(function_view: &FunctionView) -> Self {
         let num_locals = function_view.parameters().len() + function_view.locals().len();
-
         // ids in [0, num_locals) are reserved for constructing canonical state
         // id at num_locals is reserved for the frame root
         let next_id = num_locals + 1;

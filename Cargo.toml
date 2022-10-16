@@ -95,8 +95,9 @@ default-members = [
     "language/tools/move-unit-test",
 ]
 
-# [profile.release]
-# debug = true
+# Dependencies that should be kept in sync through the whole workspace
+[workspace.dependencies]
+bcs = "0.1.4"
 
 [profile.bench]
 debug = true

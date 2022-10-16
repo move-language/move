@@ -1080,7 +1080,7 @@ impl ModelValue {
             if args.len() != 2 {
                 return None;
             }
-            let size = (&args[1]).extract_number()?;
+            let size = args[1].extract_number()?;
             let map_key = &args[0];
             let value_array_map = model
                 .vars
@@ -1218,7 +1218,7 @@ impl ModelValue {
             }
         }
 
-        // Travese the update map to obtain the updated value
+        // Traverse the update map to obtain the updated value
         if let Some(value_update_map) = value_update_map_opt {
             for up_k in value_update_map.keys() {
                 if let ModelValue::List(elems) = up_k {

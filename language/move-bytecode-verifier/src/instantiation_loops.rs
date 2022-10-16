@@ -233,8 +233,8 @@ impl<'a> InstantiationLoopChecker<'a> {
             .module
             .function_defs()
             .iter()
-            .filter(|def| !def.is_native())
             .enumerate()
+            .filter(|(_, def)| !def.is_native())
         {
             self.build_graph_function_def(FunctionDefinitionIndex::new(def_idx as u16), func_def)
         }

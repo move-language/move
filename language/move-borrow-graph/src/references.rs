@@ -162,11 +162,13 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowEdges<Loc, Lbl> {
     /// Utility for remapping the reference ids according the `id_map` provided
     /// If it is not in the map, the id remains the same
     pub(crate) fn remap_refs(&mut self, id_map: &BTreeMap<RefID, RefID>) {
-        for (old, new) in id_map {
-            if let Some(edges) = self.0.remove(old) {
-                self.0.insert(*new, edges);
-            }
-        }
+        let _before = self.0.len();
+        self.0 = std::mem::take(&mut self.0)
+            .into_iter()
+            .map(|(id, edges)| (id_map.get(&id).copied().unwrap_or(id), edges))
+            .collect();
+        let _after = self.0.len();
+        debug_assert!(_before == _after)
     }
 }
 

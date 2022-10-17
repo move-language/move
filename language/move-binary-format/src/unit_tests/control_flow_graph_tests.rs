@@ -1,18 +1,20 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::control_flow_graph::{BlockId, ControlFlowGraph, VMControlFlowGraph};
-use crate::file_format::Bytecode;
+use crate::{
+    control_flow_graph::{BlockId, ControlFlowGraph, VMControlFlowGraph},
+    file_format::Bytecode,
+};
 
 #[test]
 fn traversal_no_loops() {
     let cfg = {
         use Bytecode::*;
         VMControlFlowGraph::new(&[
-            LdTrue,    // L0
-            BrTrue(3),
-            Branch(3), // L2
-            Ret,       // L3
+            /* L0 */ LdTrue,
+            /*    */ BrTrue(3),
+            /* L2 */ Branch(3),
+            /* L3 */ Ret,
         ])
     };
 
@@ -26,13 +28,13 @@ fn traversal_loops() {
     let cfg = {
         use Bytecode::*;
         VMControlFlowGraph::new(&[
-            LdTrue,    // L0: Outer head
-            BrTrue(6), //     Outer break
-            LdTrue,    // L2: Inner head
-            BrTrue(5), //     Inner break
-            Branch(2), // L4: Inner continue
-            Branch(0), // L5: Outer continue
-            Ret,       // L6
+            /* L0: Outer head     */ LdTrue,
+            /*     Outer break    */ BrTrue(6),
+            /* L2: Inner head     */ LdTrue,
+            /*     Inner break    */ BrTrue(5),
+            /* L4: Inner continue */ Branch(2),
+            /*     Outer continue */ Branch(0),
+            /* L6:                */ Ret,
         ])
     };
 
@@ -46,9 +48,9 @@ fn traversal_non_loop_back_branch() {
     let cfg = {
         use Bytecode::*;
         VMControlFlowGraph::new(&[
-            Branch(2), // L0
-            Ret,       // L1
-            Branch(1), // L2
+            /* L0 */ Branch(2),
+            /* L1 */ Ret,
+            /* L2 */ Branch(1),
         ])
     };
 

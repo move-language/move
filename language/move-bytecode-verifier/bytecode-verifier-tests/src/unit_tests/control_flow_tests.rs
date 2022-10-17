@@ -27,7 +27,7 @@ fn verify_module(verifier_config: &VerifierConfig, module: &CompiledModule) -> P
             .expect("unexpected native function");
 
         let function_view =
-            FunctionView::function(&module, current_function.unwrap(), &code, function_handle);
+            FunctionView::function(module, current_function.unwrap(), code, function_handle);
 
         control_flow::verify_fallthrough(current_function, code)?;
         control_flow::verify_reducibility(verifier_config, &function_view)?;

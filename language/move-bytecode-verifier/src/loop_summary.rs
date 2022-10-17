@@ -20,29 +20,29 @@ pub struct NodeId(u16);
 ///
 /// This is used to implement Tarjan's Loop Reducibility algorithm (Tarjan 1974).
 pub struct LoopSummary {
-    /// Original block corresponding to this loop, useful for recovering code offsets, e.g. for
+    /// Original block corresponding to this node, useful for recovering code offsets, e.g. for
     /// error messages.
     blocks: Vec<BlockId>,
 
-    /// Number of transitive descendants for a loop, in the depth-first spanning tree.
+    /// Number of transitive descendants for a node, in the depth-first spanning tree.
     descs: Vec<u16>,
 
-    /// The incoming edges for a loop are partitioned between `back_edges` which create cycles in
+    /// The incoming edges for a node are partitioned between `back_edges` which create cycles in
     /// the DFS tree, and `pred_edges` which are all the rest.
     backs: Vec<Vec<NodeId>>,
     preds: Vec<Vec<NodeId>>,
 }
 
 /// A disjoint-set data structure used when collapsing loops down to single nodes in the summary
-/// graph while remembering its loop nesting depth (how many levels of nesting are contained within
-/// it)
+/// graph while remembering their loop nesting depth (how many levels of nesting are contained
+/// within them)
 pub struct LoopPartition {
     /// The parent relationship in the disjoint-set.  The transitive closure of this type maps a
     /// node to its representative.
     parents: Vec<NodeId>,
 
-    /// The nesting depth of (collapsed) loops in the summary graph.  Initially all loops are
-    /// uncollapsed with depth 0.
+    /// The nesting depth of (collapsed) nodes in the summary graph.  Nodes that are uncollapsed
+    /// (not in any loop) have a depth of 0.  Initially, all nodes are uncollapsed.
     depths: Vec<u16>,
 }
 
@@ -114,8 +114,8 @@ impl LoopSummary {
                         // children.
                         InProgress(to_node) => backs[usize::from(*to_node)].push(from_node),
 
-                        // Cross edge detected by re-visiting `to` after finishing processing its
-                        // children.
+                        // Cross edge detected by re-visiting `to` after it and its children have
+                        // been processed.
                         Done(to_node) => preds[usize::from(*to_node)].push(from_node),
                     },
 
@@ -150,7 +150,7 @@ impl LoopSummary {
         }
     }
 
-    /// Decides whether `descendant` is an descendant of `ancestor` in the depth-first spanning
+    /// Decides whether `descendant` is a descendant of `ancestor` in the depth-first spanning
     /// tree.
     pub fn is_descendant(&self, NodeId(ancestor): NodeId, NodeId(descendant): NodeId) -> bool {
         // All the descendants of `ancestor` in the DFST will have the IDs immediately following
@@ -223,11 +223,11 @@ impl LoopPartition {
     /// Collapse `body` of a loop down to one node, represented by its `head`.  Calculate the
     /// nesting depth of the collapsed node and return it.
     ///
-    /// Assumes that all the loops involved are the heads of their corresponding nodes in the
-    /// summary graph.
+    /// Assumes that all the nodes involved are the heads of their corresponding sets in the
+    /// partition.
     ///
     /// Note that this function can be called with an empty body, meaning `head` is the only
-    /// node in the loop, which implies it will be nested more deeply.
+    /// node in the loop.  Its nesting depth will still be incremented in this case.
     pub fn collapse_loop(&mut self, head: NodeId, body: &BTreeSet<NodeId>) -> u16 {
         debug_assert_eq!(head, self.parent(head));
 

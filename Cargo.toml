@@ -22,6 +22,7 @@ members = [
     "language/move-borrow-graph",
     "language/move-bytecode-verifier",
     "language/move-bytecode-verifier/bytecode-verifier-tests",
+    "language/move-bytecode-verifier/fuzz",
     "language/move-bytecode-verifier/invalid-mutations",
     "language/move-bytecode-verifier/transactional-tests",
     "language/move-command-line-common",

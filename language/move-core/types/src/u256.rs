@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::anyhow;
+use arbitrary::Unstructured;
 use ethnum::U256 as EthnumU256;
 use num::{bigint::Sign, BigInt};
 #[cfg(any(test, feature = "fuzzing"))]
-use proptest::{prelude::*, strategy::BoxedStrategy};
+use proptest::strategy::BoxedStrategy;
+use proptest::strategy::Strategy;
 use std::{
     fmt,
     mem::size_of,
@@ -338,7 +340,7 @@ impl TryFrom<U256Inner> for u128 {
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
-impl Arbitrary for U256Inner {
+impl proptest::prelude::Arbitrary for U256Inner {
     type Strategy = BoxedStrategy<Self>;
     type Parameters = ();
     fn arbitrary_with(_params: Self::Parameters) -> Self::Strategy {
@@ -346,5 +348,12 @@ impl Arbitrary for U256Inner {
         proptest::bits::u8::masked(0xFF)
             .prop_map(|u| U256Inner(PrimitiveU256::from_little_endian(&[u; U256_NUM_BYTES])))
             .boxed()
+    }
+}
+
+impl<'a> arbitrary::Arbitrary<'a> for U256Inner {
+    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+        let bytes = <[u8; U256_NUM_BYTES]>::arbitrary(u)?;
+        Ok(U256Inner::from_le_bytes(&bytes))
     }
 }

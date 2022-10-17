@@ -10,13 +10,13 @@ Error: Script execution failed with VMError: {
 }
 
 task 2 'run'. lines 25-31:
-Error: error[E01006]: invalid number literal
-   ┌─ /var/folders/3m/hnrdf4892mj0df4tqf55pm_m0000gn/T/.tmp6wurVm:29:5
-   │
-29 │     115792089237316195423570985008687907853269984665640564139457584007913129639935u256 + 11579208927316195423570985008687907853269984665640564039457584007913129639935u256;
-   │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid number literal. The given literal is too large to fit into 'u256'
-
-
+Error: Script execution failed with VMError: {
+    major_status: INTERNAL_TYPE_ERROR,
+    sub_status: None,
+    location: script,
+    indices: [],
+    offsets: [(FunctionDefinitionIndex(0), 2)],
+}
 
 task 4 'run'. lines 48-54:
 Error: Script execution failed with VMError: {

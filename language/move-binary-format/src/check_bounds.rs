@@ -11,14 +11,13 @@ use crate::{
     file_format::{
         AbilitySet, Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledScript, Constant,
         FieldHandle, FieldInstantiation, FunctionDefinition, FunctionDefinitionIndex,
-        FunctionHandle, FunctionInstantiation, ModuleHandle, Signature, SignatureToken,
+        FunctionHandle, FunctionInstantiation, LocalIndex, ModuleHandle, Signature, SignatureToken,
         StructDefInstantiation, StructDefinition, StructFieldInformation, StructHandle, TableIndex,
     },
     internals::ModuleIndex,
     IndexKind,
 };
 use move_core_types::vm_status::StatusCode;
-use std::u8;
 
 enum BoundsCheckingContext {
     Module,
@@ -347,7 +346,7 @@ impl<'a> BoundsChecker<'a> {
             .len()
             .saturating_add(parameters.len());
 
-        if locals_count > (u8::MAX as usize) + 1 {
+        if locals_count > LocalIndex::MAX as usize {
             return Err(verification_error(
                 StatusCode::TOO_MANY_LOCALS,
                 IndexKind::FunctionDefinition,
@@ -367,7 +366,7 @@ impl<'a> BoundsChecker<'a> {
         check_bounds_impl(self.view.signatures(), code_unit.locals)?;
 
         let locals = self.get_locals(code_unit)?;
-        // Use saturating add for stability; range checked above
+        // Use saturating add for stability
         let locals_count = locals.len().saturating_add(parameters.len());
 
         // if there are locals check that the type parameters in local signature are in bounds.

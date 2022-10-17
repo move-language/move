@@ -113,6 +113,7 @@ members = [
     # Please keep this list in alphabetical order!
 
     "bytecode-interpreter-testsuite",
+    "bytecode-verifier-libfuzzer",
     "bytecode-verifier-tests",
     "bytecode-verifier-transactional-tests",
     "df-cli",

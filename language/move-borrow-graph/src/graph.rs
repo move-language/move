@@ -325,14 +325,16 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowGraph<Loc, Lbl> {
     /// If it is not in the map, the id remains the same
     pub fn remap_refs(&mut self, id_map: &BTreeMap<RefID, RefID>) {
         debug_assert!(self.check_invariant());
-        for info in self.0.values_mut() {
-            info.remap_refs(id_map);
-        }
-        for (old, new) in id_map {
-            if let Some(info) = self.0.remove(old) {
-                self.0.insert(*new, info);
-            }
-        }
+        let _before = self.0.len();
+        self.0 = std::mem::take(&mut self.0)
+            .into_iter()
+            .map(|(id, mut info)| {
+                info.remap_refs(id_map);
+                (id_map.get(&id).copied().unwrap_or(id), info)
+            })
+            .collect();
+        let _after = self.0.len();
+        debug_assert!(_before == _after);
         debug_assert!(self.check_invariant());
     }
 

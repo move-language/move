@@ -738,27 +738,29 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             exp,
                             additional_exps,
                         } => {
-                            let context = SpecBlockContext::FunctionCode(
-                                qsym.clone(),
-                                &fun_spec_info[spec_id],
-                            );
-                            if let Some(kind) = self.convert_condition_kind(kind, &context) {
-                                let properties =
-                                    self.translate_properties(properties, &|_, _, prop| {
-                                        if !is_property_valid_for_condition(&kind, prop) {
-                                            Some(loc.clone())
-                                        } else {
-                                            None
-                                        }
-                                    });
-                                self.def_ana_condition(
-                                    loc,
-                                    &context,
-                                    kind,
-                                    properties,
-                                    exp,
-                                    additional_exps,
+                            if fun_spec_info.contains_key(spec_id) {
+                                let context = SpecBlockContext::FunctionCode(
+                                    qsym.clone(),
+                                    &fun_spec_info[spec_id],
                                 );
+                                if let Some(kind) = self.convert_condition_kind(kind, &context) {
+                                    let properties =
+                                        self.translate_properties(properties, &|_, _, prop| {
+                                            if !is_property_valid_for_condition(&kind, prop) {
+                                                Some(loc.clone())
+                                            } else {
+                                                None
+                                            }
+                                        });
+                                    self.def_ana_condition(
+                                        loc,
+                                        &context,
+                                        kind,
+                                        properties,
+                                        exp,
+                                        additional_exps,
+                                    );
+                                }
                             }
                         }
                         _ => {

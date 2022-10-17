@@ -909,7 +909,7 @@ object "test_A2_M_extract_err_data" {
         }
     }
 }
-===> Test result of M::extract_err_data: Succeed(Stopped) (used_gas=5699): []
+===> Test result of M::extract_err_data: Succeed(Stopped) (used_gas=6011): []
 
 // test of M::extract_err_reason
 /* =======================================
@@ -1785,7 +1785,7 @@ object "test_A2_M_extract_err_reason" {
         }
     }
 }
-===> Test result of M::extract_err_reason: Succeed(Stopped) (used_gas=5755): []
+===> Test result of M::extract_err_reason: Succeed(Stopped) (used_gas=6005): []
 
 // test of M::extract_panic_code
 /* =======================================
@@ -2456,7 +2456,7 @@ object "test_A2_M_extract_panic_code" {
         }
     }
 }
-===> Test result of M::extract_panic_code: Succeed(Stopped) (used_gas=4153): []
+===> Test result of M::extract_panic_code: Succeed(Stopped) (used_gas=4470): []
 
 // test of M::extract_value
 /* =======================================
@@ -3107,4 +3107,4 @@ object "test_A2_M_extract_value" {
         }
     }
 }
-===> Test result of M::extract_value: Succeed(Stopped) (used_gas=4189): []
+===> Test result of M::extract_value: Succeed(Stopped) (used_gas=4408): []

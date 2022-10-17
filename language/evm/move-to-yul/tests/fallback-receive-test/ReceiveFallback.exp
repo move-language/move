@@ -63,6 +63,7 @@ object "A2_M" {
 
 !! Errors compiling Yul
 
+Warning: Yul is still experimental. Please use the output with care.
 Warning: "switch" statement with only a default case.
   --> <stdin>:17:17:
    |

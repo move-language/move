@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::anyhow;
-use arbitrary::Unstructured;
 use ethnum::U256 as EthnumU256;
 use num::{bigint::Sign, BigInt};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::strategy::BoxedStrategy;
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest::strategy::Strategy;
 use std::{
     fmt,
@@ -351,8 +351,9 @@ impl proptest::prelude::Arbitrary for U256Inner {
     }
 }
 
+#[cfg(any(test, feature = "fuzzing"))]
 impl<'a> arbitrary::Arbitrary<'a> for U256Inner {
-    fn arbitrary(u: &mut Unstructured<'a>) -> arbitrary::Result<Self> {
+    fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         let bytes = <[u8; U256_NUM_BYTES]>::arbitrary(u)?;
         Ok(U256Inner::from_le_bytes(&bytes))
     }

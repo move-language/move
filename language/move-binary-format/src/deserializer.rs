@@ -996,6 +996,15 @@ fn load_signature_token(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Sign
     let mut read_next = || {
         if let Ok(byte) = cursor.read_u8() {
             Ok(match S::from_u8(byte)? {
+                S::U16 | S::U32 | S::U256 if (cursor.version() < VERSION_6) => {
+                    return Err(
+                        PartialVMError::new(StatusCode::MALFORMED).with_message(format!(
+                            "u16, u32, u256 integers not supported in bytecode version {}",
+                            cursor.version()
+                        )),
+                    );
+                }
+
                 S::BOOL => T::Saturated(SignatureToken::Bool),
                 S::U8 => T::Saturated(SignatureToken::U8),
                 S::U16 => T::Saturated(SignatureToken::U16),
@@ -1411,6 +1420,22 @@ fn load_code(cursor: &mut VersionedCursor, code: &mut Vec<Bytecode>) -> BinaryLo
         };
         // conversion
         let bytecode = match opcode {
+            Opcodes::LD_U16
+            | Opcodes::LD_U32
+            | Opcodes::LD_U256
+            | Opcodes::CAST_U16
+            | Opcodes::CAST_U32
+            | Opcodes::CAST_U256
+                if (cursor.version() < VERSION_6) =>
+            {
+                return Err(
+                    PartialVMError::new(StatusCode::MALFORMED).with_message(format!(
+                        "Loading or casting u16, u32, u256 integers not supported in bytecode version {}",
+                        cursor.version()
+                    )),
+                );
+            }
+
             Opcodes::POP => Bytecode::Pop,
             Opcodes::RET => Bytecode::Ret,
             Opcodes::BR_TRUE => Bytecode::BrTrue(load_bytecode_index(cursor)?),

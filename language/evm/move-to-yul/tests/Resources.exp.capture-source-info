@@ -430,7 +430,7 @@ object "test_A2_M_test_increment_a" {
         }
     }
 }
-===> Test result of M::test_increment_a: Succeed(Stopped) (used_gas=113382): []
+===> Test result of M::test_increment_a: Succeed(Stopped) (used_gas=113444): []
 
 // test of M::test_publish
 /* =======================================
@@ -890,7 +890,7 @@ object "test_A2_M_test_publish" {
         }
     }
 }
-===> Test result of M::test_publish: Succeed(Stopped) (used_gas=114332): []
+===> Test result of M::test_publish: Succeed(Stopped) (used_gas=114429): []
 
 // test of M::test_publish_t
 /* =======================================
@@ -1378,7 +1378,7 @@ object "test_A2_M_test_publish_t" {
         }
     }
 }
-===> Test result of M::test_publish_t: Succeed(Stopped) (used_gas=138226): []
+===> Test result of M::test_publish_t: Succeed(Stopped) (used_gas=138059): []
 
 // test of M::test_unpublish
 /* =======================================
@@ -1763,4 +1763,4 @@ object "test_A2_M_test_unpublish" {
         }
     }
 }
-===> Test result of M::test_unpublish: Succeed(Stopped) (used_gas=90706): []
+===> Test result of M::test_unpublish: Succeed(Stopped) (used_gas=90786): []

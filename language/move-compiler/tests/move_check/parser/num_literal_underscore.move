@@ -6,7 +6,7 @@ module 0x42::M {
         let _: u8 = 8_5;
 
         // Multiple umderscore separations allowed
-        let _ = 0_1_3_4u256;
+        let _ = 02345677_15463636363_36464784848_456847568568775u256;
         let _ = 0_1_3_4;
         let _: u64 = 0_1_3_4;
 

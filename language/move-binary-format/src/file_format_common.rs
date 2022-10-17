@@ -401,8 +401,12 @@ pub const VERSION_4: u32 = 4;
 ///  + metadata
 pub const VERSION_5: u32 = 5;
 
+/// Version 6: changes compared with version 5
+///  + u16, u32, u256 integers and corresponding Ld, Cast bytecodes
+pub const VERSION_6: u32 = 6;
+
 // Mark which version is the latest version
-pub const VERSION_MAX: u32 = VERSION_5;
+pub const VERSION_MAX: u32 = VERSION_6;
 
 // Mark which oldest version is supported.
 // TODO(#145): finish v4 compatibility; as of now, only metadata is implemented

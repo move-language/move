@@ -177,7 +177,6 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
                     "Expected a literal of type '{}', but the value is too large.",
                     bt
                 );
-                // TODO (ade): improve this logic for u256
                 let fix_bt = if v > u128_max {
                     BT::U256
                 } else if v > u64_max {

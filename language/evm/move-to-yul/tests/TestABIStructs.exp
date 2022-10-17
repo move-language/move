@@ -1950,7 +1950,7 @@ object "test_A2_M_test_abi_S" {
         }
     }
 }
-===> Test result of M::test_abi_S: Succeed(Stopped) (used_gas=8541): []
+===> Test result of M::test_abi_S: Succeed(Stopped) (used_gas=8318): []
 
 // test of M::test_abi_String
 /* =======================================
@@ -2891,4 +2891,4 @@ object "test_A2_M_test_abi_String" {
         }
     }
 }
-===> Test result of M::test_abi_String: Succeed(Stopped) (used_gas=423026): []
+===> Test result of M::test_abi_String: Succeed(Stopped) (used_gas=435789): []

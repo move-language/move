@@ -48,7 +48,7 @@ module std::AModule {
     }
 }
 Command `coverage bytecode --module AModule`:
-// Move bytecode v5
+// Move bytecode v6
 module 1.AModule {
 
 
@@ -69,7 +69,7 @@ B2:
 }
 }
 Command `disassemble --package MoveStdlib --name signer`:
-// Move bytecode v5
+// Move bytecode v6
 module 1.signer {
 
 

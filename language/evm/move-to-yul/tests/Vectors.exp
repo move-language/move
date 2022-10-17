@@ -565,7 +565,7 @@ object "test_A2_Vectors_test_borrow_fail" {
         }
     }
 }
-===> Test result of Vectors::test_borrow_fail: Revert(Reverted) (used_gas=470): [255, 255, 255, 255, 255, 255, 255, 255]
+===> Test result of Vectors::test_borrow_fail: Revert(Reverted) (used_gas=468): [255, 255, 255, 255, 255, 255, 255, 255]
 
 // test of Vectors::test_borrow_mut
 /* =======================================
@@ -1271,7 +1271,7 @@ object "test_A2_Vectors_test_borrow_mut" {
         }
     }
 }
-===> Test result of Vectors::test_borrow_mut: Succeed(Stopped) (used_gas=10653): []
+===> Test result of Vectors::test_borrow_mut: Succeed(Stopped) (used_gas=10908): []
 
 // test of Vectors::test_destroy_empty
 /* =======================================
@@ -1646,7 +1646,7 @@ object "test_A2_Vectors_test_destroy_non_empty_fail" {
         }
     }
 }
-===> Test result of Vectors::test_destroy_non_empty_fail: Revert(Reverted) (used_gas=862): [255, 255, 255, 255, 255, 255, 255, 255]
+===> Test result of Vectors::test_destroy_non_empty_fail: Revert(Reverted) (used_gas=894): [255, 255, 255, 255, 255, 255, 255, 255]
 
 // test of Vectors::test_empty
 /* =======================================
@@ -1834,7 +1834,7 @@ object "test_A2_Vectors_test_empty" {
         }
     }
 }
-===> Test result of Vectors::test_empty: Succeed(Stopped) (used_gas=528): []
+===> Test result of Vectors::test_empty: Succeed(Stopped) (used_gas=522): []
 
 // test of Vectors::test_nested_vector_equality
 /* =======================================
@@ -2338,7 +2338,7 @@ object "test_A2_Vectors_test_nested_vector_equality" {
         }
     }
 }
-===> Test result of Vectors::test_nested_vector_equality: Succeed(Stopped) (used_gas=9063): []
+===> Test result of Vectors::test_nested_vector_equality: Succeed(Stopped) (used_gas=10145): []
 
 // test of Vectors::test_nested_vectors
 /* =======================================
@@ -2960,7 +2960,7 @@ object "test_A2_Vectors_test_nested_vectors" {
         }
     }
 }
-===> Test result of Vectors::test_nested_vectors: Succeed(Stopped) (used_gas=17660): []
+===> Test result of Vectors::test_nested_vectors: Succeed(Stopped) (used_gas=17759): []
 
 // test of Vectors::test_one_elem_struct
 /* =======================================
@@ -3424,7 +3424,7 @@ object "test_A2_Vectors_test_one_elem_struct" {
         }
     }
 }
-===> Test result of Vectors::test_one_elem_struct: Succeed(Stopped) (used_gas=3321): []
+===> Test result of Vectors::test_one_elem_struct: Succeed(Stopped) (used_gas=3407): []
 
 // test of Vectors::test_one_elem_u64
 /* =======================================
@@ -3757,7 +3757,7 @@ object "test_A2_Vectors_test_one_elem_u64" {
         }
     }
 }
-===> Test result of Vectors::test_one_elem_u64: Succeed(Stopped) (used_gas=1629): []
+===> Test result of Vectors::test_one_elem_u64: Succeed(Stopped) (used_gas=1746): []
 
 // test of Vectors::test_pop_back
 /* =======================================
@@ -4229,7 +4229,7 @@ object "test_A2_Vectors_test_pop_back" {
         }
     }
 }
-===> Test result of Vectors::test_pop_back: Succeed(Stopped) (used_gas=6021): []
+===> Test result of Vectors::test_pop_back: Succeed(Stopped) (used_gas=6263): []
 
 // test of Vectors::test_pop_back_empty_fail
 /* =======================================
@@ -4431,7 +4431,7 @@ object "test_A2_Vectors_test_pop_back_empty_fail" {
         }
     }
 }
-===> Test result of Vectors::test_pop_back_empty_fail: Revert(Reverted) (used_gas=317): [255, 255, 255, 255, 255, 255, 255, 255]
+===> Test result of Vectors::test_pop_back_empty_fail: Revert(Reverted) (used_gas=324): [255, 255, 255, 255, 255, 255, 255, 255]
 
 // test of Vectors::test_push_back
 /* =======================================
@@ -5082,7 +5082,7 @@ object "test_A2_Vectors_test_push_back" {
         }
     }
 }
-===> Test result of Vectors::test_push_back: Succeed(Stopped) (used_gas=13628): []
+===> Test result of Vectors::test_push_back: Succeed(Stopped) (used_gas=14029): []
 
 // test of Vectors::test_swap
 /* =======================================
@@ -5550,7 +5550,7 @@ object "test_A2_Vectors_test_swap" {
         }
     }
 }
-===> Test result of Vectors::test_swap: Succeed(Stopped) (used_gas=6776): []
+===> Test result of Vectors::test_swap: Succeed(Stopped) (used_gas=7087): []
 
 // test of Vectors::test_swap_fail
 /* =======================================
@@ -5839,7 +5839,7 @@ object "test_A2_Vectors_test_swap_fail" {
         }
     }
 }
-===> Test result of Vectors::test_swap_fail: Revert(Reverted) (used_gas=2086): [255, 255, 255, 255, 255, 255, 255, 255]
+===> Test result of Vectors::test_swap_fail: Revert(Reverted) (used_gas=2289): [255, 255, 255, 255, 255, 255, 255, 255]
 
 // test of Vectors::test_vector_equality
 /* =======================================
@@ -6319,7 +6319,7 @@ object "test_A2_Vectors_test_vector_equality" {
         }
     }
 }
-===> Test result of Vectors::test_vector_equality: Succeed(Stopped) (used_gas=6424): []
+===> Test result of Vectors::test_vector_equality: Succeed(Stopped) (used_gas=7346): []
 
 // test of Vectors::test_vector_equality_struct
 /* =======================================
@@ -6884,7 +6884,7 @@ object "test_A2_Vectors_test_vector_equality_struct" {
         }
     }
 }
-===> Test result of Vectors::test_vector_equality_struct: Succeed(Stopped) (used_gas=8929): []
+===> Test result of Vectors::test_vector_equality_struct: Succeed(Stopped) (used_gas=9065): []
 
 // test of Vectors::test_vectors_in_structs
 /* =======================================
@@ -7457,4 +7457,4 @@ object "test_A2_Vectors_test_vectors_in_structs" {
         }
     }
 }
-===> Test result of Vectors::test_vectors_in_structs: Succeed(Stopped) (used_gas=8261): []
+===> Test result of Vectors::test_vectors_in_structs: Succeed(Stopped) (used_gas=8586): []

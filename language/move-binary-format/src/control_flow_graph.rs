@@ -147,8 +147,8 @@ impl VMControlFlowGraph {
                     // Already traversed the sub-graph reachable from this block, so skip it.
                     Exploration::Done => continue,
 
-                    // Finish up the traversal by adding this block to the reverse traversal after
-                    // its sub-graph (modulo cycles).
+                    // Finish up the traversal by adding this block to the post-order traversal
+                    // after its sub-graph (modulo cycles).
                     Exploration::InProgress => {
                         post_order.push(block);
                         entry.insert(Exploration::Done);

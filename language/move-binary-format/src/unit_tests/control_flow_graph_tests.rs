@@ -59,7 +59,7 @@ fn traversal_non_loop_back_branch() {
     assert_eq!(traversal(&cfg), vec![0, 2, 1]);
 }
 
-/// Return a vector containing the `BlockId`s from `cfg` in the order suggested by successiely
+/// Return a vector containing the `BlockId`s from `cfg` in the order suggested by successively
 /// calling `ControlFlowGraph::next_block` starting from the entry block.
 fn traversal(cfg: &dyn ControlFlowGraph) -> Vec<BlockId> {
     let mut order = Vec::with_capacity(cfg.num_blocks() as usize);

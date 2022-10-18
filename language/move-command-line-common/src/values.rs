@@ -9,7 +9,6 @@ use anyhow::bail;
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{self, Identifier},
-    u256::U256Inner,
     value::{MoveStruct, MoveValue},
 };
 use std::{
@@ -42,13 +41,13 @@ pub enum ValueToken {
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub enum ParsedValue<Extra: ParsableValue = ()> {
     Address(ParsedAddress),
-    InferredNum(U256Inner),
+    InferredNum(move_core_types::u256::U256),
     U8(u8),
     U16(u16),
     U32(u32),
     U64(u64),
     U128(u128),
-    U256(U256Inner),
+    U256(move_core_types::u256::U256),
     Bool(bool),
     Vector(Vec<ParsedValue<Extra>>),
     Struct(

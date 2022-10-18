@@ -6,7 +6,7 @@ use crate::function_target::FunctionTarget;
 use ethnum::U256;
 use itertools::Itertools;
 use move_binary_format::file_format::CodeOffset;
-use move_core_types::u256::U256Inner;
+use move_core_types::u256;
 use move_model::{
     ast::{Exp, ExpData, MemoryLabel, TempIndex, TraceKind},
     exp_rewriter::{ExpRewriter, ExpRewriterFunctions, RewriteTarget},
@@ -99,8 +99,8 @@ pub enum Constant {
     AddressArray(Vec<BigUint>),
 }
 
-impl From<&U256Inner> for Constant {
-    fn from(n: &U256Inner) -> Constant {
+impl From<&u256::U256> for Constant {
+    fn from(n: &u256::U256) -> Constant {
         Constant::U256(U256::from(n))
     }
 }

@@ -26,15 +26,15 @@ use serde::{ser::SerializeTuple, Deserialize, Deserializer, Serialize, Serialize
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy, PartialOrd, Ord)]
-pub struct U256Inner(PrimitiveU256);
+pub struct U256(PrimitiveU256);
 
-impl fmt::Display for U256Inner {
+impl fmt::Display for U256 {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         self.0.fmt(f)
     }
 }
 
-impl std::str::FromStr for U256Inner {
+impl std::str::FromStr for U256 {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> anyhow::Result<Self> {
@@ -42,18 +42,18 @@ impl std::str::FromStr for U256Inner {
     }
 }
 
-impl<'de> Deserialize<'de> for U256Inner {
+impl<'de> Deserialize<'de> for U256 {
     fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        Ok(U256Inner::from_le_bytes(
+        Ok(U256::from_le_bytes(
             &(<[u8; U256_NUM_BYTES]>::deserialize(deserializer)?),
         ))
     }
 }
 
-impl Serialize for U256Inner {
+impl Serialize for U256 {
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -67,7 +67,7 @@ impl Serialize for U256Inner {
     }
 }
 
-impl Shl<u8> for U256Inner {
+impl Shl<u8> for U256 {
     type Output = Self;
 
     fn shl(self, rhs: u8) -> Self::Output {
@@ -76,7 +76,7 @@ impl Shl<u8> for U256Inner {
     }
 }
 
-impl Shr<u8> for U256Inner {
+impl Shr<u8> for U256 {
     type Output = Self;
 
     fn shr(self, rhs: u8) -> Self::Output {
@@ -85,64 +85,70 @@ impl Shr<u8> for U256Inner {
     }
 }
 
-impl BitOr<U256Inner> for U256Inner {
+impl BitOr<U256> for U256 {
     type Output = Self;
 
-    fn bitor(self, rhs: U256Inner) -> Self::Output {
+    fn bitor(self, rhs: U256) -> Self::Output {
         let Self(lhs) = self;
         let Self(rhs) = rhs;
         Self(lhs | rhs)
     }
 }
 
-impl BitAnd<U256Inner> for U256Inner {
+impl BitAnd<U256> for U256 {
     type Output = Self;
 
-    fn bitand(self, rhs: U256Inner) -> Self::Output {
+    fn bitand(self, rhs: U256) -> Self::Output {
         let Self(lhs) = self;
         let Self(rhs) = rhs;
         Self(lhs & rhs)
     }
 }
 
-impl BitXor<U256Inner> for U256Inner {
+impl BitXor<U256> for U256 {
     type Output = Self;
 
-    fn bitxor(self, rhs: U256Inner) -> Self::Output {
+    fn bitxor(self, rhs: U256) -> Self::Output {
         let Self(lhs) = self;
         let Self(rhs) = rhs;
         Self(lhs ^ rhs)
     }
 }
 
-impl U256Inner {
+impl U256 {
+    /// Zero value as U256
     pub const fn zero() -> Self {
         Self(PrimitiveU256::zero())
     }
 
+    /// One value as U256
     pub const fn one() -> Self {
         Self(PrimitiveU256::one())
     }
 
+    /// Max value of U256: 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
     pub const fn max() -> Self {
         Self(PrimitiveU256::max_value())
     }
 
+    /// U256 from string with radix 10 or 16
     pub fn from_str_radix(src: &str, radix: u32) -> Result<Self, U256FromStrError> {
         PrimitiveU256::from_str_radix(src.trim_start_matches('0'), radix).map(Self)
     }
 
-    pub fn from_le_bytes(slice: &[u8]) -> Self {
+    /// U256 from 32 little endian bytes
+    pub fn from_le_bytes(slice: &[u8; U256_NUM_BYTES]) -> Self {
         Self(PrimitiveU256::from_little_endian(slice))
     }
 
+    /// U256 to 32 little endian bytes
     pub fn to_le_bytes(self) -> [u8; U256_NUM_BYTES] {
         let mut bytes = [0u8; U256_NUM_BYTES];
         self.0.to_little_endian(&mut bytes);
         bytes
     }
 
-    // Unchecked downcasting
+    // Unchecked downcasting. Values as truncated if larger than target max
     pub fn unchecked_as_u8(&self) -> u8 {
         self.0.low_u128() as u8
     }
@@ -224,50 +230,50 @@ impl U256Inner {
     }
 }
 
-impl From<u8> for U256Inner {
+impl From<u8> for U256 {
     fn from(n: u8) -> Self {
-        U256Inner(PrimitiveU256::from(n))
+        U256(PrimitiveU256::from(n))
     }
 }
 
-impl From<u16> for U256Inner {
+impl From<u16> for U256 {
     fn from(n: u16) -> Self {
-        U256Inner(PrimitiveU256::from(n))
+        U256(PrimitiveU256::from(n))
     }
 }
 
-impl From<u32> for U256Inner {
+impl From<u32> for U256 {
     fn from(n: u32) -> Self {
-        U256Inner(PrimitiveU256::from(n))
+        U256(PrimitiveU256::from(n))
     }
 }
 
-impl From<u64> for U256Inner {
+impl From<u64> for U256 {
     fn from(n: u64) -> Self {
-        U256Inner(PrimitiveU256::from(n))
+        U256(PrimitiveU256::from(n))
     }
 }
 
-impl From<u128> for U256Inner {
+impl From<u128> for U256 {
     fn from(n: u128) -> Self {
-        U256Inner(PrimitiveU256::from(n))
+        U256(PrimitiveU256::from(n))
     }
 }
 
-impl From<BigInt> for U256Inner {
+impl From<BigInt> for U256 {
     fn from(n: BigInt) -> Self {
-        U256Inner(PrimitiveU256::from_little_endian(&n.to_bytes_le().1))
+        U256(PrimitiveU256::from_little_endian(&n.to_bytes_le().1))
     }
 }
 
-impl From<&U256Inner> for BigInt {
-    fn from(n: &U256Inner) -> Self {
+impl From<&U256> for BigInt {
+    fn from(n: &U256) -> Self {
         BigInt::from_bytes_le(Sign::Plus, &n.to_le_bytes())
     }
 }
 
-impl From<&U256Inner> for EthnumU256 {
-    fn from(n: &U256Inner) -> EthnumU256 {
+impl From<&U256> for EthnumU256 {
+    fn from(n: &U256) -> EthnumU256 {
         // TODO (ade): use better solution for conversion
         // Currently using str because EthnumU256 can be little or big endian
         let num_str = format!("{:X}", n.0);
@@ -276,9 +282,9 @@ impl From<&U256Inner> for EthnumU256 {
     }
 }
 
-impl TryFrom<U256Inner> for u8 {
+impl TryFrom<U256> for u8 {
     type Error = anyhow::Error;
-    fn try_from(n: U256Inner) -> Result<Self, Self::Error> {
+    fn try_from(n: U256) -> Result<Self, Self::Error> {
         let n = n.0.low_u64();
         if n > u8::MAX as u64 {
             Err(anyhow!("Cast failed. {n} too large for u8."))
@@ -288,10 +294,10 @@ impl TryFrom<U256Inner> for u8 {
     }
 }
 
-impl TryFrom<U256Inner> for u16 {
+impl TryFrom<U256> for u16 {
     type Error = anyhow::Error;
 
-    fn try_from(n: U256Inner) -> Result<Self, Self::Error> {
+    fn try_from(n: U256) -> Result<Self, Self::Error> {
         let n = n.0.low_u64();
         if n > u16::MAX as u64 {
             Err(anyhow!("Cast failed. {n} too large for u16."))
@@ -301,10 +307,10 @@ impl TryFrom<U256Inner> for u16 {
     }
 }
 
-impl TryFrom<U256Inner> for u32 {
+impl TryFrom<U256> for u32 {
     type Error = anyhow::Error;
 
-    fn try_from(n: U256Inner) -> Result<Self, Self::Error> {
+    fn try_from(n: U256) -> Result<Self, Self::Error> {
         let n = n.0.low_u64();
         if n > u32::MAX as u64 {
             Err(anyhow!("Cast failed. {n} too large for u32."))
@@ -314,10 +320,10 @@ impl TryFrom<U256Inner> for u32 {
     }
 }
 
-impl TryFrom<U256Inner> for u64 {
+impl TryFrom<U256> for u64 {
     type Error = anyhow::Error;
 
-    fn try_from(n: U256Inner) -> Result<Self, Self::Error> {
+    fn try_from(n: U256) -> Result<Self, Self::Error> {
         let n = n.0.low_u128();
         if n > u64::MAX as u128 {
             Err(anyhow!("Cast failed. {n} too large for u64."))
@@ -327,11 +333,11 @@ impl TryFrom<U256Inner> for u64 {
     }
 }
 
-impl TryFrom<U256Inner> for u128 {
+impl TryFrom<U256> for u128 {
     type Error = anyhow::Error;
 
-    fn try_from(n: U256Inner) -> Result<Self, Self::Error> {
-        if n > U256Inner::from(u128::MAX) {
+    fn try_from(n: U256) -> Result<Self, Self::Error> {
+        if n > U256::from(u128::MAX) {
             Err(anyhow!("Cast failed. {n} too large for u128."))
         } else {
             Ok(n.0.low_u128())
@@ -340,21 +346,31 @@ impl TryFrom<U256Inner> for u128 {
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
-impl proptest::prelude::Arbitrary for U256Inner {
+impl proptest::prelude::Arbitrary for U256 {
     type Strategy = BoxedStrategy<Self>;
     type Parameters = ();
     fn arbitrary_with(_params: Self::Parameters) -> Self::Strategy {
         // TODO (ade): improve this as is it not exhaustive
-        proptest::bits::u8::masked(0xFF)
-            .prop_map(|u| U256Inner(PrimitiveU256::from_little_endian(&[u; U256_NUM_BYTES])))
+        proptest::bits::u64::masked(0xFFFFFFFF)
+            .prop_map(|u| {
+                let bytes1 = u.to_le_bytes();
+                let mut bytes2: Vec<_> = bytes1.iter().copied().rev().collect();
+                bytes2.extend(bytes1);
+                bytes2.extend(bytes2.clone());
+                U256::from_le_bytes(
+                    &bytes2[..U256_NUM_BYTES]
+                        .try_into()
+                        .expect("Bytes should be 32 len"),
+                )
+            })
             .boxed()
     }
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
-impl<'a> arbitrary::Arbitrary<'a> for U256Inner {
+impl<'a> arbitrary::Arbitrary<'a> for U256 {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         let bytes = <[u8; U256_NUM_BYTES]>::arbitrary(u)?;
-        Ok(U256Inner::from_le_bytes(&bytes))
+        Ok(U256::from_le_bytes(&bytes))
     }
 }

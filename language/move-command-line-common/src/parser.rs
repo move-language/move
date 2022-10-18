@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{anyhow, bail, Result};
-use move_core_types::{
-    account_address::AccountAddress,
-    u256::{U256FromStrError, U256Inner},
-};
+use move_core_types::{account_address::AccountAddress, u256::U256FromStrError};
 use num_bigint::BigUint;
 use std::{collections::BTreeMap, fmt::Display, iter::Peekable, num::ParseIntError};
 
@@ -384,10 +381,12 @@ pub fn parse_u128(s: &str) -> Result<(u128, NumberFormat), ParseIntError> {
 }
 
 // Parse a u256 from a decimal or hex encoding
-pub fn parse_u256(s: &str) -> Result<(U256Inner, NumberFormat), U256FromStrError> {
+pub fn parse_u256(
+    s: &str,
+) -> Result<(move_core_types::u256::U256, NumberFormat), U256FromStrError> {
     let (txt, base) = determine_num_text_and_base(s);
     Ok((
-        U256Inner::from_str_radix(&txt.replace('_', ""), base as u32)?,
+        move_core_types::u256::U256::from_str_radix(&txt.replace('_', ""), base as u32)?,
         base,
     ))
 }
@@ -418,7 +417,7 @@ mod tests {
         types::{ParsedStructType, ParsedType},
         values::ParsedValue,
     };
-    use move_core_types::{account_address::AccountAddress, u256::U256Inner};
+    use move_core_types::account_address::AccountAddress;
 
     #[allow(clippy::unreadable_literal)]
     #[test]
@@ -428,22 +427,34 @@ mod tests {
             ("  0u8", V::U8(0)),
             ("0u8", V::U8(0)),
             ("255u8", V::U8(255)),
-            ("255u256", V::U256(U256Inner::from(255u64))),
-            ("0", V::InferredNum(U256Inner::from(0u64))),
-            ("0123", V::InferredNum(U256Inner::from(123u64))),
-            ("0xFF", V::InferredNum(U256Inner::from(0xFFu64))),
+            (
+                "255u256",
+                V::U256(move_core_types::u256::U256::from(255u64)),
+            ),
+            ("0", V::InferredNum(move_core_types::u256::U256::from(0u64))),
+            (
+                "0123",
+                V::InferredNum(move_core_types::u256::U256::from(123u64)),
+            ),
+            (
+                "0xFF",
+                V::InferredNum(move_core_types::u256::U256::from(0xFFu64)),
+            ),
             ("0u64", V::U64(0)),
             ("0x0u64", V::U64(0)),
             (
                 "18446744073709551615",
-                V::InferredNum(U256Inner::from(18446744073709551615u128)),
+                V::InferredNum(move_core_types::u256::U256::from(18446744073709551615u128)),
             ),
             ("18446744073709551615u64", V::U64(18446744073709551615)),
             ("0u128", V::U128(0)),
             ("1_0u8", V::U8(1_0)),
             ("10_u8", V::U8(10)),
             ("1_000u64", V::U64(1_000)),
-            ("1_000", V::InferredNum(U256Inner::from(1_000u32))),
+            (
+                "1_000",
+                V::InferredNum(move_core_types::u256::U256::from(1_000u32)),
+            ),
             ("1_0_0_0u64", V::U64(1_000)),
             ("1_000_000u128", V::U128(1_000_000)),
             (

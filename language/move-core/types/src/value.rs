@@ -6,7 +6,7 @@ use crate::{
     account_address::AccountAddress,
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
-    u256::U256Inner,
+    u256,
 };
 use anyhow::{bail, Result as AResult};
 use serde::{
@@ -48,7 +48,7 @@ pub enum MoveValue {
     U32(u32),
     U64(u64),
     U128(u128),
-    U256(U256Inner),
+    U256(u256::U256),
     Bool(bool),
     Address(AccountAddress),
     Vector(Vec<MoveValue>),
@@ -287,7 +287,7 @@ impl<'d> serde::de::DeserializeSeed<'d> for &MoveTypeLayout {
             MoveTypeLayout::U32 => u32::deserialize(deserializer).map(MoveValue::U32),
             MoveTypeLayout::U64 => u64::deserialize(deserializer).map(MoveValue::U64),
             MoveTypeLayout::U128 => u128::deserialize(deserializer).map(MoveValue::U128),
-            MoveTypeLayout::U256 => U256Inner::deserialize(deserializer).map(MoveValue::U256),
+            MoveTypeLayout::U256 => u256::U256::deserialize(deserializer).map(MoveValue::U256),
             MoveTypeLayout::Address => {
                 AccountAddress::deserialize(deserializer).map(MoveValue::Address)
             }

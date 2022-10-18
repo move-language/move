@@ -51,7 +51,7 @@ If a value has `key`, all values contained inside of that value have `store`. Th
 
 Most primitive, builtin types have `copy`, `drop`, and `store` with the exception of `signer`, which just has `drop`
 
-* `bool`, `u8`, `u64`, `u128`, and `address` all have `copy`, `drop`, and `store`.
+* `bool`, `u8`, `u16`, `u32`, `u64`, `u128`, `u256`, and `address` all have `copy`, `drop`, and `store`.
 * `signer` has `drop`
     * Cannot be copied and cannot be put into global storage
 * `vector<T>` may have `copy`, `drop`, and `store` depending on the abilities of `T`.

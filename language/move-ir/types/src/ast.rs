@@ -8,7 +8,7 @@ use crate::{
 };
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, language_storage::ModuleId,
-    u256::U256Inner, value::MoveValue,
+    value::MoveValue,
 };
 use move_symbol_pool::Symbol;
 use once_cell::sync::Lazy;
@@ -533,7 +533,7 @@ pub enum CopyableVal_ {
     /// An unsigned 128-bit integer
     U128(u128),
     /// An unsigned 256-bit integer
-    U256(U256Inner),
+    U256(move_core_types::u256::U256),
     /// true or false
     Bool(bool),
     /// `b"<bytes>"`
@@ -669,7 +669,7 @@ pub enum Bytecode_ {
     LdU32(u32),
     LdU64(u64),
     LdU128(u128),
-    LdU256(U256Inner),
+    LdU256(move_core_types::u256::U256),
     CastU8,
     CastU16,
     CastU32,

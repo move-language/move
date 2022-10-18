@@ -2,7 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{account_address::AccountAddress, u256::U256Inner, value::MoveValue};
+use crate::{account_address::AccountAddress, u256, value::MoveValue};
 use anyhow::{anyhow, Error, Result};
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
@@ -14,7 +14,7 @@ pub enum TransactionArgument {
     U32(u32),
     U64(u64),
     U128(u128),
-    U256(U256Inner),
+    U256(u256::U256),
     Address(AccountAddress),
     U8Vector(#[serde(with = "serde_bytes")] Vec<u8>),
     Bool(bool),

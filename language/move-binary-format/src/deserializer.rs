@@ -4,7 +4,7 @@
 
 use crate::{check_bounds::BoundsChecker, errors::*, file_format::*, file_format_common::*};
 use move_core_types::{
-    account_address::AccountAddress, identifier::Identifier, metadata::Metadata, u256::U256Inner,
+    account_address::AccountAddress, identifier::Identifier, metadata::Metadata,
     vm_status::StatusCode,
 };
 use std::{collections::HashSet, convert::TryInto, io::Read};
@@ -89,12 +89,14 @@ fn read_u128_internal(cursor: &mut VersionedCursor) -> BinaryLoaderResult<u128> 
     Ok(u128::from_le_bytes(u128_bytes))
 }
 
-fn read_u256_internal(cursor: &mut VersionedCursor) -> BinaryLoaderResult<U256Inner> {
+fn read_u256_internal(
+    cursor: &mut VersionedCursor,
+) -> BinaryLoaderResult<move_core_types::u256::U256> {
     let mut u256_bytes = [0; 32];
     cursor
         .read_exact(&mut u256_bytes)
         .map_err(|_| PartialVMError::new(StatusCode::BAD_U256))?;
-    Ok(U256Inner::from_le_bytes(&u256_bytes))
+    Ok(move_core_types::u256::U256::from_le_bytes(&u256_bytes))
 }
 
 //

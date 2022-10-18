@@ -10,7 +10,7 @@ use crate::{
     parser::ast::Ability_,
     typing::ast as T,
 };
-use move_core_types::u256::U256Inner;
+use move_core_types::u256::U256;
 use move_ir_types::location::*;
 
 //**************************************************************************************************
@@ -157,12 +157,12 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
                 _ => panic!("ICE inferred num failed {:?}", &e.ty.value),
             };
             let v = *v;
-            let u8_max = U256Inner::from(std::u8::MAX);
-            let u16_max = U256Inner::from(std::u16::MAX);
-            let u32_max = U256Inner::from(std::u32::MAX);
-            let u64_max = U256Inner::from(std::u64::MAX);
-            let u128_max = U256Inner::from(std::u128::MAX);
-            let u256_max = U256Inner::max();
+            let u8_max = U256::from(std::u8::MAX);
+            let u16_max = U256::from(std::u16::MAX);
+            let u32_max = U256::from(std::u32::MAX);
+            let u64_max = U256::from(std::u64::MAX);
+            let u128_max = U256::from(std::u128::MAX);
+            let u256_max = U256::max();
             let max = match bt {
                 BT::U8 => u8_max,
                 BT::U16 => u16_max,

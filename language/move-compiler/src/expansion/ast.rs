@@ -12,7 +12,6 @@ use crate::{
         unique_set::UniqueSet, *,
     },
 };
-use move_core_types::u256::U256Inner;
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
 use std::{
@@ -375,7 +374,7 @@ pub enum Value_ {
     // 0x<hex representation up to 64 digits with padding 0s>
     Address(Address),
     // <num>
-    InferredNum(U256Inner),
+    InferredNum(move_core_types::u256::U256),
     // <num>u8
     U8(u8),
     // <num>u16
@@ -387,7 +386,7 @@ pub enum Value_ {
     // <num>u128
     U128(u128),
     // <num>u256
-    U256(U256Inner),
+    U256(move_core_types::u256::U256),
     // true
     // false
     Bool(bool),

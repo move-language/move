@@ -13,7 +13,6 @@ use crate::{
     },
     shared::{ast_debug::*, unique_map::UniqueMap, NumericalAddress},
 };
-use move_core_types::u256::U256Inner;
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -279,7 +278,7 @@ pub enum Value_ {
     // <num>u128
     U128(u128),
     // <num>u256
-    U256(U256Inner),
+    U256(move_core_types::u256::U256),
     // true
     // false
     Bool(bool),

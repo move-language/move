@@ -39,7 +39,6 @@ use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
     metadata::Metadata,
-    u256::U256Inner,
     vm_status::StatusCode,
 };
 #[cfg(any(test, feature = "fuzzing"))]
@@ -1214,7 +1213,7 @@ pub enum Bytecode {
     /// Stack transition:
     ///
     /// ```... -> ..., u256_value```
-    LdU256(U256Inner),
+    LdU256(move_core_types::u256::U256),
     /// Convert the value at the top of the stack into u8.
     ///
     /// Stack transition:

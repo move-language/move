@@ -7,8 +7,10 @@ use crate::{
     values::{ParsableValue, ParsedValue, ValueToken},
 };
 use anyhow::{anyhow, bail, Result};
-use move_core_types::u256::U256;
-use move_core_types::{account_address::AccountAddress, u256::U256FromStrError};
+use move_core_types::{
+    account_address::AccountAddress,
+    u256::{U256FromStrError, U256},
+};
 use num_bigint::BigUint;
 use std::{collections::BTreeMap, fmt::Display, iter::Peekable, num::ParseIntError};
 

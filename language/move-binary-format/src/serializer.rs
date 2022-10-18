@@ -734,13 +734,13 @@ fn serialize_instruction_inner(
     binary: &mut BinaryData,
     opcode: &Bytecode,
 ) -> Result<()> {
-    let res = match opcode {
-        Bytecode::CastU16
-        | Bytecode::CastU32
-        | Bytecode::CastU256
-        | Bytecode::LdU16(_)
+    match opcode {
+        Bytecode::LdU16(_)
         | Bytecode::LdU32(_)
         | Bytecode::LdU256(_)
+        | Bytecode::CastU16
+        | Bytecode::CastU32
+        | Bytecode::CastU256
             if (major_version < VERSION_6) =>
         {
             return Err(anyhow!(
@@ -748,7 +748,10 @@ fn serialize_instruction_inner(
                 major_version
             ));
         }
+        _ => (),
+    };
 
+    let res = match opcode {
         Bytecode::FreezeRef => binary.push(Opcodes::FREEZE_REF as u8),
         Bytecode::Pop => binary.push(Opcodes::POP as u8),
         Bytecode::Ret => binary.push(Opcodes::RET as u8),

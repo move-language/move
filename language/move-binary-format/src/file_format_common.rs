@@ -121,7 +121,6 @@ pub enum SerializedType {
     VECTOR                  = 0xA,
     STRUCT_INST             = 0xB,
     SIGNER                  = 0xC,
-
     U16                     = 0xD,
     U32                     = 0xE,
     U256                    = 0xF,
@@ -213,7 +212,6 @@ pub enum Opcodes {
     VEC_POP_BACK                = 0x45,
     VEC_UNPACK                  = 0x46,
     VEC_SWAP                    = 0x47,
-
     LD_U16                      = 0x48,
     LD_U32                      = 0x49,
     LD_U256                     = 0x4A,

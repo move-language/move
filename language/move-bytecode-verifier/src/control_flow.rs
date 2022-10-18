@@ -7,7 +7,7 @@
 //! - All forward jumps do not enter into the middle of a loop
 //! - All "breaks" (forward, loop-exiting jumps) go to the "end" of the loop
 //! - All "continues" (back jumps in a loop) are only to the current loop
-use crate::loop_summary::{LoopSummary, LoopPartition};
+use crate::loop_summary::{LoopPartition, LoopSummary};
 use crate::verifier::VerifierConfig;
 use move_binary_format::{
     binary_views::FunctionView,
@@ -48,7 +48,7 @@ pub fn verify_reducibility<'a>(
     for head in summary.preorder().rev() {
         let back = summary.back_edges(head);
         if back.is_empty() {
-            continue
+            continue;
         }
 
         let mut body = BTreeSet::new();

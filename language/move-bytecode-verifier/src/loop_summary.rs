@@ -178,7 +178,6 @@ impl LoopSummary {
     pub fn pred_edges(&self, l: NodeId) -> &Vec<NodeId> {
         &self.preds[usize::from(l)]
     }
-
 }
 
 impl LoopPartition {

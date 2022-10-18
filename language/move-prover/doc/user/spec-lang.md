@@ -859,7 +859,14 @@ after the call to `publish1` and before the call to `publish2`.
 If either of `publish1` or `publish2` is without the other, the prover
 will also report a violation of the invariant.
 
-To prove that the invariant holds everywhere else, there is a pragma
+By default, a global invariant is checked immediately after the instruction `I` that touches the resources mentioned in the global invariant.
+The `[suspendable]` attribute (at the invariant side) together with two pragmas
+(specified in function spec block) provides fine-grained control on where we hope this invariant to be checked:
+
+- `disable_invariants_in_body`: the invariant will be checked at the end of the function where `I` resides.
+- `delegate_invariants_to_caller`: the invariant will be checked by all callers of the function where `I` resides.
+
+For the example above, we can add the pragma `disable_invariants_in_body`:
 ```move
 spec setup {
     pragma disable_invariants_in_body;
@@ -898,7 +905,7 @@ the user to declare that a function be treated like `publish1`.
 
 For example, if `publish2` is *only* called from the setup function above,
 and we did *not* disable invariants in `setup`, we could achieve a similar
-effect by using this pragma, instead.
+effect by using the pragma `delegate_invariants_to_caller`, instead.
 
 ```move
 spec setup {
@@ -927,7 +934,6 @@ callers (since the Prover does not know all the call sites), *unless*
 the function cannot possibly invalidate an invariant because it
 doesn't change any of the state mentioned in `exists` and `global`
 expressions appearing in the invariant.
-
 
 #### Update Invariants
 
@@ -1135,6 +1141,7 @@ spec Counter {
     invariant unpack sum_of_counters = sum_of_counters - value;
 }
 ```
+> TODO: `invariant pack` and `invariant unpack` are currently not implemented
 
 Now we may for example want to specify that the sum of all Counter instances in the global state
 should never exceed a particular value. We can do this as follows:

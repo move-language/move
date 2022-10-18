@@ -193,21 +193,34 @@ impl CompilationEnv {
         self.diags.extend(diags)
     }
 
-    pub fn has_diags(&self) -> bool {
+    pub fn has_warnings_or_errors(&self) -> bool {
         !self.diags.is_empty()
+    }
+
+    pub fn has_errors(&self) -> bool {
+        // Non-blocking Error is the min level considered an error
+        self.has_diags_at_or_above_severity(Severity::NonblockingError)
     }
 
     pub fn count_diags(&self) -> usize {
         self.diags.len()
     }
 
+    pub fn has_diags_at_or_above_severity(&self, threshold: Severity) -> bool {
+        match self.diags.max_severity() {
+            Some(max) if max >= threshold => true,
+            Some(_) | None => false,
+        }
+    }
+
     pub fn check_diags_at_or_above_severity(
         &mut self,
         threshold: Severity,
     ) -> Result<(), Diagnostics> {
-        match self.diags.max_severity() {
-            Some(max) if max >= threshold => Err(std::mem::take(&mut self.diags)),
-            Some(_) | None => Ok(()),
+        if self.has_diags_at_or_above_severity(threshold) {
+            Err(std::mem::take(&mut self.diags))
+        } else {
+            Ok(())
         }
     }
 

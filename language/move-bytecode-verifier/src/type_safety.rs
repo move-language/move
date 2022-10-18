@@ -722,7 +722,10 @@ fn verify_instr(
         Bytecode::VecPack(idx, num) => {
             let element_type = &verifier.resolver.signature_at(*idx).0[0];
             for _ in 0..*num {
-                verifier.stack.pop().unwrap();
+                let operand_type = verifier.stack.pop().unwrap();
+                if element_type != &operand_type {
+                    return Err(verifier.error(StatusCode::TYPE_MISMATCH, offset));
+                }
             }
             verifier
                 .stack

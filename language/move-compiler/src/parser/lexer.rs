@@ -560,7 +560,7 @@ fn get_name_len(text: &str) -> usize {
 fn get_decimal_number(text: &str) -> (Tok, usize) {
     let num_text_len = text
         .chars()
-        .position(|c| !matches!(c, '0'..='9'))
+        .position(|c| !matches!(c, '0'..='9' | '_'))
         .unwrap_or(text.len());
     get_number_maybe_with_suffix(text, num_text_len)
 }

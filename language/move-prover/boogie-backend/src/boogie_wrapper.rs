@@ -26,8 +26,8 @@ use move_model::{
     ast::TempIndex,
     code_writer::CodeWriter,
     model::{FunId, GlobalEnv, Loc, ModuleId, NodeId, QualifiedId, StructEnv},
+    pragmas::INTRINSIC_TYPE_MAP,
     ty::{PrimitiveType, Type},
-    well_known::TABLE_TABLE,
 };
 use move_stackless_bytecode::function_target_pipeline::{FunctionTargetsHolder, FunctionVariant};
 
@@ -1080,7 +1080,7 @@ impl ModelValue {
             if args.len() != 2 {
                 return None;
             }
-            let size = (&args[1]).extract_number()?;
+            let size = args[1].extract_number()?;
             let map_key = &args[0];
             let value_array_map = model
                 .vars
@@ -1218,7 +1218,7 @@ impl ModelValue {
             }
         }
 
-        // Travese the update map to obtain the updated value
+        // Traverse the update map to obtain the updated value
         if let Some(value_update_map) = value_update_map_opt {
             for up_k in value_update_map.keys() {
                 if let ModelValue::List(elems) = up_k {
@@ -1417,7 +1417,7 @@ impl ModelValue {
             Type::Vector(param) => self.pretty_vector(wrapper, model, param),
             Type::Struct(module_id, struct_id, params) => {
                 let struct_env = wrapper.env.get_struct_qid(module_id.qualified(*struct_id));
-                if struct_env.is_well_known(TABLE_TABLE) {
+                if struct_env.is_intrinsic_of(INTRINSIC_TYPE_MAP) {
                     self.pretty_table(wrapper, model, &params[0], &params[1])
                 } else {
                     self.pretty_struct(wrapper, model, &struct_env, params)

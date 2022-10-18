@@ -4,6 +4,19 @@
 
 //! Data flow analysis computing borrow information for preparation of memory_instrumentation.
 
+use std::{borrow::BorrowMut, collections::BTreeMap, fmt};
+
+use itertools::Itertools;
+
+use move_binary_format::file_format::CodeOffset;
+use move_model::{
+    ast::TempIndex,
+    model::{FunctionEnv, GlobalEnv, QualifiedInstId},
+    pragmas::INTRINSIC_FUN_MAP_BORROW_MUT,
+    ty::Type,
+    well_known::VECTOR_BORROW_MUT,
+};
+
 use crate::{
     dataflow_analysis::{DataflowAnalysis, TransferFunctions},
     dataflow_domains::{AbstractDomain, JoinResult, MapDomain, SetDomain},
@@ -13,15 +26,6 @@ use crate::{
     stackless_bytecode::{AssignKind, BorrowEdge, BorrowNode, Bytecode, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
-use itertools::Itertools;
-use move_binary_format::file_format::CodeOffset;
-use move_model::{
-    ast::TempIndex,
-    model::{FunctionEnv, GlobalEnv, QualifiedInstId},
-    ty::Type,
-    well_known::{TABLE_BORROW_MUT, VECTOR_BORROW_MUT},
-};
-use std::{borrow::BorrowMut, collections::BTreeMap, fmt};
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, Default)]
 pub struct BorrowInfo {
@@ -416,7 +420,9 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
 }
 
 fn native_annotation(fun_env: &FunctionEnv) -> BorrowAnnotation {
-    if fun_env.is_well_known(VECTOR_BORROW_MUT) || fun_env.is_well_known(TABLE_BORROW_MUT) {
+    if fun_env.is_well_known(VECTOR_BORROW_MUT)
+        || fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT)
+    {
         // Create an edge from the first parameter to the return value.
         let mut an = BorrowAnnotation::default();
         let param_node = BorrowNode::Reference(0);
@@ -577,34 +583,43 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                             .func_target
                             .global_env()
                             .get_function_qid(mid.qualified(*fid));
-                        let callee_target = &self
+
+                        if self
                             .targets
-                            .get_target(callee_env, &FunctionVariant::Baseline);
-                        let native_an;
-                        let callee_an_opt = if callee_env.is_native_or_intrinsic() {
-                            native_an = native_annotation(callee_env);
-                            Some(&native_an)
-                        } else {
-                            callee_target.get_annotations().get::<BorrowAnnotation>()
-                        };
-                        if let Some(callee_an) = callee_an_opt {
+                            .has_target(callee_env, &FunctionVariant::Baseline)
+                        {
+                            // non-recursive case
+                            let callee_target = self
+                                .targets
+                                .get_target(callee_env, &FunctionVariant::Baseline);
+
+                            let callee_annotation = if callee_env.is_native_or_intrinsic() {
+                                native_annotation(callee_env)
+                            } else {
+                                self.targets
+                                    .get_target(callee_env, &FunctionVariant::Baseline)
+                                    .get_annotations()
+                                    .get::<BorrowAnnotation>()
+                                    .expect("callee borrow annotation")
+                                    .clone()
+                            };
+
                             state.instantiate(
-                                callee_target,
+                                &callee_target,
                                 targs,
-                                &callee_an.summary,
+                                &callee_annotation.summary,
                                 srcs,
                                 dests,
                             );
                         } else {
-                            // This can happen for recursive functions. Check whether the function
-                            // has &mut returns, and report an error that we can't deal with it if
-                            // so.
-                            let has_muts = (0..callee_target.get_return_count()).any(|idx| {
-                                callee_target.get_return_type(idx).is_mutable_reference()
-                            });
+                            // This can happen for recursive functions.
+                            // Check whether the function has &mut returns.
+                            // If so, report an error that we can't deal with it.
+                            let has_muts = (0..callee_env.get_return_count())
+                                .any(|idx| callee_env.get_return_type(idx).is_mutable_reference());
                             if has_muts {
-                                callee_target.global_env().error(&self.func_target.get_bytecode_loc(*id),
-                                    "restriction: recursive functions which return `&mut` values not supported");
+                                callee_env.module_env.env.error(&self.func_target.get_bytecode_loc(*id),
+                                                                "restriction: recursive functions which return `&mut` values not supported");
                             }
                         }
                     }

@@ -14,9 +14,9 @@ use move_model::{
         FieldEnv, FunctionEnv, GlobalEnv, ModuleEnv, QualifiedInstId, SpecFunId, StructEnv,
         StructId, SCRIPT_MODULE_NAME,
     },
+    pragmas::INTRINSIC_TYPE_MAP,
     symbol::Symbol,
     ty::{PrimitiveType, Type},
-    well_known::TABLE_TABLE,
 };
 use move_stackless_bytecode::function_target::FunctionTarget;
 
@@ -39,7 +39,7 @@ pub fn boogie_module_name(env: &ModuleEnv<'_>) -> String {
 
 /// Return boogie name of given structure.
 pub fn boogie_struct_name(struct_env: &StructEnv<'_>, inst: &[Type]) -> String {
-    if struct_env.is_well_known(TABLE_TABLE) {
+    if struct_env.is_intrinsic_of(INTRINSIC_TYPE_MAP) {
         // Map to the theory type representation, which is `Table int V`. The key
         // is encoded as an integer to avoid extensionality problems, and to support
         // $Mutation paths, which are sequences of ints.
@@ -242,9 +242,13 @@ pub fn boogie_type_suffix(env: &GlobalEnv, ty: &Type) -> String {
 }
 
 pub fn boogie_type_suffix_for_struct(struct_env: &StructEnv<'_>, inst: &[Type]) -> String {
-    let env = struct_env.module_env.env;
-    if struct_env.is_well_known(TABLE_TABLE) {
-        format!("table{}", boogie_inst_suffix(env, inst))
+    if struct_env.is_intrinsic_of(INTRINSIC_TYPE_MAP) {
+        format!(
+            "${}_{}{}",
+            boogie_module_name(&struct_env.module_env),
+            struct_env.get_name().display(struct_env.symbol_pool()),
+            boogie_inst_suffix(struct_env.module_env.env, inst)
+        )
     } else {
         boogie_struct_name(struct_env, inst)
     }

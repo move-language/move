@@ -30,7 +30,7 @@ use move_vm_types::{
 };
 
 use crate::native_extensions::NativeContextExtensions;
-use std::{cmp::min, collections::VecDeque, fmt::Write, mem, sync::Arc};
+use std::{cmp::min, collections::VecDeque, fmt::Write, sync::Arc};
 use tracing::error;
 
 macro_rules! debug_write {
@@ -92,37 +92,11 @@ impl Interpreter {
         extensions: &mut NativeContextExtensions,
         loader: &Loader,
     ) -> VMResult<Vec<Value>> {
-        // We count the intrinsic cost of the transaction here, since that needs to also cover the
-        // setup of the function.
-        let mut interp = Self::new();
-        interp.execute(
-            loader, data_store, gas_meter, extensions, function, ty_args, args,
-        )
-    }
-
-    /// Create a new instance of an `Interpreter` in the context of a transaction with a
-    /// given module cache and gas schedule.
-    fn new() -> Self {
         Interpreter {
             operand_stack: Stack::new(),
             call_stack: CallStack::new(),
         }
-    }
-
-    /// Internal execution entry point.
-    fn execute(
-        &mut self,
-        loader: &Loader,
-        data_store: &mut impl DataStore,
-        gas_meter: &mut impl GasMeter,
-        extensions: &mut NativeContextExtensions,
-        function: Arc<Function>,
-        ty_args: Vec<Type>,
-        args: Vec<Value>,
-    ) -> VMResult<Vec<Value>> {
-        // No unwinding of the call stack and value stack need to be done here -- the context will
-        // take care of that.
-        self.execute_main(
+        .execute_main(
             loader, data_store, gas_meter, extensions, function, ty_args, args,
         )
     }
@@ -133,10 +107,8 @@ impl Interpreter {
     /// function represented by the frame. Control comes back to this function on return or
     /// on call. When that happens the frame is changes to a new one (call) or to the one
     /// at the top of the stack (return). If the call stack is empty execution is completed.
-    // REVIEW: create account will be removed in favor of a native function (no opcode) and
-    // we can simplify this code quite a bit.
     fn execute_main(
-        &mut self,
+        mut self,
         loader: &Loader,
         data_store: &mut impl DataStore,
         gas_meter: &mut impl GasMeter,
@@ -155,16 +127,19 @@ impl Interpreter {
         let mut current_frame = Frame::new(function, ty_args, locals);
         loop {
             let resolver = current_frame.resolver(loader);
-            let exit_code = current_frame //self
-                .execute_code(&resolver, self, data_store, gas_meter)
-                .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
+            let exit_code =
+                current_frame //self
+                    .execute_code(&resolver, &mut self, data_store, gas_meter)
+                    .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
             match exit_code {
                 ExitCode::Return => {
                     if let Some(frame) = self.call_stack.pop() {
+                        // Note: the caller will find the callee's return values at the top of the shared operand stack
                         current_frame = frame;
                         current_frame.pc += 1; // advance past the Call instruction in the caller
                     } else {
-                        return Ok(mem::take(&mut self.operand_stack.0));
+                        // end of execution. `self` should no longer be used afterward
+                        return Ok(self.operand_stack.0);
                     }
                 }
                 ExitCode::Call(fh_idx) => {
@@ -208,6 +183,7 @@ impl Interpreter {
                         let err = set_err_info!(frame, err);
                         self.maybe_core_dump(err, &frame)
                     })?;
+                    // Note: the caller will find the the callee's return values at the top of the shared operand stack
                     current_frame = frame;
                 }
                 ExitCode::CallGeneric(idx) => {
@@ -316,6 +292,7 @@ impl Interpreter {
         function: Arc<Function>,
         ty_args: Vec<Type>,
     ) -> PartialVMResult<()> {
+        let return_type_count = function.return_type_count();
         let mut args = VecDeque::new();
         let expected_args = function.arg_count();
         for _ in 0..expected_args {
@@ -330,6 +307,19 @@ impl Interpreter {
         let return_values = result
             .result
             .map_err(|code| PartialVMError::new(StatusCode::ABORTED).with_sub_status(code))?;
+        // Paranoid check to protect us against incorrect native function implementations. A native function that
+        // returns a different number of values than its declared types will trigger this check
+        if return_values.len() != return_type_count {
+            return Err(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
+                    "Arity mismatch: return value count does not match return type count"
+                        .to_string(),
+                ),
+            );
+        }
+        // Put return values on the top of the operand stack, where the caller will find them.
+        // This is one of only two times the operand stack is shared across call stack frames; the other is in handling
+        // the Return instruction for normal calls
         for value in return_values {
             self.operand_stack.push(value)?;
         }

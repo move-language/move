@@ -1,5 +1,5 @@
 module 0x2::A {
-    #[test]
+    // #[test]
     public fun loop_ind_var() {
         let i = 0;
         while (i < 10) {
@@ -7,7 +7,7 @@ module 0x2::A {
         };
     }
 
-    #[test]
+    // #[test]
     public fun loop_ind_ref() {
         let i = 0;
         let p = &mut i;
@@ -15,4 +15,6 @@ module 0x2::A {
             *p = *p + 1;
         };
     }
+
+    // TODO(mengxu): needs to fill the havoc-ed value
 }

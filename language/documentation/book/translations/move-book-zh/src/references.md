@@ -68,7 +68,7 @@ let y: &u64 = &x;
 let z: &&u64 = &y; // will not compile
 ```
 
-## 通过引用进行读写操作 (Reading and Writing Through Reference)
+## 通过引用读取和写入
 
 Both mutable and immutable references can be read to produce a copy of the referenced value.
 

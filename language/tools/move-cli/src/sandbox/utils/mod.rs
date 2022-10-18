@@ -347,7 +347,7 @@ pub(crate) fn explain_publish_error(
             let old_module = state.get_module_by_id(&module_id)?.unwrap();
             let old_api = normalized::Module::new(&old_module);
             let new_api = normalized::Module::new(module);
-            let compat = Compatibility::check(&old_api, &new_api);
+            let compat = Compatibility::check(true, &old_api, &new_api);
             // the only way we get this error code is compatibility checking failed, so assert here
             assert!(!compat.is_fully_compatible());
 

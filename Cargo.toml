@@ -22,6 +22,7 @@ members = [
     "language/move-borrow-graph",
     "language/move-bytecode-verifier",
     "language/move-bytecode-verifier/bytecode-verifier-tests",
+    "language/move-bytecode-verifier/fuzz",
     "language/move-bytecode-verifier/invalid-mutations",
     "language/move-bytecode-verifier/transactional-tests",
     "language/move-command-line-common",
@@ -95,8 +96,9 @@ default-members = [
     "language/tools/move-unit-test",
 ]
 
-# [profile.release]
-# debug = true
+# Dependencies that should be kept in sync through the whole workspace
+[workspace.dependencies]
+bcs = "0.1.4"
 
 [profile.bench]
 debug = true

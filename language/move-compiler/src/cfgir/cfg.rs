@@ -172,7 +172,7 @@ impl<'a> BlockCFG<'a> {
     }
 
     pub fn blocks_mut(&mut self) -> &mut BasicBlocks {
-        &mut self.blocks
+        self.blocks
     }
 
     pub fn block(&self, label: Label) -> &BasicBlock {

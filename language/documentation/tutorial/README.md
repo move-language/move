@@ -62,8 +62,10 @@ You should see something like this along with a list and description of a
 number of commands:
 
 ```
-move-package
-Execute a package command. Executed in the current directory or the closest containing Move package
+move-cli 0.1.0
+Diem Association <opensource@diem.com>
+MoveCLI is the CLI that will be executed by the `move-cli` command The `cmd` argument is added here
+rather than in `Move` to make it easier for other crates to extend `move-cli`
 
 USAGE:
     move [OPTIONS] <SUBCOMMAND>
@@ -120,7 +122,7 @@ module 0xCAFE::BasicCoin {
 
 This is defining a Move
 [module](https://move-language.github.io/move/modules-and-scripts.html). Modules are the
-building block of Move code, and are defined with a specific address -- the
+building blocks of Move code, and are defined with a specific address -- the
 address that the module can be published under. In this case, the `BasicCoin`
 module can only be published under `0xCAFE`.
 
@@ -215,7 +217,7 @@ to [`step_2/BasicCoin`](./step_2/BasicCoin).  Unit tests in Move are similar to
 unit tests in Rust if you're familiar with them -- tests are annotated with
 `#[test]` and written like normal Move functions.
 
-You can run the tests with the `package test` command:
+You can run the tests with the `move test` command:
 
 ```bash
 move test
@@ -273,24 +275,18 @@ assertion fails the unit test will fail.
   pass to the `move test` command that will show you the global state when
   the test fails. It should look something like this:
   ```
-    ┌── test_mint_10 ──────
-    │ error[E11001]: test failure
-    │    ┌─ ./sources/FirstModule.move:24:9
-    │    │
-    │ 18 │     fun test_mint_10(account: signer) acquires Coin {
-    │    │         ------------ In this function in 0xcafe::BasicCoin
-    │    ·
-    │ 24 │         assert!(borrow_global<Coin>(addr).value == 11, 0);
-    │    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Test was not expected to abort but it aborted with 0 here
-    │
-    │
-    │ ────── Storage state at point of failure ──────
-    │ 0xc0ffee:
-    │       => key 0xcafe::BasicCoin::Coin {
-    │           value: 10
-    │       }
-    │
-    └──────────────────
+  ┌── test_mint_10 ──────
+  │ error[E11001]: test failure
+  │    ┌─ ./sources/FirstModule.move:24:9
+  │    │
+  │ 18 │     fun test_mint_10(account: signer) acquires Coin {
+  │    │         ------------ In this function in 0xcafe::BasicCoin
+  │    ·
+  │ 24 │         assert!(borrow_global<Coin>(addr).value == 11, 0);
+  │    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Test was not expected to abort but it aborted with 0 here
+  │
+  │
+  └──────────────────
   ```
 * Find a flag that allows you to gather test coverage information, and
   then play around with using the `move coverage` command to look at
@@ -413,10 +409,12 @@ assert!(signer::address_of(&module_owner) == MODULE_OWNER, errors::requires_addr
 ```
 Assert statements in Move can be used in this way: `assert!(<predicate>, <abort_code>);`. This means that if the `<predicate>`
 is false, then abort the transaction with `<abort_code>`. Here `MODULE_OWNER` and `ENOT_MODULE_OWNER` are both constants
-defined at the beginning of the module. And `errors` module defines common error categories we can use.
+defined at the beginning of the module. The standard library's [`error` module] also defines common error categories we can use.
 It is important to note that Move is transactional in its execution -- so
 if an [abort](https://move-language.github.io/move/abort-and-assert.html) is raised no unwinding of state
 needs to be performed, as no changes from that transaction will be persisted to the blockchain.
+
+[`error` module]: https://github.com/move-language/move/blob/main/language/move-stdlib/docs/error.md
 
 We then deposit a coin with value `amount` to the balance of `mint_addr`.
 ```

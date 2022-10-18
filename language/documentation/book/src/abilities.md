@@ -49,7 +49,7 @@ If a value has `key`, all values contained inside of that value have `store`. Th
 
 ## Builtin Types
 
-Most primitive, builtin types have `copy`, `drop`, and `store` with the exception of `signer`, which just has `store`
+Most primitive, builtin types have `copy`, `drop`, and `store` with the exception of `signer`, which just has `drop`
 
 * `bool`, `u8`, `u64`, `u128`, and `address` all have `copy`, `drop`, and `store`.
 * `signer` has `drop`

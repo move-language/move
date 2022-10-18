@@ -25,7 +25,8 @@ serde_json = "1.0"
 toml_edit =  { version = "0.14.3", features = ["easy"] }
 reqwest = { version = "0.11.1", features = ["blocking", "json"] }
 
-bcs = "0.1.2"
+bcs.workspace = true
+
 move-bytecode-verifier = { path = "../../move-bytecode-verifier" }
 move-disassembler = { path = "../move-disassembler" }
 move-docgen = { path = "../../move-prover/move-docgen" }

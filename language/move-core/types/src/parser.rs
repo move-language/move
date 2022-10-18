@@ -62,7 +62,7 @@ fn next_number(initial: char, mut it: impl Iterator<Item = char>) -> Result<(Tok
     num.push(initial);
     loop {
         match it.next() {
-            Some(c) if c.is_ascii_digit() => num.push(c),
+            Some(c) if c.is_ascii_digit() || c == '_' => num.push(c),
             Some(c) if c.is_alphanumeric() => {
                 let mut suffix = String::new();
                 suffix.push(c);
@@ -306,9 +306,9 @@ impl<I: Iterator<Item = Token>> Parser<I> {
 
     fn parse_transaction_argument(&mut self) -> Result<TransactionArgument> {
         Ok(match self.next()? {
-            Token::U8(s) => TransactionArgument::U8(s.parse()?),
-            Token::U64(s) => TransactionArgument::U64(s.parse()?),
-            Token::U128(s) => TransactionArgument::U128(s.parse()?),
+            Token::U8(s) => TransactionArgument::U8(s.replace('_', "").parse()?),
+            Token::U64(s) => TransactionArgument::U64(s.replace('_', "").parse()?),
+            Token::U128(s) => TransactionArgument::U128(s.replace('_', "").parse()?),
             Token::True => TransactionArgument::Bool(true),
             Token::False => TransactionArgument::Bool(false),
             Token::Address(addr) => {
@@ -398,6 +398,13 @@ mod tests {
             ("18446744073709551615", T::U64(18446744073709551615)),
             ("18446744073709551615u64", T::U64(18446744073709551615)),
             ("0u128", T::U128(0)),
+            ("1_0u8", T::U8(1_0)),
+            ("10_u8", T::U8(10)),
+            ("10___u8", T::U8(10)),
+            ("1_000u64", T::U64(1_000)),
+            ("1_000", T::U64(1_000)),
+            ("1_0_0_0u64", T::U64(1_000)),
+            ("1_000_000u128", T::U128(1_000_000)),
             (
                 "340282366920938463463374607431768211455u128",
                 T::U128(340282366920938463463374607431768211455),
@@ -427,15 +434,24 @@ mod tests {
 
     #[test]
     fn tests_parse_transaction_argument_negative() {
-        for s in &[
+        /// Test cases for the parser that should always fail.
+        const PARSE_VALUE_NEGATIVE_TEST_CASES: &[&str] = &[
             "-3",
             "0u42",
             "0u645",
             "0u64x",
             "0u6 4",
             "0u",
+            "_10",
+            "_10_u8",
+            "_10__u8",
+            "10_u8__",
+            "_",
+            "__",
+            "__4",
+            "_u8",
+            "5_bool",
             "256u8",
-            "18446744073709551616",
             "18446744073709551616u64",
             "340282366920938463463374607431768211456u128",
             "0xg",
@@ -443,6 +459,8 @@ mod tests {
             "0x",
             "0x_",
             "",
+            "@@",
+            "()",
             "x\"ffff",
             "x\"a \"",
             "x\" \"",
@@ -453,8 +471,14 @@ mod tests {
             "3false",
             "3 false",
             "",
-        ] {
-            assert!(parse_transaction_argument(s).is_err())
+        ];
+
+        for s in PARSE_VALUE_NEGATIVE_TEST_CASES {
+            assert!(
+                parse_transaction_argument(s).is_err(),
+                "test case unexpectedly succeeded: {}",
+                s
+            )
         }
     }
 

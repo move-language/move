@@ -87,8 +87,8 @@ error: induction case of the loop invariant does not hold
 error: induction case of the loop invariant does not hold
     ┌─ tests/sources/functional/loops.move:189:17
     │
-189 │                 invariant x != y;
-    │                 ^^^^^^^^^^^^^^^^^
+189 │                 invariant x < y;
+    │                 ^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/loops.move:183: loop_with_two_back_edges_incorrect
     =         x = <redacted>

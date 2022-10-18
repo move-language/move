@@ -15,16 +15,29 @@ use std::{
 };
 use uint::FromStrRadixErr;
 
-const NUM_BITS_PER_BYTE: usize = 8;
-const U256_NUM_BITS: usize = 256;
-const U256_NUM_BYTES: usize = U256_NUM_BITS / NUM_BITS_PER_BYTE;
-pub type U256FromStrError = FromStrRadixErr;
-
 // This U256 impl was chosen for now but we are open to changing it as needed
 use primitive_types::U256 as PrimitiveU256;
-use serde::{ser::SerializeTuple, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-#[allow(non_camel_case_types)]
+const NUM_BITS_PER_BYTE: usize = 8;
+const U256_NUM_BITS: usize = 256;
+pub const U256_NUM_BYTES: usize = U256_NUM_BITS / NUM_BITS_PER_BYTE;
+
+#[derive(Debug)]
+pub struct U256FromStrError(FromStrRadixErr);
+
+impl std::error::Error for U256FromStrError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.0.source()
+    }
+}
+
+impl fmt::Display for U256FromStrError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy, PartialOrd, Ord)]
 pub struct U256(PrimitiveU256);
 
@@ -35,10 +48,12 @@ impl fmt::Display for U256 {
 }
 
 impl std::str::FromStr for U256 {
-    type Err = anyhow::Error;
+    type Err = U256FromStrError;
 
-    fn from_str(s: &str) -> anyhow::Result<Self> {
-        PrimitiveU256::from_str(s).map(Self).map_err(|e| e.into())
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        PrimitiveU256::from_str(s)
+            .map(Self)
+            .map_err(|e| U256FromStrError(FromStrRadixErr::from(e)))
     }
 }
 
@@ -58,12 +73,7 @@ impl Serialize for U256 {
     where
         S: Serializer,
     {
-        let b: [u8; U256_NUM_BYTES] = self.to_le_bytes();
-        let mut seq = serializer.serialize_tuple(U256_NUM_BYTES)?;
-        for x in b {
-            seq.serialize_element(&x)?;
-        }
-        seq.end()
+        self.to_le_bytes().serialize(serializer)
     }
 }
 
@@ -133,7 +143,9 @@ impl U256 {
 
     /// U256 from string with radix 10 or 16
     pub fn from_str_radix(src: &str, radix: u32) -> Result<Self, U256FromStrError> {
-        PrimitiveU256::from_str_radix(src.trim_start_matches('0'), radix).map(Self)
+        PrimitiveU256::from_str_radix(src.trim_start_matches('0'), radix)
+            .map(Self)
+            .map_err(U256FromStrError)
     }
 
     /// U256 from 32 little endian bytes
@@ -257,12 +269,6 @@ impl From<u64> for U256 {
 impl From<u128> for U256 {
     fn from(n: u128) -> Self {
         U256(PrimitiveU256::from(n))
-    }
-}
-
-impl From<BigInt> for U256 {
-    fn from(n: BigInt) -> Self {
-        U256(PrimitiveU256::from_little_endian(&n.to_bytes_le().1))
     }
 }
 

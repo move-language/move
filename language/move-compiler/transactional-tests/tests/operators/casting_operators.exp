@@ -56,7 +56,7 @@ Error: Script execution failed with VMError: {
 
 task 12 'run'. lines 230-236:
 Error: Script execution failed with VMError: {
-    major_status: INTERNAL_TYPE_ERROR,
+    major_status: ARITHMETIC_ERROR,
     sub_status: None,
     location: script,
     indices: [],
@@ -65,7 +65,7 @@ Error: Script execution failed with VMError: {
 
 task 13 'run'. lines 238-244:
 Error: Script execution failed with VMError: {
-    major_status: INTERNAL_TYPE_ERROR,
+    major_status: ARITHMETIC_ERROR,
     sub_status: None,
     location: script,
     indices: [],
@@ -74,7 +74,7 @@ Error: Script execution failed with VMError: {
 
 task 14 'run'. lines 246-252:
 Error: Script execution failed with VMError: {
-    major_status: INTERNAL_TYPE_ERROR,
+    major_status: ARITHMETIC_ERROR,
     sub_status: None,
     location: script,
     indices: [],
@@ -83,7 +83,7 @@ Error: Script execution failed with VMError: {
 
 task 15 'run'. lines 254-262:
 Error: Script execution failed with VMError: {
-    major_status: INTERNAL_TYPE_ERROR,
+    major_status: ARITHMETIC_ERROR,
     sub_status: None,
     location: script,
     indices: [],
@@ -146,7 +146,7 @@ Error: Script execution failed with VMError: {
 
 task 22 'run'. lines 311-317:
 Error: Script execution failed with VMError: {
-    major_status: INTERNAL_TYPE_ERROR,
+    major_status: ARITHMETIC_ERROR,
     sub_status: None,
     location: script,
     indices: [],
@@ -155,7 +155,7 @@ Error: Script execution failed with VMError: {
 
 task 23 'run'. lines 319-325:
 Error: Script execution failed with VMError: {
-    major_status: INTERNAL_TYPE_ERROR,
+    major_status: ARITHMETIC_ERROR,
     sub_status: None,
     location: script,
     indices: [],
@@ -164,7 +164,7 @@ Error: Script execution failed with VMError: {
 
 task 24 'run'. lines 327-335:
 Error: Script execution failed with VMError: {
-    major_status: INTERNAL_TYPE_ERROR,
+    major_status: ARITHMETIC_ERROR,
     sub_status: None,
     location: script,
     indices: [],
@@ -218,7 +218,7 @@ Error: Script execution failed with VMError: {
 
 task 31 'run'. lines 384-392:
 Error: Script execution failed with VMError: {
-    major_status: INTERNAL_TYPE_ERROR,
+    major_status: ARITHMETIC_ERROR,
     sub_status: None,
     location: script,
     indices: [],

@@ -188,7 +188,7 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
                 } else if v > u8_max {
                     BT::U16
                 } else {
-                    BT::U8
+                    BT::U64
                 };
                 let fix = format!(
                     "Annotating the literal might help inference: '{value}{type}'",

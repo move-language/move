@@ -10,6 +10,7 @@ use crate::{
     ty::{PrimitiveType, Type},
 };
 use move_compiler::parser::ast::{self as PA};
+use move_core_types::u256::U256;
 use num::BigInt;
 
 /// Declares builtins in the build. This adds functions and operators
@@ -35,12 +36,24 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
             mk_num_const(BigInt::from(u8::MAX)),
         );
         trans.define_const(
+            trans.builtin_qualified_symbol("MAX_U16"),
+            mk_num_const(BigInt::from(u16::MAX)),
+        );
+        trans.define_const(
+            trans.builtin_qualified_symbol("MAX_U32"),
+            mk_num_const(BigInt::from(u32::MAX)),
+        );
+        trans.define_const(
             trans.builtin_qualified_symbol("MAX_U64"),
             mk_num_const(BigInt::from(u64::MAX)),
         );
         trans.define_const(
             trans.builtin_qualified_symbol("MAX_U128"),
             mk_num_const(BigInt::from(u128::MAX)),
+        );
+        trans.define_const(
+            trans.builtin_qualified_symbol("MAX_U256"),
+            mk_num_const(BigInt::from(&U256::max())),
         );
         trans.define_const(
             trans.builtin_qualified_symbol("EXECUTION_FAILURE"),

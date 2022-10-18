@@ -13,8 +13,7 @@ module 0x42::TestVector {
         let elem = vector::borrow_mut(v, i);
         let int_ref = &mut elem.x;
 
-        // Forced u64 type since U256 not fully supported in Prover
-        *int_ref = 42u64;
+        *int_ref = 42;
         spec {
             assert 42u64 == v[i].x;
         };

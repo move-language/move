@@ -116,7 +116,12 @@ impl BaseValue {
     }
     pub fn into_u256(self) -> u256::U256 {
         match self {
-            Self::Int(v) => u256::U256::from(v),
+            Self::Int(v) => u256::U256::from_le_bytes(
+                &v.to_bytes_le()
+                    .1
+                    .try_into()
+                    .unwrap_or_else(|_| panic!("Cannot convert {} to U256", v)),
+            ),
             _ => unreachable!(),
         }
     }

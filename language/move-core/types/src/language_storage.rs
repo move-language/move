@@ -30,7 +30,7 @@ pub enum TypeTag {
     U8,
     #[serde(rename = "u16", alias = "U16")]
     U16,
-    #[serde(rename = "u32", alias = "u32")]
+    #[serde(rename = "u32", alias = "U32")]
     U32,
     #[serde(rename = "u64", alias = "U64")]
     U64,

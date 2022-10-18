@@ -7,8 +7,10 @@
 //! - All forward jumps do not enter into the middle of a loop
 //! - All "breaks" (forward, loop-exiting jumps) go to the "end" of the loop
 //! - All "continues" (back jumps in a loop) are only to the current loop
-use crate::loop_summary::{LoopPartition, LoopSummary};
-use crate::verifier::VerifierConfig;
+use crate::{
+    loop_summary::{LoopPartition, LoopSummary},
+    verifier::VerifierConfig,
+};
 use move_binary_format::{
     binary_views::FunctionView,
     errors::{PartialVMError, PartialVMResult},

@@ -5,17 +5,20 @@
 use crate::{
     interpreter::Interpreter, loader::Resolver, native_extensions::NativeContextExtensions,
 };
-use move_binary_format::errors::{ExecutionState, PartialVMError, PartialVMResult};
+use move_binary_format::errors::{ExecutionState, PartialVMError, PartialVMResult, VMResult};
 use move_core_types::{
     account_address::AccountAddress,
+    gas_algebra::NumBytes,
     identifier::Identifier,
     language_storage::TypeTag,
     value::MoveTypeLayout,
     vm_status::{StatusCode, StatusType},
 };
 use move_vm_types::{
-    data_store::DataStore, loaded_data::runtime_types::Type, natives::function::NativeResult,
-    values::Value,
+    data_store::DataStore,
+    loaded_data::runtime_types::Type,
+    natives::function::NativeResult,
+    values::{GlobalValue, Value},
 };
 use std::{
     collections::{HashMap, VecDeque},
@@ -165,6 +168,18 @@ impl<'a, 'b> NativeContext<'a, 'b> {
 
     pub fn extensions_mut(&mut self) -> &mut NativeContextExtensions<'b> {
         self.extensions
+    }
+
+    pub fn load_type(&self, type_tag: &TypeTag) -> VMResult<Type> {
+        self.resolver.loader().load_type(type_tag, self.data_store)
+    }
+
+    pub fn load_resource(
+        &mut self,
+        addr: AccountAddress,
+        ty: &Type,
+    ) -> PartialVMResult<(&mut GlobalValue, Option<Option<NumBytes>>)> {
+        self.data_store.load_resource(addr, ty)
     }
 
     /// Get count stack frames, including the one of the called native function. This

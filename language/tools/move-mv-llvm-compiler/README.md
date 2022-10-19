@@ -12,6 +12,41 @@ Compile move-bytecode to llvm bitcode
 ## Overview
 The llvm-compiler uses [Inkwell](https://github.com/TheDan64/inkwell) (Safe Rust bindings to LLVM's C API) to generate llvm bitcode for Move IR.
 
+
+## Dependencies:
+- llvm-project
+- inkwell
+
+## Testing
+
+Current testing is very hacky, and only uses the following .mvir file
+$ cat a.mvir
+```move
+//# print-bytecode --input=module
+module 0x3d10.Example {
+    public value(): u64 {
+    label a:
+        return 100;
+    }
+}
+```
+
+To generate a move bytecode file from mvir use the move-ir-compiler
+> $MOVE_HOME/target/debug/move-ir-compiler -m a.mvir
+
+This will generate `a.mv` file in the current directory. We use `a.mv` file for testing.
+
+```sh
+# Build move-mv-llvm-compiler
+$ cd $MOVE_HOME/language/tools/move-mv-llvm-compiler/ && cargo build
+
+# Generate bitcode file from move
+$ $MOVE_HOME/target/debug/move-mv-llvm-compiler -b a.mv
+
+# Generate readable bitcode file
+$ llvm-project/build/bin/opt -S 3d10.Example.bc
+```
+
 ### TODO
 
 - Add runtime calls to builtins (https://arxiv.org/pdf/2004.05106.pdf#page=7) if there is no direct mapping to SBF. To start with, we can have each of these as part of runtime library and make optimizations as needed.

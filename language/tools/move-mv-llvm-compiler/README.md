@@ -47,6 +47,26 @@ $ $MOVE_HOME/target/debug/move-mv-llvm-compiler -b a.mv
 $ llvm-project/build/bin/opt -S 3d10.Example.bc
 ```
 
+The above command will generate a llvm ir like this:
+```llvm
+; ../llvm-project/build/bin/opt -S 3d10.Example.bc
+; ModuleID = '3d10.Example.bc'
+source_filename = "3d10.Example.bc"
+target triple = "bpfel-unknown-unknown"
+
+define void @value(i64 %0) {
+entry:
+  ret void
+}
+
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!1}
+
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "Move", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
+!2 = !DIFile(filename: "3d10.Example.bc", directory: ".")
+```
+
 ### TODO
 
 - Add runtime calls to builtins (https://arxiv.org/pdf/2004.05106.pdf#page=7) if there is no direct mapping to SBF. To start with, we can have each of these as part of runtime library and make optimizations as needed.

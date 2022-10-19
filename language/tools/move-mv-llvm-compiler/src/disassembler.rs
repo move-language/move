@@ -19,14 +19,19 @@ use move_bytecode_source_map::{
     mapping::SourceMapping,
     source_map::{FunctionSourceMap, SourceName},
 };
-use move_compiler::compiled_unit::{CompiledUnit, NamedCompiledModule, NamedCompiledScript};
+
 use move_core_types::identifier::IdentStr;
 use move_coverage::coverage_map::{ExecCoverageMap, FunctionCoverage};
 use move_ir_types::location::Loc;
 
-use inkwell::targets::{TargetTriple, TargetMachine};
+use inkwell::{OptimizationLevel, targets::Target, targets::InitializationConfig};
+use inkwell::{targets::{TargetTriple, TargetMachine}};
 use inkwell::targets::{CodeModel, RelocMode};
 use std::{fs::File};
+use inkwell::context::Context as LLVMContext;
+use crate::move_bpf_module::MoveBPFModule;
+
+use crate::errors::DisassemblerError;
 
 /// Holds the various options that we support while disassembling code.
 #[derive(Debug, Default, Parser)]
@@ -65,45 +70,17 @@ pub struct Disassembler<'a> {
     options: DisassemblerOptions,
     // Optional coverage map for use in displaying code coverage
     coverage_map: Option<ExecCoverageMap>,
+    llvm_context : LLVMContext,
 }
 
 impl<'a> Disassembler<'a> {
-    pub fn new(source_mapper: SourceMapping<'a>, options: DisassemblerOptions) -> Self {
+    pub fn new(source_mapper: SourceMapping<'a>, options: DisassemblerOptions, llvm_context : LLVMContext) -> Self {
         Self {
             source_mapper,
             options,
             coverage_map: None,
+            llvm_context: llvm_context
         }
-    }
-
-    pub fn from_view(view: BinaryIndexedView<'a>, default_loc: Loc) -> Result<Self> {
-        let mut options = DisassemblerOptions::new();
-        options.print_code = true;
-        Ok(Self {
-            source_mapper: SourceMapping::new_from_view(view, default_loc)?,
-            options,
-            coverage_map: None,
-        })
-    }
-
-    pub fn from_unit(unit: &'a CompiledUnit) -> Self {
-        let options = DisassemblerOptions::new();
-        let source_map = unit.source_map().clone();
-        let index_view = match unit {
-            CompiledUnit::Module(NamedCompiledModule { module, .. }) => {
-                BinaryIndexedView::Module(module)
-            }
-            CompiledUnit::Script(NamedCompiledScript { script, .. }) => {
-                BinaryIndexedView::Script(script)
-            }
-        };
-
-        let source_mapping = SourceMapping::new(source_map, index_view);
-        Disassembler::new(source_mapping, options)
-    }
-
-    pub fn add_coverage_map(&mut self, coverage_map: ExecCoverageMap) {
-        self.coverage_map = Some(coverage_map);
     }
 
     //***************************************************************************
@@ -552,20 +529,7 @@ impl<'a> Disassembler<'a> {
         source_map_ty_params: &[SourceName],
         ablities: &[AbilitySet],
     ) -> String {
-        let ty_params: Vec<String> = source_map_ty_params
-            .iter()
-            .zip(ablities)
-            .map(|((name, _), abs)| {
-                let abilities_str = if *abs == AbilitySet::EMPTY {
-                    "".to_string()
-                } else {
-                    let ability_vec: Vec<_> = abs.into_iter().map(Self::format_ability).collect();
-                    format!(": {}", ability_vec.join(" + "))
-                };
-                format!("{}{}", name.as_str(), abilities_str)
-            })
-            .collect();
-        Self::format_type_params(&ty_params)
+        "".to_string()
     }
 
     fn disassemble_locals(
@@ -607,6 +571,7 @@ impl<'a> Disassembler<'a> {
         type_parameters: &[AbilitySet],
         parameters: SignatureIndex,
         code: Option<&CodeUnit>,
+        move_module: &mut MoveBPFModule,
     ) -> Result<String> {
         debug_assert_eq!(
             function_source_map.parameters.len(),
@@ -615,86 +580,24 @@ impl<'a> Disassembler<'a> {
             name
         );
 
-        let entry_modifier = if function.map(|(f, _)| f.is_entry).unwrap_or(false) {
-            "entry "
-        } else {
-            ""
-        };
-        let visibility_modifier = match function {
-            Some(function) => match function.0.visibility {
-                Visibility::Private => {
-                    if self.options.only_externally_visible {
-                        return Ok("".to_string());
-                    } else {
-                        ""
-                    }
-                }
-                Visibility::Friend => "public(friend) ",
-                Visibility::Public => "public ",
-            },
-            None => "",
-        };
-
-        let native_modifier = match function {
-            Some(function) if function.0.is_native() => "native ",
-            _ => "",
-        };
-
-        let ty_params = Self::disassemble_fun_type_formals(
-            &function_source_map.type_parameters,
-            type_parameters,
-        );
-        let params = &self
-            .source_mapper
-            .bytecode
-            .signature_at(parameters)
-            .0
-            .iter()
-            .zip(function_source_map.parameters.iter())
-            .map(|(tok, (name, _))| {
-                Ok(format!(
-                    "{}: {}",
-                    name,
-                    self.disassemble_sig_tok(tok.clone(), &function_source_map.type_parameters)?
-                ))
-            })
-            .collect::<Result<Vec<_>>>()?;
-
-        let ret_type = match function {
-            Some(function) => self
-                .source_mapper
-                .bytecode
-                .signature_at(function.1.return_)
-                .0
-                .iter()
-                .cloned()
-                .map(|sig_token| {
-                    let sig_tok_str =
-                        self.disassemble_sig_tok(sig_token, &function_source_map.type_parameters)?;
-                    Ok(sig_tok_str)
-                })
-                .collect::<Result<Vec<String>>>()?,
-            None => vec![],
-        };
+        let void_ty = move_module.context.void_type();
+        let u64_ty = move_module.context.i64_type();
+        let fn_value = move_module.module.add_function(name.as_str(), void_ty.fn_type(&[u64_ty.into(), ], false), None);
+        //let entry_block = self.llvm_context.append_basic_block(fn_value, "entry");
+        //builder.position_at_end(entry_block);
+        move_module.builder.build_return(None);
 
         let body = match code {
             Some(code) => {
                 let locals =
-                    self.disassemble_locals(function_source_map, code.locals, params.len())?;
+                    self.disassemble_locals(function_source_map, code.locals, 10)?;
                 let bytecode =
                     self.disassemble_bytecode(function_source_map, name, parameters, code)?;
                 Self::format_function_body(locals, bytecode)
             }
             None => "".to_string(),
         };
-        Ok(self.format_function_coverage(
-            name,
-            format!(
-                "{entry_modifier}{native_modifier}{visibility_modifier}{name}{ty_params}({params}){ret_type}{body}",
-                params = &params.join(", "),
-                ret_type = Self::format_ret_type(&ret_type),
-            ),
-        ))
+        Ok("Pass".to_string())
     }
 
     // The struct defs will filter out the structs that we print to only be the ones that are
@@ -795,7 +698,6 @@ impl<'a> Disassembler<'a> {
     }
 
     pub fn get_target_machine(&self) -> Option<TargetMachine> {
-        use inkwell::{OptimizationLevel, targets::Target, targets::InitializationConfig};
         Target::initialize_bpf(&InitializationConfig::default());
 
         let opt = OptimizationLevel::None; // TODO: Add optimization based on command line flag.
@@ -828,16 +730,12 @@ impl<'a> Disassembler<'a> {
                 "script".to_owned()
             }
         };
-        use inkwell::context::Context;
-        let llvm_context = Context::create();
 
-        let llvm_module = llvm_context.create_module(&header);
+        let llvm_module = self.llvm_context.create_module(&header);
         llvm_module.print_to_stderr();
         let _target_machine = self.get_target_machine().unwrap();
         println!("Disassembling: {}, with target: {}", header, self.llvm_target_triple());
 
-        let bc_file = File::create(&llvm_module_name).unwrap();
-        llvm_module.write_bitcode_to_file(&bc_file, true, true);
         let struct_defs: Vec<String> = (0..self
             .source_mapper
             .bytecode
@@ -847,6 +745,11 @@ impl<'a> Disassembler<'a> {
             .collect::<Result<Vec<String>>>()?;
 
         println!("Struct defs: {:?}", struct_defs);
+        let context = &self.llvm_context;
+        let builder = context.create_builder();
+        let bc_file = File::create(&llvm_module_name).unwrap();
+        let opt = OptimizationLevel::None; // TODO: Add optimization based on command line flag.
+        let mut move_module = MoveBPFModule::new(context, &header, &*llvm_module_name, opt);
 
         let function_defs: Vec<String> = match self.source_mapper.bytecode {
             BinaryIndexedView::Script(script) => {
@@ -859,6 +762,7 @@ impl<'a> Disassembler<'a> {
                     &script.type_parameters,
                     script.parameters,
                     Some(&script.code),
+                    &mut move_module,
                 )?]
             }
             BinaryIndexedView::Module(module) => (0..module.function_defs.len())
@@ -880,11 +784,13 @@ impl<'a> Disassembler<'a> {
                         &function_handle.type_parameters,
                         function_handle.parameters,
                         function_definition.code.as_ref(),
+                        &mut move_module,
                     )
                 })
                 .collect::<Result<Vec<String>>>()?,
         };
         println!("Function defs: {:?}", function_defs);
+        llvm_module.write_bitcode_to_file(&bc_file, true, true);
 
         Ok(format!(
             "// Move bytecode v{version}\n{header} {{\n{struct_defs}\n\n{function_defs}\n}}",

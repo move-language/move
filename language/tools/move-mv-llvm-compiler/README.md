@@ -54,9 +54,9 @@ The above command will generate a llvm ir like this:
 source_filename = "3d10.Example.bc"
 target triple = "bpfel-unknown-unknown"
 
-define void @value(i64 %0) {
+define i64 @value() {
 entry:
-  ret void
+  ret i64 0
 }
 
 !llvm.module.flags = !{!0}

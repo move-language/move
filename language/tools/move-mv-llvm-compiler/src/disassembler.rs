@@ -578,12 +578,11 @@ impl<'a> Disassembler<'a> {
             name
         );
 
-        let void_ty = move_module.context.void_type();
         let u64_ty = move_module.context.i64_type();
-        let fn_value = move_module.module.add_function(name.as_str(), void_ty.fn_type(&[u64_ty.into(), ], false), None);
+        let fn_value = move_module.module.add_function(name.as_str(), u64_ty.fn_type(&[],  false), None);
         let entry_block = move_module.context.append_basic_block(fn_value, "entry");
         move_module.builder.position_at_end(entry_block);
-        move_module.builder.build_return(None);
+        move_module.builder.build_return(Some(&u64_ty.const_zero()));
 
         let body = match code {
             Some(code) => {

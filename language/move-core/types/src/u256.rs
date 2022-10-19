@@ -1,7 +1,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::anyhow;
 use ethnum::U256 as EthnumU256;
 use num::{bigint::Sign, BigInt};
 #[cfg(any(test, feature = "fuzzing"))]
@@ -25,6 +24,56 @@ pub const U256_NUM_BYTES: usize = U256_NUM_BITS / NUM_BITS_PER_BYTE;
 
 #[derive(Debug)]
 pub struct U256FromStrError(FromStrRadixErr);
+
+/// A list of error categories encountered when parsing numbers.
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+pub enum U256CastErrorKind {
+    /// Value too large to fit in U8.
+    TooLargeForU8,
+
+    /// Value too large to fit in U16.
+    TooLargeForU16,
+
+    /// Value too large to fit in U32.
+    TooLargeForU32,
+
+    /// Value too large to fit in U64.
+    TooLargeForU64,
+
+    /// Value too large to fit in U128.
+    TooLargeForU128,
+}
+
+#[derive(Debug)]
+pub struct U256CastError {
+    kind: U256CastErrorKind,
+    val: U256,
+}
+
+impl U256CastError {
+    pub fn new<T: std::convert::Into<U256>>(val: T, kind: U256CastErrorKind) -> Self {
+        Self {
+            kind,
+            val: val.into(),
+        }
+    }
+}
+
+impl std::error::Error for U256CastError {}
+
+impl fmt::Display for U256CastError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let type_str = match self.kind {
+            U256CastErrorKind::TooLargeForU8 => "u8",
+            U256CastErrorKind::TooLargeForU16 => "u16",
+            U256CastErrorKind::TooLargeForU32 => "u32",
+            U256CastErrorKind::TooLargeForU64 => "u64",
+            U256CastErrorKind::TooLargeForU128 => "u128",
+        };
+        let err_str = format!("Cast failed. {} too large for {}.", self.val, type_str);
+        write!(f, "{err_str}")
+    }
+}
 
 impl std::error::Error for U256FromStrError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
@@ -272,12 +321,14 @@ impl From<u128> for U256 {
     }
 }
 
+/// TODO (ade): Remove conversions and migrate Prover & Move Model code from BigInt
 impl From<&U256> for BigInt {
     fn from(n: &U256) -> Self {
         BigInt::from_bytes_le(Sign::Plus, &n.to_le_bytes())
     }
 }
 
+/// TODO (ade): Remove conversions and migrate Prover & Move Model code from EthnumU256
 impl From<&U256> for EthnumU256 {
     fn from(n: &U256) -> EthnumU256 {
         // TODO (ade): use better solution for conversion
@@ -289,11 +340,11 @@ impl From<&U256> for EthnumU256 {
 }
 
 impl TryFrom<U256> for u8 {
-    type Error = anyhow::Error;
+    type Error = U256CastError;
     fn try_from(n: U256) -> Result<Self, Self::Error> {
         let n = n.0.low_u64();
         if n > u8::MAX as u64 {
-            Err(anyhow!("Cast failed. {n} too large for u8."))
+            Err(U256CastError::new(n, U256CastErrorKind::TooLargeForU8))
         } else {
             Ok(n as u8)
         }
@@ -301,12 +352,12 @@ impl TryFrom<U256> for u8 {
 }
 
 impl TryFrom<U256> for u16 {
-    type Error = anyhow::Error;
+    type Error = U256CastError;
 
     fn try_from(n: U256) -> Result<Self, Self::Error> {
         let n = n.0.low_u64();
         if n > u16::MAX as u64 {
-            Err(anyhow!("Cast failed. {n} too large for u16."))
+            Err(U256CastError::new(n, U256CastErrorKind::TooLargeForU16))
         } else {
             Ok(n as u16)
         }
@@ -314,12 +365,12 @@ impl TryFrom<U256> for u16 {
 }
 
 impl TryFrom<U256> for u32 {
-    type Error = anyhow::Error;
+    type Error = U256CastError;
 
     fn try_from(n: U256) -> Result<Self, Self::Error> {
         let n = n.0.low_u64();
         if n > u32::MAX as u64 {
-            Err(anyhow!("Cast failed. {n} too large for u32."))
+            Err(U256CastError::new(n, U256CastErrorKind::TooLargeForU32))
         } else {
             Ok(n as u32)
         }
@@ -327,12 +378,12 @@ impl TryFrom<U256> for u32 {
 }
 
 impl TryFrom<U256> for u64 {
-    type Error = anyhow::Error;
+    type Error = U256CastError;
 
     fn try_from(n: U256) -> Result<Self, Self::Error> {
         let n = n.0.low_u128();
         if n > u64::MAX as u128 {
-            Err(anyhow!("Cast failed. {n} too large for u64."))
+            Err(U256CastError::new(n, U256CastErrorKind::TooLargeForU64))
         } else {
             Ok(n as u64)
         }
@@ -340,11 +391,11 @@ impl TryFrom<U256> for u64 {
 }
 
 impl TryFrom<U256> for u128 {
-    type Error = anyhow::Error;
+    type Error = U256CastError;
 
     fn try_from(n: U256) -> Result<Self, Self::Error> {
         if n > U256::from(u128::MAX) {
-            Err(anyhow!("Cast failed. {n} too large for u128."))
+            Err(U256CastError::new(n, U256CastErrorKind::TooLargeForU128))
         } else {
             Ok(n.0.low_u128())
         }

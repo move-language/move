@@ -16,6 +16,7 @@ use move_command_line_common::files::{
 use move_mv_llvm_compiler::disassembler::{Disassembler, DisassemblerOptions};
 use move_ir_types::location::Spanned;
 use std::{fs, path::Path};
+use inkwell::context::Context as LLVMContext;
 
 #[derive(Debug, Parser)]
 #[clap(author, version, about)]
@@ -113,7 +114,8 @@ fn main() {
         source_mapping.with_source_code((source_path.to_str().unwrap().to_string(), source_code));
     }
 
-    let disassembler = Disassembler::new(source_mapping, disassembler_options);
+    let llvm_context = LLVMContext::create();
+    let disassembler = Disassembler::new(source_mapping, disassembler_options, llvm_context);
 
     let dissassemble_string = disassembler.disassemble().expect("Unable to dissassemble");
 

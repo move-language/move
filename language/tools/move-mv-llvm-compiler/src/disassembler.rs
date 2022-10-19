@@ -24,9 +24,7 @@ use move_core_types::identifier::IdentStr;
 use move_coverage::coverage_map::{ExecCoverageMap, FunctionCoverage};
 use move_ir_types::location::Loc;
 
-use inkwell::{OptimizationLevel, targets::Target, targets::InitializationConfig};
-use inkwell::{targets::{TargetTriple, TargetMachine}};
-use inkwell::targets::{CodeModel, RelocMode};
+use inkwell::{OptimizationLevel};
 use std::{fs::File};
 use inkwell::context::Context as LLVMContext;
 use crate::move_bpf_module::MoveBPFModule;
@@ -583,8 +581,8 @@ impl<'a> Disassembler<'a> {
         let void_ty = move_module.context.void_type();
         let u64_ty = move_module.context.i64_type();
         let fn_value = move_module.module.add_function(name.as_str(), void_ty.fn_type(&[u64_ty.into(), ], false), None);
-        //let entry_block = self.llvm_context.append_basic_block(fn_value, "entry");
-        //builder.position_at_end(entry_block);
+        let entry_block = move_module.context.append_basic_block(fn_value, "entry");
+        move_module.builder.position_at_end(entry_block);
         move_module.builder.build_return(None);
 
         let body = match code {
@@ -597,7 +595,7 @@ impl<'a> Disassembler<'a> {
             }
             None => "".to_string(),
         };
-        Ok("Pass".to_string())
+        Ok("".to_string())
     }
 
     // The struct defs will filter out the structs that we print to only be the ones that are
@@ -684,37 +682,6 @@ impl<'a> Disassembler<'a> {
         ))
     }
 
-
-    fn llvm_target_triple(&self) -> TargetTriple {
-        TargetTriple::create("bpfel-unknown-unknown")
-    }
-
-    fn llvm_target_name(&self) -> &'static str {
-        "bpfel" // bpf little endian.
-    }
-
-    fn llvm_features(&self) -> &'static str {
-        "" // no additional target specific features.
-    }
-
-    pub fn get_target_machine(&self) -> Option<TargetMachine> {
-        Target::initialize_bpf(&InitializationConfig::default());
-
-        let opt = OptimizationLevel::None; // TODO: Add optimization based on command line flag.
-        let reloc = RelocMode::Default;
-        let model = CodeModel::Default;
-        let target = Target::from_name(self.llvm_target_name()).unwrap();
-
-        return target.create_target_machine(
-            &self.llvm_target_triple(),
-            "v2",
-            self.llvm_features(),
-            opt,
-            reloc,
-            model
-        );
-    }
-
     pub fn disassemble(&self) -> Result<String> {
         let name_opt = self.source_mapper.source_map.module_name_opt.as_ref();
         let name = name_opt.map(|(addr, n)| format!("{}.{}", addr.short_str_lossless(), n));
@@ -733,8 +700,7 @@ impl<'a> Disassembler<'a> {
 
         let llvm_module = self.llvm_context.create_module(&header);
         llvm_module.print_to_stderr();
-        let _target_machine = self.get_target_machine().unwrap();
-        println!("Disassembling: {}, with target: {}", header, self.llvm_target_triple());
+        println!("Disassembling: {}", header);
 
         let struct_defs: Vec<String> = (0..self
             .source_mapper
@@ -746,7 +712,6 @@ impl<'a> Disassembler<'a> {
 
         println!("Struct defs: {:?}", struct_defs);
         let context = &self.llvm_context;
-        let builder = context.create_builder();
         let bc_file = File::create(&llvm_module_name).unwrap();
         let opt = OptimizationLevel::None; // TODO: Add optimization based on command line flag.
         let mut move_module = MoveBPFModule::new(context, &header, &*llvm_module_name, opt);
@@ -790,7 +755,7 @@ impl<'a> Disassembler<'a> {
                 .collect::<Result<Vec<String>>>()?,
         };
         println!("Function defs: {:?}", function_defs);
-        llvm_module.write_bitcode_to_file(&bc_file, true, true);
+        move_module.module.write_bitcode_to_file(&bc_file, true, true);
 
         Ok(format!(
             "// Move bytecode v{version}\n{header} {{\n{struct_defs}\n\n{function_defs}\n}}",

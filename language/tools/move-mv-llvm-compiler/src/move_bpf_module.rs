@@ -4,7 +4,10 @@ use inkwell::debug_info::DICompileUnit;
 use inkwell::debug_info::DebugInfoBuilder;
 use inkwell::module::{Linkage, Module};
 use inkwell::OptimizationLevel;
-use inkwell::targets::TargetTriple;
+use inkwell::{targets::{TargetTriple, TargetMachine}};
+use inkwell::targets::{CodeModel, RelocMode};
+use inkwell::{targets::Target, targets::InitializationConfig};
+
 use once_cell::sync::OnceCell;
 
 static LLVM_INIT: OnceCell<()> = OnceCell::new();
@@ -19,20 +22,37 @@ pub struct MoveBPFModule<'a> {
     pub(crate) opt: OptimizationLevel,
 }
 
-
-fn llvm_target_triple() -> TargetTriple {
-    TargetTriple::create("bpfel-unknown-unknown")
-}
-
-fn llvm_target_name() -> &'static str {
-    "bpfel" // bpf little endian.
-}
-
-fn llvm_features() -> &'static str {
-    "" // no additional target specific features.
-}
-
 impl<'a> MoveBPFModule<'a> {
+    fn llvm_target_triple() -> TargetTriple {
+        TargetTriple::create("bpfel-unknown-unknown")
+    }
+
+    fn llvm_target_name() -> &'static str {
+        "bpfel" // bpf little endian.
+    }
+
+    fn llvm_features() -> &'static str {
+        "" // no additional target specific features.
+    }
+
+    pub fn get_target_machine(&self) -> Option<TargetMachine> {
+        Target::initialize_bpf(&InitializationConfig::default());
+
+        let opt = OptimizationLevel::None; // TODO: Add optimization based on command line flag.
+        let reloc = RelocMode::Default;
+        let model = CodeModel::Default;
+        let target = Target::from_name(MoveBPFModule::llvm_target_name()).unwrap();
+
+        return target.create_target_machine(
+            &MoveBPFModule::llvm_target_triple(),
+            "v2",
+            MoveBPFModule::llvm_features(),
+            opt,
+            reloc,
+            model
+        );
+    }
+
     pub fn new(
         context: &'a Context,
         name: &str,
@@ -43,7 +63,7 @@ impl<'a> MoveBPFModule<'a> {
             inkwell::targets::Target::initialize_bpf(&Default::default());
         });
 
-        let triple = llvm_target_triple();
+        let triple = MoveBPFModule::llvm_target_triple();
         let module = context.create_module(name);
 
         let debug_metadata_version = context.i32_type().const_int(3, false);

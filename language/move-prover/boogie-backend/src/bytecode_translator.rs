@@ -1302,6 +1302,16 @@ impl<'env> FunctionTranslator<'env> {
                             str_local(src)
                         );
                     }
+                    CastU256 => {
+                        let src = srcs[0];
+                        let dest = dests[0];
+                        emitln!(
+                            writer,
+                            "call {} := $CastU256({});",
+                            str_local(dest),
+                            str_local(src)
+                        );
+                    }
                     Not => {
                         let src = srcs[0];
                         let dest = dests[0];

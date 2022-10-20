@@ -222,21 +222,6 @@ impl<'a, I: Iterator<Item = (ValueToken, &'a str)>> Parser<'a, ValueToken, I> {
                         .collect(),
                 )
             }
-            ValueToken::Utf8String => {
-                let contents = contents
-                    .strip_prefix("s\"")
-                    .unwrap()
-                    .strip_suffix('\"')
-                    .unwrap();
-                ParsedValue::Vector(
-                    contents
-                        .as_bytes()
-                        .iter()
-                        .copied()
-                        .map(ParsedValue::U8)
-                        .collect(),
-                )
-            }
             ValueToken::HexString => {
                 let contents = contents
                     .strip_prefix("x\"")
@@ -248,6 +233,17 @@ impl<'a, I: Iterator<Item = (ValueToken, &'a str)>> Parser<'a, ValueToken, I> {
                     hex::decode(contents)
                         .unwrap()
                         .into_iter()
+                        .map(ParsedValue::U8)
+                        .collect(),
+                )
+            }
+            ValueToken::Utf8String => {
+                let contents = contents.strip_suffix('\"').unwrap();
+                ParsedValue::Vector(
+                    contents
+                        .as_bytes()
+                        .iter()
+                        .copied()
                         .map(ParsedValue::U8)
                         .collect(),
                 )

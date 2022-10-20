@@ -138,12 +138,27 @@ impl<'env> SpecTranslator<'env> {
 
 impl<'env> SpecTranslator<'env> {
     pub fn translate_axioms(&self, env: &GlobalEnv, mono_info: &MonoInfo) {
-        for axiom in &mono_info.axioms {
-            self.writer.set_location(&axiom.loc);
-            emitln!(self.writer, "// axiom {}", axiom.loc.display(env));
-            emit!(self.writer, "axiom ");
-            self.translate_exp(&axiom.exp);
-            emitln!(self.writer, ";\n");
+        let type_display_ctx = env.get_type_display_ctx();
+        for (axiom, type_insts) in &mono_info.axioms {
+            for type_inst in type_insts {
+                self.writer.set_location(&axiom.loc);
+                emit!(self.writer, "// axiom {}", axiom.loc.display(env));
+                if !type_inst.is_empty() {
+                    emitln!(
+                        self.writer,
+                        ", instance <{}>",
+                        type_inst
+                            .iter()
+                            .map(|t| t.display(&type_display_ctx).to_string())
+                            .join(", ")
+                    );
+                } else {
+                    emitln!(self.writer);
+                }
+                emit!(self.writer, "axiom ");
+                self.translate(&axiom.exp, type_inst);
+                emitln!(self.writer, ";\n");
+            }
         }
     }
 }

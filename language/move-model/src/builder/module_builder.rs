@@ -1738,12 +1738,18 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 }
                 (first.into_exp(), exps)
             }
+            ConditionKind::Axiom(ref type_params) => {
+                for (i, sym) in type_params.iter().enumerate() {
+                    et.define_type_param(loc, *sym, Type::TypeParameter(i as u16))
+                }
+                (et.translate_exp(exp, &expected_type).into_exp(), vec![])
+            }
             _ => {
                 if !additional_exps.is_empty() {
                     et.error(
-                        loc,
-                        "additional expressions only allowed with `aborts_if`, `aborts_with`, `modifies`, or `emits`",
-                    );
+                          loc,
+                          "additional expressions only allowed with `aborts_if`, `aborts_with`, `modifies`, or `emits`",
+                      );
                 }
                 (et.translate_exp(exp, &expected_type).into_exp(), vec![])
             }

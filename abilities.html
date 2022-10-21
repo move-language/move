@@ -197,7 +197,7 @@ If you are already somewhat familiar with abilities from writing Move programs, 
 <p>The <code>key</code> ability allows the type to serve as a key for <a href="./global-storage-operators.html">global storage operations</a>. It gates all global storage operations, so in order for a type to be used with <code>move_to</code>, <code>borrow_global</code>, <code>move_from</code>, etc., the type must have the <code>key</code> ability. Note that the operations still must be used in the module where the <code>key</code> type is defined (in a sense, the operations are private to the defining module).</p>
 <p>If a value has <code>key</code>, all values contained inside of that value have <code>store</code>. This is the only ability with this sort of asymmetry.</p>
 <h2 id="builtin-types"><a class="header" href="#builtin-types">Builtin Types</a></h2>
-<p>Most primitive, builtin types have <code>copy</code>, <code>drop</code>, and <code>store</code> with the exception of <code>signer</code>, which just has <code>store</code></p>
+<p>Most primitive, builtin types have <code>copy</code>, <code>drop</code>, and <code>store</code> with the exception of <code>signer</code>, which just has <code>drop</code></p>
 <ul>
 <li><code>bool</code>, <code>u8</code>, <code>u64</code>, <code>u128</code>, and <code>address</code> all have <code>copy</code>, <code>drop</code>, and <code>store</code>.</li>
 <li><code>signer</code> has <code>drop</code>

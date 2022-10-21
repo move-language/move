@@ -17,8 +17,8 @@ use move_model::{
     ast,
     ast::{Condition, ConditionKind, ExpData},
     model::{
-        FunId, FunctionEnv, GlobalEnv, ModuleId, QualifiedId, QualifiedInstId, SpecFunId,
-        SpecVarId, StructEnv, StructId,
+        FunId, GlobalEnv, ModuleId, QualifiedId, QualifiedInstId, SpecFunId, SpecVarId, StructEnv,
+        StructId,
     },
     pragmas::INTRINSIC_TYPE_MAP,
     ty::{Type, TypeDisplayContext, TypeInstantiationDerivation, TypeUnificationAdapter, Variance},
@@ -26,7 +26,7 @@ use move_model::{
 };
 
 use crate::{
-    function_target::{FunctionData, FunctionTarget},
+    function_target::FunctionTarget,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     stackless_bytecode::{Bytecode, Operation},
     usage_analysis::UsageProcessor,
@@ -43,7 +43,8 @@ pub struct MonoInfo {
     pub vec_inst: BTreeSet<Type>,
     pub table_inst: BTreeMap<QualifiedId<StructId>, BTreeSet<(Type, Type)>>,
     pub native_inst: BTreeMap<ModuleId, BTreeSet<Vec<Type>>>,
-    pub axioms: Vec<Condition>,
+    pub all_types: BTreeSet<Type>,
+    pub axioms: Vec<(Condition, Vec<Vec<Type>>)>,
 }
 
 /// Get the information computed by this analysis.
@@ -62,44 +63,16 @@ impl MonoAnalysisProcessor {
 
 /// This processor computes monomorphization information for backends.
 impl FunctionTargetProcessor for MonoAnalysisProcessor {
-    fn process(
-        &self,
-        _targets: &mut FunctionTargetsHolder,
-        _fun_env: &FunctionEnv<'_>,
-        data: FunctionData,
-    ) -> FunctionData {
-        // Nothing to do
-        data
-    }
-
     fn name(&self) -> String {
         "mono_analysis".to_owned()
     }
 
-    fn initialize(&self, env: &GlobalEnv, targets: &mut FunctionTargetsHolder) {
-        self.analyze(env, None, targets);
+    fn is_single_run(&self) -> bool {
+        true
     }
 
-    fn finalize(&self, env: &GlobalEnv, _targets: &mut FunctionTargetsHolder) {
-        // TODO: specialize axioms based on functions they are using. For now,
-        //   we can't deal with generic axioms.
-        let mut axioms = vec![];
-        for module_env in env.get_modules() {
-            for cond in &module_env.get_spec().conditions {
-                if let ConditionKind::Axiom(params) = &cond.kind {
-                    if params.is_empty() {
-                        axioms.push(cond.clone());
-                    } else {
-                        env.error(&cond.loc, "generic axioms not yet supported")
-                    }
-                }
-            }
-        }
-        if !axioms.is_empty() {
-            env.update_extension(move |info: &mut MonoInfo| {
-                info.axioms = axioms;
-            });
-        }
+    fn run(&self, env: &GlobalEnv, targets: &mut FunctionTargetsHolder) {
+        self.analyze(env, targets);
     }
 
     fn dump_result(
@@ -148,6 +121,13 @@ impl FunctionTargetProcessor for MonoAnalysisProcessor {
             }
             writeln!(f, "}}")?;
         }
+        for (cond, insts) in &info.axioms {
+            writeln!(f, "axiom {} = {{", cond.loc.display(env))?;
+            for inst in insts {
+                writeln!(f, "  <{}>", display_inst(inst))?;
+            }
+            writeln!(f, "}}")?;
+        }
 
         Ok(())
     }
@@ -157,12 +137,7 @@ impl FunctionTargetProcessor for MonoAnalysisProcessor {
 // ======================
 
 impl MonoAnalysisProcessor {
-    fn analyze<'a>(
-        &self,
-        env: &'a GlobalEnv,
-        rewritten_axioms: Option<&[Condition]>,
-        targets: &'a FunctionTargetsHolder,
-    ) {
+    fn analyze<'a>(&self, env: &'a GlobalEnv, targets: &'a FunctionTargetsHolder) {
         let mut analyzer = Analyzer {
             env,
             targets,
@@ -174,21 +149,20 @@ impl MonoAnalysisProcessor {
             done_types: BTreeSet::new(),
             inst_opt: None,
         };
-        if let Some(axioms) = rewritten_axioms {
-            // Analyze newly rewritten axioms.
-            for axiom in axioms {
+        // Analyze axioms found in modules.
+        for module_env in env.get_modules() {
+            for axiom in module_env.get_spec().filter_kind_axiom() {
                 analyzer.analyze_exp(&axiom.exp)
             }
-        } else {
-            // Analyze axioms found in modules.
-            for module_env in env.get_modules() {
-                for axiom in module_env.get_spec().filter_kind_axiom() {
-                    analyzer.analyze_exp(&axiom.exp)
-                }
-            }
         }
+        // Analyze functions
         analyzer.analyze_funs();
-        let Analyzer { info, .. } = analyzer;
+        let Analyzer {
+            mut info,
+            done_types,
+            ..
+        } = analyzer;
+        info.all_types = done_types;
         env.set_extension(info);
     }
 }
@@ -227,9 +201,9 @@ impl<'a> Analyzer<'a> {
                 }
             }
         }
-        // Now incrementally work todo lists until they are done, while self.inst_opt
-        // contains the specific instantiation. We can first do regular functions,
-        // then the spec functions; the later can never add new regular functions.
+
+        // Next do todo-list for regular functions, while self.inst_opt contains the
+        // specific instantiation.
         while !self.todo_funs.is_empty() {
             let (fun, variant, inst) = self.todo_funs.pop().unwrap();
             self.inst_opt = Some(inst);
@@ -246,6 +220,18 @@ impl<'a> Analyzer<'a> {
                 .insert(inst.clone());
             self.done_funs.insert((fun, variant, inst));
         }
+
+        // Next do axioms, based on the types discovered for regular functions.
+        let axioms = self.compute_axiom_instances();
+        for (cond, insts) in axioms {
+            for inst in &insts {
+                self.inst_opt = Some(inst.clone());
+                self.analyze_exp(&cond.exp);
+            }
+            self.info.axioms.push((cond, insts))
+        }
+
+        // Finally do spec functions, after all regular functions and axioms are done.
         while !self.todo_spec_funs.is_empty() {
             let (fun, inst) = self.todo_spec_funs.pop().unwrap();
             self.inst_opt = Some(inst);
@@ -259,6 +245,53 @@ impl<'a> Analyzer<'a> {
                 .insert(inst.clone());
             self.done_spec_funs.insert((fun, inst));
         }
+    }
+
+    /// Analyze axioms, computing all the instantiations needed. We over-approximate the
+    /// instantiations by using the cartesian product of all known types. As the number of
+    /// type parameters for axioms is restricted to 2, the number of instantiations
+    /// should stay in range. Since each axiom instance is eventually instantiated for
+    /// distinct types, unnecessary axioms should be ignorable by the SMT solver, avoiding
+    /// over-triggering.
+    fn compute_axiom_instances(&self) -> Vec<(Condition, Vec<Vec<Type>>)> {
+        let mut axioms = vec![];
+        let all_types = self
+            .done_types
+            .iter()
+            .filter(|t| {
+                use Type::*;
+                matches!(
+                    t,
+                    TypeParameter(..) | Primitive(..) | Vector(..) | Struct(..)
+                )
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        for module_env in self.env.get_modules() {
+            for cond in &module_env.get_spec().conditions {
+                if let ConditionKind::Axiom(params) = &cond.kind {
+                    let type_insts = match params.len() {
+                        0 => vec![vec![]],
+                        1 => all_types.iter().cloned().map(|t| vec![t]).collect(),
+                        2 => itertools::iproduct!(
+                            all_types.iter().cloned(),
+                            all_types.iter().cloned()
+                        )
+                        .map(|(x, y)| vec![x, y])
+                        .collect(),
+                        _ => {
+                            self.env.error(
+                                &cond.loc,
+                                "axioms cannot have more than two type parameters",
+                            );
+                            vec![]
+                        }
+                    };
+                    axioms.push((cond.clone(), type_insts));
+                }
+            }
+        }
+        axioms
     }
 
     fn analyze_fun(&mut self, target: FunctionTarget<'_>) {

@@ -738,27 +738,29 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             exp,
                             additional_exps,
                         } => {
-                            let context = SpecBlockContext::FunctionCode(
-                                qsym.clone(),
-                                &fun_spec_info[spec_id],
-                            );
-                            if let Some(kind) = self.convert_condition_kind(kind, &context) {
-                                let properties =
-                                    self.translate_properties(properties, &|_, _, prop| {
-                                        if !is_property_valid_for_condition(&kind, prop) {
-                                            Some(loc.clone())
-                                        } else {
-                                            None
-                                        }
-                                    });
-                                self.def_ana_condition(
-                                    loc,
-                                    &context,
-                                    kind,
-                                    properties,
-                                    exp,
-                                    additional_exps,
+                            if fun_spec_info.contains_key(spec_id) {
+                                let context = SpecBlockContext::FunctionCode(
+                                    qsym.clone(),
+                                    &fun_spec_info[spec_id],
                                 );
+                                if let Some(kind) = self.convert_condition_kind(kind, &context) {
+                                    let properties =
+                                        self.translate_properties(properties, &|_, _, prop| {
+                                            if !is_property_valid_for_condition(&kind, prop) {
+                                                Some(loc.clone())
+                                            } else {
+                                                None
+                                            }
+                                        });
+                                    self.def_ana_condition(
+                                        loc,
+                                        &context,
+                                        kind,
+                                        properties,
+                                        exp,
+                                        additional_exps,
+                                    );
+                                }
                             }
                         }
                         _ => {
@@ -1736,12 +1738,18 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 }
                 (first.into_exp(), exps)
             }
+            ConditionKind::Axiom(ref type_params) => {
+                for (i, sym) in type_params.iter().enumerate() {
+                    et.define_type_param(loc, *sym, Type::TypeParameter(i as u16))
+                }
+                (et.translate_exp(exp, &expected_type).into_exp(), vec![])
+            }
             _ => {
                 if !additional_exps.is_empty() {
                     et.error(
-                        loc,
-                        "additional expressions only allowed with `aborts_if`, `aborts_with`, `modifies`, or `emits`",
-                    );
+                          loc,
+                          "additional expressions only allowed with `aborts_if`, `aborts_with`, `modifies`, or `emits`",
+                      );
                 }
                 (et.translate_exp(exp, &expected_type).into_exp(), vec![])
             }

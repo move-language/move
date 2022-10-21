@@ -144,6 +144,7 @@ impl TestRunner {
         // TODO: maybe we should require the clients to always pass in a list of native functions so
         // we don't have to make assumptions about their gas parameters.
         native_function_table: Option<NativeFunctionTable>,
+        cost_table: Option<CostTable>,
         named_address_values: BTreeMap<String, NumericalAddress>,
         record_writeset: bool,
         #[cfg(feature = "evm-backend")] evm: bool,
@@ -173,7 +174,7 @@ impl TestRunner {
                 // after executing a certain number of instructions or setting a timer.
                 //
                 // From the API standpoint, we should let the client specify the cost table.
-                cost_table: unit_cost_table(),
+                cost_table: cost_table.unwrap_or(unit_cost_table()),
                 source_files,
                 check_stackless_vm,
                 verbose,

@@ -19,6 +19,7 @@ use move_compiler::{
 };
 use move_core_types::language_storage::ModuleId;
 use move_vm_runtime::native_functions::NativeFunctionTable;
+use move_vm_test_utils::gas_schedule::CostTable;
 use std::{
     collections::BTreeMap,
     io::{Result, Write},
@@ -219,6 +220,7 @@ impl UnitTestingConfig {
         &self,
         test_plan: TestPlan,
         native_function_table: Option<NativeFunctionTable>,
+        cost_table: Option<CostTable>,
         writer: W,
     ) -> Result<(W, bool)> {
         let shared_writer = Mutex::new(writer);
@@ -248,6 +250,7 @@ impl UnitTestingConfig {
             self.report_stacktrace_on_abort,
             test_plan,
             native_function_table,
+            cost_table,
             verify_and_create_named_address_mapping(self.named_address_values.clone()).unwrap(),
             self.report_writeset,
             #[cfg(feature = "evm-backend")]

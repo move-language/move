@@ -4,6 +4,7 @@
 
 use move_command_line_common::files::find_filenames;
 use move_vm_runtime::native_functions::NativeFunctionTable;
+use move_vm_test_utils::gas_schedule::CostTable;
 
 use crate::UnitTestingConfig;
 
@@ -13,6 +14,7 @@ pub fn run_tests_with_config_and_filter(
     source_pattern: &str,
     dep_root: Option<&str>,
     native_function_table: Option<NativeFunctionTable>,
+    cost_table: Option<CostTable>,
 ) {
     let get_files = |root_path, pat| {
         let source_re = regex::Regex::new(pat)
@@ -33,7 +35,12 @@ pub fn run_tests_with_config_and_filter(
     let test_plan = config.build_test_plan().expect("Unable to build test plan");
 
     let (_, all_tests_passed) = config
-        .run_and_report_unit_tests(test_plan, native_function_table, std::io::stdout())
+        .run_and_report_unit_tests(
+            test_plan,
+            native_function_table,
+            cost_table,
+            std::io::stdout(),
+        )
         .expect("Failed to execute tests");
 
     // If all tests passed, exit with 0 otherwise with a non-zero exit code.

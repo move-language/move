@@ -15,6 +15,7 @@ use move_compiler::{
 use move_coverage::coverage_map::{output_map_to_file, CoverageMap};
 use move_package::{compilation::build_plan::BuildPlan, BuildConfig};
 use move_unit_test::UnitTestingConfig;
+use move_vm_test_utils::gas_schedule::CostTable;
 use std::{
     collections::HashMap,
     fs,
@@ -89,6 +90,7 @@ impl Test {
         path: Option<PathBuf>,
         config: BuildConfig,
         natives: Vec<NativeFunctionRecord>,
+        cost_table: Option<CostTable>,
     ) -> anyhow::Result<()> {
         let rerooted_path = reroot_path(path)?;
         let Self {
@@ -125,6 +127,7 @@ impl Test {
             config,
             unit_test_config,
             natives,
+            cost_table,
             compute_coverage,
             &mut std::io::stdout(),
         )?;
@@ -149,6 +152,7 @@ pub fn run_move_unit_tests<W: Write + Send>(
     mut build_config: move_package::BuildConfig,
     mut unit_test_config: UnitTestingConfig,
     natives: Vec<NativeFunctionRecord>,
+    cost_table: Option<CostTable>,
     compute_coverage: bool,
     writer: &mut W,
 ) -> Result<UnitTestResult> {
@@ -245,7 +249,7 @@ pub fn run_move_unit_tests<W: Write + Send>(
     // Run the tests. If any of the tests fail, then we don't produce a coverage report, so cleanup
     // the trace files.
     if !unit_test_config
-        .run_and_report_unit_tests(test_plan, Some(natives), writer)
+        .run_and_report_unit_tests(test_plan, Some(natives), cost_table, writer)
         .unwrap()
         .1
     {

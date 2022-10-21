@@ -7,7 +7,22 @@ use inkwell::OptimizationLevel;
 use inkwell::{targets::{TargetTriple, TargetMachine}};
 use inkwell::targets::{CodeModel, RelocMode};
 use inkwell::{targets::Target, targets::InitializationConfig};
+use inkwell::types::{
+    ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FunctionType, IntType, StringRadix,
+};
 
+use move_binary_format::{
+    binary_views::BinaryIndexedView,
+    control_flow_graph::{ControlFlowGraph, VMControlFlowGraph},
+    file_format::{
+        Ability, AbilitySet, Bytecode, CodeUnit, FieldHandleIndex, FunctionDefinition,
+        FunctionDefinitionIndex, FunctionHandle, Signature, SignatureIndex, SignatureToken,
+        StructDefinition, StructDefinitionIndex, StructFieldInformation, StructTypeParameter,
+        TableIndex, TypeSignature, Visibility,
+    },
+};
+
+use move_bytecode_source_map::source_map::SourceName;
 use once_cell::sync::OnceCell;
 
 static LLVM_INIT: OnceCell<()> = OnceCell::new();
@@ -104,5 +119,24 @@ impl<'a> MoveBPFModule<'a> {
             context,
             opt,
         }
+    }
+
+    pub(crate) fn llvm_type_for_sig_tok(&self, sig_tok: &SignatureToken, _type_parameters: &[AbilitySet]) -> BasicTypeEnum<'a> {
+        match sig_tok {
+            SignatureToken::Bool => BasicTypeEnum::IntType(self.context.bool_type()),
+            SignatureToken::U8 => BasicTypeEnum::IntType(self.context.custom_width_int_type(8)), // FIXME: The signedness
+            SignatureToken::U64 => BasicTypeEnum::IntType(self.context.custom_width_int_type(64)), // FIXME: The signedness
+            _ => unimplemented!("Remaining Signature tokens to be implemented"),
+        }
+    }
+    pub fn llvm_type_for_sig_tokens(&self, sig_tokens: Vec<SignatureToken>, type_parameters: &[AbilitySet],) -> Vec<BasicTypeEnum<'a>> {
+        let mut vec = Vec::new();
+        for v in sig_tokens {
+            vec.push(self.llvm_type_for_sig_tok(&v, type_parameters));
+        }
+        return vec;
+    }
+    pub fn llvm_constant() {
+        // TODO: Return a constant value corresponding to the input type.
     }
 }

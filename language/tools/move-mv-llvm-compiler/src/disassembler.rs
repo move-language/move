@@ -578,11 +578,23 @@ impl<'a> Disassembler<'a> {
             name
         );
 
-        let u64_ty = move_module.context.i64_type();
-        let fn_value = move_module.module.add_function(name.as_str(), u64_ty.fn_type(&[],  false), None);
+
+        let ret_type = match function {
+            Some(function) => self
+                .source_mapper
+                .bytecode
+                .signature_at(function.1.return_)
+                .0.clone(),
+            None => vec![],
+        };
+
+        let llvm_ret_types = move_module.llvm_type_for_sig_tokens(ret_type, type_parameters);
+        let llvm_ret_type = llvm_ret_types[0].into_int_type(); // FIXME: 1. Use all the returned types. 2. Give the right type instead of into_int_type.
+
+        let fn_value = move_module.module.add_function(name.as_str(), llvm_ret_type.fn_type(&[],  false), None);
         let entry_block = move_module.context.append_basic_block(fn_value, "entry");
         move_module.builder.position_at_end(entry_block);
-        move_module.builder.build_return(Some(&u64_ty.const_zero()));
+        move_module.builder.build_return(Some(&llvm_ret_type.const_zero()));
 
         let body = match code {
             Some(code) => {

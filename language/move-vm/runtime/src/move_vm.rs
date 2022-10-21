@@ -2,10 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[cfg(not(feature = "nostd"))]
-use std::{collections::BTreeSet, sync::Arc};
 #[cfg(feature = "nostd")]
 use alloc::{collections::BTreeSet, sync::Arc};
+#[cfg(not(feature = "nostd"))]
+use std::{collections::BTreeSet, sync::Arc};
 
 use crate::{
     data_cache::TransactionDataCache, native_extensions::NativeContextExtensions,

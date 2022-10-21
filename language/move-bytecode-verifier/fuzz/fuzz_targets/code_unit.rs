@@ -15,6 +15,7 @@ use std::str::FromStr;
 
 use libfuzzer_sys::fuzz_target;
 
+#[cfg(not(feature = "nostd"))]
 fuzz_target!(|code_unit: CodeUnit| {
     let mut module = empty_module();
     module.version = 5;

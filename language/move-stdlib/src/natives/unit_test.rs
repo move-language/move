@@ -4,7 +4,7 @@
 
 use crate::natives::helpers::make_module_natives;
 #[cfg(feature = "nostd")]
-use alloc::{collections::VecDeque, vec::Vec, sync::Arc};
+use alloc::{collections::VecDeque, sync::Arc, vec::Vec};
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::{
     account_address::AccountAddress,

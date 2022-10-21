@@ -220,9 +220,18 @@ pub const NO_TYPE_ARGUMENTS: SignatureIndex = SignatureIndex(0);
 /// Type definitions (fields) are private to the module. Outside the module a
 /// Type is an opaque handle.
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-#[cfg_attr(all(not(feature = "nostd"), any(test, feature = "fuzzing")), derive(proptest_derive::Arbitrary))]
-#[cfg_attr(all(not(feature = "nostd"), any(test, feature = "fuzzing")), proptest(no_params))]
-#[cfg_attr(all(not(feature = "nostd"), feature = "fuzzing"), derive(arbitrary::Arbitrary))]
+#[cfg_attr(
+    all(not(feature = "nostd"), any(test, feature = "fuzzing")),
+    derive(proptest_derive::Arbitrary)
+)]
+#[cfg_attr(
+    all(not(feature = "nostd"), any(test, feature = "fuzzing")),
+    proptest(no_params)
+)]
+#[cfg_attr(
+    all(not(feature = "nostd"), feature = "fuzzing"),
+    derive(arbitrary::Arbitrary)
+)]
 pub struct ModuleHandle {
     /// Index into the `AddressIdentifierIndex`. Identifies module-holding account's address.
     pub address: AddressIdentifierIndex,
@@ -244,9 +253,18 @@ pub struct ModuleHandle {
 /// At link time ability/constraint checking is performed and an error is reported if there is a
 /// mismatch with the definition.
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-#[cfg_attr(all(not(feature = "nostd"), any(test, feature = "fuzzing")), derive(proptest_derive::Arbitrary))]
-#[cfg_attr(all(not(feature = "nostd"), any(test, feature = "fuzzing")), proptest(no_params))]
-#[cfg_attr(all(not(feature = "nostd"), feature = "fuzzing"), derive(arbitrary::Arbitrary))]
+#[cfg_attr(
+    all(not(feature = "nostd"), any(test, feature = "fuzzing")),
+    derive(proptest_derive::Arbitrary)
+)]
+#[cfg_attr(
+    all(not(feature = "nostd"), any(test, feature = "fuzzing")),
+    proptest(no_params)
+)]
+#[cfg_attr(
+    all(not(feature = "nostd"), feature = "fuzzing"),
+    derive(arbitrary::Arbitrary)
+)]
 pub struct StructHandle {
     /// The module that defines the type.
     pub module: ModuleHandleIndex,
@@ -268,9 +286,18 @@ impl StructHandle {
 
 /// A type parameter used in the declaration of a struct.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
-#[cfg_attr(all(not(feature = "nostd"), any(test, feature = "fuzzing")), derive(proptest_derive::Arbitrary))]
-#[cfg_attr(all(not(feature = "nostd"), any(test, feature = "fuzzing")), proptest(no_params))]
-#[cfg_attr(all(not(feature = "nostd"), feature = "fuzzing"), derive(arbitrary::Arbitrary))]
+#[cfg_attr(
+    all(not(feature = "nostd"), any(test, feature = "fuzzing")),
+    derive(proptest_derive::Arbitrary)
+)]
+#[cfg_attr(
+    all(not(feature = "nostd"), any(test, feature = "fuzzing")),
+    proptest(no_params)
+)]
+#[cfg_attr(
+    all(not(feature = "nostd"), feature = "fuzzing"),
+    derive(arbitrary::Arbitrary)
+)]
 pub struct StructTypeParameter {
     /// The type parameter constraints.
     pub constraints: AbilitySet,
@@ -286,9 +313,18 @@ pub struct StructTypeParameter {
 /// ensure the function reference is valid and it is also used by the verifier to type check
 /// function calls.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-#[cfg_attr(all(not(feature = "nostd"), any(test, feature = "fuzzing")), derive(proptest_derive::Arbitrary))]
-#[cfg_attr(all(not(feature = "nostd"), any(test, feature = "fuzzing")), proptest(params = "usize"))]
-#[cfg_attr(all(not(feature = "nostd"), feature = "fuzzing"), derive(arbitrary::Arbitrary))]
+#[cfg_attr(
+    all(not(feature = "nostd"), any(test, feature = "fuzzing")),
+    derive(proptest_derive::Arbitrary)
+)]
+#[cfg_attr(
+    all(not(feature = "nostd"), any(test, feature = "fuzzing")),
+    proptest(params = "usize")
+)]
+#[cfg_attr(
+    all(not(feature = "nostd"), feature = "fuzzing"),
+    derive(arbitrary::Arbitrary)
+)]
 pub struct FunctionHandle {
     /// The module that defines the function.
     pub module: ModuleHandleIndex,
@@ -456,6 +492,7 @@ impl StructDefinition {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
 /// A `FieldDefinition` is the definition of a field: its name and the field type.
 #[cfg_attr(
     all(not(feature = "nostd"), any(test, feature = "fuzzing")),
@@ -743,7 +780,10 @@ impl Ability {
 
 /// A set of `Ability`s
 #[derive(Clone, Eq, Copy, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
-#[cfg_attr(feature = "fuzzing", derive(arbitrary::Arbitrary))]
+#[cfg_attr(
+    all(not(feature = "nostd"), feature = "fuzzing"),
+    derive(arbitrary::Arbitrary)
+)]
 pub struct AbilitySet(u8);
 
 impl AbilitySet {
@@ -1215,7 +1255,10 @@ impl SignatureToken {
 /// A `Constant` is a serialized value along with its type. That type will be deserialized by the
 /// loader/evauluator
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-#[cfg_attr(feature = "fuzzing", derive(arbitrary::Arbitrary))]
+#[cfg_attr(
+    all(not(feature = "nostd"), feature = "fuzzing"),
+    derive(arbitrary::Arbitrary)
+)]
 pub struct Constant {
     pub type_: SignatureToken,
     pub data: Vec<u8>,
@@ -1719,7 +1762,6 @@ pub enum Bytecode {
     VecSwap(SignatureIndex),
 }
 
-
 impl fmt::Debug for Bytecode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -1913,7 +1955,10 @@ impl CompiledScript {
 ///
 /// A module is published as a single entry and it is retrieved as a single blob.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-#[cfg_attr(feature = "fuzzing", derive(arbitrary::Arbitrary))]
+#[cfg_attr(
+    all(not(feature = "nostd"), feature = "fuzzing"),
+    derive(arbitrary::Arbitrary)
+)]
 pub struct CompiledModule {
     /// Version number found during deserialization
     pub version: u32,

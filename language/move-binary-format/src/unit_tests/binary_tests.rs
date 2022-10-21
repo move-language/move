@@ -17,6 +17,8 @@ fn binary_len() {
 
 #[test]
 fn test_max_number_of_bytecode() {
+    #[cfg(feature = "nostd")]
+    use alloc::vec;
     let mut nops = vec![];
     for _ in 0..u16::MAX - 1 {
         nops.push(Bytecode::Nop);

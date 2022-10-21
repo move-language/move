@@ -10,6 +10,7 @@ use crate::{
 use bcs::test_helpers::assert_canonical_encode_decode;
 use proptest::prelude::*;
 
+#[cfg(not(feature = "nostd"))]
 proptest! {
     #[test]
     fn test_module_id_canonical_roundtrip(module_id in any::<ModuleId>()) {

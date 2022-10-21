@@ -3,12 +3,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Implementation of native functions for utf8 strings.
-
 use move_binary_format::errors::PartialVMResult;
-use move_core_types::vm_status::sub_status::NFE_STRING_INVALID_ARG_FAILURE;
+use move_vm_types::natives::function::InternalGas;
+// use move_core_types::vm_status::sub_status::NFE_STRING_INVALID_ARG_FAILURE;
+use crate::natives::helpers::make_module_natives;
+#[cfg(feature = "nostd")]
+use alloc::{collections::VecDeque, string::String, sync::Arc, vec::Vec};
+#[cfg(feature = "nostd")]
+use core::str;
+use move_core_types::gas_algebra::InternalGasPerByte;
+use move_core_types::gas_algebra::NumBytes;
 use move_vm_runtime::native_functions::NativeContext;
+use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
-    gas_schedule::NativeCostIndex,
+    // gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
     natives::function::NativeResult,
     pop_arg,
@@ -16,10 +24,6 @@ use move_vm_types::{
 };
 #[cfg(not(feature = "nostd"))]
 use std::{collections::VecDeque, sync::Arc};
-#[cfg(feature = "nostd")]
-use alloc::{collections::VecDeque, vec::Vec, sync::Arc};
-#[cfg(feature = "nostd")]
-use core::str;
 // The implementation approach delegates all utf8 handling to Rust.
 // This is possible without copying of bytes because (a) we can
 // get a `std::cell::Ref<Vec<u8>>` from a `vector<u8>` and in turn a `&[u8]`
@@ -49,7 +53,7 @@ fn native_check_utf8(
     debug_assert!(args.len() == 1);
     let s_arg = pop_arg!(args, VectorRef);
     let s_ref = s_arg.as_bytes_ref();
-    let ok = std::str::from_utf8(s_ref.as_slice()).is_ok();
+    let ok = str::from_utf8(s_ref.as_slice()).is_ok();
     // TODO: extensible native cost tables
 
     let cost = gas_params.base + gas_params.per_byte * NumBytes::new(s_ref.as_slice().len() as u64);

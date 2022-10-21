@@ -2,7 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{loaded_data::runtime_types::Type, views::{ValueView, ValueVisitor}};
+use crate::{
+    loaded_data::runtime_types::Type,
+    views::{ValueView, ValueVisitor},
+};
 #[cfg(feature = "nostd")]
 use core::{
     cell,
@@ -25,7 +28,7 @@ use move_core_types::{
     vm_status::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode},
 };
 #[cfg(not(feature = "nostd"))]
-use std::{
+use {
     cell,
     cell::RefCell,
     cmp::max,
@@ -1862,19 +1865,19 @@ impl Container {
                 Struct::legacy_size_impl(&*r.borrow())
             }
             Self::VecU8(r) => {
-                AbstractMemorySize::new((r.borrow().len() * std::mem::size_of::<u8>()) as u64)
+                AbstractMemorySize::new((r.borrow().len() * mem::size_of::<u8>()) as u64)
             }
             Self::VecU64(r) => {
-                AbstractMemorySize::new((r.borrow().len() * std::mem::size_of::<u64>()) as u64)
+                AbstractMemorySize::new((r.borrow().len() * mem::size_of::<u64>()) as u64)
             }
             Self::VecU128(r) => {
-                AbstractMemorySize::new((r.borrow().len() * std::mem::size_of::<u128>()) as u64)
+                AbstractMemorySize::new((r.borrow().len() * mem::size_of::<u128>()) as u64)
             }
             Self::VecBool(r) => {
-                AbstractMemorySize::new((r.borrow().len() * std::mem::size_of::<bool>()) as u64)
+                AbstractMemorySize::new((r.borrow().len() * mem::size_of::<bool>()) as u64)
             }
             Self::VecAddress(r) => AbstractMemorySize::new(
-                (r.borrow().len() * std::mem::size_of::<AccountAddress>()) as u64,
+                (r.borrow().len() * mem::size_of::<AccountAddress>()) as u64,
             ),
         }
     }
@@ -2240,7 +2243,7 @@ pub mod debug {
     #[cfg(feature = "nostd")]
     use core::fmt::Write;
     #[cfg(not(feature = "nostd"))]
-    use std::fmt::Write;
+    use fmt::Write;
     fn print_invalid<B: Write>(buf: &mut B) -> PartialVMResult<()> {
         debug_write!(buf, "-")
     }

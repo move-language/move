@@ -33,12 +33,12 @@ use move_vm_types::{
     values::{Locals, Reference, VMValueCast, Value},
 };
 
-#[cfg(not(feature = "nostd"))]
-use std::{borrow::Borrow, collections::BTreeSet, sync::Arc, mem};
+#[cfg(feature = "nostd")]
+use alloc::{borrow::Borrow, collections::BTreeSet, format, string::ToString, sync::Arc, vec::Vec};
 #[cfg(feature = "nostd")]
 use core::mem;
-#[cfg(feature = "nostd")]
-use alloc::{borrow::Borrow, collections::BTreeSet, sync::Arc,vec::Vec,string::ToString,format};
+#[cfg(not(feature = "nostd"))]
+use std::{borrow::Borrow, collections::BTreeSet, mem, sync::Arc};
 
 use tracing::warn;
 

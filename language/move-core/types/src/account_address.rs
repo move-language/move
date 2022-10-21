@@ -9,8 +9,14 @@ use std::{convert::TryFrom, fmt, str::FromStr};
 
 /// A struct that represents an account address.
 #[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Clone, Copy)]
-#[cfg_attr(any(test, feature = "fuzzing"), derive(proptest_derive::Arbitrary))]
-#[cfg_attr(any(test, feature = "fuzzing"), derive(arbitrary::Arbitrary))]
+#[cfg_attr(
+    all(not(feature = "nostd"), any(test, feature = "fuzzing")),
+    derive(proptest_derive::Arbitrary)
+)]
+#[cfg_attr(
+    all(not(feature = "nostd"), any(test, feature = "fuzzing")),
+    derive(arbitrary::Arbitrary)
+)]
 pub struct AccountAddress([u8; AccountAddress::LENGTH]);
 
 impl AccountAddress {
@@ -413,6 +419,7 @@ mod tests {
         assert!(AccountAddress::from_str("").is_err());
     }
 
+    #[cfg(not(feature = "nostd"))]
     proptest! {
         #[test]
         fn test_address_string_roundtrip(addr in any::<AccountAddress>()) {

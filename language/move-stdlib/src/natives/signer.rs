@@ -4,7 +4,7 @@
 
 use crate::natives::helpers::make_module_natives;
 #[cfg(feature = "nostd")]
-use alloc::{collections::VecDeque, vec::Vec, sync::Arc};
+use alloc::{collections::VecDeque, string::String, sync::Arc, vec::Vec};
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::gas_algebra::InternalGas;
 use move_vm_runtime::native_functions::{NativeContext, NativeFunction};

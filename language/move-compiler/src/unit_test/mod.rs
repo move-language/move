@@ -9,9 +9,9 @@ use crate::{
 };
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, language_storage::ModuleId,
-    value::MoveValue,
+    value::MoveValue, vm_status::StatusCode,
 };
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, fmt};
 
 pub mod filter_test_members;
 pub mod plan_builder;
@@ -40,11 +40,20 @@ pub struct TestCase {
 
 #[derive(Debug, Clone)]
 pub enum ExpectedFailure {
-    // expected failure, but abort code not checked
+    // expected failure, but codes are not checked
     Expected,
-    // expected failure, abort code checked
-    ExpectedWithCode(u64),
+    // expected failure, abort code checked but without the module specified
+    ExpectedWithCodeDEPRECATED(u64),
+    // expected failure, abort code with the module specified
+    ExpectedWithError(ExpectedMoveError),
 }
+
+#[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq)]
+pub struct ExpectedMoveError(
+    pub StatusCode,
+    pub Option<u64>,
+    pub move_binary_format::errors::Location,
+);
 
 impl ModuleTestPlan {
     pub fn new(
@@ -88,6 +97,31 @@ impl TestPlan {
             files,
             module_tests,
             module_info,
+        }
+    }
+}
+
+impl fmt::Display for ExpectedMoveError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use move_binary_format::errors::Location;
+        let Self(status, sub_status, location) = self;
+        let status_val: u64 = (*status).into();
+        match status {
+            StatusCode::ABORTED => write!(f, "an abort")?,
+            StatusCode::ARITHMETIC_ERROR => write!(f, "an arithmetic error")?,
+            StatusCode::VECTOR_OPERATION_ERROR => write!(f, "a vector operation error")?,
+            StatusCode::OUT_OF_GAS => write!(f, "an out of gas error")?,
+            _ => write!(f, "an error (code {status_val}) of kind {status:?}")?,
+        };
+        if status == &StatusCode::ABORTED {
+            write!(f, " with code {}", sub_status.unwrap())?
+        } else if let Some(code) = sub_status {
+            write!(f, " with sub-status code {code}")?
+        };
+        match location {
+            Location::Undefined => write!(f, " originating in an unknown location"),
+            Location::Script => write!(f, " originating in the script"),
+            Location::Module(id) => write!(f, " originating in the module {id}"),
         }
     }
 }

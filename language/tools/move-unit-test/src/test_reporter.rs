@@ -24,14 +24,18 @@ use std::{
     time::Duration,
 };
 
+pub use move_compiler::unit_test::ExpectedMoveError as MoveError;
+
 #[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq)]
 pub enum FailureReason {
-    // Expected to abort, but it didn't
-    NoAbort(String),
+    // Expected to error, but it didn't
+    NoError(String),
     // Aborted with the wrong code
-    WrongAbort(String, u64, u64),
-    // Abort wasn't expected, but it did
-    Aborted(String, u64),
+    WrongError(String, MoveError, MoveError),
+    // Aborted with the wrong code, without location specified
+    WrongAbortDEPRECATED(String, u64, MoveError),
+    // Error wasn't expected, but it did
+    ExecutionError(String, MoveError),
     // Test timed out
     Timeout(String),
     // The execution results of the Move VM and stackless VM does not match
@@ -43,10 +47,6 @@ pub enum FailureReason {
     },
     // Property checking failed
     Property(String),
-    // The test failed with an execution failure (MISSING_DATA, ARITHMETIC, etc.)
-    ExecutionFailure(StatusCode),
-    // The test failed for some unknown reason. This shouldn't be encountered
-    Unknown(String),
 
     // Failed to compile Move code into EVM bytecode.
     #[cfg(feature = "evm-backend")]
@@ -92,20 +92,28 @@ impl TestRunInfo {
 }
 
 impl FailureReason {
-    pub fn no_abort() -> Self {
-        FailureReason::NoAbort("Test did not abort as expected".to_string())
+    pub fn no_error() -> Self {
+        FailureReason::NoError("Test did not fail as expected".to_string())
     }
 
-    pub fn wrong_abort(expected: u64, received: u64) -> Self {
-        FailureReason::WrongAbort(
-            "Test did not abort with expected code".to_string(),
+    pub fn wrong_error(expected: MoveError, actual: MoveError) -> Self {
+        FailureReason::WrongError(
+            "Test did not fail with the expected error".to_string(),
             expected,
-            received,
+            actual,
         )
     }
 
-    pub fn aborted(abort_code: u64) -> Self {
-        FailureReason::Aborted("Test was not expected to abort".to_string(), abort_code)
+    pub fn wrong_abort_deprecated(expected: u64, actual: MoveError) -> Self {
+        FailureReason::WrongAbortDEPRECATED(
+            "Test did not abort with expected code".to_string(),
+            expected,
+            actual,
+        )
+    }
+
+    pub fn execution_error(error: MoveError) -> Self {
+        FailureReason::ExecutionError("Test was not expected to fail".to_string(), error)
     }
 
     pub fn timeout() -> Self {
@@ -161,17 +169,26 @@ impl TestFailure {
 
     pub fn render_error(&self, test_plan: &TestPlan) -> String {
         let error_string = match &self.failure_reason {
-            FailureReason::NoAbort(message) => message.to_string(),
+            FailureReason::NoError(message) => message.to_string(),
             FailureReason::Timeout(message) => message.to_string(),
-            FailureReason::WrongAbort(message, expected_code, other_code) => {
+            FailureReason::WrongError(message, expected, actual) => {
                 let base_message = format!(
-                    "{}. Expected test to abort with {} but instead it aborted with {} here",
+                    "{message}. Expected test to error with {expected} \
+                    but instead it errored with {actual}. Rooted here",
+                );
+                Self::report_error_with_location(test_plan, base_message, &self.vm_error)
+            }
+            FailureReason::WrongAbortDEPRECATED(message, expected_code, other_code) => {
+                let base_message = format!(
+                    "{}. \
+                    Expected test to abort with {} but instead it errored with {}. Rooted here",
                     message, expected_code, other_code,
                 );
                 Self::report_error_with_location(test_plan, base_message, &self.vm_error)
             }
-            FailureReason::Aborted(message, code) => {
-                let base_message = format!("{} but it aborted with {} here", message, code);
+            FailureReason::ExecutionError(message, error) => {
+                let base_message =
+                    format!("{} but it errored with {}. Rooted here", message, error);
                 Self::report_error_with_location(test_plan, base_message, &self.vm_error)
             }
             FailureReason::ExecutionFailure(status) => {

@@ -4,7 +4,9 @@
 
 use crate::{
     extensions, format_module_id,
-    test_reporter::{FailureReason, TestFailure, TestResults, TestRunInfo, TestStatistics},
+    test_reporter::{
+        FailureReason, MoveError, TestFailure, TestResults, TestRunInfo, TestStatistics,
+    },
 };
 use anyhow::Result;
 use codespan_reporting::{
@@ -488,20 +490,84 @@ impl SharedTestingConfig {
                 }
             };
             match exec_result {
-                Err(err) => match (test_info.expected_failure.as_ref(), err.sub_status()) {
-                    // Ran out of ticks, report a test timeout and log a test failure
-                    _ if err.major_status() == StatusCode::OUT_OF_GAS => {
-                        output.timeout(function_name);
-                        stats.test_failure(
-                            TestFailure::new(
-                                FailureReason::timeout(),
-                                test_run_info,
-                                Some(err),
-                                save_session_state(),
-                            ),
-                            test_plan,
-                        )
+                Err(err) => {
+                    let actual_err =
+                        MoveError(err.major_status(), err.sub_status(), err.location().clone());
+                    assert!(err.major_status() != StatusCode::EXECUTED);
+                    match test_info.expected_failure.as_ref() {
+                        Some(ExpectedFailure::ExpectedWithError(expected_err))
+                            if expected_err == &actual_err =>
+                        {
+                            output.pass(function_name);
+                            stats.test_success(test_run_info, test_plan);
+                        }
+                        Some(ExpectedFailure::ExpectedWithCodeDEPRECATED(code))
+                            if actual_err.0 == StatusCode::ABORTED
+                                && actual_err.1.is_some()
+                                && actual_err.1.unwrap() == *code =>
+                        {
+                            output.pass(function_name);
+                            stats.test_success(test_run_info, test_plan);
+                        }
+                        // Ran out of ticks, report a test timeout and log a test failure
+                        _ if err.major_status() == StatusCode::OUT_OF_GAS => {
+                            output.timeout(function_name);
+                            stats.test_failure(
+                                TestFailure::new(
+                                    FailureReason::timeout(),
+                                    test_run_info,
+                                    Some(err),
+                                    save_session_state(),
+                                ),
+                                test_plan,
+                            )
+                        }
+                        Some(ExpectedFailure::Expected) => {
+                            output.pass(function_name);
+                            stats.test_success(test_run_info, test_plan);
+                        }
+                        // incorrect cases
+                        Some(ExpectedFailure::ExpectedWithError(expected_err)) => {
+                            output.fail(function_name);
+                            stats.test_failure(
+                                TestFailure::new(
+                                    FailureReason::wrong_error(expected_err.clone(), actual_err),
+                                    test_run_info,
+                                    Some(err),
+                                    save_session_state(),
+                                ),
+                                test_plan,
+                            )
+                        }
+                        Some(ExpectedFailure::ExpectedWithCodeDEPRECATED(expected_code)) => {
+                            output.fail(function_name);
+                            stats.test_failure(
+                                TestFailure::new(
+                                    FailureReason::wrong_abort_deprecated(
+                                        *expected_code,
+                                        actual_err,
+                                    ),
+                                    test_run_info,
+                                    Some(err),
+                                    save_session_state(),
+                                ),
+                                test_plan,
+                            )
+                        }
+                        None => {
+                            output.fail(function_name);
+                            stats.test_failure(
+                                TestFailure::new(
+                                    FailureReason::execution_error(actual_err),
+                                    test_run_info,
+                                    Some(err),
+                                    save_session_state(),
+                                ),
+                                test_plan,
+                            )
+                        }
                     }
+<<<<<<< HEAD
                     // Expected the test to not abort, but it aborted with `code`
                     (None, Some(code)) => {
                         output.fail(function_name);
@@ -573,13 +639,16 @@ impl SharedTestingConfig {
                         )
                     }
                 },
+=======
+                }
+>>>>>>> 801789195 ([unit-tests] Fix potential issue in unit tests)
                 Ok(_) => {
                     // Expected the test to fail, but it executed
                     if test_info.expected_failure.is_some() {
                         output.fail(function_name);
                         stats.test_failure(
                             TestFailure::new(
-                                FailureReason::no_abort(),
+                                FailureReason::no_error(),
                                 test_run_info,
                                 None,
                                 save_session_state(),

@@ -654,10 +654,56 @@ fn attribute_value(
 ) -> Option<E::AttributeValue> {
     use E::AttributeValue_ as EV;
     use P::AttributeValue_ as PV;
+    use P::{LeadingNameAccess_ as LN, NameAccessChain_ as PN};
     Some(sp(
         loc,
         match avalue_ {
             PV::Value(v) => EV::Value(value(context, v)?),
+            PV::ModuleAccess(sp!(ident_loc, PN::Two(sp!(aloc, LN::AnonymousAddress(a)), n))) => {
+                let addr = Address::Numerical(None, sp(aloc, a));
+                let mident = sp(ident_loc, ModuleIdent_::new(addr, ModuleName(n)));
+                if context.module_members.get(&mident).is_none() {
+                    context.env.add_diag(diag!(
+                        NameResolution::UnboundModule,
+                        (ident_loc, format!("Unbound module '{}'", mident))
+                    ));
+                }
+                EV::Module(mident)
+            }
+            // bit wonky, but this is the only spot currently where modules and expressions exist
+            // in the same namespace.
+            // TODO consider if we want to just force all of these checks into the well-known
+            // attribute setup
+            PV::ModuleAccess(sp!(ident_loc, PN::One(n)))
+                if context.aliases.module_alias_get(&n).is_some() =>
+            {
+                let sp!(_, mident_) = context.aliases.module_alias_get(&n).unwrap();
+                let mident = sp(ident_loc, mident_);
+                if context.module_members.get(&mident).is_none() {
+                    context.env.add_diag(diag!(
+                        NameResolution::UnboundModule,
+                        (ident_loc, format!("Unbound module '{}'", mident))
+                    ));
+                }
+                EV::Module(mident)
+            }
+            PV::ModuleAccess(sp!(ident_loc, PN::Two(sp!(aloc, LN::Name(n1)), n2)))
+                if context
+                    .named_address_mapping
+                    .as_ref()
+                    .map(|m| m.contains_key(&n1.value))
+                    .unwrap_or(false) =>
+            {
+                let addr = address(context, false, sp(aloc, LN::Name(n1)));
+                let mident = sp(ident_loc, ModuleIdent_::new(addr, ModuleName(n2)));
+                if context.module_members.get(&mident).is_none() {
+                    context.env.add_diag(diag!(
+                        NameResolution::UnboundModule,
+                        (ident_loc, format!("Unbound module '{}'", mident))
+                    ));
+                }
+                EV::Module(mident)
+            }
             PV::ModuleAccess(ma) => EV::ModuleAccess(name_access_chain(context, Access::Type, ma)?),
         },
     ))

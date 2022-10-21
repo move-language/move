@@ -1,9 +1,25 @@
+warning[W10007]: potential issue with attribute value
+  ┌─ tests/move_check/unit_test/expected_failure_out_of_range_value.move:6:24
+  │
+6 │     #[expected_failure(abort_code=18446744073709551614)]
+  │                        ^^^^^^^^^^ -------------------- Replace this value with a constant or add the 'location=...' attribute
+  │                        │           
+  │                        WARNING POTENTIALLY INACCURATE TEST. The value should point to a constant defined in the module that will abort to signify which module will abort. Or the location attribute must be specified.
+
+warning[W10007]: potential issue with attribute value
+   ┌─ tests/move_check/unit_test/expected_failure_out_of_range_value.move:11:24
+   │
+11 │     #[expected_failure(abort_code=18446744073709551615)]
+   │                        ^^^^^^^^^^ -------------------- Replace this value with a constant or add the 'location=...' attribute
+   │                        │           
+   │                        WARNING POTENTIALLY INACCURATE TEST. The value should point to a constant defined in the module that will abort to signify which module will abort. Or the location attribute must be specified.
+
 error[E10003]: invalid attribute value
-   ┌─ tests/move_check/unit_test/expected_failure_out_of_range_value.move:16:35
+   ┌─ tests/move_check/unit_test/expected_failure_out_of_range_value.move:16:24
    │
 16 │     #[expected_failure(abort_code=18446744073709551616)]
-   │                        -----------^^^^^^^^^^^^^^^^^^^^
+   │                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │                        │          │
-   │                        │          Invalid value in expected failure code assignment
-   │                        Unsupported value in this assignment
+   │                        │          Unsupported value in this assignment
+   │                        Invalid value in attribute assignment
 

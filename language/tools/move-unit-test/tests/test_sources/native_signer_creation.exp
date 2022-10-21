@@ -21,7 +21,7 @@ Failures in 0x1::M:
 │    │         ----------------- In this function in 0x1::M
 │    ·
 │ 47 │         abort 0
-│    │         ^^^^^^^ Test was not expected to abort but it aborted with 0 here
+│    │         ^^^^^^^ Test was not expected to fail but it errored with an abort with code 0 originating in the module 00000000000000000000000000000001::M. Rooted here
 │ 
 │ 
 └──────────────────

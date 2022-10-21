@@ -102,14 +102,15 @@ module Module {
         assert!(d<u64>(@0x2, 6), 3);
     }
 
+    // check that this test aborts with the expected error code
     #[test]
-    #[expected_failure(abort_code=10)] // check that this test aborts with the expected error code
+    #[expected_failure(abort_code=10, location=Self)]
     fun tests_aborts() {
        aborts()
     }
 
     #[test]
-    #[expected_failure(abort_code=42)]
+    #[expected_failure(abort_code=42, location=0x1::TestonlyModule)]
     fun other_module_aborts() {
        TestonlyModule::aborts()
     }

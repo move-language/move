@@ -544,6 +544,11 @@ impl Loader {
         *self.invalidated.write() = true;
     }
 
+    /// Check whether this cache is invalidated.
+    pub(crate) fn is_invalidated(&self) -> bool {
+        *self.invalidated.read()
+    }
+
     /// Copies metadata out of a modules bytecode if available.
     pub(crate) fn get_metadata(&self, module: ModuleId, key: &[u8]) -> Option<Metadata> {
         let cache = self.module_cache.read();

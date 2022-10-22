@@ -7,7 +7,7 @@ use std::{collections::BTreeSet, fmt, str::FromStr};
 
 use crate::lexer::*;
 use move_command_line_common::files::FileHash;
-use move_core_types::account_address::AccountAddress;
+use move_core_types::{account_address::AccountAddress, u256};
 use move_ir_types::{ast::*, location::*, spec_language_ast::*};
 use move_symbol_pool::Symbol;
 
@@ -279,6 +279,24 @@ fn parse_copyable_val(tokens: &mut Lexer) -> Result<CopyableVal, ParseError<Loc,
             tokens.advance()?;
             CopyableVal_::U8(i)
         }
+        Tok::U16Value => {
+            let mut s = tokens.content();
+            if s.ends_with("u16") {
+                s = &s[..s.len() - 3]
+            }
+            let i = u16::from_str(s).unwrap();
+            tokens.advance()?;
+            CopyableVal_::U16(i)
+        }
+        Tok::U32Value => {
+            let mut s = tokens.content();
+            if s.ends_with("u32") {
+                s = &s[..s.len() - 3]
+            }
+            let i = u32::from_str(s).unwrap();
+            tokens.advance()?;
+            CopyableVal_::U32(i)
+        }
         Tok::U64Value => {
             let mut s = tokens.content();
             if s.ends_with("u64") {
@@ -296,6 +314,15 @@ fn parse_copyable_val(tokens: &mut Lexer) -> Result<CopyableVal, ParseError<Loc,
             let i = u128::from_str(s).unwrap();
             tokens.advance()?;
             CopyableVal_::U128(i)
+        }
+        Tok::U256Value => {
+            let mut s = tokens.content();
+            if s.ends_with("256") {
+                s = &s[..s.len() - 4]
+            }
+            let i = u256::U256::from_str(s).unwrap();
+            tokens.advance()?;
+            CopyableVal_::U256(i)
         }
         Tok::ByteArrayValue => {
             let s = tokens.content();

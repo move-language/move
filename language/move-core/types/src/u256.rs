@@ -100,9 +100,7 @@ impl std::str::FromStr for U256 {
     type Err = U256FromStrError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        PrimitiveU256::from_str(s)
-            .map(Self)
-            .map_err(|e| U256FromStrError(FromStrRadixErr::from(e)))
+        Self::from_str_radix(s, 10)
     }
 }
 
@@ -227,7 +225,7 @@ impl U256 {
     }
 
     pub fn unchecked_as_u128(&self) -> u128 {
-        self.0.low_u128() as u128
+        self.0.low_u128()
     }
 
     // Check arithmetic

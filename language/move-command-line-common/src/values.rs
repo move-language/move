@@ -24,6 +24,7 @@ pub enum ValueToken {
     False,
     ByteString,
     HexString,
+    Utf8String,
     Ident,
     AtSign,
     LBrace,
@@ -120,6 +121,7 @@ impl Display for ValueToken {
             ValueToken::True => "true",
             ValueToken::False => "false",
             ValueToken::ByteString => "[byte string]",
+            ValueToken::Utf8String => "[utf8 string]",
             ValueToken::HexString => "[hex string]",
             ValueToken::Whitespace => "[whitespace]",
             ValueToken::Ident => "[identifier]",
@@ -241,6 +243,29 @@ impl Token for ValueToken {
                     )
                 }
                 (ValueToken::HexString, len)
+            }
+            '"' => {
+                // there is no need to check if a given char is valid UTF8 as it is already
+                // guaranteed; from the Rust docs
+                // (https://doc.rust-lang.org/std/primitive.char.html): "char values are USVs and
+                // str values are valid UTF-8, it is safe to store any char in a str or read any
+                // character from a str as a char"; this means that while not every char is valid
+                // UTF8, those stored in &str are
+                let end_quote_byte_offset = match s[1..].find('"') {
+                    Some(o) => o,
+                    None => bail!("Unexpected end of string before end quote: {}", s),
+                };
+                // the length of the token (which we need in bytes rather than chars as s is sliced
+                // in parser and slicing str uses byte indexes) is the same as position of the
+                // ending double quote (in the whole string) plus 1
+                let len = s[..1].len() + end_quote_byte_offset + 1;
+                if s[..len].chars().any(|c| c == '\\') {
+                    bail!(
+                        "Escape characters not yet supported in utf8 string: {}",
+                        &s[..len]
+                    )
+                }
+                (ValueToken::Utf8String, len)
             }
             c if c.is_ascii_digit() => {
                 // c + remaining

@@ -237,6 +237,21 @@ impl<'a, I: Iterator<Item = (ValueToken, &'a str)>> Parser<'a, ValueToken, I> {
                         .collect(),
                 )
             }
+            ValueToken::Utf8String => {
+                let contents = contents
+                    .strip_prefix('\"')
+                    .unwrap()
+                    .strip_suffix('\"')
+                    .unwrap();
+                ParsedValue::Vector(
+                    contents
+                        .as_bytes()
+                        .iter()
+                        .copied()
+                        .map(ParsedValue::U8)
+                        .collect(),
+                )
+            }
 
             ValueToken::AtSign => ParsedValue::Address(self.parse_address()?),
 

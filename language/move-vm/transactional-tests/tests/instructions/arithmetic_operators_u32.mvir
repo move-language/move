@@ -84,7 +84,7 @@ label b0:
 //# run
 main() {
 label b0:
-    _ = 2147483647 * 2u32;
+    _ = 2147483648u32 * 2u32;
     return;
 }
 

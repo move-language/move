@@ -882,6 +882,11 @@ impl<'env> Docgen<'env> {
         self.begin_items();
         for (id, _) in sorted_infos {
             let module_env = self.env.get_module(*id);
+            if !module_env.is_target() {
+                // Do not include modules which are not target (outside of the package)
+                // into the index.
+                continue;
+            }
             self.item_text(&format!(
                 "[`{}`]({})",
                 module_env.get_name().display_full(module_env.symbol_pool()),

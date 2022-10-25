@@ -661,8 +661,7 @@ where
             Adapter::ExtraRunArgs,
             Adapter::Subcommand,
         >,
-    >(path)
-    .unwrap()
+    >(path)?
     .into_iter()
     .collect::<VecDeque<_>>();
     assert!(!tasks.is_empty());

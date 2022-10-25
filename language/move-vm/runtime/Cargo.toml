@@ -18,7 +18,7 @@ once_cell = "1.7.2"
 parking_lot = "0.11.1"
 sha3 = "0.9.1"
 tracing = "0.1.26"
-
+hashbrown = "0.12.3"
 move-bytecode-verifier = { path = "../../move-bytecode-verifier" }
 move-core-types = { path = "../../move-core/types" }
 move-vm-types = { path = "../types" }
@@ -32,6 +32,7 @@ move-ir-compiler = { path = "../../move-ir-compiler" }
 move-compiler = { path = "../../move-compiler" }
 
 [features]
+nostd = []
 default = []
 fuzzing = ["move-vm-types/fuzzing"]
 failpoints = ["fail/failpoints"]

@@ -1,6 +1,9 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#[cfg(feature = "nostd")]
+use alloc::{collections::VecDeque, string::String, sync::Arc, vec, vec::Vec};
+
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::gas_algebra::{InternalGas, InternalGasPerByte, NumBytes};
 use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
@@ -11,6 +14,7 @@ use move_vm_types::{
 };
 
 use smallvec::smallvec;
+#[cfg(not(feature = "nostd"))]
 use std::{collections::VecDeque, sync::Arc};
 
 #[derive(Debug, Clone)]

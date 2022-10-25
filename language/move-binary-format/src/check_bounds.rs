@@ -19,6 +19,9 @@ use crate::{
 };
 use move_core_types::vm_status::StatusCode;
 
+#[cfg(feature = "nostd")]
+use alloc::format;
+
 enum BoundsCheckingContext {
     Module,
     ModuleFunction(FunctionDefinitionIndex),

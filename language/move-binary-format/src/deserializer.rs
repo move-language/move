@@ -3,10 +3,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{check_bounds::BoundsChecker, errors::*, file_format::*, file_format_common::*};
+#[cfg(feature = "nostd")]
+use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, vec, vec::Vec};
+#[cfg(feature = "nostd")]
+use core::convert::TryInto;
+#[cfg(feature = "nostd")]
+use core2::io::Read;
+#[cfg(feature = "nostd")]
+use hashbrown::HashSet;
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, metadata::Metadata,
     vm_status::StatusCode,
 };
+#[cfg(not(feature = "nostd"))]
 use std::{collections::HashSet, convert::TryInto, io::Read};
 
 impl CompiledScript {
@@ -881,9 +890,18 @@ fn load_signature_tokens(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Vec
     Ok(tokens)
 }
 
+#[cfg(not(feature = "nostd"))]
 #[cfg(test)]
 pub fn load_signature_token_test_entry(
     cursor: std::io::Cursor<&[u8]>,
+) -> BinaryLoaderResult<SignatureToken> {
+    load_signature_token(&mut VersionedCursor::new_for_test(VERSION_MAX, cursor))
+}
+
+#[cfg(feature = "nostd")]
+#[cfg(test)]
+pub fn load_signature_token_test_entry(
+    cursor: core2::io::Cursor<&[u8]>,
 ) -> BinaryLoaderResult<SignatureToken> {
     load_signature_token(&mut VersionedCursor::new_for_test(VERSION_MAX, cursor))
 }

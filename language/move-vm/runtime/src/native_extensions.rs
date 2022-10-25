@@ -2,7 +2,14 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#[cfg(feature = "nostd")]
+use alloc::boxed::Box;
 use better_any::{Tid, TidAble, TidExt};
+#[cfg(feature = "nostd")]
+use core::any::TypeId;
+#[cfg(feature = "nostd")]
+use hashbrown::HashMap;
+#[cfg(not(feature = "nostd"))]
 use std::{any::TypeId, collections::HashMap};
 
 /// A data type to represent a heterogeneous collection of extensions which are available to

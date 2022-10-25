@@ -6,8 +6,9 @@ use crate::{
     file_format::{CompiledModule, CompiledScript},
     file_format_common::*,
 };
+#[cfg(feature = "nostd")]
+use alloc::vec;
 use move_core_types::vm_status::StatusCode;
-
 fn malformed_simple_versioned_test(version: u32) {
     // bad uleb (more than allowed for table count)
     let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();

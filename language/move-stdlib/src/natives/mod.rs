@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod bcs;
+#[cfg(not(feature = "nostd"))]
 pub mod debug;
 pub mod event;
 pub mod hash;
@@ -17,6 +18,9 @@ mod helpers;
 
 use move_core_types::account_address::AccountAddress;
 use move_vm_runtime::native_functions::{make_table_from_iter, NativeFunctionTable};
+
+#[cfg(feature = "nostd")]
+use alloc::{string::ToString, vec};
 
 #[derive(Debug, Clone)]
 pub struct GasParameters {
@@ -133,6 +137,7 @@ pub fn all_natives(
 #[derive(Debug, Clone)]
 pub struct NurseryGasParameters {
     event: event::GasParameters,
+    #[cfg(not(feature = "nostd"))]
     debug: debug::GasParameters,
 }
 
@@ -144,6 +149,7 @@ impl NurseryGasParameters {
                     unit_cost: 0.into(),
                 },
             },
+            #[cfg(not(feature = "nostd"))]
             debug: debug::GasParameters {
                 print: debug::PrintGasParameters {
                     base_cost: 0.into(),
@@ -171,6 +177,7 @@ pub fn nursery_natives(
     }
 
     add_natives!("event", event::make_all(gas_params.event));
+    #[cfg(not(feature = "nostd"))]
     add_natives!("debug", debug::make_all(gas_params.debug, move_std_addr));
 
     make_table_from_iter(move_std_addr, natives)

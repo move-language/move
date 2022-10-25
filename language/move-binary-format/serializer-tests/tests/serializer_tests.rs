@@ -5,6 +5,7 @@
 use move_binary_format::file_format::CompiledModule;
 use proptest::prelude::*;
 
+#[cfg(not(feature = "nostd"))]
 proptest! {
     #[test]
     fn serializer_roundtrip(module in CompiledModule::valid_strategy(20)) {
@@ -18,6 +19,7 @@ proptest! {
     }
 }
 
+#[cfg(not(feature = "nostd"))]
 proptest! {
     // Generating arbitrary compiled modules is really slow, possibly because of
     // https://github.com/AltSysrq/proptest/issues/143.

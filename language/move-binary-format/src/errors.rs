@@ -6,15 +6,30 @@ use crate::{
     file_format::{CodeOffset, FunctionDefinitionIndex, TableIndex},
     IndexKind,
 };
+#[cfg(feature = "nostd")]
+use core::fmt;
 use move_core_types::{
     language_storage::ModuleId,
     vm_status::{self, StatusCode, StatusType, VMStatus},
 };
+#[cfg(not(feature = "nostd"))]
 use std::fmt;
 
+#[cfg(not(feature = "nostd"))]
 pub type VMResult<T> = ::std::result::Result<T, VMError>;
+#[cfg(not(feature = "nostd"))]
 pub type BinaryLoaderResult<T> = ::std::result::Result<T, PartialVMError>;
+#[cfg(not(feature = "nostd"))]
 pub type PartialVMResult<T> = ::std::result::Result<T, PartialVMError>;
+
+#[cfg(feature = "nostd")]
+pub type VMResult<T> = ::core::result::Result<T, VMError>;
+#[cfg(feature = "nostd")]
+pub type BinaryLoaderResult<T> = ::core::result::Result<T, PartialVMError>;
+#[cfg(feature = "nostd")]
+pub type PartialVMResult<T> = ::core::result::Result<T, PartialVMError>;
+#[cfg(feature = "nostd")]
+use alloc::{format, string::String, vec, vec::Vec};
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Location {
@@ -210,7 +225,10 @@ impl VMError {
     }
 }
 
+#[cfg(not(feature = "nostd"))]
 impl std::error::Error for VMError {}
+#[cfg(feature = "nostd")]
+impl core::error::Error for VMError {}
 
 #[derive(Debug, Clone)]
 pub struct PartialVMError {
@@ -477,8 +495,15 @@ pub fn verification_error(status: StatusCode, kind: IndexKind, idx: TableIndex) 
     PartialVMError::new(status).at_index(kind, idx)
 }
 
+#[cfg(not(feature = "nostd"))]
 impl std::error::Error for PartialVMError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
+}
+#[cfg(feature = "nostd")]
+impl core::error::Error for PartialVMError {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         None
     }
 }

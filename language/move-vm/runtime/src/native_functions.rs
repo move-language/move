@@ -17,11 +17,20 @@ use move_vm_types::{
     data_store::DataStore, loaded_data::runtime_types::Type, natives::function::NativeResult,
     values::Value,
 };
+#[cfg(not(feature = "nostd"))]
 use std::{
     collections::{HashMap, VecDeque},
     fmt::Write,
     sync::Arc,
 };
+
+#[cfg(feature = "nostd")]
+use alloc::{boxed::Box, collections::VecDeque, string::String, sync::Arc, vec::Vec};
+
+#[cfg(feature = "nostd")]
+use core::fmt::Write;
+#[cfg(feature = "nostd")]
+use hashbrown::HashMap;
 
 pub type UnboxedNativeFunction = dyn Fn(&mut NativeContext, Vec<Type>, VecDeque<Value>) -> PartialVMResult<NativeResult>
     + Send
@@ -29,7 +38,6 @@ pub type UnboxedNativeFunction = dyn Fn(&mut NativeContext, Vec<Type>, VecDeque<
     + 'static;
 
 pub type NativeFunction = Arc<UnboxedNativeFunction>;
-
 pub type NativeFunctionTable = Vec<(AccountAddress, Identifier, Identifier, NativeFunction)>;
 
 pub fn make_table(
@@ -56,7 +64,7 @@ pub fn make_table_from_iter<S: Into<Box<str>>>(
         .collect()
 }
 
-pub(crate) struct NativeFunctions(
+pub struct NativeFunctions(
     HashMap<AccountAddress, HashMap<String, HashMap<String, NativeFunction>>>,
 );
 

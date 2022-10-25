@@ -6,6 +6,8 @@ use crate::{
     data_cache::TransactionDataCache, native_extensions::NativeContextExtensions,
     runtime::VMRuntime,
 };
+#[cfg(feature = "nostd")]
+use alloc::{borrow::Borrow, sync::Arc, vec, vec::Vec};
 use move_binary_format::{
     compatibility::CompatibilityConfig,
     errors::*,
@@ -24,6 +26,7 @@ use move_vm_types::{
     gas::GasMeter,
     loaded_data::runtime_types::{CachedStructIndex, StructType, Type},
 };
+#[cfg(not(feature = "nostd"))]
 use std::{borrow::Borrow, sync::Arc};
 
 pub struct Session<'r, 'l, S> {

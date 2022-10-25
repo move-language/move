@@ -6,6 +6,9 @@ use crate::file_format::{Constant, SignatureToken};
 
 use move_core_types::value::{MoveTypeLayout, MoveValue};
 
+#[cfg(feature = "nostd")]
+use alloc::boxed::Box;
+
 fn sig_to_ty(sig: &SignatureToken) -> Option<MoveTypeLayout> {
     match sig {
         SignatureToken::Signer => Some(MoveTypeLayout::Signer),

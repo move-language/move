@@ -160,8 +160,14 @@ impl ResourceKey {
 /// Represents the initial key into global storage where we first index by the address, and then
 /// the struct tag
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-#[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
+#[cfg_attr(
+    all(not(feature = "nostd"), any(test, feature = "fuzzing")),
+    derive(Arbitrary)
+)]
+#[cfg_attr(
+    all(not(feature = "nostd"), any(test, feature = "fuzzing")),
+    proptest(no_params)
+)]
 pub struct ModuleId {
     address: AccountAddress,
     name: Identifier,

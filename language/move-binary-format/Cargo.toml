@@ -19,6 +19,8 @@ variant_count = "1.1.0"
 move-core-types = { path = "../move-core/types" }
 serde = { version = "1.0.124", default-features = false }
 arbitrary = { version = "1.1.7", optional = true, features = ["derive"] }
+hashbrown = "0.12.3"
+core2 = "0.3"
 
 [dev-dependencies]
 proptest = "1.0.0"
@@ -29,3 +31,6 @@ serde_json = "1.0.64"
 [features]
 default = []
 fuzzing = ["proptest", "proptest-derive", "arbitrary", "move-core-types/fuzzing"]
+nostd = [
+    "move-core-types/nostd"
+]

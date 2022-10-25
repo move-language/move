@@ -7,6 +7,22 @@ use crate::{
     native_functions::{NativeFunction, NativeFunctions, UnboxedNativeFunction},
     session::LoadedFunctionInstantiation,
 };
+#[cfg(feature = "nostd")]
+use alloc::{
+    borrow::ToOwned,
+    boxed::Box,
+    collections::{BTreeMap, BTreeSet},
+    format,
+    string::String,
+    string::ToString,
+    sync::Arc,
+    vec,
+    vec::Vec,
+};
+#[cfg(feature = "nostd")]
+use core::{fmt::Debug, hash::Hash, mem};
+#[cfg(feature = "nostd")]
+use hashbrown::HashMap;
 use move_binary_format::{
     access::{ModuleAccess, ScriptAccess},
     binary_views::BinaryIndexedView,
@@ -34,10 +50,12 @@ use move_vm_types::{
 };
 use parking_lot::RwLock;
 use sha3::{Digest, Sha3_256};
+#[cfg(not(feature = "nostd"))]
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     fmt::Debug,
     hash::Hash,
+    mem,
     sync::Arc,
 };
 use tracing::error;
@@ -504,7 +522,7 @@ impl Loader {
     /// indirect ones, that is all dependencies.
     pub(crate) fn get_and_clear_module_cache_hits(&self) -> BTreeSet<ModuleId> {
         let mut result = BTreeSet::new();
-        let hits: BTreeSet<ModuleId> = std::mem::take(&mut self.module_cache_hits.write());
+        let hits: BTreeSet<ModuleId> = mem::take(&mut self.module_cache_hits.write());
         for id in hits {
             self.transitive_dep_closure(&id, &mut result)
         }

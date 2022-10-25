@@ -62,6 +62,9 @@ pub fn is_permitted_chars(chars: &[u8], idx: usize) -> bool {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "nostd")]
+    use alloc::vec::Vec;
+
     #[test]
     fn test_permitted_characters() {
         let mut good_chars = (0x20..=0x7E).collect::<Vec<u8>>();

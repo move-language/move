@@ -1,6 +1,11 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#[cfg(feature = "nostd")]
+use alloc::{boxed::Box, string::String, vec::Vec};
+#[cfg(feature = "nostd")]
+use core::fmt::{self, Display};
+#[cfg(not(feature = "nostd"))]
 use std::fmt::{self, Display};
 
 use anyhow::bail;

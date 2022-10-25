@@ -21,3 +21,6 @@ serde = { version = "1.0.124", features = ["derive"] }
 dirs-next = "2.0.0"
 
 move-core-types = { path = "../move-core/types" }
+
+[features]
+nostd = ["move-core-types/nostd"]

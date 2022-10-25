@@ -59,6 +59,7 @@ impl<'env> ErrmapGen<'env> {
         }
     }
 
+    #[cfg(feature = "nostd")]
     pub fn save_result(&self) {
         self.output.to_file(&self.options.output_file);
     }

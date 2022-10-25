@@ -5,8 +5,11 @@
 use crate::{
     loader::{Function, Loader, Resolver},
     native_functions::NativeContext,
-    trace,
 };
+
+#[cfg(not(feature = "nostd"))]
+use crate::trace;
+
 use fail::fail_point;
 use move_binary_format::{
     errors::*,
@@ -30,7 +33,19 @@ use move_vm_types::{
 };
 
 use crate::native_extensions::NativeContextExtensions;
-use std::{cmp::min, collections::VecDeque, fmt::Write, sync::Arc};
+
+#[cfg(feature = "nostd")]
+use alloc::{
+    borrow::ToOwned, collections::VecDeque, format, string::String, string::ToString, sync::Arc,
+    vec, vec::Vec,
+};
+#[cfg(feature = "nostd")]
+use core::{cmp::min, fmt::Write, mem, result};
+#[cfg(not(feature = "nostd"))]
+use std::result;
+#[cfg(not(feature = "nostd"))]
+use std::{cmp::min, collections::VecDeque, fmt::Write, mem, sync::Arc};
+
 use tracing::error;
 
 macro_rules! debug_write {
@@ -749,7 +764,7 @@ impl CallStack {
     }
 
     /// Push a `Frame` on the call stack.
-    fn push(&mut self, frame: Frame) -> ::std::result::Result<(), Frame> {
+    fn push(&mut self, frame: Frame) -> result::Result<(), Frame> {
         if self.0.len() < CALL_STACK_SIZE_LIMIT {
             self.0.push(frame);
             Ok(())
@@ -836,6 +851,7 @@ impl Frame {
         let code = self.function.code();
         loop {
             for instruction in &code[self.pc as usize..] {
+                #[cfg(not(feature = "nostd"))]
                 trace!(
                     &self.function,
                     &self.locals,

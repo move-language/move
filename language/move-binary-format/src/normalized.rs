@@ -10,14 +10,20 @@ use crate::{
         Visibility,
     },
 };
+#[cfg(feature = "nostd")]
+use alloc::{borrow::ToOwned, boxed::Box, collections::BTreeMap, string::ToString, vec::Vec};
+#[cfg(feature = "nostd")]
+use core::fmt;
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
 };
 use serde::{Deserialize, Serialize};
+#[cfg(not(feature = "nostd"))]
 use std::collections::BTreeMap;
-
+#[cfg(not(feature = "nostd"))]
+use std::fmt;
 /// Defines normalized representations of Move types, fields, kinds, structs, functions, and
 /// modules. These representations are useful in situations that require require comparing
 /// functions, resources, and types across modules. This arises in linking, compatibility checks
@@ -356,8 +362,8 @@ impl From<TypeTag> for Type {
     }
 }
 
-impl std::fmt::Display for Type {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Type::Struct {
                 address,

@@ -2,10 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::parser::{parse_address_number, NumberFormat};
+#[cfg(feature = "nostd")]
+use alloc::{format, string::String};
 use anyhow::anyhow;
+#[cfg(feature = "nostd")]
+use core::{cmp, fmt, hash, hash::Hash};
 use move_core_types::account_address::AccountAddress;
 use num_bigint::BigUint;
-use std::{fmt, hash::Hash};
+#[cfg(not(feature = "nostd"))]
+use std::{cmp, fmt, hash, hash::Hash};
 
 // Parsed Address, either a name or a numerical address
 #[derive(Eq, PartialEq, Debug, Clone)]
@@ -121,12 +126,12 @@ impl fmt::UpperHex for NumericalAddress {
 }
 
 impl PartialOrd for NumericalAddress {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 impl Ord for NumericalAddress {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
         let Self {
             bytes: self_bytes,
             format: _,
@@ -155,7 +160,7 @@ impl PartialEq for NumericalAddress {
 impl Eq for NumericalAddress {}
 
 impl Hash for NumericalAddress {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
         let Self {
             bytes: self_bytes,
             format: _,

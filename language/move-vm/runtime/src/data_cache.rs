@@ -20,6 +20,10 @@ use move_vm_types::{
     loaded_data::runtime_types::Type,
     values::{GlobalValue, Value},
 };
+
+#[cfg(feature = "nostd")]
+use alloc::{borrow::ToOwned, collections::BTreeMap, format, vec, vec::Vec};
+#[cfg(not(feature = "nostd"))]
 use std::collections::btree_map::BTreeMap;
 
 pub struct AccountDataCache {

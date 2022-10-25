@@ -16,7 +16,14 @@ use move_vm_types::{
     values::{Value, Vector, VectorRef},
     views::ValueView,
 };
-use std::{collections::VecDeque, sync::Arc};
+#[cfg(not(feature = "nostd"))]
+use std::{cmp, collections::VecDeque, sync::Arc};
+
+#[cfg(feature = "nostd")]
+use alloc::{collections::VecDeque, string::String, sync::Arc, vec::Vec};
+
+#[cfg(feature = "nostd")]
+use core::cmp;
 
 /***************************************************************************************************
  * native fun empty
@@ -108,7 +115,7 @@ pub fn native_push_back(
     let mut cost = gas_params.base;
     if gas_params.legacy_per_abstract_memory_unit != 0.into() {
         cost += gas_params.legacy_per_abstract_memory_unit
-            * std::cmp::max(e.legacy_abstract_memory_size(), 1.into());
+            * cmp::max(e.legacy_abstract_memory_size(), 1.into());
     }
 
     NativeResult::map_partial_vm_result_empty(cost, r.push_back(e, &ty_args[0]))

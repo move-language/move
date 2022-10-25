@@ -2,6 +2,8 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#[cfg(feature = "nostd")]
+use alloc::format;
 use move_binary_format::errors::{PartialVMError, VMError};
 use move_core_types::vm_status::{StatusCode, StatusType};
 use tracing::error;

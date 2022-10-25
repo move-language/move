@@ -7,6 +7,8 @@
 //! It is important to note that the cost schedule defined in this file does not track hashing
 //! operations or other native operations; the cost of each native operation will be returned by the
 //! native function itself.
+#[cfg(feature = "nostd")]
+use core::cmp::max;
 use move_binary_format::{
     errors::{PartialVMError, PartialVMResult},
     file_format::{

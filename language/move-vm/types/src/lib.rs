@@ -3,6 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
+#![cfg_attr(feature = "nostd", no_std)]
+
+#[cfg(feature = "nostd")]
+extern crate alloc;
 
 macro_rules! debug_write {
     ($($toks: tt)*) => {

@@ -9,6 +9,7 @@ use crate::{
     transaction_argument::TransactionArgument,
 };
 use proptest::{collection::vec, prelude::*};
+#[cfg(not(feature = "nostd"))]
 impl Arbitrary for TypeTag {
     type Parameters = ();
     type Strategy = BoxedStrategy<Self>;
@@ -48,6 +49,7 @@ impl Arbitrary for TypeTag {
     }
 }
 
+#[cfg(not(feature = "nostd"))]
 impl Arbitrary for TransactionArgument {
     type Parameters = ();
     fn arbitrary_with(_args: ()) -> Self::Strategy {

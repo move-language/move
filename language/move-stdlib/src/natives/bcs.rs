@@ -3,6 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::natives::helpers::make_module_natives;
+#[cfg(feature = "nostd")]
+use alloc::{collections::VecDeque, string::String, sync::Arc, vec::Vec};
+#[cfg(feature = "nostd")]
+use core::cmp;
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::{
     gas_algebra::{InternalGas, InternalGasPerByte, NumBytes},
@@ -16,7 +20,8 @@ use move_vm_types::{
     values::{values_impl::Reference, Value},
 };
 use smallvec::smallvec;
-use std::{collections::VecDeque, sync::Arc};
+#[cfg(not(feature = "nostd"))]
+use std::{cmp, collections::VecDeque, sync::Arc};
 /***************************************************************************************************
  * native fun to_bytes
  *
@@ -70,7 +75,7 @@ fn native_to_bytes(
         }
     };
     cost += gas_params.per_byte_serialized
-        * std::cmp::max(
+        * cmp::max(
             NumBytes::new(serialized_value.len() as u64),
             gas_params.legacy_min_output_size,
         );

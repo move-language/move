@@ -3,19 +3,27 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Implementation of native functions for utf8 strings.
-
-use crate::natives::helpers::make_module_natives;
 use move_binary_format::errors::PartialVMResult;
-use move_core_types::gas_algebra::{InternalGas, InternalGasPerByte, NumBytes};
-use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
+use move_vm_types::natives::function::InternalGas;
+// use move_core_types::vm_status::sub_status::NFE_STRING_INVALID_ARG_FAILURE;
+use crate::natives::helpers::make_module_natives;
+#[cfg(feature = "nostd")]
+use alloc::{collections::VecDeque, string::String, sync::Arc, vec::Vec};
+#[cfg(feature = "nostd")]
+use core::str;
+use move_core_types::gas_algebra::InternalGasPerByte;
+use move_core_types::gas_algebra::NumBytes;
+use move_vm_runtime::native_functions::NativeContext;
+use move_vm_runtime::native_functions::NativeFunction;
 use move_vm_types::{
+    // gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
     natives::function::NativeResult,
     pop_arg,
     values::{Value, VectorRef},
 };
+#[cfg(not(feature = "nostd"))]
 use std::{collections::VecDeque, sync::Arc};
-
 // The implementation approach delegates all utf8 handling to Rust.
 // This is possible without copying of bytes because (a) we can
 // get a `std::cell::Ref<Vec<u8>>` from a `vector<u8>` and in turn a `&[u8]`
@@ -45,7 +53,7 @@ fn native_check_utf8(
     debug_assert!(args.len() == 1);
     let s_arg = pop_arg!(args, VectorRef);
     let s_ref = s_arg.as_bytes_ref();
-    let ok = std::str::from_utf8(s_ref.as_slice()).is_ok();
+    let ok = str::from_utf8(s_ref.as_slice()).is_ok();
     // TODO: extensible native cost tables
 
     let cost = gas_params.base + gas_params.per_byte * NumBytes::new(s_ref.as_slice().len() as u64);
@@ -84,7 +92,7 @@ fn native_is_char_boundary(
     let s_ref = s_arg.as_bytes_ref();
     let ok = unsafe {
         // This is safe because we guarantee the bytes to be utf8.
-        std::str::from_utf8_unchecked(s_ref.as_slice()).is_char_boundary(i as usize)
+        str::from_utf8_unchecked(s_ref.as_slice()).is_char_boundary(i as usize)
     };
     NativeResult::map_partial_vm_result_one(gas_params.base, Ok(Value::bool(ok)))
 }
@@ -128,7 +136,7 @@ fn native_sub_string(
     let s_ref = s_arg.as_bytes_ref();
     let s_str = unsafe {
         // This is safe because we guarantee the bytes to be utf8.
-        std::str::from_utf8_unchecked(s_ref.as_slice())
+        str::from_utf8_unchecked(s_ref.as_slice())
     };
     let v = Value::vector_u8(s_str[i..j].as_bytes().iter().cloned());
 
@@ -166,10 +174,10 @@ fn native_index_of(
     debug_assert!(args.len() == 2);
     let r_arg = pop_arg!(args, VectorRef);
     let r_ref = r_arg.as_bytes_ref();
-    let r_str = unsafe { std::str::from_utf8_unchecked(r_ref.as_slice()) };
+    let r_str = unsafe { str::from_utf8_unchecked(r_ref.as_slice()) };
     let s_arg = pop_arg!(args, VectorRef);
     let s_ref = s_arg.as_bytes_ref();
-    let s_str = unsafe { std::str::from_utf8_unchecked(s_ref.as_slice()) };
+    let s_str = unsafe { str::from_utf8_unchecked(s_ref.as_slice()) };
     let pos = match s_str.find(r_str) {
         Some(size) => size,
         None => s_str.len(),

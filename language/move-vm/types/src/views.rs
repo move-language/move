@@ -4,8 +4,11 @@
 use move_core_types::{
     account_address::AccountAddress, gas_algebra::AbstractMemorySize, language_storage::TypeTag,
 };
+#[cfg(not(feature = "nostd"))]
 use std::mem::size_of;
 
+#[cfg(feature = "nostd")]
+use core::mem::size_of;
 /// Trait that provides an abstract view into a Move type.
 ///
 /// This is used to expose certain info to clients (e.g. the gas meter),

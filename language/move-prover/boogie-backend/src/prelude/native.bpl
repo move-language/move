@@ -288,6 +288,20 @@ procedure {:inline 2} {{impl.fun_add_no_override}}{{S}}(m: $Mutation ({{Self}}),
 }
 {%- endif %}
 
+{%- if impl.fun_add_override_if_exists != "" %}
+procedure {:inline 2} {{impl.fun_add_override_if_exists}}{{S}}(m: $Mutation ({{Self}}), k: {{K}}, v: {{V}}) returns (m': $Mutation({{Self}})) {
+    var enc_k: int;
+    var t: {{Self}};
+    enc_k := {{ENC}}(k);
+    t := $Dereference(m);
+    if (ContainsTable(t, enc_k)) {
+        m' := $UpdateMutation(m, UpdateTable(t, enc_k, v));
+    } else {
+        m' := $UpdateMutation(m, AddTable(t, enc_k, v));
+    }
+}
+{%- endif %}
+
 {%- if impl.fun_del_must_exist != "" %}
 procedure {:inline 2} {{impl.fun_del_must_exist}}{{S}}(m: $Mutation ({{Self}}), k: {{K}})
 returns (v: {{V}}, m': $Mutation({{Self}})) {
@@ -298,6 +312,23 @@ returns (v: {{V}}, m': $Mutation({{Self}})) {
     if (!ContainsTable(t, enc_k)) {
         call $Abort($StdError(7/*INVALID_ARGUMENTS*/, 101/*ENOT_FOUND*/));
     } else {
+        v := GetTable(t, enc_k);
+        m' := $UpdateMutation(m, RemoveTable(t, enc_k));
+    }
+}
+{%- endif %}
+
+{%- if impl.fun_del_return_key != "" %}
+procedure {:inline 2} {{impl.fun_del_return_key}}{{S}}(m: $Mutation ({{Self}}), k: {{K}})
+returns (k': {{K}}, v: {{V}}, m': $Mutation({{Self}})) {
+    var enc_k: int;
+    var t: {{Self}};
+    enc_k := {{ENC}}(k);
+    t := $Dereference(m);
+    if (!ContainsTable(t, enc_k)) {
+        call $Abort($StdError(7/*INVALID_ARGUMENTS*/, 101/*ENOT_FOUND*/));
+    } else {
+        k' := k;
         v := GetTable(t, enc_k);
         m' := $UpdateMutation(m, RemoveTable(t, enc_k));
     }
@@ -352,7 +383,10 @@ function {:inline} {{impl.fun_spec_has_key}}{{S}}(t: ({{Self}}), k: {{K}}): bool
 
 {%- if impl.fun_spec_set != "" %}
 function {:inline} {{impl.fun_spec_set}}{{S}}(t: {{Self}}, k: {{K}}, v: {{V}}): {{Self}} {
-    AddTable(t, {{ENC}}(k), v)
+    if (ContainsTable(t, {{ENC}}(k))) then
+        UpdateTable(t, {{ENC}}(k), v)
+    else
+        AddTable(t, {{ENC}}(k), v)
 }
 {%- endif %}
 

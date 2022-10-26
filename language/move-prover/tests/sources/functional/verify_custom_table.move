@@ -9,11 +9,13 @@ module 0x42::table {
         map_is_empty = empty,
         map_has_key = contains,
         map_add_no_override = add,
+        map_add_override_if_exists = upsert,
         map_del_must_exist = remove,
+        map_del_return_key = remove_return_key,
         map_borrow = borrow,
         map_borrow_mut = borrow_mut,
         map_spec_get = spec_get,
-        map_spec_set = spec_add,
+        map_spec_set = spec_set,
         map_spec_del = spec_remove,
         map_spec_len = spec_len,
         map_spec_has_key = spec_contains;
@@ -22,16 +24,18 @@ module 0x42::table {
     public native fun new<K: copy + drop, V: store>(): Table<K, V>;
     public native fun destroy_empty<K: copy + drop, V>(table: Table<K, V>);
     public native fun add<K: copy + drop, V>(table: &mut Table<K, V>, key: K, val: V);
+    public native fun upsert<K: copy + drop, V>(table: &mut Table<K, V>, key: K, val: V);
     public native fun borrow<K: copy + drop, V>(table: &Table<K, V>, key: K): &V;
     public native fun borrow_mut<K: copy + drop, V>(table: &mut Table<K, V>, key: K): &mut V;
     public native fun length<K: copy + drop, V>(table: &Table<K, V>): u64;
     public native fun empty<K: copy + drop, V>(table: &Table<K, V>): bool;
     public native fun remove<K: copy + drop, V>(table: &mut Table<K, V>, key: K): V;
+    public native fun remove_return_key<K: copy + drop, V>(table: &mut Table<K, V>, key: K): (K, V);
     public native fun contains<K: copy + drop, V>(table: &Table<K, V>, key: K): bool;
 
     spec native fun spec_len<K, V>(t: Table<K, V>): num;
     spec native fun spec_contains<K, V>(t: Table<K, V>, k: K): bool;
-    spec native fun spec_add<K, V>(t: Table<K, V>, k: K, v: V): Table<K, V>;
+    spec native fun spec_set<K, V>(t: Table<K, V>, k: K, v: V): Table<K, V>;
     spec native fun spec_remove<K, V>(t: Table<K, V>, k: K): Table<K, V>;
     spec native fun spec_get<K, V>(t: Table<K, V>, k: K): V;
 }
@@ -78,6 +82,18 @@ module 0x42::VerifyTable {
         aborts_if k1 == k2;
     }
 
+    fun add_override_if_exists(k1: u8, k2: u8): Table<u8, u64> {
+        let t = table::new<u8, u64>();
+        table::add(&mut t, k1, 2);
+        table::upsert(&mut t, k2, 3);
+        t
+    }
+    spec add_override_if_exists {
+        aborts_if false;
+        ensures spec_get(result, k2) == 3;
+        ensures (k1 != k2) ==> spec_get(result, k1) == 2;
+    }
+
     fun remove(): Table<u8, u64> {
         let t = add();
         table::remove(&mut t, 2);
@@ -89,6 +105,22 @@ module 0x42::VerifyTable {
         ensures spec_get(result, 1) == 2;
         ensures spec_get(result, 3) == 4;
     }
+
+    fun remove_return_key(): Table<u8, u64> {
+        let t = add();
+        let (k, v) = table::remove_return_key(&mut t, 2);
+        spec {
+            assert (k == 2) && (v == 3);
+        };
+        t
+    }
+    spec remove_return_key {
+        ensures spec_contains(result, 1) && spec_contains(result, 3);
+        ensures spec_len(result) == 2;
+        ensures spec_get(result, 1) == 2;
+        ensures spec_get(result, 3) == 4;
+    }
+
 
     fun contains_and_length(): (bool, bool, u64, Table<u8, u64>) {
         let t = table::new<u8, u64>();

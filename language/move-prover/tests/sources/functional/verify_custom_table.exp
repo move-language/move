@@ -1,43 +1,43 @@
 Move prover returns: exiting with verification errors
 error: post-condition does not hold
-    ┌─ tests/sources/functional/verify_custom_table.move:170:9
+    ┌─ tests/sources/functional/verify_custom_table.move:202:9
     │
-170 │         ensures spec_get(result.t, k1) == 23;
+202 │         ensures spec_get(result.t, k1) == 23;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/verify_custom_table.move:166: add_R_fail (spec)
-    =     at tests/sources/functional/verify_custom_table.move:167: add_R_fail (spec)
-    =     at tests/sources/functional/verify_custom_table.move:163: add_R_fail
-    =     at tests/sources/functional/verify_custom_table.move:144: make_R
+    =     at tests/sources/functional/verify_custom_table.move:198: add_R_fail (spec)
+    =     at tests/sources/functional/verify_custom_table.move:199: add_R_fail (spec)
+    =     at tests/sources/functional/verify_custom_table.move:195: add_R_fail
+    =     at tests/sources/functional/verify_custom_table.move:176: make_R
     =         t = <redacted>
-    =     at tests/sources/functional/verify_custom_table.move:145: make_R
+    =     at tests/sources/functional/verify_custom_table.move:177: make_R
     =         t = <redacted>
-    =     at tests/sources/functional/verify_custom_table.move:146: make_R
+    =     at tests/sources/functional/verify_custom_table.move:178: make_R
     =         t = <redacted>
-    =     at tests/sources/functional/verify_custom_table.move:147: make_R
+    =     at tests/sources/functional/verify_custom_table.move:179: make_R
     =         result = <redacted>
-    =     at tests/sources/functional/verify_custom_table.move:148: make_R
+    =     at tests/sources/functional/verify_custom_table.move:180: make_R
     =         result = <redacted>
-    =     at tests/sources/functional/verify_custom_table.move:164: add_R_fail
-    =     at tests/sources/functional/verify_custom_table.move:168: add_R_fail (spec)
-    =     at tests/sources/functional/verify_custom_table.move:169: add_R_fail (spec)
-    =     at tests/sources/functional/verify_custom_table.move:170: add_R_fail (spec)
+    =     at tests/sources/functional/verify_custom_table.move:196: add_R_fail
+    =     at tests/sources/functional/verify_custom_table.move:200: add_R_fail (spec)
+    =     at tests/sources/functional/verify_custom_table.move:201: add_R_fail (spec)
+    =     at tests/sources/functional/verify_custom_table.move:202: add_R_fail (spec)
 
 error: post-condition does not hold
-   ┌─ tests/sources/functional/verify_custom_table.move:68:9
+   ┌─ tests/sources/functional/verify_custom_table.move:72:9
    │
-68 │         ensures spec_get(result, 1) == 1;
+72 │         ensures spec_get(result, 1) == 1;
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
-   =     at tests/sources/functional/verify_custom_table.move:61: add_fail
-   =         t = <redacted>
-   =     at tests/sources/functional/verify_custom_table.move:62: add_fail
-   =         t = <redacted>
-   =     at tests/sources/functional/verify_custom_table.move:63: add_fail
-   =         t = <redacted>
-   =     at tests/sources/functional/verify_custom_table.move:64: add_fail
-   =         t = <redacted>
    =     at tests/sources/functional/verify_custom_table.move:65: add_fail
-   =         result = <redacted>
+   =         t = <redacted>
    =     at tests/sources/functional/verify_custom_table.move:66: add_fail
-   =     at tests/sources/functional/verify_custom_table.move:68: add_fail (spec)
+   =         t = <redacted>
+   =     at tests/sources/functional/verify_custom_table.move:67: add_fail
+   =         t = <redacted>
+   =     at tests/sources/functional/verify_custom_table.move:68: add_fail
+   =         t = <redacted>
+   =     at tests/sources/functional/verify_custom_table.move:69: add_fail
+   =         result = <redacted>
+   =     at tests/sources/functional/verify_custom_table.move:70: add_fail
+   =     at tests/sources/functional/verify_custom_table.move:72: add_fail (spec)

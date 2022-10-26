@@ -504,7 +504,7 @@ impl<'env> Evaluator<'env> {
                 if cfg!(debug_assertions) {
                     assert!(arg_vals.is_empty());
                 }
-                BaseValue::mk_num(BigInt::from(&u256::U256::max()))
+                BaseValue::mk_num(BigInt::from(&u256::U256::max_value()))
             }
             Operation::AbortFlag => {
                 if cfg!(debug_assertions) {

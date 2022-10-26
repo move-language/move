@@ -162,7 +162,7 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
             let u32_max = U256::from(std::u32::MAX);
             let u64_max = U256::from(std::u64::MAX);
             let u128_max = U256::from(std::u128::MAX);
-            let u256_max = U256::max();
+            let u256_max = U256::max_value();
             let max = match bt {
                 BT::U8 => u8_max,
                 BT::U16 => u16_max,

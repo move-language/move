@@ -53,7 +53,7 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
         );
         trans.define_const(
             trans.builtin_qualified_symbol("MAX_U256"),
-            mk_num_const(BigInt::from(&U256::max())),
+            mk_num_const(BigInt::from(&U256::max_value())),
         );
         trans.define_const(
             trans.builtin_qualified_symbol("EXECUTION_FAILURE"),

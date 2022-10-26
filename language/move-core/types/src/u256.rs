@@ -184,7 +184,7 @@ impl U256 {
     }
 
     /// Max value of U256: 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
-    pub const fn max() -> Self {
+    pub const fn max_value() -> Self {
         Self(PrimitiveU256::max_value())
     }
 

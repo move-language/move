@@ -888,6 +888,14 @@ impl Frame {
                         gas_meter.charge_simple_instr(S::LdU8)?;
                         interpreter.operand_stack.push(Value::u8(*int_const))?;
                     }
+                    Bytecode::LdU16(int_const) => {
+                        gas_meter.charge_simple_instr(S::LdU16)?;
+                        interpreter.operand_stack.push(Value::u16(*int_const))?;
+                    }
+                    Bytecode::LdU32(int_const) => {
+                        gas_meter.charge_simple_instr(S::LdU32)?;
+                        interpreter.operand_stack.push(Value::u32(*int_const))?;
+                    }
                     Bytecode::LdU64(int_const) => {
                         gas_meter.charge_simple_instr(S::LdU64)?;
                         interpreter.operand_stack.push(Value::u64(*int_const))?;
@@ -895,6 +903,10 @@ impl Frame {
                     Bytecode::LdU128(int_const) => {
                         gas_meter.charge_simple_instr(S::LdU128)?;
                         interpreter.operand_stack.push(Value::u128(*int_const))?;
+                    }
+                    Bytecode::LdU256(int_const) => {
+                        gas_meter.charge_simple_instr(S::LdU256)?;
+                        interpreter.operand_stack.push(Value::u256(*int_const))?;
                     }
                     Bytecode::LdConst(idx) => {
                         let constant = resolver.constant_at(*idx);
@@ -1037,6 +1049,20 @@ impl Frame {
                             .operand_stack
                             .push(Value::u8(integer_value.cast_u8()?))?;
                     }
+                    Bytecode::CastU16 => {
+                        gas_meter.charge_simple_instr(S::CastU16)?;
+                        let integer_value = interpreter.operand_stack.pop_as::<IntegerValue>()?;
+                        interpreter
+                            .operand_stack
+                            .push(Value::u16(integer_value.cast_u16()?))?;
+                    }
+                    Bytecode::CastU32 => {
+                        gas_meter.charge_simple_instr(S::CastU16)?;
+                        let integer_value = interpreter.operand_stack.pop_as::<IntegerValue>()?;
+                        interpreter
+                            .operand_stack
+                            .push(Value::u32(integer_value.cast_u32()?))?;
+                    }
                     Bytecode::CastU64 => {
                         gas_meter.charge_simple_instr(S::CastU64)?;
                         let integer_value = interpreter.operand_stack.pop_as::<IntegerValue>()?;
@@ -1050,6 +1076,13 @@ impl Frame {
                         interpreter
                             .operand_stack
                             .push(Value::u128(integer_value.cast_u128()?))?;
+                    }
+                    Bytecode::CastU256 => {
+                        gas_meter.charge_simple_instr(S::CastU16)?;
+                        let integer_value = interpreter.operand_stack.pop_as::<IntegerValue>()?;
+                        interpreter
+                            .operand_stack
+                            .push(Value::u256(integer_value.cast_u256()?))?;
                     }
                     // Arithmetic Operations
                     Bytecode::Add => {
@@ -1351,39 +1384,6 @@ impl Frame {
                         let ty = &resolver.instantiate_single_type(*si, self.ty_args())?;
                         gas_meter.charge_vec_swap(make_ty!(ty))?;
                         vec_ref.swap(idx1, idx2, ty)?;
-                    }
-                    Bytecode::LdU16(int_const) => {
-                        gas_meter.charge_simple_instr(S::LdU16)?;
-                        interpreter.operand_stack.push(Value::u16(*int_const))?;
-                    }
-                    Bytecode::LdU32(int_const) => {
-                        gas_meter.charge_simple_instr(S::LdU32)?;
-                        interpreter.operand_stack.push(Value::u32(*int_const))?;
-                    }
-                    Bytecode::LdU256(int_const) => {
-                        gas_meter.charge_simple_instr(S::LdU256)?;
-                        interpreter.operand_stack.push(Value::u256(*int_const))?;
-                    }
-                    Bytecode::CastU16 => {
-                        gas_meter.charge_simple_instr(S::CastU16)?;
-                        let integer_value = interpreter.operand_stack.pop_as::<IntegerValue>()?;
-                        interpreter
-                            .operand_stack
-                            .push(Value::u16(integer_value.cast_u16()?))?;
-                    }
-                    Bytecode::CastU32 => {
-                        gas_meter.charge_simple_instr(S::CastU16)?;
-                        let integer_value = interpreter.operand_stack.pop_as::<IntegerValue>()?;
-                        interpreter
-                            .operand_stack
-                            .push(Value::u32(integer_value.cast_u32()?))?;
-                    }
-                    Bytecode::CastU256 => {
-                        gas_meter.charge_simple_instr(S::CastU16)?;
-                        let integer_value = interpreter.operand_stack.pop_as::<IntegerValue>()?;
-                        interpreter
-                            .operand_stack
-                            .push(Value::u256(integer_value.cast_u256()?))?;
                     }
                 }
                 // invariant: advance to pc +1 is iff instruction at pc executed without aborting

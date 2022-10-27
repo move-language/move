@@ -58,7 +58,6 @@ pub enum PrimitiveType {
     Num,
     Range,
     EventStore,
-    // NOTE: Added in bytecode version v6, do not reorder!
     U16,
     U32,
     U256,

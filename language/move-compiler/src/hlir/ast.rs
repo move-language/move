@@ -279,7 +279,6 @@ pub enum Value_ {
     // vector<type> [ <value>,* ]
     Vector(Box<BaseType>, Vec<Value>),
 
-    // NOTE: Added in bytecode version v6, do not reorder!
     // <num>u16
     U16(u16),
     // <num>u32

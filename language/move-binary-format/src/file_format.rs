@@ -859,7 +859,6 @@ pub enum SignatureToken {
     /// Type parameter.
     TypeParameter(TypeParameterIndex),
 
-    // NOTE: Added in bytecode version v6, do not reorder!
     /// Unsigned integers, 16 bits length.
     U16,
     /// Unsigned integers, 32 bits length.

@@ -41,7 +41,6 @@ pub enum ParsedType {
     Signer,
     Vector(Box<ParsedType>),
     Struct(ParsedStructType),
-    // NOTE: Added in bytecode version v6, do not reorder!
     U16,
     U32,
     U256,

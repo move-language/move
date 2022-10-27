@@ -386,7 +386,6 @@ pub enum Value_ {
     Bool(bool),
     Bytearray(Vec<u8>),
 
-    // NOTE: Added in bytecode version v6, do not reorder!
     // <num>u16
     U16(u16),
     // <num>u32

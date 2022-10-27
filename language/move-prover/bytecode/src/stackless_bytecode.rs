@@ -94,7 +94,6 @@ pub enum Constant {
     Address(BigUint),
     ByteArray(Vec<u8>),
     AddressArray(Vec<BigUint>),
-    // NOTE: Added in bytecode version v6, do not reorder!
     U16(u16),
     U32(u32),
     U256(U256),

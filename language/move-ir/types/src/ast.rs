@@ -196,7 +196,6 @@ pub enum Type {
     /// A type parameter
     TypeParameter(TypeVar_),
 
-    // NOTE: Added in bytecode version v6, do not reorder!
     /// `u16`
     U16,
     /// `u32`

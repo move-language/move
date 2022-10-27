@@ -55,7 +55,6 @@ pub enum ParsedValue<Extra: ParsableValue = ()> {
         BTreeMap<String, ParsedValue<Extra>>,
     ),
     Custom(Extra),
-    // NOTE: Added in bytecode version v6, do not reorder!
     U16(u16),
     U32(u32),
     U256(move_core_types::u256::U256),

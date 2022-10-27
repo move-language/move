@@ -4,6 +4,7 @@
 
 use crate::natives::helpers::make_module_natives;
 use move_binary_format::errors::PartialVMResult;
+use move_core_types::value::MoveStruct;
 use move_core_types::{
     account_address::AccountAddress, gas_algebra::InternalGas, language_storage::TypeTag,
 };
@@ -48,7 +49,7 @@ fn is_string_type(context: &NativeContext, ty: &Type, move_std_addr: AccountAddr
 #[inline]
 fn native_print(
     gas_params: &PrintGasParameters,
-    _context: &mut NativeContext,
+    context: &mut NativeContext,
     mut ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
     move_std_addr: AccountAddress,
@@ -60,6 +61,16 @@ fn native_print(
     #[cfg(feature = "testing")]
     {
         let ty = ty_args.pop().unwrap();
+        
+        // if ty is a struct type:
+        // get type layout in VM format (raw BCS, no field names) 
+        let old_layout = context.type_to_type_layout(&ty)?.unwrap();
+        // get BCS bytes for the struct
+        let move_struct = MoveStruct::simple_deserialize(&args[0].simple_serialize(&old_layout).unwrap(), &old_layout).unwrap();
+        // get type layout in decorated format (with field names)
+        let new_layout = context.type_to_fully_annotated_layout(&ty)?.unwrap();
+        let decorated_struct = move_struct.decorate(new_layout);
+        println!("[debug] {}", decorated_struct);
 
         match is_string_type(_context, &ty, move_std_addr) {
             true => {

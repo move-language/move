@@ -40,6 +40,8 @@ pub enum TypeTag {
     Vector(Box<TypeTag>),
     #[serde(rename = "struct", alias = "Struct")]
     Struct(StructTag),
+
+    // NOTE: Added in bytecode version v6, do not reorder!
     #[serde(rename = "u16", alias = "U16")]
     U16,
     #[serde(rename = "u32", alias = "U32")]

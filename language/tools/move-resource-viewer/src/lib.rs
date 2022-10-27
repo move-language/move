@@ -54,6 +54,7 @@ pub enum AnnotatedMoveValue {
     Vector(TypeTag, Vec<AnnotatedMoveValue>),
     Bytes(Vec<u8>),
     Struct(AnnotatedMoveStruct),
+    // NOTE: Added in bytecode version v6, do not reorder!
     U16(u16),
     U32(u32),
     U256(u256::U256),

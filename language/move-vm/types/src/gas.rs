@@ -60,6 +60,7 @@ pub enum SimpleInstruction {
 
     Abort,
 
+    // NOTE: Added in bytecode version v6, do not reorder!
     LdU16,
     LdU32,
     LdU256,

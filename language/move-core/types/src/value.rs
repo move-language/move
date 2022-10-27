@@ -51,6 +51,7 @@ pub enum MoveValue {
     Vector(Vec<MoveValue>),
     Struct(MoveStruct),
     Signer(AccountAddress),
+    // NOTE: Added in bytecode version v6, do not reorder!
     U16(u16),
     U32(u32),
     U256(u256::U256),
@@ -100,6 +101,8 @@ pub enum MoveTypeLayout {
     Struct(MoveStructLayout),
     #[serde(rename(serialize = "signer", deserialize = "signer"))]
     Signer,
+
+    // NOTE: Added in bytecode version v6, do not reorder!
     #[serde(rename(serialize = "u16", deserialize = "u16"))]
     U16,
     #[serde(rename(serialize = "u32", deserialize = "u32"))]

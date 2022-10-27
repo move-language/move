@@ -195,6 +195,8 @@ pub enum Type {
     Reference(bool, Box<Type>),
     /// A type parameter
     TypeParameter(TypeVar_),
+
+    // NOTE: Added in bytecode version v6, do not reorder!
     /// `u16`
     U16,
     /// `u32`
@@ -433,6 +435,7 @@ pub enum Builtin {
     /// Convert a mutable reference into an immutable one
     Freeze,
 
+    // NOTE: Added in bytecode version v6, do not reorder!
     /// Cast an integer into u8.
     ToU8,
     /// Cast an integer into u64.
@@ -533,6 +536,8 @@ pub enum CopyableVal_ {
     Bool(bool),
     /// `b"<bytes>"`
     ByteArray(Vec<u8>),
+
+    // NOTE: Added in bytecode version v6, do not reorder!
     /// An unsigned 16-bit integer
     U16(u16),
     /// An unsigned 32-bit integer

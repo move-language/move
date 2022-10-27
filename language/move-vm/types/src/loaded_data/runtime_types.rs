@@ -47,6 +47,7 @@ pub enum Type {
     Reference(Box<Type>),
     MutableReference(Box<Type>),
     TyParam(usize),
+    // NOTE: Added in bytecode version v6, do not reorder!
     U16,
     U32,
     U256,

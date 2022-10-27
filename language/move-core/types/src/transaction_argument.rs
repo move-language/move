@@ -15,6 +15,7 @@ pub enum TransactionArgument {
     Address(AccountAddress),
     U8Vector(#[serde(with = "serde_bytes")] Vec<u8>),
     Bool(bool),
+    // NOTE: Added in bytecode version v6, do not reorder!
     U16(u16),
     U32(u32),
     U256(u256::U256),

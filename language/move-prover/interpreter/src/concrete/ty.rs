@@ -39,6 +39,7 @@ pub enum IntType {
     U8,
     U64,
     U128,
+    // NOTE: Added in bytecode version v6, do not reorder!
     U16,
     U32,
     U256,

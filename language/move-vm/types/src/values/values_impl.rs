@@ -51,6 +51,7 @@ enum ValueImpl {
     ContainerRef(ContainerRef),
     IndexedRef(IndexedRef),
 
+    // NOTE: Added in bytecode version v6, do not reorder!
     U16(u16),
     U32(u32),
     U256(u256::U256),
@@ -75,6 +76,7 @@ enum Container {
     VecU128(Rc<RefCell<Vec<u128>>>),
     VecBool(Rc<RefCell<Vec<bool>>>),
     VecAddress(Rc<RefCell<Vec<AccountAddress>>>),
+    // NOTE: Added in bytecode version v6, do not reorder!
     VecU16(Rc<RefCell<Vec<u16>>>),
     VecU32(Rc<RefCell<Vec<u32>>>),
     VecU256(Rc<RefCell<Vec<u256::U256>>>),
@@ -142,6 +144,7 @@ pub enum IntegerValue {
     U8(u8),
     U64(u64),
     U128(u128),
+    // NOTE: Added in bytecode version v6, do not reorder!
     U16(u16),
     U32(u32),
     U256(u256::U256),

@@ -140,6 +140,10 @@ pub enum BuiltinTypeName_ {
     Signer,
     // u8
     U8,
+    // u16
+    U16,
+    // u32
+    U32,
     // u64
     U64,
     // u128
@@ -148,10 +152,6 @@ pub enum BuiltinTypeName_ {
     Vector,
     // bool
     Bool,
-    // u16
-    U16,
-    // u32
-    U32,
     // u256
     U256,
 }

@@ -53,6 +53,7 @@ pub enum Type {
     TypeParameter(TypeParameterIndex),
     Reference(Box<Type>),
     MutableReference(Box<Type>),
+    // NOTE: Added in bytecode version v6, do not reorder!
     #[serde(rename = "u16")]
     U16,
     #[serde(rename = "u32")]

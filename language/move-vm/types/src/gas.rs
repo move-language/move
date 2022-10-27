@@ -20,11 +20,8 @@ pub enum SimpleInstruction {
 
     Pop,
     LdU8,
-    LdU16,
-    LdU32,
     LdU64,
     LdU128,
-    LdU256,
     LdTrue,
     LdFalse,
 
@@ -37,11 +34,8 @@ pub enum SimpleInstruction {
     MutBorrowFieldGeneric,
 
     CastU8,
-    CastU16,
-    CastU32,
     CastU64,
     CastU128,
-    CastU256,
 
     Add,
     Sub,
@@ -65,6 +59,13 @@ pub enum SimpleInstruction {
     Ge,
 
     Abort,
+
+    LdU16,
+    LdU32,
+    LdU256,
+    CastU16,
+    CastU32,
+    CastU256,
 }
 
 /// Trait that defines a generic gas meter interface, allowing clients of the Move VM to implement

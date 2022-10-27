@@ -140,20 +140,20 @@ pub enum BuiltinTypeName_ {
     Signer,
     // u8
     U8,
-    // u16
-    U16,
-    // u32
-    U32,
     // u64
     U64,
     // u128
     U128,
-    // u256
-    U256,
     // Vector
     Vector,
     // bool
     Bool,
+    // u16
+    U16,
+    // u32
+    U32,
+    // u256
+    U256,
 }
 pub type BuiltinTypeName = Spanned<BuiltinTypeName_>;
 

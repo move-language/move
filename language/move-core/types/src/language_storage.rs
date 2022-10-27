@@ -28,16 +28,10 @@ pub enum TypeTag {
     Bool,
     #[serde(rename = "u8", alias = "U8")]
     U8,
-    #[serde(rename = "u16", alias = "U16")]
-    U16,
-    #[serde(rename = "u32", alias = "U32")]
-    U32,
     #[serde(rename = "u64", alias = "U64")]
     U64,
     #[serde(rename = "u128", alias = "U128")]
     U128,
-    #[serde(rename = "u256", alias = "U256")]
-    U256,
     #[serde(rename = "address", alias = "Address")]
     Address,
     #[serde(rename = "signer", alias = "Signer")]
@@ -46,6 +40,12 @@ pub enum TypeTag {
     Vector(Box<TypeTag>),
     #[serde(rename = "struct", alias = "Struct")]
     Struct(StructTag),
+    #[serde(rename = "u16", alias = "U16")]
+    U16,
+    #[serde(rename = "u32", alias = "U32")]
+    U32,
+    #[serde(rename = "u256", alias = "U256")]
+    U256,
 }
 
 impl TypeTag {

@@ -41,11 +41,8 @@ enum ValueImpl {
     Invalid,
 
     U8(u8),
-    U16(u16),
-    U32(u32),
     U64(u64),
     U128(u128),
-    U256(u256::U256),
     Bool(bool),
     Address(AccountAddress),
 
@@ -53,6 +50,10 @@ enum ValueImpl {
 
     ContainerRef(ContainerRef),
     IndexedRef(IndexedRef),
+
+    U16(u16),
+    U32(u32),
+    U256(u256::U256),
 }
 
 /// A container is a collection of values. It is used to represent data structures like a
@@ -70,13 +71,13 @@ enum Container {
     Vec(Rc<RefCell<Vec<ValueImpl>>>),
     Struct(Rc<RefCell<Vec<ValueImpl>>>),
     VecU8(Rc<RefCell<Vec<u8>>>),
-    VecU16(Rc<RefCell<Vec<u16>>>),
-    VecU32(Rc<RefCell<Vec<u32>>>),
     VecU64(Rc<RefCell<Vec<u64>>>),
     VecU128(Rc<RefCell<Vec<u128>>>),
-    VecU256(Rc<RefCell<Vec<u256::U256>>>),
     VecBool(Rc<RefCell<Vec<bool>>>),
     VecAddress(Rc<RefCell<Vec<AccountAddress>>>),
+    VecU16(Rc<RefCell<Vec<u16>>>),
+    VecU32(Rc<RefCell<Vec<u32>>>),
+    VecU256(Rc<RefCell<Vec<u256::U256>>>),
 }
 
 /// A ContainerRef is a direct reference to a container, which could live either in the frame
@@ -139,11 +140,11 @@ pub struct Value(ValueImpl);
 #[derive(Debug)]
 pub enum IntegerValue {
     U8(u8),
+    U64(u64),
+    U128(u128),
     U16(u16),
     U32(u32),
-    U64(u64),
     U256(u256::U256),
-    U128(u128),
 }
 
 /// A Move struct.

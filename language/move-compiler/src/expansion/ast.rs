@@ -377,20 +377,20 @@ pub enum Value_ {
     InferredNum(move_core_types::u256::U256),
     // <num>u8
     U8(u8),
-    // <num>u16
-    U16(u16),
-    // <num>u32
-    U32(u32),
     // <num>u64
     U64(u64),
     // <num>u128
     U128(u128),
-    // <num>u256
-    U256(move_core_types::u256::U256),
     // true
     // false
     Bool(bool),
     Bytearray(Vec<u8>),
+    // <num>u16
+    U16(u16),
+    // <num>u32
+    U32(u32),
+    // <num>u256
+    U256(move_core_types::u256::U256),
 }
 pub type Value = Spanned<Value_>;
 

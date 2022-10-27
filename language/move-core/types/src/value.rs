@@ -44,16 +44,16 @@ pub enum MoveStruct {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum MoveValue {
     U8(u8),
-    U16(u16),
-    U32(u32),
     U64(u64),
     U128(u128),
-    U256(u256::U256),
     Bool(bool),
     Address(AccountAddress),
     Vector(Vec<MoveValue>),
     Struct(MoveStruct),
     Signer(AccountAddress),
+    U16(u16),
+    U32(u32),
+    U256(u256::U256),
 }
 
 /// A layout associated with a named field
@@ -88,16 +88,10 @@ pub enum MoveTypeLayout {
     Bool,
     #[serde(rename(serialize = "u8", deserialize = "u8"))]
     U8,
-    #[serde(rename(serialize = "u16", deserialize = "u16"))]
-    U16,
-    #[serde(rename(serialize = "u32", deserialize = "u32"))]
-    U32,
     #[serde(rename(serialize = "u64", deserialize = "u64"))]
     U64,
     #[serde(rename(serialize = "u128", deserialize = "u128"))]
     U128,
-    #[serde(rename(serialize = "u256", deserialize = "u256"))]
-    U256,
     #[serde(rename(serialize = "address", deserialize = "address"))]
     Address,
     #[serde(rename(serialize = "vector", deserialize = "vector"))]
@@ -106,6 +100,12 @@ pub enum MoveTypeLayout {
     Struct(MoveStructLayout),
     #[serde(rename(serialize = "signer", deserialize = "signer"))]
     Signer,
+    #[serde(rename(serialize = "u16", deserialize = "u16"))]
+    U16,
+    #[serde(rename(serialize = "u32", deserialize = "u32"))]
+    U32,
+    #[serde(rename(serialize = "u256", deserialize = "u256"))]
+    U256,
 }
 
 impl MoveValue {

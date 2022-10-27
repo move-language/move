@@ -181,16 +181,10 @@ pub enum Type {
     Signer,
     /// `u8`
     U8,
-    /// `u16`
-    U16,
-    /// `u32`
-    U32,
     /// `u64`
     U64,
     /// `u128`
     U128,
-    /// `u256`
-    U256,
     /// `bool`
     Bool,
     /// `vector`
@@ -201,6 +195,12 @@ pub enum Type {
     Reference(bool, Box<Type>),
     /// A type parameter
     TypeParameter(TypeVar_),
+    /// `u16`
+    U16,
+    /// `u32`
+    U32,
+    /// `u256`
+    U256,
 }
 
 //**************************************************************************************************
@@ -435,14 +435,14 @@ pub enum Builtin {
 
     /// Cast an integer into u8.
     ToU8,
-    /// Cast an integer into u16.
-    ToU16,
-    /// Cast an integer into u32.
-    ToU32,
     /// Cast an integer into u64.
     ToU64,
     /// Cast an integer into u128.
     ToU128,
+    /// Cast an integer into u16.
+    ToU16,
+    /// Cast an integer into u32.
+    ToU32,
     /// Cast an integer into u256.
     ToU256,
 }
@@ -524,20 +524,21 @@ pub enum CopyableVal_ {
     Address(AccountAddress),
     /// An unsigned 8-bit integer
     U8(u8),
-    /// An unsigned 16-bit integer
-    U16(u16),
-    /// An unsigned 32-bit integer
-    U32(u32),
     /// An unsigned 64-bit integer
     U64(u64),
     /// An unsigned 128-bit integer
     U128(u128),
-    /// An unsigned 256-bit integer
-    U256(move_core_types::u256::U256),
+
     /// true or false
     Bool(bool),
     /// `b"<bytes>"`
     ByteArray(Vec<u8>),
+    /// An unsigned 16-bit integer
+    U16(u16),
+    /// An unsigned 32-bit integer
+    U32(u32),
+    /// An unsigned 256-bit integer
+    U256(move_core_types::u256::U256),
 }
 
 /// The type of a value and its location

@@ -34,16 +34,10 @@ pub enum Type {
     Bool,
     #[serde(rename = "u8")]
     U8,
-    #[serde(rename = "u16")]
-    U16,
-    #[serde(rename = "u32")]
-    U32,
     #[serde(rename = "u64")]
     U64,
     #[serde(rename = "u128")]
     U128,
-    #[serde(rename = "u256")]
-    U256,
     #[serde(rename = "address")]
     Address,
     #[serde(rename = "signer")]
@@ -59,6 +53,12 @@ pub enum Type {
     TypeParameter(TypeParameterIndex),
     Reference(Box<Type>),
     MutableReference(Box<Type>),
+    #[serde(rename = "u16")]
+    U16,
+    #[serde(rename = "u32")]
+    U32,
+    #[serde(rename = "u256")]
+    U256,
 }
 
 /// Normalized version of a `FieldDefinition`. The `name` is included even though it is

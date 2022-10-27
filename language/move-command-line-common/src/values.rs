@@ -44,11 +44,8 @@ pub enum ParsedValue<Extra: ParsableValue = ()> {
     Address(ParsedAddress),
     InferredNum(move_core_types::u256::U256),
     U8(u8),
-    U16(u16),
-    U32(u32),
     U64(u64),
     U128(u128),
-    U256(move_core_types::u256::U256),
     Bool(bool),
     Vector(Vec<ParsedValue<Extra>>),
     Struct(
@@ -58,6 +55,9 @@ pub enum ParsedValue<Extra: ParsableValue = ()> {
         BTreeMap<String, ParsedValue<Extra>>,
     ),
     Custom(Extra),
+    U16(u16),
+    U32(u32),
+    U256(move_core_types::u256::U256),
 }
 
 pub trait ParsableValue: Sized {

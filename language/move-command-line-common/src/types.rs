@@ -34,16 +34,16 @@ pub struct ParsedStructType {
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub enum ParsedType {
     U8,
-    U16,
-    U32,
     U64,
     U128,
-    U256,
     Bool,
     Address,
     Signer,
     Vector(Box<ParsedType>),
     Struct(ParsedStructType),
+    U16,
+    U32,
+    U256,
 }
 
 impl Display for TypeToken {

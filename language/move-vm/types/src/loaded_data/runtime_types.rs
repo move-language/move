@@ -37,11 +37,8 @@ pub struct CachedStructIndex(pub usize);
 pub enum Type {
     Bool,
     U8,
-    U16,
-    U32,
     U64,
     U128,
-    U256,
     Address,
     Signer,
     Vector(Box<Type>),
@@ -50,6 +47,9 @@ pub enum Type {
     Reference(Box<Type>),
     MutableReference(Box<Type>),
     TyParam(usize),
+    U16,
+    U32,
+    U256,
 }
 
 impl Type {

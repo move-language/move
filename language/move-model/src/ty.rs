@@ -50,17 +50,17 @@ pub const NUM_TYPE: Type = Type::Primitive(PrimitiveType::Num);
 pub enum PrimitiveType {
     Bool,
     U8,
-    U16,
-    U32,
     U64,
     U128,
-    U256,
     Address,
     Signer,
     // Types only appearing in specifications
     Num,
     Range,
     EventStore,
+    U16,
+    U32,
+    U256,
 }
 
 /// A type substitution.

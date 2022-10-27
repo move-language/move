@@ -89,14 +89,14 @@ pub enum HavocKind {
 pub enum Constant {
     Bool(bool),
     U8(u8),
-    U16(u16),
-    U32(u32),
     U64(u64),
     U128(u128),
-    U256(U256),
     Address(BigUint),
     ByteArray(Vec<u8>),
     AddressArray(Vec<BigUint>),
+    U16(u16),
+    U32(u32),
+    U256(U256),
 }
 
 impl From<&u256::U256> for Constant {

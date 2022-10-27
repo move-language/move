@@ -65,7 +65,7 @@ pub const CONTEXTUAL_KEYWORDS: &[&str] = &[
     "with",
 ];
 
-pub const PRIMITIVE_TYPES: &[&str] = &["u8", "u64", "u128", "bool", "vector"];
+pub const PRIMITIVE_TYPES: &[&str] = &["u8", "u16", "u32", "u64", "u128", "u256", "bool", "vector"];
 
 pub const BUILTINS: &[&str] = &[
     "assert",

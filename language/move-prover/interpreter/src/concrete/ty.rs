@@ -37,8 +37,11 @@ pub type CodeOffset = u16;
 pub enum IntType {
     Num,
     U8,
+    U16,
+    U32,
     U64,
     U128,
+    U256,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -105,8 +108,11 @@ impl fmt::Display for IntType {
         let repr = match self {
             Self::Num => "num",
             Self::U8 => "u8",
+            Self::U16 => "u16",
+            Self::U32 => "u32",
             Self::U64 => "u64",
             Self::U128 => "u128",
+            Self::U256 => "u256",
         };
         f.write_str(repr)
     }
@@ -228,12 +234,24 @@ impl BaseType {
         BaseType::Primitive(PrimitiveType::Int(IntType::U8))
     }
 
+    pub fn mk_u16() -> Self {
+        BaseType::Primitive(PrimitiveType::Int(IntType::U16))
+    }
+
+    pub fn mk_u32() -> Self {
+        BaseType::Primitive(PrimitiveType::Int(IntType::U32))
+    }
+
     pub fn mk_u64() -> Self {
         BaseType::Primitive(PrimitiveType::Int(IntType::U64))
     }
 
     pub fn mk_u128() -> Self {
         BaseType::Primitive(PrimitiveType::Int(IntType::U128))
+    }
+
+    pub fn mk_u256() -> Self {
+        BaseType::Primitive(PrimitiveType::Int(IntType::U256))
     }
 
     pub fn mk_num() -> Self {
@@ -272,12 +290,24 @@ impl BaseType {
         matches!(self, BaseType::Primitive(PrimitiveType::Int(IntType::U8)))
     }
 
+    pub fn is_u16(&self) -> bool {
+        matches!(self, BaseType::Primitive(PrimitiveType::Int(IntType::U16)))
+    }
+
+    pub fn is_u32(&self) -> bool {
+        matches!(self, BaseType::Primitive(PrimitiveType::Int(IntType::U32)))
+    }
+
     pub fn is_u64(&self) -> bool {
         matches!(self, BaseType::Primitive(PrimitiveType::Int(IntType::U64)))
     }
 
     pub fn is_u128(&self) -> bool {
         matches!(self, BaseType::Primitive(PrimitiveType::Int(IntType::U128)))
+    }
+
+    pub fn is_u256(&self) -> bool {
+        matches!(self, BaseType::Primitive(PrimitiveType::Int(IntType::U256)))
     }
 
     pub fn is_num(&self) -> bool {
@@ -422,8 +452,11 @@ impl BaseType {
         match self {
             BaseType::Primitive(PrimitiveType::Bool) => TypeTag::Bool,
             BaseType::Primitive(PrimitiveType::Int(IntType::U8)) => TypeTag::U8,
+            BaseType::Primitive(PrimitiveType::Int(IntType::U16)) => TypeTag::U16,
+            BaseType::Primitive(PrimitiveType::Int(IntType::U32)) => TypeTag::U32,
             BaseType::Primitive(PrimitiveType::Int(IntType::U64)) => TypeTag::U64,
             BaseType::Primitive(PrimitiveType::Int(IntType::U128)) => TypeTag::U128,
+            BaseType::Primitive(PrimitiveType::Int(IntType::U256)) => TypeTag::U256,
             BaseType::Primitive(PrimitiveType::Int(IntType::Num)) => unreachable!(),
             BaseType::Primitive(PrimitiveType::Address) => TypeTag::Address,
             BaseType::Primitive(PrimitiveType::Signer) => TypeTag::Signer,
@@ -436,8 +469,11 @@ impl BaseType {
         match self {
             BaseType::Primitive(PrimitiveType::Bool) => MoveTypeLayout::Bool,
             BaseType::Primitive(PrimitiveType::Int(IntType::U8)) => MoveTypeLayout::U8,
+            BaseType::Primitive(PrimitiveType::Int(IntType::U16)) => MoveTypeLayout::U16,
+            BaseType::Primitive(PrimitiveType::Int(IntType::U32)) => MoveTypeLayout::U32,
             BaseType::Primitive(PrimitiveType::Int(IntType::U64)) => MoveTypeLayout::U64,
             BaseType::Primitive(PrimitiveType::Int(IntType::U128)) => MoveTypeLayout::U128,
+            BaseType::Primitive(PrimitiveType::Int(IntType::U256)) => MoveTypeLayout::U256,
             BaseType::Primitive(PrimitiveType::Int(IntType::Num)) => unreachable!(),
             BaseType::Primitive(PrimitiveType::Address) => MoveTypeLayout::Address,
             BaseType::Primitive(PrimitiveType::Signer) => MoveTypeLayout::Signer,
@@ -537,8 +573,11 @@ impl Type {
 
     gen!(mk_bool, mk_ref_bool, is_bool, is_ref_bool);
     gen!(mk_u8, mk_ref_u8, is_u8, is_ref_u8);
+    gen!(mk_u16, mk_ref_u16, is_u16, is_ref_u16);
+    gen!(mk_u32, mk_ref_u32, is_u32, is_ref_u32);
     gen!(mk_u64, mk_ref_u64, is_u64, is_ref_u64);
     gen!(mk_u128, mk_ref_u128, is_u128, is_ref_u128);
+    gen!(mk_u256, mk_ref_u256, is_u256, is_ref_u256);
     gen!(mk_num, mk_ref_num, is_num, is_ref_num);
     gen!(mk_address, mk_ref_address, is_address, is_ref_address);
     gen!(mk_signer, mk_ref_signer, is_signer, is_ref_signer);

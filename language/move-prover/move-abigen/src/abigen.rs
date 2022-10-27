@@ -268,8 +268,11 @@ impl<'env> Abigen<'env> {
                 match prim {
                     Bool => TypeTag::Bool,
                     U8 => TypeTag::U8,
+                    U16 => TypeTag::U16,
+                    U32 => TypeTag::U32,
                     U64 => TypeTag::U64,
                     U128 => TypeTag::U128,
+                    U256 => TypeTag::U256,
                     Address => TypeTag::Address,
                     Signer => TypeTag::Signer,
                     Num | Range | EventStore => {

@@ -278,15 +278,18 @@ fn parse_failure_attribute(
                 {
                     match &**value {
                         sp!(_, EAV::Value(sp!(_, EV::InferredNum(u))))
-                            if *u <= std::u64::MAX as u128 =>
+                            if *u <= std::u64::MAX.into() =>
                         {
-                            Some(ExpectedFailure::ExpectedWithCode(*u as u64))
+                            Some(ExpectedFailure::ExpectedWithCode(u.down_cast_lossy()))
                         }
                         sp!(_, EAV::Value(sp!(_, EV::U64(u)))) => {
                             Some(ExpectedFailure::ExpectedWithCode(*u))
                         }
                         sp!(vloc, EAV::Value(sp!(_, EV::U8(_))))
-                        | sp!(vloc, EAV::Value(sp!(_, EV::U128(_)))) => {
+                        | sp!(vloc, EAV::Value(sp!(_, EV::U16(_))))
+                        | sp!(vloc, EAV::Value(sp!(_, EV::U32(_))))
+                        | sp!(vloc, EAV::Value(sp!(_, EV::U128(_))))
+                        | sp!(vloc, EAV::Value(sp!(_, EV::U256(_)))) => {
                             let msg = "Invalid value in expected failure code assignment";
                             context.env.add_diag(diag!(
                                 Attributes::InvalidValue,

@@ -36,7 +36,7 @@ error: no matching declaration of `M::wrongly_typed_callee`
 37 │     fun wrongly_typed_caller(): num { wrongly_typed_callee(1, 1) }
    │                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
-   = outruled candidate `M::wrongly_typed_callee(num, bool): num` (expected `bool` but found `u128` for argument 2)
+   = outruled candidate `M::wrongly_typed_callee(num, bool): num` (expected `bool` but found `u256` for argument 2)
 
 error: expected `num` but found `bool` in expression
    ┌─ tests/sources/expressions_err.move:41:80

@@ -196,7 +196,9 @@ fn is_valid_const_type_name(sp!(_, tn_): &TypeName) -> bool {
 fn is_valid_const_builtin_type(sp!(_, bt_): &BuiltinTypeName) -> bool {
     use BuiltinTypeName_ as N;
     match bt_ {
-        N::Address | N::U8 | N::U64 | N::U128 | N::Vector | N::Bool => true,
+        N::Address | N::U8 | N::U16 | N::U32 | N::U64 | N::U128 | N::U256 | N::Vector | N::Bool => {
+            true
+        }
         N::Signer => false,
     }
 }
@@ -228,47 +230,77 @@ fn fold_binary_op(
         // Checked arith
         //************************************
         (B::Add, V::U8(u1), V::U8(u2)) => V::U8(u1.checked_add(u2)?),
+        (B::Add, V::U16(u1), V::U16(u2)) => V::U16(u1.checked_add(u2)?),
+        (B::Add, V::U32(u1), V::U32(u2)) => V::U32(u1.checked_add(u2)?),
         (B::Add, V::U64(u1), V::U64(u2)) => V::U64(u1.checked_add(u2)?),
         (B::Add, V::U128(u1), V::U128(u2)) => V::U128(u1.checked_add(u2)?),
+        (B::Add, V::U256(u1), V::U256(u2)) => V::U256(u1.checked_add(u2)?),
 
         (B::Sub, V::U8(u1), V::U8(u2)) => V::U8(u1.checked_sub(u2)?),
+        (B::Sub, V::U16(u1), V::U16(u2)) => V::U16(u1.checked_sub(u2)?),
+        (B::Sub, V::U32(u1), V::U32(u2)) => V::U32(u1.checked_sub(u2)?),
         (B::Sub, V::U64(u1), V::U64(u2)) => V::U64(u1.checked_sub(u2)?),
         (B::Sub, V::U128(u1), V::U128(u2)) => V::U128(u1.checked_sub(u2)?),
+        (B::Sub, V::U256(u1), V::U256(u2)) => V::U256(u1.checked_sub(u2)?),
 
         (B::Mul, V::U8(u1), V::U8(u2)) => V::U8(u1.checked_mul(u2)?),
+        (B::Mul, V::U16(u1), V::U16(u2)) => V::U16(u1.checked_mul(u2)?),
+        (B::Mul, V::U32(u1), V::U32(u2)) => V::U32(u1.checked_mul(u2)?),
         (B::Mul, V::U64(u1), V::U64(u2)) => V::U64(u1.checked_mul(u2)?),
         (B::Mul, V::U128(u1), V::U128(u2)) => V::U128(u1.checked_mul(u2)?),
+        (B::Mul, V::U256(u1), V::U256(u2)) => V::U256(u1.checked_mul(u2)?),
 
         (B::Mod, V::U8(u1), V::U8(u2)) => V::U8(u1.checked_rem(u2)?),
+        (B::Mod, V::U16(u1), V::U16(u2)) => V::U16(u1.checked_rem(u2)?),
+        (B::Mod, V::U32(u1), V::U32(u2)) => V::U32(u1.checked_rem(u2)?),
         (B::Mod, V::U64(u1), V::U64(u2)) => V::U64(u1.checked_rem(u2)?),
         (B::Mod, V::U128(u1), V::U128(u2)) => V::U128(u1.checked_rem(u2)?),
+        (B::Mod, V::U256(u1), V::U256(u2)) => V::U256(u1.checked_rem(u2)?),
 
         (B::Div, V::U8(u1), V::U8(u2)) => V::U8(u1.checked_div(u2)?),
+        (B::Div, V::U16(u1), V::U16(u2)) => V::U16(u1.checked_div(u2)?),
+        (B::Div, V::U32(u1), V::U32(u2)) => V::U32(u1.checked_div(u2)?),
         (B::Div, V::U64(u1), V::U64(u2)) => V::U64(u1.checked_div(u2)?),
         (B::Div, V::U128(u1), V::U128(u2)) => V::U128(u1.checked_div(u2)?),
+        (B::Div, V::U256(u1), V::U256(u2)) => V::U256(u1.checked_div(u2)?),
 
         (B::Shl, V::U8(u1), V::U8(u2)) => V::U8(u1.checked_shl(u2 as u32)?),
+        (B::Shl, V::U16(u1), V::U8(u2)) => V::U16(u1.checked_shl(u2 as u32)?),
+        (B::Shl, V::U32(u1), V::U8(u2)) => V::U32(u1.checked_shl(u2 as u32)?),
         (B::Shl, V::U64(u1), V::U8(u2)) => V::U64(u1.checked_shl(u2 as u32)?),
         (B::Shl, V::U128(u1), V::U8(u2)) => V::U128(u1.checked_shl(u2 as u32)?),
+        (B::Shl, V::U256(u1), V::U8(u2)) => V::U256(u1.checked_shl(u2 as u32)?),
 
         (B::Shr, V::U8(u1), V::U8(u2)) => V::U8(u1.checked_shr(u2 as u32)?),
+        (B::Shr, V::U16(u1), V::U8(u2)) => V::U16(u1.checked_shr(u2 as u32)?),
+        (B::Shr, V::U32(u1), V::U8(u2)) => V::U32(u1.checked_shr(u2 as u32)?),
         (B::Shr, V::U64(u1), V::U8(u2)) => V::U64(u1.checked_shr(u2 as u32)?),
         (B::Shr, V::U128(u1), V::U8(u2)) => V::U128(u1.checked_shr(u2 as u32)?),
+        (B::Shr, V::U256(u1), V::U8(u2)) => V::U256(u1.checked_shr(u2 as u32)?),
 
         //************************************
         // Pure arith
         //************************************
         (B::BitOr, V::U8(u1), V::U8(u2)) => V::U8(u1 | u2),
+        (B::BitOr, V::U16(u1), V::U16(u2)) => V::U16(u1 | u2),
+        (B::BitOr, V::U32(u1), V::U32(u2)) => V::U32(u1 | u2),
         (B::BitOr, V::U64(u1), V::U64(u2)) => V::U64(u1 | u2),
         (B::BitOr, V::U128(u1), V::U128(u2)) => V::U128(u1 | u2),
+        (B::BitOr, V::U256(u1), V::U256(u2)) => V::U256(u1 | u2),
 
         (B::BitAnd, V::U8(u1), V::U8(u2)) => V::U8(u1 & u2),
+        (B::BitAnd, V::U16(u1), V::U16(u2)) => V::U16(u1 & u2),
+        (B::BitAnd, V::U32(u1), V::U32(u2)) => V::U32(u1 & u2),
         (B::BitAnd, V::U64(u1), V::U64(u2)) => V::U64(u1 & u2),
         (B::BitAnd, V::U128(u1), V::U128(u2)) => V::U128(u1 & u2),
+        (B::BitAnd, V::U256(u1), V::U256(u2)) => V::U256(u1 & u2),
 
         (B::Xor, V::U8(u1), V::U8(u2)) => V::U8(u1 ^ u2),
+        (B::Xor, V::U16(u1), V::U16(u2)) => V::U16(u1 ^ u2),
+        (B::Xor, V::U32(u1), V::U32(u2)) => V::U32(u1 ^ u2),
         (B::Xor, V::U64(u1), V::U64(u2)) => V::U64(u1 ^ u2),
         (B::Xor, V::U128(u1), V::U128(u2)) => V::U128(u1 ^ u2),
+        (B::Xor, V::U256(u1), V::U256(u2)) => V::U256(u1 ^ u2),
 
         //************************************
         // Logical
@@ -280,20 +312,32 @@ fn fold_binary_op(
         // Comparisons
         //************************************
         (B::Lt, V::U8(u1), V::U8(u2)) => V::Bool(u1 < u2),
+        (B::Lt, V::U16(u1), V::U16(u2)) => V::Bool(u1 < u2),
+        (B::Lt, V::U32(u1), V::U32(u2)) => V::Bool(u1 < u2),
         (B::Lt, V::U64(u1), V::U64(u2)) => V::Bool(u1 < u2),
         (B::Lt, V::U128(u1), V::U128(u2)) => V::Bool(u1 < u2),
+        (B::Lt, V::U256(u1), V::U256(u2)) => V::Bool(u1 < u2),
 
         (B::Gt, V::U8(u1), V::U8(u2)) => V::Bool(u1 > u2),
+        (B::Gt, V::U16(u1), V::U16(u2)) => V::Bool(u1 > u2),
+        (B::Gt, V::U32(u1), V::U32(u2)) => V::Bool(u1 > u2),
         (B::Gt, V::U64(u1), V::U64(u2)) => V::Bool(u1 > u2),
         (B::Gt, V::U128(u1), V::U128(u2)) => V::Bool(u1 > u2),
+        (B::Gt, V::U256(u1), V::U256(u2)) => V::Bool(u1 > u2),
 
         (B::Le, V::U8(u1), V::U8(u2)) => V::Bool(u1 <= u2),
+        (B::Le, V::U16(u1), V::U16(u2)) => V::Bool(u1 <= u2),
+        (B::Le, V::U32(u1), V::U32(u2)) => V::Bool(u1 <= u2),
         (B::Le, V::U64(u1), V::U64(u2)) => V::Bool(u1 <= u2),
         (B::Le, V::U128(u1), V::U128(u2)) => V::Bool(u1 <= u2),
+        (B::Le, V::U256(u1), V::U256(u2)) => V::Bool(u1 <= u2),
 
         (B::Ge, V::U8(u1), V::U8(u2)) => V::Bool(u1 >= u2),
+        (B::Ge, V::U16(u1), V::U16(u2)) => V::Bool(u1 >= u2),
+        (B::Ge, V::U32(u1), V::U32(u2)) => V::Bool(u1 >= u2),
         (B::Ge, V::U64(u1), V::U64(u2)) => V::Bool(u1 >= u2),
         (B::Ge, V::U128(u1), V::U128(u2)) => V::Bool(u1 >= u2),
+        (B::Ge, V::U256(u1), V::U256(u2)) => V::Bool(u1 >= u2),
 
         (B::Eq, v1, v2) => V::Bool(v1 == v2),
         (B::Neq, v1, v2) => V::Bool(v1 != v2),
@@ -311,17 +355,46 @@ fn fold_cast(loc: Loc, sp!(_, bt_): &BuiltinTypeName, v: Value_) -> Option<Unann
     use Value_ as V;
     let cast = match (bt_, v) {
         (BT::U8, V::U8(u)) => V::U8(u),
+        (BT::U8, V::U16(u)) => V::U8(u8::try_from(u).ok()?),
+        (BT::U8, V::U32(u)) => V::U8(u8::try_from(u).ok()?),
         (BT::U8, V::U64(u)) => V::U8(u8::try_from(u).ok()?),
         (BT::U8, V::U128(u)) => V::U8(u8::try_from(u).ok()?),
+        (BT::U8, V::U256(u)) => V::U8(u8::try_from(u).ok()?),
+
+        (BT::U16, V::U8(u)) => V::U16(u as u16),
+        (BT::U16, V::U16(u)) => V::U16(u),
+        (BT::U16, V::U32(u)) => V::U16(u16::try_from(u).ok()?),
+        (BT::U16, V::U64(u)) => V::U16(u16::try_from(u).ok()?),
+        (BT::U16, V::U128(u)) => V::U16(u16::try_from(u).ok()?),
+        (BT::U16, V::U256(u)) => V::U16(u16::try_from(u).ok()?),
+
+        (BT::U32, V::U8(u)) => V::U32(u as u32),
+        (BT::U32, V::U16(u)) => V::U32(u as u32),
+        (BT::U32, V::U32(u)) => V::U32(u),
+        (BT::U32, V::U64(u)) => V::U32(u32::try_from(u).ok()?),
+        (BT::U32, V::U128(u)) => V::U32(u32::try_from(u).ok()?),
+        (BT::U32, V::U256(u)) => V::U32(u32::try_from(u).ok()?),
 
         (BT::U64, V::U8(u)) => V::U64(u as u64),
+        (BT::U64, V::U16(u)) => V::U64(u as u64),
+        (BT::U64, V::U32(u)) => V::U64(u as u64),
         (BT::U64, V::U64(u)) => V::U64(u),
         (BT::U64, V::U128(u)) => V::U64(u64::try_from(u).ok()?),
+        (BT::U64, V::U256(u)) => V::U64(u64::try_from(u).ok()?),
 
         (BT::U128, V::U8(u)) => V::U128(u as u128),
+        (BT::U128, V::U16(u)) => V::U128(u as u128),
+        (BT::U128, V::U32(u)) => V::U128(u as u128),
         (BT::U128, V::U64(u)) => V::U128(u as u128),
         (BT::U128, V::U128(u)) => V::U128(u),
+        (BT::U128, V::U256(u)) => V::U128(u128::try_from(u).ok()?),
 
+        (BT::U256, V::U8(u)) => V::U256(u.into()),
+        (BT::U256, V::U16(u)) => V::U256(u.into()),
+        (BT::U256, V::U32(u)) => V::U256(u.into()),
+        (BT::U256, V::U64(u)) => V::U256(u.into()),
+        (BT::U256, V::U128(u)) => V::U256(u.into()),
+        (BT::U256, V::U256(u)) => V::U256(u),
         (_, v) => panic!("ICE unexpected cast while folding: {:?} as {:?}", v, bt_),
     };
     Some(evalue_(loc, cast))

@@ -11,7 +11,7 @@ error[E04003]: built-in operation not supported
   │                 ^^^^^^
   │                 │
   │                 Invalid argument to '<'
-  │                 Found: '_'. But expected: 'u8', 'u64', 'u128'
+  │                 Found: '_'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04003]: built-in operation not supported
   ┌─ tests/move_check/parser/vector_conditional_keyword.move:4:26
@@ -19,5 +19,5 @@ error[E04003]: built-in operation not supported
 4 │         let a = vector < 100;
   │                 ------   ^^^ Invalid argument to '<'
   │                 │         
-  │                 Found: '_'. But expected: 'u8', 'u64', 'u128'
+  │                 Found: '_'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 

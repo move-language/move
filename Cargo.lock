@@ -3136,8 +3136,11 @@ dependencies = [
  "anyhow",
  "arbitrary",
  "bcs",
+ "ethnum",
  "hex",
+ "num 0.4.0",
  "once_cell",
+ "primitive-types 0.10.1",
  "proptest",
  "proptest-derive",
  "rand 0.8.4",
@@ -3146,6 +3149,7 @@ dependencies = [
  "serde 1.0.145",
  "serde_bytes",
  "serde_json",
+ "uint",
 ]
 
 [[package]]
@@ -4573,6 +4577,7 @@ dependencies = [
  "fixed-hash",
  "impl-codec 0.5.1",
  "impl-rlp",
+ "impl-serde",
  "scale-info",
  "uint",
 ]
@@ -6236,9 +6241,9 @@ checksum = "56dee185309b50d1f11bfedef0fe6d036842e3fb77413abef29f8f8d1c5d4c1c"
 
 [[package]]
 name = "uint"
-version = "0.9.3"
+version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12f03af7ccf01dd611cc450a0d10dbc9b745770d096473e2faf0ca6e2d66d1e0"
+checksum = "a45526d29728d135c2900b0d30573fe3ee79fceb12ef534c7bb30e810a91b601"
 dependencies = [
  "byteorder",
  "crunchy",

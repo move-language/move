@@ -98,8 +98,11 @@ impl<'a> StackUsageVerifier<'a> {
 
             // Instructions that push, but don't pop
             Bytecode::LdU8(_)
+            | Bytecode::LdU16(_)
+            | Bytecode::LdU32(_)
             | Bytecode::LdU64(_)
             | Bytecode::LdU128(_)
+            | Bytecode::LdU256(_)
             | Bytecode::LdTrue
             | Bytecode::LdFalse
             | Bytecode::LdConst(_)
@@ -125,8 +128,11 @@ impl<'a> StackUsageVerifier<'a> {
             | Bytecode::MoveFrom(_)
             | Bytecode::MoveFromGeneric(_)
             | Bytecode::CastU8
+            | Bytecode::CastU16
+            | Bytecode::CastU32
             | Bytecode::CastU64
             | Bytecode::CastU128
+            | Bytecode::CastU256
             | Bytecode::VecLen(_)
             | Bytecode::VecPopBack(_) => (1, 1),
 

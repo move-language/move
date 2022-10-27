@@ -466,12 +466,24 @@ fn verify_instr(
             verifier.stack.push(ST::U8);
         }
 
+        Bytecode::LdU16(_) => {
+            verifier.stack.push(ST::U16);
+        }
+
+        Bytecode::LdU32(_) => {
+            verifier.stack.push(ST::U32);
+        }
+
         Bytecode::LdU64(_) => {
             verifier.stack.push(ST::U64);
         }
 
         Bytecode::LdU128(_) => {
             verifier.stack.push(ST::U128);
+        }
+
+        Bytecode::LdU256(_) => {
+            verifier.stack.push(ST::U256);
         }
 
         Bytecode::LdConst(idx) => {
@@ -800,6 +812,27 @@ fn verify_instr(
                 _ => return Err(verifier.error(StatusCode::TYPE_MISMATCH, offset)),
             };
         }
+        Bytecode::CastU16 => {
+            let operand = verifier.stack.pop().unwrap();
+            if !operand.is_integer() {
+                return Err(verifier.error(StatusCode::INTEGER_OP_TYPE_MISMATCH_ERROR, offset));
+            }
+            verifier.stack.push(ST::U16);
+        }
+        Bytecode::CastU32 => {
+            let operand = verifier.stack.pop().unwrap();
+            if !operand.is_integer() {
+                return Err(verifier.error(StatusCode::INTEGER_OP_TYPE_MISMATCH_ERROR, offset));
+            }
+            verifier.stack.push(ST::U32);
+        }
+        Bytecode::CastU256 => {
+            let operand = verifier.stack.pop().unwrap();
+            if !operand.is_integer() {
+                return Err(verifier.error(StatusCode::INTEGER_OP_TYPE_MISMATCH_ERROR, offset));
+            }
+            verifier.stack.push(ST::U256);
+        }
     };
     Ok(())
 }
@@ -822,8 +855,11 @@ fn instantiate(token: &SignatureToken, subst: &Signature) -> SignatureToken {
     match token {
         Bool => Bool,
         U8 => U8,
+        U16 => U16,
+        U32 => U32,
         U64 => U64,
         U128 => U128,
+        U256 => U256,
         Address => Address,
         Signer => Signer,
         Vector(ty) => Vector(Box::new(instantiate(ty, subst))),

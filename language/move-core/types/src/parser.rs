@@ -14,8 +14,11 @@ use std::iter::Peekable;
 #[derive(Eq, PartialEq, Debug)]
 enum Token {
     U8Type,
+    U16Type,
+    U32Type,
     U64Type,
     U128Type,
+    U256Type,
     BoolType,
     AddressType,
     VectorType,
@@ -24,8 +27,12 @@ enum Token {
     Name(String),
     Address(String),
     U8(String),
+    U16(String),
+    U32(String),
     U64(String),
     U128(String),
+    U256(String),
+
     Bytes(String),
     True,
     False,
@@ -45,8 +52,11 @@ impl Token {
 fn name_token(s: String) -> Token {
     match s.as_str() {
         "u8" => Token::U8Type,
+        "u16" => Token::U16Type,
+        "u32" => Token::U32Type,
         "u64" => Token::U64Type,
         "u128" => Token::U128Type,
+        "u256" => Token::U256Type,
         "bool" => Token::BoolType,
         "address" => Token::AddressType,
         "vector" => Token::VectorType,
@@ -73,8 +83,11 @@ fn next_number(initial: char, mut it: impl Iterator<Item = char>) -> Result<(Tok
                             let len = num.len() + suffix.len();
                             let tok = match suffix.as_str() {
                                 "u8" => Token::U8(num),
+                                "u16" => Token::U16(num),
+                                "u32" => Token::U32(num),
                                 "u64" => Token::U64(num),
                                 "u128" => Token::U128(num),
+                                "u256" => Token::U256(num),
                                 _ => bail!("invalid suffix"),
                             };
                             return Ok((tok, len));
@@ -307,8 +320,11 @@ impl<I: Iterator<Item = Token>> Parser<I> {
     fn parse_transaction_argument(&mut self) -> Result<TransactionArgument> {
         Ok(match self.next()? {
             Token::U8(s) => TransactionArgument::U8(s.replace('_', "").parse()?),
+            Token::U16(s) => TransactionArgument::U16(s.replace('_', "").parse()?),
+            Token::U32(s) => TransactionArgument::U32(s.replace('_', "").parse()?),
             Token::U64(s) => TransactionArgument::U64(s.replace('_', "").parse()?),
             Token::U128(s) => TransactionArgument::U128(s.replace('_', "").parse()?),
+            Token::U256(s) => TransactionArgument::U256(s.replace('_', "").parse()?),
             Token::True => TransactionArgument::Bool(true),
             Token::False => TransactionArgument::Bool(false),
             Token::Address(addr) => {

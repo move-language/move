@@ -42,10 +42,13 @@ pub enum ValueToken {
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub enum ParsedValue<Extra: ParsableValue = ()> {
     Address(ParsedAddress),
-    InferredNum(u128),
+    InferredNum(move_core_types::u256::U256),
     U8(u8),
+    U16(u16),
+    U32(u32),
     U64(u64),
     U128(u128),
+    U256(move_core_types::u256::U256),
     Bool(bool),
     Vector(Vec<ParsedValue<Extra>>),
     Struct(
@@ -150,9 +153,10 @@ impl Token for ValueToken {
             let rest = &text[num_text_len..];
             if rest.starts_with("u8") {
                 (ValueToken::NumberTyped, num_text_len + 2)
-            } else if rest.starts_with("u64") {
+            } else if rest.starts_with("u64") || rest.starts_with("u16") || rest.starts_with("u32")
+            {
                 (ValueToken::NumberTyped, num_text_len + 3)
-            } else if rest.starts_with("u128") {
+            } else if rest.starts_with("u128") || rest.starts_with("u256") {
                 (ValueToken::NumberTyped, num_text_len + 4)
             } else {
                 // No typed suffix
@@ -302,12 +306,15 @@ impl<Extra: ParsableValue> ParsedValue<Extra> {
                 a.into_account_address(mapping)?,
             )),
             ParsedValue::U8(u) => Extra::move_value_into_concrete(MoveValue::U8(u)),
+            ParsedValue::U16(u) => Extra::move_value_into_concrete(MoveValue::U16(u)),
+            ParsedValue::U32(u) => Extra::move_value_into_concrete(MoveValue::U32(u)),
             ParsedValue::U64(u) => Extra::move_value_into_concrete(MoveValue::U64(u)),
-            ParsedValue::InferredNum(u) if u <= (u64::MAX as u128) => {
-                Extra::move_value_into_concrete(MoveValue::U64(u as u64))
+            ParsedValue::InferredNum(u) if u <= (u64::MAX.into()) => {
+                Extra::move_value_into_concrete(MoveValue::U64(u.try_into()?))
             }
-            ParsedValue::InferredNum(u) | ParsedValue::U128(u) => {
-                Extra::move_value_into_concrete(MoveValue::U128(u))
+            ParsedValue::U128(u) => Extra::move_value_into_concrete(MoveValue::U128(u)),
+            ParsedValue::InferredNum(u) | ParsedValue::U256(u) => {
+                Extra::move_value_into_concrete(MoveValue::U256(u))
             }
             ParsedValue::Bool(b) => Extra::move_value_into_concrete(MoveValue::Bool(b)),
             ParsedValue::Vector(values) => Extra::concrete_vector(

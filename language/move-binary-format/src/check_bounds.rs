@@ -527,10 +527,11 @@ impl<'a> BoundsChecker<'a> {
 
                 // List out the other options explicitly so there's a compile error if a new
                 // bytecode gets added.
-                FreezeRef | Pop | Ret | LdU8(_) | LdU64(_) | LdU128(_) | CastU8 | CastU64
-                | CastU128 | LdTrue | LdFalse | ReadRef | WriteRef | Add | Sub | Mul | Mod
-                | Div | BitOr | BitAnd | Xor | Shl | Shr | Or | And | Not | Eq | Neq | Lt | Gt
-                | Le | Ge | Abort | Nop => (),
+                FreezeRef | Pop | Ret | LdU8(_) | LdU16(_) | LdU32(_) | LdU64(_) | LdU256(_)
+                | LdU128(_) | CastU8 | CastU16 | CastU32 | CastU64 | CastU128 | CastU256
+                | LdTrue | LdFalse | ReadRef | WriteRef | Add | Sub | Mul | Mod | Div | BitOr
+                | BitAnd | Xor | Shl | Shr | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge
+                | Abort | Nop => (),
             }
         }
         Ok(())
@@ -541,8 +542,8 @@ impl<'a> BoundsChecker<'a> {
 
         for ty in ty.preorder_traversal() {
             match ty {
-                Bool | U8 | U64 | U128 | Address | Signer | TypeParameter(_) | Reference(_)
-                | MutableReference(_) | Vector(_) => (),
+                Bool | U8 | U16 | U32 | U64 | U128 | U256 | Address | Signer | TypeParameter(_)
+                | Reference(_) | MutableReference(_) | Vector(_) => (),
                 Struct(idx) => {
                     check_bounds_impl(self.view.struct_handles(), *idx)?;
                     if let Some(sh) = self.view.struct_handles().get(idx.into_index()) {
@@ -599,8 +600,11 @@ impl<'a> BoundsChecker<'a> {
 
                 Bool
                 | U8
+                | U16
+                | U32
                 | U64
                 | U128
+                | U256
                 | Address
                 | Signer
                 | Struct(_)

@@ -93,8 +93,11 @@ fn execute_inner(
         | Bytecode::ImmBorrowField(_)
         | Bytecode::ImmBorrowFieldGeneric(_)
         | Bytecode::LdU8(_)
+        | Bytecode::LdU16(_)
+        | Bytecode::LdU32(_)
         | Bytecode::LdU64(_)
         | Bytecode::LdU128(_)
+        | Bytecode::LdU256(_)
         | Bytecode::LdConst(_)
         | Bytecode::LdTrue
         | Bytecode::LdFalse
@@ -107,8 +110,11 @@ fn execute_inner(
         | Bytecode::ReadRef
         | Bytecode::WriteRef
         | Bytecode::CastU8
+        | Bytecode::CastU16
+        | Bytecode::CastU32
         | Bytecode::CastU64
         | Bytecode::CastU128
+        | Bytecode::CastU256
         | Bytecode::Add
         | Bytecode::Sub
         | Bytecode::Mul

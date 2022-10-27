@@ -852,6 +852,8 @@ impl<'env> FunctionTranslator<'env> {
                     Constant::Address(val) => val.to_string(),
                     Constant::ByteArray(val) => boogie_byte_blob(options, val),
                     Constant::AddressArray(val) => boogie_address_blob(options, val),
+                    Constant::U16(num) => num.to_string(),
+                    Constant::U32(num) => num.to_string(),
                 };
                 let dest_str = str_local(*dest);
                 emitln!(writer, "{} := {};", dest_str, value);
@@ -1260,6 +1262,26 @@ impl<'env> FunctionTranslator<'env> {
                             str_local(src)
                         );
                     }
+                    CastU16 => {
+                        let src = srcs[0];
+                        let dest = dests[0];
+                        emitln!(
+                            writer,
+                            "call {} := $CastU16({});",
+                            str_local(dest),
+                            str_local(src)
+                        );
+                    }
+                    CastU32 => {
+                        let src = srcs[0];
+                        let dest = dests[0];
+                        emitln!(
+                            writer,
+                            "call {} := $CastU32({});",
+                            str_local(dest),
+                            str_local(src)
+                        );
+                    }
                     CastU64 => {
                         let src = srcs[0];
                         let dest = dests[0];
@@ -1276,6 +1298,16 @@ impl<'env> FunctionTranslator<'env> {
                         emitln!(
                             writer,
                             "call {} := $CastU128({});",
+                            str_local(dest),
+                            str_local(src)
+                        );
+                    }
+                    CastU256 => {
+                        let src = srcs[0];
+                        let dest = dests[0];
+                        emitln!(
+                            writer,
+                            "call {} := $CastU256({});",
                             str_local(dest),
                             str_local(src)
                         );
@@ -1537,7 +1569,6 @@ impl<'env> FunctionTranslator<'env> {
                         let node_id = env.new_node(env.unknown_loc(), mem.to_type());
                         self.track_global_mem(mem, node_id);
                     }
-                    CastU256 => unimplemented!(),
                 }
                 if let Some(AbortAction(target, code)) = aa {
                     emitln!(writer, "if ($abort_flag) {");

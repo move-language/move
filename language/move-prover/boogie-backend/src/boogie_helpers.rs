@@ -188,10 +188,10 @@ pub fn boogie_type(env: &GlobalEnv, ty: &Type) -> String {
     use Type::*;
     match ty {
         Primitive(p) => match p {
-            U8 | U64 | U128 | Num | Address => "int".to_string(),
+            U8 | U16 | U32 | U64 | U128 | U256 | Num | Address => "int".to_string(),
             Signer => "$signer".to_string(),
             Bool => "bool".to_string(),
-            _ => panic!("unexpected type"),
+            Range | EventStore => panic!("unexpected type"),
         },
         Vector(et) => format!("Vec ({})", boogie_type(env, et)),
         Struct(mid, sid, inst) => boogie_struct_name(&env.get_module(*mid).into_struct(*sid), inst),
@@ -222,14 +222,17 @@ pub fn boogie_type_suffix(env: &GlobalEnv, ty: &Type) -> String {
     match ty {
         Primitive(p) => match p {
             U8 => "u8".to_string(),
+            U16 => "u16".to_string(),
+            U32 => "u32".to_string(),
             U64 => "u64".to_string(),
             U128 => "u128".to_string(),
+            U256 => "u256".to_string(),
             Num => "num".to_string(),
             Address => "address".to_string(),
             Signer => "signer".to_string(),
             Bool => "bool".to_string(),
             Range => "range".to_string(),
-            _ => format!("<<unsupported {:?}>>", ty),
+            EventStore => format!("<<unsupported {:?}>>", ty),
         },
         Vector(et) => format!("vec{}", boogie_inst_suffix(env, &[et.as_ref().to_owned()])),
         Struct(mid, sid, inst) => {
@@ -496,8 +499,11 @@ fn type_name_to_ident_tokens(env: &GlobalEnv, ty: &Type) -> Vec<TypeIdentToken> 
     match ty {
         Type::Primitive(PrimitiveType::Bool) => TypeIdentToken::make("bool"),
         Type::Primitive(PrimitiveType::U8) => TypeIdentToken::make("u8"),
+        Type::Primitive(PrimitiveType::U16) => TypeIdentToken::make("u16"),
+        Type::Primitive(PrimitiveType::U32) => TypeIdentToken::make("u32"),
         Type::Primitive(PrimitiveType::U64) => TypeIdentToken::make("u64"),
         Type::Primitive(PrimitiveType::U128) => TypeIdentToken::make("u128"),
+        Type::Primitive(PrimitiveType::U256) => TypeIdentToken::make("u256"),
         Type::Primitive(PrimitiveType::Address) => TypeIdentToken::make("address"),
         Type::Primitive(PrimitiveType::Signer) => TypeIdentToken::make("signer"),
         Type::Vector(element) => {
@@ -586,8 +592,11 @@ fn type_name_to_info_pack(env: &GlobalEnv, ty: &Type) -> Option<TypeInfoPack> {
         // move types that will cause an error
         Type::Primitive(PrimitiveType::Bool)
         | Type::Primitive(PrimitiveType::U8)
+        | Type::Primitive(PrimitiveType::U16)
+        | Type::Primitive(PrimitiveType::U32)
         | Type::Primitive(PrimitiveType::U64)
         | Type::Primitive(PrimitiveType::U128)
+        | Type::Primitive(PrimitiveType::U256)
         | Type::Primitive(PrimitiveType::Address)
         | Type::Primitive(PrimitiveType::Signer)
         | Type::Vector(_) => None,

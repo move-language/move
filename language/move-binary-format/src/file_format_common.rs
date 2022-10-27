@@ -121,6 +121,9 @@ pub enum SerializedType {
     VECTOR                  = 0xA,
     STRUCT_INST             = 0xB,
     SIGNER                  = 0xC,
+    U16                     = 0xD,
+    U32                     = 0xE,
+    U256                    = 0xF,
 }
 
 #[rustfmt::skip]
@@ -209,6 +212,12 @@ pub enum Opcodes {
     VEC_POP_BACK                = 0x45,
     VEC_UNPACK                  = 0x46,
     VEC_SWAP                    = 0x47,
+    LD_U16                      = 0x48,
+    LD_U32                      = 0x49,
+    LD_U256                     = 0x4A,
+    CAST_U16                    = 0x4B,
+    CAST_U32                    = 0x4C,
+    CAST_U256                   = 0x4D,
 }
 
 /// Upper limit on the binary size
@@ -320,6 +329,14 @@ pub(crate) fn write_u128(binary: &mut BinaryData, value: u128) -> Result<()> {
     binary.extend(&value.to_le_bytes())
 }
 
+/// Write a `u256` in Little Endian format.
+pub(crate) fn write_u256(
+    binary: &mut BinaryData,
+    value: move_core_types::u256::U256,
+) -> Result<()> {
+    binary.extend(&value.to_le_bytes())
+}
+
 pub fn read_u8(cursor: &mut Cursor<&[u8]>) -> Result<u8> {
     let mut buf = [0; 1];
     cursor.read_exact(&mut buf)?;
@@ -384,8 +401,12 @@ pub const VERSION_4: u32 = 4;
 ///  + metadata
 pub const VERSION_5: u32 = 5;
 
+/// Version 6: changes compared with version 5
+///  + u16, u32, u256 integers and corresponding Ld, Cast bytecodes
+pub const VERSION_6: u32 = 6;
+
 // Mark which version is the latest version
-pub const VERSION_MAX: u32 = VERSION_5;
+pub const VERSION_MAX: u32 = VERSION_6;
 
 // Mark which oldest version is supported.
 // TODO(#145): finish v4 compatibility; as of now, only metadata is implemented
@@ -598,6 +619,12 @@ pub fn instruction_key(instruction: &Bytecode) -> u8 {
         VecPopBack(_) => Opcodes::VEC_POP_BACK,
         VecUnpack(..) => Opcodes::VEC_UNPACK,
         VecSwap(_) => Opcodes::VEC_SWAP,
+        LdU16(_) => Opcodes::LD_U16,
+        LdU32(_) => Opcodes::LD_U32,
+        LdU256(_) => Opcodes::LD_U256,
+        CastU16 => Opcodes::CAST_U16,
+        CastU32 => Opcodes::CAST_U32,
+        CastU256 => Opcodes::CAST_U256,
     };
     opcode as u8
 }

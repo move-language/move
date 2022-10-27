@@ -39,11 +39,23 @@ pub trait ValueView {
                 self.0 += LEGACY_CONST_SIZE;
             }
 
+            fn visit_u16(&mut self, _depth: usize, _val: u16) {
+                self.0 += LEGACY_CONST_SIZE;
+            }
+
+            fn visit_u32(&mut self, _depth: usize, _val: u32) {
+                self.0 += LEGACY_CONST_SIZE;
+            }
+
             fn visit_u64(&mut self, _depth: usize, _val: u64) {
                 self.0 += LEGACY_CONST_SIZE;
             }
 
             fn visit_u128(&mut self, _depth: usize, _val: u128) {
+                self.0 += LEGACY_CONST_SIZE;
+            }
+
+            fn visit_u256(&mut self, _depth: usize, _val: move_core_types::u256::U256) {
                 self.0 += LEGACY_CONST_SIZE;
             }
 
@@ -101,8 +113,11 @@ pub trait ValueView {
 /// Trait that defines a visitor that could be used to traverse a value recursively.
 pub trait ValueVisitor {
     fn visit_u8(&mut self, depth: usize, val: u8);
+    fn visit_u16(&mut self, depth: usize, val: u16);
+    fn visit_u32(&mut self, depth: usize, val: u32);
     fn visit_u64(&mut self, depth: usize, val: u64);
     fn visit_u128(&mut self, depth: usize, val: u128);
+    fn visit_u256(&mut self, depth: usize, val: move_core_types::u256::U256);
     fn visit_bool(&mut self, depth: usize, val: bool);
     fn visit_address(&mut self, depth: usize, val: AccountAddress);
 
@@ -118,6 +133,20 @@ pub trait ValueVisitor {
         }
     }
 
+    fn visit_vec_u16(&mut self, depth: usize, vals: &[u16]) {
+        self.visit_vec(depth, vals.len());
+        for val in vals {
+            self.visit_u16(depth + 1, *val);
+        }
+    }
+
+    fn visit_vec_u32(&mut self, depth: usize, vals: &[u32]) {
+        self.visit_vec(depth, vals.len());
+        for val in vals {
+            self.visit_u32(depth + 1, *val);
+        }
+    }
+
     fn visit_vec_u64(&mut self, depth: usize, vals: &[u64]) {
         self.visit_vec(depth, vals.len());
         for val in vals {
@@ -129,6 +158,13 @@ pub trait ValueVisitor {
         self.visit_vec(depth, vals.len());
         for val in vals {
             self.visit_u128(depth + 1, *val);
+        }
+    }
+
+    fn visit_vec_u256(&mut self, depth: usize, vals: &[move_core_types::u256::U256]) {
+        self.visit_vec(depth, vals.len());
+        for val in vals {
+            self.visit_u256(depth + 1, *val);
         }
     }
 

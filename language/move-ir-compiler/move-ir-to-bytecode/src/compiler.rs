@@ -653,8 +653,11 @@ fn compile_type(
         Type::Address => SignatureToken::Address,
         Type::Signer => SignatureToken::Signer,
         Type::U8 => SignatureToken::U8,
+        Type::U16 => SignatureToken::U16,
+        Type::U32 => SignatureToken::U32,
         Type::U64 => SignatureToken::U64,
         Type::U128 => SignatureToken::U128,
+        Type::U256 => SignatureToken::U256,
         Type::Bool => SignatureToken::Bool,
         Type::Vector(inner_type) => SignatureToken::Vector(Box::new(compile_type(
             context,
@@ -1107,12 +1110,24 @@ fn compile_expression(
                 push_instr!(exp.loc, Bytecode::LdU8(i));
                 function_frame.push()?;
             }
+            CopyableVal_::U16(i) => {
+                push_instr!(exp.loc, Bytecode::LdU16(i));
+                function_frame.push()?;
+            }
+            CopyableVal_::U32(i) => {
+                push_instr!(exp.loc, Bytecode::LdU32(i));
+                function_frame.push()?;
+            }
             CopyableVal_::U64(i) => {
                 push_instr!(exp.loc, Bytecode::LdU64(i));
                 function_frame.push()?;
             }
             CopyableVal_::U128(i) => {
                 push_instr!(exp.loc, Bytecode::LdU128(i));
+                function_frame.push()?;
+            }
+            CopyableVal_::U256(i) => {
+                push_instr!(exp.loc, Bytecode::LdU256(i));
                 function_frame.push()?;
             }
             CopyableVal_::ByteArray(buf) => {
@@ -1480,6 +1495,16 @@ fn compile_call(
                     function_frame.pop()?;
                     function_frame.push()?;
                 }
+                Builtin::ToU16 => {
+                    push_instr!(call.loc, Bytecode::CastU16);
+                    function_frame.pop()?;
+                    function_frame.push()?;
+                }
+                Builtin::ToU32 => {
+                    push_instr!(call.loc, Bytecode::CastU32);
+                    function_frame.pop()?;
+                    function_frame.push()?;
+                }
                 Builtin::ToU64 => {
                     push_instr!(call.loc, Bytecode::CastU64);
                     function_frame.pop()?;
@@ -1487,6 +1512,11 @@ fn compile_call(
                 }
                 Builtin::ToU128 => {
                     push_instr!(call.loc, Bytecode::CastU128);
+                    function_frame.pop()?;
+                    function_frame.push()?;
+                }
+                Builtin::ToU256 => {
+                    push_instr!(call.loc, Bytecode::CastU256);
                     function_frame.pop()?;
                     function_frame.push()?;
                 }
@@ -1524,8 +1554,11 @@ fn compile_constant(_context: &mut Context, ty: Type, value: MoveValue) -> Resul
             Type::Address => MoveTypeLayout::Address,
             Type::Signer => MoveTypeLayout::Signer,
             Type::U8 => MoveTypeLayout::U8,
+            Type::U16 => MoveTypeLayout::U16,
+            Type::U32 => MoveTypeLayout::U32,
             Type::U64 => MoveTypeLayout::U64,
             Type::U128 => MoveTypeLayout::U128,
+            Type::U256 => MoveTypeLayout::U256,
             Type::Bool => MoveTypeLayout::Bool,
             Type::Vector(inner_type) => MoveTypeLayout::Vector(Box::new(type_layout(*inner_type)?)),
             Type::Reference(_, _) => bail!("References are not supported in constant type layouts"),
@@ -1615,11 +1648,17 @@ fn compile_bytecode(
         IRBytecode_::BrFalse(lbl) => Bytecode::BrFalse(context.label_index(lbl)?),
         IRBytecode_::Branch(lbl) => Bytecode::Branch(context.label_index(lbl)?),
         IRBytecode_::LdU8(u) => Bytecode::LdU8(u),
+        IRBytecode_::LdU16(u) => Bytecode::LdU16(u),
+        IRBytecode_::LdU32(u) => Bytecode::LdU32(u),
         IRBytecode_::LdU64(u) => Bytecode::LdU64(u),
         IRBytecode_::LdU128(u) => Bytecode::LdU128(u),
+        IRBytecode_::LdU256(u) => Bytecode::LdU256(u),
         IRBytecode_::CastU8 => Bytecode::CastU8,
+        IRBytecode_::CastU16 => Bytecode::CastU16,
+        IRBytecode_::CastU32 => Bytecode::CastU32,
         IRBytecode_::CastU64 => Bytecode::CastU64,
         IRBytecode_::CastU128 => Bytecode::CastU128,
+        IRBytecode_::CastU256 => Bytecode::CastU256,
         IRBytecode_::LdTrue => Bytecode::LdTrue,
         IRBytecode_::LdFalse => Bytecode::LdFalse,
         IRBytecode_::LdConst(ty, v) => {

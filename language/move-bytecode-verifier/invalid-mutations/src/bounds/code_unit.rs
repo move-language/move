@@ -478,8 +478,9 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
 
                     // List out the other options explicitly so there's a compile error if a new
                     // bytecode gets added.
-                    FreezeRef | Pop | Ret | LdU8(_) | LdU64(_) | LdU128(_) | CastU8 | CastU64
-                    | CastU128 | LdTrue | LdFalse | ReadRef | WriteRef | Add | Sub | Mul | Mod
+                    FreezeRef | Pop | Ret | LdU8(_) | LdU16(_) | LdU32(_) | LdU64(_)
+                    | LdU128(_) | LdU256(_) | CastU8 | CastU16 | CastU32 | CastU64 | CastU128
+                    | CastU256 | LdTrue | LdFalse | ReadRef | WriteRef | Add | Sub | Mul | Mod
                     | Div | BitOr | BitAnd | Xor | Shl | Shr | Or | And | Not | Eq | Neq | Lt
                     | Gt | Le | Ge | Abort | Nop => {
                         panic!("Bytecode has no internal index: {:?}", code[bytecode_idx])
@@ -538,8 +539,9 @@ fn is_interesting(bytecode: &Bytecode) -> bool {
 
         // List out the other options explicitly so there's a compile error if a new
         // bytecode gets added.
-        FreezeRef | Pop | Ret | LdU8(_) | LdU64(_) | LdU128(_) | CastU8 | CastU64 | CastU128
-        | LdTrue | LdFalse | ReadRef | WriteRef | Add | Sub | Mul | Mod | Div | BitOr | BitAnd
-        | Xor | Shl | Shr | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge | Abort | Nop => false,
+        FreezeRef | Pop | Ret | LdU8(_) | LdU16(_) | LdU32(_) | LdU64(_) | LdU128(_)
+        | LdU256(_) | CastU8 | CastU16 | CastU32 | CastU64 | CastU128 | CastU256 | LdTrue
+        | LdFalse | ReadRef | WriteRef | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor
+        | Shl | Shr | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge | Abort | Nop => false,
     }
 }

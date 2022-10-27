@@ -8,7 +8,7 @@ use itertools::Itertools;
 use num::{BigInt, ToPrimitive, Zero};
 use std::{cell::Cell, collections::BTreeMap, rc::Rc};
 
-use move_core_types::account_address::AccountAddress;
+use move_core_types::{account_address::AccountAddress, u256};
 use move_model::{
     ast::{
         Exp, ExpData, LocalVarDecl, MemoryLabel, Operation, QuantKind, SpecFunDecl, TempIndex,
@@ -476,6 +476,18 @@ impl<'env> Evaluator<'env> {
                 }
                 BaseValue::mk_num(BigInt::from(u8::MAX))
             }
+            Operation::MaxU16 => {
+                if cfg!(debug_assertions) {
+                    assert!(arg_vals.is_empty());
+                }
+                BaseValue::mk_num(BigInt::from(u16::MAX))
+            }
+            Operation::MaxU32 => {
+                if cfg!(debug_assertions) {
+                    assert!(arg_vals.is_empty());
+                }
+                BaseValue::mk_num(BigInt::from(u32::MAX))
+            }
             Operation::MaxU64 => {
                 if cfg!(debug_assertions) {
                     assert!(arg_vals.is_empty());
@@ -487,6 +499,12 @@ impl<'env> Evaluator<'env> {
                     assert!(arg_vals.is_empty());
                 }
                 BaseValue::mk_num(BigInt::from(u128::MAX))
+            }
+            Operation::MaxU256 => {
+                if cfg!(debug_assertions) {
+                    assert!(arg_vals.is_empty());
+                }
+                BaseValue::mk_num(BigInt::from(&u256::U256::max_value()))
             }
             Operation::AbortFlag => {
                 if cfg!(debug_assertions) {

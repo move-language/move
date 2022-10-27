@@ -16,7 +16,7 @@
 //! serialization errors.
 
 use crate::{file_format::*, file_format_common::*};
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, metadata::Metadata,
 };
@@ -641,8 +641,11 @@ fn serialize_signature_token_single_node_impl(
     match token {
         SignatureToken::Bool => binary.push(SerializedType::BOOL as u8)?,
         SignatureToken::U8 => binary.push(SerializedType::U8 as u8)?,
+        SignatureToken::U16 => binary.push(SerializedType::U16 as u8)?,
+        SignatureToken::U32 => binary.push(SerializedType::U32 as u8)?,
         SignatureToken::U64 => binary.push(SerializedType::U64 as u8)?,
         SignatureToken::U128 => binary.push(SerializedType::U128 as u8)?,
+        SignatureToken::U256 => binary.push(SerializedType::U256 as u8)?,
         SignatureToken::Address => binary.push(SerializedType::ADDRESS as u8)?,
         SignatureToken::Signer => binary.push(SerializedType::SIGNER as u8)?,
         SignatureToken::Vector(_) => {
@@ -720,13 +723,34 @@ fn serialize_ability_sets(binary: &mut BinaryData, sets: &[AbilitySet]) -> Resul
 /// - `CodeUnit.max_stack_size` as a ULEB128
 /// - `CodeUnit.locals` as a ULEB128 (index into the `LocalSignaturePool`)
 /// - `CodeUnit.code` as variable size byte stream for the bytecode
-fn serialize_code_unit(binary: &mut BinaryData, code: &CodeUnit) -> Result<()> {
+fn serialize_code_unit(major_version: u32, binary: &mut BinaryData, code: &CodeUnit) -> Result<()> {
     serialize_signature_index(binary, &code.locals)?;
-    serialize_code(binary, &code.code)
+    serialize_code(major_version, binary, &code.code)
 }
 
 /// Serializes a single `Bytecode` instruction.
-fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Result<()> {
+fn serialize_instruction_inner(
+    major_version: u32,
+    binary: &mut BinaryData,
+    opcode: &Bytecode,
+) -> Result<()> {
+    match opcode {
+        Bytecode::LdU16(_)
+        | Bytecode::LdU32(_)
+        | Bytecode::LdU256(_)
+        | Bytecode::CastU16
+        | Bytecode::CastU32
+        | Bytecode::CastU256
+            if (major_version < VERSION_6) =>
+        {
+            return Err(anyhow!(
+                "Loading or casting u16, u32, u256 integers not supported in bytecode version {}",
+                major_version
+            ));
+        }
+        _ => (),
+    };
+
     let res = match opcode {
         Bytecode::FreezeRef => binary.push(Opcodes::FREEZE_REF as u8),
         Bytecode::Pop => binary.push(Opcodes::POP as u8),
@@ -921,16 +945,31 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
             binary.push(Opcodes::VEC_SWAP as u8)?;
             serialize_signature_index(binary, sig_idx)
         }
+        Bytecode::LdU16(value) => {
+            binary.push(Opcodes::LD_U16 as u8)?;
+            write_u16(binary, *value)
+        }
+        Bytecode::LdU32(value) => {
+            binary.push(Opcodes::LD_U32 as u8)?;
+            write_u32(binary, *value)
+        }
+        Bytecode::LdU256(value) => {
+            binary.push(Opcodes::LD_U256 as u8)?;
+            write_u256(binary, *value)
+        }
+        Bytecode::CastU16 => binary.push(Opcodes::CAST_U16 as u8),
+        Bytecode::CastU32 => binary.push(Opcodes::CAST_U32 as u8),
+        Bytecode::CastU256 => binary.push(Opcodes::CAST_U256 as u8),
     };
     res?;
     Ok(())
 }
 
 /// Serializes a `Bytecode` stream. Serialization of the function body.
-fn serialize_code(binary: &mut BinaryData, code: &[Bytecode]) -> Result<()> {
+fn serialize_code(major_version: u32, binary: &mut BinaryData, code: &[Bytecode]) -> Result<()> {
     serialize_bytecode_count(binary, code.len())?;
     for opcode in code {
-        serialize_instruction_inner(binary, opcode)?;
+        serialize_instruction_inner(major_version, binary, opcode)?;
     }
     Ok(())
 }
@@ -1202,6 +1241,10 @@ impl CommonSerializer {
         }
         Ok(())
     }
+
+    pub fn major_version(&self) -> u32 {
+        self.major_version
+    }
 }
 
 impl ModuleSerializer {
@@ -1392,7 +1435,7 @@ impl ModuleSerializer {
 
         serialize_acquires(binary, &function_definition.acquires_global_resources)?;
         if let Some(code) = &function_definition.code {
-            serialize_code_unit(binary, code)?;
+            serialize_code_unit(self.common.major_version(), binary, code)?;
         }
         Ok(())
     }
@@ -1425,7 +1468,7 @@ impl ScriptSerializer {
     fn serialize_main(&mut self, binary: &mut BinaryData, script: &CompiledScript) -> Result<()> {
         serialize_ability_sets(binary, &script.type_parameters)?;
         serialize_signature_index(binary, &script.parameters)?;
-        serialize_code_unit(binary, &script.code)?;
+        serialize_code_unit(self.common.major_version(), binary, &script.code)?;
         Ok(())
     }
 }

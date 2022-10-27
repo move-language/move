@@ -144,7 +144,12 @@ pub trait ExpGenerator<'env> {
     fn mk_builtin_num_const(&self, oper: Operation) -> Exp {
         assert!(matches!(
             oper,
-            Operation::MaxU8 | Operation::MaxU64 | Operation::MaxU128
+            Operation::MaxU8
+                | Operation::MaxU16
+                | Operation::MaxU32
+                | Operation::MaxU64
+                | Operation::MaxU128
+                | Operation::MaxU256
         ));
         self.mk_call(&NUM_TYPE, oper, vec![])
     }

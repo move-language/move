@@ -808,8 +808,11 @@ fn base_type(context: &mut Context, sp!(_, bt_): H::BaseType) -> IR::Type {
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Address))), _) => IRT::Address,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Signer))), _) => IRT::Signer,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U8))), _) => IRT::U8,
+        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U16))), _) => IRT::U16,
+        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U32))), _) => IRT::U32,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U64))), _) => IRT::U64,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U128))), _) => IRT::U128,
+        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U256))), _) => IRT::U256,
 
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Bool))), _) => IRT::Bool,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Vector))), mut args) => {
@@ -960,8 +963,11 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
         E::Value(sp!(_, v_)) => {
             let ld_value = match v_ {
                 V::U8(u) => B::LdU8(u),
+                V::U16(u) => B::LdU16(u),
+                V::U32(u) => B::LdU32(u),
                 V::U64(u) => B::LdU64(u),
                 V::U128(u) => B::LdU128(u),
+                V::U256(u) => B::LdU256(u),
                 V::Bool(b) => {
                     if b {
                         B::LdTrue
@@ -1082,9 +1088,14 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
             exp(context, code, el);
             let instr = match bt_ {
                 BT::U8 => B::CastU8,
+                BT::U16 => B::CastU16,
+                BT::U32 => B::CastU32,
                 BT::U64 => B::CastU64,
                 BT::U128 => B::CastU128,
-                _ => panic!("ICE type checking failed. unexpected cast"),
+                BT::U256 => B::CastU256,
+                BT::Address | BT::Signer | BT::Vector | BT::Bool => {
+                    panic!("ICE type checking failed. unexpected cast")
+                }
             };
             code.push(sp(loc, instr));
         }

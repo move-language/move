@@ -16,6 +16,7 @@ use crate::{
     shared::{known_attributes::AttributePosition, unique_map::UniqueMap, *},
     FullyCompiledProgram,
 };
+use move_command_line_common::parser::{parse_u16, parse_u256, parse_u32};
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
 use std::{
@@ -1987,6 +1988,20 @@ fn value(context: &mut Context, sp!(loc, pvalue_): P::Value) -> Option<E::Value>
                 return None;
             }
         },
+        PV::Num(s) if s.ends_with("u16") => match parse_u16(&s[..s.len() - 3]) {
+            Ok((u, _format)) => EV::U16(u),
+            Err(_) => {
+                context.env.add_diag(num_too_big_error(loc, "'u16'"));
+                return None;
+            }
+        },
+        PV::Num(s) if s.ends_with("u32") => match parse_u32(&s[..s.len() - 3]) {
+            Ok((u, _format)) => EV::U32(u),
+            Err(_) => {
+                context.env.add_diag(num_too_big_error(loc, "'u32'"));
+                return None;
+            }
+        },
         PV::Num(s) if s.ends_with("u64") => match parse_u64(&s[..s.len() - 3]) {
             Ok((u, _format)) => EV::U64(u),
             Err(_) => {
@@ -2001,12 +2016,20 @@ fn value(context: &mut Context, sp!(loc, pvalue_): P::Value) -> Option<E::Value>
                 return None;
             }
         },
-        PV::Num(s) => match parse_u128(&s) {
+        PV::Num(s) if s.ends_with("u256") => match parse_u256(&s[..s.len() - 4]) {
+            Ok((u, _format)) => EV::U256(u),
+            Err(_) => {
+                context.env.add_diag(num_too_big_error(loc, "'u256'"));
+                return None;
+            }
+        },
+
+        PV::Num(s) => match parse_u256(&s) {
             Ok((u, _format)) => EV::InferredNum(u),
             Err(_) => {
                 context.env.add_diag(num_too_big_error(
                     loc,
-                    "the largest possible integer type, 'u128'",
+                    "the largest possible integer type, 'u256'",
                 ));
                 return None;
             }

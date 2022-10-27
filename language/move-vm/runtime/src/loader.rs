@@ -340,8 +340,11 @@ impl ModuleCache {
         let res = match tok {
             SignatureToken::Bool => Type::Bool,
             SignatureToken::U8 => Type::U8,
+            SignatureToken::U16 => Type::U16,
+            SignatureToken::U32 => Type::U32,
             SignatureToken::U64 => Type::U64,
             SignatureToken::U128 => Type::U128,
+            SignatureToken::U256 => Type::U256,
             SignatureToken::Address => Type::Address,
             SignatureToken::Signer => Type::Signer,
             SignatureToken::TypeParameter(idx) => Type::TyParam(*idx as usize),
@@ -903,8 +906,11 @@ impl Loader {
         Ok(match type_tag {
             TypeTag::Bool => Type::Bool,
             TypeTag::U8 => Type::U8,
+            TypeTag::U16 => Type::U16,
+            TypeTag::U32 => Type::U32,
             TypeTag::U64 => Type::U64,
             TypeTag::U128 => Type::U128,
+            TypeTag::U256 => Type::U256,
             TypeTag::Address => Type::Address,
             TypeTag::Signer => Type::Signer,
             TypeTag::Vector(tt) => Type::Vector(Box::new(self.load_type(tt, data_store)?)),
@@ -1244,9 +1250,14 @@ impl Loader {
 
     pub(crate) fn abilities(&self, ty: &Type) -> PartialVMResult<AbilitySet> {
         match ty {
-            Type::Bool | Type::U8 | Type::U64 | Type::U128 | Type::Address => {
-                Ok(AbilitySet::PRIMITIVES)
-            }
+            Type::Bool
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::U128
+            | Type::U256
+            | Type::Address => Ok(AbilitySet::PRIMITIVES),
 
             // Technically unreachable but, no point in erroring if we don't have to
             Type::Reference(_) | Type::MutableReference(_) => Ok(AbilitySet::REFERENCES),
@@ -2244,8 +2255,11 @@ impl Loader {
         Ok(match ty {
             Type::Bool => TypeTag::Bool,
             Type::U8 => TypeTag::U8,
+            Type::U16 => TypeTag::U16,
+            Type::U32 => TypeTag::U32,
             Type::U64 => TypeTag::U64,
             Type::U128 => TypeTag::U128,
+            Type::U256 => TypeTag::U256,
             Type::Address => TypeTag::Address,
             Type::Signer => TypeTag::Signer,
             Type::Vector(ty) => TypeTag::Vector(Box::new(self.type_to_type_tag(ty)?)),
@@ -2307,8 +2321,11 @@ impl Loader {
         Ok(match ty {
             Type::Bool => MoveTypeLayout::Bool,
             Type::U8 => MoveTypeLayout::U8,
+            Type::U16 => MoveTypeLayout::U16,
+            Type::U32 => MoveTypeLayout::U32,
             Type::U64 => MoveTypeLayout::U64,
             Type::U128 => MoveTypeLayout::U128,
+            Type::U256 => MoveTypeLayout::U256,
             Type::Address => MoveTypeLayout::Address,
             Type::Signer => MoveTypeLayout::Signer,
             Type::Vector(ty) => {
@@ -2388,8 +2405,11 @@ impl Loader {
         Ok(match ty {
             Type::Bool => MoveTypeLayout::Bool,
             Type::U8 => MoveTypeLayout::U8,
+            Type::U16 => MoveTypeLayout::U16,
+            Type::U32 => MoveTypeLayout::U32,
             Type::U64 => MoveTypeLayout::U64,
             Type::U128 => MoveTypeLayout::U128,
+            Type::U256 => MoveTypeLayout::U256,
             Type::Address => MoveTypeLayout::Address,
             Type::Signer => MoveTypeLayout::Signer,
             Type::Vector(ty) => MoveTypeLayout::Vector(Box::new(

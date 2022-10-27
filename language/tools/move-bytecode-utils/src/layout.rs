@@ -25,6 +25,9 @@ const ADDRESS: &str = "AccountAddress";
 /// Name of the Move `signer` type in the serde registry
 const SIGNER: &str = "Signer";
 
+/// Name of the Move `u256` type in the serde registry
+const U256_SERDE_NAME: &str = "u256";
+
 /// Type for building a registry of serde-reflection friendly struct layouts for Move types.
 /// The layouts created by this type are intended to be passed to the serde-generate tool to create
 /// struct bindings for Move types in source languages that use Move-based services.
@@ -115,8 +118,11 @@ impl<T: GetModule> SerdeLayoutBuilder<T> {
         Ok(match t {
             Bool => Format::Bool,
             U8 => Format::U8,
+            U16 => Format::U16,
+            U32 => Format::U32,
             U64 => Format::U64,
             U128 => Format::U128,
+            U256 => Format::TypeName(U256_SERDE_NAME.to_string()),
             Address => Format::TypeName(ADDRESS.to_string()),
             Signer => Format::TypeName(SIGNER.to_string()),
             Struct {
@@ -206,6 +212,8 @@ impl<T: GetModule> SerdeLayoutBuilder<T> {
             Format::TypeName(s) => s.to_string(),
             Format::Bool => "bool".to_string(),
             Format::U8 => "u8".to_string(),
+            Format::U16 => "u16".to_string(),
+            Format::U32 => "u32".to_string(),
             Format::U64 => "u64".to_string(),
             Format::U128 => "u128".to_string(),
             Format::Bytes => "vector<u8>".to_string(),
@@ -256,8 +264,11 @@ impl TypeLayoutBuilder {
         Ok(match t {
             Bool => MoveTypeLayout::Bool,
             U8 => MoveTypeLayout::U8,
+            U16 => MoveTypeLayout::U16,
+            U32 => MoveTypeLayout::U32,
             U64 => MoveTypeLayout::U64,
             U128 => MoveTypeLayout::U128,
+            U256 => MoveTypeLayout::U256,
             Address => MoveTypeLayout::Address,
             Signer => bail!("Type layouts cannot contain signer"),
             Vector(elem_t) => {
@@ -316,8 +327,11 @@ impl TypeLayoutBuilder {
             TypeParameter(i) => type_arguments[*i as usize].clone(),
             Bool => MoveTypeLayout::Bool,
             U8 => MoveTypeLayout::U8,
+            U16 => MoveTypeLayout::U16,
+            U32 => MoveTypeLayout::U32,
             U64 => MoveTypeLayout::U64,
             U128 => MoveTypeLayout::U128,
+            U256 => MoveTypeLayout::U256,
             Address => MoveTypeLayout::Address,
             Signer => bail!("Type layouts cannot contain signer"),
             Reference(_) | MutableReference(_) => bail!("Type layouts cannot contain references"),

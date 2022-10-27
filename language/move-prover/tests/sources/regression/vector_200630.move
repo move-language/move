@@ -15,7 +15,7 @@ module 0x42::TestVector {
 
         *int_ref = 42;
         spec {
-            assert 42 == v[i].x;
+            assert 42u64 == v[i].x;
         };
         true
     }

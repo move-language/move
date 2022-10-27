@@ -839,10 +839,16 @@ pub enum SignatureToken {
     Bool,
     /// Unsigned integers, 8 bits length.
     U8,
+    /// Unsigned integers, 16 bits length.
+    U16,
+    /// Unsigned integers, 32 bits length.
+    U32,
     /// Unsigned integers, 64 bits length.
     U64,
     /// Unsigned integers, 128 bits length.
     U128,
+    /// Unsigned integers, 256 bits length.
+    U256,
     /// Address, a 16 bytes immutable type.
     Address,
     /// Signer, a 16 bytes immutable type representing the capability to publish at an address
@@ -885,7 +891,8 @@ impl<'a> Iterator for SignatureTokenPreorderTraversalIter<'a> {
                         self.stack.extend(inner_toks.iter().rev())
                     }
 
-                    Signer | Bool | Address | U8 | U64 | U128 | Struct(_) | TypeParameter(_) => (),
+                    Signer | Bool | Address | U8 | U16 | U32 | U64 | U128 | U256 | Struct(_)
+                    | TypeParameter(_) => (),
                 }
                 Some(tok)
             }
@@ -917,7 +924,8 @@ impl<'a> Iterator for SignatureTokenPreorderTraversalIterWithDepth<'a> {
                         .stack
                         .extend(inner_toks.iter().map(|tok| (tok, depth + 1)).rev()),
 
-                    Signer | Bool | Address | U8 | U64 | U128 | Struct(_) | TypeParameter(_) => (),
+                    Signer | Bool | Address | U8 | U16 | U32 | U64 | U128 | U256 | Struct(_)
+                    | TypeParameter(_) => (),
                 }
                 Some((tok, depth))
             }
@@ -938,8 +946,11 @@ impl Arbitrary for SignatureToken {
         let leaf = prop_oneof![
             Just(Bool),
             Just(U8),
+            Just(U16),
+            Just(U32),
             Just(U64),
             Just(U128),
+            Just(U256),
             Just(Address),
             any::<StructHandleIndex>().prop_map(Struct),
             any::<TypeParameterIndex>().prop_map(TypeParameter),
@@ -965,8 +976,11 @@ impl std::fmt::Debug for SignatureToken {
         match self {
             SignatureToken::Bool => write!(f, "Bool"),
             SignatureToken::U8 => write!(f, "U8"),
+            SignatureToken::U16 => write!(f, "U16"),
+            SignatureToken::U32 => write!(f, "U32"),
             SignatureToken::U64 => write!(f, "U64"),
             SignatureToken::U128 => write!(f, "U128"),
+            SignatureToken::U256 => write!(f, "U256"),
             SignatureToken::Address => write!(f, "Address"),
             SignatureToken::Signer => write!(f, "Signer"),
             SignatureToken::Vector(boxed) => write!(f, "Vector({:?})", boxed),
@@ -994,8 +1008,11 @@ impl SignatureToken {
             MutableReference(_) => SignatureTokenKind::MutableReference,
             Bool
             | U8
+            | U16
+            | U32
             | U64
             | U128
+            | U256
             | Address
             | Signer
             | Struct(_)
@@ -1011,7 +1028,7 @@ impl SignatureToken {
     pub fn is_integer(&self) -> bool {
         use SignatureToken::*;
         match self {
-            U8 | U64 | U128 => true,
+            U8 | U16 | U32 | U64 | U128 | U256 => true,
             Bool
             | Address
             | Signer
@@ -1051,7 +1068,7 @@ impl SignatureToken {
         use SignatureToken::*;
 
         match self {
-            Bool | U8 | U64 | U128 | Address => true,
+            Bool | U8 | U16 | U32 | U64 | U128 | U256 | Address => true,
             Vector(inner) => inner.is_valid_for_constant(),
             Signer
             | Struct(_)
@@ -1167,6 +1184,18 @@ pub enum Bytecode {
     ///
     /// ```... -> ..., u8_value```
     LdU8(u8),
+    /// Push a U16 constant onto the stack.
+    ///
+    /// Stack transition:
+    ///
+    /// ```... -> ..., u16_value```
+    LdU16(u16),
+    /// Push a U32 constant onto the stack.
+    ///
+    /// Stack transition:
+    ///
+    /// ```... -> ..., u32_value```
+    LdU32(u32),
     /// Push a U64 constant onto the stack.
     ///
     /// Stack transition:
@@ -1179,12 +1208,30 @@ pub enum Bytecode {
     ///
     /// ```... -> ..., u128_value```
     LdU128(u128),
+    /// Push a U256 constant onto the stack.
+    ///
+    /// Stack transition:
+    ///
+    /// ```... -> ..., u256_value```
+    LdU256(move_core_types::u256::U256),
     /// Convert the value at the top of the stack into u8.
     ///
     /// Stack transition:
     ///
     /// ```..., integer_value -> ..., u8_value```
     CastU8,
+    /// Convert the value at the top of the stack into u16.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., integer_value -> ..., u16_value```
+    CastU16,
+    /// Convert the value at the top of the stack into u32.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., integer_value -> ..., u32_value```
+    CastU32,
     /// Convert the value at the top of the stack into u64.
     ///
     /// Stack transition:
@@ -1197,6 +1244,12 @@ pub enum Bytecode {
     ///
     /// ```..., integer_value -> ..., u128_value```
     CastU128,
+    /// Convert the value at the top of the stack into u256.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., integer_value -> ..., u256_value```
+    CastU256,
     /// Push a `Constant` onto the stack. The value is loaded and deserialized (according to its
     /// type) from the the `ConstantPool` via `ConstantPoolIndex`
     ///
@@ -1589,11 +1642,17 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::BrFalse(a) => write!(f, "BrFalse({})", a),
             Bytecode::Branch(a) => write!(f, "Branch({})", a),
             Bytecode::LdU8(a) => write!(f, "LdU8({})", a),
+            Bytecode::LdU16(a) => write!(f, "LdU16({})", a),
+            Bytecode::LdU32(a) => write!(f, "LdU32({})", a),
             Bytecode::LdU64(a) => write!(f, "LdU64({})", a),
             Bytecode::LdU128(a) => write!(f, "LdU128({})", a),
+            Bytecode::LdU256(a) => write!(f, "LdU256({})", a),
             Bytecode::CastU8 => write!(f, "CastU8"),
+            Bytecode::CastU16 => write!(f, "CastU16"),
+            Bytecode::CastU32 => write!(f, "CastU32"),
             Bytecode::CastU64 => write!(f, "CastU64"),
             Bytecode::CastU128 => write!(f, "CastU128"),
+            Bytecode::CastU256 => write!(f, "CastU256"),
             Bytecode::LdConst(a) => write!(f, "LdConst({})", a),
             Bytecode::LdTrue => write!(f, "LdTrue"),
             Bytecode::LdFalse => write!(f, "LdFalse"),

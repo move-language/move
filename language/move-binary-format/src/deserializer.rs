@@ -57,6 +57,22 @@ impl Table {
     }
 }
 
+fn read_u16_internal(cursor: &mut VersionedCursor) -> BinaryLoaderResult<u16> {
+    let mut u16_bytes = [0; 2];
+    cursor
+        .read_exact(&mut u16_bytes)
+        .map_err(|_| PartialVMError::new(StatusCode::BAD_U16))?;
+    Ok(u16::from_le_bytes(u16_bytes))
+}
+
+fn read_u32_internal(cursor: &mut VersionedCursor) -> BinaryLoaderResult<u32> {
+    let mut u32_bytes = [0; 4];
+    cursor
+        .read_exact(&mut u32_bytes)
+        .map_err(|_| PartialVMError::new(StatusCode::BAD_U32))?;
+    Ok(u32::from_le_bytes(u32_bytes))
+}
+
 fn read_u64_internal(cursor: &mut VersionedCursor) -> BinaryLoaderResult<u64> {
     let mut u64_bytes = [0; 8];
     cursor
@@ -71,6 +87,16 @@ fn read_u128_internal(cursor: &mut VersionedCursor) -> BinaryLoaderResult<u128> 
         .read_exact(&mut u128_bytes)
         .map_err(|_| PartialVMError::new(StatusCode::BAD_U128))?;
     Ok(u128::from_le_bytes(u128_bytes))
+}
+
+fn read_u256_internal(
+    cursor: &mut VersionedCursor,
+) -> BinaryLoaderResult<move_core_types::u256::U256> {
+    let mut u256_bytes = [0; 32];
+    cursor
+        .read_exact(&mut u256_bytes)
+        .map_err(|_| PartialVMError::new(StatusCode::BAD_U256))?;
+    Ok(move_core_types::u256::U256::from_le_bytes(&u256_bytes))
 }
 
 //
@@ -971,11 +997,26 @@ fn load_signature_token(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Sign
 
     let mut read_next = || {
         if let Ok(byte) = cursor.read_u8() {
+            match S::from_u8(byte)? {
+                S::U16 | S::U32 | S::U256 if (cursor.version() < VERSION_6) => {
+                    return Err(
+                        PartialVMError::new(StatusCode::MALFORMED).with_message(format!(
+                            "u16, u32, u256 integers not supported in bytecode version {}",
+                            cursor.version()
+                        )),
+                    );
+                }
+                _ => (),
+            };
+
             Ok(match S::from_u8(byte)? {
                 S::BOOL => T::Saturated(SignatureToken::Bool),
                 S::U8 => T::Saturated(SignatureToken::U8),
+                S::U16 => T::Saturated(SignatureToken::U16),
+                S::U32 => T::Saturated(SignatureToken::U32),
                 S::U64 => T::Saturated(SignatureToken::U64),
                 S::U128 => T::Saturated(SignatureToken::U128),
+                S::U256 => T::Saturated(SignatureToken::U256),
                 S::ADDRESS => T::Saturated(SignatureToken::Address),
                 S::SIGNER => T::Saturated(SignatureToken::Signer),
                 S::VECTOR => T::Vector,
@@ -1382,6 +1423,26 @@ fn load_code(cursor: &mut VersionedCursor, code: &mut Vec<Bytecode>) -> BinaryLo
             }
             _ => {}
         };
+
+        match opcode {
+            Opcodes::LD_U16
+            | Opcodes::LD_U32
+            | Opcodes::LD_U256
+            | Opcodes::CAST_U16
+            | Opcodes::CAST_U32
+            | Opcodes::CAST_U256
+                if (cursor.version() < VERSION_6) =>
+            {
+                return Err(
+                    PartialVMError::new(StatusCode::MALFORMED).with_message(format!(
+                        "Loading or casting u16, u32, u256 integers not supported in bytecode version {}",
+                        cursor.version()
+                    )),
+                );
+            }
+            _ => (),
+        };
+
         // conversion
         let bytecode = match opcode {
             Opcodes::POP => Bytecode::Pop,
@@ -1483,6 +1544,21 @@ fn load_code(cursor: &mut VersionedCursor, code: &mut Vec<Bytecode>) -> BinaryLo
                 Bytecode::VecUnpack(load_signature_index(cursor)?, read_u64_internal(cursor)?)
             }
             Opcodes::VEC_SWAP => Bytecode::VecSwap(load_signature_index(cursor)?),
+            Opcodes::LD_U16 => {
+                let value = read_u16_internal(cursor)?;
+                Bytecode::LdU16(value)
+            }
+            Opcodes::LD_U32 => {
+                let value = read_u32_internal(cursor)?;
+                Bytecode::LdU32(value)
+            }
+            Opcodes::LD_U256 => {
+                let value = read_u256_internal(cursor)?;
+                Bytecode::LdU256(value)
+            }
+            Opcodes::CAST_U16 => Bytecode::CastU16,
+            Opcodes::CAST_U32 => Bytecode::CastU32,
+            Opcodes::CAST_U256 => Bytecode::CastU256,
         };
         code.push(bytecode);
     }
@@ -1527,6 +1603,9 @@ impl SerializedType {
             0xA => Ok(SerializedType::VECTOR),
             0xB => Ok(SerializedType::STRUCT_INST),
             0xC => Ok(SerializedType::SIGNER),
+            0xD => Ok(SerializedType::U16),
+            0xE => Ok(SerializedType::U32),
+            0xF => Ok(SerializedType::U256),
             _ => Err(PartialVMError::new(StatusCode::UNKNOWN_SERIALIZED_TYPE)),
         }
     }
@@ -1654,6 +1733,12 @@ impl Opcodes {
             0x45 => Ok(Opcodes::VEC_POP_BACK),
             0x46 => Ok(Opcodes::VEC_UNPACK),
             0x47 => Ok(Opcodes::VEC_SWAP),
+            0x48 => Ok(Opcodes::LD_U16),
+            0x49 => Ok(Opcodes::LD_U32),
+            0x4A => Ok(Opcodes::LD_U256),
+            0x4B => Ok(Opcodes::CAST_U16),
+            0x4C => Ok(Opcodes::CAST_U32),
+            0x4D => Ok(Opcodes::CAST_U256),
             _ => Err(PartialVMError::new(StatusCode::UNKNOWN_OPCODE)),
         }
     }

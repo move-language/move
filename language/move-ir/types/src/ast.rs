@@ -181,10 +181,16 @@ pub enum Type {
     Signer,
     /// `u8`
     U8,
+    /// `u16`
+    U16,
+    /// `u32`
+    U32,
     /// `u64`
     U64,
     /// `u128`
     U128,
+    /// `u256`
+    U256,
     /// `bool`
     Bool,
     /// `vector`
@@ -429,10 +435,16 @@ pub enum Builtin {
 
     /// Cast an integer into u8.
     ToU8,
+    /// Cast an integer into u16.
+    ToU16,
+    /// Cast an integer into u32.
+    ToU32,
     /// Cast an integer into u64.
     ToU64,
     /// Cast an integer into u128.
     ToU128,
+    /// Cast an integer into u256.
+    ToU256,
 }
 
 /// Enum for different function calls
@@ -512,10 +524,16 @@ pub enum CopyableVal_ {
     Address(AccountAddress),
     /// An unsigned 8-bit integer
     U8(u8),
+    /// An unsigned 16-bit integer
+    U16(u16),
+    /// An unsigned 32-bit integer
+    U32(u32),
     /// An unsigned 64-bit integer
     U64(u64),
     /// An unsigned 128-bit integer
     U128(u128),
+    /// An unsigned 256-bit integer
+    U256(move_core_types::u256::U256),
     /// true or false
     Bool(bool),
     /// `b"<bytes>"`
@@ -647,11 +665,17 @@ pub enum Bytecode_ {
     BrFalse(BlockLabel_),
     Branch(BlockLabel_),
     LdU8(u8),
+    LdU16(u16),
+    LdU32(u32),
     LdU64(u64),
     LdU128(u128),
+    LdU256(move_core_types::u256::U256),
     CastU8,
+    CastU16,
+    CastU32,
     CastU64,
     CastU128,
+    CastU256,
     LdTrue,
     LdFalse,
     LdConst(Type, MoveValue),
@@ -1442,8 +1466,11 @@ impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Type::U8 => write!(f, "u8"),
+            Type::U16 => write!(f, "u16"),
+            Type::U32 => write!(f, "u32"),
             Type::U64 => write!(f, "u64"),
             Type::U128 => write!(f, "u128"),
+            Type::U256 => write!(f, "u256"),
             Type::Bool => write!(f, "bool"),
             Type::Address => write!(f, "address"),
             Type::Signer => write!(f, "signer"),
@@ -1491,8 +1518,11 @@ impl fmt::Display for Builtin {
             Builtin::VecSwap(tys) => write!(f, "vec_swap{}", format_type_actuals(tys)),
             Builtin::Freeze => write!(f, "freeze"),
             Builtin::ToU8 => write!(f, "to_u8"),
+            Builtin::ToU16 => write!(f, "to_u16"),
+            Builtin::ToU32 => write!(f, "to_u32"),
             Builtin::ToU64 => write!(f, "to_u64"),
             Builtin::ToU128 => write!(f, "to_u128"),
+            Builtin::ToU256 => write!(f, "to_u256"),
         }
     }
 }
@@ -1575,8 +1605,11 @@ impl fmt::Display for CopyableVal_ {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CopyableVal_::U8(v) => write!(f, "{}u8", v),
+            CopyableVal_::U16(v) => write!(f, "{}u16", v),
+            CopyableVal_::U32(v) => write!(f, "{}u32", v),
             CopyableVal_::U64(v) => write!(f, "{}", v),
             CopyableVal_::U128(v) => write!(f, "{}u128", v),
+            CopyableVal_::U256(v) => write!(f, "{}u256", v),
             CopyableVal_::Bool(v) => write!(f, "{}", v),
             CopyableVal_::ByteArray(v) => write!(f, "0b{}", hex::encode(v)),
             CopyableVal_::Address(v) => write!(f, "0x{}", hex::encode(v)),
@@ -1686,11 +1719,17 @@ impl fmt::Display for Bytecode_ {
             Bytecode_::BrFalse(lbl) => write!(f, "BrFalse {}", &lbl.0),
             Bytecode_::Branch(lbl) => write!(f, "Branch {}", &lbl.0),
             Bytecode_::LdU8(u) => write!(f, "LdU8 {}", u),
+            Bytecode_::LdU16(u) => write!(f, "LdU16 {}", u),
+            Bytecode_::LdU32(u) => write!(f, "LdU32 {}", u),
             Bytecode_::LdU64(u) => write!(f, "LdU64 {}", u),
             Bytecode_::LdU128(u) => write!(f, "LdU128 {}", u),
+            Bytecode_::LdU256(u) => write!(f, "LdU256 {}", u),
             Bytecode_::CastU8 => write!(f, "CastU8"),
+            Bytecode_::CastU16 => write!(f, "CastU16"),
+            Bytecode_::CastU32 => write!(f, "CastU32"),
             Bytecode_::CastU64 => write!(f, "CastU64"),
             Bytecode_::CastU128 => write!(f, "CastU128"),
+            Bytecode_::CastU256 => write!(f, "CastU256"),
             Bytecode_::LdTrue => write!(f, "LdTrue"),
             Bytecode_::LdFalse => write!(f, "LdFalse"),
             Bytecode_::LdConst(ty, v) => write!(f, "LdConst<{}> {}", ty, format_move_value(v)),
@@ -1780,5 +1819,8 @@ fn format_move_value(v: &MoveValue) -> String {
         MoveValue::Struct(_) | MoveValue::Signer(_) => {
             panic!("Should be inexpressible as a constant")
         }
+        MoveValue::U16(u) => format!("{}u16", u),
+        MoveValue::U32(u) => format!("{}u32", u),
+        MoveValue::U256(u) => format!("{}u256", u),
     }
 }

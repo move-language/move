@@ -34,8 +34,11 @@ pub struct ParsedStructType {
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub enum ParsedType {
     U8,
+    U16,
+    U32,
     U64,
     U128,
+    U256,
     Bool,
     Address,
     Signer,
@@ -141,8 +144,11 @@ impl ParsedType {
     ) -> anyhow::Result<TypeTag> {
         Ok(match self {
             ParsedType::U8 => TypeTag::U8,
+            ParsedType::U16 => TypeTag::U16,
+            ParsedType::U32 => TypeTag::U32,
             ParsedType::U64 => TypeTag::U64,
             ParsedType::U128 => TypeTag::U128,
+            ParsedType::U256 => TypeTag::U256,
             ParsedType::Bool => TypeTag::Bool,
             ParsedType::Address => TypeTag::Address,
             ParsedType::Signer => TypeTag::Signer,

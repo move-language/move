@@ -7,6 +7,10 @@ use crate::{
     test_reporter::{FailureReason, TestFailure, TestResults, TestRunInfo, TestStatistics},
 };
 use anyhow::Result;
+use codespan_reporting::{
+    diagnostic::Severity,
+    term::termcolor::{ColorChoice, StandardStream},
+};
 use colored::*;
 
 use move_binary_format::{errors::VMResult, file_format::CompiledModule};
@@ -396,6 +400,8 @@ impl SharedTestingConfig {
             .unwrap_or_else(|e| panic!("Unable to build stackless bytecode: {}", e));
 
             if model.has_errors() {
+                let mut stderr = StandardStream::stderr(ColorChoice::Always);
+                model.report_diag(&mut stderr, Severity::Error);
                 panic!("Move model has errors");
             }
 

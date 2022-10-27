@@ -307,7 +307,7 @@ impl ResolvingGraph {
                     other.unify(addr_opt).with_context(|| {
                         format!(
                             "Unable to resolve named address '{}' in \
-                                package '{}' when resolving dependencies",
+                             package '{}' when resolving dependencies",
                             name, package_name
                         )
                     })?;

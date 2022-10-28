@@ -12,7 +12,7 @@ use crate::{
 };
 use move_binary_format::{
     access::ModuleAccess,
-    compatibility::{Compatibility, CompatibilityConfig},
+    compatibility::Compatibility,
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::LocalIndex,
     normalized, CompiledModule, IndexKind,
@@ -72,7 +72,7 @@ impl VMRuntime {
         sender: AccountAddress,
         data_store: &mut impl DataStore,
         _gas_meter: &mut impl GasMeter,
-        compat_config: CompatibilityConfig,
+        compat: Compatibility,
     ) -> VMResult<()> {
         // deserialize the modules. Perform bounds check. After this indexes can be
         // used with the `[]` operator
@@ -113,28 +113,14 @@ impl VMRuntime {
         for module in &compiled_modules {
             let module_id = module.self_id();
 
-            if data_store.exists_module(&module_id)? && compat_config.need_check_compat() {
+            if data_store.exists_module(&module_id)? && compat.need_check_compat() {
                 let old_module_ref = self.loader.load_module(&module_id, data_store)?;
                 let old_module = old_module_ref.module();
                 let old_m = normalized::Module::new(old_module);
                 let new_m = normalized::Module::new(module);
-                let compat =
-                    Compatibility::check(compat_config.check_friend_linking, &old_m, &new_m);
-
-                if compat_config.check_struct_and_function_linking
-                    && !compat.struct_and_function_linking
-                {
-                    return Err(PartialVMError::new(
-                        StatusCode::BACKWARD_INCOMPATIBLE_MODULE_UPDATE,
-                    )
-                    .finish(Location::Undefined));
-                }
-                if compat_config.check_struct_layout && !compat.struct_layout {
-                    return Err(PartialVMError::new(
-                        StatusCode::BACKWARD_INCOMPATIBLE_MODULE_UPDATE,
-                    )
-                    .finish(Location::Undefined));
-                }
+                compat
+                    .check(&old_m, &new_m)
+                    .map_err(|e| e.finish(Location::Undefined))?;
             }
             if !bundle_unverified.insert(module_id) {
                 return Err(PartialVMError::new(StatusCode::DUPLICATE_MODULE_NAME)

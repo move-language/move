@@ -68,23 +68,12 @@ fn mk_module(vis: u8) -> normalized::Module {
     normalized::Module::new(&m)
 }
 
-const NON_COMPATIBLE: Compatibility = Compatibility {
-    struct_and_function_linking: false,
-    struct_layout: true,
-};
-
-const COMPATIBLE: Compatibility = Compatibility {
-    struct_and_function_linking: true,
-    struct_layout: true,
-};
-
 #[test]
 fn deprecated_unchanged_script_visibility() {
     let script_module = mk_module(Visibility::DEPRECATED_SCRIPT);
-    assert_eq!(
-        Compatibility::check(true, &script_module, &script_module,),
-        COMPATIBLE
-    );
+    assert!(Compatibility::full_check()
+        .check(&script_module, &script_module)
+        .is_ok(),);
 }
 
 #[test]
@@ -92,22 +81,19 @@ fn deprecated_remove_script_visibility() {
     let script_module = mk_module(Visibility::DEPRECATED_SCRIPT);
     // script -> private, not allowed
     let private_module = mk_module(Visibility::Private as u8);
-    assert_eq!(
-        Compatibility::check(true, &script_module, &private_module),
-        NON_COMPATIBLE
-    );
+    assert!(Compatibility::full_check()
+        .check(&script_module, &private_module)
+        .is_err());
     // script -> public, not allowed
     let public_module = mk_module(Visibility::Public as u8);
-    assert_eq!(
-        Compatibility::check(true, &script_module, &public_module),
-        NON_COMPATIBLE
-    );
+    assert!(Compatibility::full_check()
+        .check(&script_module, &public_module)
+        .is_err());
     // script -> friend, not allowed
     let friend_module = mk_module(Visibility::Friend as u8);
-    assert_eq!(
-        Compatibility::check(true, &script_module, &friend_module),
-        NON_COMPATIBLE
-    );
+    assert!(Compatibility::full_check()
+        .check(&script_module, &friend_module)
+        .is_err());
 }
 
 #[test]
@@ -115,20 +101,17 @@ fn deprecated_add_script_visibility() {
     let script_module = mk_module(Visibility::DEPRECATED_SCRIPT);
     // private -> script, allowed
     let private_module = mk_module(Visibility::Private as u8);
-    assert_eq!(
-        Compatibility::check(true, &private_module, &script_module,),
-        COMPATIBLE
-    );
+    assert!(Compatibility::full_check()
+        .check(&private_module, &script_module)
+        .is_ok());
     // public -> script, not allowed
     let public_module = mk_module(Visibility::Public as u8);
-    assert_eq!(
-        Compatibility::check(true, &public_module, &script_module),
-        NON_COMPATIBLE
-    );
+    assert!(Compatibility::full_check()
+        .check(&public_module, &script_module)
+        .is_err());
     // friend -> script, not allowed
     let friend_module = mk_module(Visibility::Friend as u8);
-    assert_eq!(
-        Compatibility::check(true, &friend_module, &script_module),
-        NON_COMPATIBLE
-    );
+    assert!(Compatibility::full_check()
+        .check(&friend_module, &script_module)
+        .is_err());
 }

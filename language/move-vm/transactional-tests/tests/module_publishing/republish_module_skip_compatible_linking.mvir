@@ -46,7 +46,7 @@ module 0x44.C {
 //# run 0x44::C::m
 
 
-//# publish --skip-check-struct-and-function-linking
+//# publish --skip-check-struct-and-pub-function-linking
 module 0x42.A {
   struct A has store,drop {
         f: u64,

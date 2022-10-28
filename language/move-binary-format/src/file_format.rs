@@ -839,16 +839,10 @@ pub enum SignatureToken {
     Bool,
     /// Unsigned integers, 8 bits length.
     U8,
-    /// Unsigned integers, 16 bits length.
-    U16,
-    /// Unsigned integers, 32 bits length.
-    U32,
     /// Unsigned integers, 64 bits length.
     U64,
     /// Unsigned integers, 128 bits length.
     U128,
-    /// Unsigned integers, 256 bits length.
-    U256,
     /// Address, a 16 bytes immutable type.
     Address,
     /// Signer, a 16 bytes immutable type representing the capability to publish at an address
@@ -864,6 +858,12 @@ pub enum SignatureToken {
     MutableReference(Box<SignatureToken>),
     /// Type parameter.
     TypeParameter(TypeParameterIndex),
+    /// Unsigned integers, 16 bits length.
+    U16,
+    /// Unsigned integers, 32 bits length.
+    U32,
+    /// Unsigned integers, 256 bits length.
+    U256,
 }
 
 /// An iterator to help traverse the `SignatureToken` in a non-recursive fashion to avoid
@@ -1184,18 +1184,6 @@ pub enum Bytecode {
     ///
     /// ```... -> ..., u8_value```
     LdU8(u8),
-    /// Push a U16 constant onto the stack.
-    ///
-    /// Stack transition:
-    ///
-    /// ```... -> ..., u16_value```
-    LdU16(u16),
-    /// Push a U32 constant onto the stack.
-    ///
-    /// Stack transition:
-    ///
-    /// ```... -> ..., u32_value```
-    LdU32(u32),
     /// Push a U64 constant onto the stack.
     ///
     /// Stack transition:
@@ -1208,30 +1196,12 @@ pub enum Bytecode {
     ///
     /// ```... -> ..., u128_value```
     LdU128(u128),
-    /// Push a U256 constant onto the stack.
-    ///
-    /// Stack transition:
-    ///
-    /// ```... -> ..., u256_value```
-    LdU256(move_core_types::u256::U256),
     /// Convert the value at the top of the stack into u8.
     ///
     /// Stack transition:
     ///
     /// ```..., integer_value -> ..., u8_value```
     CastU8,
-    /// Convert the value at the top of the stack into u16.
-    ///
-    /// Stack transition:
-    ///
-    /// ```..., integer_value -> ..., u16_value```
-    CastU16,
-    /// Convert the value at the top of the stack into u32.
-    ///
-    /// Stack transition:
-    ///
-    /// ```..., integer_value -> ..., u32_value```
-    CastU32,
     /// Convert the value at the top of the stack into u64.
     ///
     /// Stack transition:
@@ -1244,12 +1214,6 @@ pub enum Bytecode {
     ///
     /// ```..., integer_value -> ..., u128_value```
     CastU128,
-    /// Convert the value at the top of the stack into u256.
-    ///
-    /// Stack transition:
-    ///
-    /// ```..., integer_value -> ..., u256_value```
-    CastU256,
     /// Push a `Constant` onto the stack. The value is loaded and deserialized (according to its
     /// type) from the the `ConstantPool` via `ConstantPoolIndex`
     ///
@@ -1631,6 +1595,42 @@ pub enum Bytecode {
     ///
     /// ```..., vector_reference, u64_value(1), u64_value(2) -> ...```
     VecSwap(SignatureIndex),
+    /// Push a U16 constant onto the stack.
+    ///
+    /// Stack transition:
+    ///
+    /// ```... -> ..., u16_value```
+    LdU16(u16),
+    /// Push a U32 constant onto the stack.
+    ///
+    /// Stack transition:
+    ///
+    /// ```... -> ..., u32_value```
+    LdU32(u32),
+    /// Push a U256 constant onto the stack.
+    ///
+    /// Stack transition:
+    ///
+    /// ```... -> ..., u256_value```
+    LdU256(move_core_types::u256::U256),
+    /// Convert the value at the top of the stack into u16.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., integer_value -> ..., u16_value```
+    CastU16,
+    /// Convert the value at the top of the stack into u32.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., integer_value -> ..., u32_value```
+    CastU32,
+    /// Convert the value at the top of the stack into u256.
+    ///
+    /// Stack transition:
+    ///
+    /// ```..., integer_value -> ..., u256_value```
+    CastU256,
 }
 
 impl ::std::fmt::Debug for Bytecode {

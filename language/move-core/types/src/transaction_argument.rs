@@ -10,14 +10,15 @@ use std::{convert::TryFrom, fmt};
 #[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub enum TransactionArgument {
     U8(u8),
-    U16(u16),
-    U32(u32),
     U64(u64),
     U128(u128),
-    U256(u256::U256),
     Address(AccountAddress),
     U8Vector(#[serde(with = "serde_bytes")] Vec<u8>),
     Bool(bool),
+    // NOTE: Added in bytecode version v6, do not reorder!
+    U16(u16),
+    U32(u32),
+    U256(u256::U256),
 }
 
 impl fmt::Debug for TransactionArgument {

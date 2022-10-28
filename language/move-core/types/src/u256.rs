@@ -96,6 +96,18 @@ impl fmt::Display for U256 {
     }
 }
 
+impl fmt::UpperHex for U256 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::UpperHex::fmt(&self.0, f)
+    }
+}
+
+impl fmt::LowerHex for U256 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::LowerHex::fmt(&self.0, f)
+    }
+}
+
 impl std::str::FromStr for U256 {
     type Err = U256FromStrError;
 

@@ -37,10 +37,11 @@ pub type CodeOffset = u16;
 pub enum IntType {
     Num,
     U8,
-    U16,
-    U32,
     U64,
     U128,
+    // NOTE: Added in bytecode version v6, do not reorder!
+    U16,
+    U32,
     U256,
 }
 

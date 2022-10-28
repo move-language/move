@@ -56,11 +56,8 @@ pub(crate) struct FatStructType {
 pub(crate) enum FatType {
     Bool,
     U8,
-    U16,
-    U32,
     U64,
     U128,
-    U256,
     Address,
     Signer,
     Vector(Box<FatType>),
@@ -68,6 +65,10 @@ pub(crate) enum FatType {
     Reference(Box<FatType>),
     MutableReference(Box<FatType>),
     TyParam(usize),
+    // NOTE: Added in bytecode version v6, do not reorder!
+    U16,
+    U32,
+    U256,
 }
 
 impl FatStructType {

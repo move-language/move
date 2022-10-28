@@ -41,8 +41,11 @@ enum ValueImpl {
     Invalid,
 
     U8(u8),
+    U16(u16),
+    U32(u32),
     U64(u64),
     U128(u128),
+    U256(u256::U256),
     Bool(bool),
     Address(AccountAddress),
 
@@ -50,10 +53,6 @@ enum ValueImpl {
 
     ContainerRef(ContainerRef),
     IndexedRef(IndexedRef),
-
-    U16(u16),
-    U32(u32),
-    U256(u256::U256),
 }
 
 /// A container is a collection of values. It is used to represent data structures like a
@@ -140,10 +139,10 @@ pub struct Value(ValueImpl);
 #[derive(Debug)]
 pub enum IntegerValue {
     U8(u8),
-    U64(u64),
-    U128(u128),
     U16(u16),
     U32(u32),
+    U64(u64),
+    U128(u128),
     U256(u256::U256),
 }
 

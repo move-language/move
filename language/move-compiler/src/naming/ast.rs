@@ -148,12 +148,12 @@ pub enum BuiltinTypeName_ {
     U64,
     // u128
     U128,
+    // u256
+    U256,
     // Vector
     Vector,
     // bool
     Bool,
-    // u256
-    U256,
 }
 pub type BuiltinTypeName = Spanned<BuiltinTypeName_>;
 

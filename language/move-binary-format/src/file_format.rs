@@ -858,7 +858,6 @@ pub enum SignatureToken {
     MutableReference(Box<SignatureToken>),
     /// Type parameter.
     TypeParameter(TypeParameterIndex),
-
     /// Unsigned integers, 16 bits length.
     U16,
     /// Unsigned integers, 32 bits length.

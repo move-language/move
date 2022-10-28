@@ -140,7 +140,6 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
 }
 
 fn lvalues(context: &mut Context, ls: &[LValue], values: Values) {
-    assert!(ls.len() == values.len());
     ls.iter()
         .zip(values)
         .for_each(|(l, value)| lvalue(context, l, value))

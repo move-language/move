@@ -1117,7 +1117,6 @@ impl<'env> SpecTranslator<'env> {
             let quant_ty = self.get_node_type(range.node_id());
             match quant_ty.skip_reference() {
                 Type::TypeDomain(ty) => {
-                    let ty = &self.inst(ty);
                     emit!(
                         self.writer,
                         "{}{}: {}",

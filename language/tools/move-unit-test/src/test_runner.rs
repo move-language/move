@@ -174,7 +174,7 @@ impl TestRunner {
                 // after executing a certain number of instructions or setting a timer.
                 //
                 // From the API standpoint, we should let the client specify the cost table.
-                cost_table: cost_table.unwrap_or(unit_cost_table()),
+                cost_table: cost_table.unwrap_or_else(unit_cost_table),
                 source_files,
                 check_stackless_vm,
                 verbose,

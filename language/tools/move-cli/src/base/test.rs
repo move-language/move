@@ -37,9 +37,9 @@ compile_error!("Unsupported OS, currently we only support windows and unix famil
 #[derive(Parser)]
 #[clap(name = "test")]
 pub struct Test {
-    /// Bound the number of instructions that can be executed by any one test.
-    #[clap(name = "instructions", short = 'i', long = "instructions")]
-    pub instruction_execution_bound: Option<u64>,
+    /// Bound the amount of gas used by any one test.
+    #[clap(name = "gas_limit", short = 'i', long = "gas_limit")]
+    pub gas_limit: Option<u64>,
     /// A filter string to determine which unit tests to run. A unit test will be run only if it
     /// contains this string in its fully qualified (<addr>::<module_name>::<fn_name>) name.
     #[clap(name = "filter", short = 'f', long = "filter")]
@@ -94,7 +94,7 @@ impl Test {
     ) -> anyhow::Result<()> {
         let rerooted_path = reroot_path(path)?;
         let Self {
-            instruction_execution_bound,
+            gas_limit,
             filter,
             list,
             num_threads,
@@ -108,7 +108,7 @@ impl Test {
             evm,
         } = self;
         let unit_test_config = UnitTestingConfig {
-            instruction_execution_bound,
+            gas_limit,
             filter,
             list,
             num_threads,

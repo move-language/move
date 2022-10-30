@@ -112,7 +112,7 @@ $ cargo run --bin move-unit-test <move_file_or_dir_containing_move_modules_1> ..
 
 When running tests, every test will either `PASS`, `FAIL`, or `TIMEOUT`. If a test case fails, the location of the failure along with the function name that caused the failure will be reported if possible. You can see an example of this below.
 
-A test will be marked as timing out if it exceeds the maximum number of instructions that can be executed for any single test. This bound can be changed using the options below, and its default value is set to 5000 instructions. Additionally, while the result of a test is always deterministic, tests are run in parallel by default, so the ordering of test results in a test run is non-deterministic unless running with only one thread (see `OPTIONS` below).
+A test will be marked as timing out if it exceeds the maximum gas that can be executed for any single test. When a gas table is not provided, each bytecode instruction is assigned a gas cost of 1 unit. This bound can be changed using the options below, and its default value is set to 5000 gas units. Additionally, while the result of a test is always deterministic, tests are run in parallel by default, so the ordering of test results in a test run is non-deterministic unless running with only one thread (see `OPTIONS` below).
 
 There are also a number of options that can be passed to the unit testing binary to fine-tune testing, and to help debug failing tests. These are:
 
@@ -129,7 +129,7 @@ FLAGS:
 
 OPTIONS:
     -f, --filter <filter>                A filter string to determine which unit tests to run
-    -i, --instructions <instructions>    Bound the number of Move bytecode instructions that can be executed by any one test [default: 5000]
+    -i, --gas_limit <gas_limit>          Bound the amount of gas used by any one test. [default: 1_000_000]
     -t, --threads <num_threads>          Number of threads to use for running tests [default: 8]
 
 ARGS:
@@ -215,8 +215,8 @@ Running Move unit tests
 Test result: OK. Total tests: 2; passed: 2; failed: 0
 ```
 
-#### `-i <bound>` or `--instructions <bound>`
-This bounds the number of instructions that can be executed for any one test to `<bound>`:
+#### `-i <bound>` or `--gas_limit <bound>`
+This bounds the amount of gas that can be consumed for any one test to `<bound>`:
 
 ```
 cargo run --bin move-unit-test <dir> -i 0 MyModule.move
@@ -247,7 +247,7 @@ Test result: FAILED. Total tests: 3; passed: 0; failed: 3
 ```
 
 #### `-s` or `--statistics`
-With these flags you can gather statistics about the tests run and report the runtime and instructions executed for each test. For example, if we wanted to see the statistics for the tests in the `MyModule` example above:
+With these flags you can gather statistics about the tests run and report the runtime and gas used for each test. For example, if we wanted to see the statistics for the tests in the `MyModule` example above:
 
 ```
 $ cargo run --bin move-unit-test MyModule.move -s

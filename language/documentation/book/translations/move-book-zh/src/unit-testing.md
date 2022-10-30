@@ -242,9 +242,9 @@ Running Move unit tests
 Test result: OK. Total tests: 2; passed: 2; failed: 0
 ```
 
-#### `-i <bound>` 或 `--instructions <bound>`（`-i <bound>` or `--instructions <bound>`）
+#### `-i <bound>` 或 `--gas_used <bound>`（`-i <bound>` or `--gas_used <bound>`）
 
-This bounds the number of instructions that can be executed for any one test to `<bound>`:
+This bounds the amount of gas that can be consumed for any one test to `<bound>`:
 
 调整测试指令限制为 `<bound>`：
 
@@ -280,7 +280,7 @@ Test result: FAILED. Total tests: 3; passed: 0; failed: 3
 
 #### `-s` 或 `--statistics`（`-s` or `--statistics`）
 
-With these flags you can gather statistics about the tests run and report the runtime and instructions executed for each test. For example, if we wanted to see the statistics for the tests in the example above:
+With these flags you can gather statistics about the tests run and report the runtime and gas used for each test. For example, if we wanted to see the statistics for the tests in the example above:
 
 使用此参数你可以得到每个测试的运行报告及执行指令的统计信息。例如查看上述示例的统计数据：
 

@@ -199,7 +199,7 @@ Signer:
 
 Command `sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M1.mv --struct G`:
 ---
-"00000000000000000000000000000001::M1::G<>":
+"00000000000000000000000000000001::M1::G":
   STRUCT:
     - x: U64
     - s:

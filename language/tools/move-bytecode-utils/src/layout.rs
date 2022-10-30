@@ -37,16 +37,16 @@ const U256_SERDE_NAME: &str = "u256";
 /// In deep mode, it will generate layouts for all of the (transitive) dependencies of the type passed
 /// in, as well as layouts for the Move ground types like `address` and `signer`. The result is a
 /// self-contained registry with no unbound typenames
-pub struct SerdeLayoutBuilder<T> {
+pub struct SerdeLayoutBuilder<'a, T> {
     registry: Registry,
-    module_resolver: T,
+    module_resolver: &'a T,
     /// If true, operate in shallow mode; else, operate in deep mode
     shallow: bool,
 }
 
-impl<T: GetModule> SerdeLayoutBuilder<T> {
+impl<'a, T: GetModule> SerdeLayoutBuilder<'a, T> {
     /// Create a `LayoutBuilder` with an empty registry and deep layout resolution
-    pub fn new(module_resolver: T) -> Self {
+    pub fn new(module_resolver: &'a T) -> Self {
         Self {
             registry: Self::default_registry(),
             module_resolver,
@@ -55,7 +55,7 @@ impl<T: GetModule> SerdeLayoutBuilder<T> {
     }
 
     /// Create a `LayoutBuilder` with an empty registry and shallow layout resolution
-    pub fn new_shallow(module_resolver: T) -> Self {
+    pub fn new_shallow(module_resolver: &'a T) -> Self {
         Self {
             registry: BTreeMap::new(),
             module_resolver,
@@ -162,11 +162,12 @@ impl<T: GetModule> SerdeLayoutBuilder<T> {
     ) -> Result<Format, T::Error> {
         // build a human-readable name for the struct type. this should do the same thing as
         // StructTag::display(), but it's not easy to use that code here
-        let generics: Vec<String> = type_arguments
-            .iter()
-            .map(|t| Self::print_format_type(t))
-            .collect();
-        let struct_key = format!("{}::{}<{}>", module_id, name, generics.join(","));
+        let struct_key = if type_arguments.is_empty() {
+            format!("{}::{}", module_id, name)
+        } else {
+            let generics: Vec<String> = type_arguments.iter().map(print_format_type).collect();
+            format!("{}::{}<{}>", module_id, name, generics.join(","))
+        };
         if !shallow && !self.registry.contains_key(&struct_key) {
             let declaring_module = self
                 .module_resolver
@@ -206,20 +207,20 @@ impl<T: GetModule> SerdeLayoutBuilder<T> {
         } // else, it's shallow mode or we already generated a layout for the type
         Ok(Format::TypeName(struct_key))
     }
+}
 
-    fn print_format_type(t: &Format) -> String {
-        match t {
-            Format::TypeName(s) => s.to_string(),
-            Format::Bool => "bool".to_string(),
-            Format::U8 => "u8".to_string(),
-            Format::U16 => "u16".to_string(),
-            Format::U32 => "u32".to_string(),
-            Format::U64 => "u64".to_string(),
-            Format::U128 => "u128".to_string(),
-            Format::Bytes => "vector<u8>".to_string(),
-            Format::Seq(inner) => format!("vector<{}>", Self::print_format_type(inner)),
-            v => unimplemented!("Printing format value {:?}", v),
-        }
+fn print_format_type(t: &Format) -> String {
+    match t {
+        Format::TypeName(s) => s.to_string(),
+        Format::Bool => "bool".to_string(),
+        Format::U8 => "u8".to_string(),
+        Format::U16 => "u16".to_string(),
+        Format::U32 => "u32".to_string(),
+        Format::U64 => "u64".to_string(),
+        Format::U128 => "u128".to_string(),
+        Format::Bytes => "vector<u8>".to_string(),
+        Format::Seq(inner) => format!("vector<{}>", print_format_type(inner)),
+        v => unimplemented!("Printing format value {:?}", v),
     }
 }
 

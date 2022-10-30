@@ -1077,9 +1077,15 @@ impl<'env> Docgen<'env> {
                 return_types.iter().map(|ty| ty.display(tctx)).join(", ")
             ),
         };
+        let entry_str = if func_env.is_entry() && !func_env.module_env.is_script_module() {
+            "entry ".to_owned()
+        } else {
+            "".to_owned()
+        };
         format!(
-            "{}fun {}{}({}){}",
+            "{}{}fun {}{}({}){}",
             func_env.visibility_str(),
+            entry_str,
             name,
             self.type_parameter_list_display(&func_env.get_named_type_parameters()),
             params,

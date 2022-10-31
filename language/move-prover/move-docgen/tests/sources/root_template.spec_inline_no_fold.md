@@ -135,7 +135,7 @@ This script does also abort.
 This is a script
 
 
-<pre><code><b>fun</b> <a href="root.md#0x1_OneTypeOfScript_script1">script1</a>()
+<pre><code>entry <b>fun</b> <a href="root.md#0x1_OneTypeOfScript_script1">script1</a>()
 </code></pre>
 
 
@@ -155,7 +155,7 @@ This is a script
 This is another script
 
 
-<pre><code><b>fun</b> <a href="root.md#0x1_OneTypeOfScript_script2">script2</a>()
+<pre><code>entry <b>fun</b> <a href="root.md#0x1_OneTypeOfScript_script2">script2</a>()
 </code></pre>
 
 
@@ -189,7 +189,7 @@ This is another module full of script funs too:
 This is a script
 
 
-<pre><code><b>fun</b> <a href="root.md#0x1_AnotherTypeOfScript_script3">script3</a>()
+<pre><code>entry <b>fun</b> <a href="root.md#0x1_AnotherTypeOfScript_script3">script3</a>()
 </code></pre>
 
 
@@ -209,7 +209,7 @@ This is a script
 This is another script
 
 
-<pre><code><b>fun</b> <a href="root.md#0x1_AnotherTypeOfScript_script4">script4</a>()
+<pre><code>entry <b>fun</b> <a href="root.md#0x1_AnotherTypeOfScript_script4">script4</a>()
 </code></pre>
 
 

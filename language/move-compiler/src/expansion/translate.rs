@@ -653,8 +653,7 @@ fn attribute_value(
     sp!(loc, avalue_): P::AttributeValue,
 ) -> Option<E::AttributeValue> {
     use E::AttributeValue_ as EV;
-    use P::AttributeValue_ as PV;
-    use P::{LeadingNameAccess_ as LN, NameAccessChain_ as PN};
+    use P::{AttributeValue_ as PV, LeadingNameAccess_ as LN, NameAccessChain_ as PN};
     Some(sp(
         loc,
         match avalue_ {

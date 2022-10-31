@@ -21,7 +21,7 @@ module std::roleTests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 0x80000)]
+    #[expected_failure(abort_code = 0x80000, location = std::role)]
     fun test_assign_failure() {
         let alice = create_signer();
         role::assign_role<Developer>(&alice, &Developer{});
@@ -29,7 +29,7 @@ module std::roleTests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 0x60000)]
+    #[expected_failure(abort_code = 0x60000, location = std::role)]
     fun test_revoke_failure() {
         let alice = create_signer();
         role::revoke_role<Developer>(&alice, &Developer{});

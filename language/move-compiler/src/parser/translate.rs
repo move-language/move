@@ -525,7 +525,7 @@ pub fn translate_constant(
         loc,
         signature,
         name,
-        value,
+        value: *value,
     })
 }
 
@@ -540,7 +540,7 @@ fn translate_exp(
     context: &mut Context,
     ast: &cst::PackageDefinition,
     exp: &cst::Exp,
-) -> Result<ast::Exp, Diagnostic> {
+) -> Result<Box<ast::Exp>, Diagnostic> {
     let loc = exp.loc(&ast.source_tokens);
     let exp_ = match exp.value() {
         cst::Exp_::Value(val) => Ok(ast::Exp_::Value(translate_value(context, ast, val)?)),
@@ -578,7 +578,7 @@ fn translate_exp(
         cst::Exp_::Lambda(bind_list, body) => {
             let bind_list_res = translate_bind_list(context, ast, bind_list)?;
             let body_res = translate_exp(context, ast, body)?;
-            Ok(ast::Exp_::Lambda(bind_list_res, Box::new(body_res)))
+            Ok(ast::Exp_::Lambda(bind_list_res, body_res))
         }
         cst::Exp_::Quant(kind, binds, exps, where_cond, exp) => {
             translate_quant(context, ast, kind, binds, exps, where_cond, exp)
@@ -586,7 +586,7 @@ fn translate_exp(
         cst::Exp_::ExpList(exps) => {
             let exps_res = exps
                 .iter()
-                .map(|e| translate_exp(context, ast, e))
+                .map(|e| translate_exp(context, ast, e).map(|r| *r))
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(ast::Exp_::ExpList(exps_res))
         }
@@ -594,18 +594,18 @@ fn translate_exp(
         cst::Exp_::Assign(var, body) => {
             let var_res = translate_exp(context, ast, var)?;
             let body_res = translate_exp(context, ast, body)?;
-            Ok(ast::Exp_::Assign(Box::new(var_res), Box::new(body_res)))
+            Ok(ast::Exp_::Assign(var_res, body_res))
         }
         cst::Exp_::Return(exp_opt) => match exp_opt {
             Some(exp) => {
                 let exp_res = translate_exp(context, ast, exp)?;
-                Ok(ast::Exp_::Return(Some(Box::new(exp_res))))
+                Ok(ast::Exp_::Return(Some(exp_res)))
             }
             _ => Ok(ast::Exp_::Return(None)),
         },
         cst::Exp_::Abort(e) => {
             let exp_res = translate_exp(context, ast, e)?;
-            Ok(ast::Exp_::Abort(Box::new(exp_res)))
+            Ok(ast::Exp_::Abort(exp_res))
         }
         cst::Exp_::Break => Ok(ast::Exp_::Break),
         cst::Exp_::Continue => Ok(ast::Exp_::Continue),
@@ -614,12 +614,12 @@ fn translate_exp(
         cst::Exp_::Dot(e, name) => {
             let exp_res = translate_exp(context, ast, e)?;
             let name = translate_token_to_name(ast, name)?;
-            Ok(ast::Exp_::Dot(Box::new(exp_res), name))
+            Ok(ast::Exp_::Dot(exp_res, name))
         }
         cst::Exp_::Index(e, exp_in) => {
             let exp_res = translate_exp(context, ast, e)?;
             let exp_in_res = translate_exp(context, ast, exp_in)?;
-            Ok(ast::Exp_::Index(Box::new(exp_res), Box::new(exp_in_res)))
+            Ok(ast::Exp_::Index(exp_res, exp_in_res))
         }
         cst::Exp_::Spec(spec_block) => Ok(ast::Exp_::Spec(translate_spec_block(
             context,
@@ -630,17 +630,17 @@ fn translate_exp(
         cst::Exp_::Cast(e, type_) => {
             let exp_res = translate_exp(context, ast, e)?;
             let type_res = translate_type(context, ast, type_)?;
-            Ok(ast::Exp_::Cast(Box::new(exp_res), type_res))
+            Ok(ast::Exp_::Cast(exp_res, type_res))
         }
         cst::Exp_::Annotate(e, type_) => {
             let exp_res = translate_exp(context, ast, e)?;
             let type_res = translate_type(context, ast, type_)?;
-            Ok(ast::Exp_::Annotate(Box::new(exp_res), type_res))
+            Ok(ast::Exp_::Annotate(exp_res, type_res))
         }
         cst::Exp_::UnresolvedError => Ok(ast::Exp_::UnresolvedError),
     }?;
 
-    Ok(sp(loc, exp_))
+    Ok(Box::new(sp(loc, exp_)))
 }
 
 fn translate_quant(
@@ -659,12 +659,12 @@ fn translate_quant(
         .map(|exps_| {
             exps_
                 .iter()
-                .map(|e| translate_exp(context, ast, e))
+                .map(|e| translate_exp(context, ast, e).map(|r| *r))
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;
     let where_cond_res = match where_cond {
-        Some(e) => Ok(Some(Box::new(translate_exp(context, ast, e)?))),
+        Some(e) => Ok(Some(translate_exp(context, ast, e)?)),
         None => Ok(None),
     }?;
     let exp_res = translate_exp(context, ast, exp)?;
@@ -673,7 +673,7 @@ fn translate_quant(
         binds_res,
         exps_res,
         where_cond_res,
-        Box::new(exp_res),
+        exp_res,
     ))
 }
 
@@ -705,7 +705,7 @@ fn transalte_quant_bind_list(
                     let var_res = ast::Bind_::Var(translate_var(ast, var)?);
                     let bind_res = sp(var.loc(&ast.source_tokens), var_res);
                     let exp_res = translate_exp(context, ast, exp)?;
-                    Ok(sp(loc, (bind_res, exp_res)))
+                    Ok(sp(loc, (bind_res, *exp_res)))
                 }
             }
         })
@@ -733,11 +733,7 @@ fn translate_binop_exp(
     let rhs_res = translate_exp(context, ast, rhs)?;
     let op_loc = op.loc(&ast.source_tokens);
 
-    Ok(ast::Exp_::BinopExp(
-        Box::new(lhs_res),
-        sp(op_loc, op.value),
-        Box::new(rhs_res),
-    ))
+    Ok(ast::Exp_::BinopExp(lhs_res, sp(op_loc, op.value), rhs_res))
 }
 
 fn translate_unary_exp(
@@ -749,13 +745,10 @@ fn translate_unary_exp(
     let exp_res = translate_exp(context, ast, exp)?;
     let op_loc = op.loc(&ast.source_tokens);
     match op.value() {
-        cst::UnaryOp_::Not => Ok(ast::Exp_::UnaryExp(
-            sp(op_loc, ast::UnaryOp_::Not),
-            Box::new(exp_res),
-        )),
-        cst::UnaryOp_::Borrow => Ok(ast::Exp_::Borrow(false, Box::new(exp_res))),
-        cst::UnaryOp_::BorrowMut => Ok(ast::Exp_::Borrow(true, Box::new(exp_res))),
-        cst::UnaryOp_::Dereference => Ok(ast::Exp_::Dereference(Box::new(exp_res))),
+        cst::UnaryOp_::Not => Ok(ast::Exp_::UnaryExp(sp(op_loc, ast::UnaryOp_::Not), exp_res)),
+        cst::UnaryOp_::Borrow => Ok(ast::Exp_::Borrow(false, exp_res)),
+        cst::UnaryOp_::BorrowMut => Ok(ast::Exp_::Borrow(true, exp_res)),
+        cst::UnaryOp_::Dereference => Ok(ast::Exp_::Dereference(exp_res)),
     }
 }
 
@@ -820,11 +813,11 @@ fn translate_exp_sequence(
                     end_semicolon = Some(tok.loc);
                     sequences.push(sp(
                         exp.loc(&ast.source_tokens),
-                        ast::SequenceItem_::Seq(Box::new(translate_exp(context, ast, exp)?)),
+                        ast::SequenceItem_::Seq(translate_exp(context, ast, exp)?),
                     ))
                 }
                 (None, cst::SemicolonEnd::NotSemicolonEnd) => {
-                    end_exp = Some(translate_exp(context, ast, exp)?);
+                    end_exp = Some(*translate_exp(context, ast, exp)?);
                 }
                 (Some(_), cst::SemicolonEnd::NotSemicolonEnd) => {
                     return Err(diag!(
@@ -926,7 +919,7 @@ fn translate_exp_loop(
     body: &cst::Exp,
 ) -> Result<ast::Exp_, Diagnostic> {
     let body_res = translate_exp(context, ast, body)?;
-    Ok(ast::Exp_::Loop(Box::new(body_res)))
+    Ok(ast::Exp_::Loop(body_res))
 }
 
 fn translate_exp_while(
@@ -978,14 +971,14 @@ fn translate_exp_while(
                         ast::SequenceItem_::Seq(Box::new(sp(spec_loc, ast::Exp_::Spec(spec_res)))),
                     )],
                     None,
-                    Box::new(Some(cond_res)),
+                    Box::new(Some(*cond_res)),
                 )),
             ))
         }
-        None => Ok(cond_res),
+        None => Ok(*cond_res),
     }?;
 
-    Ok(ast::Exp_::While(Box::new(econd), Box::new(loop_res)))
+    Ok(ast::Exp_::While(Box::new(econd), loop_res))
 }
 
 fn translate_exp_if_else(
@@ -998,12 +991,12 @@ fn translate_exp_if_else(
     let cond_res = translate_exp(context, ast, cond)?;
     let if_statement_res = translate_exp(context, ast, if_statement)?;
     let else_statement_res = match else_statement {
-        Some(el) => Some(Box::new(translate_exp(context, ast, el)?)),
+        Some(el) => Some(translate_exp(context, ast, el)?),
         None => None,
     };
     Ok(ast::Exp_::IfElse(
-        Box::new(cond_res),
-        Box::new(if_statement_res),
+        cond_res,
+        if_statement_res,
         else_statement_res,
     ))
 }
@@ -1021,7 +1014,7 @@ fn translate_exp_vector(
     let content_res = contents
         .value()
         .iter()
-        .map(|e| translate_exp(context, ast, e))
+        .map(|e| translate_exp(context, ast, e).map(|r| *r))
         .collect::<Result<Vec<_>, _>>()?;
 
     Ok(ast::Exp_::Vector(
@@ -1045,7 +1038,7 @@ fn translate_exp_pack(
         .map(|(f, e)| {
             let field_res = translate_field(ast, f)?;
             let exp_res = match e {
-                Some(exp_) => translate_exp(context, ast, exp_)?,
+                Some(exp_) => translate_exp(context, ast, exp_).map(|r| *r)?,
                 // field only situation
                 None => {
                     let f_loc = field_res.0.loc;
@@ -1073,7 +1066,7 @@ fn translate_exp_call(
 
     let exp_res = args
         .iter()
-        .map(|exp_| translate_exp(context, ast, exp_))
+        .map(|exp_| translate_exp(context, ast, exp_).map(|r| *r))
         .collect::<Result<Vec<_>, _>>()?;
     Ok((leading_name, type_res, exp_res))
 }
@@ -1244,11 +1237,7 @@ pub fn translate_let_assign(
     let bind_res = translate_bind_list(context, ast, &assign.value().var)?;
     let type_res = translate_optional_type(context, ast, &assign.value().type_)?;
     let exp_res = translate_exp(context, ast, &assign.value().exp)?;
-    Ok(ast::SequenceItem_::Bind(
-        bind_res,
-        type_res,
-        Box::new(exp_res),
-    ))
+    Ok(ast::SequenceItem_::Bind(bind_res, type_res, exp_res))
 }
 
 pub fn translate_bind_list(
@@ -1837,7 +1826,7 @@ fn translate_let_assign_to_spec_member(
         ast::SpecBlockMember_::Let {
             name: name_res,
             post_state: let_assign.value.is_post,
-            def: def_res,
+            def: *def_res,
         },
     ))
 }
@@ -1925,7 +1914,7 @@ fn translate_spec_condition_kind(
                 Ok(ast::SpecBlockMember_::Condition {
                     kind: sp(kind_loc, k),
                     properties: properties_res,
-                    exp: exp_res,
+                    exp: *exp_res,
                     additional_exps: vec![],
                 })
             };
@@ -1952,14 +1941,14 @@ fn translate_spec_condition_kind(
                 .collect::<Result<Vec<_>, _>>()?;
             let exp_res = translate_exp(context, ast, exp)?;
             let with_exp_res = match with_exp {
-                Some(e) => Ok(vec![translate_exp(context, ast, e)?]),
+                Some(e) => Ok(vec![*translate_exp(context, ast, e)?]),
                 None => Ok(vec![]),
             }?;
             let keyword_loc = loc.loc(&ast.source_tokens);
             Ok(ast::SpecBlockMember_::Condition {
                 kind: sp(keyword_loc, ast::SpecConditionKind_::AbortsIf),
                 properties: properties_res,
-                exp: exp_res,
+                exp: *exp_res,
                 additional_exps: with_exp_res,
             })
         }
@@ -1975,7 +1964,7 @@ fn translate_spec_condition_kind(
                 .collect::<Result<Vec<_>, _>>()?;
             let exps_res = exps
                 .iter()
-                .map(|e| translate_exp(context, ast, e))
+                .map(|e| translate_exp(context, ast, e).map(|r| *r))
                 .collect::<Result<Vec<_>, _>>()?;
             let dummy_exp = sp(
                 kind_loc,
@@ -2009,19 +1998,19 @@ fn translate_spec_condition_kind(
                 .collect::<Result<Vec<_>, _>>()?;
             let exp_res = translate_exp(context, ast, exp)?;
             let mut additional_exp = vec![];
-            let to_exp_res = translate_exp(context, ast, to_exp)?;
+            let to_exp_res = *translate_exp(context, ast, to_exp)?;
             additional_exp.push(to_exp_res);
             match if_exp {
                 Some(e) => {
                     let e_res = translate_exp(context, ast, e)?;
-                    additional_exp.push(e_res);
+                    additional_exp.push(*e_res);
                 }
                 None => (),
             };
             Ok(ast::SpecBlockMember_::Condition {
                 kind: sp(name_loc, ast::SpecConditionKind_::Emits),
                 properties: properties_res,
-                exp: exp_res,
+                exp: *exp_res,
                 additional_exps: additional_exp,
             })
         }
@@ -2040,7 +2029,7 @@ fn translate_spec_condition_kind(
             Ok(ast::SpecBlockMember_::Condition {
                 kind: sp(loc, ast::SpecConditionKind_::Invariant(types)),
                 properties: properties_res,
-                exp: exp_res,
+                exp: *exp_res,
                 additional_exps: vec![],
             })
         }
@@ -2059,7 +2048,7 @@ fn translate_spec_condition_kind(
             Ok(ast::SpecBlockMember_::Condition {
                 kind: sp(loc, ast::SpecConditionKind_::InvariantUpdate(types)),
                 properties: properties_res,
-                exp: exp_res,
+                exp: *exp_res,
                 additional_exps: vec![],
             })
         }
@@ -2078,7 +2067,7 @@ fn translate_spec_condition_kind(
             Ok(ast::SpecBlockMember_::Condition {
                 kind: sp(loc, ast::SpecConditionKind_::Axiom(types)),
                 properties: properties_res,
-                exp: exp_res,
+                exp: *exp_res,
                 additional_exps: vec![],
             })
         }
@@ -2106,7 +2095,7 @@ fn translate_spec_member(
             let type_res = translate_type(context, ast, type_)?;
             let init_res = match init {
                 None => Ok(None),
-                Some(i) => Ok(Some(translate_exp(context, ast, i)?)),
+                Some(i) => Ok(Some(*translate_exp(context, ast, i)?)),
             }?;
             ast::SpecBlockMember_::Variable {
                 is_global: *is_global,
@@ -2120,8 +2109,8 @@ fn translate_spec_member(
             let lhs_res = translate_exp(context, ast, lhs)?;
             let rhs_res = translate_exp(context, ast, rhs)?;
             ast::SpecBlockMember_::Update {
-                lhs: lhs_res,
-                rhs: rhs_res,
+                lhs: *lhs_res,
+                rhs: *rhs_res,
             }
         }
         cst::SpecMember_::Include { properties, exp } => {
@@ -2132,7 +2121,7 @@ fn translate_spec_member(
             let exp_res = translate_exp(context, ast, exp)?;
             ast::SpecBlockMember_::Include {
                 properties: properties_res,
-                exp: exp_res,
+                exp: *exp_res,
             }
         }
         cst::SpecMember_::Apply {
@@ -2151,7 +2140,7 @@ fn translate_spec_member(
                 .collect::<Result<Vec<_>, _>>()?;
 
             ast::SpecBlockMember_::Apply {
-                exp: exp_res,
+                exp: *exp_res,
                 patterns: patters_res,
                 exclusion_patterns: exclusion_patterns_res,
             }

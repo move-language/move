@@ -701,6 +701,8 @@ impl SharedTestingConfig {
         test_plan: &ModuleTestPlan,
         output: &TestOutput<impl Write>,
     ) -> TestStatistics {
+        use move_binary_format::errors::Location;
+
         let mut stats = TestStatistics::new();
 
         // TODO: Somehow, paths of some temporary Move interface files are being passed in after those files
@@ -773,9 +775,10 @@ impl SharedTestingConfig {
 
             match (test_info.expected_failure.as_ref(), &res.exit_reason) {
                 // Test expected to succeed or abort with a specific abort code, but ran into an internal error.
-                (None | Some(ExpectedFailure::ExpectedWithCode(_)), ExitReason::Revert(_))
-                    if abort_code() == u64::MAX =>
-                {
+                (
+                    None | Some(ExpectedFailure::ExpectedWithCodeDEPRECATED(_)),
+                    ExitReason::Revert(_),
+                ) if abort_code() == u64::MAX => {
                     output.fail(function_name);
                     stats.test_failure(
                         TestFailure::new(FailureReason::unknown(), test_run_info(), None, None),
@@ -788,7 +791,11 @@ impl SharedTestingConfig {
                     output.fail(function_name);
                     stats.test_failure(
                         TestFailure::new(
-                            FailureReason::aborted(abort_code()),
+                            FailureReason::execution_error(MoveError(
+                                StatusCode::ABORTED,
+                                Some(abort_code()),
+                                Location::Undefined,
+                            )),
                             test_run_info(),
                             None,
                             None,
@@ -799,7 +806,7 @@ impl SharedTestingConfig {
 
                 // Expect the test to abort with a specific code.
                 (
-                    Some(ExpectedFailure::ExpectedWithCode(exp_abort_code)),
+                    Some(ExpectedFailure::ExpectedWithCodeDEPRECATED(exp_abort_code)),
                     ExitReason::Revert(_),
                 ) => {
                     let abort_code = abort_code();
@@ -810,7 +817,14 @@ impl SharedTestingConfig {
                         output.fail(function_name);
                         stats.test_failure(
                             TestFailure::new(
-                                FailureReason::wrong_abort(*exp_abort_code, abort_code),
+                                FailureReason::wrong_abort_deprecated(
+                                    *exp_abort_code,
+                                    MoveError(
+                                        StatusCode::ABORTED,
+                                        Some(abort_code),
+                                        Location::Undefined,
+                                    ),
+                                ),
                                 test_run_info(),
                                 None,
                                 None,
@@ -822,12 +836,14 @@ impl SharedTestingConfig {
 
                 // Test expected to abort but succeeded.
                 (
-                    Some(ExpectedFailure::Expected | ExpectedFailure::ExpectedWithCode(_)),
+                    Some(
+                        ExpectedFailure::Expected | ExpectedFailure::ExpectedWithCodeDEPRECATED(_),
+                    ),
                     ExitReason::Succeed(_),
                 ) => {
                     output.fail(function_name);
                     stats.test_failure(
-                        TestFailure::new(FailureReason::no_abort(), test_run_info(), None, None),
+                        TestFailure::new(FailureReason::no_error(), test_run_info(), None, None),
                         test_plan,
                     )
                 }

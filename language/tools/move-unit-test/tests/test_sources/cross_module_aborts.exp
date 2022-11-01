@@ -20,6 +20,9 @@ Failures in 0x1::B:
 │   │         ^^^^^^^ Test was not expected to abort but it aborted with 0 here
 │ 
 │ 
+│ stack trace
+│ 	B::failing_test(tests/test_sources/cross_module_aborts.move:19)
+│ 
 └──────────────────
 
 Test result: FAILED. Total tests: 2; passed: 1; failed: 1

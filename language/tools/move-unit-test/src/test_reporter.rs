@@ -14,7 +14,7 @@ use move_compiler::{
     diagnostics::{self, Diagnostic},
     unit_test::{ModuleTestPlan, TestName, TestPlan},
 };
-use move_core_types::{effects::ChangeSet, language_storage::ModuleId};
+use move_core_types::{effects::ChangeSet, language_storage::ModuleId, vm_status::StatusCode};
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::{
@@ -43,6 +43,8 @@ pub enum FailureReason {
     },
     // Property checking failed
     Property(String),
+    // The test failed with an execution failure (MISSING_DATA, ARITHMETIC, etc.)
+    ExecutionFailure(StatusCode),
     // The test failed for some unknown reason. This shouldn't be encountered
     Unknown(String),
 
@@ -136,6 +138,10 @@ impl FailureReason {
     pub fn unknown() -> Self {
         FailureReason::Unknown("ITE: An unknown error was reported.".to_string())
     }
+
+    pub fn execution_failure(status: StatusCode) -> Self {
+        FailureReason::ExecutionFailure(status)
+    }
 }
 
 impl TestFailure {
@@ -166,6 +172,10 @@ impl TestFailure {
             }
             FailureReason::Aborted(message, code) => {
                 let base_message = format!("{} but it aborted with {} here", message, code);
+                Self::report_error_with_location(test_plan, base_message, &self.vm_error)
+            }
+            FailureReason::ExecutionFailure(status) => {
+                let base_message = format!("Execution failure {:?}", status);
                 Self::report_error_with_location(test_plan, base_message, &self.vm_error)
             }
             FailureReason::Mismatch {

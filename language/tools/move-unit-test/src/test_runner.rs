@@ -554,9 +554,16 @@ impl SharedTestingConfig {
                     // Unexpected return status from the VM, signal that we hit an unknown error.
                     (_, None) => {
                         output.fail(function_name);
+                        let failure_reason = if err.major_status() as usize >= 4000
+                            && err.major_status() as usize <= 4999
+                        {
+                            FailureReason::execution_failure(err.major_status())
+                        } else {
+                            FailureReason::unknown()
+                        };
                         stats.test_failure(
                             TestFailure::new(
-                                FailureReason::unknown(),
+                                failure_reason,
                                 test_run_info,
                                 Some(err),
                                 save_session_state(),

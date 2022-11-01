@@ -42,6 +42,9 @@ Failures in 0x1::M:
 │    │         ^^^^^^^ Test was not expected to abort but it aborted with 1 here
 │ 
 │ 
+│ stack trace
+│ 	M::unexpected_abort_in_other_function(tests/test_sources/unexpected_abort.move:33)
+│ 
 └──────────────────
 
 

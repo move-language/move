@@ -307,8 +307,8 @@ Running Move unit tests
 [ PASS    ] 0x1::my_module::make_sure_zero_coin_fails
 Test result: OK. Total tests: 2; passed: 2; failed: 0
 </code></pre>
-<h4 id="-i-bound-or---instructions-bound"><a class="header" href="#-i-bound-or---instructions-bound"><code>-i &lt;bound&gt;</code> or <code>--instructions &lt;bound&gt;</code></a></h4>
-<p>This bounds the number of instructions that can be executed for any one test to <code>&lt;bound&gt;</code>:</p>
+<h4 id="-i-bound-or---gas_used-bound"><a class="header" href="#-i-bound-or---gas_used-bound"><code>-i &lt;bound&gt;</code> or <code>--gas_used &lt;bound&gt;</code></a></h4>
+<p>This bounds the amount of gas that can be consumed for any one test to <code>&lt;bound&gt;</code>:</p>
 <pre><code>$ move test -i 0
 CACHED MoveStdlib
 BUILDING TestExample
@@ -338,7 +338,7 @@ Failures in 0x1::my_module:
 Test result: FAILED. Total tests: 3; passed: 0; failed: 3
 </code></pre>
 <h4 id="-s-or---statistics"><a class="header" href="#-s-or---statistics"><code>-s</code> or <code>--statistics</code></a></h4>
-<p>With these flags you can gather statistics about the tests run and report the runtime and instructions executed for each test. For example, if we wanted to see the statistics for the tests in the example above:</p>
+<p>With these flags you can gather statistics about the tests run and report the runtime and gas used for each test. For example, if we wanted to see the statistics for the tests in the example above:</p>
 <pre><code>$ move test -s
 CACHED MoveStdlib
 BUILDING TestExample
@@ -350,7 +350,7 @@ Running Move unit tests
 Test Statistics:
 
 ┌────────────────────────────────────────────────┬────────────┬───────────────────────────┐
-│                   Test Name                    │    Time    │   Instructions Executed   │
+│                   Test Name                    │    Time    │   Gas Used   │
 ├────────────────────────────────────────────────┼────────────┼───────────────────────────┤
 │ 0x1::my_module::make_sure_non_zero_coin_passes │   0.009    │             1             │
 ├────────────────────────────────────────────────┼────────────┼───────────────────────────┤

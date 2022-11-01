@@ -264,41 +264,55 @@ The <a href="./constants.html"><code>const</code></a> keyword defines private co
 <p>Move supports three unsigned integer types: <code>u8</code>, <code>u64</code>, and <code>u128</code>. Values of these types range from 0 to a maximum that depends on the size of the type.</p>
 <table><thead><tr><th>Type</th><th>Value Range</th></tr></thead><tbody>
 <tr><td>Unsigned 8-bit integer, <code>u8</code></td><td>0 to 2<sup>8</sup> - 1</td></tr>
+<tr><td>Unsigned 16-bit integer, <code>u16</code></td><td>0 to 2<sup>16</sup> - 1</td></tr>
+<tr><td>Unsigned 32-bit integer, <code>u32</code></td><td>0 to 2<sup>32</sup> - 1</td></tr>
 <tr><td>Unsigned 64-bit integer, <code>u64</code></td><td>0 to 2<sup>64</sup> - 1</td></tr>
 <tr><td>Unsigned 128-bit integer, <code>u128</code></td><td>0 to 2<sup>128</sup> - 1</td></tr>
+<tr><td>Unsigned 256-bit integer, <code>u256</code></td><td>0 to 2<sup>256</sup> - 1</td></tr>
 </tbody></table>
 <h2 id="literals"><a class="header" href="#literals">Literals</a></h2>
 <p>Literal values for these types are specified either as a sequence of digits (e.g.,<code>112</code>) or as hex literals, e.g., <code>0xFF</code>. The type of the literal can optionally be added as a suffix, e.g., <code>112u8</code>. If the type is not specified, the compiler will try to infer the type from the context where the literal is used. If the type cannot be inferred, it is assumed to be <code>u64</code>.</p>
+<p>Decimal literals can be separated by underscores for grouping and readability. (e.g.,<code>1_234_5678</code>, <code>1_000u128</code>). However, hexadecimal literals cannot.</p>
 <p>If a literal is too large for its specified (or inferred) size range, an error is reported.</p>
 <h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
 <pre><code class="language-move">// literals with explicit annotations;
 let explicit_u8 = 1u8;
+let explicit_u16 = 1u16;
+let explicit_u32 = 1u32;
 let explicit_u64 = 2u64;
 let explicit_u128 = 3u128;
+let explicit_u256 = 1u256;
+let explicit_u64_underscored = 154_322_973u64;
 
 // literals with simple inference
 let simple_u8: u8 = 1;
+let simple_u16: u16 = 1;
+let simple_u32: u32 = 1;
 let simple_u64: u64 = 2;
 let simple_u128: u128 = 3;
+let simple_u256: u256 = 1;
 
 // literals with more complex inference
 let complex_u8 = 1; // inferred: u8
 // right hand argument to shift must be u8
 let _unused = 10 &lt;&lt; complex_u8;
 
-let x: u8 = 0;
+let x: u8 = 38;
 let complex_u8 = 2; // inferred: u8
 // arguments to `+` must have the same type
 let _unused = x + complex_u8;
 
-let complex_u128 = 3; // inferred: u128
+let complex_u128 = 133_876; // inferred: u128
 // inferred from function argument type
 function_that_takes_u128(complex_u128);
 
 // literals can be written in hex
 let hex_u8: u8 = 0x1;
+let hex_u16: u16 = 0x1BAE;
+let hex_u32: u32 = 0xDEAD80;
 let hex_u64: u64 = 0xCAFE;
 let hex_u128: u128 = 0xDEADBEEF;
+let hex_u256: u256 = 0x1123456ABCDEF;
 </code></pre>
 <h2 id="operations"><a class="header" href="#operations">Operations</a></h2>
 <h3 id="arithmetic"><a class="header" href="#arithmetic">Arithmetic</a></h3>
@@ -321,7 +335,7 @@ let hex_u128: u128 = 0xDEADBEEF;
 </tbody></table>
 <h3 id="bit-shifts"><a class="header" href="#bit-shifts">Bit Shifts</a></h3>
 <p>Similar to the bitwise operations, each integer type supports bit shifts. But unlike the other operations, the righthand side operand (how many bits to shift by) must <em>always</em> be a <code>u8</code> and need not match the left side operand (the number you are shifting).</p>
-<p>Bit shifts can abort if the number of bits to shift by is greater than or equal to <code>8</code>, <code>64</code>, or <code>128</code> for <code>u8</code>, <code>u64</code>, and <code>u128</code> respectively.</p>
+<p>Bit shifts can abort if the number of bits to shift by is greater than or equal to <code>8</code>, <code>16</code>, <code>32</code>, <code>64</code>, <code>128</code> or <code>256</code> for <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code>, <code>u128</code> and <code>u256</code> respectively.</p>
 <table><thead><tr><th>Syntax</th><th>Operation</th><th>Aborts if</th></tr></thead><tbody>
 <tr><td><code>&lt;&lt;</code></td><td>shift left</td><td>Number of bits to shift by is greater than the size of the integer type</td></tr>
 <tr><td><code>&gt;&gt;</code></td><td>shift right</td><td>Number of bits to shift by is greater than the size of the integer type</td></tr>
@@ -349,12 +363,15 @@ let hex_u128: u128 = 0xDEADBEEF;
 <table><thead><tr><th>Syntax</th><th>Operation</th><th>Aborts if</th></tr></thead><tbody>
 <tr><td><code>(e as T)</code></td><td>Cast integer expression <code>e</code> into an integer type <code>T</code></td><td><code>e</code> is too large to represent as a <code>T</code></td></tr>
 </tbody></table>
-<p>Here, the type of <code>e</code> must be <code>u8</code>, <code>u64</code>, or <code>u128</code> and <code>T</code> must be <code>u8</code>, <code>u64</code>, or <code>u128</code>.</p>
+<p>Here, the type of <code>e</code> must be <code>8</code>, <code>16</code>, <code>32</code>, <code>64</code>, <code>128</code> or <code>256</code> and <code>T</code> must be <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code>, <code>u128</code> oe <code>u256</code>.</p>
 <p>For example:</p>
 <ul>
 <li><code>(x as u8)</code></li>
+<li><code>(y as u16)</code></li>
+<li><code>(873u16 as u32)</code></li>
 <li><code>(2u8 as u64)</code></li>
 <li><code>(1 + 3 as u128)</code></li>
+<li><code>(4/2 + 12345 as u256)</code></li>
 </ul>
 <h2 id="ownership"><a class="header" href="#ownership">Ownership</a></h2>
 <p>As with the other scalar values built-in to the language, integer values are implicitly copyable, meaning they can be copied without an explicit instruction such as <a href="./variables.html#move-and-copy"><code>copy</code></a>.</p>
@@ -974,7 +991,7 @@ syntax for adding a type annotation is:</p>
 <pre><code class="language-move">let x: T = e; // &quot;Variable x of type T is initialized to expression e&quot;
 </code></pre>
 <p>Some examples of explicit type annotations:</p>
-<pre><code class="language-move=">address 0x42 {
+<pre><code class="language-move">address 0x42 {
 module example {
 
     struct S { f: u64, g: u64 }
@@ -1128,7 +1145,7 @@ will be ignored and not introduce a new variable</p>
 </code></pre>
 <pre><code class="language-move">let (x1, _, z1) = three();
 let (x2, _y, z2) = three();
-assert!(x1 + z1 == x2 + z2)
+assert!(x1 + z1 == x2 + z2, 42);
 </code></pre>
 <p>This can be necessary at times as the compiler will error on unused local variables</p>
 <pre><code class="language-move">let (x1, y, z1) = three(); // ERROR!
@@ -1194,7 +1211,7 @@ expression block with braces (<code>{</code>...<code>}</code>).</p>
 if (cond) x = 1 else x = 2;
 </code></pre>
 <p>The assignment uses the same pattern syntax scheme as <code>let</code> bindings:</p>
-<pre><code class="language-move=">address 0x42 {
+<pre><code class="language-move">address 0x42 {
 module example {
     struct X { f: u64 }
 
@@ -1227,8 +1244,7 @@ reference <code>&amp;mut</code>.</p>
 <pre><code class="language-move">let x = 0;
 let r = &amp;mut x;
 *r = 1;
-assert!(x == 1, 42)
-}
+assert!(x == 1, 42);
 </code></pre>
 <p>This is particularly useful if either:</p>
 <p>(1) You want to modify different variables depending on some condition.</p>
@@ -1244,7 +1260,7 @@ modify_ref(&amp;mut x);
 <p>This sort of modification is how you modify structs and vectors!</p>
 <pre><code class="language-move">let v = vector::empty();
 vector::push_back(&amp;mut v, 100);
-assert!(*vector::borrow(&amp;v, 0) == 100, 42)
+assert!(*vector::borrow(&amp;v, 0) == 100, 42);
 </code></pre>
 <p>For more details, see <a href="./references.html">Move references</a>.</p>
 <h2 id="scopes"><a class="header" href="#scopes">Scopes</a></h2>
@@ -1311,7 +1327,7 @@ explicitly destroyed within its declaring module.)</p>
 }
 </code></pre>
 <p>If a final expression is not present in a block---that is, if there is a trailing semicolon <code>;</code>,
-there is an implicit unit <code>()</code> value. Similarly, if the expression block is empty, there is an
+there is an implicit <a href="https://en.wikipedia.org/wiki/Unit_type">unit <code>()</code> value</a>. Similarly, if the expression block is empty, there is an
 implicit unit <code>()</code> value.</p>
 <pre><code class="language-move">// Both are equivalent
 { x = x + 1; 1 / x; }
@@ -2169,16 +2185,16 @@ module example {
 <pre><code class="language-move">fun zero(): u64 { 0 }
 </code></pre>
 <p>Here <code>: u64</code> indicates that the function's return type is <code>u64</code>.</p>
-<p>Using tuples, a function can return multiple values</p>
+<p>Using tuples, a function can return multiple values:</p>
 <pre><code class="language-move">fun one_two_three(): (u64, u64, u64) { (0, 1, 2) }
 </code></pre>
-<p>If no return type is specified, the function has an implicit return type of unit <code>()</code>. These functions are equivalent</p>
+<p>If no return type is specified, the function has an implicit return type of unit <code>()</code>. These functions are equivalent:</p>
 <pre><code class="language-move">fun just_unit(): () { () }
 fun just_unit() { () }
 fun just_unit() { }
 </code></pre>
-<p><code>script</code> functions must have a return type of unit <code>()</code></p>
-<pre><code class="language-move=">script {
+<p><code>script</code> functions must have a return type of unit <code>()</code>:</p>
+<pre><code class="language-move">script {
     fun do_nothing() {
     }
 }
@@ -2326,14 +2342,14 @@ module m {
 }
 </code></pre>
 <p>Structs cannot be recursive, so the following definition is invalid:</p>
-<pre><code class="language-move=">struct Foo { x: Foo }
+<pre><code class="language-move">struct Foo { x: Foo }
 //              ^ error! Foo cannot contain Foo
 </code></pre>
 <p>As mentioned above: by default, a struct declaration is linear and ephemeral. So to allow the value
 to be used with certain operations (that copy it, drop it, store it in global storage, or use it as
 a storage schema), structs can be granted <a href="./abilities.html">abilities</a> by annotating them with
 <code>has &lt;ability&gt;</code>:</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     struct Foo has copy, drop { x: u64, y: bool }
 }
@@ -2341,7 +2357,7 @@ module m {
 </code></pre>
 <p>For more details, see the <a href="./abilities.html#annotating-structs">annotating structs</a> section.</p>
 <h3 id="naming"><a class="header" href="#naming">Naming</a></h3>
-<p>Structs must start with a capital letter <code>A</code> to <code>Z</code>. After the first letter, constant names can
+<p>Structs must start with a capital letter <code>A</code> to <code>Z</code>. After the first letter, struct names can
 contain underscores <code>_</code>, letters <code>a</code> to <code>z</code>, letters <code>A</code> to <code>Z</code>, or digits <code>0</code> to <code>9</code>.</p>
 <pre><code class="language-move">struct Foo {}
 struct BAR {}
@@ -2353,7 +2369,7 @@ features. It may or may not be removed later.</p>
 <h3 id="creating-structs"><a class="header" href="#creating-structs">Creating Structs</a></h3>
 <p>Values of a struct type can be created (or &quot;packed&quot;) by indicating the struct name, followed by
 value for each field:</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     struct Foo has drop { x: u64, y: bool }
     struct Baz has drop { foo: Foo }
@@ -2374,7 +2390,7 @@ let baz = Baz { foo };
 <p>This is called sometimes called &quot;field name punning&quot;.</p>
 <h3 id="destroying-structs-via-pattern-matching"><a class="header" href="#destroying-structs-via-pattern-matching">Destroying Structs via Pattern Matching</a></h3>
 <p>Struct values can be destroyed by binding or assigning them patterns.</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     struct Foo { x: u64, y: bool }
     struct Bar { foo: Foo }
@@ -2393,6 +2409,7 @@ module m {
     fun example_destroy_foo_wildcard() {
         let foo = Foo { x: 3, y: false };
         let Foo { x, y: _ } = foo;
+
         // only one new binding since y was bound to a wildcard
         //   x: u64 = 3
     }
@@ -2401,6 +2418,7 @@ module m {
         let x: u64;
         let y: bool;
         Foo { x, y } = Foo { x: 3, y: false };
+
         // mutating existing variables x &amp; y
         //   x = 3, y = false
     }
@@ -2408,6 +2426,7 @@ module m {
     fun example_foo_ref() {
         let foo = Foo { x: 3, y: false };
         let Foo { x, y } = &amp;foo;
+
         // two new bindings
         //   x: &amp;u64
         //   y: &amp;bool
@@ -2416,6 +2435,7 @@ module m {
     fun example_foo_ref_mut() {
         let foo = Foo { x: 3, y: false };
         let Foo { x, y } = &amp;mut foo;
+
         // two new bindings
         //   x: &amp;mut u64
         //   y: &amp;mut bool
@@ -2425,9 +2445,10 @@ module m {
         let bar = Bar { foo: Foo { x: 3, y: false } };
         let Bar { foo: Foo { x, y } } = bar;
         //             ^ nested pattern
+
         // two new bindings
         //   x: u64 = 3
-        //   foo_y: bool = false
+        //   y: bool = false
     }
 
     fun example_destroy_baz() {
@@ -2440,7 +2461,7 @@ module m {
 <h3 id="borrowing-structs-and-fields"><a class="header" href="#borrowing-structs-and-fields">Borrowing Structs and Fields</a></h3>
 <p>The <code>&amp;</code> and <code>&amp;mut</code> operator can be used to create references to structs or fields. These examples
 include some optional type annotations (e.g., <code>: &amp;Foo</code>) to demonstrate the type of operations.</p>
-<pre><code class="language-move=">let foo = Foo { x: 3, y: true };
+<pre><code class="language-move">let foo = Foo { x: 3, y: true };
 let foo_ref: &amp;Foo = &amp;foo;
 let y: bool = foo_ref.y;          // reading a field via a reference to the struct
 let x_ref: &amp;u64 = &amp;foo.x;
@@ -2448,21 +2469,21 @@ let x_ref: &amp;u64 = &amp;foo.x;
 let x_ref_mut: &amp;mut u64 = &amp;mut foo.x;
 *x_ref_mut = 42;            // modifying a field via a mutable reference
 </code></pre>
-<p>It is possible to borrow inner fields of nested structs.</p>
-<pre><code class="language-move=">let foo = Foo { x: 3, y: true };
+<p>It is possible to borrow inner fields of nested structs:</p>
+<pre><code class="language-move">let foo = Foo { x: 3, y: true };
 let bar = Bar { foo };
 
 let x_ref = &amp;bar.foo.x;
 </code></pre>
-<p>You can also borrow a field via a reference to a struct.</p>
-<pre><code class="language-move=">let foo = Foo { x: 3, y: true };
+<p>You can also borrow a field via a reference to a struct:</p>
+<pre><code class="language-move">let foo = Foo { x: 3, y: true };
 let foo_ref = &amp;foo;
 let x_ref = &amp;foo_ref.x;
 // this has the same effect as let x_ref = &amp;foo.x
 </code></pre>
 <h3 id="reading-and-writing-fields"><a class="header" href="#reading-and-writing-fields">Reading and Writing Fields</a></h3>
-<p>If you need to read and copy a field's value, you can then dereference the borrowed field</p>
-<pre><code class="language-move=">let foo = Foo { x: 3, y: true };
+<p>If you need to read and copy a field's value, you can then dereference the borrowed field:</p>
+<pre><code class="language-move">let foo = Foo { x: 3, y: true };
 let bar = Bar { foo: copy foo };
 let x: u64 = *&amp;foo.x;
 let y: bool = *&amp;foo.y;
@@ -2470,35 +2491,35 @@ let foo2: Foo = *&amp;bar.foo;
 </code></pre>
 <p>If the field is implicitly copyable, the dot operator can be used to read fields of a struct without
 any borrowing. (Only scalar values with the <code>copy</code> ability are implicitly copyable.)</p>
-<pre><code class="language-move=">let foo = Foo { x: 3, y: true };
+<pre><code class="language-move">let foo = Foo { x: 3, y: true };
 let x = foo.x;  // x == 3
 let y = foo.y;  // y == true
 </code></pre>
-<p>Dot operators can be chained to access nested fields.</p>
-<pre><code class="language-move=">let baz = Baz { foo: Foo { x: 3, y: true } };
+<p>Dot operators can be chained to access nested fields:</p>
+<pre><code class="language-move">let baz = Baz { foo: Foo { x: 3, y: true } };
 let x = baz.foo.x; // x = 3;
 </code></pre>
 <p>However, this is not permitted for fields that contain non-primitive types, such a vector or another
-struct</p>
-<pre><code class="language-move=">let foo = Foo { x: 3, y: true };
+struct:</p>
+<pre><code class="language-move">let foo = Foo { x: 3, y: true };
 let bar = Bar { foo };
 let foo2: Foo = *&amp;bar.foo;
-let foo3: Foo = bar.foo; // error! add an explicit copy with *&amp;
+let foo3: Foo = bar.foo; // error! must add an explicit copy with *&amp;
 </code></pre>
 <p>The reason behind this design decision is that copying a vector or another struct might be an
 expensive operation. It is important for a programmer to be aware of this copy and make others aware
-with the explicit syntax <code>*&amp;</code></p>
+with the explicit syntax <code>*&amp;</code>.</p>
 <p>In addition reading from fields, the dot syntax can be used to modify fields, regardless of the
-field being a primitive type or some other struct</p>
-<pre><code class="language-move=">let foo = Foo { x: 3, y: true };
+field being a primitive type or some other struct.</p>
+<pre><code class="language-move">let foo = Foo { x: 3, y: true };
 foo.x = 42;     // foo = Foo { x: 42, y: true }
 foo.y = !foo.y; // foo = Foo { x: 42, y: false }
 let bar = Bar { foo };            // bar = Bar { foo: Foo { x: 42, y: false } }
 bar.foo.x = 52;                   // bar = Bar { foo: Foo { x: 52, y: false } }
 bar.foo = Foo { x: 62, y: true }; // bar = Bar { foo: Foo { x: 62, y: true } }
 </code></pre>
-<p>The dot syntax also works via a reference to a struct</p>
-<pre><code class="language-move=">let foo = Foo { x: 3, y: true };
+<p>The dot syntax also works via a reference to a struct:</p>
+<pre><code class="language-move">let foo = Foo { x: 3, y: true };
 let foo_ref = &amp;mut foo;
 foo_ref.x = foo_ref.x + 1;
 </code></pre>
@@ -2513,7 +2534,7 @@ the struct.</li>
 <p>Following these rules, if you want to modify your struct outside the module, you will need to
 provide public APIs for them. The end of the chapter contains some examples of this.</p>
 <p>However, struct <em>types</em> are always visible to another module or script:</p>
-<pre><code class="language-move=">// m.move
+<pre><code class="language-move">// m.move
 address 0x2 {
 module m {
     struct Foo has drop { x: u64 }
@@ -2524,7 +2545,7 @@ module m {
 }
 }
 </code></pre>
-<pre><code class="language-move=">// n.move
+<pre><code class="language-move">// n.move
 address 0x2 {
 module n {
     use 0x2::m;
@@ -2550,7 +2571,7 @@ module n {
 ephemeral. This means they cannot be copied or dropped. This property can be very useful when
 modeling real world resources like money, as you do not want money to be duplicated or get lost in
 circulation.</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     struct Foo { x: u64 }
 
@@ -2575,9 +2596,9 @@ module m {
 }
 }
 </code></pre>
-<p>To fix the second example (<code>fun dropping_resource</code>), you would need to manually &quot;unpack&quot; the
+<p>To fix the second example (<code>fun destroying_resource1</code>), you would need to manually &quot;unpack&quot; the
 resource:</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     struct Foo { x: u64 }
 
@@ -2593,7 +2614,7 @@ This can be leveraged to enforce certain invariants in a system, for example, co
 <p>If on the other hand, your struct does not represent something valuable, you can add the abilities
 <code>copy</code> and <code>drop</code> to get a struct value that might feel more familiar from other programming
 languages:</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     struct Foo has copy, drop { x: u64 }
 
@@ -2618,10 +2639,10 @@ structs must have the <code>store</code> ability. See the <a href="./abilities">
 <a href="./global-storage-operators.html">global storage</a> chapters for more detail.</p>
 <h2 id="examples-3"><a class="header" href="#examples-3">Examples</a></h2>
 <p>Here are two short examples of how you might use structs to represent valuable data (in the case of
-<code>Coin</code>) or more classical data (in the case of <code>Point</code> and <code>Circle</code>)</p>
+<code>Coin</code>) or more classical data (in the case of <code>Point</code> and <code>Circle</code>).</p>
 <h3 id="example-1-coin"><a class="header" href="#example-1-coin">Example 1: Coin</a></h3>
 <!-- TODO link to access control for mint -->
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     // We do not want the Coin to be copied because that would be duplicating this &quot;money&quot;,
     // so we do not give the struct the 'copy' ability.
@@ -2636,7 +2657,7 @@ module m {
 
     public fun mint(value: u64): Coin {
         // You would want to gate this function with some form of access control to prevent
-        // anyone using this module from minting an infinite amount of coins
+        // anyone using this module from minting an infinite amount of coins.
         Coin { value }
     }
 
@@ -2669,7 +2690,7 @@ module m {
 }
 </code></pre>
 <h3 id="example-2-geometry"><a class="header" href="#example-2-geometry">Example 2: Geometry</a></h3>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module point {
     struct Point has copy, drop, store {
         x: u64,
@@ -2707,9 +2728,9 @@ module point {
 }
 }
 </code></pre>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module circle {
-    use 0x2::Point::{Self, Point};
+    use 0x2::point::{Self, Point};
 
     struct Circle has copy, drop, store {
         center: Point,
@@ -2721,7 +2742,7 @@ module circle {
     }
 
     public fun overlaps(c1: &amp;Circle, c2: &amp;Circle): bool {
-        let d = Point::dist_squared(&amp;c1.center, &amp;c2.center);
+        let d = point::dist_squared(&amp;c1.center, &amp;c2.center);
         let r1 = c1.radius;
         let r2 = c2.radius;
         d*d &lt;= r1*r1 + 2*r1*r2 + r2*r2
@@ -2777,7 +2798,7 @@ features. It may or may not be removed later.</p>
 <p><code>public</code> constants are not currently supported. <code>const</code> values can be used only in the declaring
 module.</p>
 <h2 id="valid-expressions"><a class="header" href="#valid-expressions">Valid Expressions</a></h2>
-<p>Currently, constants are limited to the primitive types <code>bool</code>, <code>u8</code>, <code>u64</code>, <code>u128</code>, <code>address</code>, and
+<p>Currently, constants are limited to the primitive types <code>bool</code>, <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code>, <code>u128</code>, <code>u256</code>, <code>address</code>, and
 <code>vector&lt;u8&gt;</code>. Future support for other <code>vector</code> values (besides the &quot;string&quot;-style literals) will
 come later.</p>
 <h3 id="values"><a class="header" href="#values">Values</a></h3>
@@ -2798,6 +2819,7 @@ const SHIFTY: u8 = {
   (1 &lt;&lt; 1) * (1 &lt;&lt; 2) * (1 &lt;&lt; 3) * (1 &lt;&lt; 4)
 };
 const HALF_MAX: u128 = 340282366920938463463374607431768211455 / 2;
+const REM: u256 = 57896044618658097711785492504343953926634992332820282019728792003956564819968 % 654321;
 const EQUAL: bool = 1 == 1;
 </code></pre>
 <p>If the operation would result in a runtime exception, the compiler will give an error that it is
@@ -3227,9 +3249,9 @@ If you are already somewhat familiar with abilities from writing Move programs, 
 <p>The <code>key</code> ability allows the type to serve as a key for <a href="./global-storage-operators.html">global storage operations</a>. It gates all global storage operations, so in order for a type to be used with <code>move_to</code>, <code>borrow_global</code>, <code>move_from</code>, etc., the type must have the <code>key</code> ability. Note that the operations still must be used in the module where the <code>key</code> type is defined (in a sense, the operations are private to the defining module).</p>
 <p>If a value has <code>key</code>, all values contained inside of that value have <code>store</code>. This is the only ability with this sort of asymmetry.</p>
 <h2 id="builtin-types"><a class="header" href="#builtin-types">Builtin Types</a></h2>
-<p>Most primitive, builtin types have <code>copy</code>, <code>drop</code>, and <code>store</code> with the exception of <code>signer</code>, which just has <code>store</code></p>
+<p>Most primitive, builtin types have <code>copy</code>, <code>drop</code>, and <code>store</code> with the exception of <code>signer</code>, which just has <code>drop</code></p>
 <ul>
-<li><code>bool</code>, <code>u8</code>, <code>u64</code>, <code>u128</code>, and <code>address</code> all have <code>copy</code>, <code>drop</code>, and <code>store</code>.</li>
+<li><code>bool</code>, <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code>, <code>u128</code>, <code>u256</code>, and <code>address</code> all have <code>copy</code>, <code>drop</code>, and <code>store</code>.</li>
 <li><code>signer</code> has <code>drop</code>
 <ul>
 <li>Cannot be copied and cannot be put into global storage</li>
@@ -4200,8 +4222,8 @@ Running Move unit tests
 [ PASS    ] 0x1::my_module::make_sure_zero_coin_fails
 Test result: OK. Total tests: 2; passed: 2; failed: 0
 </code></pre>
-<h4 id="-i-bound-or---instructions-bound"><a class="header" href="#-i-bound-or---instructions-bound"><code>-i &lt;bound&gt;</code> or <code>--instructions &lt;bound&gt;</code></a></h4>
-<p>This bounds the number of instructions that can be executed for any one test to <code>&lt;bound&gt;</code>:</p>
+<h4 id="-i-bound-or---gas_used-bound"><a class="header" href="#-i-bound-or---gas_used-bound"><code>-i &lt;bound&gt;</code> or <code>--gas_used &lt;bound&gt;</code></a></h4>
+<p>This bounds the amount of gas that can be consumed for any one test to <code>&lt;bound&gt;</code>:</p>
 <pre><code>$ move test -i 0
 CACHED MoveStdlib
 BUILDING TestExample
@@ -4231,7 +4253,7 @@ Failures in 0x1::my_module:
 Test result: FAILED. Total tests: 3; passed: 0; failed: 3
 </code></pre>
 <h4 id="-s-or---statistics"><a class="header" href="#-s-or---statistics"><code>-s</code> or <code>--statistics</code></a></h4>
-<p>With these flags you can gather statistics about the tests run and report the runtime and instructions executed for each test. For example, if we wanted to see the statistics for the tests in the example above:</p>
+<p>With these flags you can gather statistics about the tests run and report the runtime and gas used for each test. For example, if we wanted to see the statistics for the tests in the example above:</p>
 <pre><code>$ move test -s
 CACHED MoveStdlib
 BUILDING TestExample
@@ -4243,7 +4265,7 @@ Running Move unit tests
 Test Statistics:
 
 ┌────────────────────────────────────────────────┬────────────┬───────────────────────────┐
-│                   Test Name                    │    Time    │   Instructions Executed   │
+│                   Test Name                    │    Time    │   Gas Used   │
 ├────────────────────────────────────────────────┼────────────┼───────────────────────────┤
 │ 0x1::my_module::make_sure_non_zero_coin_passes │   0.009    │             1             │
 ├────────────────────────────────────────────────┼────────────┼───────────────────────────┤

@@ -11,12 +11,12 @@ Test failures:
 Failures in 0x1::M:
 
 ┌── multi_signer_fail ──────
-│ Test did not abort as expected
+│ Test did not fail as expected
 └──────────────────
 
 
 ┌── single_signer_fail ──────
-│ Test was not expected to abort but it aborted with 0 here
+│ Test was not expected to fail but it errored with an abort with code 0 originating in an unknown location. Rooted here
 └──────────────────
 
 Test result: FAILED. Total tests: 6; passed: 4; failed: 2

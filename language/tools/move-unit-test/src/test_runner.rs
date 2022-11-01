@@ -776,7 +776,11 @@ impl SharedTestingConfig {
             match (test_info.expected_failure.as_ref(), &res.exit_reason) {
                 // Test expected to succeed or abort with a specific abort code, but ran into an internal error.
                 (
-                    None | Some(ExpectedFailure::ExpectedWithCodeDEPRECATED(_)),
+                    None
+                    | Some(
+                        ExpectedFailure::ExpectedWithCodeDEPRECATED(_)
+                        | ExpectedFailure::ExpectedWithError(_),
+                    ),
                     ExitReason::Revert(_),
                 ) if abort_code() == u64::MAX => {
                     output.fail(function_name);
@@ -806,7 +810,10 @@ impl SharedTestingConfig {
 
                 // Expect the test to abort with a specific code.
                 (
-                    Some(ExpectedFailure::ExpectedWithCodeDEPRECATED(exp_abort_code)),
+                    Some(
+                        ExpectedFailure::ExpectedWithError(MoveError(_, Some(exp_abort_code), _))
+                        | ExpectedFailure::ExpectedWithCodeDEPRECATED(exp_abort_code),
+                    ),
                     ExitReason::Revert(_),
                 ) => {
                     let abort_code = abort_code();
@@ -837,7 +844,9 @@ impl SharedTestingConfig {
                 // Test expected to abort but succeeded.
                 (
                     Some(
-                        ExpectedFailure::Expected | ExpectedFailure::ExpectedWithCodeDEPRECATED(_),
+                        ExpectedFailure::Expected
+                        | ExpectedFailure::ExpectedWithCodeDEPRECATED(_)
+                        | ExpectedFailure::ExpectedWithError(_),
                     ),
                     ExitReason::Succeed(_),
                 ) => {

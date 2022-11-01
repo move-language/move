@@ -118,7 +118,12 @@ pub fn run_cli(
         Command::MoveyUpload(c) => c.execute(move_args.package_path),
         Command::New(c) => c.execute_with_defaults(move_args.package_path),
         Command::Prove(c) => c.execute(move_args.package_path, move_args.build_config),
-        Command::Test(c) => c.execute(move_args.package_path, move_args.build_config, natives),
+        Command::Test(c) => c.execute(
+            move_args.package_path,
+            move_args.build_config,
+            natives,
+            Some(cost_table.clone()),
+        ),
         Command::Sandbox { storage_dir, cmd } => cmd.handle_command(
             natives,
             cost_table,

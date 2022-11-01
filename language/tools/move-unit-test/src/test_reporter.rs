@@ -490,7 +490,7 @@ impl TestResults {
                 width = max_function_name_size,
                 name = "Test Name",
                 time = "Time",
-                instructions = "Instructions Executed"
+                instructions = "Gas Used"
             )?;
 
             for (qualified_function_name, time, instructions) in stats {

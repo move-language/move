@@ -11,20 +11,20 @@ module DiemFramework::RolesTests{
     }
 
     #[test]
-    #[expected_failure(abort_code = 2)]
+    #[expected_failure(abort_code = 2, location = DiemFramework::CoreAddresses)]
     fun grant_diem_root_wrong_addr_pre_genesis() {
         let account = get_account();
         Roles::grant_diem_root_role(&account);
     }
 
     #[test(tc = @TreasuryCompliance)]
-    #[expected_failure(abort_code = 5)]
+    #[expected_failure(abort_code = 5, location = Roles)]
     fun tc_dne_pre_genesis(tc: signer) {
         Roles::assert_treasury_compliance(&tc);
     }
 
     #[test(dr = @DiemRoot)]
-    #[expected_failure(abort_code = 5)]
+    #[expected_failure(abort_code = 5, location = Roles)]
     fun dr_dne_pre_genesis(dr: signer) {
         Roles::assert_diem_root(&dr);
     }
@@ -40,21 +40,21 @@ module DiemFramework::RolesTests{
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 2)]
+    #[expected_failure(abort_code = 2, location = DiemFramework::CoreAddresses)]
     fun tc_is_not_dr(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         Roles::assert_diem_root(&tc);
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 258)]
+    #[expected_failure(abort_code = 258, location = DiemFramework::CoreAddresses)]
     fun dr_is_not_tc(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         Roles::assert_treasury_compliance(&dr);
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(abort_code = 1, location = DiemFramework::DiemTimestamp)]
     fun grant_diem_root_wrong_addr_post_genesis(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let account = get_account();
@@ -62,21 +62,21 @@ module DiemFramework::RolesTests{
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(abort_code = 1, location = DiemFramework::DiemTimestamp)]
     fun grant_diem_root_correct_addr_post_genesis(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         Roles::grant_diem_root_role(&dr);
     }
 
     #[test]
-    #[expected_failure(abort_code = 258)]
+    #[expected_failure(abort_code = 258, location = DiemFramework::CoreAddresses)]
     fun grant_treasury_compliance_wrong_addr_pre_genesis() {
         let account = get_account();
         Roles::grant_treasury_compliance_role(&account, &account);
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(abort_code = 1, location = DiemFramework::DiemTimestamp)]
     fun grant_treasury_compliance_wrong_addr_post_genesis(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let account = get_account();
@@ -84,35 +84,35 @@ module DiemFramework::RolesTests{
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(abort_code = 1, location = DiemFramework::DiemTimestamp)]
     fun grant_treasury_compliance_wrong_granting_addr_post_genesis(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         Roles::grant_treasury_compliance_role(&tc, &tc);
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(abort_code = 1, location = DiemFramework::DiemTimestamp)]
     fun grant_treasury_compliance_correct_addrs(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         Roles::grant_treasury_compliance_role(&dr, &tc);
     }
 
     #[test]
-    #[expected_failure(abort_code = 5)]
+    #[expected_failure(abort_code = 5, location = Roles)]
     fun designated_dealer_role_dne() {
         let account = get_account();
         Roles::assert_designated_dealer(&account);
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 1539)]
+    #[expected_failure(abort_code = 1539, location = Roles)]
     fun designated_dealer_assert_wrong_role(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         Roles::assert_designated_dealer(&tc);
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 258)]
+    #[expected_failure(abort_code = 258, location = DiemFramework::CoreAddresses)]
     fun grant_dd_role_non_tc_granter(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let account = get_account();
@@ -131,7 +131,7 @@ module DiemFramework::RolesTests{
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 6)]
+    #[expected_failure(abort_code = 6, location = Roles)]
     fun double_grant_dd_role_tc_granter(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let account = get_account();
@@ -140,21 +140,21 @@ module DiemFramework::RolesTests{
     }
 
     #[test]
-    #[expected_failure(abort_code = 5)]
+    #[expected_failure(abort_code = 5, location = Roles)]
     fun validator_role_dne() {
         let account = get_account();
         Roles::assert_validator(&account);
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 1795)]
+    #[expected_failure(abort_code = 1795, location = Roles)]
     fun validator_assert_wrong_role(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         Roles::assert_validator(&tc);
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 2)]
+    #[expected_failure(abort_code = 2, location = DiemFramework::CoreAddresses)]
     fun grant_validator_role_non_dr_granter(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let account = get_account();
@@ -172,7 +172,7 @@ module DiemFramework::RolesTests{
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 6)]
+    #[expected_failure(abort_code = 6, location = Roles)]
     fun double_grant_validator_role_dr_granter(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let account = get_account();
@@ -181,21 +181,21 @@ module DiemFramework::RolesTests{
     }
 
     #[test]
-    #[expected_failure(abort_code = 5)]
+    #[expected_failure(abort_code = 5, location = Roles)]
     fun validator_operator_role_dne() {
         let account = get_account();
         Roles::assert_validator_operator(&account);
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 2051)]
+    #[expected_failure(abort_code = 2051, location = Roles)]
     fun validator_operator_assert_wrong_role(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         Roles::assert_validator_operator(&tc);
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 2)]
+    #[expected_failure(abort_code = 2, location = DiemFramework::CoreAddresses)]
     fun grant_validator_operator_role_non_dr_granter(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let account = get_account();
@@ -213,7 +213,7 @@ module DiemFramework::RolesTests{
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 6)]
+    #[expected_failure(abort_code = 6, location = Roles)]
     fun double_grant_validator_operator_role_dr_granter(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let account = get_account();
@@ -222,14 +222,14 @@ module DiemFramework::RolesTests{
     }
 
     #[test]
-    #[expected_failure(abort_code = 5)]
+    #[expected_failure(abort_code = 5, location = Roles)]
     fun parent_vasp_role_dne() {
         let account = get_account();
         Roles::assert_parent_vasp_role(&account);
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 258)]
+    #[expected_failure(abort_code = 258, location = DiemFramework::CoreAddresses)]
     fun grant_parent_vasp_role_non_tc_granter(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let account = get_account();
@@ -249,7 +249,7 @@ module DiemFramework::RolesTests{
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 6)]
+    #[expected_failure(abort_code = 6, location = Roles)]
     fun double_grant_parent_vasp_role_tc_granter(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let account = get_account();
@@ -258,14 +258,14 @@ module DiemFramework::RolesTests{
     }
 
     #[test]
-    #[expected_failure(abort_code = 5)]
+    #[expected_failure(abort_code = 5, location = Roles)]
     fun child_vasp_role_dne() {
         let account = get_account();
         Roles::assert_child_vasp_role(&account);
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 2307)]
+    #[expected_failure(abort_code = 2307, location = Roles)]
     fun child_vasp_assert_wrong_role(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let account = get_account();
@@ -274,7 +274,7 @@ module DiemFramework::RolesTests{
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 771)]
+    #[expected_failure(abort_code = 771, location = Roles)]
     fun grant_child_vasp_role_non_parent_vasp_granter(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let account = get_account();
@@ -297,7 +297,7 @@ module DiemFramework::RolesTests{
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 6)]
+    #[expected_failure(abort_code = 6, location = Roles)]
     fun double_grant_child_vasp_role_tc_granter(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let (account, pvasp) = {
@@ -361,21 +361,21 @@ module DiemFramework::RolesTests{
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 5)]
+    #[expected_failure(abort_code = 5, location = Roles)]
     fun get_role_id_no_role(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         Roles::get_role_id(@0x1);
     }
 
     #[test]
-    #[expected_failure(abort_code = 5)]
+    #[expected_failure(abort_code = 5, location = Roles)]
     fun assert_parent_or_designated_dealer_role_dne() {
         let account = get_account();
         Roles::assert_parent_vasp_or_designated_dealer(&account);
     }
 
     #[test]
-    #[expected_failure(abort_code = 5)]
+    #[expected_failure(abort_code = 5, location = Roles)]
     fun assert_parent_or_child_role_dne() {
         let account = get_account();
         Roles::assert_parent_vasp_or_child_vasp(&account);

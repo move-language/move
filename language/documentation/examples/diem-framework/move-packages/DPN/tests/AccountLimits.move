@@ -21,7 +21,7 @@ module DiemFramework::AccountLimitsTests {
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, vasp = @0x2)]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(abort_code = 1, location = DiemFramework::DiemTimestamp)]
     fun grant_mutation_capability_after_genesis(dr: signer, tc: signer, vasp: signer) {
         Genesis::setup(&dr, &tc);
 
@@ -34,7 +34,7 @@ module DiemFramework::AccountLimitsTests {
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, vasp = @0x2)]
-    #[expected_failure(abort_code = 262)]
+    #[expected_failure(abort_code = 262, location = AccountLimits)]
     fun publish_window_twice(dr: signer, tc: signer, vasp: signer) {
         setup(&dr, &tc, &vasp);
 
@@ -42,21 +42,21 @@ module DiemFramework::AccountLimitsTests {
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, vasp = @0x2)]
-    #[expected_failure(abort_code = 2)]
+    #[expected_failure(abort_code = 2, location = DiemFramework::CoreAddresses)]
     fun publish_window_non_diem_root(dr: signer, tc: signer, vasp: signer) {
         setup(&dr, &tc, &vasp);
         AccountLimits::publish_window<XUS>(&vasp, &vasp, signer::address_of(&vasp));
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, vasp = @0x2)]
-    #[expected_failure(abort_code = 5)]
+    #[expected_failure(abort_code = 5, location = AccountLimits)]
     fun publish_window_non_existent_limit_address(dr: signer, tc: signer, vasp: signer) {
         setup(&dr, &tc, &vasp);
         AccountLimits::publish_window<XUS>(&dr, &vasp, @0x42 /* non-exsistent */);
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, vasp = @0x2)]
-    #[expected_failure(abort_code = 6)]
+    #[expected_failure(abort_code = 6, location = AccountLimits)]
     fun publish_unrestricted_limits_for_testing_twice(dr: signer, tc: signer, vasp: signer) {
         setup(&dr, &tc, &vasp);
         AccountLimits::publish_unrestricted_limits_for_testing<XUS>(&vasp);
@@ -110,7 +110,7 @@ module DiemFramework::AccountLimitsTests {
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, vasp = @0x2)]
-    #[expected_failure(abort_code = 258)]
+    #[expected_failure(abort_code = 258, location = DiemFramework::CoreAddresses)]
     fun update_limits_definition_non_tc(dr: signer, tc: signer, vasp: signer) {
         setup(&dr, &tc, &vasp);
         AccountLimits::update_limits_definition<XUS>(
@@ -124,7 +124,7 @@ module DiemFramework::AccountLimitsTests {
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, vasp = @0x2)]
-    #[expected_failure(abort_code = 5)]
+    #[expected_failure(abort_code = 5, location = AccountLimits)]
     fun update_limits_definition_non_exsistent(dr: signer, tc: signer, vasp: signer) {
         setup(&dr, &tc, &vasp);
         AccountLimits::update_limits_definition<XUS>(
@@ -162,7 +162,7 @@ module DiemFramework::AccountLimitsTests {
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, vasp = @0x2)]
-    #[expected_failure(abort_code = 258)]
+    #[expected_failure(abort_code = 258, location = DiemFramework::CoreAddresses)]
     fun update_window_info_non_tc(dr: signer, tc: signer, vasp: signer) {
         setup(&dr, &tc, &vasp);
         let vasp_addr = signer::address_of(&vasp);

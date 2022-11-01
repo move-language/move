@@ -102,7 +102,7 @@ module ExperimentalFramework::VoteTests {
     }
 
     #[test(dr = @CoreResources)]
-    #[expected_failure(abort_code = 263)]
+    #[expected_failure(abort_code = 263, location = Vote)]
     fun create_ballot_expired_timestamp(dr: signer) {
         let (proposer, _, addr_bcs) = ballot_setup(&dr);
         Vote::create_ballot(
@@ -174,7 +174,7 @@ module ExperimentalFramework::VoteTests {
     // TODO: test disabled due to timeout
     /*
         #[test(dr = @CoreResources)]
-        #[expected_failure(abort_code = 520)]
+        #[expected_failure(abort_code = 520, location = Vote)]
         fun create_ballots_too_many(dr: signer) {
             let (proposer, _, addr_bcs) = ballot_setup(&dr);
             let i = 0;
@@ -196,7 +196,7 @@ module ExperimentalFramework::VoteTests {
     */
 
     #[test(dr = @CoreResources)]
-    #[expected_failure(abort_code = 769)]
+    #[expected_failure(abort_code = 769, location = Vote)]
     fun remove_ballot(dr: signer) {
         let (voter1, _voter2, _voter3, ballot_id, proposal) = vote_test_helper(&dr, 10);
         Vote::remove_ballot_internal<TestProposal>(get_proposer(), *(&ballot_id));
@@ -205,7 +205,7 @@ module ExperimentalFramework::VoteTests {
     }
 
     #[test(dr = @CoreResources)]
-    #[expected_failure(abort_code = 769)]
+    #[expected_failure(abort_code = 769, location = Vote)]
     fun vote_simple(dr: signer) {
         let (voter1, voter2, voter3, ballot_id, proposal) = vote_test_helper(&dr, 10);
         // First vote does not approve the ballot
@@ -245,7 +245,7 @@ module ExperimentalFramework::VoteTests {
     }
 
     #[test(dr = @CoreResources)]
-    #[expected_failure(abort_code = 263)]
+    #[expected_failure(abort_code = 263, location = Vote)]
     fun vote_expired_ts(dr: signer) {
         let (voter1, _voter2, _voter3, ballot_id, proposal) = vote_test_helper(&dr, 0);
         // Ballot has expired
@@ -253,7 +253,7 @@ module ExperimentalFramework::VoteTests {
     }
 
     #[test(dr = @CoreResources)]
-    #[expected_failure(abort_code = 2049)]
+    #[expected_failure(abort_code = 2049, location = Vote)]
     fun vote_repeat(dr: signer) {
         let (voter1, _voter2, _voter3, ballot_id, proposal) = vote_test_helper(&dr, 10);
         // First vote does not approve the ballot
@@ -263,7 +263,7 @@ module ExperimentalFramework::VoteTests {
     }
 
     #[test(dr = @CoreResources)]
-    #[expected_failure(abort_code = 1031)]
+    #[expected_failure(abort_code = 1031, location = Vote)]
     fun vote_invalid_proposal_type(dr: signer) {
         let (voter1, _voter2, _voter3, ballot_id, proposal) = vote_test_helper(&dr, 10);
         // Invalid proposal type
@@ -271,7 +271,7 @@ module ExperimentalFramework::VoteTests {
     }
 
     #[test(dr = @CoreResources)]
-    #[expected_failure(abort_code = 1031)]
+    #[expected_failure(abort_code = 1031, location = Vote)]
     fun vote_invalid_proposal(dr: signer) {
         let (voter1, _voter2, _voter3, ballot_id, _proposal) = vote_test_helper(&dr, 10);
         let invalid_proposal = TestProposal {
@@ -282,7 +282,7 @@ module ExperimentalFramework::VoteTests {
     }
 
     #[test(dr = @CoreResources)]
-    #[expected_failure(abort_code = 769)]
+    #[expected_failure(abort_code = 769, location = Vote)]
     fun vote_invalid_ballotid(dr: signer) {
         let proposer = get_proposer();
         let (voter1, _voter2, _voter3, _ballot_id, proposal) = vote_test_helper(&dr, 10);
@@ -292,7 +292,7 @@ module ExperimentalFramework::VoteTests {
     }
 
     #[test(dr = @CoreResources)]
-    #[expected_failure(abort_code = 1281)]
+    #[expected_failure(abort_code = 1281, location = Vote)]
     fun vote_invalid_voter(dr: signer) {
         let (_voter1, _voter2, _voter3, ballot_id, proposal) = vote_test_helper(&dr, 10);
         let invalid_voter = vector::pop_back(&mut unit_test::create_signers_for_testing(4));

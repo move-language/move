@@ -5,7 +5,7 @@ module DiemFramework::AccountFreezingTests {
     use std::signer;
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(abort_code = 1, location = DiemFramework::DiemTimestamp)]
     fun account_freezing_double_init(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         AF::initialize(&dr);
@@ -25,7 +25,7 @@ module DiemFramework::AccountFreezingTests {
     }
 
     #[test(a = @0x2)]
-    #[expected_failure(abort_code = 518)]
+    #[expected_failure(abort_code = 518, location = AF)]
     fun create_new_already_has_freezing_bit(a: signer) {
         AF::create_for_test(&a);
         AF::create_for_test(&a);
@@ -39,7 +39,7 @@ module DiemFramework::AccountFreezingTests {
     }
 
     #[test(a = @0x2, tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 258)]
+    #[expected_failure(abort_code = 258, location = DiemFramework::CoreAddresses)]
     fun freeze_account_not_tc(a: signer, tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         AF::create_for_test(&a);
@@ -47,28 +47,28 @@ module DiemFramework::AccountFreezingTests {
     }
 
     #[test(tc = @TreasuryCompliance, a = @0x2)]
-    #[expected_failure(abort_code = 257)]
+    #[expected_failure(abort_code = 257, location = DiemFramework::DiemTimestamp)]
     fun freeze_account_not_operating(tc: signer, a: signer) {
         AF::create_for_test(&a);
         AF::freeze_account(&tc, @0x2);
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 775)]
+    #[expected_failure(abort_code = 775, location = AF)]
     fun cannot_freeze_diem_root(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         AF::freeze_account(&tc, @DiemRoot);
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 1031)]
+    #[expected_failure(abort_code = 1031, location = AF)]
     fun cannot_freeze_treasury_compliance(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         AF::freeze_account(&tc, @TreasuryCompliance);
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 517)]
+    #[expected_failure(abort_code = 517, location = AF)]
     fun freeze_no_freezing_bit(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         AF::freeze_account(&tc, @0x2);
@@ -85,14 +85,14 @@ module DiemFramework::AccountFreezingTests {
     }
 
     #[test(tc = @TreasuryCompliance, a = @0x2)]
-    #[expected_failure(abort_code = 257)]
+    #[expected_failure(abort_code = 257, location = DiemFramework::DiemTimestamp)]
     fun unfreeze_account_not_operating(tc: signer, a: signer) {
         AF::create_for_test(&a);
         AF::unfreeze_account(&tc, @0x2);
     }
 
     #[test(a = @0x2, tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 258)]
+    #[expected_failure(abort_code = 258, location = DiemFramework::CoreAddresses)]
     fun unfreeze_account_not_tc(a: signer, tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         AF::create_for_test(&a);
@@ -100,7 +100,7 @@ module DiemFramework::AccountFreezingTests {
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 517)]
+    #[expected_failure(abort_code = 517, location = AF)]
     fun unfreeze_no_freezing_bit(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         AF::unfreeze_account(&tc, @0x2);

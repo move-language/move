@@ -3,13 +3,15 @@
 
 use crate::{
     file_format::{
-        AddressIdentifierPool, Bytecode, ConstantPool, FieldHandle, FieldInstantiation,
-        FunctionDefinition, FunctionHandle, FunctionInstantiation, IdentifierPool, ModuleHandle,
-        ModuleHandleIndex, SignaturePool, StructDefInstantiation, StructDefinition, StructHandle, CompiledScript, CodeUnit, AbilitySet, SignatureIndex,
+        AbilitySet, AddressIdentifierPool, Bytecode, CodeUnit, CompiledScript, ConstantPool,
+        FieldHandle, FieldInstantiation, FunctionDefinition, FunctionHandle, FunctionInstantiation,
+        IdentifierPool, ModuleHandle, ModuleHandleIndex, SignatureIndex, SignaturePool,
+        StructDefInstantiation, StructDefinition, StructHandle,
     },
-    file_format_common::Opcodes, CompiledModule,
+    file_format_common::Opcodes,
+    CompiledModule,
 };
-use anyhow::{Result,format_err};
+use anyhow::{format_err, Result};
 use move_core_types::{metadata::Metadata, u256::U256};
 use serde::{Deserialize, Serialize, Serializer};
 use std::str::FromStr;
@@ -35,7 +37,7 @@ pub(crate) struct CompiledModuleJsonFormat {
     pub function_defs: Vec<FunctionDefinition>,
 }
 
-impl From<CompiledModule> for CompiledModuleJsonFormat{
+impl From<CompiledModule> for CompiledModuleJsonFormat {
     fn from(module: CompiledModule) -> Self {
         let CompiledModule {
             version,
@@ -78,7 +80,7 @@ impl From<CompiledModule> for CompiledModuleJsonFormat{
     }
 }
 
-impl From<CompiledModuleJsonFormat> for CompiledModule{
+impl From<CompiledModuleJsonFormat> for CompiledModule {
     fn from(val: CompiledModuleJsonFormat) -> Self {
         let CompiledModuleJsonFormat {
             version,
@@ -122,10 +124,9 @@ impl From<CompiledModuleJsonFormat> for CompiledModule{
 }
 
 impl CompiledModule {
-    
     /// Serialize the module into a JSON string
     /// Note: We do not add `Serialize`, `Deserialize` to `CompiledModule` because we want to avoid misuse serialization
-    /// see more detail: https://github.com/move-language/move/pull/508 
+    /// see more detail: https://github.com/move-language/move/pull/508
     pub fn to_json(&self) -> Result<String> {
         serde_json::to_string(&CompiledModuleJsonFormat::from(self.clone())).map_err(Into::into)
     }
@@ -154,7 +155,7 @@ pub struct CompiledScriptJsonFormat {
     pub parameters: SignatureIndex,
 }
 
-impl From<CompiledScript> for CompiledScriptJsonFormat{
+impl From<CompiledScript> for CompiledScriptJsonFormat {
     fn from(script: CompiledScript) -> Self {
         let CompiledScript {
             version,
@@ -190,7 +191,6 @@ impl From<CompiledScript> for CompiledScriptJsonFormat{
 }
 
 impl From<CompiledScriptJsonFormat> for CompiledScript {
-    
     fn from(val: CompiledScriptJsonFormat) -> Self {
         let CompiledScriptJsonFormat {
             version,
@@ -225,7 +225,7 @@ impl From<CompiledScriptJsonFormat> for CompiledScript {
     }
 }
 
-impl CompiledScript{
+impl CompiledScript {
     pub fn to_json(&self) -> Result<String> {
         serde_json::to_string(&CompiledScriptJsonFormat::from(self.clone())).map_err(Into::into)
     }
@@ -235,7 +235,6 @@ impl CompiledScript{
         Ok(script.into())
     }
 }
-
 
 impl ToString for Opcodes {
     fn to_string(&self) -> String {
@@ -508,7 +507,7 @@ impl ToString for Bytecode {
             | Bytecode::VecSwap(idx) => format!("{} {}", opcodes.to_string(), idx),
             Bytecode::VecPack(idx, n) | Bytecode::VecUnpack(idx, n) => {
                 format!("{} {} {}", opcodes.to_string(), idx, n)
-            },
+            }
         }
     }
 }
@@ -692,13 +691,13 @@ impl FromStr for Bytecode {
                     anyhow::anyhow!("Invalid bytecode: {}. Expected value, found EOF", s)
                 })??;
                 Ok(Bytecode::LdU16(value))
-            },
+            }
             Opcodes::LD_U32 => {
                 let value = tokens.next().map(|s| s.parse::<u32>()).ok_or_else(|| {
                     anyhow::anyhow!("Invalid bytecode: {}. Expected value, found EOF", s)
                 })??;
                 Ok(Bytecode::LdU32(value))
-            },
+            }
             Opcodes::LD_U128 => {
                 let value = tokens.next().map(|s| s.parse::<u128>()).ok_or_else(|| {
                     anyhow::anyhow!("Invalid bytecode: {}. Expected value, found EOF", s)
@@ -710,7 +709,7 @@ impl FromStr for Bytecode {
                     anyhow::anyhow!("Invalid bytecode: {}. Expected value, found EOF", s)
                 })??;
                 Ok(Bytecode::LdU256(value))
-            },
+            }
             Opcodes::MUT_BORROW_FIELD_GENERIC => {
                 let field_index = tokens.next().map(|s| s.parse::<u16>()).ok_or_else(|| {
                     anyhow::anyhow!("Invalid bytecode: {}. Expected field_index, found EOF", s)
@@ -854,7 +853,10 @@ impl<'de> Deserialize<'de> for Bytecode {
 
 #[cfg(test)]
 mod tests {
-    use crate::{file_format::{basic_test_module, basic_test_script, CompiledScript}, CompiledModule};
+    use crate::{
+        file_format::{basic_test_module, basic_test_script, CompiledScript},
+        CompiledModule,
+    };
     use proptest::prelude::*;
 
     #[test]

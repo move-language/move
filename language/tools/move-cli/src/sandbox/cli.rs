@@ -20,6 +20,7 @@ use move_vm_test_utils::gas_schedule::CostTable;
 use std::{
     fs,
     path::{Path, PathBuf},
+    str::FromStr,
 };
 
 #[derive(Parser)]
@@ -141,6 +142,23 @@ pub enum SandboxCommand {
     Generate {
         #[clap(subcommand)]
         cmd: GenerateCommand,
+    },
+    /// Convert a Move module or script between binary and json format.
+    #[clap(name = "bytecode-converter")]
+    BytecodeConverter {
+        /// The path to the bytecode file to convert;
+        /// if the file is xx.mv, the output file will be xx.json
+        /// if the file is xx.json, the output file will be xx.mv
+        #[clap(short = 'i', long = "input")]
+        input_file_path: String,
+
+        /// The path to the output file dir, if absent, use the current dir
+        #[clap(short = 'o', long = "output")]
+        output_file_dir: Option<String>,
+
+        /// Should verify the module before convert.
+        #[clap(long)]
+        verify: bool,
     },
 }
 
@@ -303,6 +321,18 @@ impl SandboxCommand {
                     .prepare_state(storage_dir)?;
                 handle_generate_commands(cmd, &state)
             }
+            SandboxCommand::BytecodeConverter {
+                input_file_path,
+                output_file_dir,
+                verify,
+            } => sandbox::commands::bytecode_converter(
+                PathBuf::from_str(input_file_path)?,
+                output_file_dir
+                    .as_ref()
+                    .map(|s| PathBuf::from_str(s).unwrap())
+                    .unwrap_or_else(|| std::env::current_dir().unwrap()),
+                *verify,
+            ),
         }
     }
 }

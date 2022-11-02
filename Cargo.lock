@@ -2981,17 +2981,6 @@ name = "move-borrow-graph"
 version = "0.0.1"
 
 [[package]]
-name = "move-bytecode-converter"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap 3.1.8",
- "move-binary-format",
- "move-bytecode-verifier",
- "serde_json",
-]
-
-[[package]]
 name = "move-bytecode-source-map"
 version = "0.1.0"
 dependencies = [

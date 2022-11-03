@@ -41,10 +41,10 @@ impl ExecutionState {
     }
 }
 
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct VMError(Box<VMError_>);
 
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
 struct VMError_ {
     major_status: StatusCode,
     sub_status: Option<u64>,
@@ -213,12 +213,41 @@ impl VMError {
     }
 }
 
+impl fmt::Debug for VMError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self.0, f)
+    }
+}
+
+impl fmt::Debug for VMError_ {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self {
+            major_status,
+            sub_status,
+            message,
+            exec_state,
+            location,
+            indices,
+            offsets,
+        } = self;
+        f.debug_struct("VMError")
+            .field("major_status", major_status)
+            .field("sub_status", sub_status)
+            .field("message", message)
+            .field("exec_state", exec_state)
+            .field("location", location)
+            .field("indices", indices)
+            .field("offsets", offsets)
+            .finish()
+    }
+}
+
 impl std::error::Error for VMError {}
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PartialVMError(Box<PartialVMError_>);
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 struct PartialVMError_ {
     major_status: StatusCode,
     sub_status: Option<u64>,
@@ -467,6 +496,33 @@ pub fn bounds_error(
 
 pub fn verification_error(status: StatusCode, kind: IndexKind, idx: TableIndex) -> PartialVMError {
     PartialVMError::new(status).at_index(kind, idx)
+}
+
+impl fmt::Debug for PartialVMError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self.0, f)
+    }
+}
+
+impl fmt::Debug for PartialVMError_ {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self {
+            major_status,
+            sub_status,
+            message,
+            exec_state,
+            indices,
+            offsets,
+        } = self;
+        f.debug_struct("PartialVMError")
+            .field("major_status", major_status)
+            .field("sub_status", sub_status)
+            .field("message", message)
+            .field("exec_state", exec_state)
+            .field("indices", indices)
+            .field("offsets", offsets)
+            .finish()
+    }
 }
 
 impl std::error::Error for PartialVMError {

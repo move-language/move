@@ -72,13 +72,12 @@ impl<'a> Modules<'a> {
         &'a self,
         all_deps: &mut Vec<&'a CompiledModule>,
         module: &'a CompiledModule,
-        loader: &'a Modules,
     ) -> Result<()> {
         let next_deps = module.immediate_dependencies();
         all_deps.push(module);
         for next in next_deps {
             let next_module = self.get_module(&next)?;
-            self.get_transitive_dependencies_(all_deps, next_module, loader)?;
+            self.get_transitive_dependencies_(all_deps, next_module)?;
         }
         Ok(())
     }
@@ -90,7 +89,7 @@ impl<'a> Modules<'a> {
     ) -> Result<Vec<&CompiledModule>> {
         let mut all_deps = vec![];
         for dep in self.get_immediate_dependencies(module_id)? {
-            self.get_transitive_dependencies_(&mut all_deps, dep, self)?;
+            self.get_transitive_dependencies_(&mut all_deps, dep)?;
         }
         Ok(all_deps)
     }

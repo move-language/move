@@ -534,9 +534,9 @@ pub mod known_attributes {
             static EXPECTED_FAILURE_POSITIONS: Lazy<BTreeSet<AttributePosition>> =
                 Lazy::new(|| IntoIterator::into_iter([AttributePosition::Function]).collect());
             match self {
-                TestingAttribute::TestOnly => &*TEST_ONLY_POSITIONS,
-                TestingAttribute::Test => &*TEST_POSITIONS,
-                TestingAttribute::ExpectedFailure => &*EXPECTED_FAILURE_POSITIONS,
+                TestingAttribute::TestOnly => &TEST_ONLY_POSITIONS,
+                TestingAttribute::Test => &TEST_POSITIONS,
+                TestingAttribute::ExpectedFailure => &EXPECTED_FAILURE_POSITIONS,
             }
         }
     }
@@ -564,7 +564,7 @@ pub mod known_attributes {
                 .collect()
             });
             match self {
-                Self::VerifyOnly => &*VERIFY_ONLY_POSITIONS,
+                Self::VerifyOnly => &VERIFY_ONLY_POSITIONS,
             }
         }
     }
@@ -582,7 +582,7 @@ pub mod known_attributes {
             static BYTECODE_INSTRUCTION_POSITIONS: Lazy<BTreeSet<AttributePosition>> =
                 Lazy::new(|| IntoIterator::into_iter([AttributePosition::Function]).collect());
             match self {
-                NativeAttribute::BytecodeInstruction => &*BYTECODE_INSTRUCTION_POSITIONS,
+                NativeAttribute::BytecodeInstruction => &BYTECODE_INSTRUCTION_POSITIONS,
             }
         }
     }

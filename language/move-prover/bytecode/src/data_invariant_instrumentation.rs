@@ -49,7 +49,7 @@ impl FunctionTargetProcessor for DataInvariantInstrumentationProcessor {
             return data;
         }
         let options = ProverOptions::get(fun_env.module_env.env);
-        Instrumenter::run(&*options, targets, fun_env, data)
+        Instrumenter::run(&options, targets, fun_env, data)
     }
 
     fn name(&self) -> String {

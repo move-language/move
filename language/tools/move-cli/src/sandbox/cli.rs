@@ -261,7 +261,7 @@ impl SandboxCommand {
                 // delete storage
                 let storage_dir = Path::new(storage_dir);
                 if storage_dir.exists() {
-                    fs::remove_dir_all(&storage_dir)?;
+                    fs::remove_dir_all(storage_dir)?;
                 }
 
                 // delete build

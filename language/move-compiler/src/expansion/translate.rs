@@ -354,7 +354,7 @@ fn module(
     module_address: Option<Spanned<Address>>,
     module_def: P::ModuleDefinition,
 ) {
-    assert!(context.address == None);
+    assert!(context.address.is_none());
     let (mident, mod_) = module_(context, package_name, module_address, module_def);
     if let Err((mident, old_loc)) = module_map.add(mident, mod_) {
         duplicate_module(context, module_map, mident, old_loc)
@@ -400,8 +400,8 @@ fn module_(
         members,
     } = mdef;
     let attributes = flatten_attributes(context, AttributePosition::Module, attributes);
-    assert!(context.address == None);
-    assert!(address == None);
+    assert!(context.address.is_none());
+    assert!(address.is_none());
     set_sender_address(context, &name, module_address);
     let _ = check_restricted_name_all_cases(context, NameCase::Module, &name.0);
     if name.value().starts_with(|c| c == '_') {
@@ -479,7 +479,7 @@ fn script(
 }
 
 fn script_(context: &mut Context, package_name: Option<Symbol>, pscript: P::Script) -> E::Script {
-    assert!(context.address == None);
+    assert!(context.address.is_none());
     assert!(context.is_source_definition);
     let P::Script {
         attributes,
@@ -2038,7 +2038,7 @@ fn value(context: &mut Context, sp!(loc, pvalue_): P::Value) -> Option<E::Value>
         PV::HexString(s) => match hex_string::decode(loc, &s) {
             Ok(v) => EV::Bytearray(v),
             Err(e) => {
-                context.env.add_diag(e);
+                context.env.add_diag(*e);
                 return None;
             }
         },

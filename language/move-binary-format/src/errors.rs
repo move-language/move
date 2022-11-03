@@ -41,8 +41,11 @@ impl ExecutionState {
     }
 }
 
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct VMError {
+#[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
+pub struct VMError(Box<VMError_>);
+
+#[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
+struct VMError_ {
     major_status: StatusCode,
     sub_status: Option<u64>,
     message: Option<String>,
@@ -54,13 +57,13 @@ pub struct VMError {
 
 impl VMError {
     pub fn into_vm_status(self) -> VMStatus {
-        let VMError {
+        let VMError_ {
             major_status,
             sub_status,
             location,
             mut offsets,
             ..
-        } = self;
+        } = *self.0;
         match (major_status, sub_status, location) {
             (StatusCode::EXECUTED, sub_status, _) => {
                 debug_assert!(sub_status.is_none());
@@ -123,39 +126,39 @@ impl VMError {
     }
 
     pub fn major_status(&self) -> StatusCode {
-        self.major_status
+        self.0.major_status
     }
 
     pub fn sub_status(&self) -> Option<u64> {
-        self.sub_status
+        self.0.sub_status
     }
 
     pub fn message(&self) -> Option<&String> {
-        self.message.as_ref()
+        self.0.message.as_ref()
     }
 
     pub fn exec_state(&self) -> Option<&ExecutionState> {
-        self.exec_state.as_ref()
+        self.0.exec_state.as_ref()
     }
 
     pub fn remove_exec_state(&mut self) {
-        self.exec_state = None;
+        self.0.exec_state = None;
     }
 
     pub fn location(&self) -> &Location {
-        &self.location
+        &self.0.location
     }
 
     pub fn indices(&self) -> &Vec<(IndexKind, TableIndex)> {
-        &self.indices
+        &self.0.indices
     }
 
     pub fn offsets(&self) -> &Vec<(FunctionDefinitionIndex, CodeOffset)> {
-        &self.offsets
+        &self.0.offsets
     }
 
     pub fn status_type(&self) -> StatusType {
-        self.major_status.status_type()
+        self.0.major_status.status_type()
     }
 
     pub fn all_data(
@@ -169,7 +172,7 @@ impl VMError {
         Vec<(IndexKind, TableIndex)>,
         Vec<(FunctionDefinitionIndex, CodeOffset)>,
     ) {
-        let VMError {
+        let VMError_ {
             major_status,
             sub_status,
             message,
@@ -177,7 +180,7 @@ impl VMError {
             location,
             indices,
             offsets,
-        } = self;
+        } = *self.0;
         (
             major_status,
             sub_status,
@@ -190,7 +193,7 @@ impl VMError {
     }
 
     pub fn to_partial(self) -> PartialVMError {
-        let VMError {
+        let VMError_ {
             major_status,
             sub_status,
             message,
@@ -198,22 +201,54 @@ impl VMError {
             indices,
             offsets,
             ..
-        } = self;
-        PartialVMError {
+        } = *self.0;
+        PartialVMError(Box::new(PartialVMError_ {
             major_status,
             sub_status,
             message,
             exec_state,
             indices,
             offsets,
-        }
+        }))
+    }
+}
+
+impl fmt::Debug for VMError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self.0, f)
+    }
+}
+
+impl fmt::Debug for VMError_ {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self {
+            major_status,
+            sub_status,
+            message,
+            exec_state,
+            location,
+            indices,
+            offsets,
+        } = self;
+        f.debug_struct("VMError")
+            .field("major_status", major_status)
+            .field("sub_status", sub_status)
+            .field("message", message)
+            .field("exec_state", exec_state)
+            .field("location", location)
+            .field("indices", indices)
+            .field("offsets", offsets)
+            .finish()
     }
 }
 
 impl std::error::Error for VMError {}
 
-#[derive(Debug, Clone)]
-pub struct PartialVMError {
+#[derive(Clone)]
+pub struct PartialVMError(Box<PartialVMError_>);
+
+#[derive(Clone)]
+struct PartialVMError_ {
     major_status: StatusCode,
     sub_status: Option<u64>,
     message: Option<String>,
@@ -233,14 +268,14 @@ impl PartialVMError {
         Vec<(IndexKind, TableIndex)>,
         Vec<(FunctionDefinitionIndex, CodeOffset)>,
     ) {
-        let PartialVMError {
+        let PartialVMError_ {
             major_status,
             sub_status,
             message,
             exec_state,
             indices,
             offsets,
-        } = self;
+        } = *self.0;
         (
             major_status,
             sub_status,
@@ -252,15 +287,15 @@ impl PartialVMError {
     }
 
     pub fn finish(self, location: Location) -> VMError {
-        let PartialVMError {
+        let PartialVMError_ {
             major_status,
             sub_status,
             message,
             exec_state,
             indices,
             offsets,
-        } = self;
-        VMError {
+        } = *self.0;
+        VMError(Box::new(VMError_ {
             major_status,
             sub_status,
             message,
@@ -268,96 +303,82 @@ impl PartialVMError {
             location,
             indices,
             offsets,
-        }
+        }))
     }
 
     pub fn new(major_status: StatusCode) -> Self {
-        Self {
+        Self(Box::new(PartialVMError_ {
             major_status,
             sub_status: None,
             message: None,
             exec_state: None,
             indices: vec![],
             offsets: vec![],
-        }
+        }))
     }
 
     pub fn major_status(&self) -> StatusCode {
-        self.major_status
+        self.0.major_status
     }
 
-    pub fn with_sub_status(self, sub_status: u64) -> Self {
-        debug_assert!(self.sub_status.is_none());
-        Self {
-            sub_status: Some(sub_status),
-            ..self
-        }
+    pub fn with_sub_status(mut self, sub_status: u64) -> Self {
+        debug_assert!(self.0.sub_status.is_none());
+        self.0.sub_status = Some(sub_status);
+        self
     }
 
-    pub fn with_message(self, message: String) -> Self {
-        debug_assert!(self.message.is_none());
-        Self {
-            message: Some(message),
-            ..self
-        }
+    pub fn with_message(mut self, message: String) -> Self {
+        debug_assert!(self.0.message.is_none());
+        self.0.message = Some(message);
+        self
     }
 
-    pub fn with_exec_state(self, exec_state: ExecutionState) -> Self {
-        debug_assert!(self.exec_state.is_none());
-        Self {
-            exec_state: Some(exec_state),
-            ..self
-        }
+    pub fn with_exec_state(mut self, exec_state: ExecutionState) -> Self {
+        debug_assert!(self.0.exec_state.is_none());
+        self.0.exec_state = Some(exec_state);
+        self
     }
 
-    pub fn at_index(self, kind: IndexKind, index: TableIndex) -> Self {
-        let mut indices = self.indices;
-        indices.push((kind, index));
-        Self { indices, ..self }
+    pub fn at_index(mut self, kind: IndexKind, index: TableIndex) -> Self {
+        self.0.indices.push((kind, index));
+        self
     }
 
-    pub fn at_indices(self, additional_indices: Vec<(IndexKind, TableIndex)>) -> Self {
-        let mut indices = self.indices;
-        indices.extend(additional_indices);
-        Self { indices, ..self }
+    pub fn at_indices(mut self, additional_indices: Vec<(IndexKind, TableIndex)>) -> Self {
+        self.0.indices.extend(additional_indices);
+        self
     }
 
-    pub fn at_code_offset(self, function: FunctionDefinitionIndex, offset: CodeOffset) -> Self {
-        let mut offsets = self.offsets;
-        offsets.push((function, offset));
-        Self { offsets, ..self }
+    pub fn at_code_offset(mut self, function: FunctionDefinitionIndex, offset: CodeOffset) -> Self {
+        self.0.offsets.push((function, offset));
+        self
     }
 
     pub fn at_code_offsets(
-        self,
+        mut self,
         additional_offsets: Vec<(FunctionDefinitionIndex, CodeOffset)>,
     ) -> Self {
-        let mut offsets = self.offsets;
-        offsets.extend(additional_offsets);
-        Self { offsets, ..self }
+        self.0.offsets.extend(additional_offsets);
+        self
     }
 
     /// Append the message `message` to the message field of the VM status, and insert a seperator
     /// if the original message is non-empty.
     pub fn append_message_with_separator(
-        self,
+        mut self,
         separator: char,
         additional_message: String,
     ) -> Self {
-        let message = match self.message {
-            Some(mut msg) => {
+        match self.0.message.as_mut() {
+            Some(msg) => {
                 if !msg.is_empty() {
                     msg.push(separator);
                 }
                 msg.push_str(&additional_message);
-                msg
             }
-            None => additional_message,
+            None => self.0.message = Some(additional_message),
         };
-        Self {
-            message: Some(message),
-            ..self
-        }
+        self
     }
 }
 
@@ -373,20 +394,20 @@ impl fmt::Display for Location {
 
 impl fmt::Display for PartialVMError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut status = format!("PartialVMError with status {:#?}", self.major_status);
+        let mut status = format!("PartialVMError with status {:#?}", self.0.major_status);
 
-        if let Some(sub_status) = self.sub_status {
+        if let Some(sub_status) = self.0.sub_status {
             status = format!("{} with sub status {}", status, sub_status);
         }
 
-        if let Some(msg) = &self.message {
+        if let Some(msg) = &self.0.message {
             status = format!("{} and message {}", status, msg);
         }
 
-        for (kind, index) in &self.indices {
+        for (kind, index) in &self.0.indices {
             status = format!("{} at index {} for {}", status, index, kind);
         }
-        for (fdef, code_offset) in &self.offsets {
+        for (fdef, code_offset) in &self.0.offsets {
             status = format!(
                 "{} at code offset {} in function definition {}",
                 status, code_offset, fdef
@@ -399,22 +420,22 @@ impl fmt::Display for PartialVMError {
 
 impl fmt::Display for VMError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut status = format!("VMError with status {:#?}", self.major_status);
+        let mut status = format!("VMError with status {:#?}", self.0.major_status);
 
-        if let Some(sub_status) = self.sub_status {
+        if let Some(sub_status) = self.0.sub_status {
             status = format!("{} with sub status {}", status, sub_status);
         }
 
-        status = format!("{} at location {}", status, self.location);
+        status = format!("{} at location {}", status, self.0.location);
 
-        if let Some(msg) = &self.message {
+        if let Some(msg) = &self.0.message {
             status = format!("{} and message {}", status, msg);
         }
 
-        for (kind, index) in &self.indices {
+        for (kind, index) in &self.0.indices {
             status = format!("{} at index {} for {}", status, index, kind);
         }
-        for (fdef, code_offset) in &self.offsets {
+        for (fdef, code_offset) in &self.0.offsets {
             status = format!(
                 "{} at code offset {} in function definition {}",
                 status, code_offset, fdef
@@ -475,6 +496,33 @@ pub fn bounds_error(
 
 pub fn verification_error(status: StatusCode, kind: IndexKind, idx: TableIndex) -> PartialVMError {
     PartialVMError::new(status).at_index(kind, idx)
+}
+
+impl fmt::Debug for PartialVMError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self.0, f)
+    }
+}
+
+impl fmt::Debug for PartialVMError_ {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self {
+            major_status,
+            sub_status,
+            message,
+            exec_state,
+            indices,
+            offsets,
+        } = self;
+        f.debug_struct("PartialVMError")
+            .field("major_status", major_status)
+            .field("sub_status", sub_status)
+            .field("message", message)
+            .field("exec_state", exec_state)
+            .field("indices", indices)
+            .field("offsets", offsets)
+            .finish()
+    }
 }
 
 impl std::error::Error for PartialVMError {

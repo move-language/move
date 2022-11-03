@@ -47,7 +47,7 @@ impl FunctionTargetProcessor for CleanAndOptimizeProcessor {
         let options = ProverOptions::get(func_env.module_env.env);
         let instrs = std::mem::take(&mut data.code);
         let new_instrs = Optimizer {
-            options: &*options,
+            options: &options,
             target: &FunctionTarget::new(func_env, &data),
         }
         .run(instrs);

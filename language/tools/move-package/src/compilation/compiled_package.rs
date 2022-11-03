@@ -211,7 +211,7 @@ impl OnDiskCompiledPackage {
         let package_name_opt = Some(package_name);
         let bytecode_path = Path::new(bytecode_path_str);
         let path_to_file = CompiledPackageLayout::path_to_file_after_category(bytecode_path);
-        let bytecode_bytes = std::fs::read(&bytecode_path)?;
+        let bytecode_bytes = std::fs::read(bytecode_path)?;
         let source_map = source_map_from_file(
             &self
                 .root_path
@@ -276,7 +276,7 @@ impl OnDiskCompiledPackage {
     pub(crate) fn save_under(&self, file: impl AsRef<Path>, bytes: &[u8]) -> Result<()> {
         let path_to_save = self.root_path.join(file);
         let parent = path_to_save.parent().unwrap();
-        std::fs::create_dir_all(&parent)?;
+        std::fs::create_dir_all(parent)?;
         std::fs::write(path_to_save, bytes).map_err(|err| err.into())
     }
 
@@ -741,7 +741,7 @@ impl CompiledPackage {
                 on_disk_package.save_under(
                     CompiledPackageLayout::CompiledDocs
                         .path()
-                        .join(&doc_filename)
+                        .join(doc_filename)
                         .with_extension("md"),
                     doc_contents.clone().as_bytes(),
                 )?;

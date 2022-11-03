@@ -63,7 +63,7 @@ impl<'g> WorkspaceSubsets<'g> {
                     WorkspaceSubset::new(&initial_packages, StandardFeatures::Default, &cargo_opts);
                 Ok((name.clone(), subset))
             })
-            .collect::<Result<_, _>>()?;
+            .collect::<Result<_>>()?;
 
         Ok(Self {
             default_members,

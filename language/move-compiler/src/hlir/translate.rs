@@ -663,7 +663,7 @@ fn assign_command(
     let mut after = Block::new();
     for (idx, a) in assigns.into_iter().enumerate() {
         let a_ty = rvalue.ty.value.type_at_index(idx);
-        let (ls, mut af) = assign(context, result, a, a_ty);
+        let (ls, mut af) = assign(context, a, a_ty);
 
         lvalues.push(ls);
         after.append(&mut af);
@@ -677,7 +677,6 @@ fn assign_command(
 
 fn assign(
     context: &mut Context,
-    result: &mut Block,
     sp!(loc, ta_): T::LValue,
     rvalue_ty: &H::SingleType,
 ) -> (H::LValue, Block) {
@@ -697,7 +696,7 @@ fn assign(
             for (decl_idx, f, bt, tfa) in assign_fields(context, &s, tfields) {
                 assert!(fields.len() == decl_idx);
                 let st = &H::SingleType_::base(bt);
-                let (fa, mut fafter) = assign(context, result, tfa, st);
+                let (fa, mut fafter) = assign(context, tfa, st);
                 after.append(&mut fafter);
                 fields.push((f, fa))
             }

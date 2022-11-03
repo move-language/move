@@ -1052,7 +1052,7 @@ impl AstDebug for SpecBlockTarget_ {
             SpecBlockTarget_::Code => {}
             SpecBlockTarget_::Module => w.write("module "),
             SpecBlockTarget_::Member(name, sign_opt) => {
-                w.write(&name.value);
+                w.write(name.value);
                 if let Some(sign) = sign_opt {
                     sign.ast_debug(w);
                 }
@@ -1211,7 +1211,7 @@ impl AstDebug for SpecBlockMember_ {
 
 impl AstDebug for PragmaProperty_ {
     fn ast_debug(&self, w: &mut AstWriter) {
-        w.write(&self.name.value);
+        w.write(self.name.value);
         if let Some(value) = &self.value {
             w.write(" = ");
             match value {
@@ -1371,7 +1371,7 @@ pub fn ability_constraints_ast_debug(w: &mut AstWriter, abilities: &AbilitySet) 
 impl AstDebug for (Name, AbilitySet) {
     fn ast_debug(&self, w: &mut AstWriter) {
         let (n, abilities) = self;
-        w.write(&n.value);
+        w.write(n.value);
         ability_constraints_ast_debug(w, abilities)
     }
 }
@@ -1386,7 +1386,7 @@ impl AstDebug for StructTypeParameter {
         if *is_phantom {
             w.write("phantom ");
         }
-        w.write(&name.value);
+        w.write(name.value);
         ability_constraints_ast_debug(w, constraints)
     }
 }

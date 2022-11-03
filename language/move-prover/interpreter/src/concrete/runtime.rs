@@ -150,7 +150,7 @@ fn check_and_convert_type_args_and_args(
             }
             _ => {
                 let base_ty = convert_model_base_type(env, &local_ty, &converted_ty_args);
-                let converted = convert_move_value(env, arg, &base_ty)?;
+                let converted = convert_move_value(arg, &base_ty)?;
                 converted_args.push(converted);
             }
         }
@@ -226,11 +226,7 @@ pub fn convert_move_struct_tag(
     })
 }
 
-pub fn convert_move_value(
-    env: &GlobalEnv,
-    val: &MoveValue,
-    ty: &BaseType,
-) -> PartialVMResult<TypedValue> {
+pub fn convert_move_value(val: &MoveValue, ty: &BaseType) -> PartialVMResult<TypedValue> {
     let converted = match (val, ty) {
         (MoveValue::Bool(v), BaseType::Primitive(PrimitiveType::Bool)) => TypedValue::mk_bool(*v),
         (MoveValue::U8(v), BaseType::Primitive(PrimitiveType::Int(IntType::U8))) => {
@@ -251,7 +247,7 @@ pub fn convert_move_value(
         (MoveValue::Vector(v), BaseType::Vector(elem)) => {
             let converted = v
                 .iter()
-                .map(|e| convert_move_value(env, e, elem))
+                .map(|e| convert_move_value(e, elem))
                 .collect::<PartialVMResult<Vec<_>>>()?;
             TypedValue::mk_vector(*elem.clone(), converted)
         }
@@ -263,7 +259,7 @@ pub fn convert_move_value(
             let converted = fields
                 .iter()
                 .zip(inst.fields.iter())
-                .map(|(f, info)| convert_move_value(env, f, &info.ty))
+                .map(|(f, info)| convert_move_value(f, &info.ty))
                 .collect::<PartialVMResult<Vec<_>>>()?;
             TypedValue::mk_struct(inst.clone(), converted)
         }

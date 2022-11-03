@@ -491,8 +491,8 @@ impl Container {
 
         let res = match (self, other) {
             (Vec(l), Vec(r)) | (Struct(l), Struct(r)) => {
-                let l = &*l.borrow();
-                let r = &*r.borrow();
+                let l = &l.borrow();
+                let r = &r.borrow();
 
                 if l.len() != r.len() {
                     return Ok(false);
@@ -2252,7 +2252,7 @@ impl Container {
     fn legacy_size(&self) -> AbstractMemorySize {
         match self {
             Self::Locals(r) | Self::Vec(r) | Self::Struct(r) => {
-                Struct::legacy_size_impl(&*r.borrow())
+                Struct::legacy_size_impl(&r.borrow())
             }
             Self::VecU8(r) => {
                 AbstractMemorySize::new((r.borrow().len() * std::mem::size_of::<u8>()) as u64)
@@ -2588,7 +2588,7 @@ impl Display for ContainerRef {
             Self::Global { status, container } => write!(
                 f,
                 "({:?}, {}, {})",
-                &*status.borrow(),
+                &status.borrow(),
                 container.rc_count(),
                 container
             ),
@@ -2776,17 +2776,17 @@ pub mod debug {
         let idx = r.idx;
         match r.container_ref.container() {
             Container::Locals(r) | Container::Vec(r) | Container::Struct(r) => {
-                print_slice_elem(buf, &*r.borrow(), idx, print_value_impl)
+                print_slice_elem(buf, &r.borrow(), idx, print_value_impl)
             }
 
-            Container::VecU8(r) => print_slice_elem(buf, &*r.borrow(), idx, print_u8),
-            Container::VecU16(r) => print_slice_elem(buf, &*r.borrow(), idx, print_u16),
-            Container::VecU32(r) => print_slice_elem(buf, &*r.borrow(), idx, print_u32),
-            Container::VecU64(r) => print_slice_elem(buf, &*r.borrow(), idx, print_u64),
-            Container::VecU128(r) => print_slice_elem(buf, &*r.borrow(), idx, print_u128),
-            Container::VecU256(r) => print_slice_elem(buf, &*r.borrow(), idx, print_u256),
-            Container::VecBool(r) => print_slice_elem(buf, &*r.borrow(), idx, print_bool),
-            Container::VecAddress(r) => print_slice_elem(buf, &*r.borrow(), idx, print_address),
+            Container::VecU8(r) => print_slice_elem(buf, &r.borrow(), idx, print_u8),
+            Container::VecU16(r) => print_slice_elem(buf, &r.borrow(), idx, print_u16),
+            Container::VecU32(r) => print_slice_elem(buf, &r.borrow(), idx, print_u32),
+            Container::VecU64(r) => print_slice_elem(buf, &r.borrow(), idx, print_u64),
+            Container::VecU128(r) => print_slice_elem(buf, &r.borrow(), idx, print_u128),
+            Container::VecU256(r) => print_slice_elem(buf, &r.borrow(), idx, print_u256),
+            Container::VecBool(r) => print_slice_elem(buf, &r.borrow(), idx, print_bool),
+            Container::VecAddress(r) => print_slice_elem(buf, &r.borrow(), idx, print_address),
         }
     }
 
@@ -3167,14 +3167,14 @@ impl Container {
                     }
                 }
             }
-            VecU8(r) => visitor.visit_vec_u8(depth, &*r.borrow()),
-            VecU16(r) => visitor.visit_vec_u16(depth, &*r.borrow()),
-            VecU32(r) => visitor.visit_vec_u32(depth, &*r.borrow()),
-            VecU64(r) => visitor.visit_vec_u64(depth, &*r.borrow()),
-            VecU128(r) => visitor.visit_vec_u128(depth, &*r.borrow()),
-            VecU256(r) => visitor.visit_vec_u256(depth, &*r.borrow()),
-            VecBool(r) => visitor.visit_vec_bool(depth, &*r.borrow()),
-            VecAddress(r) => visitor.visit_vec_address(depth, &*r.borrow()),
+            VecU8(r) => visitor.visit_vec_u8(depth, &r.borrow()),
+            VecU16(r) => visitor.visit_vec_u16(depth, &r.borrow()),
+            VecU32(r) => visitor.visit_vec_u32(depth, &r.borrow()),
+            VecU64(r) => visitor.visit_vec_u64(depth, &r.borrow()),
+            VecU128(r) => visitor.visit_vec_u128(depth, &r.borrow()),
+            VecU256(r) => visitor.visit_vec_u256(depth, &r.borrow()),
+            VecBool(r) => visitor.visit_vec_bool(depth, &r.borrow()),
+            VecAddress(r) => visitor.visit_vec_address(depth, &r.borrow()),
         }
     }
 

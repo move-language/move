@@ -52,7 +52,7 @@ fn get_registry_field<'a>(toml: &'a mut Value, field: &'a str) -> Result<&'a mut
 }
 
 pub fn read_credential_file(credential_path: &str) -> Result<Value> {
-    let content = match fs::read_to_string(&credential_path) {
+    let content = match fs::read_to_string(credential_path) {
         Ok(content) => content,
         Err(error) => bail!("Error reading input: {}", error),
     };

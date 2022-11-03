@@ -158,7 +158,7 @@ impl Serialize for UnvalidatedEd25519PublicKey {
         S: serde::Serializer,
     {
         if serializer.is_human_readable() {
-            let encoded = ::hex::encode(&self.0);
+            let encoded = ::hex::encode(self.0);
             serializer.serialize_str(&encoded)
         } else {
             // See comment in deserialize_key.

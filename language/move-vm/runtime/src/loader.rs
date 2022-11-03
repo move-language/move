@@ -283,7 +283,7 @@ impl ModuleCache {
 
     // `make_type` is the entry point to "translate" a `SignatureToken` to a `Type`
     fn make_type(&self, module: BinaryIndexedView, tok: &SignatureToken) -> PartialVMResult<Type> {
-        self.make_type_internal(module, tok, &|struct_name, module_id| {
+        Self::make_type_internal(module, tok, &|struct_name, module_id| {
             Ok(self.resolve_struct_by_name(struct_name, module_id)?.0)
         })
     }
@@ -297,7 +297,7 @@ impl ModuleCache {
         tok: &SignatureToken,
     ) -> PartialVMResult<Type> {
         let self_id = module.self_id();
-        self.make_type_internal(
+        Self::make_type_internal(
             BinaryIndexedView::Module(module),
             tok,
             &|struct_name, module_id| {
@@ -329,7 +329,6 @@ impl ModuleCache {
     // `make_type_internal` returns a `Type` given a signature and a resolver which
     // is resonsible to map a local struct index to a global one
     fn make_type_internal<F>(
-        &self,
         module: BinaryIndexedView,
         tok: &SignatureToken,
         resolver: &F,
@@ -349,15 +348,15 @@ impl ModuleCache {
             SignatureToken::Signer => Type::Signer,
             SignatureToken::TypeParameter(idx) => Type::TyParam(*idx as usize),
             SignatureToken::Vector(inner_tok) => {
-                let inner_type = self.make_type_internal(module, inner_tok, resolver)?;
+                let inner_type = Self::make_type_internal(module, inner_tok, resolver)?;
                 Type::Vector(Box::new(inner_type))
             }
             SignatureToken::Reference(inner_tok) => {
-                let inner_type = self.make_type_internal(module, inner_tok, resolver)?;
+                let inner_type = Self::make_type_internal(module, inner_tok, resolver)?;
                 Type::Reference(Box::new(inner_type))
             }
             SignatureToken::MutableReference(inner_tok) => {
-                let inner_type = self.make_type_internal(module, inner_tok, resolver)?;
+                let inner_type = Self::make_type_internal(module, inner_tok, resolver)?;
                 Type::MutableReference(Box::new(inner_type))
             }
             SignatureToken::Struct(sh_idx) => {
@@ -374,7 +373,7 @@ impl ModuleCache {
             SignatureToken::StructInstantiation(sh_idx, tys) => {
                 let type_parameters: Vec<_> = tys
                     .iter()
-                    .map(|tok| self.make_type_internal(module, tok, resolver))
+                    .map(|tok| Self::make_type_internal(module, tok, resolver))
                     .collect::<PartialVMResult<_>>()?;
                 let struct_handle = module.struct_handle_at(*sh_idx);
                 let struct_name = module.identifier_at(struct_handle.name);

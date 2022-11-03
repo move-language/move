@@ -77,7 +77,7 @@ impl MoveyLogin {
 #[cfg(unix)]
 fn create_credential_file(credential_path: &str) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
-    let credential_file = File::create(&credential_path)?;
+    let credential_file = File::create(credential_path)?;
 
     let mut perms = credential_file.metadata()?.permissions();
     perms.set_mode(0o600);

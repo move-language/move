@@ -146,7 +146,7 @@ impl TranslatedSpec {
         let mut result = vec![];
         for i in 0..self.emits.len() {
             let loc = self.emits[i].0.clone();
-            let es = self.build_event_store(
+            let es = Self::build_event_store(
                 builder,
                 builder.mk_call(&es_ty, Operation::EmptyEventStore, vec![]),
                 &self.emits[0..i + 1],
@@ -161,7 +161,7 @@ impl TranslatedSpec {
 
     pub fn emits_completeness_condition<'a, T: ExpGenerator<'a>>(&self, builder: &T) -> Exp {
         let es_ty = Type::Primitive(PrimitiveType::EventStore);
-        let es = self.build_event_store(
+        let es = Self::build_event_store(
             builder,
             builder.mk_call(&es_ty, Operation::EmptyEventStore, vec![]),
             &self.emits,
@@ -170,7 +170,6 @@ impl TranslatedSpec {
     }
 
     fn build_event_store<'a, T: ExpGenerator<'a>>(
-        &self,
         builder: &T,
         es: Exp,
         emits: &[(Loc, Exp, Exp, Option<Exp>)],
@@ -185,7 +184,7 @@ impl TranslatedSpec {
             }
             let es_ty = Type::Primitive(PrimitiveType::EventStore);
             let extend_exp = builder.mk_call(&es_ty, Operation::ExtendEventStore, args);
-            self.build_event_store(builder, extend_exp, &emits[1..])
+            Self::build_event_store(builder, extend_exp, &emits[1..])
         }
     }
 }

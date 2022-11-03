@@ -1581,11 +1581,11 @@ fn join_bind_tvar(subst: &mut Subst, loc: Loc, tvar: TVar, ty: Type) -> Result<b
     Ok(true)
 }
 
-fn check_num_tvar(subst: &Subst, loc: Loc, tvar: TVar, ty: &Type) -> bool {
-    !subst.is_num_var(tvar) || check_num_tvar_(subst, loc, ty)
+fn check_num_tvar(subst: &Subst, _loc: Loc, tvar: TVar, ty: &Type) -> bool {
+    !subst.is_num_var(tvar) || check_num_tvar_(subst, ty)
 }
 
-fn check_num_tvar_(subst: &Subst, loc: Loc, ty: &Type) -> bool {
+fn check_num_tvar_(subst: &Subst, ty: &Type) -> bool {
     use Type_::*;
     match &ty.value {
         UnresolvedError | Anything => true,
@@ -1596,7 +1596,7 @@ fn check_num_tvar_(subst: &Subst, loc: Loc, ty: &Type) -> bool {
             match subst.get(last_tvar) {
                 Some(sp!(_, Var(_))) => unreachable!(),
                 None => subst.is_num_var(last_tvar),
-                Some(t) => check_num_tvar_(subst, loc, t),
+                Some(t) => check_num_tvar_(subst, t),
             }
         }
         _ => false,

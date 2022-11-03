@@ -140,7 +140,7 @@ fn copy_deps(tmp_dir: &Path, pkg_dir: &Path) -> anyhow::Result<PathBuf> {
     let tmp_dir = pad_tmp_path(tmp_dir, package_nest_depth)?;
     for (_, dep) in package_resolution.package_table.iter() {
         let source_dep_path = &dep.package_path;
-        let dest_dep_path = tmp_dir.join(&dep.package_path.strip_prefix(pkg_dir).unwrap());
+        let dest_dep_path = tmp_dir.join(dep.package_path.strip_prefix(pkg_dir).unwrap());
         if !dest_dep_path.exists() {
             fs::create_dir_all(&dest_dep_path)?;
         }

@@ -11,7 +11,7 @@ use move_core_types::vm_status::StatusCode;
 fn malformed_simple_versioned_test(version: u32) {
     // bad uleb (more than allowed for table count)
     let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.extend(&version.to_le_bytes()); // version
+    binary.extend(version.to_le_bytes()); // version
     binary.push(150); // table count (high bit 1)
     binary.push(150); // table count (high bit 1)
     binary.push(1);
@@ -23,7 +23,7 @@ fn malformed_simple_versioned_test(version: u32) {
 
     // bad uleb (too big)
     let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.extend(&version.to_le_bytes()); // version
+    binary.extend(version.to_le_bytes()); // version
     binary.push(150); // table count (high bit 1)
     binary.push(150); // table count again (high bit 1)
     binary.push(150); // table count again (high bit 1)
@@ -44,7 +44,7 @@ fn malformed_simple_versioned_test(version: u32) {
 
     // no tables
     let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.extend(&version.to_le_bytes()); // version
+    binary.extend(version.to_le_bytes()); // version
     binary.push(0); // table count
     let res = CompiledModule::deserialize(&binary);
     assert_eq!(
@@ -54,7 +54,7 @@ fn malformed_simple_versioned_test(version: u32) {
 
     // missing tables
     let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.extend(&version.to_le_bytes()); // version
+    binary.extend(version.to_le_bytes()); // version
     binary.push(10); // table count
     let res = CompiledModule::deserialize(&binary);
     assert_eq!(
@@ -64,7 +64,7 @@ fn malformed_simple_versioned_test(version: u32) {
 
     // missing table content
     let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.extend(&version.to_le_bytes()); // version
+    binary.extend(version.to_le_bytes()); // version
     binary.push(1); // table count
     binary.push(1); // table type
     binary.push(0); // table offset
@@ -77,7 +77,7 @@ fn malformed_simple_versioned_test(version: u32) {
 
     // bad table header (bad offset)
     let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.extend(&version.to_le_bytes()); // version
+    binary.extend(version.to_le_bytes()); // version
     binary.push(1); // table count
     binary.push(1); // table type
     binary.push(100); // bad table offset
@@ -90,7 +90,7 @@ fn malformed_simple_versioned_test(version: u32) {
 
     // bad table header (bad offset)
     let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.extend(&version.to_le_bytes()); // version
+    binary.extend(version.to_le_bytes()); // version
     binary.push(2); // table count
     binary.push(1); // table type
     binary.push(0); // table offset
@@ -107,7 +107,7 @@ fn malformed_simple_versioned_test(version: u32) {
 
     // incomplete table
     let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.extend(&version.to_le_bytes()); // version
+    binary.extend(version.to_le_bytes()); // version
     binary.push(1); // table count
     binary.push(1); // table type
     binary.push(0); // table offset
@@ -121,7 +121,7 @@ fn malformed_simple_versioned_test(version: u32) {
 
     // unknown table
     let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.extend(&version.to_le_bytes()); // version
+    binary.extend(version.to_le_bytes()); // version
     binary.push(1); // table count
     binary.push(100); // table type
     binary.push(0); // table offset
@@ -135,7 +135,7 @@ fn malformed_simple_versioned_test(version: u32) {
 
     // duplicate table
     let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.extend(&version.to_le_bytes()); // version
+    binary.extend(version.to_le_bytes()); // version
     binary.push(3); // table count
     binary.push(1); // table type
     binary.push(0); // table offset
@@ -156,7 +156,7 @@ fn malformed_simple_versioned_test(version: u32) {
 
     // bad table in script
     let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.extend(&version.to_le_bytes()); // version
+    binary.extend(version.to_le_bytes()); // version
     binary.push(1); // table count
     binary.push(0xD); // table type - FieldHandle not good for script
     binary.push(0); // table offset
@@ -207,7 +207,7 @@ fn malformed_simple() {
 
     // bad version
     let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.extend(&(VERSION_MAX.checked_add(1).unwrap()).to_le_bytes()); // version
+    binary.extend((VERSION_MAX.checked_add(1).unwrap()).to_le_bytes()); // version
     binary.push(10); // table count
     binary.push(0); // rest of binary
     let res = CompiledScript::deserialize(&binary);

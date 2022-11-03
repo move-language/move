@@ -42,12 +42,7 @@ impl Subst {
     /// is a type parameter, and the `stack_sig` is a concrete type. But, if the instruction signature is a
     /// concrete type, but the stack signature is a type parameter, they cannot unify and no
     /// substitution is created.
-    pub fn check_and_add(
-        &mut self,
-        state: &AbstractState,
-        stack_sig: SignatureToken,
-        instr_sig: SignatureToken,
-    ) -> bool {
+    pub fn check_and_add(&mut self, stack_sig: SignatureToken, instr_sig: SignatureToken) -> bool {
         match (stack_sig, instr_sig) {
             (tok, SignatureToken::TypeParameter(idx)) => {
                 if let Some(other_type) = self.subst.get(&(idx as usize)).cloned() {
@@ -75,7 +70,7 @@ impl Subst {
                 }
                 assert!(params1.len() == params2.len());
                 for (s1, s2) in params1.into_iter().zip(params2.into_iter()) {
-                    if !self.check_and_add(state, s1, s2) {
+                    if !self.check_and_add(s1, s2) {
                         return false;
                     }
                 }
@@ -243,7 +238,7 @@ pub fn stack_ref_polymorphic_eq(state: &AbstractState, index1: usize, index2: us
                 SignatureToken::MutableReference(token) | SignatureToken::Reference(token) => {
                     let abstract_value_inner = AbstractValue {
                         token: (*token).clone(),
-                        abilities: abilities_for_token(state, &*token, &state.instantiation[..]),
+                        abilities: abilities_for_token(state, &token, &state.instantiation[..]),
                     };
                     return Some(abstract_value_inner) == state.stack_peek(index2);
                 }
@@ -393,7 +388,7 @@ pub fn stack_satisfies_struct_signature(
         let has = if let SignatureToken::TypeParameter(idx) = &ty {
             if stack_has_all_abilities(state, i, type_parameters[*idx as usize].constraints) {
                 let stack_tok = state.stack_peek(i).unwrap();
-                substitution.check_and_add(state, stack_tok.token, ty)
+                substitution.check_and_add(stack_tok.token, ty)
             } else {
                 false
             }
@@ -807,7 +802,7 @@ pub fn stack_satisfies_function_signature(
         let has = if let SignatureToken::TypeParameter(idx) = parameter {
             if stack_has_all_abilities(state, i, type_parameters[*idx as usize]) {
                 let stack_tok = state.stack_peek(i).unwrap();
-                substitution.check_and_add(state, stack_tok.token, parameter.clone())
+                substitution.check_and_add(stack_tok.token, parameter.clone())
             } else {
                 false
             }

@@ -1176,7 +1176,7 @@ impl ModelValue {
             .and_then(|update_map| update_map.extract_map());
 
         let mut domain_exists_map_opt = domain_idx_map.get(domain);
-        if domain_exists_map_opt == None {
+        if domain_exists_map_opt.is_none() {
             if let Some(default_domain_model) = default_domain_model_opt {
                 domain_exists_map_opt = domain_idx_map.get(default_domain_model);
             }

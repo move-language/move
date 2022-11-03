@@ -345,19 +345,19 @@ impl BuiltinTypeName_ {
     pub const VECTOR: &'static str = "vector";
 
     pub fn all_names() -> &'static BTreeSet<Symbol> {
-        &*BUILTIN_TYPE_ALL_NAMES
+        &BUILTIN_TYPE_ALL_NAMES
     }
 
     pub fn numeric() -> &'static BTreeSet<BuiltinTypeName_> {
-        &*BUILTIN_TYPE_NUMERIC
+        &BUILTIN_TYPE_NUMERIC
     }
 
     pub fn bits() -> &'static BTreeSet<BuiltinTypeName_> {
-        &*BUILTIN_TYPE_BITS
+        &BUILTIN_TYPE_BITS
     }
 
     pub fn ordered() -> &'static BTreeSet<BuiltinTypeName_> {
-        &*BUILTIN_TYPE_ORDERED
+        &BUILTIN_TYPE_ORDERED
     }
 
     pub fn is_numeric(&self) -> bool {
@@ -448,7 +448,7 @@ impl BuiltinFunction_ {
     pub const ASSERT_MACRO: &'static str = "assert";
 
     pub fn all_names() -> &'static BTreeSet<Symbol> {
-        &*BUILTIN_FUNCTION_ALL_NAMES
+        &BUILTIN_FUNCTION_ALL_NAMES
     }
 
     pub fn resolve(name_str: &str, arg: Option<Type>) -> Option<Self> {

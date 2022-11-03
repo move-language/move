@@ -1261,7 +1261,7 @@ impl AstDebug for SpecBlockTarget_ {
             SpecBlockTarget_::Code => {}
             SpecBlockTarget_::Module => w.write("module "),
             SpecBlockTarget_::Member(name, sign_opt) => {
-                w.write(&name.value);
+                w.write(name.value);
                 if let Some(sign) = sign_opt {
                     sign.ast_debug(w);
                 }
@@ -1437,14 +1437,14 @@ impl AstDebug for SpecApplyFragment_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
             SpecApplyFragment_::Wildcard => w.write("*"),
-            SpecApplyFragment_::NamePart(n) => w.write(&n.value),
+            SpecApplyFragment_::NamePart(n) => w.write(n.value),
         }
     }
 }
 
 impl AstDebug for PragmaProperty_ {
     fn ast_debug(&self, w: &mut AstWriter) {
-        w.write(&self.name.value);
+        w.write(self.name.value);
         if let Some(value) = &self.value {
             w.write(" = ");
             match value {
@@ -1545,7 +1545,7 @@ impl AstDebug for Vec<(Name, Vec<Ability>)> {
 impl AstDebug for (Name, Vec<Ability>) {
     fn ast_debug(&self, w: &mut AstWriter) {
         let (n, abilities) = self;
-        w.write(&n.value);
+        w.write(n.value);
         ability_constraints_ast_debug(w, abilities);
     }
 }
@@ -1570,7 +1570,7 @@ impl AstDebug for StructTypeParameter {
         if *is_phantom {
             w.write("phantom ");
         }
-        w.write(&name.value);
+        w.write(name.value);
         ability_constraints_ast_debug(w, constraints);
     }
 }

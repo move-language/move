@@ -191,18 +191,18 @@ fn upload_package_to_movey_with_no_remote_should_panic() {
 fn init_git(package_path: &str, is_valid: bool) {
     Command::new("git")
         .current_dir(package_path)
-        .args(&["init"])
+        .args(["init"])
         .output()
         .unwrap();
     Command::new("git")
         .current_dir(package_path)
-        .args(&["add", "."])
+        .args(["add", "."])
         .output()
         .unwrap();
     if is_valid {
         Command::new("git")
             .current_dir(package_path)
-            .args(&[
+            .args([
                 "remote",
                 "add",
                 "test-origin",
@@ -212,17 +212,17 @@ fn init_git(package_path: &str, is_valid: bool) {
             .unwrap();
         Command::new("git")
             .current_dir(package_path)
-            .args(&["config", "user.email", "\"you@example.com\""])
+            .args(["config", "user.email", "\"you@example.com\""])
             .output()
             .unwrap();
         Command::new("git")
             .current_dir(package_path)
-            .args(&["config", "user.name", "\"Your Name\""])
+            .args(["config", "user.name", "\"Your Name\""])
             .output()
             .unwrap();
         Command::new("git")
             .current_dir(package_path)
-            .args(&["commit", "--allow-empty", "-m", "initial commit"])
+            .args(["commit", "--allow-empty", "-m", "initial commit"])
             .output()
             .unwrap();
     }

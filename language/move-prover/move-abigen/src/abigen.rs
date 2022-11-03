@@ -152,7 +152,7 @@ impl<'env> Abigen<'env> {
                             })
                             .all(|param| {
                                 matches!(
-                                    self.get_type_tag(&param.1, module_env),
+                                    Self::get_type_tag(&param.1, module_env),
                                     Err(_) | Ok(Some(_))
                                 )
                             })
@@ -200,7 +200,7 @@ impl<'env> Abigen<'env> {
                 _ => true,
             })
             .map(|param| {
-                let tag = self.get_type_tag(&param.1, module_env)?.unwrap();
+                let tag = Self::get_type_tag(&param.1, module_env)?.unwrap();
                 Ok(ArgumentABI::new(
                     symbol_pool.string(param.0).to_string(),
                     tag,
@@ -257,7 +257,6 @@ impl<'env> Abigen<'env> {
     }
 
     fn get_type_tag(
-        &self,
         ty0: &ty::Type,
         module_env: &ModuleEnv<'env>,
     ) -> anyhow::Result<Option<TypeTag>> {
@@ -281,7 +280,7 @@ impl<'env> Abigen<'env> {
                 }
             }
             Vector(ty) => {
-                let tag = match self.get_type_tag(ty, module_env)? {
+                let tag = match Self::get_type_tag(ty, module_env)? {
                     Some(tag) => tag,
                     None => return Ok(None),
                 };
@@ -302,7 +301,7 @@ impl<'env> Abigen<'env> {
                         type_params: vec_type
                             .iter()
                             .map(|e| {
-                                self.get_type_tag(e, module_env)
+                                Self::get_type_tag(e, module_env)
                                     .unwrap_or_else(|_| panic!("{}", expect_msg))
                             })
                             .map(|e| e.unwrap_or_else(|| panic!("{}", expect_msg)))

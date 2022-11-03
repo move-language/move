@@ -774,7 +774,7 @@ impl<'env> Docgen<'env> {
 
         let mut child = match Command::new("dot")
             .arg("-Tsvg")
-            .args(&["-o", out_file_path.to_str().unwrap()])
+            .args(["-o", out_file_path.to_str().unwrap()])
             .stdin(Stdio::piped())
             .stderr(Stdio::piped())
             .stdout(Stdio::piped())

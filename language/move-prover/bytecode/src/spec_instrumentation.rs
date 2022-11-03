@@ -119,7 +119,7 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
             // out of this data and into the clone.
             let mut verification_data =
                 data.fork(FunctionVariant::Verification(VerificationFlavor::Regular));
-            verification_data = Instrumenter::run(&*options, targets, fun_env, verification_data);
+            verification_data = Instrumenter::run(&options, targets, fun_env, verification_data);
             targets.insert_target_data(
                 &fun_env.get_qualified_id(),
                 verification_data.variant.clone(),
@@ -129,7 +129,7 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
 
         // Instrument baseline variant only if it is inlined.
         if is_inlined {
-            Instrumenter::run(&*options, targets, fun_env, data)
+            Instrumenter::run(&options, targets, fun_env, data)
         } else {
             // Clear code but keep function data stub.
             // TODO(refactoring): the stub is currently still needed because boogie_wrapper

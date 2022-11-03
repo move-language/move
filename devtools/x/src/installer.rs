@@ -90,7 +90,7 @@ impl Installer {
 
 pub fn install_rustup_component_if_needed(name: &str) -> bool {
     let mut cmd = Command::new("rustup");
-    cmd.args(&["component", "list", "--installed"]);
+    cmd.args(["component", "list", "--installed"]);
     let result = cmd.output();
 
     let installed = if let Ok(output) = result {
@@ -103,7 +103,7 @@ pub fn install_rustup_component_if_needed(name: &str) -> bool {
     if !installed {
         info!("installing rustup component: {}", name);
         let mut cmd = Command::new("rustup");
-        cmd.args(&["component", "add", name]);
+        cmd.args(["component", "add", name]);
         if cmd.output().is_ok() {
             info!("rustup component {} has been installed", name);
         } else {

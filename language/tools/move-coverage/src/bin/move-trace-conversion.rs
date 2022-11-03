@@ -38,24 +38,24 @@ fn main() {
     if !args.use_trace_map {
         let coverage_map = if let Some(old_coverage_path) = &args.update {
             let path = Path::new(&old_coverage_path);
-            let old_coverage_map = CoverageMap::from_binary_file(&path).unwrap();
-            old_coverage_map.update_coverage_from_trace_file(&input_path)
+            let old_coverage_map = CoverageMap::from_binary_file(path).unwrap();
+            old_coverage_map.update_coverage_from_trace_file(input_path)
         } else {
-            CoverageMap::from_trace_file(&input_path)
+            CoverageMap::from_trace_file(input_path)
         };
 
-        output_map_to_file(&output_path, &coverage_map)
+        output_map_to_file(output_path, &coverage_map)
             .expect("Unable to serialize coverage map to output file")
     } else {
         let trace_map = if let Some(old_trace_path) = &args.update {
             let path = Path::new(&old_trace_path);
-            let old_trace_map = TraceMap::from_binary_file(&path);
-            old_trace_map.update_from_trace_file(&input_path)
+            let old_trace_map = TraceMap::from_binary_file(path);
+            old_trace_map.update_from_trace_file(input_path)
         } else {
-            TraceMap::from_trace_file(&input_path)
+            TraceMap::from_trace_file(input_path)
         };
 
-        output_map_to_file(&output_path, &trace_map)
+        output_map_to_file(output_path, &trace_map)
             .expect("Unable to serialize trace map to output file")
     }
 }

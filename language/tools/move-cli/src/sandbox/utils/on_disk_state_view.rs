@@ -329,7 +329,7 @@ impl OnDiskStateView {
         if !path.exists() {
             fs::create_dir_all(path.parent().unwrap())?
         }
-        Ok(fs::write(path, &module_bytes)?)
+        Ok(fs::write(path, module_bytes)?)
     }
 
     /// Save the YAML encoding `layout` on disk under `build_dir/layouts/id`.

@@ -1877,7 +1877,7 @@ impl<'env> FunctionTranslator<'env> {
             let ty = ty.skip_reference();
             let suffix = boogie_type_suffix(env, ty);
             let cnt = res.entry(suffix).or_insert_with(|| (ty.to_owned(), 0));
-            (*cnt).1 = (*cnt).1.max(n);
+            cnt.1 = cnt.1.max(n);
         };
         for bc in &fun_target.data.code {
             match bc {

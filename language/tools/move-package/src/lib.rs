@@ -172,7 +172,9 @@ impl BuildConfig {
 
     #[cfg(feature = "evm-backend")]
     pub fn compile_package_evm<W: Write>(self, path: &Path, writer: &mut W) -> Result<()> {
-        let resolved_graph = self.resolution_graph_for_package(path)?;
+        // resolution graph diagnostics are only needed for CLI commands so ignore them by passing a
+        // vector as the writer
+        let resolved_graph = self.resolution_graph_for_package(path, &mut Vec::new())?;
         let mutx = PackageLock::lock();
         let ret = BuildPlan::create(resolved_graph)?.compile_evm(writer);
         mutx.unlock();

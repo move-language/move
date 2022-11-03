@@ -149,7 +149,7 @@ impl BuildConfig {
     /// Compile the package at `path` or the containing Move package. Exit process on warning or
     /// failure.
     pub fn compile_package<W: Write>(self, path: &Path, writer: &mut W) -> Result<CompiledPackage> {
-        let resolved_graph = self.resolution_graph_for_package(path)?;
+        let resolved_graph = self.resolution_graph_for_package(path, writer)?;
         let mutx = PackageLock::lock();
         let ret = BuildPlan::create(resolved_graph)?.compile(writer);
         mutx.unlock();
@@ -163,7 +163,7 @@ impl BuildConfig {
         path: &Path,
         writer: &mut W,
     ) -> Result<CompiledPackage> {
-        let resolved_graph = self.resolution_graph_for_package(path)?;
+        let resolved_graph = self.resolution_graph_for_package(path, writer)?;
         let mutx = PackageLock::lock();
         let ret = BuildPlan::create(resolved_graph)?.compile_no_exit(writer);
         mutx.unlock();
@@ -189,14 +189,16 @@ impl BuildConfig {
         path: &Path,
         model_config: ModelConfig,
     ) -> Result<GlobalEnv> {
-        let resolved_graph = self.resolution_graph_for_package(path)?;
+        // resolution graph diagnostics are only needed for CLI commands so ignore them by passing a
+        // vector as the writer
+        let resolved_graph = self.resolution_graph_for_package(path, &mut Vec::new())?;
         let mutx = PackageLock::lock();
         let ret = ModelBuilder::create(resolved_graph, model_config).build_model();
         mutx.unlock();
         ret
     }
 
-    pub fn download_deps_for_package(&self, path: &Path) -> Result<()> {
+    pub fn download_deps_for_package<W: Write>(&self, path: &Path, writer: &mut W) -> Result<()> {
         let path = SourcePackageLayout::try_find_root(path)?;
         let toml_manifest =
             self.parse_toml_manifest(path.join(SourcePackageLayout::Manifest.path()))?;
@@ -204,12 +206,16 @@ impl BuildConfig {
         // This should be locked as it inspects the environment for `MOVE_HOME` which could
         // possibly be set by a different process in parallel.
         let manifest = manifest_parser::parse_source_manifest(toml_manifest)?;
-        ResolutionGraph::download_dependency_repos(&manifest, self, &path)?;
+        ResolutionGraph::download_dependency_repos(&manifest, self, &path, writer)?;
         mutx.unlock();
         Ok(())
     }
 
-    pub fn resolution_graph_for_package(mut self, path: &Path) -> Result<ResolvedGraph> {
+    pub fn resolution_graph_for_package<W: Write>(
+        mut self,
+        path: &Path,
+        writer: &mut W,
+    ) -> Result<ResolvedGraph> {
         if self.test_mode {
             self.dev_mode = true;
         }
@@ -220,7 +226,7 @@ impl BuildConfig {
         // This should be locked as it inspects the environment for `MOVE_HOME` which could
         // possibly be set by a different process in parallel.
         let manifest = manifest_parser::parse_source_manifest(toml_manifest)?;
-        let resolution_graph = ResolutionGraph::new(manifest, path, self)?;
+        let resolution_graph = ResolutionGraph::new(manifest, path, self, writer)?;
         let ret = resolution_graph.resolve();
         mutx.unlock();
         ret

@@ -10,11 +10,14 @@ use tempfile::tempdir;
 fn package_hash_skips_non_move_files() {
     let path = Path::new("tests/test_sources/resolution/dep_good_digest");
 
+    // resolution graph diagnostics are only needed for CLI commands so ignore them in both cases by
+    // passing a vector as the writer
+
     let pkg1 = BuildConfig {
         install_dir: Some(tempdir().unwrap().path().to_path_buf()),
         ..Default::default()
     }
-    .resolution_graph_for_package(path)
+    .resolution_graph_for_package(path, &mut Vec::new())
     .unwrap();
 
     let dummy_path = path.join("deps_only/other_dep/sources/dummy_text");
@@ -27,7 +30,7 @@ fn package_hash_skips_non_move_files() {
         install_dir: Some(tempdir().unwrap().path().to_path_buf()),
         ..Default::default()
     }
-    .resolution_graph_for_package(path)
+    .resolution_graph_for_package(path, &mut Vec::new())
     .unwrap();
 
     std::fs::remove_file(&dummy_path).unwrap();

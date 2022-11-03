@@ -19,7 +19,7 @@ impl Build {
             if config.test_mode {
                 config.dev_mode = true;
             }
-            config.download_deps_for_package(&rerooted_path)?;
+            config.download_deps_for_package(&rerooted_path, &mut std::io::stdout())?;
             return Ok(());
         }
         let architecture = config.architecture.unwrap_or(Architecture::Move);

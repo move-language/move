@@ -59,6 +59,7 @@ pub fn run_test(path: &Path) -> datatest_stable::Result<()> {
                     force_recompilation: false,
                     ..Default::default()
                 },
+                &mut Vec::new(), /* empty writer as no diags needed */
             )
         })
         .and_then(|rg| rg.resolve())

@@ -26,7 +26,7 @@ impl Build {
 
         match architecture {
             Architecture::Move | Architecture::AsyncMove => {
-                config.compile_package(&rerooted_path, &mut std::io::stderr())?;
+                config.compile_package(&rerooted_path, &mut std::io::stdout())?;
             }
 
             Architecture::Ethereum => {

@@ -30,6 +30,7 @@ fn test_additonal_addresses() {
             additional_named_addresses,
             ..Default::default()
         },
+        &mut Vec::new() /* empty writer as no diags needed */
     )
     .unwrap()
     .resolve()
@@ -42,6 +43,7 @@ fn test_additonal_addresses() {
             install_dir: Some(tempdir().unwrap().path().to_path_buf()),
             ..Default::default()
         },
+        &mut Vec::new() /* empty writer as no diags needed */
     )
     .unwrap()
     .resolve()
@@ -67,6 +69,7 @@ fn test_additonal_addresses_already_assigned_same_value() {
             additional_named_addresses,
             ..Default::default()
         },
+        &mut Vec::new() /* empty writer as no diags needed */
     )
     .unwrap()
     .resolve()
@@ -92,6 +95,7 @@ fn test_additonal_addresses_already_assigned_different_value() {
             additional_named_addresses,
             ..Default::default()
         },
+        &mut Vec::new() /* empty writer as no diags needed */
     )
     .is_err());
 }

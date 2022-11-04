@@ -160,8 +160,9 @@ pub fn run_move_unit_tests<W: Write + Send>(
     build_config.test_mode = true;
     build_config.dev_mode = true;
 
-    // Build the resolution graph
-    let resolution_graph = build_config.resolution_graph_for_package(pkg_path)?;
+    // Build the resolution graph (resolution graph diagnostics are only needed for CLI commands so
+    // ignore them by passing a vector as the writer)
+    let resolution_graph = build_config.resolution_graph_for_package(pkg_path, &mut Vec::new())?;
 
     // Note: unit_test_config.named_address_values is always set to vec![] (the default value) before
     // being passed in.

@@ -165,8 +165,8 @@ mod testing {
     const STRUCT_END: &str = "}";
 
     fn fmt_error_to_partial_vm_error(e: fmt::Error) -> PartialVMError {
-        let vmerr = PartialVMError::new(StatusCode::UNKNOWN_STATUS);
-        vmerr.with_message("write! macro failed with: ".to_string() + e.to_string().as_str())
+        PartialVMError::new(StatusCode::UNKNOWN_STATUS)
+            .with_message("write! macro failed with: ".to_string() + e.to_string().as_str())
     }
 
     fn to_vec_u8_type_err<E>(_e: E) -> PartialVMError {
@@ -198,12 +198,14 @@ mod testing {
         }
     }
 
-    /// Prints an std::string::String by wrapping it in double quotes and escaping double quotes inside it.
+    /// Converts a `MoveValue::Vector` of `u8`'s to a `String` by wrapping it in double quotes and
+    /// escaping double quotes and backslashes.
     ///
     /// Examples:
-    ///  - 'Hello' prints as "Hello"
-    ///  - '"Hello?" What are you saying?' prints as "\"Hello?\" What are you saying?"
-    fn print_move_value_as_string(out: &mut String, val: MoveValue) -> PartialVMResult<()> {
+    ///  - 'Hello' returns "Hello"
+    ///  - '"Hello?" What are you saying?' returns "\"Hello?\" What are you saying?"
+    ///  - '\ and " are escaped' returns "\\ and \" are escaped"
+    fn move_value_as_escaped_string(val: MoveValue) -> PartialVMResult<String> {
         match val {
             MoveValue::Vector(bytes) => {
                 let buf = MoveValue::vec_to_vec_u8(bytes).map_err(to_vec_u8_type_err)?;
@@ -216,20 +218,11 @@ mod testing {
 
                 // We need to escape displayed double quotes " as \" and, as a result, also escape
                 // displayed \ as \\.
-                let str = str.replace('\\', "\\\\").replace('"', "\\\"");
-
-                write!(out, "\"{}\"", str).map_err(fmt_error_to_partial_vm_error)?;
+                Ok(str.replace('\\', "\\\\").replace('"', "\\\""))
             }
-            _ => {
-                return Err(
-                    PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(
-                        "Expected std::string::String to have vector<u8> bytes field".to_string(),
-                    ),
-                )
-            }
+            _ => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+                .with_message("Expected a MoveValue::Vector of u8's".to_string())),
         }
-
-        Ok(())
     }
 
     fn print_padding_at_depth(out: &mut String, depth: usize) -> PartialVMResult<()> {
@@ -253,6 +246,7 @@ mod testing {
         matches!(mv, MoveValue::Vector(_) | MoveValue::Struct(_))
     }
 
+    /// Prints any `Value` in a user-friendly manner.
     pub(crate) fn print_value(
         context: &NativeContext,
         out: &mut String,
@@ -274,11 +268,12 @@ mod testing {
                 let inner_tyl = context.type_to_type_layout(inner_ty)?.unwrap();
 
                 match inner_tyl {
-                    // We cannot simply convert this vector `Value` to a `MoveValue` because there might
-                    // be a struct in the vector that needs to be "decorated" using the logic in this
-                    // function. Instead, we recursively "unpack" the vector until we get down to either
-                    // a primitive type or a struct, which this function can then forward to
-                    // `print_move_value`.
+                    // We cannot simply convert a `Value` (of type vector) to a `MoveValue` because
+                    // there might be a struct in the vector that needs to be "decorated" using the
+                    // logic in this function. Instead, we recursively "unpack" the vector until we
+                    // get down to either (1) a primitive type, which we can forward to
+                    // `print_move_value`, or (2) a struct type, which we can decorate and forward
+                    // to `print_move_value`.
                     MoveTypeLayout::Vector(_) | MoveTypeLayout::Struct(_) => {
                         // `val` is either a `Vec<Vec<Value>>`, a `Vec<Struct>`,  or a `Vec<signer>`, so we cast `val` as a `Vec<Value>` and call ourselves recursively
                         let vec = val.value_as::<Vec<Value>>()?;
@@ -372,7 +367,8 @@ mod testing {
         Ok(())
     }
 
-    /// Prints the MoveValue, optionally-including its type if `print_type` is true.
+    /// Prints the MoveValue in `mv`, optionally-printing integer types if `include_int_type` is
+    /// true.
     fn print_move_value(
         out: &mut String,
         mv: MoveValue,
@@ -420,7 +416,9 @@ mod testing {
                 }
             }
             MoveValue::Bool(b) => {
-                // The type here can be inferred just from the true/false value, when `include_int_types` is enabled.
+                // Note that when `include_int_types` is enabled, the boolean `true` and `false`
+                // values unambiguously encode their type, since they are different than any integer
+                // type value, address value, signer value, vector value and struct value.
                 write!(out, "{}", if b { "true" } else { "false" })
                     .map_err(fmt_error_to_partial_vm_error)?;
             }
@@ -468,12 +466,25 @@ mod testing {
 
                     // Check if struct is an std::string::String
                     if !canonicalize && type_.is_std_string(move_std_addr) {
-                        assert_eq!(fields.len(), 1);
+                        if fields.len() != 1 {
+                            return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+                                .with_message(
+                                    "Expected std::string::String struct to have just one field"
+                                        .to_string(),
+                                ));
+                        }
 
                         let (id, val) = fields.pop().unwrap();
-                        assert_eq!(id.into_string(), "bytes");
+                        if id.into_string() != "bytes" {
+                            return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+                                .with_message(
+                                    "Expected std::string::String struct to have a `bytes` field"
+                                        .to_string(),
+                                ));
+                        }
 
-                        print_move_value_as_string(out, val)?;
+                        let str = move_value_as_escaped_string(val)?;
+                        write!(out, "\"{}\"", str).map_err(fmt_error_to_partial_vm_error)?
                     } else {
                         write!(out, "{} ", type_tag).map_err(fmt_error_to_partial_vm_error)?;
                         write!(out, "{}", STRUCT_BEGIN).map_err(fmt_error_to_partial_vm_error)?;

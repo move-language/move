@@ -859,6 +859,11 @@ impl Frame {
     ) -> VMResult<ExitCode> {
         self.execute_code_impl(resolver, interpreter, data_store, gas_meter)
             .map_err(|e| {
+                let e = if cfg!(feature = "testing") || cfg!(feature = "stacktrace") {
+                    e.with_exec_state(interpreter.get_internal_state())
+                } else {
+                    e
+                };
                 e.at_code_offset(self.function.index(), self.pc)
                     .finish(self.location())
             })
@@ -1216,11 +1221,7 @@ impl Frame {
                                 self.function.pretty_string(),
                                 self.pc,
                             ));
-                        if cfg!(feature = "testing") || cfg!(feature = "stacktrace") {
-                            return Err(error.with_exec_state(interpreter.get_internal_state()));
-                        } else {
-                            return Err(error);
-                        }
+                        return Err(error);
                     }
                     Bytecode::Eq => {
                         let lhs = interpreter.operand_stack.pop()?;

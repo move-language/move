@@ -197,7 +197,7 @@ features. It may or may not be removed later.</p>
 <p><code>public</code> constants are not currently supported. <code>const</code> values can be used only in the declaring
 module.</p>
 <h2 id="valid-expressions"><a class="header" href="#valid-expressions">Valid Expressions</a></h2>
-<p>Currently, constants are limited to the primitive types <code>bool</code>, <code>u8</code>, <code>u64</code>, <code>u128</code>, <code>address</code>, and
+<p>Currently, constants are limited to the primitive types <code>bool</code>, <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code>, <code>u128</code>, <code>u256</code>, <code>address</code>, and
 <code>vector&lt;u8&gt;</code>. Future support for other <code>vector</code> values (besides the &quot;string&quot;-style literals) will
 come later.</p>
 <h3 id="values"><a class="header" href="#values">Values</a></h3>
@@ -218,6 +218,7 @@ const SHIFTY: u8 = {
   (1 &lt;&lt; 1) * (1 &lt;&lt; 2) * (1 &lt;&lt; 3) * (1 &lt;&lt; 4)
 };
 const HALF_MAX: u128 = 340282366920938463463374607431768211455 / 2;
+const REM: u256 = 57896044618658097711785492504343953926634992332820282019728792003956564819968 % 654321;
 const EQUAL: bool = 1 == 1;
 </code></pre>
 <p>If the operation would result in a runtime exception, the compiler will give an error that it is

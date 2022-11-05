@@ -8,7 +8,7 @@ use crate::{
     language_storage::{StructTag, TypeTag},
     u256,
 };
-use anyhow::{bail, Result as AResult};
+use anyhow::{anyhow, bail, Result as AResult};
 use serde::{
     de::Error as DeError,
     ser::{SerializeMap, SerializeSeq, SerializeStruct, SerializeTuple},
@@ -122,6 +122,27 @@ impl MoveValue {
 
     pub fn vector_u8(v: Vec<u8>) -> Self {
         MoveValue::Vector(v.into_iter().map(MoveValue::U8).collect())
+    }
+
+    /// Converts the `Vec<MoveValue>` to a `Vec<u8>` if the inner `MoveValue` is a `MoveValue::U8`,
+    /// or returns an error otherwise.
+    pub fn vec_to_vec_u8(vec: Vec<MoveValue>) -> AResult<Vec<u8>> {
+        let mut vec_u8 = Vec::with_capacity(vec.len());
+
+        for byte in vec {
+            match byte {
+                MoveValue::U8(u8) => {
+                    vec_u8.push(u8);
+                }
+                _ => {
+                    return Err(anyhow!(
+                        "Expected inner MoveValue in Vec<MoveValue> to be a MoveValue::U8"
+                            .to_string(),
+                    ));
+                }
+            }
+        }
+        Ok(vec_u8)
     }
 
     pub fn vector_address(v: Vec<AccountAddress>) -> Self {

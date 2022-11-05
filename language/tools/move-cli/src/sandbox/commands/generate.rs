@@ -30,9 +30,9 @@ pub fn generate_struct_layouts(
                 type_params,
             };
             let mut layout_builder = if shallow {
-                SerdeLayoutBuilder::new_shallow(state)
+                SerdeLayoutBuilder::new_shallow(&state)
             } else {
-                SerdeLayoutBuilder::new(state)
+                SerdeLayoutBuilder::new(&state)
             };
             layout_builder.build_struct_layout(&struct_tag)?;
             let layout = serde_yaml::to_string(layout_builder.registry())?;

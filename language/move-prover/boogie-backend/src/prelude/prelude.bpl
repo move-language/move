@@ -29,10 +29,16 @@ options provided to the prover.
 
 const $MAX_U8: int;
 axiom $MAX_U8 == 255;
+const $MAX_U16: int;
+axiom $MAX_U16 == 65535;
+const $MAX_U32: int;
+axiom $MAX_U32 == 4294967295;
 const $MAX_U64: int;
 axiom $MAX_U64 == 18446744073709551615;
 const $MAX_U128: int;
 axiom $MAX_U128 == 340282366920938463463374607431768211455;
+const $MAX_U256: int;
+axiom $MAX_U256 == 115792089237316195423570985008687907853269984665640564039457584007913129639935;
 
 type {:datatype} $Range;
 function {:constructor} $Range(lb: int, ub: int): $Range;
@@ -45,12 +51,24 @@ function $IsValid'u8'(v: int): bool {
   v >= 0 && v <= $MAX_U8
 }
 
+function $IsValid'u16'(v: int): bool {
+  v >= 0 && v <= $MAX_U16
+}
+
+function $IsValid'u32'(v: int): bool {
+  v >= 0 && v <= $MAX_U32
+}
+
 function $IsValid'u64'(v: int): bool {
   v >= 0 && v <= $MAX_U64
 }
 
 function $IsValid'u128'(v: int): bool {
   v >= 0 && v <= $MAX_U128
+}
+
+function $IsValid'u256'(v: int): bool {
+  v >= 0 && v <= $MAX_U256
 }
 
 function $IsValid'num'(v: int): bool {
@@ -76,11 +94,23 @@ function {:inline} $IsEqual'u8'(x: int, y: int): bool {
     x == y
 }
 
+function {:inline} $IsEqual'u16'(x: int, y: int): bool {
+    x == y
+}
+
+function {:inline} $IsEqual'u32'(x: int, y: int): bool {
+    x == y
+}
+
 function {:inline} $IsEqual'u64'(x: int, y: int): bool {
     x == y
 }
 
 function {:inline} $IsEqual'u128'(x: int, y: int): bool {
+    x == y
+}
+
+function {:inline} $IsEqual'u256'(x: int, y: int): bool {
     x == y
 }
 
@@ -368,13 +398,41 @@ function $shr(src1: int, p: int): int {
 }
 
 // We need to know the size of the destination in order to drop bits
-// that have been shifted left more than that, so we have $ShlU8/64/128
+// that have been shifted left more than that, so we have $ShlU8/16/32/64/128/256
 procedure {:inline 1} $ShlU8(src1: int, src2: int) returns (dst: int)
 {
     var res: int;
     // src2 is a u8
     assume src2 >= 0 && src2 < 256;
+    if (src2 >= 8) {
+        call $ExecFailureAbort();
+        return;
+    }
     dst := $shl(src1, src2) mod 256;
+}
+
+procedure {:inline 1} $ShlU16(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    if (src2 >= 16) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $shl(src1, src2) mod 65536;
+}
+
+procedure {:inline 1} $ShlU32(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    if (src2 >= 32) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $shl(src1, src2) mod 4294967296;
 }
 
 procedure {:inline 1} $ShlU64(src1: int, src2: int) returns (dst: int)
@@ -382,6 +440,10 @@ procedure {:inline 1} $ShlU64(src1: int, src2: int) returns (dst: int)
     var res: int;
     // src2 is a u8
     assume src2 >= 0 && src2 < 256;
+    if (src2 >= 64) {
+       call $ExecFailureAbort();
+       return;
+    }
     dst := $shl(src1, src2) mod 18446744073709551616;
 }
 
@@ -390,11 +452,90 @@ procedure {:inline 1} $ShlU128(src1: int, src2: int) returns (dst: int)
     var res: int;
     // src2 is a u8
     assume src2 >= 0 && src2 < 256;
+    if (src2 >= 128) {
+        call $ExecFailureAbort();
+        return;
+    }
     dst := $shl(src1, src2) mod 340282366920938463463374607431768211456;
 }
 
-// We don't need to know the size of destination, so no $ShrU8, etc.
+procedure {:inline 1} $ShlU256(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    dst := $shl(src1, src2) mod 115792089237316195423570985008687907853269984665640564039457584007913129639936;
+}
+
 procedure {:inline 1} $Shr(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    dst := $shr(src1, src2);
+}
+
+procedure {:inline 1} $ShrU8(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    if (src2 >= 8) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $shr(src1, src2);
+}
+
+procedure {:inline 1} $ShrU16(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    if (src2 >= 16) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $shr(src1, src2);
+}
+
+procedure {:inline 1} $ShrU32(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    if (src2 >= 32) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $shr(src1, src2);
+}
+
+procedure {:inline 1} $ShrU64(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    if (src2 >= 64) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $shr(src1, src2);
+}
+
+procedure {:inline 1} $ShrU128(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    if (src2 >= 128) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $shr(src1, src2);
+}
+
+procedure {:inline 1} $ShrU256(src1: int, src2: int) returns (dst: int)
 {
     var res: int;
     // src2 is a u8

@@ -1409,8 +1409,11 @@ impl<'env> FunctionTranslator<'env> {
                         let op2 = srcs[1];
                         let sh_type = match &self.get_local_type(dest) {
                             Type::Primitive(PrimitiveType::U8) => "U8",
+                            Type::Primitive(PrimitiveType::U16) => "U16",
+                            Type::Primitive(PrimitiveType::U32) => "U32",
                             Type::Primitive(PrimitiveType::U64) => "U64",
                             Type::Primitive(PrimitiveType::U128) => "U128",
+                            Type::Primitive(PrimitiveType::U256) => "U256",
                             _ => unreachable!(),
                         };
                         emitln!(
@@ -1426,10 +1429,20 @@ impl<'env> FunctionTranslator<'env> {
                         let dest = dests[0];
                         let op1 = srcs[0];
                         let op2 = srcs[1];
+                        let sh_type = match &self.get_local_type(dest) {
+                            Type::Primitive(PrimitiveType::U8) => "U8",
+                            Type::Primitive(PrimitiveType::U16) => "U16",
+                            Type::Primitive(PrimitiveType::U32) => "U32",
+                            Type::Primitive(PrimitiveType::U64) => "U64",
+                            Type::Primitive(PrimitiveType::U128) => "U128",
+                            Type::Primitive(PrimitiveType::U256) => "U256",
+                            _ => unreachable!(),
+                        };
                         emitln!(
                             writer,
-                            "call {} := $Shr({}, {});",
+                            "call {} := $Shr{}({}, {});",
                             str_local(dest),
+                            sh_type,
                             str_local(op1),
                             str_local(op2)
                         );

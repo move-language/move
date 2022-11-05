@@ -202,8 +202,8 @@ Running Move unit tests
 Test result: OK. Total tests: 2; passed: 2; failed: 0
 ```
 
-#### `-i <bound>` or `--instructions <bound>`
-This bounds the number of instructions that can be executed for any one test to `<bound>`:
+#### `-i <bound>` or `--gas_used <bound>`
+This bounds the amount of gas that can be consumed for any one test to `<bound>`:
 
 ```
 $ move test -i 0
@@ -236,7 +236,7 @@ Test result: FAILED. Total tests: 3; passed: 0; failed: 3
 ```
 
 #### `-s` or `--statistics`
-With these flags you can gather statistics about the tests run and report the runtime and instructions executed for each test. For example, if we wanted to see the statistics for the tests in the example above:
+With these flags you can gather statistics about the tests run and report the runtime and gas used for each test. For example, if we wanted to see the statistics for the tests in the example above:
 
 ```
 $ move test -s
@@ -250,7 +250,7 @@ Running Move unit tests
 Test Statistics:
 
 ┌────────────────────────────────────────────────┬────────────┬───────────────────────────┐
-│                   Test Name                    │    Time    │   Instructions Executed   │
+│                   Test Name                    │    Time    │   Gas Used   │
 ├────────────────────────────────────────────────┼────────────┼───────────────────────────┤
 │ 0x1::my_module::make_sure_non_zero_coin_passes │   0.009    │             1             │
 ├────────────────────────────────────────────────┼────────────┼───────────────────────────┤

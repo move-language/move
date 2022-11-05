@@ -144,6 +144,7 @@ impl TestRunner {
         // TODO: maybe we should require the clients to always pass in a list of native functions so
         // we don't have to make assumptions about their gas parameters.
         native_function_table: Option<NativeFunctionTable>,
+        cost_table: Option<CostTable>,
         named_address_values: BTreeMap<String, NumericalAddress>,
         record_writeset: bool,
         #[cfg(feature = "evm-backend")] evm: bool,
@@ -173,7 +174,7 @@ impl TestRunner {
                 // after executing a certain number of instructions or setting a timer.
                 //
                 // From the API standpoint, we should let the client specify the cost table.
-                cost_table: unit_cost_table(),
+                cost_table: cost_table.unwrap_or_else(unit_cost_table),
                 source_files,
                 check_stackless_vm,
                 verbose,
@@ -548,9 +549,16 @@ impl SharedTestingConfig {
                     // Unexpected return status from the VM, signal that we hit an unknown error.
                     (_, None) => {
                         output.fail(function_name);
+                        let failure_reason = if err.major_status() as usize >= 4000
+                            && err.major_status() as usize <= 4999
+                        {
+                            FailureReason::execution_failure(err.major_status())
+                        } else {
+                            FailureReason::unknown()
+                        };
                         stats.test_failure(
                             TestFailure::new(
-                                FailureReason::unknown(),
+                                failure_reason,
                                 test_run_info,
                                 Some(err),
                                 save_session_state(),

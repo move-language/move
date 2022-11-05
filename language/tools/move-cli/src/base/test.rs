@@ -15,6 +15,7 @@ use move_compiler::{
 use move_coverage::coverage_map::{output_map_to_file, CoverageMap};
 use move_package::{compilation::build_plan::BuildPlan, BuildConfig};
 use move_unit_test::UnitTestingConfig;
+use move_vm_test_utils::gas_schedule::CostTable;
 use std::{
     collections::HashMap,
     fs,
@@ -36,9 +37,9 @@ compile_error!("Unsupported OS, currently we only support windows and unix famil
 #[derive(Parser)]
 #[clap(name = "test")]
 pub struct Test {
-    /// Bound the number of instructions that can be executed by any one test.
-    #[clap(name = "instructions", short = 'i', long = "instructions")]
-    pub instruction_execution_bound: Option<u64>,
+    /// Bound the amount of gas used by any one test.
+    #[clap(name = "gas_limit", short = 'i', long = "gas_limit")]
+    pub gas_limit: Option<u64>,
     /// A filter string to determine which unit tests to run. A unit test will be run only if it
     /// contains this string in its fully qualified (<addr>::<module_name>::<fn_name>) name.
     #[clap(name = "filter", short = 'f', long = "filter")]
@@ -72,7 +73,7 @@ pub struct Test {
     /// Verbose mode
     #[clap(long = "verbose")]
     pub verbose_mode: bool,
-    /// Collect coverage information for later use with the various `package coverage` subcommands
+    /// Collect coverage information for later use with the various `move coverage` subcommands
     #[clap(long = "coverage")]
     pub compute_coverage: bool,
 
@@ -89,10 +90,11 @@ impl Test {
         path: Option<PathBuf>,
         config: BuildConfig,
         natives: Vec<NativeFunctionRecord>,
+        cost_table: Option<CostTable>,
     ) -> anyhow::Result<()> {
         let rerooted_path = reroot_path(path)?;
         let Self {
-            instruction_execution_bound,
+            gas_limit,
             filter,
             list,
             num_threads,
@@ -106,7 +108,7 @@ impl Test {
             evm,
         } = self;
         let unit_test_config = UnitTestingConfig {
-            instruction_execution_bound,
+            gas_limit,
             filter,
             list,
             num_threads,
@@ -125,6 +127,7 @@ impl Test {
             config,
             unit_test_config,
             natives,
+            cost_table,
             compute_coverage,
             &mut std::io::stdout(),
         )?;
@@ -149,6 +152,7 @@ pub fn run_move_unit_tests<W: Write + Send>(
     mut build_config: move_package::BuildConfig,
     mut unit_test_config: UnitTestingConfig,
     natives: Vec<NativeFunctionRecord>,
+    cost_table: Option<CostTable>,
     compute_coverage: bool,
     writer: &mut W,
 ) -> Result<UnitTestResult> {
@@ -156,8 +160,9 @@ pub fn run_move_unit_tests<W: Write + Send>(
     build_config.test_mode = true;
     build_config.dev_mode = true;
 
-    // Build the resolution graph
-    let resolution_graph = build_config.resolution_graph_for_package(pkg_path)?;
+    // Build the resolution graph (resolution graph diagnostics are only needed for CLI commands so
+    // ignore them by passing a vector as the writer)
+    let resolution_graph = build_config.resolution_graph_for_package(pkg_path, &mut Vec::new())?;
 
     // Note: unit_test_config.named_address_values is always set to vec![] (the default value) before
     // being passed in.
@@ -245,7 +250,7 @@ pub fn run_move_unit_tests<W: Write + Send>(
     // Run the tests. If any of the tests fail, then we don't produce a coverage report, so cleanup
     // the trace files.
     if !unit_test_config
-        .run_and_report_unit_tests(test_plan, Some(natives), writer)
+        .run_and_report_unit_tests(test_plan, Some(natives), cost_table, writer)
         .unwrap()
         .1
     {

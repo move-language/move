@@ -270,8 +270,11 @@ impl<I: Iterator<Item = Token>> Parser<I> {
     fn parse_type_tag(&mut self) -> Result<TypeTag> {
         Ok(match self.next()? {
             Token::U8Type => TypeTag::U8,
+            Token::U16Type => TypeTag::U16,
+            Token::U32Type => TypeTag::U32,
             Token::U64Type => TypeTag::U64,
             Token::U128Type => TypeTag::U128,
+            Token::U256Type => TypeTag::U256,
             Token::BoolType => TypeTag::Bool,
             Token::AddressType => TypeTag::Address,
             Token::SignerType => TypeTag::Signer,

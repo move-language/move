@@ -286,6 +286,11 @@ assertion fails the unit test will fail.
   │    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Test was not expected to abort but it aborted with 0 here
   │
   │
+  │ ────── Storage state at point of failure ──────
+  │ 0xc0ffee:
+  │       => key 0xcafe::BasicCoin::Coin {
+  │           value: 10
+  │       }
   └──────────────────
   ```
 * Find a flag that allows you to gather test coverage information, and

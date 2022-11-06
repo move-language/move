@@ -4,7 +4,7 @@
 
 use crate::sandbox::utils::on_disk_state_view::OnDiskStateView;
 use anyhow::{bail, Result};
-use move_bytecode_utils::layout::SerdeLayoutBuilder;
+use move_bytecode_utils::layout::{SerdeLayoutBuilder, SerdeLayoutConfig};
 use move_core_types::{
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
@@ -15,6 +15,9 @@ pub fn generate_struct_layouts(
     path: &Path,
     struct_opt: &Option<String>,
     type_params_opt: &Option<Vec<TypeTag>>,
+    separator: Option<String>,
+    omit_addresses: bool,
+    ignore_phantom_types: bool,
     shallow: bool,
     state: &OnDiskStateView,
 ) -> Result<()> {
@@ -29,11 +32,15 @@ pub fn generate_struct_layouts(
                 name,
                 type_params,
             };
-            let mut layout_builder = if shallow {
-                SerdeLayoutBuilder::new_shallow(&state)
-            } else {
-                SerdeLayoutBuilder::new(&state)
-            };
+            let mut layout_builder = SerdeLayoutBuilder::new_with_config(
+                &state,
+                SerdeLayoutConfig {
+                    separator,
+                    omit_addresses,
+                    ignore_phantom_types,
+                    shallow,
+                },
+            );
             layout_builder.build_struct_layout(&struct_tag)?;
             let layout = serde_yaml::to_string(layout_builder.registry())?;
             state.save_struct_layouts(&layout)?;

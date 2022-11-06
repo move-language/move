@@ -173,6 +173,21 @@ pub struct StructLayoutOptions {
         multiple_occurrences(true)
     )]
     type_args: Option<Vec<TypeTag>>,
+    /// If set, replace all Move source syntax separators ("::" for address/struct/module name
+    /// separation, "<", ">", and "," for generics separation) with this string.
+    /// If unset, use the same syntax as Move source
+    #[clap(long = "separator")]
+    separator: Option<String>,
+    /// If true, do not include addresses in fully qualified type names.
+    /// If there is a name conflict (e.g., the registry we're building has both
+    /// 0x1::M::T and 0x2::M::T), layout generation will fail when this option is true.
+    #[clap(long = "omit-addresses")]
+    omit_addresses: bool,
+    /// If true, do not include phantom types in fully qualified type names, since they do not contribute to the layout
+    /// E.g., if we have `struct S<phantom T> { u: 64 }` and try to generate bindings for this struct with `T = u8`,
+    /// the name for `S` in the registry will be `S<u64>` when this option is false, and `S` when this option is true
+    #[clap(long = "ignore-phantom-types")]
+    ignore_phantom_types: bool,
     /// If set, generate bindings only for the struct passed in.
     /// When unset, generates bindings for the struct and all of its transitive dependencies.
     #[clap(long = "shallow")]
@@ -299,6 +314,9 @@ fn handle_generate_commands(cmd: &GenerateCommand, state: &OnDiskStateView) -> R
                 module,
                 &options.struct_,
                 &options.type_args,
+                options.separator.clone(),
+                options.omit_addresses,
+                options.ignore_phantom_types,
                 options.shallow,
                 state,
             )

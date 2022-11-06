@@ -17,7 +17,12 @@ use move_core_types::{
     value::{MoveFieldLayout, MoveStructLayout, MoveTypeLayout},
 };
 use serde_reflection::{ContainerFormat, Format, Named, Registry};
-use std::{borrow::Borrow, collections::BTreeMap, convert::TryInto, fmt::Debug};
+use std::{
+    borrow::Borrow,
+    collections::BTreeMap,
+    convert::TryInto,
+    fmt::{Debug, Write},
+};
 
 /// Name of the Move `address` type in the serde registry
 const ADDRESS: &str = "AccountAddress";
@@ -31,17 +36,33 @@ const U256_SERDE_NAME: &str = "u256";
 /// Type for building a registry of serde-reflection friendly struct layouts for Move types.
 /// The layouts created by this type are intended to be passed to the serde-generate tool to create
 /// struct bindings for Move types in source languages that use Move-based services.
-/// The LayoutBuilder can operate in two modes: "deep" and "shallow".
-/// In shallow mode, it will generate a single layout for the struct or type passed in by the user
-/// (under the assumption that layouts for dependencies have been generated previously).
-/// In deep mode, it will generate layouts for all of the (transitive) dependencies of the type passed
-/// in, as well as layouts for the Move ground types like `address` and `signer`. The result is a
-/// self-contained registry with no unbound typenames
 pub struct SerdeLayoutBuilder<'a, T> {
     registry: Registry,
     module_resolver: &'a T,
-    /// If true, operate in shallow mode; else, operate in deep mode
-    shallow: bool,
+    config: SerdeLayoutConfig,
+}
+
+#[derive(Default)]
+pub struct SerdeLayoutConfig {
+    /// If separator is Some, replace all Move source syntax separators ("::" for address/struct/module name
+    /// separation, "<", ">", and "," for generics separation) with this string.
+    /// If separator is None, use the same syntax as Move source
+    pub separator: Option<String>,
+    /// If true, do not include addresses in fully qualified type names.
+    /// If there is a name conflict (e.g., the registry we're building has both
+    /// 0x1::M::T and 0x2::M::T), layout generation will fail when this option is true.
+    pub omit_addresses: bool,
+    /// If true, do not include phantom types in fully qualified type names, since they do not contribute to the layout
+    /// E.g., if we have `struct S<phantom T> { u: 64 }` and try to generate bindings for this struct with `T = u8`,
+    /// the name for `S` in the registry will be `S<u64>` when this option is false, and `S` when this option is true
+    pub ignore_phantom_types: bool,
+    /// The LayoutBuilder can operate in two modes: "deep" and "shallow".
+    /// In shallow mode, generate a single layout for the struct or type passed in by the user
+    /// (under the assumption that layouts for dependencies have been generated previously).
+    /// In deep mode, it generate layouts for all of the (transitive) dependencies of the type passed
+    /// in, as well as layouts for the Move ground types like `address` and `signer`. The result is a
+    /// self-contained registry with no unbound typenames
+    pub shallow: bool,
 }
 
 impl<'a, T: GetModule> SerdeLayoutBuilder<'a, T> {
@@ -50,16 +71,16 @@ impl<'a, T: GetModule> SerdeLayoutBuilder<'a, T> {
         Self {
             registry: Self::default_registry(),
             module_resolver,
-            shallow: false,
+            config: SerdeLayoutConfig::default(),
         }
     }
 
     /// Create a `LayoutBuilder` with an empty registry and shallow layout resolution
-    pub fn new_shallow(module_resolver: &'a T) -> Self {
+    pub fn new_with_config(module_resolver: &'a T, config: SerdeLayoutConfig) -> Self {
         Self {
-            registry: BTreeMap::new(),
+            registry: Self::default_registry(),
             module_resolver,
-            shallow: true,
+            config,
         }
     }
 
@@ -105,8 +126,7 @@ impl<'a, T: GetModule> SerdeLayoutBuilder<'a, T> {
             .iter()
             .map(|t| self.build_type_layout(t.clone()))
             .collect::<Result<Vec<Format>, T::Error>>()?;
-        let shallow = false;
-        self.build_struct_layout_(&s.module_id(), &s.name, &serde_type_args, shallow)
+        self.build_struct_layout_(&s.module_id(), &s.name, &serde_type_args)
     }
 
     fn build_normalized_type_layout(
@@ -136,7 +156,7 @@ impl<'a, T: GetModule> SerdeLayoutBuilder<'a, T> {
                     .map(|t| self.build_normalized_type_layout(t, input_type_args))
                     .collect::<Result<Vec<Format>, T::Error>>()?;
                 let declaring_module = ModuleId::new(*address, module.clone());
-                self.build_struct_layout_(&declaring_module, name, &serde_type_args, self.shallow)?
+                self.build_struct_layout_(&declaring_module, name, &serde_type_args)?
             }
             Vector(inner_t) => {
                 if matches!(inner_t.as_ref(), U8) {
@@ -158,54 +178,114 @@ impl<'a, T: GetModule> SerdeLayoutBuilder<'a, T> {
         module_id: &ModuleId,
         name: &Identifier,
         type_arguments: &[Format],
-        shallow: bool,
     ) -> Result<Format, T::Error> {
         // build a human-readable name for the struct type. this should do the same thing as
         // StructTag::display(), but it's not easy to use that code here
-        let struct_key = if type_arguments.is_empty() {
-            format!("{}::{}", module_id, name)
-        } else {
-            let generics: Vec<String> = type_arguments.iter().map(print_format_type).collect();
-            format!("{}::{}<{}>", module_id, name, generics.join(","))
-        };
-        if !shallow && !self.registry.contains_key(&struct_key) {
-            let declaring_module = self
-                .module_resolver
-                .get_module_by_id(module_id)?
-                .expect("Failed to resolve module");
-            let def = declaring_module
-                .borrow()
-                .find_struct_def_by_name(name)
-                .unwrap_or_else(|| {
-                    panic!(
-                        "Could not find struct named {} in module {}",
-                        name,
-                        declaring_module.borrow().name()
-                    )
-                });
-            let normalized_struct = Struct::new(declaring_module.borrow(), def).1;
-            assert_eq!(
-                normalized_struct.type_parameters.len(),
-                type_arguments.len(),
-                "Wrong number of type arguments for struct"
-            );
-            let fields = normalized_struct
-                .fields
-                .iter()
-                .map(|f| {
-                    self.build_normalized_type_layout(&f.type_, type_arguments)
-                        .map(|value| Named {
-                            name: f.name.to_string(),
-                            value,
-                        })
-                })
-                .collect::<Result<Vec<Named<Format>>, T::Error>>()?;
 
-            let serde_struct = ContainerFormat::Struct(fields);
-            // update cache
+        let declaring_module = self
+            .module_resolver
+            .get_module_by_id(module_id)?
+            .expect("Failed to resolve module");
+        let def = declaring_module
+            .borrow()
+            .find_struct_def_by_name(name)
+            .unwrap_or_else(|| {
+                panic!(
+                    "Could not find struct named {} in module {}",
+                    name,
+                    declaring_module.borrow().name()
+                )
+            });
+        let normalized_struct = Struct::new(declaring_module.borrow(), def).1;
+        assert_eq!(
+            normalized_struct.type_parameters.len(),
+            type_arguments.len(),
+            "Wrong number of type arguments for struct"
+        );
+
+        let generics: Vec<String> = type_arguments
+            .iter()
+            .zip(normalized_struct.type_parameters.iter())
+            .filter_map(|(type_arg, type_param)| {
+                if self.config.ignore_phantom_types && type_param.is_phantom {
+                    // do not include phantom type arguments in the struct key, since they do not affect the struct layout
+                    None
+                } else {
+                    Some(print_format_type(type_arg))
+                }
+            })
+            .collect();
+        let mut struct_key = String::new();
+        if !self.config.omit_addresses {
+            write!(
+                struct_key,
+                "{}{}",
+                module_id.address(),
+                self.config.separator.as_deref().unwrap_or("::")
+            )
+            .unwrap();
+        }
+        write!(
+            struct_key,
+            "{}{}{}",
+            module_id.name(),
+            self.config.separator.as_deref().unwrap_or("::"),
+            name
+        )
+        .unwrap();
+        if !generics.is_empty() {
+            write!(
+                struct_key,
+                "{}{}{}",
+                self.config.separator.as_deref().unwrap_or("<"),
+                generics.join(self.config.separator.as_deref().unwrap_or(",")),
+                self.config.separator.as_deref().unwrap_or(">")
+            )
+            .unwrap()
+        }
+        if self.config.shallow {
+            return Ok(Format::TypeName(struct_key));
+        }
+
+        if let Some(old_struct) = self.registry.get(&struct_key) {
+            if self.config.omit_addresses || self.config.separator.is_some() {
+                // check for conflicts (e.g., 0x1::M::T and 0x2::M::T that both get stripped to M::T because
+                // omit_addresses is on)
+                if old_struct.clone()
+                    != self.generate_serde_struct(normalized_struct, type_arguments)?
+                {
+                    panic!(
+                        "Name conflict: multiple structs with name {}, but different addresses",
+                        struct_key
+                    )
+                }
+            }
+        } else {
+            // not found--generate and update registry
+            let serde_struct = self.generate_serde_struct(normalized_struct, type_arguments)?;
             self.registry.insert(struct_key.clone(), serde_struct);
-        } // else, it's shallow mode or we already generated a layout for the type
+        }
+
         Ok(Format::TypeName(struct_key))
+    }
+
+    fn generate_serde_struct(
+        &mut self,
+        normalized_struct: Struct,
+        type_arguments: &[Format],
+    ) -> Result<ContainerFormat, T::Error> {
+        let fields = normalized_struct
+            .fields
+            .iter()
+            .map(|f| {
+                self.build_normalized_type_layout(&f.type_, type_arguments)
+                    .map(|value| Named {
+                        name: f.name.to_string(),
+                        value,
+                    })
+            })
+            .collect::<Result<Vec<Named<Format>>, T::Error>>()?;
+        Ok(ContainerFormat::Struct(fields))
     }
 }
 

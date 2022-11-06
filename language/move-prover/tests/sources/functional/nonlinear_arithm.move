@@ -105,6 +105,7 @@ module 0x42::TestNonlinearArithmetic {
         a * b * c * d
     }
     spec overflow_u128_mul_4_incorrect {
+        pragma verify = false; // times out on smaller machines
         aborts_if false;
     }
 
@@ -112,6 +113,7 @@ module 0x42::TestNonlinearArithmetic {
         a * b * c * d
     }
     spec overflow_u128_mul_4 {
+        pragma verify = false; // times out on smaller machines
         aborts_if a * b > max_u128();
         aborts_if a * b * c > max_u128();
         aborts_if a * b * c * d > max_u128();

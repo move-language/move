@@ -4,11 +4,6 @@ sandbox publish
 sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M2.mv --struct C --type-args u64
 sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M2.mv --struct C --type-args address
 sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M2.mv --struct C --type-args vector<u8>
-sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M2.mv --struct C --type-args u8
-sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M2.mv --struct C --type-args u16
-sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M2.mv --struct C --type-args u32
-sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M2.mv --struct C --type-args u128
-sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M2.mv --struct C --type-args u256
 
 # across modules deep
 sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M1.mv --struct B --type-args bool

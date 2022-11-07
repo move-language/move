@@ -736,7 +736,7 @@ impl<'env> SpecTranslator<'env> {
             Operation::BitOr => self.translate_arith_op("|", args),
             Operation::BitAnd => self.translate_arith_op("&", args),
             Operation::Xor => self.translate_arith_op("^", args),
-            Operation::Shl => self.translate_primitive_call("$shl", args),
+            Operation::Shl => self.translate_primitive_call_shl("$shl", args),
             Operation::Shr => self.translate_primitive_call("$shr", args),
             Operation::Implies => self.translate_logical_op("==>", args),
             Operation::Iff => self.translate_logical_op("<==>", args),
@@ -752,6 +752,7 @@ impl<'env> SpecTranslator<'env> {
 
             // Unary operators
             Operation::Not => self.translate_logical_unary_op("!", args),
+            Operation::Cast => self.translate_cast(node_id, args),
 
             // Builtin functions
             Operation::Global(memory_label) => {
@@ -1383,8 +1384,33 @@ impl<'env> SpecTranslator<'env> {
         self.translate_exp(&args[0]);
     }
 
+    fn translate_cast(&self, node_id: NodeId, args: &[Exp]) {
+        let arg = args[0].clone();
+        self.env
+            .update_node_type(arg.node_id(), self.env.get_node_type(node_id));
+        self.translate_exp(&arg);
+    }
+
     fn translate_primitive_call(&self, fun: &str, args: &[Exp]) {
         emit!(self.writer, "{}(", fun);
+        self.translate_seq(args.iter(), ", ", |e| self.translate_exp(e));
+        emit!(self.writer, ")");
+    }
+
+    fn translate_primitive_call_shl(&self, fun: &str, args: &[Exp]) {
+        assert!(args.len() > 1);
+        let ty = self.get_node_type(args[0].node_id());
+        let fun_num = match ty {
+            Type::Primitive(PrimitiveType::U8) => "U8",
+            Type::Primitive(PrimitiveType::U16) => "U16",
+            Type::Primitive(PrimitiveType::U32) => "U32",
+            Type::Primitive(PrimitiveType::U64) => "U64",
+            Type::Primitive(PrimitiveType::U128) => "U128",
+            Type::Primitive(PrimitiveType::U256) => "U256",
+            Type::Primitive(PrimitiveType::Num) => "",
+            _ => unreachable!(),
+        };
+        emit!(self.writer, "{}(", format!("{}{}", fun, fun_num).as_str());
         self.translate_seq(args.iter(), ", ", |e| self.translate_exp(e));
         emit!(self.writer, ")");
     }

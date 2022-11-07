@@ -65,7 +65,7 @@ following guarantees w.r.t the original values t1 and t2:
 <code>compare::cmp&lt;T&gt;(t1, t2) != <a href="compare.md#0x1_compare_EQUAL">EQUAL</a></code> iff <code>t1 != t2</code>, where <code>==</code> and <code>!=</code> denote the Move
 bytecode operations for polymorphic equality.
 - for all primitive types <code>T</code> with <code>&lt;</code> and <code>&gt;</code> comparison operators exposed in Move bytecode
-(<code>u8</code>, <code>u64</code>, <code>u128</code>), we have
+(<code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code>, <code>u128</code>, <code>u256</code>), we have
 <code>compare_bcs_bytes(<a href="">bcs</a>(t1), <a href="">bcs</a>(t2)) == <a href="compare.md#0x1_compare_LESS_THAN">LESS_THAN</a></code> iff <code>t1 &lt; t2</code> and (similarly)
 <code>compare_bcs_bytes(<a href="">bcs</a>(t1), <a href="">bcs</a>(t2)) == <a href="compare.md#0x1_compare_LESS_THAN">LESS_THAN</a></code> iff <code>t1 &gt; t2</code>.
 

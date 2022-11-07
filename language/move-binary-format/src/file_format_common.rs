@@ -427,7 +427,7 @@ pub(crate) mod versioned_data {
     }
 
     impl<'a> VersionedBinary<'a> {
-        fn new(binary: &'a [u8]) -> BinaryLoaderResult<(Self, Cursor<&'a [u8]>)> {
+        fn new(binary: &'a [u8], max_version: u32) -> BinaryLoaderResult<(Self, Cursor<&'a [u8]>)> {
             let mut cursor = Cursor::<&'a [u8]>::new(binary);
             let mut magic = [0u8; BinaryConstants::MOVE_MAGIC_SIZE];
             if let Ok(count) = cursor.read(&mut magic) {
@@ -446,7 +446,7 @@ pub(crate) mod versioned_data {
                         .with_message("Bad binary header".to_string()));
                 }
             };
-            if version == 0 || version > VERSION_MAX {
+            if version == 0 || version > u32::min(max_version, VERSION_MAX) {
                 return Err(PartialVMError::new(StatusCode::UNKNOWN_VERSION));
             }
             Ok((Self { version, binary }, cursor))
@@ -472,8 +472,8 @@ pub(crate) mod versioned_data {
     impl<'a> VersionedCursor<'a> {
         /// Verifies the correctness of the "static" part of the binary's header.
         /// If valid, returns a cursor to the binary
-        pub fn new(binary: &'a [u8]) -> BinaryLoaderResult<Self> {
-            let (binary, cursor) = VersionedBinary::new(binary)?;
+        pub fn new(binary: &'a [u8], max_version: u32) -> BinaryLoaderResult<Self> {
+            let (binary, cursor) = VersionedBinary::new(binary, max_version)?;
             Ok(VersionedCursor {
                 version: binary.version,
                 cursor,

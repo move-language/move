@@ -222,6 +222,21 @@ fn malformed_simple() {
     }
 }
 
+#[test]
+fn max_version_lower_than_hardcoded() {
+    let mut binary = BinaryConstants::MOVE_MAGIC.to_vec();
+    binary.extend((VERSION_MAX).to_le_bytes()); // version
+    binary.push(10); // table count
+    binary.push(0); // rest of binary
+
+    let res =
+        CompiledScript::deserialize_with_max_version(&binary, VERSION_MAX.checked_sub(1).unwrap());
+    assert_eq!(
+        res.expect_err("Expected unknown version").major_status(),
+        StatusCode::UNKNOWN_VERSION
+    );
+}
+
 // Ensure that we can deserialize a script from disk
 static EMPTY_SCRIPT: &[u8] = include_bytes!("empty_script.mv");
 

@@ -79,7 +79,12 @@ impl VMRuntime {
         // used with the `[]` operator
         let compiled_modules = match modules
             .iter()
-            .map(|blob| CompiledModule::deserialize(blob))
+            .map(|blob| {
+                CompiledModule::deserialize_with_max_version(
+                    blob,
+                    self.loader.vm_config().max_binary_format_version,
+                )
+            })
             .collect::<PartialVMResult<Vec<_>>>()
         {
             Ok(modules) => modules,

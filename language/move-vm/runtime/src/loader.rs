@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    config::VMConfig,
     logging::expect_no_verification_errors,
     native_functions::{NativeFunction, NativeFunctions, UnboxedNativeFunction},
     session::LoadedFunctionInstantiation,
@@ -20,7 +21,7 @@ use move_binary_format::{
     },
     IndexKind,
 };
-use move_bytecode_verifier::{self, cyclic_dependencies, dependencies, VerifierConfig};
+use move_bytecode_verifier::{self, cyclic_dependencies, dependencies};
 use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
@@ -485,11 +486,11 @@ pub(crate) struct Loader {
     // other transactions.
     module_cache_hits: RwLock<BTreeSet<ModuleId>>,
 
-    verifier_config: VerifierConfig,
+    vm_config: VMConfig,
 }
 
 impl Loader {
-    pub(crate) fn new(natives: NativeFunctions, verifier_config: VerifierConfig) -> Self {
+    pub(crate) fn new(natives: NativeFunctions, vm_config: VMConfig) -> Self {
         Self {
             scripts: RwLock::new(ScriptCache::new()),
             module_cache: RwLock::new(ModuleCache::new()),
@@ -497,7 +498,7 @@ impl Loader {
             natives,
             invalidated: RwLock::new(false),
             module_cache_hits: RwLock::new(BTreeSet::new()),
-            verifier_config,
+            vm_config,
         }
     }
 
@@ -653,7 +654,7 @@ impl Loader {
     // Script verification steps.
     // See `verify_module()` for module verification steps.
     fn verify_script(&self, script: &CompiledScript) -> VMResult<()> {
-        move_bytecode_verifier::verify_script_with_config(&self.verifier_config, script)
+        move_bytecode_verifier::verify_script_with_config(&self.vm_config.verifier, script)
     }
 
     fn verify_script_dependencies(
@@ -778,7 +779,7 @@ impl Loader {
         // module will NOT show up in `module_cache`. In the module republishing case, it means
         // that the old module is still in the `module_cache`, unless a new Loader is created,
         // which means that a new MoveVM instance needs to be created.
-        move_bytecode_verifier::verify_module_with_config(&self.verifier_config, module)?;
+        move_bytecode_verifier::verify_module_with_config(&self.vm_config.verifier, module)?;
         self.check_natives(module)?;
 
         let mut visited = BTreeSet::new();
@@ -1010,7 +1011,7 @@ impl Loader {
             .map_err(expect_no_verification_errors)?;
 
         // bytecode verifier checks that can be performed with the module itself
-        move_bytecode_verifier::verify_module_with_config(&self.verifier_config, &module)
+        move_bytecode_verifier::verify_module_with_config(&self.vm_config.verifier, &module)
             .map_err(expect_no_verification_errors)?;
         self.check_natives(&module)
             .map_err(expect_no_verification_errors)?;

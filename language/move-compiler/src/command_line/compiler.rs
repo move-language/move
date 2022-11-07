@@ -707,12 +707,12 @@ fn has_compiled_module_magic_number(path: &str) -> bool {
         Err(_) => return false,
         Ok(f) => f,
     };
-    let mut magic = [0u8; BinaryConstants::DIEM_MAGIC_SIZE];
+    let mut magic = [0u8; BinaryConstants::MOVE_MAGIC_SIZE];
     let num_bytes_read = match file.read(&mut magic) {
         Err(_) => return false,
         Ok(n) => n,
     };
-    num_bytes_read == BinaryConstants::DIEM_MAGIC_SIZE && magic == BinaryConstants::DIEM_MAGIC
+    num_bytes_read == BinaryConstants::MOVE_MAGIC_SIZE && magic == BinaryConstants::MOVE_MAGIC
 }
 
 //**************************************************************************************************

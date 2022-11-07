@@ -502,6 +502,10 @@ impl Loader {
         }
     }
 
+    pub(crate) fn vm_config(&self) -> &VMConfig {
+        &self.vm_config
+    }
+
     /// Gets and clears module cache hits. A cache hit may also be caused indirectly by
     /// loading a function or a type. This not only returns the direct hit, but also
     /// indirect ones, that is all dependencies.
@@ -619,7 +623,10 @@ impl Loader {
         script: &[u8],
         data_store: &impl DataStore,
     ) -> VMResult<CompiledScript> {
-        let script = match CompiledScript::deserialize(script) {
+        let script = match CompiledScript::deserialize_with_max_version(
+            script,
+            self.vm_config.max_binary_format_version,
+        ) {
             Ok(script) => script,
             Err(err) => {
                 error!("[VM] deserializer for script returned error: {:?}", err,);
@@ -1001,14 +1008,17 @@ impl Loader {
 
         // for bytes obtained from the data store, they should always deserialize and verify.
         // It is an invariant violation if they don't.
-        let module = CompiledModule::deserialize(&bytes)
-            .map_err(|err| {
-                let msg = format!("Deserialization error: {:?}", err);
-                PartialVMError::new(StatusCode::CODE_DESERIALIZATION_ERROR)
-                    .with_message(msg)
-                    .finish(Location::Module(id.clone()))
-            })
-            .map_err(expect_no_verification_errors)?;
+        let module = CompiledModule::deserialize_with_max_version(
+            &bytes,
+            self.vm_config.max_binary_format_version,
+        )
+        .map_err(|err| {
+            let msg = format!("Deserialization error: {:?}", err);
+            PartialVMError::new(StatusCode::CODE_DESERIALIZATION_ERROR)
+                .with_message(msg)
+                .finish(Location::Module(id.clone()))
+        })
+        .map_err(expect_no_verification_errors)?;
 
         // bytecode verifier checks that can be performed with the module itself
         move_bytecode_verifier::verify_module_with_config(&self.vm_config.verifier, &module)

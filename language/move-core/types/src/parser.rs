@@ -396,10 +396,13 @@ pub fn parse_struct_tag(s: &str) -> Result<StructTag> {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use crate::{
         account_address::AccountAddress,
         parser::{parse_struct_tag, parse_transaction_argument, parse_type_tag},
         transaction_argument::TransactionArgument,
+        u256,
     };
 
     #[allow(clippy::unreadable_literal)]
@@ -427,6 +430,28 @@ mod tests {
             (
                 "340282366920938463463374607431768211455u128",
                 T::U128(340282366920938463463374607431768211455),
+            ),
+            ("  0u16", T::U16(0)),
+            ("0u16", T::U16(0)),
+            ("532u16", T::U16(532)),
+            ("65535u16", T::U16(65535)),
+            ("0u32", T::U32(0)),
+            ("01239498u32", T::U32(1239498)),
+            ("35366u32", T::U32(35366)),
+            ("4294967295u32", T::U32(4294967295)),
+            ("0u256", T::U256(u256::U256::from(0u8))),
+            ("1_0u16", T::U16(1_0)),
+            ("10_u16", T::U16(10)),
+            ("10___u16", T::U16(10)),
+            ("1_000u32", T::U32(1_000)),
+            ("1_000", T::U32(1_000)),
+            ("1_0_0_0u32", T::U32(1_000)),
+            ("1_000_000u256", T::U256(u256::U256::from(1_000_000u64))),
+            (
+                "3402823669209384634633746074317682114551234u256",
+                T::U256(
+                    u256::U256::from_str("3402823669209384634633746074317682114551234").unwrap(),
+                ),
             ),
             ("true", T::Bool(true)),
             ("false", T::Bool(false)),
@@ -464,6 +489,7 @@ mod tests {
             "_10",
             "_10_u8",
             "_10__u8",
+            "_1014__u32",
             "10_u8__",
             "_",
             "__",
@@ -473,6 +499,7 @@ mod tests {
             "256u8",
             "18446744073709551616u64",
             "340282366920938463463374607431768211456u128",
+            "340282366920938463463374607431768211456340282366920938463463374607431768211456340282366920938463463374607431768211456u256",
             "0xg",
             "0x00g0",
             "0x",
@@ -508,6 +535,14 @@ mod tests {
             "bool",
             "vector<u8>",
             "vector<vector<u64>>",
+            "vector<u16>",
+            "vector<vector<u16>>",
+            "vector<u32>",
+            "vector<vector<u32>>",
+            "vector<u128>",
+            "vector<vector<u128>>",
+            "vector<u256>",
+            "vector<vector<u256>>",
             "signer",
             "0x1::M::S",
             "0x2::M::S_",
@@ -515,11 +550,19 @@ mod tests {
             "0x4::M_::S_",
             "0x00000000004::M::S",
             "0x1::M::S<u64>",
+            "0x1::M::S<u16>",
+            "0x1::M::S<u32>",
+            "0x1::M::S<u256>",
             "0x1::M::S<0x2::P::Q>",
             "vector<0x1::M::S>",
             "vector<0x1::M_::S_>",
             "vector<vector<0x1::M_::S_>>",
             "0x1::M::S<vector<u8>>",
+            "0x1::M::S<vector<u16>>",
+            "0x1::M::S<vector<u32>>",
+            "0x1::M::S<vector<u64>>",
+            "0x1::M::S<vector<u128>>",
+            "0x1::M::S<vector<u256>>",
         ] {
             assert!(parse_type_tag(s).is_ok(), "Failed to parse tag {}", s);
         }
@@ -538,12 +581,19 @@ mod tests {
             "0x1::Diem::Diem<u8>",
             "0x1::Diem::Diem<u64>",
             "0x1::Diem::Diem<u128>",
+            "0x1::Diem::Diem<u16>",
+            "0x1::Diem::Diem<u32>",
+            "0x1::Diem::Diem<u256>",
             "0x1::Diem::Diem<bool>",
             "0x1::Diem::Diem<address>",
             "0x1::Diem::Diem<signer>",
             "0x1::Diem::Diem<vector<0x1::XDX::XDX>>",
             "0x1::Diem::Diem<u8,bool>",
             "0x1::Diem::Diem<u8,   bool>",
+            "0x1::Diem::Diem<u16,bool>",
+            "0x1::Diem::Diem<u32,   bool>",
+            "0x1::Diem::Diem<u128,bool>",
+            "0x1::Diem::Diem<u256,   bool>",
             "0x1::Diem::Diem<u8  ,bool>",
             "0x1::Diem::Diem<u8 , bool  ,    vector<u8>,address,signer>",
             "0x1::Diem::Diem<vector<0x1::Diem::Struct<0x1::XUS::XUS>>>",

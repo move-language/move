@@ -3537,6 +3537,7 @@ dependencies = [
  "anyhow",
  "dir-diff",
  "file_diff",
+ "hex",
  "log",
  "move-binary-format",
  "move-cli",

@@ -18,6 +18,7 @@ move-binary-format = { path = "../move-binary-format" }
 move-core-types = { path = "../move-core/types" }
 
 [dev-dependencies]
+hex-literal = "0.3.4"
 invalid-mutations = { path = "invalid-mutations" }
 
 [features]

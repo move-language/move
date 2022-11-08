@@ -3,3 +3,5 @@
 
 #[cfg(test)]
 mod reference_analysis;
+#[cfg(test)]
+mod bounds_check;

@@ -1335,8 +1335,11 @@ impl<'env> FunctionTranslator<'env> {
                         };
                         let add_type = match &self.get_local_type(dest) {
                             Type::Primitive(PrimitiveType::U8) => "U8".to_string(),
+                            Type::Primitive(PrimitiveType::U16) => format!("U16{}", unchecked),
+                            Type::Primitive(PrimitiveType::U32) => format!("U32{}", unchecked),
                             Type::Primitive(PrimitiveType::U64) => format!("U64{}", unchecked),
                             Type::Primitive(PrimitiveType::U128) => format!("U128{}", unchecked),
+                            Type::Primitive(PrimitiveType::U256) => format!("U256{}", unchecked),
                             _ => unreachable!(),
                         };
                         emitln!(
@@ -1366,8 +1369,11 @@ impl<'env> FunctionTranslator<'env> {
                         let op2 = srcs[1];
                         let mul_type = match &self.get_local_type(dest) {
                             Type::Primitive(PrimitiveType::U8) => "U8",
+                            Type::Primitive(PrimitiveType::U16) => "U16",
+                            Type::Primitive(PrimitiveType::U32) => "U32",
                             Type::Primitive(PrimitiveType::U64) => "U64",
                             Type::Primitive(PrimitiveType::U128) => "U128",
+                            Type::Primitive(PrimitiveType::U256) => "U256",
                             _ => unreachable!(),
                         };
                         emitln!(

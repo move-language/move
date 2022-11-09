@@ -24,9 +24,10 @@ use move_core_types::identifier::IdentStr;
 use move_coverage::coverage_map::{ExecCoverageMap, FunctionCoverage};
 use move_ir_types::location::Loc;
 
-use inkwell::{OptimizationLevel};
+use llvm_sys::target_machine::{LLVMCodeGenOptLevel};
 use std::{fs::File};
-use inkwell::context::Context as LLVMContext;
+//use inkwell::context::Context as LLVMContext;
+use llvm_sys::prelude::LLVMContextRef as LLVMContext;
 use crate::move_bpf_module::MoveBPFModule;
 
 use crate::errors::DisassemblerError;
@@ -724,7 +725,7 @@ impl<'a> Disassembler<'a> {
         println!("Struct defs: {:?}", struct_defs);
         let context = &self.llvm_context;
         let bc_file = File::create(&llvm_module_name).unwrap();
-        let opt = OptimizationLevel::None; // TODO: Add optimization based on command line flag.
+        let opt = LLVMCodeGenOptLevel::LLVMCodeGenLevelNone; // TODO: Add optimization based on command line flag.
         let mut move_module = MoveBPFModule::new(context, &header, &*llvm_module_name, opt);
 
         let function_defs: Vec<String> = match self.source_mapper.bytecode {

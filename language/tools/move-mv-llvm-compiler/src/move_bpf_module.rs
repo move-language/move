@@ -1,6 +1,7 @@
-use inkwell::builder::Builder;
-use inkwell::context::Context;
-use inkwell::debug_info::DICompileUnit;
+use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef, LLVMValueRef, LLVMMetadataRef, LLVMModuleRef};
+//use inkwell::builder::Builder;
+//use inkwell::context::Context;
+/*use inkwell::debug_info::DICompileUnit;
 use inkwell::debug_info::DebugInfoBuilder;
 use inkwell::module::{Linkage, Module};
 use inkwell::OptimizationLevel;
@@ -9,7 +10,16 @@ use inkwell::targets::{CodeModel, RelocMode};
 use inkwell::{targets::Target, targets::InitializationConfig};
 use inkwell::types::{
     ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FunctionType, IntType, StringRadix,
-};
+};*/
+use llvm_sys::target_machine::{LLVMCodeGenOptLevel};
+
+use crate::support::{to_c_str, LLVMString};
+use std::borrow::Cow;
+use std::error::Error;
+use std::ffi::{CStr, CString};
+use std::fmt::{self, Debug, Display, Formatter};
+use std::marker::PhantomData;
+use std::ops::Deref;
 
 use move_binary_format::{
     binary_views::BinaryIndexedView,
@@ -27,14 +37,80 @@ use once_cell::sync::OnceCell;
 
 static LLVM_INIT: OnceCell<()> = OnceCell::new();
 
+/// Source file scope for debug info
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct DIFile<'ctx> {
+    pub(crate) metadata_ref: LLVMMetadataRef,
+    _marker: PhantomData<&'ctx LLVMContextRef>,
+}
+
+/// Compilation unit scope for debug info
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct DICompileUnit<'ctx> {
+    file: DIFile<'ctx>,
+    pub(crate) metadata_ref: LLVMMetadataRef,
+    _marker: PhantomData<&'ctx LLVMContextRef>,
+}
+
+impl<'ctx> DICompileUnit<'ctx> {
+    pub fn get_file(&self) -> DIFile<'ctx> {
+        self.file
+    }
+}
+
+#[derive(Eq)]
+pub struct TargetTriple {
+    pub(crate) triple: LLVMString,
+}
+
+impl TargetTriple {
+    pub(crate) fn new(triple: LLVMString) -> TargetTriple {
+        TargetTriple { triple }
+    }
+
+    pub fn create(triple: &str) -> TargetTriple {
+        let c_string = to_c_str(triple);
+
+        TargetTriple {
+            triple: LLVMString::create_from_c_str(&c_string),
+        }
+    }
+
+    pub fn as_str(&self) -> &CStr {
+        unsafe { CStr::from_ptr(self.as_ptr()) }
+    }
+
+    pub fn as_ptr(&self) -> *const ::libc::c_char {
+        self.triple.as_ptr()
+    }
+}
+
+impl PartialEq for TargetTriple {
+    fn eq(&self, other: &TargetTriple) -> bool {
+        self.triple == other.triple
+    }
+}
+
+impl fmt::Debug for TargetTriple {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "TargetTriple({:?})", self.triple)
+    }
+}
+
+impl fmt::Display for TargetTriple {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "TargetTriple({:?})", self.triple)
+    }
+}
+
 pub struct MoveBPFModule<'a> {
     pub name: String,
-    pub module: Module<'a>,
-    pub builder: Builder<'a>,
+    pub module: Module<'a>, // Some things in inkwell are good. like Module which takes lifetime parameters. That might help getting around borrow checker issues down the road.
+    pub builder: LLVMBuilderRef<'a>,
     pub dibuilder: DebugInfoBuilder<'a>,
     pub di_compile_unit: DICompileUnit<'a>,
     pub(crate) context: &'a Context,
-    pub(crate) opt: OptimizationLevel,
+    pub(crate) opt: LLVMCodeGenOptLevel,
 }
 
 impl<'a> MoveBPFModule<'a> {
@@ -53,7 +129,7 @@ impl<'a> MoveBPFModule<'a> {
     pub fn get_target_machine(&self) -> Option<TargetMachine> {
         Target::initialize_bpf(&InitializationConfig::default());
 
-        let opt = OptimizationLevel::None; // TODO: Add optimization based on command line flag.
+        let opt = LLVMCodeGenOptLevel::LLVMCodeGenLevelNone; // TODO: Add optimization based on command line flag.
         let reloc = RelocMode::Default;
         let model = CodeModel::Default;
         let target = Target::from_name(MoveBPFModule::llvm_target_name()).unwrap();

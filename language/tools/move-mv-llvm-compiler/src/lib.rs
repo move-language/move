@@ -5,3 +5,4 @@
 pub mod disassembler;
 pub mod errors;
 pub mod move_bpf_module;
+pub mod support;

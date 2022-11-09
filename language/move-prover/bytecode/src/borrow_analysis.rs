@@ -593,24 +593,28 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                                 .targets
                                 .get_target(callee_env, &FunctionVariant::Baseline);
 
-                            let callee_annotation = if callee_env.is_native_or_intrinsic() {
-                                native_annotation(callee_env)
+                            let callee_annotation_opt = if callee_env.is_native_or_intrinsic() {
+                                Some(native_annotation(callee_env))
                             } else {
-                                self.targets
+                                let anno_opt = self
+                                    .targets
                                     .get_target(callee_env, &FunctionVariant::Baseline)
                                     .get_annotations()
-                                    .get::<BorrowAnnotation>()
-                                    .expect("callee borrow annotation")
-                                    .clone()
+                                    .get::<BorrowAnnotation>();
+                                anno_opt.cloned()
                             };
-
-                            state.instantiate(
-                                &callee_target,
-                                targs,
-                                &callee_annotation.summary,
-                                srcs,
-                                dests,
-                            );
+                            if let Some(callee_annotation) = callee_annotation_opt {
+                                state.instantiate(
+                                    &callee_target,
+                                    targs,
+                                    &callee_annotation.summary,
+                                    srcs,
+                                    dests,
+                                );
+                            } else {
+                                callee_env.module_env.env.error(&self.func_target.get_bytecode_loc(*id),
+                                                                "error happened when trying to get borrow annotation from callee");
+                            }
                         } else {
                             // This can happen for recursive functions.
                             // Check whether the function has &mut returns.

@@ -38,11 +38,17 @@ impl<'a> SummaryCache<'a> {
                 if fun_env.is_native_or_intrinsic() {
                     None
                 } else {
-                    Some(
-                        fun_data.annotations.get::<Summary>().expect(
+                    // This avoids crashing when handling recursive or mutually recursive functions
+                    // TODO: add logic to support adding summary to recursive functions
+                    if let Some(summary) = fun_data.annotations.get::<Summary>() {
+                        Some(summary)
+                    } else {
+                        self.global_env.error(
+                            &fun_env.get_loc(),
                             "Failed to resolve summary; recursion or scheduler bug suspected",
-                        ),
-                    )
+                        );
+                        None
+                    }
                 }
             })
     }

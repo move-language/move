@@ -158,6 +158,38 @@ module 0x42::TestArithmetic {
     }
 
     // fails.
+    fun overflow_u16_add_incorrect(x: u16, y: u16): u16 {
+        x + y
+    }
+    spec overflow_u16_add_incorrect {
+        aborts_if false;
+    }
+
+    // succeeds.
+    fun overflow_u16_add(x: u16, y: u16): u16 {
+        x + y
+    }
+    spec overflow_u16_add {
+        aborts_if x + y > max_u16();
+    }
+
+    // fails.
+    fun overflow_u32_add_incorrect(x: u32, y: u32): u32 {
+        x + y
+    }
+    spec overflow_u32_add_incorrect {
+        aborts_if false;
+    }
+
+    // succeeds.
+    fun overflow_u32_add(x: u32, y: u32): u32 {
+        x + y
+    }
+    spec overflow_u32_add {
+        aborts_if x + y > max_u32();
+    }
+
+    // fails.
     fun overflow_u64_add_incorrect(x: u64, y: u64): u64 {
         x + y
     }
@@ -189,6 +221,22 @@ module 0x42::TestArithmetic {
         aborts_if x + y > max_u128();
     }
 
+    // fails.
+    fun overflow_u256_add_incorrect(x: u256, y: u256): u256 {
+        x + y
+    }
+    spec overflow_u256_add_incorrect {
+        aborts_if false;
+    }
+
+    // succeeds.
+    fun overflow_u256_add(x: u256, y: u256): u256 {
+        x + y
+    }
+    spec overflow_u256_add {
+        aborts_if x + y > max_u256();
+    }
+
 
     // --------------------------
     // Overflow by multiplication
@@ -208,6 +256,38 @@ module 0x42::TestArithmetic {
     }
     spec overflow_u8_mul {
         aborts_if x * y > max_u8();
+    }
+
+    // fails.
+    fun overflow_u16_mul_incorrect(x: u16, y: u16): u16 {
+        x * y
+    }
+    spec overflow_u16_mul_incorrect {
+        aborts_if false;
+    }
+
+    // succeeds.
+    fun overflow_u16_mul(x: u16, y: u16): u16 {
+        x * y
+    }
+    spec overflow_u16_mul {
+        aborts_if x * y > max_u16();
+    }
+
+    // fails.
+    fun overflow_u32_mul_incorrect(x: u32, y: u32): u32 {
+        x * y
+    }
+    spec overflow_u32_mul_incorrect {
+        aborts_if false;
+    }
+
+    // succeeds.
+    fun overflow_u32_mul(x: u32, y: u32): u32 {
+        x * y
+    }
+    spec overflow_u32_mul {
+        aborts_if x * y > max_u32();
     }
 
     // fails.
@@ -238,6 +318,21 @@ module 0x42::TestArithmetic {
     }
     spec overflow_u128_mul {
         aborts_if x * y > max_u128(); // U128_MAX
+    }
+
+    // fails.
+    fun overflow_u256_mul_incorrect(x: u256, y: u256): u256 {
+        x * y
+    }
+    spec overflow_u256_mul_incorrect {
+        aborts_if false;
+    }
+
+    fun overflow_u256_mul(x: u256, y: u256): u256 {
+        x * y
+    }
+    spec overflow_u256_mul {
+        aborts_if x * y > max_u256(); // U256_MAX
     }
 
 }

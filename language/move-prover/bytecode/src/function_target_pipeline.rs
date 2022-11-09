@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use core::fmt;
-use std::{collections::BTreeMap, fmt::Formatter, fs};
+use std::{cmp::Ordering, collections::BTreeMap, fmt::Formatter, fs};
 
 use itertools::Itertools;
 use log::{debug, info};
@@ -313,7 +313,20 @@ impl FunctionTargetPipeline {
         let mut dep_ordered = vec![];
         while !worklist.is_empty() {
             // Put functions with 0 calls first in line, at the end of the vector
-            worklist.sort_by(|(_, callees1), (_, callees2)| callees2.len().cmp(&callees1.len()));
+            worklist.sort_by(|(_, callees1), (caller2, callees2)| {
+                // The following logic ensures that a recursive function will be handled before a non-recursive one if they have same
+                // size of callees
+                if Ordering::Equal == callees2.len().cmp(&callees1.len()) {
+                    if callees2.contains(caller2) {
+                        Ordering::Less
+                    } else {
+                        callees2.len().cmp(&callees1.len())
+                    }
+                } else {
+                    callees2.len().cmp(&callees1.len())
+                }
+            });
+
             let (call_id, _) = worklist.pop().unwrap();
 
             // At this point, one of two things is true:

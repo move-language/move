@@ -181,15 +181,14 @@ impl Interpreter {
                 .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
             match exit_code {
                 ExitCode::Return => {
+                    let non_ref_vals = current_frame
+                        .locals
+                        .drop_all_values()
+                        .map(|(_idx, val)| val);
+
                     // TODO: Check if the error location is set correctly.
                     gas_meter
-                        .charge_drop_frame(
-                            current_frame
-                                .locals
-                                .into_values()
-                                .map_err(|e| self.set_location(e))?
-                                .map(|(_idx, val)| val),
-                        )
+                        .charge_drop_frame(non_ref_vals.into_iter())
                         .map_err(|e| self.set_location(e))?;
 
                     if let Some(frame) = self.call_stack.pop() {

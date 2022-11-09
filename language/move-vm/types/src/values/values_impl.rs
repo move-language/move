@@ -1022,14 +1022,26 @@ impl Locals {
         Ok(())
     }
 
-    pub fn into_values(self) -> PartialVMResult<impl Iterator<Item = (usize, Value)>> {
-        Ok(take_unique_ownership(self.0)?
-            .into_iter()
-            .enumerate()
-            .flat_map(|(idx, val)| match &val {
-                ValueImpl::Invalid => None,
-                _ => Some((idx, Value(val))),
-            }))
+    /// Drop all Move values onto a different Vec to avoid leaking memory.
+    /// References are excluded since they may point to invalid data.
+    pub fn drop_all_values(&mut self) -> impl Iterator<Item = (usize, Value)> {
+        let mut locals = self.0.borrow_mut();
+        let mut res = vec![];
+
+        for idx in 0..locals.len() {
+            match &locals[idx] {
+                ValueImpl::Invalid => (),
+                ValueImpl::ContainerRef(_) | ValueImpl::IndexedRef(_) => {
+                    locals[idx] = ValueImpl::Invalid;
+                }
+                _ => res.push((
+                    idx,
+                    Value(std::mem::replace(&mut locals[idx], ValueImpl::Invalid)),
+                )),
+            }
+        }
+
+        res.into_iter()
     }
 }
 

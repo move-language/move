@@ -31,12 +31,13 @@ use move_stackless_bytecode::{
 
 use crate::{
     boogie_helpers::{
-        boogie_address_blob, boogie_byte_blob, boogie_debug_track_abort, boogie_debug_track_local,
-        boogie_debug_track_return, boogie_equality_for_type, boogie_field_sel, boogie_field_update,
-        boogie_function_name, boogie_make_vec_from_strings, boogie_modifies_memory_name,
-        boogie_reflection_type_info, boogie_reflection_type_name, boogie_resource_memory_name,
-        boogie_struct_name, boogie_temp, boogie_type, boogie_type_param, boogie_type_suffix,
-        boogie_type_suffix_for_struct, boogie_well_formed_check, boogie_well_formed_expr,
+        boogie_address_blob, boogie_byte_blob, boogie_constant_blob, boogie_debug_track_abort,
+        boogie_debug_track_local, boogie_debug_track_return, boogie_equality_for_type,
+        boogie_field_sel, boogie_field_update, boogie_function_name, boogie_make_vec_from_strings,
+        boogie_modifies_memory_name, boogie_reflection_type_info, boogie_reflection_type_name,
+        boogie_resource_memory_name, boogie_struct_name, boogie_temp, boogie_type,
+        boogie_type_param, boogie_type_suffix, boogie_type_suffix_for_struct,
+        boogie_well_formed_check, boogie_well_formed_expr,
     },
     options::BoogieOptions,
     spec_translator::SpecTranslator,
@@ -852,6 +853,7 @@ impl<'env> FunctionTranslator<'env> {
                     Constant::Address(val) => val.to_string(),
                     Constant::ByteArray(val) => boogie_byte_blob(options, val),
                     Constant::AddressArray(val) => boogie_address_blob(options, val),
+                    Constant::Vector(val) => boogie_constant_blob(options, val),
                     Constant::U16(num) => num.to_string(),
                     Constant::U32(num) => num.to_string(),
                 };

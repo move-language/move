@@ -1976,11 +1976,11 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     Value::AddressArray(b)
                 }
                 _ => {
-                    self.error(
-                        loc,
-                        &format!("Not yet supported constant vector value: {:?}", value),
-                    );
-                    Value::Bool(false)
+                    let b = vs
+                        .iter()
+                        .map(|v| self.translate_from_move_value(loc, inner, v))
+                        .collect::<Vec<Value>>();
+                    Value::Vector(b)
                 }
             },
             (_, _) => {

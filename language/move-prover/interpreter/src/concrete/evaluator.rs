@@ -255,6 +255,7 @@ impl<'env> Evaluator<'env> {
                     })
                     .collect(),
             ),
+            _ => unimplemented!(),
         }
     }
 

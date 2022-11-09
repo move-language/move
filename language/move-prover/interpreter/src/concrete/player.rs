@@ -460,6 +460,7 @@ impl<'env> FunctionContext<'env> {
                     .collect();
                 TypedValue::mk_vector(BaseType::mk_address(), elems)
             }
+            Constant::Vector(_) => unimplemented!(),
         };
         local_state.put_value_override(dst, val);
     }

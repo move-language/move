@@ -617,6 +617,7 @@ impl<'a> FunctionGenerator<'a> {
             }
             Constant::ByteArray(_) => "".to_string(),
             Constant::AddressArray(_) => "".to_string(),
+            Constant::Vector(_) => "".to_string(),
             Constant::U16(_) | Constant::U32(_) => panic!("unexpected field type"),
         };
         if !val_str.is_empty() {

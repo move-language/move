@@ -9,7 +9,7 @@ use num::BigUint;
 
 use move_binary_format::file_format::TypeParameterIndex;
 use move_model::{
-    ast::{MemoryLabel, TempIndex},
+    ast::{MemoryLabel, TempIndex, Value},
     model::{
         FieldEnv, FunctionEnv, GlobalEnv, ModuleEnv, QualifiedInstId, SpecFunId, StructEnv,
         StructId, SCRIPT_MODULE_NAME,
@@ -18,7 +18,7 @@ use move_model::{
     symbol::Symbol,
     ty::{PrimitiveType, Type},
 };
-use move_stackless_bytecode::function_target::FunctionTarget;
+use move_stackless_bytecode::{function_target::FunctionTarget, stackless_bytecode::Constant};
 
 use crate::options::BoogieOptions;
 
@@ -326,6 +326,62 @@ pub fn boogie_address_blob(_options: &BoogieOptions, val: &[BigUint]) -> String 
         "$EmptyVec'address'()".to_string()
     } else {
         boogie_make_vec_from_strings(&args)
+    }
+}
+
+pub fn boogie_constant_blob(_options: &BoogieOptions, val: &[Constant]) -> String {
+    let args = val
+        .iter()
+        .map(|v| boogie_constant(_options, v))
+        .collect_vec();
+    if args.is_empty() {
+        "EmptyVec()".to_string()
+    } else {
+        boogie_make_vec_from_strings(&args)
+    }
+}
+
+pub fn boogie_constant(_options: &BoogieOptions, val: &Constant) -> String {
+    match val {
+        Constant::Bool(true) => "true".to_string(),
+        Constant::Bool(false) => "false".to_string(),
+        Constant::U8(num) => num.to_string(),
+        Constant::U64(num) => num.to_string(),
+        Constant::U128(num) => num.to_string(),
+        Constant::U256(num) => num.to_string(),
+        Constant::Address(v) => v.to_string(),
+        Constant::ByteArray(v) => boogie_byte_blob(_options, v),
+        Constant::AddressArray(v) => boogie_address_blob(_options, v),
+        Constant::Vector(vec) => boogie_make_vec_from_strings(
+            &vec.iter()
+                .map(|v| boogie_constant(_options, v))
+                .collect_vec(),
+        ),
+        Constant::U16(num) => num.to_string(),
+        Constant::U32(num) => num.to_string(),
+    }
+}
+
+pub fn boogie_value_blob(_options: &BoogieOptions, val: &[Value]) -> String {
+    let args = val.iter().map(|v| boogie_value(_options, v)).collect_vec();
+    if args.is_empty() {
+        "EmptyVec()".to_string()
+    } else {
+        boogie_make_vec_from_strings(&args)
+    }
+}
+
+pub fn boogie_value(_options: &BoogieOptions, val: &Value) -> String {
+    match val {
+        Value::Bool(true) => "true".to_string(),
+        Value::Bool(false) => "false".to_string(),
+        Value::Number(num) => num.to_string(),
+        Value::Address(v) => v.to_string(),
+        Value::ByteArray(v) => boogie_byte_blob(_options, v),
+        Value::AddressArray(v) => boogie_address_blob(_options, v),
+        Value::Vector(vec) => boogie_make_vec_from_strings(
+            &vec.iter().map(|v| boogie_value(_options, v)).collect_vec(),
+        ),
     }
 }
 

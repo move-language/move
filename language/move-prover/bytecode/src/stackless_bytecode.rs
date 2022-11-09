@@ -93,7 +93,8 @@ pub enum Constant {
     U128(u128),
     Address(BigUint),
     ByteArray(Vec<u8>),
-    AddressArray(Vec<BigUint>),
+    AddressArray(Vec<BigUint>), // TODO: merge AddressArray to Vector type in the futureq
+    Vector(Vec<Constant>),
     U16(u16),
     U32(u32),
     U256(U256),
@@ -1145,6 +1146,7 @@ impl fmt::Display for Constant {
                     .map(|v| format!("0x{}", v.to_str_radix(16)))
                     .collect_vec()
             )?,
+            Vector(x) => write!(f, "{:?}", x.iter().map(|v| format!("{}", v)).collect_vec())?,
             U16(x) => write!(f, "{}", x)?,
             U32(x) => write!(f, "{}", x)?,
         }

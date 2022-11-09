@@ -53,6 +53,7 @@ impl SpecPrinter<'_> {
                 "x\"{}\"",
                 v.iter().map(|e| format!("@{:#x}", e)).join(""),
             )),
+            Value::Vector(v) => Self::doc(v.iter().map(|e| format!("{}", e)).join(",")),
         }
     }
 

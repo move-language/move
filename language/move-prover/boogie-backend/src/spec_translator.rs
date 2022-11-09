@@ -37,7 +37,7 @@ use crate::{
         boogie_field_sel, boogie_inst_suffix, boogie_modifies_memory_name,
         boogie_reflection_type_info, boogie_reflection_type_name, boogie_resource_memory_name,
         boogie_spec_fun_name, boogie_spec_var_name, boogie_struct_name, boogie_type,
-        boogie_type_suffix, boogie_well_formed_expr,
+        boogie_type_suffix, boogie_value_blob, boogie_well_formed_expr,
     },
     options::BoogieOptions,
 };
@@ -657,6 +657,7 @@ impl<'env> SpecTranslator<'env> {
             Value::Bool(val) => emit!(self.writer, "{}", val),
             Value::ByteArray(val) => emit!(self.writer, &boogie_byte_blob(self.options, val)),
             Value::AddressArray(val) => emit!(self.writer, &boogie_address_blob(self.options, val)),
+            Value::Vector(val) => emit!(self.writer, &boogie_value_blob(self.options, val)),
         }
     }
 

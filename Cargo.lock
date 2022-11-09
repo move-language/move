@@ -2496,29 +2496,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "inkwell"
-version = "0.1.0"
-source = "git+https://github.com/TheDan64/inkwell?branch=master#27b8ab5623696709c8948fabfc62ce47d5a32edd"
-dependencies = [
- "either",
- "inkwell_internals",
- "libc",
- "llvm-sys",
- "once_cell",
- "parking_lot 0.12.1",
-]
-
-[[package]]
-name = "inkwell_internals"
-version = "0.5.0"
-source = "git+https://github.com/TheDan64/inkwell?branch=master#27b8ab5623696709c8948fabfc62ce47d5a32edd"
-dependencies = [
- "proc-macro2 1.0.43",
- "quote 1.0.9",
- "syn 1.0.99",
-]
-
-[[package]]
 name = "instant"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2778,9 +2755,9 @@ checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
 
 [[package]]
 name = "llvm-sys"
-version = "140.0.3"
+version = "150.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b9eda9cc6f86672152125b1e112d66ab8797b7917fb202e2faee912caa76413"
+checksum = "fab12165825f9fe4a9afa32c17bf55a4014a7f0385c5969975f2d04d36cd611c"
 dependencies = [
  "cc",
  "lazy_static 1.4.0",
@@ -3406,7 +3383,8 @@ dependencies = [
  "anyhow",
  "clap 3.1.8",
  "colored",
- "inkwell",
+ "libc",
+ "llvm-sys",
  "move-binary-format",
  "move-bytecode-source-map",
  "move-bytecode-verifier",

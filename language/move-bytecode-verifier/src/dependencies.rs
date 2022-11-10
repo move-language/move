@@ -444,8 +444,11 @@ fn compare_types(
     match (handle_type, def_type) {
         (SignatureToken::Bool, SignatureToken::Bool)
         | (SignatureToken::U8, SignatureToken::U8)
+        | (SignatureToken::U16, SignatureToken::U16)
+        | (SignatureToken::U32, SignatureToken::U32)
         | (SignatureToken::U64, SignatureToken::U64)
         | (SignatureToken::U128, SignatureToken::U128)
+        | (SignatureToken::U256, SignatureToken::U256)
         | (SignatureToken::Address, SignatureToken::Address)
         | (SignatureToken::Signer, SignatureToken::Signer) => Ok(()),
         (SignatureToken::Vector(ty1), SignatureToken::Vector(ty2)) => {
@@ -472,7 +475,21 @@ fn compare_types(
                 Ok(())
             }
         }
-        _ => Err(PartialVMError::new(StatusCode::TYPE_MISMATCH)),
+        (SignatureToken::Bool, _)
+        | (SignatureToken::U8, _)
+        | (SignatureToken::U64, _)
+        | (SignatureToken::U128, _)
+        | (SignatureToken::Address, _)
+        | (SignatureToken::Signer, _)
+        | (SignatureToken::Vector(_), _)
+        | (SignatureToken::Struct(_), _)
+        | (SignatureToken::StructInstantiation(_, _), _)
+        | (SignatureToken::Reference(_), _)
+        | (SignatureToken::MutableReference(_), _)
+        | (SignatureToken::TypeParameter(_), _)
+        | (SignatureToken::U16, _)
+        | (SignatureToken::U32, _)
+        | (SignatureToken::U256, _) => Err(PartialVMError::new(StatusCode::TYPE_MISMATCH)),
     }
 }
 

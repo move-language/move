@@ -1345,7 +1345,13 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                         .collect::<Vec<BigUint>>();
                     Constant::AddressArray(b)
                 }
-                _ => unimplemented!("Not yet supported constant vector type: {:?}", ty),
+                _ => {
+                    let b = vs
+                        .iter()
+                        .map(|v| Self::translate_value(inner, v))
+                        .collect::<Vec<Constant>>();
+                    Constant::Vector(b)
+                }
             },
             (Type::Primitive(PrimitiveType::Bool), MoveValue::Bool(b)) => Constant::Bool(*b),
             (Type::Primitive(PrimitiveType::U8), MoveValue::U8(b)) => Constant::U8(*b),

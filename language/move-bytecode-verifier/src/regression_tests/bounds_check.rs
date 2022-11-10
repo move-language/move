@@ -1,8 +1,8 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_binary_format::file_format::CompiledScript;
 use hex_literal::hex;
+use move_binary_format::file_format::CompiledScript;
 
 #[test]
 fn script_with_too_many_locals() {

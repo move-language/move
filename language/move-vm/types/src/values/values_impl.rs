@@ -3422,7 +3422,10 @@ impl GlobalValue {
 #[cfg(feature = "fuzzing")]
 pub mod prop {
     use super::*;
-    use move_core_types::value::{MoveStruct, MoveValue};
+    use move_core_types::{
+        value::{MoveStruct, MoveValue},
+        u256
+    };
     use proptest::{collection::vec, prelude::*};
 
     pub fn value_strategy_with_layout(layout: &MoveTypeLayout) -> impl Strategy<Value = Value> {
@@ -3434,7 +3437,7 @@ pub mod prop {
             L::U32 => any::<u32>().prop_map(Value::u32).boxed(),
             L::U64 => any::<u64>().prop_map(Value::u64).boxed(),
             L::U128 => any::<u128>().prop_map(Value::u128).boxed(),
-            L::U256 => any::<u256>().prop_map(Value::u256).boxed(),
+            L::U256 => any::<u256::U256>().prop_map(Value::u256).boxed(),
             L::Bool => any::<bool>().prop_map(Value::bool).boxed(),
             L::Address => any::<AccountAddress>().prop_map(Value::address).boxed(),
             L::Signer => any::<AccountAddress>().prop_map(Value::signer).boxed(),

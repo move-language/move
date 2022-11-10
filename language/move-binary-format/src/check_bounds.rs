@@ -341,7 +341,12 @@ impl<'a> BoundsChecker<'a> {
         }
         let parameters = &self.view.signatures()[function_handle.parameters.into_index()];
 
-        self.check_code(code_unit, &function_handle.type_parameters, parameters, function_def_idx)
+        self.check_code(
+            code_unit,
+            &function_handle.type_parameters,
+            parameters,
+            function_def_idx,
+        )
     }
 
     fn check_code(
@@ -364,7 +369,6 @@ impl<'a> BoundsChecker<'a> {
                 index as TableIndex,
             ));
         }
-
 
         // if there are locals check that the type parameters in local signature are in bounds.
         let type_param_count = type_parameters.len();

@@ -340,21 +340,12 @@ impl<'a> BoundsChecker<'a> {
         }
         let parameters = &self.view.signatures()[function_handle.parameters.into_index()];
 
-        // check if the number of parameters + locals is less than u8::MAX
-        let locals_count = self
-            .get_locals(code_unit)?
-            .len()
-            .saturating_add(parameters.len());
-
-        if locals_count > LocalIndex::MAX as usize {
-            return Err(verification_error(
-                StatusCode::TOO_MANY_LOCALS,
-                IndexKind::FunctionDefinition,
-                function_def_idx as TableIndex,
-            ));
-        }
-
-        self.check_code(code_unit, &function_handle.type_parameters, parameters)
+        self.check_code(
+            code_unit,
+            &function_handle.type_parameters,
+            parameters,
+            function_def_idx,
+        )
     }
 
     fn check_code(
@@ -368,6 +359,14 @@ impl<'a> BoundsChecker<'a> {
         let locals = self.get_locals(code_unit)?;
         // Use saturating add for stability
         let locals_count = locals.len().saturating_add(parameters.len());
+
+        if locals_count > LocalIndex::MAX as usize {
+            return Err(verification_error(
+                StatusCode::TOO_MANY_LOCALS,
+                IndexKind::FunctionDefinition,
+                index as TableIndex,
+            ));
+        }
 
         // if there are locals check that the type parameters in local signature are in bounds.
         let type_param_count = type_parameters.len();

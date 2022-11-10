@@ -12,13 +12,15 @@ use crate::{
 use move_binary_format::{
     access::ModuleAccess,
     binary_views::{BinaryIndexedView, FunctionView},
-    errors::{Location, PartialVMResult, VMResult},
+    control_flow_graph::ControlFlowGraph,
+    errors::{Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
         CompiledModule, CompiledScript, FunctionDefinition, FunctionDefinitionIndex,
         IdentifierIndex, TableIndex,
     },
     IndexKind,
 };
+use move_core_types::vm_status::StatusCode;
 use std::collections::HashMap;
 
 pub struct CodeUnitVerifier<'a> {
@@ -87,6 +89,15 @@ impl<'a> CodeUnitVerifier<'a> {
         let function_handle = module.function_handle_at(function_definition.function);
         control_flow::verify(verifier_config, Some(index), code)?;
         let function_view = FunctionView::function(module, index, code, function_handle);
+
+        if let Some(limit) = verifier_config.max_basic_blocks {
+            if function_view.cfg().blocks().len() > limit {
+                return Err(
+                    PartialVMError::new(StatusCode::TOO_MANY_BASIC_BLOCKS).at_code_offset(index, 0)
+                );
+            }
+        }
+
         let resolver = BinaryIndexedView::Module(module);
         let mut name_def_map = HashMap::new();
         for (idx, func_def) in module.function_defs().iter().enumerate() {

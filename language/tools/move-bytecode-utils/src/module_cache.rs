@@ -39,6 +39,10 @@ impl<R: ModuleResolver> ModuleCache<R> {
     pub fn add(&self, id: ModuleId, m: CompiledModule) {
         self.cache.borrow_mut().insert(id, m);
     }
+
+    pub fn len(&self) -> usize {
+        self.cache.borrow().len()
+    }
 }
 
 impl<R: ModuleResolver> GetModule for ModuleCache<R> {
@@ -79,6 +83,10 @@ impl<R: ModuleResolver> SyncModuleCache<R> {
 
     pub fn add(&self, id: ModuleId, m: CompiledModule) {
         self.cache.write().unwrap().insert(id, Arc::new(m));
+    }
+
+    pub fn len(&self) -> usize {
+        self.cache.read().unwrap().len()
     }
 }
 

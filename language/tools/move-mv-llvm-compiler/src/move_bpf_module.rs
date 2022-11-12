@@ -1,4 +1,6 @@
-use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef, LLVMValueRef, LLVMMetadataRef, LLVMModuleRef, LLVMDIBuilderRef};
+use llvm_sys::core::{LLVMInt1TypeInContext, LLVMInt8TypeInContext, LLVMInt64TypeInContext};
+
+use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef, LLVMValueRef, LLVMMetadataRef, LLVMModuleRef, LLVMDIBuilderRef, LLVMTypeRef};
 //use inkwell::builder::Builder;
 //use inkwell::context::Context;
 /*use inkwell::debug_info::DICompileUnit;
@@ -267,15 +269,15 @@ impl<'a> MoveBPFModule<'a> {
         }
     }
 
-    pub(crate) fn llvm_type_for_sig_tok(&self, sig_tok: &SignatureToken, _type_parameters: &[AbilitySet]) -> BasicTypeEnum<'a> {
+    pub(crate) fn llvm_type_for_sig_tok(&self, sig_tok: &SignatureToken, _type_parameters: &[AbilitySet]) -> LLVMTypeRef {
         match sig_tok {
-            SignatureToken::Bool => BasicTypeEnum::IntType(self.context.bool_type()),
-            SignatureToken::U8 => BasicTypeEnum::IntType(self.context.custom_width_int_type(8)), // FIXME: The signedness
-            SignatureToken::U64 => BasicTypeEnum::IntType(self.context.custom_width_int_type(64)), // FIXME: The signedness
+            SignatureToken::Bool => unsafe{LLVMInt1TypeInContext(*self.context)},
+            SignatureToken::U8 => unsafe{LLVMInt8TypeInContext(*self.context)}, // FIXME: In llvm signedness is achieved with `cast` operation.
+            SignatureToken::U64 => unsafe{LLVMInt64TypeInContext(*self.context)}, // FIXME: The signedness
             _ => unimplemented!("Remaining Signature tokens to be implemented"),
         }
     }
-    pub fn llvm_type_for_sig_tokens(&self, sig_tokens: Vec<SignatureToken>, type_parameters: &[AbilitySet],) -> Vec<BasicTypeEnum<'a>> {
+    pub fn llvm_type_for_sig_tokens(&self, sig_tokens: Vec<SignatureToken>, type_parameters: &[AbilitySet],) -> Vec<LLVMTypeRef> {
         let mut vec = Vec::new();
         for v in sig_tokens {
             vec.push(self.llvm_type_for_sig_tok(&v, type_parameters));

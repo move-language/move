@@ -1,4 +1,4 @@
-use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef, LLVMValueRef, LLVMMetadataRef, LLVMModuleRef};
+use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef, LLVMValueRef, LLVMMetadataRef, LLVMModuleRef, LLVMDIBuilderRef};
 //use inkwell::builder::Builder;
 //use inkwell::context::Context;
 /*use inkwell::debug_info::DICompileUnit;
@@ -11,7 +11,7 @@ use inkwell::{targets::Target, targets::InitializationConfig};
 use inkwell::types::{
     ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FunctionType, IntType, StringRadix,
 };*/
-use llvm_sys::target_machine::{LLVMCodeGenOptLevel};
+use llvm_sys::target_machine::{LLVMCodeGenOptLevel, LLVMCodeModel, LLVMTargetMachineRef, LLVMCreateTargetMachine, LLVMTargetRef, LLVMRelocMode};
 
 use crate::support::{to_c_str, LLVMString};
 use std::borrow::Cow;
@@ -20,6 +20,8 @@ use std::ffi::{CStr, CString};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::ops::Deref;
+use once_cell::sync::Lazy;
+use parking_lot::RwLock;
 
 use move_binary_format::{
     binary_views::BinaryIndexedView,
@@ -57,6 +59,31 @@ impl<'ctx> DICompileUnit<'ctx> {
         self.file
     }
 }
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct InitializationConfig {
+    pub asm_parser: bool,
+    pub asm_printer: bool,
+    pub base: bool,
+    pub disassembler: bool,
+    pub info: bool,
+    pub machine_code: bool,
+}
+
+impl Default for InitializationConfig {
+    fn default() -> Self {
+        InitializationConfig {
+            asm_parser: true,
+            asm_printer: true,
+            base: true,
+            disassembler: true,
+            info: true,
+            machine_code: true,
+        }
+    }
+}
+
+static TARGET_LOCK: Lazy<RwLock<()>> = Lazy::new(|| RwLock::new(()));
 
 #[derive(Eq)]
 pub struct TargetTriple {
@@ -105,11 +132,11 @@ impl fmt::Display for TargetTriple {
 
 pub struct MoveBPFModule<'a> {
     pub name: String,
-    pub module: Module<'a>, // Some things in inkwell are good. like Module which takes lifetime parameters. That might help getting around borrow checker issues down the road.
-    pub builder: LLVMBuilderRef<'a>,
-    pub dibuilder: DebugInfoBuilder<'a>,
+    pub module: LLVMModuleRef, // Some things in inkwell are good. like Module which takes lifetime parameters. That might help getting around borrow checker issues down the road.
+    pub builder: LLVMBuilderRef,
+    pub dibuilder: LLVMDIBuilderRef,
     pub di_compile_unit: DICompileUnit<'a>,
-    pub(crate) context: &'a Context,
+    pub(crate) context: &'a LLVMContextRef,
     pub(crate) opt: LLVMCodeGenOptLevel,
 }
 
@@ -126,29 +153,72 @@ impl<'a> MoveBPFModule<'a> {
         "" // no additional target specific features.
     }
 
-    pub fn get_target_machine(&self) -> Option<TargetMachine> {
-        Target::initialize_bpf(&InitializationConfig::default());
+    pub fn initialize_bpf(config: &InitializationConfig) {
+        use llvm_sys::target::{
+            LLVMInitializeBPFAsmPrinter, LLVMInitializeBPFTarget, LLVMInitializeBPFTargetInfo,
+            LLVMInitializeBPFTargetMC,
+        };
 
-        let opt = LLVMCodeGenOptLevel::LLVMCodeGenLevelNone; // TODO: Add optimization based on command line flag.
-        let reloc = RelocMode::Default;
-        let model = CodeModel::Default;
-        let target = Target::from_name(MoveBPFModule::llvm_target_name()).unwrap();
+        if config.base {
+            let _guard = TARGET_LOCK.write();
+            unsafe { LLVMInitializeBPFTarget() };
+        }
 
-        return target.create_target_machine(
-            &MoveBPFModule::llvm_target_triple(),
-            "v2",
-            MoveBPFModule::llvm_features(),
-            opt,
-            reloc,
-            model
-        );
+        if config.info {
+            let _guard = TARGET_LOCK.write();
+            unsafe { LLVMInitializeBPFTargetInfo() };
+        }
+
+        if config.asm_printer {
+            let _guard = TARGET_LOCK.write();
+            unsafe { LLVMInitializeBPFAsmPrinter() };
+        }
+
+        // No asm parser
+
+        if config.disassembler {
+            use llvm_sys::target::LLVMInitializeBPFDisassembler;
+
+            let _guard = TARGET_LOCK.write();
+            unsafe { LLVMInitializeBPFDisassembler() };
+        }
+
+        if config.machine_code {
+            let _guard = TARGET_LOCK.write();
+            unsafe { LLVMInitializeBPFTargetMC() };
+        }
+    }
+
+    pub fn get_target_machine(&self) -> Option<LLVMTargetMachineRef> {
+        Self::initialize_bpf(&InitializationConfig::default());
+
+        let opt_level = LLVMCodeGenOptLevel::LLVMCodeGenLevelNone; // TODO: Add optimization based on command line flag.
+        let reloc_mode = LLVMRelocMode::LLVMRelocDefault;
+        let code_model = LLVMCodeModel::LLVMCodeModelDefault;
+        let target:LLVMTargetRef;
+        let cpu = "v2";
+
+        let target_machine = unsafe {
+            LLVMCreateTargetMachine(
+                target,
+                MoveBPFModule::llvm_target_triple().as_ptr(),
+                to_c_str(cpu).as_ptr(),
+                to_c_str(MoveBPFModule::llvm_features()).as_ptr(),
+                opt_level,
+                reloc_mode,
+                code_model,
+            )
+        };
+
+        assert!(!target_machine.is_null());
+        return Some(target_machine);
     }
 
     pub fn new(
-        context: &'a Context,
+        context: &'a LLVMContextRef,
         name: &str,
         filename: &str,
-        opt: OptimizationLevel,
+        opt: LLVMCodeGenOptLevel,
     ) -> Self {
         LLVM_INIT.get_or_init(|| {
             inkwell::targets::Target::initialize_bpf(&Default::default());

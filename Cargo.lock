@@ -3394,6 +3394,7 @@ dependencies = [
  "move-coverage",
  "move-ir-types",
  "once_cell",
+ "parking_lot 0.12.1",
  "semver 1.0.14",
 ]
 

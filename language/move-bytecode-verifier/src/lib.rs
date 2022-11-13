@@ -18,6 +18,7 @@ pub mod dependencies;
 pub mod friends;
 pub mod instantiation_loops;
 pub mod instruction_consistency;
+pub mod limits;
 pub mod script_signature;
 pub mod signature;
 pub mod struct_defs;

@@ -1,4 +1,4 @@
-use llvm_sys::core::{LLVMInt1TypeInContext, LLVMInt8TypeInContext, LLVMInt64TypeInContext};
+use llvm_sys::core::{LLVMInt1TypeInContext, LLVMInt8TypeInContext, LLVMInt64TypeInContext, LLVMModuleCreateWithNameInContext};
 
 use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef, LLVMValueRef, LLVMMetadataRef, LLVMModuleRef, LLVMDIBuilderRef, LLVMTypeRef};
 //use inkwell::builder::Builder;
@@ -82,6 +82,20 @@ impl Default for InitializationConfig {
             info: true,
             machine_code: true,
         }
+    }
+}
+
+/// Since LLVM types do not have signs, the signedness is encoded in the operations like udiv etc.
+/// It becomes very hard to work with this setup at a higher level so we need to keep the signedness
+/// along with the type.
+pub struct LLVMSignedType {
+    pub llvm_type : LLVMTypeRef,
+    pub is_signed : bool // True = signed, False = unsigned
+}
+
+impl LLVMSignedType {
+    pub(crate) fn new(t : LLVMTypeRef, s : bool) -> LLVMSignedType {
+        LLVMSignedType { llvm_type : t, is_signed : s }
     }
 }
 
@@ -216,6 +230,22 @@ impl<'a> MoveBPFModule<'a> {
         return Some(target_machine);
     }
 
+    pub fn add_basic_value_flag<BV: BasicValue<'a>>(&self, key: &str, behavior: FlagBehavior, flag: BV) {
+        use llvm_sys::core::LLVMValueAsMetadata;
+
+        let md = unsafe { LLVMValueAsMetadata(flag.as_value_ref()) };
+
+        unsafe {
+            LLVMAddModuleFlag(
+                self.module.get(),
+                behavior.into(),
+                key.as_ptr() as *mut ::libc::c_char,
+                key.len(),
+                md,
+            )
+        }
+    }
+
     pub fn new(
         context: &'a LLVMContextRef,
         name: &str,
@@ -223,11 +253,14 @@ impl<'a> MoveBPFModule<'a> {
         opt: LLVMCodeGenOptLevel,
     ) -> Self {
         LLVM_INIT.get_or_init(|| {
-            inkwell::targets::Target::initialize_bpf(&Default::default());
+            Self::initialize_bpf(&InitializationConfig::default());
         });
 
         let triple = MoveBPFModule::llvm_target_triple();
-        let module = context.create_module(name);
+        //let module = context.create_module(name);
+        let c_string = to_c_str(name);
+
+        let module = unsafe { LLVMModuleCreateWithNameInContext(c_string.as_ptr(), *context) };
 
         let debug_metadata_version = context.i32_type().const_int(3, false);
         module.add_basic_value_flag(
@@ -269,15 +302,15 @@ impl<'a> MoveBPFModule<'a> {
         }
     }
 
-    pub(crate) fn llvm_type_for_sig_tok(&self, sig_tok: &SignatureToken, _type_parameters: &[AbilitySet]) -> LLVMTypeRef {
+    pub(crate) fn llvm_type_for_sig_tok(&self, sig_tok: &SignatureToken, _type_parameters: &[AbilitySet]) -> LLVMSignedType {
         match sig_tok {
-            SignatureToken::Bool => unsafe{LLVMInt1TypeInContext(*self.context)},
-            SignatureToken::U8 => unsafe{LLVMInt8TypeInContext(*self.context)}, // FIXME: In llvm signedness is achieved with `cast` operation.
-            SignatureToken::U64 => unsafe{LLVMInt64TypeInContext(*self.context)}, // FIXME: The signedness
+            SignatureToken::Bool => LLVMSignedType::new(unsafe{LLVMInt1TypeInContext(*self.context)}, false),
+            SignatureToken::U8 => LLVMSignedType::new(unsafe{LLVMInt8TypeInContext(*self.context)}, true), // FIXME: In llvm signedness is achieved with `cast` operation.
+            SignatureToken::U64 => LLVMSignedType::new(unsafe{LLVMInt64TypeInContext(*self.context)}, true), // FIXME: The signedness
             _ => unimplemented!("Remaining Signature tokens to be implemented"),
         }
     }
-    pub fn llvm_type_for_sig_tokens(&self, sig_tokens: Vec<SignatureToken>, type_parameters: &[AbilitySet],) -> Vec<LLVMTypeRef> {
+    pub fn llvm_type_for_sig_tokens(&self, sig_tokens: Vec<SignatureToken>, type_parameters: &[AbilitySet],) -> Vec<LLVMSignedType> {
         let mut vec = Vec::new();
         for v in sig_tokens {
             vec.push(self.llvm_type_for_sig_tok(&v, type_parameters));

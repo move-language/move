@@ -60,6 +60,7 @@ impl<'a> BoundsChecker<'a> {
                 .signatures()
                 .get(script.parameters.into_index())
                 .unwrap(),
+            CompiledScript::MAIN_INDEX.into_index(),
         )
     }
 
@@ -353,6 +354,7 @@ impl<'a> BoundsChecker<'a> {
         code_unit: &CodeUnit,
         type_parameters: &[AbilitySet],
         parameters: &Signature,
+        index: usize,
     ) -> PartialVMResult<()> {
         check_bounds_impl(self.view.signatures(), code_unit.locals)?;
 

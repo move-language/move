@@ -26,7 +26,7 @@ use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
     metadata::Metadata,
-    value::{MoveStructLayout, MoveTypeLayout},
+    value::{MoveFieldLayout, MoveStructLayout, MoveTypeLayout},
     vm_status::StatusCode,
 };
 use move_vm_types::{
@@ -218,12 +218,20 @@ impl ModuleCache {
         idx: StructDefinitionIndex,
     ) -> StructType {
         let struct_handle = module.struct_handle_at(struct_def.struct_handle);
+        let field_names = match &struct_def.field_information {
+            StructFieldInformation::Native => vec![],
+            StructFieldInformation::Declared(field_info) => field_info
+                .iter()
+                .map(|f| module.identifier_at(f.name).to_owned())
+                .collect(),
+        };
         let abilities = struct_handle.abilities;
         let name = module.identifier_at(struct_handle.name).to_owned();
         let type_parameters = struct_handle.type_parameters.clone();
         let module = module.self_id();
         StructType {
             fields: vec![],
+            field_names,
             abilities,
             type_parameters,
             name,
@@ -1517,6 +1525,13 @@ impl<'a> Resolver<'a> {
         self.loader.type_to_type_layout(ty)
     }
 
+    pub(crate) fn type_to_fully_annotated_layout(
+        &self,
+        ty: &Type,
+    ) -> PartialVMResult<MoveTypeLayout> {
+        self.loader.type_to_fully_annotated_layout(ty)
+    }
+
     // get the loader
     pub(crate) fn loader(&self) -> &Loader {
         self.loader
@@ -2271,6 +2286,7 @@ struct FieldInstantiation {
 struct StructInfo {
     struct_tag: Option<StructTag>,
     struct_layout: Option<MoveStructLayout>,
+    annotated_struct_layout: Option<MoveStructLayout>,
 }
 
 impl StructInfo {
@@ -2278,6 +2294,7 @@ impl StructInfo {
         Self {
             struct_tag: None,
             struct_layout: None,
+            annotated_struct_layout: None,
         }
     }
 }
@@ -2460,15 +2477,104 @@ impl Loader {
         })
     }
 
+    fn struct_gidx_to_fully_annotated_layout(
+        &self,
+        gidx: CachedStructIndex,
+        ty_args: &[Type],
+        depth: usize,
+    ) -> PartialVMResult<MoveStructLayout> {
+        if let Some(struct_map) = self.type_cache.read().structs.get(&gidx) {
+            if let Some(struct_info) = struct_map.get(ty_args) {
+                if let Some(layout) = &struct_info.annotated_struct_layout {
+                    return Ok(layout.clone());
+                }
+            }
+        }
+
+        let struct_type = self.module_cache.read().struct_at(gidx);
+        if struct_type.fields.len() != struct_type.field_names.len() {
+            return Err(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
+                    "Field types did not match the length of field names in loaded struct"
+                        .to_owned(),
+                ),
+            );
+        }
+        let struct_tag = self.struct_gidx_to_type_tag(gidx, ty_args)?;
+        let field_layouts = struct_type
+            .field_names
+            .iter()
+            .zip(&struct_type.fields)
+            .map(|(n, ty)| {
+                let ty = ty.subst(ty_args)?;
+                let l = self.type_to_fully_annotated_layout_impl(&ty, depth + 1)?;
+                Ok(MoveFieldLayout::new(n.clone(), l))
+            })
+            .collect::<PartialVMResult<Vec<_>>>()?;
+        let struct_layout = MoveStructLayout::with_types(struct_tag, field_layouts);
+
+        self.type_cache
+            .write()
+            .structs
+            .entry(gidx)
+            .or_insert_with(HashMap::new)
+            .entry(ty_args.to_vec())
+            .or_insert_with(StructInfo::new)
+            .annotated_struct_layout = Some(struct_layout.clone());
+
+        Ok(struct_layout)
+    }
+
+    fn type_to_fully_annotated_layout_impl(
+        &self,
+        ty: &Type,
+        depth: usize,
+    ) -> PartialVMResult<MoveTypeLayout> {
+        if depth > VALUE_DEPTH_MAX {
+            return Err(PartialVMError::new(StatusCode::VM_MAX_VALUE_DEPTH_REACHED));
+        }
+        Ok(match ty {
+            Type::Bool => MoveTypeLayout::Bool,
+            Type::U8 => MoveTypeLayout::U8,
+            Type::U64 => MoveTypeLayout::U64,
+            Type::U128 => MoveTypeLayout::U128,
+            Type::Address => MoveTypeLayout::Address,
+            Type::Signer => MoveTypeLayout::Signer,
+            Type::Vector(ty) => MoveTypeLayout::Vector(Box::new(
+                self.type_to_fully_annotated_layout_impl(ty, depth + 1)?,
+            )),
+            Type::Struct(gidx) => MoveTypeLayout::Struct(
+                self.struct_gidx_to_fully_annotated_layout(*gidx, &[], depth)?,
+            ),
+            Type::StructInstantiation(gidx, ty_args) => MoveTypeLayout::Struct(
+                self.struct_gidx_to_fully_annotated_layout(*gidx, ty_args, depth)?,
+            ),
+            Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
+                return Err(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message(format!("no type layout for {:?}", ty)),
+                )
+            }
+        })
+    }
+
     pub(crate) fn type_to_type_tag(&self, ty: &Type) -> PartialVMResult<TypeTag> {
         self.type_to_type_tag_impl(ty)
     }
+
     pub(crate) fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout> {
         self.type_to_type_layout_impl(ty, 1)
     }
 
     pub(crate) fn runtime_config(&self) -> RuntimeConfig {
         self.runtime_config
+    }
+
+    pub(crate) fn type_to_fully_annotated_layout(
+        &self,
+        ty: &Type,
+    ) -> PartialVMResult<MoveTypeLayout> {
+        self.type_to_fully_annotated_layout_impl(ty, 1)
     }
 }
 
@@ -2481,6 +2587,16 @@ impl Loader {
     ) -> VMResult<MoveTypeLayout> {
         let ty = self.load_type(type_tag, move_storage)?;
         self.type_to_type_layout(&ty)
+            .map_err(|e| e.finish(Location::Undefined))
+    }
+
+    pub(crate) fn get_fully_annotated_type_layout(
+        &self,
+        type_tag: &TypeTag,
+        move_storage: &impl DataStore,
+    ) -> VMResult<MoveTypeLayout> {
+        let ty = self.load_type(type_tag, move_storage)?;
+        self.type_to_fully_annotated_layout(&ty)
             .map_err(|e| e.finish(Location::Undefined))
     }
 }

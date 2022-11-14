@@ -2913,8 +2913,13 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, MoveTypeLayout, ValueIm
                 let layout = &**layout;
                 match (layout, c) {
                     (MoveTypeLayout::U8, Container::VecU8(r)) => r.borrow().serialize(serializer),
+                    (MoveTypeLayout::U16, Container::VecU16(r)) => r.borrow().serialize(serializer),
+                    (MoveTypeLayout::U32, Container::VecU32(r)) => r.borrow().serialize(serializer),
                     (MoveTypeLayout::U64, Container::VecU64(r)) => r.borrow().serialize(serializer),
                     (MoveTypeLayout::U128, Container::VecU128(r)) => {
+                        r.borrow().serialize(serializer)
+                    }
+                    (MoveTypeLayout::U256, Container::VecU256(r)) => {
                         r.borrow().serialize(serializer)
                     }
                     (MoveTypeLayout::Bool, Container::VecBool(r)) => {

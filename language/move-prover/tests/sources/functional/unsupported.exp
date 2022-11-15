@@ -1,6 +1,0 @@
-Move prover returns: exiting with condition generation errors
-error: Unsupported operator
-  ┌─ tests/sources/functional/unsupported.move:7:37
-  │
-7 │     public fun foo(i: u64): u64 { i & 0 }
-  │                                     ^

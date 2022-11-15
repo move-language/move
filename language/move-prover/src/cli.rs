@@ -530,6 +530,11 @@ impl Options {
                     .help("For each script function which is verification target, \
                     print out the names of all called functions, directly or indirectly.")
             )
+            .arg(
+                Arg::new("ban-int-2-bv")
+                    .long("ban-int-2-bv")
+                    .long("whether allow converting int to bit vector when generating the boogie file")
+            )
             .after_help("More options available via `--config file` or `--config-str str`. \
             Use `--print-config` to see format and current values. \
             See `move-prover/src/cli.rs::Option` for documentation.");
@@ -773,6 +778,10 @@ impl Options {
 
         if matches.is_present("script-reach") {
             options.script_reach = true;
+        }
+
+        if matches.is_present("ban-int-2-bv") {
+            options.prover.ban_int_2_bv = true;
         }
 
         options.backend.derive_options();

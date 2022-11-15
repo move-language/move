@@ -560,7 +560,7 @@ impl<'env> Evaluator<'env> {
                 unreachable!()
             }
 
-            Operation::Cast => {
+            Operation::Cast | Operation::Bv2Int | Operation::Int2Bv => {
                 unreachable!()
             }
         };

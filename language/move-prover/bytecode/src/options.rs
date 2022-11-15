@@ -87,6 +87,8 @@ pub struct ProverOptions {
     /// Optional names of native methods (qualified with module name, e.g., m::foo) implementing
     /// mutable borrow semantics
     pub borrow_natives: Vec<String>,
+    /// Whether to ban convertion from int to bv at the boogie backend
+    pub ban_int_2_bv: bool,
 }
 
 // add custom struct for mutation options
@@ -120,6 +122,7 @@ impl Default for ProverOptions {
             for_interpretation: false,
             skip_loop_analysis: false,
             borrow_natives: vec![],
+            ban_int_2_bv: false,
         }
     }
 }

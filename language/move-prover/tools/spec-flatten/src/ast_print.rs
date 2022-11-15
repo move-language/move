@@ -313,6 +313,8 @@ impl SpecPrinter<'_> {
                     // unary operators
                     Not => print_call_unary("!"),
                     Cast => print_call_unary("cast"),
+                    Int2Bv => print_call_unary("int2bv"),
+                    Bv2Int => print_call_unary("bv2int"),
                     // built-in functions
                     Len => print_call_fun("len"),
                     Old => print_call_fun("old"),

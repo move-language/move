@@ -215,9 +215,11 @@ pub fn is_pragma_valid_for_block(
                 | FRIEND_PRAGMA
                 | DISABLE_INVARIANTS_IN_BODY_PRAGMA
                 | DELEGATE_INVARIANTS_TO_CALLER_PRAGMA
+                | BV_PARAM_PROP
+                | BV_RET_PROP
         ),
         Struct(..) => match pragma {
-            INTRINSIC_PRAGMA => true,
+            INTRINSIC_PRAGMA | BV_PARAM_PROP => true,
             _ if INTRINSIC_TYPE_MAP_ASSOC_FUNCTIONS.contains_key(pragma) => bag
                 .get(&symbols.make(INTRINSIC_PRAGMA))
                 .map(|v| match v {
@@ -281,6 +283,16 @@ pub const CONDITION_CHECK_ABORT_CODES_PROP: &str = "check";
 /// A property that can be attached to a global invariant to indicate that it should be
 /// enabled disabled by the disable_invariant_in_body pragma
 pub const CONDITION_SUSPENDABLE_PROP: &str = "suspendable";
+
+/// A pragama defined in the spec block of a function or a struct
+/// to explicitly specify which argument or field will be translated into a bv type in the boogie file
+/// example: bv=b"0,1"
+pub const BV_PARAM_PROP: &str = "bv";
+
+/// A pragama defined in the spec block of a function
+/// to explicitly specify which return value will be translated into a bv type in the boogie file
+/// example: bv_ret=b"0,1"
+pub const BV_RET_PROP: &str = "bv_ret";
 
 /// A function which determines whether a property is valid for a given condition kind.
 pub fn is_property_valid_for_condition(kind: &ConditionKind, prop: &str) -> bool {

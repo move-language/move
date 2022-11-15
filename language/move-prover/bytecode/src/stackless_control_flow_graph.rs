@@ -91,6 +91,45 @@ impl StacklessControlFlowGraph {
         }
     }
 
+    /// Generate a block that contains all the code
+    pub fn one_block(code: &[Bytecode]) -> Self {
+        let mut blocks = Map::new();
+        let mut successors = vec![];
+        let entry_bb = 2 as BlockId;
+        successors.insert(0, entry_bb);
+        successors.insert(1, DUMMY_EXIT);
+        let bb = BlockContent::Basic {
+            lower: 0,
+            upper: code.len() as u16 - 1,
+        };
+        blocks.insert(
+            entry_bb,
+            Block {
+                successors,
+                content: bb,
+            },
+        );
+        blocks.insert(
+            DUMMY_ENTRANCE,
+            Block {
+                successors: vec![entry_bb],
+                content: BlockContent::Dummy,
+            },
+        );
+        blocks.insert(
+            DUMMY_EXIT,
+            Block {
+                successors: Vec::new(),
+                content: BlockContent::Dummy,
+            },
+        );
+        Self {
+            entry_block_id: DUMMY_ENTRANCE,
+            blocks,
+            backward: false,
+        }
+    }
+
     fn collect_blocks(code: &[Bytecode]) -> Map<BlockId, Block> {
         // First go through and collect basic block offsets.
         // Need to do this first in order to handle backwards edges.

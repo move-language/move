@@ -427,6 +427,10 @@ fn native_annotation(fun_env: &FunctionEnv) -> BorrowAnnotation {
         || fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT)
         || fun_env.get_name() == fun_env.symbol_pool().make("borrow_child_object")
     {
+        eprintln!(
+            "ADDING EDGE: {}",
+            fun_env.get_name().display(fun_env.symbol_pool())
+        );
         // Create an edge from the first parameter to the return value.
         let mut an = BorrowAnnotation::default();
         let param_node = BorrowNode::Reference(0);

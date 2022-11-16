@@ -425,7 +425,7 @@ fn native_annotation(fun_env: &FunctionEnv) -> BorrowAnnotation {
     }
     if fun_env.is_well_known(VECTOR_BORROW_MUT)
         || fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT)
-        || fun_env.get_name() == fun_env.symbol_pool().make("borrow_child_object")
+        || fun_env.get_name() == fun_env.symbol_pool().make("borrow_child_object_mut")
     {
         eprintln!(
             "ADDING EDGE: {}",

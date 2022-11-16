@@ -422,6 +422,7 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
 fn native_annotation(fun_env: &FunctionEnv) -> BorrowAnnotation {
     if fun_env.is_well_known(VECTOR_BORROW_MUT)
         || fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT)
+        || fun_env.is_intrinsic_of("borrow_child_object")
     {
         // Create an edge from the first parameter to the return value.
         let mut an = BorrowAnnotation::default();

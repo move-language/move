@@ -20,6 +20,7 @@ use std::{
 
 use move_analyzer::{
     completion::on_completion_request,
+    completion2::{on_completion_request2, Modules},
     context::Context,
     symbols,
     vfs::{on_text_document_sync_notification, VirtualFileSystem},
@@ -224,7 +225,7 @@ fn main() {
 fn on_request(context: &Context, request: &Request) {
     match request.method.as_str() {
         lsp_types::request::Completion::METHOD => {
-            on_completion_request(context, request, &context.symbols.lock().unwrap())
+            on_completion_request2(context, request, &context.symbols.lock().unwrap())
         }
         lsp_types::request::GotoDefinition::METHOD => {
             symbols::on_go_to_def_request(context, request, &context.symbols.lock().unwrap());

@@ -52,6 +52,8 @@ fn main() {
     let (connection, io_threads) = Connection::stdio();
     let symbols = Arc::new(Mutex::new(symbols::Symbolicator::empty_symbols()));
     let mut context = Context {
+        modules: Modules::new(),
+
         connection,
         files: VirtualFileSystem::default(),
         symbols: symbols.clone(),

@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 
 /// The context within which the language server is running.
 pub struct Context {
-    modules: Modules,
+    pub modules: Modules,
     /// The connection with the language server's client.
     pub connection: Connection,
     /// The files that the language server is providing information about.

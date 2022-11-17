@@ -6,7 +6,7 @@
 extern crate move_ir_types;
 
 pub mod completion;
-mod completion2;
+pub mod completion2;
 pub mod context;
 pub mod diagnostics;
 pub mod symbols;

@@ -74,7 +74,7 @@ impl AnnotatedMoveValue {
             Address(_) => TypeTag::Address,
             Vector(t, _) => t.clone(),
             Bytes(_) => TypeTag::Vector(Box::new(TypeTag::U8)),
-            Struct(s) => TypeTag::Struct(s.type_.clone()),
+            Struct(s) => TypeTag::Struct(Box::new(s.type_.clone())),
         }
     }
 }

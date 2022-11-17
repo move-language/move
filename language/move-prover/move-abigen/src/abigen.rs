@@ -291,7 +291,7 @@ impl<'env> Abigen<'env> {
                 let struct_module_env = module_env.env.get_module(*module_id);
                 let abilities = struct_module_env.get_struct(*struct_id).get_abilities();
                 if abilities.has_ability(Ability::Copy) && !abilities.has_ability(Ability::Key) {
-                    TypeTag::Struct(StructTag {
+                    TypeTag::Struct(Box::new(StructTag {
                         address: *struct_module_env.self_address(),
                         module: struct_module_env.get_identifier(),
                         name: struct_module_env
@@ -306,7 +306,7 @@ impl<'env> Abigen<'env> {
                             })
                             .map(|e| e.unwrap_or_else(|| panic!("{}", expect_msg)))
                             .collect(),
-                    })
+                    }))
                 } else {
                     return Ok(None);
                 }

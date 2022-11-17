@@ -56,7 +56,7 @@ pub fn get_packed_types(
                             for coin_ty in &coin_types {
                                 match open_ty.instantiate(vec![coin_ty.clone()].as_slice()).into_type_tag(env) {
                                     Some(TypeTag::Struct(s)) =>     {
-                                        packed_types.insert(s);
+                                        packed_types.insert(*s);
                                     }
                                     _ => panic!("Invariant violation: failed to specialize tx script open type {:?} into struct", open_ty),
                                 }
@@ -137,7 +137,7 @@ impl<'a> TransferFunctions for PackedTypesAnalysis<'a> {
                             } else if let Some(TypeTag::Struct(s)) =
                                 specialized_ty.into_type_tag(self.cache.global_env())
                             {
-                                state.closed_types.insert(s);
+                                state.closed_types.insert(*s);
                             } else {
                                 panic!("Invariant violation: struct type {:?} became non-struct type after substitution", open_ty)
                             }

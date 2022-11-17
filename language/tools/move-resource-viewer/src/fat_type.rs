@@ -158,7 +158,7 @@ impl FatType {
             Address => TypeTag::Address,
             Signer => TypeTag::Signer,
             Vector(ty) => TypeTag::Vector(Box::new(ty.type_tag()?)),
-            Struct(struct_ty) => TypeTag::Struct(struct_ty.struct_tag()?),
+            Struct(struct_ty) => TypeTag::Struct(Box::new(struct_ty.struct_tag()?)),
 
             Reference(_) | MutableReference(_) | TyParam(_) => {
                 return Err(

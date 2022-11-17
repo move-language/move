@@ -439,8 +439,10 @@ fn native_annotation(fun_env: &FunctionEnv) -> BorrowAnnotation {
         let type_args = fun_env.get_type_parameter_types();
         let targ = if fun_env.is_well_known(VECTOR_BORROW_MUT) {
             type_args[0].clone()
-        } else {
+        } else if fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT) {
             type_args[1].clone()
+        } else {
+            type_args[0].clone()
         };
         let edge = BorrowEdge::Index(targ);
         an.summary

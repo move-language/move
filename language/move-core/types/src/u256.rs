@@ -95,7 +95,7 @@ impl fmt::Display for U256FromStrError {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy, PartialOrd, Ord, Default)]
 pub struct U256(PrimitiveU256);
 
 impl fmt::Display for U256 {

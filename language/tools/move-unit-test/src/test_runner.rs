@@ -558,7 +558,7 @@ impl SharedTestingConfig {
                             output.fail(function_name);
                             stats.test_failure(
                                 TestFailure::new(
-                                    FailureReason::execution_error(actual_err),
+                                    FailureReason::unexpected_error(actual_err),
                                     test_run_info,
                                     Some(err),
                                     save_session_state(),
@@ -567,81 +567,7 @@ impl SharedTestingConfig {
                             )
                         }
                     }
-<<<<<<< HEAD
-                    // Expected the test to not abort, but it aborted with `code`
-                    (None, Some(code)) => {
-                        output.fail(function_name);
-                        stats.test_failure(
-                            TestFailure::new(
-                                FailureReason::aborted(code),
-                                test_run_info,
-                                Some(err),
-                                save_session_state(),
-                            ),
-                            test_plan,
-                        )
-                    }
-                    // Expected the test the abort with a specific `code`, and it did abort with
-                    // that abort code
-                    (Some(ExpectedFailure::ExpectedWithCode(code)), Some(other_code))
-                        if matches!(
-                            err.major_status(),
-                            StatusCode::ABORTED | StatusCode::VECTOR_OPERATION_ERROR
-                        ) && *code == other_code =>
-                    {
-                        output.pass(function_name);
-                        stats.test_success(test_run_info, test_plan);
-                    }
-                    // Expected the test to abort with a specific `code` but it aborted with a
-                    // different `other_code`
-                    (Some(ExpectedFailure::ExpectedWithCode(code)), Some(other_code)) => {
-                        output.fail(function_name);
-                        stats.test_failure(
-                            TestFailure::new(
-                                FailureReason::wrong_abort(*code, other_code),
-                                test_run_info,
-                                Some(err),
-                                save_session_state(),
-                            ),
-                            test_plan,
-                        )
-                    }
-                    // Expected the test to abort and it aborted, but we don't need to check the code
-                    (Some(ExpectedFailure::Expected), Some(_)) => {
-                        output.pass(function_name);
-                        stats.test_success(test_run_info, test_plan);
-                    }
-                    // Expected the test to abort and it aborted with internal error
-                    (Some(ExpectedFailure::Expected), None)
-                        if err.major_status() != StatusCode::EXECUTED =>
-                    {
-                        output.pass(function_name);
-                        stats.test_success(test_run_info, test_plan);
-                    }
-                    // Unexpected return status from the VM, signal that we hit an unknown error.
-                    (_, None) => {
-                        output.fail(function_name);
-                        let failure_reason = if err.major_status() as usize >= 4000
-                            && err.major_status() as usize <= 4999
-                        {
-                            FailureReason::execution_failure(err.major_status())
-                        } else {
-                            FailureReason::unknown()
-                        };
-                        stats.test_failure(
-                            TestFailure::new(
-                                failure_reason,
-                                test_run_info,
-                                Some(err),
-                                save_session_state(),
-                            ),
-                            test_plan,
-                        )
-                    }
-                },
-=======
                 }
->>>>>>> 801789195 ([unit-tests] Fix potential issue in unit tests)
                 Ok(_) => {
                     // Expected the test to fail, but it executed
                     if test_info.expected_failure.is_some() {
@@ -785,7 +711,16 @@ impl SharedTestingConfig {
                 ) if abort_code() == u64::MAX => {
                     output.fail(function_name);
                     stats.test_failure(
-                        TestFailure::new(FailureReason::unknown(), test_run_info(), None, None),
+                        TestFailure::new(
+                            FailureReason::unexpected_error(MoveError(
+                                StatusCode::UNKNOWN_STATUS,
+                                None,
+                                Location::Undefined,
+                            )),
+                            test_run_info(),
+                            None,
+                            None,
+                        ),
                         test_plan,
                     );
                 }
@@ -795,7 +730,7 @@ impl SharedTestingConfig {
                     output.fail(function_name);
                     stats.test_failure(
                         TestFailure::new(
-                            FailureReason::execution_error(MoveError(
+                            FailureReason::unexpected_error(MoveError(
                                 StatusCode::ABORTED,
                                 Some(abort_code()),
                                 Location::Undefined,

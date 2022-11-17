@@ -14,7 +14,7 @@ use move_compiler::{
     diagnostics::{self, Diagnostic},
     unit_test::{ModuleTestPlan, TestName, TestPlan},
 };
-use move_core_types::{effects::ChangeSet, language_storage::ModuleId, vm_status::StatusCode};
+use move_core_types::{effects::ChangeSet, language_storage::ModuleId, vm_status::StatusType};
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::{
@@ -35,7 +35,7 @@ pub enum FailureReason {
     // Aborted with the wrong code, without location specified
     WrongAbortDEPRECATED(String, u64, MoveError),
     // Error wasn't expected, but it did
-    ExecutionError(String, MoveError),
+    UnexpectedError(String, MoveError),
     // Test timed out
     Timeout(String),
     // The execution results of the Move VM and stackless VM does not match
@@ -112,8 +112,8 @@ impl FailureReason {
         )
     }
 
-    pub fn execution_error(error: MoveError) -> Self {
-        FailureReason::ExecutionError("Test was not expected to fail".to_string(), error)
+    pub fn unexpected_error(error: MoveError) -> Self {
+        FailureReason::UnexpectedError("Test was not expected to fail".to_string(), error)
     }
 
     pub fn timeout() -> Self {
@@ -142,14 +142,6 @@ impl FailureReason {
     pub fn move_to_evm_error(diagnostics: String) -> Self {
         FailureReason::MoveToEVMError(diagnostics)
     }
-
-    pub fn unknown() -> Self {
-        FailureReason::Unknown("ITE: An unknown error was reported.".to_string())
-    }
-
-    pub fn execution_failure(status: StatusCode) -> Self {
-        FailureReason::ExecutionFailure(status)
-    }
 }
 
 impl TestFailure {
@@ -173,26 +165,44 @@ impl TestFailure {
             FailureReason::Timeout(message) => message.to_string(),
             FailureReason::WrongError(message, expected, actual) => {
                 let base_message = format!(
-                    "{message}. Expected test to error with {expected} \
-                    but instead it errored with {actual}. Rooted here",
+                    "{message}. Expected test to {}  but instead it {}. Rooted here",
+                    expected.verbiage(/* is_past_tense */ false),
+                    actual.verbiage(/* is_past_tense */ true),
                 );
                 Self::report_error_with_location(test_plan, base_message, &self.vm_error)
             }
-            FailureReason::WrongAbortDEPRECATED(message, expected_code, other_code) => {
+            FailureReason::WrongAbortDEPRECATED(message, expected_code, actual) => {
                 let base_message = format!(
                     "{}. \
-                    Expected test to abort with {} but instead it errored with {}. Rooted here",
-                    message, expected_code, other_code,
+                    Expected test to abort with code {}, but instead it {}. Rooted here",
+                    message,
+                    expected_code,
+                    actual.verbiage(/* is_past_tense */ true),
                 );
                 Self::report_error_with_location(test_plan, base_message, &self.vm_error)
             }
-            FailureReason::ExecutionError(message, error) => {
-                let base_message =
-                    format!("{} but it errored with {}. Rooted here", message, error);
-                Self::report_error_with_location(test_plan, base_message, &self.vm_error)
-            }
-            FailureReason::ExecutionFailure(status) => {
-                let base_message = format!("Execution failure {:?}", status);
+            FailureReason::UnexpectedError(message, error) => {
+                let prefix = match error.0.status_type() {
+                    StatusType::Validation => "INTERNAL TEST ERROR: Unexpected Validation Error\n",
+                    StatusType::Verification => {
+                        "INTERNAL TEST ERROR: Unexpected Verification Error\n"
+                    }
+                    StatusType::InvariantViolation => {
+                        "INTERNAL TEST ERROR: INTERNAL VM INVARIANT VIOLATION.\n"
+                    }
+                    StatusType::Deserialization => {
+                        "INTERNAL TEST ERROR: Unexpected Deserialization Error\n"
+                    }
+                    StatusType::Unknown => "INTERNAL TEST ERROR: UNKNOWN ERROR.\n",
+                    // execution errors are expected, so no message
+                    StatusType::Execution => "",
+                };
+                let base_message = format!(
+                    "{}{}, but it {}. Rooted here",
+                    prefix,
+                    message,
+                    error.verbiage(/* is_past_tense */ true)
+                );
                 Self::report_error_with_location(test_plan, base_message, &self.vm_error)
             }
             FailureReason::Mismatch {
@@ -215,21 +225,6 @@ impl TestFailure {
                 )
             }
             FailureReason::Property(message) => message.clone(),
-            FailureReason::Unknown(message) => {
-                format!(
-                    "{} Location: {}\nVMError (if there is one): {}",
-                    message,
-                    TestFailure::report_error_with_location(
-                        test_plan,
-                        "".to_string(),
-                        &self.vm_error
-                    ),
-                    self.vm_error
-                        .as_ref()
-                        .map(|err| format!("{:#?}", err))
-                        .unwrap_or_else(|| "".to_string()),
-                )
-            }
 
             #[cfg(feature = "evm-backend")]
             FailureReason::MoveToEVMError(diagnostics) => {

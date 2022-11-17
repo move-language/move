@@ -12,6 +12,7 @@ module 0x1::MissingData {
         missing_data()
     }
 
+    #[test]
     #[expected_failure]
     fun missing_data_captured() acquires Missing {
         borrow_global<Missing>(@0x0);

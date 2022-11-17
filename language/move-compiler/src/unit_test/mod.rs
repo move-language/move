@@ -55,6 +55,11 @@ pub struct ExpectedMoveError(
     pub move_binary_format::errors::Location,
 );
 
+pub struct ExpectedMoveErrorDisplay<'a> {
+    error: &'a ExpectedMoveError,
+    is_past_tense: bool,
+}
+
 impl ModuleTestPlan {
     pub fn new(
         addr: &NumericalAddress,
@@ -101,22 +106,46 @@ impl TestPlan {
     }
 }
 
-impl fmt::Display for ExpectedMoveError {
+impl ExpectedMoveError {
+    pub fn verbiage(&self, is_past_tense: bool) -> ExpectedMoveErrorDisplay {
+        ExpectedMoveErrorDisplay {
+            error: self,
+            is_past_tense,
+        }
+    }
+}
+
+impl<'a> fmt::Display for ExpectedMoveErrorDisplay<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use move_binary_format::errors::Location;
-        let Self(status, sub_status, location) = self;
+        let Self {
+            error: ExpectedMoveError(status, sub_status, location),
+            is_past_tense,
+        } = self;
         let status_val: u64 = (*status).into();
-        match status {
-            StatusCode::ABORTED => write!(f, "an abort")?,
-            StatusCode::ARITHMETIC_ERROR => write!(f, "an arithmetic error")?,
-            StatusCode::VECTOR_OPERATION_ERROR => write!(f, "a vector operation error")?,
-            StatusCode::OUT_OF_GAS => write!(f, "an out of gas error")?,
-            _ => write!(f, "an error (code {status_val}) of kind {status:?}")?,
-        };
+        if *is_past_tense {
+            match status {
+                StatusCode::ABORTED => write!(f, "aborted")?,
+                StatusCode::ARITHMETIC_ERROR => write!(f, "gave an arithmetic error")?,
+                StatusCode::VECTOR_OPERATION_ERROR => write!(f, "gave a vector operation error")?,
+                StatusCode::OUT_OF_GAS => write!(f, "gave an out of gas error")?,
+                _ => write!(f, "gave a {status:?} (code {status_val}) error")?,
+            };
+        } else {
+            match status {
+                StatusCode::ABORTED => write!(f, "to abort")?,
+                StatusCode::ARITHMETIC_ERROR => write!(f, "to give an arithmetic error")?,
+                StatusCode::VECTOR_OPERATION_ERROR => {
+                    write!(f, "to give a vector operation error")?
+                }
+                StatusCode::OUT_OF_GAS => write!(f, "to give an out of gas error")?,
+                _ => write!(f, "to give a {status:?} (code {status_val}) error")?,
+            };
+        }
         if status == &StatusCode::ABORTED {
             write!(f, " with code {}", sub_status.unwrap())?
         } else if let Some(code) = sub_status {
-            write!(f, " with sub-status code {code}")?
+            write!(f, " with sub-status {code}")?
         };
         match location {
             Location::Undefined => write!(f, " originating in an unknown location"),

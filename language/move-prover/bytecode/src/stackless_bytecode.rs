@@ -298,7 +298,7 @@ pub enum BorrowEdge {
     /// Field borrow with static offset.
     Field(QualifiedInstId<StructId>, usize),
     /// Vector borrow with dynamic index.
-    Index,
+    Index(Type),
     /// Composed sequence of edges.
     Hyper(Vec<BorrowEdge>),
 }
@@ -1228,7 +1228,7 @@ impl<'a> std::fmt::Display for BorrowEdgeDisplay<'a> {
                     field_type.display(&tctx),
                 )
             }
-            Index => write!(f, "[]"),
+            Index(_) => write!(f, "[]"),
             Direct => write!(f, "@"),
             Hyper(es) => {
                 write!(

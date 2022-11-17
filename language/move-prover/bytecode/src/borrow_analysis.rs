@@ -420,23 +420,29 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
 }
 
 fn native_annotation(fun_env: &FunctionEnv) -> BorrowAnnotation {
-    if fun_env.is_native() {
-        eprintln!("FUN: {}", fun_env.get_name().display(fun_env.symbol_pool()));
-    }
+    //    if fun_env.is_native() {
+    //        eprintln!("FUN: {}", fun_env.get_name().display(fun_env.symbol_pool()));
+    //    }
     if fun_env.is_well_known(VECTOR_BORROW_MUT)
         || fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT)
-        || fun_env.is_intrinsic_of("borrow_child_object_mut")
-    //        || fun_env.get_name() == fun_env.symbol_pool().make("borrow_child_object_mut")
+//        || fun_env.is_intrinsic_of("borrow_child_object_mut")
+        || fun_env.get_name() == fun_env.symbol_pool().make("borrow_child_object_mut")
     {
-        eprintln!(
-            "ADDING EDGE: {}",
-            fun_env.get_name().display(fun_env.symbol_pool())
-        );
+        //        eprintln!(
+        //            "ADDING EDGE: {}",
+        //            fun_env.get_name().display(fun_env.symbol_pool())
+        //        );
         // Create an edge from the first parameter to the return value.
         let mut an = BorrowAnnotation::default();
         let param_node = BorrowNode::Reference(0);
         let return_node = BorrowNode::ReturnPlaceholder(0);
-        let edge = BorrowEdge::Index;
+        let type_args = fun_env.get_type_parameter_types();
+        let targ = if fun_env.is_well_known(VECTOR_BORROW_MUT) {
+            type_args[0].clone()
+        } else {
+            type_args[1].clone()
+        };
+        let edge = BorrowEdge::Index(targ);
         an.summary
             .borrowed_by
             .entry(param_node)

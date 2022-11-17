@@ -71,6 +71,7 @@ use crate::{
         DELEGATE_INVARIANTS_TO_CALLER_PRAGMA, DISABLE_INVARIANTS_IN_BODY_PRAGMA, FRIEND_PRAGMA,
         INTRINSIC_PRAGMA, OPAQUE_PRAGMA, VERIFY_PRAGMA,
     },
+    project_2nd,
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type, TypeDisplayContext, TypeUnificationAdapter, Variance},
 };
@@ -1171,7 +1172,7 @@ impl GlobalEnv {
         loc: Loc,
         attributes: Vec<Attribute>,
         arg_names: Vec<Symbol>,
-        type_arg_names: Vec<Symbol>,
+        type_arg_names: Vec<(Symbol, Type)>,
         spec: Spec,
     ) -> FunctionData {
         let handle_idx = module.function_def_at(def_idx).function;
@@ -2933,7 +2934,7 @@ pub struct FunctionData {
 
     /// List of type argument names. Not in bytecode but obtained from AST.
     #[allow(unused)]
-    type_arg_names: Vec<Symbol>,
+    type_arg_names: Vec<(Symbol, Type)>,
 
     /// Specification associated with this function.
     spec: Spec,
@@ -3295,6 +3296,11 @@ impl<'env> FunctionEnv<'env> {
             return friend_env.get_transitive_friend();
         }
         self.clone()
+    }
+
+    /// Returns types of the type parameters.
+    pub fn get_type_parameter_types(&self) -> Vec<Type> {
+        project_2nd(&self.data.type_arg_names)
     }
 
     /// Returns the type parameters associated with this function.

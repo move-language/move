@@ -887,7 +887,7 @@ impl<'env> FunctionTranslator<'env> {
                                 .into_iter()
                                 .filter_map(|e| match e {
                                     BorrowEdge::Field(_, offset) => Some(format!("{}", offset)),
-                                    BorrowEdge::Index => Some("-1".to_owned()),
+                                    BorrowEdge::Index(_) => Some("-1".to_owned()),
                                     BorrowEdge::Direct => None,
                                     _ => unreachable!(),
                                 })
@@ -1742,13 +1742,13 @@ impl<'env> FunctionTranslator<'env> {
                         format!("{}({}, {})", update_fun, (*mk_dest)(), new_src)
                     }
                 }
-                BorrowEdge::Index => {
+                BorrowEdge::Index(targ) => {
                     // Index edge is used for both vectors and tables. Determine which operations
                     // to use to read and update.
                     let (read_aggregate, update_aggregate, elem_ty) = match dst_ty {
                         Type::Vector(et) => ("ReadVec", "UpdateVec", et.as_ref().clone()),
                         // If its not a vector, we assume it is the Table type.
-                        Type::Struct(_, _, inst) => ("GetTable", "UpdateTable", inst[1].clone()),
+                        Type::Struct(_, _, _) => ("GetTable", "UpdateTable", targ.clone()),
                         _ => unreachable!(),
                     };
                     // Compute the offset into the path where to retrieve the index.

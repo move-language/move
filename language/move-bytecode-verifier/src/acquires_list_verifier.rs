@@ -20,6 +20,7 @@ use move_binary_format::{
         Bytecode, CodeOffset, CompiledModule, FunctionDefinition, FunctionDefinitionIndex,
         FunctionHandle, FunctionHandleIndex, StructDefinitionIndex,
     },
+    safe_unwrap,
 };
 use move_core_types::vm_status::StatusCode;
 
@@ -54,10 +55,7 @@ impl<'a> AcquiresVerifier<'a> {
             handle_to_def,
         };
 
-        for (offset, instruction) in function_definition
-            .code
-            .as_ref()
-            .unwrap()
+        for (offset, instruction) in safe_unwrap!(function_definition.code.as_ref())
             .code
             .iter()
             .enumerate()
@@ -72,7 +70,7 @@ impl<'a> AcquiresVerifier<'a> {
                 ));
             }
 
-            let struct_def = module.struct_defs().get(annotation.0 as usize).unwrap();
+            let struct_def = safe_unwrap!(module.struct_defs().get(annotation.0 as usize));
             let struct_handle = module.struct_handle_at(struct_def.struct_handle);
             if !struct_handle.abilities.has_key() {
                 return Err(PartialVMError::new(StatusCode::INVALID_ACQUIRES_ANNOTATION));

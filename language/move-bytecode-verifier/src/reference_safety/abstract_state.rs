@@ -11,6 +11,7 @@ use move_binary_format::{
         CodeOffset, FieldHandleIndex, FunctionDefinitionIndex, LocalIndex, Signature,
         SignatureToken, StructDefinitionIndex,
     },
+    safe_unwrap,
 };
 use move_borrow_graph::references::RefID;
 use move_core_types::vm_status::StatusCode;
@@ -284,7 +285,7 @@ impl AbstractState {
         offset: CodeOffset,
         local: LocalIndex,
     ) -> PartialVMResult<AbstractValue> {
-        match self.locals.get(&local).unwrap() {
+        match safe_unwrap!(self.locals.get(&local)) {
             AbstractValue::Reference(id) => {
                 let id = *id;
                 let new_id = self.new_ref(self.borrow_graph.is_mutable(id));
@@ -303,7 +304,7 @@ impl AbstractState {
         offset: CodeOffset,
         local: LocalIndex,
     ) -> PartialVMResult<AbstractValue> {
-        match self.locals.remove(&local).unwrap() {
+        match safe_unwrap!(self.locals.remove(&local)) {
             AbstractValue::Reference(id) => Ok(AbstractValue::Reference(id)),
             AbstractValue::NonReference if self.is_local_borrowed(local) => {
                 Err(self.error(StatusCode::MOVELOC_EXISTS_BORROW_ERROR, offset))
@@ -461,7 +462,7 @@ impl AbstractState {
         vector: AbstractValue,
         mut_: bool,
     ) -> PartialVMResult<()> {
-        let id = vector.ref_id().unwrap();
+        let id = safe_unwrap!(vector.ref_id());
         if mut_ && !self.is_writable(id) {
             return Err(self.error(StatusCode::VEC_UPDATE_EXISTS_MUTABLE_BORROW_ERROR, offset));
         }
@@ -475,7 +476,7 @@ impl AbstractState {
         vector: AbstractValue,
         mut_: bool,
     ) -> PartialVMResult<AbstractValue> {
-        let vec_id = vector.ref_id().unwrap();
+        let vec_id = safe_unwrap!(vector.ref_id());
         if mut_ && !self.is_writable(vec_id) {
             return Err(self.error(
                 StatusCode::VEC_BORROW_ELEMENT_EXISTS_MUTABLE_BORROW_ERROR,

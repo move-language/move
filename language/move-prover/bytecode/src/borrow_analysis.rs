@@ -439,14 +439,21 @@ fn get_borrow_native_info(
         fun_env
             .module_env
             .get_name()
-            .display(fun_env.module_env.symbol_pool())
+            .display_full(fun_env.module_env.symbol_pool())
     );
     for n in borrow_natives {
         let mod_name = ModuleName::from_str(
             &n.mod_addr,
             fun_env.module_env.symbol_pool().make(&n.mod_name),
         );
+        eprintln!(
+            "NATIVE NAME: {} MODULE: {}",
+            n.name,
+            mod_name.display_full(fun_env.module_env.symbol_pool())
+        );
+
         if fun_env.module_env.get_name() == &mod_name && fun_env.get_full_name_str() == n.name {
+            eprintln!("FOUND");
             return Some((n.read_op.clone(), n.write_op.clone(), n.tparam_idx));
         }
     }

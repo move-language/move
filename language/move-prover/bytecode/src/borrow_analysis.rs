@@ -10,7 +10,7 @@ use itertools::Itertools;
 
 use move_binary_format::file_format::CodeOffset;
 use move_model::{
-    ast::TempIndex,
+    ast::{ModuleName, TempIndex},
     model::{FunctionEnv, GlobalEnv, QualifiedInstId},
     pragmas::INTRINSIC_FUN_MAP_BORROW_MUT,
     ty::Type,
@@ -23,6 +23,7 @@ use crate::{
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     livevar_analysis::LiveVarAnnotation,
+    options::BorrowNative,
     stackless_bytecode::{AssignKind, BorrowEdge, BorrowNode, Bytecode, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
@@ -357,11 +358,17 @@ impl BorrowAnnotation {
 }
 
 /// Borrow analysis processor.
-pub struct BorrowAnalysisProcessor {}
+pub struct BorrowAnalysisProcessor {
+    borrow_natives: Vec<BorrowNative>,
+}
 
 impl BorrowAnalysisProcessor {
     pub fn new() -> Box<Self> {
-        Box::new(BorrowAnalysisProcessor {})
+        Self::new_borrow_natives(vec![])
+    }
+
+    pub fn new_borrow_natives(borrow_natives: Vec<BorrowNative>) -> Box<Self> {
+        Box::new(BorrowAnalysisProcessor { borrow_natives })
     }
 }
 
@@ -373,10 +380,10 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
         mut data: FunctionData,
     ) -> FunctionData {
         let borrow_annotation = if func_env.is_native_or_intrinsic() {
-            native_annotation(func_env)
+            native_annotation(func_env, &self.borrow_natives)
         } else {
             let func_target = FunctionTarget::new(func_env, &data);
-            let analyzer = BorrowAnalysis::new(&func_target, targets);
+            let analyzer = BorrowAnalysis::new(&func_target, targets, &self.borrow_natives);
             analyzer.analyze(&data.code)
         };
         // Annotate function target with computed borrow data.
@@ -419,14 +426,37 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
     }
 }
 
-fn native_annotation(fun_env: &FunctionEnv) -> BorrowAnnotation {
+fn get_borrow_native_info(
+    fun_env: &FunctionEnv,
+    borrow_natives: &Vec<BorrowNative>,
+) -> Option<(String, String, usize)> {
+    if !fun_env.is_native() {
+        return None;
+    }
+    for n in borrow_natives {
+        let mod_name = ModuleName::from_str(
+            &n.mod_addr,
+            fun_env.module_env.symbol_pool().make(&n.mod_name),
+        );
+        if fun_env.module_env.get_name() == &mod_name && fun_env.get_full_name_str() == n.name {
+            return Some((n.read_op.clone(), n.write_op.clone(), n.tparam_idx));
+        }
+    }
+
+    None
+}
+
+fn native_annotation(
+    fun_env: &FunctionEnv,
+    borrow_natives: &Vec<BorrowNative>,
+) -> BorrowAnnotation {
     //    if fun_env.is_native() {
     //        eprintln!("FUN: {}", fun_env.get_name().display(fun_env.symbol_pool()));
     //    }
+    let borrow_native_info = get_borrow_native_info(fun_env, borrow_natives);
     if fun_env.is_well_known(VECTOR_BORROW_MUT)
         || fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT)
-//        || fun_env.is_intrinsic_of("borrow_child_object_mut")
-        || fun_env.get_name() == fun_env.symbol_pool().make("borrow_child_object_mut")
+        || borrow_native_info.is_some()
     {
         //        eprintln!(
         //            "ADDING EDGE: {}",
@@ -439,17 +469,22 @@ fn native_annotation(fun_env: &FunctionEnv) -> BorrowAnnotation {
         let type_args = fun_env.get_type_parameter_types();
         let (read_aggregate, update_aggregate, borrow_type) =
             if fun_env.is_well_known(VECTOR_BORROW_MUT) {
-                ("ReadVec", "UpdateVec", type_args[0].clone())
+                (
+                    "ReadVec".to_string(),
+                    "UpdateVec".to_string(),
+                    type_args[0].clone(),
+                )
             } else if fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT) {
-                ("GetTable", "UpdateTable", type_args[1].clone())
+                (
+                    "GetTable".to_string(),
+                    "UpdateTable".to_string(),
+                    type_args[1].clone(),
+                )
             } else {
-                ("GetDynField", "UpdateDynField", type_args[0].clone())
+                let (r, u, i) = borrow_native_info.unwrap();
+                (r, u, type_args[i].clone())
             };
-        let edge = BorrowEdge::Index((
-            read_aggregate.to_string(),
-            update_aggregate.to_string(),
-            borrow_type,
-        ));
+        let edge = BorrowEdge::Index((read_aggregate, update_aggregate, borrow_type));
         an.summary
             .borrowed_by
             .entry(param_node)
@@ -466,10 +501,15 @@ struct BorrowAnalysis<'a> {
     func_target: &'a FunctionTarget<'a>,
     livevar_annotation: &'a LiveVarAnnotation,
     targets: &'a FunctionTargetsHolder,
+    borrow_natives: &'a Vec<BorrowNative>,
 }
 
 impl<'a> BorrowAnalysis<'a> {
-    fn new(func_target: &'a FunctionTarget<'a>, targets: &'a FunctionTargetsHolder) -> Self {
+    fn new(
+        func_target: &'a FunctionTarget<'a>,
+        targets: &'a FunctionTargetsHolder,
+        borrow_natives: &'a Vec<BorrowNative>,
+    ) -> Self {
         let livevar_annotation = func_target
             .get_annotations()
             .get::<LiveVarAnnotation>()
@@ -479,6 +519,7 @@ impl<'a> BorrowAnalysis<'a> {
             func_target,
             livevar_annotation,
             targets,
+            borrow_natives,
         }
     }
 
@@ -616,7 +657,7 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                                 .get_target(callee_env, &FunctionVariant::Baseline);
 
                             let callee_annotation_opt = if callee_env.is_native_or_intrinsic() {
-                                Some(native_annotation(callee_env))
+                                Some(native_annotation(callee_env, self.borrow_natives))
                             } else {
                                 let anno_opt = self
                                     .targets

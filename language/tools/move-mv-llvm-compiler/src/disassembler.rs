@@ -24,11 +24,11 @@ use move_core_types::identifier::IdentStr;
 use move_coverage::coverage_map::{ExecCoverageMap, FunctionCoverage};
 use move_ir_types::location::Loc;
 
-use llvm_sys::target_machine::{LLVMCodeGenOptLevel};
+use llvm_sys::{target_machine::{LLVMCodeGenOptLevel}, core::{LLVMModuleCreateWithNameInContext, LLVMDumpModule}};
 use std::{fs::File};
 //use inkwell::context::Context as LLVMContext;
 use llvm_sys::prelude::LLVMContextRef as LLVMContext;
-use crate::move_bpf_module::MoveBPFModule;
+use crate::{move_bpf_module::MoveBPFModule, support::to_c_str};
 
 use crate::errors::DisassemblerError;
 
@@ -710,8 +710,15 @@ impl<'a> Disassembler<'a> {
             }
         };
 
-        let llvm_module = self.llvm_context.create_module(&header);
-        llvm_module.print_to_stderr();
+        //let llvm_module = self.llvm_context.create_module(&header);
+        let c_string = to_c_str(&header);
+
+        let llvm_module = unsafe { LLVMModuleCreateWithNameInContext(c_string.as_ptr(), self.llvm_context) };
+
+        //llvm_module.print_to_stderr();
+        unsafe {
+            LLVMDumpModule(llvm_module);
+        }
         println!("Disassembling: {}", header);
 
         let struct_defs: Vec<String> = (0..self
@@ -767,7 +774,18 @@ impl<'a> Disassembler<'a> {
                 .collect::<Result<Vec<String>>>()?,
         };
         println!("Function defs: {:?}", function_defs);
-        move_module.module.write_bitcode_to_file(&bc_file, true, true);
+        //move_module.module.write_bitcode_to_file(&bc_file, true, true);
+        use llvm_sys::bit_writer::LLVMWriteBitcodeToFD;
+        use std::os::unix::io::AsRawFd;
+
+        unsafe {
+            LLVMWriteBitcodeToFD(
+                move_module.module,
+                bc_file.as_raw_fd(),
+                true as i32,
+                true as i32,
+            );
+        }
 
         Ok(format!(
             "// Move bytecode v{version}\n{header} {{\n{struct_defs}\n\n{function_defs}\n}}",

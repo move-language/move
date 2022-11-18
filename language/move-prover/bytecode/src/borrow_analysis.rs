@@ -433,6 +433,14 @@ fn get_borrow_native_info(
     if !fun_env.is_native() {
         return None;
     }
+    eprintln!(
+        "FUN NAME: {} MODULE: {}",
+        fun_env.get_full_name_str(),
+        fun_env
+            .module_env
+            .get_name()
+            .display(fun_env.module_env.symbol_pool())
+    );
     for n in borrow_natives {
         let mod_name = ModuleName::from_str(
             &n.mod_addr,

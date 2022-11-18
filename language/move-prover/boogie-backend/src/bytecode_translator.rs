@@ -1742,15 +1742,13 @@ impl<'env> FunctionTranslator<'env> {
                         format!("{}({}, {})", update_fun, (*mk_dest)(), new_src)
                     }
                 }
-                BorrowEdge::Index(targ) => {
-                    // Index edge is used for both vectors and tables. Determine which operations
-                    // to use to read and update.
-                    let (read_aggregate, update_aggregate, elem_ty) = match dst_ty {
-                        Type::Vector(et) => ("ReadVec", "UpdateVec", et.as_ref().clone()),
-                        // If its not a vector, we assume it is the Table type.
-                        Type::Struct(_, _, _) => ("GetTable", "UpdateTable", targ.clone()),
-                        _ => unreachable!(),
-                    };
+                BorrowEdge::Index((read_aggregate, update_aggregate, borrow_type)) => {
+                    // Index edge is used for both vectors, tables, and custom native methods
+                    // implementing similar functionality (mutable borrow). The read aggregate is
+                    // the name of respective read operation (in Boogie), write aggregate is the
+                    // name of respective write operation (in Boogie), and borrow type is the type
+                    // of the borrowed value.
+
                     // Compute the offset into the path where to retrieve the index.
                     let offset = edges[0..at]
                         .iter()
@@ -1761,7 +1759,7 @@ impl<'env> FunctionTranslator<'env> {
                     let mut new_dest_needed = false;
                     // Recursively perform write backs for next edges
                     let new_src = self.translate_write_back_update(
-                        &elem_ty,
+                        borrow_type,
                         &mut || {
                             new_dest_needed = true;
                             format!("$$sel{}", at)

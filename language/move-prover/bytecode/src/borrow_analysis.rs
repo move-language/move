@@ -437,14 +437,19 @@ fn native_annotation(fun_env: &FunctionEnv) -> BorrowAnnotation {
         let param_node = BorrowNode::Reference(0);
         let return_node = BorrowNode::ReturnPlaceholder(0);
         let type_args = fun_env.get_type_parameter_types();
-        let targ = if fun_env.is_well_known(VECTOR_BORROW_MUT) {
-            type_args[0].clone()
-        } else if fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT) {
-            type_args[1].clone()
-        } else {
-            type_args[0].clone()
-        };
-        let edge = BorrowEdge::Index(targ);
+        let (read_aggregate, update_aggregate, borrow_type) =
+            if fun_env.is_well_known(VECTOR_BORROW_MUT) {
+                ("ReadVec", "UpdateVec", type_args[0].clone())
+            } else if fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT) {
+                ("GetTable", "UpdateTable", type_args[1].clone())
+            } else {
+                ("GetDynField", "UpdateDynField", type_args[0].clone())
+            };
+        let edge = BorrowEdge::Index((
+            read_aggregate.to_string(),
+            update_aggregate.to_string(),
+            borrow_type,
+        ));
         an.summary
             .borrowed_by
             .entry(param_node)

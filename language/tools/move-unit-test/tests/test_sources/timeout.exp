@@ -3,7 +3,7 @@ Running Move unit tests
 [ FAIL    ] 0x1::M::no_timeout_fail
 [ PASS    ] 0x1::M::no_timeout_while_loop
 [ TIMEOUT ] 0x1::M::timeout_fail
-[ TIMEOUT ] 0x1::M::timeout_fail_with_expected_failure
+[ PASS    ] 0x1::M::timeout_fail_with_expected_failure
 0x1::M::no_timeout
 Output: Ok(ChangeSet { accounts: {} })
 0x1::M::no_timeout_fail
@@ -24,7 +24,7 @@ Failures in 0x1::M:
 │    ┌─ timeout.move:18:29
 │    │
 │ 18 │     fun no_timeout_fail() { abort 0 }
-│    │         ---------------     ^^^^^^^ Test was not expected to fail, but it aborted with code 0 originating in the module 00000000000000000000000000000001::M. Rooted here
+│    │         ---------------     ^^^^^^^ Test was not expected to error, but it aborted with code 0 originating in the module 00000000000000000000000000000001::M rooted here
 │    │         │                    
 │    │         In this function in 0x1::M
 │ 
@@ -36,9 +36,4 @@ Failures in 0x1::M:
 │ Test timed out
 └──────────────────
 
-
-┌── timeout_fail_with_expected_failure ──────
-│ Test timed out
-└──────────────────
-
-Test result: FAILED. Total tests: 5; passed: 2; failed: 3
+Test result: FAILED. Total tests: 5; passed: 3; failed: 2

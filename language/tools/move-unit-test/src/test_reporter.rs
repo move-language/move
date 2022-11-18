@@ -93,12 +93,12 @@ impl TestRunInfo {
 
 impl FailureReason {
     pub fn no_error() -> Self {
-        FailureReason::NoError("Test did not fail as expected".to_string())
+        FailureReason::NoError("Test did not error as expected".to_string())
     }
 
     pub fn wrong_error(expected: MoveError, actual: MoveError) -> Self {
         FailureReason::WrongError(
-            "Test did not fail with the expected error".to_string(),
+            "Test did not error as expected".to_string(),
             expected,
             actual,
         )
@@ -113,7 +113,7 @@ impl FailureReason {
     }
 
     pub fn unexpected_error(error: MoveError) -> Self {
-        FailureReason::UnexpectedError("Test was not expected to fail".to_string(), error)
+        FailureReason::UnexpectedError("Test was not expected to error".to_string(), error)
     }
 
     pub fn timeout() -> Self {
@@ -165,7 +165,7 @@ impl TestFailure {
             FailureReason::Timeout(message) => message.to_string(),
             FailureReason::WrongError(message, expected, actual) => {
                 let base_message = format!(
-                    "{message}. Expected test to {}  but instead it {}. Rooted here",
+                    "{message}. Expected test to {}  but instead it {} rooted here",
                     expected.verbiage(/* is_past_tense */ false),
                     actual.verbiage(/* is_past_tense */ true),
                 );
@@ -174,7 +174,7 @@ impl TestFailure {
             FailureReason::WrongAbortDEPRECATED(message, expected_code, actual) => {
                 let base_message = format!(
                     "{}. \
-                    Expected test to abort with code {}, but instead it {}. Rooted here",
+                    Expected test to abort with code {}, but instead it {} rooted here",
                     message,
                     expected_code,
                     actual.verbiage(/* is_past_tense */ true),
@@ -198,7 +198,7 @@ impl TestFailure {
                     StatusType::Execution => "",
                 };
                 let base_message = format!(
-                    "{}{}, but it {}. Rooted here",
+                    "{}{}, but it {} rooted here",
                     prefix,
                     message,
                     error.verbiage(/* is_past_tense */ true)
@@ -346,7 +346,7 @@ impl TestFailure {
         };
 
         let diags = match vm_error.location() {
-            Location::Module(module_id) => {
+            Location::Module(module_id) if !vm_error.offsets().is_empty() => {
                 let diags = vm_error
                     .offsets()
                     .iter()
@@ -373,6 +373,7 @@ impl TestFailure {
             }
             _ => base_message,
         };
+
         match vm_error.exec_state() {
             None => diags,
             Some(exec_state) => {

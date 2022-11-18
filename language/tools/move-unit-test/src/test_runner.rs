@@ -495,6 +495,10 @@ impl SharedTestingConfig {
                         MoveError(err.major_status(), err.sub_status(), err.location().clone());
                     assert!(err.major_status() != StatusCode::EXECUTED);
                     match test_info.expected_failure.as_ref() {
+                        Some(ExpectedFailure::Expected) => {
+                            output.pass(function_name);
+                            stats.test_success(test_run_info, test_plan);
+                        }
                         Some(ExpectedFailure::ExpectedWithError(expected_err))
                             if expected_err == &actual_err =>
                         {
@@ -506,23 +510,6 @@ impl SharedTestingConfig {
                                 && actual_err.1.is_some()
                                 && actual_err.1.unwrap() == *code =>
                         {
-                            output.pass(function_name);
-                            stats.test_success(test_run_info, test_plan);
-                        }
-                        // Ran out of ticks, report a test timeout and log a test failure
-                        _ if err.major_status() == StatusCode::OUT_OF_GAS => {
-                            output.timeout(function_name);
-                            stats.test_failure(
-                                TestFailure::new(
-                                    FailureReason::timeout(),
-                                    test_run_info,
-                                    Some(err),
-                                    save_session_state(),
-                                ),
-                                test_plan,
-                            )
-                        }
-                        Some(ExpectedFailure::Expected) => {
                             output.pass(function_name);
                             stats.test_success(test_run_info, test_plan);
                         }
@@ -547,6 +534,19 @@ impl SharedTestingConfig {
                                         *expected_code,
                                         actual_err,
                                     ),
+                                    test_run_info,
+                                    Some(err),
+                                    save_session_state(),
+                                ),
+                                test_plan,
+                            )
+                        }
+                        None if err.major_status() == StatusCode::OUT_OF_GAS => {
+                            // Ran out of ticks, report a test timeout and log a test failure
+                            output.timeout(function_name);
+                            stats.test_failure(
+                                TestFailure::new(
+                                    FailureReason::timeout(),
                                     test_run_info,
                                     Some(err),
                                     save_session_state(),

@@ -1,4 +1,4 @@
-use llvm_sys::core::{LLVMInt1TypeInContext, LLVMInt8TypeInContext, LLVMInt64TypeInContext, LLVMModuleCreateWithNameInContext};
+use llvm_sys::core::{LLVMInt1TypeInContext, LLVMInt8TypeInContext, LLVMInt64TypeInContext, LLVMModuleCreateWithNameInContext, LLVMAddModuleFlag, LLVMConstInt, LLVMCreateBuilderInContext, LLVMSetTarget};
 
 use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef, LLVMValueRef, LLVMMetadataRef, LLVMModuleRef, LLVMDIBuilderRef, LLVMTypeRef};
 //use inkwell::builder::Builder;
@@ -14,6 +14,9 @@ use inkwell::types::{
     ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FunctionType, IntType, StringRadix,
 };*/
 use llvm_sys::target_machine::{LLVMCodeGenOptLevel, LLVMCodeModel, LLVMTargetMachineRef, LLVMCreateTargetMachine, LLVMTargetRef, LLVMRelocMode};
+use llvm_sys::LLVMModuleFlagBehavior;
+use llvm_sys::debuginfo::{LLVMDWARFEmissionKind, LLVMDWARFSourceLanguage, LLVMDIBuilderCreateCompileUnit, LLVMCreateDIBuilder, LLVMCreateDIBuilderDisallowUnresolved, LLVMDIBuilderCreateFile};
+use llvm_sys::debuginfo::{DICompileUnit, DWARFEmissionKind, DWARFSourceLanguage, DebugInfoBuilder};
 
 use crate::support::{to_c_str, LLVMString};
 use std::borrow::Cow;
@@ -230,18 +233,30 @@ impl<'a> MoveBPFModule<'a> {
         return Some(target_machine);
     }
 
-    pub fn add_basic_value_flag<BV: BasicValue<'a>>(&self, key: &str, behavior: FlagBehavior, flag: BV) {
+    pub fn add_basic_value_flag(module: LLVMModuleRef, key: &str, behavior: LLVMModuleFlagBehavior, flag: LLVMValueRef) {
         use llvm_sys::core::LLVMValueAsMetadata;
 
-        let md = unsafe { LLVMValueAsMetadata(flag.as_value_ref()) };
+        let md = unsafe { LLVMValueAsMetadata(flag) };
 
         unsafe {
             LLVMAddModuleFlag(
-                self.module.get(),
+                module,
                 behavior.into(),
                 key.as_ptr() as *mut ::libc::c_char,
                 key.len(),
                 md,
+            )
+        }
+    }
+
+    pub fn set_source_file_name(module : LLVMModuleRef, file_name: &str) {
+        use llvm_sys::core::LLVMSetSourceFileName;
+
+        unsafe {
+            LLVMSetSourceFileName(
+                module,
+                file_name.as_ptr() as *const ::libc::c_char,
+                file_name.len(),
             )
         }
     }
@@ -257,22 +272,83 @@ impl<'a> MoveBPFModule<'a> {
         });
 
         let triple = MoveBPFModule::llvm_target_triple();
-        //let module = context.create_module(name);
         let c_string = to_c_str(name);
 
         let module = unsafe { LLVMModuleCreateWithNameInContext(c_string.as_ptr(), *context) };
 
-        let debug_metadata_version = context.i32_type().const_int(3, false);
-        module.add_basic_value_flag(
+        let debug_metadata_version = unsafe { LLVMConstInt(LLVMInt64TypeInContext(*context), 3, false as i32) };
+        Self::add_basic_value_flag(
+            module,
             "Debug Info Version",
-            inkwell::module::FlagBehavior::Warning,
+            LLVMModuleFlagBehavior::LLVMModuleFlagBehaviorWarning,
             debug_metadata_version,
         );
 
-        let builder = context.create_builder();
-        let (dibuilder, di_compile_unit) = module.create_debug_info_builder(
+        let builder = unsafe { LLVMCreateBuilderInContext(*context) };
+
+        let dibuilder = unsafe { LLVMCreateDIBuilder(module) };
+
+        //let dibuilder = DebugInfoBuilder {
+        //    builder,
+        //    _marker: PhantomData,
+        //};
+
+        let directory = ".";
+        //let file = builder.create_file(filename, directory);
+
+        let file_metadata_ref = unsafe {
+            LLVMDIBuilderCreateFile(
+                dibuilder,
+                filename.as_ptr() as _,
+                filename.len(),
+                directory.as_ptr() as _,
+                directory.len(),
+            )
+        };
+
+        let producer = "Move";
+        let is_optimized = false;
+        let flags = "";
+        let runtime_ver = 0;
+        let split_name = "";
+        let kind = LLVMDWARFEmissionKind::LLVMDWARFEmissionKindFull;
+        let dwo_id = 0;
+        let split_debug_inlining= false;
+        let debug_info_for_profiling= false;
+        let sysroot = "";
+        let sdk = "";
+
+        let di_compile_unit = unsafe { LLVMDIBuilderCreateCompileUnit(
+            dibuilder,
+            LLVMDWARFSourceLanguage::LLVMDWARFSourceLanguageC,
+            file_metadata_ref,
+            producer.as_ptr() as _,
+            producer.len(),
+            is_optimized as _,
+            flags.as_ptr() as _,
+            flags.len(),
+            runtime_ver,
+            split_name.as_ptr() as _,
+            split_name.len(),
+            kind.into(),
+            dwo_id,
+            split_debug_inlining as _,
+            debug_info_for_profiling as _,
+            sysroot.as_ptr() as _,
+            sysroot.len(),
+            sdk.as_ptr() as _,
+            sdk.len(),
+        ) };
+
+        let di_compile_unit = DICompileUnit {
+            file: DIFile { metadata_ref: file_metadata_ref, _marker: PhantomData},
+            metadata_ref: file_metadata_ref,
+            _marker: PhantomData,
+        };
+
+        /*let (dibuilder, di_compile_unit) = module.create_debug_info_builder(
             true,
-            inkwell::debug_info::DWARFSourceLanguage::C,
+            LLVMDWARFSourceLanguage::LLVMDWARFSourceLanguageC,
             filename,
             ".",
             "Move",
@@ -280,16 +356,17 @@ impl<'a> MoveBPFModule<'a> {
             "",
             0,
             "",
-            inkwell::debug_info::DWARFEmissionKind::Full,
+            LLVMDWARFEmissionKind::LLVMDWARFEmissionKindFull,
             0,
             false,
             false,
             "",
             "",
-        );
+        );*/
 
-        module.set_triple(&triple);
-        module.set_source_file_name(filename);
+        // module.set_triple(&triple);
+        unsafe { LLVMSetTarget(module, triple.as_ptr()) }
+        Self::set_source_file_name(module, filename);
 
         MoveBPFModule {
             name: name.to_owned(),
@@ -319,5 +396,6 @@ impl<'a> MoveBPFModule<'a> {
     }
     pub fn llvm_constant() {
         // TODO: Return a constant value corresponding to the input type.
+        //LLVMConstInt(self.as_type_ref(), value, sign_extend as i32);
     }
 }

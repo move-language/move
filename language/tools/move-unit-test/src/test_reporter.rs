@@ -11,7 +11,7 @@ use move_binary_format::{
 };
 use move_command_line_common::files::FileHash;
 use move_compiler::{
-    diagnostics::{self, Diagnostic},
+    diagnostics::{self, Diagnostic, Diagnostics},
     unit_test::{ModuleTestPlan, TestName, TestPlan},
 };
 use move_core_types::{effects::ChangeSet, language_storage::ModuleId, vm_status::StatusType};
@@ -165,7 +165,7 @@ impl TestFailure {
             FailureReason::Timeout(message) => message.to_string(),
             FailureReason::WrongError(message, expected, actual) => {
                 let base_message = format!(
-                    "{message}. Expected test to {}  but instead it {} rooted here",
+                    "{message}. Expected test {} but instead it {} rooted here",
                     expected.verbiage(/* is_past_tense */ false),
                     actual.verbiage(/* is_past_tense */ true),
                 );
@@ -346,30 +346,32 @@ impl TestFailure {
         };
 
         let diags = match vm_error.location() {
-            Location::Module(module_id) if !vm_error.offsets().is_empty() => {
-                let diags = vm_error
-                    .offsets()
-                    .iter()
-                    .filter_map(|(fdef_idx, offset)| {
-                        let function_source_map = test_plan
-                            .module_info
-                            .get(module_id)?
-                            .source_map
-                            .get_function_source_map(*fdef_idx)
-                            .ok()?;
-                        let loc = function_source_map.get_code_location(*offset).unwrap();
-                        let msg = format!("In this function in {}", format_module_id(module_id));
-                        // TODO(tzakian) maybe migrate off of move-langs diagnostics?
-                        Some(Diagnostic::new(
-                            diagnostics::codes::Tests::TestFailed,
-                            (loc, base_message.clone()),
-                            vec![(function_source_map.definition_location, msg)],
-                            std::iter::empty::<String>(),
-                        ))
-                    })
-                    .collect();
-
-                String::from_utf8(report_diagnostics(&test_plan.files, diags)).unwrap()
+            Location::Module(module_id) => {
+                let diag_opt = vm_error.offsets().first().and_then(|(fdef_idx, offset)| {
+                    let function_source_map = test_plan
+                        .module_info
+                        .get(module_id)?
+                        .source_map
+                        .get_function_source_map(*fdef_idx)
+                        .ok()?;
+                    let loc = function_source_map.get_code_location(*offset).unwrap();
+                    let msg = format!("In this function in {}", format_module_id(module_id));
+                    // TODO(tzakian) maybe migrate off of move-langs diagnostics?
+                    Some(Diagnostic::new(
+                        diagnostics::codes::Tests::TestFailed,
+                        (loc, base_message.clone()),
+                        vec![(function_source_map.definition_location, msg)],
+                        std::iter::empty::<String>(),
+                    ))
+                });
+                match diag_opt {
+                    None => base_message,
+                    Some(diag) => String::from_utf8(report_diagnostics(
+                        &test_plan.files,
+                        Diagnostics::from(vec![diag]),
+                    ))
+                    .unwrap(),
+                }
             }
             _ => base_message,
         };

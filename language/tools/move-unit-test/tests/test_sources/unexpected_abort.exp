@@ -55,7 +55,7 @@ Failures in 0x1::M:
 │ 10 │     public fun wrong_abort_code() {
 │    │                ---------------- In this function in 0x1::M
 │ 11 │         abort 0
-│    │         ^^^^^^^ Test did not error as expected. Expected test to to abort with code 1 originating in the module 00000000000000000000000000000001::M  but instead it aborted with code 0 originating in the module 00000000000000000000000000000001::M rooted here
+│    │         ^^^^^^^ Test did not error as expected. Expected test to abort with code 1 originating in the module 00000000000000000000000000000001::M but instead it aborted with code 0 originating in the module 00000000000000000000000000000001::M rooted here
 │ 
 │ 
 └──────────────────

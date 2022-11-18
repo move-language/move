@@ -128,7 +128,7 @@ impl<'a> fmt::Display for ExpectedMoveErrorDisplay<'a> {
                 StatusCode::ABORTED => write!(f, "aborted")?,
                 StatusCode::ARITHMETIC_ERROR => write!(f, "gave an arithmetic error")?,
                 StatusCode::VECTOR_OPERATION_ERROR => write!(f, "gave a vector operation error")?,
-                StatusCode::OUT_OF_GAS => write!(f, "gave an out of gas error")?,
+                StatusCode::OUT_OF_GAS => write!(f, "ran out of gas")?,
                 _ => write!(f, "gave a {status:?} (code {status_val}) error")?,
             };
         } else {
@@ -138,7 +138,7 @@ impl<'a> fmt::Display for ExpectedMoveErrorDisplay<'a> {
                 StatusCode::VECTOR_OPERATION_ERROR => {
                     write!(f, "to give a vector operation error")?
                 }
-                StatusCode::OUT_OF_GAS => write!(f, "to give an out of gas error")?,
+                StatusCode::OUT_OF_GAS => write!(f, "to run out of gas")?,
                 _ => write!(f, "to give a {status:?} (code {status_val}) error")?,
             };
         }
@@ -147,10 +147,13 @@ impl<'a> fmt::Display for ExpectedMoveErrorDisplay<'a> {
         } else if let Some(code) = sub_status {
             write!(f, " with sub-status {code}")?
         };
+        if status != &StatusCode::OUT_OF_GAS {
+            write!(f, " originating")?;
+        }
         match location {
-            Location::Undefined => write!(f, " originating in an unknown location"),
-            Location::Script => write!(f, " originating in the script"),
-            Location::Module(id) => write!(f, " originating in the module {id}"),
+            Location::Undefined => write!(f, " in an unknown location"),
+            Location::Script => write!(f, " in the script"),
+            Location::Module(id) => write!(f, " in the module {id}"),
         }
     }
 }

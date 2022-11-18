@@ -426,6 +426,8 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
     }
 }
 
+/// Returns read aggregate, write aggregate and type param index if fun_env matches one of the
+/// native functions implementing custom mutable borrow.
 fn get_borrow_native_info(
     fun_env: &FunctionEnv,
     borrow_natives: &Vec<BorrowNative>,
@@ -433,31 +435,15 @@ fn get_borrow_native_info(
     if !fun_env.is_native() {
         return None;
     }
-    eprintln!(
-        "FUN NAME: {} MODULE: {}",
-        fun_env.get_full_name_str(),
-        fun_env
-            .module_env
-            .get_name()
-            .display_full(fun_env.module_env.symbol_pool())
-    );
     for n in borrow_natives {
         let mod_name = ModuleName::from_str(
             &n.mod_addr,
             fun_env.module_env.symbol_pool().make(&n.mod_name),
         );
-        eprintln!(
-            "NATIVE NAME: {} MODULE: {}",
-            n.name,
-            mod_name.display_full(fun_env.module_env.symbol_pool())
-        );
-
         if fun_env.module_env.get_name() == &mod_name && fun_env.get_full_name_str() == n.name {
-            eprintln!("FOUND");
             return Some((n.read_op.clone(), n.write_op.clone(), n.tparam_idx));
         }
     }
-
     None
 }
 
@@ -465,18 +451,11 @@ fn native_annotation(
     fun_env: &FunctionEnv,
     borrow_natives: &Vec<BorrowNative>,
 ) -> BorrowAnnotation {
-    //    if fun_env.is_native() {
-    //        eprintln!("FUN: {}", fun_env.get_name().display(fun_env.symbol_pool()));
-    //    }
     let borrow_native_info = get_borrow_native_info(fun_env, borrow_natives);
     if fun_env.is_well_known(VECTOR_BORROW_MUT)
         || fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT)
         || borrow_native_info.is_some()
     {
-        //        eprintln!(
-        //            "ADDING EDGE: {}",
-        //            fun_env.get_name().display(fun_env.symbol_pool())
-        //        );
         // Create an edge from the first parameter to the return value.
         let mut an = BorrowAnnotation::default();
         let param_node = BorrowNode::Reference(0);

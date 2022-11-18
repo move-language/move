@@ -3153,7 +3153,6 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 let fun_spec = self.fun_specs.remove(&name).unwrap_or_default();
                 if let Some(entry) = self.parent.fun_table.get(&self.qualified_by_module(name)) {
                     let arg_names = project_1st(&entry.params);
-//                    let type_arg_names = project_1st(&entry.type_params);
                     Some((FunId::new(name), self.parent.env.create_function_data(
                         &module,
                         def_idx,

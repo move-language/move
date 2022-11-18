@@ -13,7 +13,7 @@ use move_binary_format::{
         StructTypeParameter, TableIndex, Visibility,
     },
     file_format_common::VERSION_5,
-    IndexKind,
+    safe_unwrap, IndexKind,
 };
 use move_core_types::{identifier::Identifier, language_storage::ModuleId, vm_status::StatusCode};
 use std::collections::{BTreeMap, BTreeSet};
@@ -226,7 +226,7 @@ fn verify_imported_structs(context: &Context) -> PartialVMResult<()> {
             .resolver
             .module_id_for_handle(context.resolver.module_handle_at(struct_handle.module));
         // TODO: remove unwrap
-        let owner_module = context.dependency_map.get(&owner_module_id).unwrap();
+        let owner_module = safe_unwrap!(context.dependency_map.get(&owner_module_id));
         let struct_name = context.resolver.identifier_at(struct_handle.name);
         match context
             .struct_id_to_handle_map
@@ -269,8 +269,7 @@ fn verify_imported_functions(context: &Context) -> PartialVMResult<()> {
             .resolver
             .module_id_for_handle(context.resolver.module_handle_at(function_handle.module));
         let function_name = context.resolver.identifier_at(function_handle.name);
-        // TODO: remove unwrap
-        let owner_module = context.dependency_map.get(&owner_module_id).unwrap();
+        let owner_module = safe_unwrap!(context.dependency_map.get(&owner_module_id));
         match context
             .func_id_to_handle_map
             .get(&(owner_module_id.clone(), function_name.to_owned()))

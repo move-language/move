@@ -1126,7 +1126,7 @@ impl<'env> SpecTranslator<'env> {
                 | Type::TypeDomain(_)
                 | Type::ResourceDomain(_, _, _)
                 | Type::Error
-                | Type::Var(_) => unreachable!(),
+                | Type::Var(_) => {}
             }
         }
         // Translate quantified variables.

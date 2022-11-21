@@ -127,3 +127,8 @@ To generate a move bytecode module from mvir
 To generate bytecode in text format
 > move-disassembler --bytecode a.mv
 
+
+## ACKNOWLEDGEMENTS
+Parts of [inkwell]9https://github.com/TheDan64/inkwell) code has been copied to this subfolder.
+It will be rewritten based on the needs of the project. If exact code is to be adopted, they will be
+put in a sub folder with appropriate acknowledgement.

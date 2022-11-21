@@ -5,26 +5,20 @@ use ethnum::U256 as EthnumU256;
 use num::{bigint::Sign, BigInt};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::strategy::BoxedStrategy;
-use rand::distributions::uniform::SampleUniform;
-use rand::distributions::uniform::UniformSampler;
-use rand::distributions::Distribution;
-use rand::distributions::Standard;
-use rand::Rng;
-use std::ops::Add;
-use std::ops::AddAssign;
-use std::ops::BitAndAssign;
-use std::ops::Div;
-use std::ops::DivAssign;
-use std::ops::Mul;
-use std::ops::MulAssign;
-use std::ops::Rem;
-use std::ops::RemAssign;
-use std::ops::Sub;
-use std::ops::SubAssign;
+use rand::{
+    distributions::{
+        uniform::{SampleUniform, UniformSampler},
+        Distribution, Standard,
+    },
+    Rng,
+};
 use std::{
     fmt,
     mem::size_of,
-    ops::{BitAnd, BitOr, BitXor, Shl, Shr},
+    ops::{
+        Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitXor, Div, DivAssign, Mul, MulAssign, Rem,
+        RemAssign, Shl, Shr, Sub, SubAssign,
+    },
 };
 use uint::FromStrRadixErr;
 

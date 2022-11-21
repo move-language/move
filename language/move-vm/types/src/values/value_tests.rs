@@ -4,8 +4,7 @@
 
 use crate::{loaded_data::runtime_types::Type, values::*, views::*};
 use move_binary_format::errors::*;
-use move_core_types::account_address::AccountAddress;
-use move_core_types::u256::U256;
+use move_core_types::{account_address::AccountAddress, u256::U256};
 
 #[test]
 fn locals() -> PartialVMResult<()> {

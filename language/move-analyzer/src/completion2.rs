@@ -127,7 +127,7 @@ pub fn on_completion_request2(context: &Context, request: &Request, symbols: &Sy
 /// All Modules.
 pub struct Modules {
     modules: HashMap<ModuleIdent, IDEModule>,
-    p: Position,
+    // p: Position,
 }
 
 #[derive(Clone)]
@@ -146,11 +146,8 @@ impl Modules {
         unimplemented!()
     }
 
-    fn in_range(&self, l: Loc) -> bool {
-        unimplemented!()
-    }
     /// Enter Scope for you.
-    pub fn enter_scope(&self) {
+    pub fn enter_scope(&self, visitor: &mut dyn ScopeVisitor) {
         let mut global_scope = Scopes::default();
         // Enter all global to global_scope.
         for (_, modules) in self.modules.iter() {
@@ -171,14 +168,10 @@ impl Modules {
         // Scan all for.
         for (_, modules) in self.modules.iter() {
             for (f, d) in modules.defs.iter() {
-                // Only scan match.
-                if *f != self.p.path {
-                    continue;
-                }
                 // We have match the files.
                 match d {
                     Definition::Module(x) => {
-                        if self.in_range(x.loc) {
+                        if !visitor.file_should_visit(x.loc.file_hash()) {
                             continue;
                         }
                     }
@@ -195,33 +188,29 @@ impl Modules {
     fn enter_address_top(&self, s: &Scopes, module: &AddressDefinition) {}
 
     ///
-    fn visit_function(
-        &self,
-        function: &Function,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
-    ) -> bool {
-        return scopes.enter_scope(|s| -> bool {
-            if self.visit_signature(&function.signature, s, visitor) {
-                return true;
+    fn visit_function(&self, function: &Function, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
+        return scopes.enter_scope(|s| {
+            self.visit_signature(&function.signature, s, visitor);
+            if visitor.finished() {
+                return;
             }
             match function.body.value {
                 FunctionBody_::Native => {}
                 FunctionBody_::Defined(ref seq) => {
                     for u in seq.0.iter() {
-                        if self.visit_use_decl(u, scopes, visitor) {
-                            return true;
+                        self.visit_use_decl(u, scopes, visitor);
+                        if visitor.finished() {
+                            return;
                         }
                     }
-
                     for s in seq.1.iter() {
-                        if self.visit_sequence_item(s, scopes, visitor) {
-                            return true;
+                        self.visit_sequence_item(s, scopes, visitor);
+                        if visitor.finished() {
+                            return;
                         }
                     }
                 }
             }
-            false
         });
     }
 
@@ -230,36 +219,76 @@ impl Modules {
         seq: &SequenceItem,
         scopes: &Scopes,
         visitor: &mut dyn ScopeVisitor,
-    ) -> bool {
+    ) {
         match seq.value {
             SequenceItem_::Seq(ref e) => {
-                if self.visit_expr(e, scopes, visitor) {
-                    return true;
+                self.visit_expr(e, scopes, visitor);
+                if visitor.finished() {
+                    return;
                 }
             }
             SequenceItem_::Declare(ref list, ref ty) => {
-                if self.visit_declare(list, ty, None, scopes, visitor) {
-                    return true;
+                self.visit_bind_list(list, ty, None, scopes, visitor);
+                if visitor.finished() {
+                    return;
                 }
             }
             SequenceItem_::Bind(ref list, ref ty, ref expr) => {
-                if self.visit_declare(list, ty, Some(expr), scopes, visitor) {
-                    return true;
+                self.visit_bind_list(list, ty, Some(expr), scopes, visitor);
+                if visitor.finished() {
+                    return;
                 }
             }
         }
-        false
     }
 
-    fn visit_declare(
+    fn visit_bind_list(
         &self,
-        item: &BindList,
+        bind_list: &BindList,
         ty: &Option<Type>,
         expr: Option<&Box<Exp>>,
         scopes: &Scopes,
         visitor: &mut dyn ScopeVisitor,
-    ) -> bool {
-        false
+    ) {
+        let ty = if let Some(ty) = ty {
+            scopes.resolve_type(ty)
+        } else if let Some(expr) = expr {
+            self.get_expr_type(expr, scopes)
+        } else {
+            ResolvedType::mk_default(unimplemented!())
+        };
+
+        for (index, bind) in bind_list.value.iter().enumerate() {
+            let ty = ty.typ(index);
+            let unknown = ResolvedType::mk_default(unimplemented!());
+            let ty = ty.unwrap_or(&unknown);
+            self.visit_bind(bind, ty, scopes, None, visitor);
+            if visitor.finished() {
+                return;
+            }
+        }
+    }
+
+    fn visit_bind(
+        &self,
+        bind: &Bind,
+        ty: &ResolvedType,
+        scopes: &Scopes,
+        field: Option<&'_ Field>,
+        visitor: &mut dyn ScopeVisitor,
+    ) {
+        match &bind.value {
+            Bind_::Var(var) => {
+                let item = Item::ExprVar(var.clone());
+                visitor.handle_item(scopes, item.clone());
+                if visitor.finished() {
+                    return;
+                }
+                scopes.enter_value_item(var.0.value, item);
+                return;
+            }
+            Bind_::Unpack(_, _, _) => todo!(),
+        }
     }
 
     fn get_name_from_value(v: &Value) -> Option<&Name> {
@@ -277,7 +306,7 @@ impl Modules {
         leading: &LeadingNameAccess,
         scopes: &Scopes,
         visitor: &mut dyn ScopeVisitor,
-    ) -> bool {
+    ) {
         unimplemented!();
     }
 
@@ -286,83 +315,113 @@ impl Modules {
         leading: &NameAccessChain,
         scopes: &Scopes,
         visitor: &mut dyn ScopeVisitor,
-    ) -> bool {
+    ) {
         unimplemented!();
     }
-    fn visit_access_type(
-        &self,
-        ty: &Type,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
-    ) -> bool {
-        if self.in_range(ty.loc) {
-            return false;
-        }
-        let item = Item::ApplyType(ty.clone());
-        visitor.visit(scopes, item);
-        return true;
+
+    fn visit_access_type(&self, ty: &Type, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
+        let ty = scopes.resolve_type(ty);
+        let item = Item::ApplyType(ty);
+        visitor.handle_item(scopes, item);
     }
 
-    fn visit_expr(&self, exp: &Exp, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) -> bool {
+    /// Get A Type for expr if possible.
+    fn get_expr_type(&self, expr: &Exp, scopes: &Scopes) -> ResolvedType {
+        match &expr.value {
+            Exp_::Value(ref x) => match &x.value {
+                Value_::Address(_) => ResolvedType::new_build_in(BuildInType::Address),
+                Value_::Num(_) => ResolvedType::new_build_in(BuildInType::NumType),
+                Value_::Bool(_) => ResolvedType::new_build_in(BuildInType::Bool),
+                // TODO 余洋 这2个都是string类型 但是好像没有这个内置类型
+                Value_::HexString(_) => todo!(),
+                Value_::ByteString(_) => todo!(),
+            },
+            Exp_::Move(x) | Exp_::Copy(x) => scopes.find_var_type(x.0.value),
+            Exp_::Name(name, _ /*  TODO this is a error. */) => {
+                // scopes.find_name_access_chain_type(name)
+                return UNKNOWN_TYPE.clone();
+            }
+            Exp_::Call(name, _, _, _) => {
+                let fun_type = scopes.find_name_access_chain_type(name);
+                match &fun_type.0.value {
+                    ResolvedType_::Fun(_, _, _) => todo!(),
+                    _ => return UNKNOWN_TYPE.clone(),
+                }
+                unimplemented!()
+            }
+            Exp_::Pack(_, _, _) => todo!(),
+            Exp_::Vector(_, _, _) => todo!(),
+            Exp_::IfElse(_, _, _) => todo!(),
+            Exp_::While(_, _) => todo!(),
+            Exp_::Loop(_) => todo!(),
+            Exp_::Block(_) => todo!(),
+            Exp_::Lambda(_, _) => todo!(),
+            Exp_::Quant(_, _, _, _, _) => todo!(),
+            Exp_::ExpList(_) => todo!(),
+            Exp_::Unit => todo!(),
+            Exp_::Assign(_, _) => todo!(),
+            Exp_::Return(_) => todo!(),
+            Exp_::Abort(_) => todo!(),
+            Exp_::Break => todo!(),
+            Exp_::Continue => todo!(),
+            Exp_::Dereference(_) => todo!(),
+            Exp_::UnaryExp(_, _) => todo!(),
+            Exp_::BinopExp(_, _, _) => todo!(),
+            Exp_::Borrow(_, _) => todo!(),
+            Exp_::Dot(_, _) => todo!(),
+            Exp_::Index(_, _) => todo!(),
+            Exp_::Cast(_, _) => todo!(),
+            Exp_::Annotate(_, _) => todo!(),
+            Exp_::Spec(_) => todo!(),
+            Exp_::UnresolvedError => todo!(),
+        }
+    }
+
+    fn visit_expr(&self, exp: &Exp, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
         match &exp.value {
             Exp_::Value(ref v) => {
                 if let Some(name) = Self::get_name_from_value(v) {
-                    if self.in_range(name.loc) {
-                        let item = Item::ExprName(name.clone());
-                        visitor.visit(scopes, item);
-                        return true;
+                    let item = Item::ExprName(name.clone());
+                    visitor.handle_item(scopes, item);
+                    if visitor.finished() {
+                        return;
                     }
                 }
-                return false;
+                return;
             }
             Exp_::Move(var) | Exp_::Copy(var) => {
-                let item = Item::ExprVar(var.clone());
-                if self.in_range(var.loc()) {
-                    return true;
-                }
+                unimplemented!();
             }
-            Exp_::Name(chain, ty) => match chain.value {
-                NameAccessChain_::One(one) => {
-                    if self.in_range(one.loc) {
-                        let item = Item::ExprName(one.clone());
-                        visitor.visit(scopes, item);
-                        return true;
-                    }
-                    return false;
-                }
-                NameAccessChain_::Two(ref leading, two) => {
-                    if self.visit_expr_leading(leading, scopes, visitor) {
-                        return true;
-                    }
-                    let item = Item::NameAccessChainTwo(leading.clone(), two.clone());
-                    if self.in_range(two.loc) {
-                        visitor.visit(scopes, item);
-                        return true;
-                    }
-                    return false;
-                }
-                NameAccessChain_::Three(one, _) => todo!(),
-            },
+            Exp_::Name(chain, _ty) => {
+                // TODO how to use _ty.
+                // let _ty: Option<Vec<ResolvedType>> =
+                //     ty.map(|s| s.iter().map(|t| scopes.resolve_type(t)).collect());
+                let item = Item::ExprNameAccessChain(chain.clone());
+                visitor.handle_item(scopes, item);
+            }
 
             Exp_::Call(ref leading, _, ref types, ref exprs) => {
-                if self.visit_expr_name_access_chain(leading, scopes, visitor) {
-                    return true;
-                }
-                if let Some(ref types) = types {
-                    for t in types.iter() {
-                        if self.in_range(t.loc) {
-                            let item = Item::ApplyType(t.clone());
-                            visitor.visit(scopes, item);
-                            return true;
-                        }
-                    }
-                }
-
-                for expr in exprs.value.iter() {
-                    if self.visit_expr(exp, scopes, visitor) {
-                        return true;
-                    }
-                }
+                // self.visit_expr_name_access_chain(leading, scopes, visitor);
+                // if visitor.finished() {
+                //     return;
+                // }
+                // if let Some(ref types) = types {
+                //     for t in types.iter() {
+                //         if self.in_range(t.loc) {
+                //             let ty = scopes.resolve_type(t);
+                //             let item = Item::ApplyType(ty);
+                //             visitor.handle_item(scopes, item);
+                //             return true;
+                //         }
+                //     }
+                // }
+                // for expr in exprs.value.iter() {
+                //     self.visit_expr(exp, scopes, visitor);
+                //     if visitor.finished() {
+                //         return;
+                //     }
+                // }
+                unimplemented!();
             }
             Exp_::Pack(_, _, _) => todo!(),
             Exp_::Vector(_loc, ref ty, ref exprs) => {}
@@ -377,13 +436,7 @@ impl Modules {
             Exp_::Assign(_, _) => todo!(),
             Exp_::Return(_) => todo!(),
             Exp_::Abort(_) => todo!(),
-            Exp_::Break | Exp_::Continue => {
-                if self.in_range(exp.loc) {
-                    return true;
-                } else {
-                    return false;
-                }
-            }
+            Exp_::Break | Exp_::Continue => {}
             Exp_::Dereference(_) => todo!(),
             Exp_::UnaryExp(_, _) => todo!(),
             Exp_::BinopExp(_, _, _) => todo!(),
@@ -395,134 +448,265 @@ impl Modules {
             Exp_::Spec(_) => todo!(),
             Exp_::UnresolvedError => todo!(),
         }
-        false
     }
 
-    fn visit_use_decl(
-        &self,
-        use_decl: &UseDecl,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
-    ) -> bool {
-        match use_decl.use_ {
-            Use::Module(ref m, ref name) => {
-                if self.in_range(m.loc) {
-                    // found;
-                    let item = Item::AccessModule(m.clone());
-                    visitor.visit(scopes, item);
-                    return true;
-                }
-                if let Some(ref name) = name {
-                    if self.in_range(name.loc()) {
-                        let item = Item::AccessModuleAlias(m.clone(), name.clone());
-                        visitor.visit(scopes, item);
-                        return true;
-                    }
-                }
-            }
-            Use::Members(ref m, ref members) => {
-                if self.in_range(m.loc) {
-                    // found;
-                    let item = Item::AccessModule(m.clone());
-                    visitor.visit(scopes, item);
-                    return true;
-                }
-                for (name, alias) in members {
-                    let item = Item::AccessModuleMember(m.clone(), name.clone(), alias.clone());
-                    if self.in_range(name.loc)
-                        || alias.clone().map(|s| self.in_range(s.loc)).unwrap_or(false)
-                    {
-                        visitor.visit(scopes, item);
-                        return true;
-                    }
-                }
-            }
-        }
-
-        false
+    fn visit_use_decl(&self, use_decl: &UseDecl, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
+        unimplemented!();
     }
 
     fn visit_signature(
         &self,
         signature: &FunctionSignature,
-        s: &Scopes,
+        scopes: &Scopes,
         visitor: &mut dyn ScopeVisitor,
-    ) -> bool {
-        //
-        for (name, v) in signature.type_parameters.iter() {
-            let loc = name.loc;
-            let item = Item::TParam((name.clone(), v.clone()));
-            if self.in_range(loc) {
-                // found
-                visitor.visit(s, item);
-                return true;
-            }
-            // Enter this.
-            s.enter_item(name.value, item);
-        }
-        for (v, t) in signature.parameters.iter() {
-            {
-                let loc = v.loc();
-                let item = Item::Parameter((v.clone(), t.clone()));
-                if self.in_range(loc) {
-                    // found
-                    visitor.visit(s, item);
-                    return true;
-                }
-                s.enter_item(v.value(), item)
-            }
-            {
-                let loc = t.loc;
-                let item = Item::ApplyType(t.clone());
-                if self.in_range(loc) {
-                    // found
-                    visitor.visit(s, item);
-                    return true;
-                }
-            }
-        }
-        false
+    ) {
+        // //
+        // for (name, v) in signature.type_parameters.iter() {
+        //     let loc = name.loc;
+        //     let item = Item::TParam(name.clone(), v.clone());
+        //     if self.in_range(loc) {
+        //         // found
+        //         visitor.handle_item(scopes, item);
+        //         if visitor.finished() {
+        //             return;
+        //         }
+        //     }
+        //     // Enter this.
+        //     scopes.enter_type_item(name.value, item);
+        // }
+        // for (v, t) in signature.parameters.iter() {
+        //     let loc = t.loc;
+        //     let ty = scopes.resolve_type(t);
+        //     let item = Item::ApplyType(ty.clone());
+        //     if self.in_range(loc) {
+        //         // found
+        //         visitor.handle_item(scopes, item);
+        //         if visitor.finished() {
+        //             return;
+        //         }
+        //     }
+        //     {
+        //         let loc = v.loc();
+        //         let item = Item::Parameter(v.clone(), ty);
+        //         // found
+        //         visitor.handle_item(scopes, item);
+        //         if visitor.finished() {
+        //             return;
+        //         }
+        //         scopes.enter_value_item(v.value(), item)
+        //     }
+        // }
+
+        unimplemented!();
     }
 }
 
 #[derive(Default, Debug)]
 pub struct Scope {
-    defs: HashMap<Symbol, Item>,
+    values: HashMap<Symbol, Item>,
+    types: HashMap<Symbol, Item>,
     is_function: bool,
     is_spec: bool,
+    is_global: bool,
 }
 
 impl Scope {
-    fn enter_item(&mut self, s: Symbol, item: Item) {
-        self.defs.insert(s, item);
+    fn enter_value_item(&mut self, s: Symbol, item: Item) {
+        self.values.insert(s, item);
+    }
+    fn enter_type_item(&mut self, s: Symbol, item: Item) {
+        self.types.insert(s, item);
     }
 }
 
 /// Visit scopes for inner to outer.
 pub trait ScopeVisitor {
-    /// All Scopes that you can visit.
-    fn visit(&mut self, scopes: &Scopes, item: Item);
+    /// Handle this item.
+    /// If `should_finish` return true. All `enter_scope` and enter_scope called function will return.
+    fn handle_item(&mut self, scopes: &Scopes, item: Item);
+    /// Need not visit this structure???
+    fn file_should_visit(&self, p: FileHash) -> bool;
+    /// Visitor is finished.
+    fn finished(&self) -> bool;
+}
+
+#[derive(Clone, Debug)]
+enum ResolvedType_ {
+    UnKnown,
+    Struct(Name, Vec<StructTypeParameter>, Vec<(Field, ResolvedType)>),
+    /// struct { ... }
+    BuildInType(BuildInType),
+    /// T : drop
+    TParam(Name, Vec<Ability>),
+    ApplyTParam(
+        Box<ResolvedType>,
+        /* two field copied from TParam  */ Name,
+        Vec<Ability>,
+    ),
+    /// & mut ...
+    Ref(bool, Box<ResolvedType>),
+    /// ()
+    Unit,
+    /// (t1, t2, ... , tn)
+    /// Used for return values and expression blocks
+    Multiple(Vec<ResolvedType>),
+    Fun(
+        Vec<(Name, Vec<Ability>)>, // type parameters.
+        Vec<ResolvedType>,         // parameters.
+        Box<ResolvedType>,         // return type.
+    ),
+    Vec(Box<ResolvedType>),
+    /// Can't resolve the Type,Keep the ast type.
+    ResolvedFailed(Type_),
+}
+
+#[derive(Clone, Debug)]
+pub struct ResolvedType(Spanned<ResolvedType_>);
+impl ResolvedType {
+    fn typ(&self, index: usize) -> Option<&'_ ResolvedType> {
+        unimplemented!()
+    }
+
+    fn field(&self, index: usize) -> Option<&'_ Field> {
+        unimplemented!()
+    }
+
+    const fn mk_default(loc: Loc) -> ResolvedType {
+        Self(Spanned {
+            loc,
+            value: ResolvedType_::UnKnown,
+        })
+    }
+
+    fn new_build_in(b: BuildInType) -> Self {
+        unimplemented!();
+    }
+    fn is_unknown(&self) -> bool {
+        match &self.0.value {
+            ResolvedType_::UnKnown => true,
+            _ => false,
+        }
+    }
+    fn is_fun(&self) -> bool {
+        match &self.0.value {
+            ResolvedType_::Fun(_, _, _) => true,
+            _ => false,
+        }
+    }
+
+    /// bind type parameter to concrete tpe
+    fn bind_type_parameter(&mut self, types: &HashMap<Symbol, ResolvedType>) {
+        match &mut self.0.value {
+            ResolvedType_::UnKnown => {}
+            ResolvedType_::Struct(_, _, ref mut fields) => {
+                for i in 0..fields.len() {
+                    let mut t = fields.get_mut(i).unwrap();
+                    t.1.bind_type_parameter(types);
+                }
+            }
+            ResolvedType_::BuildInType(_) => {}
+            ResolvedType_::TParam(name, _) => {
+                if let Some(x) = types.get(&name.value) {
+                    std::mem::replace(&mut self.0.value, x.clone().0.value);
+                }
+            }
+            ResolvedType_::Ref(_, ref mut b) => {
+                b.as_mut().bind_type_parameter(types);
+            }
+            ResolvedType_::Unit => {}
+            ResolvedType_::Multiple(ref mut xs) => {
+                for i in 0..xs.len() {
+                    let mut t = xs.get_mut(i).unwrap();
+                    t.bind_type_parameter(types);
+                }
+            }
+            ResolvedType_::Fun(_, ref mut xs, ref mut ret) => {
+                for i in 0..xs.len() {
+                    let mut t = xs.get_mut(i).unwrap();
+                    t.bind_type_parameter(types);
+                }
+                ret.as_mut().bind_type_parameter(types);
+            }
+            ResolvedType_::Vec(ref mut b) => {
+                b.as_mut().bind_type_parameter(types);
+            }
+            ResolvedType_::ResolvedFailed(_) => {}
+            ResolvedType_::ApplyTParam(_, _, _) => {
+                unreachable!("called multiple times.")
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug, Copy)]
+pub enum BuildInType {
+    Bool,
+    U8,
+    U64,
+    U128,
+    Address,
+    /// A number type from literal.
+    /// Could be u8 and ... depend on How it is used.
+    NumType,
+}
+
+impl BuildInType {
+    fn from_symbol(s: Symbol) -> Self {
+        match s.as_str() {
+            "u8" => Self::U8,
+            "u64" => Self::U64,
+            "u128" => Self::U128,
+            "bool" => Self::Bool,
+            "address" => Self::Address,
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub enum Item {
-    // Here are all definition.
-    TParam((Name, Vec<Ability>)),
-    Parameter((Var, Type)),
+    /////////////////////////////
+    /// VALUE types
+    Parameter(Var, ResolvedType),
+
+    /////////////////////////
+    /// TYPE types
+    Struct(Name, Vec<StructTypeParameter>, Vec<(Field, ResolvedType)>),
+    /// build in types.
+    BuildInType(BuildInType),
+    /// Here are all definition.
+    TParam(Name, Vec<Ability>),
+
+    ////////////////////////////////
+    /// various access types.
     // A type apply.
-    ApplyType(Type),
-    AccessModule(ModuleIdent),
-    // TODO what this means.
-    AccessModuleAlias(ModuleIdent, ModuleName /*  alias  */),
-    AccessModuleMember(ModuleIdent, Name, Option<Name> /*  alias  */),
-    /// Access the last Name.
-    NameAccessChainTwo(LeadingNameAccess, Name),
-    /// Access the last name.
-    NameAccessChianThree(LeadingNameAccess, Name, Name),
+    ApplyType(ResolvedType),
+    Use(UseDecl),
     ExprVar(Var),
     ExprName(Name),
+    ExprNameAccessChain(NameAccessChain),
+
+    ///////////////
+    /// key words
+    KeyWords(&'static str),
 }
 
+impl Item {
+    fn to_type(&self, loc: Loc) -> Option<ResolvedType> {
+        let x = match self {
+            Item::TParam(name, ab) => ResolvedType_::TParam(name.clone(), ab.clone()),
+            Item::Struct(name, types, fields) => {
+                ResolvedType_::Struct(name.clone(), types.clone(), fields.clone())
+            }
+            Item::BuildInType(b) => ResolvedType_::BuildInType(*b),
+            _ => return None,
+        };
+        Some(ResolvedType(Spanned { loc, value: x }))
+    }
+    fn loc() -> Loc {
+        unimplemented!();
+    }
+}
 pub struct IDEModule {
     defs: HashMap<PathBuf, move_compiler::parser::ast::Definition>,
     filepath_to_filehash: HashMap<String /* file path */, FileHash>,
@@ -533,38 +717,32 @@ pub struct Scopes {
     scopes: Rc<RefCell<Vec<Scope>>>,
 }
 
-/// RAII type pop on Scope.
-struct ScopesGuarder(Scopes);
-
-impl ScopesGuarder {
-    fn new(s: Scopes) -> Self {
-        Self(s)
-    }
-}
-
-impl Drop for ScopesGuarder {
-    fn drop(&mut self) {
-        self.0.scopes.as_ref().borrow_mut().pop().unwrap();
-    }
-}
-
 impl Scopes {
     fn enter_scope<R>(&self, call_back: impl FnOnce(&Scopes) -> R) -> R {
         let s = Scope::default();
         self.scopes.borrow_mut().push(s);
-        let _pop = ScopesGuarder::new(self.clone());
+        let _guard = ScopesGuarder::new(self.clone());
         let r = call_back(self);
         r
     }
 
     // Enter
-    fn enter_item(&self, name: Symbol, item: Item) {
+    fn enter_value_item(&self, name: Symbol, item: Item) {
         self.scopes
             .as_ref()
             .borrow_mut()
             .last_mut()
             .unwrap()
-            .enter_item(name, item);
+            .enter_value_item(name, item);
+    }
+
+    fn enter_type_item(&self, name: Symbol, item: Item) {
+        self.scopes
+            .as_ref()
+            .borrow_mut()
+            .last_mut()
+            .unwrap()
+            .enter_type_item(name, item);
     }
 
     /// Visit all scope from inner to outer.
@@ -605,21 +783,104 @@ impl Scopes {
         });
         r
     }
-}
 
-/*
-    代码里面有很多
-    // in_range表示找到了
-    但是查找引用应该返回所有的这里肯定需要啥特殊的处理
+    fn resolve_name_access_chain_type(&self, chain: &NameAccessChain) -> ResolvedType {
+        let scopes = self.scopes.as_ref().borrow();
 
-    if self.in_range(.. )  {
-        return true
+        for s in scopes.iter() {
+            // We must be in global scope.
+            let item = match &chain.value {
+                NameAccessChain_::One(x) => {
+                    if let Some(item) = s.types.get(&x.value) {
+                        if let Some(ty) = item.to_type(x.loc) {
+                            return ty;
+                        }
+                    }
+                }
+                NameAccessChain_::Two(_, _) => todo!(),
+                NameAccessChain_::Three(_, _) => todo!(),
+            };
+        }
+        // make sure return a false type.
+        return ResolvedType(Spanned {
+            loc: chain.loc,
+            value: ResolvedType_::ResolvedFailed(Type_::Apply(Box::new(chain.clone()), vec![])),
+        });
     }
 
-*/
+    fn find_var_type(&self, name: Symbol) -> ResolvedType {
+        let mut ret = None;
+        self.inner_first_visit(|s| {
+            if let Some(v) = s.values.get(&name) {
+                match v {
+                    Item::Parameter(_, t) => {
+                        ret = Some(t.clone());
+                        return true;
+                    }
+                    _ => {}
+                }
+            };
+            false
+        });
+        return ResolvedType(Spanned {
+            loc: unimplemented!(),
+            value: ResolvedType_::UnKnown,
+        });
+    }
+    fn find_name_access_chain_type(&self, s: &NameAccessChain) -> ResolvedType {
+        unimplemented!();
+    }
+
+    fn resolve_type(&self, ty: &Type) -> ResolvedType {
+        let r = match &ty.value {
+            Type_::Apply(ref chain, types) => {
+                let chain_ty = self.resolve_name_access_chain_type(chain);
+                let _types: Vec<_> = types.iter().map(|ty| self.resolve_type(ty)).collect();
+                return chain_ty;
+            }
+            Type_::Ref(m, ref b) => ResolvedType_::Ref(*m, Box::new(self.resolve_type(b.as_ref()))),
+            Type_::Fun(ref parameters, ref ret) => {
+                let parameters: Vec<_> = parameters.iter().map(|v| self.resolve_type(v)).collect();
+                let ret = self.resolve_type(ret.as_ref());
+                ResolvedType_::Fun(vec![], parameters, Box::new(ret))
+            }
+            Type_::Unit => ResolvedType_::Unit,
+            Type_::Multiple(ref types) => {
+                let types: Vec<_> = types.iter().map(|v| self.resolve_type(v)).collect();
+                ResolvedType_::Multiple(types)
+            }
+        };
+
+        ResolvedType(Spanned {
+            loc: ty.loc,
+            value: r,
+        })
+    }
+}
+
+fn get_name_access_chain_loc(chain: &NameAccessChain) -> Loc {
+    unimplemented!()
+}
+
+/// RAII type pop on `enter_scope`.
+struct ScopesGuarder(Scopes);
+
+impl ScopesGuarder {
+    fn new(s: Scopes) -> Self {
+        Self(s)
+    }
+}
+
+impl Drop for ScopesGuarder {
+    fn drop(&mut self) {
+        self.0.scopes.as_ref().borrow_mut().pop().unwrap();
+    }
+}
 
 #[test]
 fn xxxx() {
     let s = Scopes::default();
     s.enter_scope(|s| s.enter_scope(|s| s.enter_scope(|_| {})));
 }
+
+const UNKNOWN_TYPE: ResolvedType = ResolvedType::mk_default(Loc::new(FileHash::empty(), 0, 0));

@@ -44,8 +44,6 @@ pub struct BorrowNative {
     pub read_op: String,
     /// Name of a Write operation for a given type (in Boogie)
     pub write_op: String,
-    /// Method's type parameter index describing a give type
-    pub tparam_idx: usize,
 }
 
 impl BorrowNative {
@@ -55,7 +53,6 @@ impl BorrowNative {
         name: String,
         read_op: String,
         write_op: String,
-        tparam_idx: usize,
     ) -> Self {
         BorrowNative {
             mod_addr,
@@ -63,7 +60,6 @@ impl BorrowNative {
             name,
             read_op,
             write_op,
-            tparam_idx,
         }
     }
 }

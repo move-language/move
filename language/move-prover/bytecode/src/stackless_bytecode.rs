@@ -298,7 +298,7 @@ pub enum BorrowEdge {
     /// Field borrow with static offset.
     Field(QualifiedInstId<StructId>, usize),
     /// Vector borrow with dynamic index.
-    Index((String, String, Type)),
+    Index((String, String)),
     /// Composed sequence of edges.
     Hyper(Vec<BorrowEdge>),
 }

@@ -71,7 +71,6 @@ use crate::{
         DELEGATE_INVARIANTS_TO_CALLER_PRAGMA, DISABLE_INVARIANTS_IN_BODY_PRAGMA, FRIEND_PRAGMA,
         INTRINSIC_PRAGMA, OPAQUE_PRAGMA, VERIFY_PRAGMA,
     },
-    project_2nd,
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type, TypeDisplayContext, TypeUnificationAdapter, Variance},
 };
@@ -1172,7 +1171,7 @@ impl GlobalEnv {
         loc: Loc,
         attributes: Vec<Attribute>,
         arg_names: Vec<Symbol>,
-        type_arg_names: Vec<(Symbol, Type)>,
+        type_arg_names: Vec<Symbol>,
         spec: Spec,
     ) -> FunctionData {
         let handle_idx = module.function_def_at(def_idx).function;
@@ -1183,7 +1182,7 @@ impl GlobalEnv {
             def_idx,
             handle_idx,
             arg_names,
-            type_args: type_arg_names,
+            type_arg_names,
             spec,
             called_funs: Default::default(),
             calling_funs: Default::default(),
@@ -2932,9 +2931,9 @@ pub struct FunctionData {
     /// List of function argument names. Not in bytecode but obtained from AST.
     arg_names: Vec<Symbol>,
 
-    /// List of type arguments. Not in bytecode but obtained from AST.
+    /// List of type argument names. Not in bytecode but obtained from AST.
     #[allow(unused)]
-    type_args: Vec<(Symbol, Type)>,
+    type_arg_names: Vec<Symbol>,
 
     /// Specification associated with this function.
     spec: Spec,
@@ -2962,7 +2961,7 @@ impl FunctionData {
             def_idx,
             handle_idx,
             arg_names: vec![],
-            type_args: vec![],
+            type_arg_names: vec![],
             spec: Spec::default(),
             called_funs: Default::default(),
             calling_funs: Default::default(),
@@ -3296,11 +3295,6 @@ impl<'env> FunctionEnv<'env> {
             return friend_env.get_transitive_friend();
         }
         self.clone()
-    }
-
-    /// Returns types of the type parameters.
-    pub fn get_type_parameter_types(&self) -> Vec<Type> {
-        project_2nd(&self.data.type_args)
     }
 
     /// Returns the type parameters associated with this function.

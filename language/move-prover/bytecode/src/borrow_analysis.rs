@@ -431,7 +431,7 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
 fn get_borrow_native_info(
     fun_env: &FunctionEnv,
     borrow_natives: &Vec<BorrowNative>,
-) -> Option<(String, String, usize)> {
+) -> Option<(String, String)> {
     if !fun_env.is_native() {
         return None;
     }
@@ -441,7 +441,7 @@ fn get_borrow_native_info(
             fun_env.module_env.symbol_pool().make(&n.mod_name),
         );
         if fun_env.module_env.get_name() == &mod_name && fun_env.get_full_name_str() == n.name {
-            return Some((n.read_op.clone(), n.write_op.clone(), n.tparam_idx));
+            return Some((n.read_op.clone(), n.write_op.clone()));
         }
     }
     None
@@ -460,25 +460,15 @@ fn native_annotation(
         let mut an = BorrowAnnotation::default();
         let param_node = BorrowNode::Reference(0);
         let return_node = BorrowNode::ReturnPlaceholder(0);
-        let type_args = fun_env.get_type_parameter_types();
-        let (read_aggregate, update_aggregate, borrow_type) =
-            if fun_env.is_well_known(VECTOR_BORROW_MUT) {
-                (
-                    "ReadVec".to_string(),
-                    "UpdateVec".to_string(),
-                    type_args[0].clone(),
-                )
-            } else if fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT) {
-                (
-                    "GetTable".to_string(),
-                    "UpdateTable".to_string(),
-                    type_args[1].clone(),
-                )
-            } else {
-                let (r, u, i) = borrow_native_info.unwrap();
-                (r, u, type_args[i].clone())
-            };
-        let edge = BorrowEdge::Index((read_aggregate, update_aggregate, borrow_type));
+        let (read_aggregate, update_aggregate) = if fun_env.is_well_known(VECTOR_BORROW_MUT) {
+            ("ReadVec".to_string(), "UpdateVec".to_string())
+        } else if fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT) {
+            ("GetTable".to_string(), "UpdateTable".to_string())
+        } else {
+            let (r, u) = borrow_native_info.unwrap();
+            (r, u)
+        };
+        let edge = BorrowEdge::Index((read_aggregate, update_aggregate));
         an.summary
             .borrowed_by
             .entry(param_node)

@@ -457,7 +457,16 @@ impl<'env> SpecTranslator<'env> {
                     new_spec_trans.translate_exp(&info.range);
                     emit!(new_spec_trans.writer, ", {})", &var_decl.0);
                 }
-                _ => {}
+                Type::Primitive(_)
+                | Type::Tuple(_)
+                | Type::Struct(_, _, _)
+                | Type::TypeParameter(_)
+                | Type::Reference(_, _)
+                | Type::Fun(_, _)
+                | Type::TypeDomain(_)
+                | Type::ResourceDomain(_, _, _)
+                | Type::Error
+                | Type::Var(_) => {}
             }
             emitln!(new_spec_trans.writer, " &&");
             new_spec_trans.translate_exp(&info.condition);
@@ -1108,7 +1117,16 @@ impl<'env> SpecTranslator<'env> {
                     emit!(self.writer, "; ");
                     range_tmps.insert(var.name, range_tmp);
                 }
-                _ => {}
+                Type::Primitive(_)
+                | Type::Tuple(_)
+                | Type::Struct(_, _, _)
+                | Type::TypeParameter(_)
+                | Type::Reference(_, _)
+                | Type::Fun(_, _)
+                | Type::TypeDomain(_)
+                | Type::ResourceDomain(_, _, _)
+                | Type::Error
+                | Type::Var(_) => unreachable!(),
             }
         }
         // Translate quantified variables.
@@ -1220,7 +1238,14 @@ impl<'env> SpecTranslator<'env> {
                         quant_var,
                     );
                 }
-                _ => panic!("unexpected type"),
+                Type::Primitive(_)
+                | Type::Tuple(_)
+                | Type::Struct(_, _, _)
+                | Type::TypeParameter(_)
+                | Type::Reference(_, _)
+                | Type::Fun(_, _)
+                | Type::Error
+                | Type::Var(_) => panic!("unexpected type"),
             }
             separator = connective;
         }

@@ -1983,7 +1983,27 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     Value::Vector(b)
                 }
             },
-            (_, _) => {
+            (Type::Primitive(_), MoveValue::Vector(_))
+            | (Type::Primitive(_), MoveValue::Struct(_))
+            | (Type::Tuple(_), MoveValue::Vector(_))
+            | (Type::Tuple(_), MoveValue::Struct(_))
+            | (Type::Vector(_), MoveValue::Struct(_))
+            | (Type::Struct(_, _, _), MoveValue::Vector(_))
+            | (Type::Struct(_, _, _), MoveValue::Struct(_))
+            | (Type::TypeParameter(_), MoveValue::Vector(_))
+            | (Type::TypeParameter(_), MoveValue::Struct(_))
+            | (Type::Reference(_, _), MoveValue::Vector(_))
+            | (Type::Reference(_, _), MoveValue::Struct(_))
+            | (Type::Fun(_, _), MoveValue::Vector(_))
+            | (Type::Fun(_, _), MoveValue::Struct(_))
+            | (Type::TypeDomain(_), MoveValue::Vector(_))
+            | (Type::TypeDomain(_), MoveValue::Struct(_))
+            | (Type::ResourceDomain(_, _, _), MoveValue::Vector(_))
+            | (Type::ResourceDomain(_, _, _), MoveValue::Struct(_))
+            | (Type::Error, MoveValue::Vector(_))
+            | (Type::Error, MoveValue::Struct(_))
+            | (Type::Var(_), MoveValue::Vector(_))
+            | (Type::Var(_), MoveValue::Struct(_)) => {
                 self.error(
                     loc,
                     &format!("Not yet supported constant value: {:?}", value),

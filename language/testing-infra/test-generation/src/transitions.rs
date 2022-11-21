@@ -140,11 +140,102 @@ pub fn stack_top_is_castable_to(state: &AbstractState, typ: SignatureToken) -> b
                 ) || stack_has(
                     state,
                     0,
+                    Some(AbstractValue::new_primitive(SignatureToken::U16)),
+                ) || stack_has(
+                    state,
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::U32)),
+                ) || stack_has(
+                    state,
+                    0,
                     Some(AbstractValue::new_primitive(SignatureToken::U64)),
                 )
             }
-            SignatureToken::U128 => true,
-            _ => false,
+            SignatureToken::U16 => {
+                stack_has(
+                    state,
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::U8)),
+                ) || stack_has(
+                    state,
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::U16)),
+                )
+            }
+            SignatureToken::U32 => {
+                stack_has(
+                    state,
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::U8)),
+                ) || stack_has(
+                    state,
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::U16)),
+                ) || stack_has(
+                    state,
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::U32)),
+                )
+            }
+            SignatureToken::U128 => {
+                stack_has(
+                    state,
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::U8)),
+                ) || stack_has(
+                    state,
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::U16)),
+                ) || stack_has(
+                    state,
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::U32)),
+                ) || stack_has(
+                    state,
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::U64)),
+                ) || stack_has(
+                    state,
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::U128)),
+                )
+            }
+            SignatureToken::U256 => {
+                stack_has(
+                    state,
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::U8)),
+                ) || stack_has(
+                    state,
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::U16)),
+                ) || stack_has(
+                    state,
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::U32)),
+                ) || stack_has(
+                    state,
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::U64)),
+                ) || stack_has(
+                    state,
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::U128)),
+                ) || stack_has(
+                    state,
+                    0,
+                    Some(AbstractValue::new_primitive(SignatureToken::U256)),
+                )
+            }
+            SignatureToken::Bool
+            | SignatureToken::Address
+            | SignatureToken::Signer
+            | SignatureToken::Vector(_)
+            | SignatureToken::Struct(_)
+            | SignatureToken::StructInstantiation(_, _)
+            | SignatureToken::Reference(_)
+            | SignatureToken::MutableReference(_)
+            | SignatureToken::TypeParameter(_) => false,
         }
 }
 
@@ -242,7 +333,19 @@ pub fn stack_ref_polymorphic_eq(state: &AbstractState, index1: usize, index2: us
                     };
                     return Some(abstract_value_inner) == state.stack_peek(index2);
                 }
-                _ => return false,
+                SignatureToken::Bool
+                | SignatureToken::U8
+                | SignatureToken::U64
+                | SignatureToken::U128
+                | SignatureToken::Address
+                | SignatureToken::Signer
+                | SignatureToken::Vector(_)
+                | SignatureToken::Struct(_)
+                | SignatureToken::StructInstantiation(_, _)
+                | SignatureToken::TypeParameter(_)
+                | SignatureToken::U16
+                | SignatureToken::U32
+                | SignatureToken::U256 => return false,
             }
         }
     }
@@ -458,7 +561,19 @@ pub fn stack_has_struct(state: &AbstractState, struct_index: StructDefinitionInd
                     let struct_def = state.module.module.struct_def_at(struct_index);
                     return struct_handle == struct_def.struct_handle;
                 }
-                _ => return false,
+                SignatureToken::Bool
+                | SignatureToken::U8
+                | SignatureToken::U64
+                | SignatureToken::U128
+                | SignatureToken::Address
+                | SignatureToken::Signer
+                | SignatureToken::Vector(_)
+                | SignatureToken::Reference(_)
+                | SignatureToken::MutableReference(_)
+                | SignatureToken::TypeParameter(_)
+                | SignatureToken::U16
+                | SignatureToken::U32
+                | SignatureToken::U256 => return false,
             }
         }
     }
@@ -545,7 +660,19 @@ pub fn stack_has_reference(state: &AbstractState, index: usize, mutability: Muta
                         return true;
                     }
                 }
-                _ => return false,
+                SignatureToken::Bool
+                | SignatureToken::U8
+                | SignatureToken::U64
+                | SignatureToken::U128
+                | SignatureToken::Address
+                | SignatureToken::Signer
+                | SignatureToken::Vector(_)
+                | SignatureToken::Struct(_)
+                | SignatureToken::StructInstantiation(_, _)
+                | SignatureToken::TypeParameter(_)
+                | SignatureToken::U16
+                | SignatureToken::U32
+                | SignatureToken::U256 => return false,
             }
         }
     }
@@ -629,7 +756,22 @@ pub fn stack_unpack_struct_instantiation(
                     None => panic!("Invalid unpack -- non-struct def value found at top of stack"),
                 }
             }
-            _ => panic!("Invalid unpack -- non-struct value found at top of stack"),
+            SignatureToken::Bool
+            | SignatureToken::U8
+            | SignatureToken::U64
+            | SignatureToken::U128
+            | SignatureToken::Address
+            | SignatureToken::Signer
+            | SignatureToken::Vector(_)
+            | SignatureToken::Struct(_)
+            | SignatureToken::Reference(_)
+            | SignatureToken::MutableReference(_)
+            | SignatureToken::TypeParameter(_)
+            | SignatureToken::U16
+            | SignatureToken::U32
+            | SignatureToken::U256 => {
+                panic!("Invalid unpack -- non-struct value found at top of stack")
+            }
         }
     } else {
         panic!("Invalid unpack -- precondition not satisfied");
@@ -743,7 +885,19 @@ pub fn register_dereference(state: &AbstractState) -> Result<AbstractState, VMEr
                 });
                 Ok(state)
             }
-            _ => Err(VMError::new(
+            SignatureToken::Bool
+            | SignatureToken::U8
+            | SignatureToken::U64
+            | SignatureToken::U128
+            | SignatureToken::Address
+            | SignatureToken::Signer
+            | SignatureToken::Vector(_)
+            | SignatureToken::Struct(_)
+            | SignatureToken::StructInstantiation(_, _)
+            | SignatureToken::TypeParameter(_)
+            | SignatureToken::U16
+            | SignatureToken::U32
+            | SignatureToken::U256 => Err(VMError::new(
                 "Register does not contain a reference".to_string(),
             )),
         }

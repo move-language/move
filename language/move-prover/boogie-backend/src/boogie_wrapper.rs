@@ -1433,7 +1433,13 @@ impl ModelValue {
                 // effect the verification outcome, we may not have much need for seeing it.
                 Some(PrettyDoc::text("<generic>"))
             }
-            _ => None,
+            Type::Tuple(_)
+            | Type::Primitive(_)
+            | Type::Fun(_, _)
+            | Type::TypeDomain(_)
+            | Type::ResourceDomain(_, _, _)
+            | Type::Error
+            | Type::Var(_) => None,
         }
     }
 

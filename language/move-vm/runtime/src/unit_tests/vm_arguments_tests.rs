@@ -20,6 +20,7 @@ use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
     resolver::{ModuleResolver, ResourceResolver},
+    u256::U256,
     value::{serialize_values, MoveValue},
     vm_status::{StatusCode, StatusType},
 };
@@ -389,6 +390,23 @@ fn good_signatures_and_arguments() -> Vec<(Signature, Vec<MoveValue>)> {
         (
             Signature(vec![SignatureToken::U128]),
             vec![MoveValue::U128(0)],
+        ),
+        // U8 arg
+        (Signature(vec![SignatureToken::U8]), vec![MoveValue::U8(0)]),
+        // U16 arg
+        (
+            Signature(vec![SignatureToken::U16]),
+            vec![MoveValue::U16(0)],
+        ),
+        // U32 arg
+        (
+            Signature(vec![SignatureToken::U32]),
+            vec![MoveValue::U32(0)],
+        ),
+        // U256 arg
+        (
+            Signature(vec![SignatureToken::U256]),
+            vec![MoveValue::U256(U256::zero())],
         ),
         // All constants
         (

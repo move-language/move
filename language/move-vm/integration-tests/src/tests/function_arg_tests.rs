@@ -8,6 +8,7 @@ use move_core_types::{
     account_address::AccountAddress,
     identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
+    u256::U256,
     value::{MoveStruct, MoveValue},
     vm_status::StatusCode,
 };
@@ -208,6 +209,24 @@ fn expected_A_B__A_u64_vector_B_got_u8_u128__u8_u64_vector_u128() {
             MoveValue::U8(0),
             MoveValue::U64(0),
             MoveValue::Vector(vec![MoveValue::U128(0), MoveValue::U128(0)]),
+        ],
+    )
+}
+
+#[test]
+#[allow(non_snake_case)]
+fn expected_A_B__A_u32_vector_B_got_u16_u256__u16_u32_vector_u256() {
+    expect_ok_generic(
+        &["A", "B"],
+        &["A", "u32", "vector<B>"],
+        vec![TypeTag::U16, TypeTag::U256],
+        vec![
+            MoveValue::U16(0),
+            MoveValue::U32(0),
+            MoveValue::Vector(vec![
+                MoveValue::U256(U256::from(0u8)),
+                MoveValue::U256(U256::from(0u8)),
+            ]),
         ],
     )
 }

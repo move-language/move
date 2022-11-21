@@ -94,7 +94,15 @@ impl<'a> Instrumenter<'a> {
                     || inst.iter().any(|t| self.is_pack_ref_ty(t))
             }
             Vector(et) => self.is_pack_ref_ty(et.as_ref()),
-            _ => false,
+            Primitive(_) |
+            Tuple(_) |
+            TypeParameter(_) |
+            Reference(_, _) |
+            Fun(_, _) |
+            TypeDomain(_) |
+            ResourceDomain(_, _, _) |
+            Error |
+            Var(_) => false,
         }
     }
 

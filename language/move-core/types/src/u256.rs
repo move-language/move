@@ -5,8 +5,22 @@ use ethnum::U256 as EthnumU256;
 use num::{bigint::Sign, BigInt};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::strategy::BoxedStrategy;
-#[cfg(any(test, feature = "fuzzing"))]
-use proptest::strategy::Strategy;
+use rand::distributions::uniform::SampleUniform;
+use rand::distributions::uniform::UniformSampler;
+use rand::distributions::Distribution;
+use rand::distributions::Standard;
+use rand::Rng;
+use std::ops::Add;
+use std::ops::AddAssign;
+use std::ops::BitAndAssign;
+use std::ops::Div;
+use std::ops::DivAssign;
+use std::ops::Mul;
+use std::ops::MulAssign;
+use std::ops::Rem;
+use std::ops::RemAssign;
+use std::ops::Sub;
+use std::ops::SubAssign;
 use std::{
     fmt,
     mem::size_of,
@@ -136,6 +150,15 @@ impl Serialize for U256 {
     }
 }
 
+impl Shl<u32> for U256 {
+    type Output = Self;
+
+    fn shl(self, rhs: u32) -> Self::Output {
+        let Self(lhs) = self;
+        Self(lhs << rhs)
+    }
+}
+
 impl Shl<u8> for U256 {
     type Output = Self;
 
@@ -184,6 +207,85 @@ impl BitXor<U256> for U256 {
     }
 }
 
+impl BitAndAssign<U256> for U256 {
+    fn bitand_assign(&mut self, rhs: U256) {
+        *self = *self & rhs;
+    }
+}
+
+// Ignores overflows
+impl Add<U256> for U256 {
+    type Output = Self;
+
+    fn add(self, rhs: U256) -> Self::Output {
+        self.wrapping_add(rhs)
+    }
+}
+
+impl AddAssign<U256> for U256 {
+    fn add_assign(&mut self, rhs: U256) {
+        *self = *self + rhs;
+    }
+}
+
+// Ignores underflows
+impl Sub<U256> for U256 {
+    type Output = Self;
+
+    fn sub(self, rhs: U256) -> Self::Output {
+        self.wrapping_sub(rhs)
+    }
+}
+
+impl SubAssign<U256> for U256 {
+    fn sub_assign(&mut self, rhs: U256) {
+        *self = *self - rhs;
+    }
+}
+
+// Ignores overflows
+impl Mul<U256> for U256 {
+    type Output = Self;
+
+    fn mul(self, rhs: U256) -> Self::Output {
+        self.wrapping_mul(rhs)
+    }
+}
+
+impl MulAssign<U256> for U256 {
+    fn mul_assign(&mut self, rhs: U256) {
+        *self = *self * rhs;
+    }
+}
+
+impl Div<U256> for U256 {
+    type Output = Self;
+
+    fn div(self, rhs: U256) -> Self::Output {
+        Self(self.0 / rhs.0)
+    }
+}
+
+impl DivAssign<U256> for U256 {
+    fn div_assign(&mut self, rhs: U256) {
+        *self = *self / rhs;
+    }
+}
+
+impl Rem<U256> for U256 {
+    type Output = Self;
+
+    fn rem(self, rhs: U256) -> Self::Output {
+        Self(self.0 % rhs.0)
+    }
+}
+
+impl RemAssign<U256> for U256 {
+    fn rem_assign(&mut self, rhs: U256) {
+        *self = Self(self.0 % rhs.0);
+    }
+}
+
 impl U256 {
     /// Zero value as U256
     pub const fn zero() -> Self {
@@ -217,6 +319,11 @@ impl U256 {
         let mut bytes = [0u8; U256_NUM_BYTES];
         self.0.to_little_endian(&mut bytes);
         bytes
+    }
+
+    /// Leading zeros of the number
+    pub fn leading_zeros(&self) -> u32 {
+        self.0.leading_zeros()
     }
 
     // Unchecked downcasting. Values as truncated if larger than target max
@@ -298,6 +405,48 @@ impl U256 {
             Ok(w) => w,
             Err(_) => panic!("Fatal! Downcast failed"),
         }
+    }
+
+    /// Wrapping integer addition. Computes self + rhs,  wrapping around at the boundary of the type.
+    /// By definition in std::instrinsics, a.wrapping_add(b) = (a + b) % (2^N), where N is bit width
+    pub fn wrapping_add(self, rhs: Self) -> Self {
+        Self(self.0.overflowing_add(rhs.0).0)
+    }
+
+    /// Wrapping integer subtraction. Computes self - rhs,  wrapping around at the boundary of the type.
+    /// By definition in std::instrinsics, a.wrapping_add(b) = (a - b) % (2^N), where N is bit width
+    pub fn wrapping_sub(self, rhs: Self) -> Self {
+        Self(self.0.overflowing_sub(rhs.0).0)
+    }
+
+    /// Wrapping integer multiplication. Computes self * rhs,  wrapping around at the boundary of the type.
+    /// By definition in std::instrinsics, a.wrapping_mul(b) = (a * b) % (2^N), where N is bit width
+    pub fn wrapping_mul(self, rhs: Self) -> Self {
+        Self(self.0.overflowing_mul(rhs.0).0)
+    }
+
+    /// Implementation of widenining multiply
+    /// https://github.com/rust-random/rand/blob/master/src/distributions/utils.rs
+    #[inline(always)]
+    fn wmul(self, b: Self) -> (Self, Self) {
+        let half = 128;
+        #[allow(non_snake_case)]
+        let LOWER_MASK: U256 = Self::max_value() >> half;
+
+        let mut low = (self & LOWER_MASK).wrapping_mul(b & LOWER_MASK);
+        let mut t = low >> half;
+        low &= LOWER_MASK;
+        t += (self >> half).wrapping_mul(b & LOWER_MASK);
+        low += (t & LOWER_MASK) << half;
+        let mut high = t >> half;
+        t = low >> half;
+        low &= LOWER_MASK;
+        t += (b >> half).wrapping_mul(self & LOWER_MASK);
+        low += (t & LOWER_MASK) << half;
+        high += t >> half;
+        high += (self >> half).wrapping_mul(b >> half);
+
+        (high, low)
     }
 }
 
@@ -412,24 +561,143 @@ impl TryFrom<U256> for u128 {
     }
 }
 
+impl Distribution<U256> for Standard {
+    #[inline]
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> U256 {
+        let mut dest = [0; U256_NUM_BYTES];
+        rng.fill_bytes(&mut dest);
+        U256::from_le_bytes(&dest)
+    }
+}
+
+// Rand impl below are inspired by u128 impl found in https://rust-random.github.io/rand/src/rand/distributions/uniform.rs.html
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde1", derive(Serialize, Deserialize))]
+pub struct UniformU256 {
+    low: U256,
+    range: U256,
+    z: U256,
+}
+
+impl SampleUniform for U256 {
+    type Sampler = UniformU256;
+}
+
+impl UniformSampler for UniformU256 {
+    type X = U256;
+
+    fn new<B1, B2>(low: B1, high: B2) -> Self
+    where
+        B1: rand::distributions::uniform::SampleBorrow<Self::X> + Sized,
+        B2: rand::distributions::uniform::SampleBorrow<Self::X> + Sized,
+    {
+        let low = *low.borrow();
+        let high = *high.borrow();
+        assert!(low < high, "Uniform::new called with `low >= high`");
+        UniformSampler::new_inclusive(low, high - U256::one())
+    }
+
+    fn new_inclusive<B1, B2>(low: B1, high: B2) -> Self
+    where
+        B1: rand::distributions::uniform::SampleBorrow<Self::X> + Sized,
+        B2: rand::distributions::uniform::SampleBorrow<Self::X> + Sized,
+    {
+        let low = *low.borrow();
+        let high = *high.borrow();
+        assert!(
+            low <= high,
+            "Uniform::new_inclusive called with `low > high`"
+        );
+        let unsigned_max = U256::max_value();
+
+        let range = high.wrapping_sub(low).wrapping_add(U256::one());
+
+        let ints_to_reject = if range > U256::zero() {
+            (unsigned_max - range) + U256::one() % range
+        } else {
+            U256::zero()
+        };
+
+        UniformU256 {
+            low,
+            range,
+            z: ints_to_reject,
+        }
+    }
+
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Self::X {
+        let range = self.range;
+        if range > U256::zero() {
+            let unsigned_max = U256::max_value();
+            let zone = unsigned_max - self.z;
+            loop {
+                let v: U256 = rng.gen();
+                let (hi, lo) = v.wmul(range);
+                if lo <= zone {
+                    return self.low.wrapping_add(hi);
+                }
+            }
+        } else {
+            // Sample from the entire integer range.
+            rng.gen()
+        }
+    }
+
+    fn sample_single<R: rand::Rng + ?Sized, B1, B2>(low: B1, high: B2, rng: &mut R) -> Self::X
+    where
+        B1: rand::distributions::uniform::SampleBorrow<Self::X> + Sized,
+        B2: rand::distributions::uniform::SampleBorrow<Self::X> + Sized,
+    {
+        let low = *low.borrow();
+        let high = *high.borrow();
+        assert!(low < high, "UniformSampler::sample_single: low >= high");
+        Self::sample_single_inclusive(low, high - U256::one(), rng)
+    }
+
+    fn sample_single_inclusive<R: rand::Rng + ?Sized, B1, B2>(
+        low: B1,
+        high: B2,
+        rng: &mut R,
+    ) -> Self::X
+    where
+        B1: rand::distributions::uniform::SampleBorrow<Self::X> + Sized,
+        B2: rand::distributions::uniform::SampleBorrow<Self::X> + Sized,
+    {
+        let low = *low.borrow();
+        let high = *high.borrow();
+        assert!(
+            low <= high,
+            "UniformSampler::sample_single_inclusive: low > high"
+        );
+        let range = high.wrapping_sub(low).wrapping_add(U256::one());
+        // If the above resulted in wrap-around to 0, the range is U256::MIN..=U256::MAX,
+        // and any integer will do.
+        if range == U256::zero() {
+            return rng.gen();
+        }
+        // conservative but fast approximation. `- 1` is necessary to allow the
+        // same comparison without bias.
+        let zone = (range << range.leading_zeros()).wrapping_sub(U256::one());
+
+        loop {
+            let v: U256 = rng.gen();
+            let (hi, lo) = v.wmul(range);
+            if lo <= zone {
+                return low.wrapping_add(hi);
+            }
+        }
+    }
+}
+
 #[cfg(any(test, feature = "fuzzing"))]
 impl proptest::prelude::Arbitrary for U256 {
     type Strategy = BoxedStrategy<Self>;
     type Parameters = ();
     fn arbitrary_with(_params: Self::Parameters) -> Self::Strategy {
-        // TODO (ade): improve this as is it not exhaustive
-        proptest::bits::u64::masked(0xFFFFFFFF)
-            .prop_map(|u| {
-                let bytes1 = u.to_le_bytes();
-                let mut bytes2: Vec<_> = bytes1.iter().copied().rev().collect();
-                bytes2.extend(bytes1);
-                bytes2.extend(bytes2.clone());
-                U256::from_le_bytes(
-                    &bytes2[..U256_NUM_BYTES]
-                        .try_into()
-                        .expect("Bytes should be 32 len"),
-                )
-            })
+        use proptest::strategy::Strategy as _;
+        proptest::arbitrary::any::<[u8; U256_NUM_BYTES]>()
+            .prop_map(|q| U256::from_le_bytes(&q))
             .boxed()
     }
 }
@@ -440,4 +708,19 @@ impl<'a> arbitrary::Arbitrary<'a> for U256 {
         let bytes = <[u8; U256_NUM_BYTES]>::arbitrary(u)?;
         Ok(U256::from_le_bytes(&bytes))
     }
+}
+
+#[test]
+fn wrapping_add() {
+    // a + b overflows U256::MAX by 100
+    // By definition in std::instrinsics, a.wrapping_add(b) = (a + b) % (2^N), where N is bit width
+
+    let a = U256::from(1234u32);
+    let b = U256::from_str_radix(
+        "115792089237316195423570985008687907853269984665640564039457584007913129638801",
+        10,
+    )
+    .unwrap();
+
+    assert!(a.wrapping_add(b) == U256::from(99u8));
 }

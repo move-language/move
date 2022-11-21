@@ -5,6 +5,7 @@
 use crate::{loaded_data::runtime_types::Type, values::*, views::*};
 use move_binary_format::errors::*;
 use move_core_types::account_address::AccountAddress;
+use move_core_types::u256::U256;
 
 #[test]
 fn locals() -> PartialVMResult<()> {
@@ -35,8 +36,22 @@ fn locals() -> PartialVMResult<()> {
 
 #[test]
 fn struct_pack_and_unpack() -> PartialVMResult<()> {
-    let vals = vec![Value::u8(10), Value::u64(20), Value::u128(30)];
-    let s = Struct::pack(vec![Value::u8(10), Value::u64(20), Value::u128(30)]);
+    let vals = vec![
+        Value::u8(10),
+        Value::u16(12),
+        Value::u32(15),
+        Value::u64(20),
+        Value::u128(30),
+        Value::u256(U256::max_value()),
+    ];
+    let s = Struct::pack(vec![
+        Value::u8(10),
+        Value::u16(12),
+        Value::u32(15),
+        Value::u64(20),
+        Value::u128(30),
+        Value::u256(U256::max_value()),
+    ]);
     let unpacked: Vec<_> = s.unpack()?.collect();
 
     assert!(vals.len() == unpacked.len());
@@ -164,13 +179,19 @@ fn legacy_struct_abstract_memory_size_consistenty() -> PartialVMResult<()> {
 fn legacy_val_abstract_memory_size_consistency() -> PartialVMResult<()> {
     let vals = [
         Value::u8(0),
+        Value::u16(0),
+        Value::u32(0),
         Value::u64(0),
         Value::u128(0),
+        Value::u256(U256::zero()),
         Value::bool(true),
         Value::address(AccountAddress::ZERO),
         Value::vector_u8([0, 1, 2]),
+        Value::vector_u16([0, 1, 2]),
+        Value::vector_u32([0, 1, 2]),
         Value::vector_u64([]),
         Value::vector_u128([1, 2, 3, 4]),
+        Value::vector_u256([1, 2, 3, 4].iter().map(|q| U256::from(*q as u64))),
         Value::struct_(Struct::pack([])),
         Value::struct_(Struct::pack([Value::u8(0), Value::bool(false)])),
         Value::vector_for_testing_only([]),

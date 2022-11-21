@@ -1342,7 +1342,17 @@ impl<'env> FunctionTranslator<'env> {
                             Type::Primitive(PrimitiveType::U64) => format!("U64{}", unchecked),
                             Type::Primitive(PrimitiveType::U128) => format!("U128{}", unchecked),
                             Type::Primitive(PrimitiveType::U256) => format!("U256{}", unchecked),
-                            _ => unreachable!(),
+                            Type::Primitive(_)
+                            | Type::Tuple(_)
+                            | Type::Vector(_)
+                            | Type::Struct(_, _, _)
+                            | Type::TypeParameter(_)
+                            | Type::Reference(_, _)
+                            | Type::Fun(_, _)
+                            | Type::TypeDomain(_)
+                            | Type::ResourceDomain(_, _, _)
+                            | Type::Error
+                            | Type::Var(_) => unreachable!(),
                         };
                         emitln!(
                             writer,
@@ -1376,7 +1386,17 @@ impl<'env> FunctionTranslator<'env> {
                             Type::Primitive(PrimitiveType::U64) => "U64",
                             Type::Primitive(PrimitiveType::U128) => "U128",
                             Type::Primitive(PrimitiveType::U256) => "U256",
-                            _ => unreachable!(),
+                            Type::Primitive(_)
+                            | Type::Tuple(_)
+                            | Type::Vector(_)
+                            | Type::Struct(_, _, _)
+                            | Type::TypeParameter(_)
+                            | Type::Reference(_, _)
+                            | Type::Fun(_, _)
+                            | Type::TypeDomain(_)
+                            | Type::ResourceDomain(_, _, _)
+                            | Type::Error
+                            | Type::Var(_) => unreachable!(),
                         };
                         emitln!(
                             writer,
@@ -1422,7 +1442,17 @@ impl<'env> FunctionTranslator<'env> {
                             Type::Primitive(PrimitiveType::U64) => "U64",
                             Type::Primitive(PrimitiveType::U128) => "U128",
                             Type::Primitive(PrimitiveType::U256) => "U256",
-                            _ => unreachable!(),
+                            Type::Primitive(_)
+                            | Type::Tuple(_)
+                            | Type::Vector(_)
+                            | Type::Struct(_, _, _)
+                            | Type::TypeParameter(_)
+                            | Type::Reference(_, _)
+                            | Type::Fun(_, _)
+                            | Type::TypeDomain(_)
+                            | Type::ResourceDomain(_, _, _)
+                            | Type::Error
+                            | Type::Var(_) => unreachable!(),
                         };
                         emitln!(
                             writer,
@@ -1444,7 +1474,17 @@ impl<'env> FunctionTranslator<'env> {
                             Type::Primitive(PrimitiveType::U64) => "U64",
                             Type::Primitive(PrimitiveType::U128) => "U128",
                             Type::Primitive(PrimitiveType::U256) => "U256",
-                            _ => unreachable!(),
+                            Type::Primitive(_)
+                            | Type::Tuple(_)
+                            | Type::Vector(_)
+                            | Type::Struct(_, _, _)
+                            | Type::TypeParameter(_)
+                            | Type::Reference(_, _)
+                            | Type::Fun(_, _)
+                            | Type::TypeDomain(_)
+                            | Type::ResourceDomain(_, _, _)
+                            | Type::Error
+                            | Type::Var(_) => unreachable!(),
                         };
                         emitln!(
                             writer,
@@ -1951,6 +1991,14 @@ pub fn has_native_equality(env: &GlobalEnv, options: &BoogieOptions, ty: &Type) 
         Type::Struct(mid, sid, sinst) => {
             struct_has_native_equality(&env.get_struct_qid(mid.qualified(*sid)), sinst, options)
         }
-        _ => true,
+        Type::Primitive(_)
+        | Type::Tuple(_)
+        | Type::TypeParameter(_)
+        | Type::Reference(_, _)
+        | Type::Fun(_, _)
+        | Type::TypeDomain(_)
+        | Type::ResourceDomain(_, _, _)
+        | Type::Error
+        | Type::Var(_) => true,
     }
 }

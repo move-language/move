@@ -478,7 +478,7 @@ pub type BindWithRangeList = Spanned<Vec<BindWithRange>>;
 pub enum Value_ {
     // @<num>
     Address(LeadingNameAccess),
-    // <num>(u8|u64|u128)?
+    // <num>(u8|u16|u32|u64|u128|u256)?
     Num(Symbol),
     // false
     Bool(bool),

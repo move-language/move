@@ -1183,7 +1183,7 @@ impl GlobalEnv {
             def_idx,
             handle_idx,
             arg_names,
-            type_arg_names,
+            type_args: type_arg_names,
             spec,
             called_funs: Default::default(),
             calling_funs: Default::default(),
@@ -2932,9 +2932,9 @@ pub struct FunctionData {
     /// List of function argument names. Not in bytecode but obtained from AST.
     arg_names: Vec<Symbol>,
 
-    /// List of type argument names. Not in bytecode but obtained from AST.
+    /// List of type arguments. Not in bytecode but obtained from AST.
     #[allow(unused)]
-    type_arg_names: Vec<(Symbol, Type)>,
+    type_args: Vec<(Symbol, Type)>,
 
     /// Specification associated with this function.
     spec: Spec,
@@ -2962,7 +2962,7 @@ impl FunctionData {
             def_idx,
             handle_idx,
             arg_names: vec![],
-            type_arg_names: vec![],
+            type_args: vec![],
             spec: Spec::default(),
             called_funs: Default::default(),
             calling_funs: Default::default(),
@@ -3300,7 +3300,7 @@ impl<'env> FunctionEnv<'env> {
 
     /// Returns types of the type parameters.
     pub fn get_type_parameter_types(&self) -> Vec<Type> {
-        project_2nd(&self.data.type_arg_names)
+        project_2nd(&self.data.type_args)
     }
 
     /// Returns the type parameters associated with this function.

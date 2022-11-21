@@ -206,8 +206,9 @@ impl TryInto<MoveTypeLayout> for &FatType {
                     .collect::<PartialVMResult<Vec<_>>>()?,
             )),
             FatType::Signer => MoveTypeLayout::Signer,
-
-            _ => return Err(PartialVMError::new(StatusCode::ABORT_TYPE_MISMATCH_ERROR)),
+            FatType::Reference(_) | FatType::MutableReference(_) | FatType::TyParam(_) => {
+                return Err(PartialVMError::new(StatusCode::ABORT_TYPE_MISMATCH_ERROR))
+            }
         })
     }
 }

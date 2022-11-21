@@ -474,8 +474,18 @@ impl ValueImpl {
 
             (ContainerRef(l), ContainerRef(r)) => l.equals(r)?,
             (IndexedRef(l), IndexedRef(r)) => l.equals(r)?,
-
-            _ => {
+            (Invalid, _)
+            | (U8(_), _)
+            | (U16(_), _)
+            | (U32(_), _)
+            | (U64(_), _)
+            | (U128(_), _)
+            | (U256(_), _)
+            | (Bool(_), _)
+            | (Address(_), _)
+            | (Container(_), _)
+            | (ContainerRef(_), _)
+            | (IndexedRef(_), _) => {
                 return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                     .with_message(format!("cannot compare values: {:?}, {:?}", self, other)))
             }

@@ -123,7 +123,18 @@ impl<'a, T: MoveResolver + ?Sized> MoveValueAnnotator<'a, T> {
             .filter(|t| match t {
                 FatType::Signer => false,
                 FatType::Reference(inner) => !matches!(&**inner, FatType::Signer),
-                _ => true,
+                FatType::Bool
+                | FatType::U8
+                | FatType::U64
+                | FatType::U128
+                | FatType::Address
+                | FatType::Vector(_)
+                | FatType::Struct(_)
+                | FatType::MutableReference(_)
+                | FatType::TyParam(_)
+                | FatType::U16
+                | FatType::U32
+                | FatType::U256 => true,
             })
             .collect();
         anyhow::ensure!(
@@ -227,7 +238,17 @@ impl<'a, T: MoveResolver + ?Sized> MoveValueAnnotator<'a, T> {
             (MoveValue::Struct(s), FatType::Struct(ty)) => {
                 AnnotatedMoveValue::Struct(self.annotate_struct(s, ty.as_ref())?)
             }
-            _ => {
+            (MoveValue::U8(_), _)
+            | (MoveValue::U64(_), _)
+            | (MoveValue::U128(_), _)
+            | (MoveValue::Bool(_), _)
+            | (MoveValue::Address(_), _)
+            | (MoveValue::Vector(_), _)
+            | (MoveValue::Struct(_), _)
+            | (MoveValue::Signer(_), _)
+            | (MoveValue::U16(_), _)
+            | (MoveValue::U32(_), _)
+            | (MoveValue::U256(_), _) => {
                 return Err(anyhow!(
                     "Cannot annotate value {:?} with type {:?}",
                     value,

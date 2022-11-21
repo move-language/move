@@ -11,6 +11,7 @@ use move_core_types::{
     effects::{ChangeSet, Event},
     identifier::Identifier,
     language_storage::ModuleId,
+    u256::U256,
     value::{serialize_values, MoveValue},
     vm_status::StatusCode,
 };
@@ -32,7 +33,10 @@ fn fail_arg_deserialize() {
     // all of these should fail to deserialize because the functions expect u64 args
     let values = vec![
         MoveValue::U8(16),
+        MoveValue::U16(1006),
+        MoveValue::U32(16000),
         MoveValue::U128(512),
+        MoveValue::U256(U256::from(12345u32)),
         MoveValue::Bool(true),
     ];
     for value in values {

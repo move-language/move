@@ -592,7 +592,7 @@ impl AbilitySet {
         Ability_::Store,
         Ability_::Key,
     ];
-    /// Abilities for bool, u8, u64, u128, and address
+    /// Abilities for bool, u8, u16, u32, u64, u128, u256 and address
     pub const PRIMITIVES: [Ability_; 3] = [Ability_::Copy, Ability_::Drop, Ability_::Store];
     /// Abilities for &_ and &mut _
     pub const REFERENCES: [Ability_; 2] = [Ability_::Copy, Ability_::Drop];

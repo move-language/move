@@ -28,7 +28,8 @@ pub mod unique_set;
 //**************************************************************************************************
 
 pub use move_command_line_common::parser::{
-    parse_address_number as parse_address, parse_u128, parse_u64, parse_u8, NumberFormat,
+    parse_address_number as parse_address, parse_u128, parse_u16, parse_u256, parse_u32, parse_u64,
+    parse_u8, NumberFormat,
 };
 
 //**************************************************************************************************

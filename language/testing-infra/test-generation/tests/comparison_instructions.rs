@@ -11,8 +11,11 @@ mod common;
 
 const INTEGER_TYPES: &[SignatureToken] = &[
     SignatureToken::U8,
+    SignatureToken::U16,
+    SignatureToken::U32,
     SignatureToken::U64,
     SignatureToken::U128,
+    SignatureToken::U256,
 ];
 
 #[test]

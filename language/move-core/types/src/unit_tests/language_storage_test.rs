@@ -25,8 +25,11 @@ fn test_type_tag_deserialize_case_insensitive() {
         name: Identifier::from(IdentStr::new("TestStruct").unwrap()),
         type_params: vec![
             TypeTag::U8,
+            TypeTag::U16,
+            TypeTag::U32,
             TypeTag::U64,
             TypeTag::U128,
+            TypeTag::U256,
             TypeTag::Bool,
             TypeTag::Address,
             TypeTag::Signer,
@@ -36,14 +39,14 @@ fn test_type_tag_deserialize_case_insensitive() {
     let current_json = serde_json::to_string(&org_struct_tag).unwrap();
 
     let upper_case_json = format!(
-        r##"{{"address":"{}","module":"TestModule","name":"TestStruct","type_params":["U8","U64","U128","Bool","Address","Signer"]}}"##,
+        r##"{{"address":"{}","module":"TestModule","name":"TestStruct","type_params":["U8","U16","U32","U64","U128","U256","Bool","Address","Signer"]}}"##,
         AccountAddress::ONE
     );
     let upper_case_decoded = serde_json::from_str(upper_case_json.as_str()).unwrap();
     assert_eq!(org_struct_tag, upper_case_decoded);
 
     let lower_case_json = format!(
-        r##"{{"address":"{}","module":"TestModule","name":"TestStruct","type_args":["u8","u64","u128","bool","address","signer"]}}"##,
+        r##"{{"address":"{}","module":"TestModule","name":"TestStruct","type_args":["u8","u16","u32","u64","u128","u256","bool","address","signer"]}}"##,
         AccountAddress::ONE
     );
     let lower_case_decoded = serde_json::from_str(lower_case_json.as_str()).unwrap();

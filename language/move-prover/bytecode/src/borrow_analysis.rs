@@ -426,8 +426,8 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
     }
 }
 
-/// Returns read aggregate, write aggregate and type param index if fun_env matches one of the
-/// native functions implementing custom mutable borrow.
+/// Returns read aggregate and write aggregate if fun_env matches one of the native functions
+/// implementing custom mutable borrow.
 fn get_borrow_native_info(
     fun_env: &FunctionEnv,
     borrow_natives: &Vec<BorrowNative>,

@@ -95,13 +95,11 @@ module 0x42::TestShift {
         ensures result == x << 10u8;
     }
 
-    fun var_shift_l_incorrect(x: u64, a: u8): u64 {
+    fun var_shift_l_correct_1(x: u64, a: u8): u64 {
         x << a
     }
 
-    spec var_shift_l_incorrect {
-        // The spec allows bits to be shifted beyond destination.
-        // E.g., x = 2, a = 99
+    spec var_shift_l_correct_1 {
         ensures result == x << a;
     }
 
@@ -116,13 +114,11 @@ module 0x42::TestShift {
         ensures result == (x << a) % (1 << 64);
     }
 
-    fun var_shift_l_incorrect_u32(x: u32, a: u8): u32 {
+    fun var_shift_l_incorrect_u32_1(x: u32, a: u8): u32 {
         x << a
     }
 
-    spec var_shift_l_incorrect_u32 {
-        // The spec allows bits to be shifted beyond destination.
-        // E.g., x = 2, a = 99
+    spec var_shift_l_incorrect_u32_1 {
         ensures result == x << a;
     }
 
@@ -137,13 +133,11 @@ module 0x42::TestShift {
         ensures result == (x << a) % (1 << 32);
     }
 
-    fun var_shift_l_incorrect_u256(x: u256, a: u8): u256 {
+    fun var_shift_l_incorrect_u256_1(x: u256, a: u8): u256 {
         x << a
     }
 
-    spec var_shift_l_incorrect_u256 {
-        // The spec allows bits to be shifted beyond destination.
-        // E.g., x = 2, a = 99
+    spec var_shift_l_incorrect_u256_1 {
         ensures result == x << a;
     }
 

@@ -75,7 +75,6 @@ error: post-condition does not hold
     =         result = <redacted>
     =     at tests/sources/functional/fixed_point_arithm.move:108: mul_div_incorrect
     =     at tests/sources/functional/fixed_point_arithm.move:110: mul_div_incorrect (spec)
-    =     at tests/sources/functional/fixed_point_arithm.move:111: mul_div_incorrect (spec)
     =     at tests/sources/functional/fixed_point_arithm.move:112: mul_div_incorrect (spec)
 
 error: post-condition does not hold

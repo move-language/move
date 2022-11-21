@@ -312,6 +312,7 @@ impl SpecPrinter<'_> {
                     Ge => print_call_binary(">="),
                     // unary operators
                     Not => print_call_unary("!"),
+                    Cast => print_call_unary("cast"),
                     // built-in functions
                     Len => print_call_fun("len"),
                     Old => print_call_fun("old"),

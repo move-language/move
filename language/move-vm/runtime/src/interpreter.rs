@@ -1018,6 +1018,10 @@ impl Frame {
             })
     }
 
+    /// Paranoid type checks to perform before instruction execution.
+    ///
+    /// Note that most of the checks should happen after instruction execution, because gas charging will happen during
+    /// instruction execution and we want to avoid running code without charging proper gas as much as possible.
     fn pre_execution_type_stack_transition(
         local_tys: &[Type],
         locals: &Locals,
@@ -1052,13 +1056,84 @@ impl Frame {
                     check_ability(resolver.loader().abilities(&ty)?.has_drop())?;
                 }
             }
-            // Rest of the instructions are not control flow instructions and should be checked after execution.
-            _ => (),
+            // We will check the rest of the instructions after execution phase.
+            Bytecode::Pop
+            | Bytecode::LdU8(_)
+            | Bytecode::LdU16(_)
+            | Bytecode::LdU32(_)
+            | Bytecode::LdU64(_)
+            | Bytecode::LdU128(_)
+            | Bytecode::LdU256(_)
+            | Bytecode::LdTrue
+            | Bytecode::LdFalse
+            | Bytecode::LdConst(_)
+            | Bytecode::CopyLoc(_)
+            | Bytecode::MoveLoc(_)
+            | Bytecode::MutBorrowLoc(_)
+            | Bytecode::ImmBorrowLoc(_)
+            | Bytecode::ImmBorrowField(_)
+            | Bytecode::MutBorrowField(_)
+            | Bytecode::ImmBorrowFieldGeneric(_)
+            | Bytecode::MutBorrowFieldGeneric(_)
+            | Bytecode::Pack(_)
+            | Bytecode::PackGeneric(_)
+            | Bytecode::Unpack(_)
+            | Bytecode::UnpackGeneric(_)
+            | Bytecode::ReadRef
+            | Bytecode::WriteRef
+            | Bytecode::CastU8
+            | Bytecode::CastU16
+            | Bytecode::CastU32
+            | Bytecode::CastU64
+            | Bytecode::CastU128
+            | Bytecode::CastU256
+            | Bytecode::Add
+            | Bytecode::Sub
+            | Bytecode::Mul
+            | Bytecode::Mod
+            | Bytecode::Div
+            | Bytecode::BitOr
+            | Bytecode::BitAnd
+            | Bytecode::Xor
+            | Bytecode::Or
+            | Bytecode::And
+            | Bytecode::Shl
+            | Bytecode::Shr
+            | Bytecode::Lt
+            | Bytecode::Le
+            | Bytecode::Gt
+            | Bytecode::Ge
+            | Bytecode::Eq
+            | Bytecode::Neq
+            | Bytecode::MutBorrowGlobal(_)
+            | Bytecode::ImmBorrowGlobal(_)
+            | Bytecode::MutBorrowGlobalGeneric(_)
+            | Bytecode::ImmBorrowGlobalGeneric(_)
+            | Bytecode::Exists(_)
+            | Bytecode::ExistsGeneric(_)
+            | Bytecode::MoveTo(_)
+            | Bytecode::MoveToGeneric(_)
+            | Bytecode::MoveFrom(_)
+            | Bytecode::MoveFromGeneric(_)
+            | Bytecode::FreezeRef
+            | Bytecode::Nop
+            | Bytecode::Not
+            | Bytecode::VecPack(_, _)
+            | Bytecode::VecLen(_)
+            | Bytecode::VecImmBorrow(_)
+            | Bytecode::VecMutBorrow(_)
+            | Bytecode::VecPushBack(_)
+            | Bytecode::VecPopBack(_)
+            | Bytecode::VecUnpack(_, _)
+            | Bytecode::VecSwap(_) => (),
         };
         Ok(())
     }
 
-    fn simple_instruction_type_stack_transition(
+    /// Paranoid type checks to perform after instruction execution.
+    ///
+    /// This function and `pre_execution_type_stack_transition` should constitute the full type stack transition for the paranoid mode.
+    fn post_execution_type_stack_transition(
         local_tys: &[Type],
         ty_args: &[Type],
         resolver: &Resolver,
@@ -1066,17 +1141,18 @@ impl Frame {
         instruction: &Bytecode,
     ) -> PartialVMResult<()> {
         match instruction {
-            Bytecode::Pop => {
-                let ty = interpreter.operand_stack.pop_ty()?;
-                check_ability(resolver.loader().abilities(&ty)?.has_drop())?;
-            }
             Bytecode::BrTrue(_) | Bytecode::BrFalse(_) => (),
             Bytecode::Branch(_)
             | Bytecode::Ret
             | Bytecode::Call(_)
             | Bytecode::CallGeneric(_)
             | Bytecode::Abort => {
+                // Invariants hold because all of the instructions above will force VM to break from the interpreter loop and thus not hit this code path.
                 unreachable!("control flow instruction encountered during type check")
+            }
+            Bytecode::Pop => {
+                let ty = interpreter.operand_stack.pop_ty()?;
+                check_ability(resolver.loader().abilities(&ty)?.has_drop())?;
             }
             Bytecode::LdU8(_) => interpreter.operand_stack.push_ty(Type::U8)?,
             Bytecode::LdU16(_) => interpreter.operand_stack.push_ty(Type::U16)?,
@@ -1579,6 +1655,14 @@ impl Frame {
                         ),
                     )
                 });
+
+                // Paranoid Mode: Perform the type stack transition check to make sure all type safety requirements has been met.
+                //
+                // We will run the checks for only the control flow instructions and StLoc here. The majority of checks will be
+                // performed after the instruction execution, i.e: the big match block below.
+                //
+                // The reason for this design is we charge gas during instruction execution and we want to perform checks only after
+                // proper gas has been charged for each instruction.
 
                 if interpreter.paranoid_type_checks {
                     interpreter.operand_stack.check_balance()?;
@@ -2128,7 +2212,7 @@ impl Frame {
                     }
                 }
                 if interpreter.paranoid_type_checks {
-                    Self::simple_instruction_type_stack_transition(
+                    Self::post_execution_type_stack_transition(
                         &self.local_tys,
                         &self.ty_args,
                         resolver,

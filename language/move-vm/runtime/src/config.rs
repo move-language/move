@@ -8,6 +8,8 @@ use move_bytecode_verifier::VerifierConfig;
 pub struct VMConfig {
     pub verifier: VerifierConfig,
     pub max_binary_format_version: u32,
+    // When this flag is set to true, MoveVM will perform type check at every instruction
+    // execution to ensure that type safety cannot be violated at runtime.
     pub paranoid_type_checks: bool,
 }
 

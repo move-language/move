@@ -37,7 +37,7 @@ use crate::{
         boogie_modifies_memory_name, boogie_reflection_type_info, boogie_reflection_type_name,
         boogie_resource_memory_name, boogie_struct_name, boogie_temp, boogie_type,
         boogie_type_param, boogie_type_suffix, boogie_type_suffix_for_struct,
-        boogie_well_formed_check, boogie_well_formed_expr,
+        boogie_well_formed_check, boogie_well_formed_expr, TypeIdentToken,
     },
     options::BoogieOptions,
     spec_translator::SpecTranslator,
@@ -91,6 +91,83 @@ impl<'env> BoogieTranslator<'env> {
             writer,
             "\n\n//==================================\n// Begin Translation\n"
         );
+
+        // Add type reflection axioms
+        if !mono_info.type_params.is_empty() {
+            emitln!(writer, "function $TypeName(t: $TypeParamInfo): Vec int;");
+
+            // type name <-> type info: primitives
+            for name in [
+                "Bool", "U8", "U16", "U32", "U64", "U128", "U256", "Address", "Signer",
+            ]
+            .into_iter()
+            {
+                emitln!(
+                    writer,
+                    "axiom (forall t: $TypeParamInfo :: {{$TypeName(t)}} \
+                            is#$TypeParam{}(t) ==> $IsEqual'vec'u8''($TypeName(t), {}));",
+                    name,
+                    TypeIdentToken::convert_to_bytes(TypeIdentToken::make(&name.to_lowercase()))
+                );
+                emitln!(
+                    writer,
+                    "axiom (forall t: $TypeParamInfo :: {{$TypeName(t)}} \
+                            $IsEqual'vec'u8''($TypeName(t), {}) ==> is#$TypeParam{}(t));",
+                    TypeIdentToken::convert_to_bytes(TypeIdentToken::make(&name.to_lowercase())),
+                    name,
+                );
+            }
+
+            // type name <-> type info: vector
+            let mut tokens = TypeIdentToken::make("vector<");
+            tokens.push(TypeIdentToken::Variable(
+                "$TypeName(e#$TypeParamVector(t))".to_string(),
+            ));
+            tokens.extend(TypeIdentToken::make(">"));
+            emitln!(
+                writer,
+                "axiom (forall t: $TypeParamInfo :: {{$TypeName(t)}} \
+                            is#$TypeParamVector(t) ==> $IsEqual'vec'u8''($TypeName(t), {}));",
+                TypeIdentToken::convert_to_bytes(tokens)
+            );
+            // TODO(mengxu): this will parse it to an uninterpreted vector element type
+            emitln!(
+                writer,
+                "axiom (forall t: $TypeParamInfo :: {{$TypeName(t)}} \
+                            ($IsPrefix'vec'u8''($TypeName(t), {}) && $IsSuffix'vec'u8''($TypeName(t), {})) ==> is#$TypeParamVector(t));",
+                TypeIdentToken::convert_to_bytes(TypeIdentToken::make("vector<")),
+                TypeIdentToken::convert_to_bytes(TypeIdentToken::make(">")),
+            );
+
+            // type name <-> type info: struct
+            let mut tokens = TypeIdentToken::make("0x");
+            // TODO(mengxu): this is not a correct radix16 encoding of an integer
+            tokens.push(TypeIdentToken::Variable(
+                "MakeVec1(a#$TypeParamStruct(t))".to_string(),
+            ));
+            tokens.extend(TypeIdentToken::make("::"));
+            tokens.push(TypeIdentToken::Variable(
+                "m#$TypeParamStruct(t)".to_string(),
+            ));
+            tokens.extend(TypeIdentToken::make("::"));
+            tokens.push(TypeIdentToken::Variable(
+                "s#$TypeParamStruct(t)".to_string(),
+            ));
+            emitln!(
+                writer,
+                "axiom (forall t: $TypeParamInfo :: {{$TypeName(t)}} \
+                            is#$TypeParamStruct(t) ==> $IsEqual'vec'u8''($TypeName(t), {}));",
+                TypeIdentToken::convert_to_bytes(tokens)
+            );
+            // TODO(mengxu): this will parse it to an uninterpreted struct
+            emitln!(
+                writer,
+                "axiom (forall t: $TypeParamInfo :: {{$TypeName(t)}} \
+                            $IsPrefix'vec'u8''($TypeName(t), {}) ==> is#$TypeParamVector(t));",
+                TypeIdentToken::convert_to_bytes(TypeIdentToken::make("0x")),
+            );
+        }
+
         // Add given type declarations for type parameters.
         emitln!(writer, "\n\n// Given Types for Type Parameters\n");
         for idx in &mono_info.type_params {
@@ -112,11 +189,7 @@ impl<'env> BoogieTranslator<'env> {
             );
 
             // declare free variables to represent the type info for this type
-            emitln!(writer, "var {}_name: Vec int;", param_type);
-            emitln!(writer, "var {}_is_struct: bool;", param_type);
-            emitln!(writer, "var {}_account_address: int;", param_type);
-            emitln!(writer, "var {}_module_name: Vec int;", param_type);
-            emitln!(writer, "var {}_struct_name: Vec int;", param_type);
+            emitln!(writer, "var {}_info: $TypeParamInfo;", param_type);
         }
         emitln!(writer);
 

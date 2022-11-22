@@ -179,7 +179,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
             .actor_metadata
             .get(module_id)
             .ok_or_else(|| async_extension_error(format!("actor `{}` unknown", module_id)))?;
-        let state_type_tag = TypeTag::Struct(actor.state_tag.clone());
+        let state_type_tag = TypeTag::Struct(Box::new(actor.state_tag.clone()));
         let state_type = self
             .vm_session
             .load_type(&state_type_tag)
@@ -275,7 +275,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
         })?;
 
         // Load the resource representing the actor state and add to arguments.
-        let state_type_tag = TypeTag::Struct(actor.state_tag.clone());
+        let state_type_tag = TypeTag::Struct(Box::new(actor.state_tag.clone()));
         let state_type = self
             .vm_session
             .load_type(&state_type_tag)

@@ -829,6 +829,15 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     self.new_error_exp()
                 }
             }
+            EA::Exp_::Cast(exp, typ) => {
+                let ty = self.translate_type(typ);
+                let exp = self.translate_exp(exp, &ty);
+                ExpData::Call(
+                    self.new_node_id_with_type_loc(&ty, &loc),
+                    Operation::Cast,
+                    vec![exp.into_exp()],
+                )
+            }
             _ => {
                 self.error(&loc, "expression construct not supported in specifications");
                 self.new_error_exp()
@@ -1983,7 +1992,27 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     Value::Vector(b)
                 }
             },
-            (_, _) => {
+            (Type::Primitive(_), MoveValue::Vector(_))
+            | (Type::Primitive(_), MoveValue::Struct(_))
+            | (Type::Tuple(_), MoveValue::Vector(_))
+            | (Type::Tuple(_), MoveValue::Struct(_))
+            | (Type::Vector(_), MoveValue::Struct(_))
+            | (Type::Struct(_, _, _), MoveValue::Vector(_))
+            | (Type::Struct(_, _, _), MoveValue::Struct(_))
+            | (Type::TypeParameter(_), MoveValue::Vector(_))
+            | (Type::TypeParameter(_), MoveValue::Struct(_))
+            | (Type::Reference(_, _), MoveValue::Vector(_))
+            | (Type::Reference(_, _), MoveValue::Struct(_))
+            | (Type::Fun(_, _), MoveValue::Vector(_))
+            | (Type::Fun(_, _), MoveValue::Struct(_))
+            | (Type::TypeDomain(_), MoveValue::Vector(_))
+            | (Type::TypeDomain(_), MoveValue::Struct(_))
+            | (Type::ResourceDomain(_, _, _), MoveValue::Vector(_))
+            | (Type::ResourceDomain(_, _, _), MoveValue::Struct(_))
+            | (Type::Error, MoveValue::Vector(_))
+            | (Type::Error, MoveValue::Struct(_))
+            | (Type::Var(_), MoveValue::Vector(_))
+            | (Type::Var(_), MoveValue::Struct(_)) => {
                 self.error(
                     loc,
                     &format!("Not yet supported constant value: {:?}", value),

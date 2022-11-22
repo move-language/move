@@ -320,7 +320,7 @@ fn serialize_table_index(
 }
 
 fn serialize_magic(binary: &mut BinaryData) -> Result<()> {
-    for byte in &BinaryConstants::DIEM_MAGIC {
+    for byte in &BinaryConstants::MOVE_MAGIC {
         binary.push(*byte)?;
     }
     Ok(())

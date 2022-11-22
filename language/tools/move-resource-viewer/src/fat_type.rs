@@ -158,7 +158,7 @@ impl FatType {
             Address => TypeTag::Address,
             Signer => TypeTag::Signer,
             Vector(ty) => TypeTag::Vector(Box::new(ty.type_tag()?)),
-            Struct(struct_ty) => TypeTag::Struct(struct_ty.struct_tag()?),
+            Struct(struct_ty) => TypeTag::Struct(Box::new(struct_ty.struct_tag()?)),
 
             Reference(_) | MutableReference(_) | TyParam(_) => {
                 return Err(
@@ -206,8 +206,9 @@ impl TryInto<MoveTypeLayout> for &FatType {
                     .collect::<PartialVMResult<Vec<_>>>()?,
             )),
             FatType::Signer => MoveTypeLayout::Signer,
-
-            _ => return Err(PartialVMError::new(StatusCode::ABORT_TYPE_MISMATCH_ERROR)),
+            FatType::Reference(_) | FatType::MutableReference(_) | FatType::TyParam(_) => {
+                return Err(PartialVMError::new(StatusCode::ABORT_TYPE_MISMATCH_ERROR))
+            }
         })
     }
 }

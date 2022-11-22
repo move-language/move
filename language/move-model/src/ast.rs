@@ -879,6 +879,7 @@ pub enum Operation {
 
     // Unary operators
     Not,
+    Cast,
 
     // Builtin functions
     Len,

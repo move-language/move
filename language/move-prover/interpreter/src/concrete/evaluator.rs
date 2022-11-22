@@ -559,6 +559,10 @@ impl<'env> Evaluator<'env> {
             | Operation::InRangeRange => {
                 unreachable!()
             }
+
+            Operation::Cast => {
+                unreachable!()
+            }
         };
         Ok(result)
     }

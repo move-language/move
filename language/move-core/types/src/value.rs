@@ -571,7 +571,7 @@ impl TryInto<TypeTag> for &MoveTypeLayout {
                 let inner_type = &**v;
                 TypeTag::Vector(Box::new(inner_type.try_into()?))
             }
-            MoveTypeLayout::Struct(v) => TypeTag::Struct(v.try_into()?),
+            MoveTypeLayout::Struct(v) => TypeTag::Struct(Box::new(v.try_into()?)),
         })
     }
 }

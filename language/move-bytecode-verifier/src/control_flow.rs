@@ -11,6 +11,7 @@ use crate::verifier::VerifierConfig;
 use move_binary_format::{
     errors::{PartialVMError, PartialVMResult},
     file_format::{Bytecode, CodeOffset, CodeUnit, FunctionDefinitionIndex},
+    safe_unwrap,
 };
 use move_core_types::vm_status::StatusCode;
 use std::{collections::HashSet, convert::TryInto};
@@ -138,7 +139,7 @@ fn check_code<
             Bytecode::Branch(target) | Bytecode::BrTrue(target) | Bytecode::BrFalse(target)
                 if is_back_edge(cur_instr, *target) =>
             {
-                let (_cur_loop_head, last_continue) = loop_stack.last().unwrap();
+                let (_cur_loop_head, last_continue) = safe_unwrap!(loop_stack.last());
                 if cur_instr == *last_continue {
                     loop_stack.pop();
                 }
@@ -161,7 +162,7 @@ fn check_continues(context: &ControlFlowVerifier, labels: &[Label]) -> PartialVM
             Bytecode::Branch(target) | Bytecode::BrTrue(target) | Bytecode::BrFalse(target)
                 if is_back_edge(cur_instr, *target) =>
             {
-                let (cur_loop_head, _last_continue) = loop_stack.last().unwrap();
+                let (cur_loop_head, _last_continue) = safe_unwrap!(loop_stack.last());
                 if target != cur_loop_head {
                     // Invalid back jump. Cannot back jump outside of the current loop
                     Err(context.error(StatusCode::INVALID_LOOP_CONTINUE, cur_instr))

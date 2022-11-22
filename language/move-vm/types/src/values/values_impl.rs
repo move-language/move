@@ -474,8 +474,18 @@ impl ValueImpl {
 
             (ContainerRef(l), ContainerRef(r)) => l.equals(r)?,
             (IndexedRef(l), IndexedRef(r)) => l.equals(r)?,
-
-            _ => {
+            (Invalid, _)
+            | (U8(_), _)
+            | (U16(_), _)
+            | (U32(_), _)
+            | (U64(_), _)
+            | (U128(_), _)
+            | (U256(_), _)
+            | (Bool(_), _)
+            | (Address(_), _)
+            | (Container(_), _)
+            | (ContainerRef(_), _)
+            | (IndexedRef(_), _) => {
                 return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                     .with_message(format!("cannot compare values: {:?}, {:?}", self, other)))
             }
@@ -1042,6 +1052,19 @@ impl Locals {
         }
 
         res.into_iter()
+    }
+
+    pub fn is_invalid(&self, idx: usize) -> PartialVMResult<bool> {
+        let v = self.0.borrow();
+        match v.get(idx) {
+            Some(ValueImpl::Invalid) => Ok(true),
+            Some(_) => Ok(false),
+            None => Err(
+                PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(
+                    format!("local index out of bounds: got {}, len: {}", idx, v.len()),
+                ),
+            ),
+        }
     }
 }
 
@@ -2913,8 +2936,13 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, MoveTypeLayout, ValueIm
                 let layout = &**layout;
                 match (layout, c) {
                     (MoveTypeLayout::U8, Container::VecU8(r)) => r.borrow().serialize(serializer),
+                    (MoveTypeLayout::U16, Container::VecU16(r)) => r.borrow().serialize(serializer),
+                    (MoveTypeLayout::U32, Container::VecU32(r)) => r.borrow().serialize(serializer),
                     (MoveTypeLayout::U64, Container::VecU64(r)) => r.borrow().serialize(serializer),
                     (MoveTypeLayout::U128, Container::VecU128(r)) => {
+                        r.borrow().serialize(serializer)
+                    }
+                    (MoveTypeLayout::U256, Container::VecU256(r)) => {
                         r.borrow().serialize(serializer)
                     }
                     (MoveTypeLayout::Bool, Container::VecBool(r)) => {

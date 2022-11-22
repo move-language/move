@@ -170,7 +170,7 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
                 BT::U64 => u64_max,
                 BT::U128 => u128_max,
                 BT::U256 => u256_max,
-                _ => unreachable!(),
+                BT::Address | BT::Signer | BT::Vector | BT::Bool => unreachable!(),
             };
             let new_exp = if v > max {
                 let msg = format!(
@@ -210,7 +210,7 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
                     BT::U64 => Value_::U64(v.down_cast_lossy()),
                     BT::U128 => Value_::U128(v.down_cast_lossy()),
                     BT::U256 => Value_::U256(v),
-                    _ => unreachable!(),
+                    BT::Address | BT::Signer | BT::Vector | BT::Bool => unreachable!(),
                 };
                 E::Value(sp(*vloc, value_))
             };

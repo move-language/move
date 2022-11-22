@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    config::VMConfig,
     data_cache::TransactionDataCache,
     interpreter::Interpreter,
     loader::{Function, Loader},
@@ -17,7 +18,7 @@ use move_binary_format::{
     file_format::LocalIndex,
     normalized, CompiledModule, IndexKind,
 };
-use move_bytecode_verifier::{script_signature, VerifierConfig};
+use move_bytecode_verifier::script_signature;
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
@@ -43,10 +44,10 @@ pub(crate) struct VMRuntime {
 impl VMRuntime {
     pub(crate) fn new(
         natives: impl IntoIterator<Item = (AccountAddress, Identifier, Identifier, NativeFunction)>,
-        verifier_config: VerifierConfig,
+        vm_config: VMConfig,
     ) -> PartialVMResult<Self> {
         Ok(VMRuntime {
-            loader: Loader::new(NativeFunctions::new(natives)?, verifier_config),
+            loader: Loader::new(NativeFunctions::new(natives)?, vm_config),
         })
     }
 
@@ -78,7 +79,12 @@ impl VMRuntime {
         // used with the `[]` operator
         let compiled_modules = match modules
             .iter()
-            .map(|blob| CompiledModule::deserialize(blob))
+            .map(|blob| {
+                CompiledModule::deserialize_with_max_version(
+                    blob,
+                    self.loader.vm_config().max_binary_format_version,
+                )
+            })
             .collect::<PartialVMResult<Vec<_>>>()
         {
             Ok(modules) => modules,

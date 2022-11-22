@@ -3654,6 +3654,7 @@ dependencies = [
  "move-binary-format",
  "move-bytecode-source-map",
  "move-bytecode-utils",
+ "move-bytecode-verifier",
  "move-cli",
  "move-command-line-common",
  "move-compiler",
@@ -3725,6 +3726,15 @@ dependencies = [
  "move-vm-test-utils",
  "move-vm-types",
  "tempfile",
+]
+
+[[package]]
+name = "move-vm-paranoid-tests"
+version = "0.1.0"
+dependencies = [
+ "datatest-stable",
+ "fail",
+ "move-transactional-test-runner",
 ]
 
 [[package]]

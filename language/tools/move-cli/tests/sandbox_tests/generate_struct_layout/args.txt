@@ -22,3 +22,18 @@ sandbox generate struct-layouts --module storage/0x00000000000000000000000000000
 
 # without --type-args
 sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/M1.mv --struct G
+
+# phantom type arguments should not appear in struct keys when --ignore-phantom-types is set
+sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/phantoms.mv --struct A --type-args bool --ignore-phantom-types
+sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/phantoms.mv --struct A --type-args u64 --ignore-phantom-types
+sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/phantoms.mv --struct B --type-args bool u8 --ignore-phantom-types
+sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/phantoms.mv --struct C --type-args u8 u64 u128 --ignore-phantom-types
+sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/phantoms.mv --struct D --type-args bool u64 --ignore-phantom-types
+sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/phantoms.mv --struct E --type-args bool u64 u128 --ignore-phantom-types
+
+# test config options: address omission + separators
+sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/phantoms.mv --struct E --type-args bool u64 u128 --omit-addresses
+
+sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/phantoms.mv --struct E --type-args bool u64 u128 --separator __
+
+sandbox generate struct-layouts --module storage/0x00000000000000000000000000000001/modules/phantoms.mv --struct E --type-args bool u64 u128 --omit-addresses --separator __

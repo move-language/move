@@ -39,7 +39,7 @@ pub enum TypeTag {
     #[serde(rename = "vector", alias = "Vector")]
     Vector(Box<TypeTag>),
     #[serde(rename = "struct", alias = "Struct")]
-    Struct(StructTag),
+    Struct(Box<StructTag>),
 
     // NOTE: Added in bytecode version v6, do not reorder!
     #[serde(rename = "u16", alias = "U16")]
@@ -271,7 +271,7 @@ impl Display for ResourceKey {
 
 impl From<StructTag> for TypeTag {
     fn from(t: StructTag) -> TypeTag {
-        TypeTag::Struct(t)
+        TypeTag::Struct(Box::new(t))
     }
 }
 
@@ -281,17 +281,19 @@ mod tests {
     use crate::{
         account_address::AccountAddress, identifier::Identifier, language_storage::StructTag,
     };
+    use std::mem;
 
     #[test]
     fn test_type_tag_serde() {
-        let a = TypeTag::Struct(StructTag {
+        let a = TypeTag::Struct(Box::new(StructTag {
             address: AccountAddress::ONE,
             module: Identifier::from_utf8(("abc".as_bytes()).to_vec()).unwrap(),
             name: Identifier::from_utf8(("abc".as_bytes()).to_vec()).unwrap(),
             type_params: vec![TypeTag::U8],
-        });
+        }));
         let b = serde_json::to_string(&a).unwrap();
         let c: TypeTag = serde_json::from_str(&b).unwrap();
-        assert!(a.eq(&c), "Typetag serde error")
+        assert!(a.eq(&c), "Typetag serde error");
+        assert_eq!(mem::size_of::<TypeTag>(), 16);
     }
 }

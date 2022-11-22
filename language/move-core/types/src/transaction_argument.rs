@@ -123,7 +123,7 @@ mod tests {
     use std::convert::{From, TryInto};
 
     use crate::{
-        account_address::AccountAddress, transaction_argument::TransactionArgument,
+        account_address::AccountAddress, transaction_argument::TransactionArgument, u256::U256,
         value::MoveValue,
     };
 
@@ -131,8 +131,11 @@ mod tests {
     fn test_from_and_to_move_value() {
         let vals = vec![
             TransactionArgument::U8(1),
+            TransactionArgument::U16(u16::MAX),
+            TransactionArgument::U32(u32::MAX),
             TransactionArgument::U64(u64::MAX),
             TransactionArgument::U128(u128::MAX),
+            TransactionArgument::U256(U256::max_value()),
             TransactionArgument::Bool(true),
             TransactionArgument::Address(AccountAddress::from_hex_literal("0x1").unwrap()),
             TransactionArgument::U8Vector(vec![1, 2, 3, 4]),

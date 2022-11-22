@@ -33,6 +33,7 @@ use move_resource_viewer::MoveValueAnnotator;
 use move_stdlib::move_stdlib_named_addresses;
 use move_symbol_pool::Symbol;
 use move_vm_runtime::{
+    config::VMConfig,
     move_vm::MoveVM,
     session::{SerializedReturnValues, Session},
 };
@@ -82,11 +83,17 @@ pub struct AdapterPublishArgs {
     pub skip_check_friend_linking: bool,
 }
 
+#[derive(Debug, Parser)]
+pub struct AdapterExecuteArgs {
+    #[clap(long)]
+    pub check_runtime_types: bool,
+}
+
 impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
     type ExtraInitArgs = EmptyCommand;
     type ExtraPublishArgs = AdapterPublishArgs;
     type ExtraValueArgs = ();
-    type ExtraRunArgs = EmptyCommand;
+    type ExtraRunArgs = AdapterExecuteArgs;
     type Subcommand = EmptyCommand;
 
     fn compiled_state(&mut self) -> &mut CompiledState<'a> {
@@ -126,19 +133,23 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
         };
 
         adapter
-            .perform_session_action(None, |session, gas_status| {
-                for module in &*MOVE_STDLIB_COMPILED {
-                    let mut module_bytes = vec![];
-                    module.serialize(&mut module_bytes).unwrap();
+            .perform_session_action(
+                None,
+                |session, gas_status| {
+                    for module in &*MOVE_STDLIB_COMPILED {
+                        let mut module_bytes = vec![];
+                        module.serialize(&mut module_bytes).unwrap();
 
-                    let id = module.self_id();
-                    let sender = *id.address();
-                    session
-                        .publish_module(module_bytes, sender, gas_status)
-                        .unwrap();
-                }
-                Ok(())
-            })
+                        let id = module.self_id();
+                        let sender = *id.address();
+                        session
+                            .publish_module(module_bytes, sender, gas_status)
+                            .unwrap();
+                    }
+                    Ok(())
+                },
+                VMConfig::default(),
+            )
             .unwrap();
         let mut addr_to_name_mapping = BTreeMap::new();
         for (name, addr) in move_stdlib_named_addresses() {
@@ -169,20 +180,24 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
 
         let id = module.self_id();
         let sender = *id.address();
-        match self.perform_session_action(gas_budget, |session, gas_status| {
-            let compat = Compatibility::new(
-                !extra_args.skip_check_struct_and_pub_function_linking,
-                !extra_args.skip_check_struct_layout,
-                !extra_args.skip_check_friend_linking,
-            );
+        match self.perform_session_action(
+            gas_budget,
+            |session, gas_status| {
+                let compat = Compatibility::new(
+                    !extra_args.skip_check_struct_and_pub_function_linking,
+                    !extra_args.skip_check_struct_layout,
+                    !extra_args.skip_check_friend_linking,
+                );
 
-            session.publish_module_bundle_with_compat_config(
-                vec![module_bytes],
-                sender,
-                gas_status,
-                compat,
-            )
-        }) {
+                session.publish_module_bundle_with_compat_config(
+                    vec![module_bytes],
+                    sender,
+                    gas_status,
+                    compat,
+                )
+            },
+            VMConfig::default(),
+        ) {
             Ok(()) => Ok((None, module)),
             Err(e) => Err(anyhow!(
                 "Unable to publish module '{}'. Got VMError: {}",
@@ -199,7 +214,7 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
         signers: Vec<ParsedAddress>,
         txn_args: Vec<MoveValue>,
         gas_budget: Option<u64>,
-        _extra_args: Self::ExtraRunArgs,
+        extra_args: Self::ExtraRunArgs,
     ) -> Result<(Option<String>, SerializedReturnValues)> {
         let signers: Vec<_> = signers
             .into_iter()
@@ -220,9 +235,13 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
             .chain(args)
             .collect();
         let serialized_return_values = self
-            .perform_session_action(gas_budget, |session, gas_status| {
-                session.execute_script(script_bytes, type_args, args, gas_status)
-            })
+            .perform_session_action(
+                gas_budget,
+                |session, gas_status| {
+                    session.execute_script(script_bytes, type_args, args, gas_status)
+                },
+                VMConfig::from(extra_args),
+            )
             .map_err(|e| {
                 anyhow!(
                     "Script execution failed with VMError: {}",
@@ -240,7 +259,7 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
         signers: Vec<ParsedAddress>,
         txn_args: Vec<MoveValue>,
         gas_budget: Option<u64>,
-        _extra_args: Self::ExtraRunArgs,
+        extra_args: Self::ExtraRunArgs,
     ) -> Result<(Option<String>, SerializedReturnValues)> {
         let signers: Vec<_> = signers
             .into_iter()
@@ -258,11 +277,15 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
             .chain(args)
             .collect();
         let serialized_return_values = self
-            .perform_session_action(gas_budget, |session, gas_status| {
-                session.execute_function_bypass_visibility(
-                    module, function, type_args, args, gas_status,
-                )
-            })
+            .perform_session_action(
+                gas_budget,
+                |session, gas_status| {
+                    session.execute_function_bypass_visibility(
+                        module, function, type_args, args, gas_status,
+                    )
+                },
+                VMConfig::from(extra_args),
+            )
             .map_err(|e| {
                 anyhow!(
                     "Function execution failed with VMError: {}",
@@ -315,13 +338,17 @@ impl<'a> SimpleVMTestAdapter<'a> {
         &mut self,
         gas_budget: Option<u64>,
         f: impl FnOnce(&mut Session<InMemoryStorage>, &mut GasStatus) -> VMResult<Ret>,
+        vm_config: VMConfig,
     ) -> VMResult<Ret> {
         // start session
-        let vm = MoveVM::new(move_stdlib::natives::all_natives(
-            STD_ADDR,
-            // TODO: come up with a suitable gas schedule
-            move_stdlib::natives::GasParameters::zeros(),
-        ))
+        let vm = MoveVM::new_with_config(
+            move_stdlib::natives::all_natives(
+                STD_ADDR,
+                // TODO: come up with a suitable gas schedule
+                move_stdlib::natives::GasParameters::zeros(),
+            ),
+            vm_config,
+        )
         .unwrap();
         let (mut session, mut gas_status) = {
             let gas_status = move_cli::sandbox::utils::get_gas_status(
@@ -395,4 +422,13 @@ static MOVE_STDLIB_COMPILED: Lazy<Vec<CompiledModule>> = Lazy::new(|| {
 
 pub fn run_test(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     run_test_impl::<SimpleVMTestAdapter>(path, Some(&*PRECOMPILED_MOVE_STDLIB))
+}
+
+impl From<AdapterExecuteArgs> for VMConfig {
+    fn from(arg: AdapterExecuteArgs) -> VMConfig {
+        VMConfig {
+            paranoid_type_checks: arg.check_runtime_types,
+            ..Default::default()
+        }
+    }
 }

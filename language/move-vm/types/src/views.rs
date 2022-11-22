@@ -81,12 +81,24 @@ pub trait ValueView {
                 self.0 += ((size_of::<u8>() * vals.len()) as u64).into();
             }
 
+            fn visit_vec_u16(&mut self, _depth: usize, vals: &[u16]) {
+                self.0 += ((size_of::<u16>() * vals.len()) as u64).into();
+            }
+
+            fn visit_vec_u32(&mut self, _depth: usize, vals: &[u32]) {
+                self.0 += ((size_of::<u32>() * vals.len()) as u64).into();
+            }
+
             fn visit_vec_u64(&mut self, _depth: usize, vals: &[u64]) {
                 self.0 += ((size_of::<u64>() * vals.len()) as u64).into();
             }
 
             fn visit_vec_u128(&mut self, _depth: usize, vals: &[u128]) {
                 self.0 += ((size_of::<u128>() * vals.len()) as u64).into();
+            }
+
+            fn visit_vec_u256(&mut self, _depth: usize, vals: &[move_core_types::u256::U256]) {
+                self.0 += ((size_of::<move_core_types::u256::U256>() * vals.len()) as u64).into();
             }
 
             fn visit_vec_bool(&mut self, _depth: usize, vals: &[bool]) {

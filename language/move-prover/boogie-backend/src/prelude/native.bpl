@@ -23,6 +23,18 @@ function $IsEqual'vec{{S}}'(v1: Vec ({{T}}), v2: Vec ({{T}})): bool {
 {%- endif %}
 
 // Not inlined.
+function $IsPrefix'vec{{S}}'(v: Vec ({{T}}), prefix: Vec ({{T}})): bool {
+    LenVec(v) >= LenVec(prefix) &&
+    (forall i: int:: InRangeVec(prefix, i) ==> $IsEqual{{S}}(ReadVec(v, i), ReadVec(prefix, i)))
+}
+
+// Not inlined.
+function $IsSuffix'vec{{S}}'(v: Vec ({{T}}), suffix: Vec ({{T}})): bool {
+    LenVec(v) >= LenVec(suffix) &&
+    (forall i: int:: InRangeVec(suffix, i) ==> $IsEqual{{S}}(ReadVec(v, LenVec(v) - LenVec(suffix) + i), ReadVec(suffix, i)))
+}
+
+// Not inlined.
 function $IsValid'vec{{S}}'(v: Vec ({{T}})): bool {
     $IsValid'u64'(LenVec(v)) &&
     (forall i: int:: InRangeVec(v, i) ==> $IsValid{{S}}(ReadVec(v, i)))

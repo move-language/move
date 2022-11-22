@@ -99,4 +99,15 @@ module 0x42::test {
         // this should not pass
         aborts_if false;
     }
+
+    fun test_type_info_can_abort_if<T>(): (type_info::TypeInfo, string::String) {
+        (type_info::type_of<T>(), type_info::type_name<T>())
+    }
+    spec test_type_info_can_abort_if {
+        pragma aborts_if_is_partial = true;
+        aborts_if type_info::type_name<T>().bytes == b"bool";
+        aborts_if type_info::type_name<T>().bytes == b"u64";
+        aborts_if type_info::type_name<T>().bytes == b"signer";
+        aborts_if type_info::type_name<T>().bytes == b"vector<address>";
+    }
 }

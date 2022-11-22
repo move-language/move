@@ -1024,3 +1024,20 @@ axiom $EventStore__is_empty($EmptyEventStore);
 procedure {:inline 1} $InitEventStore() {
 }
 {%- endif %}
+
+// ============================================================================================
+// Type Reflection on Type Parameters
+
+type {:datatype} $TypeParamInfo;
+
+function {:constructor} $TypeParamBool(): $TypeParamInfo;
+function {:constructor} $TypeParamU8(): $TypeParamInfo;
+function {:constructor} $TypeParamU16(): $TypeParamInfo;
+function {:constructor} $TypeParamU32(): $TypeParamInfo;
+function {:constructor} $TypeParamU64(): $TypeParamInfo;
+function {:constructor} $TypeParamU128(): $TypeParamInfo;
+function {:constructor} $TypeParamU256(): $TypeParamInfo;
+function {:constructor} $TypeParamAddress(): $TypeParamInfo;
+function {:constructor} $TypeParamSigner(): $TypeParamInfo;
+function {:constructor} $TypeParamVector(e: $TypeParamInfo): $TypeParamInfo;
+function {:constructor} $TypeParamStruct(a: int, m: Vec int, s: Vec int): $TypeParamInfo;

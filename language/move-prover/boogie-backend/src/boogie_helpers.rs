@@ -456,9 +456,9 @@ pub fn boogie_debug_track_return(
     boogie_debug_track(fun_target, "$track_return", ret_idx, idx, ty)
 }
 
-enum TypeIdentToken {
+pub enum TypeIdentToken {
     Char(u8),
-    Symbolic(TypeParameterIndex),
+    Variable(String),
 }
 
 impl TypeIdentToken {
@@ -492,16 +492,12 @@ impl TypeIdentToken {
                         k - start,
                         match &tokens[k] {
                             TypeIdentToken::Char(c) => *c,
-                            TypeIdentToken::Symbolic(_) => unreachable!(),
+                            TypeIdentToken::Variable(_) => unreachable!(),
                         }
                     )
                 })
                 .join("");
             format!("Vec(DefaultVecMap(){}, {})", elements, end - start)
-        }
-
-        fn get_symbol_name(idx: TypeParameterIndex) -> String {
-            format!("#{}_name", idx)
         }
 
         // construct all the segments
@@ -515,12 +511,12 @@ impl TypeIdentToken {
                         char_seq_start = Some(i);
                     }
                 }
-                TypeIdentToken::Symbolic(idx) => {
+                TypeIdentToken::Variable(name) => {
                     if let Some(start) = &char_seq_start {
                         segments.push(get_char_array(&tokens, *start, i));
                     };
                     char_seq_start = None;
-                    segments.push(get_symbol_name(*idx));
+                    segments.push(name.clone());
                 }
             }
         }
@@ -593,7 +589,10 @@ fn type_name_to_ident_tokens(env: &GlobalEnv, ty: &Type) -> Vec<TypeIdentToken> 
             tokens
         }
         Type::TypeParameter(idx) => {
-            vec![TypeIdentToken::Symbolic(*idx)]
+            vec![TypeIdentToken::Variable(format!(
+                "$TypeName(#{}_info)",
+                *idx
+            ))]
         }
         // move types that are not allowed
         Type::Reference(..) | Type::Tuple(..) => {
@@ -679,16 +678,16 @@ fn type_name_to_info_pack(env: &GlobalEnv, ty: &Type) -> Option<TypeInfoPack> {
 /// Convert a type info into a format that can be recognized by Boogie
 pub fn boogie_reflection_type_info(env: &GlobalEnv, ty: &Type) -> (String, String) {
     fn get_symbol_is_struct(idx: TypeParameterIndex) -> String {
-        format!("#{}_is_struct", idx)
+        format!("is#$TypeParamStruct(#{}_info)", idx)
     }
     fn get_symbol_account_address(idx: TypeParameterIndex) -> String {
-        format!("#{}_account_address", idx)
+        format!("a#$TypeParamStruct(#{}_info)", idx)
     }
     fn get_symbol_module_name(idx: TypeParameterIndex) -> String {
-        format!("#{}_module_name", idx)
+        format!("m#$TypeParamStruct(#{}_info)", idx)
     }
     fn get_symbol_struct_name(idx: TypeParameterIndex) -> String {
-        format!("#{}_struct_name", idx)
+        format!("s#$TypeParamStruct(#{}_info)", idx)
     }
 
     let extlib_address = env.get_extlib_address();

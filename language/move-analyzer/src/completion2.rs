@@ -24,8 +24,9 @@ use move_ir_types::ast::Statement_;
 use move_ir_types::location::{Loc, Spanned};
 use move_symbol_pool::Symbol;
 use serde::__private::de;
+use std::borrow::{Borrow, BorrowMut};
 use std::cell::RefCell;
-use std::ops::Deref;
+use std::ops::{Add, Deref};
 use std::path::Path;
 use std::sync::Mutex;
 use std::vec;
@@ -125,9 +126,14 @@ pub fn on_completion_request2(context: &Context, request: &Request, symbols: &Sy
 }
 
 /// All Modules.
+#[derive(Default)]
 pub struct Modules {
-    modules: HashMap<ModuleIdent, IDEModule>,
-    // p: Position,
+    modules: HashMap<
+        PathBuf, /*  this is a Move.toml loaded files  like xxxx/Move.toml  */
+        IDEModule,
+    >,
+    ///
+    named_to_addresses: HashMap<Symbol, NumericalAddress>,
 }
 
 #[derive(Clone)]
@@ -138,16 +144,19 @@ pub struct Position {
 }
 
 impl Modules {
-    pub fn new() -> Self {
-        unimplemented!()
-    }
-    ///
-    pub fn scan_all(path: impl Into<PathBuf>) {
-        unimplemented!()
+    pub fn new(working_dir: &PathBuf) -> Self {
+        let mut x = Self::default();
+        x.scan_all(working_dir);
+        x
     }
 
-    /// Enter Scope for you.
-    pub fn enter_scope(&self, visitor: &mut dyn ScopeVisitor) {
+    ///
+    pub fn scan_all(&mut self, path: &PathBuf) {
+        unimplemented!();
+    }
+
+    /// Entrance for `ScopeVisitor` base on analyze.
+    pub fn run_visitor(&self, visitor: &mut dyn ScopeVisitor) {
         let mut global_scope = Scopes::default();
         // Enter all global to global_scope.
         for (_, modules) in self.modules.iter() {
@@ -165,6 +174,7 @@ impl Modules {
                 }
             }
         }
+
         // Scan all for.
         for (_, modules) in self.modules.iter() {
             for (f, d) in modules.defs.iter() {
@@ -255,12 +265,12 @@ impl Modules {
         } else if let Some(expr) = expr {
             self.get_expr_type(expr, scopes)
         } else {
-            ResolvedType::mk_default(unimplemented!())
+            ResolvedType::new_unknown(unimplemented!())
         };
 
         for (index, bind) in bind_list.value.iter().enumerate() {
-            let ty = ty.typ(index);
-            let unknown = ResolvedType::mk_default(unimplemented!());
+            let ty = ty.nth_ty(index);
+            let unknown = ResolvedType::new_unknown(unimplemented!());
             let ty = ty.unwrap_or(&unknown);
             self.visit_bind(bind, ty, scopes, None, visitor);
             if visitor.finished() {
@@ -280,11 +290,11 @@ impl Modules {
         match &bind.value {
             Bind_::Var(var) => {
                 let item = Item::ExprVar(var.clone());
-                visitor.handle_item(scopes, item.clone());
+                visitor.handle_item(scopes, &item);
                 if visitor.finished() {
                     return;
                 }
-                scopes.enter_value_item(var.0.value, item);
+                scopes.enter_item(var.0.value, item);
                 return;
             }
             Bind_::Unpack(_, _, _) => todo!(),
@@ -322,7 +332,11 @@ impl Modules {
     fn visit_access_type(&self, ty: &Type, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
         let ty = scopes.resolve_type(ty);
         let item = Item::ApplyType(ty);
-        visitor.handle_item(scopes, item);
+        visitor.handle_item(scopes, &item);
+    }
+
+    fn name_to_addr(&self, name: Symbol) -> &NumericalAddress {
+        self.named_to_addresses.get(&name).unwrap()
     }
 
     /// Get A Type for expr if possible.
@@ -332,48 +346,191 @@ impl Modules {
                 Value_::Address(_) => ResolvedType::new_build_in(BuildInType::Address),
                 Value_::Num(_) => ResolvedType::new_build_in(BuildInType::NumType),
                 Value_::Bool(_) => ResolvedType::new_build_in(BuildInType::Bool),
-                // TODO 余洋 这2个都是string类型 但是好像没有这个内置类型
-                Value_::HexString(_) => todo!(),
-                Value_::ByteString(_) => todo!(),
+                Value_::HexString(_) | Value_::ByteString(_) => {
+                    ResolvedType::new_build_in(BuildInType::String)
+                }
             },
             Exp_::Move(x) | Exp_::Copy(x) => scopes.find_var_type(x.0.value),
             Exp_::Name(name, _ /*  TODO this is a error. */) => {
                 // scopes.find_name_access_chain_type(name)
                 return UNKNOWN_TYPE.clone();
             }
-            Exp_::Call(name, _, _, _) => {
-                let fun_type = scopes.find_name_access_chain_type(name);
-                match &fun_type.0.value {
-                    ResolvedType_::Fun(_, _, _) => todo!(),
-                    _ => return UNKNOWN_TYPE.clone(),
+            Exp_::Call(name, is_macro, ref type_args, _) => {
+                if *is_macro {
+                    let c = MacroCall::from_name_access_chain(name);
+                    match c {
+                        MacroCall::Assert => ResolvedType::new_unit(name.loc),
+                    }
+                } else {
+                    let fun_type =
+                        scopes.find_name_access_chain_value(name, |name| self.name_to_addr(name));
+                    match &fun_type.0.value {
+                        ResolvedType_::Fun(ref type_parameters, _, _) => {
+                            let type_args: Option<Vec<ResolvedType>> =
+                                if let Some(type_args) = type_args {
+                                    Some(type_args.iter().map(|x| scopes.resolve_type(x)).collect())
+                                } else {
+                                    None
+                                };
+                            let mut fun_type = fun_type.clone();
+                            let mut types = HashMap::new();
+                            if let Some(ref ts) = type_args {
+                                for (para, args) in type_parameters.iter().zip(ts.iter()) {
+                                    types.insert(para.0.value, args);
+                                }
+                            } else if type_parameters.len() > 0 {
+                                // Here need analyzer arg's type and fill in.
+                                unimplemented!();
+                            }
+                            fun_type.bind_type_parameter(&types);
+                            fun_type
+                        }
+                        // This maybe is a error.
+                        _ => return UNKNOWN_TYPE.clone(),
+                    }
                 }
-                unimplemented!()
             }
-            Exp_::Pack(_, _, _) => todo!(),
-            Exp_::Vector(_, _, _) => todo!(),
-            Exp_::IfElse(_, _, _) => todo!(),
-            Exp_::While(_, _) => todo!(),
-            Exp_::Loop(_) => todo!(),
+
+            Exp_::Pack(name, type_args, _) => {
+                let mut struct_ty =
+                    scopes.find_name_access_chain_type(name, |s| self.name_to_addr(s));
+                match &struct_ty.0.value {
+                    ResolvedType_::Struct(_, type_parameters, fields) => {
+                        let type_args: Option<Vec<ResolvedType>> =
+                            if let Some(type_args) = type_args {
+                                Some(type_args.iter().map(|x| scopes.resolve_type(x)).collect())
+                            } else {
+                                None
+                            };
+                        let mut types = HashMap::new();
+                        if let Some(ref ts) = type_args {
+                            for (para, args) in type_parameters.iter().zip(ts.iter()) {
+                                types.insert(para.name.value, args);
+                            }
+                        }
+
+                        struct_ty.bind_type_parameter(&types);
+                        struct_ty
+                    }
+                    _ => UNKNOWN_TYPE.clone(),
+                }
+            }
+            Exp_::Vector(loc, ty, exprs) => {
+                let mut ty = if let Some(ty) = ty {
+                    if let Some(ty) = ty.get(0) {
+                        Some(scopes.resolve_type(ty))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+                if option_ty_is_valid(&ty) {
+                    for e in exprs.value.iter() {
+                        let ty2 = self.get_expr_type(e, scopes);
+                        if !ty2.is_unknown() {
+                            ty = Some(ty2);
+                            break;
+                        }
+                    }
+                }
+                ty.unwrap_or(ResolvedType::new_unknown(loc.clone()))
+            }
+            Exp_::IfElse(_, then, else_) => {
+                let mut ty = self.get_expr_type(expr, scopes);
+                if ty.is_err() {
+                    if let Some(else_) = else_ {
+                        ty = self.get_expr_type(else_, scopes);
+                    }
+                }
+                ty
+            }
+            Exp_::While(_, _) | Exp_::Loop(_) => ResolvedType::new_unit(expr.loc),
             Exp_::Block(_) => todo!(),
             Exp_::Lambda(_, _) => todo!(),
             Exp_::Quant(_, _, _, _, _) => todo!(),
             Exp_::ExpList(_) => todo!(),
-            Exp_::Unit => todo!(),
-            Exp_::Assign(_, _) => todo!(),
-            Exp_::Return(_) => todo!(),
-            Exp_::Abort(_) => todo!(),
-            Exp_::Break => todo!(),
-            Exp_::Continue => todo!(),
-            Exp_::Dereference(_) => todo!(),
-            Exp_::UnaryExp(_, _) => todo!(),
-            Exp_::BinopExp(_, _, _) => todo!(),
-            Exp_::Borrow(_, _) => todo!(),
-            Exp_::Dot(_, _) => todo!(),
-            Exp_::Index(_, _) => todo!(),
-            Exp_::Cast(_, _) => todo!(),
-            Exp_::Annotate(_, _) => todo!(),
+            Exp_::Unit => ResolvedType::new_unit(expr.loc),
+            Exp_::Assign(_, _) => ResolvedType::new_unit(expr.loc),
+            Exp_::Return(_) => ResolvedType::new_unit(expr.loc),
+            Exp_::Abort(_) => ResolvedType::new_unit(expr.loc),
+            Exp_::Break => ResolvedType::new_unit(expr.loc),
+            Exp_::Continue => ResolvedType::new_unit(expr.loc),
+            Exp_::Dereference(e) => {
+                let ty = self.get_expr_type(e, scopes);
+                match &ty.0.value {
+                    ResolvedType_::Ref(_, t) => t.as_ref().clone(),
+                    _ => ty,
+                }
+            }
+            Exp_::UnaryExp(_, e) => {
+                let ty = self.get_expr_type(e, scopes);
+                ty
+            }
+            Exp_::BinopExp(left, op, right) => {
+                let left_ty = self.get_expr_type(left, scopes);
+                let right_ty = self.get_expr_type(right, scopes);
+                let pick = |prefer_left: bool| {
+                    if prefer_left && !left_ty.is_err() {
+                        left_ty.clone()
+                    } else {
+                        right_ty.clone()
+                    }
+                };
+                match op.value {
+                    BinOp_::Add => pick(true),
+                    BinOp_::Sub => pick(true),
+                    BinOp_::Mul => pick(true),
+                    BinOp_::Mod => pick(true),
+                    BinOp_::Div => pick(true),
+                    BinOp_::BitOr => pick(true),
+                    BinOp_::BitAnd => pick(true),
+                    BinOp_::Xor => pick(true),
+                    BinOp_::Shl => pick(true),
+                    BinOp_::Shr => pick(true),
+                    BinOp_::Range => todo!(),
+                    BinOp_::Implies => todo!(),
+                    BinOp_::Iff => todo!(),
+                    BinOp_::And => todo!(),
+                    BinOp_::Or => todo!(),
+                    BinOp_::Eq
+                    | BinOp_::Neq
+                    | BinOp_::Lt
+                    | BinOp_::Gt
+                    | BinOp_::Le
+                    | BinOp_::Ge => ResolvedType::new_build_in(BuildInType::Bool),
+                }
+            }
+            Exp_::Borrow(is_mut, e) => {
+                let ty = self.get_expr_type(e, scopes);
+                ResolvedType::new_ref(expr.loc, *is_mut, ty)
+            }
+            Exp_::Dot(e, name) => {
+                let ty = self.get_expr_type(e, scopes);
+                if let Some(field) = ty.find_filed_by_name(name.value) {
+                    field.1.clone()
+                } else {
+                    ty
+                }
+            }
+            Exp_::Index(e, index) => {
+                let ty = self.get_expr_type(e, scopes);
+                if let Some(v) = ty.is_vector() {
+                    v.clone()
+                } else {
+                    ty
+                }
+            }
+            Exp_::Cast(_, ty) => {
+                let ty = scopes.resolve_type(ty);
+                ty
+            }
+            Exp_::Annotate(_, ty) => scopes.resolve_type(ty),
             Exp_::Spec(_) => todo!(),
-            Exp_::UnresolvedError => todo!(),
+            Exp_::UnresolvedError => {
+                // Nothings. didn't know what to do.
+                ResolvedType::new_unknown(expr.loc)
+            }
         }
     }
 
@@ -382,7 +539,7 @@ impl Modules {
             Exp_::Value(ref v) => {
                 if let Some(name) = Self::get_name_from_value(v) {
                     let item = Item::ExprName(name.clone());
-                    visitor.handle_item(scopes, item);
+                    visitor.handle_item(scopes, &item);
                     if visitor.finished() {
                         return;
                     }
@@ -392,14 +549,12 @@ impl Modules {
             Exp_::Move(var) | Exp_::Copy(var) => {
                 unimplemented!();
             }
-            Exp_::Name(chain, _ty) => {
-                // TODO how to use _ty.
+            Exp_::Name(chain, _ty /*  How to use _ty */) => {
                 // let _ty: Option<Vec<ResolvedType>> =
                 //     ty.map(|s| s.iter().map(|t| scopes.resolve_type(t)).collect());
                 let item = Item::ExprNameAccessChain(chain.clone());
-                visitor.handle_item(scopes, item);
+                visitor.handle_item(scopes, &item);
             }
-
             Exp_::Call(ref leading, _, ref types, ref exprs) => {
                 // self.visit_expr_name_access_chain(leading, scopes, visitor);
                 // if visitor.finished() {
@@ -451,7 +606,58 @@ impl Modules {
     }
 
     fn visit_use_decl(&self, use_decl: &UseDecl, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
-        unimplemented!();
+        {
+            let item = Item::Use(use_decl.clone());
+            visitor.handle_item(scopes, &item);
+            if visitor.finished() {
+                return;
+            }
+        }
+        match &use_decl.use_ {
+            Use::Module(module, alias) => {
+                let mut name = module.value.module.0.value;
+                if let Some(alias) = alias {
+                    name = alias.0.value;
+                }
+                let r = scopes.visit_top_scope(|top| -> Option<Rc<RefCell<Scope>>> {
+                    let x = top
+                        .address
+                        .get(match &module.value.address.value {
+                            LeadingNameAccess_::AnonymousAddress(num) => num,
+                            LeadingNameAccess_::Name(name) => self.name_to_addr(name.value),
+                        })?
+                        .modules
+                        .get(&module.value.module.0.value)?
+                        .clone();
+                    Some(x)
+                });
+                if r.is_none() {
+                    return;
+                }
+                let r = r.unwrap();
+                let item = Item::ImportedUseModule(module.clone(), r);
+                scopes.enter_item(name, item);
+            }
+
+            Use::Members(module, _) => {
+                let r = scopes.visit_top_scope(|top| -> Option<Rc<RefCell<Scope>>> {
+                    let x = top
+                        .address
+                        .get(match &module.value.address.value {
+                            LeadingNameAccess_::AnonymousAddress(num) => num,
+                            LeadingNameAccess_::Name(name) => self.name_to_addr(name.value),
+                        })?
+                        .modules
+                        .get(&module.value.module.0.value)?
+                        .clone();
+                    Some(x)
+                });
+                if r.is_none() {
+                    return;
+                }
+                let r = r.unwrap();
+            }
+        }
     }
 
     fn visit_signature(
@@ -460,62 +666,88 @@ impl Modules {
         scopes: &Scopes,
         visitor: &mut dyn ScopeVisitor,
     ) {
-        // //
-        // for (name, v) in signature.type_parameters.iter() {
-        //     let loc = name.loc;
-        //     let item = Item::TParam(name.clone(), v.clone());
-        //     if self.in_range(loc) {
-        //         // found
-        //         visitor.handle_item(scopes, item);
-        //         if visitor.finished() {
-        //             return;
-        //         }
-        //     }
-        //     // Enter this.
-        //     scopes.enter_type_item(name.value, item);
-        // }
-        // for (v, t) in signature.parameters.iter() {
-        //     let loc = t.loc;
-        //     let ty = scopes.resolve_type(t);
-        //     let item = Item::ApplyType(ty.clone());
-        //     if self.in_range(loc) {
-        //         // found
-        //         visitor.handle_item(scopes, item);
-        //         if visitor.finished() {
-        //             return;
-        //         }
-        //     }
-        //     {
-        //         let loc = v.loc();
-        //         let item = Item::Parameter(v.clone(), ty);
-        //         // found
-        //         visitor.handle_item(scopes, item);
-        //         if visitor.finished() {
-        //             return;
-        //         }
-        //         scopes.enter_value_item(v.value(), item)
-        //     }
-        // }
-
-        unimplemented!();
+        for (name, v) in signature.type_parameters.iter() {
+            let item = Item::TParam(name.clone(), v.clone());
+            visitor.handle_item(scopes, &item);
+            if visitor.finished() {
+                return;
+            }
+            // Enter this.
+            scopes.enter_item(name.value, item);
+        }
+        for (v, t) in signature.parameters.iter() {
+            let ty = scopes.resolve_type(t);
+            let item = Item::ApplyType(ty.clone());
+            // found
+            visitor.handle_item(scopes, &item);
+            if visitor.finished() {
+                return;
+            }
+            let item = Item::Parameter(v.clone(), ty);
+            // found
+            visitor.handle_item(scopes, &item);
+            if visitor.finished() {
+                return;
+            }
+            scopes.enter_item(v.value(), item)
+        }
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Scope {
-    values: HashMap<Symbol, Item>,
-    types: HashMap<Symbol, Item>,
+    items: HashMap<Symbol, Item>,
     is_function: bool,
     is_spec: bool,
     is_global: bool,
+    /// Top Have this.
+    top: Option<TopScope>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct TopScope {
+    /// address to modules
+    address: HashMap<NumericalAddress, TopScopeModules>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct TopScopeModules {
+    /// module name  to Scope
+    modules: HashMap<Symbol, Rc<RefCell<Scope>>>,
+}
+
+/// Check is option is Some and ResolvedType is not unknown and not a error.
+fn option_ty_is_valid(x: &Option<ResolvedType>) -> bool {
+    if let Some(ref x) = x {
+        !x.is_err()
+    } else {
+        false
+    }
 }
 
 impl Scope {
-    fn enter_value_item(&mut self, s: Symbol, item: Item) {
-        self.values.insert(s, item);
+    fn enter_item(&mut self, s: Symbol, item: Item) {
+        self.items.insert(s, item);
     }
-    fn enter_type_item(&mut self, s: Symbol, item: Item) {
-        self.types.insert(s, item);
+}
+
+enum MacroCall {
+    Assert,
+}
+
+impl MacroCall {
+    fn from_name_access_chain(chain: &NameAccessChain) -> Self {
+        match &chain.value {
+            NameAccessChain_::One(name) => Self::from_symbol(name.value),
+            NameAccessChain_::Two(_, _) => unreachable!(),
+            NameAccessChain_::Three(_, _) => unreachable!(),
+        }
+    }
+    fn from_symbol(s: Symbol) -> Self {
+        match s.as_str() {
+            "assert" => Self::Assert,
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -523,10 +755,10 @@ impl Scope {
 pub trait ScopeVisitor {
     /// Handle this item.
     /// If `should_finish` return true. All `enter_scope` and enter_scope called function will return.
-    fn handle_item(&mut self, scopes: &Scopes, item: Item);
+    fn handle_item(&mut self, scopes: &Scopes, item: &Item);
     /// Need not visit this structure???
     fn file_should_visit(&self, p: FileHash) -> bool;
-    /// Visitor is finished.
+    /// Visitor should finished.
     fn finished(&self) -> bool;
 }
 
@@ -563,30 +795,83 @@ enum ResolvedType_ {
 #[derive(Clone, Debug)]
 pub struct ResolvedType(Spanned<ResolvedType_>);
 impl ResolvedType {
-    fn typ(&self, index: usize) -> Option<&'_ ResolvedType> {
+    fn nth_ty(&self, index: usize) -> Option<&'_ ResolvedType> {
+        match &self.0.value {
+            ResolvedType_::Multiple(x) => x.get(index),
+            ResolvedType_::Struct(_, _, fields) => fields.get(index).map(|x| &x.1),
+            _ => None,
+        }
+    }
+    fn nth_field(&self, index: usize) -> Option<&'_ (Field, ResolvedType)> {
         unimplemented!()
     }
-
-    fn field(&self, index: usize) -> Option<&'_ Field> {
-        unimplemented!()
+    fn is_vector(&self) -> Option<&'_ ResolvedType> {
+        match &self.0.value {
+            ResolvedType_::Vec(x) => Some(x.as_ref()),
+            _ => None,
+        }
     }
+    fn find_filed_by_name(&self, name: Symbol) -> Option<&'_ (Field, ResolvedType)> {
+        match &self.0.value {
+            ResolvedType_::Struct(_, _, fields) => {
+                for f in fields.iter() {
+                    if f.0.value() == name {
+                        return Some(f);
+                    }
+                }
 
-    const fn mk_default(loc: Loc) -> ResolvedType {
+                None
+            }
+            _ => None,
+        }
+    }
+    #[inline]
+    const fn new_unknown(loc: Loc) -> ResolvedType {
         Self(Spanned {
             loc,
             value: ResolvedType_::UnKnown,
         })
     }
-
-    fn new_build_in(b: BuildInType) -> Self {
-        unimplemented!();
+    #[inline]
+    fn new_unit(loc: Loc) -> Self {
+        Self(Spanned {
+            loc,
+            value: ResolvedType_::Unit,
+        })
     }
+    #[inline]
+    fn new_build_in(b: BuildInType) -> Self {
+        Self(Spanned {
+            loc: UNKNOWN_LOC.clone(),
+            value: ResolvedType_::Unit,
+        })
+    }
+    #[inline]
     fn is_unknown(&self) -> bool {
         match &self.0.value {
             ResolvedType_::UnKnown => true,
             _ => false,
         }
     }
+    #[inline]
+    fn is_resolved_failed(&self) -> bool {
+        match &self.0.value {
+            ResolvedType_::ResolvedFailed(_) => true,
+            _ => false,
+        }
+    }
+
+    #[inline]
+    fn new_ref(loc: Loc, is_mut: bool, e: ResolvedType) -> Self {
+        let value = ResolvedType_::Ref(is_mut, Box::new(e));
+        Self(Spanned { loc, value })
+    }
+
+    #[inline]
+    fn is_err(&self) -> bool {
+        self.is_resolved_failed() || self.is_unknown()
+    }
+    #[inline]
     fn is_fun(&self) -> bool {
         match &self.0.value {
             ResolvedType_::Fun(_, _, _) => true,
@@ -595,7 +880,7 @@ impl ResolvedType {
     }
 
     /// bind type parameter to concrete tpe
-    fn bind_type_parameter(&mut self, types: &HashMap<Symbol, ResolvedType>) {
+    fn bind_type_parameter(&mut self, types: &HashMap<Symbol, &'_ ResolvedType>) {
         match &mut self.0.value {
             ResolvedType_::UnKnown => {}
             ResolvedType_::Struct(_, _, ref mut fields) => {
@@ -607,7 +892,7 @@ impl ResolvedType {
             ResolvedType_::BuildInType(_) => {}
             ResolvedType_::TParam(name, _) => {
                 if let Some(x) = types.get(&name.value) {
-                    std::mem::replace(&mut self.0.value, x.clone().0.value);
+                    std::mem::replace(&mut self.0.value, (*x).clone().0.value);
                 }
             }
             ResolvedType_::Ref(_, ref mut b) => {
@@ -648,6 +933,9 @@ pub enum BuildInType {
     /// A number type from literal.
     /// Could be u8 and ... depend on How it is used.
     NumType,
+
+    /// https://move-book.com/advanced-topics/managing-collections-with-vectors.html?highlight=STring#hex-and-bytestring-literal-for-inline-vector-definitions
+    String,
 }
 
 impl BuildInType {
@@ -668,6 +956,7 @@ pub enum Item {
     /////////////////////////////
     /// VALUE types
     Parameter(Var, ResolvedType),
+    ImportedUseModule(ModuleIdent, Rc<RefCell<Scope>>),
 
     /////////////////////////
     /// TYPE types
@@ -692,23 +981,27 @@ pub enum Item {
 }
 
 impl Item {
-    fn to_type(&self, loc: Loc) -> Option<ResolvedType> {
+    ///  
+    fn to_type(&self, loc: Loc) -> ResolvedType {
         let x = match self {
             Item::TParam(name, ab) => ResolvedType_::TParam(name.clone(), ab.clone()),
             Item::Struct(name, types, fields) => {
                 ResolvedType_::Struct(name.clone(), types.clone(), fields.clone())
             }
             Item::BuildInType(b) => ResolvedType_::BuildInType(*b),
-            _ => return None,
+            _ => unreachable!(),
         };
-        Some(ResolvedType(Spanned { loc, value: x }))
+        ResolvedType(Spanned { loc, value: x })
     }
     fn loc() -> Loc {
         unimplemented!();
     }
 }
 pub struct IDEModule {
-    defs: HashMap<PathBuf, move_compiler::parser::ast::Definition>,
+    defs: HashMap<
+        PathBuf, /*  file path  xxxx/abc.move  */
+        move_compiler::parser::ast::Definition,
+    >,
     filepath_to_filehash: HashMap<String /* file path */, FileHash>,
 }
 
@@ -720,29 +1013,63 @@ pub struct Scopes {
 impl Scopes {
     fn enter_scope<R>(&self, call_back: impl FnOnce(&Scopes) -> R) -> R {
         let s = Scope::default();
-        self.scopes.borrow_mut().push(s);
+        self.scopes.as_ref().borrow_mut().push(s);
         let _guard = ScopesGuarder::new(self.clone());
         let r = call_back(self);
         r
     }
 
     // Enter
-    fn enter_value_item(&self, name: Symbol, item: Item) {
+    fn enter_item(&self, name: Symbol, item: Item) {
         self.scopes
             .as_ref()
             .borrow_mut()
             .last_mut()
             .unwrap()
-            .enter_value_item(name, item);
+            .enter_item(name, item);
     }
 
-    fn enter_type_item(&self, name: Symbol, item: Item) {
-        self.scopes
+    fn enter_top_item(
+        &self,
+        address: NumericalAddress,
+        module: Symbol,
+        item_name: Symbol,
+        item: Item,
+    ) {
+        let mut b = self.scopes.as_ref().borrow_mut();
+        let mut s = b.first_mut().unwrap();
+        if s.top.is_none() {
+            s.top = Some(TopScope::default());
+        };
+        let t = s.top.as_mut().unwrap();
+        if !t.address.contains_key(&address) {
+            t.address.insert(address, Default::default());
+        }
+        if !t
+            .address
+            .get(&address)
+            .unwrap()
+            .modules
+            .contains_key(&module)
+        {
+            t.address
+                .get_mut(&address)
+                .unwrap()
+                .modules
+                .insert(module, Default::default());
+        }
+        // finally, OK to borrow.
+        t.address
+            .get_mut(&address)
+            .unwrap()
+            .modules
+            .get_mut(&module)
+            .unwrap()
             .as_ref()
             .borrow_mut()
-            .last_mut()
-            .unwrap()
-            .enter_type_item(name, item);
+            .borrow_mut()
+            .items
+            .insert(item_name, item);
     }
 
     /// Visit all scope from inner to outer.
@@ -753,9 +1080,10 @@ impl Scopes {
             }
         }
     }
+
     ///
     fn setup_scope(&self, f: impl FnOnce(&mut Scope)) {
-        let mut x = self.scopes.borrow_mut();
+        let mut x = self.scopes.as_ref().borrow_mut();
         let x = x.last_mut().unwrap();
         f(x);
     }
@@ -786,15 +1114,12 @@ impl Scopes {
 
     fn resolve_name_access_chain_type(&self, chain: &NameAccessChain) -> ResolvedType {
         let scopes = self.scopes.as_ref().borrow();
-
         for s in scopes.iter() {
             // We must be in global scope.
             let item = match &chain.value {
                 NameAccessChain_::One(x) => {
-                    if let Some(item) = s.types.get(&x.value) {
-                        if let Some(ty) = item.to_type(x.loc) {
-                            return ty;
-                        }
+                    if let Some(item) = s.items.get(&x.value) {
+                        return item.to_type(x.loc);
                     }
                 }
                 NameAccessChain_::Two(_, _) => todo!(),
@@ -811,7 +1136,7 @@ impl Scopes {
     fn find_var_type(&self, name: Symbol) -> ResolvedType {
         let mut ret = None;
         self.inner_first_visit(|s| {
-            if let Some(v) = s.values.get(&name) {
+            if let Some(v) = s.items.get(&name) {
                 match v {
                     Item::Parameter(_, t) => {
                         ret = Some(t.clone());
@@ -827,8 +1152,107 @@ impl Scopes {
             value: ResolvedType_::UnKnown,
         });
     }
-    fn find_name_access_chain_type(&self, s: &NameAccessChain) -> ResolvedType {
-        unimplemented!();
+
+    fn find_name_access_chain_type<'a>(
+        &self,
+        s: &NameAccessChain,
+        name_to_addr: impl Fn(Symbol) -> &'a NumericalAddress,
+    ) -> ResolvedType {
+        // let s = self.scopes.as_ref().borrow().first().unwrap();
+        // match &s.value {
+        //     NameAccessChain_::One(name) => {
+        //         if let Some(t) = s.types.get(&name.value) {
+        //             return t.to_type(s.loc);
+        //         }
+        //     }
+        //     NameAccessChain_::Two(_, _) => todo!(),
+        //     NameAccessChain_::Three(_, _) => todo!(),
+        // }
+        // match &s.top {
+        //     Some(x) => match s {},
+        //     None => ResolvedType::new_unknown(s.loc),
+        // }
+        unimplemented!()
+    }
+
+    fn find_name_access_chain_value<'a>(
+        &self,
+        chain: &NameAccessChain,
+        name_to_addr: impl Fn(Symbol) -> &'a NumericalAddress,
+    ) -> ResolvedType {
+        let failed = ResolvedType::new_unknown(chain.loc);
+        match &chain.value {
+            NameAccessChain_::One(name) => {
+                let mut r = None;
+                self.inner_first_visit(|s| {
+                    if let Some(v) = s.items.get(&name.value) {
+                        r = Some(v.to_type(chain.loc));
+                        return true;
+                    }
+                    false
+                });
+                r.unwrap_or(failed)
+            }
+            NameAccessChain_::Two(name, member) => {
+                // first find this name.
+                let mut r = None;
+                self.inner_first_visit(|s| {
+                    if let Some(v) = s.items.get(&member.value) {
+                        r = Some(v.clone());
+                        return true;
+                    }
+                    false
+                });
+
+                if r.is_none() {
+                    return failed;
+                }
+                let r = r.unwrap();
+                match r {
+                    Item::ImportedUseModule(_, members) => {
+                        if let Some(item) = members.as_ref().borrow().items.get(&member.value) {
+                            item.to_type(chain.loc)
+                        } else {
+                            failed
+                        }
+                    }
+                    _ => failed,
+                }
+            }
+            NameAccessChain_::Three(chain_two, member) => self.visit_top_scope(|top| {
+                let modules = top.address.get(match &chain_two.value.0.value {
+                    LeadingNameAccess_::AnonymousAddress(x) => x,
+                    LeadingNameAccess_::Name(name) => name_to_addr(name.value),
+                });
+                if modules.is_none() {
+                    return failed;
+                }
+                let modules = modules.unwrap();
+
+                let module = modules.modules.get(&chain_two.value.1.value);
+                if module.is_none() {
+                    return failed;
+                }
+                let module = module.unwrap();
+                if let Some(item) = module.as_ref().borrow().items.get(&member.value) {
+                    item.to_type(chain.loc)
+                } else {
+                    failed
+                }
+            }),
+        }
+    }
+
+    fn visit_top_scope<R>(&self, x: impl FnOnce(&TopScope) -> R) -> R {
+        x(self
+            .scopes
+            .as_ref()
+            .borrow()
+            .first()
+            .unwrap()
+            .top
+            .as_ref()
+            .unwrap())
     }
 
     fn resolve_type(&self, ty: &Type) -> ResolvedType {
@@ -850,7 +1274,6 @@ impl Scopes {
                 ResolvedType_::Multiple(types)
             }
         };
-
         ResolvedType(Spanned {
             loc: ty.loc,
             value: r,
@@ -883,4 +1306,6 @@ fn xxxx() {
     s.enter_scope(|s| s.enter_scope(|s| s.enter_scope(|_| {})));
 }
 
-const UNKNOWN_TYPE: ResolvedType = ResolvedType::mk_default(Loc::new(FileHash::empty(), 0, 0));
+const UNKNOWN_TYPE: ResolvedType = ResolvedType::new_unknown(Loc::new(FileHash::empty(), 0, 0));
+
+const UNKNOWN_LOC: Loc = Loc::new(FileHash::empty(), 0, 0);

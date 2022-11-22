@@ -1022,7 +1022,6 @@ fn parse_term(context: &mut Context) -> Result<Exp, Box<Diagnostic>> {
             let spec_block = parse_spec_block(vec![], context)?;
             Exp_::Spec(spec_block)
         }
-
         _ => {
             return Err(unexpected_token_error(context.tokens, "an expression term"));
         }

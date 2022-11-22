@@ -251,9 +251,7 @@ fn parse_test_attribute(
     }
 }
 
-const VALUE_WARNING: &str = "WARNING POTENTIALLY INACCURATE TEST. \
-The value should point to a constant defined in the module that will \
-abort to signify which module will abort. Or the location attribute must be specified.";
+const BAD_ABORT_VALUE_WARNING: &str = "WARNING: passes for an abort from any module.";
 const INVALID_VALUE: &str = "Invalid value in attribute assignment";
 
 fn parse_failure_attribute(
@@ -332,12 +330,13 @@ fn parse_failure_attribute(
                         location
                     } else {
                         let tip = format!(
-                            "Replace this value with a constant or add the '{}=...' attribute",
+                            "Replace value with constant from expected module or add `{}=...` \
+                            attribute.",
                             TestingAttribute::ERROR_LOCATION
                         );
                         context.env.add_diag(diag!(
                             Attributes::ValueWarning,
-                            (attr_loc, VALUE_WARNING),
+                            (attr_loc, BAD_ABORT_VALUE_WARNING),
                             (value_loc, tip)
                         ));
                         return Some(ExpectedFailure::ExpectedWithCodeDEPRECATED(u));

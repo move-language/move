@@ -38,6 +38,7 @@ pub struct Program {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AttributeValue_ {
     Value(Value),
+    Module(ModuleIdent),
     ModuleAccess(ModuleAccess),
 }
 pub type AttributeValue = Spanned<AttributeValue_>;
@@ -859,6 +860,7 @@ impl AstDebug for AttributeValue_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
             AttributeValue_::Value(v) => v.ast_debug(w),
+            AttributeValue_::Module(m) => w.write(&format!("{}", m)),
             AttributeValue_::ModuleAccess(n) => n.ast_debug(w),
         }
     }

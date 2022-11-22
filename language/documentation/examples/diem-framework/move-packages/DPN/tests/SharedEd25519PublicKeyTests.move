@@ -49,7 +49,7 @@ module DiemFramework::SharedEd25519PublicKeyTests {
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, account = @0x100)]
-    #[expected_failure(abort_code = 261)]
+    #[expected_failure(abort_code = 261, location = SharedEd25519PublicKey)]
     fun get_key_for_non_shared_account_should_fail(dr: signer, tc: signer, account: signer) {
         setup(&dr, &tc, &account);
 
@@ -57,7 +57,7 @@ module DiemFramework::SharedEd25519PublicKeyTests {
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, account = @0x100)]
-    #[expected_failure(abort_code = 7)]
+    #[expected_failure(abort_code = 7, location = SharedEd25519PublicKey)]
     fun publish_key_with_bad_length_1(dr: signer, tc: signer, account: signer) {
         setup(&dr, &tc, &account);
 
@@ -66,7 +66,7 @@ module DiemFramework::SharedEd25519PublicKeyTests {
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, account = @0x100)]
-    #[expected_failure(abort_code = 7)]
+    #[expected_failure(abort_code = 7, location = SharedEd25519PublicKey)]
     fun publish_key_with_bad_length_2(dr: signer, tc: signer, account: signer) {
         setup(&dr, &tc, &account);
 
@@ -75,7 +75,7 @@ module DiemFramework::SharedEd25519PublicKeyTests {
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, account = @0x100)]
-    #[expected_failure(abort_code = 7)]
+    #[expected_failure(abort_code = 7, location = SharedEd25519PublicKey)]
     fun rotate_to_key_with_bad_length(dr: signer, tc: signer, account: signer) {
         setup(&dr, &tc, &account);
 
@@ -88,7 +88,7 @@ module DiemFramework::SharedEd25519PublicKeyTests {
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, account = @0x100)]
-    #[expected_failure(abort_code = 7)]
+    #[expected_failure(abort_code = 7, location = SharedEd25519PublicKey)]
     fun rotate_to_key_with_good_length_but_bad_contents(dr: signer, tc: signer, account: signer) {
         setup(&dr, &tc, &account);
 
@@ -100,7 +100,7 @@ module DiemFramework::SharedEd25519PublicKeyTests {
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, account = @0x100)]
-    #[expected_failure(abort_code = 261)]
+    #[expected_failure(abort_code = 261, location = SharedEd25519PublicKey)]
     fun rotate_key_on_non_shared_account(dr: signer, tc: signer, account: signer) {
         setup(&dr, &tc, &account);
 

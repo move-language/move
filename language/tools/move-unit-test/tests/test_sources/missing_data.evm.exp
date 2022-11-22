@@ -1,5 +1,7 @@
 Running Move unit tests
 [ FAIL    ] 0x1::MissingData::missing_data
+[ PASS    ] 0x1::MissingData::missing_data_captured
+[ FAIL    ] 0x1::MissingData::missing_data_exact
 [ FAIL    ] 0x1::MissingData::missing_data_from_other_function
 
 Test failures:
@@ -7,14 +9,20 @@ Test failures:
 Failures in 0x1::MissingData:
 
 ┌── missing_data ──────
-│ ITE: An unknown error was reported. Location: 
-│ VMError (if there is one): 
+│ INTERNAL TEST ERROR: UNKNOWN ERROR.
+│ Test was not expected to error, but it gave a UNKNOWN_STATUS (code 18446744073709551615) error originating in an unknown location rooted here
+└──────────────────
+
+
+┌── missing_data_exact ──────
+│ INTERNAL TEST ERROR: UNKNOWN ERROR.
+│ Test was not expected to error, but it gave a UNKNOWN_STATUS (code 18446744073709551615) error originating in an unknown location rooted here
 └──────────────────
 
 
 ┌── missing_data_from_other_function ──────
-│ ITE: An unknown error was reported. Location: 
-│ VMError (if there is one): 
+│ INTERNAL TEST ERROR: UNKNOWN ERROR.
+│ Test was not expected to error, but it gave a UNKNOWN_STATUS (code 18446744073709551615) error originating in an unknown location rooted here
 └──────────────────
 
-Test result: FAILED. Total tests: 2; passed: 0; failed: 2
+Test result: FAILED. Total tests: 4; passed: 1; failed: 3

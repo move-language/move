@@ -287,6 +287,23 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             };
                         AttributeValue::Value(value_node_id, val)
                     }
+                    EA::AttributeValue_::Module(mident) => {
+                        let addr_bytes = self.parent.resolve_address(
+                            &self.parent.to_loc(&mident.loc),
+                            &mident.value.address,
+                        );
+                        let module_name = ModuleName::from_address_bytes_and_name(
+                            addr_bytes,
+                            self.symbol_pool()
+                                .make(mident.value.module.0.value.as_str()),
+                        );
+                        // TODO support module attributes more than via empty string
+                        AttributeValue::Name(
+                            value_node_id,
+                            Some(module_name),
+                            self.symbol_pool().make(""),
+                        )
+                    }
                     EA::AttributeValue_::ModuleAccess(macc) => match macc.value {
                         EA::ModuleAccess_::Name(n) => AttributeValue::Name(
                             value_node_id,

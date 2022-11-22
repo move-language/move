@@ -12,14 +12,14 @@ module DiemFramework::CRSNTests {
     }
 
     #[test(a=@0xCAFE, tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 1281)]
+    #[expected_failure(abort_code = 1281, location = CRSN)]
     public fun cant_publish_until_init(a: signer, tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         CRSN::test_publish(&a, 0, 10);
     }
 
     #[test(a=@0xCAFE, tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 1537)]
+    #[expected_failure(abort_code = 1537, location = CRSN)]
     public fun double_init(a: signer, tc: signer, dr: signer) {
         setup(&dr, &tc, &a);
         CRSN::allow_crsns(&dr);
@@ -60,7 +60,7 @@ module DiemFramework::CRSNTests {
 
 
     #[test(a=@0xCAFE, tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 257)]
+    #[expected_failure(abort_code = 257, location = CRSN)]
     public fun double_publish(a: signer, tc: signer, dr: signer) {
         setup(&dr, &tc, &a);
         CRSN::test_publish(&a, 0, 10);
@@ -68,7 +68,7 @@ module DiemFramework::CRSNTests {
     }
 
     #[test(a=@0xCAFE, tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 519)]
+    #[expected_failure(abort_code = 519, location = CRSN)]
     public fun publish_zero_size(a: signer, tc: signer, dr: signer) {
         setup(&dr, &tc, &a);
         CRSN::test_publish(&a, 10, 0);
@@ -81,7 +81,7 @@ module DiemFramework::CRSNTests {
     }
 
     #[test(a=@0xCAFE, tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 775)]
+    #[expected_failure(abort_code = 775, location = CRSN)]
     public fun publish_above_max_size(a: signer, tc: signer, dr: signer) {
         setup(&dr, &tc, &a);
         CRSN::test_publish(&a, 10, CRSN::max_crsn_size() + 1);
@@ -97,7 +97,7 @@ module DiemFramework::CRSNTests {
     }
 
     #[test(a=@0xCAFE)]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(abort_code = 1, location = CRSN)]
     public fun record_no_crsn(a: signer) {
         CRSN::test_record(&a, 0);
     }
@@ -171,7 +171,7 @@ module DiemFramework::CRSNTests {
     }
 
     #[test(a=@0xCAFE, tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 1031)]
+    #[expected_failure(abort_code = 1031, location = CRSN)]
     public fun force_expire_zero(a: signer, tc: signer, dr: signer) {
         setup(&dr, &tc, &a);
         CRSN::test_publish(&a, 100, 10);

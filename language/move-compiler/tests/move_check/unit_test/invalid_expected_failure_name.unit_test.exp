@@ -5,5 +5,5 @@ error[E10003]: invalid attribute value
   │       -----------------^
   │       │                │
   │       │                Invalid expected failure code assignment
-  │       Expect an #[expected_failure(abort_code=...)] attribute for abort code assignment
+  │       Expect an #[expected_failure(...)] attribute for error specification
 

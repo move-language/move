@@ -23,7 +23,7 @@ module std::aclTests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 7)]
+    #[expected_failure(abort_code = 7, location = std::acl)]
     fun test_add_failure() acquires Data {
         let (alice, bob) = create_two_signers();
         let acl = acl::empty();
@@ -36,7 +36,7 @@ module std::aclTests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 263)]
+    #[expected_failure(abort_code = 263, location = std::acl)]
     fun test_remove_failure() acquires Data {
         let (alice, bob) = create_two_signers();
         let acl = acl::empty();

@@ -10,7 +10,7 @@ module DiemFramework::DiemTimestampTests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 2)]
+    #[expected_failure(abort_code = 2, location = DiemFramework::CoreAddresses)]
     fun set_time_has_started_non_dr_pre_genesis() {
         let s = get_signer();
         DiemTimestamp::set_time_has_started_for_testing(&s);
@@ -22,14 +22,14 @@ module DiemFramework::DiemTimestampTests {
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance)]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(abort_code = 1, location = DiemTimestamp)]
     fun set_time_has_started_dr_post_genesis(dr: signer, tc: signer) {
         Genesis::setup(&dr, &tc);
         DiemTimestamp::set_time_has_started_for_testing(&dr);
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance)]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(abort_code = 1, location = DiemTimestamp)]
     fun set_time_has_started_non_dr_post_genesis(dr: signer, tc: signer) {
         Genesis::setup(&dr, &tc);
         let s = get_signer();
@@ -37,14 +37,14 @@ module DiemFramework::DiemTimestampTests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 257)]
+    #[expected_failure(abort_code = 257, location = DiemTimestamp)]
     fun update_global_time_pre_genesis() {
         let s = get_signer();
         DiemTimestamp::update_global_time(&s, @0x0, 0);
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance)]
-    #[expected_failure(abort_code = 514)]
+    #[expected_failure(abort_code = 514, location = DiemFramework::CoreAddresses)]
     fun update_global_time_post_genesis_non_vm(dr: signer, tc: signer) {
         Genesis::setup(&dr, &tc);
         DiemTimestamp::update_global_time(&dr, @0x1, 0);
@@ -59,7 +59,7 @@ module DiemFramework::DiemTimestampTests {
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, vm = @VMReserved)]
-    #[expected_failure(abort_code = 519)]
+    #[expected_failure(abort_code = 519, location = DiemTimestamp)]
     fun update_global_time_post_genesis_vm_nil_proposer_increasing_timestamp(dr: signer, tc: signer, vm: signer) {
         Genesis::setup(&dr, &tc);
         assert!(DiemTimestamp::now_microseconds() == 0, 0);
@@ -67,7 +67,7 @@ module DiemFramework::DiemTimestampTests {
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance, vm = @VMReserved)]
-    #[expected_failure(abort_code = 519)]
+    #[expected_failure(abort_code = 519, location = DiemTimestamp)]
     fun update_global_time_post_genesis_vm_not_nil_proposer_equal_timestamp(dr: signer, tc: signer, vm: signer) {
         Genesis::setup(&dr, &tc);
         assert!(DiemTimestamp::now_microseconds() == 0, 0);
@@ -83,7 +83,7 @@ module DiemFramework::DiemTimestampTests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 257)]
+    #[expected_failure(abort_code = 257, location = DiemTimestamp)]
     fun now_microseconds_pre_genesis() {
         DiemTimestamp::now_microseconds();
     }
@@ -95,7 +95,7 @@ module DiemFramework::DiemTimestampTests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 257)]
+    #[expected_failure(abort_code = 257, location = DiemTimestamp)]
     fun now_seconds_pre_genesis() {
         DiemTimestamp::now_seconds();
     }
@@ -115,7 +115,7 @@ module DiemFramework::DiemTimestampTests {
     }
 
     #[test(dr = @DiemRoot, tc = @TreasuryCompliance)]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(abort_code = 1, location = DiemTimestamp)]
     fun assert_genesis(dr: signer, tc: signer) {
         Genesis::setup(&dr, &tc);
         DiemTimestamp::assert_genesis();
@@ -130,7 +130,7 @@ module DiemFramework::DiemTimestampTests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 257)]
+    #[expected_failure(abort_code = 257, location = DiemTimestamp)]
     fun assert_operating() {
         DiemTimestamp::assert_operating();
     }

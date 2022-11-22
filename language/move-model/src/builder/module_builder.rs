@@ -1044,8 +1044,11 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 }
             }
             Function {
-                signature, body, ..
-            } => self.def_ana_spec_fun(signature, body),
+                uninterpreted,
+                signature,
+                body,
+                ..
+            } => self.def_ana_spec_fun(*uninterpreted, signature, body),
             Let {
                 name,
                 post_state,
@@ -1885,24 +1888,36 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 
 impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     /// Definition analysis for a specification helper function.
-    fn def_ana_spec_fun(&mut self, _signature: &EA::FunctionSignature, body: &EA::FunctionBody) {
-        if let EA::FunctionBody_::Defined(seq) = &body.value {
-            let entry = &self.spec_funs[self.spec_fun_index];
-            let type_params = entry.type_params.clone();
-            let params = entry.params.clone();
-            let result_type = entry.result_type.clone();
-            let mut et = ExpTranslator::new(self);
-            let loc = et.to_loc(&body.loc);
-            for (n, ty) in type_params {
-                et.define_type_param(&loc, n, ty);
+    fn def_ana_spec_fun(
+        &mut self,
+        uninterpreted: bool,
+        _signature: &EA::FunctionSignature,
+        body: &EA::FunctionBody,
+    ) {
+        match &body.value {
+            EA::FunctionBody_::Defined(seq) => {
+                let entry = &self.spec_funs[self.spec_fun_index];
+                let type_params = entry.type_params.clone();
+                let params = entry.params.clone();
+                let result_type = entry.result_type.clone();
+                let mut et = ExpTranslator::new(self);
+                let loc = et.to_loc(&body.loc);
+                for (n, ty) in type_params {
+                    et.define_type_param(&loc, n, ty);
+                }
+                et.enter_scope();
+                for (n, ty) in params {
+                    et.define_local(&loc, n, ty, None, None);
+                }
+                let translated = et.translate_seq(&loc, seq, &result_type);
+                et.finalize_types();
+                self.spec_funs[self.spec_fun_index].body = Some(translated.into_exp());
             }
-            et.enter_scope();
-            for (n, ty) in params {
-                et.define_local(&loc, n, ty, None, None);
+            EA::FunctionBody_::Native => {
+                if !uninterpreted {
+                    self.spec_funs[self.spec_fun_index].is_native = true
+                }
             }
-            let translated = et.translate_seq(&loc, seq, &result_type);
-            et.finalize_types();
-            self.spec_funs[self.spec_fun_index].body = Some(translated.into_exp());
         }
         self.spec_fun_index += 1;
     }

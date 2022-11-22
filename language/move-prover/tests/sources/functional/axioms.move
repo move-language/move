@@ -4,6 +4,9 @@ module 0x42::TestAxioms {
         pragma verify = true;
     }
 
+    // ----------------------------------------------------
+    // Non-generic axiom
+
     spec module {
         fun spec_incr(x: num): num;
         axiom forall x: num: spec_incr(x) == x + 1;
@@ -16,12 +19,12 @@ module 0x42::TestAxioms {
         ensures result == TRACE(spec_incr(x));
     }
 
-    // TODO: reactivate this test when generic axiom instantiation is done
-    /*
-    // Axiom over generic function, using type quantification which is expected to be eliminated.
+    // ----------------------------------------------------
+    // Generic axiom
+
     spec module {
         fun spec_id<T>(x: T): T;
-        axiom forall t: type, x: t: spec_id(x) == x;
+        axiom<T> forall x: T: spec_id(x) == x;
     }
 
     fun id_T<T>(x: T): T {
@@ -37,5 +40,14 @@ module 0x42::TestAxioms {
     spec id_u64 {
         ensures result == spec_id(x);
     }
-    */
+
+    // ----------------------------------------------------
+    // Generic axiom calling spec function
+
+    spec module {
+        use std::bcs::serialize;
+        fun deserialize<T>(bytes: vector<u8>): T;
+        // We need the trigger annotation below, otherwise timeout
+        axiom<T> forall v: T {serialize(v)}: deserialize<T>(serialize(v)) == v;
+    }
 }

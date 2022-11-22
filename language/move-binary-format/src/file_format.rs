@@ -651,6 +651,10 @@ impl AbilitySet {
             | (Ability::Key as u8),
     );
 
+    pub fn singleton(ability: Ability) -> Self {
+        Self(ability as u8)
+    }
+
     pub fn has_ability(self, ability: Ability) -> bool {
         let a = ability as u8;
         (a & self.0) == a

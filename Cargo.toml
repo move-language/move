@@ -52,6 +52,7 @@ members = [
     "language/move-stdlib",
     "language/move-symbol-pool",
     "language/move-vm/integration-tests",
+    "language/move-vm/paranoid-tests",
     "language/move-vm/runtime",
     "language/move-vm/test-utils",
     "language/move-vm/transactional-tests",

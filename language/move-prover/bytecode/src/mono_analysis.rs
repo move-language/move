@@ -121,6 +121,17 @@ impl FunctionTargetProcessor for MonoAnalysisProcessor {
             }
             writeln!(f, "}}")?;
         }
+        for (module, insts) in &info.native_inst {
+            writeln!(
+                f,
+                "module {} = {{",
+                env.get_module(*module).get_full_name_str()
+            )?;
+            for inst in insts {
+                writeln!(f, "  <{}>", display_inst(inst))?;
+            }
+            writeln!(f, "}}")?;
+        }
         for (cond, insts) in &info.axioms {
             writeln!(f, "axiom {} = {{", cond.loc.display(env))?;
             for inst in insts {

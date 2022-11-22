@@ -1,6 +1,6 @@
 # Integers
 
-Move supports three unsigned integer types: `u8`, `u64`, and `u128`. Values of these types range from 0 to a maximum that depends on the size of the type.
+Move supports six unsigned integer types: `u8`, `u16`, `u32`, `u64`, `u128`, and `u256`. Values of these types range from 0 to a maximum that depends on the size of the type.
 
 | Type                             | Value Range              |
 | -------------------------------- | ------------------------ |

@@ -272,7 +272,7 @@ The <a href="./constants.html"><code>const</code></a> keyword defines private co
 </tbody></table>
 <h2 id="literals"><a class="header" href="#literals">Literals</a></h2>
 <p>Literal values for these types are specified either as a sequence of digits (e.g.,<code>112</code>) or as hex literals, e.g., <code>0xFF</code>. The type of the literal can optionally be added as a suffix, e.g., <code>112u8</code>. If the type is not specified, the compiler will try to infer the type from the context where the literal is used. If the type cannot be inferred, it is assumed to be <code>u64</code>.</p>
-<p>Decimal literals can be separated by underscores for grouping and readability. (e.g.,<code>1_234_5678</code>, <code>1_000u128</code>). However, hexadecimal literals cannot.</p>
+<p>Number literals can be separated by underscores for grouping and readability. (e.g.,<code>1_234_5678</code>, <code>1_000u128</code>, <code>0xAB_CD_12_35</code>).</p>
 <p>If a literal is too large for its specified (or inferred) size range, an error is reported.</p>
 <h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
 <pre><code class="language-move">// literals with explicit annotations;
@@ -312,7 +312,7 @@ let hex_u16: u16 = 0x1BAE;
 let hex_u32: u32 = 0xDEAD80;
 let hex_u64: u64 = 0xCAFE;
 let hex_u128: u128 = 0xDEADBEEF;
-let hex_u256: u256 = 0x1123456ABCDEF;
+let hex_u256: u256 = 0x1123_456A_BCDE_F;
 </code></pre>
 <h2 id="operations"><a class="header" href="#operations">Operations</a></h2>
 <h3 id="arithmetic"><a class="header" href="#arithmetic">Arithmetic</a></h3>

@@ -8,30 +8,8 @@ Test failures:
 Failures in 0x1::M:
 
 ┌── non_existent_native ──────
-│ ITE: An unknown error was reported. Location: 
-│ VMError (if there is one): VMError {
-│     major_status: UNEXPECTED_VERIFIER_ERROR,
-│     sub_status: None,
-│     message: Some(
-│         "Unexpected verifier/deserialization error! This likely means there is code stored on chain that is unverifiable!\nError: VMError { major_status: MISSING_DEPENDENCY, sub_status: None, message: None, exec_state: None, location: Module(ModuleId { address: 00000000000000000000000000000001, name: Identifier(\"M\") }), indices: [(FunctionHandle, 0)], offsets: [] }",
-│     ),
-│     exec_state: None,
-│     location: Module(
-│         ModuleId {
-│             address: 00000000000000000000000000000001,
-│             name: Identifier(
-│                 "M",
-│             ),
-│         },
-│     ),
-│     indices: [
-│         (
-│             FunctionHandle,
-│             0,
-│         ),
-│     ],
-│     offsets: [],
-│ }
+│ INTERNAL TEST ERROR: INTERNAL VM INVARIANT VIOLATION.
+│ Test was not expected to error, but it gave a UNEXPECTED_VERIFIER_ERROR (code 2017) error originating in the module 00000000000000000000000000000001::M rooted here
 └──────────────────
 
 Test result: FAILED. Total tests: 1; passed: 0; failed: 1

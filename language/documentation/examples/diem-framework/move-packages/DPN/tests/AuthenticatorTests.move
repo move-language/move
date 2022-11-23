@@ -43,21 +43,21 @@ module DiemFramework::AuthenticatorTests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 7)]
+    #[expected_failure(abort_code = 7, location = Authenticator)]
     fun empty_policy_should_be_rejected() {
         let keys = vector::empty<vector<u8>>();
         Authenticator::create_multi_ed25519(keys, 0);
     }
 
     #[test]
-    #[expected_failure(abort_code = 263)]
+    #[expected_failure(abort_code = 263, location = Authenticator)]
     fun bad_threshold_should_be_rejected_threshold_1_for_empty_keys() {
         let keys = vector::empty<vector<u8>>();
         Authenticator::create_multi_ed25519(keys, 1);
     }
 
     #[test]
-    #[expected_failure(abort_code = 519)]
+    #[expected_failure(abort_code = 519, location = Authenticator)]
     fun bad_threshold_should_be_rejected_threshold_3_for_34_keys() {
         let pubkey = x"";
 
@@ -72,7 +72,7 @@ module DiemFramework::AuthenticatorTests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 263)]
+    #[expected_failure(abort_code = 263, location = Authenticator)]
     fun bad_threshold_should_be_rejected_threshold_2_for_1_key() {
         let keys = vector::empty<vector<u8>>();
         vector::push_back(
@@ -83,7 +83,7 @@ module DiemFramework::AuthenticatorTests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 7)]
+    #[expected_failure(abort_code = 7, location = Authenticator)]
     fun bad_threshold_should_be_rejected_threshold_0_for_1_address() {
         let keys = vector::empty<vector<u8>>();
         vector::push_back(

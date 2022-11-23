@@ -507,7 +507,13 @@ pub mod known_attributes {
         pub const TEST: &'static str = "test";
         pub const EXPECTED_FAILURE: &'static str = "expected_failure";
         pub const TEST_ONLY: &'static str = "test_only";
-        pub const CODE_ASSIGNMENT_NAME: &'static str = "abort_code";
+        pub const ABORT_CODE_NAME: &'static str = "abort_code";
+        pub const ARITHMETIC_ERROR_NAME: &'static str = "arithmetic_error";
+        pub const VECTOR_ERROR_NAME: &'static str = "vector_error";
+        pub const OUT_OF_GAS_NAME: &'static str = "out_of_gas";
+        pub const MAJOR_STATUS_NAME: &'static str = "major_status";
+        pub const MINOR_STATUS_NAME: &'static str = "minor_status";
+        pub const ERROR_LOCATION: &'static str = "location";
 
         pub const fn name(&self) -> &str {
             match self {
@@ -539,6 +545,16 @@ pub mod known_attributes {
                 TestingAttribute::Test => &TEST_POSITIONS,
                 TestingAttribute::ExpectedFailure => &EXPECTED_FAILURE_POSITIONS,
             }
+        }
+
+        pub fn expected_failure_cases() -> &'static [&'static str] {
+            &[
+                Self::ABORT_CODE_NAME,
+                Self::ARITHMETIC_ERROR_NAME,
+                Self::VECTOR_ERROR_NAME,
+                Self::OUT_OF_GAS_NAME,
+                Self::MAJOR_STATUS_NAME,
+            ]
         }
     }
 

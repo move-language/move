@@ -4,7 +4,9 @@
 
 use crate::{
     extensions, format_module_id,
-    test_reporter::{FailureReason, TestFailure, TestResults, TestRunInfo, TestStatistics},
+    test_reporter::{
+        FailureReason, MoveError, TestFailure, TestResults, TestRunInfo, TestStatistics,
+    },
 };
 use anyhow::Result;
 use codespan_reporting::{
@@ -488,98 +490,91 @@ impl SharedTestingConfig {
                 }
             };
             match exec_result {
-                Err(err) => match (test_info.expected_failure.as_ref(), err.sub_status()) {
-                    // Ran out of ticks, report a test timeout and log a test failure
-                    _ if err.major_status() == StatusCode::OUT_OF_GAS => {
-                        output.timeout(function_name);
-                        stats.test_failure(
-                            TestFailure::new(
-                                FailureReason::timeout(),
-                                test_run_info,
-                                Some(err),
-                                save_session_state(),
-                            ),
-                            test_plan,
-                        )
-                    }
-                    // Expected the test to not abort, but it aborted with `code`
-                    (None, Some(code)) => {
-                        output.fail(function_name);
-                        stats.test_failure(
-                            TestFailure::new(
-                                FailureReason::aborted(code),
-                                test_run_info,
-                                Some(err),
-                                save_session_state(),
-                            ),
-                            test_plan,
-                        )
-                    }
-                    // Expected the test the abort with a specific `code`, and it did abort with
-                    // that abort code
-                    (Some(ExpectedFailure::ExpectedWithCode(code)), Some(other_code))
-                        if matches!(
-                            err.major_status(),
-                            StatusCode::ABORTED | StatusCode::VECTOR_OPERATION_ERROR
-                        ) && *code == other_code =>
-                    {
-                        output.pass(function_name);
-                        stats.test_success(test_run_info, test_plan);
-                    }
-                    // Expected the test to abort with a specific `code` but it aborted with a
-                    // different `other_code`
-                    (Some(ExpectedFailure::ExpectedWithCode(code)), Some(other_code)) => {
-                        output.fail(function_name);
-                        stats.test_failure(
-                            TestFailure::new(
-                                FailureReason::wrong_abort(*code, other_code),
-                                test_run_info,
-                                Some(err),
-                                save_session_state(),
-                            ),
-                            test_plan,
-                        )
-                    }
-                    // Expected the test to abort and it aborted, but we don't need to check the code
-                    (Some(ExpectedFailure::Expected), Some(_)) => {
-                        output.pass(function_name);
-                        stats.test_success(test_run_info, test_plan);
-                    }
-                    // Expected the test to abort and it aborted with internal error
-                    (Some(ExpectedFailure::Expected), None)
-                        if err.major_status() != StatusCode::EXECUTED =>
-                    {
-                        output.pass(function_name);
-                        stats.test_success(test_run_info, test_plan);
-                    }
-                    // Unexpected return status from the VM, signal that we hit an unknown error.
-                    (_, None) => {
-                        output.fail(function_name);
-                        let failure_reason = if err.major_status() as usize >= 4000
-                            && err.major_status() as usize <= 4999
+                Err(err) => {
+                    let actual_err =
+                        MoveError(err.major_status(), err.sub_status(), err.location().clone());
+                    assert!(err.major_status() != StatusCode::EXECUTED);
+                    match test_info.expected_failure.as_ref() {
+                        Some(ExpectedFailure::Expected) => {
+                            output.pass(function_name);
+                            stats.test_success(test_run_info, test_plan);
+                        }
+                        Some(ExpectedFailure::ExpectedWithError(expected_err))
+                            if expected_err == &actual_err =>
                         {
-                            FailureReason::execution_failure(err.major_status())
-                        } else {
-                            FailureReason::unknown()
-                        };
-                        stats.test_failure(
-                            TestFailure::new(
-                                failure_reason,
-                                test_run_info,
-                                Some(err),
-                                save_session_state(),
-                            ),
-                            test_plan,
-                        )
+                            output.pass(function_name);
+                            stats.test_success(test_run_info, test_plan);
+                        }
+                        Some(ExpectedFailure::ExpectedWithCodeDEPRECATED(code))
+                            if actual_err.0 == StatusCode::ABORTED
+                                && actual_err.1.is_some()
+                                && actual_err.1.unwrap() == *code =>
+                        {
+                            output.pass(function_name);
+                            stats.test_success(test_run_info, test_plan);
+                        }
+                        // incorrect cases
+                        Some(ExpectedFailure::ExpectedWithError(expected_err)) => {
+                            output.fail(function_name);
+                            stats.test_failure(
+                                TestFailure::new(
+                                    FailureReason::wrong_error(expected_err.clone(), actual_err),
+                                    test_run_info,
+                                    Some(err),
+                                    save_session_state(),
+                                ),
+                                test_plan,
+                            )
+                        }
+                        Some(ExpectedFailure::ExpectedWithCodeDEPRECATED(expected_code)) => {
+                            output.fail(function_name);
+                            stats.test_failure(
+                                TestFailure::new(
+                                    FailureReason::wrong_abort_deprecated(
+                                        *expected_code,
+                                        actual_err,
+                                    ),
+                                    test_run_info,
+                                    Some(err),
+                                    save_session_state(),
+                                ),
+                                test_plan,
+                            )
+                        }
+                        None if err.major_status() == StatusCode::OUT_OF_GAS => {
+                            // Ran out of ticks, report a test timeout and log a test failure
+                            output.timeout(function_name);
+                            stats.test_failure(
+                                TestFailure::new(
+                                    FailureReason::timeout(),
+                                    test_run_info,
+                                    Some(err),
+                                    save_session_state(),
+                                ),
+                                test_plan,
+                            )
+                        }
+                        None => {
+                            output.fail(function_name);
+                            stats.test_failure(
+                                TestFailure::new(
+                                    FailureReason::unexpected_error(actual_err),
+                                    test_run_info,
+                                    Some(err),
+                                    save_session_state(),
+                                ),
+                                test_plan,
+                            )
+                        }
                     }
-                },
+                }
                 Ok(_) => {
                     // Expected the test to fail, but it executed
                     if test_info.expected_failure.is_some() {
                         output.fail(function_name);
                         stats.test_failure(
                             TestFailure::new(
-                                FailureReason::no_abort(),
+                                FailureReason::no_error(),
                                 test_run_info,
                                 None,
                                 save_session_state(),
@@ -632,6 +627,8 @@ impl SharedTestingConfig {
         test_plan: &ModuleTestPlan,
         output: &TestOutput<impl Write>,
     ) -> TestStatistics {
+        use move_binary_format::errors::Location;
+
         let mut stats = TestStatistics::new();
 
         // TODO: Somehow, paths of some temporary Move interface files are being passed in after those files
@@ -704,12 +701,26 @@ impl SharedTestingConfig {
 
             match (test_info.expected_failure.as_ref(), &res.exit_reason) {
                 // Test expected to succeed or abort with a specific abort code, but ran into an internal error.
-                (None | Some(ExpectedFailure::ExpectedWithCode(_)), ExitReason::Revert(_))
-                    if abort_code() == u64::MAX =>
-                {
+                (
+                    None
+                    | Some(
+                        ExpectedFailure::ExpectedWithCodeDEPRECATED(_)
+                        | ExpectedFailure::ExpectedWithError(_),
+                    ),
+                    ExitReason::Revert(_),
+                ) if abort_code() == u64::MAX => {
                     output.fail(function_name);
                     stats.test_failure(
-                        TestFailure::new(FailureReason::unknown(), test_run_info(), None, None),
+                        TestFailure::new(
+                            FailureReason::unexpected_error(MoveError(
+                                StatusCode::UNKNOWN_STATUS,
+                                None,
+                                Location::Undefined,
+                            )),
+                            test_run_info(),
+                            None,
+                            None,
+                        ),
                         test_plan,
                     );
                 }
@@ -719,7 +730,11 @@ impl SharedTestingConfig {
                     output.fail(function_name);
                     stats.test_failure(
                         TestFailure::new(
-                            FailureReason::aborted(abort_code()),
+                            FailureReason::unexpected_error(MoveError(
+                                StatusCode::ABORTED,
+                                Some(abort_code()),
+                                Location::Undefined,
+                            )),
                             test_run_info(),
                             None,
                             None,
@@ -730,7 +745,10 @@ impl SharedTestingConfig {
 
                 // Expect the test to abort with a specific code.
                 (
-                    Some(ExpectedFailure::ExpectedWithCode(exp_abort_code)),
+                    Some(
+                        ExpectedFailure::ExpectedWithError(MoveError(_, Some(exp_abort_code), _))
+                        | ExpectedFailure::ExpectedWithCodeDEPRECATED(exp_abort_code),
+                    ),
                     ExitReason::Revert(_),
                 ) => {
                     let abort_code = abort_code();
@@ -741,7 +759,14 @@ impl SharedTestingConfig {
                         output.fail(function_name);
                         stats.test_failure(
                             TestFailure::new(
-                                FailureReason::wrong_abort(*exp_abort_code, abort_code),
+                                FailureReason::wrong_abort_deprecated(
+                                    *exp_abort_code,
+                                    MoveError(
+                                        StatusCode::ABORTED,
+                                        Some(abort_code),
+                                        Location::Undefined,
+                                    ),
+                                ),
                                 test_run_info(),
                                 None,
                                 None,
@@ -753,12 +778,16 @@ impl SharedTestingConfig {
 
                 // Test expected to abort but succeeded.
                 (
-                    Some(ExpectedFailure::Expected | ExpectedFailure::ExpectedWithCode(_)),
+                    Some(
+                        ExpectedFailure::Expected
+                        | ExpectedFailure::ExpectedWithCodeDEPRECATED(_)
+                        | ExpectedFailure::ExpectedWithError(_),
+                    ),
                     ExitReason::Succeed(_),
                 ) => {
                     output.fail(function_name);
                     stats.test_failure(
-                        TestFailure::new(FailureReason::no_abort(), test_run_info(), None, None),
+                        TestFailure::new(FailureReason::no_error(), test_run_info(), None, None),
                         test_plan,
                     )
                 }

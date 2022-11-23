@@ -216,7 +216,8 @@ codes!(
         Assignment: { msg: "unused assignment", severity: Warning },
         TrailingSemi: { msg: "unnecessary trailing semicolon", severity: Warning },
         DeadCode: { msg: "dead or unreachable code", severity: Warning },
-        StructTypeParam: { msg: "unused struct type parameter", severity: Warning }
+        StructTypeParam: { msg: "unused struct type parameter", severity: Warning },
+        Attribute: { msg: "unused attribute", severity: Warning },
     ],
     Attributes: [
         Duplicate: { msg: "invalid duplicate attribute", severity: NonblockingError },
@@ -226,6 +227,7 @@ codes!(
         InvalidTest: { msg: "unable to generate test", severity: NonblockingError },
         InvalidBytecodeInst:
             { msg: "unknown bytecode instruction function", severity: NonblockingError },
+        ValueWarning: { msg: "potential issue with attribute value", severity: Warning }
     ],
     Tests: [
         TestFailed: { msg: "test failure", severity: BlockingError },

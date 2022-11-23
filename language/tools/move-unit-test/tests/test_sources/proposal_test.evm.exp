@@ -11,7 +11,7 @@ Test failures:
 Failures in 0x1::Module:
 
 ┌── tests_d ──────
-│ Test was not expected to abort but it aborted with 3 here
+│ Test was not expected to error, but it aborted with code 3 originating in an unknown location rooted here
 └──────────────────
 
 Test result: FAILED. Total tests: 6; passed: 5; failed: 1

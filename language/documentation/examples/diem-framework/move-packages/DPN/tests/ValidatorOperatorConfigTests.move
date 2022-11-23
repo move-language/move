@@ -12,14 +12,14 @@ module DiemFramework::ValidatorOperatorConfigTests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 257)]
+    #[expected_failure(abort_code = 257, location = DiemFramework::DiemTimestamp)]
     fun publish_pre_genesis() {
         let s = get_signer();
         VOC::publish(&s, &s, x"");
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 2)]
+    #[expected_failure(abort_code = 2, location = DiemFramework::CoreAddresses)]
     fun publish_post_genesis_non_dr(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let s = get_signer();
@@ -27,7 +27,7 @@ module DiemFramework::ValidatorOperatorConfigTests {
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 5)]
+    #[expected_failure(abort_code = 5, location = DiemFramework::Roles)]
     fun publish_post_genesis_non_validator_operator(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let s = get_signer();
@@ -44,7 +44,7 @@ module DiemFramework::ValidatorOperatorConfigTests {
     }
 
     #[test(tc = @TreasuryCompliance, dr = @DiemRoot)]
-    #[expected_failure(abort_code = 6)]
+    #[expected_failure(abort_code = 6, location = VOC)]
     fun publish_post_genesis_double_publish(tc: signer, dr: signer) {
         Genesis::setup(&dr, &tc);
         let s = get_signer();
@@ -54,7 +54,7 @@ module DiemFramework::ValidatorOperatorConfigTests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 5)]
+    #[expected_failure(abort_code = 5, location = VOC)]
     fun get_human_name_not_validator_operator() {
         VOC::get_human_name(@0x1);
     }

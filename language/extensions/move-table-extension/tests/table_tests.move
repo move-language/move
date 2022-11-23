@@ -41,7 +41,7 @@ module extensions::table_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 26113)]
+    #[expected_failure(abort_code = 26113, location = extensions::table)]
     fun test_destroy_fails() {
         let t = T::new<u64, u64>();
         T::add(&mut t, 1, 2);
@@ -180,7 +180,7 @@ module extensions::table_tests {
     }
 
     #[test(s = @0x42)]
-    #[expected_failure(abort_code = 25607)]
+    #[expected_failure(abort_code = 25607, location = extensions::table)]
     fun test_insert_fail(s: signer) {
         let t = T::new<u64, u128>();
         assert!(!T::contains(&t, 42), 100);
@@ -193,7 +193,7 @@ module extensions::table_tests {
     }
 
     #[test(s = @0x42)]
-    #[expected_failure(abort_code = 25863)]
+    #[expected_failure(abort_code = 25863, location = extensions::table)]
     fun test_borrow_fail(s: signer) {
         let t = T::new<u64, u128>();
         assert!(!T::contains(&t, 42), 100);
@@ -205,7 +205,7 @@ module extensions::table_tests {
     }
 
     #[test(s = @0x42)]
-    #[expected_failure(abort_code = 25863)]
+    #[expected_failure(abort_code = 25863, location = extensions::table)]
     fun test_remove_fail(s: signer) {
         let t = T::new<u64, Balance>();
         let Balance { value } = T::remove(&mut t, 42); // should fail here since key 42 doesn't exist
@@ -228,7 +228,7 @@ module extensions::table_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 25863)]
+    #[expected_failure(abort_code = 25863, location = extensions::table)]
     fun test_remove_removed() {
         let t = T::new<u64, u64>();
         T::add(&mut t, 42, 42);
@@ -242,7 +242,7 @@ module extensions::table_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 25863)]
+    #[expected_failure(abort_code = 25863, location = extensions::table)]
     fun test_borrow_removed() {
         let t = T::new<u64, u64>();
         T::add(&mut t, 42, 42);

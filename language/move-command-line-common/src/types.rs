@@ -84,9 +84,11 @@ impl Token for TypeToken {
             '0' if matches!(chars.peek(), Some('x') | Some('X')) => {
                 chars.next().unwrap();
                 match chars.next() {
-                    Some(c) if c.is_ascii_hexdigit() => {
+                    Some(c) if c.is_ascii_hexdigit() || c == '_' => {
                         // 0x + c + remaining
-                        let len = 3 + chars.take_while(char::is_ascii_hexdigit).count();
+                        let len = 3 + chars
+                            .take_while(|q| char::is_ascii_hexdigit(q) || *q == '_')
+                            .count();
                         (Self::AddressIdent, len)
                     }
                     _ => bail!("unrecognized token: {}", s),

@@ -15,7 +15,7 @@ Move supports six unsigned integer types: `u8`, `u16`, `u32`, `u64`, `u128`, and
 
 Literal values for these types are specified either as a sequence of digits (e.g.,`112`) or as hex literals, e.g., `0xFF`. The type of the literal can optionally be added as a suffix, e.g., `112u8`. If the type is not specified, the compiler will try to infer the type from the context where the literal is used. If the type cannot be inferred, it is assumed to be `u64`.
 
-Decimal literals can be separated by underscores for grouping and readability. (e.g.,`1_234_5678`, `1_000u128`). However, hexadecimal literals cannot.
+Number literals can be separated by underscores for grouping and readability. (e.g.,`1_234_5678`, `1_000u128`, `0xAB_CD_12_35`).
 
 If a literal is too large for its specified (or inferred) size range, an error is reported.
 
@@ -59,7 +59,7 @@ let hex_u16: u16 = 0x1BAE;
 let hex_u32: u32 = 0xDEAD80;
 let hex_u64: u64 = 0xCAFE;
 let hex_u128: u128 = 0xDEADBEEF;
-let hex_u256: u256 = 0x1123456ABCDEF;
+let hex_u256: u256 = 0x1123_456A_BCDE_F;
 ```
 
 ## Operations

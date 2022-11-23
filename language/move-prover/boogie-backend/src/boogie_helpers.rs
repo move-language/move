@@ -722,3 +722,12 @@ pub fn boogie_reflection_type_info(env: &GlobalEnv, ty: &Type) -> (String, Strin
         ),
     }
 }
+
+/// Encode the test on whether a type is a struct in a format that can be recognized by Boogie
+pub fn boogie_reflection_type_is_struct(env: &GlobalEnv, ty: &Type) -> String {
+    match type_name_to_info_pack(env, ty) {
+        None => "false".to_string(),
+        Some(TypeInfoPack::Struct(..)) => "true".to_string(),
+        Some(TypeInfoPack::Symbolic(idx)) => format!("is#$TypeParamStruct(#{}_info)", idx),
+    }
+}

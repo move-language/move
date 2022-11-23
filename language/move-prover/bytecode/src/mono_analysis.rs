@@ -22,7 +22,9 @@ use move_model::{
     },
     pragmas::INTRINSIC_TYPE_MAP,
     ty::{Type, TypeDisplayContext, TypeInstantiationDerivation, TypeUnificationAdapter, Variance},
-    well_known::{TYPE_INFO_MOVE, TYPE_INFO_SPEC, TYPE_NAME_MOVE, TYPE_NAME_SPEC},
+    well_known::{
+        TYPE_INFO_MOVE, TYPE_INFO_SPEC, TYPE_NAME_MOVE, TYPE_NAME_SPEC, TYPE_SPEC_IS_STRUCT,
+    },
 };
 
 use crate::{
@@ -467,7 +469,10 @@ impl<'a> Analyzer<'a> {
                         module.get_name().name().display(self.env.symbol_pool()),
                         spec_fun.name.display(self.env.symbol_pool()),
                     );
-                    if qualified_name == TYPE_NAME_SPEC || qualified_name == TYPE_INFO_SPEC {
+                    if qualified_name == TYPE_NAME_SPEC
+                        || qualified_name == TYPE_INFO_SPEC
+                        || qualified_name == TYPE_SPEC_IS_STRUCT
+                    {
                         self.add_type(&actuals[0]);
                     }
                 }

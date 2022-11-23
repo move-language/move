@@ -4,20 +4,18 @@ Call Stack:
     [0] main
 
         Code:
-            [12] LdU64(1)
-            [13] VecImmBorrow(2)
+            [10] LdU64(1)
+            [11] VecImmBorrow(2)
+            [12] StLoc(0)
+          > [13] CallGeneric(0)
             [14] StLoc(2)
-          > [15] CallGeneric(0)
-            [16] StLoc(4)
-            [17] ImmBorrowLoc(4)
-            [18] CallGeneric(1)
+            [15] ImmBorrowLoc(2)
+            [16] CallGeneric(1)
 
         Locals:
-            [0] -
-            [1] -
-            [2] false
-            [3] [true, false]
-            [4] -
+            [0] false
+            [1] [true, false]
+            [2] -
 
 
     [1] 00000000000000000000000000000002::N::foo<bool, u64>
@@ -40,13 +38,13 @@ Call Stack:
     [2] 00000000000000000000000000000002::M::sum
 
         Code:
-            [10] MoveLoc(0)
-            [11] LdU64(1)
-            [12] Sub
-          > [13] Call(0)
-            [14] Add
-            [15] StLoc(1)
-            [16] MoveLoc(1)
+            [9] MoveLoc(0)
+            [10] LdU64(1)
+            [11] Sub
+          > [12] Call(0)
+            [13] Add
+            [14] StLoc(1)
+            [15] MoveLoc(1)
 
         Locals:
             [0] -
@@ -56,13 +54,13 @@ Call Stack:
     [3] 00000000000000000000000000000002::M::sum
 
         Code:
-            [10] MoveLoc(0)
-            [11] LdU64(1)
-            [12] Sub
-          > [13] Call(0)
-            [14] Add
-            [15] StLoc(1)
-            [16] MoveLoc(1)
+            [9] MoveLoc(0)
+            [10] LdU64(1)
+            [11] Sub
+          > [12] Call(0)
+            [13] Add
+            [14] StLoc(1)
+            [15] MoveLoc(1)
 
         Locals:
             [0] -
@@ -72,13 +70,13 @@ Call Stack:
     [4] 00000000000000000000000000000002::M::sum
 
         Code:
-            [10] MoveLoc(0)
-            [11] LdU64(1)
-            [12] Sub
-          > [13] Call(0)
-            [14] Add
-            [15] StLoc(1)
-            [16] MoveLoc(1)
+            [9] MoveLoc(0)
+            [10] LdU64(1)
+            [11] Sub
+          > [12] Call(0)
+            [13] Add
+            [14] StLoc(1)
+            [15] MoveLoc(1)
 
         Locals:
             [0] -
@@ -95,19 +93,17 @@ Call Stack:
     [0] main
 
         Code:
-            [18] CallGeneric(1)
-            [19] MoveLoc(2)
+            [16] CallGeneric(1)
+            [17] MoveLoc(0)
+            [18] Pop
+          > [19] CallGeneric(2)
             [20] Pop
-          > [21] CallGeneric(2)
-            [22] Pop
-            [23] Ret
+            [21] Ret
 
         Locals:
             [0] -
-            [1] -
-            [2] -
-            [3] [true, false]
-            [4] 10
+            [1] [true, false]
+            [2] 10
 
 
     [1] 00000000000000000000000000000002::N::foo<u8, bool>
@@ -130,13 +126,13 @@ Call Stack:
     [2] 00000000000000000000000000000002::M::sum
 
         Code:
-            [10] MoveLoc(0)
-            [11] LdU64(1)
-            [12] Sub
-          > [13] Call(0)
-            [14] Add
-            [15] StLoc(1)
-            [16] MoveLoc(1)
+            [9] MoveLoc(0)
+            [10] LdU64(1)
+            [11] Sub
+          > [12] Call(0)
+            [13] Add
+            [14] StLoc(1)
+            [15] MoveLoc(1)
 
         Locals:
             [0] -
@@ -146,13 +142,13 @@ Call Stack:
     [3] 00000000000000000000000000000002::M::sum
 
         Code:
-            [10] MoveLoc(0)
-            [11] LdU64(1)
-            [12] Sub
-          > [13] Call(0)
-            [14] Add
-            [15] StLoc(1)
-            [16] MoveLoc(1)
+            [9] MoveLoc(0)
+            [10] LdU64(1)
+            [11] Sub
+          > [12] Call(0)
+            [13] Add
+            [14] StLoc(1)
+            [15] MoveLoc(1)
 
         Locals:
             [0] -
@@ -162,13 +158,13 @@ Call Stack:
     [4] 00000000000000000000000000000002::M::sum
 
         Code:
-            [10] MoveLoc(0)
-            [11] LdU64(1)
-            [12] Sub
-          > [13] Call(0)
-            [14] Add
-            [15] StLoc(1)
-            [16] MoveLoc(1)
+            [9] MoveLoc(0)
+            [10] LdU64(1)
+            [11] Sub
+          > [12] Call(0)
+            [13] Add
+            [14] StLoc(1)
+            [15] MoveLoc(1)
 
         Locals:
             [0] -

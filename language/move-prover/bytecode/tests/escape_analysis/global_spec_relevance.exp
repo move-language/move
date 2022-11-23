@@ -48,17 +48,19 @@ public fun GlobalSpecRelevance::publish($t0|account: &signer, $t1|n: GlobalSpecR
   2: $t4 := read_ref($t3)
   3: $t5 := 0
   4: $t6 := >($t4, $t5)
-  5: if ($t6) goto 11 else goto 6
+  5: if ($t6) goto 6 else goto 8
   6: label L1
-  7: $t7 := move($t0)
-  8: destroy($t7)
-  9: $t8 := 0
- 10: abort($t8)
- 11: label L0
- 12: $t9 := move($t0)
- 13: $t10 := move($t1)
- 14: move_to<GlobalSpecRelevance::Nonzero>($t10, $t9)
- 15: return ()
+  7: goto 13
+  8: label L0
+  9: $t7 := move($t0)
+ 10: destroy($t7)
+ 11: $t8 := 0
+ 12: abort($t8)
+ 13: label L2
+ 14: $t9 := move($t0)
+ 15: $t10 := move($t1)
+ 16: move_to<GlobalSpecRelevance::Nonzero>($t10, $t9)
+ 17: return ()
 }
 
 ============ after pipeline `escape_analysis` ================
@@ -111,17 +113,19 @@ public fun GlobalSpecRelevance::publish($t0|account: &signer, $t1|n: GlobalSpecR
   2: $t4 := read_ref($t3)
   3: $t5 := 0
   4: $t6 := >($t4, $t5)
-  5: if ($t6) goto 11 else goto 6
+  5: if ($t6) goto 6 else goto 8
   6: label L1
-  7: $t7 := move($t0)
-  8: destroy($t7)
-  9: $t8 := 0
- 10: abort($t8)
- 11: label L0
- 12: $t9 := move($t0)
- 13: $t10 := move($t1)
- 14: move_to<GlobalSpecRelevance::Nonzero>($t10, $t9)
- 15: return ()
+  7: goto 13
+  8: label L0
+  9: $t7 := move($t0)
+ 10: destroy($t7)
+ 11: $t8 := 0
+ 12: abort($t8)
+ 13: label L2
+ 14: $t9 := move($t0)
+ 15: $t10 := move($t1)
+ 16: move_to<GlobalSpecRelevance::Nonzero>($t10, $t9)
+ 17: return ()
 }
 
 ============ Diagnostics ================

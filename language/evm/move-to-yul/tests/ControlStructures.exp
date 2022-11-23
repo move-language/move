@@ -76,7 +76,28 @@ object "A2_M" {
                 for {} true {} {
                     switch $block
                     case 2 {
+                        // label L1
+                        // goto L2
+                        $block := 5
+                    }
+                    case 3 {
                         // label L0
+                        // return ()
+                        leave
+                    }
+                    case 4 {
+                        // label L6
+                        // $t1 := 0
+                        $t1 := 0
+                        // $t2 := >($t0, $t1)
+                        $t2 := $Gt(x, $t1)
+                        // if ($t2) goto L1 else goto L0
+                        switch $t2
+                        case 0  { $block := 3 }
+                        default { $block := 2 }
+                    }
+                    case 5 {
+                        // label L2
                         // $t3 := 2
                         $t3 := 2
                         // $t4 := %($t0, $t3)
@@ -85,48 +106,32 @@ object "A2_M" {
                         $t5 := 0
                         // $t6 := ==($t4, $t5)
                         $t6 := $Eq($t4, $t5)
-                        // if ($t6) goto L3 else goto L5
+                        // if ($t6) goto L4 else goto L3
                         switch $t6
-                        case 0  { $block := 6 }
-                        default { $block := 5 }
+                        case 0  { $block := 7 }
+                        default { $block := 6 }
                     }
-                    case 3 {
-                        // label L2
-                        // return ()
-                        leave
-                    }
-                    case 4 {
-                        // label L7
-                        // $t1 := 0
-                        $t1 := 0
-                        // $t2 := >($t0, $t1)
-                        $t2 := $Gt(x, $t1)
-                        // if ($t2) goto L0 else goto L2
-                        switch $t2
-                        case 0  { $block := 3 }
-                        default { $block := 2 }
-                    }
-                    case 5 {
-                        // label L3
+                    case 6 {
+                        // label L4
                         // $t7 := 1
                         $t7 := 1
                         // $t0 := +($t0, $t7)
                         x := $AddU64(x, $t7)
-                        // goto L6
-                        $block := 7
+                        // goto L5
+                        $block := 8
                     }
-                    case 6 {
-                        // label L5
+                    case 7 {
+                        // label L3
                         // $t8 := 2
                         $t8 := 2
                         // $t0 := -($t0, $t8)
                         x := $Sub(x, $t8)
-                        // goto L6
-                        $block := 7
+                        // goto L5
+                        $block := 8
                     }
-                    case 7 {
-                        // label L6
-                        // goto L7
+                    case 8 {
+                        // label L5
+                        // goto L6
                         $block := 4
                     }
                 }
@@ -138,24 +143,20 @@ object "A2_M" {
                 for {} true {} {
                     switch $block
                     case 2 {
-                        // label L0
-                        // $t3 := 1
-                        $t3 := 1
-                        // $t0 := -($t0, $t3)
-                        x := $Sub(x, $t3)
-                        // goto L3
-                        $block := 4
+                        // label L1
+                        // goto L2
+                        $block := 5
                     }
                     case 3 {
-                        // label L2
+                        // label L0
                         // $t4 := 0
                         $t4 := 0
                         // $t5 := ==($t0, $t4)
                         $t5 := $Eq(x, $t4)
-                        // if ($t5) goto L4 else goto L3
+                        // if ($t5) goto L5 else goto L4
                         switch $t5
-                        case 0  { $block := 4 }
-                        default { $block := 5 }
+                        case 0  { $block := 7 }
+                        default { $block := 6 }
                     }
                     case 4 {
                         // label L3
@@ -163,13 +164,32 @@ object "A2_M" {
                         $t1 := 1
                         // $t2 := >=($t0, $t1)
                         $t2 := $GtEq(x, $t1)
-                        // if ($t2) goto L0 else goto L2
+                        // if ($t2) goto L1 else goto L0
                         switch $t2
                         case 0  { $block := 3 }
                         default { $block := 2 }
                     }
                     case 5 {
+                        // label L2
+                        // $t3 := 1
+                        $t3 := 1
+                        // $t0 := -($t0, $t3)
+                        x := $Sub(x, $t3)
+                        // goto L3
+                        $block := 4
+                    }
+                    case 6 {
+                        // label L5
+                        // goto L6
+                        $block := 8
+                    }
+                    case 7 {
                         // label L4
+                        // goto L3
+                        $block := 4
+                    }
+                    case 8 {
+                        // label L6
                         // return ()
                         leave
                     }
@@ -182,21 +202,21 @@ object "A2_M" {
                 for {} true {} {
                     switch $block
                     case 2 {
-                        // label L0
+                        // label L1
                         // $t4 := 1
                         $t4 := 1
                         // $t1 := $t4
                         tmp_$1 := $t4
-                        // goto L3
+                        // goto L2
                         $block := 5
                     }
                     case 3 {
-                        // label L2
+                        // label L0
                         // $t5 := 2
                         $t5 := 2
                         // $t1 := $t5
                         tmp_$1 := $t5
-                        // goto L3
+                        // goto L2
                         $block := 5
                     }
                     case 4 {
@@ -204,13 +224,13 @@ object "A2_M" {
                         $t2 := 0
                         // $t3 := >($t0, $t2)
                         $t3 := $Gt(x, $t2)
-                        // if ($t3) goto L0 else goto L2
+                        // if ($t3) goto L1 else goto L0
                         switch $t3
                         case 0  { $block := 3 }
                         default { $block := 2 }
                     }
                     case 5 {
-                        // label L3
+                        // label L2
                         // return $t1
                         $result := tmp_$1
                         leave
@@ -224,14 +244,14 @@ object "A2_M" {
                 for {} true {} {
                     switch $block
                     case 2 {
-                        // label L0
+                        // label L1
                         // $t3 := 1
                         $t3 := 1
                         // abort($t3)
                         $Abort($t3)
                     }
                     case 3 {
-                        // label L2
+                        // label L0
                         // return ()
                         leave
                     }
@@ -240,7 +260,7 @@ object "A2_M" {
                         $t1 := 0
                         // $t2 := >($t0, $t1)
                         $t2 := $Gt(x, $t1)
-                        // if ($t2) goto L0 else goto L2
+                        // if ($t2) goto L1 else goto L0
                         switch $t2
                         case 0  { $block := 3 }
                         default { $block := 2 }

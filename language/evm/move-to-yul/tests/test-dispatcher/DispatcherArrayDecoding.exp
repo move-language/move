@@ -278,7 +278,7 @@ object "A2_M" {
                         // label L3
                         // $t11 := <($t1, $t8)
                         $t11 := $Lt(i, $t8)
-                        // if ($t11) goto L0 else goto L2
+                        // if ($t11) goto L1 else goto L0
                         switch $t11
                         case 0  { $block := 5 }
                         default { $block := 4 }
@@ -300,7 +300,19 @@ object "A2_M" {
                         $block := 2
                     }
                     case 4 {
+                        // label L1
+                        // goto L2
+                        $block := 6
+                    }
+                    case 5 {
                         // label L0
+                        // return $t3
+                        $result := sum
+                        $Free($locals, 32)
+                        leave
+                    }
+                    case 6 {
+                        // label L2
                         // $t12 := borrow_local($t0)
                         $t12 := $MakePtr(false, $locals)
                         // $t13 := vector::borrow<vector<u64>>($t12, $t1)
@@ -328,13 +340,6 @@ object "A2_M" {
                         // goto L3
                         $block := 2
                     }
-                    case 5 {
-                        // label L2
-                        // return $t3
-                        $result := sum
-                        $Free($locals, 32)
-                        leave
-                    }
                 }
             }
 
@@ -351,7 +356,7 @@ object "A2_M" {
                         $t9 := 2
                         // $t10 := <($t1, $t9)
                         $t10 := $Lt(i, $t9)
-                        // if ($t10) goto L0 else goto L2
+                        // if ($t10) goto L1 else goto L0
                         switch $t10
                         case 0  { $block := 5 }
                         default { $block := 4 }
@@ -369,7 +374,19 @@ object "A2_M" {
                         $block := 2
                     }
                     case 4 {
+                        // label L1
+                        // goto L2
+                        $block := 6
+                    }
+                    case 5 {
                         // label L0
+                        // return $t4
+                        $result := sum
+                        $Free($locals, 32)
+                        leave
+                    }
+                    case 6 {
+                        // label L2
                         // $t11 := borrow_local($t0)
                         $t11 := $MakePtr(false, $locals)
                         // $t12 := vector::borrow<vector<u128>>($t11, $t1)
@@ -381,26 +398,34 @@ object "A2_M" {
                         // $t2 := $t14
                         j := $t14
                         // goto L6
-                        $block := 6
+                        $block := 7
                     }
-                    case 5 {
-                        // label L2
-                        // return $t4
-                        $result := sum
-                        $Free($locals, 32)
-                        leave
-                    }
-                    case 6 {
+                    case 7 {
                         // label L6
                         // $t15 := <($t2, $t13)
                         $t15 := $Lt(j, $t13)
-                        // if ($t15) goto L3 else goto L5
+                        // if ($t15) goto L4 else goto L3
                         switch $t15
-                        case 0  { $block := 8 }
-                        default { $block := 7 }
+                        case 0  { $block := 9 }
+                        default { $block := 8 }
                     }
-                    case 7 {
+                    case 8 {
+                        // label L4
+                        // goto L5
+                        $block := 10
+                    }
+                    case 9 {
                         // label L3
+                        // destroy($t12)
+                        // $t19 := 1
+                        $t19 := 1
+                        // $t1 := +($t1, $t19)
+                        i := $AddU64(i, $t19)
+                        // goto L7
+                        $block := 2
+                    }
+                    case 10 {
+                        // label L5
                         // $t16 := vector::borrow<u128>($t12, $t2)
                         $t16 := A1_vector_borrow$u128$($t12, j)
                         // $t17 := read_ref($t16)
@@ -412,17 +437,7 @@ object "A2_M" {
                         // $t2 := +($t2, $t18)
                         j := $AddU64(j, $t18)
                         // goto L6
-                        $block := 6
-                    }
-                    case 8 {
-                        // label L5
-                        // destroy($t12)
-                        // $t19 := 1
-                        $t19 := 1
-                        // $t1 := +($t1, $t19)
-                        i := $AddU64(i, $t19)
-                        // goto L7
-                        $block := 2
+                        $block := 7
                     }
                 }
             }
@@ -438,7 +453,7 @@ object "A2_M" {
                         // label L3
                         // $t10 := <($t1, $t8)
                         $t10 := $Lt(i, $t8)
-                        // if ($t10) goto L0 else goto L2
+                        // if ($t10) goto L1 else goto L0
                         switch $t10
                         case 0  { $block := 5 }
                         default { $block := 4 }
@@ -458,7 +473,19 @@ object "A2_M" {
                         $block := 2
                     }
                     case 4 {
+                        // label L1
+                        // goto L2
+                        $block := 6
+                    }
+                    case 5 {
                         // label L0
+                        // return $t3
+                        $result := sum
+                        $Free($locals, 32)
+                        leave
+                    }
+                    case 6 {
+                        // label L2
                         // $t11 := borrow_local($t0)
                         $t11 := $MakePtr(false, $locals)
                         // $t12 := vector::borrow<vector<U256::U256>>($t11, $t1)
@@ -485,13 +512,6 @@ object "A2_M" {
                         i := $AddU64(i, $t20)
                         // goto L3
                         $block := 2
-                    }
-                    case 5 {
-                        // label L2
-                        // return $t3
-                        $result := sum
-                        $Free($locals, 32)
-                        leave
                     }
                 }
             }
@@ -638,7 +658,7 @@ object "A2_M" {
                         $t8 := 2
                         // $t9 := <($t1, $t8)
                         $t9 := $Lt(i, $t8)
-                        // if ($t9) goto L0 else goto L2
+                        // if ($t9) goto L1 else goto L0
                         switch $t9
                         case 0  { $block := 5 }
                         default { $block := 4 }
@@ -654,7 +674,19 @@ object "A2_M" {
                         $block := 2
                     }
                     case 4 {
+                        // label L1
+                        // goto L2
+                        $block := 6
+                    }
+                    case 5 {
                         // label L0
+                        // return $t4
+                        $result := sum
+                        $Free($locals, 32)
+                        leave
+                    }
+                    case 6 {
+                        // label L2
                         // $t10 := borrow_local($t0)
                         $t10 := $MakePtr(false, $locals)
                         // $t11 := vector::borrow<vector<U256::U256>>($t10, $t1)
@@ -666,26 +698,34 @@ object "A2_M" {
                         // $t2 := $t13
                         j := $t13
                         // goto L6
-                        $block := 6
+                        $block := 7
                     }
-                    case 5 {
-                        // label L2
-                        // return $t4
-                        $result := sum
-                        $Free($locals, 32)
-                        leave
-                    }
-                    case 6 {
+                    case 7 {
                         // label L6
                         // $t14 := <($t2, $t12)
                         $t14 := $Lt(j, $t12)
-                        // if ($t14) goto L3 else goto L5
+                        // if ($t14) goto L4 else goto L3
                         switch $t14
-                        case 0  { $block := 8 }
-                        default { $block := 7 }
+                        case 0  { $block := 9 }
+                        default { $block := 8 }
                     }
-                    case 7 {
+                    case 8 {
+                        // label L4
+                        // goto L5
+                        $block := 10
+                    }
+                    case 9 {
                         // label L3
+                        // destroy($t11)
+                        // $t18 := 1
+                        $t18 := 1
+                        // $t1 := +($t1, $t18)
+                        i := $AddU64(i, $t18)
+                        // goto L7
+                        $block := 2
+                    }
+                    case 10 {
+                        // label L5
                         // $t15 := vector::borrow<U256::U256>($t11, $t2)
                         $t15 := A1_vector_borrow$A2_U256_U256$($t11, j)
                         // $t16 := read_ref($t15)
@@ -697,17 +737,7 @@ object "A2_M" {
                         // $t2 := +($t2, $t17)
                         j := $AddU64(j, $t17)
                         // goto L6
-                        $block := 6
-                    }
-                    case 8 {
-                        // label L5
-                        // destroy($t11)
-                        // $t18 := 1
-                        $t18 := 1
-                        // $t1 := +($t1, $t18)
-                        i := $AddU64(i, $t18)
-                        // goto L7
-                        $block := 2
+                        $block := 7
                     }
                 }
             }
@@ -725,7 +755,7 @@ object "A2_M" {
                         $t9 := 2
                         // $t10 := <($t1, $t9)
                         $t10 := $Lt(i, $t9)
-                        // if ($t10) goto L0 else goto L2
+                        // if ($t10) goto L1 else goto L0
                         switch $t10
                         case 0  { $block := 5 }
                         default { $block := 4 }
@@ -743,7 +773,19 @@ object "A2_M" {
                         $block := 2
                     }
                     case 4 {
+                        // label L1
+                        // goto L2
+                        $block := 6
+                    }
+                    case 5 {
                         // label L0
+                        // return $t4
+                        $result := sum
+                        $Free($locals, 32)
+                        leave
+                    }
+                    case 6 {
+                        // label L2
                         // $t11 := borrow_local($t0)
                         $t11 := $MakePtr(false, $locals)
                         // $t12 := vector::borrow<vector<u64>>($t11, $t1)
@@ -755,26 +797,34 @@ object "A2_M" {
                         // $t2 := $t14
                         j := $t14
                         // goto L6
-                        $block := 6
+                        $block := 7
                     }
-                    case 5 {
-                        // label L2
-                        // return $t4
-                        $result := sum
-                        $Free($locals, 32)
-                        leave
-                    }
-                    case 6 {
+                    case 7 {
                         // label L6
                         // $t15 := <($t2, $t13)
                         $t15 := $Lt(j, $t13)
-                        // if ($t15) goto L3 else goto L5
+                        // if ($t15) goto L4 else goto L3
                         switch $t15
-                        case 0  { $block := 8 }
-                        default { $block := 7 }
+                        case 0  { $block := 9 }
+                        default { $block := 8 }
                     }
-                    case 7 {
+                    case 8 {
+                        // label L4
+                        // goto L5
+                        $block := 10
+                    }
+                    case 9 {
                         // label L3
+                        // destroy($t12)
+                        // $t19 := 1
+                        $t19 := 1
+                        // $t1 := +($t1, $t19)
+                        i := $AddU64(i, $t19)
+                        // goto L7
+                        $block := 2
+                    }
+                    case 10 {
+                        // label L5
                         // $t16 := vector::borrow<u64>($t12, $t2)
                         $t16 := A1_vector_borrow$u64$($t12, j)
                         // $t17 := read_ref($t16)
@@ -786,17 +836,7 @@ object "A2_M" {
                         // $t2 := +($t2, $t18)
                         j := $AddU64(j, $t18)
                         // goto L6
-                        $block := 6
-                    }
-                    case 8 {
-                        // label L5
-                        // destroy($t12)
-                        // $t19 := 1
-                        $t19 := 1
-                        // $t1 := +($t1, $t19)
-                        i := $AddU64(i, $t19)
-                        // goto L7
-                        $block := 2
+                        $block := 7
                     }
                 }
             }
@@ -814,7 +854,7 @@ object "A2_M" {
                         $t9 := 2
                         // $t10 := <($t1, $t9)
                         $t10 := $Lt(i, $t9)
-                        // if ($t10) goto L0 else goto L2
+                        // if ($t10) goto L1 else goto L0
                         switch $t10
                         case 0  { $block := 5 }
                         default { $block := 4 }
@@ -832,7 +872,19 @@ object "A2_M" {
                         $block := 2
                     }
                     case 4 {
+                        // label L1
+                        // goto L2
+                        $block := 6
+                    }
+                    case 5 {
                         // label L0
+                        // return $t4
+                        $result := sum
+                        $Free($locals, 32)
+                        leave
+                    }
+                    case 6 {
+                        // label L2
                         // $t11 := borrow_local($t0)
                         $t11 := $MakePtr(false, $locals)
                         // $t12 := vector::borrow<vector<u8>>($t11, $t1)
@@ -844,26 +896,34 @@ object "A2_M" {
                         // $t2 := $t14
                         j := $t14
                         // goto L6
-                        $block := 6
+                        $block := 7
                     }
-                    case 5 {
-                        // label L2
-                        // return $t4
-                        $result := sum
-                        $Free($locals, 32)
-                        leave
-                    }
-                    case 6 {
+                    case 7 {
                         // label L6
                         // $t15 := <($t2, $t13)
                         $t15 := $Lt(j, $t13)
-                        // if ($t15) goto L3 else goto L5
+                        // if ($t15) goto L4 else goto L3
                         switch $t15
-                        case 0  { $block := 8 }
-                        default { $block := 7 }
+                        case 0  { $block := 9 }
+                        default { $block := 8 }
                     }
-                    case 7 {
+                    case 8 {
+                        // label L4
+                        // goto L5
+                        $block := 10
+                    }
+                    case 9 {
                         // label L3
+                        // destroy($t12)
+                        // $t19 := 1
+                        $t19 := 1
+                        // $t1 := +($t1, $t19)
+                        i := $AddU64(i, $t19)
+                        // goto L7
+                        $block := 2
+                    }
+                    case 10 {
+                        // label L5
                         // $t16 := vector::borrow<u8>($t12, $t2)
                         $t16 := A1_vector_borrow$u8$($t12, j)
                         // $t17 := read_ref($t16)
@@ -875,17 +935,7 @@ object "A2_M" {
                         // $t2 := +($t2, $t18)
                         j := $AddU64(j, $t18)
                         // goto L6
-                        $block := 6
-                    }
-                    case 8 {
-                        // label L5
-                        // destroy($t12)
-                        // $t19 := 1
-                        $t19 := 1
-                        // $t1 := +($t1, $t19)
-                        i := $AddU64(i, $t19)
-                        // goto L7
-                        $block := 2
+                        $block := 7
                     }
                 }
             }
@@ -901,7 +951,7 @@ object "A2_M" {
                         // label L3
                         // $t10 := <($t1, $t8)
                         $t10 := $Lt(i, $t8)
-                        // if ($t10) goto L0 else goto L2
+                        // if ($t10) goto L1 else goto L0
                         switch $t10
                         case 0  { $block := 5 }
                         default { $block := 4 }
@@ -921,7 +971,19 @@ object "A2_M" {
                         $block := 2
                     }
                     case 4 {
+                        // label L1
+                        // goto L2
+                        $block := 6
+                    }
+                    case 5 {
                         // label L0
+                        // return $t3
+                        $result := sum
+                        $Free($locals, 32)
+                        leave
+                    }
+                    case 6 {
+                        // label L2
                         // $t11 := borrow_local($t0)
                         $t11 := $MakePtr(false, $locals)
                         // $t12 := vector::borrow<vector<U256::U256>>($t11, $t1)
@@ -949,13 +1011,6 @@ object "A2_M" {
                         // goto L3
                         $block := 2
                     }
-                    case 5 {
-                        // label L2
-                        // return $t3
-                        $result := sum
-                        $Free($locals, 32)
-                        leave
-                    }
                 }
             }
 
@@ -970,7 +1025,7 @@ object "A2_M" {
                         // label L3
                         // $t11 := <($t1, $t8)
                         $t11 := $Lt(i, $t8)
-                        // if ($t11) goto L0 else goto L2
+                        // if ($t11) goto L1 else goto L0
                         switch $t11
                         case 0  { $block := 5 }
                         default { $block := 4 }
@@ -992,7 +1047,19 @@ object "A2_M" {
                         $block := 2
                     }
                     case 4 {
+                        // label L1
+                        // goto L2
+                        $block := 6
+                    }
+                    case 5 {
                         // label L0
+                        // return $t3
+                        $result := sum
+                        $Free($locals, 32)
+                        leave
+                    }
+                    case 6 {
+                        // label L2
                         // $t12 := borrow_local($t0)
                         $t12 := $MakePtr(false, $locals)
                         // $t13 := vector::borrow<vector<u64>>($t12, $t1)
@@ -1020,13 +1087,6 @@ object "A2_M" {
                         // goto L3
                         $block := 2
                     }
-                    case 5 {
-                        // label L2
-                        // return $t3
-                        $result := sum
-                        $Free($locals, 32)
-                        leave
-                    }
                 }
             }
 
@@ -1041,7 +1101,7 @@ object "A2_M" {
                         // label L3
                         // $t11 := <($t1, $t8)
                         $t11 := $Lt(i, $t8)
-                        // if ($t11) goto L0 else goto L2
+                        // if ($t11) goto L1 else goto L0
                         switch $t11
                         case 0  { $block := 5 }
                         default { $block := 4 }
@@ -1063,7 +1123,19 @@ object "A2_M" {
                         $block := 2
                     }
                     case 4 {
+                        // label L1
+                        // goto L2
+                        $block := 6
+                    }
+                    case 5 {
                         // label L0
+                        // return $t3
+                        $result := sum
+                        $Free($locals, 32)
+                        leave
+                    }
+                    case 6 {
+                        // label L2
                         // $t12 := borrow_local($t0)
                         $t12 := $MakePtr(false, $locals)
                         // $t13 := vector::borrow<vector<u8>>($t12, $t1)
@@ -1091,13 +1163,6 @@ object "A2_M" {
                         // goto L3
                         $block := 2
                     }
-                    case 5 {
-                        // label L2
-                        // return $t3
-                        $result := sum
-                        $Free($locals, 32)
-                        leave
-                    }
                 }
             }
 
@@ -1112,7 +1177,7 @@ object "A2_M" {
                         // label L7
                         // $t10 := <($t1, $t7)
                         $t10 := $Lt(i, $t7)
-                        // if ($t10) goto L0 else goto L2
+                        // if ($t10) goto L1 else goto L0
                         switch $t10
                         case 0  { $block := 5 }
                         default { $block := 4 }
@@ -1134,7 +1199,19 @@ object "A2_M" {
                         $block := 2
                     }
                     case 4 {
+                        // label L1
+                        // goto L2
+                        $block := 6
+                    }
+                    case 5 {
                         // label L0
+                        // return $t4
+                        $result := sum
+                        $Free($locals, 32)
+                        leave
+                    }
+                    case 6 {
+                        // label L2
                         // $t11 := borrow_local($t0)
                         $t11 := $MakePtr(false, $locals)
                         // $t12 := vector::borrow<vector<u128>>($t11, $t1)
@@ -1144,28 +1221,36 @@ object "A2_M" {
                         // $t2 := $t13
                         j := $t13
                         // goto L6
-                        $block := 6
+                        $block := 7
                     }
-                    case 5 {
-                        // label L2
-                        // return $t4
-                        $result := sum
-                        $Free($locals, 32)
-                        leave
-                    }
-                    case 6 {
+                    case 7 {
                         // label L6
                         // $t14 := vector::length<u128>($t12)
                         $t14 := A1_vector_length$u128$($t12)
                         // $t15 := <($t2, $t14)
                         $t15 := $Lt(j, $t14)
-                        // if ($t15) goto L3 else goto L5
+                        // if ($t15) goto L4 else goto L3
                         switch $t15
-                        case 0  { $block := 8 }
-                        default { $block := 7 }
+                        case 0  { $block := 9 }
+                        default { $block := 8 }
                     }
-                    case 7 {
+                    case 8 {
+                        // label L4
+                        // goto L5
+                        $block := 10
+                    }
+                    case 9 {
                         // label L3
+                        // destroy($t12)
+                        // $t19 := 1
+                        $t19 := 1
+                        // $t1 := +($t1, $t19)
+                        i := $AddU64(i, $t19)
+                        // goto L7
+                        $block := 2
+                    }
+                    case 10 {
+                        // label L5
                         // $t16 := vector::borrow<u128>($t12, $t2)
                         $t16 := A1_vector_borrow$u128$($t12, j)
                         // $t17 := read_ref($t16)
@@ -1177,17 +1262,7 @@ object "A2_M" {
                         // $t2 := +($t2, $t18)
                         j := $AddU64(j, $t18)
                         // goto L6
-                        $block := 6
-                    }
-                    case 8 {
-                        // label L5
-                        // destroy($t12)
-                        // $t19 := 1
-                        $t19 := 1
-                        // $t1 := +($t1, $t19)
-                        i := $AddU64(i, $t19)
-                        // goto L7
-                        $block := 2
+                        $block := 7
                     }
                 }
             }

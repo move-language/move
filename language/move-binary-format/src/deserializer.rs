@@ -1386,6 +1386,7 @@ fn load_function_def(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Functio
         function,
         visibility,
         is_entry,
+        is_test: false,
         acquires_global_resources,
         code: code_unit,
     })

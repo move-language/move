@@ -849,6 +849,7 @@ fn compile_function(
     let ast_function = ast_function.value;
 
     let is_entry = ast_function.is_entry;
+    let is_test = ast_function.is_test;
     let visibility = match ast_function.visibility {
         FunctionVisibility::Public => Visibility::Public,
         FunctionVisibility::Friend => Visibility::Friend,
@@ -866,6 +867,7 @@ fn compile_function(
         function: fh_idx,
         visibility,
         is_entry,
+        is_test,
         acquires_global_resources,
         code,
     })

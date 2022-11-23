@@ -444,6 +444,7 @@ fn script_into_module(compiled_script: CompiledScript) -> CompiledModule {
         function: main_handle_idx,
         visibility: Visibility::Public,
         is_entry: true,
+        is_test: false,
         acquires_global_resources: vec![],
         code: Some(script.code),
     };

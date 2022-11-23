@@ -246,6 +246,7 @@ impl<'a> ModuleGenerator<'a> {
         let fun = Function_ {
             visibility: FunctionVisibility::Public,
             is_entry: false,
+            is_test: false,
             acquires: Vec::new(),
             specifications: Vec::new(),
             signature,

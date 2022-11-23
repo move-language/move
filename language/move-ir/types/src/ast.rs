@@ -377,6 +377,8 @@ pub struct Function_ {
     pub visibility: FunctionVisibility,
     /// Is entry function
     pub is_entry: bool,
+    /// Is test ([test] or [test_only]) function
+    pub is_test: bool,
     /// The type signature
     pub signature: FunctionSignature,
     /// List of nominal resources (declared in this module) that the procedure might access
@@ -970,6 +972,7 @@ impl Function_ {
     pub fn new(
         visibility: FunctionVisibility,
         is_entry: bool,
+        is_test: bool,
         formals: Vec<(Var, Type)>,
         return_type: Vec<Type>,
         type_parameters: Vec<(TypeVar, BTreeSet<Ability>)>,
@@ -981,6 +984,7 @@ impl Function_ {
         Function_ {
             visibility,
             is_entry,
+            is_test,
             signature,
             acquires,
             specifications,

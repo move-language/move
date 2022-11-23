@@ -7,7 +7,10 @@ use crate::{
     cfgir::{ast as G, translate::move_value_from_value_},
     compiled_unit::*,
     diag,
-    expansion::ast::{AbilitySet, Address, ModuleIdent, ModuleIdent_, SpecId, Visibility},
+    expansion::ast::{
+        AbilitySet, Address, AttributeName_, Attributes, ModuleIdent, ModuleIdent_, SpecId,
+        Visibility,
+    },
     hlir::{
         ast::{self as H, Value_},
         translate::{display_var, DisplayVar},
@@ -20,7 +23,7 @@ use crate::{
         Ability, Ability_, BinOp, BinOp_, ConstantName, Field, FunctionName, StructName, UnaryOp,
         UnaryOp_, Var,
     },
-    shared::{unique_map::UniqueMap, *},
+    shared::{known_attributes::KnownAttribute, unique_map::UniqueMap, *},
     FullyCompiledProgram,
 };
 use move_binary_format::file_format as F;
@@ -537,6 +540,13 @@ fn constant(
 // Functions
 //**************************************************************************************************
 
+fn is_test(attributes: Attributes) -> bool {
+    attributes.iter().any(|(_, name, _)| match name {
+        AttributeName_::Known(KnownAttribute::Testing(_)) => true,
+        _ => false,
+    })
+}
+
 fn function(
     context: &mut Context,
     m: Option<&ModuleIdent>,
@@ -544,7 +554,7 @@ fn function(
     fdef: G::Function,
 ) -> ((IR::FunctionName, IR::Function), CollectedInfo) {
     let G::Function {
-        attributes: _attributes,
+        attributes,
         visibility: v,
         entry,
         signature,
@@ -582,6 +592,7 @@ fn function(
     let ir_function = IR::Function_ {
         visibility: v,
         is_entry: entry.is_some(),
+        is_test: is_test(attributes),
         signature,
         acquires,
         specifications: vec![],

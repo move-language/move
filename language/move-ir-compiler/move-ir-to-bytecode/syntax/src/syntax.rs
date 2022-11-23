@@ -1924,6 +1924,7 @@ fn parse_function_decl(
     let func = Function_::new(
         visibility,
         is_entry,
+        /* is_test */ false,
         args,
         ret.unwrap_or_default(),
         type_parameters,
@@ -1985,6 +1986,7 @@ fn parse_script(tokens: &mut Lexer) -> Result<Script, ParseError<Loc, anyhow::Er
     let main = Function_::new(
         FunctionVisibility::Public,
         /* is_entry */ true,
+        /* is_test */ false,
         args,
         vec![],
         type_formals,

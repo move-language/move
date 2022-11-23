@@ -1096,7 +1096,7 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
                 BT::U64 => B::CastU64,
                 BT::U128 => B::CastU128,
                 BT::U256 => B::CastU256,
-                BT::Address | BT::Signer | BT::Vector | BT::Bool => {
+                BT::Address | BT::Signer | BT::Vector | BT::Bool | BT::Fun => {
                     panic!("ICE type checking failed. unexpected cast")
                 }
             };

@@ -483,7 +483,7 @@ fn error_format_impl_(b_: &Type_, subst: &Subst, nested: bool) -> String {
             let k = tys.len() - 1;
             format!(
                 "|{}|{}",
-                format_comma((&tys[0..k]).iter().map(|t| error_format_nested(t, subst))),
+                format_comma(tys[0..k].iter().map(|t| error_format_nested(t, subst))),
                 error_format_nested(&tys[k], subst)
             )
         }

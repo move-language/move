@@ -2925,6 +2925,7 @@ dependencies = [
  "im",
  "lsp-server",
  "lsp-types",
+ "move-cli",
  "move-command-line-common",
  "move-compiler",
  "move-ir-types",
@@ -2935,6 +2936,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "url",
+ "walkdir",
 ]
 
 [[package]]

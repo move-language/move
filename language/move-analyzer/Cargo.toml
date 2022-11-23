@@ -27,7 +27,10 @@ move-command-line-common = { path = "../move-command-line-common" }
 move-compiler = { path = "../move-compiler" }
 move-ir-types = { path = "../move-ir/types" }
 move-package = { path = "../tools/move-package" }
+move-cli = { path = "../tools/move-cli" }
 move-symbol-pool = { path = "../move-symbol-pool" }
+walkdir = "2"
+
 
 [features]
 address20 = ["move-compiler/address20"]

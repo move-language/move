@@ -62,7 +62,7 @@ pub fn display_var(s: Symbol) -> DisplayVar {
 
 struct Context<'env> {
     env: &'env mut CompilationEnv,
-    structs: UniqueMap<StructName, UniqueMap<Field, usize>>,
+    structs: UniqueMap<ModuleIdent, UniqueMap<StructName, UniqueMap<Field, usize>>>,
     function_locals: UniqueMap<Var, H::SingleType>,
     local_scope: UniqueMap<Var, Var>,
     used_locals: BTreeSet<Var>,
@@ -71,10 +71,44 @@ struct Context<'env> {
 }
 
 impl<'env> Context<'env> {
-    pub fn new(env: &'env mut CompilationEnv) -> Self {
+    pub fn new(
+        env: &'env mut CompilationEnv,
+        pre_compiled_lib_opt: Option<&FullyCompiledProgram>,
+        prog: &T::Program,
+    ) -> Self {
+        fn add_struct_fields(
+            structs: &mut UniqueMap<ModuleIdent, UniqueMap<StructName, UniqueMap<Field, usize>>>,
+            mident: ModuleIdent,
+            struct_defs: &UniqueMap<StructName, N::StructDefinition>,
+        ) {
+            let mut cur_structs = UniqueMap::new();
+            for (sname, sdef) in struct_defs.key_cloned_iter() {
+                let mut fields = UniqueMap::new();
+                let field_map = match &sdef.fields {
+                    N::StructFields::Native(_) => continue,
+                    N::StructFields::Defined(m) => m,
+                };
+                for (field, (idx, _)) in field_map.key_cloned_iter() {
+                    fields.add(field, *idx).unwrap();
+                }
+                cur_structs.add(sname, fields).unwrap();
+            }
+            structs.remove(&mident);
+            structs.add(mident, cur_structs).unwrap();
+        }
+
+        let mut structs = UniqueMap::new();
+        if let Some(pre_compiled_lib) = pre_compiled_lib_opt {
+            for (mident, mdef) in pre_compiled_lib.typing.modules.key_cloned_iter() {
+                add_struct_fields(&mut structs, mident, &mdef.structs)
+            }
+        }
+        for (mident, mdef) in prog.modules.key_cloned_iter() {
+            add_struct_fields(&mut structs, mident, &mdef.structs)
+        }
         Context {
             env,
-            structs: UniqueMap::new(),
+            structs,
             function_locals: UniqueMap::new(),
             local_scope: UniqueMap::new(),
             used_locals: BTreeSet::new(),
@@ -121,23 +155,15 @@ impl<'env> Context<'env> {
         remapped
     }
 
-    pub fn add_struct_fields(&mut self, structs: &UniqueMap<StructName, H::StructDefinition>) {
-        assert!(self.structs.is_empty());
-        for (sname, sdef) in structs.key_cloned_iter() {
-            let mut fields = UniqueMap::new();
-            let field_map = match &sdef.fields {
-                H::StructFields::Native(_) => continue,
-                H::StructFields::Defined(m) => m,
-            };
-            for (idx, (field, _)) in field_map.iter().enumerate() {
-                fields.add(*field, idx).unwrap();
-            }
-            self.structs.add(sname, fields).unwrap();
-        }
-    }
-
-    pub fn fields(&self, struct_name: &StructName) -> Option<&UniqueMap<Field, usize>> {
-        let fields = self.structs.get(struct_name);
+    pub fn fields(
+        &self,
+        module: &ModuleIdent,
+        struct_name: &StructName,
+    ) -> Option<&UniqueMap<Field, usize>> {
+        let fields = self
+            .structs
+            .get(module)
+            .and_then(|structs| structs.get(struct_name));
         // if fields are none, the struct must be defined in another module,
         // in that case, there should be errors
         assert!(fields.is_some() || self.env.has_errors());
@@ -156,10 +182,10 @@ impl<'env> Context<'env> {
 
 pub fn program(
     compilation_env: &mut CompilationEnv,
-    _pre_compiled_lib: Option<&FullyCompiledProgram>,
+    pre_compiled_lib: Option<&FullyCompiledProgram>,
     prog: T::Program,
 ) -> H::Program {
-    let mut context = Context::new(compilation_env);
+    let mut context = Context::new(compilation_env, pre_compiled_lib, &prog);
     let T::Program {
         modules: tmodules,
         scripts: tscripts,
@@ -197,12 +223,9 @@ fn module(
     } = mdef;
 
     let structs = tstructs.map(|name, s| struct_def(context, name, s));
-    context.add_struct_fields(&structs);
 
     let constants = tconstants.map(|name, c| constant(context, name, c));
     let functions = tfunctions.map(|name, f| function(context, name, f));
-
-    context.structs = UniqueMap::new();
     (
         module_ident,
         H::ModuleDefinition {
@@ -689,11 +712,11 @@ fn assign(
             context.remapped_local(v),
             Box::new(single_type(context, *st)),
         ),
-        A::Unpack(_m, s, tbs, tfields) => {
+        A::Unpack(m, s, tbs, tfields) => {
             let bs = base_types(context, tbs);
 
             let mut fields = vec![];
-            for (decl_idx, f, bt, tfa) in assign_fields(context, &s, tfields) {
+            for (decl_idx, f, bt, tfa) in assign_fields(context, &m, &s, tfields) {
                 assert!(fields.len() == decl_idx);
                 let st = &H::SingleType_::base(bt);
                 let (fa, mut fafter) = assign(context, tfa, st);
@@ -702,7 +725,7 @@ fn assign(
             }
             L::Unpack(s, bs, fields)
         }
-        A::BorrowUnpack(mut_, _m, s, _tss, tfields) => {
+        A::BorrowUnpack(mut_, m, s, _tss, tfields) => {
             let tmp = context.new_temp(loc, rvalue_ty.clone());
             let copy_tmp = || {
                 let copy_tmp_ = E::Copy {
@@ -711,7 +734,9 @@ fn assign(
                 };
                 H::exp(H::Type_::single(rvalue_ty.clone()), sp(loc, copy_tmp_))
             };
-            let fields = assign_fields(context, &s, tfields).into_iter().enumerate();
+            let fields = assign_fields(context, &m, &s, tfields)
+                .into_iter()
+                .enumerate();
             for (idx, (decl_idx, f, bt, tfa)) in fields {
                 assert!(idx == decl_idx);
                 let floc = tfa.loc;
@@ -728,10 +753,11 @@ fn assign(
 
 fn assign_fields(
     context: &Context,
+    m: &ModuleIdent,
     s: &StructName,
     tfields: Fields<(N::Type, T::LValue)>,
 ) -> Vec<(usize, Field, H::BaseType, T::LValue)> {
-    let decl_fields = context.fields(s);
+    let decl_fields = context.fields(m, s);
     let mut count = 0;
     let mut decl_field = |f: &Field| -> usize {
         match decl_fields {
@@ -1188,14 +1214,14 @@ fn exp_impl(
             HE::UnaryExp(op, e)
         }
 
-        TE::Pack(_, s, tbs, tfields) => {
+        TE::Pack(m, s, tbs, tfields) => {
             let bs = base_types(context, tbs);
 
-            let decl_fields = context.fields(&s);
+            let decl_fields = context.fields(&m, &s);
             let mut count = 0;
             let mut decl_field = |f: &Field| -> usize {
                 match decl_fields {
-                    Some(m) => *m.get(f).unwrap(),
+                    Some(field_map) => *field_map.get(f).unwrap(),
                     None => {
                         // none can occur with errors in typing
                         let i = count;
@@ -1239,7 +1265,7 @@ fn exp_impl(
                 let mut fields = (0..num_fields).map(|_| None).collect::<Vec<_>>();
                 for (decl_idx, f, _exp_idx, bt, tf) in texp_fields {
                     // Might have too many arguments, there will be an error from typing
-                    if decl_idx > fields.len() {
+                    if decl_idx >= fields.len() {
                         debug_assert!(context.env.has_errors());
                         break;
                     }

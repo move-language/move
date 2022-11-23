@@ -27,7 +27,7 @@ use move_model::{
     },
     symbol::Symbol,
     ty::{PrimitiveType, Type},
-    well_known::{TYPE_INFO_SPEC, TYPE_NAME_SPEC},
+    well_known::{TYPE_INFO_SPEC, TYPE_NAME_SPEC, TYPE_SPEC_IS_STRUCT},
 };
 use move_stackless_bytecode::mono_analysis::MonoInfo;
 
@@ -35,9 +35,10 @@ use crate::{
     boogie_helpers::{
         boogie_address_blob, boogie_byte_blob, boogie_choice_fun_name, boogie_declare_global,
         boogie_field_sel, boogie_inst_suffix, boogie_modifies_memory_name,
-        boogie_reflection_type_info, boogie_reflection_type_name, boogie_resource_memory_name,
-        boogie_spec_fun_name, boogie_spec_var_name, boogie_struct_name, boogie_type,
-        boogie_type_suffix, boogie_value_blob, boogie_well_formed_expr,
+        boogie_reflection_type_info, boogie_reflection_type_is_struct, boogie_reflection_type_name,
+        boogie_resource_memory_name, boogie_spec_fun_name, boogie_spec_var_name,
+        boogie_struct_name, boogie_type, boogie_type_suffix, boogie_value_blob,
+        boogie_well_formed_expr,
     },
     options::BoogieOptions,
 };
@@ -905,6 +906,14 @@ impl<'env> SpecTranslator<'env> {
                 // invoking `type_info` on a primitive type like: `type_info<bool>`.
                 let (_, info) = boogie_reflection_type_info(self.env, &inst[0]);
                 emit!(self.writer, "{}", info);
+                processed = true;
+            } else if qualified_name == TYPE_SPEC_IS_STRUCT {
+                assert_eq!(inst.len(), 1);
+                emit!(
+                    self.writer,
+                    "{}",
+                    boogie_reflection_type_is_struct(self.env, &inst[0])
+                );
                 processed = true;
             }
         }

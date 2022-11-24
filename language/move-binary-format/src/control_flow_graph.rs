@@ -107,37 +107,77 @@ impl VMControlFlowGraph {
         let blocks = blocks;
         assert_eq!(entry, code_len);
 
+        // # Loop analysis
+        //
+        // This section identifies loops in the control-flow graph, picks a back edge and loop head
+        // (the basic block the back edge returns to), and decides the order that blocks are
+        // traversed during abstract interpretation (reverse post-order).
+        //
+        // The implementation is based on the algorithm for finding widening points in Section 4.1,
+        // "Depth-first numbering" of Bourdoncle [1993], "Efficient chaotic iteration strategies
+        // with widenings."
+        //
+        // NB. The comments below refer to a block's sub-graph -- the reflexive transitive closure
+        // of its successor edges, modulo cycles.
+
         #[derive(Copy, Clone)]
         enum Exploration {
             InProgress,
             Done,
         }
 
-        let mut loop_heads: Map<BlockId, Set<BlockId>> = Map::new();
         let mut exploration: Map<BlockId, Exploration> = Map::new();
         let mut stack = vec![ENTRY_BLOCK_ID];
+
+        // For every loop in the CFG that is reachable from the entry block, there is an entry in
+        // `loop_heads` mapping to all the back edges pointing to it, and vice versa.
+        //
+        // Entry in `loop_heads` implies loop in the CFG is justified by the comments in the loop
+        // below.  Loop in the CFG implies entry in `loop_heads` is justified by considering the
+        // point at which the first node in that loop, `F` is added to the `exploration` map:
+        //
+        // - By definition `F` is part of a loop, meaning there is a block `L` such that:
+        //
+        //     F - ... -> L -> F
+        //
+        // - `F` will not transition to `Done` until all the nodes reachable from it (including `L`)
+        //   have been visited.
+        // - Because `F` is the first node seen in the loop, all the other nodes in the loop
+        //   (including `L`) will be visited while `F` is `InProgress`.
+        // - Therefore, we will process the `L -> F` edge while `F` is `InProgress`.
+        // - Therefore, we will record a back edge to it.
+        let mut loop_heads: Map<BlockId, Set<BlockId>> = Map::new();
+
+        // Blocks appear in `post_order` after all the blocks in their (non-reflexive) sub-graph.
         let mut post_order = Vec::with_capacity(blocks.len());
 
         while let Some(block) = stack.pop() {
             match exploration.entry(block) {
                 Entry::Vacant(entry) => {
+                    // Record the fact that exploration of this block and its sub-graph has started.
                     entry.insert(Exploration::InProgress);
 
-                    // Push the block back on the stack to finish processing it once the sub-graph
-                    // reachable from it has been traversed.
+                    // Push the block back on the stack to finish processing it, and mark it as done
+                    // once its sub-graph has been traversed.
                     stack.push(block);
 
                     for succ in &blocks[&block].successors {
                         match exploration.get(succ) {
-                            // Frontier detected
+                            // This successor has never been visited before, add it to the stack to
+                            // be explored before `block` gets marked `Done`.
                             None => stack.push(*succ),
 
-                            // Back edge detected
+                            // This block's sub-graph was being explored, meaning it is a (reflexive
+                            // transitive) predecessor of `block` as well as being a successor,
+                            // implying a loop has been detected -- greedily choose the successor
+                            // block as the loop head.
                             Some(Exploration::InProgress) => {
                                 loop_heads.entry(*succ).or_default().insert(block);
                             }
 
-                            // Cross-edge detected
+                            // Cross-edge detected, this block and its entire sub-graph (modulo
+                            // cycles) has already been explored via a different path, and is
+                            // already present in `post_order`.
                             Some(Exploration::Done) => { /* skip */ }
                         };
                     }

@@ -49,7 +49,7 @@ export class Context {
     ): void {
         const disposable = vscode.commands.registerCommand(
             `move-analyzer.${name}`,
-            async (...args: Array<any>) : Promise<any> => {
+            async (...args: Array<any>): Promise<any> => {
                 const ret = await command(this, ...args);
                 return ret;
             },

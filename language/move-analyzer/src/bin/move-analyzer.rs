@@ -20,8 +20,8 @@ use std::{
 
 use move_analyzer::{
     completion::on_completion_request,
-    completion2::{on_completion_request2, Modules},
     context::Context,
+    modules::{on_completion_request2, Modules},
     symbols,
     vfs::{on_text_document_sync_notification, VirtualFileSystem},
 };

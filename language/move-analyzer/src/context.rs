@@ -2,7 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::completion2::Modules;
+use crate::modules::Modules;
 use crate::{symbols::Symbols, vfs::VirtualFileSystem};
 use lsp_server::Connection;
 use std::sync::{Arc, Mutex};

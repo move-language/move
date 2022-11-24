@@ -10,8 +10,8 @@ across projects. The Move package system allows programmers to easily:
 
 包允许 `Move` 程序员更轻松地重用代码并在项目之间共享。`Move` 包系统允许程序员轻松地：
 * 定义一个包含 `Move`代码的包；
-* 通过命名地址参数化包；
-* 在其他 `Move` 代码中导入和使用包并实例化命名地址；
+* 通过具名地址参数化包；
+* 在其他 `Move` 代码中导入和使用包并实例化具名地址；
 * 构建包并从包中生成相关的编译源代码；
 * 使用围绕已编译 `Move` 工件的通用接口。
 
@@ -102,7 +102,7 @@ An example of a more standard package manifest that also includes the Move
 standard library and instantiates the named address `Std` from it with the
 address value `0x1`:
 
-一个包括 Move 标准库并从中使用地址值`0x1`实例化命名地址`Std`的更标准的包清单示例：
+一个包括 Move 标准库并从中使用地址值`0x1`实例化具名地址`Std`的更标准的包清单示例：
 
 ```
     [package]
@@ -128,9 +128,9 @@ Most of the sections in the package manifest are self explanatory, but named
 addresses can be a bit difficult to understand so it's worth examining them in
 a bit more detail.
 
-包清单中的大部分段落都是不言自明的，但命名地址可能有点难以理解，因此值得更详细地检查它们。
+包清单中的大部分段落都是不言自明的，但具名地址可能有点难以理解，因此值得更详细地检查它们。
 
-## 编译期间的命名地址（Named Addresses During Compilation）
+## 编译期间的具名地址（Named Addresses During Compilation）
 
 Recall that Move has [named addresses](./address.md) and that
 named addresses cannot be declared in Move. Because of this, until now
@@ -141,7 +141,7 @@ addresses in scope, and rename named addresses from other packages within
 the Move package system manifest file. Let's go through each of these
 individually:
 
-回想一下，Move 具有命名地址，并且不能在 Move 中声明命名地址。正因为如此，到目前为止，命名地址及其值都需要在命令行上传递给编译器。但使用 Move 包系统时这将不再需要，您可以在包中声明命名地址，实例化范围内的其他命名地址，并从 Move 包系统清单文件中的其他包重命名命名地址，让我们分别来看看这些:
+回想一下，Move 具有具名地址，并且不能在 Move 中声明具名地址。正因为如此，到目前为止，具名地址及其值都需要在命令行上传递给编译器。但使用 Move 包系统时这将不再需要，您可以在包中声明具名地址，实例化范围内的其他具名地址，并从 Move 包系统清单文件中的其他包重命名具名地址，让我们分别来看看这些:
 
 ### 声明（Declaration）
 Let's say we have a Move module in `example_pkg/sources/A.move` as follows:
@@ -157,7 +157,7 @@ Let's say we have a Move module in `example_pkg/sources/A.move` as follows:
 We could in `example_pkg/Move.toml` declare the named address `named_addr` in
 two different ways. The first:
 
-我们可以用两种不同`example_pkg/Move.toml`的方式声明命名地址`named_addr`。首先：
+我们可以用两种不同`example_pkg/Move.toml`的方式声明具名地址`named_addr`。首先：
 
 ```
     [package]
@@ -174,7 +174,7 @@ it wishes. Intuitively you can think of this as parameterizing the package
 `ExamplePkg` by the named address `named_addr`, and the package can then be
 instantiated later on by an importing package.
 
-声明`named_addr`为包`ExamplePkg`中的命名地址，并且 _该地址可以是任何有效的地址值_。因此，导入包可以选择命名地址的值作为`named_addr`它希望的任何地址。直观地，您可以将其视为通过命名地址`named_addr`参数化包 `ExamplePkg`，然后稍后通过导入包使包被实例化。
+声明`named_addr`为包`ExamplePkg`中的具名地址，并且 _该地址可以是任何有效的地址值_。因此，导入包可以选择具名地址的值作为`named_addr`它希望的任何地址。直观地，您可以将其视为通过具名地址`named_addr`参数化包 `ExamplePkg`，然后稍后通过导入包使包被实例化。
 
 `named_addr` can also be declared as:
 
@@ -192,7 +192,7 @@ which states that the named address `named_addr` is exactly `0xCAFE` and cannot 
 changed. This is useful so other importing packages can use this named
 address without needing to worry about the exact value assigned to it.
 
-这表明命名的地址`named_addr`是准确的`0xCAFE`并且不能更改。这很有用，因此其他导入包可以使用这个命名地址，而无需担心分配给它的确切值。
+这表明命名的地址`named_addr`是准确的`0xCAFE`并且不能更改。这很有用，因此其他导入包可以使用这个具名地址，而无需担心分配给它的确切值。
 
 With these two different declaration methods, there are two ways that
 information about named addresses can flow in the package graph:
@@ -201,17 +201,17 @@ information about named addresses can flow in the package graph:
 * The latter ("assigned named addresses") allows named address values to flow
   from the declaration site upwards in the package graph to usage sites.
 
-使用这两种不同的声明方法，有关命名地址的信息可以通过两种方式在包图中流动：
-*  前者（“未分配的命名地址”）允许命名地址值从进口站点流向申报站点。
-*  后者（“分配的命名地址”）允许命名地址值从包图中的声明站点向上流动到使用站点。
+使用这两种不同的声明方法，有关具名地址的信息可以通过两种方式在包图中流动：
+*  前者（“未分配的具名地址”）允许具名地址值从进口站点流向申报站点。
+*  后者（“分配的具名地址”）允许具名地址值从包图中的声明站点向上流动到使用站点。
 
 With these two methods for flowing named address information throughout the
 package graph the rules around scoping and renaming become important to
 understand.
 
-通过这两种在整个包图中流动命名地址信息的方法，了解范围和重命名的规则变得很重要。
+通过这两种在整个包图中流动具名地址信息的方法，了解范围和重命名的规则变得很重要。
 
-## 命名地址的作用域和重命名（Scoping and Renaming of Named Addresses）
+## 具名地址的作用域和重命名（Scoping and Renaming of Named Addresses）
 
 A named address `N` in a package `P` is in scope if:
 1. It declares a named address `N`; or
@@ -219,10 +219,10 @@ A named address `N` in a package `P` is in scope if:
   `N` and there is a dependency path in the package graph between between `P` and the
   declaring package of `N` with no renaming of `N`.
 
-在包`P`中的命名地址`N`如果满足以下条件，则在作用域内：
+在包`P`中的具名地址`N`如果满足以下条件，则在作用域内：
 
- 1. 它声明了一个命名地址`N`；或者
- 2. `P`的传递依赖项之一中的包声明了命名地址`N`，并且封装图在`P`和没有重命名的声明包`N`之间有一个依赖路径。
+ 1. 它声明了一个具名地址`N`；或者
+ 2. `P`的传递依赖项之一中的包声明了具名地址`N`，并且封装图在`P`和没有重命名的声明包`N`之间有一个依赖路径。
 
  Additionally, every named address in a package is exported. Because of this and
 the above scoping rules each package can be viewed as coming with a set of
@@ -236,12 +236,12 @@ address is coming from, we enforce that the sets of scopes introduced by all
 dependencies in a package are disjoint, and provide a way to _rename named
 addresses_ when the package that brings them into scope is imported.
 
- 此外，包中的每个命名地址都会被导出。由于这个和上面的范围规则，每个包都可以被视为带有一组命名地址，当包被导入时，这些地址将被带入作用域，例如，如果包`ExamplePkg`被导入，则该导入会将命名地址`named_addr`带入作用域。 因此，如果`P`导入两个包`P1`并且`P2`都声明了一个命名地址`N`，在`P`中则会出现以下问题：当`N`被引用于`P`时我们指的是哪个`N`？来自`P1`或来自`P2`的`N`？ 为了防止命名地址来自哪个包的这种歧义，我们强制一个包中所有依赖项引入的范围集是不相交的，并提供一种在将命名地址带入范围的包被导入时重命名命名地址的方法。
+ 此外，包中的每个具名地址都会被导出。由于这个和上面的范围规则，每个包都可以被视为带有一组具名地址，当包被导入时，这些地址将被带入作用域，例如，如果包`ExamplePkg`被导入，则该导入会将具名地址`named_addr`带入作用域。 因此，如果`P`导入两个包`P1`并且`P2`都声明了一个具名地址`N`，在`P`中则会出现以下问题：当`N`被引用于`P`时我们指的是哪个`N`？来自`P1`或来自`P2`的`N`？ 为了防止具名地址来自哪个包的这种歧义，我们强制一个包中所有依赖项引入的范围集是不相交的，并提供一种在将具名地址带入范围的包被导入时重命名具名地址的方法。
 
 Renaming a named address when importing can be done as follows in our `P`,
 `P1`, and `P2` example above:
 
-导入时重命名一个命名地址可以在我们的`P`,`P1`和`P2`上面的示例中完成：
+导入时重命名一个具名地址可以在我们的`P`,`P1`和`P2`上面的示例中完成：
 ```
     [package]
     name = "P"
@@ -266,7 +266,7 @@ why rule (2) in the scoping rules at the start of this section specifies a
 "dependency path in the package graph between between `P` and the declaring
 package of `N` with no renaming of `N`."
 
-重要的是要注意 _重命名不是局部的_：一旦一个命名地址`N`在一个包`P`中被重命名为`N2`，所有导入`P`的包都不会看到`N`但只会看到`N2`，除非`N`是从`P`外引入的。这就是为什么本节开头的范围规则中的规则 (2) 特别说明了“在`P`和没有重命名的声明包`N` 的封装图中的依赖路径” 。
+重要的是要注意 _重命名不是局部的_：一旦一个具名地址`N`在一个包`P`中被重命名为`N2`，所有导入`P`的包都不会看到`N`但只会看到`N2`，除非`N`是从`P`外引入的。这就是为什么本节开头的范围规则中的规则 (2) 特别说明了“在`P`和没有重命名的声明包`N` 的封装图中的依赖路径” 。
 
 ### 实例化（Instantiation）
 
@@ -275,7 +275,7 @@ long as it is always with the same value. It is an error if the same named
 address (regardless of renaming) is instantiated with differing values across
 the package graph.
 
-只要命名地址始终具有相同的值，就可以在封装图中多次实例化命名地址。如果在整个封装图中使用不同的值实例化相同的命名地址（无论是否重命名），则会出现错误。
+只要具名地址始终具有相同的值，就可以在封装图中多次实例化具名地址。如果在整个封装图中使用不同的值实例化相同的具名地址（无论是否重命名），则会出现错误。
 
 A Move package can only be compiled if all named addresses resolve to a value.
 This presents issues if the package wishes to expose an uninstantiated named
@@ -285,7 +285,7 @@ Additionally, only the `[dev-addresses]` in the root package are included in
 `dev` mode. For example a root package with the following manifest would not compile
 outside of `dev` mode since `named_addr` would be uninstantiated:
 
-只有当所有命名地址都解析为一个值时，才能编译 Move 包。如果包希望公开未实例化的命名地址，则会出现问题。这就是`[dev-addresses]`段要解决的问题。此段可以设置命名地址的值，但不能引入任何命名地址。此外， `dev`模式下仅根包中的`[dev-addresses]`会被包括进来。例如，具有以下清单的根包将不会在`dev`模式之外编译，因为`named_addr`不会被实例化：
+只有当所有具名地址都解析为一个值时，才能编译 Move 包。如果包希望公开未实例化的具名地址，则会出现问题。这就是`[dev-addresses]`段要解决的问题。此段可以设置具名地址的值，但不能引入任何具名地址。此外， `dev`模式下仅根包中的`[dev-addresses]`会被包括进来。例如，具有以下清单的根包将不会在`dev`模式之外编译，因为`named_addr`不会被实例化：
 ```
 [package]
 name = "ExamplePkg"

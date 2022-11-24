@@ -20,7 +20,7 @@ The `vector` module defines a number of operations over the primitive
 named address `Std` and consists of a number of native functions, as
 well as functions defined in Move. The API for this module is as follows.
 
-`向量`模块在原生类型[`向量`](./vector.md)上定义了许多操作。该模块以命名地址`Std`发布，并由许多原生函数以及在Move中定义的函数组成。此模块的API如下所示:
+`向量`模块在原生类型[`向量`](./vector.md)上定义了许多操作。该模块以具名地址`Std`发布，并由许多原生函数以及在Move中定义的函数组成。此模块的API如下所示:
 
 ### 函数（Functions）
 
@@ -212,7 +212,7 @@ Return whether the vector `v` is empty.
 The `option` module defines a generic option type `Option<T>` that represents a
 value of type `T` that may, or may not, be present. It is published under the named address `Std`.
 
-`option`模块定义了一个泛型option类型`Option<T>`，它表示类型为`T`的值可能存在，也可能不存在。它发布在命名地址`Std`下。
+`option`模块定义了一个泛型option类型`Option<T>`，它表示类型为`T`的值可能存在，也可能不存在。它发布在具名地址`Std`下。
 
 The Move option type is internally represented as a singleton vector, and may
 contain a value of `resource` or `copyable` kind.  If you are familiar with option

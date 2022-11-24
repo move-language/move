@@ -69,11 +69,11 @@ fun this_is_incorrect(arg: signer) { ... }
 #[test(a = @0xC0FFEE, b = @0xCAFE)] // 正确，多参数情况下必须为每个参数提供值。 // OK. We support multiple signer arguments, but you must always provide a value for that argument
 fun this_works(a: signer, b: signer) { ... }
 
-// 在某处声明一个命名地址（named address） // somewhere a named address is declared
-#[test_only] // 命名地址支持 test-only 注解 // test-only named addresses are supported
+// 在某处声明一个具名地址（named address） // somewhere a named address is declared
+#[test_only] // 具名地址支持 test-only 注解 // test-only named addresses are supported
 address TEST_NAMED_ADDR = @0x1;
 ...
-#[test(arg = @TEST_NAMED_ADDR)] // 支持命名地址！ // Named addresses are supported!
+#[test(arg = @TEST_NAMED_ADDR)] // 支持具名地址！ // Named addresses are supported!
 fun this_is_correct_now(arg: signer) { ... }
 ```
 
@@ -98,7 +98,7 @@ A module and any of its members can be declared as test only. In such a case the
 #[test_only] // test only 属性可以用于模块  // test only attributes can be attached to modules
 module abc { ... }
 
-#[test_only] // test only 属性可以用于命名地址 // test only attributes can be attached to named addresses
+#[test_only] // test only 属性可以用于具名地址 // test only attributes can be attached to named addresses
 address ADDR = @0x1;
 
 #[test_only] // .. 用于 use 声明 // .. to uses

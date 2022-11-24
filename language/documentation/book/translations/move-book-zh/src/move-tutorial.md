@@ -241,7 +241,7 @@ move build
     ```
 * Move 代码也可以放在其他很多地方, 更多关于 Move 包系统的信息请参阅[Move book](./packages.html)
 * 更多关于 `Move.toml` 文件的信息可以参阅[package section of the Move book](./packages.html#movetoml).
-* Move语言也支持命名地址的概念([named addresses](./address.html#named-addresses)), 命名地址是一种参数化 Move 源代码的方法，
+* Move 语言也支持具名地址的概念([named addresses](./address.html#named-addresses)), 具名地址是一种参数化 Move 源代码的方法，
   就是如果对 `NamedAddr` 使用的不同赋值编译，编译后会获得部署到你控制地址的不同字节码. 这种用法很常见，一般都将地址变量其定义在 `Move.toml` 文件
   的 `[addresses]` 部分. 例如:
     ```

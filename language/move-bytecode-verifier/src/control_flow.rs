@@ -62,15 +62,16 @@ pub fn verify_reducibility<'a>(
             }
         }
 
-        let mut frontier: Vec<_> = body.iter().cloned().collect();
+        let mut frontier: Vec<_> = body.iter().copied().collect();
         while let Some(node) = frontier.pop() {
             for pred in summary.pred_edges(node) {
                 let pred = partition.containing_loop(*pred);
-                if !summary.is_descendant(head, pred) {
+                if !summary.is_descendant(/* ancestor */ head, /* descendant */ pred) {
                     return err(StatusCode::INVALID_LOOP_SPLIT, summary.block(pred));
                 }
 
-                if pred != head && body.insert(pred) {
+                let body_extended = pred != head && body.insert(pred);
+                if body_extended {
                     frontier.push(pred);
                 }
             }

@@ -8,6 +8,9 @@ use std::collections::{btree_map::Entry, BTreeMap, BTreeSet};
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct NodeId(u16);
 
+/// Alias to treat vectors as `NodeId -> T` maps.
+type NodeMap<T> = Vec<T>;
+
 /// Summarise loop information from a control-flow graph by calculating its depth-first spanning
 /// tree (DFST) and then using that to:
 ///
@@ -22,15 +25,15 @@ pub struct NodeId(u16);
 pub struct LoopSummary {
     /// Original block corresponding to this node, useful for recovering code offsets, e.g. for
     /// error messages.
-    blocks: Vec<BlockId>,
+    blocks: NodeMap<BlockId>,
 
     /// Number of transitive descendants for a node, in the depth-first spanning tree.
-    descs: Vec<u16>,
+    descs: NodeMap<u16>,
 
     /// The incoming edges for a node are partitioned between `back_edges` which create cycles in
     /// the DFS tree, and `pred_edges` which are all the rest.
-    backs: Vec<Vec<NodeId>>,
-    preds: Vec<Vec<NodeId>>,
+    backs: NodeMap<Vec<NodeId>>,
+    preds: NodeMap<Vec<NodeId>>,
 }
 
 /// A disjoint-set data structure used when collapsing loops down to single nodes in the summary
@@ -39,11 +42,11 @@ pub struct LoopSummary {
 pub struct LoopPartition {
     /// The parent relationship in the disjoint-set.  The transitive closure of this type maps a
     /// node to its representative.
-    parents: Vec<NodeId>,
+    parents: NodeMap<NodeId>,
 
     /// The nesting depth of (collapsed) nodes in the summary graph.  Nodes that are uncollapsed
     /// (not in any loop) have a depth of 0.  Initially, all nodes are uncollapsed.
-    depths: Vec<u16>,
+    depths: NodeMap<u16>,
 }
 
 impl LoopSummary {
@@ -153,8 +156,9 @@ impl LoopSummary {
     /// Decides whether `descendant` is a descendant of `ancestor` in the depth-first spanning
     /// tree.
     pub fn is_descendant(&self, NodeId(ancestor): NodeId, NodeId(descendant): NodeId) -> bool {
-        // All the descendants of `ancestor` in the DFST will have the IDs immediately following
-        // it.
+        // All the descendants of `ancestor` in the DFST will have the IDs immediately following it,
+        // so we can check for descendants with a bounds check on `NodeId`, given `ancestor`'s
+        // transitive descendant count in `self.descs[ancestor]`.
         ancestor <= descendant && descendant <= ancestor + self.descs[ancestor as usize]
     }
 

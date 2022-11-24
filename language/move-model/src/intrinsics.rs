@@ -283,6 +283,20 @@ impl IntrinsicsAnnotation {
             .map(|id| self.decls.get(id).unwrap())
     }
 
+    /// Get the intrinsic decl for a move function
+    pub fn get_decl_for_move_fun(&self, qid: &QualifiedId<FunId>) -> Option<&IntrinsicDecl> {
+        self.intrinsic_move_funs
+            .get(qid)
+            .map(|id| self.decls.get(id).unwrap())
+    }
+
+    /// Get the intrinsic decl for a spec function
+    pub fn get_decl_for_spec_fun(&self, qid: &QualifiedId<SpecFunId>) -> Option<&IntrinsicDecl> {
+        self.intrinsic_spec_funs
+            .get(qid)
+            .map(|id| self.decls.get(id).unwrap())
+    }
+
     /// Test whether a struct is an intrinsic of a specific name
     pub fn is_intrinsic_of_for_struct(
         &self,

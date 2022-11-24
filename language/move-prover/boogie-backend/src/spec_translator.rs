@@ -25,6 +25,7 @@ use move_model::{
         FieldId, GlobalEnv, Loc, ModuleEnv, ModuleId, NodeId, QualifiedInstId, SpecFunId,
         SpecVarId, StructId,
     },
+    pragmas::INTRINSIC_TYPE_MAP,
     symbol::Symbol,
     ty::{PrimitiveType, Type},
     well_known::{TYPE_INFO_SPEC, TYPE_NAME_SPEC, TYPE_SPEC_IS_STRUCT},
@@ -1119,24 +1120,28 @@ impl<'env> SpecTranslator<'env> {
         // type quantification
         let mut range_tmps = HashMap::new();
         for (var, range) in ranges {
-            match self.get_node_type(range.node_id()).skip_reference() {
-                Type::Vector(..) | Type::Primitive(PrimitiveType::Range) => {
-                    let range_tmp = self.fresh_var_name("range");
-                    emit!(self.writer, "(var {} := ", range_tmp);
-                    self.translate_exp(range);
-                    emit!(self.writer, "; ");
-                    range_tmps.insert(var.name, range_tmp);
+            let should_bind_range = match self.get_node_type(range.node_id()).skip_reference() {
+                Type::Vector(..) | Type::Primitive(PrimitiveType::Range) => true,
+                Type::Struct(mid, sid, ..) => {
+                    let struct_env = self.env.get_struct(mid.qualified(*sid));
+                    struct_env.is_intrinsic_of(INTRINSIC_TYPE_MAP)
                 }
                 Type::Primitive(_)
                 | Type::Tuple(_)
-                | Type::Struct(_, _, _)
                 | Type::TypeParameter(_)
                 | Type::Reference(_, _)
                 | Type::Fun(_, _)
                 | Type::TypeDomain(_)
                 | Type::ResourceDomain(_, _, _)
                 | Type::Error
-                | Type::Var(_) => {}
+                | Type::Var(_) => false,
+            };
+            if should_bind_range {
+                let range_tmp = self.fresh_var_name("range");
+                emit!(self.writer, "(var {} := ", range_tmp);
+                self.translate_exp(range);
+                emit!(self.writer, "; ");
+                range_tmps.insert(var.name, range_tmp);
             }
         }
         // Translate quantified variables.
@@ -1156,6 +1161,20 @@ impl<'env> SpecTranslator<'env> {
                         var_name,
                         boogie_type(self.env, ty)
                     );
+                }
+                Type::Struct(mid, sid, targs) => {
+                    let struct_env = self.env.get_struct(mid.qualified(*sid));
+                    if struct_env.is_intrinsic_of(INTRINSIC_TYPE_MAP) {
+                        emit!(
+                            self.writer,
+                            "{}{}: {}",
+                            comma,
+                            var_name,
+                            boogie_type(self.env, &targs[0])
+                        );
+                    } else {
+                        panic!("unexpected type");
+                    }
                 }
                 Type::ResourceDomain(..) => {
                     let addr_quant_var = self.fresh_var_name("a");
@@ -1237,6 +1256,21 @@ impl<'env> SpecTranslator<'env> {
                         quant_var,
                     );
                 }
+                Type::Struct(mid, sid, targs) => {
+                    let struct_env = self.env.get_struct(mid.qualified(*sid));
+                    if struct_env.is_intrinsic_of(INTRINSIC_TYPE_MAP) {
+                        emit!(
+                            self.writer,
+                            "{}ContainsTable({}, $EncodeKey'{}'({}))",
+                            separator,
+                            range_tmps.get(&var.name).unwrap(),
+                            boogie_type_suffix(self.env, &targs[0]),
+                            var_name,
+                        );
+                    } else {
+                        panic!("unexpected type");
+                    }
+                }
                 Type::Primitive(PrimitiveType::Range) => {
                     let range_tmp = range_tmps.get(&var.name).unwrap();
                     let quant_var = quant_vars.get(&var.name).unwrap();
@@ -1250,7 +1284,6 @@ impl<'env> SpecTranslator<'env> {
                 }
                 Type::Primitive(_)
                 | Type::Tuple(_)
-                | Type::Struct(_, _, _)
                 | Type::TypeParameter(_)
                 | Type::Reference(_, _)
                 | Type::Fun(_, _)
@@ -1279,7 +1312,7 @@ impl<'env> SpecTranslator<'env> {
         );
         emit!(
             self.writer,
-            &")".repeat(range_tmps.len().checked_add(1).unwrap())
+            &")".repeat(quant_vars.len().checked_add(1).unwrap())
         );
     }
 

@@ -54,6 +54,12 @@ impl IntrinsicDecl {
                 })
             })
     }
+
+    pub fn lookup_spec_fun(&self, env: &GlobalEnv, name: &str) -> Option<QualifiedId<SpecFunId>> {
+        let symbol_pool = env.symbol_pool();
+        let sym = symbol_pool.make(name);
+        self.intrinsic_to_spec_fun.get(&sym).cloned()
+    }
 }
 
 pub(crate) fn process_intrinsic_declaration(

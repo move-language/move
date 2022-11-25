@@ -1,11 +1,11 @@
 error[E04006]: invalid subtype
-  ┌─ tests/move_check/typing/subtype_assign_invalid.move:5:16
+  ┌─ tests/move_check/typing/subtype_assign_invalid.move:5:17
   │
-5 │         let x: &mut u64 = &0;
-  │                ^^^^^^^^   -- Given: '&{integer}'
-  │                │           
-  │                Invalid type annotation
-  │                Expected: '&mut u64'
+5 │         let _x: &mut u64 = &0;
+  │                 ^^^^^^^^   -- Given: '&{integer}'
+  │                 │           
+  │                 Invalid type annotation
+  │                 Expected: '&mut u64'
 
 error[E04006]: invalid subtype
    ┌─ tests/move_check/typing/subtype_assign_invalid.move:10:10

@@ -8,6 +8,7 @@ use crate::{
     expansion::ast::{
         self as E, Address, Attribute, AttributeValue, ModuleAccess_, ModuleIdent, ModuleIdent_,
     },
+    hlir::translate::display_var,
     parser::ast::ConstantName,
     shared::{
         known_attributes::{KnownAttribute, TestingAttribute},
@@ -160,7 +161,12 @@ fn build_test_info<'func>(
     let test_annotation_params = parse_test_attribute(context, test_attribute, 0);
     let mut arguments = Vec::new();
     for (var, _) in &function.signature.parameters {
-        match test_annotation_params.get(&var.value()) {
+        let sp!(vloc, var_) = var.0;
+        let var_ = match display_var(var_) {
+            crate::hlir::translate::DisplayVar::Orig(s) => s.into(),
+            crate::hlir::translate::DisplayVar::Tmp => panic!("ICE temp as parameter"),
+        };
+        match test_annotation_params.get(&var_) {
             Some(value) => arguments.push(value.clone()),
             None => {
                 let missing_param_msg = "Missing test parameter assignment in test. Expected a \
@@ -168,7 +174,7 @@ fn build_test_info<'func>(
                 context.env.add_diag(diag!(
                     Attributes::InvalidTest,
                     (test_attribute.loc, missing_param_msg),
-                    (var.loc(), "Corresponding to this parameter"),
+                    (vloc, "Corresponding to this parameter"),
                     (fn_loc, IN_THIS_TEST_MSG),
                 ))
             }

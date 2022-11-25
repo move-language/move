@@ -4,10 +4,8 @@
 
 use crate::{
     expansion::ast::{Attributes, Fields, Friend, ModuleIdent, SpecId, Value, Visibility},
-    naming::ast::{FunctionSignature, StructDefinition, Type, TypeName_, Type_},
-    parser::ast::{
-        BinOp, ConstantName, Field, FunctionName, StructName, UnaryOp, Var, ENTRY_MODIFIER,
-    },
+    naming::ast::{FunctionSignature, StructDefinition, Type, TypeName_, Type_, Var},
+    parser::ast::{BinOp, ConstantName, Field, FunctionName, StructName, UnaryOp, ENTRY_MODIFIER},
     shared::{ast_debug::*, unique_map::UniqueMap},
 };
 use move_ir_types::location::*;
@@ -101,7 +99,11 @@ pub struct Constant {
 #[allow(clippy::large_enum_variant)]
 pub enum LValue_ {
     Ignore,
-    Var(Var, Box<Type>),
+    Var {
+        var: Var,
+        ty: Box<Type>,
+        unused_binding: bool,
+    },
     Unpack(ModuleIdent, StructName, Vec<Type>, Fields<(Type, LValue)>),
     BorrowUnpack(
         bool,
@@ -428,20 +430,35 @@ impl AstDebug for UnannotatedExp_ {
             E::Move {
                 from_user: false,
                 var: v,
-            } => w.write(&format!("move {}", v)),
+            } => {
+                w.write("move ");
+                v.ast_debug(w)
+            }
             E::Move {
                 from_user: true,
                 var: v,
-            } => w.write(&format!("move@{}", v)),
+            } => {
+                w.write("move@");
+                v.ast_debug(w)
+            }
             E::Copy {
                 from_user: false,
                 var: v,
-            } => w.write(&format!("copy {}", v)),
+            } => {
+                w.write("copy ");
+                v.ast_debug(w)
+            }
             E::Copy {
                 from_user: true,
                 var: v,
-            } => w.write(&format!("copy@{}", v)),
-            E::Use(v) => w.write(&format!("use@{}", v)),
+            } => {
+                w.write("copy@");
+                v.ast_debug(w)
+            }
+            E::Use(v) => {
+                w.write("use@");
+                v.ast_debug(w)
+            }
             E::Constant(None, c) => w.write(&format!("{}", c)),
             E::Constant(Some(m), c) => w.write(&format!("{}::{}", m, c)),
             E::ModuleCall(mcall) => {
@@ -569,7 +586,7 @@ impl AstDebug for UnannotatedExp_ {
                 if *mut_ {
                     w.write("mut ");
                 }
-                w.write(&format!("{}", v));
+                v.ast_debug(w);
             }
             E::Cast(e, ty) => {
                 w.write("(");
@@ -589,9 +606,7 @@ impl AstDebug for UnannotatedExp_ {
                 w.write(&format!("spec #{}", u));
                 if !used_locals.is_empty() {
                     w.write("uses [");
-                    w.comma(used_locals, |w, (n, ty)| {
-                        w.annotate(|w| w.write(&format!("{}", n)), ty)
-                    });
+                    w.comma(used_locals, |w, (n, ty)| w.annotate(|w| n.ast_debug(w), ty));
                     w.write("]");
                 }
             }
@@ -704,7 +719,19 @@ impl AstDebug for LValue_ {
         use LValue_ as L;
         match self {
             L::Ignore => w.write("_"),
-            L::Var(v, st) => w.annotate(|w| w.write(&format!("{}", v)), st),
+            L::Var {
+                var: v,
+                ty: st,
+                unused_binding,
+            } => w.annotate(
+                |w| {
+                    v.ast_debug(w);
+                    if *unused_binding {
+                        w.write("#unused")
+                    }
+                },
+                st,
+            ),
             L::Unpack(m, s, tys, fields) => {
                 w.write(&format!("{}::{}", m, s));
                 w.write("<");

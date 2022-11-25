@@ -11,7 +11,7 @@ use crate::{
         AbilitySet, Address, Attributes, ModuleIdent, ModuleIdent_, SpecId, Visibility,
     },
     hlir::{
-        ast::{self as H, Value_},
+        ast::{self as H, Value_, Var},
         translate::{display_var, DisplayVar},
     },
     naming::{
@@ -20,7 +20,7 @@ use crate::{
     },
     parser::ast::{
         Ability, Ability_, BinOp, BinOp_, ConstantName, Field, FunctionName, StructName, UnaryOp,
-        UnaryOp_, Var,
+        UnaryOp_,
     },
     shared::{unique_map::UniqueMap, *},
     FullyCompiledProgram,

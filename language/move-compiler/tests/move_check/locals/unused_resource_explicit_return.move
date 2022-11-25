@@ -2,7 +2,7 @@ module 0x8675309::M {
     struct R {}
 
     fun t0() {
-        let r = R{};
+        let _ = R{};
         return ()
     }
 
@@ -25,12 +25,12 @@ module 0x8675309::M {
     }
 
     fun t4() {
-        let r = R{};
+        let _ = R{};
         loop { return () }
     }
 
     fun t5() {
-        let x = &R{};
+        let _ = &R{};
         return ()
     }
 

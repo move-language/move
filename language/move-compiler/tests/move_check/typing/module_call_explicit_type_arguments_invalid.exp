@@ -6,7 +6,7 @@ error[E04007]: incompatible types
   │         │   │         │
   │         │   │         Given: 'bool'
   │         │   Expected: 'u64'
-  │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
+  │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter '_'
 
 error[E04007]: incompatible types
   ┌─ tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:6:9
@@ -16,7 +16,7 @@ error[E04007]: incompatible types
   │         │        │           │
   │         │        │           Given: 'bool'
   │         │        Expected: 'u64'
-  │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
+  │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter '_'
 
 error[E04007]: incompatible types
   ┌─ tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:7:9
@@ -26,7 +26,7 @@ error[E04007]: incompatible types
   │         │   │           │
   │         │   │           Given: integer
   │         │   Expected: 'bool'
-  │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
+  │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter '_'
 
 error[E04007]: incompatible types
   ┌─ tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:8:9
@@ -36,7 +36,7 @@ error[E04007]: incompatible types
   │         │         │            │
   │         │         │            Given: integer
   │         │         Expected: 'bool'
-  │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
+  │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter '_'
 
 error[E04007]: incompatible types
   ┌─ tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:9:9
@@ -46,7 +46,7 @@ error[E04007]: incompatible types
   │         │   │           │
   │         │   │           Given: integer
   │         │   Expected: 'bool'
-  │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
+  │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter '_'
 
 error[E04007]: incompatible types
   ┌─ tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:9:9
@@ -56,7 +56,7 @@ error[E04007]: incompatible types
   │         │         │        │
   │         │         │        Given: integer
   │         │         Expected: 'bool'
-  │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
+  │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter '_'
 
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:13:9
@@ -67,7 +67,7 @@ error[E04007]: incompatible types
    │         ^^^^^^^^^^^^^^^^^
    │         │   │
    │         │   Expected: 'U'
-   │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
+   │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter '_'
 
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:14:9
@@ -79,7 +79,7 @@ error[E04007]: incompatible types
    │         ^^^^^^^^^^^^^^^
    │         │   │
    │         │   Expected: 'V'
-   │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'x'
+   │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter '_'
 
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/module_call_explicit_type_arguments_invalid.move:14:9
@@ -91,5 +91,5 @@ error[E04007]: incompatible types
    │         ^^^^^^^^^^^^^^^
    │         │      │
    │         │      Expected: 'T'
-   │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter 'y'
+   │         Invalid call of '0x8675309::M::foo'. Invalid argument for parameter '_'
 

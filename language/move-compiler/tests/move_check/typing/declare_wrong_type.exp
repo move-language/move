@@ -1,7 +1,7 @@
 error[E04007]: incompatible types
   ┌─ tests/move_check/typing/declare_wrong_type.move:6:13
   │
-6 │         let S { g } : R;
+6 │         let S { g } : R; g = 0;
   │             ^^^^^^^   - Expected: '0x8675309::M::R'
   │             │          
   │             Invalid deconstruction binding

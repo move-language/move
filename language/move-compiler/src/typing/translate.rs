@@ -11,7 +11,7 @@ use crate::{
     diagnostics::{codes::*, Diagnostic},
     expansion::ast::{Fields, ModuleIdent, Value_},
     naming::ast::{self as N, TParam, TParamID, Type, TypeName_, Type_},
-    parser::ast::{Ability_, BinOp_, ConstantName, Field, FunctionName, StructName, UnaryOp_, Var},
+    parser::ast::{Ability_, BinOp_, ConstantName, Field, FunctionName, StructName, UnaryOp_},
     shared::{unique_map::UniqueMap, *},
     typing::ast as T,
     FullyCompiledProgram,
@@ -177,7 +177,6 @@ fn function(
 fn function_signature(context: &mut Context, sig: &N::FunctionSignature) {
     assert!(context.constraints.is_empty());
 
-    let mut declared = UniqueMap::new();
     for (param, param_ty) in &sig.parameters {
         let param_ty = core::instantiate(context, param_ty.clone());
         context.add_single_type_constraint(
@@ -185,15 +184,7 @@ fn function_signature(context: &mut Context, sig: &N::FunctionSignature) {
             "Invalid parameter type",
             param_ty.clone(),
         );
-        if let Err((param, prev_loc)) = declared.add(*param, ()) {
-            let msg = format!("Duplicate parameter with name '{}'", param);
-            context.env.add_diag(diag!(
-                Declarations::DuplicateItem,
-                (param.loc(), msg),
-                (prev_loc, "Previously declared here"),
-            ))
-        }
-        context.declare_local(*param, Some(param_ty));
+        context.declare_local(*param, param_ty);
     }
     context.return_type = Some(core::instantiate(context, sig.return_type.clone()));
     core::solve_constraints(context);
@@ -932,14 +923,10 @@ fn join<T: ToString, F: FnOnce() -> T>(
 enum SeqCase {
     Seq(Loc, Box<T::Exp>),
     Declare {
-        old_locals: UniqueMap<Var, Type>,
-        declared: UniqueMap<Var, ()>,
         loc: Loc,
         b: T::LValueList,
     },
     Bind {
-        old_locals: UniqueMap<Var, Type>,
-        declared: UniqueMap<Var, ()>,
         loc: Loc,
         b: T::LValueList,
         e: Box<T::Exp>,
@@ -973,23 +960,14 @@ fn sequence(context: &mut Context, seq: N::Sequence) -> T::Sequence {
                 work_queue.push_front(SeqCase::Seq(loc, Box::new(e)));
             }
             NS::Declare(nbind, ty_opt) => {
-                let old_locals = context.save_locals_scope();
                 let instantiated_ty_op = ty_opt.map(|t| core::instantiate(context, t));
-                let (declared, b) = bind_list(context, nbind, instantiated_ty_op);
-                work_queue.push_front(SeqCase::Declare {
-                    old_locals,
-                    declared,
-                    loc,
-                    b,
-                });
+                let b = bind_list(context, nbind, instantiated_ty_op);
+                work_queue.push_front(SeqCase::Declare { loc, b });
             }
             NS::Bind(nbind, nr) => {
                 let e = exp_(context, nr);
-                let old_locals = context.save_locals_scope();
-                let (declared, b) = bind_list(context, nbind, Some(e.ty.clone()));
+                let b = bind_list(context, nbind, Some(e.ty.clone()));
                 work_queue.push_front(SeqCase::Bind {
-                    old_locals,
-                    declared,
                     loc,
                     b,
                     e: Box::new(e),
@@ -1001,23 +979,8 @@ fn sequence(context: &mut Context, seq: N::Sequence) -> T::Sequence {
     for case in work_queue {
         match case {
             SeqCase::Seq(loc, e) => resulting_sequence.push_front(sp(loc, TS::Seq(e))),
-            SeqCase::Declare {
-                old_locals,
-                declared,
-                loc,
-                b,
-            } => {
-                context.close_locals_scope(old_locals, declared);
-                resulting_sequence.push_front(sp(loc, TS::Declare(b)))
-            }
-            SeqCase::Bind {
-                old_locals,
-                declared,
-                loc,
-                b,
-                e,
-            } => {
-                context.close_locals_scope(old_locals, declared);
+            SeqCase::Declare { loc, b } => resulting_sequence.push_front(sp(loc, TS::Declare(b))),
+            SeqCase::Bind { loc, b, e } => {
                 let lvalue_ty = lvalues_expected_types(context, &b);
                 resulting_sequence.push_front(sp(loc, TS::Bind(b, lvalue_ty, e)))
             }
@@ -1210,12 +1173,12 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
         }
 
         NE::Move(var) => {
-            let ty = context.get_local(eloc, "move", &var);
+            let ty = context.get_local(&var);
             let from_user = true;
             (ty, TE::Move { var, from_user })
         }
         NE::Copy(var) => {
-            let ty = context.get_local(eloc, "copy", &var);
+            let ty = context.get_local(&var);
             context.add_ability_constraint(
                 eloc,
                 Some(format!(
@@ -1229,7 +1192,7 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             (ty, TE::Copy { var, from_user })
         }
         NE::Use(var) => {
-            let ty = context.get_local(eloc, "variable usage", &var);
+            let ty = context.get_local(&var);
             (ty, TE::Use(var))
         }
 
@@ -1492,9 +1455,9 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
         NE::Spec(u, used_locals) => {
             let used_local_types = used_locals
                 .into_iter()
-                .filter_map(|v| {
-                    let ty = context.get_local_(&v)?;
-                    Some((v, ty))
+                .map(|v| {
+                    let ty = context.get_local(&v);
+                    (v, ty)
                 })
                 .collect();
             (sp(eloc, Type_::Unit), TE::Spec(u, used_local_types))
@@ -1555,7 +1518,7 @@ fn lvalue_expected_types(_context: &mut Context, sp!(loc, b_): &T::LValue) -> Op
     let loc = *loc;
     match b_ {
         L::Ignore => None,
-        L::Var(_, ty) => Some(*ty.clone()),
+        L::Var { ty, .. } => Some(*ty.clone()),
         L::BorrowUnpack(mut_, m, s, tys, _) => {
             let tn = sp(loc, N::TypeName_::ModuleType(*m, *s));
             Some(sp(
@@ -1576,16 +1539,12 @@ enum LValueCase {
     Assign,
 }
 
-fn bind_list(
-    context: &mut Context,
-    ls: N::LValueList,
-    ty_opt: Option<Type>,
-) -> (UniqueMap<Var, ()>, T::LValueList) {
+fn bind_list(context: &mut Context, ls: N::LValueList, ty_opt: Option<Type>) -> T::LValueList {
     lvalue_list(context, LValueCase::Bind, ls, ty_opt)
 }
 
 fn assign_list(context: &mut Context, ls: N::LValueList, rvalue_ty: Type) -> T::LValueList {
-    lvalue_list(context, LValueCase::Assign, ls, Some(rvalue_ty)).1
+    lvalue_list(context, LValueCase::Assign, ls, Some(rvalue_ty))
 }
 
 fn lvalue_list(
@@ -1593,7 +1552,7 @@ fn lvalue_list(
     case: LValueCase,
     sp!(loc, nlvalues): N::LValueList,
     ty_opt: Option<Type>,
-) -> (UniqueMap<Var, ()>, T::LValueList) {
+) -> T::LValueList {
     use LValueCase as C;
     let arity = nlvalues.len();
     let locs = nlvalues.iter().map(|sp!(loc, _)| *loc).collect();
@@ -1633,20 +1592,18 @@ fn lvalue_list(
             }
         }
     }
-    let mut seen_locals: UniqueMap<Var, ()> = UniqueMap::new();
     assert!(ty_vars.len() == nlvalues.len(), "ICE invalid lvalue tvars");
     let tbinds = nlvalues
         .into_iter()
         .zip(ty_vars)
-        .map(|(l, t)| lvalue(context, case, &mut seen_locals, l, t))
+        .map(|(l, t)| lvalue(context, case, l, t))
         .collect();
-    (seen_locals, sp(loc, tbinds))
+    sp(loc, tbinds)
 }
 
 fn lvalue(
     context: &mut Context,
     case: LValueCase,
-    seen_locals: &mut UniqueMap<Var, ()>,
     sp!(loc, nl_): N::LValue,
     ty: Type,
 ) -> T::LValue {
@@ -1667,44 +1624,32 @@ fn lvalue(
             );
             TL::Ignore
         }
-        NL::Var(var) => {
+        NL::Var {
+            var,
+            unused_binding,
+        } => {
             let var_ty = match case {
                 C::Bind => {
-                    context.declare_local(var, Some(ty.clone()));
+                    context.declare_local(var, ty.clone());
                     ty
                 }
                 C::Assign => {
-                    let var_ty = context.get_local(loc, "assignment", &var);
+                    let var_ty = context.get_local(&var);
                     subtype(
                         context,
                         loc,
-                        || format!("Invalid assignment to local '{}'", &var),
+                        || format!("Invalid assignment to local '{}'", &var.value.name),
                         ty,
                         var_ty.clone(),
                     );
                     var_ty
                 }
             };
-            if let Err((var, prev_loc)) = seen_locals.add(var, ()) {
-                let (primary, secondary) = match case {
-                    C::Bind => {
-                        let msg = format!(
-                            "Duplicate declaration for local '{}' in a given 'let'",
-                            &var
-                        );
-                        ((var.loc(), msg), (prev_loc, "Previously declared here"))
-                    }
-                    C::Assign => {
-                        let msg =
-                            format!("Duplicate usage of local '{}' in a given assignment", &var);
-                        ((var.loc(), msg), (prev_loc, "Previously assigned here"))
-                    }
-                };
-                context
-                    .env
-                    .add_diag(diag!(Declarations::DuplicateItem, primary, secondary));
+            TL::Var {
+                var,
+                ty: Box::new(var_ty),
+                unused_binding,
             }
-            TL::Var(var, Box::new(var_ty))
         }
         NL::Unpack(m, n, ty_args_opt, fields) => {
             let (bt, targs) = core::make_struct_type(context, loc, &m, &n, ty_args_opt);
@@ -1741,7 +1686,7 @@ fn lvalue(
                     None => fty.clone(),
                     Some(mut_) => sp(f.loc(), Type_::Ref(mut_, Box::new(fty.clone()))),
                 };
-                let tl = lvalue(context, case, seen_locals, nl, nl_ty);
+                let tl = lvalue(context, case, nl, nl_ty);
                 (idx, (fty, tl))
             });
             if !context.is_current_module(&m) {
@@ -2071,7 +2016,7 @@ fn module_call(
         let msg = || {
             format!(
                 "Invalid call of '{}::{}'. Invalid argument for parameter '{}'",
-                &m, &f, param
+                &m, &f, &param.value.name
             )
         };
         subtype(context, loc, msg, arg_ty, param_ty);

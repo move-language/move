@@ -2,7 +2,7 @@ warning[W09003]: unused assignment
   ┌─ tests/move_check/locals/assign_resource.move:5:13
   │
 5 │         let r = R{};
-  │             ^ Unused assignment or binding for local 'r'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_r')
+  │             ^ Unused assignment for variable 'r'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_r')
 
 error[E06001]: unused value without 'drop'
   ┌─ tests/move_check/locals/assign_resource.move:6:9
@@ -60,7 +60,7 @@ warning[W09003]: unused assignment
    ┌─ tests/move_check/locals/assign_resource.move:29:13
    │
 29 │         let r = R{};
-   │             ^ Unused assignment or binding for local 'r'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_r')
+   │             ^ Unused assignment for variable 'r'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_r')
 
 error[E06001]: unused value without 'drop'
    ┌─ tests/move_check/locals/assign_resource.move:30:16

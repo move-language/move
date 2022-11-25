@@ -12,7 +12,6 @@ use super::{
 use crate::{
     diagnostics::Diagnostics,
     hlir::ast::{self as H, *},
-    parser::ast::Var,
     shared::{unique_map::UniqueMap, CompilationEnv},
 };
 use move_ir_types::location::*;
@@ -198,7 +197,7 @@ mod last_usage {
             ast::*,
             translate::{display_var, DisplayVar},
         },
-        parser::ast::{Ability_, Var},
+        parser::ast::Ability_,
         shared::{unique_map::*, *},
     };
     use std::collections::{BTreeSet, VecDeque};
@@ -300,7 +299,7 @@ mod last_usage {
                         DisplayVar::Orig(v_str) => {
                             if !v.starts_with_underscore() {
                                 let msg = format!(
-                                    "Unused assignment or binding for local '{}'. Consider \
+                                    "Unused assignment for variable '{}'. Consider \
                                      removing, replacing with '_', or prefixing with '_' (e.g., \
                                      '_{}')",
                                     v_str, v_str

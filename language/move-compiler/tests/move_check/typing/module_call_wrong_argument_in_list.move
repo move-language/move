@@ -5,7 +5,7 @@ module X {
     public fun s(): S {
         S{}
     }
-    public fun foo(a: address, u: u64, s: S) {
+    public fun foo(_: address, _: u64, _: S) {
     }
 }
 
@@ -13,7 +13,7 @@ module M {
     use 0x2::X;
     struct S {}
 
-    public fun foo(a: address, u: u64, s: S) {
+    public fun foo(_: address, _: u64, _: S) {
     }
 
     fun t0() {

@@ -1,5 +1,5 @@
 module 0x8675309::M {
-    fun foo<T, U>(x: T, y: U) {
+    fun foo<T, U>(_: T, _: U) {
     }
 
     fun t1() {

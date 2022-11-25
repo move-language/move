@@ -6,7 +6,7 @@
 // Abstract state
 //**************************************************************************************************
 
-use crate::{cfgir::absint::*, parser::ast::Var};
+use crate::{cfgir::absint::*, hlir::ast::Var};
 use std::{cmp::Ordering, collections::BTreeSet};
 
 #[derive(Clone, Debug, Eq, PartialEq)]

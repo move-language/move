@@ -13,7 +13,7 @@ error[E04007]: incompatible types
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/type_variable_join_threaded_unpack_assign_invalid.move:43:27
    │
-10 │     public fun get<V: drop>(self: &T<V>): V {
+10 │     public fun get<V: drop>(_self: &T<V>): V {
    │                       ---- 'drop' constraint declared here
    ·
 43 │         Box { f1, f2 }  = Container::get(&v);

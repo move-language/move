@@ -40,8 +40,8 @@ error[E05001]: ability constraint not satisfied
  2 │     struct S { u: u64 }
    │            - To satisfy the constraint, the 'drop' ability would need to be added here
    ·
-12 │     fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
-   │                                     - The type '0x8675309::M::S' does not have the ability 'drop'
+12 │     fun t0(s: S, s_ref: &S, s_mut: &mut S) {
+   │               - The type '0x8675309::M::S' does not have the ability 'drop'
    ·
 17 │         s != s_ref;
    │         ^ '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
@@ -49,10 +49,10 @@ error[E05001]: ability constraint not satisfied
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/neq_invalid.move:17:11
    │
-12 │     fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
-   │                                     -         -- Found: '&0x8675309::M::S'. It is not compatible with the other type.
-   │                                     │          
-   │                                     Found: '0x8675309::M::S'. It is not compatible with the other type.
+12 │     fun t0(s: S, s_ref: &S, s_mut: &mut S) {
+   │               -         -- Found: '&0x8675309::M::S'. It is not compatible with the other type.
+   │               │          
+   │               Found: '0x8675309::M::S'. It is not compatible with the other type.
    ·
 17 │         s != s_ref;
    │           ^^ Incompatible arguments to '!='
@@ -60,10 +60,10 @@ error[E04007]: incompatible types
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/neq_invalid.move:18:15
    │
-12 │     fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
-   │                                     -                    ------ Found: '&mut 0x8675309::M::S'. It is not compatible with the other type.
-   │                                     │                     
-   │                                     Found: '0x8675309::M::S'. It is not compatible with the other type.
+12 │     fun t0(s: S, s_ref: &S, s_mut: &mut S) {
+   │               -                    ------ Found: '&mut 0x8675309::M::S'. It is not compatible with the other type.
+   │               │                     
+   │               Found: '0x8675309::M::S'. It is not compatible with the other type.
    ·
 18 │         s_mut != s;
    │               ^^ Incompatible arguments to '!='
@@ -74,8 +74,8 @@ error[E05001]: ability constraint not satisfied
  2 │     struct S { u: u64 }
    │            - To satisfy the constraint, the 'drop' ability would need to be added here
    ·
-12 │     fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
-   │                                     - The type '0x8675309::M::S' does not have the ability 'drop'
+12 │     fun t0(s: S, s_ref: &S, s_mut: &mut S) {
+   │               - The type '0x8675309::M::S' does not have the ability 'drop'
    ·
 18 │         s_mut != s;
    │                  ^ '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'

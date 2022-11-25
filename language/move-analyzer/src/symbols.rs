@@ -873,7 +873,7 @@ impl Symbolicator {
                 fun.signature
                     .parameters
                     .iter()
-                    .map(|(n, _)| n.value())
+                    .map(|(n, _)| n.value.name)
                     .collect(),
                 fun.signature
                     .parameters
@@ -1090,8 +1090,8 @@ impl Symbolicator {
 
             // add definition of the parameter
             self.add_def(
-                &pname.loc(),
-                &pname.value(),
+                &pname.loc,
+                &pname.value.name,
                 &mut scope,
                 references,
                 use_defs,
@@ -1256,11 +1256,11 @@ impl Symbolicator {
         use_defs: &mut UseDefMap,
     ) {
         match &lval.value {
-            LValue_::Var(var, t) => {
+            LValue_::Var { var, ty: t, .. } => {
                 if define {
                     self.add_def(
-                        &var.loc(),
-                        &var.value(),
+                        &var.loc,
+                        &var.value.name,
                         scope,
                         references,
                         use_defs,
@@ -1268,8 +1268,8 @@ impl Symbolicator {
                     );
                 } else {
                     self.add_local_use_def(
-                        &var.value(),
-                        &var.loc(),
+                        &var.value.name,
+                        &var.loc,
                         references,
                         scope,
                         use_defs,
@@ -1347,8 +1347,8 @@ impl Symbolicator {
                 from_user: _,
                 var: v,
             } => self.add_local_use_def(
-                &v.value(),
-                &v.loc(),
+                &v.value.name,
+                &v.loc,
                 references,
                 scope,
                 use_defs,
@@ -1358,16 +1358,16 @@ impl Symbolicator {
                 from_user: _,
                 var: v,
             } => self.add_local_use_def(
-                &v.value(),
-                &v.loc(),
+                &v.value.name,
+                &v.loc,
                 references,
                 scope,
                 use_defs,
                 exp.ty.clone(),
             ),
             E::Use(v) => self.add_local_use_def(
-                &v.value(),
-                &v.loc(),
+                &v.value.name,
+                &v.loc,
                 references,
                 scope,
                 use_defs,
@@ -1476,8 +1476,8 @@ impl Symbolicator {
                 self.exp_symbols(exp, scope, references, use_defs);
             }
             E::BorrowLocal(_, var) => self.add_local_use_def(
-                &var.value(),
-                &var.loc(),
+                &var.value.name,
+                &var.loc,
                 references,
                 scope,
                 use_defs,

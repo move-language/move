@@ -10,8 +10,8 @@ use crate::{
     },
     diag,
     expansion::ast::{AbilitySet, ModuleIdent},
-    hlir::ast::{self as H, Label, Value, Value_},
-    parser::ast::{ConstantName, FunctionName, StructName, Var},
+    hlir::ast::{self as H, Label, Value, Value_, Var},
+    parser::ast::{ConstantName, FunctionName, StructName},
     shared::{unique_map::UniqueMap, CompilationEnv},
     FullyCompiledProgram,
 };

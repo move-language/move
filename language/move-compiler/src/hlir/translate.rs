@@ -6,8 +6,8 @@ use crate::{
     diag,
     expansion::ast::{self as E, AbilitySet, Fields, ModuleIdent},
     hlir::ast::{self as H, Block, MoveOpAnnotation},
-    naming::ast as N,
-    parser::ast::{BinOp_, ConstantName, Field, FunctionName, StructName, Var},
+    naming::ast::{self as N},
+    parser::ast::{BinOp_, ConstantName, Field, FunctionName, StructName},
     shared::{unique_map::UniqueMap, *},
     typing::ast as T,
     FullyCompiledProgram,
@@ -16,7 +16,7 @@ use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
 use once_cell::sync::Lazy;
 use std::{
-    collections::{BTreeMap, BTreeSet, VecDeque},
+    collections::{BTreeMap, VecDeque},
     convert::TryInto,
 };
 
@@ -26,15 +26,31 @@ use std::{
 
 const NEW_NAME_DELIM: &str = "#";
 
-fn new_name(context: &mut Context, n: Symbol) -> Symbol {
-    format!("{}{}{}", n, NEW_NAME_DELIM, context.counter_next()).into()
+fn translate_var(sp!(loc, v_): N::Var) -> H::Var {
+    let N::Var_ {
+        name,
+        id: depth,
+        color,
+    } = v_;
+    let s = format!(
+        "{}{}{}{}{}",
+        name, NEW_NAME_DELIM, depth, NEW_NAME_DELIM, color
+    )
+    .into();
+    H::Var(sp(loc, s))
 }
 
 const TEMP_PREFIX: &str = "%";
 static TEMP_PREFIX_SYMBOL: Lazy<Symbol> = Lazy::new(|| TEMP_PREFIX.into());
 
 fn new_temp_name(context: &mut Context) -> Symbol {
-    new_name(context, *TEMP_PREFIX_SYMBOL)
+    format!(
+        "{}{}{}",
+        *TEMP_PREFIX_SYMBOL,
+        NEW_NAME_DELIM,
+        context.counter_next()
+    )
+    .into()
 }
 
 pub fn is_temp_name(s: Symbol) -> bool {
@@ -51,7 +67,9 @@ pub fn display_var(s: Symbol) -> DisplayVar {
         DisplayVar::Tmp
     } else {
         let mut orig = s.as_str().to_string();
-        orig.truncate(orig.find('#').unwrap_or(s.len()));
+        if let Some(i) = orig.find(NEW_NAME_DELIM) {
+            orig.truncate(i)
+        }
         DisplayVar::Orig(orig)
     }
 }
@@ -63,9 +81,7 @@ pub fn display_var(s: Symbol) -> DisplayVar {
 struct Context<'env> {
     env: &'env mut CompilationEnv,
     structs: UniqueMap<ModuleIdent, UniqueMap<StructName, UniqueMap<Field, usize>>>,
-    function_locals: UniqueMap<Var, H::SingleType>,
-    local_scope: UniqueMap<Var, Var>,
-    used_locals: BTreeSet<Var>,
+    function_locals: UniqueMap<H::Var, H::SingleType>,
     signature: Option<H::FunctionSignature>,
     tmp_counter: usize,
 }
@@ -110,49 +126,30 @@ impl<'env> Context<'env> {
             env,
             structs,
             function_locals: UniqueMap::new(),
-            local_scope: UniqueMap::new(),
-            used_locals: BTreeSet::new(),
             signature: None,
             tmp_counter: 0,
         }
     }
 
     pub fn has_empty_locals(&self) -> bool {
-        self.function_locals.is_empty() && self.local_scope.is_empty()
+        self.function_locals.is_empty()
     }
 
-    pub fn extract_function_locals(&mut self) -> (UniqueMap<Var, H::SingleType>, BTreeSet<Var>) {
-        self.local_scope = UniqueMap::new();
+    pub fn extract_function_locals(&mut self) -> UniqueMap<H::Var, H::SingleType> {
         self.tmp_counter = 0;
-        let locals = std::mem::replace(&mut self.function_locals, UniqueMap::new());
-        let used = std::mem::take(&mut self.used_locals);
-        (locals, used)
+        std::mem::replace(&mut self.function_locals, UniqueMap::new())
     }
 
-    pub fn new_temp(&mut self, loc: Loc, t: H::SingleType) -> Var {
-        let new_var = Var(sp(loc, new_temp_name(self)));
+    pub fn new_temp(&mut self, loc: Loc, t: H::SingleType) -> H::Var {
+        let new_var = H::Var(sp(loc, new_temp_name(self)));
         self.function_locals.add(new_var, t).unwrap();
-        self.local_scope.add(new_var, new_var).unwrap();
-        self.used_locals.insert(new_var);
+
         new_var
     }
 
-    pub fn bind_local(&mut self, v: Var, t: H::SingleType) {
-        let new_var = if !self.function_locals.contains_key(&v) {
-            v
-        } else {
-            Var(sp(v.loc(), new_name(self, v.value())))
-        };
-        self.function_locals.add(new_var, t).unwrap();
-        self.local_scope.remove(&v);
-        assert!(!self.local_scope.contains_key(&new_var));
-        self.local_scope.add(v, new_var).unwrap();
-    }
-
-    pub fn remapped_local(&mut self, v: Var) -> Var {
-        let remapped = *self.local_scope.get(&v).unwrap();
-        self.used_locals.insert(remapped);
-        remapped
+    pub fn bind_local(&mut self, v: N::Var, t: H::SingleType) {
+        let symbol = translate_var(v);
+        self.function_locals.add(symbol, t).unwrap();
     }
 
     pub fn fields(
@@ -307,7 +304,7 @@ fn function_signature(context: &mut Context, sig: N::FunctionSignature) -> H::Fu
         .map(|(v, tty)| {
             let ty = single_type(context, tty);
             context.bind_local(v, ty.clone());
-            (v, ty)
+            (translate_var(v), ty)
         })
         .collect();
     let return_type = type_(context, sig.return_type);
@@ -343,7 +340,7 @@ fn function_body_defined(
     signature: &H::FunctionSignature,
     loc: Loc,
     seq: T::Sequence,
-) -> (UniqueMap<Var, H::SingleType>, Block) {
+) -> (UniqueMap<H::Var, H::SingleType>, Block) {
     let mut body = VecDeque::new();
     context.signature = Some(signature.clone());
     let final_exp = block(context, &mut body, loc, Some(&signature.return_type), seq);
@@ -362,10 +359,8 @@ fn function_body_defined(
             body.push_back(sp(eloc, S::Command(ret)))
         }
     }
-    let (mut locals, used) = context.extract_function_locals();
-    let unused = check_unused_locals(context, &mut locals, used);
+    let locals = context.extract_function_locals();
     check_trailing_unit(context, &mut body);
-    remove_unused_bindings(&unused, &mut body);
     context.signature = None;
     (locals, body)
 }
@@ -564,7 +559,6 @@ fn block(
         Some(_) => panic!("ICE last sequence item should be exp"),
     };
 
-    let old_scope = context.local_scope.clone();
     for sp!(sloc, seq_item_) in seq {
         match seq_item_ {
             S::Seq(te) => statement(context, result, *te),
@@ -577,9 +571,7 @@ fn block(
             }
         }
     }
-    let res = exp_(context, result, expected_type_opt, *last);
-    context.local_scope = old_scope;
-    res
+    exp_(context, result, expected_type_opt, *last)
 }
 
 fn statement(context: &mut Context, result: &mut Block, e: T::Exp) {
@@ -664,7 +656,7 @@ fn declare_bind(context: &mut Context, sp!(_, bind_): &T::LValue) {
     use T::LValue_ as L;
     match bind_ {
         L::Ignore => (),
-        L::Var(v, ty) => {
+        L::Var { var: v, ty, .. } => {
             let st = single_type(context, *ty.clone());
             context.bind_local(*v, st)
         }
@@ -708,10 +700,9 @@ fn assign(
     let mut after = Block::new();
     let l_ = match ta_ {
         A::Ignore => L::Ignore,
-        A::Var(v, st) => L::Var(
-            context.remapped_local(v),
-            Box::new(single_type(context, *st)),
-        ),
+        A::Var { var: v, ty: st, .. } => {
+            L::Var(translate_var(v), Box::new(single_type(context, *st)))
+        }
         A::Unpack(m, s, tbs, tfields) => {
             let bs = base_types(context, tbs);
 
@@ -962,12 +953,30 @@ fn exp_<'env>(
                 let tbool = N::Type_::bool(loc);
                 let tu64 = N::Type_::u64(loc);
                 let tunit = sp(loc, N::Type_::Unit);
-                let vcond = Var(sp(loc, new_temp_name(stack.context)));
-                let vcode = Var(sp(loc, new_temp_name(stack.context)));
+                // name guaranteed to be unique, so we can skip the depth/color
+                let vcond_ = N::Var_ {
+                    name: new_temp_name(stack.context),
+                    id: 0,
+                    color: 0,
+                };
+                let vcode_ = N::Var_ {
+                    name: new_temp_name(stack.context),
+                    id: 0,
+                    color: 0,
+                };
+                let vcond = sp(loc, vcond_);
+                let vcode = sp(loc, vcode_);
 
                 let mut stmts = VecDeque::new();
 
-                let bvar = |v, st| sp(loc, T::LValue_::Var(v, st));
+                let bvar = |v, st| {
+                    let var_ = T::LValue_::Var {
+                        var: v,
+                        ty: st,
+                        unused_binding: false,
+                    };
+                    sp(loc, var_)
+                };
                 let bind_list = sp(
                     loc,
                     vec![
@@ -1168,14 +1177,14 @@ fn exp_impl(
             };
             HE::Move {
                 annotation,
-                var: context.remapped_local(var),
+                var: translate_var(var),
             }
         }
         TE::Copy { from_user, var } => HE::Copy {
             from_user,
-            var: context.remapped_local(var),
+            var: translate_var(var),
         },
-        TE::BorrowLocal(mut_, v) => HE::BorrowLocal(mut_, context.remapped_local(v)),
+        TE::BorrowLocal(mut_, v) => HE::BorrowLocal(mut_, translate_var(v)),
 
         TE::Use(_) => panic!("ICE unexpanded use"),
         TE::ModuleCall(call) => {
@@ -1358,7 +1367,7 @@ fn exp_impl(
             let used_locals = tused_locals
                 .into_iter()
                 .map(|(var, ty)| {
-                    let v = context.remapped_local(var);
+                    let v = translate_var(var);
                     let st = single_type(context, ty);
                     (v, st)
                 })
@@ -1407,7 +1416,7 @@ fn exp_evaluation_order(
     es
 }
 
-fn make_temps(context: &mut Context, loc: Loc, ty: H::Type) -> Vec<(Var, H::SingleType)> {
+fn make_temps(context: &mut Context, loc: Loc, ty: H::Type) -> Vec<(H::Var, H::SingleType)> {
     use H::Type_ as T;
     match ty.value {
         T::Unit => vec![],
@@ -1426,7 +1435,7 @@ fn bind_exp(context: &mut Context, result: &mut Block, e: H::Exp) -> H::Exp {
 fn bind_exp_(
     result: &mut Block,
     loc: Loc,
-    tmps: Vec<(Var, H::SingleType)>,
+    tmps: Vec<(H::Var, H::SingleType)>,
     e: H::Exp,
 ) -> H::UnannotatedExp_ {
     bind_exp_impl_(result, loc, tmps, e, false)
@@ -1453,7 +1462,7 @@ fn bind_exp_impl(
 fn bind_exp_impl_(
     result: &mut Block,
     loc: Loc,
-    tmps: Vec<(Var, H::SingleType)>,
+    tmps: Vec<(H::Var, H::SingleType)>,
     e: H::Exp,
     bind_unreachable: bool,
 ) -> H::UnannotatedExp_ {
@@ -1495,7 +1504,7 @@ fn bind_exp_impl_(
     }
 }
 
-fn use_tmp(var: Var) -> H::UnannotatedExp_ {
+fn use_tmp(var: H::Var) -> H::UnannotatedExp_ {
     use H::UnannotatedExp_ as E;
     E::Move {
         annotation: MoveOpAnnotation::InferredLastUsage,
@@ -1918,106 +1927,5 @@ fn check_trailing_unit_statement(context: &mut Context, sp!(_, s_): &mut H::Stat
             check_trailing_unit(context, block)
         }
         S::Loop { block, .. } => check_trailing_unit(context, block),
-    }
-}
-
-//**************************************************************************************************
-// Unused locals
-//**************************************************************************************************
-
-fn check_unused_locals(
-    context: &mut Context,
-    locals: &mut UniqueMap<Var, H::SingleType>,
-    used: BTreeSet<Var>,
-) -> BTreeSet<Var> {
-    let signature = context
-        .signature
-        .as_ref()
-        .expect("ICE Signature should always be defined when checking a function body");
-    let mut unused = BTreeSet::new();
-    // report unused locals
-    for (v, _) in locals
-        .key_cloned_iter()
-        .filter(|(v, _)| !used.contains(v) && !v.starts_with_underscore())
-    {
-        let vstr = match display_var(v.value()) {
-            DisplayVar::Tmp => panic!("ICE unused tmp"),
-            DisplayVar::Orig(vstr) => vstr,
-        };
-        let loc = v.loc();
-        let msg = if signature.is_parameter(&v) {
-            format!(
-                "Unused parameter '{0}'. Consider removing or prefixing with an underscore: '_{0}'",
-                vstr
-            )
-        } else {
-            // unused local variable; mark for removal
-            unused.insert(v);
-            format!(
-                "Unused local variable '{0}'. Consider removing or prefixing with an underscore: \
-                 '_{0}'",
-                vstr
-            )
-        };
-        context
-            .env
-            .add_diag(diag!(UnusedItem::Variable, (loc, msg)));
-    }
-    for v in &unused {
-        locals.remove(v);
-    }
-    unused
-}
-
-fn remove_unused_bindings(unused: &BTreeSet<Var>, block: &mut Block) {
-    block
-        .iter_mut()
-        .for_each(|s| remove_unused_bindings_statement(unused, s))
-}
-
-fn remove_unused_bindings_statement(unused: &BTreeSet<Var>, sp!(_, s_): &mut H::Statement) {
-    use H::Statement_ as S;
-    match s_ {
-        S::Command(c) => remove_unused_bindings_command(unused, c),
-        S::IfElse {
-            if_block,
-            else_block,
-            ..
-        } => {
-            remove_unused_bindings(unused, if_block);
-            remove_unused_bindings(unused, else_block)
-        }
-        S::While {
-            cond: (cond_block, _),
-            block,
-        } => {
-            remove_unused_bindings(unused, cond_block);
-            remove_unused_bindings(unused, block)
-        }
-        S::Loop { block, .. } => remove_unused_bindings(unused, block),
-    }
-}
-
-fn remove_unused_bindings_command(unused: &BTreeSet<Var>, sp!(_, c_): &mut H::Command) {
-    use H::Command_ as HC;
-
-    if let HC::Assign(ls, _) = c_ {
-        remove_unused_bindings_lvalues(unused, ls)
-    }
-}
-
-fn remove_unused_bindings_lvalues(unused: &BTreeSet<Var>, ls: &mut [H::LValue]) {
-    ls.iter_mut()
-        .for_each(|l| remove_unused_bindings_lvalue(unused, l))
-}
-
-fn remove_unused_bindings_lvalue(unused: &BTreeSet<Var>, sp!(_, l_): &mut H::LValue) {
-    use H::LValue_ as HL;
-    match l_ {
-        HL::Var(v, _) if unused.contains(v) => *l_ = HL::Ignore,
-        HL::Var(_, _) | HL::Ignore => (),
-        HL::Unpack(_, _, fields) => fields
-            .iter_mut()
-            .for_each(|(_, l)| remove_unused_bindings_lvalue(unused, l)),
     }
 }

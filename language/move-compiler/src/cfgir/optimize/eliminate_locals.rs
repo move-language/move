@@ -4,8 +4,7 @@
 
 use crate::{
     cfgir::{cfg::BlockCFG, remove_no_ops},
-    hlir::ast::{FunctionSignature, SingleType},
-    parser::ast::Var,
+    hlir::ast::{FunctionSignature, SingleType, Var},
     shared::unique_map::UniqueMap,
 };
 use std::collections::BTreeSet;
@@ -48,7 +47,7 @@ fn count(signature: &FunctionSignature, cfg: &BlockCFG) -> BTreeSet<Var> {
 mod count {
     use crate::{
         hlir::ast::{FunctionSignature, *},
-        parser::ast::{BinOp, UnaryOp, Var},
+        parser::ast::{BinOp, UnaryOp},
     };
     use std::collections::{BTreeMap, BTreeSet};
 
@@ -272,10 +271,7 @@ fn eliminate(cfg: &mut BlockCFG, ssa_temps: BTreeSet<Var>) {
 }
 
 mod eliminate {
-    use crate::{
-        hlir::ast::{self as H, *},
-        parser::ast::Var,
-    };
+    use crate::hlir::ast::{self as H, *};
     use move_ir_types::location::*;
     use std::collections::{BTreeMap, BTreeSet};
 

@@ -2,11 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    cfgir::absint::*,
-    parser::ast::Var,
-    shared::{unique_map::UniqueMap, *},
-};
+use crate::{cfgir::absint::*, hlir::ast::Var, shared::unique_map::UniqueMap};
 use move_ir_types::location::*;
 
 //**************************************************************************************************
@@ -82,7 +78,7 @@ impl LocalStates {
     pub fn debug(&self) {
         use LocalState as L;
         for (var, state) in self.iter() {
-            print!("{}: ", var);
+            print!("{}: ", var.0);
             match state {
                 L::Unavailable(_, _) => println!("Unavailable"),
                 L::Available(_) => println!("Available"),

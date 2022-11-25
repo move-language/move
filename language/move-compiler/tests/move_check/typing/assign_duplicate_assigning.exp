@@ -2,7 +2,7 @@ warning[W09003]: unused assignment
   ┌─ tests/move_check/typing/assign_duplicate_assigning.move:6:10
   │
 6 │         (x, x) = (0, 0);
-  │          ^ Unused assignment or binding for local 'x'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_x')
+  │          ^ Unused assignment for variable 'x'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_x')
 
 error[E02001]: duplicate declaration, item, or annotation
   ┌─ tests/move_check/typing/assign_duplicate_assigning.move:6:13
@@ -16,13 +16,13 @@ warning[W09003]: unused assignment
   ┌─ tests/move_check/typing/assign_duplicate_assigning.move:6:13
   │
 6 │         (x, x) = (0, 0);
-  │             ^ Unused assignment or binding for local 'x'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_x')
+  │             ^ Unused assignment for variable 'x'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_x')
 
 warning[W09003]: unused assignment
   ┌─ tests/move_check/typing/assign_duplicate_assigning.move:8:10
   │
 8 │         (f, R{f}, f) = (0, R { f: 0 }, 0);
-  │          ^ Unused assignment or binding for local 'f'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_f')
+  │          ^ Unused assignment for variable 'f'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_f')
 
 error[E02001]: duplicate declaration, item, or annotation
   ┌─ tests/move_check/typing/assign_duplicate_assigning.move:8:15
@@ -36,7 +36,7 @@ warning[W09003]: unused assignment
   ┌─ tests/move_check/typing/assign_duplicate_assigning.move:8:15
   │
 8 │         (f, R{f}, f) = (0, R { f: 0 }, 0);
-  │               ^ Unused assignment or binding for local 'f'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_f')
+  │               ^ Unused assignment for variable 'f'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_f')
 
 error[E02001]: duplicate declaration, item, or annotation
   ┌─ tests/move_check/typing/assign_duplicate_assigning.move:8:19
@@ -50,5 +50,5 @@ warning[W09003]: unused assignment
   ┌─ tests/move_check/typing/assign_duplicate_assigning.move:8:19
   │
 8 │         (f, R{f}, f) = (0, R { f: 0 }, 0);
-  │                   ^ Unused assignment or binding for local 'f'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_f')
+  │                   ^ Unused assignment for variable 'f'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_f')
 

@@ -7,7 +7,7 @@ use crate::{
     diagnostics::Diagnostics,
     expansion::ast::{Attributes, ModuleIdent, ModuleIdent_, SpecId},
     hlir::ast as H,
-    parser::ast::{FunctionName, ModuleName, Var},
+    parser::ast::{FunctionName, ModuleName},
     shared::{unique_map::UniqueMap, Name, NumericalAddress},
 };
 use move_binary_format::file_format as F;
@@ -34,13 +34,13 @@ pub struct VarInfo {
 pub struct SpecInfo {
     pub offset: F::CodeOffset,
     // Free locals that are used but not declared in the block
-    pub used_locals: UniqueMap<Var, VarInfo>,
+    pub used_locals: UniqueMap<H::Var, VarInfo>,
 }
 
 #[derive(Debug, Clone)]
 pub struct FunctionInfo {
     pub spec_info: BTreeMap<SpecId, SpecInfo>,
-    pub parameters: Vec<(Var, VarInfo)>,
+    pub parameters: Vec<(H::Var, VarInfo)>,
     pub attributes: Attributes,
 }
 

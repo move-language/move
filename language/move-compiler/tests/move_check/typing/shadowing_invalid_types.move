@@ -4,7 +4,7 @@ module 0x8675309::M {
     fun t0() {
         let x = 0;
 
-        { let x = false; };
+        { let x = false; x; };
         (x: bool);
 
         { let x = false; (x: u64); };

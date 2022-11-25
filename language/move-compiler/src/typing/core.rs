@@ -8,9 +8,9 @@ use crate::{
     expansion::ast::{AbilitySet, ModuleIdent, Visibility},
     naming::ast::{
         self as N, BuiltinTypeName_, FunctionSignature, StructDefinition, StructTypeParameter,
-        TParam, TParamID, TVar, Type, TypeName, TypeName_, Type_,
+        TParam, TParamID, TVar, Type, TypeName, TypeName_, Type_, Var,
     },
-    parser::ast::{Ability_, ConstantName, Field, FunctionName, StructName, Var},
+    parser::ast::{Ability_, ConstantName, Field, FunctionName, StructName},
     shared::{unique_map::UniqueMap, *},
     FullyCompiledProgram,
 };
@@ -72,7 +72,7 @@ pub struct Context<'env> {
     pub current_function: Option<FunctionName>,
     pub current_script_constants: Option<UniqueMap<ConstantName, ConstantInfo>>,
     pub return_type: Option<Type>,
-    locals: UniqueMap<Var, Type>,
+    locals: BTreeMap<Var, Type>,
 
     pub subst: Subst,
     pub constraints: Constraints,
@@ -124,7 +124,7 @@ impl<'env> Context<'env> {
             current_script_constants: None,
             return_type: None,
             constraints: vec![],
-            locals: UniqueMap::new(),
+            locals: BTreeMap::new(),
             loop_info: LoopInfo(LoopInfo_::NotInLoop),
             modules,
             env,
@@ -137,7 +137,7 @@ impl<'env> Context<'env> {
             "ICE loop_info should be reset after the loop"
         );
         self.return_type = None;
-        self.locals = UniqueMap::new();
+        self.locals = BTreeMap::new();
         self.subst = Subst::empty();
         self.constraints = Constraints::new();
         self.current_function = None;
@@ -210,58 +210,14 @@ impl<'env> Context<'env> {
             .push(Constraint::OrderedConstraint(loc, op, t))
     }
 
-    pub fn declare_local(&mut self, var: Var, ty_opt: Option<Type>) {
-        let status = match ty_opt {
-            None => make_tvar(self, var.loc()),
-            Some(t) => t,
-        };
+    pub fn declare_local(&mut self, var: Var, ty: Type) {
         // Might overwrite (i.e. shadow) the current local's type
-        self.locals.remove(&var);
-        self.locals.add(var, status).unwrap();
+        self.locals.insert(var, ty);
     }
 
-    pub fn get_local_(&mut self, var: &Var) -> Option<Type> {
-        self.locals.get(var).cloned()
-    }
-
-    pub fn get_local(&mut self, loc: Loc, verb: &str, var: &Var) -> Type {
-        match self.get_local_(var) {
-            None => {
-                self.env.add_diag(diag!(
-                    NameResolution::UnboundVariable,
-                    (loc, format!("Invalid {}. Unbound variable '{}'", verb, var)),
-                ));
-                self.error_type(loc)
-            }
-            Some(t) => t,
-        }
-    }
-
-    pub fn save_locals_scope(&self) -> UniqueMap<Var, Type> {
-        self.locals.clone()
-    }
-
-    pub fn close_locals_scope(
-        &mut self,
-        old_locals: UniqueMap<Var, Type>,
-        declared: UniqueMap<Var, ()>,
-    ) {
-        // remove new locals from inner scope
-        for (_, new_local, _) in declared
-            .iter()
-            .filter(|(_, v, _)| !old_locals.contains_key_(v))
-        {
-            self.locals.remove_(new_local);
-        }
-
-        // return old type
-        let shadowed = old_locals
-            .into_iter()
-            .filter(|(k, _)| declared.contains_key(k));
-        for (var, shadowed_type) in shadowed {
-            self.locals.remove(&var);
-            self.locals.add(var, shadowed_type).unwrap();
-        }
+    pub fn get_local(&mut self, var: &Var) -> Type {
+        // should not fail, already checked in naming
+        self.locals.get(var).unwrap().clone()
     }
 
     pub fn is_current_module(&self, m: &ModuleIdent) -> bool {

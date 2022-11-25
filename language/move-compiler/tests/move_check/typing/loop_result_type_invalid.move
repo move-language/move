@@ -12,18 +12,18 @@ module M {
     }
 
     fun t1(): u64 {
-        loop { let x = 0; break }
+        loop { let _x = 0; break }
     }
 
     fun t2() {
         foo(loop { break })
     }
 
-    fun foo(x: u64) {}
+    fun foo(_: u64) {}
 
     fun t3() {
-        let x = loop { break };
-        let (x, y) = loop { if (false) break };
+        let _x = loop { break };
+        let (_x, _y) = loop { if (false) break };
     }
 }
 

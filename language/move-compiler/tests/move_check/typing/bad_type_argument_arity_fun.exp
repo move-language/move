@@ -1,7 +1,7 @@
 error[E03008]: too few type arguments
    ┌─ tests/move_check/typing/bad_type_argument_arity_fun.move:11:17
    │
-11 │         let x = foo<>(0);
+11 │         let x = foo<>(0); x;
    │                 ^^^^^^^^ Invalid instantiation of '0x42::M::foo'. Expected 1 type argument(s) but got 0
 
 error[E03007]: too many type arguments

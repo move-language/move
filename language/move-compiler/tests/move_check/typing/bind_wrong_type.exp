@@ -1,7 +1,7 @@
 error[E04007]: incompatible types
   ┌─ tests/move_check/typing/bind_wrong_type.move:6:13
   │
-6 │         let S { g } = R {f :0};
+6 │         let S { g } = R {f :0}; g;
   │             ^^^^^^^   -------- Expected: '0x8675309::M::R'
   │             │          
   │             Invalid deconstruction binding
@@ -10,7 +10,7 @@ error[E04007]: incompatible types
 error[E04007]: incompatible types
   ┌─ tests/move_check/typing/bind_wrong_type.move:7:14
   │
-7 │         let (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 });
+7 │         let (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 }); g; f;
   │              ^^^^^^^              --------- Expected: '0x8675309::M::R'
   │              │                     
   │              Invalid deconstruction binding
@@ -19,7 +19,7 @@ error[E04007]: incompatible types
 error[E04005]: expected a single type
    ┌─ tests/move_check/typing/bind_wrong_type.move:11:13
    │
-11 │         let x = ();
+11 │         let x = (); x;
    │             ^   -- Expected a single type, but found expression list type: '()'
    │             │    
    │             Invalid type for local
@@ -36,7 +36,7 @@ error[E04007]: incompatible types
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/bind_wrong_type.move:13:13
    │
-13 │         let (x, b, R{f}) = (0, false, R{f: 0}, R{f: 0});
+13 │         let (x, b, R{f}) = (0, false, R{f: 0}, R{f: 0}); x; b; f;
    │             ^^^^^^^^^^^^   ---------------------------- Given expression list of length 4: '({integer}, bool, 0x8675309::M::R, 0x8675309::M::R)'
    │             │               
    │             Invalid value for binding
@@ -45,7 +45,7 @@ error[E04007]: incompatible types
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/bind_wrong_type.move:14:13
    │
-14 │         let (x, b, R{f}) = (0, false);
+14 │         let (x, b, R{f}) = (0, false); x; b; f;
    │             ^^^^^^^^^^^^   ---------- Given expression list of length 2: '({integer}, bool)'
    │             │               
    │             Invalid value for binding
@@ -54,7 +54,7 @@ error[E04007]: incompatible types
 error[E04005]: expected a single type
    ┌─ tests/move_check/typing/bind_wrong_type.move:18:13
    │
-18 │         let x: () = 0;
+18 │         let x: () = 0; x;
    │             ^  -- Expected a single type, but found expression list type: '()'
    │             │   
    │             Invalid type for local
@@ -62,7 +62,7 @@ error[E04005]: expected a single type
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/bind_wrong_type.move:18:16
    │
-18 │         let x: () = 0;
+18 │         let x: () = 0; x;
    │                ^^   - Given: integer
    │                │     
    │                Invalid type annotation
@@ -89,7 +89,7 @@ error[E04007]: incompatible types
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/bind_wrong_type.move:20:13
    │
-20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0});
+20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0}); x; b; f;
    │             ^^^^^^^^^^^^  ----------------- Given expression list of length 4: '(u64, bool, 0x8675309::M::R, 0x8675309::M::R)'
    │             │              
    │             Invalid value for binding
@@ -98,7 +98,7 @@ error[E04007]: incompatible types
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/bind_wrong_type.move:20:27
    │
-20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0});
+20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0}); x; b; f;
    │                           ^^^^^^^^^^^^^^^^^   ------------------- Given expression list of length 3: '({integer}, bool, 0x8675309::M::R)'
    │                           │                    
    │                           Invalid type annotation
@@ -107,7 +107,7 @@ error[E04007]: incompatible types
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/bind_wrong_type.move:21:13
    │
-21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0});
+21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0}); x; b; f;
    │             ^^^^^^^^^^^^  ----------- Given expression list of length 2: '(u64, bool)'
    │             │              
    │             Invalid value for binding
@@ -116,7 +116,7 @@ error[E04007]: incompatible types
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/bind_wrong_type.move:21:27
    │
-21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0});
+21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0}); x; b; f;
    │                           ^^^^^^^^^^^   ------------------- Given expression list of length 3: '({integer}, bool, 0x8675309::M::R)'
    │                           │              
    │                           Invalid type annotation

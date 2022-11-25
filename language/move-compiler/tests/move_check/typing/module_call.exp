@@ -13,11 +13,11 @@ error[E04007]: incompatible types
  8 │     public fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
    │                                           -------------- Given: '(bool, (address, u64), _)'
    ·
-11 │     public fun bing(b: bool, a: address, x: u64) {
+11 │     public fun bing(_: bool, _: address, _: u64) {
    │                        ---- Expected: 'bool'
    ·
 43 │         let () = X::bing(X::baz(X::bar(X::foo())));
-   │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. Invalid argument for parameter 'b'
+   │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. Invalid argument for parameter '_'
 
 error[E04016]: too few arguments
    ┌─ tests/move_check/typing/module_call.move:43:26
@@ -52,11 +52,11 @@ error[E04007]: incompatible types
  8 │     public fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
    │                                           -------------- Given: '(bool, (address, u64), _)'
    ·
-11 │     public fun bing(b: bool, a: address, x: u64) {
+11 │     public fun bing(_: bool, _: address, _: u64) {
    │                        ---- Expected: 'bool'
    ·
 44 │         let () = X::bing (X::baz (X::bar (X::foo())));
-   │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. Invalid argument for parameter 'b'
+   │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. Invalid argument for parameter '_'
 
 error[E04016]: too few arguments
    ┌─ tests/move_check/typing/module_call.move:44:27
@@ -91,11 +91,11 @@ error[E04007]: incompatible types
  8 │     public fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
    │                                           -------------- Given: '(bool, (address, u64), _)'
    ·
-11 │     public fun bing(b: bool, a: address, x: u64) {
+11 │     public fun bing(_: bool, _: address, _: u64) {
    │                        ---- Expected: 'bool'
    ·
 45 │         let () = X::bing (X::baz (X::bar(1)));
-   │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. Invalid argument for parameter 'b'
+   │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. Invalid argument for parameter '_'
 
 error[E04016]: too few arguments
    ┌─ tests/move_check/typing/module_call.move:45:27
@@ -130,11 +130,11 @@ error[E04007]: incompatible types
  8 │     public fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
    │                                           -------------- Given: '(bool, address, {integer})'
    ·
-11 │     public fun bing(b: bool, a: address, x: u64) {
+11 │     public fun bing(_: bool, _: address, _: u64) {
    │                        ---- Expected: 'bool'
    ·
 46 │         let () = X::bing (X::baz (@0x0, 1));
-   │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. Invalid argument for parameter 'b'
+   │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. Invalid argument for parameter '_'
 
 error[E04016]: too few arguments
    ┌─ tests/move_check/typing/module_call.move:51:18
@@ -151,11 +151,11 @@ error[E04007]: incompatible types
 22 │     fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
    │                                    -------------- Given: '(bool, (address, u64), _)'
    ·
-25 │     fun bing(b: bool, a: address, x: u64) {
+25 │     fun bing(_: bool, _: address, _: u64) {
    │                 ---- Expected: 'bool'
    ·
 51 │         let () = bing(baz(bar(foo())));
-   │                  ^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. Invalid argument for parameter 'b'
+   │                  ^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. Invalid argument for parameter '_'
 
 error[E04016]: too few arguments
    ┌─ tests/move_check/typing/module_call.move:51:23
@@ -190,11 +190,11 @@ error[E04007]: incompatible types
 22 │     fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
    │                                    -------------- Given: '(bool, (address, u64), _)'
    ·
-25 │     fun bing(b: bool, a: address, x: u64) {
+25 │     fun bing(_: bool, _: address, _: u64) {
    │                 ---- Expected: 'bool'
    ·
 52 │         let () = bing (baz (bar (foo())));
-   │                  ^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. Invalid argument for parameter 'b'
+   │                  ^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. Invalid argument for parameter '_'
 
 error[E04016]: too few arguments
    ┌─ tests/move_check/typing/module_call.move:52:24
@@ -229,11 +229,11 @@ error[E04007]: incompatible types
 22 │     fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
    │                                    -------------- Given: '(bool, (address, u64), _)'
    ·
-25 │     fun bing(b: bool, a: address, x: u64) {
+25 │     fun bing(_: bool, _: address, _: u64) {
    │                 ---- Expected: 'bool'
    ·
 53 │         let () = bing (baz (bar(1)));
-   │                  ^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. Invalid argument for parameter 'b'
+   │                  ^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. Invalid argument for parameter '_'
 
 error[E04016]: too few arguments
    ┌─ tests/move_check/typing/module_call.move:53:24
@@ -268,9 +268,9 @@ error[E04007]: incompatible types
 22 │     fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
    │                                    -------------- Given: '(bool, address, {integer})'
    ·
-25 │     fun bing(b: bool, a: address, x: u64) {
+25 │     fun bing(_: bool, _: address, _: u64) {
    │                 ---- Expected: 'bool'
    ·
 54 │         let () = bing (baz (@0x0, 1));
-   │                  ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. Invalid argument for parameter 'b'
+   │                  ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. Invalid argument for parameter '_'
 

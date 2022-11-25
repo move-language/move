@@ -2,7 +2,7 @@ module 0x8675309::M {
     struct no {}
     struct X { f: no }
 
-    fun mk(x: no): no {
+    fun mk(x: no): no { x;
         no {}
     }
 

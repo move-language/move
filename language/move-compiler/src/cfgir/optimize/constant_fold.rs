@@ -6,10 +6,10 @@ use crate::{
     cfgir::cfg::BlockCFG,
     hlir::ast::{
         BaseType, BaseType_, Command, Command_, Exp, ExpListItem, FunctionSignature, SingleType,
-        TypeName, TypeName_, UnannotatedExp_, Value, Value_,
+        TypeName, TypeName_, UnannotatedExp_, Value, Value_, Var,
     },
     naming::ast::{BuiltinTypeName, BuiltinTypeName_},
-    parser::ast::{BinOp, BinOp_, UnaryOp, UnaryOp_, Var},
+    parser::ast::{BinOp, BinOp_, UnaryOp, UnaryOp_},
     shared::unique_map::UniqueMap,
 };
 use move_ir_types::location::*;

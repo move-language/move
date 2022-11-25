@@ -1,13 +1,13 @@
 error[E03005]: unbound unscoped name
   ┌─ tests/move_check/naming/unbound_constant.move:4:17
   │
-4 │         let x = CONSTANT;
+4 │         let x = CONSTANT; x;
   │                 ^^^^^^^^ Unbound constant 'CONSTANT'
 
 error[E03003]: unbound module member
   ┌─ tests/move_check/naming/unbound_constant.move:5:17
   │
-5 │         let y = Self::CONSTANT;
+5 │         let y = Self::CONSTANT; y;
   │                 ^^^^^^^^^^^^^^ Invalid module access. Unbound constant 'CONSTANT' in module '0x42::M'
 
 error[E03005]: unbound unscoped name
@@ -25,13 +25,13 @@ error[E03003]: unbound module member
 error[E03005]: unbound unscoped name
    ┌─ tests/move_check/naming/unbound_constant.move:13:17
    │
-13 │         let x = CONSTANT;
+13 │         let x = CONSTANT; x;
    │                 ^^^^^^^^ Unbound constant 'CONSTANT'
 
 error[E03002]: unbound module
    ┌─ tests/move_check/naming/unbound_constant.move:14:17
    │
-14 │         let y = Self::CONSTANT;
+14 │         let y = Self::CONSTANT; y;
    │                 ^^^^ Unbound module alias 'Self'
 
 error[E03005]: unbound unscoped name

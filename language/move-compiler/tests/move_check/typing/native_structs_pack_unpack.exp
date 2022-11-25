@@ -31,17 +31,17 @@ error[E04001]: restricted visibility
  All structs can only be deconstructed in the module in which they are declared
 
 error[E04001]: restricted visibility
-   ┌─ tests/move_check/typing/native_structs_pack_unpack.move:15:17
+   ┌─ tests/move_check/typing/native_structs_pack_unpack.move:15:18
    │
-15 │         let f = c.f;
-   │                 ^^^ Invalid access of field 'f' on '0x42::C::T'. Fields can only be accessed inside the struct's module
+15 │         let _f = c.f;
+   │                  ^^^ Invalid access of field 'f' on '0x42::C::T'. Fields can only be accessed inside the struct's module
 
 error[E03010]: unbound field
-   ┌─ tests/move_check/typing/native_structs_pack_unpack.move:15:17
+   ┌─ tests/move_check/typing/native_structs_pack_unpack.move:15:18
    │
  3 │     native struct T;
    │     ------ Struct declared 'native' here
    ·
-15 │         let f = c.f;
-   │                 ^^^ Unbound field 'f' for native struct '0x42::C::T'
+15 │         let _f = c.f;
+   │                  ^^^ Unbound field 'f' for native struct '0x42::C::T'
 

@@ -41,8 +41,8 @@ error[E04007]: incompatible types
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/unary_not_invalid.move:11:10
    │
- 6 │     fun t0(x: bool, r: R) {
-   │                        - Given: '0x8675309::M::R'
+ 6 │     fun t0(r: R) {
+   │               - Given: '0x8675309::M::R'
    ·
 11 │         !r;
    │          ^
@@ -53,8 +53,8 @@ error[E04007]: incompatible types
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/unary_not_invalid.move:12:10
    │
- 6 │     fun t0(x: bool, r: R) {
-   │                        - Given: '0x8675309::M::R'
+ 6 │     fun t0(r: R) {
+   │               - Given: '0x8675309::M::R'
    ·
 12 │         !r;
    │          ^

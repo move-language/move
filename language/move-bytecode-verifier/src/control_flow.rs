@@ -2,11 +2,13 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! This module implements a checker for verifies control flow. The following properties are
-//! ensured:
-//! - All forward jumps do not enter into the middle of a loop
-//! - All "breaks" (forward, loop-exiting jumps) go to the "end" of the loop
-//! - All "continues" (back jumps in a loop) are only to the current loop
+//! This module implements control flow checks for bytecode versions v6 and up.  The following
+//! properties are ensured:
+//! - The CFG is not empty and the last block ends in an unconditional jump, so it's not possible to
+//!   fall off the end of a function.
+//! - The CFG is reducible (and optionally max loop depth is bounded), to limit the potential for
+//!   pathologically long abstract interpretation runtimes (through poor choice of loop heads and
+//!   back edges).
 use crate::{
     loop_summary::{LoopPartition, LoopSummary},
     verifier::VerifierConfig,

@@ -7,85 +7,66 @@ use super::scope::*;
 use super::scopes::*;
 use super::types::*;
 use super::utils::*;
+use move_core_types::account_address::*;
 
-use crate::{context::Context, symbols::Symbols};
 use anyhow::{Ok, Result};
-use lsp_server::Request;
-use lsp_types::{CompletionItem, CompletionItemKind, CompletionParams};
+
 use move_command_line_common::files::FileHash;
-use move_compiler::parser::ast::ModuleName;
-use move_compiler::parser::ast::{Definition, ModuleIdent};
-use move_compiler::parser::*;
+
+use move_compiler::parser::ast::Definition;
+
 use move_compiler::shared::Identifier;
-use move_compiler::{
-    parser::{
-        ast::*,
-        keywords::{BUILTINS, CONTEXTUAL_KEYWORDS, KEYWORDS, PRIMITIVE_TYPES},
-        lexer::{Lexer, Tok},
-    },
-    shared::*,
-    CommentMap,
-};
-use move_ir_types::ast::Statement_;
-use move_ir_types::location::{Loc, Spanned};
-use move_package::compilation::build_plan;
+use move_compiler::{parser::ast::*, shared::*};
+
+use move_ir_types::location::Loc;
+
 use move_package::resolution::resolution_graph::ResolvedGraph;
 use move_package::source_package::layout::SourcePackageLayout;
 use move_package::source_package::manifest_parser::*;
-use move_package::source_package::parsed_manifest::SourceManifest;
-use move_package::source_package::*;
+
 use move_package::*;
 use move_symbol_pool::Symbol;
-use petgraph::data::Build;
-use petgraph::visit;
-use serde::__private::de;
-use std::borrow::{Borrow, BorrowMut};
+
+use core::panic;
+use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::btree_map::BTreeMap;
 use std::collections::HashMap;
-use std::hash::Hash;
-use std::ops::{Add, Deref};
-use std::path::{Component, Path};
+
 use std::slice::SliceIndex;
-use std::sync::Mutex;
-use std::vec;
-use std::{collections::HashSet, path::PathBuf, rc::Rc};
-use tempfile::TempPath;
+
+use std::{path::PathBuf, rc::Rc};
+
 use walkdir::WalkDir;
 
 /// All Modules.
 #[derive(Default, Debug)]
 pub struct Modules {
-    modules: HashMap<PathBuf /*  this is a Move.toml like xxxx/Move.toml  */, IDEModule>,
-    ///
-    named_to_addresses: HashMap<Symbol, NumericalAddress>,
-    resolution_graph: HashMap<PathBuf, ResolvedGraph>,
+    modules: HashMap<PathBuf /* this is a Move.toml like xxxx/Move.toml  */, IDEModule>,
+    /// a field contains the root manifest file
+    /// if Modules construct successful this field is never None.
+    root_manifest: Option<move_package::source_package::parsed_manifest::SourceManifest>,
     hash_file: PathBufHashMap,
     file_line_mapping: FileLineMapping,
-}
-
-#[test]
-fn xxx() {
-    let x = Modules::new(&PathBuf::from(
-        "/home/yuyang/projects/test-move/../test-move",
-    ));
+    manifests: Vec<PathBuf>,
 }
 
 impl Modules {
     pub fn new(working_dir: impl Into<PathBuf>) -> Self {
         let working_dir = working_dir.into();
-        let mut x = Self::default();
         log::info!("scan modules at {:?}", &working_dir);
-        x.load_one_move_toml(&working_dir).unwrap();
-        x
+        let mut modules = Self::default();
+        modules.load_project(&working_dir).unwrap();
+        modules
     }
 
-    fn load_one_move_toml(&mut self, manifest_path: &PathBuf) -> Result<()> {
+    fn load_project(&mut self, manifest_path: &PathBuf) -> Result<()> {
         let manifest_path = normal_path(&manifest_path.as_path());
         if self.modules.get(&manifest_path).is_some() {
             log::info!("manifest '{:?}' loaded before skipped.", &manifest_path);
             return Ok(());
         }
+        self.manifests.push(manifest_path.clone());
         log::info!("load manifest file at {:?}", &manifest_path);
         let manifest = parse_move_manifest_from_file(&manifest_path).unwrap();
         let build_cfg = BuildConfig {
@@ -100,10 +81,9 @@ impl Modules {
             fetch_deps_only: true,
             skip_fetch_latest_git_deps: false,
         };
-        let resolution_graph = build_cfg
-            .resolution_graph_for_package(manifest_path.as_path(), &mut std::io::stderr())?;
-        self.resolution_graph
-            .insert(manifest_path.clone(), resolution_graph);
+        if self.root_manifest.is_none() {
+            self.root_manifest = Some(manifest.clone());
+        }
         // load depends.
         for (dep_name, de) in manifest
             .dependencies
@@ -116,95 +96,179 @@ impl Modules {
                 &manifest_path,
                 dep_name
             );
-            self.load_one_move_toml(&p).unwrap();
+            self.load_project(&p).unwrap();
         }
+        self.load_layout_files(&manifest_path, SourcePackageLayout::Sources);
+
+        // TODO::load
+        // self.load_layout_files(&manifest_path, SourcePackageLayout::Tests);
+        // self.load_layout_files(&manifest_path, SourcePackageLayout::Scripts);
+
+        Ok(())
+    }
+
+    /// Load move files  locate in sources and tests ...
+    fn load_layout_files(&mut self, manifest_path: &PathBuf, kind: SourcePackageLayout) {
         use move_compiler::parser::syntax::parse_file_string;
         use std::fs;
         let mut env = CompilationEnv::new(Flags::testing());
-        // load self.
-        {
-            let mut p = manifest_path.clone();
-            p.push(SourcePackageLayout::Sources.location_str());
-            for item in WalkDir::new(&p) {
-                let item = match item {
-                    std::result::Result::Err(e) => continue,
-                    std::result::Result::Ok(x) => x,
-                };
-                if item.file_type().is_file()
-                    && match item.file_name().to_str() {
-                        Some(s) => s.ends_with(".move"),
-                        None => false,
-                    }
-                {
-                    let file_content = fs::read_to_string(item.path()).unwrap();
-                    log::info!("load source file {:?}", item.path());
-                    let file_hash = FileHash::new(file_content.as_str());
-                    // This is a move file.
-                    let x = parse_file_string(&mut env, file_hash, file_content.as_str());
-                    let x = match x {
-                        std::result::Result::Ok(x) => x,
-                        std::result::Result::Err(e) => {
-                            log::error!("parse file failed:{:?} d:{:?}", item.path(), e);
-                            return Ok(());
-                        }
-                    };
-                    let x = x.0;
-                    if self.modules.get(&manifest_path).is_none() {
-                        self.modules
-                            .insert(manifest_path.clone(), Default::default());
-                    }
-                    self.modules
-                        .get_mut(&manifest_path)
-                        .unwrap()
-                        .sources
-                        .insert(item.path().clone().to_path_buf(), x);
+
+        let mut p = manifest_path.clone();
+        p.push(kind.location_str());
+        for item in WalkDir::new(&p) {
+            let file = match item {
+                std::result::Result::Err(_e) => continue,
+                std::result::Result::Ok(x) => x,
+            };
+            if file.file_type().is_file()
+                && match file.file_name().to_str() {
+                    Some(s) => s.ends_with(".move"),
+                    None => continue,
                 }
+            {
+                let file_content = fs::read_to_string(file.path()).unwrap();
+                log::info!("load source file {:?}", file.path());
+                let file_hash = FileHash::new(file_content.as_str());
+                // This is a move file.
+                let x = parse_file_string(&mut env, file_hash, file_content.as_str());
+                let x = match x {
+                    std::result::Result::Ok(x) => x,
+                    std::result::Result::Err(e) => {
+                        log::error!("parse file failed:{:?} d:{:?}", file.path(), e);
+                        continue;
+                    }
+                };
+                let x = x.0;
+                if self.modules.get(manifest_path).is_none() {
+                    self.modules
+                        .insert(manifest_path.clone(), Default::default());
+                }
+                self.modules
+                    .get_mut(manifest_path)
+                    .unwrap()
+                    .sources
+                    .insert(file.path().clone().to_path_buf(), x);
+
+                //  update hash
+                self.hash_file.update(file.path().to_path_buf(), file_hash);
+                // update line mapping.
+                self.file_line_mapping
+                    .update(file.path().to_path_buf(), file_content.as_str());
             }
         }
-        // Todo load Tests and Scripts.
-        log::error!("load Tests and Scripts");
-        Ok(())
+    }
+
+    fn enter_module_constant(
+        &self,
+        scopes: &Scopes,
+        module: &ModuleDefinition,
+        addr: Option<LeadingNameAccess>,
+        visitor: &mut dyn ScopeVisitor,
+    ) {
+        let addr = if let Some(ref addr) = if addr.is_some() { addr } else { module.address } {
+            match &addr.value {
+                LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
+                LeadingNameAccess_::Name(name) => {
+                    let x = self.name_to_addr(name.value).clone();
+                    x
+                }
+            }
+        } else {
+            ERR_ADDRESS
+        };
+        for c in module.members.iter() {
+            match c {
+                ModuleMember::Constant(c) => {
+                    self.visit_const(addr, module.name.0.value, c, scopes, visitor)
+                }
+                _ => {}
+            }
+        }
     }
 
     /// Entrance for `ScopeVisitor` base on analyze.
     pub fn run_visitor(&self, visitor: &mut dyn ScopeVisitor) {
         log::info!("run visitor for {} ", visitor);
-        let mut global_scope = Scopes::new();
-        // Enter all global to global_scope.
-        for (_, modules) in self.modules.iter() {
-            for (_, ds) in modules.sources.iter() {
-                for d in ds.iter() {
-                    match d {
-                        Definition::Module(ref m) => {
-                            self.enter_module_top(&mut global_scope, m);
-                        }
-                        Definition::Address(ref a) => {
-                            self.enter_address_top(&mut global_scope, a);
-                        }
-                        Definition::Script(ref s) => {
-                            self.enter_script_top(&mut global_scope, s);
+        // visit should `rev`.
+        let x: Vec<_> = self.manifests.iter().rev().map(|x| x.clone()).collect();
+        for m in x.iter() {
+            self.run_visitor2(visitor, m);
+            if visitor.finished() {
+                return;
+            }
+        }
+    }
+
+    /// Entrance for `ScopeVisitor` base on analyze.
+    pub fn run_visitor2(&self, visitor: &mut dyn ScopeVisitor, manifest: &PathBuf) {
+        log::info!("run visitor for {} ", visitor);
+        let mut scopes = Scopes::new();
+
+        for (_, ds) in self.modules.get(manifest).unwrap().sources.iter() {
+            for d in ds.iter() {
+                match d {
+                    Definition::Module(ref m) => {
+                        self.enter_module_constant(&scopes, m, None, visitor);
+                    }
+                    Definition::Address(ref a) => {
+                        for m in a.modules.iter() {
+                            self.enter_module_constant(&scopes, m, Some(a.addr.clone()), visitor);
                         }
                     }
+                    _ => {}
                 }
             }
         }
 
+        // Second Pass.  enter struct type.
+
+        // // Enter all global to global_scope.
+        // for (_, modules) in self.modules.iter() {
+        //     for (_, ds) in modules.sources.iter() {
+        //         for d in ds.iter() {
+        //             match d {
+        //                 Definition::Module(ref m) => {
+        //                     self.enter_module_top(&mut scopes, m);
+        //                 }
+        //                 Definition::Address(ref a) => {
+        //                     self.enter_address_top(&mut scopes, a);
+        //                 }
+
+        //                 _ => {}
+        //             }
+        //         }
+        //     }
+        // }
+
         // Scan all for.
-        for (_, modules) in self.modules.iter() {
-            for (f, ds) in modules.sources.iter() {
-                // We have match the files.
-                for d in ds.iter() {
-                    match d {
-                        Definition::Module(x) => {
-                            if !visitor.file_should_visit(
-                                self.convert_file_hash_filepath(&x.loc.file_hash()).unwrap(),
-                            ) {
-                                continue;
+
+        for (_f, ds) in self.modules.get(manifest).unwrap().sources.iter() {
+            // We have match the files.
+            for d in ds.iter() {
+                match d {
+                    Definition::Module(x) => {
+                        if !visitor.file_should_visit(
+                            match self.convert_file_hash_filepath(&x.loc.file_hash()) {
+                                Some(x) => x,
+                                None => continue,
+                            },
+                        ) {
+                            continue;
+                        }
+                        for v in x.members.iter() {
+                            // Right now we only need visit function body.
+                            // All toplevel struct must be visited no matter what.
+
+                            match v {
+                                ModuleMember::Function(x) => {
+                                    self.visit_function(x, &scopes, visitor);
+                                }
+                                _ => {}
                             }
                         }
-                        Definition::Address(_) => todo!(),
-                        Definition::Script(_) => todo!(),
                     }
+                    Definition::Address(_) => todo!(),
+                    Definition::Script(_) => todo!(),
                 }
             }
         }
@@ -212,7 +276,7 @@ impl Modules {
 
     fn visit_const(
         &self,
-        address: NumericalAddress,
+        address: AccountAddress,
         module: Symbol,
         c: &Constant,
         scopes: &Scopes,
@@ -223,17 +287,11 @@ impl Modules {
             return;
         }
         // const can only be declared at top scope
-        log::trace!("visit const {:?} ", c);
         let ty = scopes.resolve_type(&c.signature);
         let item = Item::Const(c.name.clone(), ty);
         visitor.handle_item(self, scopes, &item);
         scopes.enter_top_item(self, address, module, c.name.value(), item);
     }
-
-    /// Enter Top level
-    fn enter_module_top(&self, s: &Scopes, module: &ModuleDefinition) {}
-    fn enter_script_top(&self, s: &Scopes, module: &Script) {}
-    fn enter_address_top(&self, s: &Scopes, module: &AddressDefinition) {}
 
     ///
     fn visit_function(&self, function: &Function, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
@@ -326,9 +384,9 @@ impl Modules {
     fn visit_bind(
         &self,
         bind: &Bind,
-        ty: &ResolvedType,
+        _ty: &ResolvedType,
         scopes: &Scopes,
-        field: Option<&'_ Field>,
+        _field: Option<&'_ Field>,
         visitor: &mut dyn ScopeVisitor,
     ) {
         match &bind.value {
@@ -354,6 +412,7 @@ impl Modules {
                 if visitor.finished() {
                     return;
                 }
+
                 for t in types.iter() {
                     self.visit_type_apply(t, scopes, visitor);
                     if visitor.finished() {
@@ -375,8 +434,25 @@ impl Modules {
         }
     }
 
-    fn name_to_addr(&self, name: Symbol) -> &NumericalAddress {
-        self.named_to_addresses.get(&name).unwrap()
+    fn name_to_addr(&self, name: Symbol) -> &AccountAddress {
+        if let Some(ref x) = self.root_manifest {
+            if let Some(ref x) = x.dev_address_assignments {
+                match x.get(&name) {
+                    Some(x) => return x,
+                    None => {}
+                }
+            }
+            if let Some(ref x) = x.addresses {
+                match x.get(&name) {
+                    Some(x) => match x {
+                        Some(x) => return x,
+                        _ => {}
+                    },
+                    None => {}
+                }
+            }
+        }
+        return &ERR_ADDRESS;
     }
 
     /// Get A Type for expr if possible otherwise Unknown is return.
@@ -391,7 +467,7 @@ impl Modules {
                 }
             },
             Exp_::Move(x) | Exp_::Copy(x) => scopes.find_var_type(x.0.value),
-            Exp_::Name(name, _ /*  TODO this is a error. */) => {
+            Exp_::Name(_name, _ /*  TODO this is a error. */) => {
                 return UNKNOWN_TYPE.clone();
             }
             Exp_::Call(name, is_macro, ref type_args, exprs) => {
@@ -447,7 +523,7 @@ impl Modules {
                 let mut struct_ty =
                     scopes.find_name_access_chain_type(name, |s| self.name_to_addr(s));
                 match &struct_ty.0.value {
-                    ResolvedType_::Struct(_, type_parameters, fields) => {
+                    ResolvedType_::Struct(_, type_parameters, _fields) => {
                         let type_args: Option<Vec<ResolvedType>> =
                             if let Some(type_args) = type_args {
                                 Some(type_args.iter().map(|x| scopes.resolve_type(x)).collect())
@@ -487,7 +563,7 @@ impl Modules {
                 }
                 ty.unwrap_or(ResolvedType::new_unknown(loc.clone()))
             }
-            Exp_::IfElse(_, then, else_) => {
+            Exp_::IfElse(_, _then, else_) => {
                 let mut ty = self.get_expr_type(expr, scopes);
                 if ty.is_err() {
                     if let Some(else_) = else_ {
@@ -564,7 +640,7 @@ impl Modules {
                     ty
                 }
             }
-            Exp_::Index(e, index) => {
+            Exp_::Index(e, _index) => {
                 let ty = self.get_expr_type(e, scopes);
                 if let Some(v) = ty.is_vector() {
                     v.clone()
@@ -621,7 +697,7 @@ impl Modules {
                         }
                     }
                 }
-                for expr in exprs.value.iter() {
+                for _expr in exprs.value.iter() {
                     self.visit_expr(exp, scopes, visitor);
                     if visitor.finished() {
                         return;
@@ -792,7 +868,7 @@ impl Modules {
                     let x = top
                         .address
                         .get(match &module.value.address.value {
-                            LeadingNameAccess_::AnonymousAddress(num) => num,
+                            LeadingNameAccess_::AnonymousAddress(num) => &num.bytes,
                             LeadingNameAccess_::Name(name) => self.name_to_addr(name.value),
                         })?
                         .modules
@@ -812,7 +888,7 @@ impl Modules {
                     let x = top
                         .address
                         .get(match &module.value.address.value {
-                            LeadingNameAccess_::AnonymousAddress(num) => num,
+                            LeadingNameAccess_::AnonymousAddress(num) => &num.bytes,
                             LeadingNameAccess_::Name(name) => self.name_to_addr(name.value),
                         })?
                         .modules
@@ -922,7 +998,7 @@ fn get_name_from_value(v: &Value) -> Option<&Name> {
 
 fn infer_type_on_expression(
     ret: &mut HashMap<Symbol, ResolvedType>,
-    type_parameters: &Vec<(Name, Vec<Ability>)>,
+    _type_parameters: &Vec<(Name, Vec<Ability>)>,
     parameters: &Vec<ResolvedType>,
     expression_types: &Vec<ResolvedType>,
 ) {
@@ -973,7 +1049,7 @@ fn infer_type_on_expression(
                 _ => {}
             },
             /// function is not expression
-            ResolvedType_::Fun(_, parameters, _) => {}
+            ResolvedType_::Fun(_, _parameters, _) => {}
             ResolvedType_::Vec(x) => match &expr_type.0.value {
                 ResolvedType_::Vec(y) => {
                     bind(ret, x.as_ref(), y.as_ref());
@@ -1014,3 +1090,5 @@ pub trait ScopeVisitor: std::fmt::Display {
     /// Visitor should finished.
     fn finished(&self) -> bool;
 }
+
+static ERR_ADDRESS: AccountAddress = AccountAddress::ONE;

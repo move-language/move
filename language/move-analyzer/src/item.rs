@@ -1,19 +1,8 @@
-use super::modules::*;
 use super::scope::*;
 use super::types::*;
-use super::utils::*;
 
-use move_command_line_common::files::FileHash;
-use move_compiler::parser::*;
 use move_compiler::shared::Identifier;
-use move_compiler::{
-    parser::{
-        ast::*,
-        lexer::{Lexer, Tok},
-    },
-    shared::*,
-    CommentMap,
-};
+use move_compiler::{parser::ast::*, shared::*};
 use move_ir_types::location::{Loc, Spanned};
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
@@ -82,7 +71,24 @@ impl Item {
     }
 
     pub(crate) fn debug_loc(&self) -> Option<&'_ Loc> {
-        unimplemented!()
+        match self {
+            Item::Parameter(var, _) => Some(var.borrow().0),
+            Item::ImportedUseModule(m, _) => Some(&m.loc),
+            Item::ImportedMember(item) => item.as_ref().debug_loc(),
+            Item::Const(name, _) => Some(name.borrow().0),
+            Item::Struct(name, _, _) => Some(&name.loc),
+            Item::BuildInType(_) => todo!(),
+            Item::TParam(_, _) => todo!(),
+            Item::ApplyType(_, _) => todo!(),
+            Item::UseMember(_, _) => todo!(),
+            Item::ExprVar(_) => todo!(),
+            Item::NameAccessChain(_) => todo!(),
+            Item::ExprAddressName(_) => todo!(),
+            Item::FieldInitialization(_, _) => todo!(),
+            Item::AccessFiled(_, _) => todo!(),
+            Item::KeyWords(_) => todo!(),
+            Item::MacroCall(_) => todo!(),
+        }
     }
 }
 

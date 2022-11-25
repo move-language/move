@@ -1,16 +1,10 @@
 use super::item::*;
-use super::modules::*;
+
 use super::types::*;
-use move_command_line_common::files::FileHash;
-use move_compiler::{
-    parser::{
-        ast::*,
-        lexer::{Lexer, Tok},
-    },
-    shared::*,
-    CommentMap,
-};
-use move_ir_types::location::{Loc, Spanned};
+
+use move_compiler::shared::*;
+use move_core_types::account_address::AccountAddress;
+
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -52,7 +46,7 @@ impl Scope {
 #[derive(Debug, Clone)]
 pub struct Addresses {
     /// address to modules
-    pub(crate) address: HashMap<NumericalAddress, Address>,
+    pub(crate) address: HashMap<AccountAddress, Address>,
 }
 
 impl Addresses {

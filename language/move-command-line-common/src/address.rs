@@ -19,7 +19,7 @@ pub enum ParsedAddress {
 #[derive(Clone, Copy)]
 pub struct NumericalAddress {
     /// the number for the address
-    bytes: AccountAddress,
+    pub bytes: AccountAddress,
     /// The format (e.g. decimal or hex) for displaying the number
     format: NumberFormat,
 }

@@ -7,17 +7,10 @@ use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use move_compiler::{
-    parser::{
-        ast::*,
-        lexer::{Lexer, Tok},
-    },
-    shared::*,
-    CommentMap,
-};
-use move_ir_types::location::{Loc, Spanned};
+use move_compiler::{parser::ast::*, shared::*};
+use move_core_types::account_address::AccountAddress;
+use move_ir_types::location::Spanned;
 use move_symbol_pool::Symbol;
-use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct Scopes {
@@ -31,6 +24,7 @@ impl Scopes {
         };
         let s = Scope::new_top();
         x.scopes.as_ref().borrow_mut().push(s);
+        x.enter_build_in();
         x
     }
 
@@ -53,9 +47,8 @@ impl Scopes {
     // Enter
     pub(crate) fn enter_item(&self, s: &dyn ModuleServices, name: Symbol, item: Item) {
         if let Some(loc) = item.debug_loc() {
-            let loc = s
-                .convert_loc_range(loc)
-                .unwrap_or(FileRange::UNKNOWN.clone());
+            let loc = s.convert_loc_range(loc).unwrap_or(FileRange::unknown());
+            log::trace!("{}", loc);
             log::trace!("enter scope name:{:?} item:{:?}", name, item,)
         }
         self.scopes
@@ -69,17 +62,16 @@ impl Scopes {
     pub(crate) fn enter_top_item(
         &self,
         s: &dyn ModuleServices,
-        address: NumericalAddress,
+        address: AccountAddress,
         module: Symbol,
         item_name: Symbol,
         item: Item,
     ) {
         if let Some(loc) = item.debug_loc() {
-            let loc = s
-                .convert_loc_range(loc)
-                .unwrap_or(FileRange::UNKNOWN.clone());
+            let loc = s.convert_loc_range(loc).unwrap_or(FileRange::unknown());
+            log::trace!("{}", loc);
             log::trace!(
-                "enter top scope address{:?} module:{:?} name:{:?} item:{:?}",
+                "enter top scope address:{:?} module:{:?} name:{:?} item:{:?}",
                 address,
                 module,
                 item_name,
@@ -167,11 +159,10 @@ impl Scopes {
 
     pub(crate) fn resolve_name_access_chain_type(&self, chain: &NameAccessChain) -> ResolvedType {
         let failed = ResolvedType::new_unknown(chain.loc);
-
         let scopes = self.scopes.as_ref().borrow();
         for s in scopes.iter() {
             // We must be in global scope.
-            let item = match &chain.value {
+            let _item = match &chain.value {
                 NameAccessChain_::One(x) => {
                     if let Some(item) = s.items.get(&x.value) {
                         return item.to_type().unwrap_or(failed);
@@ -211,7 +202,7 @@ impl Scopes {
     pub(crate) fn find_name_access_chain_type<'a>(
         &self,
         chain: &NameAccessChain,
-        name_to_addr: impl Fn(Symbol) -> &'a NumericalAddress,
+        name_to_addr: impl Fn(Symbol) -> &'a AccountAddress,
     ) -> ResolvedType {
         let failed = ResolvedType::new_unknown(chain.loc);
         match &chain.value {
@@ -228,7 +219,7 @@ impl Scopes {
                 });
                 r.unwrap_or(failed)
             }
-            NameAccessChain_::Two(name, member) => {
+            NameAccessChain_::Two(_name, member) => {
                 // first find this name.
                 let mut r = None;
                 self.inner_first_visit(|s| {
@@ -256,7 +247,7 @@ impl Scopes {
             }
             NameAccessChain_::Three(chain_two, member) => self.visit_top_scope(|top| {
                 let modules = top.address.get(match &chain_two.value.0.value {
-                    LeadingNameAccess_::AnonymousAddress(x) => x,
+                    LeadingNameAccess_::AnonymousAddress(x) => &x.bytes,
                     LeadingNameAccess_::Name(name) => name_to_addr(name.value),
                 });
                 if modules.is_none() {

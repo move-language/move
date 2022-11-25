@@ -1,3 +1,4 @@
+use std::fmt::write;
 use std::path::PathBuf;
 
 use crate::utils::FileRange;
@@ -5,12 +6,12 @@ use crate::utils::FileRange;
 use super::context::*;
 use super::item::*;
 use super::modules::*;
-use super::scope::*;
+
 use super::scopes::*;
-use super::types::*;
+
 use lsp_server::*;
 use lsp_types::*;
-use move_command_line_common::files::FileHash;
+
 use move_compiler::shared::TName;
 use move_ir_types::location::Loc;
 
@@ -29,7 +30,17 @@ pub fn on_go_to_def_request(context: &mut Context, request: &Request) {
     let line = loc.line;
     let col = loc.character;
 
-    unimplemented!();
+    let mut visitor = Visitor::new(fpath, line, col);
+    context.modules.run_visitor(&mut visitor);
+    match &visitor.result {
+        Some(x) => context.connection.sender.send(unimplemented!()).unwrap(),
+        None => log::error!(
+            "{:?}:{}:{} not found definition.",
+            visitor.filepath,
+            line,
+            col
+        ),
+    }
 }
 
 pub(crate) struct Visitor {
@@ -61,7 +72,7 @@ impl Visitor {
 }
 
 impl ScopeVisitor for Visitor {
-    fn handle_item(&mut self, services: &dyn ModuleServices, scopes: &Scopes, item: &Item) {
+    fn handle_item(&mut self, services: &dyn ModuleServices, _scopes: &Scopes, item: &Item) {
         match item {
             Item::Parameter(var, _) => {
                 if self.match_loc(&var.borrow().0, services) {
@@ -77,6 +88,15 @@ impl ScopeVisitor for Visitor {
                     }
                 }
             }
+            Item::UseMember(name, item) => {
+                println!("!!!!!!!!!!!!!!!11 name :{:?}", name.value);
+                if self.match_loc(&name.loc, services) {
+                    if let Some(t) = services.convert_loc_range(item.as_ref().def_loc()) {
+                        self.result = Some(t);
+                    }
+                }
+            }
+
             Item::ApplyType(chain, ty) => {
                 if self.match_loc(&get_access_chain_name(chain).loc, services) {
                     if let Some(t) =
@@ -99,6 +119,10 @@ impl ScopeVisitor for Visitor {
 
 impl std::fmt::Display for Visitor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        unimplemented!()
+        write!(
+            f,
+            "goto_definition,file:{:?} line:{} col:{}",
+            self.filepath, self.line, self.col
+        )
     }
 }

@@ -1,15 +1,13 @@
-use super::modules::*;
+
 use move_command_line_common::files::FileHash;
-use move_compiler::parser::*;
+
 use move_compiler::shared::Identifier;
 
 use move_compiler::{
     parser::{
         ast::*,
-        lexer::{Lexer, Tok},
     },
     shared::*,
-    CommentMap,
 };
 
 use move_ir_types::location::{Loc, Spanned};
@@ -98,7 +96,7 @@ impl ResolvedType {
         })
     }
     #[inline]
-    pub(crate) fn new_build_in(b: BuildInType) -> Self {
+    pub(crate) fn new_build_in(_b: BuildInType) -> Self {
         Self(Spanned {
             loc: UNKNOWN_LOC.clone(),
             value: ResolvedType_::Unit,
@@ -149,7 +147,7 @@ impl ResolvedType {
             ResolvedType_::UnKnown => {}
             ResolvedType_::Struct(_, _, ref mut fields) => {
                 for i in 0..fields.len() {
-                    let mut t = fields.get_mut(i).unwrap();
+                    let t = fields.get_mut(i).unwrap();
                     t.1.bind_type_parameter(types);
                 }
             }
@@ -165,13 +163,13 @@ impl ResolvedType {
             ResolvedType_::Unit => {}
             ResolvedType_::Multiple(ref mut xs) => {
                 for i in 0..xs.len() {
-                    let mut t = xs.get_mut(i).unwrap();
+                    let t = xs.get_mut(i).unwrap();
                     t.bind_type_parameter(types);
                 }
             }
             ResolvedType_::Fun(_, ref mut xs, ref mut ret) => {
                 for i in 0..xs.len() {
-                    let mut t = xs.get_mut(i).unwrap();
+                    let t = xs.get_mut(i).unwrap();
                     t.bind_type_parameter(types);
                 }
                 ret.as_mut().bind_type_parameter(types);

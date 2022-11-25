@@ -2923,6 +2923,7 @@ dependencies = [
  "derivative",
  "dunce",
  "im",
+ "log",
  "lsp-server",
  "lsp-types",
  "move-cli",

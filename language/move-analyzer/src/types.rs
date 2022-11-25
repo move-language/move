@@ -1,6 +1,8 @@
+use super::modules::*;
 use move_command_line_common::files::FileHash;
 use move_compiler::parser::*;
 use move_compiler::shared::Identifier;
+
 use move_compiler::{
     parser::{
         ast::*,

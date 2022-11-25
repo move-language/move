@@ -1,5 +1,8 @@
+use super::modules::*;
 use super::scope::*;
 use super::types::*;
+use super::utils::*;
+
 use move_command_line_common::files::FileHash;
 use move_compiler::parser::*;
 use move_compiler::shared::Identifier;
@@ -23,6 +26,7 @@ pub enum Item {
     Parameter(Var, ResolvedType),
     ImportedUseModule(ModuleIdent, Rc<RefCell<Scope>>),
     ImportedMember(Box<Item>),
+    Const(ConstantName, ResolvedType),
 
     /////////////////////////
     /// TYPE types
@@ -76,6 +80,10 @@ impl Item {
             _ => unreachable!(),
         }
     }
+
+    pub(crate) fn debug_loc(&self) -> Option<&'_ Loc> {
+        unimplemented!()
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -107,3 +115,55 @@ pub(crate) fn get_access_chain_name(x: &NameAccessChain) -> &Name {
         | move_compiler::parser::ast::NameAccessChain_::Three(_, name) => name,
     }
 }
+
+// impl ShowWithModule for Item {
+//     fn show_string(&self, module: &dyn ModuleServices) -> String {
+//         let loc = |loc| {
+//             module.convert_loc_range(loc).unwrap_or(FileRange {
+//                 path: "<unknown>",
+//                 line: 1,
+//                 col_start: 0,
+//                 col_end: 0,
+//             })
+//         };
+
+//         match self {
+//             Item::Parameter(var, ty) => {
+//                 format!(
+//                     "parameter:{} loc:{} ty:{}",
+//                     var,
+//                     loc(var.borrow().0),
+//                     ty.show_string(module)
+//                 )
+//             }
+//             Item::ImportedUseModule(m, _) => {
+//                 format!("imported module {}")
+//             }
+//             Item::ImportedMember(m) => m.as_ref().show_string(module),
+//             Item::Const(name, ty) => {
+//                 format!(
+//                     "parameter:{} loc:{} ty:{}",
+//                     var,
+//                     loc(name.borrow().0),
+//                     ty.show_string(module)
+//                 )
+//             }
+//             Item::Struct(name, type_paras, fields) => {
+//                 let mut s = String::default();
+
+//                 s.push("struct{")
+//             }
+//             Item::BuildInType(_) => {}
+//             Item::TParam(_, _) => todo!(),
+//             Item::ApplyType(_, _) => todo!(),
+//             Item::UseMember(_, _) => todo!(),
+//             Item::ExprVar(_) => todo!(),
+//             Item::NameAccessChain(_) => todo!(),
+//             Item::ExprAddressName(_) => todo!(),
+//             Item::FieldInitialization(_, _) => todo!(),
+//             Item::AccessFiled(_, _) => todo!(),
+//             Item::KeyWords(_) => todo!(),
+//             Item::MacroCall(_) => todo!(),
+//         }
+//     }
+// }

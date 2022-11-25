@@ -30,6 +30,7 @@ move-package = { path = "../tools/move-package" }
 move-cli = { path = "../tools/move-cli" }
 move-symbol-pool = { path = "../move-symbol-pool" }
 walkdir = "2"
+log = "0.4.14"
 
 
 [features]

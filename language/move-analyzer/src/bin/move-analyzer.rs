@@ -21,7 +21,7 @@ use std::{
 use move_analyzer::{
     completion::on_completion_request,
     context::Context,
-    modules::{on_completion_request2, Modules},
+    modules::Modules,
     symbols,
     vfs::{on_text_document_sync_notification, VirtualFileSystem},
 };
@@ -52,7 +52,7 @@ fn main() {
     let (connection, io_threads) = Connection::stdio();
     let symbols = Arc::new(Mutex::new(symbols::Symbolicator::empty_symbols()));
     let mut context = Context {
-        modules: Modules::new(unimplemented!()),
+        modules: Modules::new("."),
 
         connection,
         files: VirtualFileSystem::default(),
@@ -227,7 +227,7 @@ fn main() {
 fn on_request(context: &Context, request: &Request) {
     match request.method.as_str() {
         lsp_types::request::Completion::METHOD => {
-            on_completion_request2(context, request, &context.symbols.lock().unwrap())
+            on_completion_request(context, request, &context.symbols.lock().unwrap())
         }
         lsp_types::request::GotoDefinition::METHOD => {
             symbols::on_go_to_def_request(context, request, &context.symbols.lock().unwrap());

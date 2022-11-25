@@ -105,6 +105,7 @@ impl FileLineMapping {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct FileRange {
     path: PathBuf,
     line: u32,
@@ -113,6 +114,13 @@ pub struct FileRange {
 }
 
 impl FileRange {
+    pub const UNKNOWN: Self = Self {
+        path: todo!(),
+        line: todo!(),
+        col_start: todo!(),
+        col_end: todo!(),
+    };
+
     pub(crate) fn in_range(&self, path: PathBuf, line: u32, col: u32) -> bool {
         if self.path != path {
             return false;

@@ -32,14 +32,24 @@ pub fn on_go_to_def_request(context: &mut Context, request: &Request) {
     unimplemented!();
 }
 
-struct Visitor {
+pub(crate) struct Visitor {
     /// The file we are looking for.
-    filepath: PathBuf,
-    line: u32,
-    col: u32,
-    result: Option<FileRange>,
+    pub(crate) filepath: PathBuf,
+    pub(crate) line: u32,
+    pub(crate) col: u32,
+    pub(crate) result: Option<FileRange>,
 }
+
 impl Visitor {
+    pub(crate) fn new(filepath: impl Into<PathBuf>, line: u32, col: u32) -> Self {
+        Self {
+            filepath: filepath.into(),
+            line,
+            col,
+            result: None,
+        }
+    }
+
     ///  match loc   
     fn match_loc(&self, loc: &Loc, services: &dyn ModuleServices) -> bool {
         let r = services.convert_loc_range(loc);
@@ -84,5 +94,11 @@ impl ScopeVisitor for Visitor {
     }
     fn finished(&self) -> bool {
         self.result.is_some()
+    }
+}
+
+impl std::fmt::Display for Visitor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        unimplemented!()
     }
 }

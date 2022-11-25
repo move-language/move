@@ -8,6 +8,8 @@ pub mod completion;
 pub mod context;
 pub mod diagnostics;
 pub mod goto_definition;
+#[cfg(test)]
+mod ide_test;
 pub mod item;
 pub mod modules;
 pub mod scope;

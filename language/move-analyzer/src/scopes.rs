@@ -2,6 +2,7 @@ use super::item::*;
 use super::modules::*;
 use super::scope::*;
 use super::types::*;
+use super::utils::*;
 use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -50,7 +51,13 @@ impl Scopes {
     }
 
     // Enter
-    pub(crate) fn enter_item(&self, name: Symbol, item: Item) {
+    pub(crate) fn enter_item(&self, s: &dyn ModuleServices, name: Symbol, item: Item) {
+        if let Some(loc) = item.debug_loc() {
+            let loc = s
+                .convert_loc_range(loc)
+                .unwrap_or(FileRange::UNKNOWN.clone());
+            log::trace!("enter scope name:{:?} item:{:?}", name, item,)
+        }
         self.scopes
             .as_ref()
             .borrow_mut()
@@ -61,11 +68,24 @@ impl Scopes {
 
     pub(crate) fn enter_top_item(
         &self,
+        s: &dyn ModuleServices,
         address: NumericalAddress,
         module: Symbol,
         item_name: Symbol,
         item: Item,
     ) {
+        if let Some(loc) = item.debug_loc() {
+            let loc = s
+                .convert_loc_range(loc)
+                .unwrap_or(FileRange::UNKNOWN.clone());
+            log::trace!(
+                "enter top scope address{:?} module:{:?} name:{:?} item:{:?}",
+                address,
+                module,
+                item_name,
+                item,
+            )
+        }
         let mut b = self.scopes.as_ref().borrow_mut();
         let mut s = b.first_mut().unwrap();
         if s.addresses.is_none() {
@@ -144,7 +164,7 @@ impl Scopes {
         });
         r
     }
-    
+
     pub(crate) fn resolve_name_access_chain_type(&self, chain: &NameAccessChain) -> ResolvedType {
         let failed = ResolvedType::new_unknown(chain.loc);
 

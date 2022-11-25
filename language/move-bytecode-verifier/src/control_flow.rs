@@ -2,31 +2,78 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! This module implements control flow checks for bytecode versions v6 and up.  The following
-//! properties are ensured:
+//! This module implements control flow checks.
+//!
+//! For bytecode versions 6 and up, the following properties are ensured:
 //! - The CFG is not empty and the last block ends in an unconditional jump, so it's not possible to
 //!   fall off the end of a function.
 //! - The CFG is reducible (and optionally max loop depth is bounded), to limit the potential for
 //!   pathologically long abstract interpretation runtimes (through poor choice of loop heads and
 //!   back edges).
+//!
+//! For bytecode versions 5 and below, delegates to `control_flow_v5`.
 use crate::{
+    control_flow_v5,
     loop_summary::{LoopPartition, LoopSummary},
     verifier::VerifierConfig,
 };
 use move_binary_format::{
+    access::{ModuleAccess, ScriptAccess},
     binary_views::FunctionView,
     errors::{PartialVMError, PartialVMResult},
-    file_format::{CodeOffset, CodeUnit, FunctionDefinitionIndex},
+    file_format::{
+        CodeOffset, CodeUnit, CompiledScript, FunctionDefinition, FunctionDefinitionIndex,
+    },
+    CompiledModule,
 };
 use move_core_types::vm_status::StatusCode;
 use std::collections::BTreeSet;
 
-pub fn verify_fallthrough(
+/// Perform control flow verification on the compiled function, returning its `FunctionView` if
+/// verification was successful.
+pub fn verify_function<'a>(
+    verifier_config: &'a VerifierConfig,
+    module: &'a CompiledModule,
+    index: FunctionDefinitionIndex,
+    function_definition: &'a FunctionDefinition,
+    code: &'a CodeUnit,
+) -> PartialVMResult<FunctionView<'a>> {
+    let function_handle = module.function_handle_at(function_definition.function);
+
+    if module.version() <= 5 {
+        control_flow_v5::verify(verifier_config, Some(index), code)?;
+        Ok(FunctionView::function(module, index, code, function_handle))
+    } else {
+        verify_fallthrough(Some(index), code)?;
+        let function_view = FunctionView::function(module, index, code, function_handle);
+        verify_reducibility(verifier_config, &function_view)?;
+        Ok(function_view)
+    }
+}
+
+/// Perform control flow verification on the compiled script, returning its `FunctionView` if
+/// verification was successful.
+pub fn verify_script<'a>(
+    verifier_config: &'a VerifierConfig,
+    script: &'a CompiledScript,
+) -> PartialVMResult<FunctionView<'a>> {
+    if script.version() <= 5 {
+        control_flow_v5::verify(verifier_config, None, &script.code)?;
+        Ok(FunctionView::script(script))
+    } else {
+        verify_fallthrough(None, &script.code)?;
+        let function_view = FunctionView::script(script);
+        verify_reducibility(verifier_config, &function_view)?;
+        Ok(function_view)
+    }
+}
+
+/// Check to make sure that the bytecode vector is non-empty and ends with a branching instruction.
+fn verify_fallthrough(
     current_function_opt: Option<FunctionDefinitionIndex>,
     code: &CodeUnit,
 ) -> PartialVMResult<()> {
     let current_function = current_function_opt.unwrap_or(FunctionDefinitionIndex(0));
-    // Check to make sure that the bytecode vector ends with a branching instruction.
     match code.code.last() {
         None => Err(PartialVMError::new(StatusCode::EMPTY_CODE_UNIT)),
         Some(last) if !last.is_unconditional_branch() => {
@@ -65,7 +112,7 @@ pub fn verify_fallthrough(
 ///
 ///  1. Tarjan, R.  1974.  Testing Flow Graph Reducibility.
 ///  2. Hecht, M. S., Ullman J. D.  1974.  Characterizations of Reducible Flow Graphs.
-pub fn verify_reducibility<'a>(
+fn verify_reducibility<'a>(
     verifier_config: &VerifierConfig,
     function_view: &'a FunctionView<'a>,
 ) -> PartialVMResult<()> {

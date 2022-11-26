@@ -243,10 +243,21 @@ axiom (
 {%- set SV = "'" ~ instance.1.suffix ~ "'" -%}
 {%- set ENC = "$EncodeKey'" ~ instance.0.suffix ~ "'" -%}
 
+{%- if options.native_equality -%}
 function $IsEqual'{{Type}}{{S}}'(t1: {{Self}}, t2: {{Self}}): bool {
-    // TODO: do we need to encode table identity?
     t1 == t2
 }
+{%- else -%}
+function $IsEqual'{{Type}}{{S}}'(t1: {{Self}}, t2: {{Self}}): bool {
+    LenTable(t1) == LenTable(t2) &&
+    (forall k: int :: (
+        ContainsTable(t1, k) ==> (
+            ContainsTable(t2, k) && GetTable(t1, k) == GetTable(t2, k)
+        ) &&
+        ContainsTable(t2, k) ==> ContainsTable(t1, k)
+    ))
+}
+{%- endif %}
 
 // Not inlined.
 function $IsValid'{{Type}}{{S}}'(t: {{Self}}): bool {

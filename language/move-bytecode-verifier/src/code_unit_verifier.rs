@@ -71,7 +71,7 @@ impl<'a> CodeUnitVerifier<'a> {
             function_view,
             name_def_map: HashMap::new(),
         };
-        code_unit_verifier.verify_common()
+        code_unit_verifier.verify_common(verifier_config)
     }
 
     fn verify_function(
@@ -110,12 +110,12 @@ impl<'a> CodeUnitVerifier<'a> {
             function_view,
             name_def_map,
         };
-        code_unit_verifier.verify_common()?;
+        code_unit_verifier.verify_common(verifier_config)?;
         AcquiresVerifier::verify(module, index, function_definition)
     }
 
-    fn verify_common(&self) -> PartialVMResult<()> {
-        StackUsageVerifier::verify(&self.resolver, &self.function_view)?;
+    fn verify_common(&self, verifier_config: &VerifierConfig) -> PartialVMResult<()> {
+        StackUsageVerifier::verify(verifier_config, &self.resolver, &self.function_view)?;
         type_safety::verify(&self.resolver, &self.function_view)?;
         locals_safety::verify(&self.resolver, &self.function_view)?;
         reference_safety::verify(&self.resolver, &self.function_view, &self.name_def_map)

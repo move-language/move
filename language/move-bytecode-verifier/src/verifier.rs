@@ -25,6 +25,7 @@ pub struct VerifierConfig {
     pub max_generic_instantiation_length: Option<usize>,
     pub max_basic_blocks: Option<usize>,
     pub max_value_stack_size: usize,
+    pub max_type_nodes: Option<usize>,
 }
 
 /// Helper for a "canonical" verification of a module.
@@ -93,6 +94,7 @@ impl Default for VerifierConfig {
             max_function_parameters: None,
             max_generic_instantiation_length: None,
             max_basic_blocks: None,
+            max_type_nodes: None,
             // Max size set to 1024 to match the size limit in the interpreter.
             max_value_stack_size: 1024,
         }

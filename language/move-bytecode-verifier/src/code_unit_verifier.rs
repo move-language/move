@@ -49,8 +49,14 @@ impl<'a> CodeUnitVerifier<'a> {
         }
         for (idx, function_definition) in module.function_defs().iter().enumerate() {
             let index = FunctionDefinitionIndex(idx as TableIndex);
-            Self::verify_function(verifier_config, index, function_definition, module, &name_def_map)
-                .map_err(|err| err.at_index(IndexKind::FunctionDefinition, index.0))?
+            Self::verify_function(
+                verifier_config,
+                index,
+                function_definition,
+                module,
+                &name_def_map,
+            )
+            .map_err(|err| err.at_index(IndexKind::FunctionDefinition, index.0))?
         }
         Ok(())
     }
@@ -120,6 +126,6 @@ impl<'a> CodeUnitVerifier<'a> {
         StackUsageVerifier::verify(verifier_config, &self.resolver, &self.function_view)?;
         type_safety::verify(&self.resolver, &self.function_view)?;
         locals_safety::verify(&self.resolver, &self.function_view)?;
-        reference_safety::verify(&self.resolver, &self.function_view, &self.name_def_map)
+        reference_safety::verify(&self.resolver, &self.function_view, self.name_def_map)
     }
 }

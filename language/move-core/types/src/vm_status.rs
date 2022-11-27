@@ -602,6 +602,7 @@ pub enum StatusCode {
     TOO_MANY_PARAMETERS = 1113,
     TOO_MANY_BASIC_BLOCKS = 1114,
     VALUE_STACK_OVERFLOW = 1115,
+    TOO_MANY_TYPE_NODES = 1116,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.

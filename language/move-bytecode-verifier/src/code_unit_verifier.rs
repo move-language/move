@@ -26,7 +26,7 @@ use std::collections::HashMap;
 pub struct CodeUnitVerifier<'a> {
     resolver: BinaryIndexedView<'a>,
     function_view: FunctionView<'a>,
-    name_def_map: HashMap<IdentifierIndex, FunctionDefinitionIndex>,
+    name_def_map: &'a HashMap<IdentifierIndex, FunctionDefinitionIndex>,
 }
 
 impl<'a> CodeUnitVerifier<'a> {
@@ -40,11 +40,16 @@ impl<'a> CodeUnitVerifier<'a> {
 
     fn verify_module_impl(
         verifier_config: &VerifierConfig,
-        module: &'a CompiledModule,
+        module: &CompiledModule,
     ) -> PartialVMResult<()> {
+        let mut name_def_map = HashMap::new();
+        for (idx, func_def) in module.function_defs().iter().enumerate() {
+            let fh = module.function_handle_at(func_def.function);
+            name_def_map.insert(fh.name, FunctionDefinitionIndex(idx as u16));
+        }
         for (idx, function_definition) in module.function_defs().iter().enumerate() {
             let index = FunctionDefinitionIndex(idx as TableIndex);
-            Self::verify_function(verifier_config, index, function_definition, module)
+            Self::verify_function(verifier_config, index, function_definition, module, &name_def_map)
                 .map_err(|err| err.at_index(IndexKind::FunctionDefinition, index.0))?
         }
         Ok(())
@@ -65,11 +70,12 @@ impl<'a> CodeUnitVerifier<'a> {
         control_flow::verify(verifier_config, None, &script.code)?;
         let function_view = FunctionView::script(script);
         let resolver = BinaryIndexedView::Script(script);
+        let name_def_map = HashMap::new();
         //verify
         let code_unit_verifier = CodeUnitVerifier {
             resolver,
             function_view,
-            name_def_map: HashMap::new(),
+            name_def_map: &name_def_map,
         };
         code_unit_verifier.verify_common(verifier_config)
     }
@@ -77,8 +83,9 @@ impl<'a> CodeUnitVerifier<'a> {
     fn verify_function(
         verifier_config: &VerifierConfig,
         index: FunctionDefinitionIndex,
-        function_definition: &'a FunctionDefinition,
-        module: &'a CompiledModule,
+        function_definition: &FunctionDefinition,
+        module: &CompiledModule,
+        name_def_map: &HashMap<IdentifierIndex, FunctionDefinitionIndex>,
     ) -> PartialVMResult<()> {
         // nothing to verify for native function
         let code = match &function_definition.code {
@@ -99,11 +106,6 @@ impl<'a> CodeUnitVerifier<'a> {
         }
 
         let resolver = BinaryIndexedView::Module(module);
-        let mut name_def_map = HashMap::new();
-        for (idx, func_def) in module.function_defs().iter().enumerate() {
-            let fh = module.function_handle_at(func_def.function);
-            name_def_map.insert(fh.name, FunctionDefinitionIndex(idx as u16));
-        }
         // verify
         let code_unit_verifier = CodeUnitVerifier {
             resolver,

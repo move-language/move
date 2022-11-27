@@ -27,7 +27,8 @@ pub fn init_log() {
 #[test]
 fn goto_definition_test() {
     init_log();
-    let m = Modules::new("./tests/goto_definition/");
+    let m =
+        Modules::new("/home/yuyang/projects/move/language/move-analyzer/tests/goto_definition/");
     let mut v = goto_definition::Visitor::new(
         "/home/yuyang/projects/move/language/move-analyzer/tests/goto_definition/sources/test.move",
         1,

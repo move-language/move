@@ -1,14 +1,8 @@
-
 use move_command_line_common::files::FileHash;
 
 use move_compiler::shared::Identifier;
 
-use move_compiler::{
-    parser::{
-        ast::*,
-    },
-    shared::*,
-};
+use move_compiler::{parser::ast::*, shared::*};
 
 use move_ir_types::location::{Loc, Spanned};
 use move_symbol_pool::Symbol;
@@ -17,7 +11,12 @@ use std::collections::HashMap;
 #[derive(Clone, Debug)]
 pub(crate) enum ResolvedType_ {
     UnKnown,
-    Struct(Name, Vec<StructTypeParameter>, Vec<(Field, ResolvedType)>),
+    Struct(
+        StructName,
+        Vec<StructTypeParameter>,
+        Vec<(Field, ResolvedType)>,
+    ),
+    StructName(StructName),
     /// struct { ... }
     BuildInType(BuildInType),
     /// T : drop
@@ -76,10 +75,15 @@ impl ResolvedType {
     }
 
     #[inline]
-    pub(crate) const fn new_unknown(loc: Loc) -> ResolvedType {
+    pub(crate) const fn new_struct(
+        loc: Loc,
+        name: StructName,
+        ts: Vec<StructTypeParameter>,
+        fields: Vec<(Field, ResolvedType)>,
+    ) -> ResolvedType {
         Self(Spanned {
             loc,
-            value: ResolvedType_::UnKnown,
+            value: ResolvedType_::Struct(name, ts, fields),
         })
     }
     pub(crate) fn new_multi(loc: Loc, one: ResolvedType, num: usize) -> Self {
@@ -98,10 +102,19 @@ impl ResolvedType {
     #[inline]
     pub(crate) fn new_build_in(_b: BuildInType) -> Self {
         Self(Spanned {
-            loc: UNKNOWN_LOC.clone(),
+            loc: UNKNOWN_LOC,
             value: ResolvedType_::Unit,
         })
     }
+
+    #[inline]
+    pub(crate) const fn new_unknown(lco: Loc) -> Self {
+        Self(Spanned {
+            loc: UNKNOWN_LOC,
+            value: ResolvedType_::UnKnown,
+        })
+    }
+
     #[inline]
     pub(crate) fn is_unknown(&self) -> bool {
         match &self.0.value {
@@ -181,6 +194,7 @@ impl ResolvedType {
             ResolvedType_::ApplyTParam(_, _, _) => {
                 unreachable!("called multiple times.")
             }
+            ResolvedType_::StructName(_) => {}
         }
     }
 }
@@ -188,9 +202,26 @@ impl ResolvedType {
 impl ResolvedType {
     pub(crate) fn chain_resolve_type_loc(&self) -> &Loc {
         match &self.0.value {
-            ResolvedType_::Struct(name, _, _) => &name.loc,
+            ResolvedType_::Struct(name, _, _) => name.borrow().0,
             ResolvedType_::TParam(name, _) => &name.loc,
             _ => unreachable!(),
+        }
+    }
+
+    pub(crate) fn xxx(&self) {
+        match self.0.value {
+            ResolvedType_::UnKnown => todo!(),
+            ResolvedType_::Struct(_, _, _) => todo!(),
+            ResolvedType_::BuildInType(_) => todo!(),
+            ResolvedType_::TParam(_, _) => todo!(),
+            ResolvedType_::ApplyTParam(_, _, _) => todo!(),
+            ResolvedType_::Ref(_, _) => todo!(),
+            ResolvedType_::Unit => todo!(),
+            ResolvedType_::Multiple(_) => todo!(),
+            ResolvedType_::Fun(_, _, _) => todo!(),
+            ResolvedType_::Vec(_) => todo!(),
+            ResolvedType_::ResolvedFailed(_) => todo!(),
+            ResolvedType_::StructName(_) => todo!(),
         }
     }
 }
@@ -224,3 +255,25 @@ impl BuildInType {
 }
 
 pub const UNKNOWN_LOC: Loc = Loc::new(FileHash::empty(), 0, 0);
+
+// impl std::fmt::Display for ResolvedType {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         match &self.0.value {
+//             ResolvedType_::UnKnown => "unkown",
+//             ResolvedType_::Struct(name, ts, fields) => {
+//                 let name = name.value().as_str();
+//                 let ts =   ts.iter().map(|  ()   |)
+//             }
+//             ResolvedType_::BuildInType(_) => todo!(),
+//             ResolvedType_::TParam(_, _) => todo!(),
+//             ResolvedType_::ApplyTParam(_, _, _) => todo!(),
+//             ResolvedType_::Ref(_, _) => todo!(),
+//             ResolvedType_::Unit => todo!(),
+//             ResolvedType_::Multiple(_) => todo!(),
+//             ResolvedType_::Fun(_, _, _) => todo!(),
+//             ResolvedType_::Vec(_) => todo!(),
+//             ResolvedType_::ResolvedFailed(_) => todo!(),
+//             ResolvedType_::StructUnresolved(_) => todo!(),
+//         }
+//     }
+// }

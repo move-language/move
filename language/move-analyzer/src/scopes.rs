@@ -198,7 +198,7 @@ impl Scopes {
             value: ResolvedType_::UnKnown,
         });
     }
-
+    // TODO type parameter can return???
     pub(crate) fn find_name_access_chain_type<'a>(
         &self,
         chain: &NameAccessChain,
@@ -254,7 +254,6 @@ impl Scopes {
                     return failed;
                 }
                 let modules = modules.unwrap();
-
                 let module = modules.modules.get(&chain_two.value.1.value);
                 if module.is_none() {
                     return failed;
@@ -294,6 +293,7 @@ impl Scopes {
                 let ret = self.resolve_type(ret.as_ref());
                 ResolvedType_::Fun(vec![], parameters, Box::new(ret))
             }
+
             Type_::Unit => ResolvedType_::Unit,
             Type_::Multiple(ref types) => {
                 let types: Vec<_> = types.iter().map(|v| self.resolve_type(v)).collect();
@@ -304,6 +304,12 @@ impl Scopes {
             loc: ty.loc,
             value: r,
         })
+    }
+    ///
+    #[allow(dead_code)]
+    pub(crate) fn current_scope_mut<R>(&self, x: impl FnOnce(&mut Scope) -> R) -> R {
+        let mut s = self.scopes.as_ref().borrow_mut();
+        x(s.last_mut().unwrap())
     }
 }
 

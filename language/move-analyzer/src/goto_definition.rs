@@ -1,4 +1,3 @@
-use std::fmt::write;
 use std::path::PathBuf;
 
 use crate::utils::FileRange;
@@ -88,14 +87,6 @@ impl ScopeVisitor for Visitor {
                     }
                 }
             }
-            Item::UseMember(name, item) => {
-                println!("!!!!!!!!!!!!!!!11 name :{:?}", name.value);
-                if self.match_loc(&name.loc, services) {
-                    if let Some(t) = services.convert_loc_range(item.as_ref().def_loc()) {
-                        self.result = Some(t);
-                    }
-                }
-            }
 
             Item::ApplyType(chain, ty) => {
                 if self.match_loc(&get_access_chain_name(chain).loc, services) {
@@ -110,7 +101,10 @@ impl ScopeVisitor for Visitor {
         }
     }
     fn file_should_visit(&self, p: &PathBuf) -> bool {
-        self.filepath == *p
+        let x = self.filepath == *p;
+        println!("xxxxxxxxx {:?} {:?} match:{:?}", p, self.filepath, x);
+
+        x
     }
     fn finished(&self) -> bool {
         self.result.is_some()

@@ -2,6 +2,8 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::scopes;
+
 use super::item::*;
 use super::scope::*;
 use super::scopes::*;
@@ -20,14 +22,12 @@ use move_compiler::{parser::ast::*, shared::*};
 
 use move_ir_types::location::Loc;
 
-use move_package::resolution::resolution_graph::ResolvedGraph;
 use move_package::source_package::layout::SourcePackageLayout;
 use move_package::source_package::manifest_parser::*;
 
 use move_package::*;
 use move_symbol_pool::Symbol;
 
-use core::panic;
 use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::btree_map::BTreeMap;
@@ -188,11 +188,12 @@ impl Modules {
 
     /// Entrance for `ScopeVisitor` base on analyze.
     pub fn run_visitor(&self, visitor: &mut dyn ScopeVisitor) {
+        let scopes = Scopes::new();
         log::info!("run visitor for {} ", visitor);
         // visit should `rev`.
         let x: Vec<_> = self.manifests.iter().rev().map(|x| x.clone()).collect();
         for m in x.iter() {
-            self.run_visitor2(visitor, m);
+            self.run_visitor_for_manifest(&scopes, visitor, m);
             if visitor.finished() {
                 return;
             }
@@ -200,10 +201,43 @@ impl Modules {
     }
 
     /// Entrance for `ScopeVisitor` base on analyze.
-    pub fn run_visitor2(&self, visitor: &mut dyn ScopeVisitor, manifest: &PathBuf) {
-        log::info!("run visitor for {} ", visitor);
-        let mut scopes = Scopes::new();
+    pub fn run_visitor_for_manifest(
+        &self,
+        scopes: &Scopes,
+        visitor: &mut dyn ScopeVisitor,
+        manifest: &PathBuf,
+    ) {
+        log::info!("run visitor for {:?} ", manifest);
+        // Handle imports.
+        for (_, ds) in self.modules.get(manifest).unwrap().sources.iter() {
+            for d in ds.iter() {
+                match d {
+                    Definition::Module(ref m) => {
+                        for m in m.members.iter() {
+                            match &m {
+                                ModuleMember::Use(u) => self.visit_use_decl(u, &scopes, visitor),
+                                _ => {}
+                            }
+                        }
+                    }
+                    Definition::Address(ref a) => {
+                        for m in a.modules.iter() {
+                            for m in m.members.iter() {
+                                match &m {
+                                    ModuleMember::Use(u) => {
+                                        self.visit_use_decl(u, &scopes, visitor)
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
 
+        // Handle constant.
         for (_, ds) in self.modules.get(manifest).unwrap().sources.iter() {
             for d in ds.iter() {
                 match d {
@@ -220,27 +254,100 @@ impl Modules {
             }
         }
 
-        // Second Pass.  enter struct type.
+        // Handle all struct type.
+        {
+            // Collect all struct definition.
+            let mut all: HashMap<Symbol, StructDefinition> = HashMap::new();
+            for (_, modules) in self.modules.iter() {
+                for (_, ds) in modules.sources.iter() {
+                    for d in ds.iter() {
+                        match d {
+                            Definition::Module(ref m) => {
+                                for member in m.members.iter() {
+                                    match member {
+                                        ModuleMember::Struct(x) => {
+                                            all.insert(x.name.value(), x.clone());
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                            }
+                            Definition::Address(ref a) => {
+                                for m in a.modules.iter() {
+                                    for member in m.members.iter() {
+                                        match member {
+                                            ModuleMember::Struct(x) => {
+                                                all.insert(x.name.value(), x.clone());
+                                            }
+                                            _ => {}
+                                        }
+                                    }
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            for (_, s) in all.iter() {
+                scopes.enter_item(self, s.name.value(), Item::StructName(s.name.clone()));
+            }
+            for (_, s) in all.iter() {
+                let fields = match &s.fields {
+                    StructFields::Defined(x) => {
+                        let mut fields = Vec::with_capacity(x.len());
+                        for (f, ty) in x.iter() {
+                            let ty = scopes.resolve_type(ty);
+                            fields.push((f.clone(), ty));
+                        }
+                        fields
+                    }
+                    StructFields::Native(x) => vec![],
+                };
+                let item = Item::Struct(s.name.clone(), s.type_parameters.clone(), fields);
+                scopes.enter_item(self, s.name.value(), item);
+            }
+        }
 
-        // // Enter all global to global_scope.
-        // for (_, modules) in self.modules.iter() {
-        //     for (_, ds) in modules.sources.iter() {
-        //         for d in ds.iter() {
-        //             match d {
-        //                 Definition::Module(ref m) => {
-        //                     self.enter_module_top(&mut scopes, m);
-        //                 }
-        //                 Definition::Address(ref a) => {
-        //                     self.enter_address_top(&mut scopes, a);
-        //                 }
+        // Enter function Item.
+        for (_, ds) in self.modules.get(manifest).unwrap().sources.iter() {
+            let enter_function = |f: &Function, scopes: &Scopes| {
+                let s = &f.signature;
+                let ts = s.type_parameters.clone();
+                let params: Vec<_> = s
+                    .parameters
+                    .iter()
+                    .map(|(var, ty)| (var.clone(), scopes.resolve_type(ty)))
+                    .collect();
+                let ret = scopes.resolve_type(&s.return_type);
+                let item = Item::Fun(f.name.clone(), ts, params, Box::new(ret));
+                scopes.enter_item(self, f.name.value(), item);
+            };
 
-        //                 _ => {}
-        //             }
-        //         }
-        //     }
-        // }
-
-        // Scan all for.
+            for d in ds.iter() {
+                match d {
+                    Definition::Module(ref m) => {
+                        for member in m.members.iter() {
+                            match member {
+                                ModuleMember::Function(f) => enter_function(f, scopes),
+                                _ => {}
+                            }
+                        }
+                    }
+                    Definition::Address(ref a) => {
+                        for m in a.modules.iter() {
+                            for member in m.members.iter() {
+                                match member {
+                                    ModuleMember::Function(f) => enter_function(f, scopes),
+                                    _ => {}
+                                }
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
 
         for (_f, ds) in self.modules.get(manifest).unwrap().sources.iter() {
             // We have match the files.
@@ -258,7 +365,6 @@ impl Modules {
                         for v in x.members.iter() {
                             // Right now we only need visit function body.
                             // All toplevel struct must be visited no matter what.
-
                             match v {
                                 ModuleMember::Function(x) => {
                                     self.visit_function(x, &scopes, visitor);
@@ -1057,6 +1163,7 @@ fn infer_type_on_expression(
                 _ => {}
             },
             ResolvedType_::ResolvedFailed(_) => {}
+            ResolvedType_::StructName(_) => {}
         }
     }
 }

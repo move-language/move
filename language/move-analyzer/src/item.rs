@@ -19,7 +19,20 @@ pub enum Item {
 
     /////////////////////////
     /// TYPE types
-    Struct(Name, Vec<StructTypeParameter>, Vec<(Field, ResolvedType)>),
+    Struct(
+        StructName,
+        Vec<StructTypeParameter>,
+        Vec<(Field, ResolvedType)>, /* TODO If this length is zero,maybe a native. */
+    ),
+    StructName(StructName),
+
+    Fun(
+        FunctionName,
+        Vec<(Name, Vec<Ability>)>, // type parameters.
+        Vec<(Var, ResolvedType)>,  // parameters.
+        Box<ResolvedType>,         // return type.
+    ),
+
     /// build in types.
     BuildInType(BuildInType),
     /// Here are all definition.
@@ -50,9 +63,10 @@ impl Item {
         let (loc, x) = match self {
             Item::TParam(name, ab) => (name.loc, ResolvedType_::TParam(name.clone(), ab.clone())),
             Item::Struct(name, types, fields) => (
-                name.loc,
+                name.borrow().0.clone(),
                 ResolvedType_::Struct(name.clone(), types.clone(), fields.clone()),
             ),
+            Item::StructName(name) => (name.loc(), ResolvedType_::StructName(name.clone())),
             Item::BuildInType(b) => (UNKNOWN_LOC, ResolvedType_::BuildInType(*b)),
             _ => return None,
         };
@@ -63,9 +77,10 @@ impl Item {
         match self {
             Self::Parameter(var, _) => &var.borrow().0,
             Self::ImportedMember(item) => item.as_ref().def_loc(),
-            Self::Struct(name, _, _) => &name.loc,
+            Self::Struct(name, _, _) => name.borrow().0,
             Self::BuildInType(_) => &UNKNOWN_LOC,
             Self::TParam(name, _) => &name.loc,
+            Self::Const(name, _) => &name.borrow().0,
             _ => unreachable!(),
         }
     }
@@ -76,7 +91,7 @@ impl Item {
             Item::ImportedUseModule(m, _) => Some(&m.loc),
             Item::ImportedMember(item) => item.as_ref().debug_loc(),
             Item::Const(name, _) => Some(name.borrow().0),
-            Item::Struct(name, _, _) => Some(&name.loc),
+            Item::Struct(name, _, _) => Some(&name.borrow().0),
             Item::BuildInType(_) => todo!(),
             Item::TParam(_, _) => todo!(),
             Item::ApplyType(_, _) => todo!(),
@@ -88,6 +103,8 @@ impl Item {
             Item::AccessFiled(_, _) => todo!(),
             Item::KeyWords(_) => todo!(),
             Item::MacroCall(_) => todo!(),
+            Item::StructName(name) => Some(name.borrow().0),
+            Item::Fun(name, _, _, _) => Some(name.borrow().0),
         }
     }
 }
@@ -120,6 +137,10 @@ pub(crate) fn get_access_chain_name(x: &NameAccessChain) -> &Name {
         | move_compiler::parser::ast::NameAccessChain_::Two(_, name)
         | move_compiler::parser::ast::NameAccessChain_::Three(_, name) => name,
     }
+}
+
+impl Item {
+    pub(crate) fn fix_unresolved_struct_type(&mut self) {}
 }
 
 // impl ShowWithModule for Item {

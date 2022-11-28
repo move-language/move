@@ -10,7 +10,6 @@
 //! basically just a mapping from file identifier (this could be the file's path were it to be
 //! saved) to its textual contents.
 
-use crate::symbols;
 use lsp_server::Notification;
 use lsp_types::{
     notification::Notification as _, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
@@ -45,52 +44,4 @@ impl VirtualFileSystem {
     pub fn remove(&mut self, identifier: &PathBuf) {
         self.files.remove(identifier);
     }
-}
-
-/// Updates the given virtual file system based on the text document sync notification that was sent.
-pub fn on_text_document_sync_notification(
-    files: &mut VirtualFileSystem,
-    symbolicator_runner: &symbols::SymbolicatorRunner,
-    notification: &Notification,
-) {
-    eprintln!("text document notification");
-    match notification.method.as_str() {
-        lsp_types::notification::DidOpenTextDocument::METHOD => {
-            let parameters =
-                serde_json::from_value::<DidOpenTextDocumentParams>(notification.params.clone())
-                    .expect("could not deserialize notification");
-            files.update(
-                parameters.text_document.uri.to_file_path().unwrap(),
-                &parameters.text_document.text,
-            );
-            symbolicator_runner.run(parameters.text_document.uri.to_file_path().unwrap());
-        }
-        lsp_types::notification::DidChangeTextDocument::METHOD => {
-            let parameters =
-                serde_json::from_value::<DidChangeTextDocumentParams>(notification.params.clone())
-                    .expect("could not deserialize notification");
-            files.update(
-                parameters.text_document.uri.to_file_path().unwrap(),
-                &parameters.content_changes.last().unwrap().text,
-            );
-        }
-        lsp_types::notification::DidSaveTextDocument::METHOD => {
-            let parameters =
-                serde_json::from_value::<DidSaveTextDocumentParams>(notification.params.clone())
-                    .expect("could not deserialize notification");
-            files.update(
-                parameters.text_document.uri.to_file_path().unwrap(),
-                &parameters.text.unwrap(),
-            );
-            symbolicator_runner.run(parameters.text_document.uri.to_file_path().unwrap());
-        }
-        lsp_types::notification::DidCloseTextDocument::METHOD => {
-            let parameters =
-                serde_json::from_value::<DidCloseTextDocumentParams>(notification.params.clone())
-                    .expect("could not deserialize notification");
-            files.remove(&parameters.text_document.uri.to_file_path().unwrap());
-        }
-        _ => eprintln!("invalid notification '{}'", notification.method),
-    }
-    eprintln!("text document notification handled");
 }

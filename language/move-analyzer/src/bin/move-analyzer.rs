@@ -19,14 +19,34 @@ use std::{
 };
 
 use move_analyzer::{
-    completion::on_completion_request,
-    context::Context,
-    modules::Modules,
-    symbols,
-    vfs::{on_text_document_sync_notification, VirtualFileSystem},
+    completion::on_completion_request, context::Context, goto_definition, modules::Modules,
+    vfs::VirtualFileSystem,
 };
 use move_symbol_pool::Symbol;
 use url::Url;
+
+use log::{Level, Metadata, Record};
+
+struct SimpleLogger;
+
+impl log::Log for SimpleLogger {
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= Level::Trace
+    }
+    fn log(&self, record: &Record) {
+        if self.enabled(record.metadata()) {
+            eprintln!("{} - {}", record.level(), record.args());
+        }
+    }
+    fn flush(&self) {}
+}
+const LOGGER: SimpleLogger = SimpleLogger;
+
+pub fn init_log() {
+    log::set_logger(&LOGGER)
+        .map(|()| log::set_max_level(log::LevelFilter::Trace))
+        .unwrap()
+}
 
 #[derive(Parser)]
 #[clap(author, version, about)]
@@ -36,7 +56,7 @@ fn main() {
     // For now, move-analyzer only responds to options built-in to clap,
     // such as `--help` or `--version`.
     Options::parse();
-
+    init_log();
     // stdio is used to communicate Language Server Protocol requests and responses.
     // stderr is used for logging (and, when Visual Studio Code is used to communicate with this
     // server, it captures this output in a dedicated "output channel").
@@ -44,18 +64,16 @@ fn main() {
         .unwrap()
         .to_string_lossy()
         .to_string();
-    eprintln!(
+    log::info!(
         "Starting language server '{}' communicating via stdio...",
         exe
     );
 
     let (connection, io_threads) = Connection::stdio();
-    let symbols = Arc::new(Mutex::new(symbols::Symbolicator::empty_symbols()));
+
     let mut context = Context {
         modules: Modules::new(std::env::current_dir().unwrap()),
         connection,
-        files: VirtualFileSystem::default(),
-        symbols: symbols.clone(),
     };
 
     let (id, client_response) = context
@@ -103,50 +121,15 @@ fn main() {
                 work_done_progress: None,
             },
         }),
-        definition_provider: Some(OneOf::Left(symbols::DEFS_AND_REFS_SUPPORT)),
-        type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(
-            symbols::DEFS_AND_REFS_SUPPORT,
-        )),
-        references_provider: Some(OneOf::Left(symbols::DEFS_AND_REFS_SUPPORT)),
-        document_symbol_provider: Some(OneOf::Left(true)),
+        definition_provider: Some(OneOf::Left(true)),
+        type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(true)),
+        references_provider: Some(OneOf::Left(false)),
+        // document_symbol_provider: Some(OneOf::Left(true)),
         ..Default::default()
     })
     .expect("could not serialize server capabilities");
 
     let (diag_sender, diag_receiver) = bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
-    let mut symbolicator_runner = symbols::SymbolicatorRunner::idle();
-    if symbols::DEFS_AND_REFS_SUPPORT {
-        let initialize_params: lsp_types::InitializeParams =
-            serde_json::from_value(client_response)
-                .expect("could not deserialize client capabilities");
-
-        symbolicator_runner = symbols::SymbolicatorRunner::new(symbols.clone(), diag_sender);
-
-        // If initialization information from the client contains a path to the directory being
-        // opened, try to initialize symbols before sending response to the client. Do not bother
-        // with diagnostics as they will be recomputed whenever the first source file is opened. The
-        // main reason for this is to enable unit tests that rely on the symbolication information
-        // to be available right after the client is initialized.
-        if let Some(uri) = initialize_params.root_uri {
-            if let Some(p) = symbols::SymbolicatorRunner::root_dir(&uri.to_file_path().unwrap()) {
-                // need to evaluate in a separate thread to allow for a larger stack size (needed on
-                // Windows)
-                thread::Builder::new()
-                    .stack_size(symbols::STACK_SIZE_BYTES)
-                    .spawn(move || {
-                        if let Ok((Some(new_symbols), _)) =
-                            symbols::Symbolicator::get_symbols(p.as_path())
-                        {
-                            let mut old_symbols = symbols.lock().unwrap();
-                            (*old_symbols).merge(new_symbols);
-                        }
-                    })
-                    .unwrap()
-                    .join()
-                    .unwrap();
-            }
-        }
-    };
 
     context
         .connection
@@ -173,7 +156,7 @@ fn main() {
                                         .connection
                                         .sender
                                         .send(lsp_server::Message::Notification(notification)) {
-                                            eprintln!("could not send diagnostics response: {:?}", err);
+                                            log::error!("could not send diagnostics response: {:?}", err);
                                         };
                                 }
                             },
@@ -189,12 +172,12 @@ fn main() {
                                     .connection
                                     .sender
                                     .send(lsp_server::Message::Notification(notification)) {
-                                        eprintln!("could not send compiler error response: {:?}", err);
+                                        log::error!("could not send compiler error response: {:?}", err);
                                     };
                             },
                         }
                     },
-                    Err(error) => eprintln!("symbolicator message error: {:?}", error),
+                    Err(error) => log::error!("symbolicator message error: {:?}", error),
                 }
             },
             recv(context.connection.receiver) -> message => {
@@ -209,64 +192,55 @@ fn main() {
                                 // It ought to, especially once it begins processing requests that may
                                 // take a long time to respond to.
                             }
-                            _ => on_notification(&mut context, &symbolicator_runner, &notification),
+                            _ => on_notification(&mut context,   &notification),
                         }
                     }
-                    Err(error) => eprintln!("IDE message error: {:?}", error),
+                    Err(error) => log::error!("IDE message error: {:?}", error),
                 }
             }
         };
     }
-
     io_threads.join().expect("I/O threads could not finish");
-    symbolicator_runner.quit();
-    eprintln!("Shut down language server '{}'.", exe);
+    log::error!("Shut down language server '{}'.", exe);
 }
 
 fn on_request(context: &Context, request: &Request) {
+    log::info!("receive method:{}", request.method.as_str());
+
     match request.method.as_str() {
-        lsp_types::request::Completion::METHOD => {
-            on_completion_request(context, request, &context.symbols.lock().unwrap())
-        }
+        lsp_types::request::Completion::METHOD => on_completion_request(context, request),
         lsp_types::request::GotoDefinition::METHOD => {
-            symbols::on_go_to_def_request(context, request, &context.symbols.lock().unwrap());
+            goto_definition::on_go_to_def_request(context, request);
         }
         lsp_types::request::GotoTypeDefinition::METHOD => {
-            symbols::on_go_to_type_def_request(context, request, &context.symbols.lock().unwrap());
+            goto_definition::on_go_to_def_request(context, request);
         }
-        lsp_types::request::References::METHOD => {
-            symbols::on_references_request(context, request, &context.symbols.lock().unwrap());
-        }
-        lsp_types::request::HoverRequest::METHOD => {
-            symbols::on_hover_request(context, request, &context.symbols.lock().unwrap());
-        }
-        lsp_types::request::DocumentSymbolRequest::METHOD => {
-            symbols::on_document_symbol_request(context, request, &context.symbols.lock().unwrap());
-        }
-        _ => eprintln!("handle request '{}' from client", request.method),
+
+        // lsp_types::request::References::METHOD => {
+        //     symbols::on_references_request(context, request, &context.symbols.lock().unwrap());
+        // }
+        // lsp_types::request::HoverRequest::METHOD => {
+        //     symbols::on_hover_request(context, request, &context.symbols.lock().unwrap());
+        // }
+        // lsp_types::request::DocumentSymbolRequest::METHOD => {
+        //     symbols::on_document_symbol_request(context, request, &context.symbols.lock().unwrap());
+        // }
+        _ => log::error!("handle request '{}' from client", request.method),
     }
 }
 
 fn on_response(_context: &Context, _response: &Response) {
-    eprintln!("handle response from client");
+    log::error!("handle response from client");
 }
 
-fn on_notification(
-    context: &mut Context,
-    symbolicator_runner: &symbols::SymbolicatorRunner,
-    notification: &Notification,
-) {
+fn on_notification(context: &mut Context, notification: &Notification) {
     match notification.method.as_str() {
         lsp_types::notification::DidOpenTextDocument::METHOD
         | lsp_types::notification::DidChangeTextDocument::METHOD
         | lsp_types::notification::DidSaveTextDocument::METHOD
         | lsp_types::notification::DidCloseTextDocument::METHOD => {
-            on_text_document_sync_notification(
-                &mut context.files,
-                symbolicator_runner,
-                notification,
-            )
+            log::error!("handle notification '{}' from client", notification.method);
         }
-        _ => eprintln!("handle notification '{}' from client", notification.method),
+        _ => log::error!("handle notification '{}' from client", notification.method),
     }
 }

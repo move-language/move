@@ -10,6 +10,8 @@ use move_symbol_pool::Symbol;
 use std::collections::HashMap;
 use std::{path::*, vec};
 
+use crate::modules::Ending;
+
 /// Converts a location from the byte index format to the line/character (Position) format, where
 /// line/character are 0-based.
 pub fn get_loc(
@@ -94,10 +96,10 @@ impl FileLineMapping {
                 if start_index >= *start && start_index <= *end {
                     p = Some((*start, *end));
                     line = index;
+                    break;
                 }
             }
             let p = p?;
-            println!("p:{:?} {} {} ", p, start_index, end_index);
             Some(FileRange {
                 path: filepath.clone(),
                 line: line as u32,

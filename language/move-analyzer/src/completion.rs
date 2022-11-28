@@ -2,7 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{context::Context, symbols::Symbols};
+use crate::context::Context;
 use lsp_server::Request;
 use lsp_types::{CompletionItem, CompletionItemKind, CompletionParams, Position};
 use move_command_line_common::files::FileHash;
@@ -60,61 +60,6 @@ fn builtins() -> Vec<CompletionItem> {
         .collect()
 }
 
-/// Lexes the Move source file at the given path and returns a list of completion items
-/// corresponding to the non-keyword identifiers therein.
-///
-/// Currently, this does not perform semantic analysis to determine whether the identifiers
-/// returned are valid at the request's cursor position. However, this list of identifiers is akin
-/// to what editors like Visual Studio Code would provide as completion items if this language
-/// server did not initialize with a response indicating it's capable of providing completions. In
-/// the future, the server should be modified to return semantically valid completion items, not
-/// simple textual suggestions.
-fn identifiers(buffer: &str, symbols: &Symbols, path: &PathBuf) -> Vec<CompletionItem> {
-    let mut lexer = Lexer::new(buffer, FileHash::new(buffer));
-    if lexer.advance().is_err() {
-        return vec![];
-    }
-
-    let mut ids = HashSet::new();
-    while lexer.peek() != Tok::EOF {
-        // Some tokens, such as "phantom", are contextual keywords that are only reserved in
-        // certain contexts. Since for now this language server doesn't analyze semantic context,
-        // tokens such as "phantom" are always present in keyword suggestions. To avoid displaying
-        // these keywords to the user twice in the case that the token "phantom" is present in the
-        // source program (once as a keyword, and once as an identifier), we filter out any
-        // identifier token that has the same text as a keyword.
-        if lexer.peek() == Tok::Identifier && !KEYWORDS.contains(&lexer.content()) {
-            // The completion item kind "text" indicates the item is not based on any semantic
-            // context of the request cursor's position.
-            ids.insert(lexer.content());
-        }
-        if lexer.advance().is_err() {
-            break;
-        }
-    }
-
-    let mods_opt = symbols.file_mods().get(path);
-
-    // The completion item kind "text" indicates that the item is based on simple textual matching,
-    // not any deeper semantic analysis.
-    ids.iter()
-        .map(|label| {
-            if let Some(mods) = mods_opt {
-                if mods
-                    .iter()
-                    .any(|m| m.functions().contains_key(&Symbol::from(*label)))
-                {
-                    completion_item(label, CompletionItemKind::Function)
-                } else {
-                    completion_item(label, CompletionItemKind::Text)
-                }
-            } else {
-                completion_item(label, CompletionItemKind::Text)
-            }
-        })
-        .collect()
-}
-
 /// Returns the token corresponding to the "trigger character" that precedes the user's cursor,
 /// if it is one of `.`, `:`, or `::`. Otherwise, returns `None`.
 fn get_cursor_token(buffer: &str, position: &Position) -> Option<Tok> {
@@ -145,59 +90,6 @@ fn get_cursor_token(buffer: &str, position: &Position) -> Option<Tok> {
 /// Sends the given connection a response to a completion request.
 ///
 /// The completions returned depend upon where the user's cursor is positioned.
-pub fn on_completion_request(context: &Context, request: &Request, symbols: &Symbols) {
-    eprintln!("handling completion request");
-    let parameters = serde_json::from_value::<CompletionParams>(request.params.clone())
-        .expect("could not deserialize completion request");
-
-    let path = parameters
-        .text_document_position
-        .text_document
-        .uri
-        .to_file_path()
-        .unwrap();
-    let buffer = context.files.get(&path);
-    if buffer.is_none() {
-        eprintln!(
-            "Could not read '{:?}' when handling completion request",
-            path
-        );
-    }
-
-    // The completion items we provide depend upon where the user's cursor is positioned.
-    let cursor =
-        buffer.and_then(|buf| get_cursor_token(buf, &parameters.text_document_position.position));
-
-    let mut items = vec![];
-    match cursor {
-        Some(Tok::Colon) => {
-            items.extend_from_slice(&primitive_types());
-        }
-        Some(Tok::Period) | Some(Tok::ColonColon) => {
-            // `.` or `::` must be followed by identifiers, which are added to the completion items
-            // below.
-        }
-        _ => {
-            // If the user's cursor is positioned anywhere other than following a `.`, `:`, or `::`,
-            // offer them Move's keywords, operators, and builtins as completion items.
-            items.extend_from_slice(&keywords());
-            items.extend_from_slice(&builtins());
-        }
-    }
-
-    if let Some(buffer) = &buffer {
-        let identifiers = identifiers(buffer, symbols, &path);
-        items.extend_from_slice(&identifiers);
-    }
-
-    let result = serde_json::to_value(items).expect("could not serialize completion response");
-    eprintln!("about to send completion response");
-    let response = lsp_server::Response::new_ok(request.id.clone(), result);
-    if let Err(err) = context
-        .connection
-        .sender
-        .send(lsp_server::Message::Response(response))
-    {
-        eprintln!("could not send completion response: {:?}", err);
-    }
+pub fn on_completion_request(context: &Context, request: &Request) {
+    unimplemented!();
 }

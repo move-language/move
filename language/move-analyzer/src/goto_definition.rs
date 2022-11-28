@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use crate::utils::path_concat;
 use crate::utils::FileRange;
 
 use super::context::*;
@@ -15,7 +16,7 @@ use move_compiler::shared::TName;
 use move_ir_types::location::Loc;
 
 /// Handles go-to-def request of the language server
-pub fn on_go_to_def_request(context: &mut Context, request: &Request) {
+pub fn on_go_to_def_request(context: &Context, request: &Request) {
     let parameters = serde_json::from_value::<GotoDefinitionParams>(request.params.clone())
         .expect("could not deserialize go-to-def request");
 
@@ -28,9 +29,19 @@ pub fn on_go_to_def_request(context: &mut Context, request: &Request) {
     let loc = parameters.text_document_position_params.position;
     let line = loc.line;
     let col = loc.character;
-
+    let mut fpath = path_concat(
+        PathBuf::from(std::env::current_dir().unwrap()).as_path(),
+        fpath.as_path(),
+    );
+    log::info!(
+        "request is goto definition,fpath:{:?}  line:{} col:{}",
+        fpath.as_path(),
+        line,
+        col,
+    );
     let mut visitor = Visitor::new(fpath, line, col);
     context.modules.run_visitor(&mut visitor);
+
     match &visitor.result {
         Some(x) => {
             let range = Range {
@@ -44,7 +55,8 @@ pub fn on_go_to_def_request(context: &mut Context, request: &Request) {
                 },
             };
             let uri = Url::from_file_path(x.path.as_path()).unwrap();
-            let loc = Location::new(uri, range);
+            let loc = GotoDefinitionResponse::Scalar(Location::new(uri, range));
+            log::info!("found location is {:?}", loc);
             let r = Response::new_ok(request.id.clone(), serde_json::to_value(loc).unwrap());
             context
                 .connection
@@ -98,41 +110,33 @@ impl ScopeVisitor for Visitor {
     ) {
         match item {
             ItemOrAccess::Item(item) => match item {
-                Item::Parameter(var, _) => {
-                    if self.match_loc(&var.borrow().0, services) {
-                        if let Some(t) = services.convert_loc_range(&var.borrow().0) {
-                            self.result = Some(t);
-                        }
-                    }
-                }
-                _ => {}
-            },
-            ItemOrAccess::Access(item) => match item {
-                Access::UseMember(name, item) => {
-                    if self.match_loc(&name.loc, services) {
-                        if let Some(t) = services.convert_loc_range(item.as_ref().def_loc()) {
-                            self.result = Some(t);
-                        }
-                    }
-                }
+                // If Some special add here.
+                // Right now default is enough.
+                _ => {
+                    let loc = item.def_loc();
 
-                Access::ApplyType(chain, ty) => {
-                    if self.match_loc(&get_access_chain_name(chain).loc, services) {
-                        if let Some(t) =
-                            services.convert_loc_range(ty.as_ref().chain_resolve_type_loc())
-                        {
+                    if self.match_loc(loc, services) {
+                        if let Some(t) = services.convert_loc_range(loc) {
                             self.result = Some(t);
                         }
                     }
                 }
-                _ => {}
+            },
+            ItemOrAccess::Access(access) => match item {
+                _ => {
+                    let locs = access.access_def_loc();
+                    if self.match_loc(locs.0, services) {
+                        if let Some(t) = services.convert_loc_range(locs.1) {
+                            self.result = Some(t);
+                        }
+                    }
+                }
             },
         }
     }
 
     fn file_should_visit(&self, p: &PathBuf) -> bool {
         let x = self.filepath == *p;
-        println!("xxxxxxxxx {:?} {:?} match:{:?}", p, self.filepath, x);
         x
     }
 

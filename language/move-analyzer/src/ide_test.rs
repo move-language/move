@@ -11,7 +11,7 @@ impl log::Log for SimpleLogger {
     }
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
-            println!("{} - {}", record.level(), record.args());
+            eprintln!("{} - {}", record.level(), record.args());
         }
     }
     fn flush(&self) {}
@@ -27,13 +27,9 @@ pub fn init_log() {
 #[test]
 fn goto_definition_test() {
     init_log();
-    let m =
-        Modules::new("/home/yuyang/projects/move/language/move-analyzer/tests/goto_definition/");
-    let mut v = goto_definition::Visitor::new(
-        "/home/yuyang/projects/move/language/move-analyzer/tests/goto_definition/sources/test.move",
-        1,
-        25,
-    );
+    let m = Modules::new("/home/yuyang/projects/test-move2");
+    let mut v =
+        goto_definition::Visitor::new("/home/yuyang/projects/test-move2/sources/test.move", 2, 16);
     m.run_visitor(&mut v);
-    println!("{:?}", v.result.unwrap());
+    eprintln!("{:?}", v.result.unwrap());
 }

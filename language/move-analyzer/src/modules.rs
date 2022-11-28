@@ -33,6 +33,7 @@ use std::cell::RefCell;
 use std::collections::btree_map::BTreeMap;
 use std::collections::HashMap;
 
+use std::fmt::format;
 use std::slice::SliceIndex;
 
 use std::{path::PathBuf, rc::Rc};
@@ -208,6 +209,11 @@ impl Modules {
         manifest: &PathBuf,
     ) {
         log::info!("run visitor for {:?} ", manifest);
+        let _ending = Ending {
+            msg: format!("finish scan manifest {:?}", manifest.as_path()),
+        };
+        log::info!("imports.");
+
         // Handle imports.
         for (_, ds) in self.modules.get(manifest).unwrap().sources.iter() {
             for d in ds.iter() {
@@ -236,7 +242,7 @@ impl Modules {
                 }
             }
         }
-
+        log::info!("const.");
         // Handle constant.
         for (_, ds) in self.modules.get(manifest).unwrap().sources.iter() {
             for d in ds.iter() {
@@ -253,6 +259,8 @@ impl Modules {
                 }
             }
         }
+
+        log::info!("struct type.");
 
         // Handle all struct type.
         {
@@ -324,6 +332,7 @@ impl Modules {
             }
         }
 
+        log::info!("functions.");
         // Enter function Item.
         for (_, ds) in self.modules.get(manifest).unwrap().sources.iter() {
             let enter_function = |f: &Function, scopes: &Scopes| {
@@ -363,7 +372,7 @@ impl Modules {
                 }
             }
         }
-
+        log::info!("function body.");
         for (_f, ds) in self.modules.get(manifest).unwrap().sources.iter() {
             // We have match the files.
             for d in ds.iter() {
@@ -505,14 +514,14 @@ impl Modules {
     fn visit_bind(
         &self,
         bind: &Bind,
-        _ty: &ResolvedType,
+        ty: &ResolvedType,
         scopes: &Scopes,
-        _field: Option<&'_ Field>,
+        field: Option<&'_ Field>,
         visitor: &mut dyn ScopeVisitor,
     ) {
         match &bind.value {
             Bind_::Var(var) => {
-                let item = ItemOrAccess::Access(Access::ExprVar(var.clone()));
+                let item = ItemOrAccess::Item(Item::Var(var.clone(), ty.clone()));
                 visitor.handle_item(self, scopes, &item);
                 if visitor.finished() {
                     return;
@@ -534,7 +543,6 @@ impl Modules {
                 if visitor.finished() {
                     return;
                 }
-
                 for t in types.iter() {
                     self.visit_type_apply(t, scopes, visitor);
                     if visitor.finished() {
@@ -589,8 +597,12 @@ impl Modules {
                 }
             },
             Exp_::Move(x) | Exp_::Copy(x) => scopes.find_var_type(x.0.value),
-            Exp_::Name(_name, _ /*  TODO this is a error. */) => {
-                return UNKNOWN_TYPE.clone();
+            Exp_::Name(name, _ /*  TODO this is a error. */) => {
+                let ty = scopes.find_name_access_chain_expr_type(name, &mut None, |name| {
+                    self.name_to_addr(name)
+                });
+
+                return ty;
             }
             Exp_::Call(name, is_macro, ref type_args, exprs) => {
                 if *is_macro {
@@ -600,7 +612,9 @@ impl Modules {
                     }
                 } else {
                     let fun_type =
-                        scopes.find_name_access_chain_type(name, |name| self.name_to_addr(name));
+                        scopes.find_name_access_chain_expr_type(name, &mut None, |name| {
+                            self.name_to_addr(name)
+                        });
                     match &fun_type.0.value {
                         ResolvedType_::Fun(ref type_parameters, parameters, _) => {
                             let type_args: Option<Vec<ResolvedType>> =
@@ -642,8 +656,8 @@ impl Modules {
             }
 
             Exp_::Pack(name, type_args, _) => {
-                let mut struct_ty =
-                    scopes.find_name_access_chain_type(name, |s| self.name_to_addr(s));
+                let mut struct_ty = scopes
+                    .find_name_access_chain_expr_type(name, &mut None, |s| self.name_to_addr(s));
                 match &struct_ty.0.value {
                     ResolvedType_::Struct(ItemStruct {
                         name: _,
@@ -788,6 +802,8 @@ impl Modules {
     }
 
     fn visit_expr(&self, exp: &Exp, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
+        log::trace!("visit_expr:{:?}", exp);
+
         match &exp.value {
             Exp_::Value(ref v) => {
                 if let Some(name) = get_name_from_value(v) {
@@ -796,11 +812,29 @@ impl Modules {
                 }
             }
             Exp_::Move(var) | Exp_::Copy(var) => {
-                let item = ItemOrAccess::Access(Access::ExprVar(var.clone()));
+                let item = ItemOrAccess::Access(Access::ExprVar(
+                    var.clone(),
+                    scopes.find_var_decl(var.0.value),
+                ));
                 visitor.handle_item(self, scopes, &item);
             }
-            Exp_::Name(chain, _ty /*  How to use _ty */) => {
-                let item = ItemOrAccess::Access(Access::NameAccessChain(chain.clone()));
+            Exp_::Name(
+                chain,
+                _ty, /*
+                     yuyang:
+                      TODO How to use _ty,
+                      looks like _ty is not used. */
+            ) => {
+                let mut item = Some(Item::new_dummy());
+
+                let ttt = scopes.find_name_access_chain_expr_type(chain, &mut item, |name| {
+                    self.name_to_addr(name)
+                });
+
+                let item = ItemOrAccess::Access(Access::ExprAccessChain(
+                    chain.clone(),
+                    Box::new(item.unwrap()),
+                ));
                 visitor.handle_item(self, scopes, &item);
             }
             Exp_::Call(ref chain, is_macro, ref types, ref exprs) => {
@@ -809,7 +843,15 @@ impl Modules {
                     let item = ItemOrAccess::Access(Access::MacroCall(c));
                     visitor.handle_item(self, scopes, &item);
                 } else {
-                    let item = ItemOrAccess::Access(Access::NameAccessChain(chain.clone()));
+                    let mut item = Some(Item::new_dummy());
+                    scopes.find_name_access_chain_expr_type(chain, &mut item, |name| {
+                        self.name_to_addr(name)
+                    });
+                    let item = ItemOrAccess::Access(Access::ExprAccessChain(
+                        chain.clone(),
+                        Box::new(item.unwrap()),
+                    ));
+
                     visitor.handle_item(self, scopes, &item);
                 }
                 if visitor.finished() {
@@ -823,8 +865,8 @@ impl Modules {
                         }
                     }
                 }
-                for _expr in exprs.value.iter() {
-                    self.visit_expr(exp, scopes, visitor);
+                for expr in exprs.value.iter() {
+                    self.visit_expr(expr, scopes, visitor);
                     if visitor.finished() {
                         return;
                     }
@@ -833,7 +875,7 @@ impl Modules {
 
             Exp_::Pack(ref leading, ref types, fields) => {
                 let ty = self.get_expr_type(exp, scopes);
-                let item = ItemOrAccess::Access(Access::NameAccessChain(leading.clone()));
+                let item = ItemOrAccess::Access(Access::TypeAccessChain(leading.clone()));
                 visitor.handle_item(self, scopes, &item);
                 if visitor.finished() {
                     return;
@@ -1064,7 +1106,6 @@ impl Modules {
             if visitor.finished() {
                 return;
             }
-
             // Enter this.
             scopes.enter_item(self, name.value, item);
         }
@@ -1110,12 +1151,6 @@ pub struct IDEModule {
     >,
 
     filepath_to_filehash: HashMap<String /* file path */, FileHash>,
-}
-
-#[test]
-fn xxxx() {
-    let s = Scopes::new();
-    s.enter_scope(|s| s.enter_scope(|s| s.enter_scope(|_| {})));
 }
 
 const UNKNOWN_TYPE: ResolvedType = ResolvedType::new_unknown(Loc::new(FileHash::empty(), 0, 0));
@@ -1229,3 +1264,12 @@ pub trait ScopeVisitor: std::fmt::Display {
 }
 
 static ERR_ADDRESS: AccountAddress = AccountAddress::ONE;
+
+pub(crate) struct Ending {
+    pub(crate) msg: String,
+}
+impl Drop for Ending {
+    fn drop(&mut self) {
+        log::info!("ending {}", self.msg.as_str());
+    }
+}

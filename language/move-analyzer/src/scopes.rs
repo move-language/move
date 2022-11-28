@@ -1,3 +1,5 @@
+use crate::item;
+
 use super::item::*;
 use super::modules::*;
 use super::scope::*;
@@ -9,6 +11,7 @@ use std::rc::Rc;
 
 use move_compiler::{parser::ast::*, shared::*};
 use move_core_types::account_address::AccountAddress;
+use move_ir_types::location::Loc;
 use move_ir_types::location::Spanned;
 use move_symbol_pool::Symbol;
 
@@ -47,12 +50,10 @@ impl Scopes {
     // Enter
     pub(crate) fn enter_item(&self, s: &dyn ModuleServices, name: Symbol, item: impl Into<Item>) {
         let item = item.into();
-
-        if let Some(loc) = item.debug_loc() {
-            let loc = s.convert_loc_range(loc).unwrap_or(FileRange::unknown());
-            log::trace!("{}", loc);
-            log::trace!("enter scope name:{:?} item:{}", name, item)
-        }
+        let loc = item.def_loc();
+        let loc = s.convert_loc_range(loc).unwrap_or(FileRange::unknown());
+        log::trace!("{}", loc);
+        log::trace!("enter scope name:{:?} item:{}", name, item);
         self.scopes
             .as_ref()
             .borrow_mut()
@@ -70,17 +71,16 @@ impl Scopes {
         item: impl Into<Item>,
     ) {
         let item = item.into();
-        if let Some(loc) = item.debug_loc() {
-            let loc = s.convert_loc_range(loc).unwrap_or(FileRange::unknown());
-            log::trace!("{}", loc);
-            log::trace!(
-                "enter top scope address:{:?} module:{:?} name:{:?} item:{}",
-                address,
-                module,
-                item_name,
-                item,
-            )
-        }
+        let loc = item.def_loc();
+        let loc = s.convert_loc_range(loc).unwrap_or(FileRange::unknown());
+        log::trace!("{}", loc);
+        log::trace!(
+            "enter top scope address:{:?} module:{:?} name:{:?} item:{}",
+            address,
+            module,
+            item_name,
+            item,
+        );
         let mut b = self.scopes.as_ref().borrow_mut();
         let mut s = b.first_mut().unwrap();
         if s.addresses.is_none() {
@@ -161,14 +161,15 @@ impl Scopes {
     }
 
     pub(crate) fn resolve_name_access_chain_type(&self, chain: &NameAccessChain) -> ResolvedType {
-        let failed = ResolvedType::new_unknown(chain.loc);
         let scopes = self.scopes.as_ref().borrow();
         for s in scopes.iter() {
             // We must be in global scope.
-            let _item = match &chain.value {
+            match &chain.value {
                 NameAccessChain_::One(x) => {
                     if let Some(item) = s.items.get(&x.value) {
-                        return item.to_type().unwrap_or(failed);
+                        if let Some(ty) = item.to_type() {
+                            return ty;
+                        }
                     }
                 }
                 NameAccessChain_::Two(_, _) => todo!(),
@@ -201,10 +202,12 @@ impl Scopes {
             value: ResolvedType_::UnKnown,
         });
     }
+
     // TODO type parameter can return???
-    pub(crate) fn find_name_access_chain_type<'a>(
+    pub(crate) fn find_name_access_chain_expr_type<'a>(
         &self,
         chain: &NameAccessChain,
+        item_ret: &mut Option<Item>,
         name_to_addr: impl Fn(Symbol) -> &'a AccountAddress,
     ) -> ResolvedType {
         let failed = ResolvedType::new_unknown(chain.loc);
@@ -215,6 +218,7 @@ impl Scopes {
                     if let Some(v) = s.items.get(&name.value) {
                         r = v.to_type();
                         if r.is_some() {
+                            std::mem::replace(item_ret, Some(v.clone()));
                             return true;
                         }
                     }
@@ -232,7 +236,6 @@ impl Scopes {
                     }
                     false
                 });
-
                 if r.is_none() {
                     return failed;
                 }
@@ -240,6 +243,7 @@ impl Scopes {
                 match r {
                     Item::ImportedModule(_, members) => {
                         if let Some(item) = members.as_ref().borrow().items.get(&member.value) {
+                            std::mem::replace(item_ret, Some(item.clone()));
                             item.to_type().unwrap_or(failed)
                         } else {
                             failed
@@ -263,6 +267,7 @@ impl Scopes {
                 }
                 let module = module.unwrap();
                 if let Some(item) = module.as_ref().borrow().items.get(&member.value) {
+                    std::mem::replace(item_ret, Some(item.clone()));
                     item.to_type().unwrap_or(failed)
                 } else {
                     failed
@@ -308,11 +313,34 @@ impl Scopes {
             value: r,
         })
     }
-    ///
+
     #[allow(dead_code)]
     pub(crate) fn current_scope_mut<R>(&self, x: impl FnOnce(&mut Scope) -> R) -> R {
         let mut s = self.scopes.as_ref().borrow_mut();
         x(s.last_mut().unwrap())
+    }
+
+    /// Find var decl,a const is consider included too.
+    pub(crate) fn find_var_decl(&self, name: Symbol) -> Option<(Symbol, Loc, ResolvedType)> {
+        let mut ret = None;
+        self.inner_first_visit(|s| {
+            if let Some(item) = s.items.get(&name) {
+                match item {
+                    Item::Const(name, ty) => {
+                        return true;
+                        ret = Some((name.value(), name.0.loc.clone(), ty.clone()));
+                    }
+                    Item::Var(name, ty) | Item::Parameter(name, ty) => {
+                        ret = Some((name.value(), name.0.loc.clone(), ty.clone()));
+                        return true;
+                    }
+                    _ => {}
+                }
+            }
+            false
+        });
+
+        ret
     }
 }
 

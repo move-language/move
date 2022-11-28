@@ -208,28 +208,12 @@ impl ResolvedType {
 }
 
 impl ResolvedType {
-    pub(crate) fn chain_resolve_type_loc(&self) -> &Loc {
+    pub(crate) fn def_loc(&self) -> &Loc {
         match &self.0.value {
             ResolvedType_::Struct(x) => x.name.borrow().0,
             ResolvedType_::TParam(name, _) => &name.loc,
-            _ => unreachable!(),
-        }
-    }
-
-    pub(crate) fn xxx(&self) {
-        match self.0.value {
-            ResolvedType_::UnKnown => todo!(),
-            ResolvedType_::Struct(_) => todo!(),
-            ResolvedType_::BuildInType(_) => todo!(),
-            ResolvedType_::TParam(_, _) => todo!(),
-            ResolvedType_::ApplyTParam(_, _, _) => todo!(),
-            ResolvedType_::Ref(_, _) => todo!(),
-            ResolvedType_::Unit => todo!(),
-            ResolvedType_::Multiple(_) => todo!(),
-            ResolvedType_::Fun(_, _, _) => todo!(),
-            ResolvedType_::Vec(_) => todo!(),
-            ResolvedType_::ResolvedFailed(_) => todo!(),
-            ResolvedType_::StructName(_, _) => todo!(),
+            ResolvedType_::BuildInType(_) => &UNKNOWN_LOC,
+            _ => unreachable!("{}", self),
         }
     }
 }
@@ -290,8 +274,12 @@ impl std::fmt::Display for ResolvedType {
                 write!(f, ")")
             }
             ResolvedType_::Fun(_, _, _) => todo!(),
-            ResolvedType_::Vec(_) => todo!(),
-            ResolvedType_::ResolvedFailed(_) => todo!(),
+            ResolvedType_::Vec(ty) => {
+                write!(f, "vector<{}>", ty.as_ref())
+            }
+            ResolvedType_::ResolvedFailed(ty) => {
+                write!(f, "{:?}", ty)
+            }
         }
     }
 }

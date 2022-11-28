@@ -33,6 +33,7 @@ pub enum Item {
     ImportedModule(ModuleIdent, Rc<RefCell<Scope>>),
     ImportedMember(Name, Box<Item>),
     Const(ConstantName, ResolvedType),
+    Var(Var, ResolvedType),
 
     /////////////////////////
     /// TYPE types
@@ -59,14 +60,18 @@ pub enum Item {
 impl Item {
     ///
     pub(crate) fn to_type(&self) -> Option<ResolvedType> {
+        // TODO maybe a parameter to decide return TParam or not.
         let (loc, x) = match self {
             Item::TParam(name, ab) => (name.loc, ResolvedType_::TParam(name.clone(), ab.clone())),
-            Item::Struct(x) => (x.name.borrow().0.clone(), ResolvedType_::Struct(x.clone())),
+            Item::Struct(x) => (x.name.loc(), ResolvedType_::Struct(x.clone())),
             Item::StructName(name, x) => (
                 name.loc(),
                 ResolvedType_::StructName(name.clone(), x.clone()),
             ),
             Item::BuildInType(b) => (UNKNOWN_LOC, ResolvedType_::BuildInType(*b)),
+            Item::Parameter(_, ty) | Item::Var(_, ty) | Item::Const(_, ty) => {
+                (UNKNOWN_LOC.clone(), ty.clone().0.value)
+            }
             _ => return None,
         };
         Some(ResolvedType(Spanned { loc, value: x }))
@@ -80,25 +85,20 @@ impl Item {
             Self::BuildInType(_) => &UNKNOWN_LOC,
             Self::TParam(name, _) => &name.loc,
             Self::Const(name, _) => &name.borrow().0,
-            Item::StructName(_, _) => todo!(),
-            Item::Fun(_, _, _, _) => todo!(),
-            Item::BuildInType(_) => todo!(),
+            Item::StructName(name, _) => &name.0.loc,
+            Item::Fun(name, _, _, _) => &name.0.loc,
+            Item::BuildInType(_) => &UNKNOWN_LOC,
             Item::ImportedModule(_, _) => todo!(),
+            Item::Var(name, _) => name.borrow().0,
         }
     }
 
-    pub(crate) fn debug_loc(&self) -> Option<&'_ Loc> {
-        match self {
-            Item::Parameter(var, _) => Some(var.borrow().0),
-            Item::ImportedModule(m, _) => Some(&m.loc),
-            Item::ImportedMember(_, item) => item.as_ref().debug_loc(),
-            Item::Const(name, _) => Some(name.borrow().0),
-            Item::Struct(x) => Some(&x.name.borrow().0),
-            Item::BuildInType(_) => todo!(),
-            Item::TParam(_, _) => todo!(),
-            Item::StructName(name, _) => Some(name.borrow().0),
-            Item::Fun(name, _, _, _) => Some(name.borrow().0),
-        }
+    /// New a dummy item.
+    /// Can be use later by some override data.
+    /// like std::mem::replace.
+    pub(crate) fn new_dummy() -> Self {
+        // Data here is not important.
+        Self::BuildInType(BuildInType::Bool)
     }
 }
 
@@ -124,7 +124,7 @@ impl MacroCall {
 }
 
 /// Get the last name of a access chain.
-pub(crate) fn get_access_chain_name(x: &NameAccessChain) -> &Name {
+pub(crate) fn get_name_chain_last_name(x: &NameAccessChain) -> &Name {
     match &x.value {
         move_compiler::parser::ast::NameAccessChain_::One(name)
         | move_compiler::parser::ast::NameAccessChain_::Two(_, name)
@@ -163,6 +163,9 @@ impl std::fmt::Display for Item {
                 }
                 std::result::Result::Ok(())
             }
+            Item::Var(name, ty) => {
+                write!(f, "var {}:{}", name.0.value.as_str(), ty)
+            }
         }
     }
 }
@@ -170,8 +173,12 @@ impl std::fmt::Display for Item {
 pub enum Access {
     ApplyType(NameAccessChain, Box<ResolvedType>),
     UseMember(Name, Box<Item>),
-    ExprVar(Var),
-    NameAccessChain(NameAccessChain),
+    ExprVar(Var, Option<(Symbol, Loc, ResolvedType)>),
+    ExprAccessChain(
+        NameAccessChain,
+        Box<Item>, /* The item that you want to access.  */
+    ),
+    TypeAccessChain(NameAccessChain),
     // Maybe the same as ExprName.
     ExprAddressName(Name),
     FieldInitialization(Field, ResolvedType /*  field type */),
@@ -184,6 +191,31 @@ pub enum Access {
     MacroCall(MacroCall),
 }
 
+impl Access {
+    pub(crate) fn access_def_loc(&self) -> (&Loc /* access loc */, &Loc /* def loc */) {
+        match self {
+            Access::ApplyType(name, x) => (&name.loc, x.as_ref().def_loc()),
+            Access::UseMember(name, x) => (&name.loc, x.as_ref().def_loc()),
+            Access::ExprVar(var, x) => (
+                &var.borrow().0,
+                match x {
+                    Some(x) => &x.1,
+                    None => &UNKNOWN_LOC,
+                },
+            ),
+
+            Access::ExprAccessChain(name, item) => {
+                (&get_name_chain_last_name(name).loc, item.as_ref().def_loc())
+            }
+            Access::TypeAccessChain(_) => todo!(),
+            Access::ExprAddressName(_) => todo!(),
+            Access::FieldInitialization(_, _) => todo!(),
+            Access::AccessFiled(_, _) => todo!(),
+            Access::KeyWords(_) => todo!(),
+            Access::MacroCall(_) => todo!(),
+        }
+    }
+}
 pub enum ItemOrAccess {
     Item(Item),
     Access(Access),

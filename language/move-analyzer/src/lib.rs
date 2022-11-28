@@ -14,7 +14,7 @@ pub mod item;
 pub mod modules;
 pub mod scope;
 pub mod scopes;
-pub mod symbols;
+// pub mod symbols;
 pub mod types;
 pub mod utils;
 pub mod vfs;

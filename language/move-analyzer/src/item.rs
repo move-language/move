@@ -8,6 +8,7 @@ use move_ir_types::location::{Loc, Spanned};
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fmt::write;
 use std::hash::Hash;
 use std::rc::Rc;
 
@@ -20,7 +21,7 @@ pub struct ItemStruct {
 
 impl std::fmt::Display for ItemStruct {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        unimplemented!()
+        write!(f, "struct {}", self.name.value().as_str())
     }
 }
 
@@ -53,24 +54,6 @@ pub enum Item {
     BuildInType(BuildInType),
     /// Here are all definition.
     TParam(Name, Vec<Ability>),
-
-    ////////////////////////////////
-    /// various access types.
-    // A type apply.
-    ApplyType(NameAccessChain, Box<ResolvedType>),
-    UseMember(Name, Box<Item>),
-    ExprVar(Var),
-    NameAccessChain(NameAccessChain),
-    // Maybe the same as ExprName.
-    ExprAddressName(Name),
-    FieldInitialization(Field, ResolvedType /*  field type */),
-    AccessFiled(Field, ResolvedType /*  field type */),
-    ///////////////
-    /// key words
-    KeyWords(&'static str),
-    /////////////////
-    /// Marco call
-    MacroCall(MacroCall),
 }
 
 impl Item {
@@ -97,7 +80,10 @@ impl Item {
             Self::BuildInType(_) => &UNKNOWN_LOC,
             Self::TParam(name, _) => &name.loc,
             Self::Const(name, _) => &name.borrow().0,
-            _ => unreachable!(),
+            Item::StructName(_, _) => todo!(),
+            Item::Fun(_, _, _, _) => todo!(),
+            Item::BuildInType(_) => todo!(),
+            Item::ImportedModule(_, _) => todo!(),
         }
     }
 
@@ -110,15 +96,6 @@ impl Item {
             Item::Struct(x) => Some(&x.name.borrow().0),
             Item::BuildInType(_) => todo!(),
             Item::TParam(_, _) => todo!(),
-            Item::ApplyType(_, _) => todo!(),
-            Item::UseMember(_, _) => todo!(),
-            Item::ExprVar(_) => todo!(),
-            Item::NameAccessChain(_) => todo!(),
-            Item::ExprAddressName(_) => todo!(),
-            Item::FieldInitialization(_, _) => todo!(),
-            Item::AccessFiled(_, _) => todo!(),
-            Item::KeyWords(_) => todo!(),
-            Item::MacroCall(_) => todo!(),
             Item::StructName(name, _) => Some(name.borrow().0),
             Item::Fun(name, _, _, _) => Some(name.borrow().0),
         }
@@ -174,7 +151,7 @@ impl std::fmt::Display for Item {
             Item::StructName(name, _) => {
                 write!(f, "struct {}", name.value().as_str())
             }
-            Item::Fun(_, _, _, _) => todo!(),
+            Item::Fun(name, _, _, _) => write!(f, "fun {}", name.value().as_str()),
             Item::BuildInType(x) => {
                 write!(f, "build in '{:?}'", x)
             }
@@ -186,15 +163,55 @@ impl std::fmt::Display for Item {
                 }
                 std::result::Result::Ok(())
             }
-            Item::ApplyType(_, _) => todo!(),
-            Item::UseMember(_, _) => todo!(),
-            Item::ExprVar(_) => todo!(),
-            Item::NameAccessChain(_) => todo!(),
-            Item::ExprAddressName(_) => todo!(),
-            Item::FieldInitialization(_, _) => todo!(),
-            Item::AccessFiled(_, _) => todo!(),
-            Item::KeyWords(_) => todo!(),
-            Item::MacroCall(_) => todo!(),
+        }
+    }
+}
+
+pub enum Access {
+    ApplyType(NameAccessChain, Box<ResolvedType>),
+    UseMember(Name, Box<Item>),
+    ExprVar(Var),
+    NameAccessChain(NameAccessChain),
+    // Maybe the same as ExprName.
+    ExprAddressName(Name),
+    FieldInitialization(Field, ResolvedType /*  field type */),
+    AccessFiled(Field, ResolvedType /*  field type */),
+    ///////////////
+    /// key words
+    KeyWords(&'static str),
+    /////////////////
+    /// Marco call
+    MacroCall(MacroCall),
+}
+
+pub enum ItemOrAccess {
+    Item(Item),
+    Access(Access),
+}
+
+impl Into<Item> for ItemOrAccess {
+    fn into(self) -> Item {
+        match self {
+            Self::Item(x) => x,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl Into<Access> for ItemOrAccess {
+    fn into(self) -> Access {
+        match self {
+            Self::Access(x) => x,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl std::fmt::Display for ItemOrAccess {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Access(_) => todo!(),
+            Self::Item(x) => x.fmt(f),
         }
     }
 }

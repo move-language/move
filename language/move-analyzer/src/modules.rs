@@ -409,7 +409,7 @@ impl Modules {
         }
         // const can only be declared at top scope
         let ty = scopes.resolve_type(&c.signature);
-        let item = Item::Const(c.name.clone(), ty);
+        let item = ItemOrAccess::Item(Item::Const(c.name.clone(), ty));
         visitor.handle_item(self, scopes, &item);
         scopes.enter_top_item(self, address, module, c.name.value(), item);
     }
@@ -512,7 +512,7 @@ impl Modules {
     ) {
         match &bind.value {
             Bind_::Var(var) => {
-                let item = Item::ExprVar(var.clone());
+                let item = ItemOrAccess::Access(Access::ExprVar(var.clone()));
                 visitor.handle_item(self, scopes, &item);
                 if visitor.finished() {
                     return;
@@ -528,7 +528,8 @@ impl Modules {
         match &ty.value {
             Type_::Apply(chain, types) => {
                 let ty = scopes.resolve_name_access_chain_type(chain.as_ref());
-                let item = Item::ApplyType(chain.as_ref().clone(), Box::new(ty));
+                let item =
+                    ItemOrAccess::Access(Access::ApplyType(chain.as_ref().clone(), Box::new(ty)));
                 visitor.handle_item(self, scopes, &item);
                 if visitor.finished() {
                     return;
@@ -790,25 +791,25 @@ impl Modules {
         match &exp.value {
             Exp_::Value(ref v) => {
                 if let Some(name) = get_name_from_value(v) {
-                    let item = Item::ExprAddressName(name.clone());
+                    let item = ItemOrAccess::Access(Access::ExprAddressName(name.clone()));
                     visitor.handle_item(self, scopes, &item);
                 }
             }
             Exp_::Move(var) | Exp_::Copy(var) => {
-                let item = Item::ExprVar(var.clone());
+                let item = ItemOrAccess::Access(Access::ExprVar(var.clone()));
                 visitor.handle_item(self, scopes, &item);
             }
             Exp_::Name(chain, _ty /*  How to use _ty */) => {
-                let item = Item::NameAccessChain(chain.clone());
+                let item = ItemOrAccess::Access(Access::NameAccessChain(chain.clone()));
                 visitor.handle_item(self, scopes, &item);
             }
             Exp_::Call(ref chain, is_macro, ref types, ref exprs) => {
                 if *is_macro {
                     let c = MacroCall::from_chain(chain);
-                    let item = Item::MacroCall(c);
+                    let item = ItemOrAccess::Access(Access::MacroCall(c));
                     visitor.handle_item(self, scopes, &item);
                 } else {
-                    let item = Item::NameAccessChain(chain.clone());
+                    let item = ItemOrAccess::Access(Access::NameAccessChain(chain.clone()));
                     visitor.handle_item(self, scopes, &item);
                 }
                 if visitor.finished() {
@@ -832,7 +833,7 @@ impl Modules {
 
             Exp_::Pack(ref leading, ref types, fields) => {
                 let ty = self.get_expr_type(exp, scopes);
-                let item = Item::NameAccessChain(leading.clone());
+                let item = ItemOrAccess::Access(Access::NameAccessChain(leading.clone()));
                 visitor.handle_item(self, scopes, &item);
                 if visitor.finished() {
                     return;
@@ -848,7 +849,10 @@ impl Modules {
                 for f in fields.iter() {
                     let field_type = ty.find_filed_by_name(f.0.value());
                     if let Some(field_type) = field_type {
-                        let item = Item::FieldInitialization(f.0.clone(), field_type.1.clone());
+                        let item = ItemOrAccess::Access(Access::FieldInitialization(
+                            f.0.clone(),
+                            field_type.1.clone(),
+                        ));
                         visitor.handle_item(self, scopes, &item);
                     }
                     self.visit_expr(&f.1, scopes, visitor);
@@ -926,11 +930,11 @@ impl Modules {
             }
             Exp_::Abort(e) => self.visit_expr(e.as_ref(), scopes, visitor),
             Exp_::Break => {
-                let item = Item::KeyWords("break");
+                let item = ItemOrAccess::Access(Access::KeyWords("break"));
                 visitor.handle_item(self, scopes, &item);
             }
             Exp_::Continue => {
-                let item = Item::KeyWords("continue");
+                let item = ItemOrAccess::Access(Access::KeyWords("continue"));
                 visitor.handle_item(self, scopes, &item);
             }
             Exp_::Dereference(x) => {
@@ -956,7 +960,8 @@ impl Modules {
                 }
                 let ty = self.get_expr_type(e, scopes);
                 if let Some(field) = ty.find_filed_by_name(field.value) {
-                    let item = Item::AccessFiled(field.0.clone(), field.1.clone());
+                    let item =
+                        ItemOrAccess::Access(Access::AccessFiled(field.0.clone(), field.1.clone()));
                     visitor.handle_item(self, scopes, &item);
                 }
             }
@@ -1031,7 +1036,10 @@ impl Modules {
                         name = alias;
                     }
                     if let Some(i) = r.as_ref().borrow().items.get(&member.value) {
-                        let item = Item::UseMember(name.clone(), Box::new(i.clone()));
+                        let item = ItemOrAccess::Access(Access::UseMember(
+                            name.clone(),
+                            Box::new(i.clone()),
+                        ));
                         visitor.handle_item(self, scopes, &item);
                         if visitor.finished() {
                             return;
@@ -1051,11 +1059,12 @@ impl Modules {
         visitor: &mut dyn ScopeVisitor,
     ) {
         for (name, v) in signature.type_parameters.iter() {
-            let item = Item::TParam(name.clone(), v.clone());
+            let item = ItemOrAccess::Item(Item::TParam(name.clone(), v.clone()));
             visitor.handle_item(self, scopes, &item);
             if visitor.finished() {
                 return;
             }
+
             // Enter this.
             scopes.enter_item(self, name.value, item);
         }
@@ -1063,7 +1072,7 @@ impl Modules {
         for (v, t) in signature.parameters.iter() {
             self.visit_type_apply(t, scopes, visitor);
             let t = scopes.resolve_type(t);
-            let item = Item::Parameter(v.clone(), t);
+            let item = ItemOrAccess::Item(Item::Parameter(v.clone(), t));
             // found
             visitor.handle_item(self, scopes, &item);
             if visitor.finished() {
@@ -1212,7 +1221,7 @@ impl ModuleServices for Modules {
 pub trait ScopeVisitor: std::fmt::Display {
     /// Handle this item.
     /// If `should_finish` return true. All `enter_scope` and enter_scope called function will return.
-    fn handle_item(&mut self, services: &dyn ModuleServices, scopes: &Scopes, item: &Item);
+    fn handle_item(&mut self, services: &dyn ModuleServices, scopes: &Scopes, item: &ItemOrAccess);
     /// Need not visit this structure???
     fn file_should_visit(&self, p: &PathBuf) -> bool;
     /// Visitor should finished.

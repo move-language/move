@@ -9,6 +9,7 @@ use move_ir_types::location::{Loc, Spanned};
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fmt::write;
 use std::rc::Rc;
 
 use crate::item;
@@ -263,30 +264,34 @@ impl BuildInType {
 
 pub const UNKNOWN_LOC: Loc = Loc::new(FileHash::empty(), 0, 0);
 
-// impl std::fmt::Display for ResolvedType {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         match &self.0.value {
-//             ResolvedType_::UnKnown => "unkown",
-//             ResolvedType_::Struct(name, ts, fields) => {
-//                 let name = name.value().as_str();
-//                 let ts =   ts.iter().map(|  ()   |)
-//             }
-//             ResolvedType_::BuildInType(_) => todo!(),
-//             ResolvedType_::TParam(_, _) => todo!(),
-//             ResolvedType_::ApplyTParam(_, _, _) => todo!(),
-//             ResolvedType_::Ref(_, _) => todo!(),
-//             ResolvedType_::Unit => todo!(),
-//             ResolvedType_::Multiple(_) => todo!(),
-//             ResolvedType_::Fun(_, _, _) => todo!(),
-//             ResolvedType_::Vec(_) => todo!(),
-//             ResolvedType_::ResolvedFailed(_) => todo!(),
-//             ResolvedType_::StructUnresolved(_) => todo!(),
-//         }
-//     }
-// }
-
 impl std::fmt::Display for ResolvedType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        unimplemented!()
+        match &self.0.value {
+            ResolvedType_::UnKnown => write!(f, "unknown"),
+            ResolvedType_::Struct(x) => write!(f, "struct {}", x.name.value().as_str()),
+            ResolvedType_::StructName(name, _) => write!(f, "struct {}", name.value().as_str()),
+            ResolvedType_::BuildInType(x) => write!(f, "{:?}", x),
+            ResolvedType_::TParam(name, _) => {
+                write!(f, "type_parameter:{}", name.value.as_str())
+            }
+            ResolvedType_::ApplyTParam(t, name, _) => {
+                write!(f, "apply {} to {}", name.value.as_str(), t)
+            }
+            ResolvedType_::Ref(_, ty) => {
+                write!(f, "&{}", ty.as_ref())
+            }
+            ResolvedType_::Unit => write!(f, "()"),
+            ResolvedType_::Multiple(m) => {
+                write!(f, "(")?;
+                for i in 0..m.len() {
+                    let t = m.get(i).unwrap();
+                    write!(f, "{}", t)?;
+                }
+                write!(f, ")")
+            }
+            ResolvedType_::Fun(_, _, _) => todo!(),
+            ResolvedType_::Vec(_) => todo!(),
+            ResolvedType_::ResolvedFailed(_) => todo!(),
+        }
     }
 }

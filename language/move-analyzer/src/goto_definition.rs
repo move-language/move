@@ -32,7 +32,26 @@ pub fn on_go_to_def_request(context: &mut Context, request: &Request) {
     let mut visitor = Visitor::new(fpath, line, col);
     context.modules.run_visitor(&mut visitor);
     match &visitor.result {
-        Some(x) => context.connection.sender.send(unimplemented!()).unwrap(),
+        Some(x) => {
+            let range = Range {
+                start: Position {
+                    line: x.line,
+                    character: x.col_start,
+                },
+                end: Position {
+                    line: x.line,
+                    character: x.col_end,
+                },
+            };
+            let uri = Url::from_file_path(x.path.as_path()).unwrap();
+            let loc = Location::new(uri, range);
+            let r = Response::new_ok(request.id.clone(), serde_json::to_value(loc).unwrap());
+            context
+                .connection
+                .sender
+                .send(Message::Response(r))
+                .unwrap();
+        }
         None => log::error!(
             "{:?}:{}:{} not found definition.",
             visitor.filepath,
@@ -71,33 +90,43 @@ impl Visitor {
 }
 
 impl ScopeVisitor for Visitor {
-    fn handle_item(&mut self, services: &dyn ModuleServices, _scopes: &Scopes, item: &Item) {
+    fn handle_item(
+        &mut self,
+        services: &dyn ModuleServices,
+        _scopes: &Scopes,
+        item: &ItemOrAccess,
+    ) {
         match item {
-            Item::Parameter(var, _) => {
-                if self.match_loc(&var.borrow().0, services) {
-                    if let Some(t) = services.convert_loc_range(&var.borrow().0) {
-                        self.result = Some(t);
+            ItemOrAccess::Item(item) => match item {
+                Item::Parameter(var, _) => {
+                    if self.match_loc(&var.borrow().0, services) {
+                        if let Some(t) = services.convert_loc_range(&var.borrow().0) {
+                            self.result = Some(t);
+                        }
                     }
                 }
-            }
-            Item::UseMember(name, item) => {
-                if self.match_loc(&name.loc, services) {
-                    if let Some(t) = services.convert_loc_range(item.as_ref().def_loc()) {
-                        self.result = Some(t);
+                _ => {}
+            },
+            ItemOrAccess::Access(item) => match item {
+                Access::UseMember(name, item) => {
+                    if self.match_loc(&name.loc, services) {
+                        if let Some(t) = services.convert_loc_range(item.as_ref().def_loc()) {
+                            self.result = Some(t);
+                        }
                     }
                 }
-            }
 
-            Item::ApplyType(chain, ty) => {
-                if self.match_loc(&get_access_chain_name(chain).loc, services) {
-                    if let Some(t) =
-                        services.convert_loc_range(ty.as_ref().chain_resolve_type_loc())
-                    {
-                        self.result = Some(t);
+                Access::ApplyType(chain, ty) => {
+                    if self.match_loc(&get_access_chain_name(chain).loc, services) {
+                        if let Some(t) =
+                            services.convert_loc_range(ty.as_ref().chain_resolve_type_loc())
+                        {
+                            self.result = Some(t);
+                        }
                     }
                 }
-            }
-            _ => {}
+                _ => {}
+            },
         }
     }
 

@@ -152,10 +152,10 @@ abc        "#,
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FileRange {
-    path: PathBuf,
-    line: u32,
-    col_start: u32,
-    col_end: u32,
+    pub(crate) path: PathBuf,
+    pub(crate) line: u32,
+    pub(crate) col_start: u32,
+    pub(crate) col_end: u32,
 }
 
 impl std::fmt::Display for FileRange {

@@ -39,7 +39,8 @@ impl Scope {
             Item::BuildInType(BuildInType::Address),
         );
     }
-    pub(crate) fn enter_item(&mut self, s: Symbol, item: Item) {
+    pub(crate) fn enter_item(&mut self, s: Symbol, item: impl Into<Item>) {
+        let item = item.into();
         self.items.insert(s, item);
     }
 }

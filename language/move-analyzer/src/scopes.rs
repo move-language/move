@@ -45,11 +45,13 @@ impl Scopes {
     }
 
     // Enter
-    pub(crate) fn enter_item(&self, s: &dyn ModuleServices, name: Symbol, item: Item) {
+    pub(crate) fn enter_item(&self, s: &dyn ModuleServices, name: Symbol, item: impl Into<Item>) {
+        let item = item.into();
+
         if let Some(loc) = item.debug_loc() {
             let loc = s.convert_loc_range(loc).unwrap_or(FileRange::unknown());
             log::trace!("{}", loc);
-            log::trace!("enter scope name:{:?} item:{}", name, item,)
+            log::trace!("enter scope name:{:?} item:{}", name, item)
         }
         self.scopes
             .as_ref()
@@ -65,8 +67,9 @@ impl Scopes {
         address: AccountAddress,
         module: Symbol,
         item_name: Symbol,
-        item: Item,
+        item: impl Into<Item>,
     ) {
+        let item = item.into();
         if let Some(loc) = item.debug_loc() {
             let loc = s.convert_loc_range(loc).unwrap_or(FileRange::unknown());
             log::trace!("{}", loc);

@@ -1,18 +1,16 @@
-use std::path::PathBuf;
-
-use crate::utils::path_concat;
-use crate::utils::FileRange;
-
+#![allow(dead_code)]
 use super::context::*;
 use super::item::*;
 use super::modules::*;
+use crate::utils::path_concat;
+use crate::utils::FileRange;
+use std::path::PathBuf;
 
 use super::scopes::*;
 
 use lsp_server::*;
 use lsp_types::*;
 
-use move_compiler::shared::TName;
 use move_ir_types::location::Loc;
 
 /// Handles go-to-def request of the language server

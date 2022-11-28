@@ -1,5 +1,4 @@
-use crate::item;
-
+#![allow(dead_code)]
 use super::item::*;
 use super::modules::*;
 use super::scope::*;

@@ -1,18 +1,15 @@
-use move_command_line_common::files::FileHash;
+#![allow(dead_code)]
 
+use crate::item;
+use move_command_line_common::files::FileHash;
 use move_command_line_common::types;
 use move_compiler::shared::Identifier;
-
 use move_compiler::{parser::ast::*, shared::*};
-
 use move_ir_types::location::{Loc, Spanned};
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::fmt::write;
 use std::rc::Rc;
-
-use crate::item;
 
 #[derive(Clone, Debug)]
 pub(crate) enum ResolvedType_ {

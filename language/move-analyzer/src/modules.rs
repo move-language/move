@@ -2,8 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::scopes;
-
 use super::item::*;
 use super::scope::*;
 use super::scopes::*;
@@ -28,7 +26,6 @@ use move_package::source_package::manifest_parser::*;
 use move_package::*;
 use move_symbol_pool::Symbol;
 
-use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::btree_map::BTreeMap;
 use std::collections::HashMap;
@@ -1149,8 +1146,6 @@ pub struct IDEModule {
         PathBuf, /*  file path  xxxx/abc.move  */
         Vec<move_compiler::parser::ast::Definition>,
     >,
-
-    filepath_to_filehash: HashMap<String /* file path */, FileHash>,
 }
 
 const UNKNOWN_TYPE: ResolvedType = ResolvedType::new_unknown(Loc::new(FileHash::empty(), 0, 0));

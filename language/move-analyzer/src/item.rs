@@ -1,15 +1,13 @@
 use super::scope::*;
 use super::types::*;
 
-use anyhow::Ok;
 use move_compiler::shared::Identifier;
 use move_compiler::{parser::ast::*, shared::*};
 use move_ir_types::location::{Loc, Spanned};
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::fmt::write;
-use std::hash::Hash;
+
 use std::rc::Rc;
 
 #[derive(Debug, Clone)]
@@ -203,7 +201,6 @@ impl Access {
                     None => &UNKNOWN_LOC,
                 },
             ),
-
             Access::ExprAccessChain(name, item) => {
                 (&get_name_chain_last_name(name).loc, item.as_ref().def_loc())
             }
@@ -216,6 +213,7 @@ impl Access {
         }
     }
 }
+
 pub enum ItemOrAccess {
     Item(Item),
     Access(Access),

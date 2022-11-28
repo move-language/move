@@ -49,7 +49,7 @@ impl Scopes {
         if let Some(loc) = item.debug_loc() {
             let loc = s.convert_loc_range(loc).unwrap_or(FileRange::unknown());
             log::trace!("{}", loc);
-            log::trace!("enter scope name:{:?} item:{:?}", name, item,)
+            log::trace!("enter scope name:{:?} item:{}", name, item,)
         }
         self.scopes
             .as_ref()
@@ -71,7 +71,7 @@ impl Scopes {
             let loc = s.convert_loc_range(loc).unwrap_or(FileRange::unknown());
             log::trace!("{}", loc);
             log::trace!(
-                "enter top scope address:{:?} module:{:?} name:{:?} item:{:?}",
+                "enter top scope address:{:?} module:{:?} name:{:?} item:{}",
                 address,
                 module,
                 item_name,
@@ -235,7 +235,7 @@ impl Scopes {
                 }
                 let r = r.unwrap();
                 match r {
-                    Item::ImportedUseModule(_, members) => {
+                    Item::ImportedModule(_, members) => {
                         if let Some(item) = members.as_ref().borrow().items.get(&member.value) {
                             item.to_type().unwrap_or(failed)
                         } else {

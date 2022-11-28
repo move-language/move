@@ -1,22 +1,23 @@
 use move_command_line_common::files::FileHash;
 
+use move_command_line_common::types;
 use move_compiler::shared::Identifier;
 
 use move_compiler::{parser::ast::*, shared::*};
 
 use move_ir_types::location::{Loc, Spanned};
 use move_symbol_pool::Symbol;
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
+
+use crate::item;
 
 #[derive(Clone, Debug)]
 pub(crate) enum ResolvedType_ {
     UnKnown,
-    Struct(
-        StructName,
-        Vec<StructTypeParameter>,
-        Vec<(Field, ResolvedType)>,
-    ),
-    StructName(StructName),
+    Struct(item::ItemStruct),
+    StructName(StructName, Rc<RefCell<HashMap<Symbol, item::ItemStruct>>>),
     /// struct { ... }
     BuildInType(BuildInType),
     /// T : drop
@@ -49,7 +50,9 @@ impl ResolvedType {
     pub(crate) fn nth_ty(&self, index: usize) -> Option<&'_ ResolvedType> {
         match &self.0.value {
             ResolvedType_::Multiple(x) => x.get(index),
-            ResolvedType_::Struct(_, _, fields) => fields.get(index).map(|x| &x.1),
+            ResolvedType_::Struct(item::ItemStruct { fields, .. }) => {
+                fields.get(index).map(|x| &x.1)
+            }
             _ => None,
         }
     }
@@ -62,7 +65,7 @@ impl ResolvedType {
 
     pub(crate) fn find_filed_by_name(&self, name: Symbol) -> Option<&'_ (Field, ResolvedType)> {
         match &self.0.value {
-            ResolvedType_::Struct(_, _, fields) => {
+            ResolvedType_::Struct(item::ItemStruct { fields, .. }) => {
                 for f in fields.iter() {
                     if f.0.value() == name {
                         return Some(f);
@@ -83,7 +86,11 @@ impl ResolvedType {
     ) -> ResolvedType {
         Self(Spanned {
             loc,
-            value: ResolvedType_::Struct(name, ts, fields),
+            value: ResolvedType_::Struct(item::ItemStruct {
+                name,
+                type_parameters: ts,
+                fields,
+            }),
         })
     }
     pub(crate) fn new_multi(loc: Loc, one: ResolvedType, num: usize) -> Self {
@@ -158,7 +165,7 @@ impl ResolvedType {
     pub(crate) fn bind_type_parameter(&mut self, types: &HashMap<Symbol, ResolvedType>) {
         match &mut self.0.value {
             ResolvedType_::UnKnown => {}
-            ResolvedType_::Struct(_, _, ref mut fields) => {
+            ResolvedType_::Struct(item::ItemStruct { ref mut fields, .. }) => {
                 for i in 0..fields.len() {
                     let t = fields.get_mut(i).unwrap();
                     t.1.bind_type_parameter(types);
@@ -194,7 +201,7 @@ impl ResolvedType {
             ResolvedType_::ApplyTParam(_, _, _) => {
                 unreachable!("called multiple times.")
             }
-            ResolvedType_::StructName(_) => {}
+            ResolvedType_::StructName(_, _) => {}
         }
     }
 }
@@ -202,7 +209,7 @@ impl ResolvedType {
 impl ResolvedType {
     pub(crate) fn chain_resolve_type_loc(&self) -> &Loc {
         match &self.0.value {
-            ResolvedType_::Struct(name, _, _) => name.borrow().0,
+            ResolvedType_::Struct(x) => x.name.borrow().0,
             ResolvedType_::TParam(name, _) => &name.loc,
             _ => unreachable!(),
         }
@@ -211,7 +218,7 @@ impl ResolvedType {
     pub(crate) fn xxx(&self) {
         match self.0.value {
             ResolvedType_::UnKnown => todo!(),
-            ResolvedType_::Struct(_, _, _) => todo!(),
+            ResolvedType_::Struct(_) => todo!(),
             ResolvedType_::BuildInType(_) => todo!(),
             ResolvedType_::TParam(_, _) => todo!(),
             ResolvedType_::ApplyTParam(_, _, _) => todo!(),
@@ -221,7 +228,7 @@ impl ResolvedType {
             ResolvedType_::Fun(_, _, _) => todo!(),
             ResolvedType_::Vec(_) => todo!(),
             ResolvedType_::ResolvedFailed(_) => todo!(),
-            ResolvedType_::StructName(_) => todo!(),
+            ResolvedType_::StructName(_, _) => todo!(),
         }
     }
 }
@@ -277,3 +284,9 @@ pub const UNKNOWN_LOC: Loc = Loc::new(FileHash::empty(), 0, 0);
 //         }
 //     }
 // }
+
+impl std::fmt::Display for ResolvedType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        unimplemented!()
+    }
+}

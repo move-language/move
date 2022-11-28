@@ -211,7 +211,6 @@ pub(crate) fn path_concat_move_toml(p1: &Path, p2: &Path) -> PathBuf {
         Some(x) => x.ends_with("Move.toml"),
         None => false,
     };
-
     if p1_is_move_toml {
         let mut p1 = p1.to_path_buf();
         p1.pop();

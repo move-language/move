@@ -289,9 +289,15 @@ impl Modules {
                     }
                 }
             }
+            let all_struct_with_module = Rc::new(RefCell::new(HashMap::new()));
             for (_, s) in all.iter() {
-                scopes.enter_item(self, s.name.value(), Item::StructName(s.name.clone()));
+                scopes.enter_item(
+                    self,
+                    s.name.value(),
+                    Item::StructName(s.name.clone(), all_struct_with_module.clone()),
+                );
             }
+
             for (_, s) in all.iter() {
                 let fields = match &s.fields {
                     StructFields::Defined(x) => {
@@ -304,8 +310,17 @@ impl Modules {
                     }
                     StructFields::Native(x) => vec![],
                 };
-                let item = Item::Struct(s.name.clone(), s.type_parameters.clone(), fields);
-                scopes.enter_item(self, s.name.value(), item);
+                let is = ItemStruct {
+                    name: s.name.clone(),
+                    type_parameters: s.type_parameters.clone(),
+                    fields,
+                };
+                let item = Item::Struct(is.clone());
+                scopes.enter_item(self, is.name.value(), item);
+                all_struct_with_module
+                    .as_ref()
+                    .borrow_mut()
+                    .insert(is.name.0.value, is.clone());
             }
         }
 
@@ -629,7 +644,11 @@ impl Modules {
                 let mut struct_ty =
                     scopes.find_name_access_chain_type(name, |s| self.name_to_addr(s));
                 match &struct_ty.0.value {
-                    ResolvedType_::Struct(_, type_parameters, _fields) => {
+                    ResolvedType_::Struct(ItemStruct {
+                        name: _,
+                        type_parameters,
+                        fields,
+                    }) => {
                         let type_args: Option<Vec<ResolvedType>> =
                             if let Some(type_args) = type_args {
                                 Some(type_args.iter().map(|x| scopes.resolve_type(x)).collect())
@@ -986,7 +1005,7 @@ impl Modules {
                     return;
                 }
                 let r = r.unwrap();
-                let item = Item::ImportedUseModule(module.clone(), r);
+                let item = Item::ImportedModule(module.clone(), r);
                 scopes.enter_item(self, name, item);
             }
             Use::Members(module, members) => {
@@ -1017,7 +1036,7 @@ impl Modules {
                         if visitor.finished() {
                             return;
                         }
-                        let item = Item::ImportedMember(Box::new(i.clone()));
+                        let item = Item::ImportedMember(name.clone(), Box::new(i.clone()));
                         scopes.enter_item(self, name.value, item);
                     }
                 }
@@ -1103,7 +1122,7 @@ fn get_name_from_value(v: &Value) -> Option<&Name> {
 }
 
 fn infer_type_on_expression(
-    ret: &mut HashMap<Symbol, ResolvedType>,
+    ret: &mut HashMap<Symbol /*  name like T or ... */, ResolvedType>,
     _type_parameters: &Vec<(Name, Vec<Ability>)>,
     parameters: &Vec<ResolvedType>,
     expression_types: &Vec<ResolvedType>,
@@ -1124,8 +1143,10 @@ fn infer_type_on_expression(
     ) {
         match &parameter_type.0.value {
             ResolvedType_::UnKnown => {}
-            ResolvedType_::Struct(_, _, fields) => match &expr_type.0.value {
-                ResolvedType_::Struct(_, _, fields2) => {
+            ResolvedType_::Struct(ItemStruct { fields, .. }) => match &expr_type.0.value {
+                ResolvedType_::Struct(ItemStruct {
+                    fields: fields2, ..
+                }) => {
                     for (l, r) in fields.iter().zip(fields2.iter()) {
                         bind(ret, &l.1, &r.1);
                     }
@@ -1163,7 +1184,7 @@ fn infer_type_on_expression(
                 _ => {}
             },
             ResolvedType_::ResolvedFailed(_) => {}
-            ResolvedType_::StructName(_) => {}
+            ResolvedType_::StructName(_, _) => {}
         }
     }
 }

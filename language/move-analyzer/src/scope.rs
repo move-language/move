@@ -9,7 +9,8 @@ use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-#[derive(Default, Debug, Clone)]
+
+#[derive(Default, Clone)]
 pub struct Scope {
     pub(crate) items: HashMap<Symbol, Item>,
     pub(crate) is_function: bool,
@@ -43,7 +44,7 @@ impl Scope {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Addresses {
     /// address to modules
     pub(crate) address: HashMap<AccountAddress, Address>,
@@ -57,7 +58,7 @@ impl Addresses {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub struct Address {
     /// module name to Scope.
     pub(crate) modules: HashMap<Symbol, Rc<RefCell<Scope>>>,

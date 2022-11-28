@@ -100,12 +100,13 @@ impl ScopeVisitor for Visitor {
             _ => {}
         }
     }
+
     fn file_should_visit(&self, p: &PathBuf) -> bool {
         let x = self.filepath == *p;
         println!("xxxxxxxxx {:?} {:?} match:{:?}", p, self.filepath, x);
-
         x
     }
+
     fn finished(&self) -> bool {
         self.result.is_some()
     }

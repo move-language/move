@@ -3010,6 +3010,7 @@ name = "move-bytecode-verifier"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "crossbeam-utils",
  "hex-literal",
  "invalid-mutations",
  "move-binary-format",

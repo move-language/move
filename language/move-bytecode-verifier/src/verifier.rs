@@ -11,11 +11,13 @@ use crate::{
     script_signature::no_additional_script_signature_checks, signature::SignatureChecker,
     struct_defs::RecursiveStructDefChecker,
 };
+use crossbeam_utils::thread;
 use move_binary_format::{
     check_bounds::BoundsChecker,
-    errors::{Location, VMResult},
+    errors::{Location, PartialVMError, VMResult},
     file_format::{CompiledModule, CompiledScript},
 };
+use move_core_types::vm_status::StatusCode;
 
 #[derive(Debug, Clone, Default)]
 pub struct VerifierConfig {
@@ -24,6 +26,7 @@ pub struct VerifierConfig {
     pub max_function_parameters: Option<usize>,
     pub max_generic_instantiation_length: Option<usize>,
     pub max_basic_blocks: Option<usize>,
+    pub use_separate_thread: bool,
 }
 
 /// Helper for a "canonical" verification of a module.
@@ -40,7 +43,10 @@ pub fn verify_module(module: &CompiledModule) -> VMResult<()> {
     verify_module_with_config(&VerifierConfig::default(), module)
 }
 
-pub fn verify_module_with_config(config: &VerifierConfig, module: &CompiledModule) -> VMResult<()> {
+fn verify_module_with_config_impl(
+    config: &VerifierConfig,
+    module: &CompiledModule,
+) -> VMResult<()> {
     BoundsChecker::verify_module(module).map_err(|e| {
         // We can't point the error at the module, because if bounds-checking
         // failed, we cannot safely index into module's handle to itself.
@@ -73,7 +79,10 @@ pub fn verify_script(script: &CompiledScript) -> VMResult<()> {
     verify_script_with_config(&VerifierConfig::default(), script)
 }
 
-pub fn verify_script_with_config(config: &VerifierConfig, script: &CompiledScript) -> VMResult<()> {
+fn verify_script_with_config_impl(
+    config: &VerifierConfig,
+    script: &CompiledScript,
+) -> VMResult<()> {
     BoundsChecker::verify_script(script).map_err(|e| e.finish(Location::Script))?;
     LimitsVerifier::verify_script(config, script)?;
     DuplicationChecker::verify_script(script)?;
@@ -82,4 +91,38 @@ pub fn verify_script_with_config(config: &VerifierConfig, script: &CompiledScrip
     constants::verify_script(script)?;
     CodeUnitVerifier::verify_script(config, script)?;
     script_signature::verify_script(script, no_additional_script_signature_checks)
+}
+
+pub fn verify_script_with_config(config: &VerifierConfig, script: &CompiledScript) -> VMResult<()> {
+    if !config.use_separate_thread {
+        return verify_script_with_config_impl(config, script);
+    }
+    thread::scope(|s| {
+        s.spawn(|_| verify_script_with_config_impl(config, script))
+            .join()
+            .map_err(|_| {
+                PartialVMError::new(StatusCode::UNKNOWN_VERIFICATION_ERROR).finish(Location::Script)
+            })
+    })
+    .map_err(|_| {
+        PartialVMError::new(StatusCode::UNKNOWN_VERIFICATION_ERROR).finish(Location::Script)
+    })??
+}
+
+pub fn verify_module_with_config(config: &VerifierConfig, module: &CompiledModule) -> VMResult<()> {
+    if !config.use_separate_thread {
+        return verify_module_with_config_impl(config, module);
+    }
+    thread::scope(|s| {
+        s.spawn(|_| verify_module_with_config_impl(config, module))
+            .join()
+            .map_err(|_| {
+                PartialVMError::new(StatusCode::UNKNOWN_VERIFICATION_ERROR)
+                    .finish(Location::Module(module.self_id()))
+            })
+    })
+    .map_err(|_| {
+        PartialVMError::new(StatusCode::UNKNOWN_VERIFICATION_ERROR)
+            .finish(Location::Module(module.self_id()))
+    })??
 }

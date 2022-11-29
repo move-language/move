@@ -46,11 +46,24 @@ impl Scopes {
         r
     }
 
+    pub(crate) fn enter_scope_guard(&self) -> ScopesGuarder {
+        let s = Scope::default();
+        self.scopes.as_ref().borrow_mut().push(s);
+        ScopesGuarder::new(self.clone())
+    }
+
     // Enter
-    pub(crate) fn enter_item(&self, s: &dyn ModuleServices, name: Symbol, item: impl Into<Item>) {
+    pub(crate) fn enter_item(
+        &self,
+        convert_loc: &dyn ConvertLoc,
+        name: Symbol,
+        item: impl Into<Item>,
+    ) {
         let item = item.into();
         let loc = item.def_loc();
-        let loc = s.convert_loc_range(loc).unwrap_or(FileRange::unknown());
+        let loc = convert_loc
+            .convert_loc_range(loc)
+            .unwrap_or(FileRange::unknown());
         log::trace!("{}", loc);
         log::trace!("enter scope name:{:?} item:{}", name, item);
         self.scopes
@@ -63,15 +76,17 @@ impl Scopes {
 
     pub(crate) fn enter_top_item(
         &self,
-        s: &dyn ModuleServices,
+        convert_loc: &dyn ConvertLoc,
         address: AccountAddress,
         module: Symbol,
         item_name: Symbol,
         item: impl Into<Item>,
     ) {
-        let item = item.into();
+        let item: Item = item.into();
         let loc = item.def_loc();
-        let loc = s.convert_loc_range(loc).unwrap_or(FileRange::unknown());
+        let loc = convert_loc
+            .convert_loc_range(loc)
+            .unwrap_or(FileRange::unknown());
         log::trace!("{}", loc);
         log::trace!(
             "enter top scope address:{:?} module:{:?} name:{:?} item:{}",
@@ -113,7 +128,13 @@ impl Scopes {
             .borrow_mut()
             .borrow_mut()
             .items
-            .insert(item_name, item);
+            .insert(item_name, item.clone());
+        // A top item can be access by two ways.
+        // First 0x1::xxx::yyy
+        // Second the in current module,Can use a plain name to access then like  foo().
+        // drop b cannot borrow more than once.
+        drop(b);
+        self.enter_item(convert_loc, item_name, item);
     }
 
     /// Visit all scope from inner to outer.
@@ -159,29 +180,6 @@ impl Scopes {
         r
     }
 
-    pub(crate) fn resolve_name_access_chain_type(&self, chain: &NameAccessChain) -> ResolvedType {
-        let scopes = self.scopes.as_ref().borrow();
-        for s in scopes.iter() {
-            // We must be in global scope.
-            match &chain.value {
-                NameAccessChain_::One(x) => {
-                    if let Some(item) = s.items.get(&x.value) {
-                        if let Some(ty) = item.to_type() {
-                            return ty;
-                        }
-                    }
-                }
-                NameAccessChain_::Two(_, _) => todo!(),
-                NameAccessChain_::Three(_, _) => todo!(),
-            };
-        }
-        // make sure return a false type.
-        return ResolvedType(Spanned {
-            loc: chain.loc,
-            value: ResolvedType_::ResolvedFailed(Type_::Apply(Box::new(chain.clone()), vec![])),
-        });
-    }
-
     pub(crate) fn find_var_type(&self, name: Symbol) -> ResolvedType {
         let mut ret = None;
         self.inner_first_visit(|s| {
@@ -196,28 +194,25 @@ impl Scopes {
             };
             false
         });
-        return ResolvedType(Spanned {
-            loc: UNKNOWN_LOC,
-            value: ResolvedType_::UnKnown,
-        });
+        return ResolvedType::UnKnown;
     }
 
-    // TODO type parameter can return???
-    pub(crate) fn find_name_access_chain_expr_type<'a>(
+    pub(crate) fn find_name_chain_type<'a>(
         &self,
         chain: &NameAccessChain,
         item_ret: &mut Option<Item>,
-        name_to_addr: impl Fn(Symbol) -> &'a AccountAddress,
+        name_to_addr: &dyn ConvertName2AccountAddress,
+        accept_tparam: bool,
     ) -> ResolvedType {
-        let failed = ResolvedType::new_unknown(chain.loc);
+        let failed = ResolvedType::new_unknown();
         match &chain.value {
             NameAccessChain_::One(name) => {
                 let mut r = None;
                 self.inner_first_visit(|s| {
                     if let Some(v) = s.items.get(&name.value) {
-                        r = v.to_type();
+                        r = v.to_type(accept_tparam);
                         if r.is_some() {
-                            std::mem::replace(item_ret, Some(v.clone()));
+                            let _ = std::mem::replace(item_ret, Some(v.clone()));
                             return true;
                         }
                     }
@@ -242,8 +237,8 @@ impl Scopes {
                 match r {
                     Item::ImportedModule(_, members) => {
                         if let Some(item) = members.as_ref().borrow().items.get(&member.value) {
-                            std::mem::replace(item_ret, Some(item.clone()));
-                            item.to_type().unwrap_or(failed)
+                            let _ = std::mem::replace(item_ret, Some(item.clone()));
+                            item.to_type(false).unwrap_or(failed)
                         } else {
                             failed
                         }
@@ -252,9 +247,9 @@ impl Scopes {
                 }
             }
             NameAccessChain_::Three(chain_two, member) => self.visit_top_scope(|top| {
-                let modules = top.address.get(match &chain_two.value.0.value {
-                    LeadingNameAccess_::AnonymousAddress(x) => &x.bytes,
-                    LeadingNameAccess_::Name(name) => name_to_addr(name.value),
+                let modules = top.address.get(&match &chain_two.value.0.value {
+                    LeadingNameAccess_::AnonymousAddress(x) => x.bytes,
+                    LeadingNameAccess_::Name(name) => name_to_addr.convert(name.value),
                 });
                 if modules.is_none() {
                     return failed;
@@ -266,8 +261,8 @@ impl Scopes {
                 }
                 let module = module.unwrap();
                 if let Some(item) = module.as_ref().borrow().items.get(&member.value) {
-                    std::mem::replace(item_ret, Some(item.clone()));
-                    item.to_type().unwrap_or(failed)
+                    let _ = std::mem::replace(item_ret, Some(item.clone()));
+                    item.to_type(false).unwrap_or(failed)
                 } else {
                     failed
                 }
@@ -287,30 +282,52 @@ impl Scopes {
             .unwrap())
     }
 
-    pub(crate) fn resolve_type(&self, ty: &Type) -> ResolvedType {
+    pub(crate) fn resolve_type(
+        &self,
+        ty: &Type,
+        name_to_addr: &dyn ConvertName2AccountAddress,
+    ) -> ResolvedType {
         let r = match &ty.value {
             Type_::Apply(ref chain, types) => {
-                let chain_ty = self.resolve_name_access_chain_type(chain);
-                let _types: Vec<_> = types.iter().map(|ty| self.resolve_type(ty)).collect();
+                let chain_ty = self.find_name_chain_type(chain, &mut None, name_to_addr, true);
+                let _types: Vec<_> = types
+                    .iter()
+                    .map(|ty| self.resolve_type(ty, name_to_addr))
+                    .collect();
                 return chain_ty;
             }
-            Type_::Ref(m, ref b) => ResolvedType_::Ref(*m, Box::new(self.resolve_type(b.as_ref()))),
+            Type_::Ref(m, ref b) => {
+                ResolvedType::Ref(*m, Box::new(self.resolve_type(b.as_ref(), name_to_addr)))
+            }
             Type_::Fun(ref parameters, ref ret) => {
-                let parameters: Vec<_> = parameters.iter().map(|v| self.resolve_type(v)).collect();
-                let ret = self.resolve_type(ret.as_ref());
-                ResolvedType_::Fun(vec![], parameters, Box::new(ret))
+                let parameters: Vec<_> = parameters
+                    .iter()
+                    .map(|v| {
+                        (
+                            Var(Name::new(todo!(), Symbol::from("_"))),
+                            self.resolve_type(v, name_to_addr),
+                        )
+                    })
+                    .collect();
+                let ret = self.resolve_type(ret.as_ref(), name_to_addr);
+                ResolvedType::Fun(ItemFunction {
+                    name: todo!(),
+                    type_parameters: vec![],
+                    parameters,
+                    ret_type: Box::new(ret),
+                })
             }
 
-            Type_::Unit => ResolvedType_::Unit,
+            Type_::Unit => ResolvedType::Unit,
             Type_::Multiple(ref types) => {
-                let types: Vec<_> = types.iter().map(|v| self.resolve_type(v)).collect();
-                ResolvedType_::Multiple(types)
+                let types: Vec<_> = types
+                    .iter()
+                    .map(|v| self.resolve_type(v, name_to_addr))
+                    .collect();
+                ResolvedType::Multiple(types)
             }
         };
-        ResolvedType(Spanned {
-            loc: ty.loc,
-            value: r,
-        })
+        r
     }
 
     #[allow(dead_code)]
@@ -318,32 +335,9 @@ impl Scopes {
         let mut s = self.scopes.as_ref().borrow_mut();
         x(s.last_mut().unwrap())
     }
-
-    /// Find var decl,a const is consider included too.
-    pub(crate) fn find_var_decl(&self, name: Symbol) -> Option<(Symbol, Loc, ResolvedType)> {
-        let mut ret = None;
-        self.inner_first_visit(|s| {
-            if let Some(item) = s.items.get(&name) {
-                match item {
-                    Item::Const(name, ty) => {
-                        return true;
-                        ret = Some((name.value(), name.0.loc.clone(), ty.clone()));
-                    }
-                    Item::Var(name, ty) | Item::Parameter(name, ty) => {
-                        ret = Some((name.value(), name.0.loc.clone(), ty.clone()));
-                        return true;
-                    }
-                    _ => {}
-                }
-            }
-            false
-        });
-
-        ret
-    }
 }
 
-/// RAII type pop on `enter_scope`.
+/// RAII type pop on when enter a scope.
 pub(crate) struct ScopesGuarder(Scopes);
 
 impl ScopesGuarder {

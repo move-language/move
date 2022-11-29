@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::item;
+use crate::item::{self, ItemFunction};
 use move_command_line_common::files::FileHash;
 use move_command_line_common::types;
 use move_compiler::shared::Identifier;
@@ -11,8 +11,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-#[derive(Clone, Debug)]
-pub(crate) enum ResolvedType_ {
+#[derive(Clone)]
+pub enum ResolvedType {
     UnKnown,
     Struct(item::ItemStruct),
     StructName(StructName, Rc<RefCell<HashMap<Symbol, item::ItemStruct>>>),
@@ -32,38 +32,30 @@ pub(crate) enum ResolvedType_ {
     /// (t1, t2, ... , tn)
     /// Used for return values and expression blocks
     Multiple(Vec<ResolvedType>),
-    Fun(
-        Vec<(Name, Vec<Ability>)>, // type parameters.
-        Vec<ResolvedType>,         // parameters.
-        Box<ResolvedType>,         // return type.
-    ),
+    Fun(ItemFunction),
     Vec(Box<ResolvedType>),
     /// Can't resolve the Type,Keep the ast type.
     ResolvedFailed(Type_),
 }
 
-#[derive(Clone, Debug)]
-pub struct ResolvedType(pub(crate) Spanned<ResolvedType_>);
 impl ResolvedType {
     pub(crate) fn nth_ty(&self, index: usize) -> Option<&'_ ResolvedType> {
-        match &self.0.value {
-            ResolvedType_::Multiple(x) => x.get(index),
-            ResolvedType_::Struct(item::ItemStruct { fields, .. }) => {
-                fields.get(index).map(|x| &x.1)
-            }
-            _ => None,
+        match self {
+            ResolvedType::Multiple(x) => x.get(index),
+            _ => Some(self),
         }
     }
-    pub(crate) fn is_vector(&self) -> Option<&'_ ResolvedType> {
-        match &self.0.value {
-            ResolvedType_::Vec(x) => Some(x.as_ref()),
+
+    pub(crate) fn is_vector(&self) -> Option<&'_ Self> {
+        match self {
+            ResolvedType::Vec(x) => Some(x.as_ref()),
             _ => None,
         }
     }
 
     pub(crate) fn find_filed_by_name(&self, name: Symbol) -> Option<&'_ (Field, ResolvedType)> {
-        match &self.0.value {
-            ResolvedType_::Struct(item::ItemStruct { fields, .. }) => {
+        match self {
+            ResolvedType::Struct(item::ItemStruct { fields, .. }) => {
                 for f in fields.iter() {
                     if f.0.value() == name {
                         return Some(f);
@@ -77,139 +69,132 @@ impl ResolvedType {
 
     #[inline]
     pub(crate) const fn new_struct(
-        loc: Loc,
         name: StructName,
         ts: Vec<StructTypeParameter>,
         fields: Vec<(Field, ResolvedType)>,
     ) -> ResolvedType {
-        Self(Spanned {
-            loc,
-            value: ResolvedType_::Struct(item::ItemStruct {
-                name,
-                type_parameters: ts,
-                fields,
-            }),
-        })
-    }
-    pub(crate) fn new_multi(loc: Loc, one: ResolvedType, num: usize) -> Self {
-        Self(Spanned {
-            loc,
-            value: ResolvedType_::Multiple((0..num).map(|_| one.clone()).collect()),
-        })
-    }
-    #[inline]
-    pub(crate) fn new_unit(loc: Loc) -> Self {
-        Self(Spanned {
-            loc,
-            value: ResolvedType_::Unit,
-        })
-    }
-    #[inline]
-    pub(crate) fn new_build_in(_b: BuildInType) -> Self {
-        Self(Spanned {
-            loc: UNKNOWN_LOC,
-            value: ResolvedType_::Unit,
+        ResolvedType::Struct(item::ItemStruct {
+            name,
+            type_parameters: ts,
+            fields,
         })
     }
 
+    pub(crate) fn new_multi_repeat(one: ResolvedType, num: usize) -> Self {
+        ResolvedType::Multiple((0..num).map(|_| one.clone()).collect())
+    }
+
     #[inline]
-    pub(crate) const fn new_unknown(lco: Loc) -> Self {
-        Self(Spanned {
-            loc: UNKNOWN_LOC,
-            value: ResolvedType_::UnKnown,
-        })
+    pub(crate) fn new_unit() -> Self {
+        ResolvedType::Unit
+    }
+    #[inline]
+    pub(crate) fn new_build_in(b: BuildInType) -> Self {
+        ResolvedType::BuildInType(b)
+    }
+
+    #[inline]
+    pub(crate) const fn new_unknown() -> Self {
+        ResolvedType::UnKnown
     }
 
     #[inline]
     pub(crate) fn is_unknown(&self) -> bool {
-        match &self.0.value {
-            ResolvedType_::UnKnown => true,
+        match self {
+            ResolvedType::UnKnown => true,
             _ => false,
         }
     }
     #[inline]
     pub(crate) fn is_resolved_failed(&self) -> bool {
-        match &self.0.value {
-            ResolvedType_::ResolvedFailed(_) => true,
+        match self {
+            ResolvedType::ResolvedFailed(_) => true,
             _ => false,
         }
     }
-
-    #[inline]
-    pub(crate) fn new_ref(loc: Loc, is_mut: bool, e: ResolvedType) -> Self {
-        let value = ResolvedType_::Ref(is_mut, Box::new(e));
-        Self(Spanned { loc, value })
+    pub(crate) fn is_unit(&self) -> bool {
+        match self {
+            ResolvedType::Unit => true,
+            _ => false,
+        }
     }
-
+    #[inline]
+    pub(crate) fn new_ref(is_mut: bool, e: ResolvedType) -> Self {
+        let value = ResolvedType::Ref(is_mut, Box::new(e));
+        value
+    }
     #[inline]
     pub(crate) fn is_err(&self) -> bool {
         self.is_resolved_failed() || self.is_unknown()
     }
     fn is_tparam(&self) -> bool {
-        match &self.0.value {
-            ResolvedType_::TParam(_, _) => true,
+        match self {
+            ResolvedType::TParam(_, _) => true,
             _ => false,
         }
     }
     #[inline]
     pub(crate) fn is_fun(&self) -> bool {
-        match &self.0.value {
-            ResolvedType_::Fun(_, _, _) => true,
+        match self {
+            ResolvedType::Fun(_) => true,
             _ => false,
         }
     }
 
     /// bind type parameter to concrete tpe
     pub(crate) fn bind_type_parameter(&mut self, types: &HashMap<Symbol, ResolvedType>) {
-        match &mut self.0.value {
-            ResolvedType_::UnKnown => {}
-            ResolvedType_::Struct(item::ItemStruct { ref mut fields, .. }) => {
+        match self {
+            ResolvedType::UnKnown => {}
+            ResolvedType::Struct(item::ItemStruct { ref mut fields, .. }) => {
                 for i in 0..fields.len() {
                     let t = fields.get_mut(i).unwrap();
                     t.1.bind_type_parameter(types);
                 }
             }
-            ResolvedType_::BuildInType(_) => {}
-            ResolvedType_::TParam(name, _) => {
+            ResolvedType::BuildInType(_) => {}
+            ResolvedType::TParam(name, _) => {
                 if let Some(x) = types.get(&name.value) {
-                    std::mem::replace(&mut self.0.value, (*x).clone().0.value);
+                    let _ = std::mem::replace(self, x.clone());
                 }
             }
-            ResolvedType_::Ref(_, ref mut b) => {
+            ResolvedType::Ref(_, ref mut b) => {
                 b.as_mut().bind_type_parameter(types);
             }
-            ResolvedType_::Unit => {}
-            ResolvedType_::Multiple(ref mut xs) => {
+            ResolvedType::Unit => {}
+            ResolvedType::Multiple(ref mut xs) => {
                 for i in 0..xs.len() {
                     let t = xs.get_mut(i).unwrap();
                     t.bind_type_parameter(types);
                 }
             }
-            ResolvedType_::Fun(_, ref mut xs, ref mut ret) => {
+            ResolvedType::Fun(x) => {
+                let xs = &mut x.parameters;
                 for i in 0..xs.len() {
                     let t = xs.get_mut(i).unwrap();
-                    t.bind_type_parameter(types);
+                    t.1.bind_type_parameter(types);
                 }
-                ret.as_mut().bind_type_parameter(types);
+                x.ret_type.as_mut().bind_type_parameter(types);
             }
-            ResolvedType_::Vec(ref mut b) => {
+            ResolvedType::Vec(ref mut b) => {
                 b.as_mut().bind_type_parameter(types);
             }
-            ResolvedType_::ResolvedFailed(_) => {}
-            ResolvedType_::ApplyTParam(_, _, _) => {
+            ResolvedType::ResolvedFailed(_) => {}
+            ResolvedType::ApplyTParam(_, _, _) => {
                 unreachable!("called multiple times.")
             }
-            ResolvedType_::StructName(_, _) => {}
+            ResolvedType::StructName(_, _) => {
+                unimplemented!();
+            }
         }
     }
 }
 
 impl ResolvedType {
     pub(crate) fn def_loc(&self) -> &Loc {
-        match &self.0.value {
-            ResolvedType_::Struct(x) => x.name.borrow().0,
-            ResolvedType_::TParam(name, _) => &name.loc,
-            ResolvedType_::BuildInType(_) => &UNKNOWN_LOC,
+        match self {
+            ResolvedType::Struct(x) => x.name.borrow().0,
+            ResolvedType::TParam(name, _) => &name.loc,
+            ResolvedType::BuildInType(_) => &UNKNOWN_LOC,
             _ => unreachable!("{}", self),
         }
     }
@@ -225,7 +210,6 @@ pub enum BuildInType {
     /// A number type from literal.
     /// Could be u8 and ... depend on How it is used.
     NumType,
-
     /// https://move-book.com/advanced-topics/managing-collections-with-vectors.html?highlight=STring#hex-and-bytestring-literal-for-inline-vector-definitions
     String,
 }
@@ -247,34 +231,36 @@ pub const UNKNOWN_LOC: Loc = Loc::new(FileHash::empty(), 0, 0);
 
 impl std::fmt::Display for ResolvedType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.0.value {
-            ResolvedType_::UnKnown => write!(f, "unknown"),
-            ResolvedType_::Struct(x) => write!(f, "struct {}", x.name.value().as_str()),
-            ResolvedType_::StructName(name, _) => write!(f, "struct {}", name.value().as_str()),
-            ResolvedType_::BuildInType(x) => write!(f, "{:?}", x),
-            ResolvedType_::TParam(name, _) => {
+        match self {
+            ResolvedType::UnKnown => write!(f, "unknown"),
+            ResolvedType::Struct(x) => write!(f, "{}", x),
+            ResolvedType::StructName(name, _) => write!(f, "struct {}", name.value().as_str()),
+            ResolvedType::BuildInType(x) => write!(f, "{:?}", x),
+            ResolvedType::TParam(name, _) => {
                 write!(f, "type_parameter:{}", name.value.as_str())
             }
-            ResolvedType_::ApplyTParam(t, name, _) => {
-                write!(f, "apply {} to {}", name.value.as_str(), t)
+            ResolvedType::ApplyTParam(t, name, _) => {
+                write!(f, "{} as {}", name.value.as_str(), t)
             }
-            ResolvedType_::Ref(_, ty) => {
-                write!(f, "&{}", ty.as_ref())
+            ResolvedType::Ref(is_mut, ty) => {
+                write!(f, "&{} {}", if *is_mut { "mut" } else { "" }, ty.as_ref())
             }
-            ResolvedType_::Unit => write!(f, "()"),
-            ResolvedType_::Multiple(m) => {
+            ResolvedType::Unit => write!(f, "()"),
+            ResolvedType::Multiple(m) => {
                 write!(f, "(")?;
                 for i in 0..m.len() {
                     let t = m.get(i).unwrap();
-                    write!(f, "{}", t)?;
+                    write!(f, "{}{}", if i == m.len() - 1 { "" } else { "," }, t)?;
                 }
                 write!(f, ")")
             }
-            ResolvedType_::Fun(_, _, _) => todo!(),
-            ResolvedType_::Vec(ty) => {
+            ResolvedType::Fun(x) => {
+                write!(f, "{}", x)
+            }
+            ResolvedType::Vec(ty) => {
                 write!(f, "vector<{}>", ty.as_ref())
             }
-            ResolvedType_::ResolvedFailed(ty) => {
+            ResolvedType::ResolvedFailed(ty) => {
                 write!(f, "{:?}", ty)
             }
         }

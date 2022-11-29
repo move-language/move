@@ -16,6 +16,7 @@ impl log::Log for SimpleLogger {
     }
     fn flush(&self) {}
 }
+
 const LOGGER: SimpleLogger = SimpleLogger;
 
 pub fn init_log() {
@@ -29,7 +30,7 @@ fn goto_definition_test() {
     init_log();
     let m = Modules::new("/home/yuyang/projects/test-move2");
     let mut v =
-        goto_definition::Visitor::new("/home/yuyang/projects/test-move2/sources/test.move", 2, 16);
+        goto_definition::Visitor::new("/home/yuyang/projects/test-move2/sources/test.move", 5, 9);
     m.run_visitor(&mut v);
     eprintln!("{:?}", v.result.unwrap());
 }

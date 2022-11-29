@@ -27,7 +27,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
     let loc = parameters.text_document_position_params.position;
     let line = loc.line;
     let col = loc.character;
-    let mut fpath = path_concat(
+    let fpath = path_concat(
         PathBuf::from(std::env::current_dir().unwrap()).as_path(),
         fpath.as_path(),
     );
@@ -90,7 +90,7 @@ impl Visitor {
     }
 
     ///  match loc   
-    fn match_loc(&self, loc: &Loc, services: &dyn ModuleServices) -> bool {
+    fn match_loc(&self, loc: &Loc, services: &dyn ConvertLoc) -> bool {
         let r = services.convert_loc_range(loc);
         match &r {
             Some(r) => r.in_range(self.filepath.clone(), self.line, self.col),
@@ -100,19 +100,13 @@ impl Visitor {
 }
 
 impl ScopeVisitor for Visitor {
-    fn handle_item(
-        &mut self,
-        services: &dyn ModuleServices,
-        _scopes: &Scopes,
-        item: &ItemOrAccess,
-    ) {
+    fn handle_item(&mut self, services: &dyn ConvertLoc, _scopes: &Scopes, item: &ItemOrAccess) {
         match item {
             ItemOrAccess::Item(item) => match item {
                 // If Some special add here.
                 // Right now default is enough.
                 _ => {
                     let loc = item.def_loc();
-
                     if self.match_loc(loc, services) {
                         if let Some(t) = services.convert_loc_range(loc) {
                             self.result = Some(t);
@@ -120,8 +114,11 @@ impl ScopeVisitor for Visitor {
                     }
                 }
             },
+
             ItemOrAccess::Access(access) => match item {
                 _ => {
+                    log::trace!("access:{}", access);
+
                     let locs = access.access_def_loc();
                     if self.match_loc(locs.0, services) {
                         if let Some(t) = services.convert_loc_range(locs.1) {

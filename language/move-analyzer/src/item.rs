@@ -2,15 +2,16 @@ use super::scope::*;
 use super::types::*;
 
 use move_compiler::shared::Identifier;
+use move_compiler::shared::TName;
 use move_compiler::{parser::ast::*, shared::*};
-use move_ir_types::location::{Loc, Spanned};
+use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
-
+use std::fmt::Pointer;
 use std::rc::Rc;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ItemStruct {
     pub(crate) name: StructName,
     pub(crate) type_parameters: Vec<StructTypeParameter>,
@@ -19,7 +20,16 @@ pub struct ItemStruct {
 
 impl std::fmt::Display for ItemStruct {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "struct {}", self.name.value().as_str())
+        write!(f, "struct {}", self.name.value().as_str())?;
+        write!(f, "{{")?;
+        if self.type_parameters.len() > 0 {
+            write!(f, "<")?;
+            for t in self.type_parameters.iter() {
+                write!(f, "{}:{:?}", t.name.value.as_str(), t.constraints)?;
+            }
+            write!(f, ">")?;
+        }
+        write!(f, "}}")
     }
 }
 
@@ -32,47 +42,75 @@ pub enum Item {
     ImportedMember(Name, Box<Item>),
     Const(ConstantName, ResolvedType),
     Var(Var, ResolvedType),
+    Field(Field, ResolvedType),
 
     /////////////////////////
     /// TYPE types
-    Struct(
-        // StructName,
-        // Vec<StructTypeParameter>,
-        // Vec<(Field, ResolvedType)>, /* TODO If this length is zero,maybe a native. */
-        ItemStruct,
-    ),
+    Struct(ItemStruct),
     StructName(StructName, Rc<RefCell<HashMap<Symbol, ItemStruct>>>),
-    Fun(
-        FunctionName,
-        Vec<(Name, Vec<Ability>)>, // type parameters.
-        Vec<(Var, ResolvedType)>,  // parameters.
-        Box<ResolvedType>,         // return type.
-    ),
+    Fun(ItemFunction),
 
     /// build in types.
     BuildInType(BuildInType),
     /// Here are all definition.
     TParam(Name, Vec<Ability>),
+
+    Dummy,
+}
+
+#[derive(Clone)]
+pub struct ItemFunction {
+    pub(crate) name: FunctionName,
+    pub(crate) type_parameters: Vec<(Name, Vec<Ability>)>, // type parameters.
+    pub(crate) parameters: Vec<(Var, ResolvedType)>,       // parameters.
+    pub(crate) ret_type: Box<ResolvedType>,                // return ty
+}
+
+impl std::fmt::Display for ItemFunction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "fun {}", self.name.value().as_str())?;
+        if self.type_parameters.len() > 0 {
+            write!(f, "<")?;
+            for (name, a) in self.type_parameters.iter() {
+                write!(f, "{}:{:?},", name.value.as_str(), a)?;
+            }
+            write!(f, ">")?;
+        }
+        write!(f, "(")?;
+        for (name, t) in self.parameters.iter() {
+            write!(f, "{}:{},", name.value().as_str(), t)?;
+        }
+        write!(f, ")")?;
+        if !self.ret_type.as_ref().is_unit() {
+            write!(f, ":{}", self.ret_type.as_ref())?;
+        }
+        Ok(())
+    }
 }
 
 impl Item {
     ///
-    pub(crate) fn to_type(&self) -> Option<ResolvedType> {
+    pub(crate) fn to_type(&self, accept_tparam: bool) -> Option<ResolvedType> {
         // TODO maybe a parameter to decide return TParam or not.
-        let (loc, x) = match self {
-            Item::TParam(name, ab) => (name.loc, ResolvedType_::TParam(name.clone(), ab.clone())),
-            Item::Struct(x) => (x.name.loc(), ResolvedType_::Struct(x.clone())),
-            Item::StructName(name, x) => (
-                name.loc(),
-                ResolvedType_::StructName(name.clone(), x.clone()),
-            ),
-            Item::BuildInType(b) => (UNKNOWN_LOC, ResolvedType_::BuildInType(*b)),
-            Item::Parameter(_, ty) | Item::Var(_, ty) | Item::Const(_, ty) => {
-                (UNKNOWN_LOC.clone(), ty.clone().0.value)
+        let x = match self {
+            Item::TParam(name, ab) => {
+                if accept_tparam {
+                    ResolvedType::TParam(name.clone(), ab.clone())
+                } else {
+                    return None;
+                }
             }
-            _ => return None,
+            Item::Struct(x) => ResolvedType::Struct(x.clone()),
+            Item::StructName(name, x) => ResolvedType::StructName(name.clone(), x.clone()),
+            Item::BuildInType(b) => ResolvedType::BuildInType(*b),
+            Item::Parameter(_, ty) | Item::Var(_, ty) | Item::Const(_, ty) => ty.clone(),
+            Item::Field(_, ty) => ty.clone(),
+            Item::Fun(x) => ResolvedType::Fun(x.clone()),
+            Item::ImportedMember(_, item) => return item.to_type(false),
+            Item::ImportedModule(_, _) => return None,
+            Item::Dummy => return None,
         };
-        Some(ResolvedType(Spanned { loc, value: x }))
+        Some(x)
     }
 
     pub(crate) fn def_loc(&self) -> &Loc {
@@ -84,19 +122,21 @@ impl Item {
             Self::TParam(name, _) => &name.loc,
             Self::Const(name, _) => &name.borrow().0,
             Item::StructName(name, _) => &name.0.loc,
-            Item::Fun(name, _, _, _) => &name.0.loc,
+            Item::Fun(f) => &f.name.0.loc,
             Item::BuildInType(_) => &UNKNOWN_LOC,
-            Item::ImportedModule(_, _) => todo!(),
+            Item::ImportedModule(_, _) => &UNKNOWN_LOC, // TODO maybe loc from ModuleIdent.
             Item::Var(name, _) => name.borrow().0,
+            Item::Field(f, _) => f.borrow().0,
+            Item::Dummy => &UNKNOWN_LOC,
         }
     }
 
     /// New a dummy item.
-    /// Can be use later by some override data.
+    /// Can be use later by someone override data.
     /// like std::mem::replace.
     pub(crate) fn new_dummy() -> Self {
         // Data here is not important.
-        Self::BuildInType(BuildInType::Bool)
+        Self::Dummy
     }
 }
 
@@ -149,7 +189,7 @@ impl std::fmt::Display for Item {
             Item::StructName(name, _) => {
                 write!(f, "struct {}", name.value().as_str())
             }
-            Item::Fun(name, _, _, _) => write!(f, "fun {}", name.value().as_str()),
+            Item::Fun(x) => write!(f, "{}", x),
             Item::BuildInType(x) => {
                 write!(f, "build in '{:?}'", x)
             }
@@ -164,6 +204,12 @@ impl std::fmt::Display for Item {
             Item::Var(name, ty) => {
                 write!(f, "var {}:{}", name.0.value.as_str(), ty)
             }
+            Item::Field(x, ty) => {
+                write!(f, "field {}:{}", x.0.value.as_str(), ty)
+            }
+            Item::Dummy => {
+                write!(f, "dummy")
+            }
         }
     }
 }
@@ -171,16 +217,18 @@ impl std::fmt::Display for Item {
 pub enum Access {
     ApplyType(NameAccessChain, Box<ResolvedType>),
     UseMember(Name, Box<Item>),
-    ExprVar(Var, Option<(Symbol, Loc, ResolvedType)>),
+    ExprVar(Var, Box<Item>),
     ExprAccessChain(
         NameAccessChain,
         Box<Item>, /* The item that you want to access.  */
     ),
-    TypeAccessChain(NameAccessChain),
     // Maybe the same as ExprName.
     ExprAddressName(Name),
-    FieldInitialization(Field, ResolvedType /*  field type */),
-    AccessFiled(Field, ResolvedType /*  field type */),
+    AccessFiled(
+        Field,        // from
+        Field,        // to
+        ResolvedType, //  field type
+    ),
     ///////////////
     /// key words
     KeyWords(&'static str),
@@ -189,27 +237,45 @@ pub enum Access {
     MacroCall(MacroCall),
 }
 
+impl std::fmt::Display for Access {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Access::ApplyType(a, x) => {
+                write!(f, "apply type {:?}->{}", a.value, x)
+            }
+            Access::UseMember(name, member) => {
+                write!(f, "use {} as {}", member, name.value.as_str())
+            }
+            Access::ExprVar(var, item) => {
+                write!(f, "expr {}->{}", var.borrow().1.as_str(), item)
+            }
+
+            Access::ExprAccessChain(chain, item) => {
+                write!(f, "expr {:?}->{}", chain, item)
+            }
+            Access::ExprAddressName(_) => todo!(),
+            Access::AccessFiled(from, to, _) => {
+                write!(f, "access_field {:?}->{:?}", from, to)
+            }
+            Access::KeyWords(k) => write!(f, "{}", *k),
+            Access::MacroCall(macro_) => write!(f, "{:?}", macro_),
+        }
+    }
+}
+
 impl Access {
     pub(crate) fn access_def_loc(&self) -> (&Loc /* access loc */, &Loc /* def loc */) {
         match self {
             Access::ApplyType(name, x) => (&name.loc, x.as_ref().def_loc()),
             Access::UseMember(name, x) => (&name.loc, x.as_ref().def_loc()),
-            Access::ExprVar(var, x) => (
-                &var.borrow().0,
-                match x {
-                    Some(x) => &x.1,
-                    None => &UNKNOWN_LOC,
-                },
-            ),
+            Access::ExprVar(var, x) => (&var.borrow().0, x.def_loc()),
             Access::ExprAccessChain(name, item) => {
                 (&get_name_chain_last_name(name).loc, item.as_ref().def_loc())
             }
-            Access::TypeAccessChain(_) => todo!(),
             Access::ExprAddressName(_) => todo!(),
-            Access::FieldInitialization(_, _) => todo!(),
-            Access::AccessFiled(_, _) => todo!(),
-            Access::KeyWords(_) => todo!(),
-            Access::MacroCall(_) => todo!(),
+            Access::AccessFiled(a, d, _) => (&a.borrow().0, &d.borrow().0),
+            Access::KeyWords(_) => (&UNKNOWN_LOC, &UNKNOWN_LOC),
+            Access::MacroCall(_) => (&UNKNOWN_LOC, &UNKNOWN_LOC),
         }
     }
 }
@@ -240,7 +306,7 @@ impl Into<Access> for ItemOrAccess {
 impl std::fmt::Display for ItemOrAccess {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Access(_) => todo!(),
+            Self::Access(a) => a.fmt(f),
             Self::Item(x) => x.fmt(f),
         }
     }

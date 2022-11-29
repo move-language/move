@@ -20,11 +20,13 @@ use move_compiler::{parser::ast::*, shared::*};
 
 use move_ir_types::location::Loc;
 
+use move_ir_types::location::Spanned;
 use move_package::source_package::layout::SourcePackageLayout;
 use move_package::source_package::manifest_parser::*;
 
 use move_package::*;
 use move_symbol_pool::Symbol;
+use petgraph::visit;
 
 use std::cell::RefCell;
 use std::collections::btree_map::BTreeMap;
@@ -163,17 +165,7 @@ impl Modules {
         addr: Option<LeadingNameAccess>,
         visitor: &mut dyn ScopeVisitor,
     ) {
-        let addr = if let Some(ref addr) = if addr.is_some() { addr } else { module.address } {
-            match &addr.value {
-                LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
-                LeadingNameAccess_::Name(name) => {
-                    let x = self.name_to_addr(name.value).clone();
-                    x
-                }
-            }
-        } else {
-            ERR_ADDRESS
-        };
+        let add = self.get_module_addr(addr, module);
         for c in module.members.iter() {
             match c {
                 ModuleMember::Constant(c) => {
@@ -206,11 +198,7 @@ impl Modules {
         manifest: &PathBuf,
     ) {
         log::info!("run visitor for {:?} ", manifest);
-        let _ending = Ending {
-            msg: format!("finish scan manifest {:?}", manifest.as_path()),
-        };
-        log::info!("imports.");
-
+        let _guard = scopes.enter_scope_guard();
         // Handle imports.
         for (_, ds) in self.modules.get(manifest).unwrap().sources.iter() {
             for d in ds.iter() {
@@ -239,7 +227,7 @@ impl Modules {
                 }
             }
         }
-        log::info!("const.");
+
         // Handle constant.
         for (_, ds) in self.modules.get(manifest).unwrap().sources.iter() {
             for d in ds.iter() {
@@ -257,12 +245,12 @@ impl Modules {
             }
         }
 
-        log::info!("struct type.");
-
         // Handle all struct type.
         {
-            // Collect all struct definition.
-            let mut all: HashMap<Symbol, StructDefinition> = HashMap::new();
+            // Collect all struct defini tion.
+            let mut all: Vec<(StructDefinition, Option<AddressDefinition>, ModuleName)> =
+                Default::default();
+
             for (_, modules) in self.modules.iter() {
                 for (_, ds) in modules.sources.iter() {
                     for d in ds.iter() {
@@ -271,7 +259,7 @@ impl Modules {
                                 for member in m.members.iter() {
                                     match member {
                                         ModuleMember::Struct(x) => {
-                                            all.insert(x.name.value(), x.clone());
+                                            all.push((x.clone(), m.address.clone(), m.name));
                                         }
                                         _ => {}
                                     }
@@ -282,7 +270,7 @@ impl Modules {
                                     for member in m.members.iter() {
                                         match member {
                                             ModuleMember::Struct(x) => {
-                                                all.insert(x.name.value(), x.clone());
+                                                all.insert((x.clone(), Some(a.addr), m.name));
                                             }
                                             _ => {}
                                         }
@@ -294,34 +282,51 @@ impl Modules {
                     }
                 }
             }
+
             let all_struct_with_module = Rc::new(RefCell::new(HashMap::new()));
             for (_, s) in all.iter() {
                 scopes.enter_item(
                     self,
                     s.name.value(),
-                    Item::StructName(s.name.clone(), all_struct_with_module.clone()),
+                    Item::StructName(s.0.name.clone(), all_struct_with_module.clone()),
                 );
             }
 
-            for (_, s) in all.iter() {
+            for (s, _, _) in all.iter() {
                 let fields = match &s.fields {
                     StructFields::Defined(x) => {
                         let mut fields = Vec::with_capacity(x.len());
                         for (f, ty) in x.iter() {
-                            let ty = scopes.resolve_type(ty);
+                            let ty = scopes.resolve_type(ty, self);
+                            {
+                                let item = ItemOrAccess::Item(Item::Field(f.clone(), ty.clone()));
+                                visitor.handle_item(self, scopes, &item);
+                                if visitor.finished() {
+                                    return;
+                                }
+                            }
                             fields.push((f.clone(), ty));
                         }
                         fields
                     }
-                    StructFields::Native(x) => vec![],
+                    StructFields::Native(_) => vec![],
                 };
                 let is = ItemStruct {
                     name: s.name.clone(),
                     type_parameters: s.type_parameters.clone(),
                     fields,
                 };
+                {
+                    let item = ItemOrAccess::Item(Item::Struct(is.clone()));
+                    visitor.handle_item(self, scopes, &item);
+                    if visitor.finished() {
+                        return;
+                    }
+                }
+
                 let item = Item::Struct(is.clone());
-                scopes.enter_item(self, is.name.value(), item);
+                scopes.enter_top_item(self, is.name.value(), item);
+
                 all_struct_with_module
                     .as_ref()
                     .borrow_mut()
@@ -329,20 +334,31 @@ impl Modules {
             }
         }
 
-        log::info!("functions.");
         // Enter function Item.
         for (_, ds) in self.modules.get(manifest).unwrap().sources.iter() {
-            let enter_function = |f: &Function, scopes: &Scopes| {
+            let enter_function = |modules: &Modules,
+                                  f: &Function,
+                                  scopes: &Scopes,
+                                  visitor: &mut dyn ScopeVisitor,
+                                  address: AccountAddress,
+                                  module_name: Symbol| {
                 let s = &f.signature;
                 let ts = s.type_parameters.clone();
                 let params: Vec<_> = s
                     .parameters
                     .iter()
-                    .map(|(var, ty)| (var.clone(), scopes.resolve_type(ty)))
+                    .map(|(var, ty)| (var.clone(), scopes.resolve_type(ty, self)))
                     .collect();
-                let ret = scopes.resolve_type(&s.return_type);
-                let item = Item::Fun(f.name.clone(), ts, params, Box::new(ret));
-                scopes.enter_item(self, f.name.value(), item);
+                let ret = scopes.resolve_type(&s.return_type, self);
+                let item = Item::Fun(ItemFunction {
+                    name: f.name.clone(),
+                    type_parameters: ts,
+                    parameters: params,
+                    ret_type: Box::new(ret),
+                });
+                let item = ItemOrAccess::Item(item);
+                visitor.handle_item(modules, scopes, &item);
+                scopes.enter_top_item(self, address, module_name, f.name.value(), item);
             };
 
             for d in ds.iter() {
@@ -350,7 +366,12 @@ impl Modules {
                     Definition::Module(ref m) => {
                         for member in m.members.iter() {
                             match member {
-                                ModuleMember::Function(f) => enter_function(f, scopes),
+                                ModuleMember::Function(f) => {
+                                    let addr = self.get_module_addr(None, m);
+                                    let name = m.name.0.value;
+
+                                    enter_function(self, f, scopes, visitor, addr, name)
+                                }
                                 _ => {}
                             }
                         }
@@ -359,7 +380,11 @@ impl Modules {
                         for m in a.modules.iter() {
                             for member in m.members.iter() {
                                 match member {
-                                    ModuleMember::Function(f) => enter_function(f, scopes),
+                                    ModuleMember::Function(f) => {
+                                        let addr = self.get_module_addr(Some(a.addr), m);
+                                        let name = m.name.0.value;
+                                        enter_function(self, f, scopes, visitor);
+                                    }
                                     _ => {}
                                 }
                             }
@@ -369,7 +394,7 @@ impl Modules {
                 }
             }
         }
-        log::info!("function body.");
+
         for (_f, ds) in self.modules.get(manifest).unwrap().sources.iter() {
             // We have match the files.
             for d in ds.iter() {
@@ -414,10 +439,31 @@ impl Modules {
             return;
         }
         // const can only be declared at top scope
-        let ty = scopes.resolve_type(&c.signature);
+        let ty = scopes.resolve_type(&c.signature, self);
         let item = ItemOrAccess::Item(Item::Const(c.name.clone(), ty));
         visitor.handle_item(self, scopes, &item);
-        scopes.enter_top_item(self, address, module, c.name.value(), item);
+        let item: Item = item.into();
+        scopes.enter_top_item(self, address, module, c.name.value(), item.clone());
+    }
+
+    fn get_module_addr(
+        &self,
+        addr: Option<LeadingNameAccess>,
+        m: &ModuleDefinition,
+    ) -> AccountAddress {
+        match addr {
+            Some(x) => match x.value {
+                LeadingNameAccess_::AnonymousAddress(x) => x.bytes,
+                LeadingNameAccess_::Name(name) => self.name_to_addr(name.value),
+            },
+            None => match m.address {
+                Some(x) => match x.value {
+                    LeadingNameAccess_::AnonymousAddress(x) => x.bytes,
+                    LeadingNameAccess_::Name(name) => self.name_to_addr(name.value),
+                },
+                None => ERR_ADDRESS.clone(),
+            },
+        }
     }
 
     ///
@@ -491,15 +537,21 @@ impl Modules {
         visitor: &mut dyn ScopeVisitor,
     ) {
         let ty = if let Some(ty) = ty {
-            scopes.resolve_type(ty)
+            scopes.resolve_type(ty, self)
         } else if let Some(expr) = expr {
-            self.get_expr_type(expr, scopes)
+            let ty = self.get_expr_type(expr, scopes);
+            self.visit_expr(expr, scopes, visitor);
+            if visitor.finished() {
+                return;
+            }
+            ty
         } else {
-            ResolvedType::new_unknown(bind_list.loc)
+            ResolvedType::new_unknown()
         };
+
         for (index, bind) in bind_list.value.iter().enumerate() {
             let ty = ty.nth_ty(index);
-            let unknown = ResolvedType::new_unknown(bind_list.loc);
+            let unknown = ResolvedType::new_unknown();
             let ty = ty.unwrap_or(&unknown);
             self.visit_bind(bind, ty, scopes, None, visitor);
             if visitor.finished() {
@@ -533,7 +585,7 @@ impl Modules {
     fn visit_type_apply(&self, ty: &Type, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
         match &ty.value {
             Type_::Apply(chain, types) => {
-                let ty = scopes.resolve_name_access_chain_type(chain.as_ref());
+                let ty = scopes.find_name_chain_type(chain.as_ref(), &mut None, self, true);
                 let item =
                     ItemOrAccess::Access(Access::ApplyType(chain.as_ref().clone(), Box::new(ty)));
                 visitor.handle_item(self, scopes, &item);
@@ -561,25 +613,25 @@ impl Modules {
         }
     }
 
-    fn name_to_addr(&self, name: Symbol) -> &AccountAddress {
+    fn name_to_addr(&self, name: Symbol) -> AccountAddress {
         if let Some(ref x) = self.root_manifest {
             if let Some(ref x) = x.dev_address_assignments {
                 match x.get(&name) {
-                    Some(x) => return x,
+                    Some(x) => return x.clone(),
                     None => {}
                 }
             }
             if let Some(ref x) = x.addresses {
                 match x.get(&name) {
                     Some(x) => match x {
-                        Some(x) => return x,
+                        Some(x) => return x.clone(),
                         _ => {}
                     },
                     None => {}
                 }
             }
         }
-        return &ERR_ADDRESS;
+        return ERR_ADDRESS;
     }
 
     /// Get A Type for expr if possible otherwise Unknown is return.
@@ -595,28 +647,30 @@ impl Modules {
             },
             Exp_::Move(x) | Exp_::Copy(x) => scopes.find_var_type(x.0.value),
             Exp_::Name(name, _ /*  TODO this is a error. */) => {
-                let ty = scopes.find_name_access_chain_expr_type(name, &mut None, |name| {
-                    self.name_to_addr(name)
-                });
-
+                let ty = scopes.find_name_chain_type(name, &mut None, self, false);
                 return ty;
             }
             Exp_::Call(name, is_macro, ref type_args, exprs) => {
                 if *is_macro {
                     let c = MacroCall::from_chain(name);
                     match c {
-                        MacroCall::Assert => ResolvedType::new_unit(name.loc),
+                        MacroCall::Assert => ResolvedType::new_unit(),
                     }
                 } else {
-                    let fun_type =
-                        scopes.find_name_access_chain_expr_type(name, &mut None, |name| {
-                            self.name_to_addr(name)
-                        });
-                    match &fun_type.0.value {
-                        ResolvedType_::Fun(ref type_parameters, parameters, _) => {
+                    let fun_type = scopes.find_name_chain_type(name, &mut None, self, false);
+                    match &fun_type {
+                        ResolvedType::Fun(x) => {
+                            let type_parameters = &x.type_parameters;
+                            let parameters = &x.parameters;
+
                             let type_args: Option<Vec<ResolvedType>> =
                                 if let Some(type_args) = type_args {
-                                    Some(type_args.iter().map(|x| scopes.resolve_type(x)).collect())
+                                    Some(
+                                        type_args
+                                            .iter()
+                                            .map(|x| scopes.resolve_type(x, self))
+                                            .collect(),
+                                    )
                                 } else {
                                     None
                                 };
@@ -633,7 +687,7 @@ impl Modules {
                                     .iter()
                                     .map(|e| self.get_expr_type(e, scopes))
                                     .collect();
-                                infer_type_on_expression(
+                                infer_type_parameter_on_expression(
                                     &mut types,
                                     type_parameters,
                                     parameters,
@@ -641,8 +695,8 @@ impl Modules {
                                 );
                             }
                             fun_type.bind_type_parameter(&types);
-                            match &fun_type.0.value {
-                                ResolvedType_::Fun(_, _, ret) => ret.as_ref().clone(),
+                            match &fun_type {
+                                ResolvedType::Fun(x) => x.ret_type.as_ref().clone(),
                                 _ => unreachable!(),
                             }
                         }
@@ -653,17 +707,22 @@ impl Modules {
             }
 
             Exp_::Pack(name, type_args, _) => {
-                let mut struct_ty = scopes
-                    .find_name_access_chain_expr_type(name, &mut None, |s| self.name_to_addr(s));
-                match &struct_ty.0.value {
-                    ResolvedType_::Struct(ItemStruct {
+                let mut struct_ty = scopes.find_name_chain_type(name, &mut None, self, false);
+
+                match &struct_ty {
+                    ResolvedType::Struct(ItemStruct {
                         name: _,
                         type_parameters,
                         fields,
                     }) => {
                         let type_args: Option<Vec<ResolvedType>> =
                             if let Some(type_args) = type_args {
-                                Some(type_args.iter().map(|x| scopes.resolve_type(x)).collect())
+                                Some(
+                                    type_args
+                                        .iter()
+                                        .map(|x| scopes.resolve_type(x, self))
+                                        .collect(),
+                                )
                             } else {
                                 None
                             };
@@ -674,6 +733,7 @@ impl Modules {
                             }
                         }
                         struct_ty.bind_type_parameter(&types);
+
                         struct_ty
                     }
                     _ => UNKNOWN_TYPE.clone(),
@@ -682,7 +742,7 @@ impl Modules {
             Exp_::Vector(loc, ty, exprs) => {
                 let mut ty = if let Some(ty) = ty {
                     if let Some(ty) = ty.get(0) {
-                        Some(scopes.resolve_type(ty))
+                        Some(scopes.resolve_type(ty, self))
                     } else {
                         None
                     }
@@ -698,7 +758,7 @@ impl Modules {
                         }
                     }
                 }
-                ty.unwrap_or(ResolvedType::new_unknown(loc.clone()))
+                ty.unwrap_or(ResolvedType::new_unknown())
             }
             Exp_::IfElse(_, _then, else_) => {
                 let mut ty = self.get_expr_type(expr, scopes);
@@ -709,21 +769,31 @@ impl Modules {
                 }
                 ty
             }
-            Exp_::While(_, _) | Exp_::Loop(_) => ResolvedType::new_unit(expr.loc),
-            Exp_::Block(_) => todo!(),
+            Exp_::While(_, _) | Exp_::Loop(_) => ResolvedType::new_unit(),
+            Exp_::Block(b) => {
+                if let Some(expr) = b.3.as_ref() {
+                    scopes.enter_scope(|scopes| {
+                        let mut visitor = DummyVisitor;
+                        self.visit_block(&b, scopes, &mut visitor);
+                        self.get_expr_type(expr, scopes)
+                    })
+                } else {
+                    ResolvedType::new_unit()
+                }
+            }
             Exp_::Lambda(_, _) => todo!(),
             Exp_::Quant(_, _, _, _, _) => todo!(),
             Exp_::ExpList(_) => todo!(),
-            Exp_::Unit => ResolvedType::new_unit(expr.loc),
-            Exp_::Assign(_, _) => ResolvedType::new_unit(expr.loc),
-            Exp_::Return(_) => ResolvedType::new_unit(expr.loc),
-            Exp_::Abort(_) => ResolvedType::new_unit(expr.loc),
-            Exp_::Break => ResolvedType::new_unit(expr.loc),
-            Exp_::Continue => ResolvedType::new_unit(expr.loc),
+            Exp_::Unit => ResolvedType::new_unit(),
+            Exp_::Assign(_, _) => ResolvedType::new_unit(),
+            Exp_::Return(_) => ResolvedType::new_unit(),
+            Exp_::Abort(_) => ResolvedType::new_unit(),
+            Exp_::Break => ResolvedType::new_unit(),
+            Exp_::Continue => ResolvedType::new_unit(),
             Exp_::Dereference(e) => {
                 let ty = self.get_expr_type(e, scopes);
-                match &ty.0.value {
-                    ResolvedType_::Ref(_, t) => t.as_ref().clone(),
+                match &ty {
+                    ResolvedType::Ref(_, t) => t.as_ref().clone(),
                     _ => ty,
                 }
             }
@@ -767,7 +837,7 @@ impl Modules {
             }
             Exp_::Borrow(is_mut, e) => {
                 let ty = self.get_expr_type(e, scopes);
-                ResolvedType::new_ref(expr.loc, *is_mut, ty)
+                ResolvedType::new_ref(*is_mut, ty)
             }
             Exp_::Dot(e, name) => {
                 let ty = self.get_expr_type(e, scopes);
@@ -786,21 +856,20 @@ impl Modules {
                 }
             }
             Exp_::Cast(_, ty) => {
-                let ty = scopes.resolve_type(ty);
+                let ty = scopes.resolve_type(ty, self);
                 ty
             }
-            Exp_::Annotate(_, ty) => scopes.resolve_type(ty),
+            Exp_::Annotate(_, ty) => scopes.resolve_type(ty, self),
             Exp_::Spec(_) => todo!(),
             Exp_::UnresolvedError => {
                 // Nothings. didn't know what to do.
-                ResolvedType::new_unknown(expr.loc)
+                ResolvedType::new_unknown()
             }
         }
     }
 
     fn visit_expr(&self, exp: &Exp, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
         log::trace!("visit_expr:{:?}", exp);
-
         match &exp.value {
             Exp_::Value(ref v) => {
                 if let Some(name) = get_name_from_value(v) {
@@ -809,10 +878,18 @@ impl Modules {
                 }
             }
             Exp_::Move(var) | Exp_::Copy(var) => {
-                let item = ItemOrAccess::Access(Access::ExprVar(
-                    var.clone(),
-                    scopes.find_var_decl(var.0.value),
-                ));
+                let mut item = Some(Item::new_dummy());
+                scopes.find_name_chain_type(
+                    &Spanned {
+                        loc: var.loc(),
+                        value: NameAccessChain_::One(var.0.clone()),
+                    },
+                    &mut item,
+                    self,
+                    false,
+                );
+                let item =
+                    ItemOrAccess::Access(Access::ExprVar(var.clone(), Box::new(item.unwrap())));
                 visitor.handle_item(self, scopes, &item);
             }
             Exp_::Name(
@@ -823,11 +900,7 @@ impl Modules {
                       looks like _ty is not used. */
             ) => {
                 let mut item = Some(Item::new_dummy());
-
-                let ttt = scopes.find_name_access_chain_expr_type(chain, &mut item, |name| {
-                    self.name_to_addr(name)
-                });
-
+                scopes.find_name_chain_type(chain, &mut item, self, false);
                 let item = ItemOrAccess::Access(Access::ExprAccessChain(
                     chain.clone(),
                     Box::new(item.unwrap()),
@@ -841,14 +914,11 @@ impl Modules {
                     visitor.handle_item(self, scopes, &item);
                 } else {
                     let mut item = Some(Item::new_dummy());
-                    scopes.find_name_access_chain_expr_type(chain, &mut item, |name| {
-                        self.name_to_addr(name)
-                    });
+                    scopes.find_name_chain_type(chain, &mut item, self, false);
                     let item = ItemOrAccess::Access(Access::ExprAccessChain(
                         chain.clone(),
                         Box::new(item.unwrap()),
                     ));
-
                     visitor.handle_item(self, scopes, &item);
                 }
                 if visitor.finished() {
@@ -869,10 +939,10 @@ impl Modules {
                     }
                 }
             }
-
-            Exp_::Pack(ref leading, ref types, fields) => {
-                let ty = self.get_expr_type(exp, scopes);
-                let item = ItemOrAccess::Access(Access::TypeAccessChain(leading.clone()));
+            Exp_::Pack(ref chain, ref types, fields) => {
+                let ty = scopes.find_name_chain_type(chain, &mut None, self, false);
+                let item =
+                    ItemOrAccess::Access(Access::ApplyType(chain.clone(), Box::new(ty.clone())));
                 visitor.handle_item(self, scopes, &item);
                 if visitor.finished() {
                     return;
@@ -884,22 +954,27 @@ impl Modules {
                             return;
                         }
                     }
+                    //TODO bind type.
                 }
+
                 for f in fields.iter() {
-                    let field_type = ty.find_filed_by_name(f.0.value());
-                    if let Some(field_type) = field_type {
-                        let item = ItemOrAccess::Access(Access::FieldInitialization(
-                            f.0.clone(),
-                            field_type.1.clone(),
-                        ));
-                        visitor.handle_item(self, scopes, &item);
-                    }
                     self.visit_expr(&f.1, scopes, visitor);
                     if visitor.finished() {
                         return;
                     }
+
+                    let field_type = ty.find_filed_by_name(f.0.value());
+                    if let Some(field_type) = field_type {
+                        let item = ItemOrAccess::Access(Access::AccessFiled(
+                            f.0.clone(),
+                            field_type.0.clone(),
+                            field_type.1.clone(),
+                        ));
+                        visitor.handle_item(self, scopes, &item);
+                    }
                 }
             }
+
             Exp_::Vector(_loc, ref ty, ref exprs) => {
                 if let Some(ty) = ty {
                     for t in ty.iter() {
@@ -999,8 +1074,11 @@ impl Modules {
                 }
                 let ty = self.get_expr_type(e, scopes);
                 if let Some(field) = ty.find_filed_by_name(field.value) {
-                    let item =
-                        ItemOrAccess::Access(Access::AccessFiled(field.0.clone(), field.1.clone()));
+                    let item = ItemOrAccess::Access(Access::AccessFiled(
+                        todo!(),
+                        field.0.clone(),
+                        field.1.clone(),
+                    ));
                     visitor.handle_item(self, scopes, &item);
                 }
             }
@@ -1036,8 +1114,8 @@ impl Modules {
                 let r = scopes.visit_top_scope(|top| -> Option<Rc<RefCell<Scope>>> {
                     let x = top
                         .address
-                        .get(match &module.value.address.value {
-                            LeadingNameAccess_::AnonymousAddress(num) => &num.bytes,
+                        .get(&match &module.value.address.value {
+                            LeadingNameAccess_::AnonymousAddress(num) => num.bytes,
                             LeadingNameAccess_::Name(name) => self.name_to_addr(name.value),
                         })?
                         .modules
@@ -1056,8 +1134,8 @@ impl Modules {
                 let r = scopes.visit_top_scope(|top| -> Option<Rc<RefCell<Scope>>> {
                     let x = top
                         .address
-                        .get(match &module.value.address.value {
-                            LeadingNameAccess_::AnonymousAddress(num) => &num.bytes,
+                        .get(&match &module.value.address.value {
+                            LeadingNameAccess_::AnonymousAddress(num) => num.bytes,
                             LeadingNameAccess_::Name(name) => self.name_to_addr(name.value),
                         })?
                         .modules
@@ -1109,7 +1187,7 @@ impl Modules {
 
         for (v, t) in signature.parameters.iter() {
             self.visit_type_apply(t, scopes, visitor);
-            let t = scopes.resolve_type(t);
+            let t = scopes.resolve_type(t, self);
             let item = ItemOrAccess::Item(Item::Parameter(v.clone(), t));
             // found
             visitor.handle_item(self, scopes, &item);
@@ -1148,7 +1226,7 @@ pub struct IDEModule {
     >,
 }
 
-const UNKNOWN_TYPE: ResolvedType = ResolvedType::new_unknown(Loc::new(FileHash::empty(), 0, 0));
+const UNKNOWN_TYPE: ResolvedType = ResolvedType::new_unknown();
 
 fn get_name_from_value(v: &Value) -> Option<&Name> {
     match &v.value {
@@ -1160,15 +1238,15 @@ fn get_name_from_value(v: &Value) -> Option<&Name> {
     }
 }
 
-fn infer_type_on_expression(
+fn infer_type_parameter_on_expression(
     ret: &mut HashMap<Symbol /*  name like T or ... */, ResolvedType>,
     _type_parameters: &Vec<(Name, Vec<Ability>)>,
-    parameters: &Vec<ResolvedType>,
+    parameters: &Vec<(Var, ResolvedType)>,
     expression_types: &Vec<ResolvedType>,
 ) {
     for (index, p) in parameters.iter().enumerate() {
         if let Some(expr_type) = expression_types.get(index) {
-            bind(ret, p, expr_type);
+            bind(ret, &p.1, expr_type);
         } else {
             break;
         }
@@ -1180,10 +1258,10 @@ fn infer_type_on_expression(
         // a type that is certain.
         expr_type: &ResolvedType,
     ) {
-        match &parameter_type.0.value {
-            ResolvedType_::UnKnown => {}
-            ResolvedType_::Struct(ItemStruct { fields, .. }) => match &expr_type.0.value {
-                ResolvedType_::Struct(ItemStruct {
+        match &parameter_type {
+            ResolvedType::UnKnown => {}
+            ResolvedType::Struct(ItemStruct { fields, .. }) => match &expr_type {
+                ResolvedType::Struct(ItemStruct {
                     fields: fields2, ..
                 }) => {
                     for (l, r) in fields.iter().zip(fields2.iter()) {
@@ -1192,18 +1270,18 @@ fn infer_type_on_expression(
                 }
                 _ => {}
             },
-            ResolvedType_::BuildInType(_) => {}
-            ResolvedType_::TParam(name, _) => {
+            ResolvedType::BuildInType(_) => {}
+            ResolvedType::TParam(name, _) => {
                 ret.insert(name.value, expr_type.clone());
             }
-            ResolvedType_::ApplyTParam(_, _, _) => {}
-            ResolvedType_::Ref(_, l) => match &expr_type.0.value {
-                ResolvedType_::Ref(_, r) => bind(ret, l.as_ref(), r.as_ref()),
+            ResolvedType::ApplyTParam(_, _, _) => {}
+            ResolvedType::Ref(_, l) => match &expr_type {
+                ResolvedType::Ref(_, r) => bind(ret, l.as_ref(), r.as_ref()),
                 _ => {}
             },
-            ResolvedType_::Unit => {}
-            ResolvedType_::Multiple(x) => match &expr_type.0.value {
-                ResolvedType_::Multiple(y) => {
+            ResolvedType::Unit => {}
+            ResolvedType::Multiple(x) => match &expr_type {
+                ResolvedType::Multiple(y) => {
                     for (index, l) in x.iter().enumerate() {
                         if let Some(r) = y.get(index) {
                             bind(ret, l, r);
@@ -1215,25 +1293,25 @@ fn infer_type_on_expression(
                 _ => {}
             },
             /// function is not expression
-            ResolvedType_::Fun(_, _parameters, _) => {}
-            ResolvedType_::Vec(x) => match &expr_type.0.value {
-                ResolvedType_::Vec(y) => {
+            ResolvedType::Fun(_) => {}
+            ResolvedType::Vec(x) => match &expr_type {
+                ResolvedType::Vec(y) => {
                     bind(ret, x.as_ref(), y.as_ref());
                 }
                 _ => {}
             },
-            ResolvedType_::ResolvedFailed(_) => {}
-            ResolvedType_::StructName(_, _) => {}
+            ResolvedType::ResolvedFailed(_) => {}
+            ResolvedType::StructName(_, _) => {}
         }
     }
 }
 
-pub trait ModuleServices {
+pub trait ConvertLoc {
     fn convert_file_hash_filepath(&self, hash: &FileHash) -> Option<&'_ PathBuf>;
     fn convert_loc_range(&self, loc: &Loc) -> Option<FileRange>;
 }
 
-impl ModuleServices for Modules {
+impl ConvertLoc for Modules {
     fn convert_file_hash_filepath(&self, hash: &FileHash) -> Option<&'_ PathBuf> {
         self.hash_file.get_path(hash)
     }
@@ -1247,11 +1325,20 @@ impl ModuleServices for Modules {
     }
 }
 
+pub trait ConvertName2AccountAddress {
+    fn convert(&self, name: Symbol) -> AccountAddress;
+}
+impl ConvertName2AccountAddress for Modules {
+    fn convert(&self, name: Symbol) -> AccountAddress {
+        self.name_to_addr(name)
+    }
+}
+
 /// Visit scopes for inner to outer.
 pub trait ScopeVisitor: std::fmt::Display {
     /// Handle this item.
     /// If `should_finish` return true. All `enter_scope` and enter_scope called function will return.
-    fn handle_item(&mut self, services: &dyn ModuleServices, scopes: &Scopes, item: &ItemOrAccess);
+    fn handle_item(&mut self, services: &dyn ConvertLoc, scopes: &Scopes, item: &ItemOrAccess);
     /// Need not visit this structure???
     fn file_should_visit(&self, p: &PathBuf) -> bool;
     /// Visitor should finished.
@@ -1266,5 +1353,26 @@ pub(crate) struct Ending {
 impl Drop for Ending {
     fn drop(&mut self) {
         log::info!("ending {}", self.msg.as_str());
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct DummyVisitor;
+
+impl ScopeVisitor for DummyVisitor {
+    fn handle_item(&mut self, _services: &dyn ConvertLoc, _scopes: &Scopes, _item: &ItemOrAccess) {}
+
+    fn file_should_visit(&self, _p: &PathBuf) -> bool {
+        unreachable!();
+    }
+
+    fn finished(&self) -> bool {
+        false
+    }
+}
+
+impl std::fmt::Display for DummyVisitor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
     }
 }

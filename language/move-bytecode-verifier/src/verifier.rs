@@ -17,13 +17,15 @@ use move_binary_format::{
     file_format::{CompiledModule, CompiledScript},
 };
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct VerifierConfig {
     pub max_loop_depth: Option<usize>,
     pub treat_friend_as_private: bool,
     pub max_function_parameters: Option<usize>,
     pub max_generic_instantiation_length: Option<usize>,
     pub max_basic_blocks: Option<usize>,
+    pub max_value_stack_size: usize,
+    pub max_type_nodes: Option<usize>,
 }
 
 /// Helper for a "canonical" verification of a module.
@@ -82,4 +84,19 @@ pub fn verify_script_with_config(config: &VerifierConfig, script: &CompiledScrip
     constants::verify_script(script)?;
     CodeUnitVerifier::verify_script(config, script)?;
     script_signature::verify_script(script, no_additional_script_signature_checks)
+}
+
+impl Default for VerifierConfig {
+    fn default() -> Self {
+        Self {
+            max_loop_depth: None,
+            treat_friend_as_private: false,
+            max_function_parameters: None,
+            max_generic_instantiation_length: None,
+            max_basic_blocks: None,
+            max_type_nodes: None,
+            // Max size set to 1024 to match the size limit in the interpreter.
+            max_value_stack_size: 1024,
+        }
+    }
 }

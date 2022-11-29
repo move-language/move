@@ -90,8 +90,8 @@ fn verify_fallthrough(
 /// A CFG, `G`, with starting block `s` is reducible if and only if [2] any of the following
 /// equivalent properties hold:
 ///
-///  1. G has a unique set of back-edges `u -> v`, where the where `v` dominates `u` that
-///     corresponds to the set of back-edges for any depth-first spanning tree of G.
+///  1. G has a unique set of back-edges `u -> v` where `v` dominates `u`, that corresponds to the
+///     set of back-edges for any depth-first spanning tree of G.
 ///
 ///  2. Every loop in G contains a unique node `h` (the "head") which dominates all other nodes in
 ///     the loop.

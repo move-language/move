@@ -3,9 +3,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use invalid_mutations::signature::{FieldRefMutation, SignatureRefMutation};
-use move_binary_format::file_format::{Bytecode::*, CompiledModule, SignatureToken::*, *};
-use move_bytecode_verifier::{verify_module, SignatureChecker};
-use move_core_types::{account_address::AccountAddress, identifier::Identifier};
+use move_binary_format::file_format::{
+    Bytecode::*, CompiledModule, SignatureToken::*, Visibility::Public, *,
+};
+use move_bytecode_verifier::{
+    verify_module, verify_module_with_config, SignatureChecker, VerifierConfig,
+};
+use move_core_types::{
+    account_address::AccountAddress, identifier::Identifier, vm_status::StatusCode,
+};
 use proptest::{collection::vec, prelude::*, sample::Index as PropIndex};
 
 #[test]
@@ -120,4 +126,107 @@ fn no_verify_locals_good() {
         ],
     };
     assert!(verify_module(&compiled_module_good).is_ok());
+}
+
+#[test]
+fn big_signature_test() {
+    const N_TYPE_PARAMS: usize = 5;
+    const INSTANTIATION_DEPTH: usize = 3;
+    const VECTOR_DEPTH: usize = 250;
+    let mut st = SignatureToken::U8;
+    for _ in 0..VECTOR_DEPTH {
+        st = SignatureToken::Vector(Box::new(st));
+    }
+    for _ in 0..INSTANTIATION_DEPTH {
+        let type_params = vec![st; N_TYPE_PARAMS];
+        st = SignatureToken::StructInstantiation(StructHandleIndex(0), type_params);
+    }
+
+    const N_READPOP: u16 = 7500;
+
+    let mut code = vec![];
+    // 1. ImmBorrowLoc: ... ref
+    // 2. ReadRef:      ... value
+    // 3. Pop:          ...
+    for _ in 0..N_READPOP {
+        code.push(Bytecode::ImmBorrowLoc(0));
+        code.push(Bytecode::ReadRef);
+        code.push(Bytecode::Pop);
+    }
+    code.push(Bytecode::Ret);
+
+    let type_param_constraints = StructTypeParameter {
+        constraints: AbilitySet::EMPTY,
+        is_phantom: false,
+    };
+
+    let module = CompiledModule {
+        version: 5,
+        self_module_handle_idx: ModuleHandleIndex(0),
+        module_handles: vec![ModuleHandle {
+            address: AddressIdentifierIndex(0),
+            name: IdentifierIndex(0),
+        }],
+        struct_handles: vec![StructHandle {
+            module: ModuleHandleIndex(0),
+            name: IdentifierIndex(1),
+            abilities: AbilitySet::ALL,
+            type_parameters: vec![type_param_constraints; N_TYPE_PARAMS],
+        }],
+        function_handles: vec![FunctionHandle {
+            module: ModuleHandleIndex(0),
+            name: IdentifierIndex(0),
+            parameters: SignatureIndex(1),
+            return_: SignatureIndex(0),
+            type_parameters: vec![],
+        }],
+        field_handles: vec![],
+        friend_decls: vec![],
+        struct_def_instantiations: vec![],
+        function_instantiations: vec![],
+        field_instantiations: vec![],
+        signatures: vec![Signature(vec![]), Signature(vec![st])],
+        identifiers: vec![
+            Identifier::new("f").unwrap(),
+            Identifier::new("generic_struct").unwrap(),
+        ],
+        address_identifiers: vec![AccountAddress::ONE],
+        constant_pool: vec![],
+        metadata: vec![],
+        struct_defs: vec![StructDefinition {
+            struct_handle: StructHandleIndex(0),
+            field_information: StructFieldInformation::Native,
+        }],
+        function_defs: vec![FunctionDefinition {
+            function: FunctionHandleIndex(0),
+            visibility: Public,
+            is_entry: true,
+            acquires_global_resources: vec![],
+            code: Some(CodeUnit {
+                locals: SignatureIndex(0),
+                code,
+            }),
+        }],
+    };
+
+    // save module and verify that it can ser/de
+    let mut mvbytes = vec![];
+    module.serialize(&mut mvbytes).unwrap();
+    let module = CompiledModule::deserialize(&mvbytes).unwrap();
+
+    // run with mainnet aptos config
+    let res = verify_module_with_config(
+        &VerifierConfig {
+            max_loop_depth: Some(5),
+            treat_friend_as_private: false,
+            max_generic_instantiation_length: Some(32),
+            max_function_parameters: Some(128),
+            max_basic_blocks: Some(1024),
+            max_value_stack_size: 1024,
+            max_type_nodes: Some(256),
+        },
+        &module,
+    )
+    .unwrap_err();
+    assert_eq!(res.major_status(), StatusCode::TOO_MANY_TYPE_NODES);
 }

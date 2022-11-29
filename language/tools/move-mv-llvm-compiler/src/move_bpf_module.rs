@@ -379,6 +379,22 @@ impl<'a> MoveBPFModule<'a> {
         }
     }
 
+    pub(crate) fn llvm_signed_type_for_sig_tok(&self, sig_tok: &SignatureToken, _type_parameters: &[AbilitySet]) -> LLVMTypeRef {
+        match sig_tok {
+            SignatureToken::Bool => unsafe{LLVMInt1TypeInContext(*self.context)},
+            SignatureToken::U8 => unsafe{LLVMInt8TypeInContext(*self.context)}, // FIXME: In llvm signedness is achieved with `cast` operation.
+            SignatureToken::U64 => unsafe{LLVMInt64TypeInContext(*self.context)}, // FIXME: The signedness
+            _ => unimplemented!("Remaining Signature tokens to be implemented"),
+        }
+    }
+    pub fn llvm_signed_type_for_sig_tokens(&self, sig_tokens: Vec<SignatureToken>, type_parameters: &[AbilitySet],) -> Vec<LLVMTypeRef> {
+        let mut vec = Vec::new();
+        for v in sig_tokens {
+            vec.push(self.llvm_type_for_sig_tok(&v, type_parameters));
+        }
+        return vec;
+    }
+
     pub(crate) fn llvm_type_for_sig_tok(&self, sig_tok: &SignatureToken, _type_parameters: &[AbilitySet]) -> LLVMSignedType {
         match sig_tok {
             SignatureToken::Bool => LLVMSignedType::new(unsafe{LLVMInt1TypeInContext(*self.context)}, false),

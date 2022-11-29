@@ -24,10 +24,10 @@ use move_core_types::identifier::IdentStr;
 use move_coverage::coverage_map::{ExecCoverageMap, FunctionCoverage};
 use move_ir_types::location::Loc;
 
-use llvm_sys::{target_machine::{LLVMCodeGenOptLevel}, core::{LLVMModuleCreateWithNameInContext, LLVMDumpModule}};
+use llvm_sys::{target_machine::{LLVMCodeGenOptLevel}, core::{LLVMModuleCreateWithNameInContext, LLVMDumpModule, LLVMFunctionType, LLVMVoidType}};
 use std::{fs::File};
-//use inkwell::context::Context as LLVMContext;
-use llvm_sys::prelude::LLVMContextRef as LLVMContext;
+use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef as LLVMContext, LLVMValueRef, LLVMMetadataRef, LLVMModuleRef, LLVMDIBuilderRef, LLVMTypeRef};
+
 use crate::{move_bpf_module::MoveBPFModule, support::to_c_str};
 
 use crate::errors::DisassemblerError;
@@ -556,6 +556,20 @@ impl<'a> Disassembler<'a> {
         Ok(locals_names_tys)
     }
 
+    /// Returns type of llvm function with `ty` as return type and `param_types` as parameters.
+    fn fn_type(ty : LLVMTypeRef, param_types: &Vec<LLVMTypeRef>, is_var_args: bool) -> LLVMTypeRef {
+        assert!(!is_var_args, "Varargs not supported");
+        //let mut param_types: Vec<LLVMTypeRef> = param_types.iter().map(|val| val.as_type_ref()).collect();
+        unsafe {
+            LLVMFunctionType(
+                ty,
+                param_types.as_mut_ptr(),
+                param_types.len() as u32,
+                is_var_args as i32,
+            )
+        }
+    }
+
     /// Translates a compiled "function definition" into a disassembled bytecode string.
     ///
     /// Because a "function definition" can refer to either a function defined in a module or to a
@@ -579,7 +593,6 @@ impl<'a> Disassembler<'a> {
             name
         );
 
-
         let ret_type = match function {
             Some(function) => self
                 .source_mapper
@@ -589,10 +602,15 @@ impl<'a> Disassembler<'a> {
             None => vec![],
         };
 
-        let llvm_ret_types = move_module.llvm_type_for_sig_tokens(ret_type, type_parameters);
-        let llvm_ret_type = llvm_ret_types[0].into_int_type(); // FIXME: 1. Use all the returned types. 2. Give the right type instead of into_int_type.
+        let llvm_type_parameters = move_module.llvm_signed_type_for_sig_tokens(ret_type, type_parameters);
 
-        let fn_value = move_module.module.add_function(name.as_str(), llvm_ret_type.fn_type(&[],  false), None);
+        let fn_value = unsafe {
+            llvm_sys::core::LLVMAddFunction(move_module.module,
+                to_c_str(name.as_str()).as_ptr(),
+                Self::fn_type(LLVMVoidType(), &llvm_type_parameters, false)
+            )
+        };
+
         let entry_block = move_module.context.append_basic_block(fn_value, "entry");
         move_module.builder.position_at_end(entry_block);
         move_module.builder.build_return(Some(&llvm_ret_type.const_zero()));

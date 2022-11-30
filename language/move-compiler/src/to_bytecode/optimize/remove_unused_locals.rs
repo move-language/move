@@ -1,13 +1,18 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::BTreeSet;
-
+use crate::parser::ast::FunctionName;
 use move_ir_types::ast as IR;
+use std::collections::BTreeSet;
 
 // Removes any unused locals. Most likely generated from other optimizations
 
-pub fn code(locals: &mut Vec<(IR::Var, IR::Type)>, blocks: &IR::BytecodeBlocks) -> bool {
+pub fn optimize(
+    _f: &FunctionName,
+    _loop_heads: &BTreeSet<IR::BlockLabel_>,
+    locals: &mut Vec<(IR::Var, IR::Type)>,
+    blocks: &mut IR::BytecodeBlocks,
+) -> bool {
     let mut unused = locals
         .iter()
         .map(|(sp!(_, v_), _)| v_.clone())

@@ -2,27 +2,33 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::cfg::BlockCFG;
-use crate::{hlir::ast::FunctionSignature, parser::ast::Var};
+use crate::{
+    cfgir::{cfg::BlockCFG, remove_no_ops},
+    hlir::ast::{FunctionSignature, SingleType},
+    parser::ast::Var,
+    shared::unique_map::UniqueMap,
+};
 use std::collections::BTreeSet;
 
 /// returns true if anything changed
-pub fn optimize(signature: &FunctionSignature, cfg: &mut BlockCFG) -> bool {
-    let mut changed = super::remove_no_ops::optimize(cfg);
-    loop {
-        let ssa_temps = {
-            let s = count(signature, cfg);
-            if s.is_empty() {
-                break changed;
-            }
-            s
-        };
+pub fn optimize(
+    signature: &FunctionSignature,
+    _locals: &UniqueMap<Var, SingleType>,
+    cfg: &mut BlockCFG,
+) -> bool {
+    let changed = remove_no_ops::optimize(cfg);
+    let ssa_temps = {
+        let s = count(signature, cfg);
+        if s.is_empty() {
+            return changed;
+        }
+        s
+    };
 
-        // `eliminate` always removes if `ssa_temps` is not empty
-        changed = true;
-        eliminate(cfg, ssa_temps);
-        super::remove_no_ops::optimize(cfg);
-    }
+    // `eliminate` always removes if `ssa_temps` is not empty
+    eliminate(cfg, ssa_temps);
+    remove_no_ops::optimize(cfg);
+    true
 }
 
 //**************************************************************************************************

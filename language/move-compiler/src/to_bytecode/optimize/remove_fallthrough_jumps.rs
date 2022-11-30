@@ -2,14 +2,20 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_ir_types::ast as IR;
+use crate::parser::ast::FunctionName;
+use move_ir_types::ast::{self as IR};
 use std::collections::{BTreeSet, HashMap};
 
 // Removes any "fall through jumps", i.e. this a is a jump directly to the next instruction.
 // Iterates to find a fixpoint as it might create empty blocks which could create more jumps to
 // clean up
 
-pub fn code(loop_heads: &BTreeSet<IR::BlockLabel_>, blocks: &mut IR::BytecodeBlocks) -> bool {
+pub fn optimize(
+    _f: &FunctionName,
+    loop_heads: &BTreeSet<IR::BlockLabel_>,
+    _locals: &mut Vec<(IR::Var, IR::Type)>,
+    blocks: &mut IR::BytecodeBlocks,
+) -> bool {
     let mut changed = false;
     loop {
         let fall_through_removed = remove_fall_through(loop_heads, blocks);

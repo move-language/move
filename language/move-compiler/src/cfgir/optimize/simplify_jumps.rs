@@ -2,11 +2,19 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::cfg::BlockCFG;
-use crate::hlir::ast::{Command, Command_, Exp, UnannotatedExp_, Value_};
+use crate::{
+    cfgir::cfg::BlockCFG,
+    hlir::ast::{Command, Command_, Exp, FunctionSignature, SingleType, UnannotatedExp_, Value_},
+    parser::ast::Var,
+    shared::unique_map::UniqueMap,
+};
 
 /// returns true if anything changed
-pub fn optimize(cfg: &mut BlockCFG) -> bool {
+pub fn optimize(
+    _signature: &FunctionSignature,
+    _locals: &UniqueMap<Var, SingleType>,
+    cfg: &mut BlockCFG,
+) -> bool {
     let mut changed = false;
     for block in cfg.blocks_mut().values_mut() {
         for cmd in block {

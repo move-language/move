@@ -89,6 +89,4 @@ fn get_cursor_token(buffer: &str, position: &Position) -> Option<Tok> {
 /// Sends the given connection a response to a completion request.
 ///
 /// The completions returned depend upon where the user's cursor is positioned.
-pub fn on_completion_request(context: &Context, request: &Request) {
-    unimplemented!();
-}
+pub fn on_completion_request(context: &Context, request: &Request) {}

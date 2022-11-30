@@ -4,6 +4,7 @@ use super::types::*;
 use move_compiler::shared::Identifier;
 use move_compiler::shared::TName;
 use move_compiler::{parser::ast::*, shared::*};
+use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
@@ -15,6 +16,7 @@ use std::rc::Rc;
 pub struct ItemStruct {
     pub(crate) name: StructName,
     pub(crate) type_parameters: Vec<StructTypeParameter>,
+    pub(crate) type_parameters_ins: Vec<ResolvedType>,
     pub(crate) fields: Vec<(Field, ResolvedType)>, /* TODO If this length is zero,maybe a native. */
 }
 
@@ -24,8 +26,17 @@ impl std::fmt::Display for ItemStruct {
         write!(f, "{{")?;
         if self.type_parameters.len() > 0 {
             write!(f, "<")?;
-            for t in self.type_parameters.iter() {
-                write!(f, "{}:{:?}", t.name.value.as_str(), t.constraints)?;
+            for (index, t) in self.type_parameters.iter().enumerate() {
+                write!(
+                    f,
+                    "{}{}",
+                    t.name.value.as_str(),
+                    if let Some(ins) = self.type_parameters_ins.get(index) {
+                        format!("->{}", ins)
+                    } else {
+                        format!(":{:?}", t.constraints)
+                    }
+                )?;
             }
             write!(f, ">")?;
         }
@@ -47,7 +58,11 @@ pub enum Item {
     /////////////////////////
     /// TYPE types
     Struct(ItemStruct),
-    StructName(StructName, Rc<RefCell<HashMap<Symbol, ItemStruct>>>),
+    StructNameRef(
+        AccountAddress,
+        Symbol, // module name.
+        StructName,
+    ),
     Fun(ItemFunction),
 
     /// build in types.
@@ -101,7 +116,9 @@ impl Item {
                 }
             }
             Item::Struct(x) => ResolvedType::Struct(x.clone()),
-            Item::StructName(name, x) => ResolvedType::StructName(name.clone(), x.clone()),
+            Item::StructNameRef(addr, name, x) => {
+                ResolvedType::StructRef(addr.clone(), name.clone(), x.clone())
+            }
             Item::BuildInType(b) => ResolvedType::BuildInType(*b),
             Item::Parameter(_, ty) | Item::Var(_, ty) | Item::Const(_, ty) => ty.clone(),
             Item::Field(_, ty) => ty.clone(),
@@ -121,7 +138,7 @@ impl Item {
             Self::BuildInType(_) => &UNKNOWN_LOC,
             Self::TParam(name, _) => &name.loc,
             Self::Const(name, _) => &name.borrow().0,
-            Item::StructName(name, _) => &name.0.loc,
+            Item::StructNameRef(_, _, name) => &name.0.loc,
             Item::Fun(f) => &f.name.0.loc,
             Item::BuildInType(_) => &UNKNOWN_LOC,
             Item::ImportedModule(_, _) => &UNKNOWN_LOC, // TODO maybe loc from ModuleIdent.
@@ -186,7 +203,7 @@ impl std::fmt::Display for Item {
             Item::Struct(s) => {
                 write!(f, "{}", s)
             }
-            Item::StructName(name, _) => {
+            Item::StructNameRef(_, _, name) => {
                 write!(f, "struct {}", name.value().as_str())
             }
             Item::Fun(x) => write!(f, "{}", x),
@@ -249,7 +266,6 @@ impl std::fmt::Display for Access {
             Access::ExprVar(var, item) => {
                 write!(f, "expr {}->{}", var.borrow().1.as_str(), item)
             }
-
             Access::ExprAccessChain(chain, item) => {
                 write!(f, "expr {:?}->{}", chain, item)
             }

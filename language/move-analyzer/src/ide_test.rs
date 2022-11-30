@@ -1,3 +1,7 @@
+use std::path::PathBuf;
+
+use crate::utils::path_concat;
+
 use super::goto_definition;
 use super::modules::*;
 
@@ -25,12 +29,70 @@ pub fn init_log() {
         .unwrap()
 }
 
+fn concat_current_working_dir(s: &str) -> PathBuf {
+    path_concat(
+        std::env::current_dir().unwrap().as_path(),
+        PathBuf::from(s).as_path(),
+    )
+}
+
 #[test]
 fn goto_definition_test() {
     init_log();
+    let m = Modules::new(concat_current_working_dir("./tests/goto_definition"));
+    let mut v = goto_definition::Visitor::new(
+        concat_current_working_dir("./tests/goto_definition/sources/test.move"),
+        1,
+        21,
+    );
+    m.run_visitor(&mut v);
+    eprintln!("{:?}", v.result.unwrap());
+}
+
+#[test]
+fn goto_definition_test2() {
+    init_log();
+    let m = Modules::new(concat_current_working_dir(
+        "/home/yuyang/projects/test-move",
+    ));
+    let mut v = goto_definition::Visitor::new(
+        concat_current_working_dir("/home/yuyang/projects/test-move/sources/Hello.move"),
+        3,
+        24,
+    );
+    m.run_visitor(&mut v);
+    eprintln!("{:?}", v.result.unwrap());
+}
+
+#[test]
+fn goto_definition_test3() {
+    init_log();
+    let m = Modules::new(concat_current_working_dir("./tests/goto_definition"));
+    let mut v = goto_definition::Visitor::new(
+        concat_current_working_dir("./tests/goto_definition/sources/test.move"),
+        1,
+        21,
+    );
+    m.run_visitor(&mut v);
+    eprintln!("{:?}", v.result.unwrap());
+}
+
+#[test]
+fn goto_definition_test4() {
+    init_log();
     let m = Modules::new("/home/yuyang/projects/test-move2");
     let mut v =
-        goto_definition::Visitor::new("/home/yuyang/projects/test-move2/sources/test.move", 5, 9);
+        goto_definition::Visitor::new("/home/yuyang/projects/test-move2/sources/test.move", 3, 18);
+    m.run_visitor(&mut v);
+    eprintln!("{:?}", v.result.unwrap());
+}
+
+#[test]
+fn goto_definition_test5() {
+    init_log();
+    let m = Modules::new("/home/yuyang/projects/test-move");
+    let mut v =
+        goto_definition::Visitor::new("/home/yuyang/projects/test-move/sources/Hello.move", 3, 25);
     m.run_visitor(&mut v);
     eprintln!("{:?}", v.result.unwrap());
 }

@@ -4,30 +4,49 @@ use super::modules::*;
 use super::scope::*;
 use super::types::*;
 use super::utils::*;
+use move_compiler::{parser::ast::*, shared::*};
+use move_core_types::account_address::AccountAddress;
+use move_symbol_pool::Symbol;
+use std::borrow::Borrow;
 use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use move_compiler::{parser::ast::*, shared::*};
-use move_core_types::account_address::AccountAddress;
-use move_ir_types::location::Loc;
-use move_ir_types::location::Spanned;
-use move_symbol_pool::Symbol;
-
 #[derive(Clone)]
 pub struct Scopes {
     scopes: Rc<RefCell<Vec<Scope>>>,
+    pub(crate) addresses: RefCell<Addresses>,
 }
 
 impl Scopes {
     pub(crate) fn new() -> Self {
         let x = Scopes {
             scopes: Default::default(),
+            addresses: Default::default(),
         };
         let s = Scope::new_top();
         x.scopes.as_ref().borrow_mut().push(s);
         x.enter_build_in();
         x
+    }
+    pub(crate) fn query_item<R>(
+        &self,
+        addr: AccountAddress,
+        module_name: Symbol,
+        item_name: Symbol,
+        x: impl FnOnce(&Item) -> R,
+    ) -> Option<R> {
+        Some(x(self
+            .addresses
+            .borrow()
+            .address
+            .get(&addr)?
+            .modules
+            .get(&module_name)?
+            .as_ref()
+            .borrow()
+            .items
+            .get(&item_name)?))
     }
 
     pub(crate) fn enter_build_in(&self) {
@@ -44,12 +63,6 @@ impl Scopes {
         let _guard = ScopesGuarder::new(self.clone());
         let r = call_back(self);
         r
-    }
-
-    pub(crate) fn enter_scope_guard(&self) -> ScopesGuarder {
-        let s = Scope::default();
-        self.scopes.as_ref().borrow_mut().push(s);
-        ScopesGuarder::new(self.clone())
     }
 
     // Enter
@@ -85,7 +98,7 @@ impl Scopes {
         let item: Item = item.into();
         let loc = item.def_loc();
         let loc = convert_loc
-            .convert_loc_range(loc)
+            .convert_loc_range(&loc)
             .unwrap_or(FileRange::unknown());
         log::trace!("{}", loc);
         log::trace!(
@@ -95,30 +108,34 @@ impl Scopes {
             item_name,
             item,
         );
-        let mut b = self.scopes.as_ref().borrow_mut();
-        let mut s = b.first_mut().unwrap();
-        if s.addresses.is_none() {
-            s.addresses = Some(Addresses::new());
-        };
-        let t = s.addresses.as_mut().unwrap();
-        if !t.address.contains_key(&address) {
-            t.address.insert(address, Default::default());
+        if !self.addresses.borrow().address.contains_key(&address) {
+            self.addresses
+                .borrow_mut()
+                .address
+                .insert(address, Default::default());
         }
-        if !t
+        if !self
+            .addresses
+            .borrow()
             .address
             .get(&address)
             .unwrap()
             .modules
             .contains_key(&module)
         {
-            t.address
+            self.addresses
+                .borrow_mut()
+                .address
                 .get_mut(&address)
                 .unwrap()
                 .modules
                 .insert(module, Default::default());
         }
+
         // finally, OK to borrow.
-        t.address
+        self.addresses
+            .borrow_mut()
+            .address
             .get_mut(&address)
             .unwrap()
             .modules
@@ -129,12 +146,6 @@ impl Scopes {
             .borrow_mut()
             .items
             .insert(item_name, item.clone());
-        // A top item can be access by two ways.
-        // First 0x1::xxx::yyy
-        // Second the in current module,Can use a plain name to access then like  foo().
-        // drop b cannot borrow more than once.
-        drop(b);
-        self.enter_item(convert_loc, item_name, item);
     }
 
     /// Visit all scope from inner to outer.
@@ -147,6 +158,31 @@ impl Scopes {
                 return;
             }
         }
+    }
+
+    /// If none of item enter could be None.
+    fn clone_scope(&self, addr: AccountAddress, module_name: Symbol) -> Option<Scope> {
+        Some(
+            self.addresses
+                .borrow()
+                .address
+                .get(&addr)?
+                .modules
+                .get(&module_name)?
+                .as_ref()
+                .borrow()
+                .clone(),
+        )
+    }
+    pub(crate) fn clone_scope_and_enter(
+        &self,
+        addr: AccountAddress,
+        module_name: Symbol,
+    ) -> ScopesGuarder {
+        self.enter_scope_guard(
+            self.clone_scope(addr, module_name)
+                .unwrap_or(Default::default()),
+        )
     }
 
     ///
@@ -271,15 +307,12 @@ impl Scopes {
     }
 
     pub(crate) fn visit_top_scope<R>(&self, x: impl FnOnce(&Addresses) -> R) -> R {
-        x(self
-            .scopes
-            .as_ref()
-            .borrow()
-            .first()
-            .unwrap()
-            .addresses
-            .as_ref()
-            .unwrap())
+        x(&self.addresses.borrow())
+    }
+
+    pub(crate) fn enter_scope_guard(&self, s: Scope) -> ScopesGuarder {
+        self.scopes.as_ref().borrow_mut().push(s);
+        ScopesGuarder::new(self.clone())
     }
 
     pub(crate) fn resolve_type(

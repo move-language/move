@@ -1,10 +1,13 @@
 #![allow(dead_code)]
 
+use super::item::*;
 use crate::item::{self, ItemFunction};
+use crate::scopes::Scopes;
 use move_command_line_common::files::FileHash;
 use move_command_line_common::types;
 use move_compiler::shared::Identifier;
 use move_compiler::{parser::ast::*, shared::*};
+use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::{Loc, Spanned};
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
@@ -15,7 +18,7 @@ use std::rc::Rc;
 pub enum ResolvedType {
     UnKnown,
     Struct(item::ItemStruct),
-    StructName(StructName, Rc<RefCell<HashMap<Symbol, item::ItemStruct>>>),
+    StructRef(AccountAddress, Symbol, StructName),
     /// struct { ... }
     BuildInType(BuildInType),
     /// T : drop
@@ -35,7 +38,7 @@ pub enum ResolvedType {
     Fun(ItemFunction),
     Vec(Box<ResolvedType>),
     /// Can't resolve the Type,Keep the ast type.
-    ResolvedFailed(Type_),
+    ResolvedFailed(Type),
 }
 
 impl ResolvedType {
@@ -76,6 +79,7 @@ impl ResolvedType {
         ResolvedType::Struct(item::ItemStruct {
             name,
             type_parameters: ts,
+            type_parameters_ins: vec![],
             fields,
         })
     }
@@ -142,13 +146,19 @@ impl ResolvedType {
     }
 
     /// bind type parameter to concrete tpe
-    pub(crate) fn bind_type_parameter(&mut self, types: &HashMap<Symbol, ResolvedType>) {
+    pub(crate) fn bind_type_parameter(
+        &mut self,
+        types: &HashMap<Symbol, ResolvedType>,
+        scopes: &Scopes,
+    ) {
+        let _ = std::mem::replace(self, self.clone().struct_ref_to_struct(scopes));
+
         match self {
             ResolvedType::UnKnown => {}
             ResolvedType::Struct(item::ItemStruct { ref mut fields, .. }) => {
                 for i in 0..fields.len() {
                     let t = fields.get_mut(i).unwrap();
-                    t.1.bind_type_parameter(types);
+                    t.1.bind_type_parameter(types, scopes);
                 }
             }
             ResolvedType::BuildInType(_) => {}
@@ -158,33 +168,32 @@ impl ResolvedType {
                 }
             }
             ResolvedType::Ref(_, ref mut b) => {
-                b.as_mut().bind_type_parameter(types);
+                b.as_mut().bind_type_parameter(types, scopes);
             }
             ResolvedType::Unit => {}
             ResolvedType::Multiple(ref mut xs) => {
                 for i in 0..xs.len() {
                     let t = xs.get_mut(i).unwrap();
-                    t.bind_type_parameter(types);
+                    t.bind_type_parameter(types, scopes);
                 }
             }
             ResolvedType::Fun(x) => {
                 let xs = &mut x.parameters;
                 for i in 0..xs.len() {
                     let t = xs.get_mut(i).unwrap();
-                    t.1.bind_type_parameter(types);
+                    t.1.bind_type_parameter(types, scopes);
                 }
-                x.ret_type.as_mut().bind_type_parameter(types);
+
+                x.ret_type.as_mut().bind_type_parameter(types, scopes);
             }
             ResolvedType::Vec(ref mut b) => {
-                b.as_mut().bind_type_parameter(types);
+                b.as_mut().bind_type_parameter(types, scopes);
             }
             ResolvedType::ResolvedFailed(_) => {}
             ResolvedType::ApplyTParam(_, _, _) => {
                 unreachable!("called multiple times.")
             }
-            ResolvedType::StructName(_, _) => {
-                unimplemented!();
-            }
+            ResolvedType::StructRef(_, _, _) => {}
         }
     }
 }
@@ -195,7 +204,15 @@ impl ResolvedType {
             ResolvedType::Struct(x) => x.name.borrow().0,
             ResolvedType::TParam(name, _) => &name.loc,
             ResolvedType::BuildInType(_) => &UNKNOWN_LOC,
-            _ => unreachable!("{}", self),
+            ResolvedType::StructRef(_, _, x) => x.borrow().0,
+            ResolvedType::UnKnown => &UNKNOWN_LOC,
+            ResolvedType::ApplyTParam(x, _, _) => x.as_ref().def_loc(),
+            ResolvedType::Ref(_, x) => &UNKNOWN_LOC,
+            ResolvedType::Unit => &UNKNOWN_LOC,
+            ResolvedType::Multiple(_) => &UNKNOWN_LOC,
+            ResolvedType::Fun(f) => &f.name.0.loc,
+            ResolvedType::Vec(x) => x.as_ref().def_loc(),
+            ResolvedType::ResolvedFailed(err) => &err.loc,
         }
     }
 }
@@ -234,7 +251,9 @@ impl std::fmt::Display for ResolvedType {
         match self {
             ResolvedType::UnKnown => write!(f, "unknown"),
             ResolvedType::Struct(x) => write!(f, "{}", x),
-            ResolvedType::StructName(name, _) => write!(f, "struct {}", name.value().as_str()),
+            ResolvedType::StructRef(addr, module_name, name) => {
+                write!(f, "struct {}", name.value().as_str())
+            }
             ResolvedType::BuildInType(x) => write!(f, "{:?}", x),
             ResolvedType::TParam(name, _) => {
                 write!(f, "type_parameter:{}", name.value.as_str())
@@ -263,6 +282,26 @@ impl std::fmt::Display for ResolvedType {
             ResolvedType::ResolvedFailed(ty) => {
                 write!(f, "{:?}", ty)
             }
+        }
+    }
+}
+
+impl ResolvedType {
+    pub(crate) fn struct_ref_to_struct(self, s: &Scopes) -> ResolvedType {
+        match self {
+            Self::StructRef(addr, module_name, item_name) => s
+                .query_item(addr, module_name, item_name.0.value, |x| match x {
+                    Item::Struct(x) => ResolvedType::Struct(x.clone()),
+                    _ => unreachable!(
+                        "looks like impossible {:?} {:?} {:?} {}",
+                        addr, module_name, item_name, x
+                    ),
+                })
+                .expect(
+                    " You are looking for cannot be found,It is possible But should noe happen.",
+                ),
+
+            _ => self,
         }
     }
 }

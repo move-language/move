@@ -16,8 +16,6 @@ pub struct Scope {
     pub(crate) items: HashMap<Symbol, Item>,
     pub(crate) is_function: bool,
     pub(crate) is_spec: bool,
-    /// Top level scope have this structure.
-    pub(crate) addresses: Option<Addresses>,
 }
 
 impl Scope {
@@ -26,7 +24,6 @@ impl Scope {
             items: Default::default(),
             is_function: false,
             is_spec: false,
-            addresses: Some(Addresses::new()),
         }
     }
 
@@ -46,7 +43,7 @@ impl Scope {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Addresses {
     /// address to modules
     pub(crate) address: HashMap<AccountAddress, Address>,

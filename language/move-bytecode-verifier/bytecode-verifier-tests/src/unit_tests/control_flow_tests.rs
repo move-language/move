@@ -40,6 +40,28 @@ fn verify_module(verifier_config: &VerifierConfig, module: &CompiledModule) -> P
 //**************************************************************************************************
 
 #[test]
+fn empty_bytecode() {
+    let module = dummy_procedure_module(vec![]);
+    let result = verify_module(&Default::default(), &module);
+    assert_eq!(
+        result.unwrap_err().major_status(),
+        StatusCode::EMPTY_CODE_UNIT,
+    );
+}
+
+#[test]
+fn empty_bytecode_v5() {
+    let mut module = dummy_procedure_module(vec![]);
+    module.version = 5;
+
+    let result = verify_module(&Default::default(), &module);
+    assert_eq!(
+        result.unwrap_err().major_status(),
+        StatusCode::EMPTY_CODE_UNIT,
+    );
+}
+
+#[test]
 fn invalid_fallthrough_br_true() {
     let module = dummy_procedure_module(vec![Bytecode::LdFalse, Bytecode::BrTrue(1)]);
     let result = verify_module(&Default::default(), &module);

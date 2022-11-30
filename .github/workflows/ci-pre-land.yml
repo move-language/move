@@ -289,7 +289,7 @@ jobs:
           gem install awesome_bot
           # Don't look in git or target dirs. Don't check png, bib, tex, js, or shell files
           # We allow links to be redirects, allow duplicates, and we also allow Too Many Requests (429) errors
-          find . -not \( -path "./.git*" -prune \) -not \( -path "./target" -prune \) -type f -not -name "*.png" -not -name "*.sh" -not -name "*.bib" -not -name "*.tex" -not -name "*.js" -not -name "package-lock.json" | while read arg; do awesome_bot --allow-redirect --allow-dupe --allow 429 --skip-save-results $arg; done
+          find . -not \( -path "./.git*" -prune \) -not \( -path "./target" -prune \) -type f -not -name "*.png" -not -name "*.ai" -not -name "*.jpg" -not -name "*.svg" -not -name "*.sh" -not -name "*.bib" -not -name "*.tex" -not -name "*.js" -not -name "package-lock.json" | while read arg; do awesome_bot --allow-redirect --allow-dupe --allow 429 --skip-save-results $arg; done
 
   build-move-cli-docker-image:
     name: Build Docker image for the Move CLI

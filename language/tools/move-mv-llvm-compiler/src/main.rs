@@ -2,7 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
+//#![forbid(unsafe_code)]
 
 use clap::Parser;
 use move_binary_format::{
@@ -16,7 +16,7 @@ use move_command_line_common::files::{
 use move_mv_llvm_compiler::disassembler::{Disassembler, DisassemblerOptions};
 use move_ir_types::location::Spanned;
 use std::{fs, path::Path};
-use inkwell::context::Context as LLVMContext;
+use llvm_sys::core::LLVMContextCreate;
 
 #[derive(Debug, Parser)]
 #[clap(author, version, about)]
@@ -114,7 +114,7 @@ fn main() {
         source_mapping.with_source_code((source_path.to_str().unwrap().to_string(), source_code));
     }
 
-    let llvm_context = LLVMContext::create();
+    let llvm_context = unsafe { LLVMContextCreate() };
     let disassembler = Disassembler::new(source_mapping, disassembler_options, llvm_context);
 
     let dissassemble_string = disassembler.disassemble().expect("Unable to dissassemble");

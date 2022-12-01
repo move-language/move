@@ -1,6 +1,6 @@
-use llvm_sys::core::{LLVMInt1TypeInContext, LLVMInt8TypeInContext, LLVMInt64TypeInContext, LLVMModuleCreateWithNameInContext, LLVMAddModuleFlag, LLVMConstInt, LLVMCreateBuilderInContext, LLVMSetTarget};
+use llvm_sys::core::{LLVMInt1TypeInContext, LLVMInt8TypeInContext, LLVMInt64TypeInContext, LLVMModuleCreateWithNameInContext, LLVMAddModuleFlag, LLVMConstInt, LLVMCreateBuilderInContext, LLVMSetTarget, LLVMAppendBasicBlockInContext, LLVMGetNextBasicBlock, LLVMInsertBasicBlockInContext, LLVMGetBasicBlockParent, LLVMPositionBuilderAtEnd, LLVMBuildRetVoid, LLVMBuildRet, LLVMGetTypeKind, LLVMTypeOf};
 
-use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef, LLVMValueRef, LLVMMetadataRef, LLVMModuleRef, LLVMDIBuilderRef, LLVMTypeRef};
+use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef, LLVMValueRef, LLVMMetadataRef, LLVMModuleRef, LLVMDIBuilderRef, LLVMTypeRef, LLVMBasicBlockRef};
 //use inkwell::builder::Builder;
 //use inkwell::context::Context;
 /*use inkwell::debug_info::DICompileUnit;
@@ -13,12 +13,13 @@ use inkwell::{targets::Target, targets::InitializationConfig};
 use inkwell::types::{
     ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FunctionType, IntType, StringRadix,
 };*/
-use llvm_sys::target_machine::{LLVMCodeGenOptLevel, LLVMCodeModel, LLVMTargetMachineRef, LLVMCreateTargetMachine, LLVMTargetRef, LLVMRelocMode};
-use llvm_sys::LLVMModuleFlagBehavior;
+use llvm_sys::target_machine::{LLVMCodeGenOptLevel, LLVMCodeModel, LLVMTargetMachineRef, LLVMCreateTargetMachine, LLVMTargetRef, LLVMRelocMode, LLVMGetTargetFromName};
+use llvm_sys::{LLVMModuleFlagBehavior, LLVMTypeKind};
 use llvm_sys::debuginfo::{LLVMDWARFEmissionKind, LLVMDWARFSourceLanguage, LLVMDIBuilderCreateCompileUnit, LLVMCreateDIBuilder, LLVMCreateDIBuilderDisallowUnresolved, LLVMDIBuilderCreateFile};
-use llvm_sys::debuginfo::{DICompileUnit, DWARFEmissionKind, DWARFSourceLanguage, DebugInfoBuilder};
+//use llvm_sys::debuginfo::{DICompileUnit, DWARFEmissionKind, DWARFSourceLanguage, DebugInfoBuilder};
 
 use crate::support::{to_c_str, LLVMString};
+use std::any::Any;
 use std::borrow::Cow;
 use std::error::Error;
 use std::ffi::{CStr, CString};
@@ -214,7 +215,8 @@ impl<'a> MoveBPFModule<'a> {
         let opt_level = LLVMCodeGenOptLevel::LLVMCodeGenLevelNone; // TODO: Add optimization based on command line flag.
         let reloc_mode = LLVMRelocMode::LLVMRelocDefault;
         let code_model = LLVMCodeModel::LLVMCodeModelDefault;
-        let target:LLVMTargetRef;
+        let llvm_target_name_ptr = to_c_str(Self::llvm_target_name()).as_ptr();
+        let target:LLVMTargetRef = unsafe { LLVMGetTargetFromName(llvm_target_name_ptr) };
         let cpu = "v2";
 
         let target_machine = unsafe {
@@ -390,7 +392,7 @@ impl<'a> MoveBPFModule<'a> {
     pub fn llvm_signed_type_for_sig_tokens(&self, sig_tokens: Vec<SignatureToken>, type_parameters: &[AbilitySet],) -> Vec<LLVMTypeRef> {
         let mut vec = Vec::new();
         for v in sig_tokens {
-            vec.push(self.llvm_type_for_sig_tok(&v, type_parameters));
+            vec.push(self.llvm_signed_type_for_sig_tok(&v, type_parameters));
         }
         return vec;
     }
@@ -410,8 +412,61 @@ impl<'a> MoveBPFModule<'a> {
         }
         return vec;
     }
-    pub fn llvm_constant() {
+    pub fn llvm_constant(&self, value: u64) -> LLVMValueRef {
         // TODO: Return a constant value corresponding to the input type.
-        //LLVMConstInt(self.as_type_ref(), value, sign_extend as i32);
+        unsafe { LLVMConstInt(LLVMInt64TypeInContext(*self.context), value, false as i32) }
     }
+
+    pub fn get_next_basic_block(&self, basic_block: LLVMBasicBlockRef) -> Option<LLVMBasicBlockRef> {
+        let next_bb = unsafe { LLVMGetNextBasicBlock(basic_block) };
+        if next_bb.is_null() {
+            return None;
+        }
+        Some(next_bb)
+    }
+
+    pub fn append_basic_block<'ctx>(&self, function: LLVMValueRef, name: &str) -> LLVMBasicBlockRef {
+        let c_string = to_c_str(name);
+        unsafe {
+            LLVMAppendBasicBlockInContext(
+                *self.context,
+                function,
+                c_string.as_ptr(),
+            )
+        }
+    }
+
+    pub fn prepend_basic_block(&self, basic_block: LLVMBasicBlockRef, name: &str) -> LLVMBasicBlockRef {
+        let c_string = to_c_str(name);
+        unsafe {
+            LLVMInsertBasicBlockInContext(
+                *self.context,
+                basic_block,
+                c_string.as_ptr(),
+            )
+        }
+    }
+
+    pub fn insert_basic_block_after(&self, basic_block: LLVMBasicBlockRef, name: &str) -> LLVMBasicBlockRef {
+        //let next_basic_block = &self.get_next_basic_block(basic_block);
+        match self.get_next_basic_block(basic_block) {
+            Some(bb) => self.prepend_basic_block(bb, name),
+            None => unsafe { self.append_basic_block(LLVMGetBasicBlockParent(basic_block), name) }
+        }
+    }
+
+    pub fn position_at_end(&self, basic_block: LLVMBasicBlockRef) {
+        unsafe {
+            LLVMPositionBuilderAtEnd(self.builder, basic_block);
+        }
+    }
+    pub fn build_return(&self, value: LLVMValueRef) {
+        unsafe {
+            match LLVMGetTypeKind(LLVMTypeOf(value)) {
+                LLVMTypeKind::LLVMVoidTypeKind => LLVMBuildRetVoid(self.builder),
+                default => LLVMBuildRet(self.builder, value)
+            }
+     }  ;
+    }
+
 }

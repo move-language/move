@@ -557,7 +557,7 @@ impl<'a> Disassembler<'a> {
     }
 
     /// Returns type of llvm function with `ty` as return type and `param_types` as parameters.
-    fn fn_type(ty : LLVMTypeRef, param_types: &Vec<LLVMTypeRef>, is_var_args: bool) -> LLVMTypeRef {
+    fn fn_type(ty : LLVMTypeRef, param_types: &mut Vec<LLVMTypeRef>, is_var_args: bool) -> LLVMTypeRef {
         assert!(!is_var_args, "Varargs not supported");
         //let mut param_types: Vec<LLVMTypeRef> = param_types.iter().map(|val| val.as_type_ref()).collect();
         unsafe {
@@ -602,18 +602,19 @@ impl<'a> Disassembler<'a> {
             None => vec![],
         };
 
-        let llvm_type_parameters = move_module.llvm_signed_type_for_sig_tokens(ret_type, type_parameters);
+        // TODO: Account for signedness.
+        let mut llvm_type_parameters = move_module.llvm_signed_type_for_sig_tokens(ret_type, type_parameters);
 
         let fn_value = unsafe {
             llvm_sys::core::LLVMAddFunction(move_module.module,
                 to_c_str(name.as_str()).as_ptr(),
-                Self::fn_type(LLVMVoidType(), &llvm_type_parameters, false)
+                Self::fn_type(LLVMVoidType(), &mut llvm_type_parameters, false)
             )
         };
 
-        let entry_block = move_module.context.append_basic_block(fn_value, "entry");
-        move_module.builder.position_at_end(entry_block);
-        move_module.builder.build_return(Some(&llvm_ret_type.const_zero()));
+        let entry_block = move_module.append_basic_block(fn_value, "entry");
+        move_module.position_at_end(entry_block);
+        move_module.build_return(move_module.llvm_constant(0));
 
         let body = match code {
             Some(code) => {

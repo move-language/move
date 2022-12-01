@@ -24,7 +24,7 @@ Literal values for these types are specified either as a sequence of digits (e.g
 
 If a literal is too large for its specified (or inferred) size range, an error is reported.
 
-(在Move中)这些类型的字面值指定为数字序列(例如：112)或十六进制文字(例如：0xFF), 可以选择将字面值的类型定义为后缀, 例如 `112u8`。如果未指定类型，编译器将尝试从使用字面值的上下文推断类型。如果无法推断类型，则默认为 `u64。
+(在Move中)这些类型的字面值指定为数字序列(例如：`112`)或十六进制文字(例如：`0xFF`), 可以选择将字面值的类型定义为后缀, 例如 `112u8`。如果未指定类型，编译器将尝试从使用字面值的上下文推断类型。如果无法推断类型，则默认为 `u64`。
 
 如果字面值太大，超出其指定的(或推断的)大小范围，则会报错。
 

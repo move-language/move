@@ -5,7 +5,6 @@
 use crate::modules::Modules;
 
 use lsp_server::Connection;
-use std::sync::{Arc, Mutex};
 
 /// The context within which the language server is running.
 pub struct Context {

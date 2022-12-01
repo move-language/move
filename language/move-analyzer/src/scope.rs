@@ -17,9 +17,13 @@ pub struct Scope {
     pub(crate) items: HashMap<Symbol, Item>,
     pub(crate) is_function: bool,
     pub(crate) is_spec: bool,
-    pub(crate) module_: Option<Loc>,
+    pub(crate) module_: Option<ModuleScope>,
 }
-
+#[derive(Clone)]
+pub struct ModuleScope {
+    pub(crate) addr: AccountAddress,
+    pub(crate) name: ModuleName,
+}
 impl Scope {
     pub(crate) fn enter_build_in(&mut self) {
         self.enter_item(Symbol::from("bool"), Item::BuildInType(BuildInType::Bool));

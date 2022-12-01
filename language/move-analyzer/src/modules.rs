@@ -18,23 +18,17 @@ use move_compiler::parser::ast::Definition;
 use move_compiler::shared::Identifier;
 use move_compiler::{parser::ast::*, shared::*};
 
-use move_core_types::effects::Op;
 use move_ir_types::location::Loc;
 
 use move_ir_types::location::Spanned;
 use move_package::source_package::layout::SourcePackageLayout;
 use move_package::source_package::manifest_parser::*;
 
-use move_package::*;
 use move_symbol_pool::Symbol;
-use petgraph::visit;
 
 use std::cell::RefCell;
 use std::collections::btree_map::BTreeMap;
 use std::collections::HashMap;
-
-use std::fmt::format;
-use std::slice::SliceIndex;
 
 use std::{path::PathBuf, rc::Rc};
 
@@ -359,9 +353,16 @@ impl Modules {
         self.with_use_decl(manifest, |addr, module_name, u| {
             self.visit_use_decl(Some((addr, module_name)), u, scopes, Some(visitor));
         });
-
+        self.with_friend(manifest, |addr, module_name, f| {
+            self.visit_friend(f, scopes, visitor);
+        });
         // visit function body.
         self.with_function(manifest, |addr, module_name, f| {
+            if !visitor
+                .file_should_visit(self.convert_file_hash_filepath(&f.loc.file_hash()).unwrap())
+            {
+                return;
+            }
             let _guard = scopes.clone_scope_and_enter(addr, module_name);
             self.visit_function(f, scopes, visitor);
         });
@@ -428,6 +429,18 @@ impl Modules {
             if visitor.finished() {
                 return;
             }
+
+            for v in function.acquires.iter() {
+                let ty = &Spanned {
+                    loc: v.loc,
+                    value: Type_::Apply(Box::new(v.clone()), vec![]),
+                };
+                self.visit_type_apply(&ty, scopes, visitor);
+                if visitor.finished() {
+                    return;
+                }
+            }
+
             match function.body.value {
                 FunctionBody_::Native => {}
                 FunctionBody_::Defined(ref seq) => self.visit_block(seq, scopes, visitor),
@@ -1171,6 +1184,35 @@ impl Modules {
         }
     }
 
+    fn visit_friend(
+        &self,
+        friend_decl: &FriendDecl,
+        scopes: &Scopes,
+        visitor: &mut dyn ScopeVisitor,
+    ) {
+        match &friend_decl.friend.value {
+            NameAccessChain_::One(_) => {
+                log::error!("access friend one")
+            }
+            NameAccessChain_::Two(addr, name) => {
+                let addr = match &addr.value {
+                    LeadingNameAccess_::AnonymousAddress(x) => x.bytes,
+                    LeadingNameAccess_::Name(name) => self.name_to_addr(name.value),
+                };
+                let m = scopes.resolve_friend(addr, name.value);
+                let m = match m {
+                    Some(x) => x,
+                    None => return,
+                };
+                let item = ItemOrAccess::Access(Access::Friend(friend_decl.friend.clone(), m));
+                visitor.handle_item(self, scopes, &item);
+            }
+            NameAccessChain_::Three(_, _) => {
+                log::error!("access friend three")
+            }
+        }
+    }
+
     fn visit_use_decl(
         &self,
         is_global: Option<(AccountAddress, Symbol)>,
@@ -1180,31 +1222,40 @@ impl Modules {
     ) {
         let mut _dummy = DummyVisitor;
         let visitor = visitor.unwrap_or(&mut _dummy);
+        let get_module = |module: &ModuleIdent| {
+            let module_scope = scopes.visit_address(|top| -> Option<Rc<RefCell<Scope>>> {
+                let x = top
+                    .address
+                    .get(&match &module.value.address.value {
+                        LeadingNameAccess_::AnonymousAddress(num) => num.bytes,
+                        LeadingNameAccess_::Name(name) => self.name_to_addr(name.value),
+                    })?
+                    .modules
+                    .get(&module.value.module.0.value)?
+                    .clone();
+                Some(x)
+            });
+            let module_scope =
+                module_scope.expect(&format!("use decl {:?} not found", use_decl.use_));
+            module_scope
+        };
         match &use_decl.use_ {
             Use::Module(module, alias) => {
-                let mut name = module.value.module.0.value;
-                if let Some(alias) = alias {
-                    name = alias.0.value;
-                }
-                let module_scope = scopes.visit_top_scope(|top| -> Option<Rc<RefCell<Scope>>> {
-                    let x = top
-                        .address
-                        .get(&match &module.value.address.value {
-                            LeadingNameAccess_::AnonymousAddress(num) => num.bytes,
-                            LeadingNameAccess_::Name(name) => self.name_to_addr(name.value),
-                        })?
-                        .modules
-                        .get(&module.value.module.0.value)?
-                        .clone();
-                    Some(x)
-                });
-                let module_scope =
-                    module_scope.expect(&format!("use decl {:?} not found", use_decl.use_));
-                let item = ItemOrAccess::Item(Item::ImportedModule(module.clone(), module_scope));
+                let module_scope = get_module(module);
+                let item = ItemOrAccess::Item(Item::UseModule(
+                    module.clone(),
+                    alias.clone(),
+                    module_scope,
+                ));
                 visitor.handle_item(self, scopes, &item);
                 if visitor.finished() {
                     return;
                 }
+                let name = if let Some(alias) = alias {
+                    alias.value()
+                } else {
+                    module.value.module.value()
+                };
                 if let Some((addr, module_name)) = is_global {
                     scopes.enter_top_item(self, addr, module_name, name, item);
                 } else {
@@ -1212,36 +1263,47 @@ impl Modules {
                 }
             }
             Use::Members(module, members) => {
-                let module_scope = scopes.visit_top_scope(|top| -> Option<Rc<RefCell<Scope>>> {
-                    let x = top
-                        .address
-                        .get(&match &module.value.address.value {
-                            LeadingNameAccess_::AnonymousAddress(num) => num.bytes,
-                            LeadingNameAccess_::Name(name) => self.name_to_addr(name.value),
-                        })?
-                        .modules
-                        .get(&module.value.module.0.value)?
-                        .clone();
-                    Some(x)
-                });
-                let module_scope =
-                    module_scope.expect(&format!("use decl {:?} not found", use_decl.use_));
+                let module_scope = get_module(module);
                 for (member, alias) in members.iter() {
+                    if member.value.as_str() == "Self" {
+                        // Special handle for Self.
+                        let item = ItemOrAccess::Item(Item::UseModule(
+                            module.clone(),
+                            Some(ModuleName(member.clone())),
+                            module_scope.clone(),
+                        ));
+                        visitor.handle_item(self, scopes, &item);
+                        if visitor.finished() {
+                            return;
+                        }
+                        if let Some((addr, module_name)) = is_global {
+                            scopes.enter_top_item(
+                                self,
+                                addr,
+                                module_name,
+                                module.value.module.value(),
+                                item,
+                            );
+                        } else {
+                            scopes.enter_item(self, module.value.module.value(), item);
+                        }
+                        continue;
+                    }
                     let name = if let Some(alias) = alias {
                         alias.clone()
                     } else {
                         member.clone()
                     };
-                    let item = ItemOrAccess::Item(Item::ImportedMember(
-                        name,
-                        member.value,
+                    let item = ItemOrAccess::Item(Item::UseMember(
+                        module.clone(),
+                        member.clone(),
+                        alias.clone(),
                         module_scope.clone(),
                     ));
                     visitor.handle_item(self, scopes, &item);
                     if visitor.finished() {
                         return;
                     }
-
                     if let Some((addr, module_name)) = is_global {
                         scopes.enter_top_item(self, addr, module_name, name.value, item);
                     } else {

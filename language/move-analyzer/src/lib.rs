@@ -10,6 +10,7 @@ pub mod goto_definition;
 #[cfg(test)]
 mod ide_test;
 pub mod item;
+pub mod module_visitor;
 pub mod modules;
 pub mod scope;
 pub mod scopes;

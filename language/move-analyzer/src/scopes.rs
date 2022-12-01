@@ -6,9 +6,10 @@ use super::types::*;
 use super::utils::*;
 use move_compiler::{parser::ast::*, shared::*};
 use move_core_types::account_address::AccountAddress;
+use move_core_types::effects::Op;
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
-use std::borrow::Borrow;
+
 use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -36,12 +37,18 @@ impl Scopes {
             addr,
             module_name
         );
-        self.addresses
-            .borrow_mut()
-            .address
-            .insert(addr, Default::default());
+        if self.addresses.borrow().address.get(&addr).is_none() {
+            self.addresses
+                .borrow_mut()
+                .address
+                .insert(addr, Default::default());
+        }
         let mut s = Scope::default();
-        s.module_ = Some(module_name.loc());
+        s.module_ = Some(ModuleScope {
+            name: module_name.clone(),
+            addr: addr.clone(),
+        });
+
         self.addresses
             .borrow_mut()
             .address
@@ -285,16 +292,7 @@ impl Scopes {
                         self.inner_first_visit(|s| {
                             if let Some(v) = s.items.get(&name.value) {
                                 match v {
-                                    Item::ImportedModule(_, members) => {
-                                        eprintln!(
-                                            "!!!!!!!!!!!!!!!:{:?}",
-                                            members
-                                                .as_ref()
-                                                .borrow()
-                                                .items
-                                                .keys()
-                                                .collect::<Vec<_>>()
-                                        );
+                                    Item::UseModule(_, _, members) => {
                                         if let Some(item) =
                                             members.as_ref().borrow().items.get(&member.value)
                                         {
@@ -319,7 +317,7 @@ impl Scopes {
                 }
                 r.unwrap_or(failed)
             }
-            NameAccessChain_::Three(chain_two, member) => self.visit_top_scope(|top| {
+            NameAccessChain_::Three(chain_two, member) => self.visit_address(|top| {
                 let modules = top.address.get(&match &chain_two.value.0.value {
                     LeadingNameAccess_::AnonymousAddress(x) => x.bytes,
                     LeadingNameAccess_::Name(name) => name_to_addr.convert(name.value),
@@ -343,7 +341,7 @@ impl Scopes {
         }
     }
 
-    pub(crate) fn visit_top_scope<R>(&self, x: impl FnOnce(&Addresses) -> R) -> R {
+    pub(crate) fn visit_address<R>(&self, x: impl FnOnce(&Addresses) -> R) -> R {
         x(&self.addresses.borrow())
     }
 
@@ -404,6 +402,19 @@ impl Scopes {
     pub(crate) fn current_scope_mut<R>(&self, x: impl FnOnce(&mut Scope) -> R) -> R {
         let mut s = self.scopes.as_ref().borrow_mut();
         x(s.last_mut().unwrap())
+    }
+    pub(crate) fn resolve_friend(&self, addr: AccountAddress, name: Symbol) -> Option<ModuleName> {
+        self.visit_address(|x| {
+            x.address
+                .get(&addr)?
+                .modules
+                .get(&name)?
+                .as_ref()
+                .borrow()
+                .module_
+                .as_ref()
+                .map(|x| x.name.clone())
+        })
     }
 }
 

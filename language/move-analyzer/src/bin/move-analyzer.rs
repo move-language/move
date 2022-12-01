@@ -56,7 +56,7 @@ fn main() {
     // For now, move-analyzer only responds to options built-in to clap,
     // such as `--help` or `--version`.
     Options::parse();
-    init_log();
+    // init_log();
     // stdio is used to communicate Language Server Protocol requests and responses.
     // stderr is used for logging (and, when Visual Studio Code is used to communicate with this
     // server, it captures this output in a dedicated "output channel").

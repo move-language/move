@@ -1,5 +1,3 @@
-use crate::modules;
-
 use super::scope::*;
 use super::types::*;
 
@@ -10,9 +8,9 @@ use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
-use std::collections::HashMap;
-use std::fmt::Pointer;
+
 use std::rc::Rc;
+use std::str::FromStr;
 
 #[derive(Clone)]
 pub struct ItemStruct {
@@ -51,12 +49,18 @@ pub enum Item {
     /////////////////////////////
     /// VALUE types
     Parameter(Var, ResolvedType),
-    ImportedModule(ModuleIdent, Rc<RefCell<Scope>>),
-    ImportedMember(
-        Name,   /* access name */
-        Symbol, /* name in the module */
+    UseModule(
+        ModuleIdent, /*  */
+        Option<ModuleName>,
         Rc<RefCell<Scope>>,
     ),
+    UseMember(
+        ModuleIdent, /* access name */
+        Name,
+        Option<Name>, /* name in the module */
+        Rc<RefCell<Scope>>,
+    ),
+
     Const(ConstantName, ResolvedType),
     Var(Var, ResolvedType),
     Field(Field, ResolvedType),
@@ -129,16 +133,16 @@ impl Item {
             Item::Parameter(_, ty) | Item::Var(_, ty) | Item::Const(_, ty) => ty.clone(),
             Item::Field(_, ty) => ty.clone(),
             Item::Fun(x) => ResolvedType::Fun(x.clone()),
-            Item::ImportedMember(_, name, module) => {
+            Item::UseMember(_, name, alias, module) => {
                 return module
                     .as_ref()
                     .borrow()
                     .items
-                    .get(name)
+                    .get(&name.value)
                     .map(|i| i.to_type(false))
                     .flatten();
             }
-            Item::ImportedModule(_, _) => return None,
+            Item::UseModule(_, _, _) => return None,
             Item::Dummy => return None,
         };
         Some(x)
@@ -147,10 +151,10 @@ impl Item {
     pub(crate) fn def_loc(&self) -> Loc {
         match self {
             Self::Parameter(var, _) => var.loc(),
-            Self::ImportedMember(_, name, module) => module
+            Self::UseMember(_, name, alias, module) => module
                 .borrow()
                 .items
-                .get(name)
+                .get(&name.value)
                 .map(|u| u.def_loc())
                 .unwrap_or(UNKNOWN_LOC),
             Self::Struct(x) => x.name.loc(),
@@ -160,7 +164,7 @@ impl Item {
             Item::StructNameRef(_, _, name) => name.0.loc,
             Item::Fun(f) => f.name.0.loc,
             Item::BuildInType(_) => UNKNOWN_LOC,
-            Item::ImportedModule(_, _) => UNKNOWN_LOC, // TODO maybe loc from ModuleIdent.
+            Item::UseModule(_, _, s) => s.borrow().module_.as_ref().unwrap().name.loc(),
             Item::Var(name, _) => name.loc(),
             Item::Field(f, _) => f.loc(),
             Item::Dummy => UNKNOWN_LOC,
@@ -212,15 +216,22 @@ impl std::fmt::Display for Item {
             Item::Parameter(var, t) => {
                 write!(f, "parameter {}:{}", var.0.value.as_str(), t)
             }
-            Item::ImportedModule(x, _item) => {
+            Item::UseModule(x, alias, _) => {
                 write!(f, "use {:?} {}", x, "_")
             }
-            Item::ImportedMember(name, x, module) => write!(
-                f,
-                "use {:?} {}",
-                name,
-                module.borrow().items.get(x).unwrap_or(&Item::new_dummy())
-            ),
+            Item::UseMember(module, name, alias, _) => {
+                write!(
+                    f,
+                    "use {:?}::{:?} {}",
+                    module,
+                    name,
+                    if let Some(alias) = alias {
+                        format!(" as {}", alias.value.as_str())
+                    } else {
+                        String::from_str("").unwrap()
+                    },
+                )
+            }
             Item::Const(name, ty) => {
                 write!(f, "const {}:{}", name.0.value.as_str(), ty)
             }
@@ -264,6 +275,8 @@ pub enum Access {
         Box<Item>, /* The item that you want to access.  */
     ),
     // Maybe the same as ExprName.
+    // TODO   @XXX 目前知道的可以在Move.toml中定义
+    // 可以在源代码中定义吗?
     ExprAddressName(Name),
     AccessFiled(
         Field,        // from
@@ -276,8 +289,13 @@ pub enum Access {
     /////////////////
     /// Marco call
     MacroCall(MacroCall),
+
+    Friend(NameAccessChain, ModuleName),
 }
 
+pub enum FriendElement {
+    Module(Rc<RefCell<Scope>>),
+}
 impl std::fmt::Display for Access {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -291,12 +309,22 @@ impl std::fmt::Display for Access {
             Access::ExprAccessChain(chain, item) => {
                 write!(f, "expr {:?}->{}", chain, item)
             }
-            Access::ExprAddressName(_) => todo!(),
+            Access::ExprAddressName(chain) => {
+                write!(f, "{:?}", chain)
+            }
             Access::AccessFiled(from, to, _) => {
                 write!(f, "access_field {:?}->{:?}", from, to)
             }
             Access::KeyWords(k) => write!(f, "{}", *k),
             Access::MacroCall(macro_) => write!(f, "{:?}", macro_),
+            Access::Friend(name, item) => {
+                write!(
+                    f,
+                    "friend {}->{}",
+                    get_name_chain_last_name(name).value.as_str(),
+                    item
+                )
+            }
         }
     }
 }
@@ -305,15 +333,16 @@ impl Access {
     pub(crate) fn access_def_loc(&self) -> (Loc /* access loc */, Loc /* def loc */) {
         match self {
             Access::ApplyType(name, x) => (name.loc, x.as_ref().def_loc()),
-
             Access::ExprVar(var, x) => (var.loc(), x.def_loc()),
             Access::ExprAccessChain(name, item) => {
                 (get_name_chain_last_name(name).loc, item.as_ref().def_loc())
             }
-            Access::ExprAddressName(_) => todo!(),
+            Access::ExprAddressName(_) => (UNKNOWN_LOC, UNKNOWN_LOC),
             Access::AccessFiled(a, d, _) => (a.loc(), d.loc()),
             Access::KeyWords(_) => (UNKNOWN_LOC, UNKNOWN_LOC),
             Access::MacroCall(_) => (UNKNOWN_LOC, UNKNOWN_LOC),
+
+            Access::Friend(name, item) => (get_name_chain_last_name(name).loc.clone(), item.loc()),
         }
     }
 }

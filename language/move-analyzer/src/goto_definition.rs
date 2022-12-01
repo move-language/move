@@ -11,6 +11,7 @@ use super::scopes::*;
 use lsp_server::*;
 use lsp_types::*;
 
+use move_compiler::shared::Identifier;
 use move_ir_types::location::Loc;
 
 /// Handles go-to-def request of the language server
@@ -103,6 +104,38 @@ impl ScopeVisitor for Visitor {
     fn handle_item(&mut self, services: &dyn ConvertLoc, _scopes: &Scopes, item: &ItemOrAccess) {
         match item {
             ItemOrAccess::Item(item) => match item {
+                Item::UseModule(name, alias, s) => {
+                    if self.match_loc(&name.loc, services)
+                        || match alias {
+                            Some(alias) => self.match_loc(&alias.0.loc, services),
+                            None => false,
+                        }
+                    {
+                        if let Some(t) = services.convert_loc_range(&item.def_loc()) {
+                            self.result = Some(t);
+                        }
+                    }
+                }
+                Item::UseMember(module_name, name, alias, x) => {
+                    if self.match_loc(&module_name.loc, services) {
+                        if let Some(t) = services.convert_loc_range(
+                            &x.as_ref().borrow().module_.as_ref().unwrap().name.loc(),
+                        ) {
+                            self.result = Some(t);
+                        }
+                    }
+                    if self.match_loc(&name.loc, services)
+                        || match alias {
+                            Some(alias) => self.match_loc(&alias.loc, services),
+                            None => false,
+                        }
+                    {
+                        if let Some(t) = services.convert_loc_range(&item.def_loc()) {
+                            self.result = Some(t);
+                        }
+                    }
+                }
+
                 // If Some special add here.
                 // Right now default is enough.
                 _ => {
@@ -118,7 +151,6 @@ impl ScopeVisitor for Visitor {
             ItemOrAccess::Access(access) => match item {
                 _ => {
                     log::trace!("access:{}", access);
-
                     let locs = access.access_def_loc();
                     if self.match_loc(&locs.0, services) {
                         if let Some(t) = services.convert_loc_range(&locs.1) {

@@ -9,8 +9,6 @@ use move_compiler::parser::{
     keywords::{BUILTINS, CONTEXTUAL_KEYWORDS, KEYWORDS, PRIMITIVE_TYPES},
     lexer::{Lexer, Tok},
 };
-use move_symbol_pool::Symbol;
-use std::{collections::HashSet, path::PathBuf};
 
 /// Constructs an `lsp_types::CompletionItem` with the given `label` and `kind`.
 fn completion_item(label: &str, kind: CompletionItemKind) -> CompletionItem {

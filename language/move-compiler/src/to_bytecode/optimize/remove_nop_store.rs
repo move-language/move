@@ -7,24 +7,13 @@ use std::collections::BTreeSet;
 
 // Removes any unnecessary storing to a local just to move the value out.
 
+#[allow(clippy::ptr_arg)]
 pub fn optimize(
     _f: &FunctionName,
     _loop_heads: &BTreeSet<IR::BlockLabel_>,
     _locals: &mut Vec<(IR::Var, IR::Type)>,
     blocks: &mut IR::BytecodeBlocks,
 ) -> bool {
-    let mut changed = false;
-    loop {
-        let removed = remove_unnecessary_store(blocks);
-        if !removed {
-            break;
-        }
-        changed = true
-    }
-    changed
-}
-
-fn remove_unnecessary_store(blocks: &mut IR::BytecodeBlocks) -> bool {
     let mut changed = false;
     for (_lbl, block) in blocks {
         let mut new_block = vec![];

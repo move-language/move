@@ -10,22 +10,16 @@ use std::collections::{BTreeSet, HashMap};
 // Iterates to find a fixpoint as it might create empty blocks which could create more jumps to
 // clean up
 
+#[allow(clippy::ptr_arg)]
 pub fn optimize(
     _f: &FunctionName,
     loop_heads: &BTreeSet<IR::BlockLabel_>,
     _locals: &mut Vec<(IR::Var, IR::Type)>,
     blocks: &mut IR::BytecodeBlocks,
 ) -> bool {
-    let mut changed = false;
-    loop {
-        let fall_through_removed = remove_fall_through(loop_heads, blocks);
-        let block_removed = remove_empty_blocks(blocks);
-        if !fall_through_removed && !block_removed {
-            break;
-        };
-        changed = true
-    }
-    changed
+    let fall_through_removed = remove_fall_through(loop_heads, blocks);
+    let block_removed = remove_empty_blocks(blocks);
+    fall_through_removed || block_removed
 }
 
 fn remove_fall_through(

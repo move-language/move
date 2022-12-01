@@ -3,8 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    cfgir::ast::remap_labels,
-    cfgir::cfg::{BlockCFG, CFG},
+    cfgir::{
+        ast::remap_labels,
+        cfg::{BlockCFG, CFG},
+    },
     hlir::ast::{BasicBlocks, Command_, FunctionSignature, Label, SingleType},
     parser::ast::Var,
     shared::unique_map::UniqueMap,

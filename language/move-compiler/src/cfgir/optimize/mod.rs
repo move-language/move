@@ -24,12 +24,14 @@ pub fn optimize(
 ) {
     let mut count = 0;
     for optimization in OPTIMIZATIONS.iter().cycle() {
-        // if we have fully cycled through the list of optimizations, it is safe to stop
+        // if we have fully cycled through the list of optimizations without a change,
+        // it is safe to stop
         if count >= OPTIMIZATIONS.len() {
             debug_assert_eq!(count, OPTIMIZATIONS.len());
             break;
         }
 
+        // reset the count if something has changed
         if optimization(signature, locals, cfg) {
             count = 0
         } else {

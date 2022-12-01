@@ -18,3 +18,4 @@ pub mod scopes;
 pub mod types;
 pub mod utils;
 pub mod vfs;
+use move_core_types::account_address::AccountAddress;

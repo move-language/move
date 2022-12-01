@@ -57,6 +57,7 @@ impl Scopes {
             .modules
             .insert(module_name.0.value, Rc::new(RefCell::new(s)));
     }
+
     pub(crate) fn query_item<R>(
         &self,
         addr: AccountAddress,
@@ -265,7 +266,7 @@ impl Scopes {
         &self,
         chain: &NameAccessChain,
         item_ret: &mut Option<Item>,
-        name_to_addr: &dyn ConvertName2AccountAddress,
+        name_to_addr: &dyn Name2Addr,
         accept_tparam: bool,
     ) -> ResolvedType {
         let failed = ResolvedType::new_unknown();
@@ -350,18 +351,36 @@ impl Scopes {
         ScopesGuarder::new(self.clone())
     }
 
-    pub(crate) fn resolve_type(
-        &self,
-        ty: &Type,
-        name_to_addr: &dyn ConvertName2AccountAddress,
-    ) -> ResolvedType {
+    pub(crate) fn resolve_type(&self, ty: &Type, name_to_addr: &dyn Name2Addr) -> ResolvedType {
         let r = match &ty.value {
             Type_::Apply(ref chain, types) => {
-                let chain_ty = self.find_name_chain_type(chain, &mut None, name_to_addr, true);
-                let _types: Vec<_> = types
+                // Special handle for vector.
+                let types: Vec<_> = types
                     .iter()
                     .map(|ty| self.resolve_type(ty, name_to_addr))
                     .collect();
+                match &chain.value {
+                    NameAccessChain_::One(name) => {
+                        if name.value.as_str() == "vector" {
+                            let e_ty = types.get(0).unwrap_or(&UNKNOWN_TYPE).clone();
+                            return ResolvedType::new_vector(e_ty);
+                        }
+                    }
+
+                    NameAccessChain_::Two(_, _) => {}
+                    NameAccessChain_::Three(_, _) => {}
+                }
+
+                let mut chain_ty = self.find_name_chain_type(chain, &mut None, name_to_addr, true);
+                // Todo bind
+
+                let names = chain_ty.collect_type_parameter_name(self);
+                let mut m = std::collections::hash_map::HashMap::new();
+                for (name, ty) in names.iter().zip(types.iter()) {
+                    m.insert(name.clone(), ty.clone());
+                }
+                chain_ty.bind_type_parameter(&m, self);
+
                 return chain_ty;
             }
             Type_::Ref(m, ref b) => {

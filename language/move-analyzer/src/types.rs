@@ -13,6 +13,7 @@ use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::vec;
 
 #[derive(Clone)]
 pub enum ResolvedType {
@@ -42,6 +43,30 @@ pub enum ResolvedType {
 }
 
 impl ResolvedType {
+    /// This is used to collect type parameter just after resolved the base type.
+    pub(crate) fn collect_type_parameter_name(&self, scopes: &Scopes) -> Vec<Symbol> {
+        let mut ret = vec![];
+        match self {
+            Self::Vec(x) => match x.as_ref() {
+                Self::TParam(name, _) => {
+                    ret.push(name.value);
+                }
+                _ => {}
+            },
+            Self::Struct(x) => {
+                for t in x.type_parameters.iter() {
+                    ret.push(t.name.value);
+                }
+            }
+            Self::StructRef(_, _, _) => {
+                let struct_type = self.clone().struct_ref_to_struct(scopes);
+                return struct_type.collect_type_parameter_name(scopes);
+            }
+            _ => {}
+        }
+        ret
+    }
+
     pub(crate) fn nth_ty(&self, index: usize) -> Option<&'_ ResolvedType> {
         match self {
             ResolvedType::Multiple(x) => x.get(index),
@@ -66,6 +91,7 @@ impl ResolvedType {
                 }
                 None
             }
+            ResolvedType::Ref(_, x) => x.as_ref().find_filed_by_name(name),
             _ => None,
         }
     }
@@ -96,7 +122,10 @@ impl ResolvedType {
     pub(crate) fn new_build_in(b: BuildInType) -> Self {
         ResolvedType::BuildInType(b)
     }
-
+    #[inline]
+    pub(crate) fn new_vector(ty: ResolvedType) -> Self {
+        ResolvedType::Vec(Box::new(ty))
+    }
     #[inline]
     pub(crate) const fn new_unknown() -> Self {
         ResolvedType::UnKnown
@@ -123,8 +152,8 @@ impl ResolvedType {
         }
     }
     #[inline]
-    pub(crate) fn new_ref(is_mut: bool, e: ResolvedType) -> Self {
-        let value = ResolvedType::Ref(is_mut, Box::new(e));
+    pub(crate) fn new_ref(is_mut: bool, ty: ResolvedType) -> Self {
+        let value = ResolvedType::Ref(is_mut, Box::new(ty));
         value
     }
     #[inline]
@@ -152,7 +181,6 @@ impl ResolvedType {
         scopes: &Scopes,
     ) {
         let _ = std::mem::replace(self, self.clone().struct_ref_to_struct(scopes));
-
         match self {
             ResolvedType::UnKnown => {}
             ResolvedType::Struct(item::ItemStruct { ref mut fields, .. }) => {
@@ -183,7 +211,6 @@ impl ResolvedType {
                     let t = xs.get_mut(i).unwrap();
                     t.1.bind_type_parameter(types, scopes);
                 }
-
                 x.ret_type.as_mut().bind_type_parameter(types, scopes);
             }
             ResolvedType::Vec(ref mut b) => {
@@ -293,7 +320,7 @@ impl ResolvedType {
                 .query_item(addr, module_name, item_name.0.value, |x| match x {
                     Item::Struct(x) => ResolvedType::Struct(x.clone()),
                     _ => unreachable!(
-                        "looks like impossible {:?} {:?} {:?} {}",
+                        "looks like impossible addr:{:?} module:{:?} item:{:?} x:{}",
                         addr, module_name, item_name, x
                     ),
                 })

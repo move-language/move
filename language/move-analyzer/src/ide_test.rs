@@ -67,7 +67,7 @@ fn goto_definition_test4() {
     init_log();
     let m = Modules::new("/home/yuyang/projects/test-move2");
     let mut v =
-        goto_definition::Visitor::new("/home/yuyang/projects/test-move2/sources/test.move", 3, 25);
+        goto_definition::Visitor::new("/home/yuyang/projects/test-move2/sources/test.move", 4, 110);
     m.run_visitor(&mut v);
     eprintln!("{:?}", v.result.unwrap());
 }
@@ -80,7 +80,7 @@ fn goto_definition_test2() {
     ));
     let mut v = goto_definition::Visitor::new(
         concat_current_working_dir("/home/yuyang/projects/test-move/sources/Hello.move"),
-        9,
+        119,
         21,
     );
     m.run_visitor(&mut v);

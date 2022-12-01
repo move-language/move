@@ -378,3 +378,47 @@ impl std::fmt::Display for ItemOrAccess {
         }
     }
 }
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BuildInFun {
+    MoveTo,
+    MoveFrom,
+    BorrowGlobalMut,
+    BorrowGlobal,
+    Exits,
+}
+
+impl BuildInFun {
+    fn to_static_str(self) -> &'static str {
+        match self {
+            BuildInFun::MoveTo => "move_to",
+            BuildInFun::MoveFrom => "move_from",
+            BuildInFun::BorrowGlobalMut => "borrow_global_mut",
+            BuildInFun::BorrowGlobal => "borrow_global",
+            BuildInFun::Exits => "exists",
+        }
+    }
+}
+
+impl BuildInFun {
+    pub(crate) fn from_symbol(s: Symbol) -> Option<Self> {
+        Self::from_str(s.as_str())
+    }
+    pub(crate) fn from_str(s: &str) -> Option<Self> {
+        let x = match s {
+            "move_to" => BuildInFun::MoveTo,
+            "move_from" => BuildInFun::MoveFrom,
+            "borrow_global_mut" => BuildInFun::BorrowGlobalMut,
+            "borrow_global" => BuildInFun::BorrowGlobal,
+            "exists" => BuildInFun::Exits,
+            _ => return None,
+        };
+        Some(x)
+    }
+}
+
+impl std::fmt::Display for BuildInFun {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_static_str())
+    }
+}

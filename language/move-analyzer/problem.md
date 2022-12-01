@@ -29,3 +29,45 @@
         test completion2::xxx ... FAILED
 
 Self 看起来可以引入这种。
+
+hread 'main' panicked at 'internal error: entered unreachable code: looks like impossible addr:00000000000000000000000000000001 module:"simple_map" item:StructName("SimpleMap") x:struct SimpleMap', language/move-analyzer/src/types.rs:322:26
+stack backtrace:
+   0: rust_begin_unwind
+             at /rustc/897e37553bba8b42751c67658967889d11ecd120/library/std/src/panicking.rs:584:5
+   1: core::panicking::panic_fmt
+             at /rustc/897e37553bba8b42751c67658967889d11ecd120/library/core/src/panicking.rs:142:14
+   2: move_analyzer::types::ResolvedType::struct_ref_to_struct::{{closure}}
+             at /home/yuyang/projects/move/language/move-analyzer/src/types.rs:322:26
+   3: move_analyzer::scopes::Scopes::query_item
+             at /home/yuyang/projects/move/language/move-analyzer/src/scopes.rs:67:14
+   4: move_analyzer::types::ResolvedType::struct_ref_to_struct
+             at /home/yuyang/projects/move/language/move-analyzer/src/types.rs:319:62
+   5: move_analyzer::types::ResolvedType::collect_type_parameter_name
+             at /home/yuyang/projects/move/language/move-analyzer/src/types.rs:62:35
+   6: move_analyzer::scopes::Scopes::resolve_type
+             at /home/yuyang/projects/move/language/move-analyzer/src/scopes.rs:376:29
+   7: move_analyzer::module_visitor::<impl move_analyzer::modules::Modules>::run_visitor_for_manifest::{{closure}}::{{closure}}
+             at /home/yuyang/projects/move/language/move-analyzer/src/module_visitor.rs:69:38
+   8: move_analyzer::scopes::Scopes::enter_scope
+             at /home/yuyang/projects/move/language/move-analyzer/src/scopes.rs:92:17
+   9: move_analyzer::module_visitor::<impl move_analyzer::modules::Modules>::run_visitor_for_manifest::{{closure}}
+             at /home/yuyang/projects/move/language/move-analyzer/src/module_visitor.rs:57:13
+  10: move_analyzer::modules::Modules::with_struct::{{closure}}
+             at /home/yuyang/projects/move/language/move-analyzer/src/modules.rs:217:40
+  11: move_analyzer::modules::Modules::with_module_member
+             at /home/yuyang/projects/move/language/move-analyzer/src/modules.rs:154:29
+  12: move_analyzer::modules::Modules::with_struct
+             at /home/yuyang/projects/move/language/move-analyzer/src/modules.rs:216:9
+  13: move_analyzer::module_visitor::<impl move_analyzer::modules::Modules>::run_visitor_for_manifest
+             at /home/yuyang/projects/move/language/move-analyzer/src/module_visitor.rs:55:9
+  14: move_analyzer::module_visitor::<impl move_analyzer::modules::Modules>::run_visitor
+             at /home/yuyang/projects/move/language/move-analyzer/src/module_visitor.rs:158:13
+  15: move_analyzer::goto_definition::on_go_to_def_request
+             at /home/yuyang/projects/move/language/move-analyzer/src/goto_definition.rs:42:5
+  16: move_analyzer::on_request
+             at /home/yuyang/projects/move/language/move-analyzer/src/bin/move-analyzer.rs:213:13
+  17: move_analyzer::main
+             at /home/yuyang/projects/move/language/move-analyzer/src/bin/move-analyzer.rs:185:54
+  18: core::ops::function::FnOnce::call_once
+             at /rustc/897e37553bba8b42751c67658967889d11ecd120/library/core/src/ops/function.rs:248:5
+note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.

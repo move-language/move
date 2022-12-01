@@ -199,20 +199,20 @@ impl ResolvedType {
 }
 
 impl ResolvedType {
-    pub(crate) fn def_loc(&self) -> &Loc {
+    pub(crate) fn def_loc(&self) -> Loc {
         match self {
-            ResolvedType::Struct(x) => x.name.borrow().0,
-            ResolvedType::TParam(name, _) => &name.loc,
-            ResolvedType::BuildInType(_) => &UNKNOWN_LOC,
-            ResolvedType::StructRef(_, _, x) => x.borrow().0,
-            ResolvedType::UnKnown => &UNKNOWN_LOC,
+            ResolvedType::Struct(x) => x.name.loc(),
+            ResolvedType::TParam(name, _) => name.loc,
+            ResolvedType::BuildInType(_) => UNKNOWN_LOC,
+            ResolvedType::StructRef(_, _, x) => x.loc(),
+            ResolvedType::UnKnown => UNKNOWN_LOC,
             ResolvedType::ApplyTParam(x, _, _) => x.as_ref().def_loc(),
-            ResolvedType::Ref(_, x) => &UNKNOWN_LOC,
-            ResolvedType::Unit => &UNKNOWN_LOC,
-            ResolvedType::Multiple(_) => &UNKNOWN_LOC,
-            ResolvedType::Fun(f) => &f.name.0.loc,
+            ResolvedType::Ref(_, x) => UNKNOWN_LOC,
+            ResolvedType::Unit => UNKNOWN_LOC,
+            ResolvedType::Multiple(_) => UNKNOWN_LOC,
+            ResolvedType::Fun(f) => f.name.0.loc,
             ResolvedType::Vec(x) => x.as_ref().def_loc(),
-            ResolvedType::ResolvedFailed(err) => &err.loc,
+            ResolvedType::ResolvedFailed(err) => err.loc,
         }
     }
 }

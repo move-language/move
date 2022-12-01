@@ -107,8 +107,8 @@ impl ScopeVisitor for Visitor {
                 // Right now default is enough.
                 _ => {
                     let loc = item.def_loc();
-                    if self.match_loc(loc, services) {
-                        if let Some(t) = services.convert_loc_range(loc) {
+                    if self.match_loc(&loc, services) {
+                        if let Some(t) = services.convert_loc_range(&loc) {
                             self.result = Some(t);
                         }
                     }
@@ -120,8 +120,8 @@ impl ScopeVisitor for Visitor {
                     log::trace!("access:{}", access);
 
                     let locs = access.access_def_loc();
-                    if self.match_loc(locs.0, services) {
-                        if let Some(t) = services.convert_loc_range(locs.1) {
+                    if self.match_loc(&locs.0, services) {
+                        if let Some(t) = services.convert_loc_range(&locs.1) {
                             self.result = Some(t);
                         }
                     }

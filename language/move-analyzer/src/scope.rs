@@ -6,6 +6,7 @@ use super::types::*;
 use move_compiler::shared::*;
 use move_compiler::{parser::ast::*, shared::*};
 use move_core_types::account_address::AccountAddress;
+use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -16,17 +17,10 @@ pub struct Scope {
     pub(crate) items: HashMap<Symbol, Item>,
     pub(crate) is_function: bool,
     pub(crate) is_spec: bool,
+    pub(crate) module_: Option<Loc>,
 }
 
 impl Scope {
-    pub(crate) fn new_top() -> Self {
-        Self {
-            items: Default::default(),
-            is_function: false,
-            is_spec: false,
-        }
-    }
-
     pub(crate) fn enter_build_in(&mut self) {
         self.enter_item(Symbol::from("bool"), Item::BuildInType(BuildInType::Bool));
         self.enter_item(Symbol::from("u8"), Item::BuildInType(BuildInType::U8));

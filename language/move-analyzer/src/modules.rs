@@ -18,6 +18,7 @@ use move_compiler::parser::ast::Definition;
 use move_compiler::shared::Identifier;
 use move_compiler::{parser::ast::*, shared::*};
 
+use move_core_types::effects::Op;
 use move_ir_types::location::Loc;
 
 use move_ir_types::location::Spanned;
@@ -179,6 +180,28 @@ impl Modules {
         }
     }
 
+    pub(crate) fn with_module(
+        &self,
+        manifest: &PathBuf,
+        mut call_back: impl FnMut(AccountAddress, &ModuleDefinition),
+    ) {
+        for (_, m) in self.modules.get(manifest).unwrap().sources.iter() {
+            for d in m.iter() {
+                match d {
+                    Definition::Module(module) => {
+                        call_back(self.get_module_addr(module.address, module), module);
+                    }
+                    Definition::Address(a) => {
+                        for module in a.modules.iter() {
+                            call_back(self.get_module_addr(module.address, module), module);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
     pub(crate) fn with_const(
         &self,
         manifest: &PathBuf,
@@ -238,20 +261,25 @@ impl Modules {
         visitor: &mut dyn ScopeVisitor,
         manifest: &PathBuf,
     ) {
+        self.with_module(manifest, |addr, module_name| {
+            scopes.set_up_module(addr, module_name.name);
+        });
+
         self.with_const(manifest, |addr, name, c| {
             self.visit_const(addr, name, c, scopes, visitor);
         });
+
         self.with_struct(manifest, |addr, module_name, c| {
             let item = Item::StructNameRef(addr, module_name, c.name.clone());
             scopes.enter_top_item(self, addr, module_name, c.name.0.value, item);
         });
+
         self.with_use_decl(manifest, |addr, module_name, u| {
-            self.visit_use_decl(Some((addr, module_name)), u, scopes, visitor)
+            self.visit_use_decl(Some((addr, module_name)), u, scopes, None)
         });
 
         self.with_struct(manifest, |addr, module_name, s| {
             let _guard = scopes.clone_scope_and_enter(addr, module_name);
-
             scopes.enter_scope(|scopes| {
                 for t in s.type_parameters.iter() {
                     self.visit_struct_tparam(t, scopes, visitor);
@@ -284,7 +312,6 @@ impl Modules {
                     type_parameters_ins: vec![],
                     fields,
                 });
-
                 scopes.enter_top_item(self, addr, module_name, s.name.value(), item)
             });
         });
@@ -327,6 +354,12 @@ impl Modules {
             };
             enter_function(self, f, scopes, visitor, addr, module_name);
         });
+
+        // visit use decl again.
+        self.with_use_decl(manifest, |addr, module_name, u| {
+            self.visit_use_decl(Some((addr, module_name)), u, scopes, Some(visitor));
+        });
+
         // visit function body.
         self.with_function(manifest, |addr, module_name, f| {
             let _guard = scopes.clone_scope_and_enter(addr, module_name);
@@ -405,7 +438,7 @@ impl Modules {
     fn visit_block(&self, seq: &Sequence, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
         scopes.enter_scope(|scopes| {
             for u in seq.0.iter() {
-                self.visit_use_decl(None, u, scopes, visitor);
+                self.visit_use_decl(None, u, scopes, Some(visitor));
                 if visitor.finished() {
                     return;
                 }
@@ -492,6 +525,7 @@ impl Modules {
         scopes: &Scopes,
         visitor: &mut dyn ScopeVisitor,
     ) {
+        log::info!("visit_bind:{:?}", bind);
         match &bind.value {
             Bind_::Var(var) => {
                 let item = ItemOrAccess::Item(Item::Var(var.clone(), infer_ty.clone()));
@@ -545,7 +579,7 @@ impl Modules {
                         for (field, bind) in field_binds.iter() {
                             let field_ty = struct_ty.find_filed_by_name(field.0.value);
                             if let Some(field_ty) = field_ty {
-                                self.visit_bind(bind, &UNKNOWN_TYPE, scopes, visitor);
+                                self.visit_bind(bind, &field_ty.1, scopes, visitor);
                             } else {
                                 self.visit_bind(bind, &UNKNOWN_TYPE, scopes, visitor);
                             }
@@ -1129,7 +1163,7 @@ impl Modules {
                 self.visit_type_apply(ty, scopes, visitor);
             }
             Exp_::Spec(_) => {
-                log::error!("handle Sepc");
+                log::error!("handle Spec.");
             }
             Exp_::UnresolvedError => {
                 //
@@ -1142,15 +1176,17 @@ impl Modules {
         is_global: Option<(AccountAddress, Symbol)>,
         use_decl: &UseDecl,
         scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
+        visitor: Option<&mut dyn ScopeVisitor>,
     ) {
+        let mut _dummy = DummyVisitor;
+        let visitor = visitor.unwrap_or(&mut _dummy);
         match &use_decl.use_ {
             Use::Module(module, alias) => {
                 let mut name = module.value.module.0.value;
                 if let Some(alias) = alias {
                     name = alias.0.value;
                 }
-                let r = scopes.visit_top_scope(|top| -> Option<Rc<RefCell<Scope>>> {
+                let module_scope = scopes.visit_top_scope(|top| -> Option<Rc<RefCell<Scope>>> {
                     let x = top
                         .address
                         .get(&match &module.value.address.value {
@@ -1162,11 +1198,13 @@ impl Modules {
                         .clone();
                     Some(x)
                 });
-                if r.is_none() {
+                let module_scope =
+                    module_scope.expect(&format!("use decl {:?} not found", use_decl.use_));
+                let item = ItemOrAccess::Item(Item::ImportedModule(module.clone(), module_scope));
+                visitor.handle_item(self, scopes, &item);
+                if visitor.finished() {
                     return;
                 }
-                let r = r.unwrap();
-                let item = Item::ImportedModule(module.clone(), r);
                 if let Some((addr, module_name)) = is_global {
                     scopes.enter_top_item(self, addr, module_name, name, item);
                 } else {
@@ -1174,7 +1212,7 @@ impl Modules {
                 }
             }
             Use::Members(module, members) => {
-                let r = scopes.visit_top_scope(|top| -> Option<Rc<RefCell<Scope>>> {
+                let module_scope = scopes.visit_top_scope(|top| -> Option<Rc<RefCell<Scope>>> {
                     let x = top
                         .address
                         .get(&match &module.value.address.value {
@@ -1186,30 +1224,28 @@ impl Modules {
                         .clone();
                     Some(x)
                 });
-                if r.is_none() {
-                    return;
-                }
-                let r = r.unwrap();
+                let module_scope =
+                    module_scope.expect(&format!("use decl {:?} not found", use_decl.use_));
                 for (member, alias) in members.iter() {
-                    let mut name = member;
-                    if let Some(alias) = alias {
-                        name = alias;
+                    let name = if let Some(alias) = alias {
+                        alias.clone()
+                    } else {
+                        member.clone()
+                    };
+                    let item = ItemOrAccess::Item(Item::ImportedMember(
+                        name,
+                        member.value,
+                        module_scope.clone(),
+                    ));
+                    visitor.handle_item(self, scopes, &item);
+                    if visitor.finished() {
+                        return;
                     }
-                    if let Some(i) = r.as_ref().borrow().items.get(&member.value) {
-                        let item = ItemOrAccess::Access(Access::UseMember(
-                            name.clone(),
-                            Box::new(i.clone()),
-                        ));
-                        visitor.handle_item(self, scopes, &item);
-                        if visitor.finished() {
-                            return;
-                        }
-                        let item = Item::ImportedMember(name.clone(), Box::new(i.clone()));
-                        if let Some((addr, module_name)) = is_global {
-                            scopes.enter_top_item(self, addr, module_name, name.value, item);
-                        } else {
-                            scopes.enter_item(self, name.value, item);
-                        }
+
+                    if let Some((addr, module_name)) = is_global {
+                        scopes.enter_top_item(self, addr, module_name, name.value, item);
+                    } else {
+                        scopes.enter_item(self, name.value, item);
                     }
                 }
             }
@@ -1252,7 +1288,6 @@ impl Modules {
                 return;
             }
         }
-
         for (v, t) in signature.parameters.iter() {
             self.visit_type_apply(t, scopes, visitor);
             let t = scopes.resolve_type(t, self);
@@ -1264,6 +1299,7 @@ impl Modules {
             }
             scopes.enter_item(self, v.value(), item)
         }
+        self.visit_type_apply(&signature.return_type, scopes, visitor);
     }
 }
 

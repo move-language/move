@@ -27,3 +27,5 @@
                      at /rustc/897e37553bba8b42751c67658967889d11ecd120/library/core/src/ops/function.rs:248:5
         note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.
         test completion2::xxx ... FAILED
+
+Self 看起来可以引入这种。

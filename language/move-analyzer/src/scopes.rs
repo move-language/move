@@ -6,12 +6,12 @@ use super::types::*;
 use super::utils::*;
 use move_compiler::{parser::ast::*, shared::*};
 use move_core_types::account_address::AccountAddress;
+use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::borrow::Borrow;
 use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::rc::Rc;
-
 #[derive(Clone)]
 pub struct Scopes {
     scopes: Rc<RefCell<Vec<Scope>>>,
@@ -24,10 +24,31 @@ impl Scopes {
             scopes: Default::default(),
             addresses: Default::default(),
         };
-        let s = Scope::new_top();
+        let s = Scope::default();
         x.scopes.as_ref().borrow_mut().push(s);
         x.enter_build_in();
         x
+    }
+
+    pub(crate) fn set_up_module(&self, addr: AccountAddress, module_name: ModuleName) {
+        log::info!(
+            "set up module,addr:{:?} module_name:{:?}",
+            addr,
+            module_name
+        );
+        self.addresses
+            .borrow_mut()
+            .address
+            .insert(addr, Default::default());
+        let mut s = Scope::default();
+        s.module_ = Some(module_name.loc());
+        self.addresses
+            .borrow_mut()
+            .address
+            .get_mut(&addr)
+            .unwrap()
+            .modules
+            .insert(module_name.0.value, Rc::new(RefCell::new(s)));
     }
     pub(crate) fn query_item<R>(
         &self,
@@ -75,10 +96,10 @@ impl Scopes {
         let item = item.into();
         let loc = item.def_loc();
         let loc = convert_loc
-            .convert_loc_range(loc)
+            .convert_loc_range(&loc)
             .unwrap_or(FileRange::unknown());
-        log::trace!("{}", loc);
-        log::trace!("enter scope name:{:?} item:{}", name, item);
+        log::info!("{}", loc);
+        log::info!("enter scope name:{:?} item:{}", name, item);
         self.scopes
             .as_ref()
             .borrow_mut()
@@ -100,8 +121,8 @@ impl Scopes {
         let loc = convert_loc
             .convert_loc_range(&loc)
             .unwrap_or(FileRange::unknown());
-        log::trace!("{}", loc);
-        log::trace!(
+        log::info!("{}", loc);
+        log::info!(
             "enter top scope address:{:?} module:{:?} name:{:?} item:{}",
             address,
             module,
@@ -256,31 +277,47 @@ impl Scopes {
                 });
                 r.unwrap_or(failed)
             }
-            NameAccessChain_::Two(_name, member) => {
+            NameAccessChain_::Two(name, member) => {
                 // first find this name.
                 let mut r = None;
-                self.inner_first_visit(|s| {
-                    if let Some(v) = s.items.get(&member.value) {
-                        r = Some(v.clone());
-                        return true;
+                match name.value {
+                    LeadingNameAccess_::Name(name) => {
+                        self.inner_first_visit(|s| {
+                            if let Some(v) = s.items.get(&name.value) {
+                                match v {
+                                    Item::ImportedModule(_, members) => {
+                                        eprintln!(
+                                            "!!!!!!!!!!!!!!!:{:?}",
+                                            members
+                                                .as_ref()
+                                                .borrow()
+                                                .items
+                                                .keys()
+                                                .collect::<Vec<_>>()
+                                        );
+                                        if let Some(item) =
+                                            members.as_ref().borrow().items.get(&member.value)
+                                        {
+                                            let _ = std::mem::replace(item_ret, Some(item.clone()));
+                                            if let Some(ty) = item.to_type(false) {
+                                                r = Some(ty);
+                                                let _ =
+                                                    std::mem::replace(item_ret, Some(item.clone()));
+                                                return true; // make inner_first_visit stop.
+                                            }
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            false
+                        });
                     }
-                    false
-                });
-                if r.is_none() {
-                    return failed;
-                }
-                let r = r.unwrap();
-                match r {
-                    Item::ImportedModule(_, members) => {
-                        if let Some(item) = members.as_ref().borrow().items.get(&member.value) {
-                            let _ = std::mem::replace(item_ret, Some(item.clone()));
-                            item.to_type(false).unwrap_or(failed)
-                        } else {
-                            failed
-                        }
+                    LeadingNameAccess_::AnonymousAddress(_) => {
+                        unreachable!()
                     }
-                    _ => failed,
                 }
+                r.unwrap_or(failed)
             }
             NameAccessChain_::Three(chain_two, member) => self.visit_top_scope(|top| {
                 let modules = top.address.get(&match &chain_two.value.0.value {

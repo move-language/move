@@ -1,3 +1,5 @@
+use crate::modules;
+
 use super::scope::*;
 use super::types::*;
 
@@ -50,7 +52,11 @@ pub enum Item {
     /// VALUE types
     Parameter(Var, ResolvedType),
     ImportedModule(ModuleIdent, Rc<RefCell<Scope>>),
-    ImportedMember(Name, Box<Item>),
+    ImportedMember(
+        Name,   /* access name */
+        Symbol, /* name in the module */
+        Rc<RefCell<Scope>>,
+    ),
     Const(ConstantName, ResolvedType),
     Var(Var, ResolvedType),
     Field(Field, ResolvedType),
@@ -123,28 +129,41 @@ impl Item {
             Item::Parameter(_, ty) | Item::Var(_, ty) | Item::Const(_, ty) => ty.clone(),
             Item::Field(_, ty) => ty.clone(),
             Item::Fun(x) => ResolvedType::Fun(x.clone()),
-            Item::ImportedMember(_, item) => return item.to_type(false),
+            Item::ImportedMember(_, name, module) => {
+                return module
+                    .as_ref()
+                    .borrow()
+                    .items
+                    .get(name)
+                    .map(|i| i.to_type(false))
+                    .flatten();
+            }
             Item::ImportedModule(_, _) => return None,
             Item::Dummy => return None,
         };
         Some(x)
     }
 
-    pub(crate) fn def_loc(&self) -> &Loc {
+    pub(crate) fn def_loc(&self) -> Loc {
         match self {
-            Self::Parameter(var, _) => &var.borrow().0,
-            Self::ImportedMember(_, item) => item.as_ref().def_loc(),
-            Self::Struct(x) => x.name.borrow().0,
-            Self::BuildInType(_) => &UNKNOWN_LOC,
-            Self::TParam(name, _) => &name.loc,
-            Self::Const(name, _) => &name.borrow().0,
-            Item::StructNameRef(_, _, name) => &name.0.loc,
-            Item::Fun(f) => &f.name.0.loc,
-            Item::BuildInType(_) => &UNKNOWN_LOC,
-            Item::ImportedModule(_, _) => &UNKNOWN_LOC, // TODO maybe loc from ModuleIdent.
-            Item::Var(name, _) => name.borrow().0,
-            Item::Field(f, _) => f.borrow().0,
-            Item::Dummy => &UNKNOWN_LOC,
+            Self::Parameter(var, _) => var.loc(),
+            Self::ImportedMember(_, name, module) => module
+                .borrow()
+                .items
+                .get(name)
+                .map(|u| u.def_loc())
+                .unwrap_or(UNKNOWN_LOC),
+            Self::Struct(x) => x.name.loc(),
+            Self::BuildInType(_) => UNKNOWN_LOC,
+            Self::TParam(name, _) => name.loc,
+            Self::Const(name, _) => name.loc(),
+            Item::StructNameRef(_, _, name) => name.0.loc,
+            Item::Fun(f) => f.name.0.loc,
+            Item::BuildInType(_) => UNKNOWN_LOC,
+            Item::ImportedModule(_, _) => UNKNOWN_LOC, // TODO maybe loc from ModuleIdent.
+            Item::Var(name, _) => name.loc(),
+            Item::Field(f, _) => f.loc(),
+            Item::Dummy => UNKNOWN_LOC,
         }
     }
 
@@ -196,7 +215,12 @@ impl std::fmt::Display for Item {
             Item::ImportedModule(x, _item) => {
                 write!(f, "use {:?} {}", x, "_")
             }
-            Item::ImportedMember(name, x) => write!(f, "use {:?} {}", name, x),
+            Item::ImportedMember(name, x, module) => write!(
+                f,
+                "use {:?} {}",
+                name,
+                module.borrow().items.get(x).unwrap_or(&Item::new_dummy())
+            ),
             Item::Const(name, ty) => {
                 write!(f, "const {}:{}", name.0.value.as_str(), ty)
             }
@@ -233,7 +257,7 @@ impl std::fmt::Display for Item {
 
 pub enum Access {
     ApplyType(NameAccessChain, Box<ResolvedType>),
-    UseMember(Name, Box<Item>),
+
     ExprVar(Var, Box<Item>),
     ExprAccessChain(
         NameAccessChain,
@@ -260,9 +284,7 @@ impl std::fmt::Display for Access {
             Access::ApplyType(a, x) => {
                 write!(f, "apply type {:?}->{}", a.value, x)
             }
-            Access::UseMember(name, member) => {
-                write!(f, "use {} as {}", member, name.value.as_str())
-            }
+
             Access::ExprVar(var, item) => {
                 write!(f, "expr {}->{}", var.borrow().1.as_str(), item)
             }
@@ -280,18 +302,18 @@ impl std::fmt::Display for Access {
 }
 
 impl Access {
-    pub(crate) fn access_def_loc(&self) -> (&Loc /* access loc */, &Loc /* def loc */) {
+    pub(crate) fn access_def_loc(&self) -> (Loc /* access loc */, Loc /* def loc */) {
         match self {
-            Access::ApplyType(name, x) => (&name.loc, x.as_ref().def_loc()),
-            Access::UseMember(name, x) => (&name.loc, x.as_ref().def_loc()),
-            Access::ExprVar(var, x) => (&var.borrow().0, x.def_loc()),
+            Access::ApplyType(name, x) => (name.loc, x.as_ref().def_loc()),
+
+            Access::ExprVar(var, x) => (var.loc(), x.def_loc()),
             Access::ExprAccessChain(name, item) => {
-                (&get_name_chain_last_name(name).loc, item.as_ref().def_loc())
+                (get_name_chain_last_name(name).loc, item.as_ref().def_loc())
             }
             Access::ExprAddressName(_) => todo!(),
-            Access::AccessFiled(a, d, _) => (&a.borrow().0, &d.borrow().0),
-            Access::KeyWords(_) => (&UNKNOWN_LOC, &UNKNOWN_LOC),
-            Access::MacroCall(_) => (&UNKNOWN_LOC, &UNKNOWN_LOC),
+            Access::AccessFiled(a, d, _) => (a.loc(), d.loc()),
+            Access::KeyWords(_) => (UNKNOWN_LOC, UNKNOWN_LOC),
+            Access::MacroCall(_) => (UNKNOWN_LOC, UNKNOWN_LOC),
         }
     }
 }

@@ -484,6 +484,7 @@ impl SpecBuildInFun {
         };
         Some(x)
     }
+
     fn to_static_str(self) -> &'static str {
         match self {
             Self::Exists => "exists",

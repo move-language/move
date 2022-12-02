@@ -674,9 +674,9 @@ impl Modules {
                         Box::new(item.unwrap()),
                     ));
                     visitor.handle_item(self, scopes, &item);
-                }
-                if visitor.finished() {
-                    return;
+                    if visitor.finished() {
+                        return;
+                    }
                 }
                 if let Some(ref types) = types {
                     for t in types.iter() {

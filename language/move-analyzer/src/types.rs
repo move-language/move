@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use super::item::*;
-use crate::item::{self, ItemFunction};
+use crate::item::{self, ItemFun};
 use crate::scopes::Scopes;
 use move_command_line_common::files::FileHash;
 use move_command_line_common::types;
@@ -19,7 +19,13 @@ use std::vec;
 pub enum ResolvedType {
     UnKnown,
     Struct(item::ItemStruct),
-    StructRef(AccountAddress, Symbol, StructName),
+    StructRef(
+        AccountAddress,
+        Symbol,
+        StructName,
+        Vec<StructTypeParameter>,
+        HashMap<Symbol, ResolvedType>, //  Type Args.
+    ),
     /// struct { ... }
     BuildInType(BuildInType),
     /// T : drop
@@ -36,37 +42,15 @@ pub enum ResolvedType {
     /// (t1, t2, ... , tn)
     /// Used for return values and expression blocks
     Multiple(Vec<ResolvedType>),
-    Fun(ItemFunction),
+    Fun(ItemFun),
     Vec(Box<ResolvedType>),
     /// Can't resolve the Type,Keep the ast type.
     ResolvedFailed(Type),
+    /// Spec type
+    Range,
 }
 
 impl ResolvedType {
-    /// This is used to collect type parameter just after resolved the base type.
-    pub(crate) fn collect_type_parameter_name(&self, scopes: &Scopes) -> Vec<Symbol> {
-        let mut ret = vec![];
-        match self {
-            Self::Vec(x) => match x.as_ref() {
-                Self::TParam(name, _) => {
-                    ret.push(name.value);
-                }
-                _ => {}
-            },
-            Self::Struct(x) => {
-                for t in x.type_parameters.iter() {
-                    ret.push(t.name.value);
-                }
-            }
-            Self::StructRef(_, _, _) => {
-                let struct_type = self.clone().struct_ref_to_struct(scopes);
-                return struct_type.collect_type_parameter_name(scopes);
-            }
-            _ => {}
-        }
-        ret
-    }
-
     pub(crate) fn nth_ty(&self, index: usize) -> Option<&'_ ResolvedType> {
         match self {
             ResolvedType::Multiple(x) => x.get(index),
@@ -180,7 +164,6 @@ impl ResolvedType {
         types: &HashMap<Symbol, ResolvedType>,
         scopes: &Scopes,
     ) {
-        let _ = std::mem::replace(self, self.clone().struct_ref_to_struct(scopes));
         match self {
             ResolvedType::UnKnown => {}
             ResolvedType::Struct(item::ItemStruct { ref mut fields, .. }) => {
@@ -220,7 +203,19 @@ impl ResolvedType {
             ResolvedType::ApplyTParam(_, _, _) => {
                 unreachable!("called multiple times.")
             }
-            ResolvedType::StructRef(_, _, _) => {}
+            ResolvedType::StructRef(_, _, _, _, _) => {
+                let _ = std::mem::replace(self, self.clone().struct_ref_to_struct(scopes));
+                match self {
+                    ResolvedType::StructRef(_, _, _, _, x) => {
+                        let _ = std::mem::replace(x, types.clone());
+                    }
+                    ResolvedType::Struct(_) => {
+                        self.bind_type_parameter(types, scopes);
+                    }
+                    _ => unreachable!(),
+                }
+            }
+            ResolvedType::Range => {}
         }
     }
 }
@@ -231,7 +226,7 @@ impl ResolvedType {
             ResolvedType::Struct(x) => x.name.loc(),
             ResolvedType::TParam(name, _) => name.loc,
             ResolvedType::BuildInType(_) => UNKNOWN_LOC,
-            ResolvedType::StructRef(_, _, x) => x.loc(),
+            ResolvedType::StructRef(_, _, x, _, _) => x.loc(),
             ResolvedType::UnKnown => UNKNOWN_LOC,
             ResolvedType::ApplyTParam(x, _, _) => x.as_ref().def_loc(),
             ResolvedType::Ref(_, x) => UNKNOWN_LOC,
@@ -240,6 +235,7 @@ impl ResolvedType {
             ResolvedType::Fun(f) => f.name.0.loc,
             ResolvedType::Vec(x) => x.as_ref().def_loc(),
             ResolvedType::ResolvedFailed(err) => err.loc,
+            ResolvedType::Range => UNKNOWN_LOC,
         }
     }
 }
@@ -278,7 +274,7 @@ impl std::fmt::Display for ResolvedType {
         match self {
             ResolvedType::UnKnown => write!(f, "unknown"),
             ResolvedType::Struct(x) => write!(f, "{}", x),
-            ResolvedType::StructRef(addr, module_name, name) => {
+            ResolvedType::StructRef(addr, module_name, name, _, _) => {
                 write!(f, "struct {}", name.value().as_str())
             }
             ResolvedType::BuildInType(x) => write!(f, "{:?}", x),
@@ -309,20 +305,33 @@ impl std::fmt::Display for ResolvedType {
             ResolvedType::ResolvedFailed(ty) => {
                 write!(f, "{:?}", ty)
             }
+            ResolvedType::Range => {
+                write!(f, "range(n..m)")
+            }
         }
     }
 }
 
 impl ResolvedType {
     pub(crate) fn struct_ref_to_struct(self, s: &Scopes) -> ResolvedType {
-        match self {
-            Self::StructRef(addr, module_name, item_name) => s
+        match self.clone() {
+            Self::StructRef(addr, module_name, item_name, _, types) => s
                 .query_item(addr, module_name, item_name.0.value, |x| match x {
-                    Item::Struct(x) => ResolvedType::Struct(x.clone()),
-                    _ => unreachable!(
-                        "looks like impossible addr:{:?} module:{:?} item:{:?} x:{}",
-                        addr, module_name, item_name, x
-                    ),
+                    Item::Struct(item) => {
+                        let mut x = ResolvedType::Struct(item.clone());
+                        x.bind_type_parameter(&types, s);
+                        x
+                    }
+                    _ => {
+                        log::info!(
+                            "looks like impossible addr:{:?} module:{:?} item:{:?} x:{}",
+                            addr,
+                            module_name,
+                            item_name,
+                            x
+                        );
+                        self
+                    }
                 })
                 .expect(
                     " You are looking for cannot be found,It is possible But should noe happen.",

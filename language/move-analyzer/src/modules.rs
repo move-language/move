@@ -250,6 +250,17 @@ impl Modules {
         });
     }
 
+    pub(crate) fn with_spec(
+        &self,
+        manifest: &PathBuf,
+        mut call_back: impl FnMut(AccountAddress, Symbol, &SpecBlock),
+    ) {
+        self.with_module_member(manifest, |addr, module_name, member| match member {
+            ModuleMember::Spec(c) => call_back(addr, module_name, c),
+            _ => {}
+        });
+    }
+
     pub(crate) fn name_to_addr(&self, name: Symbol) -> AccountAddress {
         if let Some(ref x) = self.root_manifest {
             if let Some(ref x) = x.dev_address_assignments {
@@ -270,24 +281,115 @@ impl Modules {
         }
         return ERR_ADDRESS;
     }
-    /// If this is a build function call like `move_to`.
-    pub(crate) fn get_build_in_call_type(
+
+    pub(crate) fn get_spec_build_in_call_type(
         &self,
         scopes: &Scopes,
         name: &NameAccessChain,
         type_args: &Option<Vec<Type>>,
-        exprs: &Spanned<Vec<Exp>>,
+        exprs: &Spanned<Vec<Exp>>, // TODO need use _expr.
+    ) -> Option<ResolvedType> {
+        let b = match &name.value {
+            NameAccessChain_::One(name) => SpecBuildInFun::from_symbol(name.value),
+            NameAccessChain_::Two(_, _) => return None,
+            NameAccessChain_::Three(_, _) => return None,
+        }?;
+
+        let exprs_types: Vec<_> = exprs
+            .value
+            .iter()
+            .map(|e| self.get_expr_type(e, scopes))
+            .collect();
+        // vec<T>(x): vector<T> returns a singleton vector.
+        // A lot of those build function.
+        let t_in_vector = exprs_types
+            .get(0)
+            .map(|x| x.clone())
+            .map(|x| match x {
+                ResolvedType::Vec(x) => x.as_ref().clone(),
+                _ => x,
+            })
+            .unwrap_or(ResolvedType::new_unknown());
+        let first_t = exprs_types
+            .get(0)
+            .map(|x| x.clone())
+            .unwrap_or(ResolvedType::new_unknown());
+
+        Some(match b {
+            SpecBuildInFun::Exists => ResolvedType::new_build_in(BuildInType::Bool),
+            SpecBuildInFun::Global => {
+                if let Some(type_args) = type_args {
+                    if let Some(ty) = type_args.get(0) {
+                        scopes.resolve_type(ty, self)
+                    } else {
+                        ResolvedType::new_unknown()
+                    }
+                } else {
+                    ResolvedType::new_unknown()
+                }
+            }
+            SpecBuildInFun::Len => ResolvedType::new_build_in(BuildInType::NumType),
+            SpecBuildInFun::Update => {
+                if let Some(type_args) = type_args {
+                    if let Some(ty) = type_args.get(0) {
+                        ResolvedType::new_vector(scopes.resolve_type(ty, self))
+                    } else {
+                        ResolvedType::new_vector(t_in_vector)
+                    }
+                } else {
+                    ResolvedType::new_vector(t_in_vector)
+                }
+            }
+            SpecBuildInFun::Vec => {
+                if let Some(type_args) = type_args {
+                    if let Some(ty) = type_args.get(0) {
+                        ResolvedType::new_vector(scopes.resolve_type(ty, self))
+                    } else {
+                        // TODO infer from expr.
+                        ResolvedType::new_vector(first_t)
+                    }
+                } else {
+                    ResolvedType::new_vector(first_t)
+                }
+            }
+            SpecBuildInFun::Concat => {
+                if let Some(type_args) = type_args {
+                    if let Some(ty) = type_args.get(0) {
+                        ResolvedType::new_vector(scopes.resolve_type(ty, self))
+                    } else {
+                        ResolvedType::new_vector(t_in_vector)
+                    }
+                } else {
+                    ResolvedType::new_vector(t_in_vector)
+                }
+            }
+            SpecBuildInFun::Contains => ResolvedType::new_build_in(BuildInType::Bool),
+            SpecBuildInFun::IndexOf => ResolvedType::new_build_in(BuildInType::NumType),
+            SpecBuildInFun::Range => ResolvedType::Range,
+            SpecBuildInFun::InRange => ResolvedType::new_build_in(BuildInType::Bool),
+            SpecBuildInFun::UpdateField => first_t,
+            SpecBuildInFun::Old => first_t,
+            SpecBuildInFun::TRACE => first_t,
+        })
+    }
+    /// If this is a build function call like `move_to`.
+    pub(crate) fn get_move_build_in_call_type(
+        &self,
+        scopes: &Scopes,
+        name: &NameAccessChain,
+        type_args: &Option<Vec<Type>>,
+        _exprs: &Spanned<Vec<Exp>>, // TODO need use _expr.
     ) -> Option<ResolvedType> {
         //
         let b = match &name.value {
-            NameAccessChain_::One(name) => BuildInFun::from_symbol(name.value),
+            NameAccessChain_::One(name) => MoveBuildInFun::from_symbol(name.value),
             NameAccessChain_::Two(_, _) => return None,
             NameAccessChain_::Three(_, _) => return None,
         }?;
 
         match b {
-            BuildInFun::MoveTo => Some(ResolvedType::new_unit()),
-            BuildInFun::MoveFrom => {
+            MoveBuildInFun::MoveTo => Some(ResolvedType::new_unit()),
+            MoveBuildInFun::MoveFrom => {
                 if let Some(type_args) = type_args {
                     if let Some(ty) = type_args.get(0) {
                         let ty = scopes.resolve_type(ty, self);
@@ -299,11 +401,14 @@ impl Modules {
                     None
                 }
             }
-            BuildInFun::BorrowGlobalMut | BuildInFun::BorrowGlobal => {
+            MoveBuildInFun::BorrowGlobalMut | MoveBuildInFun::BorrowGlobal => {
                 if let Some(type_args) = type_args {
                     if let Some(ty) = type_args.get(0) {
                         let ty = scopes.resolve_type(ty, self);
-                        Some(ResolvedType::new_ref(b == BuildInFun::BorrowGlobalMut, ty))
+                        Some(ResolvedType::new_ref(
+                            b == MoveBuildInFun::BorrowGlobalMut,
+                            ty,
+                        ))
                     } else {
                         None
                     }
@@ -311,7 +416,7 @@ impl Modules {
                     None
                 }
             }
-            BuildInFun::Exits => Some(ResolvedType::new_build_in(BuildInType::Bool)),
+            MoveBuildInFun::Exits => Some(ResolvedType::new_build_in(BuildInType::Bool)),
         }
     }
 
@@ -328,7 +433,7 @@ impl Modules {
             },
             Exp_::Move(x) | Exp_::Copy(x) => scopes.find_var_type(x.0.value),
             Exp_::Name(name, _ /*  TODO this is a error. */) => {
-                let ty = scopes.find_name_chain_type(name, &mut None, self, false);
+                let ty = scopes.find_name_chain_type(name, &mut None, &mut None, self, false);
                 return ty;
             }
             Exp_::Call(name, is_macro, ref type_args, exprs) => {
@@ -338,10 +443,19 @@ impl Modules {
                         MacroCall::Assert => return ResolvedType::new_unit(),
                     }
                 }
-                if let Some(ty) = self.get_build_in_call_type(scopes, name, type_args, exprs) {
+                if let Some(_) = scopes.under_spec() {
+                    if let Some(ty) =
+                        self.get_spec_build_in_call_type(scopes, name, type_args, exprs)
+                    {
+                        return ty;
+                    }
+                }
+
+                if let Some(ty) = self.get_move_build_in_call_type(scopes, name, type_args, exprs) {
                     return ty;
                 }
-                let fun_type = scopes.find_name_chain_type(name, &mut None, self, false);
+                let fun_type = scopes.find_name_chain_type(name, &mut None, &mut None, self, false);
+
                 match &fun_type {
                     ResolvedType::Fun(x) => {
                         let type_parameters = &x.type_parameters;
@@ -362,9 +476,6 @@ impl Modules {
                         if let Some(ref ts) = type_args {
                             for (para, args) in type_parameters.iter().zip(ts.iter()) {
                                 types.insert(para.0.value, args.clone());
-                            }
-                            for (k, v) in types.iter() {
-                                eprintln!("xxxxxxxxxxxxxxx:{:?} {}", k, v);
                             }
                         } else if type_parameters.len() > 0 {
                             //
@@ -391,7 +502,8 @@ impl Modules {
             }
 
             Exp_::Pack(name, type_args, fields) => {
-                let mut struct_ty = scopes.find_name_chain_type(name, &mut None, self, false);
+                let mut struct_ty =
+                    scopes.find_name_chain_type(name, &mut None, &mut None, self, false);
                 let mut struct_ty = struct_ty.struct_ref_to_struct(scopes);
                 let mut types = HashMap::new();
                 let mut struct_ty = match &struct_ty {
@@ -516,9 +628,19 @@ impl Modules {
                     ResolvedType::new_unit()
                 }
             }
-            Exp_::Lambda(_, _) => ResolvedType::new_unknown(),
-            Exp_::Quant(_, _, _, _, _) => ResolvedType::new_unknown(),
-            Exp_::ExpList(_) => ResolvedType::new_unknown(),
+            Exp_::Lambda(_, _) => {
+                // TODO.
+
+                ResolvedType::new_unknown()
+            }
+            Exp_::Quant(_, _, _, _, _) => {
+                // TODO.
+                ResolvedType::new_unknown()
+            }
+            Exp_::ExpList(e) => {
+                let tys: Vec<_> = e.iter().map(|x| self.get_expr_type(x, scopes)).collect();
+                ResolvedType::Multiple(tys)
+            }
             Exp_::Unit => ResolvedType::new_unit(),
             Exp_::Assign(_, _) => ResolvedType::new_unit(),
             Exp_::Return(_) => ResolvedType::new_unit(),
@@ -584,12 +706,16 @@ impl Modules {
             }
             Exp_::Index(e, _index) => {
                 let ty = self.get_expr_type(e, scopes);
-                if let Some(v) = ty.is_vector() {
-                    v.clone()
-                } else {
-                    ty
+                let ty = match &ty {
+                    ResolvedType::Ref(_, x) => x.as_ref().clone(),
+                    _ => ty,
+                };
+                match &ty {
+                    ResolvedType::Vec(x) => x.as_ref().clone(),
+                    _ => ty,
                 }
             }
+
             Exp_::Cast(_, ty) => {
                 let ty = scopes.resolve_type(ty, self);
                 ty
@@ -751,7 +877,8 @@ pub(crate) fn infer_type_parameter_on_expression(
                 _ => {}
             },
             ResolvedType::ResolvedFailed(_) => {}
-            ResolvedType::StructRef(_, _, _) => {}
+            ResolvedType::StructRef(_, _, _, _, _) => {}
+            ResolvedType::Range => {}
         }
     }
 }

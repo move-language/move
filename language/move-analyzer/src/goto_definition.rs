@@ -105,7 +105,7 @@ impl ScopeVisitor for Visitor {
         match item {
             ItemOrAccess::Item(item) => match item {
                 Item::UseModule(name, alias, s) => {
-                    if self.match_loc(&name.loc, services)
+                    if self.match_loc(&name.value.module.loc(), services)
                         || match alias {
                             Some(alias) => self.match_loc(&alias.0.loc, services),
                             None => false,
@@ -117,11 +117,12 @@ impl ScopeVisitor for Visitor {
                     }
                 }
                 Item::UseMember(module_name, name, alias, x) => {
-                    if self.match_loc(&module_name.loc, services) {
+                    if self.match_loc(&module_name.value.module.loc(), services) {
                         if let Some(t) = services.convert_loc_range(
                             &x.as_ref().borrow().module_.as_ref().unwrap().name.loc(),
                         ) {
                             self.result = Some(t);
+                            return;
                         }
                     }
                     if self.match_loc(&name.loc, services)
@@ -151,6 +152,16 @@ impl ScopeVisitor for Visitor {
             ItemOrAccess::Access(access) => match item {
                 _ => {
                     log::trace!("access:{}", access);
+                    if let Some((access, def)) = access.access_module() {
+                        if self.match_loc(&access, services) {
+                            if let Some(t) = services.convert_loc_range(&def) {
+                                eprintln!("xxxxxxxxxxxxxxxxxxx:{:?} {:?}", t, def);
+
+                                self.result = Some(t);
+                                return;
+                            }
+                        }
+                    }
                     let locs = access.access_def_loc();
                     if self.match_loc(&locs.0, services) {
                         if let Some(t) = services.convert_loc_range(&locs.1) {

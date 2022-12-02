@@ -9,9 +9,9 @@ use move_core_types::account_address::AccountAddress;
 use move_core_types::effects::Op;
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
-
 use std::borrow::BorrowMut;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 #[derive(Clone)]
 pub struct Scopes {
@@ -266,6 +266,7 @@ impl Scopes {
         &self,
         chain: &NameAccessChain,
         item_ret: &mut Option<Item>,
+        module_ret: &mut Option<ModuleScope>,
         name_to_addr: &dyn Name2Addr,
         accept_tparam: bool,
     ) -> ResolvedType {
@@ -298,10 +299,15 @@ impl Scopes {
                                             members.as_ref().borrow().items.get(&member.value)
                                         {
                                             let _ = std::mem::replace(item_ret, Some(item.clone()));
+
                                             if let Some(ty) = item.to_type(false) {
                                                 r = Some(ty);
                                                 let _ =
                                                     std::mem::replace(item_ret, Some(item.clone()));
+                                                let _ = std::mem::replace(
+                                                    module_ret,
+                                                    members.borrow().module_.clone(),
+                                                );
                                                 return true; // make inner_first_visit stop.
                                             }
                                         }
@@ -332,6 +338,7 @@ impl Scopes {
                     return failed;
                 }
                 let module = module.unwrap();
+                let _ = std::mem::replace(module_ret, module.as_ref().borrow().module_.clone());
                 if let Some(item) = module.as_ref().borrow().items.get(&member.value) {
                     let _ = std::mem::replace(item_ret, Some(item.clone()));
                     item.to_type(false).unwrap_or(failed)
@@ -366,21 +373,29 @@ impl Scopes {
                             return ResolvedType::new_vector(e_ty);
                         }
                     }
-
                     NameAccessChain_::Two(_, _) => {}
                     NameAccessChain_::Three(_, _) => {}
                 }
-
-                let mut chain_ty = self.find_name_chain_type(chain, &mut None, name_to_addr, true);
-                // Todo bind
-
-                let names = chain_ty.collect_type_parameter_name(self);
-                let mut m = std::collections::hash_map::HashMap::new();
-                for (name, ty) in names.iter().zip(types.iter()) {
-                    m.insert(name.clone(), ty.clone());
-                }
-                chain_ty.bind_type_parameter(&m, self);
-
+                let mut chain_ty =
+                    self.find_name_chain_type(chain, &mut None, &mut None, name_to_addr, true);
+                let chain_ty = match &mut chain_ty {
+                    ResolvedType::Struct(x) => {
+                        let mut m = HashMap::new();
+                        for (name, ty) in x.type_parameters.iter().zip(types.iter()) {
+                            m.insert(name.name.value, ty.clone());
+                        }
+                        let mut x = chain_ty.clone();
+                        x.bind_type_parameter(&m, self);
+                        x
+                    }
+                    ResolvedType::StructRef(_, _, _, type_paras, m) => {
+                        for (name, ty) in type_paras.iter().zip(types.iter()) {
+                            m.insert(name.name.value, ty.clone());
+                        }
+                        chain_ty
+                    }
+                    _ => chain_ty,
+                };
                 return chain_ty;
             }
             Type_::Ref(m, ref b) => {
@@ -397,7 +412,7 @@ impl Scopes {
                     })
                     .collect();
                 let ret = self.resolve_type(ret.as_ref(), name_to_addr);
-                ResolvedType::Fun(ItemFunction {
+                ResolvedType::Fun(ItemFun {
                     name: todo!(),
                     type_parameters: vec![],
                     parameters,

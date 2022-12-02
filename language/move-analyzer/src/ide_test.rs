@@ -4,9 +4,7 @@ use crate::utils::path_concat;
 
 use super::goto_definition;
 use super::modules::*;
-
 use log::{Level, Metadata, Record};
-
 struct SimpleLogger;
 
 impl log::Log for SimpleLogger {
@@ -63,16 +61,6 @@ fn goto_definition_test3() {
 }
 
 #[test]
-fn goto_definition_test4() {
-    init_log();
-    let m = Modules::new("/home/yuyang/projects/test-move2");
-    let mut v =
-        goto_definition::Visitor::new("/home/yuyang/projects/test-move2/sources/test.move", 4, 110);
-    m.run_visitor(&mut v);
-    eprintln!("{:?}", v.result.unwrap());
-}
-
-#[test]
 fn goto_definition_test2() {
     init_log();
     let m = Modules::new(concat_current_working_dir(
@@ -83,6 +71,16 @@ fn goto_definition_test2() {
         119,
         21,
     );
+    m.run_visitor(&mut v);
+    eprintln!("{:?}", v.result.unwrap());
+}
+
+#[test]
+fn goto_definition_test4() {
+    init_log();
+    let m = Modules::new("/home/yuyang/projects/test-move2");
+    let mut v =
+        goto_definition::Visitor::new("/home/yuyang/projects/test-move2/sources/test.move", 3, 8);
     m.run_visitor(&mut v);
     eprintln!("{:?}", v.result.unwrap());
 }

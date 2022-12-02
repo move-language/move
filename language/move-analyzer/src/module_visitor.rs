@@ -44,7 +44,8 @@ impl Modules {
         });
 
         self.with_struct(manifest, |addr, module_name, c| {
-            let item = Item::StructNameRef(addr, module_name, c.name.clone());
+            let item =
+                Item::StructNameRef(addr, module_name, c.name.clone(), c.type_parameters.clone());
             scopes.enter_top_item(self, addr, module_name, c.name.0.value, item);
         });
 
@@ -115,7 +116,7 @@ impl Modules {
                         .map(|(var, ty)| (var.clone(), scopes.resolve_type(ty, self)))
                         .collect();
                     let ret = scopes.resolve_type(&s.return_type, self);
-                    let item = Item::Fun(ItemFunction {
+                    let item = Item::Fun(ItemFun {
                         name: f.name.clone(),
                         type_parameters: ts,
                         parameters: params,
@@ -146,6 +147,190 @@ impl Modules {
             let _guard = scopes.clone_scope_and_enter(addr, module_name);
             self.visit_function(f, scopes, visitor);
         });
+
+        self.with_spec(manifest, |addr, module_name, spec| {
+            self.visit_spec(spec, scopes, visitor);
+        });
+    }
+
+    pub fn visit_spec(&self, spec: &SpecBlock, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
+        let _guard = scopes.enter_scope_guard(Scope::new_spec());
+
+        match &spec.value.target.value {
+            SpecBlockTarget_::Code => {}
+            SpecBlockTarget_::Module => {}
+            SpecBlockTarget_::Member(m, _) => {
+                let mut item_ret = None;
+                let chain = Spanned {
+                    loc: m.loc,
+                    value: NameAccessChain_::One(Spanned {
+                        loc: m.loc,
+                        value: m.value,
+                    }),
+                };
+                scopes.find_name_chain_type(&chain, &mut item_ret, &mut None, self, false);
+                if let Some(item_ret) = item_ret {
+                    {
+                        let item = ItemOrAccess::Access(Access::ExprAccessChain(
+                            chain.clone(),
+                            None,
+                            Box::new(item_ret.clone()),
+                        ));
+                        visitor.handle_item(self, scopes, &item);
+                        if visitor.finished() {
+                            return;
+                        }
+                    }
+                    match &item_ret {
+                        Item::Fun(x) => {
+                            for (var, ty) in x.parameters.iter() {
+                                scopes.enter_item(
+                                    self,
+                                    var.0.value,
+                                    Item::Parameter(var.clone(), ty.clone()),
+                                );
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                // TODO why spec have function signature.
+            }
+            SpecBlockTarget_::Schema(_, _) => {
+                log::error!("handle schema.");
+            } // enter parameter and ret.
+        }
+
+        for u in spec.value.uses.iter() {
+            self.visit_use_decl(None, u, scopes, Some(visitor));
+            if visitor.finished() {
+                return;
+            }
+        }
+        for m in spec.value.members.iter() {
+            self.visit_spec_member(m, scopes, visitor);
+            if visitor.finished() {
+                return;
+            }
+        }
+    }
+
+    pub fn visit_spec_member(
+        &self,
+        member: &SpecBlockMember,
+        scopes: &Scopes,
+        visitor: &mut dyn ScopeVisitor,
+    ) {
+        match &member.value {
+            SpecBlockMember_::Condition {
+                kind,
+                properties,
+                exp,
+                additional_exps,
+            } => {
+                // TODO what is Invariant(Vec<(Name, Vec<Ability>)>),
+                self.visit_expr(exp, scopes, visitor);
+                if visitor.finished() {
+                    return;
+                }
+                for exp in additional_exps.iter() {
+                    self.visit_expr(exp, scopes, visitor);
+                    if visitor.finished() {
+                        return;
+                    }
+                }
+            }
+            SpecBlockMember_::Function {
+                uninterpreted,
+                name,
+                signature,
+                body,
+            } => {
+                self.visit_signature(signature, scopes, visitor);
+                if visitor.finished() {
+                    return;
+                }
+                let _guard = scopes.enter_scope_guard(Scope::new_fun());
+                for t in signature.type_parameters.iter() {
+                    self.visit_tparam(t, scopes, visitor);
+                    if visitor.finished() {
+                        return;
+                    }
+                }
+                let parameter: Vec<_> = signature
+                    .parameters
+                    .iter()
+                    .map(|(var, ty)| (var.clone(), scopes.resolve_type(ty, self)))
+                    .collect();
+
+                let ret_ty = scopes.resolve_type(&signature.return_type, self);
+                let item = Item::Fun(ItemFun {
+                    name: name.clone(),
+                    type_parameters: signature.type_parameters.clone(),
+                    parameters: parameter.clone(),
+                    ret_type: Box::new(ret_ty),
+                });
+                scopes.enter_item(self, name.value(), item);
+                for (var, ty) in parameter {
+                    scopes.enter_item(self, var.value(), Item::Parameter(var, ty));
+                }
+                // visit function body.
+                match &body.value {
+                    FunctionBody_::Defined(s) => self.visit_block(s, scopes, visitor),
+                    FunctionBody_::Native => {}
+                }
+            }
+
+            SpecBlockMember_::Variable {
+                is_global,
+                name,
+                type_parameters,
+                type_: ty,
+                init,
+            } => {
+                self.visit_type_apply(ty, scopes, visitor);
+                if visitor.finished() {
+                    return;
+                }
+                let ty = scopes.resolve_type(&ty, self);
+                let item = ItemOrAccess::Item(Item::Var(Var(name.clone()), ty));
+                visitor.handle_item(self, scopes, &item);
+                scopes.enter_item(self, name.value, item);
+                if let Some(init) = init {
+                    self.visit_expr(init, scopes, visitor);
+                }
+            }
+
+            SpecBlockMember_::Let {
+                name,
+                post_state,
+                def,
+            } => {
+                let ty = self.get_expr_type(&def, scopes);
+                let item = ItemOrAccess::Item(Item::Var(Var(name.clone()), ty));
+                visitor.handle_item(self, scopes, &item);
+                scopes.enter_item(self, name.value, item);
+
+                self.visit_expr(def, scopes, visitor);
+            }
+            SpecBlockMember_::Update { lhs, rhs } => {
+                self.visit_expr(&lhs, scopes, visitor);
+                self.visit_expr(&rhs, scopes, visitor);
+            }
+            SpecBlockMember_::Include { properties, exp } => {
+                // TODO.
+            }
+            SpecBlockMember_::Apply {
+                exp,
+                patterns,
+                exclusion_patterns,
+            } => {
+                // TODO.
+            }
+            SpecBlockMember_::Pragma { properties } => {
+                // TODO.
+            }
+        }
     }
 
     /// Entrance for `ScopeVisitor` base on analyze.
@@ -340,7 +525,8 @@ impl Modules {
                 return;
             }
             Bind_::Unpack(chain, tys, field_binds) => {
-                let struct_ty = scopes.find_name_chain_type(chain, &mut None, self, false);
+                let struct_ty =
+                    scopes.find_name_chain_type(chain, &mut None, &mut None, self, false);
                 let item = ItemOrAccess::Access(Access::ApplyType(
                     chain.as_ref().clone(),
                     Box::new(struct_ty.clone()),
@@ -403,7 +589,8 @@ impl Modules {
     ) {
         match &ty.value {
             Type_::Apply(chain, types) => {
-                let ty = scopes.find_name_chain_type(chain.as_ref(), &mut None, self, true);
+                let ty =
+                    scopes.find_name_chain_type(chain.as_ref(), &mut None, &mut None, self, true);
                 let item =
                     ItemOrAccess::Access(Access::ApplyType(chain.as_ref().clone(), Box::new(ty)));
                 visitor.handle_item(self, scopes, &item);
@@ -448,6 +635,7 @@ impl Modules {
                         value: NameAccessChain_::One(var.0.clone()),
                     },
                     &mut item,
+                    &mut None,
                     self,
                     false,
                 );
@@ -463,9 +651,10 @@ impl Modules {
                       looks like _ty is not used. */
             ) => {
                 let mut item = Some(Item::new_dummy());
-                scopes.find_name_chain_type(chain, &mut item, self, false);
+                scopes.find_name_chain_type(chain, &mut item, &mut None, self, false);
                 let item = ItemOrAccess::Access(Access::ExprAccessChain(
                     chain.clone(),
+                    None,
                     Box::new(item.unwrap()),
                 ));
                 visitor.handle_item(self, scopes, &item);
@@ -477,9 +666,11 @@ impl Modules {
                     visitor.handle_item(self, scopes, &item);
                 } else {
                     let mut item = Some(Item::new_dummy());
-                    scopes.find_name_chain_type(chain, &mut item, self, false);
+                    let mut module = None;
+                    scopes.find_name_chain_type(chain, &mut item, &mut module, self, false);
                     let item = ItemOrAccess::Access(Access::ExprAccessChain(
                         chain.clone(),
+                        module,
                         Box::new(item.unwrap()),
                     ));
                     visitor.handle_item(self, scopes, &item);
@@ -503,7 +694,7 @@ impl Modules {
                 }
             }
             Exp_::Pack(ref chain, ref types, fields) => {
-                let ty = scopes.find_name_chain_type(chain, &mut None, self, false);
+                let ty = scopes.find_name_chain_type(chain, &mut None, &mut None, self, false);
                 let item =
                     ItemOrAccess::Access(Access::ApplyType(chain.clone(), Box::new(ty.clone())));
                 visitor.handle_item(self, scopes, &item);
@@ -554,7 +745,6 @@ impl Modules {
                     }
                 }
             }
-
             Exp_::IfElse(condition, then_, else_) => {
                 self.visit_expr(condition, scopes, visitor);
                 if visitor.finished() {
@@ -649,8 +839,9 @@ impl Modules {
                     visitor.handle_item(self, scopes, &item);
                 }
             }
-            Exp_::Index(_, _) => {
-                log::error!("handle index.");
+            Exp_::Index(e, index) => {
+                self.visit_expr(e.as_ref(), scopes, visitor);
+                self.visit_expr(index.as_ref(), scopes, visitor)
             }
             Exp_::Cast(e, ty) => {
                 self.visit_expr(e.as_ref(), scopes, visitor);
@@ -666,8 +857,8 @@ impl Modules {
                 }
                 self.visit_type_apply(ty, scopes, visitor);
             }
-            Exp_::Spec(_) => {
-                log::error!("handle Spec.");
+            Exp_::Spec(spec) => {
+                self.visit_spec(spec, scopes, visitor);
             }
             Exp_::UnresolvedError => {
                 //

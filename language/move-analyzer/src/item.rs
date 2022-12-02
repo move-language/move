@@ -1,3 +1,5 @@
+use crate::modules::Modules;
+
 use super::scope::*;
 use super::types::*;
 
@@ -8,6 +10,7 @@ use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
+use std::collections::hash_map::HashMap;
 
 use std::rc::Rc;
 use std::str::FromStr;
@@ -50,9 +53,9 @@ pub enum Item {
     /// VALUE types
     Parameter(Var, ResolvedType),
     UseModule(
-        ModuleIdent, /*  */
-        Option<ModuleName>,
-        Rc<RefCell<Scope>>,
+        ModuleIdent,        // 0x111::xxxx
+        Option<ModuleName>, // alias
+        Rc<RefCell<Scope>>, // module scope.
     ),
     UseMember(
         ModuleIdent, /* access name */
@@ -72,8 +75,9 @@ pub enum Item {
         AccountAddress,
         Symbol, // module name.
         StructName,
+        Vec<StructTypeParameter>,
     ),
-    Fun(ItemFunction),
+    Fun(ItemFun),
 
     /// build in types.
     BuildInType(BuildInType),
@@ -84,14 +88,14 @@ pub enum Item {
 }
 
 #[derive(Clone)]
-pub struct ItemFunction {
+pub struct ItemFun {
     pub(crate) name: FunctionName,
     pub(crate) type_parameters: Vec<(Name, Vec<Ability>)>, // type parameters.
     pub(crate) parameters: Vec<(Var, ResolvedType)>,       // parameters.
     pub(crate) ret_type: Box<ResolvedType>,                // return ty
 }
 
-impl std::fmt::Display for ItemFunction {
+impl std::fmt::Display for ItemFun {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "fun {}", self.name.value().as_str())?;
         if self.type_parameters.len() > 0 {
@@ -126,9 +130,13 @@ impl Item {
                 }
             }
             Item::Struct(x) => ResolvedType::Struct(x.clone()),
-            Item::StructNameRef(addr, name, x) => {
-                ResolvedType::StructRef(addr.clone(), name.clone(), x.clone())
-            }
+            Item::StructNameRef(addr, name, x, t) => ResolvedType::StructRef(
+                addr.clone(),
+                name.clone(),
+                x.clone(),
+                t.clone(),
+                Default::default(),
+            ),
             Item::BuildInType(b) => ResolvedType::BuildInType(*b),
             Item::Parameter(_, ty) | Item::Var(_, ty) | Item::Const(_, ty) => ty.clone(),
             Item::Field(_, ty) => ty.clone(),
@@ -161,7 +169,7 @@ impl Item {
             Self::BuildInType(_) => UNKNOWN_LOC,
             Self::TParam(name, _) => name.loc,
             Self::Const(name, _) => name.loc(),
-            Item::StructNameRef(_, _, name) => name.0.loc,
+            Item::StructNameRef(_, _, name, _) => name.0.loc,
             Item::Fun(f) => f.name.0.loc,
             Item::BuildInType(_) => UNKNOWN_LOC,
             Item::UseModule(_, _, s) => s.borrow().module_.as_ref().unwrap().name.loc(),
@@ -238,7 +246,7 @@ impl std::fmt::Display for Item {
             Item::Struct(s) => {
                 write!(f, "{}", s)
             }
-            Item::StructNameRef(_, _, name) => {
+            Item::StructNameRef(_, _, name, _) => {
                 write!(f, "struct {}", name.value().as_str())
             }
             Item::Fun(x) => write!(f, "{}", x),
@@ -272,6 +280,7 @@ pub enum Access {
     ExprVar(Var, Box<Item>),
     ExprAccessChain(
         NameAccessChain,
+        Option<ModuleScope>,
         Box<Item>, /* The item that you want to access.  */
     ),
     // Maybe the same as ExprName.
@@ -306,7 +315,7 @@ impl std::fmt::Display for Access {
             Access::ExprVar(var, item) => {
                 write!(f, "expr {}->{}", var.borrow().1.as_str(), item)
             }
-            Access::ExprAccessChain(chain, item) => {
+            Access::ExprAccessChain(chain, _, item) => {
                 write!(f, "expr {:?}->{}", chain, item)
             }
             Access::ExprAddressName(chain) => {
@@ -334,7 +343,7 @@ impl Access {
         match self {
             Access::ApplyType(name, x) => (name.loc, x.as_ref().def_loc()),
             Access::ExprVar(var, x) => (var.loc(), x.def_loc()),
-            Access::ExprAccessChain(name, item) => {
+            Access::ExprAccessChain(name, _, item) => {
                 (get_name_chain_last_name(name).loc, item.as_ref().def_loc())
             }
             Access::ExprAddressName(_) => (UNKNOWN_LOC, UNKNOWN_LOC),
@@ -343,6 +352,18 @@ impl Access {
             Access::MacroCall(_) => (UNKNOWN_LOC, UNKNOWN_LOC),
 
             Access::Friend(name, item) => (get_name_chain_last_name(name).loc.clone(), item.loc()),
+        }
+    }
+    /// Get loc
+    pub(crate) fn access_module(&self) -> Option<(Loc, Loc)> {
+        match self {
+            Self::ExprAccessChain(chain, Option::Some(module), _) => match &chain.value {
+                NameAccessChain_::One(_) => return None,
+                NameAccessChain_::Two(m, _) => Some((m.loc, module.name.loc())),
+                NameAccessChain_::Three(x, _) => Some((x.value.1.loc, module.name.loc())),
+            },
+
+            _ => None,
         }
     }
 }
@@ -380,7 +401,7 @@ impl std::fmt::Display for ItemOrAccess {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum BuildInFun {
+pub enum MoveBuildInFun {
     MoveTo,
     MoveFrom,
     BorrowGlobalMut,
@@ -388,36 +409,101 @@ pub enum BuildInFun {
     Exits,
 }
 
-impl BuildInFun {
+impl MoveBuildInFun {
     fn to_static_str(self) -> &'static str {
         match self {
-            BuildInFun::MoveTo => "move_to",
-            BuildInFun::MoveFrom => "move_from",
-            BuildInFun::BorrowGlobalMut => "borrow_global_mut",
-            BuildInFun::BorrowGlobal => "borrow_global",
-            BuildInFun::Exits => "exists",
+            MoveBuildInFun::MoveTo => "move_to",
+            MoveBuildInFun::MoveFrom => "move_from",
+            MoveBuildInFun::BorrowGlobalMut => "borrow_global_mut",
+            MoveBuildInFun::BorrowGlobal => "borrow_global",
+            MoveBuildInFun::Exits => "exists",
         }
     }
 }
 
-impl BuildInFun {
+impl MoveBuildInFun {
     pub(crate) fn from_symbol(s: Symbol) -> Option<Self> {
         Self::from_str(s.as_str())
     }
     pub(crate) fn from_str(s: &str) -> Option<Self> {
         let x = match s {
-            "move_to" => BuildInFun::MoveTo,
-            "move_from" => BuildInFun::MoveFrom,
-            "borrow_global_mut" => BuildInFun::BorrowGlobalMut,
-            "borrow_global" => BuildInFun::BorrowGlobal,
-            "exists" => BuildInFun::Exits,
+            "move_to" => MoveBuildInFun::MoveTo,
+            "move_from" => MoveBuildInFun::MoveFrom,
+            "borrow_global_mut" => MoveBuildInFun::BorrowGlobalMut,
+            "borrow_global" => MoveBuildInFun::BorrowGlobal,
+            "exists" => MoveBuildInFun::Exits,
             _ => return None,
         };
         Some(x)
     }
 }
 
-impl std::fmt::Display for BuildInFun {
+impl std::fmt::Display for MoveBuildInFun {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_static_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SpecBuildInFun {
+    Exists,
+    Global,
+    Len,
+    Update,
+    Vec,
+    Concat,
+    Contains,
+    IndexOf,
+    Range,
+    InRange,
+    UpdateField,
+    Old,
+    TRACE,
+}
+
+impl SpecBuildInFun {
+    pub(crate) fn from_symbol(s: Symbol) -> Option<Self> {
+        Self::from_str(s.as_str())
+    }
+    pub(crate) fn from_str(s: &str) -> Option<Self> {
+        let x = match s {
+            "exists" => Self::Exists,
+            "global" => Self::Global,
+            "len" => Self::Len,
+            "update" => Self::Update,
+            "vec" => Self::Vec,
+            "concat" => Self::Concat,
+            "contains" => Self::Contains,
+            "index_of" => Self::IndexOf,
+            "range" => Self::Range,
+            "in_range" => Self::InRange,
+            "update_field" => Self::UpdateField,
+            "old" => Self::Old,
+            "TRACE" => Self::TRACE,
+            _ => return None,
+        };
+        Some(x)
+    }
+    fn to_static_str(self) -> &'static str {
+        match self {
+            Self::Exists => "exists",
+            Self::Global => "global",
+            Self::Len => "len",
+            Self::Update => "update",
+            Self::Vec => "vec",
+            Self::Concat => "concat",
+            Self::Contains => "contains",
+            Self::IndexOf => "index_of",
+            Self::Range => "range",
+            Self::InRange => "in_range",
+            Self::UpdateField => "update_field",
+            Self::Old => "old",
+            Self::TRACE => "TRACE",
+        }
+    }
+}
+
+impl std::fmt::Display for SpecBuildInFun {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.to_static_str())
     }

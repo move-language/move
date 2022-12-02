@@ -10,7 +10,7 @@ use itertools::Itertools;
 
 use move_binary_format::file_format::CodeOffset;
 use move_model::{
-    ast::{ModuleName, TempIndex},
+    ast::TempIndex,
     model::{FunctionEnv, GlobalEnv, QualifiedInstId},
     pragmas::INTRINSIC_FUN_MAP_BORROW_MUT,
     ty::Type,
@@ -23,8 +23,7 @@ use crate::{
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     livevar_analysis::LiveVarAnnotation,
-    options::BorrowNative,
-    stackless_bytecode::{AssignKind, BorrowEdge, BorrowNode, Bytecode, Operation},
+    stackless_bytecode::{AssignKind, BorrowEdge, BorrowNode, Bytecode, IndexEdgeKind, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 
@@ -359,7 +358,7 @@ impl BorrowAnnotation {
 
 /// Borrow analysis processor.
 pub struct BorrowAnalysisProcessor {
-    borrow_natives: Vec<BorrowNative>,
+    borrow_natives: Vec<String>,
 }
 
 impl BorrowAnalysisProcessor {
@@ -367,7 +366,7 @@ impl BorrowAnalysisProcessor {
         Self::new_borrow_natives(vec![])
     }
 
-    pub fn new_borrow_natives(borrow_natives: Vec<BorrowNative>) -> Box<Self> {
+    pub fn new_borrow_natives(borrow_natives: Vec<String>) -> Box<Self> {
         Box::new(BorrowAnalysisProcessor { borrow_natives })
     }
 }
@@ -426,49 +425,38 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
     }
 }
 
-/// Returns read aggregate and write aggregate if fun_env matches one of the native functions
-/// implementing custom mutable borrow.
-fn get_borrow_native_info(
-    fun_env: &FunctionEnv,
-    borrow_natives: &Vec<BorrowNative>,
-) -> Option<(String, String)> {
+/// If fun_env matches one of the native functions implementing custom mutable borrow then return
+/// the name of this function
+fn get_borrow_native_info(fun_env: &FunctionEnv, borrow_natives: &Vec<String>) -> Option<String> {
     if !fun_env.is_native() {
         return None;
     }
-    for n in borrow_natives {
-        let mod_name = ModuleName::from_str(
-            &n.mod_addr,
-            fun_env.module_env.symbol_pool().make(&n.mod_name),
-        );
-        if fun_env.module_env.get_name() == &mod_name && fun_env.get_full_name_str() == n.name {
-            return Some((n.read_op.clone(), n.write_op.clone()));
+    for name in borrow_natives {
+        if &fun_env.get_full_name_str() == name {
+            return Some(name.to_string());
         }
     }
     None
 }
 
-fn native_annotation(
-    fun_env: &FunctionEnv,
-    borrow_natives: &Vec<BorrowNative>,
-) -> BorrowAnnotation {
-    let borrow_native_info = get_borrow_native_info(fun_env, borrow_natives);
+fn native_annotation(fun_env: &FunctionEnv, borrow_natives: &Vec<String>) -> BorrowAnnotation {
+    let borrow_native_name = get_borrow_native_info(fun_env, borrow_natives);
     if fun_env.is_well_known(VECTOR_BORROW_MUT)
         || fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT)
-        || borrow_native_info.is_some()
+        || borrow_native_name.is_some()
     {
         // Create an edge from the first parameter to the return value.
         let mut an = BorrowAnnotation::default();
         let param_node = BorrowNode::Reference(0);
         let return_node = BorrowNode::ReturnPlaceholder(0);
-        let (read_aggregate, update_aggregate) = if fun_env.is_well_known(VECTOR_BORROW_MUT) {
-            ("ReadVec".to_string(), "UpdateVec".to_string())
+        let index_edge_kind = if fun_env.is_well_known(VECTOR_BORROW_MUT) {
+            IndexEdgeKind::Vector
         } else if fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT) {
-            ("GetTable".to_string(), "UpdateTable".to_string())
+            IndexEdgeKind::Table
         } else {
-            let (r, u) = borrow_native_info.unwrap();
-            (r, u)
+            IndexEdgeKind::Custom(borrow_native_name.unwrap())
         };
-        let edge = BorrowEdge::Index((read_aggregate, update_aggregate));
+        let edge = BorrowEdge::Index(index_edge_kind);
         an.summary
             .borrowed_by
             .entry(param_node)
@@ -485,14 +473,14 @@ struct BorrowAnalysis<'a> {
     func_target: &'a FunctionTarget<'a>,
     livevar_annotation: &'a LiveVarAnnotation,
     targets: &'a FunctionTargetsHolder,
-    borrow_natives: &'a Vec<BorrowNative>,
+    borrow_natives: &'a Vec<String>,
 }
 
 impl<'a> BorrowAnalysis<'a> {
     fn new(
         func_target: &'a FunctionTarget<'a>,
         targets: &'a FunctionTargetsHolder,
-        borrow_natives: &'a Vec<BorrowNative>,
+        borrow_natives: &'a Vec<String>,
     ) -> Self {
         let livevar_annotation = func_target
             .get_annotations()

@@ -290,6 +290,17 @@ impl BorrowNode {
     }
 }
 
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+/// A type of index borrow edge
+pub enum IndexEdgeKind {
+    /// vector operations support
+    Vector,
+    /// table operations support
+    Table,
+    /// support for a custom native function with a given name
+    Custom(String),
+}
+
 /// A borrow edge.
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum BorrowEdge {
@@ -298,7 +309,7 @@ pub enum BorrowEdge {
     /// Field borrow with static offset.
     Field(QualifiedInstId<StructId>, usize),
     /// Vector borrow with dynamic index.
-    Index((String, String)),
+    Index(IndexEdgeKind),
     /// Composed sequence of edges.
     Hyper(Vec<BorrowEdge>),
 }

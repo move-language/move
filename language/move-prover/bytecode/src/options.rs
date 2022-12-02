@@ -29,41 +29,6 @@ impl AutoTraceLevel {
     }
 }
 
-/// Describes native method implementing mutable borrow semantics for a given type in an alternative
-/// storage model (returning &mut without taking appropriate &mut as a parameter, much like
-/// vector::borrow_mut)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BorrowNative {
-    /// Method's module address
-    pub mod_addr: String,
-    /// Method's module name
-    pub mod_name: String,
-    /// Method's name
-    pub name: String,
-    /// Name of a read operation for a given type (in Boogie)
-    pub read_op: String,
-    /// Name of a Write operation for a given type (in Boogie)
-    pub write_op: String,
-}
-
-impl BorrowNative {
-    pub fn new(
-        mod_addr: String,
-        mod_name: String,
-        name: String,
-        read_op: String,
-        write_op: String,
-    ) -> Self {
-        BorrowNative {
-            mod_addr,
-            mod_name,
-            name,
-            read_op,
-            write_op,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ProverOptions {
@@ -119,8 +84,9 @@ pub struct ProverOptions {
     pub for_interpretation: bool,
     /// Whether to skip loop analysis.
     pub skip_loop_analysis: bool,
-    /// Optional specification for native methods implementing mutable borrow semantics
-    pub borrow_natives: Vec<BorrowNative>,
+    /// Optional names of native methods (qualified with module name, e.g., m::foo) implementing
+    /// mutable borrow semantics
+    pub borrow_natives: Vec<String>,
 }
 
 // add custom struct for mutation options

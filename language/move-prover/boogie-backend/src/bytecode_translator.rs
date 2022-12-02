@@ -25,7 +25,8 @@ use move_stackless_bytecode::{
     function_target_pipeline::{FunctionTargetsHolder, FunctionVariant, VerificationFlavor},
     mono_analysis,
     stackless_bytecode::{
-        AbortAction, BorrowEdge, BorrowNode, Bytecode, Constant, HavocKind, Operation, PropKind,
+        AbortAction, BorrowEdge, BorrowNode, Bytecode, Constant, HavocKind, IndexEdgeKind,
+        Operation, PropKind,
     },
 };
 
@@ -1685,6 +1686,17 @@ impl<'env> FunctionTranslator<'env> {
         }
     }
 
+    /// Returns read aggregate and write aggregate if fun_env matches one of the native functions
+    /// implementing custom mutable borrow.
+    fn get_borrow_native_aggregate_names(&self, fn_name: &String) -> Option<(String, String)> {
+        for f in &self.parent.options.borrow_aggregates {
+            if &f.name == fn_name {
+                return Some((f.read_aggregate.clone(), f.write_aggregate.clone()));
+            }
+        }
+        None
+    }
+
     fn translate_write_back_update(
         &self,
         mk_dest: &mut dyn FnMut() -> String,
@@ -1731,11 +1743,18 @@ impl<'env> FunctionTranslator<'env> {
                         format!("{}({}, {})", update_fun, (*mk_dest)(), new_src)
                     }
                 }
-                BorrowEdge::Index((read_aggregate, update_aggregate)) => {
+                BorrowEdge::Index(index_edge_kind) => {
                     // Index edge is used for both vectors, tables, and custom native methods
-                    // implementing similar functionality (mutable borrow). The read aggregate is
-                    // the name of respective read operation (in Boogie) and  write aggregate is the
-                    // name of respective write operation (in Boogie).
+                    // implementing similar functionality (mutable borrow). Determine which
+                    // operations to use to read and update.
+                    let (read_aggregate, update_aggregate) = match index_edge_kind {
+                        IndexEdgeKind::Vector => ("ReadVec".to_string(), "UpdateVec".to_string()),
+                        IndexEdgeKind::Table => ("GetTable".to_string(), "UpdateTable".to_string()),
+                        IndexEdgeKind::Custom(name) => {
+                            // panic here means that custom borrow natives options were not specified properly
+                            self.get_borrow_native_aggregate_names(name).unwrap()
+                        }
+                    };
 
                     // Compute the offset into the path where to retrieve the index.
                     let offset = edges[0..at]

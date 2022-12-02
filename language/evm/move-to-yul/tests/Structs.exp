@@ -47,29 +47,29 @@ object "test_A2_M_test_drop" {
         A2_M_test_drop()
         return (0, 0)
         function A2_M_test_drop() {
-            let _s3, $t1, $t2, $t3, $t4
-            // $t1 := 33
-            $t1 := 33
-            // $t2 := false
-            $t2 := false
-            // $t3 := M::pack_S($t1, $t2)
-            $t3 := A2_M_pack_S($t1, $t2)
-            // $t4 := pack M::S3($t3)
+            let $t0, $t1, $t2, $t3
+            // $t0 := 33
+            $t0 := 33
+            // $t1 := false
+            $t1 := false
+            // $t2 := M::pack_S($t0, $t1)
+            $t2 := A2_M_pack_S($t0, $t1)
+            // $t3 := pack M::S3($t2)
             {
                 let $mem := $Malloc(32)
-                $MemoryStoreU256(add($mem, 0), $t3)
-                $t4 := $mem
+                $MemoryStoreU256(add($mem, 0), $t2)
+                $t3 := $mem
             }
-            // destroy($t4)
+            // destroy($t3)
             {
-                let $field_ptr_1770153451 := $LoadU256(add($t4, 0))
+                let $field_ptr_1770153451 := $LoadU256(add($t3, 0))
                 {
                     let $field_ptr_1602512591 := $LoadU256(add($field_ptr_1770153451, 0))
                     $Free($field_ptr_1602512591, 16)
                 }
                 $Free($field_ptr_1770153451, 41)
             }
-            $Free($t4, 32)
+            $Free($t3, 32)
             // return ()
         }
 
@@ -238,19 +238,15 @@ object "test_A2_M_test_equality" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t13 := 101
                     $t13 := 101
                     // abort($t13)
                     $Abort($t13)
-                }
-                case 3 {
-                    // label L0
-                    // $t14 := !=($t5, $t11)
-                    $t14 := $LogicalNot($Eq_$A2_M_S$($t5, $t11))
-                    // if ($t14) goto L2 else goto L3
-                    switch $t14
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
                 }
                 case 4 {
                     // $t3 := 23
@@ -273,36 +269,55 @@ object "test_A2_M_test_equality" {
                     $t11 := A2_M_pack_S($t9, $t10)
                     // $t12 := ==($t5, $t8)
                     $t12 := $Eq_$A2_M_S$($t5, $t8)
-                    // if ($t12) goto L0 else goto L1
+                    // if ($t12) goto L1 else goto L0
                     switch $t12
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
+                    // label L2
+                    // $t14 := !=($t5, $t11)
+                    $t14 := $LogicalNot($Eq_$A2_M_S$($t5, $t11))
+                    // if ($t14) goto L4 else goto L3
+                    switch $t14
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
+                }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
                     // label L3
                     // $t15 := 102
                     $t15 := 102
                     // abort($t15)
                     $Abort($t15)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t16 := !=($t8, $t11)
                     $t16 := $LogicalNot($Eq_$A2_M_S$($t8, $t11))
-                    // if ($t16) goto L4 else goto L5
+                    // if ($t16) goto L7 else goto L6
                     switch $t16
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t17 := 103
                     $t17 := 103
                     // abort($t17)
                     $Abort($t17)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // return ()
                     leave
                 }
@@ -406,7 +421,7 @@ object "test_A2_M_test_equality" {
         }
     }
 }
-===> Test result of M::test_equality: Succeed(Stopped) (used_gas=1606): []
+===> Test result of M::test_equality: Succeed(Stopped) (used_gas=2137): []
 
 // test of M::test_pack_S
 /* =======================================
@@ -426,27 +441,15 @@ object "test_A2_M_test_pack_S" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t8 := 100
                     $t8 := 100
                     // abort($t8)
                     $Abort($t8)
-                }
-                case 3 {
-                    // label L0
-                    // $t9 := borrow_local($t0)
-                    $t9 := $MakePtr(false, s)
-                    // $t10 := borrow_field<M::S>.b($t9)
-                    $t10 := $IndexPtr($t9, 40)
-                    // $t11 := read_ref($t10)
-                    $t11 := $LoadU8($t10)
-                    // $t12 := true
-                    $t12 := true
-                    // $t13 := ==($t11, $t12)
-                    $t13 := $Eq($t11, $t12)
-                    // if ($t13) goto L2 else goto L3
-                    switch $t13
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
                 }
                 case 4 {
                     // $t1 := 42
@@ -465,20 +468,42 @@ object "test_A2_M_test_pack_S" {
                     $t6 := 42
                     // $t7 := ==($t5, $t6)
                     $t7 := $Eq($t5, $t6)
-                    // if ($t7) goto L0 else goto L1
+                    // if ($t7) goto L1 else goto L0
                     switch $t7
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
+                    // label L2
+                    // $t9 := borrow_local($t0)
+                    $t9 := $MakePtr(false, s)
+                    // $t10 := borrow_field<M::S>.b($t9)
+                    $t10 := $IndexPtr($t9, 40)
+                    // $t11 := read_ref($t10)
+                    $t11 := $LoadU8($t10)
+                    // $t12 := true
+                    $t12 := true
+                    // $t13 := ==($t11, $t12)
+                    $t13 := $Eq($t11, $t12)
+                    // if ($t13) goto L4 else goto L3
+                    switch $t13
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
+                }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
                     // label L3
                     // $t14 := 101
                     $t14 := 101
                     // abort($t14)
                     $Abort($t14)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t15 := borrow_local($t0)
                     $t15 := $MakePtr(false, s)
                     // $t16 := borrow_field<M::S>.c($t15)
@@ -493,20 +518,25 @@ object "test_A2_M_test_pack_S" {
                     $t19 := 42
                     // $t20 := ==($t18, $t19)
                     $t20 := $Eq($t18, $t19)
-                    // if ($t20) goto L4 else goto L5
+                    // if ($t20) goto L7 else goto L6
                     switch $t20
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t21 := 102
                     $t21 := 102
                     // abort($t21)
                     $Abort($t21)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // return ()
                     leave
                 }
@@ -713,7 +743,7 @@ object "test_A2_M_test_pack_S" {
         }
     }
 }
-===> Test result of M::test_pack_S: Succeed(Stopped) (used_gas=1244): []
+===> Test result of M::test_pack_S: Succeed(Stopped) (used_gas=1775): []
 
 // test of M::test_pack_S2
 /* =======================================
@@ -733,15 +763,15 @@ object "test_A2_M_test_pack_S2" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t7 := 100
                     $t7 := 100
                     // abort($t7)
                     $Abort($t7)
-                }
-                case 3 {
-                    // label L0
-                    // return ()
-                    leave
                 }
                 case 4 {
                     // $t1 := 42
@@ -758,10 +788,15 @@ object "test_A2_M_test_pack_S2" {
                     $t5 := 42
                     // $t6 := ==($t4, $t5)
                     $t6 := $Eq($t4, $t5)
-                    // if ($t6) goto L0 else goto L1
+                    // if ($t6) goto L1 else goto L0
                     switch $t6
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // return ()
+                    leave
                 }
             }
         }
@@ -880,7 +915,7 @@ object "test_A2_M_test_pack_S2" {
         }
     }
 }
-===> Test result of M::test_pack_S2: Succeed(Stopped) (used_gas=382): []
+===> Test result of M::test_pack_S2: Succeed(Stopped) (used_gas=471): []
 
 // test of M::test_pack_S2_fail
 /* =======================================
@@ -900,15 +935,15 @@ object "test_A2_M_test_pack_S2_fail" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t7 := 100
                     $t7 := 100
                     // abort($t7)
                     $Abort($t7)
-                }
-                case 3 {
-                    // label L0
-                    // return ()
-                    leave
                 }
                 case 4 {
                     // $t1 := 42
@@ -925,10 +960,15 @@ object "test_A2_M_test_pack_S2_fail" {
                     $t5 := 41
                     // $t6 := ==($t4, $t5)
                     $t6 := $Eq($t4, $t5)
-                    // if ($t6) goto L0 else goto L1
+                    // if ($t6) goto L1 else goto L0
                     switch $t6
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // return ()
+                    leave
                 }
             }
         }
@@ -1047,7 +1087,7 @@ object "test_A2_M_test_pack_S2_fail" {
         }
     }
 }
-===> Test result of M::test_pack_S2_fail: Revert(Reverted) (used_gas=369): [0, 0, 0, 0, 0, 0, 0, 100]
+===> Test result of M::test_pack_S2_fail: Revert(Reverted) (used_gas=396): [0, 0, 0, 0, 0, 0, 0, 100]
 
 // test of M::test_read_S
 /* =======================================
@@ -1067,15 +1107,15 @@ object "test_A2_M_test_read_S" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t7 := 100
                     $t7 := 100
                     // abort($t7)
                     $Abort($t7)
-                }
-                case 3 {
-                    // label L0
-                    // return ()
-                    leave
                 }
                 case 4 {
                     // $t1 := 42
@@ -1092,10 +1132,15 @@ object "test_A2_M_test_read_S" {
                     $t5 := 84
                     // $t6 := ==($t4, $t5)
                     $t6 := $Eq($t4, $t5)
-                    // if ($t6) goto L0 else goto L1
+                    // if ($t6) goto L1 else goto L0
                     switch $t6
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // return ()
+                    leave
                 }
             }
         }
@@ -1314,7 +1359,7 @@ object "test_A2_M_test_read_S" {
         }
     }
 }
-===> Test result of M::test_read_S: Succeed(Stopped) (used_gas=836): []
+===> Test result of M::test_read_S: Succeed(Stopped) (used_gas=925): []
 
 // test of M::test_read_and_write_S
 /* =======================================
@@ -1334,31 +1379,15 @@ object "test_A2_M_test_read_and_write_S" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t6 := 100
                     $t6 := 100
                     // abort($t6)
                     $Abort($t6)
-                }
-                case 3 {
-                    // label L0
-                    // $t7 := borrow_local($t0)
-                    $t7 := $MakePtr(false, s)
-                    // $t8 := borrow_field<M::S>.c($t7)
-                    {
-                        $t8 := $MakePtr($IsStoragePtr($t7), $LoadU256($t7))
-                    }
-                    // $t9 := borrow_field<M::S2>.x($t8)
-                    $t9 := $t8
-                    // $t10 := read_ref($t9)
-                    $t10 := $LoadU128($t9)
-                    // $t11 := 2
-                    $t11 := 2
-                    // $t12 := ==($t10, $t11)
-                    $t12 := $Eq($t10, $t11)
-                    // if ($t12) goto L2 else goto L3
-                    switch $t12
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
                 }
                 case 4 {
                     // $t0 := M::read_and_write_S()
@@ -1373,20 +1402,46 @@ object "test_A2_M_test_read_and_write_S" {
                     $t4 := 2
                     // $t5 := ==($t3, $t4)
                     $t5 := $Eq($t3, $t4)
-                    // if ($t5) goto L0 else goto L1
+                    // if ($t5) goto L1 else goto L0
                     switch $t5
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
+                    // label L2
+                    // $t7 := borrow_local($t0)
+                    $t7 := $MakePtr(false, s)
+                    // $t8 := borrow_field<M::S>.c($t7)
+                    {
+                        $t8 := $MakePtr($IsStoragePtr($t7), $LoadU256($t7))
+                    }
+                    // $t9 := borrow_field<M::S2>.x($t8)
+                    $t9 := $t8
+                    // $t10 := read_ref($t9)
+                    $t10 := $LoadU128($t9)
+                    // $t11 := 2
+                    $t11 := 2
+                    // $t12 := ==($t10, $t11)
+                    $t12 := $Eq($t10, $t11)
+                    // if ($t12) goto L4 else goto L3
+                    switch $t12
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
+                }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
                     // label L3
                     // $t13 := 101
                     $t13 := 101
                     // abort($t13)
                     $Abort($t13)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // return ()
                     leave
                 }
@@ -1704,7 +1759,7 @@ object "test_A2_M_test_read_and_write_S" {
         }
     }
 }
-===> Test result of M::test_read_and_write_S: Succeed(Stopped) (used_gas=1794): []
+===> Test result of M::test_read_and_write_S: Succeed(Stopped) (used_gas=2055): []
 
 // test of M::test_unpack
 /* =======================================
@@ -1718,60 +1773,65 @@ object "test_A2_M_test_unpack" {
         A2_M_test_unpack()
         return (0, 0)
         function A2_M_test_unpack() {
-            let s, s1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
+            let s1, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9
             let $block := 4
             for {} true {} {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t10 := 101
-                    $t10 := 101
-                    // abort($t10)
-                    $Abort($t10)
+                    // goto L2
+                    $block := 5
                 }
                 case 3 {
                     // label L0
-                    // return ()
-                    leave
+                    // $t9 := 101
+                    $t9 := 101
+                    // abort($t9)
+                    $Abort($t9)
                 }
                 case 4 {
-                    // $t2 := 33
-                    $t2 := 33
-                    // $t3 := false
-                    $t3 := false
-                    // $t4 := M::pack_S($t2, $t3)
-                    $t4 := A2_M_pack_S($t2, $t3)
-                    // $t1 := M::unpack($t4)
-                    s1 := A2_M_unpack($t4)
-                    // $t5 := borrow_local($t1)
-                    $t5 := $MakePtr(false, s1)
-                    // $t6 := borrow_field<M::S2>.x($t5)
-                    $t6 := $t5
-                    // $t7 := read_ref($t6)
-                    $t7 := $LoadU128($t6)
-                    // $t8 := 33
-                    $t8 := 33
-                    // $t9 := ==($t7, $t8)
-                    $t9 := $Eq($t7, $t8)
-                    // if ($t9) goto L0 else goto L1
-                    switch $t9
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    // $t1 := 33
+                    $t1 := 33
+                    // $t2 := false
+                    $t2 := false
+                    // $t3 := M::pack_S($t1, $t2)
+                    $t3 := A2_M_pack_S($t1, $t2)
+                    // $t0 := M::unpack($t3)
+                    s1 := A2_M_unpack($t3)
+                    // $t4 := borrow_local($t0)
+                    $t4 := $MakePtr(false, s1)
+                    // $t5 := borrow_field<M::S2>.x($t4)
+                    $t5 := $t4
+                    // $t6 := read_ref($t5)
+                    $t6 := $LoadU128($t5)
+                    // $t7 := 33
+                    $t7 := 33
+                    // $t8 := ==($t6, $t7)
+                    $t8 := $Eq($t6, $t7)
+                    // if ($t8) goto L1 else goto L0
+                    switch $t8
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // return ()
+                    leave
                 }
             }
         }
 
         function A2_M_unpack(s) -> $result {
-            let _a, _b, c, $t4, $t5, $t6
-            // ($t4, $t5, $t6) := unpack M::S($t0)
-            $t4 := $MemoryLoadU64(add(s, 32))
-            $t5 := $MemoryLoadU8(add(s, 40))
-            $t6 := $MemoryLoadU256(add(s, 0))
+            let c, $t2, $t3, $t4
+            // ($t2, $t3, $t4) := unpack M::S($t0)
+            $t2 := $MemoryLoadU64(add(s, 32))
+            $t3 := $MemoryLoadU8(add(s, 40))
+            $t4 := $MemoryLoadU256(add(s, 0))
             $Free(s, 41)
-            // destroy($t5)
-            // destroy($t4)
-            // return $t6
-            $result := $t6
+            // destroy($t3)
+            // destroy($t2)
+            // return $t4
+            $result := $t4
         }
 
         function A2_M_pack_S(a, b) -> $result {
@@ -1934,7 +1994,7 @@ object "test_A2_M_test_unpack" {
         }
     }
 }
-===> Test result of M::test_unpack: Succeed(Stopped) (used_gas=502): []
+===> Test result of M::test_unpack: Succeed(Stopped) (used_gas=591): []
 
 // test of M::test_write_S
 /* =======================================
@@ -1954,31 +2014,15 @@ object "test_A2_M_test_write_S" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t10 := 100
                     $t10 := 100
                     // abort($t10)
                     $Abort($t10)
-                }
-                case 3 {
-                    // label L0
-                    // $t11 := borrow_local($t0)
-                    $t11 := $MakePtr(false, s)
-                    // $t12 := borrow_field<M::S>.c($t11)
-                    {
-                        $t12 := $MakePtr($IsStoragePtr($t11), $LoadU256($t11))
-                    }
-                    // $t13 := borrow_field<M::S2>.x($t12)
-                    $t13 := $t12
-                    // $t14 := read_ref($t13)
-                    $t14 := $LoadU128($t13)
-                    // $t15 := 43
-                    $t15 := 43
-                    // $t16 := ==($t14, $t15)
-                    $t16 := $Eq($t14, $t15)
-                    // if ($t16) goto L2 else goto L3
-                    switch $t16
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
                 }
                 case 4 {
                     // $t1 := 42
@@ -2003,20 +2047,46 @@ object "test_A2_M_test_write_S" {
                     $t8 := 43
                     // $t9 := ==($t7, $t8)
                     $t9 := $Eq($t7, $t8)
-                    // if ($t9) goto L0 else goto L1
+                    // if ($t9) goto L1 else goto L0
                     switch $t9
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
+                    // label L2
+                    // $t11 := borrow_local($t0)
+                    $t11 := $MakePtr(false, s)
+                    // $t12 := borrow_field<M::S>.c($t11)
+                    {
+                        $t12 := $MakePtr($IsStoragePtr($t11), $LoadU256($t11))
+                    }
+                    // $t13 := borrow_field<M::S2>.x($t12)
+                    $t13 := $t12
+                    // $t14 := read_ref($t13)
+                    $t14 := $LoadU128($t13)
+                    // $t15 := 43
+                    $t15 := 43
+                    // $t16 := ==($t14, $t15)
+                    $t16 := $Eq($t14, $t15)
+                    // if ($t16) goto L4 else goto L3
+                    switch $t16
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
+                }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
                     // label L3
                     // $t17 := 101
                     $t17 := 101
                     // abort($t17)
                     $Abort($t17)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // return ()
                     leave
                 }
@@ -2282,4 +2352,4 @@ object "test_A2_M_test_write_S" {
         }
     }
 }
-===> Test result of M::test_write_S: Succeed(Stopped) (used_gas=1371): []
+===> Test result of M::test_write_S: Succeed(Stopped) (used_gas=1637): []

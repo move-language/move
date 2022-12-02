@@ -21,19 +21,15 @@ public fun A::mutate_at($t0|addr: address) {
 
 [variant baseline]
 public fun A::read_at($t0|addr: address): u64 {
-     var $t1|s: &A::S
-     var $t2: address
-     var $t3: &A::S
-     var $t4: &A::S
-     var $t5: &u64
-     var $t6: u64
-  0: $t2 := move($t0)
-  1: $t3 := borrow_global<A::S>($t2)
-  2: $t1 := $t3
-  3: $t4 := move($t1)
-  4: $t5 := borrow_field<A::S>.x($t4)
-  5: $t6 := read_ref($t5)
-  6: return $t6
+     var $t1: address
+     var $t2: &A::S
+     var $t3: &u64
+     var $t4: u64
+  0: $t1 := move($t0)
+  1: $t2 := borrow_global<A::S>($t1)
+  2: $t3 := borrow_field<A::S>.x($t2)
+  3: $t4 := read_ref($t3)
+  4: return $t4
 }
 
 
@@ -199,23 +195,22 @@ public fun A::mutate_at($t0|addr: address) {
 
 [variant verification]
 public fun A::read_at($t0|addr: address): u64 {
-     var $t1|s: A::S
-     var $t2: A::S
-     var $t3: num
-     var $t4: u64
+     var $t1: A::S
+     var $t2: num
+     var $t3: u64
   0: @0 := save_mem(A::S)
-  1: $t2 := get_global<A::S>($t0) on_abort goto 7 with $t3
-  2: $t4 := get_field<A::S>.x($t2)
+  1: $t1 := get_global<A::S>($t0) on_abort goto 7 with $t2
+  2: $t3 := get_field<A::S>.x($t1)
   3: label L1
      # VC: function does not abort under this condition at tests/spec_instrumentation/modifies.move:13:9+27
   4: assert Not(Not(exists[@0]<A::S>($t0)))
      # VC: post-condition does not hold at tests/spec_instrumentation/modifies.move:14:9+36
-  5: assert Eq<u64>($t4, select A::S.x(global<A::S>($t0)))
-  6: return $t4
+  5: assert Eq<u64>($t3, select A::S.x(global<A::S>($t0)))
+  6: return $t3
   7: label L2
      # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/modifies.move:11:5+131
   8: assert Not(exists[@0]<A::S>($t0))
-  9: abort($t3)
+  9: abort($t2)
 }
 
 

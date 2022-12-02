@@ -2,15 +2,23 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::cfg::{BlockCFG, CFG};
 use crate::{
-    cfgir::ast::remap_labels,
-    hlir::ast::{BasicBlocks, Command_, Label},
+    cfgir::{
+        ast::remap_labels,
+        cfg::{BlockCFG, CFG},
+    },
+    hlir::ast::{BasicBlocks, Command_, FunctionSignature, Label, SingleType},
+    parser::ast::Var,
+    shared::unique_map::UniqueMap,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
 /// returns true if anything changed
-pub fn optimize(cfg: &mut BlockCFG) -> bool {
+pub fn optimize(
+    _signature: &FunctionSignature,
+    _locals: &UniqueMap<Var, SingleType>,
+    cfg: &mut BlockCFG,
+) -> bool {
     let changed = optimize_(cfg.start_block(), cfg.blocks_mut());
     if changed {
         let dead_blocks = cfg.recompute();

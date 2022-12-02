@@ -54,29 +54,15 @@ object "test_A2_M_extract_err_data" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t8 := 102
                     $t8 := 102
                     // abort($t8)
                     $Abort($t8)
-                }
-                case 3 {
-                    // label L0
-                    // $t9 := move($t1)
-                    $t9 := v2
-                    // $t2 := ExternalResult::unwrap_err_data<u64>($t9)
-                    mstore(add($locals, 32), A2_ExternalResult_unwrap_err_data$u64$($t9))
-                    // $t10 := borrow_local($t2)
-                    $t10 := $MakePtr(false, add($locals, 32))
-                    // $t11 := vector::length<u8>($t10)
-                    $t11 := A1_vector_length$u8$($t10)
-                    // $t12 := 1
-                    $t12 := 1
-                    // $t13 := ==($t11, $t12)
-                    $t13 := $Eq($t11, $t12)
-                    // if ($t13) goto L2 else goto L3
-                    switch $t13
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
                 }
                 case 4 {
                     // $t0 := vector::empty<u8>()
@@ -95,20 +81,44 @@ object "test_A2_M_extract_err_data" {
                     $t6 := $MakePtr(false, v2)
                     // $t7 := ExternalResult::is_err_data<u64>($t6)
                     $t7 := A2_ExternalResult_is_err_data$u64$($t6)
-                    // if ($t7) goto L0 else goto L1
+                    // if ($t7) goto L1 else goto L0
                     switch $t7
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
+                    // label L2
+                    // $t9 := move($t1)
+                    $t9 := v2
+                    // $t2 := ExternalResult::unwrap_err_data<u64>($t9)
+                    mstore(add($locals, 32), A2_ExternalResult_unwrap_err_data$u64$($t9))
+                    // $t10 := borrow_local($t2)
+                    $t10 := $MakePtr(false, add($locals, 32))
+                    // $t11 := vector::length<u8>($t10)
+                    $t11 := A1_vector_length$u8$($t10)
+                    // $t12 := 1
+                    $t12 := 1
+                    // $t13 := ==($t11, $t12)
+                    $t13 := $Eq($t11, $t12)
+                    // if ($t13) goto L4 else goto L3
+                    switch $t13
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
+                }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
                     // label L3
                     // $t14 := 103
                     $t14 := 103
                     // abort($t14)
                     $Abort($t14)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t15 := borrow_local($t2)
                     $t15 := $MakePtr(false, add($locals, 32))
                     // $t16 := 0
@@ -121,20 +131,25 @@ object "test_A2_M_extract_err_data" {
                     $t19 := 42
                     // $t20 := ==($t18, $t19)
                     $t20 := $Eq($t18, $t19)
-                    // if ($t20) goto L4 else goto L5
+                    // if ($t20) goto L7 else goto L6
                     switch $t20
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t21 := 104
                     $t21 := 104
                     // abort($t21)
                     $Abort($t21)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // return ()
                     $Free($locals, 64)
                     leave
@@ -149,19 +164,114 @@ object "test_A2_M_extract_err_data" {
             if $GtEq(i, size) { $AbortBuiltin() }
             e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 1)))
         }
-        function A2_ExternalResult_is_err_data$u64$(result) -> $result {
-            let $t1, $t2
-            // $t1 := borrow_field<ExternalResult::ExternalResult<#0>>.err_data($t0)
-            {
-                let $field_ptr := $IndexPtr(result, 32)
-                $t1 := $MakePtr($IsStoragePtr($field_ptr), $LoadU256($field_ptr))
-            }
-            // $t2 := option::is_some<vector<u8>>($t1)
-            $t2 := A1_option_is_some$vec$u8$$($t1)
-            // return $t2
-            $result := $t2
+        function A1_vector_length$u8$(v_ref) -> len {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            len := $LoadU64(v_ptr)
+        }
+        function A2_ExternalResult_unwrap_err_data$u64$(result) -> $result {
+            let err_data, err_reason, panic_code, $t4, $t5, $t6, $t7, $t8
+            // ($t4, $t5, $t6, $t7) := unpack ExternalResult::ExternalResult<#0>($t0)
+            $t4 := $MemoryLoadU256(add(result, 0))
+            $t5 := $MemoryLoadU256(add(result, 32))
+            $t6 := $MemoryLoadU256(add(result, 64))
+            $t7 := $MemoryLoadU256(add(result, 96))
+            $Free(result, 128)
+            // option::destroy_none<#0>($t4)
+            A1_option_destroy_none$u64$($t4)
+            // option::destroy_none<vector<u8>>($t6)
+            A1_option_destroy_none$vec$u8$$($t6)
+            // option::destroy_none<U256::U256>($t7)
+            A1_option_destroy_none$A2_U256_U256$($t7)
+            // $t8 := option::destroy_some<vector<u8>>($t5)
+            $t8 := A1_option_destroy_some$vec$u8$$($t5)
+            // return $t8
+            $result := $t8
         }
 
+        function A1_option_destroy_some$vec$u8$$(t) -> $result {
+            let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9
+            let $locals := $Malloc(32)
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
+                    // $t5 := 262145
+                    $t5 := 262145
+                    // abort($t5)
+                    $Abort($t5)
+                }
+                case 4 {
+                    // $t3 := borrow_local($t0)
+                    $t3 := $MakePtr(false, t)
+                    // $t4 := option::is_some<#0>($t3)
+                    $t4 := A1_option_is_some$vec$u8$$($t3)
+                    // if ($t4) goto L1 else goto L0
+                    switch $t4
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // $t6 := move($t0)
+                    $t6 := t
+                    // $t2 := unpack option::Option<#0>($t6)
+                    mstore($locals, $MemoryLoadU256(add($t6, 0)))
+                    $Free($t6, 32)
+                    // $t7 := borrow_local($t2)
+                    $t7 := $MakePtr(false, $locals)
+                    // $t8 := vector::pop_back<#0>($t7)
+                    $t8 := A1_vector_pop_back$vec$u8$$($t7)
+                    // $t9 := move($t2)
+                    $t9 := mload($locals)
+                    // vector::destroy_empty<#0>($t9)
+                    A1_vector_destroy_empty$vec$u8$$($t9)
+                    // return $t8
+                    $result := $t8
+                    $Free($locals, 32)
+                    leave
+                }
+            }
+        }
+
+        function A1_vector_destroy_empty$vec$u8$$(v) {
+            let size := $MemoryLoadU64(v)
+            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
+            let capacity := $MemoryLoadU64(add(v, 8))
+            $Free(v, add(32, mul(capacity, 32)))
+        }
+        function A1_vector_pop_back$vec$u8$$(v_ref) -> e {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
+            if iszero(size) { $AbortBuiltin() }
+            let e_ptr := $IndexPtr(v_ptr, add(32, mul(sub(size, 1), 32)))
+            e := $LoadU256(e_ptr)
+            if $IsStoragePtr(e_ptr) {
+                let e_offs := $OffsetPtr(e_ptr)
+                let linked_src := $AlignedStorageLoad(e_offs)
+                let $size_2300595445 := $StorageLoadU64(linked_src)
+                let $capacity_2300595445 := $ClosestGreaterPowerOfTwo($size_2300595445)
+                e := $Malloc(add(32, mul($capacity_2300595445, 1)))
+                let $data_size_2300595445 := mul($size_2300595445, 1)
+                mstore(e, $AlignedStorageLoad(linked_src))
+                $MemoryStoreU64(add(e, 8), $capacity_2300595445)
+                let $data_src_2300595445 := add(linked_src, 32)
+                let $data_dst_2300595445 := add(e, 32)
+                for { let $offs_2300595445 := 0 } lt($offs_2300595445, $data_size_2300595445) { $offs_2300595445 := add($offs_2300595445, 32)} {
+                    mstore(add($data_dst_2300595445, $offs_2300595445), $AlignedStorageLoad(add($data_src_2300595445, $offs_2300595445)))
+                    $AlignedStorageStore(add($data_src_2300595445, $offs_2300595445), 0)
+                }
+                $AlignedStorageStore(e_offs, 0)
+            }
+            $StoreU64(v_ptr, sub(size, 1))
+        }
         function A1_option_is_some$vec$u8$$(t) -> $result {
             let $t1, $t2, $t3
             // $t1 := borrow_field<option::Option<#0>>.vec($t0)
@@ -191,6 +301,221 @@ object "test_A2_M_extract_err_data" {
             let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
             len := $LoadU64(v_ptr)
         }
+        function A1_option_destroy_none$A2_U256_U256$(t) {
+            let $t1, $t2, $t3, $t4, $t5
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
+                    // $t3 := 262144
+                    $t3 := 262144
+                    // abort($t3)
+                    $Abort($t3)
+                }
+                case 4 {
+                    // $t1 := borrow_local($t0)
+                    $t1 := $MakePtr(false, t)
+                    // $t2 := option::is_none<#0>($t1)
+                    $t2 := A1_option_is_none$A2_U256_U256$($t1)
+                    // if ($t2) goto L1 else goto L0
+                    switch $t2
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // $t4 := move($t0)
+                    $t4 := t
+                    // $t5 := unpack option::Option<#0>($t4)
+                    $t5 := $MemoryLoadU256(add($t4, 0))
+                    $Free($t4, 32)
+                    // vector::destroy_empty<#0>($t5)
+                    A1_vector_destroy_empty$A2_U256_U256$($t5)
+                    // return ()
+                    leave
+                }
+            }
+        }
+
+        function A1_vector_destroy_empty$A2_U256_U256$(v) {
+            let size := $MemoryLoadU64(v)
+            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
+            let capacity := $MemoryLoadU64(add(v, 8))
+            $Free(v, add(32, mul(capacity, 32)))
+        }
+        function A1_option_is_none$A2_U256_U256$(t) -> $result {
+            let $t1, $t2
+            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
+            $t1 := t
+            // $t2 := vector::is_empty<#0>($t1)
+            $t2 := A1_vector_is_empty$A2_U256_U256$($t1)
+            // return $t2
+            $result := $t2
+        }
+
+        function A1_vector_is_empty$A2_U256_U256$(v) -> $result {
+            let $t1, $t2, $t3
+            // $t1 := vector::length<#0>($t0)
+            $t1 := A1_vector_length$A2_U256_U256$(v)
+            // $t2 := 0
+            $t2 := 0
+            // $t3 := ==($t1, $t2)
+            $t3 := $Eq($t1, $t2)
+            // return $t3
+            $result := $t3
+        }
+
+        function A1_vector_length$A2_U256_U256$(v_ref) -> len {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            len := $LoadU64(v_ptr)
+        }
+        function A1_option_destroy_none$vec$u8$$(t) {
+            let $t1, $t2, $t3, $t4, $t5
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
+                    // $t3 := 262144
+                    $t3 := 262144
+                    // abort($t3)
+                    $Abort($t3)
+                }
+                case 4 {
+                    // $t1 := borrow_local($t0)
+                    $t1 := $MakePtr(false, t)
+                    // $t2 := option::is_none<#0>($t1)
+                    $t2 := A1_option_is_none$vec$u8$$($t1)
+                    // if ($t2) goto L1 else goto L0
+                    switch $t2
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // $t4 := move($t0)
+                    $t4 := t
+                    // $t5 := unpack option::Option<#0>($t4)
+                    $t5 := $MemoryLoadU256(add($t4, 0))
+                    $Free($t4, 32)
+                    // vector::destroy_empty<#0>($t5)
+                    A1_vector_destroy_empty$vec$u8$$($t5)
+                    // return ()
+                    leave
+                }
+            }
+        }
+
+        function A1_option_is_none$vec$u8$$(t) -> $result {
+            let $t1, $t2
+            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
+            $t1 := t
+            // $t2 := vector::is_empty<#0>($t1)
+            $t2 := A1_vector_is_empty$vec$u8$$($t1)
+            // return $t2
+            $result := $t2
+        }
+
+        function A1_option_destroy_none$u64$(t) {
+            let $t1, $t2, $t3, $t4, $t5
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
+                    // $t3 := 262144
+                    $t3 := 262144
+                    // abort($t3)
+                    $Abort($t3)
+                }
+                case 4 {
+                    // $t1 := borrow_local($t0)
+                    $t1 := $MakePtr(false, t)
+                    // $t2 := option::is_none<#0>($t1)
+                    $t2 := A1_option_is_none$u64$($t1)
+                    // if ($t2) goto L1 else goto L0
+                    switch $t2
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // $t4 := move($t0)
+                    $t4 := t
+                    // $t5 := unpack option::Option<#0>($t4)
+                    $t5 := $MemoryLoadU256(add($t4, 0))
+                    $Free($t4, 32)
+                    // vector::destroy_empty<#0>($t5)
+                    A1_vector_destroy_empty$u64$($t5)
+                    // return ()
+                    leave
+                }
+            }
+        }
+
+        function A1_vector_destroy_empty$u64$(v) {
+            let size := $MemoryLoadU64(v)
+            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
+            let capacity := $MemoryLoadU64(add(v, 8))
+            $Free(v, add(32, mul(capacity, 8)))
+        }
+        function A1_option_is_none$u64$(t) -> $result {
+            let $t1, $t2
+            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
+            $t1 := t
+            // $t2 := vector::is_empty<#0>($t1)
+            $t2 := A1_vector_is_empty$u64$($t1)
+            // return $t2
+            $result := $t2
+        }
+
+        function A1_vector_is_empty$u64$(v) -> $result {
+            let $t1, $t2, $t3
+            // $t1 := vector::length<#0>($t0)
+            $t1 := A1_vector_length$u64$(v)
+            // $t2 := 0
+            $t2 := 0
+            // $t3 := ==($t1, $t2)
+            $t3 := $Eq($t1, $t2)
+            // return $t3
+            $result := $t3
+        }
+
+        function A1_vector_length$u64$(v_ref) -> len {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            len := $LoadU64(v_ptr)
+        }
+        function A2_ExternalResult_is_err_data$u64$(result) -> $result {
+            let $t1, $t2
+            // $t1 := borrow_field<ExternalResult::ExternalResult<#0>>.err_data($t0)
+            {
+                let $field_ptr := $IndexPtr(result, 32)
+                $t1 := $MakePtr($IsStoragePtr($field_ptr), $LoadU256($field_ptr))
+            }
+            // $t2 := option::is_some<vector<u8>>($t1)
+            $t2 := A1_option_is_some$vec$u8$$($t1)
+            // return $t2
+            $result := $t2
+        }
+
         function A2_M_pack_err_data$u64$(v) -> $result {
             let $t1
             // $t1 := ExternalResult::err_data<#0>($t0)
@@ -352,296 +677,6 @@ object "test_A2_M_extract_err_data" {
             vector := $Malloc(34)
             $MemoryStoreU64(add(vector, 8), 2)
         }
-        function A1_vector_length$u8$(v_ref) -> len {
-            let v_offs := $LoadU256(v_ref)
-            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-            len := $LoadU64(v_ptr)
-        }
-        function A2_ExternalResult_unwrap_err_data$u64$(result) -> $result {
-            let err_data, err_reason, panic_code, value, $t5, $t6, $t7, $t8, $t9
-            // ($t5, $t6, $t7, $t8) := unpack ExternalResult::ExternalResult<#0>($t0)
-            $t5 := $MemoryLoadU256(add(result, 0))
-            $t6 := $MemoryLoadU256(add(result, 32))
-            $t7 := $MemoryLoadU256(add(result, 64))
-            $t8 := $MemoryLoadU256(add(result, 96))
-            $Free(result, 128)
-            // option::destroy_none<#0>($t5)
-            A1_option_destroy_none$u64$($t5)
-            // option::destroy_none<vector<u8>>($t7)
-            A1_option_destroy_none$vec$u8$$($t7)
-            // option::destroy_none<U256::U256>($t8)
-            A1_option_destroy_none$A2_U256_U256$($t8)
-            // $t9 := option::destroy_some<vector<u8>>($t6)
-            $t9 := A1_option_destroy_some$vec$u8$$($t6)
-            // return $t9
-            $result := $t9
-        }
-
-        function A1_option_destroy_some$vec$u8$$(t) -> $result {
-            let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9
-            let $locals := $Malloc(32)
-            let $block := 4
-            for {} true {} {
-                switch $block
-                case 2 {
-                    // label L1
-                    // $t5 := 262145
-                    $t5 := 262145
-                    // abort($t5)
-                    $Abort($t5)
-                }
-                case 3 {
-                    // label L0
-                    // $t6 := move($t0)
-                    $t6 := t
-                    // $t2 := unpack option::Option<#0>($t6)
-                    mstore($locals, $MemoryLoadU256(add($t6, 0)))
-                    $Free($t6, 32)
-                    // $t7 := borrow_local($t2)
-                    $t7 := $MakePtr(false, $locals)
-                    // $t8 := vector::pop_back<#0>($t7)
-                    $t8 := A1_vector_pop_back$vec$u8$$($t7)
-                    // $t9 := move($t2)
-                    $t9 := mload($locals)
-                    // vector::destroy_empty<#0>($t9)
-                    A1_vector_destroy_empty$vec$u8$$($t9)
-                    // return $t8
-                    $result := $t8
-                    $Free($locals, 32)
-                    leave
-                }
-                case 4 {
-                    // $t3 := borrow_local($t0)
-                    $t3 := $MakePtr(false, t)
-                    // $t4 := option::is_some<#0>($t3)
-                    $t4 := A1_option_is_some$vec$u8$$($t3)
-                    // if ($t4) goto L0 else goto L1
-                    switch $t4
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
-                }
-            }
-        }
-
-        function A1_vector_destroy_empty$vec$u8$$(v) {
-            let size := $MemoryLoadU64(v)
-            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
-            let capacity := $MemoryLoadU64(add(v, 8))
-            $Free(v, add(32, mul(capacity, 32)))
-        }
-        function A1_vector_pop_back$vec$u8$$(v_ref) -> e {
-            let v_offs := $LoadU256(v_ref)
-            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-            let size := $LoadU64(v_ptr)
-            if iszero(size) { $AbortBuiltin() }
-            let e_ptr := $IndexPtr(v_ptr, add(32, mul(sub(size, 1), 32)))
-            e := $LoadU256(e_ptr)
-            if $IsStoragePtr(e_ptr) {
-                let e_offs := $OffsetPtr(e_ptr)
-                let linked_src := $AlignedStorageLoad(e_offs)
-                let $size_2300595445 := $StorageLoadU64(linked_src)
-                let $capacity_2300595445 := $ClosestGreaterPowerOfTwo($size_2300595445)
-                e := $Malloc(add(32, mul($capacity_2300595445, 1)))
-                let $data_size_2300595445 := mul($size_2300595445, 1)
-                mstore(e, $AlignedStorageLoad(linked_src))
-                $MemoryStoreU64(add(e, 8), $capacity_2300595445)
-                let $data_src_2300595445 := add(linked_src, 32)
-                let $data_dst_2300595445 := add(e, 32)
-                for { let $offs_2300595445 := 0 } lt($offs_2300595445, $data_size_2300595445) { $offs_2300595445 := add($offs_2300595445, 32)} {
-                    mstore(add($data_dst_2300595445, $offs_2300595445), $AlignedStorageLoad(add($data_src_2300595445, $offs_2300595445)))
-                    $AlignedStorageStore(add($data_src_2300595445, $offs_2300595445), 0)
-                }
-                $AlignedStorageStore(e_offs, 0)
-            }
-            $StoreU64(v_ptr, sub(size, 1))
-        }
-        function A1_option_destroy_none$A2_U256_U256$(t) {
-            let vec, $t2, $t3, $t4, $t5, $t6
-            let $block := 4
-            for {} true {} {
-                switch $block
-                case 2 {
-                    // label L1
-                    // $t4 := 262144
-                    $t4 := 262144
-                    // abort($t4)
-                    $Abort($t4)
-                }
-                case 3 {
-                    // label L0
-                    // $t5 := move($t0)
-                    $t5 := t
-                    // $t6 := unpack option::Option<#0>($t5)
-                    $t6 := $MemoryLoadU256(add($t5, 0))
-                    $Free($t5, 32)
-                    // vector::destroy_empty<#0>($t6)
-                    A1_vector_destroy_empty$A2_U256_U256$($t6)
-                    // return ()
-                    leave
-                }
-                case 4 {
-                    // $t2 := borrow_local($t0)
-                    $t2 := $MakePtr(false, t)
-                    // $t3 := option::is_none<#0>($t2)
-                    $t3 := A1_option_is_none$A2_U256_U256$($t2)
-                    // if ($t3) goto L0 else goto L1
-                    switch $t3
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
-                }
-            }
-        }
-
-        function A1_option_is_none$A2_U256_U256$(t) -> $result {
-            let $t1, $t2
-            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
-            $t1 := t
-            // $t2 := vector::is_empty<#0>($t1)
-            $t2 := A1_vector_is_empty$A2_U256_U256$($t1)
-            // return $t2
-            $result := $t2
-        }
-
-        function A1_vector_is_empty$A2_U256_U256$(v) -> $result {
-            let $t1, $t2, $t3
-            // $t1 := vector::length<#0>($t0)
-            $t1 := A1_vector_length$A2_U256_U256$(v)
-            // $t2 := 0
-            $t2 := 0
-            // $t3 := ==($t1, $t2)
-            $t3 := $Eq($t1, $t2)
-            // return $t3
-            $result := $t3
-        }
-
-        function A1_vector_length$A2_U256_U256$(v_ref) -> len {
-            let v_offs := $LoadU256(v_ref)
-            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-            len := $LoadU64(v_ptr)
-        }
-        function A1_vector_destroy_empty$A2_U256_U256$(v) {
-            let size := $MemoryLoadU64(v)
-            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
-            let capacity := $MemoryLoadU64(add(v, 8))
-            $Free(v, add(32, mul(capacity, 32)))
-        }
-        function A1_option_destroy_none$vec$u8$$(t) {
-            let vec, $t2, $t3, $t4, $t5, $t6
-            let $block := 4
-            for {} true {} {
-                switch $block
-                case 2 {
-                    // label L1
-                    // $t4 := 262144
-                    $t4 := 262144
-                    // abort($t4)
-                    $Abort($t4)
-                }
-                case 3 {
-                    // label L0
-                    // $t5 := move($t0)
-                    $t5 := t
-                    // $t6 := unpack option::Option<#0>($t5)
-                    $t6 := $MemoryLoadU256(add($t5, 0))
-                    $Free($t5, 32)
-                    // vector::destroy_empty<#0>($t6)
-                    A1_vector_destroy_empty$vec$u8$$($t6)
-                    // return ()
-                    leave
-                }
-                case 4 {
-                    // $t2 := borrow_local($t0)
-                    $t2 := $MakePtr(false, t)
-                    // $t3 := option::is_none<#0>($t2)
-                    $t3 := A1_option_is_none$vec$u8$$($t2)
-                    // if ($t3) goto L0 else goto L1
-                    switch $t3
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
-                }
-            }
-        }
-
-        function A1_option_is_none$vec$u8$$(t) -> $result {
-            let $t1, $t2
-            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
-            $t1 := t
-            // $t2 := vector::is_empty<#0>($t1)
-            $t2 := A1_vector_is_empty$vec$u8$$($t1)
-            // return $t2
-            $result := $t2
-        }
-
-        function A1_option_destroy_none$u64$(t) {
-            let vec, $t2, $t3, $t4, $t5, $t6
-            let $block := 4
-            for {} true {} {
-                switch $block
-                case 2 {
-                    // label L1
-                    // $t4 := 262144
-                    $t4 := 262144
-                    // abort($t4)
-                    $Abort($t4)
-                }
-                case 3 {
-                    // label L0
-                    // $t5 := move($t0)
-                    $t5 := t
-                    // $t6 := unpack option::Option<#0>($t5)
-                    $t6 := $MemoryLoadU256(add($t5, 0))
-                    $Free($t5, 32)
-                    // vector::destroy_empty<#0>($t6)
-                    A1_vector_destroy_empty$u64$($t6)
-                    // return ()
-                    leave
-                }
-                case 4 {
-                    // $t2 := borrow_local($t0)
-                    $t2 := $MakePtr(false, t)
-                    // $t3 := option::is_none<#0>($t2)
-                    $t3 := A1_option_is_none$u64$($t2)
-                    // if ($t3) goto L0 else goto L1
-                    switch $t3
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
-                }
-            }
-        }
-
-        function A1_option_is_none$u64$(t) -> $result {
-            let $t1, $t2
-            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
-            $t1 := t
-            // $t2 := vector::is_empty<#0>($t1)
-            $t2 := A1_vector_is_empty$u64$($t1)
-            // return $t2
-            $result := $t2
-        }
-
-        function A1_vector_is_empty$u64$(v) -> $result {
-            let $t1, $t2, $t3
-            // $t1 := vector::length<#0>($t0)
-            $t1 := A1_vector_length$u64$(v)
-            // $t2 := 0
-            $t2 := 0
-            // $t3 := ==($t1, $t2)
-            $t3 := $Eq($t1, $t2)
-            // return $t3
-            $result := $t3
-        }
-
-        function A1_vector_length$u64$(v_ref) -> len {
-            let v_offs := $LoadU256(v_ref)
-            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-            len := $LoadU64(v_ptr)
-        }
-        function A1_vector_destroy_empty$u64$(v) {
-            let size := $MemoryLoadU64(v)
-            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
-            let capacity := $MemoryLoadU64(add(v, 8))
-            $Free(v, add(32, mul(capacity, 8)))
-        }
         function $Abort(code) {
             mstore(0, code)
             revert(24, 8) // TODO: store code as a string?
@@ -909,7 +944,7 @@ object "test_A2_M_extract_err_data" {
         }
     }
 }
-===> Test result of M::extract_err_data: Succeed(Stopped) (used_gas=6011): []
+===> Test result of M::extract_err_data: Succeed(Stopped) (used_gas=6994): []
 
 // test of M::extract_err_reason
 /* =======================================
@@ -930,29 +965,15 @@ object "test_A2_M_extract_err_reason" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t8 := 105
                     $t8 := 105
                     // abort($t8)
                     $Abort($t8)
-                }
-                case 3 {
-                    // label L0
-                    // $t9 := move($t1)
-                    $t9 := v2
-                    // $t2 := ExternalResult::unwrap_err_reason<u64>($t9)
-                    mstore(add($locals, 32), A2_ExternalResult_unwrap_err_reason$u64$($t9))
-                    // $t10 := borrow_local($t2)
-                    $t10 := $MakePtr(false, add($locals, 32))
-                    // $t11 := vector::length<u8>($t10)
-                    $t11 := A1_vector_length$u8$($t10)
-                    // $t12 := 1
-                    $t12 := 1
-                    // $t13 := ==($t11, $t12)
-                    $t13 := $Eq($t11, $t12)
-                    // if ($t13) goto L2 else goto L3
-                    switch $t13
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
                 }
                 case 4 {
                     // $t0 := vector::empty<u8>()
@@ -971,20 +992,44 @@ object "test_A2_M_extract_err_reason" {
                     $t6 := $MakePtr(false, v2)
                     // $t7 := ExternalResult::is_err_reason<u64>($t6)
                     $t7 := A2_ExternalResult_is_err_reason$u64$($t6)
-                    // if ($t7) goto L0 else goto L1
+                    // if ($t7) goto L1 else goto L0
                     switch $t7
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
+                    // label L2
+                    // $t9 := move($t1)
+                    $t9 := v2
+                    // $t2 := ExternalResult::unwrap_err_reason<u64>($t9)
+                    mstore(add($locals, 32), A2_ExternalResult_unwrap_err_reason$u64$($t9))
+                    // $t10 := borrow_local($t2)
+                    $t10 := $MakePtr(false, add($locals, 32))
+                    // $t11 := vector::length<u8>($t10)
+                    $t11 := A1_vector_length$u8$($t10)
+                    // $t12 := 1
+                    $t12 := 1
+                    // $t13 := ==($t11, $t12)
+                    $t13 := $Eq($t11, $t12)
+                    // if ($t13) goto L4 else goto L3
+                    switch $t13
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
+                }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
                     // label L3
                     // $t14 := 106
                     $t14 := 106
                     // abort($t14)
                     $Abort($t14)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t15 := borrow_local($t2)
                     $t15 := $MakePtr(false, add($locals, 32))
                     // $t16 := 0
@@ -997,20 +1042,25 @@ object "test_A2_M_extract_err_reason" {
                     $t19 := 42
                     // $t20 := ==($t18, $t19)
                     $t20 := $Eq($t18, $t19)
-                    // if ($t20) goto L4 else goto L5
+                    // if ($t20) goto L7 else goto L6
                     switch $t20
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t21 := 107
                     $t21 := 107
                     // abort($t21)
                     $Abort($t21)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // return ()
                     $Free($locals, 64)
                     leave
@@ -1025,19 +1075,114 @@ object "test_A2_M_extract_err_reason" {
             if $GtEq(i, size) { $AbortBuiltin() }
             e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 1)))
         }
-        function A2_ExternalResult_is_err_reason$u64$(result) -> $result {
-            let $t1, $t2
-            // $t1 := borrow_field<ExternalResult::ExternalResult<#0>>.err_reason($t0)
-            {
-                let $field_ptr := $IndexPtr(result, 64)
-                $t1 := $MakePtr($IsStoragePtr($field_ptr), $LoadU256($field_ptr))
-            }
-            // $t2 := option::is_some<vector<u8>>($t1)
-            $t2 := A1_option_is_some$vec$u8$$($t1)
-            // return $t2
-            $result := $t2
+        function A1_vector_length$u8$(v_ref) -> len {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            len := $LoadU64(v_ptr)
+        }
+        function A2_ExternalResult_unwrap_err_reason$u64$(result) -> $result {
+            let err_data, err_reason, panic_code, $t4, $t5, $t6, $t7, $t8
+            // ($t4, $t5, $t6, $t7) := unpack ExternalResult::ExternalResult<#0>($t0)
+            $t4 := $MemoryLoadU256(add(result, 0))
+            $t5 := $MemoryLoadU256(add(result, 32))
+            $t6 := $MemoryLoadU256(add(result, 64))
+            $t7 := $MemoryLoadU256(add(result, 96))
+            $Free(result, 128)
+            // option::destroy_none<#0>($t4)
+            A1_option_destroy_none$u64$($t4)
+            // option::destroy_none<vector<u8>>($t5)
+            A1_option_destroy_none$vec$u8$$($t5)
+            // option::destroy_none<U256::U256>($t7)
+            A1_option_destroy_none$A2_U256_U256$($t7)
+            // $t8 := option::destroy_some<vector<u8>>($t6)
+            $t8 := A1_option_destroy_some$vec$u8$$($t6)
+            // return $t8
+            $result := $t8
         }
 
+        function A1_option_destroy_some$vec$u8$$(t) -> $result {
+            let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9
+            let $locals := $Malloc(32)
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
+                    // $t5 := 262145
+                    $t5 := 262145
+                    // abort($t5)
+                    $Abort($t5)
+                }
+                case 4 {
+                    // $t3 := borrow_local($t0)
+                    $t3 := $MakePtr(false, t)
+                    // $t4 := option::is_some<#0>($t3)
+                    $t4 := A1_option_is_some$vec$u8$$($t3)
+                    // if ($t4) goto L1 else goto L0
+                    switch $t4
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // $t6 := move($t0)
+                    $t6 := t
+                    // $t2 := unpack option::Option<#0>($t6)
+                    mstore($locals, $MemoryLoadU256(add($t6, 0)))
+                    $Free($t6, 32)
+                    // $t7 := borrow_local($t2)
+                    $t7 := $MakePtr(false, $locals)
+                    // $t8 := vector::pop_back<#0>($t7)
+                    $t8 := A1_vector_pop_back$vec$u8$$($t7)
+                    // $t9 := move($t2)
+                    $t9 := mload($locals)
+                    // vector::destroy_empty<#0>($t9)
+                    A1_vector_destroy_empty$vec$u8$$($t9)
+                    // return $t8
+                    $result := $t8
+                    $Free($locals, 32)
+                    leave
+                }
+            }
+        }
+
+        function A1_vector_destroy_empty$vec$u8$$(v) {
+            let size := $MemoryLoadU64(v)
+            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
+            let capacity := $MemoryLoadU64(add(v, 8))
+            $Free(v, add(32, mul(capacity, 32)))
+        }
+        function A1_vector_pop_back$vec$u8$$(v_ref) -> e {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
+            if iszero(size) { $AbortBuiltin() }
+            let e_ptr := $IndexPtr(v_ptr, add(32, mul(sub(size, 1), 32)))
+            e := $LoadU256(e_ptr)
+            if $IsStoragePtr(e_ptr) {
+                let e_offs := $OffsetPtr(e_ptr)
+                let linked_src := $AlignedStorageLoad(e_offs)
+                let $size_2300595445 := $StorageLoadU64(linked_src)
+                let $capacity_2300595445 := $ClosestGreaterPowerOfTwo($size_2300595445)
+                e := $Malloc(add(32, mul($capacity_2300595445, 1)))
+                let $data_size_2300595445 := mul($size_2300595445, 1)
+                mstore(e, $AlignedStorageLoad(linked_src))
+                $MemoryStoreU64(add(e, 8), $capacity_2300595445)
+                let $data_src_2300595445 := add(linked_src, 32)
+                let $data_dst_2300595445 := add(e, 32)
+                for { let $offs_2300595445 := 0 } lt($offs_2300595445, $data_size_2300595445) { $offs_2300595445 := add($offs_2300595445, 32)} {
+                    mstore(add($data_dst_2300595445, $offs_2300595445), $AlignedStorageLoad(add($data_src_2300595445, $offs_2300595445)))
+                    $AlignedStorageStore(add($data_src_2300595445, $offs_2300595445), 0)
+                }
+                $AlignedStorageStore(e_offs, 0)
+            }
+            $StoreU64(v_ptr, sub(size, 1))
+        }
         function A1_option_is_some$vec$u8$$(t) -> $result {
             let $t1, $t2, $t3
             // $t1 := borrow_field<option::Option<#0>>.vec($t0)
@@ -1067,6 +1212,221 @@ object "test_A2_M_extract_err_reason" {
             let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
             len := $LoadU64(v_ptr)
         }
+        function A1_option_destroy_none$A2_U256_U256$(t) {
+            let $t1, $t2, $t3, $t4, $t5
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
+                    // $t3 := 262144
+                    $t3 := 262144
+                    // abort($t3)
+                    $Abort($t3)
+                }
+                case 4 {
+                    // $t1 := borrow_local($t0)
+                    $t1 := $MakePtr(false, t)
+                    // $t2 := option::is_none<#0>($t1)
+                    $t2 := A1_option_is_none$A2_U256_U256$($t1)
+                    // if ($t2) goto L1 else goto L0
+                    switch $t2
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // $t4 := move($t0)
+                    $t4 := t
+                    // $t5 := unpack option::Option<#0>($t4)
+                    $t5 := $MemoryLoadU256(add($t4, 0))
+                    $Free($t4, 32)
+                    // vector::destroy_empty<#0>($t5)
+                    A1_vector_destroy_empty$A2_U256_U256$($t5)
+                    // return ()
+                    leave
+                }
+            }
+        }
+
+        function A1_vector_destroy_empty$A2_U256_U256$(v) {
+            let size := $MemoryLoadU64(v)
+            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
+            let capacity := $MemoryLoadU64(add(v, 8))
+            $Free(v, add(32, mul(capacity, 32)))
+        }
+        function A1_option_is_none$A2_U256_U256$(t) -> $result {
+            let $t1, $t2
+            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
+            $t1 := t
+            // $t2 := vector::is_empty<#0>($t1)
+            $t2 := A1_vector_is_empty$A2_U256_U256$($t1)
+            // return $t2
+            $result := $t2
+        }
+
+        function A1_vector_is_empty$A2_U256_U256$(v) -> $result {
+            let $t1, $t2, $t3
+            // $t1 := vector::length<#0>($t0)
+            $t1 := A1_vector_length$A2_U256_U256$(v)
+            // $t2 := 0
+            $t2 := 0
+            // $t3 := ==($t1, $t2)
+            $t3 := $Eq($t1, $t2)
+            // return $t3
+            $result := $t3
+        }
+
+        function A1_vector_length$A2_U256_U256$(v_ref) -> len {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            len := $LoadU64(v_ptr)
+        }
+        function A1_option_destroy_none$vec$u8$$(t) {
+            let $t1, $t2, $t3, $t4, $t5
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
+                    // $t3 := 262144
+                    $t3 := 262144
+                    // abort($t3)
+                    $Abort($t3)
+                }
+                case 4 {
+                    // $t1 := borrow_local($t0)
+                    $t1 := $MakePtr(false, t)
+                    // $t2 := option::is_none<#0>($t1)
+                    $t2 := A1_option_is_none$vec$u8$$($t1)
+                    // if ($t2) goto L1 else goto L0
+                    switch $t2
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // $t4 := move($t0)
+                    $t4 := t
+                    // $t5 := unpack option::Option<#0>($t4)
+                    $t5 := $MemoryLoadU256(add($t4, 0))
+                    $Free($t4, 32)
+                    // vector::destroy_empty<#0>($t5)
+                    A1_vector_destroy_empty$vec$u8$$($t5)
+                    // return ()
+                    leave
+                }
+            }
+        }
+
+        function A1_option_is_none$vec$u8$$(t) -> $result {
+            let $t1, $t2
+            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
+            $t1 := t
+            // $t2 := vector::is_empty<#0>($t1)
+            $t2 := A1_vector_is_empty$vec$u8$$($t1)
+            // return $t2
+            $result := $t2
+        }
+
+        function A1_option_destroy_none$u64$(t) {
+            let $t1, $t2, $t3, $t4, $t5
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
+                    // $t3 := 262144
+                    $t3 := 262144
+                    // abort($t3)
+                    $Abort($t3)
+                }
+                case 4 {
+                    // $t1 := borrow_local($t0)
+                    $t1 := $MakePtr(false, t)
+                    // $t2 := option::is_none<#0>($t1)
+                    $t2 := A1_option_is_none$u64$($t1)
+                    // if ($t2) goto L1 else goto L0
+                    switch $t2
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // $t4 := move($t0)
+                    $t4 := t
+                    // $t5 := unpack option::Option<#0>($t4)
+                    $t5 := $MemoryLoadU256(add($t4, 0))
+                    $Free($t4, 32)
+                    // vector::destroy_empty<#0>($t5)
+                    A1_vector_destroy_empty$u64$($t5)
+                    // return ()
+                    leave
+                }
+            }
+        }
+
+        function A1_vector_destroy_empty$u64$(v) {
+            let size := $MemoryLoadU64(v)
+            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
+            let capacity := $MemoryLoadU64(add(v, 8))
+            $Free(v, add(32, mul(capacity, 8)))
+        }
+        function A1_option_is_none$u64$(t) -> $result {
+            let $t1, $t2
+            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
+            $t1 := t
+            // $t2 := vector::is_empty<#0>($t1)
+            $t2 := A1_vector_is_empty$u64$($t1)
+            // return $t2
+            $result := $t2
+        }
+
+        function A1_vector_is_empty$u64$(v) -> $result {
+            let $t1, $t2, $t3
+            // $t1 := vector::length<#0>($t0)
+            $t1 := A1_vector_length$u64$(v)
+            // $t2 := 0
+            $t2 := 0
+            // $t3 := ==($t1, $t2)
+            $t3 := $Eq($t1, $t2)
+            // return $t3
+            $result := $t3
+        }
+
+        function A1_vector_length$u64$(v_ref) -> len {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            len := $LoadU64(v_ptr)
+        }
+        function A2_ExternalResult_is_err_reason$u64$(result) -> $result {
+            let $t1, $t2
+            // $t1 := borrow_field<ExternalResult::ExternalResult<#0>>.err_reason($t0)
+            {
+                let $field_ptr := $IndexPtr(result, 64)
+                $t1 := $MakePtr($IsStoragePtr($field_ptr), $LoadU256($field_ptr))
+            }
+            // $t2 := option::is_some<vector<u8>>($t1)
+            $t2 := A1_option_is_some$vec$u8$$($t1)
+            // return $t2
+            $result := $t2
+        }
+
         function A2_M_pack_err_reason$u64$(v) -> $result {
             let $t1
             // $t1 := ExternalResult::err_reason<#0>($t0)
@@ -1228,296 +1588,6 @@ object "test_A2_M_extract_err_reason" {
             vector := $Malloc(34)
             $MemoryStoreU64(add(vector, 8), 2)
         }
-        function A1_vector_length$u8$(v_ref) -> len {
-            let v_offs := $LoadU256(v_ref)
-            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-            len := $LoadU64(v_ptr)
-        }
-        function A2_ExternalResult_unwrap_err_reason$u64$(result) -> $result {
-            let err_data, err_reason, panic_code, value, $t5, $t6, $t7, $t8, $t9
-            // ($t5, $t6, $t7, $t8) := unpack ExternalResult::ExternalResult<#0>($t0)
-            $t5 := $MemoryLoadU256(add(result, 0))
-            $t6 := $MemoryLoadU256(add(result, 32))
-            $t7 := $MemoryLoadU256(add(result, 64))
-            $t8 := $MemoryLoadU256(add(result, 96))
-            $Free(result, 128)
-            // option::destroy_none<#0>($t5)
-            A1_option_destroy_none$u64$($t5)
-            // option::destroy_none<vector<u8>>($t6)
-            A1_option_destroy_none$vec$u8$$($t6)
-            // option::destroy_none<U256::U256>($t8)
-            A1_option_destroy_none$A2_U256_U256$($t8)
-            // $t9 := option::destroy_some<vector<u8>>($t7)
-            $t9 := A1_option_destroy_some$vec$u8$$($t7)
-            // return $t9
-            $result := $t9
-        }
-
-        function A1_option_destroy_some$vec$u8$$(t) -> $result {
-            let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9
-            let $locals := $Malloc(32)
-            let $block := 4
-            for {} true {} {
-                switch $block
-                case 2 {
-                    // label L1
-                    // $t5 := 262145
-                    $t5 := 262145
-                    // abort($t5)
-                    $Abort($t5)
-                }
-                case 3 {
-                    // label L0
-                    // $t6 := move($t0)
-                    $t6 := t
-                    // $t2 := unpack option::Option<#0>($t6)
-                    mstore($locals, $MemoryLoadU256(add($t6, 0)))
-                    $Free($t6, 32)
-                    // $t7 := borrow_local($t2)
-                    $t7 := $MakePtr(false, $locals)
-                    // $t8 := vector::pop_back<#0>($t7)
-                    $t8 := A1_vector_pop_back$vec$u8$$($t7)
-                    // $t9 := move($t2)
-                    $t9 := mload($locals)
-                    // vector::destroy_empty<#0>($t9)
-                    A1_vector_destroy_empty$vec$u8$$($t9)
-                    // return $t8
-                    $result := $t8
-                    $Free($locals, 32)
-                    leave
-                }
-                case 4 {
-                    // $t3 := borrow_local($t0)
-                    $t3 := $MakePtr(false, t)
-                    // $t4 := option::is_some<#0>($t3)
-                    $t4 := A1_option_is_some$vec$u8$$($t3)
-                    // if ($t4) goto L0 else goto L1
-                    switch $t4
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
-                }
-            }
-        }
-
-        function A1_vector_destroy_empty$vec$u8$$(v) {
-            let size := $MemoryLoadU64(v)
-            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
-            let capacity := $MemoryLoadU64(add(v, 8))
-            $Free(v, add(32, mul(capacity, 32)))
-        }
-        function A1_vector_pop_back$vec$u8$$(v_ref) -> e {
-            let v_offs := $LoadU256(v_ref)
-            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-            let size := $LoadU64(v_ptr)
-            if iszero(size) { $AbortBuiltin() }
-            let e_ptr := $IndexPtr(v_ptr, add(32, mul(sub(size, 1), 32)))
-            e := $LoadU256(e_ptr)
-            if $IsStoragePtr(e_ptr) {
-                let e_offs := $OffsetPtr(e_ptr)
-                let linked_src := $AlignedStorageLoad(e_offs)
-                let $size_2300595445 := $StorageLoadU64(linked_src)
-                let $capacity_2300595445 := $ClosestGreaterPowerOfTwo($size_2300595445)
-                e := $Malloc(add(32, mul($capacity_2300595445, 1)))
-                let $data_size_2300595445 := mul($size_2300595445, 1)
-                mstore(e, $AlignedStorageLoad(linked_src))
-                $MemoryStoreU64(add(e, 8), $capacity_2300595445)
-                let $data_src_2300595445 := add(linked_src, 32)
-                let $data_dst_2300595445 := add(e, 32)
-                for { let $offs_2300595445 := 0 } lt($offs_2300595445, $data_size_2300595445) { $offs_2300595445 := add($offs_2300595445, 32)} {
-                    mstore(add($data_dst_2300595445, $offs_2300595445), $AlignedStorageLoad(add($data_src_2300595445, $offs_2300595445)))
-                    $AlignedStorageStore(add($data_src_2300595445, $offs_2300595445), 0)
-                }
-                $AlignedStorageStore(e_offs, 0)
-            }
-            $StoreU64(v_ptr, sub(size, 1))
-        }
-        function A1_option_destroy_none$A2_U256_U256$(t) {
-            let vec, $t2, $t3, $t4, $t5, $t6
-            let $block := 4
-            for {} true {} {
-                switch $block
-                case 2 {
-                    // label L1
-                    // $t4 := 262144
-                    $t4 := 262144
-                    // abort($t4)
-                    $Abort($t4)
-                }
-                case 3 {
-                    // label L0
-                    // $t5 := move($t0)
-                    $t5 := t
-                    // $t6 := unpack option::Option<#0>($t5)
-                    $t6 := $MemoryLoadU256(add($t5, 0))
-                    $Free($t5, 32)
-                    // vector::destroy_empty<#0>($t6)
-                    A1_vector_destroy_empty$A2_U256_U256$($t6)
-                    // return ()
-                    leave
-                }
-                case 4 {
-                    // $t2 := borrow_local($t0)
-                    $t2 := $MakePtr(false, t)
-                    // $t3 := option::is_none<#0>($t2)
-                    $t3 := A1_option_is_none$A2_U256_U256$($t2)
-                    // if ($t3) goto L0 else goto L1
-                    switch $t3
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
-                }
-            }
-        }
-
-        function A1_option_is_none$A2_U256_U256$(t) -> $result {
-            let $t1, $t2
-            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
-            $t1 := t
-            // $t2 := vector::is_empty<#0>($t1)
-            $t2 := A1_vector_is_empty$A2_U256_U256$($t1)
-            // return $t2
-            $result := $t2
-        }
-
-        function A1_vector_is_empty$A2_U256_U256$(v) -> $result {
-            let $t1, $t2, $t3
-            // $t1 := vector::length<#0>($t0)
-            $t1 := A1_vector_length$A2_U256_U256$(v)
-            // $t2 := 0
-            $t2 := 0
-            // $t3 := ==($t1, $t2)
-            $t3 := $Eq($t1, $t2)
-            // return $t3
-            $result := $t3
-        }
-
-        function A1_vector_length$A2_U256_U256$(v_ref) -> len {
-            let v_offs := $LoadU256(v_ref)
-            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-            len := $LoadU64(v_ptr)
-        }
-        function A1_vector_destroy_empty$A2_U256_U256$(v) {
-            let size := $MemoryLoadU64(v)
-            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
-            let capacity := $MemoryLoadU64(add(v, 8))
-            $Free(v, add(32, mul(capacity, 32)))
-        }
-        function A1_option_destroy_none$vec$u8$$(t) {
-            let vec, $t2, $t3, $t4, $t5, $t6
-            let $block := 4
-            for {} true {} {
-                switch $block
-                case 2 {
-                    // label L1
-                    // $t4 := 262144
-                    $t4 := 262144
-                    // abort($t4)
-                    $Abort($t4)
-                }
-                case 3 {
-                    // label L0
-                    // $t5 := move($t0)
-                    $t5 := t
-                    // $t6 := unpack option::Option<#0>($t5)
-                    $t6 := $MemoryLoadU256(add($t5, 0))
-                    $Free($t5, 32)
-                    // vector::destroy_empty<#0>($t6)
-                    A1_vector_destroy_empty$vec$u8$$($t6)
-                    // return ()
-                    leave
-                }
-                case 4 {
-                    // $t2 := borrow_local($t0)
-                    $t2 := $MakePtr(false, t)
-                    // $t3 := option::is_none<#0>($t2)
-                    $t3 := A1_option_is_none$vec$u8$$($t2)
-                    // if ($t3) goto L0 else goto L1
-                    switch $t3
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
-                }
-            }
-        }
-
-        function A1_option_is_none$vec$u8$$(t) -> $result {
-            let $t1, $t2
-            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
-            $t1 := t
-            // $t2 := vector::is_empty<#0>($t1)
-            $t2 := A1_vector_is_empty$vec$u8$$($t1)
-            // return $t2
-            $result := $t2
-        }
-
-        function A1_option_destroy_none$u64$(t) {
-            let vec, $t2, $t3, $t4, $t5, $t6
-            let $block := 4
-            for {} true {} {
-                switch $block
-                case 2 {
-                    // label L1
-                    // $t4 := 262144
-                    $t4 := 262144
-                    // abort($t4)
-                    $Abort($t4)
-                }
-                case 3 {
-                    // label L0
-                    // $t5 := move($t0)
-                    $t5 := t
-                    // $t6 := unpack option::Option<#0>($t5)
-                    $t6 := $MemoryLoadU256(add($t5, 0))
-                    $Free($t5, 32)
-                    // vector::destroy_empty<#0>($t6)
-                    A1_vector_destroy_empty$u64$($t6)
-                    // return ()
-                    leave
-                }
-                case 4 {
-                    // $t2 := borrow_local($t0)
-                    $t2 := $MakePtr(false, t)
-                    // $t3 := option::is_none<#0>($t2)
-                    $t3 := A1_option_is_none$u64$($t2)
-                    // if ($t3) goto L0 else goto L1
-                    switch $t3
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
-                }
-            }
-        }
-
-        function A1_option_is_none$u64$(t) -> $result {
-            let $t1, $t2
-            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
-            $t1 := t
-            // $t2 := vector::is_empty<#0>($t1)
-            $t2 := A1_vector_is_empty$u64$($t1)
-            // return $t2
-            $result := $t2
-        }
-
-        function A1_vector_is_empty$u64$(v) -> $result {
-            let $t1, $t2, $t3
-            // $t1 := vector::length<#0>($t0)
-            $t1 := A1_vector_length$u64$(v)
-            // $t2 := 0
-            $t2 := 0
-            // $t3 := ==($t1, $t2)
-            $t3 := $Eq($t1, $t2)
-            // return $t3
-            $result := $t3
-        }
-
-        function A1_vector_length$u64$(v_ref) -> len {
-            let v_offs := $LoadU256(v_ref)
-            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-            len := $LoadU64(v_ptr)
-        }
-        function A1_vector_destroy_empty$u64$(v) {
-            let size := $MemoryLoadU64(v)
-            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
-            let capacity := $MemoryLoadU64(add(v, 8))
-            $Free(v, add(32, mul(capacity, 8)))
-        }
         function $Abort(code) {
             mstore(0, code)
             revert(24, 8) // TODO: store code as a string?
@@ -1785,7 +1855,7 @@ object "test_A2_M_extract_err_reason" {
         }
     }
 }
-===> Test result of M::extract_err_reason: Succeed(Stopped) (used_gas=6005): []
+===> Test result of M::extract_err_reason: Succeed(Stopped) (used_gas=6988): []
 
 // test of M::extract_panic_code
 /* =======================================
@@ -1799,78 +1869,171 @@ object "test_A2_M_extract_panic_code" {
         A2_M_extract_panic_code()
         return (0, 0)
         function A2_M_extract_panic_code() {
-            let v, v2, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12
+            let v2, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11
             let $block := 4
             for {} true {} {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t6 := 108
-                    $t6 := 108
-                    // abort($t6)
-                    $Abort($t6)
+                    // goto L2
+                    $block := 5
                 }
                 case 3 {
                     // label L0
-                    // $t7 := move($t1)
-                    $t7 := v2
-                    // $t8 := ExternalResult::unwrap_panic<u64>($t7)
-                    $t8 := A2_ExternalResult_unwrap_panic$u64$($t7)
-                    // $t9 := 42
-                    $t9 := 42
-                    // $t10 := U256::u256_from_u128($t9)
-                    $t10 := A2_U256_u256_from_u128($t9)
-                    // $t11 := ==($t8, $t10)
-                    $t11 := $Eq($t8, $t10)
-                    // if ($t11) goto L2 else goto L3
-                    switch $t11
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
+                    // $t5 := 108
+                    $t5 := 108
+                    // abort($t5)
+                    $Abort($t5)
                 }
                 case 4 {
-                    // $t2 := 42
-                    $t2 := 42
-                    // $t3 := U256::u256_from_u128($t2)
-                    $t3 := A2_U256_u256_from_u128($t2)
-                    // $t1 := M::pack_panic_code<u64>($t3)
-                    v2 := A2_M_pack_panic_code$u64$($t3)
-                    // $t4 := borrow_local($t1)
-                    $t4 := $MakePtr(false, v2)
-                    // $t5 := ExternalResult::is_panic<u64>($t4)
-                    $t5 := A2_ExternalResult_is_panic$u64$($t4)
-                    // if ($t5) goto L0 else goto L1
-                    switch $t5
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    // $t1 := 42
+                    $t1 := 42
+                    // $t2 := U256::u256_from_u128($t1)
+                    $t2 := A2_U256_u256_from_u128($t1)
+                    // $t0 := M::pack_panic_code<u64>($t2)
+                    v2 := A2_M_pack_panic_code$u64$($t2)
+                    // $t3 := borrow_local($t0)
+                    $t3 := $MakePtr(false, v2)
+                    // $t4 := ExternalResult::is_panic<u64>($t3)
+                    $t4 := A2_ExternalResult_is_panic$u64$($t3)
+                    // if ($t4) goto L1 else goto L0
+                    switch $t4
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
-                    // label L3
-                    // $t12 := 109
-                    $t12 := 109
-                    // abort($t12)
-                    $Abort($t12)
+                    // label L2
+                    // $t6 := move($t0)
+                    $t6 := v2
+                    // $t7 := ExternalResult::unwrap_panic<u64>($t6)
+                    $t7 := A2_ExternalResult_unwrap_panic$u64$($t6)
+                    // $t8 := 42
+                    $t8 := 42
+                    // $t9 := U256::u256_from_u128($t8)
+                    $t9 := A2_U256_u256_from_u128($t8)
+                    // $t10 := ==($t7, $t9)
+                    $t10 := $Eq($t7, $t9)
+                    // if ($t10) goto L4 else goto L3
+                    switch $t10
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
                 }
                 case 6 {
-                    // label L2
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
+                    // label L3
+                    // $t11 := 109
+                    $t11 := 109
+                    // abort($t11)
+                    $Abort($t11)
+                }
+                case 8 {
+                    // label L5
                     // return ()
                     leave
                 }
             }
         }
 
-        function A2_ExternalResult_is_panic$u64$(result) -> $result {
+        function A2_U256_u256_from_u128(lo) -> $result {
             let $t1, $t2
-            // $t1 := borrow_field<ExternalResult::ExternalResult<#0>>.panic_code($t0)
-            {
-                let $field_ptr := $IndexPtr(result, 96)
-                $t1 := $MakePtr($IsStoragePtr($field_ptr), $LoadU256($field_ptr))
-            }
-            // $t2 := option::is_some<U256::U256>($t1)
-            $t2 := A1_option_is_some$A2_U256_U256$($t1)
+            // $t1 := 0
+            $t1 := 0
+            // $t2 := (u256)($t1, $t0)
+            $t2 := $CastU256($t1, lo)
             // return $t2
             $result := $t2
         }
 
+        function A2_ExternalResult_unwrap_panic$u64$(result) -> $result {
+            let err_data, err_reason, panic_code, $t4, $t5, $t6, $t7, $t8
+            // ($t4, $t5, $t6, $t7) := unpack ExternalResult::ExternalResult<#0>($t0)
+            $t4 := $MemoryLoadU256(add(result, 0))
+            $t5 := $MemoryLoadU256(add(result, 32))
+            $t6 := $MemoryLoadU256(add(result, 64))
+            $t7 := $MemoryLoadU256(add(result, 96))
+            $Free(result, 128)
+            // option::destroy_none<#0>($t4)
+            A1_option_destroy_none$u64$($t4)
+            // option::destroy_none<vector<u8>>($t6)
+            A1_option_destroy_none$vec$u8$$($t6)
+            // option::destroy_none<vector<u8>>($t5)
+            A1_option_destroy_none$vec$u8$$($t5)
+            // $t8 := option::destroy_some<U256::U256>($t7)
+            $t8 := A1_option_destroy_some$A2_U256_U256$($t7)
+            // return $t8
+            $result := $t8
+        }
+
+        function A1_option_destroy_some$A2_U256_U256$(t) -> $result {
+            let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9
+            let $locals := $Malloc(32)
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
+                    // $t5 := 262145
+                    $t5 := 262145
+                    // abort($t5)
+                    $Abort($t5)
+                }
+                case 4 {
+                    // $t3 := borrow_local($t0)
+                    $t3 := $MakePtr(false, t)
+                    // $t4 := option::is_some<#0>($t3)
+                    $t4 := A1_option_is_some$A2_U256_U256$($t3)
+                    // if ($t4) goto L1 else goto L0
+                    switch $t4
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // $t6 := move($t0)
+                    $t6 := t
+                    // $t2 := unpack option::Option<#0>($t6)
+                    mstore($locals, $MemoryLoadU256(add($t6, 0)))
+                    $Free($t6, 32)
+                    // $t7 := borrow_local($t2)
+                    $t7 := $MakePtr(false, $locals)
+                    // $t8 := vector::pop_back<#0>($t7)
+                    $t8 := A1_vector_pop_back$A2_U256_U256$($t7)
+                    // $t9 := move($t2)
+                    $t9 := mload($locals)
+                    // vector::destroy_empty<#0>($t9)
+                    A1_vector_destroy_empty$A2_U256_U256$($t9)
+                    // return $t8
+                    $result := $t8
+                    $Free($locals, 32)
+                    leave
+                }
+            }
+        }
+
+        function A1_vector_destroy_empty$A2_U256_U256$(v) {
+            let size := $MemoryLoadU64(v)
+            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
+            let capacity := $MemoryLoadU64(add(v, 8))
+            $Free(v, add(32, mul(capacity, 32)))
+        }
+        function A1_vector_pop_back$A2_U256_U256$(v_ref) -> e {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
+            if iszero(size) { $AbortBuiltin() }
+            let e_ptr := $IndexPtr(v_ptr, add(32, mul(sub(size, 1), 32)))
+            e := $LoadU256(e_ptr)
+            $StoreU64(v_ptr, sub(size, 1))
+        }
         function A1_option_is_some$A2_U256_U256$(t) -> $result {
             let $t1, $t2, $t3
             // $t1 := borrow_field<option::Option<#0>>.vec($t0)
@@ -1900,6 +2063,169 @@ object "test_A2_M_extract_panic_code" {
             let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
             len := $LoadU64(v_ptr)
         }
+        function A1_option_destroy_none$vec$u8$$(t) {
+            let $t1, $t2, $t3, $t4, $t5
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
+                    // $t3 := 262144
+                    $t3 := 262144
+                    // abort($t3)
+                    $Abort($t3)
+                }
+                case 4 {
+                    // $t1 := borrow_local($t0)
+                    $t1 := $MakePtr(false, t)
+                    // $t2 := option::is_none<#0>($t1)
+                    $t2 := A1_option_is_none$vec$u8$$($t1)
+                    // if ($t2) goto L1 else goto L0
+                    switch $t2
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // $t4 := move($t0)
+                    $t4 := t
+                    // $t5 := unpack option::Option<#0>($t4)
+                    $t5 := $MemoryLoadU256(add($t4, 0))
+                    $Free($t4, 32)
+                    // vector::destroy_empty<#0>($t5)
+                    A1_vector_destroy_empty$vec$u8$$($t5)
+                    // return ()
+                    leave
+                }
+            }
+        }
+
+        function A1_vector_destroy_empty$vec$u8$$(v) {
+            let size := $MemoryLoadU64(v)
+            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
+            let capacity := $MemoryLoadU64(add(v, 8))
+            $Free(v, add(32, mul(capacity, 32)))
+        }
+        function A1_option_is_none$vec$u8$$(t) -> $result {
+            let $t1, $t2
+            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
+            $t1 := t
+            // $t2 := vector::is_empty<#0>($t1)
+            $t2 := A1_vector_is_empty$vec$u8$$($t1)
+            // return $t2
+            $result := $t2
+        }
+
+        function A1_vector_is_empty$vec$u8$$(v) -> $result {
+            let $t1, $t2, $t3
+            // $t1 := vector::length<#0>($t0)
+            $t1 := A1_vector_length$vec$u8$$(v)
+            // $t2 := 0
+            $t2 := 0
+            // $t3 := ==($t1, $t2)
+            $t3 := $Eq($t1, $t2)
+            // return $t3
+            $result := $t3
+        }
+
+        function A1_vector_length$vec$u8$$(v_ref) -> len {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            len := $LoadU64(v_ptr)
+        }
+        function A1_option_destroy_none$u64$(t) {
+            let $t1, $t2, $t3, $t4, $t5
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
+                    // $t3 := 262144
+                    $t3 := 262144
+                    // abort($t3)
+                    $Abort($t3)
+                }
+                case 4 {
+                    // $t1 := borrow_local($t0)
+                    $t1 := $MakePtr(false, t)
+                    // $t2 := option::is_none<#0>($t1)
+                    $t2 := A1_option_is_none$u64$($t1)
+                    // if ($t2) goto L1 else goto L0
+                    switch $t2
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // $t4 := move($t0)
+                    $t4 := t
+                    // $t5 := unpack option::Option<#0>($t4)
+                    $t5 := $MemoryLoadU256(add($t4, 0))
+                    $Free($t4, 32)
+                    // vector::destroy_empty<#0>($t5)
+                    A1_vector_destroy_empty$u64$($t5)
+                    // return ()
+                    leave
+                }
+            }
+        }
+
+        function A1_vector_destroy_empty$u64$(v) {
+            let size := $MemoryLoadU64(v)
+            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
+            let capacity := $MemoryLoadU64(add(v, 8))
+            $Free(v, add(32, mul(capacity, 8)))
+        }
+        function A1_option_is_none$u64$(t) -> $result {
+            let $t1, $t2
+            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
+            $t1 := t
+            // $t2 := vector::is_empty<#0>($t1)
+            $t2 := A1_vector_is_empty$u64$($t1)
+            // return $t2
+            $result := $t2
+        }
+
+        function A1_vector_is_empty$u64$(v) -> $result {
+            let $t1, $t2, $t3
+            // $t1 := vector::length<#0>($t0)
+            $t1 := A1_vector_length$u64$(v)
+            // $t2 := 0
+            $t2 := 0
+            // $t3 := ==($t1, $t2)
+            $t3 := $Eq($t1, $t2)
+            // return $t3
+            $result := $t3
+        }
+
+        function A1_vector_length$u64$(v_ref) -> len {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            len := $LoadU64(v_ptr)
+        }
+        function A2_ExternalResult_is_panic$u64$(result) -> $result {
+            let $t1, $t2
+            // $t1 := borrow_field<ExternalResult::ExternalResult<#0>>.panic_code($t0)
+            {
+                let $field_ptr := $IndexPtr(result, 96)
+                $t1 := $MakePtr($IsStoragePtr($field_ptr), $LoadU256($field_ptr))
+            }
+            // $t2 := option::is_some<U256::U256>($t1)
+            $t2 := A1_option_is_some$A2_U256_U256$($t1)
+            // return $t2
+            $result := $t2
+        }
+
         function A2_M_pack_panic_code$u64$(v) -> $result {
             let $t1
             // $t1 := ExternalResult::panic<#0>($t0)
@@ -2014,237 +2340,6 @@ object "test_A2_M_extract_panic_code" {
         function A1_vector_empty$u64$() -> vector {
             vector := $Malloc(48)
             $MemoryStoreU64(add(vector, 8), 2)
-        }
-        function A2_U256_u256_from_u128(lo) -> $result {
-            let $t1, $t2
-            // $t1 := 0
-            $t1 := 0
-            // $t2 := (u256)($t1, $t0)
-            $t2 := $CastU256($t1, lo)
-            // return $t2
-            $result := $t2
-        }
-
-        function A2_ExternalResult_unwrap_panic$u64$(result) -> $result {
-            let err_data, err_reason, panic_code, value, $t5, $t6, $t7, $t8, $t9
-            // ($t5, $t6, $t7, $t8) := unpack ExternalResult::ExternalResult<#0>($t0)
-            $t5 := $MemoryLoadU256(add(result, 0))
-            $t6 := $MemoryLoadU256(add(result, 32))
-            $t7 := $MemoryLoadU256(add(result, 64))
-            $t8 := $MemoryLoadU256(add(result, 96))
-            $Free(result, 128)
-            // option::destroy_none<#0>($t5)
-            A1_option_destroy_none$u64$($t5)
-            // option::destroy_none<vector<u8>>($t7)
-            A1_option_destroy_none$vec$u8$$($t7)
-            // option::destroy_none<vector<u8>>($t6)
-            A1_option_destroy_none$vec$u8$$($t6)
-            // $t9 := option::destroy_some<U256::U256>($t8)
-            $t9 := A1_option_destroy_some$A2_U256_U256$($t8)
-            // return $t9
-            $result := $t9
-        }
-
-        function A1_option_destroy_some$A2_U256_U256$(t) -> $result {
-            let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9
-            let $locals := $Malloc(32)
-            let $block := 4
-            for {} true {} {
-                switch $block
-                case 2 {
-                    // label L1
-                    // $t5 := 262145
-                    $t5 := 262145
-                    // abort($t5)
-                    $Abort($t5)
-                }
-                case 3 {
-                    // label L0
-                    // $t6 := move($t0)
-                    $t6 := t
-                    // $t2 := unpack option::Option<#0>($t6)
-                    mstore($locals, $MemoryLoadU256(add($t6, 0)))
-                    $Free($t6, 32)
-                    // $t7 := borrow_local($t2)
-                    $t7 := $MakePtr(false, $locals)
-                    // $t8 := vector::pop_back<#0>($t7)
-                    $t8 := A1_vector_pop_back$A2_U256_U256$($t7)
-                    // $t9 := move($t2)
-                    $t9 := mload($locals)
-                    // vector::destroy_empty<#0>($t9)
-                    A1_vector_destroy_empty$A2_U256_U256$($t9)
-                    // return $t8
-                    $result := $t8
-                    $Free($locals, 32)
-                    leave
-                }
-                case 4 {
-                    // $t3 := borrow_local($t0)
-                    $t3 := $MakePtr(false, t)
-                    // $t4 := option::is_some<#0>($t3)
-                    $t4 := A1_option_is_some$A2_U256_U256$($t3)
-                    // if ($t4) goto L0 else goto L1
-                    switch $t4
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
-                }
-            }
-        }
-
-        function A1_vector_destroy_empty$A2_U256_U256$(v) {
-            let size := $MemoryLoadU64(v)
-            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
-            let capacity := $MemoryLoadU64(add(v, 8))
-            $Free(v, add(32, mul(capacity, 32)))
-        }
-        function A1_vector_pop_back$A2_U256_U256$(v_ref) -> e {
-            let v_offs := $LoadU256(v_ref)
-            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-            let size := $LoadU64(v_ptr)
-            if iszero(size) { $AbortBuiltin() }
-            let e_ptr := $IndexPtr(v_ptr, add(32, mul(sub(size, 1), 32)))
-            e := $LoadU256(e_ptr)
-            $StoreU64(v_ptr, sub(size, 1))
-        }
-        function A1_option_destroy_none$vec$u8$$(t) {
-            let vec, $t2, $t3, $t4, $t5, $t6
-            let $block := 4
-            for {} true {} {
-                switch $block
-                case 2 {
-                    // label L1
-                    // $t4 := 262144
-                    $t4 := 262144
-                    // abort($t4)
-                    $Abort($t4)
-                }
-                case 3 {
-                    // label L0
-                    // $t5 := move($t0)
-                    $t5 := t
-                    // $t6 := unpack option::Option<#0>($t5)
-                    $t6 := $MemoryLoadU256(add($t5, 0))
-                    $Free($t5, 32)
-                    // vector::destroy_empty<#0>($t6)
-                    A1_vector_destroy_empty$vec$u8$$($t6)
-                    // return ()
-                    leave
-                }
-                case 4 {
-                    // $t2 := borrow_local($t0)
-                    $t2 := $MakePtr(false, t)
-                    // $t3 := option::is_none<#0>($t2)
-                    $t3 := A1_option_is_none$vec$u8$$($t2)
-                    // if ($t3) goto L0 else goto L1
-                    switch $t3
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
-                }
-            }
-        }
-
-        function A1_option_is_none$vec$u8$$(t) -> $result {
-            let $t1, $t2
-            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
-            $t1 := t
-            // $t2 := vector::is_empty<#0>($t1)
-            $t2 := A1_vector_is_empty$vec$u8$$($t1)
-            // return $t2
-            $result := $t2
-        }
-
-        function A1_vector_is_empty$vec$u8$$(v) -> $result {
-            let $t1, $t2, $t3
-            // $t1 := vector::length<#0>($t0)
-            $t1 := A1_vector_length$vec$u8$$(v)
-            // $t2 := 0
-            $t2 := 0
-            // $t3 := ==($t1, $t2)
-            $t3 := $Eq($t1, $t2)
-            // return $t3
-            $result := $t3
-        }
-
-        function A1_vector_length$vec$u8$$(v_ref) -> len {
-            let v_offs := $LoadU256(v_ref)
-            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-            len := $LoadU64(v_ptr)
-        }
-        function A1_vector_destroy_empty$vec$u8$$(v) {
-            let size := $MemoryLoadU64(v)
-            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
-            let capacity := $MemoryLoadU64(add(v, 8))
-            $Free(v, add(32, mul(capacity, 32)))
-        }
-        function A1_option_destroy_none$u64$(t) {
-            let vec, $t2, $t3, $t4, $t5, $t6
-            let $block := 4
-            for {} true {} {
-                switch $block
-                case 2 {
-                    // label L1
-                    // $t4 := 262144
-                    $t4 := 262144
-                    // abort($t4)
-                    $Abort($t4)
-                }
-                case 3 {
-                    // label L0
-                    // $t5 := move($t0)
-                    $t5 := t
-                    // $t6 := unpack option::Option<#0>($t5)
-                    $t6 := $MemoryLoadU256(add($t5, 0))
-                    $Free($t5, 32)
-                    // vector::destroy_empty<#0>($t6)
-                    A1_vector_destroy_empty$u64$($t6)
-                    // return ()
-                    leave
-                }
-                case 4 {
-                    // $t2 := borrow_local($t0)
-                    $t2 := $MakePtr(false, t)
-                    // $t3 := option::is_none<#0>($t2)
-                    $t3 := A1_option_is_none$u64$($t2)
-                    // if ($t3) goto L0 else goto L1
-                    switch $t3
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
-                }
-            }
-        }
-
-        function A1_option_is_none$u64$(t) -> $result {
-            let $t1, $t2
-            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
-            $t1 := t
-            // $t2 := vector::is_empty<#0>($t1)
-            $t2 := A1_vector_is_empty$u64$($t1)
-            // return $t2
-            $result := $t2
-        }
-
-        function A1_vector_is_empty$u64$(v) -> $result {
-            let $t1, $t2, $t3
-            // $t1 := vector::length<#0>($t0)
-            $t1 := A1_vector_length$u64$(v)
-            // $t2 := 0
-            $t2 := 0
-            // $t3 := ==($t1, $t2)
-            $t3 := $Eq($t1, $t2)
-            // return $t3
-            $result := $t3
-        }
-
-        function A1_vector_length$u64$(v_ref) -> len {
-            let v_offs := $LoadU256(v_ref)
-            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-            len := $LoadU64(v_ptr)
-        }
-        function A1_vector_destroy_empty$u64$(v) {
-            let size := $MemoryLoadU64(v)
-            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
-            let capacity := $MemoryLoadU64(add(v, 8))
-            $Free(v, add(32, mul(capacity, 8)))
         }
         function $Abort(code) {
             mstore(0, code)
@@ -2456,7 +2551,7 @@ object "test_A2_M_extract_panic_code" {
         }
     }
 }
-===> Test result of M::extract_panic_code: Succeed(Stopped) (used_gas=4470): []
+===> Test result of M::extract_panic_code: Succeed(Stopped) (used_gas=5168): []
 
 // test of M::extract_value
 /* =======================================
@@ -2476,25 +2571,15 @@ object "test_A2_M_extract_value" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t4 := 100
                     $t4 := 100
                     // abort($t4)
                     $Abort($t4)
-                }
-                case 3 {
-                    // label L0
-                    // $t5 := move($t0)
-                    $t5 := v2
-                    // $t6 := ExternalResult::unwrap<u64>($t5)
-                    $t6 := A2_ExternalResult_unwrap$u64$($t5)
-                    // $t7 := 100
-                    $t7 := 100
-                    // $t8 := ==($t6, $t7)
-                    $t8 := $Eq($t6, $t7)
-                    // if ($t8) goto L2 else goto L3
-                    switch $t8
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
                 }
                 case 4 {
                     // $t1 := 100
@@ -2505,38 +2590,132 @@ object "test_A2_M_extract_value" {
                     $t2 := $MakePtr(false, v2)
                     // $t3 := ExternalResult::is_ok<u64>($t2)
                     $t3 := A2_ExternalResult_is_ok$u64$($t2)
-                    // if ($t3) goto L0 else goto L1
+                    // if ($t3) goto L1 else goto L0
                     switch $t3
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
+                    // label L2
+                    // $t5 := move($t0)
+                    $t5 := v2
+                    // $t6 := ExternalResult::unwrap<u64>($t5)
+                    $t6 := A2_ExternalResult_unwrap$u64$($t5)
+                    // $t7 := 100
+                    $t7 := 100
+                    // $t8 := ==($t6, $t7)
+                    $t8 := $Eq($t6, $t7)
+                    // if ($t8) goto L4 else goto L3
+                    switch $t8
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
+                }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
                     // label L3
                     // $t9 := 101
                     $t9 := 101
                     // abort($t9)
                     $Abort($t9)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // return ()
                     leave
                 }
             }
         }
 
-        function A2_ExternalResult_is_ok$u64$(result) -> $result {
-            let $t1, $t2
-            // $t1 := borrow_field<ExternalResult::ExternalResult<#0>>.value($t0)
-            {
-                $t1 := $MakePtr($IsStoragePtr(result), $LoadU256(result))
-            }
-            // $t2 := option::is_some<#0>($t1)
-            $t2 := A1_option_is_some$u64$($t1)
-            // return $t2
-            $result := $t2
+        function A2_ExternalResult_unwrap$u64$(result) -> $result {
+            let err_data, err_reason, panic_code, value, $t5, $t6, $t7, $t8, $t9
+            // ($t5, $t6, $t7, $t8) := unpack ExternalResult::ExternalResult<#0>($t0)
+            $t5 := $MemoryLoadU256(add(result, 0))
+            $t6 := $MemoryLoadU256(add(result, 32))
+            $t7 := $MemoryLoadU256(add(result, 64))
+            $t8 := $MemoryLoadU256(add(result, 96))
+            $Free(result, 128)
+            // option::destroy_none<vector<u8>>($t6)
+            A1_option_destroy_none$vec$u8$$($t6)
+            // option::destroy_none<vector<u8>>($t7)
+            A1_option_destroy_none$vec$u8$$($t7)
+            // option::destroy_none<U256::U256>($t8)
+            A1_option_destroy_none$A2_U256_U256$($t8)
+            // $t9 := option::destroy_some<#0>($t5)
+            $t9 := A1_option_destroy_some$u64$($t5)
+            // return $t9
+            $result := $t9
         }
 
+        function A1_option_destroy_some$u64$(t) -> $result {
+            let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9
+            let $locals := $Malloc(32)
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
+                    // $t5 := 262145
+                    $t5 := 262145
+                    // abort($t5)
+                    $Abort($t5)
+                }
+                case 4 {
+                    // $t3 := borrow_local($t0)
+                    $t3 := $MakePtr(false, t)
+                    // $t4 := option::is_some<#0>($t3)
+                    $t4 := A1_option_is_some$u64$($t3)
+                    // if ($t4) goto L1 else goto L0
+                    switch $t4
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // $t6 := move($t0)
+                    $t6 := t
+                    // $t2 := unpack option::Option<#0>($t6)
+                    mstore($locals, $MemoryLoadU256(add($t6, 0)))
+                    $Free($t6, 32)
+                    // $t7 := borrow_local($t2)
+                    $t7 := $MakePtr(false, $locals)
+                    // $t8 := vector::pop_back<#0>($t7)
+                    $t8 := A1_vector_pop_back$u64$($t7)
+                    // $t9 := move($t2)
+                    $t9 := mload($locals)
+                    // vector::destroy_empty<#0>($t9)
+                    A1_vector_destroy_empty$u64$($t9)
+                    // return $t8
+                    $result := $t8
+                    $Free($locals, 32)
+                    leave
+                }
+            }
+        }
+
+        function A1_vector_destroy_empty$u64$(v) {
+            let size := $MemoryLoadU64(v)
+            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
+            let capacity := $MemoryLoadU64(add(v, 8))
+            $Free(v, add(32, mul(capacity, 8)))
+        }
+        function A1_vector_pop_back$u64$(v_ref) -> e {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
+            if iszero(size) { $AbortBuiltin() }
+            let e_ptr := $IndexPtr(v_ptr, add(32, mul(sub(size, 1), 8)))
+            e := $LoadU64(e_ptr)
+            $StoreU64(v_ptr, sub(size, 1))
+        }
         function A1_option_is_some$u64$(t) -> $result {
             let $t1, $t2, $t3
             // $t1 := borrow_field<option::Option<#0>>.vec($t0)
@@ -2566,6 +2745,168 @@ object "test_A2_M_extract_value" {
             let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
             len := $LoadU64(v_ptr)
         }
+        function A1_option_destroy_none$A2_U256_U256$(t) {
+            let $t1, $t2, $t3, $t4, $t5
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
+                    // $t3 := 262144
+                    $t3 := 262144
+                    // abort($t3)
+                    $Abort($t3)
+                }
+                case 4 {
+                    // $t1 := borrow_local($t0)
+                    $t1 := $MakePtr(false, t)
+                    // $t2 := option::is_none<#0>($t1)
+                    $t2 := A1_option_is_none$A2_U256_U256$($t1)
+                    // if ($t2) goto L1 else goto L0
+                    switch $t2
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // $t4 := move($t0)
+                    $t4 := t
+                    // $t5 := unpack option::Option<#0>($t4)
+                    $t5 := $MemoryLoadU256(add($t4, 0))
+                    $Free($t4, 32)
+                    // vector::destroy_empty<#0>($t5)
+                    A1_vector_destroy_empty$A2_U256_U256$($t5)
+                    // return ()
+                    leave
+                }
+            }
+        }
+
+        function A1_vector_destroy_empty$A2_U256_U256$(v) {
+            let size := $MemoryLoadU64(v)
+            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
+            let capacity := $MemoryLoadU64(add(v, 8))
+            $Free(v, add(32, mul(capacity, 32)))
+        }
+        function A1_option_is_none$A2_U256_U256$(t) -> $result {
+            let $t1, $t2
+            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
+            $t1 := t
+            // $t2 := vector::is_empty<#0>($t1)
+            $t2 := A1_vector_is_empty$A2_U256_U256$($t1)
+            // return $t2
+            $result := $t2
+        }
+
+        function A1_vector_is_empty$A2_U256_U256$(v) -> $result {
+            let $t1, $t2, $t3
+            // $t1 := vector::length<#0>($t0)
+            $t1 := A1_vector_length$A2_U256_U256$(v)
+            // $t2 := 0
+            $t2 := 0
+            // $t3 := ==($t1, $t2)
+            $t3 := $Eq($t1, $t2)
+            // return $t3
+            $result := $t3
+        }
+
+        function A1_vector_length$A2_U256_U256$(v_ref) -> len {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            len := $LoadU64(v_ptr)
+        }
+        function A1_option_destroy_none$vec$u8$$(t) {
+            let $t1, $t2, $t3, $t4, $t5
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
+                    // $t3 := 262144
+                    $t3 := 262144
+                    // abort($t3)
+                    $Abort($t3)
+                }
+                case 4 {
+                    // $t1 := borrow_local($t0)
+                    $t1 := $MakePtr(false, t)
+                    // $t2 := option::is_none<#0>($t1)
+                    $t2 := A1_option_is_none$vec$u8$$($t1)
+                    // if ($t2) goto L1 else goto L0
+                    switch $t2
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // $t4 := move($t0)
+                    $t4 := t
+                    // $t5 := unpack option::Option<#0>($t4)
+                    $t5 := $MemoryLoadU256(add($t4, 0))
+                    $Free($t4, 32)
+                    // vector::destroy_empty<#0>($t5)
+                    A1_vector_destroy_empty$vec$u8$$($t5)
+                    // return ()
+                    leave
+                }
+            }
+        }
+
+        function A1_vector_destroy_empty$vec$u8$$(v) {
+            let size := $MemoryLoadU64(v)
+            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
+            let capacity := $MemoryLoadU64(add(v, 8))
+            $Free(v, add(32, mul(capacity, 32)))
+        }
+        function A1_option_is_none$vec$u8$$(t) -> $result {
+            let $t1, $t2
+            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
+            $t1 := t
+            // $t2 := vector::is_empty<#0>($t1)
+            $t2 := A1_vector_is_empty$vec$u8$$($t1)
+            // return $t2
+            $result := $t2
+        }
+
+        function A1_vector_is_empty$vec$u8$$(v) -> $result {
+            let $t1, $t2, $t3
+            // $t1 := vector::length<#0>($t0)
+            $t1 := A1_vector_length$vec$u8$$(v)
+            // $t2 := 0
+            $t2 := 0
+            // $t3 := ==($t1, $t2)
+            $t3 := $Eq($t1, $t2)
+            // return $t3
+            $result := $t3
+        }
+
+        function A1_vector_length$vec$u8$$(v_ref) -> len {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            len := $LoadU64(v_ptr)
+        }
+        function A2_ExternalResult_is_ok$u64$(result) -> $result {
+            let $t1, $t2
+            // $t1 := borrow_field<ExternalResult::ExternalResult<#0>>.value($t0)
+            {
+                $t1 := $MakePtr($IsStoragePtr(result), $LoadU256(result))
+            }
+            // $t2 := option::is_some<#0>($t1)
+            $t2 := A1_option_is_some$u64$($t1)
+            // return $t2
+            $result := $t2
+        }
+
         function A2_M_pack_value$u64$(v) -> $result {
             let $t1
             // $t1 := ExternalResult::ok<#0>($t0)
@@ -2680,227 +3021,6 @@ object "test_A2_M_extract_value" {
         function A1_vector_empty$u64$() -> vector {
             vector := $Malloc(48)
             $MemoryStoreU64(add(vector, 8), 2)
-        }
-        function A2_ExternalResult_unwrap$u64$(result) -> $result {
-            let err_data, err_reason, panic_code, value, $t5, $t6, $t7, $t8, $t9
-            // ($t5, $t6, $t7, $t8) := unpack ExternalResult::ExternalResult<#0>($t0)
-            $t5 := $MemoryLoadU256(add(result, 0))
-            $t6 := $MemoryLoadU256(add(result, 32))
-            $t7 := $MemoryLoadU256(add(result, 64))
-            $t8 := $MemoryLoadU256(add(result, 96))
-            $Free(result, 128)
-            // option::destroy_none<vector<u8>>($t6)
-            A1_option_destroy_none$vec$u8$$($t6)
-            // option::destroy_none<vector<u8>>($t7)
-            A1_option_destroy_none$vec$u8$$($t7)
-            // option::destroy_none<U256::U256>($t8)
-            A1_option_destroy_none$A2_U256_U256$($t8)
-            // $t9 := option::destroy_some<#0>($t5)
-            $t9 := A1_option_destroy_some$u64$($t5)
-            // return $t9
-            $result := $t9
-        }
-
-        function A1_option_destroy_some$u64$(t) -> $result {
-            let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9
-            let $locals := $Malloc(32)
-            let $block := 4
-            for {} true {} {
-                switch $block
-                case 2 {
-                    // label L1
-                    // $t5 := 262145
-                    $t5 := 262145
-                    // abort($t5)
-                    $Abort($t5)
-                }
-                case 3 {
-                    // label L0
-                    // $t6 := move($t0)
-                    $t6 := t
-                    // $t2 := unpack option::Option<#0>($t6)
-                    mstore($locals, $MemoryLoadU256(add($t6, 0)))
-                    $Free($t6, 32)
-                    // $t7 := borrow_local($t2)
-                    $t7 := $MakePtr(false, $locals)
-                    // $t8 := vector::pop_back<#0>($t7)
-                    $t8 := A1_vector_pop_back$u64$($t7)
-                    // $t9 := move($t2)
-                    $t9 := mload($locals)
-                    // vector::destroy_empty<#0>($t9)
-                    A1_vector_destroy_empty$u64$($t9)
-                    // return $t8
-                    $result := $t8
-                    $Free($locals, 32)
-                    leave
-                }
-                case 4 {
-                    // $t3 := borrow_local($t0)
-                    $t3 := $MakePtr(false, t)
-                    // $t4 := option::is_some<#0>($t3)
-                    $t4 := A1_option_is_some$u64$($t3)
-                    // if ($t4) goto L0 else goto L1
-                    switch $t4
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
-                }
-            }
-        }
-
-        function A1_vector_destroy_empty$u64$(v) {
-            let size := $MemoryLoadU64(v)
-            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
-            let capacity := $MemoryLoadU64(add(v, 8))
-            $Free(v, add(32, mul(capacity, 8)))
-        }
-        function A1_vector_pop_back$u64$(v_ref) -> e {
-            let v_offs := $LoadU256(v_ref)
-            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-            let size := $LoadU64(v_ptr)
-            if iszero(size) { $AbortBuiltin() }
-            let e_ptr := $IndexPtr(v_ptr, add(32, mul(sub(size, 1), 8)))
-            e := $LoadU64(e_ptr)
-            $StoreU64(v_ptr, sub(size, 1))
-        }
-        function A1_option_destroy_none$A2_U256_U256$(t) {
-            let vec, $t2, $t3, $t4, $t5, $t6
-            let $block := 4
-            for {} true {} {
-                switch $block
-                case 2 {
-                    // label L1
-                    // $t4 := 262144
-                    $t4 := 262144
-                    // abort($t4)
-                    $Abort($t4)
-                }
-                case 3 {
-                    // label L0
-                    // $t5 := move($t0)
-                    $t5 := t
-                    // $t6 := unpack option::Option<#0>($t5)
-                    $t6 := $MemoryLoadU256(add($t5, 0))
-                    $Free($t5, 32)
-                    // vector::destroy_empty<#0>($t6)
-                    A1_vector_destroy_empty$A2_U256_U256$($t6)
-                    // return ()
-                    leave
-                }
-                case 4 {
-                    // $t2 := borrow_local($t0)
-                    $t2 := $MakePtr(false, t)
-                    // $t3 := option::is_none<#0>($t2)
-                    $t3 := A1_option_is_none$A2_U256_U256$($t2)
-                    // if ($t3) goto L0 else goto L1
-                    switch $t3
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
-                }
-            }
-        }
-
-        function A1_option_is_none$A2_U256_U256$(t) -> $result {
-            let $t1, $t2
-            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
-            $t1 := t
-            // $t2 := vector::is_empty<#0>($t1)
-            $t2 := A1_vector_is_empty$A2_U256_U256$($t1)
-            // return $t2
-            $result := $t2
-        }
-
-        function A1_vector_is_empty$A2_U256_U256$(v) -> $result {
-            let $t1, $t2, $t3
-            // $t1 := vector::length<#0>($t0)
-            $t1 := A1_vector_length$A2_U256_U256$(v)
-            // $t2 := 0
-            $t2 := 0
-            // $t3 := ==($t1, $t2)
-            $t3 := $Eq($t1, $t2)
-            // return $t3
-            $result := $t3
-        }
-
-        function A1_vector_length$A2_U256_U256$(v_ref) -> len {
-            let v_offs := $LoadU256(v_ref)
-            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-            len := $LoadU64(v_ptr)
-        }
-        function A1_vector_destroy_empty$A2_U256_U256$(v) {
-            let size := $MemoryLoadU64(v)
-            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
-            let capacity := $MemoryLoadU64(add(v, 8))
-            $Free(v, add(32, mul(capacity, 32)))
-        }
-        function A1_option_destroy_none$vec$u8$$(t) {
-            let vec, $t2, $t3, $t4, $t5, $t6
-            let $block := 4
-            for {} true {} {
-                switch $block
-                case 2 {
-                    // label L1
-                    // $t4 := 262144
-                    $t4 := 262144
-                    // abort($t4)
-                    $Abort($t4)
-                }
-                case 3 {
-                    // label L0
-                    // $t5 := move($t0)
-                    $t5 := t
-                    // $t6 := unpack option::Option<#0>($t5)
-                    $t6 := $MemoryLoadU256(add($t5, 0))
-                    $Free($t5, 32)
-                    // vector::destroy_empty<#0>($t6)
-                    A1_vector_destroy_empty$vec$u8$$($t6)
-                    // return ()
-                    leave
-                }
-                case 4 {
-                    // $t2 := borrow_local($t0)
-                    $t2 := $MakePtr(false, t)
-                    // $t3 := option::is_none<#0>($t2)
-                    $t3 := A1_option_is_none$vec$u8$$($t2)
-                    // if ($t3) goto L0 else goto L1
-                    switch $t3
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
-                }
-            }
-        }
-
-        function A1_option_is_none$vec$u8$$(t) -> $result {
-            let $t1, $t2
-            // $t1 := borrow_field<option::Option<#0>>.vec($t0)
-            $t1 := t
-            // $t2 := vector::is_empty<#0>($t1)
-            $t2 := A1_vector_is_empty$vec$u8$$($t1)
-            // return $t2
-            $result := $t2
-        }
-
-        function A1_vector_is_empty$vec$u8$$(v) -> $result {
-            let $t1, $t2, $t3
-            // $t1 := vector::length<#0>($t0)
-            $t1 := A1_vector_length$vec$u8$$(v)
-            // $t2 := 0
-            $t2 := 0
-            // $t3 := ==($t1, $t2)
-            $t3 := $Eq($t1, $t2)
-            // return $t3
-            $result := $t3
-        }
-
-        function A1_vector_length$vec$u8$$(v_ref) -> len {
-            let v_offs := $LoadU256(v_ref)
-            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-            len := $LoadU64(v_ptr)
-        }
-        function A1_vector_destroy_empty$vec$u8$$(v) {
-            let size := $MemoryLoadU64(v)
-            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
-            let capacity := $MemoryLoadU64(add(v, 8))
-            $Free(v, add(32, mul(capacity, 32)))
         }
         function $Abort(code) {
             mstore(0, code)
@@ -3107,4 +3227,4 @@ object "test_A2_M_extract_value" {
         }
     }
 }
-===> Test result of M::extract_value: Succeed(Stopped) (used_gas=4408): []
+===> Test result of M::extract_value: Succeed(Stopped) (used_gas=5103): []

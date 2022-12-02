@@ -2,20 +2,25 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::cfg::BlockCFG;
 use crate::{
+    cfgir::cfg::BlockCFG,
     hlir::ast::{
-        BaseType, BaseType_, Command, Command_, Exp, ExpListItem, TypeName, TypeName_,
-        UnannotatedExp_, Value, Value_,
+        BaseType, BaseType_, Command, Command_, Exp, ExpListItem, FunctionSignature, SingleType,
+        TypeName, TypeName_, UnannotatedExp_, Value, Value_,
     },
     naming::ast::{BuiltinTypeName, BuiltinTypeName_},
-    parser::ast::{BinOp, BinOp_, UnaryOp, UnaryOp_},
+    parser::ast::{BinOp, BinOp_, UnaryOp, UnaryOp_, Var},
+    shared::unique_map::UniqueMap,
 };
 use move_ir_types::location::*;
 use std::convert::TryFrom;
 
 /// returns true if anything changed
-pub fn optimize(cfg: &mut BlockCFG) -> bool {
+pub fn optimize(
+    _signature: &FunctionSignature,
+    _locals: &UniqueMap<Var, SingleType>,
+    cfg: &mut BlockCFG,
+) -> bool {
     let mut changed = false;
     for block_ref in cfg.blocks_mut().values_mut() {
         let block = std::mem::take(block_ref);

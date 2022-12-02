@@ -60,5 +60,5 @@ Error: Script execution failed with VMError: {
     sub_status: None,
     location: 0x42::M,
     indices: [],
-    offsets: [(FunctionDefinitionIndex(1), 7)],
+    offsets: [(FunctionDefinitionIndex(1), 5)],
 }

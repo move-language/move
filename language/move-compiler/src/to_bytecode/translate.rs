@@ -2,7 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{context::*, remove_fallthrough_jumps};
+use super::{context::*, optimize};
 use crate::{
     cfgir::{ast as G, translate::move_value_from_value_},
     compiled_unit::*,
@@ -568,6 +568,7 @@ fn function(
         } => {
             let (locals, code) = function_body(
                 context,
+                &f,
                 parameters.clone(),
                 locals,
                 loop_heads,
@@ -665,6 +666,7 @@ fn seen_structs_base_type(
 
 fn function_body(
     context: &mut Context,
+    f: &FunctionName,
     parameters: Vec<(Var, H::SingleType)>,
     mut locals_map: UniqueMap<Var, H::SingleType>,
     loop_heads: BTreeSet<H::Label>,
@@ -674,7 +676,7 @@ fn function_body(
     parameters
         .iter()
         .for_each(|(var, _)| assert!(locals_map.remove(var).is_some()));
-    let locals = locals_map
+    let mut locals = locals_map
         .into_iter()
         .filter(|(_, ty)| {
             // filter out any locals generated for unreachable code
@@ -702,7 +704,7 @@ fn function_body(
     }
 
     let loop_heads = loop_heads.into_iter().map(label).collect();
-    remove_fallthrough_jumps::code(&loop_heads, &mut bytecode_blocks);
+    optimize::code(f, &loop_heads, &mut locals, &mut bytecode_blocks);
 
     (locals, bytecode_blocks)
 }
@@ -894,8 +896,8 @@ fn command(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, cmd_): 
             if_false,
         } => {
             exp_(context, code, cond);
-            code.push(sp(loc, B::BrTrue(label(if_true))));
-            code.push(sp(loc, B::Branch(label(if_false))));
+            code.push(sp(loc, B::BrFalse(label(if_false))));
+            code.push(sp(loc, B::Branch(label(if_true))));
         }
         C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
     }

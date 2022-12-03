@@ -7,7 +7,9 @@ use crate::{
     cfgir::{ast as G, translate::move_value_from_value_},
     compiled_unit::*,
     diag,
-    expansion::ast::{AbilitySet, Address, ModuleIdent, ModuleIdent_, SpecId, Visibility},
+    expansion::ast::{
+        AbilitySet, Address, Attributes, ModuleIdent, ModuleIdent_, SpecId, Visibility,
+    },
     hlir::{
         ast::{self as H, Value_},
         translate::{display_var, DisplayVar},
@@ -37,6 +39,7 @@ type CollectedInfos = UniqueMap<FunctionName, CollectedInfo>;
 type CollectedInfo = (
     Vec<(Var, H::SingleType)>,
     BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, H::SingleType>)>,
+    Attributes,
 );
 
 fn extract_decls(
@@ -371,7 +374,7 @@ fn function_info_map(
         .into_iter()
         .map(|(n, v)| (Symbol::from(n.as_str()), v))
         .collect();
-    let (params, specs) = collected_function_infos.get_(&name).unwrap();
+    let (params, specs, attributes) = collected_function_infos.get_(&name).unwrap();
     let parameters = params
         .iter()
         .map(|(v, ty)| var_info(&local_map, *v, ty.clone()))
@@ -391,6 +394,7 @@ fn function_info_map(
     let function_info = FunctionInfo {
         spec_info,
         parameters,
+        attributes: attributes.clone(),
     };
 
     let name_loc = *collected_function_infos.get_loc_(&name).unwrap();
@@ -398,7 +402,10 @@ fn function_info_map(
     (function_name, function_info)
 }
 
-fn script_function_info(source_map: &SourceMap, (params, specs): CollectedInfo) -> FunctionInfo {
+fn script_function_info(
+    source_map: &SourceMap,
+    (params, specs, attributes): CollectedInfo,
+) -> FunctionInfo {
     let idx = F::FunctionDefinitionIndex(0);
     let function_source_map = source_map.get_function_source_map(idx).unwrap();
     let local_map = function_source_map
@@ -425,6 +432,7 @@ fn script_function_info(source_map: &SourceMap, (params, specs): CollectedInfo) 
     FunctionInfo {
         spec_info,
         parameters,
+        attributes,
     }
 }
 
@@ -544,7 +552,7 @@ fn function(
     fdef: G::Function,
 ) -> ((IR::FunctionName, IR::Function), CollectedInfo) {
     let G::Function {
-        attributes: _attributes,
+        attributes,
         visibility: v,
         entry,
         signature,
@@ -590,7 +598,7 @@ fn function(
     };
     (
         (name, sp(loc, ir_function)),
-        (parameters, context.finish_function()),
+        (parameters, context.finish_function(), attributes),
     )
 }
 

@@ -5,7 +5,7 @@
 use crate::{
     diag,
     diagnostics::Diagnostics,
-    expansion::ast::{ModuleIdent, ModuleIdent_, SpecId},
+    expansion::ast::{Attributes, ModuleIdent, ModuleIdent_, SpecId},
     hlir::ast as H,
     parser::ast::{FunctionName, ModuleName, Var},
     shared::{unique_map::UniqueMap, Name, NumericalAddress},
@@ -41,6 +41,7 @@ pub struct SpecInfo {
 pub struct FunctionInfo {
     pub spec_info: BTreeMap<SpecId, SpecInfo>,
     pub parameters: Vec<(Var, VarInfo)>,
+    pub attributes: Attributes,
 }
 
 #[derive(Debug, Clone)]

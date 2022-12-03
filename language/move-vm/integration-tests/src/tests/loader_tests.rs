@@ -14,7 +14,6 @@ use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas::UnmeteredGasMeter;
 
 use std::{path::PathBuf, sync::Arc, thread};
-use move_binary_format::file_format::{AddressIdentifierIndex, empty_module, IdentifierIndex, ModuleHandle, TableIndex};
 
 const WORKING_ACCOUNT: AccountAddress =
     AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]);
@@ -56,14 +55,6 @@ impl Adapter {
         }
     }
 
-    fn fresh(self) -> Self {
-        Self {
-            store: self.store,
-            vm: Arc::new(MoveVM::new(vec![]).unwrap()),
-            functions: self.functions,
-        }
-    }
-
     fn publish_modules(&mut self, modules: Vec<CompiledModule>) {
         let mut session = self.vm.new_session(&self.store);
 
@@ -80,20 +71,6 @@ impl Adapter {
         self.store
             .apply(changeset)
             .expect("failure applying write set");
-    }
-
-    fn publish_modules_with_error(&mut self, modules: Vec<CompiledModule>) {
-        let mut session = self.vm.new_session(&self.store);
-
-        for module in modules {
-            let mut binary = vec![];
-            module
-                .serialize(&mut binary)
-                .unwrap_or_else(|_| panic!("failure in module serialization: {:#?}", module));
-            session
-                .publish_module(binary, WORKING_ACCOUNT, &mut UnmeteredGasMeter)
-                .expect_err("publishing must fail");
-        }
     }
 
     fn call_functions(&self) {
@@ -177,57 +154,4 @@ fn load_concurrent_many() {
     adapter.publish_modules(modules);
     // makes 150 threads
     adapter.call_functions_async(30);
-}
-
-#[test]
-fn deep_dependencies() {
-    let data_store = InMemoryStorage::new();
-    let mut adapter = Adapter::new(data_store);
-
-    let mut modules = vec![];
-
-    // create a module A1
-    let mut module = empty_module();
-    module.identifiers[0] = Identifier::new("A0").unwrap();
-    module.address_identifiers[0] = WORKING_ACCOUNT;
-    modules.push(module);
-
-    let max = 350u64;
-    for i in 1..max {
-        let mut name = "A".to_string();
-        name.push_str(i.to_string().as_str());
-        let mut dep_name = "A".to_string();
-        dep_name.push_str((i - 1).to_string().as_str());
-        let deps = vec![dep_name.as_str()];
-        let module = empty_module_with_dependencies(name.as_str(), &deps);
-        modules.push(module);
-    }
-
-    adapter.publish_modules(modules);
-
-    let mut adapter = adapter.fresh();
-
-    let mut name = "A".to_string();
-    name.push_str(max.to_string().as_str());
-    let mut dep_name = "A".to_string();
-    dep_name.push_str((max - 1).to_string().as_str());
-    let deps = vec![dep_name.as_str()];
-    module = empty_module_with_dependencies(name.as_str(), &deps);
-    adapter.publish_modules_with_error(vec![module]);
-}
-
-fn empty_module_with_dependencies(name: &str, deps: &[&str]) -> CompiledModule {
-    let mut module = empty_module();
-    module.address_identifiers[0] = WORKING_ACCOUNT;
-    module.identifiers[0] = Identifier::new(name).unwrap();
-    for dep in deps {
-        module.identifiers.push(Identifier::new(*dep).unwrap());
-        module.module_handles.push(
-            ModuleHandle {
-                address: AddressIdentifierIndex(0),
-                name: IdentifierIndex((module.identifiers.len() - 1) as TableIndex),
-            }
-        );
-    }
-    module
 }

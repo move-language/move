@@ -224,6 +224,7 @@ fn big_signature_test() {
             max_basic_blocks: Some(1024),
             max_value_stack_size: 1024,
             max_type_nodes: Some(256),
+            max_push_size: Some(10000),
         },
         &module,
     )

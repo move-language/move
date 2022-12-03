@@ -802,6 +802,7 @@ impl Loader {
             &mut visited,
             &mut friends_discovered,
             /* allow_dependency_loading_failure */ true,
+            /* dependencies_depth */ 0,
         )?;
 
         // upward exploration of the modules's dependency graph. Similar to dependency loading, as
@@ -813,6 +814,7 @@ impl Loader {
             bundle_unverified,
             data_store,
             /* allow_friend_loading_failure */ true,
+            /* dependencies_depth */0,
         )?;
 
         // make sure there is no cyclic dependency
@@ -972,6 +974,7 @@ impl Loader {
             bundle_unverified,
             data_store,
             /* allow_module_loading_failure */ true,
+            /* dependencies_depth */ 0,
         )?;
 
         // verify that the transitive closure does not have cycles
@@ -1030,6 +1033,7 @@ impl Loader {
         visited: &mut BTreeSet<ModuleId>,
         friends_discovered: &mut BTreeSet<ModuleId>,
         allow_module_loading_failure: bool,
+        dependencies_depth: u64,
     ) -> VMResult<Arc<Module>> {
         // dependency loading does not permit cycles
         if visited.contains(id) {
@@ -1051,6 +1055,7 @@ impl Loader {
             visited,
             friends_discovered,
             /* allow_dependency_loading_failure */ false,
+            dependencies_depth,
         )?;
 
         // if linking goes well, insert the module to the code cache
@@ -1070,7 +1075,14 @@ impl Loader {
         visited: &mut BTreeSet<ModuleId>,
         friends_discovered: &mut BTreeSet<ModuleId>,
         allow_dependency_loading_failure: bool,
+        dependencies_depth: u64,
     ) -> VMResult<()> {
+        if dependencies_depth > self.verifier_config.max_dependency_depth {
+            return
+                Err(PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
+                    .with_message("max dependency depth reached".to_owned())
+                    .finish(Location::Undefined));
+        }
         // all immediate dependencies of the module being verified should be in one of the locations
         // - the verified portion of the bundle (e.g., verified before this module)
         // - the code cache (i.e., loaded already)
@@ -1092,6 +1104,7 @@ impl Loader {
                             visited,
                             friends_discovered,
                             allow_dependency_loading_failure,
+                            dependencies_depth + 1,
                         )?
                     }
                     Some(cached) => cached,
@@ -1124,6 +1137,7 @@ impl Loader {
         bundle_unverified: &BTreeSet<ModuleId>,
         data_store: &impl DataStore,
         allow_module_loading_failure: bool,
+        dependencies_depth: u64,
     ) -> VMResult<Arc<Module>> {
         // load the closure of the module in terms of dependency relation
         let mut visited = BTreeSet::new();
@@ -1135,6 +1149,7 @@ impl Loader {
             &mut visited,
             &mut friends_discovered,
             allow_module_loading_failure,
+            0,
         )?;
 
         // upward exploration of the module's friendship graph and expand the friendship frontier.
@@ -1146,6 +1161,7 @@ impl Loader {
             bundle_unverified,
             data_store,
             /* allow_friend_loading_failure */ false,
+            dependencies_depth,
         )?;
         Ok(module_ref)
     }
@@ -1158,7 +1174,14 @@ impl Loader {
         bundle_unverified: &BTreeSet<ModuleId>,
         data_store: &impl DataStore,
         allow_friend_loading_failure: bool,
+        dependencies_depth: u64,
     ) -> VMResult<()> {
+        if dependencies_depth > self.verifier_config.max_dependency_depth {
+            return
+                Err(PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
+                    .with_message("max dependency depth reached".to_owned())
+                    .finish(Location::Undefined));
+        }
         // for each new module discovered in the frontier, load them fully and expand the frontier.
         // apply three filters to the new friend modules discovered
         // - `!locked_cache.has_module(mid)`
@@ -1191,6 +1214,7 @@ impl Loader {
                 bundle_unverified,
                 data_store,
                 allow_friend_loading_failure,
+                dependencies_depth,
             )?;
         }
         Ok(())

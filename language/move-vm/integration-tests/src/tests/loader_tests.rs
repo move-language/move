@@ -278,7 +278,7 @@ fn deep_dependency_tree_err_0() {
 
     // use one of the module in the tree
     let mut adapter = adapter.fresh();
-    let name = format!("ASome");
+    let name = "ASome".to_string();
     let dep_name = format!("A_{}_{}", height - 1, width - 1);
     let deps = vec![dep_name];
     let module = empty_module_with_dependencies(name, deps);
@@ -300,7 +300,7 @@ fn deep_dependency_tree_err_1() {
 
     // use one of the module in the tree
     let mut adapter = adapter.fresh();
-    let name = format!("ASome");
+    let name = "ASome".to_string();
     let dep_name = format!("A_{}_{}", height - 1, width - 1);
     let deps = vec![dep_name];
     let module = empty_module_with_dependencies(name, deps);
@@ -322,7 +322,7 @@ fn deep_dependency_tree_ok_0() {
 
     // use one of the module in the tree
     let mut adapter = adapter.fresh();
-    let name = format!("ASome");
+    let name = "ASome".to_string();
     let dep_name = format!("A_{}_{}", height - 1, width - 1);
     let deps = vec![dep_name];
     let module = empty_module_with_dependencies(name, deps);
@@ -344,7 +344,7 @@ fn deep_dependency_tree_ok_1() {
 
     // use one of the module in the tree
     let mut adapter = adapter.fresh();
-    let name = format!("ASome");
+    let name = "ASome".to_string();
     let dep_name = format!("A_{}_{}", height - 1, width - 1);
     let deps = vec![dep_name];
     let module = empty_module_with_dependencies(name, deps);

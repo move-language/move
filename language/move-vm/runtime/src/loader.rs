@@ -1080,7 +1080,7 @@ impl Loader {
         if dependencies_depth > self.verifier_config.max_dependency_depth {
             return Err(
                 PartialVMError::new(StatusCode::VM_MAX_DEPENDENCY_DEPTH_REACHED)
-                    .finish(Location::Undefined)
+                    .finish(Location::Undefined),
             );
         }
         // all immediate dependencies of the module being verified should be in one of the locations
@@ -1180,7 +1180,7 @@ impl Loader {
         if dependencies_depth > self.verifier_config.max_dependency_depth {
             return Err(
                 PartialVMError::new(StatusCode::VM_MAX_DEPENDENCY_DEPTH_REACHED)
-                    .finish(Location::Undefined)
+                    .finish(Location::Undefined),
             );
         }
         // for each new module discovered in the frontier, load them fully and expand the frontier.

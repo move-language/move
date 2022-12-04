@@ -1455,12 +1455,11 @@ impl<'a> Resolver<'a> {
         // existing type instantiation.
         // If that number is larger than MAX_TYPE_INSTANTIATION_NODES, refuse to construct this type.
         // This prevents constructing larger and lager types via struct instantiation.
-        // TODO: this should be revisited for performance and unification with MAX_VALUE_DEPTH
         let mut sum_nodes: usize = 1;
         for ty in ty_args.iter().chain(struct_inst.instantiation.iter()) {
             sum_nodes = sum_nodes.saturating_add(self.loader.count_type_nodes(ty));
             if sum_nodes > MAX_TYPE_INSTANTIATION_NODES {
-                return Err(PartialVMError::new(StatusCode::VM_MAX_TYPE_NODES_REACHED));
+                return Err(PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES));
             }
         }
 
@@ -2506,6 +2505,27 @@ impl Loader {
         })
     }
 
+    fn count_type_nodes(&self, ty: &Type) -> usize {
+        let mut todo = vec![ty];
+        let mut result = 0;
+        while let Some(ty) = todo.pop() {
+            match ty {
+                Type::Vector(ty) | Type::Reference(ty) | Type::MutableReference(ty) => {
+                    result += 1;
+                    todo.push(ty);
+                }
+                Type::StructInstantiation(_, ty_args) => {
+                    result += 1;
+                    todo.extend(ty_args.iter())
+                }
+                _ => {
+                    result += 1;
+                }
+            }
+        }
+        result
+    }
+
     fn struct_gidx_to_type_layout(
         &self,
         gidx: CachedStructIndex,
@@ -2559,7 +2579,7 @@ impl Loader {
         depth: usize,
     ) -> PartialVMResult<MoveTypeLayout> {
         if *count > MAX_TYPE_TO_LAYOUT_NODES {
-            return Err(PartialVMError::new(StatusCode::VM_MAX_TYPE_NODES_REACHED));
+            return Err(PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES));
         }
         if depth > VALUE_DEPTH_MAX {
             return Err(PartialVMError::new(StatusCode::VM_MAX_VALUE_DEPTH_REACHED));
@@ -2690,7 +2710,7 @@ impl Loader {
         depth: usize,
     ) -> PartialVMResult<MoveTypeLayout> {
         if *count > MAX_TYPE_TO_LAYOUT_NODES {
-            return Err(PartialVMError::new(StatusCode::VM_MAX_TYPE_NODES_REACHED));
+            return Err(PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES));
         }
         if depth > VALUE_DEPTH_MAX {
             return Err(PartialVMError::new(StatusCode::VM_MAX_VALUE_DEPTH_REACHED));

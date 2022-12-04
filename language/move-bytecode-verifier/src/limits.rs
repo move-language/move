@@ -5,7 +5,7 @@ use crate::VerifierConfig;
 use move_binary_format::{
     binary_views::BinaryIndexedView,
     errors::{Location, PartialVMError, PartialVMResult, VMResult},
-    file_format::{CompiledModule, CompiledScript, SignatureToken},
+    file_format::{CompiledModule, CompiledScript, SignatureToken, StructFieldInformation},
     IndexKind,
 };
 use move_core_types::vm_status::StatusCode;
@@ -91,6 +91,15 @@ impl<'a> LimitsVerifier<'a> {
         }
         for cons in self.resolver.constant_pool() {
             self.verify_type_node(config, &cons.type_)?
+        }
+        if let Some(sdefs) = self.resolver.struct_defs() {
+            for sdef in sdefs {
+                if let StructFieldInformation::Declared(fdefs) = &sdef.field_information {
+                    for fdef in fdefs {
+                        self.verify_type_node(config, &fdef.signature.0)?
+                    }
+                }
+            }
         }
         Ok(())
     }

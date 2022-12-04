@@ -5,7 +5,7 @@ use crate::VerifierConfig;
 use move_binary_format::{
     binary_views::BinaryIndexedView,
     errors::{Location, PartialVMError, PartialVMResult, VMResult},
-    file_format::{CompiledModule, CompiledScript},
+    file_format::{CompiledModule, CompiledScript, SignatureToken, StructFieldInformation},
     IndexKind,
 };
 use move_core_types::vm_status::StatusCode;
@@ -28,7 +28,8 @@ impl<'a> LimitsVerifier<'a> {
             resolver: BinaryIndexedView::Module(module),
         };
         limit_check.verify_function_handles(config)?;
-        limit_check.verify_struct_handles(config)
+        limit_check.verify_struct_handles(config)?;
+        limit_check.verify_type_nodes(config)
     }
 
     pub fn verify_script(config: &VerifierConfig, module: &'a CompiledScript) -> VMResult<()> {
@@ -78,6 +79,56 @@ impl<'a> LimitsVerifier<'a> {
                         .at_index(IndexKind::FunctionHandle, idx as u16));
                 }
             };
+        }
+        Ok(())
+    }
+
+    fn verify_type_nodes(&self, config: &VerifierConfig) -> PartialVMResult<()> {
+        for sign in self.resolver.signatures() {
+            for ty in &sign.0 {
+                self.verify_type_node(config, ty)?
+            }
+        }
+        for cons in self.resolver.constant_pool() {
+            self.verify_type_node(config, &cons.type_)?
+        }
+        if let Some(sdefs) = self.resolver.struct_defs() {
+            for sdef in sdefs {
+                if let StructFieldInformation::Declared(fdefs) = &sdef.field_information {
+                    for fdef in fdefs {
+                        self.verify_type_node(config, &fdef.signature.0)?
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn verify_type_node(
+        &self,
+        config: &VerifierConfig,
+        ty: &SignatureToken,
+    ) -> PartialVMResult<()> {
+        if let Some(max) = &config.max_type_nodes {
+            // Structs and Parameters can expand to an unknown number of nodes, therefore
+            // we give them a higher size weight here.
+            const STRUCT_SIZE_WEIGHT: usize = 4;
+            const PARAM_SIZE_WEIGHT: usize = 4;
+            let mut size = 0;
+            for t in ty.preorder_traversal() {
+                // Notice that the preorder traversal will iterate all type instantiations, so we
+                // why we can ignore them below.
+                match t {
+                    SignatureToken::Struct(..) | SignatureToken::StructInstantiation(..) => {
+                        size += STRUCT_SIZE_WEIGHT
+                    }
+                    SignatureToken::TypeParameter(..) => size += PARAM_SIZE_WEIGHT,
+                    _ => size += 1,
+                }
+            }
+            if size > *max {
+                return Err(PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES));
+            }
         }
         Ok(())
     }

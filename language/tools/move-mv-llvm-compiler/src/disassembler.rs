@@ -593,6 +593,12 @@ impl<'a> Disassembler<'a> {
             name
         );
 
+        let parameter_list = &self
+        .source_mapper
+        .bytecode
+        .signature_at(parameters)
+        .0;
+
         let ret_type = match function {
             Some(function) => self
                 .source_mapper
@@ -604,7 +610,7 @@ impl<'a> Disassembler<'a> {
 
         let llvm_return_type = move_module.llvm_return_type_for(&ret_type);
         // TODO: Account for signedness. Or maybe the signedness is incorporated as part of the use cases.
-        let mut llvm_type_parameters = move_module.llvm_signed_type_for_sig_tokens(ret_type, type_parameters);
+        let mut llvm_type_parameters = move_module.llvm_signed_type_for_sig_tokens(parameter_list, &type_parameters);
 
         let fn_value = unsafe {
             llvm_sys::core::LLVMAddFunction(move_module.module,

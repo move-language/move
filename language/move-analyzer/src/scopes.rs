@@ -265,12 +265,14 @@ impl Scopes {
         &self,
         chain: &NameAccessChain,
         name_to_addr: &dyn Name2Addr,
-    ) -> (Option<Item>, Option<ModuleScope>) {
+    ) -> (
+        Option<Item>,
+        Option<ModuleScope>, /* with a possible module loc returned  */
+    ) {
         let mut item_ret = None;
         let mut module_scope = None;
         match &chain.value {
             NameAccessChain_::One(name) => {
-                let mut r = None;
                 self.inner_first_visit(|s| {
                     if let Some(v) = s.items.get(&name.value) {
                         if !v.is_tparam() {
@@ -294,7 +296,7 @@ impl Scopes {
                                             if !item.is_tparam() {
                                                 module_scope =
                                                     members.as_ref().borrow().module_.clone();
-                                                item_ret = Some(ty);
+                                                item_ret = Some(item.clone());
                                                 // make inner_first_visit stop.
                                                 return true;
                                             }
@@ -317,18 +319,17 @@ impl Scopes {
                     LeadingNameAccess_::Name(name) => name_to_addr.convert(name.value),
                 });
                 if modules.is_none() {
-                    return failed;
+                    return;
                 }
                 let modules = modules.unwrap();
                 let module = modules.modules.get(&chain_two.value.1.value);
                 if module.is_none() {
-                    return failed;
+                    return;
                 }
                 let module = module.unwrap();
                 module_scope = module.as_ref().borrow().module_.clone();
-
                 if let Some(item) = module.as_ref().borrow().items.get(&member.value) {
-                    item_ret = Some(item);
+                    item_ret = Some(item.clone());
                 };
             }),
         }
@@ -338,8 +339,6 @@ impl Scopes {
     pub(crate) fn find_name_chain_type<'a>(
         &self,
         chain: &NameAccessChain,
-        item_ret: &mut Option<Item>,
-        module_ret: &mut Option<ModuleScope>,
         name_to_addr: &dyn Name2Addr,
         accept_tparam: bool,
     ) -> ResolvedType {
@@ -351,7 +350,6 @@ impl Scopes {
                     if let Some(v) = s.items.get(&name.value) {
                         r = v.to_type(accept_tparam);
                         if r.is_some() {
-                            let _ = std::mem::replace(item_ret, Some(v.clone()));
                             return true;
                         }
                     }
@@ -371,15 +369,9 @@ impl Scopes {
                                         if let Some(item) =
                                             members.as_ref().borrow().items.get(&member.value)
                                         {
-                                            let _ = std::mem::replace(item_ret, Some(item.clone()));
                                             if let Some(ty) = item.to_type(false) {
                                                 r = Some(ty);
-                                                let _ =
-                                                    std::mem::replace(item_ret, Some(item.clone()));
-                                                let _ = std::mem::replace(
-                                                    module_ret,
-                                                    members.borrow().module_.clone(),
-                                                );
+
                                                 return true; // make inner_first_visit stop.
                                             }
                                         }
@@ -410,9 +402,7 @@ impl Scopes {
                     return failed;
                 }
                 let module = module.unwrap();
-                let _ = std::mem::replace(module_ret, module.as_ref().borrow().module_.clone());
                 if let Some(item) = module.as_ref().borrow().items.get(&member.value) {
-                    let _ = std::mem::replace(item_ret, Some(item.clone()));
                     item.to_type(false).unwrap_or(failed)
                 } else {
                     failed
@@ -449,8 +439,7 @@ impl Scopes {
                     NameAccessChain_::Two(_, _) => {}
                     NameAccessChain_::Three(_, _) => {}
                 }
-                let mut chain_ty =
-                    self.find_name_chain_type(chain, &mut None, &mut None, name_to_addr, true);
+                let mut chain_ty = self.find_name_chain_type(chain, name_to_addr, true);
                 let chain_ty = match &mut chain_ty {
                     ResolvedType::Struct(x) => {
                         let mut m = HashMap::new();

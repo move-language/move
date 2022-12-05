@@ -144,17 +144,25 @@ impl Modules {
         self.with_spec_schema(manifest, |addr, module_name, name, spec| {
             //
             let item = ItemOrAccess::Item(Item::SpecSchema(name.clone(), spec.clone()));
+
             visitor.handle_item(self, scopes, &item);
             scopes.enter_top_item(self, addr, module_name, name.value, item);
+            self.visit_spec(spec, true, scopes, visitor);
         });
 
         self.with_spec(manifest, |addr, module_name, spec| {
             let _guard = scopes.clone_scope_and_enter(addr, module_name);
-            self.visit_spec(spec, scopes, visitor);
+            self.visit_spec(spec, false, scopes, visitor);
         });
     }
 
-    pub fn visit_spec(&self, spec: &SpecBlock, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
+    pub fn visit_spec(
+        &self,
+        spec: &SpecBlock,
+        visit_schema_body: bool,
+        scopes: &Scopes,
+        visitor: &mut dyn ScopeVisitor,
+    ) {
         let _guard = scopes.enter_scope_guard(Scope::new_spec());
         match &spec.value.target.value {
             SpecBlockTarget_::Code => {
@@ -165,9 +173,7 @@ impl Modules {
                 // here should to jump to module definition.
                 // But We don't have the loc to the `module` key words.
             }
-
-            SpecBlockTarget_::Member(m, _) => {
-                let mut item_ret = None;
+            SpecBlockTarget_::Member(m, signature) => {
                 let chain = Spanned {
                     loc: m.loc,
                     value: NameAccessChain_::One(Spanned {
@@ -175,7 +181,7 @@ impl Modules {
                         value: m.value,
                     }),
                 };
-                scopes.find_name_chain_type(&chain, &mut item_ret, &mut None, self, false);
+                let (item_ret, _) = scopes.find_name_chain_item(&chain, self);
                 if let Some(item_ret) = item_ret {
                     {
                         let item = ItemOrAccess::Access(Access::ExprAccessChain(
@@ -203,10 +209,22 @@ impl Modules {
                 }
                 // TODO why spec have function signature.
                 // 看起来是重复定义，必须和函数的定义一模一样。
+                if let Some(signature) = signature {
+                    self.visit_signature(signature.as_ref(), scopes, visitor);
+                    if visitor.finished() {
+                        return;
+                    }
+                }
+                // enter result.
+                // scopes.enter_item(self, Symbol::from("result"), Item::Var( Spanned { loc :  }  , ()));
             }
+
             SpecBlockTarget_::Schema(_, _) => {
                 // Handled before.
                 // Nothing to do.
+                if !visit_schema_body {
+                    return;
+                }
             } // enter parameter and ret.
         }
 
@@ -230,6 +248,7 @@ impl Modules {
         scopes: &Scopes,
         visitor: &mut dyn ScopeVisitor,
     ) {
+        log::trace!("visit spec member:{:?}", member);
         match &member.value {
             SpecBlockMember_::Condition {
                 kind,
@@ -335,23 +354,15 @@ impl Modules {
                 self.visit_expr(&lhs, scopes, visitor);
                 self.visit_expr(&rhs, scopes, visitor);
             }
-            SpecBlockMember_::Include { properties, exp } => {
+            SpecBlockMember_::Include {
+                properties: _properties,
+                exp,
+            } => {
+                // TODO handle _properties
                 // TODO.
-                let chain = match &exp.value {
-                    Exp_::Name(chain, _) => Some(chain),
-                    _ => None,
-                };
-                match chain {
-                    Some(chain) => {
-                        let mut item_ret = None;
-                        let mut module_ret = None;
-                        scopes.find_name_chain_type(
-                            chain,
-                            &mut item_ret,
-                            &mut module_ret,
-                            self,
-                            false,
-                        );
+                match &exp.value {
+                    Exp_::Name(chain, _) => {
+                        let (item_ret, module_ret) = scopes.find_name_chain_item(chain, self);
                         if let Some(item_ret) = item_ret.clone() {
                             let item = ItemOrAccess::Access(Access::ExprAccessChain(
                                 chain.clone(),
@@ -366,16 +377,46 @@ impl Modules {
                         match &item_ret {
                             Some(x) => match x {
                                 // TODO should I visit spec block.
-                                Item::SpecSchema(_, block) => {
-                                    self.visit_spec(block, scopes, visitor);
-                                }
+                                // Item::SpecSchema(_, block) => {
+                                //     self.visit_spec(block, scopes, visitor);
+                                // }
                                 _ => {}
                             },
                             None => {}
                         }
                     }
-                    None => {}
-                }
+                    Exp_::Pack(chain, type_args, fields) => {
+                        // TODO Pack.
+                        let (item_ret, module_ret) = scopes.find_name_chain_item(chain, self);
+                        if let Some(item_ret) = item_ret.clone() {
+                            let item = ItemOrAccess::Access(Access::ExprAccessChain(
+                                chain.clone(),
+                                module_ret,
+                                Box::new(item_ret),
+                            ));
+                            visitor.handle_item(self, scopes, &item);
+                            if visitor.finished() {
+                                return;
+                            }
+                        }
+                        if let Some(type_args) = type_args {
+                            for t in type_args.iter() {
+                                self.visit_type_apply(t, scopes, visitor);
+                                if visitor.finished() {
+                                    return;
+                                }
+                            }
+                        }
+                        for (f, e) in fields.iter() {
+                            // TODO can jump to the schema where define this field??.
+                            self.visit_expr(e, scopes, visitor);
+                            if visitor.finished() {
+                                return;
+                            }
+                        }
+                    }
+                    _ => {}
+                };
             }
 
             SpecBlockMember_::Apply {
@@ -389,8 +430,7 @@ impl Modules {
                     _ => None,
                 };
                 if let Some(rule) = rule {
-                    let mut item_ret = None;
-                    scopes.find_name_chain_type(&rule, &mut item_ret, &mut None, self, false);
+                    let (item_ret, _) = scopes.find_name_chain_item(&rule, self);
                     match &item_ret {
                         Some(x) => match x {
                             Item::SpecSchema(name, _) => {
@@ -411,19 +451,12 @@ impl Modules {
                         match &x.value {
                             SpecApplyFragment_::Wildcard => {}
                             SpecApplyFragment_::NamePart(name) => {
-                                let mut item_ret = None;
-                                let mut module_ret = None;
                                 let chain = Spanned {
                                     loc: name.loc,
                                     value: NameAccessChain_::One(name.clone()),
                                 };
-                                scopes.find_name_chain_type(
-                                    &chain,
-                                    &mut item_ret,
-                                    &mut module_ret,
-                                    self,
-                                    false,
-                                );
+                                let (item_ret, module_ret) =
+                                    scopes.find_name_chain_item(&chain, self);
                                 if let Some(x) = item_ret {
                                     let item = ItemOrAccess::Access(Access::ExprAccessChain(
                                         chain.clone(),
@@ -640,8 +673,7 @@ impl Modules {
                 return;
             }
             Bind_::Unpack(chain, tys, field_binds) => {
-                let struct_ty =
-                    scopes.find_name_chain_type(chain, &mut None, &mut None, self, false);
+                let struct_ty = scopes.find_name_chain_type(chain, self, false);
                 let item = ItemOrAccess::Access(Access::ApplyType(
                     chain.as_ref().clone(),
                     Box::new(struct_ty.clone()),
@@ -704,8 +736,7 @@ impl Modules {
     ) {
         match &ty.value {
             Type_::Apply(chain, types) => {
-                let ty =
-                    scopes.find_name_chain_type(chain.as_ref(), &mut None, &mut None, self, true);
+                let ty = scopes.find_name_chain_type(chain.as_ref(), self, true);
                 let item =
                     ItemOrAccess::Access(Access::ApplyType(chain.as_ref().clone(), Box::new(ty)));
                 visitor.handle_item(self, scopes, &item);
@@ -742,20 +773,20 @@ impl Modules {
                     visitor.handle_item(self, scopes, &item);
                 }
             }
+
             Exp_::Move(var) | Exp_::Copy(var) => {
-                let mut item = Some(Item::new_dummy());
-                scopes.find_name_chain_type(
+                let (item, _) = scopes.find_name_chain_item(
                     &Spanned {
                         loc: var.loc(),
                         value: NameAccessChain_::One(var.0.clone()),
                     },
-                    &mut item,
-                    &mut None,
                     self,
-                    false,
                 );
-                let item =
-                    ItemOrAccess::Access(Access::ExprVar(var.clone(), Box::new(item.unwrap())));
+
+                let item = ItemOrAccess::Access(Access::ExprVar(
+                    var.clone(),
+                    Box::new(item.unwrap_or_default()),
+                ));
                 visitor.handle_item(self, scopes, &item);
             }
             Exp_::Name(
@@ -765,12 +796,11 @@ impl Modules {
                       TODO How to use _ty,
                       looks like _ty is not used. */
             ) => {
-                let mut item = Some(Item::new_dummy());
-                scopes.find_name_chain_type(chain, &mut item, &mut None, self, false);
+                let (item, _) = scopes.find_name_chain_item(chain, self);
                 let item = ItemOrAccess::Access(Access::ExprAccessChain(
                     chain.clone(),
                     None,
-                    Box::new(item.unwrap()),
+                    Box::new(item.unwrap_or_default()),
                 ));
                 visitor.handle_item(self, scopes, &item);
             }
@@ -799,13 +829,11 @@ impl Modules {
                         return;
                     }
                 } else {
-                    let mut item = Some(Item::new_dummy());
-                    let mut module = None;
-                    scopes.find_name_chain_type(chain, &mut item, &mut module, self, false);
+                    let (item, module) = scopes.find_name_chain_item(chain, self);
                     let item = ItemOrAccess::Access(Access::ExprAccessChain(
                         chain.clone(),
                         module,
-                        Box::new(item.unwrap()),
+                        Box::new(item.unwrap_or_default()),
                     ));
                     visitor.handle_item(self, scopes, &item);
                     if visitor.finished() {
@@ -828,7 +856,7 @@ impl Modules {
                 }
             }
             Exp_::Pack(ref chain, ref types, fields) => {
-                let ty = scopes.find_name_chain_type(chain, &mut None, &mut None, self, false);
+                let ty = scopes.find_name_chain_type(chain, self, false);
                 let item =
                     ItemOrAccess::Access(Access::ApplyType(chain.clone(), Box::new(ty.clone())));
                 visitor.handle_item(self, scopes, &item);
@@ -1057,7 +1085,7 @@ impl Modules {
                 self.visit_type_apply(ty, scopes, visitor);
             }
             Exp_::Spec(spec) => {
-                self.visit_spec(spec, scopes, visitor);
+                self.visit_spec(spec, false, scopes, visitor);
             }
             Exp_::UnresolvedError => {
                 //

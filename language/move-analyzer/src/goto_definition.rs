@@ -32,6 +32,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
         PathBuf::from(std::env::current_dir().unwrap()).as_path(),
         fpath.as_path(),
     );
+
     log::info!(
         "request is goto definition,fpath:{:?}  line:{} col:{}",
         fpath.as_path(),

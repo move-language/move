@@ -479,7 +479,7 @@ impl Modules {
             },
             Exp_::Move(x) | Exp_::Copy(x) => scopes.find_var_type(x.0.value),
             Exp_::Name(name, _ /*  TODO this is a error. */) => {
-                let ty = scopes.find_name_chain_type(name, &mut None, &mut None, self, false);
+                let ty = scopes.find_name_chain_type(name, self, false);
                 return ty;
             }
             Exp_::Call(name, is_macro, ref type_args, exprs) => {
@@ -500,7 +500,7 @@ impl Modules {
                 if let Some(ty) = self.get_move_build_in_call_type(scopes, name, type_args, exprs) {
                     return ty;
                 }
-                let fun_type = scopes.find_name_chain_type(name, &mut None, &mut None, self, false);
+                let fun_type = scopes.find_name_chain_type(name, self, false);
 
                 match &fun_type {
                     ResolvedType::Fun(x) => {
@@ -548,8 +548,7 @@ impl Modules {
             }
 
             Exp_::Pack(name, type_args, fields) => {
-                let mut struct_ty =
-                    scopes.find_name_chain_type(name, &mut None, &mut None, self, false);
+                let mut struct_ty = scopes.find_name_chain_type(name, self, false);
                 let mut struct_ty = struct_ty.struct_ref_to_struct(scopes);
                 let mut types = HashMap::new();
                 let mut struct_ty = match &struct_ty {

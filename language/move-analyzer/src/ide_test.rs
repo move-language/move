@@ -80,7 +80,7 @@ fn goto_definition_test4() {
     init_log();
     let m = Modules::new("/home/yuyang/projects/test-move2");
     let mut v =
-        goto_definition::Visitor::new("/home/yuyang/projects/test-move2/sources/test.move", 7, 17);
+        goto_definition::Visitor::new("/home/yuyang/projects/test-move2/sources/test.move", 13, 25);
     m.run_visitor(&mut v);
     eprintln!("{:?}", v.result.unwrap());
 }

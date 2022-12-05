@@ -189,6 +189,11 @@ impl Item {
     }
 }
 
+impl Default for Item {
+    fn default() -> Self {
+        Self::new_dummy()
+    }
+}
 #[derive(Clone, Copy, Debug)]
 pub enum MacroCall {
     Assert,

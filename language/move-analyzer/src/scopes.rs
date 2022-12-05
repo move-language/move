@@ -261,6 +261,80 @@ impl Scopes {
         return ResolvedType::UnKnown;
     }
 
+    pub(crate) fn find_name_chain_item(
+        &self,
+        chain: &NameAccessChain,
+        name_to_addr: &dyn Name2Addr,
+    ) -> (Option<Item>, Option<ModuleScope>) {
+        let mut item_ret = None;
+        let mut module_scope = None;
+        match &chain.value {
+            NameAccessChain_::One(name) => {
+                let mut r = None;
+                self.inner_first_visit(|s| {
+                    if let Some(v) = s.items.get(&name.value) {
+                        if !v.is_tparam() {
+                            item_ret = Some(v.clone());
+                            return true;
+                        }
+                    }
+                    false
+                });
+            }
+            NameAccessChain_::Two(name, member) => {
+                match name.value {
+                    LeadingNameAccess_::Name(name) => {
+                        self.inner_first_visit(|s| {
+                            if let Some(v) = s.items.get(&name.value) {
+                                match v {
+                                    Item::UseModule(_, _, members) => {
+                                        if let Some(item) =
+                                            members.as_ref().borrow().items.get(&member.value)
+                                        {
+                                            if !item.is_tparam() {
+                                                module_scope =
+                                                    members.as_ref().borrow().module_.clone();
+                                                item_ret = Some(ty);
+                                                // make inner_first_visit stop.
+                                                return true;
+                                            }
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            false
+                        });
+                    }
+                    LeadingNameAccess_::AnonymousAddress(_) => {
+                        unreachable!()
+                    }
+                }
+            }
+            NameAccessChain_::Three(chain_two, member) => self.visit_address(|top| {
+                let modules = top.address.get(&match &chain_two.value.0.value {
+                    LeadingNameAccess_::AnonymousAddress(x) => x.bytes,
+                    LeadingNameAccess_::Name(name) => name_to_addr.convert(name.value),
+                });
+                if modules.is_none() {
+                    return failed;
+                }
+                let modules = modules.unwrap();
+                let module = modules.modules.get(&chain_two.value.1.value);
+                if module.is_none() {
+                    return failed;
+                }
+                let module = module.unwrap();
+                module_scope = module.as_ref().borrow().module_.clone();
+
+                if let Some(item) = module.as_ref().borrow().items.get(&member.value) {
+                    item_ret = Some(item);
+                };
+            }),
+        }
+        return (item_ret, module_scope);
+    }
+
     pub(crate) fn find_name_chain_type<'a>(
         &self,
         chain: &NameAccessChain,

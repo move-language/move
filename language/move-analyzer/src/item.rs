@@ -278,6 +278,15 @@ impl std::fmt::Display for Item {
     }
 }
 
+impl Item {
+    pub(crate) fn is_tparam(&self) -> bool {
+        match self {
+            Self::TParam(_, _) => true,
+            _ => false,
+        }
+    }
+}
+
 pub enum Access {
     ApplyType(NameAccessChain, Box<ResolvedType>),
 

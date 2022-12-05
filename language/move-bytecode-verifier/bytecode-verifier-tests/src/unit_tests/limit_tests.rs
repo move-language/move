@@ -247,7 +247,6 @@ fn big_vec_unpacks() {
     let res = verify_module_with_config(
         &VerifierConfig {
             max_loop_depth: Some(5),
-            treat_friend_as_private: false,
             max_generic_instantiation_length: Some(32),
             max_function_parameters: Some(128),
             max_basic_blocks: Some(1024),

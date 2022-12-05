@@ -4,15 +4,11 @@
 
 //! Analysis which computes an annotation for each function whether
 
-use crate::{
-    dataflow_domains::SetDomain,
-    function_target::{FunctionData, FunctionTarget},
-    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
-    options::ProverOptions,
-    usage_analysis,
-};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
+
 use itertools::Itertools;
 use log::debug;
+
 use move_model::{
     model::{FunId, FunctionEnv, GlobalEnv, GlobalId, ModuleEnv, QualifiedId, VerificationScope},
     pragmas::{
@@ -20,7 +16,14 @@ use move_model::{
         DISABLE_INVARIANTS_IN_BODY_PRAGMA, VERIFY_PRAGMA,
     },
 };
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+
+use crate::{
+    dataflow_domains::SetDomain,
+    function_target::{FunctionData, FunctionTarget},
+    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
+    options::ProverOptions,
+    usage_analysis,
+};
 
 /// The annotation for information about verification.
 #[derive(Clone, Default)]
@@ -738,7 +741,7 @@ fn mark_verified(
             .get_data_mut(&actual_env.get_qualified_id(), &variant)
             .expect("function data available")
             .annotations
-            .get_or_default_mut::<VerificationInfoV2>();
+            .get_or_default_mut::<VerificationInfoV2>(true);
         if !info.verified {
             info.verified = true;
             mark_callees_inlined(&actual_env, variant, targets);
@@ -767,7 +770,9 @@ fn mark_inlined(
     let data = targets
         .get_data_mut(&fun_env.get_qualified_id(), &variant)
         .expect("function data defined");
-    let info = data.annotations.get_or_default_mut::<VerificationInfoV2>();
+    let info = data
+        .annotations
+        .get_or_default_mut::<VerificationInfoV2>(true);
     if !info.inlined {
         info.inlined = true;
         mark_callees_inlined(fun_env, variant, targets);

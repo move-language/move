@@ -2,6 +2,18 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{collections::BTreeSet, fmt, fmt::Formatter};
+
+use itertools::Itertools;
+use paste::paste;
+
+use move_binary_format::file_format::CodeOffset;
+use move_model::{
+    ast::{ConditionKind, Spec},
+    model::{FunctionEnv, GlobalEnv, QualifiedId, QualifiedInstId, StructId},
+    ty::Type,
+};
+
 use crate::{
     compositional_analysis::{CompositionalAnalysis, SummaryCache},
     dataflow_analysis::{DataflowAnalysis, TransferFunctions},
@@ -10,17 +22,6 @@ use crate::{
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     stackless_bytecode::{BorrowNode, Bytecode, Operation, PropKind},
 };
-
-use move_binary_format::file_format::CodeOffset;
-use move_model::{
-    model::{FunctionEnv, GlobalEnv, QualifiedId, QualifiedInstId, StructId},
-    ty::Type,
-};
-
-use itertools::Itertools;
-use move_model::ast::{ConditionKind, Spec};
-use paste::paste;
-use std::{collections::BTreeSet, fmt, fmt::Formatter};
 
 pub fn get_memory_usage<'env>(target: &FunctionTarget<'env>) -> &'env UsageState {
     target
@@ -331,7 +332,8 @@ impl FunctionTargetProcessor for UsageProcessor {
         mut data: FunctionData,
     ) -> FunctionData {
         let summary = Self::analyze(targets, func_env, &data);
-        data.annotations.set(summary);
+        // TODO(mengxu): re-check the code on whether recursion have an impact on the analysis here.
+        data.annotations.set(summary, true);
         data
     }
 

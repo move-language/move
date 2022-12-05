@@ -20,7 +20,6 @@ use move_binary_format::{
 #[derive(Debug, Clone)]
 pub struct VerifierConfig {
     pub max_loop_depth: Option<usize>,
-    pub treat_friend_as_private: bool,
     pub max_function_parameters: Option<usize>,
     pub max_generic_instantiation_length: Option<usize>,
     pub max_basic_blocks: Option<usize>,
@@ -92,7 +91,6 @@ impl Default for VerifierConfig {
     fn default() -> Self {
         Self {
             max_loop_depth: None,
-            treat_friend_as_private: false,
             max_function_parameters: None,
             max_generic_instantiation_length: None,
             max_basic_blocks: None,

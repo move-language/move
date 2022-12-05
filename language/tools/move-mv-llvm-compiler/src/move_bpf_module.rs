@@ -1,22 +1,9 @@
 use llvm_sys::core::{LLVMInt1TypeInContext, LLVMInt8TypeInContext, LLVMInt64TypeInContext, LLVMModuleCreateWithNameInContext, LLVMAddModuleFlag, LLVMConstInt, LLVMCreateBuilderInContext, LLVMSetTarget, LLVMAppendBasicBlockInContext, LLVMGetNextBasicBlock, LLVMInsertBasicBlockInContext, LLVMGetBasicBlockParent, LLVMPositionBuilderAtEnd, LLVMBuildRetVoid, LLVMBuildRet, LLVMGetTypeKind, LLVMTypeOf, LLVMInt64Type};
 
 use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef, LLVMValueRef, LLVMMetadataRef, LLVMModuleRef, LLVMDIBuilderRef, LLVMTypeRef, LLVMBasicBlockRef};
-//use inkwell::builder::Builder;
-//use inkwell::context::Context;
-/*use inkwell::debug_info::DICompileUnit;
-use inkwell::debug_info::DebugInfoBuilder;
-use inkwell::module::{Linkage, Module};
-use inkwell::OptimizationLevel;
-use inkwell::{targets::{TargetTriple, TargetMachine}};
-use inkwell::targets::{CodeModel, RelocMode};
-use inkwell::{targets::Target, targets::InitializationConfig};
-use inkwell::types::{
-    ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FunctionType, IntType, StringRadix,
-};*/
 use llvm_sys::target_machine::{LLVMCodeGenOptLevel, LLVMCodeModel, LLVMTargetMachineRef, LLVMCreateTargetMachine, LLVMTargetRef, LLVMRelocMode, LLVMGetTargetFromName};
 use llvm_sys::{LLVMModuleFlagBehavior, LLVMTypeKind};
 use llvm_sys::debuginfo::{LLVMDWARFEmissionKind, LLVMDWARFSourceLanguage, LLVMDIBuilderCreateCompileUnit, LLVMCreateDIBuilder, LLVMCreateDIBuilderDisallowUnresolved, LLVMDIBuilderCreateFile};
-//use llvm_sys::debuginfo::{DICompileUnit, DWARFEmissionKind, DWARFSourceLanguage, DebugInfoBuilder};
 
 use crate::support::{to_c_str, LLVMString};
 use std::any::Any;

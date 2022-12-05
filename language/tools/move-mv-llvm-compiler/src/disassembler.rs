@@ -24,7 +24,7 @@ use move_core_types::identifier::IdentStr;
 use move_coverage::coverage_map::{ExecCoverageMap, FunctionCoverage};
 use move_ir_types::location::Loc;
 
-use llvm_sys::{target_machine::{LLVMCodeGenOptLevel}, core::{LLVMModuleCreateWithNameInContext, LLVMDumpModule, LLVMFunctionType, LLVMVoidType}};
+use llvm_sys::{target_machine::{LLVMCodeGenOptLevel}, core::{LLVMModuleCreateWithNameInContext, LLVMDumpModule, LLVMFunctionType}};
 use std::{fs::File};
 use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef as LLVMContext, LLVMValueRef, LLVMMetadataRef, LLVMModuleRef, LLVMDIBuilderRef, LLVMTypeRef};
 
@@ -602,13 +602,14 @@ impl<'a> Disassembler<'a> {
             None => vec![],
         };
 
-        // TODO: Account for signedness.
+        let llvm_return_type = move_module.llvm_return_type_for(&ret_type);
+        // TODO: Account for signedness. Or maybe the signedness is incorporated as part of the use cases.
         let mut llvm_type_parameters = move_module.llvm_signed_type_for_sig_tokens(ret_type, type_parameters);
 
         let fn_value = unsafe {
             llvm_sys::core::LLVMAddFunction(move_module.module,
                 to_c_str(name.as_str()).as_ptr(),
-                Self::fn_type(LLVMVoidType(), &mut llvm_type_parameters, false)
+                Self::fn_type(llvm_return_type.llvm_type, &mut llvm_type_parameters, false)
             )
         };
 

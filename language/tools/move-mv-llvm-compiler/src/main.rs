@@ -41,7 +41,7 @@ struct Args {
     #[clap(short = 's', long = "script")]
     pub is_script: bool,
 
-    /// The path to the bytecode file to compile.
+    /// The path to the move bytecode file to compile.
     #[clap(short = 'b', long = "bytecode")]
     pub bytecode_file_path: String,
 

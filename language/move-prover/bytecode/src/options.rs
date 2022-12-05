@@ -84,6 +84,9 @@ pub struct ProverOptions {
     pub for_interpretation: bool,
     /// Whether to skip loop analysis.
     pub skip_loop_analysis: bool,
+    /// Optional names of native methods (qualified with module name, e.g., m::foo) implementing
+    /// mutable borrow semantics
+    pub borrow_natives: Vec<String>,
 }
 
 // add custom struct for mutation options
@@ -116,6 +119,7 @@ impl Default for ProverOptions {
             unconditional_abort_as_inconsistency: false,
             for_interpretation: false,
             skip_loop_analysis: false,
+            borrow_natives: vec![],
         }
     }
 }

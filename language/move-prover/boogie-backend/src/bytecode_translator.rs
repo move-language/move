@@ -25,7 +25,8 @@ use move_stackless_bytecode::{
     function_target_pipeline::{FunctionTargetsHolder, FunctionVariant, VerificationFlavor},
     mono_analysis,
     stackless_bytecode::{
-        AbortAction, BorrowEdge, BorrowNode, Bytecode, Constant, HavocKind, Operation, PropKind,
+        AbortAction, BorrowEdge, BorrowNode, Bytecode, Constant, HavocKind, IndexEdgeKind,
+        Operation, PropKind,
     },
 };
 
@@ -960,7 +961,7 @@ impl<'env> FunctionTranslator<'env> {
                                 .into_iter()
                                 .filter_map(|e| match e {
                                     BorrowEdge::Field(_, offset) => Some(format!("{}", offset)),
-                                    BorrowEdge::Index => Some("-1".to_owned()),
+                                    BorrowEdge::Index(_) => Some("-1".to_owned()),
                                     BorrowEdge::Direct => None,
                                     _ => unreachable!(),
                                 })
@@ -1755,7 +1756,6 @@ impl<'env> FunctionTranslator<'env> {
                 emitln!(writer, "$t{} := $Dereference({});", idx, src_str);
             }
             Reference(idx) => {
-                let dst_ty = &self.get_local_type(*idx).skip_reference().clone();
                 let dst_value = format!("$Dereference($t{})", idx);
                 let src_value = format!("$Dereference({})", src_str);
                 let get_path_index = |offset: usize| {
@@ -1773,7 +1773,6 @@ impl<'env> FunctionTranslator<'env> {
                 };
                 let update = if let BorrowEdge::Hyper(edges) = edge {
                     self.translate_write_back_update(
-                        dst_ty,
                         &mut || dst_value.clone(),
                         &get_path_index,
                         src_value,
@@ -1782,7 +1781,6 @@ impl<'env> FunctionTranslator<'env> {
                     )
                 } else {
                     self.translate_write_back_update(
-                        dst_ty,
                         &mut || dst_value.clone(),
                         &get_path_index,
                         src_value,
@@ -1801,9 +1799,19 @@ impl<'env> FunctionTranslator<'env> {
         }
     }
 
+    /// Returns read aggregate and write aggregate if fun_env matches one of the native functions
+    /// implementing custom mutable borrow.
+    fn get_borrow_native_aggregate_names(&self, fn_name: &String) -> Option<(String, String)> {
+        for f in &self.parent.options.borrow_aggregates {
+            if &f.name == fn_name {
+                return Some((f.read_aggregate.clone(), f.write_aggregate.clone()));
+            }
+        }
+        None
+    }
+
     fn translate_write_back_update(
         &self,
-        dst_ty: &Type,
         mk_dest: &mut dyn FnMut() -> String,
         get_path_index: &dyn Fn(usize) -> String,
         src: String,
@@ -1814,24 +1822,17 @@ impl<'env> FunctionTranslator<'env> {
             src
         } else {
             match &edges[at] {
-                BorrowEdge::Direct => self.translate_write_back_update(
-                    dst_ty,
-                    mk_dest,
-                    get_path_index,
-                    src,
-                    edges,
-                    at + 1,
-                ),
+                BorrowEdge::Direct => {
+                    self.translate_write_back_update(mk_dest, get_path_index, src, edges, at + 1)
+                }
                 BorrowEdge::Field(memory, offset) => {
                     let memory = memory.to_owned().instantiate(self.type_inst);
                     let struct_env = &self.parent.env.get_struct_qid(memory.to_qualified_id());
                     let field_env = &struct_env.get_field_by_offset(*offset);
                     let sel_fun = boogie_field_sel(field_env, &memory.inst);
                     let new_dest = format!("{}({})", sel_fun, (*mk_dest)());
-                    let new_dest_ty = &field_env.get_type().instantiate(&memory.inst);
                     let mut new_dest_needed = false;
                     let new_src = self.translate_write_back_update(
-                        new_dest_ty,
                         &mut || {
                             new_dest_needed = true;
                             format!("$$sel{}", at)
@@ -1855,15 +1856,19 @@ impl<'env> FunctionTranslator<'env> {
                         format!("{}({}, {})", update_fun, (*mk_dest)(), new_src)
                     }
                 }
-                BorrowEdge::Index => {
-                    // Index edge is used for both vectors and tables. Determine which operations
-                    // to use to read and update.
-                    let (read_aggregate, update_aggregate, elem_ty) = match dst_ty {
-                        Type::Vector(et) => ("ReadVec", "UpdateVec", et.as_ref().clone()),
-                        // If its not a vector, we assume it is the Table type.
-                        Type::Struct(_, _, inst) => ("GetTable", "UpdateTable", inst[1].clone()),
-                        _ => unreachable!(),
+                BorrowEdge::Index(index_edge_kind) => {
+                    // Index edge is used for both vectors, tables, and custom native methods
+                    // implementing similar functionality (mutable borrow). Determine which
+                    // operations to use to read and update.
+                    let (read_aggregate, update_aggregate) = match index_edge_kind {
+                        IndexEdgeKind::Vector => ("ReadVec".to_string(), "UpdateVec".to_string()),
+                        IndexEdgeKind::Table => ("GetTable".to_string(), "UpdateTable".to_string()),
+                        IndexEdgeKind::Custom(name) => {
+                            // panic here means that custom borrow natives options were not specified properly
+                            self.get_borrow_native_aggregate_names(name).unwrap()
+                        }
                     };
+
                     // Compute the offset into the path where to retrieve the index.
                     let offset = edges[0..at]
                         .iter()
@@ -1874,7 +1879,6 @@ impl<'env> FunctionTranslator<'env> {
                     let mut new_dest_needed = false;
                     // Recursively perform write backs for next edges
                     let new_src = self.translate_write_back_update(
-                        &elem_ty,
                         &mut || {
                             new_dest_needed = true;
                             format!("$$sel{}", at)

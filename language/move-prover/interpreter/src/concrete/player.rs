@@ -771,7 +771,7 @@ impl<'env> FunctionContext<'env> {
                         typed_args.remove(0),
                         local_state,
                     ),
-                    BorrowEdge::Index => {
+                    BorrowEdge::Index(_) => {
                         self.handle_write_back_ref_element(*idx, typed_args.remove(0), local_state)
                     }
                     BorrowEdge::Hyper(hyper) => self.handle_write_back_ref_hyper(
@@ -1219,7 +1219,7 @@ impl<'env> FunctionContext<'env> {
                 (Pointer::RefField(_, p_field_num), BorrowEdge::Field(_, e_field_num)) => {
                     p_field_num == e_field_num
                 }
-                (Pointer::RefElement(_, _), BorrowEdge::Index) => true,
+                (Pointer::RefElement(_, _), BorrowEdge::Index(_)) => true,
                 _ => false,
             }
         }
@@ -1471,7 +1471,7 @@ impl<'env> FunctionContext<'env> {
                             // NOTE: the local_idx argument can be any dummy value here
                             cur.borrow_ref_struct_field(*field_num, true, *callee_idx)
                         }
-                        (Pointer::RefElement(callee_idx, elem_num), BorrowEdge::Index) => {
+                        (Pointer::RefElement(callee_idx, elem_num), BorrowEdge::Index(_)) => {
                             if cfg!(debug_assertions) {
                                 assert!(cur.get_ty().is_ref_vector(Some(true)));
                             }
@@ -1499,7 +1499,7 @@ impl<'env> FunctionContext<'env> {
                         BorrowEdge::Field(_, field_num) => {
                             val.update_ref_struct_field(*field_num, cur)
                         }
-                        BorrowEdge::Index => {
+                        BorrowEdge::Index(_) => {
                             let elem_num = match ptr {
                                 Pointer::RefElement(_, elem_num) => elem_num,
                                 _ => unreachable!(),

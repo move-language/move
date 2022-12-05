@@ -26,6 +26,8 @@ pub struct VerifierConfig {
     pub max_basic_blocks: Option<usize>,
     pub max_value_stack_size: usize,
     pub max_type_nodes: Option<usize>,
+    pub max_push_size: Option<usize>,
+    pub max_dependency_depth: u64,
 }
 
 /// Helper for a "canonical" verification of a module.
@@ -97,6 +99,9 @@ impl Default for VerifierConfig {
             max_type_nodes: None,
             // Max size set to 1024 to match the size limit in the interpreter.
             max_value_stack_size: 1024,
+            // Max size set to 10000 to restrict number of pushes in one function
+            max_push_size: Some(10000),
+            max_dependency_depth: 100,
         }
     }
 }

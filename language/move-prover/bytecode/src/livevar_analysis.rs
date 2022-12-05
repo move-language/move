@@ -5,6 +5,13 @@
 // Live variable analysis with subsequent dead assignment elimination and
 // computation of new Destroy instructions.
 
+use std::collections::{BTreeMap, BTreeSet};
+
+use itertools::Itertools;
+
+use move_binary_format::file_format::CodeOffset;
+use move_model::{ast::TempIndex, model::FunctionEnv, ty::Type};
+
 use crate::{
     dataflow_analysis::{DataflowAnalysis, TransferFunctions},
     dataflow_domains::{AbstractDomain, JoinResult},
@@ -13,10 +20,6 @@ use crate::{
     stackless_bytecode::{AbortAction, AttrId, Bytecode, Label, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
-use itertools::Itertools;
-use move_binary_format::file_format::CodeOffset;
-use move_model::{ast::TempIndex, model::FunctionEnv, ty::Type};
-use std::collections::{BTreeMap, BTreeSet};
 
 /// The annotation for live variable analysis. For each code position, we have a set of local
 /// variable indices that are live just before the code offset, i.e. these variables are used
@@ -92,8 +95,9 @@ impl FunctionTargetProcessor for LiveVarAnalysisProcessor {
             let func_target = FunctionTarget::new(func_env, &data);
             let offset_to_live_refs = LiveVarAnnotation(Self::analyze(&func_target, &data.code));
             // Annotate function target with computed life variable data.
+            // TODO(mengxu): verify that recursion does not affect how live-var analysis is done
             data.annotations
-                .set::<LiveVarAnnotation>(offset_to_live_refs);
+                .set::<LiveVarAnnotation>(offset_to_live_refs, true);
         }
         data
     }

@@ -755,7 +755,9 @@ impl FunctionTargetProcessor for ReadWriteSetProcessor {
         let cache = SummaryCache::new(targets, func_env.module_env.env);
         let analysis = ReadWriteSetAnalysis { cache, func_env };
         let summary = analysis.summarize(&fun_target, initial_state);
-        data.annotations.set(summary);
+        // TODO(mengxu, sam): recursion seems to have an impact on how this analysis are conducted,
+        // revisit the code logic and update the fixedpoint calculation logic here.
+        data.annotations.set(summary, true);
         data
     }
 

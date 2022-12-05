@@ -386,9 +386,10 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
             analyzer.analyze(&data.code)
         };
         // Annotate function target with computed borrow data.
+        // TODO(mengxu): manually calculate the fixedpoint marker
         data.annotations
             .borrow_mut()
-            .set::<BorrowAnnotation>(borrow_annotation);
+            .set::<BorrowAnnotation>(borrow_annotation, true);
         data.annotations.borrow_mut().remove::<LiveVarAnnotation>();
         data
     }

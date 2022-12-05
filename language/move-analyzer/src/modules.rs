@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::item::*;
-use super::scope::*;
+
 use super::scopes::*;
 use super::types::*;
 use super::utils::*;
@@ -26,12 +26,9 @@ use move_package::source_package::manifest_parser::*;
 
 use move_symbol_pool::Symbol;
 
-use std::cell::RefCell;
-use std::collections::btree_map::BTreeMap;
 use std::collections::HashMap;
 
-use super::module_visitor::*;
-use std::{path::PathBuf, rc::Rc};
+use std::path::PathBuf;
 use walkdir::WalkDir;
 
 /// All Modules.
@@ -146,7 +143,13 @@ impl Modules {
         manifest: &PathBuf,
         mut call_back: impl FnMut(AccountAddress, Symbol, &ModuleMember),
     ) {
-        for (_, m) in self.modules.get(manifest).unwrap().sources.iter() {
+        for (_, m) in self
+            .modules
+            .get(manifest)
+            .unwrap_or(&Default::default())
+            .sources
+            .iter()
+        {
             for d in m.iter() {
                 match d {
                     Definition::Module(module) => {
@@ -180,7 +183,13 @@ impl Modules {
         manifest: &PathBuf,
         mut call_back: impl FnMut(AccountAddress, &ModuleDefinition),
     ) {
-        for (_, m) in self.modules.get(manifest).unwrap().sources.iter() {
+        for (_, m) in self
+            .modules
+            .get(manifest)
+            .unwrap_or(&Default::default())
+            .sources
+            .iter()
+        {
             for d in m.iter() {
                 match d {
                     Definition::Module(module) => {
@@ -217,6 +226,26 @@ impl Modules {
             ModuleMember::Struct(c) => call_back(addr, module_name, c),
             _ => {}
         });
+    }
+
+    pub(crate) fn with_script(&self, manifest: &PathBuf, mut call_back: impl FnMut(&Script)) {
+        for (_, scripts) in self
+            .modules
+            .get(manifest)
+            .unwrap_or(&Default::default())
+            .scripts
+            .iter()
+        {
+            for script in scripts.iter() {
+                match script {
+                    Definition::Module(_) => log::error!("module definition in script."),
+                    Definition::Address(_) => log::error!("address definition in script."),
+                    Definition::Script(s) => {
+                        call_back(s);
+                    }
+                }
+            }
+        }
     }
 
     pub(crate) fn with_use_decl(
@@ -257,6 +286,21 @@ impl Modules {
     ) {
         self.with_module_member(manifest, |addr, module_name, member| match member {
             ModuleMember::Spec(c) => call_back(addr, module_name, c),
+            _ => {}
+        });
+    }
+    pub(crate) fn with_spec_schema(
+        &self,
+        manifest: &PathBuf,
+        mut call_back: impl FnMut(AccountAddress, Symbol, Name, &SpecBlock),
+    ) {
+        self.with_module_member(manifest, |addr, module_name, member| match member {
+            ModuleMember::Spec(c) => match &c.value.target.value {
+                SpecBlockTarget_::Schema(name, _) => {
+                    call_back(addr, module_name, name.clone(), c);
+                }
+                _ => {}
+            },
             _ => {}
         });
     }
@@ -301,7 +345,7 @@ impl Modules {
             .map(|e| self.get_expr_type(e, scopes))
             .collect();
         // vec<T>(x): vector<T> returns a singleton vector.
-        // A lot of those build function.
+        // A lot of those build in function.
         let t_in_vector = exprs_types
             .get(0)
             .map(|x| x.clone())
@@ -370,8 +414,10 @@ impl Modules {
             SpecBuildInFun::UpdateField => first_t,
             SpecBuildInFun::Old => first_t,
             SpecBuildInFun::TRACE => first_t,
+            SpecBuildInFun::SpecDomain => first_t,
         })
     }
+
     /// If this is a build function call like `move_to`.
     pub(crate) fn get_move_build_in_call_type(
         &self,
@@ -796,6 +842,9 @@ pub struct IDEModule {
         Vec<move_compiler::parser::ast::Definition>,
     >,
 
+    /*
+        TODO tests.
+    */
     tests: HashMap<
         PathBuf, /*  file path  xxxx/abc.move  */
         Vec<move_compiler::parser::ast::Definition>,
@@ -868,7 +917,7 @@ pub(crate) fn infer_type_parameter_on_expression(
                 }
                 _ => {}
             },
-            /// function is not expression
+            //  function is not expression
             ResolvedType::Fun(_) => {}
             ResolvedType::Vec(x) => match &expr_type {
                 ResolvedType::Vec(y) => {

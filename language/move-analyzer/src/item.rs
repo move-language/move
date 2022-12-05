@@ -1,5 +1,3 @@
-use crate::modules::Modules;
-
 use super::scope::*;
 use super::types::*;
 
@@ -10,7 +8,6 @@ use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
-use std::collections::hash_map::HashMap;
 
 use std::rc::Rc;
 use std::str::FromStr;
@@ -85,6 +82,8 @@ pub enum Item {
     TParam(Name, Vec<Ability>),
 
     Dummy,
+
+    SpecSchema(Name, SpecBlock),
 }
 
 #[derive(Clone)]
@@ -118,7 +117,7 @@ impl std::fmt::Display for ItemFun {
 }
 
 impl Item {
-    ///
+    ///   
     pub(crate) fn to_type(&self, accept_tparam: bool) -> Option<ResolvedType> {
         // TODO maybe a parameter to decide return TParam or not.
         let x = match self {
@@ -152,6 +151,7 @@ impl Item {
             }
             Item::UseModule(_, _, _) => return None,
             Item::Dummy => return None,
+            Item::SpecSchema(_, _) => return Some(ResolvedType::UnKnown),
         };
         Some(x)
     }
@@ -176,6 +176,7 @@ impl Item {
             Item::Var(name, _) => name.loc(),
             Item::Field(f, _) => f.loc(),
             Item::Dummy => UNKNOWN_LOC,
+            Item::SpecSchema(name, _) => name.loc,
         }
     }
 
@@ -270,6 +271,9 @@ impl std::fmt::Display for Item {
             Item::Dummy => {
                 write!(f, "dummy")
             }
+            Item::SpecSchema(name, _) => {
+                write!(f, "schema {}", name.value.as_str())
+            }
         }
     }
 }
@@ -297,9 +301,21 @@ pub enum Access {
     KeyWords(&'static str),
     /////////////////
     /// Marco call
-    MacroCall(MacroCall),
+    MacroCall(MacroCall, NameAccessChain),
 
     Friend(NameAccessChain, ModuleName),
+
+    MoveBuildInFun(MoveBuildInFun, NameAccessChain),
+    SpecBuildInFun(SpecBuildInFun, NameAccessChain),
+
+    IncludeSchema(
+        NameAccessChain, // access name. TODO if this can only be a simple name,So we can make it simpler.
+        Name,            // schema name.
+    ),
+    SpecFor(
+        Name, // access name like spec xxx {}
+        Name, // for some item like fun xxx() {}
+    ), //
 }
 
 pub enum FriendElement {
@@ -325,13 +341,35 @@ impl std::fmt::Display for Access {
                 write!(f, "access_field {:?}->{:?}", from, to)
             }
             Access::KeyWords(k) => write!(f, "{}", *k),
-            Access::MacroCall(macro_) => write!(f, "{:?}", macro_),
+            Access::MacroCall(macro_, _) => write!(f, "{:?}", macro_),
             Access::Friend(name, item) => {
                 write!(
                     f,
                     "friend {}->{}",
                     get_name_chain_last_name(name).value.as_str(),
                     item
+                )
+            }
+            Access::MoveBuildInFun(b, _) => {
+                write!(f, "move buildin {}", b)
+            }
+            Access::SpecBuildInFun(b, _) => {
+                write!(f, "spec buildin{}", b)
+            }
+            Access::IncludeSchema(name, spec) => {
+                write!(
+                    f,
+                    "include {}->{}",
+                    get_name_chain_last_name(name).value.as_str(),
+                    spec.value.as_str()
+                )
+            }
+            Access::SpecFor(name, spec) => {
+                write!(
+                    f,
+                    "include {}->{}",
+                    name.value.as_str(),
+                    spec.value.as_str()
                 )
             }
         }
@@ -349,9 +387,17 @@ impl Access {
             Access::ExprAddressName(_) => (UNKNOWN_LOC, UNKNOWN_LOC),
             Access::AccessFiled(a, d, _) => (a.loc(), d.loc()),
             Access::KeyWords(_) => (UNKNOWN_LOC, UNKNOWN_LOC),
-            Access::MacroCall(_) => (UNKNOWN_LOC, UNKNOWN_LOC),
+            Access::MacroCall(_, chain) => (chain.loc, chain.loc),
 
             Access::Friend(name, item) => (get_name_chain_last_name(name).loc.clone(), item.loc()),
+            Access::MoveBuildInFun(b, chain) => {
+                (get_name_chain_last_name(chain).loc.clone(), UNKNOWN_LOC)
+            }
+            Access::SpecBuildInFun(b, chain) => {
+                (get_name_chain_last_name(chain).loc.clone(), UNKNOWN_LOC)
+            }
+            Access::IncludeSchema(chain, x) => (get_name_chain_last_name(chain).loc.clone(), x.loc),
+            Access::SpecFor(name, origin) => (name.loc, origin.loc),
         }
     }
     /// Get loc
@@ -361,6 +407,12 @@ impl Access {
                 NameAccessChain_::One(_) => return None,
                 NameAccessChain_::Two(m, _) => Some((m.loc, module.name.loc())),
                 NameAccessChain_::Three(x, _) => Some((x.value.1.loc, module.name.loc())),
+            },
+
+            Self::IncludeSchema(chain, name) => match &chain.value {
+                NameAccessChain_::One(_) => return None,
+                NameAccessChain_::Two(m, _) => Some((m.loc, name.loc)),
+                NameAccessChain_::Three(x, _) => Some((x.value.1.loc, name.loc)),
             },
 
             _ => None,
@@ -436,6 +488,13 @@ impl MoveBuildInFun {
         };
         Some(x)
     }
+    pub(crate) fn from_chain(s: &NameAccessChain) -> Option<Self> {
+        match &s.value {
+            NameAccessChain_::One(x) => Self::from_symbol(x.value),
+            NameAccessChain_::Two(_, _) => return None,
+            NameAccessChain_::Three(_, _) => return None,
+        }
+    }
 }
 
 impl std::fmt::Display for MoveBuildInFun {
@@ -459,12 +518,21 @@ pub enum SpecBuildInFun {
     UpdateField,
     Old,
     TRACE,
+    SpecDomain,
 }
 
 impl SpecBuildInFun {
     pub(crate) fn from_symbol(s: Symbol) -> Option<Self> {
         Self::from_str(s.as_str())
     }
+    pub(crate) fn from_chain(s: &NameAccessChain) -> Option<Self> {
+        match &s.value {
+            NameAccessChain_::One(s) => Self::from_symbol(s.value),
+            NameAccessChain_::Two(_, _) => return None,
+            NameAccessChain_::Three(_, _) => return None,
+        }
+    }
+
     pub(crate) fn from_str(s: &str) -> Option<Self> {
         let x = match s {
             "exists" => Self::Exists,
@@ -480,6 +548,7 @@ impl SpecBuildInFun {
             "update_field" => Self::UpdateField,
             "old" => Self::Old,
             "TRACE" => Self::TRACE,
+            crate::module_visitor::SPEC_DOMAIN => Self::SpecDomain,
             _ => return None,
         };
         Some(x)
@@ -500,6 +569,7 @@ impl SpecBuildInFun {
             Self::UpdateField => "update_field",
             Self::Old => "old",
             Self::TRACE => "TRACE",
+            Self::SpecDomain => crate::module_visitor::SPEC_DOMAIN,
         }
     }
 }

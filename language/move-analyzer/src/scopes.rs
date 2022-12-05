@@ -6,8 +6,7 @@ use super::types::*;
 use super::utils::*;
 use move_compiler::{parser::ast::*, shared::*};
 use move_core_types::account_address::AccountAddress;
-use move_core_types::effects::Op;
-use move_ir_types::location::Loc;
+
 use move_symbol_pool::Symbol;
 use std::borrow::BorrowMut;
 use std::cell::RefCell;
@@ -299,7 +298,6 @@ impl Scopes {
                                             members.as_ref().borrow().items.get(&member.value)
                                         {
                                             let _ = std::mem::replace(item_ret, Some(item.clone()));
-
                                             if let Some(ty) = item.to_type(false) {
                                                 r = Some(ty);
                                                 let _ =
@@ -353,6 +351,7 @@ impl Scopes {
         x(&self.addresses.borrow())
     }
 
+    #[must_use]
     pub(crate) fn enter_scope_guard(&self, s: Scope) -> ScopesGuarder {
         self.scopes.as_ref().borrow_mut().push(s);
         ScopesGuarder::new(self.clone())
@@ -453,6 +452,7 @@ impl Scopes {
 }
 
 /// RAII type pop on when enter a scope.
+#[must_use]
 pub(crate) struct ScopesGuarder(Scopes);
 
 impl ScopesGuarder {

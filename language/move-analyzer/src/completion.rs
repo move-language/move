@@ -4,10 +4,10 @@
 
 use crate::context::Context;
 use lsp_server::Request;
-use lsp_types::{CompletionItem, CompletionItemKind, CompletionParams, Position};
+use lsp_types::{CompletionItem, CompletionItemKind, Position};
 use move_compiler::parser::{
     keywords::{BUILTINS, CONTEXTUAL_KEYWORDS, KEYWORDS, PRIMITIVE_TYPES},
-    lexer::{Lexer, Tok},
+    lexer::Tok,
 };
 
 /// Constructs an `lsp_types::CompletionItem` with the given `label` and `kind`.

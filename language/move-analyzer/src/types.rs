@@ -4,15 +4,15 @@ use super::item::*;
 use crate::item::{self, ItemFun};
 use crate::scopes::Scopes;
 use move_command_line_common::files::FileHash;
-use move_command_line_common::types;
+
 use move_compiler::shared::Identifier;
 use move_compiler::{parser::ast::*, shared::*};
 use move_core_types::account_address::AccountAddress;
-use move_ir_types::location::{Loc, Spanned};
+use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
-use std::cell::RefCell;
+
 use std::collections::HashMap;
-use std::rc::Rc;
+
 use std::vec;
 
 #[derive(Clone)]
@@ -61,6 +61,12 @@ impl ResolvedType {
     pub(crate) fn is_vector(&self) -> Option<&'_ Self> {
         match self {
             ResolvedType::Vec(x) => Some(x.as_ref()),
+            _ => None,
+        }
+    }
+    pub(crate) fn is_range(&self) -> Option<()> {
+        match self {
+            ResolvedType::Range => Some(()),
             _ => None,
         }
     }

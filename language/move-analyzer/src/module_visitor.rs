@@ -2,26 +2,19 @@ use super::item::*;
 use super::scope::*;
 use super::scopes::*;
 use super::types::*;
-use super::utils::*;
+use move_compiler::shared::Name;
+
 use move_core_types::account_address::*;
 
-use anyhow::{Ok, Result};
-
-use move_command_line_common::files::FileHash;
-
-use move_compiler::parser::ast::Definition;
-
+use move_compiler::parser::ast::*;
 use move_compiler::shared::Identifier;
-use move_compiler::{parser::ast::*, shared::*};
 
 use move_ir_types::location::Spanned;
-use move_package::source_package::layout::SourcePackageLayout;
-use move_package::source_package::manifest_parser::*;
 
 use move_symbol_pool::Symbol;
 
 use std::cell::RefCell;
-use std::collections::btree_map::BTreeMap;
+
 use std::collections::HashMap;
 
 use std::{path::PathBuf, rc::Rc};
@@ -147,18 +140,32 @@ impl Modules {
             let _guard = scopes.clone_scope_and_enter(addr, module_name);
             self.visit_function(f, scopes, visitor);
         });
+        // enter schema.
+        self.with_spec_schema(manifest, |addr, module_name, name, spec| {
+            //
+            let item = ItemOrAccess::Item(Item::SpecSchema(name.clone(), spec.clone()));
+            visitor.handle_item(self, scopes, &item);
+            scopes.enter_top_item(self, addr, module_name, name.value, item);
+        });
 
         self.with_spec(manifest, |addr, module_name, spec| {
+            let _guard = scopes.clone_scope_and_enter(addr, module_name);
             self.visit_spec(spec, scopes, visitor);
         });
     }
 
     pub fn visit_spec(&self, spec: &SpecBlock, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
         let _guard = scopes.enter_scope_guard(Scope::new_spec());
-
         match &spec.value.target.value {
-            SpecBlockTarget_::Code => {}
-            SpecBlockTarget_::Module => {}
+            SpecBlockTarget_::Code => {
+                // Nothing to do here.
+            }
+            SpecBlockTarget_::Module => {
+                // TODO
+                // here should to jump to module definition.
+                // But We don't have the loc to the `module` key words.
+            }
+
             SpecBlockTarget_::Member(m, _) => {
                 let mut item_ret = None;
                 let chain = Spanned {
@@ -195,9 +202,11 @@ impl Modules {
                     }
                 }
                 // TODO why spec have function signature.
+                // 看起来是重复定义，必须和函数的定义一模一样。
             }
             SpecBlockTarget_::Schema(_, _) => {
-                log::error!("handle schema.");
+                // Handled before.
+                // Nothing to do.
             } // enter parameter and ret.
         }
 
@@ -228,17 +237,27 @@ impl Modules {
                 exp,
                 additional_exps,
             } => {
-                // TODO what is Invariant(Vec<(Name, Vec<Ability>)>),
-                self.visit_expr(exp, scopes, visitor);
-                if visitor.finished() {
-                    return;
-                }
-                for exp in additional_exps.iter() {
+                let empty = vec![];
+                let type_parameters = get_spec_condition_type_parameters(kind).unwrap_or(&empty);
+                scopes.enter_scope(|scopes: &Scopes| {
+                    // enter type parameters.
+                    for (name, ab) in type_parameters.iter() {
+                        let item = ItemOrAccess::Item(Item::TParam(name.clone(), ab.clone()));
+                        visitor.handle_item(self, scopes, &item);
+
+                        scopes.enter_item(self, name.value, item);
+                    }
                     self.visit_expr(exp, scopes, visitor);
                     if visitor.finished() {
                         return;
                     }
-                }
+                    for exp in additional_exps.iter() {
+                        self.visit_expr(exp, scopes, visitor);
+                        if visitor.finished() {
+                            return;
+                        }
+                    }
+                });
             }
             SpecBlockMember_::Function {
                 uninterpreted,
@@ -310,7 +329,6 @@ impl Modules {
                 let item = ItemOrAccess::Item(Item::Var(Var(name.clone()), ty));
                 visitor.handle_item(self, scopes, &item);
                 scopes.enter_item(self, name.value, item);
-
                 self.visit_expr(def, scopes, visitor);
             }
             SpecBlockMember_::Update { lhs, rhs } => {
@@ -319,16 +337,113 @@ impl Modules {
             }
             SpecBlockMember_::Include { properties, exp } => {
                 // TODO.
+                let chain = match &exp.value {
+                    Exp_::Name(chain, _) => Some(chain),
+                    _ => None,
+                };
+                match chain {
+                    Some(chain) => {
+                        let mut item_ret = None;
+                        let mut module_ret = None;
+                        scopes.find_name_chain_type(
+                            chain,
+                            &mut item_ret,
+                            &mut module_ret,
+                            self,
+                            false,
+                        );
+                        if let Some(item_ret) = item_ret.clone() {
+                            let item = ItemOrAccess::Access(Access::ExprAccessChain(
+                                chain.clone(),
+                                module_ret,
+                                Box::new(item_ret),
+                            ));
+                            visitor.handle_item(self, scopes, &item);
+                            if visitor.finished() {
+                                return;
+                            }
+                        }
+                        match &item_ret {
+                            Some(x) => match x {
+                                // TODO should I visit spec block.
+                                Item::SpecSchema(_, block) => {
+                                    self.visit_spec(block, scopes, visitor);
+                                }
+                                _ => {}
+                            },
+                            None => {}
+                        }
+                    }
+                    None => {}
+                }
             }
+
             SpecBlockMember_::Apply {
                 exp,
                 patterns,
                 exclusion_patterns,
             } => {
                 // TODO.
+                let rule = match &exp.value {
+                    Exp_::Name(chain, _) => Some(chain),
+                    _ => None,
+                };
+                if let Some(rule) = rule {
+                    let mut item_ret = None;
+                    scopes.find_name_chain_type(&rule, &mut item_ret, &mut None, self, false);
+                    match &item_ret {
+                        Some(x) => match x {
+                            Item::SpecSchema(name, _) => {
+                                let item = ItemOrAccess::Access(Access::IncludeSchema(
+                                    rule.clone(),
+                                    name.clone(),
+                                ));
+                                visitor.handle_item(self, scopes, &item);
+                            }
+                            _ => {}
+                        },
+                        None => {}
+                    }
+                }
+
+                for x in patterns.iter().chain(exclusion_patterns.iter()) {
+                    for x in x.value.name_pattern.iter() {
+                        match &x.value {
+                            SpecApplyFragment_::Wildcard => {}
+                            SpecApplyFragment_::NamePart(name) => {
+                                let mut item_ret = None;
+                                let mut module_ret = None;
+                                let chain = Spanned {
+                                    loc: name.loc,
+                                    value: NameAccessChain_::One(name.clone()),
+                                };
+                                scopes.find_name_chain_type(
+                                    &chain,
+                                    &mut item_ret,
+                                    &mut module_ret,
+                                    self,
+                                    false,
+                                );
+                                if let Some(x) = item_ret {
+                                    let item = ItemOrAccess::Access(Access::ExprAccessChain(
+                                        chain.clone(),
+                                        module_ret,
+                                        Box::new(x),
+                                    ));
+                                    visitor.handle_item(self, scopes, &item);
+                                    if visitor.finished() {
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
+
             SpecBlockMember_::Pragma { properties } => {
-                // TODO.
+                // https://github.com/move-language/move/blob/main/language/move-prover/doc/user/spec-lang.md#pragmas-and-properties
+                // TODO Does't create a local variable all something,handle this later.
             }
         }
     }
@@ -662,8 +777,27 @@ impl Modules {
             Exp_::Call(ref chain, is_macro, ref types, ref exprs) => {
                 if *is_macro {
                     let c = MacroCall::from_chain(chain);
-                    let item = ItemOrAccess::Access(Access::MacroCall(c));
+                    let item = ItemOrAccess::Access(Access::MacroCall(c, chain.clone()));
                     visitor.handle_item(self, scopes, &item);
+                } else if let Some(b) = {
+                    let x = MoveBuildInFun::from_chain(chain);
+                    //TODO should under_function have this build in function.
+                    x
+                } {
+                    let mut item = ItemOrAccess::Access(Access::MoveBuildInFun(b, chain.clone()));
+                    visitor.handle_item(self, scopes, &item);
+                    if visitor.finished() {
+                        return;
+                    }
+                } else if let Some(b) = {
+                    let x = SpecBuildInFun::from_chain(chain);
+                    x.map(|x| scopes.under_function().map(|_| x)).flatten()
+                } {
+                    let mut item = ItemOrAccess::Access(Access::SpecBuildInFun(b, chain.clone()));
+                    visitor.handle_item(self, scopes, &item);
+                    if visitor.finished() {
+                        return;
+                    }
                 } else {
                     let mut item = Some(Item::new_dummy());
                     let mut module = None;
@@ -770,10 +904,75 @@ impl Modules {
             }
             Exp_::Block(b) => self.visit_block(b, scopes, visitor),
             Exp_::Lambda(_, _) => {
-                log::error!("handle Lambda");
+                // TODO have lambda expression  in ast structure.
+                // But I don't find in msl spec.
+                // for bind in binds.value.iter() {
+                //     self.visit_bind(bind, &ResolvedType::UnKnown, scopes, visitor);
+                //     if visitor.finished() {
+                //         return;
+                //     }
+                // }
+                // self.visit_expr(expr.as_ref(), scopes, visitor);
+                log::error!("lambda expression in ast.");
             }
-            Exp_::Quant(_, _, _, _, _) => {
-                log::error!("handle Quant");
+
+            Exp_::Quant(_, binds, bodies, where_, result) => {
+                // TODO look list t can be use a type alias.
+                // forall t: type, addr: address where exists<R<t>>(addr): exists<T<t>>(addr)
+                scopes.enter_scope(|scopes| {
+                    for bind_expr in binds.value.iter() {
+                        let bind = &bind_expr.value.0;
+                        let expr = &bind_expr.value.1;
+                        let ty = self.get_expr_type(&expr, scopes);
+                        let is_spec_domain: bool = match &expr.value {
+                            Exp_::Call(chain, _, _, _) => match &chain.value {
+                                NameAccessChain_::One(name) => {
+                                    if name.value.as_str() == SPEC_DOMAIN {
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                }
+                                NameAccessChain_::Two(_, _) => false,
+                                NameAccessChain_::Three(_, _) => false,
+                            },
+                            _ => false,
+                        };
+                        match &bind.value {
+                            Bind_::Var(var) => {
+                                let ty = if is_spec_domain {
+                                    ty
+                                } else if let Some(vec_ty) = ty.is_vector() {
+                                    vec_ty.clone()
+                                } else if let Some(_) = ty.is_range() {
+                                    ResolvedType::new_build_in(BuildInType::NumType)
+                                } else {
+                                    log::error!("bind the wrong type");
+                                    ty
+                                };
+                                let item = ItemOrAccess::Item(Item::Parameter(var.clone(), ty));
+                                visitor.handle_item(self, scopes, &item);
+                                scopes.enter_item(self, var.value(), item);
+                            }
+                            _ => {
+                                // Not supported,according to the msl spec.
+                            }
+                        }
+                        // bodies
+                        for body in bodies.iter() {
+                            scopes.enter_scope(|scopes| {
+                                for exp in body.iter() {
+                                    self.visit_expr(exp, scopes, visitor);
+                                }
+                            });
+                        }
+                        //
+                        if let Some(exp) = where_ {
+                            self.visit_expr(exp.as_ref(), scopes, visitor);
+                        };
+                        self.visit_expr(result.as_ref(), scopes, visitor);
+                    }
+                });
             }
             Exp_::ExpList(list) => {
                 for e in list.iter() {
@@ -994,5 +1193,16 @@ impl Modules {
                 }
             }
         }
+    }
+}
+
+pub(crate) const SPEC_DOMAIN: &str = "$spec_domain";
+
+fn get_spec_condition_type_parameters(x: &SpecConditionKind) -> Option<&Vec<(Name, Vec<Ability>)>> {
+    match &x.value {
+        SpecConditionKind_::Invariant(x)
+        | SpecConditionKind_::InvariantUpdate(x)
+        | SpecConditionKind_::Axiom(x) => Some(x),
+        _ => None,
     }
 }

@@ -3,16 +3,15 @@ use super::item::*;
 
 use super::types::*;
 
-use move_compiler::shared::*;
-use move_compiler::{parser::ast::*, shared::*};
+use move_compiler::parser::ast::*;
+
 use move_core_types::account_address::AccountAddress;
-use move_ir_types::location::Loc;
+
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::vec;
 
 #[derive(Default, Clone)]
 pub struct Scope {

@@ -14,8 +14,7 @@ pub mod module_visitor;
 pub mod modules;
 pub mod scope;
 pub mod scopes;
-// pub mod symbols;
+
 pub mod types;
 pub mod utils;
 pub mod vfs;
-use move_core_types::account_address::AccountAddress;

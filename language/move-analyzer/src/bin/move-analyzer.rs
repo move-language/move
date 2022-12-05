@@ -14,13 +14,10 @@ use lsp_types::{
 use std::{
     collections::BTreeMap,
     path::Path,
-    sync::{Arc, Mutex},
-    thread,
 };
 
 use move_analyzer::{
     completion::on_completion_request, context::Context, goto_definition, modules::Modules,
-    vfs::VirtualFileSystem,
 };
 use move_symbol_pool::Symbol;
 use url::Url;
@@ -76,7 +73,7 @@ fn main() {
         connection,
     };
 
-    let (id, client_response) = context
+    let (id, _client_response) = context
         .connection
         .initialize_start()
         .expect("could not start connection initialization");
@@ -129,7 +126,7 @@ fn main() {
     })
     .expect("could not serialize server capabilities");
 
-    let (diag_sender, diag_receiver) = bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
+    let (_diag_sender, diag_receiver) = bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
 
     context
         .connection
@@ -233,7 +230,7 @@ fn on_response(_context: &Context, _response: &Response) {
     log::error!("handle response from client");
 }
 
-fn on_notification(context: &mut Context, notification: &Notification) {
+fn on_notification(_context: &mut Context, notification: &Notification) {
     match notification.method.as_str() {
         lsp_types::notification::DidOpenTextDocument::METHOD
         | lsp_types::notification::DidChangeTextDocument::METHOD

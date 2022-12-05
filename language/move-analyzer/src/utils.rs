@@ -10,8 +10,6 @@ use move_symbol_pool::Symbol;
 use std::collections::HashMap;
 use std::{path::*, vec};
 
-use crate::modules::Ending;
-
 /// Converts a location from the byte index format to the line/character (Position) format, where
 /// line/character are 0-based.
 pub fn get_loc(

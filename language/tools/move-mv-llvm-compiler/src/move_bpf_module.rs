@@ -1,4 +1,4 @@
-use llvm_sys::core::{LLVMInt1TypeInContext, LLVMInt8TypeInContext, LLVMInt64TypeInContext, LLVMModuleCreateWithNameInContext, LLVMAddModuleFlag, LLVMConstInt, LLVMCreateBuilderInContext, LLVMSetTarget, LLVMAppendBasicBlockInContext, LLVMGetNextBasicBlock, LLVMInsertBasicBlockInContext, LLVMGetBasicBlockParent, LLVMPositionBuilderAtEnd, LLVMBuildRetVoid, LLVMBuildRet, LLVMGetTypeKind, LLVMTypeOf};
+use llvm_sys::core::{LLVMInt1TypeInContext, LLVMInt8TypeInContext, LLVMInt64TypeInContext, LLVMModuleCreateWithNameInContext, LLVMAddModuleFlag, LLVMConstInt, LLVMCreateBuilderInContext, LLVMSetTarget, LLVMAppendBasicBlockInContext, LLVMGetNextBasicBlock, LLVMInsertBasicBlockInContext, LLVMGetBasicBlockParent, LLVMPositionBuilderAtEnd, LLVMBuildRetVoid, LLVMBuildRet, LLVMGetTypeKind, LLVMTypeOf, LLVMInt64Type};
 
 use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef, LLVMValueRef, LLVMMetadataRef, LLVMModuleRef, LLVMDIBuilderRef, LLVMTypeRef, LLVMBasicBlockRef};
 //use inkwell::builder::Builder;
@@ -467,6 +467,14 @@ impl<'a> MoveBPFModule<'a> {
                 default => LLVMBuildRet(self.builder, value)
             }
      }  ;
+    }
+    pub fn llvm_return_type_for(&self, ret_type : &Vec<SignatureToken>) -> LLVMSignedType {
+        match ret_type[0] {
+            SignatureToken::Bool => LLVMSignedType::new(unsafe{LLVMInt1TypeInContext(*self.context)}, false),
+            SignatureToken::U8 => LLVMSignedType::new(unsafe{LLVMInt8TypeInContext(*self.context)}, true), // FIXME: In llvm signedness is achieved with `cast` operation.
+            SignatureToken::U64 => LLVMSignedType::new(unsafe{LLVMInt64TypeInContext(*self.context)}, true), // FIXME: The signedness
+            _ => unimplemented!("Remaining Signature tokens to be implemented"),
+        }
     }
 
 }

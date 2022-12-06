@@ -4,16 +4,7 @@
 
 // Instrumentation pass which injects global invariants into the bytecode.
 
-use crate::{
-    function_data_builder::FunctionDataBuilder,
-    function_target::{FunctionData, FunctionTarget},
-    function_target_pipeline::{
-        FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant, VerificationFlavor,
-    },
-    global_invariant_analysis::{self, PerFunctionRelevance},
-    options::ProverOptions,
-    stackless_bytecode::{Bytecode, Operation, PropKind},
-};
+use std::collections::{BTreeMap, BTreeSet};
 
 use move_binary_format::file_format::CodeOffset;
 use move_model::{
@@ -24,7 +15,16 @@ use move_model::{
     ty::Type,
 };
 
-use std::collections::{BTreeMap, BTreeSet};
+use crate::{
+    function_data_builder::FunctionDataBuilder,
+    function_target::{FunctionData, FunctionTarget},
+    function_target_pipeline::{
+        FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant, VerificationFlavor,
+    },
+    global_invariant_analysis::{self, PerFunctionRelevance},
+    options::ProverOptions,
+    stackless_bytecode::{Bytecode, Operation, PropKind},
+};
 
 const GLOBAL_INVARIANT_FAILS_MESSAGE: &str = "global memory invariant does not hold";
 
@@ -111,8 +111,9 @@ impl FunctionTargetProcessor for GlobalInvariantInstrumentationProcessor {
     fn process(
         &self,
         _targets: &mut FunctionTargetsHolder,
-        fun_env: &FunctionEnv<'_>,
+        fun_env: &FunctionEnv,
         data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         if fun_env.is_native() || fun_env.is_intrinsic() {
             // nothing to do

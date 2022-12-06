@@ -372,8 +372,9 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
     fn process(
         &self,
         targets: &mut FunctionTargetsHolder,
-        func_env: &FunctionEnv<'_>,
+        func_env: &FunctionEnv,
         mut data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         let borrow_annotation = if func_env.is_native_or_intrinsic() {
             native_annotation(func_env, &self.borrow_natives)

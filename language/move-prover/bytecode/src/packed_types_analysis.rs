@@ -178,8 +178,9 @@ impl FunctionTargetProcessor for PackedTypesProcessor {
     fn process(
         &self,
         targets: &mut FunctionTargetsHolder,
-        func_env: &FunctionEnv<'_>,
+        func_env: &FunctionEnv,
         mut data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         let initial_state = PackedTypesState::default();
         let fun_target = FunctionTarget::new(func_env, &data);

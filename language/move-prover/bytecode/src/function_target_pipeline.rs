@@ -91,8 +91,9 @@ pub trait FunctionTargetProcessor {
     fn process(
         &self,
         _targets: &mut FunctionTargetsHolder,
-        _fun_env: &FunctionEnv<'_>,
+        _fun_env: &FunctionEnv,
         _data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         unimplemented!()
     }
@@ -103,10 +104,11 @@ pub trait FunctionTargetProcessor {
     fn process_and_maybe_remove(
         &self,
         targets: &mut FunctionTargetsHolder,
-        func_env: &FunctionEnv<'_>,
+        func_env: &FunctionEnv,
         data: FunctionData,
+        scc_opt: Option<&[FunctionEnv]>,
     ) -> Option<FunctionData> {
-        Some(self.process(targets, func_env, data))
+        Some(self.process(targets, func_env, data, scc_opt))
     }
 
     /// Returns a name for this processor. This should be suitable as a file suffix.
@@ -272,12 +274,19 @@ impl FunctionTargetsHolder {
     }
 
     /// Processes the function target data for given function.
-    fn process(&mut self, func_env: &FunctionEnv<'_>, processor: &dyn FunctionTargetProcessor) {
+    fn process(
+        &mut self,
+        func_env: &FunctionEnv,
+        processor: &dyn FunctionTargetProcessor,
+        scc_opt: Option<&[FunctionEnv]>,
+    ) {
         let id = func_env.get_qualified_id();
         for variant in self.get_target_variants(func_env) {
             // Remove data so we can own it.
             let data = self.remove_target_data(&id, &variant);
-            if let Some(processed_data) = processor.process_and_maybe_remove(self, func_env, data) {
+            if let Some(processed_data) =
+                processor.process_and_maybe_remove(self, func_env, data, scc_opt)
+            {
                 // Put back processed data.
                 self.insert_target_data(&id, variant, processed_data);
             }
@@ -483,12 +492,14 @@ impl FunctionTargetPipeline {
                     match item {
                         Either::Left(fid) => {
                             let func_env = env.get_function(*fid);
-                            targets.process(&func_env, processor.as_ref());
+                            targets.process(&func_env, processor.as_ref(), None);
                         }
                         Either::Right(scc) => 'fixedpoint: loop {
+                            let scc_env: Vec<_> =
+                                scc.iter().map(|fid| env.get_function(*fid)).collect();
                             for fid in scc {
                                 let func_env = env.get_function(*fid);
-                                targets.process(&func_env, processor.as_ref());
+                                targets.process(&func_env, processor.as_ref(), Some(&scc_env));
                             }
 
                             // check for fixedpoint in summaries

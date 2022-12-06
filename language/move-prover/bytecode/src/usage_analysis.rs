@@ -328,8 +328,9 @@ impl FunctionTargetProcessor for UsageProcessor {
     fn process(
         &self,
         targets: &mut FunctionTargetsHolder,
-        func_env: &FunctionEnv<'_>,
+        func_env: &FunctionEnv,
         mut data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         let summary = Self::analyze(targets, func_env, &data);
         // TODO(mengxu): re-check the code on whether recursion have an impact on the analysis here.

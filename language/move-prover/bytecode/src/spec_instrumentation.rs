@@ -4,13 +4,20 @@
 
 // Transformation which injects specifications (Move function spec blocks) into the bytecode.
 
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt,
+};
+
 use itertools::Itertools;
 
 use move_model::{
     ast,
-    ast::{ExpData, TempIndex, Value},
+    ast::{Exp, ExpData, TempIndex, Value},
+    exp_generator::ExpGenerator,
     model::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleId, QualifiedId, QualifiedInstId, StructId},
     pragmas::{ABORTS_IF_IS_PARTIAL_PRAGMA, EMITS_IS_PARTIAL_PRAGMA, EMITS_IS_STRICT_PRAGMA},
+    spec_translator::{SpecTranslator, TranslatedSpec},
     ty::{Type, TypeDisplayContext, BOOL_TYPE, NUM_TYPE},
 };
 
@@ -28,15 +35,6 @@ use crate::{
         Operation, PropKind,
     },
     usage_analysis, verification_analysis,
-};
-use move_model::{
-    ast::Exp,
-    exp_generator::ExpGenerator,
-    spec_translator::{SpecTranslator, TranslatedSpec},
-};
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fmt,
 };
 
 const REQUIRES_FAILS_MESSAGE: &str = "precondition does not hold at this call";
@@ -100,8 +98,9 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
     fn process(
         &self,
         targets: &mut FunctionTargetsHolder,
-        fun_env: &FunctionEnv<'_>,
+        fun_env: &FunctionEnv,
         mut data: FunctionData,
+        scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         assert_eq!(data.variant, FunctionVariant::Baseline);
         if fun_env.is_native() || fun_env.is_intrinsic() {
@@ -119,7 +118,8 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
             // out of this data and into the clone.
             let mut verification_data =
                 data.fork(FunctionVariant::Verification(VerificationFlavor::Regular));
-            verification_data = Instrumenter::run(&options, targets, fun_env, verification_data);
+            verification_data =
+                Instrumenter::run(&options, targets, fun_env, verification_data, scc_opt);
             targets.insert_target_data(
                 &fun_env.get_qualified_id(),
                 verification_data.variant.clone(),
@@ -129,7 +129,7 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
 
         // Instrument baseline variant only if it is inlined.
         if is_inlined {
-            Instrumenter::run(&options, targets, fun_env, data)
+            Instrumenter::run(&options, targets, fun_env, data, scc_opt)
         } else {
             // Clear code but keep function data stub.
             // TODO(refactoring): the stub is currently still needed because boogie_wrapper
@@ -197,6 +197,7 @@ impl<'a> Instrumenter<'a> {
         targets: &mut FunctionTargetsHolder,
         fun_env: &FunctionEnv<'a>,
         data: FunctionData,
+        scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         // Pre-collect properties in the original function data
         let props: Vec<_> = data
@@ -292,8 +293,8 @@ impl<'a> Instrumenter<'a> {
         let mut data = instrumenter.builder.data;
         let reach_def = ReachingDefProcessor::new();
         let live_vars = LiveVarAnalysisProcessor::new_no_annotate();
-        data = reach_def.process(targets, fun_env, data);
-        live_vars.process(targets, fun_env, data)
+        data = reach_def.process(targets, fun_env, data, scc_opt);
+        live_vars.process(targets, fun_env, data, scc_opt)
     }
 
     fn is_verified(&self) -> bool {

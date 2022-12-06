@@ -250,6 +250,7 @@ fn big_vec_unpacks() {
             max_generic_instantiation_length: Some(32),
             max_function_parameters: Some(128),
             max_basic_blocks: Some(1024),
+            max_push_size: Some(10000),
             ..Default::default()
         },
         &module,
@@ -258,4 +259,414 @@ fn big_vec_unpacks() {
         res.unwrap_err().major_status(),
         StatusCode::VALUE_STACK_PUSH_OVERFLOW
     );
+}
+
+const MAX_STRUCTS: usize = 200;
+const MAX_FIELDS: usize = 30;
+const MAX_FUNCTIONS: usize = 1000;
+
+#[test]
+fn max_struct_test() {
+    let config = VerifierConfig {
+        max_struct_definitions: Some(MAX_STRUCTS),
+        max_fields_in_struct: Some(MAX_FIELDS),
+        max_function_definitions: Some(MAX_FUNCTIONS),
+        ..Default::default()
+    };
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, 0);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    multi_struct(&mut module, 1);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS / 2);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS * 2);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(
+        res.unwrap_err().major_status(),
+        StatusCode::MAX_STRUCT_DEFINITIONS_REACHED,
+    );
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS + 1);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(
+        res.unwrap_err().major_status(),
+        StatusCode::MAX_STRUCT_DEFINITIONS_REACHED,
+    );
+}
+
+#[test]
+fn max_fields_test() {
+    let config = VerifierConfig {
+        max_struct_definitions: Some(MAX_STRUCTS),
+        max_fields_in_struct: Some(MAX_FIELDS),
+        max_function_definitions: Some(MAX_FUNCTIONS),
+        ..Default::default()
+    };
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, 1);
+    multi_fields(&mut module, MAX_FIELDS / 2);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, 10);
+    multi_fields(&mut module, MAX_FIELDS - 1);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, 50);
+    multi_fields(&mut module, MAX_FIELDS);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, 100);
+    multi_fields(&mut module, MAX_FIELDS + 1);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(
+        res.unwrap_err().major_status(),
+        StatusCode::MAX_FIELD_DEFINITIONS_REACHED,
+    );
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, 2);
+    multi_fields(&mut module, MAX_FIELDS * 2);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(
+        res.unwrap_err().major_status(),
+        StatusCode::MAX_FIELD_DEFINITIONS_REACHED,
+    );
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, 50);
+    multi_fields_except_one(&mut module, 0, 2, MAX_FIELDS + 1);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(
+        res.unwrap_err().major_status(),
+        StatusCode::MAX_FIELD_DEFINITIONS_REACHED,
+    );
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, 20);
+    multi_fields_except_one(&mut module, 19, MAX_FIELDS, MAX_FIELDS + 1);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(
+        res.unwrap_err().major_status(),
+        StatusCode::MAX_FIELD_DEFINITIONS_REACHED,
+    );
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, 100);
+    multi_fields_except_one(&mut module, 50, 1, MAX_FIELDS * 2);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(
+        res.unwrap_err().major_status(),
+        StatusCode::MAX_FIELD_DEFINITIONS_REACHED,
+    );
+}
+
+#[test]
+fn max_functions_test() {
+    let config = VerifierConfig {
+        max_struct_definitions: Some(MAX_STRUCTS),
+        max_fields_in_struct: Some(MAX_FIELDS),
+        max_function_definitions: Some(MAX_FUNCTIONS),
+        ..Default::default()
+    };
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, 1);
+    multi_functions(&mut module, 1);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, 10);
+    multi_functions(&mut module, MAX_FUNCTIONS / 2);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, 5);
+    multi_functions(&mut module, MAX_FUNCTIONS);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, 5);
+    multi_functions(&mut module, MAX_FUNCTIONS - 1);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, 5);
+    multi_functions(&mut module, MAX_FUNCTIONS + 1);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(
+        res.unwrap_err().major_status(),
+        StatusCode::MAX_FUNCTION_DEFINITIONS_REACHED,
+    );
+    let mut module = leaf_module("M");
+    multi_functions(&mut module, MAX_FUNCTIONS * 2);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(
+        res.unwrap_err().major_status(),
+        StatusCode::MAX_FUNCTION_DEFINITIONS_REACHED,
+    );
+}
+
+#[test]
+fn max_mixed_config_test() {
+    let config = VerifierConfig {
+        max_struct_definitions: Some(MAX_STRUCTS),
+        max_fields_in_struct: Some(MAX_FIELDS),
+        max_function_definitions: Some(MAX_FUNCTIONS),
+        ..Default::default()
+    };
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS);
+    multi_fields(&mut module, MAX_FIELDS);
+    multi_functions(&mut module, MAX_FUNCTIONS);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+
+    let config = VerifierConfig {
+        max_function_definitions: None,
+        max_struct_definitions: None,
+        max_fields_in_struct: None,
+        ..Default::default()
+    };
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, 1);
+    multi_fields(&mut module, 1);
+    multi_functions(&mut module, 1);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS);
+    multi_fields(&mut module, MAX_FIELDS);
+    multi_functions(&mut module, MAX_FUNCTIONS);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS * 2);
+    multi_fields(&mut module, MAX_FIELDS * 2);
+    multi_functions(&mut module, MAX_FUNCTIONS * 2);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS + 1);
+    multi_fields(&mut module, MAX_FIELDS + 1);
+    multi_functions(&mut module, MAX_FUNCTIONS + 1);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+
+    let config = VerifierConfig {
+        max_struct_definitions: Some(MAX_STRUCTS),
+        max_fields_in_struct: Some(MAX_FIELDS),
+        ..Default::default()
+    };
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS);
+    multi_fields(&mut module, MAX_FIELDS);
+    multi_functions(&mut module, MAX_FUNCTIONS);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS);
+    multi_fields(&mut module, MAX_FIELDS);
+    multi_functions(&mut module, MAX_FUNCTIONS + 10);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS);
+    multi_fields(&mut module, MAX_FIELDS);
+    multi_functions(&mut module, MAX_FUNCTIONS * 3);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS * 2);
+    multi_fields(&mut module, MAX_FIELDS);
+    multi_functions(&mut module, MAX_FUNCTIONS + 1);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(
+        res.unwrap_err().major_status(),
+        StatusCode::MAX_STRUCT_DEFINITIONS_REACHED,
+    );
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS);
+    multi_fields(&mut module, MAX_FIELDS * 2);
+    multi_functions(&mut module, MAX_FUNCTIONS * 3);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(
+        res.unwrap_err().major_status(),
+        StatusCode::MAX_FIELD_DEFINITIONS_REACHED,
+    );
+
+    let config = VerifierConfig {
+        max_struct_definitions: Some(MAX_STRUCTS),
+        max_function_definitions: Some(MAX_FUNCTIONS),
+        ..Default::default()
+    };
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS);
+    multi_fields(&mut module, MAX_FIELDS);
+    multi_functions(&mut module, MAX_FUNCTIONS);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS);
+    multi_fields(&mut module, MAX_FIELDS + 1);
+    multi_functions(&mut module, MAX_FUNCTIONS);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS);
+    multi_fields(&mut module, MAX_FIELDS * 3);
+    multi_functions(&mut module, MAX_FUNCTIONS);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS * 2);
+    multi_fields(&mut module, MAX_FIELDS * 3);
+    multi_functions(&mut module, MAX_FUNCTIONS);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(
+        res.unwrap_err().major_status(),
+        StatusCode::MAX_STRUCT_DEFINITIONS_REACHED,
+    );
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS);
+    multi_fields(&mut module, MAX_FIELDS * 2);
+    multi_functions(&mut module, MAX_FUNCTIONS * 2);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(
+        res.unwrap_err().major_status(),
+        StatusCode::MAX_FUNCTION_DEFINITIONS_REACHED,
+    );
+
+    let config = VerifierConfig {
+        max_fields_in_struct: Some(MAX_FIELDS),
+        max_function_definitions: Some(MAX_FUNCTIONS),
+        ..Default::default()
+    };
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS);
+    multi_fields(&mut module, MAX_FIELDS);
+    multi_functions(&mut module, MAX_FUNCTIONS);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS * 3);
+    multi_fields(&mut module, MAX_FIELDS);
+    multi_functions(&mut module, MAX_FUNCTIONS);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS + 1);
+    multi_fields(&mut module, MAX_FIELDS);
+    multi_functions(&mut module, MAX_FUNCTIONS);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(res, Ok(()));
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS + 1);
+    multi_fields(&mut module, MAX_FIELDS * 3);
+    multi_functions(&mut module, MAX_FUNCTIONS);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(
+        res.unwrap_err().major_status(),
+        StatusCode::MAX_FIELD_DEFINITIONS_REACHED,
+    );
+    let mut module = leaf_module("M");
+    multi_struct(&mut module, MAX_STRUCTS * 2);
+    multi_fields(&mut module, MAX_FIELDS);
+    multi_functions(&mut module, MAX_FUNCTIONS * 2);
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(
+        res.unwrap_err().major_status(),
+        StatusCode::MAX_FUNCTION_DEFINITIONS_REACHED,
+    );
+}
+
+fn multi_struct(module: &mut CompiledModule, count: usize) {
+    for i in 0..count {
+        module
+            .identifiers
+            .push(Identifier::new(format!("A_{}", i)).unwrap());
+        module.struct_handles.push(StructHandle {
+            module: module.self_module_handle_idx,
+            name: IdentifierIndex((module.identifiers.len() - 1) as u16),
+            abilities: AbilitySet::EMPTY,
+            type_parameters: vec![],
+        });
+        module.struct_defs.push(StructDefinition {
+            struct_handle: StructHandleIndex((module.struct_handles.len() - 1) as u16),
+            field_information: StructFieldInformation::Declared(vec![]),
+        });
+    }
+}
+
+fn multi_fields(module: &mut CompiledModule, count: usize) {
+    for def in &mut module.struct_defs {
+        let mut fields = vec![];
+        for i in 0..count {
+            module
+                .identifiers
+                .push(Identifier::new(format!("f_{}", i)).unwrap());
+            fields.push(FieldDefinition {
+                name: Default::default(),
+                signature: TypeSignature(SignatureToken::U8),
+            });
+        }
+        def.field_information = StructFieldInformation::Declared(fields);
+    }
+}
+
+fn multi_fields_except_one(module: &mut CompiledModule, idx: usize, count: usize, one: usize) {
+    for (struct_idx, def) in module.struct_defs.iter_mut().enumerate() {
+        let mut fields = vec![];
+        let count = if struct_idx == idx { one } else { count };
+        for i in 0..count {
+            module
+                .identifiers
+                .push(Identifier::new(format!("f_{}", i)).unwrap());
+            fields.push(FieldDefinition {
+                name: Default::default(),
+                signature: TypeSignature(SignatureToken::U8),
+            });
+        }
+        def.field_information = StructFieldInformation::Declared(fields);
+    }
+}
+
+fn multi_functions(module: &mut CompiledModule, count: usize) {
+    module.signatures.push(Signature(vec![]));
+    for i in 0..count {
+        module
+            .identifiers
+            .push(Identifier::new(format!("func_{}", i)).unwrap());
+        module.function_handles.push(FunctionHandle {
+            module: module.self_module_handle_idx,
+            name: IdentifierIndex((module.identifiers.len() - 1) as u16),
+            parameters: SignatureIndex((module.signatures.len() - 1) as u16),
+            return_: SignatureIndex((module.signatures.len() - 1) as u16),
+            type_parameters: vec![],
+        });
+        module.function_defs.push(FunctionDefinition {
+            function: FunctionHandleIndex((module.function_handles.len() - 1) as u16),
+            visibility: Visibility::Public,
+            is_entry: false,
+            acquires_global_resources: vec![],
+            code: Some(CodeUnit {
+                locals: SignatureIndex((module.signatures.len() - 1) as u16),
+                code: vec![Bytecode::Ret],
+            }),
+        });
+    }
+}
+
+fn leaf_module(name: &str) -> CompiledModule {
+    let mut module = empty_module();
+    module.identifiers[0] = Identifier::new(name).unwrap();
+    module.address_identifiers[0] = AccountAddress::ONE;
+    module
 }

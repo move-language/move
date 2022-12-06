@@ -29,7 +29,8 @@ impl<'a> LimitsVerifier<'a> {
         };
         limit_check.verify_function_handles(config)?;
         limit_check.verify_struct_handles(config)?;
-        limit_check.verify_type_nodes(config)
+        limit_check.verify_type_nodes(config)?;
+        limit_check.verify_definitions(config)
     }
 
     pub fn verify_script(config: &VerifierConfig, module: &'a CompiledScript) -> VMResult<()> {
@@ -44,7 +45,8 @@ impl<'a> LimitsVerifier<'a> {
             resolver: BinaryIndexedView::Script(script),
         };
         limit_check.verify_function_handles(config)?;
-        limit_check.verify_struct_handles(config)
+        limit_check.verify_struct_handles(config)?;
+        limit_check.verify_type_nodes(config)
     }
 
     fn verify_struct_handles(&self, config: &VerifierConfig) -> PartialVMResult<()> {
@@ -128,6 +130,42 @@ impl<'a> LimitsVerifier<'a> {
             }
             if size > *max {
                 return Err(PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES));
+            }
+        }
+        Ok(())
+    }
+
+    fn verify_definitions(&self, config: &VerifierConfig) -> PartialVMResult<()> {
+        if let Some(defs) = self.resolver.function_defs() {
+            if let Some(max_function_definitions) = config.max_function_definitions {
+                if defs.len() > max_function_definitions {
+                    return Err(PartialVMError::new(
+                        StatusCode::MAX_FUNCTION_DEFINITIONS_REACHED,
+                    ));
+                }
+            }
+        }
+        if let Some(defs) = self.resolver.struct_defs() {
+            if let Some(max_struct_definitions) = config.max_struct_definitions {
+                if defs.len() > max_struct_definitions {
+                    return Err(PartialVMError::new(
+                        StatusCode::MAX_STRUCT_DEFINITIONS_REACHED,
+                    ));
+                }
+            }
+            if let Some(max_fields_in_struct) = config.max_fields_in_struct {
+                for def in defs {
+                    match &def.field_information {
+                        StructFieldInformation::Native => (),
+                        StructFieldInformation::Declared(fields) => {
+                            if fields.len() > max_fields_in_struct {
+                                return Err(PartialVMError::new(
+                                    StatusCode::MAX_FIELD_DEFINITIONS_REACHED,
+                                ));
+                            }
+                        }
+                    }
+                }
             }
         }
         Ok(())

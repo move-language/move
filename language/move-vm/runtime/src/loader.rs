@@ -1076,7 +1076,7 @@ impl Loader {
         visited: &mut BTreeSet<ModuleId>,
         friends_discovered: &mut BTreeSet<ModuleId>,
         allow_module_loading_failure: bool,
-        dependencies_depth: u64,
+        dependencies_depth: usize,
     ) -> VMResult<Arc<Module>> {
         // dependency loading does not permit cycles
         if visited.contains(id) {
@@ -1118,13 +1118,15 @@ impl Loader {
         visited: &mut BTreeSet<ModuleId>,
         friends_discovered: &mut BTreeSet<ModuleId>,
         allow_dependency_loading_failure: bool,
-        dependencies_depth: u64,
+        dependencies_depth: usize,
     ) -> VMResult<()> {
-        if dependencies_depth > self.vm_config.verifier.max_dependency_depth {
-            return Err(
-                PartialVMError::new(StatusCode::VM_MAX_DEPENDENCY_DEPTH_REACHED)
-                    .finish(Location::Undefined),
-            );
+        if let Some(max_dependency_depth) = self.vm_config.verifier.max_dependency_depth {
+            if dependencies_depth > max_dependency_depth {
+                return Err(
+                    PartialVMError::new(StatusCode::MAX_DEPENDENCY_DEPTH_REACHED)
+                        .finish(Location::Undefined),
+                );
+            }
         }
         // all immediate dependencies of the module being verified should be in one of the locations
         // - the verified portion of the bundle (e.g., verified before this module)
@@ -1183,7 +1185,7 @@ impl Loader {
         bundle_unverified: &BTreeSet<ModuleId>,
         data_store: &impl DataStore,
         allow_module_loading_failure: bool,
-        dependencies_depth: u64,
+        dependencies_depth: usize,
     ) -> VMResult<Arc<Module>> {
         // load the closure of the module in terms of dependency relation
         let mut visited = BTreeSet::new();
@@ -1197,7 +1199,6 @@ impl Loader {
             allow_module_loading_failure,
             0,
         )?;
-        // println!("({}) FRIENDS[{}]: {:#?}", dependencies_depth, friends_discovered.len(), friends_discovered);
 
         // upward exploration of the module's friendship graph and expand the friendship frontier.
         // For a module that is loaded from the data_store, we should never allow that its friends
@@ -1221,13 +1222,15 @@ impl Loader {
         bundle_unverified: &BTreeSet<ModuleId>,
         data_store: &impl DataStore,
         allow_friend_loading_failure: bool,
-        dependencies_depth: u64,
+        dependencies_depth: usize,
     ) -> VMResult<()> {
-        if dependencies_depth > self.vm_config.verifier.max_dependency_depth {
-            return Err(
-                PartialVMError::new(StatusCode::VM_MAX_DEPENDENCY_DEPTH_REACHED)
-                    .finish(Location::Undefined),
-            );
+        if let Some(max_dependency_depth) = self.vm_config.verifier.max_dependency_depth {
+            if dependencies_depth > max_dependency_depth {
+                return Err(
+                    PartialVMError::new(StatusCode::MAX_DEPENDENCY_DEPTH_REACHED)
+                        .finish(Location::Undefined),
+                );
+            }
         }
         // for each new module discovered in the frontier, load them fully and expand the frontier.
         // apply three filters to the new friend modules discovered

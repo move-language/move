@@ -10,15 +10,16 @@
 //! compiler. Later transformations may replace `idx` but `original_idx` will be preserved so
 //! the user sees the value of their named variable.
 
+use std::collections::BTreeSet;
+
+use move_model::{exp_generator::ExpGenerator, model::FunctionEnv};
+
 use crate::{
     function_data_builder::FunctionDataBuilder,
     function_target::FunctionData,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{Bytecode, Operation},
 };
-
-use move_model::{exp_generator::ExpGenerator, model::FunctionEnv};
-use std::collections::BTreeSet;
 
 pub struct DebugInstrumenter {}
 
@@ -32,8 +33,9 @@ impl FunctionTargetProcessor for DebugInstrumenter {
     fn process(
         &self,
         _targets: &mut FunctionTargetsHolder,
-        fun_env: &FunctionEnv<'_>,
+        fun_env: &FunctionEnv,
         data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         use Bytecode::*;
 

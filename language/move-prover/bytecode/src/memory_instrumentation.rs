@@ -2,6 +2,16 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::BTreeSet;
+
+use move_binary_format::file_format::CodeOffset;
+use move_model::{
+    ast::ConditionKind,
+    exp_generator::ExpGenerator,
+    model::{FunctionEnv, StructEnv},
+    ty::{Type, BOOL_TYPE},
+};
+
 use crate::{
     borrow_analysis::{BorrowAnnotation, WriteBackAction},
     function_data_builder::FunctionDataBuilder,
@@ -13,14 +23,6 @@ use crate::{
         Operation,
     },
 };
-use move_binary_format::file_format::CodeOffset;
-use move_model::{
-    ast::ConditionKind,
-    exp_generator::ExpGenerator,
-    model::{FunctionEnv, StructEnv},
-    ty::{Type, BOOL_TYPE},
-};
-use std::collections::BTreeSet;
 
 pub struct MemoryInstrumentationProcessor {}
 
@@ -34,8 +36,9 @@ impl FunctionTargetProcessor for MemoryInstrumentationProcessor {
     fn process(
         &self,
         _targets: &mut FunctionTargetsHolder,
-        func_env: &FunctionEnv<'_>,
+        func_env: &FunctionEnv,
         mut data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         if func_env.is_native_or_intrinsic() {
             return data;

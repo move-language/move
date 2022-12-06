@@ -86,8 +86,9 @@ impl FunctionTargetProcessor for GlobalInvariantAnalysisProcessor {
     fn process(
         &self,
         targets: &mut FunctionTargetsHolder,
-        fun_env: &FunctionEnv<'_>,
+        fun_env: &FunctionEnv,
         mut data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         if fun_env.is_native() || fun_env.is_intrinsic() {
             // Nothing to do

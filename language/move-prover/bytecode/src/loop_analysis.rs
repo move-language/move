@@ -76,8 +76,9 @@ impl FunctionTargetProcessor for LoopAnalysisProcessor {
     fn process(
         &self,
         _targets: &mut FunctionTargetsHolder,
-        func_env: &FunctionEnv<'_>,
+        func_env: &FunctionEnv,
         data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         if func_env.is_native() {
             return data;

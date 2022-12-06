@@ -571,8 +571,9 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessorV2 {
     fn process(
         &self,
         targets: &mut FunctionTargetsHolder,
-        fun_env: &FunctionEnv<'_>,
+        fun_env: &FunctionEnv,
         data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         let global_env = fun_env.module_env.env;
         let fun_id = fun_env.get_qualified_id();

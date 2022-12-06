@@ -290,7 +290,7 @@ impl BorrowInfo {
     /// Instantiates the summarized borrow graph of a function call in this graph.
     fn instantiate(
         &mut self,
-        callee_target: &FunctionTarget<'_>,
+        callee_env: &FunctionEnv,
         callee_targs: &[Type],
         callee_summary: &BorrowInfo,
         ins: &[TempIndex],
@@ -322,12 +322,9 @@ impl BorrowInfo {
                 }
             } else {
                 assert!(
-                    !callee_target
-                        .get_return_type(ret_idx)
-                        .is_mutable_reference(),
-                    "inconsistent borrow information: undefined output: {}\n{}",
-                    callee_target.func_env.get_full_name_str(),
-                    callee_summary.borrow_info_str(callee_target)
+                    !callee_env.get_return_type(ret_idx).is_mutable_reference(),
+                    "inconsistent borrow information: undefined output: {}",
+                    callee_env.get_full_name_str()
                 )
             }
         }
@@ -620,39 +617,14 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                             .global_env()
                             .get_function_qid(mid.qualified(*fid));
 
-                        if self
-                            .targets
-                            .has_target(callee_env, &FunctionVariant::Baseline)
+                        let callee_annotation = if callee_env.is_native_or_intrinsic() {
+                            native_annotation(callee_env, self.borrow_natives)
+                        } else if mid.qualified(*fid)
+                            == self.func_target.func_env.get_qualified_id()
                         {
-                            // non-recursive case
-                            let callee_target = self
-                                .targets
-                                .get_target(callee_env, &FunctionVariant::Baseline);
+                            // self recursion
 
-                            let callee_annotation_opt = if callee_env.is_native_or_intrinsic() {
-                                Some(native_annotation(callee_env, self.borrow_natives))
-                            } else {
-                                let anno_opt = self
-                                    .targets
-                                    .get_target(callee_env, &FunctionVariant::Baseline)
-                                    .get_annotations()
-                                    .get::<BorrowAnnotation>();
-                                anno_opt.cloned()
-                            };
-                            if let Some(callee_annotation) = callee_annotation_opt {
-                                state.instantiate(
-                                    &callee_target,
-                                    targs,
-                                    &callee_annotation.summary,
-                                    srcs,
-                                    dests,
-                                );
-                            } else {
-                                callee_env.module_env.env.error(&self.func_target.get_bytecode_loc(*id),
-                                                                "error happened when trying to get borrow annotation from callee");
-                            }
-                        } else {
-                            // This can happen for recursive functions.
+                            // TODO(mengxu): this should be removed
                             // Check whether the function has &mut returns.
                             // If so, report an error that we can't deal with it.
                             let has_muts = (0..callee_env.get_return_count())
@@ -661,7 +633,43 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                                 callee_env.module_env.env.error(&self.func_target.get_bytecode_loc(*id),
                                                                 "restriction: recursive functions which return `&mut` values not supported");
                             }
-                        }
+
+                            // 1st iteration of the recursive case
+                            BorrowAnnotation::default()
+                        } else {
+                            let callee_target = self
+                                .targets
+                                .get_target(callee_env, &FunctionVariant::Baseline);
+                            match callee_target.get_annotations().get::<BorrowAnnotation>() {
+                                None => {
+                                    // TODO(mengxu): this should be removed
+                                    // Check whether the function has &mut returns.
+                                    // If so, report an error that we can't deal with it.
+                                    let has_muts = (0..callee_env.get_return_count()).any(|idx| {
+                                        callee_env.get_return_type(idx).is_mutable_reference()
+                                    });
+                                    if has_muts {
+                                        callee_env.module_env.env.error(&self.func_target.get_bytecode_loc(*id),
+                                                                        "restriction: recursive functions which return `&mut` values not supported");
+                                    }
+
+                                    // 1st iteration of the recursive case
+                                    BorrowAnnotation::default()
+                                }
+                                Some(annotation) => {
+                                    // non-recursive case or Nth iteration of fixedpoint (N >= 1)
+                                    annotation.clone()
+                                }
+                            }
+                        };
+
+                        state.instantiate(
+                            callee_env,
+                            targs,
+                            &callee_annotation.summary,
+                            srcs,
+                            dests,
+                        );
                     }
                     OpaqueCallBegin(_, _, _) | OpaqueCallEnd(_, _, _) => {
                         // just skip

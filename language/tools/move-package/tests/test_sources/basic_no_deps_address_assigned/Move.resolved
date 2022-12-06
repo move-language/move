@@ -9,6 +9,9 @@ ResolutionGraph {
             "ELIDED_FOR_TEST",
         ),
         force_recompilation: false,
+        lock_file: Some(
+            "ELIDED_FOR_TEST",
+        ),
         additional_named_addresses: {},
         architecture: None,
         fetch_deps_only: false,

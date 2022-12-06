@@ -305,7 +305,7 @@ fn parse_address_literal(address_str: &str) -> Result<AccountAddress, AccountAdd
     AccountAddress::from_hex_literal(address_str)
 }
 
-fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> {
+pub fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> {
     let Some(table) = tval.as_table_mut() else {
         bail!("Malformed dependency {}", tval);
     };

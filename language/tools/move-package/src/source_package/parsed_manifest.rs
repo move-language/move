@@ -2,10 +2,15 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::{bail, Result};
+
 use crate::Architecture;
 use move_core_types::account_address::AccountAddress;
 use move_symbol_pool::symbol::Symbol;
-use std::{collections::BTreeMap, path::PathBuf};
+use std::{
+    collections::BTreeMap,
+    path::{Component, Path, PathBuf},
+};
 
 pub type NamedAddress = Symbol;
 pub type PackageName = Symbol;
@@ -86,4 +91,103 @@ pub struct BuildInfo {
 pub enum SubstOrRename {
     RenameFrom(NamedAddress),
     Assign(AccountAddress),
+}
+
+impl DependencyKind {
+    /// Given a dependency `self` assumed to be defined relative to a `parent` dependency which can
+    /// itself be defined in terms of some grandparent dependency (not provided), update `self` to
+    /// be defined relative to its grandparent.
+    ///
+    /// Fails if the resulting dependency cannot be described relative to the grandparent, because
+    /// its path is not valid (does not point to a valid location in the filesystem for local
+    /// dependencies, or within the repository for remote dependencies).
+    pub fn reroot(&mut self, parent: &DependencyKind) -> Result<()> {
+        let mut parent = parent.clone();
+
+        use DependencyKind::*;
+        match (&mut parent, &self) {
+            // If `self` is a git or custom dependency kind, its URI is absolute, and cannot be
+            // re-rooted, so rerooting does nothing
+            (_, Git(_) | Custom(_)) => return Ok(()),
+
+            (Local(parent), Local(subdir)) => {
+                parent.push(subdir);
+                *parent = normalize_path(&parent, /* allow_cwd_parent */ true)?;
+            }
+
+            (Git(git), Local(subdir)) => {
+                git.subdir.push(subdir);
+                git.subdir = normalize_path(&git.subdir, /* allow_cwd_parent */ false)?;
+            }
+
+            (Custom(custom), Local(subdir)) => {
+                custom.subdir.push(subdir);
+                custom.subdir = normalize_path(&custom.subdir, /* allow_cwd_parent */ false)?;
+            }
+        };
+
+        *self = parent;
+        Ok(())
+    }
+}
+
+/// Default `DependencyKind` is the one that acts as the left and right identity to
+/// `DependencyKind::rerooted` (modulo path normalization).
+impl Default for DependencyKind {
+    fn default() -> Self {
+        DependencyKind::Local(PathBuf::new())
+    }
+}
+
+/// Normalize the representation of `path` by eliminating redundant `.` components and applying `..`
+/// component.  Does not access the filesystem (e.g. to resolve symlinks or test for file
+/// existence), unlike `std::fs::canonicalize`.
+///
+/// Fails if the normalized path attempts to access the parent of a root directory or volume prefix,
+/// or is prefixed by accesses to parent directories when `allow_cwd_parent` is false.
+///
+/// Returns the normalized path on success.
+fn normalize_path(path: impl AsRef<Path>, allow_cwd_parent: bool) -> Result<PathBuf> {
+    use Component::*;
+
+    let mut stack = Vec::new();
+    for component in path.as_ref().components() {
+        match component {
+            // Components that contribute to the path as-is.
+            verbatim @ (Prefix(_) | RootDir | Normal(_)) => stack.push(verbatim),
+
+            // Equivalent of a `.` path component -- can be ignored.
+            CurDir => { /* nop */ }
+
+            // Going up in the directory hierarchy, which may fail if that's not possible.
+            ParentDir => match stack.last() {
+                None | Some(ParentDir) => {
+                    stack.push(ParentDir);
+                }
+
+                Some(Normal(_)) => {
+                    stack.pop();
+                }
+
+                Some(CurDir) => {
+                    unreachable!("Component::CurDir never added to the stack");
+                }
+
+                Some(RootDir | Prefix(_)) => bail!(
+                    "Invalid path accessing parent of root directory: {}",
+                    path.as_ref().to_string_lossy(),
+                ),
+            },
+        }
+    }
+
+    let normalized: PathBuf = stack.iter().collect();
+    if !allow_cwd_parent && stack.first() == Some(&ParentDir) {
+        bail!(
+            "Path cannot access parent of current directory: {}",
+            normalized.to_string_lossy()
+        );
+    }
+
+    Ok(normalized)
 }

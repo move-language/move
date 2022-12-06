@@ -24,9 +24,15 @@ use move_core_types::identifier::IdentStr;
 use move_coverage::coverage_map::{ExecCoverageMap, FunctionCoverage};
 use move_ir_types::location::Loc;
 
-use llvm_sys::{target_machine::{LLVMCodeGenOptLevel}, core::{LLVMModuleCreateWithNameInContext, LLVMDumpModule, LLVMFunctionType}};
-use std::{fs::File};
-use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef as LLVMContext, LLVMValueRef, LLVMMetadataRef, LLVMModuleRef, LLVMDIBuilderRef, LLVMTypeRef};
+use llvm_sys::prelude::{
+    LLVMBuilderRef, LLVMContextRef as LLVMContext, LLVMDIBuilderRef, LLVMMetadataRef,
+    LLVMModuleRef, LLVMTypeRef, LLVMValueRef,
+};
+use llvm_sys::{
+    core::{LLVMDumpModule, LLVMFunctionType, LLVMModuleCreateWithNameInContext},
+    target_machine::LLVMCodeGenOptLevel,
+};
+use std::fs::File;
 
 use crate::{move_bpf_module::MoveBPFModule, support::to_c_str};
 
@@ -69,16 +75,20 @@ pub struct Disassembler<'a> {
     options: DisassemblerOptions,
     // Optional coverage map for use in displaying code coverage
     coverage_map: Option<ExecCoverageMap>,
-    llvm_context : LLVMContext,
+    llvm_context: LLVMContext,
 }
 
 impl<'a> Disassembler<'a> {
-    pub fn new(source_mapper: SourceMapping<'a>, options: DisassemblerOptions, llvm_context : LLVMContext) -> Self {
+    pub fn new(
+        source_mapper: SourceMapping<'a>,
+        options: DisassemblerOptions,
+        llvm_context: LLVMContext,
+    ) -> Self {
         Self {
             source_mapper,
             options,
             coverage_map: None,
-            llvm_context: llvm_context
+            llvm_context,
         }
     }
 
@@ -435,7 +445,7 @@ impl<'a> Disassembler<'a> {
         match instruction {
             Bytecode::Ret => Ok("Ret".to_string()),
             Bytecode::LdU64(a) => Ok(format!("LdU64({})", a)),
-            x => Err(anyhow!(format!("Unhandled move instruction: {:#?}", x)))
+            x => Err(anyhow!(format!("Unhandled move instruction: {:#?}", x))),
         }
     }
 
@@ -557,7 +567,11 @@ impl<'a> Disassembler<'a> {
     }
 
     /// Returns type of llvm function with `ty` as return type and `param_types` as parameters.
-    fn fn_type(ty : LLVMTypeRef, param_types: &mut Vec<LLVMTypeRef>, is_var_args: bool) -> LLVMTypeRef {
+    fn fn_type(
+        ty: LLVMTypeRef,
+        param_types: &mut Vec<LLVMTypeRef>,
+        is_var_args: bool,
+    ) -> LLVMTypeRef {
         assert!(!is_var_args, "Varargs not supported");
         //let mut param_types: Vec<LLVMTypeRef> = param_types.iter().map(|val| val.as_type_ref()).collect();
         unsafe {
@@ -593,29 +607,28 @@ impl<'a> Disassembler<'a> {
             name
         );
 
-        let parameter_list = &self
-        .source_mapper
-        .bytecode
-        .signature_at(parameters)
-        .0;
+        let parameter_list = &self.source_mapper.bytecode.signature_at(parameters).0;
 
         let ret_type = match function {
             Some(function) => self
                 .source_mapper
                 .bytecode
                 .signature_at(function.1.return_)
-                .0.clone(),
+                .0
+                .clone(),
             None => vec![],
         };
 
         let llvm_return_type = move_module.llvm_return_type_for(&ret_type);
         // TODO: Account for signedness. Or maybe the signedness is incorporated as part of the use cases.
-        let mut llvm_type_parameters = move_module.llvm_signed_type_for_sig_tokens(parameter_list, &type_parameters);
+        let mut llvm_type_parameters =
+            move_module.llvm_signed_type_for_sig_tokens(parameter_list, &type_parameters);
 
         let fn_value = unsafe {
-            llvm_sys::core::LLVMAddFunction(move_module.module,
+            llvm_sys::core::LLVMAddFunction(
+                move_module.module,
                 to_c_str(name.as_str()).as_ptr(),
-                Self::fn_type(llvm_return_type.llvm_type, &mut llvm_type_parameters, false)
+                Self::fn_type(llvm_return_type.llvm_type, &mut llvm_type_parameters, false),
             )
         };
 
@@ -625,8 +638,7 @@ impl<'a> Disassembler<'a> {
 
         let body = match code {
             Some(code) => {
-                let locals =
-                    self.disassemble_locals(function_source_map, code.locals, 10)?;
+                let locals = self.disassemble_locals(function_source_map, code.locals, 10)?;
                 let bytecode =
                     self.disassemble_bytecode(function_source_map, name, parameters, code)?;
                 Self::format_function_body(locals, bytecode)
@@ -724,12 +736,12 @@ impl<'a> Disassembler<'a> {
         let name_opt = self.source_mapper.source_map.module_name_opt.as_ref();
         let name = name_opt.map(|(addr, n)| format!("{}.{}", addr.short_str_lossless(), n));
         let version = format!("{}", self.source_mapper.bytecode.version());
-        let llvm_module_name : String;
+        let llvm_module_name: String;
         let header = match name {
             Some(s) => {
                 llvm_module_name = String::clone(&s) + ".bc";
                 format!("module {}", s)
-            },
+            }
             None => {
                 llvm_module_name = "script.bc".to_string();
                 "script".to_owned()
@@ -739,7 +751,8 @@ impl<'a> Disassembler<'a> {
         //let llvm_module = self.llvm_context.create_module(&header);
         let c_string = to_c_str(&header);
 
-        let llvm_module = unsafe { LLVMModuleCreateWithNameInContext(c_string.as_ptr(), self.llvm_context) };
+        let llvm_module =
+            unsafe { LLVMModuleCreateWithNameInContext(c_string.as_ptr(), self.llvm_context) };
 
         //llvm_module.print_to_stderr();
         unsafe {

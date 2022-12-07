@@ -2429,6 +2429,7 @@ struct StructInfo {
     struct_layout: Option<MoveStructLayout>,
     annotated_struct_layout: Option<MoveStructLayout>,
     node_count: Option<usize>,
+    annotated_node_count: Option<usize>,
 }
 
 impl StructInfo {
@@ -2438,6 +2439,7 @@ impl StructInfo {
             struct_layout: None,
             annotated_struct_layout: None,
             node_count: None,
+            annotated_node_count: None,
         }
     }
 }
@@ -2682,8 +2684,8 @@ impl Loader {
     ) -> PartialVMResult<MoveStructLayout> {
         if let Some(struct_map) = self.type_cache.read().structs.get(&gidx) {
             if let Some(struct_info) = struct_map.get(ty_args) {
-                if let Some(node_count) = &struct_info.node_count {
-                    *count += *node_count
+                if let Some(annotated_node_count) = &struct_info.annotated_node_count {
+                    *count += *annotated_node_count
                 }
                 if let Some(layout) = &struct_info.annotated_struct_layout {
                     return Ok(layout.clone());
@@ -2723,7 +2725,7 @@ impl Loader {
             .entry(ty_args.to_vec())
             .or_insert_with(StructInfo::new);
         info.annotated_struct_layout = Some(struct_layout.clone());
-        info.node_count = Some(field_node_count);
+        info.annotated_node_count = Some(field_node_count);
 
         Ok(struct_layout)
     }

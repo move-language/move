@@ -1,4 +1,4 @@
-use llvm_sys::core::{LLVMInt1TypeInContext, LLVMInt8TypeInContext, LLVMInt64TypeInContext, LLVMModuleCreateWithNameInContext, LLVMAddModuleFlag, LLVMConstInt, LLVMCreateBuilderInContext, LLVMSetTarget, LLVMAppendBasicBlockInContext, LLVMGetNextBasicBlock, LLVMInsertBasicBlockInContext, LLVMGetBasicBlockParent, LLVMPositionBuilderAtEnd, LLVMBuildRetVoid, LLVMBuildRet, LLVMGetTypeKind, LLVMTypeOf, LLVMInt64Type};
+use llvm_sys::core::{LLVMInt1TypeInContext, LLVMInt8TypeInContext, LLVMInt64TypeInContext, LLVMModuleCreateWithNameInContext, LLVMAddModuleFlag, LLVMConstInt, LLVMCreateBuilderInContext, LLVMSetTarget, LLVMAppendBasicBlockInContext, LLVMGetNextBasicBlock, LLVMInsertBasicBlockInContext, LLVMGetBasicBlockParent, LLVMPositionBuilderAtEnd, LLVMBuildRetVoid, LLVMBuildRet, LLVMGetTypeKind, LLVMTypeOf, LLVMInt64Type, LLVMStructCreateNamed, LLVMAddGlobal, LLVMStructSetBody};
 
 use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef, LLVMValueRef, LLVMMetadataRef, LLVMModuleRef, LLVMDIBuilderRef, LLVMTypeRef, LLVMBasicBlockRef};
 use llvm_sys::target_machine::{LLVMCodeGenOptLevel, LLVMCodeModel, LLVMTargetMachineRef, LLVMCreateTargetMachine, LLVMTargetRef, LLVMRelocMode, LLVMGetTargetFromName};
@@ -376,6 +376,14 @@ impl<'a> MoveBPFModule<'a> {
             _ => unimplemented!("Remaining Signature tokens to be implemented"),
         }
     }
+    pub(crate) fn llvm_signed_type_for_type_sig(&self, parameters: &TypeSignature) -> LLVMTypeRef {
+        match parameters {
+            TypeSignature(SignatureToken::Bool) => unsafe{LLVMInt1TypeInContext(*self.context)},
+            TypeSignature(SignatureToken::U8) => unsafe{LLVMInt8TypeInContext(*self.context)}, // FIXME: In llvm signedness is achieved with `cast` operation.
+            TypeSignature(SignatureToken::U64) => unsafe{LLVMInt64TypeInContext(*self.context)}, // FIXME: The signedness
+            _ => unimplemented!("Remaining Signature tokens to be implemented"),
+        }
+    }
     pub fn llvm_signed_type_for_sig_tokens(&self, parameters: &Vec<SignatureToken>, _type_parameters: &[AbilitySet]) -> Vec<LLVMTypeRef> {
         // TODO: What is the purpose of ability set?
         let mut vec = Vec::new();
@@ -465,4 +473,13 @@ impl<'a> MoveBPFModule<'a> {
         }
     }
 
+    pub fn llvm_named_struct(&self, name: &std::string::String) -> LLVMTypeRef {
+        let s = unsafe{LLVMStructCreateNamed(*self.context, to_c_str(name).as_ptr())};
+        unsafe{LLVMAddGlobal(self.module, s, to_c_str(name).as_ptr())};
+        s
+    }
+
+    pub fn llvm_set_struct_body(&self, struct_type: LLVMTypeRef, elem_types: &mut Vec<LLVMTypeRef>) {
+        unsafe{LLVMStructSetBody(struct_type, elem_types[..].as_mut_ptr(), elem_types.len() as u32, false as i32)};
+    }
 }

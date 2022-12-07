@@ -2,6 +2,8 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use move_model::model::{FunId, GlobalEnv, QualifiedId};
+
 use crate::{
     dataflow_analysis::DataflowAnalysis,
     dataflow_domains::AbstractDomain,
@@ -9,7 +11,6 @@ use crate::{
     function_target_pipeline::{FunctionTargetsHolder, FunctionVariant},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
-use move_model::model::{FunId, GlobalEnv, QualifiedId};
 
 /// Provides access to procedure summaries that have already been computed
 pub struct SummaryCache<'a> {
@@ -25,7 +26,8 @@ impl<'a> SummaryCache<'a> {
         }
     }
 
-    /// Return a summary for a variant of `fun_id`. Returns None if `fun_id` is a native function
+    /// Return a summary for a variant of `fun_id`. Returns None if `fun_id` is a native function or
+    /// we are at the first iteration of a recursive functions group.
     pub fn get<Summary: 'static>(
         &self,
         fun_id: QualifiedId<FunId>,
@@ -38,17 +40,7 @@ impl<'a> SummaryCache<'a> {
                 if fun_env.is_native_or_intrinsic() {
                     None
                 } else {
-                    // This avoids crashing when handling recursive or mutually recursive functions
-                    // TODO: add logic to support adding summary to recursive functions
-                    if let Some(summary) = fun_data.annotations.get::<Summary>() {
-                        Some(summary)
-                    } else {
-                        self.global_env.error(
-                            &fun_env.get_loc(),
-                            "Failed to resolve summary; recursion or scheduler bug suspected",
-                        );
-                        None
-                    }
+                    fun_data.annotations.get::<Summary>()
                 }
             })
     }

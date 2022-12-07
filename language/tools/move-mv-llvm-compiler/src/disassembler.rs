@@ -650,7 +650,10 @@ impl<'a> Disassembler<'a> {
 
     // The struct defs will filter out the structs that we print to only be the ones that are
     // defined in the module in question.
-    pub fn disassemble_struct_def(&self, struct_def_idx: StructDefinitionIndex) -> Result<String> {
+    pub fn disassemble_struct_def(&self,
+                                  struct_def_idx: StructDefinitionIndex,
+                                  move_module: &mut MoveBPFModule,
+    ) -> Result<String> {
         let struct_definition = self.get_struct_def(struct_def_idx)?;
         let struct_handle = self
             .source_mapper
@@ -660,6 +663,13 @@ impl<'a> Disassembler<'a> {
             .source_mapper
             .source_map
             .get_struct_source_map(struct_def_idx)?;
+
+        let name = self
+            .source_mapper
+            .bytecode
+            .identifier_at(struct_handle.name)
+            .to_string();
+        let llvm_struct = move_module.llvm_named_struct(&name);
 
         let field_info: Option<Vec<(&IdentStr, &TypeSignature)>> =
             match &struct_definition.field_information {
@@ -679,6 +689,23 @@ impl<'a> Disassembler<'a> {
                 ),
             };
 
+        let llvm_elem_types : Option<Vec<LLVMTypeRef>> =
+            match &struct_definition.field_information {
+                StructFieldInformation::Native => None,
+                StructFieldInformation::Declared(fields) => Some(
+                    fields
+                        .iter()
+                        .map(|field_definition| {
+                             move_module.llvm_signed_type_for_type_sig(&field_definition.signature)
+                        })
+                        .collect(),
+                ),
+            };
+        match llvm_elem_types {
+            Some(mut x) => move_module.llvm_set_struct_body(llvm_struct, &mut x),
+            None => assert!(false, "Element type list is garbage"),
+        };
+
         let native = if field_info.is_none() { "native " } else { "" };
 
         let abilities = if struct_handle.abilities == AbilitySet::EMPTY {
@@ -691,12 +718,6 @@ impl<'a> Disassembler<'a> {
                 .collect();
             format!(" has {}", ability_vec.join(", "))
         };
-
-        let name = self
-            .source_mapper
-            .bytecode
-            .identifier_at(struct_handle.name)
-            .to_string();
 
         let ty_params = Self::disassemble_struct_type_formals(
             &struct_source_map.type_parameters,
@@ -760,19 +781,20 @@ impl<'a> Disassembler<'a> {
         }
         println!("Disassembling: {}", header);
 
+        let context = &self.llvm_context;
+        let bc_file = File::create(&llvm_module_name).unwrap();
+        let opt = LLVMCodeGenOptLevel::LLVMCodeGenLevelNone; // TODO: Add optimization based on command line flag.
+        let mut move_module = MoveBPFModule::new(context, &header, &*llvm_module_name, opt);
+
         let struct_defs: Vec<String> = (0..self
             .source_mapper
             .bytecode
             .struct_defs()
             .map_or(0, |d| d.len()))
-            .map(|i| self.disassemble_struct_def(StructDefinitionIndex(i as TableIndex)))
+            .map(|i| self.disassemble_struct_def(StructDefinitionIndex(i as TableIndex),&mut move_module))
             .collect::<Result<Vec<String>>>()?;
 
         println!("Struct defs: {:?}", struct_defs);
-        let context = &self.llvm_context;
-        let bc_file = File::create(&llvm_module_name).unwrap();
-        let opt = LLVMCodeGenOptLevel::LLVMCodeGenLevelNone; // TODO: Add optimization based on command line flag.
-        let mut move_module = MoveBPFModule::new(context, &header, &*llvm_module_name, opt);
 
         let function_defs: Vec<String> = match self.source_mapper.bytecode {
             BinaryIndexedView::Script(script) => {

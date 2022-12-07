@@ -508,6 +508,10 @@ impl<'a> Analyzer<'a> {
     }
 
     fn add_type(&mut self, ty: &Type) {
+        // Exclude the spec only primitive types.
+        if ty.is_spec() {
+            return;
+        }
         if !self.done_types.insert(ty.to_owned()) {
             return;
         }

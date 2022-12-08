@@ -2,6 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![allow(unused_variables)]
+#![allow(unused_must_use)]
+#![allow(unused_imports)]
+
 use anyhow::{anyhow, bail, format_err, Error, Result};
 use clap::Parser;
 use colored::*;
@@ -12,7 +16,7 @@ use move_binary_format::{
         Ability, AbilitySet, Bytecode, CodeUnit, FieldHandleIndex, FunctionDefinition,
         FunctionDefinitionIndex, FunctionHandle, Signature, SignatureIndex, SignatureToken,
         StructDefinition, StructDefinitionIndex, StructFieldInformation, StructTypeParameter,
-        TableIndex, TypeSignature, Visibility,
+        TableIndex, TypeSignature, Visibility, StructHandleIndex,
     },
 };
 use move_bytecode_source_map::{
@@ -37,6 +41,8 @@ use std::fs::File;
 use crate::{move_bpf_module::MoveBPFModule, support::to_c_str};
 
 use crate::errors::DisassemblerError;
+
+use std::collections::HashMap;
 
 /// Holds the various options that we support while disassembling code.
 #[derive(Debug, Default, Parser)]
@@ -85,10 +91,10 @@ impl<'a> Disassembler<'a> {
         llvm_context: LLVMContext,
     ) -> Self {
         Self {
-            source_mapper,
-            options,
+            source_mapper: source_mapper,
+            options: options,
             coverage_map: None,
-            llvm_context,
+            llvm_context: llvm_context,
         }
     }
 
@@ -648,109 +654,62 @@ impl<'a> Disassembler<'a> {
         Ok("".to_string())
     }
 
-    // The struct defs will filter out the structs that we print to only be the ones that are
-    // defined in the module in question.
-    pub fn disassemble_struct_def(&self,
-                                  struct_def_idx: StructDefinitionIndex,
-                                  move_module: &mut MoveBPFModule,
-    ) -> Result<String> {
-        let struct_definition = self.get_struct_def(struct_def_idx)?;
+    pub fn process_struct_member(&self,
+                                 sig: &SignatureToken,
+                                 move_module: &MoveBPFModule,
+                                 struct_map: &mut HashMap<i32,LLVMTypeRef>,
+    ) -> Result<LLVMTypeRef> {
+        match sig {
+            // Recursive case
+            SignatureToken::Struct(idx) =>
+                self.process_struct_handle(&idx, move_module, struct_map),
+            _ => Ok(move_module.llvm_signed_type_for_sig_tok(&sig))
+        }
+    }
+
+    pub fn process_struct_handle(&self,
+                                 struct_handle_idx: &StructHandleIndex,
+                                 move_module: &MoveBPFModule,
+                                 struct_map: &mut HashMap<i32,LLVMTypeRef>,
+    ) -> Result<LLVMTypeRef> {
+        let index = struct_handle_idx.0 as i32;
+        match struct_map.get(&index) {
+            Some(x) => return Ok(*x),
+            None => (),
+        };
         let struct_handle = self
             .source_mapper
             .bytecode
-            .struct_handle_at(struct_definition.struct_handle);
-        let struct_source_map = self
-            .source_mapper
-            .source_map
-            .get_struct_source_map(struct_def_idx)?;
-
+            .struct_handle_at(*struct_handle_idx);
         let name = self
             .source_mapper
             .bytecode
             .identifier_at(struct_handle.name)
             .to_string();
         let llvm_struct = move_module.llvm_named_struct(&name);
+        struct_map.insert(index, llvm_struct);
+        Ok(llvm_struct)
+    }
 
-        let field_info: Option<Vec<(&IdentStr, &TypeSignature)>> =
-            match &struct_definition.field_information {
-                StructFieldInformation::Native => None,
-                StructFieldInformation::Declared(fields) => Some(
-                    fields
-                        .iter()
-                        .map(|field_definition| {
-                            let type_sig = &field_definition.signature;
-                            let field_name = self
-                                .source_mapper
-                                .bytecode
-                                .identifier_at(field_definition.name);
-                            (field_name, type_sig)
-                        })
-                        .collect(),
-                ),
-            };
-
-        let llvm_elem_types : Option<Vec<LLVMTypeRef>> =
-            match &struct_definition.field_information {
-                StructFieldInformation::Native => None,
-                StructFieldInformation::Declared(fields) => Some(
-                    fields
-                        .iter()
-                        .map(|field_definition| {
-                             move_module.llvm_signed_type_for_type_sig(&field_definition.signature)
-                        })
-                        .collect(),
-                ),
-            };
-        match llvm_elem_types {
-            Some(mut x) => move_module.llvm_set_struct_body(llvm_struct, &mut x),
-            None => assert!(false, "Element type list is garbage"),
+    pub fn process_struct_def(&self,
+                              struct_def: &StructDefinition,
+                              move_module: &MoveBPFModule,
+                              struct_map: &mut HashMap<i32,LLVMTypeRef>,
+    ) -> Result<LLVMTypeRef> {
+        let llvm_struct = self.process_struct_handle(&struct_def.struct_handle, move_module, struct_map)?;
+        // Add members
+        let mut llvm_elem_types : Vec<LLVMTypeRef> = Vec::new();
+        match &struct_def.field_information {
+            StructFieldInformation::Native => return Ok(llvm_struct),
+            StructFieldInformation::Declared(fields) => Some(
+                for field_definition in fields {
+                    match self.process_struct_member(&field_definition.signature.0, move_module, struct_map) {
+                        Ok(x) => llvm_elem_types.push(x),
+                        _ => (),
+                    }}),
         };
-
-        let native = if field_info.is_none() { "native " } else { "" };
-
-        let abilities = if struct_handle.abilities == AbilitySet::EMPTY {
-            String::new()
-        } else {
-            let ability_vec: Vec<_> = struct_handle
-                .abilities
-                .into_iter()
-                .map(Self::format_ability)
-                .collect();
-            format!(" has {}", ability_vec.join(", "))
-        };
-
-        let ty_params = Self::disassemble_struct_type_formals(
-            &struct_source_map.type_parameters,
-            &struct_handle.type_parameters,
-        );
-        let mut fields = match field_info {
-            None => vec![],
-            Some(field_info) => field_info
-                .iter()
-                .map(|(name, ty)| {
-                    let ty_str =
-                        self.disassemble_sig_tok(ty.0.clone(), &struct_source_map.type_parameters)?;
-                    Ok(format!("{}: {}", name, ty_str))
-                })
-                .collect::<Result<Vec<String>>>()?,
-        };
-
-        if let Some(first_elem) = fields.first_mut() {
-            first_elem.insert_str(0, "{\n\t");
-        }
-
-        if let Some(last_elem) = fields.last_mut() {
-            last_elem.push_str("\n}");
-        }
-
-        Ok(format!(
-            "{native}struct {name}{ty_params}{abilities} {fields}",
-            native = native,
-            name = name,
-            ty_params = ty_params,
-            abilities = abilities,
-            fields = &fields.join(",\n\t"),
-        ))
+        move_module.llvm_set_struct_body(llvm_struct, &mut llvm_elem_types);
+        Ok(llvm_struct)
     }
 
     pub fn disassemble(&self) -> Result<String> {
@@ -781,20 +740,14 @@ impl<'a> Disassembler<'a> {
         }
         println!("Disassembling: {}", header);
 
-        let context = &self.llvm_context;
         let bc_file = File::create(&llvm_module_name).unwrap();
         let opt = LLVMCodeGenOptLevel::LLVMCodeGenLevelNone; // TODO: Add optimization based on command line flag.
-        let mut move_module = MoveBPFModule::new(context, &header, &*llvm_module_name, opt);
+        let mut move_module = MoveBPFModule::new(&self.llvm_context, &header, &*llvm_module_name, opt);
 
-        let struct_defs: Vec<String> = (0..self
-            .source_mapper
-            .bytecode
-            .struct_defs()
-            .map_or(0, |d| d.len()))
-            .map(|i| self.disassemble_struct_def(StructDefinitionIndex(i as TableIndex),&mut move_module))
-            .collect::<Result<Vec<String>>>()?;
-
-        println!("Struct defs: {:?}", struct_defs);
+        let mut struct_map: HashMap<i32,LLVMTypeRef> = HashMap::new();
+        for i in &self.source_mapper.bytecode.struct_defs() {
+            self.process_struct_def(&i[0], &move_module, &mut struct_map);
+        }
 
         let function_defs: Vec<String> = match self.source_mapper.bytecode {
             BinaryIndexedView::Script(script) => {
@@ -849,10 +802,9 @@ impl<'a> Disassembler<'a> {
         }
 
         Ok(format!(
-            "// Move bytecode v{version}\n{header} {{\n{struct_defs}\n\n{function_defs}\n}}",
+            "// Move bytecode v{version}\n{header} {{\n{function_defs}\n}}",
             version = version,
             header = header,
-            struct_defs = &struct_defs.join("\n"),
             function_defs = &function_defs.join("\n")
         ))
     }

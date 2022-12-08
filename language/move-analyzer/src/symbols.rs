@@ -624,7 +624,10 @@ impl Symbolicator {
 
         eprintln!("symbolicating {:?}", pkg_path);
 
-        let resolution_graph = build_config.resolution_graph_for_package(pkg_path)?;
+        // resolution graph diagnostics are only needed for CLI commands so ignore them by passing a
+        // vector as the writer
+        let resolution_graph =
+            build_config.resolution_graph_for_package(pkg_path, &mut Vec::new())?;
 
         // get source files to be able to correlate positions (in terms of byte offsets) with actual
         // file locations (in terms of line/column numbers)

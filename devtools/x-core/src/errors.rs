@@ -8,7 +8,7 @@ use serde::{de, ser};
 use std::{borrow::Cow, error, fmt, io, process::ExitStatus, result, str::Utf8Error};
 
 /// Type alias for the return type for `run` methods.
-pub type Result<T, E = SystemError> = result::Result<T, E>;
+pub type Result<T, E = Box<SystemError>> = result::Result<T, E>;
 
 /// A system error that happened while running a lint.
 #[derive(Debug)]
@@ -46,49 +46,49 @@ pub enum SystemError {
 }
 
 impl SystemError {
-    pub fn io(context: impl Into<Cow<'static, str>>, err: io::Error) -> Self {
-        SystemError::Io {
+    pub fn io(context: impl Into<Cow<'static, str>>, err: io::Error) -> Box<Self> {
+        Box::new(SystemError::Io {
             context: context.into(),
             err,
-        }
+        })
     }
 
-    pub fn guppy(context: impl Into<Cow<'static, str>>, err: guppy::Error) -> Self {
-        SystemError::Guppy {
+    pub fn guppy(context: impl Into<Cow<'static, str>>, err: guppy::Error) -> Box<Self> {
+        Box::new(SystemError::Guppy {
             context: context.into(),
             err,
-        }
+        })
     }
 
-    pub fn git_root(msg: impl Into<Cow<'static, str>>) -> Self {
-        SystemError::GitRoot(msg.into())
+    pub fn git_root(msg: impl Into<Cow<'static, str>>) -> Box<Self> {
+        Box::new(SystemError::GitRoot(msg.into()))
     }
 
-    pub fn from_hex(context: impl Into<Cow<'static, str>>, err: FromHexError) -> Self {
-        SystemError::FromHex {
+    pub fn from_hex(context: impl Into<Cow<'static, str>>, err: FromHexError) -> Box<Self> {
+        Box::new(SystemError::FromHex {
             context: context.into(),
             err,
-        }
+        })
     }
 
     pub fn de(
         context: impl Into<Cow<'static, str>>,
         err: impl de::Error + Send + Sync + 'static,
-    ) -> Self {
-        SystemError::Serde {
+    ) -> Box<Self> {
+        Box::new(SystemError::Serde {
             context: context.into(),
             err: Box::new(err),
-        }
+        })
     }
 
     pub fn ser(
         context: impl Into<Cow<'static, str>>,
         err: impl ser::Error + Send + Sync + 'static,
-    ) -> Self {
-        SystemError::Serde {
+    ) -> Box<Self> {
+        Box::new(SystemError::Serde {
             context: context.into(),
             err: Box::new(err),
-        }
+        })
     }
 }
 

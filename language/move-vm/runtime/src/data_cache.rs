@@ -93,7 +93,7 @@ impl<'r, 'l, S: MoveResolver> TransactionDataCache<'r, 'l, S> {
                 };
 
                 let struct_tag = match self.loader.type_to_type_tag(&ty)? {
-                    TypeTag::Struct(struct_tag) => struct_tag,
+                    TypeTag::Struct(struct_tag) => *struct_tag,
                     _ => return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)),
                 };
 

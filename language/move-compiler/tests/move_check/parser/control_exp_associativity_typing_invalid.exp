@@ -17,7 +17,7 @@ error[E04003]: built-in operation not supported
    │         ^^^^^^^^^^^^^^^^^^^
    │         │
    │         Invalid argument to '+'
-   │         Found: '()'. But expected: 'u8', 'u64', 'u128'
+   │         Found: '()'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04007]: incompatible types
    ┌─ tests/move_check/parser/control_exp_associativity_typing_invalid.move:15:29
@@ -34,7 +34,7 @@ error[E04003]: built-in operation not supported
 15 │         if (cond) { foo() } + 1;
    │         -------------------   ^ Invalid argument to '+'
    │         │                      
-   │         Found: '()'. But expected: 'u8', 'u64', 'u128'
+   │         Found: '()'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04007]: incompatible types
    ┌─ tests/move_check/parser/control_exp_associativity_typing_invalid.move:19:22
@@ -55,7 +55,7 @@ error[E04003]: built-in operation not supported
    │         ^^^^^^^^^^^^^^^^^^^^^^
    │         │
    │         Invalid argument to '+'
-   │         Found: '()'. But expected: 'u8', 'u64', 'u128'
+   │         Found: '()'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04007]: incompatible types
    ┌─ tests/move_check/parser/control_exp_associativity_typing_invalid.move:22:32
@@ -72,7 +72,7 @@ error[E04003]: built-in operation not supported
 22 │         while (cond) { foo() } + 2;
    │         ----------------------   ^ Invalid argument to '+'
    │         │                         
-   │         Found: '()'. But expected: 'u8', 'u64', 'u128'
+   │         Found: '()'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04007]: incompatible types
    ┌─ tests/move_check/parser/control_exp_associativity_typing_invalid.move:26:14

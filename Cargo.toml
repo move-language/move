@@ -22,6 +22,7 @@ members = [
     "language/move-borrow-graph",
     "language/move-bytecode-verifier",
     "language/move-bytecode-verifier/bytecode-verifier-tests",
+    "language/move-bytecode-verifier/fuzz",
     "language/move-bytecode-verifier/invalid-mutations",
     "language/move-bytecode-verifier/transactional-tests",
     "language/move-command-line-common",
@@ -51,6 +52,7 @@ members = [
     "language/move-stdlib",
     "language/move-symbol-pool",
     "language/move-vm/integration-tests",
+    "language/move-vm/paranoid-tests",
     "language/move-vm/runtime",
     "language/move-vm/test-utils",
     "language/move-vm/transactional-tests",
@@ -108,7 +110,6 @@ debug = true
 # use release settings to reduce memory pressure in the linking step in CI
 [profile.ci]
 inherits = "test"
-opt-level = 3
 debug = 0 # for saving disk space during linking
 incremental = false
 codegen-units = 16

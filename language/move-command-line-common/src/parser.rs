@@ -1,16 +1,18 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, bail, Result};
-use move_core_types::account_address::AccountAddress;
-use num_bigint::BigUint;
-use std::{collections::BTreeMap, fmt::Display, iter::Peekable, num::ParseIntError};
-
 use crate::{
     address::{NumericalAddress, ParsedAddress},
     types::{ParsedStructType, ParsedType, TypeToken},
     values::{ParsableValue, ParsedValue, ValueToken},
 };
+use anyhow::{anyhow, bail, Result};
+use move_core_types::{
+    account_address::AccountAddress,
+    u256::{U256FromStrError, U256},
+};
+use num_bigint::BigUint;
+use std::{collections::BTreeMap, fmt::Display, iter::Peekable, num::ParseIntError};
 
 pub trait Token: Display + Copy + Eq {
     fn is_whitespace(&self) -> bool;
@@ -133,8 +135,11 @@ impl<'a, I: Iterator<Item = (TypeToken, &'a str)>> Parser<'a, TypeToken, I> {
         let (tok, contents) = self.advance_any()?;
         Ok(match (tok, contents) {
             (TypeToken::Ident, "u8") => ParsedType::U8,
+            (TypeToken::Ident, "u16") => ParsedType::U16,
+            (TypeToken::Ident, "u32") => ParsedType::U32,
             (TypeToken::Ident, "u64") => ParsedType::U64,
             (TypeToken::Ident, "u128") => ParsedType::U128,
+            (TypeToken::Ident, "u256") => ParsedType::U256,
             (TypeToken::Ident, "bool") => ParsedType::Bool,
             (TypeToken::Ident, "address") => ParsedType::Address,
             (TypeToken::Ident, "signer") => ParsedType::Signer,
@@ -189,19 +194,28 @@ impl<'a, I: Iterator<Item = (ValueToken, &'a str)>> Parser<'a, ValueToken, I> {
         let (tok, contents) = self.advance_any()?;
         Ok(match tok {
             ValueToken::Number if !matches!(self.peek_tok(), Some(ValueToken::ColonColon)) => {
-                let (u, _) = parse_u128(contents)?;
+                let (u, _) = parse_u256(contents)?;
                 ParsedValue::InferredNum(u)
             }
             ValueToken::NumberTyped => {
                 if let Some(s) = contents.strip_suffix("u8") {
                     let (u, _) = parse_u8(s)?;
                     ParsedValue::U8(u)
+                } else if let Some(s) = contents.strip_suffix("u16") {
+                    let (u, _) = parse_u16(s)?;
+                    ParsedValue::U16(u)
+                } else if let Some(s) = contents.strip_suffix("u32") {
+                    let (u, _) = parse_u32(s)?;
+                    ParsedValue::U32(u)
                 } else if let Some(s) = contents.strip_suffix("u64") {
                     let (u, _) = parse_u64(s)?;
                     ParsedValue::U64(u)
-                } else {
-                    let (u, _) = parse_u128(contents.strip_suffix("u128").unwrap())?;
+                } else if let Some(s) = contents.strip_suffix("u128") {
+                    let (u, _) = parse_u128(s)?;
                     ParsedValue::U128(u)
+                } else {
+                    let (u, _) = parse_u256(contents.strip_suffix("u256").unwrap())?;
+                    ParsedValue::U256(u)
                 }
             }
             ValueToken::True => ParsedValue::Bool(true),
@@ -233,6 +247,21 @@ impl<'a, I: Iterator<Item = (ValueToken, &'a str)>> Parser<'a, ValueToken, I> {
                     hex::decode(contents)
                         .unwrap()
                         .into_iter()
+                        .map(ParsedValue::U8)
+                        .collect(),
+                )
+            }
+            ValueToken::Utf8String => {
+                let contents = contents
+                    .strip_prefix('\"')
+                    .unwrap()
+                    .strip_suffix('\"')
+                    .unwrap();
+                ParsedValue::Vector(
+                    contents
+                        .as_bytes()
+                        .iter()
+                        .copied()
                         .map(ParsedValue::U8)
                         .collect(),
                 )
@@ -332,6 +361,24 @@ pub fn parse_u8(s: &str) -> Result<(u8, NumberFormat), ParseIntError> {
     ))
 }
 
+// Parse a u16 from a decimal or hex encoding
+pub fn parse_u16(s: &str) -> Result<(u16, NumberFormat), ParseIntError> {
+    let (txt, base) = determine_num_text_and_base(s);
+    Ok((
+        u16::from_str_radix(&txt.replace('_', ""), base as u32)?,
+        base,
+    ))
+}
+
+// Parse a u32 from a decimal or hex encoding
+pub fn parse_u32(s: &str) -> Result<(u32, NumberFormat), ParseIntError> {
+    let (txt, base) = determine_num_text_and_base(s);
+    Ok((
+        u32::from_str_radix(&txt.replace('_', ""), base as u32)?,
+        base,
+    ))
+}
+
 // Parse a u64 from a decimal or hex encoding
 pub fn parse_u64(s: &str) -> Result<(u64, NumberFormat), ParseIntError> {
     let (txt, base) = determine_num_text_and_base(s);
@@ -346,6 +393,15 @@ pub fn parse_u128(s: &str) -> Result<(u128, NumberFormat), ParseIntError> {
     let (txt, base) = determine_num_text_and_base(s);
     Ok((
         u128::from_str_radix(&txt.replace('_', ""), base as u32)?,
+        base,
+    ))
+}
+
+// Parse a u256 from a decimal or hex encoding
+pub fn parse_u256(s: &str) -> Result<(U256, NumberFormat), U256FromStrError> {
+    let (txt, base) = determine_num_text_and_base(s);
+    Ok((
+        U256::from_str_radix(&txt.replace('_', ""), base as u32)?,
         base,
     ))
 }
@@ -376,7 +432,7 @@ mod tests {
         types::{ParsedStructType, ParsedType},
         values::ParsedValue,
     };
-    use move_core_types::account_address::AccountAddress;
+    use move_core_types::{account_address::AccountAddress, u256::U256};
 
     #[allow(clippy::unreadable_literal)]
     #[test]
@@ -385,19 +441,32 @@ mod tests {
         let cases: &[(&str, V)] = &[
             ("  0u8", V::U8(0)),
             ("0u8", V::U8(0)),
+            ("0xF_Fu8", V::U8(255)),
+            ("0xF__FF__Eu16", V::U16(u16::MAX - 1)),
+            ("0xFFF_FF__FF_Cu32", V::U32(u32::MAX - 3)),
             ("255u8", V::U8(255)),
-            ("0", V::InferredNum(0)),
-            ("0123", V::InferredNum(123)),
-            ("0xFF", V::InferredNum(0xFF)),
+            ("255u256", V::U256(U256::from(255u64))),
+            ("0", V::InferredNum(U256::from(0u64))),
+            ("0123", V::InferredNum(U256::from(123u64))),
+            ("0xFF", V::InferredNum(U256::from(0xFFu64))),
+            ("0xF_F", V::InferredNum(U256::from(0xFFu64))),
+            ("0xFF__", V::InferredNum(U256::from(0xFFu64))),
+            (
+                "0x12_34__ABCD_FF",
+                V::InferredNum(U256::from(0x1234ABCDFFu64)),
+            ),
             ("0u64", V::U64(0)),
             ("0x0u64", V::U64(0)),
-            ("18446744073709551615", V::InferredNum(18446744073709551615)),
+            (
+                "18446744073709551615",
+                V::InferredNum(U256::from(18446744073709551615u128)),
+            ),
             ("18446744073709551615u64", V::U64(18446744073709551615)),
             ("0u128", V::U128(0)),
             ("1_0u8", V::U8(1_0)),
             ("10_u8", V::U8(10)),
             ("1_000u64", V::U64(1_000)),
-            ("1_000", V::InferredNum(1_000)),
+            ("1_000", V::InferredNum(U256::from(1_000u32))),
             ("1_0_0_0u64", V::U64(1_000)),
             ("1_000_000u128", V::U128(1_000_000)),
             (
@@ -465,14 +534,20 @@ mod tests {
             "_10_u8",
             "_10__u8",
             "10_u8__",
+            "0xFF_u8_",
+            "0xF_u8__",
+            "0x_F_u8__",
             "_",
             "__",
             "__4",
             "_u8",
             "5_bool",
             "256u8",
+            "4294967296u32",
+            "65536u16",
             "18446744073709551616u64",
             "340282366920938463463374607431768211456u128",
+            "340282366920938463463374607431768211456340282366920938463463374607431768211456340282366920938463463374607431768211456340282366920938463463374607431768211456u256",
             "0xg",
             "0x00g0",
             "0x",
@@ -539,8 +614,11 @@ mod tests {
             "0x1::Foo::Foo<0x1::ABC::ABC>",
             "0x1::Foo::Foo<0x1::ABC::ABC_Type>",
             "0x1::Foo::Foo<u8>",
+            "0x1::Foo::Foo<u16>",
+            "0x1::Foo::Foo<u32>",
             "0x1::Foo::Foo<u64>",
             "0x1::Foo::Foo<u128>",
+            "0x1::Foo::Foo<u256>",
             "0x1::Foo::Foo<bool>",
             "0x1::Foo::Foo<address>",
             "0x1::Foo::Foo<signer>",

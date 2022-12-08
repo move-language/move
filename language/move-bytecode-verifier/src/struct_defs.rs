@@ -105,7 +105,16 @@ impl<'a> StructDefGraphBuilder<'a> {
     ) -> PartialVMResult<()> {
         use SignatureToken as T;
         Ok(match token {
-            T::Bool | T::U8 | T::U64 | T::U128 | T::Address | T::Signer | T::TypeParameter(_) => (),
+            T::Bool
+            | T::U8
+            | T::U16
+            | T::U32
+            | T::U64
+            | T::U128
+            | T::U256
+            | T::Address
+            | T::Signer
+            | T::TypeParameter(_) => (),
             T::Reference(_) | T::MutableReference(_) => {
                 return Err(
                     PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)

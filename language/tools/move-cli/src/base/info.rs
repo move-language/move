@@ -15,7 +15,7 @@ impl Info {
     pub fn execute(self, path: Option<PathBuf>, config: BuildConfig) -> anyhow::Result<()> {
         let rerooted_path = reroot_path(path)?;
         config
-            .resolution_graph_for_package(&rerooted_path)?
+            .resolution_graph_for_package(&rerooted_path, &mut std::io::stdout())?
             .print_info()
     }
 }

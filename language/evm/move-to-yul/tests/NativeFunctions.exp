@@ -312,36 +312,15 @@ object "test_A2_NativeFunctions_test_concat" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t5 := 100
                     $t5 := 100
                     // abort($t5)
                     $Abort($t5)
-                }
-                case 3 {
-                    // label L0
-                    // $t6 := [49]
-                    $t6 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(1)))
-                    $MemoryStoreU64($t6, 1)
-                    $MemoryStoreU64(add($t6, 8), $ClosestGreaterPowerOfTwo(1))
-                    copy_literal_string_to_memory_2868747976(add($t6, 32))
-                    // $t7 := [50]
-                    $t7 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(1)))
-                    $MemoryStoreU64($t7, 1)
-                    $MemoryStoreU64(add($t7, 8), $ClosestGreaterPowerOfTwo(1))
-                    copy_literal_string_to_memory_4015750317(add($t7, 32))
-                    // $t8 := Evm::concat($t6, $t7)
-                    $t8 := A2_Evm_concat($t6, $t7)
-                    // $t9 := [49, 50]
-                    $t9 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(2)))
-                    $MemoryStoreU64($t9, 2)
-                    $MemoryStoreU64(add($t9, 8), $ClosestGreaterPowerOfTwo(2))
-                    copy_literal_string_to_memory_141265791(add($t9, 32))
-                    // $t10 := ==($t8, $t9)
-                    $t10 := $Eq_$vec$u8$$($t8, $t9)
-                    // if ($t10) goto L2 else goto L3
-                    switch $t10
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
                 }
                 case 4 {
                     // $t0 := []
@@ -363,20 +342,51 @@ object "test_A2_NativeFunctions_test_concat" {
                     copy_literal_string_to_memory_21418693(add($t3, 32))
                     // $t4 := ==($t2, $t3)
                     $t4 := $Eq_$vec$u8$$($t2, $t3)
-                    // if ($t4) goto L0 else goto L1
+                    // if ($t4) goto L1 else goto L0
                     switch $t4
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
+                    // label L2
+                    // $t6 := [49]
+                    $t6 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(1)))
+                    $MemoryStoreU64($t6, 1)
+                    $MemoryStoreU64(add($t6, 8), $ClosestGreaterPowerOfTwo(1))
+                    copy_literal_string_to_memory_2868747976(add($t6, 32))
+                    // $t7 := [50]
+                    $t7 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(1)))
+                    $MemoryStoreU64($t7, 1)
+                    $MemoryStoreU64(add($t7, 8), $ClosestGreaterPowerOfTwo(1))
+                    copy_literal_string_to_memory_4015750317(add($t7, 32))
+                    // $t8 := Evm::concat($t6, $t7)
+                    $t8 := A2_Evm_concat($t6, $t7)
+                    // $t9 := [49, 50]
+                    $t9 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(2)))
+                    $MemoryStoreU64($t9, 2)
+                    $MemoryStoreU64(add($t9, 8), $ClosestGreaterPowerOfTwo(2))
+                    copy_literal_string_to_memory_141265791(add($t9, 32))
+                    // $t10 := ==($t8, $t9)
+                    $t10 := $Eq_$vec$u8$$($t8, $t9)
+                    // if ($t10) goto L4 else goto L3
+                    switch $t10
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
+                }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
                     // label L3
                     // $t11 := 101
                     $t11 := 101
                     // abort($t11)
                     $Abort($t11)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t12 := []
                     $t12 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(0)))
                     $MemoryStoreU64($t12, 0)
@@ -396,20 +406,25 @@ object "test_A2_NativeFunctions_test_concat" {
                     copy_literal_string_to_memory_2053440334(add($t15, 32))
                     // $t16 := ==($t14, $t15)
                     $t16 := $Eq_$vec$u8$$($t14, $t15)
-                    // if ($t16) goto L4 else goto L5
+                    // if ($t16) goto L7 else goto L6
                     switch $t16
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t17 := 102
                     $t17 := 102
                     // abort($t17)
                     $Abort($t17)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // $t18 := [97]
                     $t18 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(1)))
                     $MemoryStoreU64($t18, 1)
@@ -436,20 +451,25 @@ object "test_A2_NativeFunctions_test_concat" {
                     copy_literal_string_to_memory_3871831907(add($t23, 32))
                     // $t24 := ==($t22, $t23)
                     $t24 := $Eq_$vec$u8$$($t22, $t23)
-                    // if ($t24) goto L6 else goto L7
+                    // if ($t24) goto L10 else goto L9
                     switch $t24
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
                 }
-                case 9 {
-                    // label L7
+                case 12 {
+                    // label L10
+                    // goto L11
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
                     // $t25 := 103
                     $t25 := 103
                     // abort($t25)
                     $Abort($t25)
                 }
-                case 10 {
-                    // label L6
+                case 14 {
+                    // label L11
                     // $t26 := [116, 101, 115, 116]
                     $t26 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(4)))
                     $MemoryStoreU64($t26, 4)
@@ -469,20 +489,25 @@ object "test_A2_NativeFunctions_test_concat" {
                     copy_literal_string_to_memory_1610556060(add($t29, 32))
                     // $t30 := ==($t28, $t29)
                     $t30 := $Eq_$vec$u8$$($t28, $t29)
-                    // if ($t30) goto L8 else goto L9
+                    // if ($t30) goto L13 else goto L12
                     switch $t30
-                    case 0  { $block := 11 }
-                    default { $block := 12 }
+                    case 0  { $block := 16 }
+                    default { $block := 15 }
                 }
-                case 11 {
-                    // label L9
+                case 15 {
+                    // label L13
+                    // goto L14
+                    $block := 17
+                }
+                case 16 {
+                    // label L12
                     // $t31 := 104
                     $t31 := 104
                     // abort($t31)
                     $Abort($t31)
                 }
-                case 12 {
-                    // label L8
+                case 17 {
+                    // label L14
                     // return ()
                     leave
                 }
@@ -667,7 +692,7 @@ object "test_A2_NativeFunctions_test_concat" {
         }
     }
 }
-===> Test result of NativeFunctions::test_concat: Succeed(Stopped) (used_gas=9535): []
+===> Test result of NativeFunctions::test_concat: Succeed(Stopped) (used_gas=10872): []
 
 // test of NativeFunctions::test_signer_address_of
 /* =======================================
@@ -688,16 +713,15 @@ object "test_A2_NativeFunctions_test_signer_address_of" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t6 := 101
                     $t6 := 101
                     // abort($t6)
                     $Abort($t6)
-                }
-                case 3 {
-                    // label L0
-                    // return ()
-                    $Free($locals, 32)
-                    leave
                 }
                 case 4 {
                     // $t1 := 0x42
@@ -712,10 +736,16 @@ object "test_A2_NativeFunctions_test_signer_address_of" {
                     $t4 := 0x42
                     // $t5 := ==($t3, $t4)
                     $t5 := $Eq($t3, $t4)
-                    // if ($t5) goto L0 else goto L1
+                    // if ($t5) goto L1 else goto L0
                     switch $t5
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // return ()
+                    $Free($locals, 32)
+                    leave
                 }
             }
         }
@@ -832,7 +862,7 @@ object "test_A2_NativeFunctions_test_signer_address_of" {
         }
     }
 }
-===> Test result of NativeFunctions::test_signer_address_of: Succeed(Stopped) (used_gas=345): []
+===> Test result of NativeFunctions::test_signer_address_of: Succeed(Stopped) (used_gas=431): []
 
 // test of NativeFunctions::test_to_string
 /* =======================================
@@ -852,28 +882,15 @@ object "test_A2_NativeFunctions_test_to_string" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t4 := 101
                     $t4 := 101
                     // abort($t4)
                     $Abort($t4)
-                }
-                case 3 {
-                    // label L0
-                    // $t5 := U256::one()
-                    $t5 := A2_U256_one()
-                    // $t6 := Evm::to_string($t5)
-                    $t6 := A2_Evm_to_string($t5)
-                    // $t7 := [49]
-                    $t7 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(1)))
-                    $MemoryStoreU64($t7, 1)
-                    $MemoryStoreU64(add($t7, 8), $ClosestGreaterPowerOfTwo(1))
-                    copy_literal_string_to_memory_2868747976(add($t7, 32))
-                    // $t8 := ==($t6, $t7)
-                    $t8 := $Eq_$vec$u8$$($t6, $t7)
-                    // if ($t8) goto L2 else goto L3
-                    switch $t8
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
                 }
                 case 4 {
                     // $t0 := U256::zero()
@@ -887,20 +904,43 @@ object "test_A2_NativeFunctions_test_to_string" {
                     copy_literal_string_to_memory_2991736836(add($t2, 32))
                     // $t3 := ==($t1, $t2)
                     $t3 := $Eq_$vec$u8$$($t1, $t2)
-                    // if ($t3) goto L0 else goto L1
+                    // if ($t3) goto L1 else goto L0
                     switch $t3
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
+                    // label L2
+                    // $t5 := U256::one()
+                    $t5 := A2_U256_one()
+                    // $t6 := Evm::to_string($t5)
+                    $t6 := A2_Evm_to_string($t5)
+                    // $t7 := [49]
+                    $t7 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(1)))
+                    $MemoryStoreU64($t7, 1)
+                    $MemoryStoreU64(add($t7, 8), $ClosestGreaterPowerOfTwo(1))
+                    copy_literal_string_to_memory_2868747976(add($t7, 32))
+                    // $t8 := ==($t6, $t7)
+                    $t8 := $Eq_$vec$u8$$($t6, $t7)
+                    // if ($t8) goto L4 else goto L3
+                    switch $t8
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
+                }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
                     // label L3
                     // $t9 := 102
                     $t9 := 102
                     // abort($t9)
                     $Abort($t9)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t10 := 42
                     $t10 := 42
                     // $t11 := U256::u256_from_u128($t10)
@@ -914,20 +954,25 @@ object "test_A2_NativeFunctions_test_to_string" {
                     copy_literal_string_to_memory_402108876(add($t13, 32))
                     // $t14 := ==($t12, $t13)
                     $t14 := $Eq_$vec$u8$$($t12, $t13)
-                    // if ($t14) goto L4 else goto L5
+                    // if ($t14) goto L7 else goto L6
                     switch $t14
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t15 := 103
                     $t15 := 103
                     // abort($t15)
                     $Abort($t15)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // $t16 := 7008
                     $t16 := 7008
                     // $t17 := U256::u256_from_u128($t16)
@@ -941,20 +986,25 @@ object "test_A2_NativeFunctions_test_to_string" {
                     copy_literal_string_to_memory_2919365730(add($t19, 32))
                     // $t20 := ==($t18, $t19)
                     $t20 := $Eq_$vec$u8$$($t18, $t19)
-                    // if ($t20) goto L6 else goto L7
+                    // if ($t20) goto L10 else goto L9
                     switch $t20
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
                 }
-                case 9 {
-                    // label L7
+                case 12 {
+                    // label L10
+                    // goto L11
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
                     // $t21 := 104
                     $t21 := 104
                     // abort($t21)
                     $Abort($t21)
                 }
-                case 10 {
-                    // label L6
+                case 14 {
+                    // label L11
                     // $t22 := 340282366920938463463374607431768211458
                     $t22 := 340282366920938463463374607431768211458
                     // $t23 := Evm::to_string($t22)
@@ -966,20 +1016,25 @@ object "test_A2_NativeFunctions_test_to_string" {
                     copy_literal_string_to_memory_767927084(add($t24, 32))
                     // $t25 := ==($t23, $t24)
                     $t25 := $Eq_$vec$u8$$($t23, $t24)
-                    // if ($t25) goto L8 else goto L9
+                    // if ($t25) goto L13 else goto L12
                     switch $t25
-                    case 0  { $block := 11 }
-                    default { $block := 12 }
+                    case 0  { $block := 16 }
+                    default { $block := 15 }
                 }
-                case 11 {
-                    // label L9
+                case 15 {
+                    // label L13
+                    // goto L14
+                    $block := 17
+                }
+                case 16 {
+                    // label L12
                     // $t26 := 105
                     $t26 := 105
                     // abort($t26)
                     $Abort($t26)
                 }
-                case 12 {
-                    // label L8
+                case 17 {
+                    // label L14
                     // return ()
                     leave
                 }
@@ -999,18 +1054,18 @@ object "test_A2_NativeFunctions_test_to_string" {
             $result := $t2
         }
 
-        function A2_U256_zero() -> $result {
-            let $t0
-            // $t0 := 0
-            $t0 := 0
-            // return $t0
-            $result := $t0
-        }
-
         function A2_U256_one() -> $result {
             let $t0
             // $t0 := 1
             $t0 := 1
+            // return $t0
+            $result := $t0
+        }
+
+        function A2_U256_zero() -> $result {
+            let $t0
+            // $t0 := 0
+            $t0 := 0
             // return $t0
             $result := $t0
         }
@@ -1115,12 +1170,12 @@ object "test_A2_NativeFunctions_test_to_string" {
             $MemoryStoreU8(value, 50)
             value := add(value, 1)
         }
-        function copy_literal_string_to_memory_2991736836(value) {
-            $MemoryStoreU8(value, 48)
-            value := add(value, 1)
-        }
         function copy_literal_string_to_memory_2868747976(value) {
             $MemoryStoreU8(value, 49)
+            value := add(value, 1)
+        }
+        function copy_literal_string_to_memory_2991736836(value) {
+            $MemoryStoreU8(value, 48)
             value := add(value, 1)
         }
         function $Abort(code) {
@@ -1231,4 +1286,4 @@ object "test_A2_NativeFunctions_test_to_string" {
         }
     }
 }
-===> Test result of NativeFunctions::test_to_string: Succeed(Stopped) (used_gas=11916): []
+===> Test result of NativeFunctions::test_to_string: Succeed(Stopped) (used_gas=13241): []

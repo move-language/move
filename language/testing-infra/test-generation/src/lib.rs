@@ -96,7 +96,18 @@ fn run_vm(module: CompiledModule) -> Result<(), VMStatus> {
             SignatureToken::Vector(inner_tok) if **inner_tok == SignatureToken::U8 => {
                 MoveValue::Vector(vec![]).simple_serialize().unwrap()
             }
-            _ => unimplemented!("Unsupported argument type: {:#?}", sig_tok),
+            SignatureToken::Vector(_)
+            | SignatureToken::U8
+            | SignatureToken::U128
+            | SignatureToken::Signer
+            | SignatureToken::Struct(_)
+            | SignatureToken::StructInstantiation(_, _)
+            | SignatureToken::Reference(_)
+            | SignatureToken::MutableReference(_)
+            | SignatureToken::TypeParameter(_)
+            | SignatureToken::U16
+            | SignatureToken::U32
+            | SignatureToken::U256 => unimplemented!("Unsupported argument type: {:#?}", sig_tok),
         })
         .collect();
 
@@ -382,8 +393,11 @@ pub(crate) fn substitute(token: &SignatureToken, tys: &[SignatureToken]) -> Sign
     match token {
         Bool => Bool,
         U8 => U8,
+        U16 => U16,
+        U32 => U32,
         U64 => U64,
         U128 => U128,
+        U256 => U256,
         Address => Address,
         Signer => Signer,
         Vector(ty) => Vector(Box::new(substitute(ty, tys))),
@@ -411,7 +425,7 @@ pub fn abilities(
     use SignatureToken::*;
 
     match ty {
-        Bool | U8 | U64 | U128 | Address => AbilitySet::PRIMITIVES,
+        Bool | U8 | U16 | U32 | U64 | U128 | U256 | Address => AbilitySet::PRIMITIVES,
 
         Reference(_) | MutableReference(_) => AbilitySet::REFERENCES,
         Signer => AbilitySet::SIGNER,
@@ -471,6 +485,18 @@ pub(crate) fn get_type_actuals_from_reference(
             Struct(_) => Some(vec![]),
             _ => None,
         },
-        _ => None,
+        Bool
+        | U8
+        | U64
+        | U128
+        | Address
+        | Signer
+        | Vector(_)
+        | Struct(_)
+        | StructInstantiation(_, _)
+        | TypeParameter(_)
+        | U16
+        | U32
+        | U256 => None,
     }
 }

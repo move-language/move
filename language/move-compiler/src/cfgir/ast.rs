@@ -292,8 +292,11 @@ impl AstDebug for MoveValue {
         use MoveValue as V;
         match self {
             V::U8(u) => w.write(&format!("{}", u)),
+            V::U16(u) => w.write(&format!("{}", u)),
+            V::U32(u) => w.write(&format!("{}", u)),
             V::U64(u) => w.write(&format!("{}", u)),
             V::U128(u) => w.write(&format!("{}", u)),
+            V::U256(u) => w.write(&format!("{}", u)),
             V::Bool(b) => w.write(&format!("{}", b)),
             V::Address(a) => w.write(&format!("{}", a)),
             V::Vector(vs) => {

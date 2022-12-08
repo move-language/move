@@ -17,37 +17,37 @@ error: abort not covered by any of the `aborts_if` clauses
     =         ABORTED
 
 error: abort not covered by any of the `aborts_if` clauses
-    ┌─ tests/sources/functional/arithm.move:180:5
+    ┌─ tests/sources/functional/arithm.move:212:5
     │
-178 │           x + y
+210 │           x + y
     │             - abort happened here with execution failure
-179 │       }
-180 │ ╭     spec overflow_u128_add_incorrect {
-181 │ │         aborts_if false;
-182 │ │     }
+211 │       }
+212 │ ╭     spec overflow_u128_add_incorrect {
+213 │ │         aborts_if false;
+214 │ │     }
     │ ╰─────^
     │
-    =     at tests/sources/functional/arithm.move:177: overflow_u128_add_incorrect
+    =     at tests/sources/functional/arithm.move:209: overflow_u128_add_incorrect
     =         x = <redacted>
     =         y = <redacted>
-    =     at tests/sources/functional/arithm.move:178: overflow_u128_add_incorrect
+    =     at tests/sources/functional/arithm.move:210: overflow_u128_add_incorrect
     =         ABORTED
 
 error: abort not covered by any of the `aborts_if` clauses
-    ┌─ tests/sources/functional/arithm.move:232:5
+    ┌─ tests/sources/functional/arithm.move:312:5
     │
-230 │           x * y
+310 │           x * y
     │             - abort happened here with execution failure
-231 │       }
-232 │ ╭     spec overflow_u128_mul_incorrect {
-233 │ │         aborts_if false;
-234 │ │     }
+311 │       }
+312 │ ╭     spec overflow_u128_mul_incorrect {
+313 │ │         aborts_if false;
+314 │ │     }
     │ ╰─────^
     │
-    =     at tests/sources/functional/arithm.move:229: overflow_u128_mul_incorrect
+    =     at tests/sources/functional/arithm.move:309: overflow_u128_mul_incorrect
     =         x = <redacted>
     =         y = <redacted>
-    =     at tests/sources/functional/arithm.move:230: overflow_u128_mul_incorrect
+    =     at tests/sources/functional/arithm.move:310: overflow_u128_mul_incorrect
     =         ABORTED
 
 error: abort not covered by any of the `aborts_if` clauses
@@ -56,32 +56,134 @@ error: abort not covered by any of the `aborts_if` clauses
 162 │           x + y
     │             - abort happened here with execution failure
 163 │       }
-164 │ ╭     spec overflow_u64_add_incorrect {
+164 │ ╭     spec overflow_u16_add_incorrect {
 165 │ │         aborts_if false;
 166 │ │     }
     │ ╰─────^
     │
-    =     at tests/sources/functional/arithm.move:161: overflow_u64_add_incorrect
+    =     at tests/sources/functional/arithm.move:161: overflow_u16_add_incorrect
     =         x = <redacted>
     =         y = <redacted>
-    =     at tests/sources/functional/arithm.move:162: overflow_u64_add_incorrect
+    =     at tests/sources/functional/arithm.move:162: overflow_u16_add_incorrect
     =         ABORTED
 
 error: abort not covered by any of the `aborts_if` clauses
-    ┌─ tests/sources/functional/arithm.move:217:5
+    ┌─ tests/sources/functional/arithm.move:265:5
     │
-215 │           x * y
+263 │           x * y
     │             - abort happened here with execution failure
-216 │       }
-217 │ ╭     spec overflow_u64_mul_incorrect {
-218 │ │         aborts_if false;
-219 │ │     }
+264 │       }
+265 │ ╭     spec overflow_u16_mul_incorrect {
+266 │ │         aborts_if false;
+267 │ │     }
     │ ╰─────^
     │
-    =     at tests/sources/functional/arithm.move:214: overflow_u64_mul_incorrect
+    =     at tests/sources/functional/arithm.move:262: overflow_u16_mul_incorrect
     =         x = <redacted>
     =         y = <redacted>
-    =     at tests/sources/functional/arithm.move:215: overflow_u64_mul_incorrect
+    =     at tests/sources/functional/arithm.move:263: overflow_u16_mul_incorrect
+    =         ABORTED
+
+error: abort not covered by any of the `aborts_if` clauses
+    ┌─ tests/sources/functional/arithm.move:228:5
+    │
+226 │           x + y
+    │             - abort happened here with execution failure
+227 │       }
+228 │ ╭     spec overflow_u256_add_incorrect {
+229 │ │         aborts_if false;
+230 │ │     }
+    │ ╰─────^
+    │
+    =     at tests/sources/functional/arithm.move:225: overflow_u256_add_incorrect
+    =         x = <redacted>
+    =         y = <redacted>
+    =     at tests/sources/functional/arithm.move:226: overflow_u256_add_incorrect
+    =         ABORTED
+
+error: abort not covered by any of the `aborts_if` clauses
+    ┌─ tests/sources/functional/arithm.move:327:5
+    │
+325 │           x * y
+    │             - abort happened here with execution failure
+326 │       }
+327 │ ╭     spec overflow_u256_mul_incorrect {
+328 │ │         aborts_if false;
+329 │ │     }
+    │ ╰─────^
+    │
+    =     at tests/sources/functional/arithm.move:324: overflow_u256_mul_incorrect
+    =         x = <redacted>
+    =         y = <redacted>
+    =     at tests/sources/functional/arithm.move:325: overflow_u256_mul_incorrect
+    =         ABORTED
+
+error: abort not covered by any of the `aborts_if` clauses
+    ┌─ tests/sources/functional/arithm.move:180:5
+    │
+178 │           x + y
+    │             - abort happened here with execution failure
+179 │       }
+180 │ ╭     spec overflow_u32_add_incorrect {
+181 │ │         aborts_if false;
+182 │ │     }
+    │ ╰─────^
+    │
+    =     at tests/sources/functional/arithm.move:177: overflow_u32_add_incorrect
+    =         x = <redacted>
+    =         y = <redacted>
+    =     at tests/sources/functional/arithm.move:178: overflow_u32_add_incorrect
+    =         ABORTED
+
+error: abort not covered by any of the `aborts_if` clauses
+    ┌─ tests/sources/functional/arithm.move:281:5
+    │
+279 │           x * y
+    │             - abort happened here with execution failure
+280 │       }
+281 │ ╭     spec overflow_u32_mul_incorrect {
+282 │ │         aborts_if false;
+283 │ │     }
+    │ ╰─────^
+    │
+    =     at tests/sources/functional/arithm.move:278: overflow_u32_mul_incorrect
+    =         x = <redacted>
+    =         y = <redacted>
+    =     at tests/sources/functional/arithm.move:279: overflow_u32_mul_incorrect
+    =         ABORTED
+
+error: abort not covered by any of the `aborts_if` clauses
+    ┌─ tests/sources/functional/arithm.move:196:5
+    │
+194 │           x + y
+    │             - abort happened here with execution failure
+195 │       }
+196 │ ╭     spec overflow_u64_add_incorrect {
+197 │ │         aborts_if false;
+198 │ │     }
+    │ ╰─────^
+    │
+    =     at tests/sources/functional/arithm.move:193: overflow_u64_add_incorrect
+    =         x = <redacted>
+    =         y = <redacted>
+    =     at tests/sources/functional/arithm.move:194: overflow_u64_add_incorrect
+    =         ABORTED
+
+error: abort not covered by any of the `aborts_if` clauses
+    ┌─ tests/sources/functional/arithm.move:297:5
+    │
+295 │           x * y
+    │             - abort happened here with execution failure
+296 │       }
+297 │ ╭     spec overflow_u64_mul_incorrect {
+298 │ │         aborts_if false;
+299 │ │     }
+    │ ╰─────^
+    │
+    =     at tests/sources/functional/arithm.move:294: overflow_u64_mul_incorrect
+    =         x = <redacted>
+    =         y = <redacted>
+    =     at tests/sources/functional/arithm.move:295: overflow_u64_mul_incorrect
     =         ABORTED
 
 error: abort not covered by any of the `aborts_if` clauses
@@ -102,18 +204,18 @@ error: abort not covered by any of the `aborts_if` clauses
     =         ABORTED
 
 error: abort not covered by any of the `aborts_if` clauses
-    ┌─ tests/sources/functional/arithm.move:201:5
+    ┌─ tests/sources/functional/arithm.move:249:5
     │
-199 │           x * y
+247 │           x * y
     │             - abort happened here with execution failure
-200 │       }
-201 │ ╭     spec overflow_u8_mul_incorrect {
-202 │ │         aborts_if false;
-203 │ │     }
+248 │       }
+249 │ ╭     spec overflow_u8_mul_incorrect {
+250 │ │         aborts_if false;
+251 │ │     }
     │ ╰─────^
     │
-    =     at tests/sources/functional/arithm.move:198: overflow_u8_mul_incorrect
+    =     at tests/sources/functional/arithm.move:246: overflow_u8_mul_incorrect
     =         x = <redacted>
     =         y = <redacted>
-    =     at tests/sources/functional/arithm.move:199: overflow_u8_mul_incorrect
+    =     at tests/sources/functional/arithm.move:247: overflow_u8_mul_incorrect
     =         ABORTED

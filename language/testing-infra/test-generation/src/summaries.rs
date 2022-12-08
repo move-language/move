@@ -82,6 +82,18 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
                 SignatureToken::U8
             ))]),
         },
+        Bytecode::LdU16(_) => Summary {
+            preconditions: vec![],
+            effects: Effects::NoTyParams(vec![state_stack_push!(AbstractValue::new_primitive(
+                SignatureToken::U16
+            ))]),
+        },
+        Bytecode::LdU32(_) => Summary {
+            preconditions: vec![],
+            effects: Effects::NoTyParams(vec![state_stack_push!(AbstractValue::new_primitive(
+                SignatureToken::U32
+            ))]),
+        },
         Bytecode::LdU64(_) => Summary {
             preconditions: vec![],
             effects: Effects::NoTyParams(vec![state_stack_push!(AbstractValue::new_primitive(
@@ -94,11 +106,31 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
                 SignatureToken::U128
             ))]),
         },
+        Bytecode::LdU256(_) => Summary {
+            preconditions: vec![],
+            effects: Effects::NoTyParams(vec![state_stack_push!(AbstractValue::new_primitive(
+                SignatureToken::U256
+            ))]),
+        },
         Bytecode::CastU8 => Summary {
             preconditions: vec![state_stack_is_castable!(SignatureToken::U8)],
             effects: Effects::NoTyParams(vec![
                 state_stack_pop!(),
                 state_stack_push!(AbstractValue::new_primitive(SignatureToken::U8)),
+            ]),
+        },
+        Bytecode::CastU16 => Summary {
+            preconditions: vec![state_stack_is_castable!(SignatureToken::U16)],
+            effects: Effects::NoTyParams(vec![
+                state_stack_pop!(),
+                state_stack_push!(AbstractValue::new_primitive(SignatureToken::U16)),
+            ]),
+        },
+        Bytecode::CastU32 => Summary {
+            preconditions: vec![state_stack_is_castable!(SignatureToken::U32)],
+            effects: Effects::NoTyParams(vec![
+                state_stack_pop!(),
+                state_stack_push!(AbstractValue::new_primitive(SignatureToken::U32)),
             ]),
         },
         Bytecode::CastU64 => Summary {
@@ -113,6 +145,13 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
             effects: Effects::NoTyParams(vec![
                 state_stack_pop!(),
                 state_stack_push!(AbstractValue::new_primitive(SignatureToken::U128)),
+            ]),
+        },
+        Bytecode::CastU256 => Summary {
+            preconditions: vec![state_stack_is_castable!(SignatureToken::U256)],
+            effects: Effects::NoTyParams(vec![
+                state_stack_pop!(),
+                state_stack_push!(AbstractValue::new_primitive(SignatureToken::U256)),
             ]),
         },
         // TODO actual constant generation

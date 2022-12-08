@@ -18,6 +18,7 @@ Module providing debug functionality.
 
 ## Function `print`
 
+Pretty-prints any Move value. For a Move struct, includes its field names, their types and their values.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="debug.md#0x1_debug_print">print</a>&lt;T&gt;(x: &T)
@@ -40,6 +41,7 @@ Module providing debug functionality.
 
 ## Function `print_stack_trace`
 
+Prints the calling function's stack trace.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="debug.md#0x1_debug_print_stack_trace">print_stack_trace</a>()

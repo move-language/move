@@ -140,10 +140,16 @@ pub enum BuiltinTypeName_ {
     Signer,
     // u8
     U8,
+    // u16
+    U16,
+    // u32
+    U32,
     // u64
     U64,
     // u128
     U128,
+    // u256
+    U256,
     // Vector
     Vector,
     // bool
@@ -293,8 +299,11 @@ static BUILTIN_TYPE_ALL_NAMES: Lazy<BTreeSet<Symbol>> = Lazy::new(|| {
         BuiltinTypeName_::ADDRESS,
         BuiltinTypeName_::SIGNER,
         BuiltinTypeName_::U_8,
+        BuiltinTypeName_::U_16,
+        BuiltinTypeName_::U_32,
         BuiltinTypeName_::U_64,
         BuiltinTypeName_::U_128,
+        BuiltinTypeName_::U_256,
         BuiltinTypeName_::BOOL,
         BuiltinTypeName_::VECTOR,
     ]
@@ -306,8 +315,11 @@ static BUILTIN_TYPE_ALL_NAMES: Lazy<BTreeSet<Symbol>> = Lazy::new(|| {
 static BUILTIN_TYPE_NUMERIC: Lazy<BTreeSet<BuiltinTypeName_>> = Lazy::new(|| {
     [
         BuiltinTypeName_::U8,
+        BuiltinTypeName_::U16,
+        BuiltinTypeName_::U32,
         BuiltinTypeName_::U64,
         BuiltinTypeName_::U128,
+        BuiltinTypeName_::U256,
     ]
     .iter()
     .cloned()
@@ -324,25 +336,28 @@ impl BuiltinTypeName_ {
     pub const ADDRESS: &'static str = "address";
     pub const SIGNER: &'static str = "signer";
     pub const U_8: &'static str = "u8";
+    pub const U_16: &'static str = "u16";
+    pub const U_32: &'static str = "u32";
     pub const U_64: &'static str = "u64";
     pub const U_128: &'static str = "u128";
+    pub const U_256: &'static str = "u256";
     pub const BOOL: &'static str = "bool";
     pub const VECTOR: &'static str = "vector";
 
     pub fn all_names() -> &'static BTreeSet<Symbol> {
-        &*BUILTIN_TYPE_ALL_NAMES
+        &BUILTIN_TYPE_ALL_NAMES
     }
 
     pub fn numeric() -> &'static BTreeSet<BuiltinTypeName_> {
-        &*BUILTIN_TYPE_NUMERIC
+        &BUILTIN_TYPE_NUMERIC
     }
 
     pub fn bits() -> &'static BTreeSet<BuiltinTypeName_> {
-        &*BUILTIN_TYPE_BITS
+        &BUILTIN_TYPE_BITS
     }
 
     pub fn ordered() -> &'static BTreeSet<BuiltinTypeName_> {
-        &*BUILTIN_TYPE_ORDERED
+        &BUILTIN_TYPE_ORDERED
     }
 
     pub fn is_numeric(&self) -> bool {
@@ -355,8 +370,11 @@ impl BuiltinTypeName_ {
             BT::ADDRESS => Some(BT::Address),
             BT::SIGNER => Some(BT::Signer),
             BT::U_8 => Some(BT::U8),
+            BT::U_16 => Some(BT::U16),
+            BT::U_32 => Some(BT::U32),
             BT::U_64 => Some(BT::U64),
             BT::U_128 => Some(BT::U128),
+            BT::U_256 => Some(BT::U256),
             BT::BOOL => Some(BT::Bool),
             BT::VECTOR => Some(BT::Vector),
             _ => None,
@@ -367,7 +385,9 @@ impl BuiltinTypeName_ {
         use BuiltinTypeName_ as B;
         // Match here to make sure this function is fixed when collections are added
         match self {
-            B::Address | B::U8 | B::U64 | B::U128 | B::Bool => AbilitySet::primitives(loc),
+            B::Address | B::U8 | B::U16 | B::U32 | B::U64 | B::U128 | B::U256 | B::Bool => {
+                AbilitySet::primitives(loc)
+            }
             B::Signer => AbilitySet::signer(loc),
             B::Vector => AbilitySet::collection(loc),
         }
@@ -377,7 +397,15 @@ impl BuiltinTypeName_ {
         use BuiltinTypeName_ as B;
         // Match here to make sure this function is fixed when collections are added
         match self {
-            B::Address | B::Signer | B::U8 | B::U64 | B::U128 | B::Bool => vec![],
+            B::Address
+            | B::Signer
+            | B::U8
+            | B::U16
+            | B::U32
+            | B::U64
+            | B::U128
+            | B::U256
+            | B::Bool => vec![],
             B::Vector => vec![AbilitySet::empty()],
         }
     }
@@ -420,7 +448,7 @@ impl BuiltinFunction_ {
     pub const ASSERT_MACRO: &'static str = "assert";
 
     pub fn all_names() -> &'static BTreeSet<Symbol> {
-        &*BUILTIN_FUNCTION_ALL_NAMES
+        &BUILTIN_FUNCTION_ALL_NAMES
     }
 
     pub fn resolve(name_str: &str, arg: Option<Type>) -> Option<Self> {
@@ -454,7 +482,9 @@ impl Type_ {
     pub fn builtin_(b: BuiltinTypeName, ty_args: Vec<Type>) -> Type_ {
         use BuiltinTypeName_ as B;
         let abilities = match &b.value {
-            B::Address | B::U8 | B::U64 | B::U128 | B::Bool => Some(AbilitySet::primitives(b.loc)),
+            B::Address | B::U8 | B::U16 | B::U32 | B::U64 | B::U128 | B::U256 | B::Bool => {
+                Some(AbilitySet::primitives(b.loc))
+            }
             B::Signer => Some(AbilitySet::signer(b.loc)),
             B::Vector => None,
         };
@@ -482,12 +512,24 @@ impl Type_ {
         Self::builtin(loc, sp(loc, BuiltinTypeName_::U8), vec![])
     }
 
+    pub fn u16(loc: Loc) -> Type {
+        Self::builtin(loc, sp(loc, BuiltinTypeName_::U16), vec![])
+    }
+
+    pub fn u32(loc: Loc) -> Type {
+        Self::builtin(loc, sp(loc, BuiltinTypeName_::U32), vec![])
+    }
+
     pub fn u64(loc: Loc) -> Type {
         Self::builtin(loc, sp(loc, BuiltinTypeName_::U64), vec![])
     }
 
     pub fn u128(loc: Loc) -> Type {
         Self::builtin(loc, sp(loc, BuiltinTypeName_::U128), vec![])
+    }
+
+    pub fn u256(loc: Loc) -> Type {
+        Self::builtin(loc, sp(loc, BuiltinTypeName_::U256), vec![])
     }
 
     pub fn vector(loc: Loc, elem: Type) -> Type {
@@ -521,8 +563,11 @@ impl Value_ {
             Address(_) => Type_::address(loc),
             InferredNum(_) => return None,
             U8(_) => Type_::u8(loc),
+            U16(_) => Type_::u16(loc),
+            U32(_) => Type_::u32(loc),
             U64(_) => Type_::u64(loc),
             U128(_) => Type_::u128(loc),
+            U256(_) => Type_::u256(loc),
             Bool(_) => Type_::bool(loc),
             Bytearray(_) => Type_::vector(loc, Type_::u8(loc)),
         })
@@ -543,8 +588,11 @@ impl fmt::Display for BuiltinTypeName_ {
                 BT::Address => BT::ADDRESS,
                 BT::Signer => BT::SIGNER,
                 BT::U8 => BT::U_8,
+                BT::U16 => BT::U_16,
+                BT::U32 => BT::U_32,
                 BT::U64 => BT::U_64,
                 BT::U128 => BT::U_128,
+                BT::U256 => BT::U_256,
                 BT::Bool => BT::BOOL,
                 BT::Vector => BT::VECTOR,
             }

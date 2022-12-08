@@ -150,7 +150,7 @@ fn check_and_convert_type_args_and_args(
             }
             _ => {
                 let base_ty = convert_model_base_type(env, &local_ty, &converted_ty_args);
-                let converted = convert_move_value(env, arg, &base_ty)?;
+                let converted = convert_move_value(arg, &base_ty)?;
                 converted_args.push(converted);
             }
         }
@@ -163,8 +163,11 @@ pub fn convert_move_type_tag(env: &GlobalEnv, tag: &TypeTag) -> PartialVMResult<
     let converted = match tag {
         TypeTag::Bool => BaseType::mk_bool(),
         TypeTag::U8 => BaseType::mk_u8(),
+        TypeTag::U16 => BaseType::mk_u16(),
+        TypeTag::U32 => BaseType::mk_u32(),
         TypeTag::U64 => BaseType::mk_u64(),
         TypeTag::U128 => BaseType::mk_u128(),
+        TypeTag::U256 => BaseType::mk_u256(),
         TypeTag::Address => BaseType::mk_address(),
         TypeTag::Signer => BaseType::mk_signer(),
         TypeTag::Vector(elem_tag) => BaseType::mk_vector(convert_move_type_tag(env, elem_tag)?),
@@ -223,11 +226,7 @@ pub fn convert_move_struct_tag(
     })
 }
 
-pub fn convert_move_value(
-    env: &GlobalEnv,
-    val: &MoveValue,
-    ty: &BaseType,
-) -> PartialVMResult<TypedValue> {
+pub fn convert_move_value(val: &MoveValue, ty: &BaseType) -> PartialVMResult<TypedValue> {
     let converted = match (val, ty) {
         (MoveValue::Bool(v), BaseType::Primitive(PrimitiveType::Bool)) => TypedValue::mk_bool(*v),
         (MoveValue::U8(v), BaseType::Primitive(PrimitiveType::Int(IntType::U8))) => {
@@ -248,7 +247,7 @@ pub fn convert_move_value(
         (MoveValue::Vector(v), BaseType::Vector(elem)) => {
             let converted = v
                 .iter()
-                .map(|e| convert_move_value(env, e, elem))
+                .map(|e| convert_move_value(e, elem))
                 .collect::<PartialVMResult<Vec<_>>>()?;
             TypedValue::mk_vector(*elem.clone(), converted)
         }
@@ -260,7 +259,7 @@ pub fn convert_move_value(
             let converted = fields
                 .iter()
                 .zip(inst.fields.iter())
-                .map(|(f, info)| convert_move_value(env, f, &info.ty))
+                .map(|(f, info)| convert_move_value(f, &info.ty))
                 .collect::<PartialVMResult<Vec<_>>>()?;
             TypedValue::mk_struct(inst.clone(), converted)
         }
@@ -291,9 +290,14 @@ fn check_type_instantiation(
 
 fn get_abilities(env: &GlobalEnv, ty: &TypeTag) -> PartialVMResult<AbilitySet> {
     match ty {
-        TypeTag::Bool | TypeTag::U8 | TypeTag::U64 | TypeTag::U128 | TypeTag::Address => {
-            Ok(AbilitySet::PRIMITIVES)
-        }
+        TypeTag::Bool
+        | TypeTag::U8
+        | TypeTag::U16
+        | TypeTag::U32
+        | TypeTag::U64
+        | TypeTag::U128
+        | TypeTag::U256
+        | TypeTag::Address => Ok(AbilitySet::PRIMITIVES),
         TypeTag::Signer => Ok(AbilitySet::SIGNER),
         TypeTag::Vector(elem_ty) => AbilitySet::polymorphic_abilities(
             AbilitySet::VECTOR,

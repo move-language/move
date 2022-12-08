@@ -214,7 +214,10 @@ impl<'input> Lexer<'input> {
     /// (`/// .. <newline>` and `/** .. */`) will be not included in extracted comment string. The
     /// span in the returned map, however, covers the whole region of the comment, including the
     /// delimiters.
-    fn trim_whitespace_and_comments(&mut self, offset: usize) -> Result<&'input str, Diagnostic> {
+    fn trim_whitespace_and_comments(
+        &mut self,
+        offset: usize,
+    ) -> Result<&'input str, Box<Diagnostic>> {
         let mut text = &self.text[offset..];
 
         // A helper function to compute the index of the start of the given substring.
@@ -243,10 +246,10 @@ impl<'input> Lexer<'input> {
                         // otherwise.
                         let location =
                             make_loc(self.file_hash, loc.0, loc.0 + if loc.1 { 3 } else { 2 });
-                        return Err(diag!(
+                        return Err(Box::new(diag!(
                             Syntax::InvalidDocComment,
                             (location, "Unclosed block comment"),
-                        ));
+                        )));
                     } else if text.starts_with("/*") {
                         // We've found a (perhaps nested) multi-line comment.
                         let start = get_offset(text);
@@ -313,7 +316,7 @@ impl<'input> Lexer<'input> {
 
     // Look ahead to the next token after the current one and return it, and its starting offset,
     // without advancing the state of the lexer.
-    pub fn lookahead_with_start_loc(&mut self) -> Result<(Tok, usize), Diagnostic> {
+    pub fn lookahead_with_start_loc(&mut self) -> Result<(Tok, usize), Box<Diagnostic>> {
         let text = self.trim_whitespace_and_comments(self.cur_end)?;
         let next_start = self.text.len() - text.len();
         let (tok, _) = find_token(self.file_hash, text, next_start)?;
@@ -322,13 +325,13 @@ impl<'input> Lexer<'input> {
 
     // Look ahead to the next token after the current one and return it without advancing
     // the state of the lexer.
-    pub fn lookahead(&mut self) -> Result<Tok, Diagnostic> {
+    pub fn lookahead(&mut self) -> Result<Tok, Box<Diagnostic>> {
         Ok(self.lookahead_with_start_loc()?.0)
     }
 
     // Look ahead to the next two tokens after the current one and return them without advancing
     // the state of the lexer.
-    pub fn lookahead2(&mut self) -> Result<(Tok, Tok), Diagnostic> {
+    pub fn lookahead2(&mut self) -> Result<(Tok, Tok), Box<Diagnostic>> {
         let text = self.trim_whitespace_and_comments(self.cur_end)?;
         let offset = self.text.len() - text.len();
         let (first, length) = find_token(self.file_hash, text, offset)?;
@@ -385,7 +388,7 @@ impl<'input> Lexer<'input> {
         std::mem::take(&mut self.matched_doc_comments)
     }
 
-    pub fn advance(&mut self) -> Result<(), Diagnostic> {
+    pub fn advance(&mut self) -> Result<(), Box<Diagnostic>> {
         self.prev_end = self.cur_end;
         let text = self.trim_whitespace_and_comments(self.cur_end)?;
         self.cur_start = self.text.len() - text.len();
@@ -409,7 +412,7 @@ fn find_token(
     file_hash: FileHash,
     text: &str,
     start_offset: usize,
-) -> Result<(Tok, usize), Diagnostic> {
+) -> Result<(Tok, usize), Box<Diagnostic>> {
     let c: char = match text.chars().next() {
         Some(next_char) => next_char,
         None => {
@@ -438,14 +441,14 @@ fn find_token(
                     Some(last_quote) => (Tok::ByteStringValue, 2 + last_quote + 1),
                     None => {
                         let loc = make_loc(file_hash, start_offset, start_offset + line.len() + 2);
-                        return Err(diag!(
+                        return Err(Box::new(diag!(
                             if is_hex {
                                 Syntax::InvalidHexString
                             } else {
                                 Syntax::InvalidByteString
                             },
                             (loc, "Missing closing quote (\") after byte string")
-                        ));
+                        )));
                     }
                 }
             } else {
@@ -537,10 +540,10 @@ fn find_token(
         '@' => (Tok::AtSign, 1),
         _ => {
             let loc = make_loc(file_hash, start_offset, start_offset);
-            return Err(diag!(
+            return Err(Box::new(diag!(
                 Syntax::InvalidCharacter,
                 (loc, format!("Invalid character: '{}'", c))
-            ));
+            )));
         }
     };
 
@@ -568,7 +571,7 @@ fn get_decimal_number(text: &str) -> (Tok, usize) {
 // Return the length of the substring containing characters in [0-9a-fA-F].
 fn get_hex_number(text: &str) -> (Tok, usize) {
     let num_text_len = text
-        .find(|c| !matches!(c, 'a'..='f' | 'A'..='F' | '0'..='9'))
+        .find(|c| !matches!(c, 'a'..='f' | 'A'..='F' | '0'..='9'| '_'))
         .unwrap_or(text.len());
     get_number_maybe_with_suffix(text, num_text_len)
 }
@@ -579,9 +582,9 @@ fn get_number_maybe_with_suffix(text: &str, num_text_len: usize) -> (Tok, usize)
     let rest = &text[num_text_len..];
     if rest.starts_with("u8") {
         (Tok::NumTypedValue, num_text_len + 2)
-    } else if rest.starts_with("u64") {
+    } else if rest.starts_with("u64") || rest.starts_with("u16") || rest.starts_with("u32") {
         (Tok::NumTypedValue, num_text_len + 3)
-    } else if rest.starts_with("u128") {
+    } else if rest.starts_with("u128") || rest.starts_with("u256") {
         (Tok::NumTypedValue, num_text_len + 4)
     } else {
         // No typed suffix

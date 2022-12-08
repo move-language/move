@@ -130,9 +130,6 @@ impl VMStatus {
                 let code = *code;
                 debug_assert!(code != StatusCode::EXECUTED);
                 debug_assert!(code != StatusCode::ABORTED);
-                debug_assert!(
-                    code.status_type() != StatusType::Execution || code == StatusCode::OUT_OF_GAS
-                );
                 code
             }
         }
@@ -601,6 +598,12 @@ pub enum StatusCode {
     VEC_BORROW_ELEMENT_EXISTS_MUTABLE_BORROW_ERROR = 1110,
     // Loops are too deeply nested.
     LOOP_MAX_DEPTH_REACHED = 1111,
+    TOO_MANY_TYPE_PARAMETERS = 1112,
+    TOO_MANY_PARAMETERS = 1113,
+    TOO_MANY_BASIC_BLOCKS = 1114,
+    VALUE_STACK_OVERFLOW = 1115,
+    TOO_MANY_TYPE_NODES = 1116,
+    VALUE_STACK_PUSH_OVERFLOW = 1117,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.
@@ -639,8 +642,11 @@ pub enum StatusCode {
     DUPLICATE_TABLE = 3010,
     UNKNOWN_ABILITY = 3013,
     UNKNOWN_NATIVE_STRUCT_FLAG = 3014,
+    BAD_U16 = 3017,
+    BAD_U32 = 3018,
     BAD_U64 = 3019,
     BAD_U128 = 3020,
+    BAD_U256 = 3021,
     VALUE_SERIALIZATION_ERROR = 3022,
     VALUE_DESERIALIZATION_ERROR = 3023,
     CODE_DESERIALIZATION_ERROR = 3024,
@@ -667,6 +673,9 @@ pub enum StatusCode {
     VM_MAX_VALUE_DEPTH_REACHED = 4025,
     VM_EXTENSION_ERROR = 4026,
     STORAGE_WRITE_LIMIT_REACHED = 4027,
+    MEMORY_LIMIT_EXCEEDED = 4028,
+    VM_MAX_TYPE_NODES_REACHED = 4029,
+    VM_MAX_DEPENDENCY_DEPTH_REACHED = 4030,
 
     // A reserved status to represent an unknown vm status.
     // this is std::u64::MAX, but we can't pattern match on that, so put the hardcoded value in

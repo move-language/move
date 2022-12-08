@@ -64,7 +64,7 @@ fn main() {
     let mut coverage_writer: Box<dyn Write> = match &args.coverage_path {
         Some(x) => {
             let path = Path::new(x);
-            Box::new(File::create(&path).unwrap())
+            Box::new(File::create(path).unwrap())
         }
         None => Box::new(io::stdout()),
     };

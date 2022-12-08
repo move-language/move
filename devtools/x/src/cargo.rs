@@ -104,13 +104,13 @@ impl Cargo {
             SelectedInclude::Workspace => {
                 self.inner.arg("--workspace");
                 for &e in &packages.excludes {
-                    self.inner.args(&["--exclude", e]);
+                    self.inner.args(["--exclude", e]);
                 }
             }
             SelectedInclude::Includes(includes) => {
                 for &p in includes {
                     if !packages.excludes.contains(p) {
-                        self.inner.args(&["--package", p]);
+                        self.inner.args(["--package", p]);
                     }
                 }
             }
@@ -326,7 +326,7 @@ impl<'a> CargoCommand<'a> {
             Ok(vec![])
         } else {
             let mut cargo = self.prepare_cargo(packages);
-            cargo.args(&["--message-format", "json-render-diagnostics"]);
+            cargo.args(["--message-format", "json-render-diagnostics"]);
             Ok(cargo.run_with_output()?)
         }
     }

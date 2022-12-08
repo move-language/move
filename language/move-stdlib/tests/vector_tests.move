@@ -90,7 +90,7 @@ module std::vector_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(vector_error, minor_status = 1, location = Self)]
     fun borrow_out_of_range() {
         let v = V::empty();
         V::push_back(&mut v, 7);
@@ -133,7 +133,7 @@ module std::vector_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 3)]
+    #[expected_failure(vector_error, minor_status = 3, location = Self)]
     fun destroy_non_empty() {
         let v = V::empty();
         V::push_back(&mut v, 42);
@@ -154,7 +154,7 @@ module std::vector_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 2)]
+    #[expected_failure(vector_error, minor_status = 2, location = Self)]
     fun pop_out_of_range() {
         let v = V::empty<u64>();
         V::pop_back(&mut v);
@@ -228,14 +228,14 @@ module std::vector_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 0x20000)]
+    #[expected_failure(abort_code = V::EINDEX_OUT_OF_BOUNDS)]
     fun remove_empty_vector() {
         let v = V::empty<u64>();
         V::remove(&mut v, 0);
     }
 
     #[test]
-    #[expected_failure(abort_code = 0x20000)]
+    #[expected_failure(abort_code = V::EINDEX_OUT_OF_BOUNDS)]
     fun remove_out_of_bound_index() {
         let v = V::empty<u64>();
         V::push_back(&mut v, 0);
@@ -299,14 +299,14 @@ module std::vector_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(vector_error, minor_status = 1, location = Self)]
     fun swap_empty() {
         let v = V::empty<u64>();
         V::swap(&mut v, 0, 0);
     }
 
     #[test]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(vector_error, minor_status = 1, location = Self)]
     fun swap_out_of_range() {
         let v = V::empty<u64>();
 
@@ -319,7 +319,7 @@ module std::vector_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 0x20000)]
+    #[expected_failure(abort_code = V::EINDEX_OUT_OF_BOUNDS)]
     fun swap_remove_empty() {
         let v = V::empty<u64>();
         V::swap_remove(&mut v, 0);
@@ -377,7 +377,7 @@ module std::vector_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 1)]
+    #[expected_failure(vector_error, minor_status = 1, location = std::vector)]
     fun swap_remove_out_of_range() {
         let v = V::empty();
         V::push_back(&mut v, 0);
@@ -487,8 +487,11 @@ module std::vector_tests {
     #[test]
     fun test_natives_with_different_instantiations() {
         test_natives_with_type<u8>(1u8, 2u8);
+        test_natives_with_type<u16>(45356u16, 25345u16);
+        test_natives_with_type<u32>(45356u32, 28768867u32);
         test_natives_with_type<u64>(1u64, 2u64);
         test_natives_with_type<u128>(1u128, 2u128);
+        test_natives_with_type<u256>(45356u256, 253458768867u256);
         test_natives_with_type<bool>(true, false);
         test_natives_with_type<address>(@0x1, @0x2);
 

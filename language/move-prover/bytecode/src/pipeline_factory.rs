@@ -35,7 +35,7 @@ pub fn default_pipeline_with_options(options: &ProverOptions) -> FunctionTargetP
         MutRefInstrumenter::new(),
         ReachingDefProcessor::new(),
         LiveVarAnalysisProcessor::new(),
-        BorrowAnalysisProcessor::new(),
+        BorrowAnalysisProcessor::new_borrow_natives(options.borrow_natives.clone()),
         MemoryInstrumentationProcessor::new(),
         CleanAndOptimizeProcessor::new(),
         UsageProcessor::new(),

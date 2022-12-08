@@ -286,6 +286,11 @@ assertion fails the unit test will fail.
   │    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Test was not expected to abort but it aborted with 0 here
   │
   │
+  │ ────── Storage state at point of failure ──────
+  │ 0xc0ffee:
+  │       => key 0xcafe::BasicCoin::Coin {
+  │           value: 10
+  │       }
   └──────────────────
   ```
 * Find a flag that allows you to gather test coverage information, and
@@ -405,7 +410,7 @@ move_to(account, Balance { coin:  empty_coin });
 `mint` method mints coins to a given account. Here we require that `mint` must be approved
 by the module owner. We enforce this using the assert statement:
 ```
-assert!(signer::address_of(&module_owner) == MODULE_OWNER, errors::requires_address(ENOT_MODULE_OWNER));
+assert!(signer::address_of(&module_owner) == MODULE_OWNER, ENOT_MODULE_OWNER);
 ```
 Assert statements in Move can be used in this way: `assert!(<predicate>, <abort_code>);`. This means that if the `<predicate>`
 is false, then abort the transaction with `<abort_code>`. Here `MODULE_OWNER` and `ENOT_MODULE_OWNER` are both constants

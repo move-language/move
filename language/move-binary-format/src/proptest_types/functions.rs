@@ -18,6 +18,7 @@ use crate::{
         TableSize,
     },
 };
+use move_core_types::u256::U256;
 use proptest::{
     collection::{vec, SizeRange},
     prelude::*,
@@ -893,7 +894,8 @@ impl BytecodeGen {
     fn check_signature_token(token: &SignatureToken) -> bool {
         use SignatureToken::*;
         match token {
-            U8 | U64 | U128 | Bool | Address | Signer | Struct(_) | TypeParameter(_) => true,
+            U8 | U16 | U32 | U64 | U128 | U256 | Bool | Address | Signer | Struct(_)
+            | TypeParameter(_) => true,
             Vector(element_token) => BytecodeGen::check_signature_token(element_token),
             StructInstantiation(_, type_arguments) => type_arguments
                 .iter()
@@ -911,11 +913,14 @@ impl BytecodeGen {
 
     fn simple_bytecode_strategy() -> impl Strategy<Value = Bytecode> {
         prop_oneof![
-            // The numbers are relative weights, somewhat arbitrarily picked.
-            9 => Self::just_bytecode_strategy(),
-            1 => any::<u64>().prop_map(Bytecode::LdU64),
-            1 => any::<u8>().prop_map(Bytecode::LdU8),
-            1 => any::<u128>().prop_map(Bytecode::LdU128),
+        // The numbers are relative weights, somewhat arbitrarily picked.
+        9 => Self::just_bytecode_strategy(),
+        1 => any::<u64>().prop_map(Bytecode::LdU64),
+        1 => any::<u8>().prop_map(Bytecode::LdU8),
+        1 => any::<u128>().prop_map(Bytecode::LdU128),
+        1 => any::<u16>().prop_map(Bytecode::LdU16),
+        1 => any::<u32>().prop_map(Bytecode::LdU32),
+        1 => any::<U256>().prop_map(Bytecode::LdU256),
         ]
     }
 
@@ -925,7 +930,7 @@ impl BytecodeGen {
         static JUST_BYTECODES: &[Bytecode] = &[
             FreezeRef, Pop, Ret, LdTrue, LdFalse, ReadRef, WriteRef, Add, Sub, Mul, Mod, Div,
             BitOr, BitAnd, Xor, Or, And, Eq, Neq, Lt, Gt, Le, Ge, Abort, CastU8, CastU64, CastU128,
-            Not, Nop, Shl, Shr,
+            CastU16, CastU32, CastU256, Not, Nop, Shl, Shr,
         ];
         select(JUST_BYTECODES)
     }

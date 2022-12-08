@@ -126,12 +126,13 @@ fn pad_tmp_path(tmp_dir: &Path, pad_amount: usize) -> anyhow::Result<PathBuf> {
 // package manifest.
 fn copy_deps(tmp_dir: &Path, pkg_dir: &Path) -> anyhow::Result<PathBuf> {
     // Sometimes we run a test that isn't a package for metatests so if there isn't a package we
-    // don't need to nest at all.
+    // don't need to nest at all. Resolution graph diagnostics are only needed for CLI commands so
+    // ignore them by passing a vector as the writer.
     let package_resolution = match (BuildConfig {
         dev_mode: true,
         ..Default::default()
     })
-    .resolution_graph_for_package(pkg_dir)
+    .resolution_graph_for_package(pkg_dir, &mut Vec::new())
     {
         Ok(pkg) => pkg,
         Err(_) => return Ok(tmp_dir.to_path_buf()),
@@ -140,7 +141,7 @@ fn copy_deps(tmp_dir: &Path, pkg_dir: &Path) -> anyhow::Result<PathBuf> {
     let tmp_dir = pad_tmp_path(tmp_dir, package_nest_depth)?;
     for (_, dep) in package_resolution.package_table.iter() {
         let source_dep_path = &dep.package_path;
-        let dest_dep_path = tmp_dir.join(&dep.package_path.strip_prefix(pkg_dir).unwrap());
+        let dest_dep_path = tmp_dir.join(dep.package_path.strip_prefix(pkg_dir).unwrap());
         if !dest_dep_path.exists() {
             fs::create_dir_all(&dest_dep_path)?;
         }

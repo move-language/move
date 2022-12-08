@@ -133,9 +133,17 @@ pub const INTRINSIC_FUN_MAP_DESTROY_EMPTY: &str = "map_destroy_empty";
 /// `[move] fun map_add_no_override<K, V>(m: &mut Map<K, V>, k: K, v: V)`
 pub const INTRINSIC_FUN_MAP_ADD_NO_OVERRIDE: &str = "map_add_no_override";
 
-/// Remove an entry from the map, aborts if the key already exists
+/// Add a new entry to the map, override if the key already exists
+/// `[move] fun map_add_override_if_exists<K, V>(m: &mut Map<K, V>, k: K, v: V)`
+pub const INTRINSIC_FUN_MAP_ADD_OVERRIDE_IF_EXISTS: &str = "map_add_override_if_exists";
+
+/// Remove an entry from the map, aborts if the key does not exists
 /// `[move] fun map_del_must_exist<K, V>(m: &mut Map<K, V>, k: K): V`
 pub const INTRINSIC_FUN_MAP_DEL_MUST_EXIST: &str = "map_del_must_exist";
+
+/// Remove an entry from the map, aborts if the key does not exists
+/// `[move] fun map_del_return_key<K, V>(m: &mut Map<K, V>, k: K): (K, V)`
+pub const INTRINSIC_FUN_MAP_DEL_RETURN_KEY: &str = "map_del_return_key";
 
 /// Immutable borrow of a value from the map, aborts if the key does not exist
 /// `[move] fun map_borrow<K, V>(m: &Map<K, V>, k: K): &V`
@@ -161,7 +169,9 @@ pub static INTRINSIC_TYPE_MAP_ASSOC_FUNCTIONS: Lazy<BTreeMap<&'static str, bool>
             (INTRINSIC_FUN_MAP_HAS_KEY, true),
             (INTRINSIC_FUN_MAP_DESTROY_EMPTY, true),
             (INTRINSIC_FUN_MAP_ADD_NO_OVERRIDE, true),
+            (INTRINSIC_FUN_MAP_ADD_OVERRIDE_IF_EXISTS, true),
             (INTRINSIC_FUN_MAP_DEL_MUST_EXIST, true),
+            (INTRINSIC_FUN_MAP_DEL_RETURN_KEY, true),
             (INTRINSIC_FUN_MAP_BORROW, true),
             (INTRINSIC_FUN_MAP_BORROW_MUT, true),
         ])

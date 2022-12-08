@@ -48,18 +48,18 @@ impl GitCli {
             let output = self
                 .git_command()
                 // The -z causes files to not be quoted, and to be separated by \0.
-                .args(&["ls-files", "-z"])
+                .args(["ls-files", "-z"])
                 .output()
                 .map_err(|err| SystemError::io("running git ls-files", err))?;
             if !output.status.success() {
-                return Err(SystemError::Exec {
+                return Err(Box::new(SystemError::Exec {
                     cmd: "git ls-files",
                     status: output.status,
-                });
+                }));
             }
 
             Utf8Paths0::from_bytes(output.stdout)
-                .map_err(|(path, err)| SystemError::NonUtf8Path { path, err })
+                .map_err(|(path, err)| Box::new(SystemError::NonUtf8Path { path, err }))
         })
     }
 
@@ -67,16 +67,16 @@ impl GitCli {
     pub fn merge_base(&self, commit_ref: &str) -> Result<GitHash> {
         let output = self
             .git_command()
-            .args(&["merge-base", "HEAD", commit_ref])
+            .args(["merge-base", "HEAD", commit_ref])
             .output()
             .map_err(|err| {
                 SystemError::io(format!("running git merge-base HEAD {}", commit_ref), err)
             })?;
         if !output.status.success() {
-            return Err(SystemError::Exec {
+            return Err(Box::new(SystemError::Exec {
                 cmd: "git merge-base",
                 status: output.status,
-            });
+            }));
         }
 
         // The output is a hex-encoded hash followed by a newline.
@@ -96,7 +96,7 @@ impl GitCli {
         diff_filter: Option<&str>,
     ) -> Result<Utf8Paths0> {
         let mut command = self.git_command();
-        command.args(&["diff", "-z", "--name-only"]);
+        command.args(["diff", "-z", "--name-only"]);
         if let Some(diff_filter) = diff_filter {
             command.arg(format!("--diff-filter={}", diff_filter));
         }
@@ -109,14 +109,14 @@ impl GitCli {
             .output()
             .map_err(|err| SystemError::io("running git diff", err))?;
         if !output.status.success() {
-            return Err(SystemError::Exec {
+            return Err(Box::new(SystemError::Exec {
                 cmd: "git diff",
                 status: output.status,
-            });
+            }));
         }
 
         Utf8Paths0::from_bytes(output.stdout)
-            .map_err(|(path, err)| SystemError::NonUtf8Path { path, err })
+            .map_err(|(path, err)| Box::new(SystemError::NonUtf8Path { path, err }))
     }
 
     /// Returns a package graph for the given commit, using a scratch repo if necessary.
@@ -139,7 +139,7 @@ impl GitCli {
         // Check that the project root and the Git root match.
         let output = self
             .git_command()
-            .args(&["rev-parse", "--show-toplevel"])
+            .args(["rev-parse", "--show-toplevel"])
             .stderr(Stdio::inherit())
             .output()
             .map_err(|err| SystemError::io("running git rev-parse --show-toplevel", err))?;
@@ -189,7 +189,7 @@ impl GitCli {
     /// performance reasons.
     fn get_or_init_scratch(&self, hash: &GitHash) -> Result<Utf8PathBuf> {
         let mut scratch_dir = self.root.join("target");
-        scratch_dir.extend(&["x-scratch", "tree"]);
+        scratch_dir.extend(["x-scratch", "tree"]);
 
         if scratch_dir.is_dir() && self.is_git_repo(&scratch_dir)? {
             debug!("Using existing scratch worktree at {}", scratch_dir,);
@@ -199,14 +199,14 @@ impl GitCli {
                 .git_command()
                 .current_dir(&scratch_dir)
                 // TODO: also git clean?
-                .args(&["reset", &format!("{:x}", hash), "--hard"])
+                .args(["reset", &format!("{:x}", hash), "--hard"])
                 .output()
                 .map_err(|err| SystemError::io("running git checkout in scratch tree", err))?;
             if !output.status.success() {
-                return Err(SystemError::Exec {
+                return Err(Box::new(SystemError::Exec {
                     cmd: "git checkout",
                     status: output.status,
-                });
+                }));
             }
         } else {
             if scratch_dir.is_dir() {
@@ -218,16 +218,16 @@ impl GitCli {
             info!("Setting up scratch worktree in {}", scratch_dir);
             let output = self
                 .git_command()
-                .args(&["worktree", "add"])
+                .args(["worktree", "add"])
                 .arg(&scratch_dir)
-                .args(&[&format!("{:x}", hash), "--detach"])
+                .args([&format!("{:x}", hash), "--detach"])
                 .output()
                 .map_err(|err| SystemError::io("running git worktree add", err))?;
             if !output.status.success() {
-                return Err(SystemError::Exec {
+                return Err(Box::new(SystemError::Exec {
                     cmd: "git worktree add",
                     status: output.status,
-                });
+                }));
             }
         }
 
@@ -240,7 +240,7 @@ impl GitCli {
         let output = self
             .git_command()
             .current_dir(dir)
-            .args(&["rev-parse", "--git-dir"])
+            .args(["rev-parse", "--git-dir"])
             .output()
             .map_err(|err| SystemError::io("checking if a directory is a git repo", err))?;
 
@@ -270,6 +270,6 @@ impl<'a, 'b> From<&'a GitHash> for Cow<'b, OsStr> {
 
 impl fmt::LowerHex for GitHash {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", hex::encode(&self.0))
+        write!(f, "{}", hex::encode(self.0))
     }
 }

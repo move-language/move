@@ -81,7 +81,7 @@ fn main() {
     let mut summary_writer: Box<dyn Write> = match &args.summary_path {
         Some(x) => {
             let path = Path::new(x);
-            Box::new(File::create(&path).unwrap())
+            Box::new(File::create(path).unwrap())
         }
         None => Box::new(io::stdout()),
     };
@@ -89,9 +89,9 @@ fn main() {
     let modules = get_modules(&args);
     if args.derive_path_coverage {
         let trace_map = if args.is_raw_trace_file {
-            TraceMap::from_trace_file(&input_trace_path)
+            TraceMap::from_trace_file(input_trace_path)
         } else {
-            TraceMap::from_binary_file(&input_trace_path)
+            TraceMap::from_binary_file(input_trace_path)
         };
         if !args.csv_output {
             format_human_summary(
@@ -111,9 +111,9 @@ fn main() {
         }
     } else {
         let coverage_map = if args.is_raw_trace_file {
-            CoverageMap::from_trace_file(&input_trace_path)
+            CoverageMap::from_trace_file(input_trace_path)
         } else {
-            CoverageMap::from_binary_file(&input_trace_path).unwrap()
+            CoverageMap::from_binary_file(input_trace_path).unwrap()
         };
         let unified_exec_map = coverage_map.to_unified_exec_map();
         if !args.csv_output {

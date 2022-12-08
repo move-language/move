@@ -32,38 +32,38 @@ object "A2_M" {
             }
             $Abort(97)
             function A2_M_evaded(a, b) -> $result0, $result1, $result2, $result3 {
-                let ar, cr, d, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15
+                let ar, d, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14
                 let $locals := $Malloc(64)
                 mstore($locals, a)
-                // $t6 := copy($t0)
-                $t6 := mload($locals)
-                // $t3 := $t6
-                mstore(add($locals, 32), $t6)
-                // $t7 := copy($t3)
-                $t7 := mload(add($locals, 32))
-                // $t8 := +($t7, $t1)
-                $t8 := $AddU64($t7, b)
-                // $t9 := borrow_local($t0)
-                $t9 := $MakePtr(false, add($locals, 24))
-                // $t10 := borrow_local($t3)
-                $t10 := $MakePtr(false, add($locals, 56))
-                // $t11 := read_ref($t10)
-                $t11 := $LoadU64($t10)
-                // $t12 := 1
-                $t12 := 1
-                // $t13 := +($t11, $t12)
-                $t13 := $AddU64($t11, $t12)
-                // write_ref($t9, $t13)
-                $StoreU64($t9, $t13)
-                // $t14 := move($t0)
-                $t14 := mload($locals)
-                // $t15 := move($t3)
-                $t15 := mload(add($locals, 32))
-                // return ($t14, $t1, $t15, $t8)
-                $result0 := $t14
+                // $t5 := copy($t0)
+                $t5 := mload($locals)
+                // $t3 := $t5
+                mstore(add($locals, 32), $t5)
+                // $t6 := copy($t3)
+                $t6 := mload(add($locals, 32))
+                // $t7 := +($t6, $t1)
+                $t7 := $AddU64($t6, b)
+                // $t8 := borrow_local($t0)
+                $t8 := $MakePtr(false, add($locals, 24))
+                // $t9 := borrow_local($t3)
+                $t9 := $MakePtr(false, add($locals, 56))
+                // $t10 := read_ref($t9)
+                $t10 := $LoadU64($t9)
+                // $t11 := 1
+                $t11 := 1
+                // $t12 := +($t10, $t11)
+                $t12 := $AddU64($t10, $t11)
+                // write_ref($t8, $t12)
+                $StoreU64($t8, $t12)
+                // $t13 := move($t0)
+                $t13 := mload($locals)
+                // $t14 := move($t3)
+                $t14 := mload(add($locals, 32))
+                // return ($t13, $t1, $t14, $t7)
+                $result0 := $t13
                 $result1 := b
-                $result2 := $t15
-                $result3 := $t8
+                $result2 := $t14
+                $result3 := $t7
                 $Free($locals, 64)
             }
 
@@ -275,16 +275,15 @@ object "test_A2_M_test_call_by_ref" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t6 := 101
                     $t6 := 101
                     // abort($t6)
                     $Abort($t6)
-                }
-                case 3 {
-                    // label L0
-                    // return ()
-                    $Free($locals, 32)
-                    leave
                 }
                 case 4 {
                     // $t1 := 1
@@ -301,10 +300,16 @@ object "test_A2_M_test_call_by_ref" {
                     $t4 := 2
                     // $t5 := ==($t3, $t4)
                     $t5 := $Eq($t3, $t4)
-                    // if ($t5) goto L0 else goto L1
+                    // if ($t5) goto L1 else goto L0
                     switch $t5
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // return ()
+                    $Free($locals, 32)
+                    leave
                 }
             }
         }
@@ -412,7 +417,7 @@ object "test_A2_M_test_call_by_ref" {
         }
     }
 }
-===> Test result of M::test_call_by_ref: Succeed(Stopped) (used_gas=410): []
+===> Test result of M::test_call_by_ref: Succeed(Stopped) (used_gas=488): []
 
 // test of M::test_evaded
 /* =======================================
@@ -426,89 +431,109 @@ object "test_A2_M_test_evaded" {
         A2_M_test_evaded()
         return (0, 0)
         function A2_M_test_evaded() {
-            let a, b, c, d, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21
+            let b, c, d, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20
             let $block := 4
             for {} true {} {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t12 := 100
-                    $t12 := 100
-                    // abort($t12)
-                    $Abort($t12)
+                    // goto L2
+                    $block := 5
                 }
                 case 3 {
                     // label L0
-                    // $t13 := 2
-                    $t13 := 2
-                    // $t14 := ==($t7, $t13)
-                    $t14 := $Eq($t7, $t13)
-                    // if ($t14) goto L2 else goto L3
-                    switch $t14
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
+                    // $t11 := 100
+                    $t11 := 100
+                    // abort($t11)
+                    $Abort($t11)
                 }
                 case 4 {
-                    // $t4 := 1
-                    $t4 := 1
-                    // $t5 := 2
-                    $t5 := 2
-                    // ($t6, $t7, $t8, $t9) := M::evaded($t4, $t5)
-                    $t6, $t7, $t8, $t9 := A2_M_evaded($t4, $t5)
-                    // $t10 := 2
-                    $t10 := 2
-                    // $t11 := ==($t6, $t10)
-                    $t11 := $Eq($t6, $t10)
-                    // if ($t11) goto L0 else goto L1
-                    switch $t11
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    // $t3 := 1
+                    $t3 := 1
+                    // $t4 := 2
+                    $t4 := 2
+                    // ($t5, $t6, $t7, $t8) := M::evaded($t3, $t4)
+                    $t5, $t6, $t7, $t8 := A2_M_evaded($t3, $t4)
+                    // $t9 := 2
+                    $t9 := 2
+                    // $t10 := ==($t5, $t9)
+                    $t10 := $Eq($t5, $t9)
+                    // if ($t10) goto L1 else goto L0
+                    switch $t10
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
-                    // label L3
-                    // $t15 := 101
-                    $t15 := 101
-                    // abort($t15)
-                    $Abort($t15)
+                    // label L2
+                    // $t12 := 2
+                    $t12 := 2
+                    // $t13 := ==($t6, $t12)
+                    $t13 := $Eq($t6, $t12)
+                    // if ($t13) goto L4 else goto L3
+                    switch $t13
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
                 }
                 case 6 {
-                    // label L2
-                    // $t16 := 1
-                    $t16 := 1
-                    // $t17 := ==($t8, $t16)
-                    $t17 := $Eq($t8, $t16)
-                    // if ($t17) goto L4 else goto L5
-                    switch $t17
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    // label L4
+                    // goto L5
+                    $block := 8
                 }
                 case 7 {
-                    // label L5
-                    // $t18 := 102
-                    $t18 := 102
-                    // abort($t18)
-                    $Abort($t18)
+                    // label L3
+                    // $t14 := 101
+                    $t14 := 101
+                    // abort($t14)
+                    $Abort($t14)
                 }
                 case 8 {
-                    // label L4
-                    // $t19 := 3
-                    $t19 := 3
-                    // $t20 := ==($t9, $t19)
-                    $t20 := $Eq($t9, $t19)
-                    // if ($t20) goto L6 else goto L7
-                    switch $t20
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    // label L5
+                    // $t15 := 1
+                    $t15 := 1
+                    // $t16 := ==($t7, $t15)
+                    $t16 := $Eq($t7, $t15)
+                    // if ($t16) goto L7 else goto L6
+                    switch $t16
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
                 case 9 {
                     // label L7
-                    // $t21 := 103
-                    $t21 := 103
-                    // abort($t21)
-                    $Abort($t21)
+                    // goto L8
+                    $block := 11
                 }
                 case 10 {
                     // label L6
+                    // $t17 := 102
+                    $t17 := 102
+                    // abort($t17)
+                    $Abort($t17)
+                }
+                case 11 {
+                    // label L8
+                    // $t18 := 3
+                    $t18 := 3
+                    // $t19 := ==($t8, $t18)
+                    $t19 := $Eq($t8, $t18)
+                    // if ($t19) goto L10 else goto L9
+                    switch $t19
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
+                }
+                case 12 {
+                    // label L10
+                    // goto L11
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
+                    // $t20 := 103
+                    $t20 := 103
+                    // abort($t20)
+                    $Abort($t20)
+                }
+                case 14 {
+                    // label L11
                     // return ()
                     leave
                 }
@@ -516,38 +541,38 @@ object "test_A2_M_test_evaded" {
         }
 
         function A2_M_evaded(a, b) -> $result0, $result1, $result2, $result3 {
-            let ar, cr, d, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15
+            let ar, d, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14
             let $locals := $Malloc(64)
             mstore($locals, a)
-            // $t6 := copy($t0)
-            $t6 := mload($locals)
-            // $t3 := $t6
-            mstore(add($locals, 32), $t6)
-            // $t7 := copy($t3)
-            $t7 := mload(add($locals, 32))
-            // $t8 := +($t7, $t1)
-            $t8 := $AddU64($t7, b)
-            // $t9 := borrow_local($t0)
-            $t9 := $MakePtr(false, add($locals, 24))
-            // $t10 := borrow_local($t3)
-            $t10 := $MakePtr(false, add($locals, 56))
-            // $t11 := read_ref($t10)
-            $t11 := $LoadU64($t10)
-            // $t12 := 1
-            $t12 := 1
-            // $t13 := +($t11, $t12)
-            $t13 := $AddU64($t11, $t12)
-            // write_ref($t9, $t13)
-            $StoreU64($t9, $t13)
-            // $t14 := move($t0)
-            $t14 := mload($locals)
-            // $t15 := move($t3)
-            $t15 := mload(add($locals, 32))
-            // return ($t14, $t1, $t15, $t8)
-            $result0 := $t14
+            // $t5 := copy($t0)
+            $t5 := mload($locals)
+            // $t3 := $t5
+            mstore(add($locals, 32), $t5)
+            // $t6 := copy($t3)
+            $t6 := mload(add($locals, 32))
+            // $t7 := +($t6, $t1)
+            $t7 := $AddU64($t6, b)
+            // $t8 := borrow_local($t0)
+            $t8 := $MakePtr(false, add($locals, 24))
+            // $t9 := borrow_local($t3)
+            $t9 := $MakePtr(false, add($locals, 56))
+            // $t10 := read_ref($t9)
+            $t10 := $LoadU64($t9)
+            // $t11 := 1
+            $t11 := 1
+            // $t12 := +($t10, $t11)
+            $t12 := $AddU64($t10, $t11)
+            // write_ref($t8, $t12)
+            $StoreU64($t8, $t12)
+            // $t13 := move($t0)
+            $t13 := mload($locals)
+            // $t14 := move($t3)
+            $t14 := mload(add($locals, 32))
+            // return ($t13, $t1, $t14, $t7)
+            $result0 := $t13
             $result1 := b
-            $result2 := $t15
-            $result3 := $t8
+            $result2 := $t14
+            $result3 := $t7
             $Free($locals, 64)
         }
 
@@ -701,7 +726,7 @@ object "test_A2_M_test_evaded" {
         }
     }
 }
-===> Test result of M::test_evaded: Succeed(Stopped) (used_gas=1261): []
+===> Test result of M::test_evaded: Succeed(Stopped) (used_gas=2140): []
 
 // test of M::test_freeze_ref
 /* =======================================
@@ -722,16 +747,15 @@ object "test_A2_M_test_freeze_ref" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t7 := 101
                     $t7 := 101
                     // abort($t7)
                     $Abort($t7)
-                }
-                case 3 {
-                    // label L0
-                    // return ()
-                    $Free($locals, 32)
-                    leave
                 }
                 case 4 {
                     // $t1 := 1
@@ -742,18 +766,22 @@ object "test_A2_M_test_freeze_ref" {
                     $t2 := $MakePtr(false, add($locals, 24))
                     // $t3 := freeze_ref($t2)
                     $t3 := $t2
-                    // $t0 := M::call_by_immut_ref($t3)
-                    mstore($locals, A2_M_call_by_immut_ref($t3))
-                    // $t4 := move($t0)
-                    $t4 := mload($locals)
+                    // $t4 := M::call_by_immut_ref($t3)
+                    $t4 := A2_M_call_by_immut_ref($t3)
                     // $t5 := 1
                     $t5 := 1
                     // $t6 := ==($t4, $t5)
                     $t6 := $Eq($t4, $t5)
-                    // if ($t6) goto L0 else goto L1
+                    // if ($t6) goto L1 else goto L0
                     switch $t6
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // return ()
+                    $Free($locals, 32)
+                    leave
                 }
             }
         }
@@ -862,4 +890,4 @@ object "test_A2_M_test_freeze_ref" {
         }
     }
 }
-===> Test result of M::test_freeze_ref: Succeed(Stopped) (used_gas=364): []
+===> Test result of M::test_freeze_ref: Succeed(Stopped) (used_gas=438): []

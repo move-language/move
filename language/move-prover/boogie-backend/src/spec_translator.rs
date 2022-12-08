@@ -25,9 +25,10 @@ use move_model::{
         FieldId, GlobalEnv, Loc, ModuleEnv, ModuleId, NodeId, QualifiedInstId, SpecFunId,
         SpecVarId, StructId,
     },
+    pragmas::INTRINSIC_TYPE_MAP,
     symbol::Symbol,
     ty::{PrimitiveType, Type},
-    well_known::{TYPE_INFO_SPEC, TYPE_NAME_SPEC},
+    well_known::{TYPE_INFO_SPEC, TYPE_NAME_SPEC, TYPE_SPEC_IS_STRUCT},
 };
 use move_stackless_bytecode::mono_analysis::MonoInfo;
 
@@ -35,9 +36,10 @@ use crate::{
     boogie_helpers::{
         boogie_address_blob, boogie_byte_blob, boogie_choice_fun_name, boogie_declare_global,
         boogie_field_sel, boogie_inst_suffix, boogie_modifies_memory_name,
-        boogie_reflection_type_info, boogie_reflection_type_name, boogie_resource_memory_name,
-        boogie_spec_fun_name, boogie_spec_var_name, boogie_struct_name, boogie_type,
-        boogie_type_suffix, boogie_well_formed_expr,
+        boogie_reflection_type_info, boogie_reflection_type_is_struct, boogie_reflection_type_name,
+        boogie_resource_memory_name, boogie_spec_fun_name, boogie_spec_var_name,
+        boogie_struct_name, boogie_type, boogie_type_suffix, boogie_value_blob,
+        boogie_well_formed_expr,
     },
     options::BoogieOptions,
 };
@@ -138,12 +140,27 @@ impl<'env> SpecTranslator<'env> {
 
 impl<'env> SpecTranslator<'env> {
     pub fn translate_axioms(&self, env: &GlobalEnv, mono_info: &MonoInfo) {
-        for axiom in &mono_info.axioms {
-            self.writer.set_location(&axiom.loc);
-            emitln!(self.writer, "// axiom {}", axiom.loc.display(env));
-            emit!(self.writer, "axiom ");
-            self.translate_exp(&axiom.exp);
-            emitln!(self.writer, ";\n");
+        let type_display_ctx = env.get_type_display_ctx();
+        for (axiom, type_insts) in &mono_info.axioms {
+            for type_inst in type_insts {
+                self.writer.set_location(&axiom.loc);
+                emit!(self.writer, "// axiom {}", axiom.loc.display(env));
+                if !type_inst.is_empty() {
+                    emitln!(
+                        self.writer,
+                        ", instance <{}>",
+                        type_inst
+                            .iter()
+                            .map(|t| t.display(&type_display_ctx).to_string())
+                            .join(", ")
+                    );
+                } else {
+                    emitln!(self.writer);
+                }
+                emit!(self.writer, "axiom ");
+                self.translate(&axiom.exp, type_inst);
+                emitln!(self.writer, ";\n");
+            }
         }
     }
 }
@@ -442,7 +459,16 @@ impl<'env> SpecTranslator<'env> {
                     new_spec_trans.translate_exp(&info.range);
                     emit!(new_spec_trans.writer, ", {})", &var_decl.0);
                 }
-                _ => {}
+                Type::Primitive(_)
+                | Type::Tuple(_)
+                | Type::Struct(_, _, _)
+                | Type::TypeParameter(_)
+                | Type::Reference(_, _)
+                | Type::Fun(_, _)
+                | Type::TypeDomain(_)
+                | Type::ResourceDomain(_, _, _)
+                | Type::Error
+                | Type::Var(_) => {}
             }
             emitln!(new_spec_trans.writer, " &&");
             new_spec_trans.translate_exp(&info.condition);
@@ -642,6 +668,7 @@ impl<'env> SpecTranslator<'env> {
             Value::Bool(val) => emit!(self.writer, "{}", val),
             Value::ByteArray(val) => emit!(self.writer, &boogie_byte_blob(self.options, val)),
             Value::AddressArray(val) => emit!(self.writer, &boogie_address_blob(self.options, val)),
+            Value::Vector(val) => emit!(self.writer, &boogie_value_blob(self.options, val)),
         }
     }
 
@@ -720,7 +747,7 @@ impl<'env> SpecTranslator<'env> {
             Operation::BitOr => self.translate_arith_op("|", args),
             Operation::BitAnd => self.translate_arith_op("&", args),
             Operation::Xor => self.translate_arith_op("^", args),
-            Operation::Shl => self.translate_primitive_call("$shl", args),
+            Operation::Shl => self.translate_primitive_call_shl("$shl", args),
             Operation::Shr => self.translate_primitive_call("$shr", args),
             Operation::Implies => self.translate_logical_op("==>", args),
             Operation::Iff => self.translate_logical_op("<==>", args),
@@ -736,6 +763,7 @@ impl<'env> SpecTranslator<'env> {
 
             // Unary operators
             Operation::Not => self.translate_logical_unary_op("!", args),
+            Operation::Cast => self.translate_cast(node_id, args),
 
             // Builtin functions
             Operation::Global(memory_label) => {
@@ -765,8 +793,11 @@ impl<'env> SpecTranslator<'env> {
             Operation::InRangeVec => self.translate_primitive_call("InRangeVec", args),
             Operation::InRangeRange => self.translate_primitive_call("$InRange", args),
             Operation::MaxU8 => emit!(self.writer, "$MAX_U8"),
+            Operation::MaxU16 => emit!(self.writer, "$MAX_U16"),
+            Operation::MaxU32 => emit!(self.writer, "$MAX_U32"),
             Operation::MaxU64 => emit!(self.writer, "$MAX_U64"),
             Operation::MaxU128 => emit!(self.writer, "$MAX_U128"),
+            Operation::MaxU256 => emit!(self.writer, "$MAX_U256"),
             Operation::WellFormed => self.translate_well_formed(&args[0]),
             Operation::AbortCode => emit!(self.writer, "$abort_code"),
             Operation::AbortFlag => emit!(self.writer, "$abort_flag"),
@@ -876,6 +907,14 @@ impl<'env> SpecTranslator<'env> {
                 // invoking `type_info` on a primitive type like: `type_info<bool>`.
                 let (_, info) = boogie_reflection_type_info(self.env, &inst[0]);
                 emit!(self.writer, "{}", info);
+                processed = true;
+            } else if qualified_name == TYPE_SPEC_IS_STRUCT {
+                assert_eq!(inst.len(), 1);
+                emit!(
+                    self.writer,
+                    "{}",
+                    boogie_reflection_type_is_struct(self.env, &inst[0])
+                );
                 processed = true;
             }
         }
@@ -1081,15 +1120,28 @@ impl<'env> SpecTranslator<'env> {
         // type quantification
         let mut range_tmps = HashMap::new();
         for (var, range) in ranges {
-            match self.get_node_type(range.node_id()).skip_reference() {
-                Type::Vector(..) | Type::Primitive(PrimitiveType::Range) => {
-                    let range_tmp = self.fresh_var_name("range");
-                    emit!(self.writer, "(var {} := ", range_tmp);
-                    self.translate_exp(range);
-                    emit!(self.writer, "; ");
-                    range_tmps.insert(var.name, range_tmp);
+            let should_bind_range = match self.get_node_type(range.node_id()).skip_reference() {
+                Type::Vector(..) | Type::Primitive(PrimitiveType::Range) => true,
+                Type::Struct(mid, sid, ..) => {
+                    let struct_env = self.env.get_struct(mid.qualified(*sid));
+                    struct_env.is_intrinsic_of(INTRINSIC_TYPE_MAP)
                 }
-                _ => {}
+                Type::Primitive(_)
+                | Type::Tuple(_)
+                | Type::TypeParameter(_)
+                | Type::Reference(_, _)
+                | Type::Fun(_, _)
+                | Type::TypeDomain(_)
+                | Type::ResourceDomain(_, _, _)
+                | Type::Error
+                | Type::Var(_) => false,
+            };
+            if should_bind_range {
+                let range_tmp = self.fresh_var_name("range");
+                emit!(self.writer, "(var {} := ", range_tmp);
+                self.translate_exp(range);
+                emit!(self.writer, "; ");
+                range_tmps.insert(var.name, range_tmp);
             }
         }
         // Translate quantified variables.
@@ -1102,7 +1154,6 @@ impl<'env> SpecTranslator<'env> {
             let quant_ty = self.get_node_type(range.node_id());
             match quant_ty.skip_reference() {
                 Type::TypeDomain(ty) => {
-                    let ty = &self.inst(ty);
                     emit!(
                         self.writer,
                         "{}{}: {}",
@@ -1110,6 +1161,20 @@ impl<'env> SpecTranslator<'env> {
                         var_name,
                         boogie_type(self.env, ty)
                     );
+                }
+                Type::Struct(mid, sid, targs) => {
+                    let struct_env = self.env.get_struct(mid.qualified(*sid));
+                    if struct_env.is_intrinsic_of(INTRINSIC_TYPE_MAP) {
+                        emit!(
+                            self.writer,
+                            "{}{}: {}",
+                            comma,
+                            var_name,
+                            boogie_type(self.env, &targs[0])
+                        );
+                    } else {
+                        panic!("unexpected type");
+                    }
                 }
                 Type::ResourceDomain(..) => {
                     let addr_quant_var = self.fresh_var_name("a");
@@ -1191,6 +1256,21 @@ impl<'env> SpecTranslator<'env> {
                         quant_var,
                     );
                 }
+                Type::Struct(mid, sid, targs) => {
+                    let struct_env = self.env.get_struct(mid.qualified(*sid));
+                    if struct_env.is_intrinsic_of(INTRINSIC_TYPE_MAP) {
+                        emit!(
+                            self.writer,
+                            "{}ContainsTable({}, $EncodeKey'{}'({}))",
+                            separator,
+                            range_tmps.get(&var.name).unwrap(),
+                            boogie_type_suffix(self.env, &targs[0]),
+                            var_name,
+                        );
+                    } else {
+                        panic!("unexpected type");
+                    }
+                }
                 Type::Primitive(PrimitiveType::Range) => {
                     let range_tmp = range_tmps.get(&var.name).unwrap();
                     let quant_var = quant_vars.get(&var.name).unwrap();
@@ -1202,7 +1282,13 @@ impl<'env> SpecTranslator<'env> {
                         quant_var,
                     );
                 }
-                _ => panic!("unexpected type"),
+                Type::Primitive(_)
+                | Type::Tuple(_)
+                | Type::TypeParameter(_)
+                | Type::Reference(_, _)
+                | Type::Fun(_, _)
+                | Type::Error
+                | Type::Var(_) => panic!("unexpected type"),
             }
             separator = connective;
         }
@@ -1226,7 +1312,7 @@ impl<'env> SpecTranslator<'env> {
         );
         emit!(
             self.writer,
-            &")".repeat(range_tmps.len().checked_add(1).unwrap())
+            &")".repeat(quant_vars.len().checked_add(1).unwrap())
         );
     }
 
@@ -1365,8 +1451,33 @@ impl<'env> SpecTranslator<'env> {
         self.translate_exp(&args[0]);
     }
 
+    fn translate_cast(&self, node_id: NodeId, args: &[Exp]) {
+        let arg = args[0].clone();
+        self.env
+            .update_node_type(arg.node_id(), self.env.get_node_type(node_id));
+        self.translate_exp(&arg);
+    }
+
     fn translate_primitive_call(&self, fun: &str, args: &[Exp]) {
         emit!(self.writer, "{}(", fun);
+        self.translate_seq(args.iter(), ", ", |e| self.translate_exp(e));
+        emit!(self.writer, ")");
+    }
+
+    fn translate_primitive_call_shl(&self, fun: &str, args: &[Exp]) {
+        assert!(args.len() > 1);
+        let ty = self.get_node_type(args[0].node_id());
+        let fun_num = match ty {
+            Type::Primitive(PrimitiveType::U8) => "U8",
+            Type::Primitive(PrimitiveType::U16) => "U16",
+            Type::Primitive(PrimitiveType::U32) => "U32",
+            Type::Primitive(PrimitiveType::U64) => "U64",
+            Type::Primitive(PrimitiveType::U128) => "U128",
+            Type::Primitive(PrimitiveType::U256) => "U256",
+            Type::Primitive(PrimitiveType::Num) => "",
+            _ => unreachable!(),
+        };
+        emit!(self.writer, "{}(", format!("{}{}", fun, fun_num).as_str());
         self.translate_seq(args.iter(), ", ", |e| self.translate_exp(e));
         emit!(self.writer, ")");
     }

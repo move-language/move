@@ -437,6 +437,8 @@ impl<'env> FunctionContext<'env> {
         let val = match constant {
             Constant::Bool(v) => TypedValue::mk_bool(*v),
             Constant::U8(v) => TypedValue::mk_u8(*v),
+            Constant::U16(v) => TypedValue::mk_u16(*v),
+            Constant::U32(v) => TypedValue::mk_u32(*v),
             Constant::U64(v) => TypedValue::mk_u64(*v),
             Constant::U128(v) => TypedValue::mk_u128(*v),
             Constant::U256(_) => unimplemented!(),
@@ -458,6 +460,7 @@ impl<'env> FunctionContext<'env> {
                     .collect();
                 TypedValue::mk_vector(BaseType::mk_address(), elems)
             }
+            Constant::Vector(_) => unimplemented!(),
         };
         local_state.put_value_override(dst, val);
     }
@@ -768,7 +771,7 @@ impl<'env> FunctionContext<'env> {
                         typed_args.remove(0),
                         local_state,
                     ),
-                    BorrowEdge::Index => {
+                    BorrowEdge::Index(_) => {
                         self.handle_write_back_ref_element(*idx, typed_args.remove(0), local_state)
                     }
                     BorrowEdge::Hyper(hyper) => self.handle_write_back_ref_hyper(
@@ -815,15 +818,23 @@ impl<'env> FunctionContext<'env> {
                 Ok(vec![object])
             }
             // cast
-            Operation::CastU8 | Operation::CastU64 | Operation::CastU128 => {
+            Operation::CastU8
+            | Operation::CastU16
+            | Operation::CastU32
+            | Operation::CastU64
+            | Operation::CastU128
+            | Operation::CastU256 => {
                 if cfg!(debug_assertions) {
                     assert_eq!(typed_args.len(), 1);
                 }
                 let val = typed_args.remove(0);
                 match op {
                     Operation::CastU8 => self.handle_cast_u8(val),
+                    Operation::CastU16 => self.handle_cast_u16(val),
+                    Operation::CastU32 => self.handle_cast_u32(val),
                     Operation::CastU64 => self.handle_cast_u64(val),
                     Operation::CastU128 => self.handle_cast_u128(val),
+                    Operation::CastU256 => self.handle_cast_u256(val),
                     _ => unreachable!(),
                 }
                 .map(|casted| vec![casted])
@@ -913,8 +924,7 @@ impl<'env> FunctionContext<'env> {
             | Operation::TraceReturn(..)
             | Operation::TraceAbort
             | Operation::TraceExp(..)
-            | Operation::TraceGlobalMem(..)
-            | Operation::CastU256 => {
+            | Operation::TraceGlobalMem(..) => {
                 unreachable!();
             }
         };
@@ -1209,7 +1219,7 @@ impl<'env> FunctionContext<'env> {
                 (Pointer::RefField(_, p_field_num), BorrowEdge::Field(_, e_field_num)) => {
                     p_field_num == e_field_num
                 }
-                (Pointer::RefElement(_, _), BorrowEdge::Index) => true,
+                (Pointer::RefElement(_, _), BorrowEdge::Index(_)) => true,
                 _ => false,
             }
         }
@@ -1461,7 +1471,7 @@ impl<'env> FunctionContext<'env> {
                             // NOTE: the local_idx argument can be any dummy value here
                             cur.borrow_ref_struct_field(*field_num, true, *callee_idx)
                         }
-                        (Pointer::RefElement(callee_idx, elem_num), BorrowEdge::Index) => {
+                        (Pointer::RefElement(callee_idx, elem_num), BorrowEdge::Index(_)) => {
                             if cfg!(debug_assertions) {
                                 assert!(cur.get_ty().is_ref_vector(Some(true)));
                             }
@@ -1489,7 +1499,7 @@ impl<'env> FunctionContext<'env> {
                         BorrowEdge::Field(_, field_num) => {
                             val.update_ref_struct_field(*field_num, cur)
                         }
-                        BorrowEdge::Index => {
+                        BorrowEdge::Index(_) => {
                             let elem_num = match ptr {
                                 Pointer::RefElement(_, elem_num) => elem_num,
                                 _ => unreachable!(),
@@ -1563,6 +1573,18 @@ impl<'env> FunctionContext<'env> {
         let (ty, val, _) = val.decompose();
         let v = if ty.is_u8() {
             val.into_u8()
+        } else if ty.is_u16() {
+            let v = val.into_u16();
+            if v > (u8::MAX as u16) {
+                return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+            }
+            v as u8
+        } else if ty.is_u32() {
+            let v = val.into_u32();
+            if v > (u8::MAX as u32) {
+                return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+            }
+            v as u8
         } else if ty.is_u64() {
             let v = val.into_u64();
             if v > (u8::MAX as u64) {
@@ -1587,10 +1609,82 @@ impl<'env> FunctionContext<'env> {
         Ok(TypedValue::mk_u8(v))
     }
 
+    fn handle_cast_u16(&self, val: TypedValue) -> Result<TypedValue, AbortInfo> {
+        let (ty, val, _) = val.decompose();
+        let v = if ty.is_u8() {
+            val.into_u8() as u16
+        } else if ty.is_u16() {
+            val.into_u16()
+        } else if ty.is_u32() {
+            let v = val.into_u32();
+            if v > (u16::MAX as u32) {
+                return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+            }
+            v as u16
+        } else if ty.is_u64() {
+            let v = val.into_u64();
+            if v > (u16::MAX as u64) {
+                return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+            }
+            v as u16
+        } else if ty.is_u128() {
+            let v = val.into_u128();
+            if v > (u16::MAX as u128) {
+                return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+            }
+            v as u16
+        } else {
+            let n = val.into_num();
+            match n.to_u16() {
+                None => {
+                    return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+                }
+                Some(v) => v,
+            }
+        };
+        Ok(TypedValue::mk_u16(v))
+    }
+
+    fn handle_cast_u32(&self, val: TypedValue) -> Result<TypedValue, AbortInfo> {
+        let (ty, val, _) = val.decompose();
+        let v = if ty.is_u8() {
+            val.into_u8() as u32
+        } else if ty.is_u16() {
+            val.into_u16() as u32
+        } else if ty.is_u32() {
+            val.into_u32()
+        } else if ty.is_u64() {
+            let v = val.into_u64();
+            if v > (u32::MAX as u64) {
+                return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+            }
+            v as u32
+        } else if ty.is_u128() {
+            let v = val.into_u128();
+            if v > (u32::MAX as u128) {
+                return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+            }
+            v as u32
+        } else {
+            let n = val.into_num();
+            match n.to_u32() {
+                None => {
+                    return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+                }
+                Some(v) => v,
+            }
+        };
+        Ok(TypedValue::mk_u32(v))
+    }
+
     fn handle_cast_u64(&self, val: TypedValue) -> Result<TypedValue, AbortInfo> {
         let (ty, val, _) = val.decompose();
         let v = if ty.is_u8() {
             val.into_u8() as u64
+        } else if ty.is_u16() {
+            val.into_u16() as u64
+        } else if ty.is_u32() {
+            val.into_u32() as u64
         } else if ty.is_u64() {
             val.into_u64()
         } else if ty.is_u128() {
@@ -1615,6 +1709,34 @@ impl<'env> FunctionContext<'env> {
         let (ty, val, _) = val.decompose();
         let v = if ty.is_u8() {
             val.into_u8() as u128
+        } else if ty.is_u16() {
+            val.into_u16() as u128
+        } else if ty.is_u32() {
+            val.into_u32() as u128
+        } else if ty.is_u64() {
+            val.into_u64() as u128
+        } else if ty.is_u128() {
+            val.into_u128()
+        } else {
+            let n = val.into_num();
+            match n.to_u128() {
+                None => {
+                    return Err(self.sys_abort(StatusCode::ARITHMETIC_ERROR));
+                }
+                Some(v) => v,
+            }
+        };
+        Ok(TypedValue::mk_u128(v))
+    }
+
+    fn handle_cast_u256(&self, val: TypedValue) -> Result<TypedValue, AbortInfo> {
+        let (ty, val, _) = val.decompose();
+        let v = if ty.is_u8() {
+            val.into_u8() as u128
+        } else if ty.is_u16() {
+            val.into_u16() as u128
+        } else if ty.is_u32() {
+            val.into_u32() as u128
         } else if ty.is_u64() {
             val.into_u64() as u128
         } else if ty.is_u128() {

@@ -774,7 +774,7 @@ impl<'env> Docgen<'env> {
 
         let mut child = match Command::new("dot")
             .arg("-Tsvg")
-            .args(&["-o", out_file_path.to_str().unwrap()])
+            .args(["-o", out_file_path.to_str().unwrap()])
             .stdin(Stdio::piped())
             .stderr(Stdio::piped())
             .stdout(Stdio::piped())
@@ -882,6 +882,11 @@ impl<'env> Docgen<'env> {
         self.begin_items();
         for (id, _) in sorted_infos {
             let module_env = self.env.get_module(*id);
+            if !module_env.is_target() {
+                // Do not include modules which are not target (outside of the package)
+                // into the index.
+                continue;
+            }
             self.item_text(&format!(
                 "[`{}`]({})",
                 module_env.get_name().display_full(module_env.symbol_pool()),
@@ -1072,9 +1077,15 @@ impl<'env> Docgen<'env> {
                 return_types.iter().map(|ty| ty.display(tctx)).join(", ")
             ),
         };
+        let entry_str = if func_env.is_entry() && !func_env.module_env.is_script_module() {
+            "entry ".to_owned()
+        } else {
+            "".to_owned()
+        };
         format!(
-            "{}fun {}{}({}){}",
+            "{}{}fun {}{}({}){}",
             func_env.visibility_str(),
+            entry_str,
             name,
             self.type_parameter_list_display(&func_env.get_named_type_parameters()),
             params,

@@ -28,6 +28,6 @@ module 0x42::N {
 
 module 0x42::Z {
     #[test]
-    #[expected_failure(abort_code = 0)]
+    #[expected_failure(abort_code = 0, location = 0x42::Z )]
     fun foo() { abort 0 }
 }

@@ -287,6 +287,23 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             };
                         AttributeValue::Value(value_node_id, val)
                     }
+                    EA::AttributeValue_::Module(mident) => {
+                        let addr_bytes = self.parent.resolve_address(
+                            &self.parent.to_loc(&mident.loc),
+                            &mident.value.address,
+                        );
+                        let module_name = ModuleName::from_address_bytes_and_name(
+                            addr_bytes,
+                            self.symbol_pool()
+                                .make(mident.value.module.0.value.as_str()),
+                        );
+                        // TODO support module attributes more than via empty string
+                        AttributeValue::Name(
+                            value_node_id,
+                            Some(module_name),
+                            self.symbol_pool().make(""),
+                        )
+                    }
                     EA::AttributeValue_::ModuleAccess(macc) => match macc.value {
                         EA::ModuleAccess_::Name(n) => AttributeValue::Name(
                             value_node_id,
@@ -738,27 +755,29 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             exp,
                             additional_exps,
                         } => {
-                            let context = SpecBlockContext::FunctionCode(
-                                qsym.clone(),
-                                &fun_spec_info[spec_id],
-                            );
-                            if let Some(kind) = self.convert_condition_kind(kind, &context) {
-                                let properties =
-                                    self.translate_properties(properties, &|_, _, prop| {
-                                        if !is_property_valid_for_condition(&kind, prop) {
-                                            Some(loc.clone())
-                                        } else {
-                                            None
-                                        }
-                                    });
-                                self.def_ana_condition(
-                                    loc,
-                                    &context,
-                                    kind,
-                                    properties,
-                                    exp,
-                                    additional_exps,
+                            if fun_spec_info.contains_key(spec_id) {
+                                let context = SpecBlockContext::FunctionCode(
+                                    qsym.clone(),
+                                    &fun_spec_info[spec_id],
                                 );
+                                if let Some(kind) = self.convert_condition_kind(kind, &context) {
+                                    let properties =
+                                        self.translate_properties(properties, &|_, _, prop| {
+                                            if !is_property_valid_for_condition(&kind, prop) {
+                                                Some(loc.clone())
+                                            } else {
+                                                None
+                                            }
+                                        });
+                                    self.def_ana_condition(
+                                        loc,
+                                        &context,
+                                        kind,
+                                        properties,
+                                        exp,
+                                        additional_exps,
+                                    );
+                                }
                             }
                         }
                         _ => {
@@ -1042,8 +1061,11 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 }
             }
             Function {
-                signature, body, ..
-            } => self.def_ana_spec_fun(signature, body),
+                uninterpreted,
+                signature,
+                body,
+                ..
+            } => self.def_ana_spec_fun(*uninterpreted, signature, body),
             Let {
                 name,
                 post_state,
@@ -1736,12 +1758,18 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 }
                 (first.into_exp(), exps)
             }
+            ConditionKind::Axiom(ref type_params) => {
+                for (i, sym) in type_params.iter().enumerate() {
+                    et.define_type_param(loc, *sym, Type::TypeParameter(i as u16))
+                }
+                (et.translate_exp(exp, &expected_type).into_exp(), vec![])
+            }
             _ => {
                 if !additional_exps.is_empty() {
                     et.error(
-                        loc,
-                        "additional expressions only allowed with `aborts_if`, `aborts_with`, `modifies`, or `emits`",
-                    );
+                          loc,
+                          "additional expressions only allowed with `aborts_if`, `aborts_with`, `modifies`, or `emits`",
+                      );
                 }
                 (et.translate_exp(exp, &expected_type).into_exp(), vec![])
             }
@@ -1877,24 +1905,36 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 
 impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     /// Definition analysis for a specification helper function.
-    fn def_ana_spec_fun(&mut self, _signature: &EA::FunctionSignature, body: &EA::FunctionBody) {
-        if let EA::FunctionBody_::Defined(seq) = &body.value {
-            let entry = &self.spec_funs[self.spec_fun_index];
-            let type_params = entry.type_params.clone();
-            let params = entry.params.clone();
-            let result_type = entry.result_type.clone();
-            let mut et = ExpTranslator::new(self);
-            let loc = et.to_loc(&body.loc);
-            for (n, ty) in type_params {
-                et.define_type_param(&loc, n, ty);
+    fn def_ana_spec_fun(
+        &mut self,
+        uninterpreted: bool,
+        _signature: &EA::FunctionSignature,
+        body: &EA::FunctionBody,
+    ) {
+        match &body.value {
+            EA::FunctionBody_::Defined(seq) => {
+                let entry = &self.spec_funs[self.spec_fun_index];
+                let type_params = entry.type_params.clone();
+                let params = entry.params.clone();
+                let result_type = entry.result_type.clone();
+                let mut et = ExpTranslator::new(self);
+                let loc = et.to_loc(&body.loc);
+                for (n, ty) in type_params {
+                    et.define_type_param(&loc, n, ty);
+                }
+                et.enter_scope();
+                for (n, ty) in params {
+                    et.define_local(&loc, n, ty, None, None);
+                }
+                let translated = et.translate_seq(&loc, seq, &result_type);
+                et.finalize_types();
+                self.spec_funs[self.spec_fun_index].body = Some(translated.into_exp());
             }
-            et.enter_scope();
-            for (n, ty) in params {
-                et.define_local(&loc, n, ty, None, None);
+            EA::FunctionBody_::Native => {
+                if !uninterpreted {
+                    self.spec_funs[self.spec_fun_index].is_native = true
+                }
             }
-            let translated = et.translate_seq(&loc, seq, &result_type);
-            et.finalize_types();
-            self.spec_funs[self.spec_fun_index].body = Some(translated.into_exp());
         }
         self.spec_fun_index += 1;
     }

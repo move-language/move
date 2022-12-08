@@ -141,4 +141,33 @@ address 0x2 {
             0x2::A::entry_a();
         }
     }
+
+    module G {
+        struct S has copy, drop {
+            f1: u64,
+            f2: u128,
+            f3: u16,
+            f4: u32,
+            f5: u256
+        }
+
+        public fun new(v1: u64, v2: u128, v3: u16, v4: u32, v5: u256): S { S { f1: v1, f2: v2, f3: v3, f4: v4, f5: v5 } }
+
+        public fun destroy(v: S): (u64, u128, u16, u32, u256) {
+            let S { f1: val1, f2: val2, f3: val3, f4: val4, f5: val5 } = v;
+            (val1, val2, val3, val4, val5)
+        }
+
+        public fun b_and_c(b: &S, c: 0x2::C::S): S {
+            let _ = 0x2::C::destroy(c);
+            let another_b = S {
+                f1: 0,
+                f2: b.f2,
+                f3: b.f3 + (b.f2 as u16),
+                f4: (b.f1 as u32),
+                f5: b.f5
+            };
+            another_b
+        }
+    }
 }

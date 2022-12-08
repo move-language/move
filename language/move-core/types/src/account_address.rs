@@ -10,6 +10,7 @@ use std::{convert::TryFrom, fmt, str::FromStr};
 /// A struct that represents an account address.
 #[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Clone, Copy)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(proptest_derive::Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(arbitrary::Arbitrary))]
 pub struct AccountAddress([u8; AccountAddress::LENGTH]);
 
 impl AccountAddress {
@@ -51,11 +52,11 @@ impl AccountAddress {
     /// Note: this function is guaranteed to be stable, and this is suitable for use inside
     /// Move native functions or the VM.
     pub fn to_canonical_string(&self) -> String {
-        hex::encode(&self.0)
+        hex::encode(self.0)
     }
 
     pub fn short_str_lossless(&self) -> String {
-        let hex_str = hex::encode(&self.0).trim_start_matches('0').to_string();
+        let hex_str = hex::encode(self.0).trim_start_matches('0').to_string();
         if hex_str.is_empty() {
             "0".to_string()
         } else {

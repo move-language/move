@@ -23,8 +23,11 @@
 //! g ∈ GroundType ::=
 //!   | bool
 //!   | u8        // unsigned 8 bit integer
+//!   | u16       // unsigned 16 bit integer
+//!   | u32       // unsigned 32 bit integer
 //!   | u64       // unsigned 64 bit integer
 //!   | u128      // unsigned 128 bit integer
+//!   | u256      // unsigned 256 bit integer
 //!   | address   // 32 byte account address
 //!   | bytearray // immutable, arbitrarily sized array of bytes
 //!

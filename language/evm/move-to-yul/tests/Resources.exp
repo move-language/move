@@ -54,16 +54,15 @@ object "test_A2_M_test_increment_a" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t11 := 100
                     $t11 := 100
                     // abort($t11)
                     $Abort($t11)
-                }
-                case 3 {
-                    // label L0
-                    // return ()
-                    $Free($locals, 32)
-                    leave
                 }
                 case 4 {
                     // $t1 := 0x3
@@ -98,10 +97,16 @@ object "test_A2_M_test_increment_a" {
                     $t9 := 511
                     // $t10 := ==($t8, $t9)
                     $t10 := $Eq($t8, $t9)
-                    // if ($t10) goto L0 else goto L1
+                    // if ($t10) goto L1 else goto L0
                     switch $t10
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // return ()
+                    $Free($locals, 32)
+                    leave
                 }
             }
         }
@@ -392,7 +397,7 @@ object "test_A2_M_test_increment_a" {
         }
     }
 }
-===> Test result of M::test_increment_a: Succeed(Stopped) (used_gas=113444): []
+===> Test result of M::test_increment_a: Succeed(Stopped) (used_gas=113532): []
 
 // test of M::test_publish
 /* =======================================
@@ -413,13 +418,38 @@ object "test_A2_M_test_publish" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t6 := 100
                     $t6 := 100
                     // abort($t6)
                     $Abort($t6)
                 }
-                case 3 {
-                    // label L0
+                case 4 {
+                    // $t1 := 0x3
+                    $t1 := 0x3
+                    // $t0 := Evm::sign($t1)
+                    mstore($locals, A2_Evm_sign($t1))
+                    // $t2 := borrow_local($t0)
+                    $t2 := $MakePtr(false, $locals)
+                    // $t3 := 22
+                    $t3 := 22
+                    // M::publish($t2, $t3)
+                    A2_M_publish($t2, $t3)
+                    // $t4 := 0x3
+                    $t4 := 0x3
+                    // $t5 := exists<M::S>($t4)
+                    $t5 := $AlignedStorageLoad($MakeTypeStorageBase(0, 0x698265eb, $t4))
+                    // if ($t5) goto L1 else goto L0
+                    switch $t5
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
                     // $t7 := 0x3
                     $t7 := 0x3
                     // $t8 := borrow_global<M::S>($t7)
@@ -438,40 +468,25 @@ object "test_A2_M_test_publish" {
                     $t11 := 22
                     // $t12 := ==($t10, $t11)
                     $t12 := $Eq($t10, $t11)
-                    // if ($t12) goto L2 else goto L3
+                    // if ($t12) goto L4 else goto L3
                     switch $t12
-                    case 0  { $block := 5 }
+                    case 0  { $block := 7 }
                     default { $block := 6 }
                 }
-                case 4 {
-                    // $t1 := 0x3
-                    $t1 := 0x3
-                    // $t0 := Evm::sign($t1)
-                    mstore($locals, A2_Evm_sign($t1))
-                    // $t2 := borrow_local($t0)
-                    $t2 := $MakePtr(false, $locals)
-                    // $t3 := 22
-                    $t3 := 22
-                    // M::publish($t2, $t3)
-                    A2_M_publish($t2, $t3)
-                    // $t4 := 0x3
-                    $t4 := 0x3
-                    // $t5 := exists<M::S>($t4)
-                    $t5 := $AlignedStorageLoad($MakeTypeStorageBase(0, 0x698265eb, $t4))
-                    // if ($t5) goto L0 else goto L1
-                    switch $t5
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
                 }
-                case 5 {
+                case 7 {
                     // label L3
                     // $t13 := 101
                     $t13 := 101
                     // abort($t13)
                     $Abort($t13)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t14 := 0x3
                     $t14 := 0x3
                     // $t15 := borrow_global<M::S>($t14)
@@ -490,20 +505,25 @@ object "test_A2_M_test_publish" {
                     $t18 := 11
                     // $t19 := ==($t17, $t18)
                     $t19 := $Eq($t17, $t18)
-                    // if ($t19) goto L4 else goto L5
+                    // if ($t19) goto L7 else goto L6
                     switch $t19
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t20 := 102
                     $t20 := 102
                     // abort($t20)
                     $Abort($t20)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // $t21 := 0x3
                     $t21 := 0x3
                     // $t22 := borrow_global<M::S>($t21)
@@ -526,20 +546,25 @@ object "test_A2_M_test_publish" {
                     $t26 := 44
                     // $t27 := ==($t25, $t26)
                     $t27 := $Eq($t25, $t26)
-                    // if ($t27) goto L6 else goto L7
+                    // if ($t27) goto L10 else goto L9
                     switch $t27
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
                 }
-                case 9 {
-                    // label L7
+                case 12 {
+                    // label L10
+                    // goto L11
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
                     // $t28 := 103
                     $t28 := 103
                     // abort($t28)
                     $Abort($t28)
                 }
-                case 10 {
-                    // label L6
+                case 14 {
+                    // label L11
                     // return ()
                     $Free($locals, 32)
                     leave
@@ -801,7 +826,7 @@ object "test_A2_M_test_publish" {
         }
     }
 }
-===> Test result of M::test_publish: Succeed(Stopped) (used_gas=114429): []
+===> Test result of M::test_publish: Succeed(Stopped) (used_gas=115318): []
 
 // test of M::test_publish_t
 /* =======================================
@@ -822,13 +847,38 @@ object "test_A2_M_test_publish_t" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t6 := 100
                     $t6 := 100
                     // abort($t6)
                     $Abort($t6)
                 }
-                case 3 {
-                    // label L0
+                case 4 {
+                    // $t1 := 0x3
+                    $t1 := 0x3
+                    // $t0 := Evm::sign($t1)
+                    mstore($locals, A2_Evm_sign($t1))
+                    // $t2 := borrow_local($t0)
+                    $t2 := $MakePtr(false, $locals)
+                    // $t3 := 22
+                    $t3 := 22
+                    // M::publish_t($t2, $t3)
+                    A2_M_publish_t($t2, $t3)
+                    // $t4 := 0x3
+                    $t4 := 0x3
+                    // $t5 := exists<M::T>($t4)
+                    $t5 := $AlignedStorageLoad($MakeTypeStorageBase(0, 0x3948ca0a, $t4))
+                    // if ($t5) goto L1 else goto L0
+                    switch $t5
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
                     // $t7 := 0x3
                     $t7 := 0x3
                     // $t8 := borrow_global<M::T>($t7)
@@ -851,40 +901,25 @@ object "test_A2_M_test_publish_t" {
                     $t12 := 22
                     // $t13 := ==($t11, $t12)
                     $t13 := $Eq($t11, $t12)
-                    // if ($t13) goto L2 else goto L3
+                    // if ($t13) goto L4 else goto L3
                     switch $t13
-                    case 0  { $block := 5 }
+                    case 0  { $block := 7 }
                     default { $block := 6 }
                 }
-                case 4 {
-                    // $t1 := 0x3
-                    $t1 := 0x3
-                    // $t0 := Evm::sign($t1)
-                    mstore($locals, A2_Evm_sign($t1))
-                    // $t2 := borrow_local($t0)
-                    $t2 := $MakePtr(false, $locals)
-                    // $t3 := 22
-                    $t3 := 22
-                    // M::publish_t($t2, $t3)
-                    A2_M_publish_t($t2, $t3)
-                    // $t4 := 0x3
-                    $t4 := 0x3
-                    // $t5 := exists<M::T>($t4)
-                    $t5 := $AlignedStorageLoad($MakeTypeStorageBase(0, 0x3948ca0a, $t4))
-                    // if ($t5) goto L0 else goto L1
-                    switch $t5
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
                 }
-                case 5 {
+                case 7 {
                     // label L3
                     // $t14 := 101
                     $t14 := 101
                     // abort($t14)
                     $Abort($t14)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t15 := 0x3
                     $t15 := 0x3
                     // $t16 := borrow_global<M::T>($t15)
@@ -907,20 +942,25 @@ object "test_A2_M_test_publish_t" {
                     $t20 := 11
                     // $t21 := ==($t19, $t20)
                     $t21 := $Eq($t19, $t20)
-                    // if ($t21) goto L4 else goto L5
+                    // if ($t21) goto L7 else goto L6
                     switch $t21
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t22 := 102
                     $t22 := 102
                     // abort($t22)
                     $Abort($t22)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // $t23 := 0x3
                     $t23 := 0x3
                     // $t24 := borrow_global<M::T>($t23)
@@ -947,20 +987,25 @@ object "test_A2_M_test_publish_t" {
                     $t29 := 44
                     // $t30 := ==($t28, $t29)
                     $t30 := $Eq($t28, $t29)
-                    // if ($t30) goto L6 else goto L7
+                    // if ($t30) goto L10 else goto L9
                     switch $t30
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
                 }
-                case 9 {
-                    // label L7
+                case 12 {
+                    // label L10
+                    // goto L11
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
                     // $t31 := 103
                     $t31 := 103
                     // abort($t31)
                     $Abort($t31)
                 }
-                case 10 {
-                    // label L6
+                case 14 {
+                    // label L11
                     // return ()
                     $Free($locals, 32)
                     leave
@@ -1234,7 +1279,7 @@ object "test_A2_M_test_publish_t" {
         }
     }
 }
-===> Test result of M::test_publish_t: Succeed(Stopped) (used_gas=138059): []
+===> Test result of M::test_publish_t: Succeed(Stopped) (used_gas=138948): []
 
 // test of M::test_unpublish
 /* =======================================
@@ -1248,88 +1293,103 @@ object "test_A2_M_test_unpublish" {
         A2_M_test_unpublish()
         return (0, 0)
         function A2_M_test_unpublish() {
-            let a, b, x, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21
+            let b, x, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20
             let $locals := $Malloc(32)
             let $block := 4
             for {} true {} {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t15 := 101
-                    $t15 := 101
-                    // abort($t15)
-                    $Abort($t15)
+                    // goto L2
+                    $block := 5
                 }
                 case 3 {
                     // label L0
-                    // $t16 := 16
-                    $t16 := 16
-                    // $t17 := ==($t10, $t16)
-                    $t17 := $Eq($t10, $t16)
-                    // if ($t17) goto L2 else goto L3
-                    switch $t17
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
+                    // $t14 := 101
+                    $t14 := 101
+                    // abort($t14)
+                    $Abort($t14)
                 }
                 case 4 {
-                    // $t4 := 0x3
-                    $t4 := 0x3
-                    // $t0 := Evm::sign($t4)
-                    mstore($locals, A2_Evm_sign($t4))
-                    // $t5 := borrow_local($t0)
-                    $t5 := $MakePtr(false, $locals)
-                    // $t6 := 33
-                    $t6 := 33
-                    // M::publish($t5, $t6)
-                    A2_M_publish($t5, $t6)
-                    // $t7 := 0x3
-                    $t7 := 0x3
-                    // $t8 := M::unpublish($t7)
-                    $t8 := A2_M_unpublish($t7)
-                    // ($t9, $t10, $t11) := unpack M::S($t8)
-                    $t9 := $MemoryLoadU64(add($t8, 32))
-                    $t10 := $MemoryLoadU8(add($t8, 40))
-                    $t11 := $MemoryLoadU256(add($t8, 0))
-                    $Free($t8, 41)
-                    // $t12 := unpack M::S2($t11)
-                    $t12 := $MemoryLoadU128(add($t11, 0))
-                    $Free($t11, 16)
-                    // $t13 := 33
-                    $t13 := 33
-                    // $t14 := ==($t9, $t13)
-                    $t14 := $Eq($t9, $t13)
-                    // if ($t14) goto L0 else goto L1
-                    switch $t14
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    // $t3 := 0x3
+                    $t3 := 0x3
+                    // $t0 := Evm::sign($t3)
+                    mstore($locals, A2_Evm_sign($t3))
+                    // $t4 := borrow_local($t0)
+                    $t4 := $MakePtr(false, $locals)
+                    // $t5 := 33
+                    $t5 := 33
+                    // M::publish($t4, $t5)
+                    A2_M_publish($t4, $t5)
+                    // $t6 := 0x3
+                    $t6 := 0x3
+                    // $t7 := M::unpublish($t6)
+                    $t7 := A2_M_unpublish($t6)
+                    // ($t8, $t9, $t10) := unpack M::S($t7)
+                    $t8 := $MemoryLoadU64(add($t7, 32))
+                    $t9 := $MemoryLoadU8(add($t7, 40))
+                    $t10 := $MemoryLoadU256(add($t7, 0))
+                    $Free($t7, 41)
+                    // $t11 := unpack M::S2($t10)
+                    $t11 := $MemoryLoadU128(add($t10, 0))
+                    $Free($t10, 16)
+                    // $t12 := 33
+                    $t12 := 33
+                    // $t13 := ==($t8, $t12)
+                    $t13 := $Eq($t8, $t12)
+                    // if ($t13) goto L1 else goto L0
+                    switch $t13
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
-                    // label L3
-                    // $t18 := 102
-                    $t18 := 102
-                    // abort($t18)
-                    $Abort($t18)
+                    // label L2
+                    // $t15 := 16
+                    $t15 := 16
+                    // $t16 := ==($t9, $t15)
+                    $t16 := $Eq($t9, $t15)
+                    // if ($t16) goto L4 else goto L3
+                    switch $t16
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
                 }
                 case 6 {
-                    // label L2
-                    // $t19 := 66
-                    $t19 := 66
-                    // $t20 := ==($t12, $t19)
-                    $t20 := $Eq($t12, $t19)
-                    // if ($t20) goto L4 else goto L5
-                    switch $t20
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    // label L4
+                    // goto L5
+                    $block := 8
                 }
                 case 7 {
-                    // label L5
-                    // $t21 := 103
-                    $t21 := 103
-                    // abort($t21)
-                    $Abort($t21)
+                    // label L3
+                    // $t17 := 102
+                    $t17 := 102
+                    // abort($t17)
+                    $Abort($t17)
                 }
                 case 8 {
-                    // label L4
+                    // label L5
+                    // $t18 := 66
+                    $t18 := 66
+                    // $t19 := ==($t11, $t18)
+                    $t19 := $Eq($t11, $t18)
+                    // if ($t19) goto L7 else goto L6
+                    switch $t19
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
+                }
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
+                    // $t20 := 103
+                    $t20 := 103
+                    // abort($t20)
+                    $Abort($t20)
+                }
+                case 11 {
+                    // label L8
                     // return ()
                     $Free($locals, 32)
                     leave
@@ -1580,4 +1640,4 @@ object "test_A2_M_test_unpublish" {
         }
     }
 }
-===> Test result of M::test_unpublish: Succeed(Stopped) (used_gas=90786): []
+===> Test result of M::test_unpublish: Succeed(Stopped) (used_gas=91212): []

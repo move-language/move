@@ -45,7 +45,7 @@ impl MoveyUpload {
         let mut movey_upload_request: MoveyUploadRequest = Default::default();
         let mut output = Command::new("git")
             .current_dir(".")
-            .args(&["remote", "-v"])
+            .args(["remote", "-v"])
             .output()
             .unwrap();
         if !output.status.success() || output.stdout.is_empty() {
@@ -77,7 +77,7 @@ impl MoveyUpload {
         // use git command to get the subdir if move package is not on the top level
         output = Command::new("git")
             .current_dir(".")
-            .args(&["rev-parse", "--show-prefix"])
+            .args(["rev-parse", "--show-prefix"])
             .output()
             .unwrap();
         let subdir = String::from_utf8_lossy(output.stdout.as_slice());
@@ -86,7 +86,7 @@ impl MoveyUpload {
         // use git command to count total files
         output = Command::new("git")
             .current_dir(".")
-            .args(&["ls-files"])
+            .args(["ls-files"])
             .output()
             .unwrap();
         let tracked_files = String::from_utf8_lossy(output.stdout.as_slice());

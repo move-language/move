@@ -23,7 +23,7 @@ use crate::{
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     livevar_analysis::LiveVarAnnotation,
-    stackless_bytecode::{AssignKind, BorrowEdge, BorrowNode, Bytecode, Operation},
+    stackless_bytecode::{AssignKind, BorrowEdge, BorrowNode, Bytecode, IndexEdgeKind, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 
@@ -357,11 +357,17 @@ impl BorrowAnnotation {
 }
 
 /// Borrow analysis processor.
-pub struct BorrowAnalysisProcessor {}
+pub struct BorrowAnalysisProcessor {
+    borrow_natives: Vec<String>,
+}
 
 impl BorrowAnalysisProcessor {
     pub fn new() -> Box<Self> {
-        Box::new(BorrowAnalysisProcessor {})
+        Self::new_borrow_natives(vec![])
+    }
+
+    pub fn new_borrow_natives(borrow_natives: Vec<String>) -> Box<Self> {
+        Box::new(BorrowAnalysisProcessor { borrow_natives })
     }
 }
 
@@ -373,10 +379,10 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
         mut data: FunctionData,
     ) -> FunctionData {
         let borrow_annotation = if func_env.is_native_or_intrinsic() {
-            native_annotation(func_env)
+            native_annotation(func_env, &self.borrow_natives)
         } else {
             let func_target = FunctionTarget::new(func_env, &data);
-            let analyzer = BorrowAnalysis::new(&func_target, targets);
+            let analyzer = BorrowAnalysis::new(&func_target, targets, &self.borrow_natives);
             analyzer.analyze(&data.code)
         };
         // Annotate function target with computed borrow data.
@@ -419,15 +425,38 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
     }
 }
 
-fn native_annotation(fun_env: &FunctionEnv) -> BorrowAnnotation {
+/// If fun_env matches one of the native functions implementing custom mutable borrow then return
+/// the name of this function
+fn get_borrow_native_info(fun_env: &FunctionEnv, borrow_natives: &Vec<String>) -> Option<String> {
+    if !fun_env.is_native() {
+        return None;
+    }
+    for name in borrow_natives {
+        if &fun_env.get_full_name_str() == name {
+            return Some(name.to_string());
+        }
+    }
+    None
+}
+
+fn native_annotation(fun_env: &FunctionEnv, borrow_natives: &Vec<String>) -> BorrowAnnotation {
+    let borrow_native_name = get_borrow_native_info(fun_env, borrow_natives);
     if fun_env.is_well_known(VECTOR_BORROW_MUT)
         || fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT)
+        || borrow_native_name.is_some()
     {
         // Create an edge from the first parameter to the return value.
         let mut an = BorrowAnnotation::default();
         let param_node = BorrowNode::Reference(0);
         let return_node = BorrowNode::ReturnPlaceholder(0);
-        let edge = BorrowEdge::Index;
+        let index_edge_kind = if fun_env.is_well_known(VECTOR_BORROW_MUT) {
+            IndexEdgeKind::Vector
+        } else if fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT) {
+            IndexEdgeKind::Table
+        } else {
+            IndexEdgeKind::Custom(borrow_native_name.unwrap())
+        };
+        let edge = BorrowEdge::Index(index_edge_kind);
         an.summary
             .borrowed_by
             .entry(param_node)
@@ -444,10 +473,15 @@ struct BorrowAnalysis<'a> {
     func_target: &'a FunctionTarget<'a>,
     livevar_annotation: &'a LiveVarAnnotation,
     targets: &'a FunctionTargetsHolder,
+    borrow_natives: &'a Vec<String>,
 }
 
 impl<'a> BorrowAnalysis<'a> {
-    fn new(func_target: &'a FunctionTarget<'a>, targets: &'a FunctionTargetsHolder) -> Self {
+    fn new(
+        func_target: &'a FunctionTarget<'a>,
+        targets: &'a FunctionTargetsHolder,
+        borrow_natives: &'a Vec<String>,
+    ) -> Self {
         let livevar_annotation = func_target
             .get_annotations()
             .get::<LiveVarAnnotation>()
@@ -457,6 +491,7 @@ impl<'a> BorrowAnalysis<'a> {
             func_target,
             livevar_annotation,
             targets,
+            borrow_natives,
         }
     }
 
@@ -593,24 +628,28 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                                 .targets
                                 .get_target(callee_env, &FunctionVariant::Baseline);
 
-                            let callee_annotation = if callee_env.is_native_or_intrinsic() {
-                                native_annotation(callee_env)
+                            let callee_annotation_opt = if callee_env.is_native_or_intrinsic() {
+                                Some(native_annotation(callee_env, self.borrow_natives))
                             } else {
-                                self.targets
+                                let anno_opt = self
+                                    .targets
                                     .get_target(callee_env, &FunctionVariant::Baseline)
                                     .get_annotations()
-                                    .get::<BorrowAnnotation>()
-                                    .expect("callee borrow annotation")
-                                    .clone()
+                                    .get::<BorrowAnnotation>();
+                                anno_opt.cloned()
                             };
-
-                            state.instantiate(
-                                &callee_target,
-                                targs,
-                                &callee_annotation.summary,
-                                srcs,
-                                dests,
-                            );
+                            if let Some(callee_annotation) = callee_annotation_opt {
+                                state.instantiate(
+                                    &callee_target,
+                                    targs,
+                                    &callee_annotation.summary,
+                                    srcs,
+                                    dests,
+                                );
+                            } else {
+                                callee_env.module_env.env.error(&self.func_target.get_bytecode_loc(*id),
+                                                                "error happened when trying to get borrow annotation from callee");
+                            }
                         } else {
                             // This can happen for recursive functions.
                             // Check whether the function has &mut returns.

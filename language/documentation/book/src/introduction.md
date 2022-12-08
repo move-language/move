@@ -8,8 +8,6 @@ Move takes its cue from [Rust](https://www.rust-lang.org/) by using resource typ
 
 Move was designed and created as a secure, verified, yet flexible programming language. The first use of Move is for the implementation of the Diem blockchain. That said, the language is still evolving. Move has the potential to be a language for other blockchains, and even non-blockchain use cases as well.
 
-Given custom Move modules will not be supported at the [launch](https://diem.com/white-paper/#whats-next) of the Diem Payment Network (DPN), we are targeting an early Move Developer persona.
-
 The early Move Developer is one with some programming experience, who wants to begin understanding the core programming language and see examples of its usage.
 
 ### Hobbyists

@@ -117,6 +117,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "84450d0b4a8bd1ba4144ce8ce718fbc5d071358b1e5384bace6536b3d1f2d5b3"
 
 [[package]]
+name = "arbitrary"
+version = "1.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d86fd10d912cab78764cc44307d9cd5f164e09abbeb87fb19fb6d95937e8da5f"
+dependencies = [
+ "derive_arbitrary",
+]
+
+[[package]]
 name = "arrayref"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -566,6 +575,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bytecode-verifier-libfuzzer"
+version = "0.0.0"
+dependencies = [
+ "arbitrary",
+ "libfuzzer-sys",
+ "move-binary-format",
+ "move-bytecode-verifier",
+ "move-core-types",
+]
+
+[[package]]
 name = "bytecode-verifier-tests"
 version = "0.1.0"
 dependencies = [
@@ -660,6 +680,9 @@ name = "cc"
 version = "1.0.67"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3c69b077ad434294d3ce9f1f6143a2a4b89a8a2d54ef813d85003a4fd1137fd"
+dependencies = [
+ "jobserver",
+]
 
 [[package]]
 name = "cfg-expr"
@@ -1227,6 +1250,17 @@ name = "derivative"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fcc3dd5e9e9c0b295d6e1e4d811fb6f157d5ffd784b8d202fc62eac8035a770b"
+dependencies = [
+ "proc-macro2 1.0.43",
+ "quote 1.0.9",
+ "syn 1.0.99",
+]
+
+[[package]]
+name = "derive_arbitrary"
+version = "1.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "226ad66541d865d7a7173ad6a9e691c33fdb910ac723f4bc734b3e5294a1f931"
 dependencies = [
  "proc-macro2 1.0.43",
  "quote 1.0.9",
@@ -2198,6 +2232,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
+name = "hex-literal"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ebdb29d2ea9ed0083cd8cece49bbd968021bd99b0849edb4a9a7ee0fdf6a4e0"
+
+[[package]]
 name = "hkdf"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2552,6 +2592,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 
 [[package]]
+name = "jobserver"
+version = "0.1.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "068b1ee6743e4d11fb9c6a1e6064b3693a1b600e7f5f5988047d98b3dc9fb90b"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "js-sys"
 version = "0.3.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2662,6 +2711,17 @@ name = "libc"
 version = "0.2.126"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "349d5a591cd28b49e1d1037471617a32ddcda5731b99419008085f72d5a53836"
+
+[[package]]
+name = "libfuzzer-sys"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae185684fe19814afd066da15a7cc41e126886c21282934225d9fc847582da58"
+dependencies = [
+ "arbitrary",
+ "cc",
+ "once_cell",
+]
 
 [[package]]
 name = "libnghttp2-sys"
@@ -2905,6 +2965,7 @@ name = "move-binary-format"
 version = "0.0.3"
 dependencies = [
  "anyhow",
+ "arbitrary",
  "move-core-types",
  "once_cell",
  "proptest",
@@ -2949,6 +3010,7 @@ name = "move-bytecode-verifier"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "hex-literal",
  "invalid-mutations",
  "move-binary-format",
  "move-borrow-graph",
@@ -3079,9 +3141,13 @@ name = "move-core-types"
 version = "0.0.4"
 dependencies = [
  "anyhow",
+ "arbitrary",
  "bcs",
+ "ethnum",
  "hex",
+ "num 0.4.0",
  "once_cell",
+ "primitive-types 0.10.1",
  "proptest",
  "proptest-derive",
  "rand 0.8.4",
@@ -3090,6 +3156,7 @@ dependencies = [
  "serde 1.0.145",
  "serde_bytes",
  "serde_json",
+ "uint",
 ]
 
 [[package]]
@@ -3481,6 +3548,7 @@ dependencies = [
  "anyhow",
  "dir-diff",
  "file_diff",
+ "hex",
  "log",
  "move-binary-format",
  "move-cli",
@@ -3586,6 +3654,7 @@ dependencies = [
  "move-binary-format",
  "move-bytecode-source-map",
  "move-bytecode-utils",
+ "move-bytecode-verifier",
  "move-cli",
  "move-command-line-common",
  "move-compiler",
@@ -3657,6 +3726,15 @@ dependencies = [
  "move-vm-test-utils",
  "move-vm-types",
  "tempfile",
+]
+
+[[package]]
+name = "move-vm-paranoid-tests"
+version = "0.1.0"
+dependencies = [
+ "datatest-stable",
+ "fail",
+ "move-transactional-test-runner",
 ]
 
 [[package]]
@@ -4517,6 +4595,7 @@ dependencies = [
  "fixed-hash",
  "impl-codec 0.5.1",
  "impl-rlp",
+ "impl-serde",
  "scale-info",
  "uint",
 ]
@@ -6180,9 +6259,9 @@ checksum = "56dee185309b50d1f11bfedef0fe6d036842e3fb77413abef29f8f8d1c5d4c1c"
 
 [[package]]
 name = "uint"
-version = "0.9.3"
+version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12f03af7ccf01dd611cc450a0d10dbc9b745770d096473e2faf0ca6e2d66d1e0"
+checksum = "a45526d29728d135c2900b0d30573fe3ee79fceb12ef534c7bb30e810a91b601"
 dependencies = [
  "byteorder",
  "crunchy",

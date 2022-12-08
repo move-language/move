@@ -15,7 +15,7 @@
 # fast fail.
 set -eo pipefail
 
-Z3_VERSION=4.11.0
+Z3_VERSION=4.11.2
 CVC5_VERSION=0.0.3
 DOTNET_VERSION=6.0
 BOOGIE_VERSION=2.15.8
@@ -216,6 +216,13 @@ function install_gcc_powerpc_linux_gnu {
   #if [[ "$PACKAGE_MANAGER" == "apk" ]] || [[ "$PACKAGE_MANAGER" == "brew" ]]; then
   #  TODO
   #fi
+}
+
+function install_lld {
+  # Right now, only install lld for linux
+  if [[ "$(uname)" == "Linux" ]]; then
+    install_pkg lld "$PACKAGE_MANAGER"
+  fi
 }
 
 function install_toolchain {
@@ -594,6 +601,8 @@ if [[ "$INSTALL_BUILD_TOOLS" == "true" ]]; then
   install_pkg cmake "$PACKAGE_MANAGER"
   install_pkg clang "$PACKAGE_MANAGER"
   install_pkg llvm "$PACKAGE_MANAGER"
+
+  install_lld
 
   install_gcc_powerpc_linux_gnu "$PACKAGE_MANAGER"
   install_openssl_dev "$PACKAGE_MANAGER"

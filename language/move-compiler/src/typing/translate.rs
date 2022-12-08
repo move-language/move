@@ -304,8 +304,11 @@ mod check_valid_constant {
 
         let mut acceptable_types = vec![
             Type_::u8(loc),
+            Type_::u16(loc),
+            Type_::u32(loc),
             Type_::u64(loc),
             Type_::u128(loc),
+            Type_::u256(loc),
             Type_::bool(loc),
             Type_::address(loc),
         ];

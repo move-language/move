@@ -96,14 +96,14 @@ object "A2_M" {
             }
             $Abort(97)
             function A2_M_add_two_number(x, y) -> $result0, $result1 {
-                let res, z, $t4, $t5
-                // $t4 := +($t0, $t1)
-                $t4 := $AddU64(x, y)
-                // $t5 := 3
-                $t5 := 3
-                // return ($t5, $t4)
-                $result0 := $t5
-                $result1 := $t4
+                let res, $t3, $t4
+                // $t3 := +($t0, $t1)
+                $t3 := $AddU64(x, y)
+                // $t4 := 3
+                $t4 := 3
+                // return ($t4, $t3)
+                $result0 := $t4
+                $result1 := $t3
             }
 
             function A2_M_arithmetic_ops(a) -> $result0, $result1 {
@@ -112,14 +112,14 @@ object "A2_M" {
                 for {} true {} {
                     switch $block
                     case 2 {
-                        // label L0
+                        // label L1
                         // $t5 := 42
                         $t5 := 42
                         // abort($t5)
                         $Abort($t5)
                     }
                     case 3 {
-                        // label L2
+                        // label L0
                         // return ($t2, $t0)
                         $result0 := $t2
                         $result1 := a
@@ -132,7 +132,7 @@ object "A2_M" {
                         $t3 := 2
                         // $t4 := !=($t2, $t3)
                         $t4 := $Neq($t2, $t3)
-                        // if ($t4) goto L0 else goto L2
+                        // if ($t4) goto L1 else goto L0
                         switch $t4
                         case 0  { $block := 3 }
                         default { $block := 2 }
@@ -146,34 +146,34 @@ object "A2_M" {
                 for {} true {} {
                     switch $block
                     case 2 {
-                        // label L0
+                        // label L1
                         // $t2 := >=($t0, $t1)
                         tmp_$2 := $GtEq(a, b)
-                        // goto L3
+                        // goto L2
                         $block := 5
                     }
                     case 3 {
-                        // label L2
+                        // label L0
                         // $t7 := false
                         $t7 := false
                         // $t2 := $t7
                         tmp_$2 := $t7
-                        // goto L3
+                        // goto L2
                         $block := 5
                     }
                     case 4 {
                         // $t6 := >($t0, $t1)
                         $t6 := $Gt(a, b)
-                        // if ($t6) goto L0 else goto L2
+                        // if ($t6) goto L1 else goto L0
                         switch $t6
                         case 0  { $block := 3 }
                         default { $block := 2 }
                     }
                     case 5 {
-                        // label L3
+                        // label L2
                         // $t8 := <($t0, $t1)
                         $t8 := $Lt(a, b)
-                        // if ($t8) goto L4 else goto L6
+                        // if ($t8) goto L4 else goto L3
                         switch $t8
                         case 0  { $block := 7 }
                         default { $block := 6 }
@@ -184,36 +184,36 @@ object "A2_M" {
                         $t9 := true
                         // $t3 := $t9
                         tmp_$3 := $t9
-                        // goto L7
+                        // goto L5
                         $block := 8
                     }
                     case 7 {
-                        // label L6
+                        // label L3
                         // $t3 := <=($t0, $t1)
                         tmp_$3 := $LtEq(a, b)
-                        // goto L7
+                        // goto L5
                         $block := 8
                     }
                     case 8 {
-                        // label L7
+                        // label L5
                         // $t10 := !=($t2, $t3)
                         $t10 := $Neq(tmp_$2, tmp_$3)
                         // $t11 := !($t10)
                         $t11 := $LogicalNot($t10)
-                        // if ($t11) goto L8 else goto L10
+                        // if ($t11) goto L7 else goto L6
                         switch $t11
                         case 0  { $block := 10 }
                         default { $block := 9 }
                     }
                     case 9 {
-                        // label L8
+                        // label L7
                         // $t12 := 42
                         $t12 := 42
                         // abort($t12)
                         $Abort($t12)
                     }
                     case 10 {
-                        // label L10
+                        // label L6
                         // return ($t2, $t3)
                         $result0 := tmp_$2
                         $result1 := tmp_$3
@@ -244,15 +244,15 @@ object "A2_M" {
             }
 
             function A2_M_underflow() -> $result {
-                let x, $t1, $t2, $t3
-                // $t1 := 0
-                $t1 := 0
-                // $t2 := 1
-                $t2 := 1
-                // $t3 := -($t1, $t2)
-                $t3 := $Sub($t1, $t2)
-                // return $t3
-                $result := $t3
+                let $t0, $t1, $t2
+                // $t0 := 0
+                $t0 := 0
+                // $t1 := 1
+                $t1 := 1
+                // $t2 := -($t0, $t1)
+                $t2 := $Sub($t0, $t1)
+                // return $t2
+                $result := $t2
             }
 
             function abi_encode_tuple_$uint64$_$u64$(headStart ,value_0) -> tail {
@@ -391,53 +391,63 @@ object "test_A2_M_test_add_two_number" {
         A2_M_test_add_two_number()
         return (0, 0)
         function A2_M_test_add_two_number() {
-            let res, z, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11
+            let res, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
             let $block := 4
             for {} true {} {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t8 := 100
-                    $t8 := 100
-                    // abort($t8)
-                    $Abort($t8)
+                    // goto L2
+                    $block := 5
                 }
                 case 3 {
                     // label L0
-                    // $t9 := 7
-                    $t9 := 7
-                    // $t10 := ==($t5, $t9)
-                    $t10 := $Eq($t5, $t9)
-                    // if ($t10) goto L2 else goto L3
-                    switch $t10
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
+                    // $t7 := 100
+                    $t7 := 100
+                    // abort($t7)
+                    $Abort($t7)
                 }
                 case 4 {
-                    // $t2 := 2
-                    $t2 := 2
-                    // $t3 := 5
-                    $t3 := 5
-                    // ($t4, $t5) := M::add_two_number($t2, $t3)
-                    $t4, $t5 := A2_M_add_two_number($t2, $t3)
-                    // $t6 := 3
-                    $t6 := 3
-                    // $t7 := ==($t4, $t6)
-                    $t7 := $Eq($t4, $t6)
-                    // if ($t7) goto L0 else goto L1
-                    switch $t7
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    // $t1 := 2
+                    $t1 := 2
+                    // $t2 := 5
+                    $t2 := 5
+                    // ($t3, $t4) := M::add_two_number($t1, $t2)
+                    $t3, $t4 := A2_M_add_two_number($t1, $t2)
+                    // $t5 := 3
+                    $t5 := 3
+                    // $t6 := ==($t3, $t5)
+                    $t6 := $Eq($t3, $t5)
+                    // if ($t6) goto L1 else goto L0
+                    switch $t6
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
-                    // label L3
-                    // $t11 := 101
-                    $t11 := 101
-                    // abort($t11)
-                    $Abort($t11)
+                    // label L2
+                    // $t8 := 7
+                    $t8 := 7
+                    // $t9 := ==($t4, $t8)
+                    $t9 := $Eq($t4, $t8)
+                    // if ($t9) goto L4 else goto L3
+                    switch $t9
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
                 }
                 case 6 {
-                    // label L2
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
+                    // label L3
+                    // $t10 := 101
+                    $t10 := 101
+                    // abort($t10)
+                    $Abort($t10)
+                }
+                case 8 {
+                    // label L5
                     // return ()
                     leave
                 }
@@ -445,14 +455,14 @@ object "test_A2_M_test_add_two_number" {
         }
 
         function A2_M_add_two_number(x, y) -> $result0, $result1 {
-            let res, z, $t4, $t5
-            // $t4 := +($t0, $t1)
-            $t4 := $AddU64(x, y)
-            // $t5 := 3
-            $t5 := 3
-            // return ($t5, $t4)
-            $result0 := $t5
-            $result1 := $t4
+            let res, $t3, $t4
+            // $t3 := +($t0, $t1)
+            $t3 := $AddU64(x, y)
+            // $t4 := 3
+            $t4 := 3
+            // return ($t4, $t3)
+            $result0 := $t4
+            $result1 := $t3
         }
 
         function $Abort(code) {
@@ -471,7 +481,7 @@ object "test_A2_M_test_add_two_number" {
         }
     }
 }
-===> Test result of M::test_add_two_number: Succeed(Stopped) (used_gas=355): []
+===> Test result of M::test_add_two_number: Succeed(Stopped) (used_gas=677): []
 
 // test of M::test_add_two_number_overflow
 /* =======================================
@@ -485,27 +495,27 @@ object "test_A2_M_test_add_two_number_overflow" {
         A2_M_test_add_two_number_overflow()
         return (0, 0)
         function A2_M_test_add_two_number_overflow() {
-            let _res, _z, $t2, $t3, $t4, $t5
-            // $t2 := 18446744073709551615
-            $t2 := 18446744073709551615
-            // $t3 := 1
-            $t3 := 1
-            // ($t4, $t5) := M::add_two_number($t2, $t3)
-            $t4, $t5 := A2_M_add_two_number($t2, $t3)
-            // destroy($t5)
-            // destroy($t4)
+            let $t0, $t1, $t2, $t3
+            // $t0 := 18446744073709551615
+            $t0 := 18446744073709551615
+            // $t1 := 1
+            $t1 := 1
+            // ($t2, $t3) := M::add_two_number($t0, $t1)
+            $t2, $t3 := A2_M_add_two_number($t0, $t1)
+            // destroy($t3)
+            // destroy($t2)
             // return ()
         }
 
         function A2_M_add_two_number(x, y) -> $result0, $result1 {
-            let res, z, $t4, $t5
-            // $t4 := +($t0, $t1)
-            $t4 := $AddU64(x, y)
-            // $t5 := 3
-            $t5 := 3
-            // return ($t5, $t4)
-            $result0 := $t5
-            $result1 := $t4
+            let res, $t3, $t4
+            // $t3 := +($t0, $t1)
+            $t3 := $AddU64(x, y)
+            // $t4 := 3
+            $t4 := 3
+            // return ($t4, $t3)
+            $result0 := $t4
+            $result1 := $t3
         }
 
         function $Abort(code) {
@@ -535,53 +545,63 @@ object "test_A2_M_test_add_two_number_wrong_assert" {
         A2_M_test_add_two_number_wrong_assert()
         return (0, 0)
         function A2_M_test_add_two_number_wrong_assert() {
-            let res, z, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11
+            let res, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
             let $block := 4
             for {} true {} {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t8 := 100
-                    $t8 := 100
-                    // abort($t8)
-                    $Abort($t8)
+                    // goto L2
+                    $block := 5
                 }
                 case 3 {
                     // label L0
-                    // $t9 := 6
-                    $t9 := 6
-                    // $t10 := ==($t5, $t9)
-                    $t10 := $Eq($t5, $t9)
-                    // if ($t10) goto L2 else goto L3
-                    switch $t10
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
+                    // $t7 := 100
+                    $t7 := 100
+                    // abort($t7)
+                    $Abort($t7)
                 }
                 case 4 {
-                    // $t2 := 2
-                    $t2 := 2
-                    // $t3 := 5
-                    $t3 := 5
-                    // ($t4, $t5) := M::add_two_number($t2, $t3)
-                    $t4, $t5 := A2_M_add_two_number($t2, $t3)
-                    // $t6 := 3
-                    $t6 := 3
-                    // $t7 := ==($t4, $t6)
-                    $t7 := $Eq($t4, $t6)
-                    // if ($t7) goto L0 else goto L1
-                    switch $t7
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    // $t1 := 2
+                    $t1 := 2
+                    // $t2 := 5
+                    $t2 := 5
+                    // ($t3, $t4) := M::add_two_number($t1, $t2)
+                    $t3, $t4 := A2_M_add_two_number($t1, $t2)
+                    // $t5 := 3
+                    $t5 := 3
+                    // $t6 := ==($t3, $t5)
+                    $t6 := $Eq($t3, $t5)
+                    // if ($t6) goto L1 else goto L0
+                    switch $t6
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
-                    // label L3
-                    // $t11 := 101
-                    $t11 := 101
-                    // abort($t11)
-                    $Abort($t11)
+                    // label L2
+                    // $t8 := 6
+                    $t8 := 6
+                    // $t9 := ==($t4, $t8)
+                    $t9 := $Eq($t4, $t8)
+                    // if ($t9) goto L4 else goto L3
+                    switch $t9
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
                 }
                 case 6 {
-                    // label L2
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
+                    // label L3
+                    // $t10 := 101
+                    $t10 := 101
+                    // abort($t10)
+                    $Abort($t10)
+                }
+                case 8 {
+                    // label L5
                     // return ()
                     leave
                 }
@@ -589,14 +609,14 @@ object "test_A2_M_test_add_two_number_wrong_assert" {
         }
 
         function A2_M_add_two_number(x, y) -> $result0, $result1 {
-            let res, z, $t4, $t5
-            // $t4 := +($t0, $t1)
-            $t4 := $AddU64(x, y)
-            // $t5 := 3
-            $t5 := 3
-            // return ($t5, $t4)
-            $result0 := $t5
-            $result1 := $t4
+            let res, $t3, $t4
+            // $t3 := +($t0, $t1)
+            $t3 := $AddU64(x, y)
+            // $t4 := 3
+            $t4 := 3
+            // return ($t4, $t3)
+            $result0 := $t4
+            $result1 := $t3
         }
 
         function $Abort(code) {
@@ -615,7 +635,7 @@ object "test_A2_M_test_add_two_number_wrong_assert" {
         }
     }
 }
-===> Test result of M::test_add_two_number_wrong_assert: Revert(Reverted) (used_gas=356): [0, 0, 0, 0, 0, 0, 0, 101]
+===> Test result of M::test_add_two_number_wrong_assert: Revert(Reverted) (used_gas=545): [0, 0, 0, 0, 0, 0, 0, 101]
 
 // test of M::test_arithmetic_ops_aborts
 /* =======================================
@@ -629,51 +649,61 @@ object "test_A2_M_test_arithmetic_ops_aborts" {
         A2_M_test_arithmetic_ops_aborts()
         return (0, 0)
         function A2_M_test_arithmetic_ops_aborts() {
-            let r1, r2, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
+            let r2, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9
             let $block := 4
             for {} true {} {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t7 := 100
-                    $t7 := 100
-                    // abort($t7)
-                    $Abort($t7)
+                    // goto L2
+                    $block := 5
                 }
                 case 3 {
                     // label L0
-                    // $t8 := 3
-                    $t8 := 3
-                    // $t9 := ==($t4, $t8)
-                    $t9 := $Eq($t4, $t8)
-                    // if ($t9) goto L2 else goto L3
-                    switch $t9
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
+                    // $t6 := 100
+                    $t6 := 100
+                    // abort($t6)
+                    $Abort($t6)
                 }
                 case 4 {
-                    // $t2 := 3
-                    $t2 := 3
-                    // ($t3, $t4) := M::arithmetic_ops($t2)
-                    $t3, $t4 := A2_M_arithmetic_ops($t2)
-                    // $t5 := 1
-                    $t5 := 1
-                    // $t6 := ==($t3, $t5)
-                    $t6 := $Eq($t3, $t5)
-                    // if ($t6) goto L0 else goto L1
-                    switch $t6
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    // $t1 := 3
+                    $t1 := 3
+                    // ($t2, $t3) := M::arithmetic_ops($t1)
+                    $t2, $t3 := A2_M_arithmetic_ops($t1)
+                    // $t4 := 1
+                    $t4 := 1
+                    // $t5 := ==($t2, $t4)
+                    $t5 := $Eq($t2, $t4)
+                    // if ($t5) goto L1 else goto L0
+                    switch $t5
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
-                    // label L3
-                    // $t10 := 101
-                    $t10 := 101
-                    // abort($t10)
-                    $Abort($t10)
+                    // label L2
+                    // $t7 := 3
+                    $t7 := 3
+                    // $t8 := ==($t3, $t7)
+                    $t8 := $Eq($t3, $t7)
+                    // if ($t8) goto L4 else goto L3
+                    switch $t8
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
                 }
                 case 6 {
-                    // label L2
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
+                    // label L3
+                    // $t9 := 101
+                    $t9 := 101
+                    // abort($t9)
+                    $Abort($t9)
+                }
+                case 8 {
+                    // label L5
                     // return ()
                     leave
                 }
@@ -686,14 +716,14 @@ object "test_A2_M_test_arithmetic_ops_aborts" {
             for {} true {} {
                 switch $block
                 case 2 {
-                    // label L0
+                    // label L1
                     // $t5 := 42
                     $t5 := 42
                     // abort($t5)
                     $Abort($t5)
                 }
                 case 3 {
-                    // label L2
+                    // label L0
                     // return ($t2, $t0)
                     $result0 := $t2
                     $result1 := a
@@ -706,7 +736,7 @@ object "test_A2_M_test_arithmetic_ops_aborts" {
                     $t3 := 2
                     // $t4 := !=($t2, $t3)
                     $t4 := $Neq($t2, $t3)
-                    // if ($t4) goto L0 else goto L2
+                    // if ($t4) goto L1 else goto L0
                     switch $t4
                     case 0  { $block := 3 }
                     default { $block := 2 }
@@ -729,7 +759,7 @@ object "test_A2_M_test_arithmetic_ops_aborts" {
         }
     }
 }
-===> Test result of M::test_arithmetic_ops_aborts: Revert(Reverted) (used_gas=404): [0, 0, 0, 0, 0, 0, 0, 100]
+===> Test result of M::test_arithmetic_ops_aborts: Revert(Reverted) (used_gas=420): [0, 0, 0, 0, 0, 0, 0, 100]
 
 // test of M::test_bool_ops
 /* =======================================
@@ -743,53 +773,63 @@ object "test_A2_M_test_bool_ops" {
         A2_M_test_bool_ops()
         return (0, 0)
         function A2_M_test_bool_ops() {
-            let r1, r2, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11
+            let r2, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
             let $block := 4
             for {} true {} {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t8 := 100
-                    $t8 := 100
-                    // abort($t8)
-                    $Abort($t8)
+                    // goto L2
+                    $block := 5
                 }
                 case 3 {
                     // label L0
-                    // $t9 := false
-                    $t9 := false
-                    // $t10 := ==($t5, $t9)
-                    $t10 := $Eq($t5, $t9)
-                    // if ($t10) goto L2 else goto L3
-                    switch $t10
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
+                    // $t7 := 100
+                    $t7 := 100
+                    // abort($t7)
+                    $Abort($t7)
                 }
                 case 4 {
-                    // $t2 := 3
-                    $t2 := 3
-                    // $t3 := 2
-                    $t3 := 2
-                    // ($t4, $t5) := M::bool_ops($t2, $t3)
-                    $t4, $t5 := A2_M_bool_ops($t2, $t3)
-                    // $t6 := true
-                    $t6 := true
-                    // $t7 := ==($t4, $t6)
-                    $t7 := $Eq($t4, $t6)
-                    // if ($t7) goto L0 else goto L1
-                    switch $t7
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    // $t1 := 3
+                    $t1 := 3
+                    // $t2 := 2
+                    $t2 := 2
+                    // ($t3, $t4) := M::bool_ops($t1, $t2)
+                    $t3, $t4 := A2_M_bool_ops($t1, $t2)
+                    // $t5 := true
+                    $t5 := true
+                    // $t6 := ==($t3, $t5)
+                    $t6 := $Eq($t3, $t5)
+                    // if ($t6) goto L1 else goto L0
+                    switch $t6
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
-                    // label L3
-                    // $t11 := 101
-                    $t11 := 101
-                    // abort($t11)
-                    $Abort($t11)
+                    // label L2
+                    // $t8 := false
+                    $t8 := false
+                    // $t9 := ==($t4, $t8)
+                    $t9 := $Eq($t4, $t8)
+                    // if ($t9) goto L4 else goto L3
+                    switch $t9
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
                 }
                 case 6 {
-                    // label L2
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
+                    // label L3
+                    // $t10 := 101
+                    $t10 := 101
+                    // abort($t10)
+                    $Abort($t10)
+                }
+                case 8 {
+                    // label L5
                     // return ()
                     leave
                 }
@@ -802,34 +842,34 @@ object "test_A2_M_test_bool_ops" {
             for {} true {} {
                 switch $block
                 case 2 {
-                    // label L0
+                    // label L1
                     // $t2 := >=($t0, $t1)
                     tmp_$2 := $GtEq(a, b)
-                    // goto L3
+                    // goto L2
                     $block := 5
                 }
                 case 3 {
-                    // label L2
+                    // label L0
                     // $t7 := false
                     $t7 := false
                     // $t2 := $t7
                     tmp_$2 := $t7
-                    // goto L3
+                    // goto L2
                     $block := 5
                 }
                 case 4 {
                     // $t6 := >($t0, $t1)
                     $t6 := $Gt(a, b)
-                    // if ($t6) goto L0 else goto L2
+                    // if ($t6) goto L1 else goto L0
                     switch $t6
                     case 0  { $block := 3 }
                     default { $block := 2 }
                 }
                 case 5 {
-                    // label L3
+                    // label L2
                     // $t8 := <($t0, $t1)
                     $t8 := $Lt(a, b)
-                    // if ($t8) goto L4 else goto L6
+                    // if ($t8) goto L4 else goto L3
                     switch $t8
                     case 0  { $block := 7 }
                     default { $block := 6 }
@@ -840,36 +880,36 @@ object "test_A2_M_test_bool_ops" {
                     $t9 := true
                     // $t3 := $t9
                     tmp_$3 := $t9
-                    // goto L7
+                    // goto L5
                     $block := 8
                 }
                 case 7 {
-                    // label L6
+                    // label L3
                     // $t3 := <=($t0, $t1)
                     tmp_$3 := $LtEq(a, b)
-                    // goto L7
+                    // goto L5
                     $block := 8
                 }
                 case 8 {
-                    // label L7
+                    // label L5
                     // $t10 := !=($t2, $t3)
                     $t10 := $Neq(tmp_$2, tmp_$3)
                     // $t11 := !($t10)
                     $t11 := $LogicalNot($t10)
-                    // if ($t11) goto L8 else goto L10
+                    // if ($t11) goto L7 else goto L6
                     switch $t11
                     case 0  { $block := 10 }
                     default { $block := 9 }
                 }
                 case 9 {
-                    // label L8
+                    // label L7
                     // $t12 := 42
                     $t12 := 42
                     // abort($t12)
                     $Abort($t12)
                 }
                 case 10 {
-                    // label L10
+                    // label L6
                     // return ($t2, $t3)
                     $result0 := tmp_$2
                     $result1 := tmp_$3
@@ -905,7 +945,7 @@ object "test_A2_M_test_bool_ops" {
         }
     }
 }
-===> Test result of M::test_bool_ops: Succeed(Stopped) (used_gas=1228): []
+===> Test result of M::test_bool_ops: Succeed(Stopped) (used_gas=1491): []
 
 // test of M::test_bool_ops_aborts
 /* =======================================
@@ -925,19 +965,15 @@ object "test_A2_M_test_bool_ops_aborts" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t6 := 100
                     $t6 := 100
                     // abort($t6)
                     $Abort($t6)
-                }
-                case 3 {
-                    // label L0
-                    // $t7 := !=($t2, $t3)
-                    $t7 := $Neq($t2, $t3)
-                    // if ($t7) goto L2 else goto L3
-                    switch $t7
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
                 }
                 case 4 {
                     // $t2 := true
@@ -948,72 +984,101 @@ object "test_A2_M_test_bool_ops_aborts" {
                     $t4 := $Eq($t2, $t3)
                     // $t5 := !($t4)
                     $t5 := $LogicalNot($t4)
-                    // if ($t5) goto L0 else goto L1
+                    // if ($t5) goto L1 else goto L0
                     switch $t5
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
+                    // label L2
+                    // $t7 := !=($t2, $t3)
+                    $t7 := $Neq($t2, $t3)
+                    // if ($t7) goto L4 else goto L3
+                    switch $t7
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
+                }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
                     // label L3
                     // $t8 := 101
                     $t8 := 101
                     // abort($t8)
                     $Abort($t8)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t9 := !($t2)
                     $t9 := $LogicalNot($t2)
                     // $t10 := !($t3)
                     $t10 := $LogicalNot($t3)
                     // $t11 := !=($t9, $t10)
                     $t11 := $Neq($t9, $t10)
-                    // if ($t11) goto L4 else goto L5
+                    // if ($t11) goto L7 else goto L6
                     switch $t11
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t12 := 102
                     $t12 := 102
                     // abort($t12)
                     $Abort($t12)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // $t13 := !($t3)
                     $t13 := $LogicalNot($t3)
-                    // if ($t13) goto L6 else goto L7
+                    // if ($t13) goto L10 else goto L9
                     switch $t13
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
                 }
-                case 9 {
-                    // label L7
+                case 12 {
+                    // label L10
+                    // goto L11
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
                     // $t14 := 103
                     $t14 := 103
                     // abort($t14)
                     $Abort($t14)
                 }
-                case 10 {
-                    // label L6
+                case 14 {
+                    // label L11
                     // $t15 := !($t2)
                     $t15 := $LogicalNot($t2)
-                    // if ($t15) goto L8 else goto L9
+                    // if ($t15) goto L13 else goto L12
                     switch $t15
-                    case 0  { $block := 11 }
-                    default { $block := 12 }
+                    case 0  { $block := 16 }
+                    default { $block := 15 }
                 }
-                case 11 {
-                    // label L9
+                case 15 {
+                    // label L13
+                    // goto L14
+                    $block := 17
+                }
+                case 16 {
+                    // label L12
                     // $t16 := 104
                     $t16 := 104
                     // abort($t16)
                     $Abort($t16)
                 }
-                case 12 {
-                    // label L8
+                case 17 {
+                    // label L14
                     // return ()
                     leave
                 }
@@ -1035,7 +1100,7 @@ object "test_A2_M_test_bool_ops_aborts" {
         }
     }
 }
-===> Test result of M::test_bool_ops_aborts: Revert(Reverted) (used_gas=1081): [0, 0, 0, 0, 0, 0, 0, 104]
+===> Test result of M::test_bool_ops_aborts: Revert(Reverted) (used_gas=2075): [0, 0, 0, 0, 0, 0, 0, 104]
 
 // test of M::test_div
 /* =======================================
@@ -1049,53 +1114,63 @@ object "test_A2_M_test_div" {
         A2_M_test_div()
         return (0, 0)
         function A2_M_test_div() {
-            let r1, r2, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11
+            let r2, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
             let $block := 4
             for {} true {} {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t8 := 100
-                    $t8 := 100
-                    // abort($t8)
-                    $Abort($t8)
+                    // goto L2
+                    $block := 5
                 }
                 case 3 {
                     // label L0
-                    // $t9 := 3
-                    $t9 := 3
-                    // $t10 := ==($t5, $t9)
-                    $t10 := $Eq($t5, $t9)
-                    // if ($t10) goto L2 else goto L3
-                    switch $t10
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
+                    // $t7 := 100
+                    $t7 := 100
+                    // abort($t7)
+                    $Abort($t7)
                 }
                 case 4 {
-                    // $t2 := 7
-                    $t2 := 7
-                    // $t3 := 4
-                    $t3 := 4
-                    // ($t4, $t5) := M::div($t2, $t3)
-                    $t4, $t5 := A2_M_div($t2, $t3)
-                    // $t6 := 1
-                    $t6 := 1
-                    // $t7 := ==($t4, $t6)
-                    $t7 := $Eq($t4, $t6)
-                    // if ($t7) goto L0 else goto L1
-                    switch $t7
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    // $t1 := 7
+                    $t1 := 7
+                    // $t2 := 4
+                    $t2 := 4
+                    // ($t3, $t4) := M::div($t1, $t2)
+                    $t3, $t4 := A2_M_div($t1, $t2)
+                    // $t5 := 1
+                    $t5 := 1
+                    // $t6 := ==($t3, $t5)
+                    $t6 := $Eq($t3, $t5)
+                    // if ($t6) goto L1 else goto L0
+                    switch $t6
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
-                    // label L3
-                    // $t11 := 101
-                    $t11 := 101
-                    // abort($t11)
-                    $Abort($t11)
+                    // label L2
+                    // $t8 := 3
+                    $t8 := 3
+                    // $t9 := ==($t4, $t8)
+                    $t9 := $Eq($t4, $t8)
+                    // if ($t9) goto L4 else goto L3
+                    switch $t9
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
                 }
                 case 6 {
-                    // label L2
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
+                    // label L3
+                    // $t10 := 101
+                    $t10 := 101
+                    // abort($t10)
+                    $Abort($t10)
+                }
+                case 8 {
+                    // label L5
                     // return ()
                     leave
                 }
@@ -1133,7 +1208,7 @@ object "test_A2_M_test_div" {
         }
     }
 }
-===> Test result of M::test_div: Succeed(Stopped) (used_gas=355): []
+===> Test result of M::test_div: Succeed(Stopped) (used_gas=661): []
 
 // test of M::test_div_by_zero
 /* =======================================
@@ -1147,15 +1222,15 @@ object "test_A2_M_test_div_by_zero" {
         A2_M_test_div_by_zero()
         return (0, 0)
         function A2_M_test_div_by_zero() {
-            let _r1, _r2, $t2, $t3, $t4, $t5
-            // $t2 := 7
-            $t2 := 7
-            // $t3 := 0
-            $t3 := 0
-            // ($t4, $t5) := M::div($t2, $t3)
-            $t4, $t5 := A2_M_div($t2, $t3)
-            // destroy($t5)
-            // destroy($t4)
+            let $t0, $t1, $t2, $t3
+            // $t0 := 7
+            $t0 := 7
+            // $t1 := 0
+            $t1 := 0
+            // ($t2, $t3) := M::div($t0, $t1)
+            $t2, $t3 := A2_M_div($t0, $t1)
+            // destroy($t3)
+            // destroy($t2)
             // return ()
         }
 
@@ -1201,53 +1276,63 @@ object "test_A2_M_test_div_wrong_assert" {
         A2_M_test_div_wrong_assert()
         return (0, 0)
         function A2_M_test_div_wrong_assert() {
-            let r1, r2, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11
+            let r2, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
             let $block := 4
             for {} true {} {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t8 := 100
-                    $t8 := 100
-                    // abort($t8)
-                    $Abort($t8)
+                    // goto L2
+                    $block := 5
                 }
                 case 3 {
                     // label L0
-                    // $t9 := 2
-                    $t9 := 2
-                    // $t10 := ==($t5, $t9)
-                    $t10 := $Eq($t5, $t9)
-                    // if ($t10) goto L2 else goto L3
-                    switch $t10
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
+                    // $t7 := 100
+                    $t7 := 100
+                    // abort($t7)
+                    $Abort($t7)
                 }
                 case 4 {
-                    // $t2 := 7
-                    $t2 := 7
-                    // $t3 := 4
-                    $t3 := 4
-                    // ($t4, $t5) := M::div($t2, $t3)
-                    $t4, $t5 := A2_M_div($t2, $t3)
-                    // $t6 := 1
-                    $t6 := 1
-                    // $t7 := ==($t4, $t6)
-                    $t7 := $Eq($t4, $t6)
-                    // if ($t7) goto L0 else goto L1
-                    switch $t7
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    // $t1 := 7
+                    $t1 := 7
+                    // $t2 := 4
+                    $t2 := 4
+                    // ($t3, $t4) := M::div($t1, $t2)
+                    $t3, $t4 := A2_M_div($t1, $t2)
+                    // $t5 := 1
+                    $t5 := 1
+                    // $t6 := ==($t3, $t5)
+                    $t6 := $Eq($t3, $t5)
+                    // if ($t6) goto L1 else goto L0
+                    switch $t6
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
-                    // label L3
-                    // $t11 := 101
-                    $t11 := 101
-                    // abort($t11)
-                    $Abort($t11)
+                    // label L2
+                    // $t8 := 2
+                    $t8 := 2
+                    // $t9 := ==($t4, $t8)
+                    $t9 := $Eq($t4, $t8)
+                    // if ($t9) goto L4 else goto L3
+                    switch $t9
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
                 }
                 case 6 {
-                    // label L2
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
+                    // label L3
+                    // $t10 := 101
+                    $t10 := 101
+                    // abort($t10)
+                    $Abort($t10)
+                }
+                case 8 {
+                    // label L5
                     // return ()
                     leave
                 }
@@ -1285,7 +1370,7 @@ object "test_A2_M_test_div_wrong_assert" {
         }
     }
 }
-===> Test result of M::test_div_wrong_assert: Revert(Reverted) (used_gas=348): [0, 0, 0, 0, 0, 0, 0, 101]
+===> Test result of M::test_div_wrong_assert: Revert(Reverted) (used_gas=529): [0, 0, 0, 0, 0, 0, 0, 101]
 
 // test of M::test_multiple_ops
 /* =======================================
@@ -1299,39 +1384,44 @@ object "test_A2_M_test_multiple_ops" {
         A2_M_test_multiple_ops()
         return (0, 0)
         function A2_M_test_multiple_ops() {
-            let r, $t1, $t2, $t3, $t4, $t5, $t6, $t7
+            let $t0, $t1, $t2, $t3, $t4, $t5, $t6
             let $block := 4
             for {} true {} {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t7 := 100
-                    $t7 := 100
-                    // abort($t7)
-                    $Abort($t7)
+                    // goto L2
+                    $block := 5
                 }
                 case 3 {
                     // label L0
-                    // return ()
-                    leave
+                    // $t6 := 100
+                    $t6 := 100
+                    // abort($t6)
+                    $Abort($t6)
                 }
                 case 4 {
-                    // $t1 := 3
-                    $t1 := 3
-                    // $t2 := 2
-                    $t2 := 2
-                    // $t3 := 5
-                    $t3 := 5
-                    // $t4 := M::multiple_ops($t1, $t2, $t3)
-                    $t4 := A2_M_multiple_ops($t1, $t2, $t3)
-                    // $t5 := 13
-                    $t5 := 13
-                    // $t6 := ==($t4, $t5)
-                    $t6 := $Eq($t4, $t5)
-                    // if ($t6) goto L0 else goto L1
-                    switch $t6
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    // $t0 := 3
+                    $t0 := 3
+                    // $t1 := 2
+                    $t1 := 2
+                    // $t2 := 5
+                    $t2 := 5
+                    // $t3 := M::multiple_ops($t0, $t1, $t2)
+                    $t3 := A2_M_multiple_ops($t0, $t1, $t2)
+                    // $t4 := 13
+                    $t4 := 13
+                    // $t5 := ==($t3, $t4)
+                    $t5 := $Eq($t3, $t4)
+                    // if ($t5) goto L1 else goto L0
+                    switch $t5
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // return ()
+                    leave
                 }
             }
         }
@@ -1366,7 +1456,7 @@ object "test_A2_M_test_multiple_ops" {
         }
     }
 }
-===> Test result of M::test_multiple_ops: Succeed(Stopped) (used_gas=176): []
+===> Test result of M::test_multiple_ops: Succeed(Stopped) (used_gas=265): []
 
 // test of M::test_multiple_overflow
 /* =======================================
@@ -1380,39 +1470,44 @@ object "test_A2_M_test_multiple_overflow" {
         A2_M_test_multiple_overflow()
         return (0, 0)
         function A2_M_test_multiple_overflow() {
-            let r, $t1, $t2, $t3, $t4, $t5, $t6, $t7
+            let $t0, $t1, $t2, $t3, $t4, $t5, $t6
             let $block := 4
             for {} true {} {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t7 := 100
-                    $t7 := 100
-                    // abort($t7)
-                    $Abort($t7)
+                    // goto L2
+                    $block := 5
                 }
                 case 3 {
                     // label L0
-                    // return ()
-                    leave
+                    // $t6 := 100
+                    $t6 := 100
+                    // abort($t6)
+                    $Abort($t6)
                 }
                 case 4 {
-                    // $t1 := 0
-                    $t1 := 0
-                    // $t2 := 18446744073709551615
-                    $t2 := 18446744073709551615
-                    // $t3 := 2
-                    $t3 := 2
-                    // $t4 := M::multiple_ops($t1, $t2, $t3)
-                    $t4 := A2_M_multiple_ops($t1, $t2, $t3)
-                    // $t5 := 0
-                    $t5 := 0
-                    // $t6 := ==($t4, $t5)
-                    $t6 := $Eq($t4, $t5)
-                    // if ($t6) goto L0 else goto L1
-                    switch $t6
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    // $t0 := 0
+                    $t0 := 0
+                    // $t1 := 18446744073709551615
+                    $t1 := 18446744073709551615
+                    // $t2 := 2
+                    $t2 := 2
+                    // $t3 := M::multiple_ops($t0, $t1, $t2)
+                    $t3 := A2_M_multiple_ops($t0, $t1, $t2)
+                    // $t4 := 0
+                    $t4 := 0
+                    // $t5 := ==($t3, $t4)
+                    $t5 := $Eq($t3, $t4)
+                    // if ($t5) goto L1 else goto L0
+                    switch $t5
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // return ()
+                    leave
                 }
             }
         }
@@ -1447,7 +1542,7 @@ object "test_A2_M_test_multiple_overflow" {
         }
     }
 }
-===> Test result of M::test_multiple_overflow: Revert(Reverted) (used_gas=21): [255, 255, 255, 255, 255, 255, 255, 255]
+===> Test result of M::test_multiple_overflow: Revert(Reverted) (used_gas=125): [255, 255, 255, 255, 255, 255, 255, 255]
 
 // test of M::test_underflow
 /* =======================================
@@ -1461,23 +1556,23 @@ object "test_A2_M_test_underflow" {
         A2_M_test_underflow()
         return (0, 0)
         function A2_M_test_underflow() {
-            let _r, $t1
-            // $t1 := M::underflow()
-            $t1 := A2_M_underflow()
-            // destroy($t1)
+            let $t0
+            // $t0 := M::underflow()
+            $t0 := A2_M_underflow()
+            // destroy($t0)
             // return ()
         }
 
         function A2_M_underflow() -> $result {
-            let x, $t1, $t2, $t3
-            // $t1 := 0
-            $t1 := 0
-            // $t2 := 1
-            $t2 := 1
-            // $t3 := -($t1, $t2)
-            $t3 := $Sub($t1, $t2)
-            // return $t3
-            $result := $t3
+            let $t0, $t1, $t2
+            // $t0 := 0
+            $t0 := 0
+            // $t1 := 1
+            $t1 := 1
+            // $t2 := -($t0, $t1)
+            $t2 := $Sub($t0, $t1)
+            // return $t2
+            $result := $t2
         }
 
         function $Abort(code) {

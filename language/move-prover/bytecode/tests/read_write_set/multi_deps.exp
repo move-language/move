@@ -16,7 +16,7 @@ fun MultiDeps::add_to($t0|s: &mut MultiDeps::S, $t1|t: &MultiDeps::T, $t2|v: boo
      var $t14: &mut u64
   0: $t4 := move($t2)
   1: if ($t4) goto 2 else goto 10
-  2: label L0
+  2: label L1
   3: $t5 := move($t1)
   4: destroy($t5)
   5: $t6 := copy($t0)
@@ -24,13 +24,13 @@ fun MultiDeps::add_to($t0|s: &mut MultiDeps::S, $t1|t: &MultiDeps::T, $t2|v: boo
   7: $t8 := read_ref($t7)
   8: $t3 := $t8
   9: goto 16
- 10: label L2
+ 10: label L0
  11: $t9 := move($t1)
  12: $t10 := borrow_field<MultiDeps::T>.f($t9)
  13: $t11 := read_ref($t10)
  14: $t3 := $t11
  15: goto 16
- 16: label L3
+ 16: label L2
  17: $t12 := move($t3)
  18: $t13 := move($t0)
  19: $t14 := borrow_field<MultiDeps::S>.f($t13)
@@ -66,7 +66,7 @@ fun MultiDeps::add_to($t0|s: &mut MultiDeps::S, $t1|t: &MultiDeps::T, $t2|v: boo
      #
   0: $t4 := move($t2)
   1: if ($t4) goto 2 else goto 10
-  2: label L0
+  2: label L1
   3: $t5 := move($t1)
   4: destroy($t5)
   5: $t6 := copy($t0)
@@ -74,13 +74,13 @@ fun MultiDeps::add_to($t0|s: &mut MultiDeps::S, $t1|t: &MultiDeps::T, $t2|v: boo
   7: $t8 := read_ref($t7)
   8: $t3 := $t8
   9: goto 16
- 10: label L2
+ 10: label L0
  11: $t9 := move($t1)
  12: $t10 := borrow_field<MultiDeps::T>.f($t9)
  13: $t11 := read_ref($t10)
  14: $t3 := $t11
  15: goto 16
- 16: label L3
+ 16: label L2
  17: $t12 := move($t3)
  18: $t13 := move($t0)
  19: $t14 := borrow_field<MultiDeps::S>.f($t13)

@@ -11,10 +11,10 @@ use move_binary_format::{
 };
 use move_command_line_common::files::FileHash;
 use move_compiler::{
-    diagnostics::{self, Diagnostic},
+    diagnostics::{self, Diagnostic, Diagnostics},
     unit_test::{ModuleTestPlan, TestName, TestPlan},
 };
-use move_core_types::{effects::ChangeSet, language_storage::ModuleId};
+use move_core_types::{effects::ChangeSet, language_storage::ModuleId, vm_status::StatusType};
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::{
@@ -24,14 +24,18 @@ use std::{
     time::Duration,
 };
 
+pub use move_compiler::unit_test::ExpectedMoveError as MoveError;
+
 #[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq)]
 pub enum FailureReason {
-    // Expected to abort, but it didn't
-    NoAbort(String),
+    // Expected to error, but it didn't
+    NoError(String),
     // Aborted with the wrong code
-    WrongAbort(String, u64, u64),
-    // Abort wasn't expected, but it did
-    Aborted(String, u64),
+    WrongError(String, MoveError, MoveError),
+    // Aborted with the wrong code, without location specified
+    WrongAbortDEPRECATED(String, u64, MoveError),
+    // Error wasn't expected, but it did
+    UnexpectedError(String, MoveError),
     // Test timed out
     Timeout(String),
     // The execution results of the Move VM and stackless VM does not match
@@ -43,8 +47,6 @@ pub enum FailureReason {
     },
     // Property checking failed
     Property(String),
-    // The test failed for some unknown reason. This shouldn't be encountered
-    Unknown(String),
 
     // Failed to compile Move code into EVM bytecode.
     #[cfg(feature = "evm-backend")]
@@ -90,20 +92,28 @@ impl TestRunInfo {
 }
 
 impl FailureReason {
-    pub fn no_abort() -> Self {
-        FailureReason::NoAbort("Test did not abort as expected".to_string())
+    pub fn no_error() -> Self {
+        FailureReason::NoError("Test did not error as expected".to_string())
     }
 
-    pub fn wrong_abort(expected: u64, received: u64) -> Self {
-        FailureReason::WrongAbort(
-            "Test did not abort with expected code".to_string(),
+    pub fn wrong_error(expected: MoveError, actual: MoveError) -> Self {
+        FailureReason::WrongError(
+            "Test did not error as expected".to_string(),
             expected,
-            received,
+            actual,
         )
     }
 
-    pub fn aborted(abort_code: u64) -> Self {
-        FailureReason::Aborted("Test was not expected to abort".to_string(), abort_code)
+    pub fn wrong_abort_deprecated(expected: u64, actual: MoveError) -> Self {
+        FailureReason::WrongAbortDEPRECATED(
+            "Test did not abort with expected code".to_string(),
+            expected,
+            actual,
+        )
+    }
+
+    pub fn unexpected_error(error: MoveError) -> Self {
+        FailureReason::UnexpectedError("Test was not expected to error".to_string(), error)
     }
 
     pub fn timeout() -> Self {
@@ -132,10 +142,6 @@ impl FailureReason {
     pub fn move_to_evm_error(diagnostics: String) -> Self {
         FailureReason::MoveToEVMError(diagnostics)
     }
-
-    pub fn unknown() -> Self {
-        FailureReason::Unknown("ITE: An unknown error was reported.".to_string())
-    }
 }
 
 impl TestFailure {
@@ -155,17 +161,48 @@ impl TestFailure {
 
     pub fn render_error(&self, test_plan: &TestPlan) -> String {
         let error_string = match &self.failure_reason {
-            FailureReason::NoAbort(message) => message.to_string(),
+            FailureReason::NoError(message) => message.to_string(),
             FailureReason::Timeout(message) => message.to_string(),
-            FailureReason::WrongAbort(message, expected_code, other_code) => {
+            FailureReason::WrongError(message, expected, actual) => {
                 let base_message = format!(
-                    "{}. Expected test to abort with {} but instead it aborted with {} here",
-                    message, expected_code, other_code,
+                    "{message}. Expected test {} but instead it {} rooted here",
+                    expected.verbiage(/* is_past_tense */ false),
+                    actual.verbiage(/* is_past_tense */ true),
                 );
                 Self::report_error_with_location(test_plan, base_message, &self.vm_error)
             }
-            FailureReason::Aborted(message, code) => {
-                let base_message = format!("{} but it aborted with {} here", message, code);
+            FailureReason::WrongAbortDEPRECATED(message, expected_code, actual) => {
+                let base_message = format!(
+                    "{}. \
+                    Expected test to abort with code {}, but instead it {} rooted here",
+                    message,
+                    expected_code,
+                    actual.verbiage(/* is_past_tense */ true),
+                );
+                Self::report_error_with_location(test_plan, base_message, &self.vm_error)
+            }
+            FailureReason::UnexpectedError(message, error) => {
+                let prefix = match error.0.status_type() {
+                    StatusType::Validation => "INTERNAL TEST ERROR: Unexpected Validation Error\n",
+                    StatusType::Verification => {
+                        "INTERNAL TEST ERROR: Unexpected Verification Error\n"
+                    }
+                    StatusType::InvariantViolation => {
+                        "INTERNAL TEST ERROR: INTERNAL VM INVARIANT VIOLATION.\n"
+                    }
+                    StatusType::Deserialization => {
+                        "INTERNAL TEST ERROR: Unexpected Deserialization Error\n"
+                    }
+                    StatusType::Unknown => "INTERNAL TEST ERROR: UNKNOWN ERROR.\n",
+                    // execution errors are expected, so no message
+                    StatusType::Execution => "",
+                };
+                let base_message = format!(
+                    "{}{}, but it {} rooted here",
+                    prefix,
+                    message,
+                    error.verbiage(/* is_past_tense */ true)
+                );
                 Self::report_error_with_location(test_plan, base_message, &self.vm_error)
             }
             FailureReason::Mismatch {
@@ -188,21 +225,6 @@ impl TestFailure {
                 )
             }
             FailureReason::Property(message) => message.clone(),
-            FailureReason::Unknown(message) => {
-                format!(
-                    "{} Location: {}\nVMError (if there is one): {}",
-                    message,
-                    TestFailure::report_error_with_location(
-                        test_plan,
-                        "".to_string(),
-                        &self.vm_error
-                    ),
-                    self.vm_error
-                        .as_ref()
-                        .map(|err| format!("{:#?}", err))
-                        .unwrap_or_else(|| "".to_string()),
-                )
-            }
 
             #[cfg(feature = "evm-backend")]
             FailureReason::MoveToEVMError(diagnostics) => {
@@ -325,32 +347,35 @@ impl TestFailure {
 
         let diags = match vm_error.location() {
             Location::Module(module_id) => {
-                let diags = vm_error
-                    .offsets()
-                    .iter()
-                    .filter_map(|(fdef_idx, offset)| {
-                        let function_source_map = test_plan
-                            .module_info
-                            .get(module_id)?
-                            .source_map
-                            .get_function_source_map(*fdef_idx)
-                            .ok()?;
-                        let loc = function_source_map.get_code_location(*offset).unwrap();
-                        let msg = format!("In this function in {}", format_module_id(module_id));
-                        // TODO(tzakian) maybe migrate off of move-langs diagnostics?
-                        Some(Diagnostic::new(
-                            diagnostics::codes::Tests::TestFailed,
-                            (loc, base_message.clone()),
-                            vec![(function_source_map.definition_location, msg)],
-                            std::iter::empty::<String>(),
-                        ))
-                    })
-                    .collect();
-
-                String::from_utf8(report_diagnostics(&test_plan.files, diags)).unwrap()
+                let diag_opt = vm_error.offsets().first().and_then(|(fdef_idx, offset)| {
+                    let function_source_map = test_plan
+                        .module_info
+                        .get(module_id)?
+                        .source_map
+                        .get_function_source_map(*fdef_idx)
+                        .ok()?;
+                    let loc = function_source_map.get_code_location(*offset).unwrap();
+                    let msg = format!("In this function in {}", format_module_id(module_id));
+                    // TODO(tzakian) maybe migrate off of move-langs diagnostics?
+                    Some(Diagnostic::new(
+                        diagnostics::codes::Tests::TestFailed,
+                        (loc, base_message.clone()),
+                        vec![(function_source_map.definition_location, msg)],
+                        std::iter::empty::<String>(),
+                    ))
+                });
+                match diag_opt {
+                    None => base_message,
+                    Some(diag) => String::from_utf8(report_diagnostics(
+                        &test_plan.files,
+                        Diagnostics::from(vec![diag]),
+                    ))
+                    .unwrap(),
+                }
             }
             _ => base_message,
         };
+
         match vm_error.exec_state() {
             None => diags,
             Some(exec_state) => {
@@ -490,7 +515,7 @@ impl TestResults {
                 width = max_function_name_size,
                 name = "Test Name",
                 time = "Time",
-                instructions = "Instructions Executed"
+                instructions = "Gas Used"
             )?;
 
             for (qualified_function_name, time, instructions) in stats {

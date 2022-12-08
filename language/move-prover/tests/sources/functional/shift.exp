@@ -1,8 +1,8 @@
 Move prover returns: exiting with verification errors
 error: post-condition does not hold
-   ┌─ tests/sources/functional/shift.move:79:9
+   ┌─ tests/sources/functional/shift.move:95:9
    │
-79 │         ensures result == x << 10u8;
+95 │         ensures result == x << 10u8;
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
    =     at tests/sources/functional/shift.move:65: shift_l_11_incorrect
@@ -10,20 +10,7 @@ error: post-condition does not hold
    =     at tests/sources/functional/shift.move:66: shift_l_11_incorrect
    =         result = <redacted>
    =     at tests/sources/functional/shift.move:67: shift_l_11_incorrect
-   =     at tests/sources/functional/shift.move:79: shift_l_11_incorrect (spec)
-
-error: post-condition does not hold
-   ┌─ tests/sources/functional/shift.move:30:9
-   │
-30 │         ensures result == x * 64 + 1;
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   │
-   =     at tests/sources/functional/shift.move:25: shiftl_64_incorrect
-   =         x = <redacted>
-   =     at tests/sources/functional/shift.move:26: shiftl_64_incorrect
-   =         result = <redacted>
-   =     at tests/sources/functional/shift.move:27: shiftl_64_incorrect
-   =     at tests/sources/functional/shift.move:30: shiftl_64_incorrect (spec)
+   =     at tests/sources/functional/shift.move:95: shift_l_11_incorrect (spec)
 
 error: post-condition does not hold
    ┌─ tests/sources/functional/shift.move:38:9
@@ -39,19 +26,6 @@ error: post-condition does not hold
    =     at tests/sources/functional/shift.move:38: shiftl_7_incorrect (spec)
 
 error: post-condition does not hold
-   ┌─ tests/sources/functional/shift.move:46:9
-   │
-46 │         ensures result == x / 64 + 1;
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   │
-   =     at tests/sources/functional/shift.move:41: shiftr_64_incorrect
-   =         x = <redacted>
-   =     at tests/sources/functional/shift.move:42: shiftr_64_incorrect
-   =         result = <redacted>
-   =     at tests/sources/functional/shift.move:43: shiftr_64_incorrect
-   =     at tests/sources/functional/shift.move:46: shiftr_64_incorrect (spec)
-
-error: post-condition does not hold
    ┌─ tests/sources/functional/shift.move:54:9
    │
 54 │         ensures result == x / 128 + 1;
@@ -63,17 +37,3 @@ error: post-condition does not hold
    =         result = <redacted>
    =     at tests/sources/functional/shift.move:51: shiftr_7_incorrect
    =     at tests/sources/functional/shift.move:54: shiftr_7_incorrect (spec)
-
-error: post-condition does not hold
-   ┌─ tests/sources/functional/shift.move:89:9
-   │
-89 │         ensures result == x << a;
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^
-   │
-   =     at tests/sources/functional/shift.move:82: var_shift_l_incorrect
-   =         x = <redacted>
-   =         a = <redacted>
-   =     at tests/sources/functional/shift.move:83: var_shift_l_incorrect
-   =         result = <redacted>
-   =     at tests/sources/functional/shift.move:84: var_shift_l_incorrect
-   =     at tests/sources/functional/shift.move:89: var_shift_l_incorrect (spec)

@@ -136,3 +136,59 @@ impl fmt::Display for SignatureTokenKind {
         f.write_str(desc)
     }
 }
+
+/// A macro which should be preferred in critical runtime paths for unwrapping an option
+/// if a `PartialVMError` is expected. In debug mode, this will panic. Otherwise
+/// we return an Err.
+#[macro_export]
+macro_rules! safe_unwrap {
+    ($e:expr) => {{
+        match $e {
+            Some(x) => x,
+            None => {
+                let err = PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(format!("{}:{} (none)", file!(), line!()));
+                if cfg!(debug_assertions) {
+                    panic!("{:?}", err);
+                } else {
+                    return Err(err);
+                }
+            }
+        }
+    }};
+}
+
+/// Similar as above but for Result
+#[macro_export]
+macro_rules! safe_unwrap_err {
+    ($e:expr) => {{
+        match $e {
+            Ok(x) => x,
+            Err(e) => {
+                let err = PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(format!("{}:{} {:#}", file!(), line!(), e));
+                if cfg!(debug_assertions) {
+                    panic!("{:?}", err);
+                } else {
+                    return Err(err);
+                }
+            }
+        }
+    }};
+}
+
+/// Similar as above, but asserts a boolean expression to be true.
+#[macro_export]
+macro_rules! safe_assert {
+    ($e:expr) => {{
+        if !$e {
+            let err = PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                .with_message(format!("{}:{} (assert)", file!(), line!()));
+            if cfg!(debug_assertions) {
+                panic!("{:?}", err)
+            } else {
+                return Err(err);
+            }
+        }
+    }};
+}

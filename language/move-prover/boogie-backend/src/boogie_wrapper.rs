@@ -1176,7 +1176,7 @@ impl ModelValue {
             .and_then(|update_map| update_map.extract_map());
 
         let mut domain_exists_map_opt = domain_idx_map.get(domain);
-        if domain_exists_map_opt == None {
+        if domain_exists_map_opt.is_none() {
             if let Some(default_domain_model) = default_domain_model_opt {
                 domain_exists_map_opt = domain_idx_map.get(default_domain_model);
             }
@@ -1433,7 +1433,13 @@ impl ModelValue {
                 // effect the verification outcome, we may not have much need for seeing it.
                 Some(PrettyDoc::text("<generic>"))
             }
-            _ => None,
+            Type::Tuple(_)
+            | Type::Primitive(_)
+            | Type::Fun(_, _)
+            | Type::TypeDomain(_)
+            | Type::ResourceDomain(_, _, _)
+            | Type::Error
+            | Type::Var(_) => None,
         }
     }
 

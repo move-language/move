@@ -39,7 +39,15 @@ pub enum TypeTag {
     #[serde(rename = "vector", alias = "Vector")]
     Vector(Box<TypeTag>),
     #[serde(rename = "struct", alias = "Struct")]
-    Struct(StructTag),
+    Struct(Box<StructTag>),
+
+    // NOTE: Added in bytecode version v6, do not reorder!
+    #[serde(rename = "u16", alias = "U16")]
+    U16,
+    #[serde(rename = "u32", alias = "U32")]
+    U32,
+    #[serde(rename = "u256", alias = "U256")]
+    U256,
 }
 
 impl TypeTag {
@@ -58,8 +66,11 @@ impl TypeTag {
         match self {
             Bool => "bool".to_owned(),
             U8 => "u8".to_owned(),
+            U16 => "u16".to_owned(),
+            U32 => "u32".to_owned(),
             U64 => "u64".to_owned(),
             U128 => "u128".to_owned(),
+            U256 => "u256".to_owned(),
             Address => "address".to_owned(),
             Signer => "signer".to_owned(),
             Vector(t) => format!("vector<{}>", t.to_canonical_string()),
@@ -91,6 +102,14 @@ impl StructTag {
         let mut key = vec![RESOURCE_TAG];
         key.append(&mut bcs::to_bytes(self).unwrap());
         key
+    }
+
+    /// Returns true if this is a `StructTag` for an `std::string::String` struct defined in the
+    /// standard library at address `move_std_addr`.
+    pub fn is_std_string(&self, move_std_addr: &AccountAddress) -> bool {
+        self.address == *move_std_addr
+            && self.module.as_str().eq("string")
+            && self.name.as_str().eq("String")
     }
 
     pub fn module_id(&self) -> ModuleId {
@@ -232,8 +251,11 @@ impl Display for TypeTag {
             TypeTag::Struct(s) => write!(f, "{}", s),
             TypeTag::Vector(ty) => write!(f, "vector<{}>", ty),
             TypeTag::U8 => write!(f, "u8"),
+            TypeTag::U16 => write!(f, "u16"),
+            TypeTag::U32 => write!(f, "u32"),
             TypeTag::U64 => write!(f, "u64"),
             TypeTag::U128 => write!(f, "u128"),
+            TypeTag::U256 => write!(f, "u256"),
             TypeTag::Address => write!(f, "address"),
             TypeTag::Signer => write!(f, "signer"),
             TypeTag::Bool => write!(f, "bool"),
@@ -249,7 +271,7 @@ impl Display for ResourceKey {
 
 impl From<StructTag> for TypeTag {
     fn from(t: StructTag) -> TypeTag {
-        TypeTag::Struct(t)
+        TypeTag::Struct(Box::new(t))
     }
 }
 
@@ -259,17 +281,19 @@ mod tests {
     use crate::{
         account_address::AccountAddress, identifier::Identifier, language_storage::StructTag,
     };
+    use std::mem;
 
     #[test]
     fn test_type_tag_serde() {
-        let a = TypeTag::Struct(StructTag {
+        let a = TypeTag::Struct(Box::new(StructTag {
             address: AccountAddress::ONE,
             module: Identifier::from_utf8(("abc".as_bytes()).to_vec()).unwrap(),
             name: Identifier::from_utf8(("abc".as_bytes()).to_vec()).unwrap(),
             type_params: vec![TypeTag::U8],
-        });
+        }));
         let b = serde_json::to_string(&a).unwrap();
         let c: TypeTag = serde_json::from_str(&b).unwrap();
-        assert!(a.eq(&c), "Typetag serde error")
+        assert!(a.eq(&c), "Typetag serde error");
+        assert_eq!(mem::size_of::<TypeTag>(), 16);
     }
 }

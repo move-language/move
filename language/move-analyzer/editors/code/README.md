@@ -59,7 +59,7 @@ bottom-right of your Visual Studio Code screen when opening a Move file, it mean
 1. Confirm that invoking `move-analyzer --version` in a command line terminal prints out
    `move-analyzer 1.0.0`. If it doesn't, then retry the instructions in [step 1](./Step1). If it
    does successfully print this output, try closing and re-opening the Visual Studio Code
-   application, as it may not have picked up the udpates to your `PATH`.
+   application, as it may not have picked up the update to your `PATH`.
 2. If you installed the `move-analyzer` executable to a different location that is outside of your
    `PATH`, then you may have the extension look at this location by using the the Visual Studio Code
    settings (`⌘,` on macOS, or use the menu item *Code > Preferences > Settings*). Search for the

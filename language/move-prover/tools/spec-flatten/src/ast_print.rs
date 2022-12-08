@@ -53,6 +53,7 @@ impl SpecPrinter<'_> {
                 "x\"{}\"",
                 v.iter().map(|e| format!("@{:#x}", e)).join(""),
             )),
+            Value::Vector(v) => Self::doc(v.iter().map(|e| format!("{}", e)).join(",")),
         }
     }
 
@@ -60,8 +61,11 @@ impl SpecPrinter<'_> {
         match ty {
             Type::Primitive(PrimitiveType::Bool) => Self::doc("bool"),
             Type::Primitive(PrimitiveType::U8) => Self::doc("u8"),
+            Type::Primitive(PrimitiveType::U16) => Self::doc("u16"),
+            Type::Primitive(PrimitiveType::U32) => Self::doc("u32"),
             Type::Primitive(PrimitiveType::U64) => Self::doc("u64"),
             Type::Primitive(PrimitiveType::U128) => Self::doc("u128"),
+            Type::Primitive(PrimitiveType::U256) => Self::doc("u256"),
             Type::Primitive(PrimitiveType::Address) => Self::doc("address"),
             Type::Primitive(PrimitiveType::Signer) => Self::doc("signer"),
             Type::Primitive(PrimitiveType::Num) => Self::doc("num"),
@@ -308,6 +312,7 @@ impl SpecPrinter<'_> {
                     Ge => print_call_binary(">="),
                     // unary operators
                     Not => print_call_unary("!"),
+                    Cast => print_call_unary("cast"),
                     // built-in functions
                     Len => print_call_fun("len"),
                     Old => print_call_fun("old"),
@@ -327,8 +332,11 @@ impl SpecPrinter<'_> {
                     TypeDomain => self.print_type(&self.env.get_node_type(*node_id), ty_params),
                     ResourceDomain => self.print_type(&self.env.get_node_type(*node_id), ty_params),
                     MaxU8 => Self::doc("MAX_U8"),
+                    MaxU16 => Self::doc("MAX_U16"),
+                    MaxU32 => Self::doc("MAX_U32"),
                     MaxU64 => Self::doc("MAX_U64"),
                     MaxU128 => Self::doc("MAX_U128"),
+                    MaxU256 => Self::doc("MAX_U256"),
                     // unable to be specified by users
                     CanModify | AbortFlag | AbortCode | WellFormed | BoxValue | UnboxValue
                     | EmptyEventStore | ExtendEventStore | EventStoreIncludes

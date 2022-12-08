@@ -113,6 +113,7 @@ members = [
     # Please keep this list in alphabetical order!
 
     "bytecode-interpreter-testsuite",
+    "bytecode-verifier-libfuzzer",
     "bytecode-verifier-tests",
     "bytecode-verifier-transactional-tests",
     "df-cli",
@@ -129,6 +130,7 @@ members = [
     "move-compiler-transactional-tests",
     "move-explain",
     "move-ir-compiler-transactional-tests",
+    "move-vm-paranoid-tests",
     "move-prover-test-utils",
     "move-transactional-test-runner",
     "move-vm-integration-tests",

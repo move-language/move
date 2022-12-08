@@ -344,8 +344,8 @@ rounding, e.g., 0.0125 will round down to 0.012 instead of up to 0.013.
 <pre><code><b>schema</b> <a href="fixed_point32.md#0x1_fixed_point32_CreateFromRationalAbortsIf">CreateFromRationalAbortsIf</a> {
     numerator: u64;
     denominator: u64;
-    <b>let</b> scaled_numerator = numerator &lt;&lt; 64;
-    <b>let</b> scaled_denominator = denominator &lt;&lt; 32;
+    <b>let</b> scaled_numerator = (numerator <b>as</b> u128) &lt;&lt; 64;
+    <b>let</b> scaled_denominator = (denominator <b>as</b> u128) &lt;&lt; 32;
     <b>let</b> quotient = scaled_numerator / scaled_denominator;
     <b>aborts_if</b> scaled_denominator == 0 <b>with</b> <a href="fixed_point32.md#0x1_fixed_point32_EDENOMINATOR">EDENOMINATOR</a>;
     <b>aborts_if</b> quotient == 0 && scaled_numerator != 0 <b>with</b> <a href="fixed_point32.md#0x1_fixed_point32_ERATIO_OUT_OF_RANGE">ERATIO_OUT_OF_RANGE</a>;
@@ -620,7 +620,7 @@ Create a fixedpoint value from a u64 value.
 
 <pre><code><b>schema</b> <a href="fixed_point32.md#0x1_fixed_point32_CreateFromU64AbortsIf">CreateFromU64AbortsIf</a> {
     val: num;
-    <b>let</b> scaled_value = val &lt;&lt; 32;
+    <b>let</b> scaled_value = (val <b>as</b> u128) &lt;&lt; 32;
     <b>aborts_if</b> scaled_value &gt; <a href="fixed_point32.md#0x1_fixed_point32_MAX_U64">MAX_U64</a>;
 }
 </code></pre>

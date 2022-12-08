@@ -34,8 +34,11 @@ pub struct ParsedStructType {
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub enum ParsedType {
     U8,
+    U16,
+    U32,
     U64,
     U128,
+    U256,
     Bool,
     Address,
     Signer,
@@ -81,9 +84,11 @@ impl Token for TypeToken {
             '0' if matches!(chars.peek(), Some('x') | Some('X')) => {
                 chars.next().unwrap();
                 match chars.next() {
-                    Some(c) if c.is_ascii_hexdigit() => {
+                    Some(c) if c.is_ascii_hexdigit() || c == '_' => {
                         // 0x + c + remaining
-                        let len = 3 + chars.take_while(char::is_ascii_hexdigit).count();
+                        let len = 3 + chars
+                            .take_while(|q| char::is_ascii_hexdigit(q) || *q == '_')
+                            .count();
                         (Self::AddressIdent, len)
                     }
                     _ => bail!("unrecognized token: {}", s),
@@ -141,13 +146,16 @@ impl ParsedType {
     ) -> anyhow::Result<TypeTag> {
         Ok(match self {
             ParsedType::U8 => TypeTag::U8,
+            ParsedType::U16 => TypeTag::U16,
+            ParsedType::U32 => TypeTag::U32,
             ParsedType::U64 => TypeTag::U64,
             ParsedType::U128 => TypeTag::U128,
+            ParsedType::U256 => TypeTag::U256,
             ParsedType::Bool => TypeTag::Bool,
             ParsedType::Address => TypeTag::Address,
             ParsedType::Signer => TypeTag::Signer,
             ParsedType::Vector(inner) => TypeTag::Vector(Box::new(inner.into_type_tag(mapping)?)),
-            ParsedType::Struct(s) => TypeTag::Struct(s.into_struct_tag(mapping)?),
+            ParsedType::Struct(s) => TypeTag::Struct(Box::new(s.into_struct_tag(mapping)?)),
         })
     }
 }

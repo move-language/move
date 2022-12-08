@@ -39,10 +39,10 @@ impl XCoreContext {
         let current_rel_dir = match current_dir.strip_prefix(project_root) {
             Ok(rel_dir) => rel_dir.to_path_buf(),
             Err(_) => {
-                return Err(SystemError::CwdNotInProjectRoot {
+                return Err(Box::new(SystemError::CwdNotInProjectRoot {
                     current_dir,
                     project_root,
-                })
+                }))
             }
         };
         // TODO: The project root should be managed by this struct, not by the global project_root

@@ -16,6 +16,7 @@ use crate::{
     BuildConfig,
 };
 use anyhow::{bail, Context, Result};
+use colored::Colorize;
 use move_command_line_common::files::{find_move_filenames, FileHash};
 use move_core_types::account_address::AccountAddress;
 use move_symbol_pool::Symbol;
@@ -25,6 +26,7 @@ use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet},
     fs,
+    io::Write,
     path::{Path, PathBuf},
     process::{Command, Stdio},
     rc::Rc,
@@ -90,10 +92,11 @@ pub struct ResolutionPackage<T> {
 }
 
 impl ResolvingGraph {
-    pub fn new(
+    pub fn new<W: Write>(
         root_package: SourceManifest,
         root_package_path: PathBuf,
         mut build_options: BuildConfig,
+        writer: &mut W,
     ) -> Result<ResolvingGraph> {
         if build_options.architecture.is_none() {
             if let Some(info) = &root_package.build {
@@ -109,7 +112,7 @@ impl ResolvingGraph {
         };
 
         resolution_graph
-            .build_resolution_graph(root_package.clone(), root_package_path, true)
+            .build_resolution_graph(root_package.clone(), root_package_path, true, writer)
             .with_context(|| {
                 format!(
                     "Unable to resolve packages for package '{}'",
@@ -189,11 +192,12 @@ impl ResolvingGraph {
         })
     }
 
-    fn build_resolution_graph(
+    fn build_resolution_graph<W: Write>(
         &mut self,
         package: SourceManifest,
         package_path: PathBuf,
         is_root_package: bool,
+        writer: &mut W,
     ) -> Result<()> {
         let package_name = package.package.name;
         let package_node_id = match self.package_table.get(&package_name) {
@@ -246,7 +250,7 @@ impl ResolvingGraph {
             self.graph.add_edge(package_node_id, dep_node_id, ());
 
             let (dep_renaming, dep_resolution_table) = self
-                .process_dependency(dep_name, dep, package_path.clone())
+                .process_dependency(dep_name, dep, package_path.clone(), writer)
                 .with_context(|| {
                     format!(
                         "While resolving dependency '{}' in package '{}'",
@@ -306,8 +310,8 @@ impl ResolvingGraph {
                 Some(other) => {
                     other.unify(addr_opt).with_context(|| {
                         format!(
-                            "Unable to resolve named address '{}' in\
-                                package '{}' when resolving dependencies",
+                            "Unable to resolve named address '{}' in \
+                             package '{}' when resolving dependencies",
                             name, package_name
                         )
                     })?;
@@ -382,21 +386,23 @@ impl ResolvingGraph {
     // Process a dependency. `dep_name_in_pkg` is the name assigned to the dependent package `dep`
     // in the source manifest, and we check that this name matches the name of the dependency it is
     // assigned to.
-    fn process_dependency(
+    fn process_dependency<W: Write>(
         &mut self,
         dep_name_in_pkg: PackageName,
         dep: Dependency,
         root_path: PathBuf,
+        writer: &mut W,
     ) -> Result<(Renaming, ResolvingTable)> {
         Self::download_and_update_if_remote(
             dep_name_in_pkg,
             &dep,
             self.build_options.skip_fetch_latest_git_deps,
+            writer,
         )?;
         let (dep_package, dep_package_dir) =
             Self::parse_package_manifest(&dep, &dep_name_in_pkg, root_path)
                 .with_context(|| format!("While processing dependency '{}'", dep_name_in_pkg))?;
-        self.build_resolution_graph(dep_package.clone(), dep_package_dir, false)
+        self.build_resolution_graph(dep_package.clone(), dep_package_dir, false, writer)
             .with_context(|| {
                 format!("Unable to resolve package dependency '{}'", dep_name_in_pkg)
             })?;
@@ -515,10 +521,11 @@ impl ResolvingGraph {
         }
     }
 
-    pub fn download_dependency_repos(
+    pub fn download_dependency_repos<W: Write>(
         manifest: &SourceManifest,
         build_options: &BuildConfig,
         root_path: &Path,
+        writer: &mut W,
     ) -> Result<()> {
         // include dev dependencies if in dev mode
         let empty_deps;
@@ -534,69 +541,91 @@ impl ResolvingGraph {
                 *dep_name,
                 dep,
                 build_options.skip_fetch_latest_git_deps,
+                writer,
             )?;
 
             let (dep_manifest, _) =
                 Self::parse_package_manifest(dep, dep_name, root_path.to_path_buf())
                     .with_context(|| format!("While processing dependency '{}'", *dep_name))?;
             // download dependencies of dependencies
-            Self::download_dependency_repos(&dep_manifest, build_options, root_path)?;
+            Self::download_dependency_repos(&dep_manifest, build_options, root_path, writer)?;
         }
         Ok(())
     }
 
-    fn download_and_update_if_remote(
+    fn download_and_update_if_remote<W: Write>(
         dep_name: PackageName,
         dep: &Dependency,
         skip_fetch_latest_git_deps: bool,
+        writer: &mut W,
     ) -> Result<()> {
         if let Some(git_info) = &dep.git_info {
+            let git_url = git_info.git_url.as_str();
+            let git_rev = git_info.git_rev.as_str();
+            let git_path = &git_info.download_to.display().to_string();
+
+            // If there is no cached dependency, download it
             if !git_info.download_to.exists() {
+                writeln!(
+                    writer,
+                    "{} {}",
+                    "FETCHING GIT DEPENDENCY".bold().green(),
+                    git_url,
+                )?;
+
                 // If the cached folder does not exist, download and clone accordingly
                 Command::new("git")
-                    .args([
-                        "clone",
-                        &git_info.git_url,
-                        &git_info.download_to.to_string_lossy(),
-                    ])
+                    .args(["clone", git_url, git_path])
                     .output()
                     .map_err(|_| {
                         anyhow::anyhow!("Failed to clone Git repository for package '{}'", dep_name)
                     })?;
                 Command::new("git")
-                    .args([
-                        "-C",
-                        &git_info.download_to.to_string_lossy(),
-                        "checkout",
-                        &git_info.git_rev,
-                    ])
+                    .args(["-C", git_path, "checkout", git_rev])
                     .output()
                     .map_err(|_| {
                         anyhow::anyhow!(
                             "Failed to checkout Git reference '{}' for package '{}'",
-                            &git_info.git_rev,
+                            git_rev,
                             dep_name
                         )
                     })?;
             } else if !skip_fetch_latest_git_deps {
-                let git_path = &git_info.download_to.display().to_string();
-
+                // Update the git dependency
                 // Check first that it isn't a git rev (if it doesn't work, just continue with the fetch)
                 if let Ok(rev) = Command::new("git")
-                    .args(["-C", git_path, "rev-parse", "--verify", &git_info.git_rev])
+                    .args(["-C", git_path, "rev-parse", "--verify", git_rev])
                     .output()
                 {
                     if let Ok(parsable_version) = String::from_utf8(rev.stdout) {
                         // If it's exactly the same, then it's a git rev
-                        if parsable_version
-                            .trim()
-                            .starts_with(git_info.git_rev.as_str())
-                        {
+                        if parsable_version.trim().starts_with(git_rev) {
                             return Ok(());
                         }
                     }
                 }
 
+                let tag = Command::new("git")
+                    .args(["-C", git_path, "tag", "--list", git_rev])
+                    .output();
+
+                if let Ok(tag) = tag {
+                    if let Ok(parsable_version) = String::from_utf8(tag.stdout) {
+                        // If it's exactly the same, then it's a git tag, for now tags won't be updated
+                        // Tags don't easily update locally and you can't use reset --hard to cleanup
+                        // any extra files
+                        if parsable_version.trim().starts_with(git_rev) {
+                            return Ok(());
+                        }
+                    }
+                }
+
+                writeln!(
+                    writer,
+                    "{} {}",
+                    "UPDATING GIT DEPENDENCY".bold().green(),
+                    git_url,
+                )?;
                 // If the current folder exists, do a fetch and reset to ensure that the branch
                 // is up to date
                 // NOTE: this means that you must run the package system with a working network connection
@@ -630,7 +659,7 @@ impl ResolvingGraph {
                         git_path,
                         "reset",
                         "--hard",
-                        &format!("origin/{}", git_info.git_rev)
+                        &format!("origin/{}", git_rev)
                     ])
                     .stdout(Stdio::null())
                     .stderr(Stdio::null())
@@ -638,14 +667,14 @@ impl ResolvingGraph {
                     .map_err(|_| {
                         anyhow::anyhow!(
                             "Failed to reset to latest Git state '{}' for package '{}', to skip set --skip-fetch-latest-git-deps",
-                            &git_info.git_rev,
+                            git_rev,
                             dep_name
                         )
                     })?;
                 if !status.success() {
                     return Err(anyhow::anyhow!(
                             "Failed to reset to latest Git state '{}' for package '{}', to skip set --skip-fetch-latest-git-deps | Exit status: {}",
-                            &git_info.git_rev,
+                            git_rev,
                             dep_name,
                         status
                         ));

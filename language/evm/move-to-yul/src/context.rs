@@ -562,8 +562,11 @@ impl<'a> Context<'a> {
         match ty {
             Primitive(p) => match p {
                 U8 => "u8".to_string(),
+                // U16 => "u16".to_string(),
+                // U32 => "u32".to_string(),
                 U64 => "u64".to_string(),
                 U128 => "u128".to_string(),
+                // U256 => "u256".to_string(),
                 Num => "num".to_string(),
                 Address => "address".to_string(),
                 Signer => "signer".to_string(),
@@ -769,7 +772,7 @@ impl<'a> Context<'a> {
                 U128 => 16,
                 // TODO: optimize for 20 bytes? Then we need primitives like LoadU160 etc.
                 Address | Signer => 32,
-                Num | Range | EventStore => {
+                Num | Range | EventStore | U16 | U32 | U256 => {
                     panic!("unexpected field type")
                 }
             },

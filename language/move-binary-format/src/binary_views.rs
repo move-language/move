@@ -257,7 +257,7 @@ impl<'a> BinaryIndexedView<'a> {
         use SignatureToken::*;
 
         match ty {
-            Bool | U8 | U64 | U128 | Address => Ok(AbilitySet::PRIMITIVES),
+            Bool | U8 | U16 | U32 | U64 | U128 | U256 | Address => Ok(AbilitySet::PRIMITIVES),
 
             Reference(_) | MutableReference(_) => Ok(AbilitySet::REFERENCES),
             Signer => Ok(AbilitySet::SIGNER),
@@ -336,8 +336,6 @@ pub struct FunctionView<'a> {
 
 impl<'a> FunctionView<'a> {
     // Creates a `FunctionView` for a module function.
-    // Creates a `FunctionView` for a module function.
-    // Requires control flow verifier (control_flow.rs)
     pub fn function(
         module: &'a CompiledModule,
         index: FunctionDefinitionIndex,

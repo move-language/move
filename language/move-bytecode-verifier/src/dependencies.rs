@@ -13,7 +13,7 @@ use move_binary_format::{
         StructTypeParameter, TableIndex, Visibility,
     },
     file_format_common::VERSION_5,
-    IndexKind,
+    safe_unwrap, IndexKind,
 };
 use move_core_types::{identifier::Identifier, language_storage::ModuleId, vm_status::StatusCode};
 use std::collections::{BTreeMap, BTreeSet};
@@ -226,7 +226,7 @@ fn verify_imported_structs(context: &Context) -> PartialVMResult<()> {
             .resolver
             .module_id_for_handle(context.resolver.module_handle_at(struct_handle.module));
         // TODO: remove unwrap
-        let owner_module = context.dependency_map.get(&owner_module_id).unwrap();
+        let owner_module = safe_unwrap!(context.dependency_map.get(&owner_module_id));
         let struct_name = context.resolver.identifier_at(struct_handle.name);
         match context
             .struct_id_to_handle_map
@@ -269,8 +269,7 @@ fn verify_imported_functions(context: &Context) -> PartialVMResult<()> {
             .resolver
             .module_id_for_handle(context.resolver.module_handle_at(function_handle.module));
         let function_name = context.resolver.identifier_at(function_handle.name);
-        // TODO: remove unwrap
-        let owner_module = context.dependency_map.get(&owner_module_id).unwrap();
+        let owner_module = safe_unwrap!(context.dependency_map.get(&owner_module_id));
         match context
             .func_id_to_handle_map
             .get(&(owner_module_id.clone(), function_name.to_owned()))
@@ -444,8 +443,11 @@ fn compare_types(
     match (handle_type, def_type) {
         (SignatureToken::Bool, SignatureToken::Bool)
         | (SignatureToken::U8, SignatureToken::U8)
+        | (SignatureToken::U16, SignatureToken::U16)
+        | (SignatureToken::U32, SignatureToken::U32)
         | (SignatureToken::U64, SignatureToken::U64)
         | (SignatureToken::U128, SignatureToken::U128)
+        | (SignatureToken::U256, SignatureToken::U256)
         | (SignatureToken::Address, SignatureToken::Address)
         | (SignatureToken::Signer, SignatureToken::Signer) => Ok(()),
         (SignatureToken::Vector(ty1), SignatureToken::Vector(ty2)) => {
@@ -472,7 +474,21 @@ fn compare_types(
                 Ok(())
             }
         }
-        _ => Err(PartialVMError::new(StatusCode::TYPE_MISMATCH)),
+        (SignatureToken::Bool, _)
+        | (SignatureToken::U8, _)
+        | (SignatureToken::U64, _)
+        | (SignatureToken::U128, _)
+        | (SignatureToken::Address, _)
+        | (SignatureToken::Signer, _)
+        | (SignatureToken::Vector(_), _)
+        | (SignatureToken::Struct(_), _)
+        | (SignatureToken::StructInstantiation(_, _), _)
+        | (SignatureToken::Reference(_), _)
+        | (SignatureToken::MutableReference(_), _)
+        | (SignatureToken::TypeParameter(_), _)
+        | (SignatureToken::U16, _)
+        | (SignatureToken::U32, _)
+        | (SignatureToken::U256, _) => Err(PartialVMError::new(StatusCode::TYPE_MISMATCH)),
     }
 }
 

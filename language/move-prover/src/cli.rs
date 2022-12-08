@@ -181,14 +181,14 @@ impl Options {
                     .short('v')
                     .long("verbose")
                     .takes_value(true)
-                    .possible_values(&["error", "warn", "info", "debug"])
+                    .possible_values(["error", "warn", "info", "debug"])
                     .help("verbosity level"),
             )
             .arg(
                 Arg::new("vector-theory")
                     .long("vector-theory")
                     .takes_value(true)
-                    .possible_values(&["BoogieArray", "BoogieArrayIntern",
+                    .possible_values(["BoogieArray", "BoogieArrayIntern",
                                               "SmtArray", "SmtArrayExt", "SmtSeq"])
                     .help("vector theory to use"),
             )
@@ -203,7 +203,7 @@ impl Options {
                     .long("severity")
                     .short('s')
                     .takes_value(true)
-                    .possible_values(&["bug", "error", "warn", "note"])
+                    .possible_values(["bug", "error", "warn", "note"])
                     .help("The minimall level on which diagnostics are reported")
             )
             .arg(
@@ -326,7 +326,7 @@ impl Options {
                 Arg::new("verify")
                     .long("verify")
                     .takes_value(true)
-                    .possible_values(&["public", "all", "none"])
+                    .possible_values(["public", "all", "none"])
                     .value_name("SCOPE")
                     .help("default scope of verification \
                     (can be overridden by `pragma verify=true|false`)"),

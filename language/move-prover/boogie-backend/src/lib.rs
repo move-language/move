@@ -18,8 +18,9 @@ use move_model::{
     emit, emitln,
     model::{GlobalEnv, QualifiedId, StructId},
     pragmas::{
-        INTRINSIC_FUN_MAP_ADD_NO_OVERRIDE, INTRINSIC_FUN_MAP_BORROW, INTRINSIC_FUN_MAP_BORROW_MUT,
-        INTRINSIC_FUN_MAP_DEL_MUST_EXIST, INTRINSIC_FUN_MAP_DESTROY_EMPTY,
+        INTRINSIC_FUN_MAP_ADD_NO_OVERRIDE, INTRINSIC_FUN_MAP_ADD_OVERRIDE_IF_EXISTS,
+        INTRINSIC_FUN_MAP_BORROW, INTRINSIC_FUN_MAP_BORROW_MUT, INTRINSIC_FUN_MAP_DEL_MUST_EXIST,
+        INTRINSIC_FUN_MAP_DEL_RETURN_KEY, INTRINSIC_FUN_MAP_DESTROY_EMPTY,
         INTRINSIC_FUN_MAP_HAS_KEY, INTRINSIC_FUN_MAP_IS_EMPTY, INTRINSIC_FUN_MAP_LEN,
         INTRINSIC_FUN_MAP_NEW, INTRINSIC_FUN_MAP_SPEC_DEL, INTRINSIC_FUN_MAP_SPEC_GET,
         INTRINSIC_FUN_MAP_SPEC_HAS_KEY, INTRINSIC_FUN_MAP_SPEC_IS_EMPTY,
@@ -75,7 +76,9 @@ struct MapImpl {
     fun_is_empty: String,
     fun_has_key: String,
     fun_add_no_override: String,
+    fun_add_override_if_exists: String,
     fun_del_must_exist: String,
+    fun_del_return_key: String,
     fun_borrow: String,
     fun_borrow_mut: String,
     // spec functions
@@ -251,8 +254,14 @@ impl MapImpl {
             fun_add_no_override: Self::triple_opt_to_name(
                 decl.get_fun_triple(env, INTRINSIC_FUN_MAP_ADD_NO_OVERRIDE),
             ),
+            fun_add_override_if_exists: Self::triple_opt_to_name(
+                decl.get_fun_triple(env, INTRINSIC_FUN_MAP_ADD_OVERRIDE_IF_EXISTS),
+            ),
             fun_del_must_exist: Self::triple_opt_to_name(
                 decl.get_fun_triple(env, INTRINSIC_FUN_MAP_DEL_MUST_EXIST),
+            ),
+            fun_del_return_key: Self::triple_opt_to_name(
+                decl.get_fun_triple(env, INTRINSIC_FUN_MAP_DEL_RETURN_KEY),
             ),
             fun_borrow: Self::triple_opt_to_name(
                 decl.get_fun_triple(env, INTRINSIC_FUN_MAP_BORROW),

@@ -7,8 +7,9 @@ use crate::{
     ability_field_requirements, check_duplication::DuplicationChecker,
     code_unit_verifier::CodeUnitVerifier, constants, friends,
     instantiation_loops::InstantiationLoopChecker, instruction_consistency::InstructionConsistency,
-    script_signature, script_signature::no_additional_script_signature_checks,
-    signature::SignatureChecker, struct_defs::RecursiveStructDefChecker,
+    limits::LimitsVerifier, script_signature,
+    script_signature::no_additional_script_signature_checks, signature::SignatureChecker,
+    struct_defs::RecursiveStructDefChecker,
 };
 use move_binary_format::{
     check_bounds::BoundsChecker,
@@ -16,9 +17,16 @@ use move_binary_format::{
     file_format::{CompiledModule, CompiledScript},
 };
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct VerifierConfig {
     pub max_loop_depth: Option<usize>,
+    pub max_function_parameters: Option<usize>,
+    pub max_generic_instantiation_length: Option<usize>,
+    pub max_basic_blocks: Option<usize>,
+    pub max_value_stack_size: usize,
+    pub max_type_nodes: Option<usize>,
+    pub max_push_size: Option<usize>,
+    pub max_dependency_depth: u64,
 }
 
 /// Helper for a "canonical" verification of a module.
@@ -41,6 +49,7 @@ pub fn verify_module_with_config(config: &VerifierConfig, module: &CompiledModul
         // failed, we cannot safely index into module's handle to itself.
         e.finish(Location::Undefined)
     })?;
+    LimitsVerifier::verify_module(config, module)?;
     DuplicationChecker::verify_module(module)?;
     SignatureChecker::verify_module(module)?;
     InstructionConsistency::verify_module(module)?;
@@ -69,10 +78,28 @@ pub fn verify_script(script: &CompiledScript) -> VMResult<()> {
 
 pub fn verify_script_with_config(config: &VerifierConfig, script: &CompiledScript) -> VMResult<()> {
     BoundsChecker::verify_script(script).map_err(|e| e.finish(Location::Script))?;
+    LimitsVerifier::verify_script(config, script)?;
     DuplicationChecker::verify_script(script)?;
     SignatureChecker::verify_script(script)?;
     InstructionConsistency::verify_script(script)?;
     constants::verify_script(script)?;
     CodeUnitVerifier::verify_script(config, script)?;
     script_signature::verify_script(script, no_additional_script_signature_checks)
+}
+
+impl Default for VerifierConfig {
+    fn default() -> Self {
+        Self {
+            max_loop_depth: None,
+            max_function_parameters: None,
+            max_generic_instantiation_length: None,
+            max_basic_blocks: None,
+            max_type_nodes: None,
+            // Max size set to 1024 to match the size limit in the interpreter.
+            max_value_stack_size: 1024,
+            // Max size set to 10000 to restrict number of pushes in one function
+            max_push_size: Some(10000),
+            max_dependency_depth: 100,
+        }
+    }
 }

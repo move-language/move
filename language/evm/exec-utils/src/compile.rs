@@ -121,6 +121,6 @@ pub fn solc_yul(source: &str, return_optimized_yul: bool) -> Result<(Vec<u8>, Op
     } else {
         None
     };
-    let bin = hex::decode(&out_str[(start_of_hex.unwrap() + HEX_OUTPUT_MARKER.len())..].trim())?;
+    let bin = hex::decode(out_str[(start_of_hex.unwrap() + HEX_OUTPUT_MARKER.len())..].trim())?;
     Ok((bin, yul))
 }

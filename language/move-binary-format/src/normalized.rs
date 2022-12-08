@@ -53,6 +53,13 @@ pub enum Type {
     TypeParameter(TypeParameterIndex),
     Reference(Box<Type>),
     MutableReference(Box<Type>),
+    // NOTE: Added in bytecode version v6, do not reorder!
+    #[serde(rename = "u16")]
+    U16,
+    #[serde(rename = "u32")]
+    U32,
+    #[serde(rename = "u256")]
+    U256,
 }
 
 /// Normalized version of a `FieldDefinition`. The `name` is included even though it is
@@ -161,8 +168,11 @@ impl Type {
             }
             Bool => Type::Bool,
             U8 => Type::U8,
+            U16 => Type::U16,
+            U32 => Type::U32,
             U64 => Type::U64,
             U128 => Type::U128,
+            U256 => Type::U256,
             Address => Type::Address,
             Signer => Type::Signer,
             Vector(t) => Type::Vector(Box::new(Type::new(m, t))),
@@ -179,8 +189,11 @@ impl Type {
             TypeParameter(_) => false,
             Bool => true,
             U8 => true,
+            U16 => true,
+            U32 => true,
             U64 => true,
             U128 => true,
+            U256 => true,
             Address => true,
             Signer => true,
             Struct { type_arguments, .. } => type_arguments.iter().all(|t| t.is_closed()),
@@ -195,8 +208,11 @@ impl Type {
                 Reference(_) | MutableReference(_) => return None,
                 Bool => TypeTag::Bool,
                 U8 => TypeTag::U8,
+                U16 => TypeTag::U16,
+                U32 => TypeTag::U32,
                 U64 => TypeTag::U64,
                 U128 => TypeTag::U128,
+                U256 => TypeTag::U256,
                 Address => TypeTag::Address,
                 Signer => TypeTag::Signer,
                 Vector(t) => TypeTag::Vector(Box::new(
@@ -208,7 +224,7 @@ impl Type {
                     module,
                     name,
                     type_arguments,
-                } => TypeTag::Struct(StructTag {
+                } => TypeTag::Struct(Box::new(StructTag {
                     address,
                     module,
                     name,
@@ -220,7 +236,7 @@ impl Type {
                             )
                         })
                         .collect(),
-                }),
+                })),
                 TypeParameter(_) => unreachable!(),
             }
         } else {
@@ -230,7 +246,7 @@ impl Type {
 
     pub fn into_struct_tag(self) -> Option<StructTag> {
         match self.into_type_tag()? {
-            TypeTag::Struct(s) => Some(s),
+            TypeTag::Struct(s) => Some(*s),
             _ => None,
         }
     }
@@ -238,7 +254,7 @@ impl Type {
     pub fn subst(&self, type_args: &[Type]) -> Self {
         use Type::*;
         match self {
-            Bool | U8 | U64 | U128 | Address | Signer => self.clone(),
+            Bool | U8 | U16 | U32 | U64 | U128 | U256 | Address | Signer => self.clone(),
             Reference(ty) => Reference(Box::new(ty.subst(type_args))),
             MutableReference(ty) => MutableReference(Box::new(ty.subst(type_args))),
             Vector(t) => Vector(Box::new(t.subst(type_args))),
@@ -341,8 +357,11 @@ impl From<TypeTag> for Type {
         match ty {
             TypeTag::Bool => Bool,
             TypeTag::U8 => U8,
+            TypeTag::U16 => U16,
+            TypeTag::U32 => U32,
             TypeTag::U64 => U64,
             TypeTag::U128 => U128,
+            TypeTag::U256 => U256,
             TypeTag::Address => Address,
             TypeTag::Signer => Signer,
             TypeTag::Vector(ty) => Vector(Box::new(Type::from(*ty))),
@@ -384,8 +403,11 @@ impl std::fmt::Display for Type {
             }
             Type::Vector(ty) => write!(f, "vector<{}>", ty),
             Type::U8 => write!(f, "u8"),
+            Type::U16 => write!(f, "u16"),
+            Type::U32 => write!(f, "u32"),
             Type::U64 => write!(f, "u64"),
             Type::U128 => write!(f, "u128"),
+            Type::U256 => write!(f, "u256"),
             Type::Address => write!(f, "address"),
             Type::Signer => write!(f, "signer"),
             Type::Bool => write!(f, "bool"),

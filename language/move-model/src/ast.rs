@@ -879,6 +879,7 @@ pub enum Operation {
 
     // Unary operators
     Not,
+    Cast,
 
     // Builtin functions
     Len,
@@ -900,8 +901,11 @@ pub enum Operation {
     InRangeVec,
     RangeVec,
     MaxU8,
+    MaxU16,
+    MaxU32,
     MaxU64,
     MaxU128,
+    MaxU256,
 
     // Functions which support the transformation and translation process.
     AbortFlag,
@@ -957,7 +961,8 @@ pub enum Value {
     Number(BigInt),
     Bool(bool),
     ByteArray(Vec<u8>),
-    AddressArray(Vec<BigUint>),
+    AddressArray(Vec<BigUint>), // TODO: merge AddressArray to Vector type in the future
+    Vector(Vec<Value>),
 }
 
 impl fmt::Display for Value {
@@ -969,6 +974,7 @@ impl fmt::Display for Value {
             // TODO(tzakian): Figure out a better story for byte array displays
             Value::ByteArray(bytes) => write!(f, "{:?}", bytes),
             Value::AddressArray(array) => write!(f, "{:?}", array),
+            Value::Vector(array) => write!(f, "{:?}", array),
         }
     }
 }

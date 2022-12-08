@@ -5,14 +5,13 @@
 use std::{collections::BTreeSet, sync::Arc};
 
 use crate::{
-    data_cache::TransactionDataCache, native_extensions::NativeContextExtensions,
+    config::VMConfig, data_cache::TransactionDataCache, native_extensions::NativeContextExtensions,
     native_functions::NativeFunction, runtime::VMRuntime, session::Session,
 };
 use move_binary_format::{
     errors::{Location, VMResult},
     CompiledModule,
 };
-use move_bytecode_verifier::VerifierConfig;
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, language_storage::ModuleId,
     metadata::Metadata, resolver::MoveResolver,
@@ -26,15 +25,15 @@ impl MoveVM {
     pub fn new(
         natives: impl IntoIterator<Item = (AccountAddress, Identifier, Identifier, NativeFunction)>,
     ) -> VMResult<Self> {
-        Self::new_with_verifier_config(natives, VerifierConfig::default())
+        Self::new_with_config(natives, VMConfig::default())
     }
 
-    pub fn new_with_verifier_config(
+    pub fn new_with_config(
         natives: impl IntoIterator<Item = (AccountAddress, Identifier, Identifier, NativeFunction)>,
-        verifier_config: VerifierConfig,
+        vm_config: VMConfig,
     ) -> VMResult<Self> {
         Ok(Self {
-            runtime: VMRuntime::new(natives, verifier_config)
+            runtime: VMRuntime::new(natives, vm_config)
                 .map_err(|err| err.finish(Location::Undefined))?,
         })
     }
@@ -88,6 +87,12 @@ impl MoveVM {
     /// TODO: new loader architecture
     pub fn mark_loader_cache_as_invalid(&self) {
         self.runtime.loader().mark_as_invalid()
+    }
+
+    /// Returns true if the loader cache has been invalidated (either by explicit call above
+    /// or by the runtime)
+    pub fn is_loader_cache_invalidated(&self) -> bool {
+        self.runtime.loader().is_invalidated()
     }
 
     /// If the loader cache has been invalidated (either by the above call or by internal logic)

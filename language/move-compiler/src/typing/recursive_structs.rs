@@ -79,7 +79,10 @@ fn module(compilation_env: &mut CompilationEnv, mname: ModuleIdent, module: &T::
 }
 
 fn struct_def(context: &mut Context, sname: StructName, sdef: &N::StructDefinition) {
-    assert!(context.current_struct == None, "ICE struct name not unset");
+    assert!(
+        context.current_struct.is_none(),
+        "ICE struct name not unset"
+    );
     context.current_struct = Some(sname);
     match &sdef.fields {
         N::StructFields::Native(_) => (),

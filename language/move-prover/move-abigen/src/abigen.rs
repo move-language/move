@@ -152,7 +152,7 @@ impl<'env> Abigen<'env> {
                             })
                             .all(|param| {
                                 matches!(
-                                    self.get_type_tag(&param.1, module_env),
+                                    Self::get_type_tag(&param.1, module_env),
                                     Err(_) | Ok(Some(_))
                                 )
                             })
@@ -200,7 +200,7 @@ impl<'env> Abigen<'env> {
                 _ => true,
             })
             .map(|param| {
-                let tag = self.get_type_tag(&param.1, module_env)?.unwrap();
+                let tag = Self::get_type_tag(&param.1, module_env)?.unwrap();
                 Ok(ArgumentABI::new(
                     symbol_pool.string(param.0).to_string(),
                     tag,
@@ -257,7 +257,6 @@ impl<'env> Abigen<'env> {
     }
 
     fn get_type_tag(
-        &self,
         ty0: &ty::Type,
         module_env: &ModuleEnv<'env>,
     ) -> anyhow::Result<Option<TypeTag>> {
@@ -268,8 +267,11 @@ impl<'env> Abigen<'env> {
                 match prim {
                     Bool => TypeTag::Bool,
                     U8 => TypeTag::U8,
+                    U16 => TypeTag::U16,
+                    U32 => TypeTag::U32,
                     U64 => TypeTag::U64,
                     U128 => TypeTag::U128,
+                    U256 => TypeTag::U256,
                     Address => TypeTag::Address,
                     Signer => TypeTag::Signer,
                     Num | Range | EventStore => {
@@ -278,7 +280,7 @@ impl<'env> Abigen<'env> {
                 }
             }
             Vector(ty) => {
-                let tag = match self.get_type_tag(ty, module_env)? {
+                let tag = match Self::get_type_tag(ty, module_env)? {
                     Some(tag) => tag,
                     None => return Ok(None),
                 };
@@ -289,7 +291,7 @@ impl<'env> Abigen<'env> {
                 let struct_module_env = module_env.env.get_module(*module_id);
                 let abilities = struct_module_env.get_struct(*struct_id).get_abilities();
                 if abilities.has_ability(Ability::Copy) && !abilities.has_ability(Ability::Key) {
-                    TypeTag::Struct(StructTag {
+                    TypeTag::Struct(Box::new(StructTag {
                         address: *struct_module_env.self_address(),
                         module: struct_module_env.get_identifier(),
                         name: struct_module_env
@@ -299,12 +301,12 @@ impl<'env> Abigen<'env> {
                         type_params: vec_type
                             .iter()
                             .map(|e| {
-                                self.get_type_tag(e, module_env)
+                                Self::get_type_tag(e, module_env)
                                     .unwrap_or_else(|_| panic!("{}", expect_msg))
                             })
                             .map(|e| e.unwrap_or_else(|| panic!("{}", expect_msg)))
                             .collect(),
-                    })
+                    }))
                 } else {
                     return Ok(None);
                 }

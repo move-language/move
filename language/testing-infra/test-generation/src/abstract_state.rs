@@ -64,8 +64,11 @@ impl AbstractValue {
                 SignatureToken::Bool
                 | SignatureToken::Address
                 | SignatureToken::U8
+                | SignatureToken::U16
+                | SignatureToken::U32
                 | SignatureToken::U64
-                | SignatureToken::U128 => true,
+                | SignatureToken::U128
+                | SignatureToken::U256 => true,
             },
             "AbstractValue::new_primitive must be applied with primitive type"
         );

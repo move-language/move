@@ -38,6 +38,7 @@ pub struct Program {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AttributeValue_ {
     Value(Value),
+    Module(ModuleIdent),
     ModuleAccess(ModuleAccess),
 }
 pub type AttributeValue = Spanned<AttributeValue_>;
@@ -374,13 +375,19 @@ pub enum Value_ {
     // 0x<hex representation up to 64 digits with padding 0s>
     Address(Address),
     // <num>
-    InferredNum(u128),
+    InferredNum(move_core_types::u256::U256),
     // <num>u8
     U8(u8),
+    // <num>u16
+    U16(u16),
+    // <num>u32
+    U32(u32),
     // <num>u64
     U64(u64),
     // <num>u128
     U128(u128),
+    // <num>u256
+    U256(move_core_types::u256::U256),
     // true
     // false
     Bool(bool),
@@ -586,7 +593,7 @@ impl AbilitySet {
         Ability_::Store,
         Ability_::Key,
     ];
-    /// Abilities for bool, u8, u64, u128, and address
+    /// Abilities for bool, u8, u16, u32, u64, u128, u256 and address
     pub const PRIMITIVES: [Ability_; 3] = [Ability_::Copy, Ability_::Drop, Ability_::Store];
     /// Abilities for &_ and &mut _
     pub const REFERENCES: [Ability_; 2] = [Ability_::Copy, Ability_::Drop];
@@ -853,6 +860,7 @@ impl AstDebug for AttributeValue_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
             AttributeValue_::Value(v) => v.ast_debug(w),
+            AttributeValue_::Module(m) => w.write(&format!("{}", m)),
             AttributeValue_::ModuleAccess(n) => n.ast_debug(w),
         }
     }
@@ -1046,7 +1054,7 @@ impl AstDebug for SpecBlockTarget_ {
             SpecBlockTarget_::Code => {}
             SpecBlockTarget_::Module => w.write("module "),
             SpecBlockTarget_::Member(name, sign_opt) => {
-                w.write(&name.value);
+                w.write(name.value);
                 if let Some(sign) = sign_opt {
                     sign.ast_debug(w);
                 }
@@ -1205,7 +1213,7 @@ impl AstDebug for SpecBlockMember_ {
 
 impl AstDebug for PragmaProperty_ {
     fn ast_debug(&self, w: &mut AstWriter) {
-        w.write(&self.name.value);
+        w.write(self.name.value);
         if let Some(value) = &self.value {
             w.write(" = ");
             match value {
@@ -1365,7 +1373,7 @@ pub fn ability_constraints_ast_debug(w: &mut AstWriter, abilities: &AbilitySet) 
 impl AstDebug for (Name, AbilitySet) {
     fn ast_debug(&self, w: &mut AstWriter) {
         let (n, abilities) = self;
-        w.write(&n.value);
+        w.write(n.value);
         ability_constraints_ast_debug(w, abilities)
     }
 }
@@ -1380,7 +1388,7 @@ impl AstDebug for StructTypeParameter {
         if *is_phantom {
             w.write("phantom ");
         }
-        w.write(&name.value);
+        w.write(name.value);
         ability_constraints_ast_debug(w, constraints)
     }
 }
@@ -1435,8 +1443,11 @@ impl AstDebug for Value_ {
             V::Address(addr) => w.write(&format!("@{}", addr)),
             V::InferredNum(u) => w.write(&format!("{}", u)),
             V::U8(u) => w.write(&format!("{}u8", u)),
+            V::U16(u) => w.write(&format!("{}u16", u)),
+            V::U32(u) => w.write(&format!("{}u32", u)),
             V::U64(u) => w.write(&format!("{}u64", u)),
             V::U128(u) => w.write(&format!("{}u128", u)),
+            V::U256(u) => w.write(&format!("{}u256", u)),
             V::Bool(b) => w.write(&format!("{}", b)),
             V::Bytearray(v) => w.write(&format!("{:?}", v)),
         }

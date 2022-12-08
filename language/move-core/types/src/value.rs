@@ -6,8 +6,9 @@ use crate::{
     account_address::AccountAddress,
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
+    u256,
 };
-use anyhow::{bail, Result as AResult};
+use anyhow::{anyhow, bail, Result as AResult};
 use serde::{
     de::Error as DeError,
     ser::{SerializeMap, SerializeSeq, SerializeStruct, SerializeTuple},
@@ -50,6 +51,10 @@ pub enum MoveValue {
     Vector(Vec<MoveValue>),
     Struct(MoveStruct),
     Signer(AccountAddress),
+    // NOTE: Added in bytecode version v6, do not reorder!
+    U16(u16),
+    U32(u32),
+    U256(u256::U256),
 }
 
 /// A layout associated with a named field
@@ -96,6 +101,14 @@ pub enum MoveTypeLayout {
     Struct(MoveStructLayout),
     #[serde(rename(serialize = "signer", deserialize = "signer"))]
     Signer,
+
+    // NOTE: Added in bytecode version v6, do not reorder!
+    #[serde(rename(serialize = "u16", deserialize = "u16"))]
+    U16,
+    #[serde(rename(serialize = "u32", deserialize = "u32"))]
+    U32,
+    #[serde(rename(serialize = "u256", deserialize = "u256"))]
+    U256,
 }
 
 impl MoveValue {
@@ -109,6 +122,27 @@ impl MoveValue {
 
     pub fn vector_u8(v: Vec<u8>) -> Self {
         MoveValue::Vector(v.into_iter().map(MoveValue::U8).collect())
+    }
+
+    /// Converts the `Vec<MoveValue>` to a `Vec<u8>` if the inner `MoveValue` is a `MoveValue::U8`,
+    /// or returns an error otherwise.
+    pub fn vec_to_vec_u8(vec: Vec<MoveValue>) -> AResult<Vec<u8>> {
+        let mut vec_u8 = Vec::with_capacity(vec.len());
+
+        for byte in vec {
+            match byte {
+                MoveValue::U8(u8) => {
+                    vec_u8.push(u8);
+                }
+                _ => {
+                    return Err(anyhow!(
+                        "Expected inner MoveValue in Vec<MoveValue> to be a MoveValue::U8"
+                            .to_string(),
+                    ));
+                }
+            }
+        }
+        Ok(vec_u8)
     }
 
     pub fn vector_address(v: Vec<AccountAddress>) -> Self {
@@ -273,8 +307,11 @@ impl<'d> serde::de::DeserializeSeed<'d> for &MoveTypeLayout {
         match self {
             MoveTypeLayout::Bool => bool::deserialize(deserializer).map(MoveValue::Bool),
             MoveTypeLayout::U8 => u8::deserialize(deserializer).map(MoveValue::U8),
+            MoveTypeLayout::U16 => u16::deserialize(deserializer).map(MoveValue::U16),
+            MoveTypeLayout::U32 => u32::deserialize(deserializer).map(MoveValue::U32),
             MoveTypeLayout::U64 => u64::deserialize(deserializer).map(MoveValue::U64),
             MoveTypeLayout::U128 => u128::deserialize(deserializer).map(MoveValue::U128),
+            MoveTypeLayout::U256 => u256::U256::deserialize(deserializer).map(MoveValue::U256),
             MoveTypeLayout::Address => {
                 AccountAddress::deserialize(deserializer).map(MoveValue::Address)
             }
@@ -408,8 +445,11 @@ impl serde::Serialize for MoveValue {
             MoveValue::Struct(s) => s.serialize(serializer),
             MoveValue::Bool(b) => serializer.serialize_bool(*b),
             MoveValue::U8(i) => serializer.serialize_u8(*i),
+            MoveValue::U16(i) => serializer.serialize_u16(*i),
+            MoveValue::U32(i) => serializer.serialize_u32(*i),
             MoveValue::U64(i) => serializer.serialize_u64(*i),
             MoveValue::U128(i) => serializer.serialize_u128(*i),
+            MoveValue::U256(i) => i.serialize(serializer),
             MoveValue::Address(a) => a.serialize(serializer),
             MoveValue::Signer(a) => a.serialize(serializer),
             MoveValue::Vector(v) => {
@@ -474,8 +514,11 @@ impl fmt::Display for MoveTypeLayout {
         match self {
             Bool => write!(f, "bool"),
             U8 => write!(f, "u8"),
+            U16 => write!(f, "u16"),
+            U32 => write!(f, "u32"),
             U64 => write!(f, "u64"),
             U128 => write!(f, "u128"),
+            U256 => write!(f, "u256"),
             Address => write!(f, "address"),
             Vector(typ) => write!(f, "vector<{}>", typ),
             Struct(s) => write!(f, "{}", s),
@@ -518,14 +561,17 @@ impl TryInto<TypeTag> for &MoveTypeLayout {
             MoveTypeLayout::Address => TypeTag::Address,
             MoveTypeLayout::Bool => TypeTag::Bool,
             MoveTypeLayout::U8 => TypeTag::U8,
+            MoveTypeLayout::U16 => TypeTag::U16,
+            MoveTypeLayout::U32 => TypeTag::U32,
             MoveTypeLayout::U64 => TypeTag::U64,
             MoveTypeLayout::U128 => TypeTag::U128,
+            MoveTypeLayout::U256 => TypeTag::U256,
             MoveTypeLayout::Signer => TypeTag::Signer,
             MoveTypeLayout::Vector(v) => {
                 let inner_type = &**v;
                 TypeTag::Vector(Box::new(inner_type.try_into()?))
             }
-            MoveTypeLayout::Struct(v) => TypeTag::Struct(v.try_into()?),
+            MoveTypeLayout::Struct(v) => TypeTag::Struct(Box::new(v.try_into()?)),
         })
     }
 }
@@ -548,8 +594,11 @@ impl fmt::Display for MoveValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             MoveValue::U8(u) => write!(f, "{}u8", u),
+            MoveValue::U16(u) => write!(f, "{}u16", u),
+            MoveValue::U32(u) => write!(f, "{}u32", u),
             MoveValue::U64(u) => write!(f, "{}u64", u),
             MoveValue::U128(u) => write!(f, "{}u128", u),
+            MoveValue::U256(u) => write!(f, "{}u256", u),
             MoveValue::Bool(false) => write!(f, "false"),
             MoveValue::Bool(true) => write!(f, "true"),
             MoveValue::Address(a) => write!(f, "{}", a.to_hex_literal()),

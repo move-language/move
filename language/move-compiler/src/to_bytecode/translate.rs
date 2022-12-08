@@ -2,12 +2,14 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{context::*, remove_fallthrough_jumps};
+use super::{context::*, optimize};
 use crate::{
     cfgir::{ast as G, translate::move_value_from_value_},
     compiled_unit::*,
     diag,
-    expansion::ast::{AbilitySet, Address, ModuleIdent, ModuleIdent_, SpecId, Visibility},
+    expansion::ast::{
+        AbilitySet, Address, Attributes, ModuleIdent, ModuleIdent_, SpecId, Visibility,
+    },
     hlir::{
         ast::{self as H, Value_},
         translate::{display_var, DisplayVar},
@@ -37,6 +39,7 @@ type CollectedInfos = UniqueMap<FunctionName, CollectedInfo>;
 type CollectedInfo = (
     Vec<(Var, H::SingleType)>,
     BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, H::SingleType>)>,
+    Attributes,
 );
 
 fn extract_decls(
@@ -371,7 +374,7 @@ fn function_info_map(
         .into_iter()
         .map(|(n, v)| (Symbol::from(n.as_str()), v))
         .collect();
-    let (params, specs) = collected_function_infos.get_(&name).unwrap();
+    let (params, specs, attributes) = collected_function_infos.get_(&name).unwrap();
     let parameters = params
         .iter()
         .map(|(v, ty)| var_info(&local_map, *v, ty.clone()))
@@ -391,6 +394,7 @@ fn function_info_map(
     let function_info = FunctionInfo {
         spec_info,
         parameters,
+        attributes: attributes.clone(),
     };
 
     let name_loc = *collected_function_infos.get_loc_(&name).unwrap();
@@ -398,7 +402,10 @@ fn function_info_map(
     (function_name, function_info)
 }
 
-fn script_function_info(source_map: &SourceMap, (params, specs): CollectedInfo) -> FunctionInfo {
+fn script_function_info(
+    source_map: &SourceMap,
+    (params, specs, attributes): CollectedInfo,
+) -> FunctionInfo {
     let idx = F::FunctionDefinitionIndex(0);
     let function_source_map = source_map.get_function_source_map(idx).unwrap();
     let local_map = function_source_map
@@ -425,6 +432,7 @@ fn script_function_info(source_map: &SourceMap, (params, specs): CollectedInfo) 
     FunctionInfo {
         spec_info,
         parameters,
+        attributes,
     }
 }
 
@@ -544,7 +552,7 @@ fn function(
     fdef: G::Function,
 ) -> ((IR::FunctionName, IR::Function), CollectedInfo) {
     let G::Function {
-        attributes: _attributes,
+        attributes,
         visibility: v,
         entry,
         signature,
@@ -568,6 +576,7 @@ fn function(
         } => {
             let (locals, code) = function_body(
                 context,
+                &f,
                 parameters.clone(),
                 locals,
                 loop_heads,
@@ -589,7 +598,7 @@ fn function(
     };
     (
         (name, sp(loc, ir_function)),
-        (parameters, context.finish_function()),
+        (parameters, context.finish_function(), attributes),
     )
 }
 
@@ -665,6 +674,7 @@ fn seen_structs_base_type(
 
 fn function_body(
     context: &mut Context,
+    f: &FunctionName,
     parameters: Vec<(Var, H::SingleType)>,
     mut locals_map: UniqueMap<Var, H::SingleType>,
     loop_heads: BTreeSet<H::Label>,
@@ -674,7 +684,7 @@ fn function_body(
     parameters
         .iter()
         .for_each(|(var, _)| assert!(locals_map.remove(var).is_some()));
-    let locals = locals_map
+    let mut locals = locals_map
         .into_iter()
         .filter(|(_, ty)| {
             // filter out any locals generated for unreachable code
@@ -702,7 +712,7 @@ fn function_body(
     }
 
     let loop_heads = loop_heads.into_iter().map(label).collect();
-    remove_fallthrough_jumps::code(&loop_heads, &mut bytecode_blocks);
+    optimize::code(f, &loop_heads, &mut locals, &mut bytecode_blocks);
 
     (locals, bytecode_blocks)
 }
@@ -808,8 +818,11 @@ fn base_type(context: &mut Context, sp!(_, bt_): H::BaseType) -> IR::Type {
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Address))), _) => IRT::Address,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Signer))), _) => IRT::Signer,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U8))), _) => IRT::U8,
+        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U16))), _) => IRT::U16,
+        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U32))), _) => IRT::U32,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U64))), _) => IRT::U64,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U128))), _) => IRT::U128,
+        B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U256))), _) => IRT::U256,
 
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Bool))), _) => IRT::Bool,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Vector))), mut args) => {
@@ -891,8 +904,8 @@ fn command(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, cmd_): 
             if_false,
         } => {
             exp_(context, code, cond);
-            code.push(sp(loc, B::BrTrue(label(if_true))));
-            code.push(sp(loc, B::Branch(label(if_false))));
+            code.push(sp(loc, B::BrFalse(label(if_false))));
+            code.push(sp(loc, B::Branch(label(if_true))));
         }
         C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
     }
@@ -960,8 +973,11 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
         E::Value(sp!(_, v_)) => {
             let ld_value = match v_ {
                 V::U8(u) => B::LdU8(u),
+                V::U16(u) => B::LdU16(u),
+                V::U32(u) => B::LdU32(u),
                 V::U64(u) => B::LdU64(u),
                 V::U128(u) => B::LdU128(u),
+                V::U256(u) => B::LdU256(u),
                 V::Bool(b) => {
                     if b {
                         B::LdTrue
@@ -1082,9 +1098,14 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
             exp(context, code, el);
             let instr = match bt_ {
                 BT::U8 => B::CastU8,
+                BT::U16 => B::CastU16,
+                BT::U32 => B::CastU32,
                 BT::U64 => B::CastU64,
                 BT::U128 => B::CastU128,
-                _ => panic!("ICE type checking failed. unexpected cast"),
+                BT::U256 => B::CastU256,
+                BT::Address | BT::Signer | BT::Vector | BT::Bool => {
+                    panic!("ICE type checking failed. unexpected cast")
+                }
             };
             code.push(sp(loc, instr));
         }

@@ -8,5 +8,9 @@ module M {
     const C4: u8 = if (cond) 0 else 1;
     const C5: vector<vector<bool>> = abort 0;
     const C6: u128 = 0;
+    const C7: u256 = 4 / 3 + 4 - 1 << 143;
+    const C8: u16 = 123;
+    const C9: u32 = (453 as u32);
+
 }
 }

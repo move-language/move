@@ -14,8 +14,11 @@ use std::iter::Peekable;
 #[derive(Eq, PartialEq, Debug)]
 enum Token {
     U8Type,
+    U16Type,
+    U32Type,
     U64Type,
     U128Type,
+    U256Type,
     BoolType,
     AddressType,
     VectorType,
@@ -24,8 +27,12 @@ enum Token {
     Name(String),
     Address(String),
     U8(String),
+    U16(String),
+    U32(String),
     U64(String),
     U128(String),
+    U256(String),
+
     Bytes(String),
     True,
     False,
@@ -45,8 +52,11 @@ impl Token {
 fn name_token(s: String) -> Token {
     match s.as_str() {
         "u8" => Token::U8Type,
+        "u16" => Token::U16Type,
+        "u32" => Token::U32Type,
         "u64" => Token::U64Type,
         "u128" => Token::U128Type,
+        "u256" => Token::U256Type,
         "bool" => Token::BoolType,
         "address" => Token::AddressType,
         "vector" => Token::VectorType,
@@ -73,8 +83,11 @@ fn next_number(initial: char, mut it: impl Iterator<Item = char>) -> Result<(Tok
                             let len = num.len() + suffix.len();
                             let tok = match suffix.as_str() {
                                 "u8" => Token::U8(num),
+                                "u16" => Token::U16(num),
+                                "u32" => Token::U32(num),
                                 "u64" => Token::U64(num),
                                 "u128" => Token::U128(num),
+                                "u256" => Token::U256(num),
                                 _ => bail!("invalid suffix"),
                             };
                             return Ok((tok, len));
@@ -257,8 +270,11 @@ impl<I: Iterator<Item = Token>> Parser<I> {
     fn parse_type_tag(&mut self) -> Result<TypeTag> {
         Ok(match self.next()? {
             Token::U8Type => TypeTag::U8,
+            Token::U16Type => TypeTag::U16,
+            Token::U32Type => TypeTag::U32,
             Token::U64Type => TypeTag::U64,
             Token::U128Type => TypeTag::U128,
+            Token::U256Type => TypeTag::U256,
             Token::BoolType => TypeTag::Bool,
             Token::AddressType => TypeTag::Address,
             Token::SignerType => TypeTag::Signer,
@@ -287,12 +303,12 @@ impl<I: Iterator<Item = Token>> Parser<I> {
                                 } else {
                                     vec![]
                                 };
-                                TypeTag::Struct(StructTag {
+                                TypeTag::Struct(Box::new(StructTag {
                                     address: AccountAddress::from_hex_literal(&addr)?,
                                     module: Identifier::new(module)?,
                                     name: Identifier::new(name)?,
                                     type_params: ty_args,
-                                })
+                                }))
                             }
                             t => bail!("expected name, got {:?}", t),
                         }
@@ -307,8 +323,11 @@ impl<I: Iterator<Item = Token>> Parser<I> {
     fn parse_transaction_argument(&mut self) -> Result<TransactionArgument> {
         Ok(match self.next()? {
             Token::U8(s) => TransactionArgument::U8(s.replace('_', "").parse()?),
+            Token::U16(s) => TransactionArgument::U16(s.replace('_', "").parse()?),
+            Token::U32(s) => TransactionArgument::U32(s.replace('_', "").parse()?),
             Token::U64(s) => TransactionArgument::U64(s.replace('_', "").parse()?),
             Token::U128(s) => TransactionArgument::U128(s.replace('_', "").parse()?),
+            Token::U256(s) => TransactionArgument::U256(s.replace('_', "").parse()?),
             Token::True => TransactionArgument::Bool(true),
             Token::False => TransactionArgument::Bool(false),
             Token::Address(addr) => {
@@ -369,7 +388,7 @@ pub fn parse_struct_tag(s: &str) -> Result<StructTag> {
     let type_tag = parse(s, |parser| parser.parse_type_tag())
         .map_err(|e| format_err!("invalid struct tag: {}, {}", s, e))?;
     if let TypeTag::Struct(struct_tag) = type_tag {
-        Ok(struct_tag)
+        Ok(*struct_tag)
     } else {
         bail!("invalid struct tag: {}", s)
     }
@@ -377,10 +396,13 @@ pub fn parse_struct_tag(s: &str) -> Result<StructTag> {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use crate::{
         account_address::AccountAddress,
         parser::{parse_struct_tag, parse_transaction_argument, parse_type_tag},
         transaction_argument::TransactionArgument,
+        u256,
     };
 
     #[allow(clippy::unreadable_literal)]
@@ -408,6 +430,32 @@ mod tests {
             (
                 "340282366920938463463374607431768211455u128",
                 T::U128(340282366920938463463374607431768211455),
+            ),
+            ("  0u16", T::U16(0)),
+            ("0u16", T::U16(0)),
+            ("532u16", T::U16(532)),
+            ("65535u16", T::U16(65535)),
+            ("0u32", T::U32(0)),
+            ("01239498u32", T::U32(1239498)),
+            ("35366u32", T::U32(35366)),
+            ("4294967295u32", T::U32(4294967295)),
+            ("0u256", T::U256(u256::U256::from(0u8))),
+            ("1_0u16", T::U16(1_0)),
+            ("10_u16", T::U16(10)),
+            ("10___u16", T::U16(10)),
+            ("1_000u32", T::U32(1_000)),
+            ("1_0_00u32", T::U32(1_000)),
+            ("1_0_0_0u32", T::U32(1_000)),
+            ("1_000_000u256", T::U256(u256::U256::from(1_000_000u64))),
+            (
+                "1_000_000_000u256",
+                T::U256(u256::U256::from(1_000_000_000u128)),
+            ),
+            (
+                "3402823669209384634633746074317682114551234u256",
+                T::U256(
+                    u256::U256::from_str("3402823669209384634633746074317682114551234").unwrap(),
+                ),
             ),
             ("true", T::Bool(true)),
             ("false", T::Bool(false)),
@@ -445,6 +493,7 @@ mod tests {
             "_10",
             "_10_u8",
             "_10__u8",
+            "_1014__u32",
             "10_u8__",
             "_",
             "__",
@@ -454,6 +503,7 @@ mod tests {
             "256u8",
             "18446744073709551616u64",
             "340282366920938463463374607431768211456u128",
+            "340282366920938463463374607431768211456340282366920938463463374607431768211456340282366920938463463374607431768211456u256",
             "0xg",
             "0x00g0",
             "0x",
@@ -489,6 +539,14 @@ mod tests {
             "bool",
             "vector<u8>",
             "vector<vector<u64>>",
+            "vector<u16>",
+            "vector<vector<u16>>",
+            "vector<u32>",
+            "vector<vector<u32>>",
+            "vector<u128>",
+            "vector<vector<u128>>",
+            "vector<u256>",
+            "vector<vector<u256>>",
             "signer",
             "0x1::M::S",
             "0x2::M::S_",
@@ -496,11 +554,19 @@ mod tests {
             "0x4::M_::S_",
             "0x00000000004::M::S",
             "0x1::M::S<u64>",
+            "0x1::M::S<u16>",
+            "0x1::M::S<u32>",
+            "0x1::M::S<u256>",
             "0x1::M::S<0x2::P::Q>",
             "vector<0x1::M::S>",
             "vector<0x1::M_::S_>",
             "vector<vector<0x1::M_::S_>>",
             "0x1::M::S<vector<u8>>",
+            "0x1::M::S<vector<u16>>",
+            "0x1::M::S<vector<u32>>",
+            "0x1::M::S<vector<u64>>",
+            "0x1::M::S<vector<u128>>",
+            "0x1::M::S<vector<u256>>",
         ] {
             assert!(parse_type_tag(s).is_ok(), "Failed to parse tag {}", s);
         }
@@ -519,12 +585,19 @@ mod tests {
             "0x1::Diem::Diem<u8>",
             "0x1::Diem::Diem<u64>",
             "0x1::Diem::Diem<u128>",
+            "0x1::Diem::Diem<u16>",
+            "0x1::Diem::Diem<u32>",
+            "0x1::Diem::Diem<u256>",
             "0x1::Diem::Diem<bool>",
             "0x1::Diem::Diem<address>",
             "0x1::Diem::Diem<signer>",
             "0x1::Diem::Diem<vector<0x1::XDX::XDX>>",
             "0x1::Diem::Diem<u8,bool>",
             "0x1::Diem::Diem<u8,   bool>",
+            "0x1::Diem::Diem<u16,bool>",
+            "0x1::Diem::Diem<u32,   bool>",
+            "0x1::Diem::Diem<u128,bool>",
+            "0x1::Diem::Diem<u256,   bool>",
             "0x1::Diem::Diem<u8  ,bool>",
             "0x1::Diem::Diem<u8 , bool  ,    vector<u8>,address,signer>",
             "0x1::Diem::Diem<vector<0x1::Diem::Struct<0x1::XUS::XUS>>>",

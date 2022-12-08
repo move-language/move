@@ -5,31 +5,53 @@
 use crate::{
     cfgir::ast as G,
     diag,
-    expansion::ast::{self as E, Address, ModuleIdent, ModuleIdent_},
+    expansion::ast::{
+        self as E, Address, Attribute, AttributeValue, ModuleAccess_, ModuleIdent, ModuleIdent_,
+    },
+    parser::ast::ConstantName,
     shared::{
         known_attributes::{KnownAttribute, TestingAttribute},
+        unique_map::UniqueMap,
         CompilationEnv, Identifier, NumericalAddress,
     },
-    unit_test::{ExpectedFailure, ModuleTestPlan, TestCase},
+    unit_test::{ExpectedFailure, ExpectedMoveError, ModuleTestPlan, TestCase},
 };
-use move_core_types::{account_address::AccountAddress as MoveAddress, value::MoveValue};
+use move_core_types::{
+    account_address::AccountAddress as MoveAddress, language_storage::ModuleId, u256::U256,
+    value::MoveValue, vm_status::StatusCode,
+};
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::collections::BTreeMap;
 
 struct Context<'env> {
     env: &'env mut CompilationEnv,
+    constants: UniqueMap<ModuleIdent, UniqueMap<ConstantName, (Loc, Option<u64>)>>,
 }
 
 impl<'env> Context<'env> {
-    fn new(compilation_env: &'env mut CompilationEnv) -> Self {
+    fn new(compilation_env: &'env mut CompilationEnv, prog: &G::Program) -> Self {
+        let constants = prog.modules.ref_map(|_mident, module| {
+            module.constants.ref_map(|_name, constant| {
+                let v_opt = constant.value.as_ref().and_then(|v| match v {
+                    MoveValue::U64(u) => Some(*u),
+                    _ => None,
+                });
+                (constant.loc, v_opt)
+            })
+        });
         Self {
             env: compilation_env,
+            constants,
         }
     }
 
     fn resolve_address(&self, addr: &Address) -> NumericalAddress {
         (*addr).into_addr_bytes()
+    }
+
+    fn constants(&self) -> &UniqueMap<ModuleIdent, UniqueMap<ConstantName, (Loc, Option<u64>)>> {
+        &self.constants
     }
 }
 
@@ -47,7 +69,8 @@ pub fn construct_test_plan(
     if !compilation_env.flags().is_testing() {
         return None;
     }
-    let mut context = Context::new(compilation_env);
+
+    let mut context = Context::new(compilation_env, prog);
     Some(
         prog.modules
             .key_cloned_iter()
@@ -228,11 +251,14 @@ fn parse_test_attribute(
     }
 }
 
+const BAD_ABORT_VALUE_WARNING: &str = "WARNING: passes for an abort from any module.";
+const INVALID_VALUE: &str = "Invalid value in attribute assignment";
+
 fn parse_failure_attribute(
     context: &mut Context,
     sp!(aloc, expected_attr): &E::Attribute,
 ) -> Option<ExpectedFailure> {
-    use E::{AttributeValue_ as EAV, Attribute_ as EA, Value_ as EV};
+    use E::Attribute_ as EA;
     match expected_attr {
         EA::Name(nm) => {
             assert!(
@@ -244,10 +270,8 @@ fn parse_failure_attribute(
         EA::Assigned(_, value) => {
             let assign_loc = value.loc;
             let invalid_assignment_msg = "Invalid expected failure code assignment";
-            let expected_msg = format!(
-                "Expect an #[expected_failure({}=...)] attribute for abort code assignment",
-                TestingAttribute::CODE_ASSIGNMENT_NAME
-            );
+            let expected_msg =
+                "Expect an #[expected_failure(...)] attribute for error specification";
             context.env.add_diag(diag!(
                 Attributes::InvalidValue,
                 (assign_loc, invalid_assignment_msg),
@@ -256,78 +280,386 @@ fn parse_failure_attribute(
             None
         }
         EA::Parameterized(sp!(_, nm), attrs) => {
-            let mut attrs_vec = attrs.iter().map(|(_, _, attr)| attr).collect::<Vec<_>>();
-            if attrs_vec.len() != 1 {
+            assert!(
+                nm.as_str() == TestingAttribute::ExpectedFailure.name(),
+                "ICE: expected failure attribute must have the right name"
+            );
+            let mut attrs: BTreeMap<String, (Loc, Attribute)> = attrs
+                .key_cloned_iter()
+                .map(|(sp!(kloc, k_), v)| (k_.to_string(), (kloc, v.clone())))
+                .collect();
+            let mut expected_failure_kind_vec = TestingAttribute::expected_failure_cases()
+                .iter()
+                .filter_map(|k| {
+                    let k = k.to_string();
+                    let attr_opt = attrs.remove(&k)?;
+                    Some((k, attr_opt))
+                })
+                .collect::<Vec<_>>();
+            if expected_failure_kind_vec.len() != 1 {
                 let invalid_attr_msg = format!(
-                    "Invalid #[expected_failure(...)] attribute, expected 1 argument but found {}",
-                    attrs_vec.len()
+                    "Invalid #[expected_failure(...)] attribute, expected 1 failure kind but found {}. Expected one of: {}",
+                    expected_failure_kind_vec.len(),
+                    TestingAttribute::expected_failure_cases().to_vec().join(", ")
                 );
                 context
                     .env
                     .add_diag(diag!(Attributes::InvalidValue, (*aloc, invalid_attr_msg)));
                 return None;
             }
-            assert!(
-                nm.as_str() == TestingAttribute::ExpectedFailure.name(),
-                "ICE: expected failure attribute must have the right name"
-            );
-            let attr = attrs_vec.pop().unwrap();
-            match attr {
-                sp!(assign_loc, EA::Assigned(sp!(_, nm), value))
-                    if nm.as_str() == TestingAttribute::CODE_ASSIGNMENT_NAME =>
-                {
-                    match &**value {
-                        sp!(_, EAV::Value(sp!(_, EV::InferredNum(u))))
-                            if *u <= std::u64::MAX as u128 =>
-                        {
-                            Some(ExpectedFailure::ExpectedWithCode(*u as u64))
-                        }
-                        sp!(_, EAV::Value(sp!(_, EV::U64(u)))) => {
-                            Some(ExpectedFailure::ExpectedWithCode(*u))
-                        }
-                        sp!(vloc, EAV::Value(sp!(_, EV::U8(_))))
-                        | sp!(vloc, EAV::Value(sp!(_, EV::U128(_)))) => {
-                            let msg = "Invalid value in expected failure code assignment";
-                            context.env.add_diag(diag!(
-                                Attributes::InvalidValue,
-                                (*assign_loc, msg),
-                                (*vloc, "Annotated non-u64 literals are not permitted"),
-                            ));
-                            None
-                        }
-                        sp!(vloc, _) => {
-                            context.env.add_diag(diag!(
-                                Attributes::InvalidValue,
-                                (*vloc, "Invalid value in expected failure code assignment"),
-                                (*assign_loc, "Unsupported value in this assignment"),
-                            ));
-                            None
-                        }
-                    }
+            let (expected_failure_kind, (attr_loc, attr)) =
+                expected_failure_kind_vec.pop().unwrap();
+            let location_opt = attrs.remove(TestingAttribute::ERROR_LOCATION);
+            let (status_code, sub_status_code, location) = match expected_failure_kind.as_str() {
+                TestingAttribute::ABORT_CODE_NAME => {
+                    let (value_name_loc, attr_value) = get_assigned_attribute(
+                        context,
+                        TestingAttribute::ABORT_CODE_NAME,
+                        attr_loc,
+                        attr,
+                    )?;
+                    let (value_loc, const_location_opt, u) =
+                        convert_constant_value_u64_constant_or_value(
+                            context,
+                            value_name_loc,
+                            &attr_value,
+                        )?;
+                    let location = if let Some((location_loc, location_attr)) = location_opt {
+                        convert_location(context, location_loc, location_attr)?
+                    } else if let Some(location) = const_location_opt {
+                        location
+                    } else {
+                        let tip = format!(
+                            "Replace value with constant from expected module or add `{}=...` \
+                            attribute.",
+                            TestingAttribute::ERROR_LOCATION
+                        );
+                        context.env.add_diag(diag!(
+                            Attributes::ValueWarning,
+                            (attr_loc, BAD_ABORT_VALUE_WARNING),
+                            (value_loc, tip)
+                        ));
+                        return Some(ExpectedFailure::ExpectedWithCodeDEPRECATED(u));
+                    };
+                    (StatusCode::ABORTED, Some(u), location)
                 }
-                sp!(assign_loc, EA::Assigned(sp!(nmloc, _), _)) => {
-                    let invalid_name_msg = format!(
-                        "Invalid name in expected failure code assignment. Did you mean to use \
-                         '{}'?",
-                        TestingAttribute::CODE_ASSIGNMENT_NAME
-                    );
-                    context.env.add_diag(diag!(
-                        Attributes::InvalidName,
-                        (*nmloc, invalid_name_msg),
-                        (*assign_loc, "Invalid name in this assignment"),
-                    ));
-                    None
+                TestingAttribute::ARITHMETIC_ERROR_NAME => {
+                    check_attribute_unassigned(
+                        context,
+                        TestingAttribute::ARITHMETIC_ERROR_NAME,
+                        attr_loc,
+                        attr,
+                    )?;
+                    let (location_loc, location_attr) = check_location(
+                        context,
+                        attr_loc,
+                        TestingAttribute::ARITHMETIC_ERROR_NAME,
+                        location_opt,
+                    )?;
+                    let location = convert_location(context, location_loc, location_attr)?;
+                    (StatusCode::ARITHMETIC_ERROR, None, location)
                 }
-                sp!(loc, _) => {
-                    let msg = "Unsupported attribute value for expected failure attribute";
-                    context.env.add_diag(diag!(
-                        Attributes::InvalidValue,
-                        (*aloc, msg),
-                        (*loc, "Unsupported value in this assignment")
-                    ));
-                    None
+                TestingAttribute::OUT_OF_GAS_NAME => {
+                    check_attribute_unassigned(
+                        context,
+                        TestingAttribute::OUT_OF_GAS_NAME,
+                        attr_loc,
+                        attr,
+                    )?;
+                    let (location_loc, location_attr) = check_location(
+                        context,
+                        attr_loc,
+                        TestingAttribute::OUT_OF_GAS_NAME,
+                        location_opt,
+                    )?;
+                    let location = convert_location(context, location_loc, location_attr)?;
+                    (StatusCode::OUT_OF_GAS, None, location)
                 }
+                TestingAttribute::VECTOR_ERROR_NAME => {
+                    check_attribute_unassigned(
+                        context,
+                        TestingAttribute::VECTOR_ERROR_NAME,
+                        attr_loc,
+                        attr,
+                    )?;
+                    let minor_attr_opt = attrs.remove(TestingAttribute::MINOR_STATUS_NAME);
+                    let minor_status = if let Some((minor_loc, minor_attr)) = minor_attr_opt {
+                        let (minor_value_loc, minor_value) = get_assigned_attribute(
+                            context,
+                            TestingAttribute::MINOR_STATUS_NAME,
+                            minor_loc,
+                            minor_attr,
+                        )?;
+                        let (_, _, minor_status) = convert_constant_value_u64_constant_or_value(
+                            context,
+                            minor_value_loc,
+                            &minor_value,
+                        )?;
+                        Some(minor_status)
+                    } else {
+                        None
+                    };
+                    let (location_loc, location_attr) = check_location(
+                        context,
+                        attr_loc,
+                        TestingAttribute::VECTOR_ERROR_NAME,
+                        location_opt,
+                    )?;
+                    let location = convert_location(context, location_loc, location_attr)?;
+                    (StatusCode::VECTOR_OPERATION_ERROR, minor_status, location)
+                }
+                TestingAttribute::MAJOR_STATUS_NAME => {
+                    let (value_name_loc, attr_value) = get_assigned_attribute(
+                        context,
+                        TestingAttribute::MAJOR_STATUS_NAME,
+                        attr_loc,
+                        attr,
+                    )?;
+                    let (major_value_loc, _, major_status_u64) =
+                        convert_constant_value_u64_constant_or_value(
+                            context,
+                            value_name_loc,
+                            &attr_value,
+                        )?;
+                    let major_status = if let Ok(c) = StatusCode::try_from(major_status_u64) {
+                        c
+                    } else {
+                        let bad_value = format!(
+                            "Invalid value for '{}'",
+                            TestingAttribute::MAJOR_STATUS_NAME,
+                        );
+                        let no_code =
+                            format!("No status code associated with value '{major_status_u64}'");
+                        context.env.add_diag(diag!(
+                            Attributes::InvalidValue,
+                            (value_name_loc, bad_value),
+                            (major_value_loc, no_code)
+                        ));
+                        return None;
+                    };
+                    let minor_attr_opt = attrs.remove(TestingAttribute::MINOR_STATUS_NAME);
+                    let minor_status = if let Some((minor_loc, minor_attr)) = minor_attr_opt {
+                        let (minor_value_loc, minor_value) = get_assigned_attribute(
+                            context,
+                            TestingAttribute::MINOR_STATUS_NAME,
+                            minor_loc,
+                            minor_attr,
+                        )?;
+                        let (_, _, minor_status) = convert_constant_value_u64_constant_or_value(
+                            context,
+                            minor_value_loc,
+                            &minor_value,
+                        )?;
+                        Some(minor_status)
+                    } else {
+                        None
+                    };
+                    let (location_loc, location_attr) = check_location(
+                        context,
+                        attr_loc,
+                        TestingAttribute::MAJOR_STATUS_NAME,
+                        location_opt,
+                    )?;
+                    let location = convert_location(context, location_loc, location_attr)?;
+                    (major_status, minor_status, location)
+                }
+                _ => unreachable!(),
+            };
+            // warn for any remaining attrs
+            for (_, (loc, _)) in attrs {
+                let msg = format!(
+                    "Unused attribute for {}",
+                    TestingAttribute::ExpectedFailure.name()
+                );
+                context
+                    .env
+                    .add_diag(diag!(UnusedItem::Attribute, (loc, msg)));
             }
+            Some(ExpectedFailure::ExpectedWithError(ExpectedMoveError(
+                status_code,
+                sub_status_code,
+                move_binary_format::errors::Location::Module(location),
+            )))
+        }
+    }
+}
+
+fn check_attribute_unassigned(
+    context: &mut Context,
+    kind: &str,
+    attr_loc: Loc,
+    attr: Attribute,
+) -> Option<()> {
+    use E::Attribute_ as EA;
+    match attr {
+        sp!(_, EA::Name(sp!(_, nm))) => {
+            assert!(nm.as_str() == kind);
+            Some(())
+        }
+        sp!(loc, _) => {
+            let msg = format!(
+                "Expected no assigned value, e.g. '{}', for expected failure attribute",
+                kind
+            );
+            context.env.add_diag(diag!(
+                Attributes::InvalidValue,
+                (attr_loc, "Unsupported attribute in this location"),
+                (loc, msg)
+            ));
+            None
+        }
+    }
+}
+
+fn get_assigned_attribute(
+    context: &mut Context,
+    kind: &str,
+    attr_loc: Loc,
+    attr: Attribute,
+) -> Option<(Loc, AttributeValue)> {
+    use E::Attribute_ as EA;
+    match attr {
+        sp!(assign_loc, EA::Assigned(sp!(_, nm), value)) => {
+            assert!(nm.as_str() == kind);
+            Some((assign_loc, *value))
+        }
+        sp!(loc, _) => {
+            let msg = format!(
+                "Expected assigned value, e.g. '{}=...', for expected failure attribute",
+                kind
+            );
+            context.env.add_diag(diag!(
+                Attributes::InvalidValue,
+                (attr_loc, "Unsupported attribute in this location"),
+                (loc, msg)
+            ));
+            None
+        }
+    }
+}
+
+fn convert_location(context: &mut Context, attr_loc: Loc, attr: Attribute) -> Option<ModuleId> {
+    use E::AttributeValue_ as EAV;
+    let (loc, value) =
+        get_assigned_attribute(context, TestingAttribute::ERROR_LOCATION, attr_loc, attr)?;
+    match value {
+        sp!(vloc, EAV::Module(module)) => convert_module_id(context, vloc, &module),
+        sp!(vloc, _) => {
+            context.env.add_diag(diag!(
+                Attributes::InvalidValue,
+                (loc, INVALID_VALUE),
+                (vloc, "Expected a module identifier, e.g. 'std::vector'")
+            ));
+            None
+        }
+    }
+}
+
+fn convert_constant_value_u64_constant_or_value(
+    context: &mut Context,
+    loc: Loc,
+    value: &AttributeValue,
+) -> Option<(Loc, Option<ModuleId>, u64)> {
+    use E::AttributeValue_ as EAV;
+    let (vloc, module, member) = match value {
+        sp!(
+            vloc,
+            EAV::ModuleAccess(sp!(_, ModuleAccess_::ModuleAccess(m, n)))
+        ) => (*vloc, m, n),
+        _ => {
+            let (vloc, u) = convert_attribute_value_u64(context, loc, value)?;
+            return Some((vloc, None, u));
+        }
+    };
+    let module_id = convert_module_id(context, vloc, module)?;
+    let modules_constants = context.constants().get(module).unwrap();
+    let constant = match modules_constants.get_(&member.value) {
+        None => {
+            context.env.add_diag(diag!(
+                Attributes::InvalidValue,
+                (vloc, INVALID_VALUE),
+                (
+                    module.loc,
+                    format!("Unbound constant '{member}' in module '{module}'")
+                ),
+            ));
+            return None;
+        }
+        Some(c) => c,
+    };
+    match constant {
+        (cloc, None) => {
+            let msg = format!(
+                "Constant '{module}::{member}' has a non-u64 value. \
+                Only 'u64' values are permitted"
+            );
+            context.env.add_diag(diag!(
+                Attributes::InvalidValue,
+                (vloc, INVALID_VALUE),
+                (*cloc, msg),
+            ));
+            None
+        }
+        (_, Some(u)) => Some((vloc, Some(module_id), *u)),
+    }
+}
+
+fn convert_module_id(context: &mut Context, vloc: Loc, module: &ModuleIdent) -> Option<ModuleId> {
+    if !context.constants.contains_key(module) {
+        context.env.add_diag(diag!(
+            Attributes::InvalidValue,
+            (vloc, INVALID_VALUE),
+            (module.loc, format!("Unbound module '{module}'")),
+        ));
+        return None;
+    }
+    let sp!(mloc, ModuleIdent_ { address, module }) = module;
+    let addr = match address {
+        Address::Numerical(_, sp!(_, a)) => a.into_inner(),
+        Address::NamedUnassigned(addr) => {
+            context.env.add_diag(diag!(
+                Attributes::InvalidValue,
+                (vloc, INVALID_VALUE),
+                (*mloc, format!("Unbound address '{addr}'")),
+            ));
+            return None;
+        }
+    };
+    let mname = move_core_types::identifier::Identifier::new(module.value().to_string()).unwrap();
+    let mid = ModuleId::new(addr, mname);
+    Some(mid)
+}
+
+fn convert_attribute_value_u64(
+    context: &mut Context,
+    loc: Loc,
+    value: &AttributeValue,
+) -> Option<(Loc, u64)> {
+    use E::{AttributeValue_ as EAV, Value_ as EV};
+    match value {
+        sp!(vloc, EAV::Value(sp!(_, EV::InferredNum(u)))) if *u <= U256::from(std::u64::MAX) => {
+            Some((*vloc, u.down_cast_lossy()))
+        }
+        sp!(vloc, EAV::Value(sp!(_, EV::U64(u)))) => Some((*vloc, *u)),
+        sp!(vloc, EAV::Value(sp!(_, EV::U8(_))))
+        | sp!(vloc, EAV::Value(sp!(_, EV::U16(_))))
+        | sp!(vloc, EAV::Value(sp!(_, EV::U32(_))))
+        | sp!(vloc, EAV::Value(sp!(_, EV::U128(_))))
+        | sp!(vloc, EAV::Value(sp!(_, EV::U256(_)))) => {
+            context.env.add_diag(diag!(
+                Attributes::InvalidValue,
+                (loc, INVALID_VALUE),
+                (*vloc, "Annotated non-u64 literals are not permitted"),
+            ));
+            None
+        }
+        sp!(vloc, _) => {
+            context.env.add_diag(diag!(
+                Attributes::InvalidValue,
+                (loc, INVALID_VALUE),
+                (*vloc, "Unsupported value in this assignment"),
+            ));
+            None
         }
     }
 }
@@ -344,4 +676,22 @@ fn convert_attribute_value_to_move_value(
         ))),
         _ => None,
     }
+}
+
+fn check_location<T>(
+    context: &mut Context,
+    loc: Loc,
+    attr: &str,
+    location: Option<T>,
+) -> Option<T> {
+    if location.is_none() {
+        let msg = format!(
+            "Expected '{}' following '{attr}'",
+            TestingAttribute::ERROR_LOCATION
+        );
+        context
+            .env
+            .add_diag(diag!(Attributes::InvalidUsage, (loc, msg)));
+    }
+    location
 }

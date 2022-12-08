@@ -556,8 +556,11 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                         Address => Type::new_prim(PrimitiveType::Address),
                         Signer => Type::new_prim(PrimitiveType::Signer),
                         U8 => Type::new_prim(PrimitiveType::U8),
+                        U16 => Type::new_prim(PrimitiveType::U16),
+                        U32 => Type::new_prim(PrimitiveType::U32),
                         U64 => Type::new_prim(PrimitiveType::U64),
                         U128 => Type::new_prim(PrimitiveType::U128),
+                        U256 => Type::new_prim(PrimitiveType::U256),
                         Vector => Type::Vector(Box::new(self.translate_hlir_base_type(&args[0]))),
                         Bool => Type::new_prim(PrimitiveType::Bool),
                     },
@@ -621,9 +624,14 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                             return check_zero_args(self, Type::new_prim(PrimitiveType::Bool));
                         }
                         "u8" => return check_zero_args(self, Type::new_prim(PrimitiveType::U8)),
+                        "u16" => return check_zero_args(self, Type::new_prim(PrimitiveType::U16)),
+                        "u32" => return check_zero_args(self, Type::new_prim(PrimitiveType::U32)),
                         "u64" => return check_zero_args(self, Type::new_prim(PrimitiveType::U64)),
                         "u128" => {
                             return check_zero_args(self, Type::new_prim(PrimitiveType::U128));
+                        }
+                        "u256" => {
+                            return check_zero_args(self, Type::new_prim(PrimitiveType::U256))
                         }
                         "num" => return check_zero_args(self, Type::new_prim(PrimitiveType::Num)),
                         "range" => {
@@ -821,6 +829,15 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     self.new_error_exp()
                 }
             }
+            EA::Exp_::Cast(exp, typ) => {
+                let ty = self.translate_type(typ);
+                let exp = self.translate_exp(exp, &ty);
+                ExpData::Call(
+                    self.new_node_id_with_type_loc(&ty, &loc),
+                    Operation::Cast,
+                    vec![exp.into_exp()],
+                )
+            }
             _ => {
                 self.error(&loc, "expression construct not supported in specifications");
                 self.new_error_exp()
@@ -840,13 +857,25 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 Value::Number(BigInt::from_u8(*x).unwrap()),
                 Type::new_prim(PrimitiveType::U8),
             )),
+            EA::Value_::U16(x) => Some((
+                Value::Number(BigInt::from_u16(*x).unwrap()),
+                Type::new_prim(PrimitiveType::U16),
+            )),
+            EA::Value_::U32(x) => Some((
+                Value::Number(BigInt::from_u32(*x).unwrap()),
+                Type::new_prim(PrimitiveType::U32),
+            )),
             EA::Value_::U64(x) => Some((
                 Value::Number(BigInt::from_u64(*x).unwrap()),
                 Type::new_prim(PrimitiveType::U64),
             )),
-            EA::Value_::InferredNum(x) | EA::Value_::U128(x) => Some((
+            EA::Value_::U128(x) => Some((
                 Value::Number(BigInt::from_u128(*x).unwrap()),
                 Type::new_prim(PrimitiveType::U128),
+            )),
+            EA::Value_::InferredNum(x) | EA::Value_::U256(x) => Some((
+                Value::Number(BigInt::from(x)),
+                Type::new_prim(PrimitiveType::U256),
             )),
             EA::Value_::Bool(x) => Some((Value::Bool(*x), Type::new_prim(PrimitiveType::Bool))),
             EA::Value_::Bytearray(x) => {
@@ -1917,8 +1946,11 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     pub fn translate_from_move_value(&self, loc: &Loc, ty: &Type, value: &MoveValue) -> Value {
         match (ty, value) {
             (_, MoveValue::U8(n)) => Value::Number(BigInt::from_u8(*n).unwrap()),
+            (_, MoveValue::U16(n)) => Value::Number(BigInt::from_u16(*n).unwrap()),
+            (_, MoveValue::U32(n)) => Value::Number(BigInt::from_u32(*n).unwrap()),
             (_, MoveValue::U64(n)) => Value::Number(BigInt::from_u64(*n).unwrap()),
             (_, MoveValue::U128(n)) => Value::Number(BigInt::from_u128(*n).unwrap()),
+            (_, MoveValue::U256(n)) => Value::Number(BigInt::from(n)),
             (_, MoveValue::Bool(b)) => Value::Bool(*b),
             (_, MoveValue::Address(a)) => Value::Address(crate::addr_to_big_uint(a)),
             (_, MoveValue::Signer(a)) => Value::Address(crate::addr_to_big_uint(a)),
@@ -1953,14 +1985,34 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     Value::AddressArray(b)
                 }
                 _ => {
-                    self.error(
-                        loc,
-                        &format!("Not yet supported constant vector value: {:?}", value),
-                    );
-                    Value::Bool(false)
+                    let b = vs
+                        .iter()
+                        .map(|v| self.translate_from_move_value(loc, inner, v))
+                        .collect::<Vec<Value>>();
+                    Value::Vector(b)
                 }
             },
-            (_, _) => {
+            (Type::Primitive(_), MoveValue::Vector(_))
+            | (Type::Primitive(_), MoveValue::Struct(_))
+            | (Type::Tuple(_), MoveValue::Vector(_))
+            | (Type::Tuple(_), MoveValue::Struct(_))
+            | (Type::Vector(_), MoveValue::Struct(_))
+            | (Type::Struct(_, _, _), MoveValue::Vector(_))
+            | (Type::Struct(_, _, _), MoveValue::Struct(_))
+            | (Type::TypeParameter(_), MoveValue::Vector(_))
+            | (Type::TypeParameter(_), MoveValue::Struct(_))
+            | (Type::Reference(_, _), MoveValue::Vector(_))
+            | (Type::Reference(_, _), MoveValue::Struct(_))
+            | (Type::Fun(_, _), MoveValue::Vector(_))
+            | (Type::Fun(_, _), MoveValue::Struct(_))
+            | (Type::TypeDomain(_), MoveValue::Vector(_))
+            | (Type::TypeDomain(_), MoveValue::Struct(_))
+            | (Type::ResourceDomain(_, _, _), MoveValue::Vector(_))
+            | (Type::ResourceDomain(_, _, _), MoveValue::Struct(_))
+            | (Type::Error, MoveValue::Vector(_))
+            | (Type::Error, MoveValue::Struct(_))
+            | (Type::Var(_), MoveValue::Vector(_))
+            | (Type::Var(_), MoveValue::Struct(_)) => {
                 self.error(
                     loc,
                     &format!("Not yet supported constant value: {:?}", value),

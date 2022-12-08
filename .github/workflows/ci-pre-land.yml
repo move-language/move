@@ -216,8 +216,12 @@ jobs:
       - prepare
     steps:
       - uses: actions/checkout@v2.4.0
-      - name: install rust toolchain
+      - name: Install rust toolchain
         uses: actions-rs/toolchain@v1
+      - name: Install lld
+        uses: knicknic/os-specific-run@v1.0.3
+        with:
+          linux: sudo apt-get -y install lld
       - name: Use Node.js 14
         uses: actions/setup-node@v2.4.0
         with:
@@ -246,8 +250,10 @@ jobs:
       - prepare
     steps:
       - uses: actions/checkout@v2.4.0
-      - name: install rust toolchain
+      - name: Install rust toolchain
         uses: actions-rs/toolchain@v1
+      - name: Install lld
+        run: sudo apt-get -y install lld
       - name: Use Node.js 14
         uses: actions/setup-node@v2.4.0
         with:
@@ -275,9 +281,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Set up Ruby 2.6
-        uses: actions/setup-ruby@v1
+        uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 2.6.x
+          ruby-version: "2.6"
       - name: Run Checks
         run: |
           gem install awesome_bot

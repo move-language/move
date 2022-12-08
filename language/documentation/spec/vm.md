@@ -485,6 +485,9 @@ into the `STRUCT_HANDLES` table for the generic type of the instantiation, and a
 vector describing the substitution types, that is, a vector of SignatureTokens
 * `0xC`: `SIGNER` - a signer type, which is a special type for the VM
 representing the "entity" that signed the transaction. Signer is a resource type
+* `0xD`: `U16` - a 16-bit unsigned integer
+* `0xE`: `U32` - a 32-bit unsigned integer
+* `0xF`: `U256` - a 256-bit unsigned integer
 
 Signature tokens examples:
 

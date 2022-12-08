@@ -84,8 +84,11 @@ pub enum SignatureTokenGen {
     // Atomic signature tokens.
     Bool,
     U8,
+    U16,
+    U32,
     U64,
     U128,
+    U256,
     Address,
     Signer,
     TypeParameter(PropIndex),
@@ -124,7 +127,8 @@ impl SignatureTokenGen {
     pub fn owned_non_struct_strategy() -> impl Strategy<Value = Self> {
         use SignatureTokenGen::*;
 
-        static OWNED_NON_STRUCTS: &[SignatureTokenGen] = &[Bool, U8, U64, U128, Address, Signer];
+        static OWNED_NON_STRUCTS: &[SignatureTokenGen] =
+            &[Bool, U8, U16, U32, U64, U128, U256, Address, Signer];
 
         select(OWNED_NON_STRUCTS)
     }
@@ -158,8 +162,11 @@ impl SignatureTokenGen {
         match self {
             Bool => SignatureToken::Bool,
             U8 => SignatureToken::U8,
+            U16 => SignatureToken::U16,
+            U32 => SignatureToken::U32,
             U64 => SignatureToken::U64,
             U128 => SignatureToken::U128,
+            U256 => SignatureToken::U256,
             Address => SignatureToken::Address,
             Signer => SignatureToken::Signer,
             Struct(idx) => {

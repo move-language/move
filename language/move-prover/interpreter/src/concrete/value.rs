@@ -14,6 +14,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet, Op},
+    u256,
     value::{MoveStruct, MoveValue},
 };
 use move_model::ast::{MemoryLabel, TempIndex};
@@ -46,11 +47,20 @@ impl BaseValue {
     pub fn mk_u8(v: u8) -> Self {
         Self::Int(BigInt::from(v))
     }
+    pub fn mk_u16(v: u16) -> Self {
+        Self::Int(BigInt::from(v))
+    }
+    pub fn mk_u32(v: u32) -> Self {
+        Self::Int(BigInt::from(v))
+    }
     pub fn mk_u64(v: u64) -> Self {
         Self::Int(BigInt::from(v))
     }
     pub fn mk_u128(v: u128) -> Self {
         Self::Int(BigInt::from(v))
+    }
+    pub fn mk_u256(v: u256::U256) -> Self {
+        Self::Int(BigInt::from(&v))
     }
     pub fn mk_num(v: BigInt) -> Self {
         Self::Int(v)
@@ -80,6 +90,18 @@ impl BaseValue {
             _ => unreachable!(),
         }
     }
+    pub fn into_u16(self) -> u16 {
+        match self {
+            Self::Int(v) => v.to_u16().unwrap(),
+            _ => unreachable!(),
+        }
+    }
+    pub fn into_u32(self) -> u32 {
+        match self {
+            Self::Int(v) => v.to_u32().unwrap(),
+            _ => unreachable!(),
+        }
+    }
     pub fn into_u64(self) -> u64 {
         match self {
             Self::Int(v) => v.to_u64().unwrap(),
@@ -89,6 +111,17 @@ impl BaseValue {
     pub fn into_u128(self) -> u128 {
         match self {
             Self::Int(v) => v.to_u128().unwrap(),
+            _ => unreachable!(),
+        }
+    }
+    pub fn into_u256(self) -> u256::U256 {
+        match self {
+            Self::Int(v) => u256::U256::from_le_bytes(
+                &v.to_bytes_le()
+                    .1
+                    .try_into()
+                    .unwrap_or_else(|_| panic!("Cannot convert {} to U256", v)),
+            ),
             _ => unreachable!(),
         }
     }
@@ -200,6 +233,23 @@ impl TypedValue {
             ptr: Pointer::None,
         }
     }
+
+    pub fn mk_u16(v: u16) -> Self {
+        Self {
+            ty: Type::mk_u16(),
+            val: BaseValue::mk_u16(v),
+            ptr: Pointer::None,
+        }
+    }
+
+    pub fn mk_u32(v: u32) -> Self {
+        Self {
+            ty: Type::mk_u32(),
+            val: BaseValue::mk_u32(v),
+            ptr: Pointer::None,
+        }
+    }
+
     pub fn mk_u64(v: u64) -> Self {
         Self {
             ty: Type::mk_u64(),
@@ -286,6 +336,13 @@ impl TypedValue {
         Self {
             ty: Type::mk_ref_u128(is_mut),
             val: BaseValue::mk_u128(v),
+            ptr,
+        }
+    }
+    pub fn mk_ref_u256(v: u256::U256, is_mut: bool, ptr: Pointer) -> Self {
+        Self {
+            ty: Type::mk_ref_u256(is_mut),
+            val: BaseValue::mk_u256(v),
             ptr,
         }
     }
@@ -418,6 +475,18 @@ impl TypedValue {
         }
         (self.val.into_u8(), self.ty.into_ref_type().0, self.ptr)
     }
+    pub fn into_ref_u16(self) -> (u16, bool, Pointer) {
+        if cfg!(debug_assertions) {
+            assert!(self.ty.is_ref_u16(None));
+        }
+        (self.val.into_u16(), self.ty.into_ref_type().0, self.ptr)
+    }
+    pub fn into_ref_u32(self) -> (u32, bool, Pointer) {
+        if cfg!(debug_assertions) {
+            assert!(self.ty.is_ref_u32(None));
+        }
+        (self.val.into_u32(), self.ty.into_ref_type().0, self.ptr)
+    }
     pub fn into_ref_u64(self) -> (u64, bool, Pointer) {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_ref_u64(None));
@@ -429,6 +498,12 @@ impl TypedValue {
             assert!(self.ty.is_ref_u128(None));
         }
         (self.val.into_u128(), self.ty.into_ref_type().0, self.ptr)
+    }
+    pub fn into_ref_u256(self) -> (u256::U256, bool, Pointer) {
+        if cfg!(debug_assertions) {
+            assert!(self.ty.is_ref_u256(None));
+        }
+        (self.val.into_u256(), self.ty.into_ref_type().0, self.ptr)
     }
     pub fn into_ref_num(self) -> (BigInt, bool, Pointer) {
         if cfg!(debug_assertions) {

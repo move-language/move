@@ -29,10 +29,16 @@ options provided to the prover.
 
 const $MAX_U8: int;
 axiom $MAX_U8 == 255;
+const $MAX_U16: int;
+axiom $MAX_U16 == 65535;
+const $MAX_U32: int;
+axiom $MAX_U32 == 4294967295;
 const $MAX_U64: int;
 axiom $MAX_U64 == 18446744073709551615;
 const $MAX_U128: int;
 axiom $MAX_U128 == 340282366920938463463374607431768211455;
+const $MAX_U256: int;
+axiom $MAX_U256 == 115792089237316195423570985008687907853269984665640564039457584007913129639935;
 
 type {:datatype} $Range;
 function {:constructor} $Range(lb: int, ub: int): $Range;
@@ -45,12 +51,24 @@ function $IsValid'u8'(v: int): bool {
   v >= 0 && v <= $MAX_U8
 }
 
+function $IsValid'u16'(v: int): bool {
+  v >= 0 && v <= $MAX_U16
+}
+
+function $IsValid'u32'(v: int): bool {
+  v >= 0 && v <= $MAX_U32
+}
+
 function $IsValid'u64'(v: int): bool {
   v >= 0 && v <= $MAX_U64
 }
 
 function $IsValid'u128'(v: int): bool {
   v >= 0 && v <= $MAX_U128
+}
+
+function $IsValid'u256'(v: int): bool {
+  v >= 0 && v <= $MAX_U256
 }
 
 function $IsValid'num'(v: int): bool {
@@ -76,11 +94,23 @@ function {:inline} $IsEqual'u8'(x: int, y: int): bool {
     x == y
 }
 
+function {:inline} $IsEqual'u16'(x: int, y: int): bool {
+    x == y
+}
+
+function {:inline} $IsEqual'u32'(x: int, y: int): bool {
+    x == y
+}
+
 function {:inline} $IsEqual'u64'(x: int, y: int): bool {
     x == y
 }
 
 function {:inline} $IsEqual'u128'(x: int, y: int): bool {
+    x == y
+}
+
+function {:inline} $IsEqual'u256'(x: int, y: int): bool {
     x == y
 }
 
@@ -284,6 +314,24 @@ procedure {:inline 1} $CastU8(src: int) returns (dst: int)
     dst := src;
 }
 
+procedure {:inline 1} $CastU16(src: int) returns (dst: int)
+{
+    if (src > $MAX_U16) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := src;
+}
+
+procedure {:inline 1} $CastU32(src: int) returns (dst: int)
+{
+    if (src > $MAX_U32) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := src;
+}
+
 procedure {:inline 1} $CastU64(src: int) returns (dst: int)
 {
     if (src > $MAX_U64) {
@@ -302,12 +350,49 @@ procedure {:inline 1} $CastU128(src: int) returns (dst: int)
     dst := src;
 }
 
+procedure {:inline 1} $CastU256(src: int) returns (dst: int)
+{
+    if (src > $MAX_U256) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := src;
+}
+
 procedure {:inline 1} $AddU8(src1: int, src2: int) returns (dst: int)
 {
     if (src1 + src2 > $MAX_U8) {
         call $ExecFailureAbort();
         return;
     }
+    dst := src1 + src2;
+}
+
+procedure {:inline 1} $AddU16(src1: int, src2: int) returns (dst: int)
+{
+    if (src1 + src2 > $MAX_U16) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := src1 + src2;
+}
+
+procedure {:inline 1} $AddU16_unchecked(src1: int, src2: int) returns (dst: int)
+{
+    dst := src1 + src2;
+}
+
+procedure {:inline 1} $AddU32(src1: int, src2: int) returns (dst: int)
+{
+    if (src1 + src2 > $MAX_U32) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := src1 + src2;
+}
+
+procedure {:inline 1} $AddU32_unchecked(src1: int, src2: int) returns (dst: int)
+{
     dst := src1 + src2;
 }
 
@@ -339,6 +424,20 @@ procedure {:inline 1} $AddU128_unchecked(src1: int, src2: int) returns (dst: int
     dst := src1 + src2;
 }
 
+procedure {:inline 1} $AddU256(src1: int, src2: int) returns (dst: int)
+{
+    if (src1 + src2 > $MAX_U256) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := src1 + src2;
+}
+
+procedure {:inline 1} $AddU256_unchecked(src1: int, src2: int) returns (dst: int)
+{
+    dst := src1 + src2;
+}
+
 procedure {:inline 1} $Sub(src1: int, src2: int) returns (dst: int)
 {
     if (src1 < src2) {
@@ -363,18 +462,70 @@ function $shl(src1: int, p: int): int {
     src1 * $pow(2, p)
 }
 
+function $shlU8(src1: int, p: int): int {
+    (src1 * $pow(2, p)) mod 256
+}
+
+function $shlU16(src1: int, p: int): int {
+    (src1 * $pow(2, p)) mod 65536
+}
+
+function $shlU32(src1: int, p: int): int {
+    (src1 * $pow(2, p)) mod 4294967296
+}
+
+function $shlU64(src1: int, p: int): int {
+    (src1 * $pow(2, p)) mod 18446744073709551616
+}
+
+function $shlU128(src1: int, p: int): int {
+    (src1 * $pow(2, p)) mod 340282366920938463463374607431768211456
+}
+
+function $shlU256(src1: int, p: int): int {
+    (src1 * $pow(2, p)) mod 115792089237316195423570985008687907853269984665640564039457584007913129639936
+}
+
 function $shr(src1: int, p: int): int {
     src1 div $pow(2, p)
 }
 
 // We need to know the size of the destination in order to drop bits
-// that have been shifted left more than that, so we have $ShlU8/64/128
+// that have been shifted left more than that, so we have $ShlU8/16/32/64/128/256
 procedure {:inline 1} $ShlU8(src1: int, src2: int) returns (dst: int)
 {
     var res: int;
     // src2 is a u8
     assume src2 >= 0 && src2 < 256;
-    dst := $shl(src1, src2) mod 256;
+    if (src2 >= 8) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $shlU8(src1, src2);
+}
+
+procedure {:inline 1} $ShlU16(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    if (src2 >= 16) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $shlU16(src1, src2);
+}
+
+procedure {:inline 1} $ShlU32(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    if (src2 >= 32) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $shlU32(src1, src2);
 }
 
 procedure {:inline 1} $ShlU64(src1: int, src2: int) returns (dst: int)
@@ -382,7 +533,11 @@ procedure {:inline 1} $ShlU64(src1: int, src2: int) returns (dst: int)
     var res: int;
     // src2 is a u8
     assume src2 >= 0 && src2 < 256;
-    dst := $shl(src1, src2) mod 18446744073709551616;
+    if (src2 >= 64) {
+       call $ExecFailureAbort();
+       return;
+    }
+    dst := $shlU64(src1, src2);
 }
 
 procedure {:inline 1} $ShlU128(src1: int, src2: int) returns (dst: int)
@@ -390,11 +545,90 @@ procedure {:inline 1} $ShlU128(src1: int, src2: int) returns (dst: int)
     var res: int;
     // src2 is a u8
     assume src2 >= 0 && src2 < 256;
-    dst := $shl(src1, src2) mod 340282366920938463463374607431768211456;
+    if (src2 >= 128) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $shlU128(src1, src2);
 }
 
-// We don't need to know the size of destination, so no $ShrU8, etc.
+procedure {:inline 1} $ShlU256(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    dst := $shlU256(src1, src2);
+}
+
 procedure {:inline 1} $Shr(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    dst := $shr(src1, src2);
+}
+
+procedure {:inline 1} $ShrU8(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    if (src2 >= 8) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $shr(src1, src2);
+}
+
+procedure {:inline 1} $ShrU16(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    if (src2 >= 16) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $shr(src1, src2);
+}
+
+procedure {:inline 1} $ShrU32(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    if (src2 >= 32) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $shr(src1, src2);
+}
+
+procedure {:inline 1} $ShrU64(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    if (src2 >= 64) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $shr(src1, src2);
+}
+
+procedure {:inline 1} $ShrU128(src1: int, src2: int) returns (dst: int)
+{
+    var res: int;
+    // src2 is a u8
+    assume src2 >= 0 && src2 < 256;
+    if (src2 >= 128) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $shr(src1, src2);
+}
+
+procedure {:inline 1} $ShrU256(src1: int, src2: int) returns (dst: int)
 {
     var res: int;
     // src2 is a u8
@@ -405,6 +639,24 @@ procedure {:inline 1} $Shr(src1: int, src2: int) returns (dst: int)
 procedure {:inline 1} $MulU8(src1: int, src2: int) returns (dst: int)
 {
     if (src1 * src2 > $MAX_U8) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := src1 * src2;
+}
+
+procedure {:inline 1} $MulU16(src1: int, src2: int) returns (dst: int)
+{
+    if (src1 * src2 > $MAX_U16) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := src1 * src2;
+}
+
+procedure {:inline 1} $MulU32(src1: int, src2: int) returns (dst: int)
+{
+    if (src1 * src2 > $MAX_U32) {
         call $ExecFailureAbort();
         return;
     }
@@ -423,6 +675,15 @@ procedure {:inline 1} $MulU64(src1: int, src2: int) returns (dst: int)
 procedure {:inline 1} $MulU128(src1: int, src2: int) returns (dst: int)
 {
     if (src1 * src2 > $MAX_U128) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := src1 * src2;
+}
+
+procedure {:inline 1} $MulU256(src1: int, src2: int) returns (dst: int)
+{
+    if (src1 * src2 > $MAX_U256) {
         call $ExecFailureAbort();
         return;
     }
@@ -763,3 +1024,20 @@ axiom $EventStore__is_empty($EmptyEventStore);
 procedure {:inline 1} $InitEventStore() {
 }
 {%- endif %}
+
+// ============================================================================================
+// Type Reflection on Type Parameters
+
+type {:datatype} $TypeParamInfo;
+
+function {:constructor} $TypeParamBool(): $TypeParamInfo;
+function {:constructor} $TypeParamU8(): $TypeParamInfo;
+function {:constructor} $TypeParamU16(): $TypeParamInfo;
+function {:constructor} $TypeParamU32(): $TypeParamInfo;
+function {:constructor} $TypeParamU64(): $TypeParamInfo;
+function {:constructor} $TypeParamU128(): $TypeParamInfo;
+function {:constructor} $TypeParamU256(): $TypeParamInfo;
+function {:constructor} $TypeParamAddress(): $TypeParamInfo;
+function {:constructor} $TypeParamSigner(): $TypeParamInfo;
+function {:constructor} $TypeParamVector(e: $TypeParamInfo): $TypeParamInfo;
+function {:constructor} $TypeParamStruct(a: int, m: Vec int, s: Vec int): $TypeParamInfo;

@@ -171,7 +171,7 @@ pub fn nursery_natives(
     }
 
     add_natives!("event", event::make_all(gas_params.event));
-    add_natives!("debug", debug::make_all(gas_params.debug));
+    add_natives!("debug", debug::make_all(gas_params.debug, move_std_addr));
 
     make_table_from_iter(move_std_addr, natives)
 }

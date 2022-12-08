@@ -7,7 +7,7 @@ use crate::{
     runtime::VMRuntime,
 };
 use move_binary_format::{
-    compatibility::CompatibilityConfig,
+    compatibility::Compatibility,
     errors::*,
     file_format::{AbilitySet, LocalIndex},
 };
@@ -193,7 +193,7 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
             sender,
             &mut self.data_cache,
             gas_meter,
-            CompatibilityConfig::full_check(),
+            Compatibility::full_check(),
         )
     }
 
@@ -203,7 +203,7 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         modules: Vec<Vec<u8>>,
         sender: AccountAddress,
         gas_meter: &mut impl GasMeter,
-        compat_config: CompatibilityConfig,
+        compat_config: Compatibility,
     ) -> VMResult<()> {
         self.runtime.publish_module_bundle(
             modules,
@@ -225,7 +225,7 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
             sender,
             &mut self.data_cache,
             gas_meter,
-            CompatibilityConfig::no_check(),
+            Compatibility::no_check(),
         )
     }
 
@@ -302,6 +302,13 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         self.runtime
             .loader()
             .get_fully_annotated_type_layout(type_tag, &self.data_cache)
+    }
+
+    pub fn get_type_tag(&self, ty: &Type) -> VMResult<TypeTag> {
+        self.runtime
+            .loader()
+            .type_to_type_tag(ty)
+            .map_err(|e| e.finish(Location::Undefined))
     }
 
     /// Fetch a struct type from cache, if the index is in bounds

@@ -73,7 +73,7 @@ module std::event_tests {
     }
 
     #[test(s = @0x42)]
-    #[expected_failure(abort_code = 0)]
+    #[expected_failure(abort_code = 0, location = std::event)]
     fun test_event_129(s: signer) acquires MyEvent {
         event_129(&s);
     }

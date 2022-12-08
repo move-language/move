@@ -6,13 +6,13 @@ module M {
     }
 
     #[test]
-    #[expected_failure(abort_code=1)]
+    #[expected_failure(abort_code=1, location=0x1::M)]
     public fun wrong_abort_code() {
         abort 0
     }
 
     #[test]
-    #[expected_failure(abort_code=0)]
+    #[expected_failure(abort_code=0, location=0x1::M)]
     public fun correct_abort_code() {
         abort 0
     }

@@ -190,7 +190,7 @@ error: abort not covered by any of the `aborts_if` clauses
 ```
 
 The prover has generated a counter example which leads to an overflow when adding 1 the value of 255 for an `u8`. This
-happens if the function specification states something abort abort behavior, but the condition under which the function
+happens if the function specification states something abort behavior, but the condition under which the function
 is aborting is not covered by the specification. And in fact, with `aborts_if !exists<Counter>(a)` we only cover the
 abort if the resource does not exists, but not the overflow.
 

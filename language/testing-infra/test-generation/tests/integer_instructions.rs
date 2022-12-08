@@ -11,8 +11,11 @@ mod common;
 
 const INTEGER_TYPES: &[SignatureToken] = &[
     SignatureToken::U8,
+    SignatureToken::U16,
+    SignatureToken::U32,
     SignatureToken::U64,
     SignatureToken::U128,
+    SignatureToken::U256,
 ];
 
 #[test]
@@ -64,9 +67,26 @@ fn bytecode_shl_shr() {
 fn bytecode_casting_ops() {
     for (op, ty1, ty2) in [
         (Bytecode::CastU8, SignatureToken::U8, SignatureToken::U8),
+        (Bytecode::CastU16, SignatureToken::U16, SignatureToken::U16),
+        (Bytecode::CastU16, SignatureToken::U16, SignatureToken::U8),
+        (Bytecode::CastU32, SignatureToken::U32, SignatureToken::U32),
+        (Bytecode::CastU32, SignatureToken::U32, SignatureToken::U8),
+        (Bytecode::CastU32, SignatureToken::U32, SignatureToken::U16),
         (Bytecode::CastU64, SignatureToken::U64, SignatureToken::U8),
+        (Bytecode::CastU64, SignatureToken::U64, SignatureToken::U16),
+        (Bytecode::CastU64, SignatureToken::U64, SignatureToken::U32),
         (Bytecode::CastU64, SignatureToken::U64, SignatureToken::U64),
         (Bytecode::CastU128, SignatureToken::U128, SignatureToken::U8),
+        (
+            Bytecode::CastU128,
+            SignatureToken::U128,
+            SignatureToken::U16,
+        ),
+        (
+            Bytecode::CastU128,
+            SignatureToken::U128,
+            SignatureToken::U32,
+        ),
         (
             Bytecode::CastU128,
             SignatureToken::U128,
@@ -76,6 +96,32 @@ fn bytecode_casting_ops() {
             Bytecode::CastU128,
             SignatureToken::U128,
             SignatureToken::U128,
+        ),
+        (Bytecode::CastU256, SignatureToken::U256, SignatureToken::U8),
+        (
+            Bytecode::CastU256,
+            SignatureToken::U256,
+            SignatureToken::U16,
+        ),
+        (
+            Bytecode::CastU256,
+            SignatureToken::U256,
+            SignatureToken::U32,
+        ),
+        (
+            Bytecode::CastU256,
+            SignatureToken::U256,
+            SignatureToken::U64,
+        ),
+        (
+            Bytecode::CastU256,
+            SignatureToken::U256,
+            SignatureToken::U128,
+        ),
+        (
+            Bytecode::CastU256,
+            SignatureToken::U256,
+            SignatureToken::U256,
         ),
     ]
     .iter()

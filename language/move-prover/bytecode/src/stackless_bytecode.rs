@@ -6,6 +6,7 @@ use crate::function_target::FunctionTarget;
 use ethnum::U256;
 use itertools::Itertools;
 use move_binary_format::file_format::CodeOffset;
+use move_core_types::u256;
 use move_model::{
     ast::{Exp, ExpData, MemoryLabel, TempIndex, TraceKind},
     exp_rewriter::{ExpRewriter, ExpRewriterFunctions, RewriteTarget},
@@ -90,10 +91,19 @@ pub enum Constant {
     U8(u8),
     U64(u64),
     U128(u128),
-    U256(U256),
     Address(BigUint),
     ByteArray(Vec<u8>),
-    AddressArray(Vec<BigUint>),
+    AddressArray(Vec<BigUint>), // TODO: merge AddressArray to Vector type in the futureq
+    Vector(Vec<Constant>),
+    U16(u16),
+    U32(u32),
+    U256(U256),
+}
+
+impl From<&u256::U256> for Constant {
+    fn from(n: &u256::U256) -> Constant {
+        Constant::U256(U256::from(n))
+    }
 }
 
 /// An operation -- target of a call. This contains user functions, builtin functions, and
@@ -147,6 +157,8 @@ pub enum Operation {
 
     // Unary
     CastU8,
+    CastU16,
+    CastU32,
     CastU64,
     CastU128,
     Not,
@@ -215,6 +227,8 @@ impl Operation {
             Operation::UnpackRefDeep => false,
             Operation::PackRefDeep => false,
             Operation::CastU8 => true,
+            Operation::CastU16 => true,
+            Operation::CastU32 => true,
             Operation::CastU64 => true,
             Operation::CastU128 => true,
             Operation::CastU256 => true,
@@ -227,8 +241,8 @@ impl Operation {
             Operation::BitOr => false,
             Operation::BitAnd => false,
             Operation::Xor => false,
-            Operation::Shl => false,
-            Operation::Shr => false,
+            Operation::Shl => true,
+            Operation::Shr => true,
             Operation::Lt => false,
             Operation::Gt => false,
             Operation::Le => false,
@@ -276,6 +290,17 @@ impl BorrowNode {
     }
 }
 
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+/// A type of index borrow edge
+pub enum IndexEdgeKind {
+    /// vector operations support
+    Vector,
+    /// table operations support
+    Table,
+    /// support for a custom native function with a given name
+    Custom(String),
+}
+
 /// A borrow edge.
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum BorrowEdge {
@@ -284,7 +309,7 @@ pub enum BorrowEdge {
     /// Field borrow with static offset.
     Field(QualifiedInstId<StructId>, usize),
     /// Vector borrow with dynamic index.
-    Index,
+    Index(IndexEdgeKind),
     /// Composed sequence of edges.
     Hyper(Vec<BorrowEdge>),
 }
@@ -1030,6 +1055,8 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
             }
             // Unary
             CastU8 => write!(f, "(u8)")?,
+            CastU16 => write!(f, "(u16)")?,
+            CastU32 => write!(f, "(u32)")?,
             CastU64 => write!(f, "(u64)")?,
             CastU128 => write!(f, "(u128)")?,
             CastU256 => write!(f, "(u256)")?,
@@ -1130,6 +1157,9 @@ impl fmt::Display for Constant {
                     .map(|v| format!("0x{}", v.to_str_radix(16)))
                     .collect_vec()
             )?,
+            Vector(x) => write!(f, "{:?}", x.iter().map(|v| format!("{}", v)).collect_vec())?,
+            U16(x) => write!(f, "{}", x)?,
+            U32(x) => write!(f, "{}", x)?,
         }
         Ok(())
     }
@@ -1209,7 +1239,7 @@ impl<'a> std::fmt::Display for BorrowEdgeDisplay<'a> {
                     field_type.display(&tctx),
                 )
             }
-            Index => write!(f, "[]"),
+            Index(_) => write!(f, "[]"),
             Direct => write!(f, "@"),
             Hyper(es) => {
                 write!(

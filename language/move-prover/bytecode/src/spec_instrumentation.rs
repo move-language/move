@@ -119,7 +119,7 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
             // out of this data and into the clone.
             let mut verification_data =
                 data.fork(FunctionVariant::Verification(VerificationFlavor::Regular));
-            verification_data = Instrumenter::run(&*options, targets, fun_env, verification_data);
+            verification_data = Instrumenter::run(&options, targets, fun_env, verification_data);
             targets.insert_target_data(
                 &fun_env.get_qualified_id(),
                 verification_data.variant.clone(),
@@ -129,7 +129,7 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
 
         // Instrument baseline variant only if it is inlined.
         if is_inlined {
-            Instrumenter::run(&*options, targets, fun_env, data)
+            Instrumenter::run(&options, targets, fun_env, data)
         } else {
             // Clear code but keep function data stub.
             // TODO(refactoring): the stub is currently still needed because boogie_wrapper
@@ -806,7 +806,11 @@ impl<'a> Instrumenter<'a> {
             .iter()
             .filter(|(_, _, exp)| node_ids.contains(&exp.node_id()));
         for (node_id, kind, exp) in traces {
-            let loc = self.builder.global_env().get_node_loc(*node_id);
+            let env = self.builder.global_env();
+            let loc = env.get_node_loc(*node_id);
+            if !exp.free_vars(env).is_empty() {
+                continue;
+            }
             self.builder.set_loc(loc);
             let temp = if let ExpData::Temporary(_, temp) = exp.as_ref() {
                 *temp

@@ -219,8 +219,11 @@ impl ConcretizedFormals {
                 .get_resource(g, &tag)
                 .map_err(|_| anyhow!("Failed to get resource for {:?}::{:?}", g, tag))?
             {
-                let layout = TypeLayoutBuilder::build_runtime(&TypeTag::Struct(tag), module_cache)
-                    .map_err(|_| anyhow!("Failed to resolve type: {:?}", access_path.root.type_))?;
+                let layout =
+                    TypeLayoutBuilder::build_runtime(&TypeTag::Struct(Box::new(tag)), module_cache)
+                        .map_err(|_| {
+                            anyhow!("Failed to resolve type: {:?}", access_path.root.type_)
+                        })?;
 
                 let resource =
                     MoveValue::simple_deserialize(&resource_bytes, &layout).map_err(|_| {

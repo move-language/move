@@ -5,7 +5,7 @@
 use crate::{diag, diagnostics::Diagnostic, parser::syntax::make_loc};
 use move_ir_types::location::*;
 
-pub fn decode(loc: Loc, s: &str) -> Result<Vec<u8>, Diagnostic> {
+pub fn decode(loc: Loc, s: &str) -> Result<Vec<u8>, Box<Diagnostic>> {
     match hex::decode(s) {
         Ok(vec) => Ok(vec),
         Err(hex::FromHexError::InvalidHexCharacter { c, index }) => {
@@ -13,12 +13,12 @@ pub fn decode(loc: Loc, s: &str) -> Result<Vec<u8>, Diagnostic> {
             let start_offset = loc.start() as usize;
             let offset = start_offset + 2 + index;
             let loc = make_loc(filename, offset, offset);
-            Err(diag!(
+            Err(Box::new(diag!(
                 Syntax::InvalidHexString,
                 (loc, format!("Invalid hexadecimal character: '{}'", c)),
-            ))
+            )))
         }
-        Err(hex::FromHexError::OddLength) => Err(diag!(
+        Err(hex::FromHexError::OddLength) => Err(Box::new(diag!(
             Syntax::InvalidHexString,
             (
                 loc,
@@ -26,7 +26,7 @@ pub fn decode(loc: Loc, s: &str) -> Result<Vec<u8>, Diagnostic> {
                  byte"
                     .to_string(),
             )
-        )),
+        ))),
         Err(_) => unreachable!("unexpected error parsing hex byte string value"),
     }
 }

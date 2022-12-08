@@ -16,6 +16,7 @@ use crate::{
     shared::{known_attributes::AttributePosition, unique_map::UniqueMap, *},
     FullyCompiledProgram,
 };
+use move_command_line_common::parser::{parse_u16, parse_u256, parse_u32};
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
 use std::{
@@ -353,7 +354,7 @@ fn module(
     module_address: Option<Spanned<Address>>,
     module_def: P::ModuleDefinition,
 ) {
-    assert!(context.address == None);
+    assert!(context.address.is_none());
     let (mident, mod_) = module_(context, package_name, module_address, module_def);
     if let Err((mident, old_loc)) = module_map.add(mident, mod_) {
         duplicate_module(context, module_map, mident, old_loc)
@@ -399,8 +400,8 @@ fn module_(
         members,
     } = mdef;
     let attributes = flatten_attributes(context, AttributePosition::Module, attributes);
-    assert!(context.address == None);
-    assert!(address == None);
+    assert!(context.address.is_none());
+    assert!(address.is_none());
     set_sender_address(context, &name, module_address);
     let _ = check_restricted_name_all_cases(context, NameCase::Module, &name.0);
     if name.value().starts_with(|c| c == '_') {
@@ -478,7 +479,7 @@ fn script(
 }
 
 fn script_(context: &mut Context, package_name: Option<Symbol>, pscript: P::Script) -> E::Script {
-    assert!(context.address == None);
+    assert!(context.address.is_none());
     assert!(context.is_source_definition);
     let P::Script {
         attributes,
@@ -652,11 +653,56 @@ fn attribute_value(
     sp!(loc, avalue_): P::AttributeValue,
 ) -> Option<E::AttributeValue> {
     use E::AttributeValue_ as EV;
-    use P::AttributeValue_ as PV;
+    use P::{AttributeValue_ as PV, LeadingNameAccess_ as LN, NameAccessChain_ as PN};
     Some(sp(
         loc,
         match avalue_ {
             PV::Value(v) => EV::Value(value(context, v)?),
+            PV::ModuleAccess(sp!(ident_loc, PN::Two(sp!(aloc, LN::AnonymousAddress(a)), n))) => {
+                let addr = Address::Numerical(None, sp(aloc, a));
+                let mident = sp(ident_loc, ModuleIdent_::new(addr, ModuleName(n)));
+                if context.module_members.get(&mident).is_none() {
+                    context.env.add_diag(diag!(
+                        NameResolution::UnboundModule,
+                        (ident_loc, format!("Unbound module '{}'", mident))
+                    ));
+                }
+                EV::Module(mident)
+            }
+            // bit wonky, but this is the only spot currently where modules and expressions exist
+            // in the same namespace.
+            // TODO consider if we want to just force all of these checks into the well-known
+            // attribute setup
+            PV::ModuleAccess(sp!(ident_loc, PN::One(n)))
+                if context.aliases.module_alias_get(&n).is_some() =>
+            {
+                let sp!(_, mident_) = context.aliases.module_alias_get(&n).unwrap();
+                let mident = sp(ident_loc, mident_);
+                if context.module_members.get(&mident).is_none() {
+                    context.env.add_diag(diag!(
+                        NameResolution::UnboundModule,
+                        (ident_loc, format!("Unbound module '{}'", mident))
+                    ));
+                }
+                EV::Module(mident)
+            }
+            PV::ModuleAccess(sp!(ident_loc, PN::Two(sp!(aloc, LN::Name(n1)), n2)))
+                if context
+                    .named_address_mapping
+                    .as_ref()
+                    .map(|m| m.contains_key(&n1.value))
+                    .unwrap_or(false) =>
+            {
+                let addr = address(context, false, sp(aloc, LN::Name(n1)));
+                let mident = sp(ident_loc, ModuleIdent_::new(addr, ModuleName(n2)));
+                if context.module_members.get(&mident).is_none() {
+                    context.env.add_diag(diag!(
+                        NameResolution::UnboundModule,
+                        (ident_loc, format!("Unbound module '{}'", mident))
+                    ));
+                }
+                EV::Module(mident)
+            }
             PV::ModuleAccess(ma) => EV::ModuleAccess(name_access_chain(context, Access::Type, ma)?),
         },
     ))
@@ -1987,6 +2033,20 @@ fn value(context: &mut Context, sp!(loc, pvalue_): P::Value) -> Option<E::Value>
                 return None;
             }
         },
+        PV::Num(s) if s.ends_with("u16") => match parse_u16(&s[..s.len() - 3]) {
+            Ok((u, _format)) => EV::U16(u),
+            Err(_) => {
+                context.env.add_diag(num_too_big_error(loc, "'u16'"));
+                return None;
+            }
+        },
+        PV::Num(s) if s.ends_with("u32") => match parse_u32(&s[..s.len() - 3]) {
+            Ok((u, _format)) => EV::U32(u),
+            Err(_) => {
+                context.env.add_diag(num_too_big_error(loc, "'u32'"));
+                return None;
+            }
+        },
         PV::Num(s) if s.ends_with("u64") => match parse_u64(&s[..s.len() - 3]) {
             Ok((u, _format)) => EV::U64(u),
             Err(_) => {
@@ -2001,12 +2061,20 @@ fn value(context: &mut Context, sp!(loc, pvalue_): P::Value) -> Option<E::Value>
                 return None;
             }
         },
-        PV::Num(s) => match parse_u128(&s) {
+        PV::Num(s) if s.ends_with("u256") => match parse_u256(&s[..s.len() - 4]) {
+            Ok((u, _format)) => EV::U256(u),
+            Err(_) => {
+                context.env.add_diag(num_too_big_error(loc, "'u256'"));
+                return None;
+            }
+        },
+
+        PV::Num(s) => match parse_u256(&s) {
             Ok((u, _format)) => EV::InferredNum(u),
             Err(_) => {
                 context.env.add_diag(num_too_big_error(
                     loc,
-                    "the largest possible integer type, 'u128'",
+                    "the largest possible integer type, 'u256'",
                 ));
                 return None;
             }
@@ -2015,7 +2083,7 @@ fn value(context: &mut Context, sp!(loc, pvalue_): P::Value) -> Option<E::Value>
         PV::HexString(s) => match hex_string::decode(loc, &s) {
             Ok(v) => EV::Bytearray(v),
             Err(e) => {
-                context.env.add_diag(e);
+                context.env.add_diag(*e);
                 return None;
             }
         },

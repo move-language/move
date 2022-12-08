@@ -2192,8 +2192,11 @@ impl<'env> ModuleEnv<'env> {
         match sig {
             SignatureToken::Bool => Type::Primitive(PrimitiveType::Bool),
             SignatureToken::U8 => Type::Primitive(PrimitiveType::U8),
+            SignatureToken::U16 => Type::Primitive(PrimitiveType::U16),
+            SignatureToken::U32 => Type::Primitive(PrimitiveType::U32),
             SignatureToken::U64 => Type::Primitive(PrimitiveType::U64),
             SignatureToken::U128 => Type::Primitive(PrimitiveType::U128),
+            SignatureToken::U256 => Type::Primitive(PrimitiveType::U256),
             SignatureToken::Address => Type::Primitive(PrimitiveType::Address),
             SignatureToken::Signer => Type::Primitive(PrimitiveType::Signer),
             SignatureToken::Reference(t) => {
@@ -2514,7 +2517,13 @@ impl<'env> StructEnv<'env> {
 
     /// Returns true if this struct has the pragma intrinsic set to true.
     pub fn is_intrinsic(&self) -> bool {
-        self.is_pragma_true(INTRINSIC_PRAGMA, || false)
+        self.is_pragma_true(INTRINSIC_PRAGMA, || {
+            self.module_env
+                .env
+                .intrinsics
+                .get_decl_for_struct(&self.get_qualified_id())
+                .is_some()
+        })
     }
 
     /// Returns true if this is an intrinsic struct of a given name
@@ -3166,7 +3175,13 @@ impl<'env> FunctionEnv<'env> {
 
     /// Returns true if this function has the pragma intrinsic set to true.
     pub fn is_intrinsic(&self) -> bool {
-        self.is_pragma_true(INTRINSIC_PRAGMA, || false)
+        self.is_pragma_true(INTRINSIC_PRAGMA, || {
+            self.module_env
+                .env
+                .intrinsics
+                .get_decl_for_move_fun(&self.get_qualified_id())
+                .is_some()
+        })
     }
 
     /// Returns true if function is either native or intrinsic.

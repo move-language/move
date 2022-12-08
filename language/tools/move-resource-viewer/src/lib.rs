@@ -18,6 +18,7 @@ use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
     resolver::MoveResolver,
+    u256,
     value::{MoveStruct, MoveTypeLayout, MoveValue},
     vm_status::VMStatus,
 };
@@ -53,6 +54,10 @@ pub enum AnnotatedMoveValue {
     Vector(TypeTag, Vec<AnnotatedMoveValue>),
     Bytes(Vec<u8>),
     Struct(AnnotatedMoveStruct),
+    // NOTE: Added in bytecode version v6, do not reorder!
+    U16(u16),
+    U32(u32),
+    U256(u256::U256),
 }
 
 impl AnnotatedMoveValue {
@@ -60,13 +65,16 @@ impl AnnotatedMoveValue {
         use AnnotatedMoveValue::*;
         match self {
             U8(_) => TypeTag::U8,
+            U16(_) => TypeTag::U16,
+            U32(_) => TypeTag::U32,
             U64(_) => TypeTag::U64,
             U128(_) => TypeTag::U128,
+            U256(_) => TypeTag::U256,
             Bool(_) => TypeTag::Bool,
             Address(_) => TypeTag::Address,
             Vector(t, _) => t.clone(),
             Bytes(_) => TypeTag::Vector(Box::new(TypeTag::U8)),
-            Struct(s) => TypeTag::Struct(s.type_.clone()),
+            Struct(s) => TypeTag::Struct(Box::new(s.type_.clone())),
         }
     }
 }
@@ -115,7 +123,18 @@ impl<'a, T: MoveResolver + ?Sized> MoveValueAnnotator<'a, T> {
             .filter(|t| match t {
                 FatType::Signer => false,
                 FatType::Reference(inner) => !matches!(&**inner, FatType::Signer),
-                _ => true,
+                FatType::Bool
+                | FatType::U8
+                | FatType::U64
+                | FatType::U128
+                | FatType::Address
+                | FatType::Vector(_)
+                | FatType::Struct(_)
+                | FatType::MutableReference(_)
+                | FatType::TyParam(_)
+                | FatType::U16
+                | FatType::U32
+                | FatType::U256 => true,
             })
             .collect();
         anyhow::ensure!(
@@ -194,8 +213,11 @@ impl<'a, T: MoveResolver + ?Sized> MoveValueAnnotator<'a, T> {
         Ok(match (value, ty) {
             (MoveValue::Bool(b), FatType::Bool) => AnnotatedMoveValue::Bool(*b),
             (MoveValue::U8(i), FatType::U8) => AnnotatedMoveValue::U8(*i),
+            (MoveValue::U16(i), FatType::U16) => AnnotatedMoveValue::U16(*i),
+            (MoveValue::U32(i), FatType::U32) => AnnotatedMoveValue::U32(*i),
             (MoveValue::U64(i), FatType::U64) => AnnotatedMoveValue::U64(*i),
             (MoveValue::U128(i), FatType::U128) => AnnotatedMoveValue::U128(*i),
+            (MoveValue::U256(i), FatType::U256) => AnnotatedMoveValue::U256(*i),
             (MoveValue::Address(a), FatType::Address) => AnnotatedMoveValue::Address(*a),
             (MoveValue::Vector(a), FatType::Vector(ty)) => match ty.as_ref() {
                 FatType::U8 => AnnotatedMoveValue::Bytes(
@@ -216,7 +238,17 @@ impl<'a, T: MoveResolver + ?Sized> MoveValueAnnotator<'a, T> {
             (MoveValue::Struct(s), FatType::Struct(ty)) => {
                 AnnotatedMoveValue::Struct(self.annotate_struct(s, ty.as_ref())?)
             }
-            _ => {
+            (MoveValue::U8(_), _)
+            | (MoveValue::U64(_), _)
+            | (MoveValue::U128(_), _)
+            | (MoveValue::Bool(_), _)
+            | (MoveValue::Address(_), _)
+            | (MoveValue::Vector(_), _)
+            | (MoveValue::Struct(_), _)
+            | (MoveValue::Signer(_), _)
+            | (MoveValue::U16(_), _)
+            | (MoveValue::U32(_), _)
+            | (MoveValue::U256(_), _) => {
                 return Err(anyhow!(
                     "Cannot annotate value {:?} with type {:?}",
                     value,
@@ -246,8 +278,11 @@ fn pretty_print_value(
     match value {
         AnnotatedMoveValue::Bool(b) => write!(f, "{}", b),
         AnnotatedMoveValue::U8(v) => write!(f, "{}u8", v),
+        AnnotatedMoveValue::U16(v) => write!(f, "{}u16", v),
+        AnnotatedMoveValue::U32(v) => write!(f, "{}u32", v),
         AnnotatedMoveValue::U64(v) => write!(f, "{}", v),
         AnnotatedMoveValue::U128(v) => write!(f, "{}u128", v),
+        AnnotatedMoveValue::U256(v) => write!(f, "{}u256", v),
         AnnotatedMoveValue::Address(a) => write!(f, "{}", a.short_str_lossless()),
         AnnotatedMoveValue::Vector(_, v) => {
             writeln!(f, "[")?;
@@ -259,7 +294,7 @@ fn pretty_print_value(
             write_indent(f, indent)?;
             write!(f, "]")
         }
-        AnnotatedMoveValue::Bytes(v) => write!(f, "{}", hex::encode(&v)),
+        AnnotatedMoveValue::Bytes(v) => write!(f, "{}", hex::encode(v)),
         AnnotatedMoveValue::Struct(s) => pretty_print_struct(f, s, indent),
     }
 }
@@ -308,11 +343,21 @@ impl serde::Serialize for AnnotatedMoveValue {
         use AnnotatedMoveValue::*;
         match self {
             U8(n) => serializer.serialize_u8(*n),
+            U16(n) => serializer.serialize_u16(*n),
+            U32(n) => serializer.serialize_u32(*n),
             U64(n) => serializer.serialize_u64(*n),
             U128(n) => {
                 // TODO: we could use serializer.serialize_u128 here, but it requires the serde_json
                 // arbitrary_precision, which breaks some existing json-rpc test. figure
                 // out what's going on or come up with a better workaround
+                if let Ok(i) = u64::try_from(*n) {
+                    serializer.serialize_u64(i)
+                } else {
+                    serializer.serialize_bytes(&n.to_le_bytes())
+                }
+            }
+            U256(n) => {
+                // Copying logic & reasoning from above because if u128 is needs arb precision, u256 should too
                 if let Ok(i) = u64::try_from(*n) {
                     serializer.serialize_u64(i)
                 } else {

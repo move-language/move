@@ -5,7 +5,7 @@ error[E04003]: built-in operation not supported
   │         ^^^^^
   │         │
   │         Invalid argument to '*'
-  │         Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+  │         Found: 'bool'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04003]: built-in operation not supported
   ┌─ tests/move_check/typing/binary_mul_invalid.move:8:17
@@ -13,7 +13,7 @@ error[E04003]: built-in operation not supported
 8 │         false * true;
   │         -----   ^^^^ Invalid argument to '*'
   │         │        
-  │         Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+  │         Found: 'bool'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04007]: incompatible types
   ┌─ tests/move_check/typing/binary_mul_invalid.move:9:11
@@ -31,7 +31,7 @@ error[E04003]: built-in operation not supported
    │         ^^^^^
    │         │
    │         Invalid argument to '*'
-   │         Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+   │         Found: 'bool'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/binary_mul_invalid.move:10:15
@@ -48,7 +48,7 @@ error[E04003]: built-in operation not supported
 10 │         false * 1;
    │         -----   ^ Invalid argument to '*'
    │         │        
-   │         Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+   │         Found: 'bool'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_mul_invalid.move:11:9
@@ -57,7 +57,7 @@ error[E04003]: built-in operation not supported
    │         ^^^^
    │         │
    │         Invalid argument to '*'
-   │         Found: 'address'. But expected: 'u8', 'u64', 'u128'
+   │         Found: 'address'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_mul_invalid.move:11:16
@@ -65,7 +65,7 @@ error[E04003]: built-in operation not supported
 11 │         @0x0 * @0x1;
    │         ----   ^^^^ Invalid argument to '*'
    │         │       
-   │         Found: 'address'. But expected: 'u8', 'u64', 'u128'
+   │         Found: 'address'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/binary_mul_invalid.move:12:17
@@ -80,7 +80,7 @@ error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_mul_invalid.move:13:9
    │
  7 │     fun t0(x: u64, r: R, s: S) {
-   │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
+   │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
    ·
 13 │         r * r;
    │         ^ Invalid argument to '*'
@@ -101,7 +101,7 @@ error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_mul_invalid.move:13:13
    │
  7 │     fun t0(x: u64, r: R, s: S) {
-   │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
+   │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
    ·
 13 │         r * r;
    │             ^ Invalid argument to '*'
@@ -110,7 +110,7 @@ error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_mul_invalid.move:14:9
    │
  7 │     fun t0(x: u64, r: R, s: S) {
-   │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
+   │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
    ·
 14 │         s * s;
    │         ^ Invalid argument to '*'
@@ -119,7 +119,7 @@ error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_mul_invalid.move:14:13
    │
  7 │     fun t0(x: u64, r: R, s: S) {
-   │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
+   │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
    ·
 14 │         s * s;
    │             ^ Invalid argument to '*'
@@ -130,7 +130,7 @@ error[E04003]: built-in operation not supported
 15 │         1 * false * @0x0 * 0;
    │         ^^^^^^^^^^^^^^^^
    │         │           │
-   │         │           Found: 'address'. But expected: 'u8', 'u64', 'u128'
+   │         │           Found: 'address'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
    │         Invalid argument to '*'
 
 error[E04007]: incompatible types
@@ -157,7 +157,7 @@ error[E04003]: built-in operation not supported
 15 │         1 * false * @0x0 * 0;
    │                     ----   ^ Invalid argument to '*'
    │                     │       
-   │                     Found: 'address'. But expected: 'u8', 'u64', 'u128'
+   │                     Found: 'address'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_mul_invalid.move:16:9
@@ -166,7 +166,7 @@ error[E04003]: built-in operation not supported
    │         ^^
    │         │
    │         Invalid argument to '*'
-   │         Found: '()'. But expected: 'u8', 'u64', 'u128'
+   │         Found: '()'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_mul_invalid.move:16:14
@@ -174,7 +174,7 @@ error[E04003]: built-in operation not supported
 16 │         () * ();
    │         --   ^^ Invalid argument to '*'
    │         │     
-   │         Found: '()'. But expected: 'u8', 'u64', 'u128'
+   │         Found: '()'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/binary_mul_invalid.move:17:11
@@ -192,7 +192,7 @@ error[E04003]: built-in operation not supported
    │         ^^^^^^
    │         │
    │         Invalid argument to '*'
-   │         Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
+   │         Found: '(u64, u64)'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/binary_mul_invalid.move:18:16
@@ -209,7 +209,7 @@ error[E04003]: built-in operation not supported
 18 │         (0, 1) * (0, 1, 2);
    │         ------   ^^^^^^^^^ Invalid argument to '*'
    │         │         
-   │         Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
+   │         Found: '(u64, u64)'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_mul_invalid.move:19:9
@@ -218,7 +218,7 @@ error[E04003]: built-in operation not supported
    │         ^^^^^^
    │         │
    │         Invalid argument to '*'
-   │         Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
+   │         Found: '(u64, u64)'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_mul_invalid.move:19:18
@@ -226,5 +226,5 @@ error[E04003]: built-in operation not supported
 19 │         (1, 2) * (0, 1);
    │         ------   ^^^^^^ Invalid argument to '*'
    │         │         
-   │         Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
+   │         Found: '(u64, u64)'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 

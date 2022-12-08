@@ -19,7 +19,7 @@ module 0x1::M {
     public fun a(_a: signer) { }
 
     // multiple signers are supported
-    #[test(_a=0x1, _b=@0x2)]
+    #[test(_a=@0x1, _b=@0x2)]
     public fun b(_a: signer, _b: signer) { }
 
     // multiple attributes are supported in the same annotation
@@ -33,15 +33,15 @@ module 0x1::M {
 
     // Can assign abort codes
     #[test(_a=@0x1, _b=@0x2)]
-    #[expected_failure(abort_code=5)]
+    #[expected_failure(abort_code=5, location=0x1::M)]
     public fun e(_a: signer, _b: signer) { }
 
     // singe annotation with multiple attributes and an abort code assignment
-    #[test(_a=@0x1, _b=@0x2), expected_failure(abort_code=5)]
+    #[test(_a=@0x1, _b=@0x2), expected_failure(abort_code=5, location=0x1::M)]
     public fun g(_a: signer, _b: signer) { }
 
     // single annotation without any arguments and an abort code assignment
-    #[test, expected_failure(abort_code=5)]
+    #[test, expected_failure(abort_code=5, location=0x1::M)]
     public fun h() { }
 
     // single annotation with no arguments and no abort code annotation

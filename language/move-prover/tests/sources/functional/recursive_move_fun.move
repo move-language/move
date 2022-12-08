@@ -15,4 +15,20 @@ module 0x1::test {
     spec fun spec_pow(n: num, e: num): num {
         if (e == 0) { 1 } else { n * spec_pow(n, e - 1) }
     }
+
+    public fun foo_1() {
+        foo_2();
+    }
+
+    fun foo_2() {
+        foo_3();
+        foo_2();
+    }
+    spec foo_2 {
+        pragma opaque;
+    }
+
+    fun foo_3() {
+    }
+
 }

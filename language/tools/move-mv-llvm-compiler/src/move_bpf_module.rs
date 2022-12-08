@@ -376,14 +376,6 @@ impl<'a> MoveBPFModule<'a> {
             _ => unimplemented!("Remaining Signature tokens to be implemented"),
         }
     }
-    pub(crate) fn llvm_signed_type_for_type_sig(&self, parameters: &TypeSignature) -> LLVMTypeRef {
-        match parameters {
-            TypeSignature(SignatureToken::Bool) => unsafe{LLVMInt1TypeInContext(*self.context)},
-            TypeSignature(SignatureToken::U8) => unsafe{LLVMInt8TypeInContext(*self.context)}, // FIXME: In llvm signedness is achieved with `cast` operation.
-            TypeSignature(SignatureToken::U64) => unsafe{LLVMInt64TypeInContext(*self.context)}, // FIXME: The signedness
-            _ => unimplemented!("Remaining Signature tokens to be implemented"),
-        }
-    }
     pub fn llvm_signed_type_for_sig_tokens(&self, parameters: &Vec<SignatureToken>, _type_parameters: &[AbilitySet]) -> Vec<LLVMTypeRef> {
         // TODO: What is the purpose of ability set?
         let mut vec = Vec::new();

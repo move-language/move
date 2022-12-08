@@ -329,6 +329,13 @@ impl BorrowInfo {
             }
         }
     }
+
+    fn join(&mut self, other: &Self) -> JoinResult {
+        self.live_nodes
+            .join(&other.live_nodes)
+            .combine(self.borrowed_by.join(&other.borrowed_by))
+            .combine(self.borrows_from.join(&other.borrows_from))
+    }
 }
 
 #[derive(Clone, Default)]
@@ -350,6 +357,19 @@ impl BorrowAnnotation {
     }
     pub fn get_borrow_info_at(&self, code_offset: CodeOffset) -> Option<&BorrowInfoAtCodeOffset> {
         self.code_map.get(&code_offset)
+    }
+
+    fn join(&mut self, other: &Self) -> JoinResult {
+        let mut result = self.summary.join(&other.summary);
+        for (offset, info) in self.code_map.iter_mut() {
+            let other_info = other.code_map.get(offset).unwrap();
+            result = result.combine(
+                info.before
+                    .join(&other_info.before)
+                    .combine(info.after.join(&other_info.after)),
+            );
+        }
+        result
     }
 }
 
@@ -374,22 +394,39 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
         targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv,
         mut data: FunctionData,
-        _scc_opt: Option<&[FunctionEnv]>,
+        scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
-        let borrow_annotation = if func_env.is_native_or_intrinsic() {
+        let mut borrow_annotation = if func_env.is_native_or_intrinsic() {
             native_annotation(func_env, &self.borrow_natives)
         } else {
             let func_target = FunctionTarget::new(func_env, &data);
             let analyzer = BorrowAnalysis::new(&func_target, targets, &self.borrow_natives);
             analyzer.analyze(&data.code)
         };
-        // Annotate function target with computed borrow data.
-        // TODO(mengxu): manually calculate the fixedpoint marker
+
+        // Annotate function target with computed borrow data
+        let fixedpoint = match scc_opt {
+            None => true,
+            Some(_) => match data.annotations.get::<BorrowAnnotation>() {
+                None => false,
+                Some(old_annotation) => match borrow_annotation.join(old_annotation) {
+                    JoinResult::Unchanged => true,
+                    JoinResult::Changed => false,
+                },
+            },
+        };
         data.annotations
             .borrow_mut()
-            .set::<BorrowAnnotation>(borrow_annotation, true);
-        data.annotations.borrow_mut().remove::<LiveVarAnnotation>();
+            .set::<BorrowAnnotation>(borrow_annotation, fixedpoint);
         data
+    }
+
+    fn finalize(&self, _env: &GlobalEnv, targets: &mut FunctionTargetsHolder) {
+        for (fun_id, variant) in targets.get_funs_and_variants().collect_vec() {
+            if let Some(data) = targets.get_data_mut(&fun_id, &variant) {
+                data.annotations.remove::<LiveVarAnnotation>();
+            }
+        }
     }
 
     fn name(&self) -> String {
@@ -575,7 +612,7 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                     }
                 }
             }
-            Call(id, dests, oper, srcs, _) => {
+            Call(_, dests, oper, srcs, _) => {
                 use Operation::*;
                 match oper {
                     // In the borrows below, we only create an edge if the
@@ -620,40 +657,20 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
 
                         let callee_annotation = if callee_env.is_native_or_intrinsic() {
                             native_annotation(callee_env, self.borrow_natives)
-                        } else if mid.qualified(*fid)
-                            == self.func_target.func_env.get_qualified_id()
-                        {
-                            // self recursion
-
-                            // TODO(mengxu): this should be removed
-                            // Check whether the function has &mut returns.
-                            // If so, report an error that we can't deal with it.
-                            let has_muts = (0..callee_env.get_return_count())
-                                .any(|idx| callee_env.get_return_type(idx).is_mutable_reference());
-                            if has_muts {
-                                callee_env.module_env.env.error(&self.func_target.get_bytecode_loc(*id),
-                                                                "restriction: recursive functions which return `&mut` values not supported");
-                            }
-
-                            // 1st iteration of the recursive case
-                            BorrowAnnotation::default()
                         } else {
-                            let callee_target = self
-                                .targets
-                                .get_target(callee_env, &FunctionVariant::Baseline);
-                            match callee_target.get_annotations().get::<BorrowAnnotation>() {
+                            let callee_info = if mid.qualified(*fid)
+                                == self.func_target.func_env.get_qualified_id()
+                            {
+                                // self recursion (this is because we removed the current target from `self.targets`)
+                                self.func_target.get_annotations().get::<BorrowAnnotation>()
+                            } else {
+                                let callee_target = self
+                                    .targets
+                                    .get_target(callee_env, &FunctionVariant::Baseline);
+                                callee_target.get_annotations().get::<BorrowAnnotation>()
+                            };
+                            match callee_info {
                                 None => {
-                                    // TODO(mengxu): this should be removed
-                                    // Check whether the function has &mut returns.
-                                    // If so, report an error that we can't deal with it.
-                                    let has_muts = (0..callee_env.get_return_count()).any(|idx| {
-                                        callee_env.get_return_type(idx).is_mutable_reference()
-                                    });
-                                    if has_muts {
-                                        callee_env.module_env.env.error(&self.func_target.get_bytecode_loc(*id),
-                                                                        "restriction: recursive functions which return `&mut` values not supported");
-                                    }
-
                                     // 1st iteration of the recursive case
                                     BorrowAnnotation::default()
                                 }

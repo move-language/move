@@ -80,3 +80,6 @@ forall 有返回值吗？返回值是最有一个语句？ 返回值只能是tru
 ~~~
 forall <binding>, ..., <binding> [ where <exp> ] : <exp>
 ~~~
+
+//TODO
+don't enter type parameter in scope,enter in some fun spec structure.

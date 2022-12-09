@@ -6,7 +6,11 @@ language = "en"
 multilingual = false
 src = "src"
 
-[output.html]
+
+[[output.i18n.translations]]
+language = "zh"
+translators = ["Movecc & MoveDao"]
+title = "《Move Book 中文版》"
 git-repository-url = "https://github.com/move-language/move"
 git-repository-icon = "fa-github"
 edit-url-template = "https://github.com/move-language/move/edit/main/language/documentation/book/{path}"

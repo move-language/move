@@ -220,7 +220,7 @@ This genericity applies even when the `Currency` type parameter does not appear 
 ### Phantom Type Parameters
 
 In the example above, although `struct Coin` asks for the `store` ability, neither `Coin<Currency1>` nor `Coin<Currency2>` will have the `store` ability.
-This is because of the rules for [Conditional Abilities and Generic Types](./abilities.md#conditional-abilities-and-generic-types) and the fact that `Currency1` and `Currency2` don't have the `store` ability, despite the fact that they are not even used in the body of `struct Coin`.
+This is because of the rules for [Conditional Abilities and Generic Types](abilities.md#conditional-abilities-and-generic-types) and the fact that `Currency1` and `Currency2` don't have the `store` ability, despite the fact that they are not even used in the body of `struct Coin`.
 This might cause some unpleasant consequences.
 For example, we are unable to put `Coin<Currency1>` into a wallet in the global storage.
 
@@ -325,11 +325,11 @@ The usual restrictions apply and `T` can only be instantiated with arguments hav
 
 ## 约束 (Constraints)
 
-In the examples above, we have demonstrated how one can use type parameters to define "unknown" types that can be plugged in by callers at a later time. This however means the type system has little information about the type and has to perform checks in a very conservative way. In some sense, the type system must assume the worst case scenario for an unconstrained generic. Simply put, by default generic type parameters have no [abilities](./abilities.md).
+In the examples above, we have demonstrated how one can use type parameters to define "unknown" types that can be plugged in by callers at a later time. This however means the type system has little information about the type and has to perform checks in a very conservative way. In some sense, the type system must assume the worst case scenario for an unconstrained generic. Simply put, by default generic type parameters have no [abilities](abilities.md).
 
 This is where constraints come into play: they offer a way to specify what properties these unknown types have so the type system can allow operations that would otherwise be unsafe.
 
-在上面的例子中，我们已经演示了如何使用类型参数来定义“未知”类型，这些类型可以在稍后被调用者插入。然而，这意味着类型系统几乎没有关于类型的信息，并且必须以非常保守的方式执行检查。从某种意义上说，类型系统必须假设不受约束的泛型时的最坏场景。简单地说，默认情况下泛型类型参数没有[能力](./abilities.md)。
+在上面的例子中，我们已经演示了如何使用类型参数来定义“未知”类型，这些类型可以在稍后被调用者插入。然而，这意味着类型系统几乎没有关于类型的信息，并且必须以非常保守的方式执行检查。从某种意义上说，类型系统必须假设不受约束的泛型时的最坏场景。简单地说，默认情况下泛型类型参数没有[能力](abilities.md)。
 
 这就是约束发挥作用的地方：它们提供了一种方法来指定这些未知类型具有哪些属性，因此类型系统可以允许相应的操作，否则会不安全。
 
@@ -344,9 +344,9 @@ Constraints can be imposed on type parameters using the following syntax.
 T: <ability> (+ <ability>)*
 ```
 
-The `<ability>` can be any of the four [abilities](./abilities.md), and a type parameter can be constrained with multiple [abilities](./abilities.md) at once. So all of the following would be valid type parameter declarations
+The `<ability>` can be any of the four [abilities](abilities.md), and a type parameter can be constrained with multiple [abilities](abilities.md) at once. So all of the following would be valid type parameter declarations
 
-`<ability>` 可以是四种[能力](./abilities.md)中的任何一种，一个类型参数可以同时被多个能力约束。因此，以下所有内容都是有效的类型参数声明
+`<ability>` 可以是四种[能力](abilities.md)中的任何一种，一个类型参数可以同时被多个能力约束。因此，以下所有内容都是有效的类型参数声明
 
 ```move
 T: copy
@@ -410,7 +410,7 @@ fun foo(): (R, R) {
 
 For more information, see the abilities section on [conditional abilities and generic types](./abilities.html#conditional-abilities-and-generic-types)
 
-有关更多信息，请参阅有关[条件能力与泛型类型](./abilities.md#conditional-abilities-and-generic-types)
+有关更多信息，请参阅有关[条件能力与泛型类型](abilities.md#conditional-abilities-and-generic-types)
 
 ## 递归的限制 (Limitations on Recursions)
 

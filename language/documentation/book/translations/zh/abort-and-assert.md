@@ -1,13 +1,13 @@
 # 中止和断言 (Abort and Assert)
 
-[`return`](./functions.md) and `abort` are two control flow constructs that end execution, one for
+[`return`](functions.md) and `abort` are two control flow constructs that end execution, one for
 the current function and one for the entire transaction.
 
-More information on [`return` can be found in the linked section](./functions.md)
+More information on [`return` can be found in the linked section](functions.md)
 
-[`return`](./functions.md) 和 `abort` 是两种结束程序执行的控制流结构。前者针对当前函数，后者针对整个事务。
+[`return`](functions.md) 和 `abort` 是两种结束程序执行的控制流结构。前者针对当前函数，后者针对整个事务。
 
- [`return`](./functions.md)的更多信息可以参考链接中的文章。
+ [`return`](functions.md)的更多信息可以参考链接中的文章。
 
 ## `abort` 中止
 
@@ -33,11 +33,11 @@ flexibility, it is incredibly simple and predictable.
 由于这种对于所有更改的事务承诺，在 `abort` 之后我们不需要担心去回滚任何更改。尽管这种方法缺少灵活性，它还是非常简单和可预测的。
 
 
-Similar to [`return`](./functions.md), `abort` is useful for exiting control flow when some condition cannot be met.
+Similar to [`return`](functions.md), `abort` is useful for exiting control flow when some condition cannot be met.
 
 In this example, the function will pop two items off of the vector, but will abort early if the vector does not have two items
 
-与 [`return`](./functions.md)相似, 在一些条件无法被满足的时候，`abort` 可以被用于退出控制流(control flow)。
+与 [`return`](functions.md)相似, 在一些条件无法被满足的时候，`abort` 可以被用于退出控制流(control flow)。
 
 在以下示例中，目标函数会从vector里弹出两个元素，但是如果vector中并没有两个元素，函数会提前中止。
 

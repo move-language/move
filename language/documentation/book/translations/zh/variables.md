@@ -155,12 +155,12 @@ let v2: vector<u64> = vector::empty(); // 没有错误
 ```
 
 In a rarer case, the type system might not be able to infer a type for divergent code (where all the
-following code is unreachable). Both `return` and [`abort`](./abort-and-assert.md) are expressions
-and can have any type. A [`loop`](./loops.md) has type `()` if it has a `break`, but if there is no
+following code is unreachable). Both `return` and [`abort`](abort-and-assert.md) are expressions
+and can have any type. A [`loop`](loops.md) has type `()` if it has a `break`, but if there is no
 break out of the `loop`, it could have any type. If these types cannot be inferred, a type
 annotation is required. For example, this code:
 
-在极少数情况下，Move 的类型系统可能无法推断出一段发散式代码（divergent code）的类型（后面所有代码无法访问）。在 Move 语言中，`return` 和 [`abort`](./abort-and-assert.md) 都属于表达式，它们可以返回任何类型。如果一段 [`loop`](./loops.md) 有 `break`，那么它的返回类型是 `()`，但是如果它不包含 `break`，它的返回类型可以是任何类型。如果无法推断出这些类型，那么类型标注是必须的。例如，这段代码：
+在极少数情况下，Move 的类型系统可能无法推断出一段发散式代码（divergent code）的类型（后面所有代码无法访问）。在 Move 语言中，`return` 和 [`abort`](abort-and-assert.md) 都属于表达式，它们可以返回任何类型。如果一段 [`loop`](loops.md) 有 `break`，那么它的返回类型是 `()`，但是如果它不包含 `break`，它的返回类型可以是任何类型。如果无法推断出这些类型，那么类型标注是必须的。例如，这段代码：
 
 ```move
 let a: u8 = return ();
@@ -552,9 +552,9 @@ vector::push_back(&mut v, 100);
 assert!(*vector::borrow(&v, 0) == 100, 42);
 ```
 
-For more details, see [Move references](./references.md).
+For more details, see [Move references](references.md).
 
-有关更多详细信息，请参阅 [Move 引用](./references.md)。
+有关更多详细信息，请参阅 [Move 引用](references.md)。
 
 ## 作用域（Scopes）
 
@@ -651,12 +651,12 @@ This is not just limited to `()` types---any expression can be used as a stateme
 }
 ```
 
-But! If the expression contains a resource (a value without the `drop` [ability](./abilities.md)),
+But! If the expression contains a resource (a value without the `drop` [ability](abilities.md)),
 you will get an error. This is because Move's type system guarantees that any value that is dropped
-has the `drop` [ability](./abilities.md). (Ownership must be transferred or the value must be
+has the `drop` [ability](abilities.md). (Ownership must be transferred or the value must be
 explicitly destroyed within its declaring module.)
 
-但是！如果表达式包含资源（没有 `drop` [能力](./abilities.md)的值），你将收到错误消息。这是因为 Move 的类型系统保证任何被删除的值都具有 `drop` [能力](./abilities.md)。（必须转移所有权，或者必须在其声明模块中显式销毁该值。）
+但是！如果表达式包含资源（没有 `drop` [能力](abilities.md)的值），你将收到错误消息。这是因为 Move 的类型系统保证任何被删除的值都具有 `drop` [能力](abilities.md)。（必须转移所有权，或者必须在其声明模块中显式销毁该值。）
 
 ```move
 {
@@ -733,10 +733,10 @@ assert!(x == b"hello", 42);
 
 After a local is shadowed, the value stored in the local still exists, but will no longer be
 accessible. This is important to keep in mind with values of types without the
-[`drop` ability](./abilities.md), as ownership of the value must be transferred by the end of the
+[`drop` ability](abilities.md), as ownership of the value must be transferred by the end of the
 function.
 
-在局部变量被遮蔽后，存储在局部变量的值仍然存在，但是将不再可访问。对于没有 [`drop` 能力](./abilities.md)的类型的值，请记住这一点很重要，因为值的所有权必须在函数结束时转移。
+在局部变量被遮蔽后，存储在局部变量的值仍然存在，但是将不再可访问。对于没有 [`drop` 能力](abilities.md)的类型的值，请记住这一点很重要，因为值的所有权必须在函数结束时转移。
 
 ```move
 address 0x42 {
@@ -803,12 +803,12 @@ let y = copy x + 1;
 let z = copy x + 2;
 ```
 
-Any value with the `copy` [ability](./abilities.md) can be copied in this way.
+Any value with the `copy` [ability](abilities.md) can be copied in this way.
 
 `move` takes the value out of the local variable _without_ copying the data. After a `move` occurs,
 the local variable is unavailable.
 
-任何具有 `copy` [能力](./abilities.md)的值都可以通过这种方式复制。
+任何具有 `copy` [能力](abilities.md)的值都可以通过这种方式复制。
 
 `move` 从局部变量中取出值*而不是*复制数据。`移动（move）`发生后，局部变量将不可用。
 
@@ -838,20 +838,20 @@ Move 的类型系统会阻止一个值在移动后被使用。这与 [`let` 声�
 As mentioned above, the Move compiler will infer a `copy` or `move` if one is not indicated. The
 algorithm for doing so is quite simple:
 
-- Any scalar value with the `copy` [ability](./abilities.md) is given a `copy`.
+- Any scalar value with the `copy` [ability](abilities.md) is given a `copy`.
 - Any reference (both mutable `&mut` and immutable `&`) is given a `copy`.
   - Except under special circumstances where it is made a `move` for predictable borrow checker errors.
 - Any other value is given a `move`.
-  - This means that even though other values might be have the `copy` [ability](./abilities.md), it must be done _explicitly_ by the programmer.
+  - This means that even though other values might be have the `copy` [ability](abilities.md), it must be done _explicitly_ by the programmer.
   - This is to prevent accidental copies of large data structures.
 
 如上所述，如果未指明，Move 编译器将推断出 `copy` 还是 `move`。这样做的算法非常简单：
 
-- 任何带有 `copy` [能力](./abilities.md)的标量值都被赋予了 `copy`。
+- 任何带有 `copy` [能力](abilities.md)的标量值都被赋予了 `copy`。
 - 任何引用（可变的 `&mut` 和不可变的 `&`）都被赋予 `copy`。
   - 除非在可预测的借用检查器错误的特殊情况下，会进行 `move` 操作。
 - 任何其他值都被赋予 `move`。
-  - 这意味着即使其他值可能具有 `copy` [能力](./abilities.md)，它也必须由程序员*显式*声明。
+  - 这意味着即使其他值可能具有 `copy` [能力](abilities.md)，它也必须由程序员*显式*声明。
   - 这是为了防止意外地复制很大的数据结构。
 
 例如：

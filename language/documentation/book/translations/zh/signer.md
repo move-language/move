@@ -53,8 +53,8 @@ script {
 | `signer::address_of(&signer): address`      | 返回由 `&signer` 包装的地址值。                               |
 | `signer::borrow_address(&signer): &address` | 返回由 `&signer` 包装的地址的引用。                           |
 
-此外，`move_to<T>(&signer, T)` [全局存储](./global-storage-operators.md)操作符需要一个 `&signer` 参数在 `signer.address` 的帐户下发布资源 `T`。这确保了只有经过身份验证的用户才能在其地址下发布资源。
+此外，`move_to<T>(&signer, T)` [全局存储](global-storage-operators.md)操作符需要一个 `&signer` 参数在 `signer.address` 的帐户下发布资源 `T`。这确保了只有经过身份验证的用户才能在其地址下发布资源。
 
 ## 所有权
 
-与简单的标量值不同，`signer` 值是不可复制的，这意味着他们不能被复制（通过任何操作，无论是通过显式 [`copy`](./variables.md#移动和复制)指令还是通过[解引用（dereference）`*`](./references.md#通过引用读取和写入)）。
+与简单的标量值不同，`signer` 值是不可复制的，这意味着他们不能被复制（通过任何操作，无论是通过显式 [`copy`](variables.md#移动和复制)指令还是通过[解引用（dereference）`*`](references.md#通过引用读取和写入)）。

@@ -2,9 +2,9 @@
 
 The `friend` syntax is used to declare modules that are trusted by the current module.
 A trusted module is allowed to call any function defined in the current module that have the `public(friend)` visibility.
-For details on function visibilities, please refer to the *Visibility* section in [Functions](./functions.md).
+For details on function visibilities, please refer to the *Visibility* section in [Functions](functions.md).
 
-友元语法用于声明当前模块信任的其它模块。受信任的模块可以调用当前模块中定义的任何具有`公开（友元）`可见性的函数。有关函数可见性的详细信息，请参阅[函数](./functions.md)中的可见性部分。
+友元语法用于声明当前模块信任的其它模块。受信任的模块可以调用当前模块中定义的任何具有`公开（友元）`可见性的函数。有关函数可见性的详细信息，请参阅[函数](functions.md)中的可见性部分。
 
 ## 友元声明（Friend declaration）
 

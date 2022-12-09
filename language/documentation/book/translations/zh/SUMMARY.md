@@ -43,3 +43,4 @@
 
 - [标准库（Standard Library）](standard-library.md)
 - [Move 编码约定（Coding Conventions）](coding-conventions.md)
+- [中文版贡献指南](./contribute.md)

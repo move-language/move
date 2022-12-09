@@ -114,9 +114,9 @@ fun test_only_function(...) { ... }
 ## 运行单元测试（Running Unit Tests）
 
 Unit tests for a Move package can be run with the [`move test`
-command](./packages.md).
+command](packages.md).
 
-使用 [`move test` 命令](./packages.md)运行包中的单元测试。
+使用 [`move test` 命令](packages.md)运行包中的单元测试。
 
 When running tests, every test will either `PASS`, `FAIL`, or `TIMEOUT`. If a test case fails, the location of the failure along with the function name that caused the failure will be reported if possible. You can see an example of this below.
 

@@ -60,10 +60,10 @@ const ADDRESS_42: address = @0x42;
 ```
 
 Even though you can use letters `a` to `z` in a constant. The
-[general style guidelines](./coding-conventions.md) are to use just uppercase letters `A` to `Z`,
+[general style guidelines](coding-conventions.md) are to use just uppercase letters `A` to `Z`,
 with underscores `_` between each word.
 
-虽然你可以在常量中使用字母 `a` 到 `z`。但[通用风格指南](./coding-conventions.md) 只使用大写字母 `A` 到 `Z`，每个单词之间有下划线`_`。
+虽然你可以在常量中使用字母 `a` 到 `z`。但[通用风格指南](coding-conventions.md) 只使用大写字母 `A` 到 `Z`，每个单词之间有下划线`_`。
 
 This naming restriction of starting with `A` to `Z` is in place to give room for future language features. It may or may not be removed later.
 

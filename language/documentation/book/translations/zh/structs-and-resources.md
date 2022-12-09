@@ -15,11 +15,11 @@ important values (such as a token).
 By default, structs are linear and ephemeral. By this we mean that they: cannot be copied, cannot be
 dropped, and cannot be stored in global storage. This means that all values have to have ownership
 transferred (linear) and the values must be dealt with by the end of the program's execution
-(ephemeral). We can relax this behavior by giving the struct [abilities](./abilities.md) which allow
+(ephemeral). We can relax this behavior by giving the struct [abilities](abilities.md) which allow
 values to be copied or dropped and also to be stored in global storage or to define global storage
 schemas.
 
-默认情况下，结构体是线性的和临时的。我们的意思是它们：不能被复制，不能被删除，不能被存储在全局存储中。这意味着所有值都必须转移所有权（线性），并且必须在程序执行结束时处理这些值（临时）。我们可以通过赋予结构体允许复制或删除值以及将值存储在全局存储中或定义全局存储模式的[能力](./abilities.md)来放松这种行为（减轻限制）。
+默认情况下，结构体是线性的和临时的。我们的意思是它们：不能被复制，不能被删除，不能被存储在全局存储中。这意味着所有值都必须转移所有权（线性），并且必须在程序执行结束时处理这些值（临时）。我们可以通过赋予结构体允许复制或删除值以及将值存储在全局存储中或定义全局存储模式的[能力](abilities.md)来放松这种行为（减轻限制）。
 
 ## 定义结构体
 
@@ -49,10 +49,10 @@ struct Foo { x: Foo }
 
 As mentioned above: by default, a struct declaration is linear and ephemeral. So to allow the value
 to be used with certain operations (that copy it, drop it, store it in global storage, or use it as
-a storage schema), structs can be granted [abilities](./abilities.md) by annotating them with
+a storage schema), structs can be granted [abilities](abilities.md) by annotating them with
 `has <ability>`:
 
-如上所述：默认情况下，结构体声明是线性且临时的。因此，为了允许将值用于某些操作（复制、删除、将其存储在全局存储中或将其用作存储模式），可以通过使用 `has <ability>` 标注它们来授予结构体[能力](./abilities.md)：
+如上所述：默认情况下，结构体声明是线性且临时的。因此，为了允许将值用于某些操作（复制、删除、将其存储在全局存储中或将其用作存储模式），可以通过使用 `has <ability>` 标注它们来授予结构体[能力](abilities.md)：
 
 ```move
 address 0x2 {
@@ -62,9 +62,9 @@ module m {
 }
 ```
 
-For more details, see the [annotating structs](./abilities.md#annotating-structs) section.
+For more details, see the [annotating structs](abilities.md#annotating-structs) section.
 
-有关更多详细信息，请参阅[标注结构体](./abilities.md#标注结构体)部分。
+有关更多详细信息，请参阅[标注结构体](abilities.md#标注结构体)部分。
 
 ### 命名
 
@@ -460,11 +460,11 @@ module m {
 ## 在全局存储中存储资源
 
 Only structs with the `key` ability can be saved directly in
-[persistent global storage](./global-storage-operators.md). All values stored within those `key`
+[persistent global storage](global-storage-operators.md). All values stored within those `key`
 structs must have the `store` abilities. See the [ability](./abilities] and
-[global storage](./global-storage-operators.md) chapters for more detail.
+[global storage](global-storage-operators.md) chapters for more detail.
 
-只有具有 `key` 能力的结构体才能直接保存在[持久性全局存储](./global-storage-operators.md)中。存储在这些 `key` 结构体中的所有值都必须具有 `store` 能力。有关更多详细信息，请参阅[能力](./abilities.md)和[全局存储](./global-storage-operators.md)章节。
+只有具有 `key` 能力的结构体才能直接保存在[持久性全局存储](global-storage-operators.md)中。存储在这些 `key` 结构体中的所有值都必须具有 `store` 能力。有关更多详细信息，请参阅[能力](abilities.md)和[全局存储](global-storage-operators.md)章节。
 
 ## 示例
 

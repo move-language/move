@@ -488,6 +488,7 @@ fn function(
     let E::Function {
         attributes,
         loc: _,
+        is_macro,
         visibility,
         entry,
         signature,
@@ -918,7 +919,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
             let bind_opt = bind_list(context, args);
             match bind_opt {
                 None => {
-                    assert!(context.env.has_diags());
+                    assert!(context.env.has_errors());
                     N::Exp_::UnresolvedError
                 }
                 Some(bind) => NE::Lambda(bind, Box::new(exp_(context, *body))),

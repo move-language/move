@@ -277,13 +277,6 @@ where
             assert!(context.env.has_errors());
             return None;
         }
-        T::Apply(Some(abilities), sp!(_, TN::Multiple(_)), _)
-        | T::Apply(Some(abilities), sp!(_, TN::Builtin(_)), _) => {
-            // Key ability is checked by constraints
-            assert!(!abilities.has_ability_(Ability_::Key));
-            assert!(context.env.has_errors());
-            return None;
-        }
         T::Param(_) | T::Apply(_, sp!(_, TN::Builtin(sp!(_, BuiltinTypeName_::Fun))), _) => {
             let ty_debug = core::error_format(global_type, &Subst::empty());
             let tmsg = format!(
@@ -303,7 +296,7 @@ where
         | T::Apply(Some(abilities), sp!(_, TN::Builtin(_)), _) => {
             // Key ability is checked by constraints
             assert!(!abilities.has_ability_(Ability_::Key));
-            assert!(context.env.has_diags());
+            assert!(context.env.has_errors());
             return None;
         }
         T::Apply(Some(_), sp!(_, TN::ModuleType(m, s)), _args) => (*m, s),

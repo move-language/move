@@ -170,7 +170,7 @@ fn function(
     let body = function_body(context, &acquires, n_body);
     context.current_function = None;
 
-    if is_macro && !context.env.has_blocking_diags() {
+    if is_macro && !context.env.has_errors() {
         // TODO: remove once macro expansion is implemented
         // flag as an error so we bail out after typing
         context
@@ -2099,7 +2099,7 @@ fn var_call(
     let ty = context.get_local(var.0.loc, "function usage", &var);
     match ty.value {
         Type_::UnresolvedError => {
-            assert!(context.env.has_diags());
+            assert!(context.env.has_errors());
             (ty, T::UnannotatedExp_::UnresolvedError)
         }
         Type_::Apply(_, sp!(_, TypeName_::Builtin(sp!(_, BuiltinTypeName_::Fun))), targs) => {
@@ -2194,7 +2194,7 @@ fn module_call(
         parameter_types: params_ty_list,
         acquires,
     };
-    if is_macro && !context.env.has_blocking_diags() {
+    if is_macro && !context.env.has_errors() {
         // TODO: remove once macro expansion is implemented
         // flag as an error so we bail out after typing
         context

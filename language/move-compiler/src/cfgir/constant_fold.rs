@@ -197,7 +197,7 @@ fn is_valid_const_builtin_type(sp!(_, bt_): &BuiltinTypeName) -> bool {
     use BuiltinTypeName_ as N;
     match bt_ {
         N::Address | N::U8 | N::U64 | N::U128 | N::Vector | N::Bool => true,
-        N::Signer => false,
+        N::Signer | N::Fun => false,
     }
 }
 

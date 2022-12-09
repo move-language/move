@@ -277,8 +277,8 @@ struct HasCopy has copy {}
 ```
 
 Consider now the type `S<HasCopy, NoCopy>`.
-Since `S` is defined with `copy` and all non-phantom arguments have copy ability
-then `S<HasCopy, NoCopy>` also has copy ability.
+Since `S` is defined with `copy` and all non-phantom arguments have `copy`
+then `S<HasCopy, NoCopy>` also has `copy`.
 
 #### Phantom Type Parameters with Ability Constraints
 

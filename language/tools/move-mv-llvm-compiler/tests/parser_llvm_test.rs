@@ -1,5 +1,5 @@
 //use move_ir_to_bytecode::parser::parse_module_llvm;
-
+/*
 #[cfg(test)]
 mod tests {
     use std::{path::PathBuf};
@@ -42,4 +42,4 @@ mod tests {
         assert_eq!(parsed_module.get_name().to_str().unwrap(), "00000000000000000000000000000001.TestBinaryOps");
         assert_eq!(parsed_module.get_source_file_name().to_str().unwrap(), "00000000000000000000000000000001.TestBinaryOps");
     }
-}
+}*/

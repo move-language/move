@@ -84,11 +84,11 @@ The integer types support the following bitwise operations that treat each numbe
 
 Bitwise operations do not abort.
 
-| Syntax | Operation  | Description
-|--------|------------|------------
-| `&`    | bitwise and| Performs a boolean and for each bit pairwise
-| `\|`   | bitwise or | Performs a boolean or for each bit pairwise
-| `^`    | bitwise xor| Performs a boolean exclusive or for each bit pairwise
+| Syntax              | Operation   | Description                                           |
+|---------------------|-------------|-------------------------------------------------------|
+| `&`                 | bitwise and | Performs a boolean and for each bit pairwise          |
+| <code>&#124;</code> | bitwise or  | Performs a boolean or for each bit pairwise           |
+| `^`                 | bitwise xor | Performs a boolean exclusive or for each bit pairwise |
 
 ### Bit Shifts
 

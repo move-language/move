@@ -750,8 +750,11 @@ impl<'a> Disassembler<'a> {
         let mut move_module = MoveBPFModule::new(&self.llvm_context, &header, &*llvm_module_name, opt);
 
         let mut struct_map: HashMap<i32,LLVMTypeRef> = HashMap::new();
-        for i in &self.source_mapper.bytecode.struct_defs() {
-            self.process_struct_def(&i[0], &move_module, &mut struct_map);
+        let process_struct : bool = false;
+        if process_struct {
+            for i in &self.source_mapper.bytecode.struct_defs() {
+                self.process_struct_def(&i[0], &move_module, &mut struct_map);
+            }
         }
 
         let function_defs: Vec<String> = match self.source_mapper.bytecode {

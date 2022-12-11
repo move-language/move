@@ -33,10 +33,15 @@ use llvm_sys::prelude::{
     LLVMModuleRef, LLVMTypeRef, LLVMValueRef,
 };
 use llvm_sys::{
-    core::{LLVMDumpModule, LLVMFunctionType, LLVMModuleCreateWithNameInContext},
+    core::{LLVMDumpModule, LLVMFunctionType, LLVMModuleCreateWithNameInContext, LLVMPrintModuleToFile},
     target_machine::LLVMCodeGenOptLevel,
 };
-use std::fs::File;
+
+//use llvm_sys::{target_machine::{LLVMCodeGenOptLevel}, core::{LLVMModuleCreateWithNameInContext, LLVMDumpModule, LLVMFunctionType, LLVMPrintModuleToFile}};
+
+use std::{fs::File, mem::MaybeUninit};
+
+//use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef as LLVMContext, LLVMValueRef, LLVMMetadataRef, LLVMModuleRef, LLVMDIBuilderRef, LLVMTypeRef};
 
 use crate::{move_bpf_module::MoveBPFModule, support::to_c_str};
 
@@ -712,7 +717,7 @@ impl<'a> Disassembler<'a> {
         Ok(llvm_struct)
     }
 
-    pub fn disassemble(&self) -> Result<String> {
+    pub fn disassemble(&self, bitcode_or_text: bool) -> Result<String> {
         let name_opt = self.source_mapper.source_map.module_name_opt.as_ref();
         let name = name_opt.map(|(addr, n)| format!("{}.{}", addr.short_str_lossless(), n));
         let version = format!("{}", self.source_mapper.bytecode.version());
@@ -793,12 +798,20 @@ impl<'a> Disassembler<'a> {
         use std::os::unix::io::AsRawFd;
 
         unsafe {
-            LLVMWriteBitcodeToFD(
-                move_module.module,
-                bc_file.as_raw_fd(),
-                true as i32,
-                true as i32,
-            );
+            if bitcode_or_text {
+                LLVMWriteBitcodeToFD(
+                    move_module.module,
+                    bc_file.as_raw_fd(),
+                    true as i32,
+                    true as i32,
+                );
+            } else {
+                let mut err_string = MaybeUninit::uninit();
+                LLVMPrintModuleToFile(move_module.module,
+                    to_c_str(&(llvm_module_name + ".ll")).as_ptr(),
+                    err_string.as_mut_ptr(),
+                );
+            }
         }
 
         Ok(format!(

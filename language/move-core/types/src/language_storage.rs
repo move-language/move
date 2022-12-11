@@ -104,6 +104,14 @@ impl StructTag {
         key
     }
 
+    /// Returns true if this is a `StructTag` for an `std::ascii::String` struct defined in the
+    /// standard library at address `move_std_addr`.
+    pub fn is_ascii_string(&self, move_std_addr: &AccountAddress) -> bool {
+        self.address == *move_std_addr
+            && self.module.as_str().eq("ascii")
+            && self.name.as_str().eq("String")
+    }
+
     /// Returns true if this is a `StructTag` for an `std::string::String` struct defined in the
     /// standard library at address `move_std_addr`.
     pub fn is_std_string(&self, move_std_addr: &AccountAddress) -> bool {

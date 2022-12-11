@@ -1,6 +1,8 @@
 address 0x2 {
 module M {
     #[test_only]
+    use std::ascii;
+    #[test_only]
     use std::debug::print;
     #[test_only]
     use std::debug::print_string;
@@ -54,6 +56,7 @@ module M {
 
         test_print_quoted_string();
         test_print_string();
+        test_print_ascii_string();
         test_print_primitive_types();
         test_print_struct();
         test_print_vectors();
@@ -72,6 +75,12 @@ module M {
 
         let str = string::utf8(str_bytes);
         print<string::String>(&str);
+    }
+
+    #[test_only]
+    fun test_print_ascii_string() {
+        print_string(b"test_print_ascii_string");
+        print(&ascii::string(b"Hello, sane Move debugging!"));
     }
 
     #[test_only]

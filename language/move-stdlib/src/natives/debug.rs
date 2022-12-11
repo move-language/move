@@ -485,6 +485,26 @@ mod testing {
 
                         let str = move_value_as_escaped_string(val)?;
                         write!(out, "\"{}\"", str).map_err(fmt_error_to_partial_vm_error)?
+                    } else if !canonicalize && type_.is_ascii_string(move_std_addr) {
+                        if fields.len() != 1 {
+                            return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+                                .with_message(
+                                    "Expected std::ascii::String struct to have just one field"
+                                        .to_string(),
+                                ));
+                        }
+
+                        let (id, val) = fields.pop().unwrap();
+                        if id.into_string() != "bytes" {
+                            return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+                                .with_message(
+                                    "Expected std::ascii::String struct to have a `bytes` field"
+                                        .to_string(),
+                                ));
+                        }
+
+                        let str = move_value_as_escaped_string(val)?;
+                        write!(out, "\"{}\"", str).map_err(fmt_error_to_partial_vm_error)?
                     } else {
                         write!(out, "{} ", type_tag).map_err(fmt_error_to_partial_vm_error)?;
                         write!(out, "{}", STRUCT_BEGIN).map_err(fmt_error_to_partial_vm_error)?;

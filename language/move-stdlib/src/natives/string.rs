@@ -12,7 +12,7 @@ use move_vm_types::{
     loaded_data::runtime_types::Type,
     natives::function::NativeResult,
     pop_arg,
-    values::{Value, VectorRef},
+    values::{Reference, Value, VectorRef},
 };
 use std::{collections::VecDeque, sync::Arc};
 
@@ -206,12 +206,17 @@ fn native_fmt_utf8(
     gas_params: &FmtUtf8GasParameters,
     _context: &mut NativeContext,
     _ty_args: Vec<Type>,
-    args: VecDeque<Value>,
+    mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(args.len() == 1);
 
-    let v = Value::vector_u8("string".as_bytes().iter().cloned());
-    let cost = gas_params.base;
+    // pop value
+    let ref_to_val = pop_arg!(args, Reference);
+    let val = ref_to_val.read_ref()?;
+    let v_str = &val.to_string()[..];
+    let v = Value::vector_u8(v_str.as_bytes().iter().cloned());
+
+    let cost = gas_params.base + gas_params.per_byte * NumBytes::new(v_str.len() as u64);
 
     NativeResult::map_partial_vm_result_one(cost, Ok(v))
 }

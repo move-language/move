@@ -90,3 +90,15 @@ PackageBasics
 ├─ std:0x1
 └─ MoveStdlib
    └─ std:0x1
+Command `test double_two`:
+INCLUDING DEPENDENCY MoveStdlib
+BUILDING PackageBasics
+Running Move unit tests
+[ PASS    ] 0x1::AModule::double_two
+Test result: OK. Total tests: 1; passed: 1; failed: 0
+Command `test one_one`:
+INCLUDING DEPENDENCY MoveStdlib
+BUILDING PackageBasics
+Running Move unit tests
+[ PASS    ] 0x1::AModuleTests::double_one_one
+Test result: OK. Total tests: 1; passed: 1; failed: 0

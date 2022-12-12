@@ -70,8 +70,10 @@ pub struct CustomDepInfo {
     /// The address where the package is published. The representation depends
     /// on the registered node resolver.
     pub package_address: Symbol,
-    /// The address where the package is published.
+    /// The package's name (i.e. the dependency name).
     pub package_name: Symbol,
+    /// The path under this repo where the move package can be found
+    pub subdir: PathBuf,
 }
 
 #[derive(Default, Debug, Clone, Eq, PartialEq)]

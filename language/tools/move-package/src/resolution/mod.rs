@@ -278,6 +278,7 @@ fn repository_path(kind: &DependencyKind) -> PathBuf {
             node_url,
             package_address,
             package_name,
+            subdir: _,
         }) => [
             &*MOVE_HOME,
             &format!(
@@ -296,7 +297,9 @@ fn repository_path(kind: &DependencyKind) -> PathBuf {
 fn local_path(kind: &DependencyKind) -> PathBuf {
     let mut repo_path = repository_path(kind);
 
-    if let DependencyKind::Git(GitInfo { subdir, .. }) = kind {
+    if let DependencyKind::Git(GitInfo { subdir, .. })
+    | DependencyKind::Custom(CustomDepInfo { subdir, .. }) = kind
+    {
         repo_path.push(subdir);
     }
 

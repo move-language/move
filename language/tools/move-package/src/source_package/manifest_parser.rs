@@ -337,10 +337,15 @@ fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> {
 
     let kind = match (
         table.remove("local"),
+        table.remove("subdir"),
         table.remove("git"),
         custom_key_opt.as_ref().and_then(|k| table.remove(k)),
     ) {
-        (Some(local), None, None) => {
+        (Some(local), subdir, None, None) => {
+            if subdir.is_some() {
+                bail!("'subdir' not supported for local dependencies");
+            }
+
             let Some(local) = local.as_str().map(PathBuf::from) else {
                 bail!("Local source path not a string")
             };
@@ -348,7 +353,7 @@ fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> {
             PM::DependencyKind::Local(local)
         }
 
-        (None, Some(git_url), None) => {
+        (None, subdir, Some(git_url), None) => {
             let Some(git_rev) = table.remove("rev") else {
                 bail!("Git revision not supplied for dependency")
             };
@@ -361,7 +366,7 @@ fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> {
                 bail!("Git URL not a string")
             };
 
-            let subdir = match table.remove("subdir") {
+            let subdir = match subdir {
                 None => PathBuf::new(),
                 Some(path) => path
                     .as_str()
@@ -376,7 +381,7 @@ fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> {
             })
         }
 
-        (None, None, Some(custom_key)) => {
+        (None, subdir, None, Some(custom_key)) => {
             let Some(package_address) = table.remove("address") else {
                 bail!("Address not supplied for 'node' dependency");
             };
@@ -389,12 +394,21 @@ fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> {
                 bail!("Git URL not a string")
             };
 
+            let subdir = match subdir {
+                None => PathBuf::new(),
+                Some(path) => path
+                    .as_str()
+                    .map(PathBuf::from)
+                    .ok_or_else(|| anyhow!("'subdir' not a string"))?,
+            };
+
             let package_name = Symbol::from(dep_name);
 
             PM::DependencyKind::Custom(PM::CustomDepInfo {
                 node_url,
                 package_address,
                 package_name,
+                subdir,
             })
         }
 

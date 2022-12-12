@@ -151,11 +151,12 @@ impl PackageHooks for TestHooks {
         info: &CustomDepInfo,
     ) -> anyhow::Result<()> {
         bail!(
-            "TestHooks resolve dep {} = {} {} {}",
+            "TestHooks resolve dep {:?} = {:?} {:?} {:?} {:?}",
             dep_name,
             info.node_url,
             info.package_name,
-            info.package_address
+            info.package_address,
+            info.subdir.to_string_lossy(),
         )
     }
 }

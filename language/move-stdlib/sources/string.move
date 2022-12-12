@@ -85,10 +85,15 @@ module std::string {
         internal_index_of(&s.bytes, &r.bytes)
     }
 
+    /// Returns utf8 formatted string from Move values.
+    public fun fmt_utf8<MoveValue>(v: &MoveValue): String {
+        utf8(internal_fmt_utf8(v))
+    }
 
     // Native API
     native fun internal_check_utf8(v: &vector<u8>): bool;
     native fun internal_is_char_boundary(v: &vector<u8>, i: u64): bool;
     native fun internal_sub_string(v: &vector<u8>, i: u64, j: u64): vector<u8>;
     native fun internal_index_of(v: &vector<u8>, r: &vector<u8>): u64;
+    native fun internal_fmt_utf8<MoveValue>(v: &MoveValue): vector<u8>;
 }

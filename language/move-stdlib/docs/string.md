@@ -18,10 +18,12 @@ The <code><a href="string.md#0x1_string">string</a></code> module defines the <c
 -  [Function `insert`](#0x1_string_insert)
 -  [Function `sub_string`](#0x1_string_sub_string)
 -  [Function `index_of`](#0x1_string_index_of)
+-  [Function `fmt_utf8`](#0x1_string_fmt_utf8)
 -  [Function `internal_check_utf8`](#0x1_string_internal_check_utf8)
 -  [Function `internal_is_char_boundary`](#0x1_string_internal_is_char_boundary)
 -  [Function `internal_sub_string`](#0x1_string_internal_sub_string)
 -  [Function `internal_index_of`](#0x1_string_internal_index_of)
+-  [Function `internal_fmt_utf8`](#0x1_string_internal_fmt_utf8)
 
 
 <pre><code><b>use</b> <a href="option.md#0x1_option">0x1::option</a>;
@@ -354,6 +356,31 @@ Computes the index of the first occurrence of a string. Returns <code><a href="s
 
 </details>
 
+<a name="0x1_string_fmt_utf8"></a>
+
+## Function `fmt_utf8`
+
+Returns utf8 formatted string from Move values.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="string.md#0x1_string_fmt_utf8">fmt_utf8</a>&lt;MoveValue&gt;(v: &MoveValue): <a href="string.md#0x1_string_String">string::String</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="string.md#0x1_string_fmt_utf8">fmt_utf8</a>&lt;MoveValue&gt;(v: &MoveValue): <a href="string.md#0x1_string_String">String</a> {
+    <a href="string.md#0x1_string_utf8">utf8</a>(<a href="string.md#0x1_string_internal_fmt_utf8">internal_fmt_utf8</a>(v))
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_string_internal_check_utf8"></a>
 
 ## Function `internal_check_utf8`
@@ -436,6 +463,28 @@ Computes the index of the first occurrence of a string. Returns <code><a href="s
 
 
 <pre><code><b>native</b> <b>fun</b> <a href="string.md#0x1_string_internal_index_of">internal_index_of</a>(v: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;, r: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;): u64;
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_string_internal_fmt_utf8"></a>
+
+## Function `internal_fmt_utf8`
+
+
+
+<pre><code><b>fun</b> <a href="string.md#0x1_string_internal_fmt_utf8">internal_fmt_utf8</a>&lt;MoveValue&gt;(v: &MoveValue): <a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>native</b> <b>fun</b> <a href="string.md#0x1_string_internal_fmt_utf8">internal_fmt_utf8</a>&lt;MoveValue&gt;(v: &MoveValue): <a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;;
 </code></pre>
 
 

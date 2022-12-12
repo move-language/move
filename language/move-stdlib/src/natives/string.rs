@@ -191,6 +191,40 @@ pub fn make_native_index_of(gas_params: IndexOfGasParameters) -> NativeFunction 
 }
 
 /***************************************************************************************************
+ * native fun internal_fmt_utf8
+ *
+ *   gas cost: base_cost + unit_cost * bytes_to_return
+ *
+ **************************************************************************************************/
+#[derive(Debug, Clone)]
+pub struct FmtUtf8GasParameters {
+    pub base: InternalGas,
+    pub per_byte: InternalGasPerByte,
+}
+
+fn native_fmt_utf8(
+    gas_params: &FmtUtf8GasParameters,
+    _context: &mut NativeContext,
+    _ty_args: Vec<Type>,
+    args: VecDeque<Value>,
+) -> PartialVMResult<NativeResult> {
+    debug_assert!(args.len() == 1);
+
+    let v = Value::vector_u8("string".as_bytes().iter().cloned());
+    let cost = gas_params.base;
+
+    NativeResult::map_partial_vm_result_one(cost, Ok(v))
+}
+
+pub fn make_native_fmt_utf8(gas_params: FmtUtf8GasParameters) -> NativeFunction {
+    Arc::new(
+        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
+            native_fmt_utf8(&gas_params, context, ty_args, args)
+        },
+    )
+}
+
+/***************************************************************************************************
  * module
  **************************************************************************************************/
 #[derive(Debug, Clone)]
@@ -199,6 +233,7 @@ pub struct GasParameters {
     pub is_char_boundary: IsCharBoundaryGasParameters,
     pub sub_string: SubStringGasParameters,
     pub index_of: IndexOfGasParameters,
+    pub fmt_utf8: FmtUtf8GasParameters,
 }
 
 pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
@@ -218,6 +253,10 @@ pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, Nati
         (
             "internal_index_of",
             make_native_index_of(gas_params.index_of),
+        ),
+        (
+            "internal_fmt_utf8",
+            make_native_fmt_utf8(gas_params.fmt_utf8),
         ),
     ];
 

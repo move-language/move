@@ -356,6 +356,20 @@ impl<'a> Instrumenter<'a> {
                 let saved_params = translated_spec.saved_params.clone();
                 self.emit_save_for_old(&saved_params);
             }
+        } else {
+            // The inlined variant may have an inlined spec that used "old" values - these need to
+            // be saved in both cases
+            assert!(
+                verification_analysis::get_info(&FunctionTarget::new(
+                    self.builder.fun_env,
+                    &self.builder.data
+                ))
+                .inlined
+            );
+            for translated_spec in inlined_props.values().map(|(s, _)| s) {
+                let saved_params = translated_spec.saved_params.clone();
+                self.emit_save_for_old(&saved_params);
+            }
         }
 
         // Instrument and generate new code

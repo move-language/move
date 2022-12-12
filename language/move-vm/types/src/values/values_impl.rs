@@ -2616,16 +2616,41 @@ where
     write!(f, "]")
 }
 
+impl Container {
+    fn raw_address(&self) -> usize {
+        use Container::*;
+
+        match self {
+            Locals(r) => r.as_ptr() as usize,
+            Vec(r) => r.as_ptr() as usize,
+            Struct(r) => r.as_ptr() as usize,
+            VecU8(r) => r.as_ptr() as usize,
+            VecU16(r) => r.as_ptr() as usize,
+            VecU32(r) => r.as_ptr() as usize,
+            VecU64(r) => r.as_ptr() as usize,
+            VecU128(r) => r.as_ptr() as usize,
+            VecU256(r) => r.as_ptr() as usize,
+            VecBool(r) => r.as_ptr() as usize,
+            VecAddress(r) => r.as_ptr() as usize,
+        }
+    }
+}
+
+impl Locals {
+    pub fn raw_address(&self) -> usize {
+        self.0.as_ptr() as usize
+    }
+}
+
 impl Display for ContainerRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Local(c) => write!(f, "({}, {})", c.rc_count(), c),
+            Self::Local(c) => write!(f, "(&container {:x})", c.raw_address()),
             Self::Global { status, container } => write!(
                 f,
-                "({:?}, {}, {})",
-                &status.borrow(),
-                container.rc_count(),
-                container
+                "(&container {:x} -- {:?})",
+                container.raw_address(),
+                &*status.borrow(),
             ),
         }
     }
@@ -2633,12 +2658,14 @@ impl Display for ContainerRef {
 
 impl Display for IndexedRef {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}<{}>", self.container_ref, self.idx)
+        write!(f, "{}[{}]", self.container_ref, self.idx)
     }
 }
 
 impl Display for Container {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "(container {:x}: ", self.raw_address())?;
+
         match self {
             Self::Locals(r) | Self::Vec(r) | Self::Struct(r) => {
                 display_list_of_items(r.borrow().iter(), f)
@@ -2651,7 +2678,9 @@ impl Display for Container {
             Self::VecU256(r) => display_list_of_items(r.borrow().iter(), f),
             Self::VecBool(r) => display_list_of_items(r.borrow().iter(), f),
             Self::VecAddress(r) => display_list_of_items(r.borrow().iter(), f),
-        }
+        }?;
+
+        write!(f, ")")
     }
 }
 

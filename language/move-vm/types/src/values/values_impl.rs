@@ -3193,6 +3193,19 @@ impl Value {
 
 /***************************************************************************************
 *
+* Destructors
+*
+**************************************************************************************/
+// Locals may contain reference values that points to the same cotnainer through Rc, hencing forming
+// a cycle. Therefore values need to be manually taken out of the Locals in order to not leak memory.
+impl Drop for Locals {
+    fn drop(&mut self) {
+        _ = self.drop_all_values();
+    }
+}
+
+/***************************************************************************************
+*
 * Views
 *
 **************************************************************************************/

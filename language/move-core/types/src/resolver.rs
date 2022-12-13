@@ -5,6 +5,7 @@
 use crate::{
     account_address::AccountAddress,
     language_storage::{ModuleId, StructTag},
+    vm_status::StatusCode,
 };
 use std::fmt::Debug;
 
@@ -42,6 +43,10 @@ pub trait ResourceResolver {
         address: &AccountAddress,
         typ: &StructTag,
     ) -> Result<Option<Vec<u8>>, Self::Error>;
+
+    fn convert_error(_err: Self::Error) -> StatusCode {
+        StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR
+    }
 }
 
 /// A persistent storage implementation that can resolve both resources and modules

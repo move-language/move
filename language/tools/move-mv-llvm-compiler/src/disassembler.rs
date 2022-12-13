@@ -33,7 +33,7 @@ use llvm_sys::prelude::{
     LLVMModuleRef, LLVMTypeRef, LLVMValueRef,
 };
 use llvm_sys::{
-    core::{LLVMDumpModule, LLVMFunctionType, LLVMModuleCreateWithNameInContext},
+    core::{LLVMDumpModule, LLVMFunctionType, LLVMModuleCreateWithNameInContext, LLVMDumpType},
     target_machine::LLVMCodeGenOptLevel,
 };
 use std::{fs::File, mem::MaybeUninit};
@@ -43,6 +43,9 @@ use crate::{move_bpf_module::MoveBPFModule, support::to_c_str};
 use crate::errors::DisassemblerError;
 
 use std::collections::HashMap;
+
+use std::io::stdout;
+use std::io::Write;
 
 /// Holds the various options that we support while disassembling code.
 #[derive(Debug, Default, Parser)]
@@ -704,8 +707,8 @@ impl<'a> Disassembler<'a> {
 
         let process_struct : bool = true;
         if process_struct {
-            for i in &self.source_mapper.bytecode.struct_defs() {
-                self.process_struct_def(&i[0], &mut move_module);
+            for d in &self.source_mapper.bytecode.struct_defs() {
+                self.process_struct_def(&d[0], &mut move_module);
             }
         }
 

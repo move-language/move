@@ -30,7 +30,7 @@ fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
         anyhow::bail!("move-ir-compiler not built");
     }
 
-    compile_mvir_to_mvbc(&harness_paths, &test_plan)?;
+    //compile_mvir_to_mvbc(&harness_paths, &test_plan)?;
     compile_mvbc_to_llvmir(&harness_paths, &test_plan)?;
     maybe_promote_actual_llvmir_to_expected(&test_plan)?;
     compare_actual_llvmir_to_expected(&test_plan)?;

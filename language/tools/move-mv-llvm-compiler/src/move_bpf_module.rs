@@ -452,9 +452,9 @@ impl<'a> MoveBPFModule<'a> {
             .bytecode
             .identifier_at(struct_handle.name)
             .to_string();
-        let name2 = to_c_str(name.as_str()).as_ptr();
-        let s = unsafe{LLVMStructCreateNamed(*self.context, name2)};
-        unsafe{LLVMAddGlobal(self.module, s, name2)};
+        let name2 = name.as_str();
+        let s = unsafe{LLVMStructCreateNamed(*self.context, to_c_str(name2).as_ptr())};
+        unsafe{LLVMAddGlobal(self.module, s, to_c_str(name2).as_ptr())};
         self.struct_mapper.insert(index, s);
         s
     }

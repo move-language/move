@@ -118,7 +118,7 @@ fn main() {
     let disassembler = Disassembler::new(source_mapping, disassembler_options, llvm_context);
 
     // Disassemble and print llvm ir in a readable format.
-    let dissassemble_string = disassembler.disassemble(false).expect("Unable to dissassemble");
+    let dissassemble_string = disassembler.disassemble().expect("Unable to dissassemble");
 
     if args.output_file_path.eq("-") {
         println!("{}", dissassemble_string);

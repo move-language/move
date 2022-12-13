@@ -630,16 +630,16 @@ impl<'a> Disassembler<'a> {
             None => vec![],
         };
 
-        let llvm_return_type = move_module.llvm_return_type_for(&ret_type);
+        let llvm_return_type = move_module.llvm_type_for_sig_tokens(ret_type);
         // TODO: Account for signedness. Or maybe the signedness is incorporated as part of the use cases.
         let mut llvm_type_parameters =
-            move_module.llvm_signed_type_for_sig_tokens(parameter_list, &type_parameters);
+            move_module.llvm_type_for_sig_tokens(parameter_list.to_vec());
 
         let fn_value = unsafe {
             llvm_sys::core::LLVMAddFunction(
                 move_module.module,
                 to_c_str(name.as_str()).as_ptr(),
-                Self::fn_type(llvm_return_type.llvm_type, &mut llvm_type_parameters, false),
+                Self::fn_type(llvm_return_type[0], &mut llvm_type_parameters, false),
             )
         };
 
@@ -659,59 +659,19 @@ impl<'a> Disassembler<'a> {
         Ok("".to_string())
     }
 
-    pub fn process_struct_member(&self,
-                                 sig: &SignatureToken,
-                                 move_module: &MoveBPFModule,
-                                 struct_map: &mut HashMap<i32,LLVMTypeRef>,
-    ) -> Result<LLVMTypeRef> {
-        match sig {
-            // Recursive case
-            SignatureToken::Struct(idx) =>
-                self.process_struct_handle(&idx, move_module, struct_map),
-            _ => Ok(move_module.llvm_signed_type_for_sig_tok(&sig))
-        }
-    }
-
-    pub fn process_struct_handle(&self,
-                                 struct_handle_idx: &StructHandleIndex,
-                                 move_module: &MoveBPFModule,
-                                 struct_map: &mut HashMap<i32,LLVMTypeRef>,
-    ) -> Result<LLVMTypeRef> {
-        let index = struct_handle_idx.0 as i32;
-        match struct_map.get(&index) {
-            Some(x) => return Ok(*x),
-            None => (),
-        };
-        let struct_handle = self
-            .source_mapper
-            .bytecode
-            .struct_handle_at(*struct_handle_idx);
-        let name = self
-            .source_mapper
-            .bytecode
-            .identifier_at(struct_handle.name)
-            .to_string();
-        let llvm_struct = move_module.llvm_named_struct(&name);
-        struct_map.insert(index, llvm_struct);
-        Ok(llvm_struct)
-    }
-
     pub fn process_struct_def(&self,
                               struct_def: &StructDefinition,
-                              move_module: &MoveBPFModule,
-                              struct_map: &mut HashMap<i32,LLVMTypeRef>,
+                              move_module: &mut MoveBPFModule,
     ) -> Result<LLVMTypeRef> {
-        let llvm_struct = self.process_struct_handle(&struct_def.struct_handle, move_module, struct_map)?;
-        // Add members
+        let llvm_struct = move_module.llvm_struct_from_index(&struct_def.struct_handle);
         let mut llvm_elem_types : Vec<LLVMTypeRef> = Vec::new();
         match &struct_def.field_information {
             StructFieldInformation::Native => return Ok(llvm_struct),
             StructFieldInformation::Declared(fields) => Some(
                 for field_definition in fields {
-                    match self.process_struct_member(&field_definition.signature.0, move_module, struct_map) {
-                        Ok(x) => llvm_elem_types.push(x),
-                        _ => (),
-                    }}),
+                    let x = move_module.llvm_type_for_sig_tok(&field_definition.signature.0);
+                    llvm_elem_types.push(x);
+                }),
         };
         move_module.llvm_set_struct_body(llvm_struct, &mut llvm_elem_types);
         Ok(llvm_struct)
@@ -747,13 +707,12 @@ impl<'a> Disassembler<'a> {
 
         let bc_file = File::create(&llvm_module_name).unwrap();
         let opt = LLVMCodeGenOptLevel::LLVMCodeGenLevelNone; // TODO: Add optimization based on command line flag.
-        let mut move_module = MoveBPFModule::new(&self.llvm_context, &header, &*llvm_module_name, opt);
+        let mut move_module = MoveBPFModule::new(&self.llvm_context, &header, &*llvm_module_name, opt, &self.source_mapper);
 
-        let mut struct_map: HashMap<i32,LLVMTypeRef> = HashMap::new();
-        let process_struct : bool = false;
+        let process_struct : bool = true;
         if process_struct {
             for i in &self.source_mapper.bytecode.struct_defs() {
-                self.process_struct_def(&i[0], &move_module, &mut struct_map);
+                self.process_struct_def(&i[0], &mut move_module);
             }
         }
 

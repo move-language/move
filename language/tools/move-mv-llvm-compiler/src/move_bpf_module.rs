@@ -15,6 +15,7 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
+use std::collections::HashMap;
 
 use move_binary_format::{
     binary_views::BinaryIndexedView,
@@ -23,11 +24,13 @@ use move_binary_format::{
         Ability, AbilitySet, Bytecode, CodeUnit, FieldHandleIndex, FunctionDefinition,
         FunctionDefinitionIndex, FunctionHandle, Signature, SignatureIndex, SignatureToken,
         StructDefinition, StructDefinitionIndex, StructFieldInformation, StructTypeParameter,
-        TableIndex, TypeSignature, Visibility,
+        TableIndex, TypeSignature, Visibility, StructHandleIndex,
     },
 };
-
-use move_bytecode_source_map::source_map::SourceName;
+use move_bytecode_source_map::{
+    mapping::SourceMapping,
+    source_map::{FunctionSourceMap, SourceName},
+};
 use once_cell::sync::OnceCell;
 
 static LLVM_INIT: OnceCell<()> = OnceCell::new();
@@ -73,20 +76,6 @@ impl Default for InitializationConfig {
             info: true,
             machine_code: true,
         }
-    }
-}
-
-/// Since LLVM types do not have signs, the signedness is encoded in the operations like udiv etc.
-/// It becomes very hard to work with this setup at a higher level so we need to keep the signedness
-/// along with the type.
-pub struct LLVMSignedType {
-    pub llvm_type : LLVMTypeRef,
-    pub is_signed : bool // True = signed, False = unsigned
-}
-
-impl LLVMSignedType {
-    pub(crate) fn new(t : LLVMTypeRef, s : bool) -> LLVMSignedType {
-        LLVMSignedType { llvm_type : t, is_signed : s }
     }
 }
 
@@ -145,6 +134,8 @@ pub struct MoveBPFModule<'a> {
     pub di_compile_unit: DICompileUnit<'a>,
     pub(crate) context: &'a LLVMContextRef,
     pub(crate) opt: LLVMCodeGenOptLevel,
+    source_mapper: &'a SourceMapping<'a>,
+    struct_mapper: HashMap<i32,LLVMTypeRef>,
 }
 
 impl<'a> MoveBPFModule<'a> {
@@ -255,6 +246,7 @@ impl<'a> MoveBPFModule<'a> {
         name: &str,
         filename: &str,
         opt: LLVMCodeGenOptLevel,
+        source_mapper: &'a SourceMapping,
     ) -> Self {
         LLVM_INIT.get_or_init(|| {
             Self::initialize_bpf(&InitializationConfig::default());
@@ -357,6 +349,8 @@ impl<'a> MoveBPFModule<'a> {
         unsafe { LLVMSetTarget(module, triple.as_ptr()) }
         Self::set_source_file_name(module, filename);
 
+        let struct_mapper: HashMap<i32,LLVMTypeRef> = HashMap::new();
+
         MoveBPFModule {
             name: name.to_owned(),
             module,
@@ -365,38 +359,24 @@ impl<'a> MoveBPFModule<'a> {
             di_compile_unit,
             context,
             opt,
+            source_mapper,
+            struct_mapper,
         }
     }
 
-    pub(crate) fn llvm_signed_type_for_sig_tok(&self, parameters: &SignatureToken) -> LLVMTypeRef {
-        match parameters {
-            SignatureToken::Bool => unsafe{LLVMInt1TypeInContext(*self.context)},
-            SignatureToken::U8 => unsafe{LLVMInt8TypeInContext(*self.context)}, // FIXME: In llvm signedness is achieved with `cast` operation.
-            SignatureToken::U64 => unsafe{LLVMInt64TypeInContext(*self.context)}, // FIXME: The signedness
-            _ => unimplemented!("Remaining Signature tokens to be implemented"),
-        }
-    }
-    pub fn llvm_signed_type_for_sig_tokens(&self, parameters: &Vec<SignatureToken>, _type_parameters: &[AbilitySet]) -> Vec<LLVMTypeRef> {
-        // TODO: What is the purpose of ability set?
-        let mut vec = Vec::new();
-        for v in parameters {
-            vec.push(self.llvm_signed_type_for_sig_tok(&v));
-        }
-        return vec;
-    }
-
-    pub(crate) fn llvm_type_for_sig_tok(&self, sig_tok: &SignatureToken, _type_parameters: &[AbilitySet]) -> LLVMSignedType {
+    pub fn llvm_type_for_sig_tok(&mut self, sig_tok: &SignatureToken) -> LLVMTypeRef {
         match sig_tok {
-            SignatureToken::Bool => LLVMSignedType::new(unsafe{LLVMInt1TypeInContext(*self.context)}, false),
-            SignatureToken::U8 => LLVMSignedType::new(unsafe{LLVMInt8TypeInContext(*self.context)}, true), // FIXME: In llvm signedness is achieved with `cast` operation.
-            SignatureToken::U64 => LLVMSignedType::new(unsafe{LLVMInt64TypeInContext(*self.context)}, true), // FIXME: The signedness
+            SignatureToken::Bool => unsafe{LLVMInt1TypeInContext(*self.context)},
+            SignatureToken::U8 => unsafe{LLVMInt8TypeInContext(*self.context)},
+            SignatureToken::U64 => unsafe{LLVMInt64TypeInContext(*self.context)},
+            SignatureToken::Struct(idx) => self.llvm_struct_from_index(idx),
             _ => unimplemented!("Remaining Signature tokens to be implemented"),
         }
     }
-    pub fn llvm_type_for_sig_tokens(&self, sig_tokens: Vec<SignatureToken>, type_parameters: &[AbilitySet],) -> Vec<LLVMSignedType> {
+    pub fn llvm_type_for_sig_tokens(&mut self, sig_tokens: Vec<SignatureToken>) -> Vec<LLVMTypeRef> {
         let mut vec = Vec::new();
         for v in sig_tokens {
-            vec.push(self.llvm_type_for_sig_tok(&v, type_parameters));
+            vec.push(self.llvm_type_for_sig_tok(&v));
         }
         return vec;
     }
@@ -456,18 +436,25 @@ impl<'a> MoveBPFModule<'a> {
             }
      }  ;
     }
-    pub fn llvm_return_type_for(&self, ret_type : &Vec<SignatureToken>) -> LLVMSignedType {
-        match ret_type[0] {
-            SignatureToken::Bool => LLVMSignedType::new(unsafe{LLVMInt1TypeInContext(*self.context)}, false),
-            SignatureToken::U8 => LLVMSignedType::new(unsafe{LLVMInt8TypeInContext(*self.context)}, true), // FIXME: In llvm signedness is achieved with `cast` operation.
-            SignatureToken::U64 => LLVMSignedType::new(unsafe{LLVMInt64TypeInContext(*self.context)}, true), // FIXME: The signedness
-            _ => unimplemented!("Remaining Signature tokens to be implemented"),
-        }
-    }
-
-    pub fn llvm_named_struct(&self, name: &std::string::String) -> LLVMTypeRef {
-        let s = unsafe{LLVMStructCreateNamed(*self.context, to_c_str(name).as_ptr())};
-        unsafe{LLVMAddGlobal(self.module, s, to_c_str(name).as_ptr())};
+    pub fn llvm_struct_from_index(&mut self, struct_handle_idx: &StructHandleIndex) -> LLVMTypeRef {
+        let index = struct_handle_idx.0 as i32;
+        match self.struct_mapper.get(&index) {
+            Some(x) => return *x,
+            None => (),
+        };
+        let struct_handle = self
+            .source_mapper
+            .bytecode
+            .struct_handle_at(*struct_handle_idx);
+        let name = self
+            .source_mapper
+            .bytecode
+            .identifier_at(struct_handle.name)
+            .to_string();
+        let name2 = to_c_str(name.as_str()).as_ptr();
+        let s = unsafe{LLVMStructCreateNamed(*self.context, name2)};
+        unsafe{LLVMAddGlobal(self.module, s, name2)};
+        self.struct_mapper.insert(index, s);
         s
     }
 

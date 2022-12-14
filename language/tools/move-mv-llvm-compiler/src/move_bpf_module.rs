@@ -1,4 +1,4 @@
-use llvm_sys::core::{LLVMInt1TypeInContext, LLVMInt8TypeInContext, LLVMInt64TypeInContext, LLVMModuleCreateWithNameInContext, LLVMAddModuleFlag, LLVMConstInt, LLVMCreateBuilderInContext, LLVMSetTarget, LLVMAppendBasicBlockInContext, LLVMGetNextBasicBlock, LLVMInsertBasicBlockInContext, LLVMGetBasicBlockParent, LLVMPositionBuilderAtEnd, LLVMBuildRetVoid, LLVMBuildRet, LLVMGetTypeKind, LLVMTypeOf, LLVMInt64Type, LLVMStructCreateNamed, LLVMAddGlobal, LLVMStructSetBody};
+use llvm_sys::core::{LLVMInt1TypeInContext, LLVMInt8TypeInContext, LLVMInt64TypeInContext, LLVMModuleCreateWithNameInContext, LLVMAddModuleFlag, LLVMConstInt, LLVMCreateBuilderInContext, LLVMSetTarget, LLVMAppendBasicBlockInContext, LLVMGetNextBasicBlock, LLVMInsertBasicBlockInContext, LLVMGetBasicBlockParent, LLVMPositionBuilderAtEnd, LLVMBuildRetVoid, LLVMBuildRet, LLVMGetTypeKind, LLVMTypeOf, LLVMInt64Type, LLVMStructCreateNamed, LLVMAddGlobal, LLVMStructSetBody, LLVMPointerType};
 
 use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef, LLVMValueRef, LLVMMetadataRef, LLVMModuleRef, LLVMDIBuilderRef, LLVMTypeRef, LLVMBasicBlockRef};
 use llvm_sys::target_machine::{LLVMCodeGenOptLevel, LLVMCodeModel, LLVMTargetMachineRef, LLVMCreateTargetMachine, LLVMTargetRef, LLVMRelocMode, LLVMGetTargetFromName};
@@ -133,11 +133,12 @@ pub struct MoveBPFModule<'a> {
     pub builder: LLVMBuilderRef,
     pub dibuilder: LLVMDIBuilderRef,
     pub di_compile_unit: DICompileUnit<'a>,
-    pub(crate) context: &'a LLVMContextRef,
-    pub(crate) opt: LLVMCodeGenOptLevel,
-    source_mapper: &'a SourceMapping<'a>,
-    struct_mapper: HashMap<i32,LLVMTypeRef>,
-    address_type: LLVMTypeRef,
+    pub context: &'a LLVMContextRef,
+    pub opt: LLVMCodeGenOptLevel,
+    pub source_mapper: &'a SourceMapping<'a>,
+    pub struct_mapper: HashMap<i32,LLVMTypeRef>,
+    pub address_type: LLVMTypeRef,
+    pub signer_type: LLVMTypeRef,
 }
 
 impl<'a> MoveBPFModule<'a> {
@@ -354,7 +355,8 @@ impl<'a> MoveBPFModule<'a> {
         let struct_mapper: HashMap<i32,LLVMTypeRef> = HashMap::new();
 
         let address_type = unsafe{LLVMStructCreateNamed(*context, to_c_str("address").as_ptr())};
-        
+        let signer_type = unsafe{LLVMStructCreateNamed(*context, to_c_str("signer").as_ptr())};
+
         MoveBPFModule {
             name: name.to_owned(),
             module: module,
@@ -366,6 +368,7 @@ impl<'a> MoveBPFModule<'a> {
             source_mapper: source_mapper,
             struct_mapper: struct_mapper,
             address_type: address_type,
+            signer_type: signer_type
         }
     }
 
@@ -376,6 +379,9 @@ impl<'a> MoveBPFModule<'a> {
             SignatureToken::U64 => unsafe{LLVMInt64TypeInContext(*self.context)},
             SignatureToken::Struct(idx) => self.llvm_struct_from_index(idx),
             SignatureToken::Address => self.address_type,
+            SignatureToken::Signer => self.signer_type,
+            SignatureToken::Reference(inner) =>
+                unsafe{LLVMPointerType(self.llvm_type_for_sig_tok(&**inner), 0)}
             _ => unimplemented!("Remaining Signature tokens to be implemented"),
         }
     }

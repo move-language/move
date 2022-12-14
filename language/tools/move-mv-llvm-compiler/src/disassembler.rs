@@ -678,7 +678,7 @@ impl<'a> Disassembler<'a> {
         Ok(llvm_struct)
     }
 
-    pub fn disassemble(&self, output_file_name: &String, bitcode_or_ir: bool) -> Result<String> {
+    pub fn disassemble(&self, output_file_name: &String, llvm_ir: bool) -> Result<String> {
         let name_opt = self.source_mapper.source_map.module_name_opt.as_ref();
         let name = name_opt.map(|(addr, n)| format!("{}.{}", addr.short_str_lossless(), n));
         let version = format!("{}", self.source_mapper.bytecode.version());
@@ -753,29 +753,29 @@ impl<'a> Disassembler<'a> {
                 })
                 .collect::<Result<Vec<String>>>()?,
         };
-        self.llvm_write_to_file(move_module, bitcode_or_ir, output_file_name);
+        self.llvm_write_to_file(move_module, llvm_ir, output_file_name);
         Ok(format!("Good"))
     }
 
-    pub fn llvm_write_to_file(&self, move_module: MoveBPFModule, bitcode_or_ir: bool, output_file_name: &String) {
+    pub fn llvm_write_to_file(&self, move_module: MoveBPFModule, llvm_ir: bool, output_file_name: &String) {
         use llvm_sys::bit_writer::LLVMWriteBitcodeToFD;
         use llvm_sys::core::LLVMPrintModuleToFile;
         use std::os::unix::io::AsRawFd;
 
         unsafe {
-            if bitcode_or_ir {
+            if llvm_ir {
+                let mut err_string = MaybeUninit::uninit();
+                LLVMPrintModuleToFile(move_module.module,
+                    to_c_str(&output_file_name).as_ptr(),
+                    err_string.as_mut_ptr(),
+                );
+            } else {
                 let bc_file = File::create(&output_file_name).unwrap();
                 LLVMWriteBitcodeToFD(
                     move_module.module,
                     bc_file.as_raw_fd(),
                     true as i32,
                     true as i32,
-                );
-            } else {
-                let mut err_string = MaybeUninit::uninit();
-                LLVMPrintModuleToFile(move_module.module,
-                    to_c_str(&output_file_name).as_ptr(),
-                    err_string.as_mut_ptr(),
                 );
             }
         }

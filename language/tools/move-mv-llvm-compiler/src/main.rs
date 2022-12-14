@@ -51,7 +51,7 @@ struct Args {
 
     /// Output llvm bitcode in a human readable text format.
     #[clap(short = 'S')]
-    pub bitcode_in_text: bool,
+    pub llvm_ir: bool,
 }
 
 fn main() {
@@ -118,5 +118,5 @@ fn main() {
     let disassembler = Disassembler::new(source_mapping, disassembler_options, llvm_context);
 
     // Disassemble and print llvm ir in a readable format.
-    disassembler.disassemble(&args.output_file_path, false).expect("Unable to dissassemble");
+    disassembler.disassemble(&args.output_file_path, args.llvm_ir).expect("Unable to dissassemble");
 }

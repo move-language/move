@@ -40,8 +40,8 @@ This will generate `a.mv` file in the current directory. We use `a.mv` file for 
 # Build move-mv-llvm-compiler
 $ cd $MOVE_HOME/language/tools/move-mv-llvm-compiler/ && cargo build
 
-# Generate llvm bitcode file from move bytecode
-$ $MOVE_HOME/target/debug/move-mv-llvm-compiler -b a.mv
+# Generate llvm IR file from move bytecode
+$ $MOVE_HOME/target/debug/move-mv-llvm-compiler -b a.mv -S -o a.ll
 
 # Generate readable llvm bitcode file from binary representation
 $ llvm-project/build/bin/opt -S 3d10.Example.bc

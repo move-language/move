@@ -450,6 +450,7 @@ pub(crate) struct Loader {
     scripts: RwLock<ScriptCache>,
     module_cache: RwLock<ModuleCache>,
     type_cache: RwLock<TypeCache>,
+    instantiation_cache: RwLock<HashMap<Type, HashMap<Vec<Type>, Type>>>,
     natives: NativeFunctions,
 
     // The below field supports a hack to workaround well-known issues with the
@@ -499,6 +500,7 @@ impl Loader {
             scripts: RwLock::new(ScriptCache::new()),
             module_cache: RwLock::new(ModuleCache::new()),
             type_cache: RwLock::new(TypeCache::new()),
+            instantiation_cache: RwLock::new(HashMap::new()),
             natives,
             invalidated: RwLock::new(false),
             module_cache_hits: RwLock::new(BTreeSet::new()),
@@ -1221,6 +1223,29 @@ impl Loader {
         Ok(())
     }
 
+    fn subst(&self, type_: &Type, ty_args: &[Type]) -> PartialVMResult<Type> {
+        match self.instantiation_cache.read().get(type_) {
+            None => (),
+            Some(map) => match map.get(ty_args) {
+                None => (),
+                Some(instantiation) => return Ok(instantiation.clone()),
+            },
+        }
+        let instantiation = type_.subst(ty_args)?;
+        let mut lock = self.instantiation_cache.write();
+        match lock.get_mut(type_) {
+            None => {
+                let mut map = HashMap::<Vec<Type>, Type>::new();
+                map.insert(ty_args.to_vec(), instantiation.clone());
+                lock.insert(type_.clone(), map);
+            }
+            Some(map) => {
+                map.insert(ty_args.to_vec(), instantiation.clone());
+            }
+        };
+        Ok(instantiation)
+    }
+
     // Verify the kind (constraints) of an instantiation.
     // Both function and script invocation use this function to verify correctness
     // of type arguments provided
@@ -1389,7 +1414,7 @@ impl<'a> Resolver<'a> {
         };
         let mut instantiation = vec![];
         for ty in &func_inst.instantiation {
-            instantiation.push(ty.subst(type_params)?);
+            instantiation.push(self.subst(ty, type_params)?);
         }
         Ok(instantiation)
     }
@@ -1460,7 +1485,7 @@ impl<'a> Resolver<'a> {
             struct_inst
                 .instantiation
                 .iter()
-                .map(|ty| ty.subst(ty_args))
+                .map(|ty| self.subst(ty, ty_args))
                 .collect::<PartialVMResult<_>>()?,
         ))
     }
@@ -1511,7 +1536,11 @@ impl<'a> Resolver<'a> {
         ty_args: &[Type],
     ) -> PartialVMResult<Type> {
         let ty = self.single_type_at(idx);
-        ty.subst(ty_args)
+        self.subst(ty, ty_args)
+    }
+
+    pub(crate) fn subst(&self, ty: &Type, ty_args: &[Type]) -> PartialVMResult<Type> {
+        self.loader.subst(ty, ty_args)
     }
 
     //
@@ -2455,7 +2484,7 @@ impl Loader {
         let field_tys = struct_type
             .fields
             .iter()
-            .map(|ty| ty.subst(ty_args))
+            .map(|ty| self.subst(ty, ty_args))
             .collect::<PartialVMResult<Vec<_>>>()?;
         let field_layouts = field_tys
             .iter()
@@ -2588,7 +2617,7 @@ impl Loader {
             .iter()
             .zip(&struct_type.fields)
             .map(|(n, ty)| {
-                let ty = ty.subst(ty_args)?;
+                let ty = self.subst(ty, ty_args)?;
                 let l = self.type_to_fully_annotated_layout_impl(&ty, count, depth + 1)?;
                 Ok(MoveFieldLayout::new(n.clone(), l))
             })

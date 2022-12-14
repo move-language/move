@@ -359,7 +359,7 @@ impl Interpreter {
             if self.runtime_config.paranoid_type_checks {
                 let expected_ty = resolver
                     .resolve_signature_token(&func.local_types()[arg_count - i - 1])
-                    .and_then(|ty| ty.subst(&ty_args))
+                    .and_then(|ty| resolver.subst(&ty, &ty_args))
                     .map_err(|e| match func.module_id() {
                         Some(id) => e
                             .at_code_offset(func.index(), 0)
@@ -470,7 +470,9 @@ impl Interpreter {
                 );
             }
             for (value, sig) in return_values.into_iter().zip(function.return_types()) {
-                value.add_runtime_type(&resolver.resolve_signature_token(sig)?.subst(&ty_args)?)?;
+                value.add_runtime_type(
+                    &resolver.subst(&resolver.resolve_signature_token(sig)?, &ty_args)?,
+                )?;
                 self.operand_stack.push(value)?;
             }
         } else {

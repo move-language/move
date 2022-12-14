@@ -137,6 +137,7 @@ pub struct MoveBPFModule<'a> {
     pub(crate) opt: LLVMCodeGenOptLevel,
     source_mapper: &'a SourceMapping<'a>,
     struct_mapper: HashMap<i32,LLVMTypeRef>,
+    address_type: LLVMTypeRef,
 }
 
 impl<'a> MoveBPFModule<'a> {
@@ -352,16 +353,19 @@ impl<'a> MoveBPFModule<'a> {
 
         let struct_mapper: HashMap<i32,LLVMTypeRef> = HashMap::new();
 
+        let address_type = unsafe{LLVMStructCreateNamed(*context, to_c_str("address").as_ptr())};
+        
         MoveBPFModule {
             name: name.to_owned(),
-            module,
-            builder,
-            dibuilder,
-            di_compile_unit,
-            context,
-            opt,
-            source_mapper,
-            struct_mapper,
+            module: module,
+            builder: builder,
+            dibuilder: dibuilder,
+            di_compile_unit: di_compile_unit,
+            context: context,
+            opt: opt,
+            source_mapper: source_mapper,
+            struct_mapper: struct_mapper,
+            address_type: address_type,
         }
     }
 
@@ -371,6 +375,7 @@ impl<'a> MoveBPFModule<'a> {
             SignatureToken::U8 => unsafe{LLVMInt8TypeInContext(*self.context)},
             SignatureToken::U64 => unsafe{LLVMInt64TypeInContext(*self.context)},
             SignatureToken::Struct(idx) => self.llvm_struct_from_index(idx),
+            SignatureToken::Address => self.address_type,
             _ => unimplemented!("Remaining Signature tokens to be implemented"),
         }
     }

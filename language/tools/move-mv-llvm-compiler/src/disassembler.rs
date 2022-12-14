@@ -454,7 +454,7 @@ impl<'a> Disassembler<'a> {
         match instruction {
             Bytecode::Ret => Ok("Ret".to_string()),
             Bytecode::LdU64(a) => Ok(format!("LdU64({})", a)),
-            x => Err(anyhow!(format!("Unhandled move instruction: {:#?}", x))),
+            x => Ok("".to_string()),
         }
     }
 
@@ -628,8 +628,10 @@ impl<'a> Disassembler<'a> {
             None => vec![],
         };
 
-        let llvm_return_type = move_module.llvm_type_for_sig_tokens(ret_type);
-        // TODO: Account for signedness. Or maybe the signedness is incorporated as part of the use cases.
+        let llvm_type_returns = move_module.llvm_type_for_sig_tokens(ret_type);
+        let llvm_type_return = (
+            if llvm_type_returns.len() > 0 { llvm_type_returns[0] }
+            else { unsafe{llvm_sys::core::LLVMVoidType()} });
         let mut llvm_type_parameters =
             move_module.llvm_type_for_sig_tokens(parameter_list.to_vec());
 
@@ -637,7 +639,7 @@ impl<'a> Disassembler<'a> {
             llvm_sys::core::LLVMAddFunction(
                 move_module.module,
                 to_c_str(name.as_str()).as_ptr(),
-                Self::fn_type(llvm_return_type[0], &mut llvm_type_parameters, false),
+                Self::fn_type(llvm_type_return, &mut llvm_type_parameters, false),
             )
         };
 

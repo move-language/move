@@ -658,9 +658,10 @@ impl<'a> Disassembler<'a> {
     }
 
     pub fn process_struct_def(&self,
-                              struct_def: &StructDefinition,
+                              struct_def_idx: StructDefinitionIndex,
                               move_module: &mut MoveBPFModule,
     ) -> Result<LLVMTypeRef> {
+        let struct_def = self.get_struct_def(struct_def_idx)?;
         let llvm_struct = move_module.llvm_struct_from_index(&struct_def.struct_handle);
         let mut llvm_elem_types : Vec<LLVMTypeRef> = Vec::new();
         match &struct_def.field_information {
@@ -707,9 +708,9 @@ impl<'a> Disassembler<'a> {
 
         let process_struct : bool = true;
         if process_struct {
-            for d in &self.source_mapper.bytecode.struct_defs() {
-                self.process_struct_def(&d[0], &mut move_module);
-            }
+            (0 .. self.source_mapper.bytecode.struct_defs().map_or(0, |d| d.len()))
+                .map(|i| self.process_struct_def(StructDefinitionIndex(i as TableIndex), &mut move_module))
+                .collect::<Vec<Result<LLVMTypeRef>>>();
         }
 
         let function_defs: Vec<String> = match self.source_mapper.bytecode {

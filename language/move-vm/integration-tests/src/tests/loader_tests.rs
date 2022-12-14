@@ -9,12 +9,13 @@ use move_binary_format::{
     },
     CompiledModule,
 };
+use move_bytecode_verifier::VerifierConfig;
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
 };
-use move_vm_runtime::move_vm::MoveVM;
+use move_vm_runtime::{config::VMConfig, move_vm::MoveVM};
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas::UnmeteredGasMeter;
 
@@ -53,17 +54,31 @@ impl Adapter {
                 Identifier::new("just_c").unwrap(),
             ),
         ];
+        let config = VMConfig {
+            verifier: VerifierConfig {
+                max_dependency_depth: Some(100),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
         Self {
             store,
-            vm: Arc::new(MoveVM::new(vec![]).unwrap()),
+            vm: Arc::new(MoveVM::new_with_config(vec![], config).unwrap()),
             functions,
         }
     }
 
     fn fresh(self) -> Self {
+        let config = VMConfig {
+            verifier: VerifierConfig {
+                max_dependency_depth: Some(100),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
         Self {
             store: self.store,
-            vm: Arc::new(MoveVM::new(vec![]).unwrap()),
+            vm: Arc::new(MoveVM::new_with_config(vec![], config).unwrap()),
             functions: self.functions,
         }
     }

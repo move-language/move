@@ -1,36 +1,26 @@
-use llvm_sys::core::{LLVMInt1TypeInContext, LLVMInt8TypeInContext, LLVMInt64TypeInContext, LLVMModuleCreateWithNameInContext, LLVMAddModuleFlag, LLVMConstInt, LLVMCreateBuilderInContext, LLVMSetTarget, LLVMAppendBasicBlockInContext, LLVMGetNextBasicBlock, LLVMInsertBasicBlockInContext, LLVMGetBasicBlockParent, LLVMPositionBuilderAtEnd, LLVMBuildRetVoid, LLVMBuildRet, LLVMGetTypeKind, LLVMTypeOf, LLVMInt64Type, LLVMStructCreateNamed, LLVMAddGlobal, LLVMStructSetBody, LLVMPointerType, LLVMVoidType, LLVMStructTypeInContext, LLVMIsOpaqueStruct};
+use llvm_sys::core::{LLVMInt1TypeInContext, LLVMInt8TypeInContext, LLVMInt64TypeInContext, LLVMModuleCreateWithNameInContext, LLVMAddModuleFlag, LLVMConstInt, LLVMCreateBuilderInContext, LLVMSetTarget, LLVMAppendBasicBlockInContext, LLVMGetNextBasicBlock, LLVMInsertBasicBlockInContext, LLVMGetBasicBlockParent, LLVMPositionBuilderAtEnd, LLVMBuildRetVoid, LLVMBuildRet, LLVMGetTypeKind, LLVMTypeOf, LLVMStructCreateNamed, LLVMStructSetBody, LLVMPointerType, LLVMVoidType, LLVMStructTypeInContext, LLVMIsOpaqueStruct};
 
 use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef, LLVMValueRef, LLVMMetadataRef, LLVMModuleRef, LLVMDIBuilderRef, LLVMTypeRef, LLVMBasicBlockRef};
 use llvm_sys::target_machine::{LLVMCodeGenOptLevel, LLVMCodeModel, LLVMTargetMachineRef, LLVMCreateTargetMachine, LLVMTargetRef, LLVMRelocMode, LLVMGetTargetFromName};
 use llvm_sys::{LLVMModuleFlagBehavior, LLVMTypeKind};
-use llvm_sys::debuginfo::{LLVMDWARFEmissionKind, LLVMDWARFSourceLanguage, LLVMDIBuilderCreateCompileUnit, LLVMCreateDIBuilder, LLVMCreateDIBuilderDisallowUnresolved, LLVMDIBuilderCreateFile};
+use llvm_sys::debuginfo::{LLVMCreateDIBuilder, LLVMDIBuilderCreateFile};
 
 use crate::support::{to_c_str, LLVMString};
-use std::any::Any;
-use std::borrow::Cow;
-use std::error::Error;
-use std::ffi::{CStr, CString};
-use std::fmt::{self, Debug, Display, Formatter};
+use std::ffi::CStr;
+use std::fmt::{self, Debug};
 use std::marker::PhantomData;
-use std::ops::Deref;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::{fs::File, mem::MaybeUninit};
 
 use move_binary_format::{
-    binary_views::BinaryIndexedView,
-    control_flow_graph::{ControlFlowGraph, VMControlFlowGraph},
     file_format::{
-        Ability, AbilitySet, Bytecode, CodeUnit, FieldHandleIndex, FunctionDefinition,
-        FunctionDefinitionIndex, FunctionHandle, Signature, SignatureIndex, SignatureToken,
-        StructDefinition, StructDefinitionIndex, StructFieldInformation, StructTypeParameter,
-        TableIndex, TypeSignature, Visibility, StructHandleIndex, TypeParameterIndex,
+        SignatureToken, StructHandleIndex, TypeParameterIndex,
     },
 };
 use move_bytecode_source_map::{
     mapping::SourceMapping,
-    source_map::{FunctionSourceMap, SourceName},
 };
 use once_cell::sync::OnceCell;
 
@@ -88,10 +78,6 @@ pub struct TargetTriple {
 }
 
 impl TargetTriple {
-    pub(crate) fn new(triple: LLVMString) -> TargetTriple {
-        TargetTriple { triple }
-    }
-
     pub fn create(triple: &str) -> TargetTriple {
         let c_string = to_c_str(triple);
 
@@ -291,65 +277,12 @@ impl<'a> MoveBPFModule<'a> {
             )
         };
 
-        let producer = "Move";
-        let is_optimized = false;
-        let flags = "";
-        let runtime_ver = 0;
-        let split_name = "";
-        let kind = LLVMDWARFEmissionKind::LLVMDWARFEmissionKindFull;
-        let dwo_id = 0;
-        let split_debug_inlining= false;
-        let debug_info_for_profiling= false;
-        let sysroot = "";
-        let sdk = "";
-
-        let di_compile_unit = unsafe { LLVMDIBuilderCreateCompileUnit(
-            dibuilder,
-            LLVMDWARFSourceLanguage::LLVMDWARFSourceLanguageC,
-            file_metadata_ref,
-            producer.as_ptr() as _,
-            producer.len(),
-            is_optimized as _,
-            flags.as_ptr() as _,
-            flags.len(),
-            runtime_ver,
-            split_name.as_ptr() as _,
-            split_name.len(),
-            kind.into(),
-            dwo_id,
-            split_debug_inlining as _,
-            debug_info_for_profiling as _,
-            sysroot.as_ptr() as _,
-            sysroot.len(),
-            sdk.as_ptr() as _,
-            sdk.len(),
-        ) };
-
         let di_compile_unit = DICompileUnit {
             file: DIFile { metadata_ref: file_metadata_ref, _marker: PhantomData},
             metadata_ref: file_metadata_ref,
             _marker: PhantomData,
         };
 
-        /*let (dibuilder, di_compile_unit) = module.create_debug_info_builder(
-            true,
-            LLVMDWARFSourceLanguage::LLVMDWARFSourceLanguageC,
-            filename,
-            ".",
-            "Move",
-            false,
-            "",
-            0,
-            "",
-            LLVMDWARFEmissionKind::LLVMDWARFEmissionKindFull,
-            0,
-            false,
-            false,
-            "",
-            "",
-        );*/
-
-        // module.set_triple(&triple);
         unsafe { LLVMSetTarget(module, triple.as_ptr()) }
         Self::set_source_file_name(module, filename);
 
@@ -459,7 +392,7 @@ impl<'a> MoveBPFModule<'a> {
         unsafe {
             match LLVMGetTypeKind(LLVMTypeOf(value)) {
                 LLVMTypeKind::LLVMVoidTypeKind => LLVMBuildRetVoid(self.builder),
-                default => LLVMBuildRet(self.builder, value)
+                _ => LLVMBuildRet(self.builder, value)
             }
      }  ;
     }
@@ -480,7 +413,6 @@ impl<'a> MoveBPFModule<'a> {
             .to_string();
         let name2 = name.as_str();
         let s = unsafe{LLVMStructCreateNamed(*self.context, to_c_str(name2).as_ptr())};
-        unsafe{LLVMAddGlobal(self.module, s, to_c_str(name2).as_ptr())};
         self.struct_mapper.insert(index, s);
         s
     }

@@ -13,7 +13,7 @@ use move_bytecode_source_map::{mapping::SourceMapping, utils::source_map_from_fi
 use move_command_line_common::files::{
     MOVE_COMPILED_EXTENSION, MOVE_EXTENSION, SOURCE_MAP_EXTENSION,
 };
-use move_mv_llvm_compiler::disassembler::{Disassembler, DisassemblerOptions};
+use move_mv_llvm_compiler::disassembler::{Disassembler};
 use move_ir_types::location::Spanned;
 use std::{fs, path::Path};
 use llvm_sys::core::LLVMContextCreate;
@@ -81,13 +81,6 @@ fn main() {
         &Path::new(&args.bytecode_file_path).with_extension(source_map_extension),
     );
 
-    let mut disassembler_options = DisassemblerOptions::new();
-    disassembler_options.print_code = !args.skip_code;
-    disassembler_options.only_externally_visible = args.skip_private;
-    disassembler_options.print_basic_blocks = !args.skip_basic_blocks;
-    disassembler_options.print_locals = !args.skip_locals;
-
-    // TODO: make source mapping work with the Move source language
     let no_loc = Spanned::unsafe_no_loc(()).loc;
     let module: CompiledModule;
     let script: CompiledScript;
@@ -115,8 +108,10 @@ fn main() {
     }
 
     let llvm_context = unsafe { LLVMContextCreate() };
-    let disassembler = Disassembler::new(source_mapping, disassembler_options, llvm_context);
-
-    // Disassemble and print llvm ir in a readable format.
-    disassembler.disassemble(&args.output_file_path, args.llvm_ir).expect("Unable to dissassemble");
+    let mut disassembler = Disassembler::new(source_mapping, llvm_context);
+    let module = match disassembler.disassemble() {
+        Ok(module) => module,
+        Err(error) => panic!("Problem: {:?}", error),
+    };
+    disassembler.llvm_write_to_file(module, args.llvm_ir, &args.output_file_path);
 }

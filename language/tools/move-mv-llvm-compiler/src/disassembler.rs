@@ -628,12 +628,10 @@ impl<'a> Disassembler<'a> {
             None => vec![],
         };
 
-        let llvm_type_returns = move_module.llvm_type_for_sig_tokens(ret_type);
-        let llvm_type_return = (
-            if llvm_type_returns.len() > 0 { llvm_type_returns[0] }
-            else { unsafe{llvm_sys::core::LLVMVoidType()} });
+        let ts = move_module.llvm_type_for_sig_tokens(&ret_type);
+        let llvm_type_return = move_module.llvm_make_single_return_type(ts);
         let mut llvm_type_parameters =
-            move_module.llvm_type_for_sig_tokens(parameter_list.to_vec());
+            move_module.llvm_type_for_sig_tokens(&parameter_list.to_vec());
 
         let fn_value = unsafe {
             llvm_sys::core::LLVMAddFunction(

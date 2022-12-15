@@ -93,12 +93,9 @@ procedure instructions: Call ⟨h⟩ | Ret
 
 ### Dependencies
 
-> Inkwell
-> { git = "https://github.com/TheDan64/inkwell", branch = "master", features = ["llvm14-0"] }
-
 > zlib zlib1g-dev
 
-> LLVM: llvm-14-dev
+> LLVM: llvm-15-dev
 
 ### Protip
 
@@ -120,7 +117,7 @@ To update a test's expected output based on the existing output
 And then run `cargo test`
 
 ----
-To generate a move bytecode module from mvir
+To generate a move bytecode module (.mv file) from mvir file
 
 > move-ir-compiler -m a.mvir
 
@@ -128,6 +125,13 @@ To generate a move bytecode module from mvir
 To generate bytecode in text format
 > move-disassembler --bytecode a.mv
 
+
+----
+To debug use the RUST_BACKTRACE environment variables
+> RUST_BACKTRACE=<value> rust-exe [args]
+
+> RUST_BACKTRACE=1 move-mv-llvm-compiler -b tests/BasicCoin.mv
+> RUST_BACKTRACE=full move-mv-llvm-compiler -b tests/BasicCoin.mv
 
 ## ACKNOWLEDGEMENTS
 Parts of [inkwell]9https://github.com/TheDan64/inkwell) code has been copied to this subfolder.

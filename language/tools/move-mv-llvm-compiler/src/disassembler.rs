@@ -183,7 +183,10 @@ impl<'a> Disassembler<'a> {
                 }),
         };
         move_module.llvm_set_struct_body(llvm_struct, &mut llvm_elem_types);
-        unsafe{LLVMAddGlobal(move_module.module, llvm_struct, LLVMGetStructName(llvm_struct))};
+        let name = unsafe{LLVMGetStructName(llvm_struct)};
+        if !name.is_null() {
+            unsafe{LLVMAddGlobal(move_module.module, llvm_struct, name)};
+        };
         Ok(llvm_struct)
     }
 

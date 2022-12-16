@@ -535,6 +535,23 @@ impl ExpData {
         vars
     }
 
+    /// Returns the free local variables with node id in this expression
+    pub fn free_local_vars_with_node_id(&self) -> BTreeMap<Symbol, NodeId> {
+        let mut vars = BTreeMap::new();
+        let mut visitor = |up: bool, e: &ExpData| {
+            use ExpData::*;
+            if up {
+                if let LocalVar(id, sym) = e {
+                    if !vars.iter().any(|(s, _)| s == sym) {
+                        vars.insert(*sym, *id);
+                    }
+                }
+            }
+        };
+        self.visit_pre_post(&mut visitor);
+        vars
+    }
+
     /// Returns the used memory of this expression.
     pub fn used_memory(
         &self,

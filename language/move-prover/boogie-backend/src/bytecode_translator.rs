@@ -1298,12 +1298,6 @@ impl<'env> FunctionTranslator<'env> {
                     Havoc(HavocKind::Value) | Havoc(HavocKind::MutationAll) => {
                         let var_str = str_local(dests[0]);
                         emitln!(writer, "havoc {};", var_str);
-                        // Insert a WellFormed check
-                        let ty = &self.get_local_type(dests[0]);
-                        let check = boogie_well_formed_check(env, &var_str, ty);
-                        if !check.is_empty() {
-                            emitln!(writer, &check);
-                        }
                     }
                     Havoc(HavocKind::MutationValue) => {
                         let ty = &self.get_local_type(dests[0]);
@@ -1317,11 +1311,6 @@ impl<'env> FunctionTranslator<'env> {
                             var_str,
                             temp_str
                         );
-                        // Insert a WellFormed check
-                        let check = boogie_well_formed_check(env, &var_str, ty);
-                        if !check.is_empty() {
-                            emitln!(writer, &check);
-                        }
                     }
                     Stop => {
                         // the two statements combined terminate any execution trace that reaches it

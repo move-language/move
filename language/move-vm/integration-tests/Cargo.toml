@@ -31,3 +31,7 @@ table-extension = [
     "move-table-extension",
     "move-vm-test-utils/table-extension"
 ]
+
+[[bin]]
+name = "instantiation"
+path = "src/tests/instantiation_tests.rs"

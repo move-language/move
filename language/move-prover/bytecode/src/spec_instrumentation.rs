@@ -465,8 +465,13 @@ impl<'a> Instrumenter<'a> {
                         self.builder.emit(Prop(id, kind, prop));
                     }
                     Some((translated_spec, exp)) => {
-                        self.emit_traces(translated_spec, exp);
-                        self.builder.emit(Prop(id, kind, exp.clone()));
+                        // Logic specifically for generating code of updating global spec variables in the function body
+                        if *exp == prop && !translated_spec.updates.is_empty() {
+                            self.emit_updates(translated_spec);
+                        } else {
+                            self.emit_traces(translated_spec, exp);
+                            self.builder.emit(Prop(id, kind, exp.clone()));
+                        }
                     }
                 }
             }

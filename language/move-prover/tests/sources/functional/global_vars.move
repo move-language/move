@@ -14,17 +14,17 @@ module 0x42::TestGlobalVars {
     }
 
     fun add() acquires T {
-        borrow_global_mut<T>(@0).i = borrow_global_mut<T>(@0).i + 1
-    }
-    spec add {
-        update sum_of_T = sum_of_T + 1;
+        borrow_global_mut<T>(@0).i = borrow_global_mut<T>(@0).i + 1;
+        spec {
+            update sum_of_T = sum_of_T + 1;
+        };
     }
 
     fun sub() acquires T {
-        borrow_global_mut<T>(@0).i = borrow_global_mut<T>(@0).i - 1
-    }
-    spec sub {
-        update sum_of_T = sum_of_T - 1;
+        borrow_global_mut<T>(@0).i = borrow_global_mut<T>(@0).i - 1;
+        spec {
+            update sum_of_T = sum_of_T - 1;
+        };
     }
 
     fun call_add_sub() acquires T {

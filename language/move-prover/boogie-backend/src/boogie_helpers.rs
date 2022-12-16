@@ -41,12 +41,17 @@ pub fn boogie_module_name(env: &ModuleEnv<'_>) -> String {
 
 /// Return boogie name of given structure.
 pub fn boogie_struct_name(struct_env: &StructEnv<'_>, inst: &[Type]) -> String {
+    boogie_struct_name_bv(struct_env, inst, false)
+}
+
+pub fn boogie_struct_name_bv(struct_env: &StructEnv<'_>, inst: &[Type], bv_flag: bool) -> String {
     if struct_env.is_intrinsic_of(INTRINSIC_TYPE_MAP) {
         // Map to the theory type representation, which is `Table int V`. The key
         // is encoded as an integer to avoid extensionality problems, and to support
         // $Mutation paths, which are sequences of ints.
         let env = struct_env.module_env.env;
-        format!("Table int ({})", boogie_type(env, &inst[1]))
+        let type_fun = if bv_flag { boogie_bv_type } else { boogie_type };
+        format!("Table int ({})", type_fun(env, &inst[1]))
     } else {
         format!(
             "${}_{}{}",
@@ -70,7 +75,7 @@ pub fn boogie_field_sel(field_env: &FieldEnv<'_>, inst: &[Type]) -> String {
 /// Return field selector for given field.
 pub fn boogie_field_update(field_env: &FieldEnv<'_>, inst: &[Type]) -> String {
     let struct_env = &field_env.struct_env;
-    let suffix = boogie_type_suffix_for_struct(struct_env, inst);
+    let suffix = boogie_type_suffix_for_struct(struct_env, inst, false);
     format!(
         "$Update'{}'_{}",
         suffix,
@@ -90,7 +95,11 @@ pub fn boogie_function_name(fun_env: &FunctionEnv<'_>, inst: &[Type]) -> String 
 
 /// Return boogie name of given function
 /// Currently bv_flag is used when generating vector functions
-pub fn boogie_function_bv_name(fun_env: &FunctionEnv<'_>, inst: &[Type], bv_flag: bool) -> String {
+pub fn boogie_function_bv_name(
+    fun_env: &FunctionEnv<'_>,
+    inst: &[Type],
+    bv_flag: &[bool],
+) -> String {
     format!(
         "${}_{}{}",
         boogie_module_name(&fun_env.module_env),
@@ -132,12 +141,17 @@ pub fn boogie_spec_fun_name(
     } else {
         "".to_string()
     };
+    let mut suffix = boogie_inst_suffix_bv(env.env, inst, &[bv_flag]);
+    if env.is_table() {
+        assert_eq!(inst.len(), 2);
+        suffix = boogie_inst_suffix_bv_pair(env.env, inst, &[false, bv_flag]);
+    };
     format!(
         "${}_{}{}{}",
         boogie_module_name(env),
         decl.name.display(env.symbol_pool()),
         overload_qualifier,
-        boogie_inst_suffix_bv(env.env, inst, bv_flag)
+        suffix
     )
 }
 
@@ -241,7 +255,9 @@ pub fn boogie_bv_type(env: &GlobalEnv, ty: &Type) -> String {
             Num => "<<num is not unsupported here>>".to_string(),
         },
         Vector(et) => format!("Vec ({})", boogie_bv_type(env, et)),
-        Struct(mid, sid, inst) => boogie_struct_name(&env.get_module(*mid).into_struct(*sid), inst),
+        Struct(mid, sid, inst) => {
+            boogie_struct_name_bv(&env.get_module(*mid).into_struct(*sid), inst, true)
+        }
         Reference(_, bt) => format!("$Mutation ({})", boogie_bv_type(env, bt)),
         TypeParameter(idx) => boogie_type_param(env, *idx),
         Fun(..) | Tuple(..) | TypeDomain(..) | ResourceDomain(..) | Error | Var(..) => {
@@ -327,10 +343,10 @@ pub fn boogie_type_suffix_bv(env: &GlobalEnv, ty: &Type, bv_flag: bool) -> Strin
         },
         Vector(et) => format!(
             "vec{}",
-            boogie_inst_suffix_bv(env, &[et.as_ref().to_owned()], bv_flag)
+            boogie_inst_suffix_bv(env, &[et.as_ref().to_owned()], &[bv_flag])
         ),
         Struct(mid, sid, inst) => {
-            boogie_type_suffix_for_struct(&env.get_module(*mid).into_struct(*sid), inst)
+            boogie_type_suffix_for_struct(&env.get_module(*mid).into_struct(*sid), inst, bv_flag)
         }
         TypeParameter(idx) => boogie_type_param(env, *idx),
         Fun(..) | Tuple(..) | TypeDomain(..) | ResourceDomain(..) | Error | Var(..)
@@ -343,13 +359,17 @@ pub fn boogie_type_suffix(env: &GlobalEnv, ty: &Type) -> String {
     boogie_type_suffix_bv(env, ty, false)
 }
 
-pub fn boogie_type_suffix_for_struct(struct_env: &StructEnv<'_>, inst: &[Type]) -> String {
+pub fn boogie_type_suffix_for_struct(
+    struct_env: &StructEnv<'_>,
+    inst: &[Type],
+    bv_flag: bool,
+) -> String {
     if struct_env.is_intrinsic_of(INTRINSIC_TYPE_MAP) {
         format!(
             "${}_{}{}",
             boogie_module_name(&struct_env.module_env),
             struct_env.get_name().display(struct_env.symbol_pool()),
-            boogie_inst_suffix(struct_env.module_env.env, inst)
+            boogie_inst_suffix_bv_pair(struct_env.module_env.env, inst, &[false, bv_flag])
         )
     } else {
         boogie_struct_name(struct_env, inst)
@@ -357,14 +377,35 @@ pub fn boogie_type_suffix_for_struct(struct_env: &StructEnv<'_>, inst: &[Type]) 
 }
 
 /// Generate suffix after instantiation of type parameters
-pub fn boogie_inst_suffix_bv(env: &GlobalEnv, inst: &[Type], bv_flag: bool) -> String {
+pub fn boogie_inst_suffix_bv(env: &GlobalEnv, inst: &[Type], bv_flag: &[bool]) -> String {
     if inst.is_empty() {
         "".to_owned()
     } else {
+        let suffix = if bv_flag.len() == 1 {
+            inst.iter()
+                .map(|ty| boogie_type_suffix_bv(env, ty, bv_flag[0]))
+                .join("_")
+        } else {
+            assert_eq!(inst.len(), bv_flag.len());
+            inst.iter()
+                .zip(bv_flag.iter())
+                .map(|(ty, flag)| boogie_type_suffix_bv(env, ty, *flag))
+                .join("_")
+        };
+        format!("'{}'", suffix)
+    }
+}
+
+pub fn boogie_inst_suffix_bv_pair(env: &GlobalEnv, inst: &[Type], bv_flag: &[bool]) -> String {
+    if inst.is_empty() {
+        "".to_owned()
+    } else {
+        assert_eq!(inst.len(), bv_flag.len());
         format!(
             "'{}'",
             inst.iter()
-                .map(|ty| boogie_type_suffix_bv(env, ty, bv_flag))
+                .zip(bv_flag.iter())
+                .map(|(ty, flag)| boogie_type_suffix_bv(env, ty, *flag))
                 .join("_")
         )
     }

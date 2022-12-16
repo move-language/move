@@ -9,7 +9,7 @@
 use itertools::Itertools;
 use move_model::{
     ast::{PropertyValue, TempIndex, Value},
-    model::{FieldId, FunId, FunctionEnv, ModuleId, NodeId, StructEnv, StructId},
+    model::{FieldId, FunId, FunctionEnv, ModuleId, NodeId, SpecFunId, StructEnv, StructId},
     pragmas::{BV_PARAM_PROP, BV_RET_PROP},
     ty::Type,
 };
@@ -48,9 +48,11 @@ impl NumOperation {
 // NumOperation of a variable
 pub type OperationMap = BTreeMap<usize, NumOperation>;
 pub type ExpMap = BTreeMap<NodeId, NumOperation>;
+pub type OperationVec = Vec<NumOperation>;
 // NumOperation of a field
 pub type StructFieldOperationMap = BTreeMap<FieldId, NumOperation>;
 pub type FuncOperationMap = BTreeMap<(ModuleId, FunId), OperationMap>;
+pub type SpecFuncOperationMap = BTreeMap<(ModuleId, SpecFunId), (OperationVec, OperationVec)>;
 pub type StructOperationMap = BTreeMap<(ModuleId, StructId), StructFieldOperationMap>;
 
 #[derive(Default, Debug, Clone, Eq, PartialEq, PartialOrd)]
@@ -66,6 +68,8 @@ pub struct GlobalNumberOperationState {
     local_oper_baseline: FuncOperationMap,
     // Each node id appearing the function has a corresponding NumOperation
     pub exp_operation_map: ExpMap,
+    // NumberOperation state for spec functions
+    pub spec_fun_operation_map: SpecFuncOperationMap,
     // Each field in the struct has a corresponding NumOperation
     pub struct_operation_map: StructOperationMap,
 }
@@ -317,5 +321,14 @@ impl GlobalNumberOperationState {
     /// Gets the number operation of the given node, if available.
     pub fn get_node_num_oper_opt(&self, node_id: NodeId) -> Option<NumOperation> {
         self.exp_operation_map.get(&node_id).copied()
+    }
+
+    pub fn update_spec_ret(&mut self, mid: &ModuleId, fid: &SpecFunId, oper: NumOperation) {
+        let ret_num_oper_vec = &mut self
+            .spec_fun_operation_map
+            .get_mut(&(*mid, *fid))
+            .unwrap()
+            .1;
+        ret_num_oper_vec[0] = oper;
     }
 }

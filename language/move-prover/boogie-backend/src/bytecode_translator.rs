@@ -391,7 +391,7 @@ impl<'env> StructTranslator<'env> {
             struct_name
         );
 
-        let suffix = boogie_type_suffix_for_struct(struct_env, self.type_inst);
+        let suffix = boogie_type_suffix_for_struct(struct_env, self.type_inst, false);
 
         // Emit $UpdateField functions.
         let fields = struct_env.get_fields().collect_vec();
@@ -1294,25 +1294,33 @@ impl<'env> FunctionTranslator<'env> {
                                         == Bitwise
                             };
                             if dest_str.is_empty() {
-                                // TODO(tengzhang): a hacky way to generate calls for vector functions, need refactor
+                                let bv_flag = !srcs.is_empty() && compute_flag(srcs[0]);
                                 if module_env.is_std_vector() {
                                     // Check the target vector contains bv values
-                                    let bv_flag = !srcs.is_empty() && compute_flag(srcs[0]);
-                                    fun_name = boogie_function_bv_name(&callee_env, inst, bv_flag);
-                                }
-                                emitln!(writer, "call {}({});", fun_name, args_str);
-                            } else {
-                                if module_env.is_std_vector() {
-                                    let dest_bv_flag = !dests.is_empty() && compute_flag(dests[0]);
-                                    let bv_flag = !srcs.is_empty() && compute_flag(srcs[0]);
+                                    fun_name =
+                                        boogie_function_bv_name(&callee_env, inst, &[bv_flag]);
+                                } else if module_env.is_table() {
                                     fun_name = boogie_function_bv_name(
                                         &callee_env,
                                         inst,
-                                        bv_flag || dest_bv_flag,
+                                        &[false, bv_flag],
+                                    );
+                                }
+                                emitln!(writer, "call {}({});", fun_name, args_str);
+                            } else {
+                                let dest_bv_flag = !dests.is_empty() && compute_flag(dests[0]);
+                                let bv_flag = !srcs.is_empty() && compute_flag(srcs[0]);
+                                // Handle the case where the return value of length is assigned to a bv int because
+                                // length always returns a non-bv result
+                                let callee_name = callee_env.get_name_str();
+                                if module_env.is_std_vector() {
+                                    fun_name = boogie_function_bv_name(
+                                        &callee_env,
+                                        inst,
+                                        &[bv_flag || dest_bv_flag],
                                     );
                                     // Handle the case where the return value of length is assigned to a bv int because
                                     // length always returns a non-bv result
-                                    let callee_name = callee_env.get_name_str();
                                     if callee_name.contains("length") && dest_bv_flag {
                                         let local_ty = self.get_local_type(dests[0]);
                                         // Insert '$' for calling function instead of procedure
@@ -1351,6 +1359,35 @@ impl<'env> FunctionTranslator<'env> {
                                             add_local_args(srcs[2]);
                                         }
                                         args_str = args_str_vec.iter().cloned().join(", ");
+                                    }
+                                } else if module_env.is_table() {
+                                    fun_name = boogie_function_bv_name(
+                                        &callee_env,
+                                        inst,
+                                        &[false, bv_flag || dest_bv_flag],
+                                    );
+                                    if dest_bv_flag && callee_name.contains("length") {
+                                        // Handle the case where the return value of length is assigned to a bv int because
+                                        // length always returns a non-bv result
+                                        let local_ty = self.get_local_type(dests[0]);
+                                        // Replace with "spec_len"
+                                        let length_idx_start = callee_name.find("length").unwrap();
+                                        let length_idx_end = length_idx_start + "length".len();
+                                        fun_name = [
+                                            callee_name[0..length_idx_start].to_string(),
+                                            "spec_len".to_string(),
+                                            callee_name[length_idx_end..].to_string(),
+                                        ]
+                                        .join("");
+                                        // first call len fun then convert its return value to a bv type
+                                        emitln!(
+                                            writer,
+                                            "call {} := $int2bv{}({}({}));",
+                                            dest_str,
+                                            boogie_num_type_base(&local_ty),
+                                            fun_name,
+                                            args_str
+                                        );
                                     }
                                 }
                                 emitln!(writer, "call {} := {}({});", dest_str, fun_name, args_str);

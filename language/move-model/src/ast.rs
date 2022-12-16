@@ -143,7 +143,7 @@ impl ConditionKind {
         use ConditionKind::*;
         matches!(
             self,
-            Assert | Assume | Decreases | LoopInvariant | LetPost(..) | LetPre(..)
+            Assert | Assume | Decreases | LoopInvariant | LetPost(..) | LetPre(..) | Update
         )
     }
 

@@ -300,6 +300,19 @@ impl<'a> MemoryUsageAnalysis<'a> {
                 }
             }
         }
+
+        // Handle memory update of the specs in the function body
+        for impl_spec in spec.on_impl.values() {
+            for cond in &impl_spec.conditions {
+                if matches!(cond.kind, Update) && !cond.additional_exps.is_empty() {
+                    if let Some((mem, _, _)) =
+                        cond.additional_exps[0].extract_ghost_mem_access(self.cache.global_env())
+                    {
+                        state.add_direct_modified(mem);
+                    }
+                }
+            }
+        }
     }
 }
 

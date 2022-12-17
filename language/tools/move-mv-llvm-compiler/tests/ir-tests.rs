@@ -22,13 +22,8 @@ fn run_test(test_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
-    let harness_paths = get_harness_paths();
+    let harness_paths = get_harness_paths()?;
     let test_plan = get_test_plan(test_path);
-
-    if !harness_paths.move_ir_compiler.exists() {
-        // todo: can we build move-ir-compiler automatically?
-        anyhow::bail!("move-ir-compiler not built");
-    }
 
     //compile_mvir_to_mvbc(&harness_paths, &test_plan)?;
     compile_mvbc_to_llvmir(&harness_paths, &test_plan)?;
@@ -44,7 +39,7 @@ struct HarnessPaths {
     move_mv_llvm_compiler: PathBuf,
 }
 
-fn get_harness_paths() -> HarnessPaths {
+fn get_harness_paths() -> anyhow::Result<HarnessPaths> {
     // Cargo will tell us the location of move-mv-llvm-compiler.
     let move_mv_llvm_compiler = env!("CARGO_BIN_EXE_move-mv-llvm-compiler");
     let move_mv_llvm_compiler = PathBuf::from(move_mv_llvm_compiler);
@@ -56,10 +51,22 @@ fn get_harness_paths() -> HarnessPaths {
         move_mv_llvm_compiler.with_file_name("move-ir-compiler.exe")
     };
 
-    HarnessPaths {
+    if !move_ir_compiler.exists() {
+        // todo: can we build move-ir-compiler automatically?
+
+        let is_release = move_ir_compiler.to_string_lossy().contains("release");
+        let suggestion = if is_release {
+            "try running `cargo build -p move-ir-compiler --release` first"
+        } else {
+            "try running `cargo build -p move-ir-compiler` first"
+        };
+        anyhow::bail!("move-ir-compiler not built. {suggestion}");
+    }
+
+    Ok(HarnessPaths {
         move_ir_compiler,
         move_mv_llvm_compiler,
-    }
+    })
 }
 
 #[derive(Debug)]

@@ -7,6 +7,11 @@
 //!
 //! If the `PROMOTE_LLVM_IR` env var is set, the actual IR is promoted to the
 //! expected IR.
+//!
+//! MVIR files may contain "test directives" instructing the harness
+//! how to behave. These are specially-interpreted comments of the form
+//!
+//! - `// ignore` - don't run the test
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -23,7 +28,12 @@ fn run_test(test_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
 
 fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
     let harness_paths = get_harness_paths()?;
-    let test_plan = get_test_plan(test_path);
+    let test_plan = get_test_plan(test_path)?;
+
+    if test_plan.should_ignore() {
+        eprintln!("ignoring {}", test_plan.name);
+        return Ok(());
+    }
 
     compile_mvir_to_mvbc(&harness_paths, &test_plan)?;
     compile_mvbc_to_llvmir(&harness_paths, &test_plan)?;
@@ -71,6 +81,7 @@ fn get_harness_paths() -> anyhow::Result<HarnessPaths> {
 
 #[derive(Debug)]
 struct TestPlan {
+    name: String,
     /// The mvir file to be compiled to LLVM IR
     mvir_file: PathBuf,
     /// The move bytecode file, compiled from mvir, compiled to LLVM
@@ -79,23 +90,59 @@ struct TestPlan {
     llir_file: PathBuf,
     /// The existing LLVM IR file to compare to
     llir_file_expected: PathBuf,
+    /// Special commands embedded in the test file as comments
+    directives: Vec<TestDirective>,
 }
 
-fn get_test_plan(test_path: &Path) -> TestPlan {
-    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("cargo_manifest_dir");
-    let test_dir = Path::new(&manifest_dir).join(test_path);
+#[derive(Debug, Eq, PartialEq)]
+enum TestDirective {
+    Ignore,
+}
 
-    let mvir_file = test_dir.to_owned();
+impl TestPlan {
+    fn should_ignore(&self) -> bool {
+        self.directives.contains(&TestDirective::Ignore)
+    }
+}
+
+fn get_test_plan(test_path: &Path) -> anyhow::Result<TestPlan> {
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("cargo_manifest_dir");
+    let mvir_file = Path::new(&manifest_dir).join(test_path);
+
+    let name = test_path.to_string_lossy().to_string();
+    let mvir_file = mvir_file.to_owned();
     let mvbc_file = mvir_file.with_extension("mv");
     let llir_file = mvir_file.with_extension("actual.ll");
     let llir_file_expected = mvir_file.with_extension("expected.ll");
+    let directives = load_directives(test_path)?;
 
-    TestPlan {
+    Ok(TestPlan {
+        name,
         mvir_file,
         mvbc_file,
         llir_file,
         llir_file_expected,
+        directives,
+    })
+}
+
+fn load_directives(test_path: &Path) -> anyhow::Result<Vec<TestDirective>> {
+    let mut directives = Vec::new();
+    let source = std::fs::read_to_string(test_path)?;
+
+    for line in source.lines() {
+        let line = line.trim();
+        let line_is_comment = line.starts_with("//");
+        if !line_is_comment {
+            continue;
+        }
+        let line = &line[2..].trim();
+        if line.starts_with("ignore") {
+            directives.push(TestDirective::Ignore);
+        }
     }
+
+    Ok(directives)
 }
 
 /// Run `move-ir-compiler` to produce Move bytecode, `mvbc_file`.

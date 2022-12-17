@@ -1,5 +1,35 @@
 //! Tests of compilation from MVIR to LLVM IR.
 //!
+//! # Usage
+//!
+//! These tests require `move-ir-compiler` to be pre-built:
+//!
+//! ```
+//! cargo build -p move-ir-compiler
+//! ```
+//!
+//! Running the tests:
+//!
+//! ```
+//! cargo test -p move-mv-llvm-compiler --test ir-tests
+//! ```
+//!
+//! Running a specific test:
+//!
+//! ```
+//! cargo test -p move-mv-llvm-compiler --test ir-tests -- struct.mvir
+//! ```
+//!
+//! Promoting all results to expected results:
+//!
+//! ```
+//! PROMOTE_LLVM_IR=1 cargo test -p move-mv-llvm-compiler --test ir-tests
+//! ```
+//!
+//! # Details
+//!
+//! They do the following:
+//!
 //! - Create a test for every .mvir file in testdata/
 //! - Run `move-ir-compiler` to convert MVIR to MV bytecode.
 //! - Run `move-mv-llvm-compiler` to convert MV bytecode to LLVM IR.

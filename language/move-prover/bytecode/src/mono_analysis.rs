@@ -271,13 +271,7 @@ impl<'a> Analyzer<'a> {
         let all_types = self
             .done_types
             .iter()
-            .filter(|t| {
-                use Type::*;
-                matches!(
-                    t,
-                    TypeParameter(..) | Primitive(..) | Vector(..) | Struct(..)
-                )
-            })
+            .filter(|t| t.can_be_type_argument())
             .cloned()
             .collect::<Vec<_>>();
         for module_env in self.env.get_modules() {

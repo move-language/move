@@ -4,20 +4,19 @@
 
 //! Contains types and related functions.
 
-use crate::{
-    ast::QualifiedSymbol,
-    model::{GlobalEnv, ModuleId, StructEnv, StructId},
-    symbol::{Symbol, SymbolPool},
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    fmt,
+    fmt::Formatter,
 };
 
 use move_binary_format::{file_format::TypeParameterIndex, normalized::Type as MType};
 use move_core_types::language_storage::{StructTag, TypeTag};
 
-use crate::model::QualifiedInstId;
-use std::{
-    collections::{BTreeMap, BTreeSet, VecDeque},
-    fmt,
-    fmt::Formatter,
+use crate::{
+    ast::QualifiedSymbol,
+    model::{GlobalEnv, ModuleId, QualifiedInstId, StructEnv, StructId},
+    symbol::{Symbol, SymbolPool},
 };
 
 /// Represents a type.
@@ -50,17 +49,17 @@ pub const NUM_TYPE: Type = Type::Primitive(PrimitiveType::Num);
 pub enum PrimitiveType {
     Bool,
     U8,
+    U16,
+    U32,
     U64,
     U128,
+    U256,
     Address,
     Signer,
     // Types only appearing in specifications
     Num,
     Range,
     EventStore,
-    U16,
-    U32,
-    U256,
 }
 
 /// A type substitution.
@@ -204,6 +203,25 @@ impl Type {
     /// Return true if this is an account address
     pub fn is_signer(&self) -> bool {
         matches!(self, Type::Primitive(PrimitiveType::Signer))
+    }
+
+    /// Test whether this type can be used to substitute a type parameter
+    pub fn can_be_type_argument(&self) -> bool {
+        match self {
+            Type::Primitive(p) => !p.is_spec(),
+            Type::Tuple(..) => false,
+            Type::Vector(e) => e.can_be_type_argument(),
+            Type::Struct(_, _, insts) => insts.iter().all(|e| e.can_be_type_argument()),
+            Type::TypeParameter(..) => true,
+            // references cannot be a type argument
+            Type::Reference(..) => false,
+            // spec types cannot be a type argument
+            Type::Fun(..)
+            | Type::TypeDomain(..)
+            | Type::ResourceDomain(..)
+            | Type::Var(..)
+            | Type::Error => false,
+        }
     }
 
     /// Skip reference type.

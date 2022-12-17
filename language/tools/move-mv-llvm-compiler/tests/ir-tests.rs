@@ -106,7 +106,8 @@ fn compile_mvir_to_mvbc(harness_paths: &HarnessPaths, test_plan: &TestPlan) -> a
 
     let output = cmd.output().context("run move-ir-compiler failed")?;
     if !output.status.success() {
-        anyhow::bail!("move-ir-compiler failed");
+        anyhow::bail!("move-ir-compiler failed. stderr:\n\n{}",
+                      String::from_utf8_lossy(&output.stderr));
     }
 
     Ok(())
@@ -123,7 +124,8 @@ fn compile_mvbc_to_llvmir(harness_paths: &HarnessPaths, test_plan: &TestPlan) ->
 
     let output = cmd.output().context("run move-mv-llvm-compiler failed")?;
     if !output.status.success() {
-        anyhow::bail!("move-mv-llvm-compiler failed");
+        anyhow::bail!("move-mv-llvm-compiler failed. stderr:\n\n{}",
+                      String::from_utf8_lossy(&output.stderr));
     }
 
     Ok(())

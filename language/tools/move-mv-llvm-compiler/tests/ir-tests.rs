@@ -25,7 +25,7 @@ fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
     let harness_paths = get_harness_paths()?;
     let test_plan = get_test_plan(test_path);
 
-    //compile_mvir_to_mvbc(&harness_paths, &test_plan)?;
+    compile_mvir_to_mvbc(&harness_paths, &test_plan)?;
     compile_mvbc_to_llvmir(&harness_paths, &test_plan)?;
     maybe_promote_actual_llvmir_to_expected(&test_plan)?;
     compare_actual_llvmir_to_expected(&test_plan)?;

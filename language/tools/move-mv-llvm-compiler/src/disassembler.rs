@@ -24,13 +24,14 @@ use llvm_sys::prelude::{
 };
 use llvm_sys::{
     core::{LLVMDumpModule, LLVMModuleCreateWithNameInContext, LLVMAddFunction, LLVMFunctionType,
-    LLVMAddGlobal, LLVMGetStructName},
+    LLVMAddGlobal, LLVMGetStructName, LLVMDisposeMessage},
     target_machine::LLVMCodeGenOptLevel,
 };
 
 use move_ir_types::location::Loc;
 
-use std::{fs::File, mem::MaybeUninit};
+use std::{fs::File, mem::MaybeUninit, ptr};
+use std::ffi::CStr;
 
 use crate::{move_bpf_module::MoveBPFModule, support::to_c_str};
 
@@ -309,19 +310,30 @@ impl<'a> Disassembler<'a> {
 
         unsafe {
             if llvm_ir {
-                let mut err_string = MaybeUninit::uninit();
-                LLVMPrintModuleToFile(module,
-                                      to_c_str(&output_file_name).as_ptr(),
-                                      err_string.as_mut_ptr(),
+                let mut err_string = ptr::null_mut();
+                let res = LLVMPrintModuleToFile(module,
+                                                to_c_str(&output_file_name).as_ptr(),
+                                                &mut err_string,
                 );
+
+                if res != 0 {
+                    assert!(!err_string.is_null());
+                    let msg = CStr::from_ptr(err_string).to_string_lossy();
+                    LLVMDisposeMessage(err_string);
+                    anyhow::bail!("{}", msg);
+                }
             } else {
                 let bc_file = File::create(&output_file_name)?;
-                LLVMWriteBitcodeToFD(
+                let res = LLVMWriteBitcodeToFD(
                     module,
                     bc_file.as_raw_fd(),
-                    true as i32,
+                    false as i32,
                     true as i32,
                 );
+
+                if res != 0 {
+                    anyhow::bail!("Failed to write bitcode to file");
+                }
             }
         }
 

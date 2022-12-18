@@ -305,24 +305,36 @@ impl<'a> Disassembler<'a> {
 
     pub fn llvm_write_to_file(&self, module: LLVMModuleRef, llvm_ir: bool, output_file_name: &String) -> Result<()> {
         use llvm_sys::bit_writer::LLVMWriteBitcodeToFD;
-        use llvm_sys::core::LLVMPrintModuleToFile;
+        use llvm_sys::core::{LLVMPrintModuleToFile, LLVMPrintModuleToString};
         use std::os::unix::io::AsRawFd;
+        use std::io::Write;
 
         unsafe {
             if llvm_ir {
-                let mut err_string = ptr::null_mut();
-                let res = LLVMPrintModuleToFile(module,
-                                                to_c_str(&output_file_name).as_ptr(),
-                                                &mut err_string,
-                );
+                if output_file_name != "-" {
+                    let mut err_string = ptr::null_mut();
+                    let res = LLVMPrintModuleToFile(module,
+                                                    to_c_str(&output_file_name).as_ptr(),
+                                                    &mut err_string,
+                    );
 
-                if res != 0 {
-                    assert!(!err_string.is_null());
-                    let msg = CStr::from_ptr(err_string).to_string_lossy();
-                    LLVMDisposeMessage(err_string);
-                    anyhow::bail!("{}", msg);
+                    if res != 0 {
+                        assert!(!err_string.is_null());
+                        let msg = CStr::from_ptr(err_string).to_string_lossy();
+                        LLVMDisposeMessage(err_string);
+                        anyhow::bail!("{}", msg);
+                    }
+                } else {
+                    let buf = LLVMPrintModuleToString(module);
+                    assert!(!buf.is_null());
+                    let cstr = CStr::from_ptr(buf);
+                    print!("{}", cstr.to_string_lossy());
+                    LLVMDisposeMessage(buf);
                 }
             } else {
+                if output_file_name == "-" {
+                    anyhow::bail!("Not writing bitcode to stdout");
+                }
                 let bc_file = File::create(&output_file_name)?;
                 let res = LLVMWriteBitcodeToFD(
                     module,

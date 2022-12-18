@@ -242,7 +242,7 @@ impl<'a> Disassembler<'a> {
         Ok(move_module.module)
     }
 
-    pub fn llvm_write_to_file(&self, module: LLVMModuleRef, llvm_ir: bool, output_file_name: &String) {
+    pub fn llvm_write_to_file(&self, module: LLVMModuleRef, llvm_ir: bool, output_file_name: &String) -> Result<()> {
         use llvm_sys::bit_writer::LLVMWriteBitcodeToFD;
         use llvm_sys::core::LLVMPrintModuleToFile;
         use std::os::unix::io::AsRawFd;
@@ -255,7 +255,7 @@ impl<'a> Disassembler<'a> {
                                       err_string.as_mut_ptr(),
                 );
             } else {
-                let bc_file = File::create(&output_file_name).unwrap();
+                let bc_file = File::create(&output_file_name)?;
                 LLVMWriteBitcodeToFD(
                     module,
                     bc_file.as_raw_fd(),
@@ -264,5 +264,7 @@ impl<'a> Disassembler<'a> {
                 );
             }
         }
+
+        Ok(())
     }
 }

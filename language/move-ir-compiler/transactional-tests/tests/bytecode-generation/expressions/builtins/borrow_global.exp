@@ -3,6 +3,9 @@ processed 4 tasks
 task 0 'print-bytecode'. lines 1-14:
 // Move bytecode v6
 module 1d6.M {
+use 00000000000000000000000000000001::signer;
+
+
 struct T has key {
 	b: bool
 }
@@ -10,7 +13,7 @@ struct T has key {
 f(Arg0: signer) {
 B0:
 	0: ImmBorrowLoc[0](Arg0: signer)
-	1: Call[1](address_of(&signer): address)
+	1: Call signer::address_of(&signer): address
 	2: ImmBorrowGlobal[0](T)
 	3: StLoc[1](loc0: &T)
 	4: Ret

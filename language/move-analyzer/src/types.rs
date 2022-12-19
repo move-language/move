@@ -250,24 +250,32 @@ impl ResolvedType {
 pub enum BuildInType {
     Bool,
     U8,
+    U16,
+    U32,
     U64,
     U128,
+    U256,
     Address,
     /// A number type from literal.
     /// Could be u8 and ... depend on How it is used.
     NumType,
     /// https://move-book.com/advanced-topics/managing-collections-with-vectors.html?highlight=STring#hex-and-bytestring-literal-for-inline-vector-definitions
     String,
+    Signer,
 }
 
 impl BuildInType {
     pub(crate) fn from_symbol(s: Symbol) -> Self {
         match s.as_str() {
             "u8" => Self::U8,
+            "u16" => Self::U16,
+            "u32" => Self::U32,
             "u64" => Self::U64,
             "u128" => Self::U128,
+            "u256" => Self::U256,
             "bool" => Self::Bool,
             "address" => Self::Address,
+            "signer" => Self::Signer,
             _ => unreachable!(),
         }
     }

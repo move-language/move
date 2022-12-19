@@ -80,10 +80,9 @@ pub enum Item {
     BuildInType(BuildInType),
     /// Here are all definition.
     TParam(Name, Vec<Ability>),
+    SpecSchema(Name, SpecBlock),
 
     Dummy,
-
-    SpecSchema(Name, SpecBlock),
 }
 
 #[derive(Clone)]
@@ -118,16 +117,10 @@ impl std::fmt::Display for ItemFun {
 
 impl Item {
     ///   
-    pub(crate) fn to_type(&self, accept_tparam: bool) -> Option<ResolvedType> {
+    pub(crate) fn to_type(&self) -> Option<ResolvedType> {
         // TODO maybe a parameter to decide return TParam or not.
         let x = match self {
-            Item::TParam(name, ab) => {
-                if accept_tparam {
-                    ResolvedType::TParam(name.clone(), ab.clone())
-                } else {
-                    return None;
-                }
-            }
+            Item::TParam(name, ab) => ResolvedType::TParam(name.clone(), ab.clone()),
             Item::Struct(x) => ResolvedType::Struct(x.clone()),
             Item::StructNameRef(addr, name, x, t) => ResolvedType::StructRef(
                 addr.clone(),
@@ -146,7 +139,7 @@ impl Item {
                     .borrow()
                     .items
                     .get(&name.value)
-                    .map(|i| i.to_type(false))
+                    .map(|i| i.to_type())
                     .flatten();
             }
             Item::UseModule(_, _, _) => return None,
@@ -158,17 +151,17 @@ impl Item {
 
     pub(crate) fn def_loc(&self) -> Loc {
         match self {
-            Self::Parameter(var, _) => var.loc(),
-            Self::UseMember(_, name, alias, module) => module
+            Item::Parameter(var, _) => var.loc(),
+            Item::UseMember(_, name, alias, module) => module
                 .borrow()
                 .items
                 .get(&name.value)
                 .map(|u| u.def_loc())
                 .unwrap_or(UNKNOWN_LOC),
-            Self::Struct(x) => x.name.loc(),
-            Self::BuildInType(_) => UNKNOWN_LOC,
-            Self::TParam(name, _) => name.loc,
-            Self::Const(name, _) => name.loc(),
+            Item::Struct(x) => x.name.loc(),
+            Item::BuildInType(_) => UNKNOWN_LOC,
+            Item::TParam(name, _) => name.loc,
+            Item::Const(name, _) => name.loc(),
             Item::StructNameRef(_, _, name, _) => name.0.loc,
             Item::Fun(f) => f.name.0.loc,
             Item::BuildInType(_) => UNKNOWN_LOC,
@@ -283,15 +276,6 @@ impl std::fmt::Display for Item {
     }
 }
 
-impl Item {
-    pub(crate) fn is_tparam(&self) -> bool {
-        match self {
-            Self::TParam(_, _) => true,
-            _ => false,
-        }
-    }
-}
-
 pub enum Access {
     ApplyType(NameAccessChain, Box<ResolvedType>),
 
@@ -330,6 +314,8 @@ pub enum Access {
         Name, // access name like spec xxx {}
         Name, // for some item like fun xxx() {}
     ), //
+
+    PragmaProperty(PragmaProperty),
 }
 
 pub enum FriendElement {
@@ -386,6 +372,19 @@ impl std::fmt::Display for Access {
                     spec.value.as_str()
                 )
             }
+            Access::PragmaProperty(x) => {
+                write!(
+                    f,
+                    "{}{}",
+                    x.value.name.value.as_str(),
+                    if let Some(_value) = &x.value.value {
+                        //TODO. actual.
+                        String::from("...")
+                    } else {
+                        String::from("...")
+                    }
+                )
+            }
         }
     }
 }
@@ -412,8 +411,10 @@ impl Access {
             }
             Access::IncludeSchema(chain, x) => (get_name_chain_last_name(chain).loc.clone(), x.loc),
             Access::SpecFor(name, origin) => (name.loc, origin.loc),
+            Access::PragmaProperty(_) => (UNKNOWN_LOC, UNKNOWN_LOC),
         }
     }
+
     /// Get loc
     pub(crate) fn access_module(&self) -> Option<(Loc, Loc)> {
         match self {

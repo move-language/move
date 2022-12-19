@@ -115,6 +115,27 @@ impl Scopes {
             .enter_item(name, item);
     }
 
+    pub(crate) fn enter_types(
+        &self,
+        convert_loc: &dyn ConvertLoc,
+        name: Symbol,
+        item: impl Into<Item>,
+    ) {
+        let item = item.into();
+        let loc = item.def_loc();
+        let loc = convert_loc
+            .convert_loc_range(&loc)
+            .unwrap_or(FileRange::unknown());
+        log::info!("{}", loc);
+        log::info!("enter scope name:{:?} item:{}", name, item);
+        self.scopes
+            .as_ref()
+            .borrow_mut()
+            .last_mut()
+            .unwrap()
+            .enter_types(name, item);
+    }
+
     pub(crate) fn enter_top_item(
         &self,
         convert_loc: &dyn ConvertLoc,
@@ -275,10 +296,8 @@ impl Scopes {
             NameAccessChain_::One(name) => {
                 self.inner_first_visit(|s| {
                     if let Some(v) = s.items.get(&name.value) {
-                        if !v.is_tparam() {
-                            item_ret = Some(v.clone());
-                            return true;
-                        }
+                        item_ret = Some(v.clone());
+                        return true;
                     }
                     false
                 });
@@ -293,13 +312,11 @@ impl Scopes {
                                         if let Some(item) =
                                             members.as_ref().borrow().items.get(&member.value)
                                         {
-                                            if !item.is_tparam() {
-                                                module_scope =
-                                                    members.as_ref().borrow().module_.clone();
-                                                item_ret = Some(item.clone());
-                                                // make inner_first_visit stop.
-                                                return true;
-                                            }
+                                            module_scope =
+                                                members.as_ref().borrow().module_.clone();
+                                            item_ret = Some(item.clone());
+                                            // make inner_first_visit stop.
+                                            return true;
                                         }
                                     }
                                     _ => {}
@@ -340,7 +357,6 @@ impl Scopes {
         &self,
         chain: &NameAccessChain,
         name_to_addr: &dyn Name2Addr,
-        accept_tparam: bool,
     ) -> ResolvedType {
         let failed = ResolvedType::new_unknown();
         match &chain.value {
@@ -348,7 +364,13 @@ impl Scopes {
                 let mut r = None;
                 self.inner_first_visit(|s| {
                     if let Some(v) = s.items.get(&name.value) {
-                        r = v.to_type(accept_tparam);
+                        r = v.to_type();
+                        if r.is_some() {
+                            return true;
+                        }
+                    }
+                    if let Some(v) = s.types.get(&name.value) {
+                        r = v.to_type();
                         if r.is_some() {
                             return true;
                         }
@@ -357,6 +379,7 @@ impl Scopes {
                 });
                 r.unwrap_or(failed)
             }
+
             NameAccessChain_::Two(name, member) => {
                 // first find this name.
                 let mut r = None;
@@ -369,9 +392,8 @@ impl Scopes {
                                         if let Some(item) =
                                             members.as_ref().borrow().items.get(&member.value)
                                         {
-                                            if let Some(ty) = item.to_type(false) {
+                                            if let Some(ty) = item.to_type() {
                                                 r = Some(ty);
-
                                                 return true; // make inner_first_visit stop.
                                             }
                                         }
@@ -403,7 +425,7 @@ impl Scopes {
                 }
                 let module = module.unwrap();
                 if let Some(item) = module.as_ref().borrow().items.get(&member.value) {
-                    item.to_type(false).unwrap_or(failed)
+                    item.to_type().unwrap_or(failed)
                 } else {
                     failed
                 }
@@ -439,7 +461,7 @@ impl Scopes {
                     NameAccessChain_::Two(_, _) => {}
                     NameAccessChain_::Three(_, _) => {}
                 }
-                let mut chain_ty = self.find_name_chain_type(chain, name_to_addr, true);
+                let mut chain_ty = self.find_name_chain_type(chain, name_to_addr);
                 let chain_ty = match &mut chain_ty {
                     ResolvedType::Struct(x) => {
                         let mut m = HashMap::new();

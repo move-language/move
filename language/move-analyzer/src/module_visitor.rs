@@ -263,7 +263,6 @@ impl Modules {
                     for (name, ab) in type_parameters.iter() {
                         let item = ItemOrAccess::Item(Item::TParam(name.clone(), ab.clone()));
                         visitor.handle_item(self, scopes, &item);
-
                         scopes.enter_item(self, name.value, item);
                     }
                     self.visit_expr(exp, scopes, visitor);
@@ -476,7 +475,13 @@ impl Modules {
 
             SpecBlockMember_::Pragma { properties } => {
                 // https://github.com/move-language/move/blob/main/language/move-prover/doc/user/spec-lang.md#pragmas-and-properties
-                // TODO Does't create a local variable all something,handle this later.
+                for p in properties.iter() {
+                    let item = ItemOrAccess::Access(Access::PragmaProperty(p.clone()));
+                    visitor.handle_item(self, scopes, &item);
+                    if visitor.finished() {
+                        return;
+                    }
+                }
             }
         }
     }
@@ -673,7 +678,7 @@ impl Modules {
                 return;
             }
             Bind_::Unpack(chain, tys, field_binds) => {
-                let struct_ty = scopes.find_name_chain_type(chain, self, false);
+                let struct_ty = scopes.find_name_chain_type(chain, self);
                 let item = ItemOrAccess::Access(Access::ApplyType(
                     chain.as_ref().clone(),
                     Box::new(struct_ty.clone()),
@@ -736,7 +741,7 @@ impl Modules {
     ) {
         match &ty.value {
             Type_::Apply(chain, types) => {
-                let ty = scopes.find_name_chain_type(chain.as_ref(), self, true);
+                let ty = scopes.find_name_chain_type(chain.as_ref(), self);
                 let item =
                     ItemOrAccess::Access(Access::ApplyType(chain.as_ref().clone(), Box::new(ty)));
                 visitor.handle_item(self, scopes, &item);
@@ -856,7 +861,7 @@ impl Modules {
                 }
             }
             Exp_::Pack(ref chain, ref types, fields) => {
-                let ty = scopes.find_name_chain_type(chain, self, false);
+                let ty = scopes.find_name_chain_type(chain, self);
                 let item =
                     ItemOrAccess::Access(Access::ApplyType(chain.clone(), Box::new(ty.clone())));
                 visitor.handle_item(self, scopes, &item);

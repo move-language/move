@@ -19,7 +19,10 @@ pub struct Scope {
     pub(crate) is_function: bool,
     pub(crate) is_spec: bool,
     pub(crate) module_: Option<ModuleScope>,
+    /// Type parameter go into this map.
+    pub(crate) types: HashMap<Symbol, Item>,
 }
+
 #[derive(Clone)]
 pub struct ModuleScope {
     pub(crate) addr: AccountAddress,
@@ -33,9 +36,9 @@ impl Scope {
             is_function: false,
             module_: None,
             items: Default::default(),
+            types: Default::default(),
         };
         x.enter_spec_build_in_const();
-
         x
     }
     pub(crate) fn new_fun() -> Self {
@@ -44,14 +47,22 @@ impl Scope {
             is_function: false,
             module_: None,
             items: Default::default(),
+            types: Default::default(),
         };
         x
     }
     pub(crate) fn enter_build_in(&mut self) {
         self.enter_item(Symbol::from("bool"), Item::BuildInType(BuildInType::Bool));
         self.enter_item(Symbol::from("u8"), Item::BuildInType(BuildInType::U8));
+        self.enter_item(Symbol::from("u16"), Item::BuildInType(BuildInType::U16));
+        self.enter_item(Symbol::from("u32"), Item::BuildInType(BuildInType::U32));
         self.enter_item(Symbol::from("u64"), Item::BuildInType(BuildInType::U64));
         self.enter_item(Symbol::from("u128"), Item::BuildInType(BuildInType::U128));
+        self.enter_item(Symbol::from("u256"), Item::BuildInType(BuildInType::U256));
+        self.enter_item(
+            Symbol::from("signer"),
+            Item::BuildInType(BuildInType::Signer),
+        );
         self.enter_item(
             Symbol::from("address"),
             Item::BuildInType(BuildInType::Address),
@@ -60,6 +71,11 @@ impl Scope {
     pub(crate) fn enter_item(&mut self, s: Symbol, item: impl Into<Item>) {
         let item = item.into();
         self.items.insert(s, item);
+    }
+
+    pub(crate) fn enter_types(&mut self, s: Symbol, item: impl Into<Item>) {
+        let item = item.into();
+        self.types.insert(s, item);
     }
 
     fn enter_spec_build_in_const(&mut self) {

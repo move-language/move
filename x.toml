@@ -3,6 +3,7 @@ version = "0.8.2"
 
 [system-tests]
 
+
 [cargo.sccache]
 bucket = "ci-artifacts.diem.com"
 prefix = "sccache/diem/"
@@ -22,7 +23,6 @@ version = "0.2.16-alpha.0"
 git = "https://github.com/diem/sccache.git"
 git-rev = "ef50d87a58260c30767520045e242ccdbdb965af"
 features = [ "s3" ]
-
 
 [fix]
 
@@ -145,34 +145,10 @@ members = [
     # Please keep this list in alphabetical order!
 ]
 
-[workspace.move-to-diem-deps]
-# By default, all crates in the language directory are considered Move crates
-# and are forbidden from depending on any Diem crates.
-#
-# Adding a crate's name to this list will mark it as a Diem crate so that the
-# linter will not impose said restriction on it.
-#
-# Note: if your crate is indeed a Move crate and you are getting the linter
-# yelling at you, you should redesign your crate and properly remove that
-# dependency, instead of adding the crate to this list and silencing the lint.
-diem_crates_in_language = [
-]
-# A special set of diem crates Move crates are allowed to depend on.
-#
-# You should not add new entries to this list unless you have a rare justifiable
-# reason. (read: Just don't.)
-#
-# Particularly, please do not abuse this to silence the lint when it complains
-# about Move crates depending on Diem ones. Again, you should instead fix
-# the design of your crate so it doesn't have to depend on Diem.
-exclude = [
-]
-
 # Interesting subsets of the workspace, These are used for generating and
 # checking dependency summaries.
 
 [subsets.release]
-# The Diem release binaries
 root-members = [
 ]
 
@@ -191,13 +167,8 @@ globs = [".config/nextest.toml", "scripts/dev_setup.sh", "x.toml"]
 mark-changed = "all"
 
 [[determinator.path-rule]]
-# Ignore website and other ancillary files, and scripts not listed above.
-globs = ["developers.diem.com/**/*", "documentation/**/*", "docker/**/*", "helm/**/*", "language/documentation/**/*", "specifications/**/*", "scripts/**/*", "terraform/**/*",]
-mark-changed = []
-
-[[determinator.path-rule]]
-# A bunch of images that should be ignored, I guess.
-globs = ["diem.png", ".assets/diem.png", "storage/data.png"]
+# Ignore non-code dirs
+globs = ["assets/**/*", "docker/**/*", "language/documentation/**/*", "scripts/**/*"]
 mark-changed = []
 
 [[determinator.path-rule]]

@@ -8,7 +8,7 @@ use determinator::rules::DeterminatorRules;
 use guppy::graph::summaries::CargoOptionsSummary;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fs,
     path::{Path, PathBuf},
 };
@@ -130,8 +130,6 @@ pub struct WorkspaceConfig {
     pub test_only: TestOnlyConfig,
     /// Exceptions to whitespace linters
     pub whitespace_exceptions: Vec<String>,
-    /// Move to Diem dependencies
-    pub move_to_diem_deps: MoveToDiemDepsConfig,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
@@ -156,12 +154,6 @@ pub struct BannedDepsConfig {
 #[serde(rename_all = "kebab-case")]
 pub struct DirectDepDupsConfig {
     pub allow: Vec<String>,
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
-pub struct MoveToDiemDepsConfig {
-    pub diem_crates_in_language: HashSet<String>,
-    pub exclude: HashSet<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]

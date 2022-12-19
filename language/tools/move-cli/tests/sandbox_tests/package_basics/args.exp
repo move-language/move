@@ -78,7 +78,7 @@ module 1.signer {
 public address_of(s: &signer): address {
 B0:
 	0: MoveLoc[0](s: &signer)
-	1: Call[1](borrow_address(&signer): &address)
+	1: Call borrow_address(&signer): &address
 	2: ReadRef
 	3: Ret
 }

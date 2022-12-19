@@ -274,7 +274,25 @@ impl Interpreter {
         let arg_count = func.arg_count();
         let is_generic = !ty_args.is_empty();
         for i in 0..arg_count {
-            locals.store_loc(arg_count - i - 1, self.operand_stack.pop()?)?;
+            let v = self.operand_stack.pop().map_err(|e| self.set_location(e))?;
+            if self.runtime_config.paranoid_type_checks {
+                let expected_ty = resolver
+                    .resolve_signature_token(&func.local_types()[arg_count - i - 1])
+                    .and_then(|ty| resolver.subst(&ty, &ty_args))
+                    .map_err(|e| match func.module_id() {
+                        Some(id) => e
+                            .at_code_offset(func.index(), 0)
+                            .finish(Location::Module(id.clone())),
+                        None => {
+                            let err =
+                                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                                    .with_message(
+                                        "Unexpected native function not located in a module"
+                                            .to_owned(),
+                                    );
+                            self.set_location(err)
+                        }
+                    })?;
 
             if self.paranoid_type_checks {
                 let ty = self.operand_stack.pop_ty()?;
@@ -405,26 +423,22 @@ impl Interpreter {
             }
         };
 
-        // Paranoid check to protect us against incorrect native function implementations. A native function that
-        // returns a different number of values than its declared types will trigger this check
-        if return_values.len() != return_type_count {
-            return Err(
-                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
-                    "Arity mismatch: return value count does not match return type count"
-                        .to_string(),
-                ),
-            );
-        }
-        // Put return values on the top of the operand stack, where the caller will find them.
-        // This is one of only two times the operand stack is shared across call stack frames; the other is in handling
-        // the Return instruction for normal calls
-        for value in return_values {
-            self.operand_stack.push(value)?;
-        }
-
-        if self.paranoid_type_checks {
-            for ty in function.return_types() {
-                self.operand_stack.push_ty(ty.subst(&ty_args)?)?;
+        if self.runtime_config.paranoid_type_checks {
+            if return_values.len() != function.return_types().len() {
+                return Err(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message(
+                            "Unexpected native function not located in a module".to_owned(),
+                        ),
+                );
+            }
+            for (value, sig) in return_values.into_iter().zip(function.return_types()) {
+                value.add_runtime_type(&resolver.subst(&resolver.resolve_signature_token(sig)?, &ty_args)?)?;
+                self.operand_stack.push(value)?;
+            }
+        } else {
+            for value in return_values {
+                self.operand_stack.push(value)?;
             }
         }
         Ok(())

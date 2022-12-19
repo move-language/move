@@ -317,24 +317,40 @@ impl<'a> SignatureChecker<'a> {
 
     fn check_type_instantiation(
         &self,
-        ty: &SignatureToken,
+        s: &SignatureToken,
         type_parameters: &[AbilitySet],
     ) -> PartialVMResult<()> {
-        match ty {
-            SignatureToken::StructInstantiation(idx, type_arguments) => {
-                // Check that the instantiation satisfies the `idx` struct's constraints
-                // Cannot be checked completely if we do not know the constraints of type parameters
-                // i.e. it cannot be checked unless we are inside some module member. The only case
-                // where that happens is when checking the signature pool itself
-                let sh = self.resolver.struct_handle_at(*idx);
-                self.check_generic_instance(
-                    type_arguments,
-                    sh.type_param_constraints(),
-                    type_parameters,
-                )
+        for ty in s.preorder_traversal() {
+            match ty {
+                SignatureToken::StructInstantiation(idx, type_arguments) => {
+                    // Check that the instantiation satisfies the `idx` struct's constraints
+                    // Cannot be checked completely if we do not know the constraints of type parameters
+                    // i.e. it cannot be checked unless we are inside some module member. The only case
+                    // where that happens is when checking the signature pool itself
+                    let sh = self.resolver.struct_handle_at(*idx);
+                    self.check_generic_instance(
+                        type_arguments,
+                        sh.type_param_constraints(),
+                        type_parameters,
+                    )?
+                }
+                SignatureToken::Reference(_)
+                | SignatureToken::MutableReference(_)
+                | SignatureToken::Vector(_)
+                | SignatureToken::TypeParameter(_)
+                | SignatureToken::Struct(_)
+                | SignatureToken::Bool
+                | SignatureToken::U8
+                | SignatureToken::U16
+                | SignatureToken::U32
+                | SignatureToken::U64
+                | SignatureToken::U128
+                | SignatureToken::U256
+                | SignatureToken::Address
+                | SignatureToken::Signer => (),
             }
-            _ => Ok(()),
         }
+        Ok(())
     }
 
     // Checks if the given types are well defined and satisfy the constraints in the given context.

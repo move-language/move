@@ -424,7 +424,7 @@ impl Interpreter {
 
         if self.paranoid_type_checks {
             for ty in function.return_types() {
-                self.operand_stack.push_ty(ty.subst(&ty_args)?)?;
+                self.operand_stack.push_ty(resolver.subst(ty, &ty_args)?)?;
             }
         }
         Ok(())

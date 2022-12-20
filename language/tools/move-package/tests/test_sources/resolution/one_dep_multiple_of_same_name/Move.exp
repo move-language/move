@@ -37,7 +37,9 @@ ResolutionGraph {
         build: None,
         dependencies: {
             "OtherDep": Dependency {
-                local: "./deps_only/other_dep",
+                kind: Local(
+                    "./deps_only/other_dep",
+                ),
                 subst: Some(
                     {
                         "A": RenameFrom(
@@ -47,8 +49,6 @@ ResolutionGraph {
                 ),
                 version: None,
                 digest: None,
-                git_info: None,
-                node_info: None,
             },
         },
         dev_dependencies: {},
@@ -124,7 +124,9 @@ ResolutionGraph {
                 build: None,
                 dependencies: {
                     "OtherDep": Dependency {
-                        local: "./deps_only/other_dep",
+                        kind: Local(
+                            "./deps_only/other_dep",
+                        ),
                         subst: Some(
                             {
                                 "A": RenameFrom(
@@ -134,8 +136,6 @@ ResolutionGraph {
                         ),
                         version: None,
                         digest: None,
-                        git_info: None,
-                        node_info: None,
                     },
                 },
                 dev_dependencies: {},

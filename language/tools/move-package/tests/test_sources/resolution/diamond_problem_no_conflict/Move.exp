@@ -31,7 +31,9 @@ ResolutionGraph {
         build: None,
         dependencies: {
             "A": Dependency {
-                local: "./deps_only/A",
+                kind: Local(
+                    "./deps_only/A",
+                ),
                 subst: Some(
                     {
                         "AA": Assign(
@@ -41,11 +43,11 @@ ResolutionGraph {
                 ),
                 version: None,
                 digest: None,
-                git_info: None,
-                node_info: None,
             },
             "B": Dependency {
-                local: "./deps_only/B",
+                kind: Local(
+                    "./deps_only/B",
+                ),
                 subst: Some(
                     {
                         "BA": Assign(
@@ -55,8 +57,6 @@ ResolutionGraph {
                 ),
                 version: None,
                 digest: None,
-                git_info: None,
-                node_info: None,
             },
         },
         dev_dependencies: {},
@@ -123,7 +123,9 @@ ResolutionGraph {
                 build: None,
                 dependencies: {
                     "C": Dependency {
-                        local: "../C",
+                        kind: Local(
+                            "../C",
+                        ),
                         subst: Some(
                             {
                                 "AA": RenameFrom(
@@ -133,8 +135,6 @@ ResolutionGraph {
                         ),
                         version: None,
                         digest: None,
-                        git_info: None,
-                        node_info: None,
                     },
                 },
                 dev_dependencies: {},
@@ -170,7 +170,9 @@ ResolutionGraph {
                 build: None,
                 dependencies: {
                     "C": Dependency {
-                        local: "../C",
+                        kind: Local(
+                            "../C",
+                        ),
                         subst: Some(
                             {
                                 "BA": RenameFrom(
@@ -180,8 +182,6 @@ ResolutionGraph {
                         ),
                         version: None,
                         digest: None,
-                        git_info: None,
-                        node_info: None,
                     },
                 },
                 dev_dependencies: {},
@@ -248,7 +248,9 @@ ResolutionGraph {
                 build: None,
                 dependencies: {
                     "A": Dependency {
-                        local: "./deps_only/A",
+                        kind: Local(
+                            "./deps_only/A",
+                        ),
                         subst: Some(
                             {
                                 "AA": Assign(
@@ -258,11 +260,11 @@ ResolutionGraph {
                         ),
                         version: None,
                         digest: None,
-                        git_info: None,
-                        node_info: None,
                     },
                     "B": Dependency {
-                        local: "./deps_only/B",
+                        kind: Local(
+                            "./deps_only/B",
+                        ),
                         subst: Some(
                             {
                                 "BA": Assign(
@@ -272,8 +274,6 @@ ResolutionGraph {
                         ),
                         version: None,
                         digest: None,
-                        git_info: None,
-                        node_info: None,
                     },
                 },
                 dev_dependencies: {},

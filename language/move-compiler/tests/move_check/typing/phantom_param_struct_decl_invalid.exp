@@ -41,3 +41,16 @@ error[E02013]: invalid phantom type parameter usage
 23 │         b: T2,
    │            ^^ Phantom type parameter cannot be used as a field type
 
+error[E05001]: ability constraint not satisfied
+   ┌─ tests/move_check/typing/phantom_param_struct_decl_invalid.move:30:12
+   │
+28 │     struct S6<phantom T: copy> { a: bool }
+   │                          ---- 'copy' constraint declared here
+29 │     struct S7<phantom T> {
+   │                       - To satisfy the constraint, the 'copy' ability would need to be added here
+30 │         a: S6<T>
+   │            ^^^^^
+   │            │  │
+   │            │  The type 'T' does not have the ability 'copy'
+   │            'copy' constraint not satisifed
+

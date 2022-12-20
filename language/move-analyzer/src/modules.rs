@@ -546,7 +546,6 @@ impl Modules {
                     _ => return UNKNOWN_TYPE.clone(),
                 }
             }
-
             Exp_::Pack(name, type_args, fields) => {
                 let mut struct_ty = scopes.find_name_chain_type(name, self);
                 let mut struct_ty = struct_ty.struct_ref_to_struct(scopes);
@@ -724,9 +723,9 @@ impl Modules {
                     BinOp_::Xor => pick(true),
                     BinOp_::Shl => pick(true),
                     BinOp_::Shr => pick(true),
-                    BinOp_::Range => ResolvedType::new_unknown(),
-                    BinOp_::Implies => ResolvedType::new_unknown(),
-                    BinOp_::Iff => ResolvedType::new_unknown(),
+                    BinOp_::Range => ResolvedType::Range,
+                    BinOp_::Implies => ResolvedType::new_unit(),
+                    BinOp_::Iff => ResolvedType::new_unit(),
                     BinOp_::And => ResolvedType::new_build_in(BuildInType::Bool),
                     BinOp_::Or => ResolvedType::new_build_in(BuildInType::Bool),
                     BinOp_::Eq

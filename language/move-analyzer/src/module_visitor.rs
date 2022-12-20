@@ -3,6 +3,7 @@ use super::modules::*;
 use super::scope::*;
 use super::scopes::*;
 use super::types::*;
+use core::panic;
 use move_compiler::parser::ast::*;
 use move_compiler::shared::Identifier;
 use move_compiler::shared::Name;
@@ -76,43 +77,44 @@ impl Modules {
             });
         });
 
+        let enter_function = |modules: &Modules,
+                              f: &Function,
+                              scopes: &Scopes,
+                              visitor: &mut dyn ScopeVisitor,
+                              address: AccountAddress,
+                              module_name: Symbol| {
+            // This enter scope make sure the visit_tparam cannot override some module level item.
+            scopes.enter_scope(|scopes| {
+                let s = &f.signature;
+                let ts = s.type_parameters.clone();
+                for t in s.type_parameters.iter() {
+                    self.visit_tparam(t, scopes, visitor);
+                    if visitor.finished() {
+                        return;
+                    }
+                }
+                let params: Vec<_> = s
+                    .parameters
+                    .iter()
+                    .map(|(var, ty)| (var.clone(), scopes.resolve_type(ty, self)))
+                    .collect();
+                let ret = scopes.resolve_type(&s.return_type, self);
+                let item = Item::Fun(ItemFun {
+                    name: f.name.clone(),
+                    type_parameters: ts,
+                    parameters: params,
+                    ret_type: Box::new(ret),
+                    ret_type_unresolved: s.return_type.clone(),
+                });
+                let item = ItemOrAccess::Item(item);
+                visitor.handle_item(modules, scopes, &item);
+                scopes.enter_top_item(self, address, module_name, f.name.value(), item);
+            });
+        };
+
         self.with_function(manifest, |addr, module_name, f| {
             // This clone scope make sure we can visit module level item.
             let _guard = scopes.clone_scope_and_enter(addr, module_name);
-            let enter_function = |modules: &Modules,
-                                  f: &Function,
-                                  scopes: &Scopes,
-                                  visitor: &mut dyn ScopeVisitor,
-                                  address: AccountAddress,
-                                  module_name: Symbol| {
-                // This enter scope make sure the visit_tparam cannot override some module level item.
-                scopes.enter_scope(|scopes| {
-                    let s = &f.signature;
-                    let ts = s.type_parameters.clone();
-                    for t in s.type_parameters.iter() {
-                        self.visit_tparam(t, scopes, visitor);
-                        if visitor.finished() {
-                            return;
-                        }
-                    }
-                    let params: Vec<_> = s
-                        .parameters
-                        .iter()
-                        .map(|(var, ty)| (var.clone(), scopes.resolve_type(ty, self)))
-                        .collect();
-                    let ret = scopes.resolve_type(&s.return_type, self);
-                    let item = Item::Fun(ItemFun {
-                        name: f.name.clone(),
-                        type_parameters: ts,
-                        parameters: params,
-                        ret_type: Box::new(ret),
-                        ret_type_unresolved: s.return_type.clone(),
-                    });
-                    let item = ItemOrAccess::Item(item);
-                    visitor.handle_item(modules, scopes, &item);
-                    scopes.enter_top_item(self, address, module_name, f.name.value(), item);
-                });
-            };
             enter_function(self, f, scopes, visitor, addr, module_name);
         });
 
@@ -135,29 +137,52 @@ impl Modules {
         });
         // enter schema.
         self.with_spec_schema(manifest, |addr, module_name, name, spec| {
-            //
             let item = ItemOrAccess::Item(Item::SpecSchema(
                 name.clone(),
                 self.collect_spec_schema_fields(scopes, &spec.value.members),
             ));
             visitor.handle_item(self, scopes, &item);
             scopes.enter_top_item(self, addr, module_name, name.value, item);
-            self.visit_spec(spec, true, scopes, visitor);
+        });
+
+        self.with_spec(manifest, |addr, module_name, spec| {
+            match &spec.value.target.value {
+                SpecBlockTarget_::Module => {}
+                // _ => panic!("@@@@@@@@@@@@@@:{:?}", &spec.value.target.value),
+                _ => return,
+            };
+            for m in spec.value.members.iter() {
+                match &m.value {
+                    SpecBlockMember_::Function {
+                        uninterpreted: _uninterpreted,
+                        name,
+                        signature,
+                        body,
+                    } => {
+                        let f = Function {
+                            attributes: vec![],
+                            loc: m.loc,
+                            visibility: Visibility::Internal,
+                            entry: None,
+                            signature: signature.clone(),
+                            acquires: vec![],
+                            name: name.clone(),
+                            body: body.clone(),
+                        };
+                        enter_function(self, &f, scopes, visitor, addr, module_name);
+                    }
+                    _ => {}
+                }
+            }
         });
 
         self.with_spec(manifest, |addr, module_name, spec| {
             let _guard = scopes.clone_scope_and_enter(addr, module_name);
-            self.visit_spec(spec, false, scopes, visitor);
+            self.visit_spec(spec, scopes, visitor);
         });
     }
 
-    pub fn visit_spec(
-        &self,
-        spec: &SpecBlock,
-        visit_schema_body: bool,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
-    ) {
+    pub fn visit_spec(&self, spec: &SpecBlock, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
         let _guard = scopes.enter_scope_guard(Scope::new_spec());
         match &spec.value.target.value {
             SpecBlockTarget_::Code => {
@@ -240,14 +265,7 @@ impl Modules {
                     }
                 }
             }
-
-            SpecBlockTarget_::Schema(_, _) => {
-                // Handled before.
-                // Nothing to do.
-                if !visit_schema_body {
-                    return;
-                }
-            } // enter parameter and ret.
+            SpecBlockTarget_::Schema(_, _) => {} // enter parameter and ret.
         }
 
         for u in spec.value.uses.iter() {
@@ -1044,7 +1062,7 @@ impl Modules {
                                 } else if let Some(_) = ty.is_range() {
                                     ResolvedType::new_build_in(BuildInType::NumType)
                                 } else {
-                                    log::error!("bind the wrong type");
+                                    log::error!("bind the wrong type:{}", ty);
                                     ty
                                 };
                                 let item = ItemOrAccess::Item(Item::Parameter(var.clone(), ty));
@@ -1055,6 +1073,11 @@ impl Modules {
                                 // Not supported,according to the msl spec.
                             }
                         }
+                        self.visit_expr(expr, scopes, visitor);
+                        if visitor.finished() {
+                            return;
+                        }
+
                         // bodies
                         for body in bodies.iter() {
                             scopes.enter_scope(|scopes| {
@@ -1154,7 +1177,7 @@ impl Modules {
                 self.visit_type_apply(ty, scopes, visitor);
             }
             Exp_::Spec(spec) => {
-                self.visit_spec(spec, false, scopes, visitor);
+                self.visit_spec(spec, scopes, visitor);
             }
             Exp_::UnresolvedError => {
                 //

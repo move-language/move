@@ -14,6 +14,7 @@ use move_binary_format::{
         FunctionHandle, Signature, SignatureIndex, SignatureToken, StructDefinition,
         StructFieldInformation, StructTypeParameter, TableIndex,
     },
+    file_format_common::VERSION_6,
     IndexKind,
 };
 use move_core_types::vm_status::StatusCode;
@@ -320,37 +321,50 @@ impl<'a> SignatureChecker<'a> {
         s: &SignatureToken,
         type_parameters: &[AbilitySet],
     ) -> PartialVMResult<()> {
-        for ty in s.preorder_traversal() {
-            match ty {
-                SignatureToken::StructInstantiation(idx, type_arguments) => {
-                    // Check that the instantiation satisfies the `idx` struct's constraints
-                    // Cannot be checked completely if we do not know the constraints of type parameters
-                    // i.e. it cannot be checked unless we are inside some module member. The only case
-                    // where that happens is when checking the signature pool itself
-                    let sh = self.resolver.struct_handle_at(*idx);
-                    self.check_generic_instance(
-                        type_arguments,
-                        sh.type_param_constraints(),
-                        type_parameters,
-                    )?
-                }
-                SignatureToken::Reference(_)
-                | SignatureToken::MutableReference(_)
-                | SignatureToken::Vector(_)
-                | SignatureToken::TypeParameter(_)
-                | SignatureToken::Struct(_)
-                | SignatureToken::Bool
-                | SignatureToken::U8
-                | SignatureToken::U16
-                | SignatureToken::U32
-                | SignatureToken::U64
-                | SignatureToken::U128
-                | SignatureToken::U256
-                | SignatureToken::Address
-                | SignatureToken::Signer => (),
+        if self.resolver.version() >= VERSION_6 {
+            for ty in s.preorder_traversal() {
+                self.check_type_instantiation_(ty, type_parameters)?
             }
+            Ok(())
+        } else {
+            // preserve buggy, but harmless old behavior for backward compatibility
+            self.check_type_instantiation_(s, type_parameters)
         }
-        Ok(())
+    }
+
+    fn check_type_instantiation_(
+        &self,
+        s: &SignatureToken,
+        type_parameters: &[AbilitySet],
+    ) -> PartialVMResult<()> {
+        match s {
+            SignatureToken::StructInstantiation(idx, type_arguments) => {
+                // Check that the instantiation satisfies the `idx` struct's constraints
+                // Cannot be checked completely if we do not know the constraints of type parameters
+                // i.e. it cannot be checked unless we are inside some module member. The only case
+                // where that happens is when checking the signature pool itself
+                let sh = self.resolver.struct_handle_at(*idx);
+                self.check_generic_instance(
+                    type_arguments,
+                    sh.type_param_constraints(),
+                    type_parameters,
+                )
+            }
+            SignatureToken::Reference(_)
+            | SignatureToken::MutableReference(_)
+            | SignatureToken::Vector(_)
+            | SignatureToken::TypeParameter(_)
+            | SignatureToken::Struct(_)
+            | SignatureToken::Bool
+            | SignatureToken::U8
+            | SignatureToken::U16
+            | SignatureToken::U32
+            | SignatureToken::U64
+            | SignatureToken::U128
+            | SignatureToken::U256
+            | SignatureToken::Address
+            | SignatureToken::Signer => Ok(()),
+        }
     }
 
     // Checks if the given types are well defined and satisfy the constraints in the given context.

@@ -495,12 +495,13 @@ impl Scopes {
                         )
                     })
                     .collect();
-                let ret = self.resolve_type(ret.as_ref(), name_to_addr);
+
                 ResolvedType::Fun(ItemFun {
                     name: todo!(),
                     type_parameters: vec![],
                     parameters,
-                    ret_type: Box::new(ret),
+                    ret_type: Box::new(self.resolve_type(ret.as_ref(), name_to_addr)),
+                    ret_type_unresolved: *ret.clone(),
                 })
             }
 

@@ -14,7 +14,7 @@ pub mod module_visitor;
 pub mod modules;
 pub mod scope;
 pub mod scopes;
-
+pub mod syntax;
 pub mod types;
 pub mod utils;
 pub mod vfs;

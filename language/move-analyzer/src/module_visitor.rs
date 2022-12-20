@@ -1,25 +1,17 @@
 use super::item::*;
+use super::modules::*;
 use super::scope::*;
 use super::scopes::*;
 use super::types::*;
-use move_compiler::shared::Name;
-
-use move_core_types::account_address::*;
-
 use move_compiler::parser::ast::*;
 use move_compiler::shared::Identifier;
-
+use move_compiler::shared::Name;
+use move_core_types::account_address::*;
 use move_ir_types::location::Spanned;
-
 use move_symbol_pool::Symbol;
-
 use std::cell::RefCell;
-
 use std::collections::HashMap;
-
 use std::{path::PathBuf, rc::Rc};
-
-use super::modules::*;
 
 impl Modules {
     pub fn run_visitor_for_manifest(
@@ -114,6 +106,7 @@ impl Modules {
                         type_parameters: ts,
                         parameters: params,
                         ret_type: Box::new(ret),
+                        ret_type_unresolved: s.return_type.clone(),
                     });
                     let item = ItemOrAccess::Item(item);
                     visitor.handle_item(modules, scopes, &item);
@@ -143,8 +136,10 @@ impl Modules {
         // enter schema.
         self.with_spec_schema(manifest, |addr, module_name, name, spec| {
             //
-            let item = ItemOrAccess::Item(Item::SpecSchema(name.clone(), spec.clone()));
-
+            let item = ItemOrAccess::Item(Item::SpecSchema(
+                name.clone(),
+                self.collect_spec_schema_fields(scopes, &spec.value.members),
+            ));
             visitor.handle_item(self, scopes, &item);
             scopes.enter_top_item(self, addr, module_name, name.value, item);
             self.visit_spec(spec, true, scopes, visitor);
@@ -203,6 +198,35 @@ impl Modules {
                                     Item::Parameter(var.clone(), ty.clone()),
                                 );
                             }
+                            // enter result.
+                            scopes.enter_item(
+                                self,
+                                Symbol::from("result"),
+                                Item::Var(
+                                    Var(Spanned {
+                                        loc: x.ret_type_unresolved.loc,
+                                        value: Symbol::from("result"),
+                                    }),
+                                    *x.ret_type.clone(),
+                                ),
+                            );
+                        }
+                        Item::Struct(x) => {
+                            for f in x.fields.iter() {
+                                scopes.enter_item(
+                                    self,
+                                    f.0.value(),
+                                    Item::Var(Var(f.0 .0.clone()), f.1.clone()),
+                                );
+                            }
+                        }
+                        Item::StructNameRef(addr, module_name, sname, _) => {
+                            log::error!(
+                                "struct name ref not handle:{} {} {}",
+                                addr,
+                                module_name.as_str(),
+                                sname.0.value.as_str()
+                            );
                         }
                         _ => {}
                     }
@@ -215,8 +239,6 @@ impl Modules {
                         return;
                     }
                 }
-                // enter result.
-                // scopes.enter_item(self, Symbol::from("result"), Item::Var( Spanned { loc :  }  , ()));
             }
 
             SpecBlockTarget_::Schema(_, _) => {
@@ -240,6 +262,36 @@ impl Modules {
                 return;
             }
         }
+    }
+
+    /// Collect field name like a in  spec schema IncrementAborts {
+    ///                   a: address;
+    /// }
+    pub(crate) fn collect_spec_schema_fields(
+        &self,
+        scopes: &Scopes,
+        members: &Vec<SpecBlockMember>,
+    ) -> HashMap<Symbol, (Name, ResolvedType)> {
+        let mut ret = HashMap::new();
+        for member in members.iter() {
+            match &member.value {
+                SpecBlockMember_::Variable {
+                    is_global,
+                    name,
+                    type_parameters,
+                    type_,
+                    init,
+                } => {
+                    let mut ty = scopes.resolve_type(type_, self);
+                    if ty.is_err() && init.is_some() {
+                        ty = self.get_expr_type(init.as_ref().unwrap(), scopes);
+                    }
+                    ret.insert(name.value, (name.clone(), ty));
+                }
+                _ => {}
+            }
+        }
+        ret
     }
 
     pub fn visit_spec_member(
@@ -306,6 +358,7 @@ impl Modules {
                     type_parameters: signature.type_parameters.clone(),
                     parameters: parameter.clone(),
                     ret_type: Box::new(ret_ty),
+                    ret_type_unresolved: signature.return_type.clone(),
                 });
                 scopes.enter_item(self, name.value(), item);
                 for (var, ty) in parameter {
@@ -373,19 +426,8 @@ impl Modules {
                                 return;
                             }
                         }
-                        match &item_ret {
-                            Some(x) => match x {
-                                // TODO should I visit spec block.
-                                // Item::SpecSchema(_, block) => {
-                                //     self.visit_spec(block, scopes, visitor);
-                                // }
-                                _ => {}
-                            },
-                            None => {}
-                        }
                     }
                     Exp_::Pack(chain, type_args, fields) => {
-                        // TODO Pack.
                         let (item_ret, module_ret) = scopes.find_name_chain_item(chain, self);
                         if let Some(item_ret) = item_ret.clone() {
                             let item = ItemOrAccess::Access(Access::ExprAccessChain(
@@ -406,11 +448,33 @@ impl Modules {
                                 }
                             }
                         }
-                        for (f, e) in fields.iter() {
-                            // TODO can jump to the schema where define this field??.
-                            self.visit_expr(e, scopes, visitor);
-                            if visitor.finished() {
-                                return;
+                        {
+                            let x = item_ret
+                                .as_ref()
+                                .map(|x| match x {
+                                    Item::SpecSchema(_, x) => Some(x.clone()),
+                                    _ => None,
+                                })
+                                .flatten()
+                                .unwrap_or(Default::default());
+
+                            for (f, e) in fields.iter() {
+                                // TODO can jump to the schema where define this field??.
+                                self.visit_expr(e, scopes, visitor);
+                                if visitor.finished() {
+                                    return;
+                                }
+                                if let Some((f2, ty)) = x.get(&f.value()) {
+                                    let item = ItemOrAccess::Access(Access::AccessFiled(
+                                        f.clone(),
+                                        Field(f2.clone()),
+                                        ty.clone(),
+                                    ));
+                                    visitor.handle_item(self, scopes, &item);
+                                    if visitor.finished() {
+                                        return;
+                                    }
+                                }
                             }
                         }
                     }

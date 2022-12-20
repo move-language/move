@@ -8,6 +8,7 @@ use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
+use std::collections::HashMap;
 
 use std::rc::Rc;
 use std::str::FromStr;
@@ -80,7 +81,7 @@ pub enum Item {
     BuildInType(BuildInType),
     /// Here are all definition.
     TParam(Name, Vec<Ability>),
-    SpecSchema(Name, SpecBlock),
+    SpecSchema(Name, HashMap<Symbol, (Name, ResolvedType)>),
 
     Dummy,
 }
@@ -88,9 +89,10 @@ pub enum Item {
 #[derive(Clone)]
 pub struct ItemFun {
     pub(crate) name: FunctionName,
-    pub(crate) type_parameters: Vec<(Name, Vec<Ability>)>, // type parameters.
-    pub(crate) parameters: Vec<(Var, ResolvedType)>,       // parameters.
-    pub(crate) ret_type: Box<ResolvedType>,                // return ty
+    pub(crate) type_parameters: Vec<(Name, Vec<Ability>)>,
+    pub(crate) parameters: Vec<(Var, ResolvedType)>,
+    pub(crate) ret_type: Box<ResolvedType>,
+    pub(crate) ret_type_unresolved: Type,
 }
 
 impl std::fmt::Display for ItemFun {
@@ -292,7 +294,7 @@ pub enum Access {
     AccessFiled(
         Field,        // from
         Field,        // to
-        ResolvedType, //  field type
+        ResolvedType, // field type
     ),
     ///////////////
     /// key words

@@ -90,7 +90,7 @@ impl Modules {
 
     /// Load move files  locate in sources and tests ...
     pub(crate) fn load_layout_files(&mut self, manifest_path: &PathBuf, kind: SourcePackageLayout) {
-        use move_compiler::parser::syntax::parse_file_string;
+        use super::syntax::parse_file_string;
         use std::fs;
         let mut env = CompilationEnv::new(Flags::testing());
         let mut p = manifest_path.clone();

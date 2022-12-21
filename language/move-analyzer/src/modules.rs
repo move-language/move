@@ -3,31 +3,21 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::item::*;
-
 use super::scopes::*;
 use super::types::*;
 use super::utils::*;
-use move_core_types::account_address::*;
-
 use anyhow::{Ok, Result};
-
 use move_command_line_common::files::FileHash;
-
 use move_compiler::parser::ast::Definition;
-
 use move_compiler::shared::Identifier;
 use move_compiler::{parser::ast::*, shared::*};
-
+use move_core_types::account_address::*;
 use move_ir_types::location::Loc;
-
 use move_ir_types::location::Spanned;
 use move_package::source_package::layout::SourcePackageLayout;
 use move_package::source_package::manifest_parser::*;
-
 use move_symbol_pool::Symbol;
-
 use std::collections::HashMap;
-
 use std::path::PathBuf;
 use walkdir::WalkDir;
 
@@ -80,10 +70,8 @@ impl Modules {
             self.load_project(&p).unwrap();
         }
         self.load_layout_files(&manifest_path, SourcePackageLayout::Sources);
-
-        // TODO::load
-        // self.load_layout_files(&manifest_path, SourcePackageLayout::Tests);
-        // self.load_layout_files(&manifest_path, SourcePackageLayout::Scripts);
+        self.load_layout_files(&manifest_path, SourcePackageLayout::Tests);
+        self.load_layout_files(&manifest_path, SourcePackageLayout::Scripts);
 
         Ok(())
     }
@@ -110,26 +98,29 @@ impl Modules {
                 log::info!("load source file {:?}", file.path());
                 let file_hash = FileHash::new(file_content.as_str());
                 // This is a move file.
-                let x = parse_file_string(&mut env, file_hash, file_content.as_str());
-                let x = match x {
+                let defs = parse_file_string(&mut env, file_hash, file_content.as_str());
+                let defs = match defs {
                     std::result::Result::Ok(x) => x,
                     std::result::Result::Err(e) => {
                         log::error!("parse file failed:{:?} d:{:?}", file.path(), e);
                         continue;
                     }
                 };
-                let x = x.0;
+                let defs = defs.0;
                 if self.modules.get(manifest_path).is_none() {
                     self.modules
                         .insert(manifest_path.clone(), Default::default());
                 }
-                self.modules
-                    .get_mut(manifest_path)
-                    .unwrap()
-                    .sources
-                    .insert(file.path().clone().to_path_buf(), x);
+                if kind == SourcePackageLayout::Sources {
+                    &mut self.modules.get_mut(manifest_path).unwrap().sources
+                } else if kind == SourcePackageLayout::Tests {
+                    &mut self.modules.get_mut(manifest_path).unwrap().tests
+                } else {
+                    &mut self.modules.get_mut(manifest_path).unwrap().scripts
+                }
+                .insert(file.path().clone().to_path_buf(), defs);
 
-                //  update hash
+                // update hash
                 self.hash_file.update(file.path().to_path_buf(), file_hash);
                 // update line mapping.
                 self.file_line_mapping
@@ -141,14 +132,18 @@ impl Modules {
     pub(crate) fn with_module_member(
         &self,
         manifest: &PathBuf,
+        kind: SourcePackageLayout,
         mut call_back: impl FnMut(AccountAddress, Symbol, &ModuleMember),
     ) {
-        for (_, m) in self
-            .modules
-            .get(manifest)
-            .unwrap_or(&Default::default())
-            .sources
-            .iter()
+        let empty = Default::default();
+        for (_, m) in if kind == SourcePackageLayout::Sources {
+            &self.modules.get(manifest).unwrap_or(&empty).sources
+        } else if kind == SourcePackageLayout::Tests {
+            &self.modules.get(manifest).unwrap_or(&empty).tests
+        } else {
+            unreachable!()
+        }
+        .iter()
         {
             for d in m.iter() {
                 match d {
@@ -181,14 +176,18 @@ impl Modules {
     pub(crate) fn with_module(
         &self,
         manifest: &PathBuf,
+        kind: SourcePackageLayout,
         mut call_back: impl FnMut(AccountAddress, &ModuleDefinition),
     ) {
-        for (_, m) in self
-            .modules
-            .get(manifest)
-            .unwrap_or(&Default::default())
-            .sources
-            .iter()
+        let empty = Default::default();
+        for (_, m) in if kind == SourcePackageLayout::Sources {
+            &self.modules.get(manifest).unwrap_or(&empty).sources
+        } else if kind == SourcePackageLayout::Tests {
+            &self.modules.get(manifest).unwrap_or(&empty).tests
+        } else {
+            unreachable!()
+        }
+        .iter()
         {
             for d in m.iter() {
                 match d {
@@ -209,9 +208,10 @@ impl Modules {
     pub(crate) fn with_const(
         &self,
         manifest: &PathBuf,
+        kind: SourcePackageLayout,
         mut call_back: impl FnMut(AccountAddress, Symbol, &Constant),
     ) {
-        self.with_module_member(manifest, |addr, module_name, member| match member {
+        self.with_module_member(manifest, kind, |addr, module_name, member| match member {
             ModuleMember::Constant(c) => call_back(addr, module_name, c),
             _ => {}
         });
@@ -220,9 +220,10 @@ impl Modules {
     pub(crate) fn with_struct(
         &self,
         manifest: &PathBuf,
+        kind: SourcePackageLayout,
         mut call_back: impl FnMut(AccountAddress, Symbol, &StructDefinition),
     ) {
-        self.with_module_member(manifest, |addr, module_name, member| match member {
+        self.with_module_member(manifest, kind, |addr, module_name, member| match member {
             ModuleMember::Struct(c) => call_back(addr, module_name, c),
             _ => {}
         });
@@ -251,9 +252,10 @@ impl Modules {
     pub(crate) fn with_use_decl(
         &self,
         manifest: &PathBuf,
+        kind: SourcePackageLayout,
         mut call_back: impl FnMut(AccountAddress, Symbol, &UseDecl),
     ) {
-        self.with_module_member(manifest, |addr, module_name, member| match member {
+        self.with_module_member(manifest, kind, |addr, module_name, member| match member {
             ModuleMember::Use(c) => call_back(addr, module_name, c),
             _ => {}
         });
@@ -261,9 +263,10 @@ impl Modules {
     pub(crate) fn with_function(
         &self,
         manifest: &PathBuf,
+        kind: SourcePackageLayout,
         mut call_back: impl FnMut(AccountAddress, Symbol, &Function),
     ) {
-        self.with_module_member(manifest, |addr, module_name, member| match member {
+        self.with_module_member(manifest, kind, |addr, module_name, member| match member {
             ModuleMember::Function(c) => call_back(addr, module_name, c),
             _ => {}
         });
@@ -271,9 +274,10 @@ impl Modules {
     pub(crate) fn with_friend(
         &self,
         manifest: &PathBuf,
+        kind: SourcePackageLayout,
         mut call_back: impl FnMut(AccountAddress, Symbol, &FriendDecl),
     ) {
-        self.with_module_member(manifest, |addr, module_name, member| match member {
+        self.with_module_member(manifest, kind, |addr, module_name, member| match member {
             ModuleMember::Friend(c) => call_back(addr, module_name, c),
             _ => {}
         });
@@ -282,9 +286,10 @@ impl Modules {
     pub(crate) fn with_spec(
         &self,
         manifest: &PathBuf,
+        kind: SourcePackageLayout,
         mut call_back: impl FnMut(AccountAddress, Symbol, &SpecBlock),
     ) {
-        self.with_module_member(manifest, |addr, module_name, member| match member {
+        self.with_module_member(manifest, kind, |addr, module_name, member| match member {
             ModuleMember::Spec(c) => call_back(addr, module_name, c),
             _ => {}
         });
@@ -292,9 +297,10 @@ impl Modules {
     pub(crate) fn with_spec_schema(
         &self,
         manifest: &PathBuf,
+        kind: SourcePackageLayout,
         mut call_back: impl FnMut(AccountAddress, Symbol, Name, &SpecBlock),
     ) {
-        self.with_module_member(manifest, |addr, module_name, member| match member {
+        self.with_module_member(manifest, kind, |addr, module_name, member| match member {
             ModuleMember::Spec(c) => match &c.value.target.value {
                 SpecBlockTarget_::Schema(name, _) => {
                     call_back(addr, module_name, name.clone(), c);
@@ -547,7 +553,7 @@ impl Modules {
                 }
             }
             Exp_::Pack(name, type_args, fields) => {
-                let mut struct_ty = scopes.find_name_chain_type(name, self);
+                let struct_ty = scopes.find_name_chain_type(name, self);
                 let mut struct_ty = struct_ty.struct_ref_to_struct(scopes);
                 let mut types = HashMap::new();
                 let mut struct_ty = match &struct_ty {

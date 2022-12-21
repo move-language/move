@@ -31,26 +31,17 @@ pub struct ModuleScope {
 
 impl Scope {
     pub(crate) fn new_spec() -> Self {
-        let mut x = Self {
-            is_spec: true,
-            is_function: false,
-            module_: None,
-            items: Default::default(),
-            types: Default::default(),
-        };
+        let mut x = Self::default();
+        x.is_spec = true;
         x.enter_spec_build_in_const();
         x
     }
     pub(crate) fn new_fun() -> Self {
-        let x = Self {
-            is_spec: true,
-            is_function: false,
-            module_: None,
-            items: Default::default(),
-            types: Default::default(),
-        };
+        let mut x = Self::default();
+        x.is_function = true;
         x
     }
+
     pub(crate) fn enter_build_in(&mut self) {
         self.enter_item(Symbol::from("bool"), Item::BuildInType(BuildInType::Bool));
         self.enter_item(Symbol::from("u8"), Item::BuildInType(BuildInType::U8));

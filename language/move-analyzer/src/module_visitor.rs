@@ -3,43 +3,74 @@ use super::modules::*;
 use super::scope::*;
 use super::scopes::*;
 use super::types::*;
-use core::panic;
 use move_compiler::parser::ast::*;
 use move_compiler::shared::Identifier;
 use move_compiler::shared::Name;
 use move_core_types::account_address::*;
 use move_ir_types::location::Spanned;
+use move_package::source_package::layout::SourcePackageLayout;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::{path::PathBuf, rc::Rc};
 
 impl Modules {
-    pub fn run_visitor_for_manifest(
+    pub(crate) fn visit_scripts(
+        &self,
+        manifest: &PathBuf,
+        scopes: &Scopes,
+        visitor: &mut dyn ScopeVisitor,
+    ) {
+        self.with_script(manifest, |script| {
+            scopes.enter_scope(|scopes| {
+                for u in script.uses.iter() {
+                    self.visit_use_decl(None, u, scopes, Some(visitor));
+                    if visitor.finished() {
+                        return;
+                    }
+                }
+                for c in script.constants.iter() {
+                    self.visit_const(None, c, scopes, visitor);
+                    if visitor.finished() {
+                        return;
+                    }
+                }
+                for c in script.specs.iter() {
+                    self.visit_spec(c, scopes, visitor);
+                    if visitor.finished() {
+                        return;
+                    }
+                }
+                self.visit_function(&script.function, scopes, visitor);
+            })
+        });
+    }
+
+    pub fn visit_modules_or_tests(
         &self,
         scopes: &Scopes,
         visitor: &mut dyn ScopeVisitor,
         manifest: &PathBuf,
+        kind: SourcePackageLayout,
     ) {
-        self.with_module(manifest, |addr, module_name| {
+        self.with_module(manifest, kind.clone(), |addr, module_name| {
             scopes.set_up_module(addr, module_name.name);
         });
-
-        self.with_const(manifest, |addr, name, c| {
-            self.visit_const(addr, name, c, scopes, visitor);
+        self.with_const(manifest, kind.clone(), |addr, name, c| {
+            self.visit_const(Some((addr, name)), c, scopes, visitor);
         });
 
-        self.with_struct(manifest, |addr, module_name, c| {
+        self.with_struct(manifest, kind.clone(), |addr, module_name, c| {
             let item =
                 Item::StructNameRef(addr, module_name, c.name.clone(), c.type_parameters.clone());
             scopes.enter_top_item(self, addr, module_name, c.name.0.value, item);
         });
 
-        self.with_use_decl(manifest, |addr, module_name, u| {
+        self.with_use_decl(manifest, kind.clone(), |addr, module_name, u| {
             self.visit_use_decl(Some((addr, module_name)), u, scopes, None)
         });
 
-        self.with_struct(manifest, |addr, module_name, s| {
+        self.with_struct(manifest, kind.clone(), |addr, module_name, s| {
             let _guard = scopes.clone_scope_and_enter(addr, module_name);
             scopes.enter_scope(|scopes| {
                 for t in s.type_parameters.iter() {
@@ -112,21 +143,22 @@ impl Modules {
             });
         };
 
-        self.with_function(manifest, |addr, module_name, f| {
+        self.with_function(manifest, kind.clone(), |addr, module_name, f| {
             // This clone scope make sure we can visit module level item.
             let _guard = scopes.clone_scope_and_enter(addr, module_name);
             enter_function(self, f, scopes, visitor, addr, module_name);
         });
 
         // visit use decl again.
-        self.with_use_decl(manifest, |addr, module_name, u| {
+        self.with_use_decl(manifest, kind.clone(), |addr, module_name, u| {
             self.visit_use_decl(Some((addr, module_name)), u, scopes, Some(visitor));
         });
-        self.with_friend(manifest, |addr, module_name, f| {
+        self.with_friend(manifest, kind.clone(), |_addr, _module_name, f| {
             self.visit_friend(f, scopes, visitor);
         });
+
         // visit function body.
-        self.with_function(manifest, |addr, module_name, f| {
+        self.with_function(manifest, kind.clone(), |addr, module_name, f| {
             if !visitor
                 .file_should_visit(self.convert_file_hash_filepath(&f.loc.file_hash()).unwrap())
             {
@@ -136,7 +168,7 @@ impl Modules {
             self.visit_function(f, scopes, visitor);
         });
         // enter schema.
-        self.with_spec_schema(manifest, |addr, module_name, name, spec| {
+        self.with_spec_schema(manifest, kind.clone(), |addr, module_name, name, spec| {
             let item = ItemOrAccess::Item(Item::SpecSchema(
                 name.clone(),
                 self.collect_spec_schema_fields(scopes, &spec.value.members),
@@ -145,7 +177,7 @@ impl Modules {
             scopes.enter_top_item(self, addr, module_name, name.value, item);
         });
 
-        self.with_spec(manifest, |addr, module_name, spec| {
+        self.with_spec(manifest, kind.clone(), |addr, module_name, spec| {
             match &spec.value.target.value {
                 SpecBlockTarget_::Module => {}
                 // _ => panic!("@@@@@@@@@@@@@@:{:?}", &spec.value.target.value),
@@ -176,7 +208,7 @@ impl Modules {
             }
         });
 
-        self.with_spec(manifest, |addr, module_name, spec| {
+        self.with_spec(manifest, kind.clone(), |addr, module_name, spec| {
             let _guard = scopes.clone_scope_and_enter(addr, module_name);
             self.visit_spec(spec, scopes, visitor);
         });
@@ -265,7 +297,14 @@ impl Modules {
                     }
                 }
             }
-            SpecBlockTarget_::Schema(_, _) => {} // enter parameter and ret.
+            SpecBlockTarget_::Schema(_, type_parameters) => {
+                for t in type_parameters.iter() {
+                    self.visit_tparam(t, scopes, visitor);
+                    if visitor.finished() {
+                        return;
+                    }
+                }
+            } // enter parameter and ret.
         }
 
         for u in spec.value.uses.iter() {
@@ -294,9 +333,9 @@ impl Modules {
         for member in members.iter() {
             match &member.value {
                 SpecBlockMember_::Variable {
-                    is_global,
+                    is_global: _is_global,
                     name,
-                    type_parameters,
+                    type_parameters: _type_parameters,
                     type_,
                     init,
                 } => {
@@ -348,7 +387,7 @@ impl Modules {
                 });
             }
             SpecBlockMember_::Function {
-                uninterpreted,
+                uninterpreted: _uninterpreted,
                 name,
                 signature,
                 body,
@@ -573,19 +612,23 @@ impl Modules {
         let scopes = Scopes::new();
         log::info!("run visitor for {} ", visitor);
         // visit should `rev`.
-        let x: Vec<_> = self.manifests.iter().rev().map(|x| x.clone()).collect();
-        for m in x.iter() {
-            self.run_visitor_for_manifest(&scopes, visitor, m);
+        let manifests: Vec<_> = self.manifests.iter().rev().map(|x| x.clone()).collect();
+        for m in manifests.iter() {
+            self.visit_modules_or_tests(&scopes, visitor, m, SourcePackageLayout::Sources);
             if visitor.finished() {
                 return;
             }
+            self.visit_modules_or_tests(&scopes, visitor, m, SourcePackageLayout::Tests);
+            if visitor.finished() {
+                return;
+            }
+            self.visit_scripts(m, &scopes, visitor);
         }
     }
 
     pub(crate) fn visit_const(
         &self,
-        address: AccountAddress,
-        module: Symbol,
+        enter_top: Option<(AccountAddress, Symbol)>,
         c: &Constant,
         scopes: &Scopes,
         visitor: &mut dyn ScopeVisitor,
@@ -599,7 +642,11 @@ impl Modules {
         let item = ItemOrAccess::Item(Item::Const(c.name.clone(), ty));
         visitor.handle_item(self, scopes, &item);
         let item: Item = item.into();
-        scopes.enter_top_item(self, address, module, c.name.value(), item.clone());
+        if let Some((address, module)) = enter_top {
+            scopes.enter_top_item(self, address, module, c.name.value(), item.clone());
+        } else {
+            scopes.enter_item(self, c.name.value(), item);
+        }
     }
 
     pub(crate) fn get_module_addr(
@@ -781,10 +828,10 @@ impl Modules {
                 let mut struct_ty = struct_ty.struct_ref_to_struct(scopes);
                 match &struct_ty.clone() {
                     ResolvedType::Struct(ItemStruct {
-                        name,
+                        name: _name,
                         type_parameters,
                         type_parameters_ins,
-                        fields,
+                        fields: _fields,
                     }) => {
                         let struct_ty = if let Some(tys) = tys {
                             let tys: Vec<_> =
@@ -901,7 +948,7 @@ impl Modules {
                     //TODO should under_function have this build in function.
                     x
                 } {
-                    let mut item = ItemOrAccess::Access(Access::MoveBuildInFun(b, chain.clone()));
+                    let item = ItemOrAccess::Access(Access::MoveBuildInFun(b, chain.clone()));
                     visitor.handle_item(self, scopes, &item);
                     if visitor.finished() {
                         return;
@@ -910,7 +957,7 @@ impl Modules {
                     let x = SpecBuildInFun::from_chain(chain);
                     x.map(|x| scopes.under_function().map(|_| x)).flatten()
                 } {
-                    let mut item = ItemOrAccess::Access(Access::SpecBuildInFun(b, chain.clone()));
+                    let item = ItemOrAccess::Access(Access::SpecBuildInFun(b, chain.clone()));
                     visitor.handle_item(self, scopes, &item);
                     if visitor.finished() {
                         return;
@@ -1237,7 +1284,7 @@ impl Modules {
                 Some(x)
             });
             let module_scope =
-                module_scope.expect(&format!("use decl {:?} not found", use_decl.use_));
+                module_scope.expect(&format!("use decl {:?} not found.", use_decl.use_));
             module_scope
         };
         match &use_decl.use_ {

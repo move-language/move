@@ -64,12 +64,21 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
                 .send(Message::Response(r))
                 .unwrap();
         }
-        None => log::error!(
-            "{:?}:{}:{} not found definition.",
-            visitor.filepath,
-            line,
-            col
-        ),
+        None => {
+            let r = Response::new_err(
+                request.id.clone(),
+                ErrorCode::UnknownErrorCode as i32,
+                format!(
+                    "{:?}:{}:{} not found definition.",
+                    visitor.filepath, line, col
+                ),
+            );
+            context
+                .connection
+                .sender
+                .send(Message::Response(r))
+                .unwrap();
+        }
     }
 }
 
@@ -105,7 +114,7 @@ impl ScopeVisitor for Visitor {
     fn handle_item(&mut self, services: &dyn ConvertLoc, _scopes: &Scopes, item: &ItemOrAccess) {
         match item {
             ItemOrAccess::Item(item) => match item {
-                Item::UseModule(name, alias, s) => {
+                Item::UseModule(name, alias, _) => {
                     if self.match_loc(&name.value.module.loc(), services)
                         || match alias {
                             Some(alias) => self.match_loc(&alias.0.loc, services),

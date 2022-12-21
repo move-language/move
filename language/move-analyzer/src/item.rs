@@ -1,6 +1,5 @@
 use super::scope::*;
 use super::types::*;
-
 use move_compiler::shared::Identifier;
 use move_compiler::shared::TName;
 use move_compiler::{parser::ast::*, shared::*};
@@ -9,7 +8,6 @@ use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
-
 use std::rc::Rc;
 use std::str::FromStr;
 
@@ -135,7 +133,7 @@ impl Item {
             Item::Parameter(_, ty) | Item::Var(_, ty) | Item::Const(_, ty) => ty.clone(),
             Item::Field(_, ty) => ty.clone(),
             Item::Fun(x) => ResolvedType::Fun(x.clone()),
-            Item::UseMember(_, name, alias, module) => {
+            Item::UseMember(_, name, _alias, module) => {
                 return module
                     .as_ref()
                     .borrow()
@@ -154,7 +152,7 @@ impl Item {
     pub(crate) fn def_loc(&self) -> Loc {
         match self {
             Item::Parameter(var, _) => var.loc(),
-            Item::UseMember(_, name, alias, module) => module
+            Item::UseMember(_, name, _, module) => module
                 .borrow()
                 .items
                 .get(&name.value)
@@ -166,7 +164,6 @@ impl Item {
             Item::Const(name, _) => name.loc(),
             Item::StructNameRef(_, _, name, _) => name.0.loc,
             Item::Fun(f) => f.name.0.loc,
-            Item::BuildInType(_) => UNKNOWN_LOC,
             Item::UseModule(_, _, s) => s.borrow().module_.as_ref().unwrap().name.loc(),
             Item::Var(name, _) => name.loc(),
             Item::Field(f, _) => f.loc(),
@@ -174,19 +171,11 @@ impl Item {
             Item::SpecSchema(name, _) => name.loc,
         }
     }
-
-    /// New a dummy item.
-    /// Can be use later by someone override data.
-    /// like std::mem::replace.
-    pub(crate) fn new_dummy() -> Self {
-        // Data here is not important.
-        Self::Dummy
-    }
 }
 
 impl Default for Item {
     fn default() -> Self {
-        Self::new_dummy()
+        Self::Dummy
     }
 }
 #[derive(Clone, Copy, Debug)]
@@ -225,9 +214,10 @@ impl std::fmt::Display for Item {
             Item::Parameter(var, t) => {
                 write!(f, "parameter {}:{}", var.0.value.as_str(), t)
             }
-            Item::UseModule(x, alias, _) => {
+            Item::UseModule(x, _, _) => {
                 write!(f, "use {:?} {}", x, "_")
             }
+
             Item::UseMember(module, name, alias, _) => {
                 write!(
                     f,
@@ -405,10 +395,10 @@ impl Access {
             Access::MacroCall(_, chain) => (chain.loc, chain.loc),
 
             Access::Friend(name, item) => (get_name_chain_last_name(name).loc.clone(), item.loc()),
-            Access::MoveBuildInFun(b, chain) => {
+            Access::MoveBuildInFun(_, chain) => {
                 (get_name_chain_last_name(chain).loc.clone(), UNKNOWN_LOC)
             }
-            Access::SpecBuildInFun(b, chain) => {
+            Access::SpecBuildInFun(_, chain) => {
                 (get_name_chain_last_name(chain).loc.clone(), UNKNOWN_LOC)
             }
             Access::IncludeSchema(chain, x) => (get_name_chain_last_name(chain).loc.clone(), x.loc),

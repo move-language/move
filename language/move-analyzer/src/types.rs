@@ -4,15 +4,12 @@ use super::item::*;
 use crate::item::{self, ItemFun};
 use crate::scopes::Scopes;
 use move_command_line_common::files::FileHash;
-
 use move_compiler::shared::Identifier;
 use move_compiler::{parser::ast::*, shared::*};
 use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
-
 use std::collections::HashMap;
-
 use std::vec;
 
 #[derive(Clone)]
@@ -235,7 +232,7 @@ impl ResolvedType {
             ResolvedType::StructRef(_, _, x, _, _) => x.loc(),
             ResolvedType::UnKnown => UNKNOWN_LOC,
             ResolvedType::ApplyTParam(x, _, _) => x.as_ref().def_loc(),
-            ResolvedType::Ref(_, x) => UNKNOWN_LOC,
+            ResolvedType::Ref(_, _) => UNKNOWN_LOC,
             ResolvedType::Unit => UNKNOWN_LOC,
             ResolvedType::Multiple(_) => UNKNOWN_LOC,
             ResolvedType::Fun(f) => f.name.0.loc,
@@ -288,7 +285,7 @@ impl std::fmt::Display for ResolvedType {
         match self {
             ResolvedType::UnKnown => write!(f, "unknown"),
             ResolvedType::Struct(x) => write!(f, "{}", x),
-            ResolvedType::StructRef(addr, module_name, name, _, _) => {
+            ResolvedType::StructRef(_addr, _module_name, name, _, _) => {
                 write!(f, "struct {}", name.value().as_str())
             }
             ResolvedType::BuildInType(x) => write!(f, "{:?}", x),
@@ -348,7 +345,7 @@ impl ResolvedType {
                     }
                 })
                 .expect(
-                    " You are looking for cannot be found,It is possible But should noe happen.",
+                    " You are looking for cannot be found,It is possible But should not happen.",
                 ),
 
             _ => self,

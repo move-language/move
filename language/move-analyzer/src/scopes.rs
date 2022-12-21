@@ -1,18 +1,16 @@
-#![allow(dead_code)]
 use super::item::*;
 use super::modules::*;
 use super::scope::*;
 use super::types::*;
 use super::utils::*;
-use move_compiler::{parser::ast::*, shared::*};
+use move_compiler::parser::ast::*;
 use move_core_types::account_address::AccountAddress;
-
 use move_symbol_pool::Symbol;
 use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Scopes {
     scopes: Rc<RefCell<Vec<Scope>>>,
     pub(crate) addresses: RefCell<Addresses>,
@@ -20,10 +18,7 @@ pub struct Scopes {
 
 impl Scopes {
     pub(crate) fn new() -> Self {
-        let x = Scopes {
-            scopes: Default::default(),
-            addresses: Default::default(),
-        };
+        let x = Scopes::default();
         let s = Scope::default();
         x.scopes.as_ref().borrow_mut().push(s);
         x.enter_build_in();
@@ -485,24 +480,9 @@ impl Scopes {
             Type_::Ref(m, ref b) => {
                 ResolvedType::Ref(*m, Box::new(self.resolve_type(b.as_ref(), name_to_addr)))
             }
-            Type_::Fun(ref parameters, ref ret) => {
-                let parameters: Vec<_> = parameters
-                    .iter()
-                    .map(|v| {
-                        (
-                            Var(Name::new(todo!(), Symbol::from("_"))),
-                            self.resolve_type(v, name_to_addr),
-                        )
-                    })
-                    .collect();
-
-                ResolvedType::Fun(ItemFun {
-                    name: todo!(),
-                    type_parameters: vec![],
-                    parameters,
-                    ret_type: Box::new(self.resolve_type(ret.as_ref(), name_to_addr)),
-                    ret_type_unresolved: *ret.clone(),
-                })
+            Type_::Fun(_, _) => {
+                log::error!("fun is not first class type.");
+                ResolvedType::UnKnown
             }
 
             Type_::Unit => ResolvedType::Unit,

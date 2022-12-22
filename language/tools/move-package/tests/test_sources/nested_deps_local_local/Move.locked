@@ -3,13 +3,13 @@
 [move]
 version = 0
 
-[[move.dependency]]
+[[move.package]]
 name = "More"
 source = { local = "deps_only/nested/more" }
 
-[[move.dependency]]
+[[move.package]]
 name = "Nested"
 source = { local = "deps_only/nested" }
 dependencies = [
-  "More",
+  { name = "More" },
 ]

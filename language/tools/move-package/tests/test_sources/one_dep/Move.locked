@@ -3,6 +3,6 @@
 [move]
 version = 0
 
-[[move.dependency]]
+[[move.package]]
 name = "OtherDep"
-source = { local = "deps_only/other_dep", addr_subst = { "A" = "B" } }
+source = { local = "deps_only/other_dep" }

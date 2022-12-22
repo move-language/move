@@ -398,7 +398,7 @@ impl ResolvingGraph {
     ) -> Result<(Renaming, ResolvingTable)> {
         download_and_update_if_remote(
             dep_name_in_pkg,
-            &dep,
+            &dep.kind,
             self.build_options.skip_fetch_latest_git_deps,
             progress_output,
         )?;

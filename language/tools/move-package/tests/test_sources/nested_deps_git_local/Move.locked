@@ -3,13 +3,13 @@
 [move]
 version = 0
 
-[[move.dependency]]
+[[move.package]]
 name = "MoveNursery"
 source = { git = "https://github.com/move-language/move", rev = "781c844", subdir = "language/move-stdlib/nursery" }
 dependencies = [
-  "MoveStdlib",
+  { name = "MoveStdlib" },
 ]
 
-[[move.dependency]]
+[[move.package]]
 name = "MoveStdlib"
 source = { git = "https://github.com/move-language/move", rev = "781c844", subdir = "language/move-stdlib" }

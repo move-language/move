@@ -3,8 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{package_hooks, source_package::parsed_manifest as PM, Architecture};
-use anyhow::{bail, format_err, Context, Result};
-use move_command_line_common::env::MOVE_HOME;
+use anyhow::{anyhow, bail, format_err, Context, Result};
 use move_core_types::account_address::{AccountAddress, AccountAddressParseError};
 use move_symbol_pool::symbol::Symbol;
 use std::{
@@ -306,155 +305,118 @@ fn parse_address_literal(address_str: &str) -> Result<AccountAddress, AccountAdd
     AccountAddress::from_hex_literal(address_str)
 }
 
-fn parse_dependency(dep_name: &str, tval: TV) -> Result<PM::Dependency> {
-    match tval {
-        TV::Table(mut table) => {
-            let mut known_fields = vec![
-                "addr_subst",
-                "version",
-                "local",
-                "digest",
-                "git",
-                "rev",
-                "subdir",
-                "address",
-            ];
-            let custom_key_opt = &package_hooks::custom_dependency_key();
-            if let Some(key) = custom_key_opt {
-                known_fields.push(key.as_ref())
-            }
-            warn_if_unknown_field_names(&table, known_fields.as_slice());
-            let subst = table
-                .remove("addr_subst")
-                .map(parse_substitution)
-                .transpose()?;
-            let version = table.remove("version").map(parse_version).transpose()?;
-            let digest = table.remove("digest").map(parse_digest).transpose()?;
-            let mut git_info = None;
-            let mut node_info = None;
-            match (
-                table.remove("local"),
-                table.remove("git"),
-                if let Some(key) = custom_key_opt {
-                    table.remove(key)
-                } else {
-                    None
-                },
-            ) {
-                (Some(local), None, None) => {
-                    let local_str = local
-                        .as_str()
-                        .ok_or_else(|| format_err!("Local source path not a string"))?;
-                    let local_path = PathBuf::from(local_str);
-                    Ok(PM::Dependency {
-                        subst,
-                        version,
-                        digest,
-                        local: local_path,
-                        git_info,
-                        node_info,
-                    })
-                }
-                (None, Some(git), None) => {
-                    let move_home = MOVE_HOME.clone();
-                    let rev_name = match table.remove("rev") {
-                        None => bail!("Git revision not supplied for dependency"),
-                        Some(r) => Symbol::from(
-                            r.as_str()
-                                .ok_or_else(|| format_err!("Git revision not a string"))?,
-                        ),
-                    };
-                    // Downloaded packages are of the form <sanitized_git_url>_<rev_name>
-                    let git_url = git
-                        .as_str()
-                        .ok_or_else(|| anyhow::anyhow!("Git URL not a string"))?;
-                    let local_path = PathBuf::from(move_home).join(format!(
-                        "{}_{}",
-                        url_to_file_name(git_url),
-                        rev_name.replace('/', "__")
-                    ));
-                    let subdir = PathBuf::from(match table.remove("subdir") {
-                        None => "".to_string(),
-                        Some(path) => path
-                            .as_str()
-                            .ok_or_else(|| format_err!("'subdir' not a string"))?
-                            .to_string(),
-                    });
-                    git_info = Some(PM::GitInfo {
-                        git_url: Symbol::from(git_url),
-                        git_rev: rev_name,
-                        subdir: subdir.clone(),
-                        download_to: local_path.clone(),
-                    });
+fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> {
+    let Some(table) = tval.as_table_mut() else {
+        bail!("Malformed dependency {}", tval);
+    };
 
-                    Ok(PM::Dependency {
-                        subst,
-                        version,
-                        digest,
-                        local: local_path.join(subdir),
-                        git_info,
-                        node_info,
-                    })
-                }
-                (None, None, Some(custom_key)) => {
-                    let package_name = Symbol::from(dep_name);
-                    let address = match table.remove("address") {
-                        None => bail!("Address not supplied for 'node' dependency"),
-                        Some(r) => Symbol::from(
-                            r.as_str()
-                                .ok_or_else(|| format_err!("Node address not a string"))?,
-                        ),
-                    };
-                    // Downloaded packages are of the form <sanitized_node_url>_<address>_<package>
-                    let node_url = custom_key
-                        .as_str()
-                        .ok_or_else(|| anyhow::anyhow!("Git URL not a string"))?;
-                    let local_path = PathBuf::from(MOVE_HOME.clone()).join(format!(
-                        "{}_{}_{}",
-                        url_to_file_name(node_url),
-                        address,
-                        package_name
-                    ));
-                    node_info = Some(PM::CustomDepInfo {
-                        node_url: Symbol::from(node_url),
-                        package_address: address,
-                        package_name,
-                        download_to: local_path.clone(),
-                    });
-                    Ok(PM::Dependency {
-                        subst,
-                        version,
-                        digest,
-                        local: local_path,
-                        git_info,
-                        node_info,
-                    })
-                }
-                _ => {
-                    let mut keys = vec!["local", "git"];
-                    if let Some(k) = custom_key_opt {
-                        keys.push(k.as_str())
-                    }
-                    let keys = keys
-                        .into_iter()
-                        .map(|s| format!("'{}'", s))
-                        .collect::<Vec<_>>();
-                    bail!(
-                        "must provide exactly one of {} for dependency.",
-                        keys.join(" or ")
-                    )
-                }
-            }
-        }
-        x => bail!("Malformed dependency {}", x),
+    let mut known_fields = vec![
+        "addr_subst",
+        "version",
+        "local",
+        "digest",
+        "git",
+        "rev",
+        "subdir",
+        "address",
+    ];
+
+    let custom_key_opt = &package_hooks::custom_dependency_key();
+    if let Some(key) = custom_key_opt {
+        known_fields.push(key.as_ref())
     }
-}
 
-fn url_to_file_name(url: &str) -> String {
-    regex::Regex::new(r"/|:|\.|@")
-        .unwrap()
-        .replace_all(url, "_")
-        .to_string()
+    warn_if_unknown_field_names(table, known_fields.as_slice());
+
+    let subst = table
+        .remove("addr_subst")
+        .map(parse_substitution)
+        .transpose()?;
+    let version = table.remove("version").map(parse_version).transpose()?;
+    let digest = table.remove("digest").map(parse_digest).transpose()?;
+
+    let kind = match (
+        table.remove("local"),
+        table.remove("git"),
+        custom_key_opt.as_ref().and_then(|k| table.remove(k)),
+    ) {
+        (Some(local), None, None) => {
+            let Some(local) = local.as_str().map(PathBuf::from) else {
+                bail!("Local source path not a string")
+            };
+
+            PM::DependencyKind::Local(local)
+        }
+
+        (None, Some(git_url), None) => {
+            let Some(git_rev) = table.remove("rev") else {
+                bail!("Git revision not supplied for dependency")
+            };
+
+            let Some(git_rev) = git_rev.as_str().map(Symbol::from) else {
+                bail!("Git revision not a string")
+            };
+
+            let Some(git_url) = git_url.as_str().map(Symbol::from) else {
+                bail!("Git URL not a string")
+            };
+
+            let subdir = match table.remove("subdir") {
+                None => PathBuf::new(),
+                Some(path) => path
+                    .as_str()
+                    .map(PathBuf::from)
+                    .ok_or_else(|| anyhow!("'subdir' not a string"))?,
+            };
+
+            PM::DependencyKind::Git(PM::GitInfo {
+                git_url,
+                git_rev,
+                subdir,
+            })
+        }
+
+        (None, None, Some(custom_key)) => {
+            let Some(package_address) = table.remove("address") else {
+                bail!("Address not supplied for 'node' dependency");
+            };
+
+            let Some(package_address) = package_address.as_str().map(Symbol::from) else {
+                bail!("Node address not a string")
+            };
+
+            let Some(node_url) = custom_key.as_str().map(Symbol::from) else {
+                bail!("Git URL not a string")
+            };
+
+            let package_name = Symbol::from(dep_name);
+
+            PM::DependencyKind::Custom(PM::CustomDepInfo {
+                node_url,
+                package_address,
+                package_name,
+            })
+        }
+
+        _ => {
+            let mut keys = vec!["'local'", "'git'"];
+            let quoted_custom_key = custom_key_opt.as_ref().map(|k| format!("'{}'", k));
+            if let Some(k) = &quoted_custom_key {
+                keys.push(k.as_str())
+            }
+            bail!(
+                "must provide exactly one of {} for dependency.",
+                keys.join(" or ")
+            )
+        }
+    };
+
+    Ok(PM::Dependency {
+        kind,
+        subst,
+        version,
+        digest,
+    })
 }
 
 fn parse_substitution(tval: TV) -> Result<PM::Substitution> {

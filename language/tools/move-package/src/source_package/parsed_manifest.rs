@@ -104,23 +104,23 @@ impl DependencyKind {
     pub fn reroot(&mut self, parent: &DependencyKind) -> Result<()> {
         let mut parent = parent.clone();
 
-        use DependencyKind::*;
         match (&mut parent, &self) {
-            // If `self` is a git or custom dependency kind, its URI is absolute, and cannot be
-            // re-rooted, so rerooting does nothing
-            (_, Git(_) | Custom(_)) => return Ok(()),
+            // If `self` is a git or custom dependency kind, it does not need to be re-rooted
+            // because its URI is already absolute. (i.e. the location of an absolute URI does not
+            // change if referenced relative to some other URI).
+            (_, DependencyKind::Git(_) | DependencyKind::Custom(_)) => return Ok(()),
 
-            (Local(parent), Local(subdir)) => {
+            (DependencyKind::Local(parent), DependencyKind::Local(subdir)) => {
                 parent.push(subdir);
                 *parent = normalize_path(&parent, /* allow_cwd_parent */ true)?;
             }
 
-            (Git(git), Local(subdir)) => {
+            (DependencyKind::Git(git), DependencyKind::Local(subdir)) => {
                 git.subdir.push(subdir);
                 git.subdir = normalize_path(&git.subdir, /* allow_cwd_parent */ false)?;
             }
 
-            (Custom(custom), Local(subdir)) => {
+            (DependencyKind::Custom(custom), DependencyKind::Local(subdir)) => {
                 custom.subdir.push(subdir);
                 custom.subdir = normalize_path(&custom.subdir, /* allow_cwd_parent */ false)?;
             }

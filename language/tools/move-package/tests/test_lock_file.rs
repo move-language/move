@@ -30,6 +30,8 @@ fn commit() {
         buf
     };
 
+    // Check that the content written into the `LockFile` instance above can be found at the path
+    // that that lock file was committed to (indicating that the commit actually happened).
     assert!(
         lock_contents.ends_with("# Write and commit\n"),
         "Lock file doesn't have expected content:\n{}",

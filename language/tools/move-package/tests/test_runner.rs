@@ -24,7 +24,7 @@ use std::{
 };
 use tempfile::{tempdir, TempDir};
 
-const EXTENSIONS: &[&str] = &["resolved", "locked", "not-locked", "compiled", "modeled"];
+const EXTENSIONS: &[&str] = &["resolved", "locked", "notlocked", "compiled", "modeled"];
 
 pub fn run_test(path: &Path) -> datatest_stable::Result<()> {
     if path.iter().any(|part| part == "deps_only") {
@@ -116,7 +116,7 @@ impl Test<'_> {
             generate_abis: false,
             install_dir: Some(out_path),
             force_recompilation: false,
-            lock_file: ["locked", "not-locked"]
+            lock_file: ["locked", "notlocked"]
                 .contains(&ext)
                 .then(|| lock_path.clone()),
             ..Default::default()
@@ -128,11 +128,11 @@ impl Test<'_> {
         Ok(match ext {
             "locked" => fs::read_to_string(&lock_path)?,
 
-            "not-locked" if lock_path.is_file() => {
+            "notlocked" if lock_path.is_file() => {
                 bail!("Unexpected lock file");
             }
 
-            "not-locked" => "Lock file uncommitted\n".to_string(),
+            "notlocked" => "Lock file uncommitted\n".to_string(),
 
             "compiled" => {
                 let mut pkg = BuildPlan::create(resolved_package?)?.compile(&mut sink)?;

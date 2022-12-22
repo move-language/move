@@ -388,7 +388,8 @@ impl DependencyGraph {
             frontier.extend(
                 self.package_graph
                     .edges(package)
-                    .filter_map(|(_, dep, mode)| (mode == &DependencyMode::Always).then_some(dep)),
+                    .filter(|(_, _, mode)| **mode == DependencyMode::Always)
+                    .map(|(_, dep, _)| dep),
             );
         }
     }

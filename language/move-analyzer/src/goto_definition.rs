@@ -2,17 +2,14 @@
 use super::context::*;
 use super::item::*;
 use super::modules::*;
+use super::scopes::*;
 use crate::utils::path_concat;
 use crate::utils::FileRange;
-use std::path::PathBuf;
-
-use super::scopes::*;
-
 use lsp_server::*;
 use lsp_types::*;
-
 use move_compiler::shared::Identifier;
 use move_ir_types::location::Loc;
+use std::path::PathBuf;
 
 /// Handles go-to-def request of the language server
 pub fn on_go_to_def_request(context: &Context, request: &Request) {
@@ -88,6 +85,10 @@ pub(crate) struct Visitor {
     pub(crate) line: u32,
     pub(crate) col: u32,
     pub(crate) result: Option<FileRange>,
+    /// result_loc not convert to a FileRange
+    /// Current references find depend on this field.
+    pub(crate) result_loc: Option<Loc>,
+    pub(crate) natch_call_back: Option<Box<dyn FnMut(&ItemOrAccess)>>,
 }
 
 impl Visitor {
@@ -97,9 +98,16 @@ impl Visitor {
             line,
             col,
             result: None,
+            result_loc: None,
+            natch_call_back: None,
         }
     }
 
+    fn call_match_call_back(&mut self, x: &ItemOrAccess) {
+        if let Some(call) = &mut self.natch_call_back {
+            call(x);
+        }
+    }
     ///  match loc   
     fn match_loc(&self, loc: &Loc, services: &dyn ConvertLoc) -> bool {
         let r = services.convert_loc_range(loc);
@@ -111,8 +119,13 @@ impl Visitor {
 }
 
 impl ScopeVisitor for Visitor {
-    fn handle_item(&mut self, services: &dyn ConvertLoc, _scopes: &Scopes, item: &ItemOrAccess) {
-        match item {
+    fn handle_item(
+        &mut self,
+        services: &dyn ConvertLoc,
+        _scopes: &Scopes,
+        item_or_access: &ItemOrAccess,
+    ) {
+        match item_or_access {
             ItemOrAccess::Item(item) => match item {
                 Item::UseModule(name, alias, _) => {
                     if self.match_loc(&name.value.module.loc(), services)
@@ -123,15 +136,33 @@ impl ScopeVisitor for Visitor {
                     {
                         if let Some(t) = services.convert_loc_range(&item.def_loc()) {
                             self.result = Some(t);
+                            self.result_loc = Some(item.def_loc());
+                            self.call_match_call_back(item_or_access);
                         }
                     }
                 }
                 Item::UseMember(module_name, name, alias, x) => {
                     if self.match_loc(&module_name.value.module.loc(), services) {
                         if let Some(t) = services.convert_loc_range(
-                            &x.as_ref().borrow().module_.as_ref().unwrap().name.loc(),
+                            &x.as_ref()
+                                .borrow()
+                                .module_scope
+                                .as_ref()
+                                .unwrap()
+                                .name
+                                .loc(),
                         ) {
                             self.result = Some(t);
+                            self.result_loc = Some(
+                                x.as_ref()
+                                    .borrow()
+                                    .module_scope
+                                    .as_ref()
+                                    .unwrap()
+                                    .name
+                                    .loc(),
+                            );
+                            self.call_match_call_back(item_or_access);
                             return;
                         }
                     }
@@ -143,10 +174,11 @@ impl ScopeVisitor for Visitor {
                     {
                         if let Some(t) = services.convert_loc_range(&item.def_loc()) {
                             self.result = Some(t);
+                            self.result_loc = Some(item.def_loc());
+                            self.call_match_call_back(item_or_access);
                         }
                     }
                 }
-
                 // If Some special add here.
                 // Right now default is enough.
                 _ => {
@@ -154,20 +186,21 @@ impl ScopeVisitor for Visitor {
                     if self.match_loc(&loc, services) {
                         if let Some(t) = services.convert_loc_range(&loc) {
                             self.result = Some(t);
+                            self.result_loc = Some(loc);
+                            self.call_match_call_back(item_or_access);
                         }
                     }
                 }
             },
-
-            ItemOrAccess::Access(access) => match item {
+            ItemOrAccess::Access(access) => match item_or_access {
                 _ => {
                     log::trace!("access:{}", access);
                     if let Some((access, def)) = access.access_module() {
                         if self.match_loc(&access, services) {
                             if let Some(t) = services.convert_loc_range(&def) {
-                                eprintln!("xxxxxxxxxxxxxxxxxxx:{:?} {:?}", t, def);
-
                                 self.result = Some(t);
+                                self.result_loc = Some(def);
+                                self.call_match_call_back(item_or_access);
                                 return;
                             }
                         }
@@ -176,6 +209,8 @@ impl ScopeVisitor for Visitor {
                     if self.match_loc(&locs.0, services) {
                         if let Some(t) = services.convert_loc_range(&locs.1) {
                             self.result = Some(t);
+                            self.result_loc = Some(locs.1);
+                            self.call_match_call_back(item_or_access);
                         }
                     }
                 }

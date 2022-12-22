@@ -15,37 +15,6 @@ use std::collections::HashMap;
 use std::{path::PathBuf, rc::Rc};
 
 impl Modules {
-    pub(crate) fn visit_scripts(
-        &self,
-        manifest: &PathBuf,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
-    ) {
-        self.with_script(manifest, |script| {
-            scopes.enter_scope(|scopes| {
-                for u in script.uses.iter() {
-                    self.visit_use_decl(None, u, scopes, Some(visitor));
-                    if visitor.finished() {
-                        return;
-                    }
-                }
-                for c in script.constants.iter() {
-                    self.visit_const(None, c, scopes, visitor);
-                    if visitor.finished() {
-                        return;
-                    }
-                }
-                for c in script.specs.iter() {
-                    self.visit_spec(c, scopes, visitor);
-                    if visitor.finished() {
-                        return;
-                    }
-                }
-                self.visit_function(&script.function, scopes, visitor);
-            })
-        });
-    }
-
     pub fn visit_modules_or_tests(
         &self,
         scopes: &Scopes,
@@ -53,8 +22,10 @@ impl Modules {
         manifest: &PathBuf,
         kind: SourcePackageLayout,
     ) {
-        self.with_module(manifest, kind.clone(), |addr, module_name| {
-            scopes.set_up_module(addr, module_name.name);
+        self.with_module(manifest, kind.clone(), |addr, module_def| {
+            let item = ItemOrAccess::Item(Item::ModuleName(module_def.name));
+            visitor.handle_item(self, scopes, &item);
+            scopes.set_up_module(addr, module_def.name);
         });
         self.with_const(manifest, kind.clone(), |addr, name, c| {
             self.visit_const(Some((addr, name)), c, scopes, visitor);
@@ -98,12 +69,13 @@ impl Modules {
                     }
                     StructFields::Native(_) => vec![],
                 };
-                let item = Item::Struct(ItemStruct {
+                let item = ItemOrAccess::Item(Item::Struct(ItemStruct {
                     name: s.name,
                     type_parameters: s.type_parameters.clone(),
                     type_parameters_ins: vec![],
                     fields,
-                });
+                }));
+                visitor.handle_item(self, scopes, &item);
                 scopes.enter_top_item(self, addr, module_name, s.name.value(), item)
             });
         });
@@ -211,6 +183,37 @@ impl Modules {
         self.with_spec(manifest, kind.clone(), |addr, module_name, spec| {
             let _guard = scopes.clone_scope_and_enter(addr, module_name);
             self.visit_spec(spec, scopes, visitor);
+        });
+    }
+
+    pub(crate) fn visit_scripts(
+        &self,
+        manifest: &PathBuf,
+        scopes: &Scopes,
+        visitor: &mut dyn ScopeVisitor,
+    ) {
+        self.with_script(manifest, |script| {
+            scopes.enter_scope(|scopes| {
+                for u in script.uses.iter() {
+                    self.visit_use_decl(None, u, scopes, Some(visitor));
+                    if visitor.finished() {
+                        return;
+                    }
+                }
+                for c in script.constants.iter() {
+                    self.visit_const(None, c, scopes, visitor);
+                    if visitor.finished() {
+                        return;
+                    }
+                }
+                for c in script.specs.iter() {
+                    self.visit_spec(c, scopes, visitor);
+                    if visitor.finished() {
+                        return;
+                    }
+                }
+                self.visit_function(&script.function, scopes, visitor);
+            })
         });
     }
 

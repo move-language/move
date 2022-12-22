@@ -1,3 +1,5 @@
+use crate::modules::ERR_ADDRESS;
+
 use super::scope::*;
 use super::types::*;
 use move_compiler::shared::Identifier;
@@ -5,6 +7,7 @@ use move_compiler::shared::TName;
 use move_compiler::{parser::ast::*, shared::*};
 use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::Loc;
+use move_ir_types::location::Spanned;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -80,6 +83,8 @@ pub enum Item {
     /// Here are all definition.
     TParam(Name, Vec<Ability>),
     SpecSchema(Name, HashMap<Symbol, (Name, ResolvedType)>),
+    /// a module name in 0x1111::module_name
+    ModuleName(ModuleName),
 
     Dummy,
 }
@@ -145,6 +150,7 @@ impl Item {
             Item::UseModule(_, _, _) => return None,
             Item::Dummy => return None,
             Item::SpecSchema(_, _) => return Some(ResolvedType::UnKnown),
+            Item::ModuleName(_) => return None,
         };
         Some(x)
     }
@@ -164,11 +170,18 @@ impl Item {
             Item::Const(name, _) => name.loc(),
             Item::StructNameRef(_, _, name, _) => name.0.loc,
             Item::Fun(f) => f.name.0.loc,
-            Item::UseModule(_, _, s) => s.borrow().module_.as_ref().unwrap().name.loc(),
+            Item::UseModule(module, name, s) => s
+                .borrow()
+                .module_scope
+                .clone()
+                .expect(&format!("not found,module:{:?} name:{:?}", module, name))
+                .name
+                .loc(),
             Item::Var(name, _) => name.loc(),
             Item::Field(f, _) => f.loc(),
             Item::Dummy => UNKNOWN_LOC,
             Item::SpecSchema(name, _) => name.loc,
+            Item::ModuleName(name) => name.loc(),
         }
     }
 }
@@ -216,6 +229,9 @@ impl std::fmt::Display for Item {
             }
             Item::UseModule(x, _, _) => {
                 write!(f, "use {:?} {}", x, "_")
+            }
+            Item::ModuleName(name) => {
+                write!(f, "module {}", name.value().as_str())
             }
 
             Item::UseMember(module, name, alias, _) => {

@@ -38,11 +38,10 @@ impl Scopes {
                 .insert(addr, Default::default());
         }
         let mut s = Scope::default();
-        s.module_ = Some(ModuleScope {
+        s.module_scope = Some(ModuleScope {
             name: module_name.clone(),
             addr: addr.clone(),
         });
-
         self.addresses
             .borrow_mut()
             .address
@@ -308,7 +307,7 @@ impl Scopes {
                                             members.as_ref().borrow().items.get(&member.value)
                                         {
                                             module_scope =
-                                                members.as_ref().borrow().module_.clone();
+                                                members.as_ref().borrow().module_scope.clone();
                                             item_ret = Some(item.clone());
                                             // make inner_first_visit stop.
                                             return true;
@@ -339,7 +338,7 @@ impl Scopes {
                     return;
                 }
                 let module = module.unwrap();
-                module_scope = module.as_ref().borrow().module_.clone();
+                module_scope = module.as_ref().borrow().module_scope.clone();
                 if let Some(item) = module.as_ref().borrow().items.get(&member.value) {
                     item_ret = Some(item.clone());
                 };
@@ -510,7 +509,7 @@ impl Scopes {
                 .get(&name)?
                 .as_ref()
                 .borrow()
-                .module_
+                .module_scope
                 .as_ref()
                 .map(|x| x.name.clone())
         })

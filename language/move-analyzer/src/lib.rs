@@ -7,11 +7,13 @@ pub mod completion;
 pub mod context;
 pub mod diagnostics;
 pub mod goto_definition;
+pub mod hover;
 #[cfg(test)]
 mod ide_test;
 pub mod item;
 pub mod module_visitor;
 pub mod modules;
+pub mod references;
 pub mod scope;
 pub mod scopes;
 pub mod syntax;

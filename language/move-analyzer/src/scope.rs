@@ -18,7 +18,7 @@ pub struct Scope {
     pub(crate) items: HashMap<Symbol, Item>,
     pub(crate) is_function: bool,
     pub(crate) is_spec: bool,
-    pub(crate) module_: Option<ModuleScope>,
+    pub(crate) module_scope: Option<ModuleScope>,
     /// Type parameter go into this map.
     pub(crate) types: HashMap<Symbol, Item>,
 }

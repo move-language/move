@@ -11,21 +11,16 @@ use lsp_types::{
     HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
     TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
 };
-use std::{
-    collections::BTreeMap,
-    path::Path,
-};
+use std::{collections::BTreeMap, path::Path};
 
+use log::{Level, Metadata, Record};
 use move_analyzer::{
-    completion::on_completion_request, context::Context, goto_definition, modules::Modules,
+    completion::on_completion_request, context::Context, goto_definition, hover, modules::Modules,
+    references,
 };
 use move_symbol_pool::Symbol;
 use url::Url;
-
-use log::{Level, Metadata, Record};
-
 struct SimpleLogger;
-
 impl log::Log for SimpleLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
         metadata.level() <= Level::Trace
@@ -67,7 +62,6 @@ fn main() {
     );
 
     let (connection, io_threads) = Connection::stdio();
-
     let mut context = Context {
         modules: Modules::new(std::env::current_dir().unwrap()),
         connection,
@@ -120,7 +114,7 @@ fn main() {
         }),
         definition_provider: Some(OneOf::Left(true)),
         type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(true)),
-        references_provider: Some(OneOf::Left(false)),
+        references_provider: Some(OneOf::Left(true)),
         // document_symbol_provider: Some(OneOf::Left(true)),
         ..Default::default()
     })
@@ -213,12 +207,12 @@ fn on_request(context: &Context, request: &Request) {
             goto_definition::on_go_to_def_request(context, request);
         }
 
-        // lsp_types::request::References::METHOD => {
-        //     symbols::on_references_request(context, request, &context.symbols.lock().unwrap());
-        // }
-        // lsp_types::request::HoverRequest::METHOD => {
-        //     symbols::on_hover_request(context, request, &context.symbols.lock().unwrap());
-        // }
+        lsp_types::request::References::METHOD => {
+            references::on_references_request(context, request);
+        }
+        lsp_types::request::HoverRequest::METHOD => {
+            hover::on_hover_request(context, request);
+        }
         // lsp_types::request::DocumentSymbolRequest::METHOD => {
         //     symbols::on_document_symbol_request(context, request, &context.symbols.lock().unwrap());
         // }

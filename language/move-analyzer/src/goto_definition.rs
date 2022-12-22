@@ -88,7 +88,8 @@ pub(crate) struct Visitor {
     /// result_loc not convert to a FileRange
     /// Current references find depend on this field.
     pub(crate) result_loc: Option<Loc>,
-    pub(crate) natch_call_back: Option<Box<dyn FnMut(&ItemOrAccess)>>,
+    ///
+    pub(crate) result_item_or_access: Option<ItemOrAccess>,
 }
 
 impl Visitor {
@@ -99,15 +100,10 @@ impl Visitor {
             col,
             result: None,
             result_loc: None,
-            natch_call_back: None,
+            result_item_or_access: None,
         }
     }
 
-    fn call_match_call_back(&mut self, x: &ItemOrAccess) {
-        if let Some(call) = &mut self.natch_call_back {
-            call(x);
-        }
-    }
     ///  match loc   
     fn match_loc(&self, loc: &Loc, services: &dyn ConvertLoc) -> bool {
         let r = services.convert_loc_range(loc);
@@ -137,7 +133,7 @@ impl ScopeVisitor for Visitor {
                         if let Some(t) = services.convert_loc_range(&item.def_loc()) {
                             self.result = Some(t);
                             self.result_loc = Some(item.def_loc());
-                            self.call_match_call_back(item_or_access);
+                            self.result_item_or_access = Some(item_or_access.clone());
                         }
                     }
                 }
@@ -162,7 +158,7 @@ impl ScopeVisitor for Visitor {
                                     .name
                                     .loc(),
                             );
-                            self.call_match_call_back(item_or_access);
+                            self.result_item_or_access = Some(item_or_access.clone());
                             return;
                         }
                     }
@@ -175,7 +171,7 @@ impl ScopeVisitor for Visitor {
                         if let Some(t) = services.convert_loc_range(&item.def_loc()) {
                             self.result = Some(t);
                             self.result_loc = Some(item.def_loc());
-                            self.call_match_call_back(item_or_access);
+                            self.result_item_or_access = Some(item_or_access.clone());
                         }
                     }
                 }
@@ -187,7 +183,7 @@ impl ScopeVisitor for Visitor {
                         if let Some(t) = services.convert_loc_range(&loc) {
                             self.result = Some(t);
                             self.result_loc = Some(loc);
-                            self.call_match_call_back(item_or_access);
+                            self.result_item_or_access = Some(item_or_access.clone());
                         }
                     }
                 }
@@ -200,7 +196,7 @@ impl ScopeVisitor for Visitor {
                             if let Some(t) = services.convert_loc_range(&def) {
                                 self.result = Some(t);
                                 self.result_loc = Some(def);
-                                self.call_match_call_back(item_or_access);
+                                self.result_item_or_access = Some(item_or_access.clone());
                                 return;
                             }
                         }
@@ -210,7 +206,7 @@ impl ScopeVisitor for Visitor {
                         if let Some(t) = services.convert_loc_range(&locs.1) {
                             self.result = Some(t);
                             self.result_loc = Some(locs.1);
-                            self.call_match_call_back(item_or_access);
+                            self.result_item_or_access = Some(item_or_access.clone());
                         }
                     }
                 }

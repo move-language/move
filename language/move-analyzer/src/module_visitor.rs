@@ -958,7 +958,7 @@ impl Modules {
                     }
                 } else if let Some(b) = {
                     let x = SpecBuildInFun::from_chain(chain);
-                    x.map(|x| scopes.under_function().map(|_| x)).flatten()
+                    x.map(|x| scopes.under_spec().map(|_| x)).flatten()
                 } {
                     let item = ItemOrAccess::Access(Access::SpecBuildInFun(b, chain.clone()));
                     visitor.handle_item(self, scopes, &item);

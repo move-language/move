@@ -78,9 +78,9 @@ fn goto_definition_test2() {
 #[test]
 fn goto_definition_test4() {
     init_log();
-    let m = Modules::new("/Users/temp/projects/test-move");
+    let m = Modules::new("/Users/temp/projects/test-move2");
     let mut v =
-        goto_definition::Visitor::new("/Users/temp/projects/test-move   /sources/some.move", 1, 18);
+        goto_definition::Visitor::new("/Users/temp/projects/test-move2/sources/some.move", 9, 18);
     m.run_visitor(&mut v);
     eprintln!("{:?}", v.result.unwrap());
 }

@@ -146,7 +146,27 @@ module std::vector {
         pragma intrinsic = true;
     }
 
-    /// Swap the `i`th element of the vector `v` with the last element and then pop the element.
+    /// Insert `e` at position `i` in the vector `v`.
+    /// If `i` is in bounds, this shifts the old `v[i]` and all subsequent elements to the right.
+    /// If `i == length(v)`, this adds `e` to the end of the vector.
+    /// This is O(n) and preserves ordering of elements in the vector.
+    /// Aborts if `i > length(v)`
+    public fun insert<Element>(v: &mut vector<Element>, e: Element, i: u64) {
+        let len = length(v);
+        // i too big abort
+        if (i > len) abort EINDEX_OUT_OF_BOUNDS;
+
+        push_back(v, e);
+        while (i < len) {
+            swap(v, i, len);
+            i = i + 1
+        }
+    }
+    spec insert {
+        pragma intrinsic = true;
+    }
+
+    /// Swap the `i`th element of the vector `v` with the last element and then pop the vector.
     /// This is O(1), but does not preserve ordering of elements in the vector.
     /// Aborts if `i` is out of bounds.
     public fun swap_remove<Element>(v: &mut vector<Element>, i: u64): Element {
@@ -194,5 +214,4 @@ module std::vector {
             v1[i..len(v1)] == v2[i + 1..len(v2)]
         }
     }
-
 }

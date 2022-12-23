@@ -348,6 +348,20 @@ impl DependencyGraph {
             .expect("Graph is determined to be acyclic when created")
     }
 
+    /// Return an iterator over `pkg`'s immediate dependencies in the graph.  If `mode` is
+    /// `DependencyMode::Always`, only always dependencies are included, whereas if `mode` is
+    /// `DependencyMode::DevOnly`, both always and dev-only dependecies are included.
+    pub fn immediate_dependencies(
+        &'_ self,
+        pkg: PM::PackageName,
+        mode: DependencyMode,
+    ) -> impl Iterator<Item = (PM::PackageName, &'_ Dependency, &'_ Package)> {
+        self.package_graph
+            .edges(pkg)
+            .filter(move |(_, _, dep)| dep.mode <= mode)
+            .map(|(_, dep_name, dep)| (dep_name, dep, &self.package_table[&dep_name]))
+    }
+
     /// Add the transitive dependencies and dev-dependencies from `package` to the dependency graph.
     fn extend_graph<Progress: Write>(
         &mut self,

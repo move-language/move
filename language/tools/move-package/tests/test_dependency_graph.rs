@@ -4,6 +4,7 @@
 use std::{
     collections::BTreeSet,
     fs::{self, File},
+    io::Write,
     path::PathBuf,
 };
 
@@ -20,19 +21,15 @@ fn lock_file_roundtrip() {
 
     let snapshot = pkg.join("Move.locked");
     let commit = tmp.path().join("Move.lock");
-    let mut lock = LockFile::new(&pkg).expect("Creating new lock file");
-    let manifest = parse_move_manifest_from_file(&pkg).expect("Loading manifest");
 
     let graph = DependencyGraph::read_from_lock(
         pkg,
-        manifest,
+        Symbol::from("Root"),
         &mut File::open(&snapshot).expect("Opening snapshot"),
     )
     .expect("Reading DependencyGraph");
 
-    graph
-        .write_to_lock(&mut lock)
-        .expect("Writing DependencyGraph");
+    let lock = graph.write_to_lock().expect("Writing DependencyGraph");
 
     lock.commit(&commit).expect("Committing lock file");
 
@@ -52,13 +49,14 @@ fn lock_file_missing_dependency() {
 
     let commit = tmp.path().join("Move.lock");
     let lock = LockFile::new(&pkg).expect("Creating new lock file");
-    let manifest = parse_move_manifest_from_file(&pkg).expect("Loading manifest");
 
-    lock.commit(&commit).expect("Writing empty lock file");
+    // Write a reference to a dependency that there isn't package information for.
+    writeln!(&*lock, r#"dependencies = [{{ name = "OtherDep" }}]"#).unwrap();
+    lock.commit(&commit).expect("Writing partial lock file");
 
     let Err(err) = DependencyGraph::read_from_lock(
         pkg,
-        manifest,
+        Symbol::from("Root"),
         &mut File::open(&commit).expect("Opening empty lock file"),
     ) else {
         panic!("Expected reading dependencies to fail.");
@@ -100,10 +98,9 @@ fn always_deps_from_lock() {
     let pkg = dev_dep_test_package();
     let snapshot = pkg.join("Move.locked");
 
-    let manifest = parse_move_manifest_from_file(&pkg).expect("Loading manifest");
     let graph = DependencyGraph::read_from_lock(
         pkg,
-        manifest,
+        Symbol::from("Root"),
         &mut File::open(&snapshot).expect("Opening snapshot"),
     )
     .expect("Creating DependencyGraph");

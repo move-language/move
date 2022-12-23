@@ -137,35 +137,44 @@ impl DependencyGraph {
     /// the `lock_file::schema` module).
     pub fn read_from_lock(
         root_path: PathBuf,
-        root_package: PM::SourceManifest,
+        root_package: PM::PackageName,
         lock: &mut impl Read,
     ) -> Result<DependencyGraph> {
         let mut package_graph = DiGraphMap::new();
         let mut package_table = BTreeMap::new();
 
-        // Seed graph with edges from the root package
-        let root = root_package.package.name;
+        let packages = schema::Packages::read(lock)?;
 
-        for (pkg, mut dep) in root_package.dependencies {
+        for schema::Dependency {
+            name,
+            subst,
+            digest,
+        } in packages.root_dependencies.into_iter().flatten()
+        {
             package_graph.add_edge(
-                root,
-                pkg,
+                root_package,
+                Symbol::from(name),
                 Dependency {
                     mode: DependencyMode::Always,
-                    subst: dep.subst.take(),
-                    digest: dep.digest.take(),
+                    subst: subst.map(parse_substitution).transpose()?,
+                    digest: digest.map(Symbol::from),
                 },
             );
         }
 
-        for (pkg, mut dep) in root_package.dev_dependencies {
+        for schema::Dependency {
+            name,
+            subst,
+            digest,
+        } in packages.root_dev_dependencies.into_iter().flatten()
+        {
             package_graph.add_edge(
-                root,
-                pkg,
+                root_package,
+                Symbol::from(name),
                 Dependency {
                     mode: DependencyMode::DevOnly,
-                    subst: dep.subst.take(),
-                    digest: dep.digest.take(),
+                    subst: subst.map(parse_substitution).transpose()?,
+                    digest: digest.map(Symbol::from),
                 },
             );
         }
@@ -177,7 +186,7 @@ impl DependencyGraph {
             source,
             dependencies,
             dev_dependencies,
-        } in schema::Packages::read(lock)?
+        } in packages.packages.into_iter().flatten()
         {
             let pkg_name = PM::PackageName::from(pkg_name.as_str());
             let source = parse_dependency(pkg_name.as_str(), source)
@@ -247,7 +256,7 @@ impl DependencyGraph {
 
         let mut graph = DependencyGraph {
             root_path,
-            root_package: root,
+            root_package,
             package_graph,
             package_table,
             always_deps: BTreeSet::new(),
@@ -259,47 +268,65 @@ impl DependencyGraph {
         Ok(graph)
     }
 
-    /// Serialize this dependency graph into a lock file.
+    /// Serialize this dependency graph into a lock file and return it.
     ///
     /// This operation fails, writing nothing, if the graph contains a cycle, and can fail with an
     /// undefined output if it cannot be represented in a TOML file.
-    pub fn write_to_lock(&self, lock: &mut LockFile) -> Result<()> {
-        let mut writer = BufWriter::new(&**lock);
+    pub fn write_to_lock(&self) -> Result<LockFile> {
+        let lock = LockFile::new(&self.root_path)?;
+        let mut writer = BufWriter::new(&*lock);
+
+        self.write_dependencies_to_lock(self.root_package, &mut writer)?;
+
         for (name, pkg) in &self.package_table {
             writeln!(writer, "\n[[move.package]]")?;
 
             writeln!(writer, "name = {}", str_escape(name.as_str())?)?;
             writeln!(writer, "source = {}", PackageTOML(pkg))?;
 
-            let mut deps: Vec<_> = self
-                .package_graph
-                .edges(*name)
-                .map(|(_, pkg, dep)| (dep, pkg))
-                .collect();
-
-            // Sort by kind ("always" dependencies go first), and by name, to keep the output
-            // stable.
-            deps.sort_by_key(|(dep, pkg)| (dep.mode, *pkg));
-            let mut deps = deps.into_iter().peekable();
-
-            macro_rules! write_deps {
-                ($mode: pat, $label: literal) => {
-                    if let Some((Dependency { mode: $mode, .. }, _)) = deps.peek() {
-                        writeln!(writer, "{} = [", $label)?;
-                        while let Some((dep @ Dependency { mode: $mode, .. }, pkg)) = deps.peek() {
-                            writeln!(writer, "  {},", DependencyTOML(*pkg, dep))?;
-                            deps.next();
-                        }
-                        writeln!(writer, "]")?;
-                    }
-                };
-            }
-
-            write_deps!(DependencyMode::Always, "dependencies");
-            write_deps!(DependencyMode::DevOnly, "dev-dependencies");
+            self.write_dependencies_to_lock(*name, &mut writer)?;
         }
 
         writer.flush()?;
+        std::mem::drop(writer);
+
+        Ok(lock)
+    }
+
+    /// Helper function to output the dependencies and dev-dependencies of `name` from this
+    /// dependency graph, to the lock file under `writer`.
+    fn write_dependencies_to_lock<W: Write>(
+        &self,
+        name: PM::PackageName,
+        writer: &mut W,
+    ) -> Result<()> {
+        let mut deps: Vec<_> = self
+            .package_graph
+            .edges(name)
+            .map(|(_, pkg, dep)| (dep, pkg))
+            .collect();
+
+        // Sort by kind ("always" dependencies go first), and by name, to keep the output
+        // stable.
+        deps.sort_by_key(|(dep, pkg)| (dep.mode, *pkg));
+        let mut deps = deps.into_iter().peekable();
+
+        macro_rules! write_deps {
+            ($mode: pat, $label: literal) => {
+                if let Some((Dependency { mode: $mode, .. }, _)) = deps.peek() {
+                    writeln!(writer, "\n{} = [", $label)?;
+                    while let Some((dep @ Dependency { mode: $mode, .. }, pkg)) = deps.peek() {
+                        writeln!(writer, "  {},", DependencyTOML(*pkg, dep))?;
+                        deps.next();
+                    }
+                    writeln!(writer, "]")?;
+                }
+            };
+        }
+
+        write_deps!(DependencyMode::Always, "dependencies");
+        write_deps!(DependencyMode::DevOnly, "dev-dependencies");
+
         Ok(())
     }
 

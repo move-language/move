@@ -13,7 +13,7 @@ use anyhow::{bail, Result};
 use clap::*;
 use move_core_types::account_address::AccountAddress;
 use move_model::model::GlobalEnv;
-use resolution::{dependency_graph::DependencyGraph, lock_file::LockFile};
+use resolution::dependency_graph::DependencyGraph;
 use serde::{Deserialize, Serialize};
 use source_package::layout::SourcePackageLayout;
 use std::{
@@ -233,7 +233,6 @@ impl BuildConfig {
 
         // This should be locked as it inspects the environment for `MOVE_HOME` which could
         // possibly be set by a different process in parallel.
-        let mut lock = LockFile::new(&path)?;
         let manifest = manifest_parser::parse_source_manifest(toml_manifest)?;
 
         let dependency_graph = DependencyGraph::new(
@@ -243,7 +242,7 @@ impl BuildConfig {
             writer,
         )?;
 
-        dependency_graph.write_to_lock(&mut lock)?;
+        let lock = dependency_graph.write_to_lock()?;
         if let Some(lock_path) = &self.lock_file {
             lock.commit(lock_path)?;
         }

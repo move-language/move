@@ -3,9 +3,15 @@
 [move]
 version = 0
 
+dependencies = [
+  { name = "A", addr_subst = { "AA" = "00000000000000000000000000000001" } },
+  { name = "B", addr_subst = { "BA" = "00000000000000000000000000000001" } },
+]
+
 [[move.package]]
 name = "A"
 source = { local = "deps_only/A" }
+
 dependencies = [
   { name = "C", addr_subst = { "AA" = "A" } },
 ]
@@ -13,6 +19,7 @@ dependencies = [
 [[move.package]]
 name = "B"
 source = { local = "deps_only/B" }
+
 dependencies = [
   { name = "C", addr_subst = { "BA" = "A" } },
 ]

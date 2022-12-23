@@ -3,6 +3,10 @@
 [move]
 version = 0
 
+dependencies = [
+  { name = "OtherDep", addr_subst = { "A" = "B" } },
+]
+
 [[move.package]]
 name = "OtherDep"
 source = { local = "deps_only/other_dep" }

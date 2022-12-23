@@ -22,7 +22,13 @@ pub const VERSION: u64 = 0;
 #[derive(Deserialize)]
 pub struct Packages {
     #[serde(rename = "package")]
-    packages: Option<Vec<Package>>,
+    pub packages: Option<Vec<Package>>,
+
+    #[serde(rename = "dependencies")]
+    pub root_dependencies: Option<Vec<Dependency>>,
+
+    #[serde(rename = "dev-dependencies")]
+    pub root_dev_dependencies: Option<Vec<Dependency>>,
 }
 
 #[derive(Deserialize)]
@@ -68,7 +74,7 @@ struct Header {
 impl Packages {
     /// Read packages from the lock file, assuming the file's format matches the schema expected
     /// by this lock file, and its version is not newer than the version supported by this library.
-    pub fn read(lock: &mut impl Read) -> Result<Vec<Package>> {
+    pub fn read(lock: &mut impl Read) -> Result<Packages> {
         let contents = {
             let mut buf = String::new();
             lock.read_to_string(&mut buf).context("Reading lock file")?;
@@ -87,11 +93,10 @@ impl Packages {
             );
         }
 
-        let Schema {
-            move_: Packages { packages },
-        } = toml::de::from_str::<Schema<Packages>>(&contents).context("Deserializing packages")?;
+        let Schema { move_: packages } =
+            toml::de::from_str::<Schema<Packages>>(&contents).context("Deserializing packages")?;
 
-        Ok(packages.unwrap_or_default())
+        Ok(packages)
     }
 }
 

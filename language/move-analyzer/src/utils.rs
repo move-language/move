@@ -188,7 +188,7 @@ impl FileRange {
 }
 
 /// Path concat from
-pub(crate) fn path_concat(p1: &Path, p2: &Path) -> PathBuf {
+pub fn path_concat(p1: &Path, p2: &Path) -> PathBuf {
     let p2: Vec<_> = p2.components().collect();
     let is_abs = match p2.get(0).unwrap() {
         Component::RootDir | Component::Prefix(_) => true,
@@ -206,7 +206,7 @@ pub(crate) fn path_concat(p1: &Path, p2: &Path) -> PathBuf {
 }
 
 /// concat Move.toml file.
-pub(crate) fn path_concat_move_toml(p1: &Path, p2: &Path) -> PathBuf {
+pub fn path_concat_move_toml(p1: &Path, p2: &Path) -> PathBuf {
     let p1_is_move_toml = match p1.to_str() {
         Some(x) => x.ends_with("Move.toml"),
         None => false,
@@ -220,7 +220,7 @@ pub(crate) fn path_concat_move_toml(p1: &Path, p2: &Path) -> PathBuf {
     }
 }
 
-pub(crate) fn normal_path_components<'a>(x: &Vec<Component<'a>>) -> PathBuf {
+pub fn normal_path_components<'a>(x: &Vec<Component<'a>>) -> PathBuf {
     let mut ret = PathBuf::new();
     for v in x {
         match v {

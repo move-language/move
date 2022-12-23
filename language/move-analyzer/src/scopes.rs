@@ -99,8 +99,8 @@ impl Scopes {
         let loc = convert_loc
             .convert_loc_range(&loc)
             .unwrap_or(FileRange::unknown());
-        log::info!("{}", loc);
-        log::info!("enter scope name:{:?} item:{}", name, item);
+        log::trace!("{}", loc);
+        log::trace!("enter scope name:{:?} item:{}", name, item);
         self.scopes
             .as_ref()
             .borrow_mut()
@@ -120,8 +120,8 @@ impl Scopes {
         let loc = convert_loc
             .convert_loc_range(&loc)
             .unwrap_or(FileRange::unknown());
-        log::info!("{}", loc);
-        log::info!("enter scope name:{:?} item:{}", name, item);
+        log::trace!("{}", loc);
+        log::trace!("enter scope name:{:?} item:{}", name, item);
         self.scopes
             .as_ref()
             .borrow_mut()

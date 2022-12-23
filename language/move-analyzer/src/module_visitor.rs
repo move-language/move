@@ -131,9 +131,13 @@ impl Modules {
 
         // visit function body.
         self.with_function(manifest, kind.clone(), |addr, module_name, f| {
-            if !visitor
-                .file_should_visit(self.convert_file_hash_filepath(&f.loc.file_hash()).unwrap())
-            {
+            let file_path = self.convert_file_hash_filepath(&f.loc.file_hash());
+            if file_path.is_none() {
+                return;
+            }
+            let file_path = file_path.unwrap().clone();
+
+            if !visitor.file_should_visit(&file_path) {
                 return;
             }
             let _guard = scopes.clone_scope_and_enter(addr, module_name);
@@ -1273,7 +1277,7 @@ impl Modules {
     ) {
         let mut _dummy = DummyVisitor;
         let visitor = visitor.unwrap_or(&mut _dummy);
-        let get_module = |module: &ModuleIdent| {
+        let get_module = |module: &ModuleIdent| -> Option<Rc<RefCell<Scope>>> {
             let module_scope = scopes.visit_address(|top| -> Option<Rc<RefCell<Scope>>> {
                 let x = top
                     .address
@@ -1286,13 +1290,19 @@ impl Modules {
                     .clone();
                 Some(x)
             });
-            let module_scope =
-                module_scope.expect(&format!("use decl {:?} not found.", use_decl.use_));
-            module_scope
+            let module_scope = match module_scope {
+                Some(x) => x,
+                None => return None,
+            };
+            Some(module_scope)
         };
         match &use_decl.use_ {
             Use::Module(module, alias) => {
                 let module_scope = get_module(module);
+                if module_scope.is_none() {
+                    return;
+                }
+                let module_scope = module_scope.unwrap();
                 let item = ItemOrAccess::Item(Item::UseModule(
                     module.clone(),
                     alias.clone(),
@@ -1315,6 +1325,10 @@ impl Modules {
             }
             Use::Members(module, members) => {
                 let module_scope = get_module(module);
+                if module_scope.is_none() {
+                    return;
+                }
+                let module_scope = module_scope.unwrap();
                 for (member, alias) in members.iter() {
                     if member.value.as_str() == "Self" {
                         // Special handle for Self.

@@ -2,6 +2,8 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::context;
+
 use super::item::*;
 use super::scopes::*;
 use super::types::*;
@@ -10,6 +12,8 @@ use anyhow::{Ok, Result};
 use move_command_line_common::files::FileHash;
 use move_compiler::parser::ast::Definition;
 use move_compiler::shared::Identifier;
+use move_compiler::CommentMap;
+use move_compiler::MatchedFileCommentMap;
 use move_compiler::{parser::ast::*, shared::*};
 use move_core_types::account_address::*;
 use move_ir_types::location::Loc;
@@ -32,6 +36,7 @@ pub struct Modules {
     pub(crate) hash_file: PathBufHashMap,
     pub(crate) file_line_mapping: FileLineMapping,
     pub(crate) manifests: Vec<PathBuf>,
+    comments: HashMap<PathBuf, MatchedFileCommentMap>,
 }
 
 impl Modules {
@@ -43,6 +48,67 @@ impl Modules {
         modules
     }
 
+    pub fn update_defs(&mut self, file_path: &PathBuf, file_contents: &str) {
+        use super::syntax::parse_file_string;
+        let file_hash = FileHash::new(file_contents);
+        let mut env = CompilationEnv::new(Flags::testing());
+        let defs = parse_file_string(&mut env, file_hash, file_contents);
+        let defs = match defs {
+            std::result::Result::Ok(x) => x,
+            std::result::Result::Err(d) => {
+                log::error!("update file failed,err:{:?}", d);
+                return;
+            }
+        };
+        let (defs, comment_map) = defs;
+        self.comments.insert(file_path.clone(), comment_map);
+        let mut manifest = None;
+        // Find the right manifest file.
+        for m in self.modules.keys() {
+            let mut x = |layout: SourcePackageLayout| -> bool {
+                let mut p = m.clone();
+                p.push(layout.location_str()); // push source layout.
+                p.push(file_path.file_name().unwrap()); //
+                if p == file_path.clone() {
+                    manifest = Some((m.clone(), layout));
+                    true
+                } else {
+                    false
+                }
+            };
+            if x(SourcePackageLayout::Sources) {
+                break;
+            }
+            if x(SourcePackageLayout::Tests) {
+                break;
+            }
+            if x(SourcePackageLayout::Scripts) {
+                break;
+            }
+        }
+        if manifest.is_none() {
+            log::error!("path can't find manifest file:{:?}", file_path);
+            return;
+        }
+        let (manifest, layout) = manifest.unwrap();
+        log::info!(
+            "update defs for {:?} manifest:{:?} layout:{:?}",
+            file_path.as_path(),
+            manifest.as_path(),
+            layout
+        );
+        if layout == SourcePackageLayout::Sources {
+            &mut self.modules.get_mut(&manifest).unwrap().sources
+        } else if layout == SourcePackageLayout::Scripts {
+            &mut self.modules.get_mut(&manifest).unwrap().scripts
+        } else {
+            &mut self.modules.get_mut(&manifest).unwrap().tests
+        }
+        .insert(file_path.clone(), defs);
+        self.hash_file.update(file_path.clone(), file_hash);
+        self.file_line_mapping
+            .update(file_path.clone(), file_contents);
+    }
     pub(crate) fn load_project(&mut self, manifest_path: &PathBuf) -> Result<()> {
         let manifest_path = normal_path(&manifest_path.as_path());
         if self.modules.get(&manifest_path).is_some() {
@@ -106,7 +172,11 @@ impl Modules {
                         continue;
                     }
                 };
+                let comments_map = defs.1;
+                self.comments
+                    .insert(PathBuf::from(file.path()), comments_map);
                 let defs = defs.0;
+
                 if self.modules.get(manifest_path).is_none() {
                     self.modules
                         .insert(manifest_path.clone(), Default::default());

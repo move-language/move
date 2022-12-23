@@ -11,19 +11,22 @@ use lsp_types::{
     HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
     TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
 };
-use std::{collections::BTreeMap, path::Path};
+use std::{
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+};
 
 use log::{Level, Metadata, Record};
 use move_analyzer::{
     completion::on_completion_request, context::Context, goto_definition, hover, modules::Modules,
-    references,
+    references, utils::*,
 };
 use move_symbol_pool::Symbol;
 use url::Url;
 struct SimpleLogger;
 impl log::Log for SimpleLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= Level::Trace
+        metadata.level() <= Level::Error
     }
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
@@ -36,7 +39,7 @@ const LOGGER: SimpleLogger = SimpleLogger;
 
 pub fn init_log() {
     log::set_logger(&LOGGER)
-        .map(|()| log::set_max_level(log::LevelFilter::Trace))
+        .map(|()| log::set_max_level(log::LevelFilter::Error))
         .unwrap()
 }
 
@@ -48,7 +51,8 @@ fn main() {
     // For now, move-analyzer only responds to options built-in to clap,
     // such as `--help` or `--version`.
     Options::parse();
-    // init_log();
+    init_log();
+
     // stdio is used to communicate Language Server Protocol requests and responses.
     // stderr is used for logging (and, when Visual Studio Code is used to communicate with this
     // server, it captures this output in a dedicated "output channel").
@@ -224,11 +228,30 @@ fn on_response(_context: &Context, _response: &Response) {
     log::error!("handle response from client");
 }
 
-fn on_notification(_context: &mut Context, notification: &Notification) {
+fn on_notification(context: &mut Context, notification: &Notification) {
     match notification.method.as_str() {
+        lsp_types::notification::DidSaveTextDocument::METHOD => {
+            use lsp_types::DidSaveTextDocumentParams;
+            let parameters =
+                serde_json::from_value::<DidSaveTextDocumentParams>(notification.params.clone())
+                    .expect("could not deserialize go-to-def request");
+
+            let fpath = parameters.text_document.uri.to_file_path().unwrap();
+            let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
+
+            let content = std::fs::read_to_string(fpath.as_path());
+            let content = match content {
+                Ok(x) => x,
+                Err(err) => {
+                    log::error!("read file failed,err:{:?}", err);
+                    return;
+                }
+            };
+            context.modules.update_defs(&fpath, content.as_str());
+        }
+
         lsp_types::notification::DidOpenTextDocument::METHOD
         | lsp_types::notification::DidChangeTextDocument::METHOD
-        | lsp_types::notification::DidSaveTextDocument::METHOD
         | lsp_types::notification::DidCloseTextDocument::METHOD => {
             log::error!("handle notification '{}' from client", notification.method);
         }

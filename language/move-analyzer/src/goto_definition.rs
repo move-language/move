@@ -62,19 +62,12 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
                 .unwrap();
         }
         None => {
-            let r = Response::new_err(
-                request.id.clone(),
-                ErrorCode::UnknownErrorCode as i32,
-                format!(
-                    "{:?}:{}:{} not found definition.",
-                    visitor.filepath, line, col
-                ),
+            log::error!(
+                "{:?}:{}:{} not found definition.",
+                visitor.filepath,
+                line,
+                col
             );
-            context
-                .connection
-                .sender
-                .send(Message::Response(r))
-                .unwrap();
         }
     }
 }

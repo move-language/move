@@ -30,6 +30,7 @@ pub mod dependency_graph;
 mod digest;
 pub mod lock_file;
 pub mod resolution_graph;
+pub mod resolving_table;
 
 pub fn download_dependency_repos<Progress: Write>(
     manifest: &SourceManifest,

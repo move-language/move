@@ -35,7 +35,7 @@ fn package_hash_skips_non_move_files() {
 
     std::fs::remove_file(&dummy_path).unwrap();
     for (pkg, res_pkg) in pkg1.package_table {
-        let other_res_pkg = pkg2.get_package(&pkg);
+        let other_res_pkg = pkg2.get_package(pkg);
         assert_eq!(
             res_pkg.source_digest, other_res_pkg.source_digest,
             "source digests differ for {}",

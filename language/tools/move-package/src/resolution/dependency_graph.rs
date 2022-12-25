@@ -39,7 +39,7 @@ use super::{
 ///
 /// In order to be `BuildConfig` agnostic, it contains `dev-dependencies` as well as `dependencies`
 /// and labels edges in the graph accordingly, as `DevOnly`, or `Always` dependencies.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DependencyGraph {
     /// Path to the root package and its name (according to its manifest)
     pub root_path: PathBuf,
@@ -58,13 +58,13 @@ pub struct DependencyGraph {
     pub always_deps: BTreeSet<PM::PackageName>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Package {
-    kind: PM::DependencyKind,
-    version: Option<PM::Version>,
+    pub kind: PM::DependencyKind,
+    pub version: Option<PM::Version>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Dependency {
     pub mode: DependencyMode,
     pub subst: Option<PM::Substitution>,

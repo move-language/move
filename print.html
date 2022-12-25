@@ -152,7 +152,6 @@
 <p>Move takes its cue from <a href="https://www.rust-lang.org/">Rust</a> by using resource types with move (hence the name) semantics as an explicit representation of digital assets, such as currency.</p>
 <h2 id="who-is-move-for"><a class="header" href="#who-is-move-for">Who is Move for?</a></h2>
 <p>Move was designed and created as a secure, verified, yet flexible programming language. The first use of Move is for the implementation of the Diem blockchain. That said, the language is still evolving. Move has the potential to be a language for other blockchains, and even non-blockchain use cases as well.</p>
-<p>Given custom Move modules will not be supported at the <a href="https://diem.com/white-paper/#whats-next">launch</a> of the Diem Payment Network (DPN), we are targeting an early Move Developer persona.</p>
 <p>The early Move Developer is one with some programming experience, who wants to begin understanding the core programming language and see examples of its usage.</p>
 <h3 id="hobbyists"><a class="header" href="#hobbyists">Hobbyists</a></h3>
 <p>Understanding that the capability to create custom modules on the Diem Payment Network will not be available at launch, the hobbyist Move Developer is interested in learning the intricacies of the language. She will understand the basic syntax, the standard libraries available, and write example code that can be executed using the Move CLI. The Move Developer may even want to dig into understanding how the Move Virtual Machine executes the code she writes.</p>
@@ -261,44 +260,58 @@ The <a href="./constants.html"><code>const</code></a> keyword defines private co
 <div style="break-before: page; page-break-before: always;"></div><h1 id="move-tutorial"><a class="header" href="#move-tutorial">Move Tutorial</a></h1>
 <p>Please refer to the <a href="https://github.com/move-language/move/tree/main/language/documentation/tutorial">Move Tutorial</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="integers"><a class="header" href="#integers">Integers</a></h1>
-<p>Move supports three unsigned integer types: <code>u8</code>, <code>u64</code>, and <code>u128</code>. Values of these types range from 0 to a maximum that depends on the size of the type.</p>
+<p>Move supports six unsigned integer types: <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code>, <code>u128</code>, and <code>u256</code>. Values of these types range from 0 to a maximum that depends on the size of the type.</p>
 <table><thead><tr><th>Type</th><th>Value Range</th></tr></thead><tbody>
 <tr><td>Unsigned 8-bit integer, <code>u8</code></td><td>0 to 2<sup>8</sup> - 1</td></tr>
+<tr><td>Unsigned 16-bit integer, <code>u16</code></td><td>0 to 2<sup>16</sup> - 1</td></tr>
+<tr><td>Unsigned 32-bit integer, <code>u32</code></td><td>0 to 2<sup>32</sup> - 1</td></tr>
 <tr><td>Unsigned 64-bit integer, <code>u64</code></td><td>0 to 2<sup>64</sup> - 1</td></tr>
 <tr><td>Unsigned 128-bit integer, <code>u128</code></td><td>0 to 2<sup>128</sup> - 1</td></tr>
+<tr><td>Unsigned 256-bit integer, <code>u256</code></td><td>0 to 2<sup>256</sup> - 1</td></tr>
 </tbody></table>
 <h2 id="literals"><a class="header" href="#literals">Literals</a></h2>
 <p>Literal values for these types are specified either as a sequence of digits (e.g.,<code>112</code>) or as hex literals, e.g., <code>0xFF</code>. The type of the literal can optionally be added as a suffix, e.g., <code>112u8</code>. If the type is not specified, the compiler will try to infer the type from the context where the literal is used. If the type cannot be inferred, it is assumed to be <code>u64</code>.</p>
+<p>Number literals can be separated by underscores for grouping and readability. (e.g.,<code>1_234_5678</code>, <code>1_000u128</code>, <code>0xAB_CD_12_35</code>).</p>
 <p>If a literal is too large for its specified (or inferred) size range, an error is reported.</p>
 <h3 id="examples"><a class="header" href="#examples">Examples</a></h3>
 <pre><code class="language-move">// literals with explicit annotations;
 let explicit_u8 = 1u8;
+let explicit_u16 = 1u16;
+let explicit_u32 = 1u32;
 let explicit_u64 = 2u64;
 let explicit_u128 = 3u128;
+let explicit_u256 = 1u256;
+let explicit_u64_underscored = 154_322_973u64;
 
 // literals with simple inference
 let simple_u8: u8 = 1;
+let simple_u16: u16 = 1;
+let simple_u32: u32 = 1;
 let simple_u64: u64 = 2;
 let simple_u128: u128 = 3;
+let simple_u256: u256 = 1;
 
 // literals with more complex inference
 let complex_u8 = 1; // inferred: u8
 // right hand argument to shift must be u8
 let _unused = 10 &lt;&lt; complex_u8;
 
-let x: u8 = 0;
+let x: u8 = 38;
 let complex_u8 = 2; // inferred: u8
 // arguments to `+` must have the same type
 let _unused = x + complex_u8;
 
-let complex_u128 = 3; // inferred: u128
+let complex_u128 = 133_876; // inferred: u128
 // inferred from function argument type
 function_that_takes_u128(complex_u128);
 
 // literals can be written in hex
 let hex_u8: u8 = 0x1;
+let hex_u16: u16 = 0x1BAE;
+let hex_u32: u32 = 0xDEAD80;
 let hex_u64: u64 = 0xCAFE;
 let hex_u128: u128 = 0xDEADBEEF;
+let hex_u256: u256 = 0x1123_456A_BCDE_F;
 </code></pre>
 <h2 id="operations"><a class="header" href="#operations">Operations</a></h2>
 <h3 id="arithmetic"><a class="header" href="#arithmetic">Arithmetic</a></h3>
@@ -316,12 +329,12 @@ let hex_u128: u128 = 0xDEADBEEF;
 <p>Bitwise operations do not abort.</p>
 <table><thead><tr><th>Syntax</th><th>Operation</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>&amp;</code></td><td>bitwise and</td><td>Performs a boolean and for each bit pairwise</td></tr>
-<tr><td><code>\|</code></td><td>bitwise or</td><td>Performs a boolean or for each bit pairwise</td></tr>
+<tr><td><code>|</code></td><td>bitwise or</td><td>Performs a boolean or for each bit pairwise</td></tr>
 <tr><td><code>^</code></td><td>bitwise xor</td><td>Performs a boolean exclusive or for each bit pairwise</td></tr>
 </tbody></table>
 <h3 id="bit-shifts"><a class="header" href="#bit-shifts">Bit Shifts</a></h3>
 <p>Similar to the bitwise operations, each integer type supports bit shifts. But unlike the other operations, the righthand side operand (how many bits to shift by) must <em>always</em> be a <code>u8</code> and need not match the left side operand (the number you are shifting).</p>
-<p>Bit shifts can abort if the number of bits to shift by is greater than or equal to <code>8</code>, <code>64</code>, or <code>128</code> for <code>u8</code>, <code>u64</code>, and <code>u128</code> respectively.</p>
+<p>Bit shifts can abort if the number of bits to shift by is greater than or equal to <code>8</code>, <code>16</code>, <code>32</code>, <code>64</code>, <code>128</code> or <code>256</code> for <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code>, <code>u128</code> and <code>u256</code> respectively.</p>
 <table><thead><tr><th>Syntax</th><th>Operation</th><th>Aborts if</th></tr></thead><tbody>
 <tr><td><code>&lt;&lt;</code></td><td>shift left</td><td>Number of bits to shift by is greater than the size of the integer type</td></tr>
 <tr><td><code>&gt;&gt;</code></td><td>shift right</td><td>Number of bits to shift by is greater than the size of the integer type</td></tr>
@@ -349,12 +362,15 @@ let hex_u128: u128 = 0xDEADBEEF;
 <table><thead><tr><th>Syntax</th><th>Operation</th><th>Aborts if</th></tr></thead><tbody>
 <tr><td><code>(e as T)</code></td><td>Cast integer expression <code>e</code> into an integer type <code>T</code></td><td><code>e</code> is too large to represent as a <code>T</code></td></tr>
 </tbody></table>
-<p>Here, the type of <code>e</code> must be <code>u8</code>, <code>u64</code>, or <code>u128</code> and <code>T</code> must be <code>u8</code>, <code>u64</code>, or <code>u128</code>.</p>
+<p>Here, the type of <code>e</code> must be <code>8</code>, <code>16</code>, <code>32</code>, <code>64</code>, <code>128</code> or <code>256</code> and <code>T</code> must be <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code>, <code>u128</code> oe <code>u256</code>.</p>
 <p>For example:</p>
 <ul>
 <li><code>(x as u8)</code></li>
+<li><code>(y as u16)</code></li>
+<li><code>(873u16 as u32)</code></li>
 <li><code>(2u8 as u64)</code></li>
 <li><code>(1 + 3 as u128)</code></li>
+<li><code>(4/2 + 12345 as u256)</code></li>
 </ul>
 <h2 id="ownership"><a class="header" href="#ownership">Ownership</a></h2>
 <p>As with the other scalar values built-in to the language, integer values are implicitly copyable, meaning they can be copied without an explicit instruction such as <a href="./variables.html#move-and-copy"><code>copy</code></a>.</p>
@@ -974,7 +990,7 @@ syntax for adding a type annotation is:</p>
 <pre><code class="language-move">let x: T = e; // &quot;Variable x of type T is initialized to expression e&quot;
 </code></pre>
 <p>Some examples of explicit type annotations:</p>
-<pre><code class="language-move=">address 0x42 {
+<pre><code class="language-move">address 0x42 {
 module example {
 
     struct S { f: u64, g: u64 }
@@ -1128,7 +1144,7 @@ will be ignored and not introduce a new variable</p>
 </code></pre>
 <pre><code class="language-move">let (x1, _, z1) = three();
 let (x2, _y, z2) = three();
-assert!(x1 + z1 == x2 + z2)
+assert!(x1 + z1 == x2 + z2, 42);
 </code></pre>
 <p>This can be necessary at times as the compiler will error on unused local variables</p>
 <pre><code class="language-move">let (x1, y, z1) = three(); // ERROR!
@@ -1194,7 +1210,7 @@ expression block with braces (<code>{</code>...<code>}</code>).</p>
 if (cond) x = 1 else x = 2;
 </code></pre>
 <p>The assignment uses the same pattern syntax scheme as <code>let</code> bindings:</p>
-<pre><code class="language-move=">address 0x42 {
+<pre><code class="language-move">address 0x42 {
 module example {
     struct X { f: u64 }
 
@@ -1227,8 +1243,7 @@ reference <code>&amp;mut</code>.</p>
 <pre><code class="language-move">let x = 0;
 let r = &amp;mut x;
 *r = 1;
-assert!(x == 1, 42)
-}
+assert!(x == 1, 42);
 </code></pre>
 <p>This is particularly useful if either:</p>
 <p>(1) You want to modify different variables depending on some condition.</p>
@@ -1244,7 +1259,7 @@ modify_ref(&amp;mut x);
 <p>This sort of modification is how you modify structs and vectors!</p>
 <pre><code class="language-move">let v = vector::empty();
 vector::push_back(&amp;mut v, 100);
-assert!(*vector::borrow(&amp;v, 0) == 100, 42)
+assert!(*vector::borrow(&amp;v, 0) == 100, 42);
 </code></pre>
 <p>For more details, see <a href="./references.html">Move references</a>.</p>
 <h2 id="scopes"><a class="header" href="#scopes">Scopes</a></h2>
@@ -1311,7 +1326,7 @@ explicitly destroyed within its declaring module.)</p>
 }
 </code></pre>
 <p>If a final expression is not present in a block---that is, if there is a trailing semicolon <code>;</code>,
-there is an implicit unit <code>()</code> value. Similarly, if the expression block is empty, there is an
+there is an implicit <a href="https://en.wikipedia.org/wiki/Unit_type">unit <code>()</code> value</a>. Similarly, if the expression block is empty, there is an
 implicit unit <code>()</code> value.</p>
 <pre><code class="language-move">// Both are equivalent
 { x = x + 1; 1 / x; }
@@ -2169,16 +2184,16 @@ module example {
 <pre><code class="language-move">fun zero(): u64 { 0 }
 </code></pre>
 <p>Here <code>: u64</code> indicates that the function's return type is <code>u64</code>.</p>
-<p>Using tuples, a function can return multiple values</p>
+<p>Using tuples, a function can return multiple values:</p>
 <pre><code class="language-move">fun one_two_three(): (u64, u64, u64) { (0, 1, 2) }
 </code></pre>
-<p>If no return type is specified, the function has an implicit return type of unit <code>()</code>. These functions are equivalent</p>
+<p>If no return type is specified, the function has an implicit return type of unit <code>()</code>. These functions are equivalent:</p>
 <pre><code class="language-move">fun just_unit(): () { () }
 fun just_unit() { () }
 fun just_unit() { }
 </code></pre>
-<p><code>script</code> functions must have a return type of unit <code>()</code></p>
-<pre><code class="language-move=">script {
+<p><code>script</code> functions must have a return type of unit <code>()</code>:</p>
+<pre><code class="language-move">script {
     fun do_nothing() {
     }
 }
@@ -2326,14 +2341,14 @@ module m {
 }
 </code></pre>
 <p>Structs cannot be recursive, so the following definition is invalid:</p>
-<pre><code class="language-move=">struct Foo { x: Foo }
+<pre><code class="language-move">struct Foo { x: Foo }
 //              ^ error! Foo cannot contain Foo
 </code></pre>
 <p>As mentioned above: by default, a struct declaration is linear and ephemeral. So to allow the value
 to be used with certain operations (that copy it, drop it, store it in global storage, or use it as
 a storage schema), structs can be granted <a href="./abilities.html">abilities</a> by annotating them with
 <code>has &lt;ability&gt;</code>:</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     struct Foo has copy, drop { x: u64, y: bool }
 }
@@ -2341,7 +2356,7 @@ module m {
 </code></pre>
 <p>For more details, see the <a href="./abilities.html#annotating-structs">annotating structs</a> section.</p>
 <h3 id="naming"><a class="header" href="#naming">Naming</a></h3>
-<p>Structs must start with a capital letter <code>A</code> to <code>Z</code>. After the first letter, constant names can
+<p>Structs must start with a capital letter <code>A</code> to <code>Z</code>. After the first letter, struct names can
 contain underscores <code>_</code>, letters <code>a</code> to <code>z</code>, letters <code>A</code> to <code>Z</code>, or digits <code>0</code> to <code>9</code>.</p>
 <pre><code class="language-move">struct Foo {}
 struct BAR {}
@@ -2353,7 +2368,7 @@ features. It may or may not be removed later.</p>
 <h3 id="creating-structs"><a class="header" href="#creating-structs">Creating Structs</a></h3>
 <p>Values of a struct type can be created (or &quot;packed&quot;) by indicating the struct name, followed by
 value for each field:</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     struct Foo has drop { x: u64, y: bool }
     struct Baz has drop { foo: Foo }
@@ -2374,7 +2389,7 @@ let baz = Baz { foo };
 <p>This is called sometimes called &quot;field name punning&quot;.</p>
 <h3 id="destroying-structs-via-pattern-matching"><a class="header" href="#destroying-structs-via-pattern-matching">Destroying Structs via Pattern Matching</a></h3>
 <p>Struct values can be destroyed by binding or assigning them patterns.</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     struct Foo { x: u64, y: bool }
     struct Bar { foo: Foo }
@@ -2393,6 +2408,7 @@ module m {
     fun example_destroy_foo_wildcard() {
         let foo = Foo { x: 3, y: false };
         let Foo { x, y: _ } = foo;
+
         // only one new binding since y was bound to a wildcard
         //   x: u64 = 3
     }
@@ -2401,6 +2417,7 @@ module m {
         let x: u64;
         let y: bool;
         Foo { x, y } = Foo { x: 3, y: false };
+
         // mutating existing variables x &amp; y
         //   x = 3, y = false
     }
@@ -2408,6 +2425,7 @@ module m {
     fun example_foo_ref() {
         let foo = Foo { x: 3, y: false };
         let Foo { x, y } = &amp;foo;
+
         // two new bindings
         //   x: &amp;u64
         //   y: &amp;bool
@@ -2416,6 +2434,7 @@ module m {
     fun example_foo_ref_mut() {
         let foo = Foo { x: 3, y: false };
         let Foo { x, y } = &amp;mut foo;
+
         // two new bindings
         //   x: &amp;mut u64
         //   y: &amp;mut bool
@@ -2425,9 +2444,10 @@ module m {
         let bar = Bar { foo: Foo { x: 3, y: false } };
         let Bar { foo: Foo { x, y } } = bar;
         //             ^ nested pattern
+
         // two new bindings
         //   x: u64 = 3
-        //   foo_y: bool = false
+        //   y: bool = false
     }
 
     fun example_destroy_baz() {
@@ -2440,7 +2460,7 @@ module m {
 <h3 id="borrowing-structs-and-fields"><a class="header" href="#borrowing-structs-and-fields">Borrowing Structs and Fields</a></h3>
 <p>The <code>&amp;</code> and <code>&amp;mut</code> operator can be used to create references to structs or fields. These examples
 include some optional type annotations (e.g., <code>: &amp;Foo</code>) to demonstrate the type of operations.</p>
-<pre><code class="language-move=">let foo = Foo { x: 3, y: true };
+<pre><code class="language-move">let foo = Foo { x: 3, y: true };
 let foo_ref: &amp;Foo = &amp;foo;
 let y: bool = foo_ref.y;          // reading a field via a reference to the struct
 let x_ref: &amp;u64 = &amp;foo.x;
@@ -2448,21 +2468,21 @@ let x_ref: &amp;u64 = &amp;foo.x;
 let x_ref_mut: &amp;mut u64 = &amp;mut foo.x;
 *x_ref_mut = 42;            // modifying a field via a mutable reference
 </code></pre>
-<p>It is possible to borrow inner fields of nested structs.</p>
-<pre><code class="language-move=">let foo = Foo { x: 3, y: true };
+<p>It is possible to borrow inner fields of nested structs:</p>
+<pre><code class="language-move">let foo = Foo { x: 3, y: true };
 let bar = Bar { foo };
 
 let x_ref = &amp;bar.foo.x;
 </code></pre>
-<p>You can also borrow a field via a reference to a struct.</p>
-<pre><code class="language-move=">let foo = Foo { x: 3, y: true };
+<p>You can also borrow a field via a reference to a struct:</p>
+<pre><code class="language-move">let foo = Foo { x: 3, y: true };
 let foo_ref = &amp;foo;
 let x_ref = &amp;foo_ref.x;
 // this has the same effect as let x_ref = &amp;foo.x
 </code></pre>
 <h3 id="reading-and-writing-fields"><a class="header" href="#reading-and-writing-fields">Reading and Writing Fields</a></h3>
-<p>If you need to read and copy a field's value, you can then dereference the borrowed field</p>
-<pre><code class="language-move=">let foo = Foo { x: 3, y: true };
+<p>If you need to read and copy a field's value, you can then dereference the borrowed field:</p>
+<pre><code class="language-move">let foo = Foo { x: 3, y: true };
 let bar = Bar { foo: copy foo };
 let x: u64 = *&amp;foo.x;
 let y: bool = *&amp;foo.y;
@@ -2470,35 +2490,35 @@ let foo2: Foo = *&amp;bar.foo;
 </code></pre>
 <p>If the field is implicitly copyable, the dot operator can be used to read fields of a struct without
 any borrowing. (Only scalar values with the <code>copy</code> ability are implicitly copyable.)</p>
-<pre><code class="language-move=">let foo = Foo { x: 3, y: true };
+<pre><code class="language-move">let foo = Foo { x: 3, y: true };
 let x = foo.x;  // x == 3
 let y = foo.y;  // y == true
 </code></pre>
-<p>Dot operators can be chained to access nested fields.</p>
-<pre><code class="language-move=">let baz = Baz { foo: Foo { x: 3, y: true } };
+<p>Dot operators can be chained to access nested fields:</p>
+<pre><code class="language-move">let baz = Baz { foo: Foo { x: 3, y: true } };
 let x = baz.foo.x; // x = 3;
 </code></pre>
 <p>However, this is not permitted for fields that contain non-primitive types, such a vector or another
-struct</p>
-<pre><code class="language-move=">let foo = Foo { x: 3, y: true };
+struct:</p>
+<pre><code class="language-move">let foo = Foo { x: 3, y: true };
 let bar = Bar { foo };
 let foo2: Foo = *&amp;bar.foo;
-let foo3: Foo = bar.foo; // error! add an explicit copy with *&amp;
+let foo3: Foo = bar.foo; // error! must add an explicit copy with *&amp;
 </code></pre>
 <p>The reason behind this design decision is that copying a vector or another struct might be an
 expensive operation. It is important for a programmer to be aware of this copy and make others aware
-with the explicit syntax <code>*&amp;</code></p>
+with the explicit syntax <code>*&amp;</code>.</p>
 <p>In addition reading from fields, the dot syntax can be used to modify fields, regardless of the
-field being a primitive type or some other struct</p>
-<pre><code class="language-move=">let foo = Foo { x: 3, y: true };
+field being a primitive type or some other struct.</p>
+<pre><code class="language-move">let foo = Foo { x: 3, y: true };
 foo.x = 42;     // foo = Foo { x: 42, y: true }
 foo.y = !foo.y; // foo = Foo { x: 42, y: false }
 let bar = Bar { foo };            // bar = Bar { foo: Foo { x: 42, y: false } }
 bar.foo.x = 52;                   // bar = Bar { foo: Foo { x: 52, y: false } }
 bar.foo = Foo { x: 62, y: true }; // bar = Bar { foo: Foo { x: 62, y: true } }
 </code></pre>
-<p>The dot syntax also works via a reference to a struct</p>
-<pre><code class="language-move=">let foo = Foo { x: 3, y: true };
+<p>The dot syntax also works via a reference to a struct:</p>
+<pre><code class="language-move">let foo = Foo { x: 3, y: true };
 let foo_ref = &amp;mut foo;
 foo_ref.x = foo_ref.x + 1;
 </code></pre>
@@ -2513,7 +2533,7 @@ the struct.</li>
 <p>Following these rules, if you want to modify your struct outside the module, you will need to
 provide public APIs for them. The end of the chapter contains some examples of this.</p>
 <p>However, struct <em>types</em> are always visible to another module or script:</p>
-<pre><code class="language-move=">// m.move
+<pre><code class="language-move">// m.move
 address 0x2 {
 module m {
     struct Foo has drop { x: u64 }
@@ -2524,7 +2544,7 @@ module m {
 }
 }
 </code></pre>
-<pre><code class="language-move=">// n.move
+<pre><code class="language-move">// n.move
 address 0x2 {
 module n {
     use 0x2::m;
@@ -2550,7 +2570,7 @@ module n {
 ephemeral. This means they cannot be copied or dropped. This property can be very useful when
 modeling real world resources like money, as you do not want money to be duplicated or get lost in
 circulation.</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     struct Foo { x: u64 }
 
@@ -2575,9 +2595,9 @@ module m {
 }
 }
 </code></pre>
-<p>To fix the second example (<code>fun dropping_resource</code>), you would need to manually &quot;unpack&quot; the
+<p>To fix the second example (<code>fun destroying_resource1</code>), you would need to manually &quot;unpack&quot; the
 resource:</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     struct Foo { x: u64 }
 
@@ -2593,7 +2613,7 @@ This can be leveraged to enforce certain invariants in a system, for example, co
 <p>If on the other hand, your struct does not represent something valuable, you can add the abilities
 <code>copy</code> and <code>drop</code> to get a struct value that might feel more familiar from other programming
 languages:</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     struct Foo has copy, drop { x: u64 }
 
@@ -2618,10 +2638,10 @@ structs must have the <code>store</code> ability. See the <a href="./abilities">
 <a href="./global-storage-operators.html">global storage</a> chapters for more detail.</p>
 <h2 id="examples-3"><a class="header" href="#examples-3">Examples</a></h2>
 <p>Here are two short examples of how you might use structs to represent valuable data (in the case of
-<code>Coin</code>) or more classical data (in the case of <code>Point</code> and <code>Circle</code>)</p>
+<code>Coin</code>) or more classical data (in the case of <code>Point</code> and <code>Circle</code>).</p>
 <h3 id="example-1-coin"><a class="header" href="#example-1-coin">Example 1: Coin</a></h3>
 <!-- TODO link to access control for mint -->
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     // We do not want the Coin to be copied because that would be duplicating this &quot;money&quot;,
     // so we do not give the struct the 'copy' ability.
@@ -2636,7 +2656,7 @@ module m {
 
     public fun mint(value: u64): Coin {
         // You would want to gate this function with some form of access control to prevent
-        // anyone using this module from minting an infinite amount of coins
+        // anyone using this module from minting an infinite amount of coins.
         Coin { value }
     }
 
@@ -2669,7 +2689,7 @@ module m {
 }
 </code></pre>
 <h3 id="example-2-geometry"><a class="header" href="#example-2-geometry">Example 2: Geometry</a></h3>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module point {
     struct Point has copy, drop, store {
         x: u64,
@@ -2707,9 +2727,9 @@ module point {
 }
 }
 </code></pre>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module circle {
-    use 0x2::Point::{Self, Point};
+    use 0x2::point::{Self, Point};
 
     struct Circle has copy, drop, store {
         center: Point,
@@ -2721,7 +2741,7 @@ module circle {
     }
 
     public fun overlaps(c1: &amp;Circle, c2: &amp;Circle): bool {
-        let d = Point::dist_squared(&amp;c1.center, &amp;c2.center);
+        let d = point::dist_squared(&amp;c1.center, &amp;c2.center);
         let r1 = c1.radius;
         let r2 = c2.radius;
         d*d &lt;= r1*r1 + 2*r1*r2 + r2*r2
@@ -2777,7 +2797,7 @@ features. It may or may not be removed later.</p>
 <p><code>public</code> constants are not currently supported. <code>const</code> values can be used only in the declaring
 module.</p>
 <h2 id="valid-expressions"><a class="header" href="#valid-expressions">Valid Expressions</a></h2>
-<p>Currently, constants are limited to the primitive types <code>bool</code>, <code>u8</code>, <code>u64</code>, <code>u128</code>, <code>address</code>, and
+<p>Currently, constants are limited to the primitive types <code>bool</code>, <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code>, <code>u128</code>, <code>u256</code>, <code>address</code>, and
 <code>vector&lt;u8&gt;</code>. Future support for other <code>vector</code> values (besides the &quot;string&quot;-style literals) will
 come later.</p>
 <h3 id="values"><a class="header" href="#values">Values</a></h3>
@@ -2798,6 +2818,7 @@ const SHIFTY: u8 = {
   (1 &lt;&lt; 1) * (1 &lt;&lt; 2) * (1 &lt;&lt; 3) * (1 &lt;&lt; 4)
 };
 const HALF_MAX: u128 = 340282366920938463463374607431768211455 / 2;
+const REM: u256 = 57896044618658097711785492504343953926634992332820282019728792003956564819968 % 654321;
 const EQUAL: bool = 1 == 1;
 </code></pre>
 <p>If the operation would result in a runtime exception, the compiler will give an error that it is
@@ -2830,38 +2851,38 @@ struct Bar&lt;T1, T2&gt; has copy, drop {
     y: vector&lt;T2&gt;,
 }
 </code></pre>
-<p><a href="generics.html#unused-type-parameters">Note that type parameters do not have to be used</a></p>
+<p>Note that <a href="generics.html#unused-type-parameters">type parameters do not have to be used</a></p>
 <h2 id="type-arguments"><a class="header" href="#type-arguments">Type Arguments</a></h2>
 <h3 id="calling-generic-functions"><a class="header" href="#calling-generic-functions">Calling Generic Functions</a></h3>
 <p>When calling a generic function, one can specify the type arguments for the function's type parameters in a list enclosed by a pair of angle brackets.</p>
-<pre><code class="language-move=">fun foo() {
+<pre><code class="language-move">fun foo() {
     let x = id&lt;bool&gt;(true);
 }
 </code></pre>
 <p>If you do not specify the type arguments, Move's <a href="generics.html#type-inference">type inference</a> will supply them for you.</p>
 <h3 id="using-generic-structs"><a class="header" href="#using-generic-structs">Using Generic Structs</a></h3>
 <p>Similarly, one can attach a list of type arguments for the struct's type parameters when constructing or destructing values of generic types.</p>
-<pre><code class="language-move=">fun foo() {
+<pre><code class="language-move">fun foo() {
     let foo = Foo&lt;bool&gt; { x: true };
     let Foo&lt;bool&gt; { x } = foo;
 }
 </code></pre>
 <p>If you do not specify the type arguments, Move's <a href="generics.html#type-inference">type inference</a> will supply them for you.</p>
 <h3 id="type-argument-mismatch"><a class="header" href="#type-argument-mismatch">Type Argument Mismatch</a></h3>
-<p>If you specify the type arguments and they conflict with the actual values supplied, an error will be given</p>
-<pre><code class="language-move=">fun foo() {
+<p>If you specify the type arguments and they conflict with the actual values supplied, an error will be given:</p>
+<pre><code class="language-move">fun foo() {
     let x = id&lt;u64&gt;(true); // error! true is not a u64
 }
 </code></pre>
-<p>and similarly</p>
-<pre><code class="language-move=">fun foo() {
+<p>and similarly:</p>
+<pre><code class="language-move">fun foo() {
     let foo = Foo&lt;bool&gt; { x: 0 }; // error! 0 is not a bool
     let Foo&lt;address&gt; { x } = foo; // error! bool is incompatible with address
 }
 </code></pre>
 <h2 id="type-inference"><a class="header" href="#type-inference">Type Inference</a></h2>
-<p>In most cases, the Move compiler will be able to infer the type arguments so you don't have to write them down explicitly. Here's what the examples above would look like if we omit the type arguments.</p>
-<pre><code class="language-move=">fun foo() {
+<p>In most cases, the Move compiler will be able to infer the type arguments so you don't have to write them down explicitly. Here's what the examples above would look like if we omit the type arguments:</p>
+<pre><code class="language-move">fun foo() {
     let x = id(true);
     //        ^ &lt;bool&gt; is inferred
 
@@ -2873,7 +2894,7 @@ struct Bar&lt;T1, T2&gt; has copy, drop {
 }
 </code></pre>
 <p>Note: when the compiler is unable to infer the types, you'll need annotate them manually. A common scenario is to call a function with type parameters appearing only at return positions.</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     using std::vector;
 
@@ -2887,8 +2908,8 @@ module m {
 }
 }
 </code></pre>
-<p>However, the compiler will be able to infer the type if that return value is used later in that function</p>
-<pre><code class="language-move=">address 0x2 {
+<p>However, the compiler will be able to infer the type if that return value is used later in that function:</p>
+<pre><code class="language-move">address 0x2 {
 module m {
     using std::vector;
 
@@ -2906,12 +2927,12 @@ an unused type parameter is one that
 does not appear in any field defined in the struct,
 but is checked statically at compile time.
 Move allows unused type parameters so the following struct definition is valid:</p>
-<pre><code class="language-move=">struct Foo&lt;T&gt; {
+<pre><code class="language-move">struct Foo&lt;T&gt; {
     foo: u64
 }
 </code></pre>
 <p>This can be convenient when modeling certain concepts. Here is an example:</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     // Currency Specifiers
     struct Currency1 {}
@@ -2970,9 +2991,9 @@ In this way,
 arguments to phantom type parameters are not considered when deriving the abilities for generic types,
 thus avoiding the need for spurious ability annotations.
 For this relaxed rule to be sound,
-Move's type system guarantees that a parameter declared as phantom is either
+Move's type system guarantees that a parameter declared as <code>phantom</code> is either
 not used at all in the struct definition, or
-it is only used as an argument to type parameters also declared as phantom.</p>
+it is only used as an argument to type parameters also declared as <code>phantom</code>.</p>
 <h4 id="declaration-2"><a class="header" href="#declaration-2">Declaration</a></h4>
 <p>In a struct definition
 a type parameter can be declared as phantom by adding the <code>phantom</code> keyword before its declaration.
@@ -2990,7 +3011,7 @@ the rule for the correct use of phantom parameters can be specified as follows:
 In the first one,
 the parameter <code>T1</code> is not used at all inside the struct definition.
 In the second one, the parameter <code>T1</code> is only used as an argument to a phantom type parameter.</p>
-<pre><code class="language-move=">struct S1&lt;phantom T1, T2&gt; { f: u64 }
+<pre><code class="language-move">struct S1&lt;phantom T1, T2&gt; { f: u64 }
                   ^^
                   Ok: T1 does not appear inside the struct definition
 
@@ -3000,7 +3021,7 @@ struct S2&lt;phantom T1, T2&gt; { f: S1&lt;T1, T2&gt; }
                                   Ok: T1 appears in phantom position
 </code></pre>
 <p>The following code shows examples of violations of the rule:</p>
-<pre><code class="language-move=">struct S1&lt;phantom T&gt; { f: T }
+<pre><code class="language-move">struct S1&lt;phantom T&gt; { f: T }
                           ^
                           Error: Not a phantom position
 
@@ -3014,13 +3035,13 @@ struct S3&lt;phantom T&gt; { f: S2&lt;T&gt; }
 <p>When instantiating a struct,
 the arguments to phantom parameters are excluded when deriving the struct abilities.
 For example, consider the following code:</p>
-<pre><code class="language-move=">struct S&lt;T1, phantom T2&gt; has copy { f: T1 }
+<pre><code class="language-move">struct S&lt;T1, phantom T2&gt; has copy { f: T1 }
 struct NoCopy {}
 struct HasCopy has copy {}
 </code></pre>
 <p>Consider now the type <code>S&lt;HasCopy, NoCopy&gt;</code>.
-Since <code>S</code> is defined with <code>copy</code> and all non-phantom arguments have copy
-then <code>S&lt;HasCopy, NoCopy&gt;</code> also has copy.</p>
+Since <code>S</code> is defined with <code>copy</code> and all non-phantom arguments have <code>copy</code>
+then <code>S&lt;HasCopy, NoCopy&gt;</code> also has <code>copy</code>.</p>
 <h4 id="phantom-type-parameters-with-ability-constraints"><a class="header" href="#phantom-type-parameters-with-ability-constraints">Phantom Type Parameters with Ability Constraints</a></h4>
 <p>Ability constraints and phantom type parameters are orthogonal features in the sense that
 phantom parameters can be declared with ability constraints.
@@ -3028,7 +3049,7 @@ When instantiating a phantom type parameter with an ability constraint,
 the type argument has to satisfy that constraint,
 even though the parameter is phantom.
 For example, the following definition is perfectly valid:</p>
-<pre><code class="language-move=">struct S&lt;phantom T: copy&gt; {}
+<pre><code class="language-move">struct S&lt;phantom T: copy&gt; {}
 </code></pre>
 <p>The usual restrictions apply and <code>T</code> can only be instantiated with arguments having <code>copy</code>.</p>
 <h2 id="constraints"><a class="header" href="#constraints">Constraints</a></h2>
@@ -3036,17 +3057,17 @@ For example, the following definition is perfectly valid:</p>
 <p>This is where constraints come into play: they offer a way to specify what properties these unknown types have so the type system can allow operations that would otherwise be unsafe.</p>
 <h3 id="declaring-constraints"><a class="header" href="#declaring-constraints">Declaring Constraints</a></h3>
 <p>Constraints can be imposed on type parameters using the following syntax.</p>
-<pre><code class="language-move=">// T is the name of the type parameter
+<pre><code class="language-move">// T is the name of the type parameter
 T: &lt;ability&gt; (+ &lt;ability&gt;)*
 </code></pre>
-<p>The <code>&lt;ability&gt;</code> can be any of the four <a href="./abilities.html">abilities</a>, and a type parameter can be constrained with multiple <a href="./abilities.html">abilities</a> at once. So all of the following would be valid type parameter declarations</p>
+<p>The <code>&lt;ability&gt;</code> can be any of the four <a href="./abilities.html">abilities</a>, and a type parameter can be constrained with multiple abilities at once. So all of the following would be valid type parameter declarations:</p>
 <pre><code class="language-move">T: copy
 T: copy + drop
 T: copy + drop + store + key
 </code></pre>
 <h3 id="verifying-constraints"><a class="header" href="#verifying-constraints">Verifying Constraints</a></h3>
 <p>Constraints are checked at call sites so the following code won't compile.</p>
-<pre><code class="language-move=">struct Foo&lt;T: key&gt; { x: T }
+<pre><code class="language-move">struct Foo&lt;T: key&gt; { x: T }
 
 struct Bar { x: Foo&lt;u8&gt; }
 //                  ^ error! u8 does not have 'key'
@@ -3054,7 +3075,7 @@ struct Bar { x: Foo&lt;u8&gt; }
 struct Baz&lt;T&gt; { x: Foo&lt;T&gt; }
 //                     ^ error! T does not have 'key'
 </code></pre>
-<pre><code class="language-move=">struct R {}
+<pre><code class="language-move">struct R {}
 
 fun unsafe_consume&lt;T&gt;(x: T) {
     // error! x does not have 'drop'
@@ -3071,7 +3092,7 @@ fun foo() {
     //      ^ error! R does not have 'drop'
 }
 </code></pre>
-<pre><code class="language-move=">struct R {}
+<pre><code class="language-move">struct R {}
 
 fun unsafe_double&lt;T&gt;(x: T) {
     (copy x, x)
@@ -3085,14 +3106,14 @@ fun double&lt;T: copy&gt;(x: T) {
 fun foo(): (R, R) {
     let r = R {};
     double&lt;R&gt;(r)
-    //     ^ error! R does not have copy
+    //     ^ error! R does not have 'copy'
 }
 </code></pre>
-<p>For more information, see the abilities section on <a href="./abilities.html#conditional-abilities-and-generic-types">conditional abilities and generic types</a></p>
+<p>For more information, see the abilities section on <a href="./abilities.html#conditional-abilities-and-generic-types">conditional abilities and generic types</a>.</p>
 <h2 id="limitations-on-recursions"><a class="header" href="#limitations-on-recursions">Limitations on Recursions</a></h2>
 <h3 id="recursive-structs"><a class="header" href="#recursive-structs">Recursive Structs</a></h3>
 <p>Generic structs can not contain fields of the same type, either directly or indirectly, even with different type arguments. All of the following struct definitions are invalid:</p>
-<pre><code class="language-move=">struct Foo&lt;T&gt; {
+<pre><code class="language-move">struct Foo&lt;T&gt; {
     x: Foo&lt;u64&gt; // error! 'Foo' containing 'Foo'
 }
 
@@ -3113,7 +3134,7 @@ struct B&lt;T1, T2&gt; {
 <h3 id="advanced-topic-type-level-recursions"><a class="header" href="#advanced-topic-type-level-recursions">Advanced Topic: Type-level Recursions</a></h3>
 <p>Move allows generic functions to be called recursively. However, when used in combination with generic structs, this could create an infinite number of types in certain cases, and allowing this means adding unnecessary complexity to the compiler, vm and other language components. Therefore, such recursions are forbidden.</p>
 <p>Allowed:</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     struct A&lt;T&gt; {}
 
@@ -3132,7 +3153,7 @@ module m {
 }
 </code></pre>
 <p>Not allowed:</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     struct A&lt;T&gt; {}
 
@@ -3145,7 +3166,7 @@ module m {
 }
 }
 </code></pre>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module n {
     struct A&lt;T&gt; {}
 
@@ -3166,7 +3187,7 @@ module n {
 }
 </code></pre>
 <p>Note, the check for type level recursions is based on a conservative analysis on the call sites and does NOT take control flow or runtime values into account.</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     struct A&lt;T&gt; {}
 
@@ -3227,9 +3248,9 @@ If you are already somewhat familiar with abilities from writing Move programs, 
 <p>The <code>key</code> ability allows the type to serve as a key for <a href="./global-storage-operators.html">global storage operations</a>. It gates all global storage operations, so in order for a type to be used with <code>move_to</code>, <code>borrow_global</code>, <code>move_from</code>, etc., the type must have the <code>key</code> ability. Note that the operations still must be used in the module where the <code>key</code> type is defined (in a sense, the operations are private to the defining module).</p>
 <p>If a value has <code>key</code>, all values contained inside of that value have <code>store</code>. This is the only ability with this sort of asymmetry.</p>
 <h2 id="builtin-types"><a class="header" href="#builtin-types">Builtin Types</a></h2>
-<p>Most primitive, builtin types have <code>copy</code>, <code>drop</code>, and <code>store</code> with the exception of <code>signer</code>, which just has <code>store</code></p>
+<p>Most primitive, builtin types have <code>copy</code>, <code>drop</code>, and <code>store</code> with the exception of <code>signer</code>, which just has <code>drop</code></p>
 <ul>
-<li><code>bool</code>, <code>u8</code>, <code>u64</code>, <code>u128</code>, and <code>address</code> all have <code>copy</code>, <code>drop</code>, and <code>store</code>.</li>
+<li><code>bool</code>, <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code>, <code>u128</code>, <code>u256</code>, and <code>address</code> all have <code>copy</code>, <code>drop</code>, and <code>store</code>.</li>
 <li><code>signer</code> has <code>drop</code>
 <ul>
 <li>Cannot be copied and cannot be put into global storage</li>
@@ -4831,8 +4852,9 @@ The reason should be a unique number relative to the module which raised the err
 <li><strong>Module names</strong>: should be lower snake case, e.g., <code>fixed_point32</code>, <code>vector</code>.</li>
 <li><strong>Type names</strong>: should be camel case if they are not a native type, e.g., <code>Coin</code>, <code>RoleId</code>.</li>
 <li><strong>Function names</strong>: should be lower snake case, e.g., <code>destroy_empty</code>.</li>
-<li><strong>Constant names</strong>: should be upper snake case, e.g., <code>REQUIRES_CAPABILITY</code>.</li>
-<li>Generic types should be descriptive, or anti-descriptive where appropriate, e.g., <code>T</code> or <code>Element</code> for the Vector generic type parameter. Most of the time the &quot;main&quot; type in a module should be the same name as the module e.g., <code>option::Option</code>, <code>fixed_point32::FixedPoint32</code>.</li>
+<li><strong>Constant names</strong>: should be upper camel case and begin with an <code>E</code> if they represent error codes (e.g., <code>EIndexOutOfBounds</code>) and upper snake case if they represent a non-error value (e.g., <code>MIN_STAKE</code>).</li>
+<li></li>
+<li><strong>Generic type names</strong>: should be descriptive, or anti-descriptive where appropriate, e.g., <code>T</code> or <code>Element</code> for the Vector generic type parameter. Most of the time the &quot;main&quot; type in a module should be the same name as the module e.g., <code>option::Option</code>, <code>fixed_point32::FixedPoint32</code>.</li>
 <li><strong>Module file names</strong>: should be the same as the module name e.g., <code>Option.move</code>.</li>
 <li><strong>Script file names</strong>: should be lower snake case and should match the name of the “main” function in the script.</li>
 <li><strong>Mixed file names</strong>: If the file contains multiple modules and/or scripts, the file name should be lower snake case, where the name does not match any particular module/script inside.</li>

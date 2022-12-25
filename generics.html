@@ -171,38 +171,38 @@ struct Bar&lt;T1, T2&gt; has copy, drop {
     y: vector&lt;T2&gt;,
 }
 </code></pre>
-<p><a href="#unused-type-parameters">Note that type parameters do not have to be used</a></p>
+<p>Note that <a href="#unused-type-parameters">type parameters do not have to be used</a></p>
 <h2 id="type-arguments"><a class="header" href="#type-arguments">Type Arguments</a></h2>
 <h3 id="calling-generic-functions"><a class="header" href="#calling-generic-functions">Calling Generic Functions</a></h3>
 <p>When calling a generic function, one can specify the type arguments for the function's type parameters in a list enclosed by a pair of angle brackets.</p>
-<pre><code class="language-move=">fun foo() {
+<pre><code class="language-move">fun foo() {
     let x = id&lt;bool&gt;(true);
 }
 </code></pre>
 <p>If you do not specify the type arguments, Move's <a href="#type-inference">type inference</a> will supply them for you.</p>
 <h3 id="using-generic-structs"><a class="header" href="#using-generic-structs">Using Generic Structs</a></h3>
 <p>Similarly, one can attach a list of type arguments for the struct's type parameters when constructing or destructing values of generic types.</p>
-<pre><code class="language-move=">fun foo() {
+<pre><code class="language-move">fun foo() {
     let foo = Foo&lt;bool&gt; { x: true };
     let Foo&lt;bool&gt; { x } = foo;
 }
 </code></pre>
 <p>If you do not specify the type arguments, Move's <a href="#type-inference">type inference</a> will supply them for you.</p>
 <h3 id="type-argument-mismatch"><a class="header" href="#type-argument-mismatch">Type Argument Mismatch</a></h3>
-<p>If you specify the type arguments and they conflict with the actual values supplied, an error will be given</p>
-<pre><code class="language-move=">fun foo() {
+<p>If you specify the type arguments and they conflict with the actual values supplied, an error will be given:</p>
+<pre><code class="language-move">fun foo() {
     let x = id&lt;u64&gt;(true); // error! true is not a u64
 }
 </code></pre>
-<p>and similarly</p>
-<pre><code class="language-move=">fun foo() {
+<p>and similarly:</p>
+<pre><code class="language-move">fun foo() {
     let foo = Foo&lt;bool&gt; { x: 0 }; // error! 0 is not a bool
     let Foo&lt;address&gt; { x } = foo; // error! bool is incompatible with address
 }
 </code></pre>
 <h2 id="type-inference"><a class="header" href="#type-inference">Type Inference</a></h2>
-<p>In most cases, the Move compiler will be able to infer the type arguments so you don't have to write them down explicitly. Here's what the examples above would look like if we omit the type arguments.</p>
-<pre><code class="language-move=">fun foo() {
+<p>In most cases, the Move compiler will be able to infer the type arguments so you don't have to write them down explicitly. Here's what the examples above would look like if we omit the type arguments:</p>
+<pre><code class="language-move">fun foo() {
     let x = id(true);
     //        ^ &lt;bool&gt; is inferred
 
@@ -214,7 +214,7 @@ struct Bar&lt;T1, T2&gt; has copy, drop {
 }
 </code></pre>
 <p>Note: when the compiler is unable to infer the types, you'll need annotate them manually. A common scenario is to call a function with type parameters appearing only at return positions.</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     using std::vector;
 
@@ -228,8 +228,8 @@ module m {
 }
 }
 </code></pre>
-<p>However, the compiler will be able to infer the type if that return value is used later in that function</p>
-<pre><code class="language-move=">address 0x2 {
+<p>However, the compiler will be able to infer the type if that return value is used later in that function:</p>
+<pre><code class="language-move">address 0x2 {
 module m {
     using std::vector;
 
@@ -247,12 +247,12 @@ an unused type parameter is one that
 does not appear in any field defined in the struct,
 but is checked statically at compile time.
 Move allows unused type parameters so the following struct definition is valid:</p>
-<pre><code class="language-move=">struct Foo&lt;T&gt; {
+<pre><code class="language-move">struct Foo&lt;T&gt; {
     foo: u64
 }
 </code></pre>
 <p>This can be convenient when modeling certain concepts. Here is an example:</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     // Currency Specifiers
     struct Currency1 {}
@@ -311,9 +311,9 @@ In this way,
 arguments to phantom type parameters are not considered when deriving the abilities for generic types,
 thus avoiding the need for spurious ability annotations.
 For this relaxed rule to be sound,
-Move's type system guarantees that a parameter declared as phantom is either
+Move's type system guarantees that a parameter declared as <code>phantom</code> is either
 not used at all in the struct definition, or
-it is only used as an argument to type parameters also declared as phantom.</p>
+it is only used as an argument to type parameters also declared as <code>phantom</code>.</p>
 <h4 id="declaration"><a class="header" href="#declaration">Declaration</a></h4>
 <p>In a struct definition
 a type parameter can be declared as phantom by adding the <code>phantom</code> keyword before its declaration.
@@ -331,7 +331,7 @@ the rule for the correct use of phantom parameters can be specified as follows:
 In the first one,
 the parameter <code>T1</code> is not used at all inside the struct definition.
 In the second one, the parameter <code>T1</code> is only used as an argument to a phantom type parameter.</p>
-<pre><code class="language-move=">struct S1&lt;phantom T1, T2&gt; { f: u64 }
+<pre><code class="language-move">struct S1&lt;phantom T1, T2&gt; { f: u64 }
                   ^^
                   Ok: T1 does not appear inside the struct definition
 
@@ -341,7 +341,7 @@ struct S2&lt;phantom T1, T2&gt; { f: S1&lt;T1, T2&gt; }
                                   Ok: T1 appears in phantom position
 </code></pre>
 <p>The following code shows examples of violations of the rule:</p>
-<pre><code class="language-move=">struct S1&lt;phantom T&gt; { f: T }
+<pre><code class="language-move">struct S1&lt;phantom T&gt; { f: T }
                           ^
                           Error: Not a phantom position
 
@@ -355,13 +355,13 @@ struct S3&lt;phantom T&gt; { f: S2&lt;T&gt; }
 <p>When instantiating a struct,
 the arguments to phantom parameters are excluded when deriving the struct abilities.
 For example, consider the following code:</p>
-<pre><code class="language-move=">struct S&lt;T1, phantom T2&gt; has copy { f: T1 }
+<pre><code class="language-move">struct S&lt;T1, phantom T2&gt; has copy { f: T1 }
 struct NoCopy {}
 struct HasCopy has copy {}
 </code></pre>
 <p>Consider now the type <code>S&lt;HasCopy, NoCopy&gt;</code>.
-Since <code>S</code> is defined with <code>copy</code> and all non-phantom arguments have copy
-then <code>S&lt;HasCopy, NoCopy&gt;</code> also has copy.</p>
+Since <code>S</code> is defined with <code>copy</code> and all non-phantom arguments have <code>copy</code>
+then <code>S&lt;HasCopy, NoCopy&gt;</code> also has <code>copy</code>.</p>
 <h4 id="phantom-type-parameters-with-ability-constraints"><a class="header" href="#phantom-type-parameters-with-ability-constraints">Phantom Type Parameters with Ability Constraints</a></h4>
 <p>Ability constraints and phantom type parameters are orthogonal features in the sense that
 phantom parameters can be declared with ability constraints.
@@ -369,7 +369,7 @@ When instantiating a phantom type parameter with an ability constraint,
 the type argument has to satisfy that constraint,
 even though the parameter is phantom.
 For example, the following definition is perfectly valid:</p>
-<pre><code class="language-move=">struct S&lt;phantom T: copy&gt; {}
+<pre><code class="language-move">struct S&lt;phantom T: copy&gt; {}
 </code></pre>
 <p>The usual restrictions apply and <code>T</code> can only be instantiated with arguments having <code>copy</code>.</p>
 <h2 id="constraints"><a class="header" href="#constraints">Constraints</a></h2>
@@ -377,17 +377,17 @@ For example, the following definition is perfectly valid:</p>
 <p>This is where constraints come into play: they offer a way to specify what properties these unknown types have so the type system can allow operations that would otherwise be unsafe.</p>
 <h3 id="declaring-constraints"><a class="header" href="#declaring-constraints">Declaring Constraints</a></h3>
 <p>Constraints can be imposed on type parameters using the following syntax.</p>
-<pre><code class="language-move=">// T is the name of the type parameter
+<pre><code class="language-move">// T is the name of the type parameter
 T: &lt;ability&gt; (+ &lt;ability&gt;)*
 </code></pre>
-<p>The <code>&lt;ability&gt;</code> can be any of the four <a href="./abilities.html">abilities</a>, and a type parameter can be constrained with multiple <a href="./abilities.html">abilities</a> at once. So all of the following would be valid type parameter declarations</p>
+<p>The <code>&lt;ability&gt;</code> can be any of the four <a href="./abilities.html">abilities</a>, and a type parameter can be constrained with multiple abilities at once. So all of the following would be valid type parameter declarations:</p>
 <pre><code class="language-move">T: copy
 T: copy + drop
 T: copy + drop + store + key
 </code></pre>
 <h3 id="verifying-constraints"><a class="header" href="#verifying-constraints">Verifying Constraints</a></h3>
 <p>Constraints are checked at call sites so the following code won't compile.</p>
-<pre><code class="language-move=">struct Foo&lt;T: key&gt; { x: T }
+<pre><code class="language-move">struct Foo&lt;T: key&gt; { x: T }
 
 struct Bar { x: Foo&lt;u8&gt; }
 //                  ^ error! u8 does not have 'key'
@@ -395,7 +395,7 @@ struct Bar { x: Foo&lt;u8&gt; }
 struct Baz&lt;T&gt; { x: Foo&lt;T&gt; }
 //                     ^ error! T does not have 'key'
 </code></pre>
-<pre><code class="language-move=">struct R {}
+<pre><code class="language-move">struct R {}
 
 fun unsafe_consume&lt;T&gt;(x: T) {
     // error! x does not have 'drop'
@@ -412,7 +412,7 @@ fun foo() {
     //      ^ error! R does not have 'drop'
 }
 </code></pre>
-<pre><code class="language-move=">struct R {}
+<pre><code class="language-move">struct R {}
 
 fun unsafe_double&lt;T&gt;(x: T) {
     (copy x, x)
@@ -426,14 +426,14 @@ fun double&lt;T: copy&gt;(x: T) {
 fun foo(): (R, R) {
     let r = R {};
     double&lt;R&gt;(r)
-    //     ^ error! R does not have copy
+    //     ^ error! R does not have 'copy'
 }
 </code></pre>
-<p>For more information, see the abilities section on <a href="./abilities.html#conditional-abilities-and-generic-types">conditional abilities and generic types</a></p>
+<p>For more information, see the abilities section on <a href="./abilities.html#conditional-abilities-and-generic-types">conditional abilities and generic types</a>.</p>
 <h2 id="limitations-on-recursions"><a class="header" href="#limitations-on-recursions">Limitations on Recursions</a></h2>
 <h3 id="recursive-structs"><a class="header" href="#recursive-structs">Recursive Structs</a></h3>
 <p>Generic structs can not contain fields of the same type, either directly or indirectly, even with different type arguments. All of the following struct definitions are invalid:</p>
-<pre><code class="language-move=">struct Foo&lt;T&gt; {
+<pre><code class="language-move">struct Foo&lt;T&gt; {
     x: Foo&lt;u64&gt; // error! 'Foo' containing 'Foo'
 }
 
@@ -454,7 +454,7 @@ struct B&lt;T1, T2&gt; {
 <h3 id="advanced-topic-type-level-recursions"><a class="header" href="#advanced-topic-type-level-recursions">Advanced Topic: Type-level Recursions</a></h3>
 <p>Move allows generic functions to be called recursively. However, when used in combination with generic structs, this could create an infinite number of types in certain cases, and allowing this means adding unnecessary complexity to the compiler, vm and other language components. Therefore, such recursions are forbidden.</p>
 <p>Allowed:</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     struct A&lt;T&gt; {}
 
@@ -473,7 +473,7 @@ module m {
 }
 </code></pre>
 <p>Not allowed:</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     struct A&lt;T&gt; {}
 
@@ -486,7 +486,7 @@ module m {
 }
 }
 </code></pre>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module n {
     struct A&lt;T&gt; {}
 
@@ -507,7 +507,7 @@ module n {
 }
 </code></pre>
 <p>Note, the check for type level recursions is based on a conservative analysis on the call sites and does NOT take control flow or runtime values into account.</p>
-<pre><code class="language-move=">address 0x2 {
+<pre><code class="language-move">address 0x2 {
 module m {
     struct A&lt;T&gt; {}
 

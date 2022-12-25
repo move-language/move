@@ -31,7 +31,7 @@ B0:
 	6: ImmBorrowLoc[1](Arg1: Coin)
 	7: StLoc[4](loc2: &Coin)
 	8: MoveLoc[4](loc2: &Coin)
-	9: Call[0](value(&Coin): u64)
+	9: Call value(&Coin): u64
 	10: StLoc[5](loc3: u64)
 	11: CopyLoc[3](loc1: u64)
 	12: CopyLoc[5](loc3: u64)
@@ -58,7 +58,7 @@ B0:
 }
 entry public g() {
 B0:
-	0: Call[0](f())
+	0: Call f()
 	1: Ret
 }
 }

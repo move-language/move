@@ -276,6 +276,24 @@ impl BuildInType {
             _ => unreachable!(),
         }
     }
+    pub(crate) fn to_static_str(self) -> &'static str {
+        match self {
+            BuildInType::U8 => "u8",
+            BuildInType::U16 => "u16",
+            BuildInType::U32 => "u32",
+            BuildInType::U64 => "u64",
+            BuildInType::U128 => "u128",
+            BuildInType::U256 => "u256",
+            BuildInType::Bool => "bool",
+            BuildInType::Address => "address",
+            BuildInType::Signer => "signer",
+
+            BuildInType::String => {
+                "string" // TODO can have this.
+            }
+            BuildInType::NumType => "u8",
+        }
+    }
 }
 
 pub const UNKNOWN_LOC: Loc = Loc::new(FileHash::empty(), 0, 0);

@@ -327,7 +327,7 @@ impl Scopes {
             NameAccessChain_::Three(chain_two, member) => self.visit_address(|top| {
                 let modules = top.address.get(&match &chain_two.value.0.value {
                     LeadingNameAccess_::AnonymousAddress(x) => x.bytes,
-                    LeadingNameAccess_::Name(name) => name_to_addr.convert(name.value),
+                    LeadingNameAccess_::Name(name) => name_to_addr.name_2_addr(name.value),
                 });
                 if modules.is_none() {
                     return;
@@ -407,7 +407,7 @@ impl Scopes {
             NameAccessChain_::Three(chain_two, member) => self.visit_address(|top| {
                 let modules = top.address.get(&match &chain_two.value.0.value {
                     LeadingNameAccess_::AnonymousAddress(x) => x.bytes,
-                    LeadingNameAccess_::Name(name) => name_to_addr.convert(name.value),
+                    LeadingNameAccess_::Name(name) => name_to_addr.name_2_addr(name.value),
                 });
                 if modules.is_none() {
                     return failed;
@@ -513,6 +513,148 @@ impl Scopes {
                 .as_ref()
                 .map(|x| x.name.clone())
         })
+    }
+
+    /// Collect type item in all nest scopes.
+
+    pub(crate) fn collect_all_type_items(&self) -> Vec<Item> {
+        let mut ret = Vec::new();
+        self.inner_first_visit(|scope| {
+            for (_, item) in scope.types.iter().chain(scope.items.iter()) {
+                match item {
+                    Item::TParam(_, _) => {
+                        ret.push(item.clone());
+                    }
+                    Item::Struct(_) | Item::StructNameRef(_, _, _, _) => {
+                        ret.push(item.clone());
+                    }
+                    Item::BuildInType(_) => {
+                        ret.push(item.clone());
+                    }
+                    _ => {}
+                };
+            }
+            false
+        });
+        ret
+    }
+
+    /// Collect all expr name items.
+    ///
+    pub(crate) fn collect_all_var_items(&self) -> Vec<Item> {
+        let mut ret = Vec::new();
+        self.inner_first_visit(|scope| {
+            for (_, item) in scope.types.iter().chain(scope.items.iter()) {
+                match item {
+                    // collect var parameter and const.
+                    Item::Var(_, _) | Item::Parameter(_, _) | Item::Const(_, _) => {
+                        ret.push(item.clone());
+                    }
+                    _ => {}
+                };
+            }
+            false
+        });
+        ret
+    }
+
+    /// Collect all import modules.
+    /// like use 0x1::vector.
+    pub(crate) fn collect_imported_modules(&self) -> Vec<Item> {
+        let mut ret = Vec::new();
+        self.inner_first_visit(|scope| {
+            for (_, item) in scope.types.iter().chain(scope.items.iter()) {
+                match item {
+                    Item::UseModule(_, _, _) => {
+                        ret.push(item.clone());
+                    }
+                    _ => {}
+                };
+            }
+            false
+        });
+        ret
+    }
+
+    /// Collect all items in a module like 0x1::vector.
+    pub(crate) fn collect_use_module_items(&self, name: &LeadingNameAccess) -> Vec<Item> {
+        let mut ret = Vec::new();
+        let name = match &name.value {
+            LeadingNameAccess_::AnonymousAddress(addr) => {
+                log::error!("addr:{:?} should not be here.", addr);
+                return ret;
+            }
+            LeadingNameAccess_::Name(name) => name.value,
+        };
+        self.inner_first_visit(|scope| {
+            for (name2, item) in scope.types.iter().chain(scope.items.iter()) {
+                match item {
+                    Item::UseModule(_, _, s) => {
+                        if name == *name2 {
+                            ret = s
+                                .borrow()
+                                .items
+                                .iter()
+                                .map(|(_, item)| item.clone())
+                                .collect();
+                        };
+                    }
+                    _ => {}
+                };
+            }
+            false
+        });
+        ret
+    }
+
+    /// Collect all module names in a addr.
+    /// like module 0x1::vector{ ... }
+    pub(crate) fn collect_modules(&self, addr: &AccountAddress) -> Vec<ModuleName> {
+        let empty = Default::default();
+        let mut ret = Vec::new();
+        self.visit_address(|x| {
+            x.address
+                .get(addr)
+                .unwrap_or(&empty)
+                .modules
+                .iter()
+                .for_each(|(_, x)| {
+                    if let Some(name) = x.borrow().module_scope.clone() {
+                        ret.push(name.name.clone());
+                    }
+                })
+        });
+        ret
+    }
+
+    /// Collect all module names in a addr.
+    /// like module 0x1::vector{ ... }
+    pub(crate) fn collect_modules_items(
+        &self,
+        addr: &AccountAddress,
+        module_name: Symbol,
+        filter: impl Fn(&Item) -> bool,
+    ) -> Vec<Item> {
+        let empty = Default::default();
+        let empty2 = Default::default();
+        let mut ret = Vec::new();
+        self.visit_address(|x| {
+            x.address
+                .get(addr)
+                .unwrap_or(&empty)
+                .modules
+                .get(&module_name)
+                .unwrap_or(&empty2)
+                .borrow()
+                .items
+                .iter()
+                .for_each(|(_, x)| {
+                    if filter(x) {
+                        ret.push(x.clone())
+                    }
+                });
+        });
+        ret
     }
 }
 

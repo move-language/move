@@ -2,7 +2,9 @@ use std::path::PathBuf;
 
 use crate::utils::path_concat;
 
+use super::completion;
 use super::goto_definition;
+
 use super::modules::*;
 use log::{Level, Metadata, Record};
 struct SimpleLogger;
@@ -80,16 +82,17 @@ fn goto_definition_test4() {
     init_log();
     let mut m = Modules::new("/Users/temp/projects/test-move2");
     let mut v =
-        goto_definition::Visitor::new("/Users/temp/projects/test-move2/sources/some.move", 4, 9);
+        goto_definition::Visitor::new("/Users/temp/projects/test-move2/sources/some.move", 15, 26);
     m.run_visitor(&mut v);
     eprintln!("{:?}", v.result.unwrap());
-    let content = std::fs::read_to_string(&PathBuf::from(
-        "/Users/temp/projects/test-move2/sources/some.move",
-    ))
-    .unwrap();
+}
 
-    m.update_defs(
-        &PathBuf::from("/Users/temp/projects/test-move2/sources/some.move"),
-        content.as_str(),
-    );
+#[test]
+fn completion() {
+    init_log();
+    let mut m = Modules::new("/Users/temp/projects/test-move2");
+    let mut v =
+        completion::Visitor::new("/Users/temp/projects/test-move2/sources/some.move", 15, 26);
+    m.run_visitor(&mut v);
+    eprintln!("!!!!!!!!!!!!!{:?}", v.result.unwrap());
 }

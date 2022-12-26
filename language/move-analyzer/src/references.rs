@@ -115,8 +115,8 @@ impl ScopeVisitor for Visitor {
     }
     fn handle_item(
         &mut self,
-        services: &dyn ConvertLoc,
-        scopes: &crate::scopes::Scopes,
+        _services: &dyn HandleItemService,
+        _scopes: &crate::scopes::Scopes,
         item: &crate::item::ItemOrAccess,
     ) {
         match item {

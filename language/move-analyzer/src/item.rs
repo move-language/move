@@ -1,5 +1,3 @@
-use crate::modules::ERR_ADDRESS;
-
 use super::scope::*;
 use super::types::*;
 use move_compiler::shared::Identifier;
@@ -7,7 +5,6 @@ use move_compiler::shared::TName;
 use move_compiler::{parser::ast::*, shared::*};
 use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::Loc;
-use move_ir_types::location::Spanned;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -59,7 +56,7 @@ pub enum Item {
     UseMember(
         ModuleIdent, /* access name */
         Name,
-        Option<Name>, /* name in the module */
+        Option<Name>, /* name in the module  alias */
         Rc<RefCell<Scope>>,
     ),
 
@@ -292,7 +289,6 @@ impl std::fmt::Display for Item {
 #[derive(Clone)]
 pub enum Access {
     ApplyType(NameAccessChain, Box<ResolvedType>),
-
     ExprVar(Var, Box<Item>),
     ExprAccessChain(
         NameAccessChain,
@@ -304,9 +300,10 @@ pub enum Access {
     // 可以在源代码中定义吗?
     ExprAddressName(Name),
     AccessFiled(
-        Field,        // from
-        Field,        // to
-        ResolvedType, // field type
+        Field,                                 // from
+        Field,                                 // to
+        ResolvedType,                          // field type
+        HashMap<Symbol, (Name, ResolvedType)>, // all field and type.
     ),
     ///////////////
     /// key words
@@ -314,12 +311,9 @@ pub enum Access {
     /////////////////
     /// Marco call
     MacroCall(MacroCall, NameAccessChain),
-
     Friend(NameAccessChain, ModuleName),
-
     MoveBuildInFun(MoveBuildInFun, NameAccessChain),
     SpecBuildInFun(SpecBuildInFun, NameAccessChain),
-
     IncludeSchema(
         NameAccessChain, // access name. TODO if this can only be a simple name,So we can make it simpler.
         Name,            // schema name.
@@ -328,7 +322,6 @@ pub enum Access {
         Name, // access name like spec xxx {}
         Name, // for some item like fun xxx() {}
     ), //
-
     PragmaProperty(PragmaProperty),
 }
 
@@ -351,7 +344,7 @@ impl std::fmt::Display for Access {
             Access::ExprAddressName(chain) => {
                 write!(f, "{:?}", chain)
             }
-            Access::AccessFiled(from, to, _) => {
+            Access::AccessFiled(from, to, _, _) => {
                 write!(f, "access_field {:?}->{:?}", from, to)
             }
             Access::KeyWords(k) => write!(f, "{}", *k),
@@ -412,7 +405,7 @@ impl Access {
                 (get_name_chain_last_name(name).loc, item.as_ref().def_loc())
             }
             Access::ExprAddressName(_) => (UNKNOWN_LOC, UNKNOWN_LOC),
-            Access::AccessFiled(a, d, _) => (a.loc(), d.loc()),
+            Access::AccessFiled(a, d, _, _) => (a.loc(), d.loc()),
             Access::KeyWords(_) => (UNKNOWN_LOC, UNKNOWN_LOC),
             Access::MacroCall(_, chain) => (chain.loc, chain.loc),
 
@@ -609,7 +602,7 @@ impl SpecBuildInFun {
             "update_field" => Self::UpdateField,
             "old" => Self::Old,
             "TRACE" => Self::TRACE,
-            crate::module_visitor::SPEC_DOMAIN => Self::SpecDomain,
+            crate::modules_visitor::SPEC_DOMAIN => Self::SpecDomain,
             _ => return None,
         };
         Some(x)
@@ -630,7 +623,7 @@ impl SpecBuildInFun {
             Self::UpdateField => "update_field",
             Self::Old => "old",
             Self::TRACE => "TRACE",
-            Self::SpecDomain => crate::module_visitor::SPEC_DOMAIN,
+            Self::SpecDomain => crate::modules_visitor::SPEC_DOMAIN,
         }
     }
 

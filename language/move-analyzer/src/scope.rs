@@ -41,6 +41,11 @@ impl Scope {
         x.is_function = true;
         x
     }
+    pub(crate) fn new_module_name(addr: AccountAddress, name: ModuleName) -> Rc<RefCell<Self>> {
+        let mut x = Self::default();
+        x.module_scope = Some(ModuleScope { addr, name });
+        Rc::new(RefCell::new(x))
+    }
 
     pub(crate) fn enter_build_in(&mut self) {
         self.enter_item(Symbol::from("bool"), Item::BuildInType(BuildInType::Bool));

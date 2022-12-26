@@ -1,14 +1,11 @@
 use super::context::Context;
 use super::goto_definition;
 use super::item::*;
-use super::modules::*;
+
 use super::utils::*;
 use lsp_server::*;
 use lsp_types::*;
-use move_ir_types::location::Loc;
-use std::collections::HashSet;
-use std::fmt::format;
-use std::path::*;
+use std::path::PathBuf;
 
 /// Handles hover request of the language server
 pub fn on_hover_request(context: &Context, request: &Request) {
@@ -62,7 +59,7 @@ fn hover_on_item_or_access(ia: &ItemOrAccess) -> String {
             Access::ExprVar(_, item) => format!("{}", item.as_ref()),
             Access::ExprAccessChain(_, _, item) => format!("{}", item.as_ref()),
             Access::ExprAddressName(_) => String::from(""), // TODO handle this.
-            Access::AccessFiled(from, to, ty) => {
+            Access::AccessFiled(_from, to, ty, _) => {
                 format!("field {}:{}", to.0.value.as_str(), ty)
             }
             Access::KeyWords(x) => format!("keyword {}", *x),

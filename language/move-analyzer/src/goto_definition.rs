@@ -15,7 +15,6 @@ use std::path::PathBuf;
 pub fn on_go_to_def_request(context: &Context, request: &Request) {
     let parameters = serde_json::from_value::<GotoDefinitionParams>(request.params.clone())
         .expect("could not deserialize go-to-def request");
-
     let fpath = parameters
         .text_document_position_params
         .text_document
@@ -29,7 +28,6 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
         PathBuf::from(std::env::current_dir().unwrap()).as_path(),
         fpath.as_path(),
     );
-
     log::info!(
         "request is goto definition,fpath:{:?}  line:{} col:{}",
         fpath.as_path(),
@@ -38,7 +36,6 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
     );
     let mut visitor = Visitor::new(fpath, line, col);
     context.modules.run_visitor(&mut visitor);
-
     match &visitor.result {
         Some(x) => {
             let range = Range {
@@ -98,7 +95,7 @@ impl Visitor {
     }
 
     ///  match loc   
-    fn match_loc(&self, loc: &Loc, services: &dyn ConvertLoc) -> bool {
+    fn match_loc(&self, loc: &Loc, services: &dyn HandleItemService) -> bool {
         let r = services.convert_loc_range(loc);
         match &r {
             Some(r) => r.in_range(self.filepath.clone(), self.line, self.col),
@@ -110,7 +107,7 @@ impl Visitor {
 impl ScopeVisitor for Visitor {
     fn handle_item(
         &mut self,
-        services: &dyn ConvertLoc,
+        services: &dyn HandleItemService,
         _scopes: &Scopes,
         item_or_access: &ItemOrAccess,
     ) {

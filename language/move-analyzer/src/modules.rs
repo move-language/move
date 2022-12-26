@@ -2,8 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::context;
-
 use super::item::*;
 use super::scopes::*;
 use super::types::*;
@@ -381,7 +379,7 @@ impl Modules {
         });
     }
 
-    pub(crate) fn name_to_addr(&self, name: Symbol) -> AccountAddress {
+    pub(crate) fn name_to_addr_impl(&self, name: Symbol) -> AccountAddress {
         if let Some(ref x) = self.root_manifest {
             if let Some(ref x) = x.dev_address_assignments {
                 match x.get(&name) {
@@ -1026,11 +1024,11 @@ impl ConvertLoc for Modules {
 }
 
 pub trait Name2Addr {
-    fn convert(&self, name: Symbol) -> AccountAddress;
+    fn name_2_addr(&self, name: Symbol) -> AccountAddress;
 }
 impl Name2Addr for Modules {
-    fn convert(&self, name: Symbol) -> AccountAddress {
-        self.name_to_addr(name)
+    fn name_2_addr(&self, name: Symbol) -> AccountAddress {
+        self.name_to_addr_impl(name)
     }
 }
 
@@ -1038,12 +1036,20 @@ impl Name2Addr for Modules {
 pub trait ScopeVisitor: std::fmt::Display {
     /// Handle this item.
     /// If `should_finish` return true. All `enter_scope` and enter_scope called function will return.
-    fn handle_item(&mut self, services: &dyn ConvertLoc, scopes: &Scopes, item: &ItemOrAccess);
+    fn handle_item(
+        &mut self,
+        services: &dyn HandleItemService,
+        scopes: &Scopes,
+        item: &ItemOrAccess,
+    );
     /// Need not visit this structure???
     fn file_should_visit(&self, p: &PathBuf) -> bool;
     /// Visitor should finished.
     fn finished(&self) -> bool;
 }
+
+pub trait HandleItemService: ConvertLoc + ListAllNameSpace + Name2Addr {}
+impl HandleItemService for Modules {}
 
 #[allow(dead_code)]
 pub(crate) struct Ending {
@@ -1059,7 +1065,13 @@ impl Drop for Ending {
 pub(crate) struct DummyVisitor;
 
 impl ScopeVisitor for DummyVisitor {
-    fn handle_item(&mut self, _services: &dyn ConvertLoc, _scopes: &Scopes, _item: &ItemOrAccess) {}
+    fn handle_item(
+        &mut self,
+        _services: &dyn HandleItemService,
+        _scopes: &Scopes,
+        _item: &ItemOrAccess,
+    ) {
+    }
     fn file_should_visit(&self, _p: &PathBuf) -> bool {
         unreachable!();
     }
@@ -1074,3 +1086,23 @@ impl std::fmt::Display for DummyVisitor {
     }
 }
 pub(crate) static ERR_ADDRESS: AccountAddress = AccountAddress::ONE;
+
+pub trait ListAllNameSpace {
+    fn list_all_name_spaces(&self) -> Vec<(Symbol, AccountAddress)>;
+}
+
+impl ListAllNameSpace for Modules {
+    fn list_all_name_spaces(&self) -> Vec<(Symbol, AccountAddress)> {
+        let mut ret = Vec::new();
+        let empty = Default::default();
+        let empty2 = Default::default();
+        let x = self.root_manifest.as_ref().unwrap();
+        for (name, addr) in x.addresses.as_ref().unwrap_or(&empty).iter() {
+            ret.push((name.clone(), addr.clone().unwrap_or(AccountAddress::ONE)));
+        }
+        for (name, addr) in x.dev_address_assignments.as_ref().unwrap_or(&empty2).iter() {
+            ret.push((name.clone(), addr.clone()));
+        }
+        ret
+    }
+}

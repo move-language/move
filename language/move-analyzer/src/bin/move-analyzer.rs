@@ -26,7 +26,7 @@ use url::Url;
 struct SimpleLogger;
 impl log::Log for SimpleLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= Level::Error
+        metadata.level() <= Level::Info
     }
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
@@ -39,7 +39,7 @@ const LOGGER: SimpleLogger = SimpleLogger;
 
 pub fn init_log() {
     log::set_logger(&LOGGER)
-        .map(|()| log::set_max_level(log::LevelFilter::Error))
+        .map(|()| log::set_max_level(log::LevelFilter::Info))
         .unwrap()
 }
 
@@ -103,14 +103,17 @@ fn main() {
         hover_provider: Some(HoverProviderCapability::Simple(true)),
         // The server provides completions as a user is typing.
         completion_provider: Some(CompletionOptions {
-            resolve_provider: None,
-            // In Move, `foo::` and `foo.` should trigger completion suggestions for after
-            // the `:` or `.`
-            // (Trigger characters are just that: characters, such as `:`, and not sequences of
-            // characters, such as `::`. So when the language server encounters a completion
-            // request, it checks whether completions are being requested for `foo:`, and returns no
-            // completions in that case.)
-            trigger_characters: Some(vec![":".to_string(), ".".to_string()]),
+            resolve_provider: Some(true),
+            trigger_characters: Some({
+                let mut c = vec![":".to_string(), ".".to_string()];
+                for x in 'a'..='z' {
+                    c.push(String::from(x as char));
+                }
+                for x in 'A'..='Z' {
+                    c.push(String::from(x as char));
+                }
+                c
+            }),
             all_commit_characters: None,
             work_done_progress_options: WorkDoneProgressOptions {
                 work_done_progress: None,
@@ -249,9 +252,19 @@ fn on_notification(context: &mut Context, notification: &Notification) {
             };
             context.modules.update_defs(&fpath, content.as_str());
         }
-
+        lsp_types::notification::DidChangeTextDocument::METHOD => {
+            use lsp_types::DidChangeTextDocumentParams;
+            let parameters =
+                serde_json::from_value::<DidChangeTextDocumentParams>(notification.params.clone())
+                    .expect("could not deserialize go-to-def request");
+            let fpath = parameters.text_document.uri.to_file_path().unwrap();
+            let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
+            context.modules.update_defs(
+                &fpath,
+                parameters.content_changes.last().unwrap().text.as_str(),
+            );
+        }
         lsp_types::notification::DidOpenTextDocument::METHOD
-        | lsp_types::notification::DidChangeTextDocument::METHOD
         | lsp_types::notification::DidCloseTextDocument::METHOD => {
             log::error!("handle notification '{}' from client", notification.method);
         }

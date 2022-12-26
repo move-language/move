@@ -12,6 +12,8 @@ use move_package::source_package::layout::SourcePackageLayout;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::hash::Hash;
+use std::sync::Arc;
 use std::{path::PathBuf, rc::Rc};
 
 impl Modules {
@@ -368,7 +370,7 @@ impl Modules {
         match &member.value {
             SpecBlockMember_::Condition {
                 kind,
-                properties,
+                properties: _properties,
                 exp,
                 additional_exps,
             } => {
@@ -533,6 +535,7 @@ impl Modules {
                                         f.clone(),
                                         Field(f2.clone()),
                                         ty.clone(),
+                                        x.clone(),
                                     ));
                                     visitor.handle_item(self, scopes, &item);
                                     if visitor.finished() {
@@ -664,12 +667,12 @@ impl Modules {
         match addr {
             Some(x) => match x.value {
                 LeadingNameAccess_::AnonymousAddress(x) => x.bytes,
-                LeadingNameAccess_::Name(name) => self.name_to_addr(name.value),
+                LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
             },
             None => match m.address {
                 Some(x) => match x.value {
                     LeadingNameAccess_::AnonymousAddress(x) => x.bytes,
-                    LeadingNameAccess_::Name(name) => self.name_to_addr(name.value),
+                    LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
                 },
                 None => ERR_ADDRESS.clone(),
             },
@@ -837,7 +840,7 @@ impl Modules {
                     ResolvedType::Struct(ItemStruct {
                         name: _name,
                         type_parameters,
-                        type_parameters_ins,
+                        type_parameters_ins: _type_parameters_ins,
                         fields: _fields,
                     }) => {
                         let struct_ty = if let Some(tys) = tys {
@@ -1011,21 +1014,32 @@ impl Modules {
                             return;
                         }
                     }
-                    //TODO bind type.
+                    // TODO bind type.
                 }
-
                 for f in fields.iter() {
                     self.visit_expr(&f.1, scopes, visitor);
                     if visitor.finished() {
                         return;
                     }
-
                     let field_type = ty.find_filed_by_name(f.0.value());
                     if let Some(field_type) = field_type {
                         let item = ItemOrAccess::Access(Access::AccessFiled(
                             f.0.clone(),
                             field_type.0.clone(),
                             field_type.1.clone(),
+                            match &ty {
+                                ResolvedType::Struct(x) => {
+                                    let mut m = HashMap::new();
+                                    for (name, ty) in x.fields.iter() {
+                                        m.insert(
+                                            name.0.value.clone(),
+                                            (name.0.clone(), ty.clone()),
+                                        );
+                                    }
+                                    m
+                                }
+                                _ => Default::default(),
+                            },
                         ));
                         visitor.handle_item(self, scopes, &item);
                     }
@@ -1203,11 +1217,22 @@ impl Modules {
                 }
                 let struct_ty = self.get_expr_type(e, scopes);
                 let struct_ty = struct_ty.struct_ref_to_struct(scopes);
+
                 if let Some(def_field) = struct_ty.find_filed_by_name(field.value) {
                     let item = ItemOrAccess::Access(Access::AccessFiled(
                         Field(field.clone()),
                         def_field.0.clone(),
                         def_field.1.clone(),
+                        match &struct_ty {
+                            ResolvedType::Struct(x) => {
+                                let mut m = HashMap::new();
+                                for (name, ty) in x.fields.iter() {
+                                    m.insert(name.0.value.clone(), (name.0.clone(), ty.clone()));
+                                }
+                                m
+                            }
+                            _ => Default::default(),
+                        },
                     ));
                     visitor.handle_item(self, scopes, &item);
                 }
@@ -1252,7 +1277,7 @@ impl Modules {
             NameAccessChain_::Two(addr, name) => {
                 let addr = match &addr.value {
                     LeadingNameAccess_::AnonymousAddress(x) => x.bytes,
-                    LeadingNameAccess_::Name(name) => self.name_to_addr(name.value),
+                    LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
                 };
                 let m = scopes.resolve_friend(addr, name.value);
                 let m = match m {
@@ -1277,14 +1302,18 @@ impl Modules {
     ) {
         let mut _dummy = DummyVisitor;
         let visitor = visitor.unwrap_or(&mut _dummy);
+        let get_addr = |module: &ModuleIdent| -> AccountAddress {
+            match &module.value.address.value {
+                LeadingNameAccess_::AnonymousAddress(num) => num.bytes,
+                LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
+            }
+        };
+
         let get_module = |module: &ModuleIdent| -> Option<Rc<RefCell<Scope>>> {
             let module_scope = scopes.visit_address(|top| -> Option<Rc<RefCell<Scope>>> {
                 let x = top
                     .address
-                    .get(&match &module.value.address.value {
-                        LeadingNameAccess_::AnonymousAddress(num) => num.bytes,
-                        LeadingNameAccess_::Name(name) => self.name_to_addr(name.value),
-                    })?
+                    .get(&get_addr(module))?
                     .modules
                     .get(&module.value.module.0.value)?
                     .clone();
@@ -1296,13 +1325,14 @@ impl Modules {
             };
             Some(module_scope)
         };
+
         match &use_decl.use_ {
             Use::Module(module, alias) => {
                 let module_scope = get_module(module);
-                if module_scope.is_none() {
-                    return;
-                }
-                let module_scope = module_scope.unwrap();
+                let module_scope = module_scope.unwrap_or(Scope::new_module_name(
+                    get_addr(module),
+                    module.value.module.clone(),
+                ));
                 let item = ItemOrAccess::Item(Item::UseModule(
                     module.clone(),
                     alias.clone(),
@@ -1323,12 +1353,13 @@ impl Modules {
                     scopes.enter_item(self, name, item);
                 }
             }
+
             Use::Members(module, members) => {
                 let module_scope = get_module(module);
-                if module_scope.is_none() {
-                    return;
-                }
-                let module_scope = module_scope.unwrap();
+                let module_scope = module_scope.unwrap_or(Scope::new_module_name(
+                    get_addr(module),
+                    module.value.module.clone(),
+                ));
                 for (member, alias) in members.iter() {
                     if member.value.as_str() == "Self" {
                         // Special handle for Self.

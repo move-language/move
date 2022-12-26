@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::{
-    collections::HashSet,
+    collections::BTreeSet,
     fs::{self, File},
     path::PathBuf,
 };
@@ -86,7 +86,7 @@ fn always_deps() {
 
     assert_eq!(
         graph.always_deps,
-        HashSet::from([
+        BTreeSet::from([
             Symbol::from("Root"),
             Symbol::from("A"),
             Symbol::from("B"),
@@ -110,7 +110,7 @@ fn always_deps_from_lock() {
 
     assert_eq!(
         graph.always_deps,
-        HashSet::from([
+        BTreeSet::from([
             Symbol::from("Root"),
             Symbol::from("A"),
             Symbol::from("B"),

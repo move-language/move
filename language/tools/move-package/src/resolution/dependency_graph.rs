@@ -5,7 +5,7 @@ use anyhow::{bail, Context, Result};
 use move_symbol_pool::Symbol;
 use petgraph::{algo, prelude::DiGraphMap, Direction};
 use std::{
-    collections::{btree_map::Entry, BTreeMap, HashSet},
+    collections::{btree_map::Entry, BTreeMap, BTreeSet},
     fmt,
     fs::File,
     io::{BufWriter, Write},
@@ -60,7 +60,7 @@ pub struct DependencyGraph {
 
     /// Packages that are transitive dependencies regardless of mode (the transitive closure of
     /// `DependencyMode::Always` edges in `package_graph`).
-    pub always_deps: HashSet<PackageName>,
+    pub always_deps: BTreeSet<PackageName>,
 }
 
 /// Edge label indicating whether one package always depends on another, or only in dev-mode.
@@ -95,7 +95,7 @@ impl DependencyGraph {
             root_package: root_package.package.name,
             package_graph: DiGraphMap::new(),
             package_table: BTreeMap::new(),
-            always_deps: HashSet::new(),
+            always_deps: BTreeSet::new(),
         };
 
         graph
@@ -188,7 +188,7 @@ impl DependencyGraph {
             root_package: root,
             package_graph,
             package_table,
-            always_deps: HashSet::new(),
+            always_deps: BTreeSet::new(),
         };
 
         graph.check_consistency()?;

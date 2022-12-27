@@ -42,5 +42,7 @@ name = "move_check_testsuite"
 harness = false
 
 [features]
+default = ["borrow_v2"]
 address20 = ["move-core-types/address20"]
 address32 = ["move-core-types/address32"]
+borrow_v2 = ["move-bytecode-verifier/borrow_v2"]

@@ -440,24 +440,27 @@ impl BorrowState {
             }
         }
 
-        // Check resources are not borrowed
-        for resource in self.acquired_resources.keys() {
-            let borrowed_by = self.resource_borrowed_by(resource);
-            let resource_diag = Self::borrow_error(
-                &self.borrows,
-                loc,
-                &borrowed_by,
-                &BTreeMap::new(),
-                ReferenceSafety::InvalidReturn,
-                || {
-                    format!(
-                        "Invalid return. Resource variable '{}' is still being borrowed.",
-                        resource
-                    )
-                },
-            );
+        // Check resources are not borrowed.
+        // In v2 of reference safety, we allow to borrow resources.
+        if !cfg!(feature = "borrow_v2") {
+            for resource in self.acquired_resources.keys() {
+                let borrowed_by = self.resource_borrowed_by(resource);
+                let resource_diag = Self::borrow_error(
+                    &self.borrows,
+                    loc,
+                    &borrowed_by,
+                    &BTreeMap::new(),
+                    ReferenceSafety::InvalidReturn,
+                    || {
+                        format!(
+                            "Invalid return. Resource variable '{}' is still being borrowed.",
+                            resource
+                        )
+                    },
+                );
 
-            diags.add_opt(resource_diag)
+                diags.add_opt(resource_diag)
+            }
         }
 
         // check any returned reference is not borrowed
@@ -826,24 +829,60 @@ impl BorrowState {
                 }
             });
 
-        let values = match &return_ty.value {
-            Type_::Unit => vec![],
-            Type_::Single(s) => vec![self.single_type_value(s)],
-            Type_::Multiple(ss) => ss.iter().map(|s| self.single_type_value(s)).collect(),
+        let (returns, ret_tys) = match &return_ty.value {
+            Type_::Unit => (vec![], vec![]),
+            Type_::Single(s) => (vec![self.single_type_value(s)], vec![s.clone()]),
+            Type_::Multiple(ss) => (
+                ss.iter().map(|s| self.single_type_value(s)).collect(),
+                ss.iter().map(|s| s.clone()).collect(),
+            ),
         };
-        for value in &values {
-            if let Value::Ref(id) = value {
-                let parents = if self.borrows.is_mutable(*id) {
-                    &mut_parents
-                } else {
-                    &all_parents
-                };
-                parents.iter().for_each(|p| self.add_borrow(loc, *p, *id));
+        if !all_parents.is_empty() {
+            for ret in &returns {
+                if let Value::Ref(id) = ret {
+                    let parents = if self.borrows.is_mutable(*id) {
+                        &mut_parents
+                    } else {
+                        &all_parents
+                    };
+                    parents.iter().for_each(|p| self.add_borrow(loc, *p, *id));
+                }
+            }
+            all_parents.into_iter().for_each(|id| self.release(id));
+        } else if cfg!(feature = "borrow_v2") {
+            // If there are no parents from which output references can borrow, check whether
+            // they can be static borrows of the acquires
+            for (ret, ty) in returns.iter().zip(ret_tys.iter()) {
+                if let Value::Ref(id) = ret {
+                    // Calculated all the resource roots from which this reference could be
+                    // derived and add a borrow edge.
+                    let mut has_root = false;
+                    for (root, _) in resources
+                        .iter()
+                        .filter(|(n, _)| self.acquired_via(n, ty))
+                        .collect::<Vec<_>>()
+                    {
+                        self.add_resource_borrow(loc, root, *id);
+                        has_root = true;
+                    }
+                    if !has_root {}
+                }
             }
         }
-        all_parents.into_iter().for_each(|id| self.release(id));
 
-        (diags, values)
+        (diags, returns)
+    }
+
+    fn acquired_via(&self, s: &StructName, ty: &SingleType) -> bool {
+        // Every type reachable via a field of `s` should satisfy this condition. For now,
+        // simple equality,
+        matches!(&ty.value,
+            SingleType_::Ref(_,
+                sp!(
+                    _,
+                    BaseType_::Apply(_, sp!(_, TypeName_::ModuleType(_mid, sn)), _)
+                ),
+            ) if s == sn)
     }
 
     //**********************************************************************************************
